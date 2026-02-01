@@ -5,12 +5,24 @@ import App from './App';
 import PublicApp from './PublicApp';
 import AdminGate from './admin/AdminGate';
 import { ADMIN_PATH } from './config/admin';
+import { ReadOnlyBackoffError } from './lib/contract/read-only';
 import './styles/app.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 1,
+      retry: (failureCount, error) => {
+        if (error instanceof ReadOnlyBackoffError) {
+          return failureCount < 1;
+        }
+        return failureCount < 1;
+      },
+      retryDelay: (failureCount, error) => {
+        if (error instanceof ReadOnlyBackoffError) {
+          return error.retryAfterMs;
+        }
+        return Math.min(1000 * 2 ** failureCount, 8000);
+      },
       refetchOnWindowFocus: false
     }
   }

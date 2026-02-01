@@ -6,6 +6,10 @@ const READONLY_RETRIES = 3;
 const READONLY_BASE_DELAY_MS = 400;
 const READONLY_RATE_LIMIT_DELAY_MS = 1500;
 const READONLY_JITTER_MS = 120;
+const READONLY_FAILURE_WINDOW_MS = 10000;
+const READONLY_FAILURE_THRESHOLD = 3;
+const READONLY_BACKOFF_BASE_MS = 15000;
+const READONLY_BACKOFF_MAX_MS = 120000;
 
 export type ReadOnlyRetryOptions = {
   retries?: number;
@@ -34,12 +38,74 @@ const getErrorMessage = (error: unknown) => {
   }
 };
 
+export class ReadOnlyBackoffError extends Error {
+  retryAfterMs: number;
+
+  constructor(retryAfterMs: number) {
+    super(`Read-only calls paused for ${retryAfterMs}ms`);
+    this.name = 'ReadOnlyBackoffError';
+    this.retryAfterMs = retryAfterMs;
+  }
+}
+
 export const isRateLimitError = (error: unknown) => {
   const message = getErrorMessage(error).toLowerCase();
   return (
     message.includes('429') ||
     message.includes('too many requests') ||
     message.includes('rate limit')
+  );
+};
+
+export const isReadOnlyNetworkError = (error: unknown) => {
+  const message = getErrorMessage(error).toLowerCase();
+  return (
+    message.includes('failed to fetch') ||
+    message.includes('networkerror') ||
+    message.includes('cors') ||
+    message.includes('access-control-allow-origin')
+  );
+};
+
+let readOnlyFailureCount = 0;
+let readOnlyFailureWindowStart = 0;
+let readOnlyBackoffUntil = 0;
+let readOnlyBackoffMs = READONLY_BACKOFF_BASE_MS;
+
+export const getReadOnlyBackoffMs = () =>
+  Math.max(0, readOnlyBackoffUntil - Date.now());
+
+export const isReadOnlyBackoffActive = () => getReadOnlyBackoffMs() > 0;
+
+export const noteReadOnlySuccess = () => {
+  readOnlyFailureCount = 0;
+  readOnlyFailureWindowStart = 0;
+  readOnlyBackoffUntil = 0;
+  readOnlyBackoffMs = READONLY_BACKOFF_BASE_MS;
+};
+
+export const noteReadOnlyFailure = (error: unknown) => {
+  if (!isReadOnlyNetworkError(error)) {
+    return;
+  }
+  const now = Date.now();
+  if (now - readOnlyFailureWindowStart > READONLY_FAILURE_WINDOW_MS) {
+    readOnlyFailureWindowStart = now;
+    readOnlyFailureCount = 0;
+  }
+  readOnlyFailureCount += 1;
+  if (readOnlyFailureCount < READONLY_FAILURE_THRESHOLD) {
+    return;
+  }
+  readOnlyFailureCount = 0;
+  readOnlyFailureWindowStart = now;
+  if (now < readOnlyBackoffUntil) {
+    return;
+  }
+  readOnlyBackoffUntil = now + readOnlyBackoffMs;
+  readOnlyBackoffMs = Math.min(
+    READONLY_BACKOFF_MAX_MS,
+    Math.floor(readOnlyBackoffMs * 1.6)
   );
 };
 

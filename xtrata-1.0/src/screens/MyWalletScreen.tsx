@@ -9,7 +9,7 @@ import {
 import { buildTransferCall, createXtrataClient } from '../lib/contract/client';
 import type { ContractRegistryEntry } from '../lib/contract/registry';
 import { buildTransferPostCondition } from '../lib/contract/post-conditions';
-import { MICROSTX_PER_STX } from '../lib/contract/fees';
+import { MICROSTX_PER_STX, formatMicroStx } from '../lib/contract/fees';
 import type { WalletSession } from '../lib/wallet/types';
 import { getNetworkMismatch } from '../lib/network/guard';
 import { toStacksNetwork } from '../lib/network/stacks';
@@ -258,9 +258,13 @@ export default function MyWalletScreen(props: MyWalletScreenProps) {
   const [listPriceInput, setListPriceInput] = useState('');
   const [listStatus, setListStatus] = useState<string | null>(null);
   const [listPending, setListPending] = useState(false);
+  const [cancelStatus, setCancelStatus] = useState<string | null>(null);
+  const [cancelPending, setCancelPending] = useState(false);
+  const [walletToolsOpen, setWalletToolsOpen] = useState(false);
   const initialPageSetRef = useRef(false);
   const walletScopeRef = useRef<string>('');
   const autoSelectRef = useRef(true);
+  const walletToolsRef = useRef<HTMLDivElement | null>(null);
 
   const maxPage = useMemo(() => {
     if (ownedTokens.length === 0) {
@@ -312,6 +316,7 @@ export default function MyWalletScreen(props: MyWalletScreenProps) {
   useEffect(() => {
     setTransferStatus(null);
     setListStatus(null);
+    setCancelStatus(null);
     setListPriceInput('');
   }, [selectedTokenId, walletAddress]);
 
@@ -372,6 +377,10 @@ export default function MyWalletScreen(props: MyWalletScreenProps) {
       ? `Listed (#${selectedListing.listingId.toString()})`
       : `Listing record (#${selectedListing.listingId.toString()})`
     : 'Not listed';
+  const listingPriceLabel =
+    selectedListing?.price !== undefined
+      ? formatMicroStx(Number(selectedListing.price))
+      : null;
   const marketLabel = marketContractIdLabel ?? 'Select in Market module';
   const transferValidation = validateTransferRequest({
     senderAddress: walletAddress,
@@ -485,6 +494,7 @@ export default function MyWalletScreen(props: MyWalletScreenProps) {
 
   const handleList = () => {
     setListStatus(null);
+    setCancelStatus(null);
     if (!marketContract) {
       setListStatus('Select a market contract in the Market module first.');
       return;
@@ -565,6 +575,82 @@ export default function MyWalletScreen(props: MyWalletScreenProps) {
       const message = error instanceof Error ? error.message : String(error);
       setListPending(false);
       setListStatus(`Listing failed: ${message}`);
+    }
+  };
+
+  const handleOpenListingTools = () => {
+    setWalletToolsOpen(true);
+    requestAnimationFrame(() => {
+      walletToolsRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    });
+  };
+
+  const handleCancel = () => {
+    setCancelStatus(null);
+    setListStatus(null);
+    if (!marketContract) {
+      setCancelStatus('Select a market contract in the Market module first.');
+      return;
+    }
+    if (!walletAddress) {
+      setCancelStatus('Connect a wallet to cancel.');
+      return;
+    }
+    if (marketMismatch) {
+      setCancelStatus(
+        `Network mismatch: wallet on ${marketMismatch.actual}, market is ${marketMismatch.expected}.`
+      );
+      return;
+    }
+    if (marketNetworkMismatch) {
+      setCancelStatus('Market network must match the active NFT contract.');
+      return;
+    }
+    if (!selectedToken) {
+      setCancelStatus('Select a token to cancel.');
+      return;
+    }
+    if (!selectedListing) {
+      setCancelStatus('This inscription is not listed.');
+      return;
+    }
+    if (selectedListing.seller && selectedListing.seller !== walletAddress) {
+      setCancelStatus('Only the seller can cancel this listing.');
+      return;
+    }
+
+    setCancelPending(true);
+    setCancelStatus('Waiting for wallet confirmation...');
+
+    try {
+      showContractCall({
+        contractAddress: marketContract.address,
+        contractName: marketContract.contractName,
+        functionName: 'cancel',
+        functionArgs: [
+          contractPrincipalCV(props.contract.address, props.contract.contractName),
+          uintCV(selectedListing.listingId)
+        ],
+        network: props.walletSession.network ?? marketContract.network,
+        stxAddress: walletAddress,
+        onFinish: (payload) => {
+          setCancelPending(false);
+          setCancelStatus(`Cancel submitted: ${payload.txId}`);
+          refreshWallet();
+          refreshMarketActivity();
+        },
+        onCancel: () => {
+          setCancelPending(false);
+          setCancelStatus('Cancel cancelled or failed in wallet.');
+        }
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setCancelPending(false);
+      setCancelStatus(`Cancel failed: ${message}`);
     }
   };
 
@@ -667,22 +753,124 @@ export default function MyWalletScreen(props: MyWalletScreenProps) {
         </div>
         <div className="panel__body detail-panel">
           <div className="detail-panel__preview">
-            {selectedToken ? (
-              <TokenContentPreview
-                token={selectedToken}
-                contractId={contractId}
-                senderAddress={props.senderAddress}
-                client={client}
-                isActiveTab={props.isActiveTab}
-              />
-            ) : selectedTokenId !== null ? (
-              <p>Loading token #{selectedTokenId.toString()}...</p>
-            ) : (
-              <p>Select a token to preview its content.</p>
-            )}
+            <div className="wallet-preview">
+              {selectedToken ? (
+                <TokenContentPreview
+                  token={selectedToken}
+                  contractId={contractId}
+                  senderAddress={props.senderAddress}
+                  client={client}
+                  isActiveTab={props.isActiveTab}
+                />
+              ) : selectedTokenId !== null ? (
+                <p>Loading token #{selectedTokenId.toString()}...</p>
+              ) : (
+                <p>Select a token to preview its content.</p>
+              )}
+              {selectedListing && (
+                <button
+                  type="button"
+                  className="wallet-preview__badge"
+                  onClick={handleOpenListingTools}
+                  title="Open listing tools"
+                >
+                  Listed
+                </button>
+              )}
+            </div>
           </div>
-          <div className="detail-panel__tools">
-            <details className="preview-drawer preview-drawer--advanced">
+          <div className="detail-panel__tools" ref={walletToolsRef}>
+            <div className="transfer-panel wallet-tools__panel">
+              <div>
+                <h3>Listing tools</h3>
+                <p>List or cancel the selected inscription.</p>
+              </div>
+              <div className="meta-grid">
+                <div>
+                  <span className="meta-label">Selected token</span>
+                  <span className="meta-value">
+                    {selectedToken ? `#${selectedToken.id.toString()}` : 'None'}
+                  </span>
+                </div>
+                <div>
+                  <span className="meta-label">Market contract</span>
+                  <span className="meta-value">{marketLabel}</span>
+                </div>
+                <div>
+                  <span className="meta-label">Listing status</span>
+                  <span className="meta-value">{listingStatusLabel}</span>
+                </div>
+                {listingPriceLabel && (
+                  <div>
+                    <span className="meta-label">Listing price</span>
+                    <span className="meta-value">{listingPriceLabel}</span>
+                  </div>
+                )}
+              </div>
+              {parsedMarket.error && (
+                <span className="meta-value">{parsedMarket.error}</span>
+              )}
+              {marketNetworkMismatch && (
+                <span className="meta-value">
+                  Market network must match the active NFT contract.
+                </span>
+              )}
+              <label className="field">
+                <span className="field__label">Price (STX)</span>
+                <input
+                  className="input"
+                  placeholder="0.25"
+                  value={listPriceInput}
+                  onChange={(event) => {
+                    setListPriceInput(event.target.value);
+                    setListStatus(null);
+                  }}
+                  disabled={listPending}
+                />
+              </label>
+              {listStatus && <span className="meta-value">{listStatus}</span>}
+              {cancelStatus && <span className="meta-value">{cancelStatus}</span>}
+              <div className="transfer-panel__actions">
+                <button
+                  className="button button--mini"
+                  type="button"
+                  onClick={handleList}
+                  disabled={listPending || cancelPending || !selectedToken}
+                >
+                  {listPending ? 'Listing...' : 'List'}
+                </button>
+                <button
+                  className="button button--ghost button--mini"
+                  type="button"
+                  onClick={handleCancel}
+                  disabled={
+                    cancelPending ||
+                    listPending ||
+                    !selectedToken ||
+                    !selectedListing
+                  }
+                >
+                  {cancelPending ? 'Cancelling...' : 'Cancel listing'}
+                </button>
+                <button
+                  className="button button--ghost button--mini"
+                  type="button"
+                  onClick={() => {
+                    setListPriceInput('');
+                    setListStatus(null);
+                    setCancelStatus(null);
+                  }}
+                  disabled={listPending || cancelPending}
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+            <details
+              className="preview-drawer preview-drawer--advanced"
+              open={walletToolsOpen}
+              onToggle={(event) => setWalletToolsOpen(event.currentTarget.open)}
+            >
               <summary>Advanced tools &amp; filters</summary>
               <div className="preview-drawer__body">
                 <div className="transfer-panel">
@@ -761,71 +949,6 @@ export default function MyWalletScreen(props: MyWalletScreenProps) {
                       ))}
                     </div>
                   )}
-                </div>
-                <div className="transfer-panel">
-                  <div>
-                    <h3>List inscription</h3>
-                    <p>Move the selected inscription into market escrow.</p>
-                  </div>
-                  <div className="meta-grid">
-                    <div>
-                      <span className="meta-label">Selected token</span>
-                      <span className="meta-value">
-                        {selectedToken ? `#${selectedToken.id.toString()}` : 'None'}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="meta-label">Market contract</span>
-                      <span className="meta-value">{marketLabel}</span>
-                    </div>
-                    <div>
-                      <span className="meta-label">Listing status</span>
-                      <span className="meta-value">{listingStatusLabel}</span>
-                    </div>
-                  </div>
-                  {parsedMarket.error && (
-                    <span className="meta-value">{parsedMarket.error}</span>
-                  )}
-                  {marketNetworkMismatch && (
-                    <span className="meta-value">
-                      Market network must match the active NFT contract.
-                    </span>
-                  )}
-                  <label className="field">
-                    <span className="field__label">Price (STX)</span>
-                    <input
-                      className="input"
-                      placeholder="0.25"
-                      value={listPriceInput}
-                      onChange={(event) => {
-                        setListPriceInput(event.target.value);
-                        setListStatus(null);
-                      }}
-                      disabled={listPending}
-                    />
-                  </label>
-                  {listStatus && <span className="meta-value">{listStatus}</span>}
-                  <div className="transfer-panel__actions">
-                    <button
-                      className="button button--mini"
-                      type="button"
-                      onClick={handleList}
-                      disabled={listPending || !selectedToken}
-                    >
-                      {listPending ? 'Listing...' : 'List'}
-                    </button>
-                    <button
-                      className="button button--ghost button--mini"
-                      type="button"
-                      onClick={() => {
-                        setListPriceInput('');
-                        setListStatus(null);
-                      }}
-                      disabled={listPending}
-                    >
-                      Clear
-                    </button>
-                  </div>
                 </div>
               </div>
             </details>

@@ -32,5 +32,9 @@ export const getApiBaseUrls = (network: NetworkType) => {
   if (import.meta.env.DEV) {
     return [getProxyBase(network)];
   }
-  return DEFAULT_API_BASES[network];
+  const bases = DEFAULT_API_BASES[network];
+  if (typeof window !== 'undefined') {
+    return bases.filter((base) => !base.includes('hiro.so'));
+  }
+  return bases;
 };

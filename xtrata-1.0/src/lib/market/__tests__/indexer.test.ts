@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { Cl } from '@stacks/transactions';
-import { __testing, buildActiveListingIndex, buildMarketListingKey } from '../indexer';
-import type { MarketActivityEvent } from '../types';
+import {
+  __testing,
+  buildActiveListingIndex,
+  buildMarketListingKey,
+  buildUnifiedActivityTimeline
+} from '../indexer';
+import type { MarketActivityEvent, NftActivityEvent } from '../types';
 
 describe('market indexer', () => {
   it('parses list events from print tuple', () => {
@@ -133,5 +138,79 @@ describe('market indexer', () => {
     expect(active.get(tokenOneKey)?.listingId).toBe(3n);
     expect(active.has(tokenTwoKey)).toBe(false);
     expect(active.has(tokenFiveKey)).toBe(false);
+  });
+
+  it('parses NFT mint events', () => {
+    const parsed = __testing.parseNftMintEvent(
+      {
+        event_index: 12,
+        tx_id: '0xmint',
+        block_height: 700,
+        block_time_iso: '2026-01-31T00:00:00.000Z',
+        recipient: 'SP2JXKMSH007NPYAQHKJPQMAQYAD90NQGTVJVQ02B',
+        asset_identifier: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1::xtrata-inscription',
+        value: { repr: 'u42' }
+      },
+      'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1',
+      'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1::xtrata-inscription'
+    );
+
+    expect(parsed?.type).toBe('mint');
+    expect(parsed?.tokenId).toBe(42n);
+    expect(parsed?.recipient).toBe(
+      'SP2JXKMSH007NPYAQHKJPQMAQYAD90NQGTVJVQ02B'
+    );
+  });
+
+  it('builds unified activity timeline and drops duplicate transfers', () => {
+    const nftContract = 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1';
+    const marketEvents = [
+      {
+        id: 'buy-1',
+        type: 'buy',
+        listingId: 1n,
+        tokenId: 5n,
+        price: 123n,
+        seller: 'SP2JXKMSH007NPYAQHKJPQMAQYAD90NQGTVJVQ02B',
+        buyer: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
+        txId: '0xabc',
+        blockHeight: 200,
+        eventIndex: 1,
+        nftContract
+      }
+    ] satisfies MarketActivityEvent[];
+    const nftEvents = [
+      {
+        id: 'transfer-dup',
+        type: 'transfer',
+        tokenId: 5n,
+        sender: 'SP2JXKMSH007NPYAQHKJPQMAQYAD90NQGTVJVQ02B',
+        recipient: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
+        txId: '0xabc',
+        blockHeight: 200,
+        eventIndex: 2,
+        nftContract
+      },
+      {
+        id: 'mint-1',
+        type: 'mint',
+        tokenId: 6n,
+        recipient: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
+        txId: '0xdef',
+        blockHeight: 201,
+        eventIndex: 0,
+        nftContract
+      }
+    ] satisfies NftActivityEvent[];
+
+    const unified = buildUnifiedActivityTimeline({
+      marketEvents,
+      nftEvents,
+      nftContractId: nftContract
+    });
+
+    expect(unified.find((event) => event.type === 'transfer')).toBeUndefined();
+    expect(unified.find((event) => event.type === 'inscribe')?.tokenId).toBe(6n);
+    expect(unified.find((event) => event.type === 'buy')?.price).toBe(123n);
   });
 });

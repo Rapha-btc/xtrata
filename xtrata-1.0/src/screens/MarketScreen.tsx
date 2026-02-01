@@ -15,18 +15,26 @@ import type { WalletSession } from '../lib/wallet/types';
 import { getContractId } from '../lib/contract/config';
 import {
   buildContractTransferPostCondition,
-  buildTransferPostCondition
+  buildTransferPostCondition,
+  DEFAULT_NFT_ASSET_NAME
 } from '../lib/contract/post-conditions';
 import { formatMicroStx, MICROSTX_PER_STX } from '../lib/contract/fees';
 import { getNetworkMismatch } from '../lib/network/guard';
 import { createXtrataClient } from '../lib/contract/client';
 import { createMarketClient } from '../lib/market/client';
-import { loadMarketActivity } from '../lib/market/indexer';
+import {
+  buildUnifiedActivityTimeline,
+  loadMarketActivity,
+  loadNftActivity
+} from '../lib/market/indexer';
 import { MARKET_REGISTRY, getMarketContractId } from '../lib/market/registry';
 import { createMarketSelectionStore } from '../lib/market/selection';
 import { parseMarketContractId } from '../lib/market/contract';
 import { logInfo, logWarn } from '../lib/utils/logger';
-import type { MarketActivityEvent, MarketListing } from '../lib/market/types';
+import type {
+  MarketListing,
+  UnifiedActivityEvent
+} from '../lib/market/types';
 import { useTokenSummaries } from '../lib/viewer/queries';
 import type { TokenSummary } from '../lib/viewer/types';
 import TokenCardMedia from '../components/TokenCardMedia';
@@ -280,9 +288,9 @@ export default function MarketScreen(props: MarketScreenProps) {
     }
   });
 
-  const activityQuery = useQuery({
+  const marketActivityQuery = useQuery({
     queryKey: ['market', marketContractIdLabel, 'activity', activityKey],
-    enabled: !!marketContract && !props.collapsed,
+    enabled: !!marketContract && !props.collapsed && !isPublicVariant,
     staleTime: 30_000,
     refetchInterval: props.collapsed ? false : 60_000,
     queryFn: async () => {
@@ -294,6 +302,19 @@ export default function MarketScreen(props: MarketScreenProps) {
         force: activityKey > 0
       });
     }
+  });
+
+  const nftActivityQuery = useQuery({
+    queryKey: ['nft', nftContractId, DEFAULT_NFT_ASSET_NAME, 'activity', activityKey],
+    enabled: !!props.contract && !props.collapsed && !isPublicVariant,
+    staleTime: 30_000,
+    refetchInterval: props.collapsed ? false : 60_000,
+    queryFn: () =>
+      loadNftActivity({
+        contract: props.contract,
+        assetName: DEFAULT_NFT_ASSET_NAME,
+        force: activityKey > 0
+      })
   });
 
   const listingQuery = useQuery({
@@ -781,10 +802,41 @@ export default function MarketScreen(props: MarketScreenProps) {
     ? formatMicroStx(Number(displayedListing.price))
     : '—';
   const buyPriceLabel = listingPriceLabel;
-  const recentActivity = activityQuery.data?.events ?? [];
-  const recentActivityItems = recentActivity.slice(0, RECENT_ACTIVITY_LIMIT);
+  const marketActivityItems = useMemo(
+    () =>
+      buildUnifiedActivityTimeline({
+        marketEvents: marketActivityQuery.data?.events ?? [],
+        nftEvents: [],
+        nftContractId
+      }).slice(0, RECENT_ACTIVITY_LIMIT),
+    [marketActivityQuery.data?.events, nftContractId]
+  );
 
-  const formatActivityHeadline = (event: MarketActivityEvent) => {
+  const nftActivityItems = useMemo(
+    () =>
+      buildUnifiedActivityTimeline({
+        marketEvents: [],
+        nftEvents: nftActivityQuery.data?.events ?? [],
+        nftContractId
+      }).slice(0, RECENT_ACTIVITY_LIMIT),
+    [nftActivityQuery.data?.events, nftContractId]
+  );
+
+  const unifiedActivityItems = useMemo(
+    () =>
+      buildUnifiedActivityTimeline({
+        marketEvents: marketActivityQuery.data?.events ?? [],
+        nftEvents: nftActivityQuery.data?.events ?? [],
+        nftContractId
+      }).slice(0, RECENT_ACTIVITY_LIMIT),
+    [
+      marketActivityQuery.data?.events,
+      nftActivityQuery.data?.events,
+      nftContractId
+    ]
+  );
+
+  const formatActivityHeadline = (event: UnifiedActivityEvent) => {
     switch (event.type) {
       case 'list':
         return 'Listed';
@@ -792,24 +844,33 @@ export default function MarketScreen(props: MarketScreenProps) {
         return 'Sold';
       case 'cancel':
         return 'Cancelled';
+      case 'inscribe':
+        return 'Inscribed';
+      case 'transfer':
+        return 'Transfer';
       default:
         return 'Activity';
     }
   };
 
-  const formatActivityDetail = (event: MarketActivityEvent) => {
+  const formatActivityDetail = (event: UnifiedActivityEvent, showSource?: boolean) => {
     const parts: string[] = [];
-    parts.push(`#${event.listingId.toString()}`);
+    if (event.listingId !== undefined) {
+      parts.push(`#${event.listingId.toString()}`);
+    }
     if (event.tokenId !== undefined) {
       parts.push(`Token ${event.tokenId.toString()}`);
     }
     if (event.price !== undefined) {
       parts.push(formatMicroStx(Number(event.price)));
     }
+    if (showSource) {
+      parts.push(event.source === 'market' ? 'Market' : 'NFT');
+    }
     return parts.join(' · ');
   };
 
-  const formatActivityTime = (event: MarketActivityEvent) => {
+  const formatActivityTime = (event: UnifiedActivityEvent) => {
     if (event.timestamp) {
       return new Date(event.timestamp).toLocaleString();
     }
@@ -817,6 +878,31 @@ export default function MarketScreen(props: MarketScreenProps) {
       return `Block ${event.blockHeight}`;
     }
     return '—';
+  };
+
+  const getActivityParties = (event: UnifiedActivityEvent) => {
+    if (event.type === 'inscribe') {
+      return {
+        primaryLabel: 'Owner',
+        primaryValue: event.to ?? event.buyer ?? event.seller ?? '—',
+        secondaryLabel: 'Creator',
+        secondaryValue: event.from ?? '—'
+      };
+    }
+    if (event.type === 'transfer') {
+      return {
+        primaryLabel: 'From',
+        primaryValue: event.from ?? '—',
+        secondaryLabel: 'To',
+        secondaryValue: event.to ?? '—'
+      };
+    }
+    return {
+      primaryLabel: 'Seller',
+      primaryValue: event.seller ?? '—',
+      secondaryLabel: 'Buyer',
+      secondaryValue: event.buyer ?? '—'
+    };
   };
 
   const formatListingStatus = (status: ActiveListing['status']) => {
@@ -827,6 +913,63 @@ export default function MarketScreen(props: MarketScreenProps) {
       return 'Stale';
     }
     return 'Unknown';
+  };
+
+  const renderActivityBlock = (params: {
+    title: string;
+    items: UnifiedActivityEvent[];
+    isLoading: boolean;
+    hasError: boolean;
+    emptyLabel: string;
+    showSource?: boolean;
+  }) => {
+    return (
+      <div className="market-block">
+        <div className="market-block__header">
+          <h3>{params.title}</h3>
+          <button
+            className="button button--ghost"
+            type="button"
+            onClick={handleRefreshActivity}
+            disabled={!marketContract}
+          >
+            Refresh
+          </button>
+        </div>
+        {params.isLoading && <p>Loading activity...</p>}
+        {params.hasError && (
+          <div className="field__error">Unable to load activity.</div>
+        )}
+        {!params.isLoading && params.items.length === 0 && (
+          <p className="field__hint">{params.emptyLabel}</p>
+        )}
+        {params.items.map((event) => {
+          const parties = getActivityParties(event);
+          return (
+            <div className="market-listing" key={event.id}>
+              <div>
+                <span className="meta-label">{formatActivityHeadline(event)}</span>
+                <span className="meta-value">
+                  {formatActivityDetail(event, params.showSource)}
+                </span>
+              </div>
+              <div>
+                <span className="meta-label">{parties.primaryLabel}</span>
+                <span className="meta-value">{parties.primaryValue}</span>
+              </div>
+              <div>
+                <span className="meta-label">{parties.secondaryLabel}</span>
+                <span className="meta-value">{parties.secondaryValue}</span>
+              </div>
+              <div>
+                <span className="meta-label">Time</span>
+                <span className="meta-value">{formatActivityTime(event)}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
   };
 
   return (
@@ -940,40 +1083,6 @@ export default function MarketScreen(props: MarketScreenProps) {
             </div>
           )}
 
-          {isPublicVariant && marketContractIdLabel && (
-            <div className="market-block">
-              <h3>Market contract</h3>
-              <div className="meta-grid">
-                <div>
-                  <span className="meta-label">Market contract</span>
-                  <span className="meta-value">{marketContractIdLabel}</span>
-                </div>
-                <div>
-                  <span className="meta-label">NFT contract</span>
-                  <span className="meta-value">{nftContractId}</span>
-                </div>
-              </div>
-              {marketMismatch && (
-                <div className="alert">
-                  <div>
-                    <strong>Network mismatch.</strong> Wallet is on{' '}
-                    {marketMismatch.actual}, market is {marketMismatch.expected}.
-                  </div>
-                </div>
-              )}
-              {nftNetworkMismatch && (
-                <div className="alert">
-                  <div>
-                    <strong>Network mismatch.</strong> Market contract network must
-                    match the active NFT contract.
-                  </div>
-                </div>
-              )}
-              {activeMarketError && (
-                <div className="field__error">{activeMarketError}</div>
-              )}
-            </div>
-          )}
 
           {!isPublicVariant && (
             <div className="market-block">
@@ -1165,162 +1274,148 @@ export default function MarketScreen(props: MarketScreenProps) {
             )}
           </div>
 
-          <div className="market-block">
-            <div className="market-block__header">
-              <h3>Recent activity</h3>
-              <button
-                className="button button--ghost"
-                type="button"
-                onClick={handleRefreshActivity}
-                disabled={!marketContract}
-              >
-                Refresh
-              </button>
+          {!isPublicVariant && (
+            <>
+              {renderActivityBlock({
+                title: 'Market activity',
+                items: marketActivityItems,
+                isLoading: marketActivityQuery.isFetching,
+                hasError: !!marketActivityQuery.error,
+                emptyLabel: 'No market activity yet.'
+              })}
+              {renderActivityBlock({
+                title: 'NFT activity',
+                items: nftActivityItems,
+                isLoading: nftActivityQuery.isFetching,
+                hasError: !!nftActivityQuery.error,
+                emptyLabel: 'No NFT activity yet.'
+              })}
+              {renderActivityBlock({
+                title: 'All activity',
+                items: unifiedActivityItems,
+                isLoading:
+                  marketActivityQuery.isFetching ||
+                  nftActivityQuery.isFetching,
+                hasError: !!marketActivityQuery.error || !!nftActivityQuery.error,
+                emptyLabel: 'No activity yet.',
+                showSource: true
+              })}
+            </>
+          )}
+
+          {!isPublicVariant && (
+            <div className="market-block">
+              <h3>Lookup listing</h3>
+              <label className="field">
+                <span className="field__label">Listing ID</span>
+                <div className="field__inline">
+                  <input
+                    className="input"
+                    placeholder="e.g. 12"
+                    value={listingIdInput}
+                    onChange={(event) => setListingIdInput(event.target.value)}
+                  />
+                  <button
+                    className="button button--ghost"
+                    type="button"
+                    onClick={handleLookupListing}
+                    disabled={!marketContract}
+                  >
+                    Load
+                  </button>
+                </div>
+              </label>
+              <label className="field">
+                <span className="field__label">Token ID</span>
+                <div className="field__inline">
+                  <input
+                    className="input"
+                    placeholder="e.g. 42"
+                    value={tokenLookupInput}
+                    onChange={(event) => setTokenLookupInput(event.target.value)}
+                  />
+                  <button
+                    className="button button--ghost"
+                    type="button"
+                    onClick={handleLookupToken}
+                    disabled={!marketContract}
+                  >
+                    Find
+                  </button>
+                </div>
+              </label>
+              {(listingQuery.isFetching || tokenLookupQuery.isFetching) && (
+                <p>Loading listing...</p>
+              )}
+              {displayedListing && (
+                <div className="market-listing-card market-listing-card--lookup">
+                  <div className="market-listing-card__media">
+                    <div className="token-card__media">
+                      {lookupToken ? (
+                        <TokenCardMedia
+                          token={lookupToken}
+                          contractId={nftContractId}
+                          senderAddress={readOnlySender}
+                          client={nftClient}
+                          isActiveTab={!props.collapsed}
+                        />
+                      ) : (
+                        <div className="token-card__placeholder">
+                          Loading preview...
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="meta-grid meta-grid--dense">
+                    <div>
+                      <span className="meta-label">Listing ID</span>
+                      <span className="meta-value">
+                        {displayedListing.listingId.toString()}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="meta-label">Token</span>
+                      <span className="meta-value">
+                        #{displayedListing.tokenId.toString()}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="meta-label">Price</span>
+                      <span className="meta-value">{listingPriceLabel}</span>
+                    </div>
+                    <div>
+                      <span className="meta-label">Seller</span>
+                      <span className="meta-value">{displayedListing.seller}</span>
+                    </div>
+                    <div>
+                      <span className="meta-label">Owner</span>
+                      <span className="meta-value">{lookupOwner ?? 'Unknown'}</span>
+                    </div>
+                    <div>
+                      <span className="meta-label">Escrow status</span>
+                      <span className="meta-value">{lookupStatus}</span>
+                    </div>
+                    <div>
+                      <span className="meta-label">NFT contract</span>
+                      <span className="meta-value">{displayedListing.nftContract}</span>
+                    </div>
+                    <div>
+                      <span className="meta-label">Created</span>
+                      <span className="meta-value">
+                        Block {displayedListing.createdAt.toString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {!displayedListing && (listingLookupId || tokenLookupId) && (
+                <p className="field__hint">No listing found.</p>
+              )}
             </div>
-            {activityQuery.isFetching && <p>Loading activity...</p>}
-            {activityQuery.error && (
-              <div className="field__error">Unable to load activity.</div>
-            )}
-            {!activityQuery.isFetching && recentActivityItems.length === 0 && (
-              <p className="field__hint">No market activity yet.</p>
-            )}
-            {recentActivityItems.map((event) => (
-              <div className="market-listing" key={event.id}>
-                <div>
-                  <span className="meta-label">{formatActivityHeadline(event)}</span>
-                  <span className="meta-value">
-                    {formatActivityDetail(event)}
-                  </span>
-                </div>
-                <div>
-                  <span className="meta-label">Seller</span>
-                  <span className="meta-value">{event.seller ?? '—'}</span>
-                </div>
-                {event.buyer && (
-                  <div>
-                    <span className="meta-label">Buyer</span>
-                    <span className="meta-value">{event.buyer}</span>
-                  </div>
-                )}
-                <div>
-                  <span className="meta-label">Time</span>
-                  <span className="meta-value">{formatActivityTime(event)}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+          )}
 
           <div className="market-block">
-            <h3>Lookup listing</h3>
-            <label className="field">
-              <span className="field__label">Listing ID</span>
-              <div className="field__inline">
-                <input
-                  className="input"
-                  placeholder="e.g. 12"
-                  value={listingIdInput}
-                  onChange={(event) => setListingIdInput(event.target.value)}
-                />
-                <button
-                  className="button button--ghost"
-                  type="button"
-                  onClick={handleLookupListing}
-                  disabled={!marketContract}
-                >
-                  Load
-                </button>
-              </div>
-            </label>
-            <label className="field">
-              <span className="field__label">Token ID</span>
-              <div className="field__inline">
-                <input
-                  className="input"
-                  placeholder="e.g. 42"
-                  value={tokenLookupInput}
-                  onChange={(event) => setTokenLookupInput(event.target.value)}
-                />
-                <button
-                  className="button button--ghost"
-                  type="button"
-                  onClick={handleLookupToken}
-                  disabled={!marketContract}
-                >
-                  Find
-                </button>
-              </div>
-            </label>
-            {(listingQuery.isFetching || tokenLookupQuery.isFetching) && (
-              <p>Loading listing...</p>
-            )}
-            {displayedListing && (
-              <div className="market-listing-card market-listing-card--lookup">
-                <div className="market-listing-card__media">
-                  <div className="token-card__media">
-                    {lookupToken ? (
-                      <TokenCardMedia
-                        token={lookupToken}
-                        contractId={nftContractId}
-                        senderAddress={readOnlySender}
-                        client={nftClient}
-                        isActiveTab={!props.collapsed}
-                      />
-                    ) : (
-                      <div className="token-card__placeholder">
-                        Loading preview...
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="meta-grid meta-grid--dense">
-                  <div>
-                    <span className="meta-label">Listing ID</span>
-                    <span className="meta-value">
-                      {displayedListing.listingId.toString()}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="meta-label">Token</span>
-                    <span className="meta-value">
-                      #{displayedListing.tokenId.toString()}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="meta-label">Price</span>
-                    <span className="meta-value">{listingPriceLabel}</span>
-                  </div>
-                  <div>
-                    <span className="meta-label">Seller</span>
-                    <span className="meta-value">{displayedListing.seller}</span>
-                  </div>
-                  <div>
-                    <span className="meta-label">Owner</span>
-                    <span className="meta-value">{lookupOwner ?? 'Unknown'}</span>
-                  </div>
-                  <div>
-                    <span className="meta-label">Escrow status</span>
-                    <span className="meta-value">{lookupStatus}</span>
-                  </div>
-                  <div>
-                    <span className="meta-label">NFT contract</span>
-                    <span className="meta-value">{displayedListing.nftContract}</span>
-                  </div>
-                  <div>
-                    <span className="meta-label">Created</span>
-                    <span className="meta-value">
-                      Block {displayedListing.createdAt.toString()}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-            {!displayedListing && (listingLookupId || tokenLookupId) && (
-              <p className="field__hint">No listing found.</p>
-            )}
-          </div>
-
-          <div className="market-block">
-            <h3>Actions</h3>
+            <h3>{isPublicVariant ? 'Listing tools' : 'Actions'}</h3>
             <div className="market-actions">
               <div className="market-action">
                 <strong>List</strong>
@@ -1353,40 +1448,42 @@ export default function MarketScreen(props: MarketScreenProps) {
                 {listStatus && <p className="field__hint">{listStatus}</p>}
               </div>
 
-              <div className="market-action">
-                <strong>Buy</strong>
-                <label className="field">
-                  <span className="field__label">Listing ID</span>
-                  <input
-                    className="input"
-                    placeholder="Listing ID"
-                    value={buyListingIdInput}
-                    onChange={(event) => {
-                      setBuyListingTouched(true);
-                      setBuyListingIdInput(event.target.value);
-                    }}
-                  />
-                </label>
-                {buyTargetListingId !== null && (
-                  <p className="field__hint">
-                    Target listing: #{buyTargetListingId.toString()}
-                  </p>
-                )}
-                {buyPriceLabel !== '—' && (
-                  <p className="field__hint">
-                    Post condition: buyer spends exactly {buyPriceLabel} (network fee is extra).
-                  </p>
-                )}
-                <button
-                  className="button"
-                  type="button"
-                  onClick={handleBuy}
-                  disabled={!canTransact || buyPending}
-                >
-                  {buyPending ? 'Buying...' : 'Buy now'}
-                </button>
-                {buyStatus && <p className="field__hint">{buyStatus}</p>}
-              </div>
+              {!isPublicVariant && (
+                <div className="market-action">
+                  <strong>Buy</strong>
+                  <label className="field">
+                    <span className="field__label">Listing ID</span>
+                    <input
+                      className="input"
+                      placeholder="Listing ID"
+                      value={buyListingIdInput}
+                      onChange={(event) => {
+                        setBuyListingTouched(true);
+                        setBuyListingIdInput(event.target.value);
+                      }}
+                    />
+                  </label>
+                  {buyTargetListingId !== null && (
+                    <p className="field__hint">
+                      Target listing: #{buyTargetListingId.toString()}
+                    </p>
+                  )}
+                  {buyPriceLabel !== '—' && (
+                    <p className="field__hint">
+                      Post condition: buyer spends exactly {buyPriceLabel} (network fee is extra).
+                    </p>
+                  )}
+                  <button
+                    className="button"
+                    type="button"
+                    onClick={handleBuy}
+                    disabled={!canTransact || buyPending}
+                  >
+                    {buyPending ? 'Buying...' : 'Buy now'}
+                  </button>
+                  {buyStatus && <p className="field__hint">{buyStatus}</p>}
+                </div>
+              )}
 
               <div className="market-action">
                 <strong>Cancel</strong>

@@ -262,7 +262,7 @@ export default function AdminDiagnosticsScreen(props: AdminDiagnosticsScreenProp
               type="button"
               className={`button button--ghost button--mini${logConfig.dedupe ? ' is-active' : ''}`}
               onClick={handleDedupeToggle}
-              title="Only log the first occurrence per tag/message when an ID is present"
+              title="Only log the first occurrence per tag/message (suppresses repeats across IDs)"
             >
               {logConfig.dedupe ? 'Dedupe on' : 'Dedupe off'}
             </button>

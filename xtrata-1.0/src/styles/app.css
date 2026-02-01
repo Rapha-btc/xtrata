@@ -1376,11 +1376,54 @@ p {
   gap: 12px;
   min-height: 0;
   height: 100%;
+  overflow: auto;
+  scrollbar-gutter: stable;
 }
 
 .detail-panel__meta,
 .detail-panel__tools {
   flex: 0 0 auto;
+}
+
+.app-section--fit.wallet .panel__body.detail-panel {
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+
+.wallet .detail-panel__tools {
+  display: grid;
+  gap: 12px;
+}
+
+.wallet-preview {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+}
+
+.wallet-preview__badge {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  border-radius: 999px;
+  background: rgba(194, 65, 12, 0.92);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.2);
+  z-index: 2;
+}
+
+.wallet-preview__badge:hover {
+  background: rgba(194, 65, 12, 1);
+}
+
+.wallet-preview__badge:focus-visible {
+  outline: 2px solid rgba(15, 23, 42, 0.35);
+  outline-offset: 2px;
 }
 
 .detail-panel__preview {

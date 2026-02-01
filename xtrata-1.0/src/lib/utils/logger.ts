@@ -128,20 +128,22 @@ const emitLog = (
 
 const dedupeCache = new Set<string>();
 let lastDedupeState: boolean | null = null;
+const DEDUPE_CACHE_LIMIT = 800;
 
-const getSubjectId = (payload: unknown) => {
-  if (!payload || typeof payload !== 'object') {
-    return null;
-  }
-  const record = payload as Record<string, unknown>;
-  const keys = ['id', 'tokenId', 'listingId', 'chunkIndex', 'index'];
-  for (const key of keys) {
-    const value = record[key];
-    if (value !== undefined && value !== null) {
-      return String(value);
-    }
-  }
-  return null;
+const normalizeMessage = (message: string) => message.replace(/\s+/g, ' ').trim();
+
+const buildDedupeKey = (
+  level: LogLevel,
+  tag: string,
+  message: string,
+  _payload?: unknown
+) => {
+  const parts = [
+    `level:${level}`,
+    `tag:${tag}`,
+    `msg:${normalizeMessage(message)}`
+  ];
+  return parts.join('|');
 };
 
 const shouldSuppressByDedupe = (
@@ -161,15 +163,14 @@ const shouldSuppressByDedupe = (
   if (level === 'debug') {
     return false;
   }
-  const subjectId = getSubjectId(payload);
-  if (!subjectId) {
-    return false;
-  }
-  const key = `${level}:${tag}:${message}`;
+  const key = buildDedupeKey(level, tag, message, payload);
   if (dedupeCache.has(key)) {
     return true;
   }
   dedupeCache.add(key);
+  if (dedupeCache.size > DEDUPE_CACHE_LIMIT) {
+    dedupeCache.clear();
+  }
   return false;
 };
 

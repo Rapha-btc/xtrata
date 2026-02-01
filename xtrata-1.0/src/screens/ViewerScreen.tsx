@@ -9,6 +9,7 @@ import {
 import { showContractCall } from '@stacks/connect';
 import { PostConditionMode } from '@stacks/transactions';
 import { buildTransferCall, createXtrataClient } from '../lib/contract/client';
+import { isReadOnlyBackoffActive } from '../lib/contract/read-only';
 import type { ContractRegistryEntry } from '../lib/contract/registry';
 import { getContractId } from '../lib/contract/config';
 import { buildTransferPostCondition } from '../lib/contract/post-conditions';
@@ -55,8 +56,8 @@ import { formatMicroStx } from '../lib/contract/fees';
 const PAGE_SIZE = 16;
 const REFRESH_INTERVAL_MS = 6_000;
 const REFRESH_WINDOW_MS = 120_000;
-const PREFETCH_PAGE_DELAY_MS = 220;
-const PREFETCH_PAGE_CONCURRENCY = 4;
+const PREFETCH_PAGE_DELAY_MS = 800;
+const PREFETCH_PAGE_CONCURRENCY = 2;
 const RECENT_PAGE_LIMIT = 5;
 const RECENT_PAGE_STORAGE_KEY = 'xtrata.v15.1.viewer.recent-pages';
 const WALLET_LISTINGS_SCAN_LIMIT = 120;
@@ -1118,7 +1119,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
 
   const prefetchTokenSummaries = useCallback(
     async (tokenIds: bigint[], cancelled: () => boolean) => {
-      if (tokenIds.length === 0) {
+      if (tokenIds.length === 0 || isReadOnlyBackoffActive()) {
         return;
       }
       const queue = [...tokenIds];
@@ -1126,6 +1127,9 @@ export default function ViewerScreen(props: ViewerScreenProps) {
         while (queue.length > 0 && !cancelled()) {
           const id = queue.shift();
           if (id === undefined) {
+            return;
+          }
+          if (isReadOnlyBackoffActive()) {
             return;
           }
           await queryClient.prefetchQuery({

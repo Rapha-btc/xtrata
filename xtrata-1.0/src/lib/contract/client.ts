@@ -15,7 +15,13 @@ import { getApiBaseUrls } from '../network/config';
 import type { NetworkType } from '../network/types';
 import type { ContractConfig } from './config';
 import { getContractId } from './config';
-import { callReadOnlyWithRetry } from './read-only';
+import {
+  ReadOnlyBackoffError,
+  callReadOnlyWithRetry,
+  getReadOnlyBackoffMs,
+  noteReadOnlyFailure,
+  noteReadOnlySuccess
+} from './read-only';
 import { resolveContractCapabilities } from './capabilities';
 import {
   parseGetChunk,
@@ -250,11 +256,15 @@ const callReadOnly = async (params: {
     ? params.network
     : [params.network];
   const contractId = getContractId(params.contract);
+  const backoffMs = getReadOnlyBackoffMs();
+  if (backoffMs > 0) {
+    throw new ReadOnlyBackoffError(backoffMs);
+  }
   let lastError: unknown = null;
   for (let index = 0; index < networks.length; index += 1) {
     const activeNetwork = networks[index];
     try {
-      return await callReadOnlyWithRetry({
+      const result = await callReadOnlyWithRetry({
         task: () =>
           params.caller.callReadOnly({
             contract: params.contract,
@@ -267,6 +277,8 @@ const callReadOnly = async (params: {
         contractId,
         retry: params.retry
       });
+      noteReadOnlySuccess();
+      return result;
     } catch (error) {
       lastError = error;
       const hasFallback = index < networks.length - 1;
@@ -283,6 +295,7 @@ const callReadOnly = async (params: {
       break;
     }
   }
+  noteReadOnlyFailure(lastError);
   if (lastError instanceof Error) {
     throw lastError;
   }
