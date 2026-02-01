@@ -265,9 +265,6 @@ const TokenDetails = (props: {
   onToggleCollapse: () => void;
   listing: MarketActivityEvent | null;
   marketContractId: string | null;
-  isMobile: boolean;
-  mobilePanel: 'grid' | 'preview';
-  onRequestGrid: () => void;
 }) => {
   const queryClient = useQueryClient();
   const [chunkInput, setChunkInput] = useState('');
@@ -522,25 +519,12 @@ const TokenDetails = (props: {
           </div>
         )}
         <div className="detail-panel__preview">
-          {props.isMobile && props.mobilePanel === 'preview' && !isWalletView && (
-            <button
-              className="viewer-mobile-back"
-              type="button"
-              onClick={props.onRequestGrid}
-            >
-              Back to grid
-            </button>
-          )}
           <TokenContentPreview
             token={props.token}
             contractId={props.contractId}
             senderAddress={props.senderAddress}
             client={props.client}
             isActiveTab={props.isActiveTab}
-            onRequestViewer={
-              props.isMobile && !isWalletView ? props.onRequestGrid : undefined
-            }
-            viewerLabel={props.isMobile && !isWalletView ? 'Grid' : undefined}
           />
         </div>
         <div className="detail-panel__tools">
@@ -720,7 +704,6 @@ export default function ViewerScreen(props: ViewerScreenProps) {
   const hasWalletTarget = !!resolvedWalletAddress;
   const walletOverrideActive = !!props.walletLookupState.lookupAddress;
   const [mobilePanel, setMobilePanel] = useState<'grid' | 'preview'>('grid');
-  const [isMobile, setIsMobile] = useState(false);
   const [collectionGridReady, setCollectionGridReady] = useState(false);
   const lastTokenQuery = useLastTokenId({
     client,
@@ -892,25 +875,6 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       setCollectionGridReady(false);
     }
   }, [viewScopeKey]);
-
-  const handleMobileGridRequest = useCallback(() => {
-    setMobilePanel('grid');
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    const mediaQuery = window.matchMedia('(max-width: 959px)');
-    const handleChange = () => setIsMobile(mediaQuery.matches);
-    handleChange();
-    if ('addEventListener' in mediaQuery) {
-      mediaQuery.addEventListener('change', handleChange);
-      return () => mediaQuery.removeEventListener('change', handleChange);
-    }
-    mediaQuery.addListener(handleChange);
-    return () => mediaQuery.removeListener(handleChange);
-  }, []);
 
   const collectionTokenIds = useMemo(() => {
     if (lastTokenQuery.data === undefined) {
@@ -1120,10 +1084,13 @@ export default function ViewerScreen(props: ViewerScreenProps) {
   const handleSelectToken = useCallback((id: bigint) => {
     autoSelectRef.current = false;
     setSelectedTokenId(id);
-    if (isMobile) {
+    if (
+      typeof window !== 'undefined' &&
+      window.matchMedia('(max-width: 959px)').matches
+    ) {
       setMobilePanel('preview');
     }
-  }, [isMobile]);
+  }, []);
 
   useEffect(() => {
     lastTokenIdRef.current = lastTokenQuery.data;
@@ -1867,9 +1834,6 @@ export default function ViewerScreen(props: ViewerScreenProps) {
         onToggleCollapse={props.onToggleCollapse}
         listing={selectedListing}
         marketContractId={marketContractIdLabel}
-        isMobile={isMobile}
-        mobilePanel={mobilePanel}
-        onRequestGrid={handleMobileGridRequest}
       />
     </section>
   );

@@ -54,8 +54,6 @@ type TokenContentPreviewProps = {
   senderAddress: string;
   client: XtrataClient;
   isActiveTab?: boolean;
-  onRequestViewer?: () => void;
-  viewerLabel?: string;
 };
 
 const STREAM_TARGET_SECONDS = 10;
@@ -1403,12 +1401,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     !loadRequested;
   const fullscreenSource =
     contentUrl || svgPreview || tokenUriPreview || directTokenUri;
-  const viewerLabel = props.viewerLabel ?? 'Viewer';
   const handleBackToViewer = () => {
-    if (props.onRequestViewer) {
-      props.onRequestViewer();
-      return;
-    }
     if (typeof document === 'undefined') {
       return;
     }
@@ -1747,7 +1740,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
               className="button button--ghost button--mini"
               onClick={handleBackToViewer}
             >
-              {viewerLabel}
+              Viewer
             </button>
           </div>
         </div>

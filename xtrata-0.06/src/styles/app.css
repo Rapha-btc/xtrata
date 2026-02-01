@@ -566,36 +566,6 @@ p {
   .viewer[data-mobile-view="preview"] > .panel:first-of-type {
     display: none;
   }
-
-  .viewer .detail-panel__preview {
-    position: relative;
-  }
-
-  .viewer-mobile-back {
-    position: absolute;
-    top: 12px;
-    left: 12px;
-    z-index: 3;
-    border-radius: 999px;
-    border: 1px solid rgba(15, 23, 42, 0.16);
-    background: rgba(255, 255, 255, 0.92);
-    color: var(--ink);
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: 6px 12px;
-    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.15);
-  }
-
-  .viewer-mobile-back:active {
-    transform: translateY(1px);
-  }
-
-  .viewer .grid-panel .square-frame .square-frame__content,
-  .wallet .grid-panel .square-frame .square-frame__content {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 1 / 1;
-  }
 }
 
 .field {
