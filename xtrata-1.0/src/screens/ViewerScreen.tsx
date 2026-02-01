@@ -16,9 +16,22 @@ import { getNetworkMismatch } from '../lib/network/guard';
 import { toStacksNetwork } from '../lib/network/stacks';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  buildActiveListingIndex,
+  buildMarketListingKey,
+  loadMarketActivity
+} from '../lib/market/indexer';
+import { MARKET_REGISTRY, getMarketContractId } from '../lib/market/registry';
+import {
+  createMarketSelectionStore,
+  MARKET_SELECTION_EVENT
+} from '../lib/market/selection';
+import { parseMarketContractId } from '../lib/market/contract';
+import type { MarketActivityEvent } from '../lib/market/types';
+import {
   getChunkKey,
   getDependenciesKey,
   getTokenSummaryKey,
+  getTokenThumbnailKey,
   getViewerKey,
   fetchTokenSummary,
   useLastTokenId,
@@ -31,6 +44,7 @@ import { bytesToHex } from '../lib/utils/encoding';
 import TokenContentPreview from '../components/TokenContentPreview';
 import TokenCardMedia from '../components/TokenCardMedia';
 import { getMediaKind } from '../lib/viewer/content';
+import { loadInscriptionThumbnailFromCache } from '../lib/viewer/cache';
 import { logInfo } from '../lib/utils/logger';
 import { getTransferValidationMessage, validateTransferRequest } from '../lib/wallet/transfer';
 import type { WalletSession } from '../lib/wallet/types';
@@ -42,8 +56,12 @@ const REFRESH_INTERVAL_MS = 6_000;
 const REFRESH_WINDOW_MS = 120_000;
 const PREFETCH_PAGE_DELAY_MS = 220;
 const PREFETCH_PAGE_CONCURRENCY = 4;
+const RECENT_PAGE_LIMIT = 5;
+const RECENT_PAGE_STORAGE_KEY = 'xtrata.v15.1.viewer.recent-pages';
 
 export type ViewerMode = 'collection' | 'wallet';
+
+const marketSelectionStore = createMarketSelectionStore();
 
 type ViewerScreenProps = {
   contract: ContractRegistryEntry;
@@ -81,9 +99,76 @@ const getMediaLabel = (mimeType: string | null | undefined) => {
   }
 };
 
+type RecentPagesRecord = Record<
+  string,
+  {
+    pages: string[][];
+    updatedAt: number;
+  }
+>;
+
+const loadRecentPages = (scopeKey: string) => {
+  if (typeof window === 'undefined') {
+    return [] as string[][];
+  }
+  try {
+    const raw = window.localStorage.getItem(RECENT_PAGE_STORAGE_KEY);
+    if (!raw) {
+      return [];
+    }
+    const parsed = JSON.parse(raw) as RecentPagesRecord;
+    return parsed[scopeKey]?.pages ?? [];
+  } catch (error) {
+    return [];
+  }
+};
+
+const saveRecentPage = (scopeKey: string, ids: bigint[]) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  if (ids.length === 0) {
+    return;
+  }
+  const page = ids.map((id) => id.toString());
+  try {
+    const raw = window.localStorage.getItem(RECENT_PAGE_STORAGE_KEY);
+    const parsed = raw ? (JSON.parse(raw) as RecentPagesRecord) : {};
+    const existing = parsed[scopeKey]?.pages ?? [];
+    const pageKey = page.join(',');
+    const filtered = existing.filter((item) => item.join(',') !== pageKey);
+    const nextPages = [page, ...filtered].slice(0, RECENT_PAGE_LIMIT);
+    parsed[scopeKey] = {
+      pages: nextPages,
+      updatedAt: Date.now()
+    };
+    window.localStorage.setItem(
+      RECENT_PAGE_STORAGE_KEY,
+      JSON.stringify(parsed)
+    );
+  } catch (error) {
+    // ignore storage errors
+  }
+};
+
+const parseStoredIds = (pages: string[][]) => {
+  const ids: bigint[] = [];
+  pages.forEach((page) => {
+    page.forEach((value) => {
+      try {
+        ids.push(BigInt(value));
+      } catch (error) {
+        return;
+      }
+    });
+  });
+  return ids;
+};
+
 const TokenCard = (props: {
   token: TokenSummary;
   isSelected: boolean;
+  isListed: boolean;
   onSelect: (id: bigint) => void;
   client: ReturnType<typeof createXtrataClient>;
   senderAddress: string;
@@ -99,6 +184,15 @@ const TokenCard = (props: {
       className={`token-card${props.isSelected ? ' token-card--active' : ''}`}
       onClick={() => props.onSelect(props.token.id)}
     >
+      {props.isListed && (
+        <span
+          className="token-card__badge token-card__badge--listed"
+          title="Listed for sale"
+          aria-hidden="true"
+        >
+          Listed
+        </span>
+      )}
       <div className="token-card__header" aria-hidden="true">
         <span className="token-card__id">#{props.token.id.toString()}</span>
       </div>
@@ -546,16 +640,58 @@ export default function ViewerScreen(props: ViewerScreenProps) {
   );
   const queryClient = useQueryClient();
   const contractId = getContractId(props.contract);
+  const defaultMarketId = getMarketContractId(MARKET_REGISTRY[0]);
+  const [marketContractId, setMarketContractId] = useState(
+    () => marketSelectionStore.load() ?? defaultMarketId
+  );
   const isWalletView = props.mode === 'wallet';
   const walletAddress = props.walletSession.address ?? null;
   const resolvedWalletAddress = props.walletLookupState.resolvedAddress;
   const hasWalletTarget = !!resolvedWalletAddress;
   const walletOverrideActive = !!props.walletLookupState.lookupAddress;
   const [mobilePanel, setMobilePanel] = useState<'grid' | 'preview'>('grid');
+  const [collectionGridReady, setCollectionGridReady] = useState(false);
   const lastTokenQuery = useLastTokenId({
     client,
     senderAddress: props.senderAddress,
     enabled: props.isActiveTab
+  });
+
+  useEffect(() => {
+    if (!marketSelectionStore.load()) {
+      marketSelectionStore.save(defaultMarketId);
+    }
+  }, [defaultMarketId]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const handleSelection = () => {
+      setMarketContractId(marketSelectionStore.load() ?? defaultMarketId);
+    };
+    window.addEventListener(MARKET_SELECTION_EVENT, handleSelection);
+    return () => {
+      window.removeEventListener(MARKET_SELECTION_EVENT, handleSelection);
+    };
+  }, [defaultMarketId]);
+
+  const parsedMarket = useMemo(
+    () => parseMarketContractId(marketContractId),
+    [marketContractId]
+  );
+  const marketContract = parsedMarket.config;
+  const marketContractIdLabel = marketContract ? getContractId(marketContract) : null;
+  const marketNetworkMismatch = marketContract
+    ? marketContract.network !== props.contract.network
+    : false;
+
+  const marketActivityQuery = useQuery({
+    queryKey: ['market', marketContractIdLabel, 'activity'],
+    enabled:
+      !!marketContract && !marketNetworkMismatch && props.isActiveTab,
+    queryFn: () => loadMarketActivity({ contract: marketContract! }),
+    staleTime: 30_000
   });
   const [pageIndex, setPageIndex] = useState(0);
   const [selectedTokenId, setSelectedTokenId] = useState<bigint | null>(null);
@@ -619,9 +755,9 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       viewScopeRef.current = viewScopeKey;
       initialPageSetRef.current = false;
       autoSelectRef.current = true;
-      setSelectedTokenId(null);
       setPageIndex(0);
       setMobilePanel('grid');
+      setCollectionGridReady(false);
     }
   }, [viewScopeKey]);
 
@@ -638,7 +774,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       client,
       senderAddress: props.senderAddress,
       tokenIds: collectionTokenIds,
-      enabled: props.isActiveTab && !isWalletView
+      enabled: props.isActiveTab && !isWalletView && collectionGridReady
     });
 
   const tokenIds = collectionIds;
@@ -688,6 +824,32 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     walletQueries.length > 0 &&
     walletQueries.every((query) => !query.isLoading);
 
+  const activeListingIndex = useMemo(() => {
+    if (!marketActivityQuery.data || !marketContractIdLabel || marketNetworkMismatch) {
+      return new Map<string, MarketActivityEvent>();
+    }
+    return buildActiveListingIndex(marketActivityQuery.data.events, contractId);
+  }, [
+    marketActivityQuery.data,
+    marketContractIdLabel,
+    marketNetworkMismatch,
+    contractId
+  ]);
+
+  const isTokenListed = useCallback(
+    (token: TokenSummary | null) => {
+      if (!token || !marketContractIdLabel) {
+        return false;
+      }
+      if (token.owner !== marketContractIdLabel) {
+        return false;
+      }
+      const key = buildMarketListingKey(contractId, token.id);
+      return activeListingIndex.has(key);
+    },
+    [activeListingIndex, marketContractIdLabel, contractId]
+  );
+
   const walletMaxPage = useMemo(() => {
     if (ownedTokens.length === 0) {
       return 0;
@@ -707,6 +869,23 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     const start = activePageIndex * PAGE_SIZE;
     return ownedTokens.slice(start, start + PAGE_SIZE);
   }, [isWalletView, ownedTokens, activePageIndex, tokenSummaries]);
+
+  const currentPageIds = useMemo(() => {
+    if (isWalletView) {
+      return pageTokens.map((token) => token.id);
+    }
+    return pageTokenIds;
+  }, [isWalletView, pageTokenIds, pageTokens]);
+
+  useEffect(() => {
+    if (!props.isActiveTab) {
+      return;
+    }
+    if (currentPageIds.length === 0) {
+      return;
+    }
+    saveRecentPage(viewScopeKey, currentPageIds);
+  }, [currentPageIds, props.isActiveTab, viewScopeKey]);
 
   useEffect(() => {
     if (isWalletView) {
@@ -822,6 +1001,83 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     [client, contractId, props.senderAddress, queryClient]
   );
 
+  const warmThumbnailCache = useCallback(
+    async (tokenIds: bigint[], cancelled: () => boolean) => {
+      if (tokenIds.length === 0) {
+        return;
+      }
+      const queue = [...tokenIds];
+      const runWorker = async () => {
+        while (queue.length > 0 && !cancelled()) {
+          const id = queue.shift();
+          if (id === undefined) {
+            return;
+          }
+          const cached = queryClient.getQueryData(
+            getTokenThumbnailKey(contractId, id)
+          ) as { data?: Uint8Array | null } | null | undefined;
+          if (cached?.data && cached.data.length > 0) {
+            continue;
+          }
+          const result = await loadInscriptionThumbnailFromCache(contractId, id);
+          if (cancelled()) {
+            return;
+          }
+          if (result?.data && result.data.length > 0) {
+            queryClient.setQueryData(
+              getTokenThumbnailKey(contractId, id),
+              result
+            );
+          }
+        }
+      };
+      const workers = Array.from(
+        { length: Math.min(PREFETCH_PAGE_CONCURRENCY, queue.length) },
+        () => runWorker()
+      );
+      await Promise.all(workers);
+    },
+    [contractId, queryClient]
+  );
+
+  useEffect(() => {
+    if (!props.isActiveTab) {
+      return;
+    }
+    const pages = loadRecentPages(viewScopeKey);
+    if (pages.length === 0) {
+      return;
+    }
+    const ids = parseStoredIds(pages);
+    if (ids.length === 0) {
+      return;
+    }
+    const uniqueIds = Array.from(
+      new Set(ids.map((id) => id.toString()))
+    ).map((value) => BigInt(value));
+    let cancelled = false;
+    const isCancelled = () => cancelled;
+    void warmThumbnailCache(uniqueIds, isCancelled);
+    return () => {
+      cancelled = true;
+    };
+  }, [props.isActiveTab, viewScopeKey, warmThumbnailCache]);
+
+  useEffect(() => {
+    if (!props.isActiveTab) {
+      return;
+    }
+    if (currentPageIds.length === 0) {
+      return;
+    }
+    let cancelled = false;
+    const isCancelled = () => cancelled;
+    void warmThumbnailCache(currentPageIds, isCancelled);
+    return () => {
+      cancelled = true;
+    };
+  }, [currentPageIds, props.isActiveTab, warmThumbnailCache]);
+
 
   useEffect(() => {
     if (props.focusKey === undefined) {
@@ -855,7 +1111,9 @@ export default function ViewerScreen(props: ViewerScreenProps) {
   useEffect(() => {
     if (isWalletView) {
       if (pageTokens.length === 0) {
-        setSelectedTokenId(null);
+        if (walletTokenListSettled && ownedTokens.length === 0) {
+          setSelectedTokenId(null);
+        }
         return;
       }
       const pageTargetId = pageTokens[pageTokens.length - 1]?.id ?? null;
@@ -896,7 +1154,14 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       }
     }
     setSelectedTokenId(targetId);
-  }, [isWalletView, pageTokens, pageTokenIds, selectedTokenId]);
+  }, [
+    isWalletView,
+    pageTokens,
+    pageTokenIds,
+    selectedTokenId,
+    walletTokenListSettled,
+    ownedTokens.length
+  ]);
 
 
   useEffect(() => {
@@ -979,28 +1244,26 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     if (!props.isActiveTab) {
       return;
     }
+    if (collectionGridReady) {
+      return;
+    }
     if (lastTokenQuery.data === undefined) {
       return;
     }
-    void queryClient.prefetchQuery({
-      queryKey: getTokenSummaryKey(contractId, lastTokenQuery.data),
-      queryFn: () =>
-        fetchTokenSummary({
-          client,
-          id: lastTokenQuery.data as bigint,
-          senderAddress: props.senderAddress
-        }),
-      staleTime: 300_000,
-      refetchOnWindowFocus: false
-    });
+    if (selectedTokenId !== lastTokenQuery.data) {
+      return;
+    }
+    if (selectedTokenQuery.data || selectedTokenQuery.isError) {
+      setCollectionGridReady(true);
+    }
   }, [
-    client,
-    contractId,
+    collectionGridReady,
     isWalletView,
     lastTokenQuery.data,
     props.isActiveTab,
-    props.senderAddress,
-    queryClient
+    selectedTokenId,
+    selectedTokenQuery.data,
+    selectedTokenQuery.isError
   ]);
 
   useEffect(() => {
@@ -1030,8 +1293,8 @@ export default function ViewerScreen(props: ViewerScreenProps) {
         pageIds.length > 0
           ? `${pageIds[0].toString()}–${pageIds[pageIds.length - 1].toString()}`
           : 'none',
-      prefetchStartPage: collectionMaxPage,
-      prefetchDirection: 'descending'
+      prefetchTargetPage: activePageIndex > 0 ? activePageIndex - 1 : null,
+      prefetchStrategy: 'previous-page'
     });
   }, [
     contractId,
@@ -1043,6 +1306,10 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     pageIndex
   ]);
 
+  const collectionPageSettled =
+    collectionQueries.length > 0 &&
+    collectionQueries.every((query) => !query.isLoading);
+
   useEffect(() => {
     if (isWalletView) {
       return;
@@ -1050,10 +1317,25 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     if (!props.isActiveTab) {
       return;
     }
+    if (!collectionGridReady) {
+      return;
+    }
     if (lastTokenQuery.data === undefined) {
       return;
     }
-    const scopeKey = `${contractId}:${lastTokenQuery.data.toString()}`;
+    if (!collectionPageSettled) {
+      return;
+    }
+    const prevPage = activePageIndex - 1;
+    if (prevPage < 0) {
+      return;
+    }
+    const lastId = lastTokenQuery.data as bigint;
+    const pageIds = buildTokenPage(lastId, prevPage, PAGE_SIZE);
+    if (pageIds.length === 0) {
+      return;
+    }
+    const scopeKey = `${contractId}:${lastId.toString()}:${prevPage}`;
     if (prefetchScopeRef.current === scopeKey) {
       return;
     }
@@ -1061,32 +1343,20 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     let cancelled = false;
     const isCancelled = () => cancelled;
     const run = async () => {
-      const lastId = lastTokenQuery.data as bigint;
-      for (let page = collectionMaxPage; page >= 0; page -= 1) {
-        if (cancelled) {
-          return;
-        }
-        const pageIds = buildTokenPage(lastId, page, PAGE_SIZE);
-        if (pageIds.length === 0) {
-          continue;
-        }
-        const ordered =
-          page === collectionMaxPage ? [...pageIds].reverse() : [...pageIds];
-        await prefetchTokenSummaries(ordered, isCancelled);
-        if (cancelled) {
-          return;
-        }
-        await new Promise((resolve) =>
-          setTimeout(resolve, PREFETCH_PAGE_DELAY_MS)
-        );
-      }
+      await new Promise((resolve) =>
+        setTimeout(resolve, PREFETCH_PAGE_DELAY_MS)
+      );
+      const ordered = [...pageIds].reverse();
+      await prefetchTokenSummaries(ordered, isCancelled);
     };
     void run();
     return () => {
       cancelled = true;
     };
   }, [
-    collectionMaxPage,
+    activePageIndex,
+    collectionGridReady,
+    collectionPageSettled,
     contractId,
     isWalletView,
     lastTokenQuery.data,
@@ -1290,6 +1560,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
                         key={token.id.toString()}
                         token={token}
                         isSelected={token.id === selectedTokenId}
+                        isListed={isTokenListed(token)}
                         onSelect={handleSelectToken}
                         client={client}
                         senderAddress={props.senderAddress}
@@ -1312,6 +1583,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
                             key={token.id.toString()}
                             token={token}
                             isSelected={token.id === selectedTokenId}
+                            isListed={isTokenListed(token)}
                             onSelect={handleSelectToken}
                             client={client}
                             senderAddress={props.senderAddress}

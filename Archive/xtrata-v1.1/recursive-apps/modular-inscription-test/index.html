@@ -1,0 +1,247 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Recursive Loader</title>
+</head>
+<body>
+  <div id="app">Loading...</div>
+  <pre id="log" style="font: 12px/1.4 monospace; white-space: pre-wrap; background: #f7f7f7; padding: 8px; border: 1px solid #ddd; border-radius: 6px;"></pre>
+
+  <script>
+    if (window.__recursiveLoaderStarted) {
+      console.warn("Recursive loader already started; skipping duplicate run.");
+    } else {
+      window.__recursiveLoaderStarted = true;
+
+      const CORE_NETWORKS = ["testnet", "mainnet"];
+      const PROXY_BASE = `${window.location.origin}/hiro-proxy`;
+
+      const CONTRACT_ADDRESS = "ST10W2EEM757922QTVDZZ5CSEW55JEFNN33V2E7YA";
+      const CONTRACT_NAME = "xtrata-v1-1-0";
+
+      const CSS_ID  = 6;
+      const JS_ID   = 4;
+      const DATA_ID = 5;
+
+      const MAX_CHUNKS_FALLBACK = 8; // modules are tiny; keep this low
+      const RATE_LIMIT_RETRIES = 2;
+      const RATE_LIMIT_DELAY_MS = 1200;
+
+      const startMs = performance.now();
+      const logEl = document.getElementById("log");
+      const pad = (n, w=4) => String(n).padStart(w, " ");
+      const elapsed = () => pad(Math.round(performance.now() - startMs));
+
+      const summary = {
+        css: { id: CSS_ID, bytes: 0, chunks: 0, ms: 0 },
+        js: { id: JS_ID, bytes: 0, chunks: 0, ms: 0 },
+        data: { id: DATA_ID, bytes: 0, chunks: 0, ms: 0 },
+        network: null
+      };
+
+      function log(line) {
+        console.log(line);
+        if (logEl) logEl.textContent += line + "";
+      }
+
+      function blank() { log(""); }
+      function h1(title) { blank(); log(`# ${title}`); blank(); }
+      function h2(title) { blank(); log(`## ${title}`); }
+      function item(label, value) { log(`- **${label}:** ${value}`); }
+      function note(text) { log(`  - ${text}`); }
+      function tline(stage, msg) { log(`  - [${stage}] +${elapsed()}ms — ${msg}`); }
+
+      function uintToHex(u) {
+        const hex = BigInt(u).toString(16).padStart(32, "0");
+        return "0x01" + hex;
+      }
+
+      function buildProxyUrl(network, fn) {
+        return `${PROXY_BASE}/${network}/v2/contracts/call-read/${CONTRACT_ADDRESS}/${CONTRACT_NAME}/${fn}`;
+      }
+
+      async function safeJson(res) {
+        const text = await res.text();
+        try {
+          return JSON.parse(text);
+        } catch (err) {
+          const snippet = text.slice(0, 120);
+          throw new Error(`Non-JSON response: ${snippet}`);
+        }
+      }
+
+      async function callReadOnly(network, fn, args) {
+        const url = buildProxyUrl(network, fn);
+        tline("CALL", `${fn} (${network})`);
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sender: CONTRACT_ADDRESS,
+            arguments: args
+          })
+        });
+        const json = await safeJson(res);
+        if (!json || !json.okay) {
+          const reason = json && json.cause ? json.cause : "unknown";
+          throw new Error(`Read-only failed: ${reason}`);
+        }
+        return json.result;
+      }
+
+      async function callReadOnlyWithFallback(fn, args) {
+        let lastError = null;
+        for (const network of CORE_NETWORKS) {
+          for (let attempt = 0; attempt <= RATE_LIMIT_RETRIES; attempt++) {
+            try {
+              const result = await callReadOnly(network, fn, args);
+              summary.network = summary.network || network;
+              return { result, network };
+            } catch (err) {
+              lastError = err;
+              const isRateLimit = /Per-minute|rate limit|Non-JSON response/i.test(err.message);
+              tline("FAIL", `${fn} ${network} (attempt ${attempt}) ${err.message}`);
+              if (isRateLimit && attempt < RATE_LIMIT_RETRIES) {
+                await new Promise(r => setTimeout(r, RATE_LIMIT_DELAY_MS * (attempt + 1)));
+                continue;
+              }
+              break;
+            }
+          }
+        }
+        throw lastError || new Error("Read-only failed on all networks");
+      }
+
+      function hexToBytes(hex) {
+        const clean = hex.startsWith("0x") ? hex.slice(2) : hex;
+        const out = new Uint8Array(clean.length / 2);
+        for (let i = 0; i < clean.length; i += 2) {
+          out[i / 2] = parseInt(clean.slice(i, i + 2), 16);
+        }
+        return out;
+      }
+
+      function bytesToHex(bytes) {
+        return Array.from(bytes).map(b => b.toString(16).padStart(2, "0")).join("");
+      }
+
+      function clarityValueToBytes(hex) {
+        const bytes = hexToBytes(hex);
+        if (!bytes.length) return bytes;
+
+        if (bytes[0] === 0x08) return new Uint8Array(); // response err
+        if (bytes[0] === 0x07) {
+          const innerHex = "0x" + bytesToHex(bytes.slice(1));
+          return clarityValueToBytes(innerHex);
+        }
+        if (bytes[0] === 0x09) return new Uint8Array(); // optional none
+        if (bytes[0] === 0x0a) {
+          const innerHex = "0x" + bytesToHex(bytes.slice(1));
+          return clarityValueToBytes(innerHex);
+        }
+        if (bytes[0] !== 0x02) return new Uint8Array(); // unknown type
+
+        const len = (bytes[1] << 24) | (bytes[2] << 16) | (bytes[3] << 8) | bytes[4];
+        return bytes.slice(5, 5 + len);
+      }
+
+      async function fetchChunk(id, index) {
+        const { result, network } = await callReadOnlyWithFallback("get-chunk", [uintToHex(id), uintToHex(index)]);
+        const bytes = clarityValueToBytes(result);
+        tline("CHUNK", `id ${id} idx ${index} bytes=${bytes.length} (${network})`);
+        return bytes;
+      }
+
+      async function fetchInscriptionBytes(id, label, maxChunks = MAX_CHUNKS_FALLBACK) {
+        h2(`Module ${label} (id ${id})`);
+        const start = performance.now();
+        const chunks = [];
+        for (let i = 0; i < maxChunks; i++) {
+          try {
+            const chunk = await fetchChunk(id, i);
+            if (!chunk || !chunk.length) {
+              tline("STOP", `id ${id} idx ${i} (empty chunk)`);
+              break;
+            }
+            chunks.push(chunk);
+          } catch (err) {
+            tline("ERR", `id ${id} idx ${i} ${err.message}`);
+            break;
+          }
+        }
+        const total = chunks.reduce((n, c) => n + c.length, 0);
+        const out = new Uint8Array(total);
+        let offset = 0;
+        chunks.forEach(c => { out.set(c, offset); offset += c.length; });
+        const ms = Math.round(performance.now() - start);
+        tline("ASSEMBLE", `${label} chunks=${chunks.length} bytes=${total} (${ms}ms)`);
+        if (chunks.length === maxChunks) tline("WARN", `${label} reached maxChunks cap ${maxChunks}`);
+        return { bytes: out, chunks: chunks.length, total, ms };
+      }
+
+      async function fetchText(id, label) {
+        const result = await fetchInscriptionBytes(id, label);
+        return {
+          text: new TextDecoder().decode(result.bytes),
+          stats: result
+        };
+      }
+
+      async function load() {
+        h1("Recursive Loader Log");
+        h2("Init");
+        item("Contract", `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`);
+        item("Proxy", PROXY_BASE);
+        item("Networks", CORE_NETWORKS.join(" → "));
+        item("Modules", `CSS=${CSS_ID}, JS=${JS_ID}, DATA=${DATA_ID}`);
+
+        const css = await fetchText(CSS_ID, "CSS");
+        if (!css.text.trim()) throw new Error("CSS module empty or missing.");
+        summary.css.bytes = css.stats.total; summary.css.chunks = css.stats.chunks; summary.css.ms = css.stats.ms;
+        tline("OK", `css loaded (${css.stats.total} bytes)`);
+
+        const js = await fetchText(JS_ID, "JS");
+        if (!js.text.trim()) throw new Error("JS module empty or missing.");
+        summary.js.bytes = js.stats.total; summary.js.chunks = js.stats.chunks; summary.js.ms = js.stats.ms;
+        tline("OK", `js loaded (${js.stats.total} bytes)`);
+
+        const data = await fetchText(DATA_ID, "DATA");
+        if (!data.text.trim()) throw new Error("DATA module empty or missing.");
+        summary.data.bytes = data.stats.total; summary.data.chunks = data.stats.chunks; summary.data.ms = data.stats.ms;
+        tline("OK", `data loaded (${data.stats.total} bytes)`);
+        note(`preview: ${data.text.slice(0, 120).replace(/[\n\r]/g, " ")}`);
+
+        h2("Execute");
+        const style = document.createElement("style");
+        style.textContent = css.text;
+        document.head.appendChild(style);
+
+        const blob = new Blob([js.text], { type: "text/javascript" });
+        const url = URL.createObjectURL(blob);
+        const mod = await import(url);
+
+        const dataObj = JSON.parse(data.text);
+        const root = document.getElementById("app");
+        root.textContent = "";
+        mod.startApp(root, dataObj);
+        tline("DONE", "app started");
+
+        h2("Summary");
+        item("Network used", summary.network || "unknown");
+        item("CSS", `${summary.css.bytes} bytes / ${summary.css.chunks} chunk(s) / ${summary.css.ms}ms`);
+        item("JS", `${summary.js.bytes} bytes / ${summary.js.chunks} chunk(s) / ${summary.js.ms}ms`);
+        item("DATA", `${summary.data.bytes} bytes / ${summary.data.chunks} chunk(s) / ${summary.data.ms}ms`);
+        item("Total time", `~${Math.round(performance.now() - startMs)}ms`);
+      }
+
+      load().catch(err => {
+        h2("Error");
+        item("Message", err.message || String(err));
+        const el = document.getElementById("app");
+        if (el) el.textContent = "Error: " + (err.message || String(err));
+      });
+    }
+  </script>
+</body>
+</html>

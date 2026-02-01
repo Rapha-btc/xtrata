@@ -1,0 +1,45 @@
+{
+  "name": "xtrata-v15-1",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "contracts:sync": "node scripts/contract-variants.mjs sync",
+    "contracts:verify": "node scripts/contract-variants.mjs verify",
+    "test:contracts": "npm run contracts:sync && npm run contracts:verify",
+    "test:app": "vitest run",
+    "test:clarinet": "npm --prefix contracts/clarinet test",
+    "test:report": "npm --prefix contracts/clarinet run test:report",
+    "test:watch": "vitest",
+    "lint": "eslint . --max-warnings=0",
+    "format": "prettier --write .",
+    "test": "npm run test:contracts && npm run test:app && npm run test:clarinet"
+  },
+  "dependencies": {
+    "@noble/hashes": "^1.4.0",
+    "@stacks/connect": "^7.8.0",
+    "@stacks/network": "^6.11.0",
+    "@stacks/transactions": "^6.11.0",
+    "@tanstack/react-query": "^5.40.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.12",
+    "@types/react": "^18.3.2",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-react": "^7.34.1",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "eslint-plugin-react-refresh": "^0.4.6",
+    "prettier": "^3.2.5",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.11",
+    "vitest": "^1.6.0"
+  }
+}

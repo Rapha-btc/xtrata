@@ -8,70 +8,48 @@ import {
   FungibleConditionCode,
   PostConditionMode,
   type PostCondition,
-  uintCV,
-  validateStacksAddress
+  uintCV
 } from '@stacks/transactions';
 import type { ContractRegistryEntry } from '../lib/contract/registry';
 import type { WalletSession } from '../lib/wallet/types';
-import type { ContractConfig } from '../lib/contract/config';
 import { getContractId } from '../lib/contract/config';
 import {
   buildContractTransferPostCondition,
   buildTransferPostCondition
 } from '../lib/contract/post-conditions';
 import { formatMicroStx, MICROSTX_PER_STX } from '../lib/contract/fees';
-import { getNetworkMismatch, getNetworkFromAddress } from '../lib/network/guard';
-import { getApiBaseUrl } from '../lib/network/config';
+import { getNetworkMismatch } from '../lib/network/guard';
 import { createXtrataClient } from '../lib/contract/client';
 import { createMarketClient } from '../lib/market/client';
+import { loadMarketActivity } from '../lib/market/indexer';
 import { MARKET_REGISTRY, getMarketContractId } from '../lib/market/registry';
 import { createMarketSelectionStore } from '../lib/market/selection';
+import { parseMarketContractId } from '../lib/market/contract';
 import { logInfo, logWarn } from '../lib/utils/logger';
+import type { MarketActivityEvent, MarketListing } from '../lib/market/types';
+import { useTokenSummaries } from '../lib/viewer/queries';
+import type { TokenSummary } from '../lib/viewer/types';
+import TokenCardMedia from '../components/TokenCardMedia';
 
-const CONTRACT_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9-_]{0,127}$/;
-const MIN_FEE_BUFFER_MICROSTX = 10_000n;
-const BASIS_POINTS = 10_000n;
+const ACTIVE_LISTINGS_LIMIT = 12;
+const ACTIVE_LISTINGS_SCAN_LIMIT = 60;
+const ACTIVE_LISTINGS_SCAN_STEP = 20;
+const ACTIVE_LISTINGS_SCAN_MAX = 200;
+const RECENT_ACTIVITY_LIMIT = 12;
 
 const marketSelectionStore = createMarketSelectionStore();
 
-type MarketScreenProps = {
+export type MarketScreenProps = {
   contract: ContractRegistryEntry;
   walletSession: WalletSession;
   collapsed: boolean;
   onToggleCollapse: () => void;
+  variant?: 'full' | 'public';
+  marketContractIdOverride?: string;
 };
 
 type TxPayload = {
   txId: string;
-};
-
-type ParsedMarketContract = {
-  config: ContractConfig | null;
-  error: string | null;
-};
-
-const parseMarketContractId = (value: string): ParsedMarketContract => {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return { config: null, error: 'Set a market contract ID first.' };
-  }
-  const dotIndex = trimmed.indexOf('.');
-  if (dotIndex <= 0 || dotIndex === trimmed.length - 1) {
-    return { config: null, error: 'Use format ADDRESS.CONTRACT-NAME.' };
-  }
-  const address = trimmed.slice(0, dotIndex).trim();
-  const contractName = trimmed.slice(dotIndex + 1).trim();
-  if (!validateStacksAddress(address)) {
-    return { config: null, error: 'Invalid Stacks address.' };
-  }
-  if (!CONTRACT_NAME_PATTERN.test(contractName)) {
-    return { config: null, error: 'Invalid contract name.' };
-  }
-  const network = getNetworkFromAddress(address);
-  if (!network) {
-    return { config: null, error: 'Could not infer network from address.' };
-  }
-  return { config: { address, contractName, network }, error: null };
 };
 
 const parseUintInput = (value: string) => {
@@ -101,26 +79,25 @@ const parseStxInput = (value: string) => {
   return parsed;
 };
 
-const fetchStxBalance = async (address: string, network: NetworkType) => {
-  const base = getApiBaseUrl(network);
-  const response = await fetch(`${base}/v2/accounts/${address}?proof=0`);
-  if (!response.ok) {
-    throw new Error('Balance fetch failed');
-  }
-  const json = (await response.json()) as { balance?: string };
-  const raw = json.balance ?? '0';
-  return BigInt(raw);
-};
-
 export default function MarketScreen(props: MarketScreenProps) {
-  const defaultMarketId = getMarketContractId(MARKET_REGISTRY[0]);
+  const isPublicVariant = props.variant === 'public';
+  const defaultMarketId =
+    props.marketContractIdOverride ?? getMarketContractId(MARKET_REGISTRY[0]);
+  const initialMarketId = isPublicVariant
+    ? defaultMarketId
+    : marketSelectionStore.load() ?? defaultMarketId;
   const [marketInput, setMarketInput] = useState(
-    () => marketSelectionStore.load() ?? defaultMarketId
+    () => initialMarketId
   );
   const [marketContractId, setMarketContractId] = useState(
-    () => marketSelectionStore.load() ?? defaultMarketId
+    () => initialMarketId
   );
   const [statusKey, setStatusKey] = useState(0);
+  const [activityKey, setActivityKey] = useState(0);
+  const [activeListingsKey, setActiveListingsKey] = useState(0);
+  const [activeListingsScanLimit, setActiveListingsScanLimit] = useState(
+    ACTIVE_LISTINGS_SCAN_LIMIT
+  );
   const [listingIdInput, setListingIdInput] = useState('');
   const [tokenLookupInput, setTokenLookupInput] = useState('');
   const [listingLookupId, setListingLookupId] = useState<bigint | null>(null);
@@ -137,15 +114,21 @@ export default function MarketScreen(props: MarketScreenProps) {
   const [listPending, setListPending] = useState(false);
   const [buyPending, setBuyPending] = useState(false);
   const [cancelPending, setCancelPending] = useState(false);
-  const [preflightKey, setPreflightKey] = useState(0);
-  const [preflightListingId, setPreflightListingId] = useState<bigint | null>(null);
-  const [preflightStatus, setPreflightStatus] = useState<string | null>(null);
 
   useEffect(() => {
+    if (isPublicVariant) {
+      if (marketContractId !== defaultMarketId) {
+        setMarketContractId(defaultMarketId);
+      }
+      if (marketInput !== defaultMarketId) {
+        setMarketInput(defaultMarketId);
+      }
+      return;
+    }
     if (!marketSelectionStore.load()) {
       marketSelectionStore.save(defaultMarketId);
     }
-  }, [defaultMarketId]);
+  }, [defaultMarketId, isPublicVariant, marketContractId, marketInput]);
 
   const marketRegistryIds = useMemo(
     () => MARKET_REGISTRY.map(getMarketContractId),
@@ -169,9 +152,9 @@ export default function MarketScreen(props: MarketScreenProps) {
     setListStatus(null);
     setBuyStatus(null);
     setCancelStatus(null);
-    setPreflightKey(0);
-    setPreflightListingId(null);
-    setPreflightStatus(null);
+    setActivityKey(0);
+    setActiveListingsKey(0);
+    setActiveListingsScanLimit(ACTIVE_LISTINGS_SCAN_LIMIT);
   }, [marketContractId]);
 
   const parsedMarketInput = useMemo(
@@ -194,7 +177,6 @@ export default function MarketScreen(props: MarketScreenProps) {
     [props.contract]
   );
 
-  const buyerAddress = props.walletSession.address ?? null;
   const readOnlySender =
     props.walletSession.address ?? marketContract?.address ?? props.contract.address;
   const marketMismatch = marketContract
@@ -209,6 +191,12 @@ export default function MarketScreen(props: MarketScreenProps) {
     !marketMismatch &&
     !!marketContract &&
     !nftNetworkMismatch;
+
+  type ActiveListing = MarketListing & {
+    listingId: bigint;
+    owner: string | null;
+    status: 'escrowed' | 'stale' | 'unknown';
+  };
 
   const statusQuery = useQuery({
     queryKey: ['market', marketContractIdLabel, 'status', statusKey],
@@ -225,6 +213,86 @@ export default function MarketScreen(props: MarketScreenProps) {
         marketClient.getLastListingId(sender)
       ]);
       return { owner, nftContract, feeBps, lastListingId };
+    }
+  });
+
+  const activeListingsQuery = useQuery({
+    queryKey: [
+      'market',
+      marketContractIdLabel,
+      'active-listings',
+      activeListingsKey,
+      activeListingsScanLimit
+    ],
+    enabled: !!marketClient && !!marketContract && !props.collapsed,
+    staleTime: 30_000,
+    refetchInterval: props.collapsed ? false : 60_000,
+    queryFn: async (): Promise<ActiveListing[]> => {
+      if (!marketClient || !marketContractIdLabel) {
+        return [];
+      }
+      const lastListingId = await marketClient.getLastListingId(readOnlySender);
+      const listings: Array<{ listingId: bigint; listing: MarketListing }> = [];
+      let cursor = lastListingId;
+      let scanned = 0;
+      while (
+        cursor >= 0n &&
+        scanned < activeListingsScanLimit &&
+        listings.length < ACTIVE_LISTINGS_LIMIT
+      ) {
+        const listing = await marketClient.getListing(cursor, readOnlySender);
+        if (listing) {
+          listings.push({ listingId: cursor, listing });
+        }
+        if (cursor === 0n) {
+          break;
+        }
+        cursor -= 1n;
+        scanned += 1;
+      }
+      if (listings.length === 0) {
+        return [];
+      }
+      const owners = await Promise.all(
+        listings.map(async ({ listing }) => {
+          try {
+            return await nftClient.getOwner(listing.tokenId, readOnlySender);
+          } catch (error) {
+            return null;
+          }
+        })
+      );
+      return listings.map((entry, index) => {
+        const owner = owners[index];
+        const status =
+          owner && marketContractIdLabel && owner === marketContractIdLabel
+            ? 'escrowed'
+            : owner
+            ? 'stale'
+            : 'unknown';
+        return {
+          listingId: entry.listingId,
+          owner,
+          status,
+          ...entry.listing
+        };
+      });
+    }
+  });
+
+  const activityQuery = useQuery({
+    queryKey: ['market', marketContractIdLabel, 'activity', activityKey],
+    enabled: !!marketContract && !props.collapsed,
+    staleTime: 30_000,
+    refetchInterval: props.collapsed ? false : 60_000,
+    queryFn: async () => {
+      if (!marketContract) {
+        throw new Error('Market contract unavailable');
+      }
+      return loadMarketActivity({
+        contract: marketContract,
+        force: activityKey > 0
+      });
     }
   });
 
@@ -282,56 +350,6 @@ export default function MarketScreen(props: MarketScreenProps) {
     cancelListingIdInput
   ]);
 
-  const preflightQuery = useQuery({
-    queryKey: [
-      'market',
-      marketContractIdLabel,
-      'preflight',
-      preflightListingId?.toString() ?? 'none',
-      preflightKey
-    ],
-    enabled:
-      !!marketClient &&
-      !!marketContract &&
-      preflightKey > 0 &&
-      preflightListingId !== null,
-    queryFn: async () => {
-      if (!marketClient || !marketContract || preflightListingId === null) {
-        return null;
-      }
-      const listing = await marketClient.getListing(
-        preflightListingId,
-        readOnlySender
-      );
-      if (!listing) {
-        return {
-          listingId: preflightListingId,
-          listing: null,
-          owner: null,
-          balance: null
-        };
-      }
-      const owner = await nftClient.getOwner(listing.tokenId, readOnlySender);
-      let balance: bigint | null = null;
-      if (props.walletSession.address) {
-        try {
-          balance = await fetchStxBalance(
-            props.walletSession.address,
-            marketContract.network
-          );
-        } catch (error) {
-          balance = null;
-        }
-      }
-      return {
-        listingId: preflightListingId,
-        listing,
-        owner,
-        balance
-      };
-    }
-  });
-
   const handleSaveMarketContract = () => {
     const parsed = parseMarketContractId(marketInput);
     if (parsed.error || !parsed.config) {
@@ -355,6 +373,26 @@ export default function MarketScreen(props: MarketScreenProps) {
     setStatusKey((prev) => prev + 1);
   };
 
+  const handleRefreshActivity = () => {
+    if (!marketContract) {
+      return;
+    }
+    setActivityKey((prev) => prev + 1);
+  };
+
+  const handleRefreshActiveListings = () => {
+    if (!marketContract) {
+      return;
+    }
+    setActiveListingsKey((prev) => prev + 1);
+  };
+
+  const handleLoadOlderListings = () => {
+    setActiveListingsScanLimit((prev) =>
+      Math.min(prev + ACTIVE_LISTINGS_SCAN_STEP, ACTIVE_LISTINGS_SCAN_MAX)
+    );
+  };
+
 
   const handleLookupListing = () => {
     const parsed = parseUintInput(listingIdInput);
@@ -370,21 +408,6 @@ export default function MarketScreen(props: MarketScreenProps) {
       return;
     }
     setTokenLookupId(parsed);
-  };
-
-  const handleRunPreflight = () => {
-    const candidate =
-      parseUintInput(listingIdInput) ??
-      activeListingId ??
-      tokenLookupQuery.data?.listingId ??
-      null;
-    if (candidate === null) {
-      setPreflightStatus('Enter a listing ID or load a listing first.');
-      return;
-    }
-    setPreflightListingId(candidate);
-    setPreflightKey((prev) => prev + 1);
-    setPreflightStatus(null);
   };
 
   const requestContractCall = (options: {
@@ -499,7 +522,10 @@ export default function MarketScreen(props: MarketScreenProps) {
     }
   };
 
-  const handleBuy = async () => {
+  const handleBuy = async (params?: {
+    listingId?: bigint | null;
+    listing?: MarketListing;
+  }) => {
     setBuyStatus(null);
     if (!marketContract) {
       setBuyStatus('Set a market contract ID first.');
@@ -521,37 +547,9 @@ export default function MarketScreen(props: MarketScreenProps) {
     }
 
     const inputId = parseUintInput(buyListingIdInput);
-    const listingId = inputId ?? activeListingId;
+    const listingId = params?.listingId ?? inputId ?? activeListingId;
     if (listingId === null) {
       setBuyStatus('Enter a listing ID or load a listing first.');
-      return;
-    }
-    if (preflightListingId !== listingId) {
-      setBuyStatus(`Run checks for listing #${listingId.toString()} before buying.`);
-      return;
-    }
-    if (preflightQuery.isFetching) {
-      setBuyStatus('Wait for checks to finish before buying.');
-      return;
-    }
-    if (preflightSelfBuy) {
-      setBuyStatus('You cannot buy your own listing.');
-      return;
-    }
-    if (preflightBalance !== null && preflightListing && !preflightBalanceOk) {
-      setBuyStatus('Buyer balance is below the listing price.');
-      return;
-    }
-    if (
-      preflightBalance !== null &&
-      preflightListing &&
-      !preflightBalanceWithBufferOk
-    ) {
-      setBuyStatus(
-        `Buyer balance may be too low to cover network fees. Add at least ${formatMicroStx(
-          Number(MIN_FEE_BUFFER_MICROSTX)
-        )} buffer.`
-      );
       return;
     }
 
@@ -560,14 +558,13 @@ export default function MarketScreen(props: MarketScreenProps) {
     try {
       logInfo('market', 'Buy request', {
         listingId: listingId.toString(),
-        buyer: props.walletSession.address ?? null,
-        preflightListingId: preflightListingId?.toString() ?? null,
-        preflightMatchesBuy
+        buyer: props.walletSession.address ?? null
       });
       const listing =
-        activeListing && activeListingId === listingId
+        params?.listing ??
+        (activeListing && activeListingId === listingId
           ? activeListing
-          : await marketClient?.getListing(listingId, readOnlySender);
+          : await marketClient?.getListing(listingId, readOnlySender));
       if (!listing) {
         setBuyStatus('Listing not found.');
         return;
@@ -589,7 +586,7 @@ export default function MarketScreen(props: MarketScreenProps) {
         setBuyStatus('You cannot buy your own listing.');
         return;
       }
-      logInfo('market', 'Buy preflight resolved', {
+      logInfo('market', 'Buy listing resolved', {
         listingId: listingId.toString(),
         tokenId: listing.tokenId.toString(),
         listingContract: listing.nftContract,
@@ -626,9 +623,7 @@ export default function MarketScreen(props: MarketScreenProps) {
       if (message.toLowerCase().includes('post-condition')) {
         logWarn('market', 'Buy post-condition failure', {
           listingId: listingId.toString(),
-          buyer: props.walletSession.address ?? null,
-          seller: preflightSeller,
-          price: preflightListing?.price.toString() ?? null
+          buyer: props.walletSession.address ?? null
         });
         setBuyStatus(
           'Purchase failed: no STX was transferred. Check listing status and your balance.'
@@ -693,58 +688,145 @@ export default function MarketScreen(props: MarketScreenProps) {
     }
   };
 
-  const listingPriceLabel = activeListing
-    ? formatMicroStx(Number(activeListing.price))
-    : '—';
   const allowedNftMismatch =
     !!statusQuery.data?.nftContract &&
     statusQuery.data.nftContract !== nftContractId;
-  const preflight = preflightQuery.data;
-  const preflightListing = preflight?.listing ?? null;
-  const preflightOwner = preflight?.owner ?? null;
-  const preflightBalance = preflight?.balance ?? null;
-  const preflightEscrowOk =
-    !!preflightListing &&
-    !!preflightOwner &&
-    !!marketContractIdLabel &&
-    preflightOwner === marketContractIdLabel;
-  const preflightContractOk =
-    !!preflightListing && preflightListing.nftContract === nftContractId;
-  const preflightBalanceOk =
-    preflightBalance !== null &&
-    !!preflightListing &&
-    preflightBalance >= preflightListing.price;
-  const preflightBalanceWithBufferOk =
-    preflightBalance !== null &&
-    !!preflightListing &&
-    preflightBalance >= preflightListing.price + MIN_FEE_BUFFER_MICROSTX;
-  const preflightBuyer = buyerAddress;
-  const preflightSeller = preflightListing?.seller ?? null;
-  const preflightSelfBuy =
-    !!preflightBuyer && !!preflightSeller && preflightBuyer === preflightSeller;
-  const feeBpsValue = statusQuery.data?.feeBps ?? null;
-  const preflightFee =
-    preflightListing && feeBpsValue !== null
-      ? (preflightListing.price * feeBpsValue) / BASIS_POINTS
-      : null;
-  const preflightBuyTarget =
+  const buyTargetListingId =
     parseUintInput(buyListingIdInput) ?? activeListingId ?? null;
-  const preflightMatchesBuy =
-    preflightListingId !== null &&
-    preflightBuyTarget !== null &&
-    preflightListingId === preflightBuyTarget;
-  const buyPriceLabel = preflightListing
-    ? formatMicroStx(Number(preflightListing.price))
-    : listingPriceLabel;
+  const activeListings = activeListingsQuery.data ?? [];
+  const activeListingTokenIds = useMemo(() => {
+    const seen = new Set<string>();
+    const ids: bigint[] = [];
+    activeListings.forEach((listing) => {
+      const key = listing.tokenId.toString();
+      if (seen.has(key)) {
+        return;
+      }
+      seen.add(key);
+      ids.push(listing.tokenId);
+    });
+    return ids;
+  }, [activeListings]);
+  const {
+    tokenIds: listingTokenIds,
+    tokenQueries: listingTokenQueries
+  } = useTokenSummaries({
+    client: nftClient,
+    senderAddress: readOnlySender,
+    tokenIds: activeListingTokenIds,
+    enabled:
+      !!marketContract &&
+      !props.collapsed &&
+      activeListingTokenIds.length > 0
+  });
+  const listingTokenMap = useMemo(() => {
+    const map = new Map<string, TokenSummary>();
+    listingTokenQueries.forEach((query, index) => {
+      const id = listingTokenIds[index];
+      if (id === undefined || !query.data) {
+        return;
+      }
+      map.set(id.toString(), query.data);
+    });
+    return map;
+  }, [listingTokenIds, listingTokenQueries]);
+  const listingTokensLoading = listingTokenQueries.some(
+    (query) => query.isLoading
+  );
+  const selectedActiveListing =
+    buyTargetListingId !== null
+      ? activeListings.find((listing) => listing.listingId === buyTargetListingId) ??
+        null
+      : null;
+  const displayedListing =
+    selectedActiveListing ??
+    (activeListingId !== null && activeListing
+      ? {
+          listingId: activeListingId,
+          owner: null,
+          status: 'unknown' as const,
+          ...activeListing
+        }
+      : null);
+  const lookupTokenIds = useMemo(() => {
+    if (!displayedListing) {
+      return [];
+    }
+    return [displayedListing.tokenId];
+  }, [displayedListing]);
+  const {
+    tokenQueries: lookupTokenQueries
+  } = useTokenSummaries({
+    client: nftClient,
+    senderAddress: readOnlySender,
+    tokenIds: lookupTokenIds,
+    enabled:
+      !!marketContract &&
+      !props.collapsed &&
+      lookupTokenIds.length > 0
+  });
+  const lookupToken =
+    displayedListing
+      ? listingTokenMap.get(displayedListing.tokenId.toString()) ??
+        (lookupTokenQueries[0]?.data ?? null)
+      : null;
+  const lookupOwner = lookupToken?.owner ?? null;
+  const lookupStatus =
+    lookupOwner && marketContractIdLabel
+      ? lookupOwner === marketContractIdLabel
+        ? 'Escrowed'
+        : 'Not escrowed'
+      : 'Unknown';
+  const listingPriceLabel = displayedListing
+    ? formatMicroStx(Number(displayedListing.price))
+    : '—';
+  const buyPriceLabel = listingPriceLabel;
+  const recentActivity = activityQuery.data?.events ?? [];
+  const recentActivityItems = recentActivity.slice(0, RECENT_ACTIVITY_LIMIT);
 
-  const buildCheckClass = (state: boolean | null) => {
-    if (state === true) {
-      return 'market-check market-check--ok';
+  const formatActivityHeadline = (event: MarketActivityEvent) => {
+    switch (event.type) {
+      case 'list':
+        return 'Listed';
+      case 'buy':
+        return 'Sold';
+      case 'cancel':
+        return 'Cancelled';
+      default:
+        return 'Activity';
     }
-    if (state === false) {
-      return 'market-check market-check--warn';
+  };
+
+  const formatActivityDetail = (event: MarketActivityEvent) => {
+    const parts: string[] = [];
+    parts.push(`#${event.listingId.toString()}`);
+    if (event.tokenId !== undefined) {
+      parts.push(`Token ${event.tokenId.toString()}`);
     }
-    return 'market-check';
+    if (event.price !== undefined) {
+      parts.push(formatMicroStx(Number(event.price)));
+    }
+    return parts.join(' · ');
+  };
+
+  const formatActivityTime = (event: MarketActivityEvent) => {
+    if (event.timestamp) {
+      return new Date(event.timestamp).toLocaleString();
+    }
+    if (event.blockHeight !== undefined) {
+      return `Block ${event.blockHeight}`;
+    }
+    return '—';
+  };
+
+  const formatListingStatus = (status: ActiveListing['status']) => {
+    if (status === 'escrowed') {
+      return 'Escrowed';
+    }
+    if (status === 'stale') {
+      return 'Stale';
+    }
+    return 'Unknown';
   };
 
   return (
@@ -775,58 +857,92 @@ export default function MarketScreen(props: MarketScreenProps) {
       </div>
       <div className="panel__body">
         <div className="market-grid">
-          <div className="market-block">
-            <h3>Market contract</h3>
-            <label className="field">
-              <span className="field__label">Registry</span>
-              <select
-                className="select"
-                value={marketPresetValue}
-                onChange={(event) => setMarketInput(event.target.value)}
-              >
-                <option value="">Custom</option>
-                {MARKET_REGISTRY.map((entry) => {
-                  const id = getMarketContractId(entry);
-                  return (
-                    <option key={id} value={id}>
-                      {entry.label}
-                    </option>
-                  );
-                })}
-              </select>
-            </label>
-            <label className="field">
-              <span className="field__label">Contract ID</span>
-              <input
-                className="input"
-                placeholder="SP...xtrata-market-v1-1"
-                value={marketInput}
-                onChange={(event) => setMarketInput(event.target.value)}
-              />
-            </label>
-            {marketError && <div className="field__error">{marketError}</div>}
-            {!marketError && activeMarketError && (
-              <div className="field__error">{activeMarketError}</div>
-            )}
-            <div className="market-controls">
-              <button
-                className="button"
-                type="button"
-                onClick={handleSaveMarketContract}
-                disabled={!marketInput.trim() || !!marketError}
-              >
-                Use contract
-              </button>
-              <button
-                className="button button--ghost"
-                type="button"
-                onClick={handleClearMarketContract}
-                disabled={!marketContractId}
-              >
-                Clear
-              </button>
+          {!isPublicVariant && (
+            <div className="market-block">
+              <h3>Market contract</h3>
+              <label className="field">
+                <span className="field__label">Registry</span>
+                <select
+                  className="select"
+                  value={marketPresetValue}
+                  onChange={(event) => setMarketInput(event.target.value)}
+                >
+                  <option value="">Custom</option>
+                  {MARKET_REGISTRY.map((entry) => {
+                    const id = getMarketContractId(entry);
+                    return (
+                      <option key={id} value={id}>
+                        {entry.label}
+                      </option>
+                    );
+                  })}
+                </select>
+              </label>
+              <label className="field">
+                <span className="field__label">Contract ID</span>
+                <input
+                  className="input"
+                  placeholder="SP...xtrata-market-v1-1"
+                  value={marketInput}
+                  onChange={(event) => setMarketInput(event.target.value)}
+                />
+              </label>
+              {marketError && <div className="field__error">{marketError}</div>}
+              {!marketError && activeMarketError && (
+                <div className="field__error">{activeMarketError}</div>
+              )}
+              <div className="market-controls">
+                <button
+                  className="button"
+                  type="button"
+                  onClick={handleSaveMarketContract}
+                  disabled={!marketInput.trim() || !!marketError}
+                >
+                  Use contract
+                </button>
+                <button
+                  className="button button--ghost"
+                  type="button"
+                  onClick={handleClearMarketContract}
+                  disabled={!marketContractId}
+                >
+                  Clear
+                </button>
+              </div>
+              {marketContractIdLabel && (
+                <div className="meta-grid">
+                  <div>
+                    <span className="meta-label">Market contract</span>
+                    <span className="meta-value">{marketContractIdLabel}</span>
+                  </div>
+                  <div>
+                    <span className="meta-label">NFT contract</span>
+                    <span className="meta-value">{nftContractId}</span>
+                  </div>
+                </div>
+              )}
+              {marketMismatch && (
+                <div className="alert">
+                  <div>
+                    <strong>Network mismatch.</strong> Wallet is on{' '}
+                    {marketMismatch.actual}, market is {marketMismatch.expected}.
+                  </div>
+                </div>
+              )}
+              {nftNetworkMismatch && (
+                <div className="alert">
+                  <div>
+                    <strong>Network mismatch.</strong> Market contract network must
+                    match the active NFT contract.
+                  </div>
+                </div>
+              )}
             </div>
-            {marketContractIdLabel && (
+          )}
+
+          {isPublicVariant && marketContractIdLabel && (
+            <div className="market-block">
+              <h3>Market contract</h3>
               <div className="meta-grid">
                 <div>
                   <span className="meta-label">Market contract</span>
@@ -837,77 +953,261 @@ export default function MarketScreen(props: MarketScreenProps) {
                   <span className="meta-value">{nftContractId}</span>
                 </div>
               </div>
-            )}
-            {marketMismatch && (
-              <div className="alert">
-                <div>
-                  <strong>Network mismatch.</strong> Wallet is on{' '}
-                  {marketMismatch.actual}, market is {marketMismatch.expected}.
+              {marketMismatch && (
+                <div className="alert">
+                  <div>
+                    <strong>Network mismatch.</strong> Wallet is on{' '}
+                    {marketMismatch.actual}, market is {marketMismatch.expected}.
+                  </div>
                 </div>
+              )}
+              {nftNetworkMismatch && (
+                <div className="alert">
+                  <div>
+                    <strong>Network mismatch.</strong> Market contract network must
+                    match the active NFT contract.
+                  </div>
+                </div>
+              )}
+              {activeMarketError && (
+                <div className="field__error">{activeMarketError}</div>
+              )}
+            </div>
+          )}
+
+          {!isPublicVariant && (
+            <div className="market-block">
+              <div className="market-block__header">
+                <h3>Market status</h3>
+                <button
+                  className="button button--ghost"
+                  type="button"
+                  onClick={handleRefreshStatus}
+                  disabled={!marketContract}
+                >
+                  Refresh
+                </button>
               </div>
+              {statusQuery.isFetching && <p>Loading market status...</p>}
+              {statusQuery.data && (
+                <>
+                  <div className="meta-grid">
+                    <div>
+                      <span className="meta-label">Owner</span>
+                      <span className="meta-value">{statusQuery.data.owner}</span>
+                    </div>
+                    <div>
+                      <span className="meta-label">Allowed NFT</span>
+                      <span className="meta-value">
+                        {statusQuery.data.nftContract}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="meta-label">Fee</span>
+                      <span className="meta-value">{statusQuery.data.feeBps} bps</span>
+                    </div>
+                    <div>
+                      <span className="meta-label">Last listing</span>
+                      <span className="meta-value">
+                        {statusQuery.data.lastListingId.toString()}
+                      </span>
+                    </div>
+                  </div>
+                  {allowedNftMismatch && (
+                    <div className="alert">
+                      <div>
+                        <strong>Allowed contract mismatch.</strong> This market
+                        contract is locked to {statusQuery.data.nftContract}. To
+                        support a different NFT contract, redeploy the market
+                        contract with the updated allowed contract constant.
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+              {statusQuery.error && (
+                <div className="field__error">Unable to load market status.</div>
+              )}
+            </div>
+          )}
+
+          <div className="market-block">
+            <div className="market-block__header">
+              <h3>Active listings</h3>
+              <button
+                className="button button--ghost"
+                type="button"
+                onClick={handleRefreshActiveListings}
+                disabled={!marketContract}
+              >
+                Refresh
+              </button>
+            </div>
+            {activeListingsQuery.isFetching && <p>Loading active listings...</p>}
+            {activeListingsQuery.error && (
+              <div className="field__error">Unable to load active listings.</div>
             )}
-            {nftNetworkMismatch && (
-              <div className="alert">
-                <div>
-                  <strong>Network mismatch.</strong> Market contract network must
-                  match the active NFT contract.
+            {!activeListingsQuery.isFetching && activeListings.length === 0 && (
+              <p className="field__hint">
+                No active listings found. Try loading older listings.
+              </p>
+            )}
+            {activeListings.length > 0 && (
+              <>
+                {listingTokensLoading && (
+                  <p className="field__hint">Loading listing previews...</p>
+                )}
+                <div className="market-listing-grid">
+                  {activeListings.map((listing) => {
+                    const token =
+                      listingTokenMap.get(listing.tokenId.toString()) ?? null;
+                    const isSeller =
+                      !!props.walletSession.address &&
+                      listing.seller === props.walletSession.address;
+                    const canQuickBuy =
+                      canTransact &&
+                      listing.status === 'escrowed' &&
+                      !isSeller &&
+                      !buyPending;
+                    return (
+                      <div
+                        className="market-listing-card"
+                        key={listing.listingId.toString()}
+                      >
+                        <div className="market-listing-card__frame">
+                          <div className="market-listing-card__media">
+                            <div className="token-card__media">
+                              {token ? (
+                                <TokenCardMedia
+                                  token={token}
+                                  contractId={nftContractId}
+                                  senderAddress={readOnlySender}
+                                  client={nftClient}
+                                  isActiveTab={!props.collapsed}
+                                />
+                              ) : (
+                                <div className="token-card__placeholder">
+                                  Loading preview...
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="market-listing-card__meta">
+                          <div>
+                            <span className="meta-label">Listing</span>
+                            <span className="meta-value">
+                              #{listing.listingId.toString()}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="meta-label">Token</span>
+                            <span className="meta-value">
+                              #{listing.tokenId.toString()}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="meta-label">Price</span>
+                            <span className="meta-value">
+                              {formatMicroStx(Number(listing.price))}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="meta-label">Status</span>
+                            <span className="meta-value">
+                              {formatListingStatus(listing.status)}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="market-listing-card__actions">
+                          <button
+                            className="button button--mini"
+                            type="button"
+                            onClick={() =>
+                              void handleBuy({
+                                listingId: listing.listingId,
+                                listing
+                              })
+                            }
+                            disabled={!canQuickBuy}
+                          >
+                            {isSeller
+                              ? 'Your listing'
+                              : listing.status !== 'escrowed'
+                                ? 'Not escrowed'
+                                : buyPending
+                                  ? 'Buying...'
+                                  : 'Buy now'}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
+              </>
+            )}
+            {marketContract && !activeListingsQuery.isFetching && (
+              <div className="market-listing-card__actions">
+                <button
+                  className="button button--ghost button--mini"
+                  type="button"
+                  onClick={handleLoadOlderListings}
+                  disabled={activeListingsScanLimit >= ACTIVE_LISTINGS_SCAN_MAX}
+                >
+                  {activeListingsScanLimit >= ACTIVE_LISTINGS_SCAN_MAX
+                    ? 'Max range loaded'
+                    : `Load older listings (+${ACTIVE_LISTINGS_SCAN_STEP})`}
+                </button>
+                <span className="meta-value">
+                  Scanning last {activeListingsScanLimit} listings
+                </span>
               </div>
             )}
           </div>
 
           <div className="market-block">
             <div className="market-block__header">
-              <h3>Market status</h3>
+              <h3>Recent activity</h3>
               <button
                 className="button button--ghost"
                 type="button"
-                onClick={handleRefreshStatus}
+                onClick={handleRefreshActivity}
                 disabled={!marketContract}
               >
                 Refresh
               </button>
             </div>
-            {statusQuery.isFetching && <p>Loading market status...</p>}
-            {statusQuery.data && (
-              <>
-                <div className="meta-grid">
-                  <div>
-                    <span className="meta-label">Owner</span>
-                    <span className="meta-value">{statusQuery.data.owner}</span>
-                  </div>
-                  <div>
-                    <span className="meta-label">Allowed NFT</span>
-                    <span className="meta-value">
-                      {statusQuery.data.nftContract}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="meta-label">Fee</span>
-                    <span className="meta-value">{statusQuery.data.feeBps} bps</span>
-                  </div>
-                  <div>
-                    <span className="meta-label">Last listing</span>
-                    <span className="meta-value">
-                      {statusQuery.data.lastListingId.toString()}
-                    </span>
-                  </div>
+            {activityQuery.isFetching && <p>Loading activity...</p>}
+            {activityQuery.error && (
+              <div className="field__error">Unable to load activity.</div>
+            )}
+            {!activityQuery.isFetching && recentActivityItems.length === 0 && (
+              <p className="field__hint">No market activity yet.</p>
+            )}
+            {recentActivityItems.map((event) => (
+              <div className="market-listing" key={event.id}>
+                <div>
+                  <span className="meta-label">{formatActivityHeadline(event)}</span>
+                  <span className="meta-value">
+                    {formatActivityDetail(event)}
+                  </span>
                 </div>
-                {allowedNftMismatch && (
-                  <div className="alert">
-                    <div>
-                      <strong>Allowed contract mismatch.</strong> This market
-                      contract is locked to {statusQuery.data.nftContract}. To
-                      support a different NFT contract, redeploy the market
-                      contract with the updated allowed contract constant.
-                    </div>
+                <div>
+                  <span className="meta-label">Seller</span>
+                  <span className="meta-value">{event.seller ?? '—'}</span>
+                </div>
+                {event.buyer && (
+                  <div>
+                    <span className="meta-label">Buyer</span>
+                    <span className="meta-value">{event.buyer}</span>
                   </div>
                 )}
-              </>
-            )}
-            {statusQuery.error && (
-              <div className="field__error">Unable to load market status.</div>
-            )}
+                <div>
+                  <span className="meta-label">Time</span>
+                  <span className="meta-value">{formatActivityTime(event)}</span>
+                </div>
+              </div>
+            ))}
           </div>
 
           <div className="market-block">
@@ -953,209 +1253,70 @@ export default function MarketScreen(props: MarketScreenProps) {
             {(listingQuery.isFetching || tokenLookupQuery.isFetching) && (
               <p>Loading listing...</p>
             )}
-            {activeListing && (
-              <div className="market-listing">
-                <div>
-                  <span className="meta-label">Listing ID</span>
-                  <span className="meta-value">
-                    {activeListingId ? activeListingId.toString() : '—'}
-                  </span>
-                </div>
-                <div>
-                  <span className="meta-label">Token</span>
-                  <span className="meta-value">#{activeListing.tokenId.toString()}</span>
-                </div>
-                <div>
-                  <span className="meta-label">Price</span>
-                  <span className="meta-value">{listingPriceLabel}</span>
-                </div>
-                <div>
-                  <span className="meta-label">Seller</span>
-                  <span className="meta-value">{activeListing.seller}</span>
-                </div>
-              </div>
-            )}
-            {!activeListing && (listingLookupId || tokenLookupId) && (
-              <p className="field__hint">No listing found.</p>
-            )}
-          </div>
-
-          <div className="market-block">
-            <div className="market-block__header">
-              <h3>Pre-flight checks</h3>
-              <button
-                className="button button--ghost"
-                type="button"
-                onClick={handleRunPreflight}
-                disabled={!marketContract}
-              >
-                Run checks
-              </button>
-            </div>
-            {preflightStatus && <p className="field__hint">{preflightStatus}</p>}
-            {preflightQuery.isFetching && <p>Running checks...</p>}
-            {preflightQuery.isError && (
-              <div className="field__error">Pre-flight checks failed.</div>
-            )}
-            <div className="market-checks">
-              <div className={buildCheckClass(preflightListing ? true : preflight ? false : null)}>
-                <span>Listing loaded</span>
-                <span className="badge badge--neutral">
-                  {preflight
-                    ? preflightListing
-                      ? 'OK'
-                      : 'Missing'
-                    : 'Pending'}
-                </span>
-              </div>
-              <div
-                className={buildCheckClass(
-                  preflightListingId !== null && preflightBuyTarget !== null
-                    ? preflightMatchesBuy
-                    : null
-                )}
-              >
-                <span>Checks match buy target</span>
-                <span className="badge badge--neutral">
-                  {preflightListingId !== null && preflightBuyTarget !== null
-                    ? preflightMatchesBuy
-                      ? 'OK'
-                      : 'Mismatch'
-                    : 'Pending'}
-                </span>
-              </div>
-              <div className={buildCheckClass(preflightContractOk ? true : preflightListing ? false : null)}>
-                <span>NFT contract matches</span>
-                <span className="badge badge--neutral">
-                  {preflightListing
-                    ? preflightContractOk
-                      ? 'OK'
-                      : 'Mismatch'
-                    : 'Pending'}
-                </span>
-              </div>
-              <div className={buildCheckClass(preflightEscrowOk ? true : preflightOwner ? false : null)}>
-                <span>Escrow owner is market</span>
-                <span className="badge badge--neutral">
-                  {preflightOwner
-                    ? preflightEscrowOk
-                      ? 'Escrowed'
-                      : 'Not escrowed'
-                    : 'Pending'}
-                </span>
-              </div>
-              <div
-                className={buildCheckClass(
-                  preflightBuyer && preflightSeller ? !preflightSelfBuy : null
-                )}
-              >
-                <span>Buyer is not seller</span>
-                <span className="badge badge--neutral">
-                  {preflightBuyer && preflightSeller
-                    ? preflightSelfBuy
-                      ? 'Same wallet'
-                      : 'OK'
-                    : 'Pending'}
-                </span>
-              </div>
-              <div className={buildCheckClass(preflightBalanceOk ? true : preflightBalance !== null ? false : null)}>
-                <span>Buyer balance ≥ price</span>
-                <span className="badge badge--neutral">
-                  {preflightBalance !== null && preflightListing
-                    ? preflightBalanceOk
-                      ? 'OK'
-                      : 'Low'
-                    : 'Pending'}
-                </span>
-              </div>
-            </div>
-            {preflightListing && (
-              <div className="meta-grid">
-                <div>
-                  <span className="meta-label">Listing ID</span>
-                  <span className="meta-value">
-                    {preflight.listingId.toString()}
-                  </span>
-                </div>
-              <div>
-                <span className="meta-label">Price</span>
-                <span className="meta-value">
-                  {formatMicroStx(Number(preflightListing.price))}
-                </span>
-              </div>
-              <div>
-                <span className="meta-label">Market fee (included)</span>
-                <span className="meta-value">
-                  {preflightFee !== null
-                    ? formatMicroStx(Number(preflightFee))
-                    : 'Unknown'}
-                </span>
-              </div>
-              <div>
-                <span className="meta-label">Token ID</span>
-                <span className="meta-value">
-                  #{preflightListing.tokenId.toString()}
-                </span>
-              </div>
-              <div>
-                <span className="meta-label">Buyer</span>
-                <span className="meta-value">{preflightBuyer ?? 'Unknown'}</span>
-              </div>
-              <div>
-                <span className="meta-label">Seller</span>
-                <span className="meta-value">{preflightSeller ?? 'Unknown'}</span>
-              </div>
-              <div>
-                <span className="meta-label">Escrow owner</span>
-                <span className="meta-value">{preflightOwner ?? 'Unknown'}</span>
-              </div>
-              <div>
-                  <span className="meta-label">Buyer balance</span>
-                  <span className="meta-value">
-                    {preflightBalance !== null
-                      ? formatMicroStx(Number(preflightBalance))
-                      : 'Unknown'}
-                  </span>
-              </div>
-              <div>
-                <span className="meta-label">Balance ≥ price + miner buffer</span>
-                <span className="meta-value">
-                  {preflightBalance !== null
-                    ? preflightBalanceWithBufferOk
-                      ? 'Likely'
-                      : 'Possibly low'
-                      : 'Unknown'}
-                  </span>
-                </div>
-              </div>
-            )}
-            {preflightListing && !preflightEscrowOk && (
-              <div className="alert">
-                <div>
-                  <strong>Listing may be stale.</strong> The token is not owned
-                  by the market contract. Cancel and re-list to refresh escrow.
-                </div>
-              </div>
-            )}
-            {preflightListing && preflightSelfBuy && (
-              <div className="alert">
-                <div>
-                  <strong>Self purchase blocked.</strong> Switch to a different
-                  wallet before buying this listing.
-                </div>
-              </div>
-            )}
-            {preflightListing &&
-              preflightBuyTarget !== null &&
-              !preflightMatchesBuy && (
-                <div className="alert">
-                  <div>
-                    <strong>Checks mismatch.</strong> Pre-flight ran for listing
-                    #{preflight.listingId.toString()}, but Buy is targeting #
-                    {preflightBuyTarget.toString()}.
+            {displayedListing && (
+              <div className="market-listing-card market-listing-card--lookup">
+                <div className="market-listing-card__media">
+                  <div className="token-card__media">
+                    {lookupToken ? (
+                      <TokenCardMedia
+                        token={lookupToken}
+                        contractId={nftContractId}
+                        senderAddress={readOnlySender}
+                        client={nftClient}
+                        isActiveTab={!props.collapsed}
+                      />
+                    ) : (
+                      <div className="token-card__placeholder">
+                        Loading preview...
+                      </div>
+                    )}
                   </div>
                 </div>
-              )}
+                <div className="meta-grid meta-grid--dense">
+                  <div>
+                    <span className="meta-label">Listing ID</span>
+                    <span className="meta-value">
+                      {displayedListing.listingId.toString()}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="meta-label">Token</span>
+                    <span className="meta-value">
+                      #{displayedListing.tokenId.toString()}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="meta-label">Price</span>
+                    <span className="meta-value">{listingPriceLabel}</span>
+                  </div>
+                  <div>
+                    <span className="meta-label">Seller</span>
+                    <span className="meta-value">{displayedListing.seller}</span>
+                  </div>
+                  <div>
+                    <span className="meta-label">Owner</span>
+                    <span className="meta-value">{lookupOwner ?? 'Unknown'}</span>
+                  </div>
+                  <div>
+                    <span className="meta-label">Escrow status</span>
+                    <span className="meta-value">{lookupStatus}</span>
+                  </div>
+                  <div>
+                    <span className="meta-label">NFT contract</span>
+                    <span className="meta-value">{displayedListing.nftContract}</span>
+                  </div>
+                  <div>
+                    <span className="meta-label">Created</span>
+                    <span className="meta-value">
+                      Block {displayedListing.createdAt.toString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+            {!displayedListing && (listingLookupId || tokenLookupId) && (
+              <p className="field__hint">No listing found.</p>
+            )}
           </div>
 
           <div className="market-block">
@@ -1206,9 +1367,9 @@ export default function MarketScreen(props: MarketScreenProps) {
                     }}
                   />
                 </label>
-                {preflightBuyTarget !== null && (
+                {buyTargetListingId !== null && (
                   <p className="field__hint">
-                    Target listing: #{preflightBuyTarget.toString()}
+                    Target listing: #{buyTargetListingId.toString()}
                   </p>
                 )}
                 {buyPriceLabel !== '—' && (

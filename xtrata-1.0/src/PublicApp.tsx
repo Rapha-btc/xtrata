@@ -13,6 +13,7 @@ import { truncateMiddle } from './lib/utils/format';
 import MintScreen from './screens/MintScreen';
 import ViewerScreen, { type ViewerMode } from './screens/ViewerScreen';
 import WalletLookupScreen from './screens/WalletLookupScreen';
+import PublicMarketScreen from './screens/PublicMarketScreen';
 
 const walletSessionStore = createWalletSessionStore();
 
@@ -21,6 +22,7 @@ const SECTION_KEYS = [
   'wallet-session',
   'docs',
   'mint',
+  'market',
   'collection-viewer'
 ] as const;
 type SectionKey = (typeof SECTION_KEYS)[number];
@@ -165,6 +167,9 @@ export default function PublicApp() {
                 href="#collection-viewer"
               >
                 Viewer
+              </a>
+              <a className="button button--ghost app__nav-link" href="#market">
+                Market
               </a>
               <a className="button button--ghost app__nav-link" href="#mint">
                 Mint
@@ -323,6 +328,13 @@ export default function PublicApp() {
           mode={viewerMode}
           onModeChange={setViewerMode}
           onClearWalletLookup={handleClearWalletLookup}
+        />
+
+        <PublicMarketScreen
+          contract={contract}
+          walletSession={walletSession}
+          collapsed={collapsedSections.market}
+          onToggleCollapse={() => toggleSection('market')}
         />
 
         <MintScreen
