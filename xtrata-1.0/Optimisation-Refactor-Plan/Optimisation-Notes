@@ -1,0 +1,4 @@
+Main pain point right now is major loading delays incl thousands of warnings and CORS errors when attempting to load the site for the first time.
+
+We need a better process for capturing a set of logs that only shows 1 of each error, warning, process for the first ID that caused the log then hide the same logs for alt IDs to make the logs more maneagable.
+Can we add this as a log setting that can be activated from within the diagnostics module for updating the logs to display in this way?
