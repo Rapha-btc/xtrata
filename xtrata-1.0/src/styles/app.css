@@ -559,6 +559,11 @@ p {
     display: inline-flex;
   }
 
+  .app-section--fit.viewer {
+    height: 80svh;
+    max-height: 80svh;
+  }
+
   .viewer[data-mobile-view="grid"] > .panel + .panel {
     display: none;
   }
