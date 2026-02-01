@@ -3,8 +3,10 @@ import type { NetworkType } from '../lib/network/types';
 import { getApiBaseUrls } from '../lib/network/config';
 import {
   LOG_ENABLED_KEY,
+  LOG_DEDUPE_KEY,
   LOG_LEVEL_KEY,
-  LOG_TAGS_KEY
+  LOG_TAGS_KEY,
+  clearLogDedupeCache
 } from '../lib/utils/logger';
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
@@ -24,6 +26,7 @@ type LogConfigState = {
   enabled: boolean;
   level: LogLevel;
   tagsInput: string;
+  dedupe: boolean;
 };
 
 const LOG_LEVELS: LogLevel[] = ['debug', 'info', 'warn', 'error'];
@@ -63,15 +66,25 @@ const parseLevel = (value: string | null | undefined): LogLevel | null => {
   return null;
 };
 
+const parseDedupe = (value: string | null | undefined) => {
+  if (!value) {
+    return false;
+  }
+  const normalized = value.toLowerCase();
+  return normalized === 'true' || normalized === '1' || normalized === 'on';
+};
+
 const readLogConfig = (): LogConfigState => {
   const env = import.meta.env ?? {};
   const enabledValue = getStorageValue(LOG_ENABLED_KEY) ?? env.VITE_LOG_ENABLED;
   const levelValue = getStorageValue(LOG_LEVEL_KEY) ?? env.VITE_LOG_LEVEL;
   const tagsValue = getStorageValue(LOG_TAGS_KEY) ?? env.VITE_LOG_TAGS;
+  const dedupeValue = getStorageValue(LOG_DEDUPE_KEY) ?? env.VITE_LOG_DEDUPE;
   return {
     enabled: parseEnabled(enabledValue),
     level: parseLevel(levelValue) ?? 'warn',
-    tagsInput: tagsValue ?? ''
+    tagsInput: tagsValue ?? '',
+    dedupe: parseDedupe(dedupeValue)
   };
 };
 
@@ -82,6 +95,7 @@ const persistLogConfig = (config: LogConfigState) => {
     }
     localStorage.setItem(LOG_ENABLED_KEY, config.enabled ? 'true' : 'false');
     localStorage.setItem(LOG_LEVEL_KEY, config.level);
+    localStorage.setItem(LOG_DEDUPE_KEY, config.dedupe ? 'true' : 'false');
     const trimmed = config.tagsInput.trim();
     if (!trimmed) {
       localStorage.removeItem(LOG_TAGS_KEY);
@@ -122,12 +136,19 @@ export default function AdminDiagnosticsScreen(props: AdminDiagnosticsScreenProp
     applyLogConfig({ ...logConfig, tagsInput: value });
   };
 
+  const handleDedupeToggle = () => {
+    const next = !logConfig.dedupe;
+    applyLogConfig({ ...logConfig, dedupe: next });
+    clearLogDedupeCache();
+  };
+
   const handleReset = () => {
     try {
       if (typeof localStorage !== 'undefined') {
         localStorage.removeItem(LOG_ENABLED_KEY);
         localStorage.removeItem(LOG_LEVEL_KEY);
         localStorage.removeItem(LOG_TAGS_KEY);
+        localStorage.removeItem(LOG_DEDUPE_KEY);
       }
     } catch (error) {
       // ignore storage errors in diagnostics UI
@@ -144,7 +165,8 @@ export default function AdminDiagnosticsScreen(props: AdminDiagnosticsScreenProp
       if (
         event.key === LOG_ENABLED_KEY ||
         event.key === LOG_LEVEL_KEY ||
-        event.key === LOG_TAGS_KEY
+        event.key === LOG_TAGS_KEY ||
+        event.key === LOG_DEDUPE_KEY
       ) {
         setLogConfig(readLogConfig());
       }
@@ -236,6 +258,14 @@ export default function AdminDiagnosticsScreen(props: AdminDiagnosticsScreenProp
             <span className="admin-diagnostics__status">
               Tags: {effectiveTagsLabel}
             </span>
+            <button
+              type="button"
+              className={`button button--ghost button--mini${logConfig.dedupe ? ' is-active' : ''}`}
+              onClick={handleDedupeToggle}
+              title="Only log the first occurrence per tag/message when an ID is present"
+            >
+              {logConfig.dedupe ? 'Dedupe on' : 'Dedupe off'}
+            </button>
           </div>
         </label>
 
@@ -260,7 +290,8 @@ export default function AdminDiagnosticsScreen(props: AdminDiagnosticsScreenProp
                 applyPreset({
                   enabled: true,
                   level: 'warn',
-                  tagsInput: 'viewer'
+                  tagsInput: 'viewer',
+                  dedupe: logConfig.dedupe
                 })
               }
             >
@@ -273,7 +304,8 @@ export default function AdminDiagnosticsScreen(props: AdminDiagnosticsScreenProp
                 applyPreset({
                   enabled: true,
                   level: 'debug',
-                  tagsInput: 'viewer,preview,thumbnail,cache,token-uri'
+                  tagsInput: 'viewer,preview,thumbnail,cache,token-uri',
+                  dedupe: logConfig.dedupe
                 })
               }
             >
@@ -286,7 +318,8 @@ export default function AdminDiagnosticsScreen(props: AdminDiagnosticsScreenProp
                 applyPreset({
                   enabled: true,
                   level: 'debug',
-                  tagsInput: 'market,readonly'
+                  tagsInput: 'market,readonly',
+                  dedupe: logConfig.dedupe
                 })
               }
             >
@@ -299,7 +332,8 @@ export default function AdminDiagnosticsScreen(props: AdminDiagnosticsScreenProp
                 applyPreset({
                   enabled: true,
                   level: 'debug',
-                  tagsInput: '*'
+                  tagsInput: '*',
+                  dedupe: logConfig.dedupe
                 })
               }
             >
@@ -312,7 +346,8 @@ export default function AdminDiagnosticsScreen(props: AdminDiagnosticsScreenProp
                 applyPreset({
                   enabled: false,
                   level: logConfig.level,
-                  tagsInput: logConfig.tagsInput
+                  tagsInput: logConfig.tagsInput,
+                  dedupe: logConfig.dedupe
                 })
               }
             >

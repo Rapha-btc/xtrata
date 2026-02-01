@@ -10,6 +10,7 @@ const LEVEL_RANK: Record<LogLevel, number> = {
 export const LOG_ENABLED_KEY = 'xtrata.log.enabled';
 export const LOG_LEVEL_KEY = 'xtrata.log.level';
 export const LOG_TAGS_KEY = 'xtrata.log.tags';
+export const LOG_DEDUPE_KEY = 'xtrata.log.dedupe';
 
 const getStorageValue = (key: string) => {
   try {
@@ -46,6 +47,14 @@ const parseLevel = (value: string | null | undefined): LogLevel | null => {
   return null;
 };
 
+const parseDedupe = (value: string | null | undefined) => {
+  if (!value) {
+    return false;
+  }
+  const normalized = value.toLowerCase();
+  return normalized === 'true' || normalized === '1' || normalized === 'on';
+};
+
 const parseTags = (value: string | null | undefined) => {
   if (!value) {
     return null;
@@ -68,15 +77,16 @@ const getConfig = () => {
   const enabledValue = getStorageValue(LOG_ENABLED_KEY) ?? env.VITE_LOG_ENABLED;
   const levelValue = getStorageValue(LOG_LEVEL_KEY) ?? env.VITE_LOG_LEVEL;
   const tagsValue = getStorageValue(LOG_TAGS_KEY) ?? env.VITE_LOG_TAGS;
+  const dedupeValue = getStorageValue(LOG_DEDUPE_KEY) ?? env.VITE_LOG_DEDUPE;
   return {
     enabled: parseEnabled(enabledValue),
     level: parseLevel(levelValue) ?? 'warn',
-    tags: parseTags(tagsValue)
+    tags: parseTags(tagsValue),
+    dedupe: parseDedupe(dedupeValue)
   };
 };
 
-export const shouldLog = (tag: string, level: LogLevel) => {
-  const config = getConfig();
+const isLogAllowed = (config: ReturnType<typeof getConfig>, tag: string, level: LogLevel) => {
   if (!config.enabled) {
     return false;
   }
@@ -89,13 +99,22 @@ export const shouldLog = (tag: string, level: LogLevel) => {
   return config.tags.has(tag.toLowerCase());
 };
 
+export const shouldLog = (tag: string, level: LogLevel) => {
+  const config = getConfig();
+  return isLogAllowed(config, tag, level);
+};
+
 const emitLog = (
   level: LogLevel,
   tag: string,
   message: string,
   payload?: unknown
 ) => {
-  if (!shouldLog(tag, level)) {
+  const config = getConfig();
+  if (!isLogAllowed(config, tag, level)) {
+    return;
+  }
+  if (shouldSuppressByDedupe(config.dedupe, level, tag, message, payload)) {
     return;
   }
   const prefix = `[xtrata:${tag}] ${message}`;
@@ -105,6 +124,57 @@ const emitLog = (
   } else {
     logger(prefix);
   }
+};
+
+const dedupeCache = new Set<string>();
+let lastDedupeState: boolean | null = null;
+
+const getSubjectId = (payload: unknown) => {
+  if (!payload || typeof payload !== 'object') {
+    return null;
+  }
+  const record = payload as Record<string, unknown>;
+  const keys = ['id', 'tokenId', 'listingId', 'chunkIndex', 'index'];
+  for (const key of keys) {
+    const value = record[key];
+    if (value !== undefined && value !== null) {
+      return String(value);
+    }
+  }
+  return null;
+};
+
+const shouldSuppressByDedupe = (
+  enabled: boolean,
+  level: LogLevel,
+  tag: string,
+  message: string,
+  payload?: unknown
+) => {
+  if (lastDedupeState !== enabled) {
+    dedupeCache.clear();
+    lastDedupeState = enabled;
+  }
+  if (!enabled) {
+    return false;
+  }
+  if (level === 'debug') {
+    return false;
+  }
+  const subjectId = getSubjectId(payload);
+  if (!subjectId) {
+    return false;
+  }
+  const key = `${level}:${tag}:${message}`;
+  if (dedupeCache.has(key)) {
+    return true;
+  }
+  dedupeCache.add(key);
+  return false;
+};
+
+export const clearLogDedupeCache = () => {
+  dedupeCache.clear();
 };
 
 export const logDebug = (tag: string, message: string, payload?: unknown) =>
