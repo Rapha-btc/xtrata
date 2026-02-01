@@ -20,6 +20,13 @@ const getEnvOverride = (network: NetworkType) => {
 
 const getProxyBase = (network: NetworkType) => `/hiro/${network}`;
 
+const normalizeOverride = (override: string) => {
+  if (override.startsWith('/') && typeof window !== 'undefined') {
+    return `${window.location.origin}${override}`;
+  }
+  return override;
+};
+
 export const getApiBaseUrl = (network: NetworkType) => {
   return getApiBaseUrls(network)[0];
 };
@@ -27,14 +34,15 @@ export const getApiBaseUrl = (network: NetworkType) => {
 export const getApiBaseUrls = (network: NetworkType) => {
   const override = getEnvOverride(network);
   if (override) {
-    return [override];
+    return [normalizeOverride(override)];
   }
   if (import.meta.env.DEV) {
     return [getProxyBase(network)];
   }
   const bases = DEFAULT_API_BASES[network];
   if (typeof window !== 'undefined') {
-    return bases.filter((base) => !base.includes('hiro.so'));
+    const proxyBase = `${window.location.origin}${getProxyBase(network)}`;
+    return [proxyBase, ...bases.filter((base) => !base.includes('hiro.so'))];
   }
   return bases;
 };

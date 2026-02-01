@@ -80,6 +80,9 @@ const shouldTryFallback = (error: unknown) => {
   );
 };
 
+const isHiroCompatibleBase = (baseUrl: string) =>
+  baseUrl.includes('hiro.so') || baseUrl.includes('/hiro/');
+
 const parseMarketEventFromValue = (
   value: unknown,
   meta: {
@@ -342,9 +345,20 @@ export const loadMarketActivity = async (params: {
     return cached;
   }
 
-  const apiBaseUrls = getApiBaseUrls(params.contract.network);
+  const apiBaseUrls = getApiBaseUrls(params.contract.network).filter(
+    isHiroCompatibleBase
+  );
   let events: MarketActivityEvent[] = cached?.events ?? [];
   let lastError: unknown = null;
+
+  if (apiBaseUrls.length === 0) {
+    logWarn('market', 'Market activity fetch skipped: no Hiro API base configured');
+    return {
+      contractId,
+      events,
+      updatedAt: Date.now()
+    };
+  }
 
   for (let index = 0; index < apiBaseUrls.length; index += 1) {
     const baseUrl = apiBaseUrls[index];
@@ -399,9 +413,20 @@ export const loadNftActivity = async (params: {
     return cached;
   }
 
-  const apiBaseUrls = getApiBaseUrls(params.contract.network);
+  const apiBaseUrls = getApiBaseUrls(params.contract.network).filter(
+    isHiroCompatibleBase
+  );
   let events: NftActivityEvent[] = cached?.events ?? [];
   let lastError: unknown = null;
+
+  if (apiBaseUrls.length === 0) {
+    logWarn('market', 'NFT activity fetch skipped: no Hiro API base configured');
+    return {
+      assetIdentifier,
+      events,
+      updatedAt: Date.now()
+    };
+  }
 
   for (let index = 0; index < apiBaseUrls.length; index += 1) {
     const baseUrl = apiBaseUrls[index];
