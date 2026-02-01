@@ -1,0 +1,15 @@
+/* style.css */
+  body {
+    font-family: system-ui, sans-serif;
+    background: #f7f7f7;
+    color: #222;
+    margin: 0;
+    padding: 16px;
+  }
+  #app {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 16px;
+    max-width: 420px;
+  }
