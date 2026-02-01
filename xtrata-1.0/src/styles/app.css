@@ -2095,6 +2095,8 @@ p {
     flex-direction: column;
     align-items: flex-start;
     gap: 6px;
+    justify-content: flex-start;
+    flex: 0 0 auto;
   }
 
   .app__nav {
@@ -2128,6 +2130,14 @@ p {
     font-size: 0.68rem;
   }
 
+  .app__main {
+    gap: 10px;
+  }
+
+  .app__modules {
+    gap: 10px;
+  }
+
   .panel__header {
     flex-direction: column;
     align-items: flex-start;
@@ -2136,6 +2146,13 @@ p {
   .alert {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+@media (max-width: 959px) {
+  .app-section--fit.viewer .panel__body,
+  .app-section--fit.wallet .panel__body {
+    overflow: auto;
   }
 }
 
