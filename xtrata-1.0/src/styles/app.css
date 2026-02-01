@@ -2074,6 +2074,57 @@ p {
 }
 
 @media (max-width: 720px) {
+  .app__header {
+    gap: 6px;
+  }
+
+  .eyebrow,
+  .app__header p {
+    display: none;
+  }
+
+  .app__header-row {
+    gap: 6px;
+  }
+
+  h1 {
+    font-size: clamp(1.4rem, 7vw, 1.7rem);
+  }
+
+  .app__toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .app__nav {
+    flex-wrap: nowrap;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .app__nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .app__nav-link {
+    padding: 4px 8px;
+    font-size: 0.7rem;
+    white-space: nowrap;
+  }
+
+  .app__controls {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .app__controls .button {
+    padding: 4px 8px;
+    font-size: 0.68rem;
+  }
+
   .panel__header {
     flex-direction: column;
     align-items: flex-start;
