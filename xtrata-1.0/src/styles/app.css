@@ -590,6 +590,12 @@ p {
     transform: translateY(1px);
   }
 
+  .viewer .grid-panel .square-frame,
+  .wallet .grid-panel .square-frame {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+  }
+
   .viewer .grid-panel .square-frame .square-frame__content,
   .wallet .grid-panel .square-frame .square-frame__content {
     width: 100%;
