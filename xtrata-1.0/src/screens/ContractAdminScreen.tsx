@@ -63,7 +63,6 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
     senderAddress: readOnlySender
   });
   const status = adminStatusQuery.data ?? EMPTY_ADMIN_STATUS;
-
   const mismatch = getNetworkMismatch(
     props.contract.network,
     props.walletSession.network
@@ -81,6 +80,28 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
   const [ownerInput, setOwnerInput] = useState('');
   const [ownerMessage, setOwnerMessage] = useState<string | null>(null);
   const [ownerPending, setOwnerPending] = useState(false);
+  const [legacyPauseMessage, setLegacyPauseMessage] = useState<string | null>(
+    null
+  );
+  const [legacyPausePending, setLegacyPausePending] = useState(false);
+  const [legacyOwnerInput, setLegacyOwnerInput] = useState('');
+  const [legacyOwnerMessage, setLegacyOwnerMessage] = useState<string | null>(
+    null
+  );
+  const [legacyOwnerPending, setLegacyOwnerPending] = useState(false);
+  const [nextIdInput, setNextIdInput] = useState('');
+  const [nextIdMessage, setNextIdMessage] = useState<string | null>(null);
+  const [nextIdPending, setNextIdPending] = useState(false);
+  const [legacyLastId, setLegacyLastId] = useState<bigint | null>(null);
+  const [legacyLastIdMessage, setLegacyLastIdMessage] = useState<string | null>(
+    null
+  );
+  const [legacyLastIdPending, setLegacyLastIdPending] = useState(false);
+  const [legacyLockOpen, setLegacyLockOpen] = useState(false);
+  const [legacyLockConfirm, setLegacyLockConfirm] = useState('');
+  const [legacyLockAckPaused, setLegacyLockAckPaused] = useState(false);
+  const [legacyLockAckIrreversible, setLegacyLockAckIrreversible] =
+    useState(false);
 
   const currentFeeUnit = useMemo(() => {
     if (!status.feeUnitMicroStx) {
@@ -123,6 +144,29 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
       showContractCall({
         contractAddress: props.contract.address,
         contractName: props.contract.contractName,
+        functionName: options.functionName,
+        functionArgs: options.functionArgs,
+        network,
+        stxAddress,
+        onFinish: (payload) => resolve(payload as TxPayload),
+        onCancel: () =>
+          reject(new Error('Wallet cancelled or failed to broadcast.'))
+      });
+    });
+  };
+  const requestLegacyContractCall = (options: {
+    functionName: string;
+    functionArgs: ClarityValue[];
+  }) => {
+    if (!legacyContract) {
+      return Promise.reject(new Error('Legacy contract is unavailable.'));
+    }
+    const network = props.walletSession.network ?? legacyContract.network;
+    const stxAddress = props.walletSession.address;
+    return new Promise<TxPayload>((resolve, reject) => {
+      showContractCall({
+        contractAddress: legacyContract.address,
+        contractName: legacyContract.contractName,
         functionName: options.functionName,
         functionArgs: options.functionArgs,
         network,
@@ -265,6 +309,150 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
     }
   };
 
+  const handleSetNextId = async () => {
+    if (!supportsSetNextId) {
+      setNextIdMessage('Next ID setting is only available on v2 contracts.');
+      return;
+    }
+    if (!canTransact) {
+      setNextIdMessage('Connect a matching wallet to set next token ID.');
+      return;
+    }
+    if (!isAdmin) {
+      setNextIdMessage('Connect the contract admin wallet to set next token ID.');
+      return;
+    }
+    if (nextIdAlreadySet) {
+      setNextIdMessage('Next token ID is already set.');
+      return;
+    }
+    const parsed = parseUintInput(nextIdInput);
+    if (parsed === null) {
+      setNextIdMessage('Enter a valid integer next token ID.');
+      return;
+    }
+    if (parsed <= 0n) {
+      setNextIdMessage('Next token ID must be greater than 0.');
+      return;
+    }
+    setNextIdPending(true);
+    setNextIdMessage('Sending next token ID update...');
+    try {
+      const tx = await requestContractCall({
+        functionName: 'set-next-id',
+        functionArgs: [uintCV(parsed)]
+      });
+      setNextIdMessage(`Next ID tx sent: ${tx.txId}`);
+      await adminStatusQuery.refetch();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setNextIdMessage(`Next ID update failed: ${message}`);
+    } finally {
+      setNextIdPending(false);
+    }
+  };
+  const handleLegacyPause = async (nextValue: boolean) => {
+    if (!legacyContract) {
+      setLegacyPauseMessage('Legacy contract not configured for this selection.');
+      return;
+    }
+    if (!legacyCanTransact) {
+      setLegacyPauseMessage('Connect the legacy admin wallet to pause v1.');
+      return;
+    }
+    setLegacyPausePending(true);
+    setLegacyPauseMessage(nextValue ? 'Pausing legacy contract...' : 'Unpausing legacy contract...');
+    try {
+      const tx = await requestLegacyContractCall({
+        functionName: 'set-paused',
+        functionArgs: [boolCV(nextValue)]
+      });
+      setLegacyPauseMessage(`Legacy pause tx sent: ${tx.txId}`);
+      await legacyAdminStatusQuery.refetch();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setLegacyPauseMessage(`Legacy pause failed: ${message}`);
+    } finally {
+      setLegacyPausePending(false);
+    }
+  };
+  const handleLegacyTransferOwnership = async () => {
+    if (!legacyContract) {
+      setLegacyOwnerMessage('Legacy contract not configured for this selection.');
+      return;
+    }
+    if (!legacyCanTransact) {
+      setLegacyOwnerMessage('Connect the legacy admin wallet to transfer ownership.');
+      return;
+    }
+    if (legacyStatus.paused !== true) {
+      setLegacyOwnerMessage('Pause v1 before transferring ownership.');
+      return;
+    }
+    const value = legacyOwnerInput.trim();
+    if (!isValidPrincipal(value)) {
+      setLegacyOwnerMessage('Enter a valid Stacks address or contract principal.');
+      return;
+    }
+    setLegacyOwnerPending(true);
+    setLegacyOwnerMessage('Sending legacy ownership transfer...');
+    try {
+      const tx = await requestLegacyContractCall({
+        functionName: 'transfer-contract-ownership',
+        functionArgs: [principalCV(value)]
+      });
+      setLegacyOwnerMessage(`Legacy ownership tx sent: ${tx.txId}`);
+      await legacyAdminStatusQuery.refetch();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setLegacyOwnerMessage(`Legacy ownership transfer failed: ${message}`);
+    } finally {
+      setLegacyOwnerPending(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!legacyLockOpen) {
+      setLegacyLockConfirm('');
+      setLegacyLockAckPaused(false);
+      setLegacyLockAckIrreversible(false);
+    }
+  }, [legacyLockOpen]);
+
+  useEffect(() => {
+    if (!legacyClient || !legacyContract) {
+      setLegacyLastId(null);
+      setLegacyLastIdMessage(null);
+      return;
+    }
+    let cancelled = false;
+    setLegacyLastIdPending(true);
+    setLegacyLastIdMessage(null);
+    legacyClient
+      .getLastTokenId(readOnlySender)
+      .then((value) => {
+        if (cancelled) {
+          return;
+        }
+        setLegacyLastId(value);
+      })
+      .catch((error) => {
+        if (cancelled) {
+          return;
+        }
+        const message = error instanceof Error ? error.message : String(error);
+        setLegacyLastIdMessage(`Legacy last ID unavailable: ${message}`);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLegacyLastIdPending(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [legacyClient, legacyContract, readOnlySender]);
+
   const adminLabel = status.admin ?? 'Unknown';
   const royaltyLabel = status.royaltyRecipient ?? 'Unknown';
   const feeUnitLabel =
@@ -273,6 +461,41 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
     status.paused === null ? 'Unknown' : status.paused ? 'Paused' : 'Active';
   const nextTokenLabel =
     status.nextTokenId !== null ? status.nextTokenId.toString() : 'Unknown';
+  const legacyAdminLabel = legacyStatus.admin ?? 'Unknown';
+  const legacyPausedLabel =
+    legacyStatus.paused === null
+      ? 'Unknown'
+      : legacyStatus.paused
+        ? 'Paused'
+        : 'Active';
+  const legacyIsAdmin =
+    !!props.walletSession.address &&
+    legacyStatus.admin !== null &&
+    props.walletSession.address === legacyStatus.admin;
+  const isAdmin =
+    !!props.walletSession.address &&
+    status.admin !== null &&
+    props.walletSession.address === status.admin;
+  const supportsSetNextId =
+    props.contract.protocolVersion === '2.1.0' ||
+    props.contract.contractName.includes('v2-1-0');
+  const nextIdAlreadySet =
+    status.nextTokenId !== null && status.nextTokenId !== 0n;
+  const suggestedNextId = legacyLastId !== null ? legacyLastId + 1n : null;
+  const legacyCanTransact =
+    !!props.walletSession.address && !legacyMismatch && legacyIsAdmin;
+  const legacyContractLabel = legacyContract
+    ? `${legacyContract.address}.${legacyContract.contractName}`
+    : 'Not configured';
+  const legacyPauseRequired = legacyStatus.paused !== true;
+  const legacyOwnerValid = isValidPrincipal(legacyOwnerInput.trim());
+  const legacyLockReady =
+    legacyCanTransact &&
+    !legacyPauseRequired &&
+    legacyOwnerValid &&
+    legacyLockAckPaused &&
+    legacyLockAckIrreversible &&
+    legacyLockConfirm.trim().toUpperCase() === 'LOCK';
 
   return (
     <section
@@ -329,6 +552,168 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
             <span className="meta-value">{nextTokenLabel}</span>
           </div>
         </div>
+
+        {legacyContract && (
+          <div className="mint-panel mint-panel--critical">
+            <span className="meta-label">V2 launch safety lock (critical)</span>
+            <p className="meta-value">
+              Run once when moving the collection to v2. This permanently stops
+              v1 minting and keeps IDs contiguous across the collection.
+            </p>
+            <div className="meta-grid meta-grid--dense">
+              <div>
+                <span className="meta-label">Legacy contract</span>
+                <span className="meta-value">{legacyContractLabel}</span>
+              </div>
+              <div>
+                <span className="meta-label">Legacy admin</span>
+                <span className="meta-value">{legacyAdminLabel}</span>
+              </div>
+              <div>
+                <span className="meta-label">Legacy paused</span>
+                <span className="meta-value">{legacyPausedLabel}</span>
+              </div>
+            </div>
+            <ol className="critical-steps">
+              <li>Pause v1 (below).</li>
+              <li>Transfer v1 ownership to a lock/burn principal.</li>
+              <li>Deploy v2 under the same deployer as v1.</li>
+              <li>Set v2 next-id to last v1 id + 1 (one-time).</li>
+              <li>Allowlist partner collection contracts.</li>
+              <li>Unpause v2 for public mints (or keep paused to restrict).</li>
+            </ol>
+            {supportsSetNextId && (
+              <div className="mint-panel">
+                <span className="meta-label">Set v2 next token ID (one-time)</span>
+                <p className="meta-value">
+                  This permanently sets the starting ID for v2. It can only be
+                  run once and should be last v1 ID + 1.
+                </p>
+                <label className="field">
+                  <span className="field__label">Next token ID</span>
+                  <input
+                    className="input"
+                    placeholder="39"
+                    value={nextIdInput}
+                    onChange={(event) => {
+                      setNextIdInput(event.target.value);
+                      setNextIdMessage(null);
+                    }}
+                    disabled={nextIdAlreadySet}
+                  />
+                  <span className="field__hint">
+                    Current next ID: {nextTokenLabel}.{' '}
+                    {suggestedNextId !== null
+                      ? `Suggested: ${suggestedNextId.toString()}.`
+                      : legacyLastIdPending
+                        ? 'Loading legacy last ID…'
+                        : ''}
+                  </span>
+                </label>
+                <div className="mint-actions">
+                  <button
+                    className="button"
+                    type="button"
+                    onClick={() => void handleSetNextId()}
+                    disabled={
+                      nextIdPending ||
+                      nextIdAlreadySet ||
+                      !canTransact ||
+                      !isAdmin
+                    }
+                  >
+                    {nextIdPending ? 'Setting…' : 'Set next ID'}
+                  </button>
+                  {suggestedNextId !== null && !nextIdAlreadySet && (
+                    <button
+                      className="button button--ghost"
+                      type="button"
+                      onClick={() => setNextIdInput(suggestedNextId.toString())}
+                      disabled={nextIdPending}
+                    >
+                      Use suggested
+                    </button>
+                  )}
+                </div>
+                {legacyLastIdMessage && (
+                  <span className="meta-value">{legacyLastIdMessage}</span>
+                )}
+                {nextIdMessage && (
+                  <span className="meta-value">{nextIdMessage}</span>
+                )}
+                {!isAdmin && (
+                  <span className="meta-value">
+                    Connect the contract admin wallet to set the next ID.
+                  </span>
+                )}
+                {nextIdAlreadySet && (
+                  <span className="meta-value">
+                    Next ID already set. This action is no longer available.
+                  </span>
+                )}
+              </div>
+            )}
+            <div className="mint-actions">
+              <button
+                className="button"
+                type="button"
+                onClick={() => void handleLegacyPause(true)}
+                disabled={
+                  !legacyCanTransact || legacyPausePending || legacyStatus.paused === true
+                }
+              >
+                {legacyPausePending ? 'Pausing...' : 'Pause v1'}
+              </button>
+            </div>
+            {legacyPauseMessage && (
+              <span className="meta-value">{legacyPauseMessage}</span>
+            )}
+            <label className="field">
+              <span className="field__label">Lock/burn principal</span>
+              <input
+                className="input"
+                placeholder="ST... or ST...contract-name"
+                value={legacyOwnerInput}
+                onChange={(event) => {
+                  setLegacyOwnerInput(event.target.value);
+                  setLegacyOwnerMessage(null);
+                }}
+              />
+              <span className="field__hint">
+                This is irreversible. Use a lock contract or burn address you
+                control.
+              </span>
+            </label>
+            <div className="mint-actions">
+              <button
+                className="button button--ghost"
+                type="button"
+                onClick={() => setLegacyLockOpen(true)}
+                disabled={
+                  !legacyCanTransact ||
+                  legacyOwnerPending ||
+                  !legacyOwnerInput.trim() ||
+                  legacyPauseRequired
+                }
+              >
+                Review lock transfer
+              </button>
+            </div>
+            {legacyOwnerMessage && (
+              <span className="meta-value">{legacyOwnerMessage}</span>
+            )}
+            {!legacyCanTransact && (
+              <span className="meta-value">
+                Connect the legacy admin wallet on {legacyContract.network} to
+                enable lock actions.
+              </span>
+            )}
+            <p className="meta-value">
+              Leaving v1 open can create duplicate ID numbers across contracts and
+              will break the “single collection” promise.
+            </p>
+          </div>
+        )}
 
         <div className="mint-grid">
           {capabilities.supportsFeeUnit && (
@@ -470,6 +855,117 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
           </div>
         )}
       </div>
+
+      {legacyContract && legacyLockOpen && (
+        <div className="modal-overlay" role="presentation">
+          <div
+            className="modal modal--critical"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="legacy-lock-title"
+          >
+            <div className="modal__header">
+              <h3 id="legacy-lock-title" className="modal__title">
+                Confirm v1 ownership transfer (irreversible)
+              </h3>
+              <button
+                className="button button--ghost button--mini"
+                type="button"
+                onClick={() => setLegacyLockOpen(false)}
+              >
+                Cancel
+              </button>
+            </div>
+            <p className="meta-value">
+              This will permanently lock v1 and prevent any future v1 mints.
+              Ensure the legacy contract is paused first.
+            </p>
+            <div className="meta-grid meta-grid--dense">
+              <div>
+                <span className="meta-label">Legacy contract</span>
+                <span className="meta-value">{legacyContractLabel}</span>
+              </div>
+              <div>
+                <span className="meta-label">Legacy paused</span>
+                <span className="meta-value">{legacyPausedLabel}</span>
+              </div>
+              <div>
+                <span className="meta-label">New owner</span>
+                <span className="meta-value">
+                  {legacyOwnerInput.trim() || 'Not set'}
+                </span>
+              </div>
+            </div>
+            <label className="field field--checkbox">
+              <input
+                type="checkbox"
+                checked={legacyLockAckPaused}
+                onChange={(event) => setLegacyLockAckPaused(event.target.checked)}
+              />
+              <span className="field__label">
+                I confirm v1 is paused and should never mint again.
+              </span>
+            </label>
+            <label className="field field--checkbox">
+              <input
+                type="checkbox"
+                checked={legacyLockAckIrreversible}
+                onChange={(event) =>
+                  setLegacyLockAckIrreversible(event.target.checked)
+                }
+              />
+              <span className="field__label">
+                I understand this transfer is irreversible.
+              </span>
+            </label>
+            <label className="field">
+              <span className="field__label">Type LOCK to confirm</span>
+              <input
+                className="input"
+                placeholder="LOCK"
+                value={legacyLockConfirm}
+                onChange={(event) => setLegacyLockConfirm(event.target.value)}
+              />
+            </label>
+            {!legacyOwnerValid && legacyOwnerInput.trim() && (
+              <div className="alert">
+                Enter a valid Stacks address or contract principal for the new owner.
+              </div>
+            )}
+            {legacyPauseRequired && (
+              <div className="alert">
+                Legacy contract must be paused before ownership transfer.
+              </div>
+            )}
+            {!legacyCanTransact && (
+              <div className="alert">
+                Connect the legacy admin wallet on {legacyContract.network} to
+                proceed.
+              </div>
+            )}
+            <div className="modal__actions">
+              <button
+                className="button"
+                type="button"
+                onClick={() => void handleLegacyTransferOwnership()}
+                disabled={!legacyLockReady || legacyOwnerPending}
+              >
+                {legacyOwnerPending ? 'Transferring...' : 'Confirm transfer'}
+              </button>
+              <button
+                className="button button--ghost"
+                type="button"
+                onClick={() => setLegacyLockOpen(false)}
+              >
+                Back
+              </button>
+            </div>
+            {legacyOwnerMessage && (
+              <span className="meta-value">{legacyOwnerMessage}</span>
+            )}
+          </div>
+        </div>
+      )}
     </section>
   );
 }
