@@ -27,6 +27,29 @@ const VARIANT_SETS = [
         fallback: 'contracts/other/xtrata-v1.1.0.clar'
       }
     ]
+  },
+  {
+    id: 'xtrata-v2.1.0',
+    variants: [
+      {
+        name: 'clarinet',
+        trait: 'local',
+        file: 'contracts/clarinet/contracts/xtrata-v2.1.0.clar',
+        fallback: 'contracts/other/xtrata-v2.1.0.clar'
+      },
+      {
+        name: 'testnet',
+        trait: 'testnet',
+        file: 'contracts/other/xtrata-v2.1.0.clar',
+        fallback: 'contracts/clarinet/contracts/xtrata-v2.1.0.clar'
+      },
+      {
+        name: 'mainnet',
+        trait: 'mainnet',
+        file: 'contracts/live/xtrata-v2.1.0.clar',
+        fallback: 'contracts/other/xtrata-v2.1.0.clar'
+      }
+    ]
   }
 ];
 

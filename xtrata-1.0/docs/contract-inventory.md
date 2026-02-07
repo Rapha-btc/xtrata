@@ -92,5 +92,62 @@ Source: `contracts/live/xtrata-v1.1.0.clar`
 - `get-fee-unit()`
 - `is-paused()`
 
+## xtrata-v2.1.0
+
+Source: `contracts/live/xtrata-v2.1.0.clar`
+
+## Trait
+- Implements SIP-009: `nft-trait` (local/testnet/mainnet variants managed by `scripts/contract-variants.mjs`).
+
+## New Capabilities
+- Allowlisted contract callers can inscribe while paused.
+- Admin can set a one-time `next-id` offset.
+- Optional migration from v1: escrow v1 token and mint the same id in v2.
+- Mint index helpers for enumerating minted ids.
+
+## Additional Data Vars
+- `offset-set` (bool)
+- `minted-count` (uint)
+- `max-minted-id` (uint)
+- `legacy-contract` (optional principal)
+
+## Additional Maps
+- `AllowedCallers` -> `principal` => `bool`
+- `MintedIndex` -> `uint` => `uint`
+- `MigratedFromV1` -> `uint` => `bool`
+
+## Additional Public Functions
+- `set-next-id(value)`
+- `set-legacy-contract(contract)`
+- `set-allowed-caller(caller, allowed)`
+- `migrate-from-v1(token-id)`
+
+## Additional Read-Only Functions
+- `get-minted-count()`
+- `get-minted-id(index)`
+- `get-legacy-contract()`
+- `is-allowed-caller(caller)`
+
+## xtrata-collection-mint-v1.0 (template)
+
+Source: `contracts/clarinet/contracts/xtrata-collection-mint-v1.0.clar`
+
+## Purpose
+- Per-collection mint coordinator that charges a one-time mint fee split and proxies xtrata begin/chunk/seal calls.
+
+## Core Admin Functions
+- `set-mint-price(amount)`
+- `set-max-supply(amount)`
+- `set-recipients(artist, marketplace, operator)`
+- `set-splits(artist, marketplace, operator)`
+- `set-paused(value)`
+- `transfer-contract-ownership(new-owner)`
+- `release-reservation(owner, hash)`
+
+## Core Mint Functions
+- `mint-begin(expected-hash, mime, total-size, total-chunks)`
+- `mint-add-chunk-batch(hash, chunks)`
+- `mint-seal(expected-hash, token-uri-string)`
+
 ## Private Functions (internal)
 - Internal helpers cover fee math, upload expiry checks, and hashing logic. See contract source for details.
