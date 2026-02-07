@@ -21,6 +21,7 @@ const walletSessionStore = createWalletSessionStore();
 const SECTION_KEYS = [
   'wallet-lookup',
   'wallet-session',
+  'active-contract',
   'docs',
   'mint',
   'market',
@@ -196,6 +197,12 @@ export default function PublicApp() {
               </a>
               <a
                 className="button button--ghost app__nav-link"
+                href="#active-contract"
+              >
+                Active contract
+              </a>
+              <a
+                className="button button--ghost app__nav-link"
                 href="#collection-viewer"
               >
                 Viewer
@@ -348,6 +355,47 @@ export default function PublicApp() {
                   </button>
                 </div>
               )}
+            </div>
+          </section>
+
+          <section
+            className={`panel app-section panel--compact${collapsedSections['active-contract'] ? ' panel--collapsed' : ''}`}
+            id="active-contract"
+          >
+            <div className="panel__header">
+              <div>
+                <h2>Active contract</h2>
+                <p>Public view and mint target.</p>
+              </div>
+              <div className="panel__actions">
+                <span className={`badge badge--${contract.network}`}>
+                  {contract.network}
+                </span>
+                <button
+                  className="button button--ghost button--collapse"
+                  type="button"
+                  onClick={() => toggleSection('active-contract')}
+                  aria-expanded={!collapsedSections['active-contract']}
+                >
+                  {collapsedSections['active-contract'] ? 'Expand' : 'Collapse'}
+                </button>
+              </div>
+            </div>
+            <div className="panel__body">
+              <div className="meta-grid">
+                <div>
+                  <span className="meta-label">Contract</span>
+                  <span className="meta-value">{contract.label}</span>
+                </div>
+                <div>
+                  <span className="meta-label">Contract ID</span>
+                  <span className="meta-value">{contractId}</span>
+                </div>
+                <div>
+                  <span className="meta-label">Network</span>
+                  <span className="meta-value">{contract.network}</span>
+                </div>
+              </div>
             </div>
           </section>
         </div>

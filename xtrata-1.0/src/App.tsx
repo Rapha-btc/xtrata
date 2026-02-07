@@ -23,12 +23,17 @@ import CollectionMintScreen from './screens/CollectionMintScreen';
 import CollectionMintAdminScreen from './screens/CollectionMintAdminScreen';
 import MarketScreen from './screens/MarketScreen';
 
-const SELECTABLE_CONTRACTS = CONTRACT_REGISTRY.filter(
-  (entry) => entry.protocolVersion === '2.1.0'
-);
+const isV2Entry = (entry: { protocolVersion?: string; contractName?: string }) =>
+  entry.protocolVersion === '2.1.0' ||
+  entry.contractName?.toLowerCase().includes('v2-1-0') === true;
+
+const SELECTABLE_CONTRACTS = CONTRACT_REGISTRY.filter(isV2Entry);
 const ACTIVE_CONTRACTS =
   SELECTABLE_CONTRACTS.length > 0 ? SELECTABLE_CONTRACTS : CONTRACT_REGISTRY;
 const contractSelectionStore = createContractSelectionStore(ACTIVE_CONTRACTS);
+const ACTIVE_CONTRACT_IDS = new Set(
+  ACTIVE_CONTRACTS.map((entry) => getContractId(entry))
+);
 const walletSessionStore = createWalletSessionStore();
 
 const CONTRACT_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9-_]{0,127}$/;
@@ -256,6 +261,19 @@ export default function App() {
       window.removeEventListener(RATE_LIMIT_WARNING_EVENT, handler);
     };
   }, [hasHiroApiKey]);
+
+  useEffect(() => {
+    const currentId = getContractId(selectedContract);
+    if (ACTIVE_CONTRACT_IDS.has(currentId)) {
+      return;
+    }
+    const next = ACTIVE_CONTRACTS[0];
+    if (!next) {
+      return;
+    }
+    setSelectedContract(next);
+    contractSelectionStore.save(next);
+  }, [selectedContract]);
 
   useEffect(() => {
     setWalletSession(walletAdapter.getSession());
