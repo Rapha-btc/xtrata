@@ -1,0 +1,298 @@
+Perform a public-facing redesign refactor that makes Xtrata look premium, exciting, and trustworthy, while preserving existing functionality and keeping admin tooling stable. The redesign must clearly communicate Xtrata’s unique value: open-source, chunked inscription protocol, mined transactions, deterministic reconstruction, sealing/immutability, and suitability as a Bitcoin-secured data layer replacing mutable off-chain references.
+
+Hard Constraints
+
+Do not break existing inscription/mint flows.
+
+Keep admin screens and admin components working; minimal changes there.
+
+Avoid large rewrites; prefer composition + wrappers.
+
+Ensure the app remains fast: minimize rerenders, split bundles, lazy-load heavy screens.
+
+Introduce a consistent design system (tokens, layout primitives), not ad-hoc CSS.
+
+Phase 1 — Inventory & Architecture Map (must be done first)
+
+Create a module map of:
+
+src/App.tsx, src/PublicApp.tsx, src/main.tsx
+
+src/screens/*
+
+src/components/*
+
+src/styles/*
+
+src/lib/*, src/config/*, src/data/*, src/admin/*
+
+Identify:
+
+Public vs Admin boundary (routing + layout).
+
+The “core public journeys”:
+
+Viewer (token/inscription viewing)
+
+Public market
+
+Wallet lookup
+
+My wallet
+
+Mint & collection mint flows
+
+Output a short document:
+
+“Current IA + user journeys”
+
+“Pain points (UI confusion, discoverability, trust signals, narrative clarity)”
+
+“Opportunities (where to add trust strip, live stats, activity feed, protocol explainer)”
+
+Phase 2 — New Information Architecture (IA) & Layout Shell
+Create a new public shell without rewriting screen internals
+
+Implement src/layouts/PublicShell.tsx with:
+
+Top nav (sticky, minimal)
+
+Primary routes: Explore / Inscribe / Wallet / Docs / GitHub
+
+Secondary: Market / Activity / Protocol
+
+Footer: open source, protocol version, contract addresses, “immutability once sealed” statement
+
+Key rule: existing screens remain mostly unchanged; wrap them in a shell and progressively enhance.
+
+Routing strategy
+
+Keep PublicApp as the public entry.
+
+Use nested routes so the shell wraps all public screens.
+
+Admin routes should have a separate AdminShell or stay as-is.
+
+Phase 3 — Design System (Tokens + Primitives)
+
+Create a design system that can be applied incrementally:
+
+Tokens
+
+Add src/styles/tokens.css or src/styles/theme.ts:
+
+spacing scale
+
+radius
+
+elevation/shadows
+
+typography scale
+
+colors:
+
+dark neutral base
+
+1 accent color
+
+“trust” color (subtle)
+
+“warning/error/success” semantics
+
+Primitives
+
+Add reusable UI components under src/ui/ or src/components/ui/:
+
+Stack / Row / Container layout primitives
+
+Card, Panel, Badge, Button, Tabs, Pill, Tag
+
+Stat component for live metrics
+
+Callout component for trust/immutability messaging
+
+No screen should invent its own layout rules. Screens should compose primitives.
+
+Phase 4 — “Trust + Innovation” surfaces (must be visible everywhere)
+
+Add a Trust Strip component used in:
+
+Home / Explore
+
+Viewer
+
+Mint flow confirmations
+
+Trust Strip content (short, factual):
+
+Open source
+
+Deterministic reconstruction from chunks
+
+Immutable once sealed
+
+Settles via Stacks / Bitcoin security model (word carefully; avoid overclaiming)
+
+Add a Protocol Explainer panel:
+
+“Chunk → Inscribe → Seal”
+
+Minimal copy, diagram-like layout
+
+Add a Live Activity / Stats module:
+
+total inscriptions
+
+total sealed datasets
+
+latest seals
+
+latest mints
+
+current contract version + addresses
+
+Implementation: add src/data/stats.ts or similar, fetched and cached (React Query or whatever exists).
+
+Phase 5 — Upgrade “Cool Factor” (without hype)
+
+The “cool” should come from:
+
+clean typography
+
+confident whitespace
+
+good artifact presentation
+
+Upgrade Token presentation (highest leverage)
+
+Refactor/upgrade:
+
+TokenCardMedia
+
+TokenContentPreview
+
+Goals:
+
+consistent cards
+
+strong metadata hierarchy
+
+“sealed / unsealed” visual state
+
+provenance line (creator/owner, BNS name if available)
+
+chunk count and size (if available)
+
+“verify integrity” affordance (even if it just links to docs now)
+
+Phase 6 — Screen-by-screen redesign plan (incremental)
+
+Do not redesign everything at once. Priority order:
+
+Viewer
+
+Make it feel like a “vault artifact”
+
+Improve readability
+
+Add seal/provenance + trust strip
+
+WalletLookup
+
+Make it instantly discoverable (search bar always present)
+
+Add “what you’re about to see” hints
+
+PublicMarket
+
+Add filters, sorting, better cards, activity feel
+
+Mint / CollectionMint
+
+Make the flow legible:
+
+stepper UI
+
+upload/chunk progress
+
+sealing as an “event”
+
+error states that explain what to do
+
+MyWallet
+
+unify card layout with market
+
+show created vs owned vs pending inscriptions
+
+Phase 7 — Performance & Robustness Requirements
+
+Add route-based code splitting: lazy-load heavy screens
+
+Memoize heavy token rendering components
+
+Ensure large lists use virtualization if needed
+
+Provide loading skeletons (not spinners)
+
+Add error boundaries for public routes
+
+Ensure mobile responsiveness (at least basic)
+
+Phase 8 — Content / Copy integration (no marketing fluff)
+
+Add a src/content/ folder:
+
+valueProps.ts (single source of truth for key claims)
+
+labels.ts for UI labels
+
+protocolFacts.ts for “immutable once sealed” etc.
+
+Rule: no duplicate copy scattered across screens.
+
+Deliverables
+
+ARCHITECTURE_MAP.md — module map + where new shell lives
+
+DESIGN_SYSTEM.md — tokens, primitives, usage rules
+
+PUBLIC_IA.md — route map + nav plan
+
+Incremental PRs:
+
+PR1: shells + tokens + primitives
+
+PR2: Viewer redesign + token components
+
+PR3: WalletLookup + Market redesign
+
+PR4: Mint flows UX pass + trust surfaces
+
+Acceptance Criteria (definition of done)
+
+Public site has consistent layout, nav, and typography across all key screens.
+
+Trust Strip and protocol explainer appear in appropriate places.
+
+Viewer and token cards look “premium” and are screenshot-worthy.
+
+No admin regressions.
+
+Lighthouse/perf checks show no major regressions.
+
+All claims are factual and defensible (no “100x” unless substantiated in docs).
+
+Optional but high value (if time allows)
+
+Add “Activity” page that shows recent seals/mints in a clean timeline.
+
+Add a “Protocol” page with the 3-step diagram and links to contract code.
+
+Add “Verify” interactions (link to tx, show hashes, show seal state).
+
+Tone / visual direction note for implementation
+
+Aim for calm, architectural, inevitable.
+Avoid neon gradients, meme energy, or over-animated UI.
+Think “serious infrastructure with cultural weight”.
