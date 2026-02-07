@@ -1,0 +1,136 @@
+Optimisation Notes (Expanded Implementation Guidance)
+
+Context / Pain Points
+- Initial load produces major delays plus large volumes of warnings and CORS errors.
+- Logs are noisy and hard to interpret.
+- Need BNS (.btc) name resolution for addresses.
+- Need a detailed external integration doc so marketplaces can reconstruct Xtrata inscriptions from chunks.
+
+-------------------------------------------------------------------------------
+1) Log De‑Duplication + Diagnostics Control
+
+Goal
+- Show only one instance of each error/warning, record the first ID that caused it, suppress repeats for other IDs.
+- Make this behavior a toggle in the diagnostics module.
+
+Implementation Notes
+A) Logger changes (src/lib/utils/logger.ts)
+- Add a “dedup mode” that can be enabled via localStorage config.
+- Track a per‑session in‑memory map:
+  - Key: {tag}:{level}:{message}:{contextKey}
+  - Value: {firstId, firstTimestamp, count}
+- Define contextKey rules:
+  - For token‑specific logs, use token id as “firstId” but do NOT include id in the key unless we want per‑token logging.
+  - Desired behavior here: same message across ids should collapse to 1 log → key should exclude id.
+- On repeated logs, increment count and suppress output.
+- Optional: emit a periodic summary log every N minutes (e.g., “Suppressed 182 repeats of X”).
+
+B) Diagnostics toggle (src/screens/AdminDiagnosticsScreen.tsx)
+- Add a new section “Log de‑duplication” with:
+  - Toggle (on/off)
+  - Optional mode: “per‑message” vs “per‑message+source tag”
+  - Optional: “reset dedup state” button (clears in‑memory map)
+- Store settings in localStorage (e.g., LOG_DEDUP_ENABLED, LOG_DEDUP_MODE).
+
+C) Where to apply
+- All log output: token preview warnings, chunk read warnings, CORS / fetch failures.
+- Ensure error logging still happens once so issues are visible.
+
+Ease / Safety
+- Ease: Medium (small code change but touches global logger).
+- Safety: High (does not change behavior of data loading, only logging).
+- Risk: Low (log suppression only).
+
+-------------------------------------------------------------------------------
+2) BNS (.btc) Name Resolution for Addresses
+
+Goal
+- If an address has a BNS name, show the name in UI (primary), with address as secondary.
+- When searching/lookup, accept either address or .btc name.
+
+Implementation Notes
+A) Resolver module
+- Add a small resolver module: src/lib/bns/resolve.ts
+- Functions:
+  - resolveNameToAddress(name: string) => address | null
+  - resolveAddressToName(address: string) => name | null
+- IMPORTANT: Confirm the authoritative API / endpoint in Stacks BNS docs (Hiro/Stacks). Do not hard‑code until verified.
+
+B) Caching strategy
+- In‑memory cache + persistent cache (IndexedDB or localStorage).
+- TTL recommended (e.g., 24h) + negative caching for missing names (short TTL, e.g., 1h).
+- Avoid per‑card lookups during initial grid render; resolve names on demand or in background batches.
+
+C) UI integration points
+- Viewer / Wallet owner displays: show “name (address)” when resolved.
+- Wallet lookup input: if .btc provided, resolve to address before lookup.
+- Ensure accessibility: include full address in title/tooltip.
+
+D) Concurrency + rate limiting
+- Use the same read‑only request limiter or a dedicated small queue.
+- Batch requests if API supports it; otherwise debounce and cache aggressively.
+
+Ease / Safety
+- Ease: Medium (new network calls + caching + UI formatting).
+- Safety: Medium (requires careful API validation + rate‑limit handling).
+- Risk: Moderate if API endpoints change; mitigate by isolating resolver and using robust caching.
+
+-------------------------------------------------------------------------------
+3) External Marketplace / Indexer Support Document
+
+Goal
+- Provide a clear, technical guide for marketplaces to reconstruct Xtrata inscriptions from chunks.
+- Ensure third parties can render Xtrata NFTs consistently (e.g., Gamma.io).
+
+Implementation Notes (Document Outline)
+A) Contract Read‑Only Functions (per contract version)
+- get-last-token-id
+- get-inscription-meta (owner, creator, mime‑type, total‑size, total‑chunks, final‑hash, sealed)
+- get-token-uri
+- get-chunk / get-chunk-batch
+- get-svg / get-svg-data-uri
+- get-dependencies
+
+B) Reconstruction Algorithm
+1. Call get-inscription-meta(tokenId)
+2. Compute expected chunk count (from meta.total-chunks; if missing, estimate from first chunk size)
+3. Fetch chunk 0 first to determine chunk size
+4. Use get-chunk-batch when supported; otherwise fetch sequential chunks
+5. Join chunks in order; trim to total-size
+6. Validate final-hash (if provided)
+7. Derive mime type from meta; sniff bytes if needed
+8. Render based on mime:
+   - image/svg+xml => use svg data or bytes
+   - audio/video => stream or lazy load
+   - text/html => render in sandboxed iframe
+   - text/.. => text preview + download
+
+C) Token URI usage
+- Token URI can point to off‑chain metadata or image.
+- Use as fallback; on‑chain bytes should be canonical.
+
+D) Dependencies / recursive inscriptions
+- Use get-dependencies(tokenId), resolve each dependency the same way, then render the outer HTML with recursive bridge if needed.
+
+E) Caching recommendations
+- Cache chunks, assembled bytes, and thumbnails (LRU + TTL)
+- Use cache‑first behavior to avoid repeated reads
+
+F) Network / API details
+- Document chain endpoints used for read‑only calls
+- Provide guidance for rate‑limit handling and retries
+
+Doc Location Proposal
+- Add to docs/: docs/marketplace-integration.md
+- Reference contract versions in docs/contract-inventory.md
+
+Ease / Safety
+- Ease: High (documentation only, no app changes).
+- Safety: High (no runtime impact). Accuracy depends on contract docs; ensure review against contract sources.
+
+-------------------------------------------------------------------------------
+Summary of Ease & Safety
+- Log de‑duplication: Easy‑Medium / Very Safe.
+- BNS name resolution: Medium / Medium risk (external API, rate limits).
+- Marketplace doc: Easy / Very Safe.
+
