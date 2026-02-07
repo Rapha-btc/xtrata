@@ -109,7 +109,6 @@ Source: `contracts/live/xtrata-v2.1.0.clar`
 - `offset-set` (bool)
 - `minted-count` (uint)
 - `max-minted-id` (uint)
-- `legacy-contract` (optional principal)
 
 ## Additional Maps
 - `AllowedCallers` -> `principal` => `bool`
@@ -118,14 +117,12 @@ Source: `contracts/live/xtrata-v2.1.0.clar`
 
 ## Additional Public Functions
 - `set-next-id(value)`
-- `set-legacy-contract(contract)`
 - `set-allowed-caller(caller, allowed)`
 - `migrate-from-v1(token-id)`
 
 ## Additional Read-Only Functions
 - `get-minted-count()`
 - `get-minted-id(index)`
-- `get-legacy-contract()`
 - `is-allowed-caller(caller)`
 
 ## xtrata-collection-mint-v1.0 (template)

@@ -1,6 +1,6 @@
-;; xtrata-v2.1.0
+;; xtrata-v1.1.1
 ;;
-;; Core posture (v2.1.0):
+;; Core posture (v1.1.1):
 ;; 1) Open participation: anyone can inscribe (fees apply) once unpaused.
 ;; 2) Content-addressed + canonical: a given final-hash can be sealed at most once.
 ;;    - HashToId provides on-chain lookup (final-hash -> canonical token-id)
@@ -22,21 +22,19 @@
 ;;     - pause does NOT stop transfers or read-only access
 ;; 11) Hard caps: total-chunks <= 2048 and total-size <= 32 MiB.
 ;; 12) Read-only batch chunk reader speeds client reconstruction.
-;; 13) Default paused on deploy; allowlisted contract callers can inscribe while paused.
-;; 14) Optional migration: lock v1 token in escrow and mint same id in v2.
-;; 15) Admin can set an initial next-id offset once (for v1 continuity).
+;; 13) Default paused on deploy; only the contract owner can inscribe while paused.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; --- SIP-009 TRAIT (IMPLEMENT FOR WALLET/INDEXER COMPATIBILITY) ---
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; [LOCAL / CLARINET]
-(impl-trait .sip009-nft-trait.nft-trait)
-(use-trait nft-trait .sip009-nft-trait.nft-trait)
+;; (impl-trait .sip009-nft-trait.nft-trait)
+;; (use-trait nft-trait .sip009-nft-trait.nft-trait)
 
 ;; [TESTNET]
-;; (impl-trait 'ST1NXBK3K5YYMD6FD41MVNP3JS1GABZ8TRVX023PT.nft-trait.nft-trait)
-;; (use-trait nft-trait 'ST1NXBK3K5YYMD6FD41MVNP3JS1GABZ8TRVX023PT.nft-trait.nft-trait)
+(impl-trait 'ST1NXBK3K5YYMD6FD41MVNP3JS1GABZ8TRVX023PT.nft-trait.nft-trait)
+(use-trait nft-trait 'ST1NXBK3K5YYMD6FD41MVNP3JS1GABZ8TRVX023PT.nft-trait.nft-trait)
 
 ;; [MAINNET]
 ;; (impl-trait 'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.nft-trait)
@@ -63,7 +61,6 @@
 (define-constant ERR-EXPIRED            (err u112))
 (define-constant ERR-NOT-EXPIRED        (err u113))
 (define-constant ERR-DUPLICATE          (err u114))
-(define-constant ERR-ALREADY-SET        (err u115))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; --- CONSTANTS ---
@@ -82,9 +79,6 @@
 
 ;; Upload expiry (~30 days at 10-min block cadence)
 (define-constant UPLOAD-EXPIRY-BLOCKS u4320)
-
-;; Contract principal helper (for escrow / internal transfers)
-(define-constant CONTRACT-PRINCIPAL (as-contract tx-sender))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; --- SVG (COMPATIBLE / SAFE) ---
@@ -108,9 +102,6 @@
 (define-data-var contract-owner principal tx-sender)
 
 (define-data-var next-id uint u0)
-(define-data-var offset-set bool false)
-(define-data-var minted-count uint u0)
-(define-data-var max-minted-id uint u0)
 (define-data-var royalty-recipient principal tx-sender)
 
 ;; Single pricing "knob" (microSTX), bounded for predictability
@@ -134,14 +125,6 @@
 
 ;; Canonical mapping: sealed content hash -> token-id
 (define-map HashToId (buff 32) uint)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; --- CALLER + MINT INDEX ---
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(define-map AllowedCallers principal bool)
-(define-map MintedIndex uint uint)
-(define-map MigratedFromV1 uint bool)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; --- STORAGE ---
@@ -181,18 +164,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-private (assert-inscription-allowed)
-  (let ((caller contract-caller))
-    (begin
-      (asserts!
-        (or
-          (not (var-get paused))
-          (is-eq tx-sender (var-get contract-owner))
-          (is-some (map-get? AllowedCallers caller))
-        )
-        ERR-PAUSED
-      )
-      (ok true)
+  (begin
+    (asserts!
+      (or (not (var-get paused)) (is-eq tx-sender (var-get contract-owner)))
+      ERR-PAUSED
     )
+    (ok true)
   )
 )
 
@@ -264,7 +241,7 @@
 ;; Cheaper "existence" rule for sequential IDs (no burns):
 ;; Dependency exists iff dep-id < next-id at the time of sealing.
 (define-private (dep-exists? (id uint))
-  (is-some (map-get? InscriptionMeta id))
+  (< id (var-get next-id))
 )
 
 (define-private (validate-dependencies (deps (list 50 uint)))
@@ -356,44 +333,19 @@
   )
 )
 
-(define-private (record-mint (id uint))
-  (let (
-    (count (var-get minted-count))
-    (current-max (var-get max-minted-id))
-  )
-    (begin
-      (map-set MintedIndex count id)
-      (var-set minted-count (+ count u1))
-      (if (> id current-max)
-        (var-set max-minted-id id)
-        true
-      )
-      id
-    )
-  )
-)
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; --- SIP-009 REQUIRED FUNCTIONS ---
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-read-only (get-last-token-id)
-  (if (is-eq (var-get minted-count) u0)
+  (if (is-eq (var-get next-id) u0)
     (ok u0)
-    (ok (var-get max-minted-id))
+    (ok (- (var-get next-id) u1))
   )
 )
 
 (define-read-only (get-next-token-id)
   (ok (var-get next-id))
-)
-
-(define-read-only (get-minted-count)
-  (ok (var-get minted-count))
-)
-
-(define-read-only (get-minted-id (index uint))
-  (map-get? MintedIndex index)
 )
 
 (define-read-only (get-token-uri (id uint))
@@ -495,29 +447,6 @@
   )
 )
 
-(define-public (set-next-id (value uint))
-  (begin
-    (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-AUTHORIZED)
-    (asserts! (not (var-get offset-set)) ERR-ALREADY-SET)
-    (asserts! (is-eq (var-get next-id) u0) ERR-ALREADY-SET)
-    (asserts! (is-eq (var-get minted-count) u0) ERR-ALREADY-SET)
-    (var-set next-id value)
-    (var-set offset-set true)
-    (ok true)
-  )
-)
-
-(define-public (set-allowed-caller (caller principal) (allowed bool))
-  (begin
-    (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-AUTHORIZED)
-    (if allowed
-      (map-set AllowedCallers caller true)
-      (map-delete AllowedCallers caller)
-    )
-    (ok true)
-  )
-)
-
 (define-public (set-paused (value bool))
   (begin
     (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-AUTHORIZED)
@@ -531,55 +460,6 @@
     (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-AUTHORIZED)
     (var-set contract-owner new-owner)
     (ok true)
-  )
-)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; --- MIGRATION (V1 -> V2) ---
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(define-public (migrate-from-v1 (token-id uint))
-  (let (
-    (v1-meta (unwrap! (contract-call? .xtrata-v1-1-1 get-inscription-meta token-id) ERR-NOT-FOUND))
-    (v1-uri (contract-call? .xtrata-v1-1-1 get-token-uri-raw token-id))
-    (v1-deps (contract-call? .xtrata-v1-1-1 get-dependencies token-id))
-    (hash (get final-hash v1-meta))
-  )
-    (begin
-      (try! (assert-inscription-allowed))
-      (asserts! (is-none (nft-get-owner? xtrata-inscription token-id)) ERR-DUPLICATE)
-      (asserts! (is-none (map-get? HashToId hash)) ERR-DUPLICATE)
-
-      ;; charge a single xtrata fee for migration
-      (try! (maybe-pay (var-get fee-unit)))
-
-      ;; escrow the v1 token into this contract
-      (try! (contract-call? .xtrata-v1-1-1 transfer token-id tx-sender CONTRACT-PRINCIPAL))
-
-      ;; mint v2 token with the same id
-      (try! (nft-mint? xtrata-inscription token-id tx-sender))
-      (map-insert InscriptionMeta token-id {
-        owner: tx-sender,
-        creator: (get creator v1-meta),
-        mime-type: (get mime-type v1-meta),
-        total-size: (get total-size v1-meta),
-        total-chunks: (get total-chunks v1-meta),
-        sealed: true,
-        final-hash: hash
-      })
-      (map-insert HashToId hash token-id)
-      (map-set MigratedFromV1 token-id true)
-      (match v1-uri
-        uri (map-set TokenURIs token-id uri)
-        true
-      )
-      (if (> (len v1-deps) u0)
-        (map-set InscriptionDependencies token-id v1-deps)
-        true
-      )
-      (record-mint token-id)
-      (ok token-id)
-    )
   )
 )
 
@@ -826,7 +706,6 @@
 
     (map-delete UploadState { owner: tx-sender, hash: expected-hash })
     (var-set next-id (+ new-id u1))
-    (record-mint new-id)
 
     (ok new-id)
   )
@@ -1012,10 +891,6 @@
 
 (define-read-only (get-admin)
   (ok (var-get contract-owner))
-)
-
-(define-read-only (is-allowed-caller (caller principal))
-  (ok (is-some (map-get? AllowedCallers caller)))
 )
 
 (define-read-only (get-royalty-recipient)

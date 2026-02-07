@@ -28,7 +28,7 @@ When do tokens start being created?
 
 XST does not start immediately.
 
-Token emissions begin only after the 100th inscription is created.
+Token emissions begin only after the 1000th inscription is created.
 
 That moment starts a fixed, public countdown.
 

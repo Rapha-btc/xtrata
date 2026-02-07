@@ -50,3 +50,7 @@ Verification Checklist (After Each Phase)
 - Cache: React Query keys unchanged; IndexedDB stores unchanged; cache hits still work.
 - Performance: No additional read-only calls; prefetch and refresh behavior unchanged.
 
+Additional Implementation Packs
+- Parent-child relationships (mint + viewer + tests): `Refactor-Plans/parent-child-implementation/README.md`
+- Viewer page-loading optimization (budgeted full-content preload + cache eviction): `Refactor-Plans/viewer-page-loading-optimization/README.md`
+- Market module + wallet controls UX (list/cancel/transfer in wallet view + seller management): `Refactor-Plans/market-module-wallet-controls/README.md`

@@ -8,6 +8,7 @@ import { isProtocolVersion, type ProtocolVersion } from './capabilities';
 export type ContractRegistryEntry = ContractConfig & {
   label: string;
   protocolVersion: ProtocolVersion;
+  legacyContractId?: string;
 };
 
 const isValidEntry = (entry: ContractRegistryEntry) => {
@@ -45,4 +46,11 @@ export const getRegistryById = () => {
     map.set(getContractId(entry), entry);
   }
   return map;
+};
+
+export const getLegacyContract = (entry: ContractRegistryEntry) => {
+  if (!entry.legacyContractId) {
+    return null;
+  }
+  return getRegistryById().get(entry.legacyContractId) ?? null;
 };

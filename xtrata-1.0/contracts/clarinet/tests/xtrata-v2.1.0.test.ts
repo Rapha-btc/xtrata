@@ -7,7 +7,7 @@ const deployer = accounts.get("deployer")!;
 const wallet1 = accounts.get("wallet_1")!;
 const wallet2 = accounts.get("wallet_2")!;
 
-const v1Contract = `${deployer}.xtrata-v1-1-0`;
+const v1Contract = `${deployer}.xtrata-v1-1-1`;
 const v2Contract = `${deployer}.xtrata-v2-1-0`;
 const mintContract = `${deployer}.xtrata-collection-mint-v1-0`;
 const mime = "text/plain";
@@ -124,6 +124,7 @@ describe("xtrata-v2.1.0", () => {
       mintContract,
       "mint-begin",
       [
+        Cl.contractPrincipal(deployer, "xtrata-v2-1-0"),
         Cl.bufferFromHex(hash),
         Cl.stringAscii(mime),
         Cl.uint(1),
@@ -135,14 +136,14 @@ describe("xtrata-v2.1.0", () => {
   });
 
   it("migrates from v1", () => {
-    const tokenId = mintV1Token(wallet2, "ff", "data:text/plain,legacy");
-
     unwrapOk(simnet.callPublicFn(
-      v2Contract,
-      "set-legacy-contract",
-      [Cl.contractPrincipal(deployer, "xtrata-v1-1-0")],
+      v1Contract,
+      "set-paused",
+      [Cl.bool(false)],
       deployer
     ).result);
+
+    const tokenId = mintV1Token(wallet2, "ff", "data:text/plain,legacy");
 
     unwrapOk(simnet.callPublicFn(
       v2Contract,

@@ -111,7 +111,6 @@
 (define-data-var offset-set bool false)
 (define-data-var minted-count uint u0)
 (define-data-var max-minted-id uint u0)
-(define-data-var legacy-contract (optional principal) none)
 (define-data-var royalty-recipient principal tx-sender)
 
 ;; Single pricing "knob" (microSTX), bounded for predictability
@@ -508,15 +507,6 @@
   )
 )
 
-(define-public (set-legacy-contract (contract principal))
-  (begin
-    (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-AUTHORIZED)
-    (asserts! (is-none (var-get legacy-contract)) ERR-ALREADY-SET)
-    (var-set legacy-contract (some contract))
-    (ok true)
-  )
-)
-
 (define-public (set-allowed-caller (caller principal) (allowed bool))
   (begin
     (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-AUTHORIZED)
@@ -550,10 +540,9 @@
 
 (define-public (migrate-from-v1 (token-id uint))
   (let (
-    (legacy (unwrap! (var-get legacy-contract) ERR-NOT-FOUND))
-    (v1-meta (unwrap! (contract-call? legacy get-inscription-meta token-id) ERR-NOT-FOUND))
-    (v1-uri (contract-call? legacy get-token-uri-raw token-id))
-    (v1-deps (contract-call? legacy get-dependencies token-id))
+    (v1-meta (unwrap! (contract-call? .xtrata-v1-1-1 get-inscription-meta token-id) ERR-NOT-FOUND))
+    (v1-uri (contract-call? .xtrata-v1-1-1 get-token-uri-raw token-id))
+    (v1-deps (contract-call? .xtrata-v1-1-1 get-dependencies token-id))
     (hash (get final-hash v1-meta))
   )
     (begin
@@ -565,7 +554,7 @@
       (try! (maybe-pay (var-get fee-unit)))
 
       ;; escrow the v1 token into this contract
-      (try! (contract-call? legacy transfer token-id tx-sender CONTRACT-PRINCIPAL))
+      (try! (contract-call? .xtrata-v1-1-1 transfer token-id tx-sender CONTRACT-PRINCIPAL))
 
       ;; mint v2 token with the same id
       (try! (nft-mint? xtrata-inscription token-id tx-sender))
@@ -582,7 +571,7 @@
       (map-set MigratedFromV1 token-id true)
       (match v1-uri
         uri (map-set TokenURIs token-id uri)
-        none true
+        true
       )
       (if (> (len v1-deps) u0)
         (map-set InscriptionDependencies token-id v1-deps)
@@ -977,40 +966,28 @@
 )
 
 (define-read-only (get-chunk (id uint) (index uint))
-  (if (is-some (map-get? MigratedFromV1 id))
-    (match (var-get legacy-contract)
-      legacy (contract-call? legacy get-chunk id index)
-      none none
-    )
-    (match (map-get? InscriptionMeta id)
-      meta
-        (map-get? Chunks {
-          context: (get final-hash meta),
-          creator: (get creator meta),
-          index: index
-        })
-      none
-    )
+  (match (map-get? InscriptionMeta id)
+    meta
+      (map-get? Chunks {
+        context: (get final-hash meta),
+        creator: (get creator meta),
+        index: index
+      })
+    none
   )
 )
 
 (define-read-only (get-chunk-batch (id uint) (indexes (list 50 uint)))
-  (if (is-some (map-get? MigratedFromV1 id))
-    (match (var-get legacy-contract)
-      legacy (contract-call? legacy get-chunk-batch id indexes)
-      none (list)
-    )
-    (match (map-get? InscriptionMeta id)
-      meta
-        (let ((acc (fold append-chunk-batch indexes {
-          context: (get final-hash meta),
-          creator: (get creator meta),
-          chunks: (list)
-        })))
-          (get chunks acc)
-        )
-      (list)
-    )
+  (match (map-get? InscriptionMeta id)
+    meta
+      (let ((acc (fold append-chunk-batch indexes {
+        context: (get final-hash meta),
+        creator: (get creator meta),
+        chunks: (list)
+      })))
+        (get chunks acc)
+      )
+    (list)
   )
 )
 
@@ -1035,10 +1012,6 @@
 
 (define-read-only (get-admin)
   (ok (var-get contract-owner))
-)
-
-(define-read-only (get-legacy-contract)
-  (ok (var-get legacy-contract))
 )
 
 (define-read-only (is-allowed-caller (caller principal))

@@ -10,6 +10,7 @@ const minter = accounts.get("wallet_3")!;
 
 const v2Contract = `${deployer}.xtrata-v2-1-0`;
 const mintContract = `${deployer}.xtrata-collection-mint-v1-0`;
+const xtrataContractPrincipal = Cl.contractPrincipal(deployer, "xtrata-v2-1-0");
 const mime = "text/plain";
 const mintPrice = 1_000_000n;
 
@@ -92,6 +93,7 @@ describe("xtrata-collection-mint-v1.0", () => {
       mintContract,
       "mint-begin",
       [
+        xtrataContractPrincipal,
         Cl.bufferFromHex(hash),
         Cl.stringAscii(mime),
         Cl.uint(1),
@@ -115,6 +117,7 @@ describe("xtrata-collection-mint-v1.0", () => {
       mintContract,
       "mint-begin",
       [
+        xtrataContractPrincipal,
         Cl.bufferFromHex(hash),
         Cl.stringAscii(mime),
         Cl.uint(1),
@@ -128,14 +131,14 @@ describe("xtrata-collection-mint-v1.0", () => {
     unwrapOk(simnet.callPublicFn(
       mintContract,
       "mint-add-chunk-batch",
-      [Cl.bufferFromHex(hash), Cl.list([Cl.bufferFromHex("00")])],
+      [xtrataContractPrincipal, Cl.bufferFromHex(hash), Cl.list([Cl.bufferFromHex("00")])],
       minter
     ).result);
 
     const sealResult = simnet.callPublicFn(
       mintContract,
       "mint-seal",
-      [Cl.bufferFromHex(hash), Cl.stringAscii("data:text/plain,zero")],
+      [xtrataContractPrincipal, Cl.bufferFromHex(hash), Cl.stringAscii("data:text/plain,zero")],
       minter
     ).result;
     const tokenId = unwrapOk(sealResult);

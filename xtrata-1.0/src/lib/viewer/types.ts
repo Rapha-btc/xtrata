@@ -6,6 +6,7 @@ export type TokenSummary = {
   tokenUri: string | null;
   meta: InscriptionMeta | null;
   svgDataUri: string | null;
+  sourceContractId?: string;
 };
 
 export type StreamStatus = {

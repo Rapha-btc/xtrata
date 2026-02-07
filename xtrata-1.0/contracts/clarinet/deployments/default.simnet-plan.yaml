@@ -72,6 +72,11 @@ plan:
     - id: 1
       transactions:
         - emulated-contract-publish:
+            contract-name: xtrata-collection-mint-v1-0
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/xtrata-collection-mint-v1.0.clar
+            clarity-version: 3
+        - emulated-contract-publish:
             contract-name: xtrata-market-v1-0
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/xtrata-market-v1.0.clar
@@ -85,5 +90,15 @@ plan:
             contract-name: xtrata-v1-1-0
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/xtrata-v1.1.0.clar
+            clarity-version: 3
+        - emulated-contract-publish:
+            contract-name: xtrata-v1-1-1
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/xtrata-v1.1.1.clar
+            clarity-version: 3
+        - emulated-contract-publish:
+            contract-name: xtrata-v2-1-0
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/xtrata-v2.1.0.clar
             clarity-version: 3
       epoch: "3.3"

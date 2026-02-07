@@ -13,7 +13,13 @@
 
 (define-constant BASIS-POINTS u10000)
 
-(define-constant XTRATA-CONTRACT .xtrata-v2-1-0)
+(define-trait xtrata-trait
+  (
+    (begin-inscription ((buff 32) (string-ascii 64) uint uint) (response bool uint))
+    (add-chunk-batch ((buff 32) (list 50 (buff 16384))) (response bool uint))
+    (seal-inscription ((buff 32) (string-ascii 256)) (response uint uint))
+  )
+)
 
 (define-data-var contract-owner principal tx-sender)
 (define-data-var paused bool true)
@@ -154,7 +160,7 @@
   )
 )
 
-(define-public (mint-begin (expected-hash (buff 32)) (mime (string-ascii 64)) (total-size uint) (total-chunks uint))
+(define-public (mint-begin (xtrata-contract <xtrata-trait>) (expected-hash (buff 32)) (mime (string-ascii 64)) (total-size uint) (total-chunks uint))
   (begin
     (try! (assert-not-paused))
     (let (
@@ -172,25 +178,25 @@
           )
           true
         )
-        (contract-call? XTRATA-CONTRACT begin-inscription expected-hash mime total-size total-chunks)
+        (contract-call? xtrata-contract begin-inscription expected-hash mime total-size total-chunks)
       )
     )
   )
 )
 
-(define-public (mint-add-chunk-batch (hash (buff 32)) (chunks (list 50 (buff 16384))))
+(define-public (mint-add-chunk-batch (xtrata-contract <xtrata-trait>) (hash (buff 32)) (chunks (list 50 (buff 16384))))
   (begin
     (try! (assert-not-paused))
     (asserts! (is-some (map-get? MintSessions { owner: tx-sender, hash: hash })) ERR-NOT-FOUND)
-    (contract-call? XTRATA-CONTRACT add-chunk-batch hash chunks)
+    (contract-call? xtrata-contract add-chunk-batch hash chunks)
   )
 )
 
-(define-public (mint-seal (expected-hash (buff 32)) (token-uri-string (string-ascii 256)))
+(define-public (mint-seal (xtrata-contract <xtrata-trait>) (expected-hash (buff 32)) (token-uri-string (string-ascii 256)))
   (begin
     (try! (assert-not-paused))
     (asserts! (is-some (map-get? MintSessions { owner: tx-sender, hash: expected-hash })) ERR-NOT-FOUND)
-    (let ((token-id (try! (contract-call? XTRATA-CONTRACT seal-inscription expected-hash token-uri-string))))
+    (let ((token-id (try! (contract-call? xtrata-contract seal-inscription expected-hash token-uri-string))))
       (begin
         (map-delete MintSessions { owner: tx-sender, hash: expected-hash })
         (var-set reserved-count (- (var-get reserved-count) u1))
@@ -208,6 +214,7 @@
 (define-read-only (get-mint-price)
   (ok (var-get mint-price))
 )
+
 
 (define-read-only (get-max-supply)
   (ok (var-get max-supply))

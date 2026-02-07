@@ -10,7 +10,7 @@ import { showContractCall } from '@stacks/connect';
 import { PostConditionMode } from '@stacks/transactions';
 import { buildTransferCall, createXtrataClient } from '../lib/contract/client';
 import { isReadOnlyBackoffActive } from '../lib/contract/read-only';
-import type { ContractRegistryEntry } from '../lib/contract/registry';
+import { getLegacyContract, type ContractRegistryEntry } from '../lib/contract/registry';
 import { getContractId } from '../lib/contract/config';
 import { buildTransferPostCondition } from '../lib/contract/post-conditions';
 import { getNetworkMismatch } from '../lib/network/guard';
@@ -35,8 +35,8 @@ import {
   getTokenSummaryKey,
   getTokenThumbnailKey,
   getViewerKey,
-  fetchTokenSummary,
-  useLastTokenId,
+  fetchTokenSummaryWithFallback,
+  useCombinedLastTokenId,
   useTokenSummaries
 } from '../lib/viewer/queries';
 import { buildTokenPage, buildTokenRange } from '../lib/viewer/model';
@@ -256,6 +256,7 @@ const TokenDetails = (props: {
   selectedTokenId: bigint | null;
   contract: ContractRegistryEntry;
   contractId: string;
+  viewerContractId: string;
   senderAddress: string;
   client: ReturnType<typeof createXtrataClient>;
   walletSession: WalletSession;
@@ -333,9 +334,11 @@ const TokenDetails = (props: {
   };
 
   const refreshViewer = () => {
-    void queryClient.invalidateQueries({ queryKey: getViewerKey(props.contractId) });
+    void queryClient.invalidateQueries({
+      queryKey: getViewerKey(props.viewerContractId)
+    });
     void queryClient.refetchQueries({
-      queryKey: getViewerKey(props.contractId),
+      queryKey: getViewerKey(props.viewerContractId),
       type: 'active'
     });
   };
@@ -708,8 +711,18 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     () => createXtrataClient({ contract: props.contract }),
     [props.contract]
   );
+  const legacyContract = useMemo(
+    () => getLegacyContract(props.contract),
+    [props.contract]
+  );
+  const legacyClient = useMemo(
+    () => (legacyContract ? createXtrataClient({ contract: legacyContract }) : null),
+    [legacyContract]
+  );
   const queryClient = useQueryClient();
   const contractId = getContractId(props.contract);
+  const legacyContractId = legacyContract ? getContractId(legacyContract) : null;
+  const primaryContractId = contractId;
   const defaultMarketId = getMarketContractId(MARKET_REGISTRY[0]);
   const [marketContractId, setMarketContractId] = useState(
     () => marketSelectionStore.load() ?? defaultMarketId
@@ -724,11 +737,19 @@ export default function ViewerScreen(props: ViewerScreenProps) {
   const [mobilePanel, setMobilePanel] = useState<'grid' | 'preview'>('grid');
   const [isMobile, setIsMobile] = useState(false);
   const [collectionGridReady, setCollectionGridReady] = useState(false);
-  const lastTokenQuery = useLastTokenId({
-    client,
+  const lastTokenQuery = useCombinedLastTokenId({
+    primary: client,
+    legacy: legacyClient,
     senderAddress: props.senderAddress,
     enabled: props.isActiveTab
   });
+  const lastTokenId = lastTokenQuery.data?.lastTokenId ?? undefined;
+  const legacyLastTokenId = lastTokenQuery.data?.legacyLastTokenId ?? null;
+  const primaryAvailable = lastTokenQuery.data?.primaryAvailable ?? true;
+  const legacyAvailable = lastTokenQuery.data?.legacyAvailable ?? false;
+  const legacyFallbackActive =
+    !!legacyClient && legacyAvailable && !primaryAvailable;
+  const escrowOwner = legacyClient ? primaryContractId : null;
 
   useEffect(() => {
     if (!marketSelectionStore.load()) {
@@ -775,6 +796,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       'market',
       marketContractIdLabel,
       contractId,
+      legacyContractId ?? 'none',
       'wallet-listings',
       resolvedWalletAddress ?? 'none'
     ],
@@ -790,6 +812,9 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       if (!marketClient || !marketContractIdLabel || !resolvedWalletAddress) {
         return [] as MarketActivityEvent[];
       }
+      const allowedContracts = legacyContractId
+        ? new Set([contractId, legacyContractId])
+        : new Set([contractId]);
       const lastListingId = await marketClient.getLastListingId(
         resolvedWalletAddress
       );
@@ -805,7 +830,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
         const listing = await marketClient.getListing(cursor, resolvedWalletAddress);
         if (
           listing &&
-          listing.nftContract === contractId &&
+          allowedContracts.has(listing.nftContract) &&
           listing.seller.toUpperCase() === normalizedSeller
         ) {
           listings.push({
@@ -843,17 +868,17 @@ export default function ViewerScreen(props: ViewerScreenProps) {
   const loadOrderLogRef = useRef<string>('');
 
   const collectionMaxPage = useMemo(() => {
-    if (lastTokenQuery.data === undefined) {
+    if (lastTokenId === undefined) {
       return 0;
     }
-    const maxPageValue = Number(lastTokenQuery.data / BigInt(PAGE_SIZE));
+    const maxPageValue = Number(lastTokenId / BigInt(PAGE_SIZE));
     return Number.isSafeInteger(maxPageValue) ? maxPageValue : 0;
-  }, [lastTokenQuery.data]);
+  }, [lastTokenId]);
   const activePageIndex = (() => {
     if (isWalletView) {
       return pageIndex;
     }
-    if (lastTokenQuery.data === undefined) {
+    if (lastTokenId === undefined) {
       return pageIndex;
     }
     if (!initialPageSetRef.current) {
@@ -871,11 +896,11 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     if (!resolvedWalletAddress) {
       return [] as bigint[];
     }
-    if (lastTokenQuery.data === undefined) {
+    if (lastTokenId === undefined) {
       return [] as bigint[];
     }
-    return buildTokenRange(lastTokenQuery.data);
-  }, [isWalletView, props.isActiveTab, resolvedWalletAddress, lastTokenQuery.data]);
+    return buildTokenRange(lastTokenId);
+  }, [isWalletView, props.isActiveTab, resolvedWalletAddress, lastTokenId]);
 
   const viewScopeKey = useMemo(() => {
     if (isWalletView) {
@@ -915,19 +940,42 @@ export default function ViewerScreen(props: ViewerScreenProps) {
   }, []);
 
   const collectionTokenIds = useMemo(() => {
-    if (lastTokenQuery.data === undefined) {
+    if (lastTokenId === undefined) {
       return [];
     }
-    return buildTokenPage(lastTokenQuery.data, activePageIndex, PAGE_SIZE);
-  }, [lastTokenQuery.data, activePageIndex]);
+    return buildTokenPage(lastTokenId, activePageIndex, PAGE_SIZE);
+  }, [lastTokenId, activePageIndex]);
   const pageTokenIds = collectionTokenIds;
+
+  const fetchTokenSummaryForView = useCallback(
+    (id: bigint) =>
+      fetchTokenSummaryWithFallback({
+        primaryClient: client,
+        legacyClient,
+        id,
+        senderAddress: props.senderAddress,
+        legacyMaxId: legacyLastTokenId,
+        primaryAvailable,
+        escrowOwner
+      }),
+    [
+      client,
+      legacyClient,
+      props.senderAddress,
+      legacyLastTokenId,
+      primaryAvailable,
+      escrowOwner
+    ]
+  );
 
   const { tokenIds: collectionIds, tokenQueries: collectionQueries } =
     useTokenSummaries({
       client,
       senderAddress: props.senderAddress,
       tokenIds: collectionTokenIds,
-      enabled: props.isActiveTab && !isWalletView && collectionGridReady
+      enabled: props.isActiveTab && !isWalletView && collectionGridReady,
+      contractIdOverride: contractId,
+      fetchSummary: fetchTokenSummaryForView
     });
 
   const tokenIds = collectionIds;
@@ -937,7 +985,9 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     client,
     senderAddress: props.senderAddress,
     tokenIds: walletTokenIds,
-    enabled: props.isActiveTab && isWalletView
+    enabled: props.isActiveTab && isWalletView,
+    contractIdOverride: contractId,
+    fetchSummary: fetchTokenSummaryForView
   });
 
   type GridSlot = {
@@ -968,36 +1018,62 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     })
     .filter((token): token is TokenSummary => !!token);
 
+  const resolveTokenContractId = useCallback(
+    (token: TokenSummary | null) => token?.sourceContractId ?? contractId,
+    [contractId]
+  );
+
+  const resolveTokenClient = useCallback(
+    (token: TokenSummary | null) => {
+      if (!token || !legacyClient || !legacyContractId) {
+        return client;
+      }
+      return token.sourceContractId === legacyContractId ? legacyClient : client;
+    },
+    [client, legacyClient, legacyContractId]
+  );
+
   const activeListingIndex = useMemo(() => {
     if (!marketActivityQuery.data || !marketContractIdLabel || marketNetworkMismatch) {
       return new Map<string, MarketActivityEvent>();
     }
-    return buildActiveListingIndex(marketActivityQuery.data.events, contractId);
+    const merged = new Map<string, MarketActivityEvent>();
+    const primary = buildActiveListingIndex(marketActivityQuery.data.events, contractId);
+    primary.forEach((value, key) => merged.set(key, value));
+    if (legacyContractId) {
+      const legacy = buildActiveListingIndex(
+        marketActivityQuery.data.events,
+        legacyContractId
+      );
+      legacy.forEach((value, key) => merged.set(key, value));
+    }
+    return merged;
   }, [
     marketActivityQuery.data,
     marketContractIdLabel,
     marketNetworkMismatch,
-    contractId
+    contractId,
+    legacyContractId
   ]);
   const walletListingIds = useMemo(() => {
     const ids = new Set<string>();
     if (walletListingsQuery.data) {
       walletListingsQuery.data.forEach((event) => {
-        if (event.tokenId) {
-          ids.add(event.tokenId.toString());
+        if (event.tokenId && event.nftContract) {
+          ids.add(buildMarketListingKey(event.nftContract, event.tokenId));
         }
       });
     }
     if (resolvedWalletAddress) {
       const normalized = resolvedWalletAddress.toUpperCase();
-      activeListingIndex.forEach((event) => {
+      activeListingIndex.forEach((event, key) => {
         if (!event.tokenId || !event.seller) {
           return;
         }
         if (event.seller.toUpperCase() !== normalized) {
           return;
         }
-        ids.add(event.tokenId.toString());
+        ids.add(key);
       });
     }
     return ids;
@@ -1016,9 +1092,13 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       if (owner === normalized) {
         return true;
       }
-      return walletListingIds.has(token.id.toString());
+      const listingKey = buildMarketListingKey(
+        token.sourceContractId ?? contractId,
+        token.id
+      );
+      return walletListingIds.has(listingKey);
     });
-  }, [walletListingIds, walletSummaries, resolvedWalletAddress]);
+  }, [walletListingIds, walletSummaries, resolvedWalletAddress, contractId]);
 
   const walletTokenListSettled =
     walletQueries.length > 0 &&
@@ -1029,10 +1109,13 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       if (!token || !marketContractIdLabel) {
         return false;
       }
-      if (token.owner === marketContractIdLabel) {
-        return true;
+      if (token.owner !== marketContractIdLabel) {
+        return false;
       }
-      const key = buildMarketListingKey(contractId, token.id);
+      const key = buildMarketListingKey(
+        token.sourceContractId ?? contractId,
+        token.id
+      );
       return activeListingIndex.has(key);
     },
     [activeListingIndex, marketContractIdLabel, contractId]
@@ -1091,7 +1174,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       }
       return;
     }
-    if (lastTokenQuery.data === undefined) {
+    if (lastTokenId === undefined) {
       return;
     }
     if (initialPageSetRef.current) {
@@ -1105,7 +1188,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     walletMaxPage,
     walletTokenListSettled,
     pageIndex,
-    lastTokenQuery.data,
+    lastTokenId,
     collectionMaxPage
   ]);
 
@@ -1128,8 +1211,8 @@ export default function ViewerScreen(props: ViewerScreenProps) {
   }, [isMobile]);
 
   useEffect(() => {
-    lastTokenIdRef.current = lastTokenQuery.data;
-  }, [lastTokenQuery.data]);
+    lastTokenIdRef.current = lastTokenId;
+  }, [lastTokenId]);
 
   const stopRefresh = useCallback(() => {
     if (refreshIntervalRef.current !== null) {
@@ -1169,12 +1252,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
           }
           await queryClient.prefetchQuery({
             queryKey: getTokenSummaryKey(contractId, id),
-            queryFn: () =>
-              fetchTokenSummary({
-                client,
-                id,
-                senderAddress: props.senderAddress
-              }),
+            queryFn: () => fetchTokenSummaryForView(id),
             staleTime: 300_000,
             refetchOnWindowFocus: false
           });
@@ -1186,7 +1264,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       );
       await Promise.all(workers);
     },
-    [client, contractId, props.senderAddress, queryClient]
+    [contractId, fetchTokenSummaryForView, queryClient]
   );
 
   const warmThumbnailCache = useCallback(
@@ -1360,19 +1438,19 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     if (isWalletView) {
       return;
     }
-    if (lastTokenQuery.data === undefined) {
+    if (lastTokenId === undefined) {
       return;
     }
-    const baseline = focusRequest.baseline ?? lastTokenQuery.data;
+    const baseline = focusRequest.baseline ?? lastTokenId;
     if (focusRequest.baseline === null) {
       focusRequest.baseline = baseline;
     }
     setPageIndex(maxPage);
-    setSelectedTokenId(lastTokenQuery.data);
-    if (lastTokenQuery.data > baseline) {
+    setSelectedTokenId(lastTokenId);
+    if (lastTokenId > baseline) {
       endRefresh();
     }
-  }, [isWalletView, lastTokenQuery.data, maxPage, endRefresh]);
+  }, [isWalletView, lastTokenId, maxPage, endRefresh]);
 
   const gridSlots = useMemo(() => {
     if (isWalletView) {
@@ -1409,11 +1487,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
         : ['viewer', contractId, 'token', 'none'],
     queryFn: () =>
       selectedTokenId !== null
-        ? fetchTokenSummary({
-            client,
-            id: selectedTokenId,
-            senderAddress: props.senderAddress
-          })
+        ? fetchTokenSummaryForView(selectedTokenId)
         : Promise.resolve(null),
     enabled:
       props.isActiveTab &&
@@ -1424,8 +1498,13 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     refetchOnWindowFocus: false
   });
   const resolvedSelectedToken = selectedTokenQuery.data ?? selectedToken;
-  const selectedListingKey = selectedTokenId
-    ? buildMarketListingKey(contractId, selectedTokenId)
+  const selectedTokenSourceContractId =
+    resolvedSelectedToken?.sourceContractId ?? contractId;
+  const selectedListingKey = resolvedSelectedToken
+    ? buildMarketListingKey(
+        selectedTokenSourceContractId,
+        resolvedSelectedToken.id
+      )
     : null;
   const selectedListingFromIndex = useMemo(() => {
     if (!selectedListingKey) {
@@ -1440,12 +1519,13 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     props.isActiveTab &&
     !!selectedListingKey &&
     !selectedListingFromIndex &&
-    selectedToken?.owner === marketContractIdLabel;
+    resolvedSelectedToken?.owner === marketContractIdLabel;
   const selectedListingQuery = useQuery({
     queryKey: [
       'market',
       marketContractIdLabel,
       'listing-by-token',
+      selectedTokenSourceContractId,
       selectedTokenId?.toString() ?? 'none'
     ],
     enabled: shouldFetchSelectedListing,
@@ -1456,7 +1536,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
         return null;
       }
       const listingId = await marketClient.getListingIdByToken(
-        contractId,
+        selectedTokenSourceContractId,
         selectedTokenId,
         props.senderAddress
       );
@@ -1493,10 +1573,10 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     if (collectionGridReady) {
       return;
     }
-    if (lastTokenQuery.data === undefined) {
+    if (lastTokenId === undefined) {
       return;
     }
-    if (selectedTokenId !== lastTokenQuery.data) {
+    if (selectedTokenId !== lastTokenId) {
       return;
     }
     if (selectedTokenQuery.data || selectedTokenQuery.isError) {
@@ -1505,7 +1585,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
   }, [
     collectionGridReady,
     isWalletView,
-    lastTokenQuery.data,
+    lastTokenId,
     props.isActiveTab,
     selectedTokenId,
     selectedTokenQuery.data,
@@ -1519,18 +1599,18 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     if (!props.isActiveTab) {
       return;
     }
-    if (lastTokenQuery.data === undefined) {
+    if (lastTokenId === undefined) {
       return;
     }
-    const logKey = `${contractId}:${lastTokenQuery.data.toString()}`;
+    const logKey = `${contractId}:${lastTokenId.toString()}`;
     if (loadOrderLogRef.current === logKey) {
       return;
     }
     loadOrderLogRef.current = logKey;
-    const pageIds = buildTokenPage(lastTokenQuery.data, activePageIndex, PAGE_SIZE);
+    const pageIds = buildTokenPage(lastTokenId, activePageIndex, PAGE_SIZE);
     logInfo('viewer', 'Collection load order summary', {
       contractId,
-      lastTokenId: lastTokenQuery.data.toString(),
+      lastTokenId: lastTokenId.toString(),
       collectionMaxPage,
       initialPageSet: initialPageSetRef.current,
       activePageIndex,
@@ -1546,7 +1626,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     contractId,
     isWalletView,
     props.isActiveTab,
-    lastTokenQuery.data,
+    lastTokenId,
     collectionMaxPage,
     activePageIndex,
     pageIndex
@@ -1566,7 +1646,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     if (!collectionGridReady) {
       return;
     }
-    if (lastTokenQuery.data === undefined) {
+    if (lastTokenId === undefined) {
       return;
     }
     if (!collectionPageSettled) {
@@ -1576,7 +1656,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     if (prevPage < 0) {
       return;
     }
-    const lastId = lastTokenQuery.data as bigint;
+    const lastId = lastTokenId;
     const pageIds = buildTokenPage(lastId, prevPage, PAGE_SIZE);
     if (pageIds.length === 0) {
       return;
@@ -1605,13 +1685,13 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     collectionPageSettled,
     contractId,
     isWalletView,
-    lastTokenQuery.data,
+    lastTokenId,
     prefetchTokenSummaries,
     props.isActiveTab
   ]);
 
   const collectionRangeLabel =
-    lastTokenQuery.data === undefined
+    lastTokenId === undefined
       ? 'Loading...'
       : tokenIds.length > 0
         ? `IDs ${tokenIds[0].toString()}–${tokenIds[tokenIds.length - 1].toString()}`
@@ -1674,8 +1754,8 @@ export default function ViewerScreen(props: ViewerScreenProps) {
                 </>
               ) : (
                 <span className="badge badge--neutral badge--compact">
-                  {lastTokenQuery.data !== undefined
-                    ? `Last ID: ${lastTokenQuery.data.toString()}`
+                  {lastTokenId !== undefined
+                    ? `Last ID: ${lastTokenId.toString()}`
                     : 'Loading'}
                 </span>
               )}
@@ -1785,6 +1865,12 @@ export default function ViewerScreen(props: ViewerScreenProps) {
                 </>
               ) : (
                 <>
+                  {legacyFallbackActive && (
+                    <p>
+                      Legacy fallback active. Showing the v1 collection while v2 is
+                      unavailable.
+                    </p>
+                  )}
                   {lastTokenQuery.isLoading && tokenIds.length === 0 && (
                     <p>Loading collection...</p>
                   )}
@@ -1801,19 +1887,23 @@ export default function ViewerScreen(props: ViewerScreenProps) {
               pageTokens.length > 0 && (
                 <div className="square-frame">
                   <div className="token-grid square-frame__content">
-                    {pageTokens.map((token) => (
-                      <TokenCard
-                        key={token.id.toString()}
-                        token={token}
-                        isSelected={token.id === selectedTokenId}
-                        isListed={isTokenListed(token)}
-                        onSelect={handleSelectToken}
-                        client={client}
-                        senderAddress={props.senderAddress}
-                        contractId={contractId}
-                        isActiveTab={props.isActiveTab}
-                      />
-                    ))}
+                    {pageTokens.map((token) => {
+                      const tokenClient = resolveTokenClient(token);
+                      const tokenContractId = resolveTokenContractId(token);
+                      return (
+                        <TokenCard
+                          key={token.id.toString()}
+                          token={token}
+                          isSelected={token.id === selectedTokenId}
+                          isListed={isTokenListed(token)}
+                          onSelect={handleSelectToken}
+                          client={tokenClient}
+                          senderAddress={props.senderAddress}
+                          contractId={tokenContractId}
+                          isActiveTab={props.isActiveTab}
+                        />
+                      );
+                    })}
                   </div>
                 </div>
               )
@@ -1824,6 +1914,8 @@ export default function ViewerScreen(props: ViewerScreenProps) {
                     {gridSlots.map((slot, index) => {
                       if (slot.id !== null && slot.query?.data) {
                         const token = slot.query.data;
+                        const tokenClient = resolveTokenClient(token);
+                        const tokenContractId = resolveTokenContractId(token);
                         return (
                           <TokenCard
                             key={token.id.toString()}
@@ -1831,9 +1923,9 @@ export default function ViewerScreen(props: ViewerScreenProps) {
                             isSelected={token.id === selectedTokenId}
                             isListed={isTokenListed(token)}
                             onSelect={handleSelectToken}
-                            client={client}
+                            client={tokenClient}
                             senderAddress={props.senderAddress}
-                            contractId={contractId}
+                            contractId={tokenContractId}
                             isActiveTab={props.isActiveTab}
                           />
                         );
@@ -1858,10 +1950,17 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       <TokenDetails
         token={resolvedSelectedToken ?? null}
         selectedTokenId={selectedTokenId}
-        contract={props.contract}
-        contractId={contractId}
+        contract={
+          resolvedSelectedToken &&
+          legacyContract &&
+          resolvedSelectedToken.sourceContractId === legacyContractId
+            ? legacyContract
+            : props.contract
+        }
+        contractId={resolveTokenContractId(resolvedSelectedToken ?? null)}
+        viewerContractId={contractId}
         senderAddress={props.senderAddress}
-        client={client}
+        client={resolveTokenClient(resolvedSelectedToken ?? null)}
         walletSession={props.walletSession}
         mode={props.mode}
         isActiveTab={props.isActiveTab}
