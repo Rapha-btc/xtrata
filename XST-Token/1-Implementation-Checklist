@@ -1,0 +1,192 @@
+1️⃣ Clarity-Ready Implementation Checklist
+
+(Engineering-facing, no fluff)
+
+This is written so an AI dev assistant or human Clarity dev can follow it step by step.
+
+⸻
+
+A. Constants (hard-coded)
+
+(define-constant TOTAL-SUPPLY u1000000000)
+(define-constant EMISSION-YEARS u4)
+(define-constant BLOCKS-PER-YEAR u52560)
+(define-constant DURATION-BLOCKS (* EMISSION-YEARS BLOCKS-PER-YEAR))
+
+;; Emission split
+(define-constant OWNER-POOL-BPS u7000)        ;; 70%
+(define-constant PARTICIPANT-POOL-BPS u3000)  ;; 30%
+(define-constant BPS-DENOM u10000)
+
+
+⸻
+
+B. Global State Variables
+
+(define-data-var emissions-start-block (optional uint) none)
+(define-data-var last-emission-block uint u0)
+(define-data-var total-emitted uint u0)
+
+;; Owner pool accumulator
+(define-data-var acc-owner-per-weight uint u0)
+(define-data-var total-owner-weight uint u0)
+
+;; Participant pool accumulator
+(define-data-var acc-participant-per-weight uint u0)
+(define-data-var total-participant-weight uint u0)
+
+Use scaled integers for accumulators (e.g. multiply by 1_000_000) to preserve precision.
+
+⸻
+
+C. Inscription Storage
+
+;; Per inscription
+(define-map inscription-weight
+  uint        ;; token-id
+  uint        ;; weight
+)
+
+(define-map inscription-reward-debt
+  uint
+  uint
+)
+
+
+⸻
+
+D. Participant (Wallet) Storage
+
+(define-map participant-weight
+  principal
+  uint        ;; sqrt-based or capped weight
+)
+
+(define-map participant-reward-debt
+  principal
+  uint
+)
+
+
+⸻
+
+E. Weight Function (Deterministic)
+
+Owner weight by tokenId (Option A)
+
+id == 0              → 1400
+1–10                 → 1200
+11–100               → 1000
+101–1,000            → 800
+1,001–10,000         → 640
+10,001–100,000       → 512
+100,001–1,000,000    → 410
+Each further decade  → floor(prev × 4 / 5)
+
+Implement via simple comparisons — no loops, no floats.
+
+⸻
+
+F. Emissions Start Logic
+
+On inscription mint:
+
+(if (and (is-none (var-get emissions-start-block))
+         (>= token-id u100))
+    (begin
+      (var-set emissions-start-block (some block-height))
+      (var-set last-emission-block block-height)
+    )
+)
+
+
+⸻
+
+G. Emission Update Function (Shared)
+
+This function is called before any claim.
+
+Pseudocode:
+
+if emissionsStartBlock is none → return
+
+currentBlock = block-height
+elapsed = currentBlock - lastEmissionBlock
+remaining = TOTAL-SUPPLY - totalEmitted
+
+if elapsed == 0 or remaining == 0 → return
+
+yearIndex = min(3, (currentBlock - emissionsStartBlock) / BLOCKS-PER-YEAR)
+yearAllocation = [400M, 300M, 200M, 100M][yearIndex]
+perBlockRate = yearAllocation / BLOCKS-PER-YEAR
+
+emit = min(remaining, elapsed × perBlockRate)
+
+ownerEmit = emit × OWNER-POOL-BPS / BPS-DENOM
+participantEmit = emit × PARTICIPANT-POOL-BPS / BPS-DENOM
+
+acc-owner-per-weight += ownerEmit / total-owner-weight
+acc-participant-per-weight += participantEmit / total-participant-weight
+
+total-emitted += emit
+last-emission-block = currentBlock
+
+
+⸻
+
+H. Owner Claim (Per Inscription)
+
+(call update-emissions)
+
+pending =
+  inscriptionWeight[tokenId] ×
+  (acc-owner-per-weight - inscriptionRewardDebt[tokenId])
+
+transfer pending to current NFT owner
+
+update inscriptionRewardDebt[tokenId]
+
+Ownership is read directly from the NFT contract.
+
+⸻
+
+I. Participant Pool v1 (Simple)
+
+Weight definition (v1)
+
+participantWeight = sqrt(number of inscriptions owned)
+
+Use integer sqrt (floor).
+	•	Update participant weight on mint, transfer, or burn
+	•	Maintain total-participant-weight incrementally
+
+Optional safety:
+
+cap participantWeight to max 100
+
+
+⸻
+
+J. Participant Claim
+
+(call update-emissions)
+
+pending =
+  participantWeight[caller] ×
+  (acc-participant-per-weight - participantRewardDebt[caller])
+
+transfer pending to caller
+
+update participantRewardDebt[caller]
+
+
+⸻
+
+K. Gas Safety Guarantees
+	•	No loops over inscriptions
+	•	No loops over wallets
+	•	All math O(1)
+	•	Claims scale with caller activity only
+
+⸻
+

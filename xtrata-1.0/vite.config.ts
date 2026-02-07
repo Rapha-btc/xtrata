@@ -6,6 +6,8 @@ export default defineConfig(({ mode }) => {
   const hiroApiKey = env.HIRO_API_KEY || env.VITE_HIRO_API_KEY;
   const proxyHeaders = hiroApiKey ? { 'x-hiro-api-key': hiroApiKey } : {};
   const hasHiroApiKey = Boolean(hiroApiKey);
+  const bnsApiBase =
+    env.VITE_BNS_API_MAINNET || env.VITE_BNS_API_BASE || 'https://api.bns.xyz';
 
   return {
     plugins: [react()],
@@ -26,6 +28,11 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       proxy: {
+        '/bns': {
+          target: bnsApiBase,
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/bns/, '')
+        },
         '/hiro/testnet': {
           target: 'https://api.testnet.hiro.so',
           changeOrigin: true,

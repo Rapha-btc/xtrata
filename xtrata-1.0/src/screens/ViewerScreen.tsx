@@ -718,7 +718,9 @@ export default function ViewerScreen(props: ViewerScreenProps) {
   const walletAddress = props.walletSession.address ?? null;
   const resolvedWalletAddress = props.walletLookupState.resolvedAddress;
   const hasWalletTarget = !!resolvedWalletAddress;
-  const walletOverrideActive = !!props.walletLookupState.lookupAddress;
+  const walletOverrideActive =
+    !!props.walletLookupState.lookupAddress ||
+    !!props.walletLookupState.lookupName;
   const [mobilePanel, setMobilePanel] = useState<'grid' | 'preview'>('grid');
   const [isMobile, setIsMobile] = useState(false);
   const [collectionGridReady, setCollectionGridReady] = useState(false);

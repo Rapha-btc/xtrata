@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { PUBLIC_CONTRACT, PUBLIC_MINT_RESTRICTIONS } from './config/public';
 import { getContractId } from './lib/contract/config';
+import { useBnsAddress } from './lib/bns/hooks';
 import { RATE_LIMIT_WARNING_EVENT } from './lib/network/rate-limit';
 import { getNetworkMismatch } from './lib/network/guard';
 import { getViewerKey } from './lib/viewer/queries';
@@ -9,7 +10,7 @@ import { createStacksWalletAdapter } from './lib/wallet/adapter';
 import { createWalletSessionStore } from './lib/wallet/session';
 import { getWalletLookupState } from './lib/wallet/lookup';
 import { useActiveTabGuard } from './lib/utils/tab-guard';
-import { truncateMiddle } from './lib/utils/format';
+import AddressLabel from './components/AddressLabel';
 import MintScreen from './screens/MintScreen';
 import ViewerScreen, { type ViewerMode } from './screens/ViewerScreen';
 import WalletLookupScreen from './screens/WalletLookupScreen';
@@ -59,9 +60,40 @@ export default function PublicApp() {
   const contractId = getContractId(contract);
   const mismatch = getNetworkMismatch(contract.network, walletSession.network);
   const readOnlySender = walletSession.address ?? contract.address;
-  const walletLookupState = useMemo(
+  const baseLookupState = useMemo(
     () => getWalletLookupState(walletLookupInput, walletSession.address ?? null),
     [walletLookupInput, walletSession.address]
+  );
+  const bnsLookupQuery = useBnsAddress({
+    name: baseLookupState.lookupName,
+    network: contract.network,
+    enabled: !!baseLookupState.lookupName
+  });
+  const bnsLookupStatus = baseLookupState.lookupName
+    ? bnsLookupQuery.isLoading
+      ? 'loading'
+      : bnsLookupQuery.isError
+        ? 'error'
+        : bnsLookupQuery.data?.address
+          ? 'resolved'
+          : 'missing'
+    : 'idle';
+  const bnsLookupError =
+    bnsLookupQuery.error instanceof Error ? bnsLookupQuery.error.message : null;
+  const walletLookupState = useMemo(
+    () =>
+      getWalletLookupState(walletLookupInput, walletSession.address ?? null, {
+        resolvedNameAddress: bnsLookupQuery.data?.address ?? null,
+        bnsStatus: bnsLookupStatus,
+        bnsError: bnsLookupError
+      }),
+    [
+      walletLookupInput,
+      walletSession.address,
+      bnsLookupQuery.data?.address,
+      bnsLookupStatus,
+      bnsLookupError
+    ]
   );
 
   const walletAdapter = useMemo(
@@ -237,11 +269,12 @@ export default function PublicApp() {
             <div className="panel__header">
               <div>
                 <h2>Wallet</h2>
-                <span className="wallet-session__inline-address">
-                  {walletSession.address
-                    ? truncateMiddle(walletSession.address, 6, 6)
-                    : 'Not connected'}
-                </span>
+                <AddressLabel
+                  className="wallet-session__inline-address"
+                  address={walletSession.address}
+                  network={walletSession.network}
+                  fallback="Not connected"
+                />
               </div>
               <div className="panel__actions">
                 <span className="badge badge--neutral">
@@ -280,9 +313,12 @@ export default function PublicApp() {
               <div className="meta-grid">
                 <div>
                   <span className="meta-label">Address</span>
-                  <span className="meta-value">
-                    {walletSession.address ?? 'Not connected'}
-                  </span>
+                  <AddressLabel
+                    className="meta-value"
+                    address={walletSession.address}
+                    network={walletSession.network}
+                    fallback="Not connected"
+                  />
                 </div>
               <div>
                 <span className="meta-label">Wallet network</span>

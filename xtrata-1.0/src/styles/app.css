@@ -463,16 +463,13 @@ p {
 .wallet-session__inline-address {
   display: none;
   max-width: 160px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   font-size: 0.68rem;
   color: var(--muted);
   margin-top: 2px;
 }
 
 .wallet-session-panel.panel--collapsed .wallet-session__inline-address {
-  display: block;
+  display: inline-flex;
 }
 
 .module--collapsed > .panel .panel__header {
@@ -754,6 +751,32 @@ p {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.address-label {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  max-width: 100%;
+  line-height: 1.15;
+}
+
+.address-label__line {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.address-label__name {
+  font-weight: 600;
+}
+
+.address-label__address {
+  font-size: 0.85em;
+  font-weight: 500;
+  color: var(--muted);
 }
 
 .meta-actions {

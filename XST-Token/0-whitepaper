@@ -1,0 +1,258 @@
+Xtrata (XST)
+
+Deterministic Participation Token Whitepaper
+
+Version 1.0 – Emissions + Claims Specification
+
+⸻
+
+1. Overview
+
+XST is the native participation token of the Xtrata protocol.
+
+XST is not sold, not pre-mined, and not governed after deployment.
+It is emitted deterministically over a fixed period and distributed to participants based on on-chain history.
+
+The purpose of XST is to:
+	•	encode early participation,
+	•	reward long-term engagement,
+	•	and act as a permanent economic fossil record of Xtrata’s growth.
+
+Once emissions end, XST becomes a fixed-supply historical asset.
+
+⸻
+
+2. Core Principles
+	1.	Fixed Supply
+Total XST supply is capped at 1,000,000,000 tokens.
+	2.	Deterministic Emissions
+Emissions follow a fixed, block-based schedule.
+No admin controls, no future minting.
+	3.	Delayed Start
+Emissions do not begin until inscription #100 is minted.
+	4.	Inscription-Centric Rewards
+Token earnings are primarily tied to inscription ownership.
+Early inscription IDs permanently earn slightly more.
+	5.	Claim-Based Distribution
+Tokens are claimed by users.
+The contract never loops over participants or pushes payouts.
+
+⸻
+
+3. Token Supply and Timeline
+
+3.1 Total Supply
+
+TOTAL_SUPPLY = 1,000,000,000 XST
+
+3.2 Emission Start
+	•	Emissions begin only once inscription ID 100 exists
+	•	At that moment:
+
+emissionsStartBlock = current block height
+
+
+
+3.3 Emission Duration
+	•	Emissions run for exactly 4 years worth of blocks
+
+Assuming ~10 minute blocks:
+
+BLOCKS_PER_YEAR ≈ 52,560
+DURATION_BLOCKS ≈ 210,240
+
+After:
+
+emissionsStartBlock + DURATION_BLOCKS
+
+→ emissions are permanently zero.
+
+⸻
+
+4. Emission Schedule (Per Block)
+
+XST emissions are block-based, not event-based.
+
+4.1 Yearly Front-Loaded Schedule (Familiar Model)
+
+Year	Share	Tokens
+Year 1	40%	400,000,000
+Year 2	30%	300,000,000
+Year 3	20%	200,000,000
+Year 4	10%	100,000,000
+
+Each year has a fixed per-block rate:
+
+perBlockRate = yearAllocation / blocksInThatYear
+
+4.2 Hard Cap Enforcement
+
+The contract tracks:
+
+totalEmitted
+
+On every update:
+
+newEmission = min(remainingSupply, blocksElapsed × perBlockRate)
+
+This guarantees:
+	•	emissions never exceed 1B
+	•	emissions always end on time
+	•	any rounding remainder is paid out in the final blocks
+
+⸻
+
+5. Distribution Model (Simple + Safe)
+
+Chosen Model: Global Accumulator (Simplest Claims)
+
+This is the same pattern used by proven staking systems.
+
+Key idea
+	•	The protocol maintains a global “reward per weight” accumulator.
+	•	Each inscription claims based on how much the accumulator has grown since its last claim.
+
+No iteration. No snapshots. No admin logic.
+
+⸻
+
+6. Inscription Weighting (Option A – Gentle Early Advantage)
+
+Each inscription has a fixed weight, determined only by its tokenId.
+
+6.1 Weight Bands
+
+Inscription IDs	Weight
+0	1400
+1–10	1200
+11–100	1000
+101–1,000	800
+1,001–10,000	640
+10,001–100,000	512
+100,001–1,000,000	410
+…	×4/5 per decade
+
+Formula for bands ≥ 101:
+
+nextWeight = floor(previousWeight × 4 / 5)
+
+This produces:
+	•	a gentle drop from 0 → 100
+	•	permanent rarity value for early IDs
+	•	diminishing advantage at scale
+	•	integer-only math
+
+⸻
+
+7. Owner Pool Allocation
+
+Each block’s emission is split as follows:
+
+OWNER_POOL = 70%
+(optional) PARTICIPANT_POOL = 30%
+
+This whitepaper defines OWNER_POOL only, for maximal simplicity.
+
+(Participant pool can be added later without affecting determinism.)
+
+⸻
+
+8. Accumulator Mechanics (Exact Claim Logic)
+
+8.1 Global State Variables
+
+accRewardPerWeight   // scaled integer
+lastEmissionBlock
+totalWeightMinted
+
+8.2 On Inscription Mint
+
+When a new inscription is created:
+
+weight = weightForTokenId(tokenId)
+totalWeightMinted += weight
+store inscriptionWeight[tokenId] = weight
+store inscriptionRewardDebt[tokenId] = accRewardPerWeight
+
+
+⸻
+
+8.3 Updating Emissions (Lazy)
+
+Whenever any claim happens:
+	1.	Calculate elapsed blocks since last update
+	2.	Calculate how many tokens should have been emitted
+	3.	Increase accumulator:
+
+accRewardPerWeight += (newEmission × OWNER_POOL) / totalWeightMinted
+lastEmissionBlock = currentBlock
+totalEmitted += newEmission
+
+No looping. O(1).
+
+⸻
+
+8.4 Claiming Rewards
+
+When the owner of inscription tokenId calls claim(tokenId):
+
+pending =
+  inscriptionWeight[tokenId] ×
+  (accRewardPerWeight - inscriptionRewardDebt[tokenId])
+
+Then:
+
+transfer pending XST to current owner
+inscriptionRewardDebt[tokenId] = accRewardPerWeight
+
+That’s it.
+
+⸻
+
+9. Determinism Guarantees
+
+This system is fully deterministic because:
+	•	Supply is hard-capped
+	•	Start block is set once (at inscription #100)
+	•	Emissions depend only on block height
+	•	Weights depend only on tokenId
+	•	Ownership is read directly from the NFT
+	•	No admin variables can be changed post-deploy
+
+Inscription Count Independence
+
+Whether the system ends with:
+	•	10,000 inscriptions
+	•	100,000 inscriptions
+	•	10,000,000 inscriptions
+
+➡ Total emissions are identical.
+Only distribution per inscription changes.
+
+⸻
+
+10. What Happens After 4 Years
+	•	Emissions stop forever
+	•	accRewardPerWeight no longer increases
+	•	Claims still work (but return zero)
+	•	XST becomes a fixed historical asset
+	•	Inscription rarity continues to matter socially, not economically
+
+⸻
+
+11. Summary
+
+XST is:
+	•	finite
+	•	delayed
+	•	deterministic
+	•	inscription-native
+	•	fair without being flat
+	•	simple enough to implement safely
+
+This design ensures:
+	•	early participation is permanently recognised
+	•	no single party can change outcomes
+	•	the system behaves identically under all growth scenarios
+
+⸻

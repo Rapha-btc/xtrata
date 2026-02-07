@@ -1,5 +1,6 @@
 import type { WalletSession } from '../lib/wallet/types';
 import type { WalletLookupState } from '../lib/wallet/lookup';
+import AddressLabel from '../components/AddressLabel';
 
 type WalletLookupScreenProps = {
   walletSession: WalletSession;
@@ -19,10 +20,17 @@ export default function WalletLookupScreen(props: WalletLookupScreenProps) {
     !props.walletSession.address;
   const showInvalidSearch = props.lookupState.entered && !props.lookupState.valid;
   const viewingAddress = props.lookupState.resolvedAddress;
-  const hasManualOverride = !!props.lookupState.lookupAddress;
+  const hasManualOverride =
+    !!props.lookupState.lookupAddress || !!props.lookupState.lookupName;
   const clearLabel = props.walletSession.address
     ? 'Use connected wallet'
     : 'Clear search';
+  const showBnsLoading =
+    !!props.lookupState.lookupName && props.lookupState.bnsStatus === 'loading';
+  const showBnsMissing =
+    !!props.lookupState.lookupName && props.lookupState.bnsStatus === 'missing';
+  const showBnsError =
+    !!props.lookupState.lookupName && props.lookupState.bnsStatus === 'error';
 
   return (
     <section
@@ -64,7 +72,7 @@ export default function WalletLookupScreen(props: WalletLookupScreenProps) {
             <div className="field__row">
               <input
                 className={`input input--prominent${showEmptySearch ? ' input--alert' : ''}`}
-                placeholder="Enter SP..."
+                placeholder="Enter SP... or BNS name"
                 value={props.lookupState.input}
                 onChange={(event) => props.onLookupInputChange(event.target.value)}
               />
@@ -76,15 +84,33 @@ export default function WalletLookupScreen(props: WalletLookupScreenProps) {
               <span className="field__error">Enter a wallet address to search.</span>
             )}
             {showInvalidSearch && (
-              <span className="field__error">Enter a valid Stacks address.</span>
+              <span className="field__error">
+                Enter a valid Stacks address or BNS name.
+              </span>
+            )}
+            {showBnsLoading && (
+              <span className="field__hint">Resolving BNS name...</span>
+            )}
+            {showBnsMissing && (
+              <span className="field__error">
+                No address found for {props.lookupState.lookupName}.
+              </span>
+            )}
+            {showBnsError && (
+              <span className="field__error">
+                BNS lookup failed. Try again.
+              </span>
             )}
           </label>
         </form>
         <div className="wallet-lookup__status">
           <span className="meta-label">Connected wallet</span>
-          <span className="meta-value">
-            {props.walletSession.address ?? 'Not connected'}
-          </span>
+          <AddressLabel
+            className="meta-value"
+            address={props.walletSession.address}
+            network={props.walletSession.network}
+            fallback="Not connected"
+          />
           {hasManualOverride && (
             <span className="wallet-lookup__note">Manual override.</span>
           )}
@@ -104,7 +130,11 @@ export default function WalletLookupScreen(props: WalletLookupScreenProps) {
         {viewingAddress && (
           <div className="wallet-lookup__status">
             <span className="meta-label">Viewing holdings for</span>
-            <span className="meta-value">{viewingAddress}</span>
+            <AddressLabel
+              className="meta-value"
+              address={viewingAddress}
+              name={props.lookupState.lookupName}
+            />
           </div>
         )}
       </div>

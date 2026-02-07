@@ -5,14 +5,15 @@ import { validateStacksAddress } from '@stacks/transactions';
 import { getContractId } from './lib/contract/config';
 import { CONTRACT_REGISTRY } from './lib/contract/registry';
 import { createContractSelectionStore } from './lib/contract/selection';
+import { useBnsAddress } from './lib/bns/hooks';
 import { RATE_LIMIT_WARNING_EVENT } from './lib/network/rate-limit';
 import { getNetworkMismatch } from './lib/network/guard';
 import { getViewerKey } from './lib/viewer/queries';
 import { createStacksWalletAdapter } from './lib/wallet/adapter';
 import { createWalletSessionStore } from './lib/wallet/session';
 import { getWalletLookupState } from './lib/wallet/lookup';
-import { truncateMiddle } from './lib/utils/format';
 import { useActiveTabGuard } from './lib/utils/tab-guard';
+import AddressLabel from './components/AddressLabel';
 import MintScreen from './screens/MintScreen';
 import ViewerScreen, { type ViewerMode } from './screens/ViewerScreen';
 import ContractAdminScreen from './screens/ContractAdminScreen';
@@ -151,9 +152,40 @@ export default function App() {
   );
   const readOnlySender =
     walletSession.address ?? selectedContract.address;
-  const walletLookupState = useMemo(
+  const baseLookupState = useMemo(
     () => getWalletLookupState(walletLookupInput, walletSession.address ?? null),
     [walletLookupInput, walletSession.address]
+  );
+  const bnsLookupQuery = useBnsAddress({
+    name: baseLookupState.lookupName,
+    network: selectedContract.network,
+    enabled: !!baseLookupState.lookupName
+  });
+  const bnsLookupStatus = baseLookupState.lookupName
+    ? bnsLookupQuery.isLoading
+      ? 'loading'
+      : bnsLookupQuery.isError
+        ? 'error'
+        : bnsLookupQuery.data?.address
+          ? 'resolved'
+          : 'missing'
+    : 'idle';
+  const bnsLookupError =
+    bnsLookupQuery.error instanceof Error ? bnsLookupQuery.error.message : null;
+  const walletLookupState = useMemo(
+    () =>
+      getWalletLookupState(walletLookupInput, walletSession.address ?? null, {
+        resolvedNameAddress: bnsLookupQuery.data?.address ?? null,
+        bnsStatus: bnsLookupStatus,
+        bnsError: bnsLookupError
+      }),
+    [
+      walletLookupInput,
+      walletSession.address,
+      bnsLookupQuery.data?.address,
+      bnsLookupStatus,
+      bnsLookupError
+    ]
   );
   const compatibleContract = walletSession.network
     ? CONTRACT_REGISTRY.find(
@@ -470,11 +502,12 @@ export default function App() {
             <div className="panel__header">
               <div>
                 <h2>Wallet</h2>
-                <span className="wallet-session__inline-address">
-                  {walletSession.address
-                    ? truncateMiddle(walletSession.address, 6, 6)
-                    : 'Not connected'}
-                </span>
+                <AddressLabel
+                  className="wallet-session__inline-address"
+                  address={walletSession.address}
+                  network={walletSession.network}
+                  fallback="Not connected"
+                />
               </div>
               <div className="panel__actions">
                 <span className="badge badge--neutral">{walletStatus}</span>
@@ -511,9 +544,12 @@ export default function App() {
               <div className="meta-grid">
                 <div>
                   <span className="meta-label">Address</span>
-                  <span className="meta-value">
-                    {walletSession.address ?? 'Not connected'}
-                  </span>
+                  <AddressLabel
+                    className="meta-value"
+                    address={walletSession.address}
+                    network={walletSession.network}
+                    fallback="Not connected"
+                  />
                 </div>
                 <div>
                   <span className="meta-label">Wallet network</span>
