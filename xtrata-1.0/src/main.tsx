@@ -6,6 +6,10 @@ import PublicApp from './PublicApp';
 import AdminGate from './admin/AdminGate';
 import { ADMIN_PATH } from './config/admin';
 import { ReadOnlyBackoffError } from './lib/contract/read-only';
+import {
+  hydrateQueryCache,
+  setupQueryCachePersistence
+} from './lib/cache/query-persist';
 import './styles/app.css';
 
 const queryClient = new QueryClient({
@@ -27,6 +31,9 @@ const queryClient = new QueryClient({
     }
   }
 });
+
+void hydrateQueryCache(queryClient);
+setupQueryCachePersistence(queryClient);
 
 const root = document.getElementById('root');
 if (!root) {

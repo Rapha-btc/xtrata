@@ -48,6 +48,7 @@ type TokenCardMediaProps = {
   isActiveTab?: boolean;
   pixelateOnUpscale?: boolean;
   preferFullResolution?: boolean;
+  letterboxNonSquare?: boolean;
 };
 
 export default function TokenCardMedia(props: TokenCardMediaProps) {
@@ -64,6 +65,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
   const [tokenUriFailed, setTokenUriFailed] = useState(false);
   const [tokenUriDeferred, setTokenUriDeferred] = useState(false);
   const [pixelatePreview, setPixelatePreview] = useState(false);
+  const [letterboxPreview, setLetterboxPreview] = useState(false);
   const setHtmlFrameRef = useCallback((node: HTMLIFrameElement | null) => {
     setBridgeSource(node?.contentWindow ?? null);
   }, []);
@@ -121,7 +123,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
   const shouldLoad =
     !!props.token.meta &&
     totalSize !== null &&
-    totalSize <= MAX_THUMBNAIL_BYTES &&
+    (totalSize <= MAX_THUMBNAIL_BYTES || props.preferFullResolution) &&
     !svgPreview &&
     (!hasThumbnail || props.preferFullResolution) &&
     (mediaKind === 'image' ||
@@ -246,6 +248,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     setTokenUriFailed(false);
     setTokenUriDeferred(false);
     setPixelatePreview(false);
+    setLetterboxPreview(false);
   }, [props.token.id]);
 
   useEffect(() => {
@@ -540,6 +543,18 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
           previous === nextPixelate ? previous : nextPixelate
         );
       }
+      if (props.letterboxNonSquare) {
+        const target = event.currentTarget;
+        const naturalWidth = target.naturalWidth || 0;
+        const naturalHeight = target.naturalHeight || 0;
+        if (naturalWidth > 0 && naturalHeight > 0) {
+          const aspect = naturalWidth / naturalHeight;
+          const nonSquare = aspect < 0.95 || aspect > 1.05;
+          setLetterboxPreview((previous) =>
+            previous === nonSquare ? previous : nonSquare
+          );
+        }
+      }
       if (!shouldLog('preview', 'debug')) {
         return;
       }
@@ -812,6 +827,12 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
         hasTokenUri: !!props.token.tokenUri
       });
     }
+    const previewClassName = [
+      pixelatePreview ? 'preview-media--pixelated' : null,
+      letterboxPreview ? 'preview-media--letterbox' : null
+    ]
+      .filter(Boolean)
+      .join(' ');
     mediaElement = (
       <img
         src={imagePreviewSource}
@@ -819,7 +840,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
         loading="lazy"
         onLoad={handleImageLoad}
         onError={handleImageError}
-        className={pixelatePreview ? 'preview-media--pixelated' : undefined}
+        className={previewClassName || undefined}
       />
     );
   } else if (textPreview && !jsonImagePreview) {

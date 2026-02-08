@@ -2727,6 +2727,15 @@ p {
   image-rendering: crisp-edges;
 }
 
+.preview-media--letterbox {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
 /* Audio should not try to fill vertically */
 .preview-stage__frame audio {
   width: min(820px, 92%);

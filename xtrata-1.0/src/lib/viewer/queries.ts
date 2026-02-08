@@ -4,6 +4,10 @@ import { getContractId } from '../contract/config';
 import type { XtrataClient } from '../contract/client';
 import type { TokenSummary } from './types';
 import { buildTokenRange } from './model';
+import {
+  loadTokenSummaryFromCache,
+  saveTokenSummaryToCache
+} from './cache';
 
 export const getViewerKey = (contractId: string) => ['viewer', contractId];
 export const getLastTokenIdKey = (contractId: string) => [
@@ -70,6 +74,10 @@ export const fetchTokenSummary = async (params: {
   senderAddress: string;
 }): Promise<TokenSummary> => {
   const sourceContractId = getContractId(params.client.contract);
+  const cached = await loadTokenSummaryFromCache(sourceContractId, params.id);
+  if (cached) {
+    return cached;
+  }
   const [meta, tokenUri] = await Promise.all([
     safeRead(
       () => params.client.getInscriptionMeta(params.id, params.senderAddress),
@@ -97,7 +105,7 @@ export const fetchTokenSummary = async (params: {
       )
     : null;
 
-  return {
+  const summary: TokenSummary = {
     id: params.id,
     meta,
     tokenUri,
@@ -105,6 +113,8 @@ export const fetchTokenSummary = async (params: {
     svgDataUri,
     sourceContractId
   };
+  void saveTokenSummaryToCache(sourceContractId, params.id, summary);
+  return summary;
 };
 
 const isEmptySummary = (summary: TokenSummary) =>

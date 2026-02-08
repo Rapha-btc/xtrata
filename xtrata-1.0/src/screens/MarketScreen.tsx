@@ -1603,9 +1603,7 @@ export default function MarketScreen(props: MarketScreenProps) {
                     {lookupToken ? (
                       <TokenCardMedia
                         token={lookupToken}
-                        contractId={
-                          displayedListing?.nftContract ?? nftContractId
-                        }
+                        contractId={displayedListing?.nftContract ?? nftContractId}
                         senderAddress={readOnlySender}
                         client={resolveListingClient(
                           displayedListing?.nftContract
@@ -1613,6 +1611,7 @@ export default function MarketScreen(props: MarketScreenProps) {
                         isActiveTab={!props.collapsed}
                         pixelateOnUpscale
                         preferFullResolution
+                        letterboxNonSquare
                       />
                     ) : (
                       <div className="token-card__placeholder">

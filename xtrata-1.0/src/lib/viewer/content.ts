@@ -437,11 +437,13 @@ const fetchChunkWithRetry = async (params: {
   senderAddress: string;
   retries?: number;
 }) => {
+  const contractId = getContractId(params.client.contract);
   const attempts = params.retries ?? 3;
   let lastError: Error | null = null;
   for (let attempt = 0; attempt <= attempts; attempt += 1) {
     try {
       logDebug('chunk', 'Fetching chunk', {
+        contractId,
         id: params.id.toString(),
         index: params.index.toString(),
         attempt
@@ -455,6 +457,7 @@ const fetchChunkWithRetry = async (params: {
         throw new Error(`Missing chunk ${params.index.toString()}`);
       }
       logDebug('chunk', 'Fetched chunk', {
+        contractId,
         id: params.id.toString(),
         index: params.index.toString(),
         bytes: chunk.length
@@ -463,6 +466,7 @@ const fetchChunkWithRetry = async (params: {
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
       logDebug('chunk', 'Chunk fetch failed', {
+        contractId,
         id: params.id.toString(),
         index: params.index.toString(),
         attempt,
@@ -474,6 +478,7 @@ const fetchChunkWithRetry = async (params: {
     }
   }
   logWarn('chunk', 'Chunk fetch exhausted retries', {
+    contractId,
     id: params.id.toString(),
     index: params.index.toString(),
     error: lastError?.message
@@ -488,6 +493,7 @@ const fetchChunkBatchWithRetry = async (params: {
   senderAddress: string;
   retries?: number;
 }) => {
+  const contractId = getContractId(params.client.contract);
   if (params.indexes.length === 0) {
     return [] as { index: bigint; chunk: Uint8Array | null }[];
   }
@@ -496,6 +502,7 @@ const fetchChunkBatchWithRetry = async (params: {
   for (let attempt = 0; attempt <= attempts; attempt += 1) {
     try {
       logDebug('chunk', 'Fetching chunk batch', {
+        contractId,
         id: params.id.toString(),
         count: params.indexes.length,
         start: params.indexes[0]?.toString(),
@@ -509,12 +516,14 @@ const fetchChunkBatchWithRetry = async (params: {
       );
       if (batch.length !== params.indexes.length) {
         logWarn('chunk', 'Chunk batch length mismatch', {
+          contractId,
           id: params.id.toString(),
           expected: params.indexes.length,
           actual: batch.length
         });
       }
       logDebug('chunk', 'Fetched chunk batch', {
+        contractId,
         id: params.id.toString(),
         count: batch.length
       });
@@ -525,6 +534,7 @@ const fetchChunkBatchWithRetry = async (params: {
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
       logDebug('chunk', 'Chunk batch fetch failed', {
+        contractId,
         id: params.id.toString(),
         attempt,
         error: lastError.message
@@ -535,6 +545,7 @@ const fetchChunkBatchWithRetry = async (params: {
     }
   }
   logWarn('chunk', 'Chunk batch fetch exhausted retries', {
+    contractId,
     id: params.id.toString(),
     error: lastError?.message
   });
