@@ -51,6 +51,7 @@ Verification Checklist (After Each Phase)
 - Performance: No additional read-only calls; prefetch and refresh behavior unchanged.
 
 Additional Implementation Packs
+- Portfolio summary + prioritization: `Refactor-Plans/REFRACTOR-PLANS-SUMMARY.md`
 - Parent-child relationships (mint + viewer + tests): `Refactor-Plans/parent-child-implementation/README.md`
 - Viewer page-loading optimization (budgeted full-content preload + cache eviction): `Refactor-Plans/viewer-page-loading-optimization/README.md`
 - Market module + wallet controls UX (list/cancel/transfer in wallet view + seller management): `Refactor-Plans/market-module-wallet-controls/README.md`

@@ -140,5 +140,85 @@ describe("xtrata-market-v1.1", () => {
 
     expect(sellerAfter - sellerBefore).toBe(price);
     expect(buyerBefore - buyerAfter).toBe(price);
+
+    const listingAfterBuy = simnet.callReadOnlyFn(
+      marketContract,
+      "get-listing",
+      [Cl.uint(listingId)],
+      deployer
+    ).result;
+    expect(listingAfterBuy).toBeNone();
+
+    const listingIdAfterBuy = simnet.callReadOnlyFn(
+      marketContract,
+      "get-listing-id-by-token",
+      [Cl.contractPrincipal(deployer, "xtrata-v1-1-0"), Cl.uint(tokenId)],
+      deployer
+    ).result;
+    expect(listingIdAfterBuy).toBeNone();
+  });
+
+  it("stores listing id by token and clears it after cancel", () => {
+    mintToken(deployer, "02", "data:text/plain,two");
+    const tokenId = mintToken(deployer, "03", "data:text/plain,three");
+    expect(tokenId).toBeGreaterThan(0n);
+
+    unwrapOk(
+      simnet.callPublicFn(
+        nftContract,
+        "transfer",
+        [
+          Cl.uint(tokenId),
+          Cl.standardPrincipal(deployer),
+          Cl.standardPrincipal(seller),
+        ],
+        deployer
+      ).result
+    );
+
+    const listResult = simnet.callPublicFn(
+      marketContract,
+      "list-token",
+      [
+        Cl.contractPrincipal(deployer, "xtrata-v1-1-0"),
+        Cl.uint(tokenId),
+        Cl.uint(price),
+      ],
+      seller
+    ).result;
+    const listingId = unwrapUInt(unwrapOk(listResult));
+
+    const listingIdByToken = simnet.callReadOnlyFn(
+      marketContract,
+      "get-listing-id-by-token",
+      [Cl.contractPrincipal(deployer, "xtrata-v1-1-0"), Cl.uint(tokenId)],
+      deployer
+    ).result;
+    expect(listingIdByToken).toBeSome(Cl.uint(listingId));
+
+    unwrapOk(
+      simnet.callPublicFn(
+        marketContract,
+        "cancel",
+        [Cl.contractPrincipal(deployer, "xtrata-v1-1-0"), Cl.uint(listingId)],
+        seller
+      ).result
+    );
+
+    const listingAfterCancel = simnet.callReadOnlyFn(
+      marketContract,
+      "get-listing",
+      [Cl.uint(listingId)],
+      deployer
+    ).result;
+    expect(listingAfterCancel).toBeNone();
+
+    const listingIdAfterCancel = simnet.callReadOnlyFn(
+      marketContract,
+      "get-listing-id-by-token",
+      [Cl.contractPrincipal(deployer, "xtrata-v1-1-0"), Cl.uint(tokenId)],
+      deployer
+    ).result;
+    expect(listingIdAfterCancel).toBeNone();
   });
 });

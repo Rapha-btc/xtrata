@@ -46,6 +46,8 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 - `src/lib/viewer/ownership.ts` maps wallet ownership data for the wallet grid.
 - `src/lib/viewer/recursive.ts` resolves recursive dependencies when viewing.
 - `src/lib/viewer/types.ts` defines viewer models.
+- `src/lib/market/actions.ts` centralizes market list/cancel validation helpers.
+- `src/lib/market/listing-resolution.ts` resolves page-scoped listing data when activity indexes are incomplete.
 
 ## Tests and fixtures
 

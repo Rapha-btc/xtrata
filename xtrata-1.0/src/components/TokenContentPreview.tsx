@@ -139,6 +139,9 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
   const imageMetricsLogRef = useRef<string | null>(null);
   const imageErrorLogRef = useRef<string | null>(null);
   const [tokenUriFailed, setTokenUriFailed] = useState(false);
+  const [tokenUriPreviewReady, setTokenUriPreviewReady] = useState(false);
+  const [onChainImageFailed, setOnChainImageFailed] = useState(false);
+  const [onChainImageReady, setOnChainImageReady] = useState(false);
   const [pixelatePreview, setPixelatePreview] = useState(false);
   const [bridgeSource, setBridgeSource] = useState<MessageEventSource | null>(null);
   const [thumbnailPending, setThumbnailPending] = useState(false);
@@ -150,6 +153,9 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     imageMetricsLogRef.current = null;
     imageErrorLogRef.current = null;
     setTokenUriFailed(false);
+    setTokenUriPreviewReady(false);
+    setOnChainImageFailed(false);
+    setOnChainImageReady(false);
     setPixelatePreview(false);
     setThumbnailPending(false);
     setThumbnailStatusMessage(null);
@@ -438,6 +444,11 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     }
     return createObjectUrl(contentQuery.data, resolvedMimeType ?? mimeType);
   }, [contentQuery.data, resolvedMimeType, mimeType]);
+
+  useEffect(() => {
+    setOnChainImageReady(false);
+    setOnChainImageFailed(false);
+  }, [contentUrl, props.token.id]);
 
   useEffect(() => {
     if (!contentUrl) {
@@ -1110,13 +1121,16 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
   const htmlDoc = htmlPreview && bridgeId
     ? injectRecursiveBridgeHtml(htmlPreview, bridgeId)
     : htmlPreview;
-  const allowTokenUriPreview = !tokenUriFailed && shouldAllowTokenUriPreview({
-    hasMeta: !!props.token.meta,
-    contentError: contentQuery.isError,
-    streamPhase,
-    hasPreviewContent,
-    shouldStream
-  });
+  const allowTokenUriPreview =
+    !tokenUriFailed &&
+    (onChainImageFailed ||
+      shouldAllowTokenUriPreview({
+        hasMeta: !!props.token.meta,
+        contentError: contentQuery.isError,
+        streamPhase,
+        hasPreviewContent,
+        shouldStream
+      }));
   const allowTokenUriFallback = allowTokenUriPreview;
   useEffect(() => {
     const key = `${allowTokenUriPreview}:${streamPhase}:${isStreamableKind}:${mediaSourceSupported}`;
@@ -1159,6 +1173,9 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     refetchOnReconnect: false
   });
   const tokenUriPreview = allowTokenUriPreview ? tokenUriQuery.data : null;
+  useEffect(() => {
+    setTokenUriPreviewReady(false);
+  }, [tokenUriPreview, props.token.id]);
   const directTokenUri =
     props.token.tokenUri &&
     (isHttpUrl(props.token.tokenUri) || isDataUri(props.token.tokenUri))
@@ -1446,6 +1463,12 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
         if (!url) {
           return;
         }
+        if (source === 'on-chain') {
+          setOnChainImageReady(true);
+        }
+        if (source.startsWith('token-uri')) {
+          setTokenUriPreviewReady(true);
+        }
         const target = event.currentTarget;
         const rect = target.getBoundingClientRect();
         const naturalWidth = target.naturalWidth || 0;
@@ -1524,6 +1547,13 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
       (event: SyntheticEvent<HTMLImageElement>) => {
         if (!url) {
           return;
+        }
+        if (source === 'on-chain') {
+          setOnChainImageReady(false);
+          setOnChainImageFailed(true);
+        }
+        if (source.startsWith('token-uri')) {
+          setTokenUriPreviewReady(false);
         }
         setPixelatePreview(false);
         if (source.startsWith('token-uri')) {
@@ -1606,6 +1636,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
       contentQuery.status,
       allowTokenUriFallback,
       allowTokenUriPreview,
+      onChainImageFailed,
       loadRequested
     ]
   );
@@ -1839,14 +1870,41 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
                         onError={handlePreviewImageError('svg-preview', svgPreview)}
                       />
                     ) : resolvedMediaKind === 'image' && contentUrl ? (
-                      <img
-                        src={contentUrl}
-                        alt="Image preview"
-                        loading="lazy"
-                        className={previewImageClassName}
-                        onLoad={handlePreviewImageLoad('on-chain', contentUrl)}
-                        onError={handlePreviewImageError('on-chain', contentUrl)}
-                      />
+                      onChainImageFailed ? (
+                        <div className="preview-stage__notice">
+                          <p>On-chain image preview failed, trying fallback...</p>
+                        </div>
+                      ) : (
+                        <>
+                          {!onChainImageReady &&
+                            (thumbnailUrl ? (
+                              <img
+                                src={thumbnailUrl}
+                                alt="Thumbnail preview"
+                                loading="lazy"
+                                className="preview-image--placeholder"
+                              />
+                            ) : (
+                              <div className="preview-stage__notice">
+                                <p>Loading image preview...</p>
+                              </div>
+                            ))}
+                          <img
+                            src={contentUrl}
+                            alt="Image preview"
+                            loading="lazy"
+                            className={
+                              onChainImageReady
+                                ? previewImageClassName
+                                : previewImageClassName
+                                  ? `${previewImageClassName} preview-image--pending`
+                                  : 'preview-image--pending'
+                            }
+                            onLoad={handlePreviewImageLoad('on-chain', contentUrl)}
+                            onError={handlePreviewImageError('on-chain', contentUrl)}
+                          />
+                        </>
+                      )
                     ) : resolvedMediaKind === 'audio' && mediaSourceUrl ? (
                       <audio
                         ref={(node) => {
@@ -1869,14 +1927,27 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
                         onPlay={() => streamStartRef.current?.()}
                       />
                     ) : tokenUriPreview ? (
-                      <img
-                        src={tokenUriPreview}
-                        alt="Token URI preview"
-                        loading="lazy"
-                        className={previewImageClassName}
-                        onLoad={handlePreviewImageLoad('token-uri', tokenUriPreview)}
-                        onError={handlePreviewImageError('token-uri', tokenUriPreview)}
-                      />
+                      <>
+                        {!tokenUriPreviewReady && (
+                          <div className="preview-stage__notice">
+                            <p>Resolving token URI preview...</p>
+                          </div>
+                        )}
+                        <img
+                          src={tokenUriPreview}
+                          alt="Token URI preview"
+                          loading="lazy"
+                          className={
+                            tokenUriPreviewReady
+                              ? previewImageClassName
+                              : previewImageClassName
+                                ? `${previewImageClassName} preview-image--pending`
+                                : 'preview-image--pending'
+                          }
+                          onLoad={handlePreviewImageLoad('token-uri', tokenUriPreview)}
+                          onError={handlePreviewImageError('token-uri', tokenUriPreview)}
+                        />
+                      </>
                     ) : resolvedMediaKind === 'html' ? (
                       <div className="preview-stage__html">
                         {isPdf ? (

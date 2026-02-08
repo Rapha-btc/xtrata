@@ -7,13 +7,13 @@ import {
   type CSSProperties
 } from 'react';
 import { showContractCall } from '@stacks/connect';
-import { PostConditionMode } from '@stacks/transactions';
+import { PostConditionMode, contractPrincipalCV, uintCV } from '@stacks/transactions';
 import { buildTransferCall, createXtrataClient } from '../lib/contract/client';
 import { isReadOnlyBackoffActive } from '../lib/contract/read-only';
 import { getLegacyContract, type ContractRegistryEntry } from '../lib/contract/registry';
-import { getContractId } from '../lib/contract/config';
+import { getContractId, type ContractConfig } from '../lib/contract/config';
 import { buildTransferPostCondition } from '../lib/contract/post-conditions';
-import { getNetworkMismatch } from '../lib/network/guard';
+import { getNetworkMismatch, type NetworkMismatch } from '../lib/network/guard';
 import { toStacksNetwork } from '../lib/network/stacks';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -29,6 +29,17 @@ import {
 import { parseMarketContractId } from '../lib/market/contract';
 import { createMarketClient } from '../lib/market/client';
 import type { MarketActivityEvent } from '../lib/market/types';
+import {
+  isSameAddress,
+  getCancelActionValidationMessage,
+  getListActionValidationMessage,
+  validateCancelAction,
+  validateListAction
+} from '../lib/market/actions';
+import {
+  mergeListingIndexes,
+  resolveMissingListingsForTokens
+} from '../lib/market/listing-resolution';
 import {
   getChunkKey,
   getDependenciesKey,
@@ -265,7 +276,11 @@ const TokenDetails = (props: {
   collapsed: boolean;
   onToggleCollapse: () => void;
   listing: MarketActivityEvent | null;
+  marketContract: ContractConfig | null;
+  marketContractError: string | null;
   marketContractId: string | null;
+  marketMismatch: NetworkMismatch | null;
+  marketNetworkMismatch: boolean;
   isMobile: boolean;
   mobilePanel: 'grid' | 'preview';
   onRequestGrid: () => void;
@@ -277,6 +292,12 @@ const TokenDetails = (props: {
   const [transferStatus, setTransferStatus] = useState<string | null>(null);
   const [transferPending, setTransferPending] = useState(false);
   const [transferLog, setTransferLog] = useState<string[]>([]);
+  const [listPriceInput, setListPriceInput] = useState('');
+  const [listStatus, setListStatus] = useState<string | null>(null);
+  const [listPending, setListPending] = useState(false);
+  const [cancelStatus, setCancelStatus] = useState<string | null>(null);
+  const [cancelPending, setCancelPending] = useState(false);
+  const [walletToolsOpen, setWalletToolsOpen] = useState(false);
   const isWalletView = props.mode === 'wallet';
   const mismatch = getNetworkMismatch(
     props.contract.network,
@@ -309,6 +330,9 @@ const TokenDetails = (props: {
 
   useEffect(() => {
     setTransferStatus(null);
+    setListStatus(null);
+    setCancelStatus(null);
+    setListPriceInput('');
   }, [props.selectedTokenId, walletAddress]);
 
   const transferValidation = validateTransferRequest({
@@ -342,6 +366,57 @@ const TokenDetails = (props: {
       type: 'active'
     });
   };
+
+  const refreshMarketActivity = () => {
+    if (!props.marketContractId) {
+      return;
+    }
+    void queryClient.invalidateQueries({
+      queryKey: ['market', props.marketContractId, 'activity']
+    });
+    void queryClient.refetchQueries({
+      queryKey: ['market', props.marketContractId, 'activity'],
+      type: 'active'
+    });
+  };
+
+  const selectedListed =
+    !!props.listing &&
+    !!props.marketContractId &&
+    isSameAddress(props.token?.owner, props.marketContractId);
+  const listingStatusLabel = props.listing
+    ? selectedListed
+      ? `Listed (#${props.listing.listingId.toString()})`
+      : `Listing record (#${props.listing.listingId.toString()})`
+    : 'Not listed';
+  const listingPriceLabel =
+    props.listing?.price !== undefined
+      ? formatMicroStx(Number(props.listing.price))
+      : null;
+  const marketLabel = props.marketContractId ?? 'Select in Market module';
+  const listValidation = validateListAction({
+    hasMarketContract: !!props.marketContract,
+    walletAddress,
+    networkMismatch: !!props.marketMismatch,
+    marketNetworkMismatch: props.marketNetworkMismatch,
+    tokenId: props.token?.id ?? null,
+    tokenOwner: props.token?.owner ?? null,
+    isListed: selectedListed,
+    priceInput: listPriceInput
+  });
+  const listValidationMessage = getListActionValidationMessage(listValidation.reason);
+  const cancelValidation = validateCancelAction({
+    hasMarketContract: !!props.marketContract,
+    walletAddress,
+    networkMismatch: !!props.marketMismatch,
+    marketNetworkMismatch: props.marketNetworkMismatch,
+    tokenId: props.token?.id ?? null,
+    listingId: props.listing?.listingId ?? null,
+    listingSeller: props.listing?.seller ?? null
+  });
+  const cancelValidationMessage = getCancelActionValidationMessage(
+    cancelValidation.reason
+  );
 
   const handleTransfer = () => {
     if (!transferValidation.ok || !props.token) {
@@ -410,6 +485,103 @@ const TokenDetails = (props: {
     }
   };
 
+  const handleList = () => {
+    setListStatus(null);
+    setCancelStatus(null);
+    if (!listValidation.ok || !props.marketContract || !walletAddress || !props.token) {
+      const message =
+        listValidationMessage ?? 'Listing blocked: invalid inputs.';
+      setListStatus(message);
+      return;
+    }
+
+    setListPending(true);
+    setListStatus('Waiting for wallet confirmation...');
+    try {
+      showContractCall({
+        contractAddress: props.marketContract.address,
+        contractName: props.marketContract.contractName,
+        functionName: 'list-token',
+        functionArgs: [
+          contractPrincipalCV(props.contract.address, props.contract.contractName),
+          uintCV(props.token.id),
+          uintCV(listValidation.priceMicroStx)
+        ],
+        network: props.walletSession.network ?? props.marketContract.network,
+        stxAddress: walletAddress,
+        postConditionMode: PostConditionMode.Deny,
+        postConditions: [
+          buildTransferPostCondition({
+            contract: props.contract,
+            senderAddress: walletAddress,
+            tokenId: props.token.id
+          })
+        ],
+        onFinish: (payload) => {
+          setListPending(false);
+          setListStatus(`Listing submitted: ${payload.txId}`);
+          refreshViewer();
+          refreshMarketActivity();
+        },
+        onCancel: () => {
+          setListPending(false);
+          setListStatus('Listing cancelled or failed in wallet.');
+        }
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setListPending(false);
+      setListStatus(`Listing failed: ${message}`);
+    }
+  };
+
+  const handleCancel = () => {
+    setCancelStatus(null);
+    setListStatus(null);
+    if (
+      !cancelValidation.ok ||
+      !props.marketContract ||
+      !walletAddress ||
+      !props.token ||
+      !props.listing
+    ) {
+      const message =
+        cancelValidationMessage ?? 'Cancel blocked: invalid inputs.';
+      setCancelStatus(message);
+      return;
+    }
+
+    setCancelPending(true);
+    setCancelStatus('Waiting for wallet confirmation...');
+    try {
+      showContractCall({
+        contractAddress: props.marketContract.address,
+        contractName: props.marketContract.contractName,
+        functionName: 'cancel',
+        functionArgs: [
+          contractPrincipalCV(props.contract.address, props.contract.contractName),
+          uintCV(props.listing.listingId)
+        ],
+        network: props.walletSession.network ?? props.marketContract.network,
+        stxAddress: walletAddress,
+        onFinish: (payload) => {
+          setCancelPending(false);
+          setCancelStatus(`Cancel submitted: ${payload.txId}`);
+          refreshViewer();
+          refreshMarketActivity();
+        },
+        onCancel: () => {
+          setCancelPending(false);
+          setCancelStatus('Cancel cancelled or failed in wallet.');
+        }
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setCancelPending(false);
+      setCancelStatus(`Cancel failed: ${message}`);
+    }
+  };
+
   if (!props.token) {
     const pendingId = props.selectedTokenId;
     return (
@@ -427,7 +599,7 @@ const TokenDetails = (props: {
               {pendingId !== null
                 ? 'Loading token preview and metadata.'
                 : isWalletView
-                  ? 'Select a token to preview and transfer.'
+                  ? 'Select a token to preview, list, cancel, or transfer.'
                   : 'Select a token to inspect metadata and chunks.'}
             </p>
           </div>
@@ -460,7 +632,7 @@ const TokenDetails = (props: {
           <h2>Token #{props.token.id.toString()}</h2>
           <p>
             {isWalletView
-              ? 'Art-forward preview with wallet transfer tools.'
+              ? 'Art-forward preview with wallet listing and transfer tools.'
               : 'Art-forward preview with optional diagnostics.'}
           </p>
           {props.listing?.price !== undefined && (
@@ -514,12 +686,7 @@ const TokenDetails = (props: {
               )}
               <div>
                 <span className="meta-label">Status</span>
-                <span className="meta-value">
-                  {props.marketContractId &&
-                  props.token?.owner === props.marketContractId
-                    ? 'Escrowed'
-                    : 'Listed'}
-                </span>
+                <span className="meta-value">{selectedListed ? 'Escrowed' : 'Listed'}</span>
               </div>
             </div>
           </div>
@@ -534,23 +701,142 @@ const TokenDetails = (props: {
               Back to grid
             </button>
           )}
-          <TokenContentPreview
-            token={props.token}
-            contractId={props.contractId}
-            senderAddress={props.senderAddress}
-            client={props.client}
-            isActiveTab={props.isActiveTab}
-            onRequestViewer={
-              props.isMobile && !isWalletView ? props.onRequestGrid : undefined
-            }
-            viewerLabel={props.isMobile && !isWalletView ? 'Grid' : undefined}
-          />
+          {isWalletView ? (
+            <div className="wallet-preview">
+              <TokenContentPreview
+                token={props.token}
+                contractId={props.contractId}
+                senderAddress={props.senderAddress}
+                client={props.client}
+                isActiveTab={props.isActiveTab}
+              />
+              {props.listing && (
+                <button
+                  type="button"
+                  className="wallet-preview__badge"
+                  onClick={() => setWalletToolsOpen(true)}
+                  title="Open listing tools"
+                >
+                  Listed
+                </button>
+              )}
+            </div>
+          ) : (
+            <TokenContentPreview
+              token={props.token}
+              contractId={props.contractId}
+              senderAddress={props.senderAddress}
+              client={props.client}
+              isActiveTab={props.isActiveTab}
+              onRequestViewer={
+                props.isMobile && !isWalletView ? props.onRequestGrid : undefined
+              }
+              viewerLabel={props.isMobile && !isWalletView ? 'Grid' : undefined}
+            />
+          )}
         </div>
         <div className="detail-panel__tools">
           {isWalletView ? (
-            <details className="preview-drawer preview-drawer--advanced">
+            <details
+              className="preview-drawer preview-drawer--advanced"
+              open={walletToolsOpen}
+              onToggle={(event) => setWalletToolsOpen(event.currentTarget.open)}
+            >
               <summary>Wallet tools</summary>
               <div className="preview-drawer__body">
+                <div className="transfer-panel wallet-tools__panel">
+                  <div>
+                    <h3>Listing tools</h3>
+                    <p>List or cancel the selected inscription.</p>
+                  </div>
+                  <div className="meta-grid">
+                    <div>
+                      <span className="meta-label">Selected token</span>
+                      <span className="meta-value">
+                        #{props.token.id.toString()}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="meta-label">Market contract</span>
+                      <span className="meta-value">{marketLabel}</span>
+                    </div>
+                    <div>
+                      <span className="meta-label">Listing status</span>
+                      <span className="meta-value">{listingStatusLabel}</span>
+                    </div>
+                    {listingPriceLabel && (
+                      <div>
+                        <span className="meta-label">Listing price</span>
+                        <span className="meta-value">{listingPriceLabel}</span>
+                      </div>
+                    )}
+                  </div>
+                  {props.marketContractError && (
+                    <span className="meta-value">{props.marketContractError}</span>
+                  )}
+                  {props.marketMismatch && (
+                    <span className="meta-value">
+                      Network mismatch: wallet on {props.marketMismatch.actual},
+                      market is {props.marketMismatch.expected}.
+                    </span>
+                  )}
+                  {props.marketNetworkMismatch && (
+                    <span className="meta-value">
+                      Market network must match the active NFT contract.
+                    </span>
+                  )}
+                  <label className="field">
+                    <span className="field__label">Price (STX)</span>
+                    <input
+                      className="input"
+                      placeholder="0.25"
+                      value={listPriceInput}
+                      onChange={(event) => {
+                        setListPriceInput(event.target.value);
+                        setListStatus(null);
+                      }}
+                      disabled={listPending || cancelPending}
+                    />
+                  </label>
+                  {listStatus && <span className="meta-value">{listStatus}</span>}
+                  {!listStatus && listValidationMessage && (
+                    <span className="meta-value">{listValidationMessage}</span>
+                  )}
+                  {cancelStatus && <span className="meta-value">{cancelStatus}</span>}
+                  {!cancelStatus && cancelValidationMessage && (
+                    <span className="meta-value">{cancelValidationMessage}</span>
+                  )}
+                  <div className="transfer-panel__actions">
+                    <button
+                      className="button button--mini"
+                      type="button"
+                      onClick={handleList}
+                      disabled={!listValidation.ok || listPending || cancelPending}
+                    >
+                      {listPending ? 'Listing...' : 'List'}
+                    </button>
+                    <button
+                      className="button button--ghost button--mini"
+                      type="button"
+                      onClick={handleCancel}
+                      disabled={!cancelValidation.ok || cancelPending || listPending}
+                    >
+                      {cancelPending ? 'Cancelling...' : 'Cancel listing'}
+                    </button>
+                    <button
+                      className="button button--ghost button--mini"
+                      type="button"
+                      onClick={() => {
+                        setListPriceInput('');
+                        setListStatus(null);
+                        setCancelStatus(null);
+                      }}
+                      disabled={listPending || cancelPending}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
                 <div className="transfer-panel">
                   <div>
                     <h3>Transfer inscription</h3>
@@ -599,7 +885,12 @@ const TokenDetails = (props: {
                       className="button button--mini"
                       type="button"
                       onClick={handleTransfer}
-                      disabled={!transferValidation.ok || transferPending}
+                      disabled={
+                        !transferValidation.ok ||
+                        transferPending ||
+                        listPending ||
+                        cancelPending
+                      }
                     >
                       {transferPending ? 'Transferring...' : 'Transfer'}
                     </button>
@@ -775,10 +1066,14 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     [marketContractId]
   );
   const marketContract = parsedMarket.config;
+  const marketContractError = parsedMarket.error;
   const marketContractIdLabel = marketContract ? getContractId(marketContract) : null;
   const marketNetworkMismatch = marketContract
     ? marketContract.network !== props.contract.network
     : false;
+  const marketMismatch = marketContract
+    ? getNetworkMismatch(marketContract.network, props.walletSession.network)
+    : null;
   const marketClient = useMemo(
     () => (marketContract ? createMarketClient({ contract: marketContract }) : null),
     [marketContract]
@@ -1130,7 +1425,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       if (!token || !marketContractIdLabel) {
         return false;
       }
-      if (token.owner === marketContractIdLabel) {
+      if (isSameAddress(token.owner, marketContractIdLabel)) {
         return true;
       }
       const key = buildMarketListingKey(
@@ -1161,6 +1456,60 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     const start = activePageIndex * PAGE_SIZE;
     return ownedTokens.slice(start, start + PAGE_SIZE);
   }, [isWalletView, ownedTokens, activePageIndex, tokenSummaries]);
+  const walletPageListingTargets = useMemo(() => {
+    if (!isWalletView || pageTokens.length === 0) {
+      return [] as Array<{
+        nftContract: string;
+        tokenId: bigint;
+        owner: string | null;
+      }>;
+    }
+    return pageTokens.map((token) => ({
+      nftContract: resolveTokenContractId(token),
+      tokenId: token.id,
+      owner: token.owner
+    }));
+  }, [isWalletView, pageTokens, resolveTokenContractId]);
+  const walletPageListingsQuery = useQuery({
+    queryKey: [
+      'market',
+      marketContractIdLabel,
+      contractId,
+      'wallet-page-listings',
+      activePageIndex,
+      marketActivityQuery.data?.updatedAt ?? 0,
+      walletPageListingTargets.map(
+        (token) =>
+          `${token.nftContract}:${token.tokenId.toString()}:${token.owner ?? 'none'}`
+      )
+    ],
+    enabled:
+      !!marketClient &&
+      !!marketContractIdLabel &&
+      !marketNetworkMismatch &&
+      props.isActiveTab &&
+      isWalletView &&
+      walletPageListingTargets.length > 0,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    queryFn: () => {
+      if (!marketClient || !marketContractIdLabel) {
+        return Promise.resolve(new Map<string, MarketActivityEvent>());
+      }
+      return resolveMissingListingsForTokens({
+        marketClient,
+        senderAddress: props.senderAddress,
+        marketContractId: marketContractIdLabel,
+        tokens: walletPageListingTargets,
+        existing: activeListingIndex,
+        concurrency: 2
+      });
+    }
+  });
+  const listingIndex = useMemo(
+    () => mergeListingIndexes(activeListingIndex, walletPageListingsQuery.data),
+    [activeListingIndex, walletPageListingsQuery.data]
+  );
 
   const currentPageIds = useMemo(() => {
     if (isWalletView) {
@@ -1532,8 +1881,8 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     if (!selectedListingKey) {
       return null;
     }
-    return activeListingIndex.get(selectedListingKey) ?? null;
-  }, [activeListingIndex, selectedListingKey]);
+    return listingIndex.get(selectedListingKey) ?? null;
+  }, [listingIndex, selectedListingKey]);
   const shouldFetchSelectedListing =
     !!marketClient &&
     !!marketContractIdLabel &&
@@ -1541,7 +1890,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     props.isActiveTab &&
     !!selectedListingKey &&
     !selectedListingFromIndex &&
-    resolvedSelectedToken?.owner === marketContractIdLabel;
+    isSameAddress(resolvedSelectedToken?.owner, marketContractIdLabel);
   const selectedListingQuery = useQuery({
     queryKey: [
       'market',
@@ -1988,7 +2337,11 @@ export default function ViewerScreen(props: ViewerScreenProps) {
         collapsed={props.collapsed}
         onToggleCollapse={props.onToggleCollapse}
         listing={selectedListing}
+        marketContract={marketContract}
+        marketContractError={marketContractError}
         marketContractId={marketContractIdLabel}
+        marketMismatch={marketMismatch}
+        marketNetworkMismatch={marketNetworkMismatch}
         isMobile={isMobile}
         mobilePanel={mobilePanel}
         onRequestGrid={handleMobileGridRequest}

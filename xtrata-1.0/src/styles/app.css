@@ -568,6 +568,40 @@ p {
     position: relative;
   }
 
+  .detail-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: auto;
+    overflow: visible;
+  }
+
+  .detail-panel__preview,
+  .detail-panel__meta,
+  .detail-panel__tools {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .detail-panel__meta {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .detail-panel__tools {
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .preview-stage__bottom {
+    max-height: min(44svh, 380px);
+  }
+
+  .preview-stage__bottom .preview-drawer__body {
+    max-height: min(34svh, 300px);
+  }
+
   .viewer-mobile-back {
     position: absolute;
     top: 12px;
@@ -1456,27 +1490,42 @@ p {
 }
 
 .detail-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px 14px;
   min-height: 0;
   height: 100%;
+  overflow: hidden;
+}
+
+.detail-panel__meta {
+  grid-column: 2;
+  grid-row: 1;
+  min-height: 0;
+  max-height: min(30svh, 280px);
   overflow: auto;
+  padding-right: 4px;
   scrollbar-gutter: stable;
 }
 
-.detail-panel__meta,
 .detail-panel__tools {
-  flex: 0 0 auto;
+  grid-column: 2;
+  grid-row: 2;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
+  display: grid;
+  gap: 12px;
+  align-content: start;
 }
 
 .app-section--fit.wallet .panel__body.detail-panel {
-  overflow: auto;
-  scrollbar-gutter: stable;
+  overflow: hidden;
 }
 
 .wallet .detail-panel__tools {
-  display: grid;
   gap: 12px;
 }
 
@@ -1512,7 +1561,9 @@ p {
 }
 
 .detail-panel__preview {
-  flex: 1;
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  position: relative;
   min-height: 0;
 }
 
@@ -1593,6 +1644,10 @@ p {
   background: rgba(255, 255, 255, 0.6);
   max-height: 180px;
   overflow: auto;
+}
+
+.detail-panel__tools .preview-drawer__body {
+  max-height: none;
 }
 
 .chunk-panel__controls {
@@ -2494,6 +2549,19 @@ p {
   border: none;
 }
 
+.preview-stage__frame .square-frame__content img.preview-image--pending {
+  display: none;
+}
+
+.preview-stage__frame .square-frame__content img.preview-image--placeholder {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  object-position: center;
+  opacity: 0.9;
+}
+
 .preview-media--pixelated {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
@@ -2565,6 +2633,9 @@ p {
   padding: 12px;
   background: rgba(255, 255, 255, 0.82);
   border-top: 1px solid rgba(15, 23, 42, 0.12);
+  max-height: min(34svh, 340px);
+  overflow: auto;
+  scrollbar-gutter: stable;
 }
 
 /* === Preview drawers === */
@@ -2587,6 +2658,12 @@ p {
   margin-top: 10px;
   display: grid;
   gap: 12px;
+}
+
+.preview-stage__bottom .preview-drawer__body {
+  max-height: min(26svh, 260px);
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .preview-drawer__section img {
