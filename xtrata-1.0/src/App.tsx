@@ -20,9 +20,20 @@ import ContractAdminScreen from './screens/ContractAdminScreen';
 import WalletLookupScreen from './screens/WalletLookupScreen';
 import AdminDiagnosticsScreen from './screens/AdminDiagnosticsScreen';
 import CollectionMintScreen from './screens/CollectionMintScreen';
+import CollectionMintAdminScreen from './screens/CollectionMintAdminScreen';
 import MarketScreen from './screens/MarketScreen';
 
-const contractSelectionStore = createContractSelectionStore(CONTRACT_REGISTRY);
+const isV2Entry = (entry: { protocolVersion?: string; contractName?: string }) =>
+  entry.protocolVersion === '2.1.0' ||
+  entry.contractName?.toLowerCase().includes('v2-1-0') === true;
+
+const SELECTABLE_CONTRACTS = CONTRACT_REGISTRY.filter(isV2Entry);
+const ACTIVE_CONTRACTS =
+  SELECTABLE_CONTRACTS.length > 0 ? SELECTABLE_CONTRACTS : CONTRACT_REGISTRY;
+const contractSelectionStore = createContractSelectionStore(ACTIVE_CONTRACTS);
+const ACTIVE_CONTRACT_IDS = new Set(
+  ACTIVE_CONTRACTS.map((entry) => getContractId(entry))
+);
 const walletSessionStore = createWalletSessionStore();
 
 const CONTRACT_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9-_]{0,127}$/;
@@ -32,6 +43,7 @@ const SECTION_KEYS = [
   'active-contract',
   'deploy-contract',
   'contract-admin',
+  'collection-mint-admin',
   'admin-diagnostics',
   'collection-mint',
   'mint',
@@ -188,16 +200,14 @@ export default function App() {
     ]
   );
   const compatibleContract = walletSession.network
-    ? CONTRACT_REGISTRY.find(
-        (entry) => entry.network === walletSession.network
-      )
+    ? ACTIVE_CONTRACTS.find((entry) => entry.network === walletSession.network)
     : null;
 
   const handleContractChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const nextId = event.target.value;
     const next =
-      CONTRACT_REGISTRY.find((entry) => getContractId(entry) === nextId) ??
-      CONTRACT_REGISTRY[0];
+      ACTIVE_CONTRACTS.find((entry) => getContractId(entry) === nextId) ??
+      ACTIVE_CONTRACTS[0];
     setSelectedContract(next);
     contractSelectionStore.save(next);
   };
@@ -251,6 +261,19 @@ export default function App() {
       window.removeEventListener(RATE_LIMIT_WARNING_EVENT, handler);
     };
   }, [hasHiroApiKey]);
+
+  useEffect(() => {
+    const currentId = getContractId(selectedContract);
+    if (ACTIVE_CONTRACT_IDS.has(currentId)) {
+      return;
+    }
+    const next = ACTIVE_CONTRACTS[0];
+    if (!next) {
+      return;
+    }
+    setSelectedContract(next);
+    contractSelectionStore.save(next);
+  }, [selectedContract]);
 
   useEffect(() => {
     setWalletSession(walletAdapter.getSession());
@@ -420,6 +443,13 @@ export default function App() {
               </a>
               <a
                 className="button button--ghost app__nav-link"
+                href="#collection-mint-admin"
+                onClick={() => handleNavJump('collection-mint-admin')}
+              >
+                Collection mint admin
+              </a>
+              <a
+                className="button button--ghost app__nav-link"
                 href="#admin-diagnostics"
                 onClick={() => handleNavJump('admin-diagnostics')}
               >
@@ -430,7 +460,7 @@ export default function App() {
                 href="#collection-mint"
                 onClick={() => handleNavJump('collection-mint')}
               >
-                Collection mint
+                Batch mint
               </a>
               <a
                 className="button button--ghost app__nav-link"
@@ -622,7 +652,7 @@ export default function App() {
                   value={contractId}
                   onChange={handleContractChange}
                 >
-                  {CONTRACT_REGISTRY.map((entry) => {
+                  {ACTIVE_CONTRACTS.map((entry) => {
                     const id = getContractId(entry);
                     return (
                       <option key={id} value={id}>
@@ -695,7 +725,7 @@ export default function App() {
               <span className="field__label">Contract name</span>
               <input
                 className="input"
-                placeholder="xtrata-v1-1-1"
+                placeholder="xtrata-v2-1-0"
                 value={deployName}
                 onChange={(event) => {
                   setDeployName(event.target.value);
@@ -747,6 +777,13 @@ export default function App() {
           walletSession={walletSession}
           collapsed={collapsedSections['contract-admin']}
           onToggleCollapse={() => toggleSection('contract-admin')}
+        />
+
+        <CollectionMintAdminScreen
+          contract={selectedContract}
+          walletSession={walletSession}
+          collapsed={collapsedSections['collection-mint-admin']}
+          onToggleCollapse={() => toggleSection('collection-mint-admin')}
         />
 
         <AdminDiagnosticsScreen

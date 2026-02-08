@@ -1,11 +1,12 @@
 import type { ContractRegistryEntry } from '../lib/contract/registry';
 
 export const PUBLIC_CONTRACT: ContractRegistryEntry = {
-  label: 'xtrata-v1-1-1',
+  label: 'xtrata-v2-1-0',
   address: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
-  contractName: 'xtrata-v1-1-1',
+  contractName: 'xtrata-v2-1-0',
   network: 'mainnet',
-  protocolVersion: '1.1.1'
+  protocolVersion: '2.1.0',
+  legacyContractId: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1'
 };
 
 export const PUBLIC_MAX_FILE_BYTES = 4 * 1024 * 1024;

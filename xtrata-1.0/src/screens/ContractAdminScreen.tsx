@@ -63,7 +63,6 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
     senderAddress: readOnlySender
   });
   const status = adminStatusQuery.data ?? EMPTY_ADMIN_STATUS;
-
   const mismatch = getNetworkMismatch(
     props.contract.network,
     props.walletSession.network
@@ -470,6 +469,7 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
           </div>
         )}
       </div>
+
     </section>
   );
 }

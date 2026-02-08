@@ -29,7 +29,7 @@ Total XST supply is capped at 1,000,000,000 tokens.
 Emissions follow a fixed, block-based schedule.
 No admin controls, no future minting.
 	3.	Delayed Start
-Emissions do not begin until inscription #100 is minted.
+Emissions do not begin until inscription #1000 is minted.
 	4.	Inscription-Centric Rewards
 Token earnings are primarily tied to inscription ownership.
 Early inscription IDs permanently earn slightly more.
@@ -46,7 +46,7 @@ The contract never loops over participants or pushes payouts.
 TOTAL_SUPPLY = 1,000,000,000 XST
 
 3.2 Emission Start
-	•	Emissions begin only once inscription ID 100 exists
+	•	Emissions begin only once inscription ID 1000 exists
 	•	At that moment:
 
 emissionsStartBlock = current block height
@@ -213,7 +213,7 @@ That’s it.
 
 This system is fully deterministic because:
 	•	Supply is hard-capped
-	•	Start block is set once (at inscription #100)
+	•	Start block is set once (at inscription #1000)
 	•	Emissions depend only on block height
 	•	Weights depend only on tokenId
 	•	Ownership is read directly from the NFT

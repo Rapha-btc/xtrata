@@ -11,6 +11,8 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 ## Screens and shared UI
 
 - `src/screens/MintScreen.tsx` owns mint UI, file selection, cost/fee display, mint flow steps, and mint preview.
+- `src/screens/CollectionMintScreen.tsx` owns batch mint UI (multi-file upload + batch seal) into the core contract.
+- `src/screens/CollectionMintAdminScreen.tsx` owns collection-mint admin UI (per-collection settings + core allowlist).
 - `src/screens/ViewerScreen.tsx` owns the collection viewer grid, selection logic, and detailed preview panel.
 - `src/screens/MyWalletScreen.tsx` owns the wallet grid, pagination, selection, and wallet preview panel.
 - `src/components/TokenCardMedia.tsx` renders grid cell media (image/audio/video/html/text) and handles per-token loading.

@@ -92,7 +92,7 @@ F. Emissions Start Logic
 On inscription mint:
 
 (if (and (is-none (var-get emissions-start-block))
-         (>= token-id u100))
+         (>= token-id u1000))
     (begin
       (var-set emissions-start-block (some block-height))
       (var-set last-emission-block block-height)

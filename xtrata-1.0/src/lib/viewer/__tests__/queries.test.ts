@@ -16,6 +16,11 @@ const createMeta = (mimeType: string, owner = 'SPOWNER'): InscriptionMeta => ({
 describe('viewer queries', () => {
   it('skips svg fetch for non-svg mime types', async () => {
     const client = {
+      contract: {
+        address: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
+        contractName: 'xtrata-v1-1-1',
+        network: 'mainnet'
+      },
       getInscriptionMeta: vi.fn().mockResolvedValue(createMeta('image/png')),
       getTokenUri: vi.fn().mockResolvedValue('data:image/png;base64,AA=='),
       getOwner: vi.fn().mockResolvedValue('SPOWNER'),
@@ -34,6 +39,11 @@ describe('viewer queries', () => {
 
   it('handles svg errors and owner fallback', async () => {
     const client = {
+      contract: {
+        address: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
+        contractName: 'xtrata-v1-1-1',
+        network: 'mainnet'
+      },
       getInscriptionMeta: vi.fn().mockResolvedValue(createMeta('image/svg+xml', 'SPMETA')),
       getTokenUri: vi.fn().mockResolvedValue(null),
       getOwner: vi.fn().mockResolvedValue(null),

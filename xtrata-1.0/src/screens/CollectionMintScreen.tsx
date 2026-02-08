@@ -2,15 +2,20 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { showContractCall } from '@stacks/connect';
 import {
   bufferCV,
+  callReadOnlyFunction,
+  ClarityType,
   type ClarityValue,
+  cvToValue,
   FungibleConditionCode,
   listCV,
   makeStandardSTXPostCondition,
   PostConditionMode,
   type PostCondition,
+  principalCV,
   stringAsciiCV,
   tupleCV,
-  uintCV
+  uintCV,
+  validateStacksAddress
 } from '@stacks/transactions';
 import type { ContractRegistryEntry } from '../lib/contract/registry';
 import type { WalletSession } from '../lib/wallet/types';
@@ -27,6 +32,7 @@ import { getNetworkMismatch } from '../lib/network/guard';
 import { getContractId } from '../lib/contract/config';
 import { useContractAdminStatus } from '../lib/contract/admin-status';
 import { createXtrataClient } from '../lib/contract/client';
+import { toStacksNetwork } from '../lib/network/stacks';
 import {
   estimateBatchContractFees,
   formatMicroStx,
@@ -65,6 +71,19 @@ type CollectionItem = {
   expectedHashHex: string;
   issues: string[];
   status: StepState;
+};
+
+type MintTarget = 'core' | 'collection';
+
+type CollectionContractStatus = {
+  paused: boolean | null;
+  mintPrice: bigint | null;
+  allowlistEnabled: boolean | null;
+  maxPerWallet: bigint | null;
+  maxSupply: bigint | null;
+  mintedCount: bigint | null;
+  reservedCount: bigint | null;
+  finalized: boolean | null;
 };
 
 const MAX_COLLECTION_ITEMS = 50;
@@ -109,6 +128,41 @@ const formatStepStatus = (state: StepState) => {
   return 'Idle';
 };
 
+const CONTRACT_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9-_]{0,127}$/;
+
+const parseUintCv = (value: ClarityValue) => {
+  const parsed = cvToValue(value) as unknown;
+  if (parsed === null || parsed === undefined) {
+    return null;
+  }
+  if (typeof parsed === 'string') {
+    try {
+      return BigInt(parsed);
+    } catch {
+      return null;
+    }
+  }
+  if (
+    parsed &&
+    typeof parsed === 'object' &&
+    'value' in (parsed as Record<string, unknown>)
+  ) {
+    const inner = (parsed as { value?: string }).value;
+    if (!inner) {
+      return null;
+    }
+    try {
+      return BigInt(inner);
+    } catch {
+      return null;
+    }
+  }
+  if (typeof parsed === 'number') {
+    return BigInt(Math.floor(parsed));
+  }
+  return null;
+};
+
 export default function CollectionMintScreen(props: CollectionMintScreenProps) {
   const contractId = getContractId(props.contract);
   const client = useMemo(
@@ -121,6 +175,14 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
   const [mintStatus, setMintStatus] = useState<string | null>(null);
   const [mintLog, setMintLog] = useState<string[]>([]);
   const [mintPending, setMintPending] = useState(false);
+  const [mintTarget, setMintTarget] = useState<MintTarget>('core');
+  const [collectionAddress, setCollectionAddress] = useState('');
+  const [collectionName, setCollectionName] = useState('');
+  const [collectionStatus, setCollectionStatus] =
+    useState<CollectionContractStatus | null>(null);
+  const [collectionStatusMessage, setCollectionStatusMessage] =
+    useState<string | null>(null);
+  const [collectionStatusLoading, setCollectionStatusLoading] = useState(false);
   const [beginState, setBeginState] = useState<StepState>('idle');
   const [uploadState, setUploadState] = useState<StepState>('idle');
   const [sealState, setSealState] = useState<StepState>('idle');
@@ -151,6 +213,23 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
     props.walletSession.address === adminStatusQuery.data.admin;
   const pauseBlocked = isPaused === true && !isOwner;
 
+  const collectionContract = useMemo(() => {
+    const address = collectionAddress.trim();
+    const name = collectionName.trim();
+    if (!address || !name) {
+      return null;
+    }
+    if (!validateStacksAddress(address)) {
+      return null;
+    }
+    if (!CONTRACT_NAME_PATTERN.test(name)) {
+      return null;
+    }
+    return { address, contractName: name };
+  }, [collectionAddress, collectionName]);
+
+  const xtrataContractId = `${props.contract.address}.${props.contract.contractName}`;
+
   useEffect(() => {
     if (!folderInputRef.current) {
       return;
@@ -158,6 +237,11 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
     folderInputRef.current.setAttribute('webkitdirectory', 'true');
     folderInputRef.current.setAttribute('directory', 'true');
   }, []);
+
+  useEffect(() => {
+    setCollectionStatus(null);
+    setCollectionStatusMessage(null);
+  }, [collectionAddress, collectionName]);
 
   const appendLog = (message: string) => {
     setMintLog((prev) => [...prev, message].slice(-50));
@@ -224,6 +308,8 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
   const requestContractCall = (options: {
     functionName: string;
     functionArgs: ClarityValue[];
+    contractAddress?: string;
+    contractName?: string;
     logDetails?: Record<string, unknown>;
     postConditionMode?: PostConditionMode;
     postConditions?: PostCondition[];
@@ -239,8 +325,8 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
     });
     return new Promise<TxPayload>((resolve, reject) => {
       showContractCall({
-        contractAddress: props.contract.address,
-        contractName: props.contract.contractName,
+        contractAddress: options.contractAddress ?? props.contract.address,
+        contractName: options.contractName ?? props.contract.contractName,
         functionName: options.functionName,
         functionArgs: options.functionArgs,
         network,
@@ -379,26 +465,102 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
     setItems((prev) => buildIssues(prev.filter((item) => item.key !== key)));
   };
 
+  const loadCollectionStatus = async () => {
+    if (!collectionContract) {
+      setCollectionStatusMessage('Enter a valid collection contract first.');
+      return;
+    }
+    setCollectionStatusLoading(true);
+    setCollectionStatusMessage(null);
+    try {
+      const network = toStacksNetwork(props.contract.network);
+      const sender = props.walletSession.address ?? props.contract.address;
+      const readOnly = (functionName: string) =>
+        callReadOnlyFunction({
+          contractAddress: collectionContract.address,
+          contractName: collectionContract.contractName,
+          functionName,
+          functionArgs: [],
+          senderAddress: sender,
+          network
+        }).then((result) => {
+          if (result.type === ClarityType.ResponseOk) {
+            return result.value;
+          }
+          if (result.type === ClarityType.ResponseErr) {
+            throw new Error('Read-only error.');
+          }
+          return result;
+        });
+
+      const [
+        pausedCv,
+        priceCv,
+        allowlistCv,
+        maxPerWalletCv,
+        maxSupplyCv,
+        mintedCv,
+        reservedCv,
+        finalizedCv
+      ] = await Promise.all([
+        readOnly('is-paused'),
+        readOnly('get-mint-price'),
+        readOnly('get-allowlist-enabled'),
+        readOnly('get-max-per-wallet'),
+        readOnly('get-max-supply'),
+        readOnly('get-minted-count'),
+        readOnly('get-reserved-count'),
+        readOnly('get-finalized')
+      ]);
+
+      setCollectionStatus({
+        paused: Boolean(cvToValue(pausedCv)),
+        mintPrice: parseUintCv(priceCv),
+        allowlistEnabled: Boolean(cvToValue(allowlistCv)),
+        maxPerWallet: parseUintCv(maxPerWalletCv),
+        maxSupply: parseUintCv(maxSupplyCv),
+        mintedCount: parseUintCv(mintedCv),
+        reservedCount: parseUintCv(reservedCv),
+        finalized: Boolean(cvToValue(finalizedCv))
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setCollectionStatusMessage(`Failed to load collection status: ${message}`);
+    } finally {
+      setCollectionStatusLoading(false);
+    }
+  };
+
   const startBatchMint = async () => {
     if (mintPending || isPreparing) {
       return;
     }
     if (!props.walletSession.address) {
-      setMintStatus('Connect a wallet to mint the collection.');
+      setMintStatus('Connect a wallet to batch mint.');
       return;
     }
     if (mismatch) {
-      setMintStatus(
-        `Switch wallet to ${mismatch.expected} to mint this collection.`
-      );
+      setMintStatus(`Switch wallet to ${mismatch.expected} to batch mint.`);
       return;
     }
-    if (pauseBlocked) {
+    if (mintTarget === 'collection' && !collectionContract) {
+      setMintStatus('Enter a valid collection contract to continue.');
+      return;
+    }
+    if (mintTarget === 'collection' && collectionStatus?.finalized) {
+      setMintStatus('Collection contract is finalized. Minting is locked.');
+      return;
+    }
+    if (mintTarget === 'collection' && collectionStatus?.paused) {
+      setMintStatus('Collection contract is paused.');
+      return;
+    }
+    if (mintTarget === 'core' && pauseBlocked) {
       setMintStatus('Contract is paused. Only the owner can mint.');
       return;
     }
     if (items.length === 0) {
-      setMintStatus('Select files before starting.');
+      setMintStatus('Select files before starting the batch.');
       return;
     }
     if (countOverLimit) {
@@ -414,7 +576,7 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
       return;
     }
     if (hasItemIssues) {
-      setMintStatus('Fix the file issues before minting.');
+      setMintStatus('Fix the file issues before batch minting.');
       return;
     }
     let tokenUriValue = tokenUri.trim();
@@ -425,7 +587,7 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
     }
     if (!isAscii(tokenUriValue) || tokenUriValue.length > MAX_TOKEN_URI_LENGTH) {
       setMintStatus('Token URI must be ASCII and <= 256 characters.');
-      appendLog('Collection mint blocked: invalid token URI.');
+      appendLog('Batch mint blocked: invalid token URI.');
       return;
     }
     setMintPending(true);
@@ -433,7 +595,11 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
     setBeginState('pending');
     setUploadState('pending');
     setSealState('idle');
-    appendLog(`Starting collection mint (${items.length} items).`);
+    appendLog(
+      `Starting batch mint (${items.length} items) using ${
+        mintTarget === 'collection' ? 'collection contract' : 'core contract'
+      }.`
+    );
 
     try {
       for (let index = 0; index < items.length; index += 1) {
@@ -444,17 +610,32 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
           )
         );
         appendLog(`Item ${index + 1}/${items.length}: begin inscription.`);
-        const beginPostConditions = resolveFeePostConditions(
-          feeSchedule.feeUnitMicroStx
-        );
+        const beginPostConditions =
+          mintTarget === 'collection'
+            ? undefined
+            : resolveFeePostConditions(feeSchedule.feeUnitMicroStx);
         const beginTx = await requestContractCall({
-          functionName: 'begin-inscription',
-          functionArgs: [
-            bufferCV(item.expectedHash),
-            stringAsciiCV(item.mimeType),
-            uintCV(BigInt(item.totalBytes)),
-            uintCV(BigInt(item.totalChunks))
-          ],
+          functionName:
+            mintTarget === 'collection' ? 'mint-begin' : 'begin-inscription',
+          functionArgs:
+            mintTarget === 'collection'
+              ? [
+                  principalCV(xtrataContractId),
+                  bufferCV(item.expectedHash),
+                  stringAsciiCV(item.mimeType),
+                  uintCV(BigInt(item.totalBytes)),
+                  uintCV(BigInt(item.totalChunks))
+                ]
+              : [
+                  bufferCV(item.expectedHash),
+                  stringAsciiCV(item.mimeType),
+                  uintCV(BigInt(item.totalBytes)),
+                  uintCV(BigInt(item.totalChunks))
+                ],
+          contractAddress:
+            mintTarget === 'collection' ? collectionContract?.address : undefined,
+          contractName:
+            mintTarget === 'collection' ? collectionContract?.contractName : undefined,
           postConditionMode: beginPostConditions
             ? PostConditionMode.Deny
             : undefined,
@@ -483,11 +664,27 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
             `Item ${index + 1}/${items.length}: upload batch ${batchIndex + 1}/${totalBatches}.`
           );
           const uploadTx = await requestContractCall({
-            functionName: 'add-chunk-batch',
-            functionArgs: [
-              bufferCV(item.expectedHash),
-              listCV(batch.map((chunk) => bufferCV(chunk)))
-            ],
+            functionName:
+              mintTarget === 'collection'
+                ? 'mint-add-chunk-batch'
+                : 'add-chunk-batch',
+            functionArgs:
+              mintTarget === 'collection'
+                ? [
+                    principalCV(xtrataContractId),
+                    bufferCV(item.expectedHash),
+                    listCV(batch.map((chunk) => bufferCV(chunk)))
+                  ]
+                : [
+                    bufferCV(item.expectedHash),
+                    listCV(batch.map((chunk) => bufferCV(chunk)))
+                  ],
+            contractAddress:
+              mintTarget === 'collection' ? collectionContract?.address : undefined,
+            contractName:
+              mintTarget === 'collection'
+                ? collectionContract?.contractName
+                : undefined,
             logDetails: {
               item: item.path,
               batchIndex: batchIndex + 1,
@@ -511,22 +708,43 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
       setBeginState('done');
       setUploadState('done');
       setSealState('pending');
-      const sealPostConditions = resolveFeePostConditions(
-        feeEstimate.sealMicroStx
-      );
+      const sealPostConditions =
+        mintTarget === 'collection'
+          ? undefined
+          : resolveFeePostConditions(feeEstimate.sealMicroStx);
       appendLog('Submitting batch seal transaction.');
       const sealTx = await requestContractCall({
-        functionName: 'seal-inscription-batch',
-        functionArgs: [
-          listCV(
-            items.map((item) =>
-              tupleCV({
-                hash: bufferCV(item.expectedHash),
-                'token-uri': stringAsciiCV(tokenUriValue)
-              })
-            )
-          )
-        ],
+        functionName:
+          mintTarget === 'collection'
+            ? 'mint-seal-batch'
+            : 'seal-inscription-batch',
+        functionArgs:
+          mintTarget === 'collection'
+            ? [
+                principalCV(xtrataContractId),
+                listCV(
+                  items.map((item) =>
+                    tupleCV({
+                      hash: bufferCV(item.expectedHash),
+                      'token-uri': stringAsciiCV(tokenUriValue)
+                    })
+                  )
+                )
+              ]
+            : [
+                listCV(
+                  items.map((item) =>
+                    tupleCV({
+                      hash: bufferCV(item.expectedHash),
+                      'token-uri': stringAsciiCV(tokenUriValue)
+                    })
+                  )
+                )
+              ],
+        contractAddress:
+          mintTarget === 'collection' ? collectionContract?.address : undefined,
+        contractName:
+          mintTarget === 'collection' ? collectionContract?.contractName : undefined,
         postConditionMode: sealPostConditions
           ? PostConditionMode.Deny
           : undefined,
@@ -541,7 +759,7 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
       setMintStatus('Batch seal submitted. IDs will mint sequentially.');
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      setMintStatus(`Collection mint failed: ${message}`);
+      setMintStatus(`Batch mint failed: ${message}`);
       setItems((prev) =>
         prev.map((item) =>
           item.status === 'pending' ? { ...item, status: 'error' } : item
@@ -550,7 +768,7 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
       setBeginState((prev) => (prev === 'pending' ? 'error' : prev));
       setUploadState((prev) => (prev === 'pending' ? 'error' : prev));
       setSealState((prev) => (prev === 'pending' ? 'error' : prev));
-      logWarn('mint', 'Collection mint failed', { error: message });
+      logWarn('mint', 'Batch mint failed', { error: message });
     } finally {
       setMintPending(false);
       setBatchProgress(null);
@@ -570,8 +788,15 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
     >
       <div className="panel__header">
         <div>
-          <h2>Collection mint</h2>
+          <h2>Batch mint</h2>
           <p>Batch upload up to 50 items, then seal them in one transaction.</p>
+          <p className="meta-value">
+            Choose whether to mint directly into the core contract or via a
+            partner collection contract.
+          </p>
+          <p className="meta-value">
+            Use Collection mint admin to configure partner collection contracts.
+          </p>
         </div>
         <div className="panel__actions">
           <span className={`badge badge--${props.contract.network}`}>
@@ -588,6 +813,122 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
         </div>
       </div>
       <div className="panel__body">
+        <div className="mint-panel">
+          <span className="meta-label">Mint target</span>
+          <div className="meta-grid meta-grid--dense">
+            <label className="field">
+              <span className="field__label">Target</span>
+              <select
+                className="select"
+                value={mintTarget}
+                onChange={(event) =>
+                  setMintTarget(event.target.value as MintTarget)
+                }
+              >
+                <option value="core">Core contract (direct)</option>
+                <option value="collection">Collection contract (partner)</option>
+              </select>
+            </label>
+          </div>
+          {mintTarget === 'collection' && (
+            <>
+              <div className="meta-grid meta-grid--dense">
+                <label className="field">
+                  <span className="field__label">Collection contract address</span>
+                  <input
+                    className="input"
+                    placeholder="ST..."
+                    value={collectionAddress}
+                    onChange={(event) => setCollectionAddress(event.target.value)}
+                  />
+                </label>
+                <label className="field">
+                  <span className="field__label">Collection contract name</span>
+                  <input
+                    className="input"
+                    placeholder="xtrata-collection-mint-v1-0"
+                    value={collectionName}
+                    onChange={(event) => setCollectionName(event.target.value)}
+                  />
+                </label>
+              </div>
+              <div className="mint-actions">
+                <button
+                  className="button button--ghost"
+                  type="button"
+                  onClick={() => void loadCollectionStatus()}
+                  disabled={!collectionContract || collectionStatusLoading}
+                >
+                  {collectionStatusLoading ? 'Loading...' : 'Load collection status'}
+                </button>
+              </div>
+              {collectionStatus && (
+                <div className="meta-grid meta-grid--dense">
+                  <div>
+                    <span className="meta-label">Paused</span>
+                    <span className="meta-value">
+                      {collectionStatus.paused === null
+                        ? 'Unknown'
+                        : collectionStatus.paused
+                          ? 'Yes'
+                          : 'No'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="meta-label">Mint price</span>
+                    <span className="meta-value">
+                      {collectionStatus.mintPrice !== null
+                        ? formatMicroStx(Number(collectionStatus.mintPrice))
+                        : 'Unknown'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="meta-label">Allowlist enabled</span>
+                    <span className="meta-value">
+                      {collectionStatus.allowlistEnabled === null
+                        ? 'Unknown'
+                        : collectionStatus.allowlistEnabled
+                          ? 'Yes'
+                          : 'No'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="meta-label">Max per wallet</span>
+                    <span className="meta-value">
+                      {collectionStatus.maxPerWallet?.toString() ?? 'Unknown'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="meta-label">Minted / max</span>
+                    <span className="meta-value">
+                      {collectionStatus.mintedCount?.toString() ?? 'Unknown'} /{' '}
+                      {collectionStatus.maxSupply?.toString() ?? 'Unknown'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="meta-label">Reserved</span>
+                    <span className="meta-value">
+                      {collectionStatus.reservedCount?.toString() ?? 'Unknown'}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {collectionStatus?.finalized && (
+                <p className="meta-value">
+                  Collection contract finalized. Minting is locked.
+                </p>
+              )}
+              {collectionStatusMessage && (
+                <p className="meta-value">{collectionStatusMessage}</p>
+              )}
+              <p className="meta-value">
+                Collection contracts must be allowlisted by the Xtrata owner to
+                mint while the core contract is paused.
+              </p>
+            </>
+          )}
+        </div>
+
         <div className="collection-mint__steps">
           <div>
             <span className="meta-label">Step 1</span>
@@ -708,6 +1049,17 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
               {formatMicroStx(feeEstimate.totalMicroStx)}
             </span>
           </div>
+          {mintTarget === 'collection' && (
+            <div>
+              <span className="meta-label">Collection mint price</span>
+              <span className="meta-value">
+                {collectionStatus?.mintPrice !== null &&
+                collectionStatus?.mintPrice !== undefined
+                  ? formatMicroStx(Number(collectionStatus.mintPrice))
+                  : 'Unknown (load status)'}
+              </span>
+            </div>
+          )}
         </div>
 
         {isPreparing && <div className="meta-value">Preparing files…</div>}
@@ -767,10 +1119,11 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
               hasBlockingIssues ||
               !!tokenUriError ||
               !!mismatch ||
-              pauseBlocked
+              (mintTarget === 'core' && pauseBlocked) ||
+              (mintTarget === 'collection' && !collectionContract)
             }
           >
-            {mintPending ? 'Minting…' : 'Begin collection mint'}
+            {mintPending ? 'Minting…' : 'Begin batch mint'}
           </button>
           <button
             className="button button--ghost"
@@ -784,10 +1137,10 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
 
         {mismatch && (
           <div className="alert">
-            Switch wallet to {mismatch.expected} to mint this collection.
+            Switch wallet to {mismatch.expected} to batch mint.
           </div>
         )}
-        {pauseBlocked && (
+        {mintTarget === 'core' && pauseBlocked && (
           <div className="alert">
             Contract is paused. Only the owner can mint while paused.
           </div>
