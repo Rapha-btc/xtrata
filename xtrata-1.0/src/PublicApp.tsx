@@ -21,7 +21,6 @@ const walletSessionStore = createWalletSessionStore();
 const SECTION_KEYS = [
   'wallet-lookup',
   'wallet-session',
-  'active-contract',
   'docs',
   'mint',
   'market',
@@ -37,6 +36,75 @@ const buildCollapsedState = (collapsed: boolean) =>
     },
     {} as Record<SectionKey, boolean>
   );
+
+const DOC_LINKS = [
+  {
+    title: 'Xtrata v2.1.0 Overview',
+    href: 'https://github.com/stxtrata/xtrata/blob/main/docs/xtrata-v2.1.0/overview.md',
+    description: 'Start here for the flow of inscriptions, minting, and viewing.',
+    tag: 'Start here'
+  },
+  {
+    title: 'One-pager (users, artists, markets)',
+    href: 'https://github.com/stxtrata/xtrata/blob/main/docs/xtrata-v2.1.0/one-pager.md',
+    description: 'Plain-language summary of what v2 brings and who it serves.',
+    tag: 'Overview'
+  },
+  {
+    title: 'Integration guide',
+    href: 'https://github.com/stxtrata/xtrata/blob/main/docs/xtrata-v2.1.0/integration-guide.md',
+    description: 'How partners deploy collection contracts and plug into Xtrata.',
+    tag: 'Builders'
+  },
+  {
+    title: 'API reference',
+    href: 'https://github.com/stxtrata/xtrata/blob/main/docs/xtrata-v2.1.0/api-reference.md',
+    description: 'Contract methods, read-only calls, and expected responses.',
+    tag: 'Builders'
+  },
+  {
+    title: 'Migration guide',
+    href: 'https://github.com/stxtrata/xtrata/blob/main/docs/xtrata-v2.1.0/migration-guide.md',
+    description: 'How v1 inscriptions move or interoperate with v2.',
+    tag: 'Migration'
+  },
+  {
+    title: 'Changes from v1.1.1',
+    href: 'https://github.com/stxtrata/xtrata/blob/main/docs/xtrata-v2.1.0/changes-from-v1.1.1.md',
+    description: 'Quick diff of new capabilities and behaviors.',
+    tag: 'Migration'
+  },
+  {
+    title: 'Admin runbook',
+    href: 'https://github.com/stxtrata/xtrata/blob/main/docs/xtrata-v2.1.0/admin-runbook.md',
+    description: 'Owner actions, allowlists, and safety checks.',
+    tag: 'Operators'
+  },
+  {
+    title: 'Contract inventory',
+    href: 'https://github.com/stxtrata/xtrata/blob/main/docs/contract-inventory.md',
+    description: 'Deployed contract list and references.',
+    tag: 'Protocol'
+  },
+  {
+    title: 'Recursive inscriptions',
+    href: 'https://github.com/stxtrata/xtrata/blob/main/docs/recursive-inscriptions.md',
+    description: 'Standards and patterns for recursive media.',
+    tag: 'Protocol'
+  },
+  {
+    title: 'Release notes',
+    href: 'https://github.com/stxtrata/xtrata/blob/main/docs/xtrata-v2.1.0/release-notes.md',
+    description: 'What changed and when.',
+    tag: 'Release'
+  },
+  {
+    title: 'Docs index',
+    href: 'https://github.com/stxtrata/xtrata/tree/main/docs',
+    description: 'Full documentation directory.',
+    tag: 'Index'
+  }
+] as const;
 
 export default function PublicApp() {
   const contract = PUBLIC_CONTRACT;
@@ -197,12 +265,6 @@ export default function PublicApp() {
               </a>
               <a
                 className="button button--ghost app__nav-link"
-                href="#active-contract"
-              >
-                Active contract
-              </a>
-              <a
-                className="button button--ghost app__nav-link"
                 href="#collection-viewer"
               >
                 Viewer
@@ -357,47 +419,6 @@ export default function PublicApp() {
               )}
             </div>
           </section>
-
-          <section
-            className={`panel app-section panel--compact${collapsedSections['active-contract'] ? ' panel--collapsed' : ''}`}
-            id="active-contract"
-          >
-            <div className="panel__header">
-              <div>
-                <h2>Active contract</h2>
-                <p>Public view and mint target.</p>
-              </div>
-              <div className="panel__actions">
-                <span className={`badge badge--${contract.network}`}>
-                  {contract.network}
-                </span>
-                <button
-                  className="button button--ghost button--collapse"
-                  type="button"
-                  onClick={() => toggleSection('active-contract')}
-                  aria-expanded={!collapsedSections['active-contract']}
-                >
-                  {collapsedSections['active-contract'] ? 'Expand' : 'Collapse'}
-                </button>
-              </div>
-            </div>
-            <div className="panel__body">
-              <div className="meta-grid">
-                <div>
-                  <span className="meta-label">Contract</span>
-                  <span className="meta-value">{contract.label}</span>
-                </div>
-                <div>
-                  <span className="meta-label">Contract ID</span>
-                  <span className="meta-value">{contractId}</span>
-                </div>
-                <div>
-                  <span className="meta-label">Network</span>
-                  <span className="meta-value">{contract.network}</span>
-                </div>
-              </div>
-            </div>
-          </section>
         </div>
 
         <ViewerScreen
@@ -451,40 +472,26 @@ export default function PublicApp() {
             </div>
           </div>
           <div className="panel__body">
-            <div className="meta-grid">
-              <div>
-                <span className="meta-label">GitHub</span>
-                <a
-                  className="meta-value"
-                  href="https://github.com/stxtrata/xtrata"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  github.com/stxtrata/xtrata
-                </a>
-              </div>
-              <div>
-                <span className="meta-label">Docs</span>
-                <a
-                  className="meta-value"
-                  href="https://github.com/stxtrata/xtrata/tree/main/docs"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  docs/
-                </a>
-              </div>
-              <div>
-                <span className="meta-label">README</span>
-                <a
-                  className="meta-value"
-                  href="https://github.com/stxtrata/xtrata/blob/main/README.md"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  README.md
-                </a>
-              </div>
+            <div className="docs-grid">
+              {DOC_LINKS.map((doc) => (
+                <div className="docs-card" key={doc.title}>
+                  <div className="docs-card__header">
+                    <div>
+                      <span className="docs-card__title">{doc.title}</span>
+                      <span className="docs-card__tag">{doc.tag}</span>
+                    </div>
+                    <a
+                      className="button button--ghost button--mini"
+                      href={doc.href}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Open
+                    </a>
+                  </div>
+                  <p className="docs-card__text">{doc.description}</p>
+                </div>
+              ))}
             </div>
           </div>
         </section>

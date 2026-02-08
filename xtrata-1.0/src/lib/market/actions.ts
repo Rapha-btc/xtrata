@@ -206,3 +206,75 @@ export const getCancelActionValidationMessage = (
       return null;
   }
 };
+
+export type BuyActionValidationReason =
+  | 'missing-market'
+  | 'missing-wallet'
+  | 'network-mismatch'
+  | 'market-network-mismatch'
+  | 'missing-listing'
+  | 'seller-match'
+  | null;
+
+export type BuyActionValidationResult =
+  | {
+      ok: true;
+      reason: null;
+    }
+  | {
+      ok: false;
+      reason: Exclude<BuyActionValidationReason, null>;
+    };
+
+export const validateBuyAction = (params: {
+  hasMarketContract: boolean;
+  walletAddress?: string | null;
+  networkMismatch?: boolean;
+  marketNetworkMismatch?: boolean;
+  listingId?: bigint | null;
+  listingSeller?: string | null;
+}): BuyActionValidationResult => {
+  if (!params.hasMarketContract) {
+    return { ok: false, reason: 'missing-market' };
+  }
+  if (!params.walletAddress) {
+    return { ok: false, reason: 'missing-wallet' };
+  }
+  if (params.networkMismatch) {
+    return { ok: false, reason: 'network-mismatch' };
+  }
+  if (params.marketNetworkMismatch) {
+    return { ok: false, reason: 'market-network-mismatch' };
+  }
+  if (params.listingId === null || params.listingId === undefined) {
+    return { ok: false, reason: 'missing-listing' };
+  }
+  if (
+    params.listingSeller &&
+    isSameAddress(params.listingSeller, params.walletAddress)
+  ) {
+    return { ok: false, reason: 'seller-match' };
+  }
+  return { ok: true, reason: null };
+};
+
+export const getBuyActionValidationMessage = (
+  reason: BuyActionValidationReason
+) => {
+  switch (reason) {
+    case 'missing-market':
+      return 'Select a market contract in the Market module first.';
+    case 'missing-wallet':
+      return 'Connect a wallet to buy.';
+    case 'network-mismatch':
+      return 'Network mismatch: switch wallet or market contract before buying.';
+    case 'market-network-mismatch':
+      return 'Market network must match the active NFT contract.';
+    case 'missing-listing':
+      return 'This inscription is not listed.';
+    case 'seller-match':
+      return 'You cannot buy your own listing.';
+    default:
+      return null;
+  }
+};

@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  getBuyActionValidationMessage,
   getCancelActionValidationMessage,
   getListActionValidationMessage,
   isSameAddress,
   normalizeAddress,
   parsePriceMicroStx,
+  validateBuyAction,
   validateCancelAction,
   validateListAction
 } from '../actions';
@@ -211,5 +213,73 @@ describe('market action helpers', () => {
         listingSeller: OTHER
       })
     ).toEqual({ ok: false, reason: 'seller-mismatch' });
+  });
+
+  it('validates buy action success path', () => {
+    expect(
+      validateBuyAction({
+        hasMarketContract: true,
+        walletAddress: WALLET,
+        listingId: 22n,
+        listingSeller: OTHER
+      })
+    ).toEqual({ ok: true, reason: null });
+  });
+
+  it('blocks buy action for expected guard conditions', () => {
+    expect(
+      validateBuyAction({
+        hasMarketContract: false,
+        walletAddress: WALLET,
+        listingId: 1n
+      })
+    ).toEqual({ ok: false, reason: 'missing-market' });
+
+    expect(
+      validateBuyAction({
+        hasMarketContract: true,
+        walletAddress: null,
+        listingId: 1n
+      })
+    ).toEqual({ ok: false, reason: 'missing-wallet' });
+
+    expect(
+      validateBuyAction({
+        hasMarketContract: true,
+        walletAddress: WALLET,
+        networkMismatch: true,
+        listingId: 1n
+      })
+    ).toEqual({ ok: false, reason: 'network-mismatch' });
+
+    expect(
+      validateBuyAction({
+        hasMarketContract: true,
+        walletAddress: WALLET,
+        marketNetworkMismatch: true,
+        listingId: 1n
+      })
+    ).toEqual({ ok: false, reason: 'market-network-mismatch' });
+
+    const missingListing = validateBuyAction({
+      hasMarketContract: true,
+      walletAddress: WALLET,
+      listingId: null
+    });
+    expect(missingListing).toEqual({ ok: false, reason: 'missing-listing' });
+    expect(getBuyActionValidationMessage(missingListing.reason)).toBe(
+      'This inscription is not listed.'
+    );
+
+    const ownListing = validateBuyAction({
+      hasMarketContract: true,
+      walletAddress: WALLET,
+      listingId: 4n,
+      listingSeller: WALLET.toLowerCase()
+    });
+    expect(ownListing).toEqual({ ok: false, reason: 'seller-match' });
+    expect(getBuyActionValidationMessage(ownListing.reason)).toBe(
+      'You cannot buy your own listing.'
+    );
   });
 });
