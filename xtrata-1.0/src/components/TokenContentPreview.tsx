@@ -54,6 +54,7 @@ type TokenContentPreviewProps = {
   senderAddress: string;
   client: XtrataClient;
   isActiveTab?: boolean;
+  showDetailsDrawer?: boolean;
   onRequestViewer?: () => void;
   viewerLabel?: string;
 };
@@ -128,6 +129,7 @@ const getBufferedSeconds = (media: HTMLMediaElement | null) => {
 
 export default function TokenContentPreview(props: TokenContentPreviewProps) {
   const queryClient = useQueryClient();
+  const showDetailsDrawer = props.showDetailsDrawer !== false;
   const isActiveTab = props.isActiveTab !== false;
   const lastContentLogRef = useRef<number | null>(null);
   const tokenUriLoggedRef = useRef(false);
@@ -202,10 +204,12 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     mediaSourceAvailable &&
     totalSize !== null &&
     totalSize > MAX_AUTO_PREVIEW_BYTES;
+  const preferFullImageLoad =
+    mediaKind === 'image' || mediaKind === 'svg';
   const autoLoad =
     totalSize !== null &&
-    (totalSize <= MAX_AUTO_PREVIEW_BYTES || isWebm) &&
-    !svgPreview;
+    !svgPreview &&
+    (totalSize <= MAX_AUTO_PREVIEW_BYTES || isWebm || preferFullImageLoad);
 
   const [loadRequested, setLoadRequested] = useState(
     () => autoLoad || hasCachedContent || autoStream
@@ -1121,16 +1125,26 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
   const htmlDoc = htmlPreview && bridgeId
     ? injectRecursiveBridgeHtml(htmlPreview, bridgeId)
     : htmlPreview;
+  const loadingOnChainImage =
+    (mediaKind === 'image' ||
+      mediaKind === 'svg' ||
+      resolvedMediaKind === 'image' ||
+      resolvedMediaKind === 'svg') &&
+    loadRequested &&
+    !contentUrl &&
+    !contentQuery.isError &&
+    !onChainImageFailed;
   const allowTokenUriPreview =
     !tokenUriFailed &&
     (onChainImageFailed ||
-      shouldAllowTokenUriPreview({
-        hasMeta: !!props.token.meta,
-        contentError: contentQuery.isError,
-        streamPhase,
-        hasPreviewContent,
-        shouldStream
-      }));
+      (!loadingOnChainImage &&
+        shouldAllowTokenUriPreview({
+          hasMeta: !!props.token.meta,
+          contentError: contentQuery.isError,
+          streamPhase,
+          hasPreviewContent,
+          shouldStream
+        })));
   const allowTokenUriFallback = allowTokenUriPreview;
   useEffect(() => {
     const key = `${allowTokenUriPreview}:${streamPhase}:${isStreamableKind}:${mediaSourceSupported}`;
@@ -2013,162 +2027,164 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
           </div>
         </div>
 
-        <div className="preview-stage__bottom">
-          <details className="preview-drawer">
-            <summary>Details</summary>
-            <div className="preview-drawer__body">
-              <div className="meta-grid meta-grid--dense">
-                <div>
-                  <span className="meta-label">Owner</span>
-                  <span className="meta-value meta-value--truncate" title={ownerAddress}>
-                    {ownerAddress}
-                  </span>
-                  <div className="meta-actions">
-                    <button
-                      type="button"
-                      className="button button--ghost button--mini"
-                      onClick={() => handleCopyValue(ownerAddress)}
-                    >
-                      Copy
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <span className="meta-label">Creator</span>
-                  <span
-                    className="meta-value meta-value--truncate"
-                    title={creatorAddress ?? ''}
-                  >
-                    {creatorAddress ?? 'Unknown'}
-                  </span>
-                  <div className="meta-actions">
-                    <button
-                      type="button"
-                      className="button button--ghost button--mini"
-                      onClick={() => handleCopyValue(creatorAddress)}
-                      disabled={!creatorAddress}
-                    >
-                      Copy
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <span className="meta-label">Token URI</span>
-                  <span
-                    className="meta-value meta-value--truncate"
-                    title={tokenUriValue ?? ''}
-                  >
-                    {tokenUriLabel}
-                  </span>
-                  <div className="meta-actions">
-                    <button
-                      type="button"
-                      className="button button--ghost button--mini"
-                      onClick={() => handleCopyValue(tokenUriValue)}
-                      disabled={!tokenUriValue}
-                    >
-                      Copy
-                    </button>
-                    {tokenUriLink && (
-                      <a
+        {showDetailsDrawer && (
+          <div className="preview-stage__bottom">
+            <details className="preview-drawer">
+              <summary>Details</summary>
+              <div className="preview-drawer__body">
+                <div className="meta-grid meta-grid--dense">
+                  <div>
+                    <span className="meta-label">Owner</span>
+                    <span className="meta-value meta-value--truncate" title={ownerAddress}>
+                      {ownerAddress}
+                    </span>
+                    <div className="meta-actions">
+                      <button
+                        type="button"
                         className="button button--ghost button--mini"
-                        href={tokenUriLink}
-                        target="_blank"
-                        rel="noreferrer"
+                        onClick={() => handleCopyValue(ownerAddress)}
                       >
-                        Open
-                      </a>
-                    )}
+                        Copy
+                      </button>
+                    </div>
                   </div>
-                </div>
-                <div className="thumbnail-diagnostic">
-                  <span className="meta-label">Thumbnail</span>
-                  <span className="meta-value">{thumbnailStatus}</span>
-                  <span className="thumbnail-diagnostic__meta">
-                    Fallback: {thumbnailFallbackLabel}
-                  </span>
-                  <span className="thumbnail-diagnostic__meta">
-                    Candidate: {thumbnailCandidate ? thumbnailCandidate.label : 'None'}
-                  </span>
-                  {thumbnailValue?.mimeType && (
-                    <span className="thumbnail-diagnostic__meta">
-                      Mime: {thumbnailValue.mimeType}
-                    </span>
-                  )}
-                  {thumbnailValue?.data && (
-                    <span className="thumbnail-diagnostic__meta">
-                      Bytes: {thumbnailValue.data.length.toString()}
-                    </span>
-                  )}
-                  {thumbnailTimestamp && (
-                    <span className="thumbnail-diagnostic__meta">
-                      Cached: {thumbnailTimestamp}
-                    </span>
-                  )}
-                  <div className="thumbnail-diagnostic__actions">
-                    <button
-                      type="button"
-                      className="button button--ghost button--mini"
-                      onClick={handleGenerateThumbnail}
-                      disabled={!thumbnailCandidate || thumbnailPending}
+                  <div>
+                    <span className="meta-label">Creator</span>
+                    <span
+                      className="meta-value meta-value--truncate"
+                      title={creatorAddress ?? ''}
                     >
-                      {thumbnailPending
-                        ? 'Generating...'
-                        : thumbnailValue
-                          ? 'Refresh'
-                          : 'Generate'}
-                    </button>
-                    {thumbnailStatusMessage && (
-                      <span className="thumbnail-diagnostic__status">
-                        {thumbnailStatusMessage}
+                      {creatorAddress ?? 'Unknown'}
+                    </span>
+                    <div className="meta-actions">
+                      <button
+                        type="button"
+                        className="button button--ghost button--mini"
+                        onClick={() => handleCopyValue(creatorAddress)}
+                        disabled={!creatorAddress}
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <span className="meta-label">Token URI</span>
+                    <span
+                      className="meta-value meta-value--truncate"
+                      title={tokenUriValue ?? ''}
+                    >
+                      {tokenUriLabel}
+                    </span>
+                    <div className="meta-actions">
+                      <button
+                        type="button"
+                        className="button button--ghost button--mini"
+                        onClick={() => handleCopyValue(tokenUriValue)}
+                        disabled={!tokenUriValue}
+                      >
+                        Copy
+                      </button>
+                      {tokenUriLink && (
+                        <a
+                          className="button button--ghost button--mini"
+                          href={tokenUriLink}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Open
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                  <div className="thumbnail-diagnostic">
+                    <span className="meta-label">Thumbnail</span>
+                    <span className="meta-value">{thumbnailStatus}</span>
+                    <span className="thumbnail-diagnostic__meta">
+                      Fallback: {thumbnailFallbackLabel}
+                    </span>
+                    <span className="thumbnail-diagnostic__meta">
+                      Candidate: {thumbnailCandidate ? thumbnailCandidate.label : 'None'}
+                    </span>
+                    {thumbnailValue?.mimeType && (
+                      <span className="thumbnail-diagnostic__meta">
+                        Mime: {thumbnailValue.mimeType}
                       </span>
                     )}
+                    {thumbnailValue?.data && (
+                      <span className="thumbnail-diagnostic__meta">
+                        Bytes: {thumbnailValue.data.length.toString()}
+                      </span>
+                    )}
+                    {thumbnailTimestamp && (
+                      <span className="thumbnail-diagnostic__meta">
+                        Cached: {thumbnailTimestamp}
+                      </span>
+                    )}
+                    <div className="thumbnail-diagnostic__actions">
+                      <button
+                        type="button"
+                        className="button button--ghost button--mini"
+                        onClick={handleGenerateThumbnail}
+                        disabled={!thumbnailCandidate || thumbnailPending}
+                      >
+                        {thumbnailPending
+                          ? 'Generating...'
+                          : thumbnailValue
+                            ? 'Refresh'
+                            : 'Generate'}
+                      </button>
+                      {thumbnailStatusMessage && (
+                        <span className="thumbnail-diagnostic__status">
+                          {thumbnailStatusMessage}
+                        </span>
+                      )}
+                    </div>
+                    {thumbnailUrl && (
+                      <img
+                        className="thumbnail-diagnostic__image"
+                        src={thumbnailUrl}
+                        alt="Thumbnail preview"
+                        loading="lazy"
+                      />
+                    )}
                   </div>
-                  {thumbnailUrl && (
-                    <img
-                      className="thumbnail-diagnostic__image"
-                      src={thumbnailUrl}
-                      alt="Thumbnail preview"
-                      loading="lazy"
-                    />
-                  )}
-                </div>
-                <div>
-                  <span className="meta-label">Mime type</span>
-                  <span className="meta-value">
-                    {props.token.meta?.mimeType ?? 'Unknown'}
-                  </span>
-                </div>
-                <div>
-                  <span className="meta-label">Total size</span>
-                  <span className="meta-value">
-                    {props.token.meta
-                      ? formatBytes(props.token.meta.totalSize)
-                      : 'Unknown'}
-                  </span>
-                </div>
-                <div>
-                  <span className="meta-label">Chunks</span>
-                  <span className="meta-value">
-                    {props.token.meta ? props.token.meta.totalChunks.toString() : 'Unknown'}
-                  </span>
-                </div>
-                <div>
-                  <span className="meta-label">Sealed</span>
-                  <span className="meta-value">
-                    {props.token.meta ? (props.token.meta.sealed ? 'Yes' : 'No') : 'Unknown'}
-                  </span>
-                </div>
-                <div>
-                  <span className="meta-label">Final hash</span>
-                  <span className="meta-value meta-value--truncate" title={finalHash ?? ''}>
-                    {finalHashLabel}
-                  </span>
+                  <div>
+                    <span className="meta-label">Mime type</span>
+                    <span className="meta-value">
+                      {props.token.meta?.mimeType ?? 'Unknown'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="meta-label">Total size</span>
+                    <span className="meta-value">
+                      {props.token.meta
+                        ? formatBytes(props.token.meta.totalSize)
+                        : 'Unknown'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="meta-label">Chunks</span>
+                    <span className="meta-value">
+                      {props.token.meta ? props.token.meta.totalChunks.toString() : 'Unknown'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="meta-label">Sealed</span>
+                    <span className="meta-value">
+                      {props.token.meta ? (props.token.meta.sealed ? 'Yes' : 'No') : 'Unknown'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="meta-label">Final hash</span>
+                    <span className="meta-value meta-value--truncate" title={finalHash ?? ''}>
+                      {finalHashLabel}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          </details>
-        </div>
+            </details>
+          </div>
+        )}
       </div>
     </div>
   );
