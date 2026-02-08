@@ -534,6 +534,20 @@ describe("xtrata-v1.1.0 contract", () => {
     expect(result.result).toBeErr(Cl.uint(114));
   });
 
+  it("rejects recursive seal when a dependency is missing", () => {
+    unpauseForPublic();
+    const hash = computeFinalHash(["20"]);
+    beginInscription(wallet1, hash, 1, 1);
+    addChunkBatch(wallet1, hash, ["20"]);
+
+    const nextIdResult = simnet.callReadOnlyFn(contract, "get-next-token-id", [], deployer);
+    const nextId = unwrapUInt(unwrapOk(nextIdResult.result));
+    const missingId = Number(nextId + 5n);
+
+    const seal = sealRecursive(wallet1, hash, "ipfs://xtrata/dep-missing", [missingId]);
+    expect(seal.result).toBeErr(Cl.uint(111));
+  });
+
   it("records dependencies on recursive seal", () => {
     unpauseForPublic();
     const hash0 = computeFinalHash(["21"]);
@@ -550,11 +564,11 @@ describe("xtrata-v1.1.0 contract", () => {
     beginInscription(wallet1, hash2, 1, 1);
     addChunkBatch(wallet1, hash2, ["23"]);
 
-    const seal = sealRecursive(wallet1, hash2, "ipfs://xtrata/dep-2", [0, 1]);
+    const seal = sealRecursive(wallet1, hash2, "ipfs://xtrata/dep-2", [1, 0]);
     expect(seal.result).toBeOk(Cl.uint(2));
 
     const deps = simnet.callReadOnlyFn(contract, "get-dependencies", [Cl.uint(2)], deployer);
-    expect(deps.result).toBeList([Cl.uint(0), Cl.uint(1)]);
+    expect(deps.result).toBeList([Cl.uint(1), Cl.uint(0)]);
 
     const depsEmpty = simnet.callReadOnlyFn(contract, "get-dependencies", [Cl.uint(0)], deployer);
     expect(depsEmpty.result).toBeList([]);

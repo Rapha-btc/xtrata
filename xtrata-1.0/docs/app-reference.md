@@ -39,12 +39,14 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 - `src/lib/protocol/clarity.ts` maps protocol values to clarity values.
 - `src/lib/protocol/parsers.ts` parses contract read-only responses into app types.
 - `src/lib/chunking/hash.ts` hashes and slices files for chunked minting.
+- `src/lib/mint/dependencies.ts` parses and validates recursive parent IDs for minting.
 - `src/lib/viewer/queries.ts` builds React Query calls for viewer data.
 - `src/lib/viewer/content.ts` resolves content bytes, batch reads, and media handling.
 - `src/lib/viewer/cache.ts` owns the IndexedDB cache and keying.
 - `src/lib/viewer/model.ts` shapes viewer data records for grids and previews.
 - `src/lib/viewer/ownership.ts` maps wallet ownership data for the wallet grid.
 - `src/lib/viewer/recursive.ts` resolves recursive dependencies when viewing.
+- `src/lib/viewer/relationships.ts` fetches parent IDs and scans for child relationships.
 - `src/lib/viewer/types.ts` defines viewer models.
 - `src/lib/market/actions.ts` centralizes market list/cancel validation helpers.
 - `src/lib/market/listing-resolution.ts` resolves page-scoped listing data when activity indexes are incomplete.

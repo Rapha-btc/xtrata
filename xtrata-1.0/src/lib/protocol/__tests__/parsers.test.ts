@@ -126,6 +126,22 @@ describe('contract parsers', () => {
     expect(parseGetDependencies(list)).toEqual([1n, 2n, 99n]);
   });
 
+  it('parses empty dependency list', () => {
+    const list = listCV([]);
+    expect(parseGetDependencies(list)).toEqual([]);
+  });
+
+  it('parses large dependency ids', () => {
+    const largeId = 9_007_199_254_740_991n;
+    const list = listCV([uintCV(0), uintCV(largeId)]);
+    expect(parseGetDependencies(list)).toEqual([0n, largeId]);
+  });
+
+  it('rejects invalid dependency list entries', () => {
+    const list = listCV([trueCV()]);
+    expect(() => parseGetDependencies(list)).toThrow();
+  });
+
   it('parses upload state tuple', () => {
     const runningHash = new Uint8Array(32).fill(1);
     const tuple = tupleCV({

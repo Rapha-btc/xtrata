@@ -9,6 +9,7 @@ export type MintAttempt = {
   totalChunks: number;
   batchSize: number;
   tokenUri: string | null;
+  dependencyIds?: string[];
   updatedAt: number;
 };
 

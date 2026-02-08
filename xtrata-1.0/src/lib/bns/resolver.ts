@@ -75,6 +75,16 @@ const isRateLimitError = (error: unknown) => {
   );
 };
 
+const getHttpStatusFromError = (error: unknown) => {
+  const message = getErrorMessage(error);
+  const match = message.match(/\((\d{3})\)/);
+  if (!match) {
+    return null;
+  }
+  const status = Number(match[1]);
+  return Number.isFinite(status) ? status : null;
+};
+
 const isBnsNetworkError = (error: unknown) => {
   const message = getErrorMessage(error).toLowerCase();
   return (
@@ -84,6 +94,17 @@ const isBnsNetworkError = (error: unknown) => {
     message.includes('cors') ||
     message.includes('access-control-allow-origin')
   );
+};
+
+const isTransientBnsError = (error: unknown) => {
+  if (error instanceof BnsBackoffError) {
+    return true;
+  }
+  if (isRateLimitError(error) || isBnsNetworkError(error)) {
+    return true;
+  }
+  const status = getHttpStatusFromError(error);
+  return status !== null && status >= 500 && status < 600;
 };
 
 let bnsFailureCount = 0;
@@ -103,7 +124,7 @@ const noteBnsSuccess = () => {
 };
 
 const noteBnsFailure = (error: unknown) => {
-  if (!isBnsNetworkError(error)) {
+  if (!isTransientBnsError(error)) {
     return;
   }
   const now = Date.now();
@@ -206,7 +227,7 @@ const callBnsWithRetry = async <T>(params: {
     }
   }
 
-  logWarn('bns', 'BNS request failed after retries', {
+  logDebug('bns', 'BNS request exhausted retries', {
     context: params.context,
     error: getErrorMessage(lastError)
   });
@@ -230,6 +251,11 @@ type AddressNamesResponse = {
 type NameDetailsResponse = {
   status: 'ok' | 'not-found';
   address: string | null;
+};
+
+type AddressResolution = {
+  result: BnsNamesResult;
+  cacheable: boolean;
 };
 
 const BNS_PROVIDERS: BnsProvider[] = [
@@ -388,7 +414,7 @@ const resolveAddressNamesFromProviders = async (params: {
   address: string;
   network: NetworkType;
   signal?: AbortSignal;
-}): Promise<BnsNamesResult> => {
+}): Promise<AddressResolution> => {
   let lastError: unknown = null;
   let sawNotFound = false;
   let backoffTriggered = false;
@@ -417,10 +443,13 @@ const resolveAddressNamesFromProviders = async (params: {
         ]);
         const primary = pickPrimaryBnsName(combined, response.displayName);
         return {
-          address: params.address,
-          names: combined,
-          primary,
-          source: provider.id
+          result: {
+            address: params.address,
+            names: combined,
+            primary,
+            source: provider.id
+          },
+          cacheable: true
         };
       } catch (error) {
         lastError = error;
@@ -434,19 +463,49 @@ const resolveAddressNamesFromProviders = async (params: {
   }
 
   if (lastError) {
+    if (isTransientBnsError(lastError)) {
+      logDebug('bns', 'BNS address lookup unavailable, using address fallback', {
+        address: params.address,
+        error: getErrorMessage(lastError)
+      });
+      return {
+        result: {
+          address: params.address,
+          names: [],
+          primary: null,
+          source: null
+        },
+        cacheable: false
+      };
+    }
+    logWarn('bns', 'BNS address lookup failed', {
+      address: params.address,
+      error: getErrorMessage(lastError)
+    });
     throw lastError;
   }
 
   if (sawNotFound) {
     return {
+      result: {
+        address: params.address,
+        names: [],
+        primary: null,
+        source: null
+      },
+      cacheable: true
+    };
+  }
+
+  return {
+    result: {
       address: params.address,
       names: [],
       primary: null,
       source: null
-    };
-  }
-
-  return { address: params.address, names: [], primary: null, source: null };
+    },
+    cacheable: true
+  };
 };
 
 const resolveNameAddressFromProviders = async (params: {
@@ -508,6 +567,10 @@ const resolveNameAddressFromProviders = async (params: {
   }
 
   if (lastError) {
+    logWarn('bns', 'BNS name lookup failed', {
+      name: params.name,
+      error: getErrorMessage(lastError)
+    });
     throw lastError;
   }
 
@@ -544,13 +607,15 @@ export const resolveBnsNames = async (params: {
   }
 
   return resolveWithInFlight(cacheKey, async () => {
-    const result = await resolveAddressNamesFromProviders({
+    const resolution = await resolveAddressNamesFromProviders({
       address: trimmed,
       network: params.network,
       signal: params.signal
     });
-    writeCache(cacheKey, result);
-    return result;
+    if (resolution.cacheable) {
+      writeCache(cacheKey, resolution.result);
+    }
+    return resolution.result;
   });
 };
 
@@ -583,4 +648,15 @@ export const resolveBnsAddress = async (params: {
     writeCache(cacheKey, result);
     return result;
   });
+};
+
+export const __resetBnsResolverStateForTests = () => {
+  bnsFailureCount = 0;
+  bnsFailureWindowStart = 0;
+  bnsBackoffUntil = 0;
+  bnsBackoffMs = BNS_BACKOFF_BASE_MS;
+  activeBnsCalls = 0;
+  bnsQueue.length = 0;
+  memoryCache.clear();
+  inflightCache.clear();
 };
