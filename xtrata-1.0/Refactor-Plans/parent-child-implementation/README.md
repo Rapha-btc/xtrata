@@ -21,10 +21,14 @@ Step-by-step runbook for implementation and verification.
 5. `05-context-map.md`
 Direct navigation index of contract, app, and test touchpoints.
 
+6. `06-full-implementation-checklist.md`
+Authoritative implementation tracker with per-phase tasks, gates, and verification.
+
 ## Quick Start
 
 1. Read `docs/app-reference.md` and `docs/assumptions.md`.
 2. Read `01-scope-and-contract-model.md` in this folder.
-3. Execute phases in `02-implementation-plan.md` in order.
-4. Validate with `03-test-plan.md`.
-5. Close with `04-execution-checklist.md`.
+3. Open `06-full-implementation-checklist.md` and use it as the active tracker.
+4. Execute phases in `02-implementation-plan.md` in order.
+5. Validate with `03-test-plan.md`.
+6. Close with `04-execution-checklist.md`.
