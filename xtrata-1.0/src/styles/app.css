@@ -2325,6 +2325,10 @@ p {
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
 }
 
+.market-listing-card--clickable {
+  cursor: pointer;
+}
+
 .market-listing-card--active {
   border-color: rgba(224, 90, 42, 0.5);
   box-shadow: 0 14px 28px rgba(224, 90, 42, 0.16);
@@ -2727,7 +2731,7 @@ p {
   image-rendering: crisp-edges;
 }
 
-.preview-media--letterbox {
+.token-card__media img.preview-media--letterbox {
   width: auto;
   height: auto;
   max-width: 100%;
