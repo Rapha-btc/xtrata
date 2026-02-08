@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { showContractCall } from '@stacks/connect';
 import {
@@ -11,6 +11,7 @@ import {
   uintCV
 } from '@stacks/transactions';
 import type { ContractRegistryEntry } from '../lib/contract/registry';
+import { getLegacyContract } from '../lib/contract/registry';
 import type { WalletSession } from '../lib/wallet/types';
 import { getContractId } from '../lib/contract/config';
 import {
@@ -23,6 +24,7 @@ import { getNetworkMismatch } from '../lib/network/guard';
 import { createXtrataClient } from '../lib/contract/client';
 import { createMarketClient } from '../lib/market/client';
 import {
+  buildMarketListingKey,
   buildUnifiedActivityTimeline,
   loadMarketActivity,
   loadNftActivity
@@ -35,7 +37,7 @@ import type {
   MarketListing,
   UnifiedActivityEvent
 } from '../lib/market/types';
-import { useTokenSummaries } from '../lib/viewer/queries';
+import { fetchTokenSummary, useTokenSummaries } from '../lib/viewer/queries';
 import type { TokenSummary } from '../lib/viewer/types';
 import TokenCardMedia from '../components/TokenCardMedia';
 
@@ -184,6 +186,16 @@ export default function MarketScreen(props: MarketScreenProps) {
     () => createXtrataClient({ contract: props.contract }),
     [props.contract]
   );
+  const legacyContract = useMemo(
+    () => getLegacyContract(props.contract),
+    [props.contract]
+  );
+  const legacyClient = useMemo(
+    () =>
+      legacyContract ? createXtrataClient({ contract: legacyContract }) : null,
+    [legacyContract]
+  );
+  const legacyContractId = legacyContract ? getContractId(legacyContract) : null;
 
   const readOnlySender =
     props.walletSession.address ?? marketContract?.address ?? props.contract.address;
@@ -199,6 +211,44 @@ export default function MarketScreen(props: MarketScreenProps) {
     !marketMismatch &&
     !!marketContract &&
     !nftNetworkMismatch;
+  const resolveListingClient = useCallback(
+    (listingContractId?: string | null) => {
+      if (
+        listingContractId &&
+        legacyContractId &&
+        legacyClient &&
+        listingContractId === legacyContractId
+      ) {
+        return legacyClient;
+      }
+      return nftClient;
+    },
+    [legacyClient, legacyContractId, nftClient]
+  );
+
+  const parseContractId = (contractId?: string | null) => {
+    if (!contractId) {
+      return null;
+    }
+    const [address, ...rest] = contractId.split('.');
+    const contractName = rest.join('.');
+    if (!address || !contractName) {
+      return null;
+    }
+    return { address, contractName };
+  };
+
+  const resolveListingContractConfig = (listing?: MarketListing | null) => {
+    const parsed = parseContractId(listing?.nftContract ?? null);
+    if (parsed) {
+      return {
+        address: parsed.address,
+        contractName: parsed.contractName,
+        network: props.contract.network
+      };
+    }
+    return props.contract;
+  };
 
   type ActiveListing = MarketListing & {
     listingId: bigint;
@@ -264,7 +314,8 @@ export default function MarketScreen(props: MarketScreenProps) {
       const owners = await Promise.all(
         listings.map(async ({ listing }) => {
           try {
-            return await nftClient.getOwner(listing.tokenId, readOnlySender);
+            const client = resolveListingClient(listing.nftContract);
+            return await client.getOwner(listing.tokenId, readOnlySender);
           } catch (error) {
             return null;
           }
@@ -590,11 +641,12 @@ export default function MarketScreen(props: MarketScreenProps) {
         setBuyStatus('Listing not found.');
         return;
       }
-      if (listing.nftContract !== nftContractId) {
-        setBuyStatus(`Listing belongs to ${listing.nftContract}.`);
-        return;
-      }
-      const owner = await nftClient.getOwner(listing.tokenId, readOnlySender);
+      const listingContract = resolveListingContractConfig(listing);
+      const listingClient = resolveListingClient(listing.nftContract);
+      const owner = await listingClient.getOwner(
+        listing.tokenId,
+        readOnlySender
+      );
       if (!owner) {
         setBuyStatus('Token is not minted or owner is unavailable.');
         return;
@@ -624,7 +676,7 @@ export default function MarketScreen(props: MarketScreenProps) {
           listing.price
         ),
         buildContractTransferPostCondition({
-          nftContract: props.contract,
+          nftContract: listingContract,
           senderContract: marketContract,
           tokenId: listing.tokenId
         })
@@ -632,7 +684,10 @@ export default function MarketScreen(props: MarketScreenProps) {
       const tx = await requestContractCall({
         functionName: 'buy',
         functionArgs: [
-          contractPrincipalCV(props.contract.address, props.contract.contractName),
+          contractPrincipalCV(
+            listingContract.address,
+            listingContract.contractName
+          ),
           uintCV(listingId)
         ],
         postConditionMode: PostConditionMode.Deny,
@@ -662,7 +717,10 @@ export default function MarketScreen(props: MarketScreenProps) {
     }
   };
 
-  const handleCancel = async () => {
+  const handleCancel = async (params?: {
+    listingId?: bigint | null;
+    listing?: MarketListing | null;
+  }) => {
     setCancelStatus(null);
     if (!marketContract) {
       setCancelStatus('Set a market contract ID first.');
@@ -684,7 +742,7 @@ export default function MarketScreen(props: MarketScreenProps) {
     }
 
     const inputId = parseUintInput(cancelListingIdInput);
-    const listingId = inputId ?? activeListingId;
+    const listingId = params?.listingId ?? inputId ?? activeListingId;
     if (listingId === null) {
       setCancelStatus('Enter a listing ID or load a listing first.');
       return;
@@ -693,14 +751,37 @@ export default function MarketScreen(props: MarketScreenProps) {
     setCancelPending(true);
     setCancelStatus('Submitting cancel transaction...');
     try {
+      const listing =
+        params?.listing ??
+        (activeListing && activeListingId === listingId
+          ? activeListing
+          : await marketClient?.getListing(listingId, readOnlySender));
+      if (!listing) {
+        setCancelStatus('Listing not found.');
+        return;
+      }
+      const listingContract = resolveListingContractConfig(listing);
+      const postConditions = [
+        buildContractTransferPostCondition({
+          nftContract: listingContract,
+          senderContract: marketContract,
+          tokenId: listing.tokenId
+        })
+      ];
       const tx = await requestContractCall({
         functionName: 'cancel',
         functionArgs: [
-          contractPrincipalCV(props.contract.address, props.contract.contractName),
+          contractPrincipalCV(
+            listingContract.address,
+            listingContract.contractName
+          ),
           uintCV(listingId)
-        ]
+        ],
+        postConditionMode: PostConditionMode.Deny,
+        postConditions
       });
       setCancelStatus(`Cancel submitted: ${tx.txId}`);
+      setCancelListingIdInput(listingId.toString());
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       setCancelStatus(`Cancel failed: ${message}`);
@@ -715,45 +796,87 @@ export default function MarketScreen(props: MarketScreenProps) {
   const buyTargetListingId =
     parseUintInput(buyListingIdInput) ?? activeListingId ?? null;
   const activeListings = activeListingsQuery.data ?? [];
-  const activeListingTokenIds = useMemo(() => {
-    const seen = new Set<string>();
-    const ids: bigint[] = [];
+  const listingTokenGroups = useMemo(() => {
+    const primary: bigint[] = [];
+    const legacy: bigint[] = [];
+    const seenPrimary = new Set<string>();
+    const seenLegacy = new Set<string>();
     activeListings.forEach((listing) => {
       const key = listing.tokenId.toString();
-      if (seen.has(key)) {
+      if (legacyContractId && listing.nftContract === legacyContractId) {
+        if (seenLegacy.has(key)) {
+          return;
+        }
+        seenLegacy.add(key);
+        legacy.push(listing.tokenId);
         return;
       }
-      seen.add(key);
-      ids.push(listing.tokenId);
+      if (seenPrimary.has(key)) {
+        return;
+      }
+      seenPrimary.add(key);
+      primary.push(listing.tokenId);
     });
-    return ids;
-  }, [activeListings]);
-  const {
-    tokenIds: listingTokenIds,
-    tokenQueries: listingTokenQueries
-  } = useTokenSummaries({
+    return { primary, legacy };
+  }, [activeListings, legacyContractId]);
+  const primaryListingTokens = useTokenSummaries({
     client: nftClient,
     senderAddress: readOnlySender,
-    tokenIds: activeListingTokenIds,
+    tokenIds: listingTokenGroups.primary,
     enabled:
       !!marketContract &&
       !props.collapsed &&
-      activeListingTokenIds.length > 0
+      listingTokenGroups.primary.length > 0
+  });
+  const legacyListingTokens = useTokenSummaries({
+    client: legacyClient ?? nftClient,
+    senderAddress: readOnlySender,
+    tokenIds: listingTokenGroups.legacy,
+    enabled:
+      !!marketContract &&
+      !!legacyClient &&
+      !props.collapsed &&
+      listingTokenGroups.legacy.length > 0
   });
   const listingTokenMap = useMemo(() => {
     const map = new Map<string, TokenSummary>();
-    listingTokenQueries.forEach((query, index) => {
-      const id = listingTokenIds[index];
-      if (id === undefined || !query.data) {
-        return;
-      }
-      map.set(id.toString(), query.data);
-    });
+    const addEntries = (
+      tokenIds: bigint[],
+      tokenQueries: ReturnType<typeof useTokenSummaries>['tokenQueries'],
+      contractId: string
+    ) => {
+      tokenQueries.forEach((query, index) => {
+        const id = tokenIds[index];
+        if (id === undefined || !query.data) {
+          return;
+        }
+        map.set(buildMarketListingKey(contractId, id), query.data);
+      });
+    };
+    addEntries(
+      primaryListingTokens.tokenIds,
+      primaryListingTokens.tokenQueries,
+      nftContractId
+    );
+    if (legacyContractId) {
+      addEntries(
+        legacyListingTokens.tokenIds,
+        legacyListingTokens.tokenQueries,
+        legacyContractId
+      );
+    }
     return map;
-  }, [listingTokenIds, listingTokenQueries]);
-  const listingTokensLoading = listingTokenQueries.some(
-    (query) => query.isLoading
-  );
+  }, [
+    legacyContractId,
+    legacyListingTokens.tokenIds,
+    legacyListingTokens.tokenQueries,
+    nftContractId,
+    primaryListingTokens.tokenIds,
+    primaryListingTokens.tokenQueries
+  ]);
+  const listingTokensLoading =
+    primaryListingTokens.tokenQueries.some((query) => query.isLoading) ||
+    legacyListingTokens.tokenQueries.some((query) => query.isLoading);
   const selectedActiveListing =
     buyTargetListingId !== null
       ? activeListings.find((listing) => listing.listingId === buyTargetListingId) ??
@@ -769,28 +892,45 @@ export default function MarketScreen(props: MarketScreenProps) {
           ...activeListing
         }
       : null);
-  const lookupTokenIds = useMemo(() => {
-    if (!displayedListing) {
-      return [];
-    }
-    return [displayedListing.tokenId];
-  }, [displayedListing]);
-  const {
-    tokenQueries: lookupTokenQueries
-  } = useTokenSummaries({
-    client: nftClient,
-    senderAddress: readOnlySender,
-    tokenIds: lookupTokenIds,
+  const displayedListingKey = displayedListing
+    ? buildMarketListingKey(
+        displayedListing.nftContract ?? nftContractId,
+        displayedListing.tokenId
+      )
+    : null;
+  const lookupTokenFromMap = displayedListingKey
+    ? listingTokenMap.get(displayedListingKey) ?? null
+    : null;
+  const lookupTokenQuery = useQuery({
+    queryKey: [
+      'market',
+      marketContractIdLabel,
+      'listing-token',
+      displayedListing?.nftContract ?? nftContractId,
+      displayedListing?.tokenId.toString() ?? 'none'
+    ],
     enabled:
+      !!displayedListing &&
       !!marketContract &&
       !props.collapsed &&
-      lookupTokenIds.length > 0
+      !lookupTokenFromMap,
+    queryFn: async () => {
+      if (!displayedListing) {
+        return null;
+      }
+      const client = resolveListingClient(displayedListing.nftContract);
+      return fetchTokenSummary({
+        client,
+        id: displayedListing.tokenId,
+        senderAddress: readOnlySender
+      });
+    },
+    staleTime: 300_000,
+    refetchOnWindowFocus: false
   });
-  const lookupToken =
-    displayedListing
-      ? listingTokenMap.get(displayedListing.tokenId.toString()) ??
-        (lookupTokenQueries[0]?.data ?? null)
-      : null;
+  const lookupToken = displayedListing
+    ? lookupTokenFromMap ?? lookupTokenQuery.data ?? null
+    : null;
   const lookupOwner = lookupToken?.owner ?? null;
   const lookupStatus =
     lookupOwner && marketContractIdLabel
@@ -1168,8 +1308,14 @@ export default function MarketScreen(props: MarketScreenProps) {
                 )}
                 <div className="market-listing-grid">
                   {activeListings.map((listing) => {
-                    const token =
-                      listingTokenMap.get(listing.tokenId.toString()) ?? null;
+                    const listingKey = buildMarketListingKey(
+                      listing.nftContract ?? nftContractId,
+                      listing.tokenId
+                    );
+                    const token = listingTokenMap.get(listingKey) ?? null;
+                    const tokenClient = resolveListingClient(listing.nftContract);
+                    const tokenContractId =
+                      listing.nftContract ?? nftContractId;
                     const isSeller =
                       !!props.walletSession.address &&
                       listing.seller === props.walletSession.address;
@@ -1189,9 +1335,9 @@ export default function MarketScreen(props: MarketScreenProps) {
                               {token ? (
                                 <TokenCardMedia
                                   token={token}
-                                  contractId={nftContractId}
+                                  contractId={tokenContractId}
                                   senderAddress={readOnlySender}
-                                  client={nftClient}
+                                  client={tokenClient}
                                   isActiveTab={!props.collapsed}
                                 />
                               ) : (
@@ -1227,6 +1373,24 @@ export default function MarketScreen(props: MarketScreenProps) {
                               {formatListingStatus(listing.status)}
                             </span>
                           </div>
+                          {isSeller && (
+                            <div>
+                              <span className="meta-label">Actions</span>
+                              <button
+                                className="button button--ghost button--mini"
+                                type="button"
+                                onClick={() =>
+                                  void handleCancel({
+                                    listingId: listing.listingId,
+                                    listing
+                                  })
+                                }
+                                disabled={!canTransact || cancelPending}
+                              >
+                                {cancelPending ? 'Cancelling...' : 'Cancel'}
+                              </button>
+                            </div>
+                          )}
                         </div>
                         <div className="market-listing-card__actions">
                           <button
@@ -1354,9 +1518,13 @@ export default function MarketScreen(props: MarketScreenProps) {
                       {lookupToken ? (
                         <TokenCardMedia
                           token={lookupToken}
-                          contractId={nftContractId}
+                          contractId={
+                            displayedListing?.nftContract ?? nftContractId
+                          }
                           senderAddress={readOnlySender}
-                          client={nftClient}
+                          client={resolveListingClient(
+                            displayedListing?.nftContract
+                          )}
                           isActiveTab={!props.collapsed}
                         />
                       ) : (

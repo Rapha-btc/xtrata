@@ -1019,18 +1019,34 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     .filter((token): token is TokenSummary => !!token);
 
   const resolveTokenContractId = useCallback(
-    (token: TokenSummary | null) => token?.sourceContractId ?? contractId,
-    [contractId]
+    (token: TokenSummary | null) => {
+      if (!token) {
+        return contractId;
+      }
+      if (token.sourceContractId) {
+        return token.sourceContractId;
+      }
+      if (
+        legacyContractId &&
+        legacyLastTokenId !== null &&
+        token.id <= legacyLastTokenId
+      ) {
+        return legacyContractId;
+      }
+      return contractId;
+    },
+    [contractId, legacyContractId, legacyLastTokenId]
   );
 
   const resolveTokenClient = useCallback(
     (token: TokenSummary | null) => {
-      if (!token || !legacyClient || !legacyContractId) {
+      if (!legacyClient || !legacyContractId) {
         return client;
       }
-      return token.sourceContractId === legacyContractId ? legacyClient : client;
+      const resolvedId = resolveTokenContractId(token);
+      return resolvedId === legacyContractId ? legacyClient : client;
     },
-    [client, legacyClient, legacyContractId]
+    [client, legacyClient, legacyContractId, resolveTokenContractId]
   );
 
   const activeListingIndex = useMemo(() => {
@@ -1093,12 +1109,17 @@ export default function ViewerScreen(props: ViewerScreenProps) {
         return true;
       }
       const listingKey = buildMarketListingKey(
-        token.sourceContractId ?? contractId,
+        resolveTokenContractId(token),
         token.id
       );
       return walletListingIds.has(listingKey);
     });
-  }, [walletListingIds, walletSummaries, resolvedWalletAddress, contractId]);
+  }, [
+    walletListingIds,
+    walletSummaries,
+    resolvedWalletAddress,
+    resolveTokenContractId
+  ]);
 
   const walletTokenListSettled =
     walletQueries.length > 0 &&
@@ -1109,16 +1130,16 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       if (!token || !marketContractIdLabel) {
         return false;
       }
-      if (token.owner !== marketContractIdLabel) {
-        return false;
+      if (token.owner === marketContractIdLabel) {
+        return true;
       }
       const key = buildMarketListingKey(
-        token.sourceContractId ?? contractId,
+        resolveTokenContractId(token),
         token.id
       );
       return activeListingIndex.has(key);
     },
-    [activeListingIndex, marketContractIdLabel, contractId]
+    [activeListingIndex, marketContractIdLabel, resolveTokenContractId]
   );
 
   const walletMaxPage = useMemo(() => {
@@ -1498,8 +1519,9 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     refetchOnWindowFocus: false
   });
   const resolvedSelectedToken = selectedTokenQuery.data ?? selectedToken;
-  const selectedTokenSourceContractId =
-    resolvedSelectedToken?.sourceContractId ?? contractId;
+  const selectedTokenSourceContractId = resolveTokenContractId(
+    resolvedSelectedToken ?? null
+  );
   const selectedListingKey = resolvedSelectedToken
     ? buildMarketListingKey(
         selectedTokenSourceContractId,
@@ -1951,9 +1973,8 @@ export default function ViewerScreen(props: ViewerScreenProps) {
         token={resolvedSelectedToken ?? null}
         selectedTokenId={selectedTokenId}
         contract={
-          resolvedSelectedToken &&
-          legacyContract &&
-          resolvedSelectedToken.sourceContractId === legacyContractId
+          resolveTokenContractId(resolvedSelectedToken ?? null) ===
+            legacyContractId && legacyContract
             ? legacyContract
             : props.contract
         }
