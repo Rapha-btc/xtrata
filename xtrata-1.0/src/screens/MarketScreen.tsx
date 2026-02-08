@@ -19,7 +19,7 @@ import {
   buildTransferPostCondition,
   DEFAULT_NFT_ASSET_NAME
 } from '../lib/contract/post-conditions';
-import { formatMicroStx, MICROSTX_PER_STX } from '../lib/contract/fees';
+import { formatMicroStx } from '../lib/contract/fees';
 import { getNetworkMismatch } from '../lib/network/guard';
 import { createXtrataClient } from '../lib/contract/client';
 import { createMarketClient } from '../lib/market/client';
@@ -32,6 +32,7 @@ import {
 import { MARKET_REGISTRY, getMarketContractId } from '../lib/market/registry';
 import { createMarketSelectionStore } from '../lib/market/selection';
 import { parseMarketContractId } from '../lib/market/contract';
+import { isSameAddress, parsePriceMicroStx } from '../lib/market/actions';
 import { logInfo, logWarn } from '../lib/utils/logger';
 import type {
   MarketListing,
@@ -75,18 +76,6 @@ const parseUintInput = (value: string) => {
   } catch (error) {
     return null;
   }
-};
-
-const parseStxInput = (value: string) => {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-  const parsed = Number(trimmed);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return null;
-  }
-  return parsed;
 };
 
 export default function MarketScreen(props: MarketScreenProps) {
@@ -324,7 +313,7 @@ export default function MarketScreen(props: MarketScreenProps) {
       return listings.map((entry, index) => {
         const owner = owners[index];
         const status =
-          owner && marketContractIdLabel && owner === marketContractIdLabel
+          owner && marketContractIdLabel && isSameAddress(owner, marketContractIdLabel)
             ? 'escrowed'
             : owner
             ? 'stale'
@@ -482,6 +471,31 @@ export default function MarketScreen(props: MarketScreenProps) {
     setTokenLookupId(parsed);
   };
 
+  const handleManageListing = (params: {
+    listingId: bigint;
+    tokenId: bigint;
+  }) => {
+    const listingIdText = params.listingId.toString();
+    setListingIdInput(listingIdText);
+    setListingLookupId(params.listingId);
+    setBuyListingIdInput(listingIdText);
+    setCancelListingIdInput(listingIdText);
+    setBuyListingTouched(false);
+    setCancelListingTouched(false);
+    setListTokenIdInput(params.tokenId.toString());
+    setListStatus(null);
+    setBuyStatus(null);
+    setCancelStatus(null);
+    const actionsSection = document.getElementById('market-actions');
+    if (!actionsSection) {
+      return;
+    }
+    actionsSection.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
+  };
+
   const requestContractCall = (options: {
     functionName: string;
     functionArgs: ClarityValue[];
@@ -554,14 +568,9 @@ export default function MarketScreen(props: MarketScreenProps) {
       setListStatus('Enter a valid token ID.');
       return;
     }
-    const stxAmount = parseStxInput(listPriceInput);
-    if (stxAmount === null) {
+    const priceMicro = parsePriceMicroStx(listPriceInput);
+    if (priceMicro === null) {
       setListStatus('Enter a valid price in STX.');
-      return;
-    }
-    const priceMicro = Math.round(stxAmount * MICROSTX_PER_STX);
-    if (priceMicro <= 0) {
-      setListStatus('Price must be greater than 0.');
       return;
     }
 
@@ -580,7 +589,7 @@ export default function MarketScreen(props: MarketScreenProps) {
         functionArgs: [
           contractPrincipalCV(props.contract.address, props.contract.contractName),
           uintCV(tokenId),
-          uintCV(BigInt(priceMicro))
+          uintCV(priceMicro)
         ],
         postConditionMode: PostConditionMode.Deny,
         postConditions
@@ -760,6 +769,10 @@ export default function MarketScreen(props: MarketScreenProps) {
         setCancelStatus('Listing not found.');
         return;
       }
+      if (!isSameAddress(listing.seller, props.walletSession.address)) {
+        setCancelStatus('Only the seller can cancel this listing.');
+        return;
+      }
       const listingContract = resolveListingContractConfig(listing);
       const postConditions = [
         buildContractTransferPostCondition({
@@ -934,7 +947,7 @@ export default function MarketScreen(props: MarketScreenProps) {
   const lookupOwner = lookupToken?.owner ?? null;
   const lookupStatus =
     lookupOwner && marketContractIdLabel
-      ? lookupOwner === marketContractIdLabel
+      ? isSameAddress(lookupOwner, marketContractIdLabel)
         ? 'Escrowed'
         : 'Not escrowed'
       : 'Unknown';
@@ -1253,7 +1266,9 @@ export default function MarketScreen(props: MarketScreenProps) {
                     </div>
                     <div>
                       <span className="meta-label">Fee</span>
-                      <span className="meta-value">{statusQuery.data.feeBps} bps</span>
+                      <span className="meta-value">
+                        {statusQuery.data.feeBps.toString()} bps
+                      </span>
                     </div>
                     <div>
                       <span className="meta-label">Last listing</span>
@@ -1318,7 +1333,7 @@ export default function MarketScreen(props: MarketScreenProps) {
                       listing.nftContract ?? nftContractId;
                     const isSeller =
                       !!props.walletSession.address &&
-                      listing.seller === props.walletSession.address;
+                      isSameAddress(listing.seller, props.walletSession.address);
                     const canQuickBuy =
                       canTransact &&
                       listing.status === 'escrowed' &&
@@ -1373,9 +1388,22 @@ export default function MarketScreen(props: MarketScreenProps) {
                               {formatListingStatus(listing.status)}
                             </span>
                           </div>
-                          {isSeller && (
-                            <div>
-                              <span className="meta-label">Actions</span>
+                        </div>
+                        <div className="market-listing-card__actions">
+                          {isSeller ? (
+                            <>
+                              <button
+                                className="button button--mini"
+                                type="button"
+                                onClick={() =>
+                                  handleManageListing({
+                                    listingId: listing.listingId,
+                                    tokenId: listing.tokenId
+                                  })
+                                }
+                              >
+                                Manage
+                              </button>
                               <button
                                 className="button button--ghost button--mini"
                                 type="button"
@@ -1387,12 +1415,10 @@ export default function MarketScreen(props: MarketScreenProps) {
                                 }
                                 disabled={!canTransact || cancelPending}
                               >
-                                {cancelPending ? 'Cancelling...' : 'Cancel'}
+                                {cancelPending ? 'Cancelling...' : 'Cancel listing'}
                               </button>
-                            </div>
-                          )}
-                        </div>
-                        <div className="market-listing-card__actions">
+                            </>
+                          ) : (
                           <button
                             className="button button--mini"
                             type="button"
@@ -1404,14 +1430,13 @@ export default function MarketScreen(props: MarketScreenProps) {
                             }
                             disabled={!canQuickBuy}
                           >
-                            {isSeller
-                              ? 'Your listing'
-                              : listing.status !== 'escrowed'
-                                ? 'Not escrowed'
-                                : buyPending
+                            {listing.status !== 'escrowed'
+                              ? 'Not escrowed'
+                              : buyPending
                                   ? 'Buying...'
                                   : 'Buy now'}
                           </button>
+                          )}
                         </div>
                       </div>
                     );
@@ -1576,13 +1601,14 @@ export default function MarketScreen(props: MarketScreenProps) {
                   </div>
                 </div>
               )}
-              {!displayedListing && (listingLookupId || tokenLookupId) && (
+              {!displayedListing &&
+                (listingLookupId !== null || tokenLookupId !== null) && (
                 <p className="field__hint">No listing found.</p>
               )}
             </div>
           )}
 
-          <div className="market-block">
+          <div className="market-block" id="market-actions">
             <h3>{isPublicVariant ? 'Listing tools' : 'Actions'}</h3>
             <div className="market-actions">
               <div className="market-action">
@@ -1644,7 +1670,9 @@ export default function MarketScreen(props: MarketScreenProps) {
                   <button
                     className="button"
                     type="button"
-                    onClick={handleBuy}
+                    onClick={() => {
+                      void handleBuy();
+                    }}
                     disabled={!canTransact || buyPending}
                   >
                     {buyPending ? 'Buying...' : 'Buy now'}
@@ -1670,7 +1698,9 @@ export default function MarketScreen(props: MarketScreenProps) {
                 <button
                   className="button button--ghost"
                   type="button"
-                  onClick={handleCancel}
+                  onClick={() => {
+                    void handleCancel();
+                  }}
                   disabled={!canTransact || cancelPending}
                 >
                   {cancelPending ? 'Cancelling...' : 'Cancel listing'}
