@@ -1,5 +1,13 @@
 # Detailed Implementation Plan
 
+## Phase Tracking
+
+Use `06-full-implementation-checklist.md` as the active execution tracker for this plan.
+
+1. Start each phase only when its entry checklist is satisfied.
+2. Complete all implementation tasks and tests for the phase.
+3. Pass the phase exit gate before moving to the next phase.
+
 ## Phase 0: Baseline and Safety
 
 1. Confirm no contract source changes are required.

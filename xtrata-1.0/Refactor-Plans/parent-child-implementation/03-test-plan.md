@@ -1,5 +1,8 @@
 # Test Plan
 
+Use this together with `06-full-implementation-checklist.md`.
+The checklist is the phase gate tracker; this file defines required test coverage and commands.
+
 ## App Unit Tests (Vitest)
 
 ### A. Mint dependency helpers

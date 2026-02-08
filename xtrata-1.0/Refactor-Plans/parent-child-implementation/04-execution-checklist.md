@@ -1,5 +1,8 @@
 # Execution Checklist
 
+This file is the compact runbook.
+For full implementation tracking across all phases, use `06-full-implementation-checklist.md` as the source of truth.
+
 ## Pre-Implementation
 
 1. Read `docs/app-reference.md`.
