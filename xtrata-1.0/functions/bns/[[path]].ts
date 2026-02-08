@@ -22,7 +22,11 @@ export const onRequest = async (context: {
   const pathParam = params.path;
   const path = Array.isArray(pathParam) ? pathParam.join('/') : pathParam ?? '';
   const targetBase =
-    env.BNS_API_BASE || env.VITE_BNS_API_BASE || DEFAULT_BNS_BASE;
+    env.BNS_API_BASE ||
+    env.BNS_API_MAINNET ||
+    env.VITE_BNS_API_MAINNET ||
+    env.VITE_BNS_API_BASE ||
+    DEFAULT_BNS_BASE;
   const targetUrl = `${targetBase}/${path}${url.search}`;
 
   const headers = new Headers(request.headers);

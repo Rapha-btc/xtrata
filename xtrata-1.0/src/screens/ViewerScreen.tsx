@@ -61,7 +61,7 @@ import {
   useCombinedLastTokenId,
   useTokenSummaries
 } from '../lib/viewer/queries';
-import { buildTokenPage, buildTokenRange } from '../lib/viewer/model';
+import { buildTokenPage } from '../lib/viewer/model';
 import type { TokenSummary } from '../lib/viewer/types';
 import { bytesToHex } from '../lib/utils/encoding';
 import TokenContentPreview from '../components/TokenContentPreview';
@@ -90,6 +90,7 @@ const RECENT_PAGE_LIMIT = 5;
 const RECENT_PAGE_STORAGE_KEY = 'xtrata.v15.1.viewer.recent-pages';
 const WALLET_LISTINGS_SCAN_LIMIT = 120;
 const WALLET_LISTINGS_LIMIT = 160;
+const WALLET_TOKEN_SCAN_LIMIT = 2000;
 const RELATIONSHIP_THUMBNAIL_LIMIT = 12;
 
 export type ViewerMode = 'collection' | 'wallet';
@@ -210,6 +211,7 @@ const TokenCard = (props: {
   onCancelListing: (token: TokenSummary, listing: MarketActivityEvent) => void;
   marketActionPending: boolean;
   client: ReturnType<typeof createXtrataClient>;
+  fallbackClient?: ReturnType<typeof createXtrataClient> | null;
   senderAddress: string;
   contractId: string;
   isActiveTab: boolean;
@@ -254,6 +256,7 @@ const TokenCard = (props: {
             contractId={props.contractId}
             senderAddress={props.senderAddress}
             client={props.client}
+            fallbackClient={props.fallbackClient}
             isActiveTab={props.isActiveTab}
           />
         </div>
@@ -329,6 +332,7 @@ const TokenDetails = (props: {
   viewerContractId: string;
   senderAddress: string;
   client: ReturnType<typeof createXtrataClient>;
+  fallbackClient?: ReturnType<typeof createXtrataClient> | null;
   walletSession: WalletSession;
   mode: ViewerMode;
   isActiveTab: boolean;
@@ -1160,6 +1164,7 @@ const TokenDetails = (props: {
                 contractId={props.contractId}
                 senderAddress={props.senderAddress}
                 client={props.client}
+                fallbackClient={props.fallbackClient}
                 isActiveTab={props.isActiveTab}
                 showDetailsDrawer={false}
               />
@@ -1180,6 +1185,7 @@ const TokenDetails = (props: {
               contractId={props.contractId}
               senderAddress={props.senderAddress}
               client={props.client}
+              fallbackClient={props.fallbackClient}
               isActiveTab={props.isActiveTab}
               showDetailsDrawer={false}
               onRequestViewer={
@@ -1635,6 +1641,21 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     }
     return pageIndex;
   })();
+  const walletScanLimitActive = useMemo(() => {
+    if (!isWalletView || lastTokenId === undefined) {
+      return false;
+    }
+    return lastTokenId + 1n > BigInt(WALLET_TOKEN_SCAN_LIMIT);
+  }, [isWalletView, lastTokenId]);
+  const walletScanStart = useMemo(() => {
+    if (!isWalletView || lastTokenId === undefined) {
+      return 0n;
+    }
+    if (!walletScanLimitActive) {
+      return 0n;
+    }
+    return lastTokenId + 1n - BigInt(WALLET_TOKEN_SCAN_LIMIT);
+  }, [isWalletView, lastTokenId, walletScanLimitActive]);
   const walletTokenIds = useMemo(() => {
     if (!isWalletView) {
       return [] as bigint[];
@@ -1648,8 +1669,18 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     if (lastTokenId === undefined) {
       return [] as bigint[];
     }
-    return buildTokenRange(lastTokenId);
-  }, [isWalletView, props.isActiveTab, resolvedWalletAddress, lastTokenId]);
+    const ids: bigint[] = [];
+    for (let id = walletScanStart; id <= lastTokenId; id += 1n) {
+      ids.push(id);
+    }
+    return ids;
+  }, [
+    isWalletView,
+    props.isActiveTab,
+    resolvedWalletAddress,
+    lastTokenId,
+    walletScanStart
+  ]);
 
   const viewScopeKey = useMemo(() => {
     if (isWalletView) {
@@ -1796,6 +1827,28 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       return resolvedId === legacyContractId ? legacyClient : client;
     },
     [client, legacyClient, legacyContractId, resolveTokenContractId]
+  );
+
+  const resolveContentFallbackClient = useCallback(
+    (token: TokenSummary | null) => {
+      if (!token || !legacyClient || !legacyContractId || legacyLastTokenId === null) {
+        return null;
+      }
+      if (token.id > legacyLastTokenId) {
+        return null;
+      }
+      const resolvedId = resolveTokenContractId(token);
+      if (resolvedId === legacyContractId) {
+        return null;
+      }
+      return legacyClient;
+    },
+    [
+      legacyClient,
+      legacyContractId,
+      legacyLastTokenId,
+      resolveTokenContractId
+    ]
   );
 
   const knownTokens = isWalletView ? walletSummaries : tokenSummaries;
@@ -2839,6 +2892,9 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       : tokenIds.length > 0
         ? `IDs ${tokenIds[0].toString()}–${tokenIds[tokenIds.length - 1].toString()}`
         : 'No tokens';
+  const walletScanSuffix = walletScanLimitActive
+    ? ` · scanned last ${WALLET_TOKEN_SCAN_LIMIT} IDs`
+    : '';
   const walletRangeLabel = !hasWalletTarget
     ? 'No wallet selected'
     : lastTokenQuery.isError
@@ -2846,8 +2902,8 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       : lastTokenQuery.isLoading || !walletTokenListSettled
         ? 'Loading...'
         : ownedTokens.length === 0
-          ? 'No tokens'
-          : `Showing ${pageIndex * PAGE_SIZE + 1}–${pageIndex * PAGE_SIZE + pageTokens.length} of ${ownedTokens.length}`;
+          ? `No tokens${walletScanSuffix}`
+          : `Showing ${pageIndex * PAGE_SIZE + 1}–${pageIndex * PAGE_SIZE + pageTokens.length} of ${ownedTokens.length}${walletScanSuffix}`;
   const rangeLabel = isWalletView ? walletRangeLabel : collectionRangeLabel;
   const displayPageIndex = isWalletView ? pageIndex : activePageIndex;
 
@@ -3032,6 +3088,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
                   <div className="token-grid square-frame__content">
                     {pageTokens.map((token) => {
                       const tokenClient = resolveTokenClient(token);
+                      const fallbackClient = resolveContentFallbackClient(token);
                       const tokenContractId = resolveTokenContractId(token);
                       const tokenListing = getTokenListing(token);
                       return (
@@ -3047,6 +3104,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
                           onCancelListing={handleCancelListing}
                           marketActionPending={marketActionPending}
                           client={tokenClient}
+                          fallbackClient={fallbackClient}
                           senderAddress={props.senderAddress}
                           contractId={tokenContractId}
                           isActiveTab={props.isActiveTab}
@@ -3064,6 +3122,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
                       if (slot.id !== null && slot.query?.data) {
                         const token = slot.query.data;
                         const tokenClient = resolveTokenClient(token);
+                        const fallbackClient = resolveContentFallbackClient(token);
                         const tokenContractId = resolveTokenContractId(token);
                         const tokenListing = getTokenListing(token);
                         return (
@@ -3079,6 +3138,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
                             onCancelListing={handleCancelListing}
                             marketActionPending={marketActionPending}
                             client={tokenClient}
+                            fallbackClient={fallbackClient}
                             senderAddress={props.senderAddress}
                             contractId={tokenContractId}
                             isActiveTab={props.isActiveTab}
@@ -3115,6 +3175,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
         viewerContractId={contractId}
         senderAddress={props.senderAddress}
         client={resolveTokenClient(resolvedSelectedToken ?? null)}
+        fallbackClient={resolveContentFallbackClient(resolvedSelectedToken ?? null)}
         walletSession={props.walletSession}
         mode={props.mode}
         isActiveTab={props.isActiveTab}

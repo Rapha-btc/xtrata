@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { showContractCall } from '@stacks/connect';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   boolCV,
   type ClarityValue,
+  PostConditionMode,
   principalCV,
   uintCV,
   validateStacksAddress
 } from '@stacks/transactions';
 import { getLegacyContract, type ContractRegistryEntry } from '../lib/contract/registry';
+import { getContractId } from '../lib/contract/config';
 import type { WalletSession } from '../lib/wallet/types';
 import { getNetworkMismatch } from '../lib/network/guard';
 import { createXtrataClient } from '../lib/contract/client';
@@ -17,6 +20,7 @@ import {
   useContractAdminStatus
 } from '../lib/contract/admin-status';
 import { formatMicroStx, MICROSTX_PER_STX } from '../lib/contract/fees';
+import { getViewerKey } from '../lib/viewer/queries';
 
 type ContractAdminScreenProps = {
   contract: ContractRegistryEntry;
@@ -63,7 +67,25 @@ const parseTokenIdInput = (value: string) => {
   }
 };
 
+const normalizeAddress = (value?: string | null) => {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return null;
+  }
+  return trimmed.toUpperCase();
+};
+
+const addressesEqual = (left?: string | null, right?: string | null) => {
+  const normalizedLeft = normalizeAddress(left);
+  const normalizedRight = normalizeAddress(right);
+  if (!normalizedLeft || !normalizedRight) {
+    return false;
+  }
+  return normalizedLeft === normalizedRight;
+};
+
 export default function ContractAdminScreen(props: ContractAdminScreenProps) {
+  const queryClient = useQueryClient();
   const client = useMemo(
     () => createXtrataClient({ contract: props.contract }),
     [props.contract]
@@ -81,6 +103,8 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
     () => resolveContractCapabilities(props.contract),
     [props.contract]
   );
+  const contractId = getContractId(props.contract);
+  const legacyContractId = legacyContract ? getContractId(legacyContract) : null;
   const readOnlySender =
     props.walletSession.address ?? props.contract.address;
   const adminStatusQuery = useContractAdminStatus({
@@ -150,6 +174,7 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
   const requestContractCall = (options: {
     functionName: string;
     functionArgs: ClarityValue[];
+    postConditionMode?: PostConditionMode;
   }) => {
     const network = props.walletSession.network ?? props.contract.network;
     const stxAddress = props.walletSession.address;
@@ -159,6 +184,7 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
         contractName: props.contract.contractName,
         functionName: options.functionName,
         functionArgs: options.functionArgs,
+        postConditionMode: options.postConditionMode,
         network,
         stxAddress,
         onFinish: (payload) => resolve(payload as TxPayload),
@@ -334,7 +360,7 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
       const v1Exists = !!v1Meta;
       const v2Exists = !!v2Meta;
       const v1Escrowed =
-        !!v1Owner && v1Owner === v2ContractPrincipal;
+        !!v1Owner && addressesEqual(v1Owner, v2ContractPrincipal);
       setMigrationInfo({
         id: parsed,
         v1Exists,
@@ -350,7 +376,7 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
         setMigrationStatus('Unable to read V1 owner. Try again.');
       } else if (!props.walletSession.address) {
         setMigrationStatus('Connect a wallet to migrate.');
-      } else if (v1Owner !== props.walletSession.address) {
+      } else if (!addressesEqual(v1Owner, props.walletSession.address)) {
         setMigrationStatus(
           `Wallet does not own V1 token (owner: ${v1Owner}). Cancel listings or escrow before migrating.`
         );
@@ -384,13 +410,36 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
     try {
       const tx = await requestContractCall({
         functionName: 'migrate-from-v1',
-        functionArgs: [uintCV(parsed)]
+        functionArgs: [uintCV(parsed)],
+        postConditionMode: PostConditionMode.Allow
       });
       setMigrationStatus(`Migration tx sent: ${tx.txId}`);
+      void queryClient.invalidateQueries({
+        queryKey: getViewerKey(contractId)
+      });
+      void queryClient.refetchQueries({
+        queryKey: getViewerKey(contractId),
+        type: 'active'
+      });
+      if (legacyContractId) {
+        void queryClient.invalidateQueries({
+          queryKey: getViewerKey(legacyContractId)
+        });
+        void queryClient.refetchQueries({
+          queryKey: getViewerKey(legacyContractId),
+          type: 'active'
+        });
+      }
       await handleCheckMigration();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      setMigrationStatus(`Migration failed: ${message}`);
+      if (message.toLowerCase().includes('post-condition')) {
+        setMigrationStatus(
+          'Migration failed due to wallet post-condition rules. Retry and confirm your wallet is not enforcing custom deny rules.'
+        );
+      } else {
+        setMigrationStatus(`Migration failed: ${message}`);
+      }
     } finally {
       setMigrationPending(false);
     }

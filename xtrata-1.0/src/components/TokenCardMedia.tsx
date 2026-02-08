@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { XtrataClient } from '../lib/contract/client';
+import { getContractId } from '../lib/contract/config';
 import type { StreamStatus, TokenSummary } from '../lib/viewer/types';
 import {
   decodeTokenUriToImage,
@@ -43,7 +44,10 @@ type TokenCardMediaProps = {
   contractId: string;
   senderAddress: string;
   client: XtrataClient;
+  fallbackClient?: XtrataClient | null;
   isActiveTab?: boolean;
+  pixelateOnUpscale?: boolean;
+  preferFullResolution?: boolean;
 };
 
 export default function TokenCardMedia(props: TokenCardMediaProps) {
@@ -59,6 +63,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
   const [onChainFailed, setOnChainFailed] = useState(false);
   const [tokenUriFailed, setTokenUriFailed] = useState(false);
   const [tokenUriDeferred, setTokenUriDeferred] = useState(false);
+  const [pixelatePreview, setPixelatePreview] = useState(false);
   const setHtmlFrameRef = useCallback((node: HTMLIFrameElement | null) => {
     setBridgeSource(node?.contentWindow ?? null);
   }, []);
@@ -84,6 +89,21 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     staleTime: Infinity
   });
   const streamStatus = streamStatusQuery.data;
+  const fallbackContentContractId = useMemo(
+    () =>
+      props.fallbackClient
+        ? getContractId(props.fallbackClient.contract)
+        : 'none',
+    [props.fallbackClient]
+  );
+  const contentQueryKey = useMemo(
+    () => [
+      ...getTokenContentKey(props.contractId, props.token.id),
+      'chunk-source',
+      fallbackContentContractId
+    ],
+    [props.contractId, props.token.id, fallbackContentContractId]
+  );
   const thumbnailQuery = useQuery({
     queryKey: getTokenThumbnailKey(props.contractId, props.token.id),
     queryFn: () =>
@@ -103,7 +123,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     totalSize !== null &&
     totalSize <= MAX_THUMBNAIL_BYTES &&
     !svgPreview &&
-    !hasThumbnail &&
+    (!hasThumbnail || props.preferFullResolution) &&
     (mediaKind === 'image' ||
       mediaKind === 'svg' ||
       mediaKind === 'text' ||
@@ -126,10 +146,12 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     : null;
 
   const contentQuery = useQuery({
-    queryKey: getTokenContentKey(props.contractId, props.token.id),
+    queryKey: contentQueryKey,
     queryFn: () =>
       fetchOnChainContent({
         client: props.client,
+        fallbackClient: props.fallbackClient ?? null,
+        cacheContractId: props.contractId,
         id: props.token.id,
         senderAddress: props.senderAddress,
         totalSize: props.token.meta?.totalSize ?? 0n,
@@ -223,6 +245,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     setOnChainFailed(false);
     setTokenUriFailed(false);
     setTokenUriDeferred(false);
+    setPixelatePreview(false);
   }, [props.token.id]);
 
   useEffect(() => {
@@ -438,10 +461,19 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
   const onChainPreviewSource =
     !onChainFailed &&
     (resolvedKind === 'image' || resolvedKind === 'svg' ? contentUrl : null);
+  const preferFullResolution = !!props.preferFullResolution;
+  const primaryImageSource = preferFullResolution
+    ? onChainPreviewSource
+    : resolvedThumbnailUrl;
+  const primaryImageOrigin = preferFullResolution ? 'on-chain' : 'thumbnail-cache';
+  const secondaryImageSource = preferFullResolution
+    ? resolvedThumbnailUrl
+    : onChainPreviewSource;
+  const secondaryImageOrigin = preferFullResolution ? 'thumbnail-cache' : 'on-chain';
   const imagePreviewSource =
     svgPreview ||
-    resolvedThumbnailUrl ||
-    onChainPreviewSource ||
+    primaryImageSource ||
+    secondaryImageSource ||
     jsonImagePreview ||
     tokenUriImage ||
     tokenUriPreview ||
@@ -452,11 +484,11 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     if (svgPreview) {
       return 'svg-preview';
     }
-    if (resolvedThumbnailUrl) {
-      return 'thumbnail-cache';
+    if (primaryImageSource) {
+      return primaryImageOrigin;
     }
-    if (onChainPreviewSource) {
-      return 'on-chain';
+    if (secondaryImageSource) {
+      return secondaryImageOrigin;
     }
     if (jsonImagePreview) {
       return 'metadata-image';
@@ -477,6 +509,36 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     (event: SyntheticEvent<HTMLImageElement>) => {
       if (!imagePreviewSource || !imagePreviewOrigin) {
         return;
+      }
+      if (props.pixelateOnUpscale) {
+        const target = event.currentTarget;
+        const rect = target.getBoundingClientRect();
+        const naturalWidth = target.naturalWidth || 0;
+        const naturalHeight = target.naturalHeight || 0;
+        const normalizedMime = (resolvedMimeType ?? mimeType ?? '').toLowerCase();
+        const urlLower = imagePreviewSource.toLowerCase();
+        const isSvgSource =
+          imagePreviewOrigin === 'svg-preview' ||
+          normalizedMime.includes('svg') ||
+          urlLower.startsWith('data:image/svg') ||
+          urlLower.includes('.svg');
+        let nextPixelate = false;
+        if (
+          !isSvgSource &&
+          naturalWidth > 0 &&
+          naturalHeight > 0 &&
+          rect.width > 0 &&
+          rect.height > 0
+        ) {
+          const scaleX = rect.width / naturalWidth;
+          const scaleY = rect.height / naturalHeight;
+          const scale = Math.max(scaleX, scaleY);
+          const maxNatural = Math.max(naturalWidth, naturalHeight);
+          nextPixelate = scale >= 1.2 && maxNatural <= 512;
+        }
+        setPixelatePreview((previous) =>
+          previous === nextPixelate ? previous : nextPixelate
+        );
       }
       if (!shouldLog('preview', 'debug')) {
         return;
@@ -515,6 +577,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     [
       imagePreviewSource,
       imagePreviewOrigin,
+      props.pixelateOnUpscale,
       props.token.id,
       resolvedMimeType,
       mimeType,
@@ -756,6 +819,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
         loading="lazy"
         onLoad={handleImageLoad}
         onError={handleImageError}
+        className={pixelatePreview ? 'preview-media--pixelated' : undefined}
       />
     );
   } else if (textPreview && !jsonImagePreview) {

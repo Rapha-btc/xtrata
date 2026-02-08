@@ -1611,6 +1611,8 @@ export default function MarketScreen(props: MarketScreenProps) {
                           displayedListing?.nftContract
                         )}
                         isActiveTab={!props.collapsed}
+                        pixelateOnUpscale
+                        preferFullResolution
                       />
                     ) : (
                       <div className="token-card__placeholder">

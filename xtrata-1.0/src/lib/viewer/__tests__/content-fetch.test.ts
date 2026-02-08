@@ -20,11 +20,12 @@ const buildClient = (params: {
   supportsBatch: boolean;
   getChunk: XtrataClient['getChunk'];
   getChunkBatch: XtrataClient['getChunkBatch'];
+  contractName?: string;
 }) =>
   ({
     contract: {
       address: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
-      contractName: 'xtrata-v1-1-1',
+      contractName: params.contractName ?? 'xtrata-v1-1-1',
       network: 'mainnet'
     },
     supportsChunkBatchRead: params.supportsBatch,
@@ -97,6 +98,62 @@ describe('fetchOnChainContent', () => {
     expect(Array.from(result)).toEqual([1, 2, 3, 4, 5, 6]);
     expect(getChunkBatch).not.toHaveBeenCalled();
     expect(getChunk).toHaveBeenCalledTimes(3);
+  });
+
+  it('falls back to fallback chunk source when primary chunk 0 is missing', async () => {
+    const logWarnMock = vi.mocked(logWarn);
+    logWarnMock.mockClear();
+    const primaryGetChunk = vi.fn(async () => null);
+    const primaryGetChunkBatch = vi.fn(async () => []);
+    const primaryClient = buildClient({
+      supportsBatch: true,
+      getChunk: primaryGetChunk,
+      getChunkBatch: primaryGetChunkBatch,
+      contractName: 'xtrata-v2-1-0'
+    });
+
+    const first = new Uint8Array([9, 8]);
+    const second = new Uint8Array([7, 6]);
+    const legacyGetChunk = vi.fn(async (_id: bigint, index: bigint) => {
+      if (index === 0n) {
+        return first;
+      }
+      if (index === 1n) {
+        return second;
+      }
+      return null;
+    });
+    const legacyGetChunkBatch = vi.fn(async () => []);
+    const legacyClient = buildClient({
+      supportsBatch: false,
+      getChunk: legacyGetChunk,
+      getChunkBatch: legacyGetChunkBatch,
+      contractName: 'xtrata-v1-1-1'
+    });
+
+    const result = await fetchOnChainContent({
+      client: primaryClient,
+      fallbackClient: legacyClient,
+      cacheContractId:
+        'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0',
+      id: 3n,
+      senderAddress: 'SP2JXKMSH007NPYAQHKJPQMAQYAD90NQGTVJVQ02B',
+      totalSize: 4n,
+      mimeType: 'application/octet-stream'
+    });
+
+    expect(Array.from(result)).toEqual([9, 8, 7, 6]);
+    expect(primaryGetChunk).toHaveBeenCalled();
+    expect(legacyGetChunk).toHaveBeenCalled();
+    expect(logWarnMock).toHaveBeenCalledWith(
+      'chunk',
+      'Primary chunk read failed; attempting fallback source',
+      expect.objectContaining({
+        id: '3',
+        primaryContractId: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0',
+        fallbackContractId: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1'
+      })
+    );
   });
 
   it('falls back to per-chunk reads when batch calls exceed cost', async () => {

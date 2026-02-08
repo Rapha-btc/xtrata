@@ -26,6 +26,7 @@ import type {
 const EVENT_LIMIT = 50;
 const MAX_EVENTS = 200;
 const MIN_REFRESH_MS = 30_000;
+const MARKET_RATE_LIMIT_BACKOFF_MS = 120_000;
 const NFT_EVENT_LIMIT = 50;
 const NFT_MAX_EVENTS = 200;
 
@@ -70,14 +71,43 @@ type HiroNftMintResponse = {
 };
 
 const shouldTryFallback = (error: unknown) => {
-  const message = error instanceof Error ? error.message : String(error ?? '');
+  const message =
+    error instanceof Error ? error.message : String(error ?? '');
   const lower = message.toLowerCase();
+  if (
+    lower.includes('429') ||
+    lower.includes('too many requests') ||
+    lower.includes('rate limit')
+  ) {
+    return true;
+  }
   return (
     lower.includes('failed to fetch') ||
     lower.includes('networkerror') ||
     lower.includes('cors') ||
     lower.includes('access-control-allow-origin')
   );
+};
+
+const isRateLimitError = (error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  const lower = message.toLowerCase();
+  return (
+    lower.includes('429') ||
+    lower.includes('too many requests') ||
+    lower.includes('rate limit')
+  );
+};
+
+const marketBackoffUntil = new Map<string, number>();
+
+const getMarketBackoffMs = (key: string) =>
+  Math.max(0, (marketBackoffUntil.get(key) ?? 0) - Date.now());
+
+const isMarketBackoffActive = (key: string) => getMarketBackoffMs(key) > 0;
+
+const noteMarketRateLimit = (key: string) => {
+  marketBackoffUntil.set(key, Date.now() + MARKET_RATE_LIMIT_BACKOFF_MS);
 };
 
 const isHiroCompatibleBase = (baseUrl: string) =>
@@ -337,6 +367,15 @@ export const loadMarketActivity = async (params: {
 }): Promise<MarketIndexSnapshot> => {
   const contractId = getContractId(params.contract);
   const cached = await loadMarketIndexSnapshot(contractId);
+  if (isMarketBackoffActive(contractId)) {
+    return (
+      cached ?? {
+        contractId,
+        events: [],
+        updatedAt: Date.now()
+      }
+    );
+  }
   if (
     cached &&
     !params.force &&
@@ -383,6 +422,9 @@ export const loadMarketActivity = async (params: {
   }
 
   if (lastError) {
+    if (isRateLimitError(lastError)) {
+      noteMarketRateLimit(contractId);
+    }
     logWarn('market', 'Market activity fetch failed', {
       error: lastError instanceof Error ? lastError.message : String(lastError)
     });
@@ -405,6 +447,15 @@ export const loadNftActivity = async (params: {
   const contractId = getContractId(params.contract);
   const assetIdentifier = `${contractId}::${params.assetName}`;
   const cached = await loadNftIndexSnapshot(assetIdentifier);
+  if (isMarketBackoffActive(assetIdentifier)) {
+    return (
+      cached ?? {
+        assetIdentifier,
+        events: [],
+        updatedAt: Date.now()
+      }
+    );
+  }
   if (
     cached &&
     !params.force &&
@@ -452,6 +503,9 @@ export const loadNftActivity = async (params: {
   }
 
   if (lastError) {
+    if (isRateLimitError(lastError)) {
+      noteMarketRateLimit(assetIdentifier);
+    }
     logWarn('market', 'NFT activity fetch failed', {
       error: lastError instanceof Error ? lastError.message : String(lastError)
     });

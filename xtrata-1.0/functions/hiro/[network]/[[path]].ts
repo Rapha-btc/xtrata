@@ -42,6 +42,7 @@ export const onRequest = async (context: {
   const apiKey = env.HIRO_API_KEY || env.VITE_HIRO_API_KEY;
   if (apiKey) {
     headers.set('x-hiro-api-key', apiKey);
+    headers.set('x-api-key', apiKey);
   }
 
   const body =

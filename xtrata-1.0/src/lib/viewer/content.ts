@@ -424,6 +424,12 @@ const sleep = (ms: number) =>
     setTimeout(resolve, ms);
   });
 
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : String(error);
+
+const isMissingChunkError = (error: unknown) =>
+  getErrorMessage(error).toLowerCase().includes('missing chunk');
+
 const fetchChunkWithRetry = async (params: {
   client: XtrataClient;
   id: bigint;
@@ -697,6 +703,8 @@ const fetchRemainingChunksWithBatch = async (params: {
 
 export const fetchOnChainContent = async (params: {
   client: XtrataClient;
+  fallbackClient?: XtrataClient | null;
+  cacheContractId?: string;
   id: bigint;
   senderAddress: string;
   totalSize: bigint;
@@ -709,12 +717,17 @@ export const fetchOnChainContent = async (params: {
   if (!Number.isSafeInteger(totalSizeNumber)) {
     throw new Error('Inscription too large to render in browser');
   }
-  const contractId = getContractId(params.client.contract);
-  const cached = await loadInscriptionFromCache(contractId, params.id);
+  const primaryContractId = getContractId(params.client.contract);
+  const fallbackClient = params.fallbackClient ?? null;
+  const fallbackContractId = fallbackClient
+    ? getContractId(fallbackClient.contract)
+    : null;
+  const cacheContractId = params.cacheContractId ?? primaryContractId;
+  const cached = await loadInscriptionFromCache(cacheContractId, params.id);
   if (cached?.data && cached.data.length > 0) {
     if (cached.data.length >= totalSizeNumber) {
       logInfo('chunk', 'Selected fetch mode', {
-        contractId,
+        contractId: cacheContractId,
         id: params.id.toString(),
         fetchMode: 'cache',
         speed: 'FAST',
@@ -727,22 +740,54 @@ export const fetchOnChainContent = async (params: {
     }
     logWarn('cache', 'Cached inscription smaller than expected', {
       id: params.id.toString(),
-      contractId,
+      contractId: cacheContractId,
       expectedBytes: totalSizeNumber,
       cachedBytes: cached.data.length
     });
   }
   logInfo('chunk', 'Fetching on-chain content', {
     id: params.id.toString(),
+    primaryContractId,
+    fallbackContractId,
+    cacheContractId,
     totalSize: totalSizeNumber,
     sender: params.senderAddress
   });
-  const firstChunk = await fetchChunkWithRetry({
-    client: params.client,
-    id: params.id,
-    index: 0n,
-    senderAddress: params.senderAddress
-  });
+  let activeClient = params.client;
+  let chunkSourceContractId = primaryContractId;
+  let firstChunk: Uint8Array;
+  try {
+    firstChunk = await fetchChunkWithRetry({
+      client: params.client,
+      id: params.id,
+      index: 0n,
+      senderAddress: params.senderAddress
+    });
+  } catch (error) {
+    if (!fallbackClient || !isMissingChunkError(error)) {
+      throw error;
+    }
+    logWarn('chunk', 'Primary chunk read failed; attempting fallback source', {
+      id: params.id.toString(),
+      primaryContractId,
+      fallbackContractId,
+      error: getErrorMessage(error)
+    });
+    firstChunk = await fetchChunkWithRetry({
+      client: fallbackClient,
+      id: params.id,
+      index: 0n,
+      senderAddress: params.senderAddress
+    });
+    activeClient = fallbackClient;
+    chunkSourceContractId = fallbackContractId ?? primaryContractId;
+    logInfo('chunk', 'Using fallback chunk source contract', {
+      id: params.id.toString(),
+      primaryContractId,
+      chunkSourceContractId,
+      cacheContractId
+    });
+  }
 
   const expectedChunks = getExpectedChunkCount(
     params.totalSize,
@@ -757,29 +802,29 @@ export const fetchOnChainContent = async (params: {
 
   const chunks: Uint8Array[] = [firstChunk];
   if (Number.isSafeInteger(expectedCountNumber) && expectedCountNumber > 1) {
-    const fetchMode = params.client.supportsChunkBatchRead ? 'batch' : 'chunk';
-    if (params.client.supportsChunkBatchRead) {
+    const fetchMode = activeClient.supportsChunkBatchRead ? 'batch' : 'chunk';
+    if (activeClient.supportsChunkBatchRead) {
       logBatchReadConfigOnce();
     }
     logInfo('chunk', 'Selected fetch mode', {
-      contractId,
+      contractId: cacheContractId,
+      chunkSourceContractId,
       id: params.id.toString(),
       fetchMode,
       speed: fetchMode === 'batch' ? 'FAST' : 'SLOW',
-      contractMode: params.client.supportsChunkBatchRead ? 'batch' : 'chunk',
-      contractSpeed: params.client.supportsChunkBatchRead ? 'FAST' : 'SLOW',
-      readBatchSize: params.client.supportsChunkBatchRead
+      contractMode: activeClient.supportsChunkBatchRead ? 'batch' : 'chunk',
+      contractSpeed: activeClient.supportsChunkBatchRead ? 'FAST' : 'SLOW',
+      readBatchSize: activeClient.supportsChunkBatchRead
         ? Math.min(MAX_BATCH_SIZE, READ_BATCH_SIZE)
         : null,
-      chunkConcurrency: params.client.supportsChunkBatchRead
+      chunkConcurrency: activeClient.supportsChunkBatchRead
         ? READ_CHUNK_CONCURRENCY
         : null,
       expectedChunks: expectedCountNumber
     });
-    if (params.client.supportsChunkBatchRead) {
-      const readBatchSize = Math.min(MAX_BATCH_SIZE, READ_BATCH_SIZE);
+    if (activeClient.supportsChunkBatchRead) {
       const remaining = await fetchRemainingChunksWithBatch({
-        client: params.client,
+        client: activeClient,
         id: params.id,
         senderAddress: params.senderAddress,
         totalCount: expectedCountNumber
@@ -793,7 +838,7 @@ export const fetchOnChainContent = async (params: {
       const remaining = await Promise.all(
         indices.map((index) =>
           fetchChunkWithRetry({
-            client: params.client,
+            client: activeClient,
             id: params.id,
             index,
             senderAddress: params.senderAddress
@@ -804,12 +849,13 @@ export const fetchOnChainContent = async (params: {
     }
   } else {
     logInfo('chunk', 'Selected fetch mode', {
-      contractId,
+      contractId: cacheContractId,
+      chunkSourceContractId,
       id: params.id.toString(),
       fetchMode: 'single',
       speed: 'FAST',
-      contractMode: params.client.supportsChunkBatchRead ? 'batch' : 'chunk',
-      contractSpeed: params.client.supportsChunkBatchRead ? 'FAST' : 'SLOW',
+      contractMode: activeClient.supportsChunkBatchRead ? 'batch' : 'chunk',
+      contractSpeed: activeClient.supportsChunkBatchRead ? 'FAST' : 'SLOW',
       expectedChunks: expectedCountNumber
     });
     logWarn('chunk', 'Falling back to sequential chunk fetch', {
@@ -820,7 +866,7 @@ export const fetchOnChainContent = async (params: {
     let index = 1n;
     while (totalBytes < totalSizeNumber) {
       const chunk = await fetchChunkWithRetry({
-        client: params.client,
+        client: activeClient,
         id: params.id,
         index,
         senderAddress: params.senderAddress
@@ -850,7 +896,7 @@ export const fetchOnChainContent = async (params: {
     totalSizeNumber <= TEMP_CACHE_MAX_BYTES;
   if (shouldTempCache) {
     await saveInscriptionToTempCache(
-      contractId,
+      cacheContractId,
       params.id,
       trimmed,
       params.mimeType ?? null,
@@ -858,7 +904,7 @@ export const fetchOnChainContent = async (params: {
     );
   } else {
     await saveInscriptionToCache(
-      contractId,
+      cacheContractId,
       params.id,
       trimmed,
       params.mimeType ?? null

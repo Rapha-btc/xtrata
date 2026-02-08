@@ -47,6 +47,23 @@ const safeRead = async <T>(
   }
 };
 
+const normalizePrincipal = (value?: string | null) => {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return null;
+  }
+  return trimmed.toUpperCase();
+};
+
+const isSamePrincipal = (left?: string | null, right?: string | null) => {
+  const normalizedLeft = normalizePrincipal(left);
+  const normalizedRight = normalizePrincipal(right);
+  if (!normalizedLeft || !normalizedRight) {
+    return false;
+  }
+  return normalizedLeft === normalizedRight;
+};
+
 export const fetchTokenSummary = async (params: {
   client: XtrataClient;
   id: bigint;
@@ -121,11 +138,11 @@ export const fetchTokenSummaryWithFallback = async (params: {
       id: params.id,
       senderAddress: params.senderAddress
     });
-    if (
-      primaryAvailable &&
-      escrowOwner &&
-      legacySummary.owner === escrowOwner
-    ) {
+    const shouldCheckPrimaryEscrow = isSamePrincipal(
+      legacySummary.owner,
+      escrowOwner
+    );
+    if (shouldCheckPrimaryEscrow) {
       const primarySummary = await fetchTokenSummary({
         client: params.primaryClient,
         id: params.id,
