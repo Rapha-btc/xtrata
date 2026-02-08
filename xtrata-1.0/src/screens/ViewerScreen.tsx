@@ -90,6 +90,7 @@ const RECENT_PAGE_LIMIT = 5;
 const RECENT_PAGE_STORAGE_KEY = 'xtrata.v15.1.viewer.recent-pages';
 const WALLET_LISTINGS_SCAN_LIMIT = 120;
 const WALLET_LISTINGS_LIMIT = 160;
+const RELATIONSHIP_THUMBNAIL_LIMIT = 12;
 
 export type ViewerMode = 'collection' | 'wallet';
 
@@ -445,6 +446,53 @@ const TokenDetails = (props: {
       .map((value) => BigInt(value))
       .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
   }, [props.knownChildren, scannedChildren]);
+
+  const parentIds = dependenciesQuery.data ?? [];
+  const parentThumbIds = parentIds.slice(0, RELATIONSHIP_THUMBNAIL_LIMIT);
+  const { tokenQueries: parentThumbQueries } = useTokenSummaries({
+    client: props.client,
+    senderAddress: props.senderAddress,
+    tokenIds: parentThumbIds,
+    enabled:
+      props.isActiveTab && !isWalletView && parentThumbIds.length > 0,
+    contractIdOverride: props.contractId
+  });
+  const parentThumbItems = useMemo(
+    () =>
+      parentThumbIds.map((id, index) => ({
+        id,
+        summary: parentThumbQueries[index]?.data ?? null,
+        isLoading: parentThumbQueries[index]?.isLoading ?? false
+      })),
+    [parentThumbIds, parentThumbQueries]
+  );
+  const parentOverflowCount = Math.max(
+    0,
+    parentIds.length - parentThumbIds.length
+  );
+
+  const childThumbIds = combinedChildren.slice(0, RELATIONSHIP_THUMBNAIL_LIMIT);
+  const { tokenQueries: childThumbQueries } = useTokenSummaries({
+    client: props.client,
+    senderAddress: props.senderAddress,
+    tokenIds: childThumbIds,
+    enabled:
+      props.isActiveTab && !isWalletView && childThumbIds.length > 0,
+    contractIdOverride: props.contractId
+  });
+  const childThumbItems = useMemo(
+    () =>
+      childThumbIds.map((id, index) => ({
+        id,
+        summary: childThumbQueries[index]?.data ?? null,
+        isLoading: childThumbQueries[index]?.isLoading ?? false
+      })),
+    [childThumbIds, childThumbQueries]
+  );
+  const childOverflowCount = Math.max(
+    0,
+    combinedChildren.length - childThumbIds.length
+  );
 
   const scanProgressLabel = childScanProgress
     ? `Scanned ${childScanProgress.scanned.toString()}/${childScanProgress.total.toString()} · found ${childScanProgress.found.toString()}`
@@ -929,6 +977,74 @@ const TokenDetails = (props: {
                 </span>
               </div>
             </div>
+            {!isWalletView && parentThumbItems.length > 0 && (
+              <div className="relation-panel">
+                <span className="meta-label">Parent thumbnails</span>
+                <div className="relation-grid">
+                  {parentThumbItems.map((item) => (
+                    <div key={item.id.toString()} className="relation-card">
+                      <div className="relation-frame">
+                        {item.summary ? (
+                          <TokenCardMedia
+                            token={item.summary}
+                            contractId={props.contractId}
+                            senderAddress={props.senderAddress}
+                            client={props.client}
+                            isActiveTab={props.isActiveTab}
+                          />
+                        ) : (
+                          <span className="relation-placeholder">
+                            {item.isLoading ? 'Loading...' : 'Unavailable'}
+                          </span>
+                        )}
+                      </div>
+                      <span className="relation-label">
+                        #{item.id.toString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {parentOverflowCount > 0 && (
+                  <span className="meta-value">
+                    +{parentOverflowCount} more parents
+                  </span>
+                )}
+              </div>
+            )}
+            {!isWalletView && childThumbItems.length > 0 && (
+              <div className="relation-panel">
+                <span className="meta-label">Child thumbnails</span>
+                <div className="relation-grid">
+                  {childThumbItems.map((item) => (
+                    <div key={item.id.toString()} className="relation-card">
+                      <div className="relation-frame">
+                        {item.summary ? (
+                          <TokenCardMedia
+                            token={item.summary}
+                            contractId={props.contractId}
+                            senderAddress={props.senderAddress}
+                            client={props.client}
+                            isActiveTab={props.isActiveTab}
+                          />
+                        ) : (
+                          <span className="relation-placeholder">
+                            {item.isLoading ? 'Loading...' : 'Unavailable'}
+                          </span>
+                        )}
+                      </div>
+                      <span className="relation-label">
+                        #{item.id.toString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {childOverflowCount > 0 && (
+                  <span className="meta-value">
+                    +{childOverflowCount} more children
+                  </span>
+                )}
+              </div>
+            )}
             <div className="transfer-panel__actions">
               <button
                 className="button button--ghost button--mini"

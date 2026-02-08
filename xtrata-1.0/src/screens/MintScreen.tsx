@@ -29,6 +29,7 @@ import { getContractId } from '../lib/contract/config';
 import { resolveContractCapabilities } from '../lib/contract/capabilities';
 import { useContractAdminStatus } from '../lib/contract/admin-status';
 import { createXtrataClient } from '../lib/contract/client';
+import { useTokenSummaries } from '../lib/viewer/queries';
 import {
   DEFAULT_BATCH_SIZE,
   DEFAULT_TOKEN_URI,
@@ -62,6 +63,8 @@ import {
   MICROSTX_PER_STX
 } from '../lib/contract/fees';
 import type { InscriptionMeta, UploadState } from '../lib/protocol/types';
+import TokenCardMedia from '../components/TokenCardMedia';
+import type { TokenSummary } from '../lib/viewer/types';
 
 type MintScreenProps = {
   contract: ContractRegistryEntry;
@@ -113,6 +116,7 @@ const BATCH_OPTIONS = Array.from(
   (_, index) => index + 1
 );
 const MAX_UPLOAD_RETRIES = 3;
+const PARENT_THUMBNAIL_LIMIT = 12;
 
 const isAscii = (value: string) => /^[\x00-\x7F]*$/.test(value);
 const isHttpUrl = (value: string) =>
@@ -480,6 +484,150 @@ export default function MintScreen(props: MintScreenProps) {
   const dependencyIdStrings = useMemo(
     () => toDependencyStrings(resolvedDependencyIds),
     [resolvedDependencyIds]
+  );
+  const legacyContractId = legacyContract ? getContractId(legacyContract) : null;
+  const { tokenQueries: parentV2Queries } = useTokenSummaries({
+    client,
+    senderAddress: readOnlySender,
+    tokenIds: resolvedDependencyIds,
+    enabled: !props.collapsed && resolvedDependencyIds.length > 0,
+    contractIdOverride: contractId
+  });
+  const parentV2StatusById = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        summary: TokenSummary | null;
+        isLoading: boolean;
+        isError: boolean;
+      }
+    >();
+    resolvedDependencyIds.forEach((id, index) => {
+      const query = parentV2Queries[index];
+      map.set(id.toString(), {
+        summary: query?.data ?? null,
+        isLoading: query?.isLoading ?? false,
+        isError: query?.isError ?? false
+      });
+    });
+    return map;
+  }, [parentV2Queries, resolvedDependencyIds]);
+  const missingParentIds = useMemo(
+    () =>
+      resolvedDependencyIds.filter((id) => {
+        const status = parentV2StatusById.get(id.toString());
+        if (!status || status.isLoading) {
+          return false;
+        }
+        return !status.summary?.meta;
+      }),
+    [resolvedDependencyIds, parentV2StatusById]
+  );
+  const { tokenQueries: parentLegacyQueries } = useTokenSummaries({
+    client: legacyClient ?? client,
+    senderAddress: readOnlySender,
+    tokenIds: missingParentIds,
+    enabled:
+      !props.collapsed && !!legacyClient && missingParentIds.length > 0,
+    contractIdOverride: legacyContractId ?? contractId
+  });
+  const parentLegacyStatusById = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        summary: TokenSummary | null;
+        isLoading: boolean;
+        isError: boolean;
+      }
+    >();
+    missingParentIds.forEach((id, index) => {
+      const query = parentLegacyQueries[index];
+      map.set(id.toString(), {
+        summary: query?.data ?? null,
+        isLoading: query?.isLoading ?? false,
+        isError: query?.isError ?? false
+      });
+    });
+    return map;
+  }, [parentLegacyQueries, missingParentIds]);
+  const parentDisplayItems = useMemo(() => {
+    return resolvedDependencyIds.map((id) => {
+      const key = id.toString();
+      const v2Status = parentV2StatusById.get(key);
+      const legacyStatus = parentLegacyStatusById.get(key);
+      const v2Summary = v2Status?.summary ?? null;
+      const legacySummary = legacyStatus?.summary ?? null;
+      const v2Ready = !!v2Summary?.meta;
+      const legacyReady = !!legacySummary?.meta;
+      const isLoading =
+        v2Status?.isLoading ||
+        (!v2Ready && legacyStatus?.isLoading) ||
+        false;
+      let status: 'loading' | 'owned' | 'not-owned' | 'legacy' | 'missing' =
+        'loading';
+      if (!isLoading) {
+        if (v2Ready) {
+          const owner = v2Summary?.owner ?? null;
+          if (props.walletSession.address && owner === props.walletSession.address) {
+            status = 'owned';
+          } else {
+            status = 'not-owned';
+          }
+        } else if (legacyReady) {
+          status = 'legacy';
+        } else {
+          status = 'missing';
+        }
+      }
+      const summary = v2Ready ? v2Summary : legacyReady ? legacySummary : null;
+      const summaryContractId = summary?.sourceContractId ?? contractId;
+      const summaryClient =
+        summaryContractId === legacyContractId && legacyClient
+          ? legacyClient
+          : client;
+      return {
+        id,
+        summary,
+        summaryClient,
+        summaryContractId,
+        status
+      };
+    });
+  }, [
+    resolvedDependencyIds,
+    parentV2StatusById,
+    parentLegacyStatusById,
+    props.walletSession.address,
+    contractId,
+    legacyContractId,
+    legacyClient,
+    client
+  ]);
+  const parentStatusSummary = useMemo(() => {
+    const notOwned: bigint[] = [];
+    const legacyOnly: bigint[] = [];
+    const missing: bigint[] = [];
+    const loading: bigint[] = [];
+    parentDisplayItems.forEach((item) => {
+      if (item.status === 'loading') {
+        loading.push(item.id);
+      } else if (item.status === 'not-owned') {
+        notOwned.push(item.id);
+      } else if (item.status === 'legacy') {
+        legacyOnly.push(item.id);
+      } else if (item.status === 'missing') {
+        missing.push(item.id);
+      }
+    });
+    return { notOwned, legacyOnly, missing, loading };
+  }, [parentDisplayItems]);
+  const visibleParentItems = useMemo(
+    () => parentDisplayItems.slice(0, PARENT_THUMBNAIL_LIMIT),
+    [parentDisplayItems]
+  );
+  const parentOverflowCount = Math.max(
+    0,
+    parentDisplayItems.length - visibleParentItems.length
   );
   const hasDuplicate = duplicateMatch !== null;
   const resumeInfo = useMemo(() => {
@@ -1331,6 +1479,45 @@ export default function MintScreen(props: MintScreenProps) {
       });
       return null;
     }
+    if (dependencyIds.length > 0) {
+      if (parentStatusSummary.loading.length > 0) {
+        setMintStatus('Waiting for parent status checks to finish.');
+        appendLog('Mint blocked: parent status checks still loading.');
+        logWarn('mint', 'Mint blocked: parent checks loading');
+        return null;
+      }
+      if (parentStatusSummary.legacyOnly.length > 0) {
+        const ids = parentStatusSummary.legacyOnly
+          .map((id) => id.toString())
+          .join(', ');
+        setMintStatus(
+          `Parent IDs only exist in the legacy contract. Migrate before minting: ${ids}.`
+        );
+        appendLog('Mint blocked: parent ids require migration.');
+        logWarn('mint', 'Mint blocked: parent ids require migration', { ids });
+        return null;
+      }
+      if (parentStatusSummary.missing.length > 0) {
+        const ids = parentStatusSummary.missing
+          .map((id) => id.toString())
+          .join(', ');
+        setMintStatus(`Parent IDs not found on-chain: ${ids}.`);
+        appendLog('Mint blocked: parent ids missing.');
+        logWarn('mint', 'Mint blocked: parent ids missing', { ids });
+        return null;
+      }
+      if (parentStatusSummary.notOwned.length > 0) {
+        const ids = parentStatusSummary.notOwned
+          .map((id) => id.toString())
+          .join(', ');
+        setMintStatus(
+          `Parent IDs are not in the connected wallet and cannot be used: ${ids}.`
+        );
+        appendLog('Mint blocked: parent ids not owned by wallet.');
+        logWarn('mint', 'Mint blocked: parent ids not owned', { ids });
+        return null;
+      }
+    }
     if (hasDuplicate && !allowDuplicate) {
       setMintStatus(
         'Duplicate hash detected. Confirm the warning to proceed.'
@@ -2156,6 +2343,69 @@ export default function MintScreen(props: MintScreenProps) {
             <span className="meta-value">
               Resolved parents: {resolvedDependencyIds.map((id) => id.toString()).join(', ')}
             </span>
+          )}
+          {resolvedDependencyIds.length > 0 && (
+            <div className="relation-panel">
+              <span className="meta-label">Parent thumbnails</span>
+              {parentStatusSummary.loading.length > 0 && (
+                <span className="meta-value">Loading parent status...</span>
+              )}
+              {parentStatusSummary.legacyOnly.length > 0 && (
+                <span className="relation-status relation-status--warn">
+                  Needs migration: {parentStatusSummary.legacyOnly.map((id) => id.toString()).join(', ')}
+                </span>
+              )}
+              {parentStatusSummary.missing.length > 0 && (
+                <span className="relation-status relation-status--error">
+                  Missing on-chain: {parentStatusSummary.missing.map((id) => id.toString()).join(', ')}
+                </span>
+              )}
+              {parentStatusSummary.notOwned.length > 0 && (
+                <span className="relation-status relation-status--error">
+                  Not in connected wallet: {parentStatusSummary.notOwned.map((id) => id.toString()).join(', ')}
+                </span>
+              )}
+              <div className="relation-grid">
+                {visibleParentItems.map((item) => (
+                  <div key={item.id.toString()} className="relation-card">
+                    <div className="relation-frame">
+                      {item.summary ? (
+                        <TokenCardMedia
+                          token={item.summary}
+                          contractId={item.summaryContractId}
+                          senderAddress={readOnlySender}
+                          client={item.summaryClient}
+                          isActiveTab={!props.collapsed}
+                        />
+                      ) : (
+                        <span className="relation-placeholder">
+                          {item.status === 'loading' ? 'Loading...' : 'No preview'}
+                        </span>
+                      )}
+                    </div>
+                    <span className="relation-label">#{item.id.toString()}</span>
+                    {item.status === 'owned' && (
+                      <span className="relation-status relation-status--ok">Owned</span>
+                    )}
+                    {item.status === 'not-owned' && (
+                      <span className="relation-status relation-status--error">Not in wallet</span>
+                    )}
+                    {item.status === 'legacy' && (
+                      <span className="relation-status relation-status--warn">Legacy only</span>
+                    )}
+                    {item.status === 'missing' && (
+                      <span className="relation-status relation-status--error">Missing</span>
+                    )}
+                    {item.status === 'loading' && (
+                      <span className="relation-status">Checking...</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {parentOverflowCount > 0 && (
+                <span className="meta-value">+{parentOverflowCount} more parents</span>
+              )}
+            </div>
           )}
         </div>
 

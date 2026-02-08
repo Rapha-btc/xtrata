@@ -7,7 +7,7 @@ import {
   uintCV,
   validateStacksAddress
 } from '@stacks/transactions';
-import type { ContractRegistryEntry } from '../lib/contract/registry';
+import { getLegacyContract, type ContractRegistryEntry } from '../lib/contract/registry';
 import type { WalletSession } from '../lib/wallet/types';
 import { getNetworkMismatch } from '../lib/network/guard';
 import { createXtrataClient } from '../lib/contract/client';
@@ -47,10 +47,35 @@ const parseStxInput = (value: string) => {
 const formatStxFromMicro = (value: number, decimals = 6) =>
   `${(value / MICROSTX_PER_STX).toFixed(decimals)} STX`;
 
+const parseTokenIdInput = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  try {
+    const parsed = BigInt(trimmed);
+    if (parsed < 0n) {
+      return null;
+    }
+    return parsed;
+  } catch (error) {
+    return null;
+  }
+};
+
 export default function ContractAdminScreen(props: ContractAdminScreenProps) {
   const client = useMemo(
     () => createXtrataClient({ contract: props.contract }),
     [props.contract]
+  );
+  const legacyContract = useMemo(
+    () => getLegacyContract(props.contract),
+    [props.contract]
+  );
+  const legacyClient = useMemo(
+    () =>
+      legacyContract ? createXtrataClient({ contract: legacyContract }) : null,
+    [legacyContract]
   );
   const capabilities = useMemo(
     () => resolveContractCapabilities(props.contract),
@@ -80,6 +105,16 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
   const [ownerInput, setOwnerInput] = useState('');
   const [ownerMessage, setOwnerMessage] = useState<string | null>(null);
   const [ownerPending, setOwnerPending] = useState(false);
+  const [migrationIdInput, setMigrationIdInput] = useState('');
+  const [migrationStatus, setMigrationStatus] = useState<string | null>(null);
+  const [migrationPending, setMigrationPending] = useState(false);
+  const [migrationInfo, setMigrationInfo] = useState<{
+    id: bigint;
+    v1Exists: boolean;
+    v1Owner: string | null;
+    v1Escrowed: boolean;
+    v2Exists: boolean;
+  } | null>(null);
 
   const currentFeeUnit = useMemo(() => {
     if (!status.feeUnitMicroStx) {
@@ -272,6 +307,94 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
     status.paused === null ? 'Unknown' : status.paused ? 'Paused' : 'Active';
   const nextTokenLabel =
     status.nextTokenId !== null ? status.nextTokenId.toString() : 'Unknown';
+  const showMigrationModule =
+    props.contract.protocolVersion === '2.1.0' && !!legacyContract;
+  const v2ContractPrincipal = `${props.contract.address}.${props.contract.contractName}`;
+
+  const handleCheckMigration = async () => {
+    if (!legacyClient) {
+      setMigrationStatus('Legacy contract not configured for this contract.');
+      setMigrationInfo(null);
+      return;
+    }
+    const parsed = parseTokenIdInput(migrationIdInput);
+    if (parsed === null) {
+      setMigrationStatus('Enter a valid token ID.');
+      setMigrationInfo(null);
+      return;
+    }
+    setMigrationPending(true);
+    setMigrationStatus('Checking migration status...');
+    try {
+      const [v1Meta, v1Owner, v2Meta] = await Promise.all([
+        legacyClient.getInscriptionMeta(parsed, readOnlySender),
+        legacyClient.getOwner(parsed, readOnlySender),
+        client.getInscriptionMeta(parsed, readOnlySender)
+      ]);
+      const v1Exists = !!v1Meta;
+      const v2Exists = !!v2Meta;
+      const v1Escrowed =
+        !!v1Owner && v1Owner === v2ContractPrincipal;
+      setMigrationInfo({
+        id: parsed,
+        v1Exists,
+        v1Owner,
+        v1Escrowed,
+        v2Exists
+      });
+      if (!v1Exists) {
+        setMigrationStatus('V1 inscription not found.');
+      } else if (v2Exists) {
+        setMigrationStatus('Already migrated into V2.');
+      } else if (!v1Owner) {
+        setMigrationStatus('Unable to read V1 owner. Try again.');
+      } else if (!props.walletSession.address) {
+        setMigrationStatus('Connect a wallet to migrate.');
+      } else if (v1Owner !== props.walletSession.address) {
+        setMigrationStatus(
+          `Wallet does not own V1 token (owner: ${v1Owner}). Cancel listings or escrow before migrating.`
+        );
+      } else {
+        setMigrationStatus('Ready to migrate.');
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setMigrationStatus(`Migration check failed: ${message}`);
+      setMigrationInfo(null);
+    } finally {
+      setMigrationPending(false);
+    }
+  };
+
+  const handleMigrateToken = async () => {
+    if (!showMigrationModule) {
+      return;
+    }
+    if (!canTransact) {
+      setMigrationStatus('Connect a matching wallet to migrate.');
+      return;
+    }
+    const parsed = parseTokenIdInput(migrationIdInput);
+    if (parsed === null) {
+      setMigrationStatus('Enter a valid token ID.');
+      return;
+    }
+    setMigrationPending(true);
+    setMigrationStatus('Sending migrate-from-v1 transaction...');
+    try {
+      const tx = await requestContractCall({
+        functionName: 'migrate-from-v1',
+        functionArgs: [uintCV(parsed)]
+      });
+      setMigrationStatus(`Migration tx sent: ${tx.txId}`);
+      await handleCheckMigration();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setMigrationStatus(`Migration failed: ${message}`);
+    } finally {
+      setMigrationPending(false);
+    }
+  };
 
   return (
     <section
@@ -452,6 +575,83 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
               </div>
               {ownerMessage && (
                 <span className="meta-value">{ownerMessage}</span>
+              )}
+            </div>
+          )}
+
+          {showMigrationModule && (
+            <div className="mint-panel">
+              <span className="meta-label">V1 → V2 migration</span>
+              <p className="meta-value">
+                Migrate a V1 inscription into V2 to unlock parent/child linking
+                and keep IDs in sync. This transfers the V1 token into the V2
+                contract escrow and mints the V2 token with the same ID.
+              </p>
+              <ol className="meta-value">
+                <li>Ensure the V1 token is in your wallet (cancel listings/escrow).</li>
+                <li>Enter the token ID and check status.</li>
+                <li>Send the migrate transaction and wait for confirmation.</li>
+              </ol>
+              <label className="field">
+                <span className="field__label">Token ID</span>
+                <input
+                  className="input"
+                  placeholder="7"
+                  value={migrationIdInput}
+                  onChange={(event) => {
+                    setMigrationIdInput(event.target.value);
+                    setMigrationStatus(null);
+                  }}
+                />
+              </label>
+              <div className="mint-actions">
+                <button
+                  className="button button--ghost"
+                  type="button"
+                  onClick={() => void handleCheckMigration()}
+                  disabled={migrationPending}
+                >
+                  {migrationPending ? 'Checking...' : 'Check status'}
+                </button>
+                <button
+                  className="button"
+                  type="button"
+                  onClick={() => void handleMigrateToken()}
+                  disabled={!canTransact || migrationPending}
+                >
+                  {migrationPending ? 'Migrating...' : 'Migrate from V1'}
+                </button>
+              </div>
+              {migrationInfo && (
+                <div className="meta-grid meta-grid--dense">
+                  <div>
+                    <span className="meta-label">V1 exists</span>
+                    <span className="meta-value">
+                      {migrationInfo.v1Exists ? 'Yes' : 'No'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="meta-label">V1 owner</span>
+                    <span className="meta-value">
+                      {migrationInfo.v1Owner ?? 'Unknown'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="meta-label">Escrowed in V2</span>
+                    <span className="meta-value">
+                      {migrationInfo.v1Escrowed ? 'Yes' : 'No'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="meta-label">V2 exists</span>
+                    <span className="meta-value">
+                      {migrationInfo.v2Exists ? 'Yes' : 'No'}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {migrationStatus && (
+                <span className="meta-value">{migrationStatus}</span>
               )}
             </div>
           )}

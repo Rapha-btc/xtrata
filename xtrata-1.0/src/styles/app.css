@@ -831,6 +831,75 @@ p {
   white-space: nowrap;
 }
 
+.relation-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.relation-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+}
+
+.relation-card {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
+.relation-frame {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: radial-gradient(circle at 20% 10%, rgba(15, 23, 42, 0.05), rgba(15, 23, 42, 0.02));
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.relation-frame img,
+.relation-frame video,
+.relation-frame iframe,
+.relation-frame pre {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
+.relation-placeholder {
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-align: center;
+  padding: 6px;
+}
+
+.relation-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.relation-status {
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.relation-status--ok {
+  color: #047857;
+}
+
+.relation-status--warn {
+  color: #b45309;
+}
+
+.relation-status--error {
+  color: #b91c1c;
+}
+
 .address-label {
   display: inline-flex;
   flex-direction: column;
