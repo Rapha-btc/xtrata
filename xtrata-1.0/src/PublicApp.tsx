@@ -856,7 +856,7 @@ export default function PublicApp() {
       <header className="app__header">
         <div className="app__header-row">
           <h1 className="app__title">
-            XTRATA <span className="app__title-tag">- Data Inscription Portal</span>
+            XTRATA <span className="app__title-tag"> - STX Data Layer for Bitcoin</span>
           </h1>
           <div className="app__toolbar">
             <nav className="app__nav">
@@ -921,7 +921,7 @@ export default function PublicApp() {
             </div>
           </div>
         </div>
-        <p>View the collection, mint an inscription, and manage your wallet.</p>
+        <p>Immutable Data Inscriptions on Stacks. Secured by Bitcoin.</p>
       </header>
       {!tabGuard.isActive && (
         <div className="app__notice">
