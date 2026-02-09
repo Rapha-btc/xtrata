@@ -85,7 +85,7 @@ export const noteReadOnlySuccess = () => {
 };
 
 export const noteReadOnlyFailure = (error: unknown) => {
-  if (!isReadOnlyNetworkError(error)) {
+  if (!isReadOnlyNetworkError(error) && !isRateLimitError(error)) {
     return;
   }
   const now = Date.now();

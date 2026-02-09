@@ -19,6 +19,7 @@ import {
   ReadOnlyBackoffError,
   callReadOnlyWithRetry,
   getReadOnlyBackoffMs,
+  isRateLimitError,
   noteReadOnlyFailure,
   noteReadOnlySuccess
 } from './read-only';
@@ -226,6 +227,9 @@ export const buildSetRoyaltyRecipientCall = (params: {
 };
 
 const shouldTryFallback = (error: unknown) => {
+  if (isRateLimitError(error)) {
+    return true;
+  }
   const message =
     error instanceof Error ? error.message : String(error ?? '');
   const lower = message.toLowerCase();

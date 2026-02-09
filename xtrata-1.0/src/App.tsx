@@ -12,6 +12,14 @@ import { getViewerKey } from './lib/viewer/queries';
 import { createStacksWalletAdapter } from './lib/wallet/adapter';
 import { createWalletSessionStore } from './lib/wallet/session';
 import { getWalletLookupState } from './lib/wallet/lookup';
+import {
+  applyThemeToDocument,
+  coerceThemeMode,
+  resolveInitialTheme,
+  THEME_OPTIONS,
+  type ThemeMode,
+  writeThemePreference
+} from './lib/theme/preferences';
 import { useActiveTabGuard } from './lib/utils/tab-guard';
 import AddressLabel from './components/AddressLabel';
 import MintScreen from './screens/MintScreen';
@@ -119,6 +127,9 @@ const parseDeployContractName = (raw: string) => {
 };
 
 export default function App() {
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() =>
+    resolveInitialTheme()
+  );
   const [selectedContract, setSelectedContract] = useState(() =>
     contractSelectionStore.load()
   );
@@ -133,6 +144,7 @@ export default function App() {
   const [deployLog, setDeployLog] = useState<string[]>([]);
   const [walletPending, setWalletPending] = useState(false);
   const [viewerFocusKey, setViewerFocusKey] = useState<number | null>(null);
+  const [parentDraftIds, setParentDraftIds] = useState<bigint[]>([]);
   const [walletLookupInput, setWalletLookupInput] = useState('');
   const [walletLookupTouched, setWalletLookupTouched] = useState(false);
   const [viewerMode, setViewerMode] = useState<ViewerMode>('collection');
@@ -212,6 +224,21 @@ export default function App() {
     contractSelectionStore.save(next);
   };
 
+  const handleAddParentDraft = (id: bigint) => {
+    setParentDraftIds((current) => {
+      if (current.some((value) => value === id)) {
+        return current;
+      }
+      const next = [...current, id];
+      next.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+      return next;
+    });
+  };
+
+  const handleClearParentDrafts = () => {
+    setParentDraftIds([]);
+  };
+
   const handleResolveMismatch = async () => {
     if (compatibleContract) {
       setSelectedContract(compatibleContract);
@@ -228,6 +255,9 @@ export default function App() {
   };
 
   const contractId = getContractId(selectedContract);
+  useEffect(() => {
+    setParentDraftIds([]);
+  }, [contractId]);
   const walletStatus = walletSession.isConnected ? 'Connected' : 'Disconnected';
   const walletNetwork = walletSession.network ?? 'unknown';
   const showRateLimitWarning = rateLimitWarning && !hasHiroApiKey;
@@ -243,6 +273,13 @@ export default function App() {
 
   const handleExpandAll = () => {
     setCollapsedSections(buildCollapsedState(false));
+  };
+
+  const handleThemeChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const nextTheme = coerceThemeMode(event.target.value);
+    setThemeMode(nextTheme);
+    applyThemeToDocument(nextTheme);
+    writeThemePreference(nextTheme);
   };
 
   const handleNavJump = (key: SectionKey) => {
@@ -472,6 +509,22 @@ export default function App() {
             </nav>
             <div className="app__controls">
               <div className="app__controls-group">
+                <label className="theme-select" htmlFor="admin-theme-select">
+                  <span className="theme-select__label">Theme</span>
+                  <select
+                    id="admin-theme-select"
+                    className="theme-select__control"
+                    value={themeMode}
+                    onChange={handleThemeChange}
+                    onInput={handleThemeChange}
+                  >
+                    {THEME_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <button
                   className="button button--ghost"
                   type="button"
@@ -688,6 +741,7 @@ export default function App() {
           mode={viewerMode}
           onModeChange={setViewerMode}
           onClearWalletLookup={handleClearWalletLookup}
+          onAddParentDraft={handleAddParentDraft}
         />
 
         <MarketScreen
@@ -810,6 +864,8 @@ export default function App() {
           onInscriptionSealed={handleInscriptionSealed}
           collapsed={collapsedSections.mint}
           onToggleCollapse={() => toggleSection('mint')}
+          parentDraftIds={parentDraftIds}
+          onClearParentDrafts={handleClearParentDrafts}
         />
       </main>
     </div>

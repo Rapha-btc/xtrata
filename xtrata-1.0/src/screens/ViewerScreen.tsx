@@ -61,7 +61,7 @@ import {
   useCombinedLastTokenId,
   useTokenSummaries
 } from '../lib/viewer/queries';
-import { buildTokenPage, buildTokenRange } from '../lib/viewer/model';
+import { buildTokenPage } from '../lib/viewer/model';
 import type { TokenSummary } from '../lib/viewer/types';
 import { bytesToHex } from '../lib/utils/encoding';
 import TokenContentPreview from '../components/TokenContentPreview';
@@ -74,6 +74,12 @@ import type { WalletSession } from '../lib/wallet/types';
 import type { WalletLookupState } from '../lib/wallet/lookup';
 import { formatBytes, truncateMiddle } from '../lib/utils/format';
 import { formatMicroStx } from '../lib/contract/fees';
+import {
+  fetchParents,
+  findChildrenFromKnownTokens,
+  scanChildren,
+  type ParentScanProgress
+} from '../lib/viewer/relationships';
 
 const PAGE_SIZE = 16;
 const REFRESH_INTERVAL_MS = 6_000;
@@ -84,6 +90,8 @@ const RECENT_PAGE_LIMIT = 5;
 const RECENT_PAGE_STORAGE_KEY = 'xtrata.v15.1.viewer.recent-pages';
 const WALLET_LISTINGS_SCAN_LIMIT = 120;
 const WALLET_LISTINGS_LIMIT = 160;
+const WALLET_TOKEN_SCAN_LIMIT = 2000;
+const RELATIONSHIP_THUMBNAIL_LIMIT = 12;
 
 export type ViewerMode = 'collection' | 'wallet';
 
@@ -101,6 +109,7 @@ type ViewerScreenProps = {
   mode: ViewerMode;
   onModeChange: (mode: ViewerMode) => void;
   onClearWalletLookup?: () => void;
+  onAddParentDraft?: (id: bigint) => void;
 };
 
 const getMediaLabel = (mimeType: string | null | undefined) => {
@@ -202,6 +211,7 @@ const TokenCard = (props: {
   onCancelListing: (token: TokenSummary, listing: MarketActivityEvent) => void;
   marketActionPending: boolean;
   client: ReturnType<typeof createXtrataClient>;
+  fallbackClient?: ReturnType<typeof createXtrataClient> | null;
   senderAddress: string;
   contractId: string;
   isActiveTab: boolean;
@@ -246,6 +256,7 @@ const TokenCard = (props: {
             contractId={props.contractId}
             senderAddress={props.senderAddress}
             client={props.client}
+            fallbackClient={props.fallbackClient}
             isActiveTab={props.isActiveTab}
           />
         </div>
@@ -321,6 +332,7 @@ const TokenDetails = (props: {
   viewerContractId: string;
   senderAddress: string;
   client: ReturnType<typeof createXtrataClient>;
+  fallbackClient?: ReturnType<typeof createXtrataClient> | null;
   walletSession: WalletSession;
   mode: ViewerMode;
   isActiveTab: boolean;
@@ -335,6 +347,10 @@ const TokenDetails = (props: {
   isMobile: boolean;
   mobilePanel: 'grid' | 'preview';
   onRequestGrid: () => void;
+  knownChildren: bigint[];
+  lastTokenId?: bigint;
+  onAddParentDraft?: (id: bigint) => void;
+  onSelectToken: (id: bigint) => void;
   marketActionStatus: string | null;
   marketActionPending: boolean;
   onBuyListing: (token: TokenSummary, listing: MarketActivityEvent) => void;
@@ -353,6 +369,12 @@ const TokenDetails = (props: {
   const [cancelStatus, setCancelStatus] = useState<string | null>(null);
   const [cancelPending, setCancelPending] = useState(false);
   const [walletToolsOpen, setWalletToolsOpen] = useState(false);
+  const [childScanPending, setChildScanPending] = useState(false);
+  const [childScanStatus, setChildScanStatus] = useState<string | null>(null);
+  const [childScanProgress, setChildScanProgress] =
+    useState<ParentScanProgress | null>(null);
+  const [scannedChildren, setScannedChildren] = useState<bigint[]>([]);
+  const scanCancelRef = useRef<{ cancelled: boolean } | null>(null);
   const isWalletView = props.mode === 'wallet';
   const mismatch = getNetworkMismatch(
     props.contract.network,
@@ -372,7 +394,11 @@ const TokenDetails = (props: {
       : ['viewer', props.contractId, 'dependencies', 'none'],
     queryFn: () =>
       props.token
-        ? props.client.getDependencies(props.token.id, props.senderAddress)
+        ? fetchParents({
+            client: props.client,
+            tokenId: props.token.id,
+            senderAddress: props.senderAddress
+          })
         : Promise.resolve([]),
     enabled: !!props.token && !isWalletView
   });
@@ -396,6 +422,14 @@ const TokenDetails = (props: {
     setListPriceInput('');
   }, [props.selectedTokenId, walletAddress]);
 
+  useEffect(() => {
+    setChildScanPending(false);
+    setChildScanStatus(null);
+    setChildScanProgress(null);
+    setScannedChildren([]);
+    scanCancelRef.current = null;
+  }, [props.token?.id]);
+
   const transferValidation = validateTransferRequest({
     senderAddress: walletAddress,
     recipientAddress: transferRecipient,
@@ -409,6 +443,66 @@ const TokenDetails = (props: {
     transferValidation.reason === 'invalid-recipient' ||
     transferValidation.reason === 'self-recipient';
 
+  const combinedChildren = useMemo(() => {
+    const merged = new Set<string>();
+    props.knownChildren.forEach((id) => merged.add(id.toString()));
+    scannedChildren.forEach((id) => merged.add(id.toString()));
+    return Array.from(merged)
+      .map((value) => BigInt(value))
+      .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  }, [props.knownChildren, scannedChildren]);
+
+  const parentIds = dependenciesQuery.data ?? [];
+  const parentThumbIds = parentIds.slice(0, RELATIONSHIP_THUMBNAIL_LIMIT);
+  const { tokenQueries: parentThumbQueries } = useTokenSummaries({
+    client: props.client,
+    senderAddress: props.senderAddress,
+    tokenIds: parentThumbIds,
+    enabled:
+      props.isActiveTab && !isWalletView && parentThumbIds.length > 0,
+    contractIdOverride: props.contractId
+  });
+  const parentThumbItems = useMemo(
+    () =>
+      parentThumbIds.map((id, index) => ({
+        id,
+        summary: parentThumbQueries[index]?.data ?? null,
+        isLoading: parentThumbQueries[index]?.isLoading ?? false
+      })),
+    [parentThumbIds, parentThumbQueries]
+  );
+  const parentOverflowCount = Math.max(
+    0,
+    parentIds.length - parentThumbIds.length
+  );
+
+  const childThumbIds = combinedChildren.slice(0, RELATIONSHIP_THUMBNAIL_LIMIT);
+  const { tokenQueries: childThumbQueries } = useTokenSummaries({
+    client: props.client,
+    senderAddress: props.senderAddress,
+    tokenIds: childThumbIds,
+    enabled:
+      props.isActiveTab && !isWalletView && childThumbIds.length > 0,
+    contractIdOverride: props.contractId
+  });
+  const childThumbItems = useMemo(
+    () =>
+      childThumbIds.map((id, index) => ({
+        id,
+        summary: childThumbQueries[index]?.data ?? null,
+        isLoading: childThumbQueries[index]?.isLoading ?? false
+      })),
+    [childThumbIds, childThumbQueries]
+  );
+  const childOverflowCount = Math.max(
+    0,
+    combinedChildren.length - childThumbIds.length
+  );
+
+  const scanProgressLabel = childScanProgress
+    ? `Scanned ${childScanProgress.scanned.toString()}/${childScanProgress.total.toString()} · found ${childScanProgress.found.toString()}`
+    : null;
+
   const appendTransferLog = (message: string) => {
     setTransferLog((prev) => {
       const next = [...prev, message];
@@ -416,6 +510,69 @@ const TokenDetails = (props: {
     });
     // eslint-disable-next-line no-console
     console.log(`[transfer] ${message}`);
+  };
+
+  const handleScanChildren = async () => {
+    if (!props.token) {
+      return;
+    }
+    if (props.lastTokenId === undefined) {
+      setChildScanStatus('Last token id unavailable. Refresh and retry.');
+      return;
+    }
+    if (isReadOnlyBackoffActive()) {
+      setChildScanStatus('Read-only backoff active. Try again later.');
+      return;
+    }
+    const cancelState = { cancelled: false };
+    scanCancelRef.current = cancelState;
+    setChildScanPending(true);
+    setChildScanStatus('Scanning full collection...');
+    setChildScanProgress({
+      scanned: 0n,
+      total: props.lastTokenId + 1n,
+      found: 0n,
+      currentId: 0n
+    });
+
+    try {
+      const children = await scanChildren({
+        client: props.client,
+        parentId: props.token.id,
+        lastTokenId: props.lastTokenId,
+        senderAddress: props.senderAddress,
+        concurrency: 4,
+        shouldCancel: () => cancelState.cancelled,
+        onProgress: (progress) => setChildScanProgress(progress)
+      });
+      if (cancelState.cancelled) {
+        return;
+      }
+      setScannedChildren(children);
+      setChildScanStatus(
+        children.length > 0
+          ? `Found ${children.length} children.`
+          : 'No children found.'
+      );
+    } catch (error) {
+      if (cancelState.cancelled) {
+        return;
+      }
+      const message = error instanceof Error ? error.message : String(error);
+      setChildScanStatus(`Scan failed: ${message}`);
+    } finally {
+      if (!cancelState.cancelled) {
+        setChildScanPending(false);
+      }
+    }
+  };
+
+  const handleCancelScan = () => {
+    if (scanCancelRef.current) {
+      scanCancelRef.current.cancelled = true;
+    }
+    setChildScanPending(false);
+    setChildScanStatus('Scan cancelled.');
   };
 
   const refreshViewer = () => {
@@ -667,6 +824,18 @@ const TokenDetails = (props: {
     }
   };
 
+  const relationshipParentsLabel = isWalletView
+    ? 'Unavailable in wallet view.'
+    : dependenciesQuery.isLoading
+      ? 'Loading...'
+      : dependenciesQuery.data && dependenciesQuery.data.length > 0
+        ? dependenciesQuery.data.map((id) => id.toString()).join(', ')
+        : 'None';
+  const relationshipChildrenLabel =
+    combinedChildren.length > 0
+      ? combinedChildren.map((id) => id.toString()).join(', ')
+      : 'None';
+
   if (!props.token) {
     const pendingId = props.selectedTokenId;
     return (
@@ -741,14 +910,135 @@ const TokenDetails = (props: {
         <div className="detail-panel__meta">
           <div className="transfer-panel detail-summary-panel">
             <div>
-              <h3>Details</h3>
-              <p>Core inscription metadata.</p>
+              <h3>Relationships</h3>
+              <p>Token context and linked parent/child inscriptions.</p>
             </div>
             <div className="meta-grid meta-grid--dense">
               <div>
                 <span className="meta-label">Token</span>
                 <span className="meta-value">#{props.token.id.toString()}</span>
               </div>
+              <div>
+                <span className="meta-label">Parents</span>
+                <span className="meta-value">{relationshipParentsLabel}</span>
+              </div>
+              <div>
+                <span className="meta-label">Children</span>
+                <span className="meta-value">{relationshipChildrenLabel}</span>
+              </div>
+            </div>
+            {!isWalletView && parentThumbItems.length > 0 && (
+              <div className="relation-panel">
+                <span className="meta-label">Parent thumbnails</span>
+                <div className="relation-grid">
+                  {parentThumbItems.map((item) => (
+                    <button
+                      key={item.id.toString()}
+                      type="button"
+                      className="relation-card relation-card--button"
+                      onClick={() => props.onSelectToken(item.id)}
+                      aria-label={`View parent token #${item.id.toString()}`}
+                    >
+                      <div className="relation-frame">
+                        {item.summary ? (
+                          <TokenCardMedia
+                            token={item.summary}
+                            contractId={props.contractId}
+                            senderAddress={props.senderAddress}
+                            client={props.client}
+                            isActiveTab={props.isActiveTab}
+                          />
+                        ) : (
+                          <span className="relation-placeholder">
+                            {item.isLoading ? 'Loading...' : 'Unavailable'}
+                          </span>
+                        )}
+                      </div>
+                      <span className="relation-label">
+                        #{item.id.toString()}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                {parentOverflowCount > 0 && (
+                  <span className="meta-value">
+                    +{parentOverflowCount} more parents
+                  </span>
+                )}
+              </div>
+            )}
+            {!isWalletView && childThumbItems.length > 0 && (
+              <div className="relation-panel">
+                <span className="meta-label">Child thumbnails</span>
+                <div className="relation-grid">
+                  {childThumbItems.map((item) => (
+                    <button
+                      key={item.id.toString()}
+                      type="button"
+                      className="relation-card relation-card--button"
+                      onClick={() => props.onSelectToken(item.id)}
+                      aria-label={`View child token #${item.id.toString()}`}
+                    >
+                      <div className="relation-frame">
+                        {item.summary ? (
+                          <TokenCardMedia
+                            token={item.summary}
+                            contractId={props.contractId}
+                            senderAddress={props.senderAddress}
+                            client={props.client}
+                            isActiveTab={props.isActiveTab}
+                          />
+                        ) : (
+                          <span className="relation-placeholder">
+                            {item.isLoading ? 'Loading...' : 'Unavailable'}
+                          </span>
+                        )}
+                      </div>
+                      <span className="relation-label">
+                        #{item.id.toString()}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                {childOverflowCount > 0 && (
+                  <span className="meta-value">
+                    +{childOverflowCount} more children
+                  </span>
+                )}
+              </div>
+            )}
+            <div className="transfer-panel__actions">
+              <button
+                className="button button--ghost button--mini"
+                type="button"
+                onClick={handleScanChildren}
+                disabled={childScanPending || isWalletView}
+              >
+                {childScanPending ? 'Scanning...' : 'Scan full collection'}
+              </button>
+              {childScanPending && (
+                <button
+                  className="button button--ghost button--mini"
+                  type="button"
+                  onClick={handleCancelScan}
+                >
+                  Cancel scan
+                </button>
+              )}
+            </div>
+            {scanProgressLabel && (
+              <span className="meta-value">{scanProgressLabel}</span>
+            )}
+            {childScanStatus && (
+              <span className="meta-value">{childScanStatus}</span>
+            )}
+          </div>
+          <div className="transfer-panel detail-summary-panel">
+            <div>
+              <h3>Details</h3>
+              <p>Owner, creator, and core inscription metadata.</p>
+            </div>
+            <div className="meta-grid meta-grid--dense">
               <div>
                 <span className="meta-label">Owner</span>
                 <span className="meta-value">{detailOwner}</span>
@@ -786,6 +1076,17 @@ const TokenDetails = (props: {
                 </span>
               </div>
             </div>
+            {props.onAddParentDraft && (
+              <div className="transfer-panel__actions">
+                <button
+                  className="button button--ghost button--mini"
+                  type="button"
+                  onClick={() => props.onAddParentDraft?.(props.token!.id)}
+                >
+                  Use as parent
+                </button>
+              </div>
+            )}
           </div>
           {props.listing && (
             <div className="transfer-panel detail-summary-panel">
@@ -876,6 +1177,7 @@ const TokenDetails = (props: {
                 contractId={props.contractId}
                 senderAddress={props.senderAddress}
                 client={props.client}
+                fallbackClient={props.fallbackClient}
                 isActiveTab={props.isActiveTab}
                 showDetailsDrawer={false}
               />
@@ -896,6 +1198,7 @@ const TokenDetails = (props: {
               contractId={props.contractId}
               senderAddress={props.senderAddress}
               client={props.client}
+              fallbackClient={props.fallbackClient}
               isActiveTab={props.isActiveTab}
               showDetailsDrawer={false}
               onRequestViewer={
@@ -905,7 +1208,13 @@ const TokenDetails = (props: {
             />
           )}
         </div>
-        <div className="detail-panel__tools">
+        <div
+          className={
+            isWalletView
+              ? 'detail-panel__tools'
+              : 'detail-panel__tools detail-panel__tools--advanced'
+          }
+        >
           {isWalletView ? (
             <details
               className="preview-drawer preview-drawer--advanced"
@@ -1351,6 +1660,21 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     }
     return pageIndex;
   })();
+  const walletScanLimitActive = useMemo(() => {
+    if (!isWalletView || lastTokenId === undefined) {
+      return false;
+    }
+    return lastTokenId + 1n > BigInt(WALLET_TOKEN_SCAN_LIMIT);
+  }, [isWalletView, lastTokenId]);
+  const walletScanStart = useMemo(() => {
+    if (!isWalletView || lastTokenId === undefined) {
+      return 0n;
+    }
+    if (!walletScanLimitActive) {
+      return 0n;
+    }
+    return lastTokenId + 1n - BigInt(WALLET_TOKEN_SCAN_LIMIT);
+  }, [isWalletView, lastTokenId, walletScanLimitActive]);
   const walletTokenIds = useMemo(() => {
     if (!isWalletView) {
       return [] as bigint[];
@@ -1364,8 +1688,18 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     if (lastTokenId === undefined) {
       return [] as bigint[];
     }
-    return buildTokenRange(lastTokenId);
-  }, [isWalletView, props.isActiveTab, resolvedWalletAddress, lastTokenId]);
+    const ids: bigint[] = [];
+    for (let id = walletScanStart; id <= lastTokenId; id += 1n) {
+      ids.push(id);
+    }
+    return ids;
+  }, [
+    isWalletView,
+    props.isActiveTab,
+    resolvedWalletAddress,
+    lastTokenId,
+    walletScanStart
+  ]);
 
   const viewScopeKey = useMemo(() => {
     if (isWalletView) {
@@ -1513,6 +1847,52 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     },
     [client, legacyClient, legacyContractId, resolveTokenContractId]
   );
+
+  const resolveContentFallbackClient = useCallback(
+    (token: TokenSummary | null) => {
+      if (!token || !legacyClient || !legacyContractId || legacyLastTokenId === null) {
+        return null;
+      }
+      if (token.id > legacyLastTokenId) {
+        return null;
+      }
+      const resolvedId = resolveTokenContractId(token);
+      if (resolvedId === legacyContractId) {
+        return null;
+      }
+      return legacyClient;
+    },
+    [
+      legacyClient,
+      legacyContractId,
+      legacyLastTokenId,
+      resolveTokenContractId
+    ]
+  );
+
+  const knownTokens = isWalletView ? walletSummaries : tokenSummaries;
+  const dependencyCache = useMemo(() => {
+    const map = new Map<string, bigint[]>();
+    knownTokens.forEach((token) => {
+      const key = getDependenciesKey(resolveTokenContractId(token), token.id);
+      const cached = queryClient.getQueryData<bigint[]>(key);
+      if (cached && cached.length > 0) {
+        map.set(token.id.toString(), cached);
+      }
+    });
+    return map;
+  }, [knownTokens, queryClient, resolveTokenContractId]);
+
+  const knownChildren = useMemo(() => {
+    if (!selectedTokenId) {
+      return [];
+    }
+    return findChildrenFromKnownTokens(
+      knownTokens,
+      selectedTokenId,
+      dependencyCache
+    );
+  }, [knownTokens, selectedTokenId, dependencyCache]);
 
   const activeListingIndex = useMemo(() => {
     if (!marketActivityQuery.data || !marketContractIdLabel || marketNetworkMismatch) {
@@ -2531,6 +2911,9 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       : tokenIds.length > 0
         ? `IDs ${tokenIds[0].toString()}–${tokenIds[tokenIds.length - 1].toString()}`
         : 'No tokens';
+  const walletScanSuffix = walletScanLimitActive
+    ? ` · scanned last ${WALLET_TOKEN_SCAN_LIMIT} IDs`
+    : '';
   const walletRangeLabel = !hasWalletTarget
     ? 'No wallet selected'
     : lastTokenQuery.isError
@@ -2538,8 +2921,8 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       : lastTokenQuery.isLoading || !walletTokenListSettled
         ? 'Loading...'
         : ownedTokens.length === 0
-          ? 'No tokens'
-          : `Showing ${pageIndex * PAGE_SIZE + 1}–${pageIndex * PAGE_SIZE + pageTokens.length} of ${ownedTokens.length}`;
+          ? `No tokens${walletScanSuffix}`
+          : `Showing ${pageIndex * PAGE_SIZE + 1}–${pageIndex * PAGE_SIZE + pageTokens.length} of ${ownedTokens.length}${walletScanSuffix}`;
   const rangeLabel = isWalletView ? walletRangeLabel : collectionRangeLabel;
   const displayPageIndex = isWalletView ? pageIndex : activePageIndex;
 
@@ -2724,6 +3107,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
                   <div className="token-grid square-frame__content">
                     {pageTokens.map((token) => {
                       const tokenClient = resolveTokenClient(token);
+                      const fallbackClient = resolveContentFallbackClient(token);
                       const tokenContractId = resolveTokenContractId(token);
                       const tokenListing = getTokenListing(token);
                       return (
@@ -2739,6 +3123,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
                           onCancelListing={handleCancelListing}
                           marketActionPending={marketActionPending}
                           client={tokenClient}
+                          fallbackClient={fallbackClient}
                           senderAddress={props.senderAddress}
                           contractId={tokenContractId}
                           isActiveTab={props.isActiveTab}
@@ -2756,6 +3141,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
                       if (slot.id !== null && slot.query?.data) {
                         const token = slot.query.data;
                         const tokenClient = resolveTokenClient(token);
+                        const fallbackClient = resolveContentFallbackClient(token);
                         const tokenContractId = resolveTokenContractId(token);
                         const tokenListing = getTokenListing(token);
                         return (
@@ -2771,6 +3157,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
                             onCancelListing={handleCancelListing}
                             marketActionPending={marketActionPending}
                             client={tokenClient}
+                            fallbackClient={fallbackClient}
                             senderAddress={props.senderAddress}
                             contractId={tokenContractId}
                             isActiveTab={props.isActiveTab}
@@ -2807,6 +3194,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
         viewerContractId={contractId}
         senderAddress={props.senderAddress}
         client={resolveTokenClient(resolvedSelectedToken ?? null)}
+        fallbackClient={resolveContentFallbackClient(resolvedSelectedToken ?? null)}
         walletSession={props.walletSession}
         mode={props.mode}
         isActiveTab={props.isActiveTab}
@@ -2821,6 +3209,10 @@ export default function ViewerScreen(props: ViewerScreenProps) {
         isMobile={isMobile}
         mobilePanel={mobilePanel}
         onRequestGrid={handleMobileGridRequest}
+        knownChildren={knownChildren}
+        lastTokenId={lastTokenId}
+        onAddParentDraft={props.onAddParentDraft}
+        onSelectToken={handleSelectToken}
         marketActionStatus={marketActionStatus}
         marketActionPending={marketActionPending}
         onBuyListing={handleBuyListing}

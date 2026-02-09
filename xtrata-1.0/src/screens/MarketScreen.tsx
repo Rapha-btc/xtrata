@@ -1372,10 +1372,18 @@ export default function MarketScreen(props: MarketScreenProps) {
                       !isSeller &&
                       !buyPending;
                     const canQuickCancel = canTransact && isSeller && !cancelPending;
+                    const handleSelectListing = () => {
+                      setSelectedListingId(listing.listingId);
+                      setBuyListingIdInput(listing.listingId.toString());
+                      setCancelListingIdInput(listing.listingId.toString());
+                      setBuyListingTouched(false);
+                      setCancelListingTouched(false);
+                    };
                     return (
                       <div
-                        className={`market-listing-card${isCardSelected ? ' market-listing-card--active' : ''}`}
+                        className={`market-listing-card market-listing-card--clickable${isCardSelected ? ' market-listing-card--active' : ''}`}
                         key={listing.listingId.toString()}
+                        onClick={handleSelectListing}
                       >
                         <div className="market-listing-card__frame">
                           <div className="market-listing-card__media">
@@ -1430,13 +1438,7 @@ export default function MarketScreen(props: MarketScreenProps) {
                           <button
                             className="button button--ghost button--mini"
                             type="button"
-                            onClick={() => {
-                              setSelectedListingId(listing.listingId);
-                              setBuyListingIdInput(listing.listingId.toString());
-                              setCancelListingIdInput(listing.listingId.toString());
-                              setBuyListingTouched(false);
-                              setCancelListingTouched(false);
-                            }}
+                            onClick={handleSelectListing}
                           >
                             Details
                           </button>
@@ -1603,14 +1605,15 @@ export default function MarketScreen(props: MarketScreenProps) {
                     {lookupToken ? (
                       <TokenCardMedia
                         token={lookupToken}
-                        contractId={
-                          displayedListing?.nftContract ?? nftContractId
-                        }
+                        contractId={displayedListing?.nftContract ?? nftContractId}
                         senderAddress={readOnlySender}
                         client={resolveListingClient(
                           displayedListing?.nftContract
                         )}
                         isActiveTab={!props.collapsed}
+                        pixelateOnUpscale
+                        preferFullResolution
+                        letterboxNonSquare
                       />
                     ) : (
                       <div className="token-card__placeholder">

@@ -48,6 +48,34 @@ for the definitive implementation.
    - Use `get-dependencies(id)` to read the on-chain dependency list.
    - Fetch content by chunk for deterministic reconstruction.
 
+## In-app minting (multi-parent support)
+
+The mint screen now supports multiple parents:
+
+- Enter parent IDs as comma/space/newline separated values.
+- The UI validates IDs (non-negative integers, max 50, deduped).
+- If a delegate parent is set, it is merged into the same canonical list.
+- The canonical list is persisted in the mint attempt cache, so a reload
+  preserves your parent selections.
+- When at least one parent is present, the app uses `seal-recursive`.
+  Otherwise it uses `seal-inscription`.
+
+## Viewer relationships (parents + children)
+
+The viewer shows relationships in both directions:
+
+- **Parents**: read directly from `get-dependencies(id)` (authoritative).
+- **Children**: derived from known tokens in the current grid + an explicit
+  user-triggered scan of the collection (no automatic background scans).
+
+The scan is bounded and cancellable to avoid excessive read-only traffic.
+
+## Batch mint scope
+
+The current batch mint flow (`seal-inscription-batch`) does not support
+dependencies. To mint a recursive inscription today, use the standard
+single-item mint flow and `seal-recursive`.
+
 ## Code examples
 
 ### 1) Chunking + expected hash

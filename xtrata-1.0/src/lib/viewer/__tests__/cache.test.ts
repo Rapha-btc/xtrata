@@ -3,6 +3,7 @@ import {
   buildInscriptionCacheKey,
   buildInscriptionTempCacheKey,
   buildInscriptionPreviewCacheKey,
+  buildTokenSummaryCacheKey,
   clearInscriptionCache
 } from '../cache';
 
@@ -28,6 +29,11 @@ describe('viewer cache', () => {
   it('builds temp cache keys with contract id and token id', () => {
     const key = buildInscriptionTempCacheKey('SP123.fake-contract', 42n);
     expect(key).toBe('inscription-temp:SP123.fake-contract:42');
+  });
+
+  it('builds token summary cache keys with contract id and token id', () => {
+    const key = buildTokenSummaryCacheKey('SP123.fake-contract', 42n);
+    expect(key).toBe('token-summary:SP123.fake-contract:42');
   });
 
   it('reports unavailable when indexedDB is missing', async () => {

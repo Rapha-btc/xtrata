@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { XtrataClient } from '../lib/contract/client';
+import { getContractId } from '../lib/contract/config';
 import type { StreamStatus, TokenSummary } from '../lib/viewer/types';
 import {
   fetchOnChainContent,
@@ -53,6 +54,7 @@ type TokenContentPreviewProps = {
   contractId: string;
   senderAddress: string;
   client: XtrataClient;
+  fallbackClient?: XtrataClient | null;
   isActiveTab?: boolean;
   showDetailsDrawer?: boolean;
   onRequestViewer?: () => void;
@@ -169,9 +171,20 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     mediaKind === 'svg' && props.token.svgDataUri
       ? props.token.svgDataUri
       : null;
+  const fallbackContentContractId = useMemo(
+    () =>
+      props.fallbackClient
+        ? getContractId(props.fallbackClient.contract)
+        : 'none',
+    [props.fallbackClient]
+  );
   const contentQueryKey = useMemo(
-    () => getTokenContentKey(props.contractId, props.token.id),
-    [props.contractId, props.token.id]
+    () => [
+      ...getTokenContentKey(props.contractId, props.token.id),
+      'chunk-source',
+      fallbackContentContractId
+    ],
+    [props.contractId, props.token.id, fallbackContentContractId]
   );
   const streamStatusKey = useMemo(
     () => [
@@ -287,6 +300,8 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
       }
       return fetchOnChainContent({
         client: props.client,
+        fallbackClient: props.fallbackClient ?? null,
+        cacheContractId: props.contractId,
         id: props.token.id,
         senderAddress: props.senderAddress,
         totalSize: props.token.meta.totalSize,

@@ -4,6 +4,10 @@ import { getContractId } from '../contract/config';
 import type { XtrataClient } from '../contract/client';
 import type { TokenSummary } from './types';
 import { buildTokenRange } from './model';
+import {
+  loadTokenSummaryFromCache,
+  saveTokenSummaryToCache
+} from './cache';
 
 export const getViewerKey = (contractId: string) => ['viewer', contractId];
 export const getLastTokenIdKey = (contractId: string) => [
@@ -47,12 +51,33 @@ const safeRead = async <T>(
   }
 };
 
+const normalizePrincipal = (value?: string | null) => {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return null;
+  }
+  return trimmed.toUpperCase();
+};
+
+const isSamePrincipal = (left?: string | null, right?: string | null) => {
+  const normalizedLeft = normalizePrincipal(left);
+  const normalizedRight = normalizePrincipal(right);
+  if (!normalizedLeft || !normalizedRight) {
+    return false;
+  }
+  return normalizedLeft === normalizedRight;
+};
+
 export const fetchTokenSummary = async (params: {
   client: XtrataClient;
   id: bigint;
   senderAddress: string;
 }): Promise<TokenSummary> => {
   const sourceContractId = getContractId(params.client.contract);
+  const cached = await loadTokenSummaryFromCache(sourceContractId, params.id);
+  if (cached) {
+    return cached;
+  }
   const [meta, tokenUri] = await Promise.all([
     safeRead(
       () => params.client.getInscriptionMeta(params.id, params.senderAddress),
@@ -80,7 +105,7 @@ export const fetchTokenSummary = async (params: {
       )
     : null;
 
-  return {
+  const summary: TokenSummary = {
     id: params.id,
     meta,
     tokenUri,
@@ -88,6 +113,8 @@ export const fetchTokenSummary = async (params: {
     svgDataUri,
     sourceContractId
   };
+  void saveTokenSummaryToCache(sourceContractId, params.id, summary);
+  return summary;
 };
 
 const isEmptySummary = (summary: TokenSummary) =>
@@ -121,11 +148,11 @@ export const fetchTokenSummaryWithFallback = async (params: {
       id: params.id,
       senderAddress: params.senderAddress
     });
-    if (
-      primaryAvailable &&
-      escrowOwner &&
-      legacySummary.owner === escrowOwner
-    ) {
+    const shouldCheckPrimaryEscrow = isSamePrincipal(
+      legacySummary.owner,
+      escrowOwner
+    );
+    if (shouldCheckPrimaryEscrow) {
       const primarySummary = await fetchTokenSummary({
         client: params.primaryClient,
         id: params.id,

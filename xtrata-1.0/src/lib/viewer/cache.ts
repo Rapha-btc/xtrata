@@ -1,14 +1,16 @@
 import { logDebug, logInfo, logWarn } from '../utils/logger';
 
 const DB_NAME = 'XtrataCache';
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 const STORE_NAME = 'inscriptions';
 const TEMP_STORE_NAME = 'inscription-temp';
 const PREVIEW_STORE_NAME = 'inscription-previews';
 const THUMBNAIL_STORE_NAME = 'inscription-thumbnails';
+const SUMMARY_STORE_NAME = 'token-summaries';
 export const TEMP_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 export const TEMP_CACHE_MAX_BYTES = 25 * 1024 * 1024;
 export const THUMBNAIL_CACHE_LIMIT = 1000;
+export const SUMMARY_CACHE_TTL_MS = 60 * 60 * 1000;
 
 type CacheValue = {
   data: Uint8Array;
@@ -53,6 +55,29 @@ export type ThumbnailRecord = {
   timestamp: number;
 };
 
+export type TokenSummaryCacheValue = {
+  id: bigint;
+  owner: string | null;
+  tokenUri: string | null;
+  meta: {
+    owner: string;
+    creator: string | null;
+    mimeType: string;
+    totalSize: bigint;
+    totalChunks: bigint;
+    sealed: boolean;
+    finalHash: Uint8Array;
+  } | null;
+  svgDataUri: string | null;
+  sourceContractId?: string;
+};
+
+type TokenSummaryRecord = {
+  id: string;
+  value: TokenSummaryCacheValue;
+  timestamp: number;
+};
+
 let dbPromise: Promise<IDBDatabase | null> | null = null;
 
 const isIndexedDbAvailable = () =>
@@ -81,6 +106,9 @@ const openDB = () => {
       if (!db.objectStoreNames.contains(THUMBNAIL_STORE_NAME)) {
         db.createObjectStore(THUMBNAIL_STORE_NAME, { keyPath: 'id' });
       }
+      if (!db.objectStoreNames.contains(SUMMARY_STORE_NAME)) {
+        db.createObjectStore(SUMMARY_STORE_NAME, { keyPath: 'id' });
+      }
     };
     request.onsuccess = (event) => {
       resolve((event.target as IDBOpenDBRequest).result);
@@ -106,6 +134,9 @@ export const buildInscriptionPreviewCacheKey = (contractId: string, id: bigint) 
 
 export const buildInscriptionThumbnailCacheKey = (contractId: string, id: bigint) =>
   `inscription-thumb:${contractId}:${id.toString()}`;
+
+export const buildTokenSummaryCacheKey = (contractId: string, id: bigint) =>
+  `token-summary:${contractId}:${id.toString()}`;
 
 export const loadInscriptionFromCache = async (
   contractId: string,
@@ -573,6 +604,80 @@ export const deleteInscriptionThumbnailFromCache = async (
   }
 };
 
+export const loadTokenSummaryFromCache = async (
+  contractId: string,
+  id: bigint,
+  maxAgeMs = SUMMARY_CACHE_TTL_MS
+): Promise<TokenSummaryCacheValue | null> => {
+  const db = await openDB();
+  if (!db || !db.objectStoreNames.contains(SUMMARY_STORE_NAME)) {
+    return null;
+  }
+  const key = buildTokenSummaryCacheKey(contractId, id);
+  return new Promise<TokenSummaryCacheValue | null>((resolve) => {
+    try {
+      const tx = db.transaction([SUMMARY_STORE_NAME], 'readonly');
+      const store = tx.objectStore(SUMMARY_STORE_NAME);
+      const req = store.get(key);
+      req.onsuccess = () => {
+        const record = req.result as TokenSummaryRecord | undefined;
+        if (!record?.value) {
+          resolve(null);
+          return;
+        }
+        const age = Date.now() - record.timestamp;
+        if (age > maxAgeMs) {
+          resolve(null);
+          return;
+        }
+        resolve(record.value);
+      };
+      req.onerror = () => {
+        logWarn('cache', 'Token summary cache read failed', {
+          error: req.error?.message ?? 'unknown',
+          id: id.toString(),
+          contractId
+        });
+        resolve(null);
+      };
+    } catch (error) {
+      logWarn('cache', 'Token summary cache read threw', {
+        error: error instanceof Error ? error.message : String(error),
+        id: id.toString(),
+        contractId
+      });
+      resolve(null);
+    }
+  });
+};
+
+export const saveTokenSummaryToCache = async (
+  contractId: string,
+  id: bigint,
+  value: TokenSummaryCacheValue
+) => {
+  const db = await openDB();
+  if (!db || !db.objectStoreNames.contains(SUMMARY_STORE_NAME)) {
+    return;
+  }
+  const key = buildTokenSummaryCacheKey(contractId, id);
+  try {
+    const tx = db.transaction([SUMMARY_STORE_NAME], 'readwrite');
+    const store = tx.objectStore(SUMMARY_STORE_NAME);
+    store.put({
+      id: key,
+      value,
+      timestamp: Date.now()
+    });
+  } catch (error) {
+    logWarn('cache', 'Token summary cache write failed', {
+      error: error instanceof Error ? error.message : String(error),
+      id: id.toString(),
+      contractId
+    });
+  }
+};
+
 export const clearInscriptionCache = async () => {
   const db = await openDB();
   if (!db) {
@@ -590,6 +695,9 @@ export const clearInscriptionCache = async () => {
       if (db.objectStoreNames.contains(THUMBNAIL_STORE_NAME)) {
         stores.push(THUMBNAIL_STORE_NAME);
       }
+      if (db.objectStoreNames.contains(SUMMARY_STORE_NAME)) {
+        stores.push(SUMMARY_STORE_NAME);
+      }
       const tx = db.transaction(stores, 'readwrite');
       const store = tx.objectStore(STORE_NAME);
       const req = store.clear();
@@ -604,6 +712,10 @@ export const clearInscriptionCache = async () => {
       if (tx.objectStoreNames.contains(THUMBNAIL_STORE_NAME)) {
         const thumbStore = tx.objectStore(THUMBNAIL_STORE_NAME);
         thumbStore.clear();
+      }
+      if (tx.objectStoreNames.contains(SUMMARY_STORE_NAME)) {
+        const summaryStore = tx.objectStore(SUMMARY_STORE_NAME);
+        summaryStore.clear();
       }
       req.onsuccess = () => {
         logInfo('cache', 'Cleared inscription cache');

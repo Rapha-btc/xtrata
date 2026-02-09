@@ -98,7 +98,7 @@ export default function WalletLookupScreen(props: WalletLookupScreenProps) {
             )}
             {showBnsError && (
               <span className="field__error">
-                BNS lookup failed. Try again.
+                BNS lookup is temporarily unavailable. Try again or paste a wallet address directly.
               </span>
             )}
           </label>
