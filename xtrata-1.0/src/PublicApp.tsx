@@ -683,6 +683,7 @@ export default function PublicApp() {
     const initial = buildCollapsedState(false);
     initial['wallet-lookup'] = true;
     initial['wallet-session'] = true;
+    initial['active-contract'] = true;
     return initial;
   });
   const tabGuard = useActiveTabGuard();
@@ -856,7 +857,7 @@ export default function PublicApp() {
       <header className="app__header">
         <div className="app__header-row">
           <h1 className="app__title">
-            XTRATA <span className="app__title-tag"> - STX Data Layer for Bitcoin</span>
+            XTRATA <span className="app__title-tag">  Data Layer for Bitcoin</span>
           </h1>
           <div className="app__toolbar">
             <nav className="app__nav">
@@ -1043,7 +1044,7 @@ export default function PublicApp() {
           </section>
 
           <section
-            className={`panel app-section panel--compact${collapsedSections['active-contract'] ? ' panel--collapsed' : ''}`}
+            className={`panel app-section panel--compact${collapsedSections['active-contract'] !== false ? ' panel--collapsed' : ''}`}
             id="active-contract"
           >
             <div className="panel__header">
