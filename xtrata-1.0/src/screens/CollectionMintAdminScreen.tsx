@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { showContractCall } from '@stacks/connect';
 import {
+  bufferCV,
   boolCV,
   callReadOnlyFunction,
   ClarityType,
@@ -8,6 +9,7 @@ import {
   cvToValue,
   listCV,
   principalCV,
+  stringAsciiCV,
   tupleCV,
   uintCV,
   validateStacksAddress
@@ -56,6 +58,11 @@ type CollectionMintStatus = {
 type AllowlistEntry = {
   owner: string;
   allowance: bigint;
+};
+
+type RegisteredTokenUriEntry = {
+  hashHex: string;
+  tokenUri: string;
 };
 
 const parseStxInput = (value: string, allowZero = false) => {
@@ -183,6 +190,107 @@ const parseAllowlistBatch = (raw: string) => {
   return { entries, errors };
 };
 
+const ASCII_PATTERN = /^[\x00-\x7F]*$/;
+
+const isAscii = (value: string) => ASCII_PATTERN.test(value);
+
+const normalizeHashHex = (value: string) => {
+  const trimmed = value.trim().toLowerCase();
+  const normalized = trimmed.startsWith('0x') ? trimmed.slice(2) : trimmed;
+  if (!/^[0-9a-f]{64}$/.test(normalized)) {
+    return null;
+  }
+  return normalized;
+};
+
+const hashHexToBufferCv = (hashHex: string) => {
+  const bytes = new Uint8Array(32);
+  for (let index = 0; index < 32; index += 1) {
+    bytes[index] = Number.parseInt(hashHex.slice(index * 2, index * 2 + 2), 16);
+  }
+  return bufferCV(bytes);
+};
+
+const parseRegisteredUriBatch = (raw: string) => {
+  const entries: RegisteredTokenUriEntry[] = [];
+  const errors: string[] = [];
+  const lines = raw
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  lines.forEach((line, index) => {
+    const match = line.match(/^([^,\s]+)[,\s]+(.+)$/);
+    if (!match) {
+      errors.push(`Line ${index + 1} must be "hash uri".`);
+      return;
+    }
+    const hashHex = normalizeHashHex(match[1] ?? '');
+    if (!hashHex) {
+      errors.push(`Line ${index + 1} has an invalid hash (expect 64 hex chars).`);
+      return;
+    }
+    const tokenUri = (match[2] ?? '').trim();
+    if (!tokenUri) {
+      errors.push(`Line ${index + 1} is missing a token URI.`);
+      return;
+    }
+    if (tokenUri.length > 256) {
+      errors.push(`Line ${index + 1} token URI exceeds 256 chars.`);
+      return;
+    }
+    if (!isAscii(tokenUri)) {
+      errors.push(`Line ${index + 1} token URI must be ASCII.`);
+      return;
+    }
+    entries.push({ hashHex, tokenUri });
+  });
+
+  if (entries.length > 200) {
+    errors.push('Registered token URI batch limit is 200 entries.');
+  }
+
+  return { entries, errors };
+};
+
+const isMissingFunctionError = (message: string) =>
+  /NoSuchPublicFunction|NoSuchContractFunction|does not exist|Unknown function/i.test(
+    message
+  );
+
+type InfoTipProps = {
+  text: string;
+  label: string;
+};
+
+const InfoTip = ({ text, label }: InfoTipProps) => (
+  <span className="info-tip">
+    <button type="button" className="info-tip__icon" aria-label={label}>
+      i
+    </button>
+    <span className="info-tip__bubble" role="tooltip">
+      {text}
+    </span>
+  </span>
+);
+
+type LabelWithInfoProps = {
+  label: string;
+  info: string;
+  tone: 'field' | 'meta';
+};
+
+const LabelWithInfo = ({ label, info, tone }: LabelWithInfoProps) => {
+  const className =
+    tone === 'field' ? 'field__label info-label' : 'meta-label info-label';
+  return (
+    <span className={className}>
+      <span>{label}</span>
+      <InfoTip text={info} label={`About ${label}`} />
+    </span>
+  );
+};
+
 export default function CollectionMintAdminScreen(
   props: CollectionMintAdminScreenProps
 ) {
@@ -216,6 +324,24 @@ export default function CollectionMintAdminScreen(
     null
   );
   const [allowlistStatusLoading, setAllowlistStatusLoading] = useState(false);
+  const [uriControlsSupported, setUriControlsSupported] = useState<boolean | null>(
+    null
+  );
+  const [defaultTokenUriInput, setDefaultTokenUriInput] = useState('');
+  const [registeredTokenUriHashInput, setRegisteredTokenUriHashInput] =
+    useState('');
+  const [registeredTokenUriValueInput, setRegisteredTokenUriValueInput] =
+    useState('');
+  const [registeredTokenUriBatchInput, setRegisteredTokenUriBatchInput] =
+    useState('');
+  const [registeredTokenUriStatus, setRegisteredTokenUriStatus] = useState<{
+    exists: boolean;
+    tokenUri: string | null;
+  } | null>(null);
+  const [registeredTokenUriStatusMessage, setRegisteredTokenUriStatusMessage] =
+    useState<string | null>(null);
+  const [registeredTokenUriStatusLoading, setRegisteredTokenUriStatusLoading] =
+    useState(false);
   const [transferOwnerInput, setTransferOwnerInput] = useState('');
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
@@ -287,12 +413,24 @@ export default function CollectionMintAdminScreen(
     setStatusMessage(null);
     setAllowlistStatus(null);
     setAllowlistStatusMessage(null);
+    setUriControlsSupported(null);
+    setDefaultTokenUriInput('');
+    setRegisteredTokenUriHashInput('');
+    setRegisteredTokenUriValueInput('');
+    setRegisteredTokenUriBatchInput('');
+    setRegisteredTokenUriStatus(null);
+    setRegisteredTokenUriStatusMessage(null);
   }, [collectionAddress, collectionName]);
 
   useEffect(() => {
     setAllowlistStatus(null);
     setAllowlistStatusMessage(null);
   }, [allowlistAddressInput]);
+
+  useEffect(() => {
+    setRegisteredTokenUriStatus(null);
+    setRegisteredTokenUriStatusMessage(null);
+  }, [registeredTokenUriHashInput]);
 
   useEffect(() => {
     if (!status) {
@@ -457,6 +595,26 @@ export default function CollectionMintAdminScreen(
       };
 
       setStatus(nextStatus);
+
+      try {
+        const defaultTokenUriCv = await callCollectionReadOnly(
+          'get-default-token-uri'
+        );
+        const defaultTokenUri = toPrimitive(defaultTokenUriCv);
+        if (typeof defaultTokenUri === 'string') {
+          setUriControlsSupported(true);
+          if (!defaultTokenUriInput.trim()) {
+            setDefaultTokenUriInput(defaultTokenUri);
+          }
+        } else {
+          setUriControlsSupported(false);
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (isMissingFunctionError(message)) {
+          setUriControlsSupported(false);
+        }
+      }
 
       if (coreSupportsAllowlist && collectionContractId) {
         const network = toStacksNetwork(props.contract.network);
@@ -699,6 +857,148 @@ export default function CollectionMintAdminScreen(
     }
   };
 
+  const getRegisteredHashInput = () => {
+    const normalized = normalizeHashHex(registeredTokenUriHashInput);
+    if (!normalized) {
+      setActionMessage('Enter a valid hash (64 hex chars, optional 0x prefix).');
+      return null;
+    }
+    return normalized;
+  };
+
+  const handleSetDefaultTokenUri = async () => {
+    const tokenUri = defaultTokenUriInput.trim();
+    if (tokenUri.length > 256) {
+      setActionMessage('Default token URI must be 256 chars or fewer.');
+      return;
+    }
+    if (!isAscii(tokenUri)) {
+      setActionMessage('Default token URI must be ASCII.');
+      return;
+    }
+    await runAction('Set default token URI', () =>
+      requestCollectionCall({
+        functionName: 'set-default-token-uri',
+        functionArgs: [stringAsciiCV(tokenUri)]
+      })
+    );
+  };
+
+  const handleSetRegisteredTokenUri = async () => {
+    const hashHex = getRegisteredHashInput();
+    if (!hashHex) {
+      return;
+    }
+    const tokenUri = registeredTokenUriValueInput.trim();
+    if (!tokenUri) {
+      setActionMessage('Enter a token URI for this hash.');
+      return;
+    }
+    if (tokenUri.length > 256) {
+      setActionMessage('Token URI must be 256 chars or fewer.');
+      return;
+    }
+    if (!isAscii(tokenUri)) {
+      setActionMessage('Token URI must be ASCII.');
+      return;
+    }
+    await runAction('Set registered token URI', () =>
+      requestCollectionCall({
+        functionName: 'set-registered-token-uri',
+        functionArgs: [hashHexToBufferCv(hashHex), stringAsciiCV(tokenUri)]
+      })
+    );
+  };
+
+  const handleClearRegisteredTokenUri = async () => {
+    const hashHex = getRegisteredHashInput();
+    if (!hashHex) {
+      return;
+    }
+    await runAction('Clear registered token URI', () =>
+      requestCollectionCall({
+        functionName: 'clear-registered-token-uri',
+        functionArgs: [hashHexToBufferCv(hashHex)]
+      })
+    );
+  };
+
+  const handleLoadRegisteredTokenUriStatus = async () => {
+    if (!collectionContract) {
+      setRegisteredTokenUriStatusMessage('Enter a collection contract first.');
+      return;
+    }
+    const hashHex = normalizeHashHex(registeredTokenUriHashInput);
+    if (!hashHex) {
+      setRegisteredTokenUriStatusMessage(
+        'Enter a valid hash (64 hex chars, optional 0x prefix).'
+      );
+      return;
+    }
+    setRegisteredTokenUriStatusLoading(true);
+    setRegisteredTokenUriStatusMessage(null);
+    try {
+      const entryCv = await callCollectionReadOnly('get-registered-token-uri', [
+        hashHexToBufferCv(hashHex)
+      ]);
+      if (entryCv.type === ClarityType.OptionalSome) {
+        const entryRaw = cvToValue(entryCv.value) as {
+          value?: { 'token-uri'?: { value?: string } };
+          'token-uri'?: { value?: string };
+        };
+        const tokenUri =
+          entryRaw?.value?.['token-uri']?.value ??
+          entryRaw?.['token-uri']?.value ??
+          null;
+        setRegisteredTokenUriStatus({
+          exists: true,
+          tokenUri: tokenUri ?? null
+        });
+        if (tokenUri && !registeredTokenUriValueInput.trim()) {
+          setRegisteredTokenUriValueInput(tokenUri);
+        }
+      } else {
+        setRegisteredTokenUriStatus({ exists: false, tokenUri: null });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (isMissingFunctionError(message)) {
+        setUriControlsSupported(false);
+      }
+      setRegisteredTokenUriStatusMessage(
+        `Failed to load registered URI: ${message}`
+      );
+    } finally {
+      setRegisteredTokenUriStatusLoading(false);
+    }
+  };
+
+  const handleSetRegisteredTokenUriBatch = async () => {
+    const parsed = parseRegisteredUriBatch(registeredTokenUriBatchInput);
+    if (parsed.errors.length > 0) {
+      setActionMessage(parsed.errors.join(' '));
+      return;
+    }
+    if (parsed.entries.length === 0) {
+      setActionMessage('Provide at least one hash + token URI entry.');
+      return;
+    }
+    const entriesCv = listCV(
+      parsed.entries.map((entry) =>
+        tupleCV({
+          hash: hashHexToBufferCv(entry.hashHex),
+          'token-uri': stringAsciiCV(entry.tokenUri)
+        })
+      )
+    );
+    await runAction('Set registered token URI batch', () =>
+      requestCollectionCall({
+        functionName: 'set-registered-token-uri-batch',
+        functionArgs: [entriesCv]
+      })
+    );
+  };
+
   const handlePauseToggle = async (value: boolean) => {
     await runAction(value ? 'Pause mint' : 'Unpause mint', () =>
       requestCollectionCall({
@@ -750,7 +1050,13 @@ export default function CollectionMintAdminScreen(
     >
       <div className="panel__header">
         <div>
-          <h2>Collection mint admin</h2>
+          <div className="info-heading">
+            <h2>Collection mint admin</h2>
+            <InfoTip
+              label="About collection mint admin"
+              text="Admin controls for deployed collection mint contracts, including pricing, allowlist policy, URI mapping, ownership, and core allowlisting."
+            />
+          </div>
           <p>
             Configure per-collection mint contracts, then allowlist them in the
             core Xtrata contract when ready.
@@ -772,9 +1078,17 @@ export default function CollectionMintAdminScreen(
       </div>
       <div className="panel__body">
         <div className="mint-panel">
-          <span className="meta-label">1. Identify collection contract</span>
+          <LabelWithInfo
+            tone="meta"
+            label="1. Identify collection contract"
+            info="Set the deployed collection mint contract address and contract name you want to manage in this panel."
+          />
           <label className="field">
-            <span className="field__label">Collection contract address</span>
+            <LabelWithInfo
+              tone="field"
+              label="Collection contract address"
+              info="The Stacks address that owns the deployed collection mint contract."
+            />
             <input
               className="input"
               placeholder="ST..."
@@ -783,7 +1097,11 @@ export default function CollectionMintAdminScreen(
             />
           </label>
           <label className="field">
-            <span className="field__label">Collection contract name</span>
+            <LabelWithInfo
+              tone="field"
+              label="Collection contract name"
+              info="The exact deployed contract name, for example xtrata-collection-mint-v1-1."
+            />
             <input
               className="input"
               placeholder="xtrata-collection-mint-v1-0"
@@ -809,16 +1127,28 @@ export default function CollectionMintAdminScreen(
         </div>
 
         <div className="mint-panel">
-          <span className="meta-label">Current settings</span>
+          <LabelWithInfo
+            tone="meta"
+            label="Current settings"
+            info="Live on-chain values read from the selected collection contract."
+          />
           <div className="meta-grid meta-grid--dense">
             <div>
-              <span className="meta-label">Owner</span>
+              <LabelWithInfo
+                tone="meta"
+                label="Owner"
+                info="Wallet that can update admin settings when the contract is not finalized."
+              />
               <span className="meta-value">
                 {status?.owner ?? 'Unknown'}
               </span>
             </div>
             <div>
-              <span className="meta-label">Paused</span>
+              <LabelWithInfo
+                tone="meta"
+                label="Paused"
+                info="When paused, mint calls are blocked until unpaused by the owner."
+              />
               <span className="meta-value">
                 {status?.paused === null || status?.paused === undefined
                   ? 'Unknown'
@@ -828,31 +1158,51 @@ export default function CollectionMintAdminScreen(
               </span>
             </div>
             <div>
-              <span className="meta-label">Mint price</span>
+              <LabelWithInfo
+                tone="meta"
+                label="Mint price"
+                info="Current mint cost per token in STX."
+              />
               <span className="meta-value">
                 {formatMicroStxValue(status?.mintPrice ?? null)}
               </span>
             </div>
             <div>
-              <span className="meta-label">Max supply</span>
+              <LabelWithInfo
+                tone="meta"
+                label="Max supply"
+                info="Maximum number of tokens this collection contract can mint."
+              />
               <span className="meta-value">
                 {status?.maxSupply?.toString() ?? 'Unknown'}
               </span>
             </div>
             <div>
-              <span className="meta-label">Minted</span>
+              <LabelWithInfo
+                tone="meta"
+                label="Minted"
+                info="Count of tokens already minted through this collection contract."
+              />
               <span className="meta-value">
                 {status?.mintedCount?.toString() ?? 'Unknown'}
               </span>
             </div>
             <div>
-              <span className="meta-label">Reserved</span>
+              <LabelWithInfo
+                tone="meta"
+                label="Reserved"
+                info="Active mint reservations that are not yet sealed."
+              />
               <span className="meta-value">
                 {status?.reservedCount?.toString() ?? 'Unknown'}
               </span>
             </div>
             <div>
-              <span className="meta-label">Allowlist enabled</span>
+              <LabelWithInfo
+                tone="meta"
+                label="Allowlist enabled"
+                info="If enabled, only addresses with an allowance entry can reserve and mint."
+              />
               <span className="meta-value">
                 {status?.allowlistEnabled === null ||
                 status?.allowlistEnabled === undefined
@@ -863,7 +1213,11 @@ export default function CollectionMintAdminScreen(
               </span>
             </div>
             <div>
-              <span className="meta-label">Finalized</span>
+              <LabelWithInfo
+                tone="meta"
+                label="Finalized"
+                info="Finalized contracts are permanently locked and cannot mint or change settings."
+              />
               <span className="meta-value">
                 {status?.finalized === null || status?.finalized === undefined
                   ? 'Unknown'
@@ -873,26 +1227,54 @@ export default function CollectionMintAdminScreen(
               </span>
             </div>
             <div>
-              <span className="meta-label">Max per wallet</span>
+              <LabelWithInfo
+                tone="meta"
+                label="Max per wallet"
+                info="Per-address mint cap. A value of 0 means no wallet cap."
+              />
               <span className="meta-value">
                 {status?.maxPerWallet?.toString() ?? 'Unknown'}
               </span>
             </div>
+            {uriControlsSupported && (
+              <div>
+                <LabelWithInfo
+                  tone="meta"
+                  label="Default token URI"
+                  info="URI returned when no registered hash override exists and no mint-supplied URI is used."
+                />
+                <span className="meta-value">
+                  {defaultTokenUriInput || '(blank)'}
+                </span>
+              </div>
+            )}
           </div>
           {status?.recipients && (
             <div className="meta-grid meta-grid--dense">
               <div>
-                <span className="meta-label">Artist</span>
+                <LabelWithInfo
+                  tone="meta"
+                  label="Artist"
+                  info="Recipient address for the artist payout split."
+                />
                 <span className="meta-value">{status.recipients.artist}</span>
               </div>
               <div>
-                <span className="meta-label">Marketplace</span>
+                <LabelWithInfo
+                  tone="meta"
+                  label="Marketplace"
+                  info="Recipient address for marketplace payout split."
+                />
                 <span className="meta-value">
                   {status.recipients.marketplace}
                 </span>
               </div>
               <div>
-                <span className="meta-label">Operator</span>
+                <LabelWithInfo
+                  tone="meta"
+                  label="Operator"
+                  info="Recipient address for operator payout split."
+                />
                 <span className="meta-value">{status.recipients.operator}</span>
               </div>
             </div>
@@ -900,19 +1282,31 @@ export default function CollectionMintAdminScreen(
           {status?.splits && (
             <div className="meta-grid meta-grid--dense">
               <div>
-                <span className="meta-label">Artist split</span>
+                <LabelWithInfo
+                  tone="meta"
+                  label="Artist split"
+                  info="Artist payout basis points out of 10,000."
+                />
                 <span className="meta-value">
                   {status.splits.artist.toString()} bps
                 </span>
               </div>
               <div>
-                <span className="meta-label">Marketplace split</span>
+                <LabelWithInfo
+                  tone="meta"
+                  label="Marketplace split"
+                  info="Marketplace payout basis points out of 10,000."
+                />
                 <span className="meta-value">
                   {status.splits.marketplace.toString()} bps
                 </span>
               </div>
               <div>
-                <span className="meta-label">Operator split</span>
+                <LabelWithInfo
+                  tone="meta"
+                  label="Operator split"
+                  info="Operator payout basis points out of 10,000."
+                />
                 <span className="meta-value">
                   {status.splits.operator.toString()} bps
                 </span>
@@ -932,9 +1326,17 @@ export default function CollectionMintAdminScreen(
         </div>
 
         <div className="mint-panel">
-          <span className="meta-label">2. Configure mint economics</span>
+          <LabelWithInfo
+            tone="meta"
+            label="2. Configure mint economics"
+            info="Set mint price, supply caps, payout recipients, and payout splits."
+          />
           <label className="field">
-            <span className="field__label">Mint price (STX)</span>
+            <LabelWithInfo
+              tone="field"
+              label="Mint price (STX)"
+              info="Price paid by each minter for one token."
+            />
             <input
               className="input"
               placeholder="0.000000"
@@ -955,7 +1357,11 @@ export default function CollectionMintAdminScreen(
             </button>
           </div>
           <label className="field">
-            <span className="field__label">Max supply</span>
+            <LabelWithInfo
+              tone="field"
+              label="Max supply"
+              info="Hard cap on total mints from this collection contract."
+            />
             <input
               className="input"
               placeholder="50"
@@ -977,7 +1383,11 @@ export default function CollectionMintAdminScreen(
           </div>
           <div className="meta-grid meta-grid--dense">
             <label className="field">
-              <span className="field__label">Artist recipient</span>
+              <LabelWithInfo
+                tone="field"
+                label="Artist recipient"
+                info="Stacks address that receives the artist share of each mint."
+              />
               <input
                 className="input"
                 placeholder="ST..."
@@ -986,7 +1396,11 @@ export default function CollectionMintAdminScreen(
               />
             </label>
             <label className="field">
-              <span className="field__label">Marketplace recipient</span>
+              <LabelWithInfo
+                tone="field"
+                label="Marketplace recipient"
+                info="Stacks address that receives the marketplace share of each mint."
+              />
               <input
                 className="input"
                 placeholder="ST..."
@@ -995,7 +1409,11 @@ export default function CollectionMintAdminScreen(
               />
             </label>
             <label className="field">
-              <span className="field__label">Operator recipient</span>
+              <LabelWithInfo
+                tone="field"
+                label="Operator recipient"
+                info="Stacks address that receives the operator share of each mint."
+              />
               <input
                 className="input"
                 placeholder="ST..."
@@ -1018,7 +1436,11 @@ export default function CollectionMintAdminScreen(
           </div>
           <div className="meta-grid meta-grid--dense">
             <label className="field">
-              <span className="field__label">Artist split (bps)</span>
+              <LabelWithInfo
+                tone="field"
+                label="Artist split (bps)"
+                info="Artist share in basis points. Combined splits must equal 10,000."
+              />
               <input
                 className="input"
                 placeholder="8000"
@@ -1027,7 +1449,11 @@ export default function CollectionMintAdminScreen(
               />
             </label>
             <label className="field">
-              <span className="field__label">Marketplace split (bps)</span>
+              <LabelWithInfo
+                tone="field"
+                label="Marketplace split (bps)"
+                info="Marketplace share in basis points. Combined splits must equal 10,000."
+              />
               <input
                 className="input"
                 placeholder="1000"
@@ -1036,7 +1462,11 @@ export default function CollectionMintAdminScreen(
               />
             </label>
             <label className="field">
-              <span className="field__label">Operator split (bps)</span>
+              <LabelWithInfo
+                tone="field"
+                label="Operator split (bps)"
+                info="Operator share in basis points. Combined splits must equal 10,000."
+              />
               <input
                 className="input"
                 placeholder="1000"
@@ -1058,9 +1488,182 @@ export default function CollectionMintAdminScreen(
         </div>
 
         <div className="mint-panel">
-          <span className="meta-label">3. Allowlist + per-wallet controls</span>
+          <LabelWithInfo
+            tone="meta"
+            label="3. Token URI controls (v1.1+)"
+            info="Configure default and hash-registered token URIs for deterministic token metadata routing."
+          />
+          {uriControlsSupported === false && (
+            <span className="meta-value">
+              This collection contract does not expose v1.1 URI controls.
+            </span>
+          )}
+          {uriControlsSupported !== false && (
+            <>
+              <p className="meta-value">
+                URI precedence: registered hash URI, then default URI, then
+                mint-supplied URI fallback.
+              </p>
+              <label className="field">
+                <LabelWithInfo
+                  tone="field"
+                  label="Default token URI (blank allows mint-supplied fallback)"
+                  info="Project-wide default metadata URI. Leave blank to use URI supplied during mint."
+                />
+                <input
+                  className="input"
+                  placeholder="data:text/plain,project-default"
+                  value={defaultTokenUriInput}
+                  onChange={(event) => setDefaultTokenUriInput(event.target.value)}
+                />
+              </label>
+              <div className="mint-actions">
+                <button
+                  className="button"
+                  type="button"
+                  onClick={() => void handleSetDefaultTokenUri()}
+                  disabled={!canManageCollection || pendingAction !== null}
+                >
+                  {pendingAction === 'Set default token URI'
+                    ? 'Updating...'
+                    : 'Set default URI'}
+                </button>
+              </div>
+              <div className="meta-grid meta-grid--dense">
+                <label className="field">
+                  <LabelWithInfo
+                    tone="field"
+                    label="Content hash (32-byte hex)"
+                    info="SHA-256 content hash key used to register a specific token URI override."
+                  />
+                  <input
+                    className="input"
+                    placeholder="0x..."
+                    value={registeredTokenUriHashInput}
+                    onChange={(event) =>
+                      setRegisteredTokenUriHashInput(event.target.value)
+                    }
+                  />
+                </label>
+                <label className="field">
+                  <LabelWithInfo
+                    tone="field"
+                    label="Registered token URI"
+                    info="Token URI mapped to the content hash above."
+                  />
+                  <input
+                    className="input"
+                    placeholder="ar://..."
+                    value={registeredTokenUriValueInput}
+                    onChange={(event) =>
+                      setRegisteredTokenUriValueInput(event.target.value)
+                    }
+                  />
+                </label>
+              </div>
+              <div className="mint-actions">
+                <button
+                  className="button"
+                  type="button"
+                  onClick={() => void handleSetRegisteredTokenUri()}
+                  disabled={!canManageCollection || pendingAction !== null}
+                >
+                  {pendingAction === 'Set registered token URI'
+                    ? 'Updating...'
+                    : 'Add/update registered URI'}
+                </button>
+                <button
+                  className="button button--ghost"
+                  type="button"
+                  onClick={() => void handleClearRegisteredTokenUri()}
+                  disabled={!canManageCollection || pendingAction !== null}
+                >
+                  {pendingAction === 'Clear registered token URI'
+                    ? 'Clearing...'
+                    : 'Clear registered URI'}
+                </button>
+                <button
+                  className="button button--ghost"
+                  type="button"
+                  onClick={() => void handleLoadRegisteredTokenUriStatus()}
+                  disabled={registeredTokenUriStatusLoading || !collectionContract}
+                >
+                  {registeredTokenUriStatusLoading ? 'Checking...' : 'Check hash'}
+                </button>
+              </div>
+              {registeredTokenUriStatus && (
+                <div className="meta-grid meta-grid--dense">
+                  <div>
+                    <LabelWithInfo
+                      tone="meta"
+                      label="Registered"
+                      info="Whether the selected hash currently has a stored URI override."
+                    />
+                    <span className="meta-value">
+                      {registeredTokenUriStatus.exists ? 'Yes' : 'No'}
+                    </span>
+                  </div>
+                  <div>
+                    <LabelWithInfo
+                      tone="meta"
+                      label="Resolved URI"
+                      info="URI value currently resolved for the selected content hash."
+                    />
+                    <span className="meta-value">
+                      {registeredTokenUriStatus.tokenUri ?? '—'}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {registeredTokenUriStatusMessage && (
+                <span className="meta-value">{registeredTokenUriStatusMessage}</span>
+              )}
+              <label className="field">
+                <LabelWithInfo
+                  tone="field"
+                  label="Batch register URIs (one per line)"
+                  info="Bulk hash-to-URI registration. Use one line per entry in the format hash URI."
+                />
+                <textarea
+                  className="textarea"
+                  placeholder="0xHASH ar://tx-id"
+                  value={registeredTokenUriBatchInput}
+                  onChange={(event) =>
+                    setRegisteredTokenUriBatchInput(event.target.value)
+                  }
+                />
+                <span className="field__hint">
+                  Format: hash URI. Max 200 entries per batch.
+                </span>
+              </label>
+              <div className="mint-actions">
+                <button
+                  className="button"
+                  type="button"
+                  onClick={() => void handleSetRegisteredTokenUriBatch()}
+                  disabled={!canManageCollection || pendingAction !== null}
+                >
+                  {pendingAction === 'Set registered token URI batch'
+                    ? 'Updating...'
+                    : 'Apply URI batch'}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="mint-panel">
+          <LabelWithInfo
+            tone="meta"
+            label="4. Allowlist + per-wallet controls"
+            info="Configure who can mint and how many mints each wallet can reserve."
+          />
           <label className="field">
-            <span className="field__label">Allowlist enabled</span>
+            <LabelWithInfo
+              tone="field"
+              label="Allowlist enabled"
+              info="Toggle gated minting. Enabled means only listed addresses can mint."
+            />
             <select
               className="select"
               value={allowlistEnabledInput || 'false'}
@@ -1083,7 +1686,11 @@ export default function CollectionMintAdminScreen(
             </button>
           </div>
           <label className="field">
-            <span className="field__label">Max per wallet (0 = no cap)</span>
+            <LabelWithInfo
+              tone="field"
+              label="Max per wallet (0 = no cap)"
+              info="Maximum tokens each wallet can mint from this collection. Use 0 for no wallet cap."
+            />
             <input
               className="input"
               placeholder="0"
@@ -1104,7 +1711,11 @@ export default function CollectionMintAdminScreen(
             </button>
           </div>
           <label className="field">
-            <span className="field__label">Allowlist address</span>
+            <LabelWithInfo
+              tone="field"
+              label="Allowlist address"
+              info="Stacks address to inspect, add, update, or remove in the allowlist."
+            />
             <input
               className="input"
               placeholder="ST..."
@@ -1113,7 +1724,11 @@ export default function CollectionMintAdminScreen(
             />
           </label>
           <label className="field">
-            <span className="field__label">Allowance</span>
+            <LabelWithInfo
+              tone="field"
+              label="Allowance"
+              info="Maximum mints allowed for the selected address when allowlist mode is enabled."
+            />
             <input
               className="input"
               placeholder="3"
@@ -1154,13 +1769,21 @@ export default function CollectionMintAdminScreen(
           {allowlistStatus && (
             <div className="meta-grid meta-grid--dense">
               <div>
-                <span className="meta-label">Allowlisted</span>
+                <LabelWithInfo
+                  tone="meta"
+                  label="Allowlisted"
+                  info="Shows whether the selected address currently has an allowlist entry."
+                />
                 <span className="meta-value">
                   {allowlistStatus.exists ? 'Yes' : 'No'}
                 </span>
               </div>
               <div>
-                <span className="meta-label">Allowance</span>
+                <LabelWithInfo
+                  tone="meta"
+                  label="Allowance"
+                  info="Configured mint allowance for the selected address."
+                />
                 <span className="meta-value">
                   {allowlistStatus.allowance !== null
                     ? allowlistStatus.allowance.toString()
@@ -1168,13 +1791,21 @@ export default function CollectionMintAdminScreen(
                 </span>
               </div>
               <div>
-                <span className="meta-label">Minted</span>
+                <LabelWithInfo
+                  tone="meta"
+                  label="Minted"
+                  info="Number of mints already completed by the selected allowlist address."
+                />
                 <span className="meta-value">
                   {allowlistStatus.minted?.toString() ?? '0'}
                 </span>
               </div>
               <div>
-                <span className="meta-label">Reserved</span>
+                <LabelWithInfo
+                  tone="meta"
+                  label="Reserved"
+                  info="Number of active mint reservations currently held by this address."
+                />
                 <span className="meta-value">
                   {allowlistStatus.reserved?.toString() ?? '0'}
                 </span>
@@ -1190,7 +1821,11 @@ export default function CollectionMintAdminScreen(
             <span className="meta-value">{allowlistStatusMessage}</span>
           )}
           <label className="field">
-            <span className="field__label">Batch allowlist (one per line)</span>
+            <LabelWithInfo
+              tone="field"
+              label="Batch allowlist (one per line)"
+              info="Bulk allowlist update in the format address allowance, one entry per line."
+            />
             <textarea
               className="textarea"
               placeholder="ST... 3\nST... 1"
@@ -1216,7 +1851,11 @@ export default function CollectionMintAdminScreen(
         </div>
 
         <div className="mint-panel">
-          <span className="meta-label">4. Pause + ownership</span>
+          <LabelWithInfo
+            tone="meta"
+            label="5. Pause + ownership"
+            info="Emergency controls for pausing minting, finalizing the contract, and transferring ownership."
+          />
           <div className="mint-actions">
             <button
               className="button"
@@ -1250,7 +1889,11 @@ export default function CollectionMintAdminScreen(
             settings and minting.
           </p>
           <label className="field">
-            <span className="field__label">Transfer contract ownership</span>
+            <LabelWithInfo
+              tone="field"
+              label="Transfer contract ownership"
+              info="Set a new owner address. The current owner must submit this transaction."
+            />
             <input
               className="input"
               placeholder="ST..."
@@ -1273,14 +1916,22 @@ export default function CollectionMintAdminScreen(
         </div>
 
         <div className="mint-panel">
-          <span className="meta-label">5. Allowlist in Xtrata core</span>
+          <LabelWithInfo
+            tone="meta"
+            label="6. Allowlist in Xtrata core"
+            info="Register this collection contract in the core contract allowlist so it can mint while core is paused."
+          />
           <p className="meta-value">
             Core allowlisting is required before a collection contract can mint
             while the core contract is paused.
           </p>
           <div className="meta-grid meta-grid--dense">
             <div>
-              <span className="meta-label">Core allowlisted</span>
+              <LabelWithInfo
+                tone="meta"
+                label="Core allowlisted"
+                info="Whether this collection contract is currently enabled in Xtrata core allowlist."
+              />
               <span className="meta-value">
                 {coreAllowlisted === null
                   ? 'Unknown'

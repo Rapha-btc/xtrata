@@ -102,6 +102,11 @@ plan:
             path: contracts/xtrata-collection-mint-v1.0.clar
             clarity-version: 3
         - emulated-contract-publish:
+            contract-name: xtrata-collection-mint-v1-1
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/xtrata-collection-mint-v1.1.clar
+            clarity-version: 3
+        - emulated-contract-publish:
             contract-name: xtrata-market-v1-0
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/xtrata-market-v1.0.clar

@@ -138,6 +138,51 @@ const formatStepStatus = (state: StepState) => {
   return 'Idle';
 };
 
+type InfoTipProps = {
+  text: string;
+  label: string;
+};
+
+const InfoTip = ({ text, label }: InfoTipProps) => (
+  <span className="info-tip">
+    <button
+      type="button"
+      className="info-tip__icon"
+      aria-label={label}
+      onMouseDown={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+      }}
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+      }}
+    >
+      i
+    </button>
+    <span className="info-tip__bubble" role="tooltip">
+      {text}
+    </span>
+  </span>
+);
+
+type LabelWithInfoProps = {
+  label: string;
+  info: string;
+  tone: 'field' | 'meta';
+};
+
+const LabelWithInfo = ({ label, info, tone }: LabelWithInfoProps) => {
+  const className =
+    tone === 'field' ? 'field__label info-label' : 'meta-label info-label';
+  return (
+    <span className={className}>
+      <span>{label}</span>
+      <InfoTip text={info} label={`About ${label}`} />
+    </span>
+  );
+};
+
 const runWithConcurrency = async <T, R>(
   items: T[],
   limit: number,
@@ -2186,7 +2231,13 @@ export default function MintScreen(props: MintScreenProps) {
     >
       <div className="panel__header">
         <div>
-          <h2>Mint inscription</h2>
+          <div className="info-heading">
+            <h2>Mint inscription</h2>
+            <InfoTip
+              label="About mint inscription"
+              text="Full inscription workflow: prepare file, review plan and fees, then run init, upload batches, and seal transactions."
+            />
+          </div>
           <p>Upload a file, review fees, and inscribe on-chain.</p>
           <p className="meta-value">
             Public minting is available while the contract is unpaused. Partner
@@ -2209,7 +2260,11 @@ export default function MintScreen(props: MintScreenProps) {
       </div>
       <div className="panel__body">
         <label className="field">
-          <span className="field__label">Select a file</span>
+          <LabelWithInfo
+            tone="field"
+            label="Select a file"
+            info="Choose the asset to inscribe. The file is chunked and uploaded on-chain during mint."
+          />
           <input className="input" type="file" onChange={onFileChange} />
         </label>
         {maxFileBytes !== null && (
@@ -2221,13 +2276,21 @@ export default function MintScreen(props: MintScreenProps) {
 
         {!hideDelegate && (
           <div className="mint-panel mint-delegate">
-            <span className="meta-label">Delegate clone</span>
+            <LabelWithInfo
+              tone="meta"
+              label="Delegate clone"
+              info="Build a lightweight recursive HTML inscription that mirrors content from an existing token ID."
+            />
             <p className="meta-value">
               Generate a tiny recursive HTML wrapper that mirrors an existing
               inscription.
             </p>
             <label className="field">
-              <span className="field__label">Original token ID</span>
+              <LabelWithInfo
+                tone="field"
+                label="Original token ID"
+                info="Token ID to mirror. The generated delegate file reads the target token chunks at render time."
+              />
               <input
                 className="input"
                 placeholder="e.g. 12"
@@ -2271,12 +2334,20 @@ export default function MintScreen(props: MintScreenProps) {
         )}
 
         <div className="mint-panel mint-dependencies">
-          <span className="meta-label">Parents (optional)</span>
+          <LabelWithInfo
+            tone="meta"
+            label="Parents (optional)"
+            info="Parent token IDs create on-chain recursive relationships between inscriptions."
+          />
           <p className="meta-value">
             Add one or more parent IDs to link recursive inscriptions.
           </p>
           <label className="field">
-            <span className="field__label">Parent IDs</span>
+            <LabelWithInfo
+              tone="field"
+              label="Parent IDs"
+              info="Enter one or more existing token IDs separated by spaces, commas, or new lines."
+            />
             <textarea
               className="textarea"
               placeholder="e.g. 12, 48 102"
@@ -2346,7 +2417,11 @@ export default function MintScreen(props: MintScreenProps) {
           )}
           {resolvedDependencyIds.length > 0 && (
             <div className="relation-panel">
-              <span className="meta-label">Parent thumbnails</span>
+              <LabelWithInfo
+                tone="meta"
+                label="Parent thumbnails"
+                info="Preview cards for selected parents, including ownership and migration status checks."
+              />
               {parentStatusSummary.loading.length > 0 && (
                 <span className="meta-value">Loading parent status...</span>
               )}
@@ -2413,7 +2488,11 @@ export default function MintScreen(props: MintScreenProps) {
           <div className="mint-grid">
             <div className="mint-panel">
               <div className="mint-preview__header">
-                <span className="meta-label">Preview</span>
+                <LabelWithInfo
+                  tone="meta"
+                  label="Preview"
+                  info="Local preview of the selected file before any transactions are sent."
+                />
                 <div className="mint-preview__actions">
                   <button
                     type="button"
@@ -2463,39 +2542,71 @@ export default function MintScreen(props: MintScreenProps) {
               </div>
             </div>
             <div className="mint-panel">
-              <span className="meta-label">Inscription plan</span>
+              <LabelWithInfo
+                tone="meta"
+                label="Inscription plan"
+                info="Calculated upload plan and file stats derived from the selected file and mint settings."
+              />
               <div className="mint-kv">
                 <div>
-                  <span className="meta-label">File</span>
+                  <LabelWithInfo
+                    tone="meta"
+                    label="File"
+                    info="Original filename from your local upload."
+                  />
                   <span className="meta-value">{file.name}</span>
                 </div>
                 <div>
-                  <span className="meta-label">Type</span>
+                  <LabelWithInfo
+                    tone="meta"
+                    label="Type"
+                    info="Detected MIME type used when rendering and sealing the inscription."
+                  />
                   <span className="meta-value">
                     {file.type || 'application/octet-stream'}
                   </span>
                 </div>
                 <div>
-                  <span className="meta-label">Size</span>
+                  <LabelWithInfo
+                    tone="meta"
+                    label="Size"
+                    info="Total file bytes that will be committed across inscription chunks."
+                  />
                   <span className="meta-value">
                     {formatBytes(totalBytes)}
                   </span>
                 </div>
                 <div>
-                  <span className="meta-label">Chunks</span>
+                  <LabelWithInfo
+                    tone="meta"
+                    label="Chunks"
+                    info="Number of on-chain chunk records required for this file."
+                  />
                   <span className="meta-value">{chunks.length}</span>
                 </div>
                 <div>
-                  <span className="meta-label">Chunk size</span>
+                  <LabelWithInfo
+                    tone="meta"
+                    label="Chunk size"
+                    info="Per-chunk byte size used by the upload process."
+                  />
                   <span className="meta-value">{CHUNK_SIZE} bytes</span>
                 </div>
                 <div>
-                  <span className="meta-label">Batches</span>
+                  <LabelWithInfo
+                    tone="meta"
+                    label="Batches"
+                    info="Estimated number of upload transactions based on current batch size."
+                  />
                   <span className="meta-value">{uploadBatchCount}</span>
                 </div>
                 {resolvedDependencyIds.length > 0 && (
                   <div>
-                    <span className="meta-label">Parents</span>
+                    <LabelWithInfo
+                      tone="meta"
+                      label="Parents"
+                      info="Resolved parent token IDs that will be linked during seal."
+                    />
                     <span className="meta-value">
                       {resolvedDependencyIds
                         .map((id) => id.toString())
@@ -2505,7 +2616,11 @@ export default function MintScreen(props: MintScreenProps) {
                 )}
                 {expectedHashHex && (
                   <div>
-                    <span className="meta-label">Expected hash</span>
+                    <LabelWithInfo
+                      tone="meta"
+                      label="Expected hash"
+                      info="SHA-256 hash of the file used for integrity and duplicate detection."
+                    />
                     <span className="meta-value mint-hash">
                       {expectedHashHex}
                     </span>
@@ -2519,7 +2634,11 @@ export default function MintScreen(props: MintScreenProps) {
         <div className="mint-settings">
           {!hideTokenUri && (
             <label className="field">
-              <span className="field__label">Token URI (required)</span>
+              <LabelWithInfo
+                tone="field"
+                label="Token URI (required)"
+                info="Metadata URI stored with the inscription. Use a stable URL or ar:// reference."
+              />
               <input
                 className="input"
                 placeholder="https://example.com/metadata.json"
@@ -2560,43 +2679,54 @@ export default function MintScreen(props: MintScreenProps) {
                 <span className="meta-value">{metadataStatus}</span>
               )}
               {!hideMetadataTools && metadataJson && (
-                <details className="mint-metadata" open>
-                  <summary>Generated SIP-016 metadata</summary>
-                  <div className="mint-metadata__body">
-                    <div className="mint-actions">
-                      <button
-                        className="button button--ghost"
-                        type="button"
-                        onClick={() => void copySip16Metadata()}
-                      >
-                        Copy JSON
-                      </button>
-                      <button
-                        className="button button--ghost"
-                        type="button"
-                        onClick={downloadSip16Metadata}
-                      >
-                        Download JSON
-                      </button>
-                      <button
-                        className="button button--ghost"
-                        type="button"
-                        onClick={clearSip16Metadata}
-                      >
-                        Clear
-                      </button>
+                <>
+                  <LabelWithInfo
+                    tone="meta"
+                    label="Generated SIP-016 metadata"
+                    info="Auto-generated metadata JSON template you can copy, download, host, and use as the token URI."
+                  />
+                  <details className="mint-metadata" open>
+                    <summary>View metadata JSON</summary>
+                    <div className="mint-metadata__body">
+                      <div className="mint-actions">
+                        <button
+                          className="button button--ghost"
+                          type="button"
+                          onClick={() => void copySip16Metadata()}
+                        >
+                          Copy JSON
+                        </button>
+                        <button
+                          className="button button--ghost"
+                          type="button"
+                          onClick={downloadSip16Metadata}
+                        >
+                          Download JSON
+                        </button>
+                        <button
+                          className="button button--ghost"
+                          type="button"
+                          onClick={clearSip16Metadata}
+                        >
+                          Clear
+                        </button>
+                      </div>
+                      <pre className="mint-text mint-metadata__pre">
+                        {metadataJson}
+                      </pre>
                     </div>
-                    <pre className="mint-text mint-metadata__pre">
-                      {metadataJson}
-                    </pre>
-                  </div>
-                </details>
+                  </details>
+                </>
               )}
             </label>
           )}
           {!hideBatchSize ? (
             <label className="field">
-              <span className="field__label">Batch size</span>
+              <LabelWithInfo
+                tone="field"
+                label="Batch size"
+                info="How many chunks to include in each upload transaction. Higher values reduce tx count but increase tx size."
+              />
               <select
                 className="select"
                 value={batchSize}
@@ -2614,7 +2744,11 @@ export default function MintScreen(props: MintScreenProps) {
             </label>
           ) : (
             <div className="mint-panel">
-              <span className="meta-label">Batch size</span>
+              <LabelWithInfo
+                tone="meta"
+                label="Batch size"
+                info="Batch size locked by module restrictions for this mint mode."
+              />
               <span className="meta-value">
                 {effectiveBatchSize} chunks / tx
               </span>
@@ -2624,7 +2758,11 @@ export default function MintScreen(props: MintScreenProps) {
 
         <div className="mint-fees">
           <div>
-            <span className="meta-label">Fee unit</span>
+            <LabelWithInfo
+              tone="meta"
+              label="Fee unit"
+              info="Per-call contract fee unit from the active contract. Used to estimate mint contract fees."
+            />
             <span className="meta-value">
               {feeUnitValue !== null ? formatMicroStx(feeUnitValue) : 'Unknown'}
             </span>
@@ -2634,13 +2772,21 @@ export default function MintScreen(props: MintScreenProps) {
             {feeUnitError && <span className="meta-value">{feeUnitError}</span>}
           </div>
           <div>
-            <span className="meta-label">Init fee</span>
+            <LabelWithInfo
+              tone="meta"
+              label="Init fee"
+              info="Estimated contract fee for begin-inscription transaction."
+            />
             <span className="meta-value">
               {formatStx(feeEstimate.beginMicroStx)}
             </span>
           </div>
           <div>
-            <span className="meta-label">Seal fee</span>
+            <LabelWithInfo
+              tone="meta"
+              label="Seal fee"
+              info="Estimated contract fee for upload batches plus final seal call."
+            />
             <span className="meta-value">
               {hasChunks ? (
                 <>
@@ -2656,7 +2802,11 @@ export default function MintScreen(props: MintScreenProps) {
             </span>
           </div>
           <div>
-            <span className="meta-label">Total contract fees</span>
+            <LabelWithInfo
+              tone="meta"
+              label="Total contract fees"
+              info="Estimated total contract-side fees for init, all upload batches, and seal."
+            />
             <span className="meta-value">
               {formatStx(feeEstimate.totalMicroStx)}
             </span>
@@ -2700,25 +2850,49 @@ export default function MintScreen(props: MintScreenProps) {
 
         <div className="mint-steps">
           <div className={`mint-step mint-step--${beginState}`}>
-            <span>1. Initialization</span>
+            <span className="info-label">
+              <span>1. Initialization</span>
+              <InfoTip
+                label="About initialization"
+                text="Starts the inscription and reserves on-chain upload state for this file hash."
+              />
+            </span>
             <span>{formatStepStatus(beginState)}</span>
           </div>
           <div className={`mint-step mint-step--${uploadState}`}>
-            <span>
-              2. Upload batches
-              {batchProgress
-                ? ` (${batchProgress.current}/${batchProgress.total})`
-                : ''}
+            <span className="info-label">
+              <span>
+                2. Upload batches
+                {batchProgress
+                  ? ` (${batchProgress.current}/${batchProgress.total})`
+                  : ''}
+              </span>
+              <InfoTip
+                label="About upload batches"
+                text="Uploads chunk data in sequential batch transactions until all chunks are committed."
+              />
             </span>
             <span>{formatStepStatus(uploadState)}</span>
           </div>
           <div className={`mint-step mint-step--${sealState}`}>
-            <span>3. Seal inscription</span>
+            <span className="info-label">
+              <span>3. Seal inscription</span>
+              <InfoTip
+                label="About seal inscription"
+                text="Finalizes the inscription, locks metadata, and mints the token ID."
+              />
+            </span>
             <span>{formatStepStatus(sealState)}</span>
           </div>
           {formattedTxDelay && (
             <div className="mint-step mint-step--pending mint-step--countdown">
-              <span>Automated sequence</span>
+              <span className="info-label">
+                <span>Automated sequence</span>
+                <InfoTip
+                  label="About automated sequence"
+                  text="After first approval, the app schedules remaining transactions in order with delay guards."
+                />
+              </span>
               <span>
                 {(txDelayLabel ?? 'Next transaction in')} {formattedTxDelay}s
               </span>
