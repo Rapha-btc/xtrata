@@ -675,7 +675,7 @@ export default function App() {
           </section>
 
         <section
-          className={`panel app-section panel--compact${collapsedSections['active-contract'] ? ' panel--collapsed' : ''}`}
+          className={`panel app-section panel--compact${collapsedSections['active-contract'] !== false ? ' panel--collapsed' : ''}`}
           id="active-contract"
         >
             <div className="panel__header">
