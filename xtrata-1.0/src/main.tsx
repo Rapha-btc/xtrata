@@ -10,6 +10,10 @@ import {
   hydrateQueryCache,
   setupQueryCachePersistence
 } from './lib/cache/query-persist';
+import {
+  applyThemeToDocument,
+  resolveInitialTheme
+} from './lib/theme/preferences';
 import './styles/app.css';
 
 const queryClient = new QueryClient({
@@ -39,6 +43,8 @@ const root = document.getElementById('root');
 if (!root) {
   throw new Error('Root element not found');
 }
+
+applyThemeToDocument(resolveInitialTheme());
 
 ReactDOM.createRoot(root).render(
   <React.StrictMode>

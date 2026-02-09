@@ -12,6 +12,14 @@ import { getViewerKey } from './lib/viewer/queries';
 import { createStacksWalletAdapter } from './lib/wallet/adapter';
 import { createWalletSessionStore } from './lib/wallet/session';
 import { getWalletLookupState } from './lib/wallet/lookup';
+import {
+  applyThemeToDocument,
+  coerceThemeMode,
+  resolveInitialTheme,
+  THEME_OPTIONS,
+  type ThemeMode,
+  writeThemePreference
+} from './lib/theme/preferences';
 import { useActiveTabGuard } from './lib/utils/tab-guard';
 import AddressLabel from './components/AddressLabel';
 import MintScreen from './screens/MintScreen';
@@ -119,6 +127,9 @@ const parseDeployContractName = (raw: string) => {
 };
 
 export default function App() {
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() =>
+    resolveInitialTheme()
+  );
   const [selectedContract, setSelectedContract] = useState(() =>
     contractSelectionStore.load()
   );
@@ -262,6 +273,13 @@ export default function App() {
 
   const handleExpandAll = () => {
     setCollapsedSections(buildCollapsedState(false));
+  };
+
+  const handleThemeChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const nextTheme = coerceThemeMode(event.target.value);
+    setThemeMode(nextTheme);
+    applyThemeToDocument(nextTheme);
+    writeThemePreference(nextTheme);
   };
 
   const handleNavJump = (key: SectionKey) => {
@@ -491,6 +509,22 @@ export default function App() {
             </nav>
             <div className="app__controls">
               <div className="app__controls-group">
+                <label className="theme-select" htmlFor="admin-theme-select">
+                  <span className="theme-select__label">Theme</span>
+                  <select
+                    id="admin-theme-select"
+                    className="theme-select__control"
+                    value={themeMode}
+                    onChange={handleThemeChange}
+                    onInput={handleThemeChange}
+                  >
+                    {THEME_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <button
                   className="button button--ghost"
                   type="button"

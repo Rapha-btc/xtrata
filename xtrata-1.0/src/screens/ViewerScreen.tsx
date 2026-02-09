@@ -350,6 +350,7 @@ const TokenDetails = (props: {
   knownChildren: bigint[];
   lastTokenId?: bigint;
   onAddParentDraft?: (id: bigint) => void;
+  onSelectToken: (id: bigint) => void;
   marketActionStatus: string | null;
   marketActionPending: boolean;
   onBuyListing: (token: TokenSummary, listing: MarketActivityEvent) => void;
@@ -823,6 +824,18 @@ const TokenDetails = (props: {
     }
   };
 
+  const relationshipParentsLabel = isWalletView
+    ? 'Unavailable in wallet view.'
+    : dependenciesQuery.isLoading
+      ? 'Loading...'
+      : dependenciesQuery.data && dependenciesQuery.data.length > 0
+        ? dependenciesQuery.data.map((id) => id.toString()).join(', ')
+        : 'None';
+  const relationshipChildrenLabel =
+    combinedChildren.length > 0
+      ? combinedChildren.map((id) => id.toString()).join(', ')
+      : 'None';
+
   if (!props.token) {
     const pendingId = props.selectedTokenId;
     return (
@@ -897,14 +910,135 @@ const TokenDetails = (props: {
         <div className="detail-panel__meta">
           <div className="transfer-panel detail-summary-panel">
             <div>
-              <h3>Details</h3>
-              <p>Core inscription metadata.</p>
+              <h3>Relationships</h3>
+              <p>Token context and linked parent/child inscriptions.</p>
             </div>
             <div className="meta-grid meta-grid--dense">
               <div>
                 <span className="meta-label">Token</span>
                 <span className="meta-value">#{props.token.id.toString()}</span>
               </div>
+              <div>
+                <span className="meta-label">Parents</span>
+                <span className="meta-value">{relationshipParentsLabel}</span>
+              </div>
+              <div>
+                <span className="meta-label">Children</span>
+                <span className="meta-value">{relationshipChildrenLabel}</span>
+              </div>
+            </div>
+            {!isWalletView && parentThumbItems.length > 0 && (
+              <div className="relation-panel">
+                <span className="meta-label">Parent thumbnails</span>
+                <div className="relation-grid">
+                  {parentThumbItems.map((item) => (
+                    <button
+                      key={item.id.toString()}
+                      type="button"
+                      className="relation-card relation-card--button"
+                      onClick={() => props.onSelectToken(item.id)}
+                      aria-label={`View parent token #${item.id.toString()}`}
+                    >
+                      <div className="relation-frame">
+                        {item.summary ? (
+                          <TokenCardMedia
+                            token={item.summary}
+                            contractId={props.contractId}
+                            senderAddress={props.senderAddress}
+                            client={props.client}
+                            isActiveTab={props.isActiveTab}
+                          />
+                        ) : (
+                          <span className="relation-placeholder">
+                            {item.isLoading ? 'Loading...' : 'Unavailable'}
+                          </span>
+                        )}
+                      </div>
+                      <span className="relation-label">
+                        #{item.id.toString()}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                {parentOverflowCount > 0 && (
+                  <span className="meta-value">
+                    +{parentOverflowCount} more parents
+                  </span>
+                )}
+              </div>
+            )}
+            {!isWalletView && childThumbItems.length > 0 && (
+              <div className="relation-panel">
+                <span className="meta-label">Child thumbnails</span>
+                <div className="relation-grid">
+                  {childThumbItems.map((item) => (
+                    <button
+                      key={item.id.toString()}
+                      type="button"
+                      className="relation-card relation-card--button"
+                      onClick={() => props.onSelectToken(item.id)}
+                      aria-label={`View child token #${item.id.toString()}`}
+                    >
+                      <div className="relation-frame">
+                        {item.summary ? (
+                          <TokenCardMedia
+                            token={item.summary}
+                            contractId={props.contractId}
+                            senderAddress={props.senderAddress}
+                            client={props.client}
+                            isActiveTab={props.isActiveTab}
+                          />
+                        ) : (
+                          <span className="relation-placeholder">
+                            {item.isLoading ? 'Loading...' : 'Unavailable'}
+                          </span>
+                        )}
+                      </div>
+                      <span className="relation-label">
+                        #{item.id.toString()}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                {childOverflowCount > 0 && (
+                  <span className="meta-value">
+                    +{childOverflowCount} more children
+                  </span>
+                )}
+              </div>
+            )}
+            <div className="transfer-panel__actions">
+              <button
+                className="button button--ghost button--mini"
+                type="button"
+                onClick={handleScanChildren}
+                disabled={childScanPending || isWalletView}
+              >
+                {childScanPending ? 'Scanning...' : 'Scan full collection'}
+              </button>
+              {childScanPending && (
+                <button
+                  className="button button--ghost button--mini"
+                  type="button"
+                  onClick={handleCancelScan}
+                >
+                  Cancel scan
+                </button>
+              )}
+            </div>
+            {scanProgressLabel && (
+              <span className="meta-value">{scanProgressLabel}</span>
+            )}
+            {childScanStatus && (
+              <span className="meta-value">{childScanStatus}</span>
+            )}
+          </div>
+          <div className="transfer-panel detail-summary-panel">
+            <div>
+              <h3>Details</h3>
+              <p>Owner, creator, and core inscription metadata.</p>
+            </div>
+            <div className="meta-grid meta-grid--dense">
               <div>
                 <span className="meta-label">Owner</span>
                 <span className="meta-value">{detailOwner}</span>
@@ -952,127 +1086,6 @@ const TokenDetails = (props: {
                   Use as parent
                 </button>
               </div>
-            )}
-          </div>
-          <div className="transfer-panel detail-summary-panel">
-            <div>
-              <h3>Relationships</h3>
-              <p>Parents and children linked on-chain.</p>
-            </div>
-            <div className="meta-grid meta-grid--dense">
-              <div>
-                <span className="meta-label">Parents</span>
-                <span className="meta-value">
-                  {isWalletView
-                    ? 'Unavailable in wallet view.'
-                    : dependenciesQuery.isLoading
-                      ? 'Loading...'
-                      : dependenciesQuery.data && dependenciesQuery.data.length > 0
-                        ? dependenciesQuery.data.map((id) => id.toString()).join(', ')
-                        : 'None'}
-                </span>
-              </div>
-              <div>
-                <span className="meta-label">Children</span>
-                <span className="meta-value">
-                  {combinedChildren.length > 0
-                    ? combinedChildren.map((id) => id.toString()).join(', ')
-                    : 'None'}
-                </span>
-              </div>
-            </div>
-            {!isWalletView && parentThumbItems.length > 0 && (
-              <div className="relation-panel">
-                <span className="meta-label">Parent thumbnails</span>
-                <div className="relation-grid">
-                  {parentThumbItems.map((item) => (
-                    <div key={item.id.toString()} className="relation-card">
-                      <div className="relation-frame">
-                        {item.summary ? (
-                          <TokenCardMedia
-                            token={item.summary}
-                            contractId={props.contractId}
-                            senderAddress={props.senderAddress}
-                            client={props.client}
-                            isActiveTab={props.isActiveTab}
-                          />
-                        ) : (
-                          <span className="relation-placeholder">
-                            {item.isLoading ? 'Loading...' : 'Unavailable'}
-                          </span>
-                        )}
-                      </div>
-                      <span className="relation-label">
-                        #{item.id.toString()}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                {parentOverflowCount > 0 && (
-                  <span className="meta-value">
-                    +{parentOverflowCount} more parents
-                  </span>
-                )}
-              </div>
-            )}
-            {!isWalletView && childThumbItems.length > 0 && (
-              <div className="relation-panel">
-                <span className="meta-label">Child thumbnails</span>
-                <div className="relation-grid">
-                  {childThumbItems.map((item) => (
-                    <div key={item.id.toString()} className="relation-card">
-                      <div className="relation-frame">
-                        {item.summary ? (
-                          <TokenCardMedia
-                            token={item.summary}
-                            contractId={props.contractId}
-                            senderAddress={props.senderAddress}
-                            client={props.client}
-                            isActiveTab={props.isActiveTab}
-                          />
-                        ) : (
-                          <span className="relation-placeholder">
-                            {item.isLoading ? 'Loading...' : 'Unavailable'}
-                          </span>
-                        )}
-                      </div>
-                      <span className="relation-label">
-                        #{item.id.toString()}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                {childOverflowCount > 0 && (
-                  <span className="meta-value">
-                    +{childOverflowCount} more children
-                  </span>
-                )}
-              </div>
-            )}
-            <div className="transfer-panel__actions">
-              <button
-                className="button button--ghost button--mini"
-                type="button"
-                onClick={handleScanChildren}
-                disabled={childScanPending || isWalletView}
-              >
-                {childScanPending ? 'Scanning...' : 'Scan full collection'}
-              </button>
-              {childScanPending && (
-                <button
-                  className="button button--ghost button--mini"
-                  type="button"
-                  onClick={handleCancelScan}
-                >
-                  Cancel scan
-                </button>
-              )}
-            </div>
-            {scanProgressLabel && (
-              <span className="meta-value">{scanProgressLabel}</span>
-            )}
-            {childScanStatus && (
-              <span className="meta-value">{childScanStatus}</span>
             )}
           </div>
           {props.listing && (
@@ -1195,7 +1208,13 @@ const TokenDetails = (props: {
             />
           )}
         </div>
-        <div className="detail-panel__tools">
+        <div
+          className={
+            isWalletView
+              ? 'detail-panel__tools'
+              : 'detail-panel__tools detail-panel__tools--advanced'
+          }
+        >
           {isWalletView ? (
             <details
               className="preview-drawer preview-drawer--advanced"
@@ -3193,6 +3212,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
         knownChildren={knownChildren}
         lastTokenId={lastTokenId}
         onAddParentDraft={props.onAddParentDraft}
+        onSelectToken={handleSelectToken}
         marketActionStatus={marketActionStatus}
         marketActionPending={marketActionPending}
         onBuyListing={handleBuyListing}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { PUBLIC_CONTRACT, PUBLIC_MINT_RESTRICTIONS } from './config/public';
 import { getContractId } from './lib/contract/config';
@@ -9,6 +9,14 @@ import { getViewerKey } from './lib/viewer/queries';
 import { createStacksWalletAdapter } from './lib/wallet/adapter';
 import { createWalletSessionStore } from './lib/wallet/session';
 import { getWalletLookupState } from './lib/wallet/lookup';
+import {
+  applyThemeToDocument,
+  coerceThemeMode,
+  resolveInitialTheme,
+  THEME_OPTIONS,
+  type ThemeMode,
+  writeThemePreference
+} from './lib/theme/preferences';
 import { useActiveTabGuard } from './lib/utils/tab-guard';
 import AddressLabel from './components/AddressLabel';
 import MintScreen from './screens/MintScreen';
@@ -656,6 +664,9 @@ const renderMarkdown = (markdown: string) => {
 
 export default function PublicApp() {
   const contract = PUBLIC_CONTRACT;
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() =>
+    resolveInitialTheme()
+  );
   const [walletSession, setWalletSession] = useState(() =>
     walletSessionStore.load()
   );
@@ -758,6 +769,13 @@ export default function PublicApp() {
 
   const handleExpandAll = () => {
     setCollapsedSections(buildCollapsedState(false));
+  };
+
+  const handleThemeChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const nextTheme = coerceThemeMode(event.target.value);
+    setThemeMode(nextTheme);
+    applyThemeToDocument(nextTheme);
+    writeThemePreference(nextTheme);
   };
 
   const handleSelectDoc = (docId: string) => {
@@ -869,6 +887,22 @@ export default function PublicApp() {
             </nav>
             <div className="app__controls">
               <div className="app__controls-group">
+                <label className="theme-select" htmlFor="public-theme-select">
+                  <span className="theme-select__label">Theme</span>
+                  <select
+                    id="public-theme-select"
+                    className="theme-select__control"
+                    value={themeMode}
+                    onChange={handleThemeChange}
+                    onInput={handleThemeChange}
+                  >
+                    {THEME_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <button
                   className="button button--ghost"
                   type="button"

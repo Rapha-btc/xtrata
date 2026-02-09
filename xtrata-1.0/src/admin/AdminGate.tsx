@@ -1,10 +1,24 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+  type ReactNode
+} from 'react';
 import { ADMIN_GUARD_CONTRACT } from '../config/admin';
 import { getContractId } from '../lib/contract/config';
 import { createXtrataClient } from '../lib/contract/client';
 import { isAdminAddressAllowed, getAdminAllowlist } from '../lib/admin/access';
 import { createStacksWalletAdapter } from '../lib/wallet/adapter';
 import { createWalletSessionStore } from '../lib/wallet/session';
+import {
+  applyThemeToDocument,
+  coerceThemeMode,
+  resolveInitialTheme,
+  THEME_OPTIONS,
+  type ThemeMode,
+  writeThemePreference
+} from '../lib/theme/preferences';
 
 type AdminGateProps = {
   children: ReactNode;
@@ -13,6 +27,9 @@ type AdminGateProps = {
 const walletSessionStore = createWalletSessionStore();
 
 export default function AdminGate({ children }: AdminGateProps) {
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() =>
+    resolveInitialTheme()
+  );
   const [walletSession, setWalletSession] = useState(() =>
     walletSessionStore.load()
   );
@@ -80,6 +97,13 @@ export default function AdminGate({ children }: AdminGateProps) {
     setWalletPending(false);
   };
 
+  const handleThemeChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const nextTheme = coerceThemeMode(event.target.value);
+    setThemeMode(nextTheme);
+    applyThemeToDocument(nextTheme);
+    writeThemePreference(nextTheme);
+  };
+
   const connectedAddress = walletSession.address ?? null;
   const allowlist = getAdminAllowlist();
   const isAllowed =
@@ -109,6 +133,22 @@ export default function AdminGate({ children }: AdminGateProps) {
               <span className="badge badge--neutral">
                 {walletSession.isConnected ? 'Connected' : 'Disconnected'}
               </span>
+              <label className="theme-select" htmlFor="admin-gate-theme-select">
+                <span className="theme-select__label">Theme</span>
+                <select
+                  id="admin-gate-theme-select"
+                  className="theme-select__control"
+                  value={themeMode}
+                  onChange={handleThemeChange}
+                  onInput={handleThemeChange}
+                >
+                  {THEME_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
               {walletSession.isConnected ? (
                 <button
                   className="button button--ghost"

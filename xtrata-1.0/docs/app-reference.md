@@ -7,6 +7,7 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 - `src/App.tsx` owns the main layout, section order, anchor buttons, collapse state, deploy panel, and high-level app state wiring.
 - `src/styles/app.css` owns layout tokens, widths, grid sizing, square preview frames, and global layout rules.
 - `src/main.tsx` boots the app and wires providers (React Query) and global CSS.
+- `src/lib/theme/preferences.ts` owns theme mode catalog/persistence and document-level theme application.
 
 ## Screens and shared UI
 
