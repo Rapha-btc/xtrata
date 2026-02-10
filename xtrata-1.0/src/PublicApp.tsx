@@ -191,6 +191,56 @@ Xtrata supports multiple mint paths so creators, teams, and partner collections 
 - Confirm final Viewer rendering for multiple sample assets.`
   },
   {
+    id: 'artist-collection-launch',
+    title: 'Artist collection launch guide',
+    tag: 'Artists',
+    description: 'Plain-language guide to choose between collection mint and pre-inscribed sale, then launch safely.',
+    content: `## Artist collection launch guide
+This section is a plain-language reference for artists and collection teams.
+
+### Two collection sale formats
+- **Collection mint**: buyers mint new inscriptions during your sale.
+- **Pre-inscribed sale**: you pre-inscribe first, then buyers purchase token IDs from escrow inventory.
+
+### When to use collection mint
+- You want a live mint event.
+- You want buyers to mint directly at purchase time.
+- You want flexible launch rules (price, limits, phases, allowlist, splits).
+
+### When to use pre-inscribed sale
+- You want full quality control before launch.
+- You want no buyer-side file upload during checkout.
+- You want fixed inventory drops where buyers purchase existing IDs.
+
+### Contracts and modules
+- Core NFT contract: \`xtrata-v2-1-0\`
+- Collection mint contract template: \`xtrata-collection-mint-v1.1\`
+- Pre-inscribed sale contract template: \`xtrata-preinscribed-collection-sale-v1.0\`
+- Admin module: Collection mint admin
+- Admin module: Pre-inscribed sale admin
+- Buyer flow: Mint / collection mint flows
+- Buyer flow: Pre-inscribed sale buyer flow
+
+### Setup checklist before launch
+- Confirm wallet network and contract network match.
+- Confirm contract IDs are correct.
+- Set recipients and verify split total = \`10000\` bps.
+- Set price, allowlist mode, and per-wallet limits.
+- Set pause state and sale window carefully.
+- Run a small test launch before the full drop.
+
+### File handling model
+- Collection mint: buyers typically upload files during mint; the app chunks and writes on-chain.
+- Pre-inscribed sale: no buyer upload during sale; assets are already inscribed and sold by token ID.
+
+### Safety habits
+- Keep one admin wallet dedicated to launch operations.
+- Record all launch tx IDs for audit and troubleshooting.
+- If anything looks wrong, pause first, then verify settings and inventory.
+
+For the full artist documentation, see \`docs/artist-guides/collection-launch-guide.md\`.`
+  },
+  {
     id: 'market',
     title: 'Market listings and escrow',
     tag: 'Market',

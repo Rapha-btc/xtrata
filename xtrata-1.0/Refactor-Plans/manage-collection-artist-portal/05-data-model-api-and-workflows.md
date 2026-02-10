@@ -1,135 +1,71 @@
 # Data Model, API, and Workflow Specification
 
-## Data model (proposed)
+## Current D1 schema
+The migration `functions/migrations/001_create_collections.sql` creates three tables:
 
-## `CollectionRecord`
+### `collections`
+- `id TEXT PRIMARY KEY`
+- `slug TEXT UNIQUE`
+- `artist_address TEXT`
+- `contract_address TEXT`
+- `display_name TEXT`
+- `metadata JSON`
+- `state TEXT DEFAULT 'draft'`
+- `created_at INTEGER`
+- `updated_at INTEGER`
 
-1. `id: string`
-2. `slug: string`
-3. `network: 'mainnet' | 'testnet'`
-4. `artistAddress: string`
-5. `contractAddress: string`
-6. `contractName: string`
-7. `coreContractId: string`
-8. `displayName: string`
-9. `description: string`
-10. `bannerUrl?: string`
-11. `logoUrl?: string`
-12. `mintPriceMicroStx?: string`
-13. `maxSupply?: string`
-14. `mintedCount?: string`
-15. `reservedCount?: string`
-16. `paused?: boolean`
-17. `finalized?: boolean`
-18. `state: 'draft' | 'published' | 'archived'`
-19. `createdAt: string`
-20. `updatedAt: string`
+### `assets`
+- `asset_id TEXT PRIMARY KEY`
+- `collection_id TEXT`
+- `path TEXT`
+- `filename TEXT`
+- `mime_type TEXT`
+- `total_bytes INTEGER`
+- `total_chunks INTEGER`
+- `expected_hash TEXT`
+- `storage_key TEXT`
+- `edition_cap INTEGER`
+- `state TEXT DEFAULT 'draft'`
+- `expires_at INTEGER`
+- `created_at INTEGER`
+- `updated_at INTEGER`
 
-## `AssetRecord`
+### `reservations`
+- `reservation_id TEXT PRIMARY KEY`
+- `collection_id TEXT`
+- `asset_id TEXT`
+- `buyer_address TEXT`
+- `hash_hex TEXT`
+- `status TEXT`
+- `tx_id TEXT`
+- `expires_at INTEGER`
+- `created_at INTEGER`
+- `updated_at INTEGER`
 
-1. `assetId: string`
-2. `collectionId: string`
-3. `path: string`
-4. `filename: string`
-5. `mimeType: string`
-6. `totalBytes: number`
-7. `totalChunks: number`
-8. `expectedHashHex: string`
-9. `tokenUri: string`
-10. `editionCap: number | null` (`null` = open edition)
-11. `mintedCount: number`
-12. `state: 'draft' | 'published' | 'disabled' | 'sold-out'`
-13. `storageKey: string`
-14. `chunkManifestKey?: string`
-15. `createdAt: string`
-16. `updatedAt: string`
+## Planned schema enrichments
+- `CollectionRecord` still needs the richer metadata from the original spec (network, contract name, pricing/supply, banner/logo URLs, splits, reserved/minted counters, finalized/paused flags). Most of these fields can live in the JSON `metadata` column for now, but we should add explicit columns once the UI starts editing them directly.
+- `AssetRecord` needs fields for `token_uri`, `minted_count`, `storage_state` (sold-out/published), and reservation counters so the viewer can surface the remaining edition count.
+- `ReservationRecord` should track a TTL derived from `get-reservation-expiry-blocks` (the backend stores `expires_at` in ms, but we need to keep it aligned with the on-chain block height) and add `collection_contract` for correlation when multiple collections exist.
 
-## `MintReservationRecord` (MVP off-chain safety)
+## API surface (what exists today)
+- `GET /collections` — lists all collections (ordered by `created_at`). Used by `CollectionListPanel`.
+- `POST /collections` — inserts a draft collection record after slug normalization and slug validation (`functions/lib/collections.ts`).
+- `GET /collections/:collectionId` — loads a single collection record.
+- `PATCH /collections/:collectionId` — updates display name, contract address, metadata, or state.
+- `POST /collections/:collectionId/publish` — toggles between `draft` and `published` states.
+- `GET /collections/:collectionId/assets` — lists manifest entries; stale drafts with expired TTLs are marked `expired` during the read path.
+- `POST /collections/:collectionId/assets` — writes asset metadata after uploading to R2; enforces TTL and per-collection storage cap via `MAX_COLLECTION_STORAGE_BYTES`.
+- `GET /collections/:collectionId/reserve` / `POST /collections/:collectionId/reserve` / `PATCH /collections/:collectionId/reserve` — manage reservation lifecycle (create, confirm, release) with simple status updates.
+- `GET /collections/:collectionId/upload-url` — generates a 5‑minute R2 PUT URL for uploads.
 
-1. `reservationId: string`
-2. `collectionId: string`
-3. `assetId: string`
-4. `buyerAddress: string`
-5. `status: 'created' | 'tx-submitted' | 'confirmed' | 'released' | 'expired'`
-6. `txId?: string`
-7. `expiresAt: string`
+## API surface still needed
+- Wallet-signed auth + allowlist proof verification on every mutating endpoint.
+- Ownership validation that binds a collection to a deployed `xtrata-collection-mint` contract before allowing updates.
+- Asset-level PATCH/confirm endpoints to set `token_uri`, update `edition_cap`, mark assets as `sold-out`, and reconcile minted counters.
+- Reservation confirm + release flows tightly coupled to contract transactions (e.g., after `mint-seal` completes).
+- `GET /collections/:collectionId/manifest` that joins `assets` + `reservations` with minted token IDs to serve the new viewer.
 
-## API surface (proposed)
-
-All mutating endpoints require wallet-auth proof + allowlist + ownership checks.
-
-## Collection endpoints
-
-1. `POST /api/collections`
-- Create draft collection record after deploy intent.
-
-2. `GET /api/collections?artist=<address>`
-- List artist-owned collections.
-
-3. `GET /api/collections/:collectionId`
-- Load collection detail.
-
-4. `PATCH /api/collections/:collectionId`
-- Update off-chain metadata and state fields.
-
-5. `POST /api/collections/:collectionId/publish`
-- Publish collection and validate required setup.
-
-## Asset endpoints
-
-1. `POST /api/collections/:collectionId/assets/upload`
-- Upload folder items (multipart or chunked upload protocol).
-
-2. `GET /api/collections/:collectionId/assets`
-- List asset manifest entries.
-
-3. `PATCH /api/collections/:collectionId/assets/:assetId`
-- Update token URI, edition cap, state.
-
-4. `POST /api/collections/:collectionId/assets/:assetId/reserve`
-- Reserve mint slot for buyer.
-
-5. `POST /api/collections/:collectionId/assets/:assetId/confirm`
-- Confirm tx and increment minted counters.
-
-6. `POST /api/collections/:collectionId/assets/:assetId/release`
-- Release failed/expired reservation.
-
-## Example workflow specs
-
-## Artist flow: create and configure
-
-1. Connect wallet and pass manager gate.
-2. Deploy `xtrata-collection-mint-v1.0` contract with guided wizard.
-3. Create `CollectionRecord` draft.
-4. Run setup actions on contract:
-- `set-max-supply`,
-- `set-recipients`,
-- `set-splits`,
-- `set-mint-price`,
-- optional `set-allowlist-enabled` and `set-max-per-wallet`,
-- `set-paused(false)` when ready.
-5. Upload folder and configure asset-level metadata.
-6. Publish collection.
-
-## Buyer flow: mint from staged asset
-
-1. Open published collection page.
-2. Pick available asset.
-3. Create reservation record.
-4. Execute mint tx order:
-- `mint-begin`,
-- `mint-add-chunk-batch` (one or more),
-- `mint-seal` or `mint-seal-batch`.
-5. Confirm tx and finalize reservation.
-6. Refresh viewer/wallet state.
-
-## Error and idempotency rules
-
-1. Reservation API must be idempotent by `(collectionId, assetId, buyerAddress)` window.
-2. Confirm endpoint accepts retries with same tx id.
-3. Publish endpoint fails with explicit reasons:
-- contract paused,
-- missing supply config,
-- no published assets,
-- ownership mismatch.
+## Workflows in play
+- **Artist workflow today:** Connect to `/manage`, create a draft collection via the deploy wizard, load/edit the draft, upload/stage assets, and flip `state` to `published`. Most panels work end-to-end, but there is no finalization guard or metadata form that writes back to D1 besides the patch in `CollectionSettingsPanel`.
+- **Buyer/mint workflow:** Not implemented yet; the reservation APIs exist, but there is no front-end or on-chain coordination. The minted viewer and mint client must pull staged manifest data, reserve an asset, execute `mint-begin/add-chunk-batch/seal`, then confirm the reservation.
+- **Error management:** Storage enforcement (TTL + cap) already throws `400`/`badRequest` for overages; future phases should add explicit `RESERVATION_LIMIT_REACHED`/`COLLECTION_NOT_READY` errors for better UX.

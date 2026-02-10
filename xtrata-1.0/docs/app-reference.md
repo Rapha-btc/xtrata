@@ -14,10 +14,24 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 - `src/screens/MintScreen.tsx` owns mint UI, file selection, cost/fee display, mint flow steps, and mint preview.
 - `src/screens/CollectionMintScreen.tsx` owns batch mint UI (multi-file upload + batch seal) into the core contract.
 - `src/screens/CollectionMintAdminScreen.tsx` owns collection-mint admin UI (per-collection settings + core allowlist).
+- `src/screens/PreinscribedCollectionAdminScreen.tsx` owns pre-inscribed escrow sale admin UI (sale settings, allowlist, and inventory operations).
+- `src/screens/PreinscribedCollectionSaleScreen.tsx` owns the pre-inscribed sale buyer UI in admin app context (sale status, token availability checks, and buy flow).
+- `src/screens/CampaignConsoleScreen.tsx` owns the campaign console (drafts, assets, AI copy, post runner).
 - `src/screens/ViewerScreen.tsx` owns the collection viewer grid, selection logic, and detailed preview panel.
 - `src/screens/MyWalletScreen.tsx` owns the wallet grid, pagination, selection, and wallet preview panel.
 - `src/components/TokenCardMedia.tsx` renders grid cell media (image/audio/video/html/text) and handles per-token loading.
 - `src/components/TokenContentPreview.tsx` renders the large preview, resolves content, and exposes preview actions.
+
+## Artist manager portal
+
+- `src/config/manage.ts` defines `MANAGE_PATH`, parses `VITE_ARTIST_ALLOWLIST`, and exposes helpers for the gate; the same allowlist drives the `/manage` entry point.
+- `src/manage/ArtistManagerGate.tsx` handles wallet connect/disconnect, theme selection, and allowlist validation before rendering `CollectionManagerApp`.
+- `src/manage/ManageWalletContext.tsx` reuses the shared wallet adapter/session store to isolate the manage portal session from the public app.
+- `src/manage/CollectionManagerApp.tsx` composes the collapse-aware panels (`CollectionListPanel`, `DeployWizardPanel`, `CollectionSettingsPanel`, `AssetStagingPanel`, and `PublishOpsPanel`).
+- `src/manage/CollectionManagerApp.tsx` composes the collapse-aware panels (`CollectionListPanel`, `DeployWizardPanel`, `CollectionSettingsPanel`, `AssetStagingPanel`, `PublishOpsPanel`, and `DiagnosticsPanel`).
+- `functions/collections/*` responds to the `CollectionList`/`CollectionRecord` endpoints, asset manifest uploads, reservation CRUD, publish action, and R2 upload URLs using the `DB`/`ASSETS` bindings.
+- `functions/lib/collections.ts` implements slug normalization and storage-limit helpers; `functions/lib/__tests__/collections.test.ts` guards them via Vitest.
+- `functions/collections/health.ts` provides the `/collections/health` check used by the diagnostics panel to confirm D1 connectivity and table counts.
 
 ## Contracts, network, and wallet plumbing
 

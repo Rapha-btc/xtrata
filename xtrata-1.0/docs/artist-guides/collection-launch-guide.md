@@ -1,0 +1,258 @@
+# Collection Launch Guide For Artists
+
+This guide explains the two collection formats in Xtrata, in plain language.
+No coding background is required.
+
+## Quick Summary
+
+Xtrata currently supports two main collection sale formats:
+
+1. Collection mint (buyers mint new inscriptions).
+2. Pre-inscribed sale (you mint first, buyers purchase from escrow inventory).
+
+Both formats are built on the same core NFT contract:
+- `xtrata-v2-1-0`
+
+## Which Format Should You Use?
+
+Use **Collection mint** when:
+- Buyers should create new inscriptions during mint.
+- You want each mint to happen live.
+- Your launch feels like a traditional mint event.
+- Larger collection sizes (eg 10k)
+
+Use **Pre-inscribed sale** when:
+- You want full quality control before launch.
+- Assets must be prepared and verified in advance.
+- Buyers should purchase already-inscribed token IDs.
+- You want a simple, one-click purchase option.
+
+## Contracts And Screens At A Glance
+
+### Core NFT Contract
+
+- Contract: `xtrata-v2-1-0`
+- Role: Stores the actual inscriptions and ownership.
+
+### Collection Mint Contract
+
+- Template contract: `xtrata-collection-mint-v1.1`
+- Role: Controls mint rules (price, limits, phases, allowlist, splits) and proxies mint flow into core.
+- Admin screen: `CollectionMintAdminScreen` (`Collection mint admin` module in app).
+- Buyer flow: users mint through `CollectionMintScreen` / `MintScreen` depending launch setup.
+
+### Pre-Inscribed Sale Contract
+
+- Template contract: `xtrata-preinscribed-collection-sale-v1.0`
+- Role: Holds pre-inscribed IDs in escrow and sells by token ID.
+- Admin screen: `PreinscribedCollectionAdminScreen` (`Pre-inscribed sale admin` module).
+- Buyer screen: `PreinscribedCollectionSaleScreen` (`Pre-inscribed sale` module in public view).
+
+## Format 1: Collection Mint (Step By Step)
+
+### What happens
+
+1. You deploy a collection-mint contract.
+2. You configure launch settings.
+3. Buyers mint.
+4. Contract routes inscription operations into `xtrata-v2-1-0`.
+
+### Typical setup order
+
+1. Set price.
+2. Set recipients and split percentages.
+3. Set supply, batch mint and wallet limits.
+4. Configure allowlist (optional).
+5. Configure sale phase windows if used.
+6. Set collection metadata (name, symbol, project URI, defaults).
+7. Pause/unpause for launch timing.
+8. Finalize when all immutable settings are correct.
+
+### Why artists choose this
+
+- More "live mint" energy for collectors.
+- Rules can be enforced by contract at purchase time.
+- Good for dynamic drops and phased releases.
+- Good for launching large collections - buyers do the work inscribing batches.
+
+### Main tradeoff
+
+- Buyers are minting live, so user flow and wallet guidance matter more.
+ 2. Validate contract ownership (wallet connected to the artist portal must match the `contract-owner` returned by `xtrata-collection-mint`).
+
+## Format 2: Pre-Inscribed Sale (Step By Step)
+
+### What happens
+
+1. You pre-inscribe the collection in `xtrata-v2-1-0`.
+2. You deploy a pre-inscribed sale contract.
+3. You deposit token IDs into escrow inventory.
+4. Buyers purchase IDs, and tokens transfer out of escrow to buyer wallets.
+
+### Typical setup order
+
+1. Set price.
+2. Set recipients and split percentages.
+3. Set allowlist mode, batch mint size and per-wallet cap.
+4. Set sale window start/end blocks.
+5. Pause/unpause for launch timing.
+6. Deposit inventory batch.
+7. Buyers purchase token IDs.
+8. Withdraw unsold inventory after sale.
+
+### Why artists choose this
+
+- Full quality assurance before launch.
+- No buyer-side file upload during sale.
+- Cleaner buyer UX for fixed inventory drops.
+- One-click purchases.
+
+### Main tradeoff
+
+- You do more prep work up front (pre-inscribe and inventory management).
+
+## Metadata And URI Guidance
+
+Collection launches should define clear metadata defaults:
+- Collection name.
+- Symbol.
+- Base project URI (Arweave recommended for permanence-focused publishing).
+- Optional default token URI behavior if your workflow uses it.
+
+Important:
+- Keep URI decisions consistent before launch.
+- If changing URI behavior, test on a small set first.
+- Confirm your metadata strategy matches your indexer and marketplace expectations.
+- Document your metadata and edition policy inside the artist portal so it can be audited during launch day.
+
+## Launching a Collection From Scratch
+
+1. **Prepare your artist wallet**
+   - Connect the wallet you will use for deployment to the `/manage` portal (the same wallet must be on the allowlist configured via `VITE_ARTIST_ALLOWLIST`).
+   - Use the diagnostics panel to verify the Cloudflare D1 (`/collections/health`) and R2 upload flows before inviting collaborators.
+
+2. **Deploy the collection-mint contract**
+   - In the portal's deploy wizard, provide a printable slug, artist address, display name, and optional custom contract name (`xtrata-collection-${slug}` by default).
+   - Submit the guided `showContractDeploy` flow using the built-in `xtrata-collection-mint-v1.1` source; watch the wallet modal for `mint` transaction confirmations.
+   - After deployment, update the draft with the contract address/name so the portal can read owner-controlled variables later.
+
+3. **Configure contract settings**
+   - Load the draft in the settings panel (use the `/collections/:id` fetch) and confirm the contract is reachable.
+   - Set the mint price, max supply, allowlist mode, per-wallet cap, splits, and sale window via the contract admin screen (`CollectionMintAdminScreen` or the operations panel in the portal). Logging each tx ID is strongly encouraged.
+   - Once the contract is ready for public minting, mark it as published in the portal; the publish panel currently toggles `state` but should soon include readiness checks (asset counts, contract guard status).
+
+4. **Stage assets**
+   - Use the asset staging panel to upload artwork, checking the computed SHA-256 digest and chunk count for each file.
+   - Uploads go through `/collections/:id/upload-url` (R2 PUT) and then `/collections/:id/assets` (D1 manifest). Review the TTL (`COLLECTION_ASSET_TTL_MS`) and storage cap (`MAX_COLLECTION_STORAGE_BYTES`) in the portal to avoid truncation.
+   - If you need to verify Cloudflare handles uploads, the diagnostics panel can run the same flow and surface the temporary key used for debugging.
+
+5. **Publish and go live**
+   - Once the manifest has enough assets for your supply, press “Publish collection” and optionally refresh reservations to watch pending mints while the drop runs.
+   - Monitor reservations during the mint by calling `/collections/:id/reserve` (the buyer flow should reserve assets, run `mint-begin/add-chunk-batch/seal`, then PATCH the reservation to `confirmed`).
+   - Use the ops panel to release expired reservations (matching `reservation.expiry-blocks`) and keep a clean inventory of `sold-out` assets.
+
+6. **Post-launch operations**
+   - Pull the diagnostics data again if you suspect D1/R2 drift; the same health endpoint shows counts for collections/assets/reservations.
+   - When the mint winds down, finalize the contract (if not already) so no further settings can be changed.
+   - Export logs or set a checklist entry to capture the final split totals, minted counts, and tx IDs executed during the launch.
+
+## Allowlist, Limits, And Fairness Controls
+
+Both formats support controlled access:
+
+- Allowlist enabled/disabled.
+- Per-wallet max mints or buys.
+- Per-address allowlist allowance.
+- Sale windows by block height.
+
+Best practice:
+- Start with restrictive settings in test runs.
+- Confirm expected behavior.
+- Then open settings for live launch.
+
+## Splits And Payouts
+
+Both admin flows support recipient splits:
+- Artist recipient.
+- Marketplace recipient.
+- Operator recipient.
+
+Rules:
+- Splits are in basis points.
+- Total must equal `10000` (100%).
+
+Simple example:
+- Artist `9000`
+- Marketplace `700`
+- Operator `300`
+
+Always double-check:
+- Addresses are correct.
+- Split totals are exactly `10000`.
+
+## What Files Should Artists Upload, And Where?
+
+### Collection Mint format
+
+- Buyers usually provide files at mint time through the mint UI.
+- Files are processed in-browser and chunked for on-chain writes.
+- The app can cache recently resolved content in IndexedDB for faster viewing.
+- Files are not meant to sit in a centralized pending upload queue in this model.
+
+### Pre-inscribed sale format
+
+- No buyer file upload is needed during sale.
+- Files are already fully inscribed on-chain before sale starts.
+- Buyer action is purchase/transfer of existing token IDs.
+
+## Safe Launch Checklist (Artist Friendly)
+
+Before launch:
+1. Confirm wallet network matches target contract network.
+2. Confirm contract IDs are correct.
+3. Confirm recipients and split totals.
+4. Confirm price and limits.
+5. Confirm allowlist entries.
+6. Confirm pause state and sale window.
+7. Run a tiny live test (1-2 tokens) before full launch.
+
+During launch:
+1. Monitor status and inventory counts.
+2. Keep one operator wallet dedicated to admin actions.
+3. Record tx IDs for each important update.
+
+After launch:
+1. Reconcile sold and available counts.
+2. Withdraw unsold inventory if needed.
+3. Export a final launch log (settings + tx IDs + timeline).
+
+## Common Mistakes To Avoid
+
+- Deploying or using the wrong network.
+- Launching unpaused too early.
+- Wrong split totals (not 10000 bps).
+- Forgetting allowlist mode is still enabled.
+- Listing token IDs not actually deposited in sale inventory.
+
+## FAQ
+
+### Can I run both formats for one project?
+Yes. Some teams use collection mint for open phases, then pre-inscribed sale for curated inventory or reserved releases.
+
+### Do I need to host files on IPFS to sell pre-inscribed tokens?
+No. Pre-inscribed sale is built around tokens already inscribed on-chain.
+
+### Is Arweave still useful?
+Yes. It can be useful for project-level metadata references and mirrored assets. Keep your on-chain/off-chain metadata strategy consistent.
+
+### Can I pause mid-sale?
+Yes, if your contract settings and permissions allow it. Test this flow before launch day.
+
+## Glossary
+
+- **Core contract**: The main NFT contract (`xtrata-v2-1-0`).
+- **Escrow**: Contract custody of token IDs while listed/sold.
+- **Allowlist**: Addresses allowed to mint/buy with optional per-address limits.
+- **Per-wallet cap**: Max quantity a single wallet can mint/buy.
+- **BPS**: Basis points (`10000` = 100%).
+- **Sale window**: Start/end block range when buying is active.

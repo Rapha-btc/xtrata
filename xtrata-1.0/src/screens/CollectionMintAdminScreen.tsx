@@ -40,6 +40,7 @@ type CollectionMintStatus = {
   maxSupply: bigint | null;
   mintedCount: bigint | null;
   reservedCount: bigint | null;
+  reservationExpiryBlocks: bigint | null;
   finalized: boolean | null;
   recipients: {
     artist: string;
@@ -324,6 +325,17 @@ export default function CollectionMintAdminScreen(
     null
   );
   const [allowlistStatusLoading, setAllowlistStatusLoading] = useState(false);
+  const [reservationExpiryInput, setReservationExpiryInput] = useState('');
+  const [reservationOwnerInput, setReservationOwnerInput] = useState('');
+  const [reservationHashInput, setReservationHashInput] = useState('');
+  const [reservationStatus, setReservationStatus] = useState<{
+    exists: boolean;
+    createdAt: bigint | null;
+    phaseId: bigint | null;
+  } | null>(null);
+  const [reservationStatusMessage, setReservationStatusMessage] =
+    useState<string | null>(null);
+  const [reservationStatusLoading, setReservationStatusLoading] = useState(false);
   const [uriControlsSupported, setUriControlsSupported] = useState<boolean | null>(
     null
   );
@@ -413,6 +425,8 @@ export default function CollectionMintAdminScreen(
     setStatusMessage(null);
     setAllowlistStatus(null);
     setAllowlistStatusMessage(null);
+    setReservationStatus(null);
+    setReservationStatusMessage(null);
     setUriControlsSupported(null);
     setDefaultTokenUriInput('');
     setRegisteredTokenUriHashInput('');
@@ -426,6 +440,11 @@ export default function CollectionMintAdminScreen(
     setAllowlistStatus(null);
     setAllowlistStatusMessage(null);
   }, [allowlistAddressInput]);
+
+  useEffect(() => {
+    setReservationStatus(null);
+    setReservationStatusMessage(null);
+  }, [reservationOwnerInput, reservationHashInput]);
 
   useEffect(() => {
     setRegisteredTokenUriStatus(null);
@@ -473,6 +492,12 @@ export default function CollectionMintAdminScreen(
     if (status.maxPerWallet !== null && !maxPerWalletInput.trim()) {
       setMaxPerWalletInput(status.maxPerWallet.toString());
     }
+    if (
+      status.reservationExpiryBlocks !== null &&
+      !reservationExpiryInput.trim()
+    ) {
+      setReservationExpiryInput(status.reservationExpiryBlocks.toString());
+    }
   }, [
     status,
     mintPriceInput,
@@ -484,7 +509,8 @@ export default function CollectionMintAdminScreen(
     marketplaceBpsInput,
     operatorBpsInput,
     allowlistEnabledInput,
-    maxPerWalletInput
+    maxPerWalletInput,
+    reservationExpiryInput
   ]);
 
   const requestCollectionCall = (options: {
@@ -547,6 +573,7 @@ export default function CollectionMintAdminScreen(
         supplyCv,
         mintedCv,
         reservedCv,
+        reservationExpiryCv,
         finalizedCv,
         recipientsCv,
         splitsCv,
@@ -559,6 +586,7 @@ export default function CollectionMintAdminScreen(
         callCollectionReadOnly('get-max-supply'),
         callCollectionReadOnly('get-minted-count'),
         callCollectionReadOnly('get-reserved-count'),
+        callCollectionReadOnly('get-reservation-expiry-blocks'),
         callCollectionReadOnly('get-finalized'),
         callCollectionReadOnly('get-recipients'),
         callCollectionReadOnly('get-splits'),
@@ -579,6 +607,7 @@ export default function CollectionMintAdminScreen(
         maxSupply: parseUint(supplyCv),
         mintedCount: parseUint(mintedCv),
         reservedCount: parseUint(reservedCv),
+        reservationExpiryBlocks: parseUint(reservationExpiryCv),
         finalized: Boolean(toPrimitive(finalizedCv)),
         recipients: {
           artist: String(recipientsRaw.artist?.value ?? ''),
@@ -801,6 +830,113 @@ export default function CollectionMintAdminScreen(
       requestCollectionCall({
         functionName: 'set-allowlist-batch',
         functionArgs: [entriesCv]
+      })
+    );
+  };
+
+  const getReservationTargetInputs = () => {
+    const owner = reservationOwnerInput.trim();
+    if (!validateStacksAddress(owner)) {
+      setReservationStatusMessage('Enter a valid reservation owner address.');
+      return null;
+    }
+    const hashHex = normalizeHashHex(reservationHashInput);
+    if (!hashHex) {
+      setReservationStatusMessage(
+        'Enter a valid reservation hash (64 hex chars, optional 0x prefix).'
+      );
+      return null;
+    }
+    return { owner, hashHex };
+  };
+
+  const handleSetReservationExpiry = async () => {
+    const parsed = parseUintInput(reservationExpiryInput, true);
+    if (parsed === null) {
+      setActionMessage('Enter a valid reservation expiry in blocks (0+).');
+      return;
+    }
+    await runAction('Set reservation expiry', () =>
+      requestCollectionCall({
+        functionName: 'set-reservation-expiry-blocks',
+        functionArgs: [uintCV(parsed)]
+      })
+    );
+  };
+
+  const handleLoadReservationStatus = async () => {
+    if (!collectionContract) {
+      setReservationStatusMessage('Enter a collection contract first.');
+      return;
+    }
+    const target = getReservationTargetInputs();
+    if (!target) {
+      return;
+    }
+    setReservationStatusLoading(true);
+    setReservationStatusMessage(null);
+    try {
+      const reservationCv = await callCollectionReadOnly('get-reservation', [
+        principalCV(target.owner),
+        hashHexToBufferCv(target.hashHex)
+      ]);
+      if (reservationCv.type === ClarityType.OptionalSome) {
+        const raw = cvToValue(reservationCv.value) as {
+          value?: {
+            'created-at'?: { value?: string };
+            'phase-id'?: { value?: string };
+          };
+          'created-at'?: { value?: string };
+          'phase-id'?: { value?: string };
+        };
+        const createdAtRaw =
+          raw?.value?.['created-at']?.value ?? raw?.['created-at']?.value ?? null;
+        const phaseIdRaw =
+          raw?.value?.['phase-id']?.value ?? raw?.['phase-id']?.value ?? null;
+        setReservationStatus({
+          exists: true,
+          createdAt: createdAtRaw ? BigInt(createdAtRaw) : null,
+          phaseId: phaseIdRaw ? BigInt(phaseIdRaw) : null
+        });
+      } else {
+        setReservationStatus({ exists: false, createdAt: null, phaseId: null });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setReservationStatusMessage(`Failed to load reservation: ${message}`);
+    } finally {
+      setReservationStatusLoading(false);
+    }
+  };
+
+  const handleReleaseExpiredReservation = async () => {
+    const target = getReservationTargetInputs();
+    if (!target) {
+      return;
+    }
+    await runAction('Release expired reservation', () =>
+      requestCollectionCall({
+        functionName: 'release-expired-reservation',
+        functionArgs: [
+          principalCV(target.owner),
+          hashHexToBufferCv(target.hashHex)
+        ]
+      })
+    );
+  };
+
+  const handleReleaseReservation = async () => {
+    const target = getReservationTargetInputs();
+    if (!target) {
+      return;
+    }
+    await runAction('Release reservation', () =>
+      requestCollectionCall({
+        functionName: 'release-reservation',
+        functionArgs: [
+          principalCV(target.owner),
+          hashHexToBufferCv(target.hashHex)
+        ]
       })
     );
   };
@@ -1195,6 +1331,16 @@ export default function CollectionMintAdminScreen(
               />
               <span className="meta-value">
                 {status?.reservedCount?.toString() ?? 'Unknown'}
+              </span>
+            </div>
+            <div>
+              <LabelWithInfo
+                tone="meta"
+                label="Reservation expiry (blocks)"
+                info="How long reservations can stay open before admin can release them as expired."
+              />
+              <span className="meta-value">
+                {status?.reservationExpiryBlocks?.toString() ?? 'Unknown'}
               </span>
             </div>
             <div>
@@ -1853,7 +1999,138 @@ export default function CollectionMintAdminScreen(
         <div className="mint-panel">
           <LabelWithInfo
             tone="meta"
-            label="5. Pause + ownership"
+            label="5. Reservation safety + recovery"
+            info="Configure reservation timeout and release stale reservations to keep supply moving."
+          />
+          <label className="field">
+            <LabelWithInfo
+              tone="field"
+              label="Reservation expiry (blocks)"
+              info="Number of blocks before reservations can be released as expired. Around 120 blocks is roughly 20 minutes on fast blocks."
+            />
+            <input
+              className="input"
+              placeholder="120"
+              value={reservationExpiryInput}
+              onChange={(event) => setReservationExpiryInput(event.target.value)}
+            />
+            <span className="field__hint">
+              Set this to your desired timeout policy for incomplete mints.
+            </span>
+          </label>
+          <div className="mint-actions">
+            <button
+              className="button"
+              type="button"
+              onClick={() => void handleSetReservationExpiry()}
+              disabled={!canManageCollection || pendingAction !== null}
+            >
+              {pendingAction === 'Set reservation expiry'
+                ? 'Updating...'
+                : 'Set reservation expiry'}
+            </button>
+          </div>
+          <div className="meta-grid meta-grid--dense">
+            <label className="field">
+              <LabelWithInfo
+                tone="field"
+                label="Reservation owner"
+                info="Wallet that started the reservation."
+              />
+              <input
+                className="input"
+                placeholder="ST..."
+                value={reservationOwnerInput}
+                onChange={(event) => setReservationOwnerInput(event.target.value)}
+              />
+            </label>
+            <label className="field">
+              <LabelWithInfo
+                tone="field"
+                label="Reservation hash"
+                info="Expected-hash of the in-progress mint session."
+              />
+              <input
+                className="input"
+                placeholder="0x..."
+                value={reservationHashInput}
+                onChange={(event) => setReservationHashInput(event.target.value)}
+              />
+            </label>
+          </div>
+          <div className="mint-actions">
+            <button
+              className="button button--ghost"
+              type="button"
+              onClick={() => void handleLoadReservationStatus()}
+              disabled={reservationStatusLoading || !collectionContract}
+            >
+              {reservationStatusLoading ? 'Checking...' : 'Check reservation'}
+            </button>
+            <button
+              className="button"
+              type="button"
+              onClick={() => void handleReleaseExpiredReservation()}
+              disabled={!canManageCollection || pendingAction !== null}
+            >
+              {pendingAction === 'Release expired reservation'
+                ? 'Releasing...'
+                : 'Release expired'}
+            </button>
+            <button
+              className="button button--ghost"
+              type="button"
+              onClick={() => void handleReleaseReservation()}
+              disabled={!canManageCollection || pendingAction !== null}
+            >
+              {pendingAction === 'Release reservation'
+                ? 'Releasing...'
+                : 'Force release'}
+            </button>
+          </div>
+          {reservationStatus && (
+            <div className="meta-grid meta-grid--dense">
+              <div>
+                <LabelWithInfo
+                  tone="meta"
+                  label="Reservation exists"
+                  info="Whether this reservation is still active on-chain."
+                />
+                <span className="meta-value">
+                  {reservationStatus.exists ? 'Yes' : 'No'}
+                </span>
+              </div>
+              <div>
+                <LabelWithInfo
+                  tone="meta"
+                  label="Created block"
+                  info="Block height where this reservation was created."
+                />
+                <span className="meta-value">
+                  {reservationStatus.createdAt?.toString() ?? '—'}
+                </span>
+              </div>
+              <div>
+                <LabelWithInfo
+                  tone="meta"
+                  label="Phase"
+                  info="Active phase id recorded for this reservation."
+                />
+                <span className="meta-value">
+                  {reservationStatus.phaseId?.toString() ?? '—'}
+                </span>
+              </div>
+            </div>
+          )}
+          {reservationStatusMessage && (
+            <span className="meta-value">{reservationStatusMessage}</span>
+          )}
+        </div>
+
+        <div className="mint-panel">
+          <LabelWithInfo
+            tone="meta"
+            label="6. Pause + ownership"
             info="Emergency controls for pausing minting, finalizing the contract, and transferring ownership."
           />
           <div className="mint-actions">
@@ -1918,7 +2195,7 @@ export default function CollectionMintAdminScreen(
         <div className="mint-panel">
           <LabelWithInfo
             tone="meta"
-            label="6. Allowlist in Xtrata core"
+            label="7. Allowlist in Xtrata core"
             info="Register this collection contract in the core contract allowlist so it can mint while core is paused."
           />
           <p className="meta-value">

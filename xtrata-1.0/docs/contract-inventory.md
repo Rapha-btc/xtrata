@@ -162,3 +162,47 @@ Source: `contracts/clarinet/contracts/xtrata-collection-mint-v1.0.clar`
 
 ## Private Functions (internal)
 - Internal helpers cover fee math, upload expiry checks, and hashing logic. See contract source for details.
+
+## xtrata-preinscribed-collection-sale-v1.0 (template)
+
+Source: `contracts/clarinet/contracts/xtrata-preinscribed-collection-sale-v1.0.clar`
+
+## Purpose
+- Escrow sale coordinator for tokens that are already inscribed in xtrata-v2.1.0.
+- Supports inventory deposit/withdraw, direct buy, payout splits, allowlists, per-wallet caps, and sale windows.
+
+## Core Admin Functions
+- `set-price(amount)`
+- `set-recipients(artist, marketplace, operator)`
+- `set-splits(artist, marketplace, operator)`
+- `set-paused(value)`
+- `set-sale-window(start, end)`
+- `set-allowlist-enabled(value)`
+- `set-max-per-wallet(value)`
+- `set-allowlist(owner, allowance)`
+- `clear-allowlist(owner)`
+- `set-allowlist-batch(entries)`
+- `transfer-contract-ownership(new-owner)`
+- `deposit-token(token-id)`
+- `deposit-batch(token-ids)`
+- `withdraw-token(token-id, recipient)`
+- `withdraw-batch(token-ids, recipient)`
+
+## Core Buyer Function
+- `buy(token-id)`
+
+## Additional Read-Only Functions
+- `get-owner()`
+- `get-paused()`
+- `get-price()`
+- `get-allowlist-enabled()`
+- `get-max-per-wallet()`
+- `get-sale-window()`
+- `get-counts()`
+- `get-recipients()`
+- `get-splits()`
+- `get-allowlist-entry(owner)`
+- `get-wallet-stats(owner)`
+- `get-inventory(token-id)`
+- `is-token-available(token-id)`
+- `get-allowed-xtrata-contract()`
