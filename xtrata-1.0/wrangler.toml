@@ -5,7 +5,3 @@ pages_build_output_dir = "dist"
 
 [build]
 command = "npm run build"
-
-[[d1_databases]]
-binding = "DB"
-database_name = "xtrata-manage"
