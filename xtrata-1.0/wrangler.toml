@@ -1,7 +1,1 @@
-name = "xtrata-manage"
-account_id = "2ac005715950d5ec03e59738b4fdf003"
-workers_dev = true
 pages_build_output_dir = "dist"
-
-[build]
-command = "npm run build"
