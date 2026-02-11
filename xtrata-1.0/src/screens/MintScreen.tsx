@@ -6,6 +6,7 @@ import {
   FungibleConditionCode,
   listCV,
   makeStandardSTXPostCondition,
+  principalCV,
   PostConditionMode,
   type PostCondition,
   stringAsciiCV,
@@ -119,6 +120,10 @@ const MAX_UPLOAD_RETRIES = 3;
 const PARENT_THUMBNAIL_LIMIT = 12;
 const EXPIRED_ERROR_CODE = 'u112';
 const SINGLE_MINT_UPLOAD_EXPIRY_BLOCKS = 4320;
+const CLEANUP_PENDING_STATUS =
+  'Cleanup transactions are pending confirmation. Wait for confirmations, then refresh upload state before resuming.';
+const CLEANUP_CONFIRMED_STATUS =
+  'Cleanup confirmed on-chain. You can begin mint again.';
 
 const isExpiredContractError = (message: string) => {
   const normalized = message.toLowerCase();
@@ -135,6 +140,18 @@ const formatExpiredMintMessage = () =>
 const isAscii = (value: string) => /^[\x00-\x7F]*$/.test(value);
 const isHttpUrl = (value: string) =>
   value.startsWith('http://') || value.startsWith('https://');
+const toSequentialIndexBatches = (total: number, batchSize = 50) => {
+  const batches: number[][] = [];
+  for (let start = 0; start < total; start += batchSize) {
+    const end = Math.min(total, start + batchSize);
+    const batch: number[] = [];
+    for (let index = start; index < end; index += 1) {
+      batch.push(index);
+    }
+    batches.push(batch);
+  }
+  return batches;
+};
 
 const formatStx = (value: number, decimals = 2) =>
   `${(value / MICROSTX_PER_STX).toFixed(decimals)} STX`;
@@ -416,6 +433,7 @@ export default function MintScreen(props: MintScreenProps) {
   } | null>(null);
   const [resumeState, setResumeState] = useState<UploadState | null>(null);
   const [resumeCheckKey, setResumeCheckKey] = useState(0);
+  const [cleanupPending, setCleanupPending] = useState(false);
   const restrictions = props.restrictions ?? {};
   const fixedBatchSize = restrictions.fixedBatchSize;
   const fixedTokenUri = restrictions.fixedTokenUri;
@@ -857,6 +875,7 @@ export default function MintScreen(props: MintScreenProps) {
       setDuplicateState('idle');
       setDuplicateMatch(null);
       setResumeState(null);
+      setCleanupPending(false);
       setAllowDuplicate(false);
       setResumeHint(null);
       return;
@@ -886,6 +905,26 @@ export default function MintScreen(props: MintScreenProps) {
         return;
       }
       setResumeState(uploadState);
+      if (cleanupPending) {
+        if (uploadState) {
+          setMintStatus((prev) =>
+            prev === CLEANUP_PENDING_STATUS ? prev : CLEANUP_PENDING_STATUS
+          );
+        } else {
+          setCleanupPending(false);
+          setMintStatus((prev) =>
+            prev === CLEANUP_CONFIRMED_STATUS ? prev : CLEANUP_CONFIRMED_STATUS
+          );
+        }
+      }
+
+      // When an upload session exists for this hash+owner, prioritize resume flow.
+      // Skip full-history duplicate scanning to avoid unnecessary read-only load.
+      if (uploadState) {
+        setDuplicateState('clear');
+        setDuplicateMatch(null);
+        return;
+      }
 
       try {
         const lastTokenId = await client.getLastTokenId(readOnlySender);
@@ -915,6 +954,7 @@ export default function MintScreen(props: MintScreenProps) {
     void runCheck();
   }, [
     client,
+    cleanupPending,
     expectedHash,
     readOnlySender,
     resumeCheckKey
@@ -1707,7 +1747,8 @@ export default function MintScreen(props: MintScreenProps) {
   };
 
   const handleStartOver = async () => {
-    if (!props.walletSession.address) {
+    const walletAddress = props.walletSession.address;
+    if (!walletAddress) {
       setMintStatus('Connect a wallet to clear the upload state.');
       appendLog('Start over blocked: wallet not connected.');
       logWarn('mint', 'Start over blocked: wallet not connected');
@@ -1744,13 +1785,33 @@ export default function MintScreen(props: MintScreenProps) {
     }
 
     setMintPending(true);
-    setMintStatus('Clearing on-chain upload state...');
-    appendLog('Clearing in-progress upload state.');
+    setCleanupPending(true);
+    setMintStatus('Clearing expired upload state...');
+    appendLog('Clearing in-progress upload state (abandon + purge).');
     logInfo('mint', 'Sending abandon-upload', {
       contractId: getContractId(props.contract),
       expectedHash: bytesToHex(expectedHash)
     });
     try {
+      let state = resumeState;
+      if (!state) {
+        state = await client.getUploadState(
+          expectedHash,
+          walletAddress,
+          readOnlySender
+        );
+      }
+      if (!state) {
+        setMintStatus(
+          'No active upload state found for this hash. You can start a new mint.'
+        );
+        appendLog('No upload state found. Nothing to clear.');
+        setResumeState(null);
+        setCleanupPending(false);
+        setResumeCheckKey((prev) => prev + 1);
+        return;
+      }
+
       const abandonTx = await requestContractCall({
         functionName: 'abandon-upload',
         functionArgs: [bufferCV(expectedHash)],
@@ -1762,15 +1823,49 @@ export default function MintScreen(props: MintScreenProps) {
       logInfo('mint', 'Abandon upload broadcast', {
         txId: abandonTx.txId
       });
+
+      const totalChunks = Number(state.totalChunks);
+      if (!Number.isSafeInteger(totalChunks) || totalChunks < 0) {
+        throw new Error('Unable to compute purge batches for upload cleanup.');
+      }
+
+      const purgeBatches = toSequentialIndexBatches(totalChunks, MAX_BATCH_SIZE);
+      for (let batchIndex = 0; batchIndex < purgeBatches.length; batchIndex += 1) {
+        const batch = purgeBatches[batchIndex];
+        appendLog(
+          `Submitting purge batch ${batchIndex + 1}/${purgeBatches.length}.`
+        );
+        const purgeTx = await requestContractCall({
+          functionName: 'purge-expired-chunk-batch',
+          functionArgs: [
+            bufferCV(expectedHash),
+            principalCV(walletAddress),
+            listCV(batch.map((index) => uintCV(BigInt(index))))
+          ],
+          logDetails: {
+            action: 'purge-expired-chunk-batch',
+            batchIndex: batchIndex + 1,
+            totalBatches: purgeBatches.length
+          }
+        });
+        appendLog(`Purge batch tx sent: ${purgeTx.txId}`);
+      }
+
       setResumeState(null);
       setResumeCheckKey((prev) => prev + 1);
       resetSteps();
-      setMintStatus('Upload state cleared. You can begin again once confirmed.');
+      setMintStatus(CLEANUP_PENDING_STATUS);
       void clearMintAttempt(getContractId(props.contract));
       setLastAttempt(null);
       setResumeHint(null);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      if (
+        message.toLowerCase().includes('wallet cancelled') ||
+        message.toLowerCase().includes('failed to broadcast')
+      ) {
+        setCleanupPending(false);
+      }
       setMintStatus(`Unable to clear upload state: ${message}`);
       appendLog(`Abandon upload failed: ${message}`);
       logWarn('mint', 'Abandon upload failed', { error: message });
@@ -1946,8 +2041,8 @@ export default function MintScreen(props: MintScreenProps) {
       appendLog(`Seal tx sent: ${sealTx.txId}`);
       setSealState('done');
 
-      setMintStatus('Inscription complete. Await confirmations in wallet.');
-      appendLog('Mint flow completed.');
+      setMintStatus('Seal transaction submitted. Await on-chain confirmation.');
+      appendLog('Mint flow submitted. Final success depends on chain confirmation.');
       logInfo('mint', 'Mint flow completed', {
         contractId,
         txId: sealTx.txId
@@ -2186,8 +2281,8 @@ export default function MintScreen(props: MintScreenProps) {
       appendLog(`Seal tx sent: ${sealTx.txId}`);
       setSealState('done');
 
-      setMintStatus('Inscription complete. Await confirmations in wallet.');
-      appendLog('Mint flow completed.');
+      setMintStatus('Seal transaction submitted. Await on-chain confirmation.');
+      appendLog('Resume flow submitted. Final success depends on chain confirmation.');
       logInfo('mint', 'Resume flow completed', {
         contractId,
         txId: sealTx.txId
@@ -2226,6 +2321,7 @@ export default function MintScreen(props: MintScreenProps) {
   const allowDuplicateOverride = disableDuplicateOverride ? false : allowDuplicate;
   const mintActionDisabled =
     mintPending ||
+    cleanupPending ||
     isPreparing ||
     delegatePending ||
     !file ||
@@ -2962,6 +3058,25 @@ export default function MintScreen(props: MintScreenProps) {
 
         {mintStatus && <div className="alert">{mintStatus}</div>}
 
+        {cleanupPending && (
+          <div className="alert">
+            <div>
+              <strong>Cleanup pending confirmation.</strong> Resume is temporarily
+              locked until upload cleanup confirms on-chain.
+            </div>
+            <div className="mint-actions">
+              <button
+                className="button button--ghost"
+                type="button"
+                onClick={() => setResumeCheckKey((prev) => prev + 1)}
+                disabled={mintPending || isPreparing}
+              >
+                Refresh upload state
+              </button>
+            </div>
+          </div>
+        )}
+
         {formattedTxDelay && (
           <div className="alert">
             {(txDelayLabel ?? 'Next transaction in')} {formattedTxDelay}s
@@ -3014,6 +3129,12 @@ export default function MintScreen(props: MintScreenProps) {
               {startOverUnsupported && (
                 <div className="meta-value">
                   Clearing uploads is not supported by this contract.
+                </div>
+              )}
+              {!startOverUnsupported && (
+                <div className="meta-value">
+                  Start over discards this upload (abandon + purge). Use it only if the
+                  session is expired or you want to restart from chunk 0.
                 </div>
               )}
             </div>
