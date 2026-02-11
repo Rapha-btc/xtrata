@@ -117,6 +117,20 @@ const BATCH_OPTIONS = Array.from(
 );
 const MAX_UPLOAD_RETRIES = 3;
 const PARENT_THUMBNAIL_LIMIT = 12;
+const EXPIRED_ERROR_CODE = 'u112';
+const SINGLE_MINT_UPLOAD_EXPIRY_BLOCKS = 4320;
+
+const isExpiredContractError = (message: string) => {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes('err-expired') ||
+    normalized.includes('err_expired') ||
+    normalized.includes(EXPIRED_ERROR_CODE)
+  );
+};
+
+const formatExpiredMintMessage = () =>
+  `Upload session expired on-chain (u112). Single mints can resume for up to ~${SINGLE_MINT_UPLOAD_EXPIRY_BLOCKS.toLocaleString()} blocks after the last upload; this session is now past that window. Click Start over and begin again.`;
 
 const isAscii = (value: string) => /^[\x00-\x7F]*$/.test(value);
 const isHttpUrl = (value: string) =>
@@ -1667,7 +1681,10 @@ export default function MintScreen(props: MintScreenProps) {
         appendLog(`${label} tx sent: ${uploadTx.txId}`);
         return;
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
+        const rawMessage = error instanceof Error ? error.message : String(error);
+        const message = isExpiredContractError(rawMessage)
+          ? formatExpiredMintMessage()
+          : rawMessage;
         appendLog(
           `${label} failed (attempt ${attempt}/${MAX_UPLOAD_RETRIES}): ${message}`
         );
@@ -1676,6 +1693,9 @@ export default function MintScreen(props: MintScreenProps) {
           attempt,
           error: message
         });
+        if (isExpiredContractError(rawMessage)) {
+          throw new Error(message);
+        }
         if (attempt >= MAX_UPLOAD_RETRIES) {
           throw error;
         }
@@ -1938,7 +1958,10 @@ export default function MintScreen(props: MintScreenProps) {
       setResumeHint(null);
       setResumeState(null);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const rawMessage = error instanceof Error ? error.message : String(error);
+      const message = isExpiredContractError(rawMessage)
+        ? formatExpiredMintMessage()
+        : rawMessage;
       setMintStatus(`Mint failed: ${message}`);
       appendLog(`Mint failed: ${message}`);
       logWarn('mint', 'Mint failed', { error: message });
@@ -2176,7 +2199,10 @@ export default function MintScreen(props: MintScreenProps) {
       setResumeState(null);
       setResumeCheckKey((prev) => prev + 1);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const rawMessage = error instanceof Error ? error.message : String(error);
+      const message = isExpiredContractError(rawMessage)
+        ? formatExpiredMintMessage()
+        : rawMessage;
       setMintStatus(`Mint failed: ${message}`);
       appendLog(`Mint failed: ${message}`);
       logWarn('mint', 'Resume failed', { error: message });
@@ -2974,6 +3000,11 @@ export default function MintScreen(props: MintScreenProps) {
                     : 'Next: seal inscription.'}
                 </div>
               )}
+              <div className="meta-value">
+                Single-mint uploads are not auto-cancelled. You can resume for up to ~
+                {SINGLE_MINT_UPLOAD_EXPIRY_BLOCKS.toLocaleString()} blocks after the
+                last upload transaction.
+              </div>
               {resumeInfo && 'error' in resumeInfo && (
                 <div className="meta-value">{resumeInfo.error}</div>
               )}
