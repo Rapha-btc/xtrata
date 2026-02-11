@@ -734,6 +734,9 @@ export default function PublicApp() {
     initial['wallet-lookup'] = true;
     initial['wallet-session'] = true;
     initial['active-contract'] = true;
+    initial['collection-viewer'] = true;
+    initial.market = true;
+    initial.mint = false;
     return initial;
   });
   const tabGuard = useActiveTabGuard();
@@ -922,15 +925,18 @@ export default function PublicApp() {
               </a>
               <a
                 className="button button--ghost app__nav-link"
+                href="#mint"
+              >
+                Mint
+              </a>
+              <a
+                className="button button--ghost app__nav-link"
                 href="#collection-viewer"
               >
                 Viewer
               </a>
               <a className="button button--ghost app__nav-link" href="#market">
                 Market
-              </a>
-              <a className="button button--ghost app__nav-link" href="#mint">
-                Mint
               </a>
               <a className="button button--ghost app__nav-link" href="#docs">
                 Docs
@@ -1135,6 +1141,15 @@ export default function PublicApp() {
           </section>
         </div>
 
+        <MintScreen
+          contract={contract}
+          walletSession={walletSession}
+          onInscriptionSealed={handleInscriptionSealed}
+          collapsed={collapsedSections.mint}
+          onToggleCollapse={() => toggleSection('mint')}
+          restrictions={PUBLIC_MINT_RESTRICTIONS}
+        />
+
         <ViewerScreen
           contract={contract}
           senderAddress={readOnlySender}
@@ -1154,15 +1169,6 @@ export default function PublicApp() {
           walletSession={walletSession}
           collapsed={collapsedSections.market}
           onToggleCollapse={() => toggleSection('market')}
-        />
-
-        <MintScreen
-          contract={contract}
-          walletSession={walletSession}
-          onInscriptionSealed={handleInscriptionSealed}
-          collapsed={collapsedSections.mint}
-          onToggleCollapse={() => toggleSection('mint')}
-          restrictions={PUBLIC_MINT_RESTRICTIONS}
         />
 
         <section
