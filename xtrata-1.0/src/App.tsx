@@ -27,8 +27,11 @@ import ViewerScreen, { type ViewerMode } from './screens/ViewerScreen';
 import ContractAdminScreen from './screens/ContractAdminScreen';
 import WalletLookupScreen from './screens/WalletLookupScreen';
 import AdminDiagnosticsScreen from './screens/AdminDiagnosticsScreen';
+import CampaignConsoleScreen from './screens/CampaignConsoleScreen';
 import CollectionMintScreen from './screens/CollectionMintScreen';
 import CollectionMintAdminScreen from './screens/CollectionMintAdminScreen';
+import PreinscribedCollectionAdminScreen from './screens/PreinscribedCollectionAdminScreen';
+import PreinscribedCollectionSaleScreen from './screens/PreinscribedCollectionSaleScreen';
 import MarketScreen from './screens/MarketScreen';
 
 const isV2Entry = (entry: { protocolVersion?: string; contractName?: string }) =>
@@ -52,7 +55,10 @@ const SECTION_KEYS = [
   'deploy-contract',
   'contract-admin',
   'collection-mint-admin',
+  'preinscribed-sale-admin',
+  'preinscribed-sale',
   'admin-diagnostics',
+  'campaign-console',
   'collection-mint',
   'mint',
   'collection-viewer',
@@ -487,10 +493,31 @@ export default function App() {
               </a>
               <a
                 className="button button--ghost app__nav-link"
+                href="#preinscribed-sale-admin"
+                onClick={() => handleNavJump('preinscribed-sale-admin')}
+              >
+                Pre-inscribed sale admin
+              </a>
+              <a
+                className="button button--ghost app__nav-link"
+                href="#preinscribed-sale"
+                onClick={() => handleNavJump('preinscribed-sale')}
+              >
+                Pre-inscribed sale buyer
+              </a>
+              <a
+                className="button button--ghost app__nav-link"
                 href="#admin-diagnostics"
                 onClick={() => handleNavJump('admin-diagnostics')}
               >
                 Diagnostics
+              </a>
+              <a
+                className="button button--ghost app__nav-link"
+                href="#campaign-console"
+                onClick={() => handleNavJump('campaign-console')}
+              >
+                Campaign console
               </a>
               <a
                 className="button button--ghost app__nav-link"
@@ -840,6 +867,21 @@ export default function App() {
           onToggleCollapse={() => toggleSection('collection-mint-admin')}
         />
 
+        <PreinscribedCollectionAdminScreen
+          contract={selectedContract}
+          walletSession={walletSession}
+          collapsed={collapsedSections['preinscribed-sale-admin']}
+          onToggleCollapse={() => toggleSection('preinscribed-sale-admin')}
+        />
+
+        <PreinscribedCollectionSaleScreen
+          contract={selectedContract}
+          walletSession={walletSession}
+          collapsed={collapsedSections['preinscribed-sale']}
+          onToggleCollapse={() => toggleSection('preinscribed-sale')}
+          defaultSaleContractId={`${selectedContract.address}.xtrata-preinscribed-collection-sale-v1-0`}
+        />
+
         <AdminDiagnosticsScreen
           contractId={contractId}
           contractNetwork={selectedContract.network}
@@ -849,6 +891,11 @@ export default function App() {
           isActiveTab={tabGuard.isActive}
           collapsed={collapsedSections['admin-diagnostics']}
           onToggleCollapse={() => toggleSection('admin-diagnostics')}
+        />
+
+        <CampaignConsoleScreen
+          collapsed={collapsedSections['campaign-console']}
+          onToggleCollapse={() => toggleSection('campaign-console')}
         />
 
         <CollectionMintScreen

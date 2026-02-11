@@ -93,6 +93,10 @@ The UI is built with Vite + React + TypeScript and drives:
 Release notes
 	•	docs/release-notes-xtrata-v1.1.0.md
 
+Artist guides
+	•	docs/artist-guides/README.md
+	•	docs/artist-guides/collection-launch-guide.md
+
 ⸻
 
 Requirements
@@ -174,4 +178,3 @@ If Bitcoin is the settlement layer, and Stacks is the execution layer,
 Xtrata is the memory layer.
 
 ⸻
-

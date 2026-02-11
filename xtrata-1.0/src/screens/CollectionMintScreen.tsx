@@ -45,12 +45,28 @@ import {
   MAX_TOKEN_URI_LENGTH,
   TX_DELAY_SECONDS
 } from '../lib/mint/constants';
+import {
+  parseRandomDropManifest,
+  selectRandomDropAssets
+} from '../lib/collection-mint/random-drop';
+import {
+  COLLECTION_RESERVATION_TIMEOUT_MS,
+  formatRemainingMinutesSeconds,
+  getSoonestReservationRemainingMs,
+  parseStoredReservations,
+  removeReservationsByHashes,
+  serializeReservations,
+  upsertReservation,
+  type PendingCollectionReservation
+} from '../lib/collection-mint/reservations';
 
 type CollectionMintScreenProps = {
   contract: ContractRegistryEntry;
   walletSession: WalletSession;
   collapsed: boolean;
   onToggleCollapse: () => void;
+  mode?: 'mixed' | 'collection-only';
+  sectionId?: string;
 };
 
 type StepState = 'idle' | 'pending' | 'done' | 'error';
@@ -61,7 +77,6 @@ type TxPayload = {
 
 type CollectionItem = {
   key: string;
-  file: File;
   path: string;
   mimeType: string;
   totalBytes: number;
@@ -89,13 +104,20 @@ type CollectionContractStatus = {
 const MAX_COLLECTION_ITEMS = 50;
 const MAX_COLLECTION_TOTAL_BYTES = 16 * 1024 * 1024;
 const MAX_COLLECTION_FILE_BYTES = 4 * 1024 * 1024;
+const MAX_COLLECTION_ONLY_QUANTITY = 50;
 const BATCH_OPTIONS = Array.from(
   { length: MAX_BATCH_SIZE },
   (_, index) => index + 1
 );
+const COLLECTION_RESERVATION_STORAGE_PREFIX = 'xtrata:collection-mint:reservations';
 
 const readFileBytes = async (file: File) => {
   const buffer = await file.arrayBuffer();
+  return new Uint8Array(buffer);
+};
+
+const readResponseBytes = async (response: Response) => {
+  const buffer = await response.arrayBuffer();
   return new Uint8Array(buffer);
 };
 
@@ -126,6 +148,51 @@ const formatStepStatus = (state: StepState) => {
     return 'Error';
   }
   return 'Idle';
+};
+
+const parseMimeFromContentType = (headerValue: string | null) => {
+  if (!headerValue) {
+    return null;
+  }
+  const mime = headerValue.split(';')[0]?.trim() ?? '';
+  if (!mime) {
+    return null;
+  }
+  return mime;
+};
+
+const resolveNameFromUrl = (url: string) => {
+  try {
+    const parsed = new URL(url);
+    const parts = parsed.pathname.split('/').filter(Boolean);
+    const leaf = parts[parts.length - 1];
+    return leaf && leaf.length > 0 ? leaf : parsed.hostname;
+  } catch {
+    return 'artist-asset';
+  }
+};
+
+const normalizeQuantityInput = (value: string) => {
+  const parsed = Number.parseInt(value.trim(), 10);
+  if (!Number.isFinite(parsed)) {
+    return null;
+  }
+  if (parsed <= 0 || parsed > MAX_COLLECTION_ONLY_QUANTITY) {
+    return null;
+  }
+  return parsed;
+};
+
+const hashHexToBuffer = (hashHex: string) => {
+  const normalized = hashHex.trim().toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(normalized)) {
+    throw new Error('Invalid hash.');
+  }
+  const bytes = new Uint8Array(32);
+  for (let index = 0; index < 32; index += 1) {
+    bytes[index] = Number.parseInt(normalized.slice(index * 2, index * 2 + 2), 16);
+  }
+  return bytes;
 };
 
 const CONTRACT_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9-_]{0,127}$/;
@@ -164,6 +231,9 @@ const parseUintCv = (value: ClarityValue) => {
 };
 
 export default function CollectionMintScreen(props: CollectionMintScreenProps) {
+  const isCollectionOnly = props.mode === 'collection-only';
+  const sectionId =
+    props.sectionId ?? (isCollectionOnly ? 'collection-mint-user' : 'collection-mint');
   const contractId = getContractId(props.contract);
   const client = useMemo(
     () => createXtrataClient({ contract: props.contract }),
@@ -175,7 +245,9 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
   const [mintStatus, setMintStatus] = useState<string | null>(null);
   const [mintLog, setMintLog] = useState<string[]>([]);
   const [mintPending, setMintPending] = useState(false);
-  const [mintTarget, setMintTarget] = useState<MintTarget>('core');
+  const [mintTarget, setMintTarget] = useState<MintTarget>(
+    isCollectionOnly ? 'collection' : 'core'
+  );
   const [collectionAddress, setCollectionAddress] = useState('');
   const [collectionName, setCollectionName] = useState('');
   const [collectionStatus, setCollectionStatus] =
@@ -183,6 +255,10 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
   const [collectionStatusMessage, setCollectionStatusMessage] =
     useState<string | null>(null);
   const [collectionStatusLoading, setCollectionStatusLoading] = useState(false);
+  const [dropManifestUrl, setDropManifestUrl] = useState('');
+  const [dropQuantityInput, setDropQuantityInput] = useState('1');
+  const [dropLoading, setDropLoading] = useState(false);
+  const [dropMessage, setDropMessage] = useState<string | null>(null);
   const [beginState, setBeginState] = useState<StepState>('idle');
   const [uploadState, setUploadState] = useState<StepState>('idle');
   const [sealState, setSealState] = useState<StepState>('idle');
@@ -197,6 +273,14 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
   const [txDelaySeconds, setTxDelaySeconds] = useState<number>(TX_DELAY_SECONDS);
   const [txDelayLabel, setTxDelayLabel] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [pendingReservations, setPendingReservations] = useState<
+    PendingCollectionReservation[]
+  >([]);
+  const [reservationBusy, setReservationBusy] = useState(false);
+  const [reservationMessage, setReservationMessage] = useState<string | null>(null);
+  const [reservationCountdownMs, setReservationCountdownMs] = useState<number | null>(
+    null
+  );
 
   const adminStatusQuery = useContractAdminStatus({
     client,
@@ -229,6 +313,17 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
   }, [collectionAddress, collectionName]);
 
   const xtrataContractId = `${props.contract.address}.${props.contract.contractName}`;
+  const reservationStorageKey = useMemo(() => {
+    if (!isCollectionOnly) {
+      return null;
+    }
+    const owner = props.walletSession.address?.trim();
+    if (!owner || !collectionContract) {
+      return null;
+    }
+    const collectionId = `${collectionContract.address}.${collectionContract.contractName}`.toLowerCase();
+    return `${COLLECTION_RESERVATION_STORAGE_PREFIX}:${owner.toLowerCase()}:${collectionId}`;
+  }, [collectionContract, isCollectionOnly, props.walletSession.address]);
 
   useEffect(() => {
     if (!folderInputRef.current) {
@@ -239,9 +334,69 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
   }, []);
 
   useEffect(() => {
+    if (!isCollectionOnly) {
+      return;
+    }
+    if (mintTarget !== 'collection') {
+      setMintTarget('collection');
+    }
+  }, [isCollectionOnly, mintTarget]);
+
+  useEffect(() => {
     setCollectionStatus(null);
     setCollectionStatusMessage(null);
+    setDropMessage(null);
+    setReservationMessage(null);
   }, [collectionAddress, collectionName]);
+
+  useEffect(() => {
+    if (!reservationStorageKey || typeof window === 'undefined') {
+      setPendingReservations([]);
+      return;
+    }
+    const stored = window.localStorage.getItem(reservationStorageKey);
+    setPendingReservations(parseStoredReservations(stored));
+  }, [reservationStorageKey]);
+
+  useEffect(() => {
+    if (!reservationStorageKey || typeof window === 'undefined') {
+      return;
+    }
+    if (pendingReservations.length === 0) {
+      window.localStorage.removeItem(reservationStorageKey);
+      return;
+    }
+    window.localStorage.setItem(
+      reservationStorageKey,
+      serializeReservations(pendingReservations)
+    );
+  }, [pendingReservations, reservationStorageKey]);
+
+  useEffect(() => {
+    if (!isCollectionOnly || pendingReservations.length === 0) {
+      setReservationCountdownMs(null);
+      return;
+    }
+    const tick = () => {
+      setReservationCountdownMs(
+        getSoonestReservationRemainingMs(pendingReservations, Date.now())
+      );
+    };
+    tick();
+    const timer = window.setInterval(tick, 1000);
+    return () => window.clearInterval(timer);
+  }, [isCollectionOnly, pendingReservations]);
+
+  useEffect(() => {
+    if (!isCollectionOnly || pendingReservations.length === 0) {
+      return;
+    }
+    if (reservationCountdownMs === 0) {
+      setReservationMessage(
+        'Reservation timeout reached. Cancel pending reservations now to return items to supply.'
+      );
+    }
+  }, [isCollectionOnly, pendingReservations.length, reservationCountdownMs]);
 
   const appendLog = (message: string) => {
     setMintLog((prev) => [...prev, message].slice(-50));
@@ -253,6 +408,8 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
     setItems([]);
     setMintStatus(null);
     setMintLog([]);
+    setDropMessage(null);
+    setReservationMessage(null);
     setBeginState('idle');
     setUploadState('idle');
     setSealState('idle');
@@ -410,27 +567,44 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
     });
   };
 
+  const buildCollectionItemFromBytes = (params: {
+    keyPrefix: string;
+    path: string;
+    bytes: Uint8Array;
+    mimeType: string;
+    index: number;
+  }): CollectionItem => {
+    const chunks = chunkBytes(params.bytes);
+    const expectedHash = computeExpectedHash(chunks);
+    const expectedHashHex = bytesToHex(expectedHash);
+    return {
+      key: `${params.keyPrefix}-${expectedHashHex}-${params.index}`,
+      path: params.path,
+      mimeType: params.mimeType,
+      totalBytes: params.bytes.length,
+      totalChunks: chunks.length,
+      chunks,
+      expectedHash,
+      expectedHashHex,
+      issues: [],
+      status: 'idle'
+    };
+  };
+
   const buildCollectionItems = async (files: File[]) => {
     const sorted = [...files].sort(compareFiles);
     const nextItems: CollectionItem[] = [];
     for (const file of sorted) {
       const bytes = await readFileBytes(file);
-      const chunks = chunkBytes(bytes);
-      const expectedHash = computeExpectedHash(chunks);
-      const expectedHashHex = bytesToHex(expectedHash);
       const mimeType = file.type || 'application/octet-stream';
       nextItems.push({
-        key: `${file.name}-${expectedHashHex}-${nextItems.length}`,
-        file,
-        path: fileSortKey(file),
-        mimeType,
-        totalBytes: bytes.length,
-        totalChunks: chunks.length,
-        chunks,
-        expectedHash,
-        expectedHashHex,
-        issues: [],
-        status: 'idle'
+        ...buildCollectionItemFromBytes({
+          keyPrefix: file.name,
+          path: fileSortKey(file),
+          bytes,
+          mimeType,
+          index: nextItems.length
+        })
       });
     }
     return buildIssues(nextItems);
@@ -461,8 +635,218 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
     }
   };
 
+  const loadRandomDropItems = async () => {
+    const manifestUrl = dropManifestUrl.trim();
+    if (!manifestUrl) {
+      setDropMessage('Enter a drop manifest URL.');
+      return;
+    }
+    let parsedManifestUrl: URL;
+    try {
+      parsedManifestUrl = new URL(manifestUrl);
+    } catch {
+      setDropMessage('Enter a valid manifest URL.');
+      return;
+    }
+    if (
+      parsedManifestUrl.protocol !== 'https:' &&
+      parsedManifestUrl.protocol !== 'http:'
+    ) {
+      setDropMessage('Manifest URL must use http or https.');
+      return;
+    }
+    const quantity = normalizeQuantityInput(dropQuantityInput);
+    if (quantity === null) {
+      setDropMessage(`Quantity must be 1 to ${MAX_COLLECTION_ONLY_QUANTITY}.`);
+      return;
+    }
+
+    setIsPreparing(true);
+    setDropLoading(true);
+    setDropMessage(null);
+    setMintStatus(null);
+    setMintLog([]);
+    setBeginState('idle');
+    setUploadState('idle');
+    setSealState('idle');
+    setBatchProgress(null);
+    try {
+      const manifestResponse = await fetch(parsedManifestUrl.toString(), {
+        method: 'GET',
+        cache: 'no-store'
+      });
+      if (!manifestResponse.ok) {
+        throw new Error(`Manifest request failed (${manifestResponse.status}).`);
+      }
+      const manifestRaw = (await manifestResponse.json()) as unknown;
+      const parsedManifest = parseRandomDropManifest(manifestRaw);
+      if (parsedManifest.errors.length > 0) {
+        throw new Error(parsedManifest.errors[0]);
+      }
+      const selectedAssets = selectRandomDropAssets(
+        parsedManifest.assets,
+        quantity
+      );
+      if (selectedAssets.length < quantity) {
+        throw new Error(
+          `Manifest only has ${selectedAssets.length} valid assets for quantity ${quantity}.`
+        );
+      }
+      const nextItems: CollectionItem[] = [];
+      for (let index = 0; index < selectedAssets.length; index += 1) {
+        const asset = selectedAssets[index];
+        const response = await fetch(asset.url, {
+          method: 'GET',
+          cache: 'no-store'
+        });
+        if (!response.ok) {
+          throw new Error(
+            `Drop asset ${index + 1} failed to load (${response.status}).`
+          );
+        }
+        const bytes = await readResponseBytes(response);
+        const mimeType =
+          asset.mimeType ||
+          parseMimeFromContentType(response.headers.get('content-type')) ||
+          'application/octet-stream';
+        nextItems.push(
+          buildCollectionItemFromBytes({
+            keyPrefix: resolveNameFromUrl(asset.url),
+            path: `Random item ${index + 1}`,
+            bytes,
+            mimeType,
+            index
+          })
+        );
+      }
+      const prepared = buildIssues(nextItems);
+      setItems(prepared);
+      setDropMessage(`Prepared ${prepared.length} random mint item(s).`);
+      appendLog(
+        `Prepared ${prepared.length} random mint item(s) from ${parsedManifestUrl.toString()}.`
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setDropMessage(`Failed to prepare random mint items: ${message}`);
+      logWarn('mint', 'Collection random drop load failed', {
+        manifestUrl,
+        error: message
+      });
+    } finally {
+      setIsPreparing(false);
+      setDropLoading(false);
+    }
+  };
+
   const removeItem = (key: string) => {
     setItems((prev) => buildIssues(prev.filter((item) => item.key !== key)));
+  };
+
+  const refreshPendingReservations = async () => {
+    if (!collectionContract || !props.walletSession.address) {
+      setReservationMessage('Set collection contract and connect wallet first.');
+      return;
+    }
+    if (pendingReservations.length === 0) {
+      setReservationMessage('No pending reservations to refresh.');
+      return;
+    }
+    setReservationBusy(true);
+    setReservationMessage(null);
+    try {
+      const network = toStacksNetwork(props.contract.network);
+      const owner = props.walletSession.address;
+      const checks = await Promise.all(
+        pendingReservations.map(async (entry) => {
+          const result = await callReadOnlyFunction({
+            contractAddress: collectionContract.address,
+            contractName: collectionContract.contractName,
+            functionName: 'get-reservation',
+            functionArgs: [principalCV(owner), bufferCV(hashHexToBuffer(entry.hashHex))],
+            senderAddress: owner,
+            network
+          });
+          const present =
+            result.type === ClarityType.OptionalSome ||
+            (result.type === ClarityType.ResponseOk &&
+              result.value.type === ClarityType.OptionalSome);
+          return { entry, present };
+        })
+      );
+      const active = checks.filter((entry) => entry.present).map((entry) => entry.entry);
+      setPendingReservations(active);
+      const releasedCount = checks.length - active.length;
+      setReservationMessage(
+        releasedCount > 0
+          ? `Removed ${releasedCount} reservation(s) that are no longer active on-chain.`
+          : 'All pending reservations are still active.'
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setReservationMessage(`Failed to refresh reservations: ${message}`);
+      logWarn('mint', 'Collection reservation refresh failed', { error: message });
+    } finally {
+      setReservationBusy(false);
+    }
+  };
+
+  const cancelPendingReservations = async () => {
+    if (!collectionContract || !props.walletSession.address) {
+      setReservationMessage('Set collection contract and connect wallet first.');
+      return;
+    }
+    if (pendingReservations.length === 0) {
+      setReservationMessage('No pending reservations to cancel.');
+      return;
+    }
+    setReservationBusy(true);
+    setReservationMessage(null);
+    const failed: string[] = [];
+    try {
+      for (let index = 0; index < pendingReservations.length; index += 1) {
+        const reservation = pendingReservations[index];
+        try {
+          const cancelTx = await requestContractCall({
+            functionName: 'cancel-reservation',
+            functionArgs: [bufferCV(hashHexToBuffer(reservation.hashHex))],
+            contractAddress: collectionContract.address,
+            contractName: collectionContract.contractName,
+            logDetails: {
+              hash: reservation.hashHex,
+              index: index + 1,
+              total: pendingReservations.length
+            }
+          });
+          appendLog(
+            `Cancel reservation tx sent (${cancelTx.txId}) for ${reservation.itemLabel}.`
+          );
+          setPendingReservations((prev) =>
+            removeReservationsByHashes(prev, [reservation.hashHex])
+          );
+          if (index < pendingReservations.length - 1) {
+            await pauseBeforeNextTx('Next cancel in');
+          }
+        } catch (error) {
+          failed.push(reservation.hashHex);
+          const message = error instanceof Error ? error.message : String(error);
+          logWarn('mint', 'Collection reservation cancel failed', {
+            hash: reservation.hashHex,
+            error: message
+          });
+        }
+      }
+      if (failed.length === 0) {
+        setReservationMessage('All pending reservations were cancelled.');
+      } else {
+        setReservationMessage(
+          `Cancelled ${
+            pendingReservations.length - failed.length
+          }/${pendingReservations.length} reservations.`
+        );
+      }
+    } finally {
+      setReservationBusy(false);
+    }
   };
 
   const loadCollectionStatus = async () => {
@@ -532,7 +916,7 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
   };
 
   const startBatchMint = async () => {
-    if (mintPending || isPreparing) {
+    if (mintPending || isPreparing || reservationBusy) {
       return;
     }
     if (!props.walletSession.address) {
@@ -545,6 +929,12 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
     }
     if (mintTarget === 'collection' && !collectionContract) {
       setMintStatus('Enter a valid collection contract to continue.');
+      return;
+    }
+    if (mintTarget === 'collection' && pendingReservations.length > 0) {
+      setMintStatus(
+        'You have pending reservations from a previous attempt. Cancel or complete them before starting another mint.'
+      );
       return;
     }
     if (mintTarget === 'collection' && collectionStatus?.finalized) {
@@ -560,11 +950,15 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
       return;
     }
     if (items.length === 0) {
-      setMintStatus('Select files before starting the batch.');
+      setMintStatus(
+        isCollectionOnly
+          ? 'Prepare random mint items before starting.'
+          : 'Select files before starting the batch.'
+      );
       return;
     }
     if (countOverLimit) {
-      setMintStatus(`Limit exceeded: max ${MAX_COLLECTION_ITEMS} files.`);
+      setMintStatus(`Limit exceeded: max ${MAX_COLLECTION_ITEMS} items.`);
       return;
     }
     if (totalBytesOverLimit) {
@@ -592,6 +986,7 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
     }
     setMintPending(true);
     setMintStatus(null);
+    setReservationMessage(null);
     setBeginState('pending');
     setUploadState('pending');
     setSealState('idle');
@@ -647,6 +1042,15 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
           }
         });
         appendLog(`Begin tx sent (${beginTx.txId}).`);
+        if (mintTarget === 'collection') {
+          setPendingReservations((prev) =>
+            upsertReservation(prev, {
+              hashHex: item.expectedHashHex,
+              itemLabel: item.path,
+              startedAtMs: Date.now()
+            })
+          );
+        }
         await pauseBeforeNextTx('Next batch in');
 
         const batches = batchChunks(item.chunks, batchSize);
@@ -755,11 +1159,24 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
         }
       });
       appendLog(`Batch seal tx sent (${sealTx.txId}).`);
+      if (mintTarget === 'collection') {
+        setPendingReservations((prev) =>
+          removeReservationsByHashes(
+            prev,
+            items.map((item) => item.expectedHashHex)
+          )
+        );
+      }
       setSealState('done');
       setMintStatus('Batch seal submitted. IDs will mint sequentially.');
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       setMintStatus(`Batch mint failed: ${message}`);
+      if (mintTarget === 'collection') {
+        setReservationMessage(
+          'Mint did not complete. Cancel pending reservations within 20 minutes to unlock supply.'
+        );
+      }
       setItems((prev) =>
         prev.map((item) =>
           item.status === 'pending' ? { ...item, status: 'error' } : item
@@ -780,23 +1197,39 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
   const tokenUriLabel = formatTokenUriLabel(tokenUri.trim() || DEFAULT_TOKEN_URI);
   const collectionLimitLabel = formatBytes(BigInt(MAX_COLLECTION_TOTAL_BYTES));
   const itemLimitLabel = formatBytes(BigInt(MAX_COLLECTION_FILE_BYTES));
+  const reservationTimeoutLabel = formatRemainingMinutesSeconds(
+    COLLECTION_RESERVATION_TIMEOUT_MS
+  );
 
   return (
     <section
       className={`panel app-section panel--compact${props.collapsed ? ' panel--collapsed' : ''}`}
-      id="collection-mint"
+      id={sectionId}
     >
       <div className="panel__header">
         <div>
-          <h2>Batch mint</h2>
-          <p>Batch upload up to 50 items, then seal them in one transaction.</p>
-          <p className="meta-value">
-            Choose whether to mint directly into the core contract or via a
-            partner collection contract.
+          <h2>{isCollectionOnly ? 'Collection mint (user)' : 'Batch mint'}</h2>
+          <p>
+            {isCollectionOnly
+              ? 'Random collection mint: choose quantity, prepare unseen items from the artist drop manifest, then begin, upload, and seal.'
+              : 'Batch upload up to 50 items, then seal them in one transaction.'}
           </p>
-          <p className="meta-value">
-            Use Collection mint admin to configure partner collection contracts.
-          </p>
+          {!isCollectionOnly && (
+            <>
+              <p className="meta-value">
+                Choose whether to mint directly into the core contract or via a
+                partner collection contract.
+              </p>
+              <p className="meta-value">
+                Use Collection mint admin to configure partner collection contracts.
+              </p>
+            </>
+          )}
+          {isCollectionOnly && (
+            <p className="meta-value">
+              Users do not upload their own files in this flow. Mints are random and unseen until sealed.
+            </p>
+          )}
         </div>
         <div className="panel__actions">
           <span className={`badge badge--${props.contract.network}`}>
@@ -814,23 +1247,27 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
       </div>
       <div className="panel__body">
         <div className="mint-panel">
-          <span className="meta-label">Mint target</span>
-          <div className="meta-grid meta-grid--dense">
-            <label className="field">
-              <span className="field__label">Target</span>
-              <select
-                className="select"
-                value={mintTarget}
-                onChange={(event) =>
-                  setMintTarget(event.target.value as MintTarget)
-                }
-              >
-                <option value="core">Core contract (direct)</option>
-                <option value="collection">Collection contract (partner)</option>
-              </select>
-            </label>
-          </div>
-          {mintTarget === 'collection' && (
+          <span className="meta-label">
+            {isCollectionOnly ? 'Collection contract' : 'Mint target'}
+          </span>
+          {!isCollectionOnly && (
+            <div className="meta-grid meta-grid--dense">
+              <label className="field">
+                <span className="field__label">Target</span>
+                <select
+                  className="select"
+                  value={mintTarget}
+                  onChange={(event) =>
+                    setMintTarget(event.target.value as MintTarget)
+                  }
+                >
+                  <option value="core">Core contract (direct)</option>
+                  <option value="collection">Collection contract (partner)</option>
+                </select>
+              </label>
+            </div>
+          )}
+          {(isCollectionOnly || mintTarget === 'collection') && (
             <>
               <div className="meta-grid meta-grid--dense">
                 <label className="field">
@@ -933,47 +1370,93 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
           <div>
             <span className="meta-label">Step 1</span>
             <span className="meta-value">
-              Upload a folder or select multiple files (max {MAX_COLLECTION_ITEMS}).
+              {isCollectionOnly
+                ? 'Enter the artist drop manifest URL and quantity, then prepare random items (no local uploads).'
+                : `Upload a folder or select multiple files (max ${MAX_COLLECTION_ITEMS}).`}
             </span>
           </div>
           <div>
             <span className="meta-label">Step 2</span>
             <span className="meta-value">
-              Review order + sizes. Each file ≤ {itemLimitLabel}, total ≤ {collectionLimitLabel}.
+              {isCollectionOnly
+                ? `Review total size and fees. Each file ≤ ${itemLimitLabel}, total ≤ ${collectionLimitLabel}.`
+                : `Review order + sizes. Each file ≤ ${itemLimitLabel}, total ≤ ${collectionLimitLabel}.`}
             </span>
           </div>
           <div>
             <span className="meta-label">Step 3</span>
             <span className="meta-value">
-              Begin + upload each file, then seal the batch for sequential IDs.
+              Begin + upload chunk data, then seal for sequential IDs. Incomplete mints should be cancelled within 20 minutes.
             </span>
           </div>
         </div>
 
-        <div className="collection-mint__inputs">
-          <label className="field">
-            <span className="field__label">Upload a folder</span>
-            <input
-              ref={folderInputRef}
-              className="input"
-              type="file"
-              multiple
-              onChange={(event) => handleFilesSelected(event.target.files)}
-            />
-            <span className="field__hint">
-              Uses folder order where supported (Chrome/Edge).
-            </span>
-          </label>
-          <label className="field">
-            <span className="field__label">Or select multiple files</span>
-            <input
-              className="input"
-              type="file"
-              multiple
-              onChange={(event) => handleFilesSelected(event.target.files)}
-            />
-          </label>
-        </div>
+        {isCollectionOnly ? (
+          <div className="collection-mint__inputs">
+            <label className="field">
+              <span className="field__label">Drop manifest URL</span>
+              <input
+                className="input"
+                placeholder="https://artist-site.example/drop/manifest.json"
+                value={dropManifestUrl}
+                onChange={(event) => setDropManifestUrl(event.target.value)}
+              />
+              <span className="field__hint">
+                Manifest should include an `assets` array of HTTP(S) file URLs.
+              </span>
+            </label>
+            <label className="field">
+              <span className="field__label">Quantity</span>
+              <input
+                className="input"
+                type="number"
+                min={1}
+                max={MAX_COLLECTION_ONLY_QUANTITY}
+                value={dropQuantityInput}
+                onChange={(event) => setDropQuantityInput(event.target.value)}
+              />
+              <span className="field__hint">
+                Randomly selects this many items from the drop manifest.
+              </span>
+            </label>
+            <div className="mint-actions">
+              <button
+                className="button button--ghost"
+                type="button"
+                onClick={() => void loadRandomDropItems()}
+                disabled={dropLoading || reservationBusy}
+              >
+                {dropLoading ? 'Preparing...' : 'Prepare random mint'}
+              </button>
+            </div>
+            {dropMessage && <p className="meta-value">{dropMessage}</p>}
+          </div>
+        ) : (
+          <div className="collection-mint__inputs">
+            <label className="field">
+              <span className="field__label">Upload a folder</span>
+              <input
+                ref={folderInputRef}
+                className="input"
+                type="file"
+                multiple
+                onChange={(event) => handleFilesSelected(event.target.files)}
+              />
+              <span className="field__hint">
+                Uses folder order where supported (Chrome/Edge).
+              </span>
+            </label>
+            <label className="field">
+              <span className="field__label">Or select multiple files</span>
+              <input
+                className="input"
+                type="file"
+                multiple
+                onChange={(event) => handleFilesSelected(event.target.files)}
+              />
+            </label>
+          </div>
+        )}
 
         <div className="meta-grid meta-grid--dense">
           <div>
@@ -995,6 +1478,43 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
             <span className="meta-value">{batchSize} chunks/tx</span>
           </div>
         </div>
+
+        {isCollectionOnly && (
+          <div className="alert">
+            If begin/upload is not completed and sealed within {reservationTimeoutLabel},
+            reservations should be cancelled and returned to the collection supply. Fees
+            already paid to submitted transactions are non-refundable.
+          </div>
+        )}
+        {mintTarget === 'collection' && pendingReservations.length > 0 && (
+          <div className="alert">
+            Pending reservations: {pendingReservations.length}. Time until recommended
+            cancel:{' '}
+            {reservationCountdownMs !== null
+              ? formatRemainingMinutesSeconds(reservationCountdownMs)
+              : '00:00'}
+            .
+            <div className="mint-actions">
+              <button
+                className="button button--ghost"
+                type="button"
+                onClick={() => void refreshPendingReservations()}
+                disabled={reservationBusy || mintPending}
+              >
+                {reservationBusy ? 'Refreshing...' : 'Refresh reservations'}
+              </button>
+              <button
+                className="button"
+                type="button"
+                onClick={() => void cancelPendingReservations()}
+                disabled={reservationBusy || mintPending}
+              >
+                {reservationBusy ? 'Cancelling...' : 'Cancel pending reservations'}
+              </button>
+            </div>
+          </div>
+        )}
+        {reservationMessage && <div className="alert">{reservationMessage}</div>}
 
         <label className="field">
           <span className="field__label">Token URI (applied to all items)</span>
@@ -1114,16 +1634,23 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
             onClick={() => void startBatchMint()}
             disabled={
               mintPending ||
+              dropLoading ||
+              reservationBusy ||
               isPreparing ||
               items.length === 0 ||
               hasBlockingIssues ||
               !!tokenUriError ||
               !!mismatch ||
               (mintTarget === 'core' && pauseBlocked) ||
-              (mintTarget === 'collection' && !collectionContract)
+              (mintTarget === 'collection' &&
+                (!collectionContract || pendingReservations.length > 0))
             }
           >
-            {mintPending ? 'Minting…' : 'Begin batch mint'}
+            {mintPending
+              ? 'Minting…'
+              : isCollectionOnly
+                ? 'Begin collection mint'
+                : 'Begin batch mint'}
           </button>
           <button
             className="button button--ghost"

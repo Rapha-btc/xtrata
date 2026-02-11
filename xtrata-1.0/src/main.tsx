@@ -4,7 +4,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
 import PublicApp from './PublicApp';
 import AdminGate from './admin/AdminGate';
+import ArtistManagerGate from './manage/ArtistManagerGate';
+import CollectionManagerApp from './manage/CollectionManagerApp';
 import { ADMIN_PATH } from './config/admin';
+import { MANAGE_PATH } from './config/manage';
 import { ReadOnlyBackoffError } from './lib/contract/read-only';
 import {
   hydrateQueryCache,
@@ -53,6 +56,10 @@ ReactDOM.createRoot(root).render(
         <AdminGate>
           <App />
         </AdminGate>
+      ) : window.location.pathname.startsWith(MANAGE_PATH) ? (
+        <ArtistManagerGate>
+          <CollectionManagerApp />
+        </ArtistManagerGate>
       ) : (
         <PublicApp />
       )}
