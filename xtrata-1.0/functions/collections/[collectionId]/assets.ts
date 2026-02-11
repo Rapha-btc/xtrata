@@ -1,6 +1,6 @@
-import { jsonResponse, badRequest, serverError } from '../../../lib/utils';
-import { run } from '../../../lib/db';
-import { staysWithinLimit } from '../../../lib/collections';
+import { jsonResponse, badRequest, serverError } from '../../lib/utils';
+import { run } from '../../lib/db';
+import { staysWithinLimit } from '../../lib/collections';
 
 export const onRequest: PagesFunction = async ({ request, env, params }) => {
   const collectionId = params?.collectionId;
@@ -14,8 +14,10 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
       'UPDATE assets SET state = ? WHERE collection_id = ? AND expires_at IS NOT NULL AND expires_at < ? AND state = ?',
       ['expired', collectionId, Date.now(), 'draft']
     );
-    const statement = await env.DB.prepare('SELECT * FROM assets WHERE collection_id = ? ORDER BY created_at DESC');
-    const result = await statement.all(collectionId);
+    const statement = env.DB.prepare(
+      'SELECT * FROM assets WHERE collection_id = ? ORDER BY created_at DESC'
+    );
+    const result = await statement.bind(collectionId).all();
     return jsonResponse(result.results ?? []);
   }
 
@@ -35,10 +37,10 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
       const totalChunks = Number(payload.totalChunks ?? 0);
       const expectedHash = String(payload.expectedHash ?? '');
       const limitBytes = Number(env.MAX_COLLECTION_STORAGE_BYTES ?? 500 * 1024 * 1024);
-      const sumStatement = await env.DB.prepare(
+      const sumStatement = env.DB.prepare(
         'SELECT COALESCE(SUM(total_bytes), 0) as total FROM assets WHERE collection_id = ? AND state != ?'
       );
-      const aggregate = await sumStatement.all(collectionId, 'sold-out');
+      const aggregate = await sumStatement.bind(collectionId, 'sold-out').all();
       const currentBytes = Number(aggregate.results?.[0]?.total ?? 0);
       if (!staysWithinLimit(currentBytes, totalBytes, limitBytes)) {
         return badRequest(
@@ -50,8 +52,8 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
       const assetId = crypto.randomUUID();
       await run(
         env,
-        `INSERT INTO assets (asset_id, collection_id, path, filename, mime_type, total_bytes, total_chunks, expected_hash, storage_key, edition_cap, state, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO assets (asset_id, collection_id, path, filename, mime_type, total_bytes, total_chunks, expected_hash, storage_key, edition_cap, state, expires_at, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           assetId,
           collectionId,
@@ -69,7 +71,10 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
           Date.now()
         ]
       );
-      const inserted = await env.DB.prepare('SELECT * FROM assets WHERE asset_id = ?').all(assetId);
+      const inserted = await env.DB
+        .prepare('SELECT * FROM assets WHERE asset_id = ?')
+        .bind(assetId)
+        .all();
       const row = (inserted.results ?? [])[0];
       return jsonResponse(row, 201);
     } catch (error) {

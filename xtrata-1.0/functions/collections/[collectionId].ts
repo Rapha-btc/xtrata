@@ -1,5 +1,5 @@
-import { jsonResponse, badRequest, notFound, serverError } from '../../lib/utils';
-import { run } from '../../lib/db';
+import { jsonResponse, badRequest, notFound, serverError } from '../lib/utils';
+import { run } from '../lib/db';
 
 const mapRow = (row: Record<string, unknown>) => ({
   ...row,
@@ -13,8 +13,8 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
   }
 
   if (request.method === 'GET') {
-    const statement = await env.DB.prepare('SELECT * FROM collections WHERE id = ?');
-    const result = await statement.all(collectionId);
+    const statement = env.DB.prepare('SELECT * FROM collections WHERE id = ?');
+    const result = await statement.bind(collectionId).all();
     const record = (result.results ?? [])[0];
     if (!record) {
       return notFound('Collection not found.');
@@ -50,8 +50,8 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
       binds.push(collectionId);
       const query = `UPDATE collections SET ${updates.join(', ')}, updated_at = ? WHERE id = ?`;
       await run(env, query, binds);
-      const select = await env.DB.prepare('SELECT * FROM collections WHERE id = ?');
-      const record = (await select.all(collectionId)).results?.[0];
+      const select = env.DB.prepare('SELECT * FROM collections WHERE id = ?');
+      const record = (await select.bind(collectionId).all()).results?.[0];
       if (!record) {
         return notFound('Collection not found after update.');
       }

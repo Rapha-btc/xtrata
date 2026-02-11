@@ -9,7 +9,7 @@ const mapRow = (row: Record<string, unknown>) => ({
 
 export const onRequest: PagesFunction = async ({ request, env }) => {
   if (request.method === 'GET') {
-    const statement = await env.DB.prepare('SELECT * FROM collections ORDER BY created_at DESC');
+    const statement = env.DB.prepare('SELECT * FROM collections ORDER BY created_at DESC');
     const result = await statement.all();
     return jsonResponse((result.results ?? []).map(mapRow));
   }
@@ -32,8 +32,8 @@ export const onRequest: PagesFunction = async ({ request, env }) => {
         'INSERT INTO collections (id, slug, artist_address, contract_address, display_name, metadata, state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [id, slug, payload.artistAddress.trim(), payload.contractAddress ?? null, payload.displayName ?? null, metadata, 'draft', now, now]
       );
-      const statement = await env.DB.prepare('SELECT * FROM collections WHERE id = ?');
-      const created = await statement.all(id);
+      const statement = env.DB.prepare('SELECT * FROM collections WHERE id = ?');
+      const created = await statement.bind(id).all();
       const record = (created.results ?? [])[0];
       return jsonResponse(mapRow(record), 201);
     } catch (error) {

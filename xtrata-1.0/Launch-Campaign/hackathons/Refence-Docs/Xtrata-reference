@@ -1,0 +1,103 @@
+Reference: Xtrata — Positioning for Hackathons & Prize-Driven Events
+
+Core Project Snapshot
+
+Project Name: Xtrata
+Tagline: A recursive on-chain memory layer for Bitcoin via Stacks
+
+Xtrata is an on-chain memory layer for Bitcoin (via Stacks) designed to make media and app data permanent, reconstructable, and composable on-chain. Rather than stopping at pointer-to-metadata NFTs, Xtrata builds verifiable, modular on-chain data graphs using recursive relationships between inscriptions.
+
+What Xtrata Solves
+	•	Durable on-chain data: Payloads and media are stored and reconstructable without external off-chain dependencies.
+	•	Deterministic reconstruction: Same bytes → same result — ideal for verifiable content.
+	•	Recursion & composability: Parent-child inscription linkages create modular on-chain data structures.
+	•	Ecosystem compatibility: SIP-009–compatible NFTs for broader tooling and marketplace support.
+	•	Large media practicality: Chunked upload/read patterns allow scaling beyond small single-file NFTs.
+
+Target Audiences / Stakeholders
+	1.	Developers / Builders — infrastructure, data tooling, durable on-chain media.
+	2.	Creators / Artists — permanent verifiable on-chain media and composable assets.
+	3.	Collectors / Curators — provenance and reconstructability beyond pointers.
+	4.	Integrators / Marketplaces — marketplaces, gallery tools, viewer interfaces.
+
+Why Xtrata Matters (Hackathon Lens)
+
+Thematic Fit:
+	•	Blockchain infrastructure & primitives
+	•	Data permanence & verifiability
+	•	Decentralised storage and recursive data graphs
+	•	Smart contract tooling & SDK development
+	•	On-chain media / NFTs beyond simple metadata pointers
+
+Technical merits for competition:
+	•	Novel architectural model: “token as verifiable on-chain data graph” vs “pointer → off-chain”
+	•	Deep composability and ecosystem interoperability
+	•	Practical SDKs, docs, and integration helpers that reduce friction
+	•	Analytics, monitoring, and ecosystem integration stories
+	•	Impactful outcomes with measurable adoption signals
+
+Ideal Submission Angles
+
+When entering hackathons or developer competitions, frame Xtrata submissions with:
+
+⚙️ Technical Innovation
+	•	Recursive on-chain data structures
+	•	Deterministic reconstruction of arbitrary media
+	•	Chunked on-chain media workflows
+	•	SIP-009–compatible extensions
+
+📚 Developer Utility
+	•	SDKs and helper utilities (read/mint flows, composable graphs)
+	•	Reference integrations (marketplace connectors, viewer tooling)
+	•	Advanced documentation + onboarding toolkit
+
+🧠 Ecosystem Impact
+	•	Real use cases: creators, marketplaces, tooling partners
+	•	Metrics of adoption (integrations, usage, reliability dashboards)
+	•	Case studies (e.g., recursive art piece, on-chain app)
+
+How to Present Xtrata in Competition
+
+When crafting your submission (pitch deck, demo, video, poster):
+	1.	“Problem → Solution” Narrative
+Build the hook around the limitation of pointer-based NFTs and how Xtrata’s model elevates permanence and composability.
+	2.	Live Demo + SDK Walkthrough
+Show an inscribed work, its dependency graph, and reconstruction via tooling — ideally with metrics.
+	3.	Integration Story
+Early integrations with marketplaces or builder tools show adoption and ecosystem traction.
+	4.	Measurable Outcomes
+Public dashboards, reliability metrics, integration logs, or community interest signups add credibility.
+
+⸻
+
+Examples of Target Hackathons & Prize Events (2026)
+
+(Use this reference to match Xtrata’s themes with event scopes)
+
+🛠 Web3 & Blockchain-Focused Hackathons
+	•	Hedera Hello Future Apex Hackathon — ~$250,000 total prize pool; global Web3 build sprint suitable for deep technical blockchain projects.  ￼
+	•	Polkadot Solidity Hackathon 2026 — Web3 event with ~$30,000 in prizes — strong builder audience.  ￼
+	•	Devpost Blockchain hackathons (ChainX, Midwest Blockathon, etc.) — smaller cash prizes but direct hackathon entry points for blockchain submissions.  ￼
+	•	Bitcoin & Privacy Hackathon (Starknet & similar) — blockchain-centric online builds.  ￼
+
+🚀 Major Crypto/Blockchain Ecosystem Events With Hack Tracks (Prize & Visibility)
+	•	ETHDenver (Feb 17–21 2026) — world’s largest Web3 builder festival with wide hackathon participation.  ￼
+	•	Consensus Hong Kong hackathon stage & competition tracks — large global Web3 event with developer challenges and pitches.  ￼
+	•	ETHGlobal New York (June 2026) — high-energy Web3 hackathon platform and community build event.  ￼
+
+🎓 Other Related Hackathons (Developer / Tech)
+
+(Lower blockchain focus, but worth scanning for cross-domain fit)
+	•	Dev.events listings include Web3 hackathons like Polkadot, Bitcoin & privacy, crypto/online themes — handy for quick early entries.  ￼
+
+⸻
+
+Submission Positioning Checklist
+
+When you evaluate an event before applying, ensure the hackathon:
+
+✅ Has Web3 / blockchain / NFT / decentralised data themes
+✅ Offers prize money, credits, or visibility / mentor support
+✅ Accepts technical submissions with smart contracts and SDK deliverables
+✅ Values open-source or composability patterns
+✅ Has a judging rubric you can align messaging to (e.g., innovation, impact, execution)
