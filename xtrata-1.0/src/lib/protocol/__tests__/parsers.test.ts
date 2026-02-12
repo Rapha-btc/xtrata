@@ -19,6 +19,7 @@ import {
   parseGetAdmin,
   parseGetFeeUnit,
   parseGetInscriptionMeta,
+  parseGetIdByHash,
   parseGetLastTokenId,
   parseGetNextTokenId,
   parseGetOwner,
@@ -162,6 +163,11 @@ describe('contract parsers', () => {
     expect(parsed.totalChunks).toBe(2n);
     expect(parsed.currentIndex).toBe(1n);
     expect(parsed.runningHash).toEqual(runningHash);
+  });
+
+  it('parses get-id-by-hash option', () => {
+    expect(parseGetIdByHash(someCV(uintCV(42)))).toBe(42n);
+    expect(parseGetIdByHash(noneCV())).toBeNull();
   });
 
   it('parses optional chunks', () => {

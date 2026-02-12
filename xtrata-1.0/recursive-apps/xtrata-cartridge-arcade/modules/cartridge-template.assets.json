@@ -1,0 +1,7 @@
+{
+  "schema": "xtrata-cartridge-assets@1",
+  "cartridgeId": "template-cartridge",
+  "title": "Template Cartridge",
+  "description": "Copy this file and replace with your cartridge data payload.",
+  "levels": []
+}

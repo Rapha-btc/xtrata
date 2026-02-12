@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent, type MouseEvent } from 'react';
 import { showContractDeploy } from '@stacks/connect';
 import { useQueryClient } from '@tanstack/react-query';
 import { validateStacksAddress } from '@stacks/transactions';
@@ -288,8 +288,21 @@ export default function App() {
     writeThemePreference(nextTheme);
   };
 
-  const handleNavJump = (key: SectionKey) => {
+  const handleNavJump = (
+    event: MouseEvent<HTMLAnchorElement>,
+    key: SectionKey
+  ) => {
+    event.preventDefault();
     setCollapsedSections((prev) => ({ ...prev, [key]: false }));
+    if (typeof window !== 'undefined') {
+      window.requestAnimationFrame(() => {
+        const anchor = document.getElementById(key);
+        if (anchor) {
+          anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        window.history.replaceState(null, '', `#${key}`);
+      });
+    }
   };
 
   useEffect(() => {
@@ -338,6 +351,7 @@ export default function App() {
 
   const handleWalletLookupSearch = () => {
     setViewerMode('wallet');
+    setCollapsedSections((prev) => ({ ...prev, 'collection-viewer': false }));
     const anchor = document.getElementById('collection-viewer');
     if (anchor) {
       anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -438,98 +452,98 @@ export default function App() {
               <a
                 className="button button--ghost app__nav-link"
                 href="#wallet-lookup"
-                onClick={() => handleNavJump('wallet-lookup')}
+                onClick={(event) => handleNavJump(event, 'wallet-lookup')}
               >
                 Wallet lookup
               </a>
               <a
                 className="button button--ghost app__nav-link"
                 href="#wallet-session"
-                onClick={() => handleNavJump('wallet-session')}
+                onClick={(event) => handleNavJump(event, 'wallet-session')}
               >
                 Wallet session
               </a>
               <a
                 className="button button--ghost app__nav-link"
                 href="#active-contract"
-                onClick={() => handleNavJump('active-contract')}
+                onClick={(event) => handleNavJump(event, 'active-contract')}
               >
                 Active contract
               </a>
               <a
                 className="button button--ghost app__nav-link"
                 href="#collection-viewer"
-                onClick={() => handleNavJump('collection-viewer')}
+                onClick={(event) => handleNavJump(event, 'collection-viewer')}
               >
                 Viewer
               </a>
               <a
                 className="button button--ghost app__nav-link"
                 href="#market"
-                onClick={() => handleNavJump('market')}
+                onClick={(event) => handleNavJump(event, 'market')}
               >
                 Market
               </a>
               <a
                 className="button button--ghost app__nav-link"
                 href="#deploy-contract"
-                onClick={() => handleNavJump('deploy-contract')}
+                onClick={(event) => handleNavJump(event, 'deploy-contract')}
               >
                 Deploy
               </a>
               <a
                 className="button button--ghost app__nav-link"
                 href="#contract-admin"
-                onClick={() => handleNavJump('contract-admin')}
+                onClick={(event) => handleNavJump(event, 'contract-admin')}
               >
                 Contract admin
               </a>
               <a
                 className="button button--ghost app__nav-link"
                 href="#collection-mint-admin"
-                onClick={() => handleNavJump('collection-mint-admin')}
+                onClick={(event) => handleNavJump(event, 'collection-mint-admin')}
               >
                 Collection mint admin
               </a>
               <a
                 className="button button--ghost app__nav-link"
                 href="#preinscribed-sale-admin"
-                onClick={() => handleNavJump('preinscribed-sale-admin')}
+                onClick={(event) => handleNavJump(event, 'preinscribed-sale-admin')}
               >
                 Pre-inscribed sale admin
               </a>
               <a
                 className="button button--ghost app__nav-link"
                 href="#preinscribed-sale"
-                onClick={() => handleNavJump('preinscribed-sale')}
+                onClick={(event) => handleNavJump(event, 'preinscribed-sale')}
               >
                 Pre-inscribed sale buyer
               </a>
               <a
                 className="button button--ghost app__nav-link"
                 href="#admin-diagnostics"
-                onClick={() => handleNavJump('admin-diagnostics')}
+                onClick={(event) => handleNavJump(event, 'admin-diagnostics')}
               >
                 Diagnostics
               </a>
               <a
                 className="button button--ghost app__nav-link"
                 href="#campaign-console"
-                onClick={() => handleNavJump('campaign-console')}
+                onClick={(event) => handleNavJump(event, 'campaign-console')}
               >
                 Campaign console
               </a>
               <a
                 className="button button--ghost app__nav-link"
                 href="#collection-mint"
-                onClick={() => handleNavJump('collection-mint')}
+                onClick={(event) => handleNavJump(event, 'collection-mint')}
               >
                 Batch mint
               </a>
               <a
                 className="button button--ghost app__nav-link"
                 href="#mint"
-                onClick={() => handleNavJump('mint')}
+                onClick={(event) => handleNavJump(event, 'mint')}
               >
                 Mint
               </a>

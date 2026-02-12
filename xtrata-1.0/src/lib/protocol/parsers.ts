@@ -198,6 +198,14 @@ export const parseGetUploadState = (value: ClarityValue) => {
   return parseUploadStateTuple(optional, 'get-upload-state');
 };
 
+export const parseGetIdByHash = (value: ClarityValue) => {
+  const optional = expectOptional(value, 'get-id-by-hash');
+  if (!optional) {
+    return null;
+  }
+  return expectUInt(optional, 'get-id-by-hash');
+};
+
 export const parseGetPendingChunk = (value: ClarityValue) =>
   parseOptionalBuffer(value, 'get-pending-chunk');
 

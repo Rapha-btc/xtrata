@@ -1,0 +1,41 @@
+{
+  "schema": "xtrata-cartridge-manifest@1",
+  "arcadeId": "xtrata-cartridge-arcade",
+  "arcadeTitle": "Xtrata Cartridge Arcade",
+  "arcadeSubtitle": "Recursive, modular, and fully on-chain cartridges.",
+  "defaultCartridge": "orb-heist-v1",
+  "cartridges": [
+    {
+      "id": "orb-heist-v1",
+      "title": "Orb Heist",
+      "description": "Infiltrate three vaults, recover every orb, and escape while sentries patrol.",
+      "version": "1.0.0",
+      "logicModuleId": 0,
+      "assetsModuleId": 0
+    },
+    {
+      "id": "signal-sprint-v1",
+      "title": "Signal Sprint",
+      "description": "Real-time lane runner through firewall traffic and packet pickups.",
+      "version": "1.0.0",
+      "logicModuleId": 0,
+      "assetsModuleId": 0
+    },
+    {
+      "id": "glyph-link-v1",
+      "title": "Glyph Link",
+      "description": "Multi-deck memory puzzle with escalating board size.",
+      "version": "1.0.0",
+      "logicModuleId": 0,
+      "assetsModuleId": 0
+    },
+    {
+      "id": "reactor-warden-v1",
+      "title": "Reactor Warden",
+      "description": "Turn-based core stabilization under escalating thermal events.",
+      "version": "1.0.0",
+      "logicModuleId": 0,
+      "assetsModuleId": 0
+    }
+  ]
+}

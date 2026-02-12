@@ -1,0 +1,55 @@
+{
+  "schema": "xtrata-cartridge-assets@1",
+  "cartridgeId": "orb-heist-v1",
+  "title": "Orb Heist",
+  "goal": "Collect all orbs in each vault, avoid sentries, and exfiltrate through the exit.",
+  "palette": {
+    "background": "#0a1017",
+    "wall": "#325374",
+    "player": "#1a5a76",
+    "guard": "#572225",
+    "orb": "#4f3d1f",
+    "exit": "#284f36"
+  },
+  "levels": [
+    {
+      "id": "vault-a",
+      "name": "Vault A",
+      "map": [
+        "#############",
+        "#P..#....O.E#",
+        "#.#.#.###...#",
+        "#...#...#...#",
+        "#.###.#.#.#.#",
+        "#.....#...G.#",
+        "#############"
+      ]
+    },
+    {
+      "id": "vault-b",
+      "name": "Vault B",
+      "map": [
+        "#############",
+        "#P...#..O..E#",
+        "#.###.#.###.#",
+        "#...#.#...#.#",
+        "###.#.###.#.#",
+        "#O..#...G...#",
+        "#############"
+      ]
+    },
+    {
+      "id": "vault-c",
+      "name": "Vault C",
+      "map": [
+        "#############",
+        "#P..O#....O.#",
+        "#.#.#.###.#E#",
+        "#.#...#...#.#",
+        "#.###.#.###.#",
+        "#...G...O...#",
+        "#############"
+      ]
+    }
+  ]
+}

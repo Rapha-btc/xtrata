@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent, type MouseEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { PUBLIC_CONTRACT, PUBLIC_MINT_RESTRICTIONS } from './config/public';
 import { getContractId } from './lib/contract/config';
@@ -832,6 +832,23 @@ export default function PublicApp() {
     writeThemePreference(nextTheme);
   };
 
+  const handleNavJump = (
+    event: MouseEvent<HTMLAnchorElement>,
+    key: SectionKey
+  ) => {
+    event.preventDefault();
+    setCollapsedSections((prev) => ({ ...prev, [key]: false }));
+    if (typeof window !== 'undefined') {
+      window.requestAnimationFrame(() => {
+        const anchor = document.getElementById(key);
+        if (anchor) {
+          anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        window.history.replaceState(null, '', `#${key}`);
+      });
+    }
+  };
+
   const handleSelectDoc = (docId: string) => {
     setActiveDocId(docId);
     if (typeof window === 'undefined') {
@@ -882,6 +899,7 @@ export default function PublicApp() {
 
   const handleWalletLookupSearch = () => {
     setViewerMode('wallet');
+    setCollapsedSections((prev) => ({ ...prev, 'collection-viewer': false }));
     const anchor = document.getElementById('collection-viewer');
     if (anchor) {
       anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -914,31 +932,53 @@ export default function PublicApp() {
           </h1>
           <div className="app__toolbar">
             <nav className="app__nav">
-              <a className="button button--ghost app__nav-link" href="#wallet-lookup">
+              <a
+                className="button button--ghost app__nav-link"
+                href="#wallet-lookup"
+                onClick={(event) => handleNavJump(event, 'wallet-lookup')}
+              >
                 Wallet lookup
               </a>
-              <a className="button button--ghost app__nav-link" href="#wallet-session">
+              <a
+                className="button button--ghost app__nav-link"
+                href="#wallet-session"
+                onClick={(event) => handleNavJump(event, 'wallet-session')}
+              >
                 Wallet
               </a>
-              <a className="button button--ghost app__nav-link" href="#active-contract">
+              <a
+                className="button button--ghost app__nav-link"
+                href="#active-contract"
+                onClick={(event) => handleNavJump(event, 'active-contract')}
+              >
                 Active contract
               </a>
               <a
                 className="button button--ghost app__nav-link"
                 href="#mint"
+                onClick={(event) => handleNavJump(event, 'mint')}
               >
                 Mint
               </a>
               <a
                 className="button button--ghost app__nav-link"
                 href="#collection-viewer"
+                onClick={(event) => handleNavJump(event, 'collection-viewer')}
               >
                 Viewer
               </a>
-              <a className="button button--ghost app__nav-link" href="#market">
+              <a
+                className="button button--ghost app__nav-link"
+                href="#market"
+                onClick={(event) => handleNavJump(event, 'market')}
+              >
                 Market
               </a>
-              <a className="button button--ghost app__nav-link" href="#docs">
+              <a
+                className="button button--ghost app__nav-link"
+                href="#docs"
+                onClick={(event) => handleNavJump(event, 'docs')}
+              >
                 Docs
               </a>
             </nav>

@@ -997,6 +997,11 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
     );
 
     try {
+      const walletAddress = props.walletSession.address ?? null;
+      if (!walletAddress) {
+        throw new Error('Connect a wallet before starting batch mint.');
+      }
+      const itemsToSeal: CollectionItem[] = [];
       for (let index = 0; index < items.length; index += 1) {
         const item = items[index];
         setItems((prev) =>
@@ -1004,56 +1009,103 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
             idx === index ? { ...entry, status: 'pending' } : entry
           )
         );
-        appendLog(`Item ${index + 1}/${items.length}: begin inscription.`);
-        const beginPostConditions =
-          mintTarget === 'collection'
-            ? undefined
-            : resolveFeePostConditions(feeSchedule.feeUnitMicroStx);
-        const beginTx = await requestContractCall({
-          functionName:
-            mintTarget === 'collection' ? 'mint-begin' : 'begin-inscription',
-          functionArgs:
-            mintTarget === 'collection'
-              ? [
-                  principalCV(xtrataContractId),
-                  bufferCV(item.expectedHash),
-                  stringAsciiCV(item.mimeType),
-                  uintCV(BigInt(item.totalBytes)),
-                  uintCV(BigInt(item.totalChunks))
-                ]
-              : [
-                  bufferCV(item.expectedHash),
-                  stringAsciiCV(item.mimeType),
-                  uintCV(BigInt(item.totalBytes)),
-                  uintCV(BigInt(item.totalChunks))
-                ],
-          contractAddress:
-            mintTarget === 'collection' ? collectionContract?.address : undefined,
-          contractName:
-            mintTarget === 'collection' ? collectionContract?.contractName : undefined,
-          postConditionMode: beginPostConditions
-            ? PostConditionMode.Deny
-            : undefined,
-          postConditions: beginPostConditions,
-          logDetails: {
-            item: item.path,
-            bytes: item.totalBytes,
-            chunks: item.totalChunks
-          }
-        });
-        appendLog(`Begin tx sent (${beginTx.txId}).`);
-        if (mintTarget === 'collection') {
-          setPendingReservations((prev) =>
-            upsertReservation(prev, {
-              hashHex: item.expectedHashHex,
-              itemLabel: item.path,
-              startedAtMs: Date.now()
-            })
+        const sealedTokenId = await client.getIdByHash(
+          item.expectedHash,
+          walletAddress
+        );
+        if (sealedTokenId !== null) {
+          appendLog(
+            `Item ${index + 1}/${items.length}: already sealed as token #${sealedTokenId.toString()}. Skipping.`
           );
+          setItems((prev) =>
+            prev.map((entry, idx) =>
+              idx === index ? { ...entry, status: 'done' } : entry
+            )
+          );
+          continue;
         }
-        await pauseBeforeNextTx('Next batch in');
 
-        const batches = batchChunks(item.chunks, batchSize);
+        let uploadStartIndex = 0;
+        const existingUploadState = await client.getUploadState(
+          item.expectedHash,
+          walletAddress,
+          walletAddress
+        );
+        if (existingUploadState) {
+          const expectedSize = BigInt(item.totalBytes);
+          const expectedChunks = BigInt(item.totalChunks);
+          if (
+            existingUploadState.mimeType !== item.mimeType ||
+            existingUploadState.totalSize !== expectedSize ||
+            existingUploadState.totalChunks !== expectedChunks
+          ) {
+            throw new Error(
+              `Item ${item.path} does not match the on-chain upload session. Clear the old session before retrying.`
+            );
+          }
+          const onChainIndex = Number(existingUploadState.currentIndex);
+          if (!Number.isSafeInteger(onChainIndex) || onChainIndex < 0) {
+            throw new Error(`Item ${item.path} has an invalid on-chain upload index.`);
+          }
+          if (onChainIndex > item.totalChunks) {
+            throw new Error(
+              `Item ${item.path} on-chain index exceeds expected chunk count.`
+            );
+          }
+          uploadStartIndex = onChainIndex;
+          if (uploadStartIndex >= item.totalChunks) {
+            appendLog(
+              `Item ${index + 1}/${items.length}: upload already complete (${uploadStartIndex}/${item.totalChunks}).`
+            );
+          } else {
+            appendLog(
+              `Item ${index + 1}/${items.length}: resuming upload from chunk ${uploadStartIndex + 1}/${item.totalChunks}.`
+            );
+          }
+        } else {
+          appendLog(`Item ${index + 1}/${items.length}: begin inscription.`);
+          const beginPostConditions =
+            mintTarget === 'collection'
+              ? undefined
+              : resolveFeePostConditions(feeSchedule.feeUnitMicroStx);
+          const beginTx = await requestContractCall({
+            functionName:
+              mintTarget === 'collection' ? 'mint-begin' : 'begin-inscription',
+            functionArgs:
+              mintTarget === 'collection'
+                ? [
+                    principalCV(xtrataContractId),
+                    bufferCV(item.expectedHash),
+                    stringAsciiCV(item.mimeType),
+                    uintCV(BigInt(item.totalBytes)),
+                    uintCV(BigInt(item.totalChunks))
+                  ]
+                : [
+                    bufferCV(item.expectedHash),
+                    stringAsciiCV(item.mimeType),
+                    uintCV(BigInt(item.totalBytes)),
+                    uintCV(BigInt(item.totalChunks))
+                  ],
+            contractAddress:
+              mintTarget === 'collection' ? collectionContract?.address : undefined,
+            contractName:
+              mintTarget === 'collection' ? collectionContract?.contractName : undefined,
+            postConditionMode: beginPostConditions
+              ? PostConditionMode.Deny
+              : undefined,
+            postConditions: beginPostConditions,
+            logDetails: {
+              item: item.path,
+              bytes: item.totalBytes,
+              chunks: item.totalChunks
+            }
+          });
+          appendLog(`Begin tx sent (${beginTx.txId}).`);
+          await pauseBeforeNextTx('Next batch in');
+        }
+
+        const remainingChunks = item.chunks.slice(uploadStartIndex);
+        const batches = batchChunks(remainingChunks, batchSize);
         const totalBatches = batches.length;
         for (let batchIndex = 0; batchIndex < totalBatches; batchIndex += 1) {
           const batch = batches[batchIndex];
@@ -1102,6 +1154,21 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
             await pauseBeforeNextTx('Seal in');
           }
         }
+        if (totalBatches === 0) {
+          appendLog(
+            `Item ${index + 1}/${items.length}: no upload batches required.`
+          );
+        }
+        if (mintTarget === 'collection') {
+          setPendingReservations((prev) =>
+            upsertReservation(prev, {
+              hashHex: item.expectedHashHex,
+              itemLabel: item.path,
+              startedAtMs: Date.now()
+            })
+          );
+        }
+        itemsToSeal.push(item);
         setItems((prev) =>
           prev.map((entry, idx) =>
             idx === index ? { ...entry, status: 'done' } : entry
@@ -1111,12 +1178,25 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
 
       setBeginState('done');
       setUploadState('done');
+      if (itemsToSeal.length === 0) {
+        setSealState('done');
+        setMintStatus(
+          'All selected files are already sealed on-chain. No new mint transactions were required.'
+        );
+        appendLog('Nothing left to seal. Batch already completed on-chain.');
+        return;
+      }
+      if (itemsToSeal.length < items.length) {
+        appendLog(
+          `Skipping ${items.length - itemsToSeal.length} already sealed item(s); sealing ${itemsToSeal.length}.`
+        );
+      }
       setSealState('pending');
       const sealPostConditions =
         mintTarget === 'collection'
           ? undefined
           : resolveFeePostConditions(feeEstimate.sealMicroStx);
-      appendLog('Submitting batch seal transaction.');
+      appendLog(`Submitting batch seal transaction (${itemsToSeal.length} item(s)).`);
       const sealTx = await requestContractCall({
         functionName:
           mintTarget === 'collection'
@@ -1127,7 +1207,7 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
             ? [
                 principalCV(xtrataContractId),
                 listCV(
-                  items.map((item) =>
+                  itemsToSeal.map((item) =>
                     tupleCV({
                       hash: bufferCV(item.expectedHash),
                       'token-uri': stringAsciiCV(tokenUriValue)
@@ -1137,7 +1217,7 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
               ]
             : [
                 listCV(
-                  items.map((item) =>
+                  itemsToSeal.map((item) =>
                     tupleCV({
                       hash: bufferCV(item.expectedHash),
                       'token-uri': stringAsciiCV(tokenUriValue)
@@ -1154,7 +1234,7 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
           : undefined,
         postConditions: sealPostConditions,
         logDetails: {
-          itemCount: items.length,
+          itemCount: itemsToSeal.length,
           tokenUriLength: tokenUriValue.length
         }
       });
@@ -1163,7 +1243,7 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
         setPendingReservations((prev) =>
           removeReservationsByHashes(
             prev,
-            items.map((item) => item.expectedHashHex)
+            itemsToSeal.map((item) => item.expectedHashHex)
           )
         );
       }

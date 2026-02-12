@@ -35,6 +35,7 @@ import {
   parseGetOwner,
   parseGetPendingChunk,
   parseGetRoyaltyRecipient,
+  parseGetIdByHash,
   parseIsPaused,
   parseGetSvg,
   parseGetSvgDataUri,
@@ -333,6 +334,10 @@ export type XtrataClient = {
     owner: string,
     senderAddress: string
   ) => Promise<UploadState | null>;
+  getIdByHash: (
+    expectedHash: Uint8Array,
+    senderAddress: string
+  ) => Promise<bigint | null>;
   getPendingChunk: (
     expectedHash: Uint8Array,
     index: bigint,
@@ -537,6 +542,17 @@ export const createXtrataClient = (params: {
         senderAddress
       });
       return parseGetUploadState(value);
+    },
+    getIdByHash: async (expectedHash, senderAddress) => {
+      const value = await callReadOnly({
+        caller,
+        contract: params.contract,
+        network: stacksNetwork,
+        functionName: 'get-id-by-hash',
+        functionArgs: [bufferCV(expectedHash)],
+        senderAddress
+      });
+      return parseGetIdByHash(value);
     },
     getPendingChunk: async (expectedHash, index, senderAddress, creator) => {
       const functionArgs = capabilities.pendingChunkRequiresCreator
