@@ -2362,8 +2362,7 @@ export default function MintScreen(props: MintScreenProps) {
           </div>
           <p>Upload a file, review fees, and inscribe on-chain.</p>
           <p className="meta-value">
-            Public minting is available while the contract is unpaused. Partner
-            collection mints require allowlisting by the contract owner.
+            Public minting is open. Partner contracts coming soon.
           </p>
         </div>
         <div className="panel__actions">
