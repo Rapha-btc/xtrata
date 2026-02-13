@@ -71,45 +71,45 @@ Do not mint `modules/local-runner.html` or folder-level `index.html` as recursiv
 
 Record the minted IDs:
 
-- `RUNTIME_ID = ____`
-- `ORB_LOGIC_ID = ____`
-- `ORB_ASSETS_ID = ____`
-- `SIGNAL_LOGIC_ID = ____`
-- `SIGNAL_ASSETS_ID = ____`
-- `GLYPH_LOGIC_ID = ____`
-- `GLYPH_ASSETS_ID = ____`
-- `REACTOR_LOGIC_ID = ____`
-- `REACTOR_ASSETS_ID = ____`
+- `RUNTIME_ID = 51`
+- `ORB_LOGIC_ID = 48`
+- `ORB_ASSETS_ID = 47`
+- `SIGNAL_LOGIC_ID = 53`
+- `SIGNAL_ASSETS_ID = 52`
+- `GLYPH_LOGIC_ID = 46`
+- `GLYPH_ASSETS_ID = 45`
+- `REACTOR_LOGIC_ID = 50`
+- `REACTOR_ASSETS_ID = 49`
 
 ## Step 3: Fill manifest with all cartridge IDs
 
 Edit `modules/cartridge-manifest.json`:
 
-- `orb-heist-v1` -> `logicModuleId = ORB_LOGIC_ID`, `assetsModuleId = ORB_ASSETS_ID`
-- `signal-sprint-v1` -> `logicModuleId = SIGNAL_LOGIC_ID`, `assetsModuleId = SIGNAL_ASSETS_ID`
-- `glyph-link-v1` -> `logicModuleId = GLYPH_LOGIC_ID`, `assetsModuleId = GLYPH_ASSETS_ID`
-- `reactor-warden-v1` -> `logicModuleId = REACTOR_LOGIC_ID`, `assetsModuleId = REACTOR_ASSETS_ID`
+- `orb-heist-v1` -> `logicModuleId = 48`, `assetsModuleId = 47`
+- `signal-sprint-v1` -> `logicModuleId = 53`, `assetsModuleId = 52`
+- `glyph-link-v1` -> `logicModuleId = 46`, `assetsModuleId = 45`
+- `reactor-warden-v1` -> `logicModuleId = 50`, `assetsModuleId = 49`
 
 Confirm there are no `0` IDs left in the manifest, then mint `cartridge-manifest.json` as another leaf (no parents):
 
-- `MANIFEST_ID = ____`
+- `MANIFEST_ID = 54`
 
 ## Step 4: Fill cabinet with runtime + manifest IDs
 
 Edit `modules/cabinet.html`:
 
-- `runtimeModuleId = RUNTIME_ID`
-- `manifestModuleId = MANIFEST_ID`
+- `runtimeModuleId = 51`
+- `manifestModuleId = 54`
 - `declaredDependencyIds` set to:
 
 ```js
 [
-  RUNTIME_ID,
-  MANIFEST_ID,
-  ORB_LOGIC_ID, ORB_ASSETS_ID,
-  SIGNAL_LOGIC_ID, SIGNAL_ASSETS_ID,
-  GLYPH_LOGIC_ID, GLYPH_ASSETS_ID,
-  REACTOR_LOGIC_ID, REACTOR_ASSETS_ID
+  51,
+  54,
+  48, 47,
+  53, 52,
+  46, 45,
+  50, 49
 ]
 ```
 
@@ -121,7 +121,7 @@ Mint `modules/cabinet.html` using single-item flow with parents set.
 
 Set parent IDs to the exact same list used in `declaredDependencyIds`:
 
-`RUNTIME_ID, MANIFEST_ID, ORB_LOGIC_ID, ORB_ASSETS_ID, SIGNAL_LOGIC_ID, SIGNAL_ASSETS_ID, GLYPH_LOGIC_ID, GLYPH_ASSETS_ID, REACTOR_LOGIC_ID, REACTOR_ASSETS_ID`
+`51, 54, 48, 47, 53, 52, 46, 45, 50, 49`
 
 This must use the recursive parent seal path in Xtrata mint (single-item flow with parents).
 
