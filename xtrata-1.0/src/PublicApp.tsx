@@ -1246,7 +1246,7 @@ export default function PublicApp() {
             type="button"
             onClick={openCreativeStory}
           >
-            What is Xtrata? Really...
+            What is Xtrata?
           </button>
           <p className="app__hero-note">
             Xtrata infrastructure enables trustless ownership, attribution, and execution for future, true web3 applications.
