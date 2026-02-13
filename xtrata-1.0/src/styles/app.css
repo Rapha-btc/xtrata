@@ -4180,6 +4180,48 @@ p {
   margin-top: 4px;
 }
 
+.docs-viewer__summary {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.docs-viewer__summary-lead {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.docs-viewer__summary-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+}
+
+.docs-viewer__summary-list li {
+  line-height: 1.45;
+}
+
+.docs-viewer__toggle {
+  justify-self: start;
+}
+
+.docs-viewer__details {
+  display: none;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.docs-viewer__details.is-open {
+  display: block;
+}
+
 .docs-viewer__content {
   display: grid;
   gap: 10px;

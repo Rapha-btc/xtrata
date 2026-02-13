@@ -56,6 +56,11 @@ type DocSection = {
   href?: string;
 };
 
+type InHouseDocSection = DocSection & {
+  content: string;
+  external?: false;
+};
+
 const DOC_SECTIONS: DocSection[] = [
   {
     id: 'overview',
@@ -82,17 +87,7 @@ Xtrata is designed so you can move from zero setup to a fully sealed, viewable i
 ### What a successful mint looks like
 - You receive a transaction for Begin, one or more batch transactions, and a final Seal transaction.
 - Viewer resolves metadata and displays media without fallback mismatch.
-- The inscription appears in collection mode and wallet mode.
-
-### First-week operating habits
-- Keep a small test file workflow for quick verification before larger mints.
-- Track token IDs and tx IDs for each release.
-- If you run listings, confirm escrow status before sharing market links.
-
-### Common onboarding mistakes to avoid
-- Minting on the wrong network relative to contract selection.
-- Upload interruption between Begin and Seal without re-checking status.
-- Assuming thumbnail resolution equals full media completion.`
+- The inscription appears in collection mode and wallet mode.`
   },
   {
     id: 'inscriptions',
@@ -126,7 +121,7 @@ An inscription is not only metadata. The actual content bytes are committed in c
   },
   {
     id: 'ids',
-    title: 'IDs and v1/v2 continuity',
+    title: 'IDs and continuity across versions',
     tag: 'Migration',
     description: 'How token identity remains continuous across versions and what migration does not change.',
     content: `## Continuous identity across versions
@@ -330,105 +325,105 @@ Mint costs come from protocol operation count plus base chain mining fees.
 - Track actual vs expected cost for first few mints.
 - Adjust chunking/file prep policy before full release.`
   },
-  {
-    id: 'xst-token',
-    title: 'XST participation token',
-    tag: 'XST',
-    description: 'Deterministic emissions that begin at inscription #1000.',
-    content: `## XST in one view
-XST is the participation token of Xtrata. It is not sold, not pre-mined, and not governed after deployment.
+//   {
+//     id: 'xst-token',
+//     title: 'XST participation token',
+//     tag: 'XST',
+//     description: 'Deterministic emissions that begin at inscription #1000.',
+//     content: `## XST in one view
+// XST is the participation token of Xtrata. It is not sold, not pre-mined, and not governed after deployment.
 
-### Hard guarantees
-- Fixed supply: **1,000,000,000 XST**
-- Emissions start only after **inscription #1000** exists
-- Emissions run for **4 years** (~210,240 blocks at ~10 minutes) and then stop forever
-- No admin switches can change supply or schedule
+// ### Hard guarantees
+// - Fixed supply: **1,000,000,000 XST**
+// - Emissions start only after **inscription #1000** exists
+// - Emissions run for **4 years** (~210,240 blocks at ~10 minutes) and then stop forever
+// - No admin switches can change supply or schedule
 
-### Emission schedule (per block)
-- Year 1: 40% (400,000,000)
-- Year 2: 30% (300,000,000)
-- Year 3: 20% (200,000,000)
-- Year 4: 10% (100,000,000)
+// ### Emission schedule (per block)
+// - Year 1: 40% (400,000,000)
+// - Year 2: 30% (300,000,000)
+// - Year 3: 20% (200,000,000)
+// - Year 4: 10% (100,000,000)
 
-Per-block emission is constant within each year and computed from ~52,560 blocks per year.
+// Per-block emission is constant within each year and computed from ~52,560 blocks per year.
 
-### Distribution model
-- **Owner pool (70%)** goes to inscription owners (weighted by token ID)
-- **Participant pool (30%)** is optional and can reward active participants (sqrt weighting)
-- Claims are pull-based. The contract never loops over wallets.
+// ### Distribution model
+// - **Owner pool (70%)** goes to inscription owners (weighted by token ID)
+// - **Participant pool (30%)** is optional and can reward active participants (sqrt weighting)
+// - Claims are pull-based. The contract never loops over wallets.
 
-### Inscription weighting (owner pool)
-Weights are deterministic and tied to token ID:
-- #0 = 1400
-- #1-10 = 1200
-- #11-100 = 1000
-- #101-1,000 = 800
-- #1,001-10,000 = 640
-- #10,001-100,000 = 512
-- #100,001-1,000,000 = 410
-Weights continue to decay by 4/5 each decade after that.
+// ### Inscription weighting (owner pool)
+// Weights are deterministic and tied to token ID:
+// - #0 = 1400
+// - #1-10 = 1200
+// - #11-100 = 1000
+// - #101-1,000 = 800
+// - #1,001-10,000 = 640
+// - #10,001-100,000 = 512
+// - #100,001-1,000,000 = 410
+// Weights continue to decay by 4/5 each decade after that.
 
-### Determinism guarantees
-- Start block is set once at #1000
-- Emissions depend only on block height
-- Weights depend only on token ID
-- Ownership is read directly from the NFT
+// ### Determinism guarantees
+// - Start block is set once at #1000
+// - Emissions depend only on block height
+// - Weights depend only on token ID
+// - Ownership is read directly from the NFT
 
-### Claim mechanics (simplified)
-- Update emissions
-- pending = weight x (accumulator - rewardDebt)
-- Transfer to current owner
-- Update rewardDebt
+// ### Claim mechanics (simplified)
+// - Update emissions
+// - pending = weight x (accumulator - rewardDebt)
+// - Transfer to current owner
+// - Update rewardDebt
 
-### Claim operations in real usage
-- Claims are independent per wallet and can be run on your own cadence.
-- Longer intervals can reduce operational overhead but increase single-claim size.
-- Frequent claims can improve personal accounting visibility.
+// ### Claim operations in real usage
+// - Claims are independent per wallet and can be run on your own cadence.
+// - Longer intervals can reduce operational overhead but increase single-claim size.
+// - Frequent claims can improve personal accounting visibility.
 
-### Practical interpretation of weights
-- Earlier inscriptions have stronger weight and larger share pressure.
-- Later IDs still participate but with lower multiplier tiers.
-- Distribution is deterministic, so expectations can be modeled ahead of claim.
+// ### Practical interpretation of weights
+// - Earlier inscriptions have stronger weight and larger share pressure.
+// - Later IDs still participate but with lower multiplier tiers.
+// - Distribution is deterministic, so expectations can be modeled ahead of claim.
 
-### What this means for participants
-- No hidden inflation path after the 4-year schedule ends.
-- Ownership changes immediately affect future owner-pool attribution.
-- Protocol rules stay transparent because all key math is deterministic and auditable.`
-  },
-  {
-    id: 'xst-oracle',
-    title: 'XST oracle inscription',
-    tag: 'Oracle',
-    description: 'A single on-chain viewer that reads live token stats.',
-    content: `## One permanent inscription, live stats
-The oracle inscription is a single HTML/JS inscription that renders the current XST state.
+// ### What this means for participants
+// - No hidden inflation path after the 4-year schedule ends.
+// - Ownership changes immediately affect future owner-pool attribution.
+// - Protocol rules stay transparent because all key math is deterministic and auditable.`
+//   },
+//   {
+//     id: 'xst-oracle',
+//     title: 'XST oracle inscription',
+//     tag: 'Oracle',
+//     description: 'A single on-chain viewer that reads live token stats.',
+//     content: `## One permanent inscription, live stats
+// The oracle inscription is a single HTML/JS inscription that renders the current XST state.
 
-### What it shows
-- Emissions start block and time elapsed
-- Total emitted, remaining supply, and projected end date
-- Distribution by owner pool and participant pool
-- Claimable estimates for a given inscription ID
+// ### What it shows
+// - Emissions start block and time elapsed
+// - Total emitted, remaining supply, and projected end date
+// - Distribution by owner pool and participant pool
+// - Claimable estimates for a given inscription ID
 
-### How it stays live
-The inscription itself is static, but it calls public on-chain read-only endpoints:
-- XST token contract for emission state
-- Xtrata contract for inscription IDs and ownership
-- Indexer APIs for holder distribution snapshots
-The viewer refreshes on an interval and caches results to avoid heavy polling.
+// ### How it stays live
+// The inscription itself is static, but it calls public on-chain read-only endpoints:
+// - XST token contract for emission state
+// - Xtrata contract for inscription IDs and ownership
+// - Indexer APIs for holder distribution snapshots
+// The viewer refreshes on an interval and caches results to avoid heavy polling.
 
-### Important note
-This is a **viewer**, not a consensus oracle. It never writes to chain and does not change token state.
+// ### Important note
+// This is a **viewer**, not a consensus oracle. It never writes to chain and does not change token state.
 
-### Reading the oracle responsibly
-- Use it for insight and planning, not as the source of execution guarantees.
-- Cross-check critical values against direct read-only calls when needed.
-- Expect minor lag based on indexer refresh intervals.
+// ### Reading the oracle responsibly
+// - Use it for insight and planning, not as the source of execution guarantees.
+// - Cross-check critical values against direct read-only calls when needed.
+// - Expect minor lag based on indexer refresh intervals.
 
-### Operational value
-- Gives participants a shared dashboard view of emissions progress.
-- Makes pool distribution trends easier to communicate publicly.
-- Reduces manual query overhead for recurring reporting.`
-  },
+// ### Operational value
+// - Gives participants a shared dashboard view of emissions progress.
+// - Makes pool distribution trends easier to communicate publicly.
+// - Reduces manual query overhead for recurring reporting.`
+//   },
   {
     id: 'admin',
     title: 'Admin & safety',
@@ -578,9 +573,133 @@ If something looks wrong, start with these checks in order.
   }
 ];
 
-const IN_HOUSE_DOC_SECTIONS = DOC_SECTIONS.filter(
-  (doc) => !doc.external && !!doc.content
-);
+type DocSummary = {
+  lead: string;
+  points: string[];
+};
+
+const DOC_SUMMARIES: Record<string, DocSummary> = {
+  overview: {
+    lead: 'Connect your wallet, mint in three clear steps, and verify your result in Viewer.',
+    points: [
+      'Begin Inscription.',
+      'Mint flow always runs in order: Begin -> upload batches -> Seal.',
+      'After sealing, check both collection and wallet views.'
+    ]
+  },
+  inscriptions: {
+    lead: 'Your file bytes are written on-chain in chunks, then locked with a final hash.',
+    points: [
+      'Begin sets expectations, batches upload data, and Seal finalizes.',
+      'The final hash makes content verification deterministic.',
+      'Correct mime types improve rendering across grid and preview.'
+    ]
+  },
+  ids: {
+    lead: 'Continuous Token IDs across versions.',
+    points: [
+      'Legacy IDs stay valid and discoverable.',
+      'New mints continue from the next available index.',
+      'Verify ownership/listing state after migration-related transfers.'
+    ]
+  },
+  'minting-modes': {
+    lead: 'Choose minting mode by your goal: control, throughput, or rule-heavy distribution.',
+    points: [
+      'Direct mint is best for individual pieces.',
+      'Batch workflows are best for larger drops.',
+      'Partner contracts for creating custom collections.'
+    ]
+  },
+  'artist-collection-launch': {
+    lead: 'Artists can launch with either live minting or pre-inscribed inventory sales.',
+    points: [
+      'Collection mint lets buyers mint during checkout.',
+      'Pre-inscribed sale lets buyers purchase pre-made token IDs.',
+      'Before launch, verify network, contract IDs, splits (10000 bps), and pause state.'
+    ]
+  },
+  market: {
+    lead: 'Safe market actions depend on escrow status, not just visible listing cards.',
+    points: [
+      'Escrowed listings are actionable; stale listings should be canceled/relisted.',
+      'Sellers should confirm escrow before sharing listing links.',
+      'Buyers should re-check ownership after purchase confirmation.'
+    ]
+  },
+  standards: {
+    lead: 'Xtrata follows core Stacks standards so wallet/indexer behavior stays predictable.',
+    points: [
+      'SIP-009 governs NFT ownership and transfer semantics.',
+      'SIP-016 supports token URI and metadata discovery paths.',
+      'Recursive patterns support composable on-chain media experiences.'
+    ]
+  },
+  fees: {
+    lead: 'Mint cost combines contract operation fees and changing network mining fees.',
+    points: [
+      'File size drives chunk count, batch count, and total spend.',
+      'Run a small sample mint first to validate your assumptions.',
+      'Asset optimization and calmer network periods reduce cost surprises.'
+    ]
+  },
+  // 'xst-token': {
+  //   lead: 'XST has fixed supply and deterministic emissions that begin at inscription #1000.',
+  //   points: [
+  //     'No premine and no admin path to alter supply schedule.',
+  //     'Emissions run for four years, then stop permanently.',
+  //     'Claims are pull-based and tied to ownership plus deterministic weights.'
+  //   ]
+  // },
+  // 'xst-oracle': {
+  //   lead: 'The XST oracle inscription is a read-only dashboard for live token stats.',
+  //   points: [
+  //     'It displays emissions, distribution, and claimable estimate views.',
+  //     'The inscription reads on-chain/indexer data but does not write state.',
+  //     'Use it for insight, and cross-check critical numbers with direct read-only calls.'
+  //   ]
+  // },
+  admin: {
+    lead: 'Admin operations should prioritize safety, traceability, and predictable user impact.',
+    points: [
+      'Pause first for risky migrations or emergency interventions.',
+      'Apply one class of change at a time and verify targeting.',
+      'Record tx IDs and timestamps for all privileged updates.'
+    ]
+  },
+  viewer: {
+    lead: 'Viewer is designed for fast browsing: cached grid first, richer preview on demand.',
+    points: [
+      'Grid and preview should resolve the same token content identity.',
+      'IndexedDB plus React Query reduce refetching and improve revisit speed.',
+      'Square media framing is preserved while metadata/actions sit outside it.'
+    ]
+  },
+  'wallet-network': {
+    lead: 'Wallet/network guardrails block risky actions before signing prompts appear.',
+    points: [
+      'Session state persists, but mismatches are surfaced before transactions.',
+      'Wallet and looked-up address/BNS views can differ by design.',
+      'List/cancel/buy actions enforce owner/seller checks in UI.'
+    ]
+  },
+  troubleshooting: {
+    lead: 'Diagnose issues in order: network, listing state, content path, then safe retry.',
+    points: [
+      'Capture tx IDs, token/listing IDs, wallet, and network context first.',
+      'Differentiate thumbnail success from full-media success.',
+      'Reproduce with one minimal token example before escalating.'
+    ]
+  }
+};
+
+const isInHouseDocSection = (doc: DocSection): doc is InHouseDocSection =>
+  !doc.external && typeof doc.content === 'string';
+
+const IN_HOUSE_DOC_SECTIONS = DOC_SECTIONS.filter(isInHouseDocSection);
+
+const getDocSummary = (doc: DocSection): DocSummary =>
+  DOC_SUMMARIES[doc.id] ?? { lead: doc.description, points: [] };
 
 type DocBlock =
   | { type: 'heading'; level: number; text: string }
@@ -729,6 +848,7 @@ export default function PublicApp() {
   const [activeDocId, setActiveDocId] = useState<string | null>(() => {
     return IN_HOUSE_DOC_SECTIONS[0]?.id ?? null;
   });
+  const [activeDocExpanded, setActiveDocExpanded] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState(() => {
     const initial = buildCollapsedState(false);
     initial['wallet-lookup'] = true;
@@ -744,9 +864,14 @@ export default function PublicApp() {
   const queryClient = useQueryClient();
   const contractId = getContractId(contract);
   const activeDoc = useMemo(
-    () => DOC_SECTIONS.find((doc) => doc.id === activeDocId) ?? null,
+    () => IN_HOUSE_DOC_SECTIONS.find((doc) => doc.id === activeDocId) ?? null,
     [activeDocId]
   );
+  const activeDocSummary = useMemo(
+    () => (activeDoc ? getDocSummary(activeDoc) : null),
+    [activeDoc]
+  );
+  const activeDocDetailsId = activeDoc ? `docs-details-${activeDoc.id}` : null;
   const activeDocPosition = useMemo(() => {
     if (!activeDocId) {
       return null;
@@ -851,6 +976,7 @@ export default function PublicApp() {
 
   const handleSelectDoc = (docId: string) => {
     setActiveDocId(docId);
+    setActiveDocExpanded(false);
     if (typeof window === 'undefined') {
       return;
     }
@@ -1236,7 +1362,7 @@ export default function PublicApp() {
               <aside className="docs-menu" aria-label="Documentation topics">
                 <div className="docs-menu__section">
                   <h3>In-house topics</h3>
-                  <p>Select a topic to expand it for full reading.</p>
+                  <p>Each topic starts with a simple summary. Expand for deeper technical detail.</p>
                   <div className="docs-menu__list">
                     {IN_HOUSE_DOC_SECTIONS.map((doc) => (
                       <button
@@ -1272,7 +1398,7 @@ export default function PublicApp() {
                 </div>
               </aside>
               <article className="docs-reader" id="docs-reader">
-                {activeDoc && activeDoc.content ? (
+                {activeDoc ? (
                   <>
                     <div className="docs-viewer__header">
                       <div>
@@ -1285,8 +1411,35 @@ export default function PublicApp() {
                         Topic {activeDocPosition.index + 1} of {activeDocPosition.total}
                       </p>
                     )}
-                    <div className="docs-viewer__content">
-                      {renderMarkdown(activeDoc.content)}
+                    {activeDocSummary && (
+                      <div className="docs-viewer__summary">
+                        <p className="docs-viewer__summary-lead">{activeDocSummary.lead}</p>
+                        {activeDocSummary.points.length > 0 && (
+                          <ul className="docs-viewer__summary-list">
+                            {activeDocSummary.points.map((point, index) => (
+                              <li key={`${activeDoc.id}-summary-${index}`}>{point}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
+                    <button
+                      className="button button--ghost docs-viewer__toggle"
+                      type="button"
+                      onClick={() => setActiveDocExpanded((prev) => !prev)}
+                      aria-expanded={activeDocExpanded}
+                      aria-controls={activeDocDetailsId ?? undefined}
+                    >
+                      {activeDocExpanded ? 'Hide technical details' : 'Show technical details'}
+                    </button>
+                    <div
+                      className={`docs-viewer__details${activeDocExpanded ? ' is-open' : ''}`}
+                      id={activeDocDetailsId ?? undefined}
+                      hidden={!activeDocExpanded}
+                    >
+                      <div className="docs-viewer__content">
+                        {renderMarkdown(activeDoc.content)}
+                      </div>
                     </div>
                   </>
                 ) : (
