@@ -1542,6 +1542,16 @@ p {
   word-break: break-all;
 }
 
+.active-contract__link {
+  color: var(--accent-strong);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.active-contract__link:hover {
+  color: var(--accent);
+}
+
 .thumbnail-diagnostic {
   display: grid;
   gap: 4px;
@@ -4392,8 +4402,24 @@ p {
   line-height: 1.45;
 }
 
+.docs-viewer__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
 .docs-viewer__toggle {
   justify-self: start;
+}
+
+.docs-viewer__actions .button {
+  padding: 6px 12px;
+  font-size: 0.76rem;
+}
+
+.docs-viewer__jump {
+  border-color: rgba(249, 115, 22, 0.5);
 }
 
 .docs-viewer__details {
