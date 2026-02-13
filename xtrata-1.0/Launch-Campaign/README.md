@@ -11,6 +11,13 @@ tracking templates for promoting Xtrata across multiple platforms.
 - `04-copy-bank.md` - Reusable copy blocks, hooks, CTAs, and tags.
 - `05-metrics-kpis.md` - KPI targets and tracking approach.
 - `06-partnerships-outreach.md` - Partner outreach plan and templates.
+- `07-automation-plan.md` - API-first automation architecture and workflows.
+- `08-no-api-automation.md` - Browser-assisted workflow when APIs are unavailable.
+- `09-platform-content-response-handbook.md` - Ready-to-post content plus per-platform initiate/respond playbooks.
+- `10-stacks-grant-application.md` - Submission-ready Stacks Builder grant application.
+- `11-builder-grant-budget-rationale.md` - Plain-language explanation of the $35k ask, budget split, and expected outcomes.
+- `hackathons/` - Event-by-event hackathon strategy docs with custom product and pitch recommendations.
+- `hackathons/12-week-execution-plan.md` - Date-based execution roadmap for prioritized hackathon submissions.
 
 ## How to use
 1) Start with `00-campaign-plan.md`.

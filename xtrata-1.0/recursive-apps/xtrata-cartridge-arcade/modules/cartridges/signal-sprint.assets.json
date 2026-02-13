@@ -1,0 +1,38 @@
+{
+  "schema": "xtrata-cartridge-assets@1",
+  "cartridgeId": "signal-sprint-v1",
+  "title": "Signal Sprint",
+  "objective": "Run the datalane, collect packets, and survive firewall strikes.",
+  "lanes": 5,
+  "trackLength": 12,
+  "targetScore": 140,
+  "startingIntegrity": 4,
+  "packetScore": 6,
+  "repairValue": 1,
+  "phases": [
+    {
+      "name": "Boot Sector",
+      "untilScore": 40,
+      "tickMs": 320,
+      "obstacleChance": 0.22,
+      "packetChance": 0.23,
+      "repairChance": 0.04
+    },
+    {
+      "name": "Relay Core",
+      "untilScore": 90,
+      "tickMs": 250,
+      "obstacleChance": 0.3,
+      "packetChance": 0.2,
+      "repairChance": 0.03
+    },
+    {
+      "name": "Black Ice",
+      "untilScore": 9999,
+      "tickMs": 190,
+      "obstacleChance": 0.36,
+      "packetChance": 0.18,
+      "repairChance": 0.02
+    }
+  ]
+}

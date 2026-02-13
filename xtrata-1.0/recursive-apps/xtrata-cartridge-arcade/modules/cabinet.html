@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Xtrata Cartridge Arcade</title>
+  <style>
+    :root {
+      --bg: #080d13;
+      --panel: #111a25;
+      --border: #2f4052;
+      --text: #dce9f8;
+      --muted: #98aec6;
+      --accent: #4aa3ff;
+    }
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+      background: radial-gradient(circle at 20% -10%, #17283a 0%, #080d13 60%);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 14px;
+      box-sizing: border-box;
+    }
+    .cabinet {
+      max-width: 980px;
+      margin: 0 auto;
+      display: grid;
+      gap: 12px;
+    }
+    .panel {
+      background: linear-gradient(170deg, #111a25 0%, #0d141d 100%);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+      box-shadow: 0 14px 28px rgba(0, 0, 0, 0.2);
+    }
+    .hero h1 {
+      margin: 0;
+      font-size: 1.24rem;
+      letter-spacing: 0.04em;
+    }
+    .hero p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.4;
+    }
+    #arcade-root {
+      min-height: 460px;
+    }
+    .loader-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+    .loader-head h2 {
+      margin: 0;
+      font-size: 0.95rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .config-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid #385172;
+      border-radius: 999px;
+      padding: 4px 10px;
+      background: #0f2033;
+      color: #cde4ff;
+      font-size: 0.76rem;
+      letter-spacing: 0.03em;
+    }
+    pre {
+      margin: 0;
+      max-height: 260px;
+      overflow: auto;
+      border: 1px solid #243245;
+      border-radius: 8px;
+      background: #09121c;
+      color: #a9c4df;
+      padding: 10px;
+      font: 12px/1.45 "IBM Plex Mono", "Menlo", monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    @media (max-width: 760px) {
+      #arcade-root {
+        min-height: 380px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="cabinet">
+    <section class="panel hero">
+      <h1>Xtrata Cartridge Arcade</h1>
+      <p>
+        This parent inscription recursively assembles an on-chain runtime and cartridge modules.
+        Swap module IDs to publish new cartridges while preserving full provenance on-chain.
+      </p>
+    </section>
+
+    <section class="panel" id="arcade-root">Booting recursive arcade...</section>
+
+    <section class="panel">
+      <div class="loader-head">
+        <h2>Loader Log</h2>
+        <span class="config-chip" id="contract-chip">contract: not configured</span>
+      </div>
+      <pre id="loader-log"></pre>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      if (window.__xtrataCartridgeArcadeStarted) {
+        console.warn('Xtrata arcade cabinet already started. Skipping duplicate run.');
+        return;
+      }
+      window.__xtrataCartridgeArcadeStarted = true;
+
+      const CONFIG = {
+        contractAddress: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
+        contractName: 'xtrata-v2-1-0',
+        senderAddress: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
+
+        runtimeModuleId: 51,
+        manifestModuleId: 54,
+
+        declaredDependencyIds: [51, 54, 48, 47, 53, 52, 46, 45, 50, 49],
+
+        networkPriority: ['mainnet'],
+        maxChunksPerModule: 128,
+        retriesPerNetwork: 2,
+        retryDelayMs: 900
+      };
+
+      const NETWORK_BASE = {
+        mainnet: 'https://api.mainnet.hiro.so',
+        testnet: 'https://api.testnet.hiro.so'
+      };
+
+      const startMs = Date.now();
+      const logEl = document.getElementById('loader-log');
+      const rootEl = document.getElementById('arcade-root');
+      const contractChip = document.getElementById('contract-chip');
+      const moduleCache = new Map();
+
+      function nowMs() {
+        return Date.now() - startMs;
+      }
+
+      function log(message) {
+        const line = `[+${String(nowMs()).padStart(5, ' ')}ms] ${message}`;
+        console.log(line);
+        if (logEl) {
+          logEl.textContent += `${line}\n`;
+        }
+      }
+
+      function sleep(ms) {
+        return new Promise((resolve) => {
+          setTimeout(resolve, ms);
+        });
+      }
+
+      function toPositiveInt(value, fieldName) {
+        const n = Number(value);
+        if (!Number.isInteger(n) || n <= 0) {
+          throw new Error(`${fieldName} must be a positive integer`);
+        }
+        return n;
+      }
+
+      function validateConfig() {
+        if (!CONFIG.contractAddress || !CONFIG.contractName) {
+          throw new Error('CONFIG.contractAddress and CONFIG.contractName are required');
+        }
+        if (!CONFIG.senderAddress) {
+          throw new Error('CONFIG.senderAddress is required');
+        }
+
+        toPositiveInt(CONFIG.maxChunksPerModule, 'CONFIG.maxChunksPerModule');
+        toPositiveInt(CONFIG.retriesPerNetwork + 1, 'CONFIG.retriesPerNetwork + 1');
+
+        CONFIG.runtimeModuleId = toPositiveInt(CONFIG.runtimeModuleId, 'CONFIG.runtimeModuleId');
+        CONFIG.manifestModuleId = toPositiveInt(CONFIG.manifestModuleId, 'CONFIG.manifestModuleId');
+
+        if (!Array.isArray(CONFIG.networkPriority) || !CONFIG.networkPriority.length) {
+          throw new Error('CONFIG.networkPriority must include at least one network');
+        }
+
+        CONFIG.networkPriority.forEach((network) => {
+          if (!NETWORK_BASE[network]) {
+            throw new Error(`Unsupported network in CONFIG.networkPriority: ${network}`);
+          }
+        });
+
+        if (contractChip) {
+          contractChip.textContent = `contract: ${CONFIG.contractAddress}.${CONFIG.contractName}`;
+        }
+      }
+
+      function uintToCvHex(value) {
+        const n = BigInt(value);
+        if (n < 0n) {
+          throw new Error('uint cannot be negative');
+        }
+        return `0x01${n.toString(16).padStart(32, '0')}`;
+      }
+
+      function hexToBytes(hex) {
+        if (typeof hex !== 'string') {
+          throw new Error('Expected hex string');
+        }
+        const clean = hex.startsWith('0x') ? hex.slice(2) : hex;
+        if (clean.length % 2 !== 0) {
+          throw new Error('Invalid hex length');
+        }
+        const bytes = new Uint8Array(clean.length / 2);
+        for (let i = 0; i < clean.length; i += 2) {
+          bytes[i / 2] = parseInt(clean.slice(i, i + 2), 16);
+        }
+        return bytes;
+      }
+
+      function readU32BE(bytes, offset) {
+        return (
+          (bytes[offset] << 24) |
+          (bytes[offset + 1] << 16) |
+          (bytes[offset + 2] << 8) |
+          bytes[offset + 3]
+        );
+      }
+
+      function decodeBufferCv(cvHex) {
+        let bytes = hexToBytes(cvHex);
+
+        if (!bytes.length) {
+          return new Uint8Array();
+        }
+
+        while (bytes.length > 0 && (bytes[0] === 0x07 || bytes[0] === 0x0a)) {
+          bytes = bytes.slice(1);
+        }
+
+        if (!bytes.length || bytes[0] === 0x08 || bytes[0] === 0x09) {
+          return new Uint8Array();
+        }
+
+        if (bytes[0] !== 0x02) {
+          throw new Error(`Unexpected Clarity type tag: 0x${bytes[0].toString(16)}`);
+        }
+
+        if (bytes.length < 5) {
+          throw new Error('Invalid buffer CV payload');
+        }
+
+        const length = readU32BE(bytes, 1);
+        const end = 5 + length;
+        if (bytes.length < end) {
+          throw new Error('Truncated buffer CV payload');
+        }
+
+        return bytes.slice(5, end);
+      }
+
+      function concatBytes(chunks) {
+        const total = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+        const output = new Uint8Array(total);
+        let offset = 0;
+        chunks.forEach((chunk) => {
+          output.set(chunk, offset);
+          offset += chunk.length;
+        });
+        return output;
+      }
+
+      async function safeJson(response) {
+        const text = await response.text();
+        try {
+          return JSON.parse(text);
+        } catch (error) {
+          throw new Error(`Non-JSON response: ${text.slice(0, 120)}`);
+        }
+      }
+
+      function buildReadOnlyUrl(network, functionName) {
+        return `${NETWORK_BASE[network]}/v2/contracts/call-read/${CONFIG.contractAddress}/${CONFIG.contractName}/${functionName}`;
+      }
+
+      async function callReadOnly(network, functionName, args) {
+        const url = buildReadOnlyUrl(network, functionName);
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sender: CONFIG.senderAddress,
+            arguments: args
+          })
+        });
+
+        const json = await safeJson(response);
+        if (!json || !json.okay) {
+          const cause = json && json.cause ? json.cause : `HTTP ${response.status}`;
+          throw new Error(cause);
+        }
+
+        return json.result;
+      }
+
+      async function callReadOnlyWithFallback(functionName, args) {
+        let lastError = null;
+
+        for (const network of CONFIG.networkPriority) {
+          for (let attempt = 0; attempt <= CONFIG.retriesPerNetwork; attempt += 1) {
+            try {
+              const result = await callReadOnly(network, functionName, args);
+              return { result, network };
+            } catch (error) {
+              lastError = error;
+              const message = error && error.message ? error.message : String(error);
+              log(`read-only fail ${functionName} on ${network} attempt ${attempt + 1}: ${message}`);
+
+              const shouldRetry = /rate|429|Per-minute|timeout|Non-JSON response/i.test(message);
+              if (!shouldRetry || attempt === CONFIG.retriesPerNetwork) {
+                break;
+              }
+
+              await sleep(CONFIG.retryDelayMs * (attempt + 1));
+            }
+          }
+        }
+
+        throw lastError || new Error(`Read-only call failed for ${functionName}`);
+      }
+
+      async function fetchModuleSource(moduleId, label) {
+        const cacheKey = String(moduleId);
+        if (moduleCache.has(cacheKey)) {
+          const cached = moduleCache.get(cacheKey);
+          log(`cache hit for module ${moduleId} (${label})`);
+          return cached;
+        }
+
+        const chunks = [];
+        let networkUsed = null;
+
+        for (let chunkIndex = 0; chunkIndex < CONFIG.maxChunksPerModule; chunkIndex += 1) {
+          const { result, network } = await callReadOnlyWithFallback('get-chunk', [
+            uintToCvHex(moduleId),
+            uintToCvHex(chunkIndex)
+          ]);
+
+          if (!networkUsed) {
+            networkUsed = network;
+          }
+
+          const chunk = decodeBufferCv(result);
+          if (!chunk.length) {
+            break;
+          }
+
+          chunks.push(chunk);
+        }
+
+        if (!chunks.length) {
+          throw new Error(`Module ${moduleId} returned zero chunks`);
+        }
+
+        if (chunks.length === CONFIG.maxChunksPerModule) {
+          log(`warning: module ${moduleId} reached maxChunksPerModule=${CONFIG.maxChunksPerModule}`);
+        }
+
+        const bytes = concatBytes(chunks);
+        const text = new TextDecoder().decode(bytes);
+        const payload = {
+          id: moduleId,
+          label,
+          text,
+          bytes: bytes.length,
+          chunks: chunks.length,
+          network: networkUsed || 'unknown'
+        };
+
+        moduleCache.set(cacheKey, payload);
+        log(`module ${moduleId} (${label}) loaded: ${payload.bytes} bytes, ${payload.chunks} chunks via ${payload.network}`);
+        return payload;
+      }
+
+      async function importModuleFromText(source, label) {
+        const blob = new Blob([source], { type: 'text/javascript' });
+        const blobUrl = URL.createObjectURL(blob);
+        try {
+          return await import(blobUrl);
+        } catch (error) {
+          throw new Error(`Failed to import ${label}: ${error.message || String(error)}`);
+        } finally {
+          URL.revokeObjectURL(blobUrl);
+        }
+      }
+
+      function listMissingDependencies(manifest) {
+        const required = new Set([CONFIG.runtimeModuleId, CONFIG.manifestModuleId]);
+
+        if (manifest && Array.isArray(manifest.cartridges)) {
+          manifest.cartridges.forEach((entry) => {
+            const logic = Number(entry.logicModuleId);
+            const assets = Number(entry.assetsModuleId);
+            if (Number.isInteger(logic) && logic > 0) {
+              required.add(logic);
+            }
+            if (Number.isInteger(assets) && assets > 0) {
+              required.add(assets);
+            }
+          });
+        }
+
+        const declared = new Set(
+          (Array.isArray(CONFIG.declaredDependencyIds) ? CONFIG.declaredDependencyIds : [])
+            .map((id) => Number(id))
+            .filter((id) => Number.isInteger(id) && id > 0)
+        );
+
+        return Array.from(required).filter((id) => !declared.has(id));
+      }
+
+      async function boot() {
+        validateConfig();
+        if (rootEl) {
+          rootEl.textContent = 'Resolving runtime + manifest modules...';
+        }
+
+        log('starting recursive cabinet boot');
+        log(`runtimeModuleId=${CONFIG.runtimeModuleId}, manifestModuleId=${CONFIG.manifestModuleId}`);
+        log(`declaredDependencyIds=${JSON.stringify(CONFIG.declaredDependencyIds)}`);
+
+        const [runtimeSource, manifestSource] = await Promise.all([
+          fetchModuleSource(CONFIG.runtimeModuleId, 'runtime.js'),
+          fetchModuleSource(CONFIG.manifestModuleId, 'cartridge-manifest.json')
+        ]);
+
+        let manifest;
+        try {
+          manifest = JSON.parse(manifestSource.text);
+        } catch (error) {
+          throw new Error(`Manifest module is invalid JSON: ${error.message || String(error)}`);
+        }
+
+        const missing = listMissingDependencies(manifest);
+        if (missing.length) {
+          log(`warning: declaredDependencyIds is missing ${missing.join(', ')}`);
+        } else {
+          log('declaredDependencyIds covers runtime, manifest, and cartridge modules');
+        }
+
+        const runtimeModule = await importModuleFromText(runtimeSource.text, 'runtime.js');
+        if (typeof runtimeModule.bootArcade !== 'function') {
+          throw new Error('runtime module must export bootArcade(options)');
+        }
+
+        if (!rootEl) {
+          throw new Error('missing #arcade-root element');
+        }
+
+        await runtimeModule.bootArcade({
+          root: rootEl,
+          manifest,
+          resolveModuleSource: fetchModuleSource,
+          log,
+          provenance: {
+            contractId: `${CONFIG.contractAddress}.${CONFIG.contractName}`,
+            runtimeModuleId: CONFIG.runtimeModuleId,
+            manifestModuleId: CONFIG.manifestModuleId,
+            declaredDependencyIds: Array.isArray(CONFIG.declaredDependencyIds)
+              ? CONFIG.declaredDependencyIds
+              : []
+          }
+        });
+
+        log('arcade boot complete');
+      }
+
+      boot().catch((error) => {
+        const message = error && error.message ? error.message : String(error);
+        log(`boot failed: ${message}`);
+        if (rootEl) {
+          rootEl.innerHTML = `<div style="color:#ffb3b3;font-weight:600">Loader error: ${message}</div>`;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

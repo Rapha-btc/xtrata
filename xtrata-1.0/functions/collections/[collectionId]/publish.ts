@@ -1,5 +1,5 @@
-import { jsonResponse, badRequest, serverError } from '../../../lib/utils';
-import { run } from '../../../lib/db';
+import { jsonResponse, badRequest, serverError } from '../../lib/utils';
+import { run } from '../../lib/db';
 
 export const onRequest: PagesFunction = async ({ request, env, params }) => {
   const collectionId = params?.collectionId;
@@ -15,7 +15,10 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
         'UPDATE collections SET state = ?, updated_at = ? WHERE id = ?',
         [target, Date.now(), collectionId]
       );
-      const select = await env.DB.prepare('SELECT * FROM collections WHERE id = ?').all(collectionId);
+      const select = await env.DB
+        .prepare('SELECT * FROM collections WHERE id = ?')
+        .bind(collectionId)
+        .all();
       const record = (select.results ?? [])[0];
       return jsonResponse(record);
     } catch (error) {

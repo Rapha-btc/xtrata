@@ -1,5 +1,5 @@
-import { jsonResponse, badRequest, serverError } from '../../../lib/utils';
-import { run } from '../../../lib/db';
+import { jsonResponse, badRequest, serverError } from '../../lib/utils';
+import { run } from '../../lib/db';
 
 export const onRequest: PagesFunction = async ({ request, env, params }) => {
   const collectionId = params?.collectionId;
@@ -8,8 +8,10 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
   }
 
   if (request.method === 'GET') {
-    const statement = await env.DB.prepare('SELECT * FROM reservations WHERE collection_id = ? ORDER BY created_at DESC');
-    const result = await statement.all(collectionId);
+    const statement = env.DB.prepare(
+      'SELECT * FROM reservations WHERE collection_id = ? ORDER BY created_at DESC'
+    );
+    const result = await statement.bind(collectionId).all();
     return jsonResponse(result.results ?? []);
   }
 
@@ -27,7 +29,10 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [reservationId, collectionId, payload.assetId, payload.buyerAddress, payload.hashHex, 'created', payload.txId ?? null, expiresAt, now, now]
       );
-      const inserted = await env.DB.prepare('SELECT * FROM reservations WHERE reservation_id = ?').all(reservationId);
+      const inserted = await env.DB
+        .prepare('SELECT * FROM reservations WHERE reservation_id = ?')
+        .bind(reservationId)
+        .all();
       return jsonResponse(inserted.results?.[0]);
     } catch (error) {
       return serverError(error instanceof Error ? error.message : 'Failed to create reservation');
@@ -52,7 +57,10 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
         'UPDATE reservations SET status = ?, tx_id = ?, updated_at = ? WHERE reservation_id = ?',
         [status, payload.txId ?? null, Date.now(), payload.reservationId]
       );
-      const select = await env.DB.prepare('SELECT * FROM reservations WHERE reservation_id = ?').all(payload.reservationId);
+      const select = await env.DB
+        .prepare('SELECT * FROM reservations WHERE reservation_id = ?')
+        .bind(payload.reservationId)
+        .all();
       return jsonResponse(select.results?.[0]);
     } catch (error) {
       return serverError(error instanceof Error ? error.message : 'Failed to update reservation');

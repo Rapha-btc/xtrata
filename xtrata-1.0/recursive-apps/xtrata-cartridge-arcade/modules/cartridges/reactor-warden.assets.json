@@ -1,0 +1,47 @@
+{
+  "schema": "xtrata-cartridge-assets@1",
+  "cartridgeId": "reactor-warden-v1",
+  "title": "Reactor Warden",
+  "objective": "Stabilize all reactor cores for 14 cycles without a meltdown.",
+  "cores": [
+    { "id": "alpha", "label": "Alpha" },
+    { "id": "beta", "label": "Beta" },
+    { "id": "gamma", "label": "Gamma" }
+  ],
+  "startingHeat": [34, 40, 37],
+  "meltdownHeat": 100,
+  "targetCycles": 14,
+  "focusCool": 20,
+  "ventCool": 12,
+  "ventCharges": 3,
+  "shieldCharges": 2,
+  "passiveRise": [6, 13],
+  "shieldMultiplier": 0.5,
+  "events": [
+    {
+      "name": "Solar Flare",
+      "description": "Starburst pressure wave.",
+      "heat": [6, 12, 9]
+    },
+    {
+      "name": "Coolant Cavitation",
+      "description": "Uneven feed in lower manifold.",
+      "heat": [10, 5, 8]
+    },
+    {
+      "name": "Magnetic Shear",
+      "description": "Containment jitter across beta ring.",
+      "heat": [5, 11, 6]
+    },
+    {
+      "name": "Ion Dust",
+      "description": "Fine debris degrades vent transfer.",
+      "heat": [7, 7, 10]
+    },
+    {
+      "name": "Pulse Echo",
+      "description": "Reflected pulse from perimeter array.",
+      "heat": [8, 9, 7]
+    }
+  ]
+}
