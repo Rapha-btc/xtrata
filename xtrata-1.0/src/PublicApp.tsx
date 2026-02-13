@@ -660,9 +660,9 @@ const DOC_SUMMARIES: Record<string, DocSummary> = {
   //   ]
   // },
   admin: {
-    lead: 'Admin operations should prioritize safety, traceability, and predictable user impact.',
+    lead: 'Admin operations prioritise safety, traceability, and predictable user impact.',
     points: [
-      'Pause first for risky migrations or emergency interventions.',
+      'Pause for emergency interventions.',
       'Apply one class of change at a time and verify targeting.',
       'Record tx IDs and timestamps for all privileged updates.'
     ]
@@ -700,6 +700,115 @@ const IN_HOUSE_DOC_SECTIONS = DOC_SECTIONS.filter(isInHouseDocSection);
 
 const getDocSummary = (doc: DocSection): DocSummary =>
   DOC_SUMMARIES[doc.id] ?? { lead: doc.description, points: [] };
+
+const getStacksExplorerContractUrl = (
+  contractId: string,
+  network: 'mainnet' | 'testnet'
+) => `https://explorer.hiro.so/txid/${contractId}?chain=${network}`;
+
+type DocDetailToggleCopy = {
+  open: string;
+  close: string;
+};
+
+type DocModuleJump = {
+  section: SectionKey;
+  label: string;
+};
+
+const DOC_DETAIL_TOGGLE_COPY: Record<string, DocDetailToggleCopy> = {
+  overview: {
+    open: 'See the full walkthrough',
+    close: 'Back to quick start'
+  },
+  inscriptions: {
+    open: 'How the protocol works',
+    close: 'Back to plain-language view'
+  },
+  ids: {
+    open: 'Show migration details',
+    close: 'Back to continuity basics'
+  },
+  'minting-modes': {
+    open: 'Compare minting modes in detail',
+    close: 'Back to mode summary'
+  },
+  'artist-collection-launch': {
+    open: 'Open full launch guide',
+    close: 'Back to launch essentials'
+  },
+  market: {
+    open: 'Show listing and escrow mechanics',
+    close: 'Back to market basics'
+  },
+  standards: {
+    open: 'See standards and interop details',
+    close: 'Back to standards overview'
+  },
+  fees: {
+    open: 'Break down fee model',
+    close: 'Back to fee highlights'
+  },
+  'xst-token': {
+    open: 'View token design details',
+    close: 'Back to XST essentials'
+  },
+  'xst-oracle': {
+    open: 'How the oracle viewer works',
+    close: 'Back to oracle summary'
+  },
+  admin: {
+    open: 'Show admin runbook',
+    close: 'Back to safety essentials'
+  },
+  viewer: {
+    open: 'Open viewer architecture details',
+    close: 'Back to viewer summary'
+  },
+  'wallet-network': {
+    open: 'See wallet/network safeguards',
+    close: 'Back to guardrails summary'
+  },
+  troubleshooting: {
+    open: 'Open full troubleshooting runbook',
+    close: 'Back to quick checks'
+  }
+};
+
+const DEFAULT_DOC_TOGGLE_COPY: DocDetailToggleCopy = {
+  open: 'Go deeper on this topic',
+  close: 'Back to summary'
+};
+
+const getDocDetailToggleCopy = (doc: DocSection | null): DocDetailToggleCopy => {
+  if (!doc) {
+    return DEFAULT_DOC_TOGGLE_COPY;
+  }
+  return DOC_DETAIL_TOGGLE_COPY[doc.id] ?? DEFAULT_DOC_TOGGLE_COPY;
+};
+
+const DOC_MODULE_JUMPS: Record<string, DocModuleJump> = {
+  overview: { section: 'mint', label: 'Start in Mint' },
+  inscriptions: { section: 'mint', label: 'Open Mint flow' },
+  ids: { section: 'collection-viewer', label: 'Look at Viewer' },
+  'minting-modes': { section: 'mint', label: 'Go to Mint' },
+  'artist-collection-launch': { section: 'mint', label: 'Open mint tools' },
+  market: { section: 'market', label: 'Open Market' },
+  standards: { section: 'collection-viewer', label: 'Open Viewer' },
+  fees: { section: 'mint', label: 'See fees in Mint' },
+  'xst-oracle': { section: 'collection-viewer', label: 'Open Viewer' },
+  admin: { section: 'active-contract', label: 'Open contract panel' },
+  viewer: { section: 'collection-viewer', label: 'Look at Viewer' },
+  'wallet-network': { section: 'wallet-session', label: 'Open Wallet panel' },
+  troubleshooting: { section: 'wallet-lookup', label: 'Open Wallet lookup' }
+};
+
+const getDocModuleJump = (doc: DocSection | null): DocModuleJump | null => {
+  if (!doc) {
+    return null;
+  }
+  return DOC_MODULE_JUMPS[doc.id] ?? null;
+};
 
 const CREATIVE_STORY = {
   title: 'Xtrata is base infrastructure for trustless creative systems.',
@@ -903,12 +1012,24 @@ export default function PublicApp() {
 
   const queryClient = useQueryClient();
   const contractId = getContractId(contract);
+  const contractExplorerUrl = useMemo(
+    () => getStacksExplorerContractUrl(contractId, contract.network),
+    [contractId, contract.network]
+  );
   const activeDoc = useMemo(
     () => IN_HOUSE_DOC_SECTIONS.find((doc) => doc.id === activeDocId) ?? null,
     [activeDocId]
   );
   const activeDocSummary = useMemo(
     () => (activeDoc ? getDocSummary(activeDoc) : null),
+    [activeDoc]
+  );
+  const activeDocToggleCopy = useMemo(
+    () => getDocDetailToggleCopy(activeDoc),
+    [activeDoc]
+  );
+  const activeDocModuleJump = useMemo(
+    () => getDocModuleJump(activeDoc),
     [activeDoc]
   );
   const activeDocDetailsId = activeDoc ? `docs-details-${activeDoc.id}` : null;
@@ -997,11 +1118,7 @@ export default function PublicApp() {
     writeThemePreference(nextTheme);
   };
 
-  const handleNavJump = (
-    event: MouseEvent<HTMLAnchorElement>,
-    key: SectionKey
-  ) => {
-    event.preventDefault();
+  const focusSection = (key: SectionKey) => {
     setCollapsedSections((prev) => ({ ...prev, [key]: false }));
     if (typeof window !== 'undefined') {
       window.requestAnimationFrame(() => {
@@ -1012,6 +1129,14 @@ export default function PublicApp() {
         window.history.replaceState(null, '', `#${key}`);
       });
     }
+  };
+
+  const handleNavJump = (
+    event: MouseEvent<HTMLAnchorElement>,
+    key: SectionKey
+  ) => {
+    event.preventDefault();
+    focusSection(key);
   };
 
   const handleSelectDoc = (docId: string) => {
@@ -1371,7 +1496,14 @@ export default function PublicApp() {
                 </div>
                 <div>
                   <span className="meta-label">Contract ID</span>
-                  <span className="meta-value">{contractId}</span>
+                  <a
+                    className="meta-value active-contract__link"
+                    href={contractExplorerUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {contractId}
+                  </a>
                 </div>
                 <div>
                   <span className="meta-label">Network</span>
@@ -1504,15 +1636,28 @@ export default function PublicApp() {
                         )}
                       </div>
                     )}
-                    <button
-                      className="button button--ghost docs-viewer__toggle"
-                      type="button"
-                      onClick={() => setActiveDocExpanded((prev) => !prev)}
-                      aria-expanded={activeDocExpanded}
-                      aria-controls={activeDocDetailsId ?? undefined}
-                    >
-                      {activeDocExpanded ? 'Hide technical details' : 'Show technical details'}
-                    </button>
+                    <div className="docs-viewer__actions">
+                      <button
+                        className="button button--ghost docs-viewer__toggle"
+                        type="button"
+                        onClick={() => setActiveDocExpanded((prev) => !prev)}
+                        aria-expanded={activeDocExpanded}
+                        aria-controls={activeDocDetailsId ?? undefined}
+                      >
+                        {activeDocExpanded
+                          ? activeDocToggleCopy.close
+                          : activeDocToggleCopy.open}
+                      </button>
+                      {activeDocModuleJump && (
+                        <button
+                          className="button button--ghost docs-viewer__jump"
+                          type="button"
+                          onClick={() => focusSection(activeDocModuleJump.section)}
+                        >
+                          {activeDocModuleJump.label}
+                        </button>
+                      )}
+                    </div>
                     <div
                       className={`docs-viewer__details${activeDocExpanded ? ' is-open' : ''}`}
                       id={activeDocDetailsId ?? undefined}
