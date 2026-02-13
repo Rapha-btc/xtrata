@@ -701,6 +701,45 @@ const IN_HOUSE_DOC_SECTIONS = DOC_SECTIONS.filter(isInHouseDocSection);
 const getDocSummary = (doc: DocSection): DocSummary =>
   DOC_SUMMARIES[doc.id] ?? { lead: doc.description, points: [] };
 
+const CREATIVE_STORY = {
+  title: 'Xtrata is base infrastructure for trustless creative systems.',
+  foundation: [
+    'Xtrata is the foundation layer. It is the infrastructure that gives apps immutable data, verifiable ownership, and timestamped proof on Bitcoin rails.',
+    'It is designed so future Web3 apps can build on shared truth instead of fragile trust assumptions.',
+    'The goal is simple: if it matters, it should be provable.'
+  ],
+  guarantees: [
+    'Immutability: records cannot be silently rewritten.',
+    'Ownership: rights can stay attached to the asset itself.',
+    'Proof: creation, usage, and history are auditable.'
+  ],
+  audionals: [
+    'Audionals proved something radical: audio can live directly on-chain through Bitcoin Ordinals — not as a pointer, but as real, permanent media.',
+    'Xtrata takes that breakthrough further. Instead of single inscriptions, it enables an entire composable system where stems, patches, takes, samples, and even mix settings exist as modular, verifiable building blocks.',
+    'A song built this way isn’t just uploaded — it is assembled from provable components. Every contribution remains independently owned, timestamped, and reusable.',
+    'Because Xtrata runs via Stacks, this experimentation becomes dramatically cheaper and faster — a powerful sandbox for building recursive creative systems that can anchor back to Bitcoin.',
+    'In this model, a finished work doesn’t merely reference its parts — it executes them. Attribution and ownership are enforced by structure itself.'
+  ],
+
+  collaboration: [
+    'This changes how collaboration works at a fundamental level.',
+    'Instead of relying on contracts, spreadsheets, and delayed royalty reporting, rights can remain fused to the creative elements themselves.',
+    'When a part is used, it must be called. When it is called, it is provably yours. Creative coordination becomes transparent, scalable, and automated by architecture.'
+  ],
+
+  beyondMusic: [
+    'Music is simply the clearest demonstration.',
+    'The same model applies to any system where multiple contributors create shared outcomes — art, publishing, design, research, software.',
+    'Xtrata is built as base infrastructure for these trust-minimized creative networks — a shared layer where execution and proof are the same thing.'
+  ],
+
+  bigIdea:
+    'The big idea is simple: build systems where the work proves itself. Xtrata provides the infrastructure that makes ownership, attribution, and execution inseparable — not as policy, but as architecture. Music shows what’s possible. Xtrata makes it possible.'
+  };
+
+
+
+
 type DocBlock =
   | { type: 'heading'; level: number; text: string }
   | { type: 'paragraph'; text: string }
@@ -845,6 +884,7 @@ export default function PublicApp() {
   const [walletLookupInput, setWalletLookupInput] = useState('');
   const [walletLookupTouched, setWalletLookupTouched] = useState(false);
   const [viewerMode, setViewerMode] = useState<ViewerMode>('collection');
+  const [creativeStoryOpen, setCreativeStoryOpen] = useState(false);
   const [activeDocId, setActiveDocId] = useState<string | null>(() => {
     return IN_HOUSE_DOC_SECTIONS[0]?.id ?? null;
   });
@@ -1006,6 +1046,21 @@ export default function PublicApp() {
   }, [hasHiroApiKey]);
 
   useEffect(() => {
+    if (!creativeStoryOpen) {
+      return;
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setCreativeStoryOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [creativeStoryOpen]);
+
+  useEffect(() => {
     setWalletSession(walletAdapter.getSession());
   }, [walletAdapter]);
 
@@ -1049,9 +1104,29 @@ export default function PublicApp() {
     console.log(`[mint] Seal submitted, txId=${payload.txId}`);
   };
 
+  const openCreativeStory = () => {
+    setCreativeStoryOpen(true);
+  };
+
+  const closeCreativeStory = () => {
+    setCreativeStoryOpen(false);
+  };
+
   return (
     <div className="app">
       <header className="app__header">
+        <div className="app__hero">
+          <button
+            className="button app__hero-button"
+            type="button"
+            onClick={openCreativeStory}
+          >
+            What is Xtrata? Really...
+          </button>
+          <p className="app__hero-note">
+            Xtrata infrastructure enables trustless ownership, attribution, and execution for future, true web3 applications.
+          </p>
+        </div>
         <div className="app__header-row">
           <h1 className="app__title">
             XTRATA <span className="app__title-tag">  Data Layer for Bitcoin</span>
@@ -1374,10 +1449,16 @@ export default function PublicApp() {
                       >
                         <span className="docs-menu__item-title">{doc.title}</span>
                         <span className="docs-menu__item-tag">{doc.tag}</span>
-                        <span className="docs-menu__item-text">{doc.description}</span>
                       </button>
                     ))}
                   </div>
+                  {activeDoc && (
+                    <div className="docs-menu__active">
+                      <p className="docs-menu__active-label">Selected topic</p>
+                      <p className="docs-menu__active-title">{activeDoc.title}</p>
+                      <p className="docs-menu__active-text">{activeDoc.description}</p>
+                    </div>
+                  )}
                 </div>
                 <div className="docs-menu__section">
                   <h3>External references</h3>
@@ -1452,6 +1533,78 @@ export default function PublicApp() {
           </div>
         </section>
       </main>
+      {creativeStoryOpen && (
+        <div
+          className="modal-overlay story-modal-overlay"
+          onClick={closeCreativeStory}
+          role="presentation"
+        >
+          <div
+            className="modal story-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="creative-story-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="modal__header story-modal__header">
+              <div>
+                <p className="story-modal__eyebrow">Xtrata First, Apps Next</p>
+                <h2 className="modal__title story-modal__title" id="creative-story-title">
+                  {CREATIVE_STORY.title}
+                </h2>
+              </div>
+              <button
+                className="button button--ghost button--mini"
+                type="button"
+                onClick={closeCreativeStory}
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="story-modal__body">
+              {CREATIVE_STORY.foundation.map((paragraph) => (
+                <p key={paragraph}>{paragraph}</p>
+              ))}
+
+              <section className="story-modal__section">
+                <h3>What every app inherits from Xtrata</h3>
+                <ul className="story-modal__proof-list">
+                  {CREATIVE_STORY.guarantees.map((point) => (
+                    <li key={point}>{point}</li>
+                  ))}
+                </ul>
+              </section>
+
+              <section className="story-modal__section">
+                <h3>Using Audionals as the poster child</h3>
+                {CREATIVE_STORY.audionals.map((paragraph) => (
+                  <p key={paragraph}>{paragraph}</p>
+                ))}
+              </section>
+
+              <section className="story-modal__section">
+                <h3>Why this changes creative collaboration</h3>
+                {CREATIVE_STORY.collaboration.map((paragraph) => (
+                  <p key={paragraph}>{paragraph}</p>
+                ))}
+              </section>
+
+              <section className="story-modal__section">
+                <h3>Beyond music</h3>
+                {CREATIVE_STORY.beyondMusic.map((paragraph) => (
+                  <p key={paragraph}>{paragraph}</p>
+                ))}
+              </section>
+
+              <section className="story-modal__section story-modal__section--highlight">
+                <h3>So. What's the BIG idea?</h3>
+                <p>{CREATIVE_STORY.bigIdea}</p>
+              </section>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
