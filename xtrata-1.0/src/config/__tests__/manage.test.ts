@@ -25,4 +25,19 @@ describe('manage allowlist parsing', () => {
     expect(Array.from(parsed.bnsNames.values())).toEqual(['alice.btc']);
     expect(Array.from(parsed.literalAddresses.values())).toEqual(['SP123']);
   });
+
+  it('handles quoted, JSON-like, and newline-separated env formats', () => {
+    const parsed = parseArtistAllowlist(
+      '["SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X",\n"alice.btc"]'
+    );
+
+    expect(parsed.entries).toEqual([
+      'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
+      'alice.btc'
+    ]);
+    expect(Array.from(parsed.literalAddresses.values())).toEqual([
+      'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X'
+    ]);
+    expect(Array.from(parsed.bnsNames.values())).toEqual(['alice.btc']);
+  });
 });

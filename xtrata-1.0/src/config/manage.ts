@@ -1,6 +1,11 @@
 import { normalizeBnsName } from '../lib/bns/helpers';
 
 const normalizeAddress = (value: string) => value.trim().toUpperCase();
+const ENTRY_SEPARATOR_PATTERN = /[\s,;]+/;
+const WRAPPER_CHARS_PATTERN = /^[\[\]'"`]+|[\[\]'"`]+$/g;
+
+const normalizeAllowlistEntry = (entry: string) =>
+  entry.trim().replace(WRAPPER_CHARS_PATTERN, '').trim();
 
 export type ParsedArtistAllowlist = {
   entries: string[];
@@ -27,8 +32,8 @@ export const parseArtistAllowlist = (value?: string | null): ParsedArtistAllowli
   }
 
   value
-    .split(',')
-    .map((entry) => entry.trim())
+    .split(ENTRY_SEPARATOR_PATTERN)
+    .map(normalizeAllowlistEntry)
     .filter((entry) => entry.length > 0)
     .forEach((entry) => {
       const normalizedBns = normalizeBnsName(entry);
