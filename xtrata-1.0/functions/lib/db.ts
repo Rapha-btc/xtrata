@@ -1,6 +1,10 @@
-export type Env = {
-  DB: D1Database;
+export type Env = Record<string, unknown> & {
+  DB?: D1Database;
+  D1?: D1Database;
+  db?: D1Database;
   COLLECTION_ASSETS?: R2Bucket;
+  ASSETS?: R2Bucket;
+  R2?: R2Bucket;
 };
 
 const resolveDb = (env: Partial<Env> & Record<string, unknown>) => {
@@ -23,9 +27,7 @@ const resolveDb = (env: Partial<Env> & Record<string, unknown>) => {
 };
 
 export async function queryAll(env: Env, query: string, binds: Array<unknown> = []) {
-  const statement = resolveDb(env as Partial<Env> & Record<string, unknown>).prepare(
-    query
-  );
+  const statement = resolveDb(env).prepare(query);
   if (binds.length > 0) {
     return statement.bind(...binds).all();
   }
@@ -33,9 +35,7 @@ export async function queryAll(env: Env, query: string, binds: Array<unknown> = 
 }
 
 export async function run(env: Env, query: string, binds: Array<unknown> = []) {
-  const statement = resolveDb(env as Partial<Env> & Record<string, unknown>).prepare(
-    query
-  );
+  const statement = resolveDb(env).prepare(query);
   if (binds.length > 0) {
     return statement.bind(...binds).run();
   }
