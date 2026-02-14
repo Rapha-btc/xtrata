@@ -1,5 +1,10 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import { chunkCount, hexDigest } from '../lib/asset-utils';
+import {
+  parseManageJsonResponse,
+  toManageApiErrorMessage
+} from '../lib/api-errors';
+import InfoTooltip from './InfoTooltip';
 
 type ManagedAsset = {
   asset_id: string;
@@ -29,13 +34,13 @@ export default function AssetStagingPanel() {
     setLoading(true);
     try {
       const response = await fetch(`/collections/${collectionId}/assets`);
-      if (!response.ok) {
-        throw new Error('Unable to load assets');
-      }
-      const payload = await response.json();
+      const payload = await parseManageJsonResponse<ManagedAsset[]>(
+        response,
+        'Collection assets'
+      );
       setAssets(payload);
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Load failed');
+      setStatus(toManageApiErrorMessage(error, 'Load failed'));
     } finally {
       setLoading(false);
     }
@@ -62,7 +67,10 @@ export default function AssetStagingPanel() {
     setStatus('Requesting upload URL…');
     try {
       const tokenResponse = await fetch(`/collections/${collectionId}/upload-url`);
-      const token = await tokenResponse.json();
+      const token = await parseManageJsonResponse<{ uploadUrl: string; key: string }>(
+        tokenResponse,
+        'Upload URL'
+      );
       await fetch(token.uploadUrl, {
         method: 'PUT',
         headers: { 'Content-Type': selectedFile.type || 'application/octet-stream' },
@@ -77,21 +85,20 @@ export default function AssetStagingPanel() {
           filename: selectedFile.name,
           mimeType: selectedFile.type,
           totalBytes: selectedFile.size,
-      totalChunks: chunkCount(selectedFile.size),
+          totalChunks: chunkCount(selectedFile.size),
           expectedHash,
           storageKey: token.key
         })
       });
-      if (!metadataResponse.ok) {
-        const payload = await metadataResponse.json();
-        throw new Error(payload?.error ?? 'Meta sync failed');
-      }
-      const payload = await metadataResponse.json();
+      const payload = await parseManageJsonResponse<{ asset_id: string }>(
+        metadataResponse,
+        'Asset metadata'
+      );
       setStatus(`Asset staged (${payload.asset_id})`);
       setSelectedFile(null);
-      loadAssets();
+      void loadAssets();
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Upload error');
+      setStatus(toManageApiErrorMessage(error, 'Upload error'));
     }
   };
 
@@ -99,12 +106,29 @@ export default function AssetStagingPanel() {
     <div className="asset-staging-panel">
       <form className="field" onSubmit={handleSubmit}>
         <label className="field__label">
-          <span>Collection ID</span>
-          <input className="input" value={collectionId} onChange={(event) => setCollectionId(event.target.value)} />
+          <span className="info-label">
+            Collection ID
+            <InfoTooltip text="Use the ID shown in Step 1 under 'Your drops'. It identifies which drop these files belong to." />
+          </span>
+          <input
+            className="input"
+            placeholder="Paste collection ID from Your drops"
+            value={collectionId}
+            onChange={(event) => setCollectionId(event.target.value)}
+          />
+          <span className="field__hint">
+            Tip: click "Copy ID" in Your drops, then paste it here.
+          </span>
         </label>
         <label className="field__label">
-          <span>Select file</span>
+          <span className="info-label">
+            Select file
+            <InfoTooltip text="Upload one artwork file at a time. The app records hash and chunk metadata automatically." />
+          </span>
           <input className="input" type="file" onChange={handleFileChange} />
+          <span className="field__hint">
+            You can repeat this to build your staged asset list.
+          </span>
         </label>
         <div className="mint-actions">
           <button className="button" type="submit" disabled={!selectedFile}>

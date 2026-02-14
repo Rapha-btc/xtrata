@@ -1,9 +1,20 @@
 import { jsonResponse, badRequest, notFound, serverError } from '../lib/utils';
-import { run } from '../lib/db';
+import { queryAll, run } from '../lib/db';
+
+const parseMetadata = (value: unknown) => {
+  if (!value) {
+    return null;
+  }
+  try {
+    return JSON.parse(String(value));
+  } catch {
+    return null;
+  }
+};
 
 const mapRow = (row: Record<string, unknown>) => ({
   ...row,
-  metadata: row.metadata ? JSON.parse(String(row.metadata)) : null
+  metadata: parseMetadata(row.metadata)
 });
 
 export const onRequest: PagesFunction = async ({ request, env, params }) => {
@@ -13,13 +24,22 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
   }
 
   if (request.method === 'GET') {
-    const statement = env.DB.prepare('SELECT * FROM collections WHERE id = ?');
-    const result = await statement.bind(collectionId).all();
-    const record = (result.results ?? [])[0];
-    if (!record) {
-      return notFound('Collection not found.');
+    try {
+      const result = await queryAll(
+        env,
+        'SELECT * FROM collections WHERE id = ?',
+        [collectionId]
+      );
+      const record = (result.results ?? [])[0];
+      if (!record) {
+        return notFound('Collection not found.');
+      }
+      return jsonResponse(mapRow(record));
+    } catch (error) {
+      return serverError(
+        error instanceof Error ? error.message : 'failed to load collection'
+      );
     }
-    return jsonResponse(mapRow(record));
   }
 
   if (request.method === 'PATCH') {
@@ -30,6 +50,10 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
       if (typeof payload.displayName === 'string') {
         updates.push('display_name = ?');
         binds.push(payload.displayName.trim());
+      }
+      if (typeof payload.artistAddress === 'string') {
+        updates.push('artist_address = ?');
+        binds.push(payload.artistAddress.trim());
       }
       if (typeof payload.contractAddress === 'string') {
         updates.push('contract_address = ?');
@@ -50,8 +74,12 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
       binds.push(collectionId);
       const query = `UPDATE collections SET ${updates.join(', ')}, updated_at = ? WHERE id = ?`;
       await run(env, query, binds);
-      const select = env.DB.prepare('SELECT * FROM collections WHERE id = ?');
-      const record = (await select.bind(collectionId).all()).results?.[0];
+      const updated = await queryAll(
+        env,
+        'SELECT * FROM collections WHERE id = ?',
+        [collectionId]
+      );
+      const record = updated.results?.[0];
       if (!record) {
         return notFound('Collection not found after update.');
       }

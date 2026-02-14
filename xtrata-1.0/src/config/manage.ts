@@ -1,19 +1,56 @@
-const normalizeAddress = (value: string) => value.trim().toUpperCase();
+import { normalizeBnsName } from '../lib/bns/helpers';
 
-const parseAllowlist = (value?: string | null) => {
-  if (!value) {
-    return new Set<string>();
-  }
-  return new Set(
-    value
-      .split(',')
-      .map((entry) => entry.trim())
-      .filter((entry) => entry.length > 0)
-      .map(normalizeAddress)
-  );
+const normalizeAddress = (value: string) => value.trim().toUpperCase();
+const ENTRY_SEPARATOR_PATTERN = /[\s,;]+/;
+const WRAPPER_CHARS_PATTERN = /^[\[\]'"`]+|[\[\]'"`]+$/g;
+
+const normalizeAllowlistEntry = (entry: string) =>
+  entry.trim().replace(WRAPPER_CHARS_PATTERN, '').trim();
+
+export type ParsedArtistAllowlist = {
+  entries: string[];
+  literalAddresses: Set<string>;
+  bnsNames: Set<string>;
 };
 
-const ARTIST_ALLOWLIST = parseAllowlist(import.meta.env.VITE_ARTIST_ALLOWLIST);
+export const parseArtistAllowlist = (value?: string | null): ParsedArtistAllowlist => {
+  const entries: string[] = [];
+  const seenEntries = new Set<string>();
+  const literalAddresses = new Set<string>();
+  const bnsNames = new Set<string>();
+
+  const pushEntry = (entry: string) => {
+    if (seenEntries.has(entry)) {
+      return;
+    }
+    seenEntries.add(entry);
+    entries.push(entry);
+  };
+
+  if (!value) {
+    return { entries, literalAddresses, bnsNames };
+  }
+
+  value
+    .split(ENTRY_SEPARATOR_PATTERN)
+    .map(normalizeAllowlistEntry)
+    .filter((entry) => entry.length > 0)
+    .forEach((entry) => {
+      const normalizedBns = normalizeBnsName(entry);
+      if (normalizedBns) {
+        bnsNames.add(normalizedBns);
+        pushEntry(normalizedBns);
+        return;
+      }
+      const normalizedAddress = normalizeAddress(entry);
+      literalAddresses.add(normalizedAddress);
+      pushEntry(normalizedAddress);
+    });
+
+  return { entries, literalAddresses, bnsNames };
+};
+
+const ARTIST_ALLOWLIST = parseArtistAllowlist(import.meta.env.VITE_ARTIST_ALLOWLIST);
 
 export const MANAGE_PATH = '/manage';
 
@@ -21,7 +58,10 @@ export const isArtistAddressAllowed = (address?: string | null) => {
   if (!address) {
     return false;
   }
-  return ARTIST_ALLOWLIST.has(normalizeAddress(address));
+  return ARTIST_ALLOWLIST.literalAddresses.has(normalizeAddress(address));
 };
 
-export const getArtistAllowlist = () => Array.from(ARTIST_ALLOWLIST.values());
+export const getArtistAllowlist = () => ARTIST_ALLOWLIST.entries.slice();
+
+export const getArtistAllowlistBnsNames = () =>
+  Array.from(ARTIST_ALLOWLIST.bnsNames.values());

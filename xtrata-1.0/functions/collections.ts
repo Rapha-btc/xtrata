@@ -1,17 +1,36 @@
-import { jsonResponse, badRequest, serverError } from '../lib/utils';
-import { run } from '../lib/db';
-import { isValidSlug, normalizeSlug } from '../lib/collections';
+import { jsonResponse, badRequest, serverError } from './lib/utils';
+import { queryAll, run } from './lib/db';
+import { isValidSlug, normalizeSlug } from './lib/collections';
+
+const parseMetadata = (value: unknown) => {
+  if (!value) {
+    return null;
+  }
+  try {
+    return JSON.parse(String(value));
+  } catch {
+    return null;
+  }
+};
 
 const mapRow = (row: Record<string, unknown>) => ({
   ...row,
-  metadata: row.metadata ? JSON.parse(String(row.metadata)) : null
+  metadata: parseMetadata(row.metadata)
 });
 
 export const onRequest: PagesFunction = async ({ request, env }) => {
   if (request.method === 'GET') {
-    const statement = env.DB.prepare('SELECT * FROM collections ORDER BY created_at DESC');
-    const result = await statement.all();
-    return jsonResponse((result.results ?? []).map(mapRow));
+    try {
+      const result = await queryAll(
+        env,
+        'SELECT * FROM collections ORDER BY created_at DESC'
+      );
+      return jsonResponse((result.results ?? []).map(mapRow));
+    } catch (error) {
+      return serverError(
+        error instanceof Error ? error.message : 'failed to load collections'
+      );
+    }
   }
 
   if (request.method === 'POST') {
@@ -28,12 +47,26 @@ export const onRequest: PagesFunction = async ({ request, env }) => {
       const now = Date.now();
       const id = crypto.randomUUID();
       const metadata = payload.metadata ? JSON.stringify(payload.metadata) : null;
-      await run(env,
+      await run(
+        env,
         'INSERT INTO collections (id, slug, artist_address, contract_address, display_name, metadata, state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [id, slug, payload.artistAddress.trim(), payload.contractAddress ?? null, payload.displayName ?? null, metadata, 'draft', now, now]
+        [
+          id,
+          slug,
+          payload.artistAddress.trim(),
+          payload.contractAddress ?? null,
+          payload.displayName ?? null,
+          metadata,
+          'draft',
+          now,
+          now
+        ]
       );
-      const statement = env.DB.prepare('SELECT * FROM collections WHERE id = ?');
-      const created = await statement.bind(id).all();
+      const created = await queryAll(
+        env,
+        'SELECT * FROM collections WHERE id = ?',
+        [id]
+      );
       const record = (created.results ?? [])[0];
       return jsonResponse(mapRow(record), 201);
     } catch (error) {

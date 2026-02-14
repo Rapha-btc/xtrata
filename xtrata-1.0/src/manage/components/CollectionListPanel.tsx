@@ -1,4 +1,8 @@
 import { useEffect, useState } from 'react';
+import {
+  parseManageJsonResponse,
+  toManageApiErrorMessage
+} from '../lib/api-errors';
 
 type CollectionRecord = {
   id: string;
@@ -12,27 +16,21 @@ type CollectionRecord = {
 export default function CollectionListPanel() {
   const [collections, setCollections] = useState<CollectionRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [copiedCollectionId, setCopiedCollectionId] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
     const load = async () => {
       try {
         const response = await fetch('/collections', { signal: controller.signal });
-        if (!response.ok) {
-          const details = await response.text();
-          throw new Error(`Collections endpoint returned ${response.status}: ${details.slice(0, 128)}`);
-        }
-        const text = await response.text();
-        try {
-          const payload = JSON.parse(text) as CollectionRecord[];
-          setCollections(payload);
-        } catch (parseError) {
-          const snippet = text.slice(0, 128).replace(/\n/g, ' ');
-          throw new Error(`Collections response is not JSON: ${snippet}`);
-        }
+        const payload = await parseManageJsonResponse<CollectionRecord[]>(
+          response,
+          'Collections'
+        );
+        setCollections(payload);
       } catch (err) {
         if ((err as Error).name !== 'AbortError') {
-          setError((err as Error).message ?? 'Unable to load collections');
+          setError(toManageApiErrorMessage(err, 'Unable to load collections'));
         }
       }
     };
@@ -45,8 +43,22 @@ export default function CollectionListPanel() {
   }
 
   if (collections.length === 0) {
-    return <p>No collections yet. Players can create one via the deploy wizard.</p>;
+    return <p>No collections yet. Create one in the deploy wizard.</p>;
   }
+
+  const copyCollectionId = async (collectionId: string) => {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(collectionId);
+        setCopiedCollectionId(collectionId);
+        window.setTimeout(() => {
+          setCopiedCollectionId((current) => (current === collectionId ? null : current));
+        }, 1500);
+      }
+    } catch {
+      setCopiedCollectionId(null);
+    }
+  };
 
   return (
     <div className="collection-list">
@@ -54,6 +66,18 @@ export default function CollectionListPanel() {
         <div key={collection.id} className="collection-list__item">
           <strong>{collection.display_name ?? collection.slug}</strong>
           <p>{collection.slug} · {collection.state}</p>
+          <p className="meta-value">
+            Collection ID: <code>{collection.id}</code>
+          </p>
+          <div className="mint-actions">
+            <button
+              className="button button--ghost button--mini"
+              type="button"
+              onClick={() => void copyCollectionId(collection.id)}
+            >
+              {copiedCollectionId === collection.id ? 'Copied' : 'Copy ID'}
+            </button>
+          </div>
           <p>{collection.contract_address ?? 'contract pending'}</p>
         </div>
       ))}

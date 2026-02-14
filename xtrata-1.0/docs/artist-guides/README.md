@@ -11,4 +11,4 @@ It explains:
 ## Start Here
 
 - `docs/artist-guides/collection-launch-guide.md`
-
+- `docs/artist-guides/collection-template-deploy-guide.md`

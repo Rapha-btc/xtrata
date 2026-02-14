@@ -1,16 +1,19 @@
 import { jsonResponse, serverError } from '../lib/utils';
+import { queryAll } from '../lib/db';
 
-const countRows = async (db: any, table: string) => {
-  const statement = await db.prepare(`SELECT COUNT(*) AS total FROM ${table}`);
-  const result = await statement.all();
+const countRows = async (env: Record<string, unknown>, table: string) => {
+  const result = await queryAll(
+    env as any,
+    `SELECT COUNT(*) AS total FROM ${table}`
+  );
   return Number(result.results?.[0]?.total ?? 0);
 };
 
 export const onRequest: PagesFunction = async ({ env }) => {
   try {
-    const collectionsCount = await countRows(env.DB, 'collections');
-    const assetsCount = await countRows(env.DB, 'assets');
-    const reservationsCount = await countRows(env.DB, 'reservations');
+    const collectionsCount = await countRows(env, 'collections');
+    const assetsCount = await countRows(env, 'assets');
+    const reservationsCount = await countRows(env, 'reservations');
     return jsonResponse({
       collectionsCount,
       assetsCount,

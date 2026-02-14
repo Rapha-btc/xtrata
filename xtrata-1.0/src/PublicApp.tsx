@@ -570,6 +570,14 @@ If something looks wrong, start with these checks in order.
     description: 'View the full codebase and documentation on GitHub.',
     external: true,
     href: 'https://github.com/stxtrata/xtrata'
+  },
+  {
+    id: 'x',
+    title: 'X / Twitter',
+    tag: 'Social',
+    description: 'Follow updates from @XtrataBTC on X.',
+    external: true,
+    href: 'https://x.com/XtrataBTC'
   }
 ];
 
@@ -1601,23 +1609,6 @@ export default function PublicApp() {
                     </div>
                   )}
                 </div>
-                <div className="docs-menu__section">
-                  <h3>External references</h3>
-                  <div className="docs-menu__links">
-                    {DOC_SECTIONS.filter((doc) => doc.external && doc.href).map((doc) => (
-                      <a
-                        key={doc.id}
-                        className="docs-menu__link"
-                        href={doc.href}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        <span className="docs-menu__link-title">{doc.title}</span>
-                        <span className="docs-menu__link-text">{doc.description}</span>
-                      </a>
-                    ))}
-                  </div>
-                </div>
               </aside>
               <article className="docs-reader" id="docs-reader">
                 {activeDoc ? (
@@ -1683,6 +1674,42 @@ export default function PublicApp() {
                   </div>
                 )}
               </article>
+              <div className="docs-menu__section">
+                <h3>External references</h3>
+                <div className="docs-menu__links">
+                  {DOC_SECTIONS.filter((doc) => doc.external && doc.href).map((doc) => (
+                    <a
+                      key={doc.id}
+                      className="docs-menu__link"
+                      href={doc.href}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <span className="docs-menu__link-header">
+                        {(doc.id === 'github' || doc.id === 'x') && (
+                          <span className="docs-menu__link-icon" aria-hidden="true">
+                            <svg viewBox="0 0 16 16" focusable="false">
+                              {doc.id === 'github' ? (
+                                <path
+                                  fill="currentColor"
+                                  d="M8 0C3.58 0 0 3.58 0 8a8 8 0 0 0 5.47 7.59c.4.07.55-.17.55-.38v-1.33c-2.23.49-2.7-1.07-2.7-1.07-.37-.92-.9-1.16-.9-1.16-.74-.5.06-.49.06-.49.82.06 1.25.84 1.25.84.73 1.25 1.91.89 2.38.68.07-.53.29-.89.52-1.09-1.78-.2-3.64-.89-3.64-3.96 0-.88.31-1.6.83-2.16-.08-.21-.36-1.03.08-2.14 0 0 .68-.22 2.22.82A7.7 7.7 0 0 1 8 4.85c.68 0 1.36.09 2 .26 1.54-1.04 2.22-.82 2.22-.82.44 1.11.16 1.93.08 2.14.51.56.82 1.28.82 2.16 0 3.08-1.87 3.76-3.66 3.96.29.24.55.73.55 1.47v2.19c0 .21.15.46.55.38A8 8 0 0 0 16 8c0-4.42-3.58-8-8-8Z"
+                                />
+                              ) : (
+                                <path
+                                  fill="currentColor"
+                                  d="M3 2h2.75l2.86 4.09L12.12 2H14l-4.36 4.98L14.5 14h-2.75l-3.02-4.3L4.94 14H3.06l4.48-5.12L3 2zm1.79 1.05L11.8 13h.91L5.7 3.05h-.91z"
+                                />
+                              )}
+                            </svg>
+                          </span>
+                        )}
+                        <span className="docs-menu__link-title">{doc.title}</span>
+                      </span>
+                      <span className="docs-menu__link-text">{doc.description}</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </section>
