@@ -1240,24 +1240,33 @@ export default function PublicApp() {
   return (
     <div className="app">
       <header className="app__header">
-        <div className="app__hero">
-          <button
-            className="button app__hero-button"
-            type="button"
-            onClick={openCreativeStory}
-          >
-            What is Xtrata?
-          </button>
-          <p className="app__hero-note">
-            Xtrata infrastructure enables trustless ownership, attribution, and execution for future, true web3 applications.
-          </p>
-        </div>
-        <div className="app__header-row">
-          <h1 className="app__title">
-            XTRATA <span className="app__title-tag">  Data Layer for Bitcoin</span>
-          </h1>
+        <section className="app__hero" aria-label="Xtrata overview">
+          <div className="app__hero-content">
+            <p className="app__hero-kicker">
+              Immutable infrastructure for trustless creative and Web3 applications
+            </p>
+            <h1 className="app__title">
+              XTRATA <span className="app__title-tag">Data Layer for Bitcoin</span>
+            </h1>
+            <p className="app__hero-note">
+              Xtrata gives apps immutable ownership, attribution, and execution guarantees
+              anchored to Bitcoin.
+            </p>
+          </div>
+          <div className="app__hero-actions">
+            <button
+              className="button app__hero-button"
+              type="button"
+              onClick={openCreativeStory}
+            >
+              What is Xtrata?
+            </button>
+          </div>
+        </section>
+
+        <div className="app__nav-zone">
           <div className="app__toolbar">
-            <nav className="app__nav">
+            <nav className="app__nav" aria-label="Section navigation">
               <a
                 className="button button--ghost app__nav-link"
                 href="#wallet-lookup"
@@ -1344,7 +1353,6 @@ export default function PublicApp() {
             </div>
           </div>
         </div>
-        <p>Immutable Data Inscriptions on Stacks. Secured by Bitcoin.</p>
       </header>
       {!tabGuard.isActive && (
         <div className="app__notice">
@@ -1551,7 +1559,8 @@ export default function PublicApp() {
           <div className="panel__header">
             <div>
               <h2>Docs</h2>
-              <p>Learn the protocol, minting flow, markets, and how the tech fits together.</p>
+                <p>Understand the protocol, how minting works, how markets integrate, and how creators, collectors, and builders connect through Xtrata.</p>
+
             </div>
             <div className="panel__actions">
               <button
@@ -1568,8 +1577,8 @@ export default function PublicApp() {
             <div className="docs-layout">
               <aside className="docs-menu" aria-label="Documentation topics">
                 <div className="docs-menu__section">
-                  <h3>In-house topics</h3>
-                  <p>Each topic starts with a simple summary. Expand for deeper technical detail.</p>
+                  <h3>Docs</h3>
+                  <p>Expand any section for greater detail.</p>
                   <div className="docs-menu__list">
                     {IN_HOUSE_DOC_SECTIONS.map((doc) => (
                       <button

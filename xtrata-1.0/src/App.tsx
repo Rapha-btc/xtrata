@@ -447,107 +447,130 @@ export default function App() {
         <span className="eyebrow">Contract-driven UI rebuild</span>
         <div className="app__header-row">
           <h1>xtrata v15.1</h1>
-          <div className="app__toolbar">
-            <nav className="app__nav">
-              <a
-                className="button button--ghost app__nav-link"
-                href="#wallet-lookup"
-                onClick={(event) => handleNavJump(event, 'wallet-lookup')}
-              >
-                Wallet lookup
-              </a>
-              <a
-                className="button button--ghost app__nav-link"
-                href="#wallet-session"
-                onClick={(event) => handleNavJump(event, 'wallet-session')}
-              >
-                Wallet session
-              </a>
-              <a
-                className="button button--ghost app__nav-link"
-                href="#active-contract"
-                onClick={(event) => handleNavJump(event, 'active-contract')}
-              >
-                Active contract
-              </a>
-              <a
-                className="button button--ghost app__nav-link"
-                href="#collection-viewer"
-                onClick={(event) => handleNavJump(event, 'collection-viewer')}
-              >
-                Viewer
-              </a>
-              <a
-                className="button button--ghost app__nav-link"
-                href="#market"
-                onClick={(event) => handleNavJump(event, 'market')}
-              >
-                Market
-              </a>
-              <a
-                className="button button--ghost app__nav-link"
-                href="#deploy-contract"
-                onClick={(event) => handleNavJump(event, 'deploy-contract')}
-              >
-                Deploy
-              </a>
-              <a
-                className="button button--ghost app__nav-link"
-                href="#contract-admin"
-                onClick={(event) => handleNavJump(event, 'contract-admin')}
-              >
-                Contract admin
-              </a>
-              <a
-                className="button button--ghost app__nav-link"
-                href="#collection-mint-admin"
-                onClick={(event) => handleNavJump(event, 'collection-mint-admin')}
-              >
-                Collection mint admin
-              </a>
-              <a
-                className="button button--ghost app__nav-link"
-                href="#preinscribed-sale-admin"
-                onClick={(event) => handleNavJump(event, 'preinscribed-sale-admin')}
-              >
-                Pre-inscribed sale admin
-              </a>
-              <a
-                className="button button--ghost app__nav-link"
-                href="#preinscribed-sale"
-                onClick={(event) => handleNavJump(event, 'preinscribed-sale')}
-              >
-                Pre-inscribed sale buyer
-              </a>
-              <a
-                className="button button--ghost app__nav-link"
-                href="#admin-diagnostics"
-                onClick={(event) => handleNavJump(event, 'admin-diagnostics')}
-              >
-                Diagnostics
-              </a>
-              <a
-                className="button button--ghost app__nav-link"
-                href="#campaign-console"
-                onClick={(event) => handleNavJump(event, 'campaign-console')}
-              >
-                Campaign console
-              </a>
-              <a
-                className="button button--ghost app__nav-link"
-                href="#collection-mint"
-                onClick={(event) => handleNavJump(event, 'collection-mint')}
-              >
-                Batch mint
-              </a>
-              <a
-                className="button button--ghost app__nav-link"
-                href="#mint"
-                onClick={(event) => handleNavJump(event, 'mint')}
-              >
-                Mint
-              </a>
-            </nav>
+          <div className="app__toolbar app__toolbar--admin">
+            <div className="app__admin-nav-groups" aria-label="Admin section navigation">
+              <section className="app__admin-nav-group">
+                <p className="app__admin-nav-title">User Tools</p>
+                <div className="app__admin-nav-links">
+                  <a
+                    className="button button--ghost app__nav-link"
+                    href="#wallet-lookup"
+                    onClick={(event) => handleNavJump(event, 'wallet-lookup')}
+                  >
+                    Wallet lookup
+                  </a>
+                  <a
+                    className="button button--ghost app__nav-link"
+                    href="#wallet-session"
+                    onClick={(event) => handleNavJump(event, 'wallet-session')}
+                  >
+                    Wallet session
+                  </a>
+                  <a
+                    className="button button--ghost app__nav-link"
+                    href="#active-contract"
+                    onClick={(event) => handleNavJump(event, 'active-contract')}
+                  >
+                    Active contract
+                  </a>
+                  <a
+                    className="button button--ghost app__nav-link"
+                    href="#collection-viewer"
+                    onClick={(event) => handleNavJump(event, 'collection-viewer')}
+                  >
+                    Viewer
+                  </a>
+                  <a
+                    className="button button--ghost app__nav-link"
+                    href="#market"
+                    onClick={(event) => handleNavJump(event, 'market')}
+                  >
+                    Market
+                  </a>
+                </div>
+              </section>
+
+              <section className="app__admin-nav-group">
+                <p className="app__admin-nav-title">Minting</p>
+                <div className="app__admin-nav-links">
+                  <a
+                    className="button button--ghost app__nav-link"
+                    href="#collection-mint"
+                    onClick={(event) => handleNavJump(event, 'collection-mint')}
+                  >
+                    Batch mint
+                  </a>
+                  <a
+                    className="button button--ghost app__nav-link"
+                    href="#mint"
+                    onClick={(event) => handleNavJump(event, 'mint')}
+                  >
+                    Mint
+                  </a>
+                </div>
+              </section>
+
+              <section className="app__admin-nav-group">
+                <p className="app__admin-nav-title">Admin Controls</p>
+                <div className="app__admin-nav-links">
+                  <a
+                    className="button button--ghost app__nav-link"
+                    href="#deploy-contract"
+                    onClick={(event) => handleNavJump(event, 'deploy-contract')}
+                  >
+                    Deploy
+                  </a>
+                  <a
+                    className="button button--ghost app__nav-link"
+                    href="#contract-admin"
+                    onClick={(event) => handleNavJump(event, 'contract-admin')}
+                  >
+                    Contract admin
+                  </a>
+                  <a
+                    className="button button--ghost app__nav-link"
+                    href="#collection-mint-admin"
+                    onClick={(event) => handleNavJump(event, 'collection-mint-admin')}
+                  >
+                    Collection mint admin
+                  </a>
+                  <a
+                    className="button button--ghost app__nav-link"
+                    href="#preinscribed-sale-admin"
+                    onClick={(event) => handleNavJump(event, 'preinscribed-sale-admin')}
+                  >
+                    Pre-inscribed sale admin
+                  </a>
+                  <a
+                    className="button button--ghost app__nav-link"
+                    href="#preinscribed-sale"
+                    onClick={(event) => handleNavJump(event, 'preinscribed-sale')}
+                  >
+                    Pre-inscribed sale buyer
+                  </a>
+                </div>
+              </section>
+
+              <section className="app__admin-nav-group">
+                <p className="app__admin-nav-title">Ops and Insights</p>
+                <div className="app__admin-nav-links">
+                  <a
+                    className="button button--ghost app__nav-link"
+                    href="#admin-diagnostics"
+                    onClick={(event) => handleNavJump(event, 'admin-diagnostics')}
+                  >
+                    Diagnostics
+                  </a>
+                  <a
+                    className="button button--ghost app__nav-link"
+                    href="#campaign-console"
+                    onClick={(event) => handleNavJump(event, 'campaign-console')}
+                  >
+                    Campaign console
+                  </a>
+                </div>
+              </section>
+            </div>
             <div className="app__controls">
               <div className="app__controls-group">
                 <label className="theme-select" htmlFor="admin-theme-select">
