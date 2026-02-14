@@ -5,13 +5,14 @@ export const onRequest: PagesFunction = async ({ env, params }) => {
   }
   try {
     const bucket =
+      (env as Record<string, unknown>).COLLECTION_ASSETS ??
       (env as Record<string, unknown>).ASSETS ??
       (env as Record<string, unknown>).R2;
     if (!bucket || typeof (bucket as R2Bucket).getUploadUrl !== 'function') {
       return new Response(
         JSON.stringify({
           error:
-            'Missing R2 binding. Configure bucket binding `ASSETS` (or `R2`) for this Pages environment.'
+            'Missing R2 binding. Configure bucket binding `COLLECTION_ASSETS` (or legacy `ASSETS`/`R2`) for this Pages environment.'
         }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
       );

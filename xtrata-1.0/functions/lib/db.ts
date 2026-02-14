@@ -1,6 +1,6 @@
 export type Env = {
   DB: D1Database;
-  ASSETS: R2Bucket;
+  COLLECTION_ASSETS?: R2Bucket;
 };
 
 const resolveDb = (env: Partial<Env> & Record<string, unknown>) => {
