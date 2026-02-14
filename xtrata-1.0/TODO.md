@@ -1,4 +1,3 @@
-0) Update the wallet previews to show first 4 and last 5 characters whenever showing condensed addresses - most people recognise their wallets by the last letters rather than the first.
 
 
 1) Check on how fully formed our approach is to recursive inscriptions. Not only are we trying to make it as convenient and cheap as possible to create recursive apps but also need to understand how to reference cross contract files in a recursive app and what changes (if any) need to be made to the platform or protocol to improve, enhance and streamline recursive funtionality and performance to make xtrata the best and most functional on-chain data layer secured directly to Bitcoin at around 1/100-1/1000 of the cost of ordinal inscriptions. How ready are we? What improvementss could still be made?
