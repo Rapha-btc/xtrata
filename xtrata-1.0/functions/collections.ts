@@ -2,16 +2,6 @@ import { jsonResponse, badRequest, serverError } from './lib/utils';
 import { queryAll, run } from './lib/db';
 import { isValidSlug, normalizeSlug } from './lib/collections';
 
-const requireDb = (env: Record<string, unknown>) => {
-  const db = env.DB as D1Database | undefined;
-  if (!db || typeof db.prepare !== 'function') {
-    throw new Error(
-      'Missing DB binding. Configure D1 as binding `DB` for this Pages environment.'
-    );
-  }
-  return db;
-};
-
 const parseMetadata = (value: unknown) => {
   if (!value) {
     return null;
@@ -31,10 +21,10 @@ const mapRow = (row: Record<string, unknown>) => ({
 export const onRequest: PagesFunction = async ({ request, env }) => {
   if (request.method === 'GET') {
     try {
-      const statement = requireDb(env).prepare(
+      const result = await queryAll(
+        env,
         'SELECT * FROM collections ORDER BY created_at DESC'
       );
-      const result = await statement.all();
       return jsonResponse((result.results ?? []).map(mapRow));
     } catch (error) {
       return serverError(

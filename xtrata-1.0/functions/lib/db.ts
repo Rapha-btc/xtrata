@@ -3,17 +3,29 @@ export type Env = {
   ASSETS: R2Bucket;
 };
 
-const requireDb = (env: Partial<Env>) => {
-  if (!env.DB || typeof env.DB.prepare !== 'function') {
+const resolveDb = (env: Partial<Env> & Record<string, unknown>) => {
+  const candidate =
+    (env.DB as D1Database | undefined) ??
+    (env.D1 as D1Database | undefined) ??
+    (env.db as D1Database | undefined);
+  if (!candidate || typeof candidate.prepare !== 'function') {
+    const availableBindings = Object.keys(env)
+      .filter((key) => key.trim().length > 0)
+      .sort()
+      .join(', ');
     throw new Error(
-      'Missing DB binding. Configure D1 as binding `DB` for this Pages environment.'
+      `Missing D1 binding. Configure D1 as binding \`DB\` for this Pages environment. Available bindings: ${
+        availableBindings || 'none'
+      }`
     );
   }
-  return env.DB;
+  return candidate;
 };
 
 export async function queryAll(env: Env, query: string, binds: Array<unknown> = []) {
-  const statement = requireDb(env).prepare(query);
+  const statement = resolveDb(env as Partial<Env> & Record<string, unknown>).prepare(
+    query
+  );
   if (binds.length > 0) {
     return statement.bind(...binds).all();
   }
@@ -21,7 +33,9 @@ export async function queryAll(env: Env, query: string, binds: Array<unknown> = 
 }
 
 export async function run(env: Env, query: string, binds: Array<unknown> = []) {
-  const statement = requireDb(env).prepare(query);
+  const statement = resolveDb(env as Partial<Env> & Record<string, unknown>).prepare(
+    query
+  );
   if (binds.length > 0) {
     return statement.bind(...binds).run();
   }

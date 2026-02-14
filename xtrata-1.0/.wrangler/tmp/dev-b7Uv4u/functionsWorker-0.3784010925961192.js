@@ -27,16 +27,20 @@ function serverError(message = "Server error") {
 }
 __name(serverError, "serverError");
 __name2(serverError, "serverError");
-var requireDb = /* @__PURE__ */ __name2((env) => {
-  if (!env.DB || typeof env.DB.prepare !== "function") {
+var resolveDb = /* @__PURE__ */ __name2((env) => {
+  const candidate = env.DB ?? env.D1 ?? env.db;
+  if (!candidate || typeof candidate.prepare !== "function") {
+    const availableBindings = Object.keys(env).filter((key) => key.trim().length > 0).sort().join(", ");
     throw new Error(
-      "Missing DB binding. Configure D1 as binding `DB` for this Pages environment."
+      `Missing D1 binding. Configure D1 as binding \`DB\` for this Pages environment. Available bindings: ${availableBindings || "none"}`
     );
   }
-  return env.DB;
-}, "requireDb");
+  return candidate;
+}, "resolveDb");
 async function queryAll(env, query, binds = []) {
-  const statement = requireDb(env).prepare(query);
+  const statement = resolveDb(env).prepare(
+    query
+  );
   if (binds.length > 0) {
     return statement.bind(...binds).all();
   }
@@ -45,7 +49,9 @@ async function queryAll(env, query, binds = []) {
 __name(queryAll, "queryAll");
 __name2(queryAll, "queryAll");
 async function run(env, query, binds = []) {
-  const statement = requireDb(env).prepare(query);
+  const statement = resolveDb(env).prepare(
+    query
+  );
   if (binds.length > 0) {
     return statement.bind(...binds).run();
   }
@@ -371,21 +377,18 @@ var onRequest5 = /* @__PURE__ */ __name2(async (context) => {
     headers: responseHeaders
   });
 }, "onRequest");
-var countRows = /* @__PURE__ */ __name2(async (db, table) => {
-  if (!db || typeof db.prepare !== "function") {
-    throw new Error(
-      "Missing DB binding. Configure D1 as binding `DB` for this Pages environment."
-    );
-  }
-  const statement = await db.prepare(`SELECT COUNT(*) AS total FROM ${table}`);
-  const result = await statement.all();
+var countRows = /* @__PURE__ */ __name2(async (env, table) => {
+  const result = await queryAll(
+    env,
+    `SELECT COUNT(*) AS total FROM ${table}`
+  );
   return Number(result.results?.[0]?.total ?? 0);
 }, "countRows");
 var onRequest6 = /* @__PURE__ */ __name2(async ({ env }) => {
   try {
-    const collectionsCount = await countRows(env.DB, "collections");
-    const assetsCount = await countRows(env.DB, "assets");
-    const reservationsCount = await countRows(env.DB, "reservations");
+    const collectionsCount = await countRows(env, "collections");
+    const assetsCount = await countRows(env, "assets");
+    const reservationsCount = await countRows(env, "reservations");
     return jsonResponse({
       collectionsCount,
       assetsCount,
@@ -396,15 +399,6 @@ var onRequest6 = /* @__PURE__ */ __name2(async ({ env }) => {
     return serverError(error instanceof Error ? error.message : "Health check failed");
   }
 }, "onRequest");
-var requireDb2 = /* @__PURE__ */ __name2((env) => {
-  const db = env.DB;
-  if (!db || typeof db.prepare !== "function") {
-    throw new Error(
-      "Missing DB binding. Configure D1 as binding `DB` for this Pages environment."
-    );
-  }
-  return db;
-}, "requireDb");
 var parseMetadata2 = /* @__PURE__ */ __name2((value) => {
   if (!value) {
     return null;
@@ -426,10 +420,11 @@ var onRequest7 = /* @__PURE__ */ __name2(async ({ request, env, params }) => {
   }
   if (request.method === "GET") {
     try {
-      const statement = requireDb2(env).prepare(
-        "SELECT * FROM collections WHERE id = ?"
+      const result = await queryAll(
+        env,
+        "SELECT * FROM collections WHERE id = ?",
+        [collectionId]
       );
-      const result = await statement.bind(collectionId).all();
       const record = (result.results ?? [])[0];
       if (!record) {
         return notFound("Collection not found.");
@@ -526,15 +521,6 @@ var onRequest8 = /* @__PURE__ */ __name2(async (context) => {
     headers: responseHeaders
   });
 }, "onRequest");
-var requireDb3 = /* @__PURE__ */ __name2((env) => {
-  const db = env.DB;
-  if (!db || typeof db.prepare !== "function") {
-    throw new Error(
-      "Missing DB binding. Configure D1 as binding `DB` for this Pages environment."
-    );
-  }
-  return db;
-}, "requireDb");
 var parseMetadata3 = /* @__PURE__ */ __name2((value) => {
   if (!value) {
     return null;
@@ -552,10 +538,10 @@ var mapRow2 = /* @__PURE__ */ __name2((row) => ({
 var onRequest9 = /* @__PURE__ */ __name2(async ({ request, env }) => {
   if (request.method === "GET") {
     try {
-      const statement = requireDb3(env).prepare(
+      const result = await queryAll(
+        env,
         "SELECT * FROM collections ORDER BY created_at DESC"
       );
-      const result = await statement.all();
       return jsonResponse((result.results ?? []).map(mapRow2));
     } catch (error) {
       return serverError(

@@ -23,16 +23,20 @@ function serverError(message = "Server error") {
 __name(serverError, "serverError");
 
 // lib/db.ts
-var requireDb = /* @__PURE__ */ __name((env) => {
-  if (!env.DB || typeof env.DB.prepare !== "function") {
+var resolveDb = /* @__PURE__ */ __name((env) => {
+  const candidate = env.DB ?? env.D1 ?? env.db;
+  if (!candidate || typeof candidate.prepare !== "function") {
+    const availableBindings = Object.keys(env).filter((key) => key.trim().length > 0).sort().join(", ");
     throw new Error(
-      "Missing DB binding. Configure D1 as binding `DB` for this Pages environment."
+      `Missing D1 binding. Configure D1 as binding \`DB\` for this Pages environment. Available bindings: ${availableBindings || "none"}`
     );
   }
-  return env.DB;
-}, "requireDb");
+  return candidate;
+}, "resolveDb");
 async function queryAll(env, query, binds = []) {
-  const statement = requireDb(env).prepare(query);
+  const statement = resolveDb(env).prepare(
+    query
+  );
   if (binds.length > 0) {
     return statement.bind(...binds).all();
   }
@@ -40,7 +44,9 @@ async function queryAll(env, query, binds = []) {
 }
 __name(queryAll, "queryAll");
 async function run(env, query, binds = []) {
-  const statement = requireDb(env).prepare(query);
+  const statement = resolveDb(env).prepare(
+    query
+  );
   if (binds.length > 0) {
     return statement.bind(...binds).run();
   }
@@ -379,21 +385,18 @@ var onRequest5 = /* @__PURE__ */ __name(async (context) => {
 }, "onRequest");
 
 // collections/health.ts
-var countRows = /* @__PURE__ */ __name(async (db, table) => {
-  if (!db || typeof db.prepare !== "function") {
-    throw new Error(
-      "Missing DB binding. Configure D1 as binding `DB` for this Pages environment."
-    );
-  }
-  const statement = await db.prepare(`SELECT COUNT(*) AS total FROM ${table}`);
-  const result = await statement.all();
+var countRows = /* @__PURE__ */ __name(async (env, table) => {
+  const result = await queryAll(
+    env,
+    `SELECT COUNT(*) AS total FROM ${table}`
+  );
   return Number(result.results?.[0]?.total ?? 0);
 }, "countRows");
 var onRequest6 = /* @__PURE__ */ __name(async ({ env }) => {
   try {
-    const collectionsCount = await countRows(env.DB, "collections");
-    const assetsCount = await countRows(env.DB, "assets");
-    const reservationsCount = await countRows(env.DB, "reservations");
+    const collectionsCount = await countRows(env, "collections");
+    const assetsCount = await countRows(env, "assets");
+    const reservationsCount = await countRows(env, "reservations");
     return jsonResponse({
       collectionsCount,
       assetsCount,
@@ -406,15 +409,6 @@ var onRequest6 = /* @__PURE__ */ __name(async ({ env }) => {
 }, "onRequest");
 
 // collections/[collectionId].ts
-var requireDb2 = /* @__PURE__ */ __name((env) => {
-  const db = env.DB;
-  if (!db || typeof db.prepare !== "function") {
-    throw new Error(
-      "Missing DB binding. Configure D1 as binding `DB` for this Pages environment."
-    );
-  }
-  return db;
-}, "requireDb");
 var parseMetadata2 = /* @__PURE__ */ __name((value) => {
   if (!value) {
     return null;
@@ -436,10 +430,11 @@ var onRequest7 = /* @__PURE__ */ __name(async ({ request, env, params }) => {
   }
   if (request.method === "GET") {
     try {
-      const statement = requireDb2(env).prepare(
-        "SELECT * FROM collections WHERE id = ?"
+      const result = await queryAll(
+        env,
+        "SELECT * FROM collections WHERE id = ?",
+        [collectionId]
       );
-      const result = await statement.bind(collectionId).all();
       const record = (result.results ?? [])[0];
       if (!record) {
         return notFound("Collection not found.");
@@ -540,15 +535,6 @@ var onRequest8 = /* @__PURE__ */ __name(async (context) => {
 }, "onRequest");
 
 // collections.ts
-var requireDb3 = /* @__PURE__ */ __name((env) => {
-  const db = env.DB;
-  if (!db || typeof db.prepare !== "function") {
-    throw new Error(
-      "Missing DB binding. Configure D1 as binding `DB` for this Pages environment."
-    );
-  }
-  return db;
-}, "requireDb");
 var parseMetadata3 = /* @__PURE__ */ __name((value) => {
   if (!value) {
     return null;
@@ -566,10 +552,10 @@ var mapRow2 = /* @__PURE__ */ __name((row) => ({
 var onRequest9 = /* @__PURE__ */ __name(async ({ request, env }) => {
   if (request.method === "GET") {
     try {
-      const statement = requireDb3(env).prepare(
+      const result = await queryAll(
+        env,
         "SELECT * FROM collections ORDER BY created_at DESC"
       );
-      const result = await statement.all();
       return jsonResponse((result.results ?? []).map(mapRow2));
     } catch (error) {
       return serverError(
@@ -1174,7 +1160,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// ../.wrangler/tmp/bundle-HagUUb/middleware-insertion-facade.js
+// ../.wrangler/tmp/bundle-9TRkci/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -1206,7 +1192,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// ../.wrangler/tmp/bundle-HagUUb/middleware-loader.entry.ts
+// ../.wrangler/tmp/bundle-9TRkci/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;

@@ -1,16 +1,6 @@
 import { jsonResponse, badRequest, notFound, serverError } from '../lib/utils';
 import { queryAll, run } from '../lib/db';
 
-const requireDb = (env: Record<string, unknown>) => {
-  const db = env.DB as D1Database | undefined;
-  if (!db || typeof db.prepare !== 'function') {
-    throw new Error(
-      'Missing DB binding. Configure D1 as binding `DB` for this Pages environment.'
-    );
-  }
-  return db;
-};
-
 const parseMetadata = (value: unknown) => {
   if (!value) {
     return null;
@@ -35,10 +25,11 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
 
   if (request.method === 'GET') {
     try {
-      const statement = requireDb(env).prepare(
-        'SELECT * FROM collections WHERE id = ?'
+      const result = await queryAll(
+        env,
+        'SELECT * FROM collections WHERE id = ?',
+        [collectionId]
       );
-      const result = await statement.bind(collectionId).all();
       const record = (result.results ?? [])[0];
       if (!record) {
         return notFound('Collection not found.');
