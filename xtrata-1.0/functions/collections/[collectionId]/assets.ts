@@ -1,5 +1,5 @@
 import { jsonResponse, badRequest, serverError } from '../../lib/utils';
-import { run } from '../../lib/db';
+import { queryAll, run } from '../../lib/db';
 import { staysWithinLimit } from '../../lib/collections';
 
 export const onRequest: PagesFunction = async ({ request, env, params }) => {
@@ -9,16 +9,21 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
   }
 
   if (request.method === 'GET') {
-    await run(
-      env,
-      'UPDATE assets SET state = ? WHERE collection_id = ? AND expires_at IS NOT NULL AND expires_at < ? AND state = ?',
-      ['expired', collectionId, Date.now(), 'draft']
-    );
-    const statement = env.DB.prepare(
-      'SELECT * FROM assets WHERE collection_id = ? ORDER BY created_at DESC'
-    );
-    const result = await statement.bind(collectionId).all();
-    return jsonResponse(result.results ?? []);
+    try {
+      await run(
+        env,
+        'UPDATE assets SET state = ? WHERE collection_id = ? AND expires_at IS NOT NULL AND expires_at < ? AND state = ?',
+        ['expired', collectionId, Date.now(), 'draft']
+      );
+      const result = await queryAll(
+        env,
+        'SELECT * FROM assets WHERE collection_id = ? ORDER BY created_at DESC',
+        [collectionId]
+      );
+      return jsonResponse(result.results ?? []);
+    } catch (error) {
+      return serverError(error instanceof Error ? error.message : 'Failed to load assets');
+    }
   }
 
   if (request.method === 'POST') {
@@ -37,10 +42,11 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
       const totalChunks = Number(payload.totalChunks ?? 0);
       const expectedHash = String(payload.expectedHash ?? '');
       const limitBytes = Number(env.MAX_COLLECTION_STORAGE_BYTES ?? 500 * 1024 * 1024);
-      const sumStatement = env.DB.prepare(
-        'SELECT COALESCE(SUM(total_bytes), 0) as total FROM assets WHERE collection_id = ? AND state != ?'
+      const aggregate = await queryAll(
+        env,
+        'SELECT COALESCE(SUM(total_bytes), 0) as total FROM assets WHERE collection_id = ? AND state != ?',
+        [collectionId, 'sold-out']
       );
-      const aggregate = await sumStatement.bind(collectionId, 'sold-out').all();
       const currentBytes = Number(aggregate.results?.[0]?.total ?? 0);
       if (!staysWithinLimit(currentBytes, totalBytes, limitBytes)) {
         return badRequest(
@@ -71,10 +77,11 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
           Date.now()
         ]
       );
-      const inserted = await env.DB
-        .prepare('SELECT * FROM assets WHERE asset_id = ?')
-        .bind(assetId)
-        .all();
+      const inserted = await queryAll(
+        env,
+        'SELECT * FROM assets WHERE asset_id = ?',
+        [assetId]
+      );
       const row = (inserted.results ?? [])[0];
       return jsonResponse(row, 201);
     } catch (error) {

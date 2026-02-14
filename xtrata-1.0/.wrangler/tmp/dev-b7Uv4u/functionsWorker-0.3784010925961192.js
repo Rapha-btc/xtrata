@@ -35,6 +35,15 @@ var requireDb = /* @__PURE__ */ __name2((env) => {
   }
   return env.DB;
 }, "requireDb");
+async function queryAll(env, query, binds = []) {
+  const statement = requireDb(env).prepare(query);
+  if (binds.length > 0) {
+    return statement.bind(...binds).all();
+  }
+  return statement.all();
+}
+__name(queryAll, "queryAll");
+__name2(queryAll, "queryAll");
 async function run(env, query, binds = []) {
   const statement = requireDb(env).prepare(query);
   if (binds.length > 0) {
@@ -54,16 +63,21 @@ var onRequest = /* @__PURE__ */ __name2(async ({ request, env, params }) => {
     return badRequest("Collection id missing.");
   }
   if (request.method === "GET") {
-    await run(
-      env,
-      "UPDATE assets SET state = ? WHERE collection_id = ? AND expires_at IS NOT NULL AND expires_at < ? AND state = ?",
-      ["expired", collectionId, Date.now(), "draft"]
-    );
-    const statement = env.DB.prepare(
-      "SELECT * FROM assets WHERE collection_id = ? ORDER BY created_at DESC"
-    );
-    const result = await statement.bind(collectionId).all();
-    return jsonResponse(result.results ?? []);
+    try {
+      await run(
+        env,
+        "UPDATE assets SET state = ? WHERE collection_id = ? AND expires_at IS NOT NULL AND expires_at < ? AND state = ?",
+        ["expired", collectionId, Date.now(), "draft"]
+      );
+      const result = await queryAll(
+        env,
+        "SELECT * FROM assets WHERE collection_id = ? ORDER BY created_at DESC",
+        [collectionId]
+      );
+      return jsonResponse(result.results ?? []);
+    } catch (error) {
+      return serverError(error instanceof Error ? error.message : "Failed to load assets");
+    }
   }
   if (request.method === "POST") {
     try {
@@ -81,10 +95,11 @@ var onRequest = /* @__PURE__ */ __name2(async ({ request, env, params }) => {
       const totalChunks = Number(payload.totalChunks ?? 0);
       const expectedHash = String(payload.expectedHash ?? "");
       const limitBytes = Number(env.MAX_COLLECTION_STORAGE_BYTES ?? 500 * 1024 * 1024);
-      const sumStatement = env.DB.prepare(
-        "SELECT COALESCE(SUM(total_bytes), 0) as total FROM assets WHERE collection_id = ? AND state != ?"
+      const aggregate = await queryAll(
+        env,
+        "SELECT COALESCE(SUM(total_bytes), 0) as total FROM assets WHERE collection_id = ? AND state != ?",
+        [collectionId, "sold-out"]
       );
-      const aggregate = await sumStatement.bind(collectionId, "sold-out").all();
       const currentBytes = Number(aggregate.results?.[0]?.total ?? 0);
       if (!staysWithinLimit(currentBytes, totalBytes, limitBytes)) {
         return badRequest(
@@ -115,7 +130,11 @@ var onRequest = /* @__PURE__ */ __name2(async ({ request, env, params }) => {
           Date.now()
         ]
       );
-      const inserted = await env.DB.prepare("SELECT * FROM assets WHERE asset_id = ?").bind(assetId).all();
+      const inserted = await queryAll(
+        env,
+        "SELECT * FROM assets WHERE asset_id = ?",
+        [assetId]
+      );
       const row = (inserted.results ?? [])[0];
       return jsonResponse(row, 201);
     } catch (error) {
@@ -196,11 +215,18 @@ var onRequest3 = /* @__PURE__ */ __name2(async ({ request, env, params }) => {
     return badRequest("Collection id missing.");
   }
   if (request.method === "GET") {
-    const statement = env.DB.prepare(
-      "SELECT * FROM reservations WHERE collection_id = ? ORDER BY created_at DESC"
-    );
-    const result = await statement.bind(collectionId).all();
-    return jsonResponse(result.results ?? []);
+    try {
+      const result = await queryAll(
+        env,
+        "SELECT * FROM reservations WHERE collection_id = ? ORDER BY created_at DESC",
+        [collectionId]
+      );
+      return jsonResponse(result.results ?? []);
+    } catch (error) {
+      return serverError(
+        error instanceof Error ? error.message : "Failed to load reservations"
+      );
+    }
   }
   if (request.method === "POST") {
     try {
@@ -217,7 +243,11 @@ var onRequest3 = /* @__PURE__ */ __name2(async ({ request, env, params }) => {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [reservationId, collectionId, payload.assetId, payload.buyerAddress, payload.hashHex, "created", payload.txId ?? null, expiresAt, now, now]
       );
-      const inserted = await env.DB.prepare("SELECT * FROM reservations WHERE reservation_id = ?").bind(reservationId).all();
+      const inserted = await queryAll(
+        env,
+        "SELECT * FROM reservations WHERE reservation_id = ?",
+        [reservationId]
+      );
       return jsonResponse(inserted.results?.[0]);
     } catch (error) {
       return serverError(error instanceof Error ? error.message : "Failed to create reservation");
@@ -242,7 +272,11 @@ var onRequest3 = /* @__PURE__ */ __name2(async ({ request, env, params }) => {
         "UPDATE reservations SET status = ?, tx_id = ?, updated_at = ? WHERE reservation_id = ?",
         [status, payload.txId ?? null, Date.now(), payload.reservationId]
       );
-      const select = await env.DB.prepare("SELECT * FROM reservations WHERE reservation_id = ?").bind(payload.reservationId).all();
+      const select = await queryAll(
+        env,
+        "SELECT * FROM reservations WHERE reservation_id = ?",
+        [payload.reservationId]
+      );
       return jsonResponse(select.results?.[0]);
     } catch (error) {
       return serverError(error instanceof Error ? error.message : "Failed to update reservation");
@@ -439,8 +473,12 @@ var onRequest7 = /* @__PURE__ */ __name2(async ({ request, env, params }) => {
       binds.push(collectionId);
       const query = `UPDATE collections SET ${updates.join(", ")}, updated_at = ? WHERE id = ?`;
       await run(env, query, binds);
-      const select = env.DB.prepare("SELECT * FROM collections WHERE id = ?");
-      const record = (await select.bind(collectionId).all()).results?.[0];
+      const updated = await queryAll(
+        env,
+        "SELECT * FROM collections WHERE id = ?",
+        [collectionId]
+      );
+      const record = updated.results?.[0];
       if (!record) {
         return notFound("Collection not found after update.");
       }
@@ -554,8 +592,11 @@ var onRequest9 = /* @__PURE__ */ __name2(async ({ request, env }) => {
           now
         ]
       );
-      const statement = env.DB.prepare("SELECT * FROM collections WHERE id = ?");
-      const created = await statement.bind(id).all();
+      const created = await queryAll(
+        env,
+        "SELECT * FROM collections WHERE id = ?",
+        [id]
+      );
       const record = (created.results ?? [])[0];
       return jsonResponse(mapRow2(record), 201);
     } catch (error) {

@@ -1,5 +1,5 @@
 import { jsonResponse, badRequest, serverError } from './lib/utils';
-import { run } from './lib/db';
+import { queryAll, run } from './lib/db';
 import { isValidSlug, normalizeSlug } from './lib/collections';
 
 const requireDb = (env: Record<string, unknown>) => {
@@ -72,8 +72,11 @@ export const onRequest: PagesFunction = async ({ request, env }) => {
           now
         ]
       );
-      const statement = env.DB.prepare('SELECT * FROM collections WHERE id = ?');
-      const created = await statement.bind(id).all();
+      const created = await queryAll(
+        env,
+        'SELECT * FROM collections WHERE id = ?',
+        [id]
+      );
       const record = (created.results ?? [])[0];
       return jsonResponse(mapRow(record), 201);
     } catch (error) {

@@ -1,5 +1,5 @@
 import { jsonResponse, badRequest, notFound, serverError } from '../lib/utils';
-import { run } from '../lib/db';
+import { queryAll, run } from '../lib/db';
 
 const requireDb = (env: Record<string, unknown>) => {
   const db = env.DB as D1Database | undefined;
@@ -83,8 +83,12 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
       binds.push(collectionId);
       const query = `UPDATE collections SET ${updates.join(', ')}, updated_at = ? WHERE id = ?`;
       await run(env, query, binds);
-      const select = env.DB.prepare('SELECT * FROM collections WHERE id = ?');
-      const record = (await select.bind(collectionId).all()).results?.[0];
+      const updated = await queryAll(
+        env,
+        'SELECT * FROM collections WHERE id = ?',
+        [collectionId]
+      );
+      const record = updated.results?.[0];
       if (!record) {
         return notFound('Collection not found after update.');
       }
