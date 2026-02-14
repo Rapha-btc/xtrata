@@ -1,6 +1,11 @@
 import { jsonResponse, serverError } from '../lib/utils';
 
 const countRows = async (db: any, table: string) => {
+  if (!db || typeof db.prepare !== 'function') {
+    throw new Error(
+      'Missing DB binding. Configure D1 as binding `DB` for this Pages environment.'
+    );
+  }
   const statement = await db.prepare(`SELECT COUNT(*) AS total FROM ${table}`);
   const result = await statement.all();
   return Number(result.results?.[0]?.total ?? 0);

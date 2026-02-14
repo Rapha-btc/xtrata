@@ -27,8 +27,16 @@ function serverError(message = "Server error") {
 }
 __name(serverError, "serverError");
 __name2(serverError, "serverError");
+var requireDb = /* @__PURE__ */ __name2((env) => {
+  if (!env.DB || typeof env.DB.prepare !== "function") {
+    throw new Error(
+      "Missing DB binding. Configure D1 as binding `DB` for this Pages environment."
+    );
+  }
+  return env.DB;
+}, "requireDb");
 async function run(env, query, binds = []) {
-  const statement = env.DB.prepare(query);
+  const statement = requireDb(env).prepare(query);
   if (binds.length > 0) {
     return statement.bind(...binds).run();
   }
@@ -247,11 +255,33 @@ var onRequest4 = /* @__PURE__ */ __name2(async ({ env, params }) => {
   if (!collectionId) {
     return new Response(JSON.stringify({ error: "collection id required" }), { status: 400 });
   }
-  const key = `${collectionId}/${crypto.randomUUID()}`;
-  const uploadUrl = await env.ASSETS.getUploadUrl({ method: "PUT", key, expires: 60 * 5 });
-  return new Response(JSON.stringify({ uploadUrl, key }), {
-    headers: { "Content-Type": "application/json" }
-  });
+  try {
+    const bucket = env.ASSETS ?? env.R2;
+    if (!bucket || typeof bucket.getUploadUrl !== "function") {
+      return new Response(
+        JSON.stringify({
+          error: "Missing R2 binding. Configure bucket binding `ASSETS` (or `R2`) for this Pages environment."
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    const key = `${collectionId}/${crypto.randomUUID()}`;
+    const uploadUrl = await bucket.getUploadUrl({
+      method: "PUT",
+      key,
+      expires: 60 * 5
+    });
+    return new Response(JSON.stringify({ uploadUrl, key }), {
+      headers: { "Content-Type": "application/json" }
+    });
+  } catch (error) {
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : "Failed to create upload URL"
+      }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
 }, "onRequest");
 var getTargetBase = /* @__PURE__ */ __name2((network) => {
   if (network === "mainnet") {
@@ -308,6 +338,11 @@ var onRequest5 = /* @__PURE__ */ __name2(async (context) => {
   });
 }, "onRequest");
 var countRows = /* @__PURE__ */ __name2(async (db, table) => {
+  if (!db || typeof db.prepare !== "function") {
+    throw new Error(
+      "Missing DB binding. Configure D1 as binding `DB` for this Pages environment."
+    );
+  }
   const statement = await db.prepare(`SELECT COUNT(*) AS total FROM ${table}`);
   const result = await statement.all();
   return Number(result.results?.[0]?.total ?? 0);
@@ -327,9 +362,28 @@ var onRequest6 = /* @__PURE__ */ __name2(async ({ env }) => {
     return serverError(error instanceof Error ? error.message : "Health check failed");
   }
 }, "onRequest");
+var requireDb2 = /* @__PURE__ */ __name2((env) => {
+  const db = env.DB;
+  if (!db || typeof db.prepare !== "function") {
+    throw new Error(
+      "Missing DB binding. Configure D1 as binding `DB` for this Pages environment."
+    );
+  }
+  return db;
+}, "requireDb");
+var parseMetadata2 = /* @__PURE__ */ __name2((value) => {
+  if (!value) {
+    return null;
+  }
+  try {
+    return JSON.parse(String(value));
+  } catch {
+    return null;
+  }
+}, "parseMetadata");
 var mapRow = /* @__PURE__ */ __name2((row) => ({
   ...row,
-  metadata: row.metadata ? JSON.parse(String(row.metadata)) : null
+  metadata: parseMetadata2(row.metadata)
 }), "mapRow");
 var onRequest7 = /* @__PURE__ */ __name2(async ({ request, env, params }) => {
   const collectionId = params?.collectionId;
@@ -337,13 +391,21 @@ var onRequest7 = /* @__PURE__ */ __name2(async ({ request, env, params }) => {
     return badRequest("Collection id is required.");
   }
   if (request.method === "GET") {
-    const statement = env.DB.prepare("SELECT * FROM collections WHERE id = ?");
-    const result = await statement.bind(collectionId).all();
-    const record = (result.results ?? [])[0];
-    if (!record) {
-      return notFound("Collection not found.");
+    try {
+      const statement = requireDb2(env).prepare(
+        "SELECT * FROM collections WHERE id = ?"
+      );
+      const result = await statement.bind(collectionId).all();
+      const record = (result.results ?? [])[0];
+      if (!record) {
+        return notFound("Collection not found.");
+      }
+      return jsonResponse(mapRow(record));
+    } catch (error) {
+      return serverError(
+        error instanceof Error ? error.message : "failed to load collection"
+      );
     }
-    return jsonResponse(mapRow(record));
   }
   if (request.method === "PATCH") {
     try {
@@ -426,15 +488,42 @@ var onRequest8 = /* @__PURE__ */ __name2(async (context) => {
     headers: responseHeaders
   });
 }, "onRequest");
+var requireDb3 = /* @__PURE__ */ __name2((env) => {
+  const db = env.DB;
+  if (!db || typeof db.prepare !== "function") {
+    throw new Error(
+      "Missing DB binding. Configure D1 as binding `DB` for this Pages environment."
+    );
+  }
+  return db;
+}, "requireDb");
+var parseMetadata3 = /* @__PURE__ */ __name2((value) => {
+  if (!value) {
+    return null;
+  }
+  try {
+    return JSON.parse(String(value));
+  } catch {
+    return null;
+  }
+}, "parseMetadata");
 var mapRow2 = /* @__PURE__ */ __name2((row) => ({
   ...row,
-  metadata: row.metadata ? JSON.parse(String(row.metadata)) : null
+  metadata: parseMetadata3(row.metadata)
 }), "mapRow");
 var onRequest9 = /* @__PURE__ */ __name2(async ({ request, env }) => {
   if (request.method === "GET") {
-    const statement = env.DB.prepare("SELECT * FROM collections ORDER BY created_at DESC");
-    const result = await statement.all();
-    return jsonResponse((result.results ?? []).map(mapRow2));
+    try {
+      const statement = requireDb3(env).prepare(
+        "SELECT * FROM collections ORDER BY created_at DESC"
+      );
+      const result = await statement.all();
+      return jsonResponse((result.results ?? []).map(mapRow2));
+    } catch (error) {
+      return serverError(
+        error instanceof Error ? error.message : "failed to load collections"
+      );
+    }
   }
   if (request.method === "POST") {
     try {
@@ -453,7 +542,17 @@ var onRequest9 = /* @__PURE__ */ __name2(async ({ request, env }) => {
       await run(
         env,
         "INSERT INTO collections (id, slug, artist_address, contract_address, display_name, metadata, state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [id, slug, payload.artistAddress.trim(), payload.contractAddress ?? null, payload.displayName ?? null, metadata, "draft", now, now]
+        [
+          id,
+          slug,
+          payload.artistAddress.trim(),
+          payload.contractAddress ?? null,
+          payload.displayName ?? null,
+          metadata,
+          "draft",
+          now,
+          now
+        ]
       );
       const statement = env.DB.prepare("SELECT * FROM collections WHERE id = ?");
       const created = await statement.bind(id).all();
@@ -524,7 +623,7 @@ var routes = [
   },
   {
     routePath: "/collections",
-    mountPath: "/collections",
+    mountPath: "/",
     method: "",
     middlewares: [],
     modules: [onRequest9]

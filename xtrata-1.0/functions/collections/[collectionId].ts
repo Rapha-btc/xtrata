@@ -1,9 +1,30 @@
 import { jsonResponse, badRequest, notFound, serverError } from '../lib/utils';
 import { run } from '../lib/db';
 
+const requireDb = (env: Record<string, unknown>) => {
+  const db = env.DB as D1Database | undefined;
+  if (!db || typeof db.prepare !== 'function') {
+    throw new Error(
+      'Missing DB binding. Configure D1 as binding `DB` for this Pages environment.'
+    );
+  }
+  return db;
+};
+
+const parseMetadata = (value: unknown) => {
+  if (!value) {
+    return null;
+  }
+  try {
+    return JSON.parse(String(value));
+  } catch {
+    return null;
+  }
+};
+
 const mapRow = (row: Record<string, unknown>) => ({
   ...row,
-  metadata: row.metadata ? JSON.parse(String(row.metadata)) : null
+  metadata: parseMetadata(row.metadata)
 });
 
 export const onRequest: PagesFunction = async ({ request, env, params }) => {
@@ -13,13 +34,21 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
   }
 
   if (request.method === 'GET') {
-    const statement = env.DB.prepare('SELECT * FROM collections WHERE id = ?');
-    const result = await statement.bind(collectionId).all();
-    const record = (result.results ?? [])[0];
-    if (!record) {
-      return notFound('Collection not found.');
+    try {
+      const statement = requireDb(env).prepare(
+        'SELECT * FROM collections WHERE id = ?'
+      );
+      const result = await statement.bind(collectionId).all();
+      const record = (result.results ?? [])[0];
+      if (!record) {
+        return notFound('Collection not found.');
+      }
+      return jsonResponse(mapRow(record));
+    } catch (error) {
+      return serverError(
+        error instanceof Error ? error.message : 'failed to load collection'
+      );
     }
-    return jsonResponse(mapRow(record));
   }
 
   if (request.method === 'PATCH') {
