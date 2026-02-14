@@ -1,5 +1,9 @@
 import { useState, type ChangeEvent } from 'react';
 import { chunkCount, hexDigest } from '../lib/asset-utils';
+import {
+  parseManageJsonResponse,
+  toManageApiErrorMessage
+} from '../lib/api-errors';
 
 type DbHealth = {
   collectionsCount: number;
@@ -24,15 +28,14 @@ export default function DiagnosticsPanel() {
     setDbHealth(null);
     try {
       const response = await fetch('/collections/health');
-      if (!response.ok) {
-        const payload = await response.json();
-        throw new Error(payload?.error ?? 'Health check failed');
-      }
-      const payload = (await response.json()) as DbHealth;
+      const payload = await parseManageJsonResponse<DbHealth>(
+        response,
+        'Collections health'
+      );
       setDbHealth(payload);
       setDbStatus('Database reachable');
     } catch (error) {
-      setDbStatus(error instanceof Error ? error.message : 'Database error');
+      setDbStatus(toManageApiErrorMessage(error, 'Database error'));
     } finally {
       setDbLoading(false);
     }
@@ -55,11 +58,10 @@ export default function DiagnosticsPanel() {
     setStorageStatus('Requesting upload URL…');
     try {
       const tokenResponse = await fetch(`/collections/${collectionId}/upload-url`);
-      if (!tokenResponse.ok) {
-        const payload = await tokenResponse.json();
-        throw new Error(payload?.error ?? 'Could not obtain upload url');
-      }
-      const token = await tokenResponse.json();
+      const token = await parseManageJsonResponse<{ uploadUrl: string; key: string }>(
+        tokenResponse,
+        'Upload URL'
+      );
       await fetch(token.uploadUrl, {
         method: 'PUT',
         headers: { 'Content-Type': selectedFile.type || 'application/octet-stream' },
@@ -79,16 +81,15 @@ export default function DiagnosticsPanel() {
           storageKey: token.key
         })
       });
-      if (!metadataResponse.ok) {
-        const payload = await metadataResponse.json();
-        throw new Error(payload?.error ?? 'Asset metadata sync failed');
-      }
-      const payload = await metadataResponse.json();
+      const payload = await parseManageJsonResponse<{ asset_id: string }>(
+        metadataResponse,
+        'Asset metadata'
+      );
       setStorageStatus(`Storage test asset saved (${payload.asset_id})`);
       setDebugKey(token.key);
       setSelectedFile(null);
     } catch (error) {
-      setStorageStatus(error instanceof Error ? error.message : 'Storage test failed');
+      setStorageStatus(toManageApiErrorMessage(error, 'Storage test failed'));
     } finally {
       setStorageLoading(false);
     }

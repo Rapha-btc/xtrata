@@ -117,6 +117,8 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
     props.walletSession.network
   );
   const canTransact = !!props.walletSession.address && !mismatch;
+  const isAdminWallet = addressesEqual(status.admin, props.walletSession.address);
+  const canRunAdminActions = canTransact && isAdminWallet;
 
   const [feeUnitInput, setFeeUnitInput] = useState('');
   const [feeUnitMessage, setFeeUnitMessage] = useState<string | null>(null);
@@ -171,6 +173,33 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
     setRoyaltyInput(status.royaltyRecipient);
   }, [status.royaltyRecipient, royaltyInput]);
 
+  const requireAdminActionAccess = (
+    setMessage: (message: string) => void,
+    actionLabel: string
+  ) => {
+    if (!props.walletSession.address) {
+      setMessage(`Connect a wallet to ${actionLabel}.`);
+      return false;
+    }
+    if (mismatch) {
+      setMessage(
+        `Wallet network is ${mismatch.actual}. Switch to ${mismatch.expected} to ${actionLabel}.`
+      );
+      return false;
+    }
+    if (!status.admin) {
+      setMessage(`Unable to verify contract admin. Refresh status to ${actionLabel}.`);
+      return false;
+    }
+    if (!isAdminWallet) {
+      setMessage(
+        `Connected wallet is not contract admin (${status.admin}). Admin actions are locked.`
+      );
+      return false;
+    }
+    return true;
+  };
+
   const requestContractCall = (options: {
     functionName: string;
     functionArgs: ClarityValue[];
@@ -199,8 +228,7 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
       setFeeUnitMessage('Fee unit updates are not supported by this contract.');
       return;
     }
-    if (!canTransact) {
-      setFeeUnitMessage('Connect a matching wallet to update fee unit.');
+    if (!requireAdminActionAccess(setFeeUnitMessage, 'update fee unit')) {
       return;
     }
     const parsed = parseStxInput(feeUnitInput);
@@ -246,8 +274,7 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
       setPauseMessage('Pause controls are not supported by this contract.');
       return;
     }
-    if (!canTransact) {
-      setPauseMessage('Connect a matching wallet to update pause status.');
+    if (!requireAdminActionAccess(setPauseMessage, 'update pause status')) {
       return;
     }
     setPausePending(true);
@@ -268,8 +295,7 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
   };
 
   const handleSetRoyaltyRecipient = async () => {
-    if (!canTransact) {
-      setRoyaltyMessage('Connect a matching wallet to update royalty recipient.');
+    if (!requireAdminActionAccess(setRoyaltyMessage, 'update royalty recipient')) {
       return;
     }
     const value = royaltyInput.trim();
@@ -299,8 +325,7 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
       setOwnerMessage('Ownership transfer is not supported by this contract.');
       return;
     }
-    if (!canTransact) {
-      setOwnerMessage('Connect a matching wallet to transfer ownership.');
+    if (!requireAdminActionAccess(setOwnerMessage, 'transfer ownership')) {
       return;
     }
     const value = ownerInput.trim();
@@ -453,7 +478,10 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
       <div className="panel__header">
         <div>
           <h2>Contract admin</h2>
-          <p>Manage fees, pause state, and admin settings.</p>
+          <p>
+            Manage fees, pause state, and admin settings. Actions are enabled
+            only when the connected wallet matches the on-chain admin.
+          </p>
         </div>
         <div className="panel__actions">
           <span className={`badge badge--${props.contract.network}`}>
@@ -511,6 +539,7 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
                   className="input"
                   placeholder="0.100000"
                   value={feeUnitInput}
+                  disabled={!canRunAdminActions}
                   onChange={(event) => {
                     setFeeUnitInput(event.target.value);
                     setFeeUnitMessage(null);
@@ -527,7 +556,7 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
                   className="button"
                   type="button"
                   onClick={() => void handleSetFeeUnit()}
-                  disabled={!canTransact || feeUnitPending}
+                  disabled={!canRunAdminActions || feeUnitPending}
                 >
                   {feeUnitPending ? 'Updating...' : 'Set fee unit'}
                 </button>
@@ -549,7 +578,7 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
                   className="button"
                   type="button"
                   onClick={() => void handleSetPaused(true)}
-                  disabled={!canTransact || pausePending || status.paused === true}
+                  disabled={!canRunAdminActions || pausePending || status.paused === true}
                 >
                   Pause
                 </button>
@@ -557,7 +586,7 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
                   className="button button--ghost"
                   type="button"
                   onClick={() => void handleSetPaused(false)}
-                  disabled={!canTransact || pausePending || status.paused === false}
+                  disabled={!canRunAdminActions || pausePending || status.paused === false}
                 >
                   Unpause
                 </button>
@@ -576,6 +605,7 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
                 className="input"
                 placeholder="ST..."
                 value={royaltyInput}
+                disabled={!canRunAdminActions}
                 onChange={(event) => {
                   setRoyaltyInput(event.target.value);
                   setRoyaltyMessage(null);
@@ -587,7 +617,7 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
                 className="button"
                 type="button"
                 onClick={() => void handleSetRoyaltyRecipient()}
-                disabled={!canTransact || royaltyPending}
+                disabled={!canRunAdminActions || royaltyPending}
               >
                 {royaltyPending ? 'Updating...' : 'Set royalty recipient'}
               </button>
@@ -606,6 +636,7 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
                   className="input"
                   placeholder="ST..."
                   value={ownerInput}
+                  disabled={!canRunAdminActions}
                   onChange={(event) => {
                     setOwnerInput(event.target.value);
                     setOwnerMessage(null);
@@ -617,7 +648,7 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
                   className="button"
                   type="button"
                   onClick={() => void handleTransferOwnership()}
-                  disabled={!canTransact || ownerPending}
+                  disabled={!canRunAdminActions || ownerPending}
                 >
                   {ownerPending ? 'Transferring...' : 'Transfer ownership'}
                 </button>
@@ -708,7 +739,7 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
 
         {!props.walletSession.address && (
           <div className="alert">
-            Connect a wallet to submit admin transactions.
+            Connect a wallet to submit contract admin transactions.
           </div>
         )}
         {mismatch && (
@@ -717,6 +748,25 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
             {mismatch.expected} for admin actions.
           </div>
         )}
+        {props.walletSession.address &&
+          !mismatch &&
+          !adminStatusQuery.isLoading &&
+          !!status.admin &&
+          !isAdminWallet && (
+            <div className="alert">
+              Connected wallet is not the contract admin ({status.admin}). Admin
+              actions are disabled.
+            </div>
+          )}
+        {props.walletSession.address &&
+          !mismatch &&
+          !adminStatusQuery.isLoading &&
+          !status.admin && (
+            <div className="alert">
+              Unable to verify the contract admin address. Refresh status to
+              retry.
+            </div>
+          )}
       </div>
 
     </section>

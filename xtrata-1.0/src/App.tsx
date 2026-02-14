@@ -5,6 +5,11 @@ import { validateStacksAddress } from '@stacks/transactions';
 import { getContractId } from './lib/contract/config';
 import { CONTRACT_REGISTRY } from './lib/contract/registry';
 import { createContractSelectionStore } from './lib/contract/selection';
+import { createXtrataClient } from './lib/contract/client';
+import {
+  EMPTY_ADMIN_STATUS,
+  useContractAdminStatus
+} from './lib/contract/admin-status';
 import { useBnsAddress } from './lib/bns/hooks';
 import { RATE_LIMIT_WARNING_EVENT } from './lib/network/rate-limit';
 import { getNetworkMismatch } from './lib/network/guard';
@@ -33,6 +38,17 @@ import CollectionMintAdminScreen from './screens/CollectionMintAdminScreen';
 import PreinscribedCollectionAdminScreen from './screens/PreinscribedCollectionAdminScreen';
 import PreinscribedCollectionSaleScreen from './screens/PreinscribedCollectionSaleScreen';
 import MarketScreen from './screens/MarketScreen';
+import collectionMintTemplateSource from '../contracts/clarinet/contracts/xtrata-collection-mint-v1.1.clar?raw';
+import {
+  buildCollectionMintContractSource,
+  COLLECTION_TEMPLATE_FIELD_KEYS,
+  createCollectionTemplatePolicyStore,
+  createDefaultCollectionTemplateDraft,
+  createDefaultCollectionTemplatePolicy,
+  type CollectionTemplateDraft,
+  type CollectionTemplateFieldKey,
+  type CollectionTemplatePolicy
+} from './lib/deploy/collection-template';
 
 const isV2Entry = (entry: { protocolVersion?: string; contractName?: string }) =>
   entry.protocolVersion === '2.1.0' ||
@@ -48,6 +64,40 @@ const ACTIVE_CONTRACT_IDS = new Set(
 const walletSessionStore = createWalletSessionStore();
 
 const CONTRACT_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9-_]{0,127}$/;
+const TEMPLATE_GUIDE_PATH = 'docs/artist-guides/collection-template-deploy-guide.md';
+type DeployMode = 'guided-template' | 'advanced-source';
+
+const TEMPLATE_FIELD_LABELS: Record<CollectionTemplateFieldKey, string> = {
+  coreContract: 'Core contract ID',
+  defaultPaused: 'Default paused',
+  defaultMintPriceStx: 'Default mint price (STX)',
+  defaultMaxSupply: 'Default max supply',
+  defaultAllowlistEnabled: 'Default allowlist enabled',
+  defaultMaxPerWallet: 'Default max per wallet',
+  reservationExpiryBlocks: 'Reservation expiry blocks',
+  collectionName: 'Default collection name',
+  collectionSymbol: 'Default collection symbol',
+  collectionBaseUri: 'Default collection base URI',
+  collectionDescription: 'Default collection description',
+  defaultTokenUri: 'Default token URI'
+};
+
+const normalizeAddress = (value?: string | null) => {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return null;
+  }
+  return trimmed.toUpperCase();
+};
+
+const addressesEqual = (left?: string | null, right?: string | null) => {
+  const normalizedLeft = normalizeAddress(left);
+  const normalizedRight = normalizeAddress(right);
+  if (!normalizedLeft || !normalizedRight) {
+    return false;
+  }
+  return normalizedLeft === normalizedRight;
+};
 const SECTION_KEYS = [
   'wallet-lookup',
   'wallet-session',
@@ -143,16 +193,25 @@ export default function App() {
     walletSessionStore.load()
   );
   const [rateLimitWarning, setRateLimitWarning] = useState(false);
+  const [deployMode, setDeployMode] = useState<DeployMode>('guided-template');
   const [deployName, setDeployName] = useState('');
   const [deploySource, setDeploySource] = useState('');
   const [deployStatus, setDeployStatus] = useState<string | null>(null);
   const [deployPending, setDeployPending] = useState(false);
   const [deployLog, setDeployLog] = useState<string[]>([]);
+  const [templatePolicyStatus, setTemplatePolicyStatus] = useState<string | null>(
+    null
+  );
   const [walletPending, setWalletPending] = useState(false);
   const [viewerFocusKey, setViewerFocusKey] = useState<number | null>(null);
   const [parentDraftIds, setParentDraftIds] = useState<bigint[]>([]);
   const [walletLookupInput, setWalletLookupInput] = useState('');
   const [walletLookupTouched, setWalletLookupTouched] = useState(false);
+  const [collectionAdminPrefill, setCollectionAdminPrefill] = useState<{
+    key: number;
+    contractAddress: string | null;
+    contractName: string;
+  } | null>(null);
   const [viewerMode, setViewerMode] = useState<ViewerMode>('collection');
   const [collapsedSections, setCollapsedSections] = useState(() => {
     const initial = buildCollapsedState(true);
@@ -160,6 +219,12 @@ export default function App() {
     return initial;
   });
   const tabGuard = useActiveTabGuard();
+  const [templatePolicy, setTemplatePolicy] = useState<CollectionTemplatePolicy>(
+    () => createDefaultCollectionTemplatePolicy(getContractId(selectedContract))
+  );
+  const [templateDraft, setTemplateDraft] = useState<CollectionTemplateDraft>(() =>
+    createDefaultCollectionTemplateDraft(getContractId(selectedContract))
+  );
 
   const queryClient = useQueryClient();
 
@@ -180,8 +245,36 @@ export default function App() {
     selectedContract.network,
     walletSession.network
   );
+  const contractId = getContractId(selectedContract);
   const readOnlySender =
     walletSession.address ?? selectedContract.address;
+  const templatePolicyStore = useMemo(
+    () => createCollectionTemplatePolicyStore(contractId),
+    [contractId]
+  );
+  const coreAdminClient = useMemo(
+    () => createXtrataClient({ contract: selectedContract }),
+    [selectedContract]
+  );
+  const coreAdminStatusQuery = useContractAdminStatus({
+    client: coreAdminClient,
+    senderAddress: readOnlySender
+  });
+  const coreAdminStatus = coreAdminStatusQuery.data ?? EMPTY_ADMIN_STATUS;
+  const canManageTemplatePolicy =
+    !!walletSession.address &&
+    !mismatch &&
+    addressesEqual(coreAdminStatus.admin, walletSession.address);
+  const templateBuild = useMemo(
+    () =>
+      buildCollectionMintContractSource({
+        templateSource: collectionMintTemplateSource,
+        draft: templateDraft,
+        policy: templatePolicy,
+        fallbackCoreContractId: contractId
+      }),
+    [contractId, templateDraft, templatePolicy]
+  );
   const baseLookupState = useMemo(
     () => getWalletLookupState(walletLookupInput, walletSession.address ?? null),
     [walletLookupInput, walletSession.address]
@@ -260,10 +353,25 @@ export default function App() {
     }
   };
 
-  const contractId = getContractId(selectedContract);
   useEffect(() => {
     setParentDraftIds([]);
   }, [contractId]);
+
+  useEffect(() => {
+    const loaded = templatePolicyStore.load();
+    const base =
+      loaded ?? createDefaultCollectionTemplatePolicy(contractId);
+    const nextPolicy = {
+      ...base,
+      defaults: {
+        ...base.defaults,
+        coreContract: base.defaults.coreContract || contractId
+      }
+    };
+    setTemplatePolicy(nextPolicy);
+    setTemplateDraft(nextPolicy.defaults);
+    setTemplatePolicyStatus(null);
+  }, [contractId, templatePolicyStore]);
   const walletStatus = walletSession.isConnected ? 'Connected' : 'Disconnected';
   const walletNetwork = walletSession.network ?? 'unknown';
   const showRateLimitWarning = rateLimitWarning && !hasHiroApiKey;
@@ -372,6 +480,51 @@ export default function App() {
     console.log(`[deploy] ${message}`);
   };
 
+  const isTemplateFieldEditable = (field: CollectionTemplateFieldKey) =>
+    !templatePolicy.locked || templatePolicy.editableFields[field];
+
+  const setTemplateField = <K extends CollectionTemplateFieldKey>(
+    key: K,
+    value: CollectionTemplateDraft[K]
+  ) => {
+    if (!isTemplateFieldEditable(key)) {
+      return;
+    }
+    setTemplateDraft((prev) => ({ ...prev, [key]: value }));
+    setDeployStatus(null);
+  };
+
+  const saveTemplatePolicy = (next: CollectionTemplatePolicy) => {
+    const payload = {
+      ...next,
+      updatedAt: new Date().toISOString()
+    };
+    templatePolicyStore.save(payload);
+    setTemplatePolicy(payload);
+    setTemplatePolicyStatus('Template policy saved.');
+  };
+
+  const resetTemplatePolicy = () => {
+    templatePolicyStore.reset();
+    const next = createDefaultCollectionTemplatePolicy(contractId);
+    setTemplatePolicy(next);
+    setTemplateDraft(next.defaults);
+    setTemplatePolicyStatus('Template policy reset to defaults.');
+  };
+
+  const applyCurrentDraftAsPolicyDefaults = () => {
+    const next = {
+      ...templatePolicy,
+      defaults: {
+        ...templateDraft,
+        coreContract: templateDraft.coreContract.trim() || contractId
+      }
+    };
+    saveTemplatePolicy(next);
+    setTemplateDraft(next.defaults);
+    setTemplatePolicyStatus('Policy defaults updated from current template values.');
+  };
+
   const handleDeployContract = () => {
     const source = deploySource.trim();
     if (!source) {
@@ -449,7 +602,7 @@ export default function App() {
           <h1>xtrata v15.1</h1>
           <div className="app__toolbar app__toolbar--admin">
             <div className="app__admin-nav-groups" aria-label="Admin section navigation">
-              <section className="app__admin-nav-group">
+              <section className="app__admin-nav-group app__admin-nav-group--user-tools">
                 <p className="app__admin-nav-title">User Tools</p>
                 <div className="app__admin-nav-links">
                   <a
@@ -490,7 +643,7 @@ export default function App() {
                 </div>
               </section>
 
-              <section className="app__admin-nav-group">
+              <section className="app__admin-nav-group app__admin-nav-group--minting">
                 <p className="app__admin-nav-title">Minting</p>
                 <div className="app__admin-nav-links">
                   <a
@@ -510,7 +663,7 @@ export default function App() {
                 </div>
               </section>
 
-              <section className="app__admin-nav-group">
+              <section className="app__admin-nav-group app__admin-nav-group--controls">
                 <p className="app__admin-nav-title">Admin Controls</p>
                 <div className="app__admin-nav-links">
                   <a
@@ -551,7 +704,7 @@ export default function App() {
                 </div>
               </section>
 
-              <section className="app__admin-nav-group">
+              <section className="app__admin-nav-group app__admin-nav-group--ops">
                 <p className="app__admin-nav-title">Ops and Insights</p>
                 <div className="app__admin-nav-links">
                   <a

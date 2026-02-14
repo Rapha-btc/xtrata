@@ -1,3 +1,11 @@
 name = "xtrata"
-compatibility_date = "2026-01-27"
-pages_build_output_dir = "dist"
+compatibility_date = "2026-02-10"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "xtrata-db"
+database_id = "YOUR-D1-DATABASE-ID"
+
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "xtrata-bucket"

@@ -31,6 +31,10 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
         updates.push('display_name = ?');
         binds.push(payload.displayName.trim());
       }
+      if (typeof payload.artistAddress === 'string') {
+        updates.push('artist_address = ?');
+        binds.push(payload.artistAddress.trim());
+      }
       if (typeof payload.contractAddress === 'string') {
         updates.push('contract_address = ?');
         binds.push(payload.contractAddress.trim());
