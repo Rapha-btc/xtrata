@@ -22,6 +22,14 @@ interface D1Database {
 }
 
 interface R2Bucket {
+  get(
+    key: string
+  ): Promise<{
+    body: ReadableStream<Uint8Array> | null;
+    httpMetadata?: {
+      contentType?: string;
+    };
+  } | null>;
   put(
     key: string,
     value: ArrayBuffer | ArrayBufferView | string,

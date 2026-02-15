@@ -3616,6 +3616,72 @@ p {
   margin: 0;
 }
 
+.collection-live-preview {
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  padding: 10px 12px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(180px, 280px) minmax(0, 1fr);
+  align-items: start;
+}
+
+.collection-live-preview__media {
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+.collection-live-preview__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.collection-live-preview__placeholder {
+  margin: 0;
+  padding: 12px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.collection-live-preview__content {
+  display: grid;
+  gap: 8px;
+}
+
+.collection-live-preview__content h3 {
+  margin: 0;
+  font-size: 1.02rem;
+}
+
+.collection-live-preview__content p {
+  margin: 0;
+}
+
+.collection-live-preview__eyebrow {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.collection-live-preview__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
 .collection-mint__steps {
   display: grid;
   gap: 6px;
@@ -4081,6 +4147,16 @@ p {
   .manage-app .manage-journey {
     position: static;
     backdrop-filter: none;
+  }
+
+  .collection-live-preview {
+    grid-template-columns: 1fr;
+  }
+
+  .collection-live-preview__media {
+    max-width: 280px;
+    width: 100%;
+    margin: 0 auto;
   }
 
   .app__header {

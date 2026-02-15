@@ -115,7 +115,7 @@ const listBucketStats = async (
 
     for (const object of page.objects) {
       objectCount += 1;
-      totalBytes += object.size;
+      totalBytes += object.size ?? 0;
       keys.push(object.key);
       if (sampleKeys.length < MAX_SAMPLE_KEYS) {
         sampleKeys.push(object.key);
