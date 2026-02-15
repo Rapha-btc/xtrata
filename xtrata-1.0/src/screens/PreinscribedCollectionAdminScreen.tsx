@@ -959,15 +959,21 @@ export default function PreinscribedCollectionAdminScreen(
             <div className="meta-grid meta-grid--dense">
               <div>
                 <span className="meta-label">Artist</span>
-                <span className="meta-value">{status.recipients.artist}</span>
+                <span className="meta-value address-value--full">
+                  {status.recipients.artist}
+                </span>
               </div>
               <div>
                 <span className="meta-label">Marketplace</span>
-                <span className="meta-value">{status.recipients.marketplace}</span>
+                <span className="meta-value address-value--full">
+                  {status.recipients.marketplace}
+                </span>
               </div>
               <div>
                 <span className="meta-label">Operator</span>
-                <span className="meta-value">{status.recipients.operator}</span>
+                <span className="meta-value address-value--full">
+                  {status.recipients.operator}
+                </span>
               </div>
             </div>
           )}
@@ -1023,28 +1029,28 @@ export default function PreinscribedCollectionAdminScreen(
           </div>
 
           <div className="meta-grid meta-grid--dense">
-            <label className="field">
+            <label className="field field--address">
               <span className="field__label">Artist recipient</span>
               <input
-                className="input"
+                className="input input--address-fit"
                 placeholder="ST..."
                 value={artistInput}
                 onChange={(event) => setArtistInput(event.target.value)}
               />
             </label>
-            <label className="field">
+            <label className="field field--address">
               <span className="field__label">Marketplace recipient</span>
               <input
-                className="input"
+                className="input input--address-fit"
                 placeholder="ST..."
                 value={marketplaceInput}
                 onChange={(event) => setMarketplaceInput(event.target.value)}
               />
             </label>
-            <label className="field">
+            <label className="field field--address">
               <span className="field__label">Operator recipient</span>
               <input
-                className="input"
+                className="input input--address-fit"
                 placeholder="ST..."
                 value={operatorInput}
                 onChange={(event) => setOperatorInput(event.target.value)}

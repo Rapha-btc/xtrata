@@ -760,6 +760,15 @@ export default function App() {
             </div>
           </div>
         </div>
+        <p className="meta-value">
+          Logged in as:{' '}
+          <AddressLabel
+            className="meta-value"
+            address={walletSession.address}
+            network={walletSession.network}
+            fallback="Not connected"
+          />
+        </p>
         <p>
           Select the deployed contract and keep the UI aligned with the wallet
           network.

@@ -1,5 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { showContractDeploy } from '@stacks/connect';
+import { getContractId } from '../../lib/contract/config';
+import {
+  CONTRACT_REGISTRY,
+  getLegacyContract,
+  type ContractRegistryEntry
+} from '../../lib/contract/registry';
+import { createXtrataClient } from '../../lib/contract/client';
+import { useTokenSummaries } from '../../lib/viewer/queries';
+import TokenCardMedia from '../../components/TokenCardMedia';
+import {
+  normalizeDependencyIds,
+  parseDependencyInput
+} from '../../lib/mint/dependencies';
 import { toStacksNetwork } from '../../lib/network/stacks';
 import {
   ARTIST_DEPLOY_DEFAULTS,
@@ -35,6 +48,8 @@ const buildUniqueSlug = (collectionName: string) => {
   const maxBaseLength = Math.max(3, 64 - suffix.length - 1);
   return `${base.slice(0, maxBaseLength)}-${suffix}`;
 };
+
+const PARENT_THUMBNAIL_LIMIT = 12;
 
 export default function DeployWizardPanel() {
   const [collectionName, setCollectionName] = useState('');
@@ -78,6 +93,230 @@ export default function DeployWizardPanel() {
   const coreTarget = useMemo(
     () => resolveArtistDeployCoreTarget(activeNetwork) ?? fallbackCoreTarget,
     [activeNetwork, fallbackCoreTarget]
+  );
+  const coreContractEntry = useMemo(
+    () =>
+      coreTarget
+        ? CONTRACT_REGISTRY.find(
+            (entry) => getContractId(entry) === coreTarget.contractId
+          ) ?? null
+        : null,
+    [coreTarget]
+  );
+  const previewContract = useMemo<ContractRegistryEntry | null>(() => {
+    if (coreContractEntry) {
+      return coreContractEntry;
+    }
+    if (!coreTarget) {
+      return null;
+    }
+    const [address = '', contractName = ''] = coreTarget.contractId.split('.');
+    if (!address || !contractName) {
+      return null;
+    }
+    return {
+      address,
+      contractName,
+      network: coreTarget.network,
+      label: coreTarget.contractId,
+      protocolVersion: '2.1.0'
+    };
+  }, [coreContractEntry, coreTarget]);
+  const previewClient = useMemo(
+    () => (previewContract ? createXtrataClient({ contract: previewContract }) : null),
+    [previewContract]
+  );
+  const previewLegacyContract = useMemo(
+    () => (coreContractEntry ? getLegacyContract(coreContractEntry) : null),
+    [coreContractEntry]
+  );
+  const previewLegacyClient = useMemo(
+    () =>
+      previewLegacyContract
+        ? createXtrataClient({ contract: previewLegacyContract })
+        : null,
+    [previewLegacyContract]
+  );
+  const previewSenderAddress = walletSession.address ?? coreTarget?.address ?? '';
+  const previewContractId = previewContract ? getContractId(previewContract) : null;
+  const legacyContractId = previewLegacyContract
+    ? getContractId(previewLegacyContract)
+    : null;
+  const parsedParentInput = useMemo(
+    () => parseDependencyInput(parentInscriptions),
+    [parentInscriptions]
+  );
+  const previewParentIds = useMemo(
+    () => normalizeDependencyIds(parsedParentInput.ids),
+    [parsedParentInput.ids]
+  );
+  const { tokenQueries: parentV2Queries } = useTokenSummaries({
+    client: previewClient ?? createXtrataClient({
+      contract: {
+        address: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
+        contractName: 'xtrata-v2-1-0',
+        network: 'mainnet'
+      }
+    }),
+    senderAddress: previewSenderAddress,
+    tokenIds: previewParentIds,
+    enabled:
+      mintType === 'standard' &&
+      !!previewClient &&
+      previewParentIds.length > 0 &&
+      !!previewContractId,
+    contractIdOverride: previewContractId ?? undefined
+  });
+  const parentV2StatusById = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        summary: (typeof parentV2Queries)[number]['data'] | null;
+        isLoading: boolean;
+        isError: boolean;
+      }
+    >();
+    previewParentIds.forEach((id, index) => {
+      const query = parentV2Queries[index];
+      map.set(id.toString(), {
+        summary: query?.data ?? null,
+        isLoading: query?.isLoading ?? false,
+        isError: query?.isError ?? false
+      });
+    });
+    return map;
+  }, [parentV2Queries, previewParentIds]);
+  const missingParentIds = useMemo(
+    () =>
+      previewParentIds.filter((id) => {
+        const status = parentV2StatusById.get(id.toString());
+        if (!status || status.isLoading) {
+          return false;
+        }
+        return !status.summary?.meta;
+      }),
+    [previewParentIds, parentV2StatusById]
+  );
+  const { tokenQueries: parentLegacyQueries } = useTokenSummaries({
+    client:
+      previewLegacyClient ??
+      previewClient ??
+      createXtrataClient({
+        contract: {
+          address: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
+          contractName: 'xtrata-v2-1-0',
+          network: 'mainnet'
+        }
+      }),
+    senderAddress: previewSenderAddress,
+    tokenIds: missingParentIds,
+    enabled:
+      mintType === 'standard' &&
+      !!previewLegacyClient &&
+      missingParentIds.length > 0 &&
+      !!legacyContractId,
+    contractIdOverride: legacyContractId ?? undefined
+  });
+  const parentLegacyStatusById = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        summary: (typeof parentLegacyQueries)[number]['data'] | null;
+        isLoading: boolean;
+        isError: boolean;
+      }
+    >();
+    missingParentIds.forEach((id, index) => {
+      const query = parentLegacyQueries[index];
+      map.set(id.toString(), {
+        summary: query?.data ?? null,
+        isLoading: query?.isLoading ?? false,
+        isError: query?.isError ?? false
+      });
+    });
+    return map;
+  }, [parentLegacyQueries, missingParentIds]);
+  const parentDisplayItems = useMemo(() => {
+    if (!previewClient || !previewContractId) {
+      return [];
+    }
+    return previewParentIds.map((id) => {
+      const key = id.toString();
+      const v2Status = parentV2StatusById.get(key);
+      const legacyStatus = parentLegacyStatusById.get(key);
+      const v2Summary = v2Status?.summary ?? null;
+      const legacySummary = legacyStatus?.summary ?? null;
+      const v2Ready = !!v2Summary?.meta;
+      const legacyReady = !!legacySummary?.meta;
+      const isLoading =
+        v2Status?.isLoading ||
+        (!v2Ready && legacyStatus?.isLoading) ||
+        false;
+      let status: 'loading' | 'owned' | 'not-owned' | 'legacy' | 'missing' =
+        'loading';
+      if (!isLoading) {
+        if (v2Ready) {
+          const owner = v2Summary?.owner ?? null;
+          if (walletSession.address && owner === walletSession.address) {
+            status = 'owned';
+          } else {
+            status = 'not-owned';
+          }
+        } else if (legacyReady) {
+          status = 'legacy';
+        } else {
+          status = 'missing';
+        }
+      }
+      const summary = v2Ready ? v2Summary : legacyReady ? legacySummary : null;
+      const summaryContractId = summary?.sourceContractId ?? previewContractId;
+      const summaryClient =
+        summaryContractId === legacyContractId && previewLegacyClient
+          ? previewLegacyClient
+          : previewClient;
+      return {
+        id,
+        summary,
+        summaryClient,
+        summaryContractId,
+        status
+      };
+    });
+  }, [
+    previewClient,
+    previewContractId,
+    previewParentIds,
+    parentV2StatusById,
+    parentLegacyStatusById,
+    walletSession.address,
+    legacyContractId,
+    previewLegacyClient
+  ]);
+  const parentStatusSummary = useMemo(() => {
+    const notOwned: bigint[] = [];
+    const legacyOnly: bigint[] = [];
+    const missing: bigint[] = [];
+    const loading: bigint[] = [];
+    parentDisplayItems.forEach((item) => {
+      if (item.status === 'loading') {
+        loading.push(item.id);
+      } else if (item.status === 'not-owned') {
+        notOwned.push(item.id);
+      } else if (item.status === 'legacy') {
+        legacyOnly.push(item.id);
+      } else if (item.status === 'missing') {
+        missing.push(item.id);
+      }
+    });
+    return { notOwned, legacyOnly, missing, loading };
+  }, [parentDisplayItems]);
+  const visibleParentItems = useMemo(
+    () => parentDisplayItems.slice(0, PARENT_THUMBNAIL_LIMIT),
+    [parentDisplayItems]
+  );
+  const parentOverflowCount = Math.max(
+    0,
+    parentDisplayItems.length - visibleParentItems.length
   );
 
   useEffect(() => {
@@ -451,14 +690,87 @@ export default function DeployWizardPanel() {
             </span>
           </label>
         )}
+        {mintType === 'standard' && parsedParentInput.invalidTokens.length > 0 && (
+          <span className="relation-status relation-status--error">
+            Invalid parent IDs ignored: {parsedParentInput.invalidTokens.join(', ')}
+          </span>
+        )}
+        {mintType === 'standard' && previewParentIds.length > 0 && (
+          <span className="meta-value">
+            Resolved parents: {previewParentIds.map((id) => id.toString()).join(', ')}
+          </span>
+        )}
+        {mintType === 'standard' && previewParentIds.length > 0 && (
+          <div className="relation-panel">
+            <span className="meta-label">Parent thumbnails</span>
+            {parentStatusSummary.loading.length > 0 && (
+              <span className="meta-value">Loading parent status...</span>
+            )}
+            {parentStatusSummary.legacyOnly.length > 0 && (
+              <span className="relation-status relation-status--warn">
+                Needs migration: {parentStatusSummary.legacyOnly.map((id) => id.toString()).join(', ')}
+              </span>
+            )}
+            {parentStatusSummary.missing.length > 0 && (
+              <span className="relation-status relation-status--error">
+                Missing on-chain: {parentStatusSummary.missing.map((id) => id.toString()).join(', ')}
+              </span>
+            )}
+            {parentStatusSummary.notOwned.length > 0 && (
+              <span className="relation-status relation-status--error">
+                Not in connected wallet: {parentStatusSummary.notOwned.map((id) => id.toString()).join(', ')}
+              </span>
+            )}
+            <div className="relation-grid">
+              {visibleParentItems.map((item) => (
+                <div key={item.id.toString()} className="relation-card">
+                  <div className="relation-frame">
+                    {item.summary ? (
+                      <TokenCardMedia
+                        token={item.summary}
+                        contractId={item.summaryContractId}
+                        senderAddress={previewSenderAddress}
+                        client={item.summaryClient}
+                        isActiveTab
+                      />
+                    ) : (
+                      <span className="relation-placeholder">
+                        {item.status === 'loading' ? 'Loading...' : 'No preview'}
+                      </span>
+                    )}
+                  </div>
+                  <span className="relation-label">#{item.id.toString()}</span>
+                  {item.status === 'owned' && (
+                    <span className="relation-status relation-status--ok">Owned</span>
+                  )}
+                  {item.status === 'not-owned' && (
+                    <span className="relation-status relation-status--error">Not in wallet</span>
+                  )}
+                  {item.status === 'legacy' && (
+                    <span className="relation-status relation-status--warn">Legacy only</span>
+                  )}
+                  {item.status === 'missing' && (
+                    <span className="relation-status relation-status--error">Missing</span>
+                  )}
+                  {item.status === 'loading' && (
+                    <span className="relation-status">Checking...</span>
+                  )}
+                </div>
+              ))}
+            </div>
+            {parentOverflowCount > 0 && (
+              <span className="meta-value">+{parentOverflowCount} more parents</span>
+            )}
+          </div>
+        )}
 
-        <label className="field">
+        <label className="field field--full field--address">
           <span className="field__label info-label">
             Artist payout address
             <InfoTooltip text="Wallet receiving the artist share (95%) of primary mint proceeds." />
           </span>
           <input
-            className="input"
+            className="input input--address-fit"
             value={artistAddress}
             placeholder="SP..."
             onChange={(event) => {
@@ -470,13 +782,13 @@ export default function DeployWizardPanel() {
           <span className="field__hint">Defaults to your connected wallet when available.</span>
         </label>
 
-        <label className="field">
+        <label className="field field--full field--address">
           <span className="field__label info-label">
             Marketplace payout address
             <InfoTooltip text="Wallet receiving the marketplace share (2.5%) of primary mint proceeds." />
           </span>
           <input
-            className="input"
+            className="input input--address-fit"
             value={marketplaceAddress}
             placeholder="SP..."
             onChange={(event) => {
@@ -605,10 +917,16 @@ export default function DeployWizardPanel() {
                   <strong>Core contract:</strong> {coreTarget?.contractId ?? 'Not available'}
                 </p>
                 <p>
-                  <strong>Artist recipient:</strong> {deployBuild.resolved.artistAddress}
+                  <strong>Artist recipient:</strong>{' '}
+                  <span className="address-value--full">
+                    {deployBuild.resolved.artistAddress}
+                  </span>
                 </p>
                 <p>
-                  <strong>Marketplace recipient:</strong> {deployBuild.resolved.marketplaceAddress}
+                  <strong>Marketplace recipient:</strong>{' '}
+                  <span className="address-value--full">
+                    {deployBuild.resolved.marketplaceAddress}
+                  </span>
                 </p>
                 <p>
                   <strong>Operator recipient (locked):</strong> {deployBuild.resolved.operatorAddress}
