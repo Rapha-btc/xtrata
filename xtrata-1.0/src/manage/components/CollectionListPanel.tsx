@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from 'react';
 import {
   parseManageJsonResponse,
   toManageApiErrorMessage
@@ -12,11 +12,21 @@ type CollectionRecord = {
   contract_address: string | null;
   display_name: string | null;
   state: string;
+  metadata?: Record<string, unknown> | null;
 };
 
 type CollectionReadiness = {
   ready: boolean;
   reason: string;
+};
+
+type CollectionListPanelProps = {
+  activeCollectionId?: string;
+  onSelectCollection?: (collection: {
+    id: string;
+    label: string;
+    deployed: boolean;
+  }) => void;
 };
 
 const isArchived = (collection: CollectionRecord) =>
@@ -25,7 +35,25 @@ const isArchived = (collection: CollectionRecord) =>
 const isPublished = (collection: CollectionRecord) =>
   collection.state.trim().toLowerCase() === 'published';
 
-export default function CollectionListPanel() {
+const getLifecycleLabel = (collection: CollectionRecord) => {
+  const state = collection.state.trim().toLowerCase();
+  const deployTxId =
+    collection.metadata && typeof collection.metadata === 'object'
+      ? String((collection.metadata as Record<string, unknown>).deployTxId ?? '').trim()
+      : '';
+  if (state === 'published') {
+    return 'Live (locked)';
+  }
+  if (collection.contract_address && deployTxId) {
+    return 'Deployed draft';
+  }
+  if (collection.contract_address) {
+    return 'Contract submitted';
+  }
+  return 'Draft only';
+};
+
+export default function CollectionListPanel(props: CollectionListPanelProps) {
   const [collections, setCollections] = useState<CollectionRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -190,6 +218,29 @@ export default function CollectionListPanel() {
     }
   };
 
+  const handleSelectCollection = (collection: CollectionRecord) => {
+    const deployTxId =
+      collection.metadata && typeof collection.metadata === 'object'
+        ? String((collection.metadata as Record<string, unknown>).deployTxId ?? '').trim()
+        : '';
+    const deployed = Boolean(collection.contract_address?.trim() && deployTxId);
+    props.onSelectCollection?.({
+      id: collection.id,
+      label: collection.display_name ?? collection.slug,
+      deployed
+    });
+  };
+
+  const handleCardKeyDown = (
+    event: KeyboardEvent<HTMLDivElement>,
+    collection: CollectionRecord
+  ) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      handleSelectCollection(collection);
+    }
+  };
+
   const activeCollections = useMemo(
     () => collections.filter((collection) => !isArchived(collection)),
     [collections]
@@ -234,7 +285,19 @@ export default function CollectionListPanel() {
         <p>No active drops yet for this wallet. Create one in Step 1.</p>
       ) : (
         activeCollections.map((collection) => (
-          <div key={collection.id} className="collection-list__item">
+          <div
+            key={collection.id}
+            className={`collection-list__item${
+              props.activeCollectionId === collection.id
+                ? ' collection-list__item--active'
+                : ''
+            } collection-list__item--selectable`}
+            role="button"
+            tabIndex={0}
+            aria-pressed={props.activeCollectionId === collection.id}
+            onClick={() => handleSelectCollection(collection)}
+            onKeyDown={(event) => handleCardKeyDown(event, collection)}
+          >
             <strong>{collection.display_name ?? collection.slug}</strong>
             <p>
               {collection.slug} · {collection.state}
@@ -242,11 +305,17 @@ export default function CollectionListPanel() {
             <p className="meta-value">
               Collection ID: <code>{collection.id}</code>
             </p>
+            <p className="collection-list__status">
+              <strong>Lifecycle:</strong> {getLifecycleLabel(collection)}
+            </p>
             <div className="mint-actions">
               <button
                 className="button button--ghost button--mini"
                 type="button"
-                onClick={() => void copyCollectionId(collection.id)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  void copyCollectionId(collection.id);
+                }}
                 disabled={pendingCollectionId !== null}
               >
                 {copiedCollectionId === collection.id ? 'Copied' : 'Copy ID'}
@@ -255,7 +324,10 @@ export default function CollectionListPanel() {
                 <button
                   className="button button--ghost button--mini"
                   type="button"
-                  onClick={() => void archiveCollection(collection)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void archiveCollection(collection);
+                  }}
                   disabled={pendingCollectionId !== null}
                 >
                   {pendingCollectionId === collection.id
@@ -278,7 +350,19 @@ export default function CollectionListPanel() {
             <p className="meta-value">No removed drafts.</p>
           ) : (
             archivedCollections.map((collection) => (
-              <div key={collection.id} className="collection-list__item">
+              <div
+                key={collection.id}
+                className={`collection-list__item${
+                  props.activeCollectionId === collection.id
+                    ? ' collection-list__item--active'
+                    : ''
+                } collection-list__item--selectable`}
+                role="button"
+                tabIndex={0}
+                aria-pressed={props.activeCollectionId === collection.id}
+                onClick={() => handleSelectCollection(collection)}
+                onKeyDown={(event) => handleCardKeyDown(event, collection)}
+              >
                 <strong>{collection.display_name ?? collection.slug}</strong>
                 <p>
                   {collection.slug} · {collection.state}
@@ -286,11 +370,17 @@ export default function CollectionListPanel() {
                 <p className="meta-value">
                   Collection ID: <code>{collection.id}</code>
                 </p>
+                <p className="collection-list__status">
+                  <strong>Lifecycle:</strong> {getLifecycleLabel(collection)}
+                </p>
                 <div className="mint-actions">
                   <button
                     className="button button--ghost button--mini"
                     type="button"
-                    onClick={() => void restoreCollection(collection)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void restoreCollection(collection);
+                    }}
                     disabled={pendingCollectionId !== null}
                   >
                     {pendingCollectionId === collection.id
@@ -300,7 +390,10 @@ export default function CollectionListPanel() {
                   <button
                     className="button button--ghost button--mini"
                     type="button"
-                    onClick={() => void deleteCollection(collection)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void deleteCollection(collection);
+                    }}
                     disabled={pendingCollectionId !== null}
                   >
                     {pendingCollectionId === collection.id

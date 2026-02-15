@@ -547,12 +547,13 @@ export default function CollectionMintAdminScreen(
     if (status.maxPerWallet !== null && !maxPerWalletInput.trim()) {
       setMaxPerWalletInput(status.maxPerWallet.toString());
     }
+    const statusDefaultDependencies = status.defaultDependencies;
     if (
-      status.defaultDependencies !== null &&
+      Array.isArray(statusDefaultDependencies) &&
       !defaultDependenciesInput.trim()
     ) {
       setDefaultDependenciesInput(
-        status.defaultDependencies.map((id) => id.toString()).join(', ')
+        statusDefaultDependencies.map((id) => id.toString()).join(', ')
       );
     }
     if (
@@ -1286,6 +1287,11 @@ export default function CollectionMintAdminScreen(
     );
   };
 
+  const statusDefaultDependencies = status?.defaultDependencies;
+  const defaultDependencyCount = Array.isArray(statusDefaultDependencies)
+    ? statusDefaultDependencies.length
+    : null;
+
   return (
     <section
       className={`panel app-section panel--compact${props.collapsed ? ' panel--collapsed' : ''}`}
@@ -1496,12 +1502,11 @@ export default function CollectionMintAdminScreen(
                 info="Parent inscription IDs automatically attached to every mint when set."
               />
               <span className="meta-value">
-                {status?.defaultDependencies === null ||
-                status?.defaultDependencies === undefined
+                {defaultDependencyCount === null
                   ? 'Unknown'
-                  : status.defaultDependencies.length === 0
+                  : defaultDependencyCount === 0
                     ? 'None'
-                    : `${status.defaultDependencies.length} set`}
+                    : `${defaultDependencyCount} set`}
               </span>
             </div>
             {uriControlsSupported && (

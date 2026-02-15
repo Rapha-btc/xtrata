@@ -82,6 +82,15 @@ const ensureReadiness = async (params: {
   if (!readiness.ready) {
     return { ok: false as const, reason: readiness.reason };
   }
+  const collectionState = String(readiness.collection?.state ?? 'draft')
+    .trim()
+    .toLowerCase();
+  if (collectionState === 'published' || collectionState === 'archived') {
+    return {
+      ok: false as const,
+      reason: `Uploads are locked while collection state is "${collectionState}".`
+    };
+  }
   return { ok: true as const };
 };
 

@@ -26,6 +26,8 @@ type ManagedAsset = {
   path: string;
   filename: string | null;
   mime_type: string;
+  storage_key?: string | null;
+  edition_cap?: number | null;
   total_bytes: number;
   total_chunks: number;
   expected_hash: string | null;
@@ -41,6 +43,9 @@ type UploadReadiness = {
   deployTxId: string | null;
   deployTxStatus: string | null;
   network: 'mainnet' | 'testnet' | null;
+  collectionState?: string;
+  uploadsLocked?: boolean;
+  lockReason?: string | null;
 };
 
 type UploadTokenResponse = {
@@ -56,6 +61,7 @@ type CollectionRecord = {
   display_name?: string | null;
   slug?: string | null;
   metadata?: Record<string, unknown> | null;
+  state?: string | null;
 };
 
 const buildTxExplorerUrl = (
@@ -77,6 +83,79 @@ const ORDER_MODE_OPTIONS: Array<{ value: UploadOrderMode; label: string }> = [
   { value: 'filename-natural', label: 'Sort by filename (natural)' },
   { value: 'seeded-random', label: 'Seeded random order' }
 ];
+
+type AssetOrderMode =
+  | 'backend-current'
+  | 'uploaded-oldest'
+  | 'uploaded-newest'
+  | 'path-natural'
+  | 'filename-natural';
+
+const ASSET_GRID_PAGE_SIZE = 16;
+
+const ASSET_ORDER_OPTIONS: Array<{ value: AssetOrderMode; label: string }> = [
+  { value: 'backend-current', label: 'Current backend order' },
+  { value: 'uploaded-oldest', label: 'Upload time (oldest first)' },
+  { value: 'uploaded-newest', label: 'Upload time (newest first)' },
+  { value: 'path-natural', label: 'Path (A to Z)' },
+  { value: 'filename-natural', label: 'Filename (A to Z)' }
+];
+
+const naturalCompare = (left: string, right: string) =>
+  left.localeCompare(right, undefined, {
+    numeric: true,
+    sensitivity: 'base'
+  });
+
+const isImageAsset = (asset: ManagedAsset) =>
+  asset.mime_type.trim().toLowerCase().startsWith('image/');
+
+const getAssetDisplayName = (asset: ManagedAsset) => asset.filename ?? asset.path;
+
+const sortManagedAssets = (assets: ManagedAsset[], mode: AssetOrderMode) => {
+  if (mode === 'backend-current') {
+    return assets;
+  }
+  const sorted = [...assets];
+  if (mode === 'uploaded-oldest') {
+    sorted.sort((left, right) => left.created_at - right.created_at);
+    return sorted;
+  }
+  if (mode === 'uploaded-newest') {
+    sorted.sort((left, right) => right.created_at - left.created_at);
+    return sorted;
+  }
+  if (mode === 'path-natural') {
+    sorted.sort((left, right) => naturalCompare(left.path, right.path));
+    return sorted;
+  }
+  sorted.sort((left, right) =>
+    naturalCompare(getAssetDisplayName(left), getAssetDisplayName(right))
+  );
+  return sorted;
+};
+
+const buildAssetPreviewUrl = (collectionId: string, assetId: string) =>
+  `/collections/${encodeURIComponent(collectionId)}/asset-preview?assetId=${encodeURIComponent(
+    assetId
+  )}`;
+
+const extractPathTraits = (path: string) => {
+  const normalized = path.replace(/\\/g, '/');
+  const parts = normalized.split('/').filter(Boolean);
+  if (parts.length <= 1) {
+    return [] as string[];
+  }
+  return parts
+    .slice(0, -1)
+    .map((segment) =>
+      segment
+        .replace(/[_-]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+    )
+    .filter((segment) => segment.length > 0);
+};
 
 const logUploadDebug = (phase: string, details: Record<string, unknown>) => {
   console.info(`[manage:asset-staging] ${phase}`, details);
@@ -101,7 +180,11 @@ const parseTargetSupply = (metadata: Record<string, unknown> | null | undefined)
   return parsed;
 };
 
-export default function AssetStagingPanel() {
+type AssetStagingPanelProps = {
+  activeCollectionId?: string;
+};
+
+export default function AssetStagingPanel(props: AssetStagingPanelProps) {
   const [collectionId, setCollectionId] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [status, setStatus] = useState<string | null>(null);
@@ -114,6 +197,7 @@ export default function AssetStagingPanel() {
     null
   );
   const [collectionLabel, setCollectionLabel] = useState<string | null>(null);
+  const [collectionState, setCollectionState] = useState<string>('draft');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [orderMode, setOrderMode] = useState<UploadOrderMode>('path-natural');
   const [seededOrderSeed, setSeededOrderSeed] = useState(createSecureRandomSeed);
@@ -121,6 +205,20 @@ export default function AssetStagingPanel() {
   const [preflightOnly, setPreflightOnly] = useState(false);
   const [includeExtensionsInput, setIncludeExtensionsInput] = useState('');
   const [excludeExtensionsInput, setExcludeExtensionsInput] = useState('');
+  const [assetOrderMode, setAssetOrderMode] = useState<AssetOrderMode>(
+    'backend-current'
+  );
+  const [showImagesOnly, setShowImagesOnly] = useState(true);
+  const [assetGridPage, setAssetGridPage] = useState(1);
+  const [previewPanelView, setPreviewPanelView] = useState<'image' | 'metadata'>(
+    'image'
+  );
+  const [selectedPreviewAssetId, setSelectedPreviewAssetId] = useState<string | null>(
+    null
+  );
+  const [assetImageErrors, setAssetImageErrors] = useState<Record<string, true>>({});
+  const [assetsForCollectionId, setAssetsForCollectionId] = useState('');
+  const [uploadControlsCollapsed, setUploadControlsCollapsed] = useState(false);
   const [lastUploadTrace, setLastUploadTrace] = useState<{
     requestId: string | null;
     mode: string | null;
@@ -136,8 +234,13 @@ export default function AssetStagingPanel() {
   });
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const folderInputRef = useRef<HTMLInputElement | null>(null);
+  const pendingAutoCollapseCollectionIdRef = useRef<string | null>(null);
 
   const normalizedCollectionId = useMemo(() => collectionId.trim(), [collectionId]);
+  const normalizedActiveCollectionId = useMemo(
+    () => props.activeCollectionId?.trim() ?? '',
+    [props.activeCollectionId]
+  );
 
   const clearSelectedFiles = () => {
     setSelectedFiles([]);
@@ -152,6 +255,7 @@ export default function AssetStagingPanel() {
   const loadAssets = async (id = normalizedCollectionId) => {
     if (!id) {
       setAssets([]);
+      setAssetsForCollectionId('');
       return;
     }
     setLoading(true);
@@ -162,7 +266,10 @@ export default function AssetStagingPanel() {
         'Collection assets'
       );
       setAssets(payload);
+      setAssetsForCollectionId(id);
     } catch (error) {
+      setAssets([]);
+      setAssetsForCollectionId(id);
       setStatus(toManageApiErrorMessage(error, 'Load failed'));
     } finally {
       setLoading(false);
@@ -179,6 +286,37 @@ export default function AssetStagingPanel() {
 
   useEffect(() => {
     void loadAssets();
+  }, [normalizedCollectionId]);
+
+  useEffect(() => {
+    if (!normalizedActiveCollectionId || normalizedActiveCollectionId === collectionId.trim()) {
+      return;
+    }
+    pendingAutoCollapseCollectionIdRef.current = normalizedActiveCollectionId;
+    setCollectionId(normalizedActiveCollectionId);
+    setSelectedFiles([]);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    if (folderInputRef.current) {
+      folderInputRef.current.value = '';
+    }
+    setStatus(null);
+  }, [normalizedActiveCollectionId]);
+
+  useEffect(() => {
+    const pendingId = pendingAutoCollapseCollectionIdRef.current;
+    if (!pendingId || assetsForCollectionId !== pendingId) {
+      return;
+    }
+    setUploadControlsCollapsed(assets.length > 0);
+    pendingAutoCollapseCollectionIdRef.current = null;
+  }, [assetsForCollectionId, assets.length]);
+
+  useEffect(() => {
+    setAssetGridPage(1);
+    setSelectedPreviewAssetId(null);
+    setAssetImageErrors({});
   }, [normalizedCollectionId]);
 
   useEffect(() => {
@@ -227,6 +365,7 @@ export default function AssetStagingPanel() {
     if (!normalizedCollectionId) {
       setCollectionTargetSupply(null);
       setCollectionLabel(null);
+      setCollectionState('draft');
       return;
     }
 
@@ -247,10 +386,12 @@ export default function AssetStagingPanel() {
         const label = payload.display_name?.trim() || payload.slug?.trim() || null;
         setCollectionLabel(label);
         setCollectionTargetSupply(parseTargetSupply(payload.metadata ?? null));
+        setCollectionState(String(payload.state ?? 'draft').trim().toLowerCase());
       } catch {
         if (!controller.signal.aborted) {
           setCollectionLabel(null);
           setCollectionTargetSupply(null);
+          setCollectionState('draft');
         }
       }
     };
@@ -360,10 +501,120 @@ export default function AssetStagingPanel() {
     orderMode
   ]);
 
+  const orderedAssets = useMemo(
+    () => sortManagedAssets(assets, assetOrderMode),
+    [assets, assetOrderMode]
+  );
+
+  const previewableAssets = useMemo(
+    () =>
+      orderedAssets.filter((asset) =>
+        showImagesOnly ? isImageAsset(asset) : true
+      ),
+    [orderedAssets, showImagesOnly]
+  );
+
+  const totalAssetPages = Math.max(
+    1,
+    Math.ceil(previewableAssets.length / ASSET_GRID_PAGE_SIZE)
+  );
+
+  useEffect(() => {
+    setAssetGridPage((current) => Math.min(current, totalAssetPages));
+  }, [totalAssetPages]);
+
+  useEffect(() => {
+    if (previewableAssets.length === 0) {
+      if (selectedPreviewAssetId !== null) {
+        setSelectedPreviewAssetId(null);
+      }
+      return;
+    }
+    const stillExists = previewableAssets.some(
+      (asset) => asset.asset_id === selectedPreviewAssetId
+    );
+    if (!stillExists) {
+      setSelectedPreviewAssetId(previewableAssets[0].asset_id);
+    }
+  }, [previewableAssets, selectedPreviewAssetId]);
+
+  useEffect(() => {
+    if (!selectedPreviewAssetId) {
+      setPreviewPanelView('image');
+    }
+  }, [selectedPreviewAssetId]);
+
+  const pageStartIndex = (assetGridPage - 1) * ASSET_GRID_PAGE_SIZE;
+  const currentAssetPage = useMemo(
+    () =>
+      previewableAssets.slice(
+        pageStartIndex,
+        pageStartIndex + ASSET_GRID_PAGE_SIZE
+      ),
+    [previewableAssets, pageStartIndex]
+  );
+
+  const currentPageEmptySlots = Math.max(
+    0,
+    ASSET_GRID_PAGE_SIZE - currentAssetPage.length
+  );
+
+  const selectedPreviewAsset = useMemo(
+    () =>
+      previewableAssets.find((asset) => asset.asset_id === selectedPreviewAssetId) ??
+      null,
+    [previewableAssets, selectedPreviewAssetId]
+  );
+
+  const selectedPreviewIndex = useMemo(() => {
+    if (!selectedPreviewAsset) {
+      return 0;
+    }
+    const index = previewableAssets.findIndex(
+      (asset) => asset.asset_id === selectedPreviewAsset.asset_id
+    );
+    return index >= 0 ? index + 1 : 0;
+  }, [previewableAssets, selectedPreviewAsset]);
+
+  const selectedPreviewUrl = useMemo(() => {
+    if (!selectedPreviewAsset || !normalizedCollectionId) {
+      return null;
+    }
+    return buildAssetPreviewUrl(
+      normalizedCollectionId,
+      selectedPreviewAsset.asset_id
+    );
+  }, [selectedPreviewAsset, normalizedCollectionId]);
+
+  const selectedPreviewTraits = useMemo(
+    () => (selectedPreviewAsset ? extractPathTraits(selectedPreviewAsset.path) : []),
+    [selectedPreviewAsset]
+  );
+
+  const markAssetImageError = (assetId: string) => {
+    setAssetImageErrors((current) =>
+      current[assetId] ? current : { ...current, [assetId]: true }
+    );
+  };
+
+  const uploadsLocked =
+    readiness?.uploadsLocked === true ||
+    collectionState === 'published' ||
+    collectionState === 'archived';
+  const uploadLockReason =
+    readiness?.lockReason ??
+    (uploadsLocked
+      ? `Uploads are locked while collection state is "${collectionState}".`
+      : null);
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!normalizedCollectionId) {
       setStatus('Enter a collection ID first.');
+      return;
+    }
+    if (uploadsLocked) {
+      setStatus(uploadLockReason ?? 'Uploads are currently locked.');
       return;
     }
     if (filesForUpload.length === 0) {
@@ -561,308 +812,622 @@ export default function AssetStagingPanel() {
   };
 
   const canUpload = preflightOnly
-    ? filesForUpload.length > 0 && !uploading
+    ? filesForUpload.length > 0 && !uploading && !uploadsLocked
     : filesForUpload.length > 0 &&
       !!readiness?.ready &&
+      !readiness?.uploadsLocked &&
       !readinessLoading &&
       !uploading;
 
   return (
     <div className="asset-staging-panel">
-      <form className="field" onSubmit={handleSubmit}>
-        <label className="field__label">
-          <span className="info-label">
-            Collection ID
-            <InfoTooltip text="Use the ID shown in Step 1 under 'Your drops'. It identifies which drop these files belong to." />
-          </span>
-          <input
-            className="input"
-            placeholder="Paste collection ID from Your drops"
-            value={collectionId}
-            onChange={(event) => {
-              setCollectionId(event.target.value);
-              clearSelectedFiles();
-              setStatus(null);
-            }}
-          />
-          <span className="field__hint">
-            Tip: click "Copy ID" in Your drops, then paste it here.
-          </span>
-        </label>
-
-        <label className="field__label">
-          <span className="info-label">
-            Select files
-            <InfoTooltip text="Pick multiple files at once for faster staging. Files upload one-by-one for reliability." />
-          </span>
-          <input
-            ref={fileInputRef}
-            className="input"
-            type="file"
-            multiple
-            onChange={handleFilesSelected}
-            disabled={uploading}
-          />
-          <span className="field__hint">
-            Use this for quick multi-select from a single location.
-          </span>
-        </label>
-
-        <label className="field__label">
-          <span className="info-label">
-            Or select a folder
-            <InfoTooltip text="Choose a whole folder to load all files at once, including subfolder paths." />
-          </span>
-          <input
-            ref={folderInputRef}
-            className="input"
-            type="file"
-            multiple
-            onChange={handleFilesSelected}
-            disabled={uploading}
-          />
-          <span className="field__hint">
-            Folder uploads keep relative paths so collection structure stays clear.
-          </span>
-        </label>
-
-        <div className="mint-actions">
-          <button
-            className="button button--ghost"
-            type="button"
-            onClick={() => setShowAdvanced((current) => !current)}
-            disabled={uploading}
-          >
-            {showAdvanced ? 'Hide advanced upload settings' : 'Show advanced upload settings'}
-          </button>
+      <section
+        className={`asset-staging__section${
+          uploadControlsCollapsed ? ' asset-staging__section--collapsed' : ''
+        }`}
+      >
+        <div className="asset-staging__section-header">
+          <div>
+            <h3>Upload controls</h3>
+            <p>Select a collection, choose files/folder, then run upload checks.</p>
+          </div>
+          <div className="mint-actions">
+            <button
+              className="button button--ghost button--mini"
+              type="button"
+              onClick={() =>
+                setUploadControlsCollapsed((current) => !current)
+              }
+            >
+              {uploadControlsCollapsed ? 'Expand upload controls' : 'Collapse upload controls'}
+            </button>
+          </div>
         </div>
 
-        {showAdvanced && (
-          <div className="deploy-wizard__defaults">
-            <p className="deploy-wizard__defaults-title">Advanced upload settings</p>
-            <div className="deploy-wizard__grid">
-              <label className="field">
-                <span className="field__label info-label">
-                  Inscription order
-                  <InfoTooltip text="Choose how selected files are ordered before upload and mint staging." />
+        {uploadControlsCollapsed ? (
+          <p className="asset-staging__collapsed-note">
+            Upload controls are collapsed so staged assets stay in view. Expand if you
+            need to add more files.
+          </p>
+        ) : (
+          <div className="asset-staging__section-body">
+            <form className="field" onSubmit={handleSubmit}>
+              <label className="field__label">
+                <span className="info-label">
+                  Collection ID
+                  <InfoTooltip text="Use the ID shown in Step 1 under 'Your drops'. It identifies which drop these files belong to." />
                 </span>
-                <select
-                  className="select"
-                  value={orderMode}
-                  onChange={(event) => setOrderMode(event.target.value as UploadOrderMode)}
+                <input
+                  className="input"
+                  placeholder="Paste collection ID from Your drops"
+                  value={collectionId}
+                  onChange={(event) => {
+                    setCollectionId(event.target.value);
+                    clearSelectedFiles();
+                    setStatus(null);
+                  }}
                   disabled={uploading}
-                >
-                  {ORDER_MODE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                />
+                <span className="field__hint">
+                  Tip: click "Copy ID" in Your drops, then paste it here.
+                </span>
               </label>
 
-              {orderMode === 'seeded-random' && (
-                <label className="field">
-                  <span className="field__label info-label">
-                    Random seed
-                    <InfoTooltip text="Generated with Web Crypto for strong randomness. Keep this value to reproduce the same order later." />
-                  </span>
-                  <div className="field__inline">
-                    <input
-                      className="input"
-                      value={seededOrderSeed}
-                      onChange={(event) => setSeededOrderSeed(event.target.value.trim())}
-                      disabled={uploading}
-                    />
-                    <button
-                      className="button button--ghost button--mini"
-                      type="button"
-                      onClick={() => setSeededOrderSeed(createSecureRandomSeed())}
-                      disabled={uploading}
-                    >
-                      New secure seed
-                    </button>
+              <label className="field__label">
+                <span className="info-label">
+                  Select files
+                  <InfoTooltip text="Pick multiple files at once for faster staging. Files upload one-by-one for reliability." />
+                </span>
+                <input
+                  ref={fileInputRef}
+                  className="input"
+                  type="file"
+                  multiple
+                  onChange={handleFilesSelected}
+                  disabled={uploading || uploadsLocked}
+                />
+                <span className="field__hint">
+                  Use this for quick multi-select from a single location.
+                </span>
+              </label>
+
+              <label className="field__label">
+                <span className="info-label">
+                  Or select a folder
+                  <InfoTooltip text="Choose a whole folder to load all files at once, including subfolder paths." />
+                </span>
+                <input
+                  ref={folderInputRef}
+                  className="input"
+                  type="file"
+                  multiple
+                  onChange={handleFilesSelected}
+                  disabled={uploading || uploadsLocked}
+                />
+                <span className="field__hint">
+                  Folder uploads keep relative paths so collection structure stays clear.
+                </span>
+              </label>
+
+              <div className="mint-actions">
+                <button
+                  className="button button--ghost"
+                  type="button"
+                  onClick={() => setShowAdvanced((current) => !current)}
+                  disabled={uploading || uploadsLocked}
+                >
+                  {showAdvanced
+                    ? 'Hide advanced upload settings'
+                    : 'Show advanced upload settings'}
+                </button>
+              </div>
+
+              {showAdvanced && (
+                <div className="deploy-wizard__defaults">
+                  <p className="deploy-wizard__defaults-title">Advanced upload settings</p>
+                  <div className="deploy-wizard__grid">
+                    <label className="field">
+                      <span className="field__label info-label">
+                        Inscription order
+                        <InfoTooltip text="Choose how selected files are ordered before upload and mint staging." />
+                      </span>
+                      <select
+                        className="select"
+                        value={orderMode}
+                        onChange={(event) => setOrderMode(event.target.value as UploadOrderMode)}
+                        disabled={uploading}
+                      >
+                        {ORDER_MODE_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    {orderMode === 'seeded-random' && (
+                      <label className="field">
+                        <span className="field__label info-label">
+                          Random seed
+                          <InfoTooltip text="Generated with Web Crypto for strong randomness. Keep this value to reproduce the same order later." />
+                        </span>
+                        <div className="field__inline">
+                          <input
+                            className="input"
+                            value={seededOrderSeed}
+                            onChange={(event) =>
+                              setSeededOrderSeed(event.target.value.trim())
+                            }
+                            disabled={uploading}
+                          />
+                          <button
+                            className="button button--ghost button--mini"
+                            type="button"
+                            onClick={() => setSeededOrderSeed(createSecureRandomSeed())}
+                            disabled={uploading}
+                          >
+                            New secure seed
+                          </button>
+                        </div>
+                      </label>
+                    )}
+
+                    <label className="field">
+                      <span className="field__label info-label">
+                        Duplicate handling
+                        <InfoTooltip text="Warn only keeps all selected files. Auto-skip removes exact repeated file entries from this batch." />
+                      </span>
+                      <select
+                        className="select"
+                        value={duplicatePolicy}
+                        onChange={(event) =>
+                          setDuplicatePolicy(event.target.value as DuplicatePolicy)
+                        }
+                        disabled={uploading}
+                      >
+                        <option value="warn">Warn only</option>
+                        <option value="skip">Auto-skip exact duplicates</option>
+                      </select>
+                    </label>
+
+                    <label className="field">
+                      <span className="field__label info-label">
+                        Include extensions
+                        <InfoTooltip text="Optional allow-list. Example: .png, .jpg. Leave empty to include everything." />
+                      </span>
+                      <input
+                        className="input"
+                        value={includeExtensionsInput}
+                        placeholder=".png, .jpg"
+                        onChange={(event) => setIncludeExtensionsInput(event.target.value)}
+                        disabled={uploading}
+                      />
+                    </label>
+
+                    <label className="field">
+                      <span className="field__label info-label">
+                        Exclude extensions
+                        <InfoTooltip text="Optional block-list. Example: .psd, .tmp. Exclude rules override include rules." />
+                      </span>
+                      <input
+                        className="input"
+                        value={excludeExtensionsInput}
+                        placeholder=".psd, .tmp"
+                        onChange={(event) => setExcludeExtensionsInput(event.target.value)}
+                        disabled={uploading}
+                      />
+                    </label>
+
+                    <label className="field field--checkbox field--full">
+                      <input
+                        type="checkbox"
+                        checked={preflightOnly}
+                        onChange={(event) => setPreflightOnly(event.target.checked)}
+                        disabled={uploading}
+                      />
+                      <span className="field__label info-label">
+                        Preflight only (no upload)
+                        <InfoTooltip text="Runs all checks and previews final batch count/order without sending files to storage." />
+                      </span>
+                    </label>
                   </div>
-                </label>
+                </div>
               )}
 
-              <label className="field">
-                <span className="field__label info-label">
-                  Duplicate handling
-                  <InfoTooltip text="Warn only keeps all selected files. Auto-skip removes exact repeated file entries from this batch." />
-                </span>
-                <select
-                  className="select"
-                  value={duplicatePolicy}
-                  onChange={(event) =>
-                    setDuplicatePolicy(event.target.value as DuplicatePolicy)
-                  }
-                  disabled={uploading}
+              {selectedFiles.length > 0 && (
+                <div className="mint-step mint-step--pending">
+                  <span className="meta-label">Selection</span>
+                  <span className="meta-value">
+                    Selected {selectedFiles.length} file
+                    {selectedFiles.length === 1 ? '' : 's'} · ready {filesForUpload.length}{' '}
+                    file{filesForUpload.length === 1 ? '' : 's'} ·{' '}
+                    {formatBytes(BigInt(selectedTotalBytes))}
+                    {collectionTargetSupply
+                      ? ` · target supply ${collectionTargetSupply}`
+                      : ''}
+                    {collectionLabel ? ` · ${collectionLabel}` : ''}
+                  </span>
+                </div>
+              )}
+
+              {prepNotices.length > 0 && (
+                <div className="alert">
+                  <div>
+                    {prepNotices.map((notice) => (
+                      <p key={notice}>{notice}</p>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {overlappingExtensionFilters.length > 0 && (
+                <div className="alert">
+                  <p>
+                    Extensions listed in both include and exclude rules:{' '}
+                    {overlappingExtensionFilters.join(', ')}. Exclude rules take priority.
+                  </p>
+                </div>
+              )}
+
+              {uploadWarnings.length > 0 && (
+                <div className="alert">
+                  <div>
+                    <strong>Quick checks before upload:</strong>
+                    <ul>
+                      {uploadWarnings.map((warning) => (
+                        <li key={warning}>{warning}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              <div className="mint-actions">
+                <button className="button" type="submit" disabled={!canUpload}>
+                  {uploadsLocked
+                    ? 'Uploads locked'
+                    : uploading
+                    ? 'Uploading...'
+                    : preflightOnly
+                      ? 'Run preflight checks'
+                      : `Upload selected file${filesForUpload.length === 1 ? '' : 's'}`}
+                </button>
+                <button
+                  className="button button--ghost"
+                  type="button"
+                  onClick={clearSelectedFiles}
+                  disabled={selectedFiles.length === 0 || uploading}
                 >
-                  <option value="warn">Warn only</option>
-                  <option value="skip">Auto-skip exact duplicates</option>
-                </select>
-              </label>
+                  Clear selection
+                </button>
+              </div>
+            </form>
 
-              <label className="field">
-                <span className="field__label info-label">
-                  Include extensions
-                  <InfoTooltip text="Optional allow-list. Example: .png, .jpg. Leave empty to include everything." />
+            {collectionId && (
+              <div
+                className={
+                  uploadsLocked
+                    ? 'mint-step mint-step--error'
+                    : readiness?.ready
+                      ? 'mint-step mint-step--done'
+                      : 'mint-step mint-step--pending'
+                }
+              >
+                <span className="meta-label">Upload readiness</span>
+                <span className="meta-value">
+                  {uploadsLocked
+                    ? uploadLockReason
+                    : readinessLoading
+                    ? 'Checking deployment confirmation...'
+                    : readiness?.ready
+                      ? 'Ready. Deployment is confirmed on-chain.'
+                      : readiness?.reason ??
+                        'Enter a valid collection id to check readiness.'}
                 </span>
-                <input
-                  className="input"
-                  value={includeExtensionsInput}
-                  placeholder=".png, .jpg"
-                  onChange={(event) => setIncludeExtensionsInput(event.target.value)}
-                  disabled={uploading}
-                />
-              </label>
-
-              <label className="field">
-                <span className="field__label info-label">
-                  Exclude extensions
-                  <InfoTooltip text="Optional block-list. Example: .psd, .tmp. Exclude rules override include rules." />
+                <span className="meta-value">
+                  Collection state: <strong>{collectionState || 'draft'}</strong>
                 </span>
-                <input
-                  className="input"
-                  value={excludeExtensionsInput}
-                  placeholder=".psd, .tmp"
-                  onChange={(event) => setExcludeExtensionsInput(event.target.value)}
-                  disabled={uploading}
-                />
-              </label>
-
-              <label className="field field--checkbox field--full">
-                <input
-                  type="checkbox"
-                  checked={preflightOnly}
-                  onChange={(event) => setPreflightOnly(event.target.checked)}
-                  disabled={uploading}
-                />
-                <span className="field__label info-label">
-                  Preflight only (no upload)
-                  <InfoTooltip text="Runs all checks and previews final batch count/order without sending files to storage." />
-                </span>
-              </label>
-            </div>
+                {readiness?.deployTxId && (
+                  <a
+                    className="button button--ghost button--mini"
+                    href={buildTxExplorerUrl(readiness.deployTxId, readiness.network)}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    View deployment transaction
+                  </a>
+                )}
+              </div>
+            )}
           </div>
         )}
 
-        {selectedFiles.length > 0 && (
-          <div className="mint-step mint-step--pending">
-            <span className="meta-label">Selection</span>
-            <span className="meta-value">
-              Selected {selectedFiles.length} file{selectedFiles.length === 1 ? '' : 's'} ·
-              ready {filesForUpload.length} file{filesForUpload.length === 1 ? '' : 's'} ·{' '}
-              {formatBytes(BigInt(selectedTotalBytes))}
-              {collectionTargetSupply
-                ? ` · target supply ${collectionTargetSupply}`
-                : ''}
-              {collectionLabel ? ` · ${collectionLabel}` : ''}
-            </span>
+        {status && <p className="meta-value">{status}</p>}
+        {lastUploadTrace.requestId && (
+          <p className="meta-value">
+            Last upload trace: request {lastUploadTrace.requestId}
+            {lastUploadTrace.mode ? ` · ${lastUploadTrace.mode}` : ''}
+            {lastUploadTrace.binding ? ` · ${lastUploadTrace.binding}` : ''}
+            {lastUploadTrace.filePath ? ` · ${lastUploadTrace.filePath}` : ''}
+            {lastUploadTrace.step ? ` · step ${lastUploadTrace.step}` : ''}
+          </p>
+        )}
+      </section>
+
+      <section className="asset-staging__section asset-staging__list">
+        <h3>Staged assets checker</h3>
+        <p className="field__hint">
+          Browse uploaded items in 4x4 pages, verify ordering, and inspect one asset
+          in detail before launch.
+        </p>
+
+        <div className="asset-staging__controls">
+          <label className="field">
+            <span className="field__label">Mint order checker</span>
+            <select
+              className="select"
+              value={assetOrderMode}
+              onChange={(event) => {
+                setAssetOrderMode(event.target.value as AssetOrderMode);
+                setAssetGridPage(1);
+              }}
+            >
+              {ASSET_ORDER_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="field field--checkbox">
+            <input
+              type="checkbox"
+              checked={showImagesOnly}
+              onChange={(event) => {
+                setShowImagesOnly(event.target.checked);
+                setAssetGridPage(1);
+              }}
+            />
+            <span className="field__label">Show images only</span>
+          </label>
+        </div>
+
+        <div className="asset-staging__summary">
+          <span className="meta-value">
+            Showing {previewableAssets.length} of {orderedAssets.length} staged assets ·
+            page {assetGridPage} of {totalAssetPages}
+          </span>
+          <div className="asset-staging__pager">
+            <button
+              className="button button--ghost button--mini"
+              type="button"
+              onClick={() =>
+                setAssetGridPage((current) => Math.max(1, current - 1))
+              }
+              disabled={assetGridPage <= 1}
+            >
+              Previous 16
+            </button>
+            <button
+              className="button button--ghost button--mini"
+              type="button"
+              onClick={() =>
+                setAssetGridPage((current) =>
+                  Math.min(totalAssetPages, current + 1)
+                )
+              }
+              disabled={assetGridPage >= totalAssetPages}
+            >
+              Next 16
+            </button>
           </div>
+        </div>
+
+        {loading && <p>Loading…</p>}
+        {!loading && orderedAssets.length === 0 && <p>No staged assets yet.</p>}
+        {!loading && orderedAssets.length > 0 && previewableAssets.length === 0 && (
+          <p className="meta-value">
+            No image assets found in the current filter. Uncheck "Show images only" to
+            inspect non-image files.
+          </p>
         )}
 
-        {prepNotices.length > 0 && (
-          <div className="alert">
-            <div>
-              {prepNotices.map((notice) => (
-                <p key={notice}>{notice}</p>
+        {!loading && previewableAssets.length > 0 && (
+          <div className="asset-staging__viewer">
+            <div className="asset-staging__grid" role="list">
+              {currentAssetPage.map((asset, index) => {
+                const isSelected = selectedPreviewAssetId === asset.asset_id;
+                const imageFailed = Boolean(assetImageErrors[asset.asset_id]);
+                const gridIndex = pageStartIndex + index + 1;
+                const previewUrl = buildAssetPreviewUrl(
+                  normalizedCollectionId,
+                  asset.asset_id
+                );
+
+                return (
+                  <button
+                    key={asset.asset_id}
+                    className={`asset-staging__thumb${
+                      isSelected ? ' asset-staging__thumb--active' : ''
+                    }`}
+                    type="button"
+                    role="listitem"
+                    title={getAssetDisplayName(asset)}
+                    aria-label={`Select ${getAssetDisplayName(asset)} for preview`}
+                    onClick={() => setSelectedPreviewAssetId(asset.asset_id)}
+                  >
+                    <span className="asset-staging__thumb-index">#{gridIndex}</span>
+                    <span className="asset-staging__thumb-frame">
+                      {isImageAsset(asset) && !imageFailed ? (
+                        <img
+                          src={previewUrl}
+                          alt={getAssetDisplayName(asset)}
+                          loading="lazy"
+                          onError={() => markAssetImageError(asset.asset_id)}
+                        />
+                      ) : (
+                        <span className="asset-staging__thumb-placeholder">
+                          {isImageAsset(asset) ? 'Preview unavailable' : asset.mime_type}
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
+
+              {Array.from({ length: currentPageEmptySlots }).map((_, index) => (
+                <div
+                  key={`empty-${assetGridPage}-${index}`}
+                  className="asset-staging__thumb asset-staging__thumb--empty"
+                  aria-hidden="true"
+                />
               ))}
             </div>
-          </div>
-        )}
 
-        {overlappingExtensionFilters.length > 0 && (
-          <div className="alert">
-            <p>
-              Extensions listed in both include and exclude rules:{' '}
-              {overlappingExtensionFilters.join(', ')}. Exclude rules take priority.
-            </p>
-          </div>
-        )}
+            <div className="asset-staging__preview">
+              {!selectedPreviewAsset && (
+                <p className="meta-value">
+                  Select an item in the grid to see a larger preview.
+                </p>
+              )}
 
-        {uploadWarnings.length > 0 && (
-          <div className="alert">
-            <div>
-              <strong>Quick checks before upload:</strong>
-              <ul>
-                {uploadWarnings.map((warning) => (
-                  <li key={warning}>{warning}</li>
-                ))}
-              </ul>
+              {selectedPreviewAsset && (
+                <>
+                  <div className="asset-staging__preview-toolbar">
+                    <div className="asset-staging__preview-summary">
+                      <span
+                        className="asset-staging__preview-title"
+                        title={getAssetDisplayName(selectedPreviewAsset)}
+                      >
+                        {getAssetDisplayName(selectedPreviewAsset)}
+                      </span>
+                      <div className="asset-staging__preview-chips">
+                        <span className="asset-staging__preview-chip">
+                          Slot {selectedPreviewIndex > 0 ? `#${selectedPreviewIndex}` : 'n/a'}
+                        </span>
+                        <span className="asset-staging__preview-chip">
+                          {formatBytes(BigInt(selectedPreviewAsset.total_bytes))}
+                        </span>
+                        <span className="asset-staging__preview-chip">
+                          {selectedPreviewAsset.total_chunks} chunk
+                          {selectedPreviewAsset.total_chunks === 1 ? '' : 's'}
+                        </span>
+                      </div>
+                    </div>
+                    <div
+                      className="asset-staging__preview-toggle"
+                      role="group"
+                      aria-label="Preview panel view"
+                    >
+                      <button
+                        className={`asset-staging__preview-toggle-button${
+                          previewPanelView === 'image'
+                            ? ' asset-staging__preview-toggle-button--active'
+                            : ''
+                        }`}
+                        type="button"
+                        onClick={() => setPreviewPanelView('image')}
+                      >
+                        Image
+                      </button>
+                      <button
+                        className={`asset-staging__preview-toggle-button${
+                          previewPanelView === 'metadata'
+                            ? ' asset-staging__preview-toggle-button--active'
+                            : ''
+                        }`}
+                        type="button"
+                        onClick={() => setPreviewPanelView('metadata')}
+                      >
+                        Metadata
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="asset-staging__preview-body">
+                    {previewPanelView === 'image' ? (
+                      <div className="asset-staging__preview-frame">
+                        {selectedPreviewUrl &&
+                        isImageAsset(selectedPreviewAsset) &&
+                        !assetImageErrors[selectedPreviewAsset.asset_id] ? (
+                          <img
+                            src={selectedPreviewUrl}
+                            alt={getAssetDisplayName(selectedPreviewAsset)}
+                            onError={() =>
+                              markAssetImageError(selectedPreviewAsset.asset_id)
+                            }
+                          />
+                        ) : (
+                          <span className="asset-staging__thumb-placeholder">
+                            {isImageAsset(selectedPreviewAsset)
+                              ? 'Preview unavailable'
+                              : selectedPreviewAsset.mime_type}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="asset-staging__preview-meta">
+                        <p>
+                          <strong>Order slot:</strong>{' '}
+                          {selectedPreviewIndex > 0
+                            ? `#${selectedPreviewIndex}`
+                            : 'n/a'}
+                        </p>
+                        <p>
+                          <strong>Name:</strong>{' '}
+                          {getAssetDisplayName(selectedPreviewAsset)}
+                        </p>
+                        <p>
+                          <strong>Path:</strong>{' '}
+                          <code>{selectedPreviewAsset.path}</code>
+                        </p>
+                        <p>
+                          <strong>MIME:</strong> {selectedPreviewAsset.mime_type}
+                        </p>
+                        <p>
+                          <strong>Size:</strong>{' '}
+                          {formatBytes(BigInt(selectedPreviewAsset.total_bytes))}
+                        </p>
+                        <p>
+                          <strong>Chunks:</strong> {selectedPreviewAsset.total_chunks}
+                        </p>
+                        <p>
+                          <strong>State:</strong> {selectedPreviewAsset.state}
+                        </p>
+                        <p>
+                          <strong>Uploaded:</strong>{' '}
+                          {new Date(selectedPreviewAsset.created_at).toLocaleString()}
+                        </p>
+                        {selectedPreviewAsset.expires_at ? (
+                          <p>
+                            <strong>Expires:</strong>{' '}
+                            {new Date(
+                              selectedPreviewAsset.expires_at
+                            ).toLocaleString()}
+                          </p>
+                        ) : null}
+                        {selectedPreviewAsset.expected_hash ? (
+                          <p className="asset-staging__hash">
+                            <strong>Expected hash:</strong>{' '}
+                            <code>{selectedPreviewAsset.expected_hash}</code>
+                          </p>
+                        ) : null}
+                        <p className="asset-staging__traits">
+                          <strong>Trait hints:</strong>{' '}
+                          {selectedPreviewTraits.length > 0
+                            ? selectedPreviewTraits.join(' · ')
+                            : 'No folder-based traits detected'}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
-
-        <div className="mint-actions">
-          <button className="button" type="submit" disabled={!canUpload}>
-            {uploading
-              ? 'Uploading...'
-              : preflightOnly
-                ? 'Run preflight checks'
-                : `Upload selected file${filesForUpload.length === 1 ? '' : 's'}`}
-          </button>
-          <button
-            className="button button--ghost"
-            type="button"
-            onClick={clearSelectedFiles}
-            disabled={selectedFiles.length === 0 || uploading}
-          >
-            Clear selection
-          </button>
-        </div>
-      </form>
-      {collectionId && (
-        <div className={readiness?.ready ? 'mint-step mint-step--done' : 'mint-step mint-step--pending'}>
-          <span className="meta-label">Upload readiness</span>
-          <span className="meta-value">
-            {readinessLoading
-              ? 'Checking deployment confirmation...'
-              : readiness?.ready
-                ? 'Ready. Deployment is confirmed on-chain.'
-                : readiness?.reason ?? 'Enter a valid collection id to check readiness.'}
-          </span>
-          {readiness?.deployTxId && (
-            <a
-              className="button button--ghost button--mini"
-              href={buildTxExplorerUrl(readiness.deployTxId, readiness.network)}
-              target="_blank"
-              rel="noreferrer"
-            >
-              View deployment transaction
-            </a>
-          )}
-        </div>
-      )}
-      {status && <p className="meta-value">{status}</p>}
-      {lastUploadTrace.requestId && (
-        <p className="meta-value">
-          Last upload trace: request {lastUploadTrace.requestId}
-          {lastUploadTrace.mode ? ` · ${lastUploadTrace.mode}` : ''}
-          {lastUploadTrace.binding ? ` · ${lastUploadTrace.binding}` : ''}
-          {lastUploadTrace.filePath ? ` · ${lastUploadTrace.filePath}` : ''}
-          {lastUploadTrace.step ? ` · step ${lastUploadTrace.step}` : ''}
-        </p>
-      )}
-      <div className="asset-staging__list">
-        <h3>Staged assets</h3>
-        {loading && <p>Loading…</p>}
-        {!loading && assets.length === 0 && <p>No staged assets yet.</p>}
-        <ul>
-          {assets.map((asset) => (
-            <li key={asset.asset_id}>
-              <strong>{asset.filename ?? asset.path}</strong> ·{' '}
-              {Math.round(asset.total_bytes / 1024)} KB · {asset.state}
-              {asset.expires_at && (
-                <>
-                  {' '}
-                  · expires {new Date(asset.expires_at).toLocaleString()}
-                </>
-              )}
-            </li>
-          ))}
-        </ul>
-      </div>
+      </section>
     </div>
   );
 }

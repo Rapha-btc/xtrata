@@ -2,6 +2,45 @@
 Current format for collection-mint contracts.
 I have successfully deployed: SP10W2EEM757922QTVDZZ5CSEW55JEFNN30J69TM7.xtrata-collection-ahv0-34f95221
 Please explain the number at the end. 
+ANSWER:Current collection-mint contract ID format is:
+
+  <deployer-address>.<generated-contract-name>
+
+  For your example:
+
+  SP10W2EEM757922QTVDZZ5CSEW55JEFNN30J69TM7.xtrata-collection-ahv0-34f95221
+
+  Breakdown:
+
+  1. SP10W2... = wallet address that deployed it.
+  2. xtrata-collection = template prefix for standard collection mint.
+      - Pre-inscribed uses xtrata-preinscribed instead (src/lib/deploy/artist-
+        deploy.ts:140).
+  3. ahv0 = slug from collection name (src/lib/deploy/artist-deploy.ts:144).
+  4. 34f95221 = first 8 chars of the draft UUID seed (src/lib/deploy/artist-
+     deploy.ts:147-151), passed from created.id at deploy time (src/manage/
+     components/DeployWizardPanel.tsx:647-651).
+
+  So yes: that trailing number is the short seed from your collection draft ID (for
+  uniqueness + traceability).
+
+  Ticker rules (important):
+
+  - Ticker is the symbol, not the contract name.
+  - It is validated as 1-16 chars, uppercase letters/numbers/hyphen (src/lib/
+    deploy/artist-deploy.ts:242-243).
+  - It is written into on-chain collection-symbol (src/lib/deploy/artist-
+    deploy.ts:392-399), and shown in UI.
+  - Contract name generation does not use ticker directly; it uses collection name
+    slug + seed.
+
+  Practical guidance:
+
+  - Use ticker for branding (AHV0), keep it short and unique by convention.
+  - Use collection name for readability; it affects contract slug.
+  - If ticker/name is wrong after deploy, you need a new deployment to change
+    contract name/symbol at origin.
+
 
 
 
