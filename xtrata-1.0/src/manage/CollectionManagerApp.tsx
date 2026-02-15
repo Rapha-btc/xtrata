@@ -7,6 +7,7 @@ import AssetStagingPanel from './components/AssetStagingPanel';
 import PublishOpsPanel from './components/PublishOpsPanel';
 import DiagnosticsPanel from './components/DiagnosticsPanel';
 import InfoTooltip from './components/InfoTooltip';
+import AddressLabel from '../components/AddressLabel';
 import { isXtrataOwnerAddress } from '../config/manage';
 import { useManageWallet } from './ManageWalletContext';
 
@@ -111,6 +112,15 @@ export default function CollectionManagerApp() {
       <header className="app__header">
         <span className="eyebrow">Artist workspace</span>
         <h1>Launch your collection</h1>
+        <p className="meta-value">
+          Logged in as:{' '}
+          <AddressLabel
+            className="meta-value"
+            address={walletSession.address}
+            network={walletSession.network}
+            fallback="Not connected"
+          />
+        </p>
         <p>Follow the guided steps below. Advanced controls are optional and hidden by default.</p>
       </header>
       <main className="app__main">
