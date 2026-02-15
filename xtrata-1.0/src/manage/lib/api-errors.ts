@@ -18,6 +18,23 @@ const parseJsonText = (text: string) => {
   return JSON.parse(text) as unknown;
 };
 
+const extractPayloadRequestId = (payload: unknown) => {
+  if (payload && typeof payload === 'object' && 'requestId' in payload) {
+    const value = (payload as { requestId?: unknown }).requestId;
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+  return null;
+};
+
+const extractHeaderRequestId = (response: Response) =>
+  response.headers.get('x-xtrata-request-id') ||
+  response.headers.get('X-Xtrata-Request-Id');
+
+const withRequestIdSuffix = (message: string, requestId: string | null) =>
+  requestId ? `${message} [request ${requestId}]` : message;
+
 const extractErrorMessage = (payload: unknown) => {
   if (payload && typeof payload === 'object' && 'error' in payload) {
     const value = (payload as { error?: unknown }).error;
@@ -34,9 +51,15 @@ export const parseManageJsonResponse = async <T>(
 ): Promise<T> => {
   const label = formatEndpointLabel(endpointLabel);
   const text = await response.text();
+  const headerRequestId = extractHeaderRequestId(response);
 
   if (isLikelyHtmlResponse(text) || WORKER_1101_PATTERN.test(text)) {
-    throw new Error(`${label}: ${FUNCTIONS_UNAVAILABLE_HINT} ${API_SETUP_HINT}`);
+    throw new Error(
+      withRequestIdSuffix(
+        `${label}: ${FUNCTIONS_UNAVAILABLE_HINT} ${API_SETUP_HINT}`,
+        headerRequestId
+      )
+    );
   }
 
   let payload: unknown = null;
@@ -45,13 +68,25 @@ export const parseManageJsonResponse = async <T>(
   } catch {
     const snippet = text.slice(0, 140).replace(/\s+/g, ' ').trim();
     throw new Error(
-      `${label}: response was not valid JSON.${snippet ? ` Received: ${snippet}` : ''}`
+      withRequestIdSuffix(
+        `${label}: response was not valid JSON.${
+          snippet ? ` Received: ${snippet}` : ''
+        }`,
+        headerRequestId
+      )
     );
   }
 
+  const requestId = extractPayloadRequestId(payload) ?? headerRequestId;
+
   if (!response.ok) {
     const message = extractErrorMessage(payload);
-    throw new Error(message ?? `${label} request failed (${response.status}).`);
+    throw new Error(
+      withRequestIdSuffix(
+        message ?? `${label} request failed (${response.status}).`,
+        requestId
+      )
+    );
   }
 
   return payload as T;

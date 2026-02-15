@@ -3,8 +3,21 @@ import { queryAll, run } from '../../lib/db';
 import { staysWithinLimit } from '../../lib/collections';
 import { getCollectionDeployReadiness } from '../../lib/collection-deploy';
 
+const logAssetDebug = (
+  requestId: string,
+  phase: string,
+  details: Record<string, unknown>
+) => {
+  console.log(`[collections/assets][${requestId}] ${phase}`, details);
+};
+
 export const onRequest: PagesFunction = async ({ request, env, params }) => {
+  const requestId = crypto.randomUUID();
   const collectionId = params?.collectionId;
+  logAssetDebug(requestId, 'request.received', {
+    method: request.method,
+    collectionId: collectionId ?? null
+  });
   if (!collectionId) {
     return badRequest('Collection id missing.');
   }
@@ -33,6 +46,10 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
         env,
         collectionId
       });
+      logAssetDebug(requestId, 'readiness.checked', {
+        ready: readiness.ready,
+        reason: readiness.ready ? null : readiness.reason
+      });
       if (!readiness.ready) {
         return badRequest(readiness.reason);
       }
@@ -50,6 +67,14 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
       const totalBytes = Number(payload.totalBytes ?? 0);
       const totalChunks = Number(payload.totalChunks ?? 0);
       const expectedHash = String(payload.expectedHash ?? '');
+      logAssetDebug(requestId, 'payload.received', {
+        path,
+        totalBytes,
+        totalChunks,
+        mimeType,
+        hasStorageKey: storageKey.length > 0,
+        expectedHashLength: expectedHash.length
+      });
       const limitBytes = Number(env.MAX_COLLECTION_STORAGE_BYTES ?? 500 * 1024 * 1024);
       const aggregate = await queryAll(
         env,
@@ -57,6 +82,11 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
         [collectionId, 'sold-out']
       );
       const currentBytes = Number(aggregate.results?.[0]?.total ?? 0);
+      logAssetDebug(requestId, 'storage.limit.checked', {
+        currentBytes,
+        incomingBytes: totalBytes,
+        limitBytes
+      });
       if (!staysWithinLimit(currentBytes, totalBytes, limitBytes)) {
         return badRequest(
           `Collection storage limit exceeded. Limit: ${(limitBytes / (1024 * 1024)).toFixed(0)} MB.`
@@ -92,9 +122,22 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
         [assetId]
       );
       const row = (inserted.results ?? [])[0];
+      logAssetDebug(requestId, 'asset.inserted', {
+        assetId,
+        collectionId,
+        storageKey
+      });
       return jsonResponse(row, 201);
     } catch (error) {
-      return serverError(error instanceof Error ? error.message : 'Failed to add asset');
+      logAssetDebug(requestId, 'request.error', {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack ?? null : null
+      });
+      return serverError(
+        `${
+          error instanceof Error ? error.message : 'Failed to add asset'
+        } (Request ID: ${requestId})`
+      );
     }
   }
 

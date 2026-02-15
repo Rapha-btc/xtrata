@@ -10,6 +10,27 @@ type DbHealth = {
   assetsCount: number;
   reservationsCount: number;
   timestamp: number;
+  requestId?: string;
+  storage?: {
+    selectedBinding: string | null;
+    capabilities: Array<{
+      key: string;
+      present: boolean;
+      supportsPut: boolean;
+      supportsList: boolean;
+      supportsSignedUrl: boolean;
+    }>;
+    availableBindings: string[];
+  };
+};
+
+type UploadToken = {
+  uploadUrl: string;
+  key: string;
+  mode?: 'signed' | 'direct';
+  binding?: string | null;
+  requestId?: string;
+  durationMs?: number;
 };
 
 export default function DiagnosticsPanel() {
@@ -21,20 +42,29 @@ export default function DiagnosticsPanel() {
   const [storageStatus, setStorageStatus] = useState<string | null>(null);
   const [storageLoading, setStorageLoading] = useState(false);
   const [debugKey, setDebugKey] = useState<string | null>(null);
+  const [uploadDebug, setUploadDebug] = useState<{
+    requestId?: string;
+    mode?: string;
+    binding?: string | null;
+    durationMs?: number;
+  } | null>(null);
 
   const runDatabaseCheck = async () => {
     setDbLoading(true);
     setDbStatus('Checking database connectivity…');
     setDbHealth(null);
     try {
+      console.info('[manage:diagnostics] /collections/health request:start');
       const response = await fetch('/collections/health');
       const payload = await parseManageJsonResponse<DbHealth>(
         response,
         'Collections health'
       );
+      console.info('[manage:diagnostics] /collections/health request:ok', payload);
       setDbHealth(payload);
       setDbStatus('Database reachable');
     } catch (error) {
+      console.error('[manage:diagnostics] /collections/health request:error', error);
       setDbStatus(toManageApiErrorMessage(error, 'Database error'));
     } finally {
       setDbLoading(false);
@@ -57,16 +87,36 @@ export default function DiagnosticsPanel() {
     setStorageLoading(true);
     setStorageStatus('Requesting upload URL…');
     try {
+      console.info('[manage:diagnostics] upload-url request:start', { collectionId });
       const tokenResponse = await fetch(`/collections/${collectionId}/upload-url`);
-      const token = await parseManageJsonResponse<{ uploadUrl: string; key: string }>(
+      const token = await parseManageJsonResponse<UploadToken>(
         tokenResponse,
         'Upload URL'
       );
-      await fetch(token.uploadUrl, {
+      console.info('[manage:diagnostics] upload-url request:ok', token);
+      setUploadDebug({
+        requestId: token.requestId,
+        mode: token.mode,
+        binding: token.binding ?? null,
+        durationMs: token.durationMs
+      });
+
+      const uploadResponse = await fetch(token.uploadUrl, {
         method: 'PUT',
         headers: { 'Content-Type': selectedFile.type || 'application/octet-stream' },
         body: selectedFile
       });
+      if (!uploadResponse.ok) {
+        const snippet = (await uploadResponse.text())
+          .slice(0, 200)
+          .replace(/\s+/g, ' ')
+          .trim();
+        throw new Error(
+          `Storage upload failed (${uploadResponse.status})${
+            snippet ? `: ${snippet}` : ''
+          }`
+        );
+      }
       const expectedHash = await hexDigest(selectedFile);
       const metadataResponse = await fetch(`/collections/${collectionId}/assets`, {
         method: 'POST',
@@ -89,6 +139,7 @@ export default function DiagnosticsPanel() {
       setDebugKey(token.key);
       setSelectedFile(null);
     } catch (error) {
+      console.error('[manage:diagnostics] storage test error', error);
       setStorageStatus(toManageApiErrorMessage(error, 'Storage test failed'));
     } finally {
       setStorageLoading(false);
@@ -123,7 +174,36 @@ export default function DiagnosticsPanel() {
             <span className="meta-label">reservations</span>
             <span className="meta-value">{dbHealth.reservationsCount}</span>
           </div>
+          <div>
+            <span className="meta-label">request ID</span>
+            <span className="meta-value">{dbHealth.requestId ?? 'n/a'}</span>
+          </div>
+          <div>
+            <span className="meta-label">storage binding</span>
+            <span className="meta-value">
+              {dbHealth.storage?.selectedBinding ?? 'none selected'}
+            </span>
+          </div>
         </div>
+      )}
+      {dbHealth?.storage && (
+        <p className="meta-value">
+          Storage capabilities:{' '}
+          {dbHealth.storage.capabilities
+            .map((entry) => {
+              const methods = [
+                entry.supportsSignedUrl ? 'getUploadUrl' : null,
+                entry.supportsPut ? 'put' : null,
+                entry.supportsList ? 'list' : null
+              ]
+                .filter(Boolean)
+                .join('|');
+              return `${entry.key}(${entry.present ? 'present' : 'missing'}:${
+                methods || 'none'
+              })`;
+            })
+            .join(', ')}
+        </p>
       )}
 
       <label className="field">
@@ -143,6 +223,16 @@ export default function DiagnosticsPanel() {
       {debugKey && (
         <p className="meta-value">
           Last upload key: <code>{debugKey}</code>
+        </p>
+      )}
+      {uploadDebug && (
+        <p className="meta-value">
+          Upload route: {uploadDebug.mode ?? 'unknown'} via{' '}
+          {uploadDebug.binding ?? 'unknown binding'} · request{' '}
+          {uploadDebug.requestId ?? 'n/a'}
+          {typeof uploadDebug.durationMs === 'number'
+            ? ` · ${uploadDebug.durationMs} ms`
+            : ''}
         </p>
       )}
     </div>
