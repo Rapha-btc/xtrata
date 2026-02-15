@@ -28,7 +28,7 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 - `src/manage/ArtistManagerGate.tsx` handles wallet connect/disconnect, theme selection, and allowlist validation before rendering `CollectionManagerApp`.
 - `src/manage/ManageWalletContext.tsx` reuses the shared wallet adapter/session store to isolate the manage portal session from the public app.
 - `src/manage/CollectionManagerApp.tsx` composes the collapse-aware panels (`CollectionListPanel`, `OwnerOversightPanel`, `DeployWizardPanel`, `CollectionSettingsPanel`, `AssetStagingPanel`, `PublishOpsPanel`, and `DiagnosticsPanel`).
-- `functions/collections/*` responds to the `CollectionList`/`CollectionRecord` endpoints, asset manifest uploads, reservation CRUD, publish action, and R2 upload URLs using the `DB`/`ASSETS` bindings.
+- `functions/collections/*` responds to the `CollectionList`/`CollectionRecord` endpoints, asset manifest uploads, reservation CRUD, publish action, owner oversight snapshots, and R2 upload URLs using the `DB`/`ASSETS` bindings.
 - `functions/lib/collections.ts` implements slug normalization and storage-limit helpers; `functions/lib/__tests__/collections.test.ts` guards them via Vitest.
 - `functions/collections/health.ts` provides the `/collections/health` check used by the diagnostics panel to confirm D1 connectivity and table counts.
 
