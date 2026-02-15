@@ -22,6 +22,28 @@ interface D1Database {
 }
 
 interface R2Bucket {
+  put(
+    key: string,
+    value: ArrayBuffer | ArrayBufferView | string,
+    options?: {
+      httpMetadata?: {
+        contentType?: string;
+      };
+    }
+  ): Promise<unknown>;
+  delete(key: string | string[]): Promise<unknown>;
+  list(options?: {
+    prefix?: string;
+    cursor?: string;
+  }): Promise<{
+    objects: Array<{
+      key: string;
+      size?: number;
+      uploaded?: Date;
+    }>;
+    truncated: boolean;
+    cursor?: string;
+  }>;
   getUploadUrl(options: {
     method: 'PUT' | 'POST';
     key: string;
