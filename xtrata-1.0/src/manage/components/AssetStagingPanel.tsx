@@ -201,6 +201,9 @@ export default function AssetStagingPanel() {
   );
   const [showImagesOnly, setShowImagesOnly] = useState(true);
   const [assetGridPage, setAssetGridPage] = useState(1);
+  const [previewPanelView, setPreviewPanelView] = useState<'image' | 'metadata'>(
+    'image'
+  );
   const [selectedPreviewAssetId, setSelectedPreviewAssetId] = useState<string | null>(
     null
   );
@@ -486,6 +489,12 @@ export default function AssetStagingPanel() {
       setSelectedPreviewAssetId(previewableAssets[0].asset_id);
     }
   }, [previewableAssets, selectedPreviewAssetId]);
+
+  useEffect(() => {
+    if (!selectedPreviewAssetId) {
+      setPreviewPanelView('image');
+    }
+  }, [selectedPreviewAssetId]);
 
   const pageStartIndex = (assetGridPage - 1) * ASSET_GRID_PAGE_SIZE;
   const currentAssetPage = useMemo(
@@ -1123,6 +1132,8 @@ export default function AssetStagingPanel() {
                     }`}
                     type="button"
                     role="listitem"
+                    title={getAssetDisplayName(asset)}
+                    aria-label={`Select ${getAssetDisplayName(asset)} for preview`}
                     onClick={() => setSelectedPreviewAssetId(asset.asset_id)}
                   >
                     <span className="asset-staging__thumb-index">#{gridIndex}</span>
@@ -1139,9 +1150,6 @@ export default function AssetStagingPanel() {
                           {isImageAsset(asset) ? 'Preview unavailable' : asset.mime_type}
                         </span>
                       )}
-                    </span>
-                    <span className="asset-staging__thumb-name">
-                      {getAssetDisplayName(asset)}
                     </span>
                   </button>
                 );
@@ -1165,73 +1173,133 @@ export default function AssetStagingPanel() {
 
               {selectedPreviewAsset && (
                 <>
-                  <div className="asset-staging__preview-frame">
-                    {selectedPreviewUrl &&
-                    isImageAsset(selectedPreviewAsset) &&
-                    !assetImageErrors[selectedPreviewAsset.asset_id] ? (
-                      <img
-                        src={selectedPreviewUrl}
-                        alt={getAssetDisplayName(selectedPreviewAsset)}
-                        onError={() =>
-                          markAssetImageError(selectedPreviewAsset.asset_id)
-                        }
-                      />
-                    ) : (
-                      <span className="asset-staging__thumb-placeholder">
-                        {isImageAsset(selectedPreviewAsset)
-                          ? 'Preview unavailable'
-                          : selectedPreviewAsset.mime_type}
+                  <div className="asset-staging__preview-toolbar">
+                    <div className="asset-staging__preview-summary">
+                      <span
+                        className="asset-staging__preview-title"
+                        title={getAssetDisplayName(selectedPreviewAsset)}
+                      >
+                        {getAssetDisplayName(selectedPreviewAsset)}
                       </span>
-                    )}
+                      <div className="asset-staging__preview-chips">
+                        <span className="asset-staging__preview-chip">
+                          Slot {selectedPreviewIndex > 0 ? `#${selectedPreviewIndex}` : 'n/a'}
+                        </span>
+                        <span className="asset-staging__preview-chip">
+                          {formatBytes(BigInt(selectedPreviewAsset.total_bytes))}
+                        </span>
+                        <span className="asset-staging__preview-chip">
+                          {selectedPreviewAsset.total_chunks} chunk
+                          {selectedPreviewAsset.total_chunks === 1 ? '' : 's'}
+                        </span>
+                      </div>
+                    </div>
+                    <div
+                      className="asset-staging__preview-toggle"
+                      role="group"
+                      aria-label="Preview panel view"
+                    >
+                      <button
+                        className={`asset-staging__preview-toggle-button${
+                          previewPanelView === 'image'
+                            ? ' asset-staging__preview-toggle-button--active'
+                            : ''
+                        }`}
+                        type="button"
+                        onClick={() => setPreviewPanelView('image')}
+                      >
+                        Image
+                      </button>
+                      <button
+                        className={`asset-staging__preview-toggle-button${
+                          previewPanelView === 'metadata'
+                            ? ' asset-staging__preview-toggle-button--active'
+                            : ''
+                        }`}
+                        type="button"
+                        onClick={() => setPreviewPanelView('metadata')}
+                      >
+                        Metadata
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="asset-staging__preview-meta">
-                    <p>
-                      <strong>Order slot:</strong>{' '}
-                      {selectedPreviewIndex > 0 ? `#${selectedPreviewIndex}` : 'n/a'}
-                    </p>
-                    <p>
-                      <strong>Name:</strong> {getAssetDisplayName(selectedPreviewAsset)}
-                    </p>
-                    <p>
-                      <strong>Path:</strong>{' '}
-                      <code>{selectedPreviewAsset.path}</code>
-                    </p>
-                    <p>
-                      <strong>MIME:</strong> {selectedPreviewAsset.mime_type}
-                    </p>
-                    <p>
-                      <strong>Size:</strong>{' '}
-                      {formatBytes(BigInt(selectedPreviewAsset.total_bytes))}
-                    </p>
-                    <p>
-                      <strong>Chunks:</strong> {selectedPreviewAsset.total_chunks}
-                    </p>
-                    <p>
-                      <strong>State:</strong> {selectedPreviewAsset.state}
-                    </p>
-                    <p>
-                      <strong>Uploaded:</strong>{' '}
-                      {new Date(selectedPreviewAsset.created_at).toLocaleString()}
-                    </p>
-                    {selectedPreviewAsset.expires_at ? (
-                      <p>
-                        <strong>Expires:</strong>{' '}
-                        {new Date(selectedPreviewAsset.expires_at).toLocaleString()}
-                      </p>
-                    ) : null}
-                    {selectedPreviewAsset.expected_hash ? (
-                      <p className="asset-staging__hash">
-                        <strong>Expected hash:</strong>{' '}
-                        <code>{selectedPreviewAsset.expected_hash}</code>
-                      </p>
-                    ) : null}
-                    <p className="asset-staging__traits">
-                      <strong>Trait hints:</strong>{' '}
-                      {selectedPreviewTraits.length > 0
-                        ? selectedPreviewTraits.join(' · ')
-                        : 'No folder-based traits detected'}
-                    </p>
+                  <div className="asset-staging__preview-body">
+                    {previewPanelView === 'image' ? (
+                      <div className="asset-staging__preview-frame">
+                        {selectedPreviewUrl &&
+                        isImageAsset(selectedPreviewAsset) &&
+                        !assetImageErrors[selectedPreviewAsset.asset_id] ? (
+                          <img
+                            src={selectedPreviewUrl}
+                            alt={getAssetDisplayName(selectedPreviewAsset)}
+                            onError={() =>
+                              markAssetImageError(selectedPreviewAsset.asset_id)
+                            }
+                          />
+                        ) : (
+                          <span className="asset-staging__thumb-placeholder">
+                            {isImageAsset(selectedPreviewAsset)
+                              ? 'Preview unavailable'
+                              : selectedPreviewAsset.mime_type}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="asset-staging__preview-meta">
+                        <p>
+                          <strong>Order slot:</strong>{' '}
+                          {selectedPreviewIndex > 0
+                            ? `#${selectedPreviewIndex}`
+                            : 'n/a'}
+                        </p>
+                        <p>
+                          <strong>Name:</strong>{' '}
+                          {getAssetDisplayName(selectedPreviewAsset)}
+                        </p>
+                        <p>
+                          <strong>Path:</strong>{' '}
+                          <code>{selectedPreviewAsset.path}</code>
+                        </p>
+                        <p>
+                          <strong>MIME:</strong> {selectedPreviewAsset.mime_type}
+                        </p>
+                        <p>
+                          <strong>Size:</strong>{' '}
+                          {formatBytes(BigInt(selectedPreviewAsset.total_bytes))}
+                        </p>
+                        <p>
+                          <strong>Chunks:</strong> {selectedPreviewAsset.total_chunks}
+                        </p>
+                        <p>
+                          <strong>State:</strong> {selectedPreviewAsset.state}
+                        </p>
+                        <p>
+                          <strong>Uploaded:</strong>{' '}
+                          {new Date(selectedPreviewAsset.created_at).toLocaleString()}
+                        </p>
+                        {selectedPreviewAsset.expires_at ? (
+                          <p>
+                            <strong>Expires:</strong>{' '}
+                            {new Date(
+                              selectedPreviewAsset.expires_at
+                            ).toLocaleString()}
+                          </p>
+                        ) : null}
+                        {selectedPreviewAsset.expected_hash ? (
+                          <p className="asset-staging__hash">
+                            <strong>Expected hash:</strong>{' '}
+                            <code>{selectedPreviewAsset.expected_hash}</code>
+                          </p>
+                        ) : null}
+                        <p className="asset-staging__traits">
+                          <strong>Trait hints:</strong>{' '}
+                          {selectedPreviewTraits.length > 0
+                            ? selectedPreviewTraits.join(' · ')
+                            : 'No folder-based traits detected'}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </>
               )}
