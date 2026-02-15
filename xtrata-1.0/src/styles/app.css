@@ -3532,6 +3532,58 @@ p {
   text-underline-offset: 2px;
 }
 
+.manage-app .collection-settings-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.manage-app .collection-settings-panel__group {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-soft);
+  padding: 10px 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.manage-app .collection-settings-panel__group h3 {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.manage-app .collection-settings-panel__group--onchain {
+  border-style: dashed;
+  border-color: var(--border-strong);
+}
+
+.manage-app .collection-settings-panel__summary-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.manage-app .collection-settings-panel__summary-item {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  padding: 7px 8px;
+  display: grid;
+  gap: 4px;
+}
+
+.manage-app .collection-settings-panel__summary-item .meta-value {
+  white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  font-family: "IBM Plex Mono", "SFMono-Regular", ui-monospace, monospace;
+  font-size: clamp(0.62rem, 0.9vw, 0.78rem);
+}
+
+.manage-app .collection-settings-panel__textarea {
+  min-height: 86px;
+}
+
 .asset-staging__controls {
   display: grid;
   gap: 8px;
