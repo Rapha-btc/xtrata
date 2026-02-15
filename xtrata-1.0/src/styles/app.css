@@ -3480,6 +3480,7 @@ p {
 .manage-app .collection-list__item--active {
   border-color: var(--accent-strong);
   box-shadow: 0 0 0 1px rgba(224, 90, 42, 0.26);
+  background: rgba(224, 90, 42, 0.08);
 }
 
 .manage-app .collection-list__item--selectable {
@@ -3489,6 +3490,14 @@ p {
 
 .manage-app .collection-list__item--selectable:hover {
   border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+
+.manage-app .collection-list__item--selectable.collection-list__item--active:hover,
+.manage-app .collection-list__item--selectable.collection-list__item--active:focus-visible {
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 0 1px rgba(224, 90, 42, 0.4), 0 8px 18px rgba(224, 90, 42, 0.16);
+  background: rgba(224, 90, 42, 0.14);
   transform: translateY(-1px);
 }
 

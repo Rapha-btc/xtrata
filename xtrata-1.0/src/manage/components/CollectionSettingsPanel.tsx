@@ -46,6 +46,11 @@ type ContractSummary = {
   mintPriceMicroStx: bigint | null;
 };
 
+type ContractTarget = {
+  address: string;
+  contractName: string;
+};
+
 type TxPayload = {
   txId: string;
 };
@@ -831,6 +836,9 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
   const [summary, setSummary] = useState<ContractSummary | null>(null);
   const [summaryMessage, setSummaryMessage] = useState<string | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
+  const [autoSummaryTarget, setAutoSummaryTarget] = useState<ContractTarget | null>(
+    null
+  );
 
   const [selectedActionKey, setSelectedActionKey] = useState(
     MUTABLE_ACTIONS[0]?.key ?? ''
@@ -934,7 +942,8 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
       );
       setDisplayName(payload.display_name ?? '');
       setArtistAddress(payload.artist_address ?? '');
-      setContractAddress(payload.contract_address ?? '');
+      const nextContractAddress = toText(payload.contract_address ?? '');
+      setContractAddress(nextContractAddress);
       setState(payload.state ?? 'draft');
       const resolvedMetadata = toRecord(payload.metadata);
       setMetadata(resolvedMetadata);
@@ -943,6 +952,18 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
       setSummary(null);
       setSummaryMessage(null);
       setActionMessage(null);
+      if (
+        validateStacksAddress(nextContractAddress) &&
+        CONTRACT_NAME_PATTERN.test(metadataContractName)
+      ) {
+        setSummaryMessage('Refreshing on-chain status...');
+        setAutoSummaryTarget({
+          address: nextContractAddress,
+          contractName: metadataContractName
+        });
+      } else {
+        setAutoSummaryTarget(null);
+      }
     } catch (error) {
       setMessage(toManageApiErrorMessage(error, 'Unable to load collection'));
     }
@@ -990,16 +1011,25 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
 
   const callContractReadOnly = async (
     functionName: string,
-    functionArgs: ClarityValue[] = []
+    functionArgs: ClarityValue[] = [],
+    target?: ContractTarget
   ) => {
-    if (!contractReady) {
+    const contractAddressRaw = target?.address ?? contractAddress;
+    const contractNameRaw = target?.contractName ?? contractName;
+    const resolvedAddress = contractAddressRaw.trim();
+    const resolvedName = contractNameRaw.trim();
+
+    if (
+      !validateStacksAddress(resolvedAddress) ||
+      !CONTRACT_NAME_PATTERN.test(resolvedName)
+    ) {
       throw new Error('Enter a valid deployed contract address and name first.');
     }
     const network = toStacksNetwork(walletSession.network ?? 'mainnet');
-    const senderAddress = walletSession.address ?? contractAddress.trim();
+    const senderAddress = walletSession.address ?? resolvedAddress;
     return callReadOnlyFunction({
-      contractAddress: contractAddress.trim(),
-      contractName: contractName.trim(),
+      contractAddress: resolvedAddress,
+      contractName: resolvedName,
       functionName,
       functionArgs,
       network,
@@ -1007,8 +1037,15 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
     }).then(unwrapResponse);
   };
 
-  const loadContractSummary = async () => {
-    if (!contractReady) {
+  const loadContractSummary = async (target?: ContractTarget) => {
+    const contractAddressRaw = target?.address ?? contractAddress;
+    const contractNameRaw = target?.contractName ?? contractName;
+    const resolvedAddress = contractAddressRaw.trim();
+    const resolvedName = contractNameRaw.trim();
+    if (
+      !validateStacksAddress(resolvedAddress) ||
+      !CONTRACT_NAME_PATTERN.test(resolvedName)
+    ) {
       setSummaryMessage('Enter a valid deployed contract address and name first.');
       return;
     }
@@ -1024,13 +1061,34 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
         finalizedCv,
         mintPriceCv
       ] = await Promise.all([
-        callContractReadOnly('get-owner'),
-        callContractReadOnly('get-pending-owner'),
-        callContractReadOnly('get-operator-admin'),
-        callContractReadOnly('get-finance-admin'),
-        callContractReadOnly('is-paused'),
-        callContractReadOnly('get-finalized'),
-        callContractReadOnly('get-mint-price')
+        callContractReadOnly('get-owner', [], {
+          address: resolvedAddress,
+          contractName: resolvedName
+        }),
+        callContractReadOnly('get-pending-owner', [], {
+          address: resolvedAddress,
+          contractName: resolvedName
+        }),
+        callContractReadOnly('get-operator-admin', [], {
+          address: resolvedAddress,
+          contractName: resolvedName
+        }),
+        callContractReadOnly('get-finance-admin', [], {
+          address: resolvedAddress,
+          contractName: resolvedName
+        }),
+        callContractReadOnly('is-paused', [], {
+          address: resolvedAddress,
+          contractName: resolvedName
+        }),
+        callContractReadOnly('get-finalized', [], {
+          address: resolvedAddress,
+          contractName: resolvedName
+        }),
+        callContractReadOnly('get-mint-price', [], {
+          address: resolvedAddress,
+          contractName: resolvedName
+        })
       ]);
 
       const pendingOwner =
@@ -1077,6 +1135,15 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
       setSummaryLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!autoSummaryTarget) {
+      return;
+    }
+    const target = autoSummaryTarget;
+    setAutoSummaryTarget(null);
+    void loadContractSummary(target);
+  }, [autoSummaryTarget]);
 
   const requestContractCall = async (options: {
     functionName: string;
