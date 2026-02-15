@@ -50,6 +50,60 @@ const buildUniqueSlug = (collectionName: string) => {
 };
 
 const PARENT_THUMBNAIL_LIMIT = 12;
+const DEPLOY_WIZARD_DRAFT_STORAGE_KEY = 'xtrata-manage-deploy-wizard-v1';
+
+type DeployWizardDraftStorage = {
+  collectionName: string;
+  symbol: string;
+  symbolTouched: boolean;
+  description: string;
+  supply: string;
+  mintPriceStx: string;
+  mintType: ArtistMintType;
+  parentInscriptions: string;
+  artistAddress: string;
+  artistAddressTouched: boolean;
+  marketplaceAddress: string;
+  marketplaceAddressTouched: boolean;
+};
+
+const parseStoredDraft = (value: string | null): DeployWizardDraftStorage | null => {
+  if (!value) {
+    return null;
+  }
+  try {
+    const payload = JSON.parse(value) as Partial<DeployWizardDraftStorage>;
+    if (!payload || typeof payload !== 'object') {
+      return null;
+    }
+    return {
+      collectionName:
+        typeof payload.collectionName === 'string' ? payload.collectionName : '',
+      symbol: typeof payload.symbol === 'string' ? payload.symbol : '',
+      symbolTouched: payload.symbolTouched === true,
+      description: typeof payload.description === 'string' ? payload.description : '',
+      supply: typeof payload.supply === 'string' ? payload.supply : '1000',
+      mintPriceStx:
+        typeof payload.mintPriceStx === 'string' ? payload.mintPriceStx : '0',
+      mintType:
+        payload.mintType === 'pre-inscribed' ? 'pre-inscribed' : 'standard',
+      parentInscriptions:
+        typeof payload.parentInscriptions === 'string'
+          ? payload.parentInscriptions
+          : '',
+      artistAddress:
+        typeof payload.artistAddress === 'string' ? payload.artistAddress : '',
+      artistAddressTouched: payload.artistAddressTouched === true,
+      marketplaceAddress:
+        typeof payload.marketplaceAddress === 'string'
+          ? payload.marketplaceAddress
+          : '',
+      marketplaceAddressTouched: payload.marketplaceAddressTouched === true
+    };
+  } catch {
+    return null;
+  }
+};
 
 export default function DeployWizardPanel() {
   const [collectionName, setCollectionName] = useState('');
@@ -69,6 +123,7 @@ export default function DeployWizardPanel() {
   const [reviewOpen, setReviewOpen] = useState(false);
   const [deployPending, setDeployPending] = useState(false);
   const reviewCloseButtonRef = useRef<HTMLButtonElement | null>(null);
+  const hasHydratedDraftRef = useRef(false);
 
   const { walletSession, walletAdapter, connect } = useManageWallet();
 
@@ -100,6 +155,71 @@ export default function DeployWizardPanel() {
       previousActiveElement?.focus();
     };
   }, [reviewOpen, deployPending]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const stored = parseStoredDraft(
+      window.localStorage.getItem(DEPLOY_WIZARD_DRAFT_STORAGE_KEY)
+    );
+    if (stored) {
+      setCollectionName(stored.collectionName);
+      setSymbol(stored.symbol);
+      setSymbolTouched(stored.symbolTouched);
+      setDescription(stored.description);
+      setSupply(stored.supply);
+      setMintPriceStx(stored.mintPriceStx);
+      setMintType(stored.mintType);
+      setParentInscriptions(stored.parentInscriptions);
+      setArtistAddress(stored.artistAddress);
+      setArtistAddressTouched(stored.artistAddressTouched);
+      setMarketplaceAddress(stored.marketplaceAddress);
+      setMarketplaceAddressTouched(stored.marketplaceAddressTouched);
+    }
+    hasHydratedDraftRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (!hasHydratedDraftRef.current || typeof window === 'undefined') {
+      return;
+    }
+    const payload: DeployWizardDraftStorage = {
+      collectionName,
+      symbol,
+      symbolTouched,
+      description,
+      supply,
+      mintPriceStx,
+      mintType,
+      parentInscriptions,
+      artistAddress,
+      artistAddressTouched,
+      marketplaceAddress,
+      marketplaceAddressTouched
+    };
+    try {
+      window.localStorage.setItem(
+        DEPLOY_WIZARD_DRAFT_STORAGE_KEY,
+        JSON.stringify(payload)
+      );
+    } catch {
+      // Ignore storage write failures; deploy flow remains fully functional.
+    }
+  }, [
+    collectionName,
+    symbol,
+    symbolTouched,
+    description,
+    supply,
+    mintPriceStx,
+    mintType,
+    parentInscriptions,
+    artistAddress,
+    artistAddressTouched,
+    marketplaceAddress,
+    marketplaceAddressTouched
+  ]);
 
   useEffect(() => {
     if (symbolTouched) {
@@ -590,6 +710,9 @@ export default function DeployWizardPanel() {
       <p className="deploy-wizard__intro">
         Tell us about your drop. Xtrata handles the contract template, safe defaults,
         and deployment wiring for you.
+      </p>
+      <p className="meta-value">
+        Draft form values auto-save on this browser, so reloads keep your in-progress inputs.
       </p>
 
       <div className="deploy-wizard__grid">

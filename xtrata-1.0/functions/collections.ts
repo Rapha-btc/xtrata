@@ -23,14 +23,27 @@ export const onRequest: PagesFunction = async ({ request, env }) => {
     try {
       const url = new URL(request.url);
       const artistAddress = url.searchParams.get('artistAddress')?.trim() ?? '';
+      const includeArchivedParam =
+        url.searchParams.get('includeArchived')?.trim().toLowerCase() ?? '';
+      const includeArchived =
+        includeArchivedParam === '1' ||
+        includeArchivedParam === 'true' ||
+        includeArchivedParam === 'yes';
       const result =
         artistAddress.length > 0
           ? await queryAll(
               env,
-              'SELECT * FROM collections WHERE UPPER(artist_address) = UPPER(?) ORDER BY created_at DESC',
+              includeArchived
+                ? 'SELECT * FROM collections WHERE UPPER(artist_address) = UPPER(?) ORDER BY created_at DESC'
+                : "SELECT * FROM collections WHERE UPPER(artist_address) = UPPER(?) AND LOWER(COALESCE(state, 'draft')) != 'archived' ORDER BY created_at DESC",
               [artistAddress]
             )
-          : await queryAll(env, 'SELECT * FROM collections ORDER BY created_at DESC');
+          : await queryAll(
+              env,
+              includeArchived
+                ? 'SELECT * FROM collections ORDER BY created_at DESC'
+                : "SELECT * FROM collections WHERE LOWER(COALESCE(state, 'draft')) != 'archived' ORDER BY created_at DESC"
+            );
       return jsonResponse((result.results ?? []).map(mapRow));
     } catch (error) {
       return serverError(
