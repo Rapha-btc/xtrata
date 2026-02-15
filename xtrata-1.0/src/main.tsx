@@ -71,7 +71,7 @@ ReactDOM.createRoot(root).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       {collectionIdFromPath ? (
-        <CollectionMintLivePage collectionId={collectionIdFromPath} />
+        <CollectionMintLivePage collectionKey={collectionIdFromPath} />
       ) : pathname.startsWith(ADMIN_PATH) ? (
         <AdminGate>
           <App />

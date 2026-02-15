@@ -471,8 +471,9 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
 
   const canPublish = publishBlockers.length === 0;
   const normalizedCollectionId = collectionId.trim();
-  const livePagePath = normalizedCollectionId
-    ? `/collection/${encodeURIComponent(normalizedCollectionId)}`
+  const livePageKey = toText(collection?.slug) || normalizedCollectionId;
+  const livePagePath = livePageKey
+    ? `/collection/${encodeURIComponent(livePageKey)}`
     : '';
   const livePageUrl = useMemo(() => {
     if (!livePagePath) {

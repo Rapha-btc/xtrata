@@ -42,7 +42,7 @@ const STATUS_REFRESH_MS = 20_000;
 const MINTED_SCAN_BATCH_SIZE = 8;
 
 type CollectionMintLivePageProps = {
-  collectionId: string;
+  collectionKey: string;
 };
 
 type CollectionRecord = {
@@ -261,9 +261,9 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   const [mintedScanPending, setMintedScanPending] = useState(false);
   const [pendingMintAssetIds, setPendingMintAssetIds] = useState<string[]>([]);
 
-  const normalizedCollectionId = useMemo(
-    () => props.collectionId.trim(),
-    [props.collectionId]
+  const normalizedCollectionKey = useMemo(
+    () => props.collectionKey.trim(),
+    [props.collectionKey]
   );
 
   const walletAdapter = useMemo(
@@ -288,6 +288,14 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   const metadataCover = useMemo(
     () => toRecord(metadataCollectionPage?.coverImage) ?? null,
     [metadataCollectionPage]
+  );
+  const resolvedCollectionId = useMemo(
+    () => toText(collection?.id),
+    [collection]
+  );
+  const resolvedCollectionSlug = useMemo(
+    () => toText(collection?.slug),
+    [collection]
   );
 
   const collectionContract = useMemo(() => {
@@ -356,11 +364,11 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     const source = toText(metadataCover?.source);
     if (source === 'collection-asset') {
       const assetId = toText(metadataCover?.assetId);
-      if (!assetId || !normalizedCollectionId) {
+      if (!assetId || !resolvedCollectionId) {
         return null;
       }
       return `/collections/${encodeURIComponent(
-        normalizedCollectionId
+        resolvedCollectionId
       )}/asset-preview?assetId=${encodeURIComponent(assetId)}`;
     }
     if (source === 'inscribed-image-url') {
@@ -370,13 +378,13 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       }
     }
     const fallback = imageAssets[0];
-    if (!fallback || !normalizedCollectionId) {
+    if (!fallback || !resolvedCollectionId) {
       return null;
     }
     return `/collections/${encodeURIComponent(
-      normalizedCollectionId
+      resolvedCollectionId
     )}/asset-preview?assetId=${encodeURIComponent(fallback.asset_id)}`;
-  }, [metadataCover, imageAssets, normalizedCollectionId]);
+  }, [metadataCover, imageAssets, resolvedCollectionId]);
 
   const collectionTitle = useMemo(
     () =>
@@ -468,26 +476,34 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   }, []);
 
   const loadCollectionSnapshot = useCallback(async () => {
-    if (!normalizedCollectionId) {
+    if (!normalizedCollectionKey) {
       setCollection(null);
       setAssets([]);
-      setCollectionMessage('Collection id missing from URL.');
+      setCollectionMessage('Collection key missing from URL.');
       return;
     }
     setCollectionLoading(true);
     setCollectionMessage(null);
     try {
-      const [collectionResponse, assetsResponse] = await Promise.all([
-        fetch(`/collections/${encodeURIComponent(normalizedCollectionId)}`, {
+      const collectionResponse = await fetch(
+        `/collections/${encodeURIComponent(normalizedCollectionKey)}`,
+        {
           cache: 'no-store'
-        }),
-        fetch(`/collections/${encodeURIComponent(normalizedCollectionId)}/assets`, {
-          cache: 'no-store'
-        })
-      ]);
+        }
+      );
       const loadedCollection = await parseJsonResponse<CollectionRecord>(
         collectionResponse,
         'Collection'
+      );
+      const loadedCollectionId = toText(loadedCollection.id);
+      if (!loadedCollectionId) {
+        throw new Error('Collection record is missing an id.');
+      }
+      const assetsResponse = await fetch(
+        `/collections/${encodeURIComponent(loadedCollectionId)}/assets`,
+        {
+          cache: 'no-store'
+        }
       );
       const loadedAssets = await parseJsonResponse<CollectionAsset[]>(
         assetsResponse,
@@ -503,7 +519,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     } finally {
       setCollectionLoading(false);
     }
-  }, [normalizedCollectionId]);
+  }, [normalizedCollectionKey]);
 
   const loadContractStatus = useCallback(async () => {
     if (!collectionContract) {
@@ -554,7 +570,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   }, [collectionContract, walletSession.address]);
 
   const scanMintedAssets = useCallback(async () => {
-    if (!normalizedCollectionId || imageAssets.length === 0) {
+    if (!resolvedCollectionId || imageAssets.length === 0) {
       setMintedTokenIds({});
       return;
     }
@@ -592,7 +608,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     } finally {
       setMintedScanPending(false);
     }
-  }, [coreClient, coreContract.address, imageAssets, normalizedCollectionId, walletSession.address]);
+  }, [coreClient, coreContract.address, imageAssets, resolvedCollectionId, walletSession.address]);
 
   const ensureConnectedWallet = useCallback(async () => {
     if (walletSession.address && walletSession.network) {
@@ -645,7 +661,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
 
   const mintAsset = useCallback(
     async (asset: CollectionAsset, session: WalletSession) => {
-      if (!normalizedCollectionId) {
+      if (!resolvedCollectionId) {
         throw new Error('Collection id missing.');
       }
       const expectedHashBytes = hashHexToBytes(asset.expected_hash ?? '');
@@ -655,7 +671,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       const tokenUri = DEFAULT_TOKEN_URI;
       const previewResponse = await fetch(
         `/collections/${encodeURIComponent(
-          normalizedCollectionId
+          resolvedCollectionId
         )}/asset-preview?assetId=${encodeURIComponent(asset.asset_id)}`,
         { cache: 'no-store' }
       );
@@ -741,7 +757,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       appendMintLog,
       coreContract.address,
       coreContract.contractName,
-      normalizedCollectionId,
+      resolvedCollectionId,
       requestCollectionContractCall
     ]
   );
@@ -1018,7 +1034,13 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
               <div>
                 <span className="meta-label">Collection ID</span>
                 <span className="meta-value">
-                  <code>{normalizedCollectionId || 'Unknown'}</code>
+                  <code>{resolvedCollectionId || 'Unknown'}</code>
+                </span>
+              </div>
+              <div>
+                <span className="meta-label">Collection slug</span>
+                <span className="meta-value">
+                  <code>{resolvedCollectionSlug || normalizedCollectionKey || 'Unknown'}</code>
                 </span>
               </div>
               <div>
@@ -1121,7 +1143,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                 {mintedGallery.map((asset) => {
                   const tokenId = mintedTokenIds[asset.asset_id] ?? null;
                   const previewUrl = `/collections/${encodeURIComponent(
-                    normalizedCollectionId
+                    resolvedCollectionId
                   )}/asset-preview?assetId=${encodeURIComponent(asset.asset_id)}`;
                   return (
                     <article
