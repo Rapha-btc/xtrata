@@ -95,6 +95,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
   const [selectedCoverAssetId, setSelectedCoverAssetId] = useState('');
   const [inscribedCoverUrl, setInscribedCoverUrl] = useState('');
   const [coverMessage, setCoverMessage] = useState<string | null>(null);
+  const [liveLinkMessage, setLiveLinkMessage] = useState<string | null>(null);
   const [coverSaving, setCoverSaving] = useState(false);
   const [coverPreviewFailed, setCoverPreviewFailed] = useState(false);
   const [readiness, setReadiness] = useState<PublishReadiness>({
@@ -384,6 +385,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
     setCollectionId(normalizedActiveCollectionId);
     setMessage(null);
     setCoverMessage(null);
+    setLiveLinkMessage(null);
   }, [normalizedActiveCollectionId]);
 
   const availableImageAssets = useMemo(
@@ -463,10 +465,40 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
   }, [collectionId, readiness]);
 
   const canPublish = publishBlockers.length === 0;
+  const normalizedCollectionId = collectionId.trim();
+  const livePagePath = normalizedCollectionId
+    ? `/collection/${encodeURIComponent(normalizedCollectionId)}`
+    : '';
+  const livePageUrl = useMemo(() => {
+    if (!livePagePath) {
+      return '';
+    }
+    if (typeof window === 'undefined') {
+      return livePagePath;
+    }
+    return `${window.location.origin}${livePagePath}`;
+  }, [livePagePath]);
 
   const liveState = toText(collection?.state).toLowerCase() === 'published'
     ? 'Live'
     : 'Draft';
+
+  const copyLivePageLink = async () => {
+    if (!livePageUrl) {
+      setLiveLinkMessage('Enter a collection ID first.');
+      return;
+    }
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(livePageUrl);
+        setLiveLinkMessage('Live page link copied.');
+        return;
+      }
+      setLiveLinkMessage('Clipboard is unavailable in this browser.');
+    } catch {
+      setLiveLinkMessage('Unable to copy link. You can still open it directly.');
+    }
+  };
 
   return (
     <div className="publish-ops-panel">
@@ -483,6 +515,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
             setCollectionId(event.target.value);
             setMessage(null);
             setCoverMessage(null);
+            setLiveLinkMessage(null);
           }}
         />
         <span className="field__hint">
@@ -647,6 +680,26 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
           <p className="field__hint">
             This preview mirrors the top of the upcoming public collection page.
           </p>
+          {livePagePath ? (
+            <div className="mint-actions">
+              <a
+                className="button button--ghost button--mini collection-live-preview__link-button"
+                href={livePagePath}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open live page
+              </a>
+              <button
+                className="button button--ghost button--mini"
+                type="button"
+                onClick={() => void copyLivePageLink()}
+              >
+                Copy live page link
+              </button>
+            </div>
+          ) : null}
+          {liveLinkMessage ? <p className="meta-value">{liveLinkMessage}</p> : null}
         </div>
       </div>
 

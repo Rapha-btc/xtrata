@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
 import PublicApp from './PublicApp';
+import CollectionMintLivePage from './CollectionMintLivePage';
 import AdminGate from './admin/AdminGate';
 import ArtistManagerGate from './manage/ArtistManagerGate';
 import CollectionManagerApp from './manage/CollectionManagerApp';
@@ -49,14 +50,33 @@ if (!root) {
 
 applyThemeToDocument(resolveInitialTheme());
 
+const COLLECTION_LIVE_PATH_PREFIX = '/collection/';
+const pathname = window.location.pathname;
+const collectionPathMatch = pathname.startsWith(COLLECTION_LIVE_PATH_PREFIX)
+  ? pathname.slice(COLLECTION_LIVE_PATH_PREFIX.length)
+  : '';
+const decodePathSegment = (value: string) => {
+  try {
+    return decodeURIComponent(value).trim();
+  } catch {
+    return value.trim();
+  }
+};
+const collectionIdFromPath =
+  collectionPathMatch.length > 0
+    ? decodePathSegment(collectionPathMatch.split('/')[0] ?? '')
+    : '';
+
 ReactDOM.createRoot(root).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      {window.location.pathname.startsWith(ADMIN_PATH) ? (
+      {collectionIdFromPath ? (
+        <CollectionMintLivePage collectionId={collectionIdFromPath} />
+      ) : pathname.startsWith(ADMIN_PATH) ? (
         <AdminGate>
           <App />
         </AdminGate>
-      ) : window.location.pathname.startsWith(MANAGE_PATH) ? (
+      ) : pathname.startsWith(MANAGE_PATH) ? (
         <ArtistManagerGate>
           <CollectionManagerApp />
         </ArtistManagerGate>
