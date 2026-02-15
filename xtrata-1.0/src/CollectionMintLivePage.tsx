@@ -6,7 +6,10 @@ import {
   callReadOnlyFunction,
   ClarityType,
   cvToValue,
+  FungibleConditionCode,
   listCV,
+  makeStandardSTXPostCondition,
+  type PostCondition,
   PostConditionMode,
   principalCV,
   stringAsciiCV,
@@ -82,6 +85,8 @@ type ContractStatus = {
   paused: boolean | null;
   finalized: boolean | null;
   mintPrice: bigint | null;
+  activePhaseId: bigint | null;
+  activePhaseMintPrice: bigint | null;
   maxSupply: bigint | null;
   mintedCount: bigint | null;
   reservedCount: bigint | null;
@@ -182,6 +187,22 @@ const parseUintCv = (value: ClarityValue) => {
     }
   }
   return null;
+};
+
+const parseMintedIndexTokenId = (value: ClarityValue) => {
+  const optional = value.type === ClarityType.ResponseOk ? value.value : value;
+  if (optional.type !== ClarityType.OptionalSome) {
+    return null;
+  }
+  const tuple = optional.value;
+  if (tuple.type !== ClarityType.Tuple) {
+    return null;
+  }
+  const tokenIdCv = tuple.data['token-id'];
+  if (!tokenIdCv) {
+    return null;
+  }
+  return parseUintCv(tokenIdCv);
 };
 
 const normalizeHashHex = (value: string | null | undefined) => {
@@ -296,6 +317,14 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   const [mintMessage, setMintMessage] = useState<string | null>(null);
   const [mintLog, setMintLog] = useState<string[]>([]);
   const [mintedTokenIds, setMintedTokenIds] = useState<Record<string, string>>({});
+  const [collectionTokenNumberByGlobalId, setCollectionTokenNumberByGlobalId] = useState<
+    Record<string, number>
+  >({});
+  const [collectionIndexCount, setCollectionIndexCount] = useState(0);
+  const [collectionIndexSyncPending, setCollectionIndexSyncPending] = useState(false);
+  const [collectionIndexSyncMessage, setCollectionIndexSyncMessage] = useState<string | null>(
+    null
+  );
   const [canonicalHashHexByAssetId, setCanonicalHashHexByAssetId] = useState<
     Record<string, string>
   >({});
@@ -423,13 +452,30 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     [assets]
   );
 
-  const mintedGallery = useMemo(
-    () =>
-      imageAssets.filter(
-        (asset) => typeof mintedTokenIds[asset.asset_id] === 'string'
-      ),
-    [imageAssets, mintedTokenIds]
-  );
+  const mintedGallery = useMemo(() => {
+    const minted = imageAssets.filter(
+      (asset) => typeof mintedTokenIds[asset.asset_id] === 'string'
+    );
+    minted.sort((left, right) => {
+      const leftGlobal = mintedTokenIds[left.asset_id] ?? '';
+      const rightGlobal = mintedTokenIds[right.asset_id] ?? '';
+      const leftLocal = leftGlobal ? collectionTokenNumberByGlobalId[leftGlobal] : undefined;
+      const rightLocal = rightGlobal ? collectionTokenNumberByGlobalId[rightGlobal] : undefined;
+      if (typeof leftLocal === 'number' && typeof rightLocal === 'number') {
+        return leftLocal - rightLocal;
+      }
+      if (typeof leftLocal === 'number') {
+        return -1;
+      }
+      if (typeof rightLocal === 'number') {
+        return 1;
+      }
+      const leftName = left.filename ?? left.path;
+      const rightName = right.filename ?? right.path;
+      return leftName.localeCompare(rightName);
+    });
+    return minted;
+  }, [collectionTokenNumberByGlobalId, imageAssets, mintedTokenIds]);
 
   const coverUrl = useMemo(() => {
     const source = toText(metadataCover?.source);
@@ -578,13 +624,34 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       return 'STX payout transfer failed (err u2). A payout recipient is likely the same as the minting wallet. Use a different minter wallet or update payout recipients/splits.';
     }
     if (normalized.includes('post-condition check failure')) {
-      return 'Wallet post-conditions blocked STX movement for mint-begin. This build now sends collection calls with Allow mode; refresh and retry.';
+      return 'Wallet safety checks blocked this transaction. This usually means payout settings or mint price changed. Refresh status and retry.';
     }
     if (normalized.includes('wallet cancelled') || normalized.includes('failed to broadcast')) {
       return 'Wallet cancelled or could not broadcast. No new mint step was confirmed. You can safely resume.';
     }
     return raw;
   }, []);
+
+  const resolveMintBeginPostConditions = useCallback(
+    (sender: string) => {
+      if (!sender) {
+        return null;
+      }
+      const mintPrice =
+        contractStatus?.activePhaseMintPrice ?? contractStatus?.mintPrice ?? null;
+      if (mintPrice === null || mintPrice < 0n) {
+        return null;
+      }
+      return [
+        makeStandardSTXPostCondition(
+          sender,
+          FungibleConditionCode.LessEqual,
+          mintPrice
+        )
+      ] as PostCondition[];
+    },
+    [contractStatus?.activePhaseMintPrice, contractStatus?.mintPrice]
+  );
 
   const fetchAssetBytes = useCallback(
     async (assetId: string) => {
@@ -660,7 +727,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   const loadContractStatus = useCallback(async () => {
     if (!collectionContract) {
       setContractStatus(null);
-      return;
+      return null;
     }
     setStatusLoading(true);
     setStatusMessage(null);
@@ -688,22 +755,139 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
           readOnly('get-minted-count'),
           readOnly('get-reserved-count')
         ]);
+      const activePhaseCv = await readOnly('get-active-phase');
+      const activePhaseId = parseUintCv(activePhaseCv);
+      let activePhaseMintPrice: bigint | null = null;
+      if (activePhaseId !== null && activePhaseId > 0n) {
+        const phaseCv = await callReadOnlyFunction({
+          contractAddress: collectionContract.address,
+          contractName: collectionContract.contractName,
+          functionName: 'get-phase',
+          functionArgs: [uintCV(activePhaseId)],
+          senderAddress,
+          network
+        });
+        const phaseValue = unwrapReadOnly(phaseCv);
+        if (phaseValue.type === ClarityType.OptionalSome) {
+          const tuple = phaseValue.value;
+          if (tuple.type === ClarityType.Tuple) {
+            const phasePriceCv = tuple.data['mint-price'];
+            if (phasePriceCv) {
+              activePhaseMintPrice = parseUintCv(phasePriceCv);
+            }
+          }
+        }
+      }
 
-      setContractStatus({
+      const nextStatus = {
         paused: Boolean(cvToValue(pausedCv)),
         finalized: Boolean(cvToValue(finalizedCv)),
         mintPrice: parseUintCv(mintPriceCv),
+        activePhaseId,
+        activePhaseMintPrice,
         maxSupply: parseUintCv(maxSupplyCv),
         mintedCount: parseUintCv(mintedCountCv),
         reservedCount: parseUintCv(reservedCountCv)
-      });
+      } satisfies ContractStatus;
+      setContractStatus(nextStatus);
+      return nextStatus;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       setStatusMessage(`Unable to refresh contract status: ${message}`);
+      return null;
     } finally {
       setStatusLoading(false);
     }
   }, [collectionContract, walletSession.address]);
+
+  const syncCollectionTokenNumbers = useCallback(
+    async (options?: { forceFull?: boolean; mintedCount?: bigint | null }) => {
+      if (!collectionContract) {
+        setCollectionTokenNumberByGlobalId({});
+        setCollectionIndexCount(0);
+        setCollectionIndexSyncMessage(null);
+        return null;
+      }
+      const mintedCountValue = options?.mintedCount ?? contractStatus?.mintedCount ?? null;
+      if (mintedCountValue === null) {
+        return null;
+      }
+      const targetCount = Number(mintedCountValue);
+      if (!Number.isSafeInteger(targetCount) || targetCount < 0) {
+        setCollectionIndexSyncMessage(
+          'Collection numbering is too large to index safely in this view.'
+        );
+        return null;
+      }
+      if (targetCount === 0) {
+        setCollectionTokenNumberByGlobalId({});
+        setCollectionIndexCount(0);
+        setCollectionIndexSyncMessage(null);
+        return {};
+      }
+
+      const needsFullSync = options?.forceFull === true || targetCount < collectionIndexCount;
+      const startIndex = needsFullSync ? 0 : collectionIndexCount;
+      if (startIndex >= targetCount) {
+        setCollectionIndexSyncMessage(null);
+        return collectionTokenNumberByGlobalId;
+      }
+
+      setCollectionIndexSyncPending(true);
+      setCollectionIndexSyncMessage(null);
+      try {
+        const senderAddress = walletSession.address ?? collectionContract.address;
+        const network = toStacksNetwork(collectionContract.network);
+        const nextEntries: Record<string, number> = {};
+        for (let index = startIndex; index < targetCount; index += 1) {
+          const entryCv = await callReadOnlyFunction({
+            contractAddress: collectionContract.address,
+            contractName: collectionContract.contractName,
+            functionName: 'get-minted-id',
+            functionArgs: [uintCV(BigInt(index))],
+            senderAddress,
+            network
+          });
+          const tokenId = parseMintedIndexTokenId(entryCv);
+          if (tokenId !== null) {
+            nextEntries[tokenId.toString()] = index + 1;
+          }
+        }
+
+        const nextMap =
+          needsFullSync || startIndex === 0
+            ? nextEntries
+            : { ...collectionTokenNumberByGlobalId, ...nextEntries };
+        setCollectionTokenNumberByGlobalId(nextMap);
+        setCollectionIndexCount(targetCount);
+        return nextMap;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        setCollectionIndexSyncMessage(`Unable to refresh collection numbering: ${message}`);
+        return null;
+      } finally {
+        setCollectionIndexSyncPending(false);
+      }
+    },
+    [
+      collectionContract,
+      collectionIndexCount,
+      collectionTokenNumberByGlobalId,
+      contractStatus?.mintedCount,
+      walletSession.address
+    ]
+  );
+
+  const formatTokenReference = useCallback(
+    (globalTokenId: string) => {
+      const localTokenNumber = collectionTokenNumberByGlobalId[globalTokenId];
+      if (typeof localTokenNumber === 'number') {
+        return `Collection #${localTokenNumber} (Xtrata #${globalTokenId})`;
+      }
+      return `Xtrata #${globalTokenId}`;
+    },
+    [collectionTokenNumberByGlobalId]
+  );
 
   const scanMintedAssets = useCallback(async () => {
     if (!resolvedCollectionId || imageAssets.length === 0) {
@@ -822,6 +1006,8 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       params: {
         functionName: string;
         functionArgs: ClarityValue[];
+        postConditionMode?: PostConditionMode;
+        postConditions?: PostCondition[];
       },
       session: WalletSession
     ) => {
@@ -840,7 +1026,8 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
           functionArgs: params.functionArgs,
           network,
           stxAddress: session.address,
-          postConditionMode: PostConditionMode.Allow,
+          postConditionMode: params.postConditionMode ?? PostConditionMode.Deny,
+          postConditions: params.postConditions,
           appDetails: {
             name: 'Xtrata Collection Mint'
           },
@@ -960,7 +1147,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
         if (progress.tokenId !== null) {
           const existing = progress.tokenId.toString();
           setMintedTokenIds((current) => ({ ...current, [asset.asset_id]: existing }));
-          appendMintLog(`Already minted as token #${existing}.`);
+          appendMintLog(`Already minted as ${formatTokenReference(existing)}.`);
           setBeginState('done');
           setUploadState('done');
           setSealState('done');
@@ -969,6 +1156,12 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
 
         const needsBegin = !progress.hasReservation || progress.uploadState === null;
         if (needsBegin) {
+          const beginPostConditions = resolveMintBeginPostConditions(session.address);
+          if (!beginPostConditions) {
+            throw new Error(
+              'Mint price is unavailable for wallet safety checks. Refresh status, then retry.'
+            );
+          }
           setBeginState('pending');
           setMintMessage('Approve begin transaction in wallet.');
           const beginTx = await requestCollectionContractCall(
@@ -980,7 +1173,9 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                 stringAsciiCV(asset.mime_type || 'application/octet-stream'),
                 uintCV(BigInt(rawBytes.length)),
                 uintCV(BigInt(chunks.length))
-              ]
+              ],
+              postConditionMode: PostConditionMode.Deny,
+              postConditions: beginPostConditions
             },
             session
           );
@@ -1037,7 +1232,8 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                   principalCV(coreContractId),
                   bufferCV(expectedHashBytes),
                   listCV(batch.map((chunk) => bufferCV(chunk)))
-                ]
+                ],
+                postConditionMode: PostConditionMode.Deny
               },
               session
             );
@@ -1102,7 +1298,8 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
               principalCV(coreContractId),
               bufferCV(expectedHashBytes),
               stringAsciiCV(tokenUri)
-            ]
+            ],
+            postConditionMode: PostConditionMode.Deny
           },
           session
         );
@@ -1140,8 +1337,10 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       coreContract.address,
       coreContract.contractName,
       fetchAssetBytes,
+      formatTokenReference,
       getMintProgress,
       pauseBeforeNextTx,
+      resolveMintBeginPostConditions,
       requestCollectionContractCall,
       waitForMintProgress
     ]
@@ -1170,6 +1369,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       if (mismatch) {
         throw new Error(`Switch wallet to ${mismatch.expected} before minting.`);
       }
+      const senderAddress = session.address;
 
       const shuffled = shuffleAssets(imageAssets);
       const nextMinted = { ...mintedTokenIds };
@@ -1235,10 +1435,21 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       );
       setMintMessage(`Preparing ${target.filename ?? target.path}...`);
       const tokenId = await mintAsset(target, session);
-      setMintMessage(`Mint confirmed as token #${tokenId}.`);
+      const refreshedStatus = await loadContractStatus();
+      const syncedIds = await syncCollectionTokenNumbers({
+        forceFull: true,
+        mintedCount: refreshedStatus?.mintedCount ?? null
+      });
+      const localTokenNumber = syncedIds ? syncedIds[tokenId] : undefined;
+      if (typeof localTokenNumber === 'number') {
+        setMintMessage(`Mint confirmed as Collection #${localTokenNumber}.`);
+      } else {
+        setMintMessage('Mint confirmed. Collection numbering is syncing now.');
+      }
       setResumeAssetId(null);
       window.setTimeout(() => {
         void loadContractStatus();
+        void syncCollectionTokenNumbers();
         void scanMintedAssets();
       }, 8_000);
     } catch (error) {
@@ -1276,6 +1487,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     resumeAssetId,
     scanMintedAssets,
     setResumeAssetId,
+    syncCollectionTokenNumbers,
     walletPending
   ]);
 
@@ -1338,6 +1550,10 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   useEffect(() => {
     setCanonicalHashHexByAssetId({});
     setMintedTokenIds({});
+    setCollectionTokenNumberByGlobalId({});
+    setCollectionIndexCount(0);
+    setCollectionIndexSyncPending(false);
+    setCollectionIndexSyncMessage(null);
     setPendingMintAssetIds([]);
     setResumeAssetId(null);
     setMintLog([]);
@@ -1355,6 +1571,13 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     }, STATUS_REFRESH_MS);
     return () => window.clearInterval(timer);
   }, [collectionContract, loadContractStatus]);
+
+  useEffect(() => {
+    if (!collectionContract || contractStatus?.mintedCount === null) {
+      return;
+    }
+    void syncCollectionTokenNumbers();
+  }, [collectionContract, contractStatus?.mintedCount, syncCollectionTokenNumbers]);
 
   useEffect(() => {
     if (!collection || !published || !collectionContract || imageAssets.length === 0) {
@@ -1535,6 +1758,22 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                 <span className="meta-value">{finalizedLabel}</span>
               </div>
               <div>
+                <span className="meta-label">Wallet safety</span>
+                <span className="meta-value">
+                  {(
+                    contractStatus?.activePhaseMintPrice ??
+                    contractStatus?.mintPrice ??
+                    null
+                  ) === null
+                    ? 'Loading protected spend cap...'
+                    : `Deny mode with max ${toMicroStxLabel(
+                        contractStatus?.activePhaseMintPrice ??
+                          contractStatus?.mintPrice ??
+                          null
+                      )} on begin`}
+                </span>
+              </div>
+              <div>
                 <span className="meta-label">Connected wallet (STX)</span>
                 <span className="meta-value">
                   {connectedAddress ? (
@@ -1624,9 +1863,13 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
             {mintMessage && <div className="alert">{mintMessage}</div>}
             {collectionLoading && <p className="meta-value">Loading collection...</p>}
             {statusLoading && <p className="meta-value">Refreshing contract status...</p>}
+            {collectionIndexSyncPending && (
+              <p className="meta-value">Syncing collection numbering...</p>
+            )}
             {mintedScanPending && (
               <p className="meta-value">Refreshing minted gallery...</p>
             )}
+            {collectionIndexSyncMessage && <div className="alert">{collectionIndexSyncMessage}</div>}
 
             {mintLog.length > 0 && (
               <div className="mint-log">
@@ -1656,6 +1899,10 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
               <div className="collection-live-page__gallery-grid">
                 {mintedGallery.map((asset) => {
                   const tokenId = mintedTokenIds[asset.asset_id] ?? null;
+                  const localTokenNumber =
+                    tokenId && tokenId.length > 0
+                      ? collectionTokenNumberByGlobalId[tokenId]
+                      : undefined;
                   const previewUrl = `/collections/${encodeURIComponent(
                     resolvedCollectionId
                   )}/asset-preview?assetId=${encodeURIComponent(asset.asset_id)}`;
@@ -1676,7 +1923,12 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                           {asset.filename ?? asset.path}
                         </span>
                         <span className="meta-label">
-                          {tokenId ? `Token #${tokenId}` : 'Token ID pending'}
+                          {typeof localTokenNumber === 'number'
+                            ? `Collection #${localTokenNumber}`
+                            : 'Collection ID syncing...'}
+                        </span>
+                        <span className="meta-label">
+                          {tokenId ? `Xtrata #${tokenId}` : 'Xtrata ID pending'}
                         </span>
                         <span className="meta-label">
                           {formatBytes(BigInt(asset.total_bytes))}
