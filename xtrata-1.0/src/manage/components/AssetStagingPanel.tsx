@@ -43,6 +43,9 @@ type UploadReadiness = {
   deployTxId: string | null;
   deployTxStatus: string | null;
   network: 'mainnet' | 'testnet' | null;
+  collectionState?: string;
+  uploadsLocked?: boolean;
+  lockReason?: string | null;
 };
 
 type UploadTokenResponse = {
@@ -58,6 +61,7 @@ type CollectionRecord = {
   display_name?: string | null;
   slug?: string | null;
   metadata?: Record<string, unknown> | null;
+  state?: string | null;
 };
 
 const buildTxExplorerUrl = (
@@ -193,6 +197,7 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
     null
   );
   const [collectionLabel, setCollectionLabel] = useState<string | null>(null);
+  const [collectionState, setCollectionState] = useState<string>('draft');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [orderMode, setOrderMode] = useState<UploadOrderMode>('path-natural');
   const [seededOrderSeed, setSeededOrderSeed] = useState(createSecureRandomSeed);
@@ -343,6 +348,7 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
     if (!normalizedCollectionId) {
       setCollectionTargetSupply(null);
       setCollectionLabel(null);
+      setCollectionState('draft');
       return;
     }
 
@@ -363,10 +369,12 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
         const label = payload.display_name?.trim() || payload.slug?.trim() || null;
         setCollectionLabel(label);
         setCollectionTargetSupply(parseTargetSupply(payload.metadata ?? null));
+        setCollectionState(String(payload.state ?? 'draft').trim().toLowerCase());
       } catch {
         if (!controller.signal.aborted) {
           setCollectionLabel(null);
           setCollectionTargetSupply(null);
+          setCollectionState('draft');
         }
       }
     };
@@ -572,10 +580,24 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
     );
   };
 
+  const uploadsLocked =
+    readiness?.uploadsLocked === true ||
+    collectionState === 'published' ||
+    collectionState === 'archived';
+  const uploadLockReason =
+    readiness?.lockReason ??
+    (uploadsLocked
+      ? `Uploads are locked while collection state is "${collectionState}".`
+      : null);
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!normalizedCollectionId) {
       setStatus('Enter a collection ID first.');
+      return;
+    }
+    if (uploadsLocked) {
+      setStatus(uploadLockReason ?? 'Uploads are currently locked.');
       return;
     }
     if (filesForUpload.length === 0) {
@@ -773,9 +795,10 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
   };
 
   const canUpload = preflightOnly
-    ? filesForUpload.length > 0 && !uploading
+    ? filesForUpload.length > 0 && !uploading && !uploadsLocked
     : filesForUpload.length > 0 &&
       !!readiness?.ready &&
+      !readiness?.uploadsLocked &&
       !readinessLoading &&
       !uploading;
 
@@ -796,6 +819,7 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
               clearSelectedFiles();
               setStatus(null);
             }}
+            disabled={uploading}
           />
           <span className="field__hint">
             Tip: click "Copy ID" in Your drops, then paste it here.
@@ -813,7 +837,7 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
             type="file"
             multiple
             onChange={handleFilesSelected}
-            disabled={uploading}
+            disabled={uploading || uploadsLocked}
           />
           <span className="field__hint">
             Use this for quick multi-select from a single location.
@@ -831,7 +855,7 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
             type="file"
             multiple
             onChange={handleFilesSelected}
-            disabled={uploading}
+            disabled={uploading || uploadsLocked}
           />
           <span className="field__hint">
             Folder uploads keep relative paths so collection structure stays clear.
@@ -843,7 +867,7 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
             className="button button--ghost"
             type="button"
             onClick={() => setShowAdvanced((current) => !current)}
-            disabled={uploading}
+            disabled={uploading || uploadsLocked}
           >
             {showAdvanced ? 'Hide advanced upload settings' : 'Show advanced upload settings'}
           </button>
@@ -1008,7 +1032,9 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
 
         <div className="mint-actions">
           <button className="button" type="submit" disabled={!canUpload}>
-            {uploading
+            {uploadsLocked
+              ? 'Uploads locked'
+              : uploading
               ? 'Uploading...'
               : preflightOnly
                 ? 'Run preflight checks'
@@ -1025,14 +1051,27 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
         </div>
       </form>
       {collectionId && (
-        <div className={readiness?.ready ? 'mint-step mint-step--done' : 'mint-step mint-step--pending'}>
+        <div
+          className={
+            uploadsLocked
+              ? 'mint-step mint-step--error'
+              : readiness?.ready
+                ? 'mint-step mint-step--done'
+                : 'mint-step mint-step--pending'
+          }
+        >
           <span className="meta-label">Upload readiness</span>
           <span className="meta-value">
-            {readinessLoading
+            {uploadsLocked
+              ? uploadLockReason
+              : readinessLoading
               ? 'Checking deployment confirmation...'
               : readiness?.ready
                 ? 'Ready. Deployment is confirmed on-chain.'
                 : readiness?.reason ?? 'Enter a valid collection id to check readiness.'}
+          </span>
+          <span className="meta-value">
+            Collection state: <strong>{collectionState || 'draft'}</strong>
           </span>
           {readiness?.deployTxId && (
             <a

@@ -17,13 +17,25 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
       collectionId
     });
 
+    const collectionState = String(readiness.collection?.state ?? 'draft')
+      .trim()
+      .toLowerCase();
+    const uploadsLocked =
+      collectionState === 'published' || collectionState === 'archived';
+    const lockReason = uploadsLocked
+      ? `Uploads are locked while collection state is "${collectionState}".`
+      : null;
+
     return jsonResponse({
       collectionId,
       ready: readiness.ready,
       reason: readiness.reason,
       deployTxId: readiness.deployTxId,
       deployTxStatus: readiness.deployTxStatus,
-      network: readiness.network
+      network: readiness.network,
+      collectionState,
+      uploadsLocked,
+      lockReason
     });
   } catch (error) {
     return serverError(

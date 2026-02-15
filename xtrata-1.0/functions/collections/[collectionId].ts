@@ -88,7 +88,33 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
 
   if (request.method === 'PATCH') {
     try {
+      const existing = await queryAll(
+        env,
+        'SELECT * FROM collections WHERE id = ?',
+        [collectionId]
+      );
+      const existingRecord = existing.results?.[0] as
+        | Record<string, unknown>
+        | undefined;
+      if (!existingRecord) {
+        return notFound('Collection not found.');
+      }
+      const currentState = String(existingRecord.state ?? 'draft')
+        .trim()
+        .toLowerCase();
       const payload = (await request.json()) as Record<string, unknown>;
+      const draftSettingsLocked =
+        currentState === 'published' || currentState === 'archived';
+      if (
+        draftSettingsLocked &&
+        (typeof payload.displayName === 'string' ||
+          typeof payload.artistAddress === 'string' ||
+          typeof payload.contractAddress === 'string')
+      ) {
+        return badRequest(
+          `Draft settings are locked while collection state is "${currentState}".`
+        );
+      }
       const updates: string[] = [];
       const binds: unknown[] = [];
       if (typeof payload.displayName === 'string') {

@@ -3482,6 +3482,21 @@ p {
   box-shadow: 0 0 0 1px rgba(224, 90, 42, 0.26);
 }
 
+.manage-app .collection-list__item--selectable {
+  cursor: pointer;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.manage-app .collection-list__item--selectable:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+
+.manage-app .collection-list__item--selectable:focus-visible {
+  outline: 2px solid rgba(224, 90, 42, 0.45);
+  outline-offset: 2px;
+}
+
 .manage-app .collection-list__group {
   gap: 8px;
   background: var(--surface-muted);
@@ -3502,6 +3517,12 @@ p {
 
 .manage-app .collection-list__item p {
   margin: 0;
+}
+
+.manage-app .collection-list__status {
+  margin: 0;
+  font-size: 0.74rem;
+  color: var(--muted);
 }
 
 .manage-app .collection-list code {

@@ -53,6 +53,14 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
       if (!readiness.ready) {
         return badRequest(readiness.reason);
       }
+      const collectionState = String(readiness.collection?.state ?? 'draft')
+        .trim()
+        .toLowerCase();
+      if (collectionState === 'published' || collectionState === 'archived') {
+        return badRequest(
+          `Uploads are locked while collection state is "${collectionState}".`
+        );
+      }
 
       const payload = (await request.json()) as Record<string, unknown>;
       const path = String(payload.path ?? '').trim();

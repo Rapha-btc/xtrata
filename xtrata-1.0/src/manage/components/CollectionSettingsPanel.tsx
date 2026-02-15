@@ -914,6 +914,11 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
   const contractId = contractReady
     ? `${contractAddress.trim()}.${contractName.trim()}`
     : null;
+  const pausedValue = summary?.paused ?? null;
+  const finalizedValue = summary?.finalized ?? null;
+  const draftSettingsLocked =
+    state.trim().toLowerCase() === 'published' ||
+    state.trim().toLowerCase() === 'archived';
 
   const loadCollectionById = useCallback(async (nextCollectionId: string) => {
     if (!nextCollectionId.trim()) {
@@ -961,6 +966,12 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
   const saveSettings = async () => {
     if (!collectionId.trim()) {
       setMessage('Set a collection ID first.');
+      return;
+    }
+    if (draftSettingsLocked) {
+      setMessage(
+        `Draft settings are locked while collection state is "${state.trim().toLowerCase()}".`
+      );
       return;
     }
     setMessage(null);
@@ -1290,7 +1301,12 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
             Display name
             <InfoTooltip text="Public-facing name shown in manager listings. This does not redeploy the contract." />
           </span>
-          <input className="input" value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
+          <input
+            className="input"
+            value={displayName}
+            onChange={(event) => setDisplayName(event.target.value)}
+            disabled={draftSettingsLocked}
+          />
         </label>
 
         <label className="field">
@@ -1302,6 +1318,7 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
             className="input"
             value={artistAddress}
             onChange={(event) => setArtistAddress(event.target.value.trim().toUpperCase())}
+            disabled={draftSettingsLocked}
           />
         </label>
 
@@ -1314,6 +1331,7 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
             className="input"
             value={contractAddress}
             onChange={(event) => setContractAddress(event.target.value.trim().toUpperCase())}
+            disabled={draftSettingsLocked}
           />
         </label>
 
@@ -1327,6 +1345,7 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
             value={contractName}
             onChange={(event) => setContractName(event.target.value.trim())}
             placeholder="xtrata-collection-example"
+            disabled={draftSettingsLocked}
           />
         </label>
 
@@ -1343,10 +1362,20 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
         </label>
 
         <div className="mint-actions">
-          <button className="button" type="button" onClick={saveSettings}>
+          <button
+            className="button"
+            type="button"
+            onClick={saveSettings}
+            disabled={draftSettingsLocked}
+          >
             Save draft settings
           </button>
         </div>
+        {draftSettingsLocked && (
+          <p className="meta-value">
+            Draft metadata editing is locked for {state.trim().toLowerCase()} collections.
+          </p>
+        )}
         {message && <div className="alert">{message}</div>}
       </div>
 
@@ -1392,17 +1421,13 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
           <div className="collection-settings-panel__summary-item">
             <span className="meta-label">Paused</span>
             <span className="meta-value">
-              {summary?.paused === null ? 'Unknown' : summary.paused ? 'Yes' : 'No'}
+              {pausedValue === null ? 'Unknown' : pausedValue ? 'Yes' : 'No'}
             </span>
           </div>
           <div className="collection-settings-panel__summary-item">
             <span className="meta-label">Finalized</span>
             <span className="meta-value">
-              {summary?.finalized === null
-                ? 'Unknown'
-                : summary.finalized
-                  ? 'Yes'
-                  : 'No'}
+              {finalizedValue === null ? 'Unknown' : finalizedValue ? 'Yes' : 'No'}
             </span>
           </div>
           <div className="collection-settings-panel__summary-item">
