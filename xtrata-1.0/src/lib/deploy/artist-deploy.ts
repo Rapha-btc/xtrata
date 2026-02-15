@@ -5,6 +5,11 @@ import {
   type ContractRegistryEntry
 } from '../contract/registry';
 import type { NetworkType } from '../network/types';
+import {
+  normalizeDependencyIds,
+  parseDependencyInput,
+  validateDependencyIds
+} from '../mint/dependencies';
 
 export type ArtistMintType = 'standard' | 'pre-inscribed';
 
@@ -17,6 +22,7 @@ export type ArtistDeployInput = {
   mintPriceStx: string;
   artistAddress: string;
   marketplaceAddress: string;
+  parentInscriptions?: string;
 };
 
 export type ArtistDeployTemplateSources = {
@@ -40,6 +46,7 @@ export type ArtistDeployResolvedInput = {
   artistAddress: string;
   marketplaceAddress: string;
   operatorAddress: string;
+  defaultDependencyIds: bigint[];
 };
 
 export type ArtistDeployBuildResult = {
@@ -195,6 +202,26 @@ export const buildArtistDeployContractSource = (params: {
     errors.push('Mint price must be a valid STX amount (up to 6 decimals).');
   }
 
+  const parsedParentDependencies = parseDependencyInput(
+    params.input.parentInscriptions ?? ''
+  );
+  if (parsedParentDependencies.invalidTokens.length > 0) {
+    errors.push(
+      `Parent inscriptions must be numeric token IDs only: ${parsedParentDependencies.invalidTokens.join(
+        ', '
+      )}.`
+    );
+  }
+  const defaultDependencyIds = normalizeDependencyIds(parsedParentDependencies.ids);
+  const parentValidation = validateDependencyIds(defaultDependencyIds);
+  if (!parentValidation.ok) {
+    if (parentValidation.reason === 'max-50') {
+      errors.push('Parent inscriptions allow up to 50 token IDs.');
+    } else {
+      errors.push('Parent inscriptions are invalid.');
+    }
+  }
+
   const supply = UINT_PATTERN.test(params.input.supply.trim())
     ? BigInt(params.input.supply.trim())
     : null;
@@ -258,7 +285,8 @@ export const buildArtistDeployContractSource = (params: {
     mintPriceMicroStx: mintPriceMicroStx ?? 0n,
     artistAddress,
     marketplaceAddress,
-    operatorAddress
+    operatorAddress,
+    defaultDependencyIds
   };
 
   if (errors.length > 0) {
@@ -378,6 +406,20 @@ export const buildArtistDeployContractSource = (params: {
       replacement: `(define-data-var collection-description (string-ascii 256) "${escapeClarityAscii(
         resolved.description
       )}")`,
+      errors
+    });
+
+    const dependencyLiteral =
+      resolved.defaultDependencyIds.length === 0
+        ? '(list)'
+        : `(list ${resolved.defaultDependencyIds
+            .map((id) => `u${id.toString()}`)
+            .join(' ')})`;
+    source = replaceLine({
+      source,
+      marker: 'default-dependencies',
+      pattern: /^\(define-data-var default-dependencies \(list 50 uint\) .+\)$/m,
+      replacement: `(define-data-var default-dependencies (list 50 uint) ${dependencyLiteral})`,
       errors
     });
   } else {

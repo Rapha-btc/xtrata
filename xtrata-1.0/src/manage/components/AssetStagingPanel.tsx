@@ -19,12 +19,31 @@ type ManagedAsset = {
   expires_at?: number | null;
 };
 
+type UploadReadiness = {
+  collectionId: string;
+  ready: boolean;
+  reason: string;
+  deployTxId: string | null;
+  deployTxStatus: string | null;
+  network: 'mainnet' | 'testnet' | null;
+};
+
+const buildTxExplorerUrl = (
+  txId: string,
+  network: UploadReadiness['network']
+) =>
+  `https://explorer.hiro.so/txid/${txId.startsWith('0x') ? txId : `0x${txId}`}?chain=${
+    network === 'testnet' ? 'testnet' : 'mainnet'
+  }&tab=overview`;
+
 export default function AssetStagingPanel() {
   const [collectionId, setCollectionId] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [assets, setAssets] = useState<ManagedAsset[]>([]);
   const [loading, setLoading] = useState(false);
+  const [readiness, setReadiness] = useState<UploadReadiness | null>(null);
+  const [readinessLoading, setReadinessLoading] = useState(false);
 
   const loadAssets = async () => {
     if (!collectionId) {
@@ -50,6 +69,45 @@ export default function AssetStagingPanel() {
     loadAssets();
   }, [collectionId]);
 
+  useEffect(() => {
+    if (!collectionId) {
+      setReadiness(null);
+      setReadinessLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setReadinessLoading(true);
+
+    const loadReadiness = async () => {
+      try {
+        const response = await fetch(`/collections/${collectionId}/readiness`, {
+          signal: controller.signal
+        });
+        const payload = await parseManageJsonResponse<UploadReadiness>(
+          response,
+          'Collection readiness'
+        );
+        if (!controller.signal.aborted) {
+          setReadiness(payload);
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setReadiness(null);
+          setStatus(toManageApiErrorMessage(error, 'Unable to check upload readiness'));
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setReadinessLoading(false);
+        }
+      }
+    };
+
+    void loadReadiness();
+
+    return () => controller.abort();
+  }, [collectionId]);
+
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     setSelectedFile(event.target.files?.[0] ?? null);
   };
@@ -58,6 +116,14 @@ export default function AssetStagingPanel() {
     event.preventDefault();
     if (!collectionId) {
       setStatus('Enter a collection id first.');
+      return;
+    }
+    if (readinessLoading) {
+      setStatus('Checking deployment readiness. Try again in a moment.');
+      return;
+    }
+    if (!readiness?.ready) {
+      setStatus(readiness?.reason ?? 'Upload is locked until deployment is confirmed.');
       return;
     }
     if (!selectedFile) {
@@ -125,17 +191,48 @@ export default function AssetStagingPanel() {
             Select file
             <InfoTooltip text="Upload one artwork file at a time. The app records hash and chunk metadata automatically." />
           </span>
-          <input className="input" type="file" onChange={handleFileChange} />
+          <input
+            className="input"
+            type="file"
+            onChange={handleFileChange}
+            disabled={!readiness?.ready}
+          />
           <span className="field__hint">
             You can repeat this to build your staged asset list.
           </span>
         </label>
         <div className="mint-actions">
-          <button className="button" type="submit" disabled={!selectedFile}>
+          <button
+            className="button"
+            type="submit"
+            disabled={!selectedFile || !readiness?.ready || readinessLoading}
+          >
             Upload to storage
           </button>
         </div>
       </form>
+      {collectionId && (
+        <div className={readiness?.ready ? 'mint-step mint-step--done' : 'mint-step mint-step--pending'}>
+          <span className="meta-label">Upload readiness</span>
+          <span className="meta-value">
+            {readinessLoading
+              ? 'Checking deployment confirmation...'
+              : readiness?.ready
+                ? 'Ready. Deployment is confirmed on-chain.'
+                : readiness?.reason ?? 'Enter a valid collection id to check readiness.'}
+          </span>
+          {readiness?.deployTxId && (
+            <a
+              className="button button--ghost button--mini"
+              href={buildTxExplorerUrl(readiness.deployTxId, readiness.network)}
+              target="_blank"
+              rel="noreferrer"
+            >
+              View deployment transaction
+            </a>
+          )}
+        </div>
+      )}
       {status && <p className="meta-value">{status}</p>}
       <div className="asset-staging__list">
         <h3>Staged assets</h3>

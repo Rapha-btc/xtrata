@@ -1,5 +1,6 @@
 import { jsonResponse, badRequest, serverError } from '../../lib/utils';
 import { run } from '../../lib/db';
+import { getCollectionDeployReadiness } from '../../lib/collection-deploy';
 
 const parseMetadata = (raw: unknown): Record<string, unknown> | null => {
   if (!raw) {
@@ -30,24 +31,16 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
       const target = payload.state === 'published' ? 'published' : 'draft';
 
       if (target === 'published') {
-        const collectionResult = await env.DB
-          .prepare('SELECT * FROM collections WHERE id = ?')
-          .bind(collectionId)
-          .all();
-        const collection = (collectionResult.results ?? [])[0] as
-          | Record<string, unknown>
-          | undefined;
-
-        if (!collection) {
-          return badRequest('Collection not found.');
+        const readiness = await getCollectionDeployReadiness({
+          env,
+          collectionId
+        });
+        if (!readiness.ready || !readiness.collection) {
+          return badRequest(readiness.reason);
         }
+        const collection = readiness.collection;
 
-        const contractAddress = String(collection.contract_address ?? '').trim();
-        if (!contractAddress) {
-          return badRequest('Deploy the collection contract before publishing.');
-        }
-
-        const metadata = parseMetadata(collection.metadata);
+        const metadata = readiness.metadata ?? parseMetadata(collection.metadata);
         const mintType =
           typeof metadata?.mintType === 'string' ? metadata.mintType : 'standard';
 

@@ -14,6 +14,7 @@ const STANDARD_TEMPLATE = `
 (define-data-var collection-name (string-ascii 64) "")
 (define-data-var collection-symbol (string-ascii 16) "")
 (define-data-var collection-description (string-ascii 256) "")
+(define-data-var default-dependencies (list 50 uint) (list))
 (define-data-var artist-recipient principal tx-sender)
 (define-data-var marketplace-recipient principal tx-sender)
 (define-data-var operator-recipient principal tx-sender)
@@ -79,6 +80,9 @@ describe('artist deploy helpers', () => {
     expect(result.source).toContain('(define-data-var mint-price uint u420000)');
     expect(result.source).toContain('(define-data-var max-supply uint u777)');
     expect(result.source).toContain(
+      '(define-data-var default-dependencies (list 50 uint) (list))'
+    );
+    expect(result.source).toContain(
       "(define-data-var artist-recipient principal 'SP3K8BC0PPEVCV7NZ6QSRWPQ2JE9E5B6N3PA0KBR9)"
     );
     expect(result.source).toContain(
@@ -123,6 +127,34 @@ describe('artist deploy helpers', () => {
     expect(result.source).toContain('(define-data-var price uint u1000000)');
   });
 
+  it('injects default parent inscription IDs for standard collection mints', () => {
+    const result = buildArtistDeployContractSource({
+      input: {
+        collectionName: 'Parents On',
+        symbol: 'PARENTS',
+        description: 'Has parent inscriptions',
+        supply: '50',
+        mintType: 'standard',
+        mintPriceStx: '0.1',
+        parentInscriptions: '9, 3 9\n12',
+        artistAddress: 'SP3K8BC0PPEVCV7NZ6QSRWPQ2JE9E5B6N3PA0KBR9',
+        marketplaceAddress: 'SP000000000000000000002Q6VF78'
+      },
+      templateSources: {
+        standardSource: STANDARD_TEMPLATE,
+        preinscribedSource: PREINSCRIBED_TEMPLATE
+      },
+      coreContractId: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0',
+      operatorAddress: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X'
+    });
+
+    expect(result.errors).toEqual([]);
+    expect(result.resolved.defaultDependencyIds).toEqual([3n, 9n, 12n]);
+    expect(result.source).toContain(
+      '(define-data-var default-dependencies (list 50 uint) (list u3 u9 u12))'
+    );
+  });
+
   it('returns validation errors for malformed input', () => {
     const result = buildArtistDeployContractSource({
       input: {
@@ -132,6 +164,7 @@ describe('artist deploy helpers', () => {
         supply: '0',
         mintType: 'standard',
         mintPriceStx: '1.1234567',
+        parentInscriptions: 'abc',
         artistAddress: 'invalid',
         marketplaceAddress: 'invalid'
       },

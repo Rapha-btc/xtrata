@@ -44,6 +44,7 @@ export default function DeployWizardPanel() {
   const [supply, setSupply] = useState('1000');
   const [mintPriceStx, setMintPriceStx] = useState('0');
   const [mintType, setMintType] = useState<ArtistMintType>('standard');
+  const [parentInscriptions, setParentInscriptions] = useState('');
   const [artistAddress, setArtistAddress] = useState('');
   const [artistAddressTouched, setArtistAddressTouched] = useState(false);
   const [marketplaceAddress, setMarketplaceAddress] = useState('');
@@ -96,6 +97,7 @@ export default function DeployWizardPanel() {
           supply,
           mintType,
           mintPriceStx,
+          parentInscriptions,
           artistAddress,
           marketplaceAddress
         },
@@ -116,6 +118,7 @@ export default function DeployWizardPanel() {
       supply,
       mintType,
       mintPriceStx,
+      parentInscriptions,
       artistAddress,
       marketplaceAddress,
       coreTarget
@@ -170,6 +173,7 @@ export default function DeployWizardPanel() {
         supply,
         mintType,
         mintPriceStx,
+        parentInscriptions,
         artistAddress,
         marketplaceAddress
       },
@@ -203,7 +207,10 @@ export default function DeployWizardPanel() {
         description: refreshBuild.resolved.description,
         supply: refreshBuild.resolved.supply.toString(),
         mintPriceStx,
-        mintPriceMicroStx: refreshBuild.resolved.mintPriceMicroStx.toString()
+        mintPriceMicroStx: refreshBuild.resolved.mintPriceMicroStx.toString(),
+        parentInscriptionIds: refreshBuild.resolved.defaultDependencyIds.map((id) =>
+          id.toString()
+        )
       },
       hardcodedDefaults: {
         paused: ARTIST_DEPLOY_DEFAULTS.pausedByDefault,
@@ -423,6 +430,28 @@ export default function DeployWizardPanel() {
           <span className="field__hint">Set to 0 for a free mint.</span>
         </label>
 
+        {mintType === 'standard' && (
+          <label className="field field--full">
+            <span className="field__label info-label">
+              Parent inscriptions (optional)
+              <InfoTooltip text="Token IDs that should be attached as parents to every mint in this collection." />
+            </span>
+            <textarea
+              className="textarea deploy-wizard__description"
+              value={parentInscriptions}
+              placeholder="12, 144, 2048"
+              onChange={(event) => {
+                setParentInscriptions(event.target.value);
+                setStatus(null);
+              }}
+            />
+            <span className="field__hint">
+              Comma, space, or newline separated token IDs. Leave blank for none.
+              If set, minting still supports multiple items but each seal is processed one-by-one.
+            </span>
+          </label>
+        )}
+
         <label className="field">
           <span className="field__label info-label">
             Artist payout address
@@ -459,6 +488,14 @@ export default function DeployWizardPanel() {
           <span className="field__hint">Set this now so deployment ships with your chosen marketplace.</span>
         </label>
       </div>
+
+      {mintType === 'standard' && parentInscriptions.trim().length > 0 && (
+        <div className="alert">
+          Parent inscriptions enabled: collectors can still mint multiple items in one flow,
+          but final sealing must run one transaction per item so parent links are enforced.
+          Begin/upload can still use chunk batching.
+        </div>
+      )}
 
       <div className="deploy-wizard__defaults">
         <p className="deploy-wizard__defaults-title">Safe defaults we set for you</p>
@@ -547,6 +584,23 @@ export default function DeployWizardPanel() {
                 <p>
                   <strong>Price per mint:</strong> {mintPriceStx.trim() || '0'} STX
                 </p>
+                {deployBuild.resolved.mintType === 'standard' && (
+                  <p>
+                    <strong>Default parent IDs:</strong>{' '}
+                    {deployBuild.resolved.defaultDependencyIds.length === 0
+                      ? 'None'
+                      : deployBuild.resolved.defaultDependencyIds
+                          .map((id) => id.toString())
+                          .join(', ')}
+                  </p>
+                )}
+                {deployBuild.resolved.mintType === 'standard' &&
+                  deployBuild.resolved.defaultDependencyIds.length > 0 && (
+                    <p className="meta-value">
+                      Minting behavior note: batch upload stays available, but seal runs as
+                      one transaction per item because parent links require recursive sealing.
+                    </p>
+                  )}
                 <p>
                   <strong>Core contract:</strong> {coreTarget?.contractId ?? 'Not available'}
                 </p>
