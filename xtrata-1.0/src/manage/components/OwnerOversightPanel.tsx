@@ -791,11 +791,24 @@ export default function OwnerOversightPanel() {
 
                           <div className="collection-list__details-card">
                             <span className="meta-label">Recipients (template defaults)</span>
-                            <p className="meta-value">Artist: {artistRecipient ?? 'Unknown'}</p>
                             <p className="meta-value">
-                              Marketplace: {marketplaceRecipient ?? 'Unknown'}
+                              Artist:{' '}
+                              <span className="address-value--full">
+                                {artistRecipient ?? 'Unknown'}
+                              </span>
                             </p>
-                            <p className="meta-value">Operator: {operatorRecipient ?? 'Unknown'}</p>
+                            <p className="meta-value">
+                              Marketplace:{' '}
+                              <span className="address-value--full">
+                                {marketplaceRecipient ?? 'Unknown'}
+                              </span>
+                            </p>
+                            <p className="meta-value">
+                              Operator:{' '}
+                              <span className="address-value--full">
+                                {operatorRecipient ?? 'Unknown'}
+                              </span>
+                            </p>
                           </div>
                         </div>
                       </>

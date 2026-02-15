@@ -1525,7 +1525,9 @@ export default function CollectionMintAdminScreen(
                   label="Artist"
                   info="Recipient address for the artist payout split."
                 />
-                <span className="meta-value">{status.recipients.artist}</span>
+                <span className="meta-value address-value--full">
+                  {status.recipients.artist}
+                </span>
               </div>
               <div>
                 <LabelWithInfo
@@ -1533,7 +1535,7 @@ export default function CollectionMintAdminScreen(
                   label="Marketplace"
                   info="Recipient address for marketplace payout split."
                 />
-                <span className="meta-value">
+                <span className="meta-value address-value--full">
                   {status.recipients.marketplace}
                 </span>
               </div>
@@ -1543,7 +1545,9 @@ export default function CollectionMintAdminScreen(
                   label="Operator"
                   info="Recipient address for operator payout split."
                 />
-                <span className="meta-value">{status.recipients.operator}</span>
+                <span className="meta-value address-value--full">
+                  {status.recipients.operator}
+                </span>
               </div>
             </div>
           )}
@@ -1650,40 +1654,40 @@ export default function CollectionMintAdminScreen(
             </button>
           </div>
           <div className="meta-grid meta-grid--dense">
-            <label className="field">
+            <label className="field field--address">
               <LabelWithInfo
                 tone="field"
                 label="Artist recipient"
                 info="Stacks address that receives the artist share of each mint."
               />
               <input
-                className="input"
+                className="input input--address-fit"
                 placeholder="ST..."
                 value={artistInput}
                 onChange={(event) => setArtistInput(event.target.value)}
               />
             </label>
-            <label className="field">
+            <label className="field field--address">
               <LabelWithInfo
                 tone="field"
                 label="Marketplace recipient"
                 info="Stacks address that receives the marketplace share of each mint."
               />
               <input
-                className="input"
+                className="input input--address-fit"
                 placeholder="ST..."
                 value={marketplaceInput}
                 onChange={(event) => setMarketplaceInput(event.target.value)}
               />
             </label>
-            <label className="field">
+            <label className="field field--address">
               <LabelWithInfo
                 tone="field"
                 label="Operator recipient"
                 info="Stacks address that receives the operator share of each mint."
               />
               <input
-                className="input"
+                className="input input--address-fit"
                 placeholder="ST..."
                 value={operatorInput}
                 onChange={(event) => setOperatorInput(event.target.value)}

@@ -764,13 +764,13 @@ export default function DeployWizardPanel() {
           </div>
         )}
 
-        <label className="field">
+        <label className="field field--full field--address">
           <span className="field__label info-label">
             Artist payout address
             <InfoTooltip text="Wallet receiving the artist share (95%) of primary mint proceeds." />
           </span>
           <input
-            className="input"
+            className="input input--address-fit"
             value={artistAddress}
             placeholder="SP..."
             onChange={(event) => {
@@ -782,13 +782,13 @@ export default function DeployWizardPanel() {
           <span className="field__hint">Defaults to your connected wallet when available.</span>
         </label>
 
-        <label className="field">
+        <label className="field field--full field--address">
           <span className="field__label info-label">
             Marketplace payout address
             <InfoTooltip text="Wallet receiving the marketplace share (2.5%) of primary mint proceeds." />
           </span>
           <input
-            className="input"
+            className="input input--address-fit"
             value={marketplaceAddress}
             placeholder="SP..."
             onChange={(event) => {
@@ -917,10 +917,16 @@ export default function DeployWizardPanel() {
                   <strong>Core contract:</strong> {coreTarget?.contractId ?? 'Not available'}
                 </p>
                 <p>
-                  <strong>Artist recipient:</strong> {deployBuild.resolved.artistAddress}
+                  <strong>Artist recipient:</strong>{' '}
+                  <span className="address-value--full">
+                    {deployBuild.resolved.artistAddress}
+                  </span>
                 </p>
                 <p>
-                  <strong>Marketplace recipient:</strong> {deployBuild.resolved.marketplaceAddress}
+                  <strong>Marketplace recipient:</strong>{' '}
+                  <span className="address-value--full">
+                    {deployBuild.resolved.marketplaceAddress}
+                  </span>
                 </p>
                 <p>
                   <strong>Operator recipient (locked):</strong> {deployBuild.resolved.operatorAddress}

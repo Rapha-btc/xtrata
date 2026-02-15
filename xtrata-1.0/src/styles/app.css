@@ -2802,6 +2802,24 @@ p {
   color: var(--ink);
 }
 
+.input--address-fit {
+  font-family: "IBM Plex Mono", "SFMono-Regular", ui-monospace, monospace;
+  font-size: clamp(0.68rem, 1.4vw, 0.84rem);
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.address-value--full {
+  display: inline-block;
+  max-width: 100%;
+  font-family: "IBM Plex Mono", "SFMono-Regular", ui-monospace, monospace;
+  font-size: clamp(0.68rem, 1.2vw, 0.86rem);
+  font-weight: 600;
+  line-height: 1.28;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .input--prominent {
   flex: 1;
   min-width: 220px;
@@ -2830,6 +2848,10 @@ p {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.meta-grid .field--address {
+  grid-column: 1 / -1;
 }
 
 .button:disabled {
