@@ -79,13 +79,13 @@ describe('artist deploy helpers', () => {
     expect(result.source).toContain('(define-data-var mint-price uint u420000)');
     expect(result.source).toContain('(define-data-var max-supply uint u777)');
     expect(result.source).toContain(
-      '(define-data-var artist-recipient principal SP3K8BC0PPEVCV7NZ6QSRWPQ2JE9E5B6N3PA0KBR9)'
+      "(define-data-var artist-recipient principal 'SP3K8BC0PPEVCV7NZ6QSRWPQ2JE9E5B6N3PA0KBR9)"
     );
     expect(result.source).toContain(
-      '(define-data-var marketplace-recipient principal SP000000000000000000002Q6VF78)'
+      "(define-data-var marketplace-recipient principal 'SP000000000000000000002Q6VF78)"
     );
     expect(result.source).toContain(
-      '(define-data-var operator-recipient principal SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X)'
+      "(define-data-var operator-recipient principal 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X)"
     );
     expect(result.source).toContain(
       `(define-data-var artist-bps uint u${ARTIST_DEPLOY_DEFAULTS.artistBps.toString()})`
