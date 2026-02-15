@@ -95,6 +95,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
   const [selectedCoverAssetId, setSelectedCoverAssetId] = useState('');
   const [inscribedCoverUrl, setInscribedCoverUrl] = useState('');
   const [coverMessage, setCoverMessage] = useState<string | null>(null);
+  const [liveLinkMessage, setLiveLinkMessage] = useState<string | null>(null);
   const [coverSaving, setCoverSaving] = useState(false);
   const [coverPreviewFailed, setCoverPreviewFailed] = useState(false);
   const [readiness, setReadiness] = useState<PublishReadiness>({
@@ -384,6 +385,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
     setCollectionId(normalizedActiveCollectionId);
     setMessage(null);
     setCoverMessage(null);
+    setLiveLinkMessage(null);
   }, [normalizedActiveCollectionId]);
 
   const availableImageAssets = useMemo(
@@ -453,6 +455,11 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       blockers.push(readiness.error);
       return blockers;
     }
+    const currentState = toText(collection?.state).toLowerCase();
+    if (currentState === 'published') {
+      blockers.push('This collection is already live. Publishing is locked.');
+      return blockers;
+    }
     if (!readiness.contractConnected) {
       blockers.push('Deploy the contract in Step 1 before publishing.');
     }
@@ -460,13 +467,46 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       blockers.push('Upload at least one artwork file in Step 2 before publishing.');
     }
     return blockers;
-  }, [collectionId, readiness]);
+  }, [collection?.state, collectionId, readiness]);
 
   const canPublish = publishBlockers.length === 0;
+  const normalizedCollectionId = collectionId.trim();
+  const livePageKey = toText(collection?.slug) || normalizedCollectionId;
+  const livePagePath = livePageKey
+    ? `/collection/${encodeURIComponent(livePageKey)}`
+    : '';
+  const livePageUrl = useMemo(() => {
+    if (!livePagePath) {
+      return '';
+    }
+    if (typeof window === 'undefined') {
+      return livePagePath;
+    }
+    return `${window.location.origin}${livePagePath}`;
+  }, [livePagePath]);
 
   const liveState = toText(collection?.state).toLowerCase() === 'published'
     ? 'Live'
     : 'Draft';
+  const collectionStateValue = toText(collection?.state).toLowerCase();
+  const alreadyPublished = collectionStateValue === 'published';
+
+  const copyLivePageLink = async () => {
+    if (!livePageUrl) {
+      setLiveLinkMessage('Enter a collection ID first.');
+      return;
+    }
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(livePageUrl);
+        setLiveLinkMessage('Live page link copied.');
+        return;
+      }
+      setLiveLinkMessage('Clipboard is unavailable in this browser.');
+    } catch {
+      setLiveLinkMessage('Unable to copy link. You can still open it directly.');
+    }
+  };
 
   return (
     <div className="publish-ops-panel">
@@ -483,6 +523,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
             setCollectionId(event.target.value);
             setMessage(null);
             setCoverMessage(null);
+            setLiveLinkMessage(null);
           }}
         />
         <span className="field__hint">
@@ -497,10 +538,38 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
         </button>
       </label>
 
+      {livePagePath ? (
+        <div className="deploy-wizard__defaults">
+          <p className="deploy-wizard__defaults-title">Live page</p>
+          <p className="meta-value">
+            <code>{livePageUrl || livePagePath}</code>
+          </p>
+          <div className="mint-actions">
+            <a
+              className="button button--ghost button--mini collection-live-preview__link-button"
+              href={livePagePath}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open live page
+            </a>
+            <button
+              className="button button--ghost button--mini"
+              type="button"
+              onClick={() => void copyLivePageLink()}
+            >
+              Copy live page link
+            </button>
+          </div>
+          {liveLinkMessage ? <p className="meta-value">{liveLinkMessage}</p> : null}
+        </div>
+      ) : null}
+
       <div className="deploy-wizard__defaults">
         <p className="deploy-wizard__defaults-title">Publish readiness</p>
         <ul>
           <li>Contract deployed: {readiness.contractConnected ? 'Yes' : 'No'}</li>
+          <li>Current state: {liveState}</li>
           <li>
             Launch style:{' '}
             {readiness.mintType === 'pre-inscribed' ? 'Pre-inscribed' : 'Standard'}
@@ -657,7 +726,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
           onClick={() => void publishCollection()}
           disabled={!canPublish}
         >
-          Publish collection
+          {alreadyPublished ? 'Collection already live' : 'Publish collection'}
         </button>
         <span className="field__hint">
           Publishing marks this drop as live in the manager backend.

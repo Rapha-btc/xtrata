@@ -1,3 +1,92 @@
+00)› please read the suggestions below for off chain signatures. Please consider how to safely implement the following off-chain signatures for users inscribing data or setting up contracts for the first time. must not interefere with UX more than absolutly necessary as a main priority. Must keep a record of all signatures and only require once per address.
+
+ Since you’re building protocol-level infrastructure, not just a UI, you should treat this like signing into AWS or GitHub — not like minting a JPEG.
+
+You want 5 core protections:
+✅ 1. Domain Binding (Anti-Phishing)
+
+Include:
+
+App domain
+
+Network (mainnet/testnet)
+
+Chain ID
+
+Version of the app
+
+Example:
+
+Sign in to Xtrata
+Domain: xtrata.xyz
+Network: Stacks Mainnet
+Chain ID: 1
+App Version: 1.2.0
+
+
+This prevents signature reuse elsewhere.
+
+✅ 2. Nonce + Expiry (Replay Protection)
+
+Include:
+
+Unique nonce generated server-side
+
+Timestamp
+
+Expiration window (e.g., valid for 5 minutes)
+
+Without this, someone could reuse the signature later.
+
+✅ 3. Clear Statement of Intent
+
+For legal defensibility, you want explicit user acknowledgment:
+
+Example:
+
+By signing this message, I confirm:
+
+- I control this wallet address.
+- I understand I am responsible for any inscriptions I create.
+- I will not upload unlawful, infringing, or malicious content.
+- Xtrata is a neutral protocol and does not curate content.
+
+
+This matters a lot.
+
+You are running infrastructure that reconstructs data.
+You want to clearly position yourself as:
+
+a neutral data-layer protocol operator, not a publisher.
+
+✅ 4. Hash of Terms of Service
+
+This is something most marketplaces don’t do — but you could.
+
+Include:
+
+Terms Hash: 0x83af... (SHA256 of TOS)
+
+
+Why?
+
+Proves which exact TOS version they agreed to.
+
+Prevents later dispute over “you changed the terms.”
+
+Very strong legally.
+
+✅ 5. Explicit “No Custody” + “Irreversible” Language
+
+Especially important for inscriptions:
+
+I understand that blockchain transactions are irreversible.
+I understand that inscription data cannot be modified once written.
+
+
+This reduces liability claims.
+
+
 0) - REVIEW contract naming and how to apply tickers correctly:
 Current format for collection-mint contracts.
 I have successfully deployed: SP10W2EEM757922QTVDZZ5CSEW55JEFNN30J69TM7.xtrata-collection-ahv0-34f95221

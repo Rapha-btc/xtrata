@@ -42,12 +42,8 @@ type CollectionDraft = {
   metadata?: Record<string, unknown> | null;
 };
 
-const buildUniqueSlug = (collectionName: string) => {
-  const base = deriveArtistCollectionSlug(collectionName);
-  const suffix = Math.random().toString(36).slice(2, 7);
-  const maxBaseLength = Math.max(3, 64 - suffix.length - 1);
-  return `${base.slice(0, maxBaseLength)}-${suffix}`;
-};
+const buildCollectionSlug = (collectionName: string) =>
+  deriveArtistCollectionSlug(collectionName);
 
 const PARENT_THUMBNAIL_LIMIT = 12;
 const DEPLOY_WIZARD_DRAFT_STORAGE_KEY = 'xtrata-manage-deploy-wizard-v1';
@@ -580,7 +576,7 @@ export default function DeployWizardPanel() {
       return;
     }
 
-    const slug = buildUniqueSlug(refreshBuild.resolved.collectionName);
+    const slug = buildCollectionSlug(refreshBuild.resolved.collectionName);
     const templateVersion =
       mintType === 'pre-inscribed'
         ? 'xtrata-preinscribed-collection-sale-v1.0'

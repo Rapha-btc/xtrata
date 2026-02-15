@@ -26,6 +26,29 @@ const toNullableString = (value: unknown) => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
+const loadCollectionByIdentifier = async (params: {
+  env: Record<string, unknown>;
+  identifier: string;
+}) => {
+  const normalized = params.identifier.trim();
+  if (!normalized) {
+    return null;
+  }
+  const byId = await queryAll(params.env, 'SELECT * FROM collections WHERE id = ?', [
+    normalized
+  ]);
+  const idMatch = (byId.results ?? [])[0] as Record<string, unknown> | undefined;
+  if (idMatch) {
+    return idMatch;
+  }
+  const bySlug = await queryAll(
+    params.env,
+    'SELECT * FROM collections WHERE slug = ?',
+    [normalized]
+  );
+  return ((bySlug.results ?? [])[0] as Record<string, unknown> | undefined) ?? null;
+};
+
 const resolveAssetsBucket = (env: Record<string, unknown>) =>
   (env.COLLECTION_ASSETS as R2Bucket | undefined) ??
   (env.ASSETS as R2Bucket | undefined) ??
@@ -62,19 +85,17 @@ const deleteBucketPrefix = async (bucket: R2Bucket, prefix: string) => {
 };
 
 export const onRequest: PagesFunction = async ({ request, env, params }) => {
-  const collectionId = params?.collectionId;
-  if (!collectionId) {
-    return badRequest('Collection id is required.');
+  const collectionIdentifier = params?.collectionId?.trim() ?? '';
+  if (!collectionIdentifier) {
+    return badRequest('Collection id or slug is required.');
   }
 
   if (request.method === 'GET') {
     try {
-      const result = await queryAll(
+      const record = await loadCollectionByIdentifier({
         env,
-        'SELECT * FROM collections WHERE id = ?',
-        [collectionId]
-      );
-      const record = (result.results ?? [])[0];
+        identifier: collectionIdentifier
+      });
       if (!record) {
         return notFound('Collection not found.');
       }
@@ -88,16 +109,16 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
 
   if (request.method === 'PATCH') {
     try {
-      const existing = await queryAll(
+      const existingRecord = await loadCollectionByIdentifier({
         env,
-        'SELECT * FROM collections WHERE id = ?',
-        [collectionId]
-      );
-      const existingRecord = existing.results?.[0] as
-        | Record<string, unknown>
-        | undefined;
+        identifier: collectionIdentifier
+      });
       if (!existingRecord) {
         return notFound('Collection not found.');
+      }
+      const resolvedCollectionId = String(existingRecord.id ?? '').trim();
+      if (!resolvedCollectionId) {
+        return serverError('Collection record is missing an id.');
       }
       const currentState = String(existingRecord.state ?? 'draft')
         .trim()
@@ -141,13 +162,13 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
         return badRequest('No updatable fields provided.');
       }
       binds.push(Date.now());
-      binds.push(collectionId);
+      binds.push(resolvedCollectionId);
       const query = `UPDATE collections SET ${updates.join(', ')}, updated_at = ? WHERE id = ?`;
       await run(env, query, binds);
       const updated = await queryAll(
         env,
         'SELECT * FROM collections WHERE id = ?',
-        [collectionId]
+        [resolvedCollectionId]
       );
       const record = updated.results?.[0];
       if (!record) {
@@ -161,14 +182,16 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
 
   if (request.method === 'DELETE') {
     try {
-      const existing = await queryAll(
+      const record = await loadCollectionByIdentifier({
         env,
-        'SELECT * FROM collections WHERE id = ?',
-        [collectionId]
-      );
-      const record = existing.results?.[0] as Record<string, unknown> | undefined;
+        identifier: collectionIdentifier
+      });
       if (!record) {
         return notFound('Collection not found.');
+      }
+      const resolvedCollectionId = String(record.id ?? '').trim();
+      if (!resolvedCollectionId) {
+        return serverError('Collection record is missing an id.');
       }
 
       const state = String(record.state ?? '')
@@ -180,14 +203,12 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
         );
       }
       if (state !== 'archived') {
-        return badRequest(
-          'Archive this draft first, then run permanent delete.'
-        );
+        return badRequest('Archive this draft first, then run permanent delete.');
       }
 
       const readiness = await getCollectionDeployReadiness({
         env,
-        collectionId
+        collectionId: resolvedCollectionId
       });
       if (readiness.ready) {
         return badRequest(
@@ -198,12 +219,12 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
       const assetsCountResult = await queryAll(
         env,
         'SELECT COUNT(*) as total FROM assets WHERE collection_id = ?',
-        [collectionId]
+        [resolvedCollectionId]
       );
       const reservationsCountResult = await queryAll(
         env,
         'SELECT COUNT(*) as total FROM reservations WHERE collection_id = ?',
-        [collectionId]
+        [resolvedCollectionId]
       );
       const assetsCount = Number(assetsCountResult.results?.[0]?.total ?? 0);
       const reservationsCount = Number(
@@ -216,7 +237,7 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
         const keyRows = await queryAll(
           env,
           'SELECT storage_key FROM assets WHERE collection_id = ? AND storage_key IS NOT NULL AND TRIM(storage_key) != ?',
-          [collectionId, '']
+          [resolvedCollectionId, '']
         );
         const dbKeys = Array.from(
           new Set(
@@ -233,21 +254,21 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
 
         removedBucketObjects += await deleteBucketPrefix(
           bucket,
-          `${collectionId}/`
+          `${resolvedCollectionId}/`
         );
       }
 
       await run(env, 'DELETE FROM reservations WHERE collection_id = ?', [
-        collectionId
+        resolvedCollectionId
       ]);
       await run(env, 'DELETE FROM assets WHERE collection_id = ?', [
-        collectionId
+        resolvedCollectionId
       ]);
-      await run(env, 'DELETE FROM collections WHERE id = ?', [collectionId]);
+      await run(env, 'DELETE FROM collections WHERE id = ?', [resolvedCollectionId]);
 
       return jsonResponse({
         deleted: true,
-        id: collectionId,
+        id: resolvedCollectionId,
         removed: {
           assets: assetsCount,
           reservations: reservationsCount,

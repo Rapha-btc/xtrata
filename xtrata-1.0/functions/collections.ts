@@ -60,6 +60,16 @@ export const onRequest: PagesFunction = async ({ request, env }) => {
       if (!isValidSlug(slug)) {
         return badRequest('Slug must be 3-64 lowercase alphanumeric characters or hyphens.');
       }
+      const existingSlug = await queryAll(
+        env,
+        'SELECT id FROM collections WHERE slug = ? LIMIT 1',
+        [slug]
+      );
+      if ((existingSlug.results ?? []).length > 0) {
+        return badRequest(
+          `Collection URL slug "${slug}" is already in use. Choose a different collection name.`
+        );
+      }
       if (typeof payload.artistAddress !== 'string' || payload.artistAddress.trim() === '') {
         return badRequest('artistAddress is required.');
       }
@@ -89,7 +99,13 @@ export const onRequest: PagesFunction = async ({ request, env }) => {
       const record = (created.results ?? [])[0];
       return jsonResponse(mapRow(record), 201);
     } catch (error) {
-      return serverError(error instanceof Error ? error.message : 'failed to create collection');
+      const message = error instanceof Error ? error.message : 'failed to create collection';
+      if (/collections\.slug|UNIQUE constraint failed: collections\.slug/i.test(message)) {
+        return badRequest(
+          'Collection URL slug is already in use. Choose a different collection name.'
+        );
+      }
+      return serverError(message);
     }
   }
 

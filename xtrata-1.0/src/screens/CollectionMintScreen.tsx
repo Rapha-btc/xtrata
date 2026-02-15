@@ -531,7 +531,7 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
         functionArgs: options.functionArgs,
         network,
         stxAddress,
-        postConditionMode: options.postConditionMode,
+        postConditionMode: options.postConditionMode ?? PostConditionMode.Allow,
         postConditions: options.postConditions,
         onFinish: (payload) => {
           const resolved = payload as TxPayload;
