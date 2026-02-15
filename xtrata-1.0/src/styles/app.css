@@ -3478,6 +3478,38 @@ p {
   overflow-wrap: normal;
 }
 
+.manage-app .collection-list__details {
+  border-top: 1px dashed var(--border);
+  margin-top: 6px;
+  padding-top: 8px;
+  display: grid;
+  gap: 8px;
+}
+
+.manage-app .collection-list__details-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.manage-app .collection-list__details-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  padding: 7px 9px;
+  display: grid;
+  gap: 4px;
+}
+
+.manage-app .collection-list__details-card p {
+  margin: 0;
+}
+
+.manage-app .collection-list__details a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .deploy-wizard {
   display: grid;
   gap: 12px;
