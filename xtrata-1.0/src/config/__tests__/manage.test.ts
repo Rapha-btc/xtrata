@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { parseArtistAllowlist } from '../manage';
+import {
+  isXtrataOwnerAddress,
+  parseArtistAllowlist
+} from '../manage';
 
 describe('manage allowlist parsing', () => {
   it('parses addresses and .btc names into separate buckets', () => {
@@ -39,5 +42,14 @@ describe('manage allowlist parsing', () => {
       'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X'
     ]);
     expect(Array.from(parsed.bnsNames.values())).toEqual(['alice.btc']);
+  });
+
+  it('detects the xtrata owner address regardless of casing', () => {
+    expect(
+      isXtrataOwnerAddress(
+        'sp3jnsexazp4bdshv0dn3m8r3p0my0eebqqzx743x'
+      )
+    ).toBe(true);
+    expect(isXtrataOwnerAddress('SP1234TESTADDRESS')).toBe(false);
   });
 });

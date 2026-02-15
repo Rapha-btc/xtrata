@@ -21,10 +21,16 @@ const mapRow = (row: Record<string, unknown>) => ({
 export const onRequest: PagesFunction = async ({ request, env }) => {
   if (request.method === 'GET') {
     try {
-      const result = await queryAll(
-        env,
-        'SELECT * FROM collections ORDER BY created_at DESC'
-      );
+      const url = new URL(request.url);
+      const artistAddress = url.searchParams.get('artistAddress')?.trim() ?? '';
+      const result =
+        artistAddress.length > 0
+          ? await queryAll(
+              env,
+              'SELECT * FROM collections WHERE UPPER(artist_address) = UPPER(?) ORDER BY created_at DESC',
+              [artistAddress]
+            )
+          : await queryAll(env, 'SELECT * FROM collections ORDER BY created_at DESC');
       return jsonResponse((result.results ?? []).map(mapRow));
     } catch (error) {
       return serverError(

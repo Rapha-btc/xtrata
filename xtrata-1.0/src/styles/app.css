@@ -3428,6 +3428,56 @@ p {
   font-size: 0.88rem;
 }
 
+.manage-app .collection-list {
+  display: grid;
+  gap: 8px;
+}
+
+.manage-app .collection-list__summary {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.manage-app .collection-list__group,
+.manage-app .collection-list__item {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-soft);
+  padding: 8px 10px;
+  display: grid;
+  gap: 5px;
+}
+
+.manage-app .collection-list__group {
+  gap: 8px;
+  background: var(--surface-muted);
+}
+
+.manage-app .collection-list__group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.manage-app .collection-list__group-title {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.manage-app .collection-list__item p {
+  margin: 0;
+}
+
+.manage-app .collection-list code {
+  font-size: 0.72rem;
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+
 .deploy-wizard {
   display: grid;
   gap: 12px;

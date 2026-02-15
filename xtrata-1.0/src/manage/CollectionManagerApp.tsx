@@ -1,14 +1,18 @@
 import { useState } from 'react';
 import CollectionListPanel from './components/CollectionListPanel';
+import OwnerOversightPanel from './components/OwnerOversightPanel';
 import DeployWizardPanel from './components/DeployWizardPanel';
 import CollectionSettingsPanel from './components/CollectionSettingsPanel';
 import AssetStagingPanel from './components/AssetStagingPanel';
 import PublishOpsPanel from './components/PublishOpsPanel';
 import DiagnosticsPanel from './components/DiagnosticsPanel';
 import InfoTooltip from './components/InfoTooltip';
+import { isXtrataOwnerAddress } from '../config/manage';
+import { useManageWallet } from './ManageWalletContext';
 
 const PANEL_KEYS = [
   'collection-list',
+  'owner-oversight',
   'deploy-wizard',
   'collection-settings',
   'asset-staging',
@@ -21,6 +25,7 @@ type ExperienceMode = 'guided' | 'advanced';
 
 const MANAGE_PANEL_IDS: Record<PanelKey, string> = {
   'collection-list': 'manage-collection-list',
+  'owner-oversight': 'manage-owner-oversight',
   'deploy-wizard': 'manage-deploy-wizard',
   'collection-settings': 'manage-collection-settings',
   'asset-staging': 'manage-asset-staging',
@@ -56,8 +61,12 @@ const GUIDED_STEPS: Array<{
 ];
 
 export default function CollectionManagerApp() {
+  const { walletSession } = useManageWallet();
+  const isXtrataOwner = isXtrataOwnerAddress(walletSession.address);
+
   const [collapsed, setCollapsed] = useState<Record<PanelKey, boolean>>({
     'collection-list': false,
+    'owner-oversight': false,
     'deploy-wizard': false,
     'collection-settings': true,
     'asset-staging': false,
@@ -172,6 +181,31 @@ export default function CollectionManagerApp() {
             <CollectionListPanel />
           </div>
         </section>
+
+        {isXtrataOwner && (
+          <section
+            className={`panel app-section${collapsed['owner-oversight'] ? ' panel--collapsed' : ''}`}
+            id={MANAGE_PANEL_IDS['owner-oversight']}
+          >
+            <div className="panel__header">
+              <div>
+                <h2>
+                  Owner oversight
+                  <InfoTooltip text="Owner-only view of activity across other allowlisted artist wallets." />
+                </h2>
+                <p>Monitor launch progress across all allowlisted artists from one place.</p>
+              </div>
+              <div className="panel__actions">
+                <button className="button button--ghost" type="button" onClick={() => togglePanel('owner-oversight')}>
+                  {collapsed['owner-oversight'] ? 'Expand' : 'Collapse'}
+                </button>
+              </div>
+            </div>
+            <div className="panel__body">
+              <OwnerOversightPanel />
+            </div>
+          </section>
+        )}
 
         <section
           className={`panel app-section${collapsed['deploy-wizard'] ? ' panel--collapsed' : ''}`}

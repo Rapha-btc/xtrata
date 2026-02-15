@@ -3,6 +3,7 @@ import {
   parseManageJsonResponse,
   toManageApiErrorMessage
 } from '../lib/api-errors';
+import { useManageWallet } from '../ManageWalletContext';
 
 type CollectionRecord = {
   id: string;
@@ -17,12 +18,19 @@ export default function CollectionListPanel() {
   const [collections, setCollections] = useState<CollectionRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [copiedCollectionId, setCopiedCollectionId] = useState<string | null>(null);
+  const { walletSession } = useManageWallet();
+  const connectedAddress = walletSession.address?.trim() ?? '';
 
   useEffect(() => {
     const controller = new AbortController();
     const load = async () => {
       try {
-        const response = await fetch('/collections', { signal: controller.signal });
+        const query = connectedAddress
+          ? `?artistAddress=${encodeURIComponent(connectedAddress)}`
+          : '';
+        const response = await fetch(`/collections${query}`, {
+          signal: controller.signal
+        });
         const payload = await parseManageJsonResponse<CollectionRecord[]>(
           response,
           'Collections'
@@ -36,14 +44,18 @@ export default function CollectionListPanel() {
     };
     load();
     return () => controller.abort();
-  }, []);
+  }, [connectedAddress]);
 
   if (error) {
     return <div className="alert">{error}</div>;
   }
 
   if (collections.length === 0) {
-    return <p>No collections yet. Create one in the deploy wizard.</p>;
+    return (
+      <p>
+        No collections yet for this wallet. Create one in the deploy wizard.
+      </p>
+    );
   }
 
   const copyCollectionId = async (collectionId: string) => {
@@ -62,6 +74,10 @@ export default function CollectionListPanel() {
 
   return (
     <div className="collection-list">
+      <p className="meta-value">
+        Showing {collections.length} drop{collections.length === 1 ? '' : 's'} for{' '}
+        <code>{connectedAddress || 'current wallet'}</code>
+      </p>
       {collections.map((collection) => (
         <div key={collection.id} className="collection-list__item">
           <strong>{collection.display_name ?? collection.slug}</strong>
