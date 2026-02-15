@@ -45,6 +45,7 @@ import {
   MAX_TOKEN_URI_LENGTH,
   TX_DELAY_SECONDS
 } from '../lib/mint/constants';
+import { buildMintBeginStxPostConditions, resolveMintBeginSpendCapMicroStx } from '../lib/mint/post-conditions';
 import {
   parseRandomDropManifest,
   selectRandomDropAssets
@@ -93,6 +94,8 @@ type MintTarget = 'core' | 'collection';
 type CollectionContractStatus = {
   paused: boolean | null;
   mintPrice: bigint | null;
+  activePhaseId: bigint | null;
+  activePhaseMintPrice: bigint | null;
   allowlistEnabled: boolean | null;
   maxPerWallet: bigint | null;
   maxSupply: bigint | null;
@@ -531,7 +534,7 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
         functionArgs: options.functionArgs,
         network,
         stxAddress,
-        postConditionMode: options.postConditionMode ?? PostConditionMode.Allow,
+        postConditionMode: options.postConditionMode ?? PostConditionMode.Deny,
         postConditions: options.postConditions,
         onFinish: (payload) => {
           const resolved = payload as TxPayload;
@@ -568,6 +571,17 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
       makeStandardSTXPostCondition(sender, conditionCode, amount)
     ] as PostCondition[];
   };
+
+  const resolveCollectionBeginPostConditions = () =>
+    buildMintBeginStxPostConditions({
+      sender: props.walletSession.address ?? null,
+      mintPrice: collectionStatus?.mintPrice ?? null,
+      activePhaseMintPrice: collectionStatus?.activePhaseMintPrice ?? null
+    });
+  const collectionMintBeginSpendCap = resolveMintBeginSpendCapMicroStx({
+    mintPrice: collectionStatus?.mintPrice ?? null,
+    activePhaseMintPrice: collectionStatus?.activePhaseMintPrice ?? null
+  });
 
   const pauseBeforeNextTx = async (label: string) => {
     if (!txDelaySeconds || txDelaySeconds <= 0) {
@@ -951,10 +965,35 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
         readOnly('get-finalized'),
         defaultDependenciesPromise
       ]);
+      const activePhaseCv = await readOnly('get-active-phase');
+      const activePhaseId = parseUintCv(activePhaseCv);
+      let activePhaseMintPrice: bigint | null = null;
+      if (activePhaseId !== null && activePhaseId > 0n) {
+        const phaseCv = await callReadOnlyFunction({
+          contractAddress: collectionContract.address,
+          contractName: collectionContract.contractName,
+          functionName: 'get-phase',
+          functionArgs: [uintCV(activePhaseId)],
+          senderAddress: sender,
+          network
+        });
+        const phaseValue = phaseCv.type === ClarityType.ResponseOk ? phaseCv.value : phaseCv;
+        if (phaseValue.type === ClarityType.OptionalSome) {
+          const tuple = phaseValue.value;
+          if (tuple.type === ClarityType.Tuple) {
+            const priceEntry = tuple.data['mint-price'];
+            if (priceEntry) {
+              activePhaseMintPrice = parseUintCv(priceEntry);
+            }
+          }
+        }
+      }
 
       setCollectionStatus({
         paused: Boolean(cvToValue(pausedCv)),
         mintPrice: parseUintCv(priceCv),
+        activePhaseId,
+        activePhaseMintPrice,
         allowlistEnabled: Boolean(cvToValue(allowlistCv)),
         maxPerWallet: parseUintCv(maxPerWalletCv),
         maxSupply: parseUintCv(maxSupplyCv),
@@ -1148,8 +1187,13 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
           appendLog(`Item ${index + 1}/${items.length}: begin inscription.`);
           const beginPostConditions =
             mintTarget === 'collection'
-              ? undefined
+              ? resolveCollectionBeginPostConditions()
               : resolveFeePostConditions(feeSchedule.feeUnitMicroStx);
+          if (mintTarget === 'collection' && !beginPostConditions) {
+            throw new Error(
+              'Collection mint price is unavailable for wallet safety checks. Load collection status and retry.'
+            );
+          }
           const beginTx = await requestContractCall({
             functionName:
               mintTarget === 'collection' ? 'mint-begin' : 'begin-inscription',
@@ -1172,9 +1216,7 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
               mintTarget === 'collection' ? collectionContract?.address : undefined,
             contractName:
               mintTarget === 'collection' ? collectionContract?.contractName : undefined,
-            postConditionMode: beginPostConditions
-              ? PostConditionMode.Deny
-              : undefined,
+            postConditionMode: PostConditionMode.Deny,
             postConditions: beginPostConditions,
             logDetails: {
               item: item.path,
@@ -1350,9 +1392,7 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
             mintTarget === 'collection' ? collectionContract?.address : undefined,
           contractName:
             mintTarget === 'collection' ? collectionContract?.contractName : undefined,
-          postConditionMode: sealPostConditions
-            ? PostConditionMode.Deny
-            : undefined,
+          postConditionMode: PostConditionMode.Deny,
           postConditions: sealPostConditions,
           logDetails: {
             itemCount: itemsToSeal.length,
@@ -1522,9 +1562,25 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
                   <div>
                     <span className="meta-label">Mint price</span>
                     <span className="meta-value">
-                      {collectionStatus.mintPrice !== null
-                        ? formatMicroStx(Number(collectionStatus.mintPrice))
+                      {(collectionStatus.activePhaseMintPrice ?? collectionStatus.mintPrice) !==
+                      null
+                        ? formatMicroStx(
+                            Number(
+                              collectionStatus.activePhaseMintPrice ??
+                                collectionStatus.mintPrice
+                            )
+                          )
                         : 'Unknown'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="meta-label">Wallet safety (begin)</span>
+                    <span className="meta-value">
+                      {collectionMintBeginSpendCap !== null
+                        ? `Deny mode <= ${formatMicroStx(
+                            Number(collectionMintBeginSpendCap)
+                          )}`
+                        : 'Load collection status'}
                     </span>
                   </div>
                   <div>
@@ -1801,9 +1857,16 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
             <div>
               <span className="meta-label">Collection mint price</span>
               <span className="meta-value">
-                {collectionStatus?.mintPrice !== null &&
-                collectionStatus?.mintPrice !== undefined
-                  ? formatMicroStx(Number(collectionStatus.mintPrice))
+                {(collectionStatus?.activePhaseMintPrice ??
+                  collectionStatus?.mintPrice ??
+                  null) !== null
+                  ? formatMicroStx(
+                      Number(
+                        collectionStatus?.activePhaseMintPrice ??
+                          collectionStatus?.mintPrice ??
+                          null
+                      )
+                    )
                   : 'Unknown (load status)'}
               </span>
             </div>
@@ -1877,7 +1940,9 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
               !!mismatch ||
               (mintTarget === 'core' && pauseBlocked) ||
               (mintTarget === 'collection' &&
-                (!collectionContract || pendingReservations.length > 0))
+                (!collectionContract ||
+                  pendingReservations.length > 0 ||
+                  collectionMintBeginSpendCap === null))
             }
           >
             {mintPending

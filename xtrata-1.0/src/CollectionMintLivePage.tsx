@@ -6,9 +6,7 @@ import {
   callReadOnlyFunction,
   ClarityType,
   cvToValue,
-  FungibleConditionCode,
   listCV,
-  makeStandardSTXPostCondition,
   type PostCondition,
   PostConditionMode,
   principalCV,
@@ -20,6 +18,7 @@ import {
 import { createXtrataClient } from './lib/contract/client';
 import { useBnsNames } from './lib/bns/hooks';
 import { batchChunks, chunkBytes, computeExpectedHash } from './lib/chunking/hash';
+import { buildMintBeginStxPostConditions, resolveMintBeginSpendCapMicroStx } from './lib/mint/post-conditions';
 import { PUBLIC_CONTRACT } from './config/public';
 import { DEFAULT_TOKEN_URI, TX_DELAY_SECONDS } from './lib/mint/constants';
 import { getNetworkFromAddress, getNetworkMismatch } from './lib/network/guard';
@@ -634,21 +633,11 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
 
   const resolveMintBeginPostConditions = useCallback(
     (sender: string) => {
-      if (!sender) {
-        return null;
-      }
-      const mintPrice =
-        contractStatus?.activePhaseMintPrice ?? contractStatus?.mintPrice ?? null;
-      if (mintPrice === null || mintPrice < 0n) {
-        return null;
-      }
-      return [
-        makeStandardSTXPostCondition(
-          sender,
-          FungibleConditionCode.LessEqual,
-          mintPrice
-        )
-      ] as PostCondition[];
+      return buildMintBeginStxPostConditions({
+        sender,
+        mintPrice: contractStatus?.mintPrice ?? null,
+        activePhaseMintPrice: contractStatus?.activePhaseMintPrice ?? null
+      });
     },
     [contractStatus?.activePhaseMintPrice, contractStatus?.mintPrice]
   );
@@ -1607,6 +1596,10 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   const reservedCountLabel = formatCount(contractStatus?.reservedCount ?? null);
   const remainingLabel = remaining === null ? 'Unknown' : remaining.toString();
   const mintPriceLabel = toMicroStxLabel(contractStatus?.mintPrice ?? null);
+  const mintBeginSpendCap = resolveMintBeginSpendCapMicroStx({
+    mintPrice: contractStatus?.mintPrice ?? null,
+    activePhaseMintPrice: contractStatus?.activePhaseMintPrice ?? null
+  });
   const pausedStatus = contractStatus?.paused;
   const pausedLabel =
     pausedStatus === null || pausedStatus === undefined
@@ -1760,17 +1753,9 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
               <div>
                 <span className="meta-label">Wallet safety</span>
                 <span className="meta-value">
-                  {(
-                    contractStatus?.activePhaseMintPrice ??
-                    contractStatus?.mintPrice ??
-                    null
-                  ) === null
+                  {mintBeginSpendCap === null
                     ? 'Loading protected spend cap...'
-                    : `Deny mode with max ${toMicroStxLabel(
-                        contractStatus?.activePhaseMintPrice ??
-                          contractStatus?.mintPrice ??
-                          null
-                      )} on begin`}
+                    : `Deny mode with max ${toMicroStxLabel(mintBeginSpendCap)} on begin`}
                 </span>
               </div>
               <div>
