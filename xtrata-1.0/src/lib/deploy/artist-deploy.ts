@@ -290,7 +290,7 @@ export const buildArtistDeployContractSource = (params: {
     source,
     marker: 'artist-recipient',
     pattern: /^\(define-data-var artist-recipient principal [^)]+\)$/m,
-    replacement: `(define-data-var artist-recipient principal ${resolved.artistAddress})`,
+    replacement: `(define-data-var artist-recipient principal '${resolved.artistAddress})`,
     errors
   });
 
@@ -298,7 +298,7 @@ export const buildArtistDeployContractSource = (params: {
     source,
     marker: 'marketplace-recipient',
     pattern: /^\(define-data-var marketplace-recipient principal [^)]+\)$/m,
-    replacement: `(define-data-var marketplace-recipient principal ${resolved.marketplaceAddress})`,
+    replacement: `(define-data-var marketplace-recipient principal '${resolved.marketplaceAddress})`,
     errors
   });
 
@@ -306,7 +306,7 @@ export const buildArtistDeployContractSource = (params: {
     source,
     marker: 'operator-recipient',
     pattern: /^\(define-data-var operator-recipient principal [^)]+\)$/m,
-    replacement: `(define-data-var operator-recipient principal ${resolved.operatorAddress})`,
+    replacement: `(define-data-var operator-recipient principal '${resolved.operatorAddress})`,
     errors
   });
 
