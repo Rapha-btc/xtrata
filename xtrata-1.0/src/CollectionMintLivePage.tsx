@@ -134,6 +134,9 @@ const parseUintCv = (value: ClarityValue) => {
   if (parsed === null || parsed === undefined) {
     return null;
   }
+  if (typeof parsed === 'bigint') {
+    return parsed;
+  }
   if (typeof parsed === 'string') {
     try {
       return BigInt(parsed);
@@ -153,6 +156,9 @@ const parseUintCv = (value: ClarityValue) => {
     'value' in (parsed as Record<string, unknown>)
   ) {
     const raw = (parsed as { value?: unknown }).value;
+    if (typeof raw === 'bigint') {
+      return raw;
+    }
     if (typeof raw !== 'string' || raw.length === 0) {
       return null;
     }
