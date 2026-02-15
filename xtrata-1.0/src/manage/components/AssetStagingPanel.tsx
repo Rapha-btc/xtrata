@@ -176,7 +176,11 @@ const parseTargetSupply = (metadata: Record<string, unknown> | null | undefined)
   return parsed;
 };
 
-export default function AssetStagingPanel() {
+type AssetStagingPanelProps = {
+  activeCollectionId?: string;
+};
+
+export default function AssetStagingPanel(props: AssetStagingPanelProps) {
   const [collectionId, setCollectionId] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [status, setStatus] = useState<string | null>(null);
@@ -225,6 +229,10 @@ export default function AssetStagingPanel() {
   const folderInputRef = useRef<HTMLInputElement | null>(null);
 
   const normalizedCollectionId = useMemo(() => collectionId.trim(), [collectionId]);
+  const normalizedActiveCollectionId = useMemo(
+    () => props.activeCollectionId?.trim() ?? '',
+    [props.activeCollectionId]
+  );
 
   const clearSelectedFiles = () => {
     setSelectedFiles([]);
@@ -267,6 +275,21 @@ export default function AssetStagingPanel() {
   useEffect(() => {
     void loadAssets();
   }, [normalizedCollectionId]);
+
+  useEffect(() => {
+    if (!normalizedActiveCollectionId || normalizedActiveCollectionId === collectionId.trim()) {
+      return;
+    }
+    setCollectionId(normalizedActiveCollectionId);
+    setSelectedFiles([]);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    if (folderInputRef.current) {
+      folderInputRef.current.value = '';
+    }
+    setStatus(null);
+  }, [normalizedActiveCollectionId]);
 
   useEffect(() => {
     setAssetGridPage(1);

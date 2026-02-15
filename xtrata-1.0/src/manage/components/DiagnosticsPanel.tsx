@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from 'react';
+import { useEffect, useState, type ChangeEvent } from 'react';
 import { chunkCount, hexDigest } from '../lib/asset-utils';
 import {
   parseManageJsonResponse,
@@ -33,7 +33,11 @@ type UploadToken = {
   durationMs?: number;
 };
 
-export default function DiagnosticsPanel() {
+type DiagnosticsPanelProps = {
+  activeCollectionId?: string;
+};
+
+export default function DiagnosticsPanel(props: DiagnosticsPanelProps) {
   const [collectionId, setCollectionId] = useState('');
   const [dbStatus, setDbStatus] = useState<string | null>(null);
   const [dbHealth, setDbHealth] = useState<DbHealth | null>(null);
@@ -48,6 +52,15 @@ export default function DiagnosticsPanel() {
     binding?: string | null;
     durationMs?: number;
   } | null>(null);
+
+  const normalizedActiveCollectionId = props.activeCollectionId?.trim() ?? '';
+
+  useEffect(() => {
+    if (!normalizedActiveCollectionId || normalizedActiveCollectionId === collectionId.trim()) {
+      return;
+    }
+    setCollectionId(normalizedActiveCollectionId);
+  }, [normalizedActiveCollectionId]);
 
   const runDatabaseCheck = async () => {
     setDbLoading(true);

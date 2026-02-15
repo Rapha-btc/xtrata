@@ -64,6 +64,8 @@ const GUIDED_STEPS: Array<{
 export default function CollectionManagerApp() {
   const { walletSession } = useManageWallet();
   const isXtrataOwner = isXtrataOwnerAddress(walletSession.address);
+  const [activeCollectionId, setActiveCollectionId] = useState('');
+  const [activeCollectionLabel, setActiveCollectionLabel] = useState('');
 
   const [collapsed, setCollapsed] = useState<Record<PanelKey, boolean>>({
     'collection-list': false,
@@ -107,6 +109,16 @@ export default function CollectionManagerApp() {
     setExperienceMode('advanced');
   };
 
+  const handleSelectCollection = (collection: { id: string; label: string }) => {
+    setActiveCollectionId(collection.id);
+    setActiveCollectionLabel(collection.label);
+    setCollapsed((prev) => ({
+      ...prev,
+      'asset-staging': false,
+      'publish-ops': false
+    }));
+  };
+
   return (
     <div className="app manage-app">
       <header className="app__header">
@@ -122,6 +134,12 @@ export default function CollectionManagerApp() {
           />
         </p>
         <p>Follow the guided steps below. Advanced controls are optional and hidden by default.</p>
+        {activeCollectionId ? (
+          <p className="meta-value">
+            Active drop: {activeCollectionLabel || 'Selected drop'} ·{' '}
+            <code>{activeCollectionId}</code>
+          </p>
+        ) : null}
       </header>
       <main className="app__main">
         <section className="panel app-section manage-journey">
@@ -188,7 +206,10 @@ export default function CollectionManagerApp() {
             </div>
           </div>
           <div className="panel__body">
-            <CollectionListPanel />
+            <CollectionListPanel
+              activeCollectionId={activeCollectionId}
+              onSelectCollection={handleSelectCollection}
+            />
           </div>
         </section>
 
@@ -259,7 +280,7 @@ export default function CollectionManagerApp() {
             </div>
           </div>
           <div className="panel__body">
-            <AssetStagingPanel />
+            <AssetStagingPanel activeCollectionId={activeCollectionId} />
           </div>
         </section>
 
@@ -282,7 +303,7 @@ export default function CollectionManagerApp() {
             </div>
           </div>
           <div className="panel__body">
-            <PublishOpsPanel />
+            <PublishOpsPanel activeCollectionId={activeCollectionId} />
           </div>
         </section>
 
@@ -320,7 +341,7 @@ export default function CollectionManagerApp() {
                 </div>
               </div>
               <div className="panel__body">
-                <CollectionSettingsPanel />
+                <CollectionSettingsPanel activeCollectionId={activeCollectionId} />
               </div>
             </section>
 
@@ -343,7 +364,7 @@ export default function CollectionManagerApp() {
                 </div>
               </div>
               <div className="panel__body">
-                <DiagnosticsPanel />
+                <DiagnosticsPanel activeCollectionId={activeCollectionId} />
               </div>
             </section>
           </>

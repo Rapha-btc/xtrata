@@ -3331,6 +3331,12 @@ p {
   font-size: 0.78rem;
 }
 
+.manage-app .button.is-active {
+  border-color: var(--accent-strong);
+  color: var(--accent-strong);
+  background: rgba(224, 90, 42, 0.08);
+}
+
 .manage-app .button--mini {
   padding: 5px 10px;
   font-size: 0.72rem;
@@ -3469,6 +3475,11 @@ p {
   padding: 8px 10px;
   display: grid;
   gap: 5px;
+}
+
+.manage-app .collection-list__item--active {
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 0 1px rgba(224, 90, 42, 0.26);
 }
 
 .manage-app .collection-list__group {

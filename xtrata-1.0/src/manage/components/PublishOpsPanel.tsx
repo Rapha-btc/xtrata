@@ -81,7 +81,11 @@ const normalizeCoverSource = (value: unknown): CoverImageSource | null => {
 const isValidCoverUrl = (value: string) =>
   /^(https?:\/\/|ipfs:\/\/|data:image\/)/i.test(value);
 
-export default function PublishOpsPanel() {
+type PublishOpsPanelProps = {
+  activeCollectionId?: string;
+};
+
+export default function PublishOpsPanel(props: PublishOpsPanelProps) {
   const [collectionId, setCollectionId] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [reservations, setReservations] = useState<Array<Record<string, unknown>>>([]);
@@ -101,6 +105,10 @@ export default function PublishOpsPanel() {
     supplyTarget: 0,
     error: null
   });
+  const normalizedActiveCollectionId = useMemo(
+    () => props.activeCollectionId?.trim() ?? '',
+    [props.activeCollectionId]
+  );
 
   const metadata = useMemo(
     () => toRecord(collection?.metadata) ?? null,
@@ -368,6 +376,15 @@ export default function PublishOpsPanel() {
   useEffect(() => {
     void loadReadiness();
   }, [collectionId]);
+
+  useEffect(() => {
+    if (!normalizedActiveCollectionId || normalizedActiveCollectionId === collectionId.trim()) {
+      return;
+    }
+    setCollectionId(normalizedActiveCollectionId);
+    setMessage(null);
+    setCoverMessage(null);
+  }, [normalizedActiveCollectionId]);
 
   const availableImageAssets = useMemo(
     () =>

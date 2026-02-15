@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { showContractCall } from '@stacks/connect';
 import {
   boolCV,
@@ -814,7 +814,11 @@ const getDefaultInputs = (params: {
   return defaults;
 };
 
-export default function CollectionSettingsPanel() {
+type CollectionSettingsPanelProps = {
+  activeCollectionId?: string;
+};
+
+export default function CollectionSettingsPanel(props: CollectionSettingsPanelProps) {
   const [collectionId, setCollectionId] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [artistAddress, setArtistAddress] = useState('');
@@ -836,6 +840,10 @@ export default function CollectionSettingsPanel() {
   const [actionPending, setActionPending] = useState(false);
 
   const { walletSession, walletAdapter, connect } = useManageWallet();
+  const normalizedActiveCollectionId = useMemo(
+    () => props.activeCollectionId?.trim() ?? '',
+    [props.activeCollectionId]
+  );
 
   const metadataRecord = useMemo(() => toRecord(metadata), [metadata]);
   const metadataCollection = useMemo(
@@ -907,14 +915,14 @@ export default function CollectionSettingsPanel() {
     ? `${contractAddress.trim()}.${contractName.trim()}`
     : null;
 
-  const loadCollection = async () => {
-    if (!collectionId.trim()) {
+  const loadCollectionById = useCallback(async (nextCollectionId: string) => {
+    if (!nextCollectionId.trim()) {
       setMessage('Enter a collection ID first.');
       return;
     }
     setMessage(null);
     try {
-      const response = await fetch(`/collections/${collectionId.trim()}`);
+      const response = await fetch(`/collections/${nextCollectionId.trim()}`);
       const payload = await parseManageJsonResponse<CollectionPayload>(
         response,
         'Collection'
@@ -933,7 +941,22 @@ export default function CollectionSettingsPanel() {
     } catch (error) {
       setMessage(toManageApiErrorMessage(error, 'Unable to load collection'));
     }
+  }, []);
+
+  const loadCollection = async () => {
+    await loadCollectionById(collectionId.trim());
   };
+
+  useEffect(() => {
+    if (
+      !normalizedActiveCollectionId ||
+      normalizedActiveCollectionId === collectionId.trim()
+    ) {
+      return;
+    }
+    setCollectionId(normalizedActiveCollectionId);
+    void loadCollectionById(normalizedActiveCollectionId);
+  }, [normalizedActiveCollectionId, loadCollectionById]);
 
   const saveSettings = async () => {
     if (!collectionId.trim()) {

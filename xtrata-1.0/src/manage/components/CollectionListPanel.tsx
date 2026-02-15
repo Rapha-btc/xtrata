@@ -19,13 +19,18 @@ type CollectionReadiness = {
   reason: string;
 };
 
+type CollectionListPanelProps = {
+  activeCollectionId?: string;
+  onSelectCollection?: (collection: { id: string; label: string }) => void;
+};
+
 const isArchived = (collection: CollectionRecord) =>
   collection.state.trim().toLowerCase() === 'archived';
 
 const isPublished = (collection: CollectionRecord) =>
   collection.state.trim().toLowerCase() === 'published';
 
-export default function CollectionListPanel() {
+export default function CollectionListPanel(props: CollectionListPanelProps) {
   const [collections, setCollections] = useState<CollectionRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -190,6 +195,16 @@ export default function CollectionListPanel() {
     }
   };
 
+  const handleSelectCollection = (collection: CollectionRecord) => {
+    props.onSelectCollection?.({
+      id: collection.id,
+      label: collection.display_name ?? collection.slug
+    });
+    setStatus(
+      `Selected ${collection.display_name ?? collection.slug}. Collection ID synced across manager sections.`
+    );
+  };
+
   const activeCollections = useMemo(
     () => collections.filter((collection) => !isArchived(collection)),
     [collections]
@@ -234,7 +249,14 @@ export default function CollectionListPanel() {
         <p>No active drops yet for this wallet. Create one in Step 1.</p>
       ) : (
         activeCollections.map((collection) => (
-          <div key={collection.id} className="collection-list__item">
+          <div
+            key={collection.id}
+            className={`collection-list__item${
+              props.activeCollectionId === collection.id
+                ? ' collection-list__item--active'
+                : ''
+            }`}
+          >
             <strong>{collection.display_name ?? collection.slug}</strong>
             <p>
               {collection.slug} · {collection.state}
@@ -243,6 +265,18 @@ export default function CollectionListPanel() {
               Collection ID: <code>{collection.id}</code>
             </p>
             <div className="mint-actions">
+              <button
+                className={`button button--ghost button--mini${
+                  props.activeCollectionId === collection.id ? ' is-active' : ''
+                }`}
+                type="button"
+                onClick={() => handleSelectCollection(collection)}
+                disabled={pendingCollectionId !== null}
+              >
+                {props.activeCollectionId === collection.id
+                  ? 'Selected across steps'
+                  : 'Use across steps'}
+              </button>
               <button
                 className="button button--ghost button--mini"
                 type="button"
