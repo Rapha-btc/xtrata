@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { showContractCall } from '@stacks/connect';
+import { sha256 } from '@noble/hashes/sha256';
 import {
   bufferCV,
   callReadOnlyFunction,
@@ -258,6 +259,9 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   const [mintMessage, setMintMessage] = useState<string | null>(null);
   const [mintLog, setMintLog] = useState<string[]>([]);
   const [mintedTokenIds, setMintedTokenIds] = useState<Record<string, string>>({});
+  const [canonicalHashHexByAssetId, setCanonicalHashHexByAssetId] = useState<
+    Record<string, string>
+  >({});
   const [mintedScanPending, setMintedScanPending] = useState(false);
   const [pendingMintAssetIds, setPendingMintAssetIds] = useState<string[]>([]);
 
@@ -475,6 +479,31 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     setMintLog((current) => [...current, message].slice(-20));
   }, []);
 
+  const fetchAssetBytes = useCallback(
+    async (assetId: string) => {
+      if (!resolvedCollectionId) {
+        throw new Error('Collection id missing.');
+      }
+      const response = await fetch(
+        `/collections/${encodeURIComponent(
+          resolvedCollectionId
+        )}/asset-preview?assetId=${encodeURIComponent(assetId)}`,
+        { cache: 'no-store' }
+      );
+      if (!response.ok) {
+        const text = (await response.text())
+          .slice(0, 180)
+          .replace(/\s+/g, ' ')
+          .trim();
+        throw new Error(
+          `Unable to load asset bytes (${response.status})${text ? `: ${text}` : ''}.`
+        );
+      }
+      return new Uint8Array(await response.arrayBuffer());
+    },
+    [resolvedCollectionId]
+  );
+
   const loadCollectionSnapshot = useCallback(async () => {
     if (!normalizedCollectionKey) {
       setCollection(null);
@@ -574,27 +603,69 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       setMintedTokenIds({});
       return;
     }
+    if (contractStatus?.mintedCount === 0n) {
+      setMintedTokenIds({});
+      return;
+    }
     setMintedScanPending(true);
     const senderAddress = walletSession.address ?? coreContract.address;
     const next: Record<string, string> = {};
+    const hashCorrections: Record<string, string> = {};
     try {
+      const lookupTokenId = async (hashHex: string) => {
+        const hashBytes = hashHexToBytes(hashHex);
+        if (!hashBytes) {
+          return null;
+        }
+        try {
+          const tokenId = await coreClient.getIdByHash(hashBytes, senderAddress);
+          return tokenId === null ? null : tokenId.toString();
+        } catch {
+          return null;
+        }
+      };
+
       for (let offset = 0; offset < imageAssets.length; offset += MINTED_SCAN_BATCH_SIZE) {
         const batch = imageAssets.slice(offset, offset + MINTED_SCAN_BATCH_SIZE);
         const settled = await Promise.all(
           batch.map(async (asset) => {
-            const hashBytes = hashHexToBytes(asset.expected_hash ?? '');
-            if (!hashBytes) {
-              return null;
-            }
-            try {
-              const tokenId = await coreClient.getIdByHash(hashBytes, senderAddress);
-              if (tokenId === null) {
-                return null;
+            const knownHashHex =
+              normalizeHashHex(canonicalHashHexByAssetId[asset.asset_id]) ??
+              normalizeHashHex(asset.expected_hash ?? '');
+            if (knownHashHex) {
+              const tokenId = await lookupTokenId(knownHashHex);
+              if (tokenId) {
+                return { assetId: asset.asset_id, tokenId };
               }
-              return { assetId: asset.asset_id, tokenId: tokenId.toString() };
+            }
+
+            try {
+              const rawBytes = await fetchAssetBytes(asset.asset_id);
+              const computedHash = computeExpectedHash(chunkBytes(rawBytes));
+              const computedHex = bytesToHex(computedHash);
+              const rawShaHex = bytesToHex(sha256(rawBytes));
+
+              if (knownHashHex && knownHashHex !== computedHex) {
+                // Legacy uploads saved raw SHA-256. Auto-correct in-memory for reads.
+                if (knownHashHex === rawShaHex) {
+                  hashCorrections[asset.asset_id] = computedHex;
+                } else {
+                  return null;
+                }
+              }
+
+              if (!knownHashHex) {
+                hashCorrections[asset.asset_id] = computedHex;
+              }
+
+              const tokenId = await lookupTokenId(computedHex);
+              if (tokenId) {
+                return { assetId: asset.asset_id, tokenId };
+              }
             } catch {
               return null;
             }
+            return null;
           })
         );
         settled.forEach((entry) => {
@@ -605,10 +676,25 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
         });
       }
       setMintedTokenIds(next);
+      if (Object.keys(hashCorrections).length > 0) {
+        setCanonicalHashHexByAssetId((current) => ({
+          ...current,
+          ...hashCorrections
+        }));
+      }
     } finally {
       setMintedScanPending(false);
     }
-  }, [coreClient, coreContract.address, imageAssets, resolvedCollectionId, walletSession.address]);
+  }, [
+    canonicalHashHexByAssetId,
+    contractStatus?.mintedCount,
+    coreClient,
+    coreContract.address,
+    fetchAssetBytes,
+    imageAssets,
+    resolvedCollectionId,
+    walletSession.address
+  ]);
 
   const ensureConnectedWallet = useCallback(async () => {
     if (walletSession.address && walletSession.network) {
@@ -661,42 +747,48 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
 
   const mintAsset = useCallback(
     async (asset: CollectionAsset, session: WalletSession) => {
-      if (!resolvedCollectionId) {
-        throw new Error('Collection id missing.');
-      }
-      const expectedHashBytes = hashHexToBytes(asset.expected_hash ?? '');
-      if (!expectedHashBytes) {
-        throw new Error('Asset hash is missing or invalid.');
-      }
+      const knownHashHex =
+        normalizeHashHex(canonicalHashHexByAssetId[asset.asset_id]) ??
+        normalizeHashHex(asset.expected_hash ?? '');
       const tokenUri = DEFAULT_TOKEN_URI;
-      const previewResponse = await fetch(
-        `/collections/${encodeURIComponent(
-          resolvedCollectionId
-        )}/asset-preview?assetId=${encodeURIComponent(asset.asset_id)}`,
-        { cache: 'no-store' }
-      );
-      if (!previewResponse.ok) {
-        const text = (await previewResponse.text())
-          .slice(0, 180)
-          .replace(/\s+/g, ' ')
-          .trim();
-        throw new Error(
-          `Unable to load asset bytes (${previewResponse.status})${text ? `: ${text}` : ''}.`
-        );
-      }
-      const rawBytes = new Uint8Array(await previewResponse.arrayBuffer());
+      const rawBytes = await fetchAssetBytes(asset.asset_id);
       const chunks = chunkBytes(rawBytes);
       const computedHash = computeExpectedHash(chunks);
       const computedHex = bytesToHex(computedHash);
-      const expectedHex = bytesToHex(expectedHashBytes);
-      if (computedHex !== expectedHex) {
-        throw new Error('Asset bytes do not match expected on-chain hash.');
+      const rawShaHex = bytesToHex(sha256(rawBytes));
+
+      if (knownHashHex && knownHashHex !== computedHex) {
+        if (knownHashHex === rawShaHex) {
+          appendMintLog(
+            `Legacy hash format detected for ${asset.filename ?? asset.path}. Auto-correcting.`
+          );
+        } else {
+          throw new Error(
+            'Asset hash metadata does not match uploaded bytes. Re-upload this asset to continue.'
+          );
+        }
       }
+
+      if (!knownHashHex || knownHashHex !== computedHex) {
+        setCanonicalHashHexByAssetId((current) => ({
+          ...current,
+          [asset.asset_id]: computedHex
+        }));
+      }
+
       if (asset.total_bytes > 0 && asset.total_bytes !== rawBytes.length) {
         throw new Error('Asset byte size does not match staged metadata.');
       }
       if (asset.total_chunks > 0 && asset.total_chunks !== chunks.length) {
         throw new Error('Asset chunk count does not match staged metadata.');
+      }
+
+      const expectedHashBytes = computedHash;
+      const existingTokenId = await coreClient.getIdByHash(expectedHashBytes, session.address);
+      if (existingTokenId !== null) {
+        const tokenId = existingTokenId.toString();
+        setMintedTokenIds((current) => ({ ...current, [asset.asset_id]: tokenId }));
+        throw new Error(`Asset is already minted as token #${tokenId}.`);
       }
 
       const coreContractId = `${coreContract.address}.${coreContract.contractName}`;
@@ -755,9 +847,11 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     },
     [
       appendMintLog,
+      canonicalHashHexByAssetId,
+      coreClient,
       coreContract.address,
       coreContract.contractName,
-      resolvedCollectionId,
+      fetchAssetBytes,
       requestCollectionContractCall
     ]
   );
@@ -796,18 +890,22 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
         if (nextMinted[candidate.asset_id]) {
           continue;
         }
-        const hashBytes = hashHexToBytes(candidate.expected_hash ?? '');
-        if (!hashBytes) {
-          continue;
-        }
-        try {
-          const existingId = await coreClient.getIdByHash(hashBytes, senderAddress);
-          if (existingId !== null) {
-            nextMinted[candidate.asset_id] = existingId.toString();
-            continue;
+        const knownHashHex =
+          normalizeHashHex(canonicalHashHexByAssetId[candidate.asset_id]) ??
+          normalizeHashHex(candidate.expected_hash ?? '');
+        if (knownHashHex) {
+          const hashBytes = hashHexToBytes(knownHashHex);
+          if (hashBytes) {
+            try {
+              const existingId = await coreClient.getIdByHash(hashBytes, senderAddress);
+              if (existingId !== null) {
+                nextMinted[candidate.asset_id] = existingId.toString();
+                continue;
+              }
+            } catch {
+              // If this lookup fails, keep trying other candidates.
+            }
           }
-        } catch {
-          // If this one lookup fails, keep trying other candidates.
         }
         target = candidate;
         break;
@@ -847,6 +945,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     }
   }, [
     appendMintLog,
+    canonicalHashHexByAssetId,
     collectionContract,
     contractStatus?.finalized,
     contractStatus?.paused,
@@ -895,6 +994,14 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   useEffect(() => {
     void loadCollectionSnapshot();
   }, [loadCollectionSnapshot]);
+
+  useEffect(() => {
+    setCanonicalHashHexByAssetId({});
+    setMintedTokenIds({});
+    setPendingMintAssetIds([]);
+    setMintLog([]);
+    setMintMessage(null);
+  }, [normalizedCollectionKey]);
 
   useEffect(() => {
     if (!collectionContract) {
