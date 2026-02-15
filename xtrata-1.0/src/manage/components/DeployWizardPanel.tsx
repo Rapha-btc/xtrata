@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { showContractDeploy } from '@stacks/connect';
 import { getContractId } from '../../lib/contract/config';
 import {
@@ -68,8 +69,38 @@ export default function DeployWizardPanel() {
   const [collection, setCollection] = useState<CollectionDraft | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [deployPending, setDeployPending] = useState(false);
+  const reviewCloseButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const { walletSession, walletAdapter, connect } = useManageWallet();
+
+  useEffect(() => {
+    if (!reviewOpen || typeof window === 'undefined') {
+      return;
+    }
+
+    const previousActiveElement =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const frameId = window.requestAnimationFrame(() => {
+      reviewCloseButtonRef.current?.focus();
+    });
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') {
+        return;
+      }
+      event.preventDefault();
+      if (!deployPending) {
+        setReviewOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.removeEventListener('keydown', handleKeyDown);
+      previousActiveElement?.focus();
+    };
+  }, [reviewOpen, deployPending]);
 
   useEffect(() => {
     if (symbolTouched) {
@@ -843,128 +874,132 @@ export default function DeployWizardPanel() {
         </div>
       )}
 
-      {reviewOpen && (
-        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="deploy-review-title">
-          <div className="modal deploy-wizard-modal">
-            <div className="modal__header">
-              <div>
-                <h3 className="modal__title" id="deploy-review-title">
-                  Review deployment
-                </h3>
-                <p className="meta-value">
-                  Final check before wallet confirmation. This deploys your contract but does not publish your drop yet.
-                </p>
-              </div>
-              <button
-                className="button button--ghost"
-                type="button"
-                onClick={() => setReviewOpen(false)}
-                disabled={deployPending}
-              >
-                Close
-              </button>
-            </div>
-
-            {deployBuild.errors.length > 0 ? (
-              <div className="alert">
+      {reviewOpen &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="deploy-review-title">
+            <div className="modal deploy-wizard-modal">
+              <div className="modal__header">
                 <div>
-                  <strong>Fix these fields first:</strong>
-                  <ul>
-                    {deployBuild.errors.map((error) => (
-                      <li key={error}>{error}</li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            ) : (
-              <div className="deploy-wizard-modal__summary">
-                <p>
-                  <strong>Drop name:</strong> {deployBuild.resolved.collectionName}
-                </p>
-                <p>
-                  <strong>Ticker:</strong> {deployBuild.resolved.symbol}
-                </p>
-                <p>
-                  <strong>Editions:</strong> {deployBuild.resolved.supply.toString()}
-                </p>
-                <p>
-                  <strong>Launch style:</strong>{' '}
-                  {deployBuild.resolved.mintType === 'pre-inscribed'
-                    ? 'Pre-inscribed sale'
-                    : 'Standard mint'}
-                </p>
-                <p>
-                  <strong>Price per mint:</strong> {mintPriceStx.trim() || '0'} STX
-                </p>
-                {deployBuild.resolved.mintType === 'standard' && (
-                  <p>
-                    <strong>Default parent IDs:</strong>{' '}
-                    {deployBuild.resolved.defaultDependencyIds.length === 0
-                      ? 'None'
-                      : deployBuild.resolved.defaultDependencyIds
-                          .map((id) => id.toString())
-                          .join(', ')}
+                  <h3 className="modal__title" id="deploy-review-title">
+                    Review deployment
+                  </h3>
+                  <p className="meta-value">
+                    Final check before wallet confirmation. This deploys your contract but does not publish your drop yet.
                   </p>
-                )}
-                {deployBuild.resolved.mintType === 'standard' &&
-                  deployBuild.resolved.defaultDependencyIds.length > 0 && (
-                    <p className="meta-value">
-                      Minting behavior note: batch upload stays available, but seal runs as
-                      one transaction per item because parent links require recursive sealing.
+                </div>
+                <button
+                  ref={reviewCloseButtonRef}
+                  className="button button--ghost"
+                  type="button"
+                  onClick={() => setReviewOpen(false)}
+                  disabled={deployPending}
+                >
+                  Close
+                </button>
+              </div>
+
+              {deployBuild.errors.length > 0 ? (
+                <div className="alert">
+                  <div>
+                    <strong>Fix these fields first:</strong>
+                    <ul>
+                      {deployBuild.errors.map((error) => (
+                        <li key={error}>{error}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              ) : (
+                <div className="deploy-wizard-modal__summary">
+                  <p>
+                    <strong>Drop name:</strong> {deployBuild.resolved.collectionName}
+                  </p>
+                  <p>
+                    <strong>Ticker:</strong> {deployBuild.resolved.symbol}
+                  </p>
+                  <p>
+                    <strong>Editions:</strong> {deployBuild.resolved.supply.toString()}
+                  </p>
+                  <p>
+                    <strong>Launch style:</strong>{' '}
+                    {deployBuild.resolved.mintType === 'pre-inscribed'
+                      ? 'Pre-inscribed sale'
+                      : 'Standard mint'}
+                  </p>
+                  <p>
+                    <strong>Price per mint:</strong> {mintPriceStx.trim() || '0'} STX
+                  </p>
+                  {deployBuild.resolved.mintType === 'standard' && (
+                    <p>
+                      <strong>Default parent IDs:</strong>{' '}
+                      {deployBuild.resolved.defaultDependencyIds.length === 0
+                        ? 'None'
+                        : deployBuild.resolved.defaultDependencyIds
+                            .map((id) => id.toString())
+                            .join(', ')}
                     </p>
                   )}
-                <p>
-                  <strong>Core contract:</strong> {coreTarget?.contractId ?? 'Not available'}
-                </p>
-                <p>
-                  <strong>Artist recipient:</strong>{' '}
-                  <span className="address-value--full">
-                    {deployBuild.resolved.artistAddress}
-                  </span>
-                </p>
-                <p>
-                  <strong>Marketplace recipient:</strong>{' '}
-                  <span className="address-value--full">
-                    {deployBuild.resolved.marketplaceAddress}
-                  </span>
-                </p>
-                <p>
-                  <strong>Operator recipient (locked):</strong> {deployBuild.resolved.operatorAddress}
-                </p>
+                  {deployBuild.resolved.mintType === 'standard' &&
+                    deployBuild.resolved.defaultDependencyIds.length > 0 && (
+                      <p className="meta-value">
+                        Minting behavior note: batch upload stays available, but seal runs as
+                        one transaction per item because parent links require recursive sealing.
+                      </p>
+                    )}
+                  <p>
+                    <strong>Core contract:</strong> {coreTarget?.contractId ?? 'Not available'}
+                  </p>
+                  <p>
+                    <strong>Artist recipient:</strong>{' '}
+                    <span className="address-value--full">
+                      {deployBuild.resolved.artistAddress}
+                    </span>
+                  </p>
+                  <p>
+                    <strong>Marketplace recipient:</strong>{' '}
+                    <span className="address-value--full">
+                      {deployBuild.resolved.marketplaceAddress}
+                    </span>
+                  </p>
+                  <p>
+                    <strong>Operator recipient (locked):</strong> {deployBuild.resolved.operatorAddress}
+                  </p>
 
-                {deployBuild.warnings.length > 0 && (
-                  <div className="alert">
-                    <div>
-                      {deployBuild.warnings.map((warning) => (
-                        <p key={warning}>{warning}</p>
-                      ))}
+                  {deployBuild.warnings.length > 0 && (
+                    <div className="alert">
+                      <div>
+                        {deployBuild.warnings.map((warning) => (
+                          <p key={warning}>{warning}</p>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            )}
+                  )}
+                </div>
+              )}
 
-            <div className="modal__actions">
-              <button
-                className="button button--ghost"
-                type="button"
-                onClick={() => setReviewOpen(false)}
-                disabled={deployPending}
-              >
-                Back
-              </button>
-              <button
-                className="button"
-                type="button"
-                onClick={handleDeploy}
-                disabled={deployPending || deployBuild.errors.length > 0}
-              >
-                {deployPending ? 'Deploying...' : 'Deploy contract'}
-              </button>
+              <div className="modal__actions">
+                <button
+                  className="button button--ghost"
+                  type="button"
+                  onClick={() => setReviewOpen(false)}
+                  disabled={deployPending}
+                >
+                  Back
+                </button>
+                <button
+                  className="button"
+                  type="button"
+                  onClick={handleDeploy}
+                  disabled={deployPending || deployBuild.errors.length > 0}
+                >
+                  {deployPending ? 'Deploying...' : 'Deploy contract'}
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
