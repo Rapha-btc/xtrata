@@ -1496,7 +1496,8 @@ export default function CollectionMintAdminScreen(
                 info="Parent inscription IDs automatically attached to every mint when set."
               />
               <span className="meta-value">
-                {status?.defaultDependencies === null
+                {status?.defaultDependencies === null ||
+                status?.defaultDependencies === undefined
                   ? 'Unknown'
                   : status.defaultDependencies.length === 0
                     ? 'None'
