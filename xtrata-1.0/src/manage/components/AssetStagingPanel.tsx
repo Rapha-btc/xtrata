@@ -43,6 +43,15 @@ type UploadReadiness = {
   network: 'mainnet' | 'testnet' | null;
 };
 
+type UploadTokenResponse = {
+  uploadUrl: string;
+  key: string;
+  mode?: 'signed' | 'direct';
+  binding?: string | null;
+  requestId?: string;
+  durationMs?: number;
+};
+
 type CollectionRecord = {
   display_name?: string | null;
   slug?: string | null;
@@ -68,6 +77,10 @@ const ORDER_MODE_OPTIONS: Array<{ value: UploadOrderMode; label: string }> = [
   { value: 'filename-natural', label: 'Sort by filename (natural)' },
   { value: 'seeded-random', label: 'Seeded random order' }
 ];
+
+const logUploadDebug = (phase: string, details: Record<string, unknown>) => {
+  console.info(`[manage:asset-staging] ${phase}`, details);
+};
 
 const parseTargetSupply = (metadata: Record<string, unknown> | null | undefined) => {
   if (!metadata || typeof metadata !== 'object') {
@@ -108,6 +121,19 @@ export default function AssetStagingPanel() {
   const [preflightOnly, setPreflightOnly] = useState(false);
   const [includeExtensionsInput, setIncludeExtensionsInput] = useState('');
   const [excludeExtensionsInput, setExcludeExtensionsInput] = useState('');
+  const [lastUploadTrace, setLastUploadTrace] = useState<{
+    requestId: string | null;
+    mode: string | null;
+    binding: string | null;
+    filePath: string | null;
+    step: 'token' | 'storage' | 'metadata' | null;
+  }>({
+    requestId: null,
+    mode: null,
+    binding: null,
+    filePath: null,
+    step: null
+  });
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const folderInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -361,15 +387,32 @@ export default function AssetStagingPanel() {
       return;
     }
     setUploading(true);
+    setLastUploadTrace({
+      requestId: null,
+      mode: null,
+      binding: null,
+      filePath: null,
+      step: null
+    });
+    logUploadDebug('upload.start', {
+      collectionId: normalizedCollectionId,
+      selectedFiles: selectedFiles.length,
+      filesForUpload: filesForUpload.length,
+      totalBytes: selectedTotalBytes,
+      orderMode,
+      duplicatePolicy
+    });
     setStatus(`Uploading 1/${filesForUpload.length}: ${fileSortKey(filesForUpload[0])}`);
 
     let uploadedCount = 0;
     let failedAtIndex: number | null = null;
     let failedMessage: string | null = null;
+    let failedRequestId: string | null = null;
 
     for (let index = 0; index < filesForUpload.length; index += 1) {
       const selectedFile = filesForUpload[index];
       const path = fileSortKey(selectedFile);
+      let currentRequestId: string | null = null;
       try {
         if (index > 0) {
           setStatus(`Uploading ${index + 1}/${filesForUpload.length}: ${path}`);
@@ -377,10 +420,30 @@ export default function AssetStagingPanel() {
         const tokenResponse = await fetch(
           `/collections/${encodeURIComponent(normalizedCollectionId)}/upload-url`
         );
-        const token = await parseManageJsonResponse<{ uploadUrl: string; key: string }>(
+        const token = await parseManageJsonResponse<UploadTokenResponse>(
           tokenResponse,
           'Upload URL'
         );
+        const tokenRequestId = token.requestId ?? null;
+        currentRequestId = tokenRequestId;
+        failedRequestId = tokenRequestId;
+        setLastUploadTrace({
+          requestId: tokenRequestId,
+          mode: token.mode ?? null,
+          binding: token.binding ?? null,
+          filePath: path,
+          step: 'token'
+        });
+        logUploadDebug('upload.token.ok', {
+          index: index + 1,
+          total: filesForUpload.length,
+          path,
+          key: token.key,
+          mode: token.mode ?? null,
+          binding: token.binding ?? null,
+          requestId: tokenRequestId,
+          durationMs: token.durationMs ?? null
+        });
 
         const storageResponse = await fetch(token.uploadUrl, {
           method: 'PUT',
@@ -388,8 +451,37 @@ export default function AssetStagingPanel() {
           body: selectedFile
         });
         if (!storageResponse.ok) {
-          throw new Error(`Storage upload failed (${storageResponse.status}).`);
+          const snippet = (await storageResponse.text())
+            .slice(0, 220)
+            .replace(/\s+/g, ' ')
+            .trim();
+          logUploadDebug('upload.storage.error', {
+            index: index + 1,
+            total: filesForUpload.length,
+            path,
+            status: storageResponse.status,
+            snippet: snippet || null,
+            requestId: tokenRequestId
+          });
+          throw new Error(
+            `Storage upload failed (${storageResponse.status})${
+              snippet ? `: ${snippet}` : '.'
+            }${tokenRequestId ? ` Request ID: ${tokenRequestId}` : ''}`
+          );
         }
+        setLastUploadTrace({
+          requestId: tokenRequestId,
+          mode: token.mode ?? null,
+          binding: token.binding ?? null,
+          filePath: path,
+          step: 'storage'
+        });
+        logUploadDebug('upload.storage.ok', {
+          index: index + 1,
+          total: filesForUpload.length,
+          path,
+          requestId: tokenRequestId
+        });
 
         const expectedHash = await hexDigest(selectedFile);
         const metadataResponse = await fetch(
@@ -409,10 +501,31 @@ export default function AssetStagingPanel() {
           }
         );
         await parseManageJsonResponse(metadataResponse, 'Asset metadata');
+        setLastUploadTrace({
+          requestId: tokenRequestId,
+          mode: token.mode ?? null,
+          binding: token.binding ?? null,
+          filePath: path,
+          step: 'metadata'
+        });
+        logUploadDebug('upload.metadata.ok', {
+          index: index + 1,
+          total: filesForUpload.length,
+          path,
+          requestId: tokenRequestId
+        });
         uploadedCount += 1;
       } catch (error) {
+        logUploadDebug('upload.file.error', {
+          index: index + 1,
+          total: filesForUpload.length,
+          path,
+          message: error instanceof Error ? error.message : String(error),
+          requestId: currentRequestId
+        });
         failedAtIndex = index;
         failedMessage = toManageApiErrorMessage(error, 'Upload error');
+        failedRequestId = currentRequestId ?? failedRequestId;
         break;
       }
     }
@@ -421,6 +534,10 @@ export default function AssetStagingPanel() {
     setUploading(false);
 
     if (failedAtIndex === null) {
+      logUploadDebug('upload.complete', {
+        collectionId: normalizedCollectionId,
+        uploadedCount
+      });
       setStatus(`Uploaded ${uploadedCount} file${uploadedCount === 1 ? '' : 's'}.`);
       clearSelectedFiles();
       return;
@@ -437,7 +554,9 @@ export default function AssetStagingPanel() {
     setStatus(
       `Uploaded ${uploadedCount}/${filesForUpload.length}. ${
         failedMessage ?? 'Upload failed.'
-      } ${remaining.length} file${remaining.length === 1 ? '' : 's'} remain selected for retry.`
+      } ${
+        failedRequestId ? `Request ID: ${failedRequestId}. ` : ''
+      }${remaining.length} file${remaining.length === 1 ? '' : 's'} remain selected for retry.`
     );
   };
 
@@ -716,6 +835,15 @@ export default function AssetStagingPanel() {
         </div>
       )}
       {status && <p className="meta-value">{status}</p>}
+      {lastUploadTrace.requestId && (
+        <p className="meta-value">
+          Last upload trace: request {lastUploadTrace.requestId}
+          {lastUploadTrace.mode ? ` · ${lastUploadTrace.mode}` : ''}
+          {lastUploadTrace.binding ? ` · ${lastUploadTrace.binding}` : ''}
+          {lastUploadTrace.filePath ? ` · ${lastUploadTrace.filePath}` : ''}
+          {lastUploadTrace.step ? ` · step ${lastUploadTrace.step}` : ''}
+        </p>
+      )}
       <div className="asset-staging__list">
         <h3>Staged assets</h3>
         {loading && <p>Loading…</p>}
