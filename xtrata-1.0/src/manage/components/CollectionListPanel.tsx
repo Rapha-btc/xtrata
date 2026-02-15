@@ -22,7 +22,11 @@ type CollectionReadiness = {
 
 type CollectionListPanelProps = {
   activeCollectionId?: string;
-  onSelectCollection?: (collection: { id: string; label: string }) => void;
+  onSelectCollection?: (collection: {
+    id: string;
+    label: string;
+    deployed: boolean;
+  }) => void;
 };
 
 const isArchived = (collection: CollectionRecord) =>
@@ -215,9 +219,15 @@ export default function CollectionListPanel(props: CollectionListPanelProps) {
   };
 
   const handleSelectCollection = (collection: CollectionRecord) => {
+    const deployTxId =
+      collection.metadata && typeof collection.metadata === 'object'
+        ? String((collection.metadata as Record<string, unknown>).deployTxId ?? '').trim()
+        : '';
+    const deployed = Boolean(collection.contract_address?.trim() && deployTxId);
     props.onSelectCollection?.({
       id: collection.id,
-      label: collection.display_name ?? collection.slug
+      label: collection.display_name ?? collection.slug,
+      deployed
     });
   };
 

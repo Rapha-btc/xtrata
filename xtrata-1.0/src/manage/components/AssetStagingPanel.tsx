@@ -217,6 +217,8 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
     null
   );
   const [assetImageErrors, setAssetImageErrors] = useState<Record<string, true>>({});
+  const [assetsForCollectionId, setAssetsForCollectionId] = useState('');
+  const [uploadControlsCollapsed, setUploadControlsCollapsed] = useState(false);
   const [lastUploadTrace, setLastUploadTrace] = useState<{
     requestId: string | null;
     mode: string | null;
@@ -232,6 +234,7 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
   });
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const folderInputRef = useRef<HTMLInputElement | null>(null);
+  const pendingAutoCollapseCollectionIdRef = useRef<string | null>(null);
 
   const normalizedCollectionId = useMemo(() => collectionId.trim(), [collectionId]);
   const normalizedActiveCollectionId = useMemo(
@@ -252,6 +255,7 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
   const loadAssets = async (id = normalizedCollectionId) => {
     if (!id) {
       setAssets([]);
+      setAssetsForCollectionId('');
       return;
     }
     setLoading(true);
@@ -262,7 +266,10 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
         'Collection assets'
       );
       setAssets(payload);
+      setAssetsForCollectionId(id);
     } catch (error) {
+      setAssets([]);
+      setAssetsForCollectionId(id);
       setStatus(toManageApiErrorMessage(error, 'Load failed'));
     } finally {
       setLoading(false);
@@ -285,6 +292,7 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
     if (!normalizedActiveCollectionId || normalizedActiveCollectionId === collectionId.trim()) {
       return;
     }
+    pendingAutoCollapseCollectionIdRef.current = normalizedActiveCollectionId;
     setCollectionId(normalizedActiveCollectionId);
     setSelectedFiles([]);
     if (fileInputRef.current) {
@@ -295,6 +303,15 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
     }
     setStatus(null);
   }, [normalizedActiveCollectionId]);
+
+  useEffect(() => {
+    const pendingId = pendingAutoCollapseCollectionIdRef.current;
+    if (!pendingId || assetsForCollectionId !== pendingId) {
+      return;
+    }
+    setUploadControlsCollapsed(assets.length > 0);
+    pendingAutoCollapseCollectionIdRef.current = null;
+  }, [assetsForCollectionId, assets.length]);
 
   useEffect(() => {
     setAssetGridPage(1);
@@ -804,298 +821,340 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
 
   return (
     <div className="asset-staging-panel">
-      <form className="field" onSubmit={handleSubmit}>
-        <label className="field__label">
-          <span className="info-label">
-            Collection ID
-            <InfoTooltip text="Use the ID shown in Step 1 under 'Your drops'. It identifies which drop these files belong to." />
-          </span>
-          <input
-            className="input"
-            placeholder="Paste collection ID from Your drops"
-            value={collectionId}
-            onChange={(event) => {
-              setCollectionId(event.target.value);
-              clearSelectedFiles();
-              setStatus(null);
-            }}
-            disabled={uploading}
-          />
-          <span className="field__hint">
-            Tip: click "Copy ID" in Your drops, then paste it here.
-          </span>
-        </label>
-
-        <label className="field__label">
-          <span className="info-label">
-            Select files
-            <InfoTooltip text="Pick multiple files at once for faster staging. Files upload one-by-one for reliability." />
-          </span>
-          <input
-            ref={fileInputRef}
-            className="input"
-            type="file"
-            multiple
-            onChange={handleFilesSelected}
-            disabled={uploading || uploadsLocked}
-          />
-          <span className="field__hint">
-            Use this for quick multi-select from a single location.
-          </span>
-        </label>
-
-        <label className="field__label">
-          <span className="info-label">
-            Or select a folder
-            <InfoTooltip text="Choose a whole folder to load all files at once, including subfolder paths." />
-          </span>
-          <input
-            ref={folderInputRef}
-            className="input"
-            type="file"
-            multiple
-            onChange={handleFilesSelected}
-            disabled={uploading || uploadsLocked}
-          />
-          <span className="field__hint">
-            Folder uploads keep relative paths so collection structure stays clear.
-          </span>
-        </label>
-
-        <div className="mint-actions">
-          <button
-            className="button button--ghost"
-            type="button"
-            onClick={() => setShowAdvanced((current) => !current)}
-            disabled={uploading || uploadsLocked}
-          >
-            {showAdvanced ? 'Hide advanced upload settings' : 'Show advanced upload settings'}
-          </button>
+      <section
+        className={`asset-staging__section${
+          uploadControlsCollapsed ? ' asset-staging__section--collapsed' : ''
+        }`}
+      >
+        <div className="asset-staging__section-header">
+          <div>
+            <h3>Upload controls</h3>
+            <p>Select a collection, choose files/folder, then run upload checks.</p>
+          </div>
+          <div className="mint-actions">
+            <button
+              className="button button--ghost button--mini"
+              type="button"
+              onClick={() =>
+                setUploadControlsCollapsed((current) => !current)
+              }
+            >
+              {uploadControlsCollapsed ? 'Expand upload controls' : 'Collapse upload controls'}
+            </button>
+          </div>
         </div>
 
-        {showAdvanced && (
-          <div className="deploy-wizard__defaults">
-            <p className="deploy-wizard__defaults-title">Advanced upload settings</p>
-            <div className="deploy-wizard__grid">
-              <label className="field">
-                <span className="field__label info-label">
-                  Inscription order
-                  <InfoTooltip text="Choose how selected files are ordered before upload and mint staging." />
+        {uploadControlsCollapsed ? (
+          <p className="asset-staging__collapsed-note">
+            Upload controls are collapsed so staged assets stay in view. Expand if you
+            need to add more files.
+          </p>
+        ) : (
+          <div className="asset-staging__section-body">
+            <form className="field" onSubmit={handleSubmit}>
+              <label className="field__label">
+                <span className="info-label">
+                  Collection ID
+                  <InfoTooltip text="Use the ID shown in Step 1 under 'Your drops'. It identifies which drop these files belong to." />
                 </span>
-                <select
-                  className="select"
-                  value={orderMode}
-                  onChange={(event) => setOrderMode(event.target.value as UploadOrderMode)}
+                <input
+                  className="input"
+                  placeholder="Paste collection ID from Your drops"
+                  value={collectionId}
+                  onChange={(event) => {
+                    setCollectionId(event.target.value);
+                    clearSelectedFiles();
+                    setStatus(null);
+                  }}
                   disabled={uploading}
-                >
-                  {ORDER_MODE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                />
+                <span className="field__hint">
+                  Tip: click "Copy ID" in Your drops, then paste it here.
+                </span>
               </label>
 
-              {orderMode === 'seeded-random' && (
-                <label className="field">
-                  <span className="field__label info-label">
-                    Random seed
-                    <InfoTooltip text="Generated with Web Crypto for strong randomness. Keep this value to reproduce the same order later." />
-                  </span>
-                  <div className="field__inline">
-                    <input
-                      className="input"
-                      value={seededOrderSeed}
-                      onChange={(event) => setSeededOrderSeed(event.target.value.trim())}
-                      disabled={uploading}
-                    />
-                    <button
-                      className="button button--ghost button--mini"
-                      type="button"
-                      onClick={() => setSeededOrderSeed(createSecureRandomSeed())}
-                      disabled={uploading}
-                    >
-                      New secure seed
-                    </button>
+              <label className="field__label">
+                <span className="info-label">
+                  Select files
+                  <InfoTooltip text="Pick multiple files at once for faster staging. Files upload one-by-one for reliability." />
+                </span>
+                <input
+                  ref={fileInputRef}
+                  className="input"
+                  type="file"
+                  multiple
+                  onChange={handleFilesSelected}
+                  disabled={uploading || uploadsLocked}
+                />
+                <span className="field__hint">
+                  Use this for quick multi-select from a single location.
+                </span>
+              </label>
+
+              <label className="field__label">
+                <span className="info-label">
+                  Or select a folder
+                  <InfoTooltip text="Choose a whole folder to load all files at once, including subfolder paths." />
+                </span>
+                <input
+                  ref={folderInputRef}
+                  className="input"
+                  type="file"
+                  multiple
+                  onChange={handleFilesSelected}
+                  disabled={uploading || uploadsLocked}
+                />
+                <span className="field__hint">
+                  Folder uploads keep relative paths so collection structure stays clear.
+                </span>
+              </label>
+
+              <div className="mint-actions">
+                <button
+                  className="button button--ghost"
+                  type="button"
+                  onClick={() => setShowAdvanced((current) => !current)}
+                  disabled={uploading || uploadsLocked}
+                >
+                  {showAdvanced
+                    ? 'Hide advanced upload settings'
+                    : 'Show advanced upload settings'}
+                </button>
+              </div>
+
+              {showAdvanced && (
+                <div className="deploy-wizard__defaults">
+                  <p className="deploy-wizard__defaults-title">Advanced upload settings</p>
+                  <div className="deploy-wizard__grid">
+                    <label className="field">
+                      <span className="field__label info-label">
+                        Inscription order
+                        <InfoTooltip text="Choose how selected files are ordered before upload and mint staging." />
+                      </span>
+                      <select
+                        className="select"
+                        value={orderMode}
+                        onChange={(event) => setOrderMode(event.target.value as UploadOrderMode)}
+                        disabled={uploading}
+                      >
+                        {ORDER_MODE_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    {orderMode === 'seeded-random' && (
+                      <label className="field">
+                        <span className="field__label info-label">
+                          Random seed
+                          <InfoTooltip text="Generated with Web Crypto for strong randomness. Keep this value to reproduce the same order later." />
+                        </span>
+                        <div className="field__inline">
+                          <input
+                            className="input"
+                            value={seededOrderSeed}
+                            onChange={(event) =>
+                              setSeededOrderSeed(event.target.value.trim())
+                            }
+                            disabled={uploading}
+                          />
+                          <button
+                            className="button button--ghost button--mini"
+                            type="button"
+                            onClick={() => setSeededOrderSeed(createSecureRandomSeed())}
+                            disabled={uploading}
+                          >
+                            New secure seed
+                          </button>
+                        </div>
+                      </label>
+                    )}
+
+                    <label className="field">
+                      <span className="field__label info-label">
+                        Duplicate handling
+                        <InfoTooltip text="Warn only keeps all selected files. Auto-skip removes exact repeated file entries from this batch." />
+                      </span>
+                      <select
+                        className="select"
+                        value={duplicatePolicy}
+                        onChange={(event) =>
+                          setDuplicatePolicy(event.target.value as DuplicatePolicy)
+                        }
+                        disabled={uploading}
+                      >
+                        <option value="warn">Warn only</option>
+                        <option value="skip">Auto-skip exact duplicates</option>
+                      </select>
+                    </label>
+
+                    <label className="field">
+                      <span className="field__label info-label">
+                        Include extensions
+                        <InfoTooltip text="Optional allow-list. Example: .png, .jpg. Leave empty to include everything." />
+                      </span>
+                      <input
+                        className="input"
+                        value={includeExtensionsInput}
+                        placeholder=".png, .jpg"
+                        onChange={(event) => setIncludeExtensionsInput(event.target.value)}
+                        disabled={uploading}
+                      />
+                    </label>
+
+                    <label className="field">
+                      <span className="field__label info-label">
+                        Exclude extensions
+                        <InfoTooltip text="Optional block-list. Example: .psd, .tmp. Exclude rules override include rules." />
+                      </span>
+                      <input
+                        className="input"
+                        value={excludeExtensionsInput}
+                        placeholder=".psd, .tmp"
+                        onChange={(event) => setExcludeExtensionsInput(event.target.value)}
+                        disabled={uploading}
+                      />
+                    </label>
+
+                    <label className="field field--checkbox field--full">
+                      <input
+                        type="checkbox"
+                        checked={preflightOnly}
+                        onChange={(event) => setPreflightOnly(event.target.checked)}
+                        disabled={uploading}
+                      />
+                      <span className="field__label info-label">
+                        Preflight only (no upload)
+                        <InfoTooltip text="Runs all checks and previews final batch count/order without sending files to storage." />
+                      </span>
+                    </label>
                   </div>
-                </label>
+                </div>
               )}
 
-              <label className="field">
-                <span className="field__label info-label">
-                  Duplicate handling
-                  <InfoTooltip text="Warn only keeps all selected files. Auto-skip removes exact repeated file entries from this batch." />
-                </span>
-                <select
-                  className="select"
-                  value={duplicatePolicy}
-                  onChange={(event) =>
-                    setDuplicatePolicy(event.target.value as DuplicatePolicy)
-                  }
-                  disabled={uploading}
+              {selectedFiles.length > 0 && (
+                <div className="mint-step mint-step--pending">
+                  <span className="meta-label">Selection</span>
+                  <span className="meta-value">
+                    Selected {selectedFiles.length} file
+                    {selectedFiles.length === 1 ? '' : 's'} · ready {filesForUpload.length}{' '}
+                    file{filesForUpload.length === 1 ? '' : 's'} ·{' '}
+                    {formatBytes(BigInt(selectedTotalBytes))}
+                    {collectionTargetSupply
+                      ? ` · target supply ${collectionTargetSupply}`
+                      : ''}
+                    {collectionLabel ? ` · ${collectionLabel}` : ''}
+                  </span>
+                </div>
+              )}
+
+              {prepNotices.length > 0 && (
+                <div className="alert">
+                  <div>
+                    {prepNotices.map((notice) => (
+                      <p key={notice}>{notice}</p>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {overlappingExtensionFilters.length > 0 && (
+                <div className="alert">
+                  <p>
+                    Extensions listed in both include and exclude rules:{' '}
+                    {overlappingExtensionFilters.join(', ')}. Exclude rules take priority.
+                  </p>
+                </div>
+              )}
+
+              {uploadWarnings.length > 0 && (
+                <div className="alert">
+                  <div>
+                    <strong>Quick checks before upload:</strong>
+                    <ul>
+                      {uploadWarnings.map((warning) => (
+                        <li key={warning}>{warning}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              <div className="mint-actions">
+                <button className="button" type="submit" disabled={!canUpload}>
+                  {uploadsLocked
+                    ? 'Uploads locked'
+                    : uploading
+                    ? 'Uploading...'
+                    : preflightOnly
+                      ? 'Run preflight checks'
+                      : `Upload selected file${filesForUpload.length === 1 ? '' : 's'}`}
+                </button>
+                <button
+                  className="button button--ghost"
+                  type="button"
+                  onClick={clearSelectedFiles}
+                  disabled={selectedFiles.length === 0 || uploading}
                 >
-                  <option value="warn">Warn only</option>
-                  <option value="skip">Auto-skip exact duplicates</option>
-                </select>
-              </label>
+                  Clear selection
+                </button>
+              </div>
+            </form>
 
-              <label className="field">
-                <span className="field__label info-label">
-                  Include extensions
-                  <InfoTooltip text="Optional allow-list. Example: .png, .jpg. Leave empty to include everything." />
+            {collectionId && (
+              <div
+                className={
+                  uploadsLocked
+                    ? 'mint-step mint-step--error'
+                    : readiness?.ready
+                      ? 'mint-step mint-step--done'
+                      : 'mint-step mint-step--pending'
+                }
+              >
+                <span className="meta-label">Upload readiness</span>
+                <span className="meta-value">
+                  {uploadsLocked
+                    ? uploadLockReason
+                    : readinessLoading
+                    ? 'Checking deployment confirmation...'
+                    : readiness?.ready
+                      ? 'Ready. Deployment is confirmed on-chain.'
+                      : readiness?.reason ??
+                        'Enter a valid collection id to check readiness.'}
                 </span>
-                <input
-                  className="input"
-                  value={includeExtensionsInput}
-                  placeholder=".png, .jpg"
-                  onChange={(event) => setIncludeExtensionsInput(event.target.value)}
-                  disabled={uploading}
-                />
-              </label>
-
-              <label className="field">
-                <span className="field__label info-label">
-                  Exclude extensions
-                  <InfoTooltip text="Optional block-list. Example: .psd, .tmp. Exclude rules override include rules." />
+                <span className="meta-value">
+                  Collection state: <strong>{collectionState || 'draft'}</strong>
                 </span>
-                <input
-                  className="input"
-                  value={excludeExtensionsInput}
-                  placeholder=".psd, .tmp"
-                  onChange={(event) => setExcludeExtensionsInput(event.target.value)}
-                  disabled={uploading}
-                />
-              </label>
-
-              <label className="field field--checkbox field--full">
-                <input
-                  type="checkbox"
-                  checked={preflightOnly}
-                  onChange={(event) => setPreflightOnly(event.target.checked)}
-                  disabled={uploading}
-                />
-                <span className="field__label info-label">
-                  Preflight only (no upload)
-                  <InfoTooltip text="Runs all checks and previews final batch count/order without sending files to storage." />
-                </span>
-              </label>
-            </div>
+                {readiness?.deployTxId && (
+                  <a
+                    className="button button--ghost button--mini"
+                    href={buildTxExplorerUrl(readiness.deployTxId, readiness.network)}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    View deployment transaction
+                  </a>
+                )}
+              </div>
+            )}
           </div>
         )}
 
-        {selectedFiles.length > 0 && (
-          <div className="mint-step mint-step--pending">
-            <span className="meta-label">Selection</span>
-            <span className="meta-value">
-              Selected {selectedFiles.length} file{selectedFiles.length === 1 ? '' : 's'} ·
-              ready {filesForUpload.length} file{filesForUpload.length === 1 ? '' : 's'} ·{' '}
-              {formatBytes(BigInt(selectedTotalBytes))}
-              {collectionTargetSupply
-                ? ` · target supply ${collectionTargetSupply}`
-                : ''}
-              {collectionLabel ? ` · ${collectionLabel}` : ''}
-            </span>
-          </div>
+        {status && <p className="meta-value">{status}</p>}
+        {lastUploadTrace.requestId && (
+          <p className="meta-value">
+            Last upload trace: request {lastUploadTrace.requestId}
+            {lastUploadTrace.mode ? ` · ${lastUploadTrace.mode}` : ''}
+            {lastUploadTrace.binding ? ` · ${lastUploadTrace.binding}` : ''}
+            {lastUploadTrace.filePath ? ` · ${lastUploadTrace.filePath}` : ''}
+            {lastUploadTrace.step ? ` · step ${lastUploadTrace.step}` : ''}
+          </p>
         )}
+      </section>
 
-        {prepNotices.length > 0 && (
-          <div className="alert">
-            <div>
-              {prepNotices.map((notice) => (
-                <p key={notice}>{notice}</p>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {overlappingExtensionFilters.length > 0 && (
-          <div className="alert">
-            <p>
-              Extensions listed in both include and exclude rules:{' '}
-              {overlappingExtensionFilters.join(', ')}. Exclude rules take priority.
-            </p>
-          </div>
-        )}
-
-        {uploadWarnings.length > 0 && (
-          <div className="alert">
-            <div>
-              <strong>Quick checks before upload:</strong>
-              <ul>
-                {uploadWarnings.map((warning) => (
-                  <li key={warning}>{warning}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        )}
-
-        <div className="mint-actions">
-          <button className="button" type="submit" disabled={!canUpload}>
-            {uploadsLocked
-              ? 'Uploads locked'
-              : uploading
-              ? 'Uploading...'
-              : preflightOnly
-                ? 'Run preflight checks'
-                : `Upload selected file${filesForUpload.length === 1 ? '' : 's'}`}
-          </button>
-          <button
-            className="button button--ghost"
-            type="button"
-            onClick={clearSelectedFiles}
-            disabled={selectedFiles.length === 0 || uploading}
-          >
-            Clear selection
-          </button>
-        </div>
-      </form>
-      {collectionId && (
-        <div
-          className={
-            uploadsLocked
-              ? 'mint-step mint-step--error'
-              : readiness?.ready
-                ? 'mint-step mint-step--done'
-                : 'mint-step mint-step--pending'
-          }
-        >
-          <span className="meta-label">Upload readiness</span>
-          <span className="meta-value">
-            {uploadsLocked
-              ? uploadLockReason
-              : readinessLoading
-              ? 'Checking deployment confirmation...'
-              : readiness?.ready
-                ? 'Ready. Deployment is confirmed on-chain.'
-                : readiness?.reason ?? 'Enter a valid collection id to check readiness.'}
-          </span>
-          <span className="meta-value">
-            Collection state: <strong>{collectionState || 'draft'}</strong>
-          </span>
-          {readiness?.deployTxId && (
-            <a
-              className="button button--ghost button--mini"
-              href={buildTxExplorerUrl(readiness.deployTxId, readiness.network)}
-              target="_blank"
-              rel="noreferrer"
-            >
-              View deployment transaction
-            </a>
-          )}
-        </div>
-      )}
-      {status && <p className="meta-value">{status}</p>}
-      {lastUploadTrace.requestId && (
-        <p className="meta-value">
-          Last upload trace: request {lastUploadTrace.requestId}
-          {lastUploadTrace.mode ? ` · ${lastUploadTrace.mode}` : ''}
-          {lastUploadTrace.binding ? ` · ${lastUploadTrace.binding}` : ''}
-          {lastUploadTrace.filePath ? ` · ${lastUploadTrace.filePath}` : ''}
-          {lastUploadTrace.step ? ` · step ${lastUploadTrace.step}` : ''}
-        </p>
-      )}
-      <div className="asset-staging__list">
+      <section className="asset-staging__section asset-staging__list">
         <h3>Staged assets checker</h3>
         <p className="field__hint">
           Browse uploaded items in 4x4 pages, verify ordering, and inspect one asset
@@ -1368,7 +1427,7 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
             </div>
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }

@@ -109,11 +109,16 @@ export default function CollectionManagerApp() {
     setExperienceMode('advanced');
   };
 
-  const handleSelectCollection = (collection: { id: string; label: string }) => {
+  const handleSelectCollection = (collection: {
+    id: string;
+    label: string;
+    deployed: boolean;
+  }) => {
     setActiveCollectionId(collection.id);
     setActiveCollectionLabel(collection.label);
     setCollapsed((prev) => ({
       ...prev,
+      'deploy-wizard': collection.deployed,
       'asset-staging': false,
       'publish-ops': false
     }));
