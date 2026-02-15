@@ -904,6 +904,20 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   const reservedCountLabel = formatCount(contractStatus?.reservedCount ?? null);
   const remainingLabel = remaining === null ? 'Unknown' : remaining.toString();
   const mintPriceLabel = toMicroStxLabel(contractStatus?.mintPrice ?? null);
+  const pausedStatus = contractStatus?.paused;
+  const pausedLabel =
+    pausedStatus === null || pausedStatus === undefined
+      ? 'Unknown'
+      : pausedStatus
+        ? 'Yes'
+        : 'No';
+  const finalizedStatus = contractStatus?.finalized;
+  const finalizedLabel =
+    finalizedStatus === null || finalizedStatus === undefined
+      ? 'Unknown'
+      : finalizedStatus
+        ? 'Yes'
+        : 'No';
 
   return (
     <div className="app collection-live-page">
@@ -1017,23 +1031,11 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
               </div>
               <div>
                 <span className="meta-label">Paused</span>
-                <span className="meta-value">
-                  {contractStatus?.paused === null
-                    ? 'Unknown'
-                    : contractStatus.paused
-                      ? 'Yes'
-                      : 'No'}
-                </span>
+                <span className="meta-value">{pausedLabel}</span>
               </div>
               <div>
                 <span className="meta-label">Finalized</span>
-                <span className="meta-value">
-                  {contractStatus?.finalized === null
-                    ? 'Unknown'
-                    : contractStatus.finalized
-                      ? 'Yes'
-                      : 'No'}
-                </span>
+                <span className="meta-value">{finalizedLabel}</span>
               </div>
               <div>
                 <span className="meta-label">Wallet</span>
