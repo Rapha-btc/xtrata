@@ -625,22 +625,20 @@
   )
 )
 
+(define-private (pay-if-positive-split (amount uint) (recipient principal))
+  (if (and (> amount u0) (not (is-eq recipient tx-sender)))
+    (stx-transfer? amount tx-sender recipient)
+    (ok true)
+  )
+)
+
 (define-private (pay-splits (amount uint))
   (if (> amount u0)
     (let ((splits (calc-splits amount)))
       (begin
-        (if (> (get artist splits) u0)
-          (try! (stx-transfer? (get artist splits) tx-sender (var-get artist-recipient)))
-          true
-        )
-        (if (> (get market splits) u0)
-          (try! (stx-transfer? (get market splits) tx-sender (var-get marketplace-recipient)))
-          true
-        )
-        (if (> (get operator splits) u0)
-          (try! (stx-transfer? (get operator splits) tx-sender (var-get operator-recipient)))
-          true
-        )
+        (try! (pay-if-positive-split (get artist splits) (var-get artist-recipient)))
+        (try! (pay-if-positive-split (get market splits) (var-get marketplace-recipient)))
+        (try! (pay-if-positive-split (get operator splits) (var-get operator-recipient)))
         (ok true)
       )
     )

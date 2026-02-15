@@ -7,6 +7,7 @@ import {
   ClarityType,
   cvToValue,
   listCV,
+  PostConditionMode,
   principalCV,
   stringAsciiCV,
   uintCV,
@@ -558,7 +559,10 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       return 'Mint session was not found on-chain (u105). Click Resume mint to restart safely from chain state.';
     }
     if (normalized.includes('(err u2)')) {
-      return 'Mint was rejected by collection policy (err u2). This is often an allowlist or phase access rule.';
+      return 'STX payout transfer failed (err u2). A payout recipient is likely the same as the minting wallet. Use a different minter wallet or update payout recipients/splits.';
+    }
+    if (normalized.includes('post-condition check failure')) {
+      return 'Wallet post-conditions blocked STX movement for mint-begin. This build now sends collection calls with Allow mode; refresh and retry.';
     }
     if (normalized.includes('wallet cancelled') || normalized.includes('failed to broadcast')) {
       return 'Wallet cancelled or could not broadcast. No new mint step was confirmed. You can safely resume.';
@@ -820,6 +824,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
           functionArgs: params.functionArgs,
           network,
           stxAddress: session.address,
+          postConditionMode: PostConditionMode.Allow,
           appDetails: {
             name: 'Xtrata Collection Mint'
           },
