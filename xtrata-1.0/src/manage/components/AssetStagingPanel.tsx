@@ -26,6 +26,8 @@ type ManagedAsset = {
   path: string;
   filename: string | null;
   mime_type: string;
+  storage_key?: string | null;
+  edition_cap?: number | null;
   total_bytes: number;
   total_chunks: number;
   expected_hash: string | null;
@@ -78,6 +80,79 @@ const ORDER_MODE_OPTIONS: Array<{ value: UploadOrderMode; label: string }> = [
   { value: 'seeded-random', label: 'Seeded random order' }
 ];
 
+type AssetOrderMode =
+  | 'backend-current'
+  | 'uploaded-oldest'
+  | 'uploaded-newest'
+  | 'path-natural'
+  | 'filename-natural';
+
+const ASSET_GRID_PAGE_SIZE = 16;
+
+const ASSET_ORDER_OPTIONS: Array<{ value: AssetOrderMode; label: string }> = [
+  { value: 'backend-current', label: 'Current backend order' },
+  { value: 'uploaded-oldest', label: 'Upload time (oldest first)' },
+  { value: 'uploaded-newest', label: 'Upload time (newest first)' },
+  { value: 'path-natural', label: 'Path (A to Z)' },
+  { value: 'filename-natural', label: 'Filename (A to Z)' }
+];
+
+const naturalCompare = (left: string, right: string) =>
+  left.localeCompare(right, undefined, {
+    numeric: true,
+    sensitivity: 'base'
+  });
+
+const isImageAsset = (asset: ManagedAsset) =>
+  asset.mime_type.trim().toLowerCase().startsWith('image/');
+
+const getAssetDisplayName = (asset: ManagedAsset) => asset.filename ?? asset.path;
+
+const sortManagedAssets = (assets: ManagedAsset[], mode: AssetOrderMode) => {
+  if (mode === 'backend-current') {
+    return assets;
+  }
+  const sorted = [...assets];
+  if (mode === 'uploaded-oldest') {
+    sorted.sort((left, right) => left.created_at - right.created_at);
+    return sorted;
+  }
+  if (mode === 'uploaded-newest') {
+    sorted.sort((left, right) => right.created_at - left.created_at);
+    return sorted;
+  }
+  if (mode === 'path-natural') {
+    sorted.sort((left, right) => naturalCompare(left.path, right.path));
+    return sorted;
+  }
+  sorted.sort((left, right) =>
+    naturalCompare(getAssetDisplayName(left), getAssetDisplayName(right))
+  );
+  return sorted;
+};
+
+const buildAssetPreviewUrl = (collectionId: string, assetId: string) =>
+  `/collections/${encodeURIComponent(collectionId)}/asset-preview?assetId=${encodeURIComponent(
+    assetId
+  )}`;
+
+const extractPathTraits = (path: string) => {
+  const normalized = path.replace(/\\/g, '/');
+  const parts = normalized.split('/').filter(Boolean);
+  if (parts.length <= 1) {
+    return [] as string[];
+  }
+  return parts
+    .slice(0, -1)
+    .map((segment) =>
+      segment
+        .replace(/[_-]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+    )
+    .filter((segment) => segment.length > 0);
+};
+
 const logUploadDebug = (phase: string, details: Record<string, unknown>) => {
   console.info(`[manage:asset-staging] ${phase}`, details);
 };
@@ -121,6 +196,15 @@ export default function AssetStagingPanel() {
   const [preflightOnly, setPreflightOnly] = useState(false);
   const [includeExtensionsInput, setIncludeExtensionsInput] = useState('');
   const [excludeExtensionsInput, setExcludeExtensionsInput] = useState('');
+  const [assetOrderMode, setAssetOrderMode] = useState<AssetOrderMode>(
+    'backend-current'
+  );
+  const [showImagesOnly, setShowImagesOnly] = useState(true);
+  const [assetGridPage, setAssetGridPage] = useState(1);
+  const [selectedPreviewAssetId, setSelectedPreviewAssetId] = useState<string | null>(
+    null
+  );
+  const [assetImageErrors, setAssetImageErrors] = useState<Record<string, true>>({});
   const [lastUploadTrace, setLastUploadTrace] = useState<{
     requestId: string | null;
     mode: string | null;
@@ -179,6 +263,12 @@ export default function AssetStagingPanel() {
 
   useEffect(() => {
     void loadAssets();
+  }, [normalizedCollectionId]);
+
+  useEffect(() => {
+    setAssetGridPage(1);
+    setSelectedPreviewAssetId(null);
+    setAssetImageErrors({});
   }, [normalizedCollectionId]);
 
   useEffect(() => {
@@ -359,6 +449,96 @@ export default function AssetStagingPanel() {
     duplicatePolicy,
     orderMode
   ]);
+
+  const orderedAssets = useMemo(
+    () => sortManagedAssets(assets, assetOrderMode),
+    [assets, assetOrderMode]
+  );
+
+  const previewableAssets = useMemo(
+    () =>
+      orderedAssets.filter((asset) =>
+        showImagesOnly ? isImageAsset(asset) : true
+      ),
+    [orderedAssets, showImagesOnly]
+  );
+
+  const totalAssetPages = Math.max(
+    1,
+    Math.ceil(previewableAssets.length / ASSET_GRID_PAGE_SIZE)
+  );
+
+  useEffect(() => {
+    setAssetGridPage((current) => Math.min(current, totalAssetPages));
+  }, [totalAssetPages]);
+
+  useEffect(() => {
+    if (previewableAssets.length === 0) {
+      if (selectedPreviewAssetId !== null) {
+        setSelectedPreviewAssetId(null);
+      }
+      return;
+    }
+    const stillExists = previewableAssets.some(
+      (asset) => asset.asset_id === selectedPreviewAssetId
+    );
+    if (!stillExists) {
+      setSelectedPreviewAssetId(previewableAssets[0].asset_id);
+    }
+  }, [previewableAssets, selectedPreviewAssetId]);
+
+  const pageStartIndex = (assetGridPage - 1) * ASSET_GRID_PAGE_SIZE;
+  const currentAssetPage = useMemo(
+    () =>
+      previewableAssets.slice(
+        pageStartIndex,
+        pageStartIndex + ASSET_GRID_PAGE_SIZE
+      ),
+    [previewableAssets, pageStartIndex]
+  );
+
+  const currentPageEmptySlots = Math.max(
+    0,
+    ASSET_GRID_PAGE_SIZE - currentAssetPage.length
+  );
+
+  const selectedPreviewAsset = useMemo(
+    () =>
+      previewableAssets.find((asset) => asset.asset_id === selectedPreviewAssetId) ??
+      null,
+    [previewableAssets, selectedPreviewAssetId]
+  );
+
+  const selectedPreviewIndex = useMemo(() => {
+    if (!selectedPreviewAsset) {
+      return 0;
+    }
+    const index = previewableAssets.findIndex(
+      (asset) => asset.asset_id === selectedPreviewAsset.asset_id
+    );
+    return index >= 0 ? index + 1 : 0;
+  }, [previewableAssets, selectedPreviewAsset]);
+
+  const selectedPreviewUrl = useMemo(() => {
+    if (!selectedPreviewAsset || !normalizedCollectionId) {
+      return null;
+    }
+    return buildAssetPreviewUrl(
+      normalizedCollectionId,
+      selectedPreviewAsset.asset_id
+    );
+  }, [selectedPreviewAsset, normalizedCollectionId]);
+
+  const selectedPreviewTraits = useMemo(
+    () => (selectedPreviewAsset ? extractPathTraits(selectedPreviewAsset.path) : []),
+    [selectedPreviewAsset]
+  );
+
+  const markAssetImageError = (assetId: string) => {
+    setAssetImageErrors((current) =>
+      current[assetId] ? current : { ...current, [assetId]: true }
+    );
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -845,23 +1025,219 @@ export default function AssetStagingPanel() {
         </p>
       )}
       <div className="asset-staging__list">
-        <h3>Staged assets</h3>
+        <h3>Staged assets checker</h3>
+        <p className="field__hint">
+          Browse uploaded items in 4x4 pages, verify ordering, and inspect one asset
+          in detail before launch.
+        </p>
+
+        <div className="asset-staging__controls">
+          <label className="field">
+            <span className="field__label">Mint order checker</span>
+            <select
+              className="select"
+              value={assetOrderMode}
+              onChange={(event) => {
+                setAssetOrderMode(event.target.value as AssetOrderMode);
+                setAssetGridPage(1);
+              }}
+            >
+              {ASSET_ORDER_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="field field--checkbox">
+            <input
+              type="checkbox"
+              checked={showImagesOnly}
+              onChange={(event) => {
+                setShowImagesOnly(event.target.checked);
+                setAssetGridPage(1);
+              }}
+            />
+            <span className="field__label">Show images only</span>
+          </label>
+        </div>
+
+        <div className="asset-staging__summary">
+          <span className="meta-value">
+            Showing {previewableAssets.length} of {orderedAssets.length} staged assets ·
+            page {assetGridPage} of {totalAssetPages}
+          </span>
+          <div className="asset-staging__pager">
+            <button
+              className="button button--ghost button--mini"
+              type="button"
+              onClick={() =>
+                setAssetGridPage((current) => Math.max(1, current - 1))
+              }
+              disabled={assetGridPage <= 1}
+            >
+              Previous 16
+            </button>
+            <button
+              className="button button--ghost button--mini"
+              type="button"
+              onClick={() =>
+                setAssetGridPage((current) =>
+                  Math.min(totalAssetPages, current + 1)
+                )
+              }
+              disabled={assetGridPage >= totalAssetPages}
+            >
+              Next 16
+            </button>
+          </div>
+        </div>
+
         {loading && <p>Loading…</p>}
-        {!loading && assets.length === 0 && <p>No staged assets yet.</p>}
-        <ul>
-          {assets.map((asset) => (
-            <li key={asset.asset_id}>
-              <strong>{asset.filename ?? asset.path}</strong> ·{' '}
-              {Math.round(asset.total_bytes / 1024)} KB · {asset.state}
-              {asset.expires_at && (
+        {!loading && orderedAssets.length === 0 && <p>No staged assets yet.</p>}
+        {!loading && orderedAssets.length > 0 && previewableAssets.length === 0 && (
+          <p className="meta-value">
+            No image assets found in the current filter. Uncheck "Show images only" to
+            inspect non-image files.
+          </p>
+        )}
+
+        {!loading && previewableAssets.length > 0 && (
+          <div className="asset-staging__viewer">
+            <div className="asset-staging__grid" role="list">
+              {currentAssetPage.map((asset, index) => {
+                const isSelected = selectedPreviewAssetId === asset.asset_id;
+                const imageFailed = Boolean(assetImageErrors[asset.asset_id]);
+                const gridIndex = pageStartIndex + index + 1;
+                const previewUrl = buildAssetPreviewUrl(
+                  normalizedCollectionId,
+                  asset.asset_id
+                );
+
+                return (
+                  <button
+                    key={asset.asset_id}
+                    className={`asset-staging__thumb${
+                      isSelected ? ' asset-staging__thumb--active' : ''
+                    }`}
+                    type="button"
+                    role="listitem"
+                    onClick={() => setSelectedPreviewAssetId(asset.asset_id)}
+                  >
+                    <span className="asset-staging__thumb-index">#{gridIndex}</span>
+                    <span className="asset-staging__thumb-frame">
+                      {isImageAsset(asset) && !imageFailed ? (
+                        <img
+                          src={previewUrl}
+                          alt={getAssetDisplayName(asset)}
+                          loading="lazy"
+                          onError={() => markAssetImageError(asset.asset_id)}
+                        />
+                      ) : (
+                        <span className="asset-staging__thumb-placeholder">
+                          {isImageAsset(asset) ? 'Preview unavailable' : asset.mime_type}
+                        </span>
+                      )}
+                    </span>
+                    <span className="asset-staging__thumb-name">
+                      {getAssetDisplayName(asset)}
+                    </span>
+                  </button>
+                );
+              })}
+
+              {Array.from({ length: currentPageEmptySlots }).map((_, index) => (
+                <div
+                  key={`empty-${assetGridPage}-${index}`}
+                  className="asset-staging__thumb asset-staging__thumb--empty"
+                  aria-hidden="true"
+                />
+              ))}
+            </div>
+
+            <div className="asset-staging__preview">
+              {!selectedPreviewAsset && (
+                <p className="meta-value">
+                  Select an item in the grid to see a larger preview.
+                </p>
+              )}
+
+              {selectedPreviewAsset && (
                 <>
-                  {' '}
-                  · expires {new Date(asset.expires_at).toLocaleString()}
+                  <div className="asset-staging__preview-frame">
+                    {selectedPreviewUrl &&
+                    isImageAsset(selectedPreviewAsset) &&
+                    !assetImageErrors[selectedPreviewAsset.asset_id] ? (
+                      <img
+                        src={selectedPreviewUrl}
+                        alt={getAssetDisplayName(selectedPreviewAsset)}
+                        onError={() =>
+                          markAssetImageError(selectedPreviewAsset.asset_id)
+                        }
+                      />
+                    ) : (
+                      <span className="asset-staging__thumb-placeholder">
+                        {isImageAsset(selectedPreviewAsset)
+                          ? 'Preview unavailable'
+                          : selectedPreviewAsset.mime_type}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="asset-staging__preview-meta">
+                    <p>
+                      <strong>Order slot:</strong>{' '}
+                      {selectedPreviewIndex > 0 ? `#${selectedPreviewIndex}` : 'n/a'}
+                    </p>
+                    <p>
+                      <strong>Name:</strong> {getAssetDisplayName(selectedPreviewAsset)}
+                    </p>
+                    <p>
+                      <strong>Path:</strong>{' '}
+                      <code>{selectedPreviewAsset.path}</code>
+                    </p>
+                    <p>
+                      <strong>MIME:</strong> {selectedPreviewAsset.mime_type}
+                    </p>
+                    <p>
+                      <strong>Size:</strong>{' '}
+                      {formatBytes(BigInt(selectedPreviewAsset.total_bytes))}
+                    </p>
+                    <p>
+                      <strong>Chunks:</strong> {selectedPreviewAsset.total_chunks}
+                    </p>
+                    <p>
+                      <strong>State:</strong> {selectedPreviewAsset.state}
+                    </p>
+                    <p>
+                      <strong>Uploaded:</strong>{' '}
+                      {new Date(selectedPreviewAsset.created_at).toLocaleString()}
+                    </p>
+                    {selectedPreviewAsset.expires_at ? (
+                      <p>
+                        <strong>Expires:</strong>{' '}
+                        {new Date(selectedPreviewAsset.expires_at).toLocaleString()}
+                      </p>
+                    ) : null}
+                    {selectedPreviewAsset.expected_hash ? (
+                      <p className="asset-staging__hash">
+                        <strong>Expected hash:</strong>{' '}
+                        <code>{selectedPreviewAsset.expected_hash}</code>
+                      </p>
+                    ) : null}
+                    <p className="asset-staging__traits">
+                      <strong>Trait hints:</strong>{' '}
+                      {selectedPreviewTraits.length > 0
+                        ? selectedPreviewTraits.join(' · ')
+                        : 'No folder-based traits detected'}
+                    </p>
+                  </div>
                 </>
               )}
-            </li>
-          ))}
-        </ul>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
