@@ -14,7 +14,6 @@ import {
   normalizeDependencyIds,
   parseDependencyInput
 } from '../../lib/mint/dependencies';
-import { toStacksNetwork } from '../../lib/network/stacks';
 import {
   ARTIST_DEPLOY_DEFAULTS,
   buildArtistDeployContractSource,
@@ -538,7 +537,7 @@ export default function DeployWizardPanel() {
       showContractDeploy({
         contractName,
         codeBody: refreshBuild.source,
-        network: toStacksNetwork(session.network),
+        network: session.network,
         appDetails: {
           name: 'Xtrata Collection Manager'
         },
