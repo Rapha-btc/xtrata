@@ -990,7 +990,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
           <div className="panel__header">
             <div>
               <h2>Collection status</h2>
-              <p>Live monitoring from the collection contract.</p>
+              <p></p>
             </div>
             <div className="panel__actions">
               <label className="theme-select" htmlFor="live-theme-select">
