@@ -1,6 +1,7 @@
 import { jsonResponse, badRequest, serverError } from '../../lib/utils';
 import { queryAll, run } from '../../lib/db';
 import { staysWithinLimit } from '../../lib/collections';
+import { getCollectionDeployReadiness } from '../../lib/collection-deploy';
 
 export const onRequest: PagesFunction = async ({ request, env, params }) => {
   const collectionId = params?.collectionId;
@@ -28,6 +29,14 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
 
   if (request.method === 'POST') {
     try {
+      const readiness = await getCollectionDeployReadiness({
+        env,
+        collectionId
+      });
+      if (!readiness.ready) {
+        return badRequest(readiness.reason);
+      }
+
       const payload = (await request.json()) as Record<string, unknown>;
       const path = String(payload.path ?? '').trim();
       if (!path) {

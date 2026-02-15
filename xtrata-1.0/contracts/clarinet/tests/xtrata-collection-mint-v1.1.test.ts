@@ -86,6 +86,38 @@ function sealMint(sender: string, hash: string, tokenUri: string) {
   ).result;
 }
 
+function beginCoreMint(sender: string, hash: string, totalSize = 1, totalChunks = 1) {
+  return simnet.callPublicFn(
+    v2Contract,
+    "begin-inscription",
+    [
+      Cl.bufferFromHex(hash),
+      Cl.stringAscii(mime),
+      Cl.uint(totalSize),
+      Cl.uint(totalChunks),
+    ],
+    sender
+  ).result;
+}
+
+function addCoreChunk(sender: string, hash: string, chunkHex: string) {
+  return simnet.callPublicFn(
+    v2Contract,
+    "add-chunk-batch",
+    [Cl.bufferFromHex(hash), Cl.list([Cl.bufferFromHex(chunkHex)])],
+    sender
+  ).result;
+}
+
+function sealCoreMint(sender: string, hash: string, tokenUri: string) {
+  return simnet.callPublicFn(
+    v2Contract,
+    "seal-inscription",
+    [Cl.bufferFromHex(hash), Cl.stringAscii(tokenUri)],
+    sender
+  ).result;
+}
+
 function getTokenUriRaw(tokenId: bigint, sender: string = minter) {
   return simnet.callReadOnlyFn(
     v2Contract,
@@ -601,6 +633,73 @@ describe("xtrata-collection-mint-v1.1", () => {
     const minted1 = simnet.callReadOnlyFn(mintContract, "get-minted-id", [Cl.uint(1)], minter).result;
     expect(minted0.type).toBe(ClarityType.OptionalSome);
     expect(minted1.type).toBe(ClarityType.OptionalSome);
+  });
+
+  it("applies default parent dependencies on mint-seal", () => {
+    configureOpenMint(10n, 0n);
+
+    const parentHash = computeFinalHash(["80"]);
+    unwrapOk(beginCoreMint(minter, parentHash));
+    unwrapOk(addCoreChunk(minter, parentHash, "80"));
+    const parentId = unwrapUInt(
+      unwrapOk(sealCoreMint(minter, parentHash, "data:text/plain,parent"))
+    );
+
+    unwrapOk(
+      simnet.callPublicFn(
+        mintContract,
+        "set-default-dependencies",
+        [Cl.list([Cl.uint(parentId)])],
+        deployer
+      ).result
+    );
+
+    const childHash = computeFinalHash(["81"]);
+    unwrapOk(beginMint(minter, childHash));
+    unwrapOk(addChunk(minter, childHash, "81"));
+    const childId = unwrapUInt(
+      unwrapOk(sealMint(minter, childHash, "data:text/plain,child"))
+    );
+
+    const dependencies = simnet.callReadOnlyFn(
+      v2Contract,
+      "get-dependencies",
+      [Cl.uint(childId)],
+      minter
+    ).result;
+    expect(dependencies).toEqual(Cl.list([Cl.uint(parentId)]));
+  });
+
+  it("rejects mint-seal-batch when default parent dependencies are set", () => {
+    configureOpenMint(10n, 0n);
+
+    unwrapOk(
+      simnet.callPublicFn(
+        mintContract,
+        "set-default-dependencies",
+        [Cl.list([Cl.uint(1)])],
+        deployer
+      ).result
+    );
+
+    const hashA = computeFinalHash(["90"]);
+    const hashB = computeFinalHash(["91"]);
+
+    unwrapOk(beginMint(minter, hashA));
+    unwrapOk(beginMint(minter, hashB));
+    unwrapOk(addChunk(minter, hashA, "90"));
+    unwrapOk(addChunk(minter, hashB, "91"));
+
+    const result = simnet.callPublicFn(
+      mintContract,
+      "mint-seal-batch",
+      [coreContractPrincipal, Cl.list([
+        Cl.tuple({ hash: Cl.bufferFromHex(hashA), "token-uri": Cl.stringAscii("data:text/plain,a") }),
+        Cl.tuple({ hash: Cl.bufferFromHex(hashB), "token-uri": Cl.stringAscii("data:text/plain,b") }),
+      ])],
+      minter
+    ).result;
+    expectErr(result, 120);
   });
 
   it("locks admin mutability after finalize", () => {

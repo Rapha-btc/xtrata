@@ -1,20 +1,27 @@
+import { badRequest, jsonResponse, serverError } from '../../lib/utils';
+import { getCollectionDeployReadiness } from '../../lib/collection-deploy';
+
 export const onRequest: PagesFunction = async ({ env, params }) => {
   const collectionId = params?.collectionId;
   if (!collectionId) {
-    return new Response(JSON.stringify({ error: 'collection id required' }), { status: 400 });
+    return badRequest('collection id required');
   }
   try {
+    const readiness = await getCollectionDeployReadiness({
+      env,
+      collectionId
+    });
+    if (!readiness.ready) {
+      return badRequest(readiness.reason);
+    }
+
     const bucket =
       (env as Record<string, unknown>).COLLECTION_ASSETS ??
       (env as Record<string, unknown>).ASSETS ??
       (env as Record<string, unknown>).R2;
     if (!bucket || typeof (bucket as R2Bucket).getUploadUrl !== 'function') {
-      return new Response(
-        JSON.stringify({
-          error:
-            'Missing R2 binding. Configure bucket binding `COLLECTION_ASSETS` (or legacy `ASSETS`/`R2`) for this Pages environment.'
-        }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      return serverError(
+        'Missing R2 binding. Configure bucket binding `COLLECTION_ASSETS` (or legacy `ASSETS`/`R2`) for this Pages environment.'
       );
     }
     const key = `${collectionId}/${crypto.randomUUID()}`;
@@ -23,15 +30,10 @@ export const onRequest: PagesFunction = async ({ env, params }) => {
       key,
       expires: 60 * 5
     });
-    return new Response(JSON.stringify({ uploadUrl, key }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return jsonResponse({ uploadUrl, key });
   } catch (error) {
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to create upload URL'
-      }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    return serverError(
+      error instanceof Error ? error.message : 'Failed to create upload URL'
     );
   }
 };

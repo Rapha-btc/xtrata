@@ -1,4 +1,4 @@
-
+0) add ability to add parent inscriptions to collection-mints so artists can assign a parent that will then automatically be applied to all mints in the collection.
 
 1) Check on how fully formed our approach is to recursive inscriptions. Not only are we trying to make it as convenient and cheap as possible to create recursive apps but also need to understand how to reference cross contract files in a recursive app and what changes (if any) need to be made to the platform or protocol to improve, enhance and streamline recursive funtionality and performance to make xtrata the best and most functional on-chain data layer secured directly to Bitcoin at around 1/100-1/1000 of the cost of ordinal inscriptions. How ready are we? What improvementss could still be made?
 

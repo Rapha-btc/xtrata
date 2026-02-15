@@ -19,6 +19,11 @@ import type { WalletSession } from '../lib/wallet/types';
 import { getNetworkMismatch } from '../lib/network/guard';
 import { toStacksNetwork } from '../lib/network/stacks';
 import { formatMicroStx, MICROSTX_PER_STX } from '../lib/contract/fees';
+import {
+  normalizeDependencyIds,
+  parseDependencyInput,
+  validateDependencyIds
+} from '../lib/mint/dependencies';
 
 const CONTRACT_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9-_]{0,127}$/;
 
@@ -54,6 +59,7 @@ type CollectionMintStatus = {
   } | null;
   allowlistEnabled: boolean | null;
   maxPerWallet: bigint | null;
+  defaultDependencies: bigint[] | null;
 };
 
 type AllowlistEntry = {
@@ -144,6 +150,50 @@ const parseUint = (value: ClarityValue) => {
     }
   }
   return null;
+};
+
+const parseUintList = (value: ClarityValue) => {
+  const parsed = cvToValue(value) as unknown;
+  if (!Array.isArray(parsed)) {
+    return null;
+  }
+  const values: bigint[] = [];
+  for (const entry of parsed) {
+    if (typeof entry === 'bigint') {
+      values.push(entry);
+      continue;
+    }
+    if (typeof entry === 'number') {
+      values.push(BigInt(Math.floor(entry)));
+      continue;
+    }
+    if (typeof entry === 'string') {
+      try {
+        values.push(BigInt(entry));
+      } catch {
+        return null;
+      }
+      continue;
+    }
+    if (
+      entry &&
+      typeof entry === 'object' &&
+      'value' in (entry as Record<string, unknown>)
+    ) {
+      const raw = (entry as { value?: string }).value;
+      if (!raw) {
+        return null;
+      }
+      try {
+        values.push(BigInt(raw));
+      } catch {
+        return null;
+      }
+      continue;
+    }
+    return null;
+  }
+  return values;
 };
 
 const formatMicroStxValue = (value: bigint | null) => {
@@ -339,6 +389,9 @@ export default function CollectionMintAdminScreen(
   const [uriControlsSupported, setUriControlsSupported] = useState<boolean | null>(
     null
   );
+  const [defaultDependenciesSupported, setDefaultDependenciesSupported] =
+    useState<boolean | null>(null);
+  const [defaultDependenciesInput, setDefaultDependenciesInput] = useState('');
   const [defaultTokenUriInput, setDefaultTokenUriInput] = useState('');
   const [registeredTokenUriHashInput, setRegisteredTokenUriHashInput] =
     useState('');
@@ -428,6 +481,8 @@ export default function CollectionMintAdminScreen(
     setReservationStatus(null);
     setReservationStatusMessage(null);
     setUriControlsSupported(null);
+    setDefaultDependenciesSupported(null);
+    setDefaultDependenciesInput('');
     setDefaultTokenUriInput('');
     setRegisteredTokenUriHashInput('');
     setRegisteredTokenUriValueInput('');
@@ -493,6 +548,14 @@ export default function CollectionMintAdminScreen(
       setMaxPerWalletInput(status.maxPerWallet.toString());
     }
     if (
+      status.defaultDependencies !== null &&
+      !defaultDependenciesInput.trim()
+    ) {
+      setDefaultDependenciesInput(
+        status.defaultDependencies.map((id) => id.toString()).join(', ')
+      );
+    }
+    if (
       status.reservationExpiryBlocks !== null &&
       !reservationExpiryInput.trim()
     ) {
@@ -510,6 +573,7 @@ export default function CollectionMintAdminScreen(
     operatorBpsInput,
     allowlistEnabledInput,
     maxPerWalletInput,
+    defaultDependenciesInput,
     reservationExpiryInput
   ]);
 
@@ -620,8 +684,25 @@ export default function CollectionMintAdminScreen(
           operator: BigInt(splitsRaw.operator?.value ?? 0)
         },
         allowlistEnabled: Boolean(toPrimitive(allowlistCv)),
-        maxPerWallet: parseUint(maxPerWalletCv)
+        maxPerWallet: parseUint(maxPerWalletCv),
+        defaultDependencies: null
       };
+
+      try {
+        const defaultDependenciesCv = await callCollectionReadOnly(
+          'get-default-dependencies'
+        );
+        nextStatus.defaultDependencies = parseUintList(defaultDependenciesCv) ?? [];
+        setDefaultDependenciesSupported(true);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (isMissingFunctionError(message)) {
+          nextStatus.defaultDependencies = [];
+          setDefaultDependenciesSupported(false);
+        } else {
+          throw error;
+        }
+      }
 
       setStatus(nextStatus);
 
@@ -1020,6 +1101,32 @@ export default function CollectionMintAdminScreen(
     );
   };
 
+  const handleSetDefaultDependencies = async () => {
+    const parsed = parseDependencyInput(defaultDependenciesInput);
+    if (parsed.invalidTokens.length > 0) {
+      setActionMessage(
+        `Invalid parent inscription IDs: ${parsed.invalidTokens.join(', ')}`
+      );
+      return;
+    }
+    const normalized = normalizeDependencyIds(parsed.ids);
+    const validation = validateDependencyIds(normalized);
+    if (!validation.ok) {
+      if (validation.reason === 'max-50') {
+        setActionMessage('You can set up to 50 parent inscription IDs.');
+        return;
+      }
+      setActionMessage('Parent inscription IDs are invalid.');
+      return;
+    }
+    await runAction('Set default parent inscriptions', () =>
+      requestCollectionCall({
+        functionName: 'set-default-dependencies',
+        functionArgs: [listCV(normalized.map((id) => uintCV(id)))]
+      })
+    );
+  };
+
   const handleSetRegisteredTokenUri = async () => {
     const hashHex = getRegisteredHashInput();
     if (!hashHex) {
@@ -1382,6 +1489,20 @@ export default function CollectionMintAdminScreen(
                 {status?.maxPerWallet?.toString() ?? 'Unknown'}
               </span>
             </div>
+            <div>
+              <LabelWithInfo
+                tone="meta"
+                label="Default parent IDs"
+                info="Parent inscription IDs automatically attached to every mint when set."
+              />
+              <span className="meta-value">
+                {status?.defaultDependencies === null
+                  ? 'Unknown'
+                  : status.defaultDependencies.length === 0
+                    ? 'None'
+                    : `${status.defaultDependencies.length} set`}
+              </span>
+            </div>
             {uriControlsSupported && (
               <div>
                 <LabelWithInfo
@@ -1636,7 +1757,57 @@ export default function CollectionMintAdminScreen(
         <div className="mint-panel">
           <LabelWithInfo
             tone="meta"
-            label="3. Token URI controls (v1.1+)"
+            label="3. Parent inscription defaults"
+            info="Apply one shared parent inscription list to every mint from this collection contract."
+          />
+          {defaultDependenciesSupported === false && (
+            <span className="meta-value">
+              This collection contract does not expose default parent controls.
+            </span>
+          )}
+          {defaultDependenciesSupported !== false && (
+            <>
+              <p className="meta-value">
+                When default parents are set, upload can still be batched, but
+                final sealing must run one transaction per item so each mint can
+                include the parent links.
+              </p>
+              <label className="field">
+                <LabelWithInfo
+                  tone="field"
+                  label="Parent inscription IDs"
+                  info="Comma, space, or newline separated inscription IDs to attach to every mint."
+                />
+                <textarea
+                  className="textarea"
+                  placeholder="12, 144, 2048"
+                  value={defaultDependenciesInput}
+                  onChange={(event) => setDefaultDependenciesInput(event.target.value)}
+                />
+                <span className="field__hint">
+                  Leave blank to disable default parents. Max 50 IDs.
+                </span>
+              </label>
+              <div className="mint-actions">
+                <button
+                  className="button"
+                  type="button"
+                  onClick={() => void handleSetDefaultDependencies()}
+                  disabled={!canManageCollection || pendingAction !== null}
+                >
+                  {pendingAction === 'Set default parent inscriptions'
+                    ? 'Updating...'
+                    : 'Set default parents'}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="mint-panel">
+          <LabelWithInfo
+            tone="meta"
+            label="4. Token URI controls (v1.1+)"
             info="Configure default and hash-registered token URIs for deterministic token metadata routing."
           />
           {uriControlsSupported === false && (
@@ -1801,7 +1972,7 @@ export default function CollectionMintAdminScreen(
         <div className="mint-panel">
           <LabelWithInfo
             tone="meta"
-            label="4. Allowlist + per-wallet controls"
+            label="5. Allowlist + per-wallet controls"
             info="Configure who can mint and how many mints each wallet can reserve."
           />
           <label className="field">
@@ -1999,7 +2170,7 @@ export default function CollectionMintAdminScreen(
         <div className="mint-panel">
           <LabelWithInfo
             tone="meta"
-            label="5. Reservation safety + recovery"
+            label="6. Reservation safety + recovery"
             info="Configure reservation timeout and release stale reservations to keep supply moving."
           />
           <label className="field">

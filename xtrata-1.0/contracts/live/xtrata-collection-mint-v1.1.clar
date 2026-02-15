@@ -25,6 +25,7 @@
 (define-constant ERR-NO-PENDING-OWNER (err u117))
 (define-constant ERR-INVALID-ALLOWLIST-MODE (err u118))
 (define-constant ERR-RESERVATION-NOT-EXPIRED (err u119))
+(define-constant ERR-DEFAULT-DEPENDENCIES-BATCH (err u120))
 
 (define-constant BASIS-POINTS u10000)
 (define-constant DEFAULT-TOKEN-URI "data:text/plain,xtrata-collection-default")
@@ -43,6 +44,7 @@
     (add-chunk-batch ((buff 32) (list 50 (buff 16384))) (response bool uint))
     (seal-inscription ((buff 32) (string-ascii 256)) (response uint uint))
     (seal-inscription-batch ((list 50 { hash: (buff 32), token-uri: (string-ascii 256) })) (response { start: uint, count: uint } uint))
+    (seal-recursive ((buff 32) (string-ascii 256) (list 50 uint)) (response uint uint))
   )
 )
 
@@ -70,6 +72,7 @@
 (define-data-var collection-description (string-ascii 256) "")
 (define-data-var reveal-block uint u0)
 (define-data-var default-token-uri (string-ascii 256) DEFAULT-TOKEN-URI)
+(define-data-var default-dependencies (list 50 uint) (list))
 
 (define-data-var artist-recipient principal tx-sender)
 (define-data-var marketplace-recipient principal tx-sender)
@@ -814,6 +817,15 @@
   )
 )
 
+(define-public (set-default-dependencies (dependencies (list 50 uint)))
+  (begin
+    (try! (assert-config-admin))
+    (try! (assert-not-finalized))
+    (var-set default-dependencies dependencies)
+    (ok true)
+  )
+)
+
 (define-public (set-registered-token-uri (hash (buff 32)) (token-uri (string-ascii 256)))
   (begin
     (try! (assert-config-admin))
@@ -1207,7 +1219,11 @@
     (match (map-get? MintSessions { owner: tx-sender, hash: expected-hash })
       session (let (
         (resolved-token-uri (resolve-token-uri-for-hash expected-hash token-uri-string))
-        (token-id (try! (contract-call? xtrata-contract seal-inscription expected-hash resolved-token-uri)))
+        (dependencies (var-get default-dependencies))
+        (token-id (if (> (len dependencies) u0)
+          (try! (contract-call? xtrata-contract seal-recursive expected-hash resolved-token-uri dependencies))
+          (try! (contract-call? xtrata-contract seal-inscription expected-hash resolved-token-uri))
+        ))
       )
         (begin
           (map-delete MintSessions { owner: tx-sender, hash: expected-hash })
@@ -1231,6 +1247,7 @@
     (try! (assert-core-contract xtrata-contract))
     (try! (assert-not-finalized))
     (try! (assert-not-paused))
+    (asserts! (is-eq (len (var-get default-dependencies)) u0) ERR-DEFAULT-DEPENDENCIES-BATCH)
     (asserts! (> (len items) u0) ERR-INVALID-BATCH)
     (asserts! (validate-batch-uniqueness items) ERR-INVALID-BATCH)
     (asserts! (validate-batch-sessions items tx-sender) ERR-NOT-FOUND)
@@ -1358,6 +1375,10 @@
 
 (define-read-only (get-default-token-uri)
   (ok (var-get default-token-uri))
+)
+
+(define-read-only (get-default-dependencies)
+  (ok (var-get default-dependencies))
 )
 
 (define-read-only (get-registered-token-uri (hash (buff 32)))
