@@ -17,10 +17,11 @@ import AddressLabel from './components/AddressLabel';
 import { createXtrataClient } from './lib/contract/client';
 import { batchChunks, chunkBytes, computeExpectedHash } from './lib/chunking/hash';
 import { PUBLIC_CONTRACT } from './config/public';
-import { DEFAULT_TOKEN_URI } from './lib/mint/constants';
+import { DEFAULT_TOKEN_URI, TX_DELAY_SECONDS } from './lib/mint/constants';
 import { getNetworkFromAddress, getNetworkMismatch } from './lib/network/guard';
 import { toStacksNetwork } from './lib/network/stacks';
 import type { NetworkType } from './lib/network/types';
+import type { UploadState } from './lib/protocol/types';
 import {
   applyThemeToDocument,
   coerceThemeMode,
@@ -41,6 +42,10 @@ const HASH_HEX_PATTERN = /^[0-9a-f]{64}$/;
 const MINT_CHUNK_BATCH_SIZE = 30;
 const STATUS_REFRESH_MS = 20_000;
 const MINTED_SCAN_BATCH_SIZE = 8;
+const CHAIN_SYNC_INTERVAL_MS = 3_000;
+const CHAIN_SYNC_MAX_ATTEMPTS = 25;
+
+type StepState = 'idle' | 'pending' | 'done' | 'error';
 
 type CollectionMintLivePageProps = {
   collectionKey: string;
@@ -83,6 +88,12 @@ type ContractStatus = {
 
 type TxPayload = {
   txId: string;
+};
+
+type MintProgress = {
+  hasReservation: boolean;
+  uploadState: UploadState | null;
+  tokenId: bigint | null;
 };
 
 const toText = (value: unknown) => {
@@ -231,6 +242,31 @@ const formatCount = (value: bigint | null) => {
   return value.toString();
 };
 
+const formatStepStatus = (state: StepState) => {
+  if (state === 'pending') {
+    return 'In progress';
+  }
+  if (state === 'done') {
+    return 'Complete';
+  }
+  if (state === 'error') {
+    return 'Error';
+  }
+  return 'Idle';
+};
+
+const pause = (ms: number) =>
+  new Promise<void>((resolve) => {
+    window.setTimeout(() => resolve(), ms);
+  });
+
+const toResumeStorageKey = (collectionId: string, address: string | null) => {
+  if (!collectionId || !address) {
+    return null;
+  }
+  return `xtrata-live-resume:${collectionId}:${address.toUpperCase()}`;
+};
+
 const shuffleAssets = (assets: CollectionAsset[]) => {
   const next = [...assets];
   for (let index = next.length - 1; index > 0; index -= 1) {
@@ -264,6 +300,16 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   >({});
   const [mintedScanPending, setMintedScanPending] = useState(false);
   const [pendingMintAssetIds, setPendingMintAssetIds] = useState<string[]>([]);
+  const [resumeAssetId, setResumeAssetId] = useState<string | null>(null);
+  const [beginState, setBeginState] = useState<StepState>('idle');
+  const [uploadState, setUploadState] = useState<StepState>('idle');
+  const [sealState, setSealState] = useState<StepState>('idle');
+  const [batchProgress, setBatchProgress] = useState<{
+    current: number;
+    total: number;
+  } | null>(null);
+  const [txDelaySeconds, setTxDelaySeconds] = useState<number | null>(null);
+  const [txDelayLabel, setTxDelayLabel] = useState<string | null>(null);
 
   const normalizedCollectionKey = useMemo(
     () => props.collectionKey.trim(),
@@ -300,6 +346,10 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   const resolvedCollectionSlug = useMemo(
     () => toText(collection?.slug),
     [collection]
+  );
+  const resumeStorageKey = useMemo(
+    () => toResumeStorageKey(resolvedCollectionId, walletSession.address ?? null),
+    [resolvedCollectionId, walletSession.address]
   );
 
   const collectionContract = useMemo(() => {
@@ -477,6 +527,43 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
 
   const appendMintLog = useCallback((message: string) => {
     setMintLog((current) => [...current, message].slice(-20));
+  }, []);
+
+  const resetSteps = useCallback(() => {
+    setBeginState('idle');
+    setUploadState('idle');
+    setSealState('idle');
+    setBatchProgress(null);
+    setTxDelaySeconds(null);
+    setTxDelayLabel(null);
+  }, []);
+
+  const pauseBeforeNextTx = useCallback(async (label: string) => {
+    setTxDelayLabel(label);
+    for (let remaining = TX_DELAY_SECONDS; remaining > 0; remaining -= 1) {
+      setTxDelaySeconds(remaining);
+      await pause(1000);
+    }
+    setTxDelaySeconds(null);
+    setTxDelayLabel(null);
+  }, []);
+
+  const normalizeMintError = useCallback((error: unknown) => {
+    const raw = error instanceof Error ? error.message : String(error);
+    const normalized = raw.toLowerCase();
+    if (normalized.includes('bad nonce')) {
+      return 'Wallet nonce is behind a pending transaction. Wait for confirmations, then click Resume mint.';
+    }
+    if (normalized.includes('(err u105)') || normalized.includes('contract error u105')) {
+      return 'Mint session was not found on-chain (u105). Click Resume mint to restart safely from chain state.';
+    }
+    if (normalized.includes('(err u2)')) {
+      return 'Mint was rejected by collection policy (err u2). This is often an allowlist or phase access rule.';
+    }
+    if (normalized.includes('wallet cancelled') || normalized.includes('failed to broadcast')) {
+      return 'Wallet cancelled or could not broadcast. No new mint step was confirmed. You can safely resume.';
+    }
+    return raw;
   }, []);
 
   const fetchAssetBytes = useCallback(
@@ -745,114 +832,297 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     [collectionContract]
   );
 
+  const getMintProgress = useCallback(
+    async (
+      expectedHashBytes: Uint8Array,
+      session: WalletSession
+    ): Promise<MintProgress> => {
+      if (!collectionContract || !session.address) {
+        throw new Error('Connect a wallet before minting.');
+      }
+      const senderAddress = session.address;
+      const network = toStacksNetwork(collectionContract.network);
+      const [tokenId, uploadStateResult, reservationCv] = await Promise.all([
+        coreClient
+          .getIdByHash(expectedHashBytes, senderAddress)
+          .catch(() => null),
+        coreClient
+          .getUploadState(expectedHashBytes, senderAddress, senderAddress)
+          .catch(() => null),
+        callReadOnlyFunction({
+          contractAddress: collectionContract.address,
+          contractName: collectionContract.contractName,
+          functionName: 'get-reservation',
+          functionArgs: [principalCV(senderAddress), bufferCV(expectedHashBytes)],
+          senderAddress,
+          network
+        }).catch(() => null)
+      ]);
+      const reservationValue = reservationCv ? unwrapReadOnly(reservationCv) : null;
+      const hasReservation = reservationValue?.type === ClarityType.OptionalSome;
+      return {
+        tokenId,
+        uploadState: uploadStateResult,
+        hasReservation
+      };
+    },
+    [collectionContract, coreClient]
+  );
+
+  const waitForMintProgress = useCallback(
+    async (
+      expectedHashBytes: Uint8Array,
+      session: WalletSession,
+      statusLabel: string,
+      predicate: (progress: MintProgress) => boolean
+    ) => {
+      for (let attempt = 1; attempt <= CHAIN_SYNC_MAX_ATTEMPTS; attempt += 1) {
+        const progress = await getMintProgress(expectedHashBytes, session);
+        if (predicate(progress)) {
+          return progress;
+        }
+        setMintMessage(
+          `${statusLabel} (${attempt}/${CHAIN_SYNC_MAX_ATTEMPTS})...`
+        );
+        await pause(CHAIN_SYNC_INTERVAL_MS);
+      }
+      throw new Error(
+        `${statusLabel} timed out. Wait for chain confirmation, then click Resume mint.`
+      );
+    },
+    [getMintProgress]
+  );
+
   const mintAsset = useCallback(
     async (asset: CollectionAsset, session: WalletSession) => {
+      let activeStage: 'begin' | 'upload' | 'seal' = 'begin';
       const knownHashHex =
         normalizeHashHex(canonicalHashHexByAssetId[asset.asset_id]) ??
         normalizeHashHex(asset.expected_hash ?? '');
       const tokenUri = DEFAULT_TOKEN_URI;
-      const rawBytes = await fetchAssetBytes(asset.asset_id);
-      const chunks = chunkBytes(rawBytes);
-      const computedHash = computeExpectedHash(chunks);
-      const computedHex = bytesToHex(computedHash);
-      const rawShaHex = bytesToHex(sha256(rawBytes));
+      try {
+        const rawBytes = await fetchAssetBytes(asset.asset_id);
+        const chunks = chunkBytes(rawBytes);
+        const computedHash = computeExpectedHash(chunks);
+        const computedHex = bytesToHex(computedHash);
+        const rawShaHex = bytesToHex(sha256(rawBytes));
 
-      if (knownHashHex && knownHashHex !== computedHex) {
-        if (knownHashHex === rawShaHex) {
-          appendMintLog(
-            `Legacy hash format detected for ${asset.filename ?? asset.path}. Auto-correcting.`
+        if (knownHashHex && knownHashHex !== computedHex) {
+          if (knownHashHex === rawShaHex) {
+            appendMintLog(
+              `Legacy hash format detected for ${asset.filename ?? asset.path}. Auto-correcting.`
+            );
+          } else {
+            throw new Error(
+              'Asset hash metadata does not match uploaded bytes. Re-upload this asset to continue.'
+            );
+          }
+        }
+
+        if (!knownHashHex || knownHashHex !== computedHex) {
+          setCanonicalHashHexByAssetId((current) => ({
+            ...current,
+            [asset.asset_id]: computedHex
+          }));
+        }
+
+        if (asset.total_bytes > 0 && asset.total_bytes !== rawBytes.length) {
+          throw new Error('Asset byte size does not match staged metadata.');
+        }
+        if (asset.total_chunks > 0 && asset.total_chunks !== chunks.length) {
+          throw new Error('Asset chunk count does not match staged metadata.');
+        }
+
+        const expectedHashBytes = computedHash;
+        const coreContractId = `${coreContract.address}.${coreContract.contractName}`;
+        let progress = await getMintProgress(expectedHashBytes, session);
+        if (progress.tokenId !== null) {
+          const existing = progress.tokenId.toString();
+          setMintedTokenIds((current) => ({ ...current, [asset.asset_id]: existing }));
+          appendMintLog(`Already minted as token #${existing}.`);
+          setBeginState('done');
+          setUploadState('done');
+          setSealState('done');
+          return existing;
+        }
+
+        const needsBegin = !progress.hasReservation || progress.uploadState === null;
+        if (needsBegin) {
+          setBeginState('pending');
+          setMintMessage('Approve begin transaction in wallet.');
+          const beginTx = await requestCollectionContractCall(
+            {
+              functionName: 'mint-begin',
+              functionArgs: [
+                principalCV(coreContractId),
+                bufferCV(expectedHashBytes),
+                stringAsciiCV(asset.mime_type || 'application/octet-stream'),
+                uintCV(BigInt(rawBytes.length)),
+                uintCV(BigInt(chunks.length))
+              ]
+            },
+            session
           );
+          appendMintLog(`Begin submitted: ${beginTx.txId}`);
+          progress = await waitForMintProgress(
+            expectedHashBytes,
+            session,
+            'Waiting for begin confirmation',
+            (next) => next.tokenId !== null || next.uploadState !== null
+          );
+          setBeginState('done');
+          if (progress.tokenId !== null) {
+            const tokenId = progress.tokenId.toString();
+            setMintedTokenIds((current) => ({ ...current, [asset.asset_id]: tokenId }));
+            setUploadState('done');
+            setSealState('done');
+            return tokenId;
+          }
+          await pauseBeforeNextTx('Next batch in');
         } else {
+          setBeginState('done');
+          appendMintLog('Begin already confirmed on-chain. Resuming upload.');
+        }
+
+        activeStage = 'upload';
+        const onChainIndexRaw = progress.uploadState?.currentIndex ?? 0n;
+        const onChainIndex = Number(onChainIndexRaw);
+        if (!Number.isSafeInteger(onChainIndex) || onChainIndex < 0) {
+          throw new Error('Invalid on-chain upload index. Try again in a moment.');
+        }
+        if (onChainIndex > chunks.length) {
+          throw new Error('On-chain upload index exceeds staged chunk count.');
+        }
+
+        const remainingChunkBatches = batchChunks(
+          chunks.slice(onChainIndex),
+          MINT_CHUNK_BATCH_SIZE
+        );
+        if (remainingChunkBatches.length > 0) {
+          setUploadState('pending');
+          setBatchProgress({ current: 0, total: remainingChunkBatches.length });
+          let committedIndex = onChainIndex;
+          for (let index = 0; index < remainingChunkBatches.length; index += 1) {
+            const batch = remainingChunkBatches[index];
+            const targetIndex = committedIndex + batch.length;
+            setBatchProgress({ current: index + 1, total: remainingChunkBatches.length });
+            setMintMessage(
+              `Approve chunk upload ${index + 1}/${remainingChunkBatches.length} in wallet.`
+            );
+            const uploadTx = await requestCollectionContractCall(
+              {
+                functionName: 'mint-add-chunk-batch',
+                functionArgs: [
+                  principalCV(coreContractId),
+                  bufferCV(expectedHashBytes),
+                  listCV(batch.map((chunk) => bufferCV(chunk)))
+                ]
+              },
+              session
+            );
+            appendMintLog(
+              `Chunk batch ${index + 1}/${remainingChunkBatches.length} submitted: ${uploadTx.txId}`
+            );
+            progress = await waitForMintProgress(
+              expectedHashBytes,
+              session,
+              `Waiting for batch ${index + 1}/${remainingChunkBatches.length}`,
+              (next) => {
+                if (next.tokenId !== null) {
+                  return true;
+                }
+                const currentIndex = next.uploadState?.currentIndex;
+                return currentIndex ? currentIndex >= BigInt(targetIndex) : false;
+              }
+            );
+            if (progress.tokenId !== null) {
+              break;
+            }
+            committedIndex = Number(progress.uploadState?.currentIndex ?? BigInt(targetIndex));
+            if (index < remainingChunkBatches.length - 1) {
+              await pauseBeforeNextTx('Next batch in');
+            }
+          }
+          setUploadState('done');
+          setBatchProgress(null);
+        } else {
+          setUploadState('done');
+          appendMintLog('Upload already complete on-chain. Moving to seal.');
+        }
+
+        if (progress.tokenId !== null) {
+          const tokenId = progress.tokenId.toString();
+          setMintedTokenIds((current) => ({ ...current, [asset.asset_id]: tokenId }));
+          setSealState('done');
+          return tokenId;
+        }
+
+        progress = await getMintProgress(expectedHashBytes, session);
+        if (progress.tokenId !== null) {
+          const tokenId = progress.tokenId.toString();
+          setMintedTokenIds((current) => ({ ...current, [asset.asset_id]: tokenId }));
+          setSealState('done');
+          return tokenId;
+        }
+        if (!progress.hasReservation) {
           throw new Error(
-            'Asset hash metadata does not match uploaded bytes. Re-upload this asset to continue.'
+            'Mint reservation is missing before seal. Click Resume mint to recover from chain state.'
           );
         }
-      }
 
-      if (!knownHashHex || knownHashHex !== computedHex) {
-        setCanonicalHashHexByAssetId((current) => ({
-          ...current,
-          [asset.asset_id]: computedHex
-        }));
-      }
-
-      if (asset.total_bytes > 0 && asset.total_bytes !== rawBytes.length) {
-        throw new Error('Asset byte size does not match staged metadata.');
-      }
-      if (asset.total_chunks > 0 && asset.total_chunks !== chunks.length) {
-        throw new Error('Asset chunk count does not match staged metadata.');
-      }
-
-      const expectedHashBytes = computedHash;
-      const existingTokenId = await coreClient.getIdByHash(expectedHashBytes, session.address);
-      if (existingTokenId !== null) {
-        const tokenId = existingTokenId.toString();
-        setMintedTokenIds((current) => ({ ...current, [asset.asset_id]: tokenId }));
-        throw new Error(`Asset is already minted as token #${tokenId}.`);
-      }
-
-      const coreContractId = `${coreContract.address}.${coreContract.contractName}`;
-
-      setMintMessage('Approve begin transaction in wallet.');
-      const beginTx = await requestCollectionContractCall(
-        {
-          functionName: 'mint-begin',
-          functionArgs: [
-            principalCV(coreContractId),
-            bufferCV(expectedHashBytes),
-            stringAsciiCV(asset.mime_type || 'application/octet-stream'),
-            uintCV(BigInt(rawBytes.length)),
-            uintCV(BigInt(chunks.length))
-          ]
-        },
-        session
-      );
-      appendMintLog(`Begin submitted: ${beginTx.txId}`);
-
-      const chunkBatches = batchChunks(chunks, MINT_CHUNK_BATCH_SIZE);
-      for (let index = 0; index < chunkBatches.length; index += 1) {
-        setMintMessage(
-          `Approve chunk upload ${index + 1}/${chunkBatches.length} in wallet.`
-        );
-        const uploadTx = await requestCollectionContractCall(
+        activeStage = 'seal';
+        setSealState('pending');
+        await pauseBeforeNextTx('Sealing in');
+        setMintMessage('Approve seal transaction in wallet.');
+        const sealTx = await requestCollectionContractCall(
           {
-            functionName: 'mint-add-chunk-batch',
+            functionName: 'mint-seal',
             functionArgs: [
               principalCV(coreContractId),
               bufferCV(expectedHashBytes),
-              listCV(chunkBatches[index].map((chunk) => bufferCV(chunk)))
+              stringAsciiCV(tokenUri)
             ]
           },
           session
         );
-        appendMintLog(
-          `Chunk batch ${index + 1}/${chunkBatches.length} submitted: ${uploadTx.txId}`
+        appendMintLog(`Seal submitted: ${sealTx.txId}`);
+        progress = await waitForMintProgress(
+          expectedHashBytes,
+          session,
+          'Waiting for seal confirmation',
+          (next) => next.tokenId !== null
         );
+        if (progress.tokenId === null) {
+          throw new Error(
+            'Seal submitted but token id is not confirmed yet. Wait for confirmation, then resume.'
+          );
+        }
+        const tokenId = progress.tokenId.toString();
+        setMintedTokenIds((current) => ({ ...current, [asset.asset_id]: tokenId }));
+        setSealState('done');
+        return tokenId;
+      } catch (error) {
+        if (activeStage === 'begin') {
+          setBeginState('error');
+        } else if (activeStage === 'upload') {
+          setUploadState('error');
+        } else {
+          setSealState('error');
+        }
+        setBatchProgress(null);
+        throw error;
       }
-
-      setMintMessage('Approve seal transaction in wallet.');
-      const sealTx = await requestCollectionContractCall(
-        {
-          functionName: 'mint-seal',
-          functionArgs: [
-            principalCV(coreContractId),
-            bufferCV(expectedHashBytes),
-            stringAsciiCV(tokenUri)
-          ]
-        },
-        session
-      );
-      appendMintLog(`Seal submitted: ${sealTx.txId}`);
-      return sealTx.txId;
     },
     [
       appendMintLog,
       canonicalHashHexByAssetId,
-      coreClient,
       coreContract.address,
       coreContract.contractName,
       fetchAssetBytes,
-      requestCollectionContractCall
+      getMintProgress,
+      pauseBeforeNextTx,
+      requestCollectionContractCall,
+      waitForMintProgress
     ]
   );
 
@@ -866,7 +1136,9 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     }
 
     setMintPending(true);
+    resetSteps();
     setMintMessage(null);
+    setMintLog([]);
     let selectedAssetId: string | null = null;
     try {
       const session = await ensureConnectedWallet();
@@ -878,12 +1150,26 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
         throw new Error(`Switch wallet to ${mismatch.expected} before minting.`);
       }
 
-      const senderAddress = session.address;
       const shuffled = shuffleAssets(imageAssets);
       const nextMinted = { ...mintedTokenIds };
       let target: CollectionAsset | null = null;
 
+      if (resumeAssetId) {
+        const resumeTarget = imageAssets.find((asset) => asset.asset_id === resumeAssetId);
+        if (
+          resumeTarget &&
+          !pendingMintAssetIds.includes(resumeTarget.asset_id) &&
+          !nextMinted[resumeTarget.asset_id]
+        ) {
+          target = resumeTarget;
+          appendMintLog(`Resuming ${resumeTarget.filename ?? resumeTarget.path}.`);
+        }
+      }
+
       for (const candidate of shuffled) {
+        if (target) {
+          break;
+        }
         if (pendingMintAssetIds.includes(candidate.asset_id)) {
           continue;
         }
@@ -915,26 +1201,32 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
 
       if (!target) {
         setMintMessage('No unminted items remain. This collection appears sold out.');
+        setResumeAssetId(null);
         await loadContractStatus();
         await scanMintedAssets();
         return;
       }
 
       selectedAssetId = target.asset_id;
+      setResumeAssetId(target.asset_id);
       setPendingMintAssetIds((current) =>
         current.includes(target.asset_id) ? current : [...current, target.asset_id]
       );
       setMintMessage(`Preparing ${target.filename ?? target.path}...`);
-      const sealTxId = await mintAsset(target, session);
-      setMintMessage(`Mint submitted: ${sealTxId}`);
+      const tokenId = await mintAsset(target, session);
+      setMintMessage(`Mint confirmed as token #${tokenId}.`);
+      setResumeAssetId(null);
       window.setTimeout(() => {
         void loadContractStatus();
         void scanMintedAssets();
       }, 8_000);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = normalizeMintError(error);
       setMintMessage(message);
       appendMintLog(`Mint failed: ${message}`);
+      if (selectedAssetId) {
+        setResumeAssetId(selectedAssetId);
+      }
     } finally {
       if (selectedAssetId) {
         setPendingMintAssetIds((current) =>
@@ -957,8 +1249,12 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     mintPending,
     mintUnavailableReason,
     mintedTokenIds,
+    normalizeMintError,
     pendingMintAssetIds,
+    resetSteps,
+    resumeAssetId,
     scanMintedAssets,
+    setResumeAssetId,
     walletPending
   ]);
 
@@ -996,12 +1292,37 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   }, [loadCollectionSnapshot]);
 
   useEffect(() => {
+    if (!resumeStorageKey) {
+      setResumeAssetId(null);
+      return;
+    }
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const stored = window.localStorage.getItem(resumeStorageKey);
+    setResumeAssetId(stored && stored.trim().length > 0 ? stored.trim() : null);
+  }, [resumeStorageKey]);
+
+  useEffect(() => {
+    if (!resumeStorageKey || typeof window === 'undefined') {
+      return;
+    }
+    if (resumeAssetId) {
+      window.localStorage.setItem(resumeStorageKey, resumeAssetId);
+      return;
+    }
+    window.localStorage.removeItem(resumeStorageKey);
+  }, [resumeAssetId, resumeStorageKey]);
+
+  useEffect(() => {
     setCanonicalHashHexByAssetId({});
     setMintedTokenIds({});
     setPendingMintAssetIds([]);
+    setResumeAssetId(null);
     setMintLog([]);
     setMintMessage(null);
-  }, [normalizedCollectionKey]);
+    resetSteps();
+  }, [normalizedCollectionKey, resetSteps]);
 
   useEffect(() => {
     if (!collectionContract) {
@@ -1028,6 +1349,15 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     contractStatus?.mintedCount
   ]);
 
+  useEffect(() => {
+    if (!resumeAssetId) {
+      return;
+    }
+    if (mintedTokenIds[resumeAssetId]) {
+      setResumeAssetId(null);
+    }
+  }, [mintedTokenIds, resumeAssetId]);
+
   const mintedCountLabel = formatCount(contractStatus?.mintedCount ?? null);
   const maxSupplyLabel = formatCount(contractStatus?.maxSupply ?? null);
   const reservedCountLabel = formatCount(contractStatus?.reservedCount ?? null);
@@ -1047,6 +1377,15 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       : finalizedStatus
         ? 'Yes'
         : 'No';
+  const resumeTargetAsset = useMemo(
+    () =>
+      resumeAssetId
+        ? imageAssets.find((asset) => asset.asset_id === resumeAssetId) ?? null
+        : null,
+    [imageAssets, resumeAssetId]
+  );
+  const formattedTxDelay =
+    txDelaySeconds === null ? null : txDelaySeconds.toString().padStart(2, '0');
 
   return (
     <div className="app collection-live-page">
@@ -1101,7 +1440,9 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                   ? 'Minting...'
                   : mintUnavailableReason
                     ? 'Mint unavailable'
-                    : 'Mint one now'}
+                    : resumeTargetAsset
+                      ? 'Resume mint'
+                      : 'Mint one now'}
               </button>
             </div>
           </div>
@@ -1196,6 +1537,38 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                 </span>
               </div>
             </div>
+
+            <div className="mint-steps">
+              <div className={`mint-step mint-step--${beginState}`}>
+                <strong>1. Begin</strong>
+                <span>{formatStepStatus(beginState)}</span>
+              </div>
+              <div className={`mint-step mint-step--${uploadState}`}>
+                <strong>2. Upload</strong>
+                <span>{formatStepStatus(uploadState)}</span>
+              </div>
+              <div className={`mint-step mint-step--${sealState}`}>
+                <strong>3. Seal</strong>
+                <span>{formatStepStatus(sealState)}</span>
+              </div>
+              {batchProgress && (
+                <div className="mint-step mint-step--pending">
+                  Upload batch {batchProgress.current}/{batchProgress.total}
+                </div>
+              )}
+              {txDelayLabel && formattedTxDelay && (
+                <div className="mint-step mint-step--pending mint-step--countdown">
+                  {txDelayLabel} {formattedTxDelay}s
+                </div>
+              )}
+            </div>
+
+            {resumeTargetAsset && !mintPending && (
+              <div className="alert">
+                Resume target: <strong>{resumeTargetAsset.filename ?? resumeTargetAsset.path}</strong>.
+                Mint continues from last confirmed on-chain step.
+              </div>
+            )}
 
             {networkMismatch && (
               <div className="alert">
