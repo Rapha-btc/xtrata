@@ -14,8 +14,8 @@ import {
   validateStacksAddress,
   type ClarityValue
 } from '@stacks/transactions';
-import AddressLabel from './components/AddressLabel';
 import { createXtrataClient } from './lib/contract/client';
+import { useBnsNames } from './lib/bns/hooks';
 import { batchChunks, chunkBytes, computeExpectedHash } from './lib/chunking/hash';
 import { PUBLIC_CONTRACT } from './config/public';
 import { DEFAULT_TOKEN_URI, TX_DELAY_SECONDS } from './lib/mint/constants';
@@ -397,6 +397,22 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
         : null,
     [collectionContract, walletSession.network]
   );
+  const connectedAddress = useMemo(
+    () => walletSession.address?.trim() ?? '',
+    [walletSession.address]
+  );
+  const connectedAddressNetwork = useMemo(
+    () =>
+      walletSession.network ??
+      (connectedAddress ? getNetworkFromAddress(connectedAddress) : null),
+    [connectedAddress, walletSession.network]
+  );
+  const connectedBnsQuery = useBnsNames({
+    address: connectedAddress || null,
+    network: connectedAddressNetwork,
+    enabled: !!connectedAddress && !!connectedAddressNetwork
+  });
+  const connectedBnsName = connectedBnsQuery.data?.primary ?? null;
 
   const imageAssets = useMemo(
     () =>
@@ -1519,13 +1535,26 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                 <span className="meta-value">{finalizedLabel}</span>
               </div>
               <div>
-                <span className="meta-label">Wallet</span>
-                <AddressLabel
-                  className="meta-value"
-                  address={walletSession.address}
-                  network={walletSession.network}
-                  fallback="Not connected"
-                />
+                <span className="meta-label">Connected wallet (STX)</span>
+                <span className="meta-value">
+                  {connectedAddress ? (
+                    <span className="address-value--full">{connectedAddress}</span>
+                  ) : (
+                    'Not connected'
+                  )}
+                </span>
+              </div>
+              <div>
+                <span className="meta-label">Connected .btc</span>
+                <span className="meta-value">
+                  {!connectedAddress
+                    ? 'Not connected'
+                    : connectedBnsQuery.isLoading
+                      ? 'Checking...'
+                      : connectedBnsQuery.isError
+                        ? 'Lookup unavailable'
+                        : connectedBnsName ?? 'None'}
+                </span>
               </div>
               <div>
                 <span className="meta-label">Collection contract</span>
