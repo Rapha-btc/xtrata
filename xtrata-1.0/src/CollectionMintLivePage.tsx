@@ -18,7 +18,12 @@ import {
 import { createXtrataClient } from './lib/contract/client';
 import { useBnsNames } from './lib/bns/hooks';
 import { batchChunks, chunkBytes, computeExpectedHash } from './lib/chunking/hash';
-import { buildMintBeginStxPostConditions, resolveMintBeginSpendCapMicroStx } from './lib/mint/post-conditions';
+import {
+  buildMintBeginStxPostConditions,
+  buildSealStxPostConditions,
+  resolveCollectionBeginSpendCapMicroStx,
+  resolveSealSpendCapMicroStx
+} from './lib/mint/post-conditions';
 import { PUBLIC_CONTRACT } from './config/public';
 import { DEFAULT_TOKEN_URI, TX_DELAY_SECONDS } from './lib/mint/constants';
 import { getNetworkFromAddress, getNetworkMismatch } from './lib/network/guard';
@@ -84,6 +89,7 @@ type ContractStatus = {
   paused: boolean | null;
   finalized: boolean | null;
   mintPrice: bigint | null;
+  coreFeeUnitMicroStx: bigint | null;
   activePhaseId: bigint | null;
   activePhaseMintPrice: bigint | null;
   maxSupply: bigint | null;
@@ -633,13 +639,34 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
 
   const resolveMintBeginPostConditions = useCallback(
     (sender: string) => {
+      const beginSpendCap = resolveCollectionBeginSpendCapMicroStx({
+        mintPrice: contractStatus?.mintPrice ?? null,
+        activePhaseMintPrice: contractStatus?.activePhaseMintPrice ?? null,
+        protocolFeeMicroStx: contractStatus?.coreFeeUnitMicroStx ?? null
+      });
+      if (beginSpendCap === null) {
+        return null;
+      }
       return buildMintBeginStxPostConditions({
         sender,
-        mintPrice: contractStatus?.mintPrice ?? null,
-        activePhaseMintPrice: contractStatus?.activePhaseMintPrice ?? null
+        mintPrice: beginSpendCap
       });
     },
-    [contractStatus?.activePhaseMintPrice, contractStatus?.mintPrice]
+    [
+      contractStatus?.activePhaseMintPrice,
+      contractStatus?.coreFeeUnitMicroStx,
+      contractStatus?.mintPrice
+    ]
+  );
+
+  const resolveSealPostConditions = useCallback(
+    (sender: string, totalChunks: number) =>
+      buildSealStxPostConditions({
+        sender,
+        protocolFeeMicroStx: contractStatus?.coreFeeUnitMicroStx ?? null,
+        totalChunks
+      }),
+    [contractStatus?.coreFeeUnitMicroStx]
   );
 
   const fetchAssetBytes = useCallback(
@@ -744,6 +771,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
           readOnly('get-minted-count'),
           readOnly('get-reserved-count')
         ]);
+      const coreFeeUnitMicroStx = await coreClient.getFeeUnit(senderAddress).catch(() => null);
       const activePhaseCv = await readOnly('get-active-phase');
       const activePhaseId = parseUintCv(activePhaseCv);
       let activePhaseMintPrice: bigint | null = null;
@@ -772,6 +800,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
         paused: Boolean(cvToValue(pausedCv)),
         finalized: Boolean(cvToValue(finalizedCv)),
         mintPrice: parseUintCv(mintPriceCv),
+        coreFeeUnitMicroStx,
         activePhaseId,
         activePhaseMintPrice,
         maxSupply: parseUintCv(maxSupplyCv),
@@ -787,7 +816,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     } finally {
       setStatusLoading(false);
     }
-  }, [collectionContract, walletSession.address]);
+  }, [collectionContract, coreClient, walletSession.address]);
 
   const syncCollectionTokenNumbers = useCallback(
     async (options?: { forceFull?: boolean; mintedCount?: bigint | null }) => {
@@ -1142,13 +1171,12 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
           setSealState('done');
           return existing;
         }
-
         const needsBegin = !progress.hasReservation || progress.uploadState === null;
         if (needsBegin) {
           const beginPostConditions = resolveMintBeginPostConditions(session.address);
           if (!beginPostConditions) {
             throw new Error(
-              'Mint price is unavailable for wallet safety checks. Refresh status, then retry.'
+              'Mint price or Xtrata fee unit is unavailable for wallet safety checks. Refresh status, then retry.'
             );
           }
           setBeginState('pending');
@@ -1277,6 +1305,24 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
         }
 
         activeStage = 'seal';
+        const sealPostConditions = resolveSealPostConditions(
+          session.address,
+          chunks.length
+        );
+        if (!sealPostConditions) {
+          throw new Error(
+            'Seal fee safety cap is unavailable. Refresh contract status and retry.'
+          );
+        }
+        const sealSpendCap = resolveSealSpendCapMicroStx({
+          protocolFeeMicroStx: contractStatus?.coreFeeUnitMicroStx ?? null,
+          totalChunks: chunks.length
+        });
+        if (sealSpendCap !== null) {
+          appendMintLog(
+            `Seal safety cap <= ${toMicroStxLabel(sealSpendCap)} for ${chunks.length} chunk(s).`
+          );
+        }
         setSealState('pending');
         await pauseBeforeNextTx('Sealing in');
         setMintMessage('Approve seal transaction in wallet.');
@@ -1288,7 +1334,8 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
               bufferCV(expectedHashBytes),
               stringAsciiCV(tokenUri)
             ],
-            postConditionMode: PostConditionMode.Deny
+            postConditionMode: PostConditionMode.Deny,
+            postConditions: sealPostConditions
           },
           session
         );
@@ -1329,6 +1376,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       formatTokenReference,
       getMintProgress,
       pauseBeforeNextTx,
+      resolveSealPostConditions,
       resolveMintBeginPostConditions,
       requestCollectionContractCall,
       waitForMintProgress
@@ -1596,10 +1644,12 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   const reservedCountLabel = formatCount(contractStatus?.reservedCount ?? null);
   const remainingLabel = remaining === null ? 'Unknown' : remaining.toString();
   const mintPriceLabel = toMicroStxLabel(contractStatus?.mintPrice ?? null);
-  const mintBeginSpendCap = resolveMintBeginSpendCapMicroStx({
+  const mintBeginSpendCap = resolveCollectionBeginSpendCapMicroStx({
     mintPrice: contractStatus?.mintPrice ?? null,
-    activePhaseMintPrice: contractStatus?.activePhaseMintPrice ?? null
+    activePhaseMintPrice: contractStatus?.activePhaseMintPrice ?? null,
+    protocolFeeMicroStx: contractStatus?.coreFeeUnitMicroStx ?? null
   });
+  const protocolFeeUnitLabel = toMicroStxLabel(contractStatus?.coreFeeUnitMicroStx ?? null);
   const pausedStatus = contractStatus?.paused;
   const pausedLabel =
     pausedStatus === null || pausedStatus === undefined
@@ -1646,6 +1696,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
               <span>Ticker: {collectionSymbol}</span>
               <span>State: {published ? 'Live' : collectionState || 'Unknown'}</span>
               <span>Mint price: {mintPriceLabel}</span>
+              <span>Xtrata fee unit: {protocolFeeUnitLabel}</span>
             </div>
             <div className="collection-live-page__hero-actions">
               {walletSession.isConnected ? (
@@ -1755,7 +1806,9 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                 <span className="meta-value">
                   {mintBeginSpendCap === null
                     ? 'Loading protected spend cap...'
-                    : `Deny mode with max ${toMicroStxLabel(mintBeginSpendCap)} on begin`}
+                    : `Deny mode caps: begin <= ${toMicroStxLabel(
+                        mintBeginSpendCap
+                      )}. Upload enforces zero STX transfer. Seal <= fee-unit x (1 + ceil(chunks/50)).`}
                 </span>
               </div>
               <div>

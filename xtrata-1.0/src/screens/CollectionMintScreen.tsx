@@ -45,7 +45,13 @@ import {
   MAX_TOKEN_URI_LENGTH,
   TX_DELAY_SECONDS
 } from '../lib/mint/constants';
-import { buildMintBeginStxPostConditions, resolveMintBeginSpendCapMicroStx } from '../lib/mint/post-conditions';
+import {
+  buildBatchSealStxPostConditions,
+  buildMintBeginStxPostConditions,
+  buildSealStxPostConditions,
+  resolveBatchSealSpendCapMicroStx,
+  resolveCollectionBeginSpendCapMicroStx
+} from '../lib/mint/post-conditions';
 import {
   parseRandomDropManifest,
   selectRandomDropAssets
@@ -573,14 +579,40 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
   };
 
   const resolveCollectionBeginPostConditions = () =>
-    buildMintBeginStxPostConditions({
+    (() => {
+      const beginSpendCap = resolveCollectionBeginSpendCapMicroStx({
+        mintPrice: collectionStatus?.mintPrice ?? null,
+        activePhaseMintPrice: collectionStatus?.activePhaseMintPrice ?? null,
+        protocolFeeMicroStx: BigInt(feeSchedule.feeUnitMicroStx)
+      });
+      if (beginSpendCap === null) {
+        return null;
+      }
+      return buildMintBeginStxPostConditions({
+        sender: props.walletSession.address ?? null,
+        mintPrice: beginSpendCap
+      });
+    })();
+  const resolveCollectionSealPostConditions = (totalChunks: number) =>
+    buildSealStxPostConditions({
       sender: props.walletSession.address ?? null,
-      mintPrice: collectionStatus?.mintPrice ?? null,
-      activePhaseMintPrice: collectionStatus?.activePhaseMintPrice ?? null
+      protocolFeeMicroStx: BigInt(feeSchedule.feeUnitMicroStx),
+      totalChunks
     });
-  const collectionMintBeginSpendCap = resolveMintBeginSpendCapMicroStx({
+  const resolveCollectionBatchSealPostConditions = (totalChunks: number[]) =>
+    buildBatchSealStxPostConditions({
+      sender: props.walletSession.address ?? null,
+      protocolFeeMicroStx: BigInt(feeSchedule.feeUnitMicroStx),
+      totalChunks
+    });
+  const collectionMintBeginSpendCap = resolveCollectionBeginSpendCapMicroStx({
     mintPrice: collectionStatus?.mintPrice ?? null,
-    activePhaseMintPrice: collectionStatus?.activePhaseMintPrice ?? null
+    activePhaseMintPrice: collectionStatus?.activePhaseMintPrice ?? null,
+    protocolFeeMicroStx: BigInt(feeSchedule.feeUnitMicroStx)
+  });
+  const collectionSealBatchSpendCap = resolveBatchSealSpendCapMicroStx({
+    protocolFeeMicroStx: BigInt(feeSchedule.feeUnitMicroStx),
+    totalChunks: items.map((item) => item.totalChunks)
   });
 
   const pauseBeforeNextTx = async (label: string) => {
@@ -1191,7 +1223,7 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
               : resolveFeePostConditions(feeSchedule.feeUnitMicroStx);
           if (mintTarget === 'collection' && !beginPostConditions) {
             throw new Error(
-              'Collection mint price is unavailable for wallet safety checks. Load collection status and retry.'
+              'Collection mint pricing or Xtrata fee unit is unavailable for wallet safety checks. Load collection status and retry.'
             );
           }
           const beginTx = await requestContractCall({
@@ -1265,6 +1297,8 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
               mintTarget === 'collection'
                 ? collectionContract?.contractName
                 : undefined,
+            postConditionMode: PostConditionMode.Deny,
+            postConditions: undefined,
             logDetails: {
               item: item.path,
               batchIndex: batchIndex + 1,
@@ -1331,6 +1365,14 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
         );
         for (let index = 0; index < itemsToSeal.length; index += 1) {
           const item = itemsToSeal[index];
+          const sealPostConditions = resolveCollectionSealPostConditions(
+            item.totalChunks
+          );
+          if (!sealPostConditions) {
+            throw new Error(
+              'Collection seal fee safety cap could not be calculated from chunk count.'
+            );
+          }
           const sealTx = await requestContractCall({
             functionName: 'mint-seal',
             functionArgs: [
@@ -1340,6 +1382,8 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
             ],
             contractAddress: collectionContract?.address,
             contractName: collectionContract?.contractName,
+            postConditionMode: PostConditionMode.Deny,
+            postConditions: sealPostConditions,
             logDetails: {
               item: item.path,
               itemIndex: index + 1,
@@ -1357,8 +1401,15 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
       } else {
         const sealPostConditions =
           mintTarget === 'collection'
-            ? undefined
+            ? resolveCollectionBatchSealPostConditions(
+                itemsToSeal.map((item) => item.totalChunks)
+              )
             : resolveFeePostConditions(feeEstimate.sealMicroStx);
+        if (mintTarget === 'collection' && !sealPostConditions) {
+          throw new Error(
+            'Collection batch seal fee safety cap could not be calculated from chunk counts.'
+          );
+        }
         appendLog(`Submitting batch seal transaction (${itemsToSeal.length} item(s)).`);
         const sealTx = await requestContractCall({
           functionName:
@@ -1574,12 +1625,12 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
                     </span>
                   </div>
                   <div>
-                    <span className="meta-label">Wallet safety (begin)</span>
+                    <span className="meta-label">Wallet safety</span>
                     <span className="meta-value">
                       {collectionMintBeginSpendCap !== null
-                        ? `Deny mode <= ${formatMicroStx(
+                        ? `Deny mode: begin <= ${formatMicroStx(
                             Number(collectionMintBeginSpendCap)
-                          )}`
+                          )}; seal <= fee-unit x (1 + ceil(chunks/50)). Upload allows 0 STX.`
                         : 'Load collection status'}
                     </span>
                   </div>
@@ -1868,6 +1919,32 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
                       )
                     )
                   : 'Unknown (load status)'}
+              </span>
+            </div>
+          )}
+          {mintTarget === 'collection' && (
+            <div>
+              <span className="meta-label">Xtrata protocol fee unit</span>
+              <span className="meta-value">
+                {formatMicroStx(feeSchedule.feeUnitMicroStx)}
+              </span>
+            </div>
+          )}
+          {mintTarget === 'collection' && (
+            <div>
+              <span className="meta-label">Wallet safety caps</span>
+              <span className="meta-value">
+                {collectionMintBeginSpendCap !== null
+                  ? `begin <= ${formatMicroStx(
+                      Number(collectionMintBeginSpendCap)
+                    )}; upload <= 0 STX; seal formula: fee-unit x (1 + ceil(chunks/50))${
+                      collectionSealBatchSpendCap !== null
+                        ? `; current batch seal <= ${formatMicroStx(
+                            Number(collectionSealBatchSpendCap)
+                          )}`
+                        : ''
+                    }`
+                  : 'Load collection status'}
               </span>
             </div>
           )}
