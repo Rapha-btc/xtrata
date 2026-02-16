@@ -39,7 +39,6 @@ import {
   writeThemePreference
 } from './lib/theme/preferences';
 import { bytesToHex } from './lib/utils/encoding';
-import { formatBytes } from './lib/utils/format';
 import { createStacksWalletAdapter } from './lib/wallet/adapter';
 import { createWalletSessionStore } from './lib/wallet/session';
 import type { WalletSession } from './lib/wallet/types';
@@ -1147,7 +1146,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
         if (knownHashHex && knownHashHex !== computedHex) {
           if (knownHashHex === rawShaHex) {
             appendMintLog(
-              `Legacy hash format detected for ${asset.filename ?? asset.path}. Auto-correcting.`
+              'Legacy hash format detected for a collection item. Auto-correcting.'
             );
           } else {
             throw new Error(
@@ -1431,7 +1430,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
           !nextMinted[resumeTarget.asset_id]
         ) {
           target = resumeTarget;
-          appendMintLog(`Resuming ${resumeTarget.filename ?? resumeTarget.path}.`);
+          appendMintLog('Resuming previous collection mint attempt.');
         }
       }
 
@@ -1481,7 +1480,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       setPendingMintAssetIds((current) =>
         current.includes(target.asset_id) ? current : [...current, target.asset_id]
       );
-      setMintMessage(`Preparing ${target.filename ?? target.path}...`);
+      setMintMessage('Preparing next collection item...');
       const tokenId = await mintAsset(target, session);
       const refreshedStatus = await loadContractStatus();
       const syncedIds = await syncCollectionTokenNumbers({
@@ -1953,8 +1952,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
 
             {resumeTargetAsset && !mintPending && (
               <div className="alert">
-                Resume target: <strong>{resumeTargetAsset.filename ?? resumeTargetAsset.path}</strong>.
-                Mint continues from last confirmed on-chain step.
+                Resume target selected. Mint continues from the last confirmed on-chain step.
               </div>
             )}
 
@@ -2029,14 +2027,12 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                       <div className="collection-live-page__gallery-frame">
                         <img
                           src={previewUrl}
-                          alt={asset.filename ?? asset.path}
+                          alt={`${collectionTitle} artwork`}
                           loading="lazy"
                         />
                       </div>
                       <div className="collection-live-page__gallery-meta">
-                        <span className="meta-value" title={asset.filename ?? asset.path}>
-                          {asset.filename ?? asset.path}
-                        </span>
+                        <span className="meta-value">{collectionTitle}</span>
                         <span className="meta-label">
                           {typeof localTokenNumber === 'number'
                             ? `Collection #${localTokenNumber}`
@@ -2044,9 +2040,6 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                         </span>
                         <span className="meta-label">
                           {tokenId ? `Xtrata #${tokenId}` : 'Xtrata ID pending'}
-                        </span>
-                        <span className="meta-label">
-                          {formatBytes(BigInt(asset.total_bytes))}
                         </span>
                       </div>
                     </article>
