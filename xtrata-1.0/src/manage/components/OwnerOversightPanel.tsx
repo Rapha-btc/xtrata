@@ -375,6 +375,9 @@ export default function OwnerOversightPanel() {
     useState<Record<string, boolean>>({});
   const [publicVisibilityMessageByCollectionId, setPublicVisibilityMessageByCollectionId] =
     useState<Record<string, string | null>>({});
+  const [showDraftsByArtistAddress, setShowDraftsByArtistAddress] = useState<
+    Record<string, boolean>
+  >({});
 
   const buildLiteralAllowlist = useMemo(
     () => getArtistAllowlistLiteralAddresses(),
@@ -900,22 +903,61 @@ export default function OwnerOversightPanel() {
         <p>No collections found yet for other allowlisted artists.</p>
       )}
 
-      {groupedCollections.map(([artistAddress, artistCollections]) => (
-        <article className="collection-list__group" key={artistAddress}>
-          <div className="collection-list__group-header">
-            <p className="collection-list__group-title">
-              <AddressLabel
-                address={artistAddress}
-                network={walletSession.network}
-              />
-            </p>
-            <span className="badge badge--neutral">
-              {artistCollections.length} drop
-              {artistCollections.length === 1 ? '' : 's'}
-            </span>
-          </div>
+      {groupedCollections.map(([artistAddress, artistCollections]) => {
+        const publishedCollections = artistCollections.filter((collection) =>
+          isPublishedCollectionState(collection.state)
+        );
+        const draftCollections = artistCollections.filter(
+          (collection) => !isPublishedCollectionState(collection.state)
+        );
+        const draftsVisible = Boolean(showDraftsByArtistAddress[artistAddress]);
+        const visibleArtistCollections = [
+          ...publishedCollections,
+          ...draftCollections.filter(
+            (collection) => draftsVisible || Boolean(expandedByCollectionId[collection.id])
+          )
+        ];
 
-          {artistCollections.map((collection) => {
+        return (
+          <article className="collection-list__group" key={artistAddress}>
+            <div className="collection-list__group-header">
+              <p className="collection-list__group-title">
+                <AddressLabel
+                  address={artistAddress}
+                  network={walletSession.network}
+                />
+              </p>
+              <span className="badge badge--neutral">
+                {artistCollections.length} drop
+                {artistCollections.length === 1 ? '' : 's'}
+              </span>
+            </div>
+
+            {draftCollections.length > 0 && (
+              <div className="collection-list__draft-summary">
+                <p className="collection-list__summary">
+                  Draft activity: {draftCollections.length} draft
+                  {draftCollections.length === 1 ? '' : 's'}{' '}
+                  {draftsVisible ? 'shown.' : 'hidden by default.'}
+                </p>
+                <div className="mint-actions">
+                  <button
+                    className="button button--ghost button--mini"
+                    type="button"
+                    onClick={() =>
+                      setShowDraftsByArtistAddress((current) => ({
+                        ...current,
+                        [artistAddress]: !draftsVisible
+                      }))
+                    }
+                  >
+                    {draftsVisible ? 'Hide drafts' : 'Show drafts'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {visibleArtistCollections.map((collection) => {
             const collectionOversight = oversightByCollectionId[collection.id] ?? null;
             const detailError = oversightErrorByCollectionId[collection.id] ?? null;
             const detailLoading = Boolean(oversightLoadingByCollectionId[collection.id]);
@@ -1419,8 +1461,9 @@ export default function OwnerOversightPanel() {
               </div>
             );
           })}
-        </article>
-      ))}
+          </article>
+        );
+      })}
     </div>
   );
 }

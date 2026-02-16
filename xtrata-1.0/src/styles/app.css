@@ -3528,6 +3528,22 @@ p {
   margin: 0;
 }
 
+.manage-app .collection-list__draft-summary {
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  padding: 6px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.manage-app .collection-list__draft-summary .collection-list__summary {
+  margin: 0;
+}
+
 .manage-app .collection-list__item--compact {
   padding: 6px 8px;
   gap: 0;
