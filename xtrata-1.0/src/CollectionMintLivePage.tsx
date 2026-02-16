@@ -913,9 +913,9 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     (globalTokenId: string) => {
       const localTokenNumber = collectionTokenNumberByGlobalId[globalTokenId];
       if (typeof localTokenNumber === 'number') {
-        return `Collection #${localTokenNumber} (Xtrata #${globalTokenId})`;
+        return `Collection #${localTokenNumber}`;
       }
-      return `Xtrata #${globalTokenId}`;
+      return 'Collection ID syncing...';
     },
     [collectionTokenNumberByGlobalId]
   );
@@ -2035,9 +2035,6 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                           {typeof localTokenNumber === 'number'
                             ? `Collection #${localTokenNumber}`
                             : 'Collection ID syncing...'}
-                        </span>
-                        <span className="meta-label">
-                          {tokenId ? `Xtrata #${tokenId}` : 'Xtrata ID pending'}
                         </span>
                       </div>
                     </article>
