@@ -29,7 +29,7 @@ import {
 } from '../lib/api-errors';
 import { useManageWallet } from '../ManageWalletContext';
 import InfoTooltip from './InfoTooltip';
-import standardTemplateSource from '../../../contracts/clarinet/contracts/xtrata-collection-mint-v1.1.clar?raw';
+import standardTemplateSource from '../../../contracts/clarinet/contracts/xtrata-collection-mint-v1.2.clar?raw';
 import preinscribedTemplateSource from '../../../contracts/clarinet/contracts/xtrata-preinscribed-collection-sale-v1.0.clar?raw';
 
 type CollectionDraft = {
@@ -580,7 +580,7 @@ export default function DeployWizardPanel() {
     const templateVersion =
       mintType === 'pre-inscribed'
         ? 'xtrata-preinscribed-collection-sale-v1.0'
-        : 'xtrata-collection-mint-v1.1';
+        : 'xtrata-collection-mint-v1.2';
 
     const draftMetadata = {
       mintType,

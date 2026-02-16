@@ -1507,7 +1507,7 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
         <label className="field field--full">
           <span className="field__label info-label">
             Mutable action
-            <InfoTooltip text="This list includes every public mutable function in xtrata-collection-mint-v1.1." />
+            <InfoTooltip text="This list includes every public mutable function in xtrata-collection-mint-v1.2." />
           </span>
           <select
             className="select"

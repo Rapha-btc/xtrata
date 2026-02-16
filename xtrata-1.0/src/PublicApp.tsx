@@ -258,7 +258,7 @@ This section is a plain-language reference for artists and collection teams.
 
 ### Contracts and modules
 - Core NFT contract: \`xtrata-v2-1-0\`
-- Collection mint contract template: \`xtrata-collection-mint-v1.1\`
+- Collection mint contract template: \`xtrata-collection-mint-v1.2\`
 - Pre-inscribed sale contract template: \`xtrata-preinscribed-collection-sale-v1.0\`
 - Admin module: Collection mint admin
 - Admin module: Pre-inscribed sale admin

@@ -46,11 +46,12 @@ import {
   TX_DELAY_SECONDS
 } from '../lib/mint/constants';
 import {
-  buildBatchSealStxPostConditions,
+  buildCollectionBatchSealStxPostConditions,
+  buildCollectionSealStxPostConditions,
   buildMintBeginStxPostConditions,
-  buildSealStxPostConditions,
-  resolveBatchSealSpendCapMicroStx,
-  resolveCollectionBeginSpendCapMicroStx
+  resolveCollectionBatchSealSpendCapMicroStx,
+  resolveCollectionBeginSpendCapMicroStx,
+  resolveCollectionSealSpendCapMicroStx
 } from '../lib/mint/post-conditions';
 import {
   parseRandomDropManifest,
@@ -665,8 +666,6 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
   const resolveCollectionBeginPostConditions = () =>
     (() => {
       const beginSpendCap = resolveCollectionBeginSpendCapMicroStx({
-        mintPrice: collectionStatus?.mintPrice ?? null,
-        activePhaseMintPrice: collectionStatus?.activePhaseMintPrice ?? null,
         protocolFeeMicroStx: BigInt(feeSchedule.feeUnitMicroStx)
       });
       if (beginSpendCap === null) {
@@ -678,25 +677,39 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
       });
     })();
   const resolveCollectionSealPostConditions = (totalChunks: number) =>
-    buildSealStxPostConditions({
+    buildCollectionSealStxPostConditions({
       sender: props.walletSession.address ?? null,
+      mintPrice:
+        collectionStatus?.activePhaseMintPrice ?? collectionStatus?.mintPrice ?? null,
+      activePhaseMintPrice: collectionStatus?.activePhaseMintPrice ?? null,
       protocolFeeMicroStx: BigInt(feeSchedule.feeUnitMicroStx),
       totalChunks
     });
   const resolveCollectionBatchSealPostConditions = (totalChunks: number[]) =>
-    buildBatchSealStxPostConditions({
+    buildCollectionBatchSealStxPostConditions({
       sender: props.walletSession.address ?? null,
+      mintPrice:
+        collectionStatus?.activePhaseMintPrice ?? collectionStatus?.mintPrice ?? null,
+      activePhaseMintPrice: collectionStatus?.activePhaseMintPrice ?? null,
       protocolFeeMicroStx: BigInt(feeSchedule.feeUnitMicroStx),
       totalChunks
     });
   const collectionMintBeginSpendCap = resolveCollectionBeginSpendCapMicroStx({
-    mintPrice: collectionStatus?.mintPrice ?? null,
-    activePhaseMintPrice: collectionStatus?.activePhaseMintPrice ?? null,
     protocolFeeMicroStx: BigInt(feeSchedule.feeUnitMicroStx)
   });
-  const collectionSealBatchSpendCap = resolveBatchSealSpendCapMicroStx({
+  const collectionSealBatchSpendCap = resolveCollectionBatchSealSpendCapMicroStx({
+    mintPrice:
+      collectionStatus?.activePhaseMintPrice ?? collectionStatus?.mintPrice ?? null,
+    activePhaseMintPrice: collectionStatus?.activePhaseMintPrice ?? null,
     protocolFeeMicroStx: BigInt(feeSchedule.feeUnitMicroStx),
     totalChunks: items.map((item) => item.totalChunks)
+  });
+  const collectionSealSingleSpendCap = resolveCollectionSealSpendCapMicroStx({
+    mintPrice:
+      collectionStatus?.activePhaseMintPrice ?? collectionStatus?.mintPrice ?? null,
+    activePhaseMintPrice: collectionStatus?.activePhaseMintPrice ?? null,
+    protocolFeeMicroStx: BigInt(feeSchedule.feeUnitMicroStx),
+    totalChunks: 1
   });
 
   const pauseBeforeNextTx = async (label: string) => {

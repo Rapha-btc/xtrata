@@ -1349,7 +1349,7 @@ export default function CollectionMintAdminScreen(
             <LabelWithInfo
               tone="field"
               label="Collection contract name"
-              info="The exact deployed contract name, for example xtrata-collection-mint-v1-1."
+              info="The exact deployed contract name, for example xtrata-collection-mint-v1-2."
             />
             <input
               className="input"
