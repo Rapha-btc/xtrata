@@ -2,6 +2,21 @@
 
 Purpose: one-stop map of where code lives and which files to touch for common updates.
 
+## Strategic focus (Protocol Team mode)
+
+- Keep the first-party app and marketplace live and reliable, but treat them as reference implementations.
+- Prioritize protocol-layer stability, SDK tooling, and third-party builder experience.
+- Default new reusable logic to SDK-oriented modules (or SDK-ready helpers) before app-specific UI logic.
+- Add "Built using Xtrata Protocol" positioning in product copy where appropriate, while preserving existing UX.
+- Preserve backwards compatibility for core mint/view flows while extracting reusable primitives.
+
+## SDK-first decision filter (read before implementation)
+
+1) Is this feature useful to external builders (marketplaces, games, launchpads, creator tools)?
+2) If yes, define the reusable interface first (types, function contracts, errors), then wire first-party UI.
+3) Put protocol-facing behavior behind testable helpers; avoid burying contract logic inside screen components.
+4) Keep first-party modules as examples of SDK usage, not the only way to access protocol capabilities.
+
 ## Top-level layout and navigation
 
 - `src/App.tsx` owns the main layout, section order, anchor buttons, collapse state, deploy panel, and high-level app state wiring.
@@ -67,6 +82,14 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 - `src/lib/viewer/types.ts` defines viewer models.
 - `src/lib/market/actions.ts` centralizes market list/cancel validation helpers.
 - `src/lib/market/listing-resolution.ts` resolves page-scoped listing data when activity indexes are incomplete.
+
+## SDK and ecosystem docs
+
+- `docs/sdk/README.md` defines SDK mission, package boundaries, and implementation posture.
+- `docs/sdk/roadmap.md` defines phased delivery for protocol SDK and ecosystem tooling.
+- `docs/sdk/js-package-plan.md` scopes the simple JS package for third-party integrators.
+- `docs/sdk/reconstruction-library-plan.md` scopes deterministic content reconstruction utilities.
+- `docs/sdk/example-repos-plan.md` defines the first two public example integrations.
 
 ## Tests and fixtures
 
@@ -140,3 +163,15 @@ Notes: ensure tests or guards in `src/lib/network/__tests__/` still pass.
 12) New media types or preview behavior.
 Files: `src/components/TokenCardMedia.tsx`, `src/components/TokenContentPreview.tsx`, `src/lib/viewer/content.ts`.
 Notes: keep rendering logic consistent between grid and preview.
+
+13) SDK surface additions (types, client wrappers, reusable flows).
+Files: `docs/sdk/*.md`, planned `packages/xtrata-sdk/**`, `src/lib/contract/**`, `src/lib/protocol/**`.
+Notes: define stable interfaces and error models before UI adoption.
+
+14) Reconstruction library work (deterministic assembly and verification).
+Files: `docs/sdk/reconstruction-library-plan.md`, planned `packages/xtrata-reconstruction/**`, `src/lib/viewer/content.ts`, `src/lib/chunking/hash.ts`.
+Notes: keep outputs deterministic and independently verifiable.
+
+15) Third-party starter integrations and examples.
+Files: `docs/sdk/example-repos-plan.md`, planned `examples/**`.
+Notes: examples must prove end-to-end integration with minimal custom code.
