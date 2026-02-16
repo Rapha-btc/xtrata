@@ -33,7 +33,8 @@ const SECTION_KEYS = [
   'docs',
   'mint',
   'market',
-  'collection-viewer'
+  'collection-viewer',
+  'live-collections'
 ] as const;
 type SectionKey = (typeof SECTION_KEYS)[number];
 
@@ -59,6 +60,24 @@ type DocSection = {
 type InHouseDocSection = DocSection & {
   content: string;
   external?: false;
+};
+
+type PublicLiveCollectionRecord = {
+  id: string;
+  slug: string;
+  display_name: string | null;
+  state: string;
+  contract_address: string | null;
+  metadata?: Record<string, unknown> | null;
+};
+
+type PublicLiveCollectionCard = {
+  id: string;
+  name: string;
+  symbol: string;
+  description: string;
+  livePath: string;
+  contractId: string | null;
 };
 
 const DOC_SECTIONS: DocSection[] = [
@@ -709,6 +728,63 @@ const IN_HOUSE_DOC_SECTIONS = DOC_SECTIONS.filter(isInHouseDocSection);
 const getDocSummary = (doc: DocSection): DocSummary =>
   DOC_SUMMARIES[doc.id] ?? { lead: doc.description, points: [] };
 
+const toRecord = (value: unknown): Record<string, unknown> | null =>
+  value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
+
+const toText = (value: unknown) =>
+  typeof value === 'string' ? value.trim() : '';
+
+const toBoolean = (value: unknown) => {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'true' || normalized === '1' || normalized === 'yes') {
+      return true;
+    }
+    if (normalized === 'false' || normalized === '0' || normalized === 'no') {
+      return false;
+    }
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    if (value === 1) {
+      return true;
+    }
+    if (value === 0) {
+      return false;
+    }
+  }
+  return null;
+};
+
+const isCollectionVisibleOnPublicPage = (metadata: unknown) => {
+  const metadataRecord = toRecord(metadata);
+  const collectionPage = toRecord(metadataRecord?.collectionPage);
+  return toBoolean(collectionPage?.showOnPublicPage) === true;
+};
+
+const parsePublicCollectionsResponse = async (response: Response) => {
+  const text = await response.text();
+  let payload: unknown = null;
+  if (text.length > 0) {
+    try {
+      payload = JSON.parse(text) as unknown;
+    } catch {
+      throw new Error(`Collections response is not JSON: ${text.slice(0, 120)}`);
+    }
+  }
+  if (!response.ok) {
+    const message =
+      toText(toRecord(payload)?.error) || `Failed to load collections (${response.status})`;
+    throw new Error(message);
+  }
+  if (!Array.isArray(payload)) {
+    throw new Error('Collections response is not an array.');
+  }
+  return payload as PublicLiveCollectionRecord[];
+};
+
 const getStacksExplorerContractUrl = (
   contractId: string,
   network: 'mainnet' | 'testnet'
@@ -1006,6 +1082,9 @@ export default function PublicApp() {
     return IN_HOUSE_DOC_SECTIONS[0]?.id ?? null;
   });
   const [activeDocExpanded, setActiveDocExpanded] = useState(false);
+  const [liveCollections, setLiveCollections] = useState<PublicLiveCollectionRecord[]>([]);
+  const [liveCollectionsLoading, setLiveCollectionsLoading] = useState(false);
+  const [liveCollectionsError, setLiveCollectionsError] = useState<string | null>(null);
   const [collapsedSections, setCollapsedSections] = useState(() => {
     const initial = buildCollapsedState(false);
     initial['wallet-lookup'] = true;
@@ -1054,6 +1133,46 @@ export default function PublicApp() {
       total: IN_HOUSE_DOC_SECTIONS.length
     };
   }, [activeDocId]);
+  const liveCollectionCards = useMemo<PublicLiveCollectionCard[]>(() => {
+    return liveCollections
+      .filter(
+        (collection) =>
+          String(collection.state ?? '')
+            .trim()
+            .toLowerCase() === 'published' &&
+          isCollectionVisibleOnPublicPage(collection.metadata)
+      )
+      .map((collection) => {
+        const metadata = toRecord(collection.metadata);
+        const metadataCollection = toRecord(metadata?.collection);
+        const name =
+          toText(metadataCollection?.name) ||
+          toText(collection.display_name) ||
+          toText(collection.slug) ||
+          collection.id;
+        const symbol = toText(metadataCollection?.symbol);
+        const description =
+          toText(metadataCollection?.description) ||
+          'This collection is live and ready for minting.';
+        const liveKey = toText(collection.slug) || collection.id;
+        const livePath = `/collection/${encodeURIComponent(liveKey)}`;
+        const contractAddress = toText(collection.contract_address);
+        const contractName = toText(metadata?.contractName);
+        const contractId =
+          contractAddress.length > 0 && contractName.length > 0
+            ? `${contractAddress}.${contractName}`
+            : null;
+        return {
+          id: collection.id,
+          name,
+          symbol: symbol.length > 0 ? symbol : 'N/A',
+          description,
+          livePath,
+          contractId
+        };
+      })
+      .sort((left, right) => left.name.localeCompare(right.name));
+  }, [liveCollections]);
   const mismatch = getNetworkMismatch(contract.network, walletSession.network);
   const readOnlySender = walletSession.address ?? contract.address;
   const baseLookupState = useMemo(
@@ -1177,6 +1296,44 @@ export default function PublicApp() {
       window.removeEventListener(RATE_LIMIT_WARNING_EVENT, handler);
     };
   }, [hasHiroApiKey]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const loadLiveCollections = async () => {
+      setLiveCollectionsLoading(true);
+      setLiveCollectionsError(null);
+      try {
+        const response = await fetch(
+          '/collections?publishedOnly=1&publicVisibleOnly=1',
+          {
+            signal: controller.signal
+          }
+        );
+        const payload = await parsePublicCollectionsResponse(response);
+        if (controller.signal.aborted) {
+          return;
+        }
+        setLiveCollections(payload);
+      } catch (error) {
+        if (controller.signal.aborted) {
+          return;
+        }
+        const message =
+          error instanceof Error ? error.message : 'Unable to load live collections.';
+        setLiveCollectionsError(message);
+      } finally {
+        if (!controller.signal.aborted) {
+          setLiveCollectionsLoading(false);
+        }
+      }
+    };
+
+    void loadLiveCollections();
+
+    return () => {
+      controller.abort();
+    };
+  }, []);
 
   useEffect(() => {
     if (!creativeStoryOpen) {
@@ -1316,6 +1473,13 @@ export default function PublicApp() {
                 onClick={(event) => handleNavJump(event, 'market')}
               >
                 Market
+              </a>
+              <a
+                className="button button--ghost app__nav-link"
+                href="#live-collections"
+                onClick={(event) => handleNavJump(event, 'live-collections')}
+              >
+                Live drops
               </a>
               <a
                 className="button button--ghost app__nav-link"
@@ -1559,6 +1723,72 @@ export default function PublicApp() {
           collapsed={collapsedSections.market}
           onToggleCollapse={() => toggleSection('market')}
         />
+
+        <section
+          className={`panel app-section${collapsedSections['live-collections'] ? ' panel--collapsed' : ''}`}
+          id="live-collections"
+        >
+          <div className="panel__header">
+            <div>
+              <h2>Live collection mints</h2>
+              <p>Artist drops currently marked as visible by collection owners.</p>
+            </div>
+            <div className="panel__actions">
+              <span className="badge badge--neutral">
+                {liveCollectionsLoading
+                  ? 'Refreshing'
+                  : `${liveCollectionCards.length} live`}
+              </span>
+              <button
+                className="button button--ghost button--collapse"
+                type="button"
+                onClick={() => toggleSection('live-collections')}
+                aria-expanded={!collapsedSections['live-collections']}
+              >
+                {collapsedSections['live-collections'] ? 'Expand' : 'Collapse'}
+              </button>
+            </div>
+          </div>
+          <div className="panel__body">
+            {liveCollectionsError && <div className="alert">{liveCollectionsError}</div>}
+            {!liveCollectionsError && liveCollectionsLoading && liveCollectionCards.length === 0 && (
+              <p>Loading live collection pages...</p>
+            )}
+            {!liveCollectionsError &&
+              !liveCollectionsLoading &&
+              liveCollectionCards.length === 0 && (
+                <p>No live collections are currently published to the public page.</p>
+              )}
+            {liveCollectionCards.length > 0 && (
+              <div className="public-live-collections">
+                {liveCollectionCards.map((collection) => (
+                  <article className="public-live-collections__card" key={collection.id}>
+                    <div className="public-live-collections__card-header">
+                      <h3>{collection.name}</h3>
+                      <span className="badge badge--neutral">{collection.symbol}</span>
+                    </div>
+                    <p>{collection.description}</p>
+                    <div className="public-live-collections__card-meta">
+                      <p className="meta-value">
+                        Collection ID: <code>{collection.id}</code>
+                      </p>
+                      {collection.contractId && (
+                        <p className="meta-value">
+                          Contract: <code>{collection.contractId}</code>
+                        </p>
+                      )}
+                    </div>
+                    <div className="mint-actions">
+                      <a className="button button--ghost button--mini" href={collection.livePath}>
+                        Open live mint page
+                      </a>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
 
         <section
           className={`panel app-section${collapsedSections.docs ? ' panel--collapsed' : ''}`}

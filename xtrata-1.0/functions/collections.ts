@@ -1,21 +1,16 @@
 import { jsonResponse, badRequest, serverError } from './lib/utils';
 import { queryAll, run } from './lib/db';
-import { isValidSlug, normalizeSlug } from './lib/collections';
-
-const parseMetadata = (value: unknown) => {
-  if (!value) {
-    return null;
-  }
-  try {
-    return JSON.parse(String(value));
-  } catch {
-    return null;
-  }
-};
+import {
+  isCollectionPublicVisible,
+  isCollectionPublished,
+  isValidSlug,
+  normalizeSlug,
+  parseCollectionMetadata
+} from './lib/collections';
 
 const mapRow = (row: Record<string, unknown>) => ({
   ...row,
-  metadata: parseMetadata(row.metadata)
+  metadata: parseCollectionMetadata(row.metadata)
 });
 
 export const onRequest: PagesFunction = async ({ request, env }) => {
@@ -29,6 +24,18 @@ export const onRequest: PagesFunction = async ({ request, env }) => {
         includeArchivedParam === '1' ||
         includeArchivedParam === 'true' ||
         includeArchivedParam === 'yes';
+      const publishedOnlyParam =
+        url.searchParams.get('publishedOnly')?.trim().toLowerCase() ?? '';
+      const publishedOnly =
+        publishedOnlyParam === '1' ||
+        publishedOnlyParam === 'true' ||
+        publishedOnlyParam === 'yes';
+      const publicVisibleOnlyParam =
+        url.searchParams.get('publicVisibleOnly')?.trim().toLowerCase() ?? '';
+      const publicVisibleOnly =
+        publicVisibleOnlyParam === '1' ||
+        publicVisibleOnlyParam === 'true' ||
+        publicVisibleOnlyParam === 'yes';
       const result =
         artistAddress.length > 0
           ? await queryAll(
@@ -44,7 +51,17 @@ export const onRequest: PagesFunction = async ({ request, env }) => {
                 ? 'SELECT * FROM collections ORDER BY created_at DESC'
                 : "SELECT * FROM collections WHERE LOWER(COALESCE(state, 'draft')) != 'archived' ORDER BY created_at DESC"
             );
-      return jsonResponse((result.results ?? []).map(mapRow));
+      const rows = (result.results ?? []).map(mapRow);
+      const filtered = rows.filter((row) => {
+        if (publishedOnly && !isCollectionPublished(row.state)) {
+          return false;
+        }
+        if (publicVisibleOnly && !isCollectionPublicVisible(row.metadata)) {
+          return false;
+        }
+        return true;
+      });
+      return jsonResponse(filtered);
     } catch (error) {
       return serverError(
         error instanceof Error ? error.message : 'failed to load collections'
