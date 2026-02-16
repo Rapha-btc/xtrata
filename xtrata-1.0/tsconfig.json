@@ -17,5 +17,11 @@
     "isolatedModules": true,
     "types": ["vitest/globals"]
   },
-  "include": ["src", "vite.config.ts", "vitest.config.ts"]
+  "include": [
+    "src",
+    "packages/xtrata-sdk/src",
+    "packages/xtrata-reconstruction/src",
+    "vite.config.ts",
+    "vitest.config.ts"
+  ]
 }

@@ -12,7 +12,7 @@ Exit criteria:
 - Core team follows SDK-first decision filter for new features.
 - SDK scope and ownership are documented.
 
-## Phase 1: `@xtrata/sdk` baseline
+## Phase 1: `@xtrata/sdk` baseline (in progress)
 
 - Create SDK package structure (build, types, entrypoints).
 - Extract and stabilize:
@@ -23,11 +23,18 @@ Exit criteria:
 - Add unit tests for public SDK interfaces.
 - Add minimal quickstart docs and examples.
 
+Current implementation:
+- `packages/xtrata-sdk` now exists with public modules:
+  - `config`, `network`, `client`, `mint`, `collections`, `market`, `deploy`, `errors`, `types`
+  - `simple`, `safe`, `workflows`
+- Unit tests added under `packages/xtrata-sdk/src/__tests__`.
+- Quickstart docs added under `docs/sdk/quickstart-*.md`.
+
 Exit criteria:
 - Third-party app can perform read-only calls and mint flow through SDK.
 - No required imports from first-party screen files.
 
-## Phase 2: `@xtrata/reconstruction` baseline
+## Phase 2: `@xtrata/reconstruction` baseline (in progress)
 
 - Extract deterministic reconstruction helpers from viewer/chunking utilities.
 - Add canonical APIs:
@@ -36,6 +43,16 @@ Exit criteria:
   - resolve recursive dependencies
 - Add fixtures for large and recursive content.
 - Document performance and fallback behavior.
+
+Current implementation:
+- `packages/xtrata-reconstruction` now exists.
+- Baseline APIs implemented:
+  - `assembleChunks`
+  - `computeExpectedHash`
+  - `verifyPayload`
+  - `resolveDependencies`
+  - `reconstructInscription`
+- Unit tests added under `packages/xtrata-reconstruction/src/__tests__`.
 
 Exit criteria:
 - Integrators can reconstruct and verify inscription payloads without copying viewer code.

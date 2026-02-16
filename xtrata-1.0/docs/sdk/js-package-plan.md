@@ -14,18 +14,27 @@ Goal: ship a simple, typed JS/TS package that covers the most common integrator 
    - Begin/add-chunk/seal orchestration utilities
    - Fee-cap and post-condition helpers
    - Resume-friendly progress primitives
+   - High-level workflow plans for mint + collection mint
 4. Collection-mint helpers
    - Contract status snapshot helpers
    - Published/live eligibility helpers
+5. Market helpers
+   - List/buy/cancel workflow plans with deny-mode post-conditions
 
 ## Proposed module layout
 
-- `sdk/config`
-- `sdk/client`
-- `sdk/mint`
-- `sdk/collections`
-- `sdk/errors`
-- `sdk/types`
+- `packages/xtrata-sdk/src/config.ts`
+- `packages/xtrata-sdk/src/network.ts`
+- `packages/xtrata-sdk/src/client.ts`
+- `packages/xtrata-sdk/src/simple.ts`
+- `packages/xtrata-sdk/src/safe.ts`
+- `packages/xtrata-sdk/src/workflows.ts`
+- `packages/xtrata-sdk/src/mint.ts`
+- `packages/xtrata-sdk/src/collections.ts`
+- `packages/xtrata-sdk/src/market.ts`
+- `packages/xtrata-sdk/src/deploy.ts`
+- `packages/xtrata-sdk/src/errors.ts`
+- `packages/xtrata-sdk/src/types.ts`
 
 ## Stability model
 
