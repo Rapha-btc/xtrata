@@ -97,6 +97,13 @@ Artist guides
 	•	docs/artist-guides/README.md
 	•	docs/artist-guides/collection-launch-guide.md
 
+SDK + builder track
+	•	docs/sdk/README.md
+	•	docs/sdk/roadmap.md
+	•	docs/sdk/js-package-plan.md
+	•	docs/sdk/reconstruction-library-plan.md
+	•	docs/sdk/example-repos-plan.md
+
 ⸻
 
 Requirements

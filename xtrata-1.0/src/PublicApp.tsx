@@ -28,6 +28,7 @@ import {
 } from './lib/theme/preferences';
 import { useActiveTabGuard } from './lib/utils/tab-guard';
 import AddressLabel from './components/AddressLabel';
+import WalletTopBar from './components/WalletTopBar';
 import MintScreen from './screens/MintScreen';
 import ViewerScreen, { type ViewerMode } from './screens/ViewerScreen';
 import WalletLookupScreen from './screens/WalletLookupScreen';
@@ -1831,6 +1832,12 @@ export default function PublicApp() {
             </div>
           </div>
         </div>
+        <WalletTopBar
+          walletSession={walletSession}
+          walletPending={walletPending}
+          onConnect={handleConnectWallet}
+          onDisconnect={handleDisconnectWallet}
+        />
       </header>
       {!tabGuard.isActive && (
         <div className="app__notice">

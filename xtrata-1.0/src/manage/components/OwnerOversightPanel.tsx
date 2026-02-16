@@ -201,6 +201,27 @@ const toNumberOrNull = (value: unknown) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+const toBigIntOrNull = (value: unknown) => {
+  if (typeof value === 'bigint') {
+    return value;
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return BigInt(Math.floor(value));
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+    try {
+      return BigInt(trimmed);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+};
+
 const parseUintCv = (value: ClarityValue) => {
   const parsed = cvToValue(value) as unknown;
   if (parsed === null || parsed === undefined) {
@@ -273,6 +294,11 @@ const toMicroStxLabel = (value: bigint | null) => {
 
 const formatCount = (value: bigint | null) =>
   value === null ? 'Unknown' : value.toString();
+
+const isPublishedCollectionState = (state: unknown) =>
+  String(state ?? '')
+    .trim()
+    .toLowerCase() === 'published';
 
 const getLivePagePath = (collection: Pick<CollectionRecord, 'slug' | 'id'>) => {
   const key = collection.slug?.trim() || collection.id.trim();
@@ -370,6 +396,9 @@ export default function OwnerOversightPanel() {
     useState<Record<string, boolean>>({});
   const [publicVisibilityMessageByCollectionId, setPublicVisibilityMessageByCollectionId] =
     useState<Record<string, string | null>>({});
+  const [showDraftsByArtistAddress, setShowDraftsByArtistAddress] = useState<
+    Record<string, boolean>
+  >({});
 
   const buildLiteralAllowlist = useMemo(
     () => getArtistAllowlistLiteralAddresses(),
@@ -399,7 +428,7 @@ export default function OwnerOversightPanel() {
       setIsLoadingCollections(true);
       setError(null);
       try {
-        const response = await fetch('/collections', {
+        const response = await fetch('/collections?includeArchived=1', {
           signal: controller.signal
         });
         const payload = await parseManageJsonResponse<CollectionRecord[]>(
@@ -568,8 +597,10 @@ export default function OwnerOversightPanel() {
   }, [filteredCollections]);
   const publicVisibleCount = useMemo(
     () =>
-      filteredCollections.filter((collection) =>
-        isCollectionVisibleOnPublicPage(collection)
+      filteredCollections.filter(
+        (collection) =>
+          isPublishedCollectionState(collection.state) &&
+          isCollectionVisibleOnPublicPage(collection)
       ).length,
     [filteredCollections]
   );
@@ -751,6 +782,13 @@ export default function OwnerOversightPanel() {
     collection: CollectionRecord,
     visible: boolean
   ) => {
+    if (!isPublishedCollectionState(collection.state)) {
+      setPublicVisibilityMessageByCollectionId((current) => ({
+        ...current,
+        [collection.id]: 'Publish this collection first to manage public page visibility.'
+      }));
+      return;
+    }
     const metadata = toRecord(collection.metadata) ?? {};
     const collectionPage = toRecord(metadata.collectionPage) ?? {};
     const nextMetadata = {
@@ -886,22 +924,67 @@ export default function OwnerOversightPanel() {
         <p>No collections found yet for other allowlisted artists.</p>
       )}
 
-      {groupedCollections.map(([artistAddress, artistCollections]) => (
-        <article className="collection-list__group" key={artistAddress}>
-          <div className="collection-list__group-header">
-            <p className="collection-list__group-title">
-              <AddressLabel
-                address={artistAddress}
-                network={walletSession.network}
-              />
-            </p>
-            <span className="badge badge--neutral">
-              {artistCollections.length} drop
-              {artistCollections.length === 1 ? '' : 's'}
-            </span>
-          </div>
+      {groupedCollections.map(([artistAddress, artistCollections]) => {
+        const publishedCollections = artistCollections.filter((collection) =>
+          isPublishedCollectionState(collection.state)
+        );
+        const draftCollections = artistCollections.filter(
+          (collection) => !isPublishedCollectionState(collection.state)
+        );
+        const archivedCollectionsCount = draftCollections.filter(
+          (collection) => collection.state.trim().toLowerCase() === 'archived'
+        ).length;
+        const draftsVisible = Boolean(showDraftsByArtistAddress[artistAddress]);
+        const visibleArtistCollections = [
+          ...publishedCollections,
+          ...draftCollections.filter(
+            (collection) => draftsVisible || Boolean(expandedByCollectionId[collection.id])
+          )
+        ];
 
-          {artistCollections.map((collection) => {
+        return (
+          <article className="collection-list__group" key={artistAddress}>
+            <div className="collection-list__group-header">
+              <p className="collection-list__group-title">
+                <AddressLabel
+                  address={artistAddress}
+                  network={walletSession.network}
+                />
+              </p>
+              <span className="badge badge--neutral">
+                {artistCollections.length} drop
+                {artistCollections.length === 1 ? '' : 's'}
+              </span>
+            </div>
+
+            {draftCollections.length > 0 && (
+              <div className="collection-list__draft-summary">
+                <p className="collection-list__summary">
+                  Unpublished activity: {draftCollections.length} attempt
+                  {draftCollections.length === 1 ? '' : 's'}{' '}
+                  {archivedCollectionsCount > 0
+                    ? `(includes ${archivedCollectionsCount} removed). `
+                    : ''}
+                  {draftsVisible ? 'shown.' : 'hidden by default.'}
+                </p>
+                <div className="mint-actions">
+                  <button
+                    className="button button--ghost button--mini"
+                    type="button"
+                    onClick={() =>
+                      setShowDraftsByArtistAddress((current) => ({
+                        ...current,
+                        [artistAddress]: !draftsVisible
+                      }))
+                    }
+                  >
+                    {draftsVisible ? 'Hide drafts' : 'Show drafts'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {visibleArtistCollections.map((collection) => {
             const collectionOversight = oversightByCollectionId[collection.id] ?? null;
             const detailError = oversightErrorByCollectionId[collection.id] ?? null;
             const detailLoading = Boolean(oversightLoadingByCollectionId[collection.id]);
@@ -916,6 +999,23 @@ export default function OwnerOversightPanel() {
               collectionOversight
             );
             const livePagePath = getLivePagePath(collection);
+            const isPublished = isPublishedCollectionState(collection.state);
+            const isMintLiveOnChain =
+              mintSnapshot === null
+                ? true
+                : mintSnapshot.paused !== true && mintSnapshot.finalized !== true;
+            const showLiveMintPageLink =
+              Boolean(livePagePath) &&
+              isPublished &&
+              Boolean(collectionContractTarget) &&
+              isMintLiveOnChain;
+            const liveMintPageAvailabilityLabel = !isPublished
+              ? 'Unavailable until the collection is published and live.'
+              : !collectionContractTarget
+                ? 'Unavailable until contract deployment is confirmed.'
+                : !isMintLiveOnChain
+                  ? 'Unavailable while contract is paused or finalized.'
+                  : 'Unavailable';
             const isPublicVisible = isCollectionVisibleOnPublicPage(collection);
             const visibilitySaving = Boolean(
               publicVisibilitySavingByCollectionId[collection.id]
@@ -924,7 +1024,7 @@ export default function OwnerOversightPanel() {
               publicVisibilityMessageByCollectionId[collection.id] ?? null;
             const deployTxId = collectionOversight?.deploy.txId ?? null;
             const deployTxUrl = deployTxId
-              ? buildExplorerTxUrl(deployTxId, walletSession.network)
+              ? buildExplorerTxUrl(deployTxId, walletSession.network ?? null)
               : null;
             const contractName = collectionOversight?.deploy.contractName ?? null;
             const contractAddress = collectionOversight?.collection.contractAddress ?? null;
@@ -933,7 +1033,7 @@ export default function OwnerOversightPanel() {
                 ? `${contractAddress}.${contractName}`
                 : null;
             const contractUrl = contractId
-              ? buildExplorerAddressUrl(contractId, walletSession.network)
+              ? buildExplorerAddressUrl(contractId, walletSession.network ?? null)
               : null;
             const maxSupply = mintSnapshot?.maxSupply ?? null;
             const mintedCount = mintSnapshot?.mintedCount ?? null;
@@ -951,11 +1051,11 @@ export default function OwnerOversightPanel() {
                 : mintSnapshot.finalized
                   ? 'Yes'
                   : 'No';
-            const activeMintPriceLabel = toMicroStxLabel(
+            const onChainMintPriceMicroStx =
               mintSnapshot?.activePhaseMintPriceMicroStx ??
-                mintSnapshot?.mintPriceMicroStx ??
-                null
-            );
+              mintSnapshot?.mintPriceMicroStx ??
+              null;
+            const activeMintPriceLabel = toMicroStxLabel(onChainMintPriceMicroStx);
             const collectionSettings = collectionOversight?.settingsPreview.collection ?? null;
             const collectionName =
               toStringOrNull(collectionSettings?.name) ??
@@ -964,15 +1064,20 @@ export default function OwnerOversightPanel() {
               'Unknown';
             const symbol = toStringOrNull(collectionSettings?.symbol) ?? 'Unknown';
             const supply = toNumberOrNull(collectionSettings?.supply);
-            const mintPriceStx =
-              toStringOrNull(collectionSettings?.mintPriceStx) ??
-              (() => {
-                const micro = toNumberOrNull(collectionSettings?.mintPriceMicroStx);
-                if (micro === null) {
-                  return null;
-                }
-                return (micro / 1_000_000).toString();
-              })();
+            const draftMintPriceMicroStx = toBigIntOrNull(
+              collectionSettings?.mintPriceMicroStx
+            );
+            const draftMintPriceLabel =
+              draftMintPriceMicroStx !== null
+                ? toMicroStxLabel(draftMintPriceMicroStx)
+                : (() => {
+                    const mintPriceStx = toStringOrNull(collectionSettings?.mintPriceStx);
+                    return mintPriceStx ? `${mintPriceStx} STX` : null;
+                  })();
+            const mintPriceDrift =
+              onChainMintPriceMicroStx !== null &&
+              draftMintPriceMicroStx !== null &&
+              onChainMintPriceMicroStx !== draftMintPriceMicroStx;
             const artistRecipient = toStringOrNull(
               collectionOversight?.settingsPreview.hardcodedDefaults?.recipients &&
                 (
@@ -994,84 +1099,132 @@ export default function OwnerOversightPanel() {
                     .recipients as Record<string, unknown>
                 ).operator
             );
+            const formattedState = formatStateLabel(collection.state);
+            const displayName = collection.display_name ?? collection.slug;
+            const showCompactUnpublishedRow = !isPublished && !detailOpen;
+            const publicVisibilityLabel = isPublished
+              ? isPublicVisible
+                ? 'Visible'
+                : 'Hidden'
+              : 'Unavailable until published';
 
             return (
-              <div key={collection.id} className="collection-list__item">
-                <strong>{collection.display_name ?? collection.slug}</strong>
-                <p>
-                  {collection.slug} · {formatStateLabel(collection.state)}
-                </p>
-                <p className="meta-value">
-                  Collection ID: <code>{collection.id}</code>
-                </p>
-                <div className="mint-actions">
-                  <button
-                    className="button button--ghost button--mini"
-                    type="button"
-                    onClick={() => void copyCollectionId(collection.id)}
-                  >
-                    {copiedCollectionId === collection.id ? 'Copied' : 'Copy ID'}
-                  </button>
-                  <button
-                    className="button button--ghost button--mini"
-                    type="button"
-                    onClick={() =>
-                      toggleCollectionDetails(collection, collectionOversight)
-                    }
-                  >
-                    {detailOpen ? 'Hide full oversight' : 'Show full oversight'}
-                  </button>
-                  {livePagePath && (
-                    <a
-                      className="button button--ghost button--mini"
-                      href={livePagePath}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Open live mint page
-                    </a>
-                  )}
-                  <button
-                    className="button button--ghost button--mini"
-                    type="button"
-                    onClick={() =>
-                      void setCollectionPublicVisibility(collection, !isPublicVisible)
-                    }
-                    disabled={visibilitySaving}
-                  >
-                    {visibilitySaving
-                      ? 'Saving...'
-                      : isPublicVisible
-                        ? 'Hide from public page'
-                        : 'Show on public page'}
-                  </button>
-                  {detailOpen && (
-                    <button
-                      className="button button--ghost button--mini"
-                      type="button"
-                      onClick={() =>
-                        refreshCollectionDetails(collection, collectionOversight)
-                      }
-                      disabled={detailLoading}
-                    >
-                      {detailLoading ? 'Refreshing...' : 'Refresh details'}
-                    </button>
-                  )}
-                </div>
-                {visibilityMessage && (
-                  <p className="meta-value">{visibilityMessage}</p>
+              <div
+                key={collection.id}
+                className={`collection-list__item${showCompactUnpublishedRow ? ' collection-list__item--compact' : ''}`}
+              >
+                {showCompactUnpublishedRow ? (
+                  <div className="collection-list__compact-row">
+                    <div className="collection-list__compact-main">
+                      <strong>{displayName}</strong>
+                      <p className="collection-list__compact-meta">
+                        {collection.slug} · {formattedState} · ID <code>{collection.id}</code>
+                      </p>
+                    </div>
+                    <div className="mint-actions">
+                      <button
+                        className="button button--ghost button--mini"
+                        type="button"
+                        onClick={() => void copyCollectionId(collection.id)}
+                      >
+                        {copiedCollectionId === collection.id ? 'Copied' : 'Copy ID'}
+                      </button>
+                      <button
+                        className="button button--ghost button--mini"
+                        type="button"
+                        onClick={() =>
+                          toggleCollectionDetails(collection, collectionOversight)
+                        }
+                      >
+                        Expand
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <strong>{displayName}</strong>
+                    <p>
+                      {collection.slug} · {formattedState}
+                    </p>
+                    <p className="meta-value">
+                      Collection ID: <code>{collection.id}</code>
+                    </p>
+                    <div className="mint-actions">
+                      <button
+                        className="button button--ghost button--mini"
+                        type="button"
+                        onClick={() => void copyCollectionId(collection.id)}
+                      >
+                        {copiedCollectionId === collection.id ? 'Copied' : 'Copy ID'}
+                      </button>
+                      <button
+                        className="button button--ghost button--mini"
+                        type="button"
+                        onClick={() =>
+                          toggleCollectionDetails(collection, collectionOversight)
+                        }
+                      >
+                        {detailOpen ? 'Hide full oversight' : 'Show full oversight'}
+                      </button>
+                      {showLiveMintPageLink && livePagePath && (
+                        <a
+                          className="button button--ghost button--mini"
+                          href={livePagePath}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Open live mint page
+                        </a>
+                      )}
+                      {isPublished ? (
+                        <button
+                          className="button button--ghost button--mini"
+                          type="button"
+                          onClick={() =>
+                            void setCollectionPublicVisibility(collection, !isPublicVisible)
+                          }
+                          disabled={visibilitySaving}
+                        >
+                          {visibilitySaving
+                            ? 'Saving...'
+                            : isPublicVisible
+                              ? 'Hide from public page'
+                              : 'Show on public page'}
+                        </button>
+                      ) : (
+                        <span className="meta-value">
+                          Publish first to enable public visibility.
+                        </span>
+                      )}
+                      {detailOpen && (
+                        <button
+                          className="button button--ghost button--mini"
+                          type="button"
+                          onClick={() =>
+                            refreshCollectionDetails(collection, collectionOversight)
+                          }
+                          disabled={detailLoading}
+                        >
+                          {detailLoading ? 'Refreshing...' : 'Refresh details'}
+                        </button>
+                      )}
+                    </div>
+                    {visibilityMessage && (
+                      <p className="meta-value">{visibilityMessage}</p>
+                    )}
+                    <p className="meta-value">
+                      Contract owner:{' '}
+                      {collection.contract_address ? (
+                        <AddressLabel
+                          address={collection.contract_address}
+                          network={walletSession.network}
+                        />
+                      ) : (
+                        'contract pending'
+                      )}
+                    </p>
+                  </>
                 )}
-                <p className="meta-value">
-                  Contract owner:{' '}
-                  {collection.contract_address ? (
-                    <AddressLabel
-                      address={collection.contract_address}
-                      network={walletSession.network}
-                    />
-                  ) : (
-                    'contract pending'
-                  )}
-                </p>
 
                 {detailOpen && (
                   <div className="collection-list__details">
@@ -1083,18 +1236,18 @@ export default function OwnerOversightPanel() {
                           <div>
                             <span className="meta-label">Public page visibility</span>
                             <span className="meta-value">
-                              {isPublicVisible ? 'Visible' : 'Hidden'}
+                              {publicVisibilityLabel}
                             </span>
                           </div>
                           <div>
                             <span className="meta-label">Live mint page</span>
                             <span className="meta-value">
-                              {livePagePath ? (
+                              {showLiveMintPageLink && livePagePath ? (
                                 <a href={livePagePath} target="_blank" rel="noreferrer">
                                   {livePagePath}
                                 </a>
                               ) : (
-                                'Unavailable'
+                                liveMintPageAvailabilityLabel
                               )}
                             </span>
                           </div>
@@ -1113,7 +1266,7 @@ export default function OwnerOversightPanel() {
                             <span className="meta-value">{formatCount(remainingCount)}</span>
                           </div>
                           <div>
-                            <span className="meta-label">On-chain mint price</span>
+                            <span className="meta-label">Mint price</span>
                             <span className="meta-value">{activeMintPriceLabel}</span>
                           </div>
                           <div>
@@ -1150,12 +1303,14 @@ export default function OwnerOversightPanel() {
                               {supply === null ? 'Unknown' : supply.toLocaleString()}
                             </span>
                           </div>
-                          <div>
-                            <span className="meta-label">Mint price</span>
-                            <span className="meta-value">
-                              {mintPriceStx ? `${mintPriceStx} STX` : 'Unknown'}
-                            </span>
-                          </div>
+                          {mintPriceDrift && (
+                            <div>
+                              <span className="meta-label">Draft template price</span>
+                              <span className="meta-value">
+                                {draftMintPriceLabel ?? 'Unknown'}
+                              </span>
+                            </div>
+                          )}
                           <div>
                             <span className="meta-label">Created</span>
                             <span className="meta-value">
@@ -1220,6 +1375,12 @@ export default function OwnerOversightPanel() {
                             )}
                             {mintSnapshotError && (
                               <p className="meta-value">Mint status error: {mintSnapshotError}</p>
+                            )}
+                            {mintPriceDrift && (
+                              <p className="meta-value">
+                                Draft metadata price is stale. Contract price above is the live mint
+                                price.
+                              </p>
                             )}
                             {!collectionContractTarget && (
                               <p className="meta-value">
@@ -1340,8 +1501,9 @@ export default function OwnerOversightPanel() {
               </div>
             );
           })}
-        </article>
-      ))}
+          </article>
+        );
+      })}
     </div>
   );
 }

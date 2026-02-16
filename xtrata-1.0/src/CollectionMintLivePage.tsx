@@ -42,6 +42,7 @@ import { bytesToHex } from './lib/utils/encoding';
 import { createStacksWalletAdapter } from './lib/wallet/adapter';
 import { createWalletSessionStore } from './lib/wallet/session';
 import type { WalletSession } from './lib/wallet/types';
+import WalletTopBar from './components/WalletTopBar';
 
 const walletSessionStore = createWalletSessionStore();
 const CONTRACT_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9-_]{0,127}$/;
@@ -53,6 +54,8 @@ const STATUS_REFRESH_MINTING_MS = 3_000;
 const MINTED_SCAN_BATCH_SIZE = 8;
 const CHAIN_SYNC_INTERVAL_MS = 3_000;
 const CHAIN_SYNC_MAX_ATTEMPTS = 25;
+const XTRATA_APP_ICON_DATA_URI =
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%23f97316"/><path d="M18 20h28v6H18zm0 12h28v6H18zm0 12h28v6H18z" fill="white"/></svg>';
 
 type StepState = 'idle' | 'pending' | 'done' | 'error';
 
@@ -1057,7 +1060,8 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
           postConditionMode: params.postConditionMode ?? PostConditionMode.Deny,
           postConditions: params.postConditions,
           appDetails: {
-            name: 'Xtrata Collection Mint'
+            name: 'Xtrata Collection Mint',
+            icon: XTRATA_APP_ICON_DATA_URI
           },
           onFinish: (payload) => resolve(payload as TxPayload),
           onCancel: () =>
@@ -1132,6 +1136,10 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   const mintAsset = useCallback(
     async (asset: CollectionAsset, session: WalletSession) => {
       let activeStage: 'begin' | 'upload' | 'seal' = 'begin';
+      const senderAddress = session.address;
+      if (!senderAddress) {
+        throw new Error('Connect a wallet before minting.');
+      }
       const knownHashHex =
         normalizeHashHex(canonicalHashHexByAssetId[asset.asset_id]) ??
         normalizeHashHex(asset.expected_hash ?? '');
@@ -1183,7 +1191,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
         }
         const needsBegin = !progress.hasReservation || progress.uploadState === null;
         if (needsBegin) {
-          const beginPostConditions = resolveMintBeginPostConditions(session.address);
+          const beginPostConditions = resolveMintBeginPostConditions(senderAddress);
           if (!beginPostConditions) {
             throw new Error(
               'Mint price or Xtrata fee unit is unavailable for wallet safety checks. Refresh status, then retry.'
@@ -1316,7 +1324,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
 
         activeStage = 'seal';
         const sealPostConditions = resolveSealPostConditions(
-          session.address,
+          senderAddress,
           chunks.length
         );
         if (!sealPostConditions) {
@@ -1411,6 +1419,9 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       const session = await ensureConnectedWallet();
       if (!session.address || !session.network) {
         throw new Error('Connect a wallet before minting.');
+      }
+      if (!collectionContract) {
+        throw new Error('Collection contract is not configured.');
       }
       const mismatch = getNetworkMismatch(collectionContract.network, session.network);
       if (mismatch) {
@@ -1753,6 +1764,12 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   return (
     <div className="app collection-live-page">
       <header className="app__header collection-live-page__header">
+        <WalletTopBar
+          walletSession={walletSession}
+          walletPending={walletPending}
+          onConnect={handleConnectWallet}
+          onDisconnect={handleDisconnectWallet}
+        />
         <section className="collection-live-page__hero">
           {soldOut && <span className="collection-live-page__stamp">Sold out</span>}
           <div className="collection-live-page__hero-media">
@@ -1775,25 +1792,6 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
               <span>Xtrata fee unit: {protocolFeeUnitLabel}</span>
             </div>
             <div className="collection-live-page__hero-actions">
-              {walletSession.isConnected ? (
-                <button
-                  className="button button--ghost"
-                  type="button"
-                  onClick={handleDisconnectWallet}
-                  disabled={walletPending}
-                >
-                  Disconnect wallet
-                </button>
-              ) : (
-                <button
-                  className="button button--ghost"
-                  type="button"
-                  onClick={handleConnectWallet}
-                  disabled={walletPending}
-                >
-                  {walletPending ? 'Connecting...' : 'Connect wallet'}
-                </button>
-              )}
               <button
                 className="button"
                 type="button"
