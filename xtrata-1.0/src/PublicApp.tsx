@@ -1,10 +1,19 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type MouseEvent } from 'react';
+import {
+  callReadOnlyFunction,
+  ClarityType,
+  cvToValue,
+  validateStacksAddress,
+  type ClarityValue
+} from '@stacks/transactions';
 import { useQueryClient } from '@tanstack/react-query';
 import { PUBLIC_CONTRACT, PUBLIC_MINT_RESTRICTIONS } from './config/public';
 import { getContractId } from './lib/contract/config';
 import { useBnsAddress } from './lib/bns/hooks';
 import { RATE_LIMIT_WARNING_EVENT } from './lib/network/rate-limit';
-import { getNetworkMismatch } from './lib/network/guard';
+import { getNetworkFromAddress, getNetworkMismatch } from './lib/network/guard';
+import { toStacksNetwork } from './lib/network/stacks';
+import type { NetworkType } from './lib/network/types';
 import { getViewerKey } from './lib/viewer/queries';
 import { createStacksWalletAdapter } from './lib/wallet/adapter';
 import { createWalletSessionStore } from './lib/wallet/session';
@@ -71,13 +80,33 @@ type PublicLiveCollectionRecord = {
   metadata?: Record<string, unknown> | null;
 };
 
+type PublicCollectionContractTarget = {
+  address: string;
+  contractName: string;
+  network: NetworkType;
+};
+
+type PublicLiveMintStatus = {
+  paused: boolean | null;
+  finalized: boolean | null;
+  maxSupply: bigint | null;
+  mintedCount: bigint | null;
+  reservedCount: bigint | null;
+  remaining: bigint | null;
+  refreshedAt: number;
+};
+
 type PublicLiveCollectionCard = {
   id: string;
+  slug: string;
   name: string;
   symbol: string;
   description: string;
   livePath: string;
+  coverImageUrl: string | null;
+  fallbackSupply: bigint | null;
   contractId: string | null;
+  contractTarget: PublicCollectionContractTarget | null;
 };
 
 const DOC_SECTIONS: DocSection[] = [
@@ -764,6 +793,162 @@ const isCollectionVisibleOnPublicPage = (metadata: unknown) => {
   return toBoolean(collectionPage?.showOnPublicPage) === true;
 };
 
+const CONTRACT_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9-_]{0,127}$/;
+
+const toBigIntOrNull = (value: unknown) => {
+  if (typeof value === 'bigint') {
+    return value;
+  }
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) {
+      return null;
+    }
+    return BigInt(Math.floor(value));
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+    try {
+      return BigInt(trimmed);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+};
+
+const parseUintCv = (value: ClarityValue) => {
+  const parsed = cvToValue(value) as unknown;
+  if (parsed && typeof parsed === 'object' && 'value' in (parsed as Record<string, unknown>)) {
+    return toBigIntOrNull((parsed as { value?: unknown }).value);
+  }
+  return toBigIntOrNull(parsed);
+};
+
+const unwrapReadOnly = (value: ClarityValue) => {
+  if (value.type === ClarityType.ResponseOk) {
+    return value.value;
+  }
+  if (value.type === ClarityType.ResponseErr) {
+    const parsed = cvToValue(value.value) as unknown;
+    throw new Error(String(parsed ?? 'Read-only call failed.'));
+  }
+  return value;
+};
+
+const formatBigintLabel = (value: bigint | null) =>
+  value === null ? 'Unknown' : value.toString();
+
+const buildMintStateLabel = (status: PublicLiveMintStatus | null) => {
+  if (!status) {
+    return 'Published';
+  }
+  if (status.finalized) {
+    return 'Finalized';
+  }
+  if (status.remaining !== null && status.remaining <= 0n) {
+    return 'Sold out';
+  }
+  if (
+    status.maxSupply !== null &&
+    status.mintedCount !== null &&
+    status.mintedCount >= status.maxSupply
+  ) {
+    return 'Sold out';
+  }
+  if (status.paused) {
+    return 'Paused';
+  }
+  return 'Live';
+};
+
+const resolvePublicCollectionCoverUrl = (collection: PublicLiveCollectionRecord) => {
+  const metadata = toRecord(collection.metadata);
+  const collectionPage = toRecord(metadata?.collectionPage);
+  const coverImage = toRecord(collectionPage?.coverImage);
+  const source = toText(coverImage?.source);
+  const collectionId = toText(collection.id);
+  if (source === 'collection-asset') {
+    const assetId = toText(coverImage?.assetId);
+    if (!collectionId || !assetId) {
+      return null;
+    }
+    return `/collections/${encodeURIComponent(collectionId)}/asset-preview?assetId=${encodeURIComponent(assetId)}`;
+  }
+  if (source === 'inscribed-image-url') {
+    const imageUrl = toText(coverImage?.imageUrl);
+    if (imageUrl) {
+      return imageUrl;
+    }
+  }
+  return null;
+};
+
+const resolvePublicCollectionContractTarget = (
+  collection: PublicLiveCollectionRecord
+): PublicCollectionContractTarget | null => {
+  const metadata = toRecord(collection.metadata);
+  const address = toText(collection.contract_address);
+  const contractName = toText(metadata?.contractName);
+  if (!validateStacksAddress(address) || !CONTRACT_NAME_PATTERN.test(contractName)) {
+    return null;
+  }
+  return {
+    address,
+    contractName,
+    network: getNetworkFromAddress(address) ?? 'mainnet'
+  };
+};
+
+const loadPublicMintStatus = async (
+  contract: PublicCollectionContractTarget
+): Promise<PublicLiveMintStatus> => {
+  const network = toStacksNetwork(contract.network);
+  const senderAddress = contract.address;
+  const readOnly = async (functionName: string, functionArgs: ClarityValue[] = []) => {
+    const response = await callReadOnlyFunction({
+      contractAddress: contract.address,
+      contractName: contract.contractName,
+      functionName,
+      functionArgs,
+      senderAddress,
+      network
+    });
+    return unwrapReadOnly(response);
+  };
+  const [pausedCv, finalizedCv, maxSupplyCv, mintedCountCv, reservedCountCv] = await Promise.all([
+    readOnly('is-paused'),
+    readOnly('get-finalized'),
+    readOnly('get-max-supply'),
+    readOnly('get-minted-count'),
+    readOnly('get-reserved-count')
+  ]);
+
+  const paused = toBoolean(cvToValue(pausedCv)) ?? null;
+  const finalized = toBoolean(cvToValue(finalizedCv)) ?? null;
+  const maxSupply = parseUintCv(maxSupplyCv);
+  const mintedCount = parseUintCv(mintedCountCv);
+  const reservedCount = parseUintCv(reservedCountCv);
+  const remaining =
+    maxSupply === null || mintedCount === null || reservedCount === null
+      ? null
+      : maxSupply <= mintedCount + reservedCount
+        ? 0n
+        : maxSupply - mintedCount - reservedCount;
+
+  return {
+    paused,
+    finalized,
+    maxSupply,
+    mintedCount,
+    reservedCount,
+    remaining,
+    refreshedAt: Date.now()
+  };
+};
+
 const parsePublicCollectionsResponse = async (response: Response) => {
   const text = await response.text();
   let payload: unknown = null;
@@ -1085,6 +1270,16 @@ export default function PublicApp() {
   const [liveCollections, setLiveCollections] = useState<PublicLiveCollectionRecord[]>([]);
   const [liveCollectionsLoading, setLiveCollectionsLoading] = useState(false);
   const [liveCollectionsError, setLiveCollectionsError] = useState<string | null>(null);
+  const [liveMintStatusByCollectionId, setLiveMintStatusByCollectionId] = useState<
+    Record<string, PublicLiveMintStatus | null>
+  >({});
+  const [liveMintStatusLoadingByCollectionId, setLiveMintStatusLoadingByCollectionId] =
+    useState<Record<string, boolean>>({});
+  const [liveMintStatusErrorByCollectionId, setLiveMintStatusErrorByCollectionId] =
+    useState<Record<string, string | null>>({});
+  const [liveCoverPreviewErrorByCollectionId, setLiveCoverPreviewErrorByCollectionId] = useState<
+    Record<string, boolean>
+  >({});
   const [collapsedSections, setCollapsedSections] = useState(() => {
     const initial = buildCollapsedState(false);
     initial['wallet-lookup'] = true;
@@ -1145,6 +1340,7 @@ export default function PublicApp() {
       .map((collection) => {
         const metadata = toRecord(collection.metadata);
         const metadataCollection = toRecord(metadata?.collection);
+        const fallbackSupply = toBigIntOrNull(metadataCollection?.supply);
         const name =
           toText(metadataCollection?.name) ||
           toText(collection.display_name) ||
@@ -1156,6 +1352,8 @@ export default function PublicApp() {
           'This collection is live and ready for minting.';
         const liveKey = toText(collection.slug) || collection.id;
         const livePath = `/collection/${encodeURIComponent(liveKey)}`;
+        const coverImageUrl = resolvePublicCollectionCoverUrl(collection);
+        const contractTarget = resolvePublicCollectionContractTarget(collection);
         const contractAddress = toText(collection.contract_address);
         const contractName = toText(metadata?.contractName);
         const contractId =
@@ -1164,11 +1362,15 @@ export default function PublicApp() {
             : null;
         return {
           id: collection.id,
+          slug: toText(collection.slug),
           name,
           symbol: symbol.length > 0 ? symbol : 'N/A',
           description,
           livePath,
-          contractId
+          coverImageUrl,
+          fallbackSupply,
+          contractId,
+          contractTarget
         };
       })
       .sort((left, right) => left.name.localeCompare(right.name));
@@ -1334,6 +1536,110 @@ export default function PublicApp() {
       controller.abort();
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const activeIds = new Set(liveCollectionCards.map((collection) => collection.id));
+    setLiveMintStatusByCollectionId((current) =>
+      Object.fromEntries(
+        Object.entries(current).filter(([collectionId]) => activeIds.has(collectionId))
+      )
+    );
+    setLiveMintStatusLoadingByCollectionId((current) =>
+      Object.fromEntries(
+        Object.entries(current).filter(([collectionId]) => activeIds.has(collectionId))
+      )
+    );
+    setLiveMintStatusErrorByCollectionId((current) =>
+      Object.fromEntries(
+        Object.entries(current).filter(([collectionId]) => activeIds.has(collectionId))
+      )
+    );
+    setLiveCoverPreviewErrorByCollectionId((current) =>
+      Object.fromEntries(
+        Object.entries(current).filter(([collectionId]) => activeIds.has(collectionId))
+      )
+    );
+
+    const cardsWithContracts = liveCollectionCards.filter(
+      (
+        collection
+      ): collection is PublicLiveCollectionCard & {
+        contractTarget: PublicCollectionContractTarget;
+      } => collection.contractTarget !== null
+    );
+    if (cardsWithContracts.length === 0) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const refreshMintStatus = async () => {
+      setLiveMintStatusLoadingByCollectionId((current) => {
+        const next = { ...current };
+        cardsWithContracts.forEach((collection) => {
+          next[collection.id] = true;
+        });
+        return next;
+      });
+
+      const settled = await Promise.all(
+        cardsWithContracts.map(async (collection) => {
+          try {
+            const status = await loadPublicMintStatus(collection.contractTarget);
+            return { id: collection.id, status, error: null as string | null };
+          } catch (error) {
+            return {
+              id: collection.id,
+              status: null as PublicLiveMintStatus | null,
+              error:
+                error instanceof Error ? error.message : 'Unable to load mint status.'
+            };
+          }
+        })
+      );
+
+      if (cancelled) {
+        return;
+      }
+
+      setLiveMintStatusByCollectionId((current) => {
+        const next = { ...current };
+        settled.forEach((entry) => {
+          if (entry.status) {
+            next[entry.id] = entry.status;
+          } else if (!next[entry.id]) {
+            next[entry.id] = null;
+          }
+        });
+        return next;
+      });
+      setLiveMintStatusErrorByCollectionId((current) => {
+        const next = { ...current };
+        settled.forEach((entry) => {
+          next[entry.id] = entry.error;
+        });
+        return next;
+      });
+      setLiveMintStatusLoadingByCollectionId((current) => {
+        const next = { ...current };
+        cardsWithContracts.forEach((collection) => {
+          next[collection.id] = false;
+        });
+        return next;
+      });
+    };
+
+    void refreshMintStatus();
+    const intervalId = window.setInterval(() => {
+      void refreshMintStatus();
+    }, 20_000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [liveCollectionCards]);
 
   useEffect(() => {
     if (!creativeStoryOpen) {
@@ -1761,30 +2067,92 @@ export default function PublicApp() {
               )}
             {liveCollectionCards.length > 0 && (
               <div className="public-live-collections">
-                {liveCollectionCards.map((collection) => (
-                  <article className="public-live-collections__card" key={collection.id}>
-                    <div className="public-live-collections__card-header">
-                      <h3>{collection.name}</h3>
-                      <span className="badge badge--neutral">{collection.symbol}</span>
-                    </div>
-                    <p>{collection.description}</p>
-                    <div className="public-live-collections__card-meta">
-                      <p className="meta-value">
-                        Collection ID: <code>{collection.id}</code>
-                      </p>
-                      {collection.contractId && (
+                {liveCollectionCards.map((collection) => {
+                  const mintStatus = liveMintStatusByCollectionId[collection.id] ?? null;
+                  const mintStatusLoading = Boolean(
+                    liveMintStatusLoadingByCollectionId[collection.id]
+                  );
+                  const mintStatusError = liveMintStatusErrorByCollectionId[collection.id] ?? null;
+                  const maxSupply = mintStatus?.maxSupply ?? collection.fallbackSupply ?? null;
+                  const mintedCount = mintStatus?.mintedCount ?? null;
+                  const remainingCount =
+                    mintStatus?.remaining ??
+                    (maxSupply !== null && mintedCount !== null
+                      ? maxSupply <= mintedCount
+                        ? 0n
+                        : maxSupply - mintedCount
+                      : null);
+                  const mintStateLabel = buildMintStateLabel(mintStatus);
+                  const coverPreviewErrored = Boolean(
+                    liveCoverPreviewErrorByCollectionId[collection.id]
+                  );
+
+                  return (
+                    <article className="public-live-collections__card" key={collection.id}>
+                      <div className="public-live-collections__media">
+                        {collection.coverImageUrl && !coverPreviewErrored ? (
+                          <img
+                            src={collection.coverImageUrl}
+                            alt={`${collection.name} cover`}
+                            onLoad={() =>
+                              setLiveCoverPreviewErrorByCollectionId((current) => ({
+                                ...current,
+                                [collection.id]: false
+                              }))
+                            }
+                            onError={() =>
+                              setLiveCoverPreviewErrorByCollectionId((current) => ({
+                                ...current,
+                                [collection.id]: true
+                              }))
+                            }
+                          />
+                        ) : (
+                          <div className="public-live-collections__media-placeholder">
+                            Collection cover image not set yet.
+                          </div>
+                        )}
+                      </div>
+                      <div className="public-live-collections__card-header">
+                        <h3>{collection.name}</h3>
+                        <span className="badge badge--neutral">{collection.symbol}</span>
+                      </div>
+                      <p className="public-live-collections__description">{collection.description}</p>
+                      <div className="public-live-collections__summary">
+                        <span className="public-live-collections__stat">
+                          State: <strong>{mintStateLabel}</strong>
+                        </span>
+                        <span className="public-live-collections__stat">
+                          Size: <strong>{formatBigintLabel(maxSupply)}</strong>
+                        </span>
+                        <span className="public-live-collections__stat">
+                          Minted: <strong>{formatBigintLabel(mintedCount)}</strong>
+                        </span>
+                        <span className="public-live-collections__stat">
+                          Remaining: <strong>{formatBigintLabel(remainingCount)}</strong>
+                        </span>
+                      </div>
+                      <div className="public-live-collections__card-meta">
                         <p className="meta-value">
-                          Contract: <code>{collection.contractId}</code>
+                          Collection: <code>{collection.slug || collection.id}</code>
                         </p>
-                      )}
-                    </div>
-                    <div className="mint-actions">
-                      <a className="button button--ghost button--mini" href={collection.livePath}>
-                        Open live mint page
-                      </a>
-                    </div>
-                  </article>
-                ))}
+                        {mintStatusLoading && (
+                          <p className="meta-value">Refreshing mint status...</p>
+                        )}
+                        {mintStatusError && (
+                          <p className="meta-value">
+                            Mint status unavailable: {mintStatusError}
+                          </p>
+                        )}
+                      </div>
+                      <div className="mint-actions">
+                        <a className="button button--ghost button--mini" href={collection.livePath}>
+                          Open live mint page
+                        </a>
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
             )}
           </div>
