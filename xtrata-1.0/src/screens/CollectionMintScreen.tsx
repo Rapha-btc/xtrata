@@ -46,11 +46,12 @@ import {
   TX_DELAY_SECONDS
 } from '../lib/mint/constants';
 import {
-  buildBatchSealStxPostConditions,
+  buildCollectionBatchSealStxPostConditions,
+  buildCollectionSealStxPostConditions,
   buildMintBeginStxPostConditions,
-  buildSealStxPostConditions,
-  resolveBatchSealSpendCapMicroStx,
-  resolveCollectionBeginSpendCapMicroStx
+  resolveCollectionBatchSealSpendCapMicroStx,
+  resolveCollectionBeginSpendCapMicroStx,
+  resolveCollectionSealSpendCapMicroStx
 } from '../lib/mint/post-conditions';
 import {
   parseRandomDropManifest,
@@ -96,12 +97,14 @@ type CollectionItem = {
 };
 
 type MintTarget = 'core' | 'collection';
+type ReservationPresenceState = 'present' | 'missing' | 'error';
 
 type CollectionContractStatus = {
   paused: boolean | null;
   mintPrice: bigint | null;
   activePhaseId: bigint | null;
   activePhaseMintPrice: bigint | null;
+  reservationExpiryBlocks: bigint | null;
   allowlistEnabled: boolean | null;
   maxPerWallet: bigint | null;
   maxSupply: bigint | null;
@@ -120,6 +123,7 @@ const BATCH_OPTIONS = Array.from(
   (_, index) => index + 1
 );
 const COLLECTION_RESERVATION_STORAGE_PREFIX = 'xtrata:collection-mint:reservations';
+const STACKS_BLOCK_TARGET_MS = 10 * 60 * 1000;
 
 const readFileBytes = async (file: File) => {
   const buffer = await file.arrayBuffer();
@@ -158,6 +162,20 @@ const formatStepStatus = (state: StepState) => {
     return 'Error';
   }
   return 'Idle';
+};
+
+const formatDurationLabel = (durationMs: number) => {
+  const totalSeconds = Math.max(0, Math.floor(durationMs / 1000));
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  if (days > 0) {
+    return `${days}d ${hours}h`;
+  }
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+  return formatRemainingMinutesSeconds(durationMs);
 };
 
 const parseMimeFromContentType = (headerValue: string | null) => {
@@ -240,6 +258,11 @@ const parseUintCv = (value: ClarityValue) => {
     return BigInt(Math.floor(parsed));
   }
   return null;
+};
+
+const isReadOnlyOptionalSome = (value: ClarityValue) => {
+  const normalized = value.type === ClarityType.ResponseOk ? value.value : value;
+  return normalized.type === ClarityType.OptionalSome;
 };
 
 const parseUintListCv = (value: ClarityValue) => {
@@ -333,6 +356,9 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
   const [reservationCountdownMs, setReservationCountdownMs] = useState<number | null>(
     null
   );
+  const [reservationPresenceByHash, setReservationPresenceByHash] = useState<
+    Record<string, ReservationPresenceState>
+  >({});
 
   const adminStatusQuery = useContractAdminStatus({
     client,
@@ -424,6 +450,39 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
     );
   }, [pendingReservations, reservationStorageKey]);
 
+  const collectionReservationTimeoutMs = useMemo(() => {
+    const expiryBlocks = collectionStatus?.reservationExpiryBlocks ?? null;
+    if (expiryBlocks === null || expiryBlocks <= 0n) {
+      return null;
+    }
+    const timeoutMs = expiryBlocks * BigInt(STACKS_BLOCK_TARGET_MS);
+    if (timeoutMs > BigInt(Number.MAX_SAFE_INTEGER)) {
+      return null;
+    }
+    return Number(timeoutMs);
+  }, [collectionStatus?.reservationExpiryBlocks]);
+
+  const effectiveReservationTimeoutMs =
+    collectionReservationTimeoutMs ?? COLLECTION_RESERVATION_TIMEOUT_MS;
+
+  const reservationExpiryLabel = useMemo(() => {
+    const expiryBlocks = collectionStatus?.reservationExpiryBlocks ?? null;
+    if (expiryBlocks === null) {
+      return `fallback ${formatDurationLabel(
+        COLLECTION_RESERVATION_TIMEOUT_MS
+      )} (load collection status for exact expiry)`;
+    }
+    if (expiryBlocks <= 0n) {
+      return 'disabled (no expiry blocks configured)';
+    }
+    if (collectionReservationTimeoutMs === null) {
+      return `${expiryBlocks.toString()} blocks`;
+    }
+    return `${expiryBlocks.toString()} blocks (~${formatDurationLabel(
+      collectionReservationTimeoutMs
+    )})`;
+  }, [collectionReservationTimeoutMs, collectionStatus?.reservationExpiryBlocks]);
+
   useEffect(() => {
     if (!isCollectionOnly || pendingReservations.length === 0) {
       setReservationCountdownMs(null);
@@ -431,13 +490,34 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
     }
     const tick = () => {
       setReservationCountdownMs(
-        getSoonestReservationRemainingMs(pendingReservations, Date.now())
+        getSoonestReservationRemainingMs(
+          pendingReservations,
+          Date.now(),
+          effectiveReservationTimeoutMs
+        )
       );
     };
     tick();
     const timer = window.setInterval(tick, 1000);
     return () => window.clearInterval(timer);
-  }, [isCollectionOnly, pendingReservations]);
+  }, [effectiveReservationTimeoutMs, isCollectionOnly, pendingReservations]);
+
+  useEffect(() => {
+    if (pendingReservations.length === 0) {
+      setReservationPresenceByHash({});
+      return;
+    }
+    setReservationPresenceByHash((prev) => {
+      const next: Record<string, ReservationPresenceState> = {};
+      pendingReservations.forEach((entry) => {
+        const prior = prev[entry.hashHex];
+        if (prior) {
+          next[entry.hashHex] = prior;
+        }
+      });
+      return next;
+    });
+  }, [pendingReservations]);
 
   useEffect(() => {
     if (!isCollectionOnly || pendingReservations.length === 0) {
@@ -445,10 +525,15 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
     }
     if (reservationCountdownMs === 0) {
       setReservationMessage(
-        'Reservation timeout reached. Cancel pending reservations now to return items to supply.'
+        `Reservation timeout reached (${reservationExpiryLabel}). Cancel pending reservations now to return items to supply.`
       );
     }
-  }, [isCollectionOnly, pendingReservations.length, reservationCountdownMs]);
+  }, [
+    isCollectionOnly,
+    pendingReservations.length,
+    reservationCountdownMs,
+    reservationExpiryLabel
+  ]);
 
   const appendLog = (message: string) => {
     setMintLog((prev) => [...prev, message].slice(-50));
@@ -581,8 +666,6 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
   const resolveCollectionBeginPostConditions = () =>
     (() => {
       const beginSpendCap = resolveCollectionBeginSpendCapMicroStx({
-        mintPrice: collectionStatus?.mintPrice ?? null,
-        activePhaseMintPrice: collectionStatus?.activePhaseMintPrice ?? null,
         protocolFeeMicroStx: BigInt(feeSchedule.feeUnitMicroStx)
       });
       if (beginSpendCap === null) {
@@ -594,25 +677,39 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
       });
     })();
   const resolveCollectionSealPostConditions = (totalChunks: number) =>
-    buildSealStxPostConditions({
+    buildCollectionSealStxPostConditions({
       sender: props.walletSession.address ?? null,
+      mintPrice:
+        collectionStatus?.activePhaseMintPrice ?? collectionStatus?.mintPrice ?? null,
+      activePhaseMintPrice: collectionStatus?.activePhaseMintPrice ?? null,
       protocolFeeMicroStx: BigInt(feeSchedule.feeUnitMicroStx),
       totalChunks
     });
   const resolveCollectionBatchSealPostConditions = (totalChunks: number[]) =>
-    buildBatchSealStxPostConditions({
+    buildCollectionBatchSealStxPostConditions({
       sender: props.walletSession.address ?? null,
+      mintPrice:
+        collectionStatus?.activePhaseMintPrice ?? collectionStatus?.mintPrice ?? null,
+      activePhaseMintPrice: collectionStatus?.activePhaseMintPrice ?? null,
       protocolFeeMicroStx: BigInt(feeSchedule.feeUnitMicroStx),
       totalChunks
     });
   const collectionMintBeginSpendCap = resolveCollectionBeginSpendCapMicroStx({
-    mintPrice: collectionStatus?.mintPrice ?? null,
-    activePhaseMintPrice: collectionStatus?.activePhaseMintPrice ?? null,
     protocolFeeMicroStx: BigInt(feeSchedule.feeUnitMicroStx)
   });
-  const collectionSealBatchSpendCap = resolveBatchSealSpendCapMicroStx({
+  const collectionSealBatchSpendCap = resolveCollectionBatchSealSpendCapMicroStx({
+    mintPrice:
+      collectionStatus?.activePhaseMintPrice ?? collectionStatus?.mintPrice ?? null,
+    activePhaseMintPrice: collectionStatus?.activePhaseMintPrice ?? null,
     protocolFeeMicroStx: BigInt(feeSchedule.feeUnitMicroStx),
     totalChunks: items.map((item) => item.totalChunks)
+  });
+  const collectionSealSingleSpendCap = resolveCollectionSealSpendCapMicroStx({
+    mintPrice:
+      collectionStatus?.activePhaseMintPrice ?? collectionStatus?.mintPrice ?? null,
+    activePhaseMintPrice: collectionStatus?.activePhaseMintPrice ?? null,
+    protocolFeeMicroStx: BigInt(feeSchedule.feeUnitMicroStx),
+    totalChunks: 1
   });
 
   const pauseBeforeNextTx = async (label: string) => {
@@ -831,6 +928,38 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
     setItems((prev) => buildIssues(prev.filter((item) => item.key !== key)));
   };
 
+  const checkCollectionReservationOnChain = async (
+    owner: string,
+    hashHex: string
+  ) => {
+    if (!collectionContract) {
+      throw new Error('Set collection contract first.');
+    }
+    try {
+      const network = toStacksNetwork(props.contract.network);
+      const result = await callReadOnlyFunction({
+        contractAddress: collectionContract.address,
+        contractName: collectionContract.contractName,
+        functionName: 'get-reservation',
+        functionArgs: [principalCV(owner), bufferCV(hashHexToBuffer(hashHex))],
+        senderAddress: owner,
+        network
+      });
+      const present = isReadOnlyOptionalSome(result);
+      setReservationPresenceByHash((prev) => ({
+        ...prev,
+        [hashHex]: present ? 'present' : 'missing'
+      }));
+      return present;
+    } catch (error) {
+      setReservationPresenceByHash((prev) => ({
+        ...prev,
+        [hashHex]: 'error'
+      }));
+      throw error;
+    }
+  };
+
   const refreshPendingReservations = async () => {
     if (!collectionContract || !props.walletSession.address) {
       setReservationMessage('Set collection contract and connect wallet first.');
@@ -843,22 +972,13 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
     setReservationBusy(true);
     setReservationMessage(null);
     try {
-      const network = toStacksNetwork(props.contract.network);
       const owner = props.walletSession.address;
       const checks = await Promise.all(
         pendingReservations.map(async (entry) => {
-          const result = await callReadOnlyFunction({
-            contractAddress: collectionContract.address,
-            contractName: collectionContract.contractName,
-            functionName: 'get-reservation',
-            functionArgs: [principalCV(owner), bufferCV(hashHexToBuffer(entry.hashHex))],
-            senderAddress: owner,
-            network
-          });
-          const present =
-            result.type === ClarityType.OptionalSome ||
-            (result.type === ClarityType.ResponseOk &&
-              result.value.type === ClarityType.OptionalSome);
+          const present = await checkCollectionReservationOnChain(
+            owner,
+            entry.hashHex
+          );
           return { entry, present };
         })
       );
@@ -873,6 +993,13 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       setReservationMessage(`Failed to refresh reservations: ${message}`);
+      setReservationPresenceByHash((prev) => {
+        const next = { ...prev };
+        pendingReservations.forEach((entry) => {
+          next[entry.hashHex] = 'error';
+        });
+        return next;
+      });
       logWarn('mint', 'Collection reservation refresh failed', { error: message });
     } finally {
       setReservationBusy(false);
@@ -979,6 +1106,7 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
       const [
         pausedCv,
         priceCv,
+        reservationExpiryCv,
         allowlistCv,
         maxPerWalletCv,
         maxSupplyCv,
@@ -989,6 +1117,7 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
       ] = await Promise.all([
         readOnly('is-paused'),
         readOnly('get-mint-price'),
+        readOnly('get-reservation-expiry-blocks'),
         readOnly('get-allowlist-enabled'),
         readOnly('get-max-per-wallet'),
         readOnly('get-max-supply'),
@@ -1026,6 +1155,7 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
         mintPrice: parseUintCv(priceCv),
         activePhaseId,
         activePhaseMintPrice,
+        reservationExpiryBlocks: parseUintCv(reservationExpiryCv),
         allowlistEnabled: Boolean(cvToValue(allowlistCv)),
         maxPerWallet: parseUintCv(maxPerWalletCv),
         maxSupply: parseUintCv(maxSupplyCv),
@@ -1215,6 +1345,20 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
               `Item ${index + 1}/${items.length}: resuming upload from chunk ${uploadStartIndex + 1}/${item.totalChunks}.`
             );
           }
+          if (mintTarget === 'collection') {
+            const reservationPresent = await checkCollectionReservationOnChain(
+              walletAddress,
+              item.expectedHashHex
+            );
+            if (!reservationPresent) {
+              throw new Error(
+                `Item ${item.path} has on-chain upload data but no active collection reservation. Use cancel/release, then restart this item.`
+              );
+            }
+            appendLog(
+              `Item ${index + 1}/${items.length}: reservation is active on-chain.`
+            );
+          }
         } else {
           appendLog(`Item ${index + 1}/${items.length}: begin inscription.`);
           const beginPostConditions =
@@ -1249,7 +1393,7 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
             contractName:
               mintTarget === 'collection' ? collectionContract?.contractName : undefined,
             postConditionMode: PostConditionMode.Deny,
-            postConditions: beginPostConditions,
+            postConditions: beginPostConditions ?? undefined,
             logDetails: {
               item: item.path,
               bytes: item.totalBytes,
@@ -1257,7 +1401,27 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
             }
           });
           appendLog(`Begin tx sent (${beginTx.txId}).`);
+          if (mintTarget === 'collection') {
+            setPendingReservations((prev) =>
+              upsertReservation(prev, {
+                hashHex: item.expectedHashHex,
+                itemLabel: item.path,
+                startedAtMs: Date.now()
+              })
+            );
+          }
           await pauseBeforeNextTx('Next batch in');
+          if (mintTarget === 'collection') {
+            const reservationPresent = await checkCollectionReservationOnChain(
+              walletAddress,
+              item.expectedHashHex
+            );
+            appendLog(
+              reservationPresent
+                ? `Item ${index + 1}/${items.length}: reservation confirmed on-chain.`
+                : `Item ${index + 1}/${items.length}: reservation not visible yet. Continue only if uploads succeed; otherwise refresh/cancel reservations.`
+            );
+          }
         }
 
         const remainingChunks = item.chunks.slice(uploadStartIndex);
@@ -1317,15 +1481,6 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
             `Item ${index + 1}/${items.length}: no upload batches required.`
           );
         }
-        if (mintTarget === 'collection') {
-          setPendingReservations((prev) =>
-            upsertReservation(prev, {
-              hashHex: item.expectedHashHex,
-              itemLabel: item.path,
-              startedAtMs: Date.now()
-            })
-          );
-        }
         itemsToSeal.push(item);
         setItems((prev) =>
           prev.map((entry, idx) =>
@@ -1347,6 +1502,26 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
       if (itemsToSeal.length < items.length) {
         appendLog(
           `Skipping ${items.length - itemsToSeal.length} already sealed item(s); sealing ${itemsToSeal.length}.`
+        );
+      }
+      if (mintTarget === 'collection') {
+        const reservationChecks = await Promise.all(
+          itemsToSeal.map(async (item) => ({
+            item,
+            present: await checkCollectionReservationOnChain(
+              walletAddress,
+              item.expectedHashHex
+            )
+          }))
+        );
+        const missing = reservationChecks.filter((entry) => !entry.present);
+        if (missing.length > 0) {
+          throw new Error(
+            `Reservation missing on-chain for ${missing.length}/${itemsToSeal.length} item(s). Refresh reservations and retry before sealing.`
+          );
+        }
+        appendLog(
+          `Reservation check complete: ${reservationChecks.length}/${reservationChecks.length} active on-chain.`
         );
       }
       setSealState('pending');
@@ -1383,7 +1558,7 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
             contractAddress: collectionContract?.address,
             contractName: collectionContract?.contractName,
             postConditionMode: PostConditionMode.Deny,
-            postConditions: sealPostConditions,
+            postConditions: sealPostConditions ?? undefined,
             logDetails: {
               item: item.path,
               itemIndex: index + 1,
@@ -1444,7 +1619,7 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
           contractName:
             mintTarget === 'collection' ? collectionContract?.contractName : undefined,
           postConditionMode: PostConditionMode.Deny,
-          postConditions: sealPostConditions,
+          postConditions: sealPostConditions ?? undefined,
           logDetails: {
             itemCount: itemsToSeal.length,
             tokenUriLength: tokenUriValue.length
@@ -1471,7 +1646,7 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
       setMintStatus(`Batch mint failed: ${message}`);
       if (mintTarget === 'collection') {
         setReservationMessage(
-          'Mint did not complete. Cancel pending reservations within 20 minutes to unlock supply.'
+          `Mint did not complete. Cancel pending reservations before expiry (${reservationExpiryLabel}) to unlock supply.`
         );
       }
       setItems((prev) =>
@@ -1494,9 +1669,24 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
   const tokenUriLabel = formatTokenUriLabel(tokenUri.trim() || DEFAULT_TOKEN_URI);
   const collectionLimitLabel = formatBytes(BigInt(MAX_COLLECTION_TOTAL_BYTES));
   const itemLimitLabel = formatBytes(BigInt(MAX_COLLECTION_FILE_BYTES));
-  const reservationTimeoutLabel = formatRemainingMinutesSeconds(
-    COLLECTION_RESERVATION_TIMEOUT_MS
-  );
+  const reservationStatusCounts = useMemo(() => {
+    return pendingReservations.reduce(
+      (acc, entry) => {
+        const status = reservationPresenceByHash[entry.hashHex] ?? null;
+        if (status === 'present') {
+          acc.present += 1;
+        } else if (status === 'missing') {
+          acc.missing += 1;
+        } else if (status === 'error') {
+          acc.error += 1;
+        } else {
+          acc.unknown += 1;
+        }
+        return acc;
+      },
+      { present: 0, missing: 0, error: 0, unknown: 0 }
+    );
+  }, [pendingReservations, reservationPresenceByHash]);
   const hasCollectionDefaultDependencies =
     (collectionStatus?.defaultDependencies?.length ?? 0) > 0;
 
@@ -1635,6 +1825,10 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
                     </span>
                   </div>
                   <div>
+                    <span className="meta-label">Reservation expiry</span>
+                    <span className="meta-value">{reservationExpiryLabel}</span>
+                  </div>
+                  <div>
                     <span className="meta-label">Allowlist enabled</span>
                     <span className="meta-value">
                       {collectionStatus.allowlistEnabled === null
@@ -1721,7 +1915,7 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
               Begin + upload chunk data, then seal for sequential IDs. If parent
               inscriptions are configured on the collection contract, sealing runs one
               item per transaction so parent links are enforced. Incomplete mints should
-              be cancelled within 20 minutes.
+              be cancelled before reservation expiry ({reservationExpiryLabel}).
             </span>
           </div>
         </div>
@@ -1816,9 +2010,10 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
 
         {isCollectionOnly && (
           <div className="alert">
-            If begin/upload is not completed and sealed within {reservationTimeoutLabel},
-            reservations should be cancelled and returned to the collection supply. Fees
-            already paid to submitted transactions are non-refundable.
+            If begin/upload is not completed and sealed before reservation expiry (
+            {reservationExpiryLabel}), reservations should be cancelled and returned to
+            the collection supply. Fees already paid to submitted transactions are
+            non-refundable.
           </div>
         )}
         {mintTarget === 'collection' && pendingReservations.length > 0 && (
@@ -1829,6 +2024,32 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
               ? formatRemainingMinutesSeconds(reservationCountdownMs)
               : '00:00'}
             .
+            <div className="meta-value">
+              On-chain checks: {reservationStatusCounts.present} active,{' '}
+              {reservationStatusCounts.missing} missing, {reservationStatusCounts.unknown}{' '}
+              unchecked, {reservationStatusCounts.error} failed checks.
+            </div>
+            <div className="meta-grid meta-grid--dense">
+              {pendingReservations.slice(0, 8).map((reservation) => (
+                <div key={reservation.hashHex}>
+                  <span className="meta-label">{reservation.itemLabel}</span>
+                  <span className="meta-value">
+                    {reservationPresenceByHash[reservation.hashHex] === 'present'
+                      ? 'On-chain: active'
+                      : reservationPresenceByHash[reservation.hashHex] === 'missing'
+                        ? 'On-chain: missing'
+                        : reservationPresenceByHash[reservation.hashHex] === 'error'
+                          ? 'On-chain: check failed'
+                          : 'On-chain: unchecked'}
+                  </span>
+                </div>
+              ))}
+            </div>
+            {pendingReservations.length > 8 && (
+              <div className="meta-value">
+                +{pendingReservations.length - 8} additional reservations.
+              </div>
+            )}
             <div className="mint-actions">
               <button
                 className="button button--ghost"

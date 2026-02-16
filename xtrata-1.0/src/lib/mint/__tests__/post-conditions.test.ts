@@ -2,11 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { FungibleConditionCode } from '@stacks/transactions';
 import {
   buildBatchSealStxPostConditions,
+  buildCollectionBatchSealStxPostConditions,
+  buildCollectionSealStxPostConditions,
   buildProtocolFeeStxPostConditions,
   buildSealStxPostConditions,
   buildMintBeginStxPostConditions,
+  resolveCollectionBatchSealSpendCapMicroStx,
   resolveBatchSealSpendCapMicroStx,
   resolveCollectionBeginSpendCapMicroStx,
+  resolveCollectionSealSpendCapMicroStx,
   resolveMintBeginSpendCapMicroStx,
   resolveSealSpendCapMicroStx
 } from '../post-conditions';
@@ -75,21 +79,26 @@ describe('mint post conditions', () => {
     ).toBeNull();
   });
 
-  it('adds protocol fee to collection begin spend cap', () => {
+  it('uses protocol fee only for collection begin spend cap', () => {
     const cap = resolveCollectionBeginSpendCapMicroStx({
-      mintPrice: 5_000_000n,
-      activePhaseMintPrice: 6_000_000n,
       protocolFeeMicroStx: 100_000n
     });
-    expect(cap).toBe(6_100_000n);
+    expect(cap).toBe(100_000n);
   });
 
   it('returns null when collection protocol fee is missing', () => {
     const cap = resolveCollectionBeginSpendCapMicroStx({
-      mintPrice: 5_000_000n,
       protocolFeeMicroStx: null
     });
     expect(cap).toBeNull();
+  });
+
+  it('adds optional begin fee to collection begin spend cap', () => {
+    const cap = resolveCollectionBeginSpendCapMicroStx({
+      protocolFeeMicroStx: 100_000n,
+      beginFeeMicroStx: 25_000n
+    });
+    expect(cap).toBe(125_000n);
   });
 
   it('builds protocol fee STX post condition', () => {
@@ -144,5 +153,51 @@ describe('mint post conditions', () => {
     const condition = postConditions?.[0];
     expect(condition?.conditionCode).toBe(FungibleConditionCode.LessEqual);
     expect(condition?.amount).toBe(700_000n);
+  });
+
+  it('computes collection seal cap as mint price plus protocol seal fee', () => {
+    const cap = resolveCollectionSealSpendCapMicroStx({
+      mintPrice: 1_000_000n,
+      protocolFeeMicroStx: 100_000n,
+      totalChunks: 1
+    });
+    expect(cap).toBe(1_200_000n);
+  });
+
+  it('computes collection batch seal cap as per-item mint prices plus protocol seal fees', () => {
+    const cap = resolveCollectionBatchSealSpendCapMicroStx({
+      mintPrice: 1_000_000n,
+      protocolFeeMicroStx: 100_000n,
+      totalChunks: [1, 51]
+    });
+    expect(cap).toBe(2_500_000n);
+  });
+
+  it('builds collection seal post condition from mint price and chunk count', () => {
+    const postConditions = buildCollectionSealStxPostConditions({
+      sender: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
+      mintPrice: 1_000_000n,
+      protocolFeeMicroStx: 100_000n,
+      totalChunks: 1
+    });
+    expect(postConditions).not.toBeNull();
+    expect(postConditions).toHaveLength(1);
+    const condition = postConditions?.[0];
+    expect(condition?.conditionCode).toBe(FungibleConditionCode.LessEqual);
+    expect(condition?.amount).toBe(1_200_000n);
+  });
+
+  it('builds collection batch seal post condition from mint price and item chunks', () => {
+    const postConditions = buildCollectionBatchSealStxPostConditions({
+      sender: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
+      mintPrice: 1_000_000n,
+      protocolFeeMicroStx: 100_000n,
+      totalChunks: [1, 51]
+    });
+    expect(postConditions).not.toBeNull();
+    expect(postConditions).toHaveLength(1);
+    const condition = postConditions?.[0];
+    expect(condition?.conditionCode).toBe(FungibleConditionCode.LessEqual);
+    expect(condition?.amount).toBe(2_500_000n);
   });
 });

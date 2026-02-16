@@ -36,7 +36,7 @@ Use **Pre-inscribed sale** when:
 
 ### Collection Mint Contract
 
-- Template contract: `xtrata-collection-mint-v1.1`
+- Template contract: `xtrata-collection-mint-v1.2`
 - Role: Controls mint rules (price, limits, phases, allowlist, splits) and proxies mint flow into core.
 - Admin screen: `CollectionMintAdminScreen` (`Collection mint admin` module in app).
 - Buyer flow: users mint through `CollectionMintScreen` / `MintScreen` depending launch setup.

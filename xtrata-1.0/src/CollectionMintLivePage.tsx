@@ -913,11 +913,11 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     (globalTokenId: string) => {
       const localTokenNumber = collectionTokenNumberByGlobalId[globalTokenId];
       if (typeof localTokenNumber === 'number') {
-        return `Collection #${localTokenNumber} (Xtrata #${globalTokenId})`;
+        return `${collectionTitle} #${localTokenNumber}`;
       }
-      return `Xtrata #${globalTokenId}`;
+      return `${collectionTitle} #...`;
     },
-    [collectionTokenNumberByGlobalId]
+    [collectionTitle, collectionTokenNumberByGlobalId]
   );
 
   const scanMintedAssets = useCallback(async () => {
@@ -1500,7 +1500,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       });
       const localTokenNumber = syncedIds ? syncedIds[tokenId] : undefined;
       if (typeof localTokenNumber === 'number') {
-        setMintMessage(`Mint confirmed as Collection #${localTokenNumber}.`);
+        setMintMessage(`Mint confirmed as ${collectionTitle} #${localTokenNumber}.`);
       } else {
         setMintMessage('Mint confirmed. Collection numbering is syncing now.');
       }
@@ -2033,11 +2033,8 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                         <span className="meta-value">{collectionTitle}</span>
                         <span className="meta-label">
                           {typeof localTokenNumber === 'number'
-                            ? `Collection #${localTokenNumber}`
-                            : 'Collection ID syncing...'}
-                        </span>
-                        <span className="meta-label">
-                          {tokenId ? `Xtrata #${tokenId}` : 'Xtrata ID pending'}
+                            ? `${collectionTitle} #${localTokenNumber}`
+                            : `${collectionTitle} #...`}
                         </span>
                       </div>
                     </article>

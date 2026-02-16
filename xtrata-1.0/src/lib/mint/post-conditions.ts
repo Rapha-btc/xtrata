@@ -29,22 +29,23 @@ export const resolveMintBeginSpendCapMicroStx = (
     : baseCap;
 };
 
-type CollectionBeginSpendCapParams = MintBeginSpendCapParams & {
+type CollectionBeginSpendCapParams = {
   protocolFeeMicroStx: bigint | null;
+  beginFeeMicroStx?: bigint | null;
 };
 
 export const resolveCollectionBeginSpendCapMicroStx = (
   params: CollectionBeginSpendCapParams
 ) => {
-  const mintCap = resolveMintBeginSpendCapMicroStx(params);
-  if (mintCap === null) {
+  const protocolFee = toPositiveProtocolFee(params.protocolFeeMicroStx);
+  if (protocolFee === null) {
     return null;
   }
-  const protocolFee = params.protocolFeeMicroStx;
-  if (protocolFee === null || protocolFee < 0n) {
+  const beginFee = params.beginFeeMicroStx ?? 0n;
+  if (beginFee < 0n) {
     return null;
   }
-  return mintCap + protocolFee;
+  return protocolFee + beginFee;
 };
 
 type SealSpendCapParams = {
@@ -210,6 +211,115 @@ export const buildBatchSealStxPostConditions = (
       sender,
       FungibleConditionCode.LessEqual,
       sealCap
+    )
+  ];
+};
+
+type CollectionSealSpendCapParams = {
+  mintPrice: bigint | null;
+  activePhaseMintPrice?: bigint | null;
+  protocolFeeMicroStx: bigint | null;
+  totalChunks: number | bigint | null;
+};
+
+const resolveCollectionMintPrice = (params: {
+  mintPrice: bigint | null;
+  activePhaseMintPrice?: bigint | null;
+}) => {
+  const price = params.activePhaseMintPrice ?? params.mintPrice ?? null;
+  if (price === null || price < 0n) {
+    return null;
+  }
+  return price;
+};
+
+export const resolveCollectionSealSpendCapMicroStx = (
+  params: CollectionSealSpendCapParams
+) => {
+  const mintPrice = resolveCollectionMintPrice(params);
+  const sealCap = resolveSealSpendCapMicroStx({
+    protocolFeeMicroStx: params.protocolFeeMicroStx,
+    totalChunks: params.totalChunks
+  });
+  if (mintPrice === null || sealCap === null) {
+    return null;
+  }
+  return mintPrice + sealCap;
+};
+
+type CollectionBatchSealSpendCapParams = {
+  mintPrice: bigint | null;
+  activePhaseMintPrice?: bigint | null;
+  protocolFeeMicroStx: bigint | null;
+  totalChunks: Array<number | bigint>;
+};
+
+export const resolveCollectionBatchSealSpendCapMicroStx = (
+  params: CollectionBatchSealSpendCapParams
+) => {
+  const mintPrice = resolveCollectionMintPrice(params);
+  const batchSealCap = resolveBatchSealSpendCapMicroStx({
+    protocolFeeMicroStx: params.protocolFeeMicroStx,
+    totalChunks: params.totalChunks
+  });
+  if (mintPrice === null || batchSealCap === null) {
+    return null;
+  }
+  return mintPrice * BigInt(params.totalChunks.length) + batchSealCap;
+};
+
+type CollectionSealPostConditionParams = {
+  sender?: string | null;
+  mintPrice: bigint | null;
+  activePhaseMintPrice?: bigint | null;
+  protocolFeeMicroStx: bigint | null;
+  totalChunks: number | bigint | null;
+};
+
+export const buildCollectionSealStxPostConditions = (
+  params: CollectionSealPostConditionParams
+): PostCondition[] | null => {
+  const sender = params.sender?.trim() ?? '';
+  if (!sender) {
+    return null;
+  }
+  const cap = resolveCollectionSealSpendCapMicroStx(params);
+  if (cap === null) {
+    return null;
+  }
+  return [
+    makeStandardSTXPostCondition(
+      sender,
+      FungibleConditionCode.LessEqual,
+      cap
+    )
+  ];
+};
+
+type CollectionBatchSealPostConditionParams = {
+  sender?: string | null;
+  mintPrice: bigint | null;
+  activePhaseMintPrice?: bigint | null;
+  protocolFeeMicroStx: bigint | null;
+  totalChunks: Array<number | bigint>;
+};
+
+export const buildCollectionBatchSealStxPostConditions = (
+  params: CollectionBatchSealPostConditionParams
+): PostCondition[] | null => {
+  const sender = params.sender?.trim() ?? '';
+  if (!sender) {
+    return null;
+  }
+  const cap = resolveCollectionBatchSealSpendCapMicroStx(params);
+  if (cap === null) {
+    return null;
+  }
+  return [
+    makeStandardSTXPostCondition(
+      sender,
+      FungibleConditionCode.LessEqual,
+      cap
     )
   ];
 };

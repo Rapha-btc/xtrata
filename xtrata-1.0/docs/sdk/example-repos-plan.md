@@ -6,11 +6,13 @@ Goal: publish 1-2 high-value reference repos that prove third-party products can
 
 Working title: `xtrata-example-marketplace`
 
+Status: scaffolded in `examples/xtrata-example-marketplace`.
+
 Includes:
 
 - Connect wallet
 - Read collection and token data via SDK
-- List/buy/cancel flows with safe post-conditions
+- List/buy/cancel flow planning via `@xtrata/sdk/workflows`
 - Basic escrow/listing status UI
 
 Success criteria:
@@ -21,10 +23,12 @@ Success criteria:
 
 Working title: `xtrata-example-campaign-engine`
 
+Status: scaffolded in `examples/xtrata-example-campaign-engine`.
+
 Includes:
 
 - Collection launch page
-- Mint progress flow with resume logic
+- Mint workflow planning (begin/chunk/seal) with guided flow state
 - Simple allowlist/event gating
 - Live minted/remaining status widgets
 

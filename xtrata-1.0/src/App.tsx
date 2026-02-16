@@ -39,7 +39,7 @@ import CollectionMintAdminScreen from './screens/CollectionMintAdminScreen';
 import PreinscribedCollectionAdminScreen from './screens/PreinscribedCollectionAdminScreen';
 import PreinscribedCollectionSaleScreen from './screens/PreinscribedCollectionSaleScreen';
 import MarketScreen from './screens/MarketScreen';
-import collectionMintTemplateSource from '../contracts/clarinet/contracts/xtrata-collection-mint-v1.1.clar?raw';
+import collectionMintTemplateSource from '../contracts/clarinet/contracts/xtrata-collection-mint-v1.2.clar?raw';
 import {
   buildCollectionMintContractSource,
   COLLECTION_TEMPLATE_FIELD_KEYS,

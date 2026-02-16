@@ -90,10 +90,15 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 - `docs/sdk/js-package-plan.md` scopes the simple JS package for third-party integrators.
 - `docs/sdk/reconstruction-library-plan.md` scopes deterministic content reconstruction utilities.
 - `docs/sdk/example-repos-plan.md` defines the first two public example integrations.
+- `docs/sdk/quickstart-simple-mode.md` is the default onboarding path for low-friction SDK integration.
+- `docs/sdk/quickstart-workflows.md` provides high-level write transaction plans for mint and market flows.
+- `examples/xtrata-example-marketplace` and `examples/xtrata-example-campaign-engine` are starter integration shells.
 
 ## Tests and fixtures
 
 - `src/lib/**/__tests__/*.test.ts` covers unit tests for protocol, viewer, network, contract, and wallet utilities.
+- `packages/xtrata-sdk/src/__tests__/*.test.ts` covers SDK public helper/unit behavior.
+- `packages/xtrata-reconstruction/src/__tests__/*.test.ts` covers deterministic reconstruction helpers.
 - `scripts/contract-variants.mjs` syncs and verifies SIP-009 trait variants for clarinet/testnet/mainnet.
 
 ## Update types (simple -> complex)
@@ -165,13 +170,13 @@ Files: `src/components/TokenCardMedia.tsx`, `src/components/TokenContentPreview.
 Notes: keep rendering logic consistent between grid and preview.
 
 13) SDK surface additions (types, client wrappers, reusable flows).
-Files: `docs/sdk/*.md`, planned `packages/xtrata-sdk/**`, `src/lib/contract/**`, `src/lib/protocol/**`.
+Files: `docs/sdk/*.md`, `packages/xtrata-sdk/**`, `src/lib/contract/**`, `src/lib/protocol/**`.
 Notes: define stable interfaces and error models before UI adoption.
 
 14) Reconstruction library work (deterministic assembly and verification).
-Files: `docs/sdk/reconstruction-library-plan.md`, planned `packages/xtrata-reconstruction/**`, `src/lib/viewer/content.ts`, `src/lib/chunking/hash.ts`.
+Files: `docs/sdk/reconstruction-library-plan.md`, `packages/xtrata-reconstruction/**`, `src/lib/viewer/content.ts`, `src/lib/chunking/hash.ts`.
 Notes: keep outputs deterministic and independently verifiable.
 
 15) Third-party starter integrations and examples.
-Files: `docs/sdk/example-repos-plan.md`, planned `examples/**`.
+Files: `docs/sdk/example-repos-plan.md`, `examples/**`.
 Notes: examples must prove end-to-end integration with minimal custom code.

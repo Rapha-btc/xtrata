@@ -15,27 +15,37 @@ Purpose: move Xtrata toward a protocol-team model where third parties build prod
 2. Integrators can launch their own marketplaces, games, and campaign products with low setup cost.
 3. Xtrata protocol fees remain the shared base layer while ecosystem products differentiate on top.
 
-## Planned package surfaces
+## Implemented workspace packages
 
-- `@xtrata/sdk` (planned)
-  - Contract client helpers
-  - Typed read-only wrappers
-  - Mint flow orchestration helpers (begin -> batch -> seal)
-  - Fee and post-condition helpers
-- `@xtrata/reconstruction` (planned)
+- `packages/xtrata-sdk` (`@xtrata/sdk`)
+  - Contract config + network helpers
+  - Typed read-only clients (`xtrata`, `collection mint`, `market`)
+  - Simple Mode wrappers (bind sender once, minimal setup)
+  - Safe transaction helpers (deterministic caps + guided flow states)
+  - High-level workflow planners (core mint, collection mint, market list/buy/cancel)
+  - Mint flow call builders + fee/post-condition helpers
+  - Collection lifecycle + random-drop + reservation helpers
+  - Deploy helper primitives (symbol/slug/contract naming + template injection)
+- `packages/xtrata-reconstruction` (`@xtrata/reconstruction`)
   - Deterministic chunk assembly
-  - Hash verification and content integrity checks
-  - Recursive dependency resolution helpers
+  - Hash verification and diagnostics
+  - Dependency graph resolution
+  - End-to-end reconstruction helper
 
 ## Supporting artifacts
 
 - `docs/sdk/roadmap.md`
+- `docs/sdk/api-overview.md`
 - `docs/sdk/js-package-plan.md`
 - `docs/sdk/reconstruction-library-plan.md`
 - `docs/sdk/example-repos-plan.md`
+- `docs/sdk/quickstart-read-only.md`
+- `docs/sdk/quickstart-mint.md`
+- `docs/sdk/quickstart-collection-mint.md`
+- `docs/sdk/quickstart-simple-mode.md`
+- `docs/sdk/quickstart-safe-transactions.md`
+- `docs/sdk/quickstart-workflows.md`
 
 ## Positioning rule
 
 Use "Built using Xtrata Protocol" language in first-party and partner-facing surfaces where relevant.
-
-
