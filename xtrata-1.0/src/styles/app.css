@@ -5430,6 +5430,31 @@ p {
   gap: 8px;
 }
 
+.public-live-collections__media {
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+.public-live-collections__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.public-live-collections__media-placeholder {
+  margin: 0;
+  padding: 12px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
 .public-live-collections__card h3,
 .public-live-collections__card p {
   margin: 0;
@@ -5448,6 +5473,25 @@ p {
   gap: 4px;
 }
 
+.public-live-collections__summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 10px;
+}
+
+.public-live-collections__summary > div {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  padding: 7px 8px;
+  display: grid;
+  gap: 3px;
+}
+
+.public-live-collections__summary .meta-label {
+  margin-bottom: 0;
+}
+
 .public-live-collections__card-meta code {
   display: inline-block;
   max-width: 100%;
@@ -5455,6 +5499,12 @@ p {
   overflow-y: hidden;
   white-space: nowrap;
   vertical-align: bottom;
+}
+
+@media (max-width: 640px) {
+  .public-live-collections__summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* Docs module */
