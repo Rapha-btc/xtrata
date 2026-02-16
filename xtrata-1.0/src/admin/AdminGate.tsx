@@ -19,6 +19,7 @@ import {
   type ThemeMode,
   writeThemePreference
 } from '../lib/theme/preferences';
+import WalletTopBar from '../components/WalletTopBar';
 
 type AdminGateProps = {
   children: ReactNode;
@@ -130,9 +131,6 @@ export default function AdminGate({ children }: AdminGateProps) {
               <p>Only the contract owner or allowlisted addresses may enter.</p>
             </div>
             <div className="panel__actions">
-              <span className="badge badge--neutral">
-                {walletSession.isConnected ? 'Connected' : 'Disconnected'}
-              </span>
               <label className="theme-select" htmlFor="admin-gate-theme-select">
                 <span className="theme-select__label">Theme</span>
                 <select
@@ -149,28 +147,15 @@ export default function AdminGate({ children }: AdminGateProps) {
                   ))}
                 </select>
               </label>
-              {walletSession.isConnected ? (
-                <button
-                  className="button button--ghost"
-                  type="button"
-                  onClick={handleDisconnectWallet}
-                  disabled={walletPending}
-                >
-                  Disconnect
-                </button>
-              ) : (
-                <button
-                  className="button"
-                  type="button"
-                  onClick={handleConnectWallet}
-                  disabled={walletPending}
-                >
-                  Connect wallet
-                </button>
-              )}
             </div>
           </div>
           <div className="panel__body">
+            <WalletTopBar
+              walletSession={walletSession}
+              walletPending={walletPending}
+              onConnect={handleConnectWallet}
+              onDisconnect={handleDisconnectWallet}
+            />
             <div className="meta-grid">
               <div>
                 <span className="meta-label">Contract</span>

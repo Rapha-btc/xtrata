@@ -42,6 +42,7 @@ import { bytesToHex } from './lib/utils/encoding';
 import { createStacksWalletAdapter } from './lib/wallet/adapter';
 import { createWalletSessionStore } from './lib/wallet/session';
 import type { WalletSession } from './lib/wallet/types';
+import WalletTopBar from './components/WalletTopBar';
 
 const walletSessionStore = createWalletSessionStore();
 const CONTRACT_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9-_]{0,127}$/;
@@ -1753,6 +1754,12 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   return (
     <div className="app collection-live-page">
       <header className="app__header collection-live-page__header">
+        <WalletTopBar
+          walletSession={walletSession}
+          walletPending={walletPending}
+          onConnect={handleConnectWallet}
+          onDisconnect={handleDisconnectWallet}
+        />
         <section className="collection-live-page__hero">
           {soldOut && <span className="collection-live-page__stamp">Sold out</span>}
           <div className="collection-live-page__hero-media">
@@ -1775,25 +1782,6 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
               <span>Xtrata fee unit: {protocolFeeUnitLabel}</span>
             </div>
             <div className="collection-live-page__hero-actions">
-              {walletSession.isConnected ? (
-                <button
-                  className="button button--ghost"
-                  type="button"
-                  onClick={handleDisconnectWallet}
-                  disabled={walletPending}
-                >
-                  Disconnect wallet
-                </button>
-              ) : (
-                <button
-                  className="button button--ghost"
-                  type="button"
-                  onClick={handleConnectWallet}
-                  disabled={walletPending}
-                >
-                  {walletPending ? 'Connecting...' : 'Connect wallet'}
-                </button>
-              )}
               <button
                 className="button"
                 type="button"

@@ -14,6 +14,7 @@ import {
   writeThemePreference
 } from '../lib/theme/preferences';
 import AddressLabel from '../components/AddressLabel';
+import WalletTopBar from '../components/WalletTopBar';
 import {
   getArtistAllowlist,
   getArtistAllowlistBnsNames,
@@ -196,9 +197,6 @@ function GateContent({ children }: ArtistManagerGateProps) {
               <p>Connect a wallet and confirm your address matches the allowlist.</p>
             </div>
             <div className="panel__actions">
-              <span className="badge badge--neutral">
-                {walletSession.isConnected ? 'Connected' : 'Disconnected'}
-              </span>
               <label className="theme-select" htmlFor="artist-gate-theme-select">
                 <span className="theme-select__label">Theme</span>
                 <select
@@ -215,28 +213,15 @@ function GateContent({ children }: ArtistManagerGateProps) {
                   ))}
                 </select>
               </label>
-              {walletSession.isConnected ? (
-                <button
-                  className="button button--ghost"
-                  type="button"
-                  onClick={handleDisconnectWallet}
-                  disabled={walletPending}
-                >
-                  Disconnect
-                </button>
-              ) : (
-                <button
-                  className="button"
-                  type="button"
-                  onClick={handleConnectWallet}
-                  disabled={walletPending}
-                >
-                  Connect wallet
-                </button>
-              )}
             </div>
           </div>
           <div className="panel__body">
+            <WalletTopBar
+              walletSession={walletSession}
+              walletPending={walletPending}
+              onConnect={handleConnectWallet}
+              onDisconnect={handleDisconnectWallet}
+            />
             <div className="meta-grid">
               <div>
                 <span className="meta-label">Connected address</span>

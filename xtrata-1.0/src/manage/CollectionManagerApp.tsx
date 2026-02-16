@@ -8,6 +8,7 @@ import PublishOpsPanel from './components/PublishOpsPanel';
 import DiagnosticsPanel from './components/DiagnosticsPanel';
 import InfoTooltip from './components/InfoTooltip';
 import AddressLabel from '../components/AddressLabel';
+import WalletTopBar from '../components/WalletTopBar';
 import { isXtrataOwnerAddress } from '../config/manage';
 import { useManageWallet } from './ManageWalletContext';
 
@@ -62,8 +63,9 @@ const GUIDED_STEPS: Array<{
 ];
 
 export default function CollectionManagerApp() {
-  const { walletSession } = useManageWallet();
+  const { walletSession, connect, disconnect } = useManageWallet();
   const isXtrataOwner = isXtrataOwnerAddress(walletSession.address);
+  const [walletPending, setWalletPending] = useState(false);
   const [activeCollectionId, setActiveCollectionId] = useState('');
   const [activeCollectionLabel, setActiveCollectionLabel] = useState('');
 
@@ -124,6 +126,24 @@ export default function CollectionManagerApp() {
     }));
   };
 
+  const handleConnectWallet = async () => {
+    setWalletPending(true);
+    try {
+      await connect();
+    } finally {
+      setWalletPending(false);
+    }
+  };
+
+  const handleDisconnectWallet = async () => {
+    setWalletPending(true);
+    try {
+      await disconnect();
+    } finally {
+      setWalletPending(false);
+    }
+  };
+
   return (
     <div className="app manage-app">
       <header className="app__header">
@@ -139,6 +159,12 @@ export default function CollectionManagerApp() {
           />
         </p>
         <p>Follow the guided steps below. Advanced controls are optional and hidden by default.</p>
+        <WalletTopBar
+          walletSession={walletSession}
+          walletPending={walletPending}
+          onConnect={handleConnectWallet}
+          onDisconnect={handleDisconnectWallet}
+        />
         {activeCollectionId ? (
           <p className="meta-value">
             Active drop: {activeCollectionLabel || 'Selected drop'} ·{' '}
