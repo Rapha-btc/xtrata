@@ -48,7 +48,9 @@ const walletSessionStore = createWalletSessionStore();
 const CONTRACT_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9-_]{0,127}$/;
 const HASH_HEX_PATTERN = /^[0-9a-f]{64}$/;
 const MINT_CHUNK_BATCH_SIZE = 30;
-const STATUS_REFRESH_MS = 20_000;
+const STATUS_REFRESH_ACTIVE_MS = 6_000;
+const STATUS_REFRESH_BACKGROUND_MS = 20_000;
+const STATUS_REFRESH_MINTING_MS = 3_000;
 const MINTED_SCAN_BATCH_SIZE = 8;
 const CHAIN_SYNC_INTERVAL_MS = 3_000;
 const CHAIN_SYNC_MAX_ATTEMPTS = 25;
@@ -318,6 +320,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   const [contractStatus, setContractStatus] = useState<ContractStatus | null>(null);
   const [statusLoading, setStatusLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [statusLastUpdatedAt, setStatusLastUpdatedAt] = useState<number | null>(null);
   const [mintPending, setMintPending] = useState(false);
   const [mintMessage, setMintMessage] = useState<string | null>(null);
   const [mintLog, setMintLog] = useState<string[]>([]);
@@ -740,13 +743,17 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     }
   }, [normalizedCollectionKey]);
 
-  const loadContractStatus = useCallback(async () => {
+  const loadContractStatus = useCallback(async (options?: { silent?: boolean }) => {
     if (!collectionContract) {
       setContractStatus(null);
+      setStatusLastUpdatedAt(null);
       return null;
     }
-    setStatusLoading(true);
-    setStatusMessage(null);
+    const silent = options?.silent ?? false;
+    if (!silent) {
+      setStatusLoading(true);
+      setStatusMessage(null);
+    }
     try {
       const network = toStacksNetwork(collectionContract.network);
       const senderAddress = walletSession.address ?? collectionContract.address;
@@ -808,13 +815,17 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
         reservedCount: parseUintCv(reservedCountCv)
       } satisfies ContractStatus;
       setContractStatus(nextStatus);
+      setStatusMessage(null);
+      setStatusLastUpdatedAt(Date.now());
       return nextStatus;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       setStatusMessage(`Unable to refresh contract status: ${message}`);
       return null;
     } finally {
-      setStatusLoading(false);
+      if (!silent) {
+        setStatusLoading(false);
+      }
     }
   }, [collectionContract, coreClient, walletSession.address]);
 
@@ -1548,6 +1559,16 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     }
   }, [walletAdapter]);
 
+  const resolveStatusRefreshIntervalMs = useCallback(() => {
+    if (typeof document !== 'undefined' && document.hidden) {
+      return STATUS_REFRESH_BACKGROUND_MS;
+    }
+    if (mintPending) {
+      return STATUS_REFRESH_MINTING_MS;
+    }
+    return STATUS_REFRESH_ACTIVE_MS;
+  }, [mintPending]);
+
   useEffect(() => {
     applyThemeToDocument(themeMode);
     writeThemePreference(themeMode);
@@ -1591,6 +1612,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     setCollectionIndexCount(0);
     setCollectionIndexSyncPending(false);
     setCollectionIndexSyncMessage(null);
+    setStatusLastUpdatedAt(null);
     setPendingMintAssetIds([]);
     setResumeAssetId(null);
     setMintLog([]);
@@ -1602,12 +1624,62 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     if (!collectionContract) {
       return;
     }
+
+    let cancelled = false;
+    let timerId: number | null = null;
+    let inFlight = false;
+
+    const clearTimer = () => {
+      if (timerId !== null) {
+        window.clearTimeout(timerId);
+        timerId = null;
+      }
+    };
+
+    const scheduleNext = (delayMs?: number) => {
+      clearTimer();
+      if (cancelled) {
+        return;
+      }
+      const delay = delayMs ?? resolveStatusRefreshIntervalMs();
+      timerId = window.setTimeout(() => {
+        void runPoll();
+      }, delay);
+    };
+
+    const runPoll = async () => {
+      if (cancelled || inFlight) {
+        return;
+      }
+      inFlight = true;
+      try {
+        await loadContractStatus({ silent: true });
+      } finally {
+        inFlight = false;
+        scheduleNext();
+      }
+    };
+
+    const handleVisibilityOrFocus = () => {
+      if (cancelled || inFlight) {
+        return;
+      }
+      clearTimer();
+      void runPoll();
+    };
+
     void loadContractStatus();
-    const timer = window.setInterval(() => {
-      void loadContractStatus();
-    }, STATUS_REFRESH_MS);
-    return () => window.clearInterval(timer);
-  }, [collectionContract, loadContractStatus]);
+    scheduleNext(resolveStatusRefreshIntervalMs());
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    window.addEventListener('focus', handleVisibilityOrFocus);
+
+    return () => {
+      cancelled = true;
+      clearTimer();
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+    };
+  }, [collectionContract, loadContractStatus, resolveStatusRefreshIntervalMs]);
 
   useEffect(() => {
     if (!collectionContract || contractStatus?.mintedCount === null) {
@@ -1643,6 +1715,11 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   const maxSupplyLabel = formatCount(contractStatus?.maxSupply ?? null);
   const reservedCountLabel = formatCount(contractStatus?.reservedCount ?? null);
   const remainingLabel = remaining === null ? 'Unknown' : remaining.toString();
+  const statusRefreshNote = statusLastUpdatedAt
+    ? `Auto-refreshing every ~6s while active (${STATUS_REFRESH_BACKGROUND_MS / 1000}s in background). Last sync ${new Date(
+        statusLastUpdatedAt
+      ).toLocaleTimeString()}.`
+    : 'Auto-refreshing every ~6s while active. Waiting for first sync...';
   const mintPriceLabel = toMicroStxLabel(contractStatus?.mintPrice ?? null);
   const mintBeginSpendCap = resolveCollectionBeginSpendCapMicroStx({
     mintPrice: contractStatus?.mintPrice ?? null,
@@ -1742,7 +1819,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
           <div className="panel__header">
             <div>
               <h2>Collection status</h2>
-              <p></p>
+              <p>{statusRefreshNote}</p>
             </div>
             <div className="panel__actions">
               <label className="theme-select" htmlFor="live-theme-select">
