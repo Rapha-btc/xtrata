@@ -2117,34 +2117,25 @@ export default function PublicApp() {
                         <h3>{collection.name}</h3>
                         <span className="badge badge--neutral">{collection.symbol}</span>
                       </div>
-                      <p>{collection.description}</p>
+                      <p className="public-live-collections__description">{collection.description}</p>
                       <div className="public-live-collections__summary">
-                        <div>
-                          <span className="meta-label">Mint state</span>
-                          <span className="meta-value">{mintStateLabel}</span>
-                        </div>
-                        <div>
-                          <span className="meta-label">Collection size</span>
-                          <span className="meta-value">{formatBigintLabel(maxSupply)}</span>
-                        </div>
-                        <div>
-                          <span className="meta-label">Minted</span>
-                          <span className="meta-value">{formatBigintLabel(mintedCount)}</span>
-                        </div>
-                        <div>
-                          <span className="meta-label">Remaining</span>
-                          <span className="meta-value">{formatBigintLabel(remainingCount)}</span>
-                        </div>
+                        <span className="public-live-collections__stat">
+                          State: <strong>{mintStateLabel}</strong>
+                        </span>
+                        <span className="public-live-collections__stat">
+                          Size: <strong>{formatBigintLabel(maxSupply)}</strong>
+                        </span>
+                        <span className="public-live-collections__stat">
+                          Minted: <strong>{formatBigintLabel(mintedCount)}</strong>
+                        </span>
+                        <span className="public-live-collections__stat">
+                          Remaining: <strong>{formatBigintLabel(remainingCount)}</strong>
+                        </span>
                       </div>
                       <div className="public-live-collections__card-meta">
                         <p className="meta-value">
-                          Collection ID: <code>{collection.id}</code>
+                          Collection: <code>{collection.slug || collection.id}</code>
                         </p>
-                        {collection.contractId && (
-                          <p className="meta-value">
-                            Contract: <code>{collection.contractId}</code>
-                          </p>
-                        )}
                         {mintStatusLoading && (
                           <p className="meta-value">Refreshing mint status...</p>
                         )}

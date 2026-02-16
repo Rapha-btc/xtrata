@@ -5427,14 +5427,25 @@ p {
   background: var(--surface-soft);
   padding: 10px;
   display: grid;
-  gap: 8px;
+  grid-template-columns: 128px minmax(0, 1fr);
+  column-gap: 10px;
+  row-gap: 6px;
+  align-items: start;
+}
+
+.public-live-collections__card > :not(.public-live-collections__media) {
+  grid-column: 2;
+  min-width: 0;
 }
 
 .public-live-collections__media {
+  grid-column: 1;
+  grid-row: 1 / span 6;
   border-radius: 12px;
   border: 1px solid var(--border);
   background: var(--surface-muted);
-  aspect-ratio: 1 / 1;
+  width: 128px;
+  height: 128px;
   overflow: hidden;
   display: grid;
   place-items: center;
@@ -5460,6 +5471,16 @@ p {
   margin: 0;
 }
 
+.public-live-collections__description {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 .public-live-collections__card-header {
   display: flex;
   align-items: center;
@@ -5474,22 +5495,22 @@ p {
 }
 
 .public-live-collections__summary {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
-.public-live-collections__summary > div {
+.public-live-collections__stat {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 999px;
   background: var(--surface);
-  padding: 7px 8px;
-  display: grid;
-  gap: 3px;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  line-height: 1.35;
 }
 
-.public-live-collections__summary .meta-label {
-  margin-bottom: 0;
+.public-live-collections__stat strong {
+  font-weight: 700;
 }
 
 .public-live-collections__card-meta code {
@@ -5502,8 +5523,24 @@ p {
 }
 
 @media (max-width: 640px) {
+  .public-live-collections__card {
+    grid-template-columns: 110px minmax(0, 1fr);
+    column-gap: 8px;
+    row-gap: 5px;
+  }
+
+  .public-live-collections__media {
+    width: 110px;
+    height: 110px;
+  }
+
   .public-live-collections__summary {
-    grid-template-columns: minmax(0, 1fr);
+    gap: 5px;
+  }
+
+  .public-live-collections__stat {
+    font-size: 0.68rem;
+    padding: 2px 7px;
   }
 }
 
