@@ -1,4 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
+import {
+  callReadOnlyFunction,
+  ClarityType,
+  cvToValue,
+  type ClarityValue,
+  uintCV,
+  validateStacksAddress
+} from '@stacks/transactions';
 import AddressLabel from '../../components/AddressLabel';
 import {
   getArtistAllowlistBnsNames,
@@ -7,6 +15,8 @@ import {
   XTRATA_OWNER_ADDRESS
 } from '../../config/manage';
 import { resolveBnsAddress } from '../../lib/bns/resolver';
+import { getNetworkFromAddress } from '../../lib/network/guard';
+import { toStacksNetwork } from '../../lib/network/stacks';
 import type { NetworkType } from '../../lib/network/types';
 import { useManageWallet } from '../ManageWalletContext';
 import {
@@ -21,6 +31,7 @@ type CollectionRecord = {
   contract_address: string | null;
   display_name: string | null;
   state: string;
+  metadata?: Record<string, unknown> | null;
 };
 
 type RuntimeAllowlistPayload = {
@@ -89,6 +100,27 @@ type CollectionOversightResponse = {
   };
 };
 
+type CollectionContractTarget = {
+  address: string;
+  contractName: string;
+  network: NetworkType;
+};
+
+type CollectionMintSnapshot = {
+  paused: boolean | null;
+  finalized: boolean | null;
+  mintPriceMicroStx: bigint | null;
+  activePhaseId: bigint | null;
+  activePhaseMintPriceMicroStx: bigint | null;
+  maxSupply: bigint | null;
+  mintedCount: bigint | null;
+  reservedCount: bigint | null;
+  remaining: bigint | null;
+  refreshedAt: number;
+};
+
+const CONTRACT_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9-_]{0,127}$/;
+
 const normalizeAddress = (value: string) => value.trim().toUpperCase();
 
 const formatStateLabel = (value: string) => {
@@ -137,9 +169,147 @@ const toStringOrNull = (value: unknown) => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
+const toRecord = (value: unknown): Record<string, unknown> | null =>
+  value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
+
+const toBoolean = (value: unknown) => {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'true' || normalized === '1' || normalized === 'yes') {
+      return true;
+    }
+    if (normalized === 'false' || normalized === '0' || normalized === 'no') {
+      return false;
+    }
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    if (value === 1) {
+      return true;
+    }
+    if (value === 0) {
+      return false;
+    }
+  }
+  return null;
+};
+
 const toNumberOrNull = (value: unknown) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+};
+
+const parseUintCv = (value: ClarityValue) => {
+  const parsed = cvToValue(value) as unknown;
+  if (parsed === null || parsed === undefined) {
+    return null;
+  }
+  if (typeof parsed === 'bigint') {
+    return parsed;
+  }
+  if (typeof parsed === 'string') {
+    try {
+      return BigInt(parsed);
+    } catch {
+      return null;
+    }
+  }
+  if (typeof parsed === 'number' && Number.isFinite(parsed)) {
+    return BigInt(Math.floor(parsed));
+  }
+  if (
+    parsed &&
+    typeof parsed === 'object' &&
+    'value' in (parsed as Record<string, unknown>)
+  ) {
+    const raw = (parsed as { value?: unknown }).value;
+    if (typeof raw === 'bigint') {
+      return raw;
+    }
+    if (typeof raw === 'string') {
+      try {
+        return BigInt(raw);
+      } catch {
+        return null;
+      }
+    }
+  }
+  return null;
+};
+
+const unwrapResponse = (value: ClarityValue) => {
+  if (value.type === ClarityType.ResponseOk) {
+    return value.value;
+  }
+  if (value.type === ClarityType.ResponseErr) {
+    const parsed = cvToValue(value.value) as unknown;
+    if (
+      parsed &&
+      typeof parsed === 'object' &&
+      'value' in (parsed as Record<string, unknown>)
+    ) {
+      throw new Error(String((parsed as { value?: unknown }).value ?? 'Contract error'));
+    }
+    throw new Error(String(parsed ?? 'Contract error'));
+  }
+  return value;
+};
+
+const toMicroStxLabel = (value: bigint | null) => {
+  if (value === null) {
+    return 'Unknown';
+  }
+  const negative = value < 0n;
+  const normalized = negative ? -value : value;
+  const whole = normalized / 1_000_000n;
+  const fraction = (normalized % 1_000_000n).toString().padStart(6, '0');
+  const trimmedFraction = fraction.replace(/0+$/, '');
+  const formatted =
+    trimmedFraction.length > 0 ? `${whole}.${trimmedFraction}` : `${whole}`;
+  return `${negative ? '-' : ''}${formatted} STX`;
+};
+
+const formatCount = (value: bigint | null) =>
+  value === null ? 'Unknown' : value.toString();
+
+const getLivePagePath = (collection: Pick<CollectionRecord, 'slug' | 'id'>) => {
+  const key = collection.slug?.trim() || collection.id.trim();
+  if (!key) {
+    return null;
+  }
+  return `/collection/${encodeURIComponent(key)}`;
+};
+
+const isCollectionVisibleOnPublicPage = (collection: CollectionRecord) => {
+  const metadata = toRecord(collection.metadata);
+  const collectionPage = toRecord(metadata?.collectionPage);
+  return toBoolean(collectionPage?.showOnPublicPage) === true;
+};
+
+const resolveCollectionContractTarget = (
+  collection: CollectionRecord,
+  oversight: CollectionOversightResponse | null
+): CollectionContractTarget | null => {
+  const metadata = toRecord(collection.metadata);
+  const metadataContractName = toStringOrNull(metadata?.contractName);
+  const address =
+    toStringOrNull(oversight?.collection.contractAddress) ??
+    toStringOrNull(collection.contract_address);
+  const contractName =
+    toStringOrNull(oversight?.deploy.contractName) ?? metadataContractName;
+  if (!address || !contractName) {
+    return null;
+  }
+  if (!validateStacksAddress(address) || !CONTRACT_NAME_PATTERN.test(contractName)) {
+    return null;
+  }
+  return {
+    address,
+    contractName,
+    network: getNetworkFromAddress(address) ?? 'mainnet'
+  };
 };
 
 const buildExplorerTxUrl = (txId: string, network: NetworkType | null) => {
@@ -188,6 +358,17 @@ export default function OwnerOversightPanel() {
   const [oversightLoadingByCollectionId, setOversightLoadingByCollectionId] =
     useState<Record<string, boolean>>({});
   const [oversightErrorByCollectionId, setOversightErrorByCollectionId] =
+    useState<Record<string, string | null>>({});
+  const [mintSnapshotByCollectionId, setMintSnapshotByCollectionId] = useState<
+    Record<string, CollectionMintSnapshot | null>
+  >({});
+  const [mintSnapshotLoadingByCollectionId, setMintSnapshotLoadingByCollectionId] =
+    useState<Record<string, boolean>>({});
+  const [mintSnapshotErrorByCollectionId, setMintSnapshotErrorByCollectionId] =
+    useState<Record<string, string | null>>({});
+  const [publicVisibilitySavingByCollectionId, setPublicVisibilitySavingByCollectionId] =
+    useState<Record<string, boolean>>({});
+  const [publicVisibilityMessageByCollectionId, setPublicVisibilityMessageByCollectionId] =
     useState<Record<string, string | null>>({});
 
   const buildLiteralAllowlist = useMemo(
@@ -385,6 +566,13 @@ export default function OwnerOversightPanel() {
       .map(([state, count]) => `${count} ${state}`)
       .join(' · ');
   }, [filteredCollections]);
+  const publicVisibleCount = useMemo(
+    () =>
+      filteredCollections.filter((collection) =>
+        isCollectionVisibleOnPublicPage(collection)
+      ).length,
+    [filteredCollections]
+  );
 
   const copyCollectionId = async (collectionId: string) => {
     try {
@@ -438,7 +626,190 @@ export default function OwnerOversightPanel() {
     }
   };
 
-  const toggleCollectionDetails = (collectionId: string) => {
+  const callCollectionReadOnly = async (
+    contract: CollectionContractTarget,
+    functionName: string,
+    functionArgs: ClarityValue[] = []
+  ) => {
+    const network = toStacksNetwork(contract.network);
+    const senderAddress = walletSession.address ?? contract.address;
+    const value = await callReadOnlyFunction({
+      contractAddress: contract.address,
+      contractName: contract.contractName,
+      functionName,
+      functionArgs,
+      network,
+      senderAddress
+    });
+    return unwrapResponse(value);
+  };
+
+  const loadCollectionMintSnapshot = async (
+    collectionId: string,
+    contract: CollectionContractTarget | null
+  ) => {
+    if (!contract) {
+      setMintSnapshotByCollectionId((current) => ({
+        ...current,
+        [collectionId]: null
+      }));
+      setMintSnapshotErrorByCollectionId((current) => ({
+        ...current,
+        [collectionId]: 'Contract details are missing.'
+      }));
+      return;
+    }
+
+    setMintSnapshotLoadingByCollectionId((current) => ({
+      ...current,
+      [collectionId]: true
+    }));
+    setMintSnapshotErrorByCollectionId((current) => ({
+      ...current,
+      [collectionId]: null
+    }));
+
+    try {
+      const [
+        pausedCv,
+        finalizedCv,
+        mintPriceCv,
+        maxSupplyCv,
+        mintedCountCv,
+        reservedCountCv,
+        activePhaseCv
+      ] = await Promise.all([
+        callCollectionReadOnly(contract, 'is-paused'),
+        callCollectionReadOnly(contract, 'get-finalized'),
+        callCollectionReadOnly(contract, 'get-mint-price'),
+        callCollectionReadOnly(contract, 'get-max-supply'),
+        callCollectionReadOnly(contract, 'get-minted-count'),
+        callCollectionReadOnly(contract, 'get-reserved-count'),
+        callCollectionReadOnly(contract, 'get-active-phase')
+      ]);
+
+      const activePhaseId = parseUintCv(activePhaseCv);
+      let activePhaseMintPriceMicroStx: bigint | null = null;
+      if (activePhaseId !== null && activePhaseId > 0n) {
+        const phaseCv = await callCollectionReadOnly(contract, 'get-phase', [
+          uintCV(activePhaseId)
+        ]);
+        if (phaseCv.type === ClarityType.OptionalSome) {
+          const tuple = phaseCv.value;
+          if (tuple.type === ClarityType.Tuple) {
+            const phasePriceCv = tuple.data['mint-price'];
+            if (phasePriceCv) {
+              activePhaseMintPriceMicroStx = parseUintCv(phasePriceCv);
+            }
+          }
+        }
+      }
+
+      const pausedRaw = cvToValue(pausedCv) as unknown;
+      const finalizedRaw = cvToValue(finalizedCv) as unknown;
+      const mintPriceMicroStx = parseUintCv(mintPriceCv);
+      const maxSupply = parseUintCv(maxSupplyCv);
+      const mintedCount = parseUintCv(mintedCountCv);
+      const reservedCount = parseUintCv(reservedCountCv);
+      const remaining =
+        maxSupply === null || mintedCount === null || reservedCount === null
+          ? null
+          : maxSupply - mintedCount - reservedCount;
+
+      setMintSnapshotByCollectionId((current) => ({
+        ...current,
+        [collectionId]: {
+          paused: typeof pausedRaw === 'boolean' ? pausedRaw : null,
+          finalized: typeof finalizedRaw === 'boolean' ? finalizedRaw : null,
+          mintPriceMicroStx,
+          activePhaseId,
+          activePhaseMintPriceMicroStx,
+          maxSupply,
+          mintedCount,
+          reservedCount,
+          remaining,
+          refreshedAt: Date.now()
+        }
+      }));
+    } catch (loadError) {
+      setMintSnapshotErrorByCollectionId((current) => ({
+        ...current,
+        [collectionId]: toManageApiErrorMessage(
+          loadError,
+          'Unable to load on-chain mint status'
+        )
+      }));
+    } finally {
+      setMintSnapshotLoadingByCollectionId((current) => ({
+        ...current,
+        [collectionId]: false
+      }));
+    }
+  };
+
+  const setCollectionPublicVisibility = async (
+    collection: CollectionRecord,
+    visible: boolean
+  ) => {
+    const metadata = toRecord(collection.metadata) ?? {};
+    const collectionPage = toRecord(metadata.collectionPage) ?? {};
+    const nextMetadata = {
+      ...metadata,
+      collectionPage: {
+        ...collectionPage,
+        showOnPublicPage: visible
+      }
+    };
+
+    setPublicVisibilitySavingByCollectionId((current) => ({
+      ...current,
+      [collection.id]: true
+    }));
+    setPublicVisibilityMessageByCollectionId((current) => ({
+      ...current,
+      [collection.id]: null
+    }));
+
+    try {
+      const response = await fetch(`/collections/${collection.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ metadata: nextMetadata })
+      });
+      const updated = await parseManageJsonResponse<CollectionRecord>(
+        response,
+        'Update public visibility'
+      );
+      setCollections((current) =>
+        current.map((entry) => (entry.id === updated.id ? updated : entry))
+      );
+      setPublicVisibilityMessageByCollectionId((current) => ({
+        ...current,
+        [collection.id]: visible
+          ? 'Visible on public page.'
+          : 'Hidden from public page.'
+      }));
+    } catch (updateError) {
+      setPublicVisibilityMessageByCollectionId((current) => ({
+        ...current,
+        [collection.id]: toManageApiErrorMessage(
+          updateError,
+          'Unable to update public visibility'
+        )
+      }));
+    } finally {
+      setPublicVisibilitySavingByCollectionId((current) => ({
+        ...current,
+        [collection.id]: false
+      }));
+    }
+  };
+
+  const toggleCollectionDetails = (
+    collection: CollectionRecord,
+    collectionOversight: CollectionOversightResponse | null
+  ) => {
+    const collectionId = collection.id;
     const nextExpanded = !Boolean(expandedByCollectionId[collectionId]);
     setExpandedByCollectionId((current) => ({
       ...current,
@@ -452,10 +823,28 @@ export default function OwnerOversightPanel() {
     ) {
       void loadCollectionOversight(collectionId);
     }
+
+    if (nextExpanded) {
+      const target = resolveCollectionContractTarget(collection, collectionOversight);
+      if (
+        !mintSnapshotByCollectionId[collectionId] &&
+        !mintSnapshotLoadingByCollectionId[collectionId]
+      ) {
+        void loadCollectionMintSnapshot(collectionId, target);
+      }
+    }
   };
 
-  const refreshCollectionDetails = (collectionId: string) => {
+  const refreshCollectionDetails = (
+    collection: CollectionRecord,
+    collectionOversight: CollectionOversightResponse | null
+  ) => {
+    const collectionId = collection.id;
     void loadCollectionOversight(collectionId);
+    void loadCollectionMintSnapshot(
+      collectionId,
+      resolveCollectionContractTarget(collection, collectionOversight)
+    );
   };
 
   if (error) {
@@ -476,6 +865,10 @@ export default function OwnerOversightPanel() {
         <div>
           <span className="meta-label">Drops tracked</span>
           <span className="meta-value">{filteredCollections.length}</span>
+        </div>
+        <div>
+          <span className="meta-label">Visible on public page</span>
+          <span className="meta-value">{publicVisibleCount}</span>
         </div>
         <div>
           <span className="meta-label">State mix</span>
@@ -513,6 +906,22 @@ export default function OwnerOversightPanel() {
             const detailError = oversightErrorByCollectionId[collection.id] ?? null;
             const detailLoading = Boolean(oversightLoadingByCollectionId[collection.id]);
             const detailOpen = Boolean(expandedByCollectionId[collection.id]);
+            const mintSnapshot = mintSnapshotByCollectionId[collection.id] ?? null;
+            const mintSnapshotLoading = Boolean(
+              mintSnapshotLoadingByCollectionId[collection.id]
+            );
+            const mintSnapshotError = mintSnapshotErrorByCollectionId[collection.id] ?? null;
+            const collectionContractTarget = resolveCollectionContractTarget(
+              collection,
+              collectionOversight
+            );
+            const livePagePath = getLivePagePath(collection);
+            const isPublicVisible = isCollectionVisibleOnPublicPage(collection);
+            const visibilitySaving = Boolean(
+              publicVisibilitySavingByCollectionId[collection.id]
+            );
+            const visibilityMessage =
+              publicVisibilityMessageByCollectionId[collection.id] ?? null;
             const deployTxId = collectionOversight?.deploy.txId ?? null;
             const deployTxUrl = deployTxId
               ? buildExplorerTxUrl(deployTxId, walletSession.network)
@@ -526,6 +935,27 @@ export default function OwnerOversightPanel() {
             const contractUrl = contractId
               ? buildExplorerAddressUrl(contractId, walletSession.network)
               : null;
+            const maxSupply = mintSnapshot?.maxSupply ?? null;
+            const mintedCount = mintSnapshot?.mintedCount ?? null;
+            const reservedCount = mintSnapshot?.reservedCount ?? null;
+            const remainingCount = mintSnapshot?.remaining ?? null;
+            const pausedLabel =
+              mintSnapshot?.paused === null || mintSnapshot?.paused === undefined
+                ? 'Unknown'
+                : mintSnapshot.paused
+                  ? 'Yes'
+                  : 'No';
+            const finalizedLabel =
+              mintSnapshot?.finalized === null || mintSnapshot?.finalized === undefined
+                ? 'Unknown'
+                : mintSnapshot.finalized
+                  ? 'Yes'
+                  : 'No';
+            const activeMintPriceLabel = toMicroStxLabel(
+              mintSnapshot?.activePhaseMintPriceMicroStx ??
+                mintSnapshot?.mintPriceMicroStx ??
+                null
+            );
             const collectionSettings = collectionOversight?.settingsPreview.collection ?? null;
             const collectionName =
               toStringOrNull(collectionSettings?.name) ??
@@ -585,21 +1015,52 @@ export default function OwnerOversightPanel() {
                   <button
                     className="button button--ghost button--mini"
                     type="button"
-                    onClick={() => toggleCollectionDetails(collection.id)}
+                    onClick={() =>
+                      toggleCollectionDetails(collection, collectionOversight)
+                    }
                   >
                     {detailOpen ? 'Hide full oversight' : 'Show full oversight'}
+                  </button>
+                  {livePagePath && (
+                    <a
+                      className="button button--ghost button--mini"
+                      href={livePagePath}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Open live mint page
+                    </a>
+                  )}
+                  <button
+                    className="button button--ghost button--mini"
+                    type="button"
+                    onClick={() =>
+                      void setCollectionPublicVisibility(collection, !isPublicVisible)
+                    }
+                    disabled={visibilitySaving}
+                  >
+                    {visibilitySaving
+                      ? 'Saving...'
+                      : isPublicVisible
+                        ? 'Hide from public page'
+                        : 'Show on public page'}
                   </button>
                   {detailOpen && (
                     <button
                       className="button button--ghost button--mini"
                       type="button"
-                      onClick={() => refreshCollectionDetails(collection.id)}
+                      onClick={() =>
+                        refreshCollectionDetails(collection, collectionOversight)
+                      }
                       disabled={detailLoading}
                     >
                       {detailLoading ? 'Refreshing...' : 'Refresh details'}
                     </button>
                   )}
                 </div>
+                {visibilityMessage && (
+                  <p className="meta-value">{visibilityMessage}</p>
+                )}
                 <p className="meta-value">
                   Contract owner:{' '}
                   {collection.contract_address ? (
@@ -619,6 +1080,50 @@ export default function OwnerOversightPanel() {
                     {collectionOversight && !detailLoading && (
                       <>
                         <div className="collection-list__details-grid">
+                          <div>
+                            <span className="meta-label">Public page visibility</span>
+                            <span className="meta-value">
+                              {isPublicVisible ? 'Visible' : 'Hidden'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="meta-label">Live mint page</span>
+                            <span className="meta-value">
+                              {livePagePath ? (
+                                <a href={livePagePath} target="_blank" rel="noreferrer">
+                                  {livePagePath}
+                                </a>
+                              ) : (
+                                'Unavailable'
+                              )}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="meta-label">On-chain minted / max</span>
+                            <span className="meta-value">
+                              {formatCount(mintedCount)} / {formatCount(maxSupply)}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="meta-label">On-chain reserved</span>
+                            <span className="meta-value">{formatCount(reservedCount)}</span>
+                          </div>
+                          <div>
+                            <span className="meta-label">On-chain remaining</span>
+                            <span className="meta-value">{formatCount(remainingCount)}</span>
+                          </div>
+                          <div>
+                            <span className="meta-label">On-chain mint price</span>
+                            <span className="meta-value">{activeMintPriceLabel}</span>
+                          </div>
+                          <div>
+                            <span className="meta-label">On-chain paused</span>
+                            <span className="meta-value">{pausedLabel}</span>
+                          </div>
+                          <div>
+                            <span className="meta-label">On-chain finalized</span>
+                            <span className="meta-value">{finalizedLabel}</span>
+                          </div>
                           <div>
                             <span className="meta-label">Collection name</span>
                             <span className="meta-value">{collectionName}</span>
@@ -704,6 +1209,23 @@ export default function OwnerOversightPanel() {
                               Core target:{' '}
                               {collectionOversight.deploy.coreContractId ?? 'Unknown'}
                             </p>
+                            {mintSnapshot && (
+                              <p className="meta-value">
+                                Status refreshed:{' '}
+                                {new Date(mintSnapshot.refreshedAt).toLocaleTimeString()}
+                              </p>
+                            )}
+                            {mintSnapshotLoading && (
+                              <p className="meta-value">Refreshing on-chain mint status...</p>
+                            )}
+                            {mintSnapshotError && (
+                              <p className="meta-value">Mint status error: {mintSnapshotError}</p>
+                            )}
+                            {!collectionContractTarget && (
+                              <p className="meta-value">
+                                Contract target is incomplete, so on-chain mint status is unavailable.
+                              </p>
+                            )}
                           </div>
 
                           <div className="collection-list__details-card">

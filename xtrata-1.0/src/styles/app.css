@@ -5415,6 +5415,48 @@ p {
   }
 }
 
+.public-live-collections {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.public-live-collections__card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-soft);
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.public-live-collections__card h3,
+.public-live-collections__card p {
+  margin: 0;
+}
+
+.public-live-collections__card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.public-live-collections__card-meta {
+  display: grid;
+  gap: 4px;
+}
+
+.public-live-collections__card-meta code {
+  display: inline-block;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
 /* Docs module */
 .docs-layout {
   display: grid;
