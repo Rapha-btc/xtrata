@@ -201,6 +201,27 @@ const toNumberOrNull = (value: unknown) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+const toBigIntOrNull = (value: unknown) => {
+  if (typeof value === 'bigint') {
+    return value;
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return BigInt(Math.floor(value));
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+    try {
+      return BigInt(trimmed);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+};
+
 const parseUintCv = (value: ClarityValue) => {
   const parsed = cvToValue(value) as unknown;
   if (parsed === null || parsed === undefined) {
@@ -407,7 +428,7 @@ export default function OwnerOversightPanel() {
       setIsLoadingCollections(true);
       setError(null);
       try {
-        const response = await fetch('/collections', {
+        const response = await fetch('/collections?includeArchived=1', {
           signal: controller.signal
         });
         const payload = await parseManageJsonResponse<CollectionRecord[]>(
@@ -910,6 +931,9 @@ export default function OwnerOversightPanel() {
         const draftCollections = artistCollections.filter(
           (collection) => !isPublishedCollectionState(collection.state)
         );
+        const archivedCollectionsCount = draftCollections.filter(
+          (collection) => collection.state.trim().toLowerCase() === 'archived'
+        ).length;
         const draftsVisible = Boolean(showDraftsByArtistAddress[artistAddress]);
         const visibleArtistCollections = [
           ...publishedCollections,
@@ -936,8 +960,11 @@ export default function OwnerOversightPanel() {
             {draftCollections.length > 0 && (
               <div className="collection-list__draft-summary">
                 <p className="collection-list__summary">
-                  Draft activity: {draftCollections.length} draft
+                  Unpublished activity: {draftCollections.length} attempt
                   {draftCollections.length === 1 ? '' : 's'}{' '}
+                  {archivedCollectionsCount > 0
+                    ? `(includes ${archivedCollectionsCount} removed). `
+                    : ''}
                   {draftsVisible ? 'shown.' : 'hidden by default.'}
                 </p>
                 <div className="mint-actions">
@@ -997,7 +1024,7 @@ export default function OwnerOversightPanel() {
               publicVisibilityMessageByCollectionId[collection.id] ?? null;
             const deployTxId = collectionOversight?.deploy.txId ?? null;
             const deployTxUrl = deployTxId
-              ? buildExplorerTxUrl(deployTxId, walletSession.network)
+              ? buildExplorerTxUrl(deployTxId, walletSession.network ?? null)
               : null;
             const contractName = collectionOversight?.deploy.contractName ?? null;
             const contractAddress = collectionOversight?.collection.contractAddress ?? null;
@@ -1006,7 +1033,7 @@ export default function OwnerOversightPanel() {
                 ? `${contractAddress}.${contractName}`
                 : null;
             const contractUrl = contractId
-              ? buildExplorerAddressUrl(contractId, walletSession.network)
+              ? buildExplorerAddressUrl(contractId, walletSession.network ?? null)
               : null;
             const maxSupply = mintSnapshot?.maxSupply ?? null;
             const mintedCount = mintSnapshot?.mintedCount ?? null;
@@ -1024,11 +1051,11 @@ export default function OwnerOversightPanel() {
                 : mintSnapshot.finalized
                   ? 'Yes'
                   : 'No';
-            const activeMintPriceLabel = toMicroStxLabel(
+            const onChainMintPriceMicroStx =
               mintSnapshot?.activePhaseMintPriceMicroStx ??
-                mintSnapshot?.mintPriceMicroStx ??
-                null
-            );
+              mintSnapshot?.mintPriceMicroStx ??
+              null;
+            const activeMintPriceLabel = toMicroStxLabel(onChainMintPriceMicroStx);
             const collectionSettings = collectionOversight?.settingsPreview.collection ?? null;
             const collectionName =
               toStringOrNull(collectionSettings?.name) ??
@@ -1037,15 +1064,20 @@ export default function OwnerOversightPanel() {
               'Unknown';
             const symbol = toStringOrNull(collectionSettings?.symbol) ?? 'Unknown';
             const supply = toNumberOrNull(collectionSettings?.supply);
-            const mintPriceStx =
-              toStringOrNull(collectionSettings?.mintPriceStx) ??
-              (() => {
-                const micro = toNumberOrNull(collectionSettings?.mintPriceMicroStx);
-                if (micro === null) {
-                  return null;
-                }
-                return (micro / 1_000_000).toString();
-              })();
+            const draftMintPriceMicroStx = toBigIntOrNull(
+              collectionSettings?.mintPriceMicroStx
+            );
+            const draftMintPriceLabel =
+              draftMintPriceMicroStx !== null
+                ? toMicroStxLabel(draftMintPriceMicroStx)
+                : (() => {
+                    const mintPriceStx = toStringOrNull(collectionSettings?.mintPriceStx);
+                    return mintPriceStx ? `${mintPriceStx} STX` : null;
+                  })();
+            const mintPriceDrift =
+              onChainMintPriceMicroStx !== null &&
+              draftMintPriceMicroStx !== null &&
+              onChainMintPriceMicroStx !== draftMintPriceMicroStx;
             const artistRecipient = toStringOrNull(
               collectionOversight?.settingsPreview.hardcodedDefaults?.recipients &&
                 (
@@ -1234,7 +1266,7 @@ export default function OwnerOversightPanel() {
                             <span className="meta-value">{formatCount(remainingCount)}</span>
                           </div>
                           <div>
-                            <span className="meta-label">On-chain mint price</span>
+                            <span className="meta-label">Mint price</span>
                             <span className="meta-value">{activeMintPriceLabel}</span>
                           </div>
                           <div>
@@ -1271,12 +1303,14 @@ export default function OwnerOversightPanel() {
                               {supply === null ? 'Unknown' : supply.toLocaleString()}
                             </span>
                           </div>
-                          <div>
-                            <span className="meta-label">Mint price</span>
-                            <span className="meta-value">
-                              {mintPriceStx ? `${mintPriceStx} STX` : 'Unknown'}
-                            </span>
-                          </div>
+                          {mintPriceDrift && (
+                            <div>
+                              <span className="meta-label">Draft template price</span>
+                              <span className="meta-value">
+                                {draftMintPriceLabel ?? 'Unknown'}
+                              </span>
+                            </div>
+                          )}
                           <div>
                             <span className="meta-label">Created</span>
                             <span className="meta-value">
@@ -1341,6 +1375,12 @@ export default function OwnerOversightPanel() {
                             )}
                             {mintSnapshotError && (
                               <p className="meta-value">Mint status error: {mintSnapshotError}</p>
+                            )}
+                            {mintPriceDrift && (
+                              <p className="meta-value">
+                                Draft metadata price is stale. Contract price above is the live mint
+                                price.
+                              </p>
                             )}
                             {!collectionContractTarget && (
                               <p className="meta-value">
