@@ -1,0 +1,13 @@
+
+> @xtrata/reconstruction@0.1.0 prepack
+> npm run clean && npm run build
+
+
+> @xtrata/reconstruction@0.1.0 clean
+> rm -rf dist
+
+
+> @xtrata/reconstruction@0.1.0 build
+> tsc -p tsconfig.build.json
+
++ @xtrata/reconstruction@0.1.0

@@ -1,0 +1,103 @@
+0 verbose cli /opt/homebrew/Cellar/node/24.10.0/bin/node /opt/homebrew/bin/npm
+1 info using npm@11.6.0
+2 info using node@v24.10.0
+3 silly config load:file:/opt/homebrew/lib/node_modules/npm/npmrc
+4 silly config load:file:/Users/melophonic/Documents/GitHub/xtrata/xtrata-1.0/packages/xtrata-sdk/.npmrc
+5 silly config load:file:/Users/melophonic/.npmrc
+6 silly config load:file:/opt/homebrew/etc/npmrc
+7 verbose title npm pack
+8 verbose argv "pack" "--pack-destination" "/Users/melophonic/Documents/GitHub/xtrata/xtrata-1.0/.artifacts/sdk"
+9 verbose logfile logs-max:10 dir:/Users/melophonic/Documents/GitHub/xtrata/xtrata-1.0/.artifacts/sdk/npm-cache/_logs/2026-02-17T00_25_14_152Z-
+10 verbose logfile /Users/melophonic/Documents/GitHub/xtrata/xtrata-1.0/.artifacts/sdk/npm-cache/_logs/2026-02-17T00_25_14_152Z-debug-0.log
+11 silly logfile start cleaning logs, removing 1 files
+12 silly logfile done cleaning log files
+13 silly packumentCache heap:2348810240 maxSize:587202560 maxEntrySize:293601280
+14 notice
+15 notice package: @xtrata/sdk@0.1.0
+16 notice Tarball Contents
+17 notice 943B README.md
+17 notice 417B dist/capabilities.d.ts
+17 notice 390B dist/capabilities.d.ts.map
+17 notice 1.9kB dist/capabilities.js
+17 notice 1.7kB dist/capabilities.js.map
+17 notice 1.1kB dist/clarity.d.ts
+17 notice 858B dist/clarity.d.ts.map
+17 notice 2.6kB dist/clarity.js
+17 notice 3.3kB dist/clarity.js.map
+17 notice 8.6kB dist/client.d.ts
+17 notice 7.9kB dist/client.d.ts.map
+17 notice 23.5kB dist/client.js
+17 notice 20.0kB dist/client.js.map
+17 notice 2.1kB dist/collections.d.ts
+17 notice 1.5kB dist/collections.d.ts.map
+17 notice 7.6kB dist/collections.js
+17 notice 9.1kB dist/collections.js.map
+17 notice 619B dist/config.d.ts
+17 notice 552B dist/config.d.ts.map
+17 notice 2.0kB dist/config.js
+17 notice 2.1kB dist/config.js.map
+17 notice 2.0kB dist/deploy.d.ts
+17 notice 1.7kB dist/deploy.d.ts.map
+17 notice 10.3kB dist/deploy.js
+17 notice 8.9kB dist/deploy.js.map
+17 notice 1.3kB dist/errors.d.ts
+17 notice 619B dist/errors.d.ts.map
+17 notice 1.5kB dist/errors.js
+17 notice 1.4kB dist/errors.js.map
+17 notice 514B dist/index.d.ts
+17 notice 446B dist/index.d.ts.map
+17 notice 512B dist/index.js
+17 notice 444B dist/index.js.map
+17 notice 2.6kB dist/market.d.ts
+17 notice 2.4kB dist/market.d.ts.map
+17 notice 5.3kB dist/market.js
+17 notice 5.9kB dist/market.js.map
+17 notice 4.9kB dist/mint.d.ts
+17 notice 4.0kB dist/mint.d.ts.map
+17 notice 13.3kB dist/mint.js
+17 notice 14.7kB dist/mint.js.map
+17 notice 901B dist/network.d.ts
+17 notice 781B dist/network.d.ts.map
+17 notice 2.6kB dist/network.js
+17 notice 3.1kB dist/network.js.map
+17 notice 3.5kB dist/parsers.d.ts
+17 notice 2.0kB dist/parsers.d.ts.map
+17 notice 11.6kB dist/parsers.js
+17 notice 11.7kB dist/parsers.js.map
+17 notice 697B dist/read-only.d.ts
+17 notice 649B dist/read-only.d.ts.map
+17 notice 4.9kB dist/read-only.js
+17 notice 5.1kB dist/read-only.js.map
+17 notice 2.6kB dist/safe.d.ts
+17 notice 2.5kB dist/safe.d.ts.map
+17 notice 11.2kB dist/safe.js
+17 notice 9.0kB dist/safe.js.map
+17 notice 4.5kB dist/simple.d.ts
+17 notice 4.7kB dist/simple.d.ts.map
+17 notice 8.1kB dist/simple.js
+17 notice 7.5kB dist/simple.js.map
+17 notice 2.3kB dist/types.d.ts
+17 notice 2.4kB dist/types.d.ts.map
+17 notice 44B dist/types.js
+17 notice 102B dist/types.js.map
+17 notice 3.2kB dist/workflows.d.ts
+17 notice 2.7kB dist/workflows.d.ts.map
+17 notice 12.9kB dist/workflows.js
+17 notice 10.7kB dist/workflows.js.map
+17 notice 1.9kB package.json
+18 notice Tarball Details
+19 notice name: @xtrata/sdk
+20 notice version: 0.1.0
+21 notice filename: xtrata-sdk-0.1.0.tgz
+22 notice package size: 54.1 kB
+23 notice unpacked size: 315.0 kB
+24 notice shasum: 381ee2cbb587b8e8d3b06156d032b0c3c7a83233
+25 notice integrity: sha512-6k1tsZVcxXgns[...]9KlG4iNtrg3iQ==
+26 notice total files: 70
+27 notice
+28 verbose cwd /Users/melophonic/Documents/GitHub/xtrata/xtrata-1.0/packages/xtrata-sdk
+29 verbose os Darwin 23.6.0
+30 verbose node v24.10.0
+31 verbose npm  v11.6.0
+32 verbose exit 0
+33 info ok

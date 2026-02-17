@@ -1,0 +1,13 @@
+
+> @xtrata/sdk@0.1.0 prepack
+> npm run clean && npm run build
+
+
+> @xtrata/sdk@0.1.0 clean
+> rm -rf dist
+
+
+> @xtrata/sdk@0.1.0 build
+> tsc -p tsconfig.build.json
+
++ @xtrata/sdk@0.1.0
