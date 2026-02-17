@@ -110,6 +110,14 @@ type ViewerScreenProps = {
   onModeChange: (mode: ViewerMode) => void;
   onClearWalletLookup?: () => void;
   onAddParentDraft?: (id: bigint) => void;
+  modeLabels?: {
+    collection?: string;
+    wallet?: string;
+  };
+  viewerTitles?: {
+    collection?: string;
+    wallet?: string;
+  };
 };
 
 const getMediaLabel = (mimeType: string | null | undefined) => {
@@ -1498,6 +1506,10 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     () => marketSelectionStore.load() ?? defaultMarketId
   );
   const isWalletView = props.mode === 'wallet';
+  const collectionModeLabel = props.modeLabels?.collection ?? 'Collection';
+  const walletModeLabel = props.modeLabels?.wallet ?? 'Wallet';
+  const collectionViewerTitle = props.viewerTitles?.collection ?? 'Collection viewer';
+  const walletViewerTitle = props.viewerTitles?.wallet ?? 'Wallet viewer';
   const walletAddress = props.walletSession.address ?? null;
   const resolvedWalletAddress = props.walletLookupState.resolvedAddress;
   const hasWalletTarget = !!resolvedWalletAddress;
@@ -2935,7 +2947,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       <div className="panel">
         <div className="panel__header viewer-header">
           <div>
-            <h2>{isWalletView ? 'Wallet viewer' : 'Collection viewer'}</h2>
+            <h2>{isWalletView ? walletViewerTitle : collectionViewerTitle}</h2>
           </div>
           <div className="panel__actions viewer-header__actions">
             <div className="viewer-toggle" role="tablist" aria-label="Viewer mode">
@@ -2945,7 +2957,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
                 aria-pressed={!isWalletView}
                 onClick={() => props.onModeChange('collection')}
               >
-                Collection
+                {collectionModeLabel}
               </button>
               <button
                 type="button"
@@ -2953,7 +2965,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
                 aria-pressed={isWalletView}
                 onClick={() => props.onModeChange('wallet')}
               >
-                Wallet
+                {walletModeLabel}
               </button>
             </div>
             <div className="viewer-controls viewer-controls--compact">
