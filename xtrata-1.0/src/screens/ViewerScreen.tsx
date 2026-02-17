@@ -892,11 +892,7 @@ const TokenDetails = (props: {
       <div className="panel__header">
         <div>
           <h2>Token #{props.token.id.toString()}</h2>
-          <p>
-            {isWalletView
-              ? 'Art-forward preview with wallet listing and transfer tools.'
-              : 'Art-forward preview with optional diagnostics.'}
-          </p>
+          <p>{`Owner: ${detailOwner}`}</p>
           {props.listing?.price !== undefined && (
             <p className="preview-pill preview-pill--strong">
               Listed · {formatMicroStx(Number(props.listing.price))}
