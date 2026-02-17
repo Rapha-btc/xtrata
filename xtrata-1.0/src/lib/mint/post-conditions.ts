@@ -31,6 +31,9 @@ export const resolveMintBeginSpendCapMicroStx = (
 
 type CollectionBeginSpendCapParams = {
   protocolFeeMicroStx: bigint | null;
+  mintPrice?: bigint | null;
+  activePhaseMintPrice?: bigint | null;
+  chargeMintPriceAtBegin?: boolean;
   beginFeeMicroStx?: bigint | null;
 };
 
@@ -41,7 +44,14 @@ export const resolveCollectionBeginSpendCapMicroStx = (
   if (protocolFee === null) {
     return null;
   }
-  const beginFee = params.beginFeeMicroStx ?? 0n;
+  const mintPrice =
+    params.activePhaseMintPrice ?? params.mintPrice ?? null;
+  const beginFee =
+    params.beginFeeMicroStx ??
+    (params.chargeMintPriceAtBegin ? mintPrice : 0n);
+  if (beginFee === null) {
+    return null;
+  }
   if (beginFee < 0n) {
     return null;
   }

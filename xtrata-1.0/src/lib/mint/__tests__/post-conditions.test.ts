@@ -101,6 +101,26 @@ describe('mint post conditions', () => {
     expect(cap).toBe(125_000n);
   });
 
+  it('supports legacy begin pricing by adding active mint price to begin cap', () => {
+    const cap = resolveCollectionBeginSpendCapMicroStx({
+      protocolFeeMicroStx: 100_000n,
+      mintPrice: 1_000_000n,
+      activePhaseMintPrice: 1_111_111n,
+      chargeMintPriceAtBegin: true
+    });
+    expect(cap).toBe(1_211_111n);
+  });
+
+  it('returns null for legacy begin pricing when mint price is unavailable', () => {
+    const cap = resolveCollectionBeginSpendCapMicroStx({
+      protocolFeeMicroStx: 100_000n,
+      mintPrice: null,
+      activePhaseMintPrice: null,
+      chargeMintPriceAtBegin: true
+    });
+    expect(cap).toBeNull();
+  });
+
   it('builds protocol fee STX post condition', () => {
     const postConditions = buildProtocolFeeStxPostConditions({
       sender: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
