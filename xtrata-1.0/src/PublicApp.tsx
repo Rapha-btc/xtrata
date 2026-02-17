@@ -1718,11 +1718,11 @@ export default function PublicApp() {
               Immutable infrastructure for trustless creative and Web3 applications
             </p>
             <h1 className="app__title">
-              XTRATA <span className="app__title-tag">Data Layer for Bitcoin</span>
+              XTRATA <span className="app__title-tag">On-Chain Data Layer</span>
             </h1>
             <p className="app__hero-note">
-              Xtrata gives apps immutable ownership, attribution, and execution guarantees
-              anchored to Bitcoin.
+              Xtrata enables permanent, reconstructable on-chain media and application data — giving apps verifiable ownership, attribution, and deterministic execution.
+              Moving beyond metadata pointers to fully composable on-chain data.
             </p>
           </div>
           <div className="app__hero-actions">
