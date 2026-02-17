@@ -1722,7 +1722,7 @@ export default function PublicApp() {
           </h1>
           <p className="app__hero-note">
             Xtrata enables permanent, reconstructable on-chain media and application data — giving apps verifiable ownership, attribution, and deterministic execution.
-Moving beyond metadata pointers to fully composable on-chain data.
+            Moving beyond metadata pointers to fully composable on-chain data.
           </p>
         </div>
           <div className="app__hero-actions">
