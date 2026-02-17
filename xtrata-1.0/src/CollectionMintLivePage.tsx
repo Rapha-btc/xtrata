@@ -394,6 +394,10 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     () => resolveCollectionMintPaymentModel(templateVersion),
     [templateVersion]
   );
+  // Temporary global legacy override:
+  // include mint price in begin post-condition cap for every collection mint
+  // until the last v1.1 collection is complete.
+  const chargeMintPriceAtBegin = true;
   const metadataCollection = useMemo(
     () => toRecord(metadata?.collection) ?? null,
     [metadata]
@@ -671,16 +675,14 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
 
   const resolveMintBeginPostConditions = useCallback(
     (sender: string) => {
-      const chargeMintPriceAtBegin =
-        collectionMintPaymentModel === 'begin' ||
-        collectionMintPaymentModel === 'unknown';
       const beginSpendCap = resolveCollectionBeginSpendCapMicroStx({
         mintPrice: contractStatus?.mintPrice ?? null,
         activePhaseMintPrice: contractStatus?.activePhaseMintPrice ?? null,
         protocolFeeMicroStx: contractStatus?.coreFeeUnitMicroStx ?? null,
         // Temporary legacy compatibility:
-        // v1.1 collection-mint contracts charge mint price during `mint-begin`.
-        // Keep this while legacy v1.1 drops still exist, then remove this flag.
+        // Keep begin caps as (mint price + protocol begin fee) for all collection mints
+        // until the final legacy v1.1 collection is fully sold out.
+        // Remove this override and revert to v1.2-only timing afterward.
         chargeMintPriceAtBegin
       });
       if (beginSpendCap === null) {
@@ -692,7 +694,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       });
     },
     [
-      collectionMintPaymentModel,
+      chargeMintPriceAtBegin,
       contractStatus?.activePhaseMintPrice,
       contractStatus?.coreFeeUnitMicroStx,
       contractStatus?.mintPrice
@@ -1782,9 +1784,6 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       ).toLocaleTimeString()}.`
     : 'Auto-refreshing every ~6s while active. Waiting for first sync...';
   const mintPriceLabel = toMicroStxLabel(contractStatus?.mintPrice ?? null);
-  const chargeMintPriceAtBegin =
-    collectionMintPaymentModel === 'begin' ||
-    collectionMintPaymentModel === 'unknown';
   const mintBeginSpendCap = resolveCollectionBeginSpendCapMicroStx({
     mintPrice: contractStatus?.mintPrice ?? null,
     activePhaseMintPrice: contractStatus?.activePhaseMintPrice ?? null,
