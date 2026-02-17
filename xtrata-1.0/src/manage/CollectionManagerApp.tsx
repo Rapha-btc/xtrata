@@ -6,6 +6,7 @@ import CollectionSettingsPanel from './components/CollectionSettingsPanel';
 import AssetStagingPanel from './components/AssetStagingPanel';
 import PublishOpsPanel from './components/PublishOpsPanel';
 import DiagnosticsPanel from './components/DiagnosticsPanel';
+import SdkToolkitPanel from './components/SdkToolkitPanel';
 import InfoTooltip from './components/InfoTooltip';
 import AddressLabel from '../components/AddressLabel';
 import WalletTopBar from '../components/WalletTopBar';
@@ -13,6 +14,7 @@ import { isXtrataOwnerAddress } from '../config/manage';
 import { useManageWallet } from './ManageWalletContext';
 
 const PANEL_KEYS = [
+  'sdk-toolkit',
   'collection-list',
   'owner-oversight',
   'deploy-wizard',
@@ -26,6 +28,7 @@ type PanelKey = (typeof PANEL_KEYS)[number];
 type ExperienceMode = 'guided' | 'advanced';
 
 const MANAGE_PANEL_IDS: Record<PanelKey, string> = {
+  'sdk-toolkit': 'manage-sdk-toolkit',
   'collection-list': 'manage-collection-list',
   'owner-oversight': 'manage-owner-oversight',
   'deploy-wizard': 'manage-deploy-wizard',
@@ -40,6 +43,11 @@ const GUIDED_STEPS: Array<{
   label: string;
   note: string;
 }> = [
+  {
+    key: 'sdk-toolkit',
+    label: 'SDK toolkit',
+    note: 'Copy starter snippets to integrate your own site, marketplace, or app.'
+  },
   {
     key: 'collection-list',
     label: 'Your drops',
@@ -70,6 +78,7 @@ export default function CollectionManagerApp() {
   const [activeCollectionLabel, setActiveCollectionLabel] = useState('');
 
   const [collapsed, setCollapsed] = useState<Record<PanelKey, boolean>>({
+    'sdk-toolkit': true,
     'collection-list': false,
     'owner-oversight': false,
     'deploy-wizard': false,
@@ -215,6 +224,32 @@ export default function CollectionManagerApp() {
                 </button>
               ))}
             </div>
+          </div>
+        </section>
+
+        <section
+          className={`panel app-section${collapsed['sdk-toolkit'] ? ' panel--collapsed' : ''}`}
+          id={MANAGE_PANEL_IDS['sdk-toolkit']}
+        >
+          <div className="panel__header">
+            <div>
+              <h2>
+                SDK toolkit
+                <InfoTooltip text="Builder-ready snippets and links for teams integrating Xtrata into third-party apps." />
+              </h2>
+              <p>Build on Xtrata without rebuilding contract logic from scratch.</p>
+            </div>
+            <div className="panel__actions">
+              <button className="button button--ghost" type="button" onClick={() => togglePanel('sdk-toolkit')}>
+                {collapsed['sdk-toolkit'] ? 'Expand' : 'Collapse'}
+              </button>
+            </div>
+          </div>
+          <div className="panel__body">
+            <SdkToolkitPanel
+              activeCollectionId={activeCollectionId}
+              activeCollectionLabel={activeCollectionLabel}
+            />
           </div>
         </section>
 

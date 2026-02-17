@@ -1,4 +1,4 @@
-import type { ContractCapabilities, ProtocolVersion } from './types';
+import type { ContractCapabilities, ProtocolVersion } from './types.js';
 
 export const PROTOCOL_VERSIONS = ['1.1.1', '2.1.0'] as const;
 

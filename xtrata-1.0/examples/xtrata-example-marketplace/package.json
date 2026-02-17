@@ -3,6 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "smoke": "XTRATA_OFFLINE=1 node src/index.js"
+  },
+  "dependencies": {
+    "@xtrata/sdk": "file:../../packages/xtrata-sdk"
   }
 }

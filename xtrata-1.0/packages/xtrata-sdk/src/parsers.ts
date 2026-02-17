@@ -10,8 +10,8 @@ import {
   expectUInt,
   getTupleValue,
   unwrapResponse
-} from './clarity';
-import { CONTRACT_ERROR_CODES, ContractCallError } from './errors';
+} from './clarity.js';
+import { CONTRACT_ERROR_CODES, ContractCallError } from './errors.js';
 import type {
   CollectionMetadata,
   CollectionPhase,
@@ -20,7 +20,7 @@ import type {
   InscriptionMeta,
   MarketListing,
   UploadState
-} from './types';
+} from './types.js';
 
 const decodeContractError = (value: ClarityValue, context: string) => {
   const code = expectUInt(value, context);

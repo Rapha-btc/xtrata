@@ -2,7 +2,7 @@ import type {
   CollectionMintSnapshot,
   CollectionMintStatus,
   CollectionPhase
-} from './types';
+} from './types.js';
 
 const slugPattern = /^[a-z0-9-]{3,64}$/;
 

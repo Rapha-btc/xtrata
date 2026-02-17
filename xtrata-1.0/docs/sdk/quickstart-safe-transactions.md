@@ -58,3 +58,22 @@ console.log(flow.progressPercent);
 ```
 
 This helper is designed for clear UX messaging and resume-friendly interfaces.
+
+## Recovery guidance for failed wallet steps
+
+```ts
+import { buildMintRecoveryGuide } from '@xtrata/sdk/safe';
+
+const recovery = buildMintRecoveryGuide({
+  errorMessage: 'Bad nonce supplied for transaction',
+  attemptedStep: 'seal',
+  beginConfirmed: true,
+  uploadedChunkBatches: 3,
+  totalChunkBatches: 3,
+  sealConfirmed: false
+});
+
+console.log(recovery.failedStep); // "seal"
+console.log(recovery.failureType); // "bad-nonce"
+console.log(recovery.recommendedAction);
+```

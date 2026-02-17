@@ -1,6 +1,6 @@
 import { StacksMainnet, StacksTestnet } from '@stacks/network';
 import type { StacksNetwork } from '@stacks/network';
-import type { NetworkType } from './types';
+import type { NetworkType } from './types.js';
 
 export const NETWORKS: NetworkType[] = ['mainnet', 'testnet'];
 

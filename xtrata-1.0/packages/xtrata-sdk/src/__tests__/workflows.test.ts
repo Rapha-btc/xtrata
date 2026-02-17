@@ -4,6 +4,7 @@ import {
   PostConditionMode
 } from '@stacks/transactions';
 import { describe, expect, it } from 'vitest';
+import { SdkValidationError } from '../errors';
 import { chunkBytes, computeExpectedHash } from '../mint';
 import {
   buildCollectionMintWorkflowPlan,
@@ -135,5 +136,88 @@ describe('sdk workflows', () => {
     expect((buyPlan.postConditions[1] as { conditionCode: number }).conditionCode).toBe(
       NonFungibleConditionCode.Sends
     );
+  });
+
+  it('throws validation error for malformed core mint inputs', () => {
+    expect(() =>
+      buildCoreMintWorkflowPlan({
+        contract: {
+          address: mainnetAddress,
+          contractName: 'xtrata-v2-1-0',
+          network: 'mainnet'
+        },
+        senderAddress: ' ',
+        payloadBytes: new Uint8Array([1, 2, 3]),
+        expectedHash: new Uint8Array(31),
+        mimeType: 'image/png',
+        tokenUri: 'ipfs://demo',
+        mintPrice: 1_000_000n,
+        protocolFeeMicroStx: 100_000n
+      })
+    ).toThrow(SdkValidationError);
+  });
+
+  it('throws validation error for oversized token URI in mint workflow', () => {
+    expect(() =>
+      buildCoreMintWorkflowPlan({
+        contract: {
+          address: mainnetAddress,
+          contractName: 'xtrata-v2-1-0',
+          network: 'mainnet'
+        },
+        senderAddress: mainnetAddress,
+        payloadBytes: new Uint8Array([1, 2, 3]),
+        expectedHash: new Uint8Array(32),
+        mimeType: 'image/png',
+        tokenUri: `ipfs://${'x'.repeat(300)}`,
+        mintPrice: 1_000_000n,
+        protocolFeeMicroStx: 100_000n
+      })
+    ).toThrow('tokenUri exceeds max length');
+  });
+
+  it('throws validation error when collection/core contract networks mismatch', () => {
+    expect(() =>
+      buildCollectionMintWorkflowPlan({
+        contract: {
+          address: collectionAddress,
+          contractName: 'xtrata-collection-ahv0-34f95221',
+          network: 'mainnet'
+        },
+        xtrataContract: {
+          address: mainnetAddress,
+          contractName: 'xtrata-v2-1-0',
+          network: 'testnet'
+        },
+        senderAddress: collectionAddress,
+        payloadBytes: new Uint8Array([1, 2, 3]),
+        expectedHash: new Uint8Array(32),
+        mimeType: 'image/png',
+        tokenUri: 'ipfs://demo',
+        mintPrice: 1_000_000n,
+        protocolFeeMicroStx: 100_000n
+      })
+    ).toThrow(SdkValidationError);
+  });
+
+  it('throws validation error when market buy price is zero', () => {
+    expect(() =>
+      buildMarketBuyWorkflowPlan({
+        marketContract: {
+          address: mainnetAddress,
+          contractName: 'xtrata-market-v1-1',
+          network: 'mainnet'
+        },
+        nftContract: {
+          address: mainnetAddress,
+          contractName: 'xtrata-v2-1-0',
+          network: 'mainnet'
+        },
+        buyerAddress: collectionAddress,
+        listingId: 101n,
+        tokenId: 58n,
+        listingPriceMicroStx: 0n
+      })
+    ).toThrow('listingPriceMicroStx must be greater than zero');
   });
 });

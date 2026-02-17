@@ -3511,6 +3511,84 @@ p {
   font-size: 0.88rem;
 }
 
+.manage-app .sdk-toolkit {
+  display: grid;
+  gap: 10px;
+}
+
+.manage-app .sdk-toolkit__intro {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-soft);
+  padding: 10px 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.manage-app .sdk-toolkit__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.manage-app .sdk-toolkit__grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.manage-app .sdk-toolkit__content {
+  display: grid;
+  gap: 8px;
+}
+
+.manage-app .sdk-toolkit__card,
+.manage-app .sdk-toolkit__snippet,
+.manage-app .sdk-toolkit__context {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-soft);
+  padding: 9px 11px;
+  display: grid;
+  gap: 6px;
+}
+
+.manage-app .sdk-toolkit__card ul {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+}
+
+.manage-app .sdk-toolkit__card a {
+  color: var(--accent-strong);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.manage-app .sdk-toolkit__snippet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.manage-app .sdk-toolkit pre {
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-code);
+  padding: 8px;
+  overflow-x: auto;
+}
+
+.manage-app .sdk-toolkit code {
+  font-size: 0.76rem;
+  white-space: pre;
+}
+
 .manage-app .collection-list {
   display: grid;
   gap: 8px;

@@ -1,51 +1,51 @@
-# Xtrata SDK Program
+# Xtrata SDK
 
-Purpose: move Xtrata toward a protocol-team model where third parties build products on top while first-party surfaces remain stable references.
+Status: production-ready and actively maintained.
 
-## Strategy
+The SDK is now implemented through release automation. The primary focus is stable usage, release discipline, and incremental improvements for third-party builders.
 
-- Keep marketplace and app live.
-- Remove growth pressure from first-party marketplace features.
-- Prioritize reusable protocol tooling: SDK, reconstruction library, docs, examples.
-- Treat first-party app modules as reference SDK consumers.
+## Start here
 
-## Core outcomes
+1. `docs/sdk/quickstart-first-30-minutes.md`
+2. `docs/sdk/quickstart-simple-mode.md`
+3. `docs/sdk/quickstart-workflows.md`
+4. `docs/sdk/troubleshooting.md`
+5. `docs/sdk/migration-guide.md`
 
-1. Third parties can mint, read, and reconstruct without copying app internals.
-2. Integrators can launch their own marketplaces, games, and campaign products with low setup cost.
-3. Xtrata protocol fees remain the shared base layer while ecosystem products differentiate on top.
+## Core reference docs
 
-## Implemented workspace packages
-
-- `packages/xtrata-sdk` (`@xtrata/sdk`)
-  - Contract config + network helpers
-  - Typed read-only clients (`xtrata`, `collection mint`, `market`)
-  - Simple Mode wrappers (bind sender once, minimal setup)
-  - Safe transaction helpers (deterministic caps + guided flow states)
-  - High-level workflow planners (core mint, collection mint, market list/buy/cancel)
-  - Mint flow call builders + fee/post-condition helpers
-  - Collection lifecycle + random-drop + reservation helpers
-  - Deploy helper primitives (symbol/slug/contract naming + template injection)
-- `packages/xtrata-reconstruction` (`@xtrata/reconstruction`)
-  - Deterministic chunk assembly
-  - Hash verification and diagnostics
-  - Dependency graph resolution
-  - End-to-end reconstruction helper
-
-## Supporting artifacts
-
-- `docs/sdk/roadmap.md`
 - `docs/sdk/api-overview.md`
-- `docs/sdk/js-package-plan.md`
-- `docs/sdk/reconstruction-library-plan.md`
-- `docs/sdk/example-repos-plan.md`
-- `docs/sdk/quickstart-read-only.md`
-- `docs/sdk/quickstart-mint.md`
-- `docs/sdk/quickstart-collection-mint.md`
-- `docs/sdk/quickstart-simple-mode.md`
-- `docs/sdk/quickstart-safe-transactions.md`
-- `docs/sdk/quickstart-workflows.md`
+- `docs/sdk/compatibility-matrix.md`
+- `docs/sdk/test-gates.md`
+- `docs/sdk/changelog.md`
+- `docs/sdk/release-notes-template.md`
 
-## Positioning rule
+## Release and validation commands
 
-Use "Built using Xtrata Protocol" language in first-party and partner-facing surfaces where relevant.
+Run from repo root:
+
+1. `npm run sdk:docs:validate`
+2. `npm run sdk:typecheck`
+3. `npm run sdk:build`
+4. `npm run sdk:test`
+5. `npm run sdk:version:check`
+6. `npm run sdk:pack:smoke`
+7. `npm run sdk:examples:smoke`
+8. `npm run sdk:examples:tarball:smoke`
+9. `npm run sdk:changelog:generate`
+10. `npm run sdk:release:dry-run`
+
+## Packages
+
+- `@xtrata/sdk` in `packages/xtrata-sdk`
+- `@xtrata/reconstruction` in `packages/xtrata-reconstruction`
+
+## Archived planning docs
+
+Historical planning and phase tracking docs are now archived under `docs/sdk/archive/`.
+
+- `docs/sdk/archive/implementation-plan.md`
+- `docs/sdk/archive/roadmap.md`
+- `docs/sdk/archive/js-package-plan.md`
+- `docs/sdk/archive/reconstruction-library-plan.md`
+- `docs/sdk/archive/example-repos-plan.md`

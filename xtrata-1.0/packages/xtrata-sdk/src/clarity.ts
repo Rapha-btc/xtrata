@@ -4,7 +4,7 @@ import {
   principalToString,
   type PrincipalCV
 } from '@stacks/transactions';
-import { ClarityParseError } from './errors';
+import { ClarityParseError } from './errors.js';
 
 export type TupleData = Record<string, ClarityValue>;
 

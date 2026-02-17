@@ -9,7 +9,10 @@ export const CONTRACT_ERROR_CODES = {
   '107': 'ERR_INVALID_URI',
   '109': 'ERR_PAUSED',
   '110': 'ERR_INVALID_FEE',
-  '111': 'ERR_DEPENDENCY_MISSING'
+  '111': 'ERR_DEPENDENCY_MISSING',
+  '112': 'ERR_EXPIRED',
+  '113': 'ERR_NOT_EXPIRED',
+  '114': 'ERR_DUPLICATE'
 } as const;
 
 export type ContractErrorName =
@@ -44,5 +47,15 @@ export class ReadOnlyBackoffError extends Error {
     super(`Read-only calls paused for ${retryAfterMs}ms`);
     this.name = 'ReadOnlyBackoffError';
     this.retryAfterMs = retryAfterMs;
+  }
+}
+
+export class SdkValidationError extends Error {
+  code: string;
+
+  constructor(code: string, message: string) {
+    super(message);
+    this.name = 'SdkValidationError';
+    this.code = code;
   }
 }

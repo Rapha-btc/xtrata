@@ -11,7 +11,7 @@ import {
   tupleCV,
   uintCV
 } from '@stacks/transactions';
-import { resolveContractCapabilities } from './capabilities';
+import { resolveContractCapabilities } from './capabilities.js';
 import type {
   CollectionMetadata,
   CollectionMintStatus,
@@ -23,9 +23,9 @@ import type {
   MarketListing,
   NetworkType,
   UploadState
-} from './types';
-import { getContractId } from './config';
-import { getApiBaseUrls, toStacksNetwork } from './network';
+} from './types.js';
+import { getContractId } from './config.js';
+import { getApiBaseUrls, toStacksNetwork } from './network.js';
 import {
   callReadOnlyWithRetry,
   getReadOnlyBackoffMs,
@@ -33,7 +33,7 @@ import {
   noteReadOnlyFailure,
   noteReadOnlySuccess,
   type ReadOnlyRetryOptions
-} from './read-only';
+} from './read-only.js';
 import {
   parseCollectionBool,
   parseCollectionUInt,
@@ -68,8 +68,8 @@ import {
   parseGetTokenUri,
   parseGetUploadState,
   parseIsPaused
-} from './parsers';
-import { ReadOnlyBackoffError } from './errors';
+} from './parsers.js';
+import { ReadOnlyBackoffError } from './errors.js';
 
 export type ReadOnlyCallOptions = {
   contract: ContractConfig;

@@ -6,19 +6,19 @@ import {
   type MarketClient,
   type ReadOnlyCaller,
   type XtrataClient
-} from './client';
-import { getContractId, parseContractId } from './config';
+} from './client.js';
+import { getContractId, parseContractId } from './config.js';
 import {
   createCollectionMintSnapshot,
   getEffectiveMintPrice,
   isCollectionMintLive,
   shouldShowLiveMintPage
-} from './collections';
+} from './collections.js';
 import type {
   CollectionMintSnapshot,
   CollectionMintStatus,
   ContractConfig
-} from './types';
+} from './types.js';
 
 export class SdkSetupError extends Error {
   constructor(message: string) {

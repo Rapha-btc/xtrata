@@ -5,7 +5,7 @@ import {
   resolveCollectionBeginSpendCapMicroStx,
   resolveMintBeginSpendCapMicroStx,
   resolveSealSpendCapMicroStx
-} from './mint';
+} from './mint.js';
 
 export type SafeMintBundle = {
   beginCapMicroStx: bigint | null;
@@ -318,5 +318,134 @@ export const buildGuidedMintFlow = (
     steps,
     nextAction,
     progressPercent
+  };
+};
+
+export type MintFailureType =
+  | 'user-cancelled'
+  | 'post-condition'
+  | 'bad-nonce'
+  | 'insufficient-funds'
+  | 'network'
+  | 'contract'
+  | 'unknown';
+
+export type MintRecoveryGuide = {
+  failureType: MintFailureType;
+  failedStep: Exclude<GuidedMintStepId, 'complete'>;
+  canResume: boolean;
+  retryable: boolean;
+  recommendedAction: string;
+};
+
+export type MintRecoveryGuideParams = {
+  errorMessage?: string | null;
+  attemptedStep?: Exclude<GuidedMintStepId, 'complete'> | null;
+  beginConfirmed: boolean;
+  uploadedChunkBatches: number;
+  totalChunkBatches: number;
+  sealConfirmed: boolean;
+};
+
+const classifyMintFailure = (message: string): MintFailureType => {
+  const normalized = message.toLowerCase();
+  if (
+    normalized.includes('user rejected') ||
+    normalized.includes('request cancel') ||
+    normalized.includes('cancelled') ||
+    normalized.includes('canceled')
+  ) {
+    return 'user-cancelled';
+  }
+  if (normalized.includes('post-condition')) {
+    return 'post-condition';
+  }
+  if (
+    normalized.includes('bad nonce') ||
+    normalized.includes('conflicting nonce') ||
+    normalized.includes('nonce')
+  ) {
+    return 'bad-nonce';
+  }
+  if (
+    normalized.includes('insufficient funds') ||
+    normalized.includes('not enough funds')
+  ) {
+    return 'insufficient-funds';
+  }
+  if (
+    normalized.includes('network error') ||
+    normalized.includes('failed to fetch') ||
+    normalized.includes('timeout') ||
+    normalized.includes('socket')
+  ) {
+    return 'network';
+  }
+  if (
+    normalized.includes('contract error') ||
+    normalized.includes('vm error') ||
+    normalized.includes('(err u')
+  ) {
+    return 'contract';
+  }
+  return 'unknown';
+};
+
+const resolveFailedStep = (params: MintRecoveryGuideParams) => {
+  if (params.attemptedStep) {
+    return params.attemptedStep;
+  }
+  if (!params.beginConfirmed) {
+    return 'begin' as const;
+  }
+  const safeTotal = Math.max(0, Math.floor(params.totalChunkBatches));
+  const safeUploaded = Math.max(0, Math.floor(params.uploadedChunkBatches));
+  const chunkComplete = safeTotal === 0 || safeUploaded >= safeTotal;
+  if (!chunkComplete) {
+    return 'chunks' as const;
+  }
+  if (!params.sealConfirmed) {
+    return 'seal' as const;
+  }
+  return 'seal' as const;
+};
+
+export const buildMintRecoveryGuide = (
+  params: MintRecoveryGuideParams
+): MintRecoveryGuide => {
+  const failedStep = resolveFailedStep(params);
+  const failureType = classifyMintFailure(params.errorMessage ?? '');
+  const canResume = failedStep !== 'begin' && params.beginConfirmed;
+  const retryable = failureType !== 'contract' && failureType !== 'post-condition';
+
+  let recommendedAction = 'Retry the failed step.';
+  if (failureType === 'user-cancelled') {
+    recommendedAction =
+      failedStep === 'begin'
+        ? 'Reopen wallet and confirm begin transaction.'
+        : 'Reopen wallet and retry only the cancelled step.';
+  } else if (failureType === 'post-condition') {
+    recommendedAction =
+      'Refresh fee/price values, rebuild workflow post-conditions, then retry this step.';
+  } else if (failureType === 'bad-nonce') {
+    recommendedAction =
+      'Wait for pending transactions to settle, refresh nonce, then retry this step.';
+  } else if (failureType === 'insufficient-funds') {
+    recommendedAction =
+      'Top up wallet balance for spend cap + gas, then retry this step.';
+  } else if (failureType === 'network') {
+    recommendedAction =
+      'Retry after network stabilizes. Keep current progress and continue from failed step.';
+  } else if (failureType === 'contract') {
+    recommendedAction =
+      'Inspect contract error code, fix input/config issue, and retry only the failed step.';
+  }
+
+  return {
+    failureType,
+    failedStep,
+    canResume,
+    retryable,
+    recommendedAction
   };
 };

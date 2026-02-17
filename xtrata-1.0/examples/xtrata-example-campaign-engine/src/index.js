@@ -4,6 +4,7 @@ import { chunkBytes, computeExpectedHash } from '@xtrata/sdk/mint';
 import { buildCollectionMintWorkflowPlan } from '@xtrata/sdk/workflows';
 
 const senderAddress = process.env.XTRATA_SENDER || 'SP10W2EEM757922QTVDZZ5CSEW55JEFNN30J69TM7';
+const offlineMode = process.env.XTRATA_OFFLINE === '1';
 const collectionContractId =
   process.env.XTRATA_COLLECTION_CONTRACT ||
   'SP10W2EEM757922QTVDZZ5CSEW55JEFNN30J69TM7.xtrata-collection-ahv0-34f95221';
@@ -13,8 +14,29 @@ const collection = createCollectionReadClient({
   senderAddress
 });
 
-const snapshot = await collection.getSnapshot();
+let effectiveOfflineMode = offlineMode;
+let snapshot = {
+  mintedCount: 0n,
+  remaining: 0n,
+  live: false,
+  effectiveMintPrice: 1_000_000n
+};
+
+if (!offlineMode) {
+  try {
+    snapshot = await collection.getSnapshot();
+  } catch (error) {
+    effectiveOfflineMode = true;
+    console.log({
+      warning:
+        'Collection snapshot fetch failed. Falling back to offline planning output.',
+      reason: error instanceof Error ? error.message : String(error)
+    });
+  }
+}
+
 console.log({
+  mode: effectiveOfflineMode ? 'offline' : 'network',
   minted: snapshot.mintedCount.toString(),
   remaining: snapshot.remaining.toString(),
   live: snapshot.live,

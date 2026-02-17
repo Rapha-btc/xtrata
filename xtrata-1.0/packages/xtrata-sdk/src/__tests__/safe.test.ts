@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { createCollectionMintSafetyBundle, createCoreMintSafetyBundle, buildGuidedMintFlow } from '../safe';
+import {
+  buildGuidedMintFlow,
+  buildMintRecoveryGuide,
+  createCollectionMintSafetyBundle,
+  createCoreMintSafetyBundle
+} from '../safe';
 
 describe('safe transaction helpers', () => {
   it('builds deterministic core mint spend caps and post-conditions', () => {
@@ -63,5 +68,32 @@ describe('safe transaction helpers', () => {
     expect(done.nextAction).toBe('Mint complete.');
     expect(done.progressPercent).toBe(100);
     expect(done.steps[3].status).toBe('done');
+  });
+
+  it('generates recovery guidance for nonce and post-condition failures', () => {
+    const nonceGuide = buildMintRecoveryGuide({
+      errorMessage: 'Bad nonce supplied for transaction',
+      attemptedStep: 'seal',
+      beginConfirmed: true,
+      uploadedChunkBatches: 3,
+      totalChunkBatches: 3,
+      sealConfirmed: false
+    });
+    expect(nonceGuide.failureType).toBe('bad-nonce');
+    expect(nonceGuide.failedStep).toBe('seal');
+    expect(nonceGuide.canResume).toBe(true);
+    expect(nonceGuide.retryable).toBe(true);
+
+    const pcGuide = buildMintRecoveryGuide({
+      errorMessage: 'Post-condition check failure on STX',
+      beginConfirmed: true,
+      uploadedChunkBatches: 1,
+      totalChunkBatches: 2,
+      sealConfirmed: false
+    });
+    expect(pcGuide.failureType).toBe('post-condition');
+    expect(pcGuide.failedStep).toBe('chunks');
+    expect(pcGuide.retryable).toBe(false);
+    expect(pcGuide.recommendedAction).toContain('post-conditions');
   });
 });

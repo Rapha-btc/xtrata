@@ -2,7 +2,8 @@
 
 Use `@xtrata/sdk` clients to read core protocol state with retry + fallback behavior.
 
-If you want the easiest setup, use `docs/sdk/quickstart-simple-mode.md` first.
+If you are new, use `docs/sdk/quickstart-first-30-minutes.md` first.
+If you want the easiest setup for production usage, use `docs/sdk/quickstart-simple-mode.md`.
 
 ```ts
 import {

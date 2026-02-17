@@ -1,0 +1,35 @@
+name: SDK Release Rehearsal
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'sdk-v*'
+
+jobs:
+  release-rehearsal:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run release dry-run
+        run: npm run sdk:release:dry-run
+
+      - name: Upload release rehearsal artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdk-release-dry-run-artifacts
+          path: .artifacts/sdk
+          if-no-files-found: error

@@ -5,8 +5,7 @@ Simple Mode is the easiest way to integrate Xtrata.
 You pass a contract ID once, bind a sender once, and call clear methods without repeating network/sender plumbing.
 
 Import note:
-- Published package usage: `@xtrata/sdk/*`
-- Workspace source usage: `../../packages/xtrata-sdk/src/*`
+- Use published package entrypoints: `@xtrata/sdk/*`
 
 ## 1) Core Xtrata read-only in minutes
 
