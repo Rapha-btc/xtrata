@@ -1543,6 +1543,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
 
   const handleMintNow = useCallback(async () => {
     if (mintPending || walletPending) {
+      setMintMessage('Mint is already in progress. Complete the current step first.');
       return;
     }
     if (mintUnavailableReason) {
@@ -1586,6 +1587,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       }
 
       if (!target && (contractStatus?.reservedCount ?? 0n) > 0n) {
+        setMintMessage('Checking your wallet for an active reservation...');
         const reservable = await findResumableAssetForWallet(senderAddress);
         if (reservable) {
           target = reservable;
@@ -1593,6 +1595,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
           appendMintLog(
             'Active reservation detected for this wallet. Resuming that item.'
           );
+          setMintMessage('Active reservation found. Opening wallet for the next mint step.');
         } else if (remaining !== null && remaining <= 0n) {
           throw new Error(
             'The final mint slot is reserved by another wallet (or awaiting release). If this should be yours, wait for confirmations then retry, or ask admin to release the stale reservation.'
@@ -1947,6 +1950,21 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
         : null,
     [imageAssets, resumeAssetId]
   );
+  const heroMintStatusMessage = useMemo(() => {
+    if (mintMessage) {
+      return mintMessage;
+    }
+    if (networkMismatch) {
+      return `Wallet is on ${networkMismatch.actual}. Switch to ${networkMismatch.expected} to mint.`;
+    }
+    if (!published) {
+      return 'This collection is not live yet. Publishing is required before public minting.';
+    }
+    if (mintUnavailableReason) {
+      return mintUnavailableReason;
+    }
+    return null;
+  }, [mintMessage, mintUnavailableReason, networkMismatch, published]);
   const formattedTxDelay =
     txDelaySeconds === null ? null : txDelaySeconds.toString().padStart(2, '0');
 
@@ -1996,6 +2014,11 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                       : 'Mint one now'}
               </button>
             </div>
+            {heroMintStatusMessage && (
+              <div className="alert collection-live-page__hero-alert">
+                {heroMintStatusMessage}
+              </div>
+            )}
           </div>
         </section>
       </header>
