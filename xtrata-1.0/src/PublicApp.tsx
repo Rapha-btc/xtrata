@@ -2016,6 +2016,8 @@ export default function PublicApp() {
           mode={viewerMode}
           onModeChange={setViewerMode}
           onClearWalletLookup={handleClearWalletLookup}
+          modeLabels={{ collection: 'Chain', wallet: 'Wallet' }}
+          viewerTitles={{ collection: 'Chain viewer', wallet: 'Wallet viewer' }}
         />
 
         <PublicMarketScreen

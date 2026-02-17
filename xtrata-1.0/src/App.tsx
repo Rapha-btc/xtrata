@@ -975,6 +975,8 @@ export default function App() {
           onModeChange={setViewerMode}
           onClearWalletLookup={handleClearWalletLookup}
           onAddParentDraft={handleAddParentDraft}
+          modeLabels={{ collection: 'Chain', wallet: 'Wallet' }}
+          viewerTitles={{ collection: 'Chain viewer', wallet: 'Wallet viewer' }}
         />
 
         <MarketScreen
