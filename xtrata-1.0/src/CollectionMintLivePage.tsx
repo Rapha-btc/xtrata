@@ -328,6 +328,14 @@ const resolveCollectionMintPaymentModel = (
   return 'unknown';
 };
 
+const isOptionalSome = (value: ClarityValue | null) => {
+  if (!value) {
+    return false;
+  }
+  const resolved = value.type === ClarityType.ResponseOk ? value.value : value;
+  return resolved.type === ClarityType.OptionalSome;
+};
+
 export default function CollectionMintLivePage(props: CollectionMintLivePageProps) {
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => resolveInitialTheme());
   const [walletSession, setWalletSession] = useState<WalletSession>(() =>
@@ -614,6 +622,9 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       return 'Minting is finalized.';
     }
     if (remaining !== null && remaining <= 0n) {
+      if ((contractStatus?.reservedCount ?? 0n) > 0n) {
+        return null;
+      }
       return 'This collection is sold out.';
     }
     if (imageAssets.length === 0) {
@@ -624,6 +635,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     collectionContract,
     contractStatus?.finalized,
     contractStatus?.paused,
+    contractStatus?.reservedCount,
     imageAssets.length,
     published,
     remaining
@@ -1162,6 +1174,81 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     [collectionContract, coreClient]
   );
 
+  const checkReservationForHash = useCallback(
+    async (owner: string, hashBytes: Uint8Array) => {
+      if (!collectionContract) {
+        return false;
+      }
+      const network = toStacksNetwork(collectionContract.network);
+      const reservationCv = await callReadOnlyFunction({
+        contractAddress: collectionContract.address,
+        contractName: collectionContract.contractName,
+        functionName: 'get-reservation',
+        functionArgs: [principalCV(owner), bufferCV(hashBytes)],
+        senderAddress: owner,
+        network
+      }).catch(() => null);
+      return isOptionalSome(reservationCv);
+    },
+    [collectionContract]
+  );
+
+  const findResumableAssetForWallet = useCallback(
+    async (owner: string) => {
+      const candidates = imageAssets.filter(
+        (asset) =>
+          !pendingMintAssetIds.includes(asset.asset_id) &&
+          !mintedTokenIds[asset.asset_id]
+      );
+      if (candidates.length === 0) {
+        return null;
+      }
+
+      for (const candidate of candidates) {
+        const knownHashHex =
+          normalizeHashHex(canonicalHashHexByAssetId[candidate.asset_id]) ??
+          normalizeHashHex(candidate.expected_hash ?? '');
+        if (!knownHashHex) {
+          continue;
+        }
+        const knownHashBytes = hashHexToBytes(knownHashHex);
+        if (!knownHashBytes) {
+          continue;
+        }
+        if (await checkReservationForHash(owner, knownHashBytes)) {
+          return candidate;
+        }
+      }
+
+      for (const candidate of candidates) {
+        try {
+          const rawBytes = await fetchAssetBytes(candidate.asset_id);
+          const computedHash = computeExpectedHash(chunkBytes(rawBytes));
+          if (await checkReservationForHash(owner, computedHash)) {
+            const computedHex = bytesToHex(computedHash);
+            setCanonicalHashHexByAssetId((current) => ({
+              ...current,
+              [candidate.asset_id]: computedHex
+            }));
+            return candidate;
+          }
+        } catch {
+          // Ignore candidate fetch/read failures while scanning for resumable mints.
+        }
+      }
+
+      return null;
+    },
+    [
+      canonicalHashHexByAssetId,
+      checkReservationForHash,
+      fetchAssetBytes,
+      imageAssets,
+      mintedTokenIds,
+      pendingMintAssetIds
+    ]
+  );
+
   const waitForMintProgress = useCallback(
     async (
       expectedHashBytes: Uint8Array,
@@ -1498,6 +1585,21 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
         }
       }
 
+      if (!target && (contractStatus?.reservedCount ?? 0n) > 0n) {
+        const reservable = await findResumableAssetForWallet(senderAddress);
+        if (reservable) {
+          target = reservable;
+          setResumeAssetId(reservable.asset_id);
+          appendMintLog(
+            'Active reservation detected for this wallet. Resuming that item.'
+          );
+        } else if (remaining !== null && remaining <= 0n) {
+          throw new Error(
+            'The final mint slot is reserved by another wallet (or awaiting release). If this should be yours, wait for confirmations then retry, or ask admin to release the stale reservation.'
+          );
+        }
+      }
+
       for (const candidate of shuffled) {
         if (target) {
           break;
@@ -1584,8 +1686,10 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     collectionContract,
     contractStatus?.finalized,
     contractStatus?.paused,
+    contractStatus?.reservedCount,
     coreClient,
     ensureConnectedWallet,
+    findResumableAssetForWallet,
     imageAssets,
     loadContractStatus,
     mintAsset,
@@ -1596,10 +1700,41 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     pendingMintAssetIds,
     resetSteps,
     resumeAssetId,
+    remaining,
     scanMintedAssets,
     setResumeAssetId,
     syncCollectionTokenNumbers,
     walletPending
+  ]);
+
+  useEffect(() => {
+    if (!walletSession.address || (contractStatus?.reservedCount ?? 0n) <= 0n) {
+      return;
+    }
+    if (mintPending) {
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      const resumable = await findResumableAssetForWallet(walletSession.address);
+      if (cancelled) {
+        return;
+      }
+      if (resumable && !mintedTokenIds[resumable.asset_id]) {
+        setResumeAssetId(resumable.asset_id);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    contractStatus?.reservedCount,
+    findResumableAssetForWallet,
+    mintPending,
+    mintedTokenIds,
+    walletSession.address
   ]);
 
   const handleConnectWallet = useCallback(async () => {
