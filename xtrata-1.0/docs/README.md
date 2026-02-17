@@ -104,6 +104,13 @@ SDK + builder track
 	•	docs/sdk/reconstruction-library-plan.md
 	•	docs/sdk/example-repos-plan.md
 
+Legal signature track
+	•	docs/LEGAL/README.md
+	•	docs/LEGAL/signature-message-spec.md
+	•	docs/LEGAL/implementation-plan.md
+	•	docs/LEGAL/data-model-and-retention.md
+	•	docs/LEGAL/rollout-and-test-plan.md
+
 ⸻
 
 Requirements
