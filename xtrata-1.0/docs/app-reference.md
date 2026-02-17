@@ -119,6 +119,11 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 - `docs/sdk/changelog.md` and `docs/sdk/release-notes-template.md` support release operations.
 - `docs/sdk/archive/` stores completed planning/history docs.
 - `examples/xtrata-example-marketplace` and `examples/xtrata-example-campaign-engine` are starter integration shells.
+- `docs/LEGAL/README.md` is the legal-signature implementation index for one-time wallet consent gates (public mint + collection deploy).
+- `docs/LEGAL/signature-message-spec.md` defines the canonical signed message and required anti-replay/domain-binding fields.
+- `docs/LEGAL/implementation-plan.md` maps the planned Pages Functions/API + frontend gate integration points.
+- `docs/LEGAL/data-model-and-retention.md` defines D1 schema and audit retention rules for signature records.
+- `docs/LEGAL/rollout-and-test-plan.md` defines phased rollout and verification gates before enforcement.
 
 ## Optimisation planning docs
 

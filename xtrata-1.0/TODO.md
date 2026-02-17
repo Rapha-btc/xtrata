@@ -4,7 +4,7 @@
 
 000) add Bitcoin commitments (Merkle root receipts) that can be toggled on at some point in the future when they can be sustained 
 
-00)› please read the suggestions below for off chain signatures. Please consider how to safely implement the following off-chain signatures for users inscribing data or setting up contracts for the first time. must not interefere with UX more than absolutly necessary as a main priority. Must keep a record of all signatures and only require once per address.
+00) please read the suggestions below for off chain signatures. Please consider how to safely implement the following off-chain signatures for users inscribing data or setting up contracts for the first time. must not interefere with UX more than absolutly necessary as a main priority. Must keep a record of all signatures and only require once per address.
 
  Since you’re building protocol-level infrastructure, not just a UI, you should treat this like signing into AWS or GitHub — not like minting a JPEG.
 

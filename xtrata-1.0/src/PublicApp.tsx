@@ -3,6 +3,7 @@ import {
   callReadOnlyFunction,
   ClarityType,
   cvToValue,
+  uintCV,
   validateStacksAddress,
   type ClarityValue
 } from '@stacks/transactions';
@@ -90,6 +91,10 @@ type PublicCollectionContractTarget = {
 type PublicLiveMintStatus = {
   paused: boolean | null;
   finalized: boolean | null;
+  mintPrice: bigint | null;
+  activePhaseId: bigint | null;
+  activePhaseMintPrice: bigint | null;
+  effectiveMintPrice: bigint | null;
   maxSupply: bigint | null;
   mintedCount: bigint | null;
   reservedCount: bigint | null;
@@ -785,6 +790,17 @@ const unwrapReadOnly = (value: ClarityValue) => {
 const formatBigintLabel = (value: bigint | null) =>
   value === null ? 'Unknown' : value.toString();
 
+const MICROSTX_PER_STX = 1_000_000n;
+
+const formatMicroStxLabel = (value: bigint | null) => {
+  if (value === null) {
+    return 'Unknown';
+  }
+  const whole = value / MICROSTX_PER_STX;
+  const fraction = value % MICROSTX_PER_STX;
+  return `${whole.toString()}.${fraction.toString().padStart(6, '0')} STX`;
+};
+
 const buildMintStateLabel = (status: PublicLiveMintStatus | null) => {
   if (!status) {
     return 'Published';
@@ -862,9 +878,11 @@ const loadPublicMintStatus = async (
     });
     return unwrapReadOnly(response);
   };
-  const [pausedCv, finalizedCv, maxSupplyCv, mintedCountCv, reservedCountCv] = await Promise.all([
+  const [pausedCv, finalizedCv, mintPriceCv, activePhaseCv, maxSupplyCv, mintedCountCv, reservedCountCv] = await Promise.all([
     readOnly('is-paused'),
     readOnly('get-finalized'),
+    readOnly('get-mint-price'),
+    readOnly('get-active-phase'),
     readOnly('get-max-supply'),
     readOnly('get-minted-count'),
     readOnly('get-reserved-count')
@@ -872,9 +890,33 @@ const loadPublicMintStatus = async (
 
   const paused = toBoolean(cvToValue(pausedCv)) ?? null;
   const finalized = toBoolean(cvToValue(finalizedCv)) ?? null;
+  const mintPrice = parseUintCv(mintPriceCv);
+  const activePhaseId = parseUintCv(activePhaseCv);
+  let activePhaseMintPrice: bigint | null = null;
+  if (activePhaseId !== null && activePhaseId > 0n) {
+    const phaseCv = await callReadOnlyFunction({
+      contractAddress: contract.address,
+      contractName: contract.contractName,
+      functionName: 'get-phase',
+      functionArgs: [uintCV(activePhaseId)],
+      senderAddress,
+      network
+    });
+    const phaseValue = unwrapReadOnly(phaseCv);
+    if (phaseValue.type === ClarityType.OptionalSome) {
+      const tuple = phaseValue.value;
+      if (tuple.type === ClarityType.Tuple) {
+        const phasePriceCv = tuple.data['mint-price'];
+        if (phasePriceCv) {
+          activePhaseMintPrice = parseUintCv(phasePriceCv);
+        }
+      }
+    }
+  }
   const maxSupply = parseUintCv(maxSupplyCv);
   const mintedCount = parseUintCv(mintedCountCv);
   const reservedCount = parseUintCv(reservedCountCv);
+  const effectiveMintPrice = activePhaseMintPrice ?? mintPrice;
   const remaining =
     maxSupply === null || mintedCount === null || reservedCount === null
       ? null
@@ -885,6 +927,10 @@ const loadPublicMintStatus = async (
   return {
     paused,
     finalized,
+    mintPrice,
+    activePhaseId,
+    activePhaseMintPrice,
+    effectiveMintPrice,
     maxSupply,
     mintedCount,
     reservedCount,
@@ -2022,6 +2068,7 @@ export default function PublicApp() {
                     liveMintStatusLoadingByCollectionId[collection.id]
                   );
                   const mintStatusError = liveMintStatusErrorByCollectionId[collection.id] ?? null;
+                  const effectiveMintPrice = mintStatus?.effectiveMintPrice ?? null;
                   const maxSupply = mintStatus?.maxSupply ?? collection.fallbackSupply ?? null;
                   const mintedCount = mintStatus?.mintedCount ?? null;
                   const remainingCount =
@@ -2079,6 +2126,9 @@ export default function PublicApp() {
                         </span>
                         <span className="public-live-collections__stat">
                           Remaining: <strong>{formatBigintLabel(remainingCount)}</strong>
+                        </span>
+                        <span className="public-live-collections__stat">
+                          Mint price: <strong>{formatMicroStxLabel(effectiveMintPrice)}</strong>
                         </span>
                       </div>
                       <div className="public-live-collections__card-meta">
