@@ -543,6 +543,122 @@ const MUTABLE_ACTIONS: MutableAction[] = [
   }
 ];
 
+const OWNER_ONLY_FUNCTIONS = new Set<string>([
+  'set-max-supply',
+  'finalize',
+  'set-operator-admin',
+  'set-finance-admin',
+  'initiate-contract-ownership-transfer',
+  'cancel-contract-ownership-transfer',
+  'transfer-contract-ownership'
+]);
+
+const CONFIG_ADMIN_FUNCTIONS = new Set<string>([
+  'set-collection-metadata',
+  'set-reservation-expiry-blocks',
+  'set-default-token-uri',
+  'set-default-dependencies',
+  'set-registered-token-uri',
+  'clear-registered-token-uri',
+  'set-registered-token-uri-batch',
+  'set-paused',
+  'set-phase',
+  'clear-phase',
+  'set-active-phase',
+  'set-allowlist-enabled',
+  'set-max-per-wallet',
+  'set-allowlist',
+  'clear-allowlist',
+  'set-allowlist-batch',
+  'set-phase-allowlist',
+  'clear-phase-allowlist',
+  'set-phase-allowlist-batch',
+  'release-reservation',
+  'release-expired-reservation'
+]);
+
+const FINANCE_ADMIN_FUNCTIONS = new Set<string>([
+  'set-mint-price',
+  'set-recipients',
+  'set-splits'
+]);
+
+const getActionSignerHint = (action: MutableAction) => {
+  if (OWNER_ONLY_FUNCTIONS.has(action.functionName)) {
+    return 'Signer must be the contract owner wallet.';
+  }
+  if (CONFIG_ADMIN_FUNCTIONS.has(action.functionName)) {
+    return 'Signer must be contract owner or operator admin wallet.';
+  }
+  if (FINANCE_ADMIN_FUNCTIONS.has(action.functionName)) {
+    return 'Signer must be contract owner or finance admin wallet.';
+  }
+  if (action.functionName === 'accept-contract-ownership') {
+    return 'Signer must be the pending owner wallet.';
+  }
+  if (action.functionName === 'cancel-reservation') {
+    return 'Signer must be the reservation owner wallet (the mint-begin tx sender).';
+  }
+  return 'Use a wallet with permission for this contract action.';
+};
+
+const getActionFieldTooltip = (action: MutableAction, field: ActionField) => {
+  const actionFieldKey = `${action.key}.${field.key}`;
+  if (
+    actionFieldKey === 'release-reservation.owner' ||
+    actionFieldKey === 'release-expired-reservation.owner'
+  ) {
+    return 'Paste the reservation owner wallet (mint-begin tx sender), not necessarily the contract owner.';
+  }
+  if (
+    actionFieldKey === 'release-reservation.hash' ||
+    actionFieldKey === 'release-expired-reservation.hash' ||
+    actionFieldKey === 'cancel-reservation.hash'
+  ) {
+    return 'Paste expected-hash from mint-begin function arg #2 (64 hex chars, optional 0x).';
+  }
+  if (actionFieldKey === 'set-phase.allowlist-mode') {
+    return 'Allowlist mode: 0 = inherit, 1 = public, 2 = global allowlist, 3 = phase allowlist.';
+  }
+  if (actionFieldKey === 'set-phase.start-block') {
+    return 'Block height when phase begins. Use 0 to start immediately.';
+  }
+  if (actionFieldKey === 'set-phase.end-block') {
+    return 'Block height when phase ends. Use 0 for no end block.';
+  }
+  if (field.hint) {
+    return field.hint;
+  }
+  if (field.type === 'principal') {
+    return 'Paste a full STX address (SP... mainnet or ST... testnet).';
+  }
+  if (field.type === 'hash32') {
+    return 'Paste a 64-character hex hash. 0x prefix is optional.';
+  }
+  if (field.type === 'uint') {
+    return 'Whole number only (no decimals).';
+  }
+  if (field.type === 'stx') {
+    return 'STX amount with up to 6 decimals.';
+  }
+  if (field.type === 'bool') {
+    return 'Select true to enable/apply this setting, false to disable.';
+  }
+  if (field.type === 'ascii') {
+    return 'Plain ASCII text only.';
+  }
+  if (field.type === 'uintList') {
+    return 'Enter token IDs separated by comma, space, or new line.';
+  }
+  if (field.type === 'allowlistBatch') {
+    return 'One line per entry: wallet-address allowance.';
+  }
+  if (field.type === 'registeredUriBatch') {
+    return 'One line per entry: inscription-hash token-uri.';
+  }
+  return 'Provide the value required for this contract field.';
+};
+
 const toRecord = (value: unknown) =>
   value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
 
@@ -878,6 +994,16 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
     () => MUTABLE_ACTIONS.find((action) => action.key === selectedActionKey) ?? null,
     [selectedActionKey]
   );
+  const selectedActionSignerHint = useMemo(
+    () => (selectedAction ? getActionSignerHint(selectedAction) : null),
+    [selectedAction]
+  );
+  const selectedActionTooltipText = useMemo(() => {
+    if (!selectedAction) {
+      return 'Choose a contract action to configure fields for a wallet transaction.';
+    }
+    return `${selectedAction.description} ${getActionSignerHint(selectedAction)}`;
+  }, [selectedAction]);
   const actionGroups = useMemo(() => getActionGroups(MUTABLE_ACTIONS), []);
 
   useEffect(() => {
@@ -1507,7 +1633,7 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
         <label className="field field--full">
           <span className="field__label info-label">
             Mutable action
-            <InfoTooltip text="This list includes every public mutable function in xtrata-collection-mint-v1.2." />
+            <InfoTooltip text={selectedActionTooltipText} />
           </span>
           <select
             className="select"
@@ -1527,20 +1653,31 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
               </optgroup>
             ))}
           </select>
-          {selectedAction && <span className="field__hint">{selectedAction.description}</span>}
+          {selectedAction && (
+            <span className="field__hint">
+              {selectedAction.description} {selectedActionSignerHint}
+            </span>
+          )}
+          <span className="field__hint">
+            Connected signer wallet: {walletSession.address ?? 'Not connected'}
+          </span>
         </label>
 
         {selectedAction &&
           selectedAction.fields.map((field) => {
             const value = actionInputs[field.key] ?? '';
             const fieldId = `action-${selectedAction.key}-${field.key}`;
+            const fieldTooltip = getActionFieldTooltip(selectedAction, field);
             const isTextArea =
               field.type === 'uintList' ||
               field.type === 'allowlistBatch' ||
               field.type === 'registeredUriBatch';
             return (
               <label className="field field--full" key={field.key}>
-                <span className="field__label">{field.label}</span>
+                <span className="field__label info-label">
+                  {field.label}
+                  <InfoTooltip text={fieldTooltip} />
+                </span>
                 {field.type === 'bool' ? (
                   <select
                     id={fieldId}
@@ -1583,7 +1720,7 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
                     }
                   />
                 )}
-                {field.hint && <span className="field__hint">{field.hint}</span>}
+                <span className="field__hint">{field.hint ?? fieldTooltip}</span>
               </label>
             );
           })}
