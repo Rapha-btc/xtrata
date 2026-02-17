@@ -61,7 +61,8 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 - `src/config/manage.ts` defines `MANAGE_PATH`, parses `VITE_ARTIST_ALLOWLIST`, and exposes helpers for the gate; the same allowlist drives the `/manage` entry point.
 - `src/manage/ArtistManagerGate.tsx` handles wallet connect/disconnect, theme selection, and allowlist validation before rendering `CollectionManagerApp`.
 - `src/manage/ManageWalletContext.tsx` reuses the shared wallet adapter/session store to isolate the manage portal session from the public app.
-- `src/manage/CollectionManagerApp.tsx` composes the collapse-aware panels (`CollectionListPanel`, `OwnerOversightPanel`, `DeployWizardPanel`, `CollectionSettingsPanel`, `AssetStagingPanel`, `PublishOpsPanel`, and `DiagnosticsPanel`).
+- `src/manage/CollectionManagerApp.tsx` composes the collapse-aware panels (`SdkToolkitPanel`, `CollectionListPanel`, `OwnerOversightPanel`, `DeployWizardPanel`, `CollectionSettingsPanel`, `AssetStagingPanel`, `PublishOpsPanel`, and `DiagnosticsPanel`).
+- `src/manage/components/SdkToolkitPanel.tsx` provides quick-start guidance, context-aware SDK snippets, and allowlist boundary notes for third-party builders.
 - `functions/collections/*` responds to the `CollectionList`/`CollectionRecord` endpoints, deploy/readiness checks, asset manifest uploads, reservation CRUD, publish action, owner oversight snapshots, and R2 upload URLs using the `DB`/`COLLECTION_ASSETS` bindings (legacy fallbacks: `ASSETS`, `R2`).
 - `functions/lib/collections.ts` implements slug normalization and storage-limit helpers; `functions/lib/__tests__/collections.test.ts` guards them via Vitest.
 - `functions/lib/collection-deploy.ts` validates whether a draft has a confirmed on-chain deploy transaction before upload/publish operations.
@@ -104,6 +105,7 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 
 ## SDK and ecosystem docs
 
+- `src/PublicApp.tsx` docs module includes the `sdk-tooling` topic, which follows the same summary-first and expandable-detail pattern as other docs sections.
 - `docs/sdk/README.md` defines SDK mission, package boundaries, and implementation posture.
 - `docs/sdk/test-gates.md` defines required tests and release-quality gates.
 - `docs/sdk/changelog.md` tracks completed delivery iterations.

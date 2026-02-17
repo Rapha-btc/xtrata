@@ -285,6 +285,40 @@ This section is a plain-language reference for artists and collection teams.
 For the full artist documentation, see \`docs/artist-guides/collection-launch-guide.md\`.`
   },
   {
+    id: 'sdk-tooling',
+    title: 'SDK in artist + manage portal',
+    tag: 'SDK',
+    description:
+      'How the manage portal and allowlist connect to production-ready SDK tooling for third-party builders.',
+    content: `## SDK integration model
+Xtrata's artist portal is the no-code control layer. The SDK is the reusable build layer for third-party apps.
+
+### What this means in practice
+- Artists can launch and manage drops in \`/manage\` without touching raw contract code.
+- Builders can use SDK clients and workflows to power their own marketplaces, game loops, and launch pages.
+- Both paths run on the same protocol and contract rules.
+
+### Allowlist and access boundaries
+- Allowlist is for artist-management actions in \`/manage\` (deploy, publish, and contract-level controls).
+- SDK read integrations are open to any builder.
+- Production write flows should use deterministic workflow planners with deny-mode post-condition defaults.
+
+### Recommended SDK path
+- Start with \`@xtrata/sdk/simple\` for low-friction reads.
+- Add \`@xtrata/sdk/workflows\` for mint/list/buy/cancel transaction planning.
+- Use advanced modules only for custom orchestration or custom deployment tooling.
+
+### Why this matters for ecosystem growth
+- First-party pages remain a reference implementation.
+- Third parties can launch branded UX while still settling against Xtrata contracts.
+- Protocol improvements land once and benefit every integrated app.
+
+### Practical links
+- SDK start point: \`docs/sdk/README.md\`
+- Beginner path: \`docs/sdk/quickstart-simple-mode.md\`
+- Artist launch context: \`docs/artist-guides/collection-launch-guide.md\``
+  },
+  {
     id: 'market',
     title: 'Market listings and escrow',
     tag: 'Market',
@@ -676,6 +710,14 @@ const DOC_SUMMARIES: Record<string, DocSummary> = {
       'Before launch, verify network, contract IDs, splits (10000 bps), and pause state.'
     ]
   },
+  'sdk-tooling': {
+    lead: 'Use Manage as the guided control layer, and SDK packages as the reusable build layer.',
+    points: [
+      'Allowlist gates artist-management actions in /manage.',
+      'SDK read integrations are open to third-party builders.',
+      'Use simple clients first, then workflow planners for write transactions.'
+    ]
+  },
   market: {
     lead: 'Safe market actions depend on escrow status, not just visible listing cards.',
     points: [
@@ -1007,6 +1049,10 @@ const DOC_DETAIL_TOGGLE_COPY: Record<string, DocDetailToggleCopy> = {
     open: 'Open full launch guide',
     close: 'Back to launch essentials'
   },
+  'sdk-tooling': {
+    open: 'Explore SDK integration details',
+    close: 'Back to SDK overview'
+  },
   market: {
     open: 'Show listing and escrow mechanics',
     close: 'Back to market basics'
@@ -1063,6 +1109,7 @@ const DOC_MODULE_JUMPS: Record<string, DocModuleJump> = {
   ids: { section: 'collection-viewer', label: 'Look at Viewer' },
   'minting-modes': { section: 'mint', label: 'Go to Mint' },
   'artist-collection-launch': { section: 'mint', label: 'Open mint tools' },
+  'sdk-tooling': { section: 'wallet-session', label: 'Open wallet setup' },
   market: { section: 'market', label: 'Open Market' },
   standards: { section: 'collection-viewer', label: 'Open Viewer' },
   fees: { section: 'mint', label: 'See fees in Mint' },
