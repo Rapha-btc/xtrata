@@ -4902,6 +4902,10 @@ p {
   overflow-wrap: break-word;
 }
 
+.collection-live-page__hero-alert {
+  margin-top: 10px;
+}
+
 @media (max-width: 1080px) {
   .asset-staging__viewer {
     grid-template-columns: 1fr;
