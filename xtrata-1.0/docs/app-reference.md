@@ -120,6 +120,13 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 - `docs/sdk/archive/` stores completed planning/history docs.
 - `examples/xtrata-example-marketplace` and `examples/xtrata-example-campaign-engine` are starter integration shells.
 
+## Optimisation planning docs
+
+- `OPTIMISATION/README.md` defines optimisation program goals, scope, and baseline commands.
+- `OPTIMISATION/baseline-2026-02-17.md` tracks current performance/code-size baseline snapshots.
+- `OPTIMISATION/identified-areas.md` lists grouped optimisation opportunities and primary targets.
+- `OPTIMISATION/triage-plan.md` defines phased execution priorities and acceptance criteria.
+
 ## Tests and fixtures
 
 - `src/lib/**/__tests__/*.test.ts` covers unit tests for protocol, viewer, network, contract, and wallet utilities.
