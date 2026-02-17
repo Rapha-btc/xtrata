@@ -424,105 +424,6 @@ Mint costs come from protocol operation count plus base chain mining fees.
 - Track actual vs expected cost for first few mints.
 - Adjust chunking/file prep policy before full release.`
   },
-//   {
-//     id: 'xst-token',
-//     title: 'XST participation token',
-//     tag: 'XST',
-//     description: 'Deterministic emissions that begin at inscription #1000.',
-//     content: `## XST in one view
-// XST is the participation token of Xtrata. It is not sold, not pre-mined, and not governed after deployment.
-
-// ### Hard guarantees
-// - Fixed supply: **1,000,000,000 XST**
-// - Emissions start only after **inscription #1000** exists
-// - Emissions run for **4 years** (~210,240 blocks at ~10 minutes) and then stop forever
-// - No admin switches can change supply or schedule
-
-// ### Emission schedule (per block)
-// - Year 1: 40% (400,000,000)
-// - Year 2: 30% (300,000,000)
-// - Year 3: 20% (200,000,000)
-// - Year 4: 10% (100,000,000)
-
-// Per-block emission is constant within each year and computed from ~52,560 blocks per year.
-
-// ### Distribution model
-// - **Owner pool (70%)** goes to inscription owners (weighted by token ID)
-// - **Participant pool (30%)** is optional and can reward active participants (sqrt weighting)
-// - Claims are pull-based. The contract never loops over wallets.
-
-// ### Inscription weighting (owner pool)
-// Weights are deterministic and tied to token ID:
-// - #0 = 1400
-// - #1-10 = 1200
-// - #11-100 = 1000
-// - #101-1,000 = 800
-// - #1,001-10,000 = 640
-// - #10,001-100,000 = 512
-// - #100,001-1,000,000 = 410
-// Weights continue to decay by 4/5 each decade after that.
-
-// ### Determinism guarantees
-// - Start block is set once at #1000
-// - Emissions depend only on block height
-// - Weights depend only on token ID
-// - Ownership is read directly from the NFT
-
-// ### Claim mechanics (simplified)
-// - Update emissions
-// - pending = weight x (accumulator - rewardDebt)
-// - Transfer to current owner
-// - Update rewardDebt
-
-// ### Claim operations in real usage
-// - Claims are independent per wallet and can be run on your own cadence.
-// - Longer intervals can reduce operational overhead but increase single-claim size.
-// - Frequent claims can improve personal accounting visibility.
-
-// ### Practical interpretation of weights
-// - Earlier inscriptions have stronger weight and larger share pressure.
-// - Later IDs still participate but with lower multiplier tiers.
-// - Distribution is deterministic, so expectations can be modeled ahead of claim.
-
-// ### What this means for participants
-// - No hidden inflation path after the 4-year schedule ends.
-// - Ownership changes immediately affect future owner-pool attribution.
-// - Protocol rules stay transparent because all key math is deterministic and auditable.`
-//   },
-//   {
-//     id: 'xst-oracle',
-//     title: 'XST oracle inscription',
-//     tag: 'Oracle',
-//     description: 'A single on-chain viewer that reads live token stats.',
-//     content: `## One permanent inscription, live stats
-// The oracle inscription is a single HTML/JS inscription that renders the current XST state.
-
-// ### What it shows
-// - Emissions start block and time elapsed
-// - Total emitted, remaining supply, and projected end date
-// - Distribution by owner pool and participant pool
-// - Claimable estimates for a given inscription ID
-
-// ### How it stays live
-// The inscription itself is static, but it calls public on-chain read-only endpoints:
-// - XST token contract for emission state
-// - Xtrata contract for inscription IDs and ownership
-// - Indexer APIs for holder distribution snapshots
-// The viewer refreshes on an interval and caches results to avoid heavy polling.
-
-// ### Important note
-// This is a **viewer**, not a consensus oracle. It never writes to chain and does not change token state.
-
-// ### Reading the oracle responsibly
-// - Use it for insight and planning, not as the source of execution guarantees.
-// - Cross-check critical values against direct read-only calls when needed.
-// - Expect minor lag based on indexer refresh intervals.
-
-// ### Operational value
-// - Gives participants a shared dashboard view of emissions progress.
-// - Makes pool distribution trends easier to communicate publicly.
-// - Reduces manual query overhead for recurring reporting.`
-//   },
   {
     id: 'admin',
     title: 'Admin & safety',
@@ -758,22 +659,6 @@ const DOC_SUMMARIES: Record<string, DocSummary> = {
       'Asset optimization and calmer network periods reduce cost surprises.'
     ]
   },
-  // 'xst-token': {
-  //   lead: 'XST has fixed supply and deterministic emissions that begin at inscription #1000.',
-  //   points: [
-  //     'No premine and no admin path to alter supply schedule.',
-  //     'Emissions run for four years, then stop permanently.',
-  //     'Claims are pull-based and tied to ownership plus deterministic weights.'
-  //   ]
-  // },
-  // 'xst-oracle': {
-  //   lead: 'The XST oracle inscription is a read-only dashboard for live token stats.',
-  //   points: [
-  //     'It displays emissions, distribution, and claimable estimate views.',
-  //     'The inscription reads on-chain/indexer data but does not write state.',
-  //     'Use it for insight, and cross-check critical numbers with direct read-only calls.'
-  //   ]
-  // },
   admin: {
     lead: 'Admin operations prioritise safety, traceability, and predictable user impact.',
     points: [
@@ -1081,14 +966,6 @@ const DOC_DETAIL_TOGGLE_COPY: Record<string, DocDetailToggleCopy> = {
     open: 'Break down fee model',
     close: 'Back to fee highlights'
   },
-  'xst-token': {
-    open: 'View token design details',
-    close: 'Back to XST essentials'
-  },
-  'xst-oracle': {
-    open: 'How the oracle viewer works',
-    close: 'Back to oracle summary'
-  },
   admin: {
     open: 'Show admin runbook',
     close: 'Back to safety essentials'
@@ -1129,7 +1006,6 @@ const DOC_MODULE_JUMPS: Record<string, DocModuleJump> = {
   market: { section: 'market', label: 'Open Market' },
   standards: { section: 'collection-viewer', label: 'Open Viewer' },
   fees: { section: 'mint', label: 'See fees in Mint' },
-  'xst-oracle': { section: 'collection-viewer', label: 'Open Viewer' },
   admin: { section: 'active-contract', label: 'Open contract panel' },
   viewer: { section: 'collection-viewer', label: 'Look at Viewer' },
   'wallet-network': { section: 'wallet-session', label: 'Open Wallet panel' },
