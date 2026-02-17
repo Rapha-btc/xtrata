@@ -140,7 +140,7 @@ Design notes
 	•	Uploads are chunked, resumable, and purgeable if abandoned.
 	•	Reads prefer batch access, with adaptive fallback to per-chunk reads.
 	•	Large media previews buffer initial data and stream the remainder on demand.
-	•	IndexedDB is used for local caching (clearable via the Viewer panel).
+	•	IndexedDB is used for local caching.
 
 ⸻
 
