@@ -20,24 +20,28 @@ import {
   buildMarketCancelCall,
   buildMarketListCall,
   buildSealInscriptionCall
-} from './client';
+} from './client.js';
 import {
   DEFAULT_BATCH_SIZE,
   MAX_BATCH_SIZE,
+  MAX_MIME_LENGTH,
+  MAX_TOKEN_URI_LENGTH,
   batchChunks,
   chunkBytes
-} from './mint';
-import { toStacksNetwork } from './network';
+} from './mint.js';
+import { toStacksNetwork } from './network.js';
+import { SdkValidationError } from './errors.js';
 import {
   buildGuidedMintFlow,
   createCollectionMintSafetyBundle,
   createCoreMintSafetyBundle,
   type GuidedMintFlow,
   type SafeMintBundle
-} from './safe';
-import type { ContractConfig } from './types';
+} from './safe.js';
+import type { ContractConfig } from './types.js';
 
 export const DEFAULT_NFT_ASSET_NAME = 'xtrata-inscription';
+const EXPECTED_HASH_BYTES = 32;
 
 const normalizeBatchSize = (value: number | undefined) => {
   if (!Number.isFinite(value) || !value) {
@@ -65,6 +69,96 @@ const buildAssetInfo = (params: {
     params.nftContract.contractName,
     params.assetName ?? DEFAULT_NFT_ASSET_NAME
   );
+
+const assertTrimmedString = (value: string, field: string) => {
+  if (!value.trim()) {
+    throw new SdkValidationError('invalid-input', `${field} is required.`);
+  }
+};
+
+const assertPayload = (payloadBytes: Uint8Array) => {
+  if (payloadBytes.length <= 0) {
+    throw new SdkValidationError(
+      'invalid-input',
+      'payloadBytes must contain at least one byte.'
+    );
+  }
+};
+
+const assertExpectedHash = (expectedHash: Uint8Array) => {
+  if (expectedHash.length !== EXPECTED_HASH_BYTES) {
+    throw new SdkValidationError(
+      'invalid-input',
+      `expectedHash must be ${EXPECTED_HASH_BYTES} bytes.`
+    );
+  }
+};
+
+const assertMimeType = (mimeType: string) => {
+  assertTrimmedString(mimeType, 'mimeType');
+  if (mimeType.length > MAX_MIME_LENGTH) {
+    throw new SdkValidationError(
+      'invalid-input',
+      `mimeType exceeds max length (${MAX_MIME_LENGTH}).`
+    );
+  }
+};
+
+const assertTokenUri = (tokenUri: string) => {
+  assertTrimmedString(tokenUri, 'tokenUri');
+  if (tokenUri.length > MAX_TOKEN_URI_LENGTH) {
+    throw new SdkValidationError(
+      'invalid-input',
+      `tokenUri exceeds max length (${MAX_TOKEN_URI_LENGTH}).`
+    );
+  }
+};
+
+const assertKnownMintPrice = (params: {
+  mintPrice: bigint | null;
+  activePhaseMintPrice?: bigint | null;
+}) => {
+  const effectiveMintPrice = params.activePhaseMintPrice ?? params.mintPrice;
+  if (effectiveMintPrice === null) {
+    throw new SdkValidationError(
+      'invalid-input',
+      'mintPrice or activePhaseMintPrice is required for deterministic spend caps.'
+    );
+  }
+  if (effectiveMintPrice < 0n) {
+    throw new SdkValidationError(
+      'invalid-input',
+      'mintPrice must be zero or greater.'
+    );
+  }
+};
+
+const assertPositiveBigint = (value: bigint | null, field: string) => {
+  if (value === null || value <= 0n) {
+    throw new SdkValidationError(
+      'invalid-input',
+      `${field} must be greater than zero for deterministic safety planning.`
+    );
+  }
+};
+
+const assertNonNegativeBigint = (value: bigint, field: string) => {
+  if (value < 0n) {
+    throw new SdkValidationError(
+      'invalid-input',
+      `${field} must be zero or greater.`
+    );
+  }
+};
+
+const assertMatchingNetwork = (left: ContractConfig, right: ContractConfig) => {
+  if (left.network !== right.network) {
+    throw new SdkValidationError(
+      'network-mismatch',
+      `Contract networks do not match (${left.network} vs ${right.network}).`
+    );
+  }
+};
 
 export const buildWalletNftSendsPostCondition = (params: {
   nftContract: ContractConfig;
@@ -136,6 +230,17 @@ export type CoreMintWorkflowParams = MintWorkflowBaseParams & {
 export const buildCoreMintWorkflowPlan = (
   params: CoreMintWorkflowParams
 ): MintWorkflowPlan => {
+  assertTrimmedString(params.senderAddress, 'senderAddress');
+  assertPayload(params.payloadBytes);
+  assertExpectedHash(params.expectedHash);
+  assertMimeType(params.mimeType);
+  assertTokenUri(params.tokenUri);
+  assertKnownMintPrice({
+    mintPrice: params.mintPrice,
+    activePhaseMintPrice: params.activePhaseMintPrice
+  });
+  assertPositiveBigint(params.protocolFeeMicroStx, 'protocolFeeMicroStx');
+
   const network = toStacksNetwork(params.contract.network, params.apiBaseUrl);
   const chunks = chunkBytes(params.payloadBytes);
   const chunkBatches = batchChunks(chunks, normalizeBatchSize(params.chunkBatchSize));
@@ -207,6 +312,18 @@ export type CollectionMintWorkflowParams = MintWorkflowBaseParams & {
 export const buildCollectionMintWorkflowPlan = (
   params: CollectionMintWorkflowParams
 ): MintWorkflowPlan => {
+  assertTrimmedString(params.senderAddress, 'senderAddress');
+  assertPayload(params.payloadBytes);
+  assertExpectedHash(params.expectedHash);
+  assertMimeType(params.mimeType);
+  assertTokenUri(params.tokenUri);
+  assertKnownMintPrice({
+    mintPrice: params.mintPrice,
+    activePhaseMintPrice: params.activePhaseMintPrice
+  });
+  assertPositiveBigint(params.protocolFeeMicroStx, 'protocolFeeMicroStx');
+  assertMatchingNetwork(params.contract, params.xtrataContract);
+
   const network = toStacksNetwork(params.contract.network, params.apiBaseUrl);
   const chunks = chunkBytes(params.payloadBytes);
   const chunkBatches = batchChunks(chunks, normalizeBatchSize(params.chunkBatchSize));
@@ -292,6 +409,11 @@ export type MarketListWorkflowParams = {
 export const buildMarketListWorkflowPlan = (
   params: MarketListWorkflowParams
 ): MarketWorkflowPlan => {
+  assertTrimmedString(params.senderAddress, 'senderAddress');
+  assertPositiveBigint(params.priceMicroStx, 'priceMicroStx');
+  assertNonNegativeBigint(params.tokenId, 'tokenId');
+  assertMatchingNetwork(params.marketContract, params.nftContract);
+
   const network = toStacksNetwork(params.marketContract.network, params.apiBaseUrl);
   const postConditions: PostCondition[] = [
     buildWalletNftSendsPostCondition({
@@ -335,6 +457,10 @@ export type MarketCancelWorkflowParams = {
 export const buildMarketCancelWorkflowPlan = (
   params: MarketCancelWorkflowParams
 ): MarketWorkflowPlan => {
+  assertNonNegativeBigint(params.listingId, 'listingId');
+  assertNonNegativeBigint(params.tokenId, 'tokenId');
+  assertMatchingNetwork(params.marketContract, params.nftContract);
+
   const network = toStacksNetwork(params.marketContract.network, params.apiBaseUrl);
   const postConditions: PostCondition[] = [
     buildContractNftSendsPostCondition({
@@ -379,6 +505,12 @@ export type MarketBuyWorkflowParams = {
 export const buildMarketBuyWorkflowPlan = (
   params: MarketBuyWorkflowParams
 ): MarketWorkflowPlan => {
+  assertTrimmedString(params.buyerAddress, 'buyerAddress');
+  assertNonNegativeBigint(params.listingId, 'listingId');
+  assertNonNegativeBigint(params.tokenId, 'tokenId');
+  assertPositiveBigint(params.listingPriceMicroStx, 'listingPriceMicroStx');
+  assertMatchingNetwork(params.marketContract, params.nftContract);
+
   const network = toStacksNetwork(params.marketContract.network, params.apiBaseUrl);
   const postConditions: PostCondition[] = [
     makeStandardSTXPostCondition(

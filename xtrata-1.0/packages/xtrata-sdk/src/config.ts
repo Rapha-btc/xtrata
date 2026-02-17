@@ -1,6 +1,6 @@
 import { validateStacksAddress } from '@stacks/transactions';
-import type { ContractConfig, NetworkType } from './types';
-import { getNetworkFromAddress } from './network';
+import type { ContractConfig, NetworkType } from './types.js';
+import { getNetworkFromAddress } from './network.js';
 
 const CONTRACT_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9-_]{0,127}$/;
 

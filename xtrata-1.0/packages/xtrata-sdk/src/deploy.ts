@@ -1,11 +1,11 @@
 import { validateStacksAddress } from '@stacks/transactions';
-import { getContractId } from './config';
-import type { NetworkType, SdkContractRegistryEntry } from './types';
+import { getContractId } from './config.js';
+import type { NetworkType, SdkContractRegistryEntry } from './types.js';
 import {
   normalizeDependencyIds,
   parseDependencyInput,
   validateDependencyIds
-} from './mint';
+} from './mint.js';
 
 export type ArtistMintType = 'standard' | 'pre-inscribed';
 

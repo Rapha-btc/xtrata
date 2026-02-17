@@ -1,26 +1,74 @@
-name: CI
+name: SDK CI
 
 on:
   push:
-    branches: ["main"]
+    branches:
+      - main
+    paths:
+      - '.github/workflows/**'
+      - 'docs/sdk/**'
+      - 'examples/**'
+      - 'packages/xtrata-sdk/**'
+      - 'packages/xtrata-reconstruction/**'
+      - 'scripts/sdk/**'
+      - 'package.json'
+      - 'package-lock.json'
   pull_request:
+    paths:
+      - '.github/workflows/**'
+      - 'docs/sdk/**'
+      - 'examples/**'
+      - 'packages/xtrata-sdk/**'
+      - 'packages/xtrata-reconstruction/**'
+      - 'scripts/sdk/**'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
 
 jobs:
-  build:
+  sdk-gates:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20, 22]
+        include:
+          - node-version: 20
+            run-extended: false
+          - node-version: 22
+            run-extended: true
+
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: ${{ matrix.node-version }}
           cache: npm
-          cache-dependency-path: v15.1/package-lock.json
-      - name: Install
-        run: npm install
-        working-directory: v15.1
-      - name: Lint
-        run: npm run lint
-        working-directory: v15.1
-      - name: Test
-        run: npm test
-        working-directory: v15.1
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate SDK docs
+        run: npm run sdk:docs:validate
+
+      - name: SDK typecheck
+        run: npm run sdk:typecheck
+
+      - name: SDK build
+        run: npm run sdk:build
+
+      - name: SDK tests
+        run: npm run sdk:test
+
+      - name: SDK pack smoke
+        if: matrix.run-extended
+        run: npm run sdk:pack:smoke
+
+      - name: SDK examples smoke
+        if: matrix.run-extended
+        run: npm run sdk:examples:smoke
+
+      - name: SDK examples tarball smoke
+        if: matrix.run-extended
+        run: npm run sdk:examples:tarball:smoke

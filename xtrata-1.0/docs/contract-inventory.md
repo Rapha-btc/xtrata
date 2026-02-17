@@ -125,12 +125,13 @@ Source: `contracts/live/xtrata-v2.1.0.clar`
 - `get-minted-id(index)`
 - `is-allowed-caller(caller)`
 
-## xtrata-collection-mint-v1.0 (template)
+## xtrata-collection-mint-v1.0 (template, legacy)
 
 Source: `contracts/clarinet/contracts/xtrata-collection-mint-v1.0.clar`
 
 ## Purpose
 - Per-collection mint coordinator that charges a one-time mint fee split, supports allowlists and per-wallet caps, and proxies xtrata begin/chunk/seal calls.
+- SDK support note: archived for new SDK work. Active collection-mint SDK target is `xtrata-collection-mint-v1.2`.
 
 ## Core Admin Functions
 - `set-mint-price(amount)`

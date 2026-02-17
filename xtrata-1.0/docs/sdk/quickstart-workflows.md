@@ -117,3 +117,6 @@ console.log(cancelPlan.summaryLines);
 ```
 
 These workflow plans are designed so integrators can call `openContractCall` directly with consistent, deny-mode defaults.
+
+Validation note:
+- Workflow planners fail fast with `SdkValidationError` when critical inputs are malformed (missing sender, invalid hash length, oversized URI, zero/negative spend values, network mismatches).

@@ -18,11 +18,28 @@ Set environment variables (optional):
 - `XTRATA_SENDER`
 - `XTRATA_CORE_CONTRACT`
 - `XTRATA_MARKET_CONTRACT`
+- `XTRATA_OFFLINE=1` (optional smoke mode that skips network reads and still outputs a valid workflow plan)
+
+Starter template is included at `.env.example`.
 
 Run:
 
 ```bash
+npm install
 npm start
+```
+
+Offline smoke:
+
+```bash
+npm install
+npm run smoke
+```
+
+Tarball smoke (from repo root):
+
+```bash
+npm run sdk:examples:tarball:smoke
 ```
 
 ## Next implementation steps

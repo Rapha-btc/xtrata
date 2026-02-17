@@ -1,24 +1,80 @@
 {
   "name": "@xtrata/sdk",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
-  "main": "./src/index.ts",
-  "module": "./src/index.ts",
-  "types": "./src/index.ts",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./config": "./src/config.ts",
-    "./network": "./src/network.ts",
-    "./client": "./src/client.ts",
-    "./mint": "./src/mint.ts",
-    "./collections": "./src/collections.ts",
-    "./market": "./src/market.ts",
-    "./deploy": "./src/deploy.ts",
-    "./simple": "./src/simple.ts",
-    "./safe": "./src/safe.ts",
-    "./workflows": "./src/workflows.ts",
-    "./types": "./src/types.ts",
-    "./errors": "./src/errors.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./config": {
+      "types": "./dist/config.d.ts",
+      "import": "./dist/config.js"
+    },
+    "./network": {
+      "types": "./dist/network.d.ts",
+      "import": "./dist/network.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "import": "./dist/client.js"
+    },
+    "./mint": {
+      "types": "./dist/mint.d.ts",
+      "import": "./dist/mint.js"
+    },
+    "./collections": {
+      "types": "./dist/collections.d.ts",
+      "import": "./dist/collections.js"
+    },
+    "./market": {
+      "types": "./dist/market.d.ts",
+      "import": "./dist/market.js"
+    },
+    "./deploy": {
+      "types": "./dist/deploy.d.ts",
+      "import": "./dist/deploy.js"
+    },
+    "./simple": {
+      "types": "./dist/simple.d.ts",
+      "import": "./dist/simple.js"
+    },
+    "./safe": {
+      "types": "./dist/safe.d.ts",
+      "import": "./dist/safe.js"
+    },
+    "./workflows": {
+      "types": "./dist/workflows.d.ts",
+      "import": "./dist/workflows.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.js"
+    },
+    "./errors": {
+      "types": "./dist/errors.d.ts",
+      "import": "./dist/errors.js"
+    }
+  },
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit",
+    "test": "vitest run src/__tests__",
+    "prepack": "npm run clean && npm run build"
+  },
+  "dependencies": {
+    "@noble/hashes": "^1.4.0",
+    "@stacks/connect": "^7.8.0",
+    "@stacks/network": "^6.11.0",
+    "@stacks/transactions": "^6.11.0"
   }
 }

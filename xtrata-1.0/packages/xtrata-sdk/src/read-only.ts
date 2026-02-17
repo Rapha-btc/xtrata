@@ -1,4 +1,4 @@
-import { ReadOnlyBackoffError } from './errors';
+import { ReadOnlyBackoffError } from './errors.js';
 
 const READONLY_MAX_CONCURRENT = 3;
 const READONLY_RETRIES = 3;

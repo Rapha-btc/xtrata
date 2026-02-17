@@ -17,6 +17,25 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 3) Put protocol-facing behavior behind testable helpers; avoid burying contract logic inside screen components.
 4) Keep first-party modules as examples of SDK usage, not the only way to access protocol capabilities.
 
+## SDK operating mode (third-party build ready)
+
+- SDK implementation is complete and release-automated. Operate in maintenance/release mode using:
+  - `docs/sdk/README.md` (current start points and release commands)
+  - `docs/sdk/test-gates.md` (required tests and release quality gates)
+  - `docs/sdk/changelog.md` (tracked delivery history)
+- Historical planning docs are archived in `docs/sdk/archive/`.
+- Maintenance loop for SDK increments:
+  1. Implement changes in `packages/xtrata-sdk` and/or `packages/xtrata-reconstruction`.
+  2. Add or update tests in the same change set.
+  3. Update quickstarts, compatibility notes, and troubleshooting when behavior changes.
+  4. Run `npm run sdk:release:dry-run`.
+  5. Regenerate and commit `docs/sdk/changelog.md`.
+- Minimum quality bar for merged SDK work:
+  - Unit coverage for new public helpers.
+  - Integration or smoke test coverage for affected workflows.
+  - Example usage that can run in a clean environment.
+  - Documentation updates for developer onboarding and migration impact.
+
 ## Top-level layout and navigation
 
 - `src/App.tsx` owns the main layout, section order, anchor buttons, collapse state, deploy panel, and high-level app state wiring.
@@ -86,12 +105,17 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 ## SDK and ecosystem docs
 
 - `docs/sdk/README.md` defines SDK mission, package boundaries, and implementation posture.
-- `docs/sdk/roadmap.md` defines phased delivery for protocol SDK and ecosystem tooling.
-- `docs/sdk/js-package-plan.md` scopes the simple JS package for third-party integrators.
-- `docs/sdk/reconstruction-library-plan.md` scopes deterministic content reconstruction utilities.
-- `docs/sdk/example-repos-plan.md` defines the first two public example integrations.
+- `docs/sdk/test-gates.md` defines required tests and release-quality gates.
+- `docs/sdk/changelog.md` tracks completed delivery iterations.
+- `docs/sdk/compatibility-matrix.md` tracks protocol/template version support and SDK readiness status.
+  - Active collection-mint SDK target: `xtrata-collection-mint-v1.2` (`v1.0`/`v1.1` archived for new SDK work).
+  - SDK implementation status: fully implemented and release-automated.
+- `docs/sdk/quickstart-first-30-minutes.md` is the beginner onboarding path.
 - `docs/sdk/quickstart-simple-mode.md` is the default onboarding path for low-friction SDK integration.
 - `docs/sdk/quickstart-workflows.md` provides high-level write transaction plans for mint and market flows.
+- `docs/sdk/troubleshooting.md` and `docs/sdk/migration-guide.md` capture integration operations and upgrades.
+- `docs/sdk/changelog.md` and `docs/sdk/release-notes-template.md` support release operations.
+- `docs/sdk/archive/` stores completed planning/history docs.
 - `examples/xtrata-example-marketplace` and `examples/xtrata-example-campaign-engine` are starter integration shells.
 
 ## Tests and fixtures
@@ -100,6 +124,16 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 - `packages/xtrata-sdk/src/__tests__/*.test.ts` covers SDK public helper/unit behavior.
 - `packages/xtrata-reconstruction/src/__tests__/*.test.ts` covers deterministic reconstruction helpers.
 - `scripts/contract-variants.mjs` syncs and verifies SIP-009 trait variants for clarinet/testnet/mainnet.
+- SDK smoke scripts live in `scripts/sdk/`:
+  - `pack-smoke.sh` (tarball install/import validation).
+  - `examples-tarball-smoke.sh` (example apps validated against packed SDK artifacts).
+  - `docs-validate.mjs` (SDK docs link + command reference validation).
+  - `version-check.mjs` (publish-ready version checks for SDK packages).
+  - `changelog-generate.mjs` (generates `docs/sdk/changelog.md` from iteration history).
+  - `release-dry-run.sh` (end-to-end release rehearsal + dry-run publish outputs).
+- SDK CI/release workflows:
+  - `.github/workflows/ci.yml` (Node 20/22 SDK gates).
+  - `.github/workflows/sdk-release.yml` (release rehearsal + artifact upload).
 
 ## Update types (simple -> complex)
 
@@ -174,9 +208,13 @@ Files: `docs/sdk/*.md`, `packages/xtrata-sdk/**`, `src/lib/contract/**`, `src/li
 Notes: define stable interfaces and error models before UI adoption.
 
 14) Reconstruction library work (deterministic assembly and verification).
-Files: `docs/sdk/reconstruction-library-plan.md`, `packages/xtrata-reconstruction/**`, `src/lib/viewer/content.ts`, `src/lib/chunking/hash.ts`.
+Files: `packages/xtrata-reconstruction/**`, `src/lib/viewer/content.ts`, `src/lib/chunking/hash.ts`, `docs/sdk/compatibility-matrix.md`.
 Notes: keep outputs deterministic and independently verifiable.
 
 15) Third-party starter integrations and examples.
-Files: `docs/sdk/example-repos-plan.md`, `examples/**`.
+Files: `examples/**`, `docs/sdk/README.md`, `docs/sdk/quickstart-first-30-minutes.md`.
 Notes: examples must prove end-to-end integration with minimal custom code.
+
+16) SDK hardening and release readiness.
+Files: `docs/sdk/test-gates.md`, `docs/sdk/changelog.md`, `docs/sdk/release-notes-template.md`, `packages/xtrata-sdk/**`, `packages/xtrata-reconstruction/**`, `examples/**`, `.github/workflows/ci.yml`, `.github/workflows/sdk-release.yml`.
+Notes: every phase must add tests and pass defined release gates before progressing.

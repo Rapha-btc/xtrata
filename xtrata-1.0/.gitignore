@@ -4,8 +4,11 @@ dist
 coverage
 .env
 .env.local
+.artifacts
 
 
 # FOLDERS
 
 Archive/
+!docs/sdk/archive/
+!docs/sdk/archive/**
