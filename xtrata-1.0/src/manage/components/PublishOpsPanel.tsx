@@ -1,8 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
+import { showContractCall } from '@stacks/connect';
+import {
+  bufferCV,
+  callReadOnlyFunction,
+  ClarityType,
+  cvToValue,
+  principalCV,
+  validateStacksAddress,
+  type ClarityValue
+} from '@stacks/transactions';
+import { getNetworkFromAddress } from '../../lib/network/guard';
+import { toStacksNetwork } from '../../lib/network/stacks';
 import {
   parseManageJsonResponse,
   toManageApiErrorMessage
 } from '../lib/api-errors';
+import { useManageWallet } from '../ManageWalletContext';
 import InfoTooltip from './InfoTooltip';
 
 type CollectionRecord = {
@@ -33,6 +46,27 @@ type PublishReadiness = {
 };
 
 type CoverImageSource = 'collection-asset' | 'inscribed-image-url';
+
+type ContractTarget = {
+  address: string;
+  contractName: string;
+  network: 'mainnet' | 'testnet';
+};
+
+type OnChainReservationStatus = {
+  exists: boolean;
+  createdAt: bigint | null;
+  phaseId: bigint | null;
+};
+
+type TxPayload = {
+  txId: string;
+};
+
+const CONTRACT_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9-_]{0,127}$/;
+const HASH_HEX_PATTERN = /^[0-9a-f]{64}$/;
+const XTRATA_APP_ICON_DATA_URI =
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%23f97316"/><path d="M18 20h28v6H18zm0 12h28v6H18zm0 12h28v6H18z" fill="white"/></svg>';
 
 const parsePositiveInt = (value: unknown) => {
   if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
@@ -81,11 +115,68 @@ const normalizeCoverSource = (value: unknown): CoverImageSource | null => {
 const isValidCoverUrl = (value: string) =>
   /^(https?:\/\/|ipfs:\/\/|data:image\/)/i.test(value);
 
+const normalizeHashHex = (value: string) => {
+  const normalized = value.trim().toLowerCase().replace(/^0x/, '');
+  if (!HASH_HEX_PATTERN.test(normalized)) {
+    return null;
+  }
+  return normalized;
+};
+
+const hashHexToBufferCv = (hashHex: string) => {
+  const bytes = new Uint8Array(32);
+  for (let index = 0; index < 32; index += 1) {
+    bytes[index] = Number.parseInt(hashHex.slice(index * 2, index * 2 + 2), 16);
+  }
+  return bufferCV(bytes);
+};
+
+const parseUintCv = (value: ClarityValue | null | undefined) => {
+  if (!value) {
+    return null;
+  }
+  const parsed = cvToValue(value) as unknown;
+  if (typeof parsed === 'bigint') {
+    return parsed;
+  }
+  if (typeof parsed === 'number') {
+    return Number.isFinite(parsed) ? BigInt(Math.floor(parsed)) : null;
+  }
+  if (typeof parsed === 'string' && /^\d+$/.test(parsed)) {
+    return BigInt(parsed);
+  }
+  if (parsed && typeof parsed === 'object' && 'value' in parsed) {
+    const raw = (parsed as { value?: unknown }).value;
+    if (typeof raw === 'string' && /^\d+$/.test(raw)) {
+      return BigInt(raw);
+    }
+  }
+  return null;
+};
+
+const unwrapReadOnly = (value: ClarityValue) => {
+  if (value.type === ClarityType.ResponseOk) {
+    return value.value;
+  }
+  if (value.type === ClarityType.ResponseErr) {
+    const parsed = cvToValue(value.value) as { value?: string } | string;
+    const detail =
+      typeof parsed === 'string'
+        ? parsed
+        : parsed && typeof parsed === 'object' && 'value' in parsed
+          ? parsed.value
+          : 'Read-only call failed';
+    throw new Error(String(detail));
+  }
+  return value;
+};
+
 type PublishOpsPanelProps = {
   activeCollectionId?: string;
 };
 
 export default function PublishOpsPanel(props: PublishOpsPanelProps) {
+  const { walletSession, walletAdapter, connect } = useManageWallet();
   const [collectionId, setCollectionId] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [reservations, setReservations] = useState<Array<Record<string, unknown>>>([]);
@@ -98,6 +189,17 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
   const [liveLinkMessage, setLiveLinkMessage] = useState<string | null>(null);
   const [coverSaving, setCoverSaving] = useState(false);
   const [coverPreviewFailed, setCoverPreviewFailed] = useState(false);
+  const [onChainReservationOwner, setOnChainReservationOwner] = useState('');
+  const [onChainReservationHash, setOnChainReservationHash] = useState('');
+  const [onChainReservationStatus, setOnChainReservationStatus] =
+    useState<OnChainReservationStatus | null>(null);
+  const [onChainReservationMessage, setOnChainReservationMessage] = useState<string | null>(
+    null
+  );
+  const [onChainReservedCount, setOnChainReservedCount] = useState<bigint | null>(null);
+  const [onChainReservationLoading, setOnChainReservationLoading] = useState(false);
+  const [onChainReservationActionPending, setOnChainReservationActionPending] =
+    useState(false);
   const [readiness, setReadiness] = useState<PublishReadiness>({
     loading: false,
     contractConnected: false,
@@ -127,6 +229,18 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
     () => toRecord(metadataCollectionPage?.coverImage) ?? null,
     [metadataCollectionPage]
   );
+  const collectionContractTarget = useMemo((): ContractTarget | null => {
+    const address = toText(collection?.contract_address);
+    const contractName = toText(metadata?.contractName);
+    if (!validateStacksAddress(address) || !CONTRACT_NAME_PATTERN.test(contractName)) {
+      return null;
+    }
+    return {
+      address,
+      contractName,
+      network: getNetworkFromAddress(address) ?? 'mainnet'
+    };
+  }, [collection, metadata]);
 
   const previewTitle = useMemo(
     () =>
@@ -155,6 +269,177 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
     [metadataCollection]
   );
 
+  const callCollectionReadOnly = async (
+    functionName: string,
+    functionArgs: ClarityValue[] = []
+  ) => {
+    if (!collectionContractTarget) {
+      throw new Error('Collection contract is not configured yet.');
+    }
+    const senderAddress = walletSession.address ?? collectionContractTarget.address;
+    const network = toStacksNetwork(walletSession.network ?? collectionContractTarget.network);
+    const value = await callReadOnlyFunction({
+      contractAddress: collectionContractTarget.address,
+      contractName: collectionContractTarget.contractName,
+      functionName,
+      functionArgs,
+      senderAddress,
+      network
+    });
+    return unwrapReadOnly(value);
+  };
+
+  const refreshOnChainReservedCount = async () => {
+    if (!collectionContractTarget) {
+      setOnChainReservedCount(null);
+      return;
+    }
+    try {
+      const reservedCv = await callCollectionReadOnly('get-reserved-count');
+      setOnChainReservedCount(parseUintCv(reservedCv));
+    } catch {
+      setOnChainReservedCount(null);
+    }
+  };
+
+  const parseReservationHashInput = () => {
+    if (!collectionContractTarget) {
+      setOnChainReservationMessage('Collection contract is not configured yet.');
+      return null;
+    }
+    const hashHex = normalizeHashHex(onChainReservationHash);
+    if (!hashHex) {
+      setOnChainReservationMessage(
+        'Enter a valid reservation hash (64 hex characters, optional 0x prefix).'
+      );
+      return null;
+    }
+    return hashHex;
+  };
+
+  const parseReservationTargetInputs = () => {
+    const hashHex = parseReservationHashInput();
+    if (!hashHex) {
+      return null;
+    }
+    const owner = onChainReservationOwner.trim();
+    if (!validateStacksAddress(owner)) {
+      setOnChainReservationMessage('Enter a valid reservation owner wallet address.');
+      return null;
+    }
+    return { owner, hashHex };
+  };
+
+  const requestCollectionContractCall = async (options: {
+    functionName: string;
+    functionArgs: ClarityValue[];
+  }) => {
+    if (!collectionContractTarget) {
+      throw new Error('Collection contract is not configured yet.');
+    }
+    let session = walletSession;
+    if (!session.address || !session.network) {
+      await connect();
+      session = walletAdapter.getSession();
+    }
+    if (!session.address || !session.network) {
+      throw new Error('Connect a wallet before submitting this action.');
+    }
+    return new Promise<TxPayload>((resolve, reject) => {
+      showContractCall({
+        contractAddress: collectionContractTarget.address,
+        contractName: collectionContractTarget.contractName,
+        functionName: options.functionName,
+        functionArgs: options.functionArgs,
+        network: session.network,
+        stxAddress: session.address,
+        appDetails: {
+          name: 'Xtrata Collection Manager',
+          icon: XTRATA_APP_ICON_DATA_URI
+        },
+        onFinish: (payload) => resolve(payload as TxPayload),
+        onCancel: () =>
+          reject(new Error('Wallet cancelled or failed to broadcast transaction.'))
+      });
+    });
+  };
+
+  const loadOnChainReservationStatus = async () => {
+    const target = parseReservationTargetInputs();
+    if (!target) {
+      return;
+    }
+    setOnChainReservationLoading(true);
+    setOnChainReservationMessage(null);
+    try {
+      const reservationCv = await callCollectionReadOnly('get-reservation', [
+        principalCV(target.owner),
+        hashHexToBufferCv(target.hashHex)
+      ]);
+      if (reservationCv.type === ClarityType.OptionalSome) {
+        const raw = cvToValue(reservationCv.value) as {
+          value?: {
+            'created-at'?: { value?: string };
+            'phase-id'?: { value?: string };
+          };
+          'created-at'?: { value?: string };
+          'phase-id'?: { value?: string };
+        };
+        const createdAtRaw =
+          raw?.value?.['created-at']?.value ?? raw?.['created-at']?.value ?? null;
+        const phaseIdRaw =
+          raw?.value?.['phase-id']?.value ?? raw?.['phase-id']?.value ?? null;
+        setOnChainReservationStatus({
+          exists: true,
+          createdAt: createdAtRaw ? BigInt(createdAtRaw) : null,
+          phaseId: phaseIdRaw ? BigInt(phaseIdRaw) : null
+        });
+      } else {
+        setOnChainReservationStatus({ exists: false, createdAt: null, phaseId: null });
+      }
+      await refreshOnChainReservedCount();
+    } catch (error) {
+      setOnChainReservationMessage(
+        toManageApiErrorMessage(error, 'Unable to load on-chain reservation status.')
+      );
+    } finally {
+      setOnChainReservationLoading(false);
+    }
+  };
+
+  const runOnChainReservationAction = async (
+    label: string,
+    functionName: string,
+    ownerRequired: boolean
+  ) => {
+    const hashHex = parseReservationHashInput();
+    if (!hashHex) {
+      return;
+    }
+    const owner = onChainReservationOwner.trim();
+    if (ownerRequired && !validateStacksAddress(owner)) {
+      setOnChainReservationMessage('Enter a valid reservation owner wallet address.');
+      return;
+    }
+    setOnChainReservationActionPending(true);
+    setOnChainReservationMessage(null);
+    try {
+      const functionArgs = ownerRequired
+        ? [principalCV(owner), hashHexToBufferCv(hashHex)]
+        : [hashHexToBufferCv(hashHex)];
+      const payload = await requestCollectionContractCall({
+        functionName,
+        functionArgs
+      });
+      setOnChainReservationMessage(`${label} submitted: ${payload.txId}`);
+      await refreshOnChainReservedCount();
+    } catch (error) {
+      setOnChainReservationMessage(toManageApiErrorMessage(error, `${label} failed`));
+    } finally {
+      setOnChainReservationActionPending(false);
+    }
+  };
+
   const loadReadiness = async () => {
     const normalizedCollectionId = collectionId.trim();
     if (!normalizedCollectionId) {
@@ -163,6 +448,9 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       setCoverSource('collection-asset');
       setSelectedCoverAssetId('');
       setInscribedCoverUrl('');
+      setOnChainReservationStatus(null);
+      setOnChainReservationMessage(null);
+      setOnChainReservedCount(null);
       setReadiness({
         loading: false,
         contractConnected: false,
@@ -232,6 +520,8 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
     } catch (error) {
       setCollection(null);
       setAssets([]);
+      setOnChainReservationStatus(null);
+      setOnChainReservedCount(null);
       setReadiness({
         loading: false,
         contractConnected: false,
@@ -386,7 +676,24 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
     setMessage(null);
     setCoverMessage(null);
     setLiveLinkMessage(null);
+    setOnChainReservationMessage(null);
+    setOnChainReservationStatus(null);
   }, [normalizedActiveCollectionId]);
+
+  useEffect(() => {
+    if (!walletSession.address || onChainReservationOwner.trim().length > 0) {
+      return;
+    }
+    setOnChainReservationOwner(walletSession.address);
+  }, [walletSession.address, onChainReservationOwner]);
+
+  useEffect(() => {
+    if (!collectionContractTarget) {
+      setOnChainReservedCount(null);
+      return;
+    }
+    void refreshOnChainReservedCount();
+  }, [collectionContractTarget, walletSession.address, walletSession.network]);
 
   const availableImageAssets = useMemo(
     () =>
@@ -490,6 +797,13 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
     : 'Draft';
   const collectionStateValue = toText(collection?.state).toLowerCase();
   const alreadyPublished = collectionStateValue === 'published';
+  const onChainContractId = collectionContractTarget
+    ? `${collectionContractTarget.address}.${collectionContractTarget.contractName}`
+    : null;
+  const onChainReservedCountLabel =
+    onChainReservedCount === null ? 'Unknown' : onChainReservedCount.toString();
+  const reservationControlsDisabled =
+    onChainReservationLoading || onChainReservationActionPending || !collectionContractTarget;
 
   const copyLivePageLink = async () => {
     if (!livePageUrl) {
@@ -524,6 +838,8 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
             setMessage(null);
             setCoverMessage(null);
             setLiveLinkMessage(null);
+            setOnChainReservationMessage(null);
+            setOnChainReservationStatus(null);
           }}
         />
         <span className="field__hint">
@@ -540,7 +856,10 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
 
       {livePagePath ? (
         <div className="deploy-wizard__defaults">
-          <p className="deploy-wizard__defaults-title">Live page</p>
+          <p className="deploy-wizard__defaults-title info-label">
+            Live page
+            <InfoTooltip text="This is the public mint page URL collectors use to mint from this collection." />
+          </p>
           <p className="meta-value">
             <code>{livePageUrl || livePagePath}</code>
           </p>
@@ -566,7 +885,10 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       ) : null}
 
       <div className="deploy-wizard__defaults">
-        <p className="deploy-wizard__defaults-title">Publish readiness</p>
+        <p className="deploy-wizard__defaults-title info-label">
+          Publish readiness
+          <InfoTooltip text="Checks if this drop has the minimum setup required before making it live." />
+        </p>
         <ul>
           <li>Contract deployed: {readiness.contractConnected ? 'Yes' : 'No'}</li>
           <li>Current state: {liveState}</li>
@@ -593,6 +915,155 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       </div>
 
       <div className="deploy-wizard__defaults">
+        <p className="deploy-wizard__defaults-title info-label">
+          On-chain reservation recovery
+          <InfoTooltip text="Use this when minting is blocked by a stuck reservation. These actions call the collection contract directly." />
+        </p>
+        <p className="field__hint">
+          If the live mint page says the final slot is reserved, use the owner wallet
+          and reservation hash from the failed/pending <code>mint-begin</code>{' '}
+          transaction.
+        </p>
+        <p className="field__hint">
+          In most cases, reservation owner = the minting wallet (<code>tx-sender</code> on
+          <code> mint-begin</code>), not the contract owner wallet.
+        </p>
+        <p className="meta-value">
+          Connected wallet:{' '}
+          <code>{walletSession.address?.trim() || 'Not connected'}</code>
+        </p>
+        <p className="meta-value">
+          <span className="info-label">
+            Contract
+            <InfoTooltip text="Target collection contract used for these checks and release actions." />
+          </span>
+          : <code>{onChainContractId ?? 'Not configured yet.'}</code>
+        </p>
+        <p className="meta-value">
+          <span className="info-label">
+            On-chain reserved count
+            <InfoTooltip text="Number of active mint reservations currently held in the collection contract." />
+          </span>
+          : {onChainReservedCountLabel}
+        </p>
+
+        <label className="field">
+          <span className="field__label info-label">
+            Reservation owner
+            <InfoTooltip text="Paste the wallet that submitted mint-begin (the tx sender in Hiro Explorer)." />
+          </span>
+          <input
+            className="input"
+            placeholder="SP... / ST..."
+            value={onChainReservationOwner}
+            onChange={(event) => {
+              setOnChainReservationOwner(event.target.value);
+              setOnChainReservationMessage(null);
+            }}
+          />
+        </label>
+
+        <label className="field">
+          <span className="field__label info-label">
+            Inscription hash (expected-hash)
+            <InfoTooltip text="Paste function arg #2 from mint-begin (expected-hash, 64 hex chars, optional 0x)." />
+          </span>
+          <input
+            className="input"
+            placeholder="0x..."
+            value={onChainReservationHash}
+            onChange={(event) => {
+              setOnChainReservationHash(event.target.value);
+              setOnChainReservationMessage(null);
+            }}
+          />
+          <span className="field__hint">
+            In Hiro: open tx → <strong>Function called</strong> → <strong>mint-begin</strong> → copy arg
+            2 <code>expected-hash</code>.
+          </span>
+        </label>
+
+        <div className="mint-actions">
+          <button
+            className="button button--ghost button--mini"
+            type="button"
+            onClick={() => void loadOnChainReservationStatus()}
+            disabled={reservationControlsDisabled}
+          >
+            {onChainReservationLoading ? 'Checking...' : 'Check on-chain reservation'}
+          </button>
+          <button
+            className="button button--ghost button--mini"
+            type="button"
+            onClick={() =>
+              void runOnChainReservationAction(
+                'Release expired reservation',
+                'release-expired-reservation',
+                true
+              )
+            }
+            disabled={reservationControlsDisabled}
+          >
+            {onChainReservationActionPending
+              ? 'Submitting...'
+              : 'Release expired reservation'}
+          </button>
+          <button
+            className="button button--ghost button--mini"
+            type="button"
+            onClick={() =>
+              void runOnChainReservationAction(
+                'Force release reservation',
+                'release-reservation',
+                true
+              )
+            }
+            disabled={reservationControlsDisabled}
+          >
+            {onChainReservationActionPending ? 'Submitting...' : 'Force release reservation'}
+          </button>
+          <button
+            className="button button--ghost button--mini"
+            type="button"
+            onClick={() =>
+              void runOnChainReservationAction(
+                'Cancel reservation',
+                'cancel-reservation',
+                false
+              )
+            }
+            disabled={reservationControlsDisabled}
+          >
+            {onChainReservationActionPending ? 'Submitting...' : 'Cancel as connected wallet'}
+          </button>
+        </div>
+
+        {onChainReservationStatus && (
+          <div className="meta-grid">
+            <div>
+              <span className="meta-label">Reservation exists</span>
+              <span className="meta-value">
+                {onChainReservationStatus.exists ? 'Yes' : 'No'}
+              </span>
+            </div>
+            <div>
+              <span className="meta-label">Created at block</span>
+              <span className="meta-value">
+                {onChainReservationStatus.createdAt?.toString() ?? '—'}
+              </span>
+            </div>
+            <div>
+              <span className="meta-label">Phase ID</span>
+              <span className="meta-value">
+                {onChainReservationStatus.phaseId?.toString() ?? '—'}
+              </span>
+            </div>
+          </div>
+        )}
+        {onChainReservationMessage && <div className="alert">{onChainReservationMessage}</div>}
+      </div>
+
+      <div className="deploy-wizard__defaults">
         <p className="deploy-wizard__defaults-title">Collection cover image</p>
         <p className="field__hint">
           Set the hero image for your live collection page. You can use an uploaded
@@ -600,7 +1071,10 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
         </p>
 
         <label className="field">
-          <span className="field__label">Cover source</span>
+          <span className="field__label info-label">
+            Cover source
+            <InfoTooltip text="Choose whether the live page hero image comes from staged collection artwork or an external inscribed image URL." />
+          </span>
           <select
             className="select"
             value={coverSource}
