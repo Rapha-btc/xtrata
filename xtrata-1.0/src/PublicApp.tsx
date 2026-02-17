@@ -298,6 +298,12 @@ Xtrata's artist portal is the no-code control layer. The SDK is the reusable bui
 - Builders can use SDK clients and workflows to power their own marketplaces, game loops, and launch pages.
 - Both paths run on the same protocol and contract rules.
 
+### Who this section is for
+- Artists: understand what the portal does for you and what stays configurable.
+- Builders: understand how to integrate protocol reads/writes into your own app.
+- Operators: understand allowlist boundaries and controlled rollout flow.
+- Collectors and curious users: understand what is open now vs partner-gated.
+
 ### Allowlist and access boundaries
 - Allowlist is for artist-management actions in \`/manage\` (deploy, publish, and contract-level controls).
 - SDK read integrations are open to any builder.
@@ -312,6 +318,16 @@ Xtrata's artist portal is the no-code control layer. The SDK is the reusable bui
 - First-party pages remain a reference implementation.
 - Third parties can launch branded UX while still settling against Xtrata contracts.
 - Protocol improvements land once and benefit every integrated app.
+
+### Partner access (invite to apply)
+- Partner access is currently curated while the rollout stays high-quality and supportable.
+- If you are building a marketplace, game, launchpad, or creator tool on top of Xtrata, you are encouraged to apply.
+- Include:
+  - your product/use-case summary
+  - target launch timeline
+  - the wallet addresses you want allowlisted for \`/manage\`
+  - the contract flow you plan to use (collection mint, pre-inscribed sale, market, or mixed)
+- Apply via the official channels in External references (\`@XtrataBTC\` on X and GitHub).
 
 ### Practical links
 - SDK start point: \`docs/sdk/README.md\`
@@ -711,11 +727,11 @@ const DOC_SUMMARIES: Record<string, DocSummary> = {
     ]
   },
   'sdk-tooling': {
-    lead: 'Use Manage as the guided control layer, and SDK packages as the reusable build layer.',
+    lead: 'Manage is the guided control layer, while SDK packages power third-party apps and integrations.',
     points: [
-      'Allowlist gates artist-management actions in /manage.',
+      'Public reads are open; allowlist gates deploy/publish actions in /manage.',
       'SDK read integrations are open to third-party builders.',
-      'Use simple clients first, then workflow planners for write transactions.'
+      'Partner teams are invited to apply for curated allowlist access via official channels.'
     ]
   },
   market: {
