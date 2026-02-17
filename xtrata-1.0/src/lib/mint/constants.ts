@@ -10,6 +10,6 @@ export const SIP16_TOKEN_ID_PLACEHOLDER = '{id}';
 export const SIP16_RESOLVER_HOST_PLACEHOLDER = '{resolver-host}';
 export const SIP16_PREVIEW_HOST_PLACEHOLDER = '{preview-host}';
 export const SIP16_COLLECTION_NAME = 'xtrata';
-export const SIP16_COLLECTION_SYMBOL = 'XST';
+export const SIP16_COLLECTION_SYMBOL = 'XTRATA';
 export const SIP16_PLACEHOLDER_IMAGE =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA1MCA1MCc+PGNpcmNsZSBjeD0nMjUnIGN5PScyNScgcj0nMjAnIGZpbGw9J25vbmUnIHN0cm9rZT0nIzYzNjZmMScgc3Ryb2tlLXdpZHRoPSc0Jy8+PGNpcmNsZSBjeD0nMjUnIGN5PScyNScgcj0nMTInIGZpbGw9J25vbmUnIHN0cm9rZT0nI2VjNDg5OScgc3Ryb2tlLXdpZHRoPSc0Jy8+PC9zdmc+';
