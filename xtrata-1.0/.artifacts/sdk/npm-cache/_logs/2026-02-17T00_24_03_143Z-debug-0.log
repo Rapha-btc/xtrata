@@ -1,0 +1,45 @@
+0 verbose cli /opt/homebrew/Cellar/node/24.10.0/bin/node /opt/homebrew/bin/npm
+1 info using npm@11.6.0
+2 info using node@v24.10.0
+3 silly config load:file:/opt/homebrew/lib/node_modules/npm/npmrc
+4 silly config load:file:/Users/melophonic/Documents/GitHub/xtrata/xtrata-1.0/packages/xtrata-reconstruction/.npmrc
+5 silly config load:file:/Users/melophonic/.npmrc
+6 silly config load:file:/opt/homebrew/etc/npmrc
+7 verbose title npm publish
+8 verbose argv "publish" "--dry-run"
+9 verbose logfile logs-max:10 dir:/Users/melophonic/Documents/GitHub/xtrata/xtrata-1.0/.artifacts/sdk/npm-cache/_logs/2026-02-17T00_24_03_143Z-
+10 verbose logfile /Users/melophonic/Documents/GitHub/xtrata/xtrata-1.0/.artifacts/sdk/npm-cache/_logs/2026-02-17T00_24_03_143Z-debug-0.log
+11 silly logfile start cleaning logs, removing 1 files
+12 verbose publish [ '.' ]
+13 silly logfile done cleaning log files
+14 silly packumentCache heap:2348810240 maxSize:587202560 maxEntrySize:293601280
+15 notice
+16 notice package: @xtrata/reconstruction@0.1.0
+17 notice Tarball Contents
+18 notice 295B README.md
+18 notice 2.0kB dist/index.d.ts
+18 notice 1.9kB dist/index.d.ts.map
+18 notice 4.8kB dist/index.js
+18 notice 5.6kB dist/index.js.map
+18 notice 640B package.json
+19 notice Tarball Details
+20 notice name: @xtrata/reconstruction
+21 notice version: 0.1.0
+22 notice filename: xtrata-reconstruction-0.1.0.tgz
+23 notice package size: 4.3 kB
+24 notice unpacked size: 15.3 kB
+25 notice shasum: 339cf5f370093dcfdbef51d8c1fcf1bb468afe18
+26 notice integrity: sha512-qt+xYE97/8mYE[...]sBRa8O4B118yQ==
+27 notice total files: 6
+28 notice
+29 warn This command requires you to be logged in to https://registry.npmjs.org/ (dry-run)
+30 http fetch GET https://registry.npmjs.org/@xtrata%2freconstruction attempt 1 failed with ENOTFOUND
+31 http fetch GET https://registry.npmjs.org/@xtrata%2freconstruction attempt 2 failed with ENOTFOUND
+32 http fetch GET https://registry.npmjs.org/@xtrata%2freconstruction attempt 3 failed with ENOTFOUND
+33 notice Publishing to https://registry.npmjs.org/ with tag latest and default access (dry-run)
+34 verbose cwd /Users/melophonic/Documents/GitHub/xtrata/xtrata-1.0/packages/xtrata-reconstruction
+35 verbose os Darwin 23.6.0
+36 verbose node v24.10.0
+37 verbose npm  v11.6.0
+38 verbose exit 0
+39 info ok
