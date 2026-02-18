@@ -1066,39 +1066,46 @@ const getDocModuleJump = (doc: DocSection | null): DocModuleJump | null => {
 };
 
 const CREATIVE_STORY = {
-  title: 'Xtrata is base infrastructure for trustless creative systems.',
+  title: 'Xtrata is a graph-based, immutable execution reference layer.',
   foundation: [
-    'Xtrata is the foundation layer. It is the infrastructure that gives apps immutable data, verifiable ownership, and timestamped proof on Bitcoin rails.',
-    'It is designed so future Web3 apps can build on shared truth instead of fragile trust assumptions.',
-    'The goal is simple: if it matters, it should be provable.'
+    'Xtrata is infrastructure for on-chain state that must remain verifiable over time.',
+    'It anchors modules, dependencies, and history as an append-only recursive graph instead of isolated mutable records.',
+    'Apps can evolve quickly while inheriting stable, inspectable source-of-truth references.'
   ],
   guarantees: [
-    'Immutability: records cannot be silently rewritten.',
-    'Ownership: rights can stay attached to the asset itself.',
-    'Proof: creation, usage, and history are auditable.'
+    'Append-only lineage: new states extend history instead of rewriting it.',
+    'Deterministic reconstruction: the same references resolve to the same outcome.',
+    'Composable references: systems can reuse shared primitives across apps.',
+    'Forkable state: teams can branch systems without losing provenance.'
   ],
-  audionals: [
-    'Audionals proved something radical: audio can live directly on-chain through Bitcoin Ordinals — not as a pointer, but as real, permanent media.',
-    'Xtrata takes that breakthrough further. Instead of single inscriptions, it enables an entire composable system where stems, patches, takes, samples, and even mix settings exist as modular, verifiable building blocks.',
-    'A song built this way isn’t just uploaded — it is assembled from provable components. Every contribution remains independently owned, timestamped, and reusable.',
-    'Because Xtrata runs via Stacks, this experimentation becomes dramatically cheaper and faster — a powerful sandbox for building recursive creative systems that can anchor back to Bitcoin.',
-    'In this model, a finished work doesn’t merely reference its parts — it executes them. Attribution and ownership are enforced by structure itself.'
+  enablesNow: [
+    'Provenance-first media and asset systems with verifiable lineage.',
+    'Shared game modules with auditable score and event trails.',
+    'Versioned app manifests and dependency registries that can be reconstructed deterministically.',
+    'Governance and policy records with append-only amendment history.',
+    'Cross-app reusable primitives where references remain canonical over time.'
   ],
-
-  collaboration: [
-    'This changes how collaboration works at a fundamental level.',
-    'Instead of relying on contracts, spreadsheets, and delayed royalty reporting, rights can remain fused to the creative elements themselves.',
-    'When a part is used, it must be called. When it is called, it is provably yours. Creative coordination becomes transparent, scalable, and automated by architecture.'
-  ],
-
-  beyondMusic: [
-    'Music is simply the clearest demonstration.',
-    'The same model applies to any system where multiple contributors create shared outcomes — art, publishing, design, research, software.',
-    'Xtrata is built as base infrastructure for these trust-minimized creative networks — a shared layer where execution and proof are the same thing.'
+  enablesNext: [
+    'Shared execution conventions across many independent apps.',
+    'Richer agent and AI memory lineage anchored to immutable reference graphs.',
+    'Large modular ecosystems where apps safely fork, remix, and recombine state.'
   ],
 
-  bigIdea:
-    'The big idea is simple: build systems where the work proves itself. Xtrata provides the infrastructure that makes ownership, attribution, and execution inseparable — not as policy, but as architecture. Music shows what’s possible. Xtrata makes it possible.'
+  architecture: [
+    'Xtrata is the immutable reference graph.',
+    'Contracts enforce bounded rules and settlement logic.',
+    'Applications deliver UX, indexing, and off-chain compute.'
+  ],
+
+  boundaries: [
+    'Xtrata does not replace application UX, indexing, or off-chain compute.',
+    'Xtrata does not make legal rights enforcement automatic by itself.',
+    'Xtrata provides durable state references so higher layers can enforce policy and coordination.'
+  ],
+
+  bigIdeaLead:
+    'The foundational role is simple: make critical state trustworthy, composable, and durable.',
+  bigIdeaTagline: 'Xtrata is boring infrastructure for useful, powerful, and exciting Web3 apps.'
   };
 
 
@@ -2348,7 +2355,7 @@ export default function PublicApp() {
               ))}
 
               <section className="story-modal__section">
-                <h3>What every app inherits from Xtrata</h3>
+                <h3>Core guarantees</h3>
                 <ul className="story-modal__proof-list">
                   {CREATIVE_STORY.guarantees.map((point) => (
                     <li key={point}>{point}</li>
@@ -2357,29 +2364,47 @@ export default function PublicApp() {
               </section>
 
               <section className="story-modal__section">
-                <h3>Using Audionals as the poster child</h3>
-                {CREATIVE_STORY.audionals.map((paragraph) => (
+                <h3>What Xtrata enables now</h3>
+                <ul className="story-modal__proof-list">
+                  {CREATIVE_STORY.enablesNow.map((point) => (
+                    <li key={point}>{point}</li>
+                  ))}
+                </ul>
+              </section>
+
+              <section className="story-modal__section">
+                <h3>What Xtrata could enable next</h3>
+                <ul className="story-modal__proof-list">
+                  {CREATIVE_STORY.enablesNext.map((point) => (
+                    <li key={point}>{point}</li>
+                  ))}
+                </ul>
+              </section>
+
+              <section className="story-modal__section">
+                <h3>Stack separation</h3>
+                {CREATIVE_STORY.architecture.map((paragraph) => (
                   <p key={paragraph}>{paragraph}</p>
                 ))}
               </section>
 
               <section className="story-modal__section">
-                <h3>Why this changes creative collaboration</h3>
-                {CREATIVE_STORY.collaboration.map((paragraph) => (
-                  <p key={paragraph}>{paragraph}</p>
-                ))}
-              </section>
-
-              <section className="story-modal__section">
-                <h3>Beyond music</h3>
-                {CREATIVE_STORY.beyondMusic.map((paragraph) => (
-                  <p key={paragraph}>{paragraph}</p>
-                ))}
+                <h3>Scope and boundaries</h3>
+                <ul className="story-modal__proof-list">
+                  {CREATIVE_STORY.boundaries.map((point) => (
+                    <li key={point}>{point}</li>
+                  ))}
+                </ul>
               </section>
 
               <section className="story-modal__section story-modal__section--highlight">
                 <h3>So. What's the BIG idea?</h3>
-                <p>{CREATIVE_STORY.bigIdea}</p>
+                <p>
+                  {CREATIVE_STORY.bigIdeaLead}
+                  <span className="story-modal__big-idea-tagline">
+                    {CREATIVE_STORY.bigIdeaTagline}
+                  </span>
+                </p>
               </section>
             </div>
           </div>
