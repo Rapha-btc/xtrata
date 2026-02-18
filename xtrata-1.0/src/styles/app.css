@@ -3059,7 +3059,7 @@ p {
 .story-modal__title {
   margin-top: 4px;
   color: var(--ink);
-  font-size: clamp(1.28rem, 2.8vw, 1.7rem);
+  font-size: clamp(1.14rem, 2.2vw, 1.46rem);
   line-height: 1.15;
 }
 
@@ -3115,6 +3115,12 @@ p {
 
 .story-modal__section--highlight p {
   font-weight: 600;
+}
+
+.story-modal__big-idea-tagline {
+  display: block;
+  margin-top: 4px;
+  font-weight: 700;
 }
 
 .field--checkbox {
