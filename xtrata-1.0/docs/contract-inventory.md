@@ -125,6 +125,36 @@ Source: `contracts/live/xtrata-v2.1.0.clar`
 - `get-minted-id(index)`
 - `is-allowed-caller(caller)`
 
+## xtrata-arcade-scores-v1.0
+
+Source: `contracts/live/xtrata-arcade-scores-v1.0.clar`
+
+## Purpose
+- Lightweight arcade score attestation contract for single-call writes.
+- Stores each caller's best score per `{game-id, mode}`.
+- Mode semantics: `u0` score mode (higher is better), `u1` time mode (lower is better).
+
+## Error Codes
+- `ERR-INVALID-MODE` -> `(err u100)`
+- `ERR-NOT-IMPROVEMENT` -> `(err u101)`
+- `ERR-INVALID-NAME` -> `(err u102)`
+- `ERR-INVALID-SCORE` -> `(err u103)`
+- `ERR-NOT-AUTHORIZED` -> `(err u104)`
+
+## Data Vars
+- `contract-owner` (principal)
+
+## Maps
+- `PlayerBest` -> `{ game-id: (string-ascii 32), mode: uint, player: principal }` => `{ name: (string-ascii 12), score: uint, updated-at: uint }`
+
+## Public Functions
+- `submit-score(game-id, mode, score, player-name)`
+- `transfer-contract-ownership(new-owner)`
+
+## Read-Only Functions
+- `get-player-best(game-id, mode, player)`
+- `get-owner()`
+
 ## xtrata-collection-mint-v1.0 (template, legacy)
 
 Source: `contracts/clarinet/contracts/xtrata-collection-mint-v1.0.clar`
