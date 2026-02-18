@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Retro Arcade - Test Runner</title>
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { overflow: auto !important; }
+  body::after { display: none !important; }
+  #test-output { padding: 20px; max-width: 900px; margin: 0 auto; font-family: 'Courier New', monospace; color: #e0e0e0; }
+  #test-output h2 { color: #0ff; margin-bottom: 10px; }
+  #test-output table { font-size: 13px; }
+  #test-output th { color: #0ff; text-align: left; padding: 6px; }
+  #test-output td { padding: 4px 6px; }
+  #run-btn { display: block; margin: 20px auto; padding: 12px 40px; background: #0ff; color: #000;
+    border: none; font-family: 'Courier New', monospace; font-size: 16px; font-weight: bold;
+    cursor: pointer; border-radius: 4px; }
+  #run-btn:hover { background: #0aa; }
+  #top-bar { position: relative; }
+  #app { display: none; }
+</style>
+</head>
+<body>
+<div id="top-bar">
+  <span id="title">Retro Arcade - Test Runner</span>
+  <div id="top-bar-right">
+    <button id="sound-toggle" style="display:none;">🔇</button>
+    <button id="exit-btn" style="display:none;">Exit to Arcade</button>
+  </div>
+</div>
+<div id="app">
+  <div id="home-grid" style="display:none;"></div>
+  <div id="game-container" style="display:none;"></div>
+</div>
+<div id="error-overlay" style="display:none;">
+  <div id="error-box"><h2>Error</h2><p id="error-msg"></p><button id="error-close">OK</button></div>
+</div>
+
+<button id="run-btn">Run All Tests</button>
+<div id="test-output">
+  <p style="color:#888;">Click "Run All Tests" to begin. Tests will launch each game, verify lifecycle, level progression, and high scores.</p>
+</div>
+
+<!-- Load all arcade files -->
+<script src="../lib/utils.js"></script>
+<script src="../lib/highscores.js"></script>
+<script src="../games/game01_astro_blaster.js"></script>
+<script src="../games/game02_neon_runner.js"></script>
+<script src="../games/game03_block_drop.js"></script>
+<script src="../games/game04_maze_escape.js"></script>
+<script src="../games/game05_paddle_punk.js"></script>
+<script src="../games/game06_meteor_miner.js"></script>
+<script src="../games/game07_sky_racer.js"></script>
+<script src="../games/game08_laser_defender.js"></script>
+<script src="../games/game09_snakebyte.js"></script>
+<script src="../games/game10_cipher_quest.js"></script>
+<script src="../games/game11_memory_matrix.js"></script>
+<script src="../games/game12_tile_flip.js"></script>
+<script src="../games/game13_robot_sokoban.js"></script>
+<script src="../games/game14_bubble_pop.js"></script>
+<script src="../games/game15_stealth_grid.js"></script>
+<script src="../games/game16_platform_micro.js"></script>
+<script src="../games/game17_typing_invaders.js"></script>
+<script src="../games/game18_fishing_byte.js"></script>
+<script src="../games/game19_duel_at_dawn.js"></script>
+<script src="../games/game20_circuit_builder.js"></script>
+<script src="../games/game21_boss_rush_mini.js"></script>
+<script src="../main.js"></script>
+
+<!-- Test files -->
+<script src="test_utils.js"></script>
+<script src="tests.js"></script>
+
+<script>
+  /* Disable sound during tests */
+  ArcadeUtils.setSoundEnabled(false);
+
+  document.getElementById('run-btn').addEventListener('click', function(){
+    this.disabled = true;
+    this.textContent = 'Running...';
+    /* Show app container for game rendering */
+    document.getElementById('app').style.display = 'block';
+    ArcadeTests.runAll().then(function(){
+      document.getElementById('run-btn').textContent = 'Tests Complete';
+      document.getElementById('app').style.display = 'none';
+    });
+  });
+</script>
+</body>
+</html>

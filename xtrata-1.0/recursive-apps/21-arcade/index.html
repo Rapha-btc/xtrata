@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Retro Arcade</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="top-bar">
+  <span id="title">Retro Arcade</span>
+  <div id="top-bar-right">
+    <button id="sound-toggle" title="Toggle Sound">🔊</button>
+    <button id="exit-btn" style="display:none;">Exit to Arcade</button>
+  </div>
+</div>
+<div id="app">
+  <div id="home-grid"></div>
+  <div id="game-container" style="display:none;"></div>
+</div>
+<div id="error-overlay" style="display:none;">
+  <div id="error-box">
+    <h2>Game Error</h2>
+    <p id="error-msg"></p>
+    <button id="error-close">Return to Arcade</button>
+  </div>
+</div>
+
+<script src="lib/utils.js"></script>
+<script src="lib/highscores.js"></script>
+<script src="games/game01_astro_blaster.js"></script>
+<script src="games/game02_neon_runner.js?v=2"></script>
+<script src="games/game03_block_drop.js"></script>
+<script src="games/game04_maze_escape.js?v=2"></script>
+<script src="games/game05_paddle_punk.js"></script>
+<script src="games/game06_meteor_miner.js"></script>
+<script src="games/game07_sky_racer.js"></script>
+<script src="games/game08_laser_defender.js"></script>
+<script src="games/game09_snakebyte.js"></script>
+<script src="games/game10_cipher_quest.js"></script>
+<script src="games/game11_memory_matrix.js"></script>
+<script src="games/game12_tile_flip.js?v=2"></script>
+<script src="games/game13_robot_sokoban.js"></script>
+<script src="games/game14_bubble_pop.js"></script>
+<script src="games/game15_stealth_grid.js"></script>
+<script src="games/game16_platform_micro.js"></script>
+<script src="games/game17_typing_invaders.js"></script>
+<script src="games/game18_fishing_byte.js"></script>
+<script src="games/game19_duel_at_dawn.js"></script>
+<script src="games/game20_circuit_builder.js?v=2"></script>
+<script src="games/game21_boss_rush_mini.js"></script>
+<script src="main.js"></script>
+</body>
+</html>
