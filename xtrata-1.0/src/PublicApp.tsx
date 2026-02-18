@@ -332,7 +332,7 @@ Xtrata's artist portal is the no-code control layer. The SDK is the reusable bui
   - target launch timeline
   - the wallet addresses you want allowlisted for \`/manage\`
   - the contract flow you plan to use (collection mint, pre-inscribed sale, market, or mixed)
-- Apply via the official channels in External references (\`@XtrataBTC\` on X and GitHub).
+- Apply via the official channels in External references (\`@XtrataLayers\` on X and GitHub).
 
 ### Practical links
 - SDK start point: \`docs/sdk/README.md\`
@@ -580,9 +580,9 @@ If something looks wrong, start with these checks in order.
     id: 'x',
     title: 'X / Twitter',
     tag: 'Social',
-    description: 'Follow updates from @XtrataBTC on X.',
+    description: 'Follow updates from @XtrataLayers on X.',
     external: true,
-    href: 'https://x.com/XtrataBTC'
+    href: 'https://x.com/XtrataLayers'
   }
 ];
 

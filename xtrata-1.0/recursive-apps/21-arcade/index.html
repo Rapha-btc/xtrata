@@ -10,6 +10,7 @@
 <div id="top-bar">
   <span id="title">Retro Arcade</span>
   <div id="top-bar-right">
+    <span id="wallet-status-badge" class="wallet-status-badge is-loading" aria-live="polite">Wallet: checking...</span>
     <button id="sound-toggle" title="Toggle Sound">🔊</button>
     <button id="exit-btn" style="display:none;">Exit to Arcade</button>
   </div>
@@ -27,6 +28,18 @@
 </div>
 
 <script src="lib/utils.js"></script>
+<script>
+  // Configure this after deploy to enable optional on-chain top-score submissions.
+  // When disabled, gameplay/high-score behavior stays fully local.
+  window.ARCADE_ONCHAIN_CONFIG = window.ARCADE_ONCHAIN_CONFIG || {
+    enabled: false,
+    network: 'mainnet',
+    contractAddress: '',
+    contractName: 'xtrata-arcade-scores-v1-0',
+    functionName: 'submit-score',
+    minRank: 10
+  };
+</script>
 <script src="lib/highscores.js"></script>
 <script src="games/game01_astro_blaster.js"></script>
 <script src="games/game02_neon_runner.js?v=2"></script>

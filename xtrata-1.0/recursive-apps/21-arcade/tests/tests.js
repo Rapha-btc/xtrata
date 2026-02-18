@@ -212,6 +212,47 @@ var ArcadeTests = (function(){
       log('HS: Name entry', true, 'Short names accepted by addEntry');
     } catch(e) { log('HS: Name entry', false, e.message); }
 
+    /* Test 7: On-chain submission bridge */
+    try {
+      var captured = null;
+      HighScores.configureOnChain({
+        enabled: true,
+        network: 'testnet',
+        contractAddress: 'STTESTADDRESS0000000000000000000000000',
+        contractName: 'xtrata-arcade-scores-v1-0',
+        functionName: 'submit-score',
+        minRank: 10
+      });
+      HighScores.setOnChainSubmitter(function(payload){
+        captured = payload;
+        return Promise.resolve({ txId: '0xabc123' });
+      });
+
+      var submitResult = await HighScores.submitOnChainScore({
+        gameId: gameId,
+        mode: 'score',
+        score: 1234,
+        playerName: 'TST',
+        rank: 1
+      });
+
+      TestUtils.assertTrue(!!captured, 'Submitter should receive payload');
+      TestUtils.assertEqual(captured.contractName, 'xtrata-arcade-scores-v1-0', 'Contract name should pass through');
+      TestUtils.assertEqual(submitResult.txId, '0xabc123', 'submitOnChainScore should return submitter tx');
+      log('HS: On-chain bridge', true, 'Payload and response verified');
+    } catch(e) { log('HS: On-chain bridge', false, e.message); }
+    finally {
+      HighScores.setOnChainSubmitter(null);
+      HighScores.configureOnChain({
+        enabled: false,
+        contractAddress: '',
+        contractName: 'xtrata-arcade-scores-v1-0',
+        functionName: 'submit-score',
+        network: 'mainnet',
+        minRank: 10
+      });
+    }
+
     /* Cleanup test data */
     try {
       var data = JSON.parse(localStorage.getItem('retro_arcade_scores') || '{}');

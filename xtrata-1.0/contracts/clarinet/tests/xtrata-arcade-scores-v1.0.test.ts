@@ -42,7 +42,7 @@ describe("xtrata-arcade-scores-v1.0", () => {
     expect(best.type).toBe(ClarityType.OptionalSome);
     const tuple = (best as any).value;
     expect(tuple.type).toBe(ClarityType.Tuple);
-    const value = tuple.data;
+    const value = tuple.value;
     expect(value.score).toEqual(Cl.uint(1000));
     expect(value.name).toEqual(Cl.stringAscii("AAA"));
   });
