@@ -138,127 +138,164 @@ var ArcadeTests = (function(){
   async function highScoreTests(){
     var gameId = 'test_hs_game';
     var mode = 'score';
+    var boardState = {};
+    var captured = null;
 
-    /* Clear any existing test data */
-    try {
-      var data = JSON.parse(localStorage.getItem('retro_arcade_scores') || '{}');
-      delete data[gameId + '_score'];
-      localStorage.setItem('retro_arcade_scores', JSON.stringify(data));
-    } catch(e){}
-
-    /* Test 1: Empty leaderboard */
-    try {
-      var top = HighScores.getTop10(gameId, mode);
-      TestUtils.assertEqual(top.length, 0, 'Empty leaderboard');
-      log('HS: Empty leaderboard', true, 'Returns empty array');
-    } catch(e) { log('HS: Empty leaderboard', false, e.message); }
-
-    /* Test 2: Add entries and verify ordering */
-    try {
-      var scores = [100, 500, 300, 800, 200, 900, 150, 750, 400, 600, 50, 1000];
-      scores.forEach(function(s){
-        HighScores._addEntry(gameId, mode, 'TST', s);
-      });
-      var top = HighScores.getTop10(gameId, mode);
-      TestUtils.assertEqual(top.length, 10, 'Should have max 10 entries');
-      /* Verify descending order */
-      for(var i = 1; i < top.length; i++){
-        TestUtils.assertTrue(top[i-1].score >= top[i].score, 'Scores should be descending');
-      }
-      TestUtils.assertEqual(top[0].score, 1000, 'Top score should be 1000');
-      log('HS: Ordering and max 10', true, 'Top: ' + top[0].score + ', Count: ' + top.length);
-    } catch(e) { log('HS: Ordering and max 10', false, e.message); }
-
-    /* Test 3: Qualifying score check */
-    try {
-      var qualifies = HighScores._qualifies(gameId, mode, 999);
-      TestUtils.assertTrue(qualifies, '999 should qualify (beats some entries)');
-      var notQualifies = HighScores._qualifies(gameId, mode, 10);
-      TestUtils.assertFalse(notQualifies, '10 should not qualify');
-      log('HS: Qualification check', true, '999 qualifies, 10 does not');
-    } catch(e) { log('HS: Qualification check', false, e.message); }
-
-    /* Test 4: Time mode (lower is better) */
-    try {
-      var timeId = 'test_hs_time';
-      var tdata = JSON.parse(localStorage.getItem('retro_arcade_scores') || '{}');
-      delete tdata[timeId + '_time'];
-      localStorage.setItem('retro_arcade_scores', JSON.stringify(tdata));
-
-      HighScores._addEntry(timeId, 'time', 'TST', 5000);
-      HighScores._addEntry(timeId, 'time', 'TST', 3000);
-      HighScores._addEntry(timeId, 'time', 'TST', 7000);
-      var top = HighScores.getTop10(timeId, 'time');
-      TestUtils.assertEqual(top[0].score, 3000, 'Best time should be lowest');
-      TestUtils.assertTrue(top[0].score <= top[1].score, 'Times should be ascending');
-      log('HS: Time mode ordering', true, 'Best: ' + top[0].score);
-    } catch(e) { log('HS: Time mode ordering', false, e.message); }
-
-    /* Test 5: Persistence */
-    try {
-      var stored = localStorage.getItem('retro_arcade_scores');
-      TestUtils.assertTrue(stored && stored.length > 10, 'Data should be in localStorage');
-      var parsed = JSON.parse(stored);
-      TestUtils.assertTrue(parsed[gameId + '_score'], 'Game data should exist');
-      log('HS: Persistence', true, 'Data persists in localStorage');
-    } catch(e) { log('HS: Persistence', false, e.message); }
-
-    /* Test 6: Name validation (3-12 chars) */
-    try {
-      /* The name entry is interactive, so we test the addEntry directly */
-      HighScores._addEntry(gameId, mode, 'AB', 9999); /* short name gets padded in UI */
-      var top = HighScores.getTop10(gameId, mode);
-      TestUtils.assertTrue(top[0].score === 9999, 'Entry with short name should be added');
-      log('HS: Name entry', true, 'Short names accepted by addEntry');
-    } catch(e) { log('HS: Name entry', false, e.message); }
-
-    /* Test 7: On-chain submission bridge */
-    try {
-      var captured = null;
-      HighScores.configureOnChain({
-        enabled: true,
-        network: 'testnet',
-        contractAddress: 'STTESTADDRESS0000000000000000000000000',
-        contractName: 'xtrata-arcade-scores-v1-0',
-        functionName: 'submit-score',
-        minRank: 10
-      });
-      HighScores.setOnChainSubmitter(function(payload){
-        captured = payload;
-        return Promise.resolve({ txId: '0xabc123' });
-      });
-
-      var submitResult = await HighScores.submitOnChainScore({
-        gameId: gameId,
-        mode: 'score',
-        score: 1234,
-        playerName: 'TST',
-        rank: 1
-      });
-
-      TestUtils.assertTrue(!!captured, 'Submitter should receive payload');
-      TestUtils.assertEqual(captured.contractName, 'xtrata-arcade-scores-v1-0', 'Contract name should pass through');
-      TestUtils.assertEqual(submitResult.txId, '0xabc123', 'submitOnChainScore should return submitter tx');
-      log('HS: On-chain bridge', true, 'Payload and response verified');
-    } catch(e) { log('HS: On-chain bridge', false, e.message); }
-    finally {
-      HighScores.setOnChainSubmitter(null);
-      HighScores.configureOnChain({
-        enabled: false,
-        contractAddress: '',
-        contractName: 'xtrata-arcade-scores-v1-0',
-        functionName: 'submit-score',
-        network: 'mainnet',
-        minRank: 10
+    function bkey(id, m){ return id + '_' + m; }
+    function clone(list){
+      return (list || []).map(function(item){
+        return {
+          rank: item.rank,
+          name: item.name,
+          score: item.score,
+          updatedAt: item.updatedAt || 0,
+          player: item.player || null
+        };
       });
     }
 
-    /* Cleanup test data */
     try {
-      var data = JSON.parse(localStorage.getItem('retro_arcade_scores') || '{}');
-      delete data[gameId + '_score'];
-      delete data['test_hs_time_time'];
-      localStorage.setItem('retro_arcade_scores', JSON.stringify(data));
+      localStorage.removeItem('retro_arcade_scores');
+      localStorage.removeItem('retro_arcade_personal_bests');
+    } catch(e){}
+
+    boardState[bkey(gameId, mode)] = clone([
+      { rank: 1, name: 'AAA', score: 1000, player: 'P1' },
+      { rank: 2, name: 'BBB', score: 800, player: 'P2' },
+      { rank: 3, name: 'CCC', score: 700, player: 'P3' }
+    ]);
+    boardState[bkey('test_hs_time', 'time')] = clone([
+      { rank: 1, name: 'FAST', score: 3000, player: 'T1' },
+      { rank: 2, name: 'GOOD', score: 4500, player: 'T2' },
+      { rank: 3, name: 'SLOW', score: 7000, player: 'T3' }
+    ]);
+
+    HighScores.configureOnChain({
+      enabled: true,
+      network: 'testnet',
+      contractAddress: 'STTESTADDRESS0000000000000000000000000',
+      contractName: 'xtrata-arcade-scores-v1-0',
+      functionName: 'submit-score',
+      leaderboardFunctionName: 'get-top10',
+      minRank: 10
+    });
+
+    HighScores.setOnChainLeaderboardFetcher(function(payload){
+      return Promise.resolve(clone(boardState[bkey(payload.gameId, payload.mode)] || []));
+    });
+
+    HighScores.setOnChainSubmitter(function(payload){
+      captured = payload;
+      var key = bkey(payload.gameId, payload.mode);
+      var current = clone(boardState[key] || []);
+      var i;
+      for(i = current.length - 1; i >= 0; i--){
+        if(current[i].player === 'SIM_PLAYER'){
+          current.splice(i, 1);
+        }
+      }
+      var insertAt = current.length;
+      for(i = 0; i < current.length; i++){
+        if(payload.mode === 'time'){
+          if(payload.score < current[i].score){ insertAt = i; break; }
+        } else {
+          if(payload.score > current[i].score){ insertAt = i; break; }
+        }
+      }
+      current.splice(insertAt, 0, {
+        name: payload.playerName,
+        score: payload.score,
+        player: 'SIM_PLAYER'
+      });
+      current = current.slice(0, 10);
+      for(i = 0; i < current.length; i++){ current[i].rank = i + 1; }
+      boardState[key] = current;
+      return Promise.resolve({ txId: '0xabc123' });
+    });
+
+    /* Test 1: Empty on-chain leaderboard */
+    try {
+      var empty = await HighScores.fetchTop10('empty_game', 'score', { force: true });
+      TestUtils.assertEqual(empty.length, 0, 'Empty chain leaderboard should return []');
+      log('HS: Empty on-chain leaderboard', true, 'Returns empty array');
+    } catch(e) { log('HS: Empty on-chain leaderboard', false, e.message); }
+
+    /* Test 2: Fetch ordering (score mode) */
+    try {
+      var top = await HighScores.fetchTop10(gameId, mode, { force: true });
+      TestUtils.assertEqual(top.length, 3, 'Should fetch 3 score entries');
+      TestUtils.assertTrue(top[0].score >= top[1].score, 'Score board should be descending');
+      TestUtils.assertEqual(top[0].score, 1000, 'Top score should be 1000');
+      log('HS: Score ordering', true, 'Top score from chain is ' + top[0].score);
+    } catch(e) { log('HS: Score ordering', false, e.message); }
+
+    /* Test 3: Fetch ordering (time mode) */
+    try {
+      var timeTop = await HighScores.fetchTop10('test_hs_time', 'time', { force: true });
+      TestUtils.assertEqual(timeTop.length, 3, 'Should fetch 3 time entries');
+      TestUtils.assertTrue(timeTop[0].score <= timeTop[1].score, 'Time board should be ascending');
+      TestUtils.assertEqual(timeTop[0].score, 3000, 'Best time should be lowest');
+      log('HS: Time ordering', true, 'Best time from chain is ' + timeTop[0].score);
+    } catch(e) { log('HS: Time ordering', false, e.message); }
+
+    /* Test 4: Qualification check uses chain board */
+    try {
+      var current = await HighScores.fetchTop10(gameId, mode, { force: true });
+      var qualifies = HighScores._qualifies(gameId, mode, 900, current);
+      var notQualifies = HighScores._qualifies(gameId, mode, 1, current);
+      TestUtils.assertTrue(qualifies, '900 should qualify in current board');
+      TestUtils.assertFalse(notQualifies, '1 should not qualify');
+      log('HS: Qualification check', true, 'Qualification now based on chain board');
+    } catch(e) { log('HS: Qualification check', false, e.message); }
+
+    /* Test 5: Local storage keeps personal best only */
+    try {
+      HighScores._recordPersonalBest(gameId, mode, 500);
+      HighScores._recordPersonalBest(gameId, mode, 400);
+      HighScores._recordPersonalBest(gameId, mode, 700);
+      var best = HighScores.getBest(gameId, mode);
+      TestUtils.assertEqual(best, 700, 'Personal best should keep improved score only');
+      var pbRaw = localStorage.getItem('retro_arcade_personal_bests');
+      TestUtils.assertTrue(!!pbRaw, 'PB key should exist');
+      var legacyRaw = localStorage.getItem('retro_arcade_scores');
+      TestUtils.assertFalse(!!legacyRaw, 'Legacy local leaderboard key should not be used');
+      log('HS: Personal best storage', true, 'PB stored locally, leaderboard not local');
+    } catch(e) { log('HS: Personal best storage', false, e.message); }
+
+    /* Test 6: On-chain submission bridge + board update */
+    try {
+      var submitResult = await HighScores.submitOnChainScore({
+        gameId: gameId,
+        mode: 'score',
+        score: 1200,
+        playerName: 'TST',
+        rank: 1
+      });
+      TestUtils.assertTrue(!!captured, 'Submitter should receive payload');
+      TestUtils.assertEqual(captured.contractName, 'xtrata-arcade-scores-v1-0', 'Contract name should pass through');
+      TestUtils.assertEqual(submitResult.txId, '0xabc123', 'submitOnChainScore should return tx id');
+
+      var refreshed = await HighScores.fetchTop10(gameId, mode, { force: true });
+      TestUtils.assertEqual(refreshed[0].score, 1200, 'Refreshed chain board should include verified score');
+      log('HS: On-chain bridge', true, 'Submitter payload and refresh verified');
+    } catch(e) { log('HS: On-chain bridge', false, e.message); }
+
+    HighScores.setOnChainSubmitter(null);
+    HighScores.setOnChainLeaderboardFetcher(null);
+    HighScores.configureOnChain({
+      enabled: true,
+      contractAddress: '',
+      contractName: 'xtrata-arcade-scores-v1-0',
+      functionName: 'submit-score',
+      leaderboardFunctionName: 'get-top10',
+      network: 'mainnet',
+      apiBaseUrl: 'https://api.mainnet.hiro.so',
+      readSenderAddress: '',
+      minRank: 10
+    });
+
+    try {
+      localStorage.removeItem('retro_arcade_personal_bests');
     } catch(e){}
   }
 

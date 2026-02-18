@@ -77,14 +77,9 @@ plan:
     - id: 1
       transactions:
         - emulated-contract-publish:
-            contract-name: xtrata-v1-1-1
+            contract-name: xtrata-arcade-scores-v1-0
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-v1.1.1.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: xtrata-v2-1-0
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-v2.1.0.clar
+            path: contracts/xtrata-arcade-scores-v1.0.clar
             clarity-version: 3
         - emulated-contract-publish:
             contract-name: xtrata-collection-mint-v1-0
@@ -110,6 +105,16 @@ plan:
             contract-name: xtrata-market-v1-1
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/xtrata-market-v1.1.clar
+            clarity-version: 3
+        - emulated-contract-publish:
+            contract-name: xtrata-v1-1-1
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/xtrata-v1.1.1.clar
+            clarity-version: 3
+        - emulated-contract-publish:
+            contract-name: xtrata-v2-1-0
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/xtrata-v2.1.0.clar
             clarity-version: 3
         - emulated-contract-publish:
             contract-name: xtrata-preinscribed-collection-sale-v1-0

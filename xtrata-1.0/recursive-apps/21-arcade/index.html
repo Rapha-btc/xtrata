@@ -29,14 +29,17 @@
 
 <script src="lib/utils.js"></script>
 <script>
-  // Configure this after deploy to enable optional on-chain top-score submissions.
-  // When disabled, gameplay/high-score behavior stays fully local.
+  // Configure this after deploy to enable on-chain Top 10 verification.
+  // Top 10 is on-chain only. Local storage keeps personal bests only.
   window.ARCADE_ONCHAIN_CONFIG = window.ARCADE_ONCHAIN_CONFIG || {
-    enabled: false,
+    enabled: true,
     network: 'mainnet',
-    contractAddress: '',
+    contractAddress: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
     contractName: 'xtrata-arcade-scores-v1-0',
     functionName: 'submit-score',
+    leaderboardFunctionName: 'get-top10',
+    apiBaseUrl: 'https://api.mainnet.hiro.so',
+    readSenderAddress: '',
     minRank: 10
   };
 </script>

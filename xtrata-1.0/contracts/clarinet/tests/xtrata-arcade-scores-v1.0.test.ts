@@ -3,8 +3,15 @@ import { describe, expect, it } from "vitest";
 
 const accounts = simnet.getAccounts();
 const deployer = accounts.get("deployer")!;
+const faucet = accounts.get("faucet")!;
 const wallet1 = accounts.get("wallet_1")!;
 const wallet2 = accounts.get("wallet_2")!;
+const wallet3 = accounts.get("wallet_3")!;
+const wallet4 = accounts.get("wallet_4")!;
+const wallet5 = accounts.get("wallet_5")!;
+const wallet6 = accounts.get("wallet_6")!;
+const wallet7 = accounts.get("wallet_7")!;
+const wallet8 = accounts.get("wallet_8")!;
 
 const contract = `${deployer}.xtrata-arcade-scores-v1-0`;
 
@@ -13,8 +20,22 @@ function unwrapOk(result: any) {
   return result.value;
 }
 
+function unwrapTop10(result: any) {
+  const listValue = unwrapOk(result);
+  expect(listValue.type).toBe(ClarityType.List);
+  const list = (listValue as any).list || (listValue as any).value || [];
+  const entries: any[] = [];
+  for (const item of list) {
+    if (item.type === ClarityType.OptionalSome) {
+      expect(item.value.type).toBe(ClarityType.Tuple);
+      entries.push(item.value.value);
+    }
+  }
+  return entries;
+}
+
 describe("xtrata-arcade-scores-v1.0", () => {
-  it("stores first score submission", () => {
+  it("stores first score submission and rank", () => {
     const submit = simnet.callPublicFn(
       contract,
       "submit-score",
@@ -26,29 +47,29 @@ describe("xtrata-arcade-scores-v1.0", () => {
       ],
       wallet1
     ).result;
-    unwrapOk(submit);
+    expect(submit).toBeOk(Cl.uint(1));
 
-    const best = simnet.callReadOnlyFn(
+    const top1 = simnet.callReadOnlyFn(
       contract,
-      "get-player-best",
+      "get-top10-entry",
       [
         Cl.stringAscii("astro_blaster"),
         Cl.uint(0),
-        Cl.standardPrincipal(wallet1),
+        Cl.uint(1),
       ],
       deployer
     ).result;
 
-    expect(best.type).toBe(ClarityType.OptionalSome);
-    const tuple = (best as any).value;
-    expect(tuple.type).toBe(ClarityType.Tuple);
-    const value = tuple.value;
-    expect(value.score).toEqual(Cl.uint(1000));
-    expect(value.name).toEqual(Cl.stringAscii("AAA"));
+    const top1Value = unwrapOk(top1);
+    expect(top1Value.type).toBe(ClarityType.OptionalSome);
+    const top1Tuple = (top1Value as any).value.value;
+    expect(top1Tuple.score).toEqual(Cl.uint(1000));
+    expect(top1Tuple.name).toEqual(Cl.stringAscii("AAA"));
+    expect(top1Tuple.player).toEqual(Cl.standardPrincipal(wallet1));
   });
 
   it("rejects score-mode submissions that are not improvements", () => {
-    unwrapOk(
+    expect(
       simnet.callPublicFn(
         contract,
         "submit-score",
@@ -60,7 +81,7 @@ describe("xtrata-arcade-scores-v1.0", () => {
         ],
         wallet1
       ).result
-    );
+    ).toBeOk(Cl.uint(1));
 
     const lower = simnet.callPublicFn(
       contract,
@@ -88,7 +109,7 @@ describe("xtrata-arcade-scores-v1.0", () => {
     ).result;
     expect(equal).toBeErr(Cl.uint(101));
 
-    unwrapOk(
+    expect(
       simnet.callPublicFn(
         contract,
         "submit-score",
@@ -100,11 +121,11 @@ describe("xtrata-arcade-scores-v1.0", () => {
         ],
         wallet1
       ).result
-    );
+    ).toBeOk(Cl.uint(1));
   });
 
   it("requires lower times for time mode", () => {
-    unwrapOk(
+    expect(
       simnet.callPublicFn(
         contract,
         "submit-score",
@@ -116,7 +137,7 @@ describe("xtrata-arcade-scores-v1.0", () => {
         ],
         wallet2
       ).result
-    );
+    ).toBeOk(Cl.uint(1));
 
     const slower = simnet.callPublicFn(
       contract,
@@ -131,7 +152,7 @@ describe("xtrata-arcade-scores-v1.0", () => {
     ).result;
     expect(slower).toBeErr(Cl.uint(101));
 
-    unwrapOk(
+    expect(
       simnet.callPublicFn(
         contract,
         "submit-score",
@@ -143,7 +164,131 @@ describe("xtrata-arcade-scores-v1.0", () => {
         ],
         wallet2
       ).result
-    );
+    ).toBeOk(Cl.uint(1));
+  });
+
+  it("maintains a ranked top10 and rejects non-qualifying entries", () => {
+    const participants = [
+      deployer,
+      faucet,
+      wallet1,
+      wallet2,
+      wallet3,
+      wallet4,
+      wallet5,
+      wallet6,
+      wallet7,
+      wallet8,
+    ];
+    const scores = [1000, 900, 800, 700, 600, 500, 400, 300, 200, 100];
+
+    for (let i = 0; i < participants.length; i++) {
+      const result = simnet.callPublicFn(
+        contract,
+        "submit-score",
+        [
+          Cl.stringAscii("snakebyte"),
+          Cl.uint(0),
+          Cl.uint(scores[i]),
+          Cl.stringAscii(`P${String(i).padStart(2, "0")}`),
+        ],
+        participants[i]
+      ).result;
+      expect(result.type).toBe(ClarityType.ResponseOk);
+    }
+
+    const reject = simnet.callPublicFn(
+      contract,
+      "submit-score",
+      [
+        Cl.stringAscii("snakebyte"),
+        Cl.uint(0),
+        Cl.uint(50),
+        Cl.stringAscii("LOW"),
+      ],
+      "ST000000000000000000002AMW42H"
+    ).result;
+    expect(reject).toBeErr(Cl.uint(105));
+
+    const board = simnet.callReadOnlyFn(
+      contract,
+      "get-top10",
+      [Cl.stringAscii("snakebyte"), Cl.uint(0)],
+      deployer
+    ).result;
+    const entries = unwrapTop10(board);
+    expect(entries.length).toBe(10);
+    expect(entries[0].score).toEqual(Cl.uint(1000));
+    expect(entries[9].score).toEqual(Cl.uint(100));
+  });
+
+  it("removes old slot and re-ranks improved player without duplicates", () => {
+    expect(
+      simnet.callPublicFn(
+        contract,
+        "submit-score",
+        [
+          Cl.stringAscii("bubble_pop"),
+          Cl.uint(0),
+          Cl.uint(500),
+          Cl.stringAscii("A01"),
+        ],
+        wallet1
+      ).result
+    ).toBeOk(Cl.uint(1));
+    expect(
+      simnet.callPublicFn(
+        contract,
+        "submit-score",
+        [
+          Cl.stringAscii("bubble_pop"),
+          Cl.uint(0),
+          Cl.uint(400),
+          Cl.stringAscii("B02"),
+        ],
+        wallet2
+      ).result
+    ).toBeOk(Cl.uint(2));
+    expect(
+      simnet.callPublicFn(
+        contract,
+        "submit-score",
+        [
+          Cl.stringAscii("bubble_pop"),
+          Cl.uint(0),
+          Cl.uint(300),
+          Cl.stringAscii("C03"),
+        ],
+        wallet3
+      ).result
+    ).toBeOk(Cl.uint(3));
+
+    expect(
+      simnet.callPublicFn(
+        contract,
+        "submit-score",
+        [
+          Cl.stringAscii("bubble_pop"),
+          Cl.uint(0),
+          Cl.uint(600),
+          Cl.stringAscii("C03"),
+        ],
+        wallet3
+      ).result
+    ).toBeOk(Cl.uint(1));
+
+    const board = simnet.callReadOnlyFn(
+      contract,
+      "get-top10",
+      [Cl.stringAscii("bubble_pop"), Cl.uint(0)],
+      deployer
+    ).result;
+    const entries = unwrapTop10(board);
+    expect(entries.length).toBe(3);
+    expect(entries[0].player).toEqual(Cl.standardPrincipal(wallet3));
+    expect(entries[0].score).toEqual(Cl.uint(600));
+    expect(entries[1].player).toEqual(Cl.standardPrincipal(wallet1));
+    expect(entries[2].player).toEqual(Cl.standardPrincipal(wallet2));
   });
 
   it("validates mode, name length, and score", () => {
@@ -185,6 +330,14 @@ describe("xtrata-arcade-scores-v1.0", () => {
       wallet1
     ).result;
     expect(badScore).toBeErr(Cl.uint(103));
+
+    const badRank = simnet.callReadOnlyFn(
+      contract,
+      "get-top10-entry",
+      [Cl.stringAscii("snakebyte"), Cl.uint(0), Cl.uint(0)],
+      deployer
+    ).result;
+    expect(badRank).toBeErr(Cl.uint(106));
   });
 
   it("allows owner transfer by current owner only", () => {

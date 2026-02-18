@@ -50,6 +50,27 @@ const VARIANT_SETS = [
         fallback: 'contracts/other/xtrata-v2.1.0.clar'
       }
     ]
+  },
+  {
+    id: 'xtrata-arcade-scores-v1.0',
+    syncMode: 'plain',
+    variants: [
+      {
+        name: 'clarinet',
+        file: 'contracts/clarinet/contracts/xtrata-arcade-scores-v1.0.clar',
+        fallback: 'contracts/other/xtrata-arcade-scores-v1.0.clar'
+      },
+      {
+        name: 'testnet',
+        file: 'contracts/other/xtrata-arcade-scores-v1.0.clar',
+        fallback: 'contracts/clarinet/contracts/xtrata-arcade-scores-v1.0.clar'
+      },
+      {
+        name: 'mainnet',
+        file: 'contracts/live/xtrata-arcade-scores-v1.0.clar',
+        fallback: 'contracts/other/xtrata-arcade-scores-v1.0.clar'
+      }
+    ]
   }
 ];
 
@@ -164,6 +185,44 @@ const main = async () => {
 
   for (const set of VARIANT_SETS) {
     const setResults = [];
+    const syncMode = set.syncMode ?? 'traits';
+
+    if (syncMode === 'plain') {
+      for (const variant of set.variants) {
+        const loaded = await loadFile(variant.file, variant.fallback, fix);
+        setResults.push({
+          name: variant.name,
+          file: variant.file,
+          changed: false,
+          existed: loaded.existed,
+          content: loaded.content
+        });
+      }
+
+      const source = setResults[0];
+      if (!source) {
+        throw new Error(`Variant set ${set.id} has no source variants`);
+      }
+
+      for (const entry of setResults) {
+        const changed = entry.content !== source.content;
+        if (changed && fix) {
+          const absolute = path.join(ROOT, entry.file);
+          await fs.writeFile(absolute, source.content, 'utf8');
+        }
+        entry.changed = changed;
+        entry.content = changed && fix ? source.content : entry.content;
+        results.push(entry);
+      }
+
+      for (const entry of setResults) {
+        const status = entry.changed ? (fix ? 'updated' : 'mismatch') : 'ok';
+        const created = entry.existed ? '' : ' (created)';
+        rows.push(`- ${set.id}/${entry.name}: ${entry.file} -> plain [${status}]${created}`);
+      }
+      continue;
+    }
+
     for (const variant of set.variants) {
       const loaded = await loadFile(variant.file, variant.fallback, fix);
       const normalized = normalizeTraitLines(loaded.content, variant.trait);

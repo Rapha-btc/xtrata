@@ -130,8 +130,9 @@ Source: `contracts/live/xtrata-v2.1.0.clar`
 Source: `contracts/live/xtrata-arcade-scores-v1.0.clar`
 
 ## Purpose
-- Lightweight arcade score attestation contract for single-call writes.
-- Stores each caller's best score per `{game-id, mode}`.
+- Lightweight arcade leaderboard + score attestation contract for single-call writes.
+- Maintains a ranked top-10 board per `{game-id, mode}`.
+- Stores each caller's best verified score per `{game-id, mode}`.
 - Mode semantics: `u0` score mode (higher is better), `u1` time mode (lower is better).
 
 ## Error Codes
@@ -140,12 +141,15 @@ Source: `contracts/live/xtrata-arcade-scores-v1.0.clar`
 - `ERR-INVALID-NAME` -> `(err u102)`
 - `ERR-INVALID-SCORE` -> `(err u103)`
 - `ERR-NOT-AUTHORIZED` -> `(err u104)`
+- `ERR-NOT-TOP10` -> `(err u105)`
+- `ERR-INVALID-RANK` -> `(err u106)`
 
 ## Data Vars
 - `contract-owner` (principal)
 
 ## Maps
 - `PlayerBest` -> `{ game-id: (string-ascii 32), mode: uint, player: principal }` => `{ name: (string-ascii 12), score: uint, updated-at: uint }`
+- `LeaderboardSlot` -> `{ game-id: (string-ascii 32), mode: uint, rank: uint }` => `{ player: principal, name: (string-ascii 12), score: uint, updated-at: uint }`
 
 ## Public Functions
 - `submit-score(game-id, mode, score, player-name)`
@@ -153,6 +157,8 @@ Source: `contracts/live/xtrata-arcade-scores-v1.0.clar`
 
 ## Read-Only Functions
 - `get-player-best(game-id, mode, player)`
+- `get-top10(game-id, mode)`
+- `get-top10-entry(game-id, mode, rank)`
 - `get-owner()`
 
 ## xtrata-collection-mint-v1.0 (template, legacy)
