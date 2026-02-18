@@ -3,6 +3,23 @@ var HighScores = (function(){
   var STORAGE_KEY = 'retro_arcade_scores';
   var MAX_ENTRIES = 10;
 
+  var MODE_SCORE = 0;
+  var MODE_TIME = 1;
+
+  var DEFAULT_ONCHAIN_CONFIG = {
+    enabled: false,
+    network: 'mainnet',
+    contractAddress: '',
+    contractName: 'xtrata-arcade-scores-v1-0',
+    functionName: 'submit-score',
+    minRank: 10
+  };
+
+  var onChainConfig = _normalizeOnChainConfig(
+    typeof window !== 'undefined' ? window.ARCADE_ONCHAIN_CONFIG : null
+  );
+  var customOnChainSubmitter = null;
+
   function _load(){
     try{
       var d = localStorage.getItem(STORAGE_KEY);
@@ -52,6 +69,270 @@ var HighScores = (function(){
     return list[0].score;
   }
 
+  function _copyOnChainConfig(source){
+    return {
+      enabled: !!source.enabled,
+      network: source.network || 'mainnet',
+      contractAddress: source.contractAddress || '',
+      contractName: source.contractName || 'xtrata-arcade-scores-v1-0',
+      functionName: source.functionName || 'submit-score',
+      minRank: source.minRank || 10
+    };
+  }
+
+  function _normalizeOnChainConfig(input){
+    var base = _copyOnChainConfig(DEFAULT_ONCHAIN_CONFIG);
+    if(!input || typeof input !== 'object') return base;
+
+    if(typeof input.enabled === 'boolean') base.enabled = input.enabled;
+    if(typeof input.network === 'string' && input.network.trim()) base.network = input.network.trim();
+    if(typeof input.contractAddress === 'string') base.contractAddress = input.contractAddress.trim();
+    if(typeof input.contractName === 'string' && input.contractName.trim()) base.contractName = input.contractName.trim();
+    if(typeof input.functionName === 'string' && input.functionName.trim()) base.functionName = input.functionName.trim();
+
+    var rankNum = Number(input.minRank);
+    if(isFinite(rankNum) && rankNum > 0){
+      base.minRank = Math.floor(rankNum);
+    }
+
+    return base;
+  }
+
+  function configureOnChain(config){
+    var next = _copyOnChainConfig(onChainConfig);
+    config = config || {};
+    for(var key in config){
+      if(Object.prototype.hasOwnProperty.call(config, key)){
+        next[key] = config[key];
+      }
+    }
+    onChainConfig = _normalizeOnChainConfig(next);
+    return getOnChainConfig();
+  }
+
+  function getOnChainConfig(){
+    return _copyOnChainConfig(onChainConfig);
+  }
+
+  function setOnChainSubmitter(submitter){
+    customOnChainSubmitter = typeof submitter === 'function' ? submitter : null;
+  }
+
+  function _sanitizeAscii(input, maxLen, fallback){
+    var raw = input == null ? '' : String(input);
+    var out = '';
+    for(var i=0; i<raw.length; i++){
+      var code = raw.charCodeAt(i);
+      if(code >= 32 && code <= 126){
+        out += raw.charAt(i);
+        if(out.length >= maxLen) break;
+      }
+    }
+    if(out.length === 0) out = fallback || '';
+    if(out.length > maxLen) out = out.substring(0, maxLen);
+    return out;
+  }
+
+  function _safePlayerName(input){
+    var name = _sanitizeAscii(input, 12, 'AAA');
+    if(name.length < 3){
+      name = (name + 'AAA').substring(0,3);
+    }
+    return name;
+  }
+
+  function _safeGameId(input){
+    return _sanitizeAscii(input, 32, 'unknown_game');
+  }
+
+  function _toModeUint(mode){
+    return mode === 'time' ? MODE_TIME : MODE_SCORE;
+  }
+
+  function _encodeUIntCV(value){
+    var num;
+    try{
+      num = BigInt(value);
+    }catch(e){
+      throw new Error('Invalid uint value for contract call.');
+    }
+    if(num < 0n){
+      throw new Error('Contract call uint cannot be negative.');
+    }
+    var hex = num.toString(16);
+    if(hex.length > 32){
+      throw new Error('Contract call uint exceeds Clarity uint width.');
+    }
+    while(hex.length < 32) hex = '0' + hex;
+    return '0x01' + hex;
+  }
+
+  function _encodeAsciiCV(value){
+    var text = String(value == null ? '' : value);
+    var hex = '';
+    for(var i=0; i<text.length; i++){
+      var code = text.charCodeAt(i);
+      if(code < 0 || code > 127){
+        throw new Error('Contract call string must be ASCII.');
+      }
+      var byteHex = code.toString(16);
+      if(byteHex.length < 2) byteHex = '0' + byteHex;
+      hex += byteHex;
+    }
+    var lenHex = text.length.toString(16);
+    while(lenHex.length < 8) lenHex = '0' + lenHex;
+    return '0x0d' + lenHex + hex;
+  }
+
+  function _getStacksProvider(){
+    if(typeof window === 'undefined') return null;
+    if(window.StacksProvider && typeof window.StacksProvider.request === 'function'){
+      return window.StacksProvider;
+    }
+    if(window.LeatherProvider && typeof window.LeatherProvider.request === 'function'){
+      return window.LeatherProvider;
+    }
+    return null;
+  }
+
+  function _requestWalletContractCall(provider, params){
+    return Promise.resolve()
+      .then(function(){
+        return provider.request('stx_callContract', params);
+      })
+      .catch(function(){
+        return provider.request({ method: 'stx_callContract', params: params });
+      });
+  }
+
+  function _defaultOnChainSubmitter(payload){
+    var provider = _getStacksProvider();
+    if(!provider){
+      return Promise.reject(new Error('No Stacks wallet provider found in this browser.'));
+    }
+
+    var params = {
+      contractAddress: payload.contractAddress,
+      contractName: payload.contractName,
+      functionName: payload.functionName,
+      functionArgs: [
+        _encodeAsciiCV(_safeGameId(payload.gameId)),
+        _encodeUIntCV(_toModeUint(payload.mode)),
+        _encodeUIntCV(payload.score),
+        _encodeAsciiCV(_safePlayerName(payload.playerName))
+      ],
+      network: payload.network || 'mainnet',
+      postConditionMode: 'allow'
+    };
+
+    return _requestWalletContractCall(provider, params).then(function(result){
+      var txId = null;
+      if(result && typeof result === 'object'){
+        txId = result.txId || result.txid || result.tx_id || null;
+      }
+      return {
+        txId: txId,
+        raw: result
+      };
+    });
+  }
+
+  function _resolveOnChainSubmitter(){
+    if(customOnChainSubmitter) return customOnChainSubmitter;
+    if(typeof window !== 'undefined' && window.ArcadeOnChain && typeof window.ArcadeOnChain.submitScore === 'function'){
+      return function(payload){
+        return window.ArcadeOnChain.submitScore(payload);
+      };
+    }
+    return _defaultOnChainSubmitter;
+  }
+
+  function submitOnChainScore(opts){
+    opts = opts || {};
+    var config = getOnChainConfig();
+
+    if(!config.contractAddress || !config.contractName){
+      return Promise.reject(new Error('Missing ARCADE_ONCHAIN_CONFIG contractAddress/contractName.'));
+    }
+
+    var scoreNum = Number(opts.score);
+    if(!isFinite(scoreNum) || scoreNum <= 0){
+      return Promise.reject(new Error('Score must be a positive number for on-chain submit.'));
+    }
+
+    var payload = {
+      gameId: _safeGameId(opts.gameId),
+      mode: opts.mode === 'time' ? 'time' : 'score',
+      score: Math.floor(scoreNum),
+      playerName: _safePlayerName(opts.playerName),
+      rank: opts.rank,
+      contractAddress: config.contractAddress,
+      contractName: config.contractName,
+      functionName: config.functionName,
+      network: config.network
+    };
+
+    var submitter = _resolveOnChainSubmitter();
+    return Promise.resolve(submitter(payload));
+  }
+
+  function _shouldOfferOnChain(rank){
+    return !!(
+      onChainConfig.enabled &&
+      onChainConfig.contractAddress &&
+      onChainConfig.contractName &&
+      rank > 0 &&
+      rank <= onChainConfig.minRank
+    );
+  }
+
+  function _maybeOfferOnChainSubmit(opts){
+    if(!_shouldOfferOnChain(opts.rank)){
+      return Promise.resolve({ offered:false, submitted:false });
+    }
+
+    var value = opts.mode === 'time' ? ArcadeUtils.formatTime(opts.score) : ArcadeUtils.formatScore(opts.score);
+    var proceed = true;
+
+    if(typeof window !== 'undefined' && typeof window.confirm === 'function'){
+      proceed = window.confirm(
+        'Top ' + onChainConfig.minRank + ' reached for ' + (opts.title || opts.gameId) +
+        ' (#' + opts.rank + ', ' + value + ').\n\n' +
+        'Submit this score on-chain now?'
+      );
+    }
+
+    if(!proceed){
+      return Promise.resolve({ offered:true, submitted:false, skipped:true });
+    }
+
+    return submitOnChainScore({
+      gameId: opts.gameId,
+      mode: opts.mode,
+      score: opts.score,
+      playerName: opts.name,
+      rank: opts.rank
+    })
+      .then(function(result){
+        return {
+          offered:true,
+          submitted:true,
+          txId: result && result.txId ? result.txId : null
+        };
+      })
+      .catch(function(error){
+        var message = error && error.message ? error.message : String(error);
+        if(typeof window !== 'undefined' && typeof window.alert === 'function'){
+          window.alert('On-chain score submit failed: ' + message);
+        }
+        return {
+          offered:true,
+          submitted:false,
+          error: message
+        };
+      });
+  }
+
   /* Name entry + overlay */
   function _createOverlayEl(){
     var ov = document.createElement('div');
@@ -96,8 +377,8 @@ var HighScores = (function(){
     var modal = document.createElement('div');
     modal.className = 'hs-modal';
     var isTime = mode === 'time';
-    var h = '<h2>Top 10 — ' + (opts.title || gameId) + '</h2>';
-    if(highlightIdx >= 0) h += '<div class="hs-new">★ NEW HIGH SCORE ★</div>';
+    var h = '<h2>Top 10 - ' + (opts.title || gameId) + '</h2>';
+    if(highlightIdx >= 0) h += '<div class="hs-new">* NEW HIGH SCORE *</div>';
     h += '<table class="hs-table"><tr><th>#</th><th>Name</th><th>' + (isTime?'Time':'Score') + '</th></tr>';
     for(var i=0;i<list.length;i++){
       var cls = i===highlightIdx ? ' class="hs-highlight"' : '';
@@ -130,12 +411,27 @@ var HighScores = (function(){
       if(_qualifies(gameId, mode, score)){
         _promptName(function(name){
           var idx = _addEntry(gameId, mode, name, score);
+          var rank = idx >= 0 ? (idx + 1) : null;
           renderOverlay({ gameId:gameId, mode:mode, title:title, highlightIdx:idx });
-          resolve({ submitted:true, rank:idx+1 });
+
+          if(rank){
+            _maybeOfferOnChainSubmit({
+              gameId: gameId,
+              mode: mode,
+              score: score,
+              title: title,
+              name: name,
+              rank: rank
+            }).then(function(onChain){
+              resolve({ submitted:true, rank:rank, onChain:onChain });
+            });
+          } else {
+            resolve({ submitted:true, rank:null, onChain:{ offered:false, submitted:false } });
+          }
         });
       } else {
         renderOverlay({ gameId:gameId, mode:mode, title:title, highlightIdx:-1 });
-        resolve({ submitted:false });
+        resolve({ submitted:false, onChain:{ offered:false, submitted:false } });
       }
     });
   }
@@ -151,7 +447,12 @@ var HighScores = (function(){
     renderOverlay: renderOverlay,
     hideOverlay: hideOverlay,
     clearAll: clearAll,
+    configureOnChain: configureOnChain,
+    getOnChainConfig: getOnChainConfig,
+    setOnChainSubmitter: setOnChainSubmitter,
+    submitOnChainScore: submitOnChainScore,
     _qualifies: _qualifies,
-    _addEntry: _addEntry
+    _addEntry: _addEntry,
+    _shouldOfferOnChain: _shouldOfferOnChain
   };
 })();
