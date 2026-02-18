@@ -44,12 +44,82 @@
     walletStatusBadge.title = label;
   }
 
-  function getProvider(){
-    if(window.StacksProvider && typeof window.StacksProvider.request === 'function'){
-      return { name: 'Stacks', provider: window.StacksProvider };
+  function resolveProviderPath(path){
+    if(typeof path !== 'string' || !path) return null;
+    var parts = path.split('.');
+    var node = window;
+    var i;
+    for(i = 0; i < parts.length; i++){
+      var key = parts[i];
+      if(!key || !node || typeof node !== 'object') return null;
+      if(!(key in node)) return null;
+      node = node[key];
     }
-    if(window.LeatherProvider && typeof window.LeatherProvider.request === 'function'){
-      return { name: 'Leather', provider: window.LeatherProvider };
+    return node;
+  }
+
+  function getProvider(){
+    var direct = [
+      { name: 'Stacks', provider: window.StacksProvider },
+      { name: 'Leather', provider: window.LeatherProvider },
+      { name: 'BTC', provider: window.btc },
+      { name: 'Stacks', provider: window.stacks },
+      { name: 'BitcoinProvider', provider: window.BitcoinProvider },
+      { name: 'Xverse', provider: window.XverseProviders },
+      { name: 'xverse', provider: window.xverseProviders },
+      {
+        name: 'Xverse',
+        provider: window.XverseProviders && (
+          window.XverseProviders.StacksProvider ||
+          window.XverseProviders.BitcoinProvider
+        )
+      },
+      {
+        name: 'xverse',
+        provider: window.xverseProviders && (
+          window.xverseProviders.StacksProvider ||
+          window.xverseProviders.BitcoinProvider
+        )
+      }
+    ];
+    var d;
+    for(d = 0; d < direct.length; d++){
+      var item = direct[d];
+      if(item.provider && typeof item.provider.request === 'function'){
+        return item;
+      }
+    }
+
+    var registries = [window.btc_providers, window.webbtc_providers, window.wbip_providers];
+    var r;
+    for(r = 0; r < registries.length; r++){
+      var registry = registries[r];
+      if(!Array.isArray(registry)) continue;
+      var i;
+      for(i = 0; i < registry.length; i++){
+        var entry = registry[i];
+        if(!entry) continue;
+        var methods = Array.isArray(entry.methods) ? entry.methods : null;
+        if(
+          methods &&
+          methods.indexOf('stx_getAddresses') < 0 &&
+          methods.indexOf('stx_getAccounts') < 0 &&
+          methods.indexOf('getAddresses') < 0 &&
+          methods.indexOf('getAccounts') < 0 &&
+          methods.indexOf('stx_callContract') < 0
+        ){
+          continue;
+        }
+        var provider = null;
+        if(entry.provider && typeof entry.provider.request === 'function'){
+          provider = entry.provider;
+        } else if(typeof entry.id === 'string' && entry.id){
+          provider = resolveProviderPath(entry.id);
+        }
+        if(provider && typeof provider.request === 'function'){
+          return { name: entry.name || entry.id || 'Wallet', provider: provider };
+        }
+      }
     }
     return null;
   }

@@ -15,7 +15,8 @@ var HighScores = (function(){
     leaderboardFunctionName: 'get-top10',
     apiBaseUrl: '',
     readSenderAddress: '',
-    minRank: 10
+    minRank: 10,
+    debug: false
   };
 
   var onChainConfig = _normalizeOnChainConfig(
@@ -24,6 +25,37 @@ var HighScores = (function(){
   var customOnChainSubmitter = null;
   var customLeaderboardFetcher = null;
   var leaderboardCache = {};
+  var submitInFlight = null;
+  var submitFlowInFlight = {};
+
+  function _debugEnabled(){
+    if(onChainConfig && onChainConfig.debug) return true;
+    if(typeof window !== 'undefined' && window.ARCADE_ONCHAIN_DEBUG === true) return true;
+    return false;
+  }
+
+  function _debugLog(level, message, detail){
+    if(!_debugEnabled()) return;
+    if(typeof console === 'undefined') return;
+    var logFn = console[level];
+    if(typeof logFn !== 'function') logFn = console.log;
+    try{
+      if(typeof detail === 'undefined'){
+        logFn.call(console, '[ArcadeOnChain] ' + message);
+      } else {
+        logFn.call(console, '[ArcadeOnChain] ' + message, detail);
+      }
+    }catch(e){}
+  }
+
+  function _errorForLog(error){
+    if(!error) return null;
+    return {
+      name: error.name || null,
+      message: error.message || String(error),
+      code: error.code || null
+    };
+  }
 
   function _loadPB(){
     try{
@@ -51,7 +83,9 @@ var HighScores = (function(){
       score: entry.score,
       updatedAt: entry.updatedAt,
       player: entry.player,
-      pending: !!entry.pending
+      pending: !!entry.pending,
+      submitted: !!entry.submitted,
+      onChain: !!entry.onChain
     };
   }
 
@@ -88,6 +122,99 @@ var HighScores = (function(){
     return next;
   }
 
+  function _entriesMatch(a, b){
+    if(!a || !b) return false;
+    return (
+      _safePlayerName(a.name) === _safePlayerName(b.name) &&
+      Math.floor(_toSafeNumber(a.score)) === Math.floor(_toSafeNumber(b.score))
+    );
+  }
+
+  function _findEntryIndex(list, target){
+    if(!Array.isArray(list) || !target) return -1;
+    var i;
+    for(i = 0; i < list.length; i++){
+      if(_entriesMatch(list[i], target)) return i;
+    }
+    return -1;
+  }
+
+  function _escapeHtml(input){
+    return String(input == null ? '' : input)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function _buildPostSubmitDisplay(list, mode, candidate, rankHint){
+    var normalized = _normalizeLeaderboardList(list, mode);
+    var idx = _findEntryIndex(normalized, candidate);
+    if(idx >= 0){
+      normalized[idx].pending = false;
+      normalized[idx].submitted = false;
+      normalized[idx].onChain = true;
+      return { list: normalized, highlightIdx: idx, onChain: true };
+    }
+
+    var optimistic = {
+      rank: rankHint,
+      name: _safePlayerName(candidate.name),
+      score: Math.floor(_toSafeNumber(candidate.score)),
+      updatedAt: 0,
+      player: null,
+      pending: false,
+      submitted: true,
+      onChain: false
+    };
+    var preview = _buildPreviewList(normalized, rankHint, optimistic);
+    var previewIdx = _findEntryIndex(preview, optimistic);
+    return {
+      list: preview,
+      highlightIdx: previewIdx >= 0 ? previewIdx : (rankHint - 1),
+      onChain: false
+    };
+  }
+
+  function _scheduleOnChainRefresh(opts){
+    if(typeof document === 'undefined') return;
+    var attempts = 4;
+    var delayMs = 3500;
+
+    function hasOverlay(){
+      return !!document.querySelector('.hs-overlay');
+    }
+
+    function poll(attempt){
+      if(attempt >= attempts) return;
+      setTimeout(function(){
+        if(!hasOverlay()) return;
+        fetchTop10(opts.gameId, opts.mode, { force: true, allowStale: true })
+          .then(function(latest){
+            var display = _buildPostSubmitDisplay(latest, opts.mode, opts.candidate, opts.rank);
+            if(display.onChain){
+              renderOverlay({
+                gameId: opts.gameId,
+                mode: opts.mode,
+                title: opts.title,
+                list: display.list,
+                highlightIdx: display.highlightIdx,
+                subtitle: 'Score verified on-chain' + (opts.txId ? ' · tx ' + String(opts.txId).slice(0, 12) + '...' : '')
+              });
+              return;
+            }
+            poll(attempt + 1);
+          })
+          .catch(function(){
+            poll(attempt + 1);
+          });
+      }, delayMs);
+    }
+
+    poll(0);
+  }
+
   function _recordPersonalBest(gameId, mode, score){
     var data = _loadPB();
     var k = _key(gameId, mode);
@@ -121,7 +248,8 @@ var HighScores = (function(){
       leaderboardFunctionName: source.leaderboardFunctionName || 'get-top10',
       apiBaseUrl: source.apiBaseUrl || '',
       readSenderAddress: source.readSenderAddress || '',
-      minRank: source.minRank || 10
+      minRank: source.minRank || 10,
+      debug: !!source.debug
     };
   }
 
@@ -144,6 +272,7 @@ var HighScores = (function(){
     if(isFinite(rankNum) && rankNum > 0){
       base.minRank = Math.floor(rankNum);
     }
+    if(typeof input.debug === 'boolean') base.debug = input.debug;
 
     return base;
   }
@@ -158,6 +287,7 @@ var HighScores = (function(){
       }
     }
     onChainConfig = _normalizeOnChainConfig(next);
+    _debugLog('info', 'Updated on-chain config', onChainConfig);
     return getOnChainConfig();
   }
 
@@ -241,32 +371,476 @@ var HighScores = (function(){
     return '0x0d' + lenHex + hex;
   }
 
-  function _getStacksProvider(){
-    if(typeof window === 'undefined') return null;
-    if(window.StacksProvider && typeof window.StacksProvider.request === 'function'){
-      return window.StacksProvider;
+  function _providerDebugSnapshot(){
+    if(typeof window === 'undefined'){
+      return { env: 'non-browser' };
     }
-    if(window.LeatherProvider && typeof window.LeatherProvider.request === 'function'){
-      return window.LeatherProvider;
-    }
-    return null;
+    return {
+      origin: window.location ? window.location.origin : null,
+      hasStacksProvider: !!window.StacksProvider,
+      hasLeatherProvider: !!window.LeatherProvider,
+      hasBtc: !!window.btc,
+      hasStacks: !!window.stacks,
+      hasBitcoinProvider: !!window.BitcoinProvider,
+      hasXverseProviders: !!window.XverseProviders,
+      hasxverseProviders: !!window.xverseProviders,
+      btcProvidersCount: Array.isArray(window.btc_providers) ? window.btc_providers.length : 0,
+      webbtcProvidersCount: Array.isArray(window.webbtc_providers) ? window.webbtc_providers.length : 0,
+      wbipProvidersCount: Array.isArray(window.wbip_providers) ? window.wbip_providers.length : 0
+    };
   }
 
-  function _requestWalletContractCall(provider, params){
-    return Promise.resolve()
-      .then(function(){
-        return provider.request('stx_callContract', params);
-      })
-      .catch(function(){
-        return provider.request({ method: 'stx_callContract', params: params });
+  function _collectStacksProviders(){
+    if(typeof window === 'undefined') return null;
+
+    _debugLog('info', 'Provider discovery started', _providerDebugSnapshot());
+
+    var directCandidates = [
+      { label: 'window.StacksProvider', value: window.StacksProvider },
+      { label: 'window.LeatherProvider', value: window.LeatherProvider },
+      { label: 'window.XverseProviders', value: window.XverseProviders },
+      { label: 'window.xverseProviders', value: window.xverseProviders },
+      {
+        label: 'window.XverseProviders.StacksProvider',
+        value: window.XverseProviders && window.XverseProviders.StacksProvider
+      },
+      {
+        label: 'window.xverseProviders.StacksProvider',
+        value: window.xverseProviders && window.xverseProviders.StacksProvider
+      },
+      {
+        label: 'window.XverseProviders.BitcoinProvider',
+        value: window.XverseProviders && window.XverseProviders.BitcoinProvider
+      },
+      {
+        label: 'window.xverseProviders.BitcoinProvider',
+        value: window.xverseProviders && window.xverseProviders.BitcoinProvider
+      },
+      { label: 'window.btc', value: window.btc },
+      { label: 'window.stacks', value: window.stacks },
+      { label: 'window.BitcoinProvider', value: window.BitcoinProvider }
+    ];
+    var out = [];
+
+    function pushProvider(provider, label){
+      if(
+        !provider ||
+        (typeof provider.request !== 'function' && typeof provider.transactionRequest !== 'function')
+      ) return;
+      var i;
+      for(i = 0; i < out.length; i++){
+        if(out[i].provider === provider) return;
+      }
+      out.push({
+        provider: provider,
+        label: label,
+        hasRequest: typeof provider.request === 'function',
+        hasTransactionRequest: typeof provider.transactionRequest === 'function'
       });
+    }
+
+    var c;
+    for(c = 0; c < directCandidates.length; c++){
+      var directEntry = directCandidates[c];
+      var direct = directEntry.value;
+      if(direct && (typeof direct.request === 'function' || typeof direct.transactionRequest === 'function')){
+        _debugLog('info', 'Provider discovered via direct global', {
+          source: directEntry.label,
+          hasRequest: typeof direct.request === 'function',
+          hasTransactionRequest: typeof direct.transactionRequest === 'function'
+        });
+        pushProvider(direct, directEntry.label);
+      }
+    }
+
+    var registries = [window.btc_providers, window.webbtc_providers, window.wbip_providers];
+    var r;
+    for(r = 0; r < registries.length; r++){
+      var registry = registries[r];
+      if(!Array.isArray(registry)) continue;
+      var i;
+      for(i = 0; i < registry.length; i++){
+        var entry = registry[i];
+        if(!entry) continue;
+        var methods = Array.isArray(entry.methods) ? entry.methods : null;
+        if(
+          methods &&
+          methods.indexOf('stx_callContract') < 0 &&
+          methods.indexOf('stx_callContractV2') < 0
+        ){
+          continue;
+        }
+        var provider = null;
+        if(
+          entry.provider &&
+          (typeof entry.provider.request === 'function' || typeof entry.provider.transactionRequest === 'function')
+        ){
+          provider = entry.provider;
+        } else if(typeof entry.id === 'string' && entry.id){
+          provider = _resolveProviderPath(entry.id);
+        }
+        if(provider && (typeof provider.request === 'function' || typeof provider.transactionRequest === 'function')){
+          _debugLog('info', 'Provider discovered via provider registry', {
+            registryIndex: r,
+            providerName: entry.name || null,
+            providerId: entry.id || null,
+            methods: methods || null,
+            hasRequest: typeof provider.request === 'function',
+            hasTransactionRequest: typeof provider.transactionRequest === 'function'
+          });
+          pushProvider(provider, 'registry:' + (entry.name || entry.id || ('#' + i)));
+        }
+      }
+    }
+
+    if(out.length === 0){
+      _debugLog('warn', 'No provider detected after discovery sweep', _providerDebugSnapshot());
+      return [];
+    }
+    out.sort(function(a, b){
+      var scoreA = (a.hasTransactionRequest ? 10 : 0) + (a.hasRequest ? 1 : 0);
+      var scoreB = (b.hasTransactionRequest ? 10 : 0) + (b.hasRequest ? 1 : 0);
+      return scoreB - scoreA;
+    });
+
+    _debugLog('info', 'Provider discovery completed', {
+      count: out.length,
+      labels: out.map(function(item){ return item.label; }),
+      capabilities: out.map(function(item){
+        return {
+          label: item.label,
+          hasRequest: !!item.hasRequest,
+          hasTransactionRequest: !!item.hasTransactionRequest
+        };
+      })
+    });
+    return out;
+  }
+
+  function _getStacksProvider(){
+    var providers = _collectStacksProviders();
+    return providers && providers.length ? providers[0].provider : null;
+  }
+
+  function _resolveProviderPath(path){
+    if(typeof window === 'undefined') return null;
+    if(typeof path !== 'string' || !path) return null;
+    var parts = path.split('.');
+    var node = window;
+    var i;
+    for(i = 0; i < parts.length; i++){
+      var key = parts[i];
+      if(!key || !node || typeof node !== 'object') return null;
+      if(!(key in node)) return null;
+      node = node[key];
+    }
+    return node;
+  }
+
+  function _legacyNetworkConfig(network){
+    var normalized = String(network || 'mainnet').toLowerCase();
+    if(normalized === 'testnet'){
+      return {
+        version: 128,
+        chainId: 2147483648,
+        bnsLookupUrl: 'https://api.mainnet.hiro.so',
+        broadcastEndpoint: '/v2/transactions',
+        transferFeeEstimateEndpoint: '/v2/fees/transfer',
+        transactionFeeEstimateEndpoint: '/v2/fees/transaction',
+        accountEndpoint: '/v2/accounts',
+        contractAbiEndpoint: '/v2/contracts/interface',
+        readOnlyFunctionCallEndpoint: '/v2/contracts/call-read',
+        coreApiUrl: 'https://api.testnet.hiro.so'
+      };
+    }
+    if(normalized === 'devnet' || normalized === 'regtest'){
+      return {
+        version: 128,
+        chainId: 2147483648,
+        bnsLookupUrl: 'http://localhost:3999',
+        broadcastEndpoint: '/v2/transactions',
+        transferFeeEstimateEndpoint: '/v2/fees/transfer',
+        transactionFeeEstimateEndpoint: '/v2/fees/transaction',
+        accountEndpoint: '/v2/accounts',
+        contractAbiEndpoint: '/v2/contracts/interface',
+        readOnlyFunctionCallEndpoint: '/v2/contracts/call-read',
+        coreApiUrl: 'http://localhost:3999'
+      };
+    }
+    return {
+      version: 0,
+      chainId: 1,
+      bnsLookupUrl: 'https://api.mainnet.hiro.so',
+      broadcastEndpoint: '/v2/transactions',
+      transferFeeEstimateEndpoint: '/v2/fees/transfer',
+      transactionFeeEstimateEndpoint: '/v2/fees/transaction',
+      accountEndpoint: '/v2/accounts',
+      contractAbiEndpoint: '/v2/contracts/interface',
+      readOnlyFunctionCallEndpoint: '/v2/contracts/call-read',
+      coreApiUrl: 'https://api.mainnet.hiro.so'
+    };
+  }
+
+  function _normalizePostConditionMode(value){
+    if(value === 1 || value === 2) return value;
+    if(typeof value === 'string'){
+      var lower = value.toLowerCase();
+      if(lower === 'allow') return 1;
+      if(lower === 'deny') return 2;
+    }
+    return 1;
+  }
+
+  function _base64UrlEncodeUtf8(input){
+    var base64;
+    if(typeof btoa === 'function'){
+      base64 = btoa(unescape(encodeURIComponent(String(input))));
+    } else if(typeof Buffer !== 'undefined'){
+      base64 = Buffer.from(String(input), 'utf8').toString('base64');
+    } else {
+      throw new Error('No base64 encoder is available in this environment.');
+    }
+    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+  }
+
+  function _createUnsecuredJwt(payload){
+    var header = { typ: 'JWT', alg: 'none' };
+    return _base64UrlEncodeUtf8(JSON.stringify(header)) +
+      '.' +
+      _base64UrlEncodeUtf8(JSON.stringify(payload)) +
+      '.';
+  }
+
+  function _buildContractCallParamVariants(params){
+    var fullContract = params.contractAddress + '.' + params.contractName;
+    var variants = [];
+
+    variants.push({
+      label: 'legacy-split',
+      params: {
+        contractAddress: params.contractAddress,
+        contractName: params.contractName,
+        functionName: params.functionName,
+        functionArgs: params.functionArgs,
+        network: params.network,
+        postConditionMode: params.postConditionMode
+      }
+    });
+
+    variants.push({
+      label: 'sats-minimal',
+      params: {
+        contract: fullContract,
+        functionName: params.functionName,
+        functionArgs: params.functionArgs,
+        postConditionMode: params.postConditionMode
+      }
+    });
+
+    return variants;
+  }
+
+  function _buildTransactionRequestPayloadVariants(params){
+    var base = {
+      txType: 'contract_call',
+      contractAddress: params.contractAddress,
+      contractName: params.contractName,
+      functionName: params.functionName,
+      functionArgs: params.functionArgs
+    };
+    var network = params.network || 'mainnet';
+    var postConditionMode = _normalizePostConditionMode(params.postConditionMode);
+    var withNetwork = Object.assign({}, base, {
+      network: _legacyNetworkConfig(network),
+      postConditionMode: postConditionMode
+    });
+    return [
+      { label: 'tx-token-connect-default', payload: withNetwork }
+    ];
+  }
+
+  function _requestWalletContractCall(provider, params, providerLabel){
+    _debugLog('info', 'Submitting wallet contract call', {
+      providerLabel: providerLabel || null,
+      contractAddress: params.contractAddress,
+      contractName: params.contractName,
+      functionName: params.functionName,
+      network: params.network,
+      argsCount: params.functionArgs ? params.functionArgs.length : 0
+    });
+
+    var attempts = [];
+    var transactionVariants = _buildTransactionRequestPayloadVariants(params);
+    if(typeof provider.transactionRequest === 'function'){
+      var t;
+      for(t = 0; t < transactionVariants.length; t++){
+        (function(variant){
+          attempts.push({
+            label: 'provider.transactionRequest(' + variant.label + ')',
+            exec: function(){
+              _debugLog('info', 'Wallet transactionRequest payload prepared', {
+                providerLabel: providerLabel || null,
+                variant: variant.label,
+                payload: variant.payload
+              });
+              var token = _createUnsecuredJwt(variant.payload);
+              return provider.transactionRequest(token);
+            }
+          });
+        })(transactionVariants[t]);
+      }
+    } else if(typeof provider.request === 'function'){
+      var paramVariants = _buildContractCallParamVariants(params);
+      var v;
+      for(v = 0; v < paramVariants.length; v++){
+        (function(variant){
+          attempts.push({
+            label: 'provider.request("stx_callContract", ' + variant.label + ')',
+            exec: function(){ return provider.request('stx_callContract', variant.params); }
+          });
+          attempts.push({
+            label: 'provider.request("stx_callContractV2", ' + variant.label + ')',
+            exec: function(){ return provider.request('stx_callContractV2', variant.params); }
+          });
+        })(paramVariants[v]);
+      }
+    }
+
+    function withTimeout(promise, ms, label){
+      var timer = null;
+      return new Promise(function(resolve, reject){
+        timer = setTimeout(function(){
+          var timeoutErr = new Error('Wallet request timed out after ' + ms + 'ms (' + label + ').');
+          timeoutErr.code = 'ETIMEOUT';
+          reject(timeoutErr);
+        }, ms);
+        Promise.resolve(promise).then(function(value){
+          clearTimeout(timer);
+          resolve(value);
+        }).catch(function(error){
+          clearTimeout(timer);
+          reject(error);
+        });
+      });
+    }
+
+    function runAttempt(index, previousError){
+      if(index >= attempts.length){
+        throw previousError || new Error('Wallet provider rejected contract call request.');
+      }
+      var attempt = attempts[index];
+      _debugLog('info', 'Wallet request attempt #' + (index + 1), attempt.label);
+      return Promise.resolve()
+        .then(function(){
+          return withTimeout(attempt.exec(), 12000, attempt.label);
+        })
+        .then(function(result){
+          _debugLog('info', 'Wallet request returned result', result);
+          var rpcError = _extractRpcError(result);
+          if(rpcError){
+            _debugLog('warn', 'Wallet request returned RPC error', _errorForLog(rpcError));
+            if(_isUnsupportedProviderError(rpcError)){
+              return runAttempt(index + 1, rpcError);
+            }
+            throw rpcError;
+          }
+          return result;
+        })
+        .catch(function(error){
+          _debugLog('warn', 'Wallet request attempt failed', {
+            attempt: attempt.label,
+            error: _errorForLog(error)
+          });
+          if(
+            _isUnsupportedProviderError(error) ||
+            _isRetryableParamError(error) ||
+            _isRetryableTransportError(error)
+          ){
+            return runAttempt(index + 1, error);
+          }
+          throw error;
+        });
+    }
+
+    return runAttempt(0, null).catch(function(finalError){
+      _debugLog('error', 'Wallet request failed', _errorForLog(finalError));
+      throw finalError;
+    });
+  }
+
+  function _extractRpcError(result){
+    if(!result || typeof result !== 'object') return null;
+    if(!result.error) return null;
+    var details = result.error;
+    var message = details && details.message ? String(details.message) : 'Wallet RPC request failed.';
+    var err = new Error(message);
+    err.code = details && typeof details.code !== 'undefined' ? details.code : null;
+    err.data = details && typeof details.data !== 'undefined' ? details.data : null;
+    err.rpc = result;
+    return err;
+  }
+
+  function _isUnsupportedProviderError(error){
+    if(!error) return false;
+    if(typeof error.code !== 'undefined' && error.code === -32601) return true;
+    var message = (error && error.message ? error.message : String(error)).toLowerCase();
+    return (
+      message.indexOf('not implemented') >= 0 ||
+      message.indexOf('unsupported') >= 0 ||
+      message.indexOf('not support') >= 0 ||
+      message.indexOf('unknown method') >= 0 ||
+      message.indexOf('method not found') >= 0
+    );
+  }
+
+  function _isRetryableParamError(error){
+    if(!error) return false;
+    if(typeof error.code !== 'undefined' && error.code === -32602) return true;
+    var message = (error && error.message ? error.message : String(error)).toLowerCase();
+    return (
+      message.indexOf('invalid parameters') >= 0 ||
+      message.indexOf('invalid params') >= 0
+    );
+  }
+
+  function _isRetryableTransportError(error){
+    if(!error) return false;
+    if(error.code === 'ETIMEOUT') return true;
+    var message = (error && error.message ? error.message : String(error)).toLowerCase();
+    return (
+      message.indexOf('timed out') >= 0 ||
+      message.indexOf('timeout') >= 0 ||
+      message.indexOf('request was canceled') >= 0 ||
+      message.indexOf('request was cancelled') >= 0
+    );
   }
 
   function _defaultOnChainSubmitter(payload){
-    var provider = _getStacksProvider();
-    if(!provider){
-      return Promise.reject(new Error('No Stacks wallet provider found in this browser.'));
+    if(typeof window !== 'undefined' && window.location && window.location.protocol === 'file:'){
+      _debugLog('error', 'On-chain submit blocked: file:// origin does not support wallet injection');
+      return Promise.reject(new Error(
+        'Wallet extensions do not inject providers on file:// pages. Open this arcade via http://localhost (or https) and retry.'
+      ));
     }
+
+    var providers = _collectStacksProviders();
+    if(!providers || providers.length === 0){
+      _debugLog('error', 'On-chain submit blocked: provider missing', _providerDebugSnapshot());
+      return Promise.reject(new Error(
+        'No compatible Stacks wallet provider was detected. Enable Xverse/Leather in this browser and refresh.'
+      ));
+    }
+
+    _debugLog('info', 'Preparing on-chain submit payload', {
+      gameId: payload.gameId,
+      mode: payload.mode,
+      score: payload.score,
+      playerName: payload.playerName,
+      contractAddress: payload.contractAddress,
+      contractName: payload.contractName,
+      functionName: payload.functionName,
+      network: payload.network
+    });
 
     var params = {
       contractAddress: payload.contractAddress,
@@ -279,19 +853,54 @@ var HighScores = (function(){
         _encodeAsciiCV(_safePlayerName(payload.playerName))
       ],
       network: payload.network || 'mainnet',
-      postConditionMode: 'allow'
+      postConditionMode: 1
     };
 
-    return _requestWalletContractCall(provider, params).then(function(result){
-      var txId = null;
-      if(result && typeof result === 'object'){
-        txId = result.txId || result.txid || result.tx_id || null;
+    function tryProvider(index, previousError){
+      if(index >= providers.length){
+        throw previousError || new Error('No compatible wallet provider accepted contract-call request.');
       }
-      return {
-        txId: txId,
-        raw: result
-      };
-    });
+      var candidate = providers[index];
+      _debugLog('info', 'Attempting wallet provider candidate', {
+        index: index,
+        total: providers.length,
+        label: candidate.label
+      });
+      return _requestWalletContractCall(candidate.provider, params, candidate.label).then(function(result){
+        var txId = null;
+        if(result && typeof result === 'object'){
+          txId =
+            result.txId ||
+            result.txid ||
+            result.tx_id ||
+            (result.result && (result.result.txId || result.result.txid || result.result.tx_id)) ||
+            null;
+        }
+        _debugLog('info', 'On-chain submit completed', {
+          providerLabel: candidate.label,
+          txId: txId,
+          result: result
+        });
+        return {
+          txId: txId,
+          raw: result
+        };
+      }).catch(function(error){
+        _debugLog('warn', 'Wallet provider candidate failed', {
+          providerLabel: candidate.label,
+          error: _errorForLog(error)
+        });
+        if(_isUnsupportedProviderError(error)){
+          _debugLog('warn', 'Trying next provider after candidate failure', {
+            providerLabel: candidate.label
+          });
+          return tryProvider(index + 1, error);
+        }
+        throw error;
+      });
+    }
+
+    return tryProvider(0, null);
   }
 
   function _resolveOnChainSubmitter(){
@@ -327,13 +936,21 @@ var HighScores = (function(){
   function submitOnChainScore(opts){
     opts = opts || {};
     var config = getOnChainConfig();
+    _debugLog('info', 'submitOnChainScore called', { opts: opts, config: config });
+
+    if(submitInFlight){
+      _debugLog('warn', 'submitOnChainScore deduped: submit already in flight');
+      return submitInFlight;
+    }
 
     if(!_isOnChainReady()){
+      _debugLog('error', 'On-chain config is incomplete', config);
       return Promise.reject(new Error('On-chain leaderboard config is incomplete.'));
     }
 
     var scoreNum = Number(opts.score);
     if(!isFinite(scoreNum) || scoreNum <= 0){
+      _debugLog('error', 'Invalid score passed to submitOnChainScore', { rawScore: opts.score });
       return Promise.reject(new Error('Score must be a positive number for on-chain submit.'));
     }
 
@@ -350,7 +967,15 @@ var HighScores = (function(){
     };
 
     var submitter = _resolveOnChainSubmitter();
-    return Promise.resolve(submitter(payload));
+    submitInFlight = Promise.resolve(submitter(payload))
+      .catch(function(error){
+        _debugLog('error', 'submitOnChainScore failed', _errorForLog(error));
+        throw error;
+      })
+      .finally(function(){
+        submitInFlight = null;
+      });
+    return submitInFlight;
   }
 
   function _stripHexPrefix(input){
@@ -536,17 +1161,27 @@ var HighScores = (function(){
   }
 
   function _callReadOnly(payload){
+    _debugLog('info', 'Read-only leaderboard call starting', {
+      contractAddress: payload.contractAddress,
+      contractName: payload.contractName,
+      functionName: payload.leaderboardFunctionName,
+      network: payload.network,
+      apiBaseUrl: payload.apiBaseUrl || null
+    });
     if(typeof fetch !== 'function'){
+      _debugLog('error', 'Read-only call failed: fetch missing');
       return Promise.reject(new Error('Browser fetch API is unavailable for leaderboard reads.'));
     }
 
     var apiBase = payload.apiBaseUrl || _defaultApiBase(payload.network);
     if(!apiBase){
+      _debugLog('error', 'Read-only call failed: apiBase missing', payload);
       return Promise.reject(new Error('No API base URL configured for leaderboard read-only calls.'));
     }
 
     var sender = payload.readSenderAddress || payload.contractAddress;
     if(!sender){
+      _debugLog('error', 'Read-only call failed: sender missing', payload);
       return Promise.reject(new Error('Missing sender principal for read-only leaderboard call.'));
     }
 
@@ -568,12 +1203,14 @@ var HighScores = (function(){
       })
     })
       .then(function(response){
+        _debugLog('info', 'Read-only HTTP response received', { status: response.status, ok: response.ok });
         if(!response.ok){
           throw new Error('Leaderboard read call failed with HTTP ' + response.status + '.');
         }
         return response.json();
       })
       .then(function(body){
+        _debugLog('info', 'Read-only response body parsed', body);
         if(!body || typeof body !== 'object'){
           throw new Error('Invalid leaderboard read response payload.');
         }
@@ -582,6 +1219,10 @@ var HighScores = (function(){
           throw new Error(cause);
         }
         return body.result;
+      })
+      .catch(function(error){
+        _debugLog('error', 'Read-only leaderboard call failed', _errorForLog(error));
+        throw error;
       });
   }
 
@@ -608,7 +1249,10 @@ var HighScores = (function(){
         name: _safePlayerName(slot.name),
         score: Math.floor(_toSafeNumber(slot.score)),
         updatedAt: Math.floor(_toSafeNumber(slot['updated-at'])),
-        player: slot.player || null
+        player: slot.player || null,
+        pending: false,
+        submitted: false,
+        onChain: true
       });
     }
     return entries;
@@ -629,7 +1273,9 @@ var HighScores = (function(){
         score: scoreNum,
         updatedAt: Math.floor(_toSafeNumber(item.updatedAt || item['updated-at'] || 0)),
         player: item.player || null,
-        pending: !!item.pending
+        pending: !!item.pending,
+        submitted: !!item.submitted,
+        onChain: !!item.onChain
       });
     }
 
@@ -661,10 +1307,12 @@ var HighScores = (function(){
     var cacheKey = _key(safeGameId, safeMode);
 
     if(!opts.force && leaderboardCache[cacheKey]){
+      _debugLog('info', 'fetchTop10 served from cache', { gameId: safeGameId, mode: safeMode, count: leaderboardCache[cacheKey].length });
       return Promise.resolve(_copyList(leaderboardCache[cacheKey]));
     }
 
     if(!_isOnChainReady()){
+      _debugLog('warn', 'fetchTop10 skipped: on-chain config incomplete');
       leaderboardCache[cacheKey] = [];
       return Promise.resolve([]);
     }
@@ -684,10 +1332,18 @@ var HighScores = (function(){
     var fetcher = _resolveLeaderboardFetcher();
     return Promise.resolve(fetcher(payload)).then(function(list){
       var normalized = _normalizeLeaderboardList(list, safeMode);
+      normalized.forEach(function(entry){
+        entry.pending = false;
+        entry.submitted = false;
+        entry.onChain = true;
+      });
       leaderboardCache[cacheKey] = normalized;
+      _debugLog('info', 'fetchTop10 loaded from chain', { gameId: safeGameId, mode: safeMode, count: normalized.length });
       return _copyList(normalized);
     }).catch(function(error){
+      _debugLog('error', 'fetchTop10 failed', _errorForLog(error));
       if(opts.allowStale && leaderboardCache[cacheKey]){
+        _debugLog('warn', 'fetchTop10 returning stale cache after failure', { gameId: safeGameId, mode: safeMode });
         return _copyList(leaderboardCache[cacheKey]);
       }
       throw error;
@@ -748,13 +1404,13 @@ var HighScores = (function(){
     modal.className = 'hs-modal';
 
     var isTime = mode === 'time';
-    var html = '<h2>Top 10 - ' + title + '</h2>';
+    var html = '<h2>Top 10 - ' + _escapeHtml(title) + '</h2>';
 
     if(opts.subtitle){
-      html += '<div class="hs-subtitle">' + _sanitizeAscii(opts.subtitle, 180, '') + '</div>';
+      html += '<div class="hs-subtitle">' + _escapeHtml(_sanitizeAscii(opts.subtitle, 180, '')) + '</div>';
     }
 
-    html += '<table class="hs-table"><tr><th>#</th><th>Name</th><th>' + (isTime ? 'Time' : 'Score') + '</th></tr>';
+    html += '<table class="hs-table"><tr><th>#</th><th>Name</th><th></th><th>' + (isTime ? 'Time' : 'Score') + '</th></tr>';
 
     var i;
     for(i = 0; i < MAX_ENTRIES; i++){
@@ -762,13 +1418,22 @@ var HighScores = (function(){
       var classes = [];
       if(i === highlightIdx) classes.push('hs-highlight');
       if(row && row.pending) classes.push('hs-pending');
+      if(row && row.submitted) classes.push('hs-submitted');
+      if(row && row.onChain) classes.push('hs-onchain');
       var clsAttr = classes.length ? ' class="' + classes.join(' ') + '"' : '';
 
       if(row){
         var value = isTime ? ArcadeUtils.formatTime(row.score) : ArcadeUtils.formatScore(row.score);
-        html += '<tr' + clsAttr + '><td class="rank">' + (i + 1) + '</td><td class="name">' + row.name + '</td><td class="score-col">' + value + '</td></tr>';
+        var nameHtml = _escapeHtml(row.name);
+        var chainHtml = row.onChain
+          ? '<span class="hs-chain-icon" title="On-chain verified" aria-label="On-chain verified">&#128279;</span>'
+          : '';
+        if(row.onChain){
+          nameHtml = '<span class="hs-name-label">' + nameHtml + '</span>';
+        }
+        html += '<tr' + clsAttr + '><td class="rank">' + (i + 1) + '</td><td class="name">' + nameHtml + '</td><td class="chain-col">' + chainHtml + '</td><td class="score-col">' + value + '</td></tr>';
       } else {
-        html += '<tr' + clsAttr + '><td class="rank">' + (i + 1) + '</td><td class="name">---</td><td class="score-col">--</td></tr>';
+        html += '<tr' + clsAttr + '><td class="rank">' + (i + 1) + '</td><td class="name">---</td><td class="chain-col"></td><td class="score-col">--</td></tr>';
       }
     }
 
@@ -847,6 +1512,8 @@ var HighScores = (function(){
         updatedAt: 0,
         player: null,
         pending: true,
+        submitted: false,
+        onChain: false,
         rank: opts.rank
       };
       var preview = _buildPreviewList(opts.currentTop10, opts.rank, pendingEntry);
@@ -868,19 +1535,50 @@ var HighScores = (function(){
             playerName: opts.name,
             rank: opts.rank
           }).then(function(result){
+            var submittedEntry = {
+              name: pendingEntry.name,
+              score: pendingEntry.score,
+              updatedAt: 0,
+              player: null,
+              pending: false,
+              submitted: true,
+              onChain: false,
+              rank: opts.rank
+            };
             return fetchTop10(opts.gameId, opts.mode, { force: true, allowStale: true })
               .then(function(latest){
+                var display = _buildPostSubmitDisplay(latest, opts.mode, submittedEntry, opts.rank);
                 renderOverlay({
                   gameId: opts.gameId,
                   mode: opts.mode,
                   title: opts.title,
-                  list: latest,
-                  highlightIdx: -1,
-                  subtitle: 'Score verified on-chain' + (result && result.txId ? ' · tx ' + String(result.txId).slice(0, 12) + '...' : '')
+                  list: display.list,
+                  highlightIdx: display.highlightIdx,
+                  subtitle: display.onChain
+                    ? ('Score verified on-chain' + (result && result.txId ? ' · tx ' + String(result.txId).slice(0, 12) + '...' : ''))
+                    : ('Transaction submitted. Score will turn chain-verified after index update' + (result && result.txId ? ' · tx ' + String(result.txId).slice(0, 12) + '...' : ''))
                 });
+                if(!display.onChain){
+                  _scheduleOnChainRefresh({
+                    gameId: opts.gameId,
+                    mode: opts.mode,
+                    title: opts.title,
+                    rank: opts.rank,
+                    candidate: submittedEntry,
+                    txId: result && result.txId ? result.txId : null
+                  });
+                }
               })
               .catch(function(){
-                hideOverlay();
+                var fallback = _buildPreviewList(opts.currentTop10, opts.rank, submittedEntry);
+                renderOverlay({
+                  gameId: opts.gameId,
+                  mode: opts.mode,
+                  title: opts.title,
+                  list: fallback,
+                  highlightIdx: opts.rank - 1,
+                  subtitle: 'Transaction submitted. Waiting for chain read to catch up'
+                });
               })
               .finally(function(){
                 done({
@@ -891,9 +1589,6 @@ var HighScores = (function(){
               });
           }).catch(function(error){
             var message = error && error.message ? error.message : String(error);
-            if(typeof window !== 'undefined' && typeof window.alert === 'function'){
-              window.alert('On-chain score submit failed: ' + message);
-            }
             done({ offered: true, submitted: false, error: message });
             throw error;
           });
@@ -912,6 +1607,12 @@ var HighScores = (function(){
     var score = Math.floor(Number(opts.score));
     var mode = opts.mode === 'time' ? 'time' : 'score';
     var title = opts.title || gameId;
+    var flowKey = _key(gameId, mode) + ':' + String(score);
+
+    if(submitFlowInFlight[flowKey]){
+      _debugLog('warn', 'maybeSubmit deduped: submit flow already in flight', { flowKey: flowKey });
+      return submitFlowInFlight[flowKey];
+    }
 
     if(!isFinite(score) || score <= 0){
       renderOverlay({
@@ -924,8 +1625,7 @@ var HighScores = (function(){
     }
 
     var pb = _recordPersonalBest(gameId, mode, score);
-
-    return fetchTop10(gameId, mode, { force: true, allowStale: true })
+    var flowPromise = fetchTop10(gameId, mode, { force: true, allowStale: true })
       .catch(function(){
         return getTop10(gameId, mode);
       })
@@ -973,6 +1673,12 @@ var HighScores = (function(){
           });
         });
       });
+    submitFlowInFlight[flowKey] = flowPromise.finally(function(){
+      if(submitFlowInFlight[flowKey] === flowPromise){
+        delete submitFlowInFlight[flowKey];
+      }
+    });
+    return submitFlowInFlight[flowKey];
   }
 
   function clearAll(){
@@ -996,7 +1702,9 @@ var HighScores = (function(){
       score: Math.floor(_toSafeNumber(value)),
       updatedAt: 0,
       player: null,
-      pending: true
+      pending: true,
+      submitted: false,
+      onChain: false
     };
 
     var next = _buildPreviewList(getTop10(gameId, mode), rank, entry);
