@@ -71,6 +71,27 @@ const VARIANT_SETS = [
         fallback: 'contracts/other/xtrata-arcade-scores-v1.0.clar'
       }
     ]
+  },
+  {
+    id: 'xtrata-arcade-scores-v1.1',
+    syncMode: 'plain',
+    variants: [
+      {
+        name: 'clarinet',
+        file: 'contracts/clarinet/contracts/xtrata-arcade-scores-v1.1.clar',
+        fallback: 'contracts/other/xtrata-arcade-scores-v1.1.clar'
+      },
+      {
+        name: 'testnet',
+        file: 'contracts/other/xtrata-arcade-scores-v1.1.clar',
+        fallback: 'contracts/clarinet/contracts/xtrata-arcade-scores-v1.1.clar'
+      },
+      {
+        name: 'mainnet',
+        file: 'contracts/live/xtrata-arcade-scores-v1.1.clar',
+        fallback: 'contracts/other/xtrata-arcade-scores-v1.1.clar'
+      }
+    ]
   }
 ];
 

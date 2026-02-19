@@ -11,6 +11,9 @@
   <span id="title">Retro Arcade</span>
   <div id="top-bar-right">
     <span id="wallet-status-badge" class="wallet-status-badge is-loading" aria-live="polite">Wallet: checking...</span>
+    <button id="wallet-disconnect-btn" title="Disconnect wallet" style="display:none;">Disconnect</button>
+    <button id="admin-btn" title="Arcade score admin">Admin</button>
+    <button id="force-next-wave-btn" title="Force next wave/level for testing" style="display:none;">Next Wave</button>
     <button id="sound-toggle" title="Toggle Sound">🔊</button>
     <button id="exit-btn" style="display:none;">Exit to Arcade</button>
   </div>
@@ -26,26 +29,66 @@
     <button id="error-close">Return to Arcade</button>
   </div>
 </div>
+<div id="admin-overlay" style="display:none;">
+  <div id="admin-modal">
+    <h2>Arcade Admin</h2>
+    <div class="admin-grid">
+      <div class="admin-label">Contract</div>
+      <div class="admin-value" id="admin-contract-id">-</div>
+
+      <div class="admin-label">Current Fee</div>
+      <div class="admin-value" id="admin-fee-current">-</div>
+
+      <div class="admin-label">Set Fee (STX)</div>
+      <div class="admin-value">
+        <input id="admin-fee-stx-input" type="text" inputmode="decimal" placeholder="0.03" />
+        <button id="admin-fee-apply">Set Fee</button>
+      </div>
+
+      <div class="admin-label">Verifier Hash</div>
+      <div class="admin-value" id="admin-verifier-current">-</div>
+
+      <div class="admin-label">Set Verifier Hash</div>
+      <div class="admin-value">
+        <input id="admin-verifier-input" type="text" maxlength="40" placeholder="40 hex chars or blank" />
+        <button id="admin-verifier-apply">Set</button>
+        <button id="admin-verifier-clear">Clear</button>
+      </div>
+    </div>
+    <div id="admin-status" class="admin-status"></div>
+    <div class="admin-actions">
+      <button id="admin-refresh">Refresh</button>
+      <button id="admin-close">Close</button>
+    </div>
+  </div>
+</div>
 
 <script src="lib/utils.js"></script>
 <script>
   // Configure this after deploy to enable on-chain Top 10 verification.
   // Top 10 is on-chain only. Local storage keeps personal bests only.
+  // For v1.1 attested submits set:
+  // - contractName: 'xtrata-arcade-scores-v1-1'
+  // - requiresAttestation: true
+  // - attestationEndpoint: '/arcade/attest-score'
   window.ARCADE_ONCHAIN_CONFIG = window.ARCADE_ONCHAIN_CONFIG || {
     enabled: true,
     network: 'mainnet',
     contractAddress: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
-    contractName: 'xtrata-arcade-scores-v1-0',
+    contractName: 'xtrata-arcade-scores-v1-1',
     functionName: 'submit-score',
     leaderboardFunctionName: 'get-top10',
     apiBaseUrl: 'https://api.mainnet.hiro.so',
     readSenderAddress: '',
+    requiresAttestation: true,
+    attestationEndpoint: '/arcade/attest-score',
+    attestationTimeoutMs: 10000,
     minRank: 10,
     debug: true
   };
   window.ARCADE_ONCHAIN_DEBUG = true;
 </script>
-<script src="lib/highscores.js"></script>
+<script src="lib/highscores.js?v=wallet-debug-2026-02-19-01"></script>
 <script src="games/game01_astro_blaster.js"></script>
 <script src="games/game02_neon_runner.js?v=2"></script>
 <script src="games/game03_block_drop.js"></script>
@@ -67,6 +110,6 @@
 <script src="games/game19_duel_at_dawn.js"></script>
 <script src="games/game20_circuit_builder.js?v=2"></script>
 <script src="games/game21_boss_rush_mini.js"></script>
-<script src="main.js"></script>
+<script src="main.js?v=wallet-debug-2026-02-19-08"></script>
 </body>
 </html>

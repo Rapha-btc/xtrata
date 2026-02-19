@@ -34,6 +34,18 @@ body::after{content:'';position:fixed;top:0;left:0;width:100%;height:100%;
 #sound-toggle{background:none;border:1px solid #555;color:#e0e0e0;padding:4px 10px;cursor:pointer;
   font-family:inherit;font-size:16px;border-radius:4px;}
 #sound-toggle:hover{border-color:#0ff;}
+#wallet-disconnect-btn{background:none;border:1px solid #7b4c5a;color:#ffb5c4;padding:4px 10px;cursor:pointer;
+  font-family:inherit;font-size:12px;border-radius:4px;letter-spacing:0.4px;}
+#wallet-disconnect-btn:hover{border-color:#f28da9;color:#ffd7e2;}
+#wallet-disconnect-btn:disabled{opacity:0.55;cursor:default;}
+#admin-btn{background:none;border:1px solid #555;color:#c9d7ff;padding:4px 10px;cursor:pointer;
+  font-family:inherit;font-size:12px;border-radius:4px;letter-spacing:0.5px;}
+#admin-btn:hover{border-color:#6ad2ff;color:#9fe6ff;}
+#force-next-wave-btn{background:none;border:1px solid #a56f16;color:#ffd279;padding:4px 10px;cursor:pointer;
+  font-family:inherit;font-size:12px;border-radius:4px;letter-spacing:0.4px;}
+#force-next-wave-btn:hover{border-color:#ffc665;color:#fff0c4;}
+#force-next-wave-btn:disabled{opacity:0.55;cursor:default;}
+#force-next-wave-btn.is-locked{border-color:#a13f3f;color:#ff9f9f;}
 #exit-btn{background:#c00;color:#fff;border:none;padding:6px 16px;cursor:pointer;
   font-family:inherit;font-size:14px;border-radius:4px;font-weight:bold;letter-spacing:1px;}
 #exit-btn:hover{background:#f00;}
@@ -63,6 +75,30 @@ body::after{content:'';position:fixed;top:0;left:0;width:100%;height:100%;
 #error-box h2{color:#f00;margin-bottom:12px;}
 #error-box p{color:#ccc;margin-bottom:20px;font-size:13px;word-break:break-word;}
 #error-close{background:#c00;color:#fff;border:none;padding:8px 20px;cursor:pointer;font-family:inherit;border-radius:4px;}
+
+/* Admin overlay */
+#admin-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.86);
+  display:flex;justify-content:center;align-items:center;z-index:1200;}
+#admin-modal{background:#0d1628;border:2px solid #6ad2ff;border-radius:10px;padding:20px;
+  width:min(92vw,680px);max-height:88vh;overflow:auto;box-shadow:0 0 28px rgba(35,145,255,0.24);}
+#admin-modal h2{color:#7bd8ff;font-size:20px;margin-bottom:14px;text-shadow:0 0 8px rgba(123,216,255,0.4);}
+.admin-grid{display:grid;grid-template-columns:180px 1fr;gap:10px 12px;align-items:center;}
+.admin-label{color:#8aa6d8;font-size:12px;letter-spacing:0.4px;}
+.admin-value{color:#e6efff;font-size:13px;word-break:break-word;}
+.admin-value input{background:#0b1020;border:1px solid #365685;color:#d4ebff;border-radius:4px;
+  padding:6px 8px;min-width:220px;max-width:100%;font-family:inherit;font-size:13px;}
+.admin-value button{margin-left:8px;margin-top:4px;background:none;border:1px solid #4b74aa;color:#d8e8ff;
+  border-radius:4px;padding:6px 10px;cursor:pointer;font-family:inherit;font-size:12px;}
+.admin-value button:hover{border-color:#7bc9ff;color:#ffffff;}
+.admin-value button:disabled,.admin-actions button:disabled,.admin-value input:disabled{opacity:0.6;cursor:default;}
+.admin-status{margin-top:14px;min-height:20px;color:#a6c3e3;font-size:12px;line-height:1.4;}
+.admin-status.is-loading{color:#90beff;}
+.admin-status.is-ok{color:#7ef0b9;}
+.admin-status.is-error{color:#ff9fbc;}
+.admin-actions{margin-top:12px;display:flex;justify-content:flex-end;gap:8px;}
+.admin-actions button{background:none;border:1px solid #5b7eaf;color:#d9e8ff;border-radius:4px;
+  padding:6px 12px;cursor:pointer;font-family:inherit;font-size:12px;}
+.admin-actions button:hover{border-color:#95d8ff;}
 
 /* High Score Overlay */
 .hs-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);
@@ -146,4 +182,11 @@ body::after{content:'';position:fixed;top:0;left:0;width:100%;height:100%;
 @media(max-width:500px){
   #home-grid{grid-template-columns:repeat(3,1fr);}
   .wallet-status-badge{display:none;}
+  #wallet-disconnect-btn{padding:4px 8px;font-size:11px;}
+  #admin-btn{padding:4px 8px;font-size:11px;}
+  #force-next-wave-btn{padding:4px 8px;font-size:11px;}
+  #admin-modal{padding:14px;}
+  .admin-grid{grid-template-columns:1fr;}
+  .admin-value input{min-width:0;width:100%;}
+  .admin-value button{margin-left:0;margin-right:8px;}
 }

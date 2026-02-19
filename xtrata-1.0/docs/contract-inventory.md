@@ -161,6 +161,67 @@ Source: `contracts/live/xtrata-arcade-scores-v1.0.clar`
 - `get-top10-entry(game-id, mode, rank)`
 - `get-owner()`
 
+## xtrata-arcade-scores-v1.1
+
+Source: `contracts/live/xtrata-arcade-scores-v1.1.clar`
+
+## Purpose
+- Arcade leaderboard contract with attested score submissions, replay protection, and configurable write fees.
+- Maintains a ranked top-10 board per `{game-id, mode}` and stores each caller's best verified score.
+- Mode semantics: `u0` score mode (higher is better), `u1` time mode (lower is better).
+
+## Error Codes
+- `ERR-INVALID-MODE` -> `(err u100)`
+- `ERR-NOT-IMPROVEMENT` -> `(err u101)`
+- `ERR-INVALID-NAME` -> `(err u102)`
+- `ERR-INVALID-SCORE` -> `(err u103)`
+- `ERR-NOT-AUTHORIZED` -> `(err u104)`
+- `ERR-NOT-TOP10` -> `(err u105)`
+- `ERR-INVALID-RANK` -> `(err u106)`
+- `ERR-INVALID-FEE` -> `(err u107)`
+- `ERR-NONCE-ALREADY-USED` -> `(err u108)`
+- `ERR-SIGNATURE-INVALID` -> `(err u109)`
+- `ERR-ATTESTATION-EXPIRED` -> `(err u110)`
+- `ERR-ATTESTER-NOT-CONFIGURED` -> `(err u111)`
+
+## Fee Constants
+- `FEE-MIN` -> `u100` (0.0001 STX)
+- `FEE-MAX` -> `u1000000` (1 STX)
+- `DEFAULT-FEE` -> `u30000` (0.03 STX)
+
+## Data Vars
+- `contract-owner` (principal)
+- `fee-unit` (uint)
+- `fee-recipient` (principal)
+- `verifier-pubkey-hash` (`optional (buff 20)`)
+
+## Attestation Notes
+- Signatures are recovered with `secp256k1-recover?` and must be 65-byte RSV format.
+- `verifier-pubkey-hash` should be `hash160` of the verifier's compressed secp256k1 pubkey bytes.
+- Helper command: `npm run arcade:verifier-hash -- <private-key-hex>`
+
+## Maps
+- `PlayerBest` -> `{ game-id: (string-ascii 32), mode: uint, player: principal }` => `{ name: (string-ascii 12), score: uint, updated-at: uint }`
+- `LeaderboardSlot` -> `{ game-id: (string-ascii 32), mode: uint, rank: uint }` => `{ player: principal, name: (string-ascii 12), score: uint, updated-at: uint }`
+- `UsedNonce` -> `{ player: principal, nonce: uint }` => `bool`
+
+## Public Functions
+- `submit-score(game-id, mode, score, player-name, nonce, expires-at, signature)`
+- `set-fee-unit(new-fee)`
+- `set-fee-recipient(recipient)`
+- `set-verifier-pubkey-hash(new-hash)`
+- `transfer-contract-ownership(new-owner)`
+
+## Read-Only Functions
+- `get-player-best(game-id, mode, player)`
+- `get-top10(game-id, mode)`
+- `get-top10-entry(game-id, mode, rank)`
+- `is-nonce-used(player, nonce)`
+- `get-owner()`
+- `get-fee-unit()`
+- `get-fee-recipient()`
+- `get-verifier-pubkey-hash()`
+
 ## xtrata-collection-mint-v1.0 (template, legacy)
 
 Source: `contracts/clarinet/contracts/xtrata-collection-mint-v1.0.clar`

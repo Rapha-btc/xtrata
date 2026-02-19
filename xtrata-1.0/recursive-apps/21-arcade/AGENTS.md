@@ -1,45 +1,100 @@
-# Repository Guidelines
+# Arcade AGENTS
 
-## Project Structure & Module Organization
-- `index.html` loads shared libraries, all game modules, and `main.js`.
-- `main.js` is the launcher: home grid rendering, game lifecycle, error handling, and keyboard navigation.
-- `games/` contains one game per file (`gameNN_slug.js`), each exposing a global `GameNN` object.
-- `lib/utils.js` and `lib/highscores.js` provide shared utilities, audio helpers, and leaderboard logic.
-- `tests/` contains the browser-based harness: `test_runner.html`, `tests.js`, and `test_utils.js`.
-- `styles.css` defines global arcade, overlay, and responsive layout styles.
+This file governs work in `recursive-apps/21-arcade/` and is optimized for long-term scaling
+of game content (many levels/waves), stable performance, and trustworthy high-score submission.
 
-## Build, Test, and Development Commands
-- No Node build pipeline is used here; this is a static HTML/CSS/JS project.
-- Run locally with a static server:
-  - `python3 -m http.server 8000`
-- Open the app:
-  - `http://localhost:8000/index.html`
-- Run tests:
-  - `http://localhost:8000/tests/test_runner.html` then click **Run All Tests**.
-- Useful repo navigation:
-  - `rg --files`
-  - `rg "Game[0-9]{2}" games/`
+## Scope
+- Applies to `index.html`, `main.js`, `styles.css`, `lib/*.js`, `games/*.js`, and `tests/*`.
+- For game-specific constraints, also read `games/AGENTS.md`.
+- Before major architecture changes, review `/Users/melophonic/Documents/GitHub/xtrata/xtrata-1.0/docs/app-reference.md`.
 
-## Coding Style & Naming Conventions
-- Follow existing vanilla JS style: ES5 patterns (`var`, IIFEs, explicit returned API objects).
-- Use 2-space indentation, semicolons, and compact function declarations consistent with current files.
-- Keep naming aligned:
-  - File: `games/gameNN_slug.js`
-  - Module global: `GameNN`
-  - Game metadata keys: `id`, `title`, `description`, `genreTag`, `controls`, `hasLevels`, `scoreMode`.
-- Preserve shared contracts (`ArcadeUtils`, `HighScores`, `ArcadeLauncher`) when extending functionality.
+## Product Goals
+- Keep each game fun and responsive on desktop and mobile browsers.
+- Support content expansion (100+ levels/waves) without rewriting core loops.
+- Preserve leaderboard integrity for long-term on-chain score competition.
+- Make updates safe: deterministic behavior where needed, test hooks always present, no hidden scoring paths.
 
-## Testing Guidelines
-- Main coverage is through `tests/tests.js` (smoke, lifecycle cleanup, level progression, high scores).
-- For new or changed games, ensure `getTestHooks()` remains available for deterministic checks.
-- Before PR: run the full browser test suite and manually verify launch, exit, restart, and score submission behavior.
-- Any runtime error overlay should be treated as a blocking issue.
+## Project Structure
+- `index.html`: boot order and runtime config (`window.ARCADE_ONCHAIN_CONFIG`).
+- `main.js`: launcher, game lifecycle, wallet status/connect, admin actions, debug controls.
+- `lib/highscores.js`: local PB + on-chain submit/fetch + scoring lock behavior.
+- `lib/utils.js`: shared rendering/audio/input helpers.
+- `games/gameNN_slug.js`: standalone ES5 IIFE exposing global `GameNN`.
+- `tests/`: browser test harness and regression checks.
 
-## Commit & Pull Request Guidelines
-- Use short, imperative commit subjects (for example: `Fix cleanup on game exit`).
-- Keep each commit focused on one concern (single game, shared lib, or tests).
-- PRs should include:
-  - What changed and why.
-  - Test evidence (test runner result + manual steps).
-  - Screenshot or GIF for visible UI/gameplay changes.
-  - Linked issue/task ID when available.
+## Coding Rules
+- Use existing vanilla ES5 style (`var`, function declarations, IIFE game modules).
+- Keep code ASCII unless a file already requires Unicode.
+- Do not add dependencies/build tooling unless explicitly requested.
+- Keep startup lightweight; avoid blocking event handlers with long synchronous work.
+- Preserve existing public contracts: `ArcadeLauncher`, `HighScores`, `ArcadeUtils`, and game module API shape.
+
+## Game Module Contract
+- Each game file must expose:
+  - `id`, `title`, `description`, `genreTag`, `controls`, `hasLevels`, `scoreMode`
+  - `init(containerEl, shared)`
+  - `destroy()`
+  - `getTestHooks()` for deterministic test control
+- `destroy()` must clean timers, animation loops, listeners, and audio to prevent cross-game leaks.
+- `getTestHooks()` must remain functional after refactors.
+
+## Scaling Strategy (Levels/Waves)
+- Prefer data-driven level definitions over hardcoded per-level conditionals.
+- Separate level data from runtime systems:
+  - spawn schedules
+  - enemy mix/composition
+  - speed/health/fire-rate modifiers
+  - reward/score multipliers
+- Add reusable wave primitives (formation, burst, flank, rush, boss escort) and compose from them.
+- Support procedural variation via deterministic seeds only when fairness is preserved.
+- Keep difficulty curves smooth; avoid abrupt spikes unless flagged as boss/challenge waves.
+
+## Effects and Animation Rules
+- Effects (missiles, trails, explosions, hit flashes) must be pooled/reused when possible.
+- Avoid per-frame object churn in hot loops.
+- Keep animation timing frame-rate independent (delta-based updates with clamped dt).
+- Visual upgrades must not change score rules unless explicitly intended and documented.
+
+## Performance and Stability Budgets
+- Target 60fps on typical laptops; degrade gracefully on weaker devices.
+- Avoid expensive allocation/parsing inside frame loops.
+- Keep click handlers and synchronous setup work short; defer heavy work using async scheduling when possible.
+- Treat console runtime errors and overlay crashes as release blockers.
+
+## Score and On-Chain Integrity
+- Never mutate final score after a run is marked complete.
+- Do not bypass or weaken attestation, nonce, or wallet checks in submit flow.
+- Keep game-over -> verify -> submit sequence deterministic from one score snapshot.
+- If test shortcuts are used in a browser session (for example force-next-wave), honor scoring lock behavior.
+
+## Wallet and Network Behavior
+- Treat detected provider != connected account.
+- Resolve Stacks addresses robustly from provider payload variants.
+- Respect configured network target and show explicit mismatch status.
+- On wallet integration changes, test both connect badge behavior and score-submit behavior.
+
+## Testing Requirements
+- Maintain and update tests in `tests/tests.js` for any shared logic changes.
+- For game updates, verify:
+  - launch, play, exit, restart
+  - cleanup after destroy
+  - level progression correctness
+  - overlay display correctness
+  - score submit flow (including rejection/failure paths)
+- Keep `getTestHooks()` aligned with test harness expectations.
+
+## Development Commands
+- Run local server: `python3 -m http.server 8000`
+- Open arcade: `http://localhost:8000/index.html`
+- Run test harness: `http://localhost:8000/tests/test_runner.html`
+- Useful search:
+  - `rg --files recursive-apps/21-arcade`
+  - `rg "Game[0-9]{2}|getTestHooks|submitOnChainScore" recursive-apps/21-arcade`
+
+## Change Management
+- Keep commits focused (one concern per commit).
+- For substantial gameplay or shared-lib changes, include:
+  - behavior summary
+  - risk notes
+  - test evidence (manual + harness)
+- When introducing new game architecture patterns, update this file so future game scaling stays consistent.

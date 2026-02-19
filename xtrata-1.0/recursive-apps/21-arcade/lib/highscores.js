@@ -1,6 +1,7 @@
 /* Shared High Scores Module */
 var HighScores = (function(){
   var PB_STORAGE_KEY = 'retro_arcade_personal_bests';
+  var SCORING_DISABLED_STORAGE_KEY = 'retro_arcade_scoring_disabled';
   var MAX_ENTRIES = 10;
 
   var MODE_SCORE = 0;
@@ -10,11 +11,14 @@ var HighScores = (function(){
     enabled: true,
     network: 'mainnet',
     contractAddress: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
-    contractName: 'xtrata-arcade-scores-v1-0',
+    contractName: 'xtrata-arcade-scores-v1-1',
     functionName: 'submit-score',
     leaderboardFunctionName: 'get-top10',
     apiBaseUrl: '',
     readSenderAddress: '',
+    requiresAttestation: true,
+    attestationEndpoint: '/arcade/attest-score',
+    attestationTimeoutMs: 10000,
     minRank: 10,
     debug: false
   };
@@ -27,6 +31,9 @@ var HighScores = (function(){
   var leaderboardCache = {};
   var submitInFlight = null;
   var submitFlowInFlight = {};
+  var finalizedScoreResults = {};
+  var FINALIZED_SCORE_TTL_MS = 30000;
+  var scoringDisabledState = _loadScoringDisabledState();
 
   function _debugEnabled(){
     if(onChainConfig && onChainConfig.debug) return true;
@@ -66,10 +73,77 @@ var HighScores = (function(){
     }
   }
 
+  function _loadScoringDisabledState(){
+    var fallback = { disabled: false, reason: '', at: 0 };
+    if(typeof localStorage === 'undefined'){
+      return fallback;
+    }
+    try{
+      var raw = localStorage.getItem(SCORING_DISABLED_STORAGE_KEY);
+      if(!raw) return fallback;
+      var parsed = JSON.parse(raw);
+      if(!parsed || parsed.disabled !== true){
+        return fallback;
+      }
+      return {
+        disabled: true,
+        reason: typeof parsed.reason === 'string' ? parsed.reason : '',
+        at: typeof parsed.at === 'number' ? parsed.at : 0
+      };
+    }catch(e){
+      return fallback;
+    }
+  }
+
   function _savePB(data){
     try{
       localStorage.setItem(PB_STORAGE_KEY, JSON.stringify(data));
     }catch(e){}
+  }
+
+  function _saveScoringDisabledState(){
+    if(typeof localStorage === 'undefined') return;
+    try{
+      if(!scoringDisabledState || scoringDisabledState.disabled !== true){
+        localStorage.removeItem(SCORING_DISABLED_STORAGE_KEY);
+        return;
+      }
+      localStorage.setItem(SCORING_DISABLED_STORAGE_KEY, JSON.stringify({
+        disabled: true,
+        reason: scoringDisabledState.reason || '',
+        at: scoringDisabledState.at || Date.now()
+      }));
+    }catch(e){}
+  }
+
+  function isScoringDisabled(){
+    return !!(scoringDisabledState && scoringDisabledState.disabled === true);
+  }
+
+  function disableScoring(reason){
+    if(isScoringDisabled()) return false;
+    scoringDisabledState = {
+      disabled: true,
+      reason: typeof reason === 'string' ? reason : '',
+      at: Date.now()
+    };
+    _saveScoringDisabledState();
+    return true;
+  }
+
+  function getScoringDisabledState(){
+    return {
+      disabled: isScoringDisabled(),
+      reason: scoringDisabledState && scoringDisabledState.reason ? scoringDisabledState.reason : '',
+      at: scoringDisabledState && scoringDisabledState.at ? scoringDisabledState.at : 0
+    };
+  }
+
+  function clearScoringDisabled(){
+    if(!isScoringDisabled()) return false;
+    scoringDisabledState = { disabled: false, reason: '', at: 0 };
+    _saveScoringDisabledState();
+    return true;
   }
 
   function _key(gameId, mode){
@@ -91,6 +165,32 @@ var HighScores = (function(){
 
   function _copyList(list){
     return (list || []).map(_copyEntry);
+  }
+
+  function _cloneSubmitResult(result){
+    if(!result || typeof result !== 'object') return result;
+    var clone = Object.assign({}, result);
+    if(result.onChain && typeof result.onChain === 'object'){
+      clone.onChain = Object.assign({}, result.onChain);
+    }
+    return clone;
+  }
+
+  function _getCachedFinalizedScoreResult(key){
+    var cached = finalizedScoreResults[key];
+    if(!cached) return null;
+    if(Date.now() > cached.expiresAt){
+      delete finalizedScoreResults[key];
+      return null;
+    }
+    return _cloneSubmitResult(cached.result);
+  }
+
+  function _cacheFinalizedScoreResult(key, result){
+    finalizedScoreResults[key] = {
+      result: _cloneSubmitResult(result),
+      expiresAt: Date.now() + FINALIZED_SCORE_TTL_MS
+    };
   }
 
   function _isBetter(mode, candidate, existing){
@@ -243,11 +343,14 @@ var HighScores = (function(){
       enabled: !!source.enabled,
       network: source.network || 'mainnet',
       contractAddress: source.contractAddress || '',
-      contractName: source.contractName || 'xtrata-arcade-scores-v1-0',
+      contractName: source.contractName || 'xtrata-arcade-scores-v1-1',
       functionName: source.functionName || 'submit-score',
       leaderboardFunctionName: source.leaderboardFunctionName || 'get-top10',
       apiBaseUrl: source.apiBaseUrl || '',
       readSenderAddress: source.readSenderAddress || '',
+      requiresAttestation: !!source.requiresAttestation,
+      attestationEndpoint: source.attestationEndpoint || '',
+      attestationTimeoutMs: source.attestationTimeoutMs || 10000,
       minRank: source.minRank || 10,
       debug: !!source.debug
     };
@@ -267,6 +370,17 @@ var HighScores = (function(){
     }
     if(typeof input.apiBaseUrl === 'string') base.apiBaseUrl = input.apiBaseUrl.trim();
     if(typeof input.readSenderAddress === 'string') base.readSenderAddress = input.readSenderAddress.trim();
+    if(typeof input.requiresAttestation === 'boolean'){
+      base.requiresAttestation = input.requiresAttestation;
+    }
+    if(typeof input.attestationEndpoint === 'string'){
+      base.attestationEndpoint = input.attestationEndpoint.trim();
+    }
+
+    var timeoutNum = Number(input.attestationTimeoutMs);
+    if(isFinite(timeoutNum) && timeoutNum >= 1000){
+      base.attestationTimeoutMs = Math.floor(timeoutNum);
+    }
 
     var rankNum = Number(input.minRank);
     if(isFinite(rankNum) && rankNum > 0){
@@ -369,6 +483,17 @@ var HighScores = (function(){
     var lenHex = text.length.toString(16);
     while(lenHex.length < 8) lenHex = '0' + lenHex;
     return '0x0d' + lenHex + hex;
+  }
+
+  function _encodeBufferCV(hexValue){
+    var clean = _stripHexPrefix(String(hexValue == null ? '' : hexValue)).toLowerCase();
+    if(!clean || clean.length % 2 !== 0 || /[^0-9a-f]/.test(clean)){
+      throw new Error('Contract call buffer must be a valid hex string.');
+    }
+    var byteLen = clean.length / 2;
+    var lenHex = byteLen.toString(16);
+    while(lenHex.length < 8) lenHex = '0' + lenHex;
+    return '0x02' + lenHex + clean;
   }
 
   function _providerDebugSnapshot(){
@@ -498,9 +623,18 @@ var HighScores = (function(){
       return [];
     }
     out.sort(function(a, b){
-      var scoreA = (a.hasTransactionRequest ? 10 : 0) + (a.hasRequest ? 1 : 0);
-      var scoreB = (b.hasTransactionRequest ? 10 : 0) + (b.hasRequest ? 1 : 0);
-      return scoreB - scoreA;
+      function scoreProvider(item){
+        var label = String(item.label || '').toLowerCase();
+        var score = 0;
+        if(item.hasTransactionRequest) score += 100;
+        if(item.hasRequest) score += 10;
+        if(label.indexOf('bitcoinprovider') >= 0) score += 40;
+        if(label.indexOf('xverse') >= 0) score += 20;
+        if(label.indexOf('registry:') === 0) score += 15;
+        if(label.indexOf('window.stacksprovider') === 0) score -= 10;
+        return score;
+      }
+      return scoreProvider(b) - scoreProvider(a);
     });
 
     _debugLog('info', 'Provider discovery completed', {
@@ -633,7 +767,7 @@ var HighScores = (function(){
         contract: fullContract,
         functionName: params.functionName,
         functionArgs: params.functionArgs,
-        postConditionMode: params.postConditionMode
+        network: params.network
       }
     });
 
@@ -659,6 +793,372 @@ var HighScores = (function(){
     ];
   }
 
+  function _withTimeout(promise, ms, label){
+    var timer = null;
+    return new Promise(function(resolve, reject){
+      timer = setTimeout(function(){
+        var timeoutErr = new Error('Wallet request timed out after ' + ms + 'ms (' + label + ').');
+        timeoutErr.code = 'ETIMEOUT';
+        reject(timeoutErr);
+      }, ms);
+      Promise.resolve(promise).then(function(value){
+        clearTimeout(timer);
+        resolve(value);
+      }).catch(function(error){
+        clearTimeout(timer);
+        reject(error);
+      });
+    });
+  }
+
+  function _callProviderRequest(provider, method, params){
+    if(!provider || typeof provider.request !== 'function'){
+      throw new Error('Wallet provider request method is unavailable.');
+    }
+    if(provider.request.length >= 2){
+      return provider.request(method, params);
+    }
+    return provider.request({ method: method, params: params });
+  }
+
+  function _callProviderMethod(provider, method){
+    if(!provider || typeof provider.request !== 'function'){
+      throw new Error('Wallet provider request method is unavailable.');
+    }
+    if(provider.request.length >= 2){
+      return provider.request(method);
+    }
+    return provider.request({ method: method });
+  }
+
+  function _looksLikeStacksAddress(value){
+    if(typeof value !== 'string') return false;
+    var trimmed = value.trim();
+    if(trimmed.length < 20) return false;
+    var prefix = trimmed.substring(0, 2);
+    return prefix === 'SP' || prefix === 'ST' || prefix === 'SM' || prefix === 'SN';
+  }
+
+  function _normalizeWalletNetwork(value){
+    if(!value) return null;
+    var raw = String(value).toLowerCase();
+    if(raw.indexOf('mainnet') >= 0 || raw === 'main') return 'mainnet';
+    if(raw.indexOf('testnet') >= 0 || raw === 'test') return 'testnet';
+    if(raw.indexOf('devnet') >= 0 || raw === 'dev') return 'devnet';
+    return null;
+  }
+
+  function _networkFromAddress(value){
+    if(typeof value !== 'string' || !value) return null;
+    var prefix = value.substring(0, 2);
+    if(prefix === 'SP' || prefix === 'SM') return 'mainnet';
+    if(prefix === 'ST' || prefix === 'SN') return 'testnet';
+    return null;
+  }
+
+  function _collectStacksAddressesFromPayload(payload, out){
+    if(!payload) return out;
+
+    if(typeof payload === 'string'){
+      if(_looksLikeStacksAddress(payload)){
+        out.push(payload.trim());
+      }
+      return out;
+    }
+
+    if(Array.isArray(payload)){
+      var i;
+      for(i = 0; i < payload.length; i++){
+        _collectStacksAddressesFromPayload(payload[i], out);
+      }
+      return out;
+    }
+
+    if(typeof payload !== 'object') return out;
+
+    if(payload.stxAddress){
+      _collectStacksAddressesFromPayload(payload.stxAddress, out);
+      if(typeof payload.stxAddress === 'object'){
+        _collectStacksAddressesFromPayload(payload.stxAddress.mainnet, out);
+        _collectStacksAddressesFromPayload(payload.stxAddress.testnet, out);
+      }
+    }
+
+    _collectStacksAddressesFromPayload(payload.identityAddress, out);
+    _collectStacksAddressesFromPayload(payload.address, out);
+    _collectStacksAddressesFromPayload(payload.selectedAddress, out);
+    _collectStacksAddressesFromPayload(payload.paymentAddress, out);
+    _collectStacksAddressesFromPayload(payload.addresses, out);
+    _collectStacksAddressesFromPayload(payload.accounts, out);
+    _collectStacksAddressesFromPayload(payload.stxAddresses, out);
+
+    if(payload.profile && typeof payload.profile === 'object' && payload.profile.stxAddress){
+      _collectStacksAddressesFromPayload(payload.profile.stxAddress, out);
+    }
+    if(payload.result){
+      _collectStacksAddressesFromPayload(payload.result, out);
+    }
+    return out;
+  }
+
+  function _pickPreferredStacksAddress(candidates, preferredNetwork){
+    if(!Array.isArray(candidates) || !candidates.length){
+      return null;
+    }
+
+    var deduped = [];
+    var seen = {};
+    var i;
+    for(i = 0; i < candidates.length; i++){
+      var candidate = candidates[i];
+      if(!_looksLikeStacksAddress(candidate)) continue;
+      if(seen[candidate]) continue;
+      seen[candidate] = true;
+      deduped.push(candidate);
+    }
+
+    if(!deduped.length){
+      return null;
+    }
+    if(preferredNetwork){
+      for(i = 0; i < deduped.length; i++){
+        if(_networkFromAddress(deduped[i]) === preferredNetwork){
+          return deduped[i];
+        }
+      }
+    }
+    return deduped[0];
+  }
+
+  function _extractAddressFromPayload(payload, preferredNetwork){
+    var candidates = _collectStacksAddressesFromPayload(payload, []);
+    return _pickPreferredStacksAddress(candidates, preferredNetwork || null);
+  }
+
+  function _resolveProviderAddress(provider, preferredNetwork){
+    if(!provider) return Promise.resolve(null);
+    var fallbackAddress = null;
+
+    if(typeof provider.selectedAddress === 'string' && _looksLikeStacksAddress(provider.selectedAddress)){
+      if(!preferredNetwork || _networkFromAddress(provider.selectedAddress) === preferredNetwork){
+        return Promise.resolve(provider.selectedAddress);
+      }
+      fallbackAddress = provider.selectedAddress;
+    }
+    if(typeof provider.address === 'string' && _looksLikeStacksAddress(provider.address)){
+      if(!preferredNetwork || _networkFromAddress(provider.address) === preferredNetwork){
+        return Promise.resolve(provider.address);
+      }
+      if(!fallbackAddress){
+        fallbackAddress = provider.address;
+      }
+    }
+    if(typeof provider.request !== 'function'){
+      return Promise.resolve(fallbackAddress);
+    }
+
+    var methods = ['stx_getAddresses', 'getAddresses', 'stx_getAccounts', 'getAccounts'];
+    function tryMethod(index){
+      if(index >= methods.length) return Promise.resolve(fallbackAddress);
+      var method = methods[index];
+      return Promise.resolve()
+        .then(function(){
+          return _withTimeout(_callProviderMethod(provider, method), 3000, 'address:' + method);
+        })
+        .then(function(result){
+          var address = _extractAddressFromPayload(result, preferredNetwork);
+          if(address) return address;
+          var fallback = _extractAddressFromPayload(result);
+          if(!fallbackAddress && fallback){
+            fallbackAddress = fallback;
+          }
+          return tryMethod(index + 1);
+        })
+        .catch(function(){
+          return tryMethod(index + 1);
+        });
+    }
+
+    function tryRequest(index){
+      var requestMethods = ['stx_requestAccounts', 'requestAccounts'];
+      if(index >= requestMethods.length) return Promise.resolve(null);
+      var method = requestMethods[index];
+      return Promise.resolve()
+        .then(function(){
+          return _withTimeout(_callProviderMethod(provider, method), 10000, 'address-request:' + method);
+        })
+        .then(function(result){
+          var address = _extractAddressFromPayload(result, preferredNetwork);
+          if(address) return address;
+          var fallback = _extractAddressFromPayload(result);
+          if(!fallbackAddress && fallback){
+            fallbackAddress = fallback;
+          }
+          return tryMethod(0);
+        })
+        .catch(function(error){
+          if(_isUserRejectedError(error)){
+            throw error;
+          }
+          return tryRequest(index + 1);
+        });
+    }
+
+    return tryMethod(0).then(function(address){
+      if(address) return address;
+      return tryRequest(0).catch(function(error){
+        if(_isUserRejectedError(error)){
+          throw error;
+        }
+        return fallbackAddress;
+      });
+    });
+  }
+
+  function _normalizeUIntInput(value, label){
+    if(typeof value === 'bigint'){
+      if(value < 0n) throw new Error(label + ' must be an unsigned integer.');
+      return value.toString(10);
+    }
+    var text = String(value == null ? '' : value).trim();
+    if(!text || !/^[0-9]+$/.test(text)){
+      throw new Error(label + ' must be an unsigned integer.');
+    }
+    return text.replace(/^0+(\d)/, '$1');
+  }
+
+  function _normalizeAttestationResponse(raw){
+    if(!raw || typeof raw !== 'object'){
+      throw new Error('Attestation response is missing or invalid.');
+    }
+
+    var nonce = _normalizeUIntInput(raw.nonce, 'Attestation nonce');
+    var expiresAt = _normalizeUIntInput(
+      typeof raw.expiresAt !== 'undefined'
+        ? raw.expiresAt
+        : (typeof raw.expires_at !== 'undefined' ? raw.expires_at : raw['expires-at']),
+      'Attestation expiry'
+    );
+    var signatureHex = _stripHexPrefix(
+      raw.signature || raw.signatureHex || raw.signature_hex || raw.sig || ''
+    ).toLowerCase();
+
+    if(signatureHex.length !== 130 || /[^0-9a-f]/.test(signatureHex)){
+      throw new Error('Attestation signature must be a 65-byte hex string.');
+    }
+
+    return {
+      nonce: nonce,
+      expiresAt: expiresAt,
+      signatureHex: signatureHex
+    };
+  }
+
+  function _requestScoreAttestation(payload, playerAddress){
+    if(payload.attestation && typeof payload.attestation === 'object'){
+      return Promise.resolve(_normalizeAttestationResponse(payload.attestation));
+    }
+
+    if(!payload.requiresAttestation){
+      return Promise.resolve(null);
+    }
+
+    if(typeof fetch !== 'function'){
+      return Promise.reject(new Error('Browser fetch API is unavailable for score attestation.'));
+    }
+
+    if(!payload.attestationEndpoint){
+      return Promise.reject(new Error('This leaderboard requires attestation, but no attestation endpoint is configured.'));
+    }
+    if(!playerAddress){
+      return Promise.reject(new Error('Unable to resolve the wallet address required for attestation.'));
+    }
+
+    var endpoint = String(payload.attestationEndpoint);
+    var timeoutMs = Number(payload.attestationTimeoutMs || 10000);
+    if(!isFinite(timeoutMs) || timeoutMs < 1000) timeoutMs = 10000;
+
+    var requestBody = {
+      gameId: payload.gameId,
+      mode: payload.mode,
+      score: payload.score,
+      playerName: payload.playerName,
+      player: playerAddress,
+      contractAddress: payload.contractAddress,
+      contractName: payload.contractName,
+      functionName: payload.functionName,
+      network: payload.network || 'mainnet',
+      origin:
+        (typeof window !== 'undefined' && window.location && window.location.origin)
+          ? window.location.origin
+          : null
+    };
+
+    _debugLog('info', 'Requesting score attestation', {
+      endpoint: endpoint,
+      player: playerAddress,
+      gameId: payload.gameId,
+      mode: payload.mode,
+      score: payload.score
+    });
+
+    return _withTimeout(fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody)
+    }), timeoutMs, 'attestation-request')
+      .then(function(response){
+        if(!response.ok){
+          throw new Error('Attestation endpoint returned HTTP ' + response.status + '.');
+        }
+        return response.json();
+      })
+      .then(function(body){
+        var attestation = _normalizeAttestationResponse(body);
+        _debugLog('info', 'Score attestation received', {
+          nonce: attestation.nonce,
+          expiresAt: attestation.expiresAt
+        });
+        return attestation;
+      });
+  }
+
+  function _buildSubmitFunctionArgs(payload, attestation){
+    var args = [
+      _encodeAsciiCV(_safeGameId(payload.gameId)),
+      _encodeUIntCV(_toModeUint(payload.mode)),
+      _encodeUIntCV(payload.score),
+      _encodeAsciiCV(_safePlayerName(payload.playerName))
+    ];
+
+    if(attestation){
+      args.push(_encodeUIntCV(attestation.nonce));
+      args.push(_encodeUIntCV(attestation.expiresAt));
+      args.push(_encodeBufferCV(attestation.signatureHex));
+    }
+    return args;
+  }
+
+  function _pickContractCallVariants(providerLabel, params){
+    var variants = _buildContractCallParamVariants(params);
+    var lowerLabel = String(providerLabel || '').toLowerCase();
+    var preferMinimal =
+      lowerLabel.indexOf('bitcoinprovider') >= 0 ||
+      lowerLabel.indexOf('xverse') >= 0 ||
+      lowerLabel.indexOf('btc') >= 0;
+
+    variants.sort(function(a, b){
+      var scoreA = 0;
+      var scoreB = 0;
+      if(a.label === 'sats-minimal') scoreA += preferMinimal ? 10 : 0;
+      if(a.label === 'legacy-split') scoreA += preferMinimal ? 0 : 10;
+      if(b.label === 'sats-minimal') scoreB += preferMinimal ? 10 : 0;
+      if(b.label === 'legacy-split') scoreB += preferMinimal ? 0 : 10;
+      return scoreB - scoreA;
+    });
+    return variants;
+  }
+
   function _requestWalletContractCall(provider, params, providerLabel){
     _debugLog('info', 'Submitting wallet contract call', {
       providerLabel: providerLabel || null,
@@ -672,56 +1172,36 @@ var HighScores = (function(){
     var attempts = [];
     var transactionVariants = _buildTransactionRequestPayloadVariants(params);
     if(typeof provider.transactionRequest === 'function'){
-      var t;
-      for(t = 0; t < transactionVariants.length; t++){
-        (function(variant){
-          attempts.push({
-            label: 'provider.transactionRequest(' + variant.label + ')',
-            exec: function(){
-              _debugLog('info', 'Wallet transactionRequest payload prepared', {
-                providerLabel: providerLabel || null,
-                variant: variant.label,
-                payload: variant.payload
-              });
-              var token = _createUnsecuredJwt(variant.payload);
-              return provider.transactionRequest(token);
-            }
+      var variant = transactionVariants[0];
+      attempts.push({
+        label: 'provider.transactionRequest(' + variant.label + ')',
+        exec: function(){
+          _debugLog('info', 'Wallet transactionRequest payload prepared', {
+            providerLabel: providerLabel || null,
+            variant: variant.label,
+            payload: variant.payload
           });
-        })(transactionVariants[t]);
-      }
+          var token = _createUnsecuredJwt(variant.payload);
+          return provider.transactionRequest(token);
+        }
+      });
     } else if(typeof provider.request === 'function'){
-      var paramVariants = _buildContractCallParamVariants(params);
+      var paramVariants = _pickContractCallVariants(providerLabel, params);
       var v;
-      for(v = 0; v < paramVariants.length; v++){
+      for(v = 0; v < paramVariants.length && v < 2; v++){
         (function(variant){
           attempts.push({
             label: 'provider.request("stx_callContract", ' + variant.label + ')',
-            exec: function(){ return provider.request('stx_callContract', variant.params); }
+            exec: function(){ return _callProviderRequest(provider, 'stx_callContract', variant.params); }
           });
-          attempts.push({
-            label: 'provider.request("stx_callContractV2", ' + variant.label + ')',
-            exec: function(){ return provider.request('stx_callContractV2', variant.params); }
-          });
+          if(v === 0){
+            attempts.push({
+              label: 'provider.request("stx_callContractV2", ' + variant.label + ')',
+              exec: function(){ return _callProviderRequest(provider, 'stx_callContractV2', variant.params); }
+            });
+          }
         })(paramVariants[v]);
       }
-    }
-
-    function withTimeout(promise, ms, label){
-      var timer = null;
-      return new Promise(function(resolve, reject){
-        timer = setTimeout(function(){
-          var timeoutErr = new Error('Wallet request timed out after ' + ms + 'ms (' + label + ').');
-          timeoutErr.code = 'ETIMEOUT';
-          reject(timeoutErr);
-        }, ms);
-        Promise.resolve(promise).then(function(value){
-          clearTimeout(timer);
-          resolve(value);
-        }).catch(function(error){
-          clearTimeout(timer);
-          reject(error);
-        });
-      });
     }
 
     function runAttempt(index, previousError){
@@ -732,7 +1212,7 @@ var HighScores = (function(){
       _debugLog('info', 'Wallet request attempt #' + (index + 1), attempt.label);
       return Promise.resolve()
         .then(function(){
-          return withTimeout(attempt.exec(), 12000, attempt.label);
+          return _withTimeout(attempt.exec(), 12000, attempt.label);
         })
         .then(function(result){
           _debugLog('info', 'Wallet request returned result', result);
@@ -815,6 +1295,27 @@ var HighScores = (function(){
     );
   }
 
+  function _isUserRejectedError(error){
+    if(!error) return false;
+    if(typeof error.code !== 'undefined' && Number(error.code) === 4001) return true;
+    var message = (error && error.message ? error.message : String(error)).toLowerCase();
+    return (
+      message.indexOf('rejected') >= 0 ||
+      message.indexOf('denied') >= 0 ||
+      message.indexOf('cancelled') >= 0 ||
+      message.indexOf('canceled') >= 0
+    );
+  }
+
+  function _isMissingAddressError(error){
+    if(!error) return false;
+    var message = (error && error.message ? error.message : String(error)).toLowerCase();
+    return (
+      message.indexOf('unable to resolve the wallet address') >= 0 ||
+      message.indexOf('wallet address required for attestation') >= 0
+    );
+  }
+
   function _defaultOnChainSubmitter(payload){
     if(typeof window !== 'undefined' && window.location && window.location.protocol === 'file:'){
       _debugLog('error', 'On-chain submit blocked: file:// origin does not support wallet injection');
@@ -839,22 +1340,10 @@ var HighScores = (function(){
       contractAddress: payload.contractAddress,
       contractName: payload.contractName,
       functionName: payload.functionName,
-      network: payload.network
+      network: payload.network,
+      requiresAttestation: !!payload.requiresAttestation,
+      hasAttestationEndpoint: !!payload.attestationEndpoint
     });
-
-    var params = {
-      contractAddress: payload.contractAddress,
-      contractName: payload.contractName,
-      functionName: payload.functionName,
-      functionArgs: [
-        _encodeAsciiCV(_safeGameId(payload.gameId)),
-        _encodeUIntCV(_toModeUint(payload.mode)),
-        _encodeUIntCV(payload.score),
-        _encodeAsciiCV(_safePlayerName(payload.playerName))
-      ],
-      network: payload.network || 'mainnet',
-      postConditionMode: 1
-    };
 
     function tryProvider(index, previousError){
       if(index >= providers.length){
@@ -866,38 +1355,67 @@ var HighScores = (function(){
         total: providers.length,
         label: candidate.label
       });
-      return _requestWalletContractCall(candidate.provider, params, candidate.label).then(function(result){
-        var txId = null;
-        if(result && typeof result === 'object'){
-          txId =
-            result.txId ||
-            result.txid ||
-            result.tx_id ||
-            (result.result && (result.result.txId || result.result.txid || result.result.tx_id)) ||
-            null;
-        }
-        _debugLog('info', 'On-chain submit completed', {
-          providerLabel: candidate.label,
-          txId: txId,
-          result: result
-        });
-        return {
-          txId: txId,
-          raw: result
-        };
-      }).catch(function(error){
-        _debugLog('warn', 'Wallet provider candidate failed', {
-          providerLabel: candidate.label,
-          error: _errorForLog(error)
-        });
-        if(_isUnsupportedProviderError(error)){
-          _debugLog('warn', 'Trying next provider after candidate failure', {
-            providerLabel: candidate.label
+
+      return _resolveProviderAddress(candidate.provider, _normalizeWalletNetwork(payload.network))
+        .then(function(playerAddress){
+          _debugLog('info', 'Resolved wallet address for candidate', {
+            providerLabel: candidate.label,
+            playerAddress: playerAddress || null
           });
-          return tryProvider(index + 1, error);
-        }
-        throw error;
-      });
+          return _requestScoreAttestation(payload, playerAddress).then(function(attestation){
+            var params = {
+              contractAddress: payload.contractAddress,
+              contractName: payload.contractName,
+              functionName: payload.functionName,
+              functionArgs: _buildSubmitFunctionArgs(payload, attestation),
+              network: payload.network || 'mainnet',
+              postConditionMode: 1
+            };
+            return _requestWalletContractCall(candidate.provider, params, candidate.label);
+          });
+        })
+        .then(function(result){
+          var txId = null;
+          if(result && typeof result === 'object'){
+            txId =
+              result.txId ||
+              result.txid ||
+              result.tx_id ||
+              (result.result && (result.result.txId || result.result.txid || result.result.tx_id)) ||
+              null;
+          }
+          _debugLog('info', 'On-chain submit completed', {
+            providerLabel: candidate.label,
+            txId: txId,
+            result: result
+          });
+          return {
+            txId: txId,
+            raw: result
+          };
+        })
+        .catch(function(error){
+          _debugLog('warn', 'Wallet provider candidate failed', {
+            providerLabel: candidate.label,
+            error: _errorForLog(error)
+          });
+          if(_isUserRejectedError(error)){
+            throw error;
+          }
+          if(_isUnsupportedProviderError(error) || _isRetryableParamError(error)){
+            _debugLog('warn', 'Trying next provider after candidate failure', {
+              providerLabel: candidate.label
+            });
+            return tryProvider(index + 1, error);
+          }
+          if(_isMissingAddressError(error)){
+            _debugLog('warn', 'Trying next provider because address resolution failed', {
+              providerLabel: candidate.label
+            });
+            return tryProvider(index + 1, error);
+          }
+          throw error;
+        });
     }
 
     return tryProvider(0, null);
@@ -954,6 +1472,13 @@ var HighScores = (function(){
       return Promise.reject(new Error('Score must be a positive number for on-chain submit.'));
     }
 
+    if(config.requiresAttestation && !config.attestationEndpoint && !opts.attestation){
+      _debugLog('error', 'Attestation is required but endpoint is missing', config);
+      return Promise.reject(
+        new Error('On-chain attestation is required, but no attestation endpoint is configured.')
+      );
+    }
+
     var payload = {
       gameId: _safeGameId(opts.gameId),
       mode: opts.mode === 'time' ? 'time' : 'score',
@@ -963,7 +1488,11 @@ var HighScores = (function(){
       contractAddress: config.contractAddress,
       contractName: config.contractName,
       functionName: config.functionName,
-      network: config.network
+      network: config.network,
+      requiresAttestation: !!config.requiresAttestation,
+      attestationEndpoint: config.attestationEndpoint || '',
+      attestationTimeoutMs: config.attestationTimeoutMs || 10000,
+      attestation: opts.attestation || null
     };
 
     var submitter = _resolveOnChainSubmitter();
@@ -1609,6 +2138,34 @@ var HighScores = (function(){
     var title = opts.title || gameId;
     var flowKey = _key(gameId, mode) + ':' + String(score);
 
+    if(isScoringDisabled()){
+      var disabledState = getScoringDisabledState();
+      var reasonSuffix = disabledState.reason === 'force-next-wave'
+        ? ' Force Next Wave test mode was used in this browser.'
+        : '';
+      renderOverlay({
+        gameId: gameId,
+        mode: mode,
+        title: title,
+        subtitle: 'Score submission is disabled for this browser.' + reasonSuffix
+      });
+      return Promise.resolve({
+        submitted: false,
+        disabled: true,
+        onChain: { offered: false, submitted: false }
+      });
+    }
+
+    var cachedResult = _getCachedFinalizedScoreResult(flowKey);
+    if(cachedResult){
+      _debugLog('info', 'maybeSubmit reused finalized score result', {
+        flowKey: flowKey,
+        submitted: !!cachedResult.submitted,
+        offered: !!(cachedResult.onChain && cachedResult.onChain.offered)
+      });
+      return Promise.resolve(cachedResult);
+    }
+
     if(submitFlowInFlight[flowKey]){
       _debugLog('warn', 'maybeSubmit deduped: submit flow already in flight', { flowKey: flowKey });
       return submitFlowInFlight[flowKey];
@@ -1673,8 +2230,12 @@ var HighScores = (function(){
           });
         });
       });
-    submitFlowInFlight[flowKey] = flowPromise.finally(function(){
-      if(submitFlowInFlight[flowKey] === flowPromise){
+    var trackedFlow = flowPromise.then(function(result){
+      _cacheFinalizedScoreResult(flowKey, result);
+      return result;
+    });
+    submitFlowInFlight[flowKey] = trackedFlow.finally(function(){
+      if(submitFlowInFlight[flowKey] === trackedFlow){
         delete submitFlowInFlight[flowKey];
       }
     });
@@ -1684,6 +2245,9 @@ var HighScores = (function(){
   function clearAll(){
     try{ localStorage.removeItem(PB_STORAGE_KEY); }catch(e){}
     leaderboardCache = {};
+    submitInFlight = null;
+    submitFlowInFlight = {};
+    finalizedScoreResults = {};
   }
 
   function _qualifies(gameId, mode, value, listOverride){
@@ -1721,6 +2285,10 @@ var HighScores = (function(){
     renderOverlay: renderOverlay,
     hideOverlay: hideOverlay,
     clearAll: clearAll,
+    disableScoring: disableScoring,
+    isScoringDisabled: isScoringDisabled,
+    getScoringDisabledState: getScoringDisabledState,
+    clearScoringDisabled: clearScoringDisabled,
     configureOnChain: configureOnChain,
     getOnChainConfig: getOnChainConfig,
     setOnChainSubmitter: setOnChainSubmitter,

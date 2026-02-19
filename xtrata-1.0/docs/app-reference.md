@@ -82,6 +82,7 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 - `src/lib/network/guard.ts` and `src/lib/network/rate-limit.ts` protect against aggressive polling.
 - `functions/hiro/[network]/[[path]].ts` proxies Hiro API calls and injects API keys when present.
 - `functions/bns/[[path]].ts` proxies BNS lookups (configure base via env).
+- `functions/arcade/attest-score.ts` signs `xtrata-arcade-scores-v1.1` submit attestations (nonce + expiry + RSV signature) for on-chain high-score verification.
 - `src/lib/wallet/session.ts` and `src/lib/wallet/storage.ts` persist wallet sessions.
 - `src/lib/wallet/adapter.ts` centralizes wallet request calls and types.
 
@@ -212,6 +213,10 @@ Notes: ensure tests or guards in `src/lib/network/__tests__/` still pass.
     `VITE_BNS_API_MAINNET=https://api.mainnet.hiro.so` (client) and/or
     `BNS_API_BASE=https://api.mainnet.hiro.so` (Pages Functions `/bns` proxy).
   - Local dev can use `VITE_BNS_API_MAINNET` to keep `/bns` proxy pointed at Hiro.
+- **Arcade score attestation (`xtrata-arcade-scores-v1.1`)**
+  - Pages Functions signer key: `ARCADE_SCORE_ATTESTATION_PRIVATE_KEY` (required for `/arcade/attest-score`).
+  - Optional expiry window in blocks: `ARCADE_SCORE_ATTESTATION_EXPIRY_BLOCKS` (default `30`, max `500`).
+  - Optional Hiro API bases: `ARCADE_HIRO_API_BASE_MAINNET`, `ARCADE_HIRO_API_BASE_TESTNET`, `ARCADE_HIRO_API_BASE_DEVNET`.
 
 12) New media types or preview behavior.
 Files: `src/components/TokenCardMedia.tsx`, `src/components/TokenContentPreview.tsx`, `src/lib/viewer/content.ts`.
