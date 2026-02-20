@@ -43,6 +43,8 @@ This file governs the production-test game outputs in `recursive-apps/21-arcade/
 5. Regenerate manifest.
 6. Verify game starts and exits correctly in arcade launcher.
 7. Verify score flow still uses guarded `shared.highScores` path.
+8. If score submit/wallet code changed, run strict wallet diagnostics before promotion:
+   - `npm run arcade:wallet:diag`
 
 ## Do Not
 - Do not hand-edit `games/latest-manifest.js`.

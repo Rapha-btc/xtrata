@@ -138,6 +138,21 @@ of game content (many levels/waves), stable performance, and trustworthy high-sc
 - Respect configured network target and show explicit mismatch status.
 - On wallet integration changes, test both connect badge behavior and score-submit behavior.
 
+## Strict Deny-Mode Post Condition Rules
+- The arcade score submit path runs in strict fee-trust mode by default:
+  - `useDenyModePostConditions: true`
+  - `fallbackToAllowModeOnPostConditionFailure: false`
+- Compatibility requirements discovered during wallet hardening:
+  - do not rely on `stx_callContractV2` (many providers do not support it).
+  - for strict submit, generate provider variants that include:
+    - post conditions serialized as STX post-condition hex bytes
+    - `functionArgs` variants with and without `0x` prefixes
+    - mode variants (`deny` string + numeric mode) for provider tolerance
+  - Xverse/BitcoinProvider paths may require `transactionRequest`-first behavior in strict mode.
+- Keep strict mode enabled; do not silently downgrade to allow mode.
+- If wallet submit code changes, run diagnostics before manual wallet testing:
+  - `npm run arcade:wallet:diag`
+
 ## Testing Requirements
 - Maintain and update tests in `tests/tests.js` for any shared logic changes.
 - For game updates, verify:
@@ -152,6 +167,7 @@ of game content (many levels/waves), stable performance, and trustworthy high-sc
 - Run local server: `python3 -m http.server 8000`
 - Open arcade: `http://localhost:8000/index.html`
 - Run test harness: `http://localhost:8000/tests/test_runner.html`
+- Run wallet compatibility diagnostics: `npm run arcade:wallet:diag`
 - Useful search:
   - `rg --files recursive-apps/21-arcade`
   - `rg "Game[0-9]{2}|getTestHooks|submitOnChainScore" recursive-apps/21-arcade`
