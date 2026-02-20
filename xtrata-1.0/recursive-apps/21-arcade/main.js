@@ -51,14 +51,20 @@
   var errorClose = document.getElementById('error-close');
 
   var activeGame = null;
+  var pendingStartGameIdx = null;
+  var startScreenLoopTimer = null;
+  var startScreenLoopPhase = 'scores';
+  var startScreenLoopManualOverride = false;
+  var START_SCREEN_LOOP_MS = 8000;
   var focusIdx = 0;
   var walletStatusTimer = null;
   var walletStatusRefreshInFlight = null;
   var lastWalletStatus = null;
+  var walletDisconnectOverride = false;
   var connectPromptShown = false;
   var connectWalletInFlight = null;
   var adminBusy = false;
-  var WALLET_DEBUG_BUILD = 'wallet-debug-2026-02-19-08';
+  var WALLET_DEBUG_BUILD = 'wallet-debug-2026-02-20-07';
   var providerMethodUnsupported = {};
   var walletDebugEvents = [];
   var walletDebugEventLimit = 800;
@@ -568,6 +574,28 @@
     walletDisconnectBtn.title = hasAddress
       ? 'Disconnect wallet so you can reconnect a different account'
       : 'Connect a wallet to enable disconnect';
+  }
+
+  function syncOnChainReadSenderAddress(address){
+    if(typeof window === 'undefined') return;
+    if(!window.ARCADE_ONCHAIN_CONFIG || typeof window.ARCADE_ONCHAIN_CONFIG !== 'object') return;
+    var next = looksLikeStacksAddress(address) ? String(address).trim() : '';
+    if(String(window.ARCADE_ONCHAIN_CONFIG.readSenderAddress || '') === next){
+      return;
+    }
+    window.ARCADE_ONCHAIN_CONFIG.readSenderAddress = next;
+    walletDebug('info', 'Synced on-chain read sender address', {
+      readSenderAddress: next || null
+    });
+  }
+
+  function setWalletDisconnectOverride(enabled, meta){
+    var next = !!enabled;
+    if(walletDisconnectOverride === next){
+      return;
+    }
+    walletDisconnectOverride = next;
+    walletDebug(next ? 'warn' : 'info', next ? 'Enabled local wallet disconnect override' : 'Cleared local wallet disconnect override', meta || null);
   }
 
   function setAdminStatus(message, tone){
@@ -1598,7 +1626,10 @@
       return {
         state: 'is-missing',
         label: 'Wallet: not detected',
-        hasAddress: false
+        hasAddress: false,
+        address: null,
+        network: null,
+        provider: null
       };
     }
 
@@ -1613,7 +1644,24 @@
       return {
         state: 'is-warning',
         label: warningLabel,
-        hasAddress: false
+        hasAddress: false,
+        address: null,
+        network: null,
+        provider: providerName
+      };
+    }
+
+    if(walletDisconnectOverride){
+      var disconnectedProviderName = resolved.providerEntry && resolved.providerEntry.name
+        ? resolved.providerEntry.name
+        : 'wallet provider';
+      return {
+        state: 'is-warning',
+        label: 'Wallet: disconnected on page · click to reconnect',
+        hasAddress: false,
+        address: null,
+        network: null,
+        provider: disconnectedProviderName
       };
     }
 
@@ -1630,7 +1678,10 @@
     return {
       state: warning ? 'is-warning' : 'is-connected',
       label: warning ? connectedLabel + ' (target ' + targetNetwork + ')' : connectedLabel,
-      hasAddress: true
+      hasAddress: true,
+      address: resolved.address,
+      network: resolvedNetwork,
+      provider: resolved.providerEntry ? resolved.providerEntry.label : null
     };
   }
 
@@ -1641,6 +1692,7 @@
     walletStatusRefreshInFlight = getWalletStatus()
       .then(function(status){
         lastWalletStatus = status;
+        syncOnChainReadSenderAddress(status && status.address ? status.address : '');
         setWalletBadge(status.state, status.label);
         updateWalletDisconnectButtonState();
         walletDebug('info', 'Wallet status refreshed', status);
@@ -1666,7 +1718,7 @@
       build: WALLET_DEBUG_BUILD
     });
     var initial = await resolveConnectedWallet({ targetNetwork: targetNetwork });
-    if(initial.address && !isTargetNetworkMismatch(targetNetwork, initial.network, initial.address)){
+    if(!walletDisconnectOverride && initial.address && !isTargetNetworkMismatch(targetNetwork, initial.network, initial.address)){
       walletDebug('info', 'connectWalletInternal short-circuit: already connected', {
         address: initial.address,
         network: initial.network || null
@@ -1731,6 +1783,12 @@
             await refreshWalletStatus();
             var postConnect = await resolveConnectedWallet({ targetNetwork: targetNetwork });
             if(postConnect.address && !isTargetNetworkMismatch(targetNetwork, postConnect.network, postConnect.address)){
+              setWalletDisconnectOverride(false, {
+                source: 'connectWalletInternal',
+                provider: entry.label,
+                mode: 'requestAccounts'
+              });
+              await refreshWalletStatus();
               walletDebug('info', 'connectWalletInternal succeeded after requestAccounts', {
                 provider: entry.label,
                 address: postConnect.address,
@@ -1775,6 +1833,12 @@
             await refreshWalletStatus();
             var directResolved = await resolveConnectedWallet({ targetNetwork: targetNetwork });
             if(directResolved.address && !isTargetNetworkMismatch(targetNetwork, directResolved.network, directResolved.address)){
+              setWalletDisconnectOverride(false, {
+                source: 'connectWalletInternal',
+                provider: entry.label,
+                mode: 'directConnect'
+              });
+              await refreshWalletStatus();
               walletDebug('info', 'connectWalletInternal succeeded after direct provider connect', {
                 provider: entry.label,
                 address: directResolved.address,
@@ -1798,6 +1862,12 @@
           await refreshWalletStatus();
           var passiveResolved = await resolveConnectedWallet({ targetNetwork: targetNetwork });
           if(passiveResolved.address && !isTargetNetworkMismatch(targetNetwork, passiveResolved.network, passiveResolved.address)){
+            setWalletDisconnectOverride(false, {
+              source: 'connectWalletInternal',
+              provider: entry.label,
+              mode: 'passiveResolve'
+            });
+            await refreshWalletStatus();
             walletDebug('info', 'connectWalletInternal succeeded after passive resolve', {
               provider: entry.label,
               address: passiveResolved.address,
@@ -1818,6 +1888,11 @@
     var finalResolved = await resolveConnectedWallet({ targetNetwork: targetNetwork });
     await refreshWalletStatus();
     if(finalResolved.address && !isTargetNetworkMismatch(targetNetwork, finalResolved.network, finalResolved.address)){
+      setWalletDisconnectOverride(false, {
+        source: 'connectWalletInternal',
+        mode: 'finalCheck'
+      });
+      await refreshWalletStatus();
       walletDebug('info', 'connectWalletInternal succeeded at final check', {
         address: finalResolved.address,
         network: finalResolved.network || null
@@ -1950,6 +2025,10 @@
     await refreshWalletStatus();
     var finalResolved = await resolveConnectedWallet({ targetNetwork: targetNetwork });
     if(!finalResolved.address){
+      setWalletDisconnectOverride(false, {
+        source: 'disconnectWalletInternal',
+        mode: 'providerCleared'
+      });
       walletDebug('info', 'disconnectWalletInternal completed', {
         disconnected: true,
         attemptedAnyMethod: attemptedAnyMethod,
@@ -1966,10 +2045,16 @@
       lastDisconnectError: walletErrorForLog(lastDisconnectError)
     });
 
-    if(attemptedAnyMethod && lastDisconnectError){
-      throw new Error('Wallet did not disconnect. Last wallet error: ' + (lastDisconnectError.message || String(lastDisconnectError)));
-    }
-    throw new Error('Wallet provider does not support programmatic disconnect. Disconnect in the wallet extension and retry.');
+    setWalletDisconnectOverride(true, {
+      source: 'disconnectWalletInternal',
+      mode: 'localOverride',
+      attemptedAnyMethod: attemptedAnyMethod,
+      disconnectSucceeded: disconnectSucceeded,
+      address: finalResolved.address
+    });
+    syncOnChainReadSenderAddress('');
+    await refreshWalletStatus();
+    return true;
   }
 
   function disconnectWallet(){
@@ -2516,6 +2601,232 @@
     };
   }
 
+  function escapeHtml(value){
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function sanitizeAscii(value, maxLen, fallback){
+    var text = String(value == null ? '' : value);
+    var out = '';
+    var i;
+    for(i = 0; i < text.length; i++){
+      var code = text.charCodeAt(i);
+      if(code >= 32 && code <= 126){
+        out += text[i];
+        if(maxLen && out.length >= maxLen) break;
+      }
+    }
+    if(!out && typeof fallback === 'string'){
+      return fallback;
+    }
+    return out;
+  }
+
+  function buildStartLeaderboardRows(mode, list){
+    var rows = '';
+    var isTime = mode === 'time';
+    var i;
+    for(i = 0; i < 10; i++){
+      var entry = list && list[i] ? list[i] : null;
+      var name = entry ? sanitizeAscii(entry.name, 12, '---') : '---';
+      var scoreText = '--';
+      if(entry && isFinite(Number(entry.score))){
+        var scoreNum = Math.floor(Number(entry.score));
+        scoreText = isTime ? ArcadeUtils.formatTime(scoreNum) : ArcadeUtils.formatScore(scoreNum);
+      }
+      rows += '<tr>' +
+        '<td class="rank">' + (i + 1) + '</td>' +
+        '<td class="name">' + escapeHtml(name) + '</td>' +
+        '<td class="score-col">' + escapeHtml(scoreText) + '</td>' +
+      '</tr>';
+    }
+    return rows;
+  }
+
+  function buildStartTipsMarkup(game, mode){
+    var tips = [];
+    var rows = '';
+    var i;
+
+    if(mode === 'time'){
+      tips.push('Lower time ranks higher. Clean movement beats risky shortcuts.');
+    } else {
+      tips.push('Higher score ranks higher. Keep your streak alive to climb fast.');
+    }
+
+    if(game && game.hasLevels){
+      tips.push('Clear each stage quickly to carry momentum into later levels.');
+    } else {
+      tips.push('Stay alive and keep pressure up to grow your run.');
+    }
+
+    tips.push('Press Esc any time to return to the arcade lobby.');
+
+    for(i = 0; i < tips.length; i++){
+      rows += '<li>' + escapeHtml(sanitizeAscii(tips[i], 120, '')) + '</li>';
+    }
+    return rows;
+  }
+
+  function setGameStartScreenPhase(phase){
+    var card = gameContainer ? gameContainer.querySelector('.game-start-card') : null;
+    var state = phase === 'briefing' ? 'briefing' : 'scores';
+    startScreenLoopPhase = state;
+    if(!card) return;
+    card.classList.toggle('is-scores', state === 'scores');
+    card.classList.toggle('is-briefing', state === 'briefing');
+  }
+
+  function setGameStartScreenManualPhase(phase){
+    var target = phase === 'briefing' ? 'briefing' : 'scores';
+    if(startScreenLoopPhase === target){
+      return false;
+    }
+    setGameStartScreenPhase(target);
+    startScreenLoopManualOverride = true;
+    clearGameStartScreenLoop();
+    return true;
+  }
+
+  function clearGameStartScreenLoop(){
+    if(startScreenLoopTimer){
+      clearInterval(startScreenLoopTimer);
+      startScreenLoopTimer = null;
+    }
+  }
+
+  function startGameStartScreenLoop(idx){
+    clearGameStartScreenLoop();
+    if(startScreenLoopManualOverride){
+      return;
+    }
+    setGameStartScreenPhase('scores');
+    startScreenLoopTimer = setInterval(function(){
+      if(pendingStartGameIdx !== idx || activeGame){
+        clearGameStartScreenLoop();
+        return;
+      }
+      if(startScreenLoopManualOverride){
+        clearGameStartScreenLoop();
+        return;
+      }
+      setGameStartScreenPhase(startScreenLoopPhase === 'scores' ? 'briefing' : 'scores');
+    }, START_SCREEN_LOOP_MS);
+  }
+
+  function renderGameStartScreen(idx, game, top10, statusText){
+    if(pendingStartGameIdx !== idx) return;
+    if(!game) return;
+
+    var mode = game.scoreMode === 'time' ? 'time' : 'score';
+    var best = HighScores.getBest(game.id, mode);
+    var bestText = '--';
+    if(best != null){
+      bestText = mode === 'time' ? ArcadeUtils.formatTime(best) : ArcadeUtils.formatScore(best);
+    }
+    var scoreHeading = mode === 'time' ? 'Time' : 'Score';
+    var modeLabel = mode === 'time' ? 'Time Trial - lower is better' : 'Score Attack - higher is better';
+    var title = sanitizeAscii(game.title || 'Game', 60, 'Game');
+    var description = sanitizeAscii(game.description || '', 220, 'No mission briefing available.');
+    var controls = sanitizeAscii(game.controls || '', 160, 'Use controls shown in-game.');
+    var genre = sanitizeAscii(game.genreTag || '', 40, 'Arcade');
+    var status = sanitizeAscii(statusText || '', 160, '');
+
+    gameContainer.innerHTML =
+      '<div class="game-start-screen">' +
+        '<div class="game-start-card is-scores">' +
+          '<div class="game-start-stage">' +
+            '<div class="game-start-stage-track">' +
+              '<section class="game-start-pane game-start-pane-scores">' +
+                '<h2>' + escapeHtml(title) + '</h2>' +
+                '<div class="game-start-meta">' + escapeHtml(genre) + ' · ' + escapeHtml(modeLabel) + '</div>' +
+                '<div class="game-start-best">Personal Best: ' + escapeHtml(bestText) + '</div>' +
+                '<div class="game-start-status">' + escapeHtml(status) + '</div>' +
+                '<table class="game-start-table">' +
+                  '<tr><th>#</th><th>Name</th><th>' + scoreHeading + '</th></tr>' +
+                  buildStartLeaderboardRows(mode, top10 || []) +
+                '</table>' +
+              '</section>' +
+              '<section class="game-start-pane game-start-pane-briefing">' +
+                '<h3>Mission Briefing</h3>' +
+                '<p class="game-start-description">' + escapeHtml(description) + '</p>' +
+                '<div class="game-start-brief-block">' +
+                  '<div class="game-start-brief-label">Controls</div>' +
+                  '<p class="game-start-brief-text">' + escapeHtml(controls) + '</p>' +
+                '</div>' +
+                '<div class="game-start-brief-block">' +
+                  '<div class="game-start-brief-label">Tips</div>' +
+                  '<ul class="game-start-tips">' + buildStartTipsMarkup(game, mode) + '</ul>' +
+                '</div>' +
+              '</section>' +
+            '</div>' +
+          '</div>' +
+          '<div class="game-start-cycle">' +
+            '<span class="game-start-cycle-text">Intro Loop</span>' +
+            '<span class="game-start-cycle-dots">' +
+              '<span class="game-start-cycle-dot game-start-cycle-dot-scores"></span>' +
+              '<span class="game-start-cycle-dot game-start-cycle-dot-briefing"></span>' +
+            '</span>' +
+          '</div>' +
+          '<button class="game-start-btn" type="button">Start</button>' +
+        '</div>' +
+      '</div>';
+
+    var startBtn = gameContainer.querySelector('.game-start-btn');
+    if(startBtn){
+      startBtn.onclick = function(){
+        if(pendingStartGameIdx !== idx) return;
+        clearGameStartScreenLoop();
+        pendingStartGameIdx = null;
+        launchGame(idx);
+      };
+    }
+    setGameStartScreenPhase(startScreenLoopPhase);
+  }
+
+  function openGameStartScreen(idx){
+    var g = GAMES[idx];
+    if(!g) return;
+
+    clearGameStartScreenLoop();
+    focusIdx = idx;
+    pendingStartGameIdx = idx;
+    startScreenLoopPhase = 'scores';
+    startScreenLoopManualOverride = false;
+    activeGame = null;
+
+    homeGrid.style.display = 'none';
+    gameContainer.style.display = 'block';
+    gameContainer.innerHTML = '';
+    exitBtn.style.display = 'inline-block';
+    updateForceWaveButtonState();
+
+    var mode = g.scoreMode === 'time' ? 'time' : 'score';
+    var cached = HighScores.getTop10(g.id, mode);
+    renderGameStartScreen(idx, g, cached, 'Loading top scores...');
+    startGameStartScreenLoop(idx);
+
+    HighScores.fetchTop10(g.id, mode, { force: true, allowStale: true })
+      .then(function(list){
+        if(pendingStartGameIdx !== idx) return;
+        var status = list && list.length
+          ? 'Top on-chain scores'
+          : 'No scores yet. Be the first on the board.';
+        renderGameStartScreen(idx, g, list || [], status);
+      })
+      .catch(function(error){
+        if(pendingStartGameIdx !== idx) return;
+        var fallback = HighScores.getTop10(g.id, mode);
+        var detail = error && error.message ? error.message : String(error);
+        renderGameStartScreen(idx, g, fallback, 'Top scores unavailable: ' + detail);
+      });
+  }
+
   /* Build home grid */
   function buildGrid(){
     homeGrid.innerHTML = '';
@@ -2535,13 +2846,15 @@
         '<div class="tile-title">'+g.title+'</div>' +
         '<div class="tile-genre">'+g.genreTag+'</div>' +
         '<div class="tile-best">'+bestStr+'</div>';
-      tile.onclick = function(){ launchGame(i); };
-      tile.onkeydown = function(e){ if(e.key==='Enter') launchGame(i); };
+      tile.onclick = function(){ openGameStartScreen(i); };
+      tile.onkeydown = function(e){ if(e.key==='Enter') openGameStartScreen(i); };
       homeGrid.appendChild(tile);
     });
   }
 
   function showHome(){
+    clearGameStartScreenLoop();
+    pendingStartGameIdx = null;
     HighScores.hideOverlay();
     gameContainer.style.display = 'none';
     gameContainer.innerHTML = '';
@@ -2557,6 +2870,8 @@
     var g = GAMES[idx];
     if(!g) return;
 
+    clearGameStartScreenLoop();
+    pendingStartGameIdx = null;
     ArcadeUtils.initAudio();
     focusIdx = idx;
     homeGrid.style.display = 'none';
@@ -2584,6 +2899,8 @@
   }
 
   function exitGame(){
+    clearGameStartScreenLoop();
+    pendingStartGameIdx = null;
     if(activeGame){
       try{ activeGame.destroy(); }catch(e){}
       activeGame = null;
@@ -2598,8 +2915,18 @@
   /* Esc key */
   document.addEventListener('keydown', function(e){
     if(e.key === 'Escape'){
-      if(activeGame){
+      if(activeGame || pendingStartGameIdx != null){
         exitGame();
+      }
+    }
+    if(!activeGame && pendingStartGameIdx != null){
+      if(e.key === 'ArrowRight' || e.key === 'ArrowDown'){
+        setGameStartScreenManualPhase('briefing');
+        e.preventDefault();
+      }
+      if(e.key === 'ArrowLeft' || e.key === 'ArrowUp'){
+        setGameStartScreenManualPhase('scores');
+        e.preventDefault();
       }
     }
     /* Arrow key navigation on home grid */
@@ -2633,6 +2960,7 @@
   window.ArcadeLauncher = {
     getGames: function(){ return GAMES; },
     launchGame: launchGame,
+    openGameStartScreen: openGameStartScreen,
     exitGame: exitGame,
     forceNextWave: forceNextWave,
     getActiveGame: function(){ return activeGame; },

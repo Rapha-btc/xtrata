@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Retro Arcade</title>
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=wallet-debug-2026-02-20-07">
 </head>
 <body>
 <div id="top-bar">
@@ -67,28 +67,29 @@
 <script>
   // Configure this after deploy to enable on-chain Top 10 verification.
   // Top 10 is on-chain only. Local storage keeps personal bests only.
-  // For v1.1 attested submits set:
-  // - contractName: 'xtrata-arcade-scores-v1-1'
-  // - requiresAttestation: true
-  // - attestationEndpoint: '/arcade/attest-score'
+  // Wallet-only v1.3 default:
+  // - contractName: 'xtrata-arcade-scores-v1-3'
+  // - requiresAttestation: false
+  // - attestationEndpoint: ''
   window.ARCADE_ONCHAIN_CONFIG = window.ARCADE_ONCHAIN_CONFIG || {
     enabled: true,
     network: 'mainnet',
     contractAddress: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
-    contractName: 'xtrata-arcade-scores-v1-1',
+    contractName: 'xtrata-arcade-scores-v1-3',
     functionName: 'submit-score',
     leaderboardFunctionName: 'get-top10',
     apiBaseUrl: 'https://api.mainnet.hiro.so',
     readSenderAddress: '',
-    requiresAttestation: true,
-    attestationEndpoint: '/arcade/attest-score',
+    requiresAttestation: false,
+    attestationEndpoint: '',
     attestationTimeoutMs: 10000,
     minRank: 10,
+    useDenyModePostConditions: false,
     debug: true
   };
   window.ARCADE_ONCHAIN_DEBUG = true;
 </script>
-<script src="lib/highscores.js?v=wallet-debug-2026-02-19-01"></script>
+<script src="lib/highscores.js?v=wallet-debug-2026-02-20-08"></script>
 <script src="games/game01_astro_blaster.js"></script>
 <script src="games/game02_neon_runner.js?v=2"></script>
 <script src="games/game03_block_drop.js"></script>
@@ -110,6 +111,6 @@
 <script src="games/game19_duel_at_dawn.js"></script>
 <script src="games/game20_circuit_builder.js?v=2"></script>
 <script src="games/game21_boss_rush_mini.js"></script>
-<script src="main.js?v=wallet-debug-2026-02-19-08"></script>
+<script src="main.js?v=wallet-debug-2026-02-20-07"></script>
 </body>
 </html>

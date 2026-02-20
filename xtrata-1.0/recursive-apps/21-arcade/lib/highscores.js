@@ -11,15 +11,16 @@ var HighScores = (function(){
     enabled: true,
     network: 'mainnet',
     contractAddress: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
-    contractName: 'xtrata-arcade-scores-v1-1',
+    contractName: 'xtrata-arcade-scores-v1-3',
     functionName: 'submit-score',
     leaderboardFunctionName: 'get-top10',
     apiBaseUrl: '',
     readSenderAddress: '',
-    requiresAttestation: true,
-    attestationEndpoint: '/arcade/attest-score',
+    requiresAttestation: false,
+    attestationEndpoint: '',
     attestationTimeoutMs: 10000,
     minRank: 10,
+    useDenyModePostConditions: false,
     debug: false
   };
 
@@ -34,6 +35,10 @@ var HighScores = (function(){
   var finalizedScoreResults = {};
   var FINALIZED_SCORE_TTL_MS = 30000;
   var scoringDisabledState = _loadScoringDisabledState();
+  var feeUnitCacheByContract = {};
+
+  var POST_CONDITION_MODE_ALLOW = 1;
+  var POST_CONDITION_MODE_DENY = 2;
 
   function _debugEnabled(){
     if(onChainConfig && onChainConfig.debug) return true;
@@ -343,7 +348,7 @@ var HighScores = (function(){
       enabled: !!source.enabled,
       network: source.network || 'mainnet',
       contractAddress: source.contractAddress || '',
-      contractName: source.contractName || 'xtrata-arcade-scores-v1-1',
+      contractName: source.contractName || 'xtrata-arcade-scores-v1-3',
       functionName: source.functionName || 'submit-score',
       leaderboardFunctionName: source.leaderboardFunctionName || 'get-top10',
       apiBaseUrl: source.apiBaseUrl || '',
@@ -352,6 +357,7 @@ var HighScores = (function(){
       attestationEndpoint: source.attestationEndpoint || '',
       attestationTimeoutMs: source.attestationTimeoutMs || 10000,
       minRank: source.minRank || 10,
+      useDenyModePostConditions: !!source.useDenyModePostConditions,
       debug: !!source.debug
     };
   }
@@ -385,6 +391,9 @@ var HighScores = (function(){
     var rankNum = Number(input.minRank);
     if(isFinite(rankNum) && rankNum > 0){
       base.minRank = Math.floor(rankNum);
+    }
+    if(typeof input.useDenyModePostConditions === 'boolean'){
+      base.useDenyModePostConditions = input.useDenyModePostConditions;
     }
     if(typeof input.debug === 'boolean') base.debug = input.debug;
 
@@ -716,13 +725,13 @@ var HighScores = (function(){
   }
 
   function _normalizePostConditionMode(value){
-    if(value === 1 || value === 2) return value;
+    if(value === POST_CONDITION_MODE_ALLOW || value === POST_CONDITION_MODE_DENY) return value;
     if(typeof value === 'string'){
       var lower = value.toLowerCase();
-      if(lower === 'allow') return 1;
-      if(lower === 'deny') return 2;
+      if(lower === 'allow') return POST_CONDITION_MODE_ALLOW;
+      if(lower === 'deny') return POST_CONDITION_MODE_DENY;
     }
-    return 1;
+    return POST_CONDITION_MODE_ALLOW;
   }
 
   function _base64UrlEncodeUtf8(input){
@@ -748,28 +757,79 @@ var HighScores = (function(){
   function _buildContractCallParamVariants(params){
     var fullContract = params.contractAddress + '.' + params.contractName;
     var variants = [];
+    var postConditionMode = _normalizePostConditionMode(params.postConditionMode);
+    var postConditionSets = [];
+    var i;
 
-    variants.push({
-      label: 'legacy-split',
-      params: {
+    if(Array.isArray(params.postConditionVariants) && params.postConditionVariants.length > 0){
+      for(i = 0; i < params.postConditionVariants.length; i++){
+        if(Array.isArray(params.postConditionVariants[i]) && params.postConditionVariants[i].length > 0){
+          postConditionSets.push(params.postConditionVariants[i]);
+        }
+      }
+    } else if(Array.isArray(params.postConditions) && params.postConditions.length > 0){
+      postConditionSets.push(params.postConditions);
+    }
+
+    function legacyVariant(modeValue, labelSuffix, postConditions){
+      var out = {
         contractAddress: params.contractAddress,
         contractName: params.contractName,
         functionName: params.functionName,
         functionArgs: params.functionArgs,
         network: params.network,
-        postConditionMode: params.postConditionMode
+        postConditionMode: modeValue
+      };
+      if(Array.isArray(postConditions) && postConditions.length > 0){
+        out.postConditions = postConditions;
       }
-    });
+      variants.push({
+        label: 'legacy-split' + labelSuffix,
+        params: out
+      });
+    }
 
-    variants.push({
-      label: 'sats-minimal',
-      params: {
+    function minimalVariant(modeValue, labelSuffix, postConditions){
+      var out = {
         contract: fullContract,
         functionName: params.functionName,
         functionArgs: params.functionArgs,
         network: params.network
+      };
+      if(typeof modeValue !== 'undefined'){
+        out.postConditionMode = modeValue;
       }
-    });
+      if(Array.isArray(postConditions) && postConditions.length > 0){
+        out.postConditions = postConditions;
+      }
+      variants.push({
+        label: 'sats-minimal' + labelSuffix,
+        params: out
+      });
+    }
+
+    if(postConditionSets.length === 0){
+      legacyVariant(postConditionMode, ':mode-num', null);
+      minimalVariant(postConditionMode, ':mode-num', null);
+      return variants;
+    }
+
+    for(i = 0; i < postConditionSets.length && i < 2; i++){
+      var suffix = ':pc' + (i + 1);
+      var pcSet = postConditionSets[i];
+      legacyVariant(postConditionMode, suffix + ':mode-num', pcSet);
+      legacyVariant(
+        postConditionMode === POST_CONDITION_MODE_DENY ? 'deny' : 'allow',
+        suffix + ':mode-str',
+        pcSet
+      );
+      minimalVariant(postConditionMode, suffix + ':mode-num', pcSet);
+      minimalVariant(
+        postConditionMode === POST_CONDITION_MODE_DENY ? 'deny' : 'allow',
+        suffix + ':mode-str',
+        pcSet
+      );
+    }
 
     return variants;
   }
@@ -784,13 +844,44 @@ var HighScores = (function(){
     };
     var network = params.network || 'mainnet';
     var postConditionMode = _normalizePostConditionMode(params.postConditionMode);
-    var withNetwork = Object.assign({}, base, {
-      network: _legacyNetworkConfig(network),
-      postConditionMode: postConditionMode
-    });
-    return [
-      { label: 'tx-token-connect-default', payload: withNetwork }
-    ];
+    var postConditionSets = [];
+    var i;
+    if(Array.isArray(params.postConditionVariants) && params.postConditionVariants.length > 0){
+      for(i = 0; i < params.postConditionVariants.length; i++){
+        if(Array.isArray(params.postConditionVariants[i]) && params.postConditionVariants[i].length > 0){
+          postConditionSets.push(params.postConditionVariants[i]);
+        }
+      }
+    } else if(Array.isArray(params.postConditions) && params.postConditions.length > 0){
+      postConditionSets.push(params.postConditions);
+    }
+    var withNetwork = Object.assign({}, base, { network: _legacyNetworkConfig(network) });
+    var variants = [];
+
+    function addVariant(label, modeValue, postConditions){
+      var payload = Object.assign({}, withNetwork, { postConditionMode: modeValue });
+      if(Array.isArray(postConditions) && postConditions.length > 0){
+        payload.postConditions = postConditions;
+      }
+      variants.push({ label: label, payload: payload });
+    }
+
+    if(postConditionSets.length === 0){
+      addVariant('tx-token-connect-mode-num', postConditionMode, null);
+      return variants;
+    }
+
+    for(i = 0; i < postConditionSets.length && i < 2; i++){
+      var suffix = ':pc' + (i + 1);
+      var pcSet = postConditionSets[i];
+      addVariant('tx-token-connect-mode-num' + suffix, postConditionMode, pcSet);
+      addVariant(
+        'tx-token-connect-mode-str' + suffix,
+        postConditionMode === POST_CONDITION_MODE_DENY ? 'deny' : 'allow',
+        pcSet
+      );
+    }
+    return variants;
   }
 
   function _withTimeout(promise, ms, label){
@@ -829,6 +920,98 @@ var HighScores = (function(){
       return provider.request(method);
     }
     return provider.request({ method: method });
+  }
+
+  function _defaultProviderMethodParams(method, preferredNetwork){
+    var target = preferredNetwork || _normalizeWalletNetwork(onChainConfig.network) || 'mainnet';
+    var commonMessage = 'Connect Retro Arcade for on-chain leaderboard access';
+
+    if(method === 'getAccounts' || method === 'getAddresses' || method === 'requestAccounts'){
+      return [
+        { purposes: ['stacks'], message: commonMessage },
+        { purposes: ['payment', 'ordinals', 'stacks'], message: commonMessage },
+        { addresses: ['stacks'] },
+        { network: target }
+      ];
+    }
+    if(method === 'wallet_getAccount'){
+      return [
+        { addresses: ['stacks'] },
+        { addresses: ['payment', 'ordinals', 'stacks'] }
+      ];
+    }
+    if(method === 'stx_getAccounts' || method === 'stx_getAddresses' || method === 'stx_requestAccounts'){
+      return [
+        { network: target },
+        { message: commonMessage }
+      ];
+    }
+    if(method === 'connect' || method === 'stx_connect' || method === 'wallet_connect'){
+      return [
+        { addresses: ['stacks'], purposes: ['stacks'], message: commonMessage },
+        { addresses: ['payment', 'ordinals', 'stacks'], purposes: ['payment', 'ordinals', 'stacks'], message: commonMessage },
+        { network: target }
+      ];
+    }
+    return [];
+  }
+
+  function _callProviderMethodWithFallback(provider, method, preferredNetwork, timeoutMs){
+    var defaults = _defaultProviderMethodParams(method, preferredNetwork);
+    var attempts = [];
+    var i;
+
+    attempts.push({
+      label: method + '()',
+      run: function(){
+        return _callProviderMethod(provider, method);
+      }
+    });
+
+    for(i = 0; i < defaults.length; i++){
+      (function(param, idx){
+        attempts.push({
+          label: method + '(default-' + idx + ')',
+          run: function(){
+            return _callProviderRequest(provider, method, param);
+          }
+        });
+      })(defaults[i], i);
+    }
+
+    if(defaults.length === 0){
+      attempts.push({
+        label: method + '({})',
+        run: function(){
+          return _callProviderRequest(provider, method, {});
+        }
+      });
+    }
+
+    function run(index, lastError){
+      if(index >= attempts.length){
+        throw lastError || new Error('Wallet provider rejected "' + method + '" request.');
+      }
+      var attempt = attempts[index];
+      return Promise.resolve()
+        .then(function(){
+          return _withTimeout(attempt.run(), timeoutMs || 4000, 'provider-method:' + attempt.label);
+        })
+        .catch(function(error){
+          if(_isUserRejectedError(error)){
+            throw error;
+          }
+          if(_isUnsupportedProviderError(error)){
+            return run(index + 1, error);
+          }
+          if(_isRetryableParamError(error)){
+            return run(index + 1, error);
+          }
+          throw error;
+        });
+    }
+
+    return run(0, null);
   }
 
   function _looksLikeStacksAddress(value){
@@ -963,7 +1146,7 @@ var HighScores = (function(){
       var method = methods[index];
       return Promise.resolve()
         .then(function(){
-          return _withTimeout(_callProviderMethod(provider, method), 3000, 'address:' + method);
+          return _callProviderMethodWithFallback(provider, method, preferredNetwork, 4500);
         })
         .then(function(result){
           var address = _extractAddressFromPayload(result, preferredNetwork);
@@ -980,12 +1163,12 @@ var HighScores = (function(){
     }
 
     function tryRequest(index){
-      var requestMethods = ['stx_requestAccounts', 'requestAccounts'];
+      var requestMethods = ['stx_requestAccounts', 'requestAccounts', 'stx_connect', 'connect', 'wallet_connect'];
       if(index >= requestMethods.length) return Promise.resolve(null);
       var method = requestMethods[index];
       return Promise.resolve()
         .then(function(){
-          return _withTimeout(_callProviderMethod(provider, method), 10000, 'address-request:' + method);
+          return _callProviderMethodWithFallback(provider, method, preferredNetwork, 15000);
         })
         .then(function(result){
           var address = _extractAddressFromPayload(result, preferredNetwork);
@@ -1150,10 +1333,10 @@ var HighScores = (function(){
     variants.sort(function(a, b){
       var scoreA = 0;
       var scoreB = 0;
-      if(a.label === 'sats-minimal') scoreA += preferMinimal ? 10 : 0;
-      if(a.label === 'legacy-split') scoreA += preferMinimal ? 0 : 10;
-      if(b.label === 'sats-minimal') scoreB += preferMinimal ? 10 : 0;
-      if(b.label === 'legacy-split') scoreB += preferMinimal ? 0 : 10;
+      if(a.label.indexOf('sats-minimal') === 0) scoreA += preferMinimal ? 10 : 0;
+      if(a.label.indexOf('legacy-split') === 0) scoreA += preferMinimal ? 0 : 10;
+      if(b.label.indexOf('sats-minimal') === 0) scoreB += preferMinimal ? 10 : 0;
+      if(b.label.indexOf('legacy-split') === 0) scoreB += preferMinimal ? 0 : 10;
       return scoreB - scoreA;
     });
     return variants;
@@ -1166,40 +1349,44 @@ var HighScores = (function(){
       contractName: params.contractName,
       functionName: params.functionName,
       network: params.network,
-      argsCount: params.functionArgs ? params.functionArgs.length : 0
+      argsCount: params.functionArgs ? params.functionArgs.length : 0,
+      postConditionMode: _normalizePostConditionMode(params.postConditionMode),
+      postConditionsCount: Array.isArray(params.postConditions) ? params.postConditions.length : 0
     });
 
     var attempts = [];
     var transactionVariants = _buildTransactionRequestPayloadVariants(params);
     if(typeof provider.transactionRequest === 'function'){
-      var variant = transactionVariants[0];
-      attempts.push({
-        label: 'provider.transactionRequest(' + variant.label + ')',
-        exec: function(){
-          _debugLog('info', 'Wallet transactionRequest payload prepared', {
-            providerLabel: providerLabel || null,
-            variant: variant.label,
-            payload: variant.payload
+      var t;
+      for(t = 0; t < transactionVariants.length && t < 4; t++){
+        (function(variant){
+          attempts.push({
+            label: 'provider.transactionRequest(' + variant.label + ')',
+            exec: function(){
+              _debugLog('info', 'Wallet transactionRequest payload prepared', {
+                providerLabel: providerLabel || null,
+                variant: variant.label,
+                payload: variant.payload
+              });
+              var token = _createUnsecuredJwt(variant.payload);
+              return provider.transactionRequest(token);
+            }
           });
-          var token = _createUnsecuredJwt(variant.payload);
-          return provider.transactionRequest(token);
-        }
-      });
+        })(transactionVariants[t]);
+      }
     } else if(typeof provider.request === 'function'){
       var paramVariants = _pickContractCallVariants(providerLabel, params);
       var v;
-      for(v = 0; v < paramVariants.length && v < 2; v++){
+      for(v = 0; v < paramVariants.length && v < 4; v++){
         (function(variant){
           attempts.push({
             label: 'provider.request("stx_callContract", ' + variant.label + ')',
             exec: function(){ return _callProviderRequest(provider, 'stx_callContract', variant.params); }
           });
-          if(v === 0){
-            attempts.push({
-              label: 'provider.request("stx_callContractV2", ' + variant.label + ')',
-              exec: function(){ return _callProviderRequest(provider, 'stx_callContractV2', variant.params); }
-            });
-          }
+          attempts.push({
+            label: 'provider.request("stx_callContractV2", ' + variant.label + ')',
+            exec: function(){ return _callProviderRequest(provider, 'stx_callContractV2', variant.params); }
+          });
         })(paramVariants[v]);
       }
     }
@@ -1212,7 +1399,7 @@ var HighScores = (function(){
       _debugLog('info', 'Wallet request attempt #' + (index + 1), attempt.label);
       return Promise.resolve()
         .then(function(){
-          return _withTimeout(attempt.exec(), 12000, attempt.label);
+          return attempt.exec();
         })
         .then(function(result){
           _debugLog('info', 'Wallet request returned result', result);
@@ -1233,8 +1420,7 @@ var HighScores = (function(){
           });
           if(
             _isUnsupportedProviderError(error) ||
-            _isRetryableParamError(error) ||
-            _isRetryableTransportError(error)
+            _isRetryableParamError(error)
           ){
             return runAttempt(index + 1, error);
           }
@@ -1283,18 +1469,6 @@ var HighScores = (function(){
     );
   }
 
-  function _isRetryableTransportError(error){
-    if(!error) return false;
-    if(error.code === 'ETIMEOUT') return true;
-    var message = (error && error.message ? error.message : String(error)).toLowerCase();
-    return (
-      message.indexOf('timed out') >= 0 ||
-      message.indexOf('timeout') >= 0 ||
-      message.indexOf('request was canceled') >= 0 ||
-      message.indexOf('request was cancelled') >= 0
-    );
-  }
-
   function _isUserRejectedError(error){
     if(!error) return false;
     if(typeof error.code !== 'undefined' && Number(error.code) === 4001) return true;
@@ -1312,8 +1486,234 @@ var HighScores = (function(){
     var message = (error && error.message ? error.message : String(error)).toLowerCase();
     return (
       message.indexOf('unable to resolve the wallet address') >= 0 ||
-      message.indexOf('wallet address required for attestation') >= 0
+      message.indexOf('unable to resolve wallet address') >= 0 ||
+      message.indexOf('wallet address required for attestation') >= 0 ||
+      message.indexOf('wallet address required for deny-mode post conditions') >= 0
     );
+  }
+
+  function _buildReadOnlyEndpoint(payload, functionName){
+    var apiBase = payload.apiBaseUrl || _defaultApiBase(payload.network);
+    if(!apiBase){
+      throw new Error('No API base URL configured for read-only contract calls.');
+    }
+    return apiBase.replace(/\/+$/, '') +
+      '/v2/contracts/call-read/' +
+      payload.contractAddress + '/' +
+      payload.contractName + '/' +
+      functionName;
+  }
+
+  function _callContractReadOnly(payload, functionName, functionArgs){
+    if(typeof fetch !== 'function'){
+      return Promise.reject(new Error('Browser fetch API is unavailable for read-only calls.'));
+    }
+    var sender = payload.readSenderAddress || payload.contractAddress;
+    if(!sender){
+      return Promise.reject(new Error('Missing sender principal for read-only call.'));
+    }
+
+    var endpoint;
+    try{
+      endpoint = _buildReadOnlyEndpoint(payload, functionName);
+    }catch(error){
+      return Promise.reject(error);
+    }
+
+    return fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sender: sender,
+        arguments: Array.isArray(functionArgs) ? functionArgs : []
+      })
+    })
+      .then(function(response){
+        if(!response.ok){
+          throw new Error('Read-only call failed with HTTP ' + response.status + '.');
+        }
+        return response.json();
+      })
+      .then(function(body){
+        if(!body || body.okay !== true || typeof body.result !== 'string'){
+          var cause = body && body.cause ? String(body.cause) : 'Read-only contract call failed.';
+          throw new Error(cause);
+        }
+        return body.result;
+      });
+  }
+
+  function _decodeReadOnlyUIntResult(resultHex, functionName){
+    var parsed = _parseClarityHex(resultHex);
+    if(!parsed || typeof parsed !== 'object' || parsed.type !== 'response-ok'){
+      throw new Error('Read-only ' + functionName + ' call returned non-ok response.');
+    }
+    var value = parsed.value;
+    if(typeof value === 'bigint'){
+      if(value < 0n){
+        throw new Error(functionName + ' returned a negative value.');
+      }
+      return value.toString(10);
+    }
+    if(typeof value === 'number'){
+      if(!isFinite(value) || value < 0){
+        throw new Error(functionName + ' returned an invalid number.');
+      }
+      return Math.floor(value).toString(10);
+    }
+    if(typeof value === 'string' && /^[0-9]+$/.test(value)){
+      return value;
+    }
+    throw new Error(functionName + ' did not return a uint value.');
+  }
+
+  function _getSubmitFeeCacheKey(payload){
+    return (
+      String(payload.contractAddress || '') + '.' +
+      String(payload.contractName || '') + '@' +
+      String(payload.network || 'mainnet')
+    );
+  }
+
+  function _fetchSubmitFeeUnitMicroStx(payload){
+    var cacheKey = _getSubmitFeeCacheKey(payload);
+    return _callContractReadOnly(payload, 'get-fee-unit', [])
+      .then(function(resultHex){
+        var amount = _decodeReadOnlyUIntResult(resultHex, 'get-fee-unit');
+        feeUnitCacheByContract[cacheKey] = amount;
+        _debugLog('info', 'Loaded fee-unit for deny-mode post conditions', {
+          cacheKey: cacheKey,
+          feeUnitMicroStx: amount
+        });
+        return amount;
+      })
+      .catch(function(error){
+        var cached = feeUnitCacheByContract[cacheKey];
+        if(cached){
+          _debugLog('warn', 'Using cached fee-unit for deny-mode post conditions', {
+            cacheKey: cacheKey,
+            feeUnitMicroStx: cached,
+            error: _errorForLog(error)
+          });
+          return cached;
+        }
+        throw new Error(
+          'Unable to load fee-unit for deny-mode score submit: ' +
+          (error && error.message ? error.message : String(error))
+        );
+      });
+  }
+
+  function _buildSubmitPostConditionVariants(senderAddress, feeCapMicroStx){
+    var principal = String(senderAddress || '').trim();
+    if(!_looksLikeStacksAddress(principal)){
+      throw new Error('Unable to resolve wallet address required for deny-mode post conditions.');
+    }
+    var amount = _normalizeUIntInput(feeCapMicroStx, 'Score submit fee cap');
+
+    return [
+      [{
+        type: 'stx',
+        address: principal,
+        amount: amount,
+        condition: 'less_equal'
+      }],
+      [{
+        type: 'stx',
+        principal: principal,
+        amount: amount,
+        conditionCode: 5
+      }]
+    ];
+  }
+
+  function _resolveFallbackPostConditionAddress(payload, candidateAddress, providers, providerIndex){
+    if(_looksLikeStacksAddress(candidateAddress)){
+      return Promise.resolve(candidateAddress);
+    }
+
+    var currentProviderEntry =
+      Array.isArray(providers) && providerIndex >= 0 && providerIndex < providers.length
+        ? providers[providerIndex]
+        : null;
+    if(currentProviderEntry && currentProviderEntry.provider){
+      return _resolveProviderAddress(currentProviderEntry.provider, null)
+        .then(function(address){
+          if(_looksLikeStacksAddress(address)){
+            return address;
+          }
+
+          var configured =
+            (payload && typeof payload.readSenderAddress === 'string' && _looksLikeStacksAddress(payload.readSenderAddress))
+              ? payload.readSenderAddress
+              : null;
+          if(configured){
+            return configured;
+          }
+
+          if(
+            typeof window !== 'undefined' &&
+            window.ARCADE_ONCHAIN_CONFIG &&
+            typeof window.ARCADE_ONCHAIN_CONFIG.readSenderAddress === 'string' &&
+            _looksLikeStacksAddress(window.ARCADE_ONCHAIN_CONFIG.readSenderAddress)
+          ){
+            return window.ARCADE_ONCHAIN_CONFIG.readSenderAddress;
+          }
+
+          return null;
+        })
+        .catch(function(){
+          return null;
+        })
+        .then(function(primaryAddress){
+          if(_looksLikeStacksAddress(primaryAddress)){
+            return primaryAddress;
+          }
+          return tryProvider(0);
+        });
+    }
+
+    var configured =
+      (payload && typeof payload.readSenderAddress === 'string' && _looksLikeStacksAddress(payload.readSenderAddress))
+        ? payload.readSenderAddress
+        : null;
+    if(configured){
+      return Promise.resolve(configured);
+    }
+
+    if(
+      typeof window !== 'undefined' &&
+      window.ARCADE_ONCHAIN_CONFIG &&
+      typeof window.ARCADE_ONCHAIN_CONFIG.readSenderAddress === 'string' &&
+      _looksLikeStacksAddress(window.ARCADE_ONCHAIN_CONFIG.readSenderAddress)
+    ){
+      return Promise.resolve(window.ARCADE_ONCHAIN_CONFIG.readSenderAddress);
+    }
+
+    function tryProvider(index){
+      if(!Array.isArray(providers) || index >= providers.length){
+        return Promise.resolve(null);
+      }
+      if(index === providerIndex){
+        return tryProvider(index + 1);
+      }
+      var entry = providers[index];
+      if(!entry || !entry.provider){
+        return tryProvider(index + 1);
+      }
+      return _resolveProviderAddress(entry.provider, null)
+        .then(function(address){
+          if(_looksLikeStacksAddress(address)){
+            return address;
+          }
+          return tryProvider(index + 1);
+        })
+        .catch(function(){
+          return tryProvider(index + 1);
+        });
+    }
+
+    return tryProvider(0);
   }
 
   function _defaultOnChainSubmitter(payload){
@@ -1358,21 +1758,74 @@ var HighScores = (function(){
 
       return _resolveProviderAddress(candidate.provider, _normalizeWalletNetwork(payload.network))
         .then(function(playerAddress){
-          _debugLog('info', 'Resolved wallet address for candidate', {
-            providerLabel: candidate.label,
-            playerAddress: playerAddress || null
-          });
-          return _requestScoreAttestation(payload, playerAddress).then(function(attestation){
-            var params = {
+          function submitAllowMode(attestation){
+            var allowParams = {
               contractAddress: payload.contractAddress,
               contractName: payload.contractName,
               functionName: payload.functionName,
               functionArgs: _buildSubmitFunctionArgs(payload, attestation),
               network: payload.network || 'mainnet',
-              postConditionMode: 1
+              postConditionMode: POST_CONDITION_MODE_ALLOW
             };
-            return _requestWalletContractCall(candidate.provider, params, candidate.label);
+            _debugLog('info', 'Submitting score with compatible allow-mode transaction params', {
+              providerLabel: candidate.label
+            });
+            return _requestWalletContractCall(candidate.provider, allowParams, candidate.label);
+          }
+
+          _debugLog('info', 'Resolved wallet address for candidate', {
+            providerLabel: candidate.label,
+            playerAddress: playerAddress || null
           });
+          var attestationPromise = _requestScoreAttestation(payload, playerAddress);
+          if(!payload.useDenyModePostConditions){
+            return attestationPromise.then(function(attestation){
+              return submitAllowMode(attestation);
+            });
+          }
+
+          return Promise.all([
+            attestationPromise,
+            _fetchSubmitFeeUnitMicroStx(payload)
+          ])
+            .then(function(values){
+              var attestation = values[0];
+              var feeCapMicroStx = values[1];
+              return _resolveFallbackPostConditionAddress(payload, playerAddress, providers, index)
+                .then(function(senderAddress){
+                  if(!senderAddress){
+                    throw new Error('Unable to resolve wallet address required for deny-mode post conditions.');
+                  }
+                  var params = {
+                    contractAddress: payload.contractAddress,
+                    contractName: payload.contractName,
+                    functionName: payload.functionName,
+                    functionArgs: _buildSubmitFunctionArgs(payload, attestation),
+                    network: payload.network || 'mainnet',
+                    postConditionMode: POST_CONDITION_MODE_DENY,
+                    postConditionVariants: _buildSubmitPostConditionVariants(senderAddress, feeCapMicroStx)
+                  };
+                  _debugLog('info', 'Prepared deny-mode post conditions for score submit', {
+                    providerLabel: candidate.label,
+                    feeCapMicroStx: feeCapMicroStx,
+                    senderAddress: senderAddress,
+                    postConditionVariants: params.postConditionVariants
+                  });
+                  return _requestWalletContractCall(candidate.provider, params, candidate.label);
+                });
+            })
+            .catch(function(error){
+              if(_isUserRejectedError(error)){
+                throw error;
+              }
+              _debugLog('warn', 'Deny-mode submit preparation failed; falling back to allow-mode', {
+                providerLabel: candidate.label,
+                error: _errorForLog(error)
+              });
+              return attestationPromise.then(function(attestation){
+                return submitAllowMode(attestation);
+              });
+            });
         })
         .then(function(result){
           var txId = null;
@@ -1489,9 +1942,12 @@ var HighScores = (function(){
       contractName: config.contractName,
       functionName: config.functionName,
       network: config.network,
+      apiBaseUrl: config.apiBaseUrl,
+      readSenderAddress: config.readSenderAddress,
       requiresAttestation: !!config.requiresAttestation,
       attestationEndpoint: config.attestationEndpoint || '',
       attestationTimeoutMs: config.attestationTimeoutMs || 10000,
+      useDenyModePostConditions: !!config.useDenyModePostConditions,
       attestation: opts.attestation || null
     };
 

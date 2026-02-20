@@ -673,7 +673,6 @@ var Game01 = (function(){
     state.waveIntro = 80;
     state.currentProfile = wave.profile;
     state.enemies = wave.enemies;
-    state.enemyShots = [];
 
     if(shared.beep){
       shared.beep(480, 0.05, 'square', 0.03);
