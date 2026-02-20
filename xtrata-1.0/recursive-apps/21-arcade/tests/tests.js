@@ -347,7 +347,9 @@ var ArcadeTests = (function(){
         contractName: 'xtrata-arcade-scores-v1-0',
         functionName: 'submit-score',
         leaderboardFunctionName: 'get-top10',
-        minRank: 10
+        minRank: 10,
+        useDenyModePostConditions: true,
+        fallbackToAllowModeOnPostConditionFailure: false
       });
       var submitResult = await HighScores.submitOnChainScore({
         gameId: gameId,
@@ -358,6 +360,8 @@ var ArcadeTests = (function(){
       });
       TestUtils.assertTrue(!!captured, 'Submitter should receive payload');
       TestUtils.assertEqual(captured.contractName, 'xtrata-arcade-scores-v1-0', 'Contract name should pass through');
+      TestUtils.assertTrue(captured.useDenyModePostConditions === true, 'Deny-mode post-condition config should pass through');
+      TestUtils.assertTrue(captured.fallbackToAllowModeOnPostConditionFailure === false, 'Strict post-condition fallback flag should pass through');
       TestUtils.assertEqual(submitResult.txId, '0xabc123', 'submitOnChainScore should return tx id');
 
       var refreshed = await HighScores.fetchTop10(gameId, mode, { force: true });

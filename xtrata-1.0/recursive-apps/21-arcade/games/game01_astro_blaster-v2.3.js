@@ -3,8 +3,8 @@
  * AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY.
  * Source: recursive-apps/21-arcade/game01_astro_blaster-v2/src/legacy/game01_astro_blaster.legacy.js
  * Build Framework: recursive-apps/21-arcade/game01_astro_blaster-v2/src/build/build-game.mjs
- * Generated At: 2026-02-20T17:08:16.119Z
- * Legacy Source SHA256: 80790aeca98e37181c3a4de4a12917cf3af93381b611a0970f1fa78e4b6d4d5a
+ * Generated At: 2026-02-20T16:24:48.639Z
+ * Legacy Source SHA256: 80bd988caeb540401ff1603eafac06e394216e0cf8bc79733dfb54973041b5d1
  */
 
 var Game01 = (function(){
@@ -12,7 +12,7 @@ var Game01 = (function(){
   var title = 'Astro Blaster';
   var description = 'Top-down space shooter. Push through deep sectors and survive endless overdrive.';
   var genreTag = 'Shoot \'em Up';
-  var controls = 'Arrows: Move, Space: Shoot, Enter/Space: Ready, R: Restart';
+  var controls = 'Arrows: Move, Space: Shoot, R: Restart';
   var hasLevels = true;
   var scoreMode = 'score';
 
@@ -195,7 +195,6 @@ var Game01 = (function(){
   var intervals = [];
   var forcedSeed = null;
   var runtimeHooks = null;
-  var readyButton = null;
 
   function setV2RuntimeHooks(nextHooks){
     runtimeHooks = nextHooks || null;
@@ -253,60 +252,6 @@ var Game01 = (function(){
     listeners.push(['keyup', fn]);
   }
 
-  function ensureReadyButton(){
-    if(!container) return null;
-    if(readyButton && readyButton.parentNode === container){
-      return readyButton;
-    }
-
-    if(!container.style.position || container.style.position === 'static'){
-      container.style.position = 'relative';
-    }
-
-    readyButton = document.createElement('button');
-    readyButton.type = 'button';
-    readyButton.className = 'ab-ready-btn';
-    readyButton.textContent = 'Ready?';
-    readyButton.style.position = 'absolute';
-    readyButton.style.left = '50%';
-    readyButton.style.bottom = '22px';
-    readyButton.style.transform = 'translateX(-50%)';
-    readyButton.style.padding = '10px 18px';
-    readyButton.style.border = '1px solid #6fd5ff';
-    readyButton.style.borderRadius = '9px';
-    readyButton.style.background = 'rgba(3, 22, 38, 0.9)';
-    readyButton.style.color = '#d6f6ff';
-    readyButton.style.font = '13px monospace';
-    readyButton.style.letterSpacing = '0.3px';
-    readyButton.style.cursor = 'pointer';
-    readyButton.style.boxShadow = '0 0 12px rgba(57, 191, 255, 0.28)';
-    readyButton.style.zIndex = '22';
-    readyButton.style.display = 'none';
-    readyButton.onclick = function(){
-      beginNextWaveFromReady();
-    };
-
-    container.appendChild(readyButton);
-    return readyButton;
-  }
-
-  function removeReadyButton(){
-    if(readyButton && readyButton.parentNode){
-      readyButton.parentNode.removeChild(readyButton);
-    }
-    readyButton = null;
-  }
-
-  function setReadyButtonVisible(isVisible){
-    var btn = ensureReadyButton();
-    if(!btn) return;
-    btn.style.display = isVisible ? 'inline-block' : 'none';
-    if(isVisible){
-      btn.textContent = 'Ready?';
-      btn.title = 'Start the next wave';
-    }
-  }
-
   function init(cont, sh){
     container = cont;
     shared = sh;
@@ -321,10 +266,6 @@ var Game01 = (function(){
       keys[e.key] = true;
       if(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].indexOf(e.key) >= 0){
         e.preventDefault();
-      }
-      if(state && !state.gameOver && state.awaitingReady && (e.key === 'Enter' || e.key === ' ')){
-        beginNextWaveFromReady();
-        return;
       }
       if(e.key === 'r' || e.key === 'R'){
         restartGame();
@@ -464,11 +405,9 @@ var Game01 = (function(){
       testMode: false,
       deterministicSeed: forcedSeed,
       submitQueued: false,
-      currentProfile: null,
-      awaitingReady: false
+      currentProfile: null
     };
 
-    setReadyButtonVisible(false);
     spawnWave();
     loop();
   }
@@ -477,7 +416,6 @@ var Game01 = (function(){
     cancelAnimationFrame(raf);
     intervals.forEach(function(id){ clearInterval(id); });
     intervals = [];
-    setReadyButtonVisible(false);
     startGame();
   }
 
@@ -872,46 +810,11 @@ var Game01 = (function(){
     state.waveIntro = 80;
     state.currentProfile = wave.profile;
     state.enemies = wave.enemies;
-    state.awaitingReady = false;
-    setReadyButtonVisible(false);
 
     if(shared.beep){
       shared.beep(480, 0.05, 'square', 0.03);
       shared.beep(640, 0.04, 'square', 0.03);
     }
-  }
-
-  function startInterWavePause(){
-    if(state.awaitingReady || state.gameOver) return;
-
-    state.level++;
-    state.score += 400 + Math.floor(state.level * 14);
-
-    if(!state.campaignComplete && state.level > MAX_CAMPAIGN_LEVEL){
-      state.campaignComplete = true;
-      state.score += 5000;
-      if(shared.beep){
-        shared.beep(420, 0.06, 'triangle', 0.04);
-        shared.beep(620, 0.06, 'triangle', 0.04);
-        shared.beep(820, 0.08, 'triangle', 0.05);
-      }
-    }
-
-    state.awaitingReady = true;
-    state.waveIntro = 0;
-    setReadyButtonVisible(true);
-    if(shared.beep){
-      shared.beep(520, 0.05, 'sine', 0.03);
-    }
-  }
-
-  function beginNextWaveFromReady(){
-    if(!state || state.gameOver || !state.awaitingReady) return;
-    state.awaitingReady = false;
-    setReadyButtonVisible(false);
-    keys[' '] = false;
-    keys['Enter'] = false;
-    spawnWave();
   }
 
   function spawnPlayerShot(x, y, vx, vy, damage, color){
@@ -1225,16 +1128,6 @@ var Game01 = (function(){
       return;
     }
 
-    if(state.awaitingReady){
-      if(state.waveIntro > 0){
-        state.waveIntro--;
-      }
-      if(state.shake > 0){
-        state.shake--;
-      }
-      return;
-    }
-
     var p = state.player;
     var powerupsRuntime = getPowerupsRuntime();
     var rewardsHazardsRuntime = getRewardsHazardsRuntime();
@@ -1419,7 +1312,20 @@ var Game01 = (function(){
     }
 
     if(state.enemies.length === 0 && !state.gameOver){
-      startInterWavePause();
+      state.level++;
+      state.score += 400 + Math.floor(state.level * 14);
+
+      if(!state.campaignComplete && state.level > MAX_CAMPAIGN_LEVEL){
+        state.campaignComplete = true;
+        state.score += 5000;
+        if(shared.beep){
+          shared.beep(420, 0.06, 'triangle', 0.04);
+          shared.beep(620, 0.06, 'triangle', 0.04);
+          shared.beep(820, 0.08, 'triangle', 0.05);
+        }
+      }
+
+      spawnWave();
     }
   }
 
@@ -1500,47 +1406,20 @@ var Game01 = (function(){
     }
   }
 
-  function drawShotGlyph(targetCtx, shot, includeNose){
-    if(!targetCtx || !shot) return;
-    targetCtx.fillStyle = shot.color;
-    targetCtx.fillRect(shot.x, shot.y, shot.w, shot.h);
-    if(includeNose){
-      targetCtx.fillStyle = '#ffffff';
-      targetCtx.fillRect(shot.x + 1, shot.y - 3, 2, 3);
-    }
-  }
-
-  function drawParticleGlyph(targetCtx, particle){
-    if(!targetCtx || !particle) return;
-    var pAlpha = Math.max(0, particle.life / particle.maxLife);
-    targetCtx.globalAlpha = pAlpha;
-    targetCtx.fillStyle = particle.color;
-    targetCtx.fillRect(particle.x, particle.y, particle.size || 2, particle.size || 2);
-    targetCtx.globalAlpha = 1;
-  }
-
-  function drawExplosionGlyph(targetCtx, explosion){
-    if(!targetCtx || !explosion) return;
-    var alpha = explosion.life / explosion.maxLife;
-    targetCtx.globalAlpha = alpha;
-    targetCtx.strokeStyle = explosion.color;
-    targetCtx.lineWidth = 2;
-    targetCtx.beginPath();
-    targetCtx.arc(explosion.x, explosion.y, explosion.radius, 0, Math.PI * 2);
-    targetCtx.stroke();
-    targetCtx.globalAlpha = 1;
-  }
-
   function drawShots(){
     var i;
     for(i = 0; i < state.playerShots.length; i++){
       var ps = state.playerShots[i];
-      drawShotGlyph(ctx, ps, true);
+      ctx.fillStyle = ps.color;
+      ctx.fillRect(ps.x, ps.y, ps.w, ps.h);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(ps.x + 1, ps.y - 3, 2, 3);
     }
 
     for(i = 0; i < state.enemyShots.length; i++){
       var es = state.enemyShots[i];
-      drawShotGlyph(ctx, es, false);
+      ctx.fillStyle = es.color;
+      ctx.fillRect(es.x, es.y, es.w, es.h);
     }
   }
 
@@ -1562,214 +1441,25 @@ var Game01 = (function(){
     var i;
 
     for(i = 0; i < state.explosions.length; i++){
-      drawExplosionGlyph(ctx, state.explosions[i]);
+      var ex = state.explosions[i];
+      var alpha = ex.life / ex.maxLife;
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = ex.color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(ex.x, ex.y, ex.radius, 0, Math.PI * 2);
+      ctx.stroke();
     }
 
     for(i = 0; i < state.particles.length; i++){
-      drawParticleGlyph(ctx, state.particles[i]);
+      var pt = state.particles[i];
+      var pAlpha = Math.max(0, pt.life / pt.maxLife);
+      ctx.globalAlpha = pAlpha;
+      ctx.fillStyle = pt.color;
+      ctx.fillRect(pt.x, pt.y, pt.size || 2, pt.size || 2);
     }
 
     ctx.globalAlpha = 1;
-  }
-
-  function drawPreviewTrailSparks(previewCtx, tick, shot, trailColor, trailConfig){
-    var direction = trailConfig && trailConfig.direction === 'up' ? -1 : 1;
-    var count = Math.max(3, Math.floor((trailConfig && trailConfig.count) || 6));
-    var spread = Math.max(0.2, Number(trailConfig && trailConfig.spread) || 0.72);
-    var phase = Number(trailConfig && trailConfig.phase) || 0;
-    var i;
-    for(i = 0; i < count; i++){
-      var t = tick + phase + i * 3;
-      var distance = (i + 1) * (1.8 + Math.sin((t + i) * 0.21) * 0.2);
-      var jitterX = Math.sin((t + phase) * 0.56 + i * 1.17) * (spread + i * 0.12);
-      var jitterY = Math.cos((t + phase) * 0.42 + i * 0.68) * 0.45;
-      var life = Math.max(2, 12 - i + Math.floor((Math.sin((t + i) * 0.35) + 1) * 1.4));
-      drawParticleGlyph(previewCtx, {
-        x: shot.x + shot.w * 0.5 + jitterX,
-        y: shot.y + (direction > 0 ? -distance : (shot.h + distance)) + jitterY,
-        life: life,
-        maxLife: 14,
-        size: i < 2 ? 2 : 1.8,
-        color: trailColor
-      });
-    }
-  }
-
-  function drawPreviewEnemyShot(previewCtx, tick, width, height, shotConfig){
-    var travelHeight = height + 22;
-    var phase = Math.floor(shotConfig.phase || 0);
-    var y = ((tick * (shotConfig.speed || 1.4) + phase) % travelHeight) - 16;
-    var x = (shotConfig.baseX || (width * 0.5)) + Math.sin((tick + phase) * 0.08) * (shotConfig.wobble || 0);
-    var shot = {
-      x: Math.round(x),
-      y: Math.round(y),
-      w: shotConfig.w || 3,
-      h: shotConfig.h || 12,
-      color: shotConfig.color || '#ff8f00'
-    };
-    drawShotGlyph(previewCtx, shot, false);
-
-    drawPreviewTrailSparks(previewCtx, tick, shot, shotConfig.trailColor || '#ff6837', {
-      direction: 'down',
-      count: shotConfig.trailCount || 7,
-      spread: shotConfig.trailSpread || 0.7,
-      phase: phase
-    });
-  }
-
-  function drawPreviewPlayerShot(previewCtx, tick, width, height, shotConfig){
-    var travelHeight = height + 18;
-    var phase = Math.floor(shotConfig.phase || 0);
-    var y = height + 6 - ((tick * (shotConfig.speed || 1.7) + phase) % travelHeight);
-    var x = (shotConfig.baseX || (width * 0.5)) + Math.sin((tick + phase) * 0.06) * (shotConfig.wobble || 0);
-    var shot = {
-      x: Math.round(x),
-      y: Math.round(y),
-      w: shotConfig.w || 3,
-      h: shotConfig.h || 12,
-      color: shotConfig.color || '#fff08f'
-    };
-    drawShotGlyph(previewCtx, shot, true);
-
-    drawPreviewTrailSparks(previewCtx, tick, shot, shotConfig.trailColor || '#ff9f1a', {
-      direction: 'up',
-      count: shotConfig.trailCount || 6,
-      spread: shotConfig.trailSpread || 0.62,
-      phase: phase
-    });
-  }
-
-  function drawPreviewExplosion(previewCtx, tick, width, height, visual, color){
-    var pulse = (tick % 30) / 30;
-    var cx = width * 0.5;
-    var cy = height * 0.5;
-    var baseColor = color || '#ffb347';
-    var maxRadius = visual === 'carrier-breach' ? 11 : (visual === 'shock-ring' ? 9 : 8);
-    var radius = 1.8 + pulse * maxRadius;
-    drawExplosionGlyph(previewCtx, {
-      x: cx,
-      y: cy,
-      radius: radius,
-      life: Math.max(1, Math.floor((1 - pulse) * 24)),
-      maxLife: 24,
-      color: baseColor
-    });
-
-    if(visual === 'shock-ring' || visual === 'carrier-breach' || visual === 'kill-burst'){
-      drawExplosionGlyph(previewCtx, {
-        x: cx,
-        y: cy,
-        radius: radius * 0.62,
-        life: Math.max(1, Math.floor((1 - pulse) * 20)),
-        maxLife: 20,
-        color: baseColor
-      });
-    }
-
-    var shardCount = visual === 'hit-spark' ? 4 : (visual === 'carrier-breach' ? 8 : 6);
-    var i;
-    for(i = 0; i < shardCount; i++){
-      var angle = (Math.PI * 2 * i / shardCount) + (tick * 0.05);
-      var dist = (2.5 + pulse * (visual === 'carrier-breach' ? 10 : 7));
-      drawParticleGlyph(previewCtx, {
-        x: cx + Math.cos(angle) * dist,
-        y: cy + Math.sin(angle) * dist,
-        life: Math.max(2, Math.floor((1 - pulse) * 18)),
-        maxLife: 18,
-        size: visual === 'carrier-breach' ? 2.2 : 2,
-        color: baseColor
-      });
-    }
-  }
-
-  function renderIntelPreviewTile(previewCtx, previewSpec){
-    if(!previewCtx || !previewSpec) return;
-
-    var width = Math.max(18, Math.floor(Number(previewSpec.width) || (previewCtx.canvas ? previewCtx.canvas.width : 36)));
-    var height = Math.max(18, Math.floor(Number(previewSpec.height) || (previewCtx.canvas ? previewCtx.canvas.height : 36)));
-    var section = String(previewSpec.section || '').toLowerCase();
-    var visual = String(previewSpec.visual || '').toLowerCase();
-    var color = previewSpec.color || '#ffbf40';
-    var tick = Math.max(0, Number(previewSpec.tick) || 0);
-
-    previewCtx.clearRect(0, 0, width, height);
-    previewCtx.fillStyle = section === 'explosions' ? 'rgba(20,8,10,0.9)' : 'rgba(3,16,26,0.92)';
-    previewCtx.fillRect(0, 0, width, height);
-
-    if(section === 'bullets'){
-      if(visual === 'split-lance'){
-        drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.34, wobble: 0.2, w: 3, h: 11, color: color, trailColor: '#ff6837', trailCount: 6, speed: 1.35, phase: 3 });
-        drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.62, wobble: 0.2, w: 3, h: 11, color: color, trailColor: '#ff6837', trailCount: 6, speed: 1.35, phase: 11 });
-        return;
-      }
-      if(visual === 'burst-stack'){
-        drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.42, wobble: 0.16, w: 3, h: 11, color: color, trailColor: '#ff6837', speed: 1.38, phase: 2 });
-        drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.5, wobble: 0.12, w: 4, h: 12, color: color, trailColor: '#ff6837', speed: 1.46, phase: 7 });
-        drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.58, wobble: 0.16, w: 3, h: 11, color: color, trailColor: '#ff6837', speed: 1.38, phase: 13 });
-        return;
-      }
-      if(visual === 'aim-lance'){
-        drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.35, wobble: 2.2, w: 3, h: 13, color: color, trailColor: '#ff6837', trailCount: 7, speed: 1.42, phase: 5 });
-        return;
-      }
-      if(visual === 'fan-volley'){
-        drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.2, wobble: 0.25, w: 3, h: 10, color: color, trailColor: '#ff6837', speed: 1.3, phase: 0 });
-        drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.35, wobble: 0.2, w: 3, h: 10, color: color, trailColor: '#ff6837', speed: 1.32, phase: 4 });
-        drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.5, wobble: 0.14, w: 3, h: 10, color: color, trailColor: '#ff6837', speed: 1.34, phase: 8 });
-        drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.65, wobble: 0.2, w: 3, h: 10, color: color, trailColor: '#ff6837', speed: 1.32, phase: 12 });
-        drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.8, wobble: 0.25, w: 3, h: 10, color: color, trailColor: '#ff6837', speed: 1.3, phase: 16 });
-        return;
-      }
-      drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.5, wobble: 0.2, w: 4, h: 14, color: color, trailColor: '#ff6837', trailCount: 8, trailSpread: 0.75, speed: 1.4, phase: 6 });
-      return;
-    }
-
-    if(section === 'upgrades'){
-      if(visual === 'triple-volley'){
-        drawPreviewPlayerShot(previewCtx, tick, width, height, { baseX: width * 0.34, wobble: 0.15, w: 3, h: 11, color: '#fff08f', speed: 1.75, phase: 2 });
-        drawPreviewPlayerShot(previewCtx, tick, width, height, { baseX: width * 0.5, wobble: 0.1, w: 3, h: 12, color: '#fff08f', speed: 1.82, phase: 7 });
-        drawPreviewPlayerShot(previewCtx, tick, width, height, { baseX: width * 0.66, wobble: 0.15, w: 3, h: 11, color: '#fff08f', speed: 1.75, phase: 12 });
-        return;
-      }
-      if(visual === 'overhead-spread'){
-        drawPreviewPlayerShot(previewCtx, tick, width, height, { baseX: width * 0.5, wobble: 0.1, w: 3, h: 12, color: '#7efcff', speed: 1.8, phase: 2 });
-        drawPreviewPlayerShot(previewCtx, tick, width, height, { baseX: width * 0.35, wobble: 0.25, w: 3, h: 10, color: '#7efcff', speed: 1.72, phase: 9 });
-        drawPreviewPlayerShot(previewCtx, tick, width, height, { baseX: width * 0.65, wobble: 0.25, w: 3, h: 10, color: '#7efcff', speed: 1.72, phase: 15 });
-        return;
-      }
-      if(visual === 'diagonal-lances'){
-        drawPreviewPlayerShot(previewCtx, tick, width, height, { baseX: width * 0.38, wobble: 1.4, w: 3, h: 10, color: '#ffde59', speed: 1.76, phase: 4 });
-        drawPreviewPlayerShot(previewCtx, tick, width, height, { baseX: width * 0.62, wobble: 1.4, w: 3, h: 10, color: '#ffde59', speed: 1.76, phase: 11 });
-        return;
-      }
-      if(visual === 'tracking-pulse'){
-        drawPreviewPlayerShot(previewCtx, tick, width, height, { baseX: width * 0.5, wobble: 0.12, w: 3, h: 12, color: '#ff5252', speed: 1.8, phase: 4 });
-        drawParticleGlyph(previewCtx, {
-          x: width * 0.7 + Math.sin(tick * 0.08) * 1.2,
-          y: 7 + Math.cos(tick * 0.08) * 1.2,
-          life: 8,
-          maxLife: 10,
-          size: 3,
-          color: '#ff5252'
-        });
-        return;
-      }
-      if(visual === 'arc-fan'){
-        drawPreviewPlayerShot(previewCtx, tick, width, height, { baseX: width * 0.2, wobble: 0.25, w: 3, h: 9, color: '#ff79f2', speed: 1.66, phase: 0 });
-        drawPreviewPlayerShot(previewCtx, tick, width, height, { baseX: width * 0.35, wobble: 0.2, w: 3, h: 9, color: '#ff79f2', speed: 1.68, phase: 4 });
-        drawPreviewPlayerShot(previewCtx, tick, width, height, { baseX: width * 0.5, wobble: 0.14, w: 3, h: 10, color: '#ff79f2', speed: 1.7, phase: 8 });
-        drawPreviewPlayerShot(previewCtx, tick, width, height, { baseX: width * 0.65, wobble: 0.2, w: 3, h: 9, color: '#ff79f2', speed: 1.68, phase: 12 });
-        drawPreviewPlayerShot(previewCtx, tick, width, height, { baseX: width * 0.8, wobble: 0.25, w: 3, h: 9, color: '#ff79f2', speed: 1.66, phase: 16 });
-        return;
-      }
-      drawPreviewPlayerShot(previewCtx, tick, width, height, { baseX: width * 0.5, wobble: 0.12, w: 3, h: 11, color: color, speed: 1.75, phase: 6 });
-      return;
-    }
-
-    if(section === 'explosions'){
-      drawPreviewExplosion(previewCtx, tick, width, height, visual, color);
-      return;
-    }
   }
 
   function drawHud(){
@@ -1838,27 +1528,6 @@ var Game01 = (function(){
     ctx.textAlign = 'left';
   }
 
-  function drawReadyOverlay(){
-    if(!state.awaitingReady || state.gameOver) return;
-
-    ctx.fillStyle = 'rgba(0,0,0,0.58)';
-    ctx.fillRect(0, 0, WIDTH, HEIGHT);
-
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#9cecff';
-    ctx.font = '20px monospace';
-    ctx.fillText('WAVE CLEARED', WIDTH * 0.5, HEIGHT * 0.42);
-
-    ctx.fillStyle = '#ffd66e';
-    ctx.font = '15px monospace';
-    ctx.fillText('Level ' + state.level + ' is ready.', WIDTH * 0.5, HEIGHT * 0.42 + 30);
-
-    ctx.fillStyle = '#d7d7d7';
-    ctx.font = '13px monospace';
-    ctx.fillText('Press Ready, Enter, or Space to continue', WIDTH * 0.5, HEIGHT * 0.42 + 58);
-    ctx.textAlign = 'left';
-  }
-
   function draw(){
     ctx.save();
     if(state.shake > 0){
@@ -1877,7 +1546,6 @@ var Game01 = (function(){
     drawParticlesAndExplosions();
     drawPlayer();
     drawHud();
-    drawReadyOverlay();
     drawGameOver();
 
     ctx.restore();
@@ -1941,7 +1609,6 @@ var Game01 = (function(){
     intervals = [];
     listeners.forEach(function(l){ document.removeEventListener(l[0], l[1]); });
     listeners = [];
-    removeReadyButton();
     if(container) container.innerHTML = '';
   }
 
@@ -1964,9 +1631,6 @@ var Game01 = (function(){
       },
       forceWin: function(){
         endGame(true);
-      },
-      renderIntelPreview: function(previewCtx, previewSpec){
-        renderIntelPreviewTile(previewCtx, previewSpec);
       },
       setDeterministicSeed: function(n){
         var parsed = Number(n);
@@ -2516,48 +2180,6 @@ var Game01 = (function(){
           "trait": "Hazard locks firing briefly."
         }
       ],
-      "upgrades": [
-        {
-          "id": "upgrade-triple-volley",
-          "label": "Triple Volley",
-          "color": "#fff08f",
-          "shape": "3x Forward",
-          "visual": "triple-volley",
-          "trait": "Adds central triple-shot burst pattern."
-        },
-        {
-          "id": "upgrade-overhead-spread",
-          "label": "Overhead Spread",
-          "color": "#7efcff",
-          "shape": "Top Split",
-          "visual": "overhead-spread",
-          "trait": "Projectiles split downward from overhead lane."
-        },
-        {
-          "id": "upgrade-diagonal-lances",
-          "label": "Diagonal Lances",
-          "color": "#ffde59",
-          "shape": "Cross Angles",
-          "visual": "diagonal-lances",
-          "trait": "Adds diagonal wing lances to widen hitbox coverage."
-        },
-        {
-          "id": "upgrade-tracking-pulse",
-          "label": "Tracking Pulse",
-          "color": "#ff5252",
-          "shape": "Seek Target",
-          "visual": "tracking-pulse",
-          "trait": "Target-seeking pulse aligns to nearest hostile."
-        },
-        {
-          "id": "upgrade-arc-fan",
-          "label": "Arc Fan",
-          "color": "#ff79f2",
-          "shape": "Fan Arc",
-          "visual": "arc-fan",
-          "trait": "Wide fan burst for crowd pressure."
-        }
-      ],
       "bullets": [
         {
           "id": "enemy-single",
@@ -2616,7 +2238,8 @@ var Game01 = (function(){
           "label": "Hit Spark",
           "color": "#ff9f40",
           "shape": "Micro Ring",
-          "visual": "hit-spark",
+          "glyph": "◌",
+          "animation": "pulse",
           "trait": "Minor impact confirmation."
         },
         {
@@ -2624,7 +2247,8 @@ var Game01 = (function(){
           "label": "Kill Burst",
           "color": "#ffb347",
           "shape": "Shard Cloud",
-          "visual": "kill-burst",
+          "glyph": "✹",
+          "animation": "spin",
           "trait": "Default enemy elimination burst."
         },
         {
@@ -2632,7 +2256,8 @@ var Game01 = (function(){
           "label": "Carrier Breach",
           "color": "#ff4de3",
           "shape": "Heavy Burst",
-          "visual": "carrier-breach",
+          "glyph": "✸",
+          "animation": "spin",
           "trait": "Large force explosion profile."
         },
         {
@@ -2640,7 +2265,8 @@ var Game01 = (function(){
           "label": "Hull Rupture",
           "color": "#ff5f56",
           "shape": "Player Crash",
-          "visual": "hull-rupture",
+          "glyph": "✶",
+          "animation": "blink",
           "trait": "Player damage blast signature."
         },
         {
@@ -2648,7 +2274,8 @@ var Game01 = (function(){
           "label": "Shock Ring",
           "color": "#7df2ff",
           "shape": "Expanding Ring",
-          "visual": "shock-ring",
+          "glyph": "◎",
+          "animation": "pulse",
           "trait": "Ring overlay from explosion core."
         }
       ]
@@ -3752,7 +3379,6 @@ var Game01 = (function(){
       ],
       "right": [
         "weapons",
-        "upgrades",
         "bullets",
         "explosions"
       ]
@@ -3761,7 +3387,6 @@ var Game01 = (function(){
       "players": "Player Types",
       "enemies": "Enemy Types",
       "weapons": "Weapon Types",
-      "upgrades": "Upgrade Patterns",
       "bullets": "Bullet Types",
       "explosions": "Explosion Types"
     },
@@ -3898,48 +3523,6 @@ var Game01 = (function(){
           "trait": "Hazard locks firing briefly."
         }
       ],
-      "upgrades": [
-        {
-          "id": "upgrade-triple-volley",
-          "label": "Triple Volley",
-          "color": "#fff08f",
-          "shape": "3x Forward",
-          "visual": "triple-volley",
-          "trait": "Adds central triple-shot burst pattern."
-        },
-        {
-          "id": "upgrade-overhead-spread",
-          "label": "Overhead Spread",
-          "color": "#7efcff",
-          "shape": "Top Split",
-          "visual": "overhead-spread",
-          "trait": "Projectiles split downward from overhead lane."
-        },
-        {
-          "id": "upgrade-diagonal-lances",
-          "label": "Diagonal Lances",
-          "color": "#ffde59",
-          "shape": "Cross Angles",
-          "visual": "diagonal-lances",
-          "trait": "Adds diagonal wing lances to widen hitbox coverage."
-        },
-        {
-          "id": "upgrade-tracking-pulse",
-          "label": "Tracking Pulse",
-          "color": "#ff5252",
-          "shape": "Seek Target",
-          "visual": "tracking-pulse",
-          "trait": "Target-seeking pulse aligns to nearest hostile."
-        },
-        {
-          "id": "upgrade-arc-fan",
-          "label": "Arc Fan",
-          "color": "#ff79f2",
-          "shape": "Fan Arc",
-          "visual": "arc-fan",
-          "trait": "Wide fan burst for crowd pressure."
-        }
-      ],
       "bullets": [
         {
           "id": "enemy-single",
@@ -3998,7 +3581,8 @@ var Game01 = (function(){
           "label": "Hit Spark",
           "color": "#ff9f40",
           "shape": "Micro Ring",
-          "visual": "hit-spark",
+          "glyph": "◌",
+          "animation": "pulse",
           "trait": "Minor impact confirmation."
         },
         {
@@ -4006,7 +3590,8 @@ var Game01 = (function(){
           "label": "Kill Burst",
           "color": "#ffb347",
           "shape": "Shard Cloud",
-          "visual": "kill-burst",
+          "glyph": "✹",
+          "animation": "spin",
           "trait": "Default enemy elimination burst."
         },
         {
@@ -4014,7 +3599,8 @@ var Game01 = (function(){
           "label": "Carrier Breach",
           "color": "#ff4de3",
           "shape": "Heavy Burst",
-          "visual": "carrier-breach",
+          "glyph": "✸",
+          "animation": "spin",
           "trait": "Large force explosion profile."
         },
         {
@@ -4022,7 +3608,8 @@ var Game01 = (function(){
           "label": "Hull Rupture",
           "color": "#ff5f56",
           "shape": "Player Crash",
-          "visual": "hull-rupture",
+          "glyph": "✶",
+          "animation": "blink",
           "trait": "Player damage blast signature."
         },
         {
@@ -4030,7 +3617,8 @@ var Game01 = (function(){
           "label": "Shock Ring",
           "color": "#7df2ff",
           "shape": "Expanding Ring",
-          "visual": "shock-ring",
+          "glyph": "◎",
+          "animation": "pulse",
           "trait": "Ring overlay from explosion core."
         }
       ]
@@ -4091,10 +3679,6 @@ var Game01 = (function(){
         '.ab-intel-swatch.is-shake{animation:abIntelShake 0.8s linear infinite;}',
         '.ab-intel-swatch.is-glow{animation:abIntelGlow 1.4s ease-in-out infinite;}',
         '.ab-intel-swatch.is-bullet{position:relative;overflow:hidden;background:rgba(3,16,26,0.92);color:transparent;}',
-        '.ab-intel-swatch.is-upgrade{position:relative;overflow:hidden;background:rgba(5,20,34,0.92);color:transparent;}',
-        '.ab-intel-swatch.is-explosion{position:relative;overflow:hidden;background:rgba(20,8,10,0.9);color:transparent;}',
-        '.ab-intel-swatch.is-preview-canvas{position:relative;overflow:hidden;padding:0;background:rgba(5,16,28,0.95);}',
-        '.ab-intel-preview-canvas{display:block;width:18px;height:18px;image-rendering:pixelated;}',
         '.ab-intel-shot-line{position:absolute;left:50%;top:-10px;width:3px;height:12px;border-radius:999px;transform:translateX(-50%);background:var(--shot-color,#ffbf40);box-shadow:0 0 6px var(--shot-color,#ffbf40);animation:abIntelShotDrop 1.1s linear infinite;}',
         '.ab-intel-shot-line.is-long{height:15px;width:3px;}',
         '.ab-intel-shot-line.is-left{left:34%;transform:translateX(-50%) rotate(-22deg);}',
@@ -4110,32 +3694,6 @@ var Game01 = (function(){
         '.ab-intel-burst-stack i{display:block;width:3px;height:4px;border-radius:999px;background:var(--shot-color,#ffbf40);box-shadow:0 0 6px var(--shot-color,#ffbf40);animation:abIntelBurstPulse 0.9s ease-in-out infinite;}',
         '.ab-intel-burst-stack i:nth-child(2){animation-delay:0.12s;}',
         '.ab-intel-burst-stack i:nth-child(3){animation-delay:0.24s;}',
-        '.ab-intel-upgrade-shot{position:absolute;width:2px;height:8px;border-radius:999px;background:var(--shot-color,#7efcff);box-shadow:0 0 6px var(--shot-color,#7efcff);animation:abIntelUpgradeFlow 1s linear infinite;}',
-        '.ab-intel-upgrade-shot.is-triple-left{left:28%;top:1px;}',
-        '.ab-intel-upgrade-shot.is-triple-mid{left:50%;top:-2px;transform:translateX(-50%);} ',
-        '.ab-intel-upgrade-shot.is-triple-right{left:72%;top:1px;}',
-        '.ab-intel-upgrade-shot.is-overhead-mid{left:50%;top:-2px;transform:translateX(-50%);} ',
-        '.ab-intel-upgrade-shot.is-overhead-left{left:37%;top:0;transform:translateX(-50%) rotate(-24deg);} ',
-        '.ab-intel-upgrade-shot.is-overhead-right{left:63%;top:0;transform:translateX(-50%) rotate(24deg);} ',
-        '.ab-intel-upgrade-shot.is-diag-left{left:38%;top:3px;transform:translateX(-50%) rotate(-32deg);} ',
-        '.ab-intel-upgrade-shot.is-diag-right{left:62%;top:3px;transform:translateX(-50%) rotate(32deg);} ',
-        '.ab-intel-upgrade-shot.is-track{left:50%;top:-2px;transform:translateX(-50%);} ',
-        '.ab-intel-upgrade-target{position:absolute;left:62%;top:11px;width:5px;height:5px;border:1px solid var(--shot-color,#ff5252);border-radius:999px;box-shadow:0 0 6px var(--shot-color,#ff5252);animation:abIntelTrackPulse 0.95s ease-in-out infinite;}',
-        '.ab-intel-upgrade-dot{position:absolute;width:3px;height:3px;border-radius:999px;background:var(--shot-color,#ff79f2);box-shadow:0 0 6px var(--shot-color,#ff79f2);animation:abIntelShotPulse 0.95s ease-in-out infinite;}',
-        '.ab-intel-upgrade-dot.is-fan-1{left:20%;top:10px;}',
-        '.ab-intel-upgrade-dot.is-fan-2{left:35%;top:6px;}',
-        '.ab-intel-upgrade-dot.is-fan-3{left:50%;top:3px;}',
-        '.ab-intel-upgrade-dot.is-fan-4{left:65%;top:6px;}',
-        '.ab-intel-upgrade-dot.is-fan-5{left:80%;top:10px;}',
-        '.ab-intel-explosion-core{position:absolute;left:50%;top:50%;width:4px;height:4px;border-radius:999px;transform:translate(-50%,-50%);background:var(--shot-color,#ffb347);box-shadow:0 0 7px var(--shot-color,#ffb347);animation:abIntelExplosionCore 0.8s ease-in-out infinite;}',
-        '.ab-intel-explosion-ring{position:absolute;left:50%;top:50%;width:6px;height:6px;border:1px solid var(--shot-color,#ffb347);border-radius:999px;transform:translate(-50%,-50%);animation:abIntelExplosionRing 1s ease-out infinite;}',
-        '.ab-intel-explosion-ring.is-large{animation-duration:1.2s;animation-delay:0.14s;}',
-        '.ab-intel-explosion-shard{position:absolute;left:50%;top:50%;width:2px;height:6px;border-radius:999px;transform-origin:50% 0%;background:var(--shot-color,#ffb347);box-shadow:0 0 5px var(--shot-color,#ffb347);animation:abIntelExplosionShard 0.95s ease-in-out infinite;}',
-        '.ab-intel-explosion-shard.is-a{transform:translate(-50%,-50%) rotate(18deg);} ',
-        '.ab-intel-explosion-shard.is-b{transform:translate(-50%,-50%) rotate(84deg);animation-delay:0.08s;} ',
-        '.ab-intel-explosion-shard.is-c{transform:translate(-50%,-50%) rotate(148deg);animation-delay:0.16s;} ',
-        '.ab-intel-explosion-shard.is-d{transform:translate(-50%,-50%) rotate(218deg);animation-delay:0.24s;} ',
-        '.ab-intel-explosion-shard.is-e{transform:translate(-50%,-50%) rotate(286deg);animation-delay:0.32s;} ',
         '.ab-intel-live{display:grid;grid-template-columns:auto 1fr;gap:4px 8px;font:11px monospace;color:#bee9ff;margin-bottom:6px;}',
         '.ab-intel-live-key{color:#74b2d6;}',
         '.ab-intel-live-val{color:#d9f6ff;}',
@@ -4147,12 +3705,7 @@ var Game01 = (function(){
         '@keyframes abIntelGlow{0%,100%{filter:brightness(1);}50%{filter:brightness(1.25);}}',
         '@keyframes abIntelShotDrop{0%{top:-10px;opacity:0.2;}25%{opacity:1;}100%{top:16px;opacity:0.25;}}',
         '@keyframes abIntelShotPulse{0%,100%{transform:scale(0.85);}50%{transform:scale(1.2);}}',
-        '@keyframes abIntelBurstPulse{0%,100%{opacity:0.3;}45%{opacity:1;}}',
-        '@keyframes abIntelUpgradeFlow{0%{top:-4px;opacity:0.2;}25%{opacity:1;}100%{top:14px;opacity:0.25;}}',
-        '@keyframes abIntelTrackPulse{0%,100%{transform:scale(0.8);}50%{transform:scale(1.15);}}',
-        '@keyframes abIntelExplosionCore{0%,100%{transform:translate(-50%,-50%) scale(0.7);}50%{transform:translate(-50%,-50%) scale(1.25);}}',
-        '@keyframes abIntelExplosionRing{0%{transform:translate(-50%,-50%) scale(0.45);opacity:0.9;}100%{transform:translate(-50%,-50%) scale(1.8);opacity:0;}}',
-        '@keyframes abIntelExplosionShard{0%,100%{opacity:0.2;height:4px;}40%{opacity:1;height:8px;}}'
+        '@keyframes abIntelBurstPulse{0%,100%{opacity:0.3;}45%{opacity:1;}}'
       ].join('\n');
       document.head.appendChild(style);
     }
@@ -4185,45 +3738,63 @@ var Game01 = (function(){
       };
     }
   
-    function createPreviewCanvasSwatch(entry, sectionKey){
+    function createBulletSwatch(entry){
       var swatch = document.createElement('span');
-      swatch.className = 'ab-intel-swatch is-preview-canvas';
-      swatch.title = entry.label || '';
+      swatch.className = 'ab-intel-swatch is-bullet';
       swatch.style.setProperty('--shot-color', entry.color || '#ffbf40');
+      swatch.title = entry.label || '';
   
-      var canvas = document.createElement('canvas');
-      canvas.className = 'ab-intel-preview-canvas';
-      canvas.width = 36;
-      canvas.height = 36;
-      swatch.appendChild(canvas);
+      var visual = String(entry.visual || entry.id || '').toLowerCase();
   
-      var previewCtx = canvas.getContext ? canvas.getContext('2d') : null;
-      if(!previewCtx){
-        swatch.className = 'ab-intel-swatch';
-        swatch.style.backgroundColor = entry.color || '#416181';
-        swatch.textContent = entry.glyph || '•';
+      function appendLine(extraClass){
+        var line = document.createElement('span');
+        line.className = 'ab-intel-shot-line' + (extraClass ? ' ' + extraClass : '');
+        swatch.appendChild(line);
+      }
+  
+      if(visual === 'single-lance'){
+        appendLine('is-long');
         return swatch;
       }
   
-      swatch.__intelPreview = {
-        section: sectionKey,
-        visual: String(entry.visual || entry.id || '').toLowerCase(),
-        color: entry.color || '#ffbf40',
-        canvas: canvas,
-        ctx: previewCtx
-      };
+      if(visual === 'split-lance'){
+        appendLine('is-left');
+        appendLine('is-right');
+        return swatch;
+      }
+  
+      if(visual === 'burst-stack'){
+        var burst = document.createElement('span');
+        burst.className = 'ab-intel-burst-stack';
+        burst.innerHTML = '<i></i><i></i><i></i>';
+        swatch.appendChild(burst);
+        return swatch;
+      }
+  
+      if(visual === 'aim-lance'){
+        appendLine('is-aim is-long');
+        return swatch;
+      }
+  
+      if(visual === 'fan-volley'){
+        var classes = ['is-fan-a', 'is-fan-b', 'is-fan-c', 'is-fan-d', 'is-fan-e'];
+        var i;
+        for(i = 0; i < classes.length; i++){
+          var dot = document.createElement('span');
+          dot.className = 'ab-intel-shot-dot ' + classes[i];
+          dot.style.animationDelay = (i * 0.08) + 's';
+          swatch.appendChild(dot);
+        }
+        return swatch;
+      }
+  
+      appendLine('is-long');
       return swatch;
     }
   
     function createSwatch(entry, sectionKey){
       if(sectionKey === 'bullets'){
-        return createPreviewCanvasSwatch(entry, sectionKey);
-      }
-      if(sectionKey === 'upgrades'){
-        return createPreviewCanvasSwatch(entry, sectionKey);
-      }
-      if(sectionKey === 'explosions'){
-        return createPreviewCanvasSwatch(entry, sectionKey);
+        return createBulletSwatch(entry);
       }
       var swatch = document.createElement('span');
       var animation = entry.animation ? ' is-' + entry.animation : '';
@@ -4234,7 +3805,7 @@ var Game01 = (function(){
       return swatch;
     }
   
-    function createSection(title, entries, sectionKey, previewRegistry){
+    function createSection(title, entries, sectionKey){
       var section = document.createElement('section');
       section.className = 'ab-intel-section';
   
@@ -4264,16 +3835,7 @@ var Game01 = (function(){
         var tr = document.createElement('tr');
   
         var tileCell = document.createElement('td');
-        var swatch = createSwatch(row, sectionKey);
-        tileCell.appendChild(swatch);
-        if(
-          previewRegistry &&
-          swatch &&
-          swatch.__intelPreview &&
-          swatch.__intelPreview.ctx
-        ){
-          previewRegistry.push(swatch.__intelPreview);
-        }
+        tileCell.appendChild(createSwatch(row, sectionKey));
   
         var typeCell = document.createElement('td');
         typeCell.textContent = row.label || row.id || 'Unknown';
@@ -4296,7 +3858,7 @@ var Game01 = (function(){
       return section;
     }
   
-    function fillColumn(column, order, previewRegistry){
+    function fillColumn(column, order){
       var sectionTitles = runtimeConfig.sectionTitles || {};
       var sectionData = runtimeConfig.sections || {};
       var i;
@@ -4304,61 +3866,7 @@ var Game01 = (function(){
         var key = order[i];
         var rows = Array.isArray(sectionData[key]) ? sectionData[key] : [];
         if(rows.length === 0) continue;
-        column.appendChild(createSection(sectionTitles[key] || key, rows, key, previewRegistry));
-      }
-    }
-  
-    function resolvePreviewRenderer(gameRef){
-      var hooks = gameRef && typeof gameRef.getTestHooks === 'function' ? gameRef.getTestHooks() : null;
-      if(!hooks || typeof hooks.renderIntelPreview !== 'function'){
-        return null;
-      }
-      return hooks.renderIntelPreview;
-    }
-  
-    function renderFallbackPreview(preview, tick){
-      if(!preview || !preview.ctx || !preview.canvas) return;
-      var ctx = preview.ctx;
-      var width = preview.canvas.width || 36;
-      var height = preview.canvas.height || 36;
-      var pulse = 0.45 + 0.35 * Math.sin(tick * 0.13);
-      ctx.clearRect(0, 0, width, height);
-      ctx.fillStyle = 'rgba(6,20,34,0.94)';
-      ctx.fillRect(0, 0, width, height);
-      ctx.globalAlpha = pulse;
-      ctx.fillStyle = preview.color || '#7efcff';
-      ctx.fillRect(width * 0.46, height * 0.18, 3, height * 0.62);
-      ctx.globalAlpha = 1;
-    }
-  
-    function updatePreviewTiles(gameRef, intelState){
-      if(!intelState || !Array.isArray(intelState.previewTiles) || intelState.previewTiles.length === 0){
-        return;
-      }
-  
-      intelState.previewTick = (intelState.previewTick || 0) + 1;
-      var previewTick = intelState.previewTick;
-      var previewRenderer = resolvePreviewRenderer(gameRef);
-      var i;
-      for(i = 0; i < intelState.previewTiles.length; i++){
-        var preview = intelState.previewTiles[i];
-        if(!preview || !preview.ctx || !preview.canvas) continue;
-        if(!previewRenderer){
-          renderFallbackPreview(preview, previewTick);
-          continue;
-        }
-        try{
-          previewRenderer(preview.ctx, {
-            section: preview.section,
-            visual: preview.visual,
-            color: preview.color,
-            tick: previewTick,
-            width: preview.canvas.width || 36,
-            height: preview.canvas.height || 36
-          });
-        }catch(e){
-          renderFallbackPreview(preview, previewTick);
-        }
+        column.appendChild(createSection(sectionTitles[key] || key, rows, key));
       }
     }
   
@@ -4400,9 +3908,8 @@ var Game01 = (function(){
       var liveBoard = createLiveBoard();
       leftCol.appendChild(liveBoard.node);
   
-      var previewTiles = [];
-      fillColumn(leftCol, (runtimeConfig.sectionOrder && runtimeConfig.sectionOrder.left) || [], previewTiles);
-      fillColumn(rightCol, (runtimeConfig.sectionOrder && runtimeConfig.sectionOrder.right) || [], previewTiles);
+      fillColumn(leftCol, (runtimeConfig.sectionOrder && runtimeConfig.sectionOrder.left) || []);
+      fillColumn(rightCol, (runtimeConfig.sectionOrder && runtimeConfig.sectionOrder.right) || []);
   
       root.appendChild(leftCol);
       root.appendChild(center);
@@ -4416,10 +3923,7 @@ var Game01 = (function(){
         toggleBtn: toggleBtn,
         hidden: false,
         liveBoard: liveBoard,
-        previewTiles: previewTiles,
-        previewTick: 0,
         updateTimer: null,
-        previewTimer: null,
         onResize: null,
         onOrientation: null,
         onKeyToggle: null
@@ -4486,11 +3990,7 @@ var Game01 = (function(){
       applyLayoutMode();
       applyHiddenMode();
       setTimeout(updateLiveBoard, 0);
-      setTimeout(function(){ updatePreviewTiles(gameRef, intelState); }, 0);
       intelState.updateTimer = setInterval(updateLiveBoard, 240);
-      intelState.previewTimer = setInterval(function(){
-        updatePreviewTiles(gameRef, intelState);
-      }, 70);
   
       return intelState;
     }
@@ -4500,10 +4000,6 @@ var Game01 = (function(){
       if(intelState.updateTimer){
         clearInterval(intelState.updateTimer);
         intelState.updateTimer = null;
-      }
-      if(intelState.previewTimer){
-        clearInterval(intelState.previewTimer);
-        intelState.previewTimer = null;
       }
   
       if(typeof window !== 'undefined' && window.removeEventListener){

@@ -8,12 +8,13 @@ const combatIntelPanelConfig = Object.freeze({
   },
   sectionOrder: {
     left: ['players', 'enemies'],
-    right: ['weapons', 'bullets', 'explosions']
+    right: ['weapons', 'upgrades', 'bullets', 'explosions']
   },
   sectionTitles: {
     players: 'Player Types',
     enemies: 'Enemy Types',
     weapons: 'Weapon Types',
+    upgrades: 'Upgrade Patterns',
     bullets: 'Bullet Types',
     explosions: 'Explosion Types'
   },
@@ -38,19 +39,26 @@ const combatIntelPanelConfig = Object.freeze({
       { id: 'wing-spears', label: 'Wing Spears', color: '#ffde59', shape: 'Angled Pair', glyph: '⟋', animation: 'float', trait: 'Unlocked at power level 3.' },
       { id: 'weapon-jam', label: 'Jam State', color: '#ff5b6e', shape: 'Suppression', glyph: '✖', animation: 'blink', trait: 'Hazard locks firing briefly.' }
     ],
+    upgrades: [
+      { id: 'upgrade-triple-volley', label: 'Triple Volley', color: '#fff08f', shape: '3x Forward', visual: 'triple-volley', trait: 'Adds central triple-shot burst pattern.' },
+      { id: 'upgrade-overhead-spread', label: 'Overhead Spread', color: '#7efcff', shape: 'Top Split', visual: 'overhead-spread', trait: 'Projectiles split downward from overhead lane.' },
+      { id: 'upgrade-diagonal-lances', label: 'Diagonal Lances', color: '#ffde59', shape: 'Cross Angles', visual: 'diagonal-lances', trait: 'Adds diagonal wing lances to widen hitbox coverage.' },
+      { id: 'upgrade-tracking-pulse', label: 'Tracking Pulse', color: '#ff5252', shape: 'Seek Target', visual: 'tracking-pulse', trait: 'Target-seeking pulse aligns to nearest hostile.' },
+      { id: 'upgrade-arc-fan', label: 'Arc Fan', color: '#ff79f2', shape: 'Fan Arc', visual: 'arc-fan', trait: 'Wide fan burst for crowd pressure.' }
+    ],
     bullets: [
-      { id: 'enemy-single', label: 'Single Ember', color: '#ff8f00', shape: 'Linear', glyph: '•', animation: 'pulse', trait: 'Basic enemy shot line.' },
-      { id: 'enemy-spread', label: 'Split Arc', color: '#ff7f50', shape: 'Twin Diverge', glyph: '⋰', animation: 'shake', trait: 'Spread pattern from zigzag foes.' },
-      { id: 'enemy-burst', label: 'Burst Trio', color: '#ffbf40', shape: '3-Round Burst', glyph: '⋮', animation: 'glow', trait: 'Tank burst pattern.' },
-      { id: 'enemy-aim', label: 'Aim Lance', color: '#ff5252', shape: 'Tracking Vector', glyph: '↘', animation: 'blink', trait: 'Sniper aimed shot.' },
-      { id: 'enemy-fan', label: 'Fan Volley', color: '#ff79f2', shape: 'Arc Spread', glyph: '⌒', animation: 'float', trait: 'Carrier radial fan.' }
+      { id: 'enemy-single', label: 'Single Lance', color: '#ff8f00', shape: 'Linear Drop', glyph: '•', visual: 'single-lance', animation: 'pulse', trait: 'Basic enemy shot line.' },
+      { id: 'enemy-spread', label: 'Split Arc', color: '#ff7f50', shape: 'Twin Diverge', glyph: '⋰', visual: 'split-lance', animation: 'shake', trait: 'Spread pattern from zigzag foes.' },
+      { id: 'enemy-burst', label: 'Burst Trio', color: '#ffbf40', shape: '3-Round Burst', glyph: '⋮', visual: 'burst-stack', animation: 'glow', trait: 'Tank burst pattern.' },
+      { id: 'enemy-aim', label: 'Aim Lance', color: '#ff5252', shape: 'Tracking Vector', glyph: '↘', visual: 'aim-lance', animation: 'blink', trait: 'Sniper aimed shot.' },
+      { id: 'enemy-fan', label: 'Fan Volley', color: '#ff79f2', shape: 'Arc Spread', glyph: '⌒', visual: 'fan-volley', animation: 'float', trait: 'Carrier radial fan.' }
     ],
     explosions: [
-      { id: 'hit-spark', label: 'Hit Spark', color: '#ff9f40', shape: 'Micro Ring', glyph: '◌', animation: 'pulse', trait: 'Minor impact confirmation.' },
-      { id: 'kill-burst', label: 'Kill Burst', color: '#ffb347', shape: 'Shard Cloud', glyph: '✹', animation: 'spin', trait: 'Default enemy elimination burst.' },
-      { id: 'carrier-breach', label: 'Carrier Breach', color: '#ff4de3', shape: 'Heavy Burst', glyph: '✸', animation: 'spin', trait: 'Large force explosion profile.' },
-      { id: 'hull-rupture', label: 'Hull Rupture', color: '#ff5f56', shape: 'Player Crash', glyph: '✶', animation: 'blink', trait: 'Player damage blast signature.' },
-      { id: 'shock-ring', label: 'Shock Ring', color: '#7df2ff', shape: 'Expanding Ring', glyph: '◎', animation: 'pulse', trait: 'Ring overlay from explosion core.' }
+      { id: 'hit-spark', label: 'Hit Spark', color: '#ff9f40', shape: 'Micro Ring', visual: 'hit-spark', trait: 'Minor impact confirmation.' },
+      { id: 'kill-burst', label: 'Kill Burst', color: '#ffb347', shape: 'Shard Cloud', visual: 'kill-burst', trait: 'Default enemy elimination burst.' },
+      { id: 'carrier-breach', label: 'Carrier Breach', color: '#ff4de3', shape: 'Heavy Burst', visual: 'carrier-breach', trait: 'Large force explosion profile.' },
+      { id: 'hull-rupture', label: 'Hull Rupture', color: '#ff5f56', shape: 'Player Crash', visual: 'hull-rupture', trait: 'Player damage blast signature.' },
+      { id: 'shock-ring', label: 'Shock Ring', color: '#7df2ff', shape: 'Expanding Ring', visual: 'shock-ring', trait: 'Ring overlay from explosion core.' }
     ]
   }
 });
@@ -114,6 +122,52 @@ function buildRuntimeSnippet(config){
       '.ab-intel-swatch.is-blink{animation:abIntelBlink 0.9s step-start infinite;}',
       '.ab-intel-swatch.is-shake{animation:abIntelShake 0.8s linear infinite;}',
       '.ab-intel-swatch.is-glow{animation:abIntelGlow 1.4s ease-in-out infinite;}',
+      '.ab-intel-swatch.is-bullet{position:relative;overflow:hidden;background:rgba(3,16,26,0.92);color:transparent;}',
+      '.ab-intel-swatch.is-upgrade{position:relative;overflow:hidden;background:rgba(5,20,34,0.92);color:transparent;}',
+      '.ab-intel-swatch.is-explosion{position:relative;overflow:hidden;background:rgba(20,8,10,0.9);color:transparent;}',
+      '.ab-intel-swatch.is-preview-canvas{position:relative;overflow:hidden;padding:0;background:rgba(5,16,28,0.95);}',
+      '.ab-intel-preview-canvas{display:block;width:18px;height:18px;image-rendering:pixelated;}',
+      '.ab-intel-shot-line{position:absolute;left:50%;top:-10px;width:3px;height:12px;border-radius:999px;transform:translateX(-50%);background:var(--shot-color,#ffbf40);box-shadow:0 0 6px var(--shot-color,#ffbf40);animation:abIntelShotDrop 1.1s linear infinite;}',
+      '.ab-intel-shot-line.is-long{height:15px;width:3px;}',
+      '.ab-intel-shot-line.is-left{left:34%;transform:translateX(-50%) rotate(-22deg);}',
+      '.ab-intel-shot-line.is-right{left:66%;transform:translateX(-50%) rotate(22deg);}',
+      '.ab-intel-shot-line.is-aim{height:14px;width:2px;transform:translateX(-50%) rotate(28deg);}',
+      '.ab-intel-shot-dot{position:absolute;width:3px;height:3px;border-radius:999px;background:var(--shot-color,#ff79f2);box-shadow:0 0 6px var(--shot-color,#ff79f2);animation:abIntelShotPulse 0.95s ease-in-out infinite;}',
+      '.ab-intel-shot-dot.is-fan-a{left:22%;top:9px;}',
+      '.ab-intel-shot-dot.is-fan-b{left:38%;top:5px;}',
+      '.ab-intel-shot-dot.is-fan-c{left:50%;top:3px;}',
+      '.ab-intel-shot-dot.is-fan-d{left:62%;top:5px;}',
+      '.ab-intel-shot-dot.is-fan-e{left:78%;top:9px;}',
+      '.ab-intel-burst-stack{position:absolute;left:50%;top:2px;transform:translateX(-50%);display:flex;flex-direction:column;gap:2px;}',
+      '.ab-intel-burst-stack i{display:block;width:3px;height:4px;border-radius:999px;background:var(--shot-color,#ffbf40);box-shadow:0 0 6px var(--shot-color,#ffbf40);animation:abIntelBurstPulse 0.9s ease-in-out infinite;}',
+      '.ab-intel-burst-stack i:nth-child(2){animation-delay:0.12s;}',
+      '.ab-intel-burst-stack i:nth-child(3){animation-delay:0.24s;}',
+      '.ab-intel-upgrade-shot{position:absolute;width:2px;height:8px;border-radius:999px;background:var(--shot-color,#7efcff);box-shadow:0 0 6px var(--shot-color,#7efcff);animation:abIntelUpgradeFlow 1s linear infinite;}',
+      '.ab-intel-upgrade-shot.is-triple-left{left:28%;top:1px;}',
+      '.ab-intel-upgrade-shot.is-triple-mid{left:50%;top:-2px;transform:translateX(-50%);} ',
+      '.ab-intel-upgrade-shot.is-triple-right{left:72%;top:1px;}',
+      '.ab-intel-upgrade-shot.is-overhead-mid{left:50%;top:-2px;transform:translateX(-50%);} ',
+      '.ab-intel-upgrade-shot.is-overhead-left{left:37%;top:0;transform:translateX(-50%) rotate(-24deg);} ',
+      '.ab-intel-upgrade-shot.is-overhead-right{left:63%;top:0;transform:translateX(-50%) rotate(24deg);} ',
+      '.ab-intel-upgrade-shot.is-diag-left{left:38%;top:3px;transform:translateX(-50%) rotate(-32deg);} ',
+      '.ab-intel-upgrade-shot.is-diag-right{left:62%;top:3px;transform:translateX(-50%) rotate(32deg);} ',
+      '.ab-intel-upgrade-shot.is-track{left:50%;top:-2px;transform:translateX(-50%);} ',
+      '.ab-intel-upgrade-target{position:absolute;left:62%;top:11px;width:5px;height:5px;border:1px solid var(--shot-color,#ff5252);border-radius:999px;box-shadow:0 0 6px var(--shot-color,#ff5252);animation:abIntelTrackPulse 0.95s ease-in-out infinite;}',
+      '.ab-intel-upgrade-dot{position:absolute;width:3px;height:3px;border-radius:999px;background:var(--shot-color,#ff79f2);box-shadow:0 0 6px var(--shot-color,#ff79f2);animation:abIntelShotPulse 0.95s ease-in-out infinite;}',
+      '.ab-intel-upgrade-dot.is-fan-1{left:20%;top:10px;}',
+      '.ab-intel-upgrade-dot.is-fan-2{left:35%;top:6px;}',
+      '.ab-intel-upgrade-dot.is-fan-3{left:50%;top:3px;}',
+      '.ab-intel-upgrade-dot.is-fan-4{left:65%;top:6px;}',
+      '.ab-intel-upgrade-dot.is-fan-5{left:80%;top:10px;}',
+      '.ab-intel-explosion-core{position:absolute;left:50%;top:50%;width:4px;height:4px;border-radius:999px;transform:translate(-50%,-50%);background:var(--shot-color,#ffb347);box-shadow:0 0 7px var(--shot-color,#ffb347);animation:abIntelExplosionCore 0.8s ease-in-out infinite;}',
+      '.ab-intel-explosion-ring{position:absolute;left:50%;top:50%;width:6px;height:6px;border:1px solid var(--shot-color,#ffb347);border-radius:999px;transform:translate(-50%,-50%);animation:abIntelExplosionRing 1s ease-out infinite;}',
+      '.ab-intel-explosion-ring.is-large{animation-duration:1.2s;animation-delay:0.14s;}',
+      '.ab-intel-explosion-shard{position:absolute;left:50%;top:50%;width:2px;height:6px;border-radius:999px;transform-origin:50% 0%;background:var(--shot-color,#ffb347);box-shadow:0 0 5px var(--shot-color,#ffb347);animation:abIntelExplosionShard 0.95s ease-in-out infinite;}',
+      '.ab-intel-explosion-shard.is-a{transform:translate(-50%,-50%) rotate(18deg);} ',
+      '.ab-intel-explosion-shard.is-b{transform:translate(-50%,-50%) rotate(84deg);animation-delay:0.08s;} ',
+      '.ab-intel-explosion-shard.is-c{transform:translate(-50%,-50%) rotate(148deg);animation-delay:0.16s;} ',
+      '.ab-intel-explosion-shard.is-d{transform:translate(-50%,-50%) rotate(218deg);animation-delay:0.24s;} ',
+      '.ab-intel-explosion-shard.is-e{transform:translate(-50%,-50%) rotate(286deg);animation-delay:0.32s;} ',
       '.ab-intel-live{display:grid;grid-template-columns:auto 1fr;gap:4px 8px;font:11px monospace;color:#bee9ff;margin-bottom:6px;}',
       '.ab-intel-live-key{color:#74b2d6;}',
       '.ab-intel-live-val{color:#d9f6ff;}',
@@ -122,7 +176,15 @@ function buildRuntimeSnippet(config){
       '@keyframes abIntelFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-2px);}}',
       '@keyframes abIntelBlink{0%,45%{opacity:1;}46%,100%{opacity:0.3;}}',
       '@keyframes abIntelShake{0%,100%{transform:translateX(0);}25%{transform:translateX(-1px);}75%{transform:translateX(1px);}}',
-      '@keyframes abIntelGlow{0%,100%{filter:brightness(1);}50%{filter:brightness(1.25);}}'
+      '@keyframes abIntelGlow{0%,100%{filter:brightness(1);}50%{filter:brightness(1.25);}}',
+      '@keyframes abIntelShotDrop{0%{top:-10px;opacity:0.2;}25%{opacity:1;}100%{top:16px;opacity:0.25;}}',
+      '@keyframes abIntelShotPulse{0%,100%{transform:scale(0.85);}50%{transform:scale(1.2);}}',
+      '@keyframes abIntelBurstPulse{0%,100%{opacity:0.3;}45%{opacity:1;}}',
+      '@keyframes abIntelUpgradeFlow{0%{top:-4px;opacity:0.2;}25%{opacity:1;}100%{top:14px;opacity:0.25;}}',
+      '@keyframes abIntelTrackPulse{0%,100%{transform:scale(0.8);}50%{transform:scale(1.15);}}',
+      '@keyframes abIntelExplosionCore{0%,100%{transform:translate(-50%,-50%) scale(0.7);}50%{transform:translate(-50%,-50%) scale(1.25);}}',
+      '@keyframes abIntelExplosionRing{0%{transform:translate(-50%,-50%) scale(0.45);opacity:0.9;}100%{transform:translate(-50%,-50%) scale(1.8);opacity:0;}}',
+      '@keyframes abIntelExplosionShard{0%,100%{opacity:0.2;height:4px;}40%{opacity:1;height:8px;}}'
     ].join('\\n');
     document.head.appendChild(style);
   }
@@ -155,7 +217,46 @@ function buildRuntimeSnippet(config){
     };
   }
 
-  function createSwatch(entry){
+  function createPreviewCanvasSwatch(entry, sectionKey){
+    var swatch = document.createElement('span');
+    swatch.className = 'ab-intel-swatch is-preview-canvas';
+    swatch.title = entry.label || '';
+    swatch.style.setProperty('--shot-color', entry.color || '#ffbf40');
+
+    var canvas = document.createElement('canvas');
+    canvas.className = 'ab-intel-preview-canvas';
+    canvas.width = 36;
+    canvas.height = 36;
+    swatch.appendChild(canvas);
+
+    var previewCtx = canvas.getContext ? canvas.getContext('2d') : null;
+    if(!previewCtx){
+      swatch.className = 'ab-intel-swatch';
+      swatch.style.backgroundColor = entry.color || '#416181';
+      swatch.textContent = entry.glyph || '•';
+      return swatch;
+    }
+
+    swatch.__intelPreview = {
+      section: sectionKey,
+      visual: String(entry.visual || entry.id || '').toLowerCase(),
+      color: entry.color || '#ffbf40',
+      canvas: canvas,
+      ctx: previewCtx
+    };
+    return swatch;
+  }
+
+  function createSwatch(entry, sectionKey){
+    if(sectionKey === 'bullets'){
+      return createPreviewCanvasSwatch(entry, sectionKey);
+    }
+    if(sectionKey === 'upgrades'){
+      return createPreviewCanvasSwatch(entry, sectionKey);
+    }
+    if(sectionKey === 'explosions'){
+      return createPreviewCanvasSwatch(entry, sectionKey);
+    }
     var swatch = document.createElement('span');
     var animation = entry.animation ? ' is-' + entry.animation : '';
     swatch.className = 'ab-intel-swatch' + animation;
@@ -165,7 +266,7 @@ function buildRuntimeSnippet(config){
     return swatch;
   }
 
-  function createSection(title, entries){
+  function createSection(title, entries, sectionKey, previewRegistry){
     var section = document.createElement('section');
     section.className = 'ab-intel-section';
 
@@ -195,7 +296,16 @@ function buildRuntimeSnippet(config){
       var tr = document.createElement('tr');
 
       var tileCell = document.createElement('td');
-      tileCell.appendChild(createSwatch(row));
+      var swatch = createSwatch(row, sectionKey);
+      tileCell.appendChild(swatch);
+      if(
+        previewRegistry &&
+        swatch &&
+        swatch.__intelPreview &&
+        swatch.__intelPreview.ctx
+      ){
+        previewRegistry.push(swatch.__intelPreview);
+      }
 
       var typeCell = document.createElement('td');
       typeCell.textContent = row.label || row.id || 'Unknown';
@@ -218,7 +328,7 @@ function buildRuntimeSnippet(config){
     return section;
   }
 
-  function fillColumn(column, order){
+  function fillColumn(column, order, previewRegistry){
     var sectionTitles = runtimeConfig.sectionTitles || {};
     var sectionData = runtimeConfig.sections || {};
     var i;
@@ -226,7 +336,61 @@ function buildRuntimeSnippet(config){
       var key = order[i];
       var rows = Array.isArray(sectionData[key]) ? sectionData[key] : [];
       if(rows.length === 0) continue;
-      column.appendChild(createSection(sectionTitles[key] || key, rows));
+      column.appendChild(createSection(sectionTitles[key] || key, rows, key, previewRegistry));
+    }
+  }
+
+  function resolvePreviewRenderer(gameRef){
+    var hooks = gameRef && typeof gameRef.getTestHooks === 'function' ? gameRef.getTestHooks() : null;
+    if(!hooks || typeof hooks.renderIntelPreview !== 'function'){
+      return null;
+    }
+    return hooks.renderIntelPreview;
+  }
+
+  function renderFallbackPreview(preview, tick){
+    if(!preview || !preview.ctx || !preview.canvas) return;
+    var ctx = preview.ctx;
+    var width = preview.canvas.width || 36;
+    var height = preview.canvas.height || 36;
+    var pulse = 0.45 + 0.35 * Math.sin(tick * 0.13);
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = 'rgba(6,20,34,0.94)';
+    ctx.fillRect(0, 0, width, height);
+    ctx.globalAlpha = pulse;
+    ctx.fillStyle = preview.color || '#7efcff';
+    ctx.fillRect(width * 0.46, height * 0.18, 3, height * 0.62);
+    ctx.globalAlpha = 1;
+  }
+
+  function updatePreviewTiles(gameRef, intelState){
+    if(!intelState || !Array.isArray(intelState.previewTiles) || intelState.previewTiles.length === 0){
+      return;
+    }
+
+    intelState.previewTick = (intelState.previewTick || 0) + 1;
+    var previewTick = intelState.previewTick;
+    var previewRenderer = resolvePreviewRenderer(gameRef);
+    var i;
+    for(i = 0; i < intelState.previewTiles.length; i++){
+      var preview = intelState.previewTiles[i];
+      if(!preview || !preview.ctx || !preview.canvas) continue;
+      if(!previewRenderer){
+        renderFallbackPreview(preview, previewTick);
+        continue;
+      }
+      try{
+        previewRenderer(preview.ctx, {
+          section: preview.section,
+          visual: preview.visual,
+          color: preview.color,
+          tick: previewTick,
+          width: preview.canvas.width || 36,
+          height: preview.canvas.height || 36
+        });
+      }catch(e){
+        renderFallbackPreview(preview, previewTick);
+      }
     }
   }
 
@@ -268,8 +432,9 @@ function buildRuntimeSnippet(config){
     var liveBoard = createLiveBoard();
     leftCol.appendChild(liveBoard.node);
 
-    fillColumn(leftCol, (runtimeConfig.sectionOrder && runtimeConfig.sectionOrder.left) || []);
-    fillColumn(rightCol, (runtimeConfig.sectionOrder && runtimeConfig.sectionOrder.right) || []);
+    var previewTiles = [];
+    fillColumn(leftCol, (runtimeConfig.sectionOrder && runtimeConfig.sectionOrder.left) || [], previewTiles);
+    fillColumn(rightCol, (runtimeConfig.sectionOrder && runtimeConfig.sectionOrder.right) || [], previewTiles);
 
     root.appendChild(leftCol);
     root.appendChild(center);
@@ -283,7 +448,10 @@ function buildRuntimeSnippet(config){
       toggleBtn: toggleBtn,
       hidden: false,
       liveBoard: liveBoard,
+      previewTiles: previewTiles,
+      previewTick: 0,
       updateTimer: null,
+      previewTimer: null,
       onResize: null,
       onOrientation: null,
       onKeyToggle: null
@@ -350,7 +518,11 @@ function buildRuntimeSnippet(config){
     applyLayoutMode();
     applyHiddenMode();
     setTimeout(updateLiveBoard, 0);
+    setTimeout(function(){ updatePreviewTiles(gameRef, intelState); }, 0);
     intelState.updateTimer = setInterval(updateLiveBoard, 240);
+    intelState.previewTimer = setInterval(function(){
+      updatePreviewTiles(gameRef, intelState);
+    }, 70);
 
     return intelState;
   }
@@ -360,6 +532,10 @@ function buildRuntimeSnippet(config){
     if(intelState.updateTimer){
       clearInterval(intelState.updateTimer);
       intelState.updateTimer = null;
+    }
+    if(intelState.previewTimer){
+      clearInterval(intelState.previewTimer);
+      intelState.previewTimer = null;
     }
 
     if(typeof window !== 'undefined' && window.removeEventListener){

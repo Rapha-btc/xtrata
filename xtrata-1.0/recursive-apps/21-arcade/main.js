@@ -65,10 +65,20 @@
   var connectPromptShown = false;
   var connectWalletInFlight = null;
   var adminBusy = false;
-  var WALLET_DEBUG_BUILD = 'wallet-debug-2026-02-20-07';
+  var WALLET_DEBUG_BUILD = 'wallet-debug-2026-02-20-12';
   var providerMethodUnsupported = {};
   var walletDebugEvents = [];
   var walletDebugEventLimit = 800;
+  var walletDebugThrottleState = {};
+  var WALLET_DEBUG_THROTTLE_DEFAULT_MS = 350;
+  var WALLET_DEBUG_THROTTLE_SUMMARY_IDLE_MS = 1800;
+  var WALLET_DEBUG_THROTTLE_RULES = {
+    'Provider request attempt': 1200,
+    'Provider request attempt retrying': 1600,
+    'Provider request attempt failed': 1600,
+    'Wallet status refreshed': 2200,
+    'resolveConnectedWallet candidate resolved': 1000
+  };
   var walletDebugSummaryWindow = null;
   var walletDebugSummaryCounter = 0;
   var WALLET_DEBUG_SUMMARY_WINDOW_MS = 3000;
@@ -160,8 +170,7 @@
     return !!(window.ARCADE_ONCHAIN_CONFIG && window.ARCADE_ONCHAIN_CONFIG.debug === true);
   }
 
-  function walletDebug(level, message, detail){
-    if(!walletDebugEnabled()) return;
+  function emitWalletDebugLine(level, message, detail){
     recordWalletDebugEvent(level, message, detail);
     if(typeof console === 'undefined') return;
     var fn = console[level];
@@ -173,6 +182,97 @@
         fn.call(console, '[ArcadeWallet] ' + message, detail);
       }
     }catch(e){}
+  }
+
+  function walletDebugMessageKey(message){
+    return String(message || '').replace(/#[0-9]+/g, '#*');
+  }
+
+  function walletDebugThrottleWindowMs(level, message){
+    if(level === 'error') return 0;
+    var normalized = walletDebugMessageKey(message);
+    var key;
+    for(key in WALLET_DEBUG_THROTTLE_RULES){
+      if(!Object.prototype.hasOwnProperty.call(WALLET_DEBUG_THROTTLE_RULES, key)) continue;
+      if(normalized.indexOf(key) === 0){
+        return WALLET_DEBUG_THROTTLE_RULES[key];
+      }
+    }
+    if(level === 'warn') return 700;
+    if(level === 'info') return WALLET_DEBUG_THROTTLE_DEFAULT_MS;
+    return 0;
+  }
+
+  function walletDebugThrottleKey(level, message, detail){
+    var key = String(level || 'log') + '|' + walletDebugMessageKey(message);
+    if(detail && typeof detail === 'object'){
+      if(detail.provider) key += '|provider:' + String(detail.provider);
+      else if(detail.providerLabel) key += '|provider:' + String(detail.providerLabel);
+      if(detail.method) key += '|method:' + String(detail.method);
+    }
+    return key;
+  }
+
+  function flushWalletDebugThrottleSummaries(now){
+    var key;
+    for(key in walletDebugThrottleState){
+      if(!Object.prototype.hasOwnProperty.call(walletDebugThrottleState, key)) continue;
+      var state = walletDebugThrottleState[key];
+      if(!state || !state.suppressedCount) continue;
+      if(now - state.lastAt < WALLET_DEBUG_THROTTLE_SUMMARY_IDLE_MS) continue;
+      emitWalletDebugLine('info', 'Debug summary: throttled repeated logs', {
+        message: state.message,
+        level: state.level,
+        suppressed: state.suppressedCount,
+        windowMs: state.windowMs,
+        lastDetail: state.lastDetail
+      });
+      state.suppressedCount = 0;
+      state.lastDetail = null;
+      state.lastSummaryAt = now;
+    }
+  }
+
+  function walletDebug(level, message, detail){
+    if(!walletDebugEnabled()) return;
+    var now = Date.now();
+    flushWalletDebugThrottleSummaries(now);
+    var windowMs = walletDebugThrottleWindowMs(level, message);
+    if(windowMs > 0){
+      var throttleKey = walletDebugThrottleKey(level, message, detail);
+      var state = walletDebugThrottleState[throttleKey];
+      if(!state){
+        state = {
+          level: String(level || 'log'),
+          message: String(message || ''),
+          windowMs: windowMs,
+          lastAt: 0,
+          lastSummaryAt: 0,
+          suppressedCount: 0,
+          lastDetail: null
+        };
+        walletDebugThrottleState[throttleKey] = state;
+      }
+      if(state.lastAt > 0 && (now - state.lastAt) < windowMs){
+        state.suppressedCount += 1;
+        state.lastDetail = cloneWalletDebugDetail(detail);
+        return;
+      }
+      if(state.suppressedCount > 0){
+        emitWalletDebugLine('info', 'Debug summary: throttled repeated logs', {
+          message: state.message,
+          level: state.level,
+          suppressed: state.suppressedCount,
+          windowMs: state.windowMs,
+          lastDetail: state.lastDetail
+        });
+        state.suppressedCount = 0;
+        state.lastDetail = null;
+        state.lastSummaryAt = now;
+      }
+      state.lastAt = now;
+    }
+    emitWalletDebugLine(level, message, detail);
   }
 
   function cloneWalletDebugDetail(detail){
@@ -729,8 +829,9 @@
   }
 
   function isScoringLocked(){
+    if(!activeGame) return false;
     if(!HighScores || typeof HighScores.isScoringDisabled !== 'function') return false;
-    return !!HighScores.isScoringDisabled();
+    return !!HighScores.isScoringDisabled(activeGame.id);
   }
 
   function updateForceWaveButtonState(){
@@ -748,7 +849,7 @@
     if(!canForce){
       forceNextWaveBtn.title = 'This game does not expose a next-wave test hook.';
     } else if(locked){
-      forceNextWaveBtn.title = 'Scoring is disabled in this browser because Force Next Wave was used.';
+      forceNextWaveBtn.title = 'Scoring is disabled for this game session because Force Next Wave was used.';
     } else {
       forceNextWaveBtn.title = 'Force the next wave/level for testing.';
     }
@@ -764,11 +865,14 @@
 
     var scoringJustDisabled = false;
     if(HighScores && typeof HighScores.disableScoring === 'function'){
-      scoringJustDisabled = !!HighScores.disableScoring('force-next-wave');
+      scoringJustDisabled = !!HighScores.disableScoring('force-next-wave', activeGame && activeGame.id);
     }
 
     if(scoringJustDisabled && typeof window !== 'undefined' && typeof window.alert === 'function'){
-      window.alert('Scoring is now disabled in this browser because Next Wave test mode was used.');
+      window.alert(
+        'Scoring is now disabled for this game session because Next Wave test mode was used.\n\n' +
+        'It will reset when you start another game or reload the page.'
+      );
     }
 
     try{
@@ -1809,10 +1913,13 @@
     var targetNetwork = resolveTargetNetwork();
     var lastConnectError = null;
     var providers = collectProviders();
+    var requireInteractiveReconnect = !!walletDisconnectOverride;
+    var interactiveReconnectCompleted = false;
     walletDebug('info', 'connectWalletInternal start', {
       targetNetwork: targetNetwork,
       build: WALLET_DEBUG_BUILD,
-      providerCount: providers.length
+      providerCount: providers.length,
+      requireInteractiveReconnect: requireInteractiveReconnect
     });
     if(
       !walletDisconnectOverride &&
@@ -1884,6 +1991,7 @@
             await refreshWalletStatus();
             var postConnect = await resolveConnectedWallet({ targetNetwork: targetNetwork });
             if(postConnect.address && !isTargetNetworkMismatch(targetNetwork, postConnect.network, postConnect.address)){
+              interactiveReconnectCompleted = true;
               setWalletDisconnectOverride(false, {
                 source: 'connectWalletInternal',
                 provider: entry.label,
@@ -1922,6 +2030,10 @@
           provider: entry.label,
           reason: 'bitcoin-only-provider'
         });
+      } else if(requireInteractiveReconnect){
+        walletDebug('info', 'Skipping direct provider connect while interactive reconnect is required', {
+          provider: entry.label
+        });
       } else {
         try{
           await maybeCallDirectProviderConnect(provider);
@@ -1953,42 +2065,58 @@
         }
       }
 
-      try{
-        var passiveAddress = await resolveProviderAddress(provider, targetNetwork);
-        if(passiveAddress){
-          walletDebug('info', 'Passive provider address resolved', {
-            provider: entry.label,
-            address: passiveAddress
-          });
-          await refreshWalletStatus();
-          var passiveResolved = await resolveConnectedWallet({ targetNetwork: targetNetwork });
-          if(passiveResolved.address && !isTargetNetworkMismatch(targetNetwork, passiveResolved.network, passiveResolved.address)){
-            setWalletDisconnectOverride(false, {
-              source: 'connectWalletInternal',
+      if(requireInteractiveReconnect){
+        walletDebug('info', 'Skipping passive provider resolve while interactive reconnect is required', {
+          provider: entry.label
+        });
+      } else {
+        try{
+          var passiveAddress = await resolveProviderAddress(provider, targetNetwork);
+          if(passiveAddress){
+            walletDebug('info', 'Passive provider address resolved', {
               provider: entry.label,
-              mode: 'passiveResolve'
+              address: passiveAddress
             });
             await refreshWalletStatus();
-            walletDebug('info', 'connectWalletInternal succeeded after passive resolve', {
-              provider: entry.label,
-              address: passiveResolved.address,
-              network: passiveResolved.network || null
-            });
-            return true;
+            var passiveResolved = await resolveConnectedWallet({ targetNetwork: targetNetwork });
+            if(passiveResolved.address && !isTargetNetworkMismatch(targetNetwork, passiveResolved.network, passiveResolved.address)){
+              setWalletDisconnectOverride(false, {
+                source: 'connectWalletInternal',
+                provider: entry.label,
+                mode: 'passiveResolve'
+              });
+              await refreshWalletStatus();
+              walletDebug('info', 'connectWalletInternal succeeded after passive resolve', {
+                provider: entry.label,
+                address: passiveResolved.address,
+                network: passiveResolved.network || null
+              });
+              return true;
+            }
           }
+        }catch(e){
+          lastConnectError = e;
+          walletDebug('warn', 'Passive provider address resolution failed', {
+            provider: entry.label,
+            error: walletErrorForLog(e)
+          });
         }
-      }catch(e){
-        lastConnectError = e;
-        walletDebug('warn', 'Passive provider address resolution failed', {
-          provider: entry.label,
-          error: walletErrorForLog(e)
-        });
       }
     }
 
     var finalResolved = await resolveConnectedWallet({ targetNetwork: targetNetwork });
     await refreshWalletStatus();
     if(finalResolved.address && !isTargetNetworkMismatch(targetNetwork, finalResolved.network, finalResolved.address)){
+      if(requireInteractiveReconnect && !interactiveReconnectCompleted){
+        walletDebug('warn', 'connectWalletInternal blocked passive reconnect while local override is active', {
+          address: finalResolved.address,
+          network: finalResolved.network || null
+        });
+        throw new Error(
+          'Reconnect requires wallet account selection. ' +
+          'Use Connect and approve account selection in the wallet popup, then retry.'
+        );
+      }
       setWalletDisconnectOverride(false, {
         source: 'connectWalletInternal',
         mode: 'finalCheck'
@@ -2969,6 +3097,9 @@
 
     clearGameStartScreenLoop();
     pendingStartGameIdx = null;
+    if(HighScores && typeof HighScores.clearScoringDisabled === 'function'){
+      HighScores.clearScoringDisabled();
+    }
     ArcadeUtils.initAudio();
     focusIdx = idx;
     homeGrid.style.display = 'none';

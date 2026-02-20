@@ -13,8 +13,13 @@ export async function run(){
   assert.ok(source.includes('Player Types'), 'Bundle must include player types section');
   assert.ok(source.includes('Enemy Types'), 'Bundle must include enemy types section');
   assert.ok(source.includes('Weapon Types'), 'Bundle must include weapon types section');
+  assert.ok(source.includes('Upgrade Patterns'), 'Bundle must include upgrade patterns section');
   assert.ok(source.includes('Bullet Types'), 'Bundle must include bullet types section');
   assert.ok(source.includes('Explosion Types'), 'Bundle must include explosion types section');
+  assert.ok(source.includes('ab-intel-preview-canvas'), 'Bundle must include canvas tile preview styling');
+  assert.ok(source.includes('renderIntelPreview'), 'Bundle must render tile previews via gameplay runtime hook');
+  assert.ok(source.includes('updatePreviewTiles'), 'Bundle must include animated preview tile update loop');
+  assert.ok(source.includes('single-lance'), 'Bundle must include bullet visual metadata');
   assert.match(
     source,
     /try\{\s*snapshot = hooks\.getState\(\);\s*\}catch\(e\)\{/m,

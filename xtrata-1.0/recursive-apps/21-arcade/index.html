@@ -72,6 +72,9 @@
   // - contractName: 'xtrata-arcade-scores-v1-3'
   // - requiresAttestation: false
   // - attestationEndpoint: ''
+  // Strict fee trust mode:
+  // - useDenyModePostConditions: true
+  // - fallbackToAllowModeOnPostConditionFailure: false
   window.ARCADE_ONCHAIN_CONFIG = window.ARCADE_ONCHAIN_CONFIG || {
     enabled: true,
     network: 'mainnet',
@@ -85,13 +88,14 @@
     attestationEndpoint: '',
     attestationTimeoutMs: 10000,
     minRank: 10,
-    useDenyModePostConditions: false,
+    useDenyModePostConditions: true,
+    fallbackToAllowModeOnPostConditionFailure: false,
     debug: true
   };
   window.ARCADE_ONCHAIN_DEBUG = true;
-  window.ARCADE_MAIN_SCRIPT = 'main.js?v=wallet-debug-2026-02-20-09';
+  window.ARCADE_MAIN_SCRIPT = 'main.js?v=wallet-debug-2026-02-20-12';
 </script>
-<script src="lib/highscores.js?v=wallet-debug-2026-02-20-10"></script>
+<script src="lib/highscores.js?v=wallet-debug-2026-02-20-18"></script>
 <script src="games/latest-manifest.js"></script>
 <script src="lib/game-loader.js?v=game-loader-2026-02-20-01"></script>
 </body>

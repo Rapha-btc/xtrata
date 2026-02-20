@@ -3,8 +3,8 @@
  * AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY.
  * Source: recursive-apps/21-arcade/game01_astro_blaster-v2/src/legacy/game01_astro_blaster.legacy.js
  * Build Framework: recursive-apps/21-arcade/game01_astro_blaster-v2/src/build/build-game.mjs
- * Generated At: 2026-02-20T17:08:16.119Z
- * Legacy Source SHA256: 80790aeca98e37181c3a4de4a12917cf3af93381b611a0970f1fa78e4b6d4d5a
+ * Generated At: 2026-02-20T16:34:19.440Z
+ * Legacy Source SHA256: 2aa5f4c9cadd94fd10914461cfa494bfc6538eacd2ca25a252fec2db9aa4e5ce
  */
 
 var Game01 = (function(){
@@ -1500,47 +1500,20 @@ var Game01 = (function(){
     }
   }
 
-  function drawShotGlyph(targetCtx, shot, includeNose){
-    if(!targetCtx || !shot) return;
-    targetCtx.fillStyle = shot.color;
-    targetCtx.fillRect(shot.x, shot.y, shot.w, shot.h);
-    if(includeNose){
-      targetCtx.fillStyle = '#ffffff';
-      targetCtx.fillRect(shot.x + 1, shot.y - 3, 2, 3);
-    }
-  }
-
-  function drawParticleGlyph(targetCtx, particle){
-    if(!targetCtx || !particle) return;
-    var pAlpha = Math.max(0, particle.life / particle.maxLife);
-    targetCtx.globalAlpha = pAlpha;
-    targetCtx.fillStyle = particle.color;
-    targetCtx.fillRect(particle.x, particle.y, particle.size || 2, particle.size || 2);
-    targetCtx.globalAlpha = 1;
-  }
-
-  function drawExplosionGlyph(targetCtx, explosion){
-    if(!targetCtx || !explosion) return;
-    var alpha = explosion.life / explosion.maxLife;
-    targetCtx.globalAlpha = alpha;
-    targetCtx.strokeStyle = explosion.color;
-    targetCtx.lineWidth = 2;
-    targetCtx.beginPath();
-    targetCtx.arc(explosion.x, explosion.y, explosion.radius, 0, Math.PI * 2);
-    targetCtx.stroke();
-    targetCtx.globalAlpha = 1;
-  }
-
   function drawShots(){
     var i;
     for(i = 0; i < state.playerShots.length; i++){
       var ps = state.playerShots[i];
-      drawShotGlyph(ctx, ps, true);
+      ctx.fillStyle = ps.color;
+      ctx.fillRect(ps.x, ps.y, ps.w, ps.h);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(ps.x + 1, ps.y - 3, 2, 3);
     }
 
     for(i = 0; i < state.enemyShots.length; i++){
       var es = state.enemyShots[i];
-      drawShotGlyph(ctx, es, false);
+      ctx.fillStyle = es.color;
+      ctx.fillRect(es.x, es.y, es.w, es.h);
     }
   }
 
@@ -1562,214 +1535,25 @@ var Game01 = (function(){
     var i;
 
     for(i = 0; i < state.explosions.length; i++){
-      drawExplosionGlyph(ctx, state.explosions[i]);
+      var ex = state.explosions[i];
+      var alpha = ex.life / ex.maxLife;
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = ex.color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(ex.x, ex.y, ex.radius, 0, Math.PI * 2);
+      ctx.stroke();
     }
 
     for(i = 0; i < state.particles.length; i++){
-      drawParticleGlyph(ctx, state.particles[i]);
+      var pt = state.particles[i];
+      var pAlpha = Math.max(0, pt.life / pt.maxLife);
+      ctx.globalAlpha = pAlpha;
+      ctx.fillStyle = pt.color;
+      ctx.fillRect(pt.x, pt.y, pt.size || 2, pt.size || 2);
     }
 
     ctx.globalAlpha = 1;
-  }
-
-  function drawPreviewTrailSparks(previewCtx, tick, shot, trailColor, trailConfig){
-    var direction = trailConfig && trailConfig.direction === 'up' ? -1 : 1;
-    var count = Math.max(3, Math.floor((trailConfig && trailConfig.count) || 6));
-    var spread = Math.max(0.2, Number(trailConfig && trailConfig.spread) || 0.72);
-    var phase = Number(trailConfig && trailConfig.phase) || 0;
-    var i;
-    for(i = 0; i < count; i++){
-      var t = tick + phase + i * 3;
-      var distance = (i + 1) * (1.8 + Math.sin((t + i) * 0.21) * 0.2);
-      var jitterX = Math.sin((t + phase) * 0.56 + i * 1.17) * (spread + i * 0.12);
-      var jitterY = Math.cos((t + phase) * 0.42 + i * 0.68) * 0.45;
-      var life = Math.max(2, 12 - i + Math.floor((Math.sin((t + i) * 0.35) + 1) * 1.4));
-      drawParticleGlyph(previewCtx, {
-        x: shot.x + shot.w * 0.5 + jitterX,
-        y: shot.y + (direction > 0 ? -distance : (shot.h + distance)) + jitterY,
-        life: life,
-        maxLife: 14,
-        size: i < 2 ? 2 : 1.8,
-        color: trailColor
-      });
-    }
-  }
-
-  function drawPreviewEnemyShot(previewCtx, tick, width, height, shotConfig){
-    var travelHeight = height + 22;
-    var phase = Math.floor(shotConfig.phase || 0);
-    var y = ((tick * (shotConfig.speed || 1.4) + phase) % travelHeight) - 16;
-    var x = (shotConfig.baseX || (width * 0.5)) + Math.sin((tick + phase) * 0.08) * (shotConfig.wobble || 0);
-    var shot = {
-      x: Math.round(x),
-      y: Math.round(y),
-      w: shotConfig.w || 3,
-      h: shotConfig.h || 12,
-      color: shotConfig.color || '#ff8f00'
-    };
-    drawShotGlyph(previewCtx, shot, false);
-
-    drawPreviewTrailSparks(previewCtx, tick, shot, shotConfig.trailColor || '#ff6837', {
-      direction: 'down',
-      count: shotConfig.trailCount || 7,
-      spread: shotConfig.trailSpread || 0.7,
-      phase: phase
-    });
-  }
-
-  function drawPreviewPlayerShot(previewCtx, tick, width, height, shotConfig){
-    var travelHeight = height + 18;
-    var phase = Math.floor(shotConfig.phase || 0);
-    var y = height + 6 - ((tick * (shotConfig.speed || 1.7) + phase) % travelHeight);
-    var x = (shotConfig.baseX || (width * 0.5)) + Math.sin((tick + phase) * 0.06) * (shotConfig.wobble || 0);
-    var shot = {
-      x: Math.round(x),
-      y: Math.round(y),
-      w: shotConfig.w || 3,
-      h: shotConfig.h || 12,
-      color: shotConfig.color || '#fff08f'
-    };
-    drawShotGlyph(previewCtx, shot, true);
-
-    drawPreviewTrailSparks(previewCtx, tick, shot, shotConfig.trailColor || '#ff9f1a', {
-      direction: 'up',
-      count: shotConfig.trailCount || 6,
-      spread: shotConfig.trailSpread || 0.62,
-      phase: phase
-    });
-  }
-
-  function drawPreviewExplosion(previewCtx, tick, width, height, visual, color){
-    var pulse = (tick % 30) / 30;
-    var cx = width * 0.5;
-    var cy = height * 0.5;
-    var baseColor = color || '#ffb347';
-    var maxRadius = visual === 'carrier-breach' ? 11 : (visual === 'shock-ring' ? 9 : 8);
-    var radius = 1.8 + pulse * maxRadius;
-    drawExplosionGlyph(previewCtx, {
-      x: cx,
-      y: cy,
-      radius: radius,
-      life: Math.max(1, Math.floor((1 - pulse) * 24)),
-      maxLife: 24,
-      color: baseColor
-    });
-
-    if(visual === 'shock-ring' || visual === 'carrier-breach' || visual === 'kill-burst'){
-      drawExplosionGlyph(previewCtx, {
-        x: cx,
-        y: cy,
-        radius: radius * 0.62,
-        life: Math.max(1, Math.floor((1 - pulse) * 20)),
-        maxLife: 20,
-        color: baseColor
-      });
-    }
-
-    var shardCount = visual === 'hit-spark' ? 4 : (visual === 'carrier-breach' ? 8 : 6);
-    var i;
-    for(i = 0; i < shardCount; i++){
-      var angle = (Math.PI * 2 * i / shardCount) + (tick * 0.05);
-      var dist = (2.5 + pulse * (visual === 'carrier-breach' ? 10 : 7));
-      drawParticleGlyph(previewCtx, {
-        x: cx + Math.cos(angle) * dist,
-        y: cy + Math.sin(angle) * dist,
-        life: Math.max(2, Math.floor((1 - pulse) * 18)),
-        maxLife: 18,
-        size: visual === 'carrier-breach' ? 2.2 : 2,
-        color: baseColor
-      });
-    }
-  }
-
-  function renderIntelPreviewTile(previewCtx, previewSpec){
-    if(!previewCtx || !previewSpec) return;
-
-    var width = Math.max(18, Math.floor(Number(previewSpec.width) || (previewCtx.canvas ? previewCtx.canvas.width : 36)));
-    var height = Math.max(18, Math.floor(Number(previewSpec.height) || (previewCtx.canvas ? previewCtx.canvas.height : 36)));
-    var section = String(previewSpec.section || '').toLowerCase();
-    var visual = String(previewSpec.visual || '').toLowerCase();
-    var color = previewSpec.color || '#ffbf40';
-    var tick = Math.max(0, Number(previewSpec.tick) || 0);
-
-    previewCtx.clearRect(0, 0, width, height);
-    previewCtx.fillStyle = section === 'explosions' ? 'rgba(20,8,10,0.9)' : 'rgba(3,16,26,0.92)';
-    previewCtx.fillRect(0, 0, width, height);
-
-    if(section === 'bullets'){
-      if(visual === 'split-lance'){
-        drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.34, wobble: 0.2, w: 3, h: 11, color: color, trailColor: '#ff6837', trailCount: 6, speed: 1.35, phase: 3 });
-        drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.62, wobble: 0.2, w: 3, h: 11, color: color, trailColor: '#ff6837', trailCount: 6, speed: 1.35, phase: 11 });
-        return;
-      }
-      if(visual === 'burst-stack'){
-        drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.42, wobble: 0.16, w: 3, h: 11, color: color, trailColor: '#ff6837', speed: 1.38, phase: 2 });
-        drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.5, wobble: 0.12, w: 4, h: 12, color: color, trailColor: '#ff6837', speed: 1.46, phase: 7 });
-        drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.58, wobble: 0.16, w: 3, h: 11, color: color, trailColor: '#ff6837', speed: 1.38, phase: 13 });
-        return;
-      }
-      if(visual === 'aim-lance'){
-        drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.35, wobble: 2.2, w: 3, h: 13, color: color, trailColor: '#ff6837', trailCount: 7, speed: 1.42, phase: 5 });
-        return;
-      }
-      if(visual === 'fan-volley'){
-        drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.2, wobble: 0.25, w: 3, h: 10, color: color, trailColor: '#ff6837', speed: 1.3, phase: 0 });
-        drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.35, wobble: 0.2, w: 3, h: 10, color: color, trailColor: '#ff6837', speed: 1.32, phase: 4 });
-        drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.5, wobble: 0.14, w: 3, h: 10, color: color, trailColor: '#ff6837', speed: 1.34, phase: 8 });
-        drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.65, wobble: 0.2, w: 3, h: 10, color: color, trailColor: '#ff6837', speed: 1.32, phase: 12 });
-        drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.8, wobble: 0.25, w: 3, h: 10, color: color, trailColor: '#ff6837', speed: 1.3, phase: 16 });
-        return;
-      }
-      drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.5, wobble: 0.2, w: 4, h: 14, color: color, trailColor: '#ff6837', trailCount: 8, trailSpread: 0.75, speed: 1.4, phase: 6 });
-      return;
-    }
-
-    if(section === 'upgrades'){
-      if(visual === 'triple-volley'){
-        drawPreviewPlayerShot(previewCtx, tick, width, height, { baseX: width * 0.34, wobble: 0.15, w: 3, h: 11, color: '#fff08f', speed: 1.75, phase: 2 });
-        drawPreviewPlayerShot(previewCtx, tick, width, height, { baseX: width * 0.5, wobble: 0.1, w: 3, h: 12, color: '#fff08f', speed: 1.82, phase: 7 });
-        drawPreviewPlayerShot(previewCtx, tick, width, height, { baseX: width * 0.66, wobble: 0.15, w: 3, h: 11, color: '#fff08f', speed: 1.75, phase: 12 });
-        return;
-      }
-      if(visual === 'overhead-spread'){
-        drawPreviewPlayerShot(previewCtx, tick, width, height, { baseX: width * 0.5, wobble: 0.1, w: 3, h: 12, color: '#7efcff', speed: 1.8, phase: 2 });
-        drawPreviewPlayerShot(previewCtx, tick, width, height, { baseX: width * 0.35, wobble: 0.25, w: 3, h: 10, color: '#7efcff', speed: 1.72, phase: 9 });
-        drawPreviewPlayerShot(previewCtx, tick, width, height, { baseX: width * 0.65, wobble: 0.25, w: 3, h: 10, color: '#7efcff', speed: 1.72, phase: 15 });
-        return;
-      }
-      if(visual === 'diagonal-lances'){
-        drawPreviewPlayerShot(previewCtx, tick, width, height, { baseX: width * 0.38, wobble: 1.4, w: 3, h: 10, color: '#ffde59', speed: 1.76, phase: 4 });
-        drawPreviewPlayerShot(previewCtx, tick, width, height, { baseX: width * 0.62, wobble: 1.4, w: 3, h: 10, color: '#ffde59', speed: 1.76, phase: 11 });
-        return;
-      }
-      if(visual === 'tracking-pulse'){
-        drawPreviewPlayerShot(previewCtx, tick, width, height, { baseX: width * 0.5, wobble: 0.12, w: 3, h: 12, color: '#ff5252', speed: 1.8, phase: 4 });
-        drawParticleGlyph(previewCtx, {
-          x: width * 0.7 + Math.sin(tick * 0.08) * 1.2,
-          y: 7 + Math.cos(tick * 0.08) * 1.2,
-          life: 8,
-          maxLife: 10,
-          size: 3,
-          color: '#ff5252'
-        });
-        return;
-      }
-      if(visual === 'arc-fan'){
-        drawPreviewPlayerShot(previewCtx, tick, width, height, { baseX: width * 0.2, wobble: 0.25, w: 3, h: 9, color: '#ff79f2', speed: 1.66, phase: 0 });
-        drawPreviewPlayerShot(previewCtx, tick, width, height, { baseX: width * 0.35, wobble: 0.2, w: 3, h: 9, color: '#ff79f2', speed: 1.68, phase: 4 });
-        drawPreviewPlayerShot(previewCtx, tick, width, height, { baseX: width * 0.5, wobble: 0.14, w: 3, h: 10, color: '#ff79f2', speed: 1.7, phase: 8 });
-        drawPreviewPlayerShot(previewCtx, tick, width, height, { baseX: width * 0.65, wobble: 0.2, w: 3, h: 9, color: '#ff79f2', speed: 1.68, phase: 12 });
-        drawPreviewPlayerShot(previewCtx, tick, width, height, { baseX: width * 0.8, wobble: 0.25, w: 3, h: 9, color: '#ff79f2', speed: 1.66, phase: 16 });
-        return;
-      }
-      drawPreviewPlayerShot(previewCtx, tick, width, height, { baseX: width * 0.5, wobble: 0.12, w: 3, h: 11, color: color, speed: 1.75, phase: 6 });
-      return;
-    }
-
-    if(section === 'explosions'){
-      drawPreviewExplosion(previewCtx, tick, width, height, visual, color);
-      return;
-    }
   }
 
   function drawHud(){
@@ -1964,9 +1748,6 @@ var Game01 = (function(){
       },
       forceWin: function(){
         endGame(true);
-      },
-      renderIntelPreview: function(previewCtx, previewSpec){
-        renderIntelPreviewTile(previewCtx, previewSpec);
       },
       setDeterministicSeed: function(n){
         var parsed = Number(n);
@@ -4093,8 +3874,6 @@ var Game01 = (function(){
         '.ab-intel-swatch.is-bullet{position:relative;overflow:hidden;background:rgba(3,16,26,0.92);color:transparent;}',
         '.ab-intel-swatch.is-upgrade{position:relative;overflow:hidden;background:rgba(5,20,34,0.92);color:transparent;}',
         '.ab-intel-swatch.is-explosion{position:relative;overflow:hidden;background:rgba(20,8,10,0.9);color:transparent;}',
-        '.ab-intel-swatch.is-preview-canvas{position:relative;overflow:hidden;padding:0;background:rgba(5,16,28,0.95);}',
-        '.ab-intel-preview-canvas{display:block;width:18px;height:18px;image-rendering:pixelated;}',
         '.ab-intel-shot-line{position:absolute;left:50%;top:-10px;width:3px;height:12px;border-radius:999px;transform:translateX(-50%);background:var(--shot-color,#ffbf40);box-shadow:0 0 6px var(--shot-color,#ffbf40);animation:abIntelShotDrop 1.1s linear infinite;}',
         '.ab-intel-shot-line.is-long{height:15px;width:3px;}',
         '.ab-intel-shot-line.is-left{left:34%;transform:translateX(-50%) rotate(-22deg);}',
@@ -4185,45 +3964,199 @@ var Game01 = (function(){
       };
     }
   
-    function createPreviewCanvasSwatch(entry, sectionKey){
+    function createBulletSwatch(entry){
       var swatch = document.createElement('span');
-      swatch.className = 'ab-intel-swatch is-preview-canvas';
-      swatch.title = entry.label || '';
+      swatch.className = 'ab-intel-swatch is-bullet';
       swatch.style.setProperty('--shot-color', entry.color || '#ffbf40');
+      swatch.title = entry.label || '';
   
-      var canvas = document.createElement('canvas');
-      canvas.className = 'ab-intel-preview-canvas';
-      canvas.width = 36;
-      canvas.height = 36;
-      swatch.appendChild(canvas);
+      var visual = String(entry.visual || entry.id || '').toLowerCase();
   
-      var previewCtx = canvas.getContext ? canvas.getContext('2d') : null;
-      if(!previewCtx){
-        swatch.className = 'ab-intel-swatch';
-        swatch.style.backgroundColor = entry.color || '#416181';
-        swatch.textContent = entry.glyph || '•';
+      function appendLine(extraClass){
+        var line = document.createElement('span');
+        line.className = 'ab-intel-shot-line' + (extraClass ? ' ' + extraClass : '');
+        swatch.appendChild(line);
+      }
+  
+      if(visual === 'single-lance'){
+        appendLine('is-long');
         return swatch;
       }
   
-      swatch.__intelPreview = {
-        section: sectionKey,
-        visual: String(entry.visual || entry.id || '').toLowerCase(),
-        color: entry.color || '#ffbf40',
-        canvas: canvas,
-        ctx: previewCtx
-      };
+      if(visual === 'split-lance'){
+        appendLine('is-left');
+        appendLine('is-right');
+        return swatch;
+      }
+  
+      if(visual === 'burst-stack'){
+        var burst = document.createElement('span');
+        burst.className = 'ab-intel-burst-stack';
+        burst.innerHTML = '<i></i><i></i><i></i>';
+        swatch.appendChild(burst);
+        return swatch;
+      }
+  
+      if(visual === 'aim-lance'){
+        appendLine('is-aim is-long');
+        return swatch;
+      }
+  
+      if(visual === 'fan-volley'){
+        var classes = ['is-fan-a', 'is-fan-b', 'is-fan-c', 'is-fan-d', 'is-fan-e'];
+        var i;
+        for(i = 0; i < classes.length; i++){
+          var dot = document.createElement('span');
+          dot.className = 'ab-intel-shot-dot ' + classes[i];
+          dot.style.animationDelay = (i * 0.08) + 's';
+          swatch.appendChild(dot);
+        }
+        return swatch;
+      }
+  
+      appendLine('is-long');
+      return swatch;
+    }
+  
+    function createUpgradeSwatch(entry){
+      var swatch = document.createElement('span');
+      swatch.className = 'ab-intel-swatch is-upgrade';
+      swatch.style.setProperty('--shot-color', entry.color || '#7efcff');
+      swatch.title = entry.label || '';
+  
+      var visual = String(entry.visual || entry.id || '').toLowerCase();
+  
+      function addShot(extraClass, delay){
+        var shot = document.createElement('span');
+        shot.className = 'ab-intel-upgrade-shot' + (extraClass ? ' ' + extraClass : '');
+        if(typeof delay === 'number'){
+          shot.style.animationDelay = delay + 's';
+        }
+        swatch.appendChild(shot);
+      }
+  
+      if(visual === 'triple-volley'){
+        addShot('is-triple-left', 0);
+        addShot('is-triple-mid', 0.08);
+        addShot('is-triple-right', 0.16);
+        return swatch;
+      }
+  
+      if(visual === 'overhead-spread'){
+        addShot('is-overhead-mid', 0.03);
+        addShot('is-overhead-left', 0.1);
+        addShot('is-overhead-right', 0.17);
+        return swatch;
+      }
+  
+      if(visual === 'diagonal-lances'){
+        addShot('is-diag-left', 0);
+        addShot('is-diag-right', 0.11);
+        return swatch;
+      }
+  
+      if(visual === 'tracking-pulse'){
+        addShot('is-track', 0);
+        var target = document.createElement('span');
+        target.className = 'ab-intel-upgrade-target';
+        swatch.appendChild(target);
+        return swatch;
+      }
+  
+      if(visual === 'arc-fan'){
+        var classes = ['is-fan-1', 'is-fan-2', 'is-fan-3', 'is-fan-4', 'is-fan-5'];
+        var i;
+        for(i = 0; i < classes.length; i++){
+          var dot = document.createElement('span');
+          dot.className = 'ab-intel-upgrade-dot ' + classes[i];
+          dot.style.animationDelay = (i * 0.08) + 's';
+          swatch.appendChild(dot);
+        }
+        return swatch;
+      }
+  
+      addShot('is-triple-mid', 0);
+      return swatch;
+    }
+  
+    function createExplosionSwatch(entry){
+      var swatch = document.createElement('span');
+      swatch.className = 'ab-intel-swatch is-explosion';
+      swatch.style.setProperty('--shot-color', entry.color || '#ffb347');
+      swatch.title = entry.label || '';
+  
+      var visual = String(entry.visual || entry.id || '').toLowerCase();
+  
+      function addCore(){
+        var core = document.createElement('span');
+        core.className = 'ab-intel-explosion-core';
+        swatch.appendChild(core);
+      }
+  
+      function addRing(extraClass){
+        var ring = document.createElement('span');
+        ring.className = 'ab-intel-explosion-ring' + (extraClass ? ' ' + extraClass : '');
+        swatch.appendChild(ring);
+      }
+  
+      function addShards(){
+        var shardClasses = ['is-a', 'is-b', 'is-c', 'is-d', 'is-e'];
+        var i;
+        for(i = 0; i < shardClasses.length; i++){
+          var shard = document.createElement('span');
+          shard.className = 'ab-intel-explosion-shard ' + shardClasses[i];
+          swatch.appendChild(shard);
+        }
+      }
+  
+      if(visual === 'hit-spark'){
+        addCore();
+        addShards();
+        return swatch;
+      }
+  
+      if(visual === 'kill-burst'){
+        addCore();
+        addRing();
+        addShards();
+        return swatch;
+      }
+  
+      if(visual === 'carrier-breach'){
+        addCore();
+        addRing();
+        addRing('is-large');
+        addShards();
+        return swatch;
+      }
+  
+      if(visual === 'hull-rupture'){
+        addCore();
+        addShards();
+        return swatch;
+      }
+  
+      if(visual === 'shock-ring'){
+        addCore();
+        addRing();
+        addRing('is-large');
+        return swatch;
+      }
+  
+      addCore();
+      addRing();
       return swatch;
     }
   
     function createSwatch(entry, sectionKey){
       if(sectionKey === 'bullets'){
-        return createPreviewCanvasSwatch(entry, sectionKey);
+        return createBulletSwatch(entry);
       }
       if(sectionKey === 'upgrades'){
-        return createPreviewCanvasSwatch(entry, sectionKey);
+        return createUpgradeSwatch(entry);
       }
       if(sectionKey === 'explosions'){
-        return createPreviewCanvasSwatch(entry, sectionKey);
+        return createExplosionSwatch(entry);
       }
       var swatch = document.createElement('span');
       var animation = entry.animation ? ' is-' + entry.animation : '';
@@ -4234,7 +4167,7 @@ var Game01 = (function(){
       return swatch;
     }
   
-    function createSection(title, entries, sectionKey, previewRegistry){
+    function createSection(title, entries, sectionKey){
       var section = document.createElement('section');
       section.className = 'ab-intel-section';
   
@@ -4264,16 +4197,7 @@ var Game01 = (function(){
         var tr = document.createElement('tr');
   
         var tileCell = document.createElement('td');
-        var swatch = createSwatch(row, sectionKey);
-        tileCell.appendChild(swatch);
-        if(
-          previewRegistry &&
-          swatch &&
-          swatch.__intelPreview &&
-          swatch.__intelPreview.ctx
-        ){
-          previewRegistry.push(swatch.__intelPreview);
-        }
+        tileCell.appendChild(createSwatch(row, sectionKey));
   
         var typeCell = document.createElement('td');
         typeCell.textContent = row.label || row.id || 'Unknown';
@@ -4296,7 +4220,7 @@ var Game01 = (function(){
       return section;
     }
   
-    function fillColumn(column, order, previewRegistry){
+    function fillColumn(column, order){
       var sectionTitles = runtimeConfig.sectionTitles || {};
       var sectionData = runtimeConfig.sections || {};
       var i;
@@ -4304,61 +4228,7 @@ var Game01 = (function(){
         var key = order[i];
         var rows = Array.isArray(sectionData[key]) ? sectionData[key] : [];
         if(rows.length === 0) continue;
-        column.appendChild(createSection(sectionTitles[key] || key, rows, key, previewRegistry));
-      }
-    }
-  
-    function resolvePreviewRenderer(gameRef){
-      var hooks = gameRef && typeof gameRef.getTestHooks === 'function' ? gameRef.getTestHooks() : null;
-      if(!hooks || typeof hooks.renderIntelPreview !== 'function'){
-        return null;
-      }
-      return hooks.renderIntelPreview;
-    }
-  
-    function renderFallbackPreview(preview, tick){
-      if(!preview || !preview.ctx || !preview.canvas) return;
-      var ctx = preview.ctx;
-      var width = preview.canvas.width || 36;
-      var height = preview.canvas.height || 36;
-      var pulse = 0.45 + 0.35 * Math.sin(tick * 0.13);
-      ctx.clearRect(0, 0, width, height);
-      ctx.fillStyle = 'rgba(6,20,34,0.94)';
-      ctx.fillRect(0, 0, width, height);
-      ctx.globalAlpha = pulse;
-      ctx.fillStyle = preview.color || '#7efcff';
-      ctx.fillRect(width * 0.46, height * 0.18, 3, height * 0.62);
-      ctx.globalAlpha = 1;
-    }
-  
-    function updatePreviewTiles(gameRef, intelState){
-      if(!intelState || !Array.isArray(intelState.previewTiles) || intelState.previewTiles.length === 0){
-        return;
-      }
-  
-      intelState.previewTick = (intelState.previewTick || 0) + 1;
-      var previewTick = intelState.previewTick;
-      var previewRenderer = resolvePreviewRenderer(gameRef);
-      var i;
-      for(i = 0; i < intelState.previewTiles.length; i++){
-        var preview = intelState.previewTiles[i];
-        if(!preview || !preview.ctx || !preview.canvas) continue;
-        if(!previewRenderer){
-          renderFallbackPreview(preview, previewTick);
-          continue;
-        }
-        try{
-          previewRenderer(preview.ctx, {
-            section: preview.section,
-            visual: preview.visual,
-            color: preview.color,
-            tick: previewTick,
-            width: preview.canvas.width || 36,
-            height: preview.canvas.height || 36
-          });
-        }catch(e){
-          renderFallbackPreview(preview, previewTick);
-        }
+        column.appendChild(createSection(sectionTitles[key] || key, rows, key));
       }
     }
   
@@ -4400,9 +4270,8 @@ var Game01 = (function(){
       var liveBoard = createLiveBoard();
       leftCol.appendChild(liveBoard.node);
   
-      var previewTiles = [];
-      fillColumn(leftCol, (runtimeConfig.sectionOrder && runtimeConfig.sectionOrder.left) || [], previewTiles);
-      fillColumn(rightCol, (runtimeConfig.sectionOrder && runtimeConfig.sectionOrder.right) || [], previewTiles);
+      fillColumn(leftCol, (runtimeConfig.sectionOrder && runtimeConfig.sectionOrder.left) || []);
+      fillColumn(rightCol, (runtimeConfig.sectionOrder && runtimeConfig.sectionOrder.right) || []);
   
       root.appendChild(leftCol);
       root.appendChild(center);
@@ -4416,10 +4285,7 @@ var Game01 = (function(){
         toggleBtn: toggleBtn,
         hidden: false,
         liveBoard: liveBoard,
-        previewTiles: previewTiles,
-        previewTick: 0,
         updateTimer: null,
-        previewTimer: null,
         onResize: null,
         onOrientation: null,
         onKeyToggle: null
@@ -4486,11 +4352,7 @@ var Game01 = (function(){
       applyLayoutMode();
       applyHiddenMode();
       setTimeout(updateLiveBoard, 0);
-      setTimeout(function(){ updatePreviewTiles(gameRef, intelState); }, 0);
       intelState.updateTimer = setInterval(updateLiveBoard, 240);
-      intelState.previewTimer = setInterval(function(){
-        updatePreviewTiles(gameRef, intelState);
-      }, 70);
   
       return intelState;
     }
@@ -4500,10 +4362,6 @@ var Game01 = (function(){
       if(intelState.updateTimer){
         clearInterval(intelState.updateTimer);
         intelState.updateTimer = null;
-      }
-      if(intelState.previewTimer){
-        clearInterval(intelState.previewTimer);
-        intelState.previewTimer = null;
       }
   
       if(typeof window !== 'undefined' && window.removeEventListener){

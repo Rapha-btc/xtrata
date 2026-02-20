@@ -3,8 +3,8 @@
  * AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY.
  * Source: recursive-apps/21-arcade/game01_astro_blaster-v2/src/legacy/game01_astro_blaster.legacy.js
  * Build Framework: recursive-apps/21-arcade/game01_astro_blaster-v2/src/build/build-game.mjs
- * Generated At: 2026-02-20T17:08:16.119Z
- * Legacy Source SHA256: 80790aeca98e37181c3a4de4a12917cf3af93381b611a0970f1fa78e4b6d4d5a
+ * Generated At: 2026-02-20T16:48:24.458Z
+ * Legacy Source SHA256: 49bc6489dfa303bba53a7380454178052ca12b379a658b3728f08b9634015550
  */
 
 var Game01 = (function(){
@@ -1572,49 +1572,31 @@ var Game01 = (function(){
     ctx.globalAlpha = 1;
   }
 
-  function drawPreviewTrailSparks(previewCtx, tick, shot, trailColor, trailConfig){
-    var direction = trailConfig && trailConfig.direction === 'up' ? -1 : 1;
-    var count = Math.max(3, Math.floor((trailConfig && trailConfig.count) || 6));
-    var spread = Math.max(0.2, Number(trailConfig && trailConfig.spread) || 0.72);
-    var phase = Number(trailConfig && trailConfig.phase) || 0;
-    var i;
-    for(i = 0; i < count; i++){
-      var t = tick + phase + i * 3;
-      var distance = (i + 1) * (1.8 + Math.sin((t + i) * 0.21) * 0.2);
-      var jitterX = Math.sin((t + phase) * 0.56 + i * 1.17) * (spread + i * 0.12);
-      var jitterY = Math.cos((t + phase) * 0.42 + i * 0.68) * 0.45;
-      var life = Math.max(2, 12 - i + Math.floor((Math.sin((t + i) * 0.35) + 1) * 1.4));
-      drawParticleGlyph(previewCtx, {
-        x: shot.x + shot.w * 0.5 + jitterX,
-        y: shot.y + (direction > 0 ? -distance : (shot.h + distance)) + jitterY,
-        life: life,
-        maxLife: 14,
-        size: i < 2 ? 2 : 1.8,
-        color: trailColor
-      });
-    }
-  }
-
   function drawPreviewEnemyShot(previewCtx, tick, width, height, shotConfig){
     var travelHeight = height + 22;
     var phase = Math.floor(shotConfig.phase || 0);
     var y = ((tick * (shotConfig.speed || 1.4) + phase) % travelHeight) - 16;
     var x = (shotConfig.baseX || (width * 0.5)) + Math.sin((tick + phase) * 0.08) * (shotConfig.wobble || 0);
     var shot = {
-      x: Math.round(x),
-      y: Math.round(y),
+      x: x,
+      y: y,
       w: shotConfig.w || 3,
-      h: shotConfig.h || 12,
+      h: shotConfig.h || 11,
       color: shotConfig.color || '#ff8f00'
     };
     drawShotGlyph(previewCtx, shot, false);
 
-    drawPreviewTrailSparks(previewCtx, tick, shot, shotConfig.trailColor || '#ff6837', {
-      direction: 'down',
-      count: shotConfig.trailCount || 7,
-      spread: shotConfig.trailSpread || 0.7,
-      phase: phase
-    });
+    var i;
+    for(i = 0; i < 4; i++){
+      drawParticleGlyph(previewCtx, {
+        x: shot.x + shot.w * 0.5 + ((i % 2 === 0) ? -0.5 : 0.5),
+        y: shot.y - (i * 2.2) - 1,
+        life: 9 - i,
+        maxLife: 10,
+        size: 2,
+        color: shotConfig.trailColor || '#ff6837'
+      });
+    }
   }
 
   function drawPreviewPlayerShot(previewCtx, tick, width, height, shotConfig){
@@ -1623,20 +1605,25 @@ var Game01 = (function(){
     var y = height + 6 - ((tick * (shotConfig.speed || 1.7) + phase) % travelHeight);
     var x = (shotConfig.baseX || (width * 0.5)) + Math.sin((tick + phase) * 0.06) * (shotConfig.wobble || 0);
     var shot = {
-      x: Math.round(x),
-      y: Math.round(y),
+      x: x,
+      y: y,
       w: shotConfig.w || 3,
-      h: shotConfig.h || 12,
+      h: shotConfig.h || 11,
       color: shotConfig.color || '#fff08f'
     };
     drawShotGlyph(previewCtx, shot, true);
 
-    drawPreviewTrailSparks(previewCtx, tick, shot, shotConfig.trailColor || '#ff9f1a', {
-      direction: 'up',
-      count: shotConfig.trailCount || 6,
-      spread: shotConfig.trailSpread || 0.62,
-      phase: phase
-    });
+    var i;
+    for(i = 0; i < 3; i++){
+      drawParticleGlyph(previewCtx, {
+        x: shot.x + shot.w * 0.5 + ((i % 2 === 0) ? -0.4 : 0.4),
+        y: shot.y + shot.h + (i * 1.8),
+        life: 8 - i,
+        maxLife: 9,
+        size: 2,
+        color: shotConfig.trailColor || '#ff9f1a'
+      });
+    }
   }
 
   function drawPreviewExplosion(previewCtx, tick, width, height, visual, color){
@@ -1698,8 +1685,8 @@ var Game01 = (function(){
 
     if(section === 'bullets'){
       if(visual === 'split-lance'){
-        drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.34, wobble: 0.2, w: 3, h: 11, color: color, trailColor: '#ff6837', trailCount: 6, speed: 1.35, phase: 3 });
-        drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.62, wobble: 0.2, w: 3, h: 11, color: color, trailColor: '#ff6837', trailCount: 6, speed: 1.35, phase: 11 });
+        drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.34, wobble: 0.2, w: 3, h: 11, color: color, trailColor: '#ff6837', speed: 1.35, phase: 3 });
+        drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.62, wobble: 0.2, w: 3, h: 11, color: color, trailColor: '#ff6837', speed: 1.35, phase: 11 });
         return;
       }
       if(visual === 'burst-stack'){
@@ -1709,7 +1696,7 @@ var Game01 = (function(){
         return;
       }
       if(visual === 'aim-lance'){
-        drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.35, wobble: 2.2, w: 3, h: 13, color: color, trailColor: '#ff6837', trailCount: 7, speed: 1.42, phase: 5 });
+        drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.35, wobble: 2.2, w: 3, h: 12, color: color, trailColor: '#ff6837', speed: 1.42, phase: 5 });
         return;
       }
       if(visual === 'fan-volley'){
@@ -1720,7 +1707,7 @@ var Game01 = (function(){
         drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.8, wobble: 0.25, w: 3, h: 10, color: color, trailColor: '#ff6837', speed: 1.3, phase: 16 });
         return;
       }
-      drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.5, wobble: 0.2, w: 4, h: 14, color: color, trailColor: '#ff6837', trailCount: 8, trailSpread: 0.75, speed: 1.4, phase: 6 });
+      drawPreviewEnemyShot(previewCtx, tick, width, height, { baseX: width * 0.5, wobble: 0.2, w: 3, h: 12, color: color, trailColor: '#ff6837', speed: 1.4, phase: 6 });
       return;
     }
 

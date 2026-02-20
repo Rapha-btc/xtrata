@@ -1,6 +1,6 @@
 /* Arcade game loader: resolves latest available game version per slot. */
 (function(){
-  var DEFAULT_MAIN_SCRIPT = 'main.js?v=wallet-debug-2026-02-20-09';
+  var DEFAULT_MAIN_SCRIPT = 'main.js?v=wallet-debug-2026-02-20-12';
   var FALLBACK_GAME_SCRIPTS = [
     'games/game01_astro_blaster.js',
     'games/game02_neon_runner.js',

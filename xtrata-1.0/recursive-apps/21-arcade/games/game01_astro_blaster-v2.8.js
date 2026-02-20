@@ -3,7 +3,7 @@
  * AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY.
  * Source: recursive-apps/21-arcade/game01_astro_blaster-v2/src/legacy/game01_astro_blaster.legacy.js
  * Build Framework: recursive-apps/21-arcade/game01_astro_blaster-v2/src/build/build-game.mjs
- * Generated At: 2026-02-20T17:08:16.119Z
+ * Generated At: 2026-02-20T16:51:02.779Z
  * Legacy Source SHA256: 80790aeca98e37181c3a4de4a12917cf3af93381b611a0970f1fa78e4b6d4d5a
  */
 

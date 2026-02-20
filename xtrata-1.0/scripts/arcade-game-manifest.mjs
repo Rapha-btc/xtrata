@@ -10,7 +10,7 @@ const gamesDir = path.join(arcadeRoot, 'games');
 const outputPath = path.join(gamesDir, 'latest-manifest.js');
 
 const GAME_FILE_RE = /^(game\d{2}_[a-z0-9_]+?)(?:-v([a-z0-9][a-z0-9._-]*))?\.js$/i;
-const DEFAULT_MAIN_SCRIPT = 'main.js?v=wallet-debug-2026-02-20-09';
+const DEFAULT_MAIN_SCRIPT = 'main.js?v=wallet-debug-2026-02-20-12';
 
 function tokenizeVersion(versionRaw){
   if(!versionRaw) return [];
