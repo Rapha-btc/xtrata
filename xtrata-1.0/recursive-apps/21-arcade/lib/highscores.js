@@ -216,6 +216,11 @@ var HighScores = (function(){
     return 0;
   }
 
+  function _computeInsertRank(list, mode, score){
+    var normalized = _normalizeLeaderboardList(list, mode);
+    return _findRank(normalized, mode, score);
+  }
+
   function _buildPreviewList(list, rank, candidate){
     var next = _copyList(list);
     next.splice(rank - 1, 0, candidate);
@@ -1504,12 +1509,45 @@ var HighScores = (function(){
       functionName;
   }
 
+  function _resolveReadOnlySenderCandidates(payload){
+    var candidates = [];
+    var targetNetwork = _normalizeWalletNetwork(payload && payload.network);
+    var preferred = payload && typeof payload.readSenderAddress === 'string'
+      ? payload.readSenderAddress.trim()
+      : '';
+    var fallback = payload && typeof payload.contractAddress === 'string'
+      ? payload.contractAddress.trim()
+      : '';
+
+    function push(sender){
+      if(!sender) return;
+      if(candidates.indexOf(sender) >= 0) return;
+      candidates.push(sender);
+    }
+
+    if(preferred){
+      var senderNetwork = _networkFromAddress(preferred);
+      if(!senderNetwork || !targetNetwork || targetNetwork === 'devnet' || senderNetwork === targetNetwork){
+        push(preferred);
+      } else {
+        _debugLog('warn', 'Ignoring readSenderAddress network mismatch for read-only call', {
+          sender: preferred,
+          senderNetwork: senderNetwork,
+          targetNetwork: targetNetwork
+        });
+      }
+    }
+
+    push(fallback);
+    return candidates;
+  }
+
   function _callContractReadOnly(payload, functionName, functionArgs){
     if(typeof fetch !== 'function'){
       return Promise.reject(new Error('Browser fetch API is unavailable for read-only calls.'));
     }
-    var sender = payload.readSenderAddress || payload.contractAddress;
-    if(!sender){
+    var senderCandidates = _resolveReadOnlySenderCandidates(payload);
+    if(senderCandidates.length === 0){
       return Promise.reject(new Error('Missing sender principal for read-only call.'));
     }
 
@@ -1520,27 +1558,50 @@ var HighScores = (function(){
       return Promise.reject(error);
     }
 
-    return fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sender: sender,
-        arguments: Array.isArray(functionArgs) ? functionArgs : []
+    function execute(sender){
+      return fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sender: sender,
+          arguments: Array.isArray(functionArgs) ? functionArgs : []
+        })
       })
-    })
-      .then(function(response){
-        if(!response.ok){
-          throw new Error('Read-only call failed with HTTP ' + response.status + '.');
+        .then(function(response){
+          if(!response.ok){
+            throw new Error('Read-only call failed with HTTP ' + response.status + '.');
+          }
+          return response.json();
+        })
+        .then(function(body){
+          if(!body || body.okay !== true || typeof body.result !== 'string'){
+            var cause = body && body.cause ? String(body.cause) : 'Read-only contract call failed.';
+            throw new Error(cause);
+          }
+          return body.result;
+        });
+    }
+
+    function attempt(index, lastError){
+      if(index >= senderCandidates.length){
+        throw lastError || new Error('Read-only contract call failed.');
+      }
+      var sender = senderCandidates[index];
+      return execute(sender).catch(function(error){
+        if(index + 1 >= senderCandidates.length){
+          throw error;
         }
-        return response.json();
-      })
-      .then(function(body){
-        if(!body || body.okay !== true || typeof body.result !== 'string'){
-          var cause = body && body.cause ? String(body.cause) : 'Read-only contract call failed.';
-          throw new Error(cause);
-        }
-        return body.result;
+        _debugLog('warn', 'Retrying read-only contract call with fallback sender', {
+          functionName: functionName,
+          failedSender: sender,
+          nextSender: senderCandidates[index + 1],
+          error: _errorForLog(error)
+        });
+        return attempt(index + 1, error);
       });
+    }
+
+    return attempt(0, null);
   }
 
   function _decodeReadOnlyUIntResult(resultHex, functionName){
@@ -2164,8 +2225,8 @@ var HighScores = (function(){
       return Promise.reject(new Error('No API base URL configured for leaderboard read-only calls.'));
     }
 
-    var sender = payload.readSenderAddress || payload.contractAddress;
-    if(!sender){
+    var senderCandidates = _resolveReadOnlySenderCandidates(payload);
+    if(senderCandidates.length === 0){
       _debugLog('error', 'Read-only call failed: sender missing', payload);
       return Promise.reject(new Error('Missing sender principal for read-only leaderboard call.'));
     }
@@ -2176,39 +2237,63 @@ var HighScores = (function(){
       payload.contractName + '/' +
       payload.leaderboardFunctionName;
 
-    return fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sender: sender,
-        arguments: [
-          _encodeAsciiCV(payload.gameId),
-          _encodeUIntCV(_toModeUint(payload.mode))
-        ]
+    function execute(sender){
+      return fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sender: sender,
+          arguments: [
+            _encodeAsciiCV(payload.gameId),
+            _encodeUIntCV(_toModeUint(payload.mode))
+          ]
+        })
       })
-    })
-      .then(function(response){
-        _debugLog('info', 'Read-only HTTP response received', { status: response.status, ok: response.ok });
-        if(!response.ok){
-          throw new Error('Leaderboard read call failed with HTTP ' + response.status + '.');
+        .then(function(response){
+          _debugLog('info', 'Read-only HTTP response received', {
+            status: response.status,
+            ok: response.ok,
+            sender: sender
+          });
+          if(!response.ok){
+            throw new Error('Leaderboard read call failed with HTTP ' + response.status + '.');
+          }
+          return response.json();
+        })
+        .then(function(body){
+          _debugLog('info', 'Read-only response body parsed', body);
+          if(!body || typeof body !== 'object'){
+            throw new Error('Invalid leaderboard read response payload.');
+          }
+          if(body.okay !== true || typeof body.result !== 'string'){
+            var cause = body.cause ? String(body.cause) : 'Read-only contract call failed.';
+            throw new Error(cause);
+          }
+          return body.result;
+        });
+    }
+
+    function attempt(index, lastError){
+      if(index >= senderCandidates.length){
+        _debugLog('error', 'Read-only leaderboard call failed', _errorForLog(lastError));
+        throw lastError || new Error('Read-only leaderboard call failed.');
+      }
+      var sender = senderCandidates[index];
+      return execute(sender).catch(function(error){
+        if(index + 1 >= senderCandidates.length){
+          _debugLog('error', 'Read-only leaderboard call failed', _errorForLog(error));
+          throw error;
         }
-        return response.json();
-      })
-      .then(function(body){
-        _debugLog('info', 'Read-only response body parsed', body);
-        if(!body || typeof body !== 'object'){
-          throw new Error('Invalid leaderboard read response payload.');
-        }
-        if(body.okay !== true || typeof body.result !== 'string'){
-          var cause = body.cause ? String(body.cause) : 'Read-only contract call failed.';
-          throw new Error(cause);
-        }
-        return body.result;
-      })
-      .catch(function(error){
-        _debugLog('error', 'Read-only leaderboard call failed', _errorForLog(error));
-        throw error;
+        _debugLog('warn', 'Retrying leaderboard read with fallback sender', {
+          failedSender: sender,
+          nextSender: senderCandidates[index + 1],
+          error: _errorForLog(error)
+        });
+        return attempt(index + 1, error);
       });
+    }
+
+    return attempt(0, null);
   }
 
   function _decodeTop10Result(resultHex){
@@ -2477,7 +2562,7 @@ var HighScores = (function(){
     return !!(
       _isOnChainReady() &&
       rank > 0 &&
-      rank <= onChainConfig.minRank
+      rank <= MAX_ENTRIES
     );
   }
 
@@ -2643,7 +2728,8 @@ var HighScores = (function(){
         return getTop10(gameId, mode);
       })
       .then(function(board){
-        var rank = _findRank(board, mode, score);
+        var normalizedBoard = _normalizeLeaderboardList(board, mode);
+        var rank = _computeInsertRank(normalizedBoard, mode, score);
 
         if(!_shouldOfferOnChain(rank)){
           var subtitle = rank
@@ -2653,7 +2739,7 @@ var HighScores = (function(){
             gameId: gameId,
             mode: mode,
             title: title,
-            list: board,
+            list: normalizedBoard,
             highlightIdx: -1,
             subtitle: subtitle
           });
@@ -2674,7 +2760,7 @@ var HighScores = (function(){
               score: score,
               name: name,
               rank: rank,
-              currentTop10: board
+              currentTop10: normalizedBoard
             }).then(function(onChain){
               resolve({
                 submitted: !!onChain.submitted,
@@ -2707,13 +2793,15 @@ var HighScores = (function(){
   }
 
   function _qualifies(gameId, mode, value, listOverride){
+    var scoreMode = mode === 'time' ? 'time' : 'score';
     var list = listOverride || getTop10(gameId, mode);
-    return _findRank(list, mode === 'time' ? 'time' : 'score', value) > 0;
+    return _computeInsertRank(list, scoreMode, value) > 0;
   }
 
   function _addEntry(gameId, mode, name, value){
     var k = _key(gameId, mode);
-    var rank = _findRank(getTop10(gameId, mode), mode === 'time' ? 'time' : 'score', value);
+    var scoreMode = mode === 'time' ? 'time' : 'score';
+    var rank = _computeInsertRank(getTop10(gameId, mode), scoreMode, value);
     if(!rank) return -1;
 
     var entry = {
@@ -2753,6 +2841,7 @@ var HighScores = (function(){
     _qualifies: _qualifies,
     _addEntry: _addEntry,
     _shouldOfferOnChain: _shouldOfferOnChain,
-    _recordPersonalBest: _recordPersonalBest
+    _recordPersonalBest: _recordPersonalBest,
+    _computeInsertRank: _computeInsertRank
   };
 })();

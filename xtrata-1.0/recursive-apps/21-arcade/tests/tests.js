@@ -238,17 +238,93 @@ var ArcadeTests = (function(){
       log('HS: Time ordering', true, 'Best time from chain is ' + timeTop[0].score);
     } catch(e) { log('HS: Time ordering', false, e.message); }
 
-    /* Test 4: Qualification check uses chain board */
+    /* Test 4: Qualification with open slots (less than top 10 filled) */
     try {
       var current = await HighScores.fetchTop10(gameId, mode, { force: true });
-      var qualifies = HighScores._qualifies(gameId, mode, 900, current);
-      var notQualifies = HighScores._qualifies(gameId, mode, 1, current);
-      TestUtils.assertTrue(qualifies, '900 should qualify in current board');
-      TestUtils.assertFalse(notQualifies, '1 should not qualify');
-      log('HS: Qualification check', true, 'Qualification now based on chain board');
-    } catch(e) { log('HS: Qualification check', false, e.message); }
+      var qualifiesStrong = HighScores._qualifies(gameId, mode, 900, current);
+      var qualifiesWeak = HighScores._qualifies(gameId, mode, 1, current);
+      TestUtils.assertTrue(qualifiesStrong, '900 should qualify in current board');
+      TestUtils.assertTrue(qualifiesWeak, 'Any positive score should qualify while fewer than 10 slots are filled');
+      log('HS: Qualification with open slots', true, 'Open slots allow rank insertion up to #10');
+    } catch(e) { log('HS: Qualification with open slots', false, e.message); }
 
-    /* Test 5: Local storage keeps personal best only */
+    /* Test 4b: Placeholder/invalid rows must not block open-slot ranking */
+    try {
+      var malformedBoard = [
+        { rank: 1, name: 'AAA', score: 1000, player: 'P1' },
+        { rank: 2, name: 'BBB', score: 800, player: 'P2' },
+        { rank: 3, name: '', score: 0, player: null },
+        { rank: 4, name: '', score: 0, player: null },
+        { rank: 5, name: '', score: 0, player: null },
+        { rank: 6, name: '', score: 0, player: null },
+        { rank: 7, name: '', score: 0, player: null },
+        { rank: 8, name: '', score: 0, player: null },
+        { rank: 9, name: '', score: 0, player: null },
+        { rank: 10, name: '', score: 0, player: null }
+      ];
+      var malformedRank = HighScores._computeInsertRank(malformedBoard, mode, 1);
+      TestUtils.assertEqual(malformedRank, 3, 'Malformed placeholder rows should collapse and allow rank #3');
+      TestUtils.assertTrue(HighScores._qualifies(gameId, mode, 1, malformedBoard), 'Score should qualify when only 2 valid rows exist');
+      log('HS: Placeholder rows do not block ranking', true, 'Invalid/zero rows are ignored before rank calculation');
+    } catch(e) { log('HS: Placeholder rows do not block ranking', false, e.message); }
+
+    /* Test 5: Qualification threshold at rank #10 when board is full */
+    try {
+      boardState[bkey(gameId, mode)] = clone([
+        { rank: 1, name: 'A1', score: 1000, player: 'P1' },
+        { rank: 2, name: 'A2', score: 900, player: 'P2' },
+        { rank: 3, name: 'A3', score: 800, player: 'P3' },
+        { rank: 4, name: 'A4', score: 700, player: 'P4' },
+        { rank: 5, name: 'A5', score: 600, player: 'P5' },
+        { rank: 6, name: 'A6', score: 500, player: 'P6' },
+        { rank: 7, name: 'A7', score: 400, player: 'P7' },
+        { rank: 8, name: 'A8', score: 300, player: 'P8' },
+        { rank: 9, name: 'A9', score: 200, player: 'P9' },
+        { rank: 10, name: 'A10', score: 100, player: 'P10' }
+      ]);
+      var fullScoreBoard = await HighScores.fetchTop10(gameId, mode, { force: true });
+      TestUtils.assertEqual(fullScoreBoard.length, 10, 'Full score board should have 10 entries');
+      TestUtils.assertTrue(HighScores._qualifies(gameId, mode, 101, fullScoreBoard), '101 should qualify above current #10');
+      TestUtils.assertFalse(HighScores._qualifies(gameId, mode, 100, fullScoreBoard), '100 should not qualify when equal to #10');
+      TestUtils.assertFalse(HighScores._qualifies(gameId, mode, 99, fullScoreBoard), '99 should not qualify below #10');
+
+      var fullTimeBoardInput = [
+        { rank: 1, name: 'T1', score: 100, player: 'T1' },
+        { rank: 2, name: 'T2', score: 200, player: 'T2' },
+        { rank: 3, name: 'T3', score: 300, player: 'T3' },
+        { rank: 4, name: 'T4', score: 400, player: 'T4' },
+        { rank: 5, name: 'T5', score: 500, player: 'T5' },
+        { rank: 6, name: 'T6', score: 600, player: 'T6' },
+        { rank: 7, name: 'T7', score: 700, player: 'T7' },
+        { rank: 8, name: 'T8', score: 800, player: 'T8' },
+        { rank: 9, name: 'T9', score: 900, player: 'T9' },
+        { rank: 10, name: 'T10', score: 1000, player: 'T10' }
+      ];
+      TestUtils.assertTrue(HighScores._qualifies('full_time_game', 'time', 999, fullTimeBoardInput), '999 should qualify above current #10 time');
+      TestUtils.assertFalse(HighScores._qualifies('full_time_game', 'time', 1000, fullTimeBoardInput), '1000 should not qualify when equal to #10 time');
+      TestUtils.assertFalse(HighScores._qualifies('full_time_game', 'time', 1200, fullTimeBoardInput), '1200 should not qualify below #10 time');
+      log('HS: Qualification threshold at #10', true, 'Threshold follows rank #10 when board is full');
+    } catch(e) { log('HS: Qualification threshold at #10', false, e.message); }
+
+    /* Test 6: On-chain offer rank gate is top 10 */
+    try {
+      HighScores.configureOnChain({
+        enabled: true,
+        network: 'testnet',
+        contractAddress: 'STTESTADDRESS0000000000000000000000000',
+        contractName: 'xtrata-arcade-scores-v1-3',
+        functionName: 'submit-score',
+        leaderboardFunctionName: 'get-top10',
+        minRank: 1
+      });
+      TestUtils.assertTrue(HighScores._shouldOfferOnChain(1), '#1 should be offerable');
+      TestUtils.assertTrue(HighScores._shouldOfferOnChain(3), '#3 should be offerable');
+      TestUtils.assertTrue(HighScores._shouldOfferOnChain(10), '#10 should be offerable');
+      TestUtils.assertFalse(HighScores._shouldOfferOnChain(11), '#11 should not be offerable');
+      log('HS: On-chain offer top10 gate', true, 'Offer gate is rank 1..10');
+    } catch(e) { log('HS: On-chain offer top10 gate', false, e.message); }
+
+    /* Test 7: Local storage keeps personal best only */
     try {
       HighScores._recordPersonalBest(gameId, mode, 500);
       HighScores._recordPersonalBest(gameId, mode, 400);
@@ -262,8 +338,17 @@ var ArcadeTests = (function(){
       log('HS: Personal best storage', true, 'PB stored locally, leaderboard not local');
     } catch(e) { log('HS: Personal best storage', false, e.message); }
 
-    /* Test 6: On-chain submission bridge + board update */
+    /* Test 8: On-chain submission bridge + board update */
     try {
+      HighScores.configureOnChain({
+        enabled: true,
+        network: 'testnet',
+        contractAddress: 'STTESTADDRESS0000000000000000000000000',
+        contractName: 'xtrata-arcade-scores-v1-0',
+        functionName: 'submit-score',
+        leaderboardFunctionName: 'get-top10',
+        minRank: 10
+      });
       var submitResult = await HighScores.submitOnChainScore({
         gameId: gameId,
         mode: 'score',

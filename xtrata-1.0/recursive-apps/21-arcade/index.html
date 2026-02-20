@@ -11,6 +11,7 @@
   <span id="title">Retro Arcade</span>
   <div id="top-bar-right">
     <span id="wallet-status-badge" class="wallet-status-badge is-loading" aria-live="polite">Wallet: checking...</span>
+    <button id="wallet-connect-btn" title="Connect wallet">Connect</button>
     <button id="wallet-disconnect-btn" title="Disconnect wallet" style="display:none;">Disconnect</button>
     <button id="admin-btn" title="Arcade score admin">Admin</button>
     <button id="force-next-wave-btn" title="Force next wave/level for testing" style="display:none;">Next Wave</button>
@@ -88,29 +89,10 @@
     debug: true
   };
   window.ARCADE_ONCHAIN_DEBUG = true;
+  window.ARCADE_MAIN_SCRIPT = 'main.js?v=wallet-debug-2026-02-20-09';
 </script>
-<script src="lib/highscores.js?v=wallet-debug-2026-02-20-08"></script>
-<script src="games/game01_astro_blaster.js"></script>
-<script src="games/game02_neon_runner.js?v=2"></script>
-<script src="games/game03_block_drop.js"></script>
-<script src="games/game04_maze_escape.js?v=2"></script>
-<script src="games/game05_paddle_punk.js"></script>
-<script src="games/game06_meteor_miner.js"></script>
-<script src="games/game07_sky_racer.js"></script>
-<script src="games/game08_laser_defender.js"></script>
-<script src="games/game09_snakebyte.js"></script>
-<script src="games/game10_cipher_quest.js"></script>
-<script src="games/game11_memory_matrix.js"></script>
-<script src="games/game12_tile_flip.js?v=2"></script>
-<script src="games/game13_robot_sokoban.js"></script>
-<script src="games/game14_bubble_pop.js"></script>
-<script src="games/game15_stealth_grid.js"></script>
-<script src="games/game16_platform_micro.js"></script>
-<script src="games/game17_typing_invaders.js"></script>
-<script src="games/game18_fishing_byte.js"></script>
-<script src="games/game19_duel_at_dawn.js"></script>
-<script src="games/game20_circuit_builder.js?v=2"></script>
-<script src="games/game21_boss_rush_mini.js"></script>
-<script src="main.js?v=wallet-debug-2026-02-20-07"></script>
+<script src="lib/highscores.js?v=wallet-debug-2026-02-20-10"></script>
+<script src="games/latest-manifest.js"></script>
+<script src="lib/game-loader.js?v=game-loader-2026-02-20-01"></script>
 </body>
 </html>

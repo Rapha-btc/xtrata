@@ -29,6 +29,7 @@
   var exitBtn = document.getElementById('exit-btn');
   var soundToggle = document.getElementById('sound-toggle');
   var walletStatusBadge = document.getElementById('wallet-status-badge');
+  var walletConnectBtn = document.getElementById('wallet-connect-btn');
   var walletDisconnectBtn = document.getElementById('wallet-disconnect-btn');
   var adminBtn = document.getElementById('admin-btn');
   var forceNextWaveBtn = document.getElementById('force-next-wave-btn');
@@ -72,6 +73,86 @@
   var walletDebugSummaryCounter = 0;
   var WALLET_DEBUG_SUMMARY_WINDOW_MS = 3000;
   var disconnectWalletInFlight = null;
+  var gameVersionBySlot = resolveGameVersionBySlot();
+
+  function parseGameScriptVersion(pathValue){
+    if(typeof pathValue !== 'string') return null;
+    var cleaned = pathValue.trim();
+    if(!cleaned) return null;
+    var noQuery = cleaned.split('?')[0];
+    var fileName = noQuery.split('/').pop();
+    if(!fileName) return null;
+    var match = fileName.match(/^game(\d{2})_[a-z0-9_]+(?:-v([a-z0-9][a-z0-9._-]*))?\.js$/i);
+    if(!match) return null;
+    return {
+      slot: Number(match[1]),
+      version: match[2] ? String(match[2]) : '1'
+    };
+  }
+
+  function normalizeVersionText(versionValue){
+    if(typeof versionValue === 'undefined' || versionValue === null){
+      return null;
+    }
+    var cleaned = String(versionValue).trim();
+    if(!cleaned) return null;
+    return cleaned.replace(/^v/i, '') || '1';
+  }
+
+  function applySlotVersion(versionMap, slot, versionText){
+    if(!versionMap) return;
+    if(typeof slot !== 'number' || !isFinite(slot) || slot < 1) return;
+    var normalized = normalizeVersionText(versionText);
+    if(!normalized) return;
+    versionMap[slot] = normalized;
+  }
+
+  function resolveGameVersionBySlot(){
+    var versionMap = {};
+    var manifest = window.ARCADE_GAME_SCRIPT_MANIFEST;
+    var i;
+
+    if(manifest && Array.isArray(manifest.games)){
+      for(i = 0; i < manifest.games.length; i += 1){
+        var entry = manifest.games[i];
+        if(!entry) continue;
+        var slot = Number(entry.slot);
+        var versionText = normalizeVersionText(entry.version);
+        if(!versionText){
+          var parsedFromManifest = parseGameScriptVersion(entry.script || entry.file || '');
+          if(parsedFromManifest){
+            if(!slot) slot = parsedFromManifest.slot;
+            versionText = parsedFromManifest.version;
+          }
+        }
+        applySlotVersion(versionMap, slot, versionText);
+      }
+    }
+
+    if(typeof document !== 'undefined'){
+      var scripts = document.getElementsByTagName('script');
+      for(i = 0; i < scripts.length; i += 1){
+        var src = scripts[i] && scripts[i].getAttribute ? scripts[i].getAttribute('src') : '';
+        var parsed = parseGameScriptVersion(src || '');
+        if(!parsed) continue;
+        if(!versionMap[parsed.slot]){
+          applySlotVersion(versionMap, parsed.slot, parsed.version);
+        }
+      }
+    }
+
+    return versionMap;
+  }
+
+  function getGameVersionLabelByIndex(idx){
+    var slot = Number(idx) + 1;
+    var versionText = gameVersionBySlot[slot];
+    var normalized = normalizeVersionText(versionText || '1') || '1';
+    if(/^\d+$/.test(normalized)){
+      return 'v' + normalized + '.0';
+    }
+    return 'v' + String(normalized);
+  }
 
   function walletDebugEnabled(){
     if(typeof window === 'undefined') return false;
@@ -574,6 +655,17 @@
     walletDisconnectBtn.title = hasAddress
       ? 'Disconnect wallet so you can reconnect a different account'
       : 'Connect a wallet to enable disconnect';
+    updateWalletConnectButtonState();
+  }
+
+  function updateWalletConnectButtonState(){
+    if(!walletConnectBtn) return;
+    var hasAddress = !!(lastWalletStatus && lastWalletStatus.hasAddress);
+    walletConnectBtn.style.display = hasAddress ? 'none' : 'inline-block';
+    walletConnectBtn.disabled = !!connectWalletInFlight || !!disconnectWalletInFlight;
+    walletConnectBtn.title = hasAddress
+      ? 'Wallet connected'
+      : 'Connect wallet';
   }
 
   function syncOnChainReadSenderAddress(address){
@@ -1007,6 +1099,7 @@
 
   function maybeCallDirectProviderConnect(provider){
     if(!provider) return Promise.resolve(null);
+    var directConnectTimeoutMs = 12000;
     var attempts = [];
 
     if(typeof provider.enable === 'function'){
@@ -1050,7 +1143,11 @@
             method: attempt.method,
             variant: attempt.variant
           });
-          return attempt.run();
+          return withPromiseTimeout(
+            Promise.resolve(attempt.run()),
+            directConnectTimeoutMs,
+            'Direct wallet connect timed out.'
+          );
         })
         .then(function(result){
           return result || true;
@@ -1310,64 +1407,62 @@
       return Promise.reject(new Error('Wallet provider has no callable method for "' + method + '".'));
     }
 
-    function run(index, previousError){
+    async function run(index, previousError){
       if(index >= attempts.length){
         if(shouldCacheUnsupportedMethod(hasParams, previousError)){
           markMethodUnsupported(provider, method);
         }
-        return Promise.reject(previousError || new Error('Wallet provider rejected request.'));
+        throw previousError || new Error('Wallet provider rejected request.');
       }
-      return Promise.resolve()
-        .then(function(){
-          var attempt = attempts[index];
-          walletDebug('info', 'Provider request attempt', {
-            provider: providerLabel,
-            method: method,
-            attemptIndex: index,
-            hasParams: hasParams,
-            source: attempt.source,
-            variant: attempt.variant,
-            timeoutMs: timeoutMs
-          });
-          return withPromiseTimeout(
-            Promise.resolve().then(function(){ return attempt.run(); }),
-            timeoutMs,
-            'Wallet provider request timed out for "' + method + '".'
-          );
-        })
-        .catch(function(error){
-          var retryable = isUnsupportedProviderError(error) || isInvalidParamsError(error);
-          if(retryable){
-            var cacheMethod = shouldCacheUnsupportedMethod(hasParams, error);
-            if(cacheMethod && index >= attempts.length - 1){
-              markMethodUnsupported(provider, method);
-              walletDebug('warn', 'Provider method marked unsupported', {
-                provider: providerLabel,
-                method: method,
-                error: walletErrorForLog(error)
-              });
-            } else {
-              walletDebug('warn', 'Provider request attempt retrying', {
-                provider: providerLabel,
-                method: method,
-                attemptIndex: index,
-                source: attempts[index].source,
-                variant: attempts[index].variant,
-                error: walletErrorForLog(error)
-              });
-            }
-            return run(index + 1, error);
-          }
-          walletDebug('warn', 'Provider request attempt failed', {
-            provider: providerLabel,
-            method: method,
-            attemptIndex: index,
-            source: attempts[index].source,
-            variant: attempts[index].variant,
-            error: walletErrorForLog(error)
-          });
-          throw error;
+      var attempt = attempts[index];
+      try{
+        walletDebug('info', 'Provider request attempt', {
+          provider: providerLabel,
+          method: method,
+          attemptIndex: index,
+          hasParams: hasParams,
+          source: attempt.source,
+          variant: attempt.variant,
+          timeoutMs: timeoutMs
         });
+        return await withPromiseTimeout(
+          Promise.resolve(attempt.run()),
+          timeoutMs,
+          'Wallet provider request timed out for "' + method + '".'
+        );
+      }catch(error){
+        var retryable = isUnsupportedProviderError(error) || isInvalidParamsError(error);
+        if(retryable){
+          var cacheMethod = shouldCacheUnsupportedMethod(hasParams, error);
+          if(cacheMethod && index >= attempts.length - 1){
+            markMethodUnsupported(provider, method);
+            walletDebug('warn', 'Provider method marked unsupported', {
+              provider: providerLabel,
+              method: method,
+              error: walletErrorForLog(error)
+            });
+          } else {
+            walletDebug('warn', 'Provider request attempt retrying', {
+              provider: providerLabel,
+              method: method,
+              attemptIndex: index,
+              source: attempts[index].source,
+              variant: attempts[index].variant,
+              error: walletErrorForLog(error)
+            });
+          }
+          return run(index + 1, error);
+        }
+        walletDebug('warn', 'Provider request attempt failed', {
+          provider: providerLabel,
+          method: method,
+          attemptIndex: index,
+          source: attempts[index].source,
+          variant: attempts[index].variant,
+          error: walletErrorForLog(error)
+        });
+        throw error;
+      }
     }
 
     return run(0, null);
@@ -1713,21 +1808,27 @@
   async function connectWalletInternal(){
     var targetNetwork = resolveTargetNetwork();
     var lastConnectError = null;
+    var providers = collectProviders();
     walletDebug('info', 'connectWalletInternal start', {
       targetNetwork: targetNetwork,
-      build: WALLET_DEBUG_BUILD
+      build: WALLET_DEBUG_BUILD,
+      providerCount: providers.length
     });
-    var initial = await resolveConnectedWallet({ targetNetwork: targetNetwork });
-    if(!walletDisconnectOverride && initial.address && !isTargetNetworkMismatch(targetNetwork, initial.network, initial.address)){
+    if(
+      !walletDisconnectOverride &&
+      lastWalletStatus &&
+      lastWalletStatus.hasAddress &&
+      !isTargetNetworkMismatch(targetNetwork, lastWalletStatus.network, lastWalletStatus.address)
+    ){
       walletDebug('info', 'connectWalletInternal short-circuit: already connected', {
-        address: initial.address,
-        network: initial.network || null
+        address: lastWalletStatus.address || null,
+        network: lastWalletStatus.network || null
       });
       await refreshWalletStatus();
       return true;
     }
 
-    if(!initial.providers.length){
+    if(!providers.length){
       walletDebug('warn', 'connectWalletInternal failed: no providers');
       throw new Error(buildWalletConnectFailureMessage(
         'No Stacks-compatible wallet provider detected in this browser.',
@@ -1738,8 +1839,8 @@
     setWalletBadge('is-loading', 'Wallet: connecting...');
 
     var connectMethods = ['stx_requestAccounts', 'requestAccounts', 'stx_connect', 'connect', 'wallet_connect'];
-    clearUnsupportedMethodsForProviders(initial.providers, connectMethods);
-    var connectProviders = getWalletAddressCandidates(initial.providers);
+    clearUnsupportedMethodsForProviders(providers, connectMethods);
+    var connectProviders = getWalletAddressCandidates(providers);
     var i;
     var m;
 
@@ -1932,22 +2033,19 @@
     }
 
     walletDebug('info', 'connectWallet invoked');
-    connectWalletInFlight = Promise.resolve()
-      .then(function(){
-        return connectWalletInternal();
-      })
-      .then(function(result){
+    connectWalletInFlight = (async function(){
+      try{
+        var result = await connectWalletInternal();
         walletDebug('info', 'connectWallet resolved', { result: !!result });
         return result;
-      })
-      .catch(function(error){
+      }catch(error){
         walletDebug('error', 'connectWallet rejected', walletErrorForLog(error));
         throw error;
-      })
-      .finally(function(){
+      }finally{
         connectWalletInFlight = null;
         updateWalletDisconnectButtonState();
-      });
+      }
+    })();
     updateWalletDisconnectButtonState();
 
     return connectWalletInFlight;
@@ -2067,22 +2165,19 @@
     }
 
     walletDebug('info', 'disconnectWallet invoked');
-    disconnectWalletInFlight = Promise.resolve()
-      .then(function(){
-        return disconnectWalletInternal();
-      })
-      .then(function(result){
+    disconnectWalletInFlight = (async function(){
+      try{
+        var result = await disconnectWalletInternal();
         walletDebug('info', 'disconnectWallet resolved', { result: !!result });
         return result;
-      })
-      .catch(function(error){
+      }catch(error){
         walletDebug('error', 'disconnectWallet rejected', walletErrorForLog(error));
         throw error;
-      })
-      .finally(function(){
+      }finally{
         disconnectWalletInFlight = null;
         updateWalletDisconnectButtonState();
-      });
+      }
+    })();
     updateWalletDisconnectButtonState();
 
     return disconnectWalletInFlight;
@@ -2835,6 +2930,7 @@
       tile.className = 'tile';
       tile.tabIndex = 0;
       tile.dataset.idx = i;
+      var versionLabel = getGameVersionLabelByIndex(i);
       var mode = (g.scoreMode || 'score');
       var best = HighScores.getBest(g.id, mode);
       var bestStr = '--';
@@ -2843,6 +2939,7 @@
       }
       tile.innerHTML =
         '<span class="tile-num">#'+(i+1)+'</span>' +
+        '<span class="tile-ver">'+versionLabel+'</span>' +
         '<div class="tile-title">'+g.title+'</div>' +
         '<div class="tile-genre">'+g.genreTag+'</div>' +
         '<div class="tile-best">'+bestStr+'</div>';
@@ -3005,6 +3102,24 @@
       });
     };
     updateWalletDisconnectButtonState();
+  }
+
+  if(walletConnectBtn){
+    walletConnectBtn.onclick = function(){
+      startWalletDebugSummaryWindow('wallet-connect-btn-click', {
+        source: 'walletConnectBtn',
+        targetNetwork: resolveTargetNetwork()
+      });
+      walletDebug('info', 'Wallet connect button clicked');
+      connectWallet().catch(function(error){
+        var msg = error && error.message ? error.message : String(error);
+        walletDebug('error', 'Connect button wallet connect failed', walletErrorForLog(error));
+        if(typeof window !== 'undefined' && typeof window.alert === 'function'){
+          window.alert('Wallet connect failed: ' + msg);
+        }
+      });
+    };
+    updateWalletConnectButtonState();
   }
 
   walletDebug('info', 'main.js initialized', {

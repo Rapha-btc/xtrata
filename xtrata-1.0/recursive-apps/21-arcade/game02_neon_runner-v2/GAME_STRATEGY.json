@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "gameKey": "game02_neon_runner",
+  "gameId": "neon_runner",
+  "title": "Neon Runner",
+  "genreTag": "Endless Runner",
+  "archetype": "runner",
+  "workspaceDir": "game02_neon_runner-v2",
+  "runtime": {
+    "file": "game02_neon_runner.js",
+    "version": "v1"
+  },
+  "reviewStatus": "approved",
+  "reviewer": "codex",
+  "reviewedAt": "2026-02-20T15:31:22.091Z",
+  "scaleGoal": "Scale obstacle vocab and pacing variety while preserving fairness, readability, and restart velocity.",
+  "iterationLanes": [
+    "obstacle-catalog",
+    "tempo-curves",
+    "player-ability-balance",
+    "difficulty-curation",
+    "performance"
+  ],
+  "testFocus": [
+    "spawn-fairness",
+    "hitbox-regressions",
+    "speed-scaling",
+    "restart-cleanup",
+    "input-latency"
+  ],
+  "notes": [
+    "Approved archetype strategy for Neon Runner.",
+    "Update this strategy when core loop, progression model, or scoring rules change.",
+    "Before promotion, run strict review for game02_neon_runner and relevant game tests.",
+    "Add a workspace tests/run.mjs suite before next production promotion."
+  ],
+  "gameSpecificTargets": [
+    "Increase obstacle family variety with fair sequencing rules.",
+    "Tune speed ramps and stamina windows for longer runs.",
+    "Add high-risk route modifiers with deterministic scoring impact."
+  ],
+  "approvedPlan": {
+    "summary": "Approved runner development strategy for Neon Runner.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "name": "Core Gameplay Systems",
+        "objective": "Codify pacing curves and obstacle sequencing rules into modular runtime logic.",
+        "deliverables": [
+          "Modularized runtime subsystems for the core loop.",
+          "Behavior parity verification against current production baseline.",
+          "Targeted unit/regression tests for extracted systems."
+        ],
+        "exitCriteria": [
+          "Core loop parity confirmed in seeded/manual runs.",
+          "No scoring or progression regressions.",
+          "All Stage 1 tests passing in CI/local runner."
+        ]
+      },
+      {
+        "id": "stage-2",
+        "name": "Content and Presentation Expansion",
+        "objective": "Introduce advanced obstacle sets, route choices, and progression rewards.",
+        "deliverables": [
+          "New mechanics/content variants aligned to archetype.",
+          "Improved readability and UX feedback for new systems.",
+          "Balance pass for rewards, upgrades, and challenge pacing."
+        ],
+        "exitCriteria": [
+          "Content additions validated against difficulty targets.",
+          "No readability regressions under peak gameplay load.",
+          "Mode-specific smoke tests passing."
+        ]
+      },
+      {
+        "id": "stage-3",
+        "name": "Optimization and Quality Hardening",
+        "objective": "Optimize update loops and validate long-session consistency with automation.",
+        "deliverables": [
+          "Performance optimization of hot loops and allocations.",
+          "Expanded automated regression and stress suites.",
+          "Release candidate checklist with rollback safety."
+        ],
+        "exitCriteria": [
+          "Performance budgets met for target hardware/browser matrix.",
+          "Regression suite stable across repeated runs.",
+          "Promotion checklist completed without blockers."
+        ]
+      }
+    ],
+    "qaGates": {
+      "requiredCommands": [
+        "npm run arcade:strategy:review -- --game game02_neon_runner --strict",
+        "node --check recursive-apps/21-arcade/games/game02_neon_runner.js"
+      ],
+      "manualChecks": [
+        "Launch -> playthrough -> game over -> restart cycle",
+        "Score/leaderboard integrity under repeated sessions",
+        "State cleanup after disconnect/reconnect and rerun"
+      ]
+    },
+    "successMetrics": [
+      "No impossible obstacle chains in seeded test corpus",
+      "Consistent run pacing over first 3 minutes",
+      "Clean reset state after every run"
+    ]
+  }
+}

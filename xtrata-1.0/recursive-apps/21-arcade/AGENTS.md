@@ -19,8 +19,73 @@ of game content (many levels/waves), stable performance, and trustworthy high-sc
 - `main.js`: launcher, game lifecycle, wallet status/connect, admin actions, debug controls.
 - `lib/highscores.js`: local PB + on-chain submit/fetch + scoring lock behavior.
 - `lib/utils.js`: shared rendering/audio/input helpers.
+- `lib/game-loader.js`: runtime loader that resolves and loads latest available game versions.
+- `games/latest-manifest.js`: auto-generated manifest of latest version per game slot.
 - `games/gameNN_slug.js`: standalone ES5 IIFE exposing global `GameNN`.
+- `gameNN_slug-vX/`: per-game development workspace (source modules, tests, build scripts, workspace `AGENTS.md`).
 - `tests/`: browser test harness and regression checks.
+
+## Main App Consumption
+- The arcade launcher main app must always load latest game versions through:
+  - `index.html` -> `games/latest-manifest.js` -> `lib/game-loader.js` -> `main.js`
+- Do not hardcode individual game version file paths in `main.js`.
+- Home tiles should display the resolved version label so testers can verify the active build before launching.
+- Version labels in tiles must show decimal form:
+  - examples: `v1.0`, `v2.0`, `v2.1`, `v2.2`
+
+## Game-Type Review Gate
+- Each workspace must maintain `GAME_STRATEGY.json` with archetype-aware scaling and testing plans.
+- Initialize missing profiles:
+  - `npm run arcade:strategy:init`
+- Run review audit across all workspaces:
+  - `npm run arcade:strategy:review`
+- Before promoting any game version, pass strict review for that game:
+  - `npm run arcade:strategy:review -- --game gameNN_slug --strict`
+- If genre/core-loop changes, update `GAME_STRATEGY.json`, workspace `AGENTS.md`, and `README.md` before code promotion.
+
+## Versioned Game Workflow
+- Keep `games/` as production-test outputs only.
+- Build and test inside per-game workspace folders, then promote via generated `games/gameNN_slug-vX.js` files.
+- Follow naming rules:
+  - base output: `games/gameNN_slug.js`
+  - versioned output: `games/gameNN_slug-vX.js` (example: `games/game01_astro_blaster-v2.js`)
+- Default version progression policy:
+  - from `v2`, use decimal minor versions by default: `v2.1`, `v2.2`, `v2.3`, ...
+  - use an explicit major jump only when requested
+  - helper command:
+    - `npm run arcade:next-version -- --game game01_astro_blaster`
+    - explicit override: `npm run arcade:next-version -- --game game01_astro_blaster --version 3`
+- Build automation policy:
+  - each workspace build command should mint a new decimal versioned runtime file on every build
+  - example progression for repeated builds: `v2 -> v2.1 -> v2.2 -> v2.3`
+  - after writing the new versioned file, regenerate `games/latest-manifest.js`
+- Loader behavior:
+  - `lib/game-loader.js` uses `games/latest-manifest.js` and chooses highest available `-v` version per slot.
+  - Deleting an unwanted newer version reverts to the previous version after manifest refresh.
+- Manifest lifecycle:
+  - Generate manually: `npm run arcade:games:manifest`
+  - Auto-generated on `npm run dev` and `npm run build` via `predev`/`prebuild`.
+
+## Per-Game Workspace Standards
+- Each `gameNN_slug-vX/` workspace must include:
+  - `AGENTS.md` with build/test/promotion rules for that game.
+  - `src/` for modular source and catalogs.
+  - `tests/` for deterministic workspace tests.
+  - `scripts/` with build entrypoint that outputs to `games/`.
+- Workspace `AGENTS.md` must document:
+  - invariants to preserve (`id`, `scoreMode`, launcher API shape, score submit path),
+  - how to add new modules and tests,
+  - exact build command,
+  - exact test command,
+  - promotion checklist for production testing in `games/`.
+
+## Workspace Coverage Model
+- Every playable slot in `games/` should have a matching enhancement workspace folder.
+- Current standard naming:
+  - runtime slot file: `games/gameNN_slug.js` (and optional `games/gameNN_slug-vX.js`)
+  - workspace folder: `gameNN_slug-v2/` (then `-v2.1/`, `-v2.2/` by default after v2, unless a major jump is explicitly requested)
+- Rule: do not enhance a game directly in `games/`; always implement in its workspace folder first, then promote generated output to `games/`.
+- For new slots, create the workspace folder immediately so the same test/build/promotion method is available from day one.
 
 ## Coding Rules
 - Use existing vanilla ES5 style (`var`, function declarations, IIFE game modules).

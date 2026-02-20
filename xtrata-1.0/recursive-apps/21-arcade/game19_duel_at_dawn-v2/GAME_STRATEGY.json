@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "gameKey": "game19_duel_at_dawn",
+  "gameId": "duel_at_dawn",
+  "title": "Duel at Dawn",
+  "genreTag": "Reaction",
+  "archetype": "action",
+  "workspaceDir": "game19_duel_at_dawn-v2",
+  "runtime": {
+    "file": "game19_duel_at_dawn.js",
+    "version": "v1"
+  },
+  "reviewStatus": "approved",
+  "reviewer": "codex",
+  "reviewedAt": "2026-02-20T15:31:22.091Z",
+  "scaleGoal": "Scale encounter complexity and skill expression while preserving clear cause/effect and fair challenge.",
+  "iterationLanes": [
+    "encounter-design",
+    "ability-balance",
+    "feedback-clarity",
+    "progression",
+    "performance"
+  ],
+  "testFocus": [
+    "damage-balance",
+    "cooldown-logic",
+    "state-transition",
+    "render-stability",
+    "restart-cleanup"
+  ],
+  "notes": [
+    "Approved archetype strategy for Duel at Dawn.",
+    "Update this strategy when core loop, progression model, or scoring rules change.",
+    "Before promotion, run strict review for game19_duel_at_dawn and relevant game tests.",
+    "Add a workspace tests/run.mjs suite before next production promotion."
+  ],
+  "gameSpecificTargets": [
+    "Deepen reaction/counter windows with readable telegraphs.",
+    "Introduce duel styles and tactical stance variations.",
+    "Tune fairness across latency and frame pacing boundaries."
+  ],
+  "approvedPlan": {
+    "summary": "Approved action development strategy for Duel at Dawn.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "name": "Core Gameplay Systems",
+        "objective": "Split combat and progression systems into independent modules with parity coverage.",
+        "deliverables": [
+          "Modularized runtime subsystems for the core loop.",
+          "Behavior parity verification against current production baseline.",
+          "Targeted unit/regression tests for extracted systems."
+        ],
+        "exitCriteria": [
+          "Core loop parity confirmed in seeded/manual runs.",
+          "No scoring or progression regressions.",
+          "All Stage 1 tests passing in CI/local runner."
+        ]
+      },
+      {
+        "id": "stage-2",
+        "name": "Content and Presentation Expansion",
+        "objective": "Add combat styles, enemy counters, and reward loops tied to mastery.",
+        "deliverables": [
+          "New mechanics/content variants aligned to archetype.",
+          "Improved readability and UX feedback for new systems.",
+          "Balance pass for rewards, upgrades, and challenge pacing."
+        ],
+        "exitCriteria": [
+          "Content additions validated against difficulty targets.",
+          "No readability regressions under peak gameplay load.",
+          "Mode-specific smoke tests passing."
+        ]
+      },
+      {
+        "id": "stage-3",
+        "name": "Optimization and Quality Hardening",
+        "objective": "Tune difficulty curves and automate combat regression validation.",
+        "deliverables": [
+          "Performance optimization of hot loops and allocations.",
+          "Expanded automated regression and stress suites.",
+          "Release candidate checklist with rollback safety."
+        ],
+        "exitCriteria": [
+          "Performance budgets met for target hardware/browser matrix.",
+          "Regression suite stable across repeated runs.",
+          "Promotion checklist completed without blockers."
+        ]
+      }
+    ],
+    "qaGates": {
+      "requiredCommands": [
+        "npm run arcade:strategy:review -- --game game19_duel_at_dawn --strict",
+        "node --check recursive-apps/21-arcade/games/game19_duel_at_dawn.js"
+      ],
+      "manualChecks": [
+        "Launch -> playthrough -> game over -> restart cycle",
+        "Score/leaderboard integrity under repeated sessions",
+        "State cleanup after disconnect/reconnect and rerun"
+      ]
+    },
+    "successMetrics": [
+      "Consistent TTK envelope across target skill bands",
+      "No invalid combat states during stress tests",
+      "No restart desync after repeated failures"
+    ]
+  }
+}

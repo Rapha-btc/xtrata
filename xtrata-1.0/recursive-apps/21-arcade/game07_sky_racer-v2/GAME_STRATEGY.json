@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "gameKey": "game07_sky_racer",
+  "gameId": "sky_racer",
+  "title": "Sky Racer",
+  "genreTag": "Racing",
+  "archetype": "racing",
+  "workspaceDir": "game07_sky_racer-v2",
+  "runtime": {
+    "file": "game07_sky_racer.js",
+    "version": "v1"
+  },
+  "reviewStatus": "approved",
+  "reviewer": "codex",
+  "reviewedAt": "2026-02-20T15:31:22.091Z",
+  "scaleGoal": "Scale track/content variety and speed tiers while preserving control feel and timing precision.",
+  "iterationLanes": [
+    "track-authoring",
+    "handling-balance",
+    "progression",
+    "ai-racers",
+    "performance"
+  ],
+  "testFocus": [
+    "lap-timing-accuracy",
+    "collision-robustness",
+    "speed-tier-balance",
+    "input-latency",
+    "restart-cleanup"
+  ],
+  "notes": [
+    "Approved archetype strategy for Sky Racer.",
+    "Update this strategy when core loop, progression model, or scoring rules change.",
+    "Before promotion, run strict review for game07_sky_racer and relevant game tests.",
+    "Add a workspace tests/run.mjs suite before next production promotion."
+  ],
+  "gameSpecificTargets": [
+    "Expand course segments and hazard combinations.",
+    "Tune handling model across speed tiers and weather states.",
+    "Add progression rewards tied to consistent lap execution."
+  ],
+  "approvedPlan": {
+    "summary": "Approved racing development strategy for Sky Racer.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "name": "Core Gameplay Systems",
+        "objective": "Modularize track/handling parameters with deterministic lap simulation hooks.",
+        "deliverables": [
+          "Modularized runtime subsystems for the core loop.",
+          "Behavior parity verification against current production baseline.",
+          "Targeted unit/regression tests for extracted systems."
+        ],
+        "exitCriteria": [
+          "Core loop parity confirmed in seeded/manual runs.",
+          "No scoring or progression regressions.",
+          "All Stage 1 tests passing in CI/local runner."
+        ]
+      },
+      {
+        "id": "stage-2",
+        "name": "Content and Presentation Expansion",
+        "objective": "Expand track modifiers, opponent behaviors, and progression unlocks.",
+        "deliverables": [
+          "New mechanics/content variants aligned to archetype.",
+          "Improved readability and UX feedback for new systems.",
+          "Balance pass for rewards, upgrades, and challenge pacing."
+        ],
+        "exitCriteria": [
+          "Content additions validated against difficulty targets.",
+          "No readability regressions under peak gameplay load.",
+          "Mode-specific smoke tests passing."
+        ]
+      },
+      {
+        "id": "stage-3",
+        "name": "Optimization and Quality Hardening",
+        "objective": "Optimize rendering/physics paths and automate timing regression checks.",
+        "deliverables": [
+          "Performance optimization of hot loops and allocations.",
+          "Expanded automated regression and stress suites.",
+          "Release candidate checklist with rollback safety."
+        ],
+        "exitCriteria": [
+          "Performance budgets met for target hardware/browser matrix.",
+          "Regression suite stable across repeated runs.",
+          "Promotion checklist completed without blockers."
+        ]
+      }
+    ],
+    "qaGates": {
+      "requiredCommands": [
+        "npm run arcade:strategy:review -- --game game07_sky_racer --strict",
+        "node --check recursive-apps/21-arcade/games/game07_sky_racer.js"
+      ],
+      "manualChecks": [
+        "Launch -> playthrough -> game over -> restart cycle",
+        "Score/leaderboard integrity under repeated sessions",
+        "State cleanup after disconnect/reconnect and rerun"
+      ]
+    },
+    "successMetrics": [
+      "Lap times remain deterministic under seeded conditions",
+      "No control drift across speed tiers",
+      "Stable collision behavior on edge cases"
+    ]
+  }
+}

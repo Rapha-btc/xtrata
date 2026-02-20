@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "gameKey": "game16_platform_micro",
+  "gameId": "platform_micro",
+  "title": "Platform Micro",
+  "genreTag": "Platformer",
+  "archetype": "platformer",
+  "workspaceDir": "game16_platform_micro-v2",
+  "runtime": {
+    "file": "game16_platform_micro.js",
+    "version": "v1"
+  },
+  "reviewStatus": "approved",
+  "reviewer": "codex",
+  "reviewedAt": "2026-02-20T15:31:22.091Z",
+  "scaleGoal": "Scale movement depth and level content while preserving responsiveness and collision reliability.",
+  "iterationLanes": [
+    "movement-physics",
+    "level-design",
+    "checkpoint-tuning",
+    "ability-progression",
+    "performance"
+  ],
+  "testFocus": [
+    "jump-arc-consistency",
+    "collision-edge-cases",
+    "camera-follow-stability",
+    "save-restart",
+    "input-latency"
+  ],
+  "notes": [
+    "Approved archetype strategy for Platform Micro.",
+    "Update this strategy when core loop, progression model, or scoring rules change.",
+    "Before promotion, run strict review for game16_platform_micro and relevant game tests.",
+    "Add a workspace tests/run.mjs suite before next production promotion."
+  ],
+  "gameSpecificTargets": [
+    "Expand movement kit and precision challenge patterns.",
+    "Add level mechanics that escalate traversal complexity.",
+    "Tune checkpoint flow for fast iteration and low frustration."
+  ],
+  "approvedPlan": {
+    "summary": "Approved platformer development strategy for Platform Micro.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "name": "Core Gameplay Systems",
+        "objective": "Extract movement/collision subsystems with strict parity tests.",
+        "deliverables": [
+          "Modularized runtime subsystems for the core loop.",
+          "Behavior parity verification against current production baseline.",
+          "Targeted unit/regression tests for extracted systems."
+        ],
+        "exitCriteria": [
+          "Core loop parity confirmed in seeded/manual runs.",
+          "No scoring or progression regressions.",
+          "All Stage 1 tests passing in CI/local runner."
+        ]
+      },
+      {
+        "id": "stage-2",
+        "name": "Content and Presentation Expansion",
+        "objective": "Add level mechanics, traversal abilities, and branch routes.",
+        "deliverables": [
+          "New mechanics/content variants aligned to archetype.",
+          "Improved readability and UX feedback for new systems.",
+          "Balance pass for rewards, upgrades, and challenge pacing."
+        ],
+        "exitCriteria": [
+          "Content additions validated against difficulty targets.",
+          "No readability regressions under peak gameplay load.",
+          "Mode-specific smoke tests passing."
+        ]
+      },
+      {
+        "id": "stage-3",
+        "name": "Optimization and Quality Hardening",
+        "objective": "Optimize update/render loops and automate movement regression matrices.",
+        "deliverables": [
+          "Performance optimization of hot loops and allocations.",
+          "Expanded automated regression and stress suites.",
+          "Release candidate checklist with rollback safety."
+        ],
+        "exitCriteria": [
+          "Performance budgets met for target hardware/browser matrix.",
+          "Regression suite stable across repeated runs.",
+          "Promotion checklist completed without blockers."
+        ]
+      }
+    ],
+    "qaGates": {
+      "requiredCommands": [
+        "npm run arcade:strategy:review -- --game game16_platform_micro --strict",
+        "node --check recursive-apps/21-arcade/games/game16_platform_micro.js"
+      ],
+      "manualChecks": [
+        "Launch -> playthrough -> game over -> restart cycle",
+        "Score/leaderboard integrity under repeated sessions",
+        "State cleanup after disconnect/reconnect and rerun"
+      ]
+    },
+    "successMetrics": [
+      "Movement frame windows remain stable over all levels",
+      "No collision tunneling on high-speed jumps",
+      "Checkpoint restores are deterministic"
+    ]
+  }
+}
