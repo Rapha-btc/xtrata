@@ -1,4 +1,113 @@
 import { cloneSerializable } from '../framework/clone-serializable.mjs';
+import { rewardCatalog } from '../catalogs/rewards.mjs';
+import { hazardCatalog } from '../catalogs/hazards.mjs';
+
+const rewardDropIntelMap = Object.freeze({
+  reward_supply_cache: {
+    label: 'Supply Cache',
+    shape: 'Repair Crate',
+    effectLabel: '+1 life',
+    glyph: '+',
+    color: '#7efcff',
+    team: 'player',
+    animation: 'pulse'
+  },
+  reward_proto_upgrade: {
+    label: 'Prototype Upgrade',
+    shape: 'Power Crate',
+    effectLabel: 'Spread power +1',
+    glyph: 'P',
+    color: '#fff08f',
+    team: 'player',
+    animation: 'glow'
+  },
+  reward_thruster_module: {
+    label: 'Thruster Module',
+    shape: 'Mobility Crate',
+    effectLabel: 'Unlocks up/down',
+    glyph: 'T',
+    color: '#73f8ff',
+    team: 'player',
+    animation: 'float'
+  },
+  reward_weapon_multiplier: {
+    label: 'Weapon Multiplier',
+    shape: 'Core Pickup',
+    effectLabel: 'Faster fire tier',
+    glyph: 'M',
+    color: '#ffd66e',
+    team: 'player',
+    animation: 'pulse'
+  },
+  reward_aegis_shell: {
+    label: 'Aegis Shell',
+    shape: 'Defense Crate',
+    effectLabel: 'Shield charge',
+    glyph: 'S',
+    color: '#7df2ff',
+    team: 'player',
+    animation: 'glow'
+  }
+});
+
+function formatHazardEffects(effects){
+  var e = effects || {};
+  var parts = [];
+  if(Number(e.weaponJamFrames) > 0){
+    parts.push('jam ' + (Number(e.weaponJamFrames) / 60).toFixed(1) + 's');
+  }
+  if(Number(e.radialProjectiles) > 0){
+    parts.push('shard burst x' + Math.floor(Number(e.radialProjectiles)));
+  }
+  if(Number(e.moveSpeedMultiplier) > 0 && Number(e.moveSpeedMultiplier) < 1){
+    parts.push('slow ' + Math.round((1 - Number(e.moveSpeedMultiplier)) * 100) + '%');
+  }
+  if(Number(e.enemyBudgetBonus) > 0){
+    parts.push('ambush +' + Math.floor(Number(e.enemyBudgetBonus)) + ' threat');
+  }
+  return parts.join(', ') || 'Hostile status effect';
+}
+
+function buildDropsSectionEntries(){
+  var entries = [];
+  var i;
+
+  for(i = 0; i < rewardCatalog.length; i++){
+    var reward = rewardCatalog[i];
+    if(!reward || !reward.id) continue;
+    var mapped = rewardDropIntelMap[reward.id];
+    if(!mapped) continue;
+    entries.push({
+      id: 'drop-' + reward.id,
+      label: mapped.label,
+      color: mapped.color,
+      shape: mapped.shape,
+      effectLabel: mapped.effectLabel,
+      glyph: mapped.glyph,
+      animation: mapped.animation,
+      team: mapped.team,
+      trait: reward.outcome || mapped.effectLabel
+    });
+  }
+
+  for(i = 0; i < hazardCatalog.length; i++){
+    var hazard = hazardCatalog[i];
+    if(!hazard || !hazard.id) continue;
+    entries.push({
+      id: 'drop-' + hazard.id,
+      label: hazard.label || 'Hazard',
+      color: '#ff6f86',
+      shape: 'Hazard Crate',
+      effectLabel: formatHazardEffects(hazard.effects),
+      glyph: '!',
+      animation: 'blink',
+      team: 'enemy',
+      trait: (hazard.summary || 'Negative effect') + ' ' + formatHazardEffects(hazard.effects)
+    });
+  }
+
+  return entries;
+}
 
 const combatIntelPanelConfig = Object.freeze({
   layout: {
@@ -8,15 +117,22 @@ const combatIntelPanelConfig = Object.freeze({
   },
   sectionOrder: {
     left: ['players', 'enemies'],
-    right: ['weapons', 'upgrades', 'bullets', 'explosions']
+    right: ['weapons', 'upgrades', 'drops', 'bullets', 'explosions']
   },
   sectionTitles: {
     players: 'Player Types',
     enemies: 'Enemy Types',
     weapons: 'Weapon Types',
     upgrades: 'Upgrade Patterns',
+    drops: 'Drops & Crates',
     bullets: 'Bullet Types',
     explosions: 'Explosion Types'
+  },
+  sectionTeams: {
+    players: 'player',
+    enemies: 'enemy',
+    upgrades: 'player',
+    bullets: 'enemy'
   },
   sections: {
     players: [
@@ -34,10 +150,10 @@ const combatIntelPanelConfig = Object.freeze({
       { id: 'carrier', label: 'Carrier', color: '#ff4de3', shape: 'Carrier Barge', glyph: '▦', animation: 'pulse', trait: 'Fan-fire boss-lite encounter.' }
     ],
     weapons: [
-      { id: 'pulse-core', label: 'Pulse Core', color: '#fff08f', shape: 'Forward Beam', glyph: '┃', animation: 'glow', trait: 'Primary centerline stream.' },
-      { id: 'side-lances', label: 'Side Lances', color: '#7efcff', shape: 'Dual Offsets', glyph: '∥', animation: 'pulse', trait: 'Unlocked at power level 2.' },
-      { id: 'wing-spears', label: 'Wing Spears', color: '#ffde59', shape: 'Angled Pair', glyph: '⟋', animation: 'float', trait: 'Unlocked at power level 3.' },
-      { id: 'weapon-jam', label: 'Jam State', color: '#ff5b6e', shape: 'Suppression', glyph: '✖', animation: 'blink', trait: 'Hazard locks firing briefly.' }
+      { id: 'pulse-core', label: 'Pulse Core', color: '#fff08f', shape: 'Forward Beam', glyph: '┃', animation: 'glow', team: 'player', trait: 'Primary centerline stream.' },
+      { id: 'side-lances', label: 'Side Lances', color: '#7efcff', shape: 'Dual Offsets', glyph: '∥', animation: 'pulse', team: 'player', trait: 'Unlocked at power level 2.' },
+      { id: 'wing-spears', label: 'Wing Spears', color: '#ffde59', shape: 'Angled Pair', glyph: '⟋', animation: 'float', team: 'player', trait: 'Unlocked at power level 3.' },
+      { id: 'weapon-jam', label: 'Jam State', color: '#ff5b6e', shape: 'Suppression', glyph: '✖', animation: 'blink', team: 'enemy', trait: 'Hazard locks firing briefly.' }
     ],
     upgrades: [
       { id: 'upgrade-triple-volley', label: 'Triple Volley', color: '#fff08f', shape: '3x Forward', visual: 'triple-volley', trait: 'Adds central triple-shot burst pattern.' },
@@ -46,6 +162,7 @@ const combatIntelPanelConfig = Object.freeze({
       { id: 'upgrade-tracking-pulse', label: 'Tracking Pulse', color: '#ff5252', shape: 'Seek Target', visual: 'tracking-pulse', trait: 'Target-seeking pulse aligns to nearest hostile.' },
       { id: 'upgrade-arc-fan', label: 'Arc Fan', color: '#ff79f2', shape: 'Fan Arc', visual: 'arc-fan', trait: 'Wide fan burst for crowd pressure.' }
     ],
+    drops: buildDropsSectionEntries(),
     bullets: [
       { id: 'enemy-single', label: 'Single Lance', color: '#ff8f00', shape: 'Linear Drop', glyph: '•', visual: 'single-lance', animation: 'pulse', trait: 'Basic enemy shot line.' },
       { id: 'enemy-spread', label: 'Split Arc', color: '#ff7f50', shape: 'Twin Diverge', glyph: '⋰', visual: 'split-lance', animation: 'shake', trait: 'Spread pattern from zigzag foes.' },
@@ -115,13 +232,15 @@ function buildRuntimeSnippet(config){
       '.ab-intel-table{width:100%;border-collapse:collapse;font:10px/1.25 monospace;color:#d7ecff;}',
       '.ab-intel-table td,.ab-intel-table th{padding:3px 2px;border-bottom:1px solid rgba(113,154,196,0.14);vertical-align:middle;}',
       '.ab-intel-table th{font-size:9px;color:#79b8dc;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;}',
-      '.ab-intel-swatch{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:4px;border:1px solid rgba(255,255,255,0.28);font-size:12px;font-weight:700;color:#031018;box-shadow:0 0 7px rgba(0,0,0,0.3);}',
+      '.ab-intel-swatch{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:4px;border:1px solid rgba(138,185,224,0.46);background:rgba(14,24,38,0.94);font-size:12px;font-weight:700;color:var(--intel-accent-color,#9fe8ff);text-shadow:0 0 4px rgba(0,0,0,0.6);box-shadow:0 0 7px rgba(0,0,0,0.3);}',
       '.ab-intel-swatch.is-pulse{animation:abIntelPulse 1.2s ease-in-out infinite;}',
       '.ab-intel-swatch.is-spin{animation:abIntelSpin 1.6s linear infinite;}',
       '.ab-intel-swatch.is-float{animation:abIntelFloat 1.5s ease-in-out infinite;}',
       '.ab-intel-swatch.is-blink{animation:abIntelBlink 0.9s step-start infinite;}',
       '.ab-intel-swatch.is-shake{animation:abIntelShake 0.8s linear infinite;}',
       '.ab-intel-swatch.is-glow{animation:abIntelGlow 1.4s ease-in-out infinite;}',
+      '.ab-intel-swatch.is-team-player{background:rgba(24,42,76,0.93);border-color:rgba(118,186,255,0.7);box-shadow:inset 0 0 0 1px rgba(166,214,255,0.2),0 0 7px rgba(29,91,176,0.38);}',
+      '.ab-intel-swatch.is-team-enemy{background:rgba(78,28,36,0.93);border-color:rgba(255,132,132,0.7);box-shadow:inset 0 0 0 1px rgba(255,188,188,0.2),0 0 7px rgba(176,44,60,0.38);}',
       '.ab-intel-swatch.is-bullet{position:relative;overflow:hidden;background:rgba(3,16,26,0.92);color:transparent;}',
       '.ab-intel-swatch.is-upgrade{position:relative;overflow:hidden;background:rgba(5,20,34,0.92);color:transparent;}',
       '.ab-intel-swatch.is-explosion{position:relative;overflow:hidden;background:rgba(20,8,10,0.9);color:transparent;}',
@@ -171,6 +290,9 @@ function buildRuntimeSnippet(config){
       '.ab-intel-live{display:grid;grid-template-columns:auto 1fr;gap:4px 8px;font:11px monospace;color:#bee9ff;margin-bottom:6px;}',
       '.ab-intel-live-key{color:#74b2d6;}',
       '.ab-intel-live-val{color:#d9f6ff;}',
+      '.ab-intel-feed{margin:8px 0 10px;border-top:1px solid rgba(114,171,222,0.24);padding-top:8px;}',
+      '.ab-intel-feed-head{font:11px monospace;color:#8dd9ff;margin-bottom:6px;}',
+      '.ab-intel-feed-host{display:flex;flex-direction:column;gap:6px;}',
       '@keyframes abIntelPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.12);}}',
       '@keyframes abIntelSpin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}',
       '@keyframes abIntelFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-2px);}}',
@@ -212,15 +334,46 @@ function buildRuntimeSnippet(config){
         level: row('Level'),
         lives: row('Lives'),
         wave: row('Wave'),
-        sector: row('Sector')
+        sector: row('Sector'),
+        path: row('Path'),
+        mobility: row('Thrusters'),
+        fire: row('Fire'),
+        shield: row('Shield'),
+        special: row('Special'),
+        hazard: row('Hazard')
       }
     };
   }
 
-  function createPreviewCanvasSwatch(entry, sectionKey){
+  function resolveSwatchTeam(entry, sectionKey){
+    var explicitTeam = entry && typeof entry.team === 'string' ? String(entry.team).toLowerCase() : '';
+    if(explicitTeam === 'player' || explicitTeam === 'enemy'){
+      return explicitTeam;
+    }
+    var sectionTeams = runtimeConfig.sectionTeams || {};
+    var sectionTeam = typeof sectionTeams[sectionKey] === 'string' ? String(sectionTeams[sectionKey]).toLowerCase() : '';
+    if(sectionTeam === 'player' || sectionTeam === 'enemy'){
+      return sectionTeam;
+    }
+    return '';
+  }
+
+  function resolveSwatchTeamClass(team){
+    if(team === 'player'){
+      return ' is-team-player';
+    }
+    if(team === 'enemy'){
+      return ' is-team-enemy';
+    }
+    return '';
+  }
+
+  function createPreviewCanvasSwatch(entry, sectionKey, team){
+    var teamClass = resolveSwatchTeamClass(team);
     var swatch = document.createElement('span');
-    swatch.className = 'ab-intel-swatch is-preview-canvas';
+    swatch.className = 'ab-intel-swatch is-preview-canvas' + teamClass;
     swatch.title = entry.label || '';
+    swatch.style.setProperty('--intel-accent-color', entry.color || '#9fe8ff');
     swatch.style.setProperty('--shot-color', entry.color || '#ffbf40');
 
     var canvas = document.createElement('canvas');
@@ -231,8 +384,7 @@ function buildRuntimeSnippet(config){
 
     var previewCtx = canvas.getContext ? canvas.getContext('2d') : null;
     if(!previewCtx){
-      swatch.className = 'ab-intel-swatch';
-      swatch.style.backgroundColor = entry.color || '#416181';
+      swatch.className = 'ab-intel-swatch' + teamClass;
       swatch.textContent = entry.glyph || '•';
       return swatch;
     }
@@ -248,19 +400,21 @@ function buildRuntimeSnippet(config){
   }
 
   function createSwatch(entry, sectionKey){
+    var team = resolveSwatchTeam(entry, sectionKey);
     if(sectionKey === 'bullets'){
-      return createPreviewCanvasSwatch(entry, sectionKey);
+      return createPreviewCanvasSwatch(entry, sectionKey, team);
     }
     if(sectionKey === 'upgrades'){
-      return createPreviewCanvasSwatch(entry, sectionKey);
+      return createPreviewCanvasSwatch(entry, sectionKey, team);
     }
     if(sectionKey === 'explosions'){
-      return createPreviewCanvasSwatch(entry, sectionKey);
+      return createPreviewCanvasSwatch(entry, sectionKey, team);
     }
     var swatch = document.createElement('span');
+    var teamClass = resolveSwatchTeamClass(team);
     var animation = entry.animation ? ' is-' + entry.animation : '';
-    swatch.className = 'ab-intel-swatch' + animation;
-    swatch.style.backgroundColor = entry.color || '#416181';
+    swatch.className = 'ab-intel-swatch' + teamClass + animation;
+    swatch.style.setProperty('--intel-accent-color', entry.color || '#9fe8ff');
     swatch.textContent = entry.glyph || '•';
     swatch.title = entry.label || '';
     return swatch;
@@ -280,7 +434,8 @@ function buildRuntimeSnippet(config){
 
     var thead = document.createElement('thead');
     var trh = document.createElement('tr');
-    var headers = ['Tile', 'Type', 'Color', 'Shape'];
+    var isDropSection = sectionKey === 'drops';
+    var headers = isDropSection ? ['Tile', 'Drop', 'Effect'] : ['Tile', 'Type', 'Shape'];
     var i;
     for(i = 0; i < headers.length; i++){
       var th = document.createElement('th');
@@ -311,15 +466,11 @@ function buildRuntimeSnippet(config){
       typeCell.textContent = row.label || row.id || 'Unknown';
       typeCell.title = row.trait || '';
 
-      var colorCell = document.createElement('td');
-      colorCell.textContent = row.color || '-';
-
       var shapeCell = document.createElement('td');
-      shapeCell.textContent = row.shape || '-';
+      shapeCell.textContent = isDropSection ? (row.effectLabel || row.shape || '-') : (row.shape || '-');
 
       tr.appendChild(tileCell);
       tr.appendChild(typeCell);
-      tr.appendChild(colorCell);
       tr.appendChild(shapeCell);
       tbody.appendChild(tr);
     }
@@ -432,6 +583,17 @@ function buildRuntimeSnippet(config){
     var liveBoard = createLiveBoard();
     leftCol.appendChild(liveBoard.node);
 
+    var feedWrap = document.createElement('div');
+    feedWrap.className = 'ab-intel-feed';
+    var feedHead = document.createElement('div');
+    feedHead.className = 'ab-intel-feed-head';
+    feedHead.textContent = 'Mission Feed';
+    var feedHost = document.createElement('div');
+    feedHost.className = 'ab-intel-feed-host';
+    feedWrap.appendChild(feedHead);
+    feedWrap.appendChild(feedHost);
+    leftCol.appendChild(feedWrap);
+
     var previewTiles = [];
     fillColumn(leftCol, (runtimeConfig.sectionOrder && runtimeConfig.sectionOrder.left) || [], previewTiles);
     fillColumn(rightCol, (runtimeConfig.sectionOrder && runtimeConfig.sectionOrder.right) || [], previewTiles);
@@ -445,6 +607,7 @@ function buildRuntimeSnippet(config){
       root: root,
       hostContainer: hostContainer,
       gameHost: gameHost,
+      overlayHost: feedHost,
       toggleBtn: toggleBtn,
       hidden: false,
       liveBoard: liveBoard,
@@ -488,6 +651,26 @@ function buildRuntimeSnippet(config){
       setField('lives', Number(snapshot.lives || 0));
       setField('wave', Number(snapshot.wave || 0));
       setField('sector', snapshot.sector || 'Unknown');
+      setField('path', snapshot.upgradeArchetype ? String(snapshot.upgradeArchetype).toUpperCase() : 'UNASSIGNED');
+      setField('mobility', snapshot.verticalMobilityUnlocked ? 'ONLINE' : 'LOCKED');
+      setField('fire', snapshot.fireAutoUnlocked ? ('AUTO T' + Number(snapshot.fireCadenceTier || 0)) : ('TAP T' + Number(snapshot.fireCadenceTier || 0)));
+      setField('shield', Number(snapshot.shieldCharges || 0) > 0 ? ('Aegis x' + Number(snapshot.shieldCharges || 0)) : 'OFF');
+      var charge = Math.max(0, Number(snapshot.specialCharge || 0));
+      var chargeMax = Math.max(1, Number(snapshot.specialChargeMax || 100));
+      var pct = Math.max(0, Math.min(100, Math.floor((charge / chargeMax) * 100)));
+      setField('special', snapshot.specialReady ? 'EMP READY' : (pct + '%'));
+      var hazardStatus = 'CLEAR';
+      var jamTimer = Math.max(0, Number(snapshot.weaponJamTimer || 0));
+      var slowTimer = Math.max(0, Number(snapshot.hazardSlowTimer || 0));
+      var ambushTimer = Math.max(0, Number(snapshot.hazardReinforcementTimer || 0));
+      if(jamTimer > 0){
+        hazardStatus = 'JAM ' + (jamTimer / 60).toFixed(1) + 's';
+      } else if(slowTimer > 0){
+        hazardStatus = 'SLOW ' + (slowTimer / 60).toFixed(1) + 's';
+      } else if(ambushTimer > 0){
+        hazardStatus = 'AMBUSH ' + (ambushTimer / 60).toFixed(1) + 's';
+      }
+      setField('hazard', hazardStatus);
     }
 
     toggleBtn.onclick = function(){

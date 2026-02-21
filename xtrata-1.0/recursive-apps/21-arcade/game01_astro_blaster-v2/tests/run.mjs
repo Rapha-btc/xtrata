@@ -6,6 +6,10 @@ import { run as runRewardsHazardsRuntime } from './rewards-hazards-runtime.test.
 import { run as runWaveProgressionRuntime } from './wave-progression-runtime.test.mjs';
 import { run as runEnemyCombatRuntime } from './enemy-combat-runtime.test.mjs';
 import { run as runCombatIntelPanel } from './combat-intel-panel.test.mjs';
+import { run as runNarrativeRuntime } from './narrative-runtime.test.mjs';
+import { run as runThreatBriefingRuntime } from './threat-briefing-runtime.test.mjs';
+import { run as runReputationRuntime } from './reputation-runtime.test.mjs';
+import { run as runSpecialWeaponRuntime } from './special-weapon-runtime.test.mjs';
 
 const suites = [
   { name: 'module-registry', fn: runModuleRegistry },
@@ -15,7 +19,11 @@ const suites = [
   { name: 'rewards-hazards-runtime', fn: runRewardsHazardsRuntime },
   { name: 'wave-progression-runtime', fn: runWaveProgressionRuntime },
   { name: 'enemy-combat-runtime', fn: runEnemyCombatRuntime },
-  { name: 'combat-intel-panel', fn: runCombatIntelPanel }
+  { name: 'combat-intel-panel', fn: runCombatIntelPanel },
+  { name: 'narrative-runtime', fn: runNarrativeRuntime },
+  { name: 'threat-briefing-runtime', fn: runThreatBriefingRuntime },
+  { name: 'reputation-runtime', fn: runReputationRuntime },
+  { name: 'special-weapon-runtime', fn: runSpecialWeaponRuntime }
 ];
 
 async function main(){

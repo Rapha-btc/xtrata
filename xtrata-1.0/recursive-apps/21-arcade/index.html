@@ -13,7 +13,6 @@
     <span id="wallet-status-badge" class="wallet-status-badge is-loading" aria-live="polite">Wallet: checking...</span>
     <button id="wallet-connect-btn" title="Connect wallet">Connect</button>
     <button id="wallet-disconnect-btn" title="Disconnect wallet" style="display:none;">Disconnect</button>
-    <button id="admin-btn" title="Arcade score admin">Admin</button>
     <button id="force-next-wave-btn" title="Force next wave/level for testing" style="display:none;">Next Wave</button>
     <button id="sound-toggle" title="Toggle Sound">🔊</button>
     <button id="exit-btn" style="display:none;">Exit to Arcade</button>
@@ -82,7 +81,8 @@
     contractName: 'xtrata-arcade-scores-v1-3',
     functionName: 'submit-score',
     leaderboardFunctionName: 'get-top10',
-    apiBaseUrl: 'https://api.mainnet.hiro.so',
+    apiBaseUrl: '/rpc',
+    apiFallbackBaseUrls: ['https://api.mainnet.hiro.so'],
     readSenderAddress: '',
     requiresAttestation: false,
     attestationEndpoint: '',

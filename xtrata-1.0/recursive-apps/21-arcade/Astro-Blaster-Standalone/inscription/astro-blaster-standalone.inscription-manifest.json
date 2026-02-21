@@ -1,0 +1,114 @@
+{
+  "schema": "xtrata-standalone-inscription-manifest@1",
+  "appId": "astro_blaster_standalone",
+  "release": "v2.37-standalone",
+  "createdAt": "2026-02-21",
+  "contentContract": {
+    "address": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X",
+    "name": "xtrata-v2-1-0",
+    "network": "mainnet",
+    "senderAddress": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X"
+  },
+  "scoreContract": {
+    "address": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X",
+    "name": "xtrata-arcade-scores-v1-3",
+    "network": "mainnet",
+    "functionName": "submit-score",
+    "leaderboardFunctionName": "get-top10"
+  },
+  "leafModules": [
+    {
+      "key": "styles",
+      "path": "styles.css",
+      "mimeType": "text/css",
+      "sizeBytes": 15888,
+      "sha256": "d8b3e8f89a257432222afd3785b49da0d03e2e297f526eb89270998fc1e220e3",
+      "mintOrder": 1,
+      "mintedInscriptionId": 0
+    },
+    {
+      "key": "utils",
+      "path": "lib/utils.js",
+      "mimeType": "text/javascript",
+      "sizeBytes": 2261,
+      "sha256": "16fb1f0d7a410ef200cfeded828160f1cb4619641cd0ae5ecc46b0b106e2a69f",
+      "mintOrder": 2,
+      "mintedInscriptionId": 0
+    },
+    {
+      "key": "highscores",
+      "path": "lib/highscores.js",
+      "mimeType": "text/javascript",
+      "sizeBytes": 129741,
+      "sha256": "dd47cfbf1d3f3468076e7f2038dc82da1b5238c4e091018448bb51c75ab71603",
+      "mintOrder": 3,
+      "mintedInscriptionId": 0
+    },
+    {
+      "key": "gameRuntime",
+      "path": "games/game01_astro_blaster-v2.37.js",
+      "mimeType": "text/javascript",
+      "sizeBytes": 263260,
+      "sha256": "dbadd0907f3951646c3768ea21052091e3d253cbe6f5a9d2a6622ff632479675",
+      "mintOrder": 4,
+      "mintedInscriptionId": 0
+    },
+    {
+      "key": "main",
+      "path": "main.js",
+      "mimeType": "text/javascript",
+      "sizeBytes": 118415,
+      "sha256": "b057fa344a8757f2bc01c75a6bbc8f70d29e0ffb5dad7576ee1f92de295f3e3a",
+      "mintOrder": 5,
+      "mintedInscriptionId": 0
+    }
+  ],
+  "parent": {
+    "path": "inscription/astro-blaster-parent.template.html",
+    "mimeType": "text/html",
+    "sizeBytes": 11834,
+    "sha256": "51744f07604ab2548f977c1ebfd1a3b2f0af69d7e45971ec640e1e13baebd1ea",
+    "configFieldsToSetBeforeMint": [
+      "CONFIG.contentContractAddress",
+      "CONFIG.contentContractName",
+      "CONFIG.senderAddress",
+      "CONFIG.moduleIds.styles",
+      "CONFIG.moduleIds.utils",
+      "CONFIG.moduleIds.highscores",
+      "CONFIG.moduleIds.gameRuntime",
+      "CONFIG.moduleIds.main"
+    ],
+    "mintedInscriptionId": 0
+  },
+  "recursiveSeal": {
+    "method": "seal-recursive",
+    "dependencyOrder": [
+      "styles",
+      "utils",
+      "highscores",
+      "gameRuntime",
+      "main"
+    ],
+    "dependencies": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "tokenUri": "",
+    "notes": "Dependencies must match CONFIG.moduleIds in parent HTML exactly."
+  },
+  "verification": {
+    "expectedGlobals": [
+      "ArcadeUtils",
+      "HighScores",
+      "Game01",
+      "ArcadeLauncher"
+    ],
+    "expectedBoot": "Top-10 start screen appears first, then Start launches gameplay.",
+    "requiredReadOnlyFunctions": [
+      "get-chunk"
+    ]
+  }
+}

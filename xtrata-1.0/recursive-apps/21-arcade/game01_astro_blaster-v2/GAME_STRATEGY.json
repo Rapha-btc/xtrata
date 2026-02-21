@@ -6,6 +6,7 @@
   "genreTag": "Shoot 'em Up",
   "archetype": "shooter",
   "workspaceDir": "game01_astro_blaster-v2",
+  "planningDir": "game01_astro_blaster-v2/planning",
   "runtime": {
     "file": "game01_astro_blaster-v2.js",
     "version": "v2"
@@ -30,6 +31,7 @@
   ],
   "notes": [
     "Approved archetype strategy for Astro Blaster.",
+    "Use planning/ for Stage 0 review, brainstorming, scoring, and roadmap promotion before major gameplay changes.",
     "Update this strategy when core loop, progression model, or scoring rules change.",
     "Before promotion, run strict review for game01_astro_blaster and relevant game tests."
   ],

@@ -16,6 +16,30 @@ export const rewardCatalog = Object.freeze([
     weight: 18
   },
   {
+    id: 'reward_thruster_module',
+    label: 'Thruster Module',
+    type: 'crate',
+    rarity: 'rare',
+    outcome: 'Unlocks vertical thrusters for full arena movement.',
+    weight: 12
+  },
+  {
+    id: 'reward_weapon_multiplier',
+    label: 'Weapon Multiplier',
+    type: 'core',
+    rarity: 'rare',
+    outcome: 'Improves firing cadence and eventually unlocks auto-fire.',
+    weight: 20
+  },
+  {
+    id: 'reward_aegis_shell',
+    label: 'Aegis Shell',
+    type: 'defense',
+    rarity: 'rare',
+    outcome: 'Grants one temporary shield charge that absorbs a hit.',
+    weight: 14
+  },
+  {
     id: 'reward_elite_bounty',
     label: 'Elite Bounty',
     type: 'challenge',

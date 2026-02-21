@@ -70,6 +70,7 @@
   var walletDebugEvents = [];
   var walletDebugEventLimit = 800;
   var walletDebugThrottleState = {};
+  var walletRpcLogOnceState = {};
   var WALLET_DEBUG_THROTTLE_DEFAULT_MS = 350;
   var WALLET_DEBUG_THROTTLE_SUMMARY_IDLE_MS = 1800;
   var WALLET_DEBUG_THROTTLE_RULES = {
@@ -273,6 +274,27 @@
       state.lastAt = now;
     }
     emitWalletDebugLine(level, message, detail);
+  }
+
+  function originForRpcLog(){
+    if(typeof window === 'undefined' || !window.location){
+      return 'unknown-origin';
+    }
+    if(typeof window.location.origin === 'string' && window.location.origin){
+      return window.location.origin;
+    }
+    var protocol = window.location.protocol || 'http:';
+    var host = window.location.host || 'localhost';
+    return protocol + '//' + host;
+  }
+
+  function walletRpcLogOnce(key, message, detail){
+    if(!walletDebugEnabled()) return;
+    var normalizedKey = String(key || '').trim();
+    if(!normalizedKey) return;
+    if(walletRpcLogOnceState[normalizedKey]) return;
+    walletRpcLogOnceState[normalizedKey] = true;
+    walletDebug('info', '[RPC] ' + message, detail);
   }
 
   function cloneWalletDebugDetail(detail){
@@ -1921,6 +1943,22 @@
       providerCount: providers.length,
       requireInteractiveReconnect: requireInteractiveReconnect
     });
+    try{
+      var rpcContract = getContractConfigOrThrow();
+      walletRpcLogOnce('connect-context', 'Wallet connect context and RPC resolution inputs', {
+        origin: originForRpcLog(),
+        targetNetwork: targetNetwork,
+        configuredApiBaseUrl: rpcContract.apiBaseUrl || null,
+        configuredApiFallbackBaseUrls: rpcContract.apiFallbackBaseUrls || [],
+        resolvedReadOnlyApiBases: resolveReadOnlyApiBases(rpcContract)
+      });
+    }catch(rpcConfigError){
+      walletRpcLogOnce('connect-context-missing-config', 'Wallet connect context without contract RPC config', {
+        origin: originForRpcLog(),
+        targetNetwork: targetNetwork,
+        error: walletErrorForLog(rpcConfigError)
+      });
+    }
     if(
       !walletDisconnectOverride &&
       lastWalletStatus &&
@@ -2336,19 +2374,56 @@
     if(!config.contractAddress || !config.contractName){
       throw new Error('Missing on-chain contract config.');
     }
+    var fallbackList = [];
+    if(Array.isArray(config.apiFallbackBaseUrls)){
+      fallbackList = config.apiFallbackBaseUrls;
+    } else if(typeof config.apiFallbackBaseUrls === 'string'){
+      fallbackList = config.apiFallbackBaseUrls.split(',');
+    }
+    var normalizedFallbackList = [];
+    var i;
+    for(i = 0; i < fallbackList.length; i++){
+      var base = String(fallbackList[i] == null ? '' : fallbackList[i]).trim();
+      if(!base || normalizedFallbackList.indexOf(base) >= 0) continue;
+      normalizedFallbackList.push(base);
+    }
     return {
       contractAddress: String(config.contractAddress),
       contractName: String(config.contractName),
       network: normalizeNetwork(config.network) || 'mainnet',
       apiBaseUrl: String(config.apiBaseUrl || '').trim(),
+      apiFallbackBaseUrls: normalizedFallbackList,
       readSenderAddress: String(config.readSenderAddress || '').trim()
     };
   }
 
   function defaultApiBase(network){
-    if(network === 'testnet') return 'https://api.testnet.hiro.so';
-    if(network === 'devnet') return 'http://localhost:3999';
-    return 'https://api.mainnet.hiro.so';
+    if(network === 'testnet') return '/rpc-testnet';
+    if(network === 'devnet') return '/rpc';
+    return '/rpc';
+  }
+
+  function defaultApiFallbackBases(network){
+    if(network === 'testnet') return ['https://api.testnet.hiro.so'];
+    if(network === 'devnet') return ['http://localhost:3999'];
+    return ['https://api.mainnet.hiro.so'];
+  }
+
+  function resolveReadOnlyApiBases(contract){
+    var out = [];
+
+    function push(value){
+      var normalized = String(value || '').trim().replace(/\/+$/, '');
+      if(!normalized) return;
+      if(out.indexOf(normalized) >= 0) return;
+      out.push(normalized);
+    }
+
+    push(contract.apiBaseUrl);
+    push(defaultApiBase(contract.network));
+    (contract.apiFallbackBaseUrls || []).forEach(push);
+    defaultApiFallbackBases(contract.network).forEach(push);
+    return out;
   }
 
   function encodeUIntCV(value){
@@ -2465,35 +2540,83 @@
 
   async function callReadOnlyFunction(functionName, args){
     var contract = getContractConfigOrThrow();
-    var apiBase = contract.apiBaseUrl || defaultApiBase(contract.network);
     var sender = contract.readSenderAddress || contract.contractAddress;
+    var apiBases = resolveReadOnlyApiBases(contract);
+    var lastError = null;
+    var i;
 
-    var endpoint = apiBase.replace(/\/+$/, '') +
-      '/v2/contracts/call-read/' +
-      contract.contractAddress + '/' +
-      contract.contractName + '/' +
-      functionName;
-
-    var response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sender: sender,
-        arguments: Array.isArray(args) ? args : []
-      })
+    if(apiBases.length === 0){
+      throw new Error('No API base URL configured for read-only calls.');
+    }
+    walletRpcLogOnce('readonly-plan', 'Read-only endpoint candidate plan resolved', {
+      origin: originForRpcLog(),
+      network: contract.network,
+      contract: contract.contractAddress + '.' + contract.contractName,
+      sender: sender,
+      apiBases: apiBases
     });
 
-    if(!response.ok){
-      throw new Error('Read-only call failed with HTTP ' + response.status + '.');
+    for(i = 0; i < apiBases.length; i++){
+      var endpoint = apiBases[i] +
+        '/v2/contracts/call-read/' +
+        contract.contractAddress + '/' +
+        contract.contractName + '/' +
+        functionName;
+      try{
+        var response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sender: sender,
+            arguments: Array.isArray(args) ? args : []
+          })
+        });
+
+        if(!response.ok){
+          throw new Error('Read-only call failed with HTTP ' + response.status + '.');
+        }
+
+        var body = await response.json();
+        if(!body || body.okay !== true || typeof body.result !== 'string'){
+          var cause = body && body.cause ? String(body.cause) : 'Read-only contract call failed.';
+          throw new Error(cause);
+        }
+
+        if(i > 0){
+          walletDebug('warn', 'Read-only call succeeded via fallback endpoint', {
+            functionName: functionName,
+            endpoint: apiBases[i]
+          });
+        }
+        walletRpcLogOnce('readonly-selected', 'Read-only endpoint selected for successful response', {
+          origin: originForRpcLog(),
+          functionName: functionName,
+          selectedApiBase: apiBases[i],
+          selectedEndpoint: endpoint,
+          usedFallback: i > 0
+        });
+        return body.result;
+      }catch(error){
+        lastError = error;
+        if(i + 1 < apiBases.length){
+          walletDebug('warn', 'Read-only call endpoint failed, trying fallback', {
+            functionName: functionName,
+            endpoint: apiBases[i],
+            nextEndpoint: apiBases[i + 1],
+            error: walletErrorForLog(error)
+          });
+        }
+      }
     }
 
-    var body = await response.json();
-    if(!body || body.okay !== true || typeof body.result !== 'string'){
-      var cause = body && body.cause ? String(body.cause) : 'Read-only contract call failed.';
-      throw new Error(cause);
-    }
+    walletRpcLogOnce('readonly-failed', 'All read-only endpoints failed during resolution', {
+      origin: originForRpcLog(),
+      functionName: functionName,
+      apiBases: apiBases,
+      error: walletErrorForLog(lastError)
+    });
 
-    return body.result;
+    throw lastError || new Error('Read-only contract call failed.');
   }
 
   function extractRpcError(result){

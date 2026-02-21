@@ -59,6 +59,15 @@ When adding a new module, function, or catalog:
 4. Keep tests deterministic and dependency-free (Node built-ins only).
 5. Never merge module additions without a corresponding test update.
 
+## Planning Workflow (Required for Major Features)
+Use `planning/` for idea-to-implementation flow before coding large gameplay changes:
+1. Baseline review in `planning/01-game-review-plan.md`.
+2. Add ideas to `planning/03-brainstorm-backlog.md`.
+3. Score candidates in `planning/04-idea-scorecard-template.md`.
+4. Add approved work to `planning/02-progression-and-narrative-roadmap.md`.
+5. Define validation in `planning/05-stage-gates-and-test-plan.md`.
+6. Only then create/modify runtime modules and tests.
+
 ## Recommended Test Additions As Runtime Expands
 1. Mode routing tests per leaderboard suffix.
 2. Upgrade stacking limit and compatibility tests.
