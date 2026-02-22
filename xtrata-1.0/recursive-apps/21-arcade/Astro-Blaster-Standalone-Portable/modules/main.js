@@ -732,6 +732,27 @@
     return label.indexOf('bitcoinprovider') >= 0 && label.indexOf('stacksprovider') < 0;
   }
 
+  function providerHasNestedStacksCandidate(provider){
+    if(!provider || typeof provider !== 'object') return false;
+    return !!(
+      (provider.StacksProvider && typeof provider.StacksProvider === 'object') ||
+      (provider.stacksProvider && typeof provider.stacksProvider === 'object') ||
+      (provider.walletProvider && typeof provider.walletProvider === 'object') ||
+      (provider.provider && typeof provider.provider === 'object' && provider.provider !== provider) ||
+      (provider.wallet && typeof provider.wallet === 'object')
+    );
+  }
+
+  function providerLooksLikeNamespaceContainer(provider){
+    if(!provider || typeof provider !== 'object') return false;
+    if(!providerHasNestedStacksCandidate(provider)) return false;
+    if(providerHasDirectRpcMethods(provider)) return false;
+    if(typeof provider.transactionRequest === 'function') return false;
+    if(typeof provider.enable === 'function') return false;
+    if(typeof provider.connect === 'function') return false;
+    return true;
+  }
+
   function splitWalletAddressCandidates(providers){
     var primary = [];
     var fallback = [];
@@ -1045,6 +1066,7 @@
     var out = [];
 
     function push(provider, label){
+      if(providerLooksLikeNamespaceContainer(provider)) return;
       if(!providerHasCapabilities(provider)) return;
       var i;
       for(i = 0; i < out.length; i++){
@@ -1068,13 +1090,24 @@
       var prefix = context.label || 'window';
       var directCandidates = [
         { label: prefix + '.StacksProvider', value: safeWindowRead(contextRoot, 'StacksProvider') },
+        { label: prefix + '.StacksProvider.StacksProvider', value: resolveProviderPathFromRoot('StacksProvider.StacksProvider', contextRoot) },
+        { label: prefix + '.StacksProvider.provider', value: resolveProviderPathFromRoot('StacksProvider.provider', contextRoot) },
+        { label: prefix + '.StacksProvider.stacksProvider', value: resolveProviderPathFromRoot('StacksProvider.stacksProvider', contextRoot) },
+        { label: prefix + '.StacksProvider.walletProvider', value: resolveProviderPathFromRoot('StacksProvider.walletProvider', contextRoot) },
+        { label: prefix + '.StacksProvider.wallet', value: resolveProviderPathFromRoot('StacksProvider.wallet', contextRoot) },
         { label: prefix + '.LeatherProvider', value: safeWindowRead(contextRoot, 'LeatherProvider') },
+        { label: prefix + '.LeatherProvider.provider', value: resolveProviderPathFromRoot('LeatherProvider.provider', contextRoot) },
+        { label: prefix + '.LeatherProvider.stacksProvider', value: resolveProviderPathFromRoot('LeatherProvider.stacksProvider', contextRoot) },
+        { label: prefix + '.LeatherProvider.walletProvider', value: resolveProviderPathFromRoot('LeatherProvider.walletProvider', contextRoot) },
         { label: prefix + '.XverseProviders', value: safeWindowRead(contextRoot, 'XverseProviders') },
+        { label: prefix + '.XverseProviders.provider', value: resolveProviderPathFromRoot('XverseProviders.provider', contextRoot) },
+        { label: prefix + '.XverseProviders.walletProvider', value: resolveProviderPathFromRoot('XverseProviders.walletProvider', contextRoot) },
         { label: prefix + '.xverseProviders', value: safeWindowRead(contextRoot, 'xverseProviders') },
         { label: prefix + '.XverseProviders.StacksProvider', value: resolveProviderPathFromRoot('XverseProviders.StacksProvider', contextRoot) },
         { label: prefix + '.xverseProviders.StacksProvider', value: resolveProviderPathFromRoot('xverseProviders.StacksProvider', contextRoot) },
         { label: prefix + '.XverseProviders.BitcoinProvider', value: resolveProviderPathFromRoot('XverseProviders.BitcoinProvider', contextRoot) },
         { label: prefix + '.xverseProviders.BitcoinProvider', value: resolveProviderPathFromRoot('xverseProviders.BitcoinProvider', contextRoot) },
+        { label: prefix + '.stacksProvider', value: safeWindowRead(contextRoot, 'stacksProvider') },
         { label: prefix + '.btc', value: safeWindowRead(contextRoot, 'btc') },
         { label: prefix + '.stacks', value: safeWindowRead(contextRoot, 'stacks') },
         { label: prefix + '.BitcoinProvider', value: safeWindowRead(contextRoot, 'BitcoinProvider') }
@@ -1135,6 +1168,23 @@
         var label = String(entry && entry.label ? entry.label : '').toLowerCase();
         var score = 0;
         if(label.indexOf('window.stacksprovider') === 0) score += 140;
+        if(
+          label === 'window.stacksprovider' ||
+          label === 'window.parent.stacksprovider' ||
+          label === 'window.top.stacksprovider' ||
+          label === 'window.opener.stacksprovider'
+        ){
+          score -= 45;
+        }
+        if(
+          label.indexOf('.stacksprovider.stacksprovider') >= 0 ||
+          label.indexOf('.stacksprovider.provider') >= 0 ||
+          label.indexOf('.stacksprovider.walletprovider') >= 0 ||
+          label.indexOf('.leatherprovider.provider') >= 0 ||
+          label.indexOf('.leatherprovider.walletprovider') >= 0
+        ){
+          score += 65;
+        }
         if(label.indexOf('stacksprovider') >= 0) score += 100;
         if(label.indexOf('leatherprovider') >= 0) score += 80;
         if(label.indexOf('xverseproviders.stacksprovider') >= 0) score += 60;
@@ -1460,7 +1510,13 @@
   function shouldSkipConnectMethodForProvider(entry, method){
     if(!entry) return false;
     if(!isLikelyBitcoinOnlyProvider(entry)) return false;
-    return method === 'connect' || method === 'stx_connect';
+    return (
+      method === 'stx_requestAccounts' ||
+      method === 'requestAccounts' ||
+      method === 'connect' ||
+      method === 'stx_connect' ||
+      method === 'wallet_connect'
+    );
   }
 
   function isUserRejectedError(error){
@@ -1513,7 +1569,18 @@
 
     pushTarget(provider, providerLabel + ':self');
     if(provider && typeof provider === 'object'){
-      var nestedKeys = ['provider', 'stacksProvider', 'walletProvider', 'rpc', 'client'];
+      var nestedKeys = [
+        'StacksProvider',
+        'stacksProvider',
+        'provider',
+        'walletProvider',
+        'wallet',
+        'providers',
+        'stacks',
+        'rpc',
+        'client',
+        'BitcoinProvider'
+      ];
       var n;
       for(n = 0; n < nestedKeys.length; n++){
         if(provider[nestedKeys[n]] && typeof provider[nestedKeys[n]] === 'object'){
@@ -1531,6 +1598,21 @@
         }
       }
     }
+
+    targets.sort(function(a, b){
+      function score(targetEntry){
+        var tag = String(targetEntry && targetEntry.tag ? targetEntry.tag : '').toLowerCase();
+        var s = 0;
+        if(tag.indexOf(':stacksprovider') >= 0) s += 120;
+        if(tag.indexOf(':walletprovider') >= 0) s += 60;
+        if(tag.indexOf(':provider') >= 0) s += 40;
+        if(tag.indexOf(':wallet') >= 0) s += 20;
+        if(tag.indexOf(':bitcoinprovider') >= 0) s -= 120;
+        if(tag.indexOf(':self') >= 0) s -= 10;
+        return s;
+      }
+      return score(b) - score(a);
+    });
 
     function addAttempt(target, source, variant, run){
       attempts.push({
