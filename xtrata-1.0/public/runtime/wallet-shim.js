@@ -21,6 +21,9 @@
   var TARGET_NETWORK = normalizeNetwork(search.get('network')) || 'mainnet';
   var DEBUG_ENABLED =
     search.get('debug') === '1' || search.get('arcadeDebug') === '1';
+  var HOST_BRIDGE_TOKEN = String(search.get('walletBridgeToken') || '');
+  var HOST_BRIDGE_REQUEST_TYPE = 'xtrata:wallet:request';
+  var HOST_BRIDGE_RESPONSE_TYPE = 'xtrata:wallet:response';
   var STORAGE_KEY = 'xtrata.runtime.wallet.session.v1';
   var CONNECT_URLS = [
     'https://esm.sh/@stacks/connect@7.10.2?bundle',
@@ -39,6 +42,8 @@
     'stx_connect',
     'connect',
     'wallet_connect',
+    'stx_callContract',
+    'stx_callContractV2',
     'stx_disconnect',
     'wallet_disconnect',
     'disconnect',
@@ -47,6 +52,9 @@
 
   var connectModulePromise = null;
   var connectInFlight = null;
+  var hostBridgePending = new Map();
+  var hostBridgeListenerInstalled = false;
+  var hostBridgeSeq = 0;
 
   function debugLog(message, detail) {
     if (!DEBUG_ENABLED) return;
@@ -236,6 +244,142 @@
     };
   }
 
+  function createShimError(message, code) {
+    var error = new Error(String(message || 'Runtime wallet shim error.'));
+    if (typeof code !== 'undefined') {
+      error.code = code;
+    }
+    return error;
+  }
+
+  function getHostBridgeTargets() {
+    var targets = [];
+    if (window.opener && window.opener !== window) {
+      targets.push(window.opener);
+    }
+    if (window.parent && window.parent !== window) {
+      targets.push(window.parent);
+    }
+    if (window.top && window.top !== window && targets.indexOf(window.top) < 0) {
+      targets.push(window.top);
+    }
+    return targets;
+  }
+
+  function hasHostBridge() {
+    return !!HOST_BRIDGE_TOKEN && getHostBridgeTargets().length > 0;
+  }
+
+  function ensureHostBridgeResponseListener() {
+    if (hostBridgeListenerInstalled) return;
+    hostBridgeListenerInstalled = true;
+    window.addEventListener('message', function (event) {
+      var payload = event && event.data ? event.data : null;
+      if (!payload || payload.type !== HOST_BRIDGE_RESPONSE_TYPE) {
+        return;
+      }
+      if (event.origin !== window.location.origin) {
+        return;
+      }
+      var requestId =
+        typeof payload.requestId === 'string' ? payload.requestId : '';
+      if (!requestId || !hostBridgePending.has(requestId)) {
+        return;
+      }
+      var pending = hostBridgePending.get(requestId);
+      hostBridgePending.delete(requestId);
+      clearTimeout(pending.timeout);
+      if (payload.ok) {
+        pending.resolve(payload.result);
+        return;
+      }
+      var detail = payload.error || {};
+      var message =
+        detail && detail.message
+          ? String(detail.message)
+          : 'Runtime wallet host bridge rejected request.';
+      var error = createShimError(message);
+      if (detail && typeof detail.code === 'number') {
+        error.code = detail.code;
+      }
+      pending.reject(error);
+    });
+  }
+
+  function requestHostBridge(method, params) {
+    if (!HOST_BRIDGE_TOKEN) {
+      return Promise.reject(
+        createShimError('Host wallet bridge token is missing.', -32001)
+      );
+    }
+    var targets = getHostBridgeTargets();
+    if (!targets.length) {
+      return Promise.reject(
+        createShimError('Host wallet bridge target is unavailable.', -32001)
+      );
+    }
+
+    ensureHostBridgeResponseListener();
+
+    return new Promise(function (resolve, reject) {
+      var requestId = 'runtime-wallet-' + String(++hostBridgeSeq);
+      var timeout = setTimeout(function () {
+        hostBridgePending.delete(requestId);
+        reject(createShimError('Host wallet bridge request timed out.', -32001));
+      }, 120000);
+      hostBridgePending.set(requestId, { resolve: resolve, reject: reject, timeout: timeout });
+
+      var message = {
+        type: HOST_BRIDGE_REQUEST_TYPE,
+        requestId: requestId,
+        bridgeToken: HOST_BRIDGE_TOKEN,
+        method: method,
+        params: typeof params === 'undefined' ? null : params
+      };
+
+      var sent = false;
+      for (var i = 0; i < targets.length; i += 1) {
+        var target = targets[i];
+        try {
+          target.postMessage(message, window.location.origin);
+          sent = true;
+          break;
+        } catch (error) {}
+      }
+
+      if (!sent) {
+        clearTimeout(timeout);
+        hostBridgePending.delete(requestId);
+        reject(createShimError('Host wallet bridge postMessage failed.', -32001));
+      }
+    });
+  }
+
+  function resolveSessionFromPayload(payload) {
+    var address = extractStacksAddress(payload, 0);
+    if (!address) return null;
+    return {
+      address: String(address).trim(),
+      network:
+        normalizeNetwork(payload && payload.network) ||
+        inferNetworkFromAddress(address) ||
+        TARGET_NETWORK
+    };
+  }
+
+  function isHostBridgeUnavailableError(error) {
+    if (!error) return false;
+    if (typeof error.code !== 'undefined' && Number(error.code) === -32001) {
+      return true;
+    }
+    var message = error && error.message ? String(error.message).toLowerCase() : '';
+    return (
+      message.indexOf('host wallet bridge') >= 0 ||
+      message.indexOf('bridge target is unavailable') >= 0 ||
+      message.indexOf('bridge token is missing') >= 0
+    );
+  }
+
   function parseRequestArgs(methodOrPayload, maybeParams) {
     if (typeof methodOrPayload === 'string') {
       return { method: methodOrPayload, params: maybeParams };
@@ -277,6 +421,10 @@
       method === 'disconnect' ||
       method === 'deactivate'
     );
+  }
+
+  function isContractCallMethod(method) {
+    return method === 'stx_callContract' || method === 'stx_callContractV2';
   }
 
   function pickDelegatedRequest(root, originalRequest) {
@@ -440,49 +588,125 @@
     return connectInFlight;
   }
 
-  function shimRequest(method, provider) {
+  function shimRequest(method, provider, params) {
     var lower = String(method || '').trim();
 
+    function applySessionFromPayload(payload) {
+      var session = resolveSessionFromPayload(payload);
+      if (session) {
+        writeStoredSession(session);
+      }
+      return buildSessionResponse(session || readStoredSession());
+    }
+
     if (isDisconnectMethod(lower)) {
-      writeStoredSession(null);
-      return Promise.resolve({ ok: true });
+      var disconnectAttempt = hasHostBridge()
+        ? requestHostBridge(lower, params).catch(function (error) {
+            if (!isHostBridgeUnavailableError(error)) {
+              throw error;
+            }
+            return null;
+          })
+        : Promise.resolve(null);
+
+      return disconnectAttempt.then(function () {
+        writeStoredSession(null);
+        return { ok: true };
+      });
     }
 
     if (isConnectMethod(lower)) {
-      return connectViaShim(provider).then(function (session) {
-        return buildSessionResponse(session);
+      var hostConnectAttempt = hasHostBridge()
+        ? requestHostBridge(lower, params).then(function (payload) {
+            return applySessionFromPayload(payload);
+          })
+        : Promise.reject(createShimError('Host wallet bridge unavailable.', -32001));
+
+      return hostConnectAttempt.catch(function (error) {
+        if (!isHostBridgeUnavailableError(error)) {
+          throw error;
+        }
+        return connectViaShim(provider).then(function (session) {
+          return buildSessionResponse(session);
+        });
       });
     }
 
     if (isReadMethod(lower)) {
-      var session = readStoredSession();
-      if (!session && provider) {
-        var direct = null;
-        if (looksLikeStacksAddress(provider.selectedAddress)) {
-          direct = provider.selectedAddress;
-        } else if (looksLikeStacksAddress(provider.address)) {
-          direct = provider.address;
-        }
-        if (direct) {
-          session = {
-            address: String(direct).trim(),
-            network: inferNetworkFromAddress(String(direct).trim()) || TARGET_NETWORK
-          };
-          writeStoredSession(session);
-        }
-      }
-      return Promise.resolve(buildSessionResponse(session));
-    }
+      var hostReadAttempt = hasHostBridge()
+        ? requestHostBridge(lower, params).then(function (payload) {
+            return applySessionFromPayload(payload);
+          })
+        : Promise.reject(createShimError('Host wallet bridge unavailable.', -32001));
 
-    if (isNetworkMethod(lower)) {
-      var stored = readStoredSession();
-      return Promise.resolve({
-        network: (stored && stored.network) || TARGET_NETWORK
+      return hostReadAttempt.catch(function (error) {
+        if (!isHostBridgeUnavailableError(error)) {
+          throw error;
+        }
+        var session = readStoredSession();
+        if (!session && provider) {
+          var direct = null;
+          if (looksLikeStacksAddress(provider.selectedAddress)) {
+            direct = provider.selectedAddress;
+          } else if (looksLikeStacksAddress(provider.address)) {
+            direct = provider.address;
+          }
+          if (direct) {
+            session = {
+              address: String(direct).trim(),
+              network: inferNetworkFromAddress(String(direct).trim()) || TARGET_NETWORK
+            };
+            writeStoredSession(session);
+          }
+        }
+        return buildSessionResponse(session);
       });
     }
 
-    var unsupported = new Error('Wallet method unsupported in runtime shim: ' + lower);
-    unsupported.code = -32601;
+    if (isNetworkMethod(lower)) {
+      var hostNetworkAttempt = hasHostBridge()
+        ? requestHostBridge(lower, params).then(function (payload) {
+            var network = normalizeNetwork(payload && payload.network);
+            if (!network) {
+              var nested = payload && payload.result ? payload.result : null;
+              network = normalizeNetwork(nested && nested.network);
+            }
+            return {
+              network:
+                network ||
+                (readStoredSession() && readStoredSession().network) ||
+                TARGET_NETWORK
+            };
+          })
+        : Promise.reject(createShimError('Host wallet bridge unavailable.', -32001));
+
+      return hostNetworkAttempt.catch(function (error) {
+        if (!isHostBridgeUnavailableError(error)) {
+          throw error;
+        }
+        var stored = readStoredSession();
+        return {
+          network: (stored && stored.network) || TARGET_NETWORK
+        };
+      });
+    }
+
+    if (isContractCallMethod(lower)) {
+      if (!hasHostBridge()) {
+        return Promise.reject(
+          createShimError(
+            'Wallet contract call requires host wallet bridge support.',
+            -32601
+          )
+        );
+      }
+      return requestHostBridge(lower, params);
+    }
+
+    var unsupported = createShimError(
+      'Wallet method unsupported in runtime shim: ' + lower,
+      -32601
+    );
     return Promise.reject(unsupported);
   }
 
@@ -516,7 +740,7 @@
             if (message.indexOf('request function is not implemented') < 0) {
               throw error;
             }
-            return shimRequest(method, provider);
+            return shimRequest(method, provider, parsed.params);
           });
       }
 
@@ -533,12 +757,12 @@
             if (message.indexOf('request function is not implemented') < 0) {
               throw error;
             }
-            return shimRequest(method, provider);
+            return shimRequest(method, provider, parsed.params);
           });
       }
 
       if (SHIM_METHODS.indexOf(method) >= 0) {
-        return shimRequest(method, provider);
+        return shimRequest(method, provider, parsed.params);
       }
 
       var unsupported = new Error('Wallet request unavailable for "' + method + '".');
@@ -560,6 +784,14 @@
   }
 
   function installAllProviderShims() {
+    if (!window.StacksProvider || typeof window.StacksProvider !== 'object') {
+      window.StacksProvider = {};
+      debugLog('created synthetic window.StacksProvider shim target');
+    }
+    if (!window.stacks || typeof window.stacks !== 'object') {
+      window.stacks = window.StacksProvider;
+    }
+
     var candidates = [
       { label: 'window.StacksProvider', provider: window.StacksProvider },
       { label: 'window.LeatherProvider', provider: window.LeatherProvider },

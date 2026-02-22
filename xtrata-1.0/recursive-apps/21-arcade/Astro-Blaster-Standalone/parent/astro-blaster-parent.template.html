@@ -100,6 +100,15 @@
       var loaderPanel = document.getElementById('loader-panel');
       var loaderLog = document.getElementById('loader-log');
       var startMs = Date.now();
+      var HOST_WALLET_BRIDGE = {
+        requestType: 'xtrata:wallet:request',
+        responseType: 'xtrata:wallet:response',
+        intentType: 'xtrata:arcade:wallet-intent',
+        token: '',
+        pending: {},
+        seq: 0,
+        listenerReady: false
+      };
 
       function keepLoaderVisible() {
         try {
@@ -147,6 +156,525 @@
         if (loaderLog) {
           loaderLog.textContent += line + '\n';
         }
+      }
+
+      function getHostWalletBridgeToken() {
+        try {
+          var params = new URLSearchParams(window.location.search || '');
+          return String(params.get('walletBridgeToken') || '').trim();
+        } catch (error) {
+          return '';
+        }
+      }
+
+      function getHostWalletBridgeTargets() {
+        var out = [];
+        if (window.opener && window.opener !== window) {
+          out.push(window.opener);
+        }
+        if (window.parent && window.parent !== window) {
+          out.push(window.parent);
+        }
+        if (window.top && window.top !== window && out.indexOf(window.top) < 0) {
+          out.push(window.top);
+        }
+        return out;
+      }
+
+      function hasHostWalletBridge() {
+        return !!HOST_WALLET_BRIDGE.token && getHostWalletBridgeTargets().length > 0;
+      }
+
+      function emitHostWalletIntent(intent, payload) {
+        var targets = getHostWalletBridgeTargets();
+        if (!targets.length) return;
+        var message = {
+          type: HOST_WALLET_BRIDGE.intentType,
+          intent: String(intent || ''),
+          payload: payload || {},
+          bridgeToken: HOST_WALLET_BRIDGE.token || ''
+        };
+        var i;
+        for (i = 0; i < targets.length; i += 1) {
+          try {
+            targets[i].postMessage(message, window.location.origin);
+          } catch (error) {}
+        }
+      }
+
+      function createHostWalletBridgeError(message, code) {
+        var error = new Error(String(message || 'Host wallet bridge request failed.'));
+        if (typeof code !== 'undefined') {
+          error.code = code;
+        }
+        return error;
+      }
+
+      function ensureHostWalletBridgeListener() {
+        if (HOST_WALLET_BRIDGE.listenerReady) return;
+        HOST_WALLET_BRIDGE.listenerReady = true;
+        window.addEventListener('message', function (event) {
+          var data = event && event.data ? event.data : null;
+          if (!data || data.type !== HOST_WALLET_BRIDGE.responseType) {
+            return;
+          }
+          if (event.origin !== window.location.origin) {
+            return;
+          }
+          var requestId = typeof data.requestId === 'string' ? data.requestId : '';
+          if (!requestId || !HOST_WALLET_BRIDGE.pending[requestId]) {
+            return;
+          }
+          var entry = HOST_WALLET_BRIDGE.pending[requestId];
+          delete HOST_WALLET_BRIDGE.pending[requestId];
+          clearTimeout(entry.timer);
+          if (data.ok) {
+            entry.resolve(data.result);
+            return;
+          }
+          var detail = data.error || {};
+          var message =
+            detail && detail.message
+              ? String(detail.message)
+              : 'Host wallet bridge rejected request.';
+          var error = createHostWalletBridgeError(message);
+          if (detail && typeof detail.code === 'number') {
+            error.code = detail.code;
+          }
+          entry.reject(error);
+        });
+      }
+
+      function requestHostWalletBridge(method, params, timeoutMs) {
+        if (!HOST_WALLET_BRIDGE.token) {
+          return Promise.reject(
+            createHostWalletBridgeError('Host wallet bridge token missing.', -32001)
+          );
+        }
+        var targets = getHostWalletBridgeTargets();
+        if (!targets.length) {
+          return Promise.reject(
+            createHostWalletBridgeError('Host wallet bridge target unavailable.', -32001)
+          );
+        }
+
+        ensureHostWalletBridgeListener();
+
+        return new Promise(function (resolve, reject) {
+          var requestId = 'astro-wallet-' + String(++HOST_WALLET_BRIDGE.seq);
+          var timer = setTimeout(function () {
+            if (HOST_WALLET_BRIDGE.pending[requestId]) {
+              delete HOST_WALLET_BRIDGE.pending[requestId];
+            }
+            reject(
+              createHostWalletBridgeError(
+                'Host wallet bridge request timed out for ' + method + '.',
+                -32001
+              )
+            );
+          }, Math.max(3000, Number(timeoutMs || 90000)));
+
+          HOST_WALLET_BRIDGE.pending[requestId] = {
+            resolve: resolve,
+            reject: reject,
+            timer: timer
+          };
+
+          var message = {
+            type: HOST_WALLET_BRIDGE.requestType,
+            requestId: requestId,
+            bridgeToken: HOST_WALLET_BRIDGE.token,
+            method: method,
+            params: typeof params === 'undefined' ? null : params
+          };
+
+          var sent = false;
+          var i;
+          for (i = 0; i < targets.length; i += 1) {
+            try {
+              targets[i].postMessage(message, window.location.origin);
+              sent = true;
+            } catch (error) {}
+          }
+
+          if (!sent) {
+            clearTimeout(timer);
+            delete HOST_WALLET_BRIDGE.pending[requestId];
+            reject(
+              createHostWalletBridgeError('Host wallet bridge postMessage failed.', -32001)
+            );
+          }
+        });
+      }
+
+      function networkFromAddress(address) {
+        if (typeof address !== 'string' || address.length < 2) return null;
+        var prefix = address.substring(0, 2);
+        if (prefix === 'SP' || prefix === 'SM') return 'mainnet';
+        if (prefix === 'ST' || prefix === 'SN') return 'testnet';
+        return null;
+      }
+
+      function looksLikeStacksAddress(address) {
+        if (typeof address !== 'string') return false;
+        var trimmed = address.trim();
+        if (trimmed.length < 20) return false;
+        return networkFromAddress(trimmed) !== null;
+      }
+
+      function collectStacksAddresses(payload, out, depth) {
+        if (!payload || depth > 8) return out;
+        if (typeof payload === 'string') {
+          if (looksLikeStacksAddress(payload)) {
+            out.push(payload.trim());
+          }
+          return out;
+        }
+        if (Array.isArray(payload)) {
+          var i;
+          for (i = 0; i < payload.length; i += 1) {
+            collectStacksAddresses(payload[i], out, depth + 1);
+          }
+          return out;
+        }
+        if (typeof payload !== 'object') return out;
+
+        collectStacksAddresses(payload.address, out, depth + 1);
+        collectStacksAddresses(payload.selectedAddress, out, depth + 1);
+        collectStacksAddresses(payload.identityAddress, out, depth + 1);
+        collectStacksAddresses(payload.addresses, out, depth + 1);
+        collectStacksAddresses(payload.accounts, out, depth + 1);
+        collectStacksAddresses(payload.stxAddress, out, depth + 1);
+        collectStacksAddresses(payload.result, out, depth + 1);
+        if (payload.stxAddress && typeof payload.stxAddress === 'object') {
+          collectStacksAddresses(payload.stxAddress.mainnet, out, depth + 1);
+          collectStacksAddresses(payload.stxAddress.testnet, out, depth + 1);
+        }
+        return out;
+      }
+
+      function pickStacksAddress(candidates, network) {
+        if (!Array.isArray(candidates) || !candidates.length) return null;
+        var deduped = [];
+        var seen = {};
+        var i;
+        for (i = 0; i < candidates.length; i += 1) {
+          var candidate = String(candidates[i] || '').trim();
+          if (!looksLikeStacksAddress(candidate)) continue;
+          if (seen[candidate]) continue;
+          seen[candidate] = true;
+          deduped.push(candidate);
+        }
+        if (!deduped.length) return null;
+        if (network) {
+          for (i = 0; i < deduped.length; i += 1) {
+            if (networkFromAddress(deduped[i]) === network) {
+              return deduped[i];
+            }
+          }
+        }
+        return deduped[0];
+      }
+
+      function sanitizeAscii(input, maxLen, fallback) {
+        var raw = input == null ? '' : String(input);
+        var out = '';
+        var i;
+        for (i = 0; i < raw.length; i += 1) {
+          var code = raw.charCodeAt(i);
+          if (code >= 32 && code <= 126) {
+            out += raw.charAt(i);
+            if (out.length >= maxLen) break;
+          }
+        }
+        if (out.length === 0) out = fallback || '';
+        if (out.length > maxLen) out = out.substring(0, maxLen);
+        return out;
+      }
+
+      function safePlayerName(input) {
+        var name = sanitizeAscii(input, 12, 'AAA');
+        if (name.length < 3) {
+          name = (name + 'AAA').substring(0, 3);
+        }
+        return name;
+      }
+
+      function safeGameId(input) {
+        return sanitizeAscii(input, 32, 'unknown_game');
+      }
+
+      function toModeUint(mode) {
+        return mode === 'time' ? 1 : 0;
+      }
+
+      function encodeUIntCv(value) {
+        return uintToCvHex(value);
+      }
+
+      function encodeAsciiCv(value) {
+        var text = String(value == null ? '' : value);
+        var hex = '';
+        var i;
+        for (i = 0; i < text.length; i += 1) {
+          var code = text.charCodeAt(i);
+          if (code < 0 || code > 127) {
+            throw new Error('Contract call string must be ASCII.');
+          }
+          var byteHex = code.toString(16);
+          if (byteHex.length < 2) byteHex = '0' + byteHex;
+          hex += byteHex;
+        }
+        var lenHex = text.length.toString(16);
+        while (lenHex.length < 8) lenHex = '0' + lenHex;
+        return '0x0d' + lenHex + hex;
+      }
+
+      function encodeBufferCv(hexValue) {
+        var clean = String(hexValue == null ? '' : hexValue)
+          .replace(/^0x/i, '')
+          .toLowerCase();
+        if (!clean || clean.length % 2 !== 0 || /[^0-9a-f]/.test(clean)) {
+          throw new Error('Contract call buffer must be a valid hex string.');
+        }
+        var byteLen = clean.length / 2;
+        var lenHex = byteLen.toString(16);
+        while (lenHex.length < 8) lenHex = '0' + lenHex;
+        return '0x02' + lenHex + clean;
+      }
+
+      function buildSubmitFunctionArgs(payload) {
+        var args = [
+          encodeAsciiCv(safeGameId(payload.gameId)),
+          encodeUIntCv(toModeUint(payload.mode)),
+          encodeUIntCv(payload.score),
+          encodeAsciiCv(safePlayerName(payload.playerName))
+        ];
+
+        var attestation = payload && payload.attestation ? payload.attestation : null;
+        if (attestation) {
+          args.push(encodeUIntCv(attestation.nonce));
+          args.push(encodeUIntCv(attestation.expiresAt));
+          args.push(encodeBufferCv(attestation.signatureHex || attestation.signature_hex || attestation.signature || ''));
+        }
+        return args;
+      }
+
+      function collectApiBaseCandidates(payload) {
+        var out = [];
+        function push(value) {
+          var normalized = String(value || '').trim().replace(/\/+$/, '');
+          if (!normalized) return;
+          if (out.indexOf(normalized) >= 0) return;
+          out.push(normalized);
+        }
+
+        var network = String((payload && payload.network) || CONFIG.scoreConfig.network || 'mainnet').toLowerCase();
+        push(payload && payload.apiBaseUrl);
+        if (NETWORK_BASE[network]) {
+          var baseList = NETWORK_BASE[network];
+          if (Array.isArray(baseList)) {
+            var i;
+            for (i = 0; i < baseList.length; i += 1) {
+              push(baseList[i]);
+            }
+          }
+        }
+        if (payload && Array.isArray(payload.apiFallbackBaseUrls)) {
+          var j;
+          for (j = 0; j < payload.apiFallbackBaseUrls.length; j += 1) {
+            push(payload.apiFallbackBaseUrls[j]);
+          }
+        }
+
+        return out;
+      }
+
+      function decodeReadOnlyUIntResult(resultHex, functionName) {
+        var bytes = hexToBytes(resultHex);
+        while (bytes.length > 0 && (bytes[0] === 0x07 || bytes[0] === 0x0a)) {
+          bytes = bytes.slice(1);
+        }
+        if (!bytes.length || bytes[0] !== 0x01 || bytes.length < 17) {
+          throw new Error(functionName + ' did not return an unsigned integer.');
+        }
+        var value = 0n;
+        var i;
+        for (i = 1; i <= 16; i += 1) {
+          value = (value << 8n) + BigInt(bytes[i]);
+        }
+        return value.toString(10);
+      }
+
+      async function callScoreReadOnly(payload, functionName, args, senderAddress) {
+        var bases = collectApiBaseCandidates(payload);
+        if (!bases.length) {
+          throw new Error('No API base URL available for score read-only call.');
+        }
+        var sender =
+          String(senderAddress || '').trim() ||
+          String((payload && payload.readSenderAddress) || '').trim() ||
+          CONFIG.senderAddress;
+        var i;
+        var lastError = null;
+        for (i = 0; i < bases.length; i += 1) {
+          var endpoint =
+            bases[i] +
+            '/v2/contracts/call-read/' +
+            String(payload.contractAddress) + '/' +
+            String(payload.contractName) + '/' +
+            functionName;
+          try {
+            var response = await fetch(endpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                sender: sender,
+                arguments: Array.isArray(args) ? args : []
+              })
+            });
+            if (!response.ok) {
+              throw new Error('Read-only call failed with HTTP ' + response.status + '.');
+            }
+            var body = await response.json();
+            if (!body || body.okay !== true || typeof body.result !== 'string') {
+              throw new Error(body && body.cause ? String(body.cause) : 'Read-only call failed.');
+            }
+            return body.result;
+          } catch (error) {
+            lastError = error;
+          }
+        }
+        throw lastError || new Error('Read-only score call failed.');
+      }
+
+      async function resolveFeePostConditionConfig(payload, walletAddress) {
+        if (!payload || !payload.useDenyModePostConditions) {
+          return { postConditionMode: 'allow' };
+        }
+        var feeHex = await callScoreReadOnly(payload, 'get-fee-unit', [], walletAddress);
+        var feeUnit = decodeReadOnlyUIntResult(feeHex, 'get-fee-unit');
+        return {
+          postConditionMode: 'deny',
+          postConditions: [{
+            type: 'stx',
+            address: walletAddress,
+            amount: feeUnit,
+            condition: 'less_equal'
+          }]
+        };
+      }
+
+      function extractTxId(result) {
+        if (!result || typeof result !== 'object') return null;
+        return (
+          result.txId ||
+          result.txid ||
+          result.tx_id ||
+          (result.result && (result.result.txId || result.result.txid || result.result.tx_id)) ||
+          null
+        );
+      }
+
+      async function submitScoreViaHostWalletBridge(payload) {
+        if (!hasHostWalletBridge()) {
+          throw createHostWalletBridgeError(
+            'Host wallet bridge unavailable. Open this game from inside Xtrata runtime.',
+            -32001
+          );
+        }
+
+        payload = payload || {};
+        var network = String(payload.network || CONFIG.scoreConfig.network || 'mainnet').toLowerCase();
+
+        emitHostWalletIntent('score.submit.requested', {
+          gameId: safeGameId(payload.gameId),
+          mode: payload.mode === 'time' ? 'time' : 'score',
+          score: Number(payload.score || 0),
+          network: network,
+          contractAddress: payload.contractAddress,
+          contractName: payload.contractName
+        });
+
+        var walletSession = await requestHostWalletBridge(
+          'stx_requestAccounts',
+          { network: network },
+          120000
+        );
+        var walletAddress = pickStacksAddress(
+          collectStacksAddresses(walletSession, [], 0),
+          network
+        );
+        if (!walletAddress) {
+          throw new Error('Unable to resolve wallet address from host bridge.');
+        }
+
+        if (payload.requiresAttestation && !payload.attestation) {
+          throw new Error('This score submit requires attestation before sending the transaction.');
+        }
+
+        var args = buildSubmitFunctionArgs(payload);
+        var strictConfig;
+        try {
+          strictConfig = await resolveFeePostConditionConfig(payload, walletAddress);
+        } catch (error) {
+          if (payload.fallbackToAllowModeOnPostConditionFailure) {
+            strictConfig = { postConditionMode: 'allow' };
+          } else {
+            throw error;
+          }
+        }
+
+        var callParams = {
+          contractAddress: String(payload.contractAddress || ''),
+          contractName: String(payload.contractName || ''),
+          functionName: String(payload.functionName || 'submit-score'),
+          functionArgs: args,
+          network: network,
+          postConditionMode: strictConfig.postConditionMode || 'allow',
+          postConditions: strictConfig.postConditions
+        };
+
+        var txResult = await requestHostWalletBridge(
+          'stx_callContract',
+          callParams,
+          180000
+        );
+        var txId = extractTxId(txResult);
+        emitHostWalletIntent('score.submit.submitted', {
+          gameId: safeGameId(payload.gameId),
+          mode: payload.mode === 'time' ? 'time' : 'score',
+          score: Number(payload.score || 0),
+          walletAddress: walletAddress,
+          txId: txId
+        });
+        return {
+          txId: txId,
+          raw: txResult
+        };
+      }
+
+      function installHostWalletBridgeSubmitter() {
+        HOST_WALLET_BRIDGE.token = getHostWalletBridgeToken();
+        if (!hasHostWalletBridge()) {
+          log('Host wallet bridge unavailable in this runtime context; default wallet flow remains active.');
+          return;
+        }
+        var existing =
+          window.ArcadeOnChain && typeof window.ArcadeOnChain === 'object'
+            ? window.ArcadeOnChain
+            : {};
+        existing.submitScore = submitScoreViaHostWalletBridge;
+        existing.__xtrataHostWalletBridge = {
+          mode: 'score-submit-v1',
+          tokenAttached: true
+        };
+        window.ArcadeOnChain = existing;
+        emitHostWalletIntent('bridge.ready', {
+          app: 'astro-blaster-standalone',
+          mode: 'score-submit-v1'
+        });
+        log('Host wallet bridge enabled for on-chain score submits.');
       }
 
       function uintToCvHex(value) {
@@ -353,6 +881,8 @@
         if (debugEnabled) {
           log('Arcade debug logging enabled via URL/config.');
         }
+
+        installHostWalletBridgeSubmitter();
 
         var i;
         for (i = 0; i < MODULES.length; i += 1) {

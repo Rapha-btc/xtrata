@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  appendRuntimeWalletBridgeToken,
   buildRuntimeOpenUrl,
+  createRuntimeWalletBridgeToken,
   isExecutableRuntimeMimeType,
+  isRuntimeWalletBridgeTokenValid,
   markRuntimeOpenWarningShown,
+  registerRuntimeWalletBridgeToken,
   shouldShowRuntimeOpenWarning
 } from '../runtime-open';
 
@@ -42,6 +46,19 @@ describe('viewer runtime open helpers', () => {
     expect(minimalUrl.searchParams.get('source')).toBeNull();
   });
 
+  it('appends runtime wallet bridge token to runtime urls', () => {
+    const input = '/runtime/?contractId=SP123.contract-name&tokenId=9&network=mainnet';
+    const output = appendRuntimeWalletBridgeToken(input, 'token-123');
+    const parsed = new URL(output, 'https://xtrata.xyz');
+    expect(parsed.pathname).toBe('/runtime/');
+    expect(parsed.searchParams.get('walletBridgeToken')).toBe('token-123');
+  });
+
+  it('creates non-empty runtime wallet bridge tokens', () => {
+    const token = createRuntimeWalletBridgeToken();
+    expect(token.trim().length).toBeGreaterThan(0);
+  });
+
   it('tracks one-time runtime warning state', () => {
     const store = new Map<string, string>();
     const storage = {
@@ -71,5 +88,20 @@ describe('viewer runtime open helpers', () => {
     expect(shouldShowRuntimeOpenWarning(brokenStorage)).toBe(true);
     expect(() => markRuntimeOpenWarningShown(brokenStorage)).not.toThrow();
   });
-});
 
+  it('registers and validates runtime wallet bridge tokens', () => {
+    const store = new Map<string, string>();
+    const storage = {
+      getItem(key: string) {
+        return store.has(key) ? store.get(key) ?? null : null;
+      },
+      setItem(key: string, value: string) {
+        store.set(key, value);
+      }
+    };
+
+    expect(isRuntimeWalletBridgeTokenValid(storage, 'bridge-token')).toBe(false);
+    registerRuntimeWalletBridgeToken(storage, 'bridge-token', 1000);
+    expect(isRuntimeWalletBridgeTokenValid(storage, 'bridge-token')).toBe(true);
+  });
+});

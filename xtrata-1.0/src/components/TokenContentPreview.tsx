@@ -29,9 +29,12 @@ import {
   registerRecursiveBridge
 } from '../lib/viewer/recursive';
 import {
+  appendRuntimeWalletBridgeToken,
   buildRuntimeOpenUrl,
+  createRuntimeWalletBridgeToken,
   isExecutableRuntimeMimeType,
   markRuntimeOpenWarningShown,
+  registerRuntimeWalletBridgeToken,
   shouldShowRuntimeOpenWarning
 } from '../lib/viewer/runtime-open';
 import {
@@ -1508,9 +1511,9 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
       return;
     }
     if (runtimeOpenUrl) {
-      const storage =
+      const warningStorage =
         typeof window.localStorage === 'undefined' ? null : window.localStorage;
-      if (shouldShowRuntimeOpenWarning(storage)) {
+      if (shouldShowRuntimeOpenWarning(warningStorage)) {
         const accepted =
           typeof window.confirm === 'function'
             ? window.confirm(RUNTIME_OPEN_WARNING_MESSAGE)
@@ -1518,8 +1521,18 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
         if (!accepted) {
           return;
         }
-        markRuntimeOpenWarningShown(storage);
+        markRuntimeOpenWarningShown(warningStorage);
       }
+      const bridgeStorage =
+        typeof window.sessionStorage === 'undefined' ? null : window.sessionStorage;
+      const bridgeToken = createRuntimeWalletBridgeToken();
+      registerRuntimeWalletBridgeToken(bridgeStorage, bridgeToken);
+      const runtimeUrl = appendRuntimeWalletBridgeToken(
+        runtimeOpenUrl,
+        bridgeToken
+      );
+      window.open(runtimeUrl, '_blank');
+      return;
     }
     window.open(fullscreenSource, '_blank', 'noopener,noreferrer');
   };
