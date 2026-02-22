@@ -156,7 +156,12 @@
               url.searchParams.set('debug', '1');
             }
           } catch (error) {}
-          return '<script src="' + escapeAttribute(url.toString()) + '"><\\/script>';
+          return (
+            '<script src="' +
+            escapeAttribute(url.toString()) +
+            '"></' +
+            'script>'
+          );
         }
 
         function injectRuntimeSupport(html, params) {
