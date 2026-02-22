@@ -23,8 +23,8 @@
     search.get('debug') === '1' || search.get('arcadeDebug') === '1';
   var STORAGE_KEY = 'xtrata.runtime.wallet.session.v1';
   var CONNECT_URLS = [
-    'https://cdn.jsdelivr.net/npm/@stacks/connect@7.10.2/dist/index.mjs',
-    'https://unpkg.com/@stacks/connect@7.10.2/dist/index.mjs'
+    'https://esm.sh/@stacks/connect@7.10.2?bundle',
+    'https://esm.run/@stacks/connect@7.10.2'
   ];
   var SHIM_METHODS = [
     'stx_getAddresses',
@@ -503,20 +503,42 @@
         return Promise.reject(invalid);
       }
 
-      if (SHIM_METHODS.indexOf(method) >= 0) {
-        return shimRequest(method, provider);
-      }
-
       if (originalRequest) {
-        return Promise.resolve().then(function () {
-          return originalRequest(methodOrPayload, maybeParams);
-        });
+        return Promise.resolve()
+          .then(function () {
+            return originalRequest(methodOrPayload, maybeParams);
+          })
+          .catch(function (error) {
+            if (SHIM_METHODS.indexOf(method) < 0) {
+              throw error;
+            }
+            var message = error && error.message ? String(error.message).toLowerCase() : '';
+            if (message.indexOf('request function is not implemented') < 0) {
+              throw error;
+            }
+            return shimRequest(method, provider);
+          });
       }
 
       if (delegatedRequest) {
-        return Promise.resolve().then(function () {
-          return delegatedRequest(methodOrPayload, maybeParams);
-        });
+        return Promise.resolve()
+          .then(function () {
+            return delegatedRequest(methodOrPayload, maybeParams);
+          })
+          .catch(function (error) {
+            if (SHIM_METHODS.indexOf(method) < 0) {
+              throw error;
+            }
+            var message = error && error.message ? String(error.message).toLowerCase() : '';
+            if (message.indexOf('request function is not implemented') < 0) {
+              throw error;
+            }
+            return shimRequest(method, provider);
+          });
+      }
+
+      if (SHIM_METHODS.indexOf(method) >= 0) {
+        return shimRequest(method, provider);
       }
 
       var unsupported = new Error('Wallet request unavailable for "' + method + '".');
@@ -526,6 +548,7 @@
 
     for (var i = 0; i < SHIM_METHODS.length; i += 1) {
       (function (methodName) {
+        if (typeof provider[methodName] === 'function') return;
         provider[methodName] = function (params) {
           return provider.request(methodName, params);
         };
@@ -541,12 +564,10 @@
       { label: 'window.StacksProvider', provider: window.StacksProvider },
       { label: 'window.LeatherProvider', provider: window.LeatherProvider },
       { label: 'window.stacks', provider: window.stacks },
-      { label: 'window.XverseProviders', provider: window.XverseProviders },
       {
         label: 'window.XverseProviders.StacksProvider',
         provider: window.XverseProviders && window.XverseProviders.StacksProvider
       },
-      { label: 'window.xverseProviders', provider: window.xverseProviders },
       {
         label: 'window.xverseProviders.StacksProvider',
         provider: window.xverseProviders && window.xverseProviders.StacksProvider
@@ -564,12 +585,6 @@
       } catch (error) {}
     }
   }
-
-  loadConnectModule().catch(function (error) {
-    debugLog('wallet sdk prewarm failed', {
-      error: error && error.message ? error.message : String(error)
-    });
-  });
 
   installAllProviderShims();
   setTimeout(installAllProviderShims, 400);
