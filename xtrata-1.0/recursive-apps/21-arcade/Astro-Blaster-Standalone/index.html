@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Astro Blaster Standalone</title>
-<link rel="stylesheet" href="styles.css">
+<title>Astro Blaster Standalone Portable (Local Test)</title>
+<link rel="stylesheet" href="modules/styles.css">
 </head>
 <body>
 <div id="top-bar">
@@ -30,7 +30,7 @@
   </div>
 </div>
 
-<script src="lib/utils.js"></script>
+<script src="modules/utils.js"></script>
 <script>
   var arcadeDebugEnabled = false;
   try{
@@ -43,7 +43,6 @@
     arcadeDebugEnabled = true;
   }
 
-  // Standalone Astro Blaster on-chain score config
   window.ARCADE_ONCHAIN_CONFIG = window.ARCADE_ONCHAIN_CONFIG || {
     enabled: true,
     network: 'mainnet',
@@ -51,7 +50,7 @@
     contractName: 'xtrata-arcade-scores-v1-3',
     functionName: 'submit-score',
     leaderboardFunctionName: 'get-top10',
-    apiBaseUrl: '/rpc',
+    apiBaseUrl: 'https://api.mainnet.hiro.so',
     apiFallbackBaseUrls: ['https://api.mainnet.hiro.so'],
     readSenderAddress: '',
     requiresAttestation: false,
@@ -65,8 +64,8 @@
   window.ARCADE_ONCHAIN_CONFIG.debug = arcadeDebugEnabled;
   window.ARCADE_ONCHAIN_DEBUG = arcadeDebugEnabled;
 </script>
-<script src="lib/highscores.js"></script>
-<script src="games/game01_astro_blaster-v2.37.js"></script>
-<script src="main.js"></script>
+<script src="modules/highscores.js"></script>
+<script src="modules/game01_astro_blaster-v2.37.js"></script>
+<script src="modules/main.js"></script>
 </body>
 </html>

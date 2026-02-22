@@ -1,56 +1,37 @@
-# Astro Blaster Standalone
+# Astro Blaster Standalone Portable
 
-This folder is a self-contained standalone package for Astro Blaster with on-chain Top 10 and wallet connect support.
+This folder is a portable package you can copy out of this repo and use directly.
 
-## Runtime entry
+## Folder layout
+- `modules/` -> the 5 leaf modules to inscribe
+- `parent/` -> recursive parent template, manifest, and ID autofill script
+- `index.html` -> local/off-chain test app (loads from `modules/`)
+
+## Local test (before inscription)
+Serve this folder over HTTP (not `file://`) and open:
 - `index.html`
 
-## Local modules/assets included
-- `styles.css`
-- `lib/utils.js`
-- `lib/highscores.js`
-- `games/game01_astro_blaster-v2.37.js`
-- `main.js`
+You can also test the parent-style loader:
+- `parent/astro-blaster-parent.local-test.html`
 
-## Startup behavior
-- Opens directly to Astro Blaster start screen (Top 10 + mission briefing loop).
-- Uses same wallet connect/disconnect flow as arcade.
-- Uses same on-chain high score contract configuration used in main arcade.
-- Uses same-origin RPC first (`/rpc`) for read-only chain data, with safe fallback to Hiro API if `/rpc` is unavailable.
+## Leaf modules to inscribe
+Inscribe these first:
+1. `modules/styles.css`
+2. `modules/utils.js`
+3. `modules/highscores.js`
+4. `modules/game01_astro_blaster-v2.37.js`
+5. `modules/main.js`
 
-## Script load order (for recursive inscription planning)
-1. `lib/utils.js`
-2. inline config in `index.html` (`window.ARCADE_ONCHAIN_CONFIG`)
-3. `lib/highscores.js`
-4. `games/game01_astro_blaster-v2.37.js`
-5. `main.js`
+## Parent to inscribe last
+After the 5 leaf inscriptions are minted and IDs are known:
+- update IDs with `parent/fill-inscription-ids.mjs`
+- then inscribe `parent/astro-blaster-parent.template.html` as recursive parent
 
-## Notes
-- This package intentionally removes the multi-game home lobby flow.
-- Exit/Esc returns to this game's own start screen.
-
-## Recursive inscription artifacts
-- Plan/runbook: `inscription/INSCRIPTION-PLAN.md`
-- Ready manifest: `inscription/astro-blaster-standalone.inscription-manifest.json`
-- Recursive parent template: `inscription/astro-blaster-parent.template.html`
-- Auto-fill helper: `inscription/fill-inscription-ids.mjs`
-
-## Exact files to inscribe (for full working standalone)
-Inscribe these files in this order:
-1. `styles.css`
-2. `lib/utils.js`
-3. `lib/highscores.js`
-4. `games/game01_astro_blaster-v2.37.js`
-5. `main.js`
-6. `inscription/astro-blaster-parent.template.html` (recursive parent, last)
-
-Do not use `index.html` as the recursive parent inscription. `index.html` is for local/off-chain testing.
-
-## Auto-fill minted IDs
-After minting all five leaf modules, run:
+## Update IDs automatically
+From this folder:
 
 ```bash
-node inscription/fill-inscription-ids.mjs \
+node parent/fill-inscription-ids.mjs \
   --styles <styles-id> \
   --utils <utils-id> \
   --highscores <highscores-id> \
@@ -58,14 +39,13 @@ node inscription/fill-inscription-ids.mjs \
   --main <main-id>
 ```
 
-Optional: include parent ID after recursive parent mint:
+Then, after parent mint:
 
 ```bash
-node inscription/fill-inscription-ids.mjs --parent <parent-id>
+node parent/fill-inscription-ids.mjs --parent <parent-id>
 ```
 
-You can dry-run first:
-
-```bash
-node inscription/fill-inscription-ids.mjs ... --dry-run
-```
+## Important
+- Do not inscribe `index.html` for recursive deployment.
+- Parent dependency order must be:
+  `[stylesId, utilsId, highscoresId, gameRuntimeId, mainId]`

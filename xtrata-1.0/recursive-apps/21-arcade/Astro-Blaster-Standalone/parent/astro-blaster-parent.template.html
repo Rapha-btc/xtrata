@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Astro Blaster - On-Chain Standalone</title>
+  <title>Astro Blaster - On-Chain</title>
   <style>
     body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: #050816; color: #d6e7ff; }
     #loader-panel { padding: 10px 12px; border-bottom: 1px solid #1d2c47; background: #0a1223; overflow: hidden; transition: opacity 0.22s ease, max-height 0.22s ease, padding 0.22s ease, border-width 0.22s ease; max-height: 240px; opacity: 1; }
@@ -57,11 +57,11 @@
         maxChunksPerModule: 512,
 
         moduleIds: {
-          styles: 0,
-          utils: 0,
-          highscores: 0,
-          gameRuntime: 0,
-          main: 0
+          styles: 69,
+          utils: 70,
+          highscores: 68,
+          gameRuntime: 71,
+          main: 78
         },
 
         scoreConfig: {
@@ -72,7 +72,7 @@
           functionName: 'submit-score',
           leaderboardFunctionName: 'get-top10',
           apiBaseUrl: '/hiro/mainnet',
-          apiFallbackBaseUrls: ['/rpc', 'https://api.mainnet.hiro.so'],
+          apiFallbackBaseUrls: ["https://api.mainnet.hiro.so"],
           readSenderAddress: '',
           requiresAttestation: false,
           attestationEndpoint: '',
@@ -85,8 +85,8 @@
       };
 
       var NETWORK_BASE = {
-        mainnet: ['/hiro/mainnet', '/rpc', 'https://api.mainnet.hiro.so'],
-        testnet: ['/hiro/testnet', '/rpc-testnet', 'https://api.testnet.hiro.so']
+        mainnet: ['/hiro/mainnet', 'https://api.mainnet.hiro.so'],
+        testnet: ['/hiro/testnet', 'https://api.testnet.hiro.so']
       };
 
       var MODULES = [

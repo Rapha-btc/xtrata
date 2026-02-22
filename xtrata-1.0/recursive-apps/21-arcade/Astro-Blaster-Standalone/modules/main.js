@@ -2849,15 +2849,15 @@
   }
 
   function defaultApiBase(network){
-    if(network === 'testnet') return '/rpc-testnet';
-    if(network === 'devnet') return '/rpc';
-    return '/rpc';
+    if(network === 'testnet') return 'https://api.testnet.hiro.so';
+    if(network === 'devnet') return 'http://localhost:3999';
+    return 'https://api.mainnet.hiro.so';
   }
 
   function defaultApiFallbackBases(network){
-    if(network === 'testnet') return ['https://api.testnet.hiro.so'];
-    if(network === 'devnet') return ['http://localhost:3999'];
-    return ['https://api.mainnet.hiro.so'];
+    if(network === 'testnet') return [];
+    if(network === 'devnet') return [];
+    return [];
   }
 
   function resolveReadOnlyApiBases(contract){

@@ -2860,17 +2860,17 @@ var HighScores = (function(){
 
   function _defaultApiBase(network){
     var normalized = String(network || '').toLowerCase();
-    if(normalized === 'mainnet' || normalized === 'main') return '/rpc';
-    if(normalized === 'testnet' || normalized === 'test') return '/rpc-testnet';
-    if(normalized === 'devnet' || normalized === 'dev') return '/rpc';
+    if(normalized === 'mainnet' || normalized === 'main') return 'https://api.mainnet.hiro.so';
+    if(normalized === 'testnet' || normalized === 'test') return 'https://api.testnet.hiro.so';
+    if(normalized === 'devnet' || normalized === 'dev') return 'http://localhost:3999';
     return '';
   }
 
   function _defaultApiFallbackBases(network){
     var normalized = String(network || '').toLowerCase();
-    if(normalized === 'mainnet' || normalized === 'main') return ['https://api.mainnet.hiro.so'];
-    if(normalized === 'testnet' || normalized === 'test') return ['https://api.testnet.hiro.so'];
-    if(normalized === 'devnet' || normalized === 'dev') return ['http://localhost:3999'];
+    if(normalized === 'mainnet' || normalized === 'main') return [];
+    if(normalized === 'testnet' || normalized === 'test') return [];
+    if(normalized === 'devnet' || normalized === 'dev') return [];
     return [];
   }
 
