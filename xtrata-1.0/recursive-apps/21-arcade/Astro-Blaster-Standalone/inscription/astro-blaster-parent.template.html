@@ -80,7 +80,7 @@
           minRank: 10,
           useDenyModePostConditions: true,
           fallbackToAllowModeOnPostConditionFailure: false,
-          debug: true
+          debug: false
         }
       };
 
@@ -109,6 +109,20 @@
         } catch (error) {
           return false;
         }
+      }
+
+      function resolveRuntimeDebugEnabled() {
+        var enabled = !!(
+          window.ARCADE_ONCHAIN_CONFIG &&
+          window.ARCADE_ONCHAIN_CONFIG.debug === true
+        );
+        try {
+          var params = new URLSearchParams(window.location.search || '');
+          if (params.get('debug') === '1' || params.get('arcadeDebug') === '1') {
+            enabled = true;
+          }
+        } catch (error) {}
+        return enabled;
       }
 
       function hideLoaderPanelAfterBoot() {
@@ -212,6 +226,8 @@
         if (!rawBases) throw new Error('Unsupported network: ' + network);
         var bases = Array.isArray(rawBases) ? rawBases : [rawBases];
         var lastError = null;
+        var fallbackCount = 0;
+        var firstFailedBase = null;
         var i;
 
         for (i = 0; i < bases.length; i += 1) {
@@ -229,13 +245,23 @@
               throw new Error('HTTP ' + response.status + ' for ' + fn + ' on ' + network + ' via ' + base);
             }
 
+            if (fallbackCount > 0) {
+              log('Read-only fallback summary for ' + fn + ' on ' + network + ': retries=' + fallbackCount + ', firstFailed=' + firstFailedBase + ', selected=' + base + '.');
+            }
             return response.json();
           } catch (error) {
             lastError = error;
             if (i + 1 < bases.length) {
-              log('Read-only fallback: ' + base + ' failed; trying next endpoint.');
+              fallbackCount += 1;
+              if (!firstFailedBase) {
+                firstFailedBase = base;
+                log('Read-only fallback triggered for ' + fn + ' on ' + network + '; suppressing repetitive fallback logs.');
+              }
             }
           }
+        }
+        if (fallbackCount > 0) {
+          log('Read-only fallback exhausted for ' + fn + ' on ' + network + ': retries=' + fallbackCount + ', firstFailed=' + firstFailedBase + '.');
         }
         throw lastError || new Error('Read-only call failed on all endpoints for ' + network + '.');
       }
@@ -317,8 +343,16 @@
       async function boot() {
         validateConfig();
 
+        var debugEnabled = resolveRuntimeDebugEnabled();
+        CONFIG.scoreConfig.debug = debugEnabled;
         window.ARCADE_ONCHAIN_CONFIG = window.ARCADE_ONCHAIN_CONFIG || CONFIG.scoreConfig;
-        window.ARCADE_ONCHAIN_DEBUG = true;
+        if (window.ARCADE_ONCHAIN_CONFIG && typeof window.ARCADE_ONCHAIN_CONFIG === 'object') {
+          window.ARCADE_ONCHAIN_CONFIG.debug = debugEnabled;
+        }
+        window.ARCADE_ONCHAIN_DEBUG = debugEnabled;
+        if (debugEnabled) {
+          log('Arcade debug logging enabled via URL/config.');
+        }
 
         var i;
         for (i = 0; i < MODULES.length; i += 1) {

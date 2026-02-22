@@ -70,6 +70,7 @@
   var walletDebugEvents = [];
   var walletDebugEventLimit = 800;
   var walletDebugThrottleState = {};
+  var walletDebugChangeState = {};
   var walletRpcLogOnceState = {};
   var WALLET_DEBUG_THROTTLE_DEFAULT_MS = 350;
   var WALLET_DEBUG_THROTTLE_SUMMARY_IDLE_MS = 1800;
@@ -315,6 +316,45 @@
       }
       return String(detail);
     }
+  }
+
+  function walletDebugKey(detail){
+    var cloned = cloneWalletDebugDetail(detail);
+    if(typeof cloned === 'undefined') return '__undefined__';
+    if(cloned === null) return '__null__';
+    if(typeof cloned === 'string' || typeof cloned === 'number' || typeof cloned === 'boolean'){
+      return String(cloned);
+    }
+    try{
+      return JSON.stringify(cloned);
+    }catch(e){
+      return String(cloned);
+    }
+  }
+
+  function walletDebugChanged(level, message, detail, key){
+    var stateKey = String(key || message || 'wallet-debug-change');
+    var nextKey = walletDebugKey(detail);
+    if(walletDebugChangeState[stateKey] === nextKey){
+      return false;
+    }
+    walletDebugChangeState[stateKey] = nextKey;
+    walletDebug(level, message, detail);
+    return true;
+  }
+
+  function walletStatusKey(status){
+    if(!status || typeof status !== 'object'){
+      return 'status:none';
+    }
+    return [
+      String(status.state || ''),
+      status.hasAddress ? '1' : '0',
+      String(status.address || ''),
+      String(status.network || ''),
+      String(status.provider || ''),
+      String(status.label || '')
+    ].join('|');
   }
 
   function recordWalletDebugEvent(level, message, detail){
@@ -1134,7 +1174,7 @@
       inIframe = true;
     }
 
-    walletDebug('info', 'Provider discovery completed', {
+    var providerDiscoveryDetail = {
       build: WALLET_DEBUG_BUILD,
       count: out.length,
       labels: out.map(function(entry){ return entry.label; }),
@@ -1143,7 +1183,8 @@
       hasXverseProviders: providerContexts.some(function(context){ return !!safeWindowRead(context.target, 'XverseProviders'); }),
       providerContexts: providerContexts.map(function(context){ return context.label; }),
       inIframe: inIframe
-    });
+    };
+    walletDebugChanged('info', 'Provider discovery completed', providerDiscoveryDetail, 'provider-discovery');
 
     return out;
   }
@@ -1824,15 +1865,19 @@
     var candidateProviders = getWalletAddressCandidates(providers);
     var splitCandidates = splitWalletAddressCandidates(candidateProviders);
     var targetNetwork = options && options.targetNetwork ? options.targetNetwork : null;
-    walletDebug('info', 'resolveConnectedWallet start', {
+    var resolveStartDetail = {
       targetNetwork: targetNetwork,
       providers: providers.map(function(entry){ return entry.label; }),
       candidateProviders: candidateProviders.map(function(entry){ return entry.label; }),
       primaryCandidates: splitCandidates.primary.map(function(entry){ return entry.label; }),
       fallbackCandidates: splitCandidates.fallback.map(function(entry){ return entry.label; })
-    });
+    };
+    walletDebugChanged('info', 'resolveConnectedWallet start', resolveStartDetail, 'resolve-start');
     if(!providers.length){
-      walletDebug('warn', 'resolveConnectedWallet found no providers');
+      walletDebugChanged('warn', 'resolveConnectedWallet found no providers', {
+        status: 'no-providers',
+        targetNetwork: targetNetwork
+      }, 'resolve-outcome');
       return {
         providers: providers,
         providerEntry: null,
@@ -1858,13 +1903,14 @@
         var address = await resolveProviderAddress(entry.provider, targetNetwork);
         if(address){
           var network = await resolveProviderNetwork(entry.provider, address);
-          walletDebug('info', 'resolveConnectedWallet candidate resolved', {
+          var candidateDetail = {
             provider: entry.label,
             address: address,
             network: network || null,
             targetNetwork: targetNetwork,
             candidateGroup: groups[g].kind
-          });
+          };
+          walletDebugChanged('info', 'resolveConnectedWallet candidate resolved', candidateDetail, 'resolve-candidate');
           var resolved = {
             providers: providers,
             providerEntry: entry,
@@ -1875,12 +1921,12 @@
             firstResolved = resolved;
           }
           if(!isTargetNetworkMismatch(targetNetwork, network, address)){
-            walletDebug('info', 'resolveConnectedWallet selected candidate', {
+            walletDebugChanged('info', 'resolveConnectedWallet selected candidate', {
               provider: entry.label,
               address: address,
               network: network || null,
               candidateGroup: groups[g].kind
-            });
+            }, 'resolve-selected');
             return resolved;
           }
         }
@@ -1888,19 +1934,21 @@
     }
 
     if(firstResolved){
-      walletDebug('warn', 'resolveConnectedWallet returning mismatched-network candidate', {
+      walletDebugChanged('warn', 'resolveConnectedWallet returning mismatched-network candidate', {
+        status: 'mismatch',
         provider: firstResolved.providerEntry ? firstResolved.providerEntry.label : null,
         address: firstResolved.address || null,
         network: firstResolved.network || null,
         targetNetwork: targetNetwork
-      });
+      }, 'resolve-outcome');
       return firstResolved;
     }
 
-    walletDebug('warn', 'resolveConnectedWallet providers detected but no address resolved', {
+    walletDebugChanged('warn', 'resolveConnectedWallet providers detected but no address resolved', {
+      status: 'no-address',
       firstProvider: candidateProviders[0] ? candidateProviders[0].label : null,
       targetNetwork: targetNetwork
-    });
+    }, 'resolve-outcome');
     return {
       providers: providers,
       providerEntry: candidateProviders[0] || providers[0] || null,
@@ -1959,12 +2007,12 @@
     var resolvedNetwork = resolved.network || inferNetworkFromAddress(resolved.address) || targetNetwork || 'unknown';
     var connectedLabel = 'Wallet: ' + shortAddress(resolved.address) + ' · ' + resolvedNetwork;
     var warning = isTargetNetworkMismatch(targetNetwork, resolved.network, resolved.address);
-    walletDebug('info', 'getWalletStatus computed', {
+    walletDebugChanged('info', 'getWalletStatus computed', {
       targetNetwork: targetNetwork,
       resolvedAddress: resolved.address || null,
       resolvedNetwork: resolvedNetwork,
       warning: warning
-    });
+    }, 'wallet-status-computed');
 
     return {
       state: warning ? 'is-warning' : 'is-connected',
@@ -1980,19 +2028,38 @@
     if(!walletStatusBadge) return Promise.resolve();
     if(walletStatusRefreshInFlight) return walletStatusRefreshInFlight;
 
+    var previousStatus = lastWalletStatus;
     walletStatusRefreshInFlight = getWalletStatus()
       .then(function(status){
         lastWalletStatus = status;
         syncOnChainReadSenderAddress(status && status.address ? status.address : '');
         setWalletBadge(status.state, status.label);
         updateWalletDisconnectButtonState();
-        walletDebug('info', 'Wallet status refreshed', status);
+        var previousKey = walletStatusKey(previousStatus);
+        var nextKey = walletStatusKey(status);
+        walletDebugChangeState['wallet-status-error'] = '__none__';
+        if(previousKey !== nextKey){
+          walletDebug('info', 'Wallet status refreshed', {
+            changed: true,
+            previous: previousStatus ? {
+              state: previousStatus.state || null,
+              address: previousStatus.address || null,
+              network: previousStatus.network || null,
+              provider: previousStatus.provider || null
+            } : null,
+            next: status
+          });
+        }
       })
       .catch(function(error){
         lastWalletStatus = { state: 'is-warning', label: 'Wallet: status unavailable', hasAddress: false };
         setWalletBadge('is-warning', 'Wallet: status unavailable');
         updateWalletDisconnectButtonState();
-        walletDebug('warn', 'Wallet status refresh failed', walletErrorForLog(error));
+        var errorKey = String(error && error.code ? error.code : '') + '|' + String(error && error.message ? error.message : String(error));
+        if(walletDebugChangeState['wallet-status-error'] !== errorKey){
+          walletDebugChangeState['wallet-status-error'] = errorKey;
+          walletDebug('warn', 'Wallet status refresh failed', walletErrorForLog(error));
+        }
       })
       .finally(function(){
         walletStatusRefreshInFlight = null;
