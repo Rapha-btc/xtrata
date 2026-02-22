@@ -64,6 +64,7 @@
   var walletDisconnectOverride = false;
   var connectPromptShown = false;
   var connectWalletInFlight = null;
+  var walletConnectSdkModulePromise = null;
   var adminBusy = false;
   var WALLET_DEBUG_BUILD = 'wallet-debug-2026-02-20-12';
   var providerMethodUnsupported = {};
@@ -1573,6 +1574,192 @@
     walletDebug(level, '[wallet-connect] ' + String(message || ''), detail);
   }
 
+  function isWalletConnectCancelledStatus(status){
+    if(typeof status === 'undefined' || status === null) return false;
+    var lower = String(status).toLowerCase();
+    return lower === 'cancelled' || lower === 'canceled' || lower === 'cancel';
+  }
+
+  function walletConnectImportUrls(){
+    return [
+      'https://cdn.jsdelivr.net/npm/@stacks/connect@7.10.2/dist/index.mjs',
+      'https://unpkg.com/@stacks/connect@7.10.2/dist/index.mjs'
+    ];
+  }
+
+  function normalizeWalletConnectModule(imported){
+    if(!imported || typeof imported !== 'object') return null;
+    if(
+      typeof imported.authenticate === 'function' ||
+      typeof imported.showConnect === 'function'
+    ){
+      return imported;
+    }
+    if(imported.default && typeof imported.default === 'object'){
+      if(
+        typeof imported.default.authenticate === 'function' ||
+        typeof imported.default.showConnect === 'function'
+      ){
+        return imported.default;
+      }
+    }
+    return imported;
+  }
+
+  function loadWalletConnectModule(){
+    if(walletConnectSdkModulePromise){
+      return walletConnectSdkModulePromise;
+    }
+    walletConnectSdkModulePromise = (async function(){
+      var urls = walletConnectImportUrls();
+      var lastError = null;
+      var i;
+      for(i = 0; i < urls.length; i++){
+        var url = urls[i];
+        try{
+          walletConnectDebug('info', 'fallback sdk import attempt', {
+            url: url
+          });
+          var imported = await import(url);
+          var walletConnectModule = normalizeWalletConnectModule(imported);
+          if(
+            walletConnectModule &&
+            (typeof walletConnectModule.authenticate === 'function' || typeof walletConnectModule.showConnect === 'function')
+          ){
+            walletConnectDebug('info', 'fallback sdk import succeeded', {
+              url: url,
+              hasAuthenticate: typeof walletConnectModule.authenticate === 'function',
+              hasShowConnect: typeof walletConnectModule.showConnect === 'function'
+            });
+            return walletConnectModule;
+          }
+          throw new Error('Stacks Connect module did not expose authenticate/showConnect.');
+        }catch(error){
+          lastError = error;
+          walletConnectDebug('warn', 'fallback sdk import failed', {
+            url: url,
+            error: walletErrorForLog(error)
+          });
+        }
+      }
+      throw lastError || new Error('Unable to load Stacks Connect module.');
+    })().catch(function(error){
+      walletConnectSdkModulePromise = null;
+      throw error;
+    });
+    return walletConnectSdkModulePromise;
+  }
+
+  function resolveWalletConnectRedirectPath(){
+    if(typeof window === 'undefined' || !window.location) return '/';
+    var path =
+      String(window.location.pathname || '/') +
+      String(window.location.search || '') +
+      String(window.location.hash || '');
+    return path || '/';
+  }
+
+  function resolveWalletConnectIconUrl(){
+    if(typeof window === 'undefined' || !window.location) return '';
+    return window.location.origin + '/favicon.ico';
+  }
+
+  function createWalletConnectUserSession(walletConnectModule){
+    if(!walletConnectModule) return null;
+    if(typeof walletConnectModule.AppConfig !== 'function') return null;
+    if(typeof walletConnectModule.UserSession !== 'function') return null;
+    try{
+      var appConfig = new walletConnectModule.AppConfig(['store_write'], undefined, '', '/manifest.json');
+      return new walletConnectModule.UserSession({ appConfig: appConfig });
+    }catch(error){
+      walletConnectDebug('warn', 'fallback user session creation failed', {
+        error: walletErrorForLog(error)
+      });
+      return null;
+    }
+  }
+
+  async function attemptWalletConnectWithStacksConnect(providerEntry, targetNetwork){
+    var provider = providerEntry && providerEntry.provider ? providerEntry.provider : null;
+    var providerLabel = providerEntry && providerEntry.label ? providerEntry.label : 'unknown-provider';
+    var walletConnectModule = await loadWalletConnectModule();
+    var authFn = walletConnectModule && typeof walletConnectModule.authenticate === 'function'
+      ? walletConnectModule.authenticate
+      : null;
+    var showConnectFn = walletConnectModule && typeof walletConnectModule.showConnect === 'function'
+      ? walletConnectModule.showConnect
+      : null;
+    if(!authFn && !showConnectFn){
+      throw new Error('Stacks Connect module did not expose authenticate/showConnect.');
+    }
+    var userSession = createWalletConnectUserSession(walletConnectModule);
+    var strategy = authFn ? 'authenticate' : 'showConnect';
+    walletConnectDebug('info', 'fallback auth invocation', {
+      provider: providerLabel,
+      targetNetwork: targetNetwork,
+      strategy: strategy,
+      hasProvider: !!provider
+    });
+
+    return await new Promise(function(resolve, reject){
+      var settled = false;
+      var timeoutMs = 90000;
+      var timeoutId = setTimeout(function(){
+        if(settled) return;
+        settled = true;
+        reject(new Error('Wallet authentication timed out.'));
+      }, timeoutMs);
+
+      function settle(error, result){
+        if(settled) return;
+        settled = true;
+        clearTimeout(timeoutId);
+        if(error){
+          reject(error);
+        } else {
+          resolve(result);
+        }
+      }
+
+      var authOptions = {
+        appDetails: {
+          name: 'Retro Arcade',
+          icon: resolveWalletConnectIconUrl()
+        },
+        manifestPath: '/manifest.json',
+        redirectTo: resolveWalletConnectRedirectPath(),
+        onFinish: function(payload){
+          settle(null, {
+            status: 'finished',
+            payload: payload || null
+          });
+        },
+        onCancel: function(){
+          settle(null, {
+            status: 'cancelled'
+          });
+        }
+      };
+      if(userSession){
+        authOptions.userSession = userSession;
+      }
+
+      try{
+        var invocation;
+        if(authFn){
+          invocation = authFn(authOptions, provider || undefined);
+        } else {
+          invocation = showConnectFn(authOptions);
+        }
+        Promise.resolve(invocation).catch(function(error){
+          settle(error);
+        });
+      }catch(error){
+        settle(error);
+      }
+    });
+  }
+
   function isUserRejectedError(error){
     if(!error) return false;
     if(typeof error.code !== 'undefined'){
@@ -2342,6 +2529,7 @@
     var connectMethods = ['stx_requestAccounts', 'requestAccounts', 'stx_connect', 'connect', 'wallet_connect'];
     clearUnsupportedMethodsForProviders(providers, connectMethods);
     var connectProviders = getWalletAddressCandidates(providers);
+    var fallbackAuthTried = false;
     walletConnectDebug('info', 'provider candidate list', {
       targetNetwork: targetNetwork,
       providers: connectProviders.map(function(entry){ return entry.label; }),
@@ -2473,6 +2661,50 @@
           }
           if(isUnsupportedProviderError(error) || isInvalidParamsError(error)){
             continue;
+          }
+        }
+      }
+
+      if(!fallbackAuthTried && !requireInteractiveReconnect && !isLikelyBitcoinOnlyProvider(entry)){
+        fallbackAuthTried = true;
+        try{
+          var fallbackAuthResult = await attemptWalletConnectWithStacksConnect(entry, targetNetwork);
+          if(fallbackAuthResult && isWalletConnectCancelledStatus(fallbackAuthResult.status)){
+            walletConnectDebug('warn', 'outcome: user cancelled fallback auth', {
+              provider: entry.label
+            });
+            throw new Error('Wallet connection was cancelled in the wallet prompt.');
+          }
+
+          await refreshWalletStatus();
+          var fallbackResolved = await resolveConnectedWallet({ targetNetwork: targetNetwork });
+          if(fallbackResolved.address && !isTargetNetworkMismatch(targetNetwork, fallbackResolved.network, fallbackResolved.address)){
+            setWalletDisconnectOverride(false, {
+              source: 'connectWalletInternal',
+              provider: entry.label,
+              mode: 'stacksConnectAuth'
+            });
+            await refreshWalletStatus();
+            walletConnectDebug('info', 'outcome: connected via fallback auth', {
+              provider: entry.label,
+              address: fallbackResolved.address,
+              network: fallbackResolved.network || null
+            });
+            return true;
+          }
+          walletConnectDebug('warn', 'non-event: fallback auth finished without connected address', {
+            provider: entry.label,
+            status: fallbackAuthResult ? fallbackAuthResult.status : null
+          });
+        }catch(fallbackAuthError){
+          lastConnectError = fallbackAuthError;
+          walletConnectDebug('warn', 'fallback auth failed', {
+            provider: entry.label,
+            errorKind: walletConnectErrorKind(fallbackAuthError),
+            error: walletErrorForLog(fallbackAuthError)
+          });
+          if(isUserRejectedError(fallbackAuthError)){
+            throw new Error('Wallet connection was cancelled in the wallet prompt.');
           }
         }
       }
