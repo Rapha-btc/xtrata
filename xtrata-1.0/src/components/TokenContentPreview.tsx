@@ -29,6 +29,12 @@ import {
   registerRecursiveBridge
 } from '../lib/viewer/recursive';
 import {
+  buildRuntimeOpenUrl,
+  isExecutableRuntimeMimeType,
+  markRuntimeOpenWarningShown,
+  shouldShowRuntimeOpenWarning
+} from '../lib/viewer/runtime-open';
+import {
   type StreamPhase,
   shouldAllowTokenUriPreview
 } from '../lib/viewer/streaming';
@@ -66,6 +72,9 @@ const STREAM_MAX_INITIAL_CHUNKS = 24;
 const STREAM_BATCH_SIZE = 4;
 const STREAM_SOURCEOPEN_TIMEOUT_MS = 3000;
 const STREAM_APPEND_TIMEOUT_MS = 5000;
+const RUNTIME_OPEN_WARNING_MESSAGE =
+  'This will open executable inscription content in an isolated runtime page so wallet providers can connect.\n\n' +
+  'Only continue if you trust this content.';
 
 const buildStreamMimeCandidates = (mimeType: string | null) => {
   if (!mimeType) {
@@ -1447,8 +1456,36 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     totalSize !== null &&
     !svgPreview &&
     !loadRequested;
+  const runtimeOpenUrl = useMemo(() => {
+    if (!isExecutableRuntimeMimeType(resolvedMimeType ?? mimeType)) {
+      return null;
+    }
+    const fallbackContractId = props.fallbackClient
+      ? getContractId(props.fallbackClient.contract)
+      : null;
+    const fallbackSource =
+      contentUrl || svgPreview || tokenUriPreview || directTokenUri;
+    return buildRuntimeOpenUrl({
+      contractId: props.contractId,
+      tokenId: props.token.id,
+      network: props.client.network,
+      fallbackContractId,
+      sourceUrl: fallbackSource
+    });
+  }, [
+    resolvedMimeType,
+    mimeType,
+    props.fallbackClient,
+    props.contractId,
+    props.token.id,
+    props.client.network,
+    contentUrl,
+    svgPreview,
+    tokenUriPreview,
+    directTokenUri
+  ]);
   const fullscreenSource =
-    contentUrl || svgPreview || tokenUriPreview || directTokenUri;
+    runtimeOpenUrl || contentUrl || svgPreview || tokenUriPreview || directTokenUri;
   const viewerLabel = props.viewerLabel ?? 'Viewer';
   const handleBackToViewer = () => {
     if (props.onRequestViewer) {
@@ -1469,6 +1506,20 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     }
     if (!fullscreenSource) {
       return;
+    }
+    if (runtimeOpenUrl) {
+      const storage =
+        typeof window.localStorage === 'undefined' ? null : window.localStorage;
+      if (shouldShowRuntimeOpenWarning(storage)) {
+        const accepted =
+          typeof window.confirm === 'function'
+            ? window.confirm(RUNTIME_OPEN_WARNING_MESSAGE)
+            : true;
+        if (!accepted) {
+          return;
+        }
+        markRuntimeOpenWarningShown(storage);
+      }
     }
     window.open(fullscreenSource, '_blank', 'noopener,noreferrer');
   };
