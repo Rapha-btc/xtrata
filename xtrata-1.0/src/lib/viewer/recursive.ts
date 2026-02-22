@@ -330,7 +330,12 @@ const buildBridgeScript = (bridgeId: string) => {
       });
       return buildResponse({ ok: true, result });
     } catch (err) {
-      return buildResponse({ ok: false, cause: err && err.message ? err.message : String(err) });
+      const cause = err && err.message ? err.message : String(err);
+      // Let non-content-contract read-only calls proceed normally.
+      if (cause === 'Contract mismatch' && originalFetch) {
+        return originalFetch(input, init);
+      }
+      return buildResponse({ ok: false, cause });
     }
   };
 
