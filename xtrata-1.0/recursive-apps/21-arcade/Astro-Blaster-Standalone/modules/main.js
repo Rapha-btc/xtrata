@@ -46,6 +46,7 @@
   var connectWalletInFlight = null;
   var walletConnectSession = null;
   var walletConnectSdkModulePromise = null;
+  var WALLET_CONNECT_SESSION_STORAGE_KEY = 'arcade-wallet-session-v1';
   var adminBusy = false;
   var WALLET_DEBUG_BUILD = 'wallet-debug-2026-02-20-12';
   var providerMethodUnsupported = {};
@@ -1555,6 +1556,51 @@
     walletDebug(level, '[wallet-connect] ' + String(message || ''), detail);
   }
 
+  function readWalletConnectSessionStorage(){
+    if(typeof window === 'undefined') return null;
+    if(!window.localStorage) return null;
+    try{
+      return window.localStorage.getItem(WALLET_CONNECT_SESSION_STORAGE_KEY);
+    }catch(error){
+      return null;
+    }
+  }
+
+  function writeWalletConnectSessionStorage(value){
+    if(typeof window === 'undefined') return;
+    if(!window.localStorage) return;
+    try{
+      if(value){
+        window.localStorage.setItem(WALLET_CONNECT_SESSION_STORAGE_KEY, value);
+      } else {
+        window.localStorage.removeItem(WALLET_CONNECT_SESSION_STORAGE_KEY);
+      }
+    }catch(error){}
+  }
+
+  function restoreWalletConnectSession(){
+    if(walletConnectSession) return;
+    var raw = readWalletConnectSessionStorage();
+    if(!raw) return;
+    try{
+      var parsed = JSON.parse(raw);
+      if(!parsed || !looksLikeStacksAddress(parsed.address)) return;
+      walletConnectSession = {
+        address: String(parsed.address).trim(),
+        network: normalizeNetwork(parsed.network) || inferNetworkFromAddress(parsed.address) || null,
+        provider: parsed.provider ? String(parsed.provider) : null,
+        source: parsed.source ? String(parsed.source) : 'storage'
+      };
+      walletConnectDebug('info', 'session restored', {
+        address: walletConnectSession.address,
+        network: walletConnectSession.network,
+        provider: walletConnectSession.provider
+      });
+    }catch(error){
+      writeWalletConnectSessionStorage('');
+    }
+  }
+
   function clearWalletConnectSession(reason){
     if(walletConnectSession){
       walletConnectDebug('info', 'session cleared', {
@@ -1566,6 +1612,7 @@
       });
     }
     walletConnectSession = null;
+    writeWalletConnectSessionStorage('');
   }
 
   function setWalletConnectSession(address, network, providerLabel, source){
@@ -1583,6 +1630,7 @@
       provider: walletConnectSession.provider,
       source: walletConnectSession.source
     });
+    writeWalletConnectSessionStorage(JSON.stringify(walletConnectSession));
     return true;
   }
 
