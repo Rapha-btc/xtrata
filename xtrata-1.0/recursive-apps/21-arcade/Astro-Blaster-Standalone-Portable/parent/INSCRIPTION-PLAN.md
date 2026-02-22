@@ -8,11 +8,11 @@ This plan is for this portable folder layout:
 ## Files to inscribe
 
 Leaf modules first:
-1. `modules/styles.css`
-2. `modules/utils.js`
-3. `modules/highscores.js`
-4. `modules/game01_astro_blaster-v2.37.js`
-5. `modules/main.js`
+1. `modules/styles.css` - 69
+2. `modules/utils.js` - 70
+3. `modules/highscores.js` - 68
+4. `modules/game01_astro_blaster-v2.37.js` - 71
+5. `modules/main.js` - 72
 
 Recursive parent last:
 6. `parent/astro-blaster-parent.template.html`
@@ -28,11 +28,11 @@ From the portable folder root:
 
 ```bash
 node parent/fill-inscription-ids.mjs \
-  --styles <styles-id> \
-  --utils <utils-id> \
-  --highscores <highscores-id> \
-  --game-runtime <game-runtime-id> \
-  --main <main-id>
+  --styles <69> \
+  --utils <70> \
+  --highscores <68> \
+  --game-runtime <71> \
+  --main <72>
 ```
 
 This updates:

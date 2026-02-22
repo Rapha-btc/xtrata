@@ -1,11 +1,5 @@
 /* eslint-disable */
-/*
- * AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY.
- * Source: recursive-apps/21-arcade/game01_astro_blaster-v2/src/legacy/game01_astro_blaster.legacy.js
- * Build Framework: recursive-apps/21-arcade/game01_astro_blaster-v2/src/build/build-game.mjs
- * Generated At: 2026-02-21T00:55:02.776Z
- * Legacy Source SHA256: bd4fedbda0aefd53f48f01927ef726ee53d15b6a6f6ddab0191253b937a2a884
- */
+
 
 var Game01 = (function(){
   var id = 'astro_blaster';

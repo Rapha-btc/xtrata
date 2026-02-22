@@ -6,9 +6,11 @@
   <title>Astro Blaster - On-Chain Standalone</title>
   <style>
     body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: #050816; color: #d6e7ff; }
-    #loader-panel { padding: 10px 12px; border-bottom: 1px solid #1d2c47; background: #0a1223; }
+    #loader-panel { padding: 10px 12px; border-bottom: 1px solid #1d2c47; background: #0a1223; overflow: hidden; transition: opacity 0.22s ease, max-height 0.22s ease, padding 0.22s ease, border-width 0.22s ease; max-height: 240px; opacity: 1; }
+    #loader-panel.is-hidden { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; border-bottom-width: 0; }
     #loader-title { font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; color: #9fc2ff; }
     #loader-log { margin: 8px 0 0; max-height: 130px; overflow: auto; font-size: 12px; line-height: 1.4; white-space: pre-wrap; word-break: break-word; color: #9ec6ff; }
+    #loader-panel.is-hidden #loader-log { max-height: 0; margin-top: 0; }
   </style>
 </head>
 <body>
@@ -95,8 +97,33 @@
         { key: 'main', id: Number(CONFIG.moduleIds.main || 0), mimeType: 'text/javascript' }
       ];
 
+      var loaderPanel = document.getElementById('loader-panel');
       var loaderLog = document.getElementById('loader-log');
       var startMs = Date.now();
+
+      function keepLoaderVisible() {
+        try {
+          if (typeof window === 'undefined' || !window.location) return false;
+          var params = new URLSearchParams(window.location.search || '');
+          return params.get('loader') === '1';
+        } catch (error) {
+          return false;
+        }
+      }
+
+      function hideLoaderPanelAfterBoot() {
+        if (keepLoaderVisible()) {
+          log('Loader pinned via ?loader=1');
+          return;
+        }
+        if (!loaderPanel) return;
+        loaderPanel.classList.add('is-hidden');
+        setTimeout(function () {
+          if (loaderPanel && loaderPanel.parentNode) {
+            loaderPanel.style.display = 'none';
+          }
+        }, 260);
+      }
 
       function log(message) {
         var line = '[+' + String(Date.now() - startMs).padStart(5, ' ') + 'ms] ' + String(message);
@@ -303,6 +330,7 @@
         }
 
         log('All modules loaded. Standalone Astro Blaster should now be running.');
+        hideLoaderPanelAfterBoot();
       }
 
       boot().catch(function (error) {

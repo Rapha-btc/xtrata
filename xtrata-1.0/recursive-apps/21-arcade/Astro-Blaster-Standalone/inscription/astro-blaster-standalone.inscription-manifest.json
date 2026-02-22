@@ -66,8 +66,8 @@
   "parent": {
     "path": "inscription/astro-blaster-parent.template.html",
     "mimeType": "text/html",
-    "sizeBytes": 11834,
-    "sha256": "51744f07604ab2548f977c1ebfd1a3b2f0af69d7e45971ec640e1e13baebd1ea",
+    "sizeBytes": 13005,
+    "sha256": "1d1cb52a584185e45bdaeecd97e7b791e1f7e6bbf8ebd1e9110d7b36fcdc3727",
     "configFieldsToSetBeforeMint": [
       "CONFIG.contentContractAddress",
       "CONFIG.contentContractName",

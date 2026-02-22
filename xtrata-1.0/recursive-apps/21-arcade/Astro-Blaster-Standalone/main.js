@@ -929,17 +929,76 @@
   }
 
   function resolveProviderPath(path){
+    return resolveProviderPathFromRoot(path, window);
+  }
+
+  function resolveProviderPathFromRoot(path, rootNode){
     if(typeof path !== 'string' || !path) return null;
     var parts = path.split('.');
-    var node = window;
+    var node = rootNode || window;
     var i;
     for(i = 0; i < parts.length; i++){
       var key = parts[i];
       if(!key || !node || typeof node !== 'object') return null;
-      if(!(key in node)) return null;
-      node = node[key];
+      try{
+        if(!(key in node)) return null;
+        node = node[key];
+      }catch(e){
+        return null;
+      }
     }
     return node;
+  }
+
+  function safeWindowRead(target, key){
+    if(!target || typeof target !== 'object') return null;
+    try{
+      return target[key];
+    }catch(e){
+      return null;
+    }
+  }
+
+  function collectProviderContexts(){
+    var out = [];
+
+    function push(target, label){
+      if(!target || (typeof target !== 'object' && typeof target !== 'function')) return;
+      var i;
+      for(i = 0; i < out.length; i++){
+        if(out[i].target === target) return;
+      }
+      out.push({
+        target: target,
+        label: label
+      });
+    }
+
+    if(typeof window === 'undefined'){
+      return out;
+    }
+
+    push(window, 'window');
+
+    try{
+      if(window.parent && window.parent !== window){
+        push(window.parent, 'window.parent');
+      }
+    }catch(e){}
+
+    try{
+      if(window.top && window.top !== window){
+        push(window.top, 'window.top');
+      }
+    }catch(e){}
+
+    try{
+      if(window.opener && window.opener !== window){
+        push(window.opener, 'window.opener');
+      }
+    }catch(e){}
+
+    return out;
   }
 
   function collectProviders(){
@@ -961,70 +1020,72 @@
       });
     }
 
-    var directCandidates = [
-      { label: 'window.StacksProvider', value: window.StacksProvider },
-      { label: 'window.LeatherProvider', value: window.LeatherProvider },
-      { label: 'window.XverseProviders', value: window.XverseProviders },
-      { label: 'window.xverseProviders', value: window.xverseProviders },
-      {
-        label: 'window.XverseProviders.StacksProvider',
-        value: window.XverseProviders && window.XverseProviders.StacksProvider
-      },
-      {
-        label: 'window.xverseProviders.StacksProvider',
-        value: window.xverseProviders && window.xverseProviders.StacksProvider
-      },
-      {
-        label: 'window.XverseProviders.BitcoinProvider',
-        value: window.XverseProviders && window.XverseProviders.BitcoinProvider
-      },
-      {
-        label: 'window.xverseProviders.BitcoinProvider',
-        value: window.xverseProviders && window.xverseProviders.BitcoinProvider
-      },
-      { label: 'window.btc', value: window.btc },
-      { label: 'window.stacks', value: window.stacks },
-      { label: 'window.BitcoinProvider', value: window.BitcoinProvider }
-    ];
+    var providerContexts = collectProviderContexts();
+    var contextIndex;
+    for(contextIndex = 0; contextIndex < providerContexts.length; contextIndex++){
+      var context = providerContexts[contextIndex];
+      var contextRoot = context.target;
+      var prefix = context.label || 'window';
+      var directCandidates = [
+        { label: prefix + '.StacksProvider', value: safeWindowRead(contextRoot, 'StacksProvider') },
+        { label: prefix + '.LeatherProvider', value: safeWindowRead(contextRoot, 'LeatherProvider') },
+        { label: prefix + '.XverseProviders', value: safeWindowRead(contextRoot, 'XverseProviders') },
+        { label: prefix + '.xverseProviders', value: safeWindowRead(contextRoot, 'xverseProviders') },
+        { label: prefix + '.XverseProviders.StacksProvider', value: resolveProviderPathFromRoot('XverseProviders.StacksProvider', contextRoot) },
+        { label: prefix + '.xverseProviders.StacksProvider', value: resolveProviderPathFromRoot('xverseProviders.StacksProvider', contextRoot) },
+        { label: prefix + '.XverseProviders.BitcoinProvider', value: resolveProviderPathFromRoot('XverseProviders.BitcoinProvider', contextRoot) },
+        { label: prefix + '.xverseProviders.BitcoinProvider', value: resolveProviderPathFromRoot('xverseProviders.BitcoinProvider', contextRoot) },
+        { label: prefix + '.btc', value: safeWindowRead(contextRoot, 'btc') },
+        { label: prefix + '.stacks', value: safeWindowRead(contextRoot, 'stacks') },
+        { label: prefix + '.BitcoinProvider', value: safeWindowRead(contextRoot, 'BitcoinProvider') }
+      ];
 
-    var c;
-    for(c = 0; c < directCandidates.length; c++){
-      push(directCandidates[c].value, directCandidates[c].label);
-    }
+      var c;
+      for(c = 0; c < directCandidates.length; c++){
+        push(directCandidates[c].value, directCandidates[c].label);
+      }
 
-    var registries = [window.btc_providers, window.webbtc_providers, window.wbip_providers];
-    var r;
-    for(r = 0; r < registries.length; r++){
-      var registry = registries[r];
-      if(!Array.isArray(registry)) continue;
-      var i;
-      for(i = 0; i < registry.length; i++){
-        var entry = registry[i];
-        if(!entry) continue;
-        var methods = Array.isArray(entry.methods) ? entry.methods : null;
-        if(
-          methods &&
-          methods.indexOf('stx_getAddresses') < 0 &&
-          methods.indexOf('stx_getAccounts') < 0 &&
-          methods.indexOf('getAddresses') < 0 &&
-          methods.indexOf('getAccounts') < 0 &&
-          methods.indexOf('stx_callContract') < 0 &&
-          methods.indexOf('stx_callContractV2') < 0 &&
-          methods.indexOf('stx_requestAccounts') < 0 &&
-          methods.indexOf('requestAccounts') < 0
-        ){
-          continue;
-        }
+      var registries = [
+        safeWindowRead(contextRoot, 'btc_providers'),
+        safeWindowRead(contextRoot, 'webbtc_providers'),
+        safeWindowRead(contextRoot, 'wbip_providers')
+      ];
+      var r;
+      for(r = 0; r < registries.length; r++){
+        var registry = registries[r];
+        if(!Array.isArray(registry)) continue;
+        var i;
+        for(i = 0; i < registry.length; i++){
+          var entry = registry[i];
+          if(!entry) continue;
+          var methods = Array.isArray(entry.methods) ? entry.methods : null;
+          if(
+            methods &&
+            methods.indexOf('stx_getAddresses') < 0 &&
+            methods.indexOf('stx_getAccounts') < 0 &&
+            methods.indexOf('getAddresses') < 0 &&
+            methods.indexOf('getAccounts') < 0 &&
+            methods.indexOf('stx_callContract') < 0 &&
+            methods.indexOf('stx_callContractV2') < 0 &&
+            methods.indexOf('stx_requestAccounts') < 0 &&
+            methods.indexOf('requestAccounts') < 0
+          ){
+            continue;
+          }
 
-        var provider = null;
-        if(entry.provider && providerHasCapabilities(entry.provider)){
-          provider = entry.provider;
-        } else if(typeof entry.id === 'string' && entry.id){
-          provider = resolveProviderPath(entry.id);
-        }
+          var provider = null;
+          if(entry.provider && providerHasCapabilities(entry.provider)){
+            provider = entry.provider;
+          } else if(typeof entry.id === 'string' && entry.id){
+            provider = resolveProviderPathFromRoot(entry.id, contextRoot);
+            if(!provider && entry.id.indexOf('window.') === 0){
+              provider = resolveProviderPathFromRoot(entry.id.substring(7), contextRoot);
+            }
+          }
 
-        if(providerHasCapabilities(provider)){
-          push(provider, 'registry:' + (entry.name || entry.id || ('#' + i)));
+          if(providerHasCapabilities(provider)){
+            push(provider, prefix + ':registry:' + (entry.name || entry.id || ('#' + i)));
+          }
         }
       }
     }
@@ -1039,20 +1100,29 @@
         if(label.indexOf('xverseproviders.stacksprovider') >= 0) score += 60;
         if(label === 'window.xverseproviders') score -= 40;
         if(label.indexOf('xverse') >= 0) score += 20;
-        if(label.indexOf('registry:') === 0) score += 10;
+        if(label.indexOf('registry:') === 0 || label.indexOf(':registry:') >= 0) score += 10;
         if(label.indexOf('bitcoinprovider') >= 0) score -= 140;
         return score;
       }
       return score(b) - score(a);
     });
 
+    var inIframe = false;
+    try{
+      inIframe = window.self !== window.top;
+    }catch(e){
+      inIframe = true;
+    }
+
     walletDebug('info', 'Provider discovery completed', {
       build: WALLET_DEBUG_BUILD,
       count: out.length,
       labels: out.map(function(entry){ return entry.label; }),
-      hasStacksProvider: typeof window !== 'undefined' ? !!window.StacksProvider : false,
-      hasLeatherProvider: typeof window !== 'undefined' ? !!window.LeatherProvider : false,
-      hasXverseProviders: typeof window !== 'undefined' ? !!window.XverseProviders : false
+      hasStacksProvider: providerContexts.some(function(context){ return !!safeWindowRead(context.target, 'StacksProvider'); }),
+      hasLeatherProvider: providerContexts.some(function(context){ return !!safeWindowRead(context.target, 'LeatherProvider'); }),
+      hasXverseProviders: providerContexts.some(function(context){ return !!safeWindowRead(context.target, 'XverseProviders'); }),
+      providerContexts: providerContexts.map(function(context){ return context.label; }),
+      inIframe: inIframe
     });
 
     return out;

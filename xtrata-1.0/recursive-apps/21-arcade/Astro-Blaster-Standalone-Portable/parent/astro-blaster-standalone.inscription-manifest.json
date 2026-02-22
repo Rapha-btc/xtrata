@@ -24,7 +24,7 @@
       "sizeBytes": 15888,
       "sha256": "d8b3e8f89a257432222afd3785b49da0d03e2e297f526eb89270998fc1e220e3",
       "mintOrder": 1,
-      "mintedInscriptionId": 0
+      "mintedInscriptionId": 69
     },
     {
       "key": "utils",
@@ -33,7 +33,7 @@
       "sizeBytes": 2261,
       "sha256": "16fb1f0d7a410ef200cfeded828160f1cb4619641cd0ae5ecc46b0b106e2a69f",
       "mintOrder": 2,
-      "mintedInscriptionId": 0
+      "mintedInscriptionId": 70
     },
     {
       "key": "highscores",
@@ -42,7 +42,7 @@
       "sizeBytes": 129741,
       "sha256": "dd47cfbf1d3f3468076e7f2038dc82da1b5238c4e091018448bb51c75ab71603",
       "mintOrder": 3,
-      "mintedInscriptionId": 0
+      "mintedInscriptionId": 68
     },
     {
       "key": "gameRuntime",
@@ -51,7 +51,7 @@
       "sizeBytes": 263260,
       "sha256": "dbadd0907f3951646c3768ea21052091e3d253cbe6f5a9d2a6622ff632479675",
       "mintOrder": 4,
-      "mintedInscriptionId": 0
+      "mintedInscriptionId": 71
     },
     {
       "key": "main",
@@ -60,14 +60,14 @@
       "sizeBytes": 118415,
       "sha256": "b057fa344a8757f2bc01c75a6bbc8f70d29e0ffb5dad7576ee1f92de295f3e3a",
       "mintOrder": 5,
-      "mintedInscriptionId": 0
+      "mintedInscriptionId": 72
     }
   ],
   "parent": {
     "path": "parent/astro-blaster-parent.template.html",
     "mimeType": "text/html",
-    "sizeBytes": 11834,
-    "sha256": "51744f07604ab2548f977c1ebfd1a3b2f0af69d7e45971ec640e1e13baebd1ea",
+    "sizeBytes": 12999,
+    "sha256": "1a6e4faf901a3a5ab3520174d728e5b026790349e5d4cb60d783a694ef1c9a2e",
     "configFieldsToSetBeforeMint": [
       "CONFIG.contentContractAddress",
       "CONFIG.contentContractName",
@@ -90,11 +90,11 @@
       "main"
     ],
     "dependencies": [
-      0,
-      0,
-      0,
-      0,
-      0
+      69,
+      70,
+      68,
+      71,
+      72
     ],
     "tokenUri": "",
     "notes": "Dependencies must match CONFIG.moduleIds in parent HTML exactly."
