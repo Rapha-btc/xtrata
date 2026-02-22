@@ -71,8 +71,8 @@
           contractName: 'xtrata-arcade-scores-v1-3',
           functionName: 'submit-score',
           leaderboardFunctionName: 'get-top10',
-          apiBaseUrl: '/rpc',
-          apiFallbackBaseUrls: ['https://api.mainnet.hiro.so'],
+          apiBaseUrl: '/hiro/mainnet',
+          apiFallbackBaseUrls: ['/rpc', 'https://api.mainnet.hiro.so'],
           readSenderAddress: '',
           requiresAttestation: false,
           attestationEndpoint: '',
@@ -85,8 +85,8 @@
       };
 
       var NETWORK_BASE = {
-        mainnet: ['/rpc', 'https://api.mainnet.hiro.so'],
-        testnet: ['/rpc-testnet', 'https://api.testnet.hiro.so']
+        mainnet: ['/hiro/mainnet', '/rpc', 'https://api.mainnet.hiro.so'],
+        testnet: ['/hiro/testnet', '/rpc-testnet', 'https://api.testnet.hiro.so']
       };
 
       var MODULES = [

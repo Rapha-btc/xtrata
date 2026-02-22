@@ -87,16 +87,16 @@ function normalizeLeafPayload(payload, label){
 
 function buildApiBaseUrl(network){
   const normalized = String(network || '').toLowerCase();
-  if(normalized === 'testnet') return '/rpc-testnet';
+  if(normalized === 'testnet') return '/hiro/testnet';
   if(normalized === 'devnet' || normalized === 'regtest') return '/rpc';
-  return '/rpc';
+  return '/hiro/mainnet';
 }
 
 function buildApiFallbackBaseUrls(network){
   const normalized = String(network || '').toLowerCase();
-  if(normalized === 'testnet') return ['https://api.testnet.hiro.so'];
+  if(normalized === 'testnet') return ['/rpc-testnet', 'https://api.testnet.hiro.so'];
   if(normalized === 'devnet' || normalized === 'regtest') return ['http://localhost:3999'];
-  return ['https://api.mainnet.hiro.so'];
+  return ['/rpc', 'https://api.mainnet.hiro.so'];
 }
 
 function escapeRegex(text){
