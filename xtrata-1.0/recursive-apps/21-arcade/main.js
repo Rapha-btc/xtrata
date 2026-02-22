@@ -1822,7 +1822,7 @@
           variant: attempt.variant,
           timeoutMs: timeoutMs
         });
-        return await withPromiseTimeout(
+        var result = await withPromiseTimeout(
           Promise.resolve(attempt.run()),
           timeoutMs,
           'Wallet provider request timed out for "' + method + '".'
