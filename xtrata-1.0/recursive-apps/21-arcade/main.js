@@ -64,6 +64,7 @@
   var walletDisconnectOverride = false;
   var connectPromptShown = false;
   var connectWalletInFlight = null;
+  var walletConnectSession = null;
   var walletConnectSdkModulePromise = null;
   var adminBusy = false;
   var WALLET_DEBUG_BUILD = 'wallet-debug-2026-02-20-12';
@@ -1574,6 +1575,79 @@
     walletDebug(level, '[wallet-connect] ' + String(message || ''), detail);
   }
 
+  function clearWalletConnectSession(reason){
+    if(walletConnectSession){
+      walletConnectDebug('info', 'session cleared', {
+        reason: reason || 'unspecified',
+        address: walletConnectSession.address || null,
+        network: walletConnectSession.network || null,
+        provider: walletConnectSession.provider || null,
+        source: walletConnectSession.source || null
+      });
+    }
+    walletConnectSession = null;
+  }
+
+  function setWalletConnectSession(address, network, providerLabel, source){
+    if(!looksLikeStacksAddress(address)) return false;
+    var normalizedAddress = String(address).trim();
+    walletConnectSession = {
+      address: normalizedAddress,
+      network: normalizeNetwork(network) || inferNetworkFromAddress(normalizedAddress) || null,
+      provider: providerLabel ? String(providerLabel) : null,
+      source: source ? String(source) : null
+    };
+    walletConnectDebug('info', 'session updated', {
+      address: walletConnectSession.address,
+      network: walletConnectSession.network,
+      provider: walletConnectSession.provider,
+      source: walletConnectSession.source
+    });
+    return true;
+  }
+
+  function extractAddressFromConnectAuthPayload(payload, targetNetwork){
+    var candidates = [];
+
+    if(payload && payload.userSession && typeof payload.userSession.loadUserData === 'function'){
+      try{
+        var userData = payload.userSession.loadUserData();
+        collectStacksAddresses(userData, candidates);
+        if(userData && userData.profile){
+          collectStacksAddresses(userData.profile, candidates);
+        }
+        if(userData && userData.identityAddress){
+          collectStacksAddresses(userData.identityAddress, candidates);
+        }
+      }catch(error){
+        walletConnectDebug('warn', 'auth payload userSession read failed', {
+          error: walletErrorForLog(error)
+        });
+      }
+    }
+
+    if(payload && payload.authResponsePayload){
+      collectStacksAddresses(payload.authResponsePayload, candidates);
+      if(payload.authResponsePayload.profile){
+        collectStacksAddresses(payload.authResponsePayload.profile, candidates);
+      }
+      if(payload.authResponsePayload.identityAddress){
+        collectStacksAddresses(payload.authResponsePayload.identityAddress, candidates);
+      }
+    }
+
+    return pickPreferredStacksAddress(candidates, targetNetwork) || pickPreferredStacksAddress(candidates, null);
+  }
+
+  function setWalletConnectSessionFromAuthPayload(payload, targetNetwork, providerLabel){
+    var address = extractAddressFromConnectAuthPayload(payload, targetNetwork);
+    if(!address){
+      return false;
+    }
+    var payloadNetwork = inferNetworkFromAddress(address) || targetNetwork || null;
+    return setWalletConnectSession(address, payloadNetwork, providerLabel || 'stacks-connect', 'stacks-connect-auth');
+  }
+
   function isWalletConnectCancelledStatus(status){
     if(typeof status === 'undefined' || status === null) return false;
     var lower = String(status).toLowerCase();
@@ -1693,7 +1767,7 @@
       throw new Error('Stacks Connect module did not expose authenticate/showConnect.');
     }
     var userSession = createWalletConnectUserSession(walletConnectModule);
-    var strategy = authFn ? 'authenticate' : 'showConnect';
+    var strategy = showConnectFn ? 'showConnect' : 'authenticate';
     walletConnectDebug('info', 'fallback auth invocation', {
       provider: providerLabel,
       targetNetwork: targetNetwork,
@@ -1746,10 +1820,10 @@
 
       try{
         var invocation;
-        if(authFn){
-          invocation = authFn(authOptions, provider || undefined);
-        } else {
+        if(showConnectFn){
           invocation = showConnectFn(authOptions);
+        } else {
+          invocation = authFn(authOptions, provider || undefined);
         }
         Promise.resolve(invocation).catch(function(error){
           settle(error);
@@ -2357,6 +2431,31 @@
 
   async function getWalletStatus(){
     var targetNetwork = resolveTargetNetwork();
+
+    if(walletConnectSession && looksLikeStacksAddress(walletConnectSession.address)){
+      if(walletDisconnectOverride){
+        return {
+          state: 'is-warning',
+          label: 'Wallet: disconnected on page · click to reconnect',
+          hasAddress: false,
+          address: null,
+          network: null,
+          provider: walletConnectSession.provider || 'wallet session'
+        };
+      }
+      var sessionNetwork = walletConnectSession.network || inferNetworkFromAddress(walletConnectSession.address) || targetNetwork || 'unknown';
+      var sessionLabel = 'Wallet: ' + shortAddress(walletConnectSession.address) + ' · ' + sessionNetwork;
+      var sessionWarning = isTargetNetworkMismatch(targetNetwork, walletConnectSession.network, walletConnectSession.address);
+      return {
+        state: sessionWarning ? 'is-warning' : 'is-connected',
+        label: sessionWarning ? sessionLabel + ' (target ' + targetNetwork + ')' : sessionLabel,
+        hasAddress: true,
+        address: walletConnectSession.address,
+        network: sessionNetwork,
+        provider: walletConnectSession.provider || 'stacks-connect'
+      };
+    }
+
     var resolved = await resolveConnectedWallet({ targetNetwork: targetNetwork });
     var providers = resolved.providers;
     if(!providers || providers.length === 0){
@@ -2387,6 +2486,13 @@
         provider: providerName
       };
     }
+
+    setWalletConnectSession(
+      resolved.address,
+      resolved.network || inferNetworkFromAddress(resolved.address) || targetNetwork || null,
+      resolved.providerEntry ? resolved.providerEntry.label : null,
+      'provider-resolve'
+    );
 
     if(walletDisconnectOverride){
       var disconnectedProviderName = resolved.providerEntry && resolved.providerEntry.name
@@ -2501,6 +2607,20 @@
     }
     if(
       !walletDisconnectOverride &&
+      walletConnectSession &&
+      looksLikeStacksAddress(walletConnectSession.address) &&
+      !isTargetNetworkMismatch(targetNetwork, walletConnectSession.network, walletConnectSession.address)
+    ){
+      walletConnectDebug('info', 'short-circuit: existing connect session', {
+        address: walletConnectSession.address,
+        network: walletConnectSession.network || null,
+        provider: walletConnectSession.provider || null
+      });
+      await refreshWalletStatus();
+      return true;
+    }
+    if(
+      !walletDisconnectOverride &&
       lastWalletStatus &&
       lastWalletStatus.hasAddress &&
       !isTargetNetworkMismatch(targetNetwork, lastWalletStatus.network, lastWalletStatus.address)
@@ -2535,6 +2655,78 @@
       providers: connectProviders.map(function(entry){ return entry.label; }),
       methods: connectMethods.slice()
     });
+
+    var primaryAuthEntry = null;
+    var pa;
+    for(pa = 0; pa < connectProviders.length; pa++){
+      if(!isLikelyBitcoinOnlyProvider(connectProviders[pa])){
+        primaryAuthEntry = connectProviders[pa];
+        break;
+      }
+    }
+
+    if(primaryAuthEntry){
+      fallbackAuthTried = true;
+      try{
+        var primaryAuthResult = await attemptWalletConnectWithStacksConnect(primaryAuthEntry, targetNetwork);
+        if(primaryAuthResult && isWalletConnectCancelledStatus(primaryAuthResult.status)){
+          walletConnectDebug('warn', 'outcome: user cancelled primary auth', {
+            provider: primaryAuthEntry.label
+          });
+          throw new Error('Wallet connection was cancelled in the wallet prompt.');
+        }
+
+        var sessionCaptured = setWalletConnectSessionFromAuthPayload(
+          primaryAuthResult ? primaryAuthResult.payload : null,
+          targetNetwork,
+          primaryAuthEntry.label
+        );
+
+        await refreshWalletStatus();
+        var primaryResolved = await resolveConnectedWallet({ targetNetwork: targetNetwork });
+        if(sessionCaptured || (primaryResolved.address && !isTargetNetworkMismatch(targetNetwork, primaryResolved.network, primaryResolved.address))){
+          setWalletDisconnectOverride(false, {
+            source: 'connectWalletInternal',
+            provider: primaryAuthEntry.label,
+            mode: 'stacksConnectAuthPrimary'
+          });
+          if(primaryResolved.address){
+            setWalletConnectSession(
+              primaryResolved.address,
+              primaryResolved.network || inferNetworkFromAddress(primaryResolved.address) || targetNetwork || null,
+              primaryResolved.providerEntry ? primaryResolved.providerEntry.label : primaryAuthEntry.label,
+              'stacks-connect-auth-primary-resolve'
+            );
+          }
+          await refreshWalletStatus();
+          walletConnectDebug('info', 'outcome: connected via primary auth', {
+            provider: primaryAuthEntry.label,
+            address: primaryResolved.address || (walletConnectSession ? walletConnectSession.address : null),
+            network: primaryResolved.network || (walletConnectSession ? walletConnectSession.network : null)
+          });
+          return true;
+        }
+        walletConnectDebug('warn', 'non-event: primary auth finished without connected address', {
+          provider: primaryAuthEntry.label,
+          status: primaryAuthResult ? primaryAuthResult.status : null
+        });
+      }catch(primaryAuthError){
+        lastConnectError = primaryAuthError;
+        walletConnectDebug('warn', 'primary auth failed', {
+          provider: primaryAuthEntry.label,
+          errorKind: walletConnectErrorKind(primaryAuthError),
+          error: walletErrorForLog(primaryAuthError)
+        });
+        if(isUserRejectedError(primaryAuthError)){
+          throw new Error('Wallet connection was cancelled in the wallet prompt.');
+        }
+      }
+    } else {
+      walletConnectDebug('warn', 'non-event: no non-bitcoin provider available for primary auth', {
+        providers: connectProviders.map(function(entry){ return entry.label; })
+      });
+    }
+
     var i;
     var m;
 
@@ -2597,6 +2789,12 @@
             }
           }
           if(requestedAddress){
+            setWalletConnectSession(
+              requestedAddress,
+              inferNetworkFromAddress(requestedAddress) || targetNetwork || null,
+              entry.label,
+              'provider-request-method'
+            );
             walletDebug('info', 'Account access returned address', {
               provider: entry.label,
               method: connectMethods[m],
@@ -2676,19 +2874,33 @@
             throw new Error('Wallet connection was cancelled in the wallet prompt.');
           }
 
+          var fallbackSessionCaptured = setWalletConnectSessionFromAuthPayload(
+            fallbackAuthResult ? fallbackAuthResult.payload : null,
+            targetNetwork,
+            entry.label
+          );
+
           await refreshWalletStatus();
           var fallbackResolved = await resolveConnectedWallet({ targetNetwork: targetNetwork });
-          if(fallbackResolved.address && !isTargetNetworkMismatch(targetNetwork, fallbackResolved.network, fallbackResolved.address)){
+          if(fallbackSessionCaptured || (fallbackResolved.address && !isTargetNetworkMismatch(targetNetwork, fallbackResolved.network, fallbackResolved.address))){
             setWalletDisconnectOverride(false, {
               source: 'connectWalletInternal',
               provider: entry.label,
               mode: 'stacksConnectAuth'
             });
+            if(fallbackResolved.address){
+              setWalletConnectSession(
+                fallbackResolved.address,
+                fallbackResolved.network || inferNetworkFromAddress(fallbackResolved.address) || targetNetwork || null,
+                fallbackResolved.providerEntry ? fallbackResolved.providerEntry.label : entry.label,
+                'stacks-connect-auth-fallback-resolve'
+              );
+            }
             await refreshWalletStatus();
             walletConnectDebug('info', 'outcome: connected via fallback auth', {
               provider: entry.label,
-              address: fallbackResolved.address,
-              network: fallbackResolved.network || null
+              address: fallbackResolved.address || (walletConnectSession ? walletConnectSession.address : null),
+              network: fallbackResolved.network || (walletConnectSession ? walletConnectSession.network : null)
             });
             return true;
           }
@@ -2742,6 +2954,12 @@
                 provider: entry.label,
                 mode: 'directConnect'
               });
+              setWalletConnectSession(
+                directResolved.address,
+                directResolved.network || inferNetworkFromAddress(directResolved.address) || targetNetwork || null,
+                directResolved.providerEntry ? directResolved.providerEntry.label : entry.label,
+                'direct-provider-connect'
+              );
               await refreshWalletStatus();
               walletDebug('info', 'connectWalletInternal succeeded after direct provider connect', {
                 provider: entry.label,
@@ -2789,6 +3007,12 @@
                 provider: entry.label,
                 mode: 'passiveResolve'
               });
+              setWalletConnectSession(
+                passiveResolved.address,
+                passiveResolved.network || inferNetworkFromAddress(passiveResolved.address) || targetNetwork || null,
+                passiveResolved.providerEntry ? passiveResolved.providerEntry.label : entry.label,
+                'passive-provider-resolve'
+              );
               await refreshWalletStatus();
               walletDebug('info', 'connectWalletInternal succeeded after passive resolve', {
                 provider: entry.label,
@@ -2839,6 +3063,12 @@
         source: 'connectWalletInternal',
         mode: 'finalCheck'
       });
+      setWalletConnectSession(
+        finalResolved.address,
+        finalResolved.network || inferNetworkFromAddress(finalResolved.address) || targetNetwork || null,
+        finalResolved.providerEntry ? finalResolved.providerEntry.label : null,
+        'final-check'
+      );
       await refreshWalletStatus();
       walletDebug('info', 'connectWalletInternal succeeded at final check', {
         address: finalResolved.address,
@@ -2996,6 +3226,7 @@
         source: 'disconnectWalletInternal',
         mode: 'providerCleared'
       });
+      clearWalletConnectSession('disconnect-provider-cleared');
       walletDebug('info', 'disconnectWalletInternal completed', {
         disconnected: true,
         attemptedAnyMethod: attemptedAnyMethod,
@@ -3019,6 +3250,7 @@
       disconnectSucceeded: disconnectSucceeded,
       address: finalResolved.address
     });
+    clearWalletConnectSession('disconnect-local-override');
     syncOnChainReadSenderAddress('');
     await refreshWalletStatus();
     return true;
