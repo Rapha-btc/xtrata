@@ -47,6 +47,23 @@ const buildCollectionSlug = (collectionName: string) =>
 
 const PARENT_THUMBNAIL_LIMIT = 12;
 const DEPLOY_WIZARD_DRAFT_STORAGE_KEY = 'xtrata-manage-deploy-wizard-v1';
+const DEPLOY_DEBUG_LOG_LIMIT = 60;
+const DEPLOY_CLARITY_VERSION = 2;
+const MANAGE_APP_ICON =
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%23f97316"/><path d="M18 20h28v6H18zm0 12h28v6H18zm0 12h28v6H18z" fill="white"/></svg>';
+
+const debugStringify = (value: unknown) => {
+  try {
+    return JSON.stringify(value, (_key, entry) =>
+      typeof entry === 'bigint' ? entry.toString() : entry
+    );
+  } catch {
+    return String(value);
+  }
+};
+
+const toErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : String(error);
 
 type DeployWizardDraftStorage = {
   collectionName: string;
@@ -118,6 +135,8 @@ export default function DeployWizardPanel() {
   const [collection, setCollection] = useState<CollectionDraft | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [deployPending, setDeployPending] = useState(false);
+  const [deployAttemptId, setDeployAttemptId] = useState<string | null>(null);
+  const [deployDebugLog, setDeployDebugLog] = useState<string[]>([]);
   const reviewCloseButtonRef = useRef<HTMLButtonElement | null>(null);
   const hasHydratedDraftRef = useRef(false);
 
@@ -509,16 +528,70 @@ export default function DeployWizardPanel() {
       coreTarget
     ]
   );
+  const deploySourceByteLength = useMemo(
+    () => new TextEncoder().encode(deployBuild.source).byteLength,
+    [deployBuild.source]
+  );
+  const preflightSummary = useMemo(
+    () => ({
+      walletAddress: walletSession.address ?? null,
+      walletNetwork: walletSession.network ?? null,
+      activeNetwork,
+      coreContractId: coreTarget?.contractId ?? null,
+      mintType,
+      clarityVersion: DEPLOY_CLARITY_VERSION,
+      sourceLengthChars: deployBuild.source.length,
+      sourceLengthBytes: deploySourceByteLength,
+      errors: deployBuild.errors.length,
+      warnings: deployBuild.warnings.length
+    }),
+    [
+      walletSession.address,
+      walletSession.network,
+      activeNetwork,
+      coreTarget?.contractId,
+      mintType,
+      deployBuild.source.length,
+      deploySourceByteLength,
+      deployBuild.errors.length,
+      deployBuild.warnings.length
+    ]
+  );
+
+  const appendDeployDebug = (message: string, details?: Record<string, unknown>) => {
+    const timestamp = new Date().toISOString();
+    const suffix = details ? ` ${debugStringify(details)}` : '';
+    const line = `${timestamp} ${message}${suffix}`;
+    setDeployDebugLog((previous) => [
+      ...previous.slice(-(DEPLOY_DEBUG_LOG_LIMIT - 1)),
+      line
+    ]);
+    // eslint-disable-next-line no-console
+    console.debug('[xtrata:deploy]', message, details ?? {});
+  };
 
   const handleOpenReview = () => {
     setStatus(null);
+    appendDeployDebug('Review modal opened', preflightSummary);
     setReviewOpen(true);
   };
 
   const handleDeploy = async () => {
     setStatus(null);
+    const attemptId = `${Date.now().toString(36)}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}`;
+    setDeployAttemptId(attemptId);
+    appendDeployDebug('Deploy started', {
+      attemptId,
+      ...preflightSummary
+    });
 
     if (deployBuild.errors.length > 0) {
+      appendDeployDebug('Deploy blocked by form validation', {
+        attemptId,
+        firstError: deployBuild.errors[0]
+      });
       setStatus(deployBuild.errors[0]);
       return;
     }
@@ -528,8 +601,13 @@ export default function DeployWizardPanel() {
     let session = walletSession;
     if (!session.address || !session.network) {
       try {
+        appendDeployDebug('Wallet session missing, requesting connect', { attemptId });
         await connect();
       } catch (error) {
+        appendDeployDebug('Wallet connect failed', {
+          attemptId,
+          error: toErrorMessage(error)
+        });
         setDeployPending(false);
         setStatus(error instanceof Error ? error.message : 'Wallet connection failed.');
         return;
@@ -538,6 +616,9 @@ export default function DeployWizardPanel() {
     }
 
     if (!session.address || !session.network) {
+      appendDeployDebug('Deploy blocked: wallet not connected after connect flow', {
+        attemptId
+      });
       setDeployPending(false);
       setStatus('Connect a wallet to deploy this collection.');
       return;
@@ -545,6 +626,10 @@ export default function DeployWizardPanel() {
 
     const networkCoreTarget = resolveArtistDeployCoreTarget(session.network);
     if (!networkCoreTarget) {
+      appendDeployDebug('Deploy blocked: missing core target for network', {
+        attemptId,
+        network: session.network
+      });
       setDeployPending(false);
       setStatus(`No supported core contract is configured for ${session.network}.`);
       return;
@@ -571,6 +656,10 @@ export default function DeployWizardPanel() {
     });
 
     if (refreshBuild.errors.length > 0) {
+      appendDeployDebug('Deploy blocked by contract source build validation', {
+        attemptId,
+        firstError: refreshBuild.errors[0]
+      });
       setDeployPending(false);
       setStatus(refreshBuild.errors[0]);
       return;
@@ -615,6 +704,11 @@ export default function DeployWizardPanel() {
 
     let created: CollectionDraft;
     try {
+      appendDeployDebug('Creating draft record', {
+        attemptId,
+        slug,
+        templateVersion
+      });
       setStatus('Saving your drop draft...');
       const createResponse = await fetch('/collections', {
         method: 'POST',
@@ -631,8 +725,17 @@ export default function DeployWizardPanel() {
         createResponse,
         'Create collection draft'
       );
+      appendDeployDebug('Draft record created', {
+        attemptId,
+        draftId: created.id,
+        draftSlug: created.slug
+      });
       setCollection(created);
     } catch (error) {
+      appendDeployDebug('Draft creation failed', {
+        attemptId,
+        error: toErrorMessage(error)
+      });
       setDeployPending(false);
       setStatus(
         toManageApiErrorMessage(error, 'Could not create collection draft.')
@@ -650,14 +753,29 @@ export default function DeployWizardPanel() {
     setStatus('Open your wallet and approve contract deployment.');
 
     try {
+      appendDeployDebug('Opening wallet deployment request', {
+        attemptId,
+        contractName,
+        network: session.network,
+        clarityVersion: DEPLOY_CLARITY_VERSION,
+        sourceLengthChars: refreshBuild.source.length,
+        sourceLengthBytes: new TextEncoder().encode(refreshBuild.source).byteLength,
+        coreContractId: networkCoreTarget.contractId
+      });
       showContractDeploy({
         contractName,
         codeBody: refreshBuild.source,
         network: session.network,
+        clarityVersion: DEPLOY_CLARITY_VERSION,
         appDetails: {
-          name: 'Xtrata Collection Manager'
+          name: 'Xtrata Collection Manager',
+          icon: MANAGE_APP_ICON
         },
         onFinish: async (payload) => {
+          appendDeployDebug('Wallet returned tx payload', {
+            attemptId,
+            txId: payload.txId
+          });
           try {
             const patchResponse = await fetch(`/collections/${created.id}`, {
               method: 'PATCH',
@@ -678,8 +796,19 @@ export default function DeployWizardPanel() {
               'Update collection draft'
             );
             setCollection(updated);
+            appendDeployDebug('Draft metadata synced after deploy submit', {
+              attemptId,
+              draftId: created.id,
+              txId: payload.txId
+            });
             setStatus(`Contract deployment submitted: ${payload.txId}`);
           } catch (error) {
+            appendDeployDebug('Draft metadata sync failed after deploy submit', {
+              attemptId,
+              draftId: created.id,
+              txId: payload.txId,
+              error: toErrorMessage(error)
+            });
             setStatus(
               `Contract deployment submitted, but metadata sync failed: ${toManageApiErrorMessage(
                 error,
@@ -691,11 +820,22 @@ export default function DeployWizardPanel() {
           }
         },
         onCancel: () => {
+          appendDeployDebug('Wallet cancelled deploy request or broadcast failed', {
+            attemptId,
+            hint:
+              'Wallet onCancel can represent an explicit cancel or a broadcast failure such as non-JSON node response.'
+          });
           setDeployPending(false);
-          setStatus('Deployment cancelled. Your draft is saved and ready to retry.');
+          setStatus(
+            'Wallet cancelled deployment or failed to broadcast. Check Deploy debug details below, then retry.'
+          );
         }
       });
     } catch (error) {
+      appendDeployDebug('Deploy request failed before wallet open', {
+        attemptId,
+        error: toErrorMessage(error)
+      });
       setDeployPending(false);
       setStatus(toManageApiErrorMessage(error, 'Deploy flow failed.'));
     }
@@ -981,6 +1121,36 @@ export default function DeployWizardPanel() {
 
       {status && <p className="meta-value">{status}</p>}
 
+      <div className="deploy-wizard__defaults">
+        <p className="deploy-wizard__defaults-title">Deploy debug details</p>
+        <ul>
+          <li>Clarity version: v{DEPLOY_CLARITY_VERSION} (forced for wallet deploy requests).</li>
+          <li>Current wallet network: {preflightSummary.walletNetwork ?? 'not connected'}</li>
+          <li>Current wallet address: {preflightSummary.walletAddress ?? 'not connected'}</li>
+          <li>Core target: {preflightSummary.coreContractId ?? 'not available'}</li>
+          <li>
+            Generated source size: {preflightSummary.sourceLengthChars.toString()} chars /{' '}
+            {preflightSummary.sourceLengthBytes.toString()} bytes
+          </li>
+          <li>
+            Validation state: {preflightSummary.errors.toString()} errors,{' '}
+            {preflightSummary.warnings.toString()} warnings
+          </li>
+          <li>Latest deploy attempt id: {deployAttemptId ?? 'none yet'}</li>
+        </ul>
+        {deployDebugLog.length > 0 ? (
+          <div className="deploy-log">
+            {deployDebugLog.map((entry, index) => (
+              <div key={`${entry}-${index}`} className="deploy-log__item">
+                {entry}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="meta-value">No deploy attempts logged in this browser session yet.</p>
+        )}
+      </div>
+
       {collection && (
         <div className="deploy-wizard__result">
           <p className="meta-value">
@@ -1067,6 +1237,9 @@ export default function DeployWizardPanel() {
                     )}
                   <p>
                     <strong>Core contract:</strong> {coreTarget?.contractId ?? 'Not available'}
+                  </p>
+                  <p>
+                    <strong>Clarity version:</strong> v{DEPLOY_CLARITY_VERSION} (forced)
                   </p>
                   <p>
                     <strong>Artist recipient:</strong>{' '}

@@ -107,8 +107,30 @@
         token: '',
         pending: {},
         seq: 0,
-        listenerReady: false
+        listenerReady: false,
+        session: null,
+        providerShimInstalled: false
       };
+      var HOST_WALLET_SHIM_METHODS = [
+        'stx_getAddresses',
+        'getAddresses',
+        'stx_getAccounts',
+        'getAccounts',
+        'wallet_getAccount',
+        'stx_getNetwork',
+        'getNetwork',
+        'stx_requestAccounts',
+        'requestAccounts',
+        'stx_connect',
+        'connect',
+        'wallet_connect',
+        'stx_callContract',
+        'stx_callContractV2',
+        'stx_disconnect',
+        'wallet_disconnect',
+        'disconnect',
+        'deactivate'
+      ];
 
       function keepLoaderVisible() {
         try {
@@ -305,6 +327,281 @@
             );
           }
         });
+      }
+
+      function normalizeHostWalletNetwork(value, fallback) {
+        if (typeof value === 'string') {
+          var lower = value.toLowerCase();
+          if (lower.indexOf('mainnet') >= 0 || lower === 'main') return 'mainnet';
+          if (lower.indexOf('testnet') >= 0 || lower === 'test') return 'testnet';
+        } else if (value && typeof value === 'object') {
+          if (typeof value.network === 'string') {
+            return normalizeHostWalletNetwork(value.network, fallback);
+          }
+          if (typeof value.name === 'string') {
+            return normalizeHostWalletNetwork(value.name, fallback);
+          }
+          if (typeof value.id === 'string') {
+            return normalizeHostWalletNetwork(value.id, fallback);
+          }
+        }
+        if (typeof fallback === 'string' && fallback) {
+          return fallback;
+        }
+        return 'mainnet';
+      }
+
+      function parseHostWalletRequestArgs(methodOrPayload, maybeParams) {
+        if (typeof methodOrPayload === 'string') {
+          return { method: methodOrPayload, params: maybeParams };
+        }
+        if (methodOrPayload && typeof methodOrPayload === 'object') {
+          return {
+            method: methodOrPayload.method,
+            params: typeof methodOrPayload.params === 'undefined' ? maybeParams : methodOrPayload.params
+          };
+        }
+        return { method: '', params: maybeParams };
+      }
+
+      function isHostWalletConnectMethod(method) {
+        return (
+          method === 'stx_requestAccounts' ||
+          method === 'requestAccounts' ||
+          method === 'stx_connect' ||
+          method === 'connect' ||
+          method === 'wallet_connect'
+        );
+      }
+
+      function isHostWalletReadMethod(method) {
+        return (
+          method === 'stx_getAddresses' ||
+          method === 'getAddresses' ||
+          method === 'stx_getAccounts' ||
+          method === 'getAccounts' ||
+          method === 'wallet_getAccount'
+        );
+      }
+
+      function isHostWalletNetworkMethod(method) {
+        return method === 'stx_getNetwork' || method === 'getNetwork';
+      }
+
+      function isHostWalletDisconnectMethod(method) {
+        return (
+          method === 'stx_disconnect' ||
+          method === 'wallet_disconnect' ||
+          method === 'disconnect' ||
+          method === 'deactivate'
+        );
+      }
+
+      function isHostWalletContractCallMethod(method) {
+        return method === 'stx_callContract' || method === 'stx_callContractV2';
+      }
+
+      function isHostWalletBridgeUnavailableError(error) {
+        if (!error) return false;
+        if (typeof error.code !== 'undefined' && Number(error.code) === -32001) {
+          return true;
+        }
+        var message = error && error.message ? String(error.message).toLowerCase() : '';
+        return (
+          message.indexOf('host wallet bridge') >= 0 ||
+          message.indexOf('bridge token') >= 0 ||
+          message.indexOf('bridge target') >= 0
+        );
+      }
+
+      function resolveHostWalletSessionFromPayload(payload, preferredNetwork) {
+        var preferred = normalizeHostWalletNetwork(
+          preferredNetwork,
+          CONFIG.scoreConfig.network || 'mainnet'
+        );
+        var address = pickStacksAddress(collectStacksAddresses(payload, [], 0), preferred);
+        if (!address) {
+          address = pickStacksAddress(collectStacksAddresses(payload, [], 0), null);
+        }
+        if (!address) {
+          return null;
+        }
+        var network = normalizeHostWalletNetwork(
+          payload && payload.network,
+          networkFromAddress(address) || preferred
+        );
+        return {
+          address: address,
+          network: network
+        };
+      }
+
+      function applyHostWalletSessionFromPayload(payload, preferredNetwork) {
+        var session = resolveHostWalletSessionFromPayload(payload, preferredNetwork);
+        if (session) {
+          HOST_WALLET_BRIDGE.session = session;
+        }
+        return HOST_WALLET_BRIDGE.session;
+      }
+
+      function buildHostWalletSessionResponse(session, fallbackNetwork) {
+        var network = normalizeHostWalletNetwork(
+          session && session.network,
+          fallbackNetwork || CONFIG.scoreConfig.network || 'mainnet'
+        );
+        if (!session || !looksLikeStacksAddress(session.address)) {
+          return {
+            addresses: [],
+            accounts: [],
+            network: network
+          };
+        }
+        var address = String(session.address).trim();
+        var stxAddress = network === 'testnet'
+          ? { testnet: address }
+          : { mainnet: address };
+        return {
+          address: address,
+          selectedAddress: address,
+          identityAddress: address,
+          addresses: [address],
+          accounts: [address],
+          stxAddress: stxAddress,
+          network: network
+        };
+      }
+
+      function resolveHostWalletRequestNetwork(params, fallback) {
+        if (params && typeof params === 'object') {
+          return normalizeHostWalletNetwork(params.network, fallback);
+        }
+        if (typeof params === 'string') {
+          return normalizeHostWalletNetwork(params, fallback);
+        }
+        return normalizeHostWalletNetwork(fallback, CONFIG.scoreConfig.network || 'mainnet');
+      }
+
+      function hostWalletShimRequest(methodName, params) {
+        var method = String(methodName || '').trim();
+        if (!method) {
+          return Promise.reject(
+            createHostWalletBridgeError('Wallet request method is required.', -32600)
+          );
+        }
+
+        var fallbackNetwork = normalizeHostWalletNetwork(
+          CONFIG.scoreConfig.network,
+          'mainnet'
+        );
+        var requestedNetwork = resolveHostWalletRequestNetwork(params, fallbackNetwork);
+
+        if (isHostWalletDisconnectMethod(method)) {
+          var disconnectRequest = hasHostWalletBridge()
+            ? requestHostWalletBridge(method, params, 45000)
+            : Promise.reject(
+                createHostWalletBridgeError('Host wallet bridge unavailable.', -32001)
+              );
+          return disconnectRequest
+            .catch(function (error) {
+              if (!isHostWalletBridgeUnavailableError(error)) {
+                throw error;
+              }
+              return null;
+            })
+            .then(function () {
+              HOST_WALLET_BRIDGE.session = null;
+              return { ok: true };
+            });
+        }
+
+        if (isHostWalletConnectMethod(method)) {
+          if (!hasHostWalletBridge()) {
+            return Promise.reject(
+              createHostWalletBridgeError(
+                'Host wallet bridge unavailable. Open this game from inside Xtrata runtime.',
+                -32001
+              )
+            );
+          }
+          return requestHostWalletBridge(method, params, 120000).then(function (payload) {
+            applyHostWalletSessionFromPayload(payload, requestedNetwork);
+            return buildHostWalletSessionResponse(
+              HOST_WALLET_BRIDGE.session,
+              requestedNetwork
+            );
+          });
+        }
+
+        if (isHostWalletReadMethod(method)) {
+          if (!hasHostWalletBridge()) {
+            return Promise.resolve(
+              buildHostWalletSessionResponse(HOST_WALLET_BRIDGE.session, requestedNetwork)
+            );
+          }
+          return requestHostWalletBridge(method, params, 45000)
+            .then(function (payload) {
+              applyHostWalletSessionFromPayload(payload, requestedNetwork);
+              return buildHostWalletSessionResponse(
+                HOST_WALLET_BRIDGE.session,
+                requestedNetwork
+              );
+            })
+            .catch(function (error) {
+              if (!isHostWalletBridgeUnavailableError(error)) {
+                throw error;
+              }
+              return buildHostWalletSessionResponse(
+                HOST_WALLET_BRIDGE.session,
+                requestedNetwork
+              );
+            });
+        }
+
+        if (isHostWalletNetworkMethod(method)) {
+          if (!hasHostWalletBridge()) {
+            return Promise.resolve({
+              network: normalizeHostWalletNetwork(
+                HOST_WALLET_BRIDGE.session && HOST_WALLET_BRIDGE.session.network,
+                requestedNetwork
+              )
+            });
+          }
+          return requestHostWalletBridge(method, params, 45000).then(function (payload) {
+            var network = normalizeHostWalletNetwork(
+              payload && payload.network,
+              payload && payload.result && payload.result.network
+                ? payload.result.network
+                : requestedNetwork
+            );
+            if (HOST_WALLET_BRIDGE.session && HOST_WALLET_BRIDGE.session.address) {
+              HOST_WALLET_BRIDGE.session.network = network;
+            }
+            return { network: network };
+          });
+        }
+
+        if (isHostWalletContractCallMethod(method)) {
+          if (!hasHostWalletBridge()) {
+            return Promise.reject(
+              createHostWalletBridgeError(
+                'Wallet contract call requires host wallet bridge support.',
+                -32601
+              )
+            );
+          }
+          return requestHostWalletBridge(
+            method === 'stx_callContractV2' ? 'stx_callContract' : method,
+            params,
+            180000
+          );
+        }
+
+        return Promise.reject(
+          createHostWalletBridgeError(
+            'Wallet method unsupported in host bridge shim: ' + method,
+            -32601
+          )
+        );
       }
 
       function networkFromAddress(address) {
@@ -654,6 +951,81 @@
         };
       }
 
+      function installHostWalletBridgeProviderShim() {
+        if (HOST_WALLET_BRIDGE.providerShimInstalled) return;
+        HOST_WALLET_BRIDGE.token = getHostWalletBridgeToken();
+        if (!hasHostWalletBridge()) return;
+        HOST_WALLET_BRIDGE.providerShimInstalled = true;
+
+        if (!window.StacksProvider || typeof window.StacksProvider !== 'object') {
+          window.StacksProvider = {};
+        }
+        if (!window.stacks || typeof window.stacks !== 'object') {
+          window.stacks = window.StacksProvider;
+        }
+
+        function patchProvider(provider, label) {
+          if (!provider || typeof provider !== 'object') return;
+          if (provider.__xtrataHostWalletBridgeShim) return;
+
+          var originalRequest =
+            typeof provider.request === 'function'
+              ? provider.request.bind(provider)
+              : null;
+
+          provider.request = function (methodOrPayload, maybeParams) {
+            var parsed = parseHostWalletRequestArgs(methodOrPayload, maybeParams);
+            var method = typeof parsed.method === 'string' ? parsed.method.trim() : '';
+            if (!method) {
+              return Promise.reject(
+                createHostWalletBridgeError('Wallet request method is required.', -32600)
+              );
+            }
+
+            if (HOST_WALLET_SHIM_METHODS.indexOf(method) >= 0) {
+              return hostWalletShimRequest(method, parsed.params);
+            }
+
+            if (originalRequest) {
+              return Promise.resolve(originalRequest(methodOrPayload, maybeParams));
+            }
+
+            return Promise.reject(
+              createHostWalletBridgeError(
+                'Wallet method unsupported in provider shim: ' + method,
+                -32601
+              )
+            );
+          };
+
+          var i;
+          for (i = 0; i < HOST_WALLET_SHIM_METHODS.length; i += 1) {
+            (function (methodName) {
+              provider[methodName] = function (params) {
+                return provider.request(methodName, params);
+              };
+            })(HOST_WALLET_SHIM_METHODS[i]);
+          }
+
+          try {
+            provider.__xtrataHostWalletBridgeShim = true;
+            provider.__arcadeWalletLabel = provider.__arcadeWalletLabel || label;
+          } catch (error) {}
+        }
+
+        patchProvider(window.StacksProvider, 'window.StacksProvider');
+        patchProvider(window.stacks, 'window.stacks');
+        patchProvider(window.LeatherProvider, 'window.LeatherProvider');
+        patchProvider(window.XverseProviders && window.XverseProviders.StacksProvider, 'window.XverseProviders.StacksProvider');
+        patchProvider(window.xverseProviders && window.xverseProviders.StacksProvider, 'window.xverseProviders.StacksProvider');
+
+        emitHostWalletIntent('bridge.provider-shim-ready', {
+          app: 'astro-blaster-standalone',
+          mode: 'wallet-provider-shim-v1'
+        });
+        log('Host wallet bridge provider shim installed.');
+      }
+
       function installHostWalletBridgeSubmitter() {
         HOST_WALLET_BRIDGE.token = getHostWalletBridgeToken();
         if (!hasHostWalletBridge()) {
@@ -882,6 +1254,7 @@
           log('Arcade debug logging enabled via URL/config.');
         }
 
+        installHostWalletBridgeProviderShim();
         installHostWalletBridgeSubmitter();
 
         var i;
