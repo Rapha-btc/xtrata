@@ -712,6 +712,9 @@ const toRecord = (value: unknown): Record<string, unknown> | null =>
 const toText = (value: unknown) =>
   typeof value === 'string' ? value.trim() : '';
 
+const toMultilineText = (value: unknown) =>
+  typeof value === 'string' ? value.replace(/\r\n/g, '\n') : '';
+
 const toBoolean = (value: unknown) => {
   if (typeof value === 'boolean') {
     return value;
@@ -1333,6 +1336,7 @@ export default function PublicApp() {
       .map((collection) => {
         const metadata = toRecord(collection.metadata);
         const metadataCollection = toRecord(metadata?.collection);
+        const metadataCollectionPage = toRecord(metadata?.collectionPage);
         const fallbackSupply = toBigIntOrNull(metadataCollection?.supply);
         const name =
           toText(metadataCollection?.name) ||
@@ -1341,7 +1345,8 @@ export default function PublicApp() {
           collection.id;
         const symbol = toText(metadataCollection?.symbol);
         const description =
-          toText(metadataCollection?.description) ||
+          toMultilineText(metadataCollectionPage?.description) ||
+          toMultilineText(metadataCollection?.description) ||
           'This collection is live and ready for minting.';
         const liveKey = toText(collection.slug) || collection.id;
         const livePath = `/collection/${encodeURIComponent(liveKey)}`;

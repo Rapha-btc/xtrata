@@ -65,6 +65,7 @@ type TxPayload = {
 
 const CONTRACT_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9-_]{0,127}$/;
 const HASH_HEX_PATTERN = /^[0-9a-f]{64}$/;
+const COLLECTION_PAGE_DESCRIPTION_MAX_LENGTH = 4000;
 const XTRATA_APP_ICON_DATA_URI =
   'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%23f97316"/><path d="M18 20h28v6H18zm0 12h28v6H18zm0 12h28v6H18z" fill="white"/></svg>';
 
@@ -97,6 +98,13 @@ const toText = (value: unknown) => {
     return '';
   }
   return value.trim();
+};
+
+const toMultilineText = (value: unknown) => {
+  if (typeof value !== 'string') {
+    return '';
+  }
+  return value.replace(/\r\n/g, '\n');
 };
 
 const isImageMimeType = (mimeType: string) =>
@@ -259,9 +267,10 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
   );
   const previewDescription = useMemo(
     () =>
-      toText(metadataCollection?.description) ||
+      toMultilineText(metadataCollectionPage?.description) ||
+      toMultilineText(metadataCollection?.description) ||
       'Add a short description so collectors instantly understand your drop.',
-    [metadataCollection]
+    [metadataCollection, metadataCollectionPage]
   );
   const previewSupply = useMemo(
     () => parsePositiveInt(metadataCollection?.supply),
@@ -508,7 +517,9 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       const savedAssetId = toText(loadedCover?.assetId);
       const savedUrl = toText(loadedCover?.imageUrl);
       const loadedCollectionMetadata = toRecord(loadedMetadata?.collection) ?? null;
-      const savedDescription = toText(loadedCollectionMetadata?.description);
+      const savedDescription =
+        toMultilineText(loadedCollectionPage?.description) ||
+        toMultilineText(loadedCollectionMetadata?.description);
 
       setCollection(loadedCollection);
       setAssets(loadedAssets);
@@ -683,19 +694,22 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       return;
     }
 
-    const trimmedDescription = collectionDescriptionInput.trim();
-    if (trimmedDescription.length > 256) {
-      setDescriptionMessage('Description must be 256 characters or fewer.');
+    const normalizedDescription = collectionDescriptionInput.replace(/\r\n/g, '\n');
+    if (normalizedDescription.length > COLLECTION_PAGE_DESCRIPTION_MAX_LENGTH) {
+      setDescriptionMessage(
+        `Description must be ${COLLECTION_PAGE_DESCRIPTION_MAX_LENGTH} characters or fewer.`
+      );
       return;
     }
 
     const currentMetadata = toRecord(collection.metadata) ?? {};
-    const currentCollectionMetadata = toRecord(currentMetadata.collection) ?? {};
+    const currentCollectionPage = toRecord(currentMetadata.collectionPage) ?? {};
     const nextMetadata = {
       ...currentMetadata,
-      collection: {
-        ...currentCollectionMetadata,
-        description: trimmedDescription
+      collectionPage: {
+        ...currentCollectionPage,
+        description: normalizedDescription,
+        updatedAt: new Date().toISOString()
       }
     };
 
@@ -715,9 +729,13 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
         'Collection update'
       );
       const updatedMetadata = toRecord(updated.metadata) ?? null;
+      const updatedCollectionPage = toRecord(updatedMetadata?.collectionPage) ?? null;
       const updatedCollectionMetadata = toRecord(updatedMetadata?.collection) ?? null;
       setCollection(updated);
-      setCollectionDescriptionInput(toText(updatedCollectionMetadata?.description));
+      setCollectionDescriptionInput(
+        toMultilineText(updatedCollectionPage?.description) ||
+          toMultilineText(updatedCollectionMetadata?.description)
+      );
       setDescriptionMessage('Collection description saved.');
     } catch (error) {
       setDescriptionMessage(
@@ -1211,12 +1229,12 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
         <label className="field">
           <span className="field__label info-label">
             Collection description
-            <InfoTooltip text="Update the public collection summary text shown under the hero image. You can edit this any time." />
+            <InfoTooltip text="Update the public collection summary text shown under the hero image. Line breaks are supported." />
           </span>
           <textarea
             className="textarea"
-            rows={4}
-            maxLength={256}
+            rows={6}
+            maxLength={COLLECTION_PAGE_DESCRIPTION_MAX_LENGTH}
             placeholder="Add a short description so collectors instantly understand your drop."
             value={collectionDescriptionInput}
             onChange={(event) => {
@@ -1225,7 +1243,8 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
             }}
           />
           <span className="field__hint">
-            {collectionDescriptionInput.trim().length}/256 characters
+            {collectionDescriptionInput.length}/
+            {COLLECTION_PAGE_DESCRIPTION_MAX_LENGTH.toString()} characters
           </span>
         </label>
 
@@ -1270,7 +1289,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
         <div className="collection-live-preview__content">
           <p className="collection-live-preview__eyebrow">Live collection page preview</p>
           <h3>{previewTitle}</h3>
-          <p>{previewDescription}</p>
+          <p className="collection-live-preview__description">{previewDescription}</p>
           <div className="collection-live-preview__meta">
             <span>Ticker: {previewSymbol}</span>
             <span>State: {liveState}</span>

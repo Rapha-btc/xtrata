@@ -122,6 +122,13 @@ const toText = (value: unknown) => {
   return value.trim();
 };
 
+const toMultilineText = (value: unknown) => {
+  if (typeof value !== 'string') {
+    return '';
+  }
+  return value.replace(/\r\n/g, '\n');
+};
+
 const toRecord = (value: unknown): Record<string, unknown> | null => {
   if (!value || typeof value !== 'object') {
     return null;
@@ -563,9 +570,10 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
 
   const collectionDescription = useMemo(
     () =>
-      toText(metadataCollection?.description) ||
+      toMultilineText(metadataCollectionPage?.description) ||
+      toMultilineText(metadataCollection?.description) ||
       'This collection is live on Xtrata.',
-    [metadataCollection]
+    [metadataCollection, metadataCollectionPage]
   );
 
   const collectionSymbol = useMemo(
@@ -2010,7 +2018,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
           <div className="collection-live-page__hero-copy">
             <p className="collection-live-page__eyebrow">Live collection mint</p>
             <h1>{collectionTitle}</h1>
-            <p>{collectionDescription}</p>
+            <p className="collection-live-page__description">{collectionDescription}</p>
             <div className="collection-live-page__hero-meta">
               <span>Ticker: {collectionSymbol}</span>
               <span>State: {published ? 'Live' : collectionState || 'Unknown'}</span>
