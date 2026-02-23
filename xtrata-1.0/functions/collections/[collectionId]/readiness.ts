@@ -1,5 +1,9 @@
 import { badRequest, jsonResponse, serverError } from '../../lib/utils';
 import { getCollectionDeployReadiness } from '../../lib/collection-deploy';
+import {
+  canStageUploadsBeforeDeploy,
+  isCollectionUploadsLocked
+} from '../../lib/collections';
 
 export const onRequest: PagesFunction = async ({ request, env, params }) => {
   if (request.method !== 'GET') {
@@ -20,16 +24,32 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
     const collectionState = String(readiness.collection?.state ?? 'draft')
       .trim()
       .toLowerCase();
-    const uploadsLocked =
-      collectionState === 'published' || collectionState === 'archived';
+    const contractAddress = String(readiness.collection?.contract_address ?? '')
+      .trim();
+    const uploadsLocked = isCollectionUploadsLocked(collectionState);
     const lockReason = uploadsLocked
       ? `Uploads are locked while collection state is "${collectionState}".`
       : null;
+    const predeployUploadsReady = canStageUploadsBeforeDeploy({
+      contractAddress,
+      state: collectionState
+    });
+    const uploadReady =
+      !uploadsLocked && (readiness.ready || predeployUploadsReady);
+    const uploadReason = uploadsLocked
+      ? lockReason
+      : readiness.ready
+        ? readiness.reason
+        : predeployUploadsReady
+          ? 'Draft staging enabled before deploy. Upload assets, then lock pricing before deploying.'
+          : readiness.reason;
 
     return jsonResponse({
       collectionId,
-      ready: readiness.ready,
-      reason: readiness.reason,
+      ready: uploadReady,
+      reason: uploadReason,
+      deployReady: readiness.ready,
+      predeployUploadsReady,
       deployTxId: readiness.deployTxId,
       deployTxStatus: readiness.deployTxStatus,
       network: readiness.network,

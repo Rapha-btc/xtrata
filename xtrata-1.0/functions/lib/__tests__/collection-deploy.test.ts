@@ -48,6 +48,89 @@ describe('collection deploy readiness', () => {
     expect(result.reason).toContain('not recorded');
   });
 
+  it('returns ready when deploy tx id is missing but contract source exists', async () => {
+    const urls: string[] = [];
+    const result = await getCollectionDeployReadiness({
+      env: baseEnv,
+      collectionId: 'c1',
+      queryAllImpl: async () => ({
+        results: [
+          {
+            id: 'c1',
+            contract_address: 'SP10W2EEM757922QTVDZZ5CSEW55JEFNN30J69TM7',
+            metadata: JSON.stringify({ contractName: 'xtrata-collection-ahv1-7f52463b' })
+          }
+        ]
+      }),
+      fetcher: async (input) => {
+        urls.push(String(input));
+        return new Response(JSON.stringify({ source: '(define-constant TEST u1)' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    });
+
+    expect(result.ready).toBe(true);
+    expect(result.deployTxId).toBeNull();
+    expect(result.deployTxStatus).toBe('success');
+    expect(result.reason).toContain('Deployment confirmed from contract source');
+    expect(urls[0]).toContain('/v2/contracts/source/');
+  });
+
+  it('returns not ready when deploy tx id is missing and contract source is not indexed', async () => {
+    const result = await getCollectionDeployReadiness({
+      env: baseEnv,
+      collectionId: 'c1',
+      queryAllImpl: async () => ({
+        results: [
+          {
+            id: 'c1',
+            contract_address: 'SP10W2EEM757922QTVDZZ5CSEW55JEFNN30J69TM7',
+            metadata: JSON.stringify({ contractName: 'xtrata-collection-ahv1-7f52463b' })
+          }
+        ]
+      }),
+      fetcher: async () =>
+        new Response('not found', {
+          status: 404
+        })
+    });
+
+    expect(result.ready).toBe(false);
+    expect(result.reason).toContain('not recorded');
+  });
+
+  it('derives contract name from slug/id when metadata contractName is missing', async () => {
+    const urls: string[] = [];
+    const result = await getCollectionDeployReadiness({
+      env: baseEnv,
+      collectionId: '7f52463b-6f3f-4442-aaaa-bbbbbbbbbbbb',
+      queryAllImpl: async () => ({
+        results: [
+          {
+            id: '7f52463b-6f3f-4442-aaaa-bbbbbbbbbbbb',
+            slug: 'ahv1',
+            contract_address: 'SP10W2EEM757922QTVDZZ5CSEW55JEFNN30J69TM7',
+            metadata: JSON.stringify({ mintType: 'standard' })
+          }
+        ]
+      }),
+      fetcher: async (input) => {
+        urls.push(String(input));
+        return new Response(JSON.stringify({ source: '(define-constant TEST u1)' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    });
+
+    expect(result.ready).toBe(true);
+    expect(urls[0]).toContain(
+      '/v2/contracts/source/SP10W2EEM757922QTVDZZ5CSEW55JEFNN30J69TM7/xtrata-collection-ahv1-7f52463b'
+    );
+  });
+
   it('returns ready when Hiro reports tx success', async () => {
     const result = await getCollectionDeployReadiness({
       env: baseEnv,

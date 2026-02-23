@@ -4,7 +4,9 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const hiroApiKey = env.HIRO_API_KEY || env.VITE_HIRO_API_KEY;
-  const proxyHeaders = hiroApiKey ? { 'x-hiro-api-key': hiroApiKey } : {};
+  const proxyHeaders: Record<string, string> = hiroApiKey
+    ? { 'x-hiro-api-key': hiroApiKey }
+    : {};
   const hasHiroApiKey = Boolean(hiroApiKey);
   const bnsApiBase =
     env.VITE_BNS_API_MAINNET || env.VITE_BNS_API_BASE || 'https://api.bns.xyz';
@@ -32,6 +34,18 @@ export default defineConfig(({ mode }) => {
           target: bnsApiBase,
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/bns/, '')
+        },
+        '/rpc-testnet': {
+          target: 'https://api.testnet.hiro.so',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/rpc-testnet/, ''),
+          headers: proxyHeaders
+        },
+        '/rpc': {
+          target: 'https://api.mainnet.hiro.so',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/rpc/, ''),
+          headers: proxyHeaders
         },
         '/hiro/testnet': {
           target: 'https://api.testnet.hiro.so',

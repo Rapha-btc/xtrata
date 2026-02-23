@@ -23,6 +23,7 @@ import {
   parseManageJsonResponse,
   toManageApiErrorMessage
 } from '../lib/api-errors';
+import { resolveCollectionContractLink } from '../lib/contract-link';
 
 type CollectionRecord = {
   id: string;
@@ -319,22 +320,29 @@ const resolveCollectionContractTarget = (
   oversight: CollectionOversightResponse | null
 ): CollectionContractTarget | null => {
   const metadata = toRecord(collection.metadata);
-  const metadataContractName = toStringOrNull(metadata?.contractName);
-  const address =
-    toStringOrNull(oversight?.collection.contractAddress) ??
-    toStringOrNull(collection.contract_address);
-  const contractName =
-    toStringOrNull(oversight?.deploy.contractName) ?? metadataContractName;
-  if (!address || !contractName) {
+  const resolved = resolveCollectionContractLink({
+    collectionId: collection.id,
+    collectionSlug: collection.slug,
+    contractAddress:
+      toStringOrNull(oversight?.collection.contractAddress) ??
+      toStringOrNull(collection.contract_address),
+    metadata,
+    deployContractAddress: toStringOrNull(oversight?.collection.contractAddress),
+    deployContractName: toStringOrNull(oversight?.deploy.contractName)
+  });
+  if (!resolved) {
     return null;
   }
-  if (!validateStacksAddress(address) || !CONTRACT_NAME_PATTERN.test(contractName)) {
+  if (
+    !validateStacksAddress(resolved.address) ||
+    !CONTRACT_NAME_PATTERN.test(resolved.contractName)
+  ) {
     return null;
   }
   return {
-    address,
-    contractName,
-    network: getNetworkFromAddress(address) ?? 'mainnet'
+    address: resolved.address,
+    contractName: resolved.contractName,
+    network: getNetworkFromAddress(resolved.address) ?? 'mainnet'
   };
 };
 

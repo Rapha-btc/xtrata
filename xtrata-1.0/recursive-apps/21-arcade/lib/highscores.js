@@ -41,12 +41,15 @@ var HighScores = (function(){
   var ONCHAIN_DEBUG_THROTTLE_SUMMARY_IDLE_MS = 1800;
   var onChainDebugThrottleState = {};
   var onChainRpcLogOnceState = {};
+  var onChainReadOnlyCallCounter = 0;
   var ONCHAIN_DEBUG_THROTTLE_RULES = {
     'Wallet request attempt #': 1300,
     'Wallet request returned result': 900,
     'Wallet transactionRequest payload prepared': 1200,
-    'Read-only HTTP response received': 1400,
-    'Read-only response body parsed': 1700,
+    'Retrying leaderboard read with fallback sender': 1800,
+    'Retrying leaderboard read with fallback endpoint': 1800,
+    'Read-only leaderboard call completed': 1400,
+    'Read-only leaderboard call completed via fallback': 2200,
     'fetchTop10 served from cache': 1200,
     'Provider discovery started': 1200,
     'Provider discovery completed': 1200
@@ -2857,22 +2860,35 @@ var HighScores = (function(){
 
   function _defaultApiBase(network){
     var normalized = String(network || '').toLowerCase();
-    if(normalized === 'mainnet' || normalized === 'main') return '/rpc';
-    if(normalized === 'testnet' || normalized === 'test') return '/rpc-testnet';
-    if(normalized === 'devnet' || normalized === 'dev') return '/rpc';
+    if(normalized === 'mainnet' || normalized === 'main') return 'https://api.mainnet.hiro.so';
+    if(normalized === 'testnet' || normalized === 'test') return 'https://api.testnet.hiro.so';
+    if(normalized === 'devnet' || normalized === 'dev') return 'http://localhost:3999';
     return '';
   }
 
   function _defaultApiFallbackBases(network){
     var normalized = String(network || '').toLowerCase();
-    if(normalized === 'mainnet' || normalized === 'main') return ['https://api.mainnet.hiro.so'];
-    if(normalized === 'testnet' || normalized === 'test') return ['https://api.testnet.hiro.so'];
-    if(normalized === 'devnet' || normalized === 'dev') return ['http://localhost:3999'];
+    if(normalized === 'mainnet' || normalized === 'main') return [];
+    if(normalized === 'testnet' || normalized === 'test') return [];
+    if(normalized === 'devnet' || normalized === 'dev') return [];
     return [];
   }
 
   function _callReadOnly(payload){
+    var callId = ++onChainReadOnlyCallCounter;
+    var callStartedAt = Date.now();
+    var callMetrics = {
+      callId: callId,
+      endpointAttempts: 0,
+      senderAttempts: 0,
+      fallbackEndpointCount: 0,
+      fallbackSenderCount: 0,
+      selectedEndpoint: null,
+      selectedSender: null
+    };
+
     _debugLog('info', 'Read-only leaderboard call starting', {
+      callId: callId,
       contractAddress: payload.contractAddress,
       contractName: payload.contractName,
       functionName: payload.leaderboardFunctionName,
@@ -2900,10 +2916,15 @@ var HighScores = (function(){
       return _buildReadOnlyEndpointFromBase(apiBase, payload, payload.leaderboardFunctionName);
     });
     _debugLog('info', 'Read-only leaderboard endpoint candidates resolved', {
+      callId: callId,
       candidates: apiBases
     });
 
     function execute(endpoint, sender){
+      callMetrics.endpointAttempts += 1;
+      callMetrics.senderAttempts += 1;
+      callMetrics.selectedEndpoint = endpoint;
+      callMetrics.selectedSender = sender;
       return fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2916,19 +2937,12 @@ var HighScores = (function(){
         })
       })
         .then(function(response){
-          _debugLog('info', 'Read-only HTTP response received', {
-            status: response.status,
-            ok: response.ok,
-            endpoint: endpoint,
-            sender: sender
-          });
           if(!response.ok){
             throw new Error('Leaderboard read call failed with HTTP ' + response.status + '.');
           }
           return response.json();
         })
         .then(function(body){
-          _debugLog('info', 'Read-only response body parsed', body);
           if(!body || typeof body !== 'object'){
             throw new Error('Invalid leaderboard read response payload.');
           }
@@ -2949,37 +2963,79 @@ var HighScores = (function(){
         if(senderIndex + 1 >= senderCandidates.length){
           throw error;
         }
-        _debugLog('warn', 'Retrying leaderboard read with fallback sender', {
-          failedSender: sender,
-          nextSender: senderCandidates[senderIndex + 1],
-          endpoint: endpoint,
-          error: _errorForLog(error)
-        });
+        callMetrics.fallbackSenderCount += 1;
+        if(callMetrics.fallbackSenderCount === 1){
+          _debugLog('warn', 'Retrying leaderboard read with fallback sender', {
+            callId: callId,
+            failedSender: sender,
+            nextSender: senderCandidates[senderIndex + 1],
+            endpoint: endpoint,
+            error: _errorForLog(error),
+            suppression: 'Further sender fallback logs are summarized per call.'
+          });
+        }
         return attemptSender(endpoint, senderIndex + 1, error);
       });
     }
 
     function attemptEndpoint(endpointIndex, lastError){
       if(endpointIndex >= endpoints.length){
-        _debugLog('error', 'Read-only leaderboard call failed', _errorForLog(lastError));
         throw lastError || new Error('Read-only leaderboard call failed.');
       }
       var endpoint = endpoints[endpointIndex];
       return attemptSender(endpoint, 0, null).catch(function(error){
         if(endpointIndex + 1 >= endpoints.length){
-          _debugLog('error', 'Read-only leaderboard call failed', _errorForLog(error));
           throw error;
         }
-        _debugLog('warn', 'Retrying leaderboard read with fallback endpoint', {
-          failedEndpoint: endpoint,
-          nextEndpoint: endpoints[endpointIndex + 1],
-          error: _errorForLog(error)
-        });
+        callMetrics.fallbackEndpointCount += 1;
+        if(callMetrics.fallbackEndpointCount === 1){
+          _debugLog('warn', 'Retrying leaderboard read with fallback endpoint', {
+            callId: callId,
+            failedEndpoint: endpoint,
+            nextEndpoint: endpoints[endpointIndex + 1],
+            error: _errorForLog(error),
+            suppression: 'Further endpoint fallback logs are summarized per call.'
+          });
+        }
         return attemptEndpoint(endpointIndex + 1, error);
       });
     }
 
-    return attemptEndpoint(0, null);
+    return attemptEndpoint(0, null)
+      .then(function(resultHex){
+        var summary = {
+          callId: callId,
+          functionName: payload.leaderboardFunctionName,
+          durationMs: Date.now() - callStartedAt,
+          endpointAttempts: callMetrics.endpointAttempts,
+          senderAttempts: callMetrics.senderAttempts,
+          fallbackEndpoints: callMetrics.fallbackEndpointCount,
+          fallbackSenders: callMetrics.fallbackSenderCount,
+          selectedEndpoint: callMetrics.selectedEndpoint,
+          selectedSender: callMetrics.selectedSender
+        };
+        if(callMetrics.fallbackEndpointCount > 0 || callMetrics.fallbackSenderCount > 0){
+          _debugLog('warn', 'Read-only leaderboard call completed via fallback', summary);
+        } else {
+          _debugLog('info', 'Read-only leaderboard call completed', summary);
+        }
+        return resultHex;
+      })
+      .catch(function(error){
+        _debugLog('error', 'Read-only leaderboard call failed', {
+          callId: callId,
+          functionName: payload.leaderboardFunctionName,
+          durationMs: Date.now() - callStartedAt,
+          endpointAttempts: callMetrics.endpointAttempts,
+          senderAttempts: callMetrics.senderAttempts,
+          fallbackEndpoints: callMetrics.fallbackEndpointCount,
+          fallbackSenders: callMetrics.fallbackSenderCount,
+          lastEndpoint: callMetrics.selectedEndpoint || null,
+          lastSender: callMetrics.selectedSender || null,
+          error: _errorForLog(error)
+        });
+        throw error;
+      });
   }
 
   function _decodeTop10Result(resultHex){

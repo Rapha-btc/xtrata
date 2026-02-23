@@ -65,6 +65,17 @@
 
 <script src="lib/utils.js"></script>
 <script>
+  var arcadeDebugEnabled = false;
+  try{
+    var arcadeParams = new URLSearchParams(window.location.search || '');
+    arcadeDebugEnabled =
+      arcadeParams.get('debug') === '1' ||
+      arcadeParams.get('arcadeDebug') === '1';
+  }catch(e){}
+  if(window.ARCADE_ONCHAIN_CONFIG && window.ARCADE_ONCHAIN_CONFIG.debug === true){
+    arcadeDebugEnabled = true;
+  }
+
   // Configure this after deploy to enable on-chain Top 10 verification.
   // Top 10 is on-chain only. Local storage keeps personal bests only.
   // Wallet-only v1.3 default:
@@ -81,7 +92,7 @@
     contractName: 'xtrata-arcade-scores-v1-3',
     functionName: 'submit-score',
     leaderboardFunctionName: 'get-top10',
-    apiBaseUrl: '/rpc',
+    apiBaseUrl: '/hiro/mainnet',
     apiFallbackBaseUrls: ['https://api.mainnet.hiro.so'],
     readSenderAddress: '',
     requiresAttestation: false,
@@ -90,9 +101,10 @@
     minRank: 10,
     useDenyModePostConditions: true,
     fallbackToAllowModeOnPostConditionFailure: false,
-    debug: true
+    debug: arcadeDebugEnabled
   };
-  window.ARCADE_ONCHAIN_DEBUG = true;
+  window.ARCADE_ONCHAIN_CONFIG.debug = arcadeDebugEnabled;
+  window.ARCADE_ONCHAIN_DEBUG = arcadeDebugEnabled;
   window.ARCADE_MAIN_SCRIPT = 'main.js?v=wallet-debug-2026-02-20-12';
 </script>
 <script src="lib/highscores.js?v=wallet-debug-2026-02-20-18"></script>

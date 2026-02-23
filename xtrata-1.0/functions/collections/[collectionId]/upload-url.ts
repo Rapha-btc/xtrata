@@ -1,5 +1,9 @@
 import { badRequest, jsonResponse, serverError } from '../../lib/utils';
 import { getCollectionDeployReadiness } from '../../lib/collection-deploy';
+import {
+  canStageUploadsBeforeDeploy,
+  isCollectionUploadsLocked
+} from '../../lib/collections';
 
 type UploadBucket = {
   getUploadUrl?: (options: {
@@ -79,13 +83,19 @@ const ensureReadiness = async (params: {
     env: params.env as any,
     collectionId: params.collectionId
   });
-  if (!readiness.ready) {
-    return { ok: false as const, reason: readiness.reason };
-  }
   const collectionState = String(readiness.collection?.state ?? 'draft')
     .trim()
     .toLowerCase();
-  if (collectionState === 'published' || collectionState === 'archived') {
+  const contractAddress = String(readiness.collection?.contract_address ?? '')
+    .trim();
+  const predeployUploadsAllowed = canStageUploadsBeforeDeploy({
+    contractAddress,
+    state: collectionState
+  });
+  if (!readiness.ready && !predeployUploadsAllowed) {
+    return { ok: false as const, reason: readiness.reason };
+  }
+  if (isCollectionUploadsLocked(collectionState)) {
     return {
       ok: false as const,
       reason: `Uploads are locked while collection state is "${collectionState}".`

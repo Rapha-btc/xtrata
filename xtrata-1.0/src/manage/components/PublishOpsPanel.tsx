@@ -65,6 +65,7 @@ type TxPayload = {
 
 const CONTRACT_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9-_]{0,127}$/;
 const HASH_HEX_PATTERN = /^[0-9a-f]{64}$/;
+const COLLECTION_PAGE_DESCRIPTION_MAX_LENGTH = 4000;
 const XTRATA_APP_ICON_DATA_URI =
   'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%23f97316"/><path d="M18 20h28v6H18zm0 12h28v6H18zm0 12h28v6H18z" fill="white"/></svg>';
 
@@ -97,6 +98,13 @@ const toText = (value: unknown) => {
     return '';
   }
   return value.trim();
+};
+
+const toMultilineText = (value: unknown) => {
+  if (typeof value !== 'string') {
+    return '';
+  }
+  return value.replace(/\r\n/g, '\n');
 };
 
 const isImageMimeType = (mimeType: string) =>
@@ -185,9 +193,12 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
   const [coverSource, setCoverSource] = useState<CoverImageSource>('collection-asset');
   const [selectedCoverAssetId, setSelectedCoverAssetId] = useState('');
   const [inscribedCoverUrl, setInscribedCoverUrl] = useState('');
+  const [collectionDescriptionInput, setCollectionDescriptionInput] = useState('');
   const [coverMessage, setCoverMessage] = useState<string | null>(null);
+  const [descriptionMessage, setDescriptionMessage] = useState<string | null>(null);
   const [liveLinkMessage, setLiveLinkMessage] = useState<string | null>(null);
   const [coverSaving, setCoverSaving] = useState(false);
+  const [descriptionSaving, setDescriptionSaving] = useState(false);
   const [coverPreviewFailed, setCoverPreviewFailed] = useState(false);
   const [onChainReservationOwner, setOnChainReservationOwner] = useState('');
   const [onChainReservationHash, setOnChainReservationHash] = useState('');
@@ -256,9 +267,10 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
   );
   const previewDescription = useMemo(
     () =>
-      toText(metadataCollection?.description) ||
+      toMultilineText(metadataCollectionPage?.description) ||
+      toMultilineText(metadataCollection?.description) ||
       'Add a short description so collectors instantly understand your drop.',
-    [metadataCollection]
+    [metadataCollection, metadataCollectionPage]
   );
   const previewSupply = useMemo(
     () => parsePositiveInt(metadataCollection?.supply),
@@ -448,6 +460,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       setCoverSource('collection-asset');
       setSelectedCoverAssetId('');
       setInscribedCoverUrl('');
+      setCollectionDescriptionInput('');
       setOnChainReservationStatus(null);
       setOnChainReservationMessage(null);
       setOnChainReservedCount(null);
@@ -503,12 +516,17 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       const savedSource = normalizeCoverSource(loadedCover?.source);
       const savedAssetId = toText(loadedCover?.assetId);
       const savedUrl = toText(loadedCover?.imageUrl);
+      const loadedCollectionMetadata = toRecord(loadedMetadata?.collection) ?? null;
+      const savedDescription =
+        toMultilineText(loadedCollectionPage?.description) ||
+        toMultilineText(loadedCollectionMetadata?.description);
 
       setCollection(loadedCollection);
       setAssets(loadedAssets);
       setCoverSource(savedSource ?? 'collection-asset');
       setSelectedCoverAssetId(savedAssetId);
       setInscribedCoverUrl(savedUrl);
+      setCollectionDescriptionInput(savedDescription);
       setReadiness({
         loading: false,
         contractConnected: !!loadedCollection.contract_address,
@@ -520,6 +538,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
     } catch (error) {
       setCollection(null);
       setAssets([]);
+      setCollectionDescriptionInput('');
       setOnChainReservationStatus(null);
       setOnChainReservedCount(null);
       setReadiness({
@@ -664,6 +683,69 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
     }
   };
 
+  const saveCollectionDescription = async () => {
+    const normalizedCollectionId = collectionId.trim();
+    if (!normalizedCollectionId) {
+      setDescriptionMessage('Collection id required.');
+      return;
+    }
+    if (!collection) {
+      setDescriptionMessage('Load collection details before saving description.');
+      return;
+    }
+
+    const normalizedDescription = collectionDescriptionInput.replace(/\r\n/g, '\n');
+    if (normalizedDescription.length > COLLECTION_PAGE_DESCRIPTION_MAX_LENGTH) {
+      setDescriptionMessage(
+        `Description must be ${COLLECTION_PAGE_DESCRIPTION_MAX_LENGTH} characters or fewer.`
+      );
+      return;
+    }
+
+    const currentMetadata = toRecord(collection.metadata) ?? {};
+    const currentCollectionPage = toRecord(currentMetadata.collectionPage) ?? {};
+    const nextMetadata = {
+      ...currentMetadata,
+      collectionPage: {
+        ...currentCollectionPage,
+        description: normalizedDescription,
+        updatedAt: new Date().toISOString()
+      }
+    };
+
+    setDescriptionSaving(true);
+    setDescriptionMessage('Saving collection description...');
+    try {
+      const response = await fetch(
+        `/collections/${encodeURIComponent(normalizedCollectionId)}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ metadata: nextMetadata })
+        }
+      );
+      const updated = await parseManageJsonResponse<CollectionRecord>(
+        response,
+        'Collection update'
+      );
+      const updatedMetadata = toRecord(updated.metadata) ?? null;
+      const updatedCollectionPage = toRecord(updatedMetadata?.collectionPage) ?? null;
+      const updatedCollectionMetadata = toRecord(updatedMetadata?.collection) ?? null;
+      setCollection(updated);
+      setCollectionDescriptionInput(
+        toMultilineText(updatedCollectionPage?.description) ||
+          toMultilineText(updatedCollectionMetadata?.description)
+      );
+      setDescriptionMessage('Collection description saved.');
+    } catch (error) {
+      setDescriptionMessage(
+        toManageApiErrorMessage(error, 'Unable to save collection description.')
+      );
+    } finally {
+      setDescriptionSaving(false);
+    }
+  };
+
   useEffect(() => {
     void loadReadiness();
   }, [collectionId]);
@@ -675,6 +757,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
     setCollectionId(normalizedActiveCollectionId);
     setMessage(null);
     setCoverMessage(null);
+    setDescriptionMessage(null);
     setLiveLinkMessage(null);
     setOnChainReservationMessage(null);
     setOnChainReservationStatus(null);
@@ -1143,6 +1226,28 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
           </label>
         )}
 
+        <label className="field">
+          <span className="field__label info-label">
+            Collection description
+            <InfoTooltip text="Update the public collection summary text shown under the hero image. Line breaks are supported." />
+          </span>
+          <textarea
+            className="textarea"
+            rows={6}
+            maxLength={COLLECTION_PAGE_DESCRIPTION_MAX_LENGTH}
+            placeholder="Add a short description so collectors instantly understand your drop."
+            value={collectionDescriptionInput}
+            onChange={(event) => {
+              setCollectionDescriptionInput(event.target.value);
+              setDescriptionMessage(null);
+            }}
+          />
+          <span className="field__hint">
+            {collectionDescriptionInput.length}/
+            {COLLECTION_PAGE_DESCRIPTION_MAX_LENGTH.toString()} characters
+          </span>
+        </label>
+
         <div className="mint-actions">
           <button
             className="button button--ghost button--mini"
@@ -1152,8 +1257,17 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
           >
             {coverSaving ? 'Saving...' : 'Save cover image'}
           </button>
+          <button
+            className="button button--ghost button--mini"
+            type="button"
+            onClick={() => void saveCollectionDescription()}
+            disabled={descriptionSaving || !collectionId.trim()}
+          >
+            {descriptionSaving ? 'Saving...' : 'Save description'}
+          </button>
         </div>
         {coverMessage && <p className="meta-value">{coverMessage}</p>}
+        {descriptionMessage && <p className="meta-value">{descriptionMessage}</p>}
       </div>
 
       <div className="collection-live-preview">
@@ -1175,7 +1289,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
         <div className="collection-live-preview__content">
           <p className="collection-live-preview__eyebrow">Live collection page preview</p>
           <h3>{previewTitle}</h3>
-          <p>{previewDescription}</p>
+          <p className="collection-live-preview__description">{previewDescription}</p>
           <div className="collection-live-preview__meta">
             <span>Ticker: {previewSymbol}</span>
             <span>State: {liveState}</span>

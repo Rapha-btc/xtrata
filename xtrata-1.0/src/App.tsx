@@ -1,7 +1,19 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type MouseEvent } from 'react';
-import { showContractDeploy } from '@stacks/connect';
+import { showContractCall, showContractDeploy } from '@stacks/connect';
+import { hexToBytes } from '@stacks/common';
 import { useQueryClient } from '@tanstack/react-query';
-import { validateStacksAddress } from '@stacks/transactions';
+import {
+  BytesReader,
+  deserializeCV,
+  deserializePostCondition,
+  FungibleConditionCode,
+  makeContractSTXPostCondition,
+  makeStandardSTXPostCondition,
+  PostConditionMode,
+  validateStacksAddress,
+  type ClarityValue,
+  type PostCondition
+} from '@stacks/transactions';
 import { getContractId } from './lib/contract/config';
 import { CONTRACT_REGISTRY } from './lib/contract/registry';
 import { createContractSelectionStore } from './lib/contract/selection';
@@ -12,11 +24,14 @@ import {
 } from './lib/contract/admin-status';
 import { useBnsAddress } from './lib/bns/hooks';
 import { RATE_LIMIT_WARNING_EVENT } from './lib/network/rate-limit';
-import { getNetworkMismatch } from './lib/network/guard';
+import { getNetworkFromAddress, getNetworkMismatch } from './lib/network/guard';
+import type { NetworkType } from './lib/network/types';
 import { getViewerKey } from './lib/viewer/queries';
+import { isRuntimeWalletBridgeTokenValid } from './lib/viewer/runtime-open';
 import { createStacksWalletAdapter } from './lib/wallet/adapter';
 import { createWalletSessionStore } from './lib/wallet/session';
 import { getWalletLookupState } from './lib/wallet/lookup';
+import type { WalletSession } from './lib/wallet/types';
 import {
   applyThemeToDocument,
   coerceThemeMode,
@@ -180,6 +195,363 @@ const parseDeployContractName = (raw: string) => {
     reason: normalized.changed ? 'normalized-name' : 'name-only',
     warnings,
     normalizedName: normalized.normalized
+  };
+};
+
+const RUNTIME_WALLET_BRIDGE_REQUEST_TYPE = 'xtrata:wallet:request';
+const RUNTIME_WALLET_BRIDGE_RESPONSE_TYPE = 'xtrata:wallet:response';
+
+const RUNTIME_WALLET_CONNECT_METHODS = new Set([
+  'stx_requestAccounts',
+  'requestAccounts',
+  'stx_connect',
+  'connect',
+  'wallet_connect'
+]);
+
+const RUNTIME_WALLET_READ_METHODS = new Set([
+  'stx_getAddresses',
+  'getAddresses',
+  'stx_getAccounts',
+  'getAccounts',
+  'wallet_getAccount'
+]);
+
+const RUNTIME_WALLET_NETWORK_METHODS = new Set(['stx_getNetwork', 'getNetwork']);
+
+const RUNTIME_WALLET_DISCONNECT_METHODS = new Set([
+  'stx_disconnect',
+  'wallet_disconnect',
+  'disconnect',
+  'deactivate'
+]);
+
+const RUNTIME_WALLET_CONTRACT_CALL_METHODS = new Set([
+  'stx_callContract',
+  'stx_callContractV2'
+]);
+
+type RuntimeWalletBridgeRequestMessage = {
+  type: string;
+  requestId?: unknown;
+  bridgeToken?: unknown;
+  method?: unknown;
+  params?: unknown;
+};
+
+type RuntimeWalletBridgeResponseMessage = {
+  type: string;
+  requestId: string;
+  ok: boolean;
+  result?: unknown;
+  error?: {
+    message: string;
+    code?: number;
+  };
+};
+
+type RuntimeWalletBridgeError = Error & { code?: number };
+
+type RuntimeWalletContractCallRequest = {
+  contractAddress: string;
+  contractName: string;
+  functionName: string;
+  functionArgs: ClarityValue[];
+  network: NetworkType;
+  postConditionMode: PostConditionMode;
+  postConditions?: PostCondition[];
+};
+
+const createRuntimeWalletBridgeError = (
+  message: string,
+  code?: number
+): RuntimeWalletBridgeError => {
+  const error = new Error(message) as RuntimeWalletBridgeError;
+  if (typeof code === 'number') {
+    error.code = code;
+  }
+  return error;
+};
+
+const normalizeRuntimeHex = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return '';
+  }
+  if (trimmed.startsWith('0x') || trimmed.startsWith('0X')) {
+    return `0x${trimmed.slice(2)}`;
+  }
+  return `0x${trimmed}`;
+};
+
+const normalizeRuntimeNetwork = (
+  value: unknown,
+  fallback: NetworkType = 'mainnet'
+): NetworkType => {
+  if (typeof value === 'string') {
+    const lower = value.toLowerCase();
+    if (lower.includes('testnet') || lower === 'test') {
+      return 'testnet';
+    }
+    if (lower.includes('mainnet') || lower === 'main') {
+      return 'mainnet';
+    }
+  } else if (value && typeof value === 'object') {
+    const candidate = value as Record<string, unknown>;
+    if (typeof candidate.network === 'string') {
+      return normalizeRuntimeNetwork(candidate.network, fallback);
+    }
+    const api =
+      (typeof candidate.coreApiUrl === 'string' && candidate.coreApiUrl) ||
+      (typeof candidate.url === 'string' && candidate.url) ||
+      '';
+    if (api) {
+      return normalizeRuntimeNetwork(api, fallback);
+    }
+  }
+  return fallback;
+};
+
+const normalizeRuntimeUint = (value: unknown, label: string) => {
+  if (typeof value === 'bigint') {
+    if (value < 0n) {
+      throw createRuntimeWalletBridgeError(`${label} must be an unsigned integer.`, -32602);
+    }
+    return value.toString(10);
+  }
+  const text = String(value ?? '').trim();
+  if (!/^[0-9]+$/.test(text)) {
+    throw createRuntimeWalletBridgeError(`${label} must be an unsigned integer.`, -32602);
+  }
+  return text.replace(/^0+(\d)/, '$1');
+};
+
+const normalizeRuntimeFungibleConditionCode = (value: unknown): FungibleConditionCode => {
+  if (typeof value === 'number' && Number.isInteger(value)) {
+    if (
+      value >= FungibleConditionCode.Equal &&
+      value <= FungibleConditionCode.LessEqual
+    ) {
+      return value as FungibleConditionCode;
+    }
+  }
+
+  const text = String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+
+  if (!text) {
+    return FungibleConditionCode.LessEqual;
+  }
+  if (/^[0-9]+$/.test(text)) {
+    return normalizeRuntimeFungibleConditionCode(Number.parseInt(text, 10));
+  }
+  if (text === 'equal' || text === 'eq') {
+    return FungibleConditionCode.Equal;
+  }
+  if (text === 'greater' || text === 'gt') {
+    return FungibleConditionCode.Greater;
+  }
+  if (
+    text === 'greater_equal' ||
+    text === 'greaterequal' ||
+    text === 'gte'
+  ) {
+    return FungibleConditionCode.GreaterEqual;
+  }
+  if (text === 'less' || text === 'lt') {
+    return FungibleConditionCode.Less;
+  }
+  if (text === 'less_equal' || text === 'lessequal' || text === 'lte') {
+    return FungibleConditionCode.LessEqual;
+  }
+
+  throw createRuntimeWalletBridgeError('Unsupported post condition code.', -32602);
+};
+
+const parseRuntimeContractIdentifier = (value: string) => {
+  const trimmed = value.trim();
+  const separator = trimmed.indexOf('.');
+  if (separator <= 0 || separator >= trimmed.length - 1) {
+    return null;
+  }
+  return {
+    contractAddress: trimmed.slice(0, separator).trim(),
+    contractName: trimmed.slice(separator + 1).trim()
+  };
+};
+
+const parseRuntimePostCondition = (value: unknown): PostCondition => {
+  if (typeof value === 'string') {
+    try {
+      const bytes = hexToBytes(normalizeRuntimeHex(value));
+      return deserializePostCondition(new BytesReader(bytes));
+    } catch (error) {
+      throw createRuntimeWalletBridgeError(
+        'Post condition hex payload is invalid.',
+        -32602
+      );
+    }
+  }
+
+  if (!value || typeof value !== 'object') {
+    throw createRuntimeWalletBridgeError('Unsupported post condition payload.', -32602);
+  }
+
+  const payload = value as Record<string, unknown>;
+  const type = String(payload.type ?? '').toLowerCase();
+  if (type && type !== 'stx') {
+    throw createRuntimeWalletBridgeError('Only STX post conditions are supported.', -32602);
+  }
+
+  const principal = String(payload.principal ?? payload.address ?? '').trim();
+  if (!principal) {
+    throw createRuntimeWalletBridgeError('Post condition principal is required.', -32602);
+  }
+
+  const amount = BigInt(normalizeRuntimeUint(payload.amount, 'Post condition amount'));
+  const conditionCode = normalizeRuntimeFungibleConditionCode(
+    payload.conditionCode ?? payload.condition
+  );
+
+  const contractPrincipal = parseRuntimeContractIdentifier(principal);
+  if (contractPrincipal) {
+    return makeContractSTXPostCondition(
+      contractPrincipal.contractAddress,
+      contractPrincipal.contractName,
+      conditionCode,
+      amount
+    );
+  }
+  if (!validateStacksAddress(principal)) {
+    throw createRuntimeWalletBridgeError('Post condition principal is invalid.', -32602);
+  }
+  return makeStandardSTXPostCondition(principal, conditionCode, amount);
+};
+
+const parseRuntimePostConditions = (value: unknown): PostCondition[] | undefined => {
+  if (!Array.isArray(value) || value.length === 0) {
+    return undefined;
+  }
+  return value.map((entry) => parseRuntimePostCondition(entry));
+};
+
+const parseRuntimeFunctionArgs = (value: unknown): ClarityValue[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.map((entry, index) => {
+    if (typeof entry !== 'string') {
+      throw createRuntimeWalletBridgeError(
+        `Contract call argument #${index + 1} must be a Clarity hex string.`,
+        -32602
+      );
+    }
+    try {
+      return deserializeCV(normalizeRuntimeHex(entry));
+    } catch (error) {
+      throw createRuntimeWalletBridgeError(
+        `Contract call argument #${index + 1} is not valid Clarity hex.`,
+        -32602
+      );
+    }
+  });
+};
+
+const parseRuntimePostConditionMode = (value: unknown): PostConditionMode => {
+  if (value === PostConditionMode.Allow || value === PostConditionMode.Deny) {
+    return value;
+  }
+  if (typeof value === 'number' && Number.isInteger(value)) {
+    if (value === PostConditionMode.Allow || value === PostConditionMode.Deny) {
+      return value;
+    }
+  }
+  if (typeof value === 'string') {
+    const lower = value.toLowerCase();
+    if (lower === 'allow') {
+      return PostConditionMode.Allow;
+    }
+    if (lower === 'deny') {
+      return PostConditionMode.Deny;
+    }
+  }
+  return PostConditionMode.Allow;
+};
+
+const parseRuntimeContractCallRequest = (
+  params: unknown,
+  fallbackNetwork: NetworkType
+): RuntimeWalletContractCallRequest => {
+  const payload = Array.isArray(params) ? params[0] : params;
+  if (!payload || typeof payload !== 'object') {
+    throw createRuntimeWalletBridgeError('Contract call params are missing.', -32602);
+  }
+
+  const record = payload as Record<string, unknown>;
+  let contractAddress = String(record.contractAddress ?? '').trim();
+  let contractName = String(record.contractName ?? '').trim();
+
+  if ((!contractAddress || !contractName) && typeof record.contract === 'string') {
+    const parsedContract = parseRuntimeContractIdentifier(record.contract);
+    if (parsedContract) {
+      contractAddress = parsedContract.contractAddress;
+      contractName = parsedContract.contractName;
+    }
+  }
+
+  if (!validateStacksAddress(contractAddress)) {
+    throw createRuntimeWalletBridgeError('Contract address is invalid.', -32602);
+  }
+  if (!contractName) {
+    throw createRuntimeWalletBridgeError('Contract name is required.', -32602);
+  }
+
+  const functionName = String(record.functionName ?? '').trim();
+  if (!functionName) {
+    throw createRuntimeWalletBridgeError('Function name is required.', -32602);
+  }
+
+  return {
+    contractAddress,
+    contractName,
+    functionName,
+    functionArgs: parseRuntimeFunctionArgs(record.functionArgs),
+    network: normalizeRuntimeNetwork(record.network, fallbackNetwork),
+    postConditionMode: parseRuntimePostConditionMode(record.postConditionMode),
+    postConditions: parseRuntimePostConditions(record.postConditions)
+  };
+};
+
+const toRuntimeWalletSessionResponse = (
+  session: WalletSession,
+  fallbackNetwork: NetworkType
+) => {
+  if (!session.isConnected || !session.address) {
+    return {
+      addresses: [],
+      accounts: [],
+      network: fallbackNetwork
+    };
+  }
+
+  const network =
+    session.network ??
+    getNetworkFromAddress(session.address) ??
+    fallbackNetwork;
+  const stxAddress = network === 'testnet'
+    ? { testnet: session.address }
+    : { mainnet: session.address };
+
+  return {
+    address: session.address,
+    selectedAddress: session.address,
+    identityAddress: session.address,
+    addresses: [session.address],
+    accounts: [session.address],
+    stxAddress,
+    network
   };
 };
 
@@ -443,6 +815,221 @@ export default function App() {
   useEffect(() => {
     setWalletSession(walletAdapter.getSession());
   }, [walletAdapter]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const handleRuntimeWalletBridgeRequest = (
+      event: MessageEvent<RuntimeWalletBridgeRequestMessage>
+    ) => {
+      const payload = event.data;
+      if (
+        !payload ||
+        typeof payload !== 'object' ||
+        payload.type !== RUNTIME_WALLET_BRIDGE_REQUEST_TYPE
+      ) {
+        return;
+      }
+
+      const requestId =
+        typeof payload.requestId === 'string' ? payload.requestId.trim() : '';
+
+      const sendResponse = (response: RuntimeWalletBridgeResponseMessage) => {
+        const target = event.source;
+        if (!target || typeof (target as Window).postMessage !== 'function') {
+          return;
+        }
+        const targetOrigin =
+          event.origin && event.origin !== 'null' ? event.origin : '*';
+        (target as Window).postMessage(response, targetOrigin);
+      };
+
+      if (!requestId) {
+        sendResponse({
+          type: RUNTIME_WALLET_BRIDGE_RESPONSE_TYPE,
+          requestId: 'unknown',
+          ok: false,
+          error: { message: 'Missing runtime wallet bridge request id.', code: -32600 }
+        });
+        return;
+      }
+
+      if (event.origin !== window.location.origin) {
+        sendResponse({
+          type: RUNTIME_WALLET_BRIDGE_RESPONSE_TYPE,
+          requestId,
+          ok: false,
+          error: {
+            message: `Runtime wallet bridge origin mismatch (${event.origin}).`,
+            code: -32600
+          }
+        });
+        return;
+      }
+
+      const bridgeToken =
+        typeof payload.bridgeToken === 'string' ? payload.bridgeToken : '';
+      const tokenStorage =
+        typeof window.sessionStorage === 'undefined'
+          ? null
+          : window.sessionStorage;
+      if (!isRuntimeWalletBridgeTokenValid(tokenStorage, bridgeToken)) {
+        sendResponse({
+          type: RUNTIME_WALLET_BRIDGE_RESPONSE_TYPE,
+          requestId,
+          ok: false,
+          error: {
+            message: 'Runtime wallet bridge token is missing or expired.',
+            code: -32600
+          }
+        });
+        return;
+      }
+
+      const method = typeof payload.method === 'string' ? payload.method.trim() : '';
+      if (!method) {
+        sendResponse({
+          type: RUNTIME_WALLET_BRIDGE_RESPONSE_TYPE,
+          requestId,
+          ok: false,
+          error: { message: 'Runtime wallet bridge method is required.', code: -32600 }
+        });
+        return;
+      }
+
+      const resolveResponse = async () => {
+        const fallbackNetwork = selectedContract.network;
+
+        if (RUNTIME_WALLET_READ_METHODS.has(method)) {
+          return toRuntimeWalletSessionResponse(
+            walletAdapter.getSession(),
+            fallbackNetwork
+          );
+        }
+
+        if (RUNTIME_WALLET_NETWORK_METHODS.has(method)) {
+          const session = walletAdapter.getSession();
+          return {
+            network:
+              session.network ??
+              (session.address
+                ? getNetworkFromAddress(session.address) ?? fallbackNetwork
+                : fallbackNetwork)
+          };
+        }
+
+        if (RUNTIME_WALLET_DISCONNECT_METHODS.has(method)) {
+          await walletAdapter.disconnect();
+          const session = walletAdapter.getSession();
+          setWalletSession(session);
+          return {
+            ok: true,
+            ...toRuntimeWalletSessionResponse(session, fallbackNetwork)
+          };
+        }
+
+        if (RUNTIME_WALLET_CONNECT_METHODS.has(method)) {
+          const priorSession = walletAdapter.getSession();
+          const session = await walletAdapter.connect();
+          setWalletSession(session);
+          if (!session.isConnected && !priorSession.isConnected) {
+            throw createRuntimeWalletBridgeError(
+              'Wallet connection was cancelled by the user.',
+              4001
+            );
+          }
+          return toRuntimeWalletSessionResponse(session, fallbackNetwork);
+        }
+
+        if (RUNTIME_WALLET_CONTRACT_CALL_METHODS.has(method)) {
+          const request = parseRuntimeContractCallRequest(
+            payload.params,
+            fallbackNetwork
+          );
+          let session = walletAdapter.getSession();
+          const wasConnected = session.isConnected;
+          if (!session.isConnected) {
+            session = await walletAdapter.connect();
+            setWalletSession(session);
+          }
+          if (!session.isConnected || !session.address) {
+            throw createRuntimeWalletBridgeError(
+              wasConnected
+                ? 'Wallet session is unavailable for contract call.'
+                : 'Wallet transaction was cancelled by the user.',
+              4001
+            );
+          }
+          if (session.network && request.network !== session.network) {
+            throw createRuntimeWalletBridgeError(
+              `Wallet network mismatch: wallet=${session.network}, request=${request.network}.`,
+              -32602
+            );
+          }
+          return await new Promise((resolve, reject) => {
+            showContractCall({
+              contractAddress: request.contractAddress,
+              contractName: request.contractName,
+              functionName: request.functionName,
+              functionArgs: request.functionArgs,
+              network: request.network,
+              stxAddress: session.address,
+              postConditionMode: request.postConditionMode,
+              postConditions: request.postConditions,
+              onFinish: (result) => resolve(result),
+              onCancel: () =>
+                reject(
+                  createRuntimeWalletBridgeError(
+                    'Wallet transaction was cancelled by the user.',
+                    4001
+                  )
+                )
+            });
+          });
+        }
+
+        throw createRuntimeWalletBridgeError(
+          `Runtime wallet bridge method is unsupported: ${method}.`,
+          -32601
+        );
+      };
+
+      void resolveResponse()
+        .then((result) => {
+          sendResponse({
+            type: RUNTIME_WALLET_BRIDGE_RESPONSE_TYPE,
+            requestId,
+            ok: true,
+            result
+          });
+        })
+        .catch((error) => {
+          const bridgeError = error as RuntimeWalletBridgeError;
+          sendResponse({
+            type: RUNTIME_WALLET_BRIDGE_RESPONSE_TYPE,
+            requestId,
+            ok: false,
+            error: {
+              message:
+                bridgeError instanceof Error
+                  ? bridgeError.message
+                  : String(bridgeError),
+              code:
+                typeof bridgeError?.code === 'number'
+                  ? bridgeError.code
+                  : undefined
+            }
+          });
+        });
+    };
+
+    window.addEventListener('message', handleRuntimeWalletBridgeRequest);
+    return () => {
+      window.removeEventListener('message', handleRuntimeWalletBridgeRequest);
+    };
+  }, [walletAdapter, selectedContract.network]);
 
   const handleConnectWallet = async () => {
     setWalletPending(true);

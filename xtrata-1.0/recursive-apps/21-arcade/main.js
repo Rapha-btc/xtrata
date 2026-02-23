@@ -64,12 +64,15 @@
   var walletDisconnectOverride = false;
   var connectPromptShown = false;
   var connectWalletInFlight = null;
+  var walletConnectSession = null;
+  var walletConnectSdkModulePromise = null;
   var adminBusy = false;
   var WALLET_DEBUG_BUILD = 'wallet-debug-2026-02-20-12';
   var providerMethodUnsupported = {};
   var walletDebugEvents = [];
   var walletDebugEventLimit = 800;
   var walletDebugThrottleState = {};
+  var walletDebugChangeState = {};
   var walletRpcLogOnceState = {};
   var WALLET_DEBUG_THROTTLE_DEFAULT_MS = 350;
   var WALLET_DEBUG_THROTTLE_SUMMARY_IDLE_MS = 1800;
@@ -78,7 +81,11 @@
     'Provider request attempt retrying': 1600,
     'Provider request attempt failed': 1600,
     'Wallet status refreshed': 2200,
-    'resolveConnectedWallet candidate resolved': 1000
+    'resolveConnectedWallet candidate resolved': 1000,
+    '[wallet-connect] attempt': 1000,
+    '[wallet-connect] provider candidate': 1200,
+    '[wallet-connect] non-event': 1300,
+    '[wallet-connect] outcome': 1800
   };
   var walletDebugSummaryWindow = null;
   var walletDebugSummaryCounter = 0;
@@ -315,6 +322,45 @@
       }
       return String(detail);
     }
+  }
+
+  function walletDebugKey(detail){
+    var cloned = cloneWalletDebugDetail(detail);
+    if(typeof cloned === 'undefined') return '__undefined__';
+    if(cloned === null) return '__null__';
+    if(typeof cloned === 'string' || typeof cloned === 'number' || typeof cloned === 'boolean'){
+      return String(cloned);
+    }
+    try{
+      return JSON.stringify(cloned);
+    }catch(e){
+      return String(cloned);
+    }
+  }
+
+  function walletDebugChanged(level, message, detail, key){
+    var stateKey = String(key || message || 'wallet-debug-change');
+    var nextKey = walletDebugKey(detail);
+    if(walletDebugChangeState[stateKey] === nextKey){
+      return false;
+    }
+    walletDebugChangeState[stateKey] = nextKey;
+    walletDebug(level, message, detail);
+    return true;
+  }
+
+  function walletStatusKey(status){
+    if(!status || typeof status !== 'object'){
+      return 'status:none';
+    }
+    return [
+      String(status.state || ''),
+      status.hasAddress ? '1' : '0',
+      String(status.address || ''),
+      String(status.network || ''),
+      String(status.provider || ''),
+      String(status.label || '')
+    ].join('|');
   }
 
   function recordWalletDebugEvent(level, message, detail){
@@ -712,6 +758,27 @@
     return label.indexOf('bitcoinprovider') >= 0 && label.indexOf('stacksprovider') < 0;
   }
 
+  function providerHasNestedStacksCandidate(provider){
+    if(!provider || typeof provider !== 'object') return false;
+    return !!(
+      (provider.StacksProvider && typeof provider.StacksProvider === 'object') ||
+      (provider.stacksProvider && typeof provider.stacksProvider === 'object') ||
+      (provider.walletProvider && typeof provider.walletProvider === 'object') ||
+      (provider.provider && typeof provider.provider === 'object' && provider.provider !== provider) ||
+      (provider.wallet && typeof provider.wallet === 'object')
+    );
+  }
+
+  function providerLooksLikeNamespaceContainer(provider){
+    if(!provider || typeof provider !== 'object') return false;
+    if(!providerHasNestedStacksCandidate(provider)) return false;
+    if(providerHasDirectRpcMethods(provider)) return false;
+    if(typeof provider.transactionRequest === 'function') return false;
+    if(typeof provider.enable === 'function') return false;
+    if(typeof provider.connect === 'function') return false;
+    return true;
+  }
+
   function splitWalletAddressCandidates(providers){
     var primary = [];
     var fallback = [];
@@ -1025,6 +1092,7 @@
     var out = [];
 
     function push(provider, label){
+      if(providerLooksLikeNamespaceContainer(provider)) return;
       if(!providerHasCapabilities(provider)) return;
       var i;
       for(i = 0; i < out.length; i++){
@@ -1048,13 +1116,24 @@
       var prefix = context.label || 'window';
       var directCandidates = [
         { label: prefix + '.StacksProvider', value: safeWindowRead(contextRoot, 'StacksProvider') },
+        { label: prefix + '.StacksProvider.StacksProvider', value: resolveProviderPathFromRoot('StacksProvider.StacksProvider', contextRoot) },
+        { label: prefix + '.StacksProvider.provider', value: resolveProviderPathFromRoot('StacksProvider.provider', contextRoot) },
+        { label: prefix + '.StacksProvider.stacksProvider', value: resolveProviderPathFromRoot('StacksProvider.stacksProvider', contextRoot) },
+        { label: prefix + '.StacksProvider.walletProvider', value: resolveProviderPathFromRoot('StacksProvider.walletProvider', contextRoot) },
+        { label: prefix + '.StacksProvider.wallet', value: resolveProviderPathFromRoot('StacksProvider.wallet', contextRoot) },
         { label: prefix + '.LeatherProvider', value: safeWindowRead(contextRoot, 'LeatherProvider') },
+        { label: prefix + '.LeatherProvider.provider', value: resolveProviderPathFromRoot('LeatherProvider.provider', contextRoot) },
+        { label: prefix + '.LeatherProvider.stacksProvider', value: resolveProviderPathFromRoot('LeatherProvider.stacksProvider', contextRoot) },
+        { label: prefix + '.LeatherProvider.walletProvider', value: resolveProviderPathFromRoot('LeatherProvider.walletProvider', contextRoot) },
         { label: prefix + '.XverseProviders', value: safeWindowRead(contextRoot, 'XverseProviders') },
+        { label: prefix + '.XverseProviders.provider', value: resolveProviderPathFromRoot('XverseProviders.provider', contextRoot) },
+        { label: prefix + '.XverseProviders.walletProvider', value: resolveProviderPathFromRoot('XverseProviders.walletProvider', contextRoot) },
         { label: prefix + '.xverseProviders', value: safeWindowRead(contextRoot, 'xverseProviders') },
         { label: prefix + '.XverseProviders.StacksProvider', value: resolveProviderPathFromRoot('XverseProviders.StacksProvider', contextRoot) },
         { label: prefix + '.xverseProviders.StacksProvider', value: resolveProviderPathFromRoot('xverseProviders.StacksProvider', contextRoot) },
         { label: prefix + '.XverseProviders.BitcoinProvider', value: resolveProviderPathFromRoot('XverseProviders.BitcoinProvider', contextRoot) },
         { label: prefix + '.xverseProviders.BitcoinProvider', value: resolveProviderPathFromRoot('xverseProviders.BitcoinProvider', contextRoot) },
+        { label: prefix + '.stacksProvider', value: safeWindowRead(contextRoot, 'stacksProvider') },
         { label: prefix + '.btc', value: safeWindowRead(contextRoot, 'btc') },
         { label: prefix + '.stacks', value: safeWindowRead(contextRoot, 'stacks') },
         { label: prefix + '.BitcoinProvider', value: safeWindowRead(contextRoot, 'BitcoinProvider') }
@@ -1115,6 +1194,23 @@
         var label = String(entry && entry.label ? entry.label : '').toLowerCase();
         var score = 0;
         if(label.indexOf('window.stacksprovider') === 0) score += 140;
+        if(
+          label === 'window.stacksprovider' ||
+          label === 'window.parent.stacksprovider' ||
+          label === 'window.top.stacksprovider' ||
+          label === 'window.opener.stacksprovider'
+        ){
+          score -= 45;
+        }
+        if(
+          label.indexOf('.stacksprovider.stacksprovider') >= 0 ||
+          label.indexOf('.stacksprovider.provider') >= 0 ||
+          label.indexOf('.stacksprovider.walletprovider') >= 0 ||
+          label.indexOf('.leatherprovider.provider') >= 0 ||
+          label.indexOf('.leatherprovider.walletprovider') >= 0
+        ){
+          score += 65;
+        }
         if(label.indexOf('stacksprovider') >= 0) score += 100;
         if(label.indexOf('leatherprovider') >= 0) score += 80;
         if(label.indexOf('xverseproviders.stacksprovider') >= 0) score += 60;
@@ -1134,7 +1230,7 @@
       inIframe = true;
     }
 
-    walletDebug('info', 'Provider discovery completed', {
+    var providerDiscoveryDetail = {
       build: WALLET_DEBUG_BUILD,
       count: out.length,
       labels: out.map(function(entry){ return entry.label; }),
@@ -1143,7 +1239,8 @@
       hasXverseProviders: providerContexts.some(function(context){ return !!safeWindowRead(context.target, 'XverseProviders'); }),
       providerContexts: providerContexts.map(function(context){ return context.label; }),
       inIframe: inIframe
-    });
+    };
+    walletDebugChanged('info', 'Provider discovery completed', providerDiscoveryDetail, 'provider-discovery');
 
     return out;
   }
@@ -1439,7 +1536,302 @@
   function shouldSkipConnectMethodForProvider(entry, method){
     if(!entry) return false;
     if(!isLikelyBitcoinOnlyProvider(entry)) return false;
-    return method === 'connect' || method === 'stx_connect';
+    return (
+      method === 'stx_requestAccounts' ||
+      method === 'requestAccounts' ||
+      method === 'connect' ||
+      method === 'stx_connect' ||
+      method === 'wallet_connect'
+    );
+  }
+
+  function isWalletConnectMethod(method){
+    return (
+      method === 'stx_requestAccounts' ||
+      method === 'requestAccounts' ||
+      method === 'stx_connect' ||
+      method === 'connect' ||
+      method === 'wallet_connect'
+    );
+  }
+
+  function isRequestFunctionNotImplementedError(error){
+    if(!error) return false;
+    var message = (error && error.message ? error.message : String(error)).toLowerCase();
+    return message.indexOf('`request` function is not implemented') >= 0 || message.indexOf('request function is not implemented') >= 0;
+  }
+
+  function walletConnectErrorKind(error){
+    if(!error) return 'unknown';
+    if(isUserRejectedError(error)) return 'user-rejected';
+    if(isRequestFunctionNotImplementedError(error)) return 'request-not-implemented';
+    if(isUnsupportedProviderError(error)) return 'unsupported-method';
+    if(isInvalidParamsError(error)) return 'invalid-params';
+    if(error && error.code === 'REQUEST_TIMEOUT') return 'timeout';
+    return 'other';
+  }
+
+  function walletConnectDebug(level, message, detail){
+    walletDebug(level, '[wallet-connect] ' + String(message || ''), detail);
+  }
+
+  function clearWalletConnectSession(reason){
+    if(walletConnectSession){
+      walletConnectDebug('info', 'session cleared', {
+        reason: reason || 'unspecified',
+        address: walletConnectSession.address || null,
+        network: walletConnectSession.network || null,
+        provider: walletConnectSession.provider || null,
+        source: walletConnectSession.source || null
+      });
+    }
+    walletConnectSession = null;
+  }
+
+  function setWalletConnectSession(address, network, providerLabel, source){
+    if(!looksLikeStacksAddress(address)) return false;
+    var normalizedAddress = String(address).trim();
+    walletConnectSession = {
+      address: normalizedAddress,
+      network: normalizeNetwork(network) || inferNetworkFromAddress(normalizedAddress) || null,
+      provider: providerLabel ? String(providerLabel) : null,
+      source: source ? String(source) : null
+    };
+    walletConnectDebug('info', 'session updated', {
+      address: walletConnectSession.address,
+      network: walletConnectSession.network,
+      provider: walletConnectSession.provider,
+      source: walletConnectSession.source
+    });
+    return true;
+  }
+
+  function extractAddressFromConnectAuthPayload(payload, targetNetwork){
+    var candidates = [];
+
+    if(payload && payload.userSession && typeof payload.userSession.loadUserData === 'function'){
+      try{
+        var userData = payload.userSession.loadUserData();
+        collectStacksAddresses(userData, candidates);
+        if(userData && userData.profile){
+          collectStacksAddresses(userData.profile, candidates);
+        }
+        if(userData && userData.identityAddress){
+          collectStacksAddresses(userData.identityAddress, candidates);
+        }
+      }catch(error){
+        walletConnectDebug('warn', 'auth payload userSession read failed', {
+          error: walletErrorForLog(error)
+        });
+      }
+    }
+
+    if(payload && payload.authResponsePayload){
+      collectStacksAddresses(payload.authResponsePayload, candidates);
+      if(payload.authResponsePayload.profile){
+        collectStacksAddresses(payload.authResponsePayload.profile, candidates);
+      }
+      if(payload.authResponsePayload.identityAddress){
+        collectStacksAddresses(payload.authResponsePayload.identityAddress, candidates);
+      }
+    }
+
+    return pickPreferredStacksAddress(candidates, targetNetwork) || pickPreferredStacksAddress(candidates, null);
+  }
+
+  function setWalletConnectSessionFromAuthPayload(payload, targetNetwork, providerLabel){
+    var address = extractAddressFromConnectAuthPayload(payload, targetNetwork);
+    if(!address){
+      return false;
+    }
+    var payloadNetwork = inferNetworkFromAddress(address) || targetNetwork || null;
+    return setWalletConnectSession(address, payloadNetwork, providerLabel || 'stacks-connect', 'stacks-connect-auth');
+  }
+
+  function isWalletConnectCancelledStatus(status){
+    if(typeof status === 'undefined' || status === null) return false;
+    var lower = String(status).toLowerCase();
+    return lower === 'cancelled' || lower === 'canceled' || lower === 'cancel';
+  }
+
+  function walletConnectImportUrls(){
+    return [
+      'https://cdn.jsdelivr.net/npm/@stacks/connect@7.10.2/dist/index.mjs',
+      'https://unpkg.com/@stacks/connect@7.10.2/dist/index.mjs'
+    ];
+  }
+
+  function normalizeWalletConnectModule(imported){
+    if(!imported || typeof imported !== 'object') return null;
+    if(
+      typeof imported.authenticate === 'function' ||
+      typeof imported.showConnect === 'function'
+    ){
+      return imported;
+    }
+    if(imported.default && typeof imported.default === 'object'){
+      if(
+        typeof imported.default.authenticate === 'function' ||
+        typeof imported.default.showConnect === 'function'
+      ){
+        return imported.default;
+      }
+    }
+    return imported;
+  }
+
+  function loadWalletConnectModule(){
+    if(walletConnectSdkModulePromise){
+      return walletConnectSdkModulePromise;
+    }
+    walletConnectSdkModulePromise = (async function(){
+      var urls = walletConnectImportUrls();
+      var lastError = null;
+      var i;
+      for(i = 0; i < urls.length; i++){
+        var url = urls[i];
+        try{
+          walletConnectDebug('info', 'fallback sdk import attempt', {
+            url: url
+          });
+          var imported = await import(url);
+          var walletConnectModule = normalizeWalletConnectModule(imported);
+          if(
+            walletConnectModule &&
+            (typeof walletConnectModule.authenticate === 'function' || typeof walletConnectModule.showConnect === 'function')
+          ){
+            walletConnectDebug('info', 'fallback sdk import succeeded', {
+              url: url,
+              hasAuthenticate: typeof walletConnectModule.authenticate === 'function',
+              hasShowConnect: typeof walletConnectModule.showConnect === 'function'
+            });
+            return walletConnectModule;
+          }
+          throw new Error('Stacks Connect module did not expose authenticate/showConnect.');
+        }catch(error){
+          lastError = error;
+          walletConnectDebug('warn', 'fallback sdk import failed', {
+            url: url,
+            error: walletErrorForLog(error)
+          });
+        }
+      }
+      throw lastError || new Error('Unable to load Stacks Connect module.');
+    })().catch(function(error){
+      walletConnectSdkModulePromise = null;
+      throw error;
+    });
+    return walletConnectSdkModulePromise;
+  }
+
+  function resolveWalletConnectRedirectPath(){
+    if(typeof window === 'undefined' || !window.location) return '/';
+    var path =
+      String(window.location.pathname || '/') +
+      String(window.location.search || '') +
+      String(window.location.hash || '');
+    return path || '/';
+  }
+
+  function resolveWalletConnectIconUrl(){
+    if(typeof window === 'undefined' || !window.location) return '';
+    return window.location.origin + '/favicon.ico';
+  }
+
+  function createWalletConnectUserSession(walletConnectModule){
+    if(!walletConnectModule) return null;
+    if(typeof walletConnectModule.AppConfig !== 'function') return null;
+    if(typeof walletConnectModule.UserSession !== 'function') return null;
+    try{
+      var appConfig = new walletConnectModule.AppConfig(['store_write'], undefined, '', '/manifest.json');
+      return new walletConnectModule.UserSession({ appConfig: appConfig });
+    }catch(error){
+      walletConnectDebug('warn', 'fallback user session creation failed', {
+        error: walletErrorForLog(error)
+      });
+      return null;
+    }
+  }
+
+  async function attemptWalletConnectWithStacksConnect(providerEntry, targetNetwork){
+    var provider = providerEntry && providerEntry.provider ? providerEntry.provider : null;
+    var providerLabel = providerEntry && providerEntry.label ? providerEntry.label : 'unknown-provider';
+    var walletConnectModule = await loadWalletConnectModule();
+    var authFn = walletConnectModule && typeof walletConnectModule.authenticate === 'function'
+      ? walletConnectModule.authenticate
+      : null;
+    var showConnectFn = walletConnectModule && typeof walletConnectModule.showConnect === 'function'
+      ? walletConnectModule.showConnect
+      : null;
+    if(!authFn && !showConnectFn){
+      throw new Error('Stacks Connect module did not expose authenticate/showConnect.');
+    }
+    var userSession = createWalletConnectUserSession(walletConnectModule);
+    var strategy = showConnectFn ? 'showConnect' : 'authenticate';
+    walletConnectDebug('info', 'fallback auth invocation', {
+      provider: providerLabel,
+      targetNetwork: targetNetwork,
+      strategy: strategy,
+      hasProvider: !!provider
+    });
+
+    return await new Promise(function(resolve, reject){
+      var settled = false;
+      var timeoutMs = 90000;
+      var timeoutId = setTimeout(function(){
+        if(settled) return;
+        settled = true;
+        reject(new Error('Wallet authentication timed out.'));
+      }, timeoutMs);
+
+      function settle(error, result){
+        if(settled) return;
+        settled = true;
+        clearTimeout(timeoutId);
+        if(error){
+          reject(error);
+        } else {
+          resolve(result);
+        }
+      }
+
+      var authOptions = {
+        appDetails: {
+          name: 'Retro Arcade',
+          icon: resolveWalletConnectIconUrl()
+        },
+        manifestPath: '/manifest.json',
+        redirectTo: resolveWalletConnectRedirectPath(),
+        onFinish: function(payload){
+          settle(null, {
+            status: 'finished',
+            payload: payload || null
+          });
+        },
+        onCancel: function(){
+          settle(null, {
+            status: 'cancelled'
+          });
+        }
+      };
+      if(userSession){
+        authOptions.userSession = userSession;
+      }
+
+      try{
+        var invocation;
+        if(showConnectFn){
+          invocation = showConnectFn(authOptions);
+        } else {
+          invocation = authFn(authOptions, provider || undefined);
+        }
+        Promise.resolve(invocation).catch(function(error){
+          settle(error);
+        });
+      }catch(error){
+        settle(error);
+      }
+    });
   }
 
   function isUserRejectedError(error){
@@ -1469,7 +1861,14 @@
       ? options.timeoutMs
       : 3500;
     var providerLabel = getProviderLabel(provider);
+    var connectMethod = isWalletConnectMethod(method);
     if(isKnownUnsupportedMethod(provider, method)){
+      if(connectMethod){
+        walletConnectDebug('info', 'non-event: method already known unsupported', {
+          provider: providerLabel,
+          method: method
+        });
+      }
       return Promise.reject(createKnownUnsupportedMethodError(method));
     }
     var attempts = [];
@@ -1492,7 +1891,18 @@
 
     pushTarget(provider, providerLabel + ':self');
     if(provider && typeof provider === 'object'){
-      var nestedKeys = ['provider', 'stacksProvider', 'walletProvider', 'rpc', 'client'];
+      var nestedKeys = [
+        'StacksProvider',
+        'stacksProvider',
+        'provider',
+        'walletProvider',
+        'wallet',
+        'providers',
+        'stacks',
+        'rpc',
+        'client',
+        'BitcoinProvider'
+      ];
       var n;
       for(n = 0; n < nestedKeys.length; n++){
         if(provider[nestedKeys[n]] && typeof provider[nestedKeys[n]] === 'object'){
@@ -1509,6 +1919,32 @@
           });
         }
       }
+    }
+
+    targets.sort(function(a, b){
+      function score(targetEntry){
+        var tag = String(targetEntry && targetEntry.tag ? targetEntry.tag : '').toLowerCase();
+        var s = 0;
+        if(tag.indexOf(':stacksprovider') >= 0) s += 120;
+        if(tag.indexOf(':walletprovider') >= 0) s += 60;
+        if(tag.indexOf(':provider') >= 0) s += 40;
+        if(tag.indexOf(':wallet') >= 0) s += 20;
+        if(tag.indexOf(':bitcoinprovider') >= 0) s -= 120;
+        if(tag.indexOf(':self') >= 0) s -= 10;
+        return s;
+      }
+      return score(b) - score(a);
+    });
+
+    function nextAttemptIndexAfterSource(index){
+      var source = attempts[index] ? attempts[index].source : null;
+      var i;
+      for(i = index + 1; i < attempts.length; i++){
+        if(attempts[i].source !== source){
+          return i;
+        }
+      }
+      return attempts.length;
     }
 
     function addAttempt(target, source, variant, run){
@@ -1603,8 +2039,24 @@
       return Promise.reject(new Error('Wallet provider has no callable method for "' + method + '".'));
     }
 
+    if(connectMethod){
+      walletConnectDebug('info', 'attempt plan', {
+        provider: providerLabel,
+        method: method,
+        attemptCount: attempts.length,
+        targetSources: targets.map(function(target){ return target.tag; })
+      });
+    }
+
     async function run(index, previousError){
       if(index >= attempts.length){
+        if(connectMethod){
+          walletConnectDebug('warn', 'non-event: exhausted request attempts', {
+            provider: providerLabel,
+            method: method,
+            lastError: walletErrorForLog(previousError)
+          });
+        }
         if(shouldCacheUnsupportedMethod(hasParams, previousError)){
           markMethodUnsupported(provider, method);
         }
@@ -1612,6 +2064,16 @@
       }
       var attempt = attempts[index];
       try{
+        if(connectMethod){
+          walletConnectDebug('info', 'attempt', {
+            provider: providerLabel,
+            method: method,
+            attemptIndex: index,
+            source: attempt.source,
+            variant: attempt.variant,
+            timeoutMs: timeoutMs
+          });
+        }
         walletDebug('info', 'Provider request attempt', {
           provider: providerLabel,
           method: method,
@@ -1621,14 +2083,43 @@
           variant: attempt.variant,
           timeoutMs: timeoutMs
         });
-        return await withPromiseTimeout(
+        var result = await withPromiseTimeout(
           Promise.resolve(attempt.run()),
           timeoutMs,
           'Wallet provider request timed out for "' + method + '".'
         );
+        if(connectMethod){
+          walletConnectDebug('info', 'attempt succeeded', {
+            provider: providerLabel,
+            method: method,
+            attemptIndex: index,
+            source: attempt.source,
+            variant: attempt.variant
+          });
+        }
+        return result;
       }catch(error){
         var retryable = isUnsupportedProviderError(error) || isInvalidParamsError(error);
         if(retryable){
+          if(
+            connectMethod &&
+            isRequestFunctionNotImplementedError(error) &&
+            attempt &&
+            typeof attempt.variant === 'string' &&
+            attempt.variant.indexOf('request(') === 0
+          ){
+            var nextIndex = nextAttemptIndexAfterSource(index);
+            walletConnectDebug('warn', 'non-event: request shim not implemented; skipping source', {
+              provider: providerLabel,
+              method: method,
+              source: attempt.source,
+              attemptIndex: index,
+              variant: attempt.variant,
+              skippedUntilIndex: nextIndex,
+              error: walletErrorForLog(error)
+            });
+            return run(nextIndex, error);
+          }
           var cacheMethod = shouldCacheUnsupportedMethod(hasParams, error);
           if(cacheMethod && index >= attempts.length - 1){
             markMethodUnsupported(provider, method);
@@ -1647,6 +2138,17 @@
               error: walletErrorForLog(error)
             });
           }
+          if(connectMethod){
+            walletConnectDebug('warn', 'attempt retrying', {
+              provider: providerLabel,
+              method: method,
+              attemptIndex: index,
+              source: attempts[index].source,
+              variant: attempts[index].variant,
+              errorKind: walletConnectErrorKind(error),
+              error: walletErrorForLog(error)
+            });
+          }
           return run(index + 1, error);
         }
         walletDebug('warn', 'Provider request attempt failed', {
@@ -1657,6 +2159,17 @@
           variant: attempts[index].variant,
           error: walletErrorForLog(error)
         });
+        if(connectMethod){
+          walletConnectDebug('warn', 'attempt failed', {
+            provider: providerLabel,
+            method: method,
+            attemptIndex: index,
+            source: attempts[index].source,
+            variant: attempts[index].variant,
+            errorKind: walletConnectErrorKind(error),
+            error: walletErrorForLog(error)
+          });
+        }
         throw error;
       }
     }
@@ -1824,15 +2337,19 @@
     var candidateProviders = getWalletAddressCandidates(providers);
     var splitCandidates = splitWalletAddressCandidates(candidateProviders);
     var targetNetwork = options && options.targetNetwork ? options.targetNetwork : null;
-    walletDebug('info', 'resolveConnectedWallet start', {
+    var resolveStartDetail = {
       targetNetwork: targetNetwork,
       providers: providers.map(function(entry){ return entry.label; }),
       candidateProviders: candidateProviders.map(function(entry){ return entry.label; }),
       primaryCandidates: splitCandidates.primary.map(function(entry){ return entry.label; }),
       fallbackCandidates: splitCandidates.fallback.map(function(entry){ return entry.label; })
-    });
+    };
+    walletDebugChanged('info', 'resolveConnectedWallet start', resolveStartDetail, 'resolve-start');
     if(!providers.length){
-      walletDebug('warn', 'resolveConnectedWallet found no providers');
+      walletDebugChanged('warn', 'resolveConnectedWallet found no providers', {
+        status: 'no-providers',
+        targetNetwork: targetNetwork
+      }, 'resolve-outcome');
       return {
         providers: providers,
         providerEntry: null,
@@ -1858,13 +2375,14 @@
         var address = await resolveProviderAddress(entry.provider, targetNetwork);
         if(address){
           var network = await resolveProviderNetwork(entry.provider, address);
-          walletDebug('info', 'resolveConnectedWallet candidate resolved', {
+          var candidateDetail = {
             provider: entry.label,
             address: address,
             network: network || null,
             targetNetwork: targetNetwork,
             candidateGroup: groups[g].kind
-          });
+          };
+          walletDebugChanged('info', 'resolveConnectedWallet candidate resolved', candidateDetail, 'resolve-candidate');
           var resolved = {
             providers: providers,
             providerEntry: entry,
@@ -1875,12 +2393,12 @@
             firstResolved = resolved;
           }
           if(!isTargetNetworkMismatch(targetNetwork, network, address)){
-            walletDebug('info', 'resolveConnectedWallet selected candidate', {
+            walletDebugChanged('info', 'resolveConnectedWallet selected candidate', {
               provider: entry.label,
               address: address,
               network: network || null,
               candidateGroup: groups[g].kind
-            });
+            }, 'resolve-selected');
             return resolved;
           }
         }
@@ -1888,19 +2406,21 @@
     }
 
     if(firstResolved){
-      walletDebug('warn', 'resolveConnectedWallet returning mismatched-network candidate', {
+      walletDebugChanged('warn', 'resolveConnectedWallet returning mismatched-network candidate', {
+        status: 'mismatch',
         provider: firstResolved.providerEntry ? firstResolved.providerEntry.label : null,
         address: firstResolved.address || null,
         network: firstResolved.network || null,
         targetNetwork: targetNetwork
-      });
+      }, 'resolve-outcome');
       return firstResolved;
     }
 
-    walletDebug('warn', 'resolveConnectedWallet providers detected but no address resolved', {
+    walletDebugChanged('warn', 'resolveConnectedWallet providers detected but no address resolved', {
+      status: 'no-address',
       firstProvider: candidateProviders[0] ? candidateProviders[0].label : null,
       targetNetwork: targetNetwork
-    });
+    }, 'resolve-outcome');
     return {
       providers: providers,
       providerEntry: candidateProviders[0] || providers[0] || null,
@@ -1911,6 +2431,31 @@
 
   async function getWalletStatus(){
     var targetNetwork = resolveTargetNetwork();
+
+    if(walletConnectSession && looksLikeStacksAddress(walletConnectSession.address)){
+      if(walletDisconnectOverride){
+        return {
+          state: 'is-warning',
+          label: 'Wallet: disconnected on page · click to reconnect',
+          hasAddress: false,
+          address: null,
+          network: null,
+          provider: walletConnectSession.provider || 'wallet session'
+        };
+      }
+      var sessionNetwork = walletConnectSession.network || inferNetworkFromAddress(walletConnectSession.address) || targetNetwork || 'unknown';
+      var sessionLabel = 'Wallet: ' + shortAddress(walletConnectSession.address) + ' · ' + sessionNetwork;
+      var sessionWarning = isTargetNetworkMismatch(targetNetwork, walletConnectSession.network, walletConnectSession.address);
+      return {
+        state: sessionWarning ? 'is-warning' : 'is-connected',
+        label: sessionWarning ? sessionLabel + ' (target ' + targetNetwork + ')' : sessionLabel,
+        hasAddress: true,
+        address: walletConnectSession.address,
+        network: sessionNetwork,
+        provider: walletConnectSession.provider || 'stacks-connect'
+      };
+    }
+
     var resolved = await resolveConnectedWallet({ targetNetwork: targetNetwork });
     var providers = resolved.providers;
     if(!providers || providers.length === 0){
@@ -1942,6 +2487,13 @@
       };
     }
 
+    setWalletConnectSession(
+      resolved.address,
+      resolved.network || inferNetworkFromAddress(resolved.address) || targetNetwork || null,
+      resolved.providerEntry ? resolved.providerEntry.label : null,
+      'provider-resolve'
+    );
+
     if(walletDisconnectOverride){
       var disconnectedProviderName = resolved.providerEntry && resolved.providerEntry.name
         ? resolved.providerEntry.name
@@ -1959,12 +2511,12 @@
     var resolvedNetwork = resolved.network || inferNetworkFromAddress(resolved.address) || targetNetwork || 'unknown';
     var connectedLabel = 'Wallet: ' + shortAddress(resolved.address) + ' · ' + resolvedNetwork;
     var warning = isTargetNetworkMismatch(targetNetwork, resolved.network, resolved.address);
-    walletDebug('info', 'getWalletStatus computed', {
+    walletDebugChanged('info', 'getWalletStatus computed', {
       targetNetwork: targetNetwork,
       resolvedAddress: resolved.address || null,
       resolvedNetwork: resolvedNetwork,
       warning: warning
-    });
+    }, 'wallet-status-computed');
 
     return {
       state: warning ? 'is-warning' : 'is-connected',
@@ -1980,19 +2532,38 @@
     if(!walletStatusBadge) return Promise.resolve();
     if(walletStatusRefreshInFlight) return walletStatusRefreshInFlight;
 
+    var previousStatus = lastWalletStatus;
     walletStatusRefreshInFlight = getWalletStatus()
       .then(function(status){
         lastWalletStatus = status;
         syncOnChainReadSenderAddress(status && status.address ? status.address : '');
         setWalletBadge(status.state, status.label);
         updateWalletDisconnectButtonState();
-        walletDebug('info', 'Wallet status refreshed', status);
+        var previousKey = walletStatusKey(previousStatus);
+        var nextKey = walletStatusKey(status);
+        walletDebugChangeState['wallet-status-error'] = '__none__';
+        if(previousKey !== nextKey){
+          walletDebug('info', 'Wallet status refreshed', {
+            changed: true,
+            previous: previousStatus ? {
+              state: previousStatus.state || null,
+              address: previousStatus.address || null,
+              network: previousStatus.network || null,
+              provider: previousStatus.provider || null
+            } : null,
+            next: status
+          });
+        }
       })
       .catch(function(error){
         lastWalletStatus = { state: 'is-warning', label: 'Wallet: status unavailable', hasAddress: false };
         setWalletBadge('is-warning', 'Wallet: status unavailable');
         updateWalletDisconnectButtonState();
-        walletDebug('warn', 'Wallet status refresh failed', walletErrorForLog(error));
+        var errorKey = String(error && error.code ? error.code : '') + '|' + String(error && error.message ? error.message : String(error));
+        if(walletDebugChangeState['wallet-status-error'] !== errorKey){
+          walletDebugChangeState['wallet-status-error'] = errorKey;
+          walletDebug('warn', 'Wallet status refresh failed', walletErrorForLog(error));
+        }
       })
       .finally(function(){
         walletStatusRefreshInFlight = null;
@@ -2010,6 +2581,11 @@
     walletDebug('info', 'connectWalletInternal start', {
       targetNetwork: targetNetwork,
       build: WALLET_DEBUG_BUILD,
+      providerCount: providers.length,
+      requireInteractiveReconnect: requireInteractiveReconnect
+    });
+    walletConnectDebug('info', 'start', {
+      targetNetwork: targetNetwork,
       providerCount: providers.length,
       requireInteractiveReconnect: requireInteractiveReconnect
     });
@@ -2031,6 +2607,20 @@
     }
     if(
       !walletDisconnectOverride &&
+      walletConnectSession &&
+      looksLikeStacksAddress(walletConnectSession.address) &&
+      !isTargetNetworkMismatch(targetNetwork, walletConnectSession.network, walletConnectSession.address)
+    ){
+      walletConnectDebug('info', 'short-circuit: existing connect session', {
+        address: walletConnectSession.address,
+        network: walletConnectSession.network || null,
+        provider: walletConnectSession.provider || null
+      });
+      await refreshWalletStatus();
+      return true;
+    }
+    if(
+      !walletDisconnectOverride &&
       lastWalletStatus &&
       lastWalletStatus.hasAddress &&
       !isTargetNetworkMismatch(targetNetwork, lastWalletStatus.network, lastWalletStatus.address)
@@ -2045,6 +2635,9 @@
 
     if(!providers.length){
       walletDebug('warn', 'connectWalletInternal failed: no providers');
+      walletConnectDebug('error', 'outcome: no providers', {
+        targetNetwork: targetNetwork
+      });
       throw new Error(buildWalletConnectFailureMessage(
         'No Stacks-compatible wallet provider detected in this browser.',
         null
@@ -2056,6 +2649,84 @@
     var connectMethods = ['stx_requestAccounts', 'requestAccounts', 'stx_connect', 'connect', 'wallet_connect'];
     clearUnsupportedMethodsForProviders(providers, connectMethods);
     var connectProviders = getWalletAddressCandidates(providers);
+    var fallbackAuthTried = false;
+    walletConnectDebug('info', 'provider candidate list', {
+      targetNetwork: targetNetwork,
+      providers: connectProviders.map(function(entry){ return entry.label; }),
+      methods: connectMethods.slice()
+    });
+
+    var primaryAuthEntry = null;
+    var pa;
+    for(pa = 0; pa < connectProviders.length; pa++){
+      if(!isLikelyBitcoinOnlyProvider(connectProviders[pa])){
+        primaryAuthEntry = connectProviders[pa];
+        break;
+      }
+    }
+
+    if(primaryAuthEntry){
+      fallbackAuthTried = true;
+      try{
+        var primaryAuthResult = await attemptWalletConnectWithStacksConnect(primaryAuthEntry, targetNetwork);
+        if(primaryAuthResult && isWalletConnectCancelledStatus(primaryAuthResult.status)){
+          walletConnectDebug('warn', 'outcome: user cancelled primary auth', {
+            provider: primaryAuthEntry.label
+          });
+          throw new Error('Wallet connection was cancelled in the wallet prompt.');
+        }
+
+        var sessionCaptured = setWalletConnectSessionFromAuthPayload(
+          primaryAuthResult ? primaryAuthResult.payload : null,
+          targetNetwork,
+          primaryAuthEntry.label
+        );
+
+        await refreshWalletStatus();
+        var primaryResolved = await resolveConnectedWallet({ targetNetwork: targetNetwork });
+        if(sessionCaptured || (primaryResolved.address && !isTargetNetworkMismatch(targetNetwork, primaryResolved.network, primaryResolved.address))){
+          setWalletDisconnectOverride(false, {
+            source: 'connectWalletInternal',
+            provider: primaryAuthEntry.label,
+            mode: 'stacksConnectAuthPrimary'
+          });
+          if(primaryResolved.address){
+            setWalletConnectSession(
+              primaryResolved.address,
+              primaryResolved.network || inferNetworkFromAddress(primaryResolved.address) || targetNetwork || null,
+              primaryResolved.providerEntry ? primaryResolved.providerEntry.label : primaryAuthEntry.label,
+              'stacks-connect-auth-primary-resolve'
+            );
+          }
+          await refreshWalletStatus();
+          walletConnectDebug('info', 'outcome: connected via primary auth', {
+            provider: primaryAuthEntry.label,
+            address: primaryResolved.address || (walletConnectSession ? walletConnectSession.address : null),
+            network: primaryResolved.network || (walletConnectSession ? walletConnectSession.network : null)
+          });
+          return true;
+        }
+        walletConnectDebug('warn', 'non-event: primary auth finished without connected address', {
+          provider: primaryAuthEntry.label,
+          status: primaryAuthResult ? primaryAuthResult.status : null
+        });
+      }catch(primaryAuthError){
+        lastConnectError = primaryAuthError;
+        walletConnectDebug('warn', 'primary auth failed', {
+          provider: primaryAuthEntry.label,
+          errorKind: walletConnectErrorKind(primaryAuthError),
+          error: walletErrorForLog(primaryAuthError)
+        });
+        if(isUserRejectedError(primaryAuthError)){
+          throw new Error('Wallet connection was cancelled in the wallet prompt.');
+        }
+      }
+    } else {
+      walletConnectDebug('warn', 'non-event: no non-bitcoin provider available for primary auth', {
+        providers: connectProviders.map(function(entry){ return entry.label; })
+      });
+    }
+
     var i;
     var m;
 
@@ -2063,6 +2734,11 @@
       var entry = connectProviders[i];
       var provider = entry.provider;
       walletDebug('info', 'Trying provider candidate for connect', {
+        provider: entry.label,
+        index: i,
+        total: connectProviders.length
+      });
+      walletConnectDebug('info', 'provider candidate', {
         provider: entry.label,
         index: i,
         total: connectProviders.length
@@ -2075,11 +2751,26 @@
             method: connectMethods[m],
             reason: 'bitcoin-only-provider'
           });
+          walletConnectDebug('info', 'non-event: skipped method for provider', {
+            provider: entry.label,
+            method: connectMethods[m],
+            reason: 'bitcoin-only-provider'
+          });
           continue;
         }
-        if(isKnownUnsupportedMethod(provider, connectMethods[m])) continue;
+        if(isKnownUnsupportedMethod(provider, connectMethods[m])){
+          walletConnectDebug('info', 'non-event: method already marked unsupported', {
+            provider: entry.label,
+            method: connectMethods[m]
+          });
+          continue;
+        }
         try{
           walletDebug('info', 'Requesting account access', {
+            provider: entry.label,
+            method: connectMethods[m]
+          });
+          walletConnectDebug('info', 'requesting account access', {
             provider: entry.label,
             method: connectMethods[m]
           });
@@ -2089,12 +2780,30 @@
           var requestedAddress = extractAddress(payload, targetNetwork);
           if(!requestedAddress){
             requestedAddress = await resolveProviderAddress(provider, targetNetwork);
+            if(!requestedAddress){
+              walletConnectDebug('warn', 'non-event: method completed but no address resolved', {
+                provider: entry.label,
+                method: connectMethods[m],
+                payloadType: payload && typeof payload
+              });
+            }
           }
           if(requestedAddress){
+            setWalletConnectSession(
+              requestedAddress,
+              inferNetworkFromAddress(requestedAddress) || targetNetwork || null,
+              entry.label,
+              'provider-request-method'
+            );
             walletDebug('info', 'Account access returned address', {
               provider: entry.label,
               method: connectMethods[m],
               requestedAddress: requestedAddress
+            });
+            walletConnectDebug('info', 'address resolved', {
+              provider: entry.label,
+              method: connectMethods[m],
+              address: requestedAddress
             });
             await refreshWalletStatus();
             var postConnect = await resolveConnectedWallet({ targetNetwork: targetNetwork });
@@ -2111,8 +2820,19 @@
                 address: postConnect.address,
                 network: postConnect.network || null
               });
+              walletConnectDebug('info', 'outcome: connected via account request', {
+                provider: entry.label,
+                address: postConnect.address,
+                network: postConnect.network || null
+              });
               return true;
             }
+            walletConnectDebug('warn', 'non-event: address resolved but post-connect validation failed', {
+              provider: entry.label,
+              method: connectMethods[m],
+              targetNetwork: targetNetwork,
+              postConnect: postConnect
+            });
           }
         }catch(error){
           lastConnectError = error;
@@ -2124,11 +2844,79 @@
             method: connectMethods[m],
             error: walletErrorForLog(error)
           });
+          walletConnectDebug('warn', 'account access failed', {
+            provider: entry.label,
+            method: connectMethods[m],
+            errorKind: walletConnectErrorKind(error),
+            error: walletErrorForLog(error)
+          });
           if(isUserRejectedError(error)){
+            walletConnectDebug('warn', 'outcome: user rejected request', {
+              provider: entry.label,
+              method: connectMethods[m]
+            });
             throw new Error('Wallet connection was cancelled in the wallet prompt.');
           }
           if(isUnsupportedProviderError(error) || isInvalidParamsError(error)){
             continue;
+          }
+        }
+      }
+
+      if(!fallbackAuthTried && !requireInteractiveReconnect && !isLikelyBitcoinOnlyProvider(entry)){
+        fallbackAuthTried = true;
+        try{
+          var fallbackAuthResult = await attemptWalletConnectWithStacksConnect(entry, targetNetwork);
+          if(fallbackAuthResult && isWalletConnectCancelledStatus(fallbackAuthResult.status)){
+            walletConnectDebug('warn', 'outcome: user cancelled fallback auth', {
+              provider: entry.label
+            });
+            throw new Error('Wallet connection was cancelled in the wallet prompt.');
+          }
+
+          var fallbackSessionCaptured = setWalletConnectSessionFromAuthPayload(
+            fallbackAuthResult ? fallbackAuthResult.payload : null,
+            targetNetwork,
+            entry.label
+          );
+
+          await refreshWalletStatus();
+          var fallbackResolved = await resolveConnectedWallet({ targetNetwork: targetNetwork });
+          if(fallbackSessionCaptured || (fallbackResolved.address && !isTargetNetworkMismatch(targetNetwork, fallbackResolved.network, fallbackResolved.address))){
+            setWalletDisconnectOverride(false, {
+              source: 'connectWalletInternal',
+              provider: entry.label,
+              mode: 'stacksConnectAuth'
+            });
+            if(fallbackResolved.address){
+              setWalletConnectSession(
+                fallbackResolved.address,
+                fallbackResolved.network || inferNetworkFromAddress(fallbackResolved.address) || targetNetwork || null,
+                fallbackResolved.providerEntry ? fallbackResolved.providerEntry.label : entry.label,
+                'stacks-connect-auth-fallback-resolve'
+              );
+            }
+            await refreshWalletStatus();
+            walletConnectDebug('info', 'outcome: connected via fallback auth', {
+              provider: entry.label,
+              address: fallbackResolved.address || (walletConnectSession ? walletConnectSession.address : null),
+              network: fallbackResolved.network || (walletConnectSession ? walletConnectSession.network : null)
+            });
+            return true;
+          }
+          walletConnectDebug('warn', 'non-event: fallback auth finished without connected address', {
+            provider: entry.label,
+            status: fallbackAuthResult ? fallbackAuthResult.status : null
+          });
+        }catch(fallbackAuthError){
+          lastConnectError = fallbackAuthError;
+          walletConnectDebug('warn', 'fallback auth failed', {
+            provider: entry.label,
+            errorKind: walletConnectErrorKind(fallbackAuthError),
+            error: walletErrorForLog(fallbackAuthError)
+          });
+          if(isUserRejectedError(fallbackAuthError)){
+            throw new Error('Wallet connection was cancelled in the wallet prompt.');
           }
         }
       }
@@ -2138,8 +2926,15 @@
           provider: entry.label,
           reason: 'bitcoin-only-provider'
         });
+        walletConnectDebug('info', 'non-event: skipped direct connect for provider', {
+          provider: entry.label,
+          reason: 'bitcoin-only-provider'
+        });
       } else if(requireInteractiveReconnect){
         walletDebug('info', 'Skipping direct provider connect while interactive reconnect is required', {
+          provider: entry.label
+        });
+        walletConnectDebug('info', 'non-event: skipped direct connect while interactive reconnect required', {
           provider: entry.label
         });
       } else {
@@ -2159,8 +2954,19 @@
                 provider: entry.label,
                 mode: 'directConnect'
               });
+              setWalletConnectSession(
+                directResolved.address,
+                directResolved.network || inferNetworkFromAddress(directResolved.address) || targetNetwork || null,
+                directResolved.providerEntry ? directResolved.providerEntry.label : entry.label,
+                'direct-provider-connect'
+              );
               await refreshWalletStatus();
               walletDebug('info', 'connectWalletInternal succeeded after direct provider connect', {
+                provider: entry.label,
+                address: directResolved.address,
+                network: directResolved.network || null
+              });
+              walletConnectDebug('info', 'outcome: connected via direct provider connect', {
                 provider: entry.label,
                 address: directResolved.address,
                 network: directResolved.network || null
@@ -2170,11 +2976,19 @@
           }
         }catch(eDirect){
           lastConnectError = eDirect;
+          walletConnectDebug('warn', 'direct connect failed', {
+            provider: entry.label,
+            errorKind: walletConnectErrorKind(eDirect),
+            error: walletErrorForLog(eDirect)
+          });
         }
       }
 
       if(requireInteractiveReconnect){
         walletDebug('info', 'Skipping passive provider resolve while interactive reconnect is required', {
+          provider: entry.label
+        });
+        walletConnectDebug('info', 'non-event: skipped passive resolve while interactive reconnect required', {
           provider: entry.label
         });
       } else {
@@ -2193,8 +3007,19 @@
                 provider: entry.label,
                 mode: 'passiveResolve'
               });
+              setWalletConnectSession(
+                passiveResolved.address,
+                passiveResolved.network || inferNetworkFromAddress(passiveResolved.address) || targetNetwork || null,
+                passiveResolved.providerEntry ? passiveResolved.providerEntry.label : entry.label,
+                'passive-provider-resolve'
+              );
               await refreshWalletStatus();
               walletDebug('info', 'connectWalletInternal succeeded after passive resolve', {
+                provider: entry.label,
+                address: passiveResolved.address,
+                network: passiveResolved.network || null
+              });
+              walletConnectDebug('info', 'outcome: connected via passive resolve', {
                 provider: entry.label,
                 address: passiveResolved.address,
                 network: passiveResolved.network || null
@@ -2206,6 +3031,11 @@
           lastConnectError = e;
           walletDebug('warn', 'Passive provider address resolution failed', {
             provider: entry.label,
+            error: walletErrorForLog(e)
+          });
+          walletConnectDebug('warn', 'passive resolve failed', {
+            provider: entry.label,
+            errorKind: walletConnectErrorKind(e),
             error: walletErrorForLog(e)
           });
         }
@@ -2220,6 +3050,10 @@
           address: finalResolved.address,
           network: finalResolved.network || null
         });
+        walletConnectDebug('warn', 'outcome: blocked by local reconnect override', {
+          address: finalResolved.address,
+          network: finalResolved.network || null
+        });
         throw new Error(
           'Reconnect requires wallet account selection. ' +
           'Use Connect and approve account selection in the wallet popup, then retry.'
@@ -2229,8 +3063,18 @@
         source: 'connectWalletInternal',
         mode: 'finalCheck'
       });
+      setWalletConnectSession(
+        finalResolved.address,
+        finalResolved.network || inferNetworkFromAddress(finalResolved.address) || targetNetwork || null,
+        finalResolved.providerEntry ? finalResolved.providerEntry.label : null,
+        'final-check'
+      );
       await refreshWalletStatus();
       walletDebug('info', 'connectWalletInternal succeeded at final check', {
+        address: finalResolved.address,
+        network: finalResolved.network || null
+      });
+      walletConnectDebug('info', 'outcome: connected at final check', {
         address: finalResolved.address,
         network: finalResolved.network || null
       });
@@ -2239,6 +3083,11 @@
     if(finalResolved.address && isTargetNetworkMismatch(targetNetwork, finalResolved.network, finalResolved.address)){
       var actual = finalResolved.network || inferNetworkFromAddress(finalResolved.address) || 'unknown';
       walletDebug('warn', 'connectWalletInternal failed due to network mismatch', {
+        targetNetwork: targetNetwork,
+        actualNetwork: actual,
+        address: finalResolved.address
+      });
+      walletConnectDebug('warn', 'outcome: network mismatch', {
         targetNetwork: targetNetwork,
         actualNetwork: actual,
         address: finalResolved.address
@@ -2253,6 +3102,12 @@
       lastWalletStatus: lastWalletStatus,
       lastConnectError: walletErrorForLog(lastConnectError)
     });
+    walletConnectDebug('error', 'outcome: no connected account resolved', {
+      targetNetwork: targetNetwork,
+      lastWalletStatus: lastWalletStatus,
+      lastConnectErrorKind: walletConnectErrorKind(lastConnectError),
+      lastConnectError: walletErrorForLog(lastConnectError)
+    });
     throw new Error(buildWalletConnectFailureMessage(
       'Wallet did not return a connected account.',
       lastConnectError
@@ -2262,20 +3117,28 @@
   function connectWallet(){
     if(connectWalletInFlight){
       walletDebug('info', 'connectWallet deduped: existing in-flight promise');
+      walletConnectDebug('info', 'non-event: connect deduped (already in flight)');
       return connectWalletInFlight;
     }
     if(disconnectWalletInFlight){
+      walletConnectDebug('warn', 'non-event: connect blocked by disconnect in flight');
       return Promise.reject(new Error('Wallet disconnect is in progress. Please retry in a moment.'));
     }
 
     walletDebug('info', 'connectWallet invoked');
+    walletConnectDebug('info', 'connect invoked');
     connectWalletInFlight = (async function(){
       try{
         var result = await connectWalletInternal();
         walletDebug('info', 'connectWallet resolved', { result: !!result });
+        walletConnectDebug('info', 'outcome: connect resolved', { result: !!result });
         return result;
       }catch(error){
         walletDebug('error', 'connectWallet rejected', walletErrorForLog(error));
+        walletConnectDebug('error', 'outcome: connect rejected', {
+          errorKind: walletConnectErrorKind(error),
+          error: walletErrorForLog(error)
+        });
         throw error;
       }finally{
         connectWalletInFlight = null;
@@ -2363,6 +3226,7 @@
         source: 'disconnectWalletInternal',
         mode: 'providerCleared'
       });
+      clearWalletConnectSession('disconnect-provider-cleared');
       walletDebug('info', 'disconnectWalletInternal completed', {
         disconnected: true,
         attemptedAnyMethod: attemptedAnyMethod,
@@ -2386,6 +3250,7 @@
       disconnectSucceeded: disconnectSucceeded,
       address: finalResolved.address
     });
+    clearWalletConnectSession('disconnect-local-override');
     syncOnChainReadSenderAddress('');
     await refreshWalletStatus();
     return true;
@@ -2468,15 +3333,15 @@
   }
 
   function defaultApiBase(network){
-    if(network === 'testnet') return '/rpc-testnet';
-    if(network === 'devnet') return '/rpc';
-    return '/rpc';
+    if(network === 'testnet') return 'https://api.testnet.hiro.so';
+    if(network === 'devnet') return 'http://localhost:3999';
+    return 'https://api.mainnet.hiro.so';
   }
 
   function defaultApiFallbackBases(network){
-    if(network === 'testnet') return ['https://api.testnet.hiro.so'];
-    if(network === 'devnet') return ['http://localhost:3999'];
-    return ['https://api.mainnet.hiro.so'];
+    if(network === 'testnet') return [];
+    if(network === 'devnet') return [];
+    return [];
   }
 
   function resolveReadOnlyApiBases(contract){

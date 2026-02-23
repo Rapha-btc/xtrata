@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
+  canStageUploadsBeforeDeploy,
+  canReuseCollectionSlug,
+  isCollectionUploadsLocked,
   isCollectionPublicVisible,
   isCollectionPublished,
   isValidSlug,
+  mergeCollectionMetadata,
   normalizeSlug,
   parseCollectionMetadata,
+  stripDeployPricingLockFromMetadata,
   staysWithinLimit
 } from '../collections';
 
@@ -53,5 +58,115 @@ describe('collections helpers', () => {
     expect(isCollectionPublished('published')).toBe(true);
     expect(isCollectionPublished(' PUBLISHED ')).toBe(true);
     expect(isCollectionPublished('draft')).toBe(false);
+  });
+
+  it('allows slug reuse for undeployed draft by same artist', () => {
+    expect(
+      canReuseCollectionSlug({
+        incomingArtistAddress: 'SP123',
+        existingArtistAddress: 'sp123',
+        contractAddress: null,
+        metadata: { templateVersion: 'xtrata-collection-mint-v1.2' },
+        state: 'draft'
+      })
+    ).toBe(true);
+  });
+
+  it('blocks slug reuse when deployment is already recorded', () => {
+    expect(
+      canReuseCollectionSlug({
+        incomingArtistAddress: 'SP123',
+        existingArtistAddress: 'SP123',
+        contractAddress: null,
+        metadata: { deployTxId: '0xabc' },
+        state: 'draft'
+      })
+    ).toBe(false);
+    expect(
+      canReuseCollectionSlug({
+        incomingArtistAddress: 'SP123',
+        existingArtistAddress: 'SP123',
+        contractAddress: 'SP123',
+        metadata: null,
+        state: 'draft'
+      })
+    ).toBe(false);
+    expect(
+      canReuseCollectionSlug({
+        incomingArtistAddress: 'SP123',
+        existingArtistAddress: 'SP123',
+        contractAddress: null,
+        metadata: null,
+        state: 'published'
+      })
+    ).toBe(false);
+  });
+
+  it('blocks slug reuse across different artists', () => {
+    expect(
+      canReuseCollectionSlug({
+        incomingArtistAddress: 'SP123',
+        existingArtistAddress: 'SP999',
+        contractAddress: null,
+        metadata: null,
+        state: 'draft'
+      })
+    ).toBe(false);
+  });
+
+  it('merges reused-slug metadata with existing values preserved', () => {
+    expect(
+      mergeCollectionMetadata(
+        {
+          deployPricingLock: { version: 'v1', maxChunks: 99 },
+          existingOnly: true
+        },
+        {
+          collection: { name: 'Test' }
+        }
+      )
+    ).toEqual({
+      deployPricingLock: { version: 'v1', maxChunks: 99 },
+      existingOnly: true,
+      collection: { name: 'Test' }
+    });
+  });
+
+  it('strips deploy pricing lock from metadata', () => {
+    const removed = stripDeployPricingLockFromMetadata({
+      deployPricingLock: { version: 'v1' },
+      foo: 'bar'
+    });
+    expect(removed.changed).toBe(true);
+    expect(removed.metadata).toEqual({ foo: 'bar' });
+
+    const untouched = stripDeployPricingLockFromMetadata({ foo: 'bar' });
+    expect(untouched.changed).toBe(false);
+    expect(untouched.metadata).toEqual({ foo: 'bar' });
+  });
+
+  it('detects upload lock states and predeploy staging eligibility', () => {
+    expect(isCollectionUploadsLocked('published')).toBe(true);
+    expect(isCollectionUploadsLocked('archived')).toBe(true);
+    expect(isCollectionUploadsLocked('draft')).toBe(false);
+
+    expect(
+      canStageUploadsBeforeDeploy({
+        contractAddress: '',
+        state: 'draft'
+      })
+    ).toBe(true);
+    expect(
+      canStageUploadsBeforeDeploy({
+        contractAddress: 'SP123.contract',
+        state: 'draft'
+      })
+    ).toBe(false);
+    expect(
+      canStageUploadsBeforeDeploy({
+        contractAddress: '',
+        state: 'published'
+      })
+    ).toBe(false);
   });
 });
