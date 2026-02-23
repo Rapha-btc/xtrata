@@ -58,6 +58,8 @@ const DEPLOY_WIZARD_DRAFT_STORAGE_KEY = 'xtrata-manage-deploy-wizard-v1';
 const DEPLOY_DEBUG_LOG_LIMIT = 60;
 const DEPLOY_CLARITY_VERSION = 2;
 const DEPLOY_DEBUG_TEXT_MAX = 1200;
+const DEPLOY_DEBUG_VERSION = 'deploy-debug-v4-2026-02-23';
+const DEPLOY_SOURCE_COMPACTION_MODE = 'strip-indent-comments-blank-lines';
 const MANAGE_APP_ICON =
   'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%23f97316"/><path d="M18 20h28v6H18zm0 12h28v6H18zm0 12h28v6H18z" fill="white"/></svg>';
 
@@ -639,6 +641,22 @@ export default function DeployWizardPanel() {
     console.debug('[xtrata:deploy]', message, details ?? {});
   };
 
+  useEffect(() => {
+    const details = {
+      debugVersion: DEPLOY_DEBUG_VERSION,
+      clarityVersion: DEPLOY_CLARITY_VERSION,
+      sourceCompactionMode: DEPLOY_SOURCE_COMPACTION_MODE
+    };
+    const timestamp = new Date().toISOString();
+    const line = `${timestamp} Runtime ready ${debugStringify(details)}`;
+    setDeployDebugLog((previous) => [
+      ...previous.slice(-(DEPLOY_DEBUG_LOG_LIMIT - 1)),
+      line
+    ]);
+    // eslint-disable-next-line no-console
+    console.debug('[xtrata:deploy] Runtime ready', details);
+  }, []);
+
   const handleOpenReview = () => {
     setStatus(null);
     appendDeployDebug('Review modal opened', preflightSummary);
@@ -819,6 +837,7 @@ export default function DeployWizardPanel() {
       seed: created.id
     });
     const sourceForDeploy = compactClaritySourceForDeploy(refreshBuild.source);
+    const sourceOriginalBytes = new TextEncoder().encode(refreshBuild.source).byteLength;
     const sourceForDeployBytes = new TextEncoder().encode(sourceForDeploy).byteLength;
     const sourceCompacted = sourceForDeploy !== refreshBuild.source;
 
@@ -869,16 +888,21 @@ export default function DeployWizardPanel() {
 
       appendDeployDebug('Opening wallet deployment request', {
         attemptId,
+        debugVersion: DEPLOY_DEBUG_VERSION,
         contractName,
         network: session.network,
         clarityVersion: DEPLOY_CLARITY_VERSION,
         sourceLengthChars: refreshBuild.source.length,
-        sourceLengthBytes: new TextEncoder().encode(refreshBuild.source).byteLength,
+        sourceLengthBytes: sourceOriginalBytes,
         deploySourceLengthChars: sourceForDeploy.length,
         deploySourceLengthBytes: sourceForDeployBytes,
         sourceCompacted,
+        sourceCompactionMode: DEPLOY_SOURCE_COMPACTION_MODE,
         coreContractId: networkCoreTarget.contractId
       });
+      appendDeployDebug(
+        `Opening wallet deployment request (v=${DEPLOY_DEBUG_VERSION}, origBytes=${sourceOriginalBytes.toString()}, deployBytes=${sourceForDeployBytes.toString()}, compacted=${sourceCompacted ? 'yes' : 'no'})`
+      );
       showContractDeploy({
         contractName,
         codeBody: sourceForDeploy,
