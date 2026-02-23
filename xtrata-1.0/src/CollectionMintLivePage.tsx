@@ -23,6 +23,7 @@ import {
   buildMintBeginStxPostConditions,
   buildSealStxPostConditions,
   resolveCollectionBeginSpendCapMicroStx,
+  resolveCollectionSealSpendCapMicroStx,
   resolveSealSpendCapMicroStx
 } from './lib/mint/post-conditions';
 import { PUBLIC_CONTRACT } from './config/public';
@@ -402,10 +403,9 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     () => resolveCollectionMintPaymentModel(templateVersion),
     [templateVersion]
   );
-  // Temporary global legacy override:
-  // include mint price in begin post-condition cap for every collection mint
-  // until the last v1.1 collection is complete.
-  const chargeMintPriceAtBegin = true;
+  // Keep legacy v1.1 compatibility (mint price charged at begin) while allowing
+  // v1.2 collections to charge only protocol fee at begin and settle price at seal.
+  const chargeMintPriceAtBegin = collectionMintPaymentModel !== 'seal';
   const metadataCollection = useMemo(
     () => toRecord(metadata?.collection) ?? null,
     [metadata]
@@ -691,10 +691,6 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
         mintPrice: contractStatus?.mintPrice ?? null,
         activePhaseMintPrice: contractStatus?.activePhaseMintPrice ?? null,
         protocolFeeMicroStx: contractStatus?.coreFeeUnitMicroStx ?? null,
-        // Temporary legacy compatibility:
-        // Keep begin caps as (mint price + protocol begin fee) for all collection mints
-        // until the final legacy v1.1 collection is fully sold out.
-        // Remove this override and revert to v1.2-only timing afterward.
         chargeMintPriceAtBegin
       });
       if (beginSpendCap === null) {
@@ -1331,6 +1327,19 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
         }
         const needsBegin = !progress.hasReservation || progress.uploadState === null;
         if (needsBegin) {
+          const beginSpendCap = resolveCollectionBeginSpendCapMicroStx({
+            mintPrice: contractStatus?.mintPrice ?? null,
+            activePhaseMintPrice: contractStatus?.activePhaseMintPrice ?? null,
+            protocolFeeMicroStx: contractStatus?.coreFeeUnitMicroStx ?? null,
+            chargeMintPriceAtBegin
+          });
+          if (beginSpendCap !== null) {
+            appendMintLog(
+              chargeMintPriceAtBegin
+                ? `Begin safety cap <= ${toMicroStxLabel(beginSpendCap)} (mint price + protocol begin fee).`
+                : `Begin safety cap <= ${toMicroStxLabel(beginSpendCap)} (protocol begin fee only).`
+            );
+          }
           const beginPostConditions = resolveMintBeginPostConditions(senderAddress);
           if (!beginPostConditions) {
             throw new Error(
@@ -1472,13 +1481,23 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
             'Seal fee safety cap is unavailable. Refresh contract status and retry.'
           );
         }
-        const sealSpendCap = resolveSealSpendCapMicroStx({
-          protocolFeeMicroStx: contractStatus?.coreFeeUnitMicroStx ?? null,
-          totalChunks: chunks.length
-        });
+        const sealSpendCap =
+          collectionMintPaymentModel === 'begin'
+            ? resolveSealSpendCapMicroStx({
+                protocolFeeMicroStx: contractStatus?.coreFeeUnitMicroStx ?? null,
+                totalChunks: chunks.length
+              })
+            : resolveCollectionSealSpendCapMicroStx({
+                mintPrice: contractStatus?.mintPrice ?? null,
+                activePhaseMintPrice: contractStatus?.activePhaseMintPrice ?? null,
+                protocolFeeMicroStx: contractStatus?.coreFeeUnitMicroStx ?? null,
+                totalChunks: chunks.length
+              });
         if (sealSpendCap !== null) {
           appendMintLog(
-            `Seal safety cap <= ${toMicroStxLabel(sealSpendCap)} for ${chunks.length} chunk(s).`
+            collectionMintPaymentModel === 'begin'
+              ? `Seal safety cap <= ${toMicroStxLabel(sealSpendCap)} for ${chunks.length} chunk(s) (protocol seal fee only; mint price was charged at begin).`
+              : `Seal safety cap <= ${toMicroStxLabel(sealSpendCap)} for ${chunks.length} chunk(s) (mint price + protocol seal fee).`
           );
         }
         setSealState('pending');
@@ -2095,12 +2114,12 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                     : collectionMintPaymentModel === 'begin'
                       ? `Deny mode caps: begin <= ${toMicroStxLabel(
                           mintBeginSpendCap
-                        )}. Upload enforces zero STX transfer. Seal <= fee-unit x (1 + ceil(chunks/50)).`
+                        )}. Upload enforces zero STX transfer. Seal <= fee-unit x (1 + ceil(chunks/50)) (mint price already charged at begin).`
                       : collectionMintPaymentModel === 'seal'
                         ? `Deny mode caps: begin <= ${toMicroStxLabel(
                             mintBeginSpendCap
                           )}. Upload enforces zero STX transfer. Seal <= mint price + fee-unit x (1 + ceil(chunks/50)).`
-                        : `Compatibility mode caps (temporary): begin <= ${toMicroStxLabel(
+                        : `Compatibility mode caps: begin <= ${toMicroStxLabel(
                             mintBeginSpendCap
                           )}. Upload enforces zero STX transfer. Seal <= mint price + fee-unit x (1 + ceil(chunks/50)).`}
                 </span>

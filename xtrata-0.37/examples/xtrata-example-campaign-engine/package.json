@@ -1,8 +1,0 @@
-{
-  "name": "xtrata-example-campaign-engine",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "start": "node src/index.js"
-  }
-}

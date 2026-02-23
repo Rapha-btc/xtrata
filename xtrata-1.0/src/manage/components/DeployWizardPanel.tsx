@@ -139,6 +139,42 @@ const compactClaritySourceForDeploy = (source: string) => {
 
 type DeployTemplateMode = 'standard-v1.2' | 'legacy-v1.1-compat';
 
+type ContractNameAvailability = {
+  exists: boolean;
+  status: number | null;
+  error: string | null;
+  url: string;
+};
+
+const checkContractNameAvailability = async (params: {
+  network: string;
+  deployerAddress: string;
+  contractName: string;
+}): Promise<ContractNameAvailability> => {
+  const network = encodeURIComponent(params.network);
+  const address = encodeURIComponent(params.deployerAddress);
+  const contractName = encodeURIComponent(params.contractName);
+  const url = `/hiro/${network}/v2/contracts/source/${address}/${contractName}`;
+
+  try {
+    const response = await fetch(url, { method: 'GET' });
+    if (response.ok) {
+      return { exists: true, status: response.status, error: null, url };
+    }
+    if (response.status === 404) {
+      return { exists: false, status: response.status, error: null, url };
+    }
+    return { exists: false, status: response.status, error: null, url };
+  } catch (error) {
+    return {
+      exists: false,
+      status: null,
+      error: toErrorMessage(error),
+      url
+    };
+  }
+};
+
 type DeployWizardDraftStorage = {
   collectionName: string;
   symbol: string;
@@ -886,6 +922,41 @@ export default function DeployWizardPanel() {
       mintType,
       seed: created.id
     });
+    appendDeployDebug('Checking contract-name availability', {
+      attemptId,
+      contractName,
+      deployerAddress: session.address,
+      network: session.network
+    });
+    const contractNameAvailability = await checkContractNameAvailability({
+      network: session.network,
+      deployerAddress: session.address,
+      contractName
+    });
+    appendDeployDebug('Contract-name availability checked', {
+      attemptId,
+      contractName,
+      exists: contractNameAvailability.exists,
+      status: contractNameAvailability.status,
+      error: contractNameAvailability.error,
+      slugReused: created.slugReused === true,
+      lookupUrl: contractNameAvailability.url
+    });
+    if (contractNameAvailability.exists) {
+      const fullContractId = `${session.address}.${contractName}`;
+      const explorerUrl = `https://explorer.hiro.so/txid/${fullContractId}?chain=${session.network}`;
+      appendDeployDebug('Deploy blocked: contract name already exists on-chain', {
+        attemptId,
+        contractId: fullContractId,
+        explorerUrl
+      });
+      setDeployPending(false);
+      setStatus(
+        `Contract name already exists on-chain: ${fullContractId}. A previous deploy likely succeeded. Use a new drop name/slug, or open Collection Settings and link the existing contract (${explorerUrl}).`
+      );
+      return;
+    }
+
     const sourceForDeploy = compactClaritySourceForDeploy(sourceBeforeCompaction);
     const sourceOriginalBytes = new TextEncoder().encode(sourceBeforeCompaction).byteLength;
     const sourceForDeployBytes = new TextEncoder().encode(sourceForDeploy).byteLength;
