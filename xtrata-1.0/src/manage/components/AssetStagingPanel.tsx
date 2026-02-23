@@ -978,7 +978,8 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
     if (!normalizedCollectionId) {
       return {
         canUpload: false,
-        reason: 'Enter a collection ID first.'
+        reason:
+          'Enter a collection ID first. Copy it from "Your drops" after creating a draft in Step 1.'
       };
     }
     if (uploadsLocked) {

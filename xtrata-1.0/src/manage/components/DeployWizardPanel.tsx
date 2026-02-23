@@ -294,6 +294,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
   const [collection, setCollection] = useState<CollectionDraft | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [deployPending, setDeployPending] = useState(false);
+  const [draftPending, setDraftPending] = useState(false);
   const [selectedDraftLoading, setSelectedDraftLoading] = useState(false);
   const [deployTemplateMode, setDeployTemplateMode] =
     useState<DeployTemplateMode>('standard-v1.2');
@@ -916,6 +917,156 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     setStatus(null);
     appendDeployDebug('Review modal opened', preflightSummary);
     setReviewOpen(true);
+  };
+
+  const handleCreateDraftOnly = async () => {
+    setStatus(null);
+    const attemptId = `${Date.now().toString(36)}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}`;
+    setDeployAttemptId(attemptId);
+    appendDeployDebug('Draft create requested', {
+      attemptId,
+      ...preflightSummary
+    });
+
+    if (deployBuild.errors.length > 0) {
+      appendDeployDebug('Draft create blocked by form validation', {
+        attemptId,
+        firstError: deployBuild.errors[0]
+      });
+      setStatus(deployBuild.errors[0]);
+      return;
+    }
+
+    const networkCoreTarget =
+      resolveArtistDeployCoreTarget(activeNetwork) ?? fallbackCoreTarget;
+    if (!networkCoreTarget) {
+      appendDeployDebug('Draft create blocked: missing core target for network', {
+        attemptId,
+        network: activeNetwork
+      });
+      setStatus(`No supported core contract is configured for ${activeNetwork}.`);
+      return;
+    }
+
+    const refreshBuild = buildArtistDeployContractSource({
+      input: {
+        collectionName,
+        symbol,
+        description,
+        supply,
+        mintType,
+        mintPriceStx,
+        parentInscriptions,
+        artistAddress,
+        marketplaceAddress
+      },
+      templateSources: {
+        standardSource: selectedStandardTemplateSource,
+        preinscribedSource: preinscribedTemplateSource
+      },
+      coreContractId: networkCoreTarget.contractId,
+      operatorAddress: networkCoreTarget.address
+    });
+
+    if (refreshBuild.errors.length > 0) {
+      appendDeployDebug('Draft create blocked by contract source build validation', {
+        attemptId,
+        firstError: refreshBuild.errors[0]
+      });
+      setStatus(refreshBuild.errors[0]);
+      return;
+    }
+
+    const slug = buildCollectionSlug(refreshBuild.resolved.collectionName);
+    const templateVersion =
+      mintType === 'pre-inscribed'
+        ? 'xtrata-preinscribed-collection-sale-v1.0'
+        : useLegacyV11CompatTemplate
+          ? 'xtrata-collection-mint-v1.1'
+          : 'xtrata-collection-mint-v1.2';
+
+    const draftMetadata = {
+      mintType,
+      templateVersion,
+      coreContractId: networkCoreTarget.contractId,
+      collection: {
+        name: refreshBuild.resolved.collectionName,
+        symbol: refreshBuild.resolved.symbol,
+        description: refreshBuild.resolved.description,
+        supply: refreshBuild.resolved.supply.toString(),
+        mintPriceStx,
+        mintPriceMicroStx: refreshBuild.resolved.mintPriceMicroStx.toString(),
+        parentInscriptionIds: refreshBuild.resolved.defaultDependencyIds.map((id) =>
+          id.toString()
+        )
+      },
+      hardcodedDefaults: {
+        paused: ARTIST_DEPLOY_DEFAULTS.pausedByDefault,
+        royaltyTotalBps: ARTIST_DEPLOY_DEFAULTS.royaltyTotalBps,
+        splits: {
+          artist: ARTIST_DEPLOY_DEFAULTS.artistBps,
+          marketplace: ARTIST_DEPLOY_DEFAULTS.marketplaceBps,
+          operator: ARTIST_DEPLOY_DEFAULTS.operatorBps
+        },
+        recipients: {
+          artist: refreshBuild.resolved.artistAddress,
+          marketplace: refreshBuild.resolved.marketplaceAddress,
+          operator: refreshBuild.resolved.operatorAddress
+        }
+      }
+    };
+
+    setDraftPending(true);
+    try {
+      appendDeployDebug('Creating draft record for upload staging', {
+        attemptId,
+        slug,
+        templateVersion
+      });
+      setStatus('Creating draft ID for Step 2 uploads...');
+      const createResponse = await fetch('/collections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug,
+          artistAddress: refreshBuild.resolved.artistAddress,
+          displayName: refreshBuild.resolved.collectionName,
+          contractAddress: null,
+          metadata: draftMetadata
+        })
+      });
+      const created = await parseManageJsonResponse<CollectionDraftCreateResponse>(
+        createResponse,
+        'Create collection draft'
+      );
+      appendDeployDebug('Draft record ready for upload staging', {
+        attemptId,
+        draftId: created.id,
+        draftSlug: created.slug,
+        slugReused: created.slugReused === true
+      });
+      setCollection(created);
+      props.onDraftReady?.({
+        id: created.id,
+        label: created.display_name ?? created.slug,
+        deployed: false
+      });
+      setStatus(
+        `Draft ready for Step 2 uploads. Collection ID: ${created.id}.`
+      );
+    } catch (error) {
+      appendDeployDebug('Draft create failed', {
+        attemptId,
+        error: toErrorMessage(error)
+      });
+      setStatus(
+        toManageApiErrorMessage(error, 'Could not create collection draft.')
+      );
+    } finally {
+      setDraftPending(false);
+    }
   };
 
   const handleDeploy = async () => {
@@ -1725,10 +1876,18 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
 
       <div className="mint-actions">
         <button
+          className="button button--ghost"
+          type="button"
+          onClick={handleCreateDraftOnly}
+          disabled={deployPending || draftPending}
+        >
+          {draftPending ? 'Saving draft...' : 'Create draft ID (Step 2 upload)'}
+        </button>
+        <button
           className="button"
           type="button"
           onClick={handleOpenReview}
-          disabled={deployPending}
+          disabled={deployPending || draftPending}
         >
           {deployPending ? 'Waiting for wallet...' : 'Review deployment'}
         </button>
