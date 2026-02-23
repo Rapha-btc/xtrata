@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   getStacksProvider,
@@ -896,6 +896,50 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     console.debug('[xtrata:deploy]', message, details ?? {});
   };
 
+  const refreshSelectedDraft = useCallback(
+    async (reason: string) => {
+      const candidateId =
+        normalizedActiveCollectionId || collection?.id?.trim() || '';
+      if (!candidateId) {
+        return null;
+      }
+
+      setSelectedDraftLoading(true);
+      try {
+        const response = await fetch(
+          `/collections/${encodeURIComponent(candidateId)}`,
+          { cache: 'no-store' }
+        );
+        const payload = await parseManageJsonResponse<CollectionDraft>(
+          response,
+          'Collection draft'
+        );
+        setCollection(payload);
+        const lock = parseDeployPricingLockSnapshot(payload.metadata);
+        appendDeployDebug('Selected draft refreshed', {
+          reason,
+          draftId: payload.id,
+          draftState: payload.state,
+          pricingLockPresent: lock !== null,
+          pricingLockAssetCount: lock?.assetCount ?? null,
+          pricingLockMaxChunks: lock?.maxChunks ?? null,
+          pricingLockLockedAt: lock?.lockedAt ?? null
+        });
+        return payload;
+      } catch (error) {
+        appendDeployDebug('Selected draft refresh failed', {
+          reason,
+          draftId: candidateId,
+          error: toErrorMessage(error)
+        });
+        return null;
+      } finally {
+        setSelectedDraftLoading(false);
+      }
+    },
+    [normalizedActiveCollectionId, collection?.id]
+  );
+
   useEffect(() => {
     const details = {
       debugVersion: DEPLOY_DEBUG_VERSION,
@@ -913,9 +957,17 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     console.debug('[xtrata:deploy] Runtime ready', details);
   }, []);
 
-  const handleOpenReview = () => {
+  const handleOpenReview = async () => {
     setStatus(null);
-    appendDeployDebug('Review modal opened', preflightSummary);
+    const refreshed = await refreshSelectedDraft('review-open');
+    const refreshedLock = parseDeployPricingLockSnapshot(refreshed?.metadata ?? null);
+    appendDeployDebug('Review modal opened', {
+      ...preflightSummary,
+      refreshedDraftId: refreshed?.id ?? null,
+      refreshedPricingLockPresent: refreshedLock !== null,
+      refreshedPricingLockAssetCount: refreshedLock?.assetCount ?? null,
+      refreshedPricingLockMaxChunks: refreshedLock?.maxChunks ?? null
+    });
     setReviewOpen(true);
   };
 
@@ -1785,16 +1837,28 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         >
           <span className="meta-label">Deploy pricing safety</span>
           {!collectionDeployPricingLock ? (
-            <span className="meta-value">
-              Deploy is locked. In Step 2, upload your full collection and click
-              "Lock staged assets for deploy" before deploying.
-            </span>
+            <>
+              <span className="meta-value">
+                Deploy is locked. In Step 2, upload your full collection and click
+                "Lock staged assets for deploy" before deploying.
+              </span>
+                <span className="meta-value">
+                  Lock check draft ID:{' '}
+                  <code>{(collection?.id ?? normalizedActiveCollectionId) || 'none selected'}</code>
+                  {selectedDraftLoading ? ' (refreshing...)' : ''}
+                </span>
+            </>
           ) : (
             <>
               <span className="meta-value">
                 Locked snapshot: {collectionDeployPricingLock.assetCount} assets, max{' '}
                 {collectionDeployPricingLock.maxChunks} chunks, locked{' '}
                 {new Date(collectionDeployPricingLock.lockedAt).toLocaleString()}.
+              </span>
+              <span className="meta-value">
+                Lock check draft ID:{' '}
+                <code>{(collection?.id ?? normalizedActiveCollectionId) || 'none selected'}</code>
+                {selectedDraftLoading ? ' (refreshing...)' : ''}
               </span>
               {coreFeeUnitMicroStx !== null ? (
                 <span className="meta-value">
@@ -1812,6 +1876,13 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                   )}{' '}
                   ({pricingPreflight.feeBatches} chunk batch
                   {pricingPreflight.feeBatches === 1 ? '' : 'es'} + seal).
+                </span>
+              )}
+              {pricingPreflight && (
+                <span className="meta-value">
+                  Pricing inputs used: mint price {formatMicroStx(pricingPreflight.mintPriceMicroStx)} ·
+                  max chunks {collectionDeployPricingLock.maxChunks.toString()} · fee unit{' '}
+                  {formatMicroStx(pricingPreflight.feeUnitMicroStx)}.
                 </span>
               )}
               {pricingPreflight && !pricingPreflight.safe && (
@@ -1875,6 +1946,14 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       )}
 
       <div className="mint-actions">
+        <button
+          className="button button--ghost"
+          type="button"
+          onClick={() => void refreshSelectedDraft('manual-refresh')}
+          disabled={deployPending || draftPending || selectedDraftLoading}
+        >
+          {selectedDraftLoading ? 'Refreshing draft...' : 'Refresh draft lock status'}
+        </button>
         <button
           className="button button--ghost"
           type="button"
@@ -2050,6 +2129,12 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                         : 'Missing (Step 2 lock required before deploy)'}
                     </p>
                   )}
+                  {deployBuild.resolved.mintType === 'standard' && (
+                    <p className="meta-value">
+                      <strong>Lock check draft ID:</strong>{' '}
+                      <code>{(collection?.id ?? normalizedActiveCollectionId) || 'none selected'}</code>
+                    </p>
+                  )}
                   {deployBuild.resolved.mintType === 'standard' && coreFeeUnitMicroStx !== null && (
                     <p>
                       <strong>Core fee unit:</strong> {formatMicroStx(coreFeeUnitMicroStx)}
@@ -2060,6 +2145,16 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                       <strong>Worst-case seal fee:</strong>{' '}
                       {formatMicroStx(pricingPreflight.worstCaseSealFeeMicroStx)} ({pricingPreflight.feeBatches}{' '}
                       chunk batch{pricingPreflight.feeBatches === 1 ? '' : 'es'} + seal)
+                    </p>
+                  )}
+                  {deployBuild.resolved.mintType === 'standard' && pricingPreflight && (
+                    <p className="meta-value">
+                      <strong>Pricing inputs used:</strong> mint price{' '}
+                      {formatMicroStx(pricingPreflight.mintPriceMicroStx)} · max chunks{' '}
+                      {collectionDeployPricingLock
+                        ? collectionDeployPricingLock.maxChunks.toString()
+                        : '?'}{' '}
+                      · fee unit {formatMicroStx(pricingPreflight.feeUnitMicroStx)}
                     </p>
                   )}
                   {deployBuild.resolved.mintType === 'standard' && pricingPreflight && (

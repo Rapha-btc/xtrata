@@ -76,6 +76,7 @@ export default function CollectionManagerApp() {
   const [walletPending, setWalletPending] = useState(false);
   const [activeCollectionId, setActiveCollectionId] = useState('');
   const [activeCollectionLabel, setActiveCollectionLabel] = useState('');
+  const [collectionListRefreshKey, setCollectionListRefreshKey] = useState(0);
 
   const [collapsed, setCollapsed] = useState<Record<PanelKey, boolean>>({
     'sdk-toolkit': true,
@@ -142,6 +143,7 @@ export default function CollectionManagerApp() {
   }) => {
     setActiveCollectionId(collection.id);
     setActiveCollectionLabel(collection.label);
+    setCollectionListRefreshKey((current) => current + 1);
     setCollapsed((prev) => ({
       ...prev,
       'deploy-wizard': collection.deployed,
@@ -288,6 +290,7 @@ export default function CollectionManagerApp() {
           <div className="panel__body">
             <CollectionListPanel
               activeCollectionId={activeCollectionId}
+              refreshKey={collectionListRefreshKey}
               onSelectCollection={handleSelectCollection}
             />
           </div>
