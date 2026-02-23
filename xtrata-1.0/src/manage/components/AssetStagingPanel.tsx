@@ -792,7 +792,9 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
       return;
     }
     if (!readiness?.ready) {
-      setStatus(readiness?.reason ?? 'Upload is locked until deployment is confirmed.');
+      setStatus(
+        readiness?.reason ?? 'Upload readiness check is unavailable. Refresh and try again.'
+      );
       return;
     }
     setUploading(true);
@@ -972,13 +974,74 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
     );
   };
 
-  const canUpload = preflightOnly
-    ? filesForUpload.length > 0 && !uploading && !uploadsLocked
-    : filesForUpload.length > 0 &&
-      !!readiness?.ready &&
-      !readiness?.uploadsLocked &&
-      !readinessLoading &&
-      !uploading;
+  const uploadGate = useMemo(() => {
+    if (!normalizedCollectionId) {
+      return {
+        canUpload: false,
+        reason: 'Enter a collection ID first.'
+      };
+    }
+    if (uploadsLocked) {
+      return {
+        canUpload: false,
+        reason: uploadLockReason ?? 'Uploads are currently locked for this collection.'
+      };
+    }
+    if (uploading) {
+      return {
+        canUpload: false,
+        reason: 'Upload already in progress.'
+      };
+    }
+    if (selectedFiles.length === 0) {
+      return {
+        canUpload: false,
+        reason: 'Select one or more files first.'
+      };
+    }
+    if (filesForUpload.length === 0) {
+      return {
+        canUpload: false,
+        reason:
+          'No selected files are currently eligible after filters/duplicate rules.'
+      };
+    }
+    if (preflightOnly) {
+      return {
+        canUpload: true,
+        reason: null
+      };
+    }
+    if (readinessLoading) {
+      return {
+        canUpload: false,
+        reason: 'Checking upload readiness...'
+      };
+    }
+    if (!readiness?.ready) {
+      return {
+        canUpload: false,
+        reason: readiness?.reason ?? 'Upload readiness check is unavailable.'
+      };
+    }
+    return {
+      canUpload: true,
+      reason: null
+    };
+  }, [
+    normalizedCollectionId,
+    uploadsLocked,
+    uploadLockReason,
+    uploading,
+    selectedFiles.length,
+    filesForUpload.length,
+    preflightOnly,
+    readinessLoading,
+    readiness?.ready,
+    readiness?.reason
+  ]);
+
+  const canUpload = uploadGate.canUpload;
 
   return (
     <div className="asset-staging-panel">
@@ -1243,6 +1306,15 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
                 </div>
               )}
 
+              {selectedFiles.length > 0 && filesForUpload.length === 0 && (
+                <div className="alert">
+                  <p>
+                    No files are currently ready for upload. Check extension filters or
+                    duplicate settings in advanced upload settings.
+                  </p>
+                </div>
+              )}
+
               <div className="mint-actions">
                 <button className="button" type="submit" disabled={!canUpload}>
                   {uploadsLocked
@@ -1277,6 +1349,10 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
                   {lockPending ? 'Locking...' : 'Lock staged assets for deploy'}
                 </button>
               </div>
+
+              {!canUpload && uploadGate.reason ? (
+                <p className="field__hint">Upload disabled: {uploadGate.reason}</p>
+              ) : null}
             </form>
 
             {collectionId && (
@@ -1294,9 +1370,13 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
                   {uploadsLocked
                     ? uploadLockReason
                     : readinessLoading
-                    ? 'Checking deployment confirmation...'
+                    ? 'Checking upload readiness...'
                     : readiness?.ready
-                      ? 'Ready. Deployment is confirmed on-chain.'
+                      ? readiness.predeployUploadsReady && !readiness.deployReady
+                        ? 'Ready. Draft upload staging is enabled before deploy.'
+                        : readiness.deployReady
+                          ? 'Ready. Deployment is confirmed on-chain.'
+                          : readiness.reason ?? 'Ready to upload.'
                       : readiness?.reason ??
                         'Enter a valid collection id to check readiness.'}
                 </span>
