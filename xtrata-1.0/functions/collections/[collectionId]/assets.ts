@@ -1,6 +1,11 @@
 import { jsonResponse, badRequest, serverError } from '../../lib/utils';
 import { queryAll, run } from '../../lib/db';
-import { staysWithinLimit } from '../../lib/collections';
+import {
+  canStageUploadsBeforeDeploy,
+  isCollectionUploadsLocked,
+  staysWithinLimit,
+  stripDeployPricingLockFromMetadata
+} from '../../lib/collections';
 import { getCollectionDeployReadiness } from '../../lib/collection-deploy';
 
 const logAssetDebug = (
@@ -9,6 +14,27 @@ const logAssetDebug = (
   details: Record<string, unknown>
 ) => {
   console.log(`[collections/assets][${requestId}] ${phase}`, details);
+};
+
+const clearDeployPricingLock = async (params: {
+  env: Parameters<typeof run>[0];
+  collectionId: string;
+  metadata: unknown;
+  requestId: string;
+}) => {
+  const result = stripDeployPricingLockFromMetadata(params.metadata);
+  if (!result.changed || !result.metadata) {
+    return false;
+  }
+  await run(
+    params.env,
+    'UPDATE collections SET metadata = ?, updated_at = ? WHERE id = ?',
+    [JSON.stringify(result.metadata), Date.now(), params.collectionId]
+  );
+  logAssetDebug(params.requestId, 'pricing-lock.cleared', {
+    collectionId: params.collectionId
+  });
+  return true;
 };
 
 export const onRequest: PagesFunction = async ({ request, env, params }) => {
@@ -46,17 +72,24 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
         env,
         collectionId
       });
+      const contractAddress = String(readiness.collection?.contract_address ?? '')
+        .trim();
       logAssetDebug(requestId, 'readiness.checked', {
         ready: readiness.ready,
-        reason: readiness.ready ? null : readiness.reason
+        reason: readiness.ready ? null : readiness.reason,
+        contractAddress: contractAddress || null
       });
-      if (!readiness.ready) {
-        return badRequest(readiness.reason);
-      }
       const collectionState = String(readiness.collection?.state ?? 'draft')
         .trim()
         .toLowerCase();
-      if (collectionState === 'published' || collectionState === 'archived') {
+      const predeployUploadsAllowed = canStageUploadsBeforeDeploy({
+        contractAddress,
+        state: collectionState
+      });
+      if (!readiness.ready && !predeployUploadsAllowed) {
+        return badRequest(readiness.reason);
+      }
+      if (isCollectionUploadsLocked(collectionState)) {
         return badRequest(
           `Uploads are locked while collection state is "${collectionState}".`
         );
@@ -130,6 +163,12 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
         [assetId]
       );
       const row = (inserted.results ?? [])[0];
+      await clearDeployPricingLock({
+        env,
+        collectionId,
+        metadata: readiness.collection?.metadata,
+        requestId
+      });
       logAssetDebug(requestId, 'asset.inserted', {
         assetId,
         collectionId,

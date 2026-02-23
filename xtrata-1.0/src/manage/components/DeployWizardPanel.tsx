@@ -25,6 +25,7 @@ import {
   deriveArtistCollectionSymbol,
   deriveArtistContractName,
   resolveArtistDeployCoreTarget,
+  type ArtistDeployCoreTarget,
   type ArtistMintType
 } from '../../lib/deploy/artist-deploy';
 import {
@@ -32,6 +33,10 @@ import {
   toManageApiErrorMessage
 } from '../lib/api-errors';
 import { useManageWallet } from '../ManageWalletContext';
+import {
+  evaluateDeployPriceSafety,
+  parseDeployPricingLockSnapshot
+} from '../../lib/deploy/pricing-lock';
 import InfoTooltip from './InfoTooltip';
 import legacyV11TemplateSource from '../../../contracts/clarinet/contracts/xtrata-collection-mint-v1.1.clar?raw';
 import standardTemplateSource from '../../../contracts/clarinet/contracts/xtrata-collection-mint-v1.2.clar?raw';
@@ -63,6 +68,41 @@ const DEPLOY_DEBUG_VERSION = 'deploy-debug-v5-2026-02-23';
 const DEPLOY_SOURCE_COMPACTION_MODE = 'strip-indent-comments-blank-lines';
 const MANAGE_APP_ICON =
   'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%23f97316"/><path d="M18 20h28v6H18zm0 12h28v6H18zm0 12h28v6H18z" fill="white"/></svg>';
+const MICROSTX_PER_STX = 1_000_000n;
+
+const parseContractIdParts = (contractId: string) => {
+  const [address = '', contractName = ''] = contractId.trim().split('.');
+  if (!address || !contractName) {
+    return null;
+  }
+  return { address, contractName };
+};
+
+const formatMicroStx = (value: bigint) => {
+  const sign = value < 0n ? '-' : '';
+  const absolute = value < 0n ? -value : value;
+  const whole = absolute / MICROSTX_PER_STX;
+  const fraction = (absolute % MICROSTX_PER_STX).toString().padStart(6, '0');
+  return `${sign}${whole.toString()}.${fraction} STX`;
+};
+
+const readCoreFeeUnitMicroStx = async (params: {
+  coreTarget: ArtistDeployCoreTarget;
+  senderAddress: string;
+}) => {
+  const contractParts = parseContractIdParts(params.coreTarget.contractId);
+  if (!contractParts) {
+    throw new Error('Core contract id is invalid for fee preflight.');
+  }
+  const client = createXtrataClient({
+    contract: {
+      address: contractParts.address,
+      contractName: contractParts.contractName,
+      network: params.coreTarget.network
+    }
+  });
+  return client.getFeeUnit(params.senderAddress);
+};
 
 const debugStringify = (value: unknown) => {
   try {
@@ -228,7 +268,16 @@ const parseStoredDraft = (value: string | null): DeployWizardDraftStorage | null
   }
 };
 
-export default function DeployWizardPanel() {
+type DeployWizardPanelProps = {
+  activeCollectionId?: string;
+  onDraftReady?: (collection: {
+    id: string;
+    label: string;
+    deployed: boolean;
+  }) => void;
+};
+
+export default function DeployWizardPanel(props: DeployWizardPanelProps) {
   const [collectionName, setCollectionName] = useState('');
   const [symbol, setSymbol] = useState('');
   const [symbolTouched, setSymbolTouched] = useState(false);
@@ -245,14 +294,20 @@ export default function DeployWizardPanel() {
   const [collection, setCollection] = useState<CollectionDraft | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [deployPending, setDeployPending] = useState(false);
+  const [selectedDraftLoading, setSelectedDraftLoading] = useState(false);
   const [deployTemplateMode, setDeployTemplateMode] =
     useState<DeployTemplateMode>('standard-v1.2');
   const [deployAttemptId, setDeployAttemptId] = useState<string | null>(null);
   const [deployDebugLog, setDeployDebugLog] = useState<string[]>([]);
+  const [coreFeeUnitMicroStx, setCoreFeeUnitMicroStx] = useState<bigint | null>(null);
   const reviewCloseButtonRef = useRef<HTMLButtonElement | null>(null);
   const hasHydratedDraftRef = useRef(false);
 
   const { walletSession, walletAdapter, connect } = useManageWallet();
+  const normalizedActiveCollectionId = useMemo(
+    () => props.activeCollectionId?.trim() ?? '',
+    [props.activeCollectionId]
+  );
   const debugEnabled = useMemo(() => {
     if (typeof window === 'undefined') {
       return false;
@@ -368,6 +423,45 @@ export default function DeployWizardPanel() {
     marketplaceAddress,
     marketplaceAddressTouched
   ]);
+
+  useEffect(() => {
+    if (!normalizedActiveCollectionId) {
+      setSelectedDraftLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setSelectedDraftLoading(true);
+
+    const loadSelectedDraft = async () => {
+      try {
+        const response = await fetch(
+          `/collections/${encodeURIComponent(normalizedActiveCollectionId)}`,
+          {
+            signal: controller.signal
+          }
+        );
+        const payload = await parseManageJsonResponse<CollectionDraft>(
+          response,
+          'Collection draft'
+        );
+        if (!controller.signal.aborted) {
+          setCollection(payload);
+        }
+      } catch {
+        if (!controller.signal.aborted) {
+          setCollection(null);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setSelectedDraftLoading(false);
+        }
+      }
+    };
+
+    void loadSelectedDraft();
+    return () => controller.abort();
+  }, [normalizedActiveCollectionId]);
 
   useEffect(() => {
     if (symbolTouched) {
@@ -624,6 +718,37 @@ export default function DeployWizardPanel() {
     setMarketplaceAddress(coreTarget.address);
   }, [coreTarget, marketplaceAddressTouched]);
 
+  useEffect(() => {
+    if (!coreTarget) {
+      setCoreFeeUnitMicroStx(null);
+      return;
+    }
+
+    const senderAddress = walletSession.address ?? coreTarget.address;
+    let cancelled = false;
+
+    const loadFeeUnit = async () => {
+      try {
+        const feeUnit = await readCoreFeeUnitMicroStx({
+          coreTarget,
+          senderAddress
+        });
+        if (!cancelled) {
+          setCoreFeeUnitMicroStx(feeUnit);
+        }
+      } catch {
+        if (!cancelled) {
+          setCoreFeeUnitMicroStx(null);
+        }
+      }
+    };
+
+    void loadFeeUnit();
+    return () => {
+      cancelled = true;
+    };
+  }, [coreTarget, walletSession.address]);
+
   const deployBuild = useMemo(
     () =>
       buildArtistDeployContractSource({
@@ -662,6 +787,41 @@ export default function DeployWizardPanel() {
       selectedStandardTemplateSource
     ]
   );
+  const collectionDeployPricingLock = useMemo(
+    () => parseDeployPricingLockSnapshot(collection?.metadata),
+    [collection?.metadata]
+  );
+  const pricingPreflight = useMemo(() => {
+    if (mintType !== 'standard') {
+      return null;
+    }
+    if (!collectionDeployPricingLock || coreFeeUnitMicroStx === null) {
+      return null;
+    }
+    const mintPriceMicroStx = deployBuild.resolved.mintPriceMicroStx;
+    const evaluation = evaluateDeployPriceSafety({
+      mintPriceMicroStx,
+      maxChunks: collectionDeployPricingLock.maxChunks,
+      feeUnitMicroStx: coreFeeUnitMicroStx
+    });
+    return {
+      mintPriceMicroStx,
+      feeUnitMicroStx: coreFeeUnitMicroStx,
+      worstCaseSealFeeMicroStx: evaluation.worstCaseSealFeeMicroStx,
+      feeBatches: evaluation.feeBatches,
+      marginMicroStx: evaluation.marginMicroStx,
+      safe: evaluation.safe
+    };
+  }, [
+    mintType,
+    collectionDeployPricingLock,
+    coreFeeUnitMicroStx,
+    deployBuild.resolved.mintPriceMicroStx
+  ]);
+  const reviewDeployBlockedByPricing =
+    mintType === 'standard' &&
+    collection !== null &&
+    (!collectionDeployPricingLock || (pricingPreflight ? !pricingPreflight.safe : false));
   const preflightTemplateVersion = useMemo(() => {
     if (mintType === 'pre-inscribed') {
       return 'xtrata-preinscribed-collection-sale-v1.0';
@@ -679,13 +839,27 @@ export default function DeployWizardPanel() {
       walletAddress: walletSession.address ?? null,
       walletNetwork: walletSession.network ?? null,
       activeNetwork,
+      selectedDraftId: collection?.id ?? (normalizedActiveCollectionId || null),
       coreContractId: coreTarget?.contractId ?? null,
+      coreFeeUnitMicroStx:
+        coreFeeUnitMicroStx !== null ? coreFeeUnitMicroStx.toString() : null,
       mintType,
       deployTemplateMode,
       templateVersion: preflightTemplateVersion,
       clarityVersion: DEPLOY_CLARITY_VERSION,
       sourceLengthChars: deployBuild.source.length,
       sourceLengthBytes: deploySourceByteLength,
+      pricingLockPresent: collectionDeployPricingLock !== null,
+      pricingLockAssetCount: collectionDeployPricingLock?.assetCount ?? null,
+      pricingLockMaxChunks: collectionDeployPricingLock?.maxChunks ?? null,
+      pricingLockLockedAt: collectionDeployPricingLock?.lockedAt ?? null,
+      worstCaseSealFeeMicroStx: pricingPreflight
+        ? pricingPreflight.worstCaseSealFeeMicroStx.toString()
+        : null,
+      worstCaseSealFeeMarginMicroStx: pricingPreflight
+        ? pricingPreflight.marginMicroStx.toString()
+        : null,
+      pricingPreflightSafe: pricingPreflight ? pricingPreflight.safe : null,
       errors: deployBuild.errors.length,
       warnings: deployBuild.warnings.length
     }),
@@ -693,12 +867,17 @@ export default function DeployWizardPanel() {
       walletSession.address,
       walletSession.network,
       activeNetwork,
+      collection?.id,
+      normalizedActiveCollectionId,
       coreTarget?.contractId,
+      coreFeeUnitMicroStx,
       mintType,
       deployTemplateMode,
       preflightTemplateVersion,
       deployBuild.source.length,
       deploySourceByteLength,
+      collectionDeployPricingLock,
+      pricingPreflight,
       deployBuild.errors.length,
       deployBuild.warnings.length
     ]
@@ -905,6 +1084,11 @@ export default function DeployWizardPanel() {
         slugReused: created.slugReused === true
       });
       setCollection(created);
+      props.onDraftReady?.({
+        id: created.id,
+        label: created.display_name ?? created.slug,
+        deployed: false
+      });
     } catch (error) {
       appendDeployDebug('Draft creation failed', {
         attemptId,
@@ -915,6 +1099,76 @@ export default function DeployWizardPanel() {
         toManageApiErrorMessage(error, 'Could not create collection draft.')
       );
       return;
+    }
+
+    if (mintType === 'standard') {
+      const pricingLock = parseDeployPricingLockSnapshot(created.metadata);
+      if (!pricingLock) {
+        appendDeployDebug('Deploy blocked: staged assets are not locked', {
+          attemptId,
+          draftId: created.id
+        });
+        setDeployPending(false);
+        setStatus(
+          `Deploy blocked. Stage your assets in Step 2 and click "Lock staged assets for deploy" first. Draft ID: ${created.id}.`
+        );
+        return;
+      }
+
+      let feeUnitMicroStx: bigint;
+      try {
+        appendDeployDebug('Loading core fee unit for pricing preflight', {
+          attemptId,
+          coreContractId: networkCoreTarget.contractId,
+          senderAddress: session.address
+        });
+        feeUnitMicroStx = await readCoreFeeUnitMicroStx({
+          coreTarget: networkCoreTarget,
+          senderAddress: session.address
+        });
+        setCoreFeeUnitMicroStx(feeUnitMicroStx);
+      } catch (error) {
+        appendDeployDebug('Deploy blocked: core fee unit read failed', {
+          attemptId,
+          error: toErrorMessage(error)
+        });
+        setDeployPending(false);
+        setStatus(
+          'Deploy blocked. Could not read the core fee unit for pricing safety checks. Retry in a moment.'
+        );
+        return;
+      }
+
+      const mintPriceMicroStx = refreshBuild.resolved.mintPriceMicroStx;
+      const evaluation = evaluateDeployPriceSafety({
+        mintPriceMicroStx,
+        maxChunks: pricingLock.maxChunks,
+        feeUnitMicroStx
+      });
+      appendDeployDebug('Pricing safety preflight evaluated', {
+        attemptId,
+        draftId: created.id,
+        lockedAssetCount: pricingLock.assetCount,
+        maxChunks: pricingLock.maxChunks,
+        maxBytes: pricingLock.maxBytes,
+        feeUnitMicroStx: feeUnitMicroStx.toString(),
+        feeBatches: evaluation.feeBatches,
+        worstCaseSealFeeMicroStx: evaluation.worstCaseSealFeeMicroStx.toString(),
+        mintPriceMicroStx: mintPriceMicroStx.toString(),
+        marginMicroStx: evaluation.marginMicroStx.toString(),
+        safe: evaluation.safe
+      });
+      if (!evaluation.safe) {
+        setDeployPending(false);
+        setStatus(
+          `Deploy blocked. Price per mint (${formatMicroStx(
+            mintPriceMicroStx
+          )}) must be greater than the worst-case seal protocol fee (${formatMicroStx(
+            evaluation.worstCaseSealFeeMicroStx
+          )}) for your largest locked asset. Increase price or reduce max chunk size, then lock again.`
+        );
+        return;
+      }
     }
 
     const contractName = deriveArtistContractName({
@@ -1046,6 +1300,7 @@ export default function DeployWizardPanel() {
               body: JSON.stringify({
                 contractAddress: session.address,
                 metadata: {
+                  ...(created.metadata ?? {}),
                   ...draftMetadata,
                   contractName,
                   deployTxId: payload.txId,
@@ -1059,6 +1314,11 @@ export default function DeployWizardPanel() {
               'Update collection draft'
             );
             setCollection(updated);
+            props.onDraftReady?.({
+              id: updated.id,
+              label: updated.display_name ?? updated.slug,
+              deployed: true
+            });
             appendDeployDebug('Draft metadata synced after deploy submit', {
               attemptId,
               draftId: created.id,
@@ -1361,6 +1621,65 @@ export default function DeployWizardPanel() {
         </div>
       )}
 
+      {mintType === 'standard' && (
+        <div
+          className={
+            !collectionDeployPricingLock ||
+            (pricingPreflight !== null && !pricingPreflight.safe)
+              ? 'mint-step mint-step--error'
+              : pricingPreflight?.safe
+              ? 'mint-step mint-step--done'
+              : 'mint-step mint-step--pending'
+          }
+        >
+          <span className="meta-label">Deploy pricing safety</span>
+          {!collectionDeployPricingLock ? (
+            <span className="meta-value">
+              Deploy is locked. In Step 2, upload your full collection and click
+              "Lock staged assets for deploy" before deploying.
+            </span>
+          ) : (
+            <>
+              <span className="meta-value">
+                Locked snapshot: {collectionDeployPricingLock.assetCount} assets, max{' '}
+                {collectionDeployPricingLock.maxChunks} chunks, locked{' '}
+                {new Date(collectionDeployPricingLock.lockedAt).toLocaleString()}.
+              </span>
+              {coreFeeUnitMicroStx !== null ? (
+                <span className="meta-value">
+                  Core fee unit: {formatMicroStx(coreFeeUnitMicroStx)}.
+                </span>
+              ) : (
+                <span className="meta-value">
+                  Core fee unit: loading...
+                </span>
+              )}
+              {pricingPreflight && (
+                <span className="meta-value">
+                  Worst-case seal protocol fee: {formatMicroStx(
+                    pricingPreflight.worstCaseSealFeeMicroStx
+                  )}{' '}
+                  ({pricingPreflight.feeBatches} chunk batch
+                  {pricingPreflight.feeBatches === 1 ? '' : 'es'} + seal).
+                </span>
+              )}
+              {pricingPreflight && !pricingPreflight.safe && (
+                <span className="meta-value">
+                  Increase mint price above {formatMicroStx(
+                    pricingPreflight.worstCaseSealFeeMicroStx
+                  )} before deploy.
+                </span>
+              )}
+              {pricingPreflight?.safe && (
+                <span className="meta-value">
+                  Safety margin: {formatMicroStx(pricingPreflight.marginMicroStx)} above worst-case seal fee.
+                </span>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
       <div className="deploy-wizard__defaults">
         <p className="deploy-wizard__defaults-title">Safe defaults we set for you</p>
         <ul>
@@ -1434,6 +1753,27 @@ export default function DeployWizardPanel() {
           <li>
             Validation state: {preflightSummary.errors.toString()} errors,{' '}
             {preflightSummary.warnings.toString()} warnings
+          </li>
+          <li>
+            Active draft: {selectedDraftLoading ? 'loading...' : preflightSummary.selectedDraftId ?? 'none selected'}
+          </li>
+          <li>
+            Pricing lock:{' '}
+            {preflightSummary.pricingLockPresent
+              ? `${preflightSummary.pricingLockAssetCount?.toString() ?? '?'} assets, max ${preflightSummary.pricingLockMaxChunks?.toString() ?? '?'} chunks`
+              : 'missing'}
+          </li>
+          <li>
+            Core fee unit (preview):{' '}
+            {preflightSummary.coreFeeUnitMicroStx
+              ? `${preflightSummary.coreFeeUnitMicroStx} microSTX`
+              : 'unavailable'}
+          </li>
+          <li>
+            Worst-case seal fee (preview):{' '}
+            {preflightSummary.worstCaseSealFeeMicroStx
+              ? `${preflightSummary.worstCaseSealFeeMicroStx} microSTX`
+              : 'unavailable'}
           </li>
           <li>Latest deploy attempt id: {deployAttemptId ?? 'none yet'}</li>
         </ul>
@@ -1543,6 +1883,37 @@ export default function DeployWizardPanel() {
                   <p>
                     <strong>Template version:</strong> {preflightSummary.templateVersion}
                   </p>
+                  {deployBuild.resolved.mintType === 'standard' && (
+                    <p>
+                      <strong>Pricing lock:</strong>{' '}
+                      {collectionDeployPricingLock
+                        ? `${collectionDeployPricingLock.assetCount} assets, max ${collectionDeployPricingLock.maxChunks} chunks`
+                        : 'Missing (Step 2 lock required before deploy)'}
+                    </p>
+                  )}
+                  {deployBuild.resolved.mintType === 'standard' && coreFeeUnitMicroStx !== null && (
+                    <p>
+                      <strong>Core fee unit:</strong> {formatMicroStx(coreFeeUnitMicroStx)}
+                    </p>
+                  )}
+                  {deployBuild.resolved.mintType === 'standard' && pricingPreflight && (
+                    <p>
+                      <strong>Worst-case seal fee:</strong>{' '}
+                      {formatMicroStx(pricingPreflight.worstCaseSealFeeMicroStx)} ({pricingPreflight.feeBatches}{' '}
+                      chunk batch{pricingPreflight.feeBatches === 1 ? '' : 'es'} + seal)
+                    </p>
+                  )}
+                  {deployBuild.resolved.mintType === 'standard' && pricingPreflight && (
+                    <p className="meta-value">
+                      {pricingPreflight.safe
+                        ? `Price safety margin: ${formatMicroStx(
+                            pricingPreflight.marginMicroStx
+                          )} above worst-case seal fee.`
+                        : `Price safety check failed. Price must be greater than ${formatMicroStx(
+                            pricingPreflight.worstCaseSealFeeMicroStx
+                          )}.`}
+                    </p>
+                  )}
                   <p>
                     <strong>Artist recipient:</strong>{' '}
                     <span className="address-value--full">
@@ -1568,6 +1939,14 @@ export default function DeployWizardPanel() {
                       </div>
                     </div>
                   )}
+                  {reviewDeployBlockedByPricing && (
+                    <div className="alert">
+                      <p>
+                        Deploy is blocked until pricing safety passes. Lock staged assets in
+                        Step 2, then ensure mint price is higher than the worst-case seal protocol fee.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1584,7 +1963,11 @@ export default function DeployWizardPanel() {
                   className="button"
                   type="button"
                   onClick={handleDeploy}
-                  disabled={deployPending || deployBuild.errors.length > 0}
+                  disabled={
+                    deployPending ||
+                    deployBuild.errors.length > 0 ||
+                    reviewDeployBlockedByPricing
+                  }
                 >
                   {deployPending ? 'Deploying...' : 'Deploy contract'}
                 </button>

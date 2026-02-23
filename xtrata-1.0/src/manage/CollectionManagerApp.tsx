@@ -135,6 +135,20 @@ export default function CollectionManagerApp() {
     }));
   };
 
+  const handleDraftReady = (collection: {
+    id: string;
+    label: string;
+    deployed: boolean;
+  }) => {
+    setActiveCollectionId(collection.id);
+    setActiveCollectionLabel(collection.label);
+    setCollapsed((prev) => ({
+      ...prev,
+      'deploy-wizard': collection.deployed,
+      'asset-staging': false
+    }));
+  };
+
   const handleConnectWallet = async () => {
     setWalletPending(true);
     try {
@@ -323,7 +337,10 @@ export default function CollectionManagerApp() {
             </div>
           </div>
           <div className="panel__body">
-            <DeployWizardPanel />
+            <DeployWizardPanel
+              activeCollectionId={activeCollectionId}
+              onDraftReady={handleDraftReady}
+            />
           </div>
         </section>
 

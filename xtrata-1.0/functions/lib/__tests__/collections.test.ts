@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
+  canStageUploadsBeforeDeploy,
   canReuseCollectionSlug,
+  isCollectionUploadsLocked,
   isCollectionPublicVisible,
   isCollectionPublished,
   isValidSlug,
+  mergeCollectionMetadata,
   normalizeSlug,
   parseCollectionMetadata,
+  stripDeployPricingLockFromMetadata,
   staysWithinLimit
 } from '../collections';
 
@@ -106,6 +110,62 @@ describe('collections helpers', () => {
         contractAddress: null,
         metadata: null,
         state: 'draft'
+      })
+    ).toBe(false);
+  });
+
+  it('merges reused-slug metadata with existing values preserved', () => {
+    expect(
+      mergeCollectionMetadata(
+        {
+          deployPricingLock: { version: 'v1', maxChunks: 99 },
+          existingOnly: true
+        },
+        {
+          collection: { name: 'Test' }
+        }
+      )
+    ).toEqual({
+      deployPricingLock: { version: 'v1', maxChunks: 99 },
+      existingOnly: true,
+      collection: { name: 'Test' }
+    });
+  });
+
+  it('strips deploy pricing lock from metadata', () => {
+    const removed = stripDeployPricingLockFromMetadata({
+      deployPricingLock: { version: 'v1' },
+      foo: 'bar'
+    });
+    expect(removed.changed).toBe(true);
+    expect(removed.metadata).toEqual({ foo: 'bar' });
+
+    const untouched = stripDeployPricingLockFromMetadata({ foo: 'bar' });
+    expect(untouched.changed).toBe(false);
+    expect(untouched.metadata).toEqual({ foo: 'bar' });
+  });
+
+  it('detects upload lock states and predeploy staging eligibility', () => {
+    expect(isCollectionUploadsLocked('published')).toBe(true);
+    expect(isCollectionUploadsLocked('archived')).toBe(true);
+    expect(isCollectionUploadsLocked('draft')).toBe(false);
+
+    expect(
+      canStageUploadsBeforeDeploy({
+        contractAddress: '',
+        state: 'draft'
+      })
+    ).toBe(true);
+    expect(
+      canStageUploadsBeforeDeploy({
+        contractAddress: 'SP123.contract',
+        state: 'draft'
+      })
+    ).toBe(false);
+    expect(
+      canStageUploadsBeforeDeploy({
+        contractAddress: '',
+        state: 'published'
       })
     ).toBe(false);
   });

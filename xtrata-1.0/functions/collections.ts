@@ -2,6 +2,7 @@ import { jsonResponse, badRequest, serverError } from './lib/utils';
 import { queryAll, run } from './lib/db';
 import {
   canReuseCollectionSlug,
+  mergeCollectionMetadata,
   isCollectionPublicVisible,
   isCollectionPublished,
   isValidSlug,
@@ -105,7 +106,11 @@ export const onRequest: PagesFunction = async ({ request, env }) => {
             return serverError('Existing slug record is missing an id.');
           }
           const now = Date.now();
-          const metadata = payload.metadata ? JSON.stringify(payload.metadata) : null;
+          const mergedMetadata = mergeCollectionMetadata(
+            existingRecord.metadata,
+            payload.metadata
+          );
+          const metadata = mergedMetadata ? JSON.stringify(mergedMetadata) : null;
           await run(
             env,
             'UPDATE collections SET artist_address = ?, contract_address = ?, display_name = ?, metadata = ?, state = ?, updated_at = ? WHERE id = ?',

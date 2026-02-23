@@ -36,6 +36,64 @@ const toNullableString = (value: unknown) => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
+const normalizeCollectionState = (value: unknown) =>
+  String(value ?? '')
+    .trim()
+    .toLowerCase();
+
+export const isCollectionUploadsLocked = (state: unknown) => {
+  const normalizedState = normalizeCollectionState(state);
+  return normalizedState === 'published' || normalizedState === 'archived';
+};
+
+export const canStageUploadsBeforeDeploy = (params: {
+  contractAddress: unknown;
+  state: unknown;
+}) => {
+  const hasContract = toNullableString(params.contractAddress) !== null;
+  return !hasContract && normalizeCollectionState(params.state) === 'draft';
+};
+
+export const mergeCollectionMetadata = (
+  existingMetadata: unknown,
+  incomingMetadata: unknown
+) => {
+  const existing = parseCollectionMetadata(existingMetadata);
+  const incoming =
+    incomingMetadata && typeof incomingMetadata === 'object'
+      ? (incomingMetadata as Record<string, unknown>)
+      : null;
+  if (!existing && !incoming) {
+    return null;
+  }
+  return {
+    ...(existing ?? {}),
+    ...(incoming ?? {})
+  };
+};
+
+export const stripDeployPricingLockFromMetadata = (metadata: unknown) => {
+  const parsed = parseCollectionMetadata(metadata);
+  if (!parsed) {
+    return {
+      metadata: null as Record<string, unknown> | null,
+      changed: false
+    };
+  }
+  if (!Object.prototype.hasOwnProperty.call(parsed, 'deployPricingLock')) {
+    return {
+      metadata: parsed,
+      changed: false
+    };
+  }
+  const next = { ...parsed };
+  delete next.deployPricingLock;
+  return {
+    metadata: next,
+    changed: true
+  };
+};
+
 export const canReuseCollectionSlug = (params: {
   incomingArtistAddress: string;
   existingArtistAddress: unknown;
@@ -59,10 +117,7 @@ export const canReuseCollectionSlug = (params: {
     return false;
   }
 
-  const state = String(params.state ?? '')
-    .trim()
-    .toLowerCase();
-  if (state === 'published') {
+  if (normalizeCollectionState(params.state) === 'published') {
     return false;
   }
 

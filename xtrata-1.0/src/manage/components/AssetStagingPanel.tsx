@@ -40,6 +40,8 @@ type UploadReadiness = {
   collectionId: string;
   ready: boolean;
   reason: string;
+  deployReady?: boolean;
+  predeployUploadsReady?: boolean;
   deployTxId: string | null;
   deployTxStatus: string | null;
   network: 'mainnet' | 'testnet' | null;
@@ -62,6 +64,15 @@ type CollectionRecord = {
   slug?: string | null;
   metadata?: Record<string, unknown> | null;
   state?: string | null;
+};
+
+type DeployPricingLock = {
+  version: 'v1';
+  lockedAt: string;
+  assetCount: number;
+  maxChunks: number;
+  maxBytes: number;
+  totalBytes: number;
 };
 
 const buildTxExplorerUrl = (
@@ -180,6 +191,46 @@ const parseTargetSupply = (metadata: Record<string, unknown> | null | undefined)
   return parsed;
 };
 
+const parseDeployPricingLock = (
+  metadata: Record<string, unknown> | null | undefined
+): DeployPricingLock | null => {
+  if (!metadata || typeof metadata !== 'object') {
+    return null;
+  }
+  const raw = metadata.deployPricingLock;
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+  const record = raw as Record<string, unknown>;
+  const lockedAt =
+    typeof record.lockedAt === 'string' ? record.lockedAt.trim() : '';
+  const assetCount = Number(record.assetCount ?? 0);
+  const maxChunks = Number(record.maxChunks ?? 0);
+  const maxBytes = Number(record.maxBytes ?? 0);
+  const totalBytes = Number(record.totalBytes ?? 0);
+  if (
+    !lockedAt ||
+    !Number.isFinite(assetCount) ||
+    !Number.isFinite(maxChunks) ||
+    !Number.isFinite(maxBytes) ||
+    !Number.isFinite(totalBytes) ||
+    assetCount <= 0 ||
+    maxChunks <= 0 ||
+    maxBytes <= 0 ||
+    totalBytes <= 0
+  ) {
+    return null;
+  }
+  return {
+    version: 'v1',
+    lockedAt,
+    assetCount: Math.floor(assetCount),
+    maxChunks: Math.floor(maxChunks),
+    maxBytes: Math.floor(maxBytes),
+    totalBytes: Math.floor(totalBytes)
+  };
+};
+
 type AssetStagingPanelProps = {
   activeCollectionId?: string;
 };
@@ -196,8 +247,15 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
   const [collectionTargetSupply, setCollectionTargetSupply] = useState<number | null>(
     null
   );
+  const [collectionMetadata, setCollectionMetadata] = useState<
+    Record<string, unknown> | null
+  >(null);
+  const [deployPricingLock, setDeployPricingLock] = useState<DeployPricingLock | null>(
+    null
+  );
   const [collectionLabel, setCollectionLabel] = useState<string | null>(null);
   const [collectionState, setCollectionState] = useState<string>('draft');
+  const [lockPending, setLockPending] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [orderMode, setOrderMode] = useState<UploadOrderMode>('path-natural');
   const [seededOrderSeed, setSeededOrderSeed] = useState(createSecureRandomSeed);
@@ -364,6 +422,8 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
   useEffect(() => {
     if (!normalizedCollectionId) {
       setCollectionTargetSupply(null);
+      setCollectionMetadata(null);
+      setDeployPricingLock(null);
       setCollectionLabel(null);
       setCollectionState('draft');
       return;
@@ -385,12 +445,17 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
         }
         const label = payload.display_name?.trim() || payload.slug?.trim() || null;
         setCollectionLabel(label);
-        setCollectionTargetSupply(parseTargetSupply(payload.metadata ?? null));
+        const metadata = payload.metadata ?? null;
+        setCollectionMetadata(metadata);
+        setCollectionTargetSupply(parseTargetSupply(metadata));
+        setDeployPricingLock(parseDeployPricingLock(metadata));
         setCollectionState(String(payload.state ?? 'draft').trim().toLowerCase());
       } catch {
         if (!controller.signal.aborted) {
           setCollectionLabel(null);
           setCollectionTargetSupply(null);
+          setCollectionMetadata(null);
+          setDeployPricingLock(null);
           setCollectionState('draft');
         }
       }
@@ -607,6 +672,99 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
       ? `Uploads are locked while collection state is "${collectionState}".`
       : null);
 
+  const lockStagedAssetsForDeploy = async () => {
+    if (!normalizedCollectionId) {
+      setStatus('Enter a collection ID first.');
+      return;
+    }
+    if (uploadsLocked) {
+      setStatus(uploadLockReason ?? 'Uploads are currently locked.');
+      return;
+    }
+    const activeAssets = assets.filter((asset) => {
+      const state = String(asset.state ?? '').trim().toLowerCase();
+      return state !== 'expired' && state !== 'sold-out';
+    });
+    if (activeAssets.length === 0) {
+      setStatus('No active staged assets found to lock.');
+      return;
+    }
+    const maxChunks = activeAssets.reduce(
+      (max, asset) => Math.max(max, Math.floor(asset.total_chunks || 0)),
+      0
+    );
+    const maxBytes = activeAssets.reduce(
+      (max, asset) => Math.max(max, Math.floor(asset.total_bytes || 0)),
+      0
+    );
+    const totalBytes = activeAssets.reduce(
+      (sum, asset) => sum + Math.max(0, Math.floor(asset.total_bytes || 0)),
+      0
+    );
+    if (maxChunks <= 0 || maxBytes <= 0 || totalBytes <= 0) {
+      setStatus('Unable to lock pricing: staged asset stats are invalid.');
+      return;
+    }
+
+    const lock: DeployPricingLock = {
+      version: 'v1',
+      lockedAt: new Date().toISOString(),
+      assetCount: activeAssets.length,
+      maxChunks,
+      maxBytes,
+      totalBytes
+    };
+
+    setLockPending(true);
+    try {
+      const nextMetadata: Record<string, unknown> = {
+        ...(collectionMetadata ?? {}),
+        deployPricingLock: lock
+      };
+      const response = await fetch(
+        `/collections/${encodeURIComponent(normalizedCollectionId)}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ metadata: nextMetadata })
+        }
+      );
+      const updated = await parseManageJsonResponse<CollectionRecord>(
+        response,
+        'Collection update'
+      );
+      const updatedMetadata = updated.metadata ?? null;
+      setCollectionMetadata(updatedMetadata);
+      setDeployPricingLock(parseDeployPricingLock(updatedMetadata));
+      setStatus(
+        `Pricing lock saved (${activeAssets.length} assets, max ${maxChunks} chunks, max ${formatBytes(
+          BigInt(maxBytes)
+        )}).`
+      );
+    } catch (error) {
+      setStatus(
+        toManageApiErrorMessage(error, 'Unable to save deploy pricing lock.')
+      );
+    } finally {
+      setLockPending(false);
+    }
+  };
+
+  const clearLocalDeployPricingLock = () => {
+    setCollectionMetadata((current) => {
+      if (!current || typeof current !== 'object') {
+        return current;
+      }
+      if (!Object.prototype.hasOwnProperty.call(current, 'deployPricingLock')) {
+        return current;
+      }
+      const next = { ...current };
+      delete next.deployPricingLock;
+      return next;
+    });
+    setDeployPricingLock(null);
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!normalizedCollectionId) {
@@ -752,6 +910,9 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
           }
         );
         await parseManageJsonResponse(metadataResponse, 'Asset metadata');
+        if (uploadedCount === 0) {
+          clearLocalDeployPricingLock();
+        }
         setLastUploadTrace({
           requestId: tokenRequestId,
           mode: token.mode ?? null,
@@ -1100,6 +1261,21 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
                 >
                   Clear selection
                 </button>
+                <button
+                  className="button button--ghost"
+                  type="button"
+                  onClick={() => void lockStagedAssetsForDeploy()}
+                  disabled={
+                    uploading ||
+                    loading ||
+                    lockPending ||
+                    !normalizedCollectionId ||
+                    assets.length === 0 ||
+                    uploadsLocked
+                  }
+                >
+                  {lockPending ? 'Locking...' : 'Lock staged assets for deploy'}
+                </button>
               </div>
             </form>
 
@@ -1126,6 +1302,14 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
                 </span>
                 <span className="meta-value">
                   Collection state: <strong>{collectionState || 'draft'}</strong>
+                </span>
+                <span className="meta-value">
+                  Pricing lock:{' '}
+                  {deployPricingLock
+                    ? `${deployPricingLock.assetCount} assets · max ${deployPricingLock.maxChunks} chunks · locked ${new Date(
+                        deployPricingLock.lockedAt
+                      ).toLocaleString()}`
+                    : 'Not locked yet'}
                 </span>
                 {readiness?.deployTxId && (
                   <a
