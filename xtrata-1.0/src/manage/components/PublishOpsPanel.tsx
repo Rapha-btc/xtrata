@@ -185,9 +185,12 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
   const [coverSource, setCoverSource] = useState<CoverImageSource>('collection-asset');
   const [selectedCoverAssetId, setSelectedCoverAssetId] = useState('');
   const [inscribedCoverUrl, setInscribedCoverUrl] = useState('');
+  const [collectionDescriptionInput, setCollectionDescriptionInput] = useState('');
   const [coverMessage, setCoverMessage] = useState<string | null>(null);
+  const [descriptionMessage, setDescriptionMessage] = useState<string | null>(null);
   const [liveLinkMessage, setLiveLinkMessage] = useState<string | null>(null);
   const [coverSaving, setCoverSaving] = useState(false);
+  const [descriptionSaving, setDescriptionSaving] = useState(false);
   const [coverPreviewFailed, setCoverPreviewFailed] = useState(false);
   const [onChainReservationOwner, setOnChainReservationOwner] = useState('');
   const [onChainReservationHash, setOnChainReservationHash] = useState('');
@@ -448,6 +451,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       setCoverSource('collection-asset');
       setSelectedCoverAssetId('');
       setInscribedCoverUrl('');
+      setCollectionDescriptionInput('');
       setOnChainReservationStatus(null);
       setOnChainReservationMessage(null);
       setOnChainReservedCount(null);
@@ -503,12 +507,15 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       const savedSource = normalizeCoverSource(loadedCover?.source);
       const savedAssetId = toText(loadedCover?.assetId);
       const savedUrl = toText(loadedCover?.imageUrl);
+      const loadedCollectionMetadata = toRecord(loadedMetadata?.collection) ?? null;
+      const savedDescription = toText(loadedCollectionMetadata?.description);
 
       setCollection(loadedCollection);
       setAssets(loadedAssets);
       setCoverSource(savedSource ?? 'collection-asset');
       setSelectedCoverAssetId(savedAssetId);
       setInscribedCoverUrl(savedUrl);
+      setCollectionDescriptionInput(savedDescription);
       setReadiness({
         loading: false,
         contractConnected: !!loadedCollection.contract_address,
@@ -520,6 +527,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
     } catch (error) {
       setCollection(null);
       setAssets([]);
+      setCollectionDescriptionInput('');
       setOnChainReservationStatus(null);
       setOnChainReservedCount(null);
       setReadiness({
@@ -664,6 +672,62 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
     }
   };
 
+  const saveCollectionDescription = async () => {
+    const normalizedCollectionId = collectionId.trim();
+    if (!normalizedCollectionId) {
+      setDescriptionMessage('Collection id required.');
+      return;
+    }
+    if (!collection) {
+      setDescriptionMessage('Load collection details before saving description.');
+      return;
+    }
+
+    const trimmedDescription = collectionDescriptionInput.trim();
+    if (trimmedDescription.length > 256) {
+      setDescriptionMessage('Description must be 256 characters or fewer.');
+      return;
+    }
+
+    const currentMetadata = toRecord(collection.metadata) ?? {};
+    const currentCollectionMetadata = toRecord(currentMetadata.collection) ?? {};
+    const nextMetadata = {
+      ...currentMetadata,
+      collection: {
+        ...currentCollectionMetadata,
+        description: trimmedDescription
+      }
+    };
+
+    setDescriptionSaving(true);
+    setDescriptionMessage('Saving collection description...');
+    try {
+      const response = await fetch(
+        `/collections/${encodeURIComponent(normalizedCollectionId)}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ metadata: nextMetadata })
+        }
+      );
+      const updated = await parseManageJsonResponse<CollectionRecord>(
+        response,
+        'Collection update'
+      );
+      const updatedMetadata = toRecord(updated.metadata) ?? null;
+      const updatedCollectionMetadata = toRecord(updatedMetadata?.collection) ?? null;
+      setCollection(updated);
+      setCollectionDescriptionInput(toText(updatedCollectionMetadata?.description));
+      setDescriptionMessage('Collection description saved.');
+    } catch (error) {
+      setDescriptionMessage(
+        toManageApiErrorMessage(error, 'Unable to save collection description.')
+      );
+    } finally {
+      setDescriptionSaving(false);
+    }
+  };
+
   useEffect(() => {
     void loadReadiness();
   }, [collectionId]);
@@ -675,6 +739,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
     setCollectionId(normalizedActiveCollectionId);
     setMessage(null);
     setCoverMessage(null);
+    setDescriptionMessage(null);
     setLiveLinkMessage(null);
     setOnChainReservationMessage(null);
     setOnChainReservationStatus(null);
@@ -1143,6 +1208,27 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
           </label>
         )}
 
+        <label className="field">
+          <span className="field__label info-label">
+            Collection description
+            <InfoTooltip text="Update the public collection summary text shown under the hero image. You can edit this any time." />
+          </span>
+          <textarea
+            className="textarea"
+            rows={4}
+            maxLength={256}
+            placeholder="Add a short description so collectors instantly understand your drop."
+            value={collectionDescriptionInput}
+            onChange={(event) => {
+              setCollectionDescriptionInput(event.target.value);
+              setDescriptionMessage(null);
+            }}
+          />
+          <span className="field__hint">
+            {collectionDescriptionInput.trim().length}/256 characters
+          </span>
+        </label>
+
         <div className="mint-actions">
           <button
             className="button button--ghost button--mini"
@@ -1152,8 +1238,17 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
           >
             {coverSaving ? 'Saving...' : 'Save cover image'}
           </button>
+          <button
+            className="button button--ghost button--mini"
+            type="button"
+            onClick={() => void saveCollectionDescription()}
+            disabled={descriptionSaving || !collectionId.trim()}
+          >
+            {descriptionSaving ? 'Saving...' : 'Save description'}
+          </button>
         </div>
         {coverMessage && <p className="meta-value">{coverMessage}</p>}
+        {descriptionMessage && <p className="meta-value">{descriptionMessage}</p>}
       </div>
 
       <div className="collection-live-preview">
