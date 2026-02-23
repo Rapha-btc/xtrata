@@ -33,6 +33,7 @@ import {
 } from '../lib/api-errors';
 import { useManageWallet } from '../ManageWalletContext';
 import InfoTooltip from './InfoTooltip';
+import legacyV11TemplateSource from '../../../contracts/clarinet/contracts/xtrata-collection-mint-v1.1.clar?raw';
 import standardTemplateSource from '../../../contracts/clarinet/contracts/xtrata-collection-mint-v1.2.clar?raw';
 import preinscribedTemplateSource from '../../../contracts/clarinet/contracts/xtrata-preinscribed-collection-sale-v1.0.clar?raw';
 
@@ -58,7 +59,7 @@ const DEPLOY_WIZARD_DRAFT_STORAGE_KEY = 'xtrata-manage-deploy-wizard-v1';
 const DEPLOY_DEBUG_LOG_LIMIT = 60;
 const DEPLOY_CLARITY_VERSION = 2;
 const DEPLOY_DEBUG_TEXT_MAX = 1200;
-const DEPLOY_DEBUG_VERSION = 'deploy-debug-v4-2026-02-23';
+const DEPLOY_DEBUG_VERSION = 'deploy-debug-v5-2026-02-23';
 const DEPLOY_SOURCE_COMPACTION_MODE = 'strip-indent-comments-blank-lines';
 const MANAGE_APP_ICON =
   'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%23f97316"/><path d="M18 20h28v6H18zm0 12h28v6H18zm0 12h28v6H18z" fill="white"/></svg>';
@@ -136,6 +137,8 @@ const compactClaritySourceForDeploy = (source: string) => {
   return result.length > 0 ? result : source;
 };
 
+type DeployTemplateMode = 'standard-v1.2' | 'legacy-v1.1-compat';
+
 type DeployWizardDraftStorage = {
   collectionName: string;
   symbol: string;
@@ -206,12 +209,35 @@ export default function DeployWizardPanel() {
   const [collection, setCollection] = useState<CollectionDraft | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [deployPending, setDeployPending] = useState(false);
+  const [deployTemplateMode, setDeployTemplateMode] =
+    useState<DeployTemplateMode>('standard-v1.2');
   const [deployAttemptId, setDeployAttemptId] = useState<string | null>(null);
   const [deployDebugLog, setDeployDebugLog] = useState<string[]>([]);
   const reviewCloseButtonRef = useRef<HTMLButtonElement | null>(null);
   const hasHydratedDraftRef = useRef(false);
 
   const { walletSession, walletAdapter, connect } = useManageWallet();
+  const debugEnabled = useMemo(() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    return new URLSearchParams(window.location.search).get('debug') === '1';
+  }, []);
+  const useLegacyV11CompatTemplate =
+    mintType === 'standard' && deployTemplateMode === 'legacy-v1.1-compat';
+  const selectedStandardTemplateSource = useMemo(
+    () =>
+      useLegacyV11CompatTemplate
+        ? legacyV11TemplateSource
+        : standardTemplateSource,
+    [useLegacyV11CompatTemplate]
+  );
+
+  useEffect(() => {
+    if (mintType !== 'standard' && deployTemplateMode !== 'standard-v1.2') {
+      setDeployTemplateMode('standard-v1.2');
+    }
+  }, [mintType, deployTemplateMode]);
 
   useEffect(() => {
     if (!reviewOpen || typeof window === 'undefined') {
@@ -577,7 +603,7 @@ export default function DeployWizardPanel() {
           marketplaceAddress
         },
         templateSources: {
-          standardSource: standardTemplateSource,
+          standardSource: selectedStandardTemplateSource,
           preinscribedSource: preinscribedTemplateSource
         },
         coreContractId:
@@ -596,9 +622,18 @@ export default function DeployWizardPanel() {
       parentInscriptions,
       artistAddress,
       marketplaceAddress,
-      coreTarget
+      coreTarget,
+      selectedStandardTemplateSource
     ]
   );
+  const preflightTemplateVersion = useMemo(() => {
+    if (mintType === 'pre-inscribed') {
+      return 'xtrata-preinscribed-collection-sale-v1.0';
+    }
+    return useLegacyV11CompatTemplate
+      ? 'xtrata-collection-mint-v1.1'
+      : 'xtrata-collection-mint-v1.2';
+  }, [mintType, useLegacyV11CompatTemplate]);
   const deploySourceByteLength = useMemo(
     () => new TextEncoder().encode(deployBuild.source).byteLength,
     [deployBuild.source]
@@ -610,6 +645,8 @@ export default function DeployWizardPanel() {
       activeNetwork,
       coreContractId: coreTarget?.contractId ?? null,
       mintType,
+      deployTemplateMode,
+      templateVersion: preflightTemplateVersion,
       clarityVersion: DEPLOY_CLARITY_VERSION,
       sourceLengthChars: deployBuild.source.length,
       sourceLengthBytes: deploySourceByteLength,
@@ -622,6 +659,8 @@ export default function DeployWizardPanel() {
       activeNetwork,
       coreTarget?.contractId,
       mintType,
+      deployTemplateMode,
+      preflightTemplateVersion,
       deployBuild.source.length,
       deploySourceByteLength,
       deployBuild.errors.length,
@@ -645,6 +684,7 @@ export default function DeployWizardPanel() {
     const details = {
       debugVersion: DEPLOY_DEBUG_VERSION,
       clarityVersion: DEPLOY_CLARITY_VERSION,
+      defaultDeployTemplateMode: 'standard-v1.2',
       sourceCompactionMode: DEPLOY_SOURCE_COMPACTION_MODE
     };
     const timestamp = new Date().toISOString();
@@ -735,7 +775,7 @@ export default function DeployWizardPanel() {
         marketplaceAddress
       },
       templateSources: {
-        standardSource: standardTemplateSource,
+        standardSource: selectedStandardTemplateSource,
         preinscribedSource: preinscribedTemplateSource
       },
       coreContractId: networkCoreTarget.contractId,
@@ -753,10 +793,20 @@ export default function DeployWizardPanel() {
     }
 
     const slug = buildCollectionSlug(refreshBuild.resolved.collectionName);
-    const templateVersion =
+    let templateVersion =
       mintType === 'pre-inscribed'
         ? 'xtrata-preinscribed-collection-sale-v1.0'
+        : useLegacyV11CompatTemplate
+        ? 'xtrata-collection-mint-v1.1'
         : 'xtrata-collection-mint-v1.2';
+    let sourceTemplateLabel = templateVersion;
+    let sourceBeforeCompaction = refreshBuild.source;
+    if (useLegacyV11CompatTemplate) {
+      appendDeployDebug('Using legacy v1.1 compatibility deploy template', {
+        attemptId,
+        templateVersion
+      });
+    }
 
     const draftMetadata = {
       mintType,
@@ -836,10 +886,10 @@ export default function DeployWizardPanel() {
       mintType,
       seed: created.id
     });
-    const sourceForDeploy = compactClaritySourceForDeploy(refreshBuild.source);
-    const sourceOriginalBytes = new TextEncoder().encode(refreshBuild.source).byteLength;
+    const sourceForDeploy = compactClaritySourceForDeploy(sourceBeforeCompaction);
+    const sourceOriginalBytes = new TextEncoder().encode(sourceBeforeCompaction).byteLength;
     const sourceForDeployBytes = new TextEncoder().encode(sourceForDeploy).byteLength;
-    const sourceCompacted = sourceForDeploy !== refreshBuild.source;
+    const sourceCompacted = sourceForDeploy !== sourceBeforeCompaction;
 
     setReviewOpen(false);
     setStatus('Open your wallet and approve contract deployment.');
@@ -890,9 +940,10 @@ export default function DeployWizardPanel() {
         attemptId,
         debugVersion: DEPLOY_DEBUG_VERSION,
         contractName,
+        templateVersion: sourceTemplateLabel,
         network: session.network,
         clarityVersion: DEPLOY_CLARITY_VERSION,
-        sourceLengthChars: refreshBuild.source.length,
+        sourceLengthChars: sourceBeforeCompaction.length,
         sourceLengthBytes: sourceOriginalBytes,
         deploySourceLengthChars: sourceForDeploy.length,
         deploySourceLengthBytes: sourceForDeployBytes,
@@ -1249,6 +1300,39 @@ export default function DeployWizardPanel() {
         </ul>
       </div>
 
+      {debugEnabled && mintType === 'standard' && (
+        <div className="deploy-wizard__defaults">
+          <p className="deploy-wizard__defaults-title">Debug template switch</p>
+          <label className="field">
+            <span className="field__label info-label">
+              Template mode (debug only)
+            </span>
+            <select
+              className="select"
+              value={deployTemplateMode}
+              onChange={(event) => {
+                const nextMode =
+                  event.target.value === 'legacy-v1.1-compat'
+                    ? 'legacy-v1.1-compat'
+                    : 'standard-v1.2';
+                setDeployTemplateMode(nextMode);
+                setStatus(null);
+                appendDeployDebug('Debug template mode changed', {
+                  nextMode
+                });
+              }}
+              disabled={deployPending}
+            >
+              <option value="standard-v1.2">Standard template (v1.2)</option>
+              <option value="legacy-v1.1-compat">Legacy compatibility template (v1.1)</option>
+            </select>
+            <span className="field__hint">
+              Deploy the previously proven v1.1 template wiring to compare wallet broadcast behavior directly.
+            </span>
+          </label>
+        </div>
+      )}
+
       <div className="mint-actions">
         <button
           className="button"
@@ -1265,6 +1349,9 @@ export default function DeployWizardPanel() {
       <div className="deploy-wizard__defaults">
         <p className="deploy-wizard__defaults-title">Deploy debug details</p>
         <ul>
+          <li>Debug version: {DEPLOY_DEBUG_VERSION}</li>
+          <li>Template mode: {deployTemplateMode}</li>
+          <li>Template version: {preflightSummary.templateVersion}</li>
           <li>Clarity version: v{DEPLOY_CLARITY_VERSION} (forced for wallet deploy requests).</li>
           <li>Current wallet network: {preflightSummary.walletNetwork ?? 'not connected'}</li>
           <li>Current wallet address: {preflightSummary.walletAddress ?? 'not connected'}</li>
@@ -1381,6 +1468,9 @@ export default function DeployWizardPanel() {
                   </p>
                   <p>
                     <strong>Clarity version:</strong> v{DEPLOY_CLARITY_VERSION} (forced)
+                  </p>
+                  <p>
+                    <strong>Template version:</strong> {preflightSummary.templateVersion}
                   </p>
                   <p>
                     <strong>Artist recipient:</strong>{' '}
