@@ -28,6 +28,47 @@ export const parseCollectionMetadata = (value: unknown) => {
   }
 };
 
+const toNullableString = (value: unknown) => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+export const canReuseCollectionSlug = (params: {
+  incomingArtistAddress: string;
+  existingArtistAddress: unknown;
+  contractAddress: unknown;
+  metadata: unknown;
+  state: unknown;
+}) => {
+  const incomingArtist = params.incomingArtistAddress.trim().toUpperCase();
+  const existingArtist =
+    toNullableString(params.existingArtistAddress)?.toUpperCase() ?? '';
+  if (!incomingArtist || !existingArtist || incomingArtist !== existingArtist) {
+    return false;
+  }
+
+  if (toNullableString(params.contractAddress)) {
+    return false;
+  }
+
+  const metadataRecord = parseCollectionMetadata(params.metadata);
+  if (toNullableString(metadataRecord?.deployTxId)) {
+    return false;
+  }
+
+  const state = String(params.state ?? '')
+    .trim()
+    .toLowerCase();
+  if (state === 'published') {
+    return false;
+  }
+
+  return true;
+};
+
 const toRecord = (value: unknown) =>
   value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
 

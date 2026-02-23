@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  canReuseCollectionSlug,
   isCollectionPublicVisible,
   isCollectionPublished,
   isValidSlug,
@@ -53,5 +54,59 @@ describe('collections helpers', () => {
     expect(isCollectionPublished('published')).toBe(true);
     expect(isCollectionPublished(' PUBLISHED ')).toBe(true);
     expect(isCollectionPublished('draft')).toBe(false);
+  });
+
+  it('allows slug reuse for undeployed draft by same artist', () => {
+    expect(
+      canReuseCollectionSlug({
+        incomingArtistAddress: 'SP123',
+        existingArtistAddress: 'sp123',
+        contractAddress: null,
+        metadata: { templateVersion: 'xtrata-collection-mint-v1.2' },
+        state: 'draft'
+      })
+    ).toBe(true);
+  });
+
+  it('blocks slug reuse when deployment is already recorded', () => {
+    expect(
+      canReuseCollectionSlug({
+        incomingArtistAddress: 'SP123',
+        existingArtistAddress: 'SP123',
+        contractAddress: null,
+        metadata: { deployTxId: '0xabc' },
+        state: 'draft'
+      })
+    ).toBe(false);
+    expect(
+      canReuseCollectionSlug({
+        incomingArtistAddress: 'SP123',
+        existingArtistAddress: 'SP123',
+        contractAddress: 'SP123',
+        metadata: null,
+        state: 'draft'
+      })
+    ).toBe(false);
+    expect(
+      canReuseCollectionSlug({
+        incomingArtistAddress: 'SP123',
+        existingArtistAddress: 'SP123',
+        contractAddress: null,
+        metadata: null,
+        state: 'published'
+      })
+    ).toBe(false);
+  });
+
+  it('blocks slug reuse across different artists', () => {
+    expect(
+      canReuseCollectionSlug({
+        incomingArtistAddress: 'SP123',
+        existingArtistAddress: 'SP999',
+        contractAddress: null,
+        metadata: null,
+        state: 'draft'
+      })
+    ).toBe(false);
   });
 });

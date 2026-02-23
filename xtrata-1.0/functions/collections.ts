@@ -1,6 +1,7 @@
 import { jsonResponse, badRequest, serverError } from './lib/utils';
 import { queryAll, run } from './lib/db';
 import {
+  canReuseCollectionSlug,
   isCollectionPublicVisible,
   isCollectionPublished,
   isValidSlug,
@@ -72,6 +73,10 @@ export const onRequest: PagesFunction = async ({ request, env }) => {
   if (request.method === 'POST') {
     try {
       const payload = (await request.json()) as Record<string, unknown>;
+      if (typeof payload.artistAddress !== 'string' || payload.artistAddress.trim() === '') {
+        return badRequest('artistAddress is required.');
+      }
+      const artistAddress = payload.artistAddress.trim();
       const slugRaw = String(payload.slug ?? '');
       const slug = normalizeSlug(slugRaw);
       if (!isValidSlug(slug)) {
@@ -79,16 +84,58 @@ export const onRequest: PagesFunction = async ({ request, env }) => {
       }
       const existingSlug = await queryAll(
         env,
-        'SELECT id FROM collections WHERE slug = ? LIMIT 1',
+        'SELECT * FROM collections WHERE slug = ? LIMIT 1',
         [slug]
       );
-      if ((existingSlug.results ?? []).length > 0) {
+      const existingRecord = (existingSlug.results ?? [])[0] as
+        | Record<string, unknown>
+        | undefined;
+      if (existingRecord) {
+        if (
+          canReuseCollectionSlug({
+            incomingArtistAddress: artistAddress,
+            existingArtistAddress: existingRecord.artist_address,
+            contractAddress: existingRecord.contract_address,
+            metadata: existingRecord.metadata,
+            state: existingRecord.state
+          })
+        ) {
+          const existingId = String(existingRecord.id ?? '').trim();
+          if (!existingId) {
+            return serverError('Existing slug record is missing an id.');
+          }
+          const now = Date.now();
+          const metadata = payload.metadata ? JSON.stringify(payload.metadata) : null;
+          await run(
+            env,
+            'UPDATE collections SET artist_address = ?, contract_address = ?, display_name = ?, metadata = ?, state = ?, updated_at = ? WHERE id = ?',
+            [
+              artistAddress,
+              payload.contractAddress ?? null,
+              payload.displayName ?? null,
+              metadata,
+              'draft',
+              now,
+              existingId
+            ]
+          );
+          const reused = await queryAll(
+            env,
+            'SELECT * FROM collections WHERE id = ?',
+            [existingId]
+          );
+          const reusedRecord = (reused.results ?? [])[0];
+          return jsonResponse(
+            {
+              ...mapRow(reusedRecord),
+              slugReused: true
+            },
+            200
+          );
+        }
         return badRequest(
           `Collection URL slug "${slug}" is already in use. Choose a different collection name.`
         );
-      }
-      if (typeof payload.artistAddress !== 'string' || payload.artistAddress.trim() === '') {
-        return badRequest('artistAddress is required.');
       }
       const now = Date.now();
       const id = crypto.randomUUID();
@@ -99,7 +146,7 @@ export const onRequest: PagesFunction = async ({ request, env }) => {
         [
           id,
           slug,
-          payload.artistAddress.trim(),
+          artistAddress,
           payload.contractAddress ?? null,
           payload.displayName ?? null,
           metadata,
@@ -114,7 +161,13 @@ export const onRequest: PagesFunction = async ({ request, env }) => {
         [id]
       );
       const record = (created.results ?? [])[0];
-      return jsonResponse(mapRow(record), 201);
+      return jsonResponse(
+        {
+          ...mapRow(record),
+          slugReused: false
+        },
+        201
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'failed to create collection';
       if (/collections\.slug|UNIQUE constraint failed: collections\.slug/i.test(message)) {

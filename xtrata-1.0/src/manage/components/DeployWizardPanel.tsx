@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { showContractDeploy } from '@stacks/connect';
+import {
+  getStacksProvider,
+  showContractDeploy,
+  type StacksProvider
+} from '@stacks/connect';
 import { getContractId } from '../../lib/contract/config';
 import {
   CONTRACT_REGISTRY,
@@ -42,6 +46,10 @@ type CollectionDraft = {
   metadata?: Record<string, unknown> | null;
 };
 
+type CollectionDraftCreateResponse = CollectionDraft & {
+  slugReused?: boolean;
+};
+
 const buildCollectionSlug = (collectionName: string) =>
   deriveArtistCollectionSlug(collectionName);
 
@@ -49,6 +57,7 @@ const PARENT_THUMBNAIL_LIMIT = 12;
 const DEPLOY_WIZARD_DRAFT_STORAGE_KEY = 'xtrata-manage-deploy-wizard-v1';
 const DEPLOY_DEBUG_LOG_LIMIT = 60;
 const DEPLOY_CLARITY_VERSION = 2;
+const DEPLOY_DEBUG_TEXT_MAX = 1200;
 const MANAGE_APP_ICON =
   'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%23f97316"/><path d="M18 20h28v6H18zm0 12h28v6H18zm0 12h28v6H18z" fill="white"/></svg>';
 
@@ -64,6 +73,48 @@ const debugStringify = (value: unknown) => {
 
 const toErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : String(error);
+
+const truncateDebugText = (value: string) =>
+  value.length > DEPLOY_DEBUG_TEXT_MAX
+    ? `${value.slice(0, DEPLOY_DEBUG_TEXT_MAX)}...(+${value.length - DEPLOY_DEBUG_TEXT_MAX} chars)`
+    : value;
+
+const extractErrorDebug = (error: unknown): Record<string, unknown> => {
+  const details: Record<string, unknown> = {
+    message: toErrorMessage(error)
+  };
+
+  if (error instanceof Error) {
+    details.name = error.name;
+    if (error.stack) {
+      details.stack = truncateDebugText(error.stack);
+    }
+  }
+
+  if (error && typeof error === 'object') {
+    const record = error as Record<string, unknown>;
+    details.keys = Object.keys(record).slice(0, 20);
+
+    const code = record.code;
+    if (typeof code === 'string' || typeof code === 'number') {
+      details.code = code;
+    }
+
+    const reason = record.reason;
+    if (typeof reason === 'string') {
+      details.reason = truncateDebugText(reason);
+    }
+
+    if ('data' in record) {
+      details.data = truncateDebugText(debugStringify(record.data));
+    }
+    if ('response' in record) {
+      details.response = truncateDebugText(debugStringify(record.response));
+    }
+  }
+
+  return details;
+};
 
 type DeployWizardDraftStorage = {
   collectionName: string;
@@ -702,7 +753,7 @@ export default function DeployWizardPanel() {
       }
     };
 
-    let created: CollectionDraft;
+    let created: CollectionDraftCreateResponse;
     try {
       appendDeployDebug('Creating draft record', {
         attemptId,
@@ -721,14 +772,15 @@ export default function DeployWizardPanel() {
           metadata: draftMetadata
         })
       });
-      created = await parseManageJsonResponse<CollectionDraft>(
+      created = await parseManageJsonResponse<CollectionDraftCreateResponse>(
         createResponse,
         'Create collection draft'
       );
       appendDeployDebug('Draft record created', {
         attemptId,
         draftId: created.id,
-        draftSlug: created.slug
+        draftSlug: created.slug,
+        slugReused: created.slugReused === true
       });
       setCollection(created);
     } catch (error) {
@@ -753,6 +805,47 @@ export default function DeployWizardPanel() {
     setStatus('Open your wallet and approve contract deployment.');
 
     try {
+      const selectedProvider = getStacksProvider();
+      const selectedProviderInfo =
+        selectedProvider?.getProductInfo?.() ?? null;
+      appendDeployDebug('Resolved wallet provider', {
+        attemptId,
+        providerDetected: Boolean(selectedProvider),
+        providerInfo: selectedProviderInfo
+      });
+
+      const instrumentedProvider: StacksProvider | undefined = selectedProvider
+        ? {
+            ...selectedProvider,
+            transactionRequest: async (payload: string) => {
+              appendDeployDebug('Provider transactionRequest invoked', {
+                attemptId,
+                payloadLength: payload.length
+              });
+              try {
+                const providerResult = await selectedProvider.transactionRequest.call(
+                  selectedProvider,
+                  payload
+                );
+                appendDeployDebug('Provider transactionRequest resolved', {
+                  attemptId,
+                  txId:
+                    'txId' in providerResult && typeof providerResult.txId === 'string'
+                      ? providerResult.txId
+                      : null
+                });
+                return providerResult;
+              } catch (error) {
+                appendDeployDebug('Provider transactionRequest rejected', {
+                  attemptId,
+                  ...extractErrorDebug(error)
+                });
+                throw error;
+              }
+            }
+          }
+        : undefined;
+
       appendDeployDebug('Opening wallet deployment request', {
         attemptId,
         contractName,
@@ -830,7 +923,7 @@ export default function DeployWizardPanel() {
             'Wallet cancelled deployment or failed to broadcast. Check Deploy debug details below, then retry.'
           );
         }
-      });
+      }, instrumentedProvider);
     } catch (error) {
       appendDeployDebug('Deploy request failed before wallet open', {
         attemptId,
