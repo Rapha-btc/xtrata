@@ -1337,7 +1337,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
             appendMintLog(
               chargeMintPriceAtBegin
                 ? `Begin safety cap <= ${toMicroStxLabel(beginSpendCap)} (mint price + protocol begin fee).`
-                : `Begin safety cap <= ${toMicroStxLabel(beginSpendCap)} (protocol begin fee only).`
+                : `Begin safety cap <= ${toMicroStxLabel(beginSpendCap)} (protocol anti-spam fee only).`
             );
           }
           const beginPostConditions = resolveMintBeginPostConditions(senderAddress);
@@ -2112,14 +2112,14 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                   {mintBeginSpendCap === null
                     ? 'Loading protected spend cap...'
                     : collectionMintPaymentModel === 'begin'
-                      ? `Deny mode caps: begin <= ${toMicroStxLabel(
+                      ? `Deny mode caps: begin anti-spam <= ${toMicroStxLabel(
                           mintBeginSpendCap
                         )}. Upload enforces zero STX transfer. Seal <= fee-unit x (1 + ceil(chunks/50)) (mint price already charged at begin).`
                       : collectionMintPaymentModel === 'seal'
-                        ? `Deny mode caps: begin <= ${toMicroStxLabel(
+                        ? `Deny mode caps: begin anti-spam <= ${toMicroStxLabel(
                             mintBeginSpendCap
                           )}. Upload enforces zero STX transfer. Seal <= mint price + fee-unit x (1 + ceil(chunks/50)).`
-                        : `Compatibility mode caps: begin <= ${toMicroStxLabel(
+                        : `Compatibility mode caps: begin anti-spam <= ${toMicroStxLabel(
                             mintBeginSpendCap
                           )}. Upload enforces zero STX transfer. Seal <= mint price + fee-unit x (1 + ceil(chunks/50)).`}
                 </span>
