@@ -20,6 +20,10 @@ import {
   toManageApiErrorMessage
 } from '../lib/api-errors';
 import { useManageWallet } from '../ManageWalletContext';
+import {
+  parseContractPrincipal,
+  resolveCollectionContractLink
+} from '../lib/contract-link';
 import InfoTooltip from './InfoTooltip';
 
 const ASCII_PATTERN = /^[\x00-\x7F]*$/;
@@ -32,6 +36,8 @@ const XTRATA_APP_ICON_DATA_URI =
   'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%23f97316"/><path d="M18 20h28v6H18zm0 12h28v6H18zm0 12h28v6H18z" fill="white"/></svg>';
 
 type CollectionPayload = {
+  id?: string | null;
+  slug?: string | null;
   display_name?: string | null;
   artist_address?: string | null;
   contract_address?: string | null;
@@ -676,20 +682,6 @@ const toRecord = (value: unknown) =>
 const toText = (value: unknown) =>
   typeof value === 'string' ? value.trim() : '';
 
-const parseContractPrincipal = (value: string): ContractTarget | null => {
-  const trimmed = value.trim().replace(/^'+/, '');
-  const dotIndex = trimmed.indexOf('.');
-  if (dotIndex <= 0 || dotIndex >= trimmed.length - 1) {
-    return null;
-  }
-  const address = trimmed.slice(0, dotIndex).trim();
-  const contractName = trimmed.slice(dotIndex + 1).trim();
-  if (!validateStacksAddress(address) || !CONTRACT_NAME_PATTERN.test(contractName)) {
-    return null;
-  }
-  return { address, contractName };
-};
-
 const toPrimitive = (value: ClarityValue): unknown => {
   const parsed = cvToValue(value) as unknown;
   if (
@@ -990,6 +982,7 @@ type CollectionSettingsPanelProps = {
 
 export default function CollectionSettingsPanel(props: CollectionSettingsPanelProps) {
   const [collectionId, setCollectionId] = useState('');
+  const [collectionSlug, setCollectionSlug] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [artistAddress, setArtistAddress] = useState('');
   const [contractAddress, setContractAddress] = useState('');
@@ -1124,29 +1117,50 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
         response,
         'Collection'
       );
+      const resolvedCollectionId = toText(payload.id ?? '') || nextCollectionId.trim();
+      const resolvedCollectionSlug = toText(payload.slug ?? '');
       setDisplayName(payload.display_name ?? '');
       setArtistAddress(payload.artist_address ?? '');
-      const nextContractAddress = toText(payload.contract_address ?? '');
-      setContractAddress(nextContractAddress);
+      setCollectionId(resolvedCollectionId);
+      setCollectionSlug(resolvedCollectionSlug);
       setState(payload.state ?? 'draft');
       const resolvedMetadata = toRecord(payload.metadata);
       setMetadata(resolvedMetadata);
-      const metadataContractName = toText(resolvedMetadata?.contractName);
-      setContractName(metadataContractName);
+      const resolvedContractTarget = resolveCollectionContractLink({
+        collectionId: resolvedCollectionId,
+        collectionSlug: resolvedCollectionSlug,
+        contractAddress: toText(payload.contract_address ?? ''),
+        metadata: resolvedMetadata
+      });
+      const parsedContractAddress = parseContractPrincipal(
+        toText(payload.contract_address ?? '')
+      );
+      const nextContractAddress =
+        resolvedContractTarget?.address ??
+        parsedContractAddress?.address ??
+        toText(payload.contract_address ?? '');
+      const nextContractName = resolvedContractTarget?.contractName ?? '';
+      setContractAddress(nextContractAddress);
+      setContractName(nextContractName);
       setSummary(null);
       setSummaryMessage(null);
       setActionMessage(null);
       if (
         validateStacksAddress(nextContractAddress) &&
-        CONTRACT_NAME_PATTERN.test(metadataContractName)
+        CONTRACT_NAME_PATTERN.test(nextContractName)
       ) {
         setSummaryMessage('Refreshing on-chain status...');
         setAutoSummaryTarget({
           address: nextContractAddress,
-          contractName: metadataContractName
+          contractName: nextContractName
         });
       } else {
         setAutoSummaryTarget(null);
+      }
+      if (resolvedContractTarget?.source === 'derived-slug-id') {
+        setMessage(
+          'Contract name was auto-resolved from draft slug/id. Click "Save draft settings" to store it in draft metadata.'
+        );
       }
     } catch (error) {
       setMessage(toManageApiErrorMessage(error, 'Unable to load collection'));
@@ -1181,12 +1195,75 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
     }
     setMessage(null);
     try {
+      const parsedContractFromAddress = parseContractPrincipal(contractAddress);
+      const resolvedContractAddress =
+        parsedContractFromAddress?.address ?? contractAddress.trim().toUpperCase();
+      const typedContractName = contractName.trim();
+      if (typedContractName && !CONTRACT_NAME_PATTERN.test(typedContractName)) {
+        setMessage('Contract name is invalid. Use letters, numbers, hyphen, or underscore.');
+        return;
+      }
+
+      let nextMetadata = metadataRecord ? { ...metadataRecord } : null;
+      const resolvedContractTarget = resolveCollectionContractLink({
+        collectionId: collectionId.trim(),
+        collectionSlug,
+        contractAddress: resolvedContractAddress,
+        metadata: nextMetadata,
+        deployContractName: typedContractName || parsedContractFromAddress?.contractName
+      });
+
+      let metadataChanged = false;
+      if (resolvedContractTarget) {
+        if (!nextMetadata) {
+          nextMetadata = {};
+        }
+        if (toText(nextMetadata.contractName) !== resolvedContractTarget.contractName) {
+          nextMetadata.contractName = resolvedContractTarget.contractName;
+          metadataChanged = true;
+        }
+        if (toText(nextMetadata.contractId) !== resolvedContractTarget.contractId) {
+          nextMetadata.contractId = resolvedContractTarget.contractId;
+          metadataChanged = true;
+        }
+      }
+
+      const patchPayload: Record<string, unknown> = {
+        displayName,
+        artistAddress,
+        contractAddress: resolvedContractAddress
+      };
+      if (nextMetadata && metadataChanged) {
+        patchPayload.metadata = nextMetadata;
+      }
+
       const response = await fetch(`/collections/${collectionId.trim()}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ displayName, artistAddress, contractAddress })
+        body: JSON.stringify(patchPayload)
       });
-      await parseManageJsonResponse(response, 'Collection update');
+      const payload = await parseManageJsonResponse<CollectionPayload>(
+        response,
+        'Collection update'
+      );
+      const resolvedCollectionSlug = toText(payload.slug ?? '');
+      if (resolvedCollectionSlug) {
+        setCollectionSlug(resolvedCollectionSlug);
+      }
+      const resolvedMetadata = toRecord(payload.metadata);
+      setMetadata(resolvedMetadata);
+      const persistedTarget = resolveCollectionContractLink({
+        collectionId: collectionId.trim(),
+        collectionSlug: resolvedCollectionSlug || collectionSlug,
+        contractAddress: toText(payload.contract_address ?? ''),
+        metadata: resolvedMetadata
+      });
+      const persistedAddress =
+        persistedTarget?.address ??
+        parseContractPrincipal(toText(payload.contract_address ?? ''))?.address ??
+        toText(payload.contract_address ?? '');
+      setContractAddress(persistedAddress);
+      setContractName(persistedTarget?.contractName ?? '');
       setMessage('Draft settings saved.');
     } catch (error) {
       setMessage(toManageApiErrorMessage(error, 'Update error'));
@@ -1670,7 +1747,16 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
           <input
             className="input"
             value={contractAddress}
-            onChange={(event) => setContractAddress(event.target.value.trim().toUpperCase())}
+            onChange={(event) => {
+              const input = event.target.value.trim();
+              const parsed = parseContractPrincipal(input);
+              if (parsed) {
+                setContractAddress(parsed.address);
+                setContractName((current) => current || parsed.contractName);
+              } else {
+                setContractAddress(input.toUpperCase());
+              }
+            }}
             disabled={draftSettingsLocked}
           />
         </label>
