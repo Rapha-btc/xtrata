@@ -4,12 +4,12 @@ import {
   ClarityType,
   cvToValue,
   uintCV,
-  validateStacksAddress,
   type ClarityValue
 } from '@stacks/transactions';
 import { useQueryClient } from '@tanstack/react-query';
 import { PUBLIC_CONTRACT, PUBLIC_MINT_RESTRICTIONS } from './config/public';
 import { getContractId } from './lib/contract/config';
+import { resolveCollectionContractLink } from './lib/collections/contract-link';
 import { useBnsAddress } from './lib/bns/hooks';
 import { RATE_LIMIT_WARNING_EVENT } from './lib/network/rate-limit';
 import { getNetworkFromAddress, getNetworkMismatch } from './lib/network/guard';
@@ -745,8 +745,6 @@ const isCollectionVisibleOnPublicPage = (metadata: unknown) => {
   return toBoolean(collectionPage?.showOnPublicPage) === true;
 };
 
-const CONTRACT_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9-_]{0,127}$/;
-
 const toBigIntOrNull = (value: unknown) => {
   if (typeof value === 'bigint') {
     return value;
@@ -853,15 +851,19 @@ const resolvePublicCollectionContractTarget = (
   collection: PublicLiveCollectionRecord
 ): PublicCollectionContractTarget | null => {
   const metadata = toRecord(collection.metadata);
-  const address = toText(collection.contract_address);
-  const contractName = toText(metadata?.contractName);
-  if (!validateStacksAddress(address) || !CONTRACT_NAME_PATTERN.test(contractName)) {
+  const resolved = resolveCollectionContractLink({
+    collectionId: toText(collection.id),
+    collectionSlug: toText(collection.slug),
+    contractAddress: toText(collection.contract_address),
+    metadata
+  });
+  if (!resolved) {
     return null;
   }
   return {
-    address,
-    contractName,
-    network: getNetworkFromAddress(address) ?? 'mainnet'
+    address: resolved.address,
+    contractName: resolved.contractName,
+    network: getNetworkFromAddress(resolved.address) ?? 'mainnet'
   };
 };
 
@@ -1352,12 +1354,9 @@ export default function PublicApp() {
         const livePath = `/collection/${encodeURIComponent(liveKey)}`;
         const coverImageUrl = resolvePublicCollectionCoverUrl(collection);
         const contractTarget = resolvePublicCollectionContractTarget(collection);
-        const contractAddress = toText(collection.contract_address);
-        const contractName = toText(metadata?.contractName);
-        const contractId =
-          contractAddress.length > 0 && contractName.length > 0
-            ? `${contractAddress}.${contractName}`
-            : null;
+        const contractId = contractTarget
+          ? `${contractTarget.address}.${contractTarget.contractName}`
+          : null;
         return {
           id: collection.id,
           slug: toText(collection.slug),

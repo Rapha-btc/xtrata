@@ -26,6 +26,7 @@ import {
   resolveCollectionSealSpendCapMicroStx,
   resolveSealSpendCapMicroStx
 } from './lib/mint/post-conditions';
+import { resolveCollectionContractLink } from './lib/collections/contract-link';
 import { PUBLIC_CONTRACT } from './config/public';
 import { DEFAULT_TOKEN_URI, TX_DELAY_SECONDS } from './lib/mint/constants';
 import { getNetworkFromAddress, getNetworkMismatch } from './lib/network/guard';
@@ -439,15 +440,19 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   );
 
   const collectionContract = useMemo(() => {
-    const address = toText(collection?.contract_address);
-    const name = toText(metadata?.contractName);
-    if (!validateStacksAddress(address) || !CONTRACT_NAME_PATTERN.test(name)) {
+    const resolved = resolveCollectionContractLink({
+      collectionId: toText(collection?.id),
+      collectionSlug: toText(collection?.slug),
+      contractAddress: toText(collection?.contract_address),
+      metadata
+    });
+    if (!resolved) {
       return null;
     }
     return {
-      address,
-      contractName: name,
-      network: inferNetworkFromContract(address)
+      address: resolved.address,
+      contractName: resolved.contractName,
+      network: inferNetworkFromContract(resolved.address)
     } as CollectionContractTarget;
   }, [collection, metadata]);
 
