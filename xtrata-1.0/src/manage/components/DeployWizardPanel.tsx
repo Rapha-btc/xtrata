@@ -116,6 +116,24 @@ const extractErrorDebug = (error: unknown): Record<string, unknown> => {
   return details;
 };
 
+const compactClaritySourceForDeploy = (source: string) => {
+  const lines = source.split('\n');
+  const compacted: string[] = [];
+  for (const line of lines) {
+    const withoutIndent = line.replace(/^\s+/, '');
+    if (withoutIndent.startsWith(';;')) {
+      continue;
+    }
+    const trimmedLine = withoutIndent.replace(/\s+$/, '');
+    if (trimmedLine.length === 0) {
+      continue;
+    }
+    compacted.push(trimmedLine);
+  }
+  const result = compacted.join('\n');
+  return result.length > 0 ? result : source;
+};
+
 type DeployWizardDraftStorage = {
   collectionName: string;
   symbol: string;
@@ -800,6 +818,9 @@ export default function DeployWizardPanel() {
       mintType,
       seed: created.id
     });
+    const sourceForDeploy = compactClaritySourceForDeploy(refreshBuild.source);
+    const sourceForDeployBytes = new TextEncoder().encode(sourceForDeploy).byteLength;
+    const sourceCompacted = sourceForDeploy !== refreshBuild.source;
 
     setReviewOpen(false);
     setStatus('Open your wallet and approve contract deployment.');
@@ -853,11 +874,14 @@ export default function DeployWizardPanel() {
         clarityVersion: DEPLOY_CLARITY_VERSION,
         sourceLengthChars: refreshBuild.source.length,
         sourceLengthBytes: new TextEncoder().encode(refreshBuild.source).byteLength,
+        deploySourceLengthChars: sourceForDeploy.length,
+        deploySourceLengthBytes: sourceForDeployBytes,
+        sourceCompacted,
         coreContractId: networkCoreTarget.contractId
       });
       showContractDeploy({
         contractName,
-        codeBody: refreshBuild.source,
+        codeBody: sourceForDeploy,
         network: session.network,
         clarityVersion: DEPLOY_CLARITY_VERSION,
         appDetails: {
