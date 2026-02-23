@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   evaluateDeployPriceSafety,
   estimateWorstCaseSealFeeMicroStx,
-  parseDeployPricingLockSnapshot
+  parseDeployPricingLockSnapshot,
+  resolveDeployMintPriceAbsorption
 } from '../pricing-lock';
 
 describe('deploy pricing lock helpers', () => {
@@ -74,5 +75,27 @@ describe('deploy pricing lock helpers', () => {
     });
     expect(unsafe.marginMicroStx).toBe(0n);
     expect(unsafe.safe).toBe(false);
+  });
+
+  it('resolves absorbed on-chain mint price from advertised price', () => {
+    const resolved = resolveDeployMintPriceAbsorption({
+      advertisedMintPriceMicroStx: 1_000_000n,
+      maxChunks: 120,
+      feeUnitMicroStx: 100_000n
+    });
+    expect(resolved.worstCaseSealFeeMicroStx).toBe(400_000n);
+    expect(resolved.onChainMintPriceMicroStx).toBe(600_000n);
+    expect(resolved.safe).toBe(true);
+  });
+
+  it('returns null absorbed mint price when advertised price is too low', () => {
+    const resolved = resolveDeployMintPriceAbsorption({
+      advertisedMintPriceMicroStx: 400_000n,
+      maxChunks: 120,
+      feeUnitMicroStx: 100_000n
+    });
+    expect(resolved.worstCaseSealFeeMicroStx).toBe(400_000n);
+    expect(resolved.onChainMintPriceMicroStx).toBeNull();
+    expect(resolved.safe).toBe(false);
   });
 });

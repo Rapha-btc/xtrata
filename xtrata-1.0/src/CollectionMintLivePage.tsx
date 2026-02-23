@@ -26,6 +26,7 @@ import {
   resolveCollectionSealSpendCapMicroStx,
   resolveSealSpendCapMicroStx
 } from './lib/mint/post-conditions';
+import { resolveMetadataDisplayMintPrice } from './lib/collections/display-price';
 import { resolveCollectionContractLink } from './lib/collections/contract-link';
 import { PUBLIC_CONTRACT } from './config/public';
 import { DEFAULT_TOKEN_URI, TX_DELAY_SECONDS } from './lib/mint/constants';
@@ -420,6 +421,10 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   );
   const metadataCollectionPage = useMemo(
     () => toRecord(metadata?.collectionPage) ?? null,
+    [metadata]
+  );
+  const metadataDisplayMintPrice = useMemo(
+    () => resolveMetadataDisplayMintPrice(metadata),
     [metadata]
   );
   const metadataCover = useMemo(
@@ -1953,7 +1958,16 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
         statusLastUpdatedAt
       ).toLocaleTimeString()}.`
     : 'Auto-refreshing every ~6s while active. Waiting for first sync...';
-  const mintPriceLabel = toMicroStxLabel(contractStatus?.mintPrice ?? null);
+  const onChainMintPriceMicroStx =
+    contractStatus?.activePhaseMintPrice ?? contractStatus?.mintPrice ?? null;
+  const displayMintPriceMicroStx =
+    metadataDisplayMintPrice.microStx ?? onChainMintPriceMicroStx;
+  const mintPriceLabel = toMicroStxLabel(displayMintPriceMicroStx);
+  const onChainMintPriceLabel = toMicroStxLabel(onChainMintPriceMicroStx);
+  const showingDisplayMintPriceOverride =
+    metadataDisplayMintPrice.microStx !== null &&
+    onChainMintPriceMicroStx !== null &&
+    metadataDisplayMintPrice.microStx !== onChainMintPriceMicroStx;
   const mintBeginSpendCap = resolveCollectionBeginSpendCapMicroStx({
     mintPrice: contractStatus?.mintPrice ?? null,
     activePhaseMintPrice: contractStatus?.activePhaseMintPrice ?? null,
@@ -2119,6 +2133,12 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                 <span className="meta-label">Finalized</span>
                 <span className="meta-value">{finalizedLabel}</span>
               </div>
+              {showingDisplayMintPriceOverride && (
+                <div>
+                  <span className="meta-label">On-chain mint price</span>
+                  <span className="meta-value">{onChainMintPriceLabel}</span>
+                </div>
+              )}
               <div>
                 <span className="meta-label">Wallet safety</span>
                 <span className="meta-value">
@@ -2127,14 +2147,14 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                     : collectionMintPaymentModel === 'begin'
                       ? `Deny mode caps: begin anti-spam <= ${toMicroStxLabel(
                           mintBeginSpendCap
-                        )}. Upload enforces zero STX transfer. Seal <= fee-unit x (1 + ceil(chunks/50)) (mint price already charged at begin).`
+                        )}. Upload enforces zero STX transfer. Seal <= fee-unit x (1 + ceil(chunks/50)) (on-chain mint price already charged at begin).`
                       : collectionMintPaymentModel === 'seal'
                         ? `Deny mode caps: begin anti-spam <= ${toMicroStxLabel(
                             mintBeginSpendCap
-                          )}. Upload enforces zero STX transfer. Seal <= mint price + fee-unit x (1 + ceil(chunks/50)).`
+                          )}. Upload enforces zero STX transfer. Seal <= on-chain mint price + fee-unit x (1 + ceil(chunks/50)).`
                         : `Compatibility mode caps: begin anti-spam <= ${toMicroStxLabel(
                             mintBeginSpendCap
-                          )}. Upload enforces zero STX transfer. Seal <= mint price + fee-unit x (1 + ceil(chunks/50)).`}
+                          )}. Upload enforces zero STX transfer. Seal <= on-chain mint price + fee-unit x (1 + ceil(chunks/50)).`}
                 </span>
               </div>
               <div>

@@ -9,6 +9,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { PUBLIC_CONTRACT, PUBLIC_MINT_RESTRICTIONS } from './config/public';
 import { getContractId } from './lib/contract/config';
+import { resolveMetadataDisplayMintPrice } from './lib/collections/display-price';
 import { resolveCollectionContractLink } from './lib/collections/contract-link';
 import { useBnsAddress } from './lib/bns/hooks';
 import { RATE_LIMIT_WARNING_EVENT } from './lib/network/rate-limit';
@@ -110,6 +111,7 @@ type PublicLiveCollectionCard = {
   description: string;
   livePath: string;
   coverImageUrl: string | null;
+  displayMintPriceMicroStx: bigint | null;
   fallbackSupply: bigint | null;
   contractId: string | null;
   contractTarget: PublicCollectionContractTarget | null;
@@ -1339,6 +1341,7 @@ export default function PublicApp() {
         const metadata = toRecord(collection.metadata);
         const metadataCollection = toRecord(metadata?.collection);
         const metadataCollectionPage = toRecord(metadata?.collectionPage);
+        const displayMintPrice = resolveMetadataDisplayMintPrice(metadata);
         const fallbackSupply = toBigIntOrNull(metadataCollection?.supply);
         const name =
           toText(metadataCollection?.name) ||
@@ -1365,6 +1368,7 @@ export default function PublicApp() {
           description,
           livePath,
           coverImageUrl,
+          displayMintPriceMicroStx: displayMintPrice.microStx,
           fallbackSupply,
           contractId,
           contractTarget
@@ -2082,6 +2086,8 @@ export default function PublicApp() {
                   );
                   const mintStatusError = liveMintStatusErrorByCollectionId[collection.id] ?? null;
                   const effectiveMintPrice = mintStatus?.effectiveMintPrice ?? null;
+                  const displayMintPrice =
+                    collection.displayMintPriceMicroStx ?? effectiveMintPrice;
                   const maxSupply = mintStatus?.maxSupply ?? collection.fallbackSupply ?? null;
                   const mintedCount = mintStatus?.mintedCount ?? null;
                   const remainingCount =
@@ -2141,7 +2147,7 @@ export default function PublicApp() {
                           Remaining: <strong>{formatBigintLabel(remainingCount)}</strong>
                         </span>
                         <span className="public-live-collections__stat">
-                          Mint price: <strong>{formatMicroStxLabel(effectiveMintPrice)}</strong>
+                          Mint price: <strong>{formatMicroStxLabel(displayMintPrice)}</strong>
                         </span>
                       </div>
                       <div className="public-live-collections__card-meta">

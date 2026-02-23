@@ -82,3 +82,34 @@ export const evaluateDeployPriceSafety = (params: {
     safe: marginMicroStx > 0n
   };
 };
+
+export type DeployMintPriceAbsorption = {
+  advertisedMintPriceMicroStx: bigint;
+  onChainMintPriceMicroStx: bigint | null;
+  feeBatches: number;
+  worstCaseSealFeeMicroStx: bigint;
+  marginMicroStx: bigint;
+  safe: boolean;
+};
+
+export const resolveDeployMintPriceAbsorption = (params: {
+  advertisedMintPriceMicroStx: bigint;
+  maxChunks: number;
+  feeUnitMicroStx: bigint;
+}): DeployMintPriceAbsorption => {
+  const safety = evaluateDeployPriceSafety({
+    mintPriceMicroStx: params.advertisedMintPriceMicroStx,
+    maxChunks: params.maxChunks,
+    feeUnitMicroStx: params.feeUnitMicroStx
+  });
+  return {
+    advertisedMintPriceMicroStx: params.advertisedMintPriceMicroStx,
+    onChainMintPriceMicroStx: safety.safe
+      ? params.advertisedMintPriceMicroStx - safety.worstCaseSealFeeMicroStx
+      : null,
+    feeBatches: safety.feeBatches,
+    worstCaseSealFeeMicroStx: safety.worstCaseSealFeeMicroStx,
+    marginMicroStx: safety.marginMicroStx,
+    safe: safety.safe
+  };
+};

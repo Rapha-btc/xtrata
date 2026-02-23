@@ -11,6 +11,7 @@ import {
 } from '@stacks/transactions';
 import { getNetworkFromAddress } from '../../lib/network/guard';
 import { toStacksNetwork } from '../../lib/network/stacks';
+import { parseStxToMicroStx } from '../../lib/collections/display-price';
 import {
   parseManageJsonResponse,
   toManageApiErrorMessage
@@ -46,6 +47,7 @@ type PublishReadiness = {
 };
 
 type CoverImageSource = 'collection-asset' | 'inscribed-image-url';
+type DisplayMintPriceMode = 'on-chain' | 'override';
 
 type ContractTarget = {
   address: string;
@@ -119,6 +121,9 @@ const normalizeCoverSource = (value: unknown): CoverImageSource | null => {
   }
   return null;
 };
+
+const normalizeDisplayMintPriceMode = (value: unknown): DisplayMintPriceMode =>
+  value === 'override' ? 'override' : 'on-chain';
 
 const isValidCoverUrl = (value: string) =>
   /^(https?:\/\/|ipfs:\/\/|data:image\/)/i.test(value);
@@ -194,11 +199,16 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
   const [selectedCoverAssetId, setSelectedCoverAssetId] = useState('');
   const [inscribedCoverUrl, setInscribedCoverUrl] = useState('');
   const [collectionDescriptionInput, setCollectionDescriptionInput] = useState('');
+  const [displayMintPriceMode, setDisplayMintPriceMode] =
+    useState<DisplayMintPriceMode>('on-chain');
+  const [displayMintPriceInput, setDisplayMintPriceInput] = useState('');
   const [coverMessage, setCoverMessage] = useState<string | null>(null);
   const [descriptionMessage, setDescriptionMessage] = useState<string | null>(null);
+  const [displayPriceMessage, setDisplayPriceMessage] = useState<string | null>(null);
   const [liveLinkMessage, setLiveLinkMessage] = useState<string | null>(null);
   const [coverSaving, setCoverSaving] = useState(false);
   const [descriptionSaving, setDescriptionSaving] = useState(false);
+  const [displayPriceSaving, setDisplayPriceSaving] = useState(false);
   const [coverPreviewFailed, setCoverPreviewFailed] = useState(false);
   const [onChainReservationOwner, setOnChainReservationOwner] = useState('');
   const [onChainReservationHash, setOnChainReservationHash] = useState('');
@@ -277,8 +287,11 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
     [metadataCollection]
   );
   const previewMintPrice = useMemo(
-    () => toText(metadataCollection?.mintPriceStx) || '0',
-    [metadataCollection]
+    () =>
+      displayMintPriceMode === 'override'
+        ? displayMintPriceInput.trim() || toText(metadataCollection?.mintPriceStx) || '0'
+        : toText(metadataCollection?.mintPriceStx) || '0',
+    [displayMintPriceInput, displayMintPriceMode, metadataCollection]
   );
 
   const callCollectionReadOnly = async (
@@ -461,6 +474,8 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       setSelectedCoverAssetId('');
       setInscribedCoverUrl('');
       setCollectionDescriptionInput('');
+      setDisplayMintPriceMode('on-chain');
+      setDisplayMintPriceInput('');
       setOnChainReservationStatus(null);
       setOnChainReservationMessage(null);
       setOnChainReservedCount(null);
@@ -520,6 +535,12 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       const savedDescription =
         toMultilineText(loadedCollectionPage?.description) ||
         toMultilineText(loadedCollectionMetadata?.description);
+      const savedDisplayPriceMode = normalizeDisplayMintPriceMode(
+        loadedCollectionPage?.displayMintPriceMode
+      );
+      const savedDisplayPrice =
+        toText(loadedCollectionPage?.displayMintPriceStx) ||
+        toText(loadedCollectionMetadata?.mintPriceStx);
 
       setCollection(loadedCollection);
       setAssets(loadedAssets);
@@ -527,6 +548,8 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       setSelectedCoverAssetId(savedAssetId);
       setInscribedCoverUrl(savedUrl);
       setCollectionDescriptionInput(savedDescription);
+      setDisplayMintPriceMode(savedDisplayPriceMode);
+      setDisplayMintPriceInput(savedDisplayPrice);
       setReadiness({
         loading: false,
         contractConnected: !!loadedCollection.contract_address,
@@ -539,6 +562,8 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       setCollection(null);
       setAssets([]);
       setCollectionDescriptionInput('');
+      setDisplayMintPriceMode('on-chain');
+      setDisplayMintPriceInput('');
       setOnChainReservationStatus(null);
       setOnChainReservedCount(null);
       setReadiness({
@@ -746,6 +771,83 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
     }
   };
 
+  const saveDisplayMintPriceSettings = async () => {
+    const normalizedCollectionId = collectionId.trim();
+    if (!normalizedCollectionId) {
+      setDisplayPriceMessage('Collection id required.');
+      return;
+    }
+    if (!collection) {
+      setDisplayPriceMessage('Load collection details before saving display mint price.');
+      return;
+    }
+
+    const mode = displayMintPriceMode;
+    const normalizedDisplayPrice = displayMintPriceInput.trim();
+    if (mode === 'override') {
+      const parsedPrice = parseStxToMicroStx(normalizedDisplayPrice);
+      if (parsedPrice === null) {
+        setDisplayPriceMessage(
+          'Display mint price must be a valid STX amount (up to 6 decimals).'
+        );
+        return;
+      }
+    }
+
+    const currentMetadata = toRecord(collection.metadata) ?? {};
+    const currentCollectionPage = toRecord(currentMetadata.collectionPage) ?? {};
+    const nextCollectionPage: Record<string, unknown> = {
+      ...currentCollectionPage,
+      displayMintPriceMode: mode,
+      updatedAt: new Date().toISOString()
+    };
+    if (mode === 'override') {
+      nextCollectionPage.displayMintPriceStx = normalizedDisplayPrice;
+    } else if ('displayMintPriceStx' in nextCollectionPage) {
+      delete nextCollectionPage.displayMintPriceStx;
+    }
+
+    const nextMetadata = {
+      ...currentMetadata,
+      collectionPage: nextCollectionPage
+    };
+
+    setDisplayPriceSaving(true);
+    setDisplayPriceMessage('Saving display mint price settings...');
+    try {
+      const response = await fetch(
+        `/collections/${encodeURIComponent(normalizedCollectionId)}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ metadata: nextMetadata })
+        }
+      );
+      const updated = await parseManageJsonResponse<CollectionRecord>(
+        response,
+        'Collection update'
+      );
+      const updatedMetadata = toRecord(updated.metadata) ?? null;
+      const updatedCollectionPage = toRecord(updatedMetadata?.collectionPage) ?? null;
+      const updatedCollectionMetadata = toRecord(updatedMetadata?.collection) ?? null;
+      setCollection(updated);
+      setDisplayMintPriceMode(
+        normalizeDisplayMintPriceMode(updatedCollectionPage?.displayMintPriceMode)
+      );
+      setDisplayMintPriceInput(
+        toText(updatedCollectionPage?.displayMintPriceStx) ||
+          toText(updatedCollectionMetadata?.mintPriceStx)
+      );
+      setDisplayPriceMessage('Display mint price settings saved.');
+    } catch (error) {
+      setDisplayPriceMessage(
+        toManageApiErrorMessage(error, 'Unable to save display mint price settings.')
+      );
+    } finally {
+      setDisplayPriceSaving(false);
+    }
+  };
+
   useEffect(() => {
     void loadReadiness();
   }, [collectionId]);
@@ -758,6 +860,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
     setMessage(null);
     setCoverMessage(null);
     setDescriptionMessage(null);
+    setDisplayPriceMessage(null);
     setLiveLinkMessage(null);
     setOnChainReservationMessage(null);
     setOnChainReservationStatus(null);
@@ -920,6 +1023,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
             setCollectionId(event.target.value);
             setMessage(null);
             setCoverMessage(null);
+            setDisplayPriceMessage(null);
             setLiveLinkMessage(null);
             setOnChainReservationMessage(null);
             setOnChainReservationStatus(null);
@@ -1248,6 +1352,48 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
           </span>
         </label>
 
+        <label className="field">
+          <span className="field__label info-label">
+            Display mint price mode
+            <InfoTooltip text="Optional display-only override. This does not change on-chain mint price or wallet post-condition calculations." />
+          </span>
+          <select
+            className="select"
+            value={displayMintPriceMode}
+            onChange={(event) => {
+              const nextMode = normalizeDisplayMintPriceMode(event.target.value);
+              setDisplayMintPriceMode(nextMode);
+              setDisplayPriceMessage(null);
+            }}
+          >
+            <option value="on-chain">Use on-chain mint price</option>
+            <option value="override">Override displayed mint price</option>
+          </select>
+          <span className="field__hint">
+            Use override when you intentionally want the public/live UI price to differ from
+            on-chain payout price.
+          </span>
+        </label>
+
+        {displayMintPriceMode === 'override' && (
+          <label className="field">
+            <span className="field__label info-label">
+              Displayed mint price (STX)
+              <InfoTooltip text="Shown on public and live mint pages. Keep this aligned with your intended collector-facing price." />
+            </span>
+            <input
+              className="input"
+              inputMode="decimal"
+              placeholder="1"
+              value={displayMintPriceInput}
+              onChange={(event) => {
+                setDisplayMintPriceInput(event.target.value);
+                setDisplayPriceMessage(null);
+              }}
+            />
+          </label>
+        )}
+
         <div className="mint-actions">
           <button
             className="button button--ghost button--mini"
@@ -1265,9 +1411,18 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
           >
             {descriptionSaving ? 'Saving...' : 'Save description'}
           </button>
+          <button
+            className="button button--ghost button--mini"
+            type="button"
+            onClick={() => void saveDisplayMintPriceSettings()}
+            disabled={displayPriceSaving || !collectionId.trim()}
+          >
+            {displayPriceSaving ? 'Saving...' : 'Save display price'}
+          </button>
         </div>
         {coverMessage && <p className="meta-value">{coverMessage}</p>}
         {descriptionMessage && <p className="meta-value">{descriptionMessage}</p>}
+        {displayPriceMessage && <p className="meta-value">{displayPriceMessage}</p>}
       </div>
 
       <div className="collection-live-preview">
