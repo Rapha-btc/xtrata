@@ -66,10 +66,21 @@ type TxPayload = {
   txId: string;
 };
 
+type MintPriceUpdateContext = {
+  advertisedMintPriceMicroStx: bigint;
+  onChainMintPriceMicroStx: bigint;
+  absorptionEnabled: boolean;
+  sealProtocolFeeMicroStx: bigint;
+  feeUnitMicroStx: bigint | null;
+  expectedChunks: bigint | null;
+  feeBatches: bigint | null;
+};
+
 type BuildActionArgsResult = {
   args: ClarityValue[];
   notices: string[];
   error: string | null;
+  mintPriceUpdate: MintPriceUpdateContext | null;
 };
 
 type ActionField = {
@@ -900,6 +911,17 @@ const formatMicroStx = (value: bigint | null) => {
   return `${whole.toString()}.${fractionText} STX`;
 };
 
+const microStxToStxString = (value: bigint) => {
+  const negative = value < 0n;
+  const normalized = negative ? -value : value;
+  const whole = normalized / MICROSTX_PER_STX;
+  const fraction = (normalized % MICROSTX_PER_STX).toString().padStart(6, '0');
+  const fractionTrimmed = fraction.replace(/0+$/, '');
+  return `${negative ? '-' : ''}${whole.toString()}${
+    fractionTrimmed ? `.${fractionTrimmed}` : ''
+  }`;
+};
+
 const getActionGroups = (actions: MutableAction[]) => {
   const groups = new Map<string, MutableAction[]>();
   actions.forEach((action) => {
@@ -1465,6 +1487,7 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
   const buildActionArgs = (action: MutableAction): BuildActionArgsResult => {
     const args: ClarityValue[] = [];
     const notices: string[] = [];
+    let mintPriceUpdate: MintPriceUpdateContext | null = null;
 
     for (const field of action.fields) {
       const rawValue = actionInputs[field.key] ?? '';
@@ -1475,7 +1498,8 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
           return {
             args: [],
             notices: [],
-            error: `${field.label} must be a valid STX address.`
+            error: `${field.label} must be a valid STX address.`,
+            mintPriceUpdate: null
           };
         }
         args.push(principalCV(value));
@@ -1490,7 +1514,8 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
             notices: [],
             error: `${field.label} must be a valid whole number${
               field.allowZero ? ' (0 allowed)' : ''
-            }.`
+            }.`,
+            mintPriceUpdate: null
           };
         }
         args.push(uintCV(value));
@@ -1503,7 +1528,8 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
           return {
             args: [],
             notices: [],
-            error: `${field.label} must be a valid STX amount (up to 6 decimals).`
+            error: `${field.label} must be a valid STX amount (up to 6 decimals).`,
+            mintPriceUpdate: null
           };
         }
         if (
@@ -1516,7 +1542,8 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
             return {
               args: [],
               notices: [],
-              error: 'Expected chunks must be a whole number greater than 0.'
+              error: 'Expected chunks must be a whole number greater than 0.',
+              mintPriceUpdate: null
             };
           }
           const feeUnitMicroStx = summary?.coreFeeUnitMicroStx ?? null;
@@ -1525,7 +1552,8 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
               args: [],
               notices: [],
               error:
-                'Core fee unit is unavailable. Refresh on-chain status before using fee absorption.'
+                'Core fee unit is unavailable. Refresh on-chain status before using fee absorption.',
+              mintPriceUpdate: null
             };
           }
           const sealProtocolFee = resolveSealProtocolFeeMicroStx(
@@ -1536,7 +1564,8 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
             return {
               args: [],
               notices: [],
-              error: 'Unable to compute seal protocol fee from fee unit/chunk count.'
+              error: 'Unable to compute seal protocol fee from fee unit/chunk count.',
+              mintPriceUpdate: null
             };
           }
           if (value < sealProtocolFee) {
@@ -1544,11 +1573,22 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
               args: [],
               notices: [],
               error:
-                'Advertised seal price is lower than the protocol seal fee. Increase advertised price or lower expected chunks.'
+                'Advertised seal price is lower than the protocol seal fee. Increase advertised price or lower expected chunks.',
+              mintPriceUpdate: null
             };
           }
           const advertised = value;
           value = advertised - sealProtocolFee;
+          const feeBatches = (chunkCount + CHUNK_BATCH_SIZE - 1n) / CHUNK_BATCH_SIZE;
+          mintPriceUpdate = {
+            advertisedMintPriceMicroStx: advertised,
+            onChainMintPriceMicroStx: value,
+            absorptionEnabled: true,
+            sealProtocolFeeMicroStx: sealProtocolFee,
+            feeUnitMicroStx,
+            expectedChunks: chunkCount,
+            feeBatches
+          };
           notices.push(
             `Fee absorption enabled: advertised seal ${formatMicroStx(
               advertised
@@ -1556,6 +1596,19 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
               sealProtocolFee
             )} = on-chain mint price ${formatMicroStx(value)}. Begin anti-spam fee remains separate.`
           );
+        } else if (
+          action.functionName === 'set-mint-price' &&
+          field.key === 'amount'
+        ) {
+          mintPriceUpdate = {
+            advertisedMintPriceMicroStx: value,
+            onChainMintPriceMicroStx: value,
+            absorptionEnabled: false,
+            sealProtocolFeeMicroStx: 0n,
+            feeUnitMicroStx: summary?.coreFeeUnitMicroStx ?? null,
+            expectedChunks: null,
+            feeBatches: null
+          };
         }
         args.push(uintCV(value));
         continue;
@@ -1573,7 +1626,8 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
           return {
             args: [],
             notices: [],
-            error: `${field.label} cannot be empty.`
+            error: `${field.label} cannot be empty.`,
+            mintPriceUpdate: null
           };
         }
         if (
@@ -1583,11 +1637,17 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
           return {
             args: [],
             notices: [],
-            error: `${field.label} must be ${field.maxLength} characters or fewer.`
+            error: `${field.label} must be ${field.maxLength} characters or fewer.`,
+            mintPriceUpdate: null
           };
         }
         if (!ASCII_PATTERN.test(value)) {
-          return { args: [], notices: [], error: `${field.label} must be ASCII text.` };
+          return {
+            args: [],
+            notices: [],
+            error: `${field.label} must be ASCII text.`,
+            mintPriceUpdate: null
+          };
         }
         args.push(stringAsciiCV(value));
         continue;
@@ -1599,7 +1659,8 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
           return {
             args: [],
             notices: [],
-            error: `${field.label} must be a 64-char hex hash (optional 0x).`
+            error: `${field.label} must be a 64-char hex hash (optional 0x).`,
+            mintPriceUpdate: null
           };
         }
         args.push(hashHexToBufferCv(normalized));
@@ -1609,7 +1670,12 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
       if (field.type === 'uintList') {
         const parsed = parseUintList(rawValue, field.maxItems ?? 50);
         if (parsed.errors.length > 0) {
-          return { args: [], notices: [], error: parsed.errors.join(' ') };
+          return {
+            args: [],
+            notices: [],
+            error: parsed.errors.join(' '),
+            mintPriceUpdate: null
+          };
         }
         args.push(listCV(parsed.values.map((value) => uintCV(value))));
         continue;
@@ -1618,7 +1684,12 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
       if (field.type === 'allowlistBatch') {
         const parsed = parseAllowlistBatch(rawValue, field.maxItems ?? 200);
         if (parsed.errors.length > 0) {
-          return { args: [], notices: [], error: parsed.errors.join(' ') };
+          return {
+            args: [],
+            notices: [],
+            error: parsed.errors.join(' '),
+            mintPriceUpdate: null
+          };
         }
         args.push(
           listCV(
@@ -1636,7 +1707,12 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
       if (field.type === 'registeredUriBatch') {
         const parsed = parseRegisteredUriBatch(rawValue, field.maxItems ?? 200);
         if (parsed.errors.length > 0) {
-          return { args: [], notices: [], error: parsed.errors.join(' ') };
+          return {
+            args: [],
+            notices: [],
+            error: parsed.errors.join(' '),
+            mintPriceUpdate: null
+          };
         }
         args.push(
           listCV(
@@ -1651,7 +1727,81 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
       }
     }
 
-    return { args, notices, error: null as string | null };
+    return { args, notices, error: null as string | null, mintPriceUpdate };
+  };
+
+  const syncMintPriceMetadata = async (update: MintPriceUpdateContext) => {
+    const normalizedCollectionId = collectionId.trim();
+    if (!normalizedCollectionId) {
+      throw new Error('Collection id is required to sync display metadata.');
+    }
+
+    const currentMetadata = metadataRecord ? { ...metadataRecord } : {};
+    const currentCollection = toRecord(currentMetadata.collection) ?? {};
+    const currentCollectionPage = toRecord(currentMetadata.collectionPage) ?? {};
+    const now = new Date().toISOString();
+    const advertisedMintPriceStx = microStxToStxString(
+      update.advertisedMintPriceMicroStx
+    );
+    const onChainMintPriceStx = microStxToStxString(update.onChainMintPriceMicroStx);
+
+    const nextPriceAbsorption: Record<string, unknown> = {
+      ...(toRecord(currentCollection.priceAbsorption) ?? {}),
+      enabled: update.absorptionEnabled,
+      model: update.absorptionEnabled
+        ? 'advertised-seal-price-minus-protocol-seal-fee'
+        : 'disabled',
+      beginFeeBehavior: 'separate-anti-spam-fee',
+      advertisedMintPriceStx,
+      advertisedMintPriceMicroStx:
+        update.advertisedMintPriceMicroStx.toString(),
+      onChainMintPriceStx,
+      onChainMintPriceMicroStx: update.onChainMintPriceMicroStx.toString(),
+      sealProtocolFeeMicroStx: update.sealProtocolFeeMicroStx.toString(),
+      feeUnitMicroStx:
+        update.feeUnitMicroStx !== null ? update.feeUnitMicroStx.toString() : null,
+      expectedChunks:
+        update.expectedChunks !== null ? update.expectedChunks.toString() : null,
+      feeBatches: update.feeBatches !== null ? update.feeBatches.toString() : null,
+      updatedAt: now
+    };
+
+    const nextCollection: Record<string, unknown> = {
+      ...currentCollection,
+      mintPriceStx: advertisedMintPriceStx,
+      mintPriceMicroStx: update.advertisedMintPriceMicroStx.toString(),
+      onChainMintPriceStx,
+      onChainMintPriceMicroStx: update.onChainMintPriceMicroStx.toString(),
+      priceAbsorption: nextPriceAbsorption
+    };
+
+    const nextCollectionPage: Record<string, unknown> = {
+      ...currentCollectionPage,
+      displayMintPriceMode: update.absorptionEnabled ? 'override' : 'on-chain',
+      updatedAt: now
+    };
+    if (update.absorptionEnabled) {
+      nextCollectionPage.displayMintPriceStx = advertisedMintPriceStx;
+    } else if ('displayMintPriceStx' in nextCollectionPage) {
+      delete nextCollectionPage.displayMintPriceStx;
+    }
+
+    const nextMetadata = {
+      ...currentMetadata,
+      collection: nextCollection,
+      collectionPage: nextCollectionPage
+    };
+
+    const response = await fetch(`/collections/${encodeURIComponent(normalizedCollectionId)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ metadata: nextMetadata })
+    });
+    const payload = await parseManageJsonResponse<CollectionPayload>(
+      response,
+      'Collection metadata sync'
+    );
+    setMetadata(toRecord(payload.metadata));
   };
 
   const runAction = async () => {
@@ -1676,10 +1826,26 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
         functionName: selectedAction.functionName,
         functionArgs: parsed.args
       });
+      let metadataSyncNote = '';
+      if (
+        selectedAction.functionName === 'set-mint-price' &&
+        parsed.mintPriceUpdate
+      ) {
+        try {
+          await syncMintPriceMetadata(parsed.mintPriceUpdate);
+          metadataSyncNote =
+            ' Draft metadata synced for live/public display price.';
+        } catch (error) {
+          metadataSyncNote = ` Draft metadata sync failed: ${toManageApiErrorMessage(
+            error,
+            'unknown error'
+          )}.`;
+        }
+      }
       setActionMessage(
         `${parsed.notices.join(' ')}${parsed.notices.length > 0 ? ' ' : ''}${
           selectedAction.label
-        } submitted: ${payload.txId}. Refresh status after confirmation.`
+        } submitted: ${payload.txId}.${metadataSyncNote} Refresh status after confirmation.`
       );
     } catch (error) {
       setActionMessage(toManageApiErrorMessage(error, `${selectedAction.label} failed`));

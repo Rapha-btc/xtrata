@@ -44,7 +44,21 @@ describe('collection display mint price helpers', () => {
     expect(resolved.microStx).toBe(1_000_000n);
   });
 
-  it('respects explicit on-chain mode and skips absorbed metadata fallback', () => {
+  it('uses explicit absorbed advertised price metadata when present', () => {
+    const resolved = resolveMetadataDisplayMintPrice({
+      collection: {
+        mintPriceMicroStx: '800000',
+        priceAbsorption: {
+          enabled: true,
+          advertisedMintPriceMicroStx: '1000000'
+        }
+      }
+    });
+    expect(resolved.source).toBe('price-absorption');
+    expect(resolved.microStx).toBe(1_000_000n);
+  });
+
+  it('keeps absorbed display price even if collection-page mode is on-chain', () => {
     const resolved = resolveMetadataDisplayMintPrice({
       collection: {
         mintPriceMicroStx: '1000000',
@@ -56,7 +70,7 @@ describe('collection display mint price helpers', () => {
         displayMintPriceMode: 'on-chain'
       }
     });
-    expect(resolved.source).toBe('none');
-    expect(resolved.microStx).toBeNull();
+    expect(resolved.source).toBe('price-absorption');
+    expect(resolved.microStx).toBe(1_000_000n);
   });
 });

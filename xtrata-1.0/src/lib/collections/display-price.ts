@@ -71,12 +71,43 @@ export type MetadataDisplayMintPrice = {
   source: 'collection-page-override' | 'price-absorption' | 'none';
 };
 
+const resolveAbsorbedAdvertisedMintPrice = (
+  collection: Record<string, unknown> | null
+) => {
+  const priceAbsorption = toRecord(collection?.priceAbsorption);
+  if (toBoolean(priceAbsorption?.enabled) !== true) {
+    return null;
+  }
+
+  const absorbedAdvertisedMicroStx = toBigIntOrNull(
+    priceAbsorption?.advertisedMintPriceMicroStx
+  );
+  if (absorbedAdvertisedMicroStx !== null && absorbedAdvertisedMicroStx >= 0n) {
+    return absorbedAdvertisedMicroStx;
+  }
+
+  const absorbedAdvertisedStx = parseStxToMicroStx(
+    priceAbsorption?.advertisedMintPriceStx
+  );
+  if (absorbedAdvertisedStx !== null) {
+    return absorbedAdvertisedStx;
+  }
+
+  const absorbedCollectionMicroStx = toBigIntOrNull(collection?.mintPriceMicroStx);
+  if (absorbedCollectionMicroStx !== null && absorbedCollectionMicroStx >= 0n) {
+    return absorbedCollectionMicroStx;
+  }
+
+  return parseStxToMicroStx(collection?.mintPriceStx);
+};
+
 export const resolveMetadataDisplayMintPrice = (
   metadata: unknown
 ): MetadataDisplayMintPrice => {
   const metadataRecord = toRecord(metadata);
   const collection = toRecord(metadataRecord?.collection);
   const collectionPage = toRecord(metadataRecord?.collectionPage);
+  const absorbedDisplayMicroStx = resolveAbsorbedAdvertisedMintPrice(collection);
 
   const mode = toText(collectionPage?.displayMintPriceMode).toLowerCase();
   if (mode === 'override') {
@@ -95,28 +126,23 @@ export const resolveMetadataDisplayMintPrice = (
     };
   }
   if (mode === 'on-chain') {
+    if (absorbedDisplayMicroStx !== null) {
+      return {
+        microStx: absorbedDisplayMicroStx,
+        source: 'price-absorption'
+      };
+    }
     return {
       microStx: null,
       source: 'none'
     };
   }
 
-  const priceAbsorption = toRecord(collection?.priceAbsorption);
-  if (toBoolean(priceAbsorption?.enabled) === true) {
-    const absorbedMicroStx = toBigIntOrNull(collection?.mintPriceMicroStx);
-    if (absorbedMicroStx !== null && absorbedMicroStx >= 0n) {
-      return {
-        microStx: absorbedMicroStx,
-        source: 'price-absorption'
-      };
-    }
-    const absorbedStx = parseStxToMicroStx(collection?.mintPriceStx);
-    if (absorbedStx !== null) {
-      return {
-        microStx: absorbedStx,
-        source: 'price-absorption'
-      };
-    }
+  if (absorbedDisplayMicroStx !== null) {
+    return {
+      microStx: absorbedDisplayMicroStx,
+      source: 'price-absorption'
+    };
   }
 
   return {
