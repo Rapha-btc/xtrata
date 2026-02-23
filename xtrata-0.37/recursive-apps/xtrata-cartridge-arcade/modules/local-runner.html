@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Xtrata Arcade Local Runner</title>
+  <style>
+    :root {
+      --bg: #081018;
+      --panel: #101b27;
+      --border: #30475f;
+      --text: #d8e8fa;
+      --muted: #99b0c7;
+      --accent: #52b1ff;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      box-sizing: border-box;
+      font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+      background: radial-gradient(circle at 18% -10%, #1a2f43 0%, #081018 62%);
+      color: var(--text);
+      padding: 14px;
+    }
+    .layout {
+      max-width: 980px;
+      margin: 0 auto;
+      display: grid;
+      gap: 12px;
+    }
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: linear-gradient(170deg, #101b27 0%, #0c151f 100%);
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.2);
+      padding: 12px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.24rem;
+      letter-spacing: 0.04em;
+    }
+    p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      line-height: 1.42;
+      font-size: 0.92rem;
+    }
+    ul {
+      margin: 10px 0 0;
+      padding-left: 18px;
+      color: #bfd6ee;
+      font-size: 0.88rem;
+      line-height: 1.4;
+    }
+    code {
+      color: #d6ebff;
+      background: #132131;
+      padding: 1px 5px;
+      border-radius: 4px;
+      border: 1px solid #29425d;
+      font-size: 0.84rem;
+    }
+    #arcade-root {
+      min-height: 440px;
+    }
+    .log-head {
+      margin: 0 0 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-size: 0.84rem;
+      color: #a9bfda;
+    }
+    pre {
+      margin: 0;
+      max-height: 260px;
+      overflow: auto;
+      border: 1px solid #243749;
+      border-radius: 8px;
+      background: #0a131d;
+      color: #a8c6e4;
+      padding: 10px;
+      font: 12px/1.42 "IBM Plex Mono", "Menlo", monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+  </style>
+</head>
+<body>
+  <main class="layout">
+    <section class="panel">
+      <h1>Xtrata Arcade Local Runner</h1>
+      <p>
+        This bypasses all on-chain reads and loads modules from local files in this folder.
+        Use this to test gameplay and runtime behavior before inscription.
+      </p>
+      <ul>
+        <li>Run from Vite dev server (not <code>file://</code>), e.g. <code>npm run dev</code>.</li>
+        <li>Open <code>/modules/local-runner.html</code>.</li>
+        <li>Edit local files and refresh to test changes.</li>
+      </ul>
+    </section>
+
+    <section class="panel" id="arcade-root">Booting local runner...</section>
+
+    <section class="panel">
+      <h2 class="log-head">Local Loader Log</h2>
+      <pre id="loader-log"></pre>
+    </section>
+  </main>
+
+  <script type="module">
+    import { bootArcade } from './runtime.js';
+
+    const rootEl = document.getElementById('arcade-root');
+    const logEl = document.getElementById('loader-log');
+    const startMs = Date.now();
+
+    const LOCAL_MANIFEST = {
+      schema: 'xtrata-cartridge-manifest@1',
+      arcadeId: 'xtrata-cartridge-arcade-local',
+      arcadeTitle: 'Xtrata Cartridge Arcade (Local)',
+      arcadeSubtitle: 'Filesystem test harness, no on-chain reads.',
+      defaultCartridge: 'orb-heist-v1',
+      cartridges: [
+        {
+          id: 'orb-heist-v1',
+          title: 'Orb Heist',
+          description: 'Infiltrate vaults, recover orbs, and evade sentries.',
+          version: '1.0.0-local',
+          logicModuleId: 9101,
+          assetsModuleId: 9102
+        },
+        {
+          id: 'signal-sprint-v1',
+          title: 'Signal Sprint',
+          description: 'Real-time lane runner through firewall traffic and packet pickups.',
+          version: '1.0.0-local',
+          logicModuleId: 9201,
+          assetsModuleId: 9202
+        },
+        {
+          id: 'glyph-link-v1',
+          title: 'Glyph Link',
+          description: 'Multi-deck memory puzzle with escalating board size.',
+          version: '1.0.0-local',
+          logicModuleId: 9301,
+          assetsModuleId: 9302
+        },
+        {
+          id: 'reactor-warden-v1',
+          title: 'Reactor Warden',
+          description: 'Turn-based core stabilization under escalating thermal events.',
+          version: '1.0.0-local',
+          logicModuleId: 9401,
+          assetsModuleId: 9402
+        }
+      ]
+    };
+
+    const LOCAL_MODULES = {
+      9101: './orb-heist.logic.js',
+      9102: './orb-heist.assets.json',
+      9201: './cartridges/signal-sprint.logic.js',
+      9202: './cartridges/signal-sprint.assets.json',
+      9301: './cartridges/glyph-link.logic.js',
+      9302: './cartridges/glyph-link.assets.json',
+      9401: './cartridges/reactor-warden.logic.js',
+      9402: './cartridges/reactor-warden.assets.json'
+    };
+
+    const moduleCache = new Map();
+
+    function elapsedMs() {
+      return String(Date.now() - startMs).padStart(5, ' ');
+    }
+
+    function log(line) {
+      const message = `[+${elapsedMs()}ms] ${line}`;
+      console.log(message);
+      if (logEl) {
+        logEl.textContent += `${message}\n`;
+      }
+    }
+
+    async function loadLocalModule(moduleId, label) {
+      const id = Number(moduleId);
+      if (!Number.isInteger(id) || id <= 0) {
+        throw new Error(`Invalid local module id: ${moduleId}`);
+      }
+
+      if (moduleCache.has(id)) {
+        log(`cache hit ${id} (${label})`);
+        return moduleCache.get(id);
+      }
+
+      const url = LOCAL_MODULES[id];
+      if (!url) {
+        throw new Error(`No local file mapped for module ${id} (${label})`);
+      }
+
+      const response = await fetch(url, { cache: 'no-store' });
+      if (!response.ok) {
+        throw new Error(`Failed to load ${url}: HTTP ${response.status}`);
+      }
+
+      const text = await response.text();
+      const bytes = new TextEncoder().encode(text).length;
+      const payload = {
+        id,
+        label,
+        text,
+        bytes,
+        chunks: 1,
+        network: 'local'
+      };
+
+      moduleCache.set(id, payload);
+      log(`loaded module ${id} from ${url} (${bytes} bytes)`);
+      return payload;
+    }
+
+    async function main() {
+      log('starting local runner');
+      if (rootEl) {
+        rootEl.textContent = 'Loading local runtime and cartridge modules...';
+      }
+
+      await bootArcade({
+        root: rootEl,
+        manifest: LOCAL_MANIFEST,
+        resolveModuleSource: loadLocalModule,
+        log,
+        provenance: {
+          contractId: 'local://filesystem',
+          runtimeModuleId: 'runtime.js',
+          manifestModuleId: 'inline-manifest',
+          declaredDependencyIds: Object.keys(LOCAL_MODULES).map((id) => Number(id))
+        }
+      });
+
+      log('local runner ready');
+    }
+
+    main().catch((error) => {
+      const message = error && error.message ? error.message : String(error);
+      log(`local runner failed: ${message}`);
+      if (rootEl) {
+        rootEl.innerHTML = `<div style="color:#ffb8b8;font-weight:600">Local runner error: ${message}</div>`;
+      }
+    });
+  </script>
+</body>
+</html>

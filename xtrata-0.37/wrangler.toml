@@ -1,0 +1,12 @@
+name = "xtrata"
+compatibility_date = "2026-02-14"
+pages_build_output_dir = "dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "xtrata-manage"
+database_id = "7d7cf4b8-bc72-41b2-9eea-cc4af9aea54b"
+
+[[r2_buckets]]
+binding = "COLLECTION_ASSETS"
+bucket_name = "xtrata-manage-assets"
