@@ -22,6 +22,7 @@ type CollectionReadiness = {
 
 type CollectionListPanelProps = {
   activeCollectionId?: string;
+  refreshKey?: number;
   onSelectCollection?: (collection: {
     id: string;
     label: string;
@@ -95,6 +96,13 @@ export default function CollectionListPanel(props: CollectionListPanelProps) {
   useEffect(() => {
     void loadCollections(showArchived);
   }, [loadCollections, showArchived]);
+
+  useEffect(() => {
+    if (!props.refreshKey) {
+      return;
+    }
+    void loadCollections(showArchived);
+  }, [props.refreshKey, loadCollections, showArchived]);
 
   const archiveCollection = useCallback(
     async (collection: CollectionRecord) => {

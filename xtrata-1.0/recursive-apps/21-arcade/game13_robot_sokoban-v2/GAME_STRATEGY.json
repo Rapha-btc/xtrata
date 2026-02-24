@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "gameKey": "game13_robot_sokoban",
+  "gameId": "robot_sokoban",
+  "title": "Robot Sokoban",
+  "genreTag": "Puzzle",
+  "archetype": "puzzle",
+  "workspaceDir": "game13_robot_sokoban-v2",
+  "runtime": {
+    "file": "game13_robot_sokoban.js",
+    "version": "v1"
+  },
+  "reviewStatus": "approved",
+  "reviewer": "codex",
+  "reviewedAt": "2026-02-20T15:31:22.091Z",
+  "scaleGoal": "Scale puzzle depth and board variation while preserving deterministic solvability and clear player feedback.",
+  "iterationLanes": [
+    "puzzle-authoring",
+    "difficulty-curation",
+    "hint-systems",
+    "state-management",
+    "performance"
+  ],
+  "testFocus": [
+    "solver-validity",
+    "difficulty-regressions",
+    "undo-redo-integrity",
+    "state-reset",
+    "scoring-rules"
+  ],
+  "notes": [
+    "Approved archetype strategy for Robot Sokoban.",
+    "Update this strategy when core loop, progression model, or scoring rules change.",
+    "Before promotion, run strict review for game13_robot_sokoban and relevant game tests.",
+    "Add a workspace tests/run.mjs suite before next production promotion."
+  ],
+  "gameSpecificTargets": [
+    "Introduce interactive tile/device mechanics in later stages.",
+    "Expand level archetypes with clean teach-test-master pacing.",
+    "Strengthen undo/restart ergonomics for rapid experimentation."
+  ],
+  "approvedPlan": {
+    "summary": "Approved puzzle development strategy for Robot Sokoban.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "name": "Core Gameplay Systems",
+        "objective": "Extract core puzzle rules and state transitions into composable modules.",
+        "deliverables": [
+          "Modularized runtime subsystems for the core loop.",
+          "Behavior parity verification against current production baseline.",
+          "Targeted unit/regression tests for extracted systems."
+        ],
+        "exitCriteria": [
+          "Core loop parity confirmed in seeded/manual runs.",
+          "No scoring or progression regressions.",
+          "All Stage 1 tests passing in CI/local runner."
+        ]
+      },
+      {
+        "id": "stage-2",
+        "name": "Content and Presentation Expansion",
+        "objective": "Expand board mechanics, progression ramps, and reward loops with clarity-first UX.",
+        "deliverables": [
+          "New mechanics/content variants aligned to archetype.",
+          "Improved readability and UX feedback for new systems.",
+          "Balance pass for rewards, upgrades, and challenge pacing."
+        ],
+        "exitCriteria": [
+          "Content additions validated against difficulty targets.",
+          "No readability regressions under peak gameplay load.",
+          "Mode-specific smoke tests passing."
+        ]
+      },
+      {
+        "id": "stage-3",
+        "name": "Optimization and Quality Hardening",
+        "objective": "Add solver-backed regression suites and optimize heavy board states.",
+        "deliverables": [
+          "Performance optimization of hot loops and allocations.",
+          "Expanded automated regression and stress suites.",
+          "Release candidate checklist with rollback safety."
+        ],
+        "exitCriteria": [
+          "Performance budgets met for target hardware/browser matrix.",
+          "Regression suite stable across repeated runs.",
+          "Promotion checklist completed without blockers."
+        ]
+      }
+    ],
+    "qaGates": {
+      "requiredCommands": [
+        "npm run arcade:strategy:review -- --game game13_robot_sokoban --strict",
+        "node --check recursive-apps/21-arcade/games/game13_robot_sokoban.js"
+      ],
+      "manualChecks": [
+        "Launch -> playthrough -> game over -> restart cycle",
+        "Score/leaderboard integrity under repeated sessions",
+        "State cleanup after disconnect/reconnect and rerun"
+      ]
+    },
+    "successMetrics": [
+      "All shipped puzzle seeds remain solvable",
+      "No invalid board states after 1000 randomized moves",
+      "Hint and scoring systems remain deterministic"
+    ]
+  }
+}

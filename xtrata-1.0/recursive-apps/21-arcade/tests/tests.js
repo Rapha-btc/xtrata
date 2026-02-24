@@ -138,127 +138,253 @@ var ArcadeTests = (function(){
   async function highScoreTests(){
     var gameId = 'test_hs_game';
     var mode = 'score';
+    var boardState = {};
+    var captured = null;
 
-    /* Clear any existing test data */
+    function bkey(id, m){ return id + '_' + m; }
+    function clone(list){
+      return (list || []).map(function(item){
+        return {
+          rank: item.rank,
+          name: item.name,
+          score: item.score,
+          updatedAt: item.updatedAt || 0,
+          player: item.player || null
+        };
+      });
+    }
+
     try {
-      var data = JSON.parse(localStorage.getItem('retro_arcade_scores') || '{}');
-      delete data[gameId + '_score'];
-      localStorage.setItem('retro_arcade_scores', JSON.stringify(data));
+      localStorage.removeItem('retro_arcade_scores');
+      localStorage.removeItem('retro_arcade_personal_bests');
     } catch(e){}
 
-    /* Test 1: Empty leaderboard */
-    try {
-      var top = HighScores.getTop10(gameId, mode);
-      TestUtils.assertEqual(top.length, 0, 'Empty leaderboard');
-      log('HS: Empty leaderboard', true, 'Returns empty array');
-    } catch(e) { log('HS: Empty leaderboard', false, e.message); }
+    boardState[bkey(gameId, mode)] = clone([
+      { rank: 1, name: 'AAA', score: 1000, player: 'P1' },
+      { rank: 2, name: 'BBB', score: 800, player: 'P2' },
+      { rank: 3, name: 'CCC', score: 700, player: 'P3' }
+    ]);
+    boardState[bkey('test_hs_time', 'time')] = clone([
+      { rank: 1, name: 'FAST', score: 3000, player: 'T1' },
+      { rank: 2, name: 'GOOD', score: 4500, player: 'T2' },
+      { rank: 3, name: 'SLOW', score: 7000, player: 'T3' }
+    ]);
 
-    /* Test 2: Add entries and verify ordering */
-    try {
-      var scores = [100, 500, 300, 800, 200, 900, 150, 750, 400, 600, 50, 1000];
-      scores.forEach(function(s){
-        HighScores._addEntry(gameId, mode, 'TST', s);
-      });
-      var top = HighScores.getTop10(gameId, mode);
-      TestUtils.assertEqual(top.length, 10, 'Should have max 10 entries');
-      /* Verify descending order */
-      for(var i = 1; i < top.length; i++){
-        TestUtils.assertTrue(top[i-1].score >= top[i].score, 'Scores should be descending');
+    HighScores.configureOnChain({
+      enabled: true,
+      network: 'testnet',
+      contractAddress: 'STTESTADDRESS0000000000000000000000000',
+      contractName: 'xtrata-arcade-scores-v1-0',
+      functionName: 'submit-score',
+      leaderboardFunctionName: 'get-top10',
+      minRank: 10
+    });
+
+    HighScores.setOnChainLeaderboardFetcher(function(payload){
+      return Promise.resolve(clone(boardState[bkey(payload.gameId, payload.mode)] || []));
+    });
+
+    HighScores.setOnChainSubmitter(function(payload){
+      captured = payload;
+      var key = bkey(payload.gameId, payload.mode);
+      var current = clone(boardState[key] || []);
+      var i;
+      for(i = current.length - 1; i >= 0; i--){
+        if(current[i].player === 'SIM_PLAYER'){
+          current.splice(i, 1);
+        }
       }
+      var insertAt = current.length;
+      for(i = 0; i < current.length; i++){
+        if(payload.mode === 'time'){
+          if(payload.score < current[i].score){ insertAt = i; break; }
+        } else {
+          if(payload.score > current[i].score){ insertAt = i; break; }
+        }
+      }
+      current.splice(insertAt, 0, {
+        name: payload.playerName,
+        score: payload.score,
+        player: 'SIM_PLAYER'
+      });
+      current = current.slice(0, 10);
+      for(i = 0; i < current.length; i++){ current[i].rank = i + 1; }
+      boardState[key] = current;
+      return Promise.resolve({ txId: '0xabc123' });
+    });
+
+    /* Test 1: Empty on-chain leaderboard */
+    try {
+      var empty = await HighScores.fetchTop10('empty_game', 'score', { force: true });
+      TestUtils.assertEqual(empty.length, 0, 'Empty chain leaderboard should return []');
+      log('HS: Empty on-chain leaderboard', true, 'Returns empty array');
+    } catch(e) { log('HS: Empty on-chain leaderboard', false, e.message); }
+
+    /* Test 2: Fetch ordering (score mode) */
+    try {
+      var top = await HighScores.fetchTop10(gameId, mode, { force: true });
+      TestUtils.assertEqual(top.length, 3, 'Should fetch 3 score entries');
+      TestUtils.assertTrue(top[0].score >= top[1].score, 'Score board should be descending');
       TestUtils.assertEqual(top[0].score, 1000, 'Top score should be 1000');
-      log('HS: Ordering and max 10', true, 'Top: ' + top[0].score + ', Count: ' + top.length);
-    } catch(e) { log('HS: Ordering and max 10', false, e.message); }
+      log('HS: Score ordering', true, 'Top score from chain is ' + top[0].score);
+    } catch(e) { log('HS: Score ordering', false, e.message); }
 
-    /* Test 3: Qualifying score check */
+    /* Test 3: Fetch ordering (time mode) */
     try {
-      var qualifies = HighScores._qualifies(gameId, mode, 999);
-      TestUtils.assertTrue(qualifies, '999 should qualify (beats some entries)');
-      var notQualifies = HighScores._qualifies(gameId, mode, 10);
-      TestUtils.assertFalse(notQualifies, '10 should not qualify');
-      log('HS: Qualification check', true, '999 qualifies, 10 does not');
-    } catch(e) { log('HS: Qualification check', false, e.message); }
+      var timeTop = await HighScores.fetchTop10('test_hs_time', 'time', { force: true });
+      TestUtils.assertEqual(timeTop.length, 3, 'Should fetch 3 time entries');
+      TestUtils.assertTrue(timeTop[0].score <= timeTop[1].score, 'Time board should be ascending');
+      TestUtils.assertEqual(timeTop[0].score, 3000, 'Best time should be lowest');
+      log('HS: Time ordering', true, 'Best time from chain is ' + timeTop[0].score);
+    } catch(e) { log('HS: Time ordering', false, e.message); }
 
-    /* Test 4: Time mode (lower is better) */
+    /* Test 4: Qualification with open slots (less than top 10 filled) */
     try {
-      var timeId = 'test_hs_time';
-      var tdata = JSON.parse(localStorage.getItem('retro_arcade_scores') || '{}');
-      delete tdata[timeId + '_time'];
-      localStorage.setItem('retro_arcade_scores', JSON.stringify(tdata));
+      var current = await HighScores.fetchTop10(gameId, mode, { force: true });
+      var qualifiesStrong = HighScores._qualifies(gameId, mode, 900, current);
+      var qualifiesWeak = HighScores._qualifies(gameId, mode, 1, current);
+      TestUtils.assertTrue(qualifiesStrong, '900 should qualify in current board');
+      TestUtils.assertTrue(qualifiesWeak, 'Any positive score should qualify while fewer than 10 slots are filled');
+      log('HS: Qualification with open slots', true, 'Open slots allow rank insertion up to #10');
+    } catch(e) { log('HS: Qualification with open slots', false, e.message); }
 
-      HighScores._addEntry(timeId, 'time', 'TST', 5000);
-      HighScores._addEntry(timeId, 'time', 'TST', 3000);
-      HighScores._addEntry(timeId, 'time', 'TST', 7000);
-      var top = HighScores.getTop10(timeId, 'time');
-      TestUtils.assertEqual(top[0].score, 3000, 'Best time should be lowest');
-      TestUtils.assertTrue(top[0].score <= top[1].score, 'Times should be ascending');
-      log('HS: Time mode ordering', true, 'Best: ' + top[0].score);
-    } catch(e) { log('HS: Time mode ordering', false, e.message); }
-
-    /* Test 5: Persistence */
+    /* Test 4b: Placeholder/invalid rows must not block open-slot ranking */
     try {
-      var stored = localStorage.getItem('retro_arcade_scores');
-      TestUtils.assertTrue(stored && stored.length > 10, 'Data should be in localStorage');
-      var parsed = JSON.parse(stored);
-      TestUtils.assertTrue(parsed[gameId + '_score'], 'Game data should exist');
-      log('HS: Persistence', true, 'Data persists in localStorage');
-    } catch(e) { log('HS: Persistence', false, e.message); }
+      var malformedBoard = [
+        { rank: 1, name: 'AAA', score: 1000, player: 'P1' },
+        { rank: 2, name: 'BBB', score: 800, player: 'P2' },
+        { rank: 3, name: '', score: 0, player: null },
+        { rank: 4, name: '', score: 0, player: null },
+        { rank: 5, name: '', score: 0, player: null },
+        { rank: 6, name: '', score: 0, player: null },
+        { rank: 7, name: '', score: 0, player: null },
+        { rank: 8, name: '', score: 0, player: null },
+        { rank: 9, name: '', score: 0, player: null },
+        { rank: 10, name: '', score: 0, player: null }
+      ];
+      var malformedRank = HighScores._computeInsertRank(malformedBoard, mode, 1);
+      TestUtils.assertEqual(malformedRank, 3, 'Malformed placeholder rows should collapse and allow rank #3');
+      TestUtils.assertTrue(HighScores._qualifies(gameId, mode, 1, malformedBoard), 'Score should qualify when only 2 valid rows exist');
+      log('HS: Placeholder rows do not block ranking', true, 'Invalid/zero rows are ignored before rank calculation');
+    } catch(e) { log('HS: Placeholder rows do not block ranking', false, e.message); }
 
-    /* Test 6: Name validation (3-12 chars) */
+    /* Test 5: Qualification threshold at rank #10 when board is full */
     try {
-      /* The name entry is interactive, so we test the addEntry directly */
-      HighScores._addEntry(gameId, mode, 'AB', 9999); /* short name gets padded in UI */
-      var top = HighScores.getTop10(gameId, mode);
-      TestUtils.assertTrue(top[0].score === 9999, 'Entry with short name should be added');
-      log('HS: Name entry', true, 'Short names accepted by addEntry');
-    } catch(e) { log('HS: Name entry', false, e.message); }
+      boardState[bkey(gameId, mode)] = clone([
+        { rank: 1, name: 'A1', score: 1000, player: 'P1' },
+        { rank: 2, name: 'A2', score: 900, player: 'P2' },
+        { rank: 3, name: 'A3', score: 800, player: 'P3' },
+        { rank: 4, name: 'A4', score: 700, player: 'P4' },
+        { rank: 5, name: 'A5', score: 600, player: 'P5' },
+        { rank: 6, name: 'A6', score: 500, player: 'P6' },
+        { rank: 7, name: 'A7', score: 400, player: 'P7' },
+        { rank: 8, name: 'A8', score: 300, player: 'P8' },
+        { rank: 9, name: 'A9', score: 200, player: 'P9' },
+        { rank: 10, name: 'A10', score: 100, player: 'P10' }
+      ]);
+      var fullScoreBoard = await HighScores.fetchTop10(gameId, mode, { force: true });
+      TestUtils.assertEqual(fullScoreBoard.length, 10, 'Full score board should have 10 entries');
+      TestUtils.assertTrue(HighScores._qualifies(gameId, mode, 101, fullScoreBoard), '101 should qualify above current #10');
+      TestUtils.assertFalse(HighScores._qualifies(gameId, mode, 100, fullScoreBoard), '100 should not qualify when equal to #10');
+      TestUtils.assertFalse(HighScores._qualifies(gameId, mode, 99, fullScoreBoard), '99 should not qualify below #10');
 
-    /* Test 7: On-chain submission bridge */
+      var fullTimeBoardInput = [
+        { rank: 1, name: 'T1', score: 100, player: 'T1' },
+        { rank: 2, name: 'T2', score: 200, player: 'T2' },
+        { rank: 3, name: 'T3', score: 300, player: 'T3' },
+        { rank: 4, name: 'T4', score: 400, player: 'T4' },
+        { rank: 5, name: 'T5', score: 500, player: 'T5' },
+        { rank: 6, name: 'T6', score: 600, player: 'T6' },
+        { rank: 7, name: 'T7', score: 700, player: 'T7' },
+        { rank: 8, name: 'T8', score: 800, player: 'T8' },
+        { rank: 9, name: 'T9', score: 900, player: 'T9' },
+        { rank: 10, name: 'T10', score: 1000, player: 'T10' }
+      ];
+      TestUtils.assertTrue(HighScores._qualifies('full_time_game', 'time', 999, fullTimeBoardInput), '999 should qualify above current #10 time');
+      TestUtils.assertFalse(HighScores._qualifies('full_time_game', 'time', 1000, fullTimeBoardInput), '1000 should not qualify when equal to #10 time');
+      TestUtils.assertFalse(HighScores._qualifies('full_time_game', 'time', 1200, fullTimeBoardInput), '1200 should not qualify below #10 time');
+      log('HS: Qualification threshold at #10', true, 'Threshold follows rank #10 when board is full');
+    } catch(e) { log('HS: Qualification threshold at #10', false, e.message); }
+
+    /* Test 6: On-chain offer rank gate is top 10 */
     try {
-      var captured = null;
+      HighScores.configureOnChain({
+        enabled: true,
+        network: 'testnet',
+        contractAddress: 'STTESTADDRESS0000000000000000000000000',
+        contractName: 'xtrata-arcade-scores-v1-3',
+        functionName: 'submit-score',
+        leaderboardFunctionName: 'get-top10',
+        minRank: 1
+      });
+      TestUtils.assertTrue(HighScores._shouldOfferOnChain(1), '#1 should be offerable');
+      TestUtils.assertTrue(HighScores._shouldOfferOnChain(3), '#3 should be offerable');
+      TestUtils.assertTrue(HighScores._shouldOfferOnChain(10), '#10 should be offerable');
+      TestUtils.assertFalse(HighScores._shouldOfferOnChain(11), '#11 should not be offerable');
+      log('HS: On-chain offer top10 gate', true, 'Offer gate is rank 1..10');
+    } catch(e) { log('HS: On-chain offer top10 gate', false, e.message); }
+
+    /* Test 7: Local storage keeps personal best only */
+    try {
+      HighScores._recordPersonalBest(gameId, mode, 500);
+      HighScores._recordPersonalBest(gameId, mode, 400);
+      HighScores._recordPersonalBest(gameId, mode, 700);
+      var best = HighScores.getBest(gameId, mode);
+      TestUtils.assertEqual(best, 700, 'Personal best should keep improved score only');
+      var pbRaw = localStorage.getItem('retro_arcade_personal_bests');
+      TestUtils.assertTrue(!!pbRaw, 'PB key should exist');
+      var legacyRaw = localStorage.getItem('retro_arcade_scores');
+      TestUtils.assertFalse(!!legacyRaw, 'Legacy local leaderboard key should not be used');
+      log('HS: Personal best storage', true, 'PB stored locally, leaderboard not local');
+    } catch(e) { log('HS: Personal best storage', false, e.message); }
+
+    /* Test 8: On-chain submission bridge + board update */
+    try {
       HighScores.configureOnChain({
         enabled: true,
         network: 'testnet',
         contractAddress: 'STTESTADDRESS0000000000000000000000000',
         contractName: 'xtrata-arcade-scores-v1-0',
         functionName: 'submit-score',
-        minRank: 10
+        leaderboardFunctionName: 'get-top10',
+        minRank: 10,
+        useDenyModePostConditions: true,
+        fallbackToAllowModeOnPostConditionFailure: false
       });
-      HighScores.setOnChainSubmitter(function(payload){
-        captured = payload;
-        return Promise.resolve({ txId: '0xabc123' });
-      });
-
       var submitResult = await HighScores.submitOnChainScore({
         gameId: gameId,
         mode: 'score',
-        score: 1234,
+        score: 1200,
         playerName: 'TST',
         rank: 1
       });
-
       TestUtils.assertTrue(!!captured, 'Submitter should receive payload');
       TestUtils.assertEqual(captured.contractName, 'xtrata-arcade-scores-v1-0', 'Contract name should pass through');
-      TestUtils.assertEqual(submitResult.txId, '0xabc123', 'submitOnChainScore should return submitter tx');
-      log('HS: On-chain bridge', true, 'Payload and response verified');
-    } catch(e) { log('HS: On-chain bridge', false, e.message); }
-    finally {
-      HighScores.setOnChainSubmitter(null);
-      HighScores.configureOnChain({
-        enabled: false,
-        contractAddress: '',
-        contractName: 'xtrata-arcade-scores-v1-0',
-        functionName: 'submit-score',
-        network: 'mainnet',
-        minRank: 10
-      });
-    }
+      TestUtils.assertTrue(captured.useDenyModePostConditions === true, 'Deny-mode post-condition config should pass through');
+      TestUtils.assertTrue(captured.fallbackToAllowModeOnPostConditionFailure === false, 'Strict post-condition fallback flag should pass through');
+      TestUtils.assertEqual(submitResult.txId, '0xabc123', 'submitOnChainScore should return tx id');
 
-    /* Cleanup test data */
+      var refreshed = await HighScores.fetchTop10(gameId, mode, { force: true });
+      TestUtils.assertEqual(refreshed[0].score, 1200, 'Refreshed chain board should include verified score');
+      log('HS: On-chain bridge', true, 'Submitter payload and refresh verified');
+    } catch(e) { log('HS: On-chain bridge', false, e.message); }
+
+    HighScores.setOnChainSubmitter(null);
+    HighScores.setOnChainLeaderboardFetcher(null);
+    HighScores.configureOnChain({
+      enabled: true,
+      contractAddress: '',
+      contractName: 'xtrata-arcade-scores-v1-0',
+      functionName: 'submit-score',
+      leaderboardFunctionName: 'get-top10',
+      network: 'mainnet',
+      apiBaseUrl: 'https://api.mainnet.hiro.so',
+      readSenderAddress: '',
+      minRank: 10
+    });
+
     try {
-      var data = JSON.parse(localStorage.getItem('retro_arcade_scores') || '{}');
-      delete data[gameId + '_score'];
-      delete data['test_hs_time_time'];
-      localStorage.setItem('retro_arcade_scores', JSON.stringify(data));
+      localStorage.removeItem('retro_arcade_personal_bests');
     } catch(e){}
   }
 

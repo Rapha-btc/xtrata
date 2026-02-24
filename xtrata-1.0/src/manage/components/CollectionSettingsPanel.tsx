@@ -20,6 +20,10 @@ import {
   toManageApiErrorMessage
 } from '../lib/api-errors';
 import { useManageWallet } from '../ManageWalletContext';
+import {
+  parseContractPrincipal,
+  resolveCollectionContractLink
+} from '../lib/contract-link';
 import InfoTooltip from './InfoTooltip';
 
 const ASCII_PATTERN = /^[\x00-\x7F]*$/;
@@ -27,8 +31,13 @@ const CONTRACT_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9-_]{0,127}$/;
 const UINT_PATTERN = /^\d+$/;
 const STX_PATTERN = /^\d+(?:\.\d{0,6})?$/;
 const MICROSTX_PER_STX = 1_000_000n;
+const CHUNK_BATCH_SIZE = 50n;
+const XTRATA_APP_ICON_DATA_URI =
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%23f97316"/><path d="M18 20h28v6H18zm0 12h28v6H18zm0 12h28v6H18z" fill="white"/></svg>';
 
 type CollectionPayload = {
+  id?: string | null;
+  slug?: string | null;
   display_name?: string | null;
   artist_address?: string | null;
   contract_address?: string | null;
@@ -44,6 +53,8 @@ type ContractSummary = {
   paused: boolean | null;
   finalized: boolean | null;
   mintPriceMicroStx: bigint | null;
+  coreContractId: string | null;
+  coreFeeUnitMicroStx: bigint | null;
 };
 
 type ContractTarget = {
@@ -53,6 +64,12 @@ type ContractTarget = {
 
 type TxPayload = {
   txId: string;
+};
+
+type BuildActionArgsResult = {
+  args: ClarityValue[];
+  notices: string[];
+  error: string | null;
 };
 
 type ActionField = {
@@ -729,6 +746,30 @@ const parseStxToMicro = (value: string, allowZero = false): bigint | null => {
   }
 };
 
+const parseUintPrimitive = (value: unknown): bigint | null => {
+  if (typeof value === 'bigint') {
+    return value >= 0n ? value : null;
+  }
+  if (typeof value === 'number' && Number.isFinite(value) && value >= 0) {
+    return BigInt(Math.floor(value));
+  }
+  if (typeof value === 'string' && UINT_PATTERN.test(value)) {
+    return BigInt(value);
+  }
+  return null;
+};
+
+const resolveSealProtocolFeeMicroStx = (
+  feeUnitMicroStx: bigint,
+  totalChunks: bigint
+) => {
+  if (feeUnitMicroStx <= 0n || totalChunks <= 0n) {
+    return null;
+  }
+  const feeBatches = (totalChunks + CHUNK_BATCH_SIZE - 1n) / CHUNK_BATCH_SIZE;
+  return feeUnitMicroStx * (1n + feeBatches);
+};
+
 const normalizeHashHex = (value: string) => {
   const trimmed = value.trim().toLowerCase();
   const normalized = trimmed.startsWith('0x') ? trimmed.slice(2) : trimmed;
@@ -941,6 +982,7 @@ type CollectionSettingsPanelProps = {
 
 export default function CollectionSettingsPanel(props: CollectionSettingsPanelProps) {
   const [collectionId, setCollectionId] = useState('');
+  const [collectionSlug, setCollectionSlug] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [artistAddress, setArtistAddress] = useState('');
   const [contractAddress, setContractAddress] = useState('');
@@ -962,6 +1004,8 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
   const [actionInputs, setActionInputs] = useState<Record<string, string>>({});
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [actionPending, setActionPending] = useState(false);
+  const [absorbSealFees, setAbsorbSealFees] = useState(false);
+  const [sealChunkCountInput, setSealChunkCountInput] = useState('1');
 
   const { walletSession, walletAdapter, connect } = useManageWallet();
   const normalizedActiveCollectionId = useMemo(
@@ -1039,6 +1083,13 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
     walletSession.address
   ]);
 
+  useEffect(() => {
+    if (selectedAction?.functionName !== 'set-mint-price') {
+      setAbsorbSealFees(false);
+      setSealChunkCountInput('1');
+    }
+  }, [selectedAction]);
+
   const contractReady = useMemo(() => {
     const address = contractAddress.trim();
     const name = contractName.trim();
@@ -1066,29 +1117,50 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
         response,
         'Collection'
       );
+      const resolvedCollectionId = toText(payload.id ?? '') || nextCollectionId.trim();
+      const resolvedCollectionSlug = toText(payload.slug ?? '');
       setDisplayName(payload.display_name ?? '');
       setArtistAddress(payload.artist_address ?? '');
-      const nextContractAddress = toText(payload.contract_address ?? '');
-      setContractAddress(nextContractAddress);
+      setCollectionId(resolvedCollectionId);
+      setCollectionSlug(resolvedCollectionSlug);
       setState(payload.state ?? 'draft');
       const resolvedMetadata = toRecord(payload.metadata);
       setMetadata(resolvedMetadata);
-      const metadataContractName = toText(resolvedMetadata?.contractName);
-      setContractName(metadataContractName);
+      const resolvedContractTarget = resolveCollectionContractLink({
+        collectionId: resolvedCollectionId,
+        collectionSlug: resolvedCollectionSlug,
+        contractAddress: toText(payload.contract_address ?? ''),
+        metadata: resolvedMetadata
+      });
+      const parsedContractAddress = parseContractPrincipal(
+        toText(payload.contract_address ?? '')
+      );
+      const nextContractAddress =
+        resolvedContractTarget?.address ??
+        parsedContractAddress?.address ??
+        toText(payload.contract_address ?? '');
+      const nextContractName = resolvedContractTarget?.contractName ?? '';
+      setContractAddress(nextContractAddress);
+      setContractName(nextContractName);
       setSummary(null);
       setSummaryMessage(null);
       setActionMessage(null);
       if (
         validateStacksAddress(nextContractAddress) &&
-        CONTRACT_NAME_PATTERN.test(metadataContractName)
+        CONTRACT_NAME_PATTERN.test(nextContractName)
       ) {
         setSummaryMessage('Refreshing on-chain status...');
         setAutoSummaryTarget({
           address: nextContractAddress,
-          contractName: metadataContractName
+          contractName: nextContractName
         });
       } else {
         setAutoSummaryTarget(null);
+      }
+      if (resolvedContractTarget?.source === 'derived-slug-id') {
+        setMessage(
+          'Contract name was auto-resolved from draft slug/id. Click "Save draft settings" to store it in draft metadata.'
+        );
       }
     } catch (error) {
       setMessage(toManageApiErrorMessage(error, 'Unable to load collection'));
@@ -1123,12 +1195,75 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
     }
     setMessage(null);
     try {
+      const parsedContractFromAddress = parseContractPrincipal(contractAddress);
+      const resolvedContractAddress =
+        parsedContractFromAddress?.address ?? contractAddress.trim().toUpperCase();
+      const typedContractName = contractName.trim();
+      if (typedContractName && !CONTRACT_NAME_PATTERN.test(typedContractName)) {
+        setMessage('Contract name is invalid. Use letters, numbers, hyphen, or underscore.');
+        return;
+      }
+
+      let nextMetadata = metadataRecord ? { ...metadataRecord } : null;
+      const resolvedContractTarget = resolveCollectionContractLink({
+        collectionId: collectionId.trim(),
+        collectionSlug,
+        contractAddress: resolvedContractAddress,
+        metadata: nextMetadata,
+        deployContractName: typedContractName || parsedContractFromAddress?.contractName
+      });
+
+      let metadataChanged = false;
+      if (resolvedContractTarget) {
+        if (!nextMetadata) {
+          nextMetadata = {};
+        }
+        if (toText(nextMetadata.contractName) !== resolvedContractTarget.contractName) {
+          nextMetadata.contractName = resolvedContractTarget.contractName;
+          metadataChanged = true;
+        }
+        if (toText(nextMetadata.contractId) !== resolvedContractTarget.contractId) {
+          nextMetadata.contractId = resolvedContractTarget.contractId;
+          metadataChanged = true;
+        }
+      }
+
+      const patchPayload: Record<string, unknown> = {
+        displayName,
+        artistAddress,
+        contractAddress: resolvedContractAddress
+      };
+      if (nextMetadata && metadataChanged) {
+        patchPayload.metadata = nextMetadata;
+      }
+
       const response = await fetch(`/collections/${collectionId.trim()}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ displayName, artistAddress, contractAddress })
+        body: JSON.stringify(patchPayload)
       });
-      await parseManageJsonResponse(response, 'Collection update');
+      const payload = await parseManageJsonResponse<CollectionPayload>(
+        response,
+        'Collection update'
+      );
+      const resolvedCollectionSlug = toText(payload.slug ?? '');
+      if (resolvedCollectionSlug) {
+        setCollectionSlug(resolvedCollectionSlug);
+      }
+      const resolvedMetadata = toRecord(payload.metadata);
+      setMetadata(resolvedMetadata);
+      const persistedTarget = resolveCollectionContractLink({
+        collectionId: collectionId.trim(),
+        collectionSlug: resolvedCollectionSlug || collectionSlug,
+        contractAddress: toText(payload.contract_address ?? ''),
+        metadata: resolvedMetadata
+      });
+      const persistedAddress =
+        persistedTarget?.address ??
+        parseContractPrincipal(toText(payload.contract_address ?? ''))?.address ??
+        toText(payload.contract_address ?? '');
+      setContractAddress(persistedAddress);
+      setContractName(persistedTarget?.contractName ?? '');
       setMessage('Draft settings saved.');
     } catch (error) {
       setMessage(toManageApiErrorMessage(error, 'Update error'));
@@ -1217,6 +1352,26 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
         })
       ]);
 
+      let coreContractId: string | null = null;
+      let coreFeeUnitMicroStx: bigint | null = null;
+
+      try {
+        const lockedCoreCv = await callContractReadOnly('get-locked-core-contract', [], {
+          address: resolvedAddress,
+          contractName: resolvedName
+        });
+        const lockedCoreRaw = toText(toPrimitive(lockedCoreCv));
+        coreContractId = lockedCoreRaw || null;
+        const parsedCoreTarget = parseContractPrincipal(lockedCoreRaw);
+        if (parsedCoreTarget) {
+          const feeUnitCv = await callContractReadOnly('get-fee-unit', [], parsedCoreTarget);
+          coreFeeUnitMicroStx = parseUintPrimitive(toPrimitive(feeUnitCv));
+        }
+      } catch {
+        coreContractId = null;
+        coreFeeUnitMicroStx = null;
+      }
+
       const pendingOwner =
         pendingOwnerCv.type === ClarityType.OptionalSome
           ? toText(toPrimitive(pendingOwnerCv.value))
@@ -1248,7 +1403,9 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
           typeof toPrimitive(finalizedCv) === 'boolean'
             ? (toPrimitive(finalizedCv) as boolean)
             : null,
-        mintPriceMicroStx: parsedMintPrice
+        mintPriceMicroStx: parsedMintPrice,
+        coreContractId,
+        coreFeeUnitMicroStx
       };
 
       setSummary(nextSummary);
@@ -1295,7 +1452,8 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
         network: session.network,
         stxAddress: session.address,
         appDetails: {
-          name: 'Xtrata Collection Manager'
+          name: 'Xtrata Collection Manager',
+          icon: XTRATA_APP_ICON_DATA_URI
         },
         onFinish: (payload) => resolve(payload as TxPayload),
         onCancel: () =>
@@ -1304,8 +1462,9 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
     });
   };
 
-  const buildActionArgs = (action: MutableAction) => {
+  const buildActionArgs = (action: MutableAction): BuildActionArgsResult => {
     const args: ClarityValue[] = [];
+    const notices: string[] = [];
 
     for (const field of action.fields) {
       const rawValue = actionInputs[field.key] ?? '';
@@ -1313,7 +1472,11 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
       if (field.type === 'principal') {
         const value = rawValue.trim();
         if (!validateStacksAddress(value)) {
-          return { args: [], error: `${field.label} must be a valid STX address.` };
+          return {
+            args: [],
+            notices: [],
+            error: `${field.label} must be a valid STX address.`
+          };
         }
         args.push(principalCV(value));
         continue;
@@ -1324,6 +1487,7 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
         if (value === null) {
           return {
             args: [],
+            notices: [],
             error: `${field.label} must be a valid whole number${
               field.allowZero ? ' (0 allowed)' : ''
             }.`
@@ -1334,12 +1498,64 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
       }
 
       if (field.type === 'stx') {
-        const value = parseStxToMicro(rawValue, field.allowZero === true);
+        let value = parseStxToMicro(rawValue, field.allowZero === true);
         if (value === null) {
           return {
             args: [],
+            notices: [],
             error: `${field.label} must be a valid STX amount (up to 6 decimals).`
           };
+        }
+        if (
+          action.functionName === 'set-mint-price' &&
+          field.key === 'amount' &&
+          absorbSealFees
+        ) {
+          const chunkCount = parseUintInput(sealChunkCountInput, false);
+          if (chunkCount === null) {
+            return {
+              args: [],
+              notices: [],
+              error: 'Expected chunks must be a whole number greater than 0.'
+            };
+          }
+          const feeUnitMicroStx = summary?.coreFeeUnitMicroStx ?? null;
+          if (feeUnitMicroStx === null) {
+            return {
+              args: [],
+              notices: [],
+              error:
+                'Core fee unit is unavailable. Refresh on-chain status before using fee absorption.'
+            };
+          }
+          const sealProtocolFee = resolveSealProtocolFeeMicroStx(
+            feeUnitMicroStx,
+            chunkCount
+          );
+          if (sealProtocolFee === null) {
+            return {
+              args: [],
+              notices: [],
+              error: 'Unable to compute seal protocol fee from fee unit/chunk count.'
+            };
+          }
+          if (value < sealProtocolFee) {
+            return {
+              args: [],
+              notices: [],
+              error:
+                'Advertised seal price is lower than the protocol seal fee. Increase advertised price or lower expected chunks.'
+            };
+          }
+          const advertised = value;
+          value = advertised - sealProtocolFee;
+          notices.push(
+            `Fee absorption enabled: advertised seal ${formatMicroStx(
+              advertised
+            )} - protocol seal fee ${formatMicroStx(
+              sealProtocolFee
+            )} = on-chain mint price ${formatMicroStx(value)}. Begin anti-spam fee remains separate.`
+          );
         }
         args.push(uintCV(value));
         continue;
@@ -1354,7 +1570,11 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
         const value = rawValue.trim();
         const allowEmpty = field.allowEmpty === true;
         if (!allowEmpty && value.length === 0) {
-          return { args: [], error: `${field.label} cannot be empty.` };
+          return {
+            args: [],
+            notices: [],
+            error: `${field.label} cannot be empty.`
+          };
         }
         if (
           typeof field.maxLength === 'number' &&
@@ -1362,11 +1582,12 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
         ) {
           return {
             args: [],
+            notices: [],
             error: `${field.label} must be ${field.maxLength} characters or fewer.`
           };
         }
         if (!ASCII_PATTERN.test(value)) {
-          return { args: [], error: `${field.label} must be ASCII text.` };
+          return { args: [], notices: [], error: `${field.label} must be ASCII text.` };
         }
         args.push(stringAsciiCV(value));
         continue;
@@ -1377,6 +1598,7 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
         if (!normalized) {
           return {
             args: [],
+            notices: [],
             error: `${field.label} must be a 64-char hex hash (optional 0x).`
           };
         }
@@ -1387,7 +1609,7 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
       if (field.type === 'uintList') {
         const parsed = parseUintList(rawValue, field.maxItems ?? 50);
         if (parsed.errors.length > 0) {
-          return { args: [], error: parsed.errors.join(' ') };
+          return { args: [], notices: [], error: parsed.errors.join(' ') };
         }
         args.push(listCV(parsed.values.map((value) => uintCV(value))));
         continue;
@@ -1396,7 +1618,7 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
       if (field.type === 'allowlistBatch') {
         const parsed = parseAllowlistBatch(rawValue, field.maxItems ?? 200);
         if (parsed.errors.length > 0) {
-          return { args: [], error: parsed.errors.join(' ') };
+          return { args: [], notices: [], error: parsed.errors.join(' ') };
         }
         args.push(
           listCV(
@@ -1414,7 +1636,7 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
       if (field.type === 'registeredUriBatch') {
         const parsed = parseRegisteredUriBatch(rawValue, field.maxItems ?? 200);
         if (parsed.errors.length > 0) {
-          return { args: [], error: parsed.errors.join(' ') };
+          return { args: [], notices: [], error: parsed.errors.join(' ') };
         }
         args.push(
           listCV(
@@ -1429,7 +1651,7 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
       }
     }
 
-    return { args, error: null as string | null };
+    return { args, notices, error: null as string | null };
   };
 
   const runAction = async () => {
@@ -1455,7 +1677,9 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
         functionArgs: parsed.args
       });
       setActionMessage(
-        `${selectedAction.label} submitted: ${payload.txId}. Refresh status after confirmation.`
+        `${parsed.notices.join(' ')}${parsed.notices.length > 0 ? ' ' : ''}${
+          selectedAction.label
+        } submitted: ${payload.txId}. Refresh status after confirmation.`
       );
     } catch (error) {
       setActionMessage(toManageApiErrorMessage(error, `${selectedAction.label} failed`));
@@ -1523,7 +1747,16 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
           <input
             className="input"
             value={contractAddress}
-            onChange={(event) => setContractAddress(event.target.value.trim().toUpperCase())}
+            onChange={(event) => {
+              const input = event.target.value.trim();
+              const parsed = parseContractPrincipal(input);
+              if (parsed) {
+                setContractAddress(parsed.address);
+                setContractName((current) => current || parsed.contractName);
+              } else {
+                setContractAddress(input.toUpperCase());
+              }
+            }}
             disabled={draftSettingsLocked}
           />
         </label>
@@ -1587,7 +1820,7 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
           <button
             className="button button--ghost"
             type="button"
-            onClick={loadContractSummary}
+            onClick={() => void loadContractSummary()}
             disabled={!contractReady || summaryLoading}
           >
             {summaryLoading ? 'Refreshing...' : 'Refresh on-chain status'}
@@ -1626,6 +1859,12 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
           <div className="collection-settings-panel__summary-item">
             <span className="meta-label">Mint price</span>
             <span className="meta-value">{formatMicroStx(summary?.mintPriceMicroStx ?? null)}</span>
+          </div>
+          <div className="collection-settings-panel__summary-item">
+            <span className="meta-label">Core fee unit</span>
+            <span className="meta-value">
+              {formatMicroStx(summary?.coreFeeUnitMicroStx ?? null)}
+            </span>
           </div>
         </div>
         {summaryMessage && <p className="meta-value">{summaryMessage}</p>}
@@ -1724,6 +1963,53 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
               </label>
             );
           })}
+
+        {selectedAction?.functionName === 'set-mint-price' && (
+          <div className="field field--full">
+            <span className="field__label info-label">
+              Mint Price Mode
+              <InfoTooltip text="Optional helper: keep begin anti-spam fee separate, and absorb seal protocol fee into your advertised seal price." />
+            </span>
+            <select
+              className="select"
+              value={absorbSealFees ? 'absorb' : 'raw'}
+              onChange={(event) => {
+                const nextAbsorb = event.target.value === 'absorb';
+                setAbsorbSealFees(nextAbsorb);
+                setActionMessage(null);
+              }}
+            >
+              <option value="raw">Raw on-chain mint price (no absorption)</option>
+              <option value="absorb">Advertised seal price (absorb seal protocol fee)</option>
+            </select>
+            <span className="field__hint">
+              Begin anti-spam fee is unchanged and always paid separately at mint-begin.
+            </span>
+
+            {absorbSealFees && (
+              <>
+                <label className="field field--full">
+                  <span className="field__label info-label">
+                    Expected chunks per mint
+                    <InfoTooltip text="Used to estimate protocol seal fee: fee-unit x (1 + ceil(chunks/50))." />
+                  </span>
+                  <input
+                    className="input"
+                    value={sealChunkCountInput}
+                    onChange={(event) => {
+                      setSealChunkCountInput(event.target.value.trim());
+                      setActionMessage(null);
+                    }}
+                    placeholder="1"
+                  />
+                  <span className="field__hint">
+                    Core fee unit for this collection: {formatMicroStx(summary?.coreFeeUnitMicroStx ?? null)}.
+                  </span>
+                </label>
+              </>
+            )}
+          </div>
+        )}
 
         <div className="mint-actions">
           <button

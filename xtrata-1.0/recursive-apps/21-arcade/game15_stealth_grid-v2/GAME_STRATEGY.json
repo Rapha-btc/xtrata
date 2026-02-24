@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "gameKey": "game15_stealth_grid",
+  "gameId": "stealth_grid",
+  "title": "Stealth Grid",
+  "genreTag": "Stealth",
+  "archetype": "arcade",
+  "workspaceDir": "game15_stealth_grid-v2",
+  "runtime": {
+    "file": "game15_stealth_grid.js",
+    "version": "v1"
+  },
+  "reviewStatus": "approved",
+  "reviewer": "codex",
+  "reviewedAt": "2026-02-20T15:31:22.091Z",
+  "scaleGoal": "Scale content breadth and replay depth while preserving deterministic scoring and rapid restart flow.",
+  "iterationLanes": [
+    "core-loop-expansion",
+    "difficulty-curation",
+    "reward-systems",
+    "ux-feedback",
+    "performance"
+  ],
+  "testFocus": [
+    "score-integrity",
+    "round-progression",
+    "restart-cleanup",
+    "resource-usage",
+    "state-transition"
+  ],
+  "notes": [
+    "Approved archetype strategy for Stealth Grid.",
+    "Update this strategy when core loop, progression model, or scoring rules change.",
+    "Before promotion, run strict review for game15_stealth_grid and relevant game tests.",
+    "Add a workspace tests/run.mjs suite before next production promotion."
+  ],
+  "gameSpecificTargets": [
+    "Expand visibility/noise systems with readable feedback.",
+    "Introduce patrol behavior tiers and counterplay tools.",
+    "Balance stealth risk against objective completion pace."
+  ],
+  "approvedPlan": {
+    "summary": "Approved arcade development strategy for Stealth Grid.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "name": "Core Gameplay Systems",
+        "objective": "Modularize core loop systems with parity-safe runtime hooks.",
+        "deliverables": [
+          "Modularized runtime subsystems for the core loop.",
+          "Behavior parity verification against current production baseline.",
+          "Targeted unit/regression tests for extracted systems."
+        ],
+        "exitCriteria": [
+          "Core loop parity confirmed in seeded/manual runs.",
+          "No scoring or progression regressions.",
+          "All Stage 1 tests passing in CI/local runner."
+        ]
+      },
+      {
+        "id": "stage-2",
+        "name": "Content and Presentation Expansion",
+        "objective": "Expand content variants, modifiers, and progression hooks.",
+        "deliverables": [
+          "New mechanics/content variants aligned to archetype.",
+          "Improved readability and UX feedback for new systems.",
+          "Balance pass for rewards, upgrades, and challenge pacing."
+        ],
+        "exitCriteria": [
+          "Content additions validated against difficulty targets.",
+          "No readability regressions under peak gameplay load.",
+          "Mode-specific smoke tests passing."
+        ]
+      },
+      {
+        "id": "stage-3",
+        "name": "Optimization and Quality Hardening",
+        "objective": "Harden runtime reliability with regression automation and stress checks.",
+        "deliverables": [
+          "Performance optimization of hot loops and allocations.",
+          "Expanded automated regression and stress suites.",
+          "Release candidate checklist with rollback safety."
+        ],
+        "exitCriteria": [
+          "Performance budgets met for target hardware/browser matrix.",
+          "Regression suite stable across repeated runs.",
+          "Promotion checklist completed without blockers."
+        ]
+      }
+    ],
+    "qaGates": {
+      "requiredCommands": [
+        "npm run arcade:strategy:review -- --game game15_stealth_grid --strict",
+        "node --check recursive-apps/21-arcade/games/game15_stealth_grid.js"
+      ],
+      "manualChecks": [
+        "Launch -> playthrough -> game over -> restart cycle",
+        "Score/leaderboard integrity under repeated sessions",
+        "State cleanup after disconnect/reconnect and rerun"
+      ]
+    },
+    "successMetrics": [
+      "Scoring remains deterministic under seeded runs",
+      "Round flow remains stable after repeated restarts",
+      "No memory leak across extended sessions"
+    ]
+  }
+}

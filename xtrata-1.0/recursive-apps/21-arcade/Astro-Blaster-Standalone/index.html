@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Astro Blaster Standalone Portable (Local Test)</title>
+<link rel="stylesheet" href="modules/styles.css">
+</head>
+<body>
+<div id="top-bar">
+  <span id="title">Astro Blaster</span>
+  <div id="top-bar-right">
+    <span id="wallet-status-badge" class="wallet-status-badge is-loading" aria-live="polite">Wallet: checking...</span>
+    <button id="wallet-connect-btn" title="Connect wallet">Connect</button>
+    <button id="wallet-disconnect-btn" title="Disconnect wallet" style="display:none;">Disconnect</button>
+    <button id="force-next-wave-btn" title="Force next wave/level for testing" style="display:none;">Next Wave</button>
+    <button id="sound-toggle" title="Toggle Sound">🔊</button>
+    <button id="exit-btn" style="display:none;">Exit</button>
+  </div>
+</div>
+<div id="app">
+  <div id="home-grid" style="display:none;"></div>
+  <div id="game-container"></div>
+</div>
+<div id="error-overlay" style="display:none;">
+  <div id="error-box">
+    <h2>Game Error</h2>
+    <p id="error-msg"></p>
+    <button id="error-close">Return to Start Screen</button>
+  </div>
+</div>
+
+<script src="modules/utils.js"></script>
+<script>
+  var arcadeDebugEnabled = false;
+  try{
+    var arcadeParams = new URLSearchParams(window.location.search || '');
+    arcadeDebugEnabled =
+      arcadeParams.get('debug') === '1' ||
+      arcadeParams.get('arcadeDebug') === '1';
+  }catch(e){}
+  if(window.ARCADE_ONCHAIN_CONFIG && window.ARCADE_ONCHAIN_CONFIG.debug === true){
+    arcadeDebugEnabled = true;
+  }
+
+  window.ARCADE_ONCHAIN_CONFIG = window.ARCADE_ONCHAIN_CONFIG || {
+    enabled: true,
+    network: 'mainnet',
+    contractAddress: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
+    contractName: 'xtrata-arcade-scores-v1-3',
+    functionName: 'submit-score',
+    leaderboardFunctionName: 'get-top10',
+    apiBaseUrl: 'https://api.mainnet.hiro.so',
+    apiFallbackBaseUrls: ['https://api.mainnet.hiro.so'],
+    readSenderAddress: '',
+    requiresAttestation: false,
+    attestationEndpoint: '',
+    attestationTimeoutMs: 10000,
+    minRank: 10,
+    useDenyModePostConditions: true,
+    fallbackToAllowModeOnPostConditionFailure: false,
+    debug: arcadeDebugEnabled
+  };
+  window.ARCADE_ONCHAIN_CONFIG.debug = arcadeDebugEnabled;
+  window.ARCADE_ONCHAIN_DEBUG = arcadeDebugEnabled;
+</script>
+<script src="modules/highscores.js"></script>
+<script src="modules/game01_astro_blaster-v2.37.js"></script>
+<script src="modules/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Xtrata Runtime</title>
+    <style>
+      :root {
+        color-scheme: light;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #0c1020;
+        color: #e8ecff;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+          Helvetica, Arial, sans-serif;
+      }
+      .runtime-shell {
+        width: min(92vw, 640px);
+        padding: 20px;
+        border-radius: 12px;
+        border: 1px solid #33406f;
+        background: linear-gradient(180deg, #121938, #0e142b);
+        box-shadow: 0 10px 35px rgba(0, 0, 0, 0.3);
+      }
+      .runtime-shell h1 {
+        margin: 0 0 10px;
+        font-size: 1.05rem;
+      }
+      .runtime-shell p {
+        margin: 0;
+        font-size: 0.92rem;
+        line-height: 1.45;
+      }
+      .runtime-shell code {
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 5px;
+        padding: 2px 6px;
+      }
+      .runtime-shell .error {
+        margin-top: 12px;
+        color: #ffb4b4;
+      }
+      .runtime-shell .detail {
+        margin-top: 8px;
+        color: #c7d2ff;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="runtime-shell" id="runtime-shell">
+      <h1>Launching runtime...</h1>
+      <p id="runtime-status">Preparing isolated page context.</p>
+    </div>
+
+    <script>
+      (function () {
+        var shell = document.getElementById('runtime-shell');
+        var statusEl = document.getElementById('runtime-status');
+
+        function setStatus(message) {
+          if (statusEl) {
+            statusEl.textContent = message;
+          }
+        }
+
+        function escapeHtml(value) {
+          return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/\"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+        }
+
+        function setError(message, detail) {
+          if (!shell) {
+            return;
+          }
+          shell.innerHTML =
+            '<h1>Runtime launch failed</h1>' +
+            '<p class="error">' +
+            escapeHtml(message || 'Unable to open runtime content.') +
+            '</p>' +
+            (detail
+              ? '<p class="detail"><code>' + escapeHtml(detail) + '</code></p>'
+              : '');
+        }
+
+        function toRuntimeEndpoint(params) {
+          var url = new URL('/runtime/content', window.location.origin);
+          if (params.contractId) {
+            url.searchParams.set('contractId', params.contractId);
+          }
+          if (params.tokenId) {
+            url.searchParams.set('tokenId', params.tokenId);
+          }
+          if (params.network) {
+            url.searchParams.set('network', params.network);
+          }
+          if (params.fallbackContractId) {
+            url.searchParams.set('fallbackContractId', params.fallbackContractId);
+          }
+          return url.toString();
+        }
+
+        function loadFromRuntimeEndpoint(params) {
+          var endpoint = toRuntimeEndpoint(params);
+          return fetch(endpoint, {
+            method: 'GET',
+            credentials: 'same-origin',
+            redirect: 'follow'
+          }).then(function (response) {
+            if (!response.ok) {
+              throw new Error('Runtime endpoint returned HTTP ' + response.status + '.');
+            }
+            return response.text();
+          });
+        }
+
+        function loadFromSource(source) {
+          if (!source) {
+            return Promise.reject(new Error('No source URL provided.'));
+          }
+          return fetch(source, {
+            method: 'GET',
+            credentials: 'same-origin',
+            redirect: 'follow'
+          }).then(function (response) {
+            if (!response.ok) {
+              throw new Error('Source URL returned HTTP ' + response.status + '.');
+            }
+            return response.text();
+          });
+        }
+
+        function escapeAttribute(value) {
+          return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+        }
+
+        function buildRuntimeWalletSupportScriptTag(params) {
+          var url = new URL('/runtime/wallet-shim.js', window.location.origin);
+          if (params && params.network) {
+            url.searchParams.set('network', params.network);
+          }
+          try {
+            var query = new URLSearchParams(window.location.search || '');
+            if (query.get('debug') === '1' || query.get('arcadeDebug') === '1') {
+              url.searchParams.set('debug', '1');
+            }
+          } catch (error) {}
+          return (
+            '<script src="' +
+            escapeAttribute(url.toString()) +
+            '"></' +
+            'script>'
+          );
+        }
+
+        function injectRuntimeSupport(html, params) {
+          var supportScript = buildRuntimeWalletSupportScriptTag(params);
+          if (!supportScript) {
+            return html;
+          }
+          if (/<head[^>]*>/i.test(html)) {
+            return html.replace(/<head[^>]*>/i, function (match) {
+              return match + '\n' + supportScript;
+            });
+          }
+          if (/<body[^>]*>/i.test(html)) {
+            return html.replace(/<body[^>]*>/i, function (match) {
+              return match + '\n' + supportScript;
+            });
+          }
+          return supportScript + '\n' + html;
+        }
+
+        function launchHtml(html, contextLabel) {
+          if (!html || !html.trim()) {
+            throw new Error('Runtime content was empty (' + contextLabel + ').');
+          }
+          var htmlWithSupport = injectRuntimeSupport(html, params);
+          document.open();
+          document.write(htmlWithSupport);
+          document.close();
+        }
+
+        var query = new URLSearchParams(window.location.search || '');
+        var params = {
+          contractId: query.get('contractId') || '',
+          tokenId: query.get('tokenId') || '',
+          network: query.get('network') || 'mainnet',
+          fallbackContractId: query.get('fallbackContractId') || '',
+          source: query.get('source') || ''
+        };
+
+        if (!params.contractId || !params.tokenId) {
+          if (!params.source) {
+            setError('Missing runtime parameters.', 'contractId/tokenId not provided');
+            return;
+          }
+        }
+
+        setStatus('Loading inscription content from runtime endpoint...');
+
+        loadFromRuntimeEndpoint(params)
+          .then(function (html) {
+            launchHtml(html, 'runtime-endpoint');
+          })
+          .catch(function (runtimeError) {
+            if (!params.source) {
+              setError(
+                'Runtime endpoint failed and no fallback source was provided.',
+                runtimeError && runtimeError.message
+                  ? runtimeError.message
+                  : String(runtimeError)
+              );
+              return;
+            }
+            setStatus('Runtime endpoint failed, trying provided source URL...');
+            loadFromSource(params.source)
+              .then(function (html) {
+                launchHtml(html, 'source-url');
+              })
+              .catch(function (sourceError) {
+                var runtimeMessage =
+                  runtimeError && runtimeError.message
+                    ? runtimeError.message
+                    : String(runtimeError);
+                var sourceMessage =
+                  sourceError && sourceError.message
+                    ? sourceError.message
+                    : String(sourceError);
+                setError('Unable to load runtime content.', runtimeMessage + ' | ' + sourceMessage);
+              });
+          });
+      })();
+    </script>
+  </body>
+</html>

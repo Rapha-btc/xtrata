@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "gameKey": "game04_maze_escape",
+  "gameId": "maze_escape",
+  "title": "Maze Escape",
+  "genreTag": "Maze",
+  "archetype": "maze",
+  "workspaceDir": "game04_maze_escape-v2",
+  "runtime": {
+    "file": "game04_maze_escape.js",
+    "version": "v1"
+  },
+  "reviewStatus": "approved",
+  "reviewer": "codex",
+  "reviewedAt": "2026-02-20T15:31:22.091Z",
+  "scaleGoal": "Scale maze complexity and threat behavior while preserving route readability and fair pressure.",
+  "iterationLanes": [
+    "map-design",
+    "enemy-pathing",
+    "resource-pressure",
+    "progression",
+    "performance"
+  ],
+  "testFocus": [
+    "pathfinding-validity",
+    "spawn-safety",
+    "win-loss-state",
+    "restart-cleanup",
+    "input-fidelity"
+  ],
+  "notes": [
+    "Approved archetype strategy for Maze Escape.",
+    "Update this strategy when core loop, progression model, or scoring rules change.",
+    "Before promotion, run strict review for game04_maze_escape and relevant game tests.",
+    "Add a workspace tests/run.mjs suite before next production promotion."
+  ],
+  "gameSpecificTargets": [
+    "Expand maze templates with progressive threat patterns.",
+    "Evolve enemy pathing and pursuit behavior by stage.",
+    "Strengthen resource and timing pressure without unfair starts."
+  ],
+  "approvedPlan": {
+    "summary": "Approved maze development strategy for Maze Escape.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "name": "Core Gameplay Systems",
+        "objective": "Modularize maze generation/pathing constraints and core hazard logic.",
+        "deliverables": [
+          "Modularized runtime subsystems for the core loop.",
+          "Behavior parity verification against current production baseline.",
+          "Targeted unit/regression tests for extracted systems."
+        ],
+        "exitCriteria": [
+          "Core loop parity confirmed in seeded/manual runs.",
+          "No scoring or progression regressions.",
+          "All Stage 1 tests passing in CI/local runner."
+        ]
+      },
+      {
+        "id": "stage-2",
+        "name": "Content and Presentation Expansion",
+        "objective": "Add map themes, enemy variants, and progression modifiers with readable telegraphing.",
+        "deliverables": [
+          "New mechanics/content variants aligned to archetype.",
+          "Improved readability and UX feedback for new systems.",
+          "Balance pass for rewards, upgrades, and challenge pacing."
+        ],
+        "exitCriteria": [
+          "Content additions validated against difficulty targets.",
+          "No readability regressions under peak gameplay load.",
+          "Mode-specific smoke tests passing."
+        ]
+      },
+      {
+        "id": "stage-3",
+        "name": "Optimization and Quality Hardening",
+        "objective": "Stress-test pathing and optimize map update costs for larger layouts.",
+        "deliverables": [
+          "Performance optimization of hot loops and allocations.",
+          "Expanded automated regression and stress suites.",
+          "Release candidate checklist with rollback safety."
+        ],
+        "exitCriteria": [
+          "Performance budgets met for target hardware/browser matrix.",
+          "Regression suite stable across repeated runs.",
+          "Promotion checklist completed without blockers."
+        ]
+      }
+    ],
+    "qaGates": {
+      "requiredCommands": [
+        "npm run arcade:strategy:review -- --game game04_maze_escape --strict",
+        "node --check recursive-apps/21-arcade/games/game04_maze_escape.js"
+      ],
+      "manualChecks": [
+        "Launch -> playthrough -> game over -> restart cycle",
+        "Score/leaderboard integrity under repeated sessions",
+        "State cleanup after disconnect/reconnect and rerun"
+      ]
+    },
+    "successMetrics": [
+      "All generated layouts remain traversable",
+      "No unfair spawn collisions at run start",
+      "Stable pathing behavior under high-agent scenarios"
+    ]
+  }
+}

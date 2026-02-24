@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "gameKey": "game14_bubble_pop",
+  "gameId": "bubble_pop",
+  "title": "Bubble Pop",
+  "genreTag": "Puzzle Shooter",
+  "archetype": "shooter",
+  "workspaceDir": "game14_bubble_pop-v2",
+  "runtime": {
+    "file": "game14_bubble_pop.js",
+    "version": "v1"
+  },
+  "reviewStatus": "approved",
+  "reviewer": "codex",
+  "reviewedAt": "2026-02-20T15:31:22.091Z",
+  "scaleGoal": "Scale enemy variety, wave complexity, and weapon interplay while maintaining readable combat and stable frame pacing.",
+  "iterationLanes": [
+    "enemy-composition",
+    "weapon-balance",
+    "reward-risk",
+    "combat-readability",
+    "performance"
+  ],
+  "testFocus": [
+    "spawn-density-regressions",
+    "combat-dps-balance",
+    "hitbox-regressions",
+    "collision-performance",
+    "cleanup-leaks"
+  ],
+  "notes": [
+    "Approved archetype strategy for Bubble Pop.",
+    "Update this strategy when core loop, progression model, or scoring rules change.",
+    "Before promotion, run strict review for game14_bubble_pop and relevant game tests.",
+    "Add a workspace tests/run.mjs suite before next production promotion."
+  ],
+  "gameSpecificTargets": [
+    "Add bubble classes and chain reaction interactions.",
+    "Expand shot/trajectory modifiers with player agency.",
+    "Tune scoring multipliers for skill-expression depth."
+  ],
+  "approvedPlan": {
+    "summary": "Approved shooter development strategy for Bubble Pop.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "name": "Core Gameplay Systems",
+        "objective": "Modularize encounter and upgrade systems while preserving parity and scoring integrity.",
+        "deliverables": [
+          "Modularized runtime subsystems for the core loop.",
+          "Behavior parity verification against current production baseline.",
+          "Targeted unit/regression tests for extracted systems."
+        ],
+        "exitCriteria": [
+          "Core loop parity confirmed in seeded/manual runs.",
+          "No scoring or progression regressions.",
+          "All Stage 1 tests passing in CI/local runner."
+        ]
+      },
+      {
+        "id": "stage-2",
+        "name": "Content and Presentation Expansion",
+        "objective": "Expand enemy archetypes, weapons, and visual telegraphs with no readability regressions.",
+        "deliverables": [
+          "New mechanics/content variants aligned to archetype.",
+          "Improved readability and UX feedback for new systems.",
+          "Balance pass for rewards, upgrades, and challenge pacing."
+        ],
+        "exitCriteria": [
+          "Content additions validated against difficulty targets.",
+          "No readability regressions under peak gameplay load.",
+          "Mode-specific smoke tests passing."
+        ]
+      },
+      {
+        "id": "stage-3",
+        "name": "Optimization and Quality Hardening",
+        "objective": "Harden balancing and runtime stability with deterministic tests and stress checks.",
+        "deliverables": [
+          "Performance optimization of hot loops and allocations.",
+          "Expanded automated regression and stress suites.",
+          "Release candidate checklist with rollback safety."
+        ],
+        "exitCriteria": [
+          "Performance budgets met for target hardware/browser matrix.",
+          "Regression suite stable across repeated runs.",
+          "Promotion checklist completed without blockers."
+        ]
+      }
+    ],
+    "qaGates": {
+      "requiredCommands": [
+        "npm run arcade:strategy:review -- --game game14_bubble_pop --strict",
+        "node --check recursive-apps/21-arcade/games/game14_bubble_pop.js"
+      ],
+      "manualChecks": [
+        "Launch -> playthrough -> game over -> restart cycle",
+        "Score/leaderboard integrity under repeated sessions",
+        "State cleanup after disconnect/reconnect and rerun"
+      ]
+    },
+    "successMetrics": [
+      "Stable 60fps under peak wave load on target browsers",
+      "No scoring regression across seeded runs",
+      "Zero memory growth across 20 restart cycles"
+    ]
+  }
+}

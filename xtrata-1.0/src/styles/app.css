@@ -4285,6 +4285,13 @@ p {
   color: var(--muted);
 }
 
+.collection-live-preview__description {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+
 .collection-live-preview__link-button {
   text-decoration: none;
 }
@@ -4393,6 +4400,11 @@ p {
 .collection-live-page__hero-copy p {
   margin: 0;
   line-height: 1.5;
+}
+
+.collection-live-page__description {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .collection-live-page__hero-meta {

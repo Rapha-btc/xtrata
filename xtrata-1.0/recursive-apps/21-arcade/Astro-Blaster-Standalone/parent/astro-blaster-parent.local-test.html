@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Astro Blaster - Parent Local Test</title>
+  <style>
+    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: #050816; color: #d6e7ff; }
+    #loader-panel { padding: 10px 12px; border-bottom: 1px solid #1d2c47; background: #0a1223; }
+    #loader-title { font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; color: #9fc2ff; }
+    #loader-log { margin: 8px 0 0; max-height: 130px; overflow: auto; font-size: 12px; line-height: 1.4; white-space: pre-wrap; word-break: break-word; color: #9ec6ff; }
+  </style>
+</head>
+<body>
+  <div id="loader-panel">
+    <div id="loader-title">Astro Blaster Parent Local Test Loader</div>
+    <pre id="loader-log"></pre>
+  </div>
+
+  <div id="top-bar">
+    <span id="title">Astro Blaster</span>
+    <div id="top-bar-right">
+      <span id="wallet-status-badge" class="wallet-status-badge is-loading" aria-live="polite">Wallet: checking...</span>
+      <button id="wallet-connect-btn" title="Connect wallet">Connect</button>
+      <button id="wallet-disconnect-btn" title="Disconnect wallet" style="display:none;">Disconnect</button>
+      <button id="force-next-wave-btn" title="Force next wave/level for testing" style="display:none;">Next Wave</button>
+      <button id="sound-toggle" title="Toggle Sound">Sound</button>
+      <button id="exit-btn" style="display:none;">Exit</button>
+    </div>
+  </div>
+
+  <div id="app">
+    <div id="home-grid" style="display:none;"></div>
+    <div id="game-container"></div>
+  </div>
+
+  <div id="error-overlay" style="display:none;">
+    <div id="error-box">
+      <h2>Game Error</h2>
+      <p id="error-msg"></p>
+      <button id="error-close">Return to Start Screen</button>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      if (window.__astroBlasterStandaloneParentLocalTestStarted) return;
+      window.__astroBlasterStandaloneParentLocalTestStarted = true;
+
+      var CONFIG = {
+        scoreConfig: {
+          enabled: true,
+          network: 'mainnet',
+          contractAddress: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
+          contractName: 'xtrata-arcade-scores-v1-3',
+          functionName: 'submit-score',
+          leaderboardFunctionName: 'get-top10',
+          apiBaseUrl: '/hiro/mainnet',
+          apiFallbackBaseUrls: ['https://api.mainnet.hiro.so'],
+          readSenderAddress: '',
+          requiresAttestation: false,
+          attestationEndpoint: '',
+          attestationTimeoutMs: 10000,
+          minRank: 10,
+          useDenyModePostConditions: true,
+          fallbackToAllowModeOnPostConditionFailure: false,
+          debug: true
+        }
+      };
+
+      var MODULES = [
+        { key: 'styles', path: '../modules/styles.css', mimeType: 'text/css' },
+        { key: 'utils', path: '../modules/utils.js', mimeType: 'text/javascript' },
+        { key: 'highscores', path: '../modules/highscores.js', mimeType: 'text/javascript' },
+        { key: 'game-runtime', path: '../modules/game01_astro_blaster-v2.37.js', mimeType: 'text/javascript' },
+        { key: 'main', path: '../modules/main.js', mimeType: 'text/javascript' }
+      ];
+
+      var loaderLog = document.getElementById('loader-log');
+      var startMs = Date.now();
+
+      function log(message) {
+        var line = '[+' + String(Date.now() - startMs).padStart(5, ' ') + 'ms] ' + String(message);
+        if (typeof console !== 'undefined' && typeof console.log === 'function') {
+          console.log(line);
+        }
+        if (loaderLog) {
+          loaderLog.textContent += line + '\n';
+        }
+      }
+
+      function injectModule(module, sourceText) {
+        if (module.mimeType === 'text/css') {
+          var style = document.createElement('style');
+          style.setAttribute('data-module-key', module.key);
+          style.textContent = sourceText;
+          document.head.appendChild(style);
+          return;
+        }
+
+        var script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.setAttribute('data-module-key', module.key);
+        script.text = sourceText + '\n//# sourceURL=' + module.path;
+        document.body.appendChild(script);
+      }
+
+      async function loadModule(module) {
+        var response = await fetch(module.path);
+        if (!response.ok) {
+          throw new Error('Failed to load module "' + module.key + '" from ' + module.path + ' (HTTP ' + response.status + ').');
+        }
+        var sourceText = await response.text();
+        injectModule(module, sourceText);
+        log('Loaded module ' + module.key + ' from ' + module.path);
+      }
+
+      async function boot() {
+        window.ARCADE_ONCHAIN_CONFIG = window.ARCADE_ONCHAIN_CONFIG || CONFIG.scoreConfig;
+        window.ARCADE_ONCHAIN_DEBUG = true;
+
+        var i;
+        for (i = 0; i < MODULES.length; i += 1) {
+          await loadModule(MODULES[i]);
+        }
+
+        log('All local modules loaded. Parent-style local test is running.');
+      }
+
+      boot().catch(function (error) {
+        log('FATAL: ' + (error && error.message ? error.message : String(error)));
+        var errorOverlay = document.getElementById('error-overlay');
+        var errorMsg = document.getElementById('error-msg');
+        if (errorOverlay && errorMsg) {
+          errorMsg.textContent = error && error.message ? error.message : String(error);
+          errorOverlay.style.display = 'flex';
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

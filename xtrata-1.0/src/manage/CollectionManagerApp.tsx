@@ -76,6 +76,7 @@ export default function CollectionManagerApp() {
   const [walletPending, setWalletPending] = useState(false);
   const [activeCollectionId, setActiveCollectionId] = useState('');
   const [activeCollectionLabel, setActiveCollectionLabel] = useState('');
+  const [collectionListRefreshKey, setCollectionListRefreshKey] = useState(0);
 
   const [collapsed, setCollapsed] = useState<Record<PanelKey, boolean>>({
     'sdk-toolkit': true,
@@ -132,6 +133,21 @@ export default function CollectionManagerApp() {
       'deploy-wizard': collection.deployed,
       'asset-staging': false,
       'publish-ops': false
+    }));
+  };
+
+  const handleDraftReady = (collection: {
+    id: string;
+    label: string;
+    deployed: boolean;
+  }) => {
+    setActiveCollectionId(collection.id);
+    setActiveCollectionLabel(collection.label);
+    setCollectionListRefreshKey((current) => current + 1);
+    setCollapsed((prev) => ({
+      ...prev,
+      'deploy-wizard': collection.deployed,
+      'asset-staging': false
     }));
   };
 
@@ -274,6 +290,7 @@ export default function CollectionManagerApp() {
           <div className="panel__body">
             <CollectionListPanel
               activeCollectionId={activeCollectionId}
+              refreshKey={collectionListRefreshKey}
               onSelectCollection={handleSelectCollection}
             />
           </div>
@@ -323,7 +340,10 @@ export default function CollectionManagerApp() {
             </div>
           </div>
           <div className="panel__body">
-            <DeployWizardPanel />
+            <DeployWizardPanel
+              activeCollectionId={activeCollectionId}
+              onDraftReady={handleDraftReady}
+            />
           </div>
         </section>
 

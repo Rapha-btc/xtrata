@@ -26,4 +26,11 @@ describe('recursive bridge html injection', () => {
     const matches = result.match(/data-xtrata-bridge/g) ?? [];
     expect(matches).toHaveLength(1);
   });
+
+  it('falls back to native fetch on bridge contract mismatch', () => {
+    const html = '<html><head><title>Fallback</title></head><body></body></html>';
+    const result = injectRecursiveBridgeHtml(html, 'bridge-4');
+    expect(result).toContain("cause === 'Contract mismatch' && originalFetch");
+    expect(result).toContain('return originalFetch(input, init);');
+  });
 });

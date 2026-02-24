@@ -66,6 +66,21 @@ path = 'contracts/xtrata-arcade-scores-v1.0.clar'
 clarity_version = 3
 epoch = 'latest'
 
+[contracts.xtrata-arcade-scores-v1-1]
+path = 'contracts/xtrata-arcade-scores-v1.1.clar'
+clarity_version = 3
+epoch = 'latest'
+
+[contracts.xtrata-arcade-scores-v1-2]
+path = 'contracts/xtrata-arcade-scores-v1.2.clar'
+clarity_version = 3
+epoch = 'latest'
+
+[contracts.xtrata-arcade-scores-v1-3]
+path = 'contracts/xtrata-arcade-scores-v1.3.clar'
+clarity_version = 3
+epoch = 'latest'
+
 
 [repl.analysis]
 passes = [

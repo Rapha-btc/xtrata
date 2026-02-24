@@ -29,3 +29,6 @@ done
 rsync -a "$SRC/" "$DEST/"
 
 printf "Cloned %s -> %s\n" "$(basename "$SRC")" "${DEST#$ROOT_DIR/}"
+
+
+// USE ./clone-version.sh xtrata-1.0 to clone the xtrata-1.0 folder to a new backup folder with an incremented name (e.g., xtrata-0.01, xtrata-0.02, etc.) in the backups directory.

@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "gameKey": "game01_astro_blaster",
+  "gameId": "astro_blaster",
+  "title": "Astro Blaster",
+  "genreTag": "Shoot 'em Up",
+  "archetype": "shooter",
+  "workspaceDir": "game01_astro_blaster-v2",
+  "planningDir": "game01_astro_blaster-v2/planning",
+  "runtime": {
+    "file": "game01_astro_blaster-v2.js",
+    "version": "v2"
+  },
+  "reviewStatus": "approved",
+  "reviewer": "codex",
+  "reviewedAt": "2026-02-20T15:31:22.091Z",
+  "scaleGoal": "Scale enemy variety, wave complexity, and weapon interplay while maintaining readable combat and stable frame pacing.",
+  "iterationLanes": [
+    "enemy-composition",
+    "weapon-balance",
+    "reward-risk",
+    "combat-readability",
+    "performance"
+  ],
+  "testFocus": [
+    "spawn-density-regressions",
+    "combat-dps-balance",
+    "hitbox-regressions",
+    "collision-performance",
+    "cleanup-leaks"
+  ],
+  "notes": [
+    "Approved archetype strategy for Astro Blaster.",
+    "Use planning/ for Stage 0 review, brainstorming, scoring, and roadmap promotion before major gameplay changes.",
+    "Update this strategy when core loop, progression model, or scoring rules change.",
+    "Before promotion, run strict review for game01_astro_blaster and relevant game tests."
+  ],
+  "gameSpecificTargets": [
+    "Deepen wave archetypes and sector identity progression.",
+    "Expand upgrade/reward trees with meaningful trade-offs.",
+    "Add advanced game modes without score-integrity regressions."
+  ],
+  "approvedPlan": {
+    "summary": "Approved shooter development strategy for Astro Blaster.",
+    "stages": [
+      {
+        "id": "stage-1",
+        "name": "Core Gameplay Systems",
+        "objective": "Modularize encounter and upgrade systems while preserving parity and scoring integrity.",
+        "deliverables": [
+          "Modularized runtime subsystems for the core loop.",
+          "Behavior parity verification against current production baseline.",
+          "Targeted unit/regression tests for extracted systems."
+        ],
+        "exitCriteria": [
+          "Core loop parity confirmed in seeded/manual runs.",
+          "No scoring or progression regressions.",
+          "All Stage 1 tests passing in CI/local runner."
+        ]
+      },
+      {
+        "id": "stage-2",
+        "name": "Content and Presentation Expansion",
+        "objective": "Expand enemy archetypes, weapons, and visual telegraphs with no readability regressions.",
+        "deliverables": [
+          "New mechanics/content variants aligned to archetype.",
+          "Improved readability and UX feedback for new systems.",
+          "Balance pass for rewards, upgrades, and challenge pacing."
+        ],
+        "exitCriteria": [
+          "Content additions validated against difficulty targets.",
+          "No readability regressions under peak gameplay load.",
+          "Mode-specific smoke tests passing."
+        ]
+      },
+      {
+        "id": "stage-3",
+        "name": "Optimization and Quality Hardening",
+        "objective": "Harden balancing and runtime stability with deterministic tests and stress checks.",
+        "deliverables": [
+          "Performance optimization of hot loops and allocations.",
+          "Expanded automated regression and stress suites.",
+          "Release candidate checklist with rollback safety."
+        ],
+        "exitCriteria": [
+          "Performance budgets met for target hardware/browser matrix.",
+          "Regression suite stable across repeated runs.",
+          "Promotion checklist completed without blockers."
+        ]
+      }
+    ],
+    "qaGates": {
+      "requiredCommands": [
+        "npm run arcade:strategy:review -- --game game01_astro_blaster --strict",
+        "node --check recursive-apps/21-arcade/games/game01_astro_blaster-v2.js",
+        "node recursive-apps/21-arcade/game01_astro_blaster-v2/tests/run.mjs"
+      ],
+      "manualChecks": [
+        "Launch -> playthrough -> game over -> restart cycle",
+        "Score/leaderboard integrity under repeated sessions",
+        "State cleanup after disconnect/reconnect and rerun"
+      ]
+    },
+    "successMetrics": [
+      "Stable 60fps under peak wave load on target browsers",
+      "No scoring regression across seeded runs",
+      "Zero memory growth across 20 restart cycles"
+    ]
+  }
+}
