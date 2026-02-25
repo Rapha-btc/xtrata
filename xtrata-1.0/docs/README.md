@@ -104,6 +104,12 @@ SDK + builder track
 	•	docs/sdk/reconstruction-library-plan.md
 	•	docs/sdk/example-repos-plan.md
 
+AI skills training track
+	•	docs/ai-skills/README.md
+	•	docs/ai-skills/aibtc-agent-training.md
+	•	docs/ai-skills/generic-agent-training.md
+	•	XTRATA_AGENT_SKILL.md
+
 Legal signature track
 	•	docs/LEGAL/README.md
 	•	docs/LEGAL/signature-message-spec.md

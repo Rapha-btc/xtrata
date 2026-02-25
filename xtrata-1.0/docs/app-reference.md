@@ -107,7 +107,11 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 ## SDK and ecosystem docs
 
 - `src/PublicApp.tsx` docs module includes the `sdk-tooling` topic, which follows the same summary-first and expandable-detail pattern as other docs sections.
+- `src/PublicApp.tsx` docs module includes the `ai-agent-training` topic and external AI docs links for package index + track-specific guides (`aibtc` and generic).
 - `XTRATA_AGENT_SKILL.md` is the self-contained agent training reference for autonomous xtrata inscription workflows (contract API, fees, workflows, and aibtc integration).
+- `docs/ai-skills/README.md` is the AI training package index and onboarding entry point.
+- `docs/ai-skills/aibtc-agent-training.md` is the track-specific guide for aibtc MCP agents.
+- `docs/ai-skills/generic-agent-training.md` is the track-specific guide for non-aibtc AI agents and frameworks.
 - `docs/sdk/README.md` defines SDK mission, package boundaries, and implementation posture.
 - `docs/sdk/test-gates.md` defines required tests and release-quality gates.
 - `docs/sdk/changelog.md` tracks completed delivery iterations.

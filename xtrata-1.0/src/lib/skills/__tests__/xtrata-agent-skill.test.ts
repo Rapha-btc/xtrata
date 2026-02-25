@@ -5,10 +5,14 @@ import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = process.cwd();
 const SKILL_FILE = path.join(REPO_ROOT, 'XTRATA_AGENT_SKILL.md');
+const PUBLIC_APP_FILE = path.join(REPO_ROOT, 'src', 'PublicApp.tsx');
 
 const MINT_SCRIPT = path.join(REPO_ROOT, 'scripts', 'xtrata-mint-example.js');
 const TRANSFER_SCRIPT = path.join(REPO_ROOT, 'scripts', 'xtrata-transfer-example.js');
 const QUERY_SCRIPT = path.join(REPO_ROOT, 'scripts', 'xtrata-query-example.js');
+const AI_SKILLS_DOCS_INDEX = path.join(REPO_ROOT, 'docs', 'ai-skills', 'README.md');
+const AI_SKILLS_AIBTC_DOC = path.join(REPO_ROOT, 'docs', 'ai-skills', 'aibtc-agent-training.md');
+const AI_SKILLS_GENERIC_DOC = path.join(REPO_ROOT, 'docs', 'ai-skills', 'generic-agent-training.md');
 
 const PUBLIC_FUNCTIONS = [
   'transfer',
@@ -67,6 +71,17 @@ describe('XTRATA_AGENT_SKILL package', () => {
     expect(existsSync(MINT_SCRIPT)).toBe(true);
     expect(existsSync(TRANSFER_SCRIPT)).toBe(true);
     expect(existsSync(QUERY_SCRIPT)).toBe(true);
+  });
+
+  it('ships a dedicated AI docs set for aibtc and generic agent tracks', () => {
+    expect(existsSync(AI_SKILLS_DOCS_INDEX)).toBe(true);
+    expect(existsSync(AI_SKILLS_AIBTC_DOC)).toBe(true);
+    expect(existsSync(AI_SKILLS_GENERIC_DOC)).toBe(true);
+
+    const docsIndex = readFileSync(AI_SKILLS_DOCS_INDEX, 'utf8');
+    expect(docsIndex).toContain('aibtc');
+    expect(docsIndex).toContain('generic');
+    expect(docsIndex).toContain('XTRATA_AGENT_SKILL.md');
   });
 
   it('documents required contract identifiers and fee model', () => {
@@ -134,5 +149,16 @@ describe('XTRATA_AGENT_SKILL package', () => {
     execFileSync(process.execPath, ['--check', MINT_SCRIPT], { stdio: 'pipe' });
     execFileSync(process.execPath, ['--check', TRANSFER_SCRIPT], { stdio: 'pipe' });
     execFileSync(process.execPath, ['--check', QUERY_SCRIPT], { stdio: 'pipe' });
+  });
+
+  it('public docs section includes AI training topic and external links', () => {
+    const publicApp = readFileSync(PUBLIC_APP_FILE, 'utf8');
+    expect(publicApp).toContain("id: 'ai-agent-training'");
+    expect(publicApp).toContain("id: 'ai-skills-docs'");
+    expect(publicApp).toContain("id: 'ai-skills-aibtc'");
+    expect(publicApp).toContain("id: 'ai-skills-generic'");
+    expect(publicApp).toContain('docs/ai-skills');
+    expect(publicApp).toContain('aibtc-agent-training.md');
+    expect(publicApp).toContain('generic-agent-training.md');
   });
 });
