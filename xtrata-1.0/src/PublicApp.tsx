@@ -802,6 +802,26 @@ const formatMicroStxLabel = (value: bigint | null) => {
   return `${whole.toString()}.${fraction.toString().padStart(6, '0')} STX`;
 };
 
+const isPublicMintSoldOut = (status: PublicLiveMintStatus | null) => {
+  if (!status) {
+    return false;
+  }
+  if (status.remaining !== null && status.remaining <= 0n) {
+    return true;
+  }
+  if (status.finalized === true) {
+    return true;
+  }
+  if (
+    status.maxSupply !== null &&
+    status.mintedCount !== null &&
+    status.mintedCount >= status.maxSupply
+  ) {
+    return true;
+  }
+  return false;
+};
+
 const buildMintStateLabel = (status: PublicLiveMintStatus | null) => {
   if (!status) {
     return 'Published';
@@ -2092,12 +2112,14 @@ export default function PublicApp() {
                         : maxSupply - mintedCount
                       : null);
                   const mintStateLabel = buildMintStateLabel(mintStatus);
+                  const soldOut = isPublicMintSoldOut(mintStatus);
                   const coverPreviewErrored = Boolean(
                     liveCoverPreviewErrorByCollectionId[collection.id]
                   );
 
                   return (
                     <article className="public-live-collections__card" key={collection.id}>
+                      {soldOut && <span className="collection-live-page__stamp">Sold out</span>}
                       <div className="public-live-collections__media">
                         {collection.coverImageUrl && !coverPreviewErrored ? (
                           <img

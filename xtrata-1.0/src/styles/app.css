@@ -5694,6 +5694,8 @@ p {
   border-radius: 14px;
   background: var(--surface-soft);
   padding: 10px;
+  position: relative;
+  overflow: hidden;
   display: grid;
   grid-template-columns: 128px minmax(0, 1fr);
   column-gap: 10px;
