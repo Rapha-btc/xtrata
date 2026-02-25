@@ -4427,6 +4427,43 @@ p {
   font-size: 0.79rem;
 }
 
+.collection-live-page__mint-guide {
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  padding: 10px 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.collection-live-page__mint-guide-title {
+  margin: 0;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.collection-live-page__mint-guide-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+}
+
+.collection-live-page__mint-guide-item {
+  display: grid;
+  gap: 4px;
+  font-size: 0.84rem;
+}
+
+.collection-live-page__mint-guide-note {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
 .collection-live-page__gallery-grid {
   display: grid;
   gap: 10px;

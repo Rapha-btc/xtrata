@@ -17,7 +17,13 @@ import {
 } from '@stacks/transactions';
 import { createXtrataClient } from './lib/contract/client';
 import { useBnsNames } from './lib/bns/hooks';
-import { batchChunks, chunkBytes, computeExpectedHash } from './lib/chunking/hash';
+import {
+  batchChunks,
+  CHUNK_SIZE,
+  chunkBytes,
+  computeExpectedHash,
+  MAX_BATCH_SIZE
+} from './lib/chunking/hash';
 import {
   buildCollectionSealStxPostConditions,
   buildMintBeginStxPostConditions,
@@ -42,6 +48,7 @@ import {
   writeThemePreference
 } from './lib/theme/preferences';
 import { bytesToHex } from './lib/utils/encoding';
+import { formatBytes } from './lib/utils/format';
 import { createStacksWalletAdapter } from './lib/wallet/adapter';
 import { createWalletSessionStore } from './lib/wallet/session';
 import type { WalletSession } from './lib/wallet/types';
@@ -57,6 +64,8 @@ const STATUS_REFRESH_MINTING_MS = 3_000;
 const MINTED_SCAN_BATCH_SIZE = 8;
 const CHAIN_SYNC_INTERVAL_MS = 3_000;
 const CHAIN_SYNC_MAX_ATTEMPTS = 25;
+const COLLECTION_UPLOAD_EXPIRY_BLOCKS = 4_320;
+const APPROX_BLOCKS_PER_DAY = 144;
 const XTRATA_APP_ICON_DATA_URI =
   'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%23f97316"/><path d="M18 20h28v6H18zm0 12h28v6H18zm0 12h28v6H18z" fill="white"/></svg>';
 
@@ -303,6 +312,26 @@ const pause = (ms: number) =>
     window.setTimeout(() => resolve(), ms);
   });
 
+const toPositiveInteger = (value: number) => {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  const normalized = Math.floor(value);
+  return normalized > 0 ? normalized : 0;
+};
+
+const resolveAssetChunkCount = (asset: CollectionAsset) => {
+  const totalChunks = toPositiveInteger(asset.total_chunks);
+  if (totalChunks > 0) {
+    return totalChunks;
+  }
+  const totalBytes = toPositiveInteger(asset.total_bytes);
+  if (totalBytes <= 0) {
+    return 0;
+  }
+  return Math.ceil(totalBytes / CHUNK_SIZE);
+};
+
 const toResumeStorageKey = (collectionId: string, address: string | null) => {
   if (!collectionId || !address) {
     return null;
@@ -377,6 +406,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   const [mintedScanPending, setMintedScanPending] = useState(false);
   const [pendingMintAssetIds, setPendingMintAssetIds] = useState<string[]>([]);
   const [resumeAssetId, setResumeAssetId] = useState<string | null>(null);
+  const [showMintGuide, setShowMintGuide] = useState(false);
   const [beginState, setBeginState] = useState<StepState>('idle');
   const [uploadState, setUploadState] = useState<StepState>('idle');
   const [sealState, setSealState] = useState<StepState>('idle');
@@ -512,6 +542,29 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       }),
     [assets]
   );
+
+  const largestImageMintAsset = useMemo(() => {
+    if (imageAssets.length === 0) {
+      return null;
+    }
+    let selected: CollectionAsset | null = null;
+    let maxChunks = 0;
+    imageAssets.forEach((asset) => {
+      const chunkCount = resolveAssetChunkCount(asset);
+      if (chunkCount <= maxChunks) {
+        return;
+      }
+      maxChunks = chunkCount;
+      selected = asset;
+    });
+    if (!selected) {
+      return null;
+    }
+    return {
+      totalChunks: maxChunks,
+      totalBytes: toPositiveInteger(selected.total_bytes)
+    };
+  }, [imageAssets]);
 
   const mintedGallery = useMemo(() => {
     const minted = imageAssets.filter(
@@ -1961,6 +2014,41 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     chargeMintPriceAtBegin
   });
   const protocolFeeUnitLabel = toMicroStxLabel(contractStatus?.coreFeeUnitMicroStx ?? null);
+  const largestImageChunkCount = largestImageMintAsset?.totalChunks ?? null;
+  const largestImageBytes = largestImageMintAsset?.totalBytes ?? null;
+  const estimatedUploadTransactionCount =
+    largestImageChunkCount === null || largestImageChunkCount <= 0
+      ? null
+      : Math.max(1, Math.ceil(largestImageChunkCount / MINT_CHUNK_BATCH_SIZE));
+  const estimatedWalletApprovals =
+    estimatedUploadTransactionCount === null
+      ? null
+      : 2 + estimatedUploadTransactionCount;
+  const estimatedSealFeeUnits =
+    largestImageChunkCount === null || largestImageChunkCount <= 0
+      ? null
+      : 1 + Math.ceil(largestImageChunkCount / MAX_BATCH_SIZE);
+  const minimumProtocolFeeTotal =
+    contractStatus?.coreFeeUnitMicroStx && contractStatus.coreFeeUnitMicroStx > 0n
+      ? contractStatus.coreFeeUnitMicroStx * 3n
+      : null;
+  const estimatedMaxProtocolFeeTotal =
+    contractStatus?.coreFeeUnitMicroStx &&
+    contractStatus.coreFeeUnitMicroStx > 0n &&
+    estimatedSealFeeUnits !== null
+      ? contractStatus.coreFeeUnitMicroStx * BigInt(1 + estimatedSealFeeUnits)
+      : null;
+  const sealMinProtocolFee =
+    contractStatus?.coreFeeUnitMicroStx && contractStatus.coreFeeUnitMicroStx > 0n
+      ? contractStatus.coreFeeUnitMicroStx * 2n
+      : null;
+  const exampleSealTotalForFiveStx =
+    sealMinProtocolFee === null ? null : 5_000_000n + sealMinProtocolFee;
+  const uploadExpiryDays = Math.round(COLLECTION_UPLOAD_EXPIRY_BLOCKS / APPROX_BLOCKS_PER_DAY);
+  const largestImageSizeLabel =
+    largestImageBytes && largestImageBytes > 0
+      ? formatBytes(BigInt(largestImageBytes))
+      : null;
   const pausedStatus = contractStatus?.paused;
   const pausedLabel =
     pausedStatus === null || pausedStatus === undefined
@@ -2045,7 +2133,85 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                       ? 'Resume mint'
                       : 'Mint one now'}
               </button>
+              <button
+                className="button button--ghost"
+                type="button"
+                onClick={() => setShowMintGuide((current) => !current)}
+                aria-expanded={showMintGuide}
+                aria-controls="live-mint-guide"
+              >
+                {showMintGuide ? 'Hide mint guide' : 'How minting works'}
+              </button>
             </div>
+            {showMintGuide && (
+              <div id="live-mint-guide" className="collection-live-page__mint-guide">
+                <p className="collection-live-page__mint-guide-title">
+                  Xtrata mint flow: minimum 3 wallet signatures
+                </p>
+                <ol className="collection-live-page__mint-guide-list">
+                  <li className="collection-live-page__mint-guide-item">
+                    <strong>Begin transaction</strong>
+                    <span>
+                      Starts your mint session and anti-spam protection. This includes one
+                      protocol fee unit ({protocolFeeUnitLabel}).
+                    </span>
+                  </li>
+                  <li className="collection-live-page__mint-guide-item">
+                    <strong>Upload batch transactions</strong>
+                    <span>
+                      Data is inscribed here. These can require multiple signatures, but upload
+                      batches do not add Xtrata protocol fees (only network mining fees). If a
+                      session is interrupted, resume will continue from confirmed chunks so data is
+                      not uploaded twice. With the current 4 MB cap, this is typically 10 upload
+                      signatures or fewer.
+                    </span>
+                    <span className="collection-live-page__mint-guide-note">
+                      {estimatedWalletApprovals === null
+                        ? 'Expected wallet prompts: at least 3 total (begin, upload, seal).'
+                        : `Expected wallet prompts for the largest image in this collection: about ${estimatedWalletApprovals} total (${estimatedUploadTransactionCount} upload batch signatures).`}
+                    </span>
+                    {largestImageChunkCount !== null && (
+                      <span className="collection-live-page__mint-guide-note">
+                        Largest image estimate: {largestImageChunkCount} chunks
+                        {largestImageSizeLabel ? ` (${largestImageSizeLabel})` : ''}.
+                      </span>
+                    )}
+                  </li>
+                  <li className="collection-live-page__mint-guide-item">
+                    <strong>Seal transaction</strong>
+                    <span>
+                      Finalizes the mint, assigns IDs, and confirms the inscription on-chain.
+                    </span>
+                  </li>
+                </ol>
+                <p className="collection-live-page__mint-guide-note">
+                  Current v1 collection mint behavior: protocol fees settle across begin + seal.
+                  Minimum protocol fee is{' '}
+                  {minimumProtocolFeeTotal ? toMicroStxLabel(minimumProtocolFeeTotal) : 'unknown'}
+                  {sealMinProtocolFee
+                    ? ` (begin ${protocolFeeUnitLabel} + seal ${toMicroStxLabel(sealMinProtocolFee)} for <=50 chunks).`
+                    : '.'}
+                </p>
+                {estimatedMaxProtocolFeeTotal && largestImageChunkCount !== null && (
+                  <p className="collection-live-page__mint-guide-note">
+                    Estimated protocol fee for the largest image here:{' '}
+                    {toMicroStxLabel(estimatedMaxProtocolFeeTotal)} total.
+                  </p>
+                )}
+                <p className="collection-live-page__mint-guide-note">
+                  If mint price is 5 STX, wallet may currently show{' '}
+                  {exampleSealTotalForFiveStx
+                    ? `${toMicroStxLabel(exampleSealTotalForFiveStx)}`
+                    : '5 STX + completion fee'}
+                  at seal for smaller mints because completion fees are included at seal.
+                </p>
+                <p className="collection-live-page__mint-guide-note">
+                  Unfinished sessions can be resumed for about {uploadExpiryDays} days (
+                  {COLLECTION_UPLOAD_EXPIRY_BLOCKS.toLocaleString()} blocks). After that, stale
+                  uploads expire on-chain.
+                </p>
+              </div>
+            )}
             {heroMintStatusMessage && (
               <div className="alert collection-live-page__hero-alert">
                 {heroMintStatusMessage}
