@@ -179,4 +179,40 @@ describe('collection deploy readiness', () => {
     expect(result.ready).toBe(false);
     expect(result.reason).toContain('abort_by_response');
   });
+
+  it('retries deploy status lookup with the next key on Hiro rate limits', async () => {
+    const headerSnapshots: Array<string | null> = [];
+    const result = await getCollectionDeployReadiness({
+      env: {
+        HIRO_API_KEYS: 'key-one,key-two'
+      },
+      collectionId: 'c1',
+      queryAllImpl: async () => ({
+        results: [
+          {
+            id: 'c1',
+            contract_address: 'SP1234',
+            metadata: JSON.stringify({ deployTxId: '0xabc123' })
+          }
+        ]
+      }),
+      fetcher: async (_input, init) => {
+        const headers = new Headers(init?.headers);
+        headerSnapshots.push(headers.get('x-hiro-api-key'));
+        if (headerSnapshots.length === 1) {
+          return new Response('rate limited', {
+            status: 429
+          });
+        }
+        return new Response(JSON.stringify({ tx_status: 'success' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    });
+
+    expect(result.ready).toBe(true);
+    expect(result.deployTxStatus).toBe('success');
+    expect(headerSnapshots).toEqual(['key-one', 'key-two']);
+  });
 });

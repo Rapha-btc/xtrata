@@ -158,7 +158,8 @@ Vite proxies Hiro API endpoints to avoid CORS issues:
 	•	/hiro/mainnet
 
 Optional:
-	•	set HIRO_API_KEY in .env.local to reduce 429 rate limits
+	•	set HIRO_API_KEYS in .env.local (comma/newline list) to reduce 429 rate limits
+	•	fallback support remains for HIRO_API_KEY
 
 Override endpoints if required:
 	•	VITE_STACKS_API_TESTNET

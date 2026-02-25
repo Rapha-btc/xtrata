@@ -1,5 +1,6 @@
 import { deserializeCV, serializeCV, uintCV } from '@stacks/transactions';
 import { parseGetChunk, parseGetInscriptionMeta } from '../../src/lib/protocol/parsers';
+import { applyHiroApiKey, getHiroApiKeys, shouldRetryWithNextHiroKey } from '../lib/hiro-keys';
 
 type RuntimeEnv = Record<string, string | undefined>;
 
@@ -135,7 +136,7 @@ const callReadOnly = async (params: {
   senderAddress: string;
 }) => {
   const { env, apiBases } = params;
-  const key = env.HIRO_API_KEY || env.VITE_HIRO_API_KEY;
+  const hiroKeys = getHiroApiKeys(env);
   let lastError: Error | null = null;
 
   for (let i = 0; i < apiBases.length; i += 1) {
@@ -146,37 +147,46 @@ const callReadOnly = async (params: {
       `${params.contract.contractName}/` +
       `${params.functionName}`;
 
-    try {
-      const headers = new Headers({
-        'Content-Type': 'application/json'
-      });
-      if (key && base.includes('hiro.so')) {
-        headers.set('x-hiro-api-key', key);
-        headers.set('x-api-key', key);
+    const keyCandidates =
+      base.includes('hiro.so') && hiroKeys.length > 0 ? hiroKeys : [null];
+
+    for (let keyIndex = 0; keyIndex < keyCandidates.length; keyIndex += 1) {
+      const keyCandidate = keyCandidates[keyIndex];
+      const hasNextKey = keyIndex < keyCandidates.length - 1;
+      try {
+        const headers = new Headers({
+          'Content-Type': 'application/json'
+        });
+        applyHiroApiKey(headers, keyCandidate);
+
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            sender: params.senderAddress,
+            arguments: params.functionArgs
+          })
+        });
+
+        if (!response.ok) {
+          lastError = new Error(`HTTP ${response.status} from ${base}`);
+          if (hasNextKey && shouldRetryWithNextHiroKey(response.status)) {
+            continue;
+          }
+          break;
+        }
+
+        const body = await response.json();
+        if (!body || body.okay !== true || typeof body.result !== 'string') {
+          const cause = body && body.cause ? String(body.cause) : 'Invalid read-only response.';
+          throw new Error(cause);
+        }
+
+        return deserializeCV(body.result);
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        break;
       }
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          sender: params.senderAddress,
-          arguments: params.functionArgs
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status} from ${base}`);
-      }
-
-      const body = await response.json();
-      if (!body || body.okay !== true || typeof body.result !== 'string') {
-        const cause = body && body.cause ? String(body.cause) : 'Invalid read-only response.';
-        throw new Error(cause);
-      }
-
-      return deserializeCV(body.result);
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
     }
   }
 

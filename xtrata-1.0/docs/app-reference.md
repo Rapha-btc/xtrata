@@ -203,8 +203,12 @@ Notes: ensure tests or guards in `src/lib/network/__tests__/` still pass.
 ## API keys and env notes (local + Pages)
 
 - **Hiro API key**
-  - Local dev: set `HIRO_API_KEY` in `.env.local` (used by Vite proxy `/hiro/*`).
-  - Pages Functions: set `HIRO_API_KEY` in the Pages runtime env (used by `/functions/hiro`).
+  - Local dev: set `HIRO_API_KEYS` (comma/newline list) in `.env.local`; fallback supports `HIRO_API_KEY`.
+  - Pages Functions: set runtime env keys for `/functions/hiro`:
+    - preferred: `HIRO_API_KEYS` list
+    - optional numbered fallback: `HIRO_API_KEY_1`, `HIRO_API_KEY_2`, ...
+    - legacy single key: `HIRO_API_KEY`
+  - On `401/403/429`, the proxy tries the next configured Hiro key automatically.
   - Optional build flag: `VITE_HIRO_API_KEY` only indicates key presence in the UI.
   - Pages note: set variables for both **Production** and **Preview** environments
     (the `*.pages.dev` URL uses Preview) to avoid 429s on preview builds.

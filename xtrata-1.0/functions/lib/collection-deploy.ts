@@ -1,4 +1,5 @@
 import { queryAll, type Env } from './db';
+import { applyHiroApiKey, getHiroApiKeys, shouldRetryWithNextHiroKey } from './hiro-keys';
 
 type CollectionRow = Record<string, unknown>;
 
@@ -213,11 +214,27 @@ const resolveContractLookupTarget = (params: {
 
 const buildHiroHeaders = (apiKey: string | null) => {
   const headers = new Headers();
-  if (apiKey) {
-    headers.set('x-hiro-api-key', apiKey);
-    headers.set('x-api-key', apiKey);
-  }
+  applyHiroApiKey(headers, apiKey);
   return headers;
+};
+
+const fetchWithHiroKeyFallback = async (params: {
+  fetcher: typeof fetch;
+  url: string;
+  apiKeys: string[];
+}) => {
+  const keyCandidates = params.apiKeys.length > 0 ? params.apiKeys : [null];
+  for (let i = 0; i < keyCandidates.length; i += 1) {
+    const response = await params.fetcher(params.url, {
+      headers: buildHiroHeaders(keyCandidates[i])
+    });
+    const hasNextKey = i < keyCandidates.length - 1;
+    if (hasNextKey && shouldRetryWithNextHiroKey(response.status)) {
+      continue;
+    }
+    return response;
+  }
+  return new Response('Hiro request failed.', { status: 502 });
 };
 
 export async function getCollectionDeployReadiness(
@@ -275,8 +292,7 @@ export async function getCollectionDeployReadiness(
     contractAddress,
     coreContractId: toNullableString(metadata?.coreContractId)
   });
-  const apiKey =
-    toNullableString(params.env.HIRO_API_KEY) ?? toNullableString(params.env.VITE_HIRO_API_KEY);
+  const apiKeys = getHiroApiKeys(params.env);
   const deployTxId = toNullableString(metadata?.deployTxId);
   if (!deployTxId) {
     const contractTarget = resolveContractLookupTarget({
@@ -299,8 +315,10 @@ export async function getCollectionDeployReadiness(
 
     for (const network of networkOrder) {
       const contractSourceUrl = `${hiroBaseByNetwork(network)}/v2/contracts/source/${contractTarget.address}/${contractTarget.contractName}`;
-      const response = await fetcher(contractSourceUrl, {
-        headers: buildHiroHeaders(apiKey)
+      const response = await fetchWithHiroKeyFallback({
+        fetcher,
+        url: contractSourceUrl,
+        apiKeys
       });
 
       if (response.status === 404) {
@@ -359,8 +377,10 @@ export async function getCollectionDeployReadiness(
 
   for (const network of networkOrder) {
     const url = `${hiroBaseByNetwork(network)}/extended/v1/tx/${txId}`;
-    const response = await fetcher(url, {
-      headers: buildHiroHeaders(apiKey)
+    const response = await fetchWithHiroKeyFallback({
+      fetcher,
+      url,
+      apiKeys
     });
     if (response.status === 404) {
       continue;

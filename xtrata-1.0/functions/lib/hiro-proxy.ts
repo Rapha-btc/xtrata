@@ -1,3 +1,5 @@
+import { applyHiroApiKey, getHiroApiKeys, shouldRetryWithNextHiroKey } from './hiro-keys';
+
 const DEFAULT_TARGET_BASES: Record<string, string> = {
   mainnet: 'https://api.mainnet.hiro.so',
   testnet: 'https://api.testnet.hiro.so'
@@ -66,23 +68,37 @@ export const proxyHiroRequest = async (params: {
   const headers = new Headers(request.headers);
   headers.delete('host');
   headers.delete('origin');
-  const apiKey = env.HIRO_API_KEY || env.VITE_HIRO_API_KEY;
-  if (apiKey) {
-    headers.set('x-hiro-api-key', apiKey);
-    headers.set('x-api-key', apiKey);
-  }
+  const apiKeys = getHiroApiKeys(env);
+  const keyCandidates = apiKeys.length > 0 ? apiKeys : [null];
 
   const body =
     request.method === 'GET' || request.method === 'HEAD'
       ? undefined
       : await request.arrayBuffer();
+  let response: Response | null = null;
 
-  const response = await fetch(targetUrl, {
-    method: request.method,
-    headers,
-    body,
-    redirect: 'follow'
-  });
+  for (let i = 0; i < keyCandidates.length; i += 1) {
+    const keyCandidate = keyCandidates[i];
+    const attemptHeaders = new Headers(headers);
+    applyHiroApiKey(attemptHeaders, keyCandidate);
+    const attemptResponse = await fetch(targetUrl, {
+      method: request.method,
+      headers: attemptHeaders,
+      body,
+      redirect: 'follow'
+    });
+
+    const hasNextKey = i < keyCandidates.length - 1;
+    if (hasNextKey && shouldRetryWithNextHiroKey(attemptResponse.status)) {
+      continue;
+    }
+    response = attemptResponse;
+    break;
+  }
+
+  if (!response) {
+    response = new Response('Hiro request failed.', { status: 502 });
+  }
 
   const responseHeaders = new Headers(response.headers);
   Object.entries(CORS_HEADERS).forEach(([key, value]) => {
