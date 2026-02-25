@@ -2,7 +2,10 @@ import { jsonResponse, badRequest, serverError } from '../../lib/utils';
 import { queryAll, run } from '../../lib/db';
 import {
   canStageUploadsBeforeDeploy,
+  isCollectionPublicVisible,
+  isCollectionPublished,
   isCollectionUploadsLocked,
+  parseCollectionMetadata,
   staysWithinLimit,
   stripDeployPricingLockFromMetadata
 } from '../../lib/collections';
@@ -15,6 +18,10 @@ const logAssetDebug = (
 ) => {
   console.log(`[collections/assets][${requestId}] ${phase}`, details);
 };
+
+const PUBLIC_ASSETS_CACHE_CONTROL =
+  'public, max-age=120, s-maxage=300, stale-while-revalidate=600';
+const PRIVATE_NO_STORE_CACHE_CONTROL = 'private, no-store, max-age=0';
 
 const clearDeployPricingLock = async (params: {
   env: Parameters<typeof run>[0];
@@ -50,17 +57,35 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
 
   if (request.method === 'GET') {
     try {
-      await run(
+      const collectionResult = await queryAll(
         env,
-        'UPDATE assets SET state = ? WHERE collection_id = ? AND expires_at IS NOT NULL AND expires_at < ? AND state = ?',
-        ['expired', collectionId, Date.now(), 'draft']
+        'SELECT state, metadata FROM collections WHERE id = ? LIMIT 1',
+        [collectionId]
       );
+      const collectionRow = (collectionResult.results ?? [])[0] as
+        | Record<string, unknown>
+        | undefined;
+      const isPublicCollection =
+        collectionRow !== undefined &&
+        isCollectionPublished(collectionRow.state) &&
+        isCollectionPublicVisible(parseCollectionMetadata(collectionRow.metadata));
+      if (!isPublicCollection) {
+        await run(
+          env,
+          'UPDATE assets SET state = ? WHERE collection_id = ? AND expires_at IS NOT NULL AND expires_at < ? AND state = ?',
+          ['expired', collectionId, Date.now(), 'draft']
+        );
+      }
       const result = await queryAll(
         env,
         'SELECT * FROM assets WHERE collection_id = ? ORDER BY created_at DESC',
         [collectionId]
       );
-      return jsonResponse(result.results ?? []);
+      return jsonResponse(result.results ?? [], 200, {
+        'Cache-Control': isPublicCollection
+          ? PUBLIC_ASSETS_CACHE_CONTROL
+          : PRIVATE_NO_STORE_CACHE_CONTROL
+      });
     } catch (error) {
       return serverError(error instanceof Error ? error.message : 'Failed to load assets');
     }

@@ -10,7 +10,13 @@ import {
   parseCollectionMetadata
 } from './lib/collections';
 
-const mapRow = (row: Record<string, unknown>) => ({
+const PUBLIC_COLLECTIONS_CACHE_CONTROL =
+  'public, max-age=60, s-maxage=120, stale-while-revalidate=300';
+const PRIVATE_NO_STORE_CACHE_CONTROL = 'private, no-store, max-age=0';
+
+const mapRow = (
+  row: Record<string, unknown>
+): Record<string, unknown> & { metadata: Record<string, unknown> | null } => ({
   ...row,
   metadata: parseCollectionMetadata(row.metadata)
 });
@@ -63,7 +69,16 @@ export const onRequest: PagesFunction = async ({ request, env }) => {
         }
         return true;
       });
-      return jsonResponse(filtered);
+      const isPublicLiveListRequest =
+        artistAddress.length === 0 &&
+        !includeArchived &&
+        publishedOnly &&
+        publicVisibleOnly;
+      return jsonResponse(filtered, 200, {
+        'Cache-Control': isPublicLiveListRequest
+          ? PUBLIC_COLLECTIONS_CACHE_CONTROL
+          : PRIVATE_NO_STORE_CACHE_CONTROL
+      });
     } catch (error) {
       return serverError(
         error instanceof Error ? error.message : 'failed to load collections'

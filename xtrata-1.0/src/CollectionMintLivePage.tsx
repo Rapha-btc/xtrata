@@ -67,6 +67,8 @@ const CHAIN_SYNC_INTERVAL_MS = 3_000;
 const CHAIN_SYNC_MAX_ATTEMPTS = 25;
 const COLLECTION_UPLOAD_EXPIRY_BLOCKS = 4_320;
 const APPROX_BLOCKS_PER_DAY = 144;
+const COLLECTION_SNAPSHOT_CACHE_MS = 2 * 60_000;
+const COLLECTION_ASSET_BYTES_CACHE_MS = 10 * 60_000;
 const XTRATA_APP_ICON_DATA_URI =
   'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%23f97316"/><path d="M18 20h28v6H18zm0 12h28v6H18zm0 12h28v6H18z" fill="white"/></svg>';
 
@@ -125,6 +127,56 @@ type MintProgress = {
 };
 
 type CollectionMintPaymentModel = 'begin' | 'seal' | 'unknown';
+
+type CollectionSnapshot = {
+  collection: CollectionRecord;
+  assets: CollectionAsset[];
+};
+
+type TimedCacheEntry<T> = {
+  updatedAt: number;
+  value: T;
+};
+
+const collectionSnapshotCache = new Map<
+  string,
+  TimedCacheEntry<CollectionSnapshot>
+>();
+const collectionSnapshotInFlight = new Map<string, Promise<CollectionSnapshot>>();
+const collectionAssetBytesCache = new Map<
+  string,
+  TimedCacheEntry<Uint8Array>
+>();
+const collectionAssetBytesInFlight = new Map<string, Promise<Uint8Array>>();
+
+const readTimedCache = <T,>(
+  cache: Map<string, TimedCacheEntry<T>>,
+  key: string,
+  maxAgeMs: number
+) => {
+  const record = cache.get(key);
+  if (!record) {
+    return null;
+  }
+  if (Date.now() - record.updatedAt > maxAgeMs) {
+    cache.delete(key);
+    return null;
+  }
+  return record.value;
+};
+
+const writeTimedCache = <T,>(
+  cache: Map<string, TimedCacheEntry<T>>,
+  key: string,
+  value: T
+) => {
+  cache.set(key, {
+    updatedAt: Date.now(),
+    value
+  });
+};
+
+const cloneBytes = (value: Uint8Array) => new Uint8Array(value);
 
 const toText = (value: unknown) => {
   if (typeof value !== 'string') {
@@ -811,22 +863,45 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       if (!resolvedCollectionId) {
         throw new Error('Collection id missing.');
       }
-      const response = await fetch(
-        `/collections/${encodeURIComponent(
-          resolvedCollectionId
-        )}/asset-preview?assetId=${encodeURIComponent(assetId)}`,
-        { cache: 'no-store' }
+      const cacheKey = `${resolvedCollectionId}:${assetId}`;
+      const cached = readTimedCache(
+        collectionAssetBytesCache,
+        cacheKey,
+        COLLECTION_ASSET_BYTES_CACHE_MS
       );
-      if (!response.ok) {
-        const text = (await response.text())
-          .slice(0, 180)
-          .replace(/\s+/g, ' ')
-          .trim();
-        throw new Error(
-          `Unable to load asset bytes (${response.status})${text ? `: ${text}` : ''}.`
-        );
+      if (cached) {
+        return cloneBytes(cached);
       }
-      return new Uint8Array(await response.arrayBuffer());
+      const inFlight = collectionAssetBytesInFlight.get(cacheKey);
+      if (inFlight) {
+        return cloneBytes(await inFlight);
+      }
+      const loadPromise = (async () => {
+        const response = await fetch(
+          `/collections/${encodeURIComponent(
+            resolvedCollectionId
+          )}/asset-preview?assetId=${encodeURIComponent(assetId)}`,
+          { cache: 'default' }
+        );
+        if (!response.ok) {
+          const text = (await response.text())
+            .slice(0, 180)
+            .replace(/\s+/g, ' ')
+            .trim();
+          throw new Error(
+            `Unable to load asset bytes (${response.status})${text ? `: ${text}` : ''}.`
+          );
+        }
+        const bytes = new Uint8Array(await response.arrayBuffer());
+        writeTimedCache(collectionAssetBytesCache, cacheKey, bytes);
+        return bytes;
+      })();
+      collectionAssetBytesInFlight.set(cacheKey, loadPromise);
+      try {
+        return cloneBytes(await loadPromise);
+      } finally {
+        collectionAssetBytesInFlight.delete(cacheKey);
+      }
     },
     [resolvedCollectionId]
   );
@@ -841,32 +916,65 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     setCollectionLoading(true);
     setCollectionMessage(null);
     try {
-      const collectionResponse = await fetch(
-        `/collections/${encodeURIComponent(normalizedCollectionKey)}`,
-        {
-          cache: 'no-store'
+      const cached = readTimedCache(
+        collectionSnapshotCache,
+        normalizedCollectionKey,
+        COLLECTION_SNAPSHOT_CACHE_MS
+      );
+      let snapshot: CollectionSnapshot;
+      if (cached) {
+        snapshot = cached;
+      } else {
+        const inFlight = collectionSnapshotInFlight.get(normalizedCollectionKey);
+        if (inFlight) {
+          snapshot = await inFlight;
+        } else {
+          const loadPromise = (async () => {
+            const collectionResponse = await fetch(
+              `/collections/${encodeURIComponent(normalizedCollectionKey)}`,
+              {
+                cache: 'default'
+              }
+            );
+            const loadedCollection = await parseJsonResponse<CollectionRecord>(
+              collectionResponse,
+              'Collection'
+            );
+            const loadedCollectionId = toText(loadedCollection.id);
+            if (!loadedCollectionId) {
+              throw new Error('Collection record is missing an id.');
+            }
+            const assetsResponse = await fetch(
+              `/collections/${encodeURIComponent(loadedCollectionId)}/assets`,
+              {
+                cache: 'default'
+              }
+            );
+            const loadedAssets = await parseJsonResponse<CollectionAsset[]>(
+              assetsResponse,
+              'Collection assets'
+            );
+            const nextSnapshot = {
+              collection: loadedCollection,
+              assets: loadedAssets
+            } satisfies CollectionSnapshot;
+            writeTimedCache(
+              collectionSnapshotCache,
+              normalizedCollectionKey,
+              nextSnapshot
+            );
+            return nextSnapshot;
+          })();
+          collectionSnapshotInFlight.set(normalizedCollectionKey, loadPromise);
+          try {
+            snapshot = await loadPromise;
+          } finally {
+            collectionSnapshotInFlight.delete(normalizedCollectionKey);
+          }
         }
-      );
-      const loadedCollection = await parseJsonResponse<CollectionRecord>(
-        collectionResponse,
-        'Collection'
-      );
-      const loadedCollectionId = toText(loadedCollection.id);
-      if (!loadedCollectionId) {
-        throw new Error('Collection record is missing an id.');
       }
-      const assetsResponse = await fetch(
-        `/collections/${encodeURIComponent(loadedCollectionId)}/assets`,
-        {
-          cache: 'no-store'
-        }
-      );
-      const loadedAssets = await parseJsonResponse<CollectionAsset[]>(
-        assetsResponse,
-        'Collection assets'
-      );
-      setCollection(loadedCollection);
-      setAssets(loadedAssets);
+      setCollection(snapshot.collection);
+      setAssets(snapshot.assets);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       setCollection(null);

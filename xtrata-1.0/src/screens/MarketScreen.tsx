@@ -47,6 +47,8 @@ const ACTIVE_LISTINGS_SCAN_LIMIT = 60;
 const ACTIVE_LISTINGS_SCAN_STEP = 20;
 const ACTIVE_LISTINGS_SCAN_MAX = 200;
 const RECENT_ACTIVITY_LIMIT = 12;
+const MARKET_DATA_STALE_MS = 60_000;
+const MARKET_DATA_REFETCH_MS = 120_000;
 
 const marketSelectionStore = createMarketSelectionStore();
 
@@ -274,8 +276,9 @@ export default function MarketScreen(props: MarketScreenProps) {
       activeListingsScanLimit
     ],
     enabled: !!marketClient && !!marketContract && !props.collapsed,
-    staleTime: 30_000,
-    refetchInterval: props.collapsed ? false : 60_000,
+    staleTime: MARKET_DATA_STALE_MS,
+    refetchInterval: props.collapsed ? false : MARKET_DATA_REFETCH_MS,
+    refetchOnWindowFocus: false,
     queryFn: async (): Promise<ActiveListing[]> => {
       if (!marketClient || !marketContractIdLabel) {
         return [];
@@ -333,8 +336,9 @@ export default function MarketScreen(props: MarketScreenProps) {
   const marketActivityQuery = useQuery({
     queryKey: ['market', marketContractIdLabel, 'activity', activityKey],
     enabled: !!marketContract && !props.collapsed && !isPublicVariant,
-    staleTime: 30_000,
-    refetchInterval: props.collapsed ? false : 60_000,
+    staleTime: MARKET_DATA_STALE_MS,
+    refetchInterval: props.collapsed ? false : MARKET_DATA_REFETCH_MS,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       if (!marketContract) {
         throw new Error('Market contract unavailable');
@@ -349,8 +353,9 @@ export default function MarketScreen(props: MarketScreenProps) {
   const nftActivityQuery = useQuery({
     queryKey: ['nft', nftContractId, DEFAULT_NFT_ASSET_NAME, 'activity', activityKey],
     enabled: !!props.contract && !props.collapsed && !isPublicVariant,
-    staleTime: 30_000,
-    refetchInterval: props.collapsed ? false : 60_000,
+    staleTime: MARKET_DATA_STALE_MS,
+    refetchInterval: props.collapsed ? false : MARKET_DATA_REFETCH_MS,
+    refetchOnWindowFocus: false,
     queryFn: () =>
       loadNftActivity({
         contract: props.contract,

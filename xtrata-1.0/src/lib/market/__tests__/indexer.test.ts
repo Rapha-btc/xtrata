@@ -1,14 +1,26 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Cl } from '@stacks/transactions';
 import {
   __testing,
   buildActiveListingIndex,
   buildMarketListingKey,
-  buildUnifiedActivityTimeline
+  buildUnifiedActivityTimeline,
+  loadMarketActivity,
+  loadNftActivity
 } from '../indexer';
 import type { MarketActivityEvent, NftActivityEvent } from '../types';
 
 describe('market indexer', () => {
+  beforeEach(() => {
+    __testing.resetMarketIndexerRuntimeState();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    __testing.resetMarketIndexerRuntimeState();
+  });
+
   it('parses list events from print tuple', () => {
     const value = Cl.tuple({
       event: Cl.stringAscii('list'),
@@ -212,5 +224,77 @@ describe('market indexer', () => {
     expect(unified.find((event) => event.type === 'transfer')).toBeUndefined();
     expect(unified.find((event) => event.type === 'inscribe')?.tokenId).toBe(6n);
     expect(unified.find((event) => event.type === 'buy')?.price).toBe(123n);
+  });
+
+  it('deduplicates concurrent market activity fetches', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ results: [] }), {
+          status: 200,
+          headers: {
+            'content-type': 'application/json'
+          }
+        })
+      );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const contract = {
+      address: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
+      contractName: 'xtrata-market-v1-2',
+      network: 'mainnet' as const
+    };
+
+    const [first, second] = await Promise.all([
+      loadMarketActivity({ contract, force: true }),
+      loadMarketActivity({ contract, force: true })
+    ]);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(first.contractId).toBe(
+      'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-market-v1-2'
+    );
+    expect(second.updatedAt).toBe(first.updatedAt);
+    expect(second.events).toEqual(first.events);
+  });
+
+  it('deduplicates concurrent NFT activity fetches', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ results: [] }), {
+          status: 200,
+          headers: {
+            'content-type': 'application/json'
+          }
+        })
+      );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const contract = {
+      address: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
+      contractName: 'xtrata-v1-2',
+      network: 'mainnet' as const
+    };
+
+    const [first, second] = await Promise.all([
+      loadNftActivity({
+        contract,
+        assetName: 'xtrata-inscription',
+        force: true
+      }),
+      loadNftActivity({
+        contract,
+        assetName: 'xtrata-inscription',
+        force: true
+      })
+    ]);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(first.assetIdentifier).toBe(
+      'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-2::xtrata-inscription'
+    );
+    expect(second.updatedAt).toBe(first.updatedAt);
+    expect(second.events).toEqual(first.events);
   });
 });

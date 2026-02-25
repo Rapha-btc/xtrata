@@ -4,6 +4,8 @@ import { DEFAULT_NFT_ASSET_NAME } from '../contract/post-conditions';
 
 const HOLDINGS_PAGE_LIMIT = 200;
 const DEFAULT_MAX_IDS = 2000;
+const HOLDINGS_CACHE_MAX_AGE_MS = 15 * 60_000;
+const HOLDINGS_RATE_LIMIT_BACKOFF_MS = 3 * 60_000;
 
 type HiroHoldingValue =
   | string
@@ -100,6 +102,62 @@ const shouldTryFallback = (error: unknown) => {
   );
 };
 
+const isRateLimitError = (error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  const lower = message.toLowerCase();
+  return (
+    lower.includes('429') ||
+    lower.includes('too many requests') ||
+    lower.includes('rate limit')
+  );
+};
+
+const walletHoldingsBackoffUntil = new Map<string, number>();
+const walletHoldingsSnapshots = new Map<
+  string,
+  {
+    updatedAt: number;
+    snapshot: WalletHoldingsIndex;
+  }
+>();
+
+const toWalletHoldingsSnapshotKey = (params: {
+  network: NetworkType;
+  walletAddress: string;
+  contractIds: string[];
+  maxIds: number;
+  assetName: string;
+}) =>
+  [
+    params.network,
+    params.walletAddress.trim().toUpperCase(),
+    params.assetName,
+    params.maxIds.toString(),
+    ...params.contractIds
+  ].join('|');
+
+const loadWalletHoldingsSnapshot = (
+  key: string,
+  maxAgeMs = HOLDINGS_CACHE_MAX_AGE_MS
+) => {
+  const record = walletHoldingsSnapshots.get(key);
+  if (!record) {
+    return null;
+  }
+  if (Date.now() - record.updatedAt > maxAgeMs) {
+    walletHoldingsSnapshots.delete(key);
+    return null;
+  }
+  return record.snapshot;
+};
+
+const saveWalletHoldingsSnapshot = (key: string, snapshot: WalletHoldingsIndex) => {
+  walletHoldingsSnapshots.set(key, {
+    updatedAt: Date.now(),
+    snapshot
+  });
+};
+
 export type WalletHoldingsIndex = {
   tokenIds: bigint[];
   sourceBase: string;
@@ -121,8 +179,25 @@ export const loadWalletHoldingsIndex = async (params: {
         .map((entry) => entry.trim())
         .filter((entry) => entry.length > 0)
     )
-  );
+  ).sort();
   if (normalizedContracts.length === 0) {
+    return null;
+  }
+  const maxIds = Math.max(1, params.maxIds ?? DEFAULT_MAX_IDS);
+  const assetName = params.assetName ?? DEFAULT_NFT_ASSET_NAME;
+  const snapshotKey = toWalletHoldingsSnapshotKey({
+    network: params.network,
+    walletAddress: params.walletAddress,
+    contractIds: normalizedContracts,
+    maxIds,
+    assetName
+  });
+  const backoffUntil = walletHoldingsBackoffUntil.get(snapshotKey) ?? 0;
+  if (backoffUntil > Date.now()) {
+    const cached = loadWalletHoldingsSnapshot(snapshotKey);
+    if (cached) {
+      return cached;
+    }
     return null;
   }
   const baseUrls = (
@@ -131,9 +206,8 @@ export const loadWalletHoldingsIndex = async (params: {
   if (baseUrls.length === 0) {
     return null;
   }
-  const maxIds = Math.max(1, params.maxIds ?? DEFAULT_MAX_IDS);
   const assetIdentifiers = normalizedContracts
-    .map((contractId) => `${contractId}::${params.assetName ?? DEFAULT_NFT_ASSET_NAME}`)
+    .map((contractId) => `${contractId}::${assetName}`)
     .join(',');
   const allowedContracts = new Set(normalizedContracts);
   let lastError: unknown = null;
@@ -185,12 +259,14 @@ export const loadWalletHoldingsIndex = async (params: {
           break;
         }
       }
-      return {
+      const snapshot = {
         tokenIds: Array.from(tokenIdSet, (value) => BigInt(value)).sort(
           sortBigIntAsc
         ),
         sourceBase: baseUrl
       };
+      saveWalletHoldingsSnapshot(snapshotKey, snapshot);
+      return snapshot;
     } catch (error) {
       lastError = error;
       const hasFallback = index < baseUrls.length - 1;
@@ -202,8 +278,24 @@ export const loadWalletHoldingsIndex = async (params: {
   }
 
   if (lastError) {
+    if (isRateLimitError(lastError)) {
+      walletHoldingsBackoffUntil.set(
+        snapshotKey,
+        Date.now() + HOLDINGS_RATE_LIMIT_BACKOFF_MS
+      );
+    }
+    const cached = loadWalletHoldingsSnapshot(snapshotKey);
+    if (cached) {
+      return cached;
+    }
     return null;
   }
   return null;
 };
 
+export const __testing = {
+  resetWalletHoldingsIndexState() {
+    walletHoldingsBackoffUntil.clear();
+    walletHoldingsSnapshots.clear();
+  }
+};

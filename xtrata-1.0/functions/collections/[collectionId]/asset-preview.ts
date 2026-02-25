@@ -5,6 +5,11 @@ import {
   serverError
 } from '../../lib/utils';
 import { queryAll, type Env } from '../../lib/db';
+import {
+  isCollectionPublicVisible,
+  isCollectionPublished,
+  parseCollectionMetadata
+} from '../../lib/collections';
 
 type BucketCandidate = {
   key: 'COLLECTION_ASSETS' | 'ASSETS' | 'R2';
@@ -21,6 +26,10 @@ const toNullableString = (value: unknown) => {
 
 const isImageMimeType = (mimeType: string | null) =>
   Boolean(mimeType && mimeType.toLowerCase().startsWith('image/'));
+
+const PUBLIC_PREVIEW_CACHE_CONTROL =
+  'public, max-age=300, s-maxage=900, stale-while-revalidate=3600';
+const PRIVATE_PREVIEW_CACHE_CONTROL = 'private, no-store, max-age=0';
 
 const resolveAssetsBucket = (env: Env) => {
   const candidates: BucketCandidate[] = [
@@ -69,9 +78,15 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
   try {
     const result = await queryAll(
       env as Env,
-      `SELECT asset_id, storage_key, mime_type
-       FROM assets
-       WHERE collection_id = ? AND asset_id = ?
+      `SELECT
+         a.asset_id,
+         a.storage_key,
+         a.mime_type,
+         c.state as collection_state,
+         c.metadata as collection_metadata
+       FROM assets a
+       JOIN collections c ON c.id = a.collection_id
+       WHERE a.collection_id = ? AND a.asset_id = ?
        LIMIT 1`,
       [collectionId, assetId]
     );
@@ -82,6 +97,9 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
 
     const storageKey = toNullableString(row.storage_key);
     const mimeType = toNullableString(row.mime_type);
+    const shouldPublicCache =
+      isCollectionPublished(row.collection_state) &&
+      isCollectionPublicVisible(parseCollectionMetadata(row.collection_metadata));
 
     if (!storageKey) {
       return badRequest(`Asset is missing a storage key. Request ID: ${requestId}`);
@@ -113,7 +131,12 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
       'Content-Type',
       object.httpMetadata?.contentType ?? mimeType ?? 'application/octet-stream'
     );
-    headers.set('Cache-Control', 'private, max-age=60');
+    headers.set(
+      'Cache-Control',
+      shouldPublicCache
+        ? PUBLIC_PREVIEW_CACHE_CONTROL
+        : PRIVATE_PREVIEW_CACHE_CONTROL
+    );
     headers.set('X-Xtrata-Request-Id', requestId);
     headers.set('X-Xtrata-Asset-Binding', resolved.binding ?? 'unknown');
 
