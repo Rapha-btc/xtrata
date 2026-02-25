@@ -2203,7 +2203,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                   {exampleSealTotalForFiveStx
                     ? `${toMicroStxLabel(exampleSealTotalForFiveStx)}`
                     : '5 STX + completion fee'}
-                  at seal for smaller mints because completion fees are included at seal.
+                   at seal because completion fees are added at seal.
                 </p>
                 <p className="collection-live-page__mint-guide-note">
                   Unfinished sessions can be resumed for about {uploadExpiryDays} days (
