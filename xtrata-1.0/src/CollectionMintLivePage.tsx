@@ -33,6 +33,7 @@ import {
   resolveSealSpendCapMicroStx
 } from './lib/mint/post-conditions';
 import { resolveCollectionContractLink } from './lib/collections/contract-link';
+import { parseDeployPricingLockSnapshot } from './lib/deploy/pricing-lock';
 import { PUBLIC_CONTRACT } from './config/public';
 import { DEFAULT_TOKEN_URI, TX_DELAY_SECONDS } from './lib/mint/constants';
 import { getNetworkFromAddress, getNetworkMismatch } from './lib/network/guard';
@@ -433,6 +434,10 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   );
 
   const metadata = useMemo(() => toRecord(collection?.metadata) ?? null, [collection]);
+  const deployPricingLock = useMemo(
+    () => parseDeployPricingLockSnapshot(metadata),
+    [metadata]
+  );
   const templateVersion = useMemo(
     () => toText(metadata?.templateVersion),
     [metadata]
@@ -2014,20 +2019,22 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     chargeMintPriceAtBegin
   });
   const protocolFeeUnitLabel = toMicroStxLabel(contractStatus?.coreFeeUnitMicroStx ?? null);
-  const largestImageChunkCount = largestImageMintAsset?.totalChunks ?? null;
-  const largestImageBytes = largestImageMintAsset?.totalBytes ?? null;
+  const fallbackMaxChunkCount = largestImageMintAsset?.totalChunks ?? null;
+  const fallbackMaxBytes = largestImageMintAsset?.totalBytes ?? null;
+  const collectionMaxChunkCount = deployPricingLock?.maxChunks ?? fallbackMaxChunkCount;
+  const collectionMaxBytes = deployPricingLock?.maxBytes ?? fallbackMaxBytes;
   const estimatedUploadTransactionCount =
-    largestImageChunkCount === null || largestImageChunkCount <= 0
+    collectionMaxChunkCount === null || collectionMaxChunkCount <= 0
       ? null
-      : Math.max(1, Math.ceil(largestImageChunkCount / MINT_CHUNK_BATCH_SIZE));
+      : Math.max(1, Math.ceil(collectionMaxChunkCount / MINT_CHUNK_BATCH_SIZE));
   const estimatedWalletApprovals =
     estimatedUploadTransactionCount === null
       ? null
       : 2 + estimatedUploadTransactionCount;
   const estimatedSealFeeUnits =
-    largestImageChunkCount === null || largestImageChunkCount <= 0
+    collectionMaxChunkCount === null || collectionMaxChunkCount <= 0
       ? null
-      : 1 + Math.ceil(largestImageChunkCount / MAX_BATCH_SIZE);
+      : 1 + Math.ceil(collectionMaxChunkCount / MAX_BATCH_SIZE);
   const minimumProtocolFeeTotal =
     contractStatus?.coreFeeUnitMicroStx && contractStatus.coreFeeUnitMicroStx > 0n
       ? contractStatus.coreFeeUnitMicroStx * 3n
@@ -2045,10 +2052,20 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   const exampleSealTotalForFiveStx =
     sealMinProtocolFee === null ? null : 5_000_000n + sealMinProtocolFee;
   const uploadExpiryDays = Math.round(COLLECTION_UPLOAD_EXPIRY_BLOCKS / APPROX_BLOCKS_PER_DAY);
-  const largestImageSizeLabel =
-    largestImageBytes && largestImageBytes > 0
-      ? formatBytes(BigInt(largestImageBytes))
+  const collectionMaxSizeLabel =
+    collectionMaxBytes && collectionMaxBytes > 0
+      ? formatBytes(BigInt(collectionMaxBytes))
       : null;
+  const protocolFeeRangeLabel =
+    minimumProtocolFeeTotal && estimatedMaxProtocolFeeTotal
+      ? minimumProtocolFeeTotal === estimatedMaxProtocolFeeTotal
+        ? toMicroStxLabel(minimumProtocolFeeTotal)
+        : `${toMicroStxLabel(minimumProtocolFeeTotal)} - ${toMicroStxLabel(
+            estimatedMaxProtocolFeeTotal
+          )}`
+      : minimumProtocolFeeTotal
+        ? `from ${toMicroStxLabel(minimumProtocolFeeTotal)}`
+        : 'Loading...';
   const pausedStatus = contractStatus?.paused;
   const pausedLabel =
     pausedStatus === null || pausedStatus === undefined
@@ -2142,6 +2159,23 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
               >
                 {showMintGuide ? 'Hide mint guide' : 'How minting works'}
               </button>
+              <div className="collection-live-page__hero-summary">
+                <span>
+                  For <strong>{collectionTitle}</strong>
+                </span>
+                <span>
+                  max size {collectionMaxSizeLabel ?? 'Loading...'}
+                </span>
+                <span>
+                  max upload batches {estimatedUploadTransactionCount ?? '...'}
+                </span>
+                <span>
+                  max total signatures {estimatedWalletApprovals ?? '...'}
+                </span>
+                <span>
+                  protocol fee range {protocolFeeRangeLabel}
+                </span>
+              </div>
             </div>
             {showMintGuide && (
               <div id="live-mint-guide" className="collection-live-page__mint-guide">
@@ -2162,18 +2196,19 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                       Data is inscribed here. These can require multiple signatures, but upload
                       batches do not add Xtrata protocol fees (only network mining fees). If a
                       session is interrupted, resume will continue from confirmed chunks so data is
-                      not uploaded twice. With the current 4 MB cap, this is typically 10 upload
-                      signatures or fewer.
+                      not uploaded twice. With the current collection max (
+                      {collectionMaxSizeLabel ?? 'loading...'}), this is typically{' '}
+                      {estimatedUploadTransactionCount ?? '...'} upload signatures or fewer.
                     </span>
                     <span className="collection-live-page__mint-guide-note">
                       {estimatedWalletApprovals === null
                         ? 'Expected wallet prompts: at least 3 total (begin, upload, seal).'
-                        : `Expected wallet prompts for the largest image in this collection: about ${estimatedWalletApprovals} total (${estimatedUploadTransactionCount} upload batch signatures).`}
+                        : `Expected wallet prompts for a max-size mint in this collection: up to ${estimatedWalletApprovals} total (${estimatedUploadTransactionCount} upload batch signatures).`}
                     </span>
-                    {largestImageChunkCount !== null && (
+                    {collectionMaxChunkCount !== null && (
                       <span className="collection-live-page__mint-guide-note">
-                        Largest image estimate: {largestImageChunkCount} chunks
-                        {largestImageSizeLabel ? ` (${largestImageSizeLabel})` : ''}.
+                        Collection max-size estimate: {collectionMaxChunkCount} chunks
+                        {collectionMaxSizeLabel ? ` (${collectionMaxSizeLabel})` : ''}.
                       </span>
                     )}
                   </li>
@@ -2192,9 +2227,9 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                     ? ` (begin ${protocolFeeUnitLabel} + seal ${toMicroStxLabel(sealMinProtocolFee)} for <=50 chunks).`
                     : '.'}
                 </p>
-                {estimatedMaxProtocolFeeTotal && largestImageChunkCount !== null && (
+                {estimatedMaxProtocolFeeTotal && collectionMaxChunkCount !== null && (
                   <p className="collection-live-page__mint-guide-note">
-                    Estimated protocol fee for the largest image here:{' '}
+                    Estimated protocol fee for a max-size mint in this collection:{' '}
                     {toMicroStxLabel(estimatedMaxProtocolFeeTotal)} total.
                   </p>
                 )}
