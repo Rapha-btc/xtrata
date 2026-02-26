@@ -30,7 +30,7 @@ ordering, and verification:
 
 ## Training sequence
 
-1. Load `XTRATA_AGENT_SKILL.md`.
+1. Load [`XTRATA_AGENT_SKILL.md`](https://github.com/stxtrata/xtrata/blob/HEAD/xtrata-1.0/XTRATA_AGENT_SKILL.md).
 2. Train chunking and hash routines exactly.
 3. Train fee estimation and spend-cap post-conditions.
 4. Train nonce sequencing for multi-transaction mint workflows.
@@ -70,8 +70,8 @@ ordering, and verification:
 
 ## Companion references
 
-- `docs/ai-skills/README.md`
-- `XTRATA_AGENT_SKILL.md`
-- `scripts/xtrata-mint-example.js`
-- `scripts/xtrata-transfer-example.js`
-- `scripts/xtrata-query-example.js`
+- [`docs/ai-skills/README.md`](https://github.com/stxtrata/xtrata/blob/HEAD/xtrata-1.0/docs/ai-skills/README.md)
+- [`XTRATA_AGENT_SKILL.md`](https://github.com/stxtrata/xtrata/blob/HEAD/xtrata-1.0/XTRATA_AGENT_SKILL.md)
+- [`scripts/xtrata-mint-example.js`](https://github.com/stxtrata/xtrata/blob/HEAD/xtrata-1.0/scripts/xtrata-mint-example.js)
+- [`scripts/xtrata-transfer-example.js`](https://github.com/stxtrata/xtrata/blob/HEAD/xtrata-1.0/scripts/xtrata-transfer-example.js)
+- [`scripts/xtrata-query-example.js`](https://github.com/stxtrata/xtrata/blob/HEAD/xtrata-1.0/scripts/xtrata-query-example.js)

@@ -82,6 +82,16 @@ describe('XTRATA_AGENT_SKILL package', () => {
     expect(docsIndex).toContain('aibtc');
     expect(docsIndex).toContain('generic');
     expect(docsIndex).toContain('XTRATA_AGENT_SKILL.md');
+    expect(docsIndex).toContain('https://github.com/stxtrata/xtrata/blob/HEAD/xtrata-1.0/XTRATA_AGENT_SKILL.md');
+    expect(docsIndex).toContain('https://github.com/stxtrata/xtrata/blob/HEAD/xtrata-1.0/scripts/xtrata-mint-example.js');
+
+    const aibtcDoc = readFileSync(AI_SKILLS_AIBTC_DOC, 'utf8');
+    expect(aibtcDoc).toContain('https://github.com/stxtrata/xtrata/blob/HEAD/xtrata-1.0/XTRATA_AGENT_SKILL.md');
+    expect(aibtcDoc).toContain('https://github.com/stxtrata/xtrata/blob/HEAD/xtrata-1.0/scripts/xtrata-transfer-example.js');
+
+    const genericDoc = readFileSync(AI_SKILLS_GENERIC_DOC, 'utf8');
+    expect(genericDoc).toContain('https://github.com/stxtrata/xtrata/blob/HEAD/xtrata-1.0/docs/ai-skills/README.md');
+    expect(genericDoc).toContain('https://github.com/stxtrata/xtrata/blob/HEAD/xtrata-1.0/scripts/xtrata-query-example.js');
   });
 
   it('documents required contract identifiers and fee model', () => {
@@ -157,8 +167,8 @@ describe('XTRATA_AGENT_SKILL package', () => {
     expect(publicApp).toContain("id: 'ai-skills-docs'");
     expect(publicApp).toContain("id: 'ai-skills-aibtc'");
     expect(publicApp).toContain("id: 'ai-skills-generic'");
-    expect(publicApp).toContain('docs/ai-skills');
-    expect(publicApp).toContain('aibtc-agent-training.md');
-    expect(publicApp).toContain('generic-agent-training.md');
+    expect(publicApp).toContain('https://github.com/stxtrata/xtrata/tree/HEAD/xtrata-1.0/docs/ai-skills');
+    expect(publicApp).toContain('https://github.com/stxtrata/xtrata/blob/HEAD/xtrata-1.0/docs/ai-skills/aibtc-agent-training.md');
+    expect(publicApp).toContain('https://github.com/stxtrata/xtrata/blob/HEAD/xtrata-1.0/docs/ai-skills/generic-agent-training.md');
   });
 });
