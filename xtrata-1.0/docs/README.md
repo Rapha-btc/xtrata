@@ -104,6 +104,12 @@ SDK + builder track
 	•	docs/sdk/reconstruction-library-plan.md
 	•	docs/sdk/example-repos-plan.md
 
+AI skills training track
+	•	docs/ai-skills/README.md
+	•	docs/ai-skills/aibtc-agent-training.md
+	•	docs/ai-skills/generic-agent-training.md
+	•	XTRATA_AGENT_SKILL.md
+
 Legal signature track
 	•	docs/LEGAL/README.md
 	•	docs/LEGAL/signature-message-spec.md
@@ -158,7 +164,8 @@ Vite proxies Hiro API endpoints to avoid CORS issues:
 	•	/hiro/mainnet
 
 Optional:
-	•	set HIRO_API_KEY in .env.local to reduce 429 rate limits
+	•	set HIRO_API_KEYS in .env.local (comma/newline list) to reduce 429 rate limits
+	•	fallback support remains for HIRO_API_KEY
 
 Override endpoints if required:
 	•	VITE_STACKS_API_TESTNET

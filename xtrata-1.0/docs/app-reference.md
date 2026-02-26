@@ -107,6 +107,11 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 ## SDK and ecosystem docs
 
 - `src/PublicApp.tsx` docs module includes the `sdk-tooling` topic, which follows the same summary-first and expandable-detail pattern as other docs sections.
+- `src/PublicApp.tsx` docs module includes the `ai-agent-training` topic and external AI docs links for package index + track-specific guides (`aibtc` and generic).
+- `XTRATA_AGENT_SKILL.md` is the self-contained agent training reference for autonomous xtrata inscription workflows (contract API, fees, workflows, and aibtc integration).
+- `docs/ai-skills/README.md` is the AI training package index and onboarding entry point.
+- `docs/ai-skills/aibtc-agent-training.md` is the track-specific guide for aibtc MCP agents.
+- `docs/ai-skills/generic-agent-training.md` is the track-specific guide for non-aibtc AI agents and frameworks.
 - `docs/sdk/README.md` defines SDK mission, package boundaries, and implementation posture.
 - `docs/sdk/test-gates.md` defines required tests and release-quality gates.
 - `docs/sdk/changelog.md` tracks completed delivery iterations.
@@ -136,6 +141,7 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 ## Tests and fixtures
 
 - `src/lib/**/__tests__/*.test.ts` covers unit tests for protocol, viewer, network, contract, and wallet utilities.
+- `src/lib/skills/__tests__/xtrata-agent-skill.test.ts` validates the embedded AI training package (`XTRATA_AGENT_SKILL.md` + companion scripts) for required coverage and syntax checks.
 - `packages/xtrata-sdk/src/__tests__/*.test.ts` covers SDK public helper/unit behavior.
 - `packages/xtrata-reconstruction/src/__tests__/*.test.ts` covers deterministic reconstruction helpers.
 - `scripts/contract-variants.mjs` syncs and verifies SIP-009 trait variants for clarinet/testnet/mainnet.
@@ -146,6 +152,10 @@ Purpose: one-stop map of where code lives and which files to touch for common up
   - `version-check.mjs` (publish-ready version checks for SDK packages).
   - `changelog-generate.mjs` (generates `docs/sdk/changelog.md` from iteration history).
   - `release-dry-run.sh` (end-to-end release rehearsal + dry-run publish outputs).
+- Xtrata AI skill companion scripts live in `scripts/`:
+  - `xtrata-mint-example.js` (complete begin/upload/seal flow reference).
+  - `xtrata-transfer-example.js` (ownership-checked transfer flow reference).
+  - `xtrata-query-example.js` (metadata/content/read-only query reference).
 - SDK CI/release workflows:
   - `.github/workflows/ci.yml` (Node 20/22 SDK gates).
   - `.github/workflows/sdk-release.yml` (release rehearsal + artifact upload).
@@ -203,8 +213,12 @@ Notes: ensure tests or guards in `src/lib/network/__tests__/` still pass.
 ## API keys and env notes (local + Pages)
 
 - **Hiro API key**
-  - Local dev: set `HIRO_API_KEY` in `.env.local` (used by Vite proxy `/hiro/*`).
-  - Pages Functions: set `HIRO_API_KEY` in the Pages runtime env (used by `/functions/hiro`).
+  - Local dev: set `HIRO_API_KEYS` (comma/newline list) in `.env.local`; fallback supports `HIRO_API_KEY`.
+  - Pages Functions: set runtime env keys for `/functions/hiro`:
+    - preferred: `HIRO_API_KEYS` list
+    - optional numbered fallback: `HIRO_API_KEY_1`, `HIRO_API_KEY_2`, ...
+    - legacy single key: `HIRO_API_KEY`
+  - On `401/403/429`, the proxy tries the next configured Hiro key automatically.
   - Optional build flag: `VITE_HIRO_API_KEY` only indicates key presence in the UI.
   - Pages note: set variables for both **Production** and **Preview** environments
     (the `*.pages.dev` URL uses Preview) to avoid 429s on preview builds.

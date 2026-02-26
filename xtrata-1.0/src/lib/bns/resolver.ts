@@ -33,6 +33,7 @@ const BNS_FAILURE_THRESHOLD = 3;
 const BNS_BACKOFF_BASE_MS = 10000;
 const BNS_BACKOFF_MAX_MS = 60000;
 const BNS_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+const BNS_TRANSIENT_FALLBACK_COOLDOWN_MS = 60 * 1000;
 
 const sleep = (ms: number) =>
   new Promise((resolve) => {
@@ -58,11 +59,13 @@ const getErrorMessage = (error: unknown) => {
 
 class BnsBackoffError extends Error {
   retryAfterMs: number;
+  scope: string;
 
-  constructor(retryAfterMs: number) {
+  constructor(retryAfterMs: number, scope: string) {
     super(`BNS calls paused for ${retryAfterMs}ms`);
     this.name = 'BnsBackoffError';
     this.retryAfterMs = retryAfterMs;
+    this.scope = scope;
   }
 }
 
@@ -107,44 +110,71 @@ const isTransientBnsError = (error: unknown) => {
   return status !== null && status >= 500 && status < 600;
 };
 
-let bnsFailureCount = 0;
-let bnsFailureWindowStart = 0;
-let bnsBackoffUntil = 0;
-let bnsBackoffMs = BNS_BACKOFF_BASE_MS;
-
-const getBnsBackoffMs = () => Math.max(0, bnsBackoffUntil - Date.now());
-
-const isBnsBackoffActive = () => getBnsBackoffMs() > 0;
-
-const noteBnsSuccess = () => {
-  bnsFailureCount = 0;
-  bnsFailureWindowStart = 0;
-  bnsBackoffUntil = 0;
-  bnsBackoffMs = BNS_BACKOFF_BASE_MS;
+type BnsBackoffState = {
+  failureCount: number;
+  failureWindowStart: number;
+  backoffUntil: number;
+  backoffMs: number;
 };
 
-const noteBnsFailure = (error: unknown) => {
+const bnsBackoffByScope = new Map<string, BnsBackoffState>();
+
+const getBnsScopeFromContext = (context: string) => {
+  const scope = context.split(':')[0]?.trim().toLowerCase();
+  return scope || 'default';
+};
+
+const getBnsBackoffState = (scope: string): BnsBackoffState => {
+  const existing = bnsBackoffByScope.get(scope);
+  if (existing) {
+    return existing;
+  }
+  const initialState: BnsBackoffState = {
+    failureCount: 0,
+    failureWindowStart: 0,
+    backoffUntil: 0,
+    backoffMs: BNS_BACKOFF_BASE_MS
+  };
+  bnsBackoffByScope.set(scope, initialState);
+  return initialState;
+};
+
+const getBnsBackoffMs = (scope: string) =>
+  Math.max(0, getBnsBackoffState(scope).backoffUntil - Date.now());
+
+const isBnsBackoffActive = (scope: string) => getBnsBackoffMs(scope) > 0;
+
+const noteBnsSuccess = (scope: string) => {
+  const state = getBnsBackoffState(scope);
+  state.failureCount = 0;
+  state.failureWindowStart = 0;
+  state.backoffUntil = 0;
+  state.backoffMs = BNS_BACKOFF_BASE_MS;
+};
+
+const noteBnsFailure = (scope: string, error: unknown) => {
   if (!isTransientBnsError(error)) {
     return;
   }
+  const state = getBnsBackoffState(scope);
   const now = Date.now();
-  if (now - bnsFailureWindowStart > BNS_FAILURE_WINDOW_MS) {
-    bnsFailureWindowStart = now;
-    bnsFailureCount = 0;
+  if (now - state.failureWindowStart > BNS_FAILURE_WINDOW_MS) {
+    state.failureWindowStart = now;
+    state.failureCount = 0;
   }
-  bnsFailureCount += 1;
-  if (bnsFailureCount < BNS_FAILURE_THRESHOLD) {
+  state.failureCount += 1;
+  if (state.failureCount < BNS_FAILURE_THRESHOLD) {
     return;
   }
-  bnsFailureCount = 0;
-  bnsFailureWindowStart = now;
-  if (now < bnsBackoffUntil) {
+  state.failureCount = 0;
+  state.failureWindowStart = now;
+  if (now < state.backoffUntil) {
     return;
   }
-  bnsBackoffUntil = now + bnsBackoffMs;
-  bnsBackoffMs = Math.min(
+  state.backoffUntil = now + state.backoffMs;
+  state.backoffMs = Math.min(
     BNS_BACKOFF_MAX_MS,
-    Math.floor(bnsBackoffMs * 1.6)
+    Math.floor(state.backoffMs * 1.6)
   );
 };
 
@@ -196,8 +226,9 @@ const callBnsWithRetry = async <T>(params: {
   context: string;
   signal?: AbortSignal;
 }) => {
-  if (isBnsBackoffActive()) {
-    throw new BnsBackoffError(getBnsBackoffMs());
+  const scope = getBnsScopeFromContext(params.context);
+  if (isBnsBackoffActive(scope)) {
+    throw new BnsBackoffError(getBnsBackoffMs(scope), scope);
   }
 
   let lastError: unknown = null;
@@ -207,18 +238,21 @@ const callBnsWithRetry = async <T>(params: {
     }
     try {
       const result = await withBnsLimit(params.task);
-      noteBnsSuccess();
+      noteBnsSuccess(scope);
       return result;
     } catch (error) {
       lastError = error;
       const rateLimited = isRateLimitError(error);
-      noteBnsFailure(error);
-      logDebug('bns', 'BNS request failed', {
-        context: params.context,
-        attempt,
-        rateLimited,
-        error: getErrorMessage(error)
-      });
+      noteBnsFailure(scope, error);
+      if (rateLimited || attempt >= BNS_RETRIES) {
+        logDebug('bns', 'BNS request failed', {
+          context: params.context,
+          scope,
+          attempt,
+          rateLimited,
+          error: getErrorMessage(error)
+        });
+      }
       if (attempt >= BNS_RETRIES) {
         break;
       }
@@ -229,8 +263,13 @@ const callBnsWithRetry = async <T>(params: {
 
   logDebug('bns', 'BNS request exhausted retries', {
     context: params.context,
+    scope,
     error: getErrorMessage(lastError)
   });
+
+  if (lastError && isTransientBnsError(lastError) && isBnsBackoffActive(scope)) {
+    throw new BnsBackoffError(getBnsBackoffMs(scope), scope);
+  }
 
   throw (lastError instanceof Error
     ? lastError
@@ -354,6 +393,27 @@ type CacheEntry<T> = {
 
 const memoryCache = new Map<string, CacheEntry<unknown>>();
 const inflightCache = new Map<string, Promise<unknown>>();
+const transientFallbackByKey = new Map<string, number>();
+
+const isTransientFallbackActive = (key: string) => {
+  const until = transientFallbackByKey.get(key) ?? 0;
+  if (until <= Date.now()) {
+    transientFallbackByKey.delete(key);
+    return false;
+  }
+  return true;
+};
+
+const noteTransientFallback = (key: string) => {
+  transientFallbackByKey.set(
+    key,
+    Date.now() + BNS_TRANSIENT_FALLBACK_COOLDOWN_MS
+  );
+};
+
+const clearTransientFallback = (key: string) => {
+  transientFallbackByKey.delete(key);
+};
 
 const readCache = <T>(key: string): CacheEntry<T> | null => {
   const now = Date.now();
@@ -417,12 +477,9 @@ const resolveAddressNamesFromProviders = async (params: {
 }): Promise<AddressResolution> => {
   let lastError: unknown = null;
   let sawNotFound = false;
-  let backoffTriggered = false;
 
   for (const provider of BNS_PROVIDERS) {
-    if (backoffTriggered) {
-      break;
-    }
+    let providerBackoffActive = false;
     const bases = provider.getBaseUrls(params.network);
     for (const baseUrl of bases) {
       try {
@@ -454,11 +511,14 @@ const resolveAddressNamesFromProviders = async (params: {
       } catch (error) {
         lastError = error;
         if (error instanceof BnsBackoffError) {
-          backoffTriggered = true;
+          providerBackoffActive = true;
           break;
         }
         continue;
       }
+    }
+    if (providerBackoffActive) {
+      continue;
     }
   }
 
@@ -515,12 +575,9 @@ const resolveNameAddressFromProviders = async (params: {
 }): Promise<BnsAddressResult> => {
   let lastError: unknown = null;
   let sawNotFound = false;
-  let backoffTriggered = false;
 
   for (const provider of BNS_PROVIDERS) {
-    if (backoffTriggered) {
-      break;
-    }
+    let providerBackoffActive = false;
     const bases = provider.getBaseUrls(params.network);
     for (const baseUrl of bases) {
       try {
@@ -558,11 +615,14 @@ const resolveNameAddressFromProviders = async (params: {
       } catch (error) {
         lastError = error;
         if (error instanceof BnsBackoffError) {
-          backoffTriggered = true;
+          providerBackoffActive = true;
           break;
         }
         continue;
       }
+    }
+    if (providerBackoffActive) {
+      continue;
     }
   }
 
@@ -605,6 +665,14 @@ export const resolveBnsNames = async (params: {
   if (cached) {
     return cached.value;
   }
+  if (isTransientFallbackActive(cacheKey)) {
+    return {
+      address: trimmed,
+      names: [],
+      primary: null,
+      source: null
+    };
+  }
 
   return resolveWithInFlight(cacheKey, async () => {
     const resolution = await resolveAddressNamesFromProviders({
@@ -614,6 +682,9 @@ export const resolveBnsNames = async (params: {
     });
     if (resolution.cacheable) {
       writeCache(cacheKey, resolution.result);
+      clearTransientFallback(cacheKey);
+    } else {
+      noteTransientFallback(cacheKey);
     }
     return resolution.result;
   });
@@ -651,12 +722,10 @@ export const resolveBnsAddress = async (params: {
 };
 
 export const __resetBnsResolverStateForTests = () => {
-  bnsFailureCount = 0;
-  bnsFailureWindowStart = 0;
-  bnsBackoffUntil = 0;
-  bnsBackoffMs = BNS_BACKOFF_BASE_MS;
+  bnsBackoffByScope.clear();
   activeBnsCalls = 0;
   bnsQueue.length = 0;
   memoryCache.clear();
   inflightCache.clear();
+  transientFallbackByKey.clear();
 };

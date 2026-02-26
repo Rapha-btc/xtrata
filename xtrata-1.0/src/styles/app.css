@@ -4325,7 +4325,7 @@ p {
   padding: clamp(14px, 2.2vw, 20px);
   display: grid;
   grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
-  align-items: stretch;
+  align-items: start;
   gap: 14px;
   position: relative;
   overflow: hidden;
@@ -4358,6 +4358,7 @@ p {
   border: 1px solid var(--border);
   background: var(--surface-soft);
   aspect-ratio: 1 / 1;
+  align-self: start;
   overflow: hidden;
   display: grid;
   place-items: center;
@@ -4425,6 +4426,62 @@ p {
 .collection-live-page__hero-actions .button {
   padding: 7px 14px;
   font-size: 0.79rem;
+}
+
+.collection-live-page__hero-summary {
+  flex: 1 1 320px;
+  min-width: min(100%, 320px);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  padding: 6px 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: center;
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+.collection-live-page__hero-summary strong {
+  color: var(--text);
+}
+
+.collection-live-page__mint-guide {
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  padding: 10px 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.collection-live-page__mint-guide-title {
+  margin: 0;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.collection-live-page__mint-guide-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+}
+
+.collection-live-page__mint-guide-item {
+  display: grid;
+  gap: 4px;
+  font-size: 0.84rem;
+}
+
+.collection-live-page__mint-guide-note {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
 }
 
 .collection-live-page__gallery-grid {
@@ -5637,6 +5694,8 @@ p {
   border-radius: 14px;
   background: var(--surface-soft);
   padding: 10px;
+  position: relative;
+  overflow: hidden;
   display: grid;
   grid-template-columns: 128px minmax(0, 1fr);
   column-gap: 10px;

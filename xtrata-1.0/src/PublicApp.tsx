@@ -340,6 +340,39 @@ Xtrata's artist portal is the no-code control layer. The SDK is the reusable bui
 - Artist launch context: \`docs/artist-guides/collection-launch-guide.md\``
   },
   {
+    id: 'ai-agent-training',
+    title: 'AI agent training package',
+    tag: 'AI',
+    description:
+      'Where to train aibtc agents and generic AI agents to execute Xtrata workflows safely and reproducibly.',
+    content: `## AI agent training package
+Xtrata now ships a dedicated AI training package so autonomous agents can learn contract-correct mint, transfer, and query flows.
+
+### Core package artifact
+- Canonical skill file: \`XTRATA_AGENT_SKILL.md\`
+- Companion scripts:
+  - \`scripts/xtrata-mint-example.js\`
+  - \`scripts/xtrata-transfer-example.js\`
+  - \`scripts/xtrata-query-example.js\`
+
+### Training tracks
+- **aibtc track**:
+  - Doc: \`docs/ai-skills/aibtc-agent-training.md\`
+  - Focus: MCP wallet tools, signing via MCP, autonomous run loops, and recovery strategy.
+- **Generic AI track**:
+  - Doc: \`docs/ai-skills/generic-agent-training.md\`
+  - Focus: library-driven agents (direct key or wallet adapter), typed transaction construction, and safe orchestration.
+
+### Docs index
+- Package index: \`docs/ai-skills/README.md\`
+
+### Recommended rollout posture
+- Train on testnet first with small files.
+- Enforce post-conditions and deny mode for all fee-paying writes.
+- Validate with read-only checks after each state transition.
+- Keep retries bounded and use fallback endpoints under rate limits.`
+  },
+  {
     id: 'market',
     title: 'Market listings and escrow',
     tag: 'Market',
@@ -569,6 +602,30 @@ If something looks wrong, start with these checks in order.
 - Escalate with exact reproduction steps and observed vs expected behavior.`,
   },
   {
+    id: 'ai-skills-docs',
+    title: 'AI skills docs',
+    tag: 'Agents',
+    description: 'Open the AI skills training package index (aibtc + generic tracks).',
+    external: true,
+    href: 'https://github.com/stxtrata/xtrata/tree/OPTIMISATIONS/xtrata-1.0/docs/ai-skills'
+  },
+  {
+    id: 'ai-skills-aibtc',
+    title: 'AIBTC training guide',
+    tag: 'AIBTC',
+    description: 'Track-specific training and execution guidance for aibtc MCP agents.',
+    external: true,
+    href: 'https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/ai-skills/aibtc-agent-training.md'
+  },
+  {
+    id: 'ai-skills-generic',
+    title: 'Generic AI training guide',
+    tag: 'Agents',
+    description: 'Track-specific training guidance for non-aibtc AI agents and frameworks.',
+    external: true,
+    href: 'https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/ai-skills/generic-agent-training.md'
+  },
+  {
     id: 'github',
     title: 'GitHub repository',
     tag: 'Source',
@@ -638,6 +695,14 @@ const DOC_SUMMARIES: Record<string, DocSummary> = {
       'Public reads are open; allowlist gates deploy/publish actions in /manage.',
       'SDK read integrations are open to third-party builders.',
       'Partner teams are invited to apply for curated allowlist access via official channels.'
+    ]
+  },
+  'ai-agent-training': {
+    lead: 'Use the dedicated AI training package to teach agents deterministic Xtrata workflows.',
+    points: [
+      'Package includes a canonical skill file and runnable mint/transfer/query scripts.',
+      'aibtc and generic-agent tracks are documented separately.',
+      'Train on testnet first, then enforce post-conditions and bounded retries on mainnet.'
     ]
   },
   market: {
@@ -800,6 +865,26 @@ const formatMicroStxLabel = (value: bigint | null) => {
   const whole = value / MICROSTX_PER_STX;
   const fraction = value % MICROSTX_PER_STX;
   return `${whole.toString()}.${fraction.toString().padStart(6, '0')} STX`;
+};
+
+const isPublicMintSoldOut = (status: PublicLiveMintStatus | null) => {
+  if (!status) {
+    return false;
+  }
+  if (status.remaining !== null && status.remaining <= 0n) {
+    return true;
+  }
+  if (status.finalized === true) {
+    return true;
+  }
+  if (
+    status.maxSupply !== null &&
+    status.mintedCount !== null &&
+    status.mintedCount >= status.maxSupply
+  ) {
+    return true;
+  }
+  return false;
 };
 
 const buildMintStateLabel = (status: PublicLiveMintStatus | null) => {
@@ -1005,6 +1090,10 @@ const DOC_DETAIL_TOGGLE_COPY: Record<string, DocDetailToggleCopy> = {
     open: 'Explore SDK integration details',
     close: 'Back to SDK overview'
   },
+  'ai-agent-training': {
+    open: 'Open AI training package details',
+    close: 'Back to AI training summary'
+  },
   market: {
     open: 'Show listing and escrow mechanics',
     close: 'Back to market basics'
@@ -1054,6 +1143,7 @@ const DOC_MODULE_JUMPS: Record<string, DocModuleJump> = {
   'minting-modes': { section: 'mint', label: 'Go to Mint' },
   'artist-collection-launch': { section: 'mint', label: 'Open mint tools' },
   'sdk-tooling': { section: 'wallet-session', label: 'Open wallet setup' },
+  'ai-agent-training': { section: 'wallet-session', label: 'Open wallet setup' },
   market: { section: 'market', label: 'Open Market' },
   standards: { section: 'collection-viewer', label: 'Open Viewer' },
   fees: { section: 'mint', label: 'See fees in Mint' },
@@ -1943,8 +2033,8 @@ export default function PublicApp() {
                 <div className="alert">
                   <div>
                     <strong>Rate limit detected.</strong> No Hiro API key is
-                    configured for the dev proxy. Set HIRO_API_KEY in .env.local
-                    and restart the dev server.
+                    configured for the dev proxy. Set HIRO_API_KEYS (or
+                    HIRO_API_KEY) in .env.local and restart the dev server.
                   </div>
                   <button
                     className="button button--ghost"
@@ -2092,12 +2182,14 @@ export default function PublicApp() {
                         : maxSupply - mintedCount
                       : null);
                   const mintStateLabel = buildMintStateLabel(mintStatus);
+                  const soldOut = isPublicMintSoldOut(mintStatus);
                   const coverPreviewErrored = Boolean(
                     liveCoverPreviewErrorByCollectionId[collection.id]
                   );
 
                   return (
                     <article className="public-live-collections__card" key={collection.id}>
+                      {soldOut && <span className="collection-live-page__stamp">Sold out</span>}
                       <div className="public-live-collections__media">
                         {collection.coverImageUrl && !coverPreviewErrored ? (
                           <img

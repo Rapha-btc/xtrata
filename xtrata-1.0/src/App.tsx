@@ -1480,8 +1480,8 @@ export default function App() {
                 <div className="alert">
                   <div>
                     <strong>Rate limit detected.</strong> No Hiro API key is
-                    configured for the dev proxy. Set HIRO_API_KEY in
-                    .env.local and restart the dev server.
+                    configured for the dev proxy. Set HIRO_API_KEYS (or
+                    HIRO_API_KEY) in .env.local and restart the dev server.
                   </div>
                   <button
                     className="button button--ghost"

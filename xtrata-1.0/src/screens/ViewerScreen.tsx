@@ -95,6 +95,9 @@ const WALLET_TOKEN_SCAN_LIMIT = 2000;
 const WALLET_TOKEN_INITIAL_SCAN = 320;
 const WALLET_TOKEN_SCAN_STEP = 320;
 const RELATIONSHIP_THUMBNAIL_LIMIT = 12;
+const MARKET_DATA_STALE_MS = 60_000;
+const WALLET_LISTINGS_REFETCH_MS = 120_000;
+const WALLET_HOLDINGS_STALE_MS = 120_000;
 const sortBigIntAsc = (left: bigint, right: bigint) =>
   left < right ? -1 : left > right ? 1 : 0;
 
@@ -1576,7 +1579,8 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     enabled:
       !!marketContract && !marketNetworkMismatch && props.isActiveTab,
     queryFn: () => loadMarketActivity({ contract: marketContract! }),
-    staleTime: 30_000
+    staleTime: MARKET_DATA_STALE_MS,
+    refetchOnWindowFocus: false
   });
   const walletListingsQuery = useQuery({
     queryKey: [
@@ -1593,8 +1597,10 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       !!resolvedWalletAddress &&
       props.isActiveTab &&
       isWalletView,
-    staleTime: 30_000,
-    refetchInterval: props.isActiveTab && isWalletView ? 60_000 : false,
+    staleTime: MARKET_DATA_STALE_MS,
+    refetchInterval:
+      props.isActiveTab && isWalletView ? WALLET_LISTINGS_REFETCH_MS : false,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       if (!marketClient || !marketContractIdLabel || !resolvedWalletAddress) {
         return [] as MarketActivityEvent[];
@@ -1737,7 +1743,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       resolvedWalletAddress ?? 'none'
     ],
     enabled: props.isActiveTab && isWalletView && !!resolvedWalletAddress,
-    staleTime: 45_000,
+    staleTime: WALLET_HOLDINGS_STALE_MS,
     refetchOnWindowFocus: false,
     queryFn: () => {
       if (!resolvedWalletAddress) {

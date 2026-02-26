@@ -25,8 +25,8 @@ import type {
 
 const EVENT_LIMIT = 50;
 const MAX_EVENTS = 200;
-const MIN_REFRESH_MS = 30_000;
-const MARKET_RATE_LIMIT_BACKOFF_MS = 120_000;
+const MIN_REFRESH_MS = 60_000;
+const MARKET_RATE_LIMIT_BACKOFF_MS = 300_000;
 const NFT_EVENT_LIMIT = 50;
 const NFT_MAX_EVENTS = 200;
 
@@ -100,6 +100,8 @@ const isRateLimitError = (error: unknown) => {
 };
 
 const marketBackoffUntil = new Map<string, number>();
+const marketActivityInFlight = new Map<string, Promise<MarketIndexSnapshot>>();
+const nftActivityInFlight = new Map<string, Promise<NftIndexSnapshot>>();
 
 const getMarketBackoffMs = (key: string) =>
   Math.max(0, (marketBackoffUntil.get(key) ?? 0) - Date.now());
@@ -384,59 +386,73 @@ export const loadMarketActivity = async (params: {
     return cached;
   }
 
-  const apiBaseUrls = getApiBaseUrls(params.contract.network).filter(
-    isHiroCompatibleBase
-  );
-  let events: MarketActivityEvent[] = cached?.events ?? [];
-  let lastError: unknown = null;
+  const inFlight = marketActivityInFlight.get(contractId);
+  if (inFlight) {
+    return inFlight;
+  }
 
-  if (apiBaseUrls.length === 0) {
-    logWarn('market', 'Market activity fetch skipped: no Hiro API base configured');
-    return {
+  const loadPromise = (async () => {
+    const apiBaseUrls = getApiBaseUrls(params.contract.network).filter(
+      isHiroCompatibleBase
+    );
+    let events: MarketActivityEvent[] = cached?.events ?? [];
+    let lastError: unknown = null;
+
+    if (apiBaseUrls.length === 0) {
+      logWarn('market', 'Market activity fetch skipped: no Hiro API base configured');
+      return {
+        contractId,
+        events,
+        updatedAt: Date.now()
+      };
+    }
+
+    for (let index = 0; index < apiBaseUrls.length; index += 1) {
+      const baseUrl = apiBaseUrls[index];
+      try {
+        const fetched = await fetchMarketEventsPage({
+          baseUrl,
+          contractId,
+          limit: EVENT_LIMIT,
+          offset: 0
+        });
+        events = mergeEvents(events, fetched);
+        lastError = null;
+        break;
+      } catch (error) {
+        lastError = error;
+        const hasFallback = index < apiBaseUrls.length - 1;
+        if (hasFallback && shouldTryFallback(error)) {
+          continue;
+        }
+        break;
+      }
+    }
+
+    if (lastError) {
+      if (isRateLimitError(lastError)) {
+        noteMarketRateLimit(contractId);
+      }
+      logWarn('market', 'Market activity fetch failed', {
+        error: lastError instanceof Error ? lastError.message : String(lastError)
+      });
+    }
+
+    const snapshot: MarketIndexSnapshot = {
       contractId,
       events,
       updatedAt: Date.now()
     };
-  }
+    await saveMarketIndexSnapshot(snapshot);
+    return snapshot;
+  })();
 
-  for (let index = 0; index < apiBaseUrls.length; index += 1) {
-    const baseUrl = apiBaseUrls[index];
-    try {
-      const fetched = await fetchMarketEventsPage({
-        baseUrl,
-        contractId,
-        limit: EVENT_LIMIT,
-        offset: 0
-      });
-      events = mergeEvents(events, fetched);
-      lastError = null;
-      break;
-    } catch (error) {
-      lastError = error;
-      const hasFallback = index < apiBaseUrls.length - 1;
-      if (hasFallback && shouldTryFallback(error)) {
-        continue;
-      }
-      break;
-    }
+  marketActivityInFlight.set(contractId, loadPromise);
+  try {
+    return await loadPromise;
+  } finally {
+    marketActivityInFlight.delete(contractId);
   }
-
-  if (lastError) {
-    if (isRateLimitError(lastError)) {
-      noteMarketRateLimit(contractId);
-    }
-    logWarn('market', 'Market activity fetch failed', {
-      error: lastError instanceof Error ? lastError.message : String(lastError)
-    });
-  }
-
-  const snapshot: MarketIndexSnapshot = {
-    contractId,
-    events,
-    updatedAt: Date.now()
-  };
-  await saveMarketIndexSnapshot(snapshot);
-  return snapshot;
 };
 
 export const loadNftActivity = async (params: {
@@ -464,60 +480,74 @@ export const loadNftActivity = async (params: {
     return cached;
   }
 
-  const apiBaseUrls = getApiBaseUrls(params.contract.network).filter(
-    isHiroCompatibleBase
-  );
-  let events: NftActivityEvent[] = cached?.events ?? [];
-  let lastError: unknown = null;
+  const inFlight = nftActivityInFlight.get(assetIdentifier);
+  if (inFlight) {
+    return inFlight;
+  }
 
-  if (apiBaseUrls.length === 0) {
-    logWarn('market', 'NFT activity fetch skipped: no Hiro API base configured');
-    return {
+  const loadPromise = (async () => {
+    const apiBaseUrls = getApiBaseUrls(params.contract.network).filter(
+      isHiroCompatibleBase
+    );
+    let events: NftActivityEvent[] = cached?.events ?? [];
+    let lastError: unknown = null;
+
+    if (apiBaseUrls.length === 0) {
+      logWarn('market', 'NFT activity fetch skipped: no Hiro API base configured');
+      return {
+        assetIdentifier,
+        events,
+        updatedAt: Date.now()
+      };
+    }
+
+    for (let index = 0; index < apiBaseUrls.length; index += 1) {
+      const baseUrl = apiBaseUrls[index];
+      try {
+        const fetched = await fetchNftMintsPage({
+          baseUrl,
+          contractId,
+          assetIdentifier,
+          limit: NFT_EVENT_LIMIT,
+          offset: 0
+        });
+        events = mergeNftEvents(events, fetched);
+        lastError = null;
+        break;
+      } catch (error) {
+        lastError = error;
+        const hasFallback = index < apiBaseUrls.length - 1;
+        if (hasFallback && shouldTryFallback(error)) {
+          continue;
+        }
+        break;
+      }
+    }
+
+    if (lastError) {
+      if (isRateLimitError(lastError)) {
+        noteMarketRateLimit(assetIdentifier);
+      }
+      logWarn('market', 'NFT activity fetch failed', {
+        error: lastError instanceof Error ? lastError.message : String(lastError)
+      });
+    }
+
+    const snapshot: NftIndexSnapshot = {
       assetIdentifier,
       events,
       updatedAt: Date.now()
     };
-  }
+    await saveNftIndexSnapshot(snapshot);
+    return snapshot;
+  })();
 
-  for (let index = 0; index < apiBaseUrls.length; index += 1) {
-    const baseUrl = apiBaseUrls[index];
-    try {
-      const fetched = await fetchNftMintsPage({
-        baseUrl,
-        contractId,
-        assetIdentifier,
-        limit: NFT_EVENT_LIMIT,
-        offset: 0
-      });
-      events = mergeNftEvents(events, fetched);
-      lastError = null;
-      break;
-    } catch (error) {
-      lastError = error;
-      const hasFallback = index < apiBaseUrls.length - 1;
-      if (hasFallback && shouldTryFallback(error)) {
-        continue;
-      }
-      break;
-    }
+  nftActivityInFlight.set(assetIdentifier, loadPromise);
+  try {
+    return await loadPromise;
+  } finally {
+    nftActivityInFlight.delete(assetIdentifier);
   }
-
-  if (lastError) {
-    if (isRateLimitError(lastError)) {
-      noteMarketRateLimit(assetIdentifier);
-    }
-    logWarn('market', 'NFT activity fetch failed', {
-      error: lastError instanceof Error ? lastError.message : String(lastError)
-    });
-  }
-
-  const snapshot: NftIndexSnapshot = {
-    assetIdentifier,
-    events,
-    updatedAt: Date.now()
-  };
-  await saveNftIndexSnapshot(snapshot);
-  return snapshot;
 };
 
 export const buildUnifiedActivityTimeline = (params: {
@@ -584,5 +614,10 @@ export const buildUnifiedActivityTimeline = (params: {
 export const __testing = {
   parseMarketEventFromValue,
   parseNftMintEvent,
-  buildUnifiedActivityTimeline
+  buildUnifiedActivityTimeline,
+  resetMarketIndexerRuntimeState() {
+    marketBackoffUntil.clear();
+    marketActivityInFlight.clear();
+    nftActivityInFlight.clear();
+  }
 };

@@ -1,6 +1,14 @@
 import { jsonResponse, badRequest, notFound, serverError } from '../lib/utils';
 import { queryAll, run } from '../lib/db';
 import { getCollectionDeployReadiness } from '../lib/collection-deploy';
+import {
+  isCollectionPublicVisible,
+  isCollectionPublished
+} from '../lib/collections';
+
+const PUBLIC_COLLECTION_CACHE_CONTROL =
+  'public, max-age=60, s-maxage=120, stale-while-revalidate=300';
+const PRIVATE_NO_STORE_CACHE_CONTROL = 'private, no-store, max-age=0';
 
 const parseMetadata = (value: unknown) => {
   if (!value) {
@@ -13,7 +21,9 @@ const parseMetadata = (value: unknown) => {
   }
 };
 
-const mapRow = (row: Record<string, unknown>) => ({
+const mapRow = (
+  row: Record<string, unknown>
+): Record<string, unknown> & { metadata: Record<string, unknown> | null } => ({
   ...row,
   metadata: parseMetadata(row.metadata)
 });
@@ -99,7 +109,15 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
       if (!record) {
         return notFound('Collection not found.');
       }
-      return jsonResponse(mapRow(record));
+      const mappedRecord = mapRow(record);
+      const shouldPublicCache =
+        isCollectionPublished(mappedRecord.state) &&
+        isCollectionPublicVisible(mappedRecord.metadata);
+      return jsonResponse(mappedRecord, 200, {
+        'Cache-Control': shouldPublicCache
+          ? PUBLIC_COLLECTION_CACHE_CONTROL
+          : PRIVATE_NO_STORE_CACHE_CONTROL
+      });
     } catch (error) {
       return serverError(
         error instanceof Error ? error.message : 'failed to load collection'
