@@ -49,6 +49,16 @@ const SECTION_KEYS = [
 ] as const;
 type SectionKey = (typeof SECTION_KEYS)[number];
 
+const toSectionKeyFromHash = (hash: string): SectionKey | null => {
+  const normalized = hash.replace(/^#/, '').trim();
+  if (!normalized) {
+    return null;
+  }
+  return SECTION_KEYS.includes(normalized as SectionKey)
+    ? (normalized as SectionKey)
+    : null;
+};
+
 const buildCollapsedState = (collapsed: boolean) =>
   SECTION_KEYS.reduce(
     (acc, key) => {
@@ -1585,6 +1595,32 @@ export default function PublicApp() {
       window.removeEventListener(RATE_LIMIT_WARNING_EVENT, handler);
     };
   }, [hasHiroApiKey]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const openHashSection = () => {
+      const section = toSectionKeyFromHash(window.location.hash);
+      if (!section) {
+        return;
+      }
+      setCollapsedSections((prev) => ({ ...prev, [section]: false }));
+      window.requestAnimationFrame(() => {
+        const anchor = document.getElementById(section);
+        if (anchor) {
+          anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    };
+
+    openHashSection();
+    window.addEventListener('hashchange', openHashSection);
+    return () => {
+      window.removeEventListener('hashchange', openHashSection);
+    };
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
