@@ -82,6 +82,36 @@ with deterministic fee caps, confirmations, and error recovery.
 7. Verify metadata and canonical hash->id mapping.
 8. Return structured output (`tokenId`, `txids`, `hash`, `mimeType`, `totalSize`).
 
+## Known MCP tool limitations
+
+**CRITICAL:** Some MCP tool implementations may silently send empty buffers when
+large hex-encoded data is passed in nested list+buffer arguments (e.g., the chunk
+data inside `add-chunk-batch`). If the contract's running hash after upload equals
+`sha256(32 zero bytes)` = `66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925`,
+the MCP tool sent an empty buffer instead of your chunk data.
+
+**Workaround:** Use the `@stacks/transactions` SDK directly for `add-chunk-batch`
+calls. The `begin-or-get` and `seal-inscription` calls (which use small buffer
+arguments) work correctly via MCP tools. See `inscribe-genesis.cjs` in the AIBTC
+directory for a working SDK-based reference.
+
+## Resume path
+
+Xtrata has a robust resume capability. If an inscription process is interrupted
+(crash, timeout, network error), do NOT abandon the upload. Instead:
+
+1. Call `get-upload-state(expected-hash, owner)` to check the session status.
+2. Check `current-index` to see how many chunks have been uploaded.
+3. Resume uploading from the next chunk index.
+4. The contract validates hashes incrementally — if the same correct data is
+   re-uploaded, it will produce the same running hash.
+5. `begin-or-get` is resume-safe: calling it again with the same hash will
+   return the existing session, not create a duplicate.
+6. Sessions persist for 4,320 blocks (~30 days).
+
+Only use `abandon-upload` as a last resort when the upload is truly broken
+(e.g., wrong data was uploaded and the running hash is irrecoverable).
+
 ## Operational safeguards
 
 - Start on testnet first for new workflows.

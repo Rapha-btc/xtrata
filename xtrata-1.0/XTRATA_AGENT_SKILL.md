@@ -120,6 +120,15 @@ export function batchChunks(chunks) {
 ```
 
 ### Incremental Hashing (Required)
+
+The hash is computed as a chain: start with 32 zero bytes, then for each chunk
+concatenate the current running hash (32 bytes) with the raw chunk bytes and
+SHA-256 the result. The output replaces the running hash. The final value after
+all chunks is the `expected-hash` used in `begin-or-get` and `seal-inscription`.
+
+This MUST match the contract's `process-chunk` logic:
+`next-hash = sha256(concat(current-hash, data))`
+
 ```javascript
 import { sha256 } from '@noble/hashes/sha256';
 
@@ -135,6 +144,20 @@ export function computeExpectedHash(chunks) {
 }
 ```
 
+Alternative using Node.js built-in crypto:
+```javascript
+const crypto = require('crypto');
+
+function computeExpectedHash(chunks) {
+  let running = Buffer.alloc(32, 0);
+  for (const chunk of chunks) {
+    running = crypto.createHash('sha256')
+      .update(Buffer.concat([running, chunk])).digest();
+  }
+  return running;
+}
+```
+
 ### Deduplication
 - Read-only lookup: `get-id-by-hash(hash)` -> `(optional uint)`
 - Atomic begin+dedupe path: `begin-or-get(...)`
@@ -146,8 +169,18 @@ export function computeExpectedHash(chunks) {
 2. Upload chunks: `add-chunk-batch`
 3. Seal: `seal-inscription` or `seal-recursive`
 4. Expire after inactivity (`UPLOAD-EXPIRY-BLOCKS`)
-5. Optional early expire: `abandon-upload`
+5. **Last resort** early expire: `abandon-upload`
 6. Purge expired chunks: `purge-expired-chunk-batch`
+
+**Resume is the default recovery path.** If an inscription is interrupted:
+- `begin-or-get` is resume-safe: calling it again returns the existing session.
+- Check `get-upload-state` to see `current-index` (how many chunks uploaded).
+- Resume uploading from the next chunk index.
+- The contract validates hashes incrementally — re-uploading the same correct
+  data produces the same running hash.
+- Sessions persist for 4,320 blocks (~30 days).
+- Only use `abandon-upload` when the upload is truly irrecoverable (e.g., wrong
+  data was uploaded and the running hash cannot be corrected).
 
 ## Complete Contract API (xtrata-v2-1-0)
 
