@@ -31,7 +31,24 @@ with deterministic fee caps, confirmations, and error recovery.
    - max batch size `50`
    - max chunks `2,048`
 3. Train hash derivation:
-   - incremental SHA-256 chain hash (`running-hash || chunk`).
+   - incremental SHA-256 chain hash: `sha256(running-hash || chunk)`.
+   - Running hash starts as 32 zero bytes (0x00...00).
+   - For each chunk: concatenate the current 32-byte running hash with the raw
+     chunk bytes, then SHA-256 the result. The output becomes the new running hash.
+   - The final running hash after all chunks is the `expected-hash` used in
+     `begin-or-get` and `seal-inscription`.
+   - Reference implementation (Node.js):
+     ```javascript
+     const crypto = require('crypto');
+     function computeExpectedHash(chunks) {
+       let running = Buffer.alloc(32, 0);
+       for (const chunk of chunks) {
+         running = crypto.createHash('sha256')
+           .update(Buffer.concat([running, chunk])).digest();
+       }
+       return running;
+     }
+     ```
 4. Train fee model:
    - begin fee = `fee-unit`
    - seal fee = `fee-unit * (1 + ceil(totalChunks / 50))`
