@@ -607,7 +607,7 @@ If something looks wrong, start with these checks in order.
     tag: 'Agents',
     description: 'Open the AI skills training package index (aibtc + generic tracks).',
     external: true,
-    href: 'https://github.com/stxtrata/xtrata/tree/HEAD/xtrata-1.0/docs/ai-skills'
+    href: 'https://github.com/stxtrata/xtrata/tree/OPTIMISATIONS/xtrata-1.0/docs/ai-skills'
   },
   {
     id: 'ai-skills-aibtc',
@@ -615,7 +615,7 @@ If something looks wrong, start with these checks in order.
     tag: 'AIBTC',
     description: 'Track-specific training and execution guidance for aibtc MCP agents.',
     external: true,
-    href: 'https://github.com/stxtrata/xtrata/blob/HEAD/xtrata-1.0/docs/ai-skills/aibtc-agent-training.md'
+    href: 'https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/ai-skills/aibtc-agent-training.md'
   },
   {
     id: 'ai-skills-generic',
@@ -623,7 +623,7 @@ If something looks wrong, start with these checks in order.
     tag: 'Agents',
     description: 'Track-specific training guidance for non-aibtc AI agents and frameworks.',
     external: true,
-    href: 'https://github.com/stxtrata/xtrata/blob/HEAD/xtrata-1.0/docs/ai-skills/generic-agent-training.md'
+    href: 'https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/ai-skills/generic-agent-training.md'
   },
   {
     id: 'github',

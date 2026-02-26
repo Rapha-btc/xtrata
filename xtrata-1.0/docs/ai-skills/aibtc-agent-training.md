@@ -25,7 +25,7 @@ with deterministic fee caps, confirmations, and error recovery.
 
 ## Training sequence
 
-1. Load and parse [`XTRATA_AGENT_SKILL.md`](https://github.com/stxtrata/xtrata/blob/HEAD/xtrata-1.0/XTRATA_AGENT_SKILL.md).
+1. Load and parse [`XTRATA_AGENT_SKILL.md`](https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/XTRATA_AGENT_SKILL.md).
 2. Train on fixed constants:
    - chunk size `16,384`
    - max batch size `50`
@@ -74,7 +74,7 @@ with deterministic fee caps, confirmations, and error recovery.
 
 ## Companion references
 
-- [`XTRATA_AGENT_SKILL.md`](https://github.com/stxtrata/xtrata/blob/HEAD/xtrata-1.0/XTRATA_AGENT_SKILL.md)
-- [`scripts/xtrata-mint-example.js`](https://github.com/stxtrata/xtrata/blob/HEAD/xtrata-1.0/scripts/xtrata-mint-example.js)
-- [`scripts/xtrata-transfer-example.js`](https://github.com/stxtrata/xtrata/blob/HEAD/xtrata-1.0/scripts/xtrata-transfer-example.js)
-- [`scripts/xtrata-query-example.js`](https://github.com/stxtrata/xtrata/blob/HEAD/xtrata-1.0/scripts/xtrata-query-example.js)
+- [`XTRATA_AGENT_SKILL.md`](https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/XTRATA_AGENT_SKILL.md)
+- [`scripts/xtrata-mint-example.js`](https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/scripts/xtrata-mint-example.js)
+- [`scripts/xtrata-transfer-example.js`](https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/scripts/xtrata-transfer-example.js)
+- [`scripts/xtrata-query-example.js`](https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/scripts/xtrata-query-example.js)
