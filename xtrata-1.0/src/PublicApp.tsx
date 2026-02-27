@@ -12,9 +12,11 @@ import { getContractId } from './lib/contract/config';
 import { resolveCollectionContractLink } from './lib/collections/contract-link';
 import { useBnsAddress } from './lib/bns/hooks';
 import { RATE_LIMIT_WARNING_EVENT } from './lib/network/rate-limit';
+import { getApiBaseUrls } from './lib/network/config';
 import { getNetworkFromAddress, getNetworkMismatch } from './lib/network/guard';
 import { toStacksNetwork } from './lib/network/stacks';
 import type { NetworkType } from './lib/network/types';
+import { isRateLimitError, isReadOnlyNetworkError } from './lib/contract/read-only';
 import { getViewerKey } from './lib/viewer/queries';
 import { createStacksWalletAdapter } from './lib/wallet/adapter';
 import { createWalletSessionStore } from './lib/wallet/session';
@@ -48,6 +50,10 @@ const SECTION_KEYS = [
   'live-collections'
 ] as const;
 type SectionKey = (typeof SECTION_KEYS)[number];
+
+const LIVE_MINT_REFRESH_INTERVAL_MS = 3 * 60_000;
+const LIVE_MINT_ERROR_BACKOFF_MS = 5 * 60_000;
+const LIVE_MINT_RATE_LIMIT_BACKOFF_MS = 15 * 60_000;
 
 const toSectionKeyFromHash = (hash: string): SectionKey | null => {
   const normalized = hash.replace(/^#/, '').trim();
@@ -962,21 +968,67 @@ const resolvePublicCollectionContractTarget = (
   };
 };
 
+const getErrorMessage = (error: unknown) => {
+  if (typeof error === 'string') {
+    return error;
+  }
+  if (error instanceof Error) {
+    return error.message || error.name || 'Unknown error';
+  }
+  if (!error) {
+    return 'Unknown error';
+  }
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+};
+
+const shouldTryReadOnlyFallback = (error: unknown) =>
+  isRateLimitError(error) || isReadOnlyNetworkError(error);
+
+const toMintStatusErrorMessage = (error: unknown) => {
+  if (isRateLimitError(error)) {
+    return `Upstream API rate-limited this request. Mint status refresh is paused and will retry in about ${Math.round(
+      LIVE_MINT_RATE_LIMIT_BACKOFF_MS / 60_000
+    )} minutes.`;
+  }
+  return getErrorMessage(error);
+};
+
 const loadPublicMintStatus = async (
   contract: PublicCollectionContractTarget
 ): Promise<PublicLiveMintStatus> => {
-  const network = toStacksNetwork(contract.network);
+  const apiBaseUrls = getApiBaseUrls(contract.network);
   const senderAddress = contract.address;
   const readOnly = async (functionName: string, functionArgs: ClarityValue[] = []) => {
-    const response = await callReadOnlyFunction({
-      contractAddress: contract.address,
-      contractName: contract.contractName,
-      functionName,
-      functionArgs,
-      senderAddress,
-      network
-    });
-    return unwrapReadOnly(response);
+    let lastError: unknown = null;
+    for (let index = 0; index < apiBaseUrls.length; index += 1) {
+      const apiBaseUrl = apiBaseUrls[index];
+      try {
+        const response = await callReadOnlyFunction({
+          contractAddress: contract.address,
+          contractName: contract.contractName,
+          functionName,
+          functionArgs,
+          senderAddress,
+          network: toStacksNetwork(contract.network, apiBaseUrl)
+        });
+        return unwrapReadOnly(response);
+      } catch (error) {
+        lastError = error;
+        const hasFallback = index < apiBaseUrls.length - 1;
+        if (hasFallback && shouldTryReadOnlyFallback(error)) {
+          continue;
+        }
+        break;
+      }
+    }
+    if (lastError instanceof Error) {
+      throw lastError;
+    }
+    throw new Error(getErrorMessage(lastError));
   };
   const [pausedCv, finalizedCv, mintPriceCv, activePhaseCv, maxSupplyCv, mintedCountCv, reservedCountCv] = await Promise.all([
     readOnly('is-paused'),
@@ -994,15 +1046,7 @@ const loadPublicMintStatus = async (
   const activePhaseId = parseUintCv(activePhaseCv);
   let activePhaseMintPrice: bigint | null = null;
   if (activePhaseId !== null && activePhaseId > 0n) {
-    const phaseCv = await callReadOnlyFunction({
-      contractAddress: contract.address,
-      contractName: contract.contractName,
-      functionName: 'get-phase',
-      functionArgs: [uintCV(activePhaseId)],
-      senderAddress,
-      network
-    });
-    const phaseValue = unwrapReadOnly(phaseCv);
+    const phaseValue = await readOnly('get-phase', [uintCV(activePhaseId)]);
     if (phaseValue.type === ClarityType.OptionalSome) {
       const tuple = phaseValue.value;
       if (tuple.type === ClarityType.Tuple) {
@@ -1406,6 +1450,7 @@ export default function PublicApp() {
     initial['active-contract'] = true;
     initial['collection-viewer'] = true;
     initial.market = true;
+    initial['live-collections'] = true;
     initial.mint = false;
     return initial;
   });
@@ -1683,6 +1728,7 @@ export default function PublicApp() {
 
   useEffect(() => {
     let cancelled = false;
+    let timeoutId: number | null = null;
     const activeIds = new Set(liveCollectionCards.map((collection) => collection.id));
     setLiveMintStatusByCollectionId((current) =>
       Object.fromEntries(
@@ -1712,11 +1758,27 @@ export default function PublicApp() {
         contractTarget: PublicCollectionContractTarget;
       } => collection.contractTarget !== null
     );
-    if (cardsWithContracts.length === 0) {
+    const shouldRefreshLiveMintStatus =
+      cardsWithContracts.length > 0 &&
+      tabGuard.isActive &&
+      !collapsedSections['live-collections'];
+    if (!shouldRefreshLiveMintStatus) {
       return () => {
         cancelled = true;
+        if (timeoutId !== null) {
+          window.clearTimeout(timeoutId);
+        }
       };
     }
+
+    const scheduleRefresh = (delayMs: number) => {
+      if (cancelled) {
+        return;
+      }
+      timeoutId = window.setTimeout(() => {
+        void refreshMintStatus();
+      }, delayMs);
+    };
 
     const refreshMintStatus = async () => {
       setLiveMintStatusLoadingByCollectionId((current) => {
@@ -1731,13 +1793,18 @@ export default function PublicApp() {
         cardsWithContracts.map(async (collection) => {
           try {
             const status = await loadPublicMintStatus(collection.contractTarget);
-            return { id: collection.id, status, error: null as string | null };
+            return {
+              id: collection.id,
+              status,
+              error: null as string | null,
+              rateLimited: false
+            };
           } catch (error) {
             return {
               id: collection.id,
               status: null as PublicLiveMintStatus | null,
-              error:
-                error instanceof Error ? error.message : 'Unable to load mint status.'
+              error: toMintStatusErrorMessage(error),
+              rateLimited: isRateLimitError(error)
             };
           }
         })
@@ -1746,6 +1813,9 @@ export default function PublicApp() {
       if (cancelled) {
         return;
       }
+
+      const hasRateLimitedEntry = settled.some((entry) => entry.rateLimited);
+      const hasErrorEntry = settled.some((entry) => entry.error !== null);
 
       setLiveMintStatusByCollectionId((current) => {
         const next = { ...current };
@@ -1772,18 +1842,24 @@ export default function PublicApp() {
         });
         return next;
       });
+
+      const nextDelayMs = hasRateLimitedEntry
+        ? LIVE_MINT_RATE_LIMIT_BACKOFF_MS
+        : hasErrorEntry
+          ? LIVE_MINT_ERROR_BACKOFF_MS
+          : LIVE_MINT_REFRESH_INTERVAL_MS;
+      scheduleRefresh(nextDelayMs);
     };
 
     void refreshMintStatus();
-    const intervalId = window.setInterval(() => {
-      void refreshMintStatus();
-    }, 20_000);
 
     return () => {
       cancelled = true;
-      window.clearInterval(intervalId);
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
     };
-  }, [liveCollectionCards]);
+  }, [liveCollectionCards, tabGuard.isActive, collapsedSections['live-collections']]);
 
   useEffect(() => {
     if (!creativeStoryOpen && !artistPortalGuideOpen) {
