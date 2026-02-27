@@ -1211,7 +1211,27 @@ const CREATIVE_STORY = {
   bigIdeaLead:
     'The foundational role is simple: make critical state trustworthy, composable, and durable.',
   bigIdeaTagline: 'Xtrata is boring infrastructure for useful, powerful, and exciting Web3 apps.'
-  };
+};
+
+const ARTIST_PORTAL_GUIDE = {
+  title: 'Artist Portal and collection mint guide',
+  intro: 'Public inscriptions are open. Partner contracts are available now.',
+  access:
+    'Contact Jim.BTC (@JimDotBTC on X) to request access to the Artist Portal.',
+  portalSteps: [
+    'Connect your approved wallet in the Artist Portal.',
+    'Configure collection details, pricing, and sale settings.',
+    'Upload assets, stage metadata, and publish when your drop is ready.',
+    'Share your collection page so buyers can mint directly from your release.'
+  ],
+  mintFlow: [
+    'Collection mints run through the collection mint contract.',
+    'Each buyer mint finalizes an on-chain inscription in Xtrata-compatible format.',
+    'Owner controls let you monitor status, pause/unpause, and manage launch operations.'
+  ],
+  sizeNote:
+    'There is no fixed hard cap on collection size in this flow. Large releases should still be staged in manageable batches.'
+};
 
 
 
@@ -1361,6 +1381,7 @@ export default function PublicApp() {
   const [walletLookupTouched, setWalletLookupTouched] = useState(false);
   const [viewerMode, setViewerMode] = useState<ViewerMode>('collection');
   const [creativeStoryOpen, setCreativeStoryOpen] = useState(false);
+  const [artistPortalGuideOpen, setArtistPortalGuideOpen] = useState(false);
   const [activeDocId, setActiveDocId] = useState<string | null>(() => {
     return IN_HOUSE_DOC_SECTIONS[0]?.id ?? null;
   });
@@ -1765,19 +1786,20 @@ export default function PublicApp() {
   }, [liveCollectionCards]);
 
   useEffect(() => {
-    if (!creativeStoryOpen) {
+    if (!creativeStoryOpen && !artistPortalGuideOpen) {
       return;
     }
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setCreativeStoryOpen(false);
+        setArtistPortalGuideOpen(false);
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => {
       window.removeEventListener('keydown', onKeyDown);
     };
-  }, [creativeStoryOpen]);
+  }, [creativeStoryOpen, artistPortalGuideOpen]);
 
   useEffect(() => {
     setWalletSession(walletAdapter.getSession());
@@ -1829,6 +1851,14 @@ export default function PublicApp() {
 
   const closeCreativeStory = () => {
     setCreativeStoryOpen(false);
+  };
+
+  const openArtistPortalGuide = () => {
+    setArtistPortalGuideOpen(true);
+  };
+
+  const closeArtistPortalGuide = () => {
+    setArtistPortalGuideOpen(false);
   };
 
   return (
@@ -1890,7 +1920,7 @@ export default function PublicApp() {
                 href="#mint"
                 onClick={(event) => handleNavJump(event, 'mint')}
               >
-                Mint
+                Inscribe
               </a>
               <a
                 className="button button--ghost app__nav-link"
@@ -1911,7 +1941,7 @@ export default function PublicApp() {
                 href="#live-collections"
                 onClick={(event) => handleNavJump(event, 'live-collections')}
               >
-                Live drops
+                Artist collections
               </a>
               <a
                 className="button button--ghost app__nav-link"
@@ -1939,6 +1969,13 @@ export default function PublicApp() {
                     ))}
                   </select>
                 </label>
+                <button
+                  className="button button--ghost"
+                  type="button"
+                  onClick={openArtistPortalGuide}
+                >
+                  Artist portal
+                </button>
                 <button
                   className="button button--ghost"
                   type="button"
@@ -2170,14 +2207,14 @@ export default function PublicApp() {
         >
           <div className="panel__header">
             <div>
-              <h2>Live collection mints</h2>
-              <p>Artist drops currently marked as visible by collection owners.</p>
+              <h2>Current + previous artist collections</h2>
+              <p>Artist collection pages currently published by collection owners.</p>
             </div>
             <div className="panel__actions">
               <span className="badge badge--neutral">
                 {liveCollectionsLoading
                   ? 'Refreshing'
-                  : `${liveCollectionCards.length} live`}
+                  : `${liveCollectionCards.length} listed`}
               </span>
               <button
                 className="button button--ghost button--collapse"
@@ -2192,12 +2229,12 @@ export default function PublicApp() {
           <div className="panel__body">
             {liveCollectionsError && <div className="alert">{liveCollectionsError}</div>}
             {!liveCollectionsError && liveCollectionsLoading && liveCollectionCards.length === 0 && (
-              <p>Loading live collection pages...</p>
+              <p>Loading artist collection pages...</p>
             )}
             {!liveCollectionsError &&
               !liveCollectionsLoading &&
               liveCollectionCards.length === 0 && (
-                <p>No live collections are currently published to the public page.</p>
+                <p>No artist collections are currently published to the public page.</p>
               )}
             {liveCollectionCards.length > 0 && (
               <div className="public-live-collections">
@@ -2287,7 +2324,7 @@ export default function PublicApp() {
                       </div>
                       <div className="mint-actions">
                         <a className="button button--ghost button--mini" href={collection.livePath}>
-                          Open live mint page
+                          Open collection page
                         </a>
                       </div>
                     </article>
@@ -2537,6 +2574,67 @@ export default function PublicApp() {
                     {CREATIVE_STORY.bigIdeaTagline}
                   </span>
                 </p>
+              </section>
+            </div>
+          </div>
+        </div>
+      )}
+      {artistPortalGuideOpen && (
+        <div
+          className="modal-overlay"
+          onClick={closeArtistPortalGuide}
+          role="presentation"
+        >
+          <div
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="artist-portal-guide-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="modal__header">
+              <div>
+                <p className="story-modal__eyebrow">For artists</p>
+                <h2 className="modal__title" id="artist-portal-guide-title">
+                  {ARTIST_PORTAL_GUIDE.title}
+                </h2>
+              </div>
+              <button
+                className="button button--ghost button--mini"
+                type="button"
+                onClick={closeArtistPortalGuide}
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="story-modal__body">
+              <p>{ARTIST_PORTAL_GUIDE.intro}</p>
+              <p>
+                <strong>{ARTIST_PORTAL_GUIDE.access}</strong>
+              </p>
+
+              <section className="story-modal__section">
+                <h3>How the Artist Portal works</h3>
+                <ul className="story-modal__proof-list">
+                  {ARTIST_PORTAL_GUIDE.portalSteps.map((step) => (
+                    <li key={step}>{step}</li>
+                  ))}
+                </ul>
+              </section>
+
+              <section className="story-modal__section">
+                <h3>How collection mints work</h3>
+                <ul className="story-modal__proof-list">
+                  {ARTIST_PORTAL_GUIDE.mintFlow.map((point) => (
+                    <li key={point}>{point}</li>
+                  ))}
+                </ul>
+              </section>
+
+              <section className="story-modal__section story-modal__section--highlight">
+                <h3>Collection size</h3>
+                <p>{ARTIST_PORTAL_GUIDE.sizeNote}</p>
               </section>
             </div>
           </div>
