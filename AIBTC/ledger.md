@@ -35,6 +35,8 @@ Updated after each research cycle and inscription.
 |---|---|---|---|---|---|---|
 | 2026-02-26 | ~03:30 | Research (dry run) | Sonnet | ~8k out / ~2k in | ~3 min | Hit $0.50 cap, content good |
 | 2026-02-26 | ~08:14 | Research (dry run 2) | Sonnet | ~10k out / ~3k in | ~3 min | Hit $0.50 cap, files written |
+| 2026-02-27 | 10:35 | Research (Pulse 002) | Sonnet | ~10k out / ~3k in | ~5 min | Timed out but files written |
+| 2026-02-27 | 11:25 | Research (Pulse 003) | Sonnet | ~10k out / ~3k in | ~2 min | Manual trigger, buffer complete |
 
 **Estimated per-cycle allocation draw:**
 | Cycle | Model | Est. Input Tokens | Est. Output Tokens | Relative Weight |
@@ -52,11 +54,11 @@ Updated after each research cycle and inscription.
 | Metric | Value | Last Updated |
 |---|---|---|
 | STX spent (total) | 0.434 | 2026-02-26 |
-| STX remaining | 9.566 | 2026-02-26 |
-| Days of on-chain life | ~30.8 | 2026-02-26 |
+| STX remaining | 9.566 | 2026-02-27 |
+| Days of on-chain life | ~30.86 | 2026-02-27 |
 | Inscriptions sealed | 1 (genesis) | 2026-02-26 |
-| Research cycles run | 2 (dry runs) | 2026-02-26 |
-| Pro allocation concern | None | 2026-02-26 |
+| Research cycles run | 4 (2 dry, 2 live) | 2026-02-27 |
+| Pro allocation concern | None | 2026-02-27 |
 
 ---
 

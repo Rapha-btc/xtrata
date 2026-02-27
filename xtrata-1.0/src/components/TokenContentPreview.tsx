@@ -215,6 +215,8 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
   const hasCachedContent = !!cachedContent && cachedContent.length > 0;
   const streamMimeType = mimeType ? mimeType.toLowerCase() : null;
   const isWebm = !!streamMimeType && streamMimeType.includes('webm');
+  const preferDirectVideoLoad =
+    !!streamMimeType && streamMimeType.startsWith('video/mp4');
   const isStreamableKind =
     !!streamMimeType &&
     (streamMimeType.startsWith('audio/') ||
@@ -230,15 +232,27 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     !!props.token.meta &&
     isStreamableKind &&
     !isWebm &&
+    !preferDirectVideoLoad &&
     mediaSourceAvailable &&
+    mediaSourceSupported &&
     totalSize !== null &&
     totalSize > MAX_AUTO_PREVIEW_BYTES;
+  const directVideoAutoLoad =
+    preferDirectVideoLoad &&
+    totalSize !== null &&
+    totalSize > MAX_AUTO_PREVIEW_BYTES &&
+    totalSize <= BigInt(TEMP_CACHE_MAX_BYTES);
   const preferFullImageLoad =
     mediaKind === 'image' || mediaKind === 'svg';
   const autoLoad =
     totalSize !== null &&
     !svgPreview &&
-    (totalSize <= MAX_AUTO_PREVIEW_BYTES || isWebm || preferFullImageLoad);
+    (
+      totalSize <= MAX_AUTO_PREVIEW_BYTES ||
+      isWebm ||
+      preferFullImageLoad ||
+      directVideoAutoLoad
+    );
 
   const [loadRequested, setLoadRequested] = useState(
     () => autoLoad || hasCachedContent || autoStream
@@ -305,7 +319,9 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     !svgPreview &&
     isStreamableKind &&
     !isWebm &&
+    !preferDirectVideoLoad &&
     mediaSourceAvailable &&
+    mediaSourceSupported &&
     isActiveTab;
 
   const contentQuery = useQuery({
@@ -456,6 +472,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
       streamable: isStreamableKind,
       mediaSourceAvailable,
       mediaSourceSupported,
+      preferDirectVideoLoad,
       candidateMimeTypes: streamMimeCandidates,
       autoStream,
       totalSize: totalSize !== null ? totalSize.toString() : null,
@@ -468,6 +485,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     isStreamableKind,
     mediaSourceAvailable,
     mediaSourceSupported,
+    preferDirectVideoLoad,
     streamMimeCandidates,
     autoStream,
     totalSize
@@ -921,9 +939,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
           id: props.token.id.toString(),
           error: message
         });
-        if (nextIndex === 0) {
-          setForceFullLoad(true);
-        }
+        setForceFullLoad(true);
       }
     };
 
@@ -991,6 +1007,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
           id: props.token.id.toString(),
           error: message
         });
+        setForceFullLoad(true);
       }
     };
 
@@ -2029,6 +2046,11 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
                         preload="metadata"
                         src={mediaSourceUrl}
                         onPlay={() => streamStartRef.current?.()}
+                        onError={() => {
+                          if (shouldStream && !forceFullLoad) {
+                            setForceFullLoad(true);
+                          }
+                        }}
                       />
                     ) : resolvedMediaKind === 'video' && mediaSourceUrl ? (
                       <video
@@ -2040,6 +2062,11 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
                         src={mediaSourceUrl}
                         poster={tokenUriPreview ?? undefined}
                         onPlay={() => streamStartRef.current?.()}
+                        onError={() => {
+                          if (shouldStream && !forceFullLoad) {
+                            setForceFullLoad(true);
+                          }
+                        }}
                       />
                     ) : tokenUriPreview ? (
                       <>

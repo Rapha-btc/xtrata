@@ -156,6 +156,82 @@ export const sniffMimeType = (bytes: Uint8Array) => {
   return null;
 };
 
+const toAsciiBytes = (value: string) =>
+  Uint8Array.from(value.split('').map((char) => char.charCodeAt(0)));
+
+const indexOfBytes = (
+  haystack: Uint8Array,
+  needle: Uint8Array
+) => {
+  if (needle.length === 0 || haystack.length < needle.length) {
+    return -1;
+  }
+  const end = haystack.length - needle.length;
+  for (let offset = 0; offset <= end; offset += 1) {
+    let matches = true;
+    for (let index = 0; index < needle.length; index += 1) {
+      if (haystack[offset + index] !== needle[index]) {
+        matches = false;
+        break;
+      }
+    }
+    if (matches) {
+      return offset;
+    }
+  }
+  return -1;
+};
+
+const WEBM_AUDIO_CODEC_MARKERS = [
+  'A_OPUS',
+  'A_VORBIS',
+  'A_AAC',
+  'A_MPEG/L3',
+  'A_AC3',
+  'A_EAC3',
+  'A_FLAC',
+  'A_PCM',
+  'A_ALAC'
+].map(toAsciiBytes);
+
+const WEBM_VIDEO_CODEC_MARKERS = [
+  'V_VP8',
+  'V_VP9',
+  'V_AV1',
+  'V_THEORA',
+  'V_MPEG4',
+  'V_MPEGH/ISO/HEVC'
+].map(toAsciiBytes);
+
+// Detects likely media kind for WebM payloads using codec-id markers in the
+// file header, allowing audio/webm-in-video containers to be treated as audio.
+export const detectWebmTrackKind = (
+  bytes: Uint8Array,
+  maxScanBytes = 256 * 1024
+): 'audio' | 'video' | null => {
+  if (bytes.length === 0) {
+    return null;
+  }
+  const scanLimit = Math.min(bytes.length, Math.max(0, maxScanBytes));
+  if (scanLimit === 0) {
+    return null;
+  }
+  const head = bytes.subarray(0, scanLimit);
+  const hasVideoMarker = WEBM_VIDEO_CODEC_MARKERS.some(
+    (marker) => indexOfBytes(head, marker) !== -1
+  );
+  const hasAudioMarker = WEBM_AUDIO_CODEC_MARKERS.some(
+    (marker) => indexOfBytes(head, marker) !== -1
+  );
+  if (hasVideoMarker) {
+    return 'video';
+  }
+  if (hasAudioMarker) {
+    return 'audio';
+  }
+  return null;
+};
+
 export const resolveMimeType = (
   metaMimeType: string | null,
   bytes?: Uint8Array | null
@@ -172,6 +248,134 @@ export const resolveMimeType = (
     return sniffMimeType(bytes) ?? normalized;
   }
   return normalized;
+};
+
+const isGifHeader = (bytes: Uint8Array) =>
+  bytes.length >= 6 &&
+  bytes[0] === 0x47 &&
+  bytes[1] === 0x49 &&
+  bytes[2] === 0x46 &&
+  bytes[3] === 0x38 &&
+  (bytes[4] === 0x37 || bytes[4] === 0x39) &&
+  bytes[5] === 0x61;
+
+const skipGifSubBlocks = (bytes: Uint8Array, start: number) => {
+  let cursor = start;
+  while (cursor < bytes.length) {
+    const blockSize = bytes[cursor] ?? 0;
+    cursor += 1;
+    if (blockSize === 0) {
+      return cursor;
+    }
+    cursor += blockSize;
+  }
+  return bytes.length;
+};
+
+// Returns the playback duration of one finite GIF run (all loops), or null
+// when the GIF already loops forever, is static, or cannot be parsed safely.
+export const getFiniteGifReplayDelayMs = (bytes: Uint8Array) => {
+  if (!isGifHeader(bytes) || bytes.length < 13) {
+    return null;
+  }
+  let cursor = 13;
+  const logicalDescriptorPacked = bytes[10] ?? 0;
+  if ((logicalDescriptorPacked & 0x80) !== 0) {
+    const globalColorTableSize = 1 << ((logicalDescriptorPacked & 0x07) + 1);
+    cursor += globalColorTableSize * 3;
+  }
+
+  let currentDelayCs = 10;
+  let totalDelayCs = 0;
+  let frameCount = 0;
+  let loopCount: number | null = null;
+
+  while (cursor < bytes.length) {
+    const blockType = bytes[cursor++];
+    if (blockType === 0x3b) {
+      break;
+    }
+    if (blockType === 0x21) {
+      const extensionLabel = bytes[cursor++] ?? 0;
+      if (extensionLabel === 0xf9) {
+        const blockSize = bytes[cursor++] ?? 0;
+        if (blockSize >= 4 && cursor + blockSize <= bytes.length) {
+          const delayLo = bytes[cursor + 1] ?? 0;
+          const delayHi = bytes[cursor + 2] ?? 0;
+          const parsedDelay = (delayHi << 8) | delayLo;
+          currentDelayCs = parsedDelay > 0 ? parsedDelay : 10;
+        }
+        cursor += blockSize;
+        if (cursor < bytes.length && bytes[cursor] === 0x00) {
+          cursor += 1;
+        }
+        continue;
+      }
+      if (extensionLabel === 0xff) {
+        const appBlockSize = bytes[cursor++] ?? 0;
+        const appStart = cursor;
+        const appEnd = Math.min(bytes.length, cursor + appBlockSize);
+        const appIdentifier = Array.from(bytes.slice(appStart, appEnd))
+          .map((value) => String.fromCharCode(value))
+          .join('');
+        cursor = appEnd;
+        const isLoopExtension =
+          appIdentifier.startsWith('NETSCAPE') ||
+          appIdentifier.startsWith('ANIMEXTS');
+        if (isLoopExtension && cursor < bytes.length) {
+          const firstSubBlockSize = bytes[cursor] ?? 0;
+          const firstSubBlockStart = cursor + 1;
+          if (
+            firstSubBlockSize >= 3 &&
+            firstSubBlockStart + firstSubBlockSize <= bytes.length &&
+            bytes[firstSubBlockStart] === 0x01
+          ) {
+            const loopLo = bytes[firstSubBlockStart + 1] ?? 0;
+            const loopHi = bytes[firstSubBlockStart + 2] ?? 0;
+            loopCount = (loopHi << 8) | loopLo;
+          }
+        }
+        cursor = skipGifSubBlocks(bytes, cursor);
+        continue;
+      }
+      cursor = skipGifSubBlocks(bytes, cursor);
+      continue;
+    }
+    if (blockType === 0x2c) {
+      if (cursor + 9 > bytes.length) {
+        break;
+      }
+      const localDescriptorPacked = bytes[cursor + 8] ?? 0;
+      cursor += 9;
+      if ((localDescriptorPacked & 0x80) !== 0) {
+        const localColorTableSize = 1 << ((localDescriptorPacked & 0x07) + 1);
+        cursor += localColorTableSize * 3;
+      }
+      if (cursor >= bytes.length) {
+        break;
+      }
+      cursor += 1; // LZW minimum code size
+      cursor = skipGifSubBlocks(bytes, cursor);
+      frameCount += 1;
+      totalDelayCs += currentDelayCs;
+      currentDelayCs = 10;
+      continue;
+    }
+    break;
+  }
+
+  if (frameCount < 2) {
+    return null;
+  }
+  if (loopCount === 0) {
+    return null;
+  }
+  const resolvedLoops = loopCount ?? 1;
+  if (resolvedLoops <= 0) {
+    return null;
+  }
+  const perLoopDurationMs = Math.max(totalDelayCs * 10, frameCount * 100);
+  return perLoopDurationMs * resolvedLoops;
 };
 
 export const extractImageFromMetadata = (value: unknown) => {
@@ -927,4 +1131,30 @@ export const fetchOnChainContent = async (params: {
     trimmed: combined.length > totalSizeNumber
   });
   return trimmed;
+};
+
+export const fetchOnChainHeadChunk = async (params: {
+  client: XtrataClient;
+  fallbackClient?: XtrataClient | null;
+  id: bigint;
+  senderAddress: string;
+}) => {
+  try {
+    return await fetchChunkWithRetry({
+      client: params.client,
+      id: params.id,
+      index: 0n,
+      senderAddress: params.senderAddress
+    });
+  } catch (error) {
+    if (!params.fallbackClient || !isMissingChunkError(error)) {
+      throw error;
+    }
+    return fetchChunkWithRetry({
+      client: params.fallbackClient,
+      id: params.id,
+      index: 0n,
+      senderAddress: params.senderAddress
+    });
+  }
 };

@@ -2,8 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CHUNK_SIZE } from '../../chunking/hash';
 import {
   decodeTokenUriToImage,
+  detectWebmTrackKind,
   extractImageFromMetadata,
   fetchTokenImageFromUri,
+  getFiniteGifReplayDelayMs,
   getExpectedChunkCount,
   getMediaKind,
   getTextPreview,
@@ -13,6 +15,54 @@ import {
   resolveMimeType,
   sniffMimeType
 } from '../content';
+
+const buildAnimatedGif = ({
+  frameCount = 2,
+  delayCs = 5,
+  loopCount
+}: {
+  frameCount?: number;
+  delayCs?: number;
+  loopCount?: number;
+}) => {
+  const bytes: number[] = [
+    0x47, 0x49, 0x46, 0x38, 0x39, 0x61, // GIF89a
+    0x01, 0x00, 0x01, 0x00, // width/height = 1x1
+    0x80, 0x00, 0x00, // global color table flag + 2 entries
+    0x00, 0x00, 0x00, // black
+    0xff, 0xff, 0xff // white
+  ];
+
+  if (typeof loopCount === 'number') {
+    bytes.push(
+      0x21, 0xff, 0x0b,
+      0x4e, 0x45, 0x54, 0x53, 0x43, 0x41, 0x50, 0x45, 0x32, 0x2e, 0x30, // NETSCAPE2.0
+      0x03, 0x01,
+      loopCount & 0xff,
+      (loopCount >> 8) & 0xff,
+      0x00
+    );
+  }
+
+  for (let index = 0; index < frameCount; index += 1) {
+    bytes.push(
+      0x21, 0xf9, 0x04, 0x00,
+      delayCs & 0xff,
+      (delayCs >> 8) & 0xff,
+      0x00, 0x00,
+      0x2c,
+      0x00, 0x00, 0x00, 0x00,
+      0x01, 0x00, 0x01, 0x00,
+      0x00,
+      0x02,
+      0x02, 0x4c, 0x01,
+      0x00
+    );
+  }
+
+  bytes.push(0x3b);
+  return new Uint8Array(bytes);
+};
 
 describe('viewer content helpers', () => {
   const originalFetch = globalThis.fetch;
@@ -75,6 +125,32 @@ describe('viewer content helpers', () => {
     const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
     expect(resolveMimeType('application/octet-stream', bytes)).toBe('image/png');
     expect(resolveMimeType('image/png', bytes)).toBe('image/png');
+  });
+
+  it('computes finite gif replay durations', () => {
+    const finiteGif = buildAnimatedGif({ frameCount: 2, delayCs: 5, loopCount: 2 });
+    const singleRunGif = buildAnimatedGif({ frameCount: 2, delayCs: 5 });
+    const infiniteGif = buildAnimatedGif({ frameCount: 2, delayCs: 5, loopCount: 0 });
+    const staticGif = buildAnimatedGif({ frameCount: 1, delayCs: 5, loopCount: 1 });
+
+    expect(getFiniteGifReplayDelayMs(finiteGif)).toBe(400);
+    expect(getFiniteGifReplayDelayMs(singleRunGif)).toBe(200);
+    expect(getFiniteGifReplayDelayMs(infiniteGif)).toBeNull();
+    expect(getFiniteGifReplayDelayMs(staticGif)).toBeNull();
+  });
+
+  it('detects webm audio/video codec markers from header bytes', () => {
+    const audioBytes = new Uint8Array([0x1a, 0x45, 0xdf, 0xa3, 0x41, 0x5f, 0x4f, 0x50, 0x55, 0x53]); // A_OPUS
+    const videoBytes = new Uint8Array([0x1a, 0x45, 0xdf, 0xa3, 0x56, 0x5f, 0x56, 0x50, 0x39]); // V_VP9
+    const mixedBytes = new Uint8Array([
+      0x41, 0x5f, 0x4f, 0x50, 0x55, 0x53, // A_OPUS
+      0x56, 0x5f, 0x56, 0x50, 0x38 // V_VP8
+    ]);
+
+    expect(detectWebmTrackKind(audioBytes)).toBe('audio');
+    expect(detectWebmTrackKind(videoBytes)).toBe('video');
+    expect(detectWebmTrackKind(mixedBytes)).toBe('video');
+    expect(detectWebmTrackKind(new Uint8Array([0x1a, 0x45, 0xdf, 0xa3]))).toBeNull();
   });
 
   it('extracts image URIs from metadata', () => {
