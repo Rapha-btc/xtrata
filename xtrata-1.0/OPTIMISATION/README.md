@@ -8,10 +8,16 @@ This folder is the working hub for optimisation planning and delivery.
 
 - `OPTIMISATION/baseline-2026-02-17.md`
   - Current baseline snapshot (bundle output, large files, known pain points).
+- `OPTIMISATION/api-efficiency-baseline-2026-02-27.md`
+  - API traffic and cache baseline derived from Cloudflare dashboard and runtime observations.
 - `OPTIMISATION/identified-areas.md`
   - Consolidated optimisation opportunities grouped by workstream.
 - `OPTIMISATION/triage-plan.md`
   - Prioritised execution plan with phases, task IDs, and acceptance criteria.
+- `OPTIMISATION/api-efficiency-plan-2026-02-27.md`
+  - Focused API-efficiency roadmap with concrete code targets and rollout gates.
+- `OPTIMISATION/cloudflare-api-controls-runbook-2026-02-27.md`
+  - Cloudflare bot/rate-limit controls and rollout/rollback checklist for API protection.
 
 ## Working model
 

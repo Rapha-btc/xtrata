@@ -6,6 +6,16 @@ const DEFAULT_TARGET_BASES: Record<string, string> = {
 };
 const SAFE_METHODS = new Set(['GET', 'HEAD']);
 const HIRO_KEY_COOLDOWN_MS = 2 * 60_000;
+const CALL_READ_FUNCTION_TTLS_MS: Record<string, number> = {
+  'get-last-token-id': 8_000,
+  'get-next-token-id': 8_000,
+  'get-inscription-meta': 20_000,
+  'get-owner': 20_000,
+  'get-token-uri': 30_000,
+  'get-svg-data-uri': 30_000,
+  'get-svg': 30_000,
+  'get-max-supply': 15_000
+};
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -14,6 +24,19 @@ const CORS_HEADERS = {
 };
 const inFlightSafeRequests = new Map<string, Promise<Response>>();
 const hiroKeyCooldownUntil = new Map<string, number>();
+const cachedProxyResponses = new Map<string, CachedProxyResponse>();
+const inFlightCacheableRequests = new Map<string, Promise<Response>>();
+
+type CachedProxyResponse = {
+  status: number;
+  headers: Array<[string, string]>;
+  body: Uint8Array;
+  expiresAt: number;
+};
+
+type ProxyCachePolicy = {
+  ttlMs: number;
+};
 
 const normalizeBase = (value: string) => value.trim().replace(/\/+$/, '');
 
@@ -81,6 +104,101 @@ const buildSafeRequestKey = (params: {
   `${params.method.toUpperCase()}|${params.targetUrl}|${serializeHeaders(
     params.headers
   )}`;
+
+const normalizePath = (value: string) =>
+  value.replace(/^\/+/, '').split('?')[0] ?? '';
+
+const extractCallReadFunctionName = (path: string) => {
+  const normalized = normalizePath(path);
+  const match = /^v2\/contracts\/call-read\/[^/]+\/[^/]+\/([^/]+)$/i.exec(normalized);
+  if (!match) {
+    return null;
+  }
+  try {
+    return decodeURIComponent(match[1]).toLowerCase();
+  } catch {
+    return match[1].toLowerCase();
+  }
+};
+
+const getProxyCachePolicy = (params: {
+  method: string;
+  path: string;
+}): ProxyCachePolicy | null => {
+  if (params.method !== 'POST') {
+    return null;
+  }
+  const functionName = extractCallReadFunctionName(params.path);
+  if (!functionName) {
+    return null;
+  }
+  const ttlMs = CALL_READ_FUNCTION_TTLS_MS[functionName];
+  if (!ttlMs || ttlMs <= 0) {
+    return null;
+  }
+  return { ttlMs };
+};
+
+const getBodyFingerprint = (body?: ArrayBuffer) => {
+  if (!body || body.byteLength === 0) {
+    return '0:0';
+  }
+  const bytes = new Uint8Array(body);
+  let hash = 2166136261;
+  for (let i = 0; i < bytes.length; i += 1) {
+    hash ^= bytes[i];
+    hash = Math.imul(hash, 16777619);
+  }
+  return `${bytes.length}:${(hash >>> 0).toString(16)}`;
+};
+
+const buildCacheableRequestKey = (params: {
+  network: string;
+  targetUrl: string;
+  method: string;
+  body?: ArrayBuffer;
+}) =>
+  `${params.network.toLowerCase()}|${params.method.toUpperCase()}|${params.targetUrl}|${getBodyFingerprint(
+    params.body
+  )}`;
+
+const cleanupExpiredProxyResponses = (now = Date.now()) => {
+  cachedProxyResponses.forEach((value, key) => {
+    if (value.expiresAt <= now) {
+      cachedProxyResponses.delete(key);
+    }
+  });
+};
+
+const restoreCachedResponse = (cached: CachedProxyResponse) => {
+  const headers = new Headers(cached.headers);
+  headers.set('x-xtrata-proxy-cache', 'hit');
+  return new Response(cached.body.slice(), {
+    status: cached.status,
+    headers
+  });
+};
+
+const cacheProxyResponse = async (params: {
+  key: string;
+  response: Response;
+  ttlMs: number;
+}) => {
+  if (params.response.status !== 200 || params.ttlMs <= 0) {
+    return;
+  }
+  const bytes = new Uint8Array(await params.response.clone().arrayBuffer());
+  const headerPairs: Array<[string, string]> = [];
+  params.response.headers.forEach((value, name) => {
+    headerPairs.push([name, value]);
+  });
+  cachedProxyResponses.set(params.key, {
+    status: params.response.status,
+    headers: headerPairs,
+    body: bytes,
+    expiresAt: Date.now() + params.ttlMs
+  });
+};
 
 const withCorsHeaders = (response: Response) => {
   const responseHeaders = new Headers(response.headers);
@@ -235,6 +353,42 @@ export const proxyHiroRequest = async (params: {
     return withCorsHeaders(response.clone());
   }
 
+  const cachePolicy = getProxyCachePolicy({
+    method,
+    path
+  });
+  if (cachePolicy) {
+    cleanupExpiredProxyResponses();
+    const cacheKey = buildCacheableRequestKey({
+      network: params.network,
+      targetUrl,
+      method,
+      body
+    });
+    const cached = cachedProxyResponses.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return withCorsHeaders(restoreCachedResponse(cached));
+    }
+    let inFlight = inFlightCacheableRequests.get(cacheKey);
+    if (!inFlight) {
+      inFlight = (async () => {
+        const response = await load();
+        await cacheProxyResponse({
+          key: cacheKey,
+          response,
+          ttlMs: cachePolicy.ttlMs
+        });
+        return response;
+      })();
+      inFlightCacheableRequests.set(cacheKey, inFlight);
+      void inFlight.finally(() => {
+        inFlightCacheableRequests.delete(cacheKey);
+      });
+    }
+    const response = await inFlight;
+    return withCorsHeaders(response.clone());
+  }
+
   const response = await load();
   return withCorsHeaders(response);
 };
@@ -243,5 +397,7 @@ export const __testing = {
   resetHiroProxyRuntimeState() {
     inFlightSafeRequests.clear();
     hiroKeyCooldownUntil.clear();
+    cachedProxyResponses.clear();
+    inFlightCacheableRequests.clear();
   }
 };

@@ -147,6 +147,48 @@ Acceptance:
 
 ---
 
+## Phase 5B (`P0/P1`): API efficiency and quota resilience
+
+Goal: cut avoidable upstream API traffic and prevent user-facing degradation under rate limits.
+
+Tasks:
+
+1. `OPT-701` Prevent long-lived caching of degraded token summaries.
+   - Files: `src/lib/viewer/queries.ts`, `src/lib/viewer/cache.ts`, `src/lib/viewer/__tests__/*`.
+   - Acceptance:
+     - Transient `429`/network errors do not produce 1-hour stale metadata gaps.
+     - New tests cover degraded-summary caching behavior.
+2. `OPT-702` Add edge cache strategy for selected read-only `/hiro` routes.
+   - Files: `functions/lib/hiro-proxy.ts`, `functions/lib/__tests__/hiro-keys.test.ts` (or new proxy tests).
+   - Acceptance:
+     - Cacheable read-only endpoints (safe subset) support short TTL edge reuse.
+     - Cache bypass remains for sensitive or mutation routes.
+3. `OPT-703` Add endpoint budget instrumentation and diagnostics output.
+   - Files: `functions/lib/hiro-proxy.ts`, `src/screens/AdminDiagnosticsScreen.tsx` (or diagnostics helper layer).
+   - Acceptance:
+     - Endpoint-level hit/error/rate-limit counters are inspectable.
+     - Clear identification of top API spend paths.
+4. `OPT-704` Replace per-card live status fan-out with aggregated snapshot fetch.
+   - Files: `functions/collections/*` (new summary endpoint), `src/PublicApp.tsx`.
+   - Acceptance:
+     - Public live collections no longer trigger N x 7 read-only calls per refresh cycle.
+     - Equivalent user-visible mint-state information remains available.
+5. `OPT-705` Add Cloudflare traffic controls runbook and rollout checklist.
+   - Files:
+     - `OPTIMISATION/api-efficiency-plan-2026-02-27.md`
+     - `OPTIMISATION/cloudflare-api-controls-runbook-2026-02-27.md`
+   - Acceptance:
+     - Cache rules, AI crawler mode, and WAF rate limits are documented with rollback steps.
+     - Production vs preview env parity checks are explicit.
+
+Phase 5B exit gate:
+
+- API request volume per visitor drops materially from baseline.
+- Cloudflare cache ratio increases from low-single-digit baseline.
+- Viewer metadata/preview failures under rate-limit conditions are no longer sticky.
+
+---
+
 ## Phase 6 (`P2`): Hardening and follow-through
 
 Goal: lock in gains and prevent regressions.
@@ -170,7 +212,10 @@ Acceptance:
 2. `OPT-102`
 3. `OPT-103`
 4. `OPT-104`
-5. `OPT-201`
+5. `OPT-701`
+6. `OPT-702`
+7. `OPT-704`
+8. `OPT-201`
 
 This sequence should deliver the fastest visible gains with low disruption.
 
@@ -178,4 +223,11 @@ This sequence should deliver the fastest visible gains with low disruption.
 
 ## Progress log
 
-- Pending first execution cycle.
+- `2026-02-27`:
+  - Completed `OPT-701`:
+    - Degraded token summaries now use short-lived cache windows instead of 1-hour sticky state.
+    - Added targeted tests in `src/lib/viewer/__tests__/queries.test.ts`.
+    - Added preview metadata retry action in `TokenContentPreview`.
+  - Started `OPT-702`:
+    - Added allowlisted short-TTL cache for hot `POST /v2/contracts/call-read/*` functions in `functions/lib/hiro-proxy.ts`.
+    - Added coverage in `functions/lib/__tests__/hiro-keys.test.ts`.

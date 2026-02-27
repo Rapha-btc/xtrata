@@ -176,4 +176,148 @@ describe('hiro proxy key fallback', () => {
     expect(secondHeaders.get('x-hiro-api-key')).toBe('key-b');
     expect(thirdHeaders.get('x-hiro-api-key')).toBe('key-b');
   });
+
+  it('caches allowlisted call-read POST responses for a short window', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response('{"okay":true}', {
+        status: 200,
+        headers: {
+          'content-type': 'application/json'
+        }
+      })
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const first = await proxyHiroRequest({
+      request: new Request(
+        'https://example.com/hiro/mainnet/v2/contracts/call-read/SP123/test/get-last-token-id',
+        {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json'
+          },
+          body: JSON.stringify({ sender: 'SPSENDER' })
+        }
+      ),
+      env: {
+        HIRO_API_KEYS: 'key-a,key-b'
+      },
+      network: 'mainnet',
+      path: 'v2/contracts/call-read/SP123/test/get-last-token-id'
+    });
+
+    const second = await proxyHiroRequest({
+      request: new Request(
+        'https://example.com/hiro/mainnet/v2/contracts/call-read/SP123/test/get-last-token-id',
+        {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json'
+          },
+          body: JSON.stringify({ sender: 'SPSENDER' })
+        }
+      ),
+      env: {
+        HIRO_API_KEYS: 'key-a,key-b'
+      },
+      network: 'mainnet',
+      path: 'v2/contracts/call-read/SP123/test/get-last-token-id'
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(await first.text()).toBe('{"okay":true}');
+    expect(await second.text()).toBe('{"okay":true}');
+    expect(second.headers.get('x-xtrata-proxy-cache')).toBe('hit');
+  });
+
+  it('does not cache non-allowlisted call-read functions', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response('first', { status: 200 }))
+      .mockResolvedValueOnce(new Response('second', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const first = await proxyHiroRequest({
+      request: new Request(
+        'https://example.com/hiro/mainnet/v2/contracts/call-read/SP123/test/custom-fn',
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ sender: 'SPSENDER' })
+        }
+      ),
+      env: {
+        HIRO_API_KEYS: 'key-a,key-b'
+      },
+      network: 'mainnet',
+      path: 'v2/contracts/call-read/SP123/test/custom-fn'
+    });
+
+    const second = await proxyHiroRequest({
+      request: new Request(
+        'https://example.com/hiro/mainnet/v2/contracts/call-read/SP123/test/custom-fn',
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ sender: 'SPSENDER' })
+        }
+      ),
+      env: {
+        HIRO_API_KEYS: 'key-a,key-b'
+      },
+      network: 'mainnet',
+      path: 'v2/contracts/call-read/SP123/test/custom-fn'
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(await first.text()).toBe('first');
+    expect(await second.text()).toBe('second');
+    expect(second.headers.get('x-xtrata-proxy-cache')).toBeNull();
+  });
+
+  it('keys cached POST call-read responses by body fingerprint', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response('sender-a', { status: 200 }))
+      .mockResolvedValueOnce(new Response('sender-b', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const first = await proxyHiroRequest({
+      request: new Request(
+        'https://example.com/hiro/mainnet/v2/contracts/call-read/SP123/test/get-owner',
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ sender: 'SPA' })
+        }
+      ),
+      env: {
+        HIRO_API_KEYS: 'key-a,key-b'
+      },
+      network: 'mainnet',
+      path: 'v2/contracts/call-read/SP123/test/get-owner'
+    });
+
+    const second = await proxyHiroRequest({
+      request: new Request(
+        'https://example.com/hiro/mainnet/v2/contracts/call-read/SP123/test/get-owner',
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ sender: 'SPB' })
+        }
+      ),
+      env: {
+        HIRO_API_KEYS: 'key-a,key-b'
+      },
+      network: 'mainnet',
+      path: 'v2/contracts/call-read/SP123/test/get-owner'
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(await first.text()).toBe('sender-a');
+    expect(await second.text()).toBe('sender-b');
+  });
 });

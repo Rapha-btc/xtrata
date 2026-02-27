@@ -41,7 +41,11 @@ import {
   type StreamPhase,
   shouldAllowTokenUriPreview
 } from '../lib/viewer/streaming';
-import { getTokenContentKey, getTokenThumbnailKey } from '../lib/viewer/queries';
+import {
+  getTokenContentKey,
+  getTokenSummaryKey,
+  getTokenThumbnailKey
+} from '../lib/viewer/queries';
 import {
   buildInscriptionThumbnailCacheKey,
   loadInscriptionPreviewFromCache,
@@ -1503,6 +1507,11 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
       anchor.scrollIntoView({ behavior: 'auto', block: 'center', inline: 'nearest' });
     }
   };
+  const handleRetryMetadata = () => {
+    const summaryKey = getTokenSummaryKey(props.contractId, props.token.id);
+    void queryClient.invalidateQueries({ queryKey: summaryKey });
+    void queryClient.refetchQueries({ queryKey: summaryKey, type: 'active' });
+  };
   const handleOpenFullscreen = () => {
     if (typeof window === 'undefined') {
       return;
@@ -1882,6 +1891,19 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
               {!props.token.meta && (
                 <div className="preview-stage__empty">
                   <p>Metadata unavailable for this inscription.</p>
+                  <button
+                    type="button"
+                    className="button button--ghost button--mini"
+                    onClick={handleRetryMetadata}
+                    disabled={!isActiveTab}
+                    title={
+                      isActiveTab
+                        ? 'Retry inscription metadata'
+                        : 'Activate this tab to retry metadata'
+                    }
+                  >
+                    Retry metadata
+                  </button>
                 </div>
               )}
 
