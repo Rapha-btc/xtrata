@@ -12,6 +12,7 @@ import { getContractId } from '../lib/contract/config';
 import type { StreamStatus, TokenSummary } from '../lib/viewer/types';
 import {
   detectWebmTrackKind,
+  fetchOnChainHeadChunk,
   fetchOnChainContent,
   fetchTokenImageFromUri,
   getMediaKind,
@@ -351,14 +352,56 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     refetchOnReconnect: false
   });
 
-  const resolvedMimeType = resolveMimeType(mimeType, contentQuery.data);
+  const cachedPreviewQuery = useQuery({
+    queryKey: [
+      'viewer',
+      props.contractId,
+      'content-preview-cache',
+      props.token.id.toString()
+    ],
+    queryFn: () => loadInscriptionPreviewFromCache(props.contractId, props.token.id),
+    enabled: isWebm && !!props.token.meta && isActiveTab,
+    staleTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false
+  });
+  const webmHeadQuery = useQuery({
+    queryKey: [
+      'viewer',
+      props.contractId,
+      'webm-head',
+      props.token.id.toString(),
+      'chunk-source',
+      fallbackContentContractId
+    ],
+    queryFn: () =>
+      fetchOnChainHeadChunk({
+        client: props.client,
+        fallbackClient: props.fallbackClient ?? null,
+        id: props.token.id,
+        senderAddress: props.senderAddress
+      }),
+    enabled: isWebm && !!props.token.meta && isActiveTab,
+    staleTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false
+  });
+  const previewCachedBytes =
+    isWebm && cachedPreviewQuery.data?.data
+      ? cachedPreviewQuery.data.data
+      : null;
+  const resolvedContentBytes = contentQuery.data ?? previewCachedBytes;
+  const webmProbeBytes = resolvedContentBytes ?? webmHeadQuery.data ?? null;
+  const resolvedMimeType = resolveMimeType(mimeType, resolvedContentBytes);
   const resolvedMediaKind = getMediaKind(resolvedMimeType);
   const detectedWebmTrackKind = useMemo(() => {
-    if (!isWebm || !contentQuery.data || contentQuery.data.length === 0) {
+    if (!isWebm || !webmProbeBytes || webmProbeBytes.length === 0) {
       return null;
     }
-    return detectWebmTrackKind(contentQuery.data);
-  }, [isWebm, contentQuery.data]);
+    return detectWebmTrackKind(webmProbeBytes);
+  }, [isWebm, webmProbeBytes]);
   const displayMediaKind =
     detectedWebmTrackKind === 'audio' ? 'audio' : resolvedMediaKind;
   const displayMimeType =
@@ -369,11 +412,11 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     displayMimeType === 'text/html' ||
     displayMimeType === 'application/xhtml+xml';
   const isPdf = displayMimeType === 'application/pdf';
-  const hasContent = !!contentQuery.data && contentQuery.data.length > 0;
-  const contentBytes = contentQuery.data ? contentQuery.data.length : null;
+  const hasContent = !!resolvedContentBytes && resolvedContentBytes.length > 0;
+  const contentBytes = resolvedContentBytes ? resolvedContentBytes.length : null;
   const sniffedMimeType = useMemo(
-    () => (contentQuery.data ? sniffMimeType(contentQuery.data) : null),
-    [contentQuery.data]
+    () => (resolvedContentBytes ? sniffMimeType(resolvedContentBytes) : null),
+    [resolvedContentBytes]
   );
   const sniffedKind = sniffedMimeType ? getMediaKind(sniffedMimeType) : null;
   const hasStream = !!streamUrl;
@@ -506,11 +549,11 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
   ]);
 
   const contentUrl = useMemo(() => {
-    if (!contentQuery.data || contentQuery.data.length === 0) {
+    if (!resolvedContentBytes || resolvedContentBytes.length === 0) {
       return null;
     }
-    return createObjectUrl(contentQuery.data, displayMimeType ?? mimeType);
-  }, [contentQuery.data, displayMimeType, mimeType]);
+    return createObjectUrl(resolvedContentBytes, displayMimeType ?? mimeType);
+  }, [resolvedContentBytes, displayMimeType, mimeType]);
 
   useEffect(() => {
     setOnChainImageReady(false);
@@ -1252,6 +1295,9 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
       contentLoading: contentQuery.isLoading,
       contentStatus: contentQuery.status,
       bytesLoaded: contentBytes,
+      previewCachedBytes: previewCachedBytes?.length ?? null,
+      webmHeadProbeBytes: webmHeadQuery.data?.length ?? null,
+      detectedWebmTrackKind,
       hasMediaSourceUrl: !!(streamUrl ?? contentUrl),
       streamPhase,
       allowTokenUriPreview,
@@ -1267,6 +1313,9 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     contentQuery.isLoading,
     contentQuery.status,
     contentBytes,
+    previewCachedBytes,
+    webmHeadQuery.data,
+    detectedWebmTrackKind,
     streamUrl,
     contentUrl,
     streamPhase,
@@ -2043,7 +2092,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
                 !contentQuery.isError &&
                 !isStreamError &&
                 (svgPreview ||
-                  (contentQuery.data && contentQuery.data.length > 0) ||
+                  hasContent ||
                   mediaSourceUrl ||
                   tokenUriPreview) && (
                   <>
@@ -2095,7 +2144,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
                           props.token.id.toString(),
                           displayMimeType ?? mimeType ?? 'audio'
                         ].join(':')}
-                        bytes={contentQuery.data ?? null}
+                        bytes={resolvedContentBytes}
                         onPlay={() => {
                           streamStartRef.current?.();
                         }}
