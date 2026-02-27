@@ -11,14 +11,11 @@ import type { XtrataClient } from '../lib/contract/client';
 import { getContractId } from '../lib/contract/config';
 import type { StreamStatus, TokenSummary } from '../lib/viewer/types';
 import {
-  detectWebmTrackKind,
   decodeTokenUriToImage,
   extractImageFromMetadata,
   fetchTokenImageFromUri,
-  fetchOnChainHeadChunk,
   fetchOnChainContent,
   getMediaKind,
-  getFiniteGifReplayDelayMs,
   getTextPreview,
   isDataUri,
   isHttpUrl,
@@ -29,8 +26,6 @@ import {
 } from '../lib/viewer/content';
 import { getTokenContentKey, getTokenThumbnailKey } from '../lib/viewer/queries';
 import {
-  loadInscriptionFromCache,
-  loadInscriptionPreviewFromCache,
   loadInscriptionThumbnailFromCache,
   saveInscriptionThumbnailToCache,
   deleteInscriptionThumbnailFromCache
@@ -43,7 +38,6 @@ import {
   registerRecursiveBridge
 } from '../lib/viewer/recursive';
 import { createObjectUrl } from '../lib/utils/blob';
-import { AudioWaveformBars, useAudioWaveformBins } from './AudioWaveform';
 
 type TokenCardMediaProps = {
   token: TokenSummary;
@@ -57,8 +51,6 @@ type TokenCardMediaProps = {
   letterboxNonSquare?: boolean;
 };
 
-const GIF_REPLAY_FALLBACK_MS = 8000;
-
 export default function TokenCardMedia(props: TokenCardMediaProps) {
   const isActiveTab = props.isActiveTab !== false;
   const queryClient = useQueryClient();
@@ -67,7 +59,6 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
   const lastImageErrorRef = useRef<string | null>(null);
   const thumbnailGenRef = useRef(false);
   const contentUrlRef = useRef<string | null>(null);
-  const token8DebugRef = useRef<string | null>(null);
   const [bridgeSource, setBridgeSource] = useState<MessageEventSource | null>(null);
   const [thumbnailFailed, setThumbnailFailed] = useState(false);
   const [onChainFailed, setOnChainFailed] = useState(false);
@@ -75,14 +66,11 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
   const [tokenUriDeferred, setTokenUriDeferred] = useState(false);
   const [pixelatePreview, setPixelatePreview] = useState(false);
   const [letterboxPreview, setLetterboxPreview] = useState(false);
-  const [gifReplayTick, setGifReplayTick] = useState(0);
   const setHtmlFrameRef = useCallback((node: HTMLIFrameElement | null) => {
     setBridgeSource(node?.contentWindow ?? null);
   }, []);
   const mimeType = props.token.meta?.mimeType ?? null;
   const mediaKind = getMediaKind(mimeType);
-  const normalizedMimeType = (mimeType ?? '').toLowerCase();
-  const isWebmMime = normalizedMimeType.includes('webm');
   const totalSize = props.token.meta?.totalSize ?? null;
   const svgPreview = props.token.svgDataUri ?? null;
   const streamStatusKey = useMemo(
@@ -128,64 +116,6 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false
   });
-  const cachedContentQuery = useQuery({
-    queryKey: [
-      'viewer',
-      props.contractId,
-      'content-cache',
-      props.token.id.toString()
-    ],
-    queryFn: () => loadInscriptionFromCache(props.contractId, props.token.id),
-    enabled: !!props.token.meta && !svgPreview && isActiveTab,
-    staleTime: Infinity,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false
-  });
-  const cachedPreviewQuery = useQuery({
-    queryKey: [
-      'viewer',
-      props.contractId,
-      'content-preview-cache',
-      props.token.id.toString()
-    ],
-    queryFn: () => loadInscriptionPreviewFromCache(props.contractId, props.token.id),
-    enabled:
-      (mediaKind === 'video' || mediaKind === 'audio') &&
-      !!props.token.meta &&
-      isActiveTab,
-    staleTime: Infinity,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false
-  });
-  const webmHeadQuery = useQuery({
-    queryKey: [
-      'viewer',
-      props.contractId,
-      'webm-head',
-      props.token.id.toString(),
-      'chunk-source',
-      fallbackContentContractId
-    ],
-    queryFn: () =>
-      fetchOnChainHeadChunk({
-        client: props.client,
-        fallbackClient: props.fallbackClient ?? null,
-        id: props.token.id,
-        senderAddress: props.senderAddress
-      }),
-    enabled:
-      isActiveTab &&
-      isWebmMime &&
-      mediaKind === 'video' &&
-      !!props.token.meta &&
-      (totalSize === null || totalSize > MAX_THUMBNAIL_BYTES),
-    staleTime: Infinity,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false
-  });
   const hasThumbnail =
     !thumbnailFailed &&
     !!thumbnailQuery.data?.data &&
@@ -198,8 +128,6 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     (!hasThumbnail || props.preferFullResolution) &&
     (mediaKind === 'image' ||
       mediaKind === 'svg' ||
-      mediaKind === 'audio' ||
-      mediaKind === 'video' ||
       mediaKind === 'text' ||
       mediaKind === 'html' ||
       mediaKind === 'binary');
@@ -238,100 +166,14 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     refetchOnReconnect: false
   });
 
-  const fullContentValue = contentQuery.data
-    ? {
-        data: contentQuery.data,
-        mimeType: mimeType ?? null
-      }
-    : cachedContentQuery.data ?? null;
-  const fullContentBytes = fullContentValue?.data ?? null;
-  const resolvedMimeType = resolveMimeType(
-    fullContentValue?.mimeType ?? mimeType,
-    fullContentBytes
-  );
+  const resolvedMimeType = resolveMimeType(mimeType, contentQuery.data);
   const resolvedKind = getMediaKind(resolvedMimeType);
-  const contentBytes = fullContentBytes ? fullContentBytes.length : null;
+  const contentBytes = contentQuery.data ? contentQuery.data.length : null;
   const sniffedMimeType = useMemo(
-    () => (fullContentBytes ? sniffMimeType(fullContentBytes) : null),
-    [fullContentBytes]
+    () => (contentQuery.data ? sniffMimeType(contentQuery.data) : null),
+    [contentQuery.data]
   );
   const sniffedKind = sniffedMimeType ? getMediaKind(sniffedMimeType) : null;
-  const webmProbeBytes =
-    fullContentBytes ??
-    cachedPreviewQuery.data?.data ??
-    webmHeadQuery.data ??
-    null;
-  const detectedWebmTrackKind = useMemo(() => {
-    if (!isWebmMime || !webmProbeBytes || webmProbeBytes.length === 0) {
-      return null;
-    }
-    return detectWebmTrackKind(webmProbeBytes);
-  }, [isWebmMime, webmProbeBytes]);
-  const displayKind = detectedWebmTrackKind === 'audio' ? 'audio' : resolvedKind;
-  const displayMimeType =
-    detectedWebmTrackKind === 'audio' && isWebmMime
-      ? 'audio/webm'
-      : resolvedMimeType;
-  const audioWaveformBytes =
-    displayKind === 'audio'
-      ? fullContentBytes ?? cachedPreviewQuery.data?.data ?? null
-      : null;
-  const audioWaveform = useAudioWaveformBins({
-    cacheKey: [
-      props.contractId,
-      props.token.id.toString(),
-      displayMimeType ?? mimeType ?? 'audio',
-      audioWaveformBytes?.length ?? 0
-    ].join(':'),
-    bytes: audioWaveformBytes,
-    count: 34
-  });
-  const audioWaveformReady =
-    !!audioWaveform.bins && audioWaveform.bins.length > 0;
-  useEffect(() => {
-    if (props.token.id !== 8n) {
-      return;
-    }
-    const snapshot = [
-      mimeType ?? 'none',
-      resolvedMimeType ?? 'none',
-      resolvedKind,
-      detectedWebmTrackKind ?? 'none',
-      displayKind,
-      audioWaveformBytes?.length ?? 0,
-      audioWaveformReady ? 'ready' : audioWaveform.loading ? 'loading' : 'placeholder'
-    ].join('|');
-    if (token8DebugRef.current === snapshot) {
-      return;
-    }
-    token8DebugRef.current = snapshot;
-    logDebug('preview', 'Token #8 grid media pipeline', {
-      id: props.token.id.toString(),
-      contractId: props.contractId,
-      metaMimeType: mimeType,
-      resolvedMimeType,
-      resolvedKind,
-      detectedWebmTrackKind,
-      displayKind,
-      waveformBytes: audioWaveformBytes?.length ?? null,
-      waveformState: audioWaveformReady
-        ? 'ready'
-        : audioWaveform.loading
-          ? 'loading'
-          : 'placeholder'
-    });
-  }, [
-    props.token.id,
-    props.contractId,
-    mimeType,
-    resolvedMimeType,
-    resolvedKind,
-    detectedWebmTrackKind,
-    displayKind,
-    audioWaveformBytes,
-    audioWaveformReady,
-    audioWaveform.loading
-  ]);
 
   const thumbnailUrl = useMemo(() => {
     if (!thumbnailQuery.data || !thumbnailQuery.data.data) {
@@ -358,43 +200,18 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
   }, [resolvedThumbnailUrl]);
 
   const contentUrl = useMemo(() => {
-    if (!fullContentBytes || fullContentBytes.length === 0) {
+    if (!contentQuery.data || contentQuery.data.length === 0) {
       return null;
     }
     if (
-      displayKind !== 'image' &&
-      displayKind !== 'svg' &&
-      displayKind !== 'video' &&
-      displayMimeType !== 'application/pdf'
+      resolvedKind !== 'image' &&
+      resolvedKind !== 'svg' &&
+      resolvedMimeType !== 'application/pdf'
     ) {
       return null;
     }
-    return createObjectUrl(
-      fullContentBytes,
-      displayMimeType ?? fullContentValue?.mimeType ?? mimeType
-    );
-  }, [
-    fullContentBytes,
-    fullContentValue?.mimeType,
-    displayKind,
-    displayMimeType,
-    mimeType
-  ]);
-  const previewVideoUrl = useMemo(() => {
-    const preview = cachedPreviewQuery.data;
-    if (!preview?.data || preview.data.length === 0) {
-      return null;
-    }
-    const previewMime = (
-      preview.mimeType ??
-      mimeType ??
-      ''
-    ).toLowerCase();
-    if (!previewMime.startsWith('video/')) {
-      return null;
-    }
-    return createObjectUrl(preview.data, previewMime);
-  }, [cachedPreviewQuery.data, mimeType]);
+    return createObjectUrl(contentQuery.data, resolvedMimeType ?? mimeType);
+  }, [contentQuery.data, resolvedKind, resolvedMimeType, mimeType]);
 
   useEffect(() => {
     if (contentUrlRef.current !== contentUrl) {
@@ -419,14 +236,6 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
       URL.revokeObjectURL(contentUrl);
     };
   }, [contentUrl, props.token.id]);
-  useEffect(() => {
-    if (!previewVideoUrl) {
-      return;
-    }
-    return () => {
-      URL.revokeObjectURL(previewVideoUrl);
-    };
-  }, [previewVideoUrl]);
 
   useEffect(() => {
     lastPreviewLogRef.current = null;
@@ -440,7 +249,6 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     setTokenUriDeferred(false);
     setPixelatePreview(false);
     setLetterboxPreview(false);
-    setGifReplayTick(0);
   }, [props.token.id]);
 
   useEffect(() => {
@@ -453,7 +261,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     if (!isActiveTab) {
       return;
     }
-    if (!fullContentBytes || fullContentBytes.length === 0) {
+    if (!contentQuery.data || contentQuery.data.length === 0) {
       return;
     }
     if (resolvedKind !== 'image') {
@@ -469,7 +277,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     const run = async () => {
       try {
         const result = await createImageThumbnail({
-          bytes: fullContentBytes,
+          bytes: contentQuery.data,
           mimeType: resolvedMimeType ?? mimeType,
           size: THUMBNAIL_SIZE
         });
@@ -511,7 +319,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     });
   }, [
     isActiveTab,
-    fullContentBytes,
+    contentQuery.data,
     resolvedKind,
     hasThumbnail,
     resolvedMimeType,
@@ -527,30 +335,30 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
   const isPdf = resolvedMimeType === 'application/pdf';
 
   const jsonImagePreview = useMemo(() => {
-    if (!fullContentBytes || resolvedMimeType !== 'application/json') {
+    if (!contentQuery.data || resolvedMimeType !== 'application/json') {
       return null;
     }
     try {
-      const decoded = new TextDecoder().decode(fullContentBytes);
+      const decoded = new TextDecoder().decode(contentQuery.data);
       return extractImageFromMetadata(JSON.parse(decoded));
     } catch (error) {
       return null;
     }
-  }, [fullContentBytes, resolvedMimeType]);
+  }, [contentQuery.data, resolvedMimeType]);
 
   const textPreview = useMemo(() => {
-    if (!fullContentBytes || resolvedKind !== 'text') {
+    if (!contentQuery.data || resolvedKind !== 'text') {
       return null;
     }
-    return getTextPreview(fullContentBytes, 2000);
-  }, [fullContentBytes, resolvedKind]);
+    return getTextPreview(contentQuery.data, 2000);
+  }, [contentQuery.data, resolvedKind]);
 
   const htmlPreview = useMemo(() => {
-    if (!fullContentBytes || !isHtmlDocument) {
+    if (!contentQuery.data || !isHtmlDocument) {
       return null;
     }
-    return new TextDecoder().decode(fullContentBytes);
-  }, [fullContentBytes, isHtmlDocument]);
+    return new TextDecoder().decode(contentQuery.data);
+  }, [contentQuery.data, isHtmlDocument]);
 
   const bridgeId = useMemo(() => {
     if (!isHtmlDocument || !htmlPreview) {
@@ -652,37 +460,19 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
         isLikelyImageUrl(props.token.tokenUri)))
       ? props.token.tokenUri
       : null;
-  const directVideoUri =
-    props.token.tokenUri &&
-    (isDataUri(props.token.tokenUri) ||
-      (isHttpUrl(props.token.tokenUri) &&
-        !isLikelyImageUrl(props.token.tokenUri)))
-      ? props.token.tokenUri
-      : null;
 
   const onChainPreviewSource =
     !onChainFailed &&
-    (displayKind === 'image' || displayKind === 'svg' ? contentUrl : null);
-  const videoPreviewSource =
-    displayKind === 'video'
-      ? contentUrl || previewVideoUrl || directVideoUri
-      : null;
-  const videoPreviewOrigin =
-    displayKind === 'video'
-      ? contentUrl
-        ? 'on-chain'
-        : previewVideoUrl
-          ? 'preview-cache'
-          : directVideoUri
-            ? 'token-uri-direct'
-            : null
-      : null;
-  // Stage grid rendering: show thumbnail instantly, but promote to full bytes
-  // as soon as they are available from query cache or IndexedDB.
-  const primaryImageSource = onChainPreviewSource || resolvedThumbnailUrl;
-  const primaryImageOrigin = onChainPreviewSource ? 'on-chain' : 'thumbnail-cache';
-  const secondaryImageSource = resolvedThumbnailUrl;
-  const secondaryImageOrigin = 'thumbnail-cache';
+    (resolvedKind === 'image' || resolvedKind === 'svg' ? contentUrl : null);
+  const preferFullResolution = !!props.preferFullResolution;
+  const primaryImageSource = preferFullResolution
+    ? onChainPreviewSource
+    : resolvedThumbnailUrl;
+  const primaryImageOrigin = preferFullResolution ? 'on-chain' : 'thumbnail-cache';
+  const secondaryImageSource = preferFullResolution
+    ? resolvedThumbnailUrl
+    : onChainPreviewSource;
+  const secondaryImageOrigin = preferFullResolution ? 'thumbnail-cache' : 'on-chain';
   const imagePreviewSource =
     svgPreview ||
     primaryImageSource ||
@@ -717,52 +507,6 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     }
     return null;
   })();
-  const isGifImage =
-    displayKind === 'image' &&
-    ((displayMimeType ?? '').toLowerCase() === 'image/gif' ||
-      sniffedMimeType === 'image/gif');
-  const gifReplayDelayMs = useMemo(() => {
-    if (!isGifImage || !imagePreviewSource) {
-      return null;
-    }
-    if (fullContentBytes && fullContentBytes.length > 0) {
-      return getFiniteGifReplayDelayMs(fullContentBytes);
-    }
-    if (imagePreviewOrigin === 'thumbnail-cache') {
-      return null;
-    }
-    return GIF_REPLAY_FALLBACK_MS;
-  }, [isGifImage, fullContentBytes, imagePreviewSource, imagePreviewOrigin]);
-  const shouldForceGifReplay =
-    !!imagePreviewSource && !!gifReplayDelayMs;
-  const replayImageSource = useMemo(() => {
-    if (!imagePreviewSource || !shouldForceGifReplay) {
-      return imagePreviewSource;
-    }
-    if (imagePreviewSource.startsWith('data:')) {
-      return imagePreviewSource;
-    }
-    const replayToken = `xtrata-replay-${gifReplayTick}`;
-    return imagePreviewSource.includes('#')
-      ? `${imagePreviewSource}&${replayToken}`
-      : `${imagePreviewSource}#${replayToken}`;
-  }, [imagePreviewSource, shouldForceGifReplay, gifReplayTick]);
-
-  useEffect(() => {
-    if (!shouldForceGifReplay || !gifReplayDelayMs) {
-      return;
-    }
-    if (typeof window === 'undefined') {
-      return;
-    }
-    const replayDelayMs = Math.max(500, Math.min(gifReplayDelayMs + 120, 60_000));
-    const intervalId = window.setInterval(() => {
-      setGifReplayTick((previous) => previous + 1);
-    }, replayDelayMs);
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [shouldForceGifReplay, gifReplayDelayMs, props.token.id]);
 
   const handleImageLoad = useCallback(
     (event: SyntheticEvent<HTMLImageElement>) => {
@@ -833,7 +577,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
         source: imagePreviewOrigin,
         sourceType,
         mimeType: resolvedMimeType ?? mimeType ?? null,
-        mediaKind: displayKind,
+        mediaKind: resolvedKind,
         totalSize: totalSize !== null ? totalSize.toString() : null,
         bytesLoaded: contentBytes,
         naturalWidth: target.naturalWidth,
@@ -852,7 +596,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
       props.token.id,
       resolvedMimeType,
       mimeType,
-      displayKind,
+      resolvedKind,
       totalSize,
       contentBytes,
       allowTokenUriFallback
@@ -901,7 +645,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
       ) {
         diagnosticHints.push('stale-blob-url');
       }
-      if (!fullContentBytes || fullContentBytes.length === 0) {
+      if (!contentQuery.data || contentQuery.data.length === 0) {
         diagnosticHints.push('no-bytes');
       }
       if (contentQuery.isError) {
@@ -918,7 +662,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
       ) {
         diagnosticHints.push('bytes-not-image');
       }
-      if (displayKind !== 'image' && displayKind !== 'svg') {
+      if (resolvedKind !== 'image' && resolvedKind !== 'svg') {
         diagnosticHints.push('resolved-not-image');
       }
       if (imagePreviewOrigin.startsWith('token-uri')) {
@@ -935,7 +679,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
         mimeType: resolvedMimeType ?? mimeType ?? null,
         metaMimeType: mimeType ?? null,
         sniffedMimeType,
-        mediaKind: displayKind,
+        mediaKind: resolvedKind,
         sniffedKind,
         totalSize: totalSize !== null ? totalSize.toString() : null,
         bytesLoaded: contentBytes,
@@ -953,13 +697,13 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
       props.contractId,
       resolvedMimeType,
       mimeType,
-      displayKind,
+      resolvedKind,
       sniffedMimeType,
       sniffedKind,
       totalSize,
       contentBytes,
-      fullContentBytes,
       queryClient,
+      contentQuery.data,
       contentQuery.isError,
       contentQuery.status,
       allowTokenUriFallback,
@@ -969,14 +713,14 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
   );
 
   const previewLabel =
-    displayMimeType ??
+    resolvedMimeType ??
     mimeType ??
     (mediaKind === 'binary' ? 'Binary data' : mediaKind.toUpperCase());
   const docBadge = (() => {
     if (isPdf) {
       return 'PDF';
     }
-    switch (displayKind) {
+    switch (resolvedKind) {
       case 'image':
         return 'IMG';
       case 'svg':
@@ -995,7 +739,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
         return 'DATA';
     }
   })();
-  const docTitle = displayMimeType ?? mimeType ?? previewLabel;
+  const docTitle = resolvedMimeType ?? mimeType ?? previewLabel;
   const docSnippet =
     textPreview && textPreview.text
       ? (() => {
@@ -1035,41 +779,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
   );
 
   let mediaElement: JSX.Element;
-  if (displayKind === 'video' && videoPreviewSource) {
-    mediaElement = (
-      <video
-        src={videoPreviewSource}
-        autoPlay
-        loop
-        muted
-        playsInline
-        preload={videoPreviewOrigin === 'on-chain' ? 'auto' : 'metadata'}
-        onLoadedData={(event) => {
-          const media = event.currentTarget;
-          const playPromise = media.play();
-          if (playPromise && typeof playPromise.catch === 'function') {
-            void playPromise.catch(() => undefined);
-          }
-        }}
-        onEnded={(event) => {
-          const media = event.currentTarget;
-          media.currentTime = 0;
-          const playPromise = media.play();
-          if (playPromise && typeof playPromise.catch === 'function') {
-            void playPromise.catch(() => undefined);
-          }
-        }}
-        onError={() => {
-          if (videoPreviewOrigin === 'on-chain') {
-            setOnChainFailed(true);
-          }
-          if (videoPreviewOrigin?.startsWith('token-uri')) {
-            setTokenUriFailed(true);
-          }
-        }}
-      />
-    );
-  } else if (isHtmlDocument && htmlDoc) {
+  if (isHtmlDocument && htmlDoc) {
     if (lastPreviewLogRef.current !== 'html') {
       lastPreviewLogRef.current = 'html';
       logDebug('preview', 'Token card HTML preview resolved', {
@@ -1110,7 +820,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
         source: sourceType,
         origin: imagePreviewOrigin,
         mimeType: resolvedMimeType ?? mimeType ?? null,
-        mediaKind: displayKind,
+        mediaKind: resolvedKind,
         totalSize: totalSize !== null ? totalSize.toString() : null,
         bytesLoaded: contentBytes,
         allowTokenUriFallback,
@@ -1125,12 +835,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
       .join(' ');
     mediaElement = (
       <img
-        key={
-          shouldForceGifReplay
-            ? `gif-replay-${props.token.id.toString()}-${gifReplayTick}`
-            : undefined
-        }
-        src={replayImageSource ?? imagePreviewSource}
+        src={imagePreviewSource}
         alt="token preview"
         loading="lazy"
         onLoad={handleImageLoad}
@@ -1144,20 +849,13 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
       title: docTitle,
       snippet: docSnippet
     });
-  } else if (displayKind === 'audio') {
-    mediaElement = (
-      <div className="token-card__audio">
-        <span className="token-card__audio-badge">AUDIO</span>
-        <AudioWaveformBars
-          bins={audioWaveform.bins}
-          loading={audioWaveform.loading}
-          compact
-        />
-        <span className="token-card__audio-status">
-          {audioWaveformReady ? 'Waveform ready' : 'Loading waveform'}
-        </span>
-      </div>
-    );
+  } else if (resolvedKind === 'audio' || resolvedKind === 'video') {
+    mediaElement = renderDocCard({
+      label: docBadge,
+      title: docTitle,
+      snippet: 'Preview on selection.',
+      showPlay: true
+    });
   } else if (contentQuery.isLoading) {
     mediaElement = (
       <div className="token-card__placeholder">Loading preview...</div>

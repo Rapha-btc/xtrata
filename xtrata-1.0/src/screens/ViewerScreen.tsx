@@ -54,7 +54,6 @@ import {
 import {
   getChunkKey,
   getDependenciesKey,
-  getTokenContentKey,
   getTokenSummaryKey,
   getTokenThumbnailKey,
   getViewerKey,
@@ -67,12 +66,7 @@ import type { TokenSummary } from '../lib/viewer/types';
 import { bytesToHex } from '../lib/utils/encoding';
 import TokenContentPreview from '../components/TokenContentPreview';
 import TokenCardMedia from '../components/TokenCardMedia';
-import {
-  detectWebmTrackKind,
-  fetchOnChainHeadChunk,
-  getMediaKind,
-  sniffMimeType
-} from '../lib/viewer/content';
+import { getMediaKind } from '../lib/viewer/content';
 import { loadInscriptionThumbnailFromCache } from '../lib/viewer/cache';
 import { logInfo } from '../lib/utils/logger';
 import { getTransferValidationMessage, validateTransferRequest } from '../lib/wallet/transfer';
@@ -134,11 +128,8 @@ type ViewerScreenProps = {
   };
 };
 
-const getMediaLabel = (
-  mimeType: string | null | undefined,
-  kindOverride?: ReturnType<typeof getMediaKind> | null
-) => {
-  const kind = kindOverride ?? getMediaKind(mimeType ?? null);
+const getMediaLabel = (mimeType: string | null | undefined) => {
+  const kind = getMediaKind(mimeType ?? null);
   switch (kind) {
     case 'image':
       return 'IMAGE';
@@ -241,125 +232,8 @@ const TokenCard = (props: {
   contractId: string;
   isActiveTab: boolean;
 }) => {
-  const queryClient = useQueryClient();
-  const debugLabelLogRef = useRef<string | null>(null);
-  const metaMimeType = props.token.meta?.mimeType ?? null;
-  const metaMediaKind = getMediaKind(metaMimeType);
-  const isWebmVideoMeta =
-    metaMediaKind === 'video' &&
-    (metaMimeType ?? '').toLowerCase().includes('webm');
-  const fallbackContentContractId = props.fallbackClient
-    ? getContractId(props.fallbackClient.contract)
-    : 'none';
-  const contentQueryKey = useMemo(
-    () => [
-      ...getTokenContentKey(props.contractId, props.token.id),
-      'chunk-source',
-      fallbackContentContractId
-    ],
-    [props.contractId, props.token.id, fallbackContentContractId]
-  );
-  const cachedContentQuery = useQuery<Uint8Array | null>({
-    queryKey: contentQueryKey,
-    queryFn: () => null,
-    initialData: () =>
-      (queryClient.getQueryData(contentQueryKey) as Uint8Array | null) ?? null,
-    enabled: false,
-    staleTime: Infinity
-  });
-  const webmHeadQuery = useQuery({
-    queryKey: [
-      'viewer',
-      props.contractId,
-      'webm-head',
-      props.token.id.toString(),
-      'chunk-source',
-      fallbackContentContractId
-    ],
-    queryFn: () =>
-      fetchOnChainHeadChunk({
-        client: props.client,
-        fallbackClient: props.fallbackClient ?? null,
-        id: props.token.id,
-        senderAddress: props.senderAddress
-      }),
-    enabled: isWebmVideoMeta && props.isActiveTab,
-    staleTime: Infinity,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false
-  });
-  const webmProbeBytes =
-    cachedContentQuery.data ?? webmHeadQuery.data ?? null;
-  const detectedWebmTrackKind = useMemo(() => {
-    if (!isWebmVideoMeta || !webmProbeBytes || webmProbeBytes.length === 0) {
-      return null;
-    }
-    return detectWebmTrackKind(webmProbeBytes);
-  }, [isWebmVideoMeta, webmProbeBytes]);
-  const displayMediaKind =
-    detectedWebmTrackKind === 'audio' ? 'audio' : metaMediaKind;
-  const mediaLabel = getMediaLabel(metaMimeType, displayMediaKind);
-  const mediaTitle =
-    detectedWebmTrackKind === 'audio' && isWebmVideoMeta
-      ? 'audio/webm'
-      : metaMimeType ?? 'Unknown mime type';
-  const isDebugToken8 = props.token.id === 8n;
-  useEffect(() => {
-    if (!isDebugToken8) {
-      return;
-    }
-    const snapshot = [
-      metaMimeType ?? 'none',
-      metaMediaKind,
-      detectedWebmTrackKind ?? 'none',
-      displayMediaKind,
-      mediaLabel,
-      mediaTitle,
-      cachedContentQuery.data?.length ?? 0,
-      webmHeadQuery.data?.length ?? 0,
-      webmHeadQuery.status
-    ].join('|');
-    if (debugLabelLogRef.current === snapshot) {
-      return;
-    }
-    debugLabelLogRef.current = snapshot;
-    logInfo('preview', 'Token #8 media label debug', {
-      id: props.token.id.toString(),
-      contractId: props.contractId,
-      metaMimeType,
-      metaMediaKind,
-      isWebmVideoMeta,
-      probeSource: cachedContentQuery.data
-        ? 'content-cache'
-        : webmHeadQuery.data
-          ? 'head-chunk'
-          : 'none',
-      cachedContentBytes: cachedContentQuery.data?.length ?? null,
-      headProbeBytes: webmHeadQuery.data?.length ?? null,
-      probeSniffedMimeType: webmProbeBytes ? sniffMimeType(webmProbeBytes) : null,
-      detectedWebmTrackKind,
-      displayMediaKind,
-      label: mediaLabel,
-      title: mediaTitle,
-      headProbeStatus: webmHeadQuery.status
-    });
-  }, [
-    isDebugToken8,
-    props.token.id,
-    props.contractId,
-    metaMimeType,
-    metaMediaKind,
-    isWebmVideoMeta,
-    webmProbeBytes,
-    detectedWebmTrackKind,
-    displayMediaKind,
-    mediaLabel,
-    mediaTitle,
-    cachedContentQuery.data,
-    webmHeadQuery.data,
-    webmHeadQuery.status
-  ]);
+  const mediaLabel = getMediaLabel(props.token.meta?.mimeType ?? null);
+  const mediaTitle = props.token.meta?.mimeType ?? 'Unknown mime type';
   const listedByWallet =
     !!props.listing?.seller &&
     !!props.walletAddress &&
@@ -1308,30 +1182,8 @@ const TokenDetails = (props: {
               Back to grid
             </button>
           )}
-          {props.token ? (
-            isWalletView ? (
-              <div className="wallet-preview">
-                <TokenContentPreview
-                  token={props.token}
-                  contractId={props.contractId}
-                  senderAddress={props.senderAddress}
-                  client={props.client}
-                  fallbackClient={props.fallbackClient}
-                  isActiveTab={props.isActiveTab}
-                  showDetailsDrawer={false}
-                />
-                {props.listing && (
-                  <button
-                    type="button"
-                    className="wallet-preview__badge"
-                    onClick={() => setWalletToolsOpen(true)}
-                    title="Open listing tools"
-                  >
-                    Listed
-                  </button>
-                )}
-              </div>
-            ) : (
+          {isWalletView ? (
+            <div className="wallet-preview">
               <TokenContentPreview
                 token={props.token}
                 contractId={props.contractId}
@@ -1340,22 +1192,32 @@ const TokenDetails = (props: {
                 fallbackClient={props.fallbackClient}
                 isActiveTab={props.isActiveTab}
                 showDetailsDrawer={false}
-                onRequestViewer={
-                  props.isMobile && !isWalletView ? props.onRequestGrid : undefined
-                }
-                viewerLabel={props.isMobile && !isWalletView ? 'Grid' : undefined}
               />
-            )
-          ) : (
-            <div className="preview-panel preview-panel--art">
-              <div className="preview-stage">
-                <div className="preview-stage__frame" role="region" aria-label="Artwork preview">
-                  <div className="preview-stage__notice">
-                    <p>Loading selected inscription preview...</p>
-                  </div>
-                </div>
-              </div>
+              {props.listing && (
+                <button
+                  type="button"
+                  className="wallet-preview__badge"
+                  onClick={() => setWalletToolsOpen(true)}
+                  title="Open listing tools"
+                >
+                  Listed
+                </button>
+              )}
             </div>
+          ) : (
+            <TokenContentPreview
+              token={props.token}
+              contractId={props.contractId}
+              senderAddress={props.senderAddress}
+              client={props.client}
+              fallbackClient={props.fallbackClient}
+              isActiveTab={props.isActiveTab}
+              showDetailsDrawer={false}
+              onRequestViewer={
+                props.isMobile && !isWalletView ? props.onRequestGrid : undefined
+              }
+              viewerLabel={props.isMobile && !isWalletView ? 'Grid' : undefined}
+            />
           )}
         </div>
         <div
@@ -2120,7 +1982,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       }
     });
     return map;
-  }, [knownTokens, queryClient, resolveTokenContractId, selectedTokenId]);
+  }, [knownTokens, queryClient, resolveTokenContractId]);
 
   const knownChildren = useMemo(() => {
     if (!selectedTokenId) {
@@ -2739,6 +2601,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
         ? fetchTokenSummaryForView(selectedTokenId)
         : Promise.resolve(null),
     enabled:
+      props.isActiveTab &&
       selectedTokenId !== null &&
       shouldRefreshSelectedToken,
     initialData: selectedToken ?? undefined,
