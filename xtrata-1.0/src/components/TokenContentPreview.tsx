@@ -344,7 +344,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
       });
     },
     enabled:
-      !!props.token.meta && loadRequested && !svgPreview && !shouldStream && isActiveTab,
+      !!props.token.meta && loadRequested && !svgPreview && !shouldStream,
     initialData: cachedContent,
     staleTime: Infinity,
     refetchOnMount: false,
@@ -360,7 +360,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
       props.token.id.toString()
     ],
     queryFn: () => loadInscriptionPreviewFromCache(props.contractId, props.token.id),
-    enabled: isWebm && !!props.token.meta && isActiveTab,
+    enabled: isWebm && !!props.token.meta,
     staleTime: Infinity,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
@@ -382,7 +382,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
         id: props.token.id,
         senderAddress: props.senderAddress
       }),
-    enabled: isWebm && !!props.token.meta && isActiveTab,
+    enabled: isWebm && !!props.token.meta,
     staleTime: Infinity,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
@@ -1250,7 +1250,10 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
           streamPhase,
           hasPreviewContent,
           shouldStream,
-          preferOnChainMedia: isStreamableKind,
+          preferOnChainMedia:
+            isStreamableKind ||
+            resolvedMediaKind === 'html' ||
+            mediaKind === 'html',
           loadRequested
         })));
   const allowTokenUriFallback = allowTokenUriPreview;
@@ -1332,7 +1335,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
       props.token.tokenUri ?? 'none'
     ],
     queryFn: () => fetchTokenImageFromUri(props.token.tokenUri),
-    enabled: allowTokenUriPreview && !!props.token.tokenUri && isActiveTab,
+    enabled: allowTokenUriPreview && !!props.token.tokenUri,
     staleTime: Infinity,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
@@ -1570,6 +1573,8 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
       ? 'preview-media--pixelated'
       : undefined;
   const mediaSourceUrl = streamUrl ?? contentUrl;
+  const hasRenderableSource =
+    !!svgPreview || hasContent || !!mediaSourceUrl || !!tokenUriPreview;
   const isStreamBuffering = shouldStream && streamPhase === 'buffering';
   const isStreamLoading = shouldStream && streamPhase === 'loading';
   const isStreamError = shouldStream && streamPhase === 'error';
@@ -1971,12 +1976,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
                 type="button"
                 className="button button--ghost button--mini"
                 onClick={() => setLoadRequested(true)}
-                disabled={!isActiveTab}
-                title={
-                  isActiveTab
-                    ? 'Fetch on-chain bytes for this token'
-                    : 'Activate this tab to load on-chain content'
-                }
+                title="Fetch on-chain bytes for this token"
               >
                 Load
               </button>
@@ -1986,12 +1986,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
                 type="button"
                 className="button button--ghost button--mini"
                 onClick={() => setLoadRequested(true)}
-                disabled={!isActiveTab}
-                title={
-                  isActiveTab
-                    ? 'Fetch on-chain bytes for this token'
-                    : 'Activate this tab to load on-chain content'
-                }
+                title="Fetch on-chain bytes for this token"
               >
                 Load
               </button>
@@ -2016,12 +2011,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
                     type="button"
                     className="button button--ghost button--mini"
                     onClick={handleRetryMetadata}
-                    disabled={!isActiveTab}
-                    title={
-                      isActiveTab
-                        ? 'Retry inscription metadata'
-                        : 'Activate this tab to retry metadata'
-                    }
+                    title="Retry inscription metadata"
                   >
                     Retry metadata
                   </button>
@@ -2091,10 +2081,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
               {!contentQuery.isLoading &&
                 !contentQuery.isError &&
                 !isStreamError &&
-                (svgPreview ||
-                  hasContent ||
-                  mediaSourceUrl ||
-                  tokenUriPreview) && (
+                hasRenderableSource && (
                   <>
                     {displayMediaKind === 'svg' && svgPreview ? (
                       <img
@@ -2255,6 +2242,18 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
                       </div>
                     )}
                   </>
+                )}
+
+              {!contentQuery.isLoading &&
+                !contentQuery.isError &&
+                !isStreamError &&
+                props.token.meta &&
+                !showLoadButton &&
+                !showFallbackLoadButton &&
+                !hasRenderableSource && (
+                  <div className="preview-stage__notice">
+                    <p>Preparing preview source...</p>
+                  </div>
                 )}
             </div>
           </div>

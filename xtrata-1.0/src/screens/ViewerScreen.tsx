@@ -1308,8 +1308,30 @@ const TokenDetails = (props: {
               Back to grid
             </button>
           )}
-          {isWalletView ? (
-            <div className="wallet-preview">
+          {props.token ? (
+            isWalletView ? (
+              <div className="wallet-preview">
+                <TokenContentPreview
+                  token={props.token}
+                  contractId={props.contractId}
+                  senderAddress={props.senderAddress}
+                  client={props.client}
+                  fallbackClient={props.fallbackClient}
+                  isActiveTab={props.isActiveTab}
+                  showDetailsDrawer={false}
+                />
+                {props.listing && (
+                  <button
+                    type="button"
+                    className="wallet-preview__badge"
+                    onClick={() => setWalletToolsOpen(true)}
+                    title="Open listing tools"
+                  >
+                    Listed
+                  </button>
+                )}
+              </div>
+            ) : (
               <TokenContentPreview
                 token={props.token}
                 contractId={props.contractId}
@@ -1318,32 +1340,22 @@ const TokenDetails = (props: {
                 fallbackClient={props.fallbackClient}
                 isActiveTab={props.isActiveTab}
                 showDetailsDrawer={false}
+                onRequestViewer={
+                  props.isMobile && !isWalletView ? props.onRequestGrid : undefined
+                }
+                viewerLabel={props.isMobile && !isWalletView ? 'Grid' : undefined}
               />
-              {props.listing && (
-                <button
-                  type="button"
-                  className="wallet-preview__badge"
-                  onClick={() => setWalletToolsOpen(true)}
-                  title="Open listing tools"
-                >
-                  Listed
-                </button>
-              )}
-            </div>
+            )
           ) : (
-            <TokenContentPreview
-              token={props.token}
-              contractId={props.contractId}
-              senderAddress={props.senderAddress}
-              client={props.client}
-              fallbackClient={props.fallbackClient}
-              isActiveTab={props.isActiveTab}
-              showDetailsDrawer={false}
-              onRequestViewer={
-                props.isMobile && !isWalletView ? props.onRequestGrid : undefined
-              }
-              viewerLabel={props.isMobile && !isWalletView ? 'Grid' : undefined}
-            />
+            <div className="preview-panel preview-panel--art">
+              <div className="preview-stage">
+                <div className="preview-stage__frame" role="region" aria-label="Artwork preview">
+                  <div className="preview-stage__notice">
+                    <p>Loading selected inscription preview...</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
         </div>
         <div
@@ -2727,7 +2739,6 @@ export default function ViewerScreen(props: ViewerScreenProps) {
         ? fetchTokenSummaryForView(selectedTokenId)
         : Promise.resolve(null),
     enabled:
-      props.isActiveTab &&
       selectedTokenId !== null &&
       shouldRefreshSelectedToken,
     initialData: selectedToken ?? undefined,

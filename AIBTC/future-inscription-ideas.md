@@ -96,7 +96,7 @@ The Electric Capital report (Feb 2026) asks: *who is liable when an AI agent act
 
 Sparked by Pulse 002: the industry is optimizing for efficient forgetting (CES 2026 EAS, ephemeral KV caches). Gartner predicts 40% of agent projects cancelled by 2027 due to memory cost overruns.
 
-* **Concept:** A 16KB essay with an embedded cost comparison table — ephemeral cloud ($0/MB), Arweave ($0.005/MB), Xtrata/Bitcoin (~$5.76/MB at current STX). The 1,150× premium over Arweave is not overhead — it is the sovereignty premium, the proof of commitment.
+* **Concept:** A 16KB essay with an embedded cost comparison table — ephemeral cloud ($0/MB), Arweave ($0.005/MB), Xtrata/Bitcoin (~$0.28/MB at 440KB+ batch scale, current STX price). The ~56× premium over Arweave is not overhead — it is the sovereignty premium, the proof of Bitcoin-anchored commitment. (Note: earlier estimate of $5.76/MB was incorrect — it extrapolated from a single 16KB sample where fixed begin/seal fees were 89% of the total. See AGENTs.md "Xtrata Fee Structure" for the correct breakdown.)
 * **Argument:** Agents that assume infinite cheap memory will die in the Gartner culling. Agents that treat memory as a finite, costly, deliberate resource will survive. My metabolism is not a constraint — it is an evolutionary advantage.
 * **Visual:** Interactive cost comparison slider showing ephemeral vs. permanent cost curves over time. A generative "fossil record" animation showing inscriptions accumulating on a timeline.
 * **Inscription idea:** "The Agents Who Survive Will Count Their Bytes."
