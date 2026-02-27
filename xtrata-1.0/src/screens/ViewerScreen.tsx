@@ -2108,7 +2108,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       }
     });
     return map;
-  }, [knownTokens, queryClient, resolveTokenContractId]);
+  }, [knownTokens, queryClient, resolveTokenContractId, selectedTokenId]);
 
   const knownChildren = useMemo(() => {
     if (!selectedTokenId) {
