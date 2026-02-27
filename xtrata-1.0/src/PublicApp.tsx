@@ -12,9 +12,11 @@ import { getContractId } from './lib/contract/config';
 import { resolveCollectionContractLink } from './lib/collections/contract-link';
 import { useBnsAddress } from './lib/bns/hooks';
 import { RATE_LIMIT_WARNING_EVENT } from './lib/network/rate-limit';
+import { getApiBaseUrls } from './lib/network/config';
 import { getNetworkFromAddress, getNetworkMismatch } from './lib/network/guard';
 import { toStacksNetwork } from './lib/network/stacks';
 import type { NetworkType } from './lib/network/types';
+import { isRateLimitError, isReadOnlyNetworkError } from './lib/contract/read-only';
 import { getViewerKey } from './lib/viewer/queries';
 import { createStacksWalletAdapter } from './lib/wallet/adapter';
 import { createWalletSessionStore } from './lib/wallet/session';
@@ -48,6 +50,10 @@ const SECTION_KEYS = [
   'live-collections'
 ] as const;
 type SectionKey = (typeof SECTION_KEYS)[number];
+
+const LIVE_MINT_REFRESH_INTERVAL_MS = 3 * 60_000;
+const LIVE_MINT_ERROR_BACKOFF_MS = 5 * 60_000;
+const LIVE_MINT_RATE_LIMIT_BACKOFF_MS = 15 * 60_000;
 
 const toSectionKeyFromHash = (hash: string): SectionKey | null => {
   const normalized = hash.replace(/^#/, '').trim();
@@ -962,21 +968,67 @@ const resolvePublicCollectionContractTarget = (
   };
 };
 
+const getErrorMessage = (error: unknown) => {
+  if (typeof error === 'string') {
+    return error;
+  }
+  if (error instanceof Error) {
+    return error.message || error.name || 'Unknown error';
+  }
+  if (!error) {
+    return 'Unknown error';
+  }
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+};
+
+const shouldTryReadOnlyFallback = (error: unknown) =>
+  isRateLimitError(error) || isReadOnlyNetworkError(error);
+
+const toMintStatusErrorMessage = (error: unknown) => {
+  if (isRateLimitError(error)) {
+    return `Upstream API rate-limited this request. Mint status refresh is paused and will retry in about ${Math.round(
+      LIVE_MINT_RATE_LIMIT_BACKOFF_MS / 60_000
+    )} minutes.`;
+  }
+  return getErrorMessage(error);
+};
+
 const loadPublicMintStatus = async (
   contract: PublicCollectionContractTarget
 ): Promise<PublicLiveMintStatus> => {
-  const network = toStacksNetwork(contract.network);
+  const apiBaseUrls = getApiBaseUrls(contract.network);
   const senderAddress = contract.address;
   const readOnly = async (functionName: string, functionArgs: ClarityValue[] = []) => {
-    const response = await callReadOnlyFunction({
-      contractAddress: contract.address,
-      contractName: contract.contractName,
-      functionName,
-      functionArgs,
-      senderAddress,
-      network
-    });
-    return unwrapReadOnly(response);
+    let lastError: unknown = null;
+    for (let index = 0; index < apiBaseUrls.length; index += 1) {
+      const apiBaseUrl = apiBaseUrls[index];
+      try {
+        const response = await callReadOnlyFunction({
+          contractAddress: contract.address,
+          contractName: contract.contractName,
+          functionName,
+          functionArgs,
+          senderAddress,
+          network: toStacksNetwork(contract.network, apiBaseUrl)
+        });
+        return unwrapReadOnly(response);
+      } catch (error) {
+        lastError = error;
+        const hasFallback = index < apiBaseUrls.length - 1;
+        if (hasFallback && shouldTryReadOnlyFallback(error)) {
+          continue;
+        }
+        break;
+      }
+    }
+    if (lastError instanceof Error) {
+      throw lastError;
+    }
+    throw new Error(getErrorMessage(lastError));
   };
   const [pausedCv, finalizedCv, mintPriceCv, activePhaseCv, maxSupplyCv, mintedCountCv, reservedCountCv] = await Promise.all([
     readOnly('is-paused'),
@@ -994,15 +1046,7 @@ const loadPublicMintStatus = async (
   const activePhaseId = parseUintCv(activePhaseCv);
   let activePhaseMintPrice: bigint | null = null;
   if (activePhaseId !== null && activePhaseId > 0n) {
-    const phaseCv = await callReadOnlyFunction({
-      contractAddress: contract.address,
-      contractName: contract.contractName,
-      functionName: 'get-phase',
-      functionArgs: [uintCV(activePhaseId)],
-      senderAddress,
-      network
-    });
-    const phaseValue = unwrapReadOnly(phaseCv);
+    const phaseValue = await readOnly('get-phase', [uintCV(activePhaseId)]);
     if (phaseValue.type === ClarityType.OptionalSome) {
       const tuple = phaseValue.value;
       if (tuple.type === ClarityType.Tuple) {
@@ -1211,7 +1255,27 @@ const CREATIVE_STORY = {
   bigIdeaLead:
     'The foundational role is simple: make critical state trustworthy, composable, and durable.',
   bigIdeaTagline: 'Xtrata is boring infrastructure for useful, powerful, and exciting Web3 apps.'
-  };
+};
+
+const ARTIST_PORTAL_GUIDE = {
+  title: 'Artist Portal and collection mint guide',
+  intro: 'Public inscriptions are open. Partner contracts are available now.',
+  access:
+    'Contact Jim.BTC (@JimDotBTC on X) to request access to the Artist Portal.',
+  portalSteps: [
+    'Connect your approved wallet in the Artist Portal.',
+    'Configure collection details, pricing, and sale settings.',
+    'Upload assets, stage metadata, and publish when your drop is ready.',
+    'Share your collection page so buyers can mint directly from your release.'
+  ],
+  mintFlow: [
+    'Collection mints run through the collection mint contract.',
+    'Each buyer mint finalizes an on-chain inscription in Xtrata-compatible format.',
+    'Owner controls let you monitor status, pause/unpause, and manage launch operations.'
+  ],
+  sizeNote:
+    'There is no fixed hard cap on collection size in this flow. Large releases should still be staged in manageable batches.'
+};
 
 
 
@@ -1361,6 +1425,7 @@ export default function PublicApp() {
   const [walletLookupTouched, setWalletLookupTouched] = useState(false);
   const [viewerMode, setViewerMode] = useState<ViewerMode>('collection');
   const [creativeStoryOpen, setCreativeStoryOpen] = useState(false);
+  const [artistPortalGuideOpen, setArtistPortalGuideOpen] = useState(false);
   const [activeDocId, setActiveDocId] = useState<string | null>(() => {
     return IN_HOUSE_DOC_SECTIONS[0]?.id ?? null;
   });
@@ -1385,6 +1450,7 @@ export default function PublicApp() {
     initial['active-contract'] = true;
     initial['collection-viewer'] = true;
     initial.market = true;
+    initial['live-collections'] = true;
     initial.mint = false;
     return initial;
   });
@@ -1662,6 +1728,7 @@ export default function PublicApp() {
 
   useEffect(() => {
     let cancelled = false;
+    let timeoutId: number | null = null;
     const activeIds = new Set(liveCollectionCards.map((collection) => collection.id));
     setLiveMintStatusByCollectionId((current) =>
       Object.fromEntries(
@@ -1691,11 +1758,27 @@ export default function PublicApp() {
         contractTarget: PublicCollectionContractTarget;
       } => collection.contractTarget !== null
     );
-    if (cardsWithContracts.length === 0) {
+    const shouldRefreshLiveMintStatus =
+      cardsWithContracts.length > 0 &&
+      tabGuard.isActive &&
+      !collapsedSections['live-collections'];
+    if (!shouldRefreshLiveMintStatus) {
       return () => {
         cancelled = true;
+        if (timeoutId !== null) {
+          window.clearTimeout(timeoutId);
+        }
       };
     }
+
+    const scheduleRefresh = (delayMs: number) => {
+      if (cancelled) {
+        return;
+      }
+      timeoutId = window.setTimeout(() => {
+        void refreshMintStatus();
+      }, delayMs);
+    };
 
     const refreshMintStatus = async () => {
       setLiveMintStatusLoadingByCollectionId((current) => {
@@ -1710,13 +1793,18 @@ export default function PublicApp() {
         cardsWithContracts.map(async (collection) => {
           try {
             const status = await loadPublicMintStatus(collection.contractTarget);
-            return { id: collection.id, status, error: null as string | null };
+            return {
+              id: collection.id,
+              status,
+              error: null as string | null,
+              rateLimited: false
+            };
           } catch (error) {
             return {
               id: collection.id,
               status: null as PublicLiveMintStatus | null,
-              error:
-                error instanceof Error ? error.message : 'Unable to load mint status.'
+              error: toMintStatusErrorMessage(error),
+              rateLimited: isRateLimitError(error)
             };
           }
         })
@@ -1725,6 +1813,9 @@ export default function PublicApp() {
       if (cancelled) {
         return;
       }
+
+      const hasRateLimitedEntry = settled.some((entry) => entry.rateLimited);
+      const hasErrorEntry = settled.some((entry) => entry.error !== null);
 
       setLiveMintStatusByCollectionId((current) => {
         const next = { ...current };
@@ -1751,33 +1842,40 @@ export default function PublicApp() {
         });
         return next;
       });
+
+      const nextDelayMs = hasRateLimitedEntry
+        ? LIVE_MINT_RATE_LIMIT_BACKOFF_MS
+        : hasErrorEntry
+          ? LIVE_MINT_ERROR_BACKOFF_MS
+          : LIVE_MINT_REFRESH_INTERVAL_MS;
+      scheduleRefresh(nextDelayMs);
     };
 
     void refreshMintStatus();
-    const intervalId = window.setInterval(() => {
-      void refreshMintStatus();
-    }, 20_000);
 
     return () => {
       cancelled = true;
-      window.clearInterval(intervalId);
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
     };
-  }, [liveCollectionCards]);
+  }, [liveCollectionCards, tabGuard.isActive, collapsedSections['live-collections']]);
 
   useEffect(() => {
-    if (!creativeStoryOpen) {
+    if (!creativeStoryOpen && !artistPortalGuideOpen) {
       return;
     }
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setCreativeStoryOpen(false);
+        setArtistPortalGuideOpen(false);
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => {
       window.removeEventListener('keydown', onKeyDown);
     };
-  }, [creativeStoryOpen]);
+  }, [creativeStoryOpen, artistPortalGuideOpen]);
 
   useEffect(() => {
     setWalletSession(walletAdapter.getSession());
@@ -1829,6 +1927,14 @@ export default function PublicApp() {
 
   const closeCreativeStory = () => {
     setCreativeStoryOpen(false);
+  };
+
+  const openArtistPortalGuide = () => {
+    setArtistPortalGuideOpen(true);
+  };
+
+  const closeArtistPortalGuide = () => {
+    setArtistPortalGuideOpen(false);
   };
 
   return (
@@ -1890,7 +1996,7 @@ export default function PublicApp() {
                 href="#mint"
                 onClick={(event) => handleNavJump(event, 'mint')}
               >
-                Mint
+                Inscribe
               </a>
               <a
                 className="button button--ghost app__nav-link"
@@ -1911,7 +2017,7 @@ export default function PublicApp() {
                 href="#live-collections"
                 onClick={(event) => handleNavJump(event, 'live-collections')}
               >
-                Live drops
+                Artist collections
               </a>
               <a
                 className="button button--ghost app__nav-link"
@@ -1939,6 +2045,13 @@ export default function PublicApp() {
                     ))}
                   </select>
                 </label>
+                <button
+                  className="button button--ghost"
+                  type="button"
+                  onClick={openArtistPortalGuide}
+                >
+                  Artist portal
+                </button>
                 <button
                   className="button button--ghost"
                   type="button"
@@ -2170,14 +2283,14 @@ export default function PublicApp() {
         >
           <div className="panel__header">
             <div>
-              <h2>Live collection mints</h2>
-              <p>Artist drops currently marked as visible by collection owners.</p>
+              <h2>Current + previous artist collections</h2>
+              <p>Artist collection pages currently published by collection owners.</p>
             </div>
             <div className="panel__actions">
               <span className="badge badge--neutral">
                 {liveCollectionsLoading
                   ? 'Refreshing'
-                  : `${liveCollectionCards.length} live`}
+                  : `${liveCollectionCards.length} listed`}
               </span>
               <button
                 className="button button--ghost button--collapse"
@@ -2192,12 +2305,12 @@ export default function PublicApp() {
           <div className="panel__body">
             {liveCollectionsError && <div className="alert">{liveCollectionsError}</div>}
             {!liveCollectionsError && liveCollectionsLoading && liveCollectionCards.length === 0 && (
-              <p>Loading live collection pages...</p>
+              <p>Loading artist collection pages...</p>
             )}
             {!liveCollectionsError &&
               !liveCollectionsLoading &&
               liveCollectionCards.length === 0 && (
-                <p>No live collections are currently published to the public page.</p>
+                <p>No artist collections are currently published to the public page.</p>
               )}
             {liveCollectionCards.length > 0 && (
               <div className="public-live-collections">
@@ -2287,7 +2400,7 @@ export default function PublicApp() {
                       </div>
                       <div className="mint-actions">
                         <a className="button button--ghost button--mini" href={collection.livePath}>
-                          Open live mint page
+                          Open collection page
                         </a>
                       </div>
                     </article>
@@ -2537,6 +2650,67 @@ export default function PublicApp() {
                     {CREATIVE_STORY.bigIdeaTagline}
                   </span>
                 </p>
+              </section>
+            </div>
+          </div>
+        </div>
+      )}
+      {artistPortalGuideOpen && (
+        <div
+          className="modal-overlay"
+          onClick={closeArtistPortalGuide}
+          role="presentation"
+        >
+          <div
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="artist-portal-guide-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="modal__header">
+              <div>
+                <p className="story-modal__eyebrow">For artists</p>
+                <h2 className="modal__title" id="artist-portal-guide-title">
+                  {ARTIST_PORTAL_GUIDE.title}
+                </h2>
+              </div>
+              <button
+                className="button button--ghost button--mini"
+                type="button"
+                onClick={closeArtistPortalGuide}
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="story-modal__body">
+              <p>{ARTIST_PORTAL_GUIDE.intro}</p>
+              <p>
+                <strong>{ARTIST_PORTAL_GUIDE.access}</strong>
+              </p>
+
+              <section className="story-modal__section">
+                <h3>How the Artist Portal works</h3>
+                <ul className="story-modal__proof-list">
+                  {ARTIST_PORTAL_GUIDE.portalSteps.map((step) => (
+                    <li key={step}>{step}</li>
+                  ))}
+                </ul>
+              </section>
+
+              <section className="story-modal__section">
+                <h3>How collection mints work</h3>
+                <ul className="story-modal__proof-list">
+                  {ARTIST_PORTAL_GUIDE.mintFlow.map((point) => (
+                    <li key={point}>{point}</li>
+                  ))}
+                </ul>
+              </section>
+
+              <section className="story-modal__section story-modal__section--highlight">
+                <h3>Collection size</h3>
+                <p>{ARTIST_PORTAL_GUIDE.sizeNote}</p>
               </section>
             </div>
           </div>

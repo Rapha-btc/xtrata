@@ -2354,15 +2354,16 @@ export default function MintScreen(props: MintScreenProps) {
       <div className="panel__header">
         <div>
           <div className="info-heading">
-            <h2>Mint inscription</h2>
+            <h2>Inscribe data</h2>
             <InfoTip
-              label="About mint inscription"
+              label="About inscribing data"
               text="Full inscription workflow: prepare file, review plan and fees, then run init, upload batches, and seal transactions."
             />
           </div>
           <p>Upload a file, review fees, and inscribe on-chain.</p>
           <p className="meta-value">
-            Public minting is open. Partner contracts coming soon.
+            Public inscriptions are open. Partner contracts are available now. Contact Jim.BTC
+            (@JimDotBTC) to request Artist Portal access.
           </p>
         </div>
         <div className="panel__actions">
