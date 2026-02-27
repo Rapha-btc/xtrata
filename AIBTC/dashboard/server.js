@@ -5,7 +5,7 @@ const { exec } = require('child_process');
 const { sseHandler, broadcast } = require('./sse');
 const stateManager = require('./state');
 const markdown = require('./markdown');
-const { initScheduler, stopScheduler, getScheduleInfo } = require('./scheduler');
+const { initScheduler, stopScheduler, getScheduleInfo, triggerPhase } = require('./scheduler');
 const { initWatcher, stopWatcher } = require('./watcher');
 const { startChainPoller, stopChainPoller, getChainData } = require('./chain');
 
@@ -121,6 +121,16 @@ app.get('/api/chain', (req, res) => {
 
 app.get('/api/schedule', (req, res) => {
   res.json(getScheduleInfo());
+});
+
+app.post('/api/trigger/:phaseId', (req, res) => {
+  const result = triggerPhase(req.params.phaseId);
+  if (result.ok) {
+    addLog('start', `Manual trigger: ${req.params.phaseId}`);
+  } else {
+    addLog('error', `Manual trigger rejected: ${result.error}`);
+  }
+  res.json(result);
 });
 
 // --- SSE Route ---

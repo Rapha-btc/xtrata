@@ -214,6 +214,27 @@
         .phase-status-text.running { color: var(--accent-color); }
         .phase-status-text.missed { color: #ff6347; }
 
+        .phase-trigger {
+            font-family: var(--font-family);
+            font-size: 11px;
+            padding: 2px 8px;
+            margin-left: 0.5rem;
+            background: transparent;
+            color: var(--accent-color);
+            border: 1px solid var(--accent-color);
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+        }
+        .phase-trigger:hover:not(:disabled) {
+            background: var(--accent-color);
+            color: #000;
+        }
+        .phase-trigger:disabled {
+            color: #444;
+            border-color: #333;
+            cursor: default;
+        }
+
         @media (max-width: 900px) {
             .container { grid-template-columns: 1fr; }
             .metric-grid { grid-template-columns: 1fr; }
@@ -377,7 +398,11 @@
                     timelineLabels.appendChild(span);
                 });
 
-                // Phase checklist
+                // Phase checklist with override buttons
+                const phaseStatusMap = {};
+                schedule.phases.forEach((p) => { phaseStatusMap[p.id] = p.status; });
+                const anyRunning = !!schedule.runningPhase;
+
                 phaseListEl.innerHTML = '';
                 schedule.phases.forEach((p) => {
                     const li = document.createElement('li');
@@ -408,7 +433,62 @@
                         statusText.textContent = p.status;
                     }
 
-                    li.append(icon, time, label, model, statusText);
+                    // Override button with sequence logic
+                    const btn = document.createElement('button');
+                    btn.className = 'phase-trigger';
+                    btn.dataset.phase = p.id;
+
+                    let canTrigger = true;
+                    let reason = '';
+
+                    if (p.status === 'completed') {
+                        canTrigger = false; reason = 'done';
+                    } else if (p.status === 'running') {
+                        canTrigger = false; reason = 'running';
+                    } else if (anyRunning) {
+                        canTrigger = false; reason = 'busy';
+                    } else if (p.id === 'pulse-2' && phaseStatusMap['pulse-1'] !== 'completed') {
+                        canTrigger = false; reason = 'need P1';
+                    } else if (p.id === 'pulse-3' && phaseStatusMap['pulse-2'] !== 'completed') {
+                        canTrigger = false; reason = 'need P2';
+                    } else if (p.id === 'inscribe') {
+                        const pulseDone = ['pulse-1', 'pulse-2', 'pulse-3']
+                            .some((id) => phaseStatusMap[id] === 'completed');
+                        if (!pulseDone) { canTrigger = false; reason = 'need pulse'; }
+                    }
+
+                    btn.textContent = canTrigger ? 'RUN' : reason;
+                    btn.disabled = !canTrigger;
+
+                    if (canTrigger) {
+                        btn.addEventListener('click', () => {
+                            btn.disabled = true;
+                            btn.textContent = '...';
+                            fetch(`/api/trigger/${p.id}`, { method: 'POST' })
+                                .then((r) => r.json())
+                                .then((result) => {
+                                    if (result.ok) {
+                                        appendLogEntry({ type: 'start', line: `Manual trigger: ${p.label}` });
+                                    } else {
+                                        appendLogEntry({ type: 'error', line: `Trigger rejected: ${result.error}` });
+                                        btn.textContent = 'RUN';
+                                        btn.disabled = false;
+                                    }
+                                    // Refresh schedule to update all buttons
+                                    fetchJson('/api/schedule').then((sched) => {
+                                        scheduleCache = sched;
+                                        renderTimeline(sched);
+                                    }).catch(() => {});
+                                })
+                                .catch((err) => {
+                                    appendLogEntry({ type: 'error', line: `Trigger failed: ${err.message}` });
+                                    btn.textContent = 'RUN';
+                                    btn.disabled = false;
+                                });
+                        });
+                    }
+
+                    li.append(icon, time, label, model, statusText, btn);
                     phaseListEl.appendChild(li);
                 });
 

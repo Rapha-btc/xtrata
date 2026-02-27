@@ -11,6 +11,7 @@ import type { XtrataClient } from '../lib/contract/client';
 import { getContractId } from '../lib/contract/config';
 import type { StreamStatus, TokenSummary } from '../lib/viewer/types';
 import {
+  detectWebmTrackKind,
   fetchOnChainContent,
   fetchTokenImageFromUri,
   getMediaKind,
@@ -331,10 +332,22 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
 
   const resolvedMimeType = resolveMimeType(mimeType, contentQuery.data);
   const resolvedMediaKind = getMediaKind(resolvedMimeType);
+  const detectedWebmTrackKind = useMemo(() => {
+    if (!isWebm || !contentQuery.data || contentQuery.data.length === 0) {
+      return null;
+    }
+    return detectWebmTrackKind(contentQuery.data);
+  }, [isWebm, contentQuery.data]);
+  const displayMediaKind =
+    detectedWebmTrackKind === 'audio' ? 'audio' : resolvedMediaKind;
+  const displayMimeType =
+    detectedWebmTrackKind === 'audio' && isWebm
+      ? 'audio/webm'
+      : resolvedMimeType;
   const isHtmlDocument =
-    resolvedMimeType === 'text/html' ||
-    resolvedMimeType === 'application/xhtml+xml';
-  const isPdf = resolvedMimeType === 'application/pdf';
+    displayMimeType === 'text/html' ||
+    displayMimeType === 'application/xhtml+xml';
+  const isPdf = displayMimeType === 'application/pdf';
   const hasContent = !!contentQuery.data && contentQuery.data.length > 0;
   const contentBytes = contentQuery.data ? contentQuery.data.length : null;
   const sniffedMimeType = useMemo(
@@ -417,7 +430,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     if (isPdf) {
       return 'PDF';
     }
-    switch (resolvedMediaKind) {
+    switch (displayMediaKind) {
       case 'image':
         return 'IMAGE';
       case 'svg':
@@ -436,7 +449,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
         return 'UNKNOWN';
     }
   })();
-  const mediaBadgeTitle = resolvedMimeType ?? mimeType ?? 'Unknown mime type';
+  const mediaBadgeTitle = displayMimeType ?? mimeType ?? 'Unknown mime type';
 
   useEffect(() => {
     if (!props.token.meta) {
@@ -1445,6 +1458,11 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
       ? 'preview-media--pixelated'
       : undefined;
   const mediaSourceUrl = streamUrl ?? contentUrl;
+  const hasRenderableSource =
+    !!svgPreview ||
+    !!(contentQuery.data && contentQuery.data.length > 0) ||
+    !!mediaSourceUrl ||
+    !!tokenUriPreview;
   const isStreamBuffering = shouldStream && streamPhase === 'buffering';
   const isStreamLoading = shouldStream && streamPhase === 'loading';
   const isStreamError = shouldStream && streamPhase === 'error';
@@ -1911,7 +1929,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
               {isStreamBuffering && (
                 <div className="preview-stage__notice">
                   <p>
-                    Buffering {resolvedMediaKind}...
+                    Buffering {displayMediaKind}...
                     {streamBufferedSeconds > 0
                       ? ` ${streamBufferedSeconds.toFixed(1)}s buffered`
                       : ''}
@@ -1921,7 +1939,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
 
               {isStreamLoading && (
                 <div className="preview-stage__notice">
-                  <p>Loading remaining {resolvedMediaKind}...</p>
+                  <p>Loading remaining {displayMediaKind}...</p>
                 </div>
               )}
 
@@ -1948,12 +1966,9 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
               {!contentQuery.isLoading &&
                 !contentQuery.isError &&
                 !isStreamError &&
-                (svgPreview ||
-                  (contentQuery.data && contentQuery.data.length > 0) ||
-                  mediaSourceUrl ||
-                  tokenUriPreview) && (
+                hasRenderableSource && (
                   <>
-                    {resolvedMediaKind === 'svg' && svgPreview ? (
+                    {displayMediaKind === 'svg' && svgPreview ? (
                       <img
                         src={svgPreview}
                         alt="SVG preview"
@@ -1962,7 +1977,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
                         onLoad={handlePreviewImageLoad('svg-preview', svgPreview)}
                         onError={handlePreviewImageError('svg-preview', svgPreview)}
                       />
-                    ) : resolvedMediaKind === 'image' && contentUrl ? (
+                    ) : displayMediaKind === 'image' && contentUrl ? (
                       onChainImageFailed ? (
                         <div className="preview-stage__notice">
                           <p>On-chain image preview failed, trying fallback...</p>
@@ -1998,7 +2013,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
                           />
                         </>
                       )
-                    ) : resolvedMediaKind === 'audio' && mediaSourceUrl ? (
+                    ) : displayMediaKind === 'audio' && mediaSourceUrl ? (
                       <audio
                         ref={(node) => {
                           mediaRef.current = node;
@@ -2008,7 +2023,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
                         src={mediaSourceUrl}
                         onPlay={() => streamStartRef.current?.()}
                       />
-                    ) : resolvedMediaKind === 'video' && mediaSourceUrl ? (
+                    ) : displayMediaKind === 'video' && mediaSourceUrl ? (
                       <video
                         ref={(node) => {
                           mediaRef.current = node;
@@ -2041,7 +2056,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
                           onError={handlePreviewImageError('token-uri', tokenUriPreview)}
                         />
                       </>
-                    ) : resolvedMediaKind === 'html' ? (
+                    ) : displayMediaKind === 'html' ? (
                       <div className="preview-stage__html">
                         {isPdf ? (
                           contentUrl ? (
@@ -2068,7 +2083,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
                           <p>HTML preview unavailable.</p>
                         )}
                       </div>
-                    ) : resolvedMediaKind === 'text' && textPreview ? (
+                    ) : displayMediaKind === 'text' && textPreview ? (
                       <div className="preview-stage__text">
                         {jsonImagePreview && (
                           <img
@@ -2101,6 +2116,17 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
                       </div>
                     )}
                   </>
+                )}
+              {!contentQuery.isLoading &&
+                !contentQuery.isError &&
+                !isStreamError &&
+                props.token.meta &&
+                !showLoadButton &&
+                !showFallbackLoadButton &&
+                !hasRenderableSource && (
+                  <div className="preview-stage__notice">
+                    <p>Preparing preview source...</p>
+                  </div>
                 )}
             </div>
           </div>

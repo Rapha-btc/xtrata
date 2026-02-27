@@ -262,4 +262,48 @@ function getScheduleInfo() {
   };
 }
 
-module.exports = { initScheduler, stopScheduler, getScheduleInfo };
+/**
+ * Manually trigger a phase, enforcing sequential order.
+ * Returns { ok: true } or { ok: false, error: '...' }.
+ */
+function triggerPhase(phaseId) {
+  const phase = PHASES.find((p) => p.id === phaseId);
+  if (!phase) return { ok: false, error: `Unknown phase: ${phaseId}` };
+  if (isPhaseRunning()) return { ok: false, error: 'Another phase is currently running' };
+  if (hasRunToday(phaseId)) return { ok: false, error: `${phase.label} already completed today` };
+
+  // Sequence enforcement
+  if (phaseId === 'pulse-2' && !hasRunToday('pulse-1')) {
+    return { ok: false, error: 'Pulse 1 must complete before Pulse 2' };
+  }
+  if (phaseId === 'pulse-3' && !hasRunToday('pulse-2')) {
+    return { ok: false, error: 'Pulse 2 must complete before Pulse 3' };
+  }
+  if (phaseId === 'inscribe') {
+    if (pulsesCompletedToday() < 1) {
+      return { ok: false, error: 'At least 1 pulse must complete before inscription' };
+    }
+    const chain = getChainData();
+    if (chain.stxBalance !== null && chain.stxBalance < 1.0) {
+      return { ok: false, error: `STX balance too low (${chain.stxBalance} STX)` };
+    }
+  }
+
+  // Clear missed flag if it was set
+  const state = stateManager.getState();
+  const key = phaseKey(phaseId);
+  if (state.missedPhases && state.missedPhases[key]) {
+    const missed = { ...state.missedPhases };
+    delete missed[key];
+    stateManager.updateState({ missedPhases: missed });
+  }
+
+  // Fire and forget
+  executePhase(phase).catch((err) => {
+    console.error('Manual trigger phase error:', err);
+  });
+
+  return { ok: true };
+}
+
+module.exports = { initScheduler, stopScheduler, getScheduleInfo, triggerPhase, PHASES };
