@@ -62,6 +62,7 @@ import { createObjectUrl } from '../lib/utils/blob';
 import { formatBytes, truncateMiddle } from '../lib/utils/format';
 import { bytesToHex } from '../lib/utils/encoding';
 import { logDebug, logInfo, logWarn, shouldLog } from '../lib/utils/logger';
+import { AudioWaveformPlayer } from './AudioWaveform';
 
 type TokenContentPreviewProps = {
   token: TokenSummary;
@@ -2051,14 +2052,20 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
                         </>
                       )
                     ) : displayMediaKind === 'audio' && mediaSourceUrl ? (
-                      <audio
-                        ref={(node) => {
+                      <AudioWaveformPlayer
+                        sourceUrl={mediaSourceUrl}
+                        cacheKey={[
+                          props.contractId,
+                          props.token.id.toString(),
+                          displayMimeType ?? mimeType ?? 'audio'
+                        ].join(':')}
+                        bytes={contentQuery.data ?? null}
+                        onPlay={() => {
+                          streamStartRef.current?.();
+                        }}
+                        onMediaElement={(node) => {
                           mediaRef.current = node;
                         }}
-                        controls
-                        preload="metadata"
-                        src={mediaSourceUrl}
-                        onPlay={() => streamStartRef.current?.()}
                         onError={() => {
                           if (shouldStream && !forceFullLoad) {
                             setForceFullLoad(true);

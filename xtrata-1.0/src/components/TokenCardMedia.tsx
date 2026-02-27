@@ -43,6 +43,7 @@ import {
   registerRecursiveBridge
 } from '../lib/viewer/recursive';
 import { createObjectUrl } from '../lib/utils/blob';
+import { AudioWaveformBars, useAudioWaveformBins } from './AudioWaveform';
 
 type TokenCardMediaProps = {
   token: TokenSummary;
@@ -64,6 +65,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
   const lastImageErrorRef = useRef<string | null>(null);
   const thumbnailGenRef = useRef(false);
   const contentUrlRef = useRef<string | null>(null);
+  const token8DebugRef = useRef<string | null>(null);
   const [bridgeSource, setBridgeSource] = useState<MessageEventSource | null>(null);
   const [thumbnailFailed, setThumbnailFailed] = useState(false);
   const [onChainFailed, setOnChainFailed] = useState(false);
@@ -146,7 +148,10 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
       props.token.id.toString()
     ],
     queryFn: () => loadInscriptionPreviewFromCache(props.contractId, props.token.id),
-    enabled: mediaKind === 'video' && !!props.token.meta && isActiveTab,
+    enabled:
+      (mediaKind === 'video' || mediaKind === 'audio') &&
+      !!props.token.meta &&
+      isActiveTab,
     staleTime: Infinity,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
@@ -265,6 +270,66 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     detectedWebmTrackKind === 'audio' && isWebmMime
       ? 'audio/webm'
       : resolvedMimeType;
+  const audioWaveformBytes =
+    displayKind === 'audio'
+      ? fullContentBytes ?? cachedPreviewQuery.data?.data ?? null
+      : null;
+  const audioWaveform = useAudioWaveformBins({
+    cacheKey: [
+      props.contractId,
+      props.token.id.toString(),
+      displayMimeType ?? mimeType ?? 'audio',
+      audioWaveformBytes?.length ?? 0
+    ].join(':'),
+    bytes: audioWaveformBytes,
+    count: 34
+  });
+  const audioWaveformReady =
+    !!audioWaveform.bins && audioWaveform.bins.length > 0;
+  useEffect(() => {
+    if (props.token.id !== 8n) {
+      return;
+    }
+    const snapshot = [
+      mimeType ?? 'none',
+      resolvedMimeType ?? 'none',
+      resolvedKind,
+      detectedWebmTrackKind ?? 'none',
+      displayKind,
+      audioWaveformBytes?.length ?? 0,
+      audioWaveformReady ? 'ready' : audioWaveform.loading ? 'loading' : 'placeholder'
+    ].join('|');
+    if (token8DebugRef.current === snapshot) {
+      return;
+    }
+    token8DebugRef.current = snapshot;
+    logDebug('preview', 'Token #8 grid media pipeline', {
+      id: props.token.id.toString(),
+      contractId: props.contractId,
+      metaMimeType: mimeType,
+      resolvedMimeType,
+      resolvedKind,
+      detectedWebmTrackKind,
+      displayKind,
+      waveformBytes: audioWaveformBytes?.length ?? null,
+      waveformState: audioWaveformReady
+        ? 'ready'
+        : audioWaveform.loading
+          ? 'loading'
+          : 'placeholder'
+    });
+  }, [
+    props.token.id,
+    props.contractId,
+    mimeType,
+    resolvedMimeType,
+    resolvedKind,
+    detectedWebmTrackKind,
+    displayKind,
+    audioWaveformBytes,
+    audioWaveformReady,
+    audioWaveform.loading
+  ]);
 
   const thumbnailUrl = useMemo(() => {
     if (!thumbnailQuery.data || !thumbnailQuery.data.data) {
@@ -1052,12 +1117,19 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
       snippet: docSnippet
     });
   } else if (displayKind === 'audio') {
-    mediaElement = renderDocCard({
-      label: docBadge,
-      title: docTitle,
-      snippet: 'Preview on selection.',
-      showPlay: true
-    });
+    mediaElement = (
+      <div className="token-card__audio">
+        <span className="token-card__audio-badge">AUDIO</span>
+        <AudioWaveformBars
+          bins={audioWaveform.bins}
+          loading={audioWaveform.loading}
+          compact
+        />
+        <span className="token-card__audio-status">
+          {audioWaveformReady ? 'Waveform ready' : 'Loading waveform'}
+        </span>
+      </div>
+    );
   } else if (contentQuery.isLoading) {
     mediaElement = (
       <div className="token-card__placeholder">Loading preview...</div>

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent 27 Dashboard</title>
+    <style>
+        :root {
+            --bg-color: #050505;
+            --text-color: #949494;
+            --text-emphasis: #fff;
+            --accent-color: #ff7900;
+            --border-color: #1a1a1a;
+            --font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-family);
+            font-size: 14px;
+            margin: 0;
+            padding: 1rem;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto auto auto;
+            gap: 1rem;
+            max-width: 1600px;
+            margin: auto;
+        }
+        .header, .footer {
+            grid-column: 1 / -1;
+            border: 1px solid var(--border-color);
+            padding: 0.5rem 1rem;
+        }
+        .header h1, .header p { margin: 0; }
+        .header h1 { color: var(--text-emphasis); }
+        .footer { text-align: center; font-size: 12px; }
+
+        .panel {
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+        }
+        .panel h2 {
+            color: var(--text-emphasis);
+            margin-top: 0;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+        .full-width { grid-column: 1 / -1; }
+        .metabolic, .cycle-status { min-height: 250px; }
+        .activity-log { min-height: 300px; }
+        
+        #activity-log-content {
+            flex-grow: 1;
+            overflow-y: auto;
+            font-size: 12px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+        .log-line {
+            display: flex;
+        }
+        .log-line .timestamp {
+            color: #666;
+            margin-right: 1rem;
+        }
+        .log-line .type-start { color: #87CEEB; }
+        .log-line .type-complete { color: #32CD32; }
+        .log-line .type-error { color: #FF6347; }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header class="header">
+            <h1>AGENT 27</h1>
+            <p>Autonomous On-Chain Journal</p>
+        </header>
+
+        <div class="panel full-width timeline">
+            <h2>24-Hour Cycle Timeline</h2>
+            <div id="timeline-content">Timeline visualization will be implemented here.</div>
+        </div>
+
+        <div class="panel metabolic">
+            <h2>Metabolic Status</h2>
+            <div id="metabolic-content">Loading...</div>
+        </div>
+
+        <div class="panel cycle-status">
+            <h2>Cycle Status</h2>
+            <div id="cycle-status-content">Loading...</div>
+        </div>
+
+        <div class="panel research-buffer">
+            <h2>Research Buffer</h2>
+            <pre id="research-buffer-content" style="white-space: pre-wrap; word-wrap: break-word;">Loading...</pre>
+        </div>
+
+        <div class="panel ideas-ledger">
+            <h2>Ideas & Ledger</h2>
+            <pre id="ideas-ledger-content" style="white-space: pre-wrap; word-wrap: break-word;">Loading...</pre>
+        </div>
+
+        <div class="panel activity-log full-width">
+            <h2>Activity Log (Live)</h2>
+            <div id="activity-log-content">Connecting to event stream...</div>
+        </div>
+
+        <footer class="footer">
+            Agent 27 | Token #107 (Genesis) | SP15T1W26...KTYA9EJ | v1.0.0
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const logContent = document.getElementById('activity-log-content');
+
+            function appendLogEntry(entry) {
+                const div = document.createElement('div');
+                div.classList.add('log-line');
+
+                const ts = new Date().toLocaleTimeString();
+                
+                let line = entry.line || `${entry.type} event`;
+                if(entry.model) line += ` (${entry.model}, budget: $${entry.budget})`
+                if(entry.code !== undefined) line += ` (exit code: ${entry.code})`
+
+                div.innerHTML = `<span class="timestamp">${ts}</span> <span class="type-${entry.type}">${line}</span>`;
+                logContent.appendChild(div);
+                logContent.scrollTop = logContent.scrollHeight;
+            }
+
+            function init() {
+                logContent.innerHTML = '';
+                const evtSource = new EventSource('/events');
+
+                evtSource.onopen = () => {
+                    appendLogEntry({ type: 'stdout', line: 'SSE connection established. Fetching initial data...'});
+                    console.log('SSE connection opened. Fetching initial data...');
+                    
+                    fetch('/api/status').then(r => r.json()).then(data => {
+                        console.log('Received /api/status:', data);
+                        document.getElementById('cycle-status-content').textContent = JSON.stringify(data, null, 2);
+                    });
+                    fetch('/api/research').then(r => r.json()).then(data => {
+                        console.log('Received /api/research:', data);
+                        document.getElementById('research-buffer-content').textContent = JSON.stringify(data, null, 2);
+                    });
+                    fetch('/api/ideas').then(r => r.json()).then(data => {
+                         console.log('Received /api/ideas:', data);
+                        document.getElementById('ideas-ledger-content').textContent = JSON.stringify(data, null, 2);
+                    });
+                    fetch('/api/ledger').then(r => r.json()).then(data => {
+                        console.log('Received /api/ledger:', data);
+                    });
+                    fetch('/api/log').then(r => r.json()).then(logs => {
+                        console.log('Received /api/log:', logs);
+                        logContent.innerHTML = '';
+                        logs.forEach(appendLogEntry);
+                    });
+                     fetch('/api/chain').then(r => r.json()).then(data => {
+                        console.log('Received /api/chain:', data);
+                        document.getElementById('metabolic-content').textContent = JSON.stringify(data, null, 2);
+                     });
+                };
+
+                evtSource.onerror = (err) => {
+                    appendLogEntry({ type: 'error', line: 'SSE connection failed. Will retry automatically.'});
+                    console.error("EventSource failed:", err);
+                };
+
+                evtSource.addEventListener('log', (e) => {
+                    appendLogEntry(JSON.parse(e.data));
+                });
+                
+                // Add more event listeners here in future phases
+            }
+
+            init();
+        });
+    </script>
+
+</body>
+</html>
