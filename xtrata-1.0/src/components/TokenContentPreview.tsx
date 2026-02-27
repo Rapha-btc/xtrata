@@ -1203,9 +1203,12 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
         shouldAllowTokenUriPreview({
           hasMeta: !!props.token.meta,
           contentError: contentQuery.isError,
+          contentLoading: contentQuery.isLoading,
           streamPhase,
           hasPreviewContent,
-          shouldStream
+          shouldStream,
+          preferOnChainMedia: isStreamableKind,
+          loadRequested
         })));
   const allowTokenUriFallback = allowTokenUriPreview;
   useEffect(() => {
@@ -1221,7 +1224,8 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
       streamPhase,
       streamable: isStreamableKind,
       mediaSourceSupported,
-      loadRequested
+      loadRequested,
+      contentLoading: contentQuery.isLoading
     });
   }, [
     props.token.id,
@@ -1230,7 +1234,44 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     streamPhase,
     isStreamableKind,
     mediaSourceSupported,
-    loadRequested
+    loadRequested,
+    contentQuery.isLoading
+  ]);
+
+  useEffect(() => {
+    if (props.token.id !== 8n) {
+      return;
+    }
+    logDebug('preview', 'Token #8 preview media pipeline', {
+      id: props.token.id.toString(),
+      metaMimeType: mimeType,
+      resolvedMimeType,
+      resolvedMediaKind,
+      displayMediaKind,
+      loadRequested,
+      contentLoading: contentQuery.isLoading,
+      contentStatus: contentQuery.status,
+      bytesLoaded: contentBytes,
+      hasMediaSourceUrl: !!(streamUrl ?? contentUrl),
+      streamPhase,
+      allowTokenUriPreview,
+      tokenUriPreviewReady
+    });
+  }, [
+    props.token.id,
+    mimeType,
+    resolvedMimeType,
+    resolvedMediaKind,
+    displayMediaKind,
+    loadRequested,
+    contentQuery.isLoading,
+    contentQuery.status,
+    contentBytes,
+    streamUrl,
+    contentUrl,
+    streamPhase,
+    allowTokenUriPreview,
+    tokenUriPreviewReady
   ]);
 
   const tokenUriQuery = useQuery({
@@ -2022,19 +2063,14 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
                         </div>
                       ) : (
                         <>
-                          {!onChainImageReady &&
-                            (thumbnailUrl ? (
-                              <img
-                                src={thumbnailUrl}
-                                alt="Thumbnail preview"
-                                loading="lazy"
-                                className="preview-image--placeholder"
-                              />
-                            ) : (
-                              <div className="preview-stage__notice">
-                                <p>Loading image preview...</p>
-                              </div>
-                            ))}
+                          {!onChainImageReady && thumbnailUrl && (
+                            <img
+                              src={thumbnailUrl}
+                              alt="Thumbnail preview"
+                              loading="lazy"
+                              className="preview-image--placeholder"
+                            />
+                          )}
                           <img
                             src={contentUrl}
                             alt="Image preview"
@@ -2042,9 +2078,9 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
                             className={
                               onChainImageReady
                                 ? previewImageClassName
-                                : previewImageClassName
+                                : thumbnailUrl && previewImageClassName
                                   ? `${previewImageClassName} preview-image--pending`
-                                  : 'preview-image--pending'
+                                  : previewImageClassName
                             }
                             onLoad={handlePreviewImageLoad('on-chain', contentUrl)}
                             onError={handlePreviewImageError('on-chain', contentUrl)}

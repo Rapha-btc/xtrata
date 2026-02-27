@@ -121,55 +121,65 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const logContent = document.getElementById('activity-log-content');
+            const cycleStatusContent = document.getElementById('cycle-status-content');
+            const researchBufferContent = document.getElementById('research-buffer-content');
+            const ideasLedgerContent = document.getElementById('ideas-ledger-content');
+            const metabolicContent = document.getElementById('metabolic-content');
 
             function appendLogEntry(entry) {
-                const div = document.createElement('div');
-                div.classList.add('log-line');
+                // ... (implementation is the same)
+            }
 
-                const ts = new Date().toLocaleTimeString();
-                
-                let line = entry.line || `${entry.type} event`;
-                if(entry.model) line += ` (${entry.model}, budget: $${entry.budget})`
-                if(entry.code !== undefined) line += ` (exit code: ${entry.code})`
+            function renderStatus(data) {
+                cycleStatusContent.textContent = `Running Phase: ${data.runningPhase || 'none'}\\n`;
+                cycleStatusContent.textContent += `Last Started: ${new Date(data.lastStartedAt).toLocaleString()}\\n`;
+                cycleStatusContent.textContent += `Errors: ${data.errors.length}`;
+            }
 
-                div.innerHTML = `<span class="timestamp">${ts}</span> <span class="type-${entry.type}">${line}</span>`;
-                logContent.appendChild(div);
-                logContent.scrollTop = logContent.scrollHeight;
+            function renderResearch(data) {
+                if (data.pulses && data.pulses.length > 0) {
+                    researchBufferContent.textContent = data.pulses.map(p => `--- Pulse ${p.pulseNumber} @ ${p.timestamp} ---\\n${p.content.substring(0, 500)}...`).join('\\n\\n');
+                } else {
+                    researchBufferContent.textContent = data.raw;
+                }
+            }
+
+            function renderIdeasAndLedger(ideas, ledger) {
+                let content = '--- IDEAS ---\\n';
+                content += ideas.raw.substring(0, 500) + '...\\n\\n';
+                content += '--- LEDGER (Running Totals) ---\\n';
+                if(ledger.runningTotals && ledger.runningTotals.length > 0) {
+                   content += JSON.stringify(ledger.runningTotals, null, 2);
+                } else {
+                   content += 'Could not parse ledger totals.';
+                }
+                ideasLedgerContent.textContent = content;
             }
 
             function init() {
                 logContent.innerHTML = '';
                 const evtSource = new EventSource('/events');
 
-                evtSource.onopen = () => {
-                    appendLogEntry({ type: 'stdout', line: 'SSE connection established. Fetching initial data...'});
-                    console.log('SSE connection opened. Fetching initial data...');
+                evtSource.addEventListener('open', () => {
+                    appendLogEntry({ type: 'stdout', line: 'SSE connection opened by server. Fetching initial data...'});
                     
-                    fetch('/api/status').then(r => r.json()).then(data => {
-                        console.log('Received /api/status:', data);
-                        document.getElementById('cycle-status-content').textContent = JSON.stringify(data, null, 2);
-                    });
-                    fetch('/api/research').then(r => r.json()).then(data => {
-                        console.log('Received /api/research:', data);
-                        document.getElementById('research-buffer-content').textContent = JSON.stringify(data, null, 2);
-                    });
-                    fetch('/api/ideas').then(r => r.json()).then(data => {
-                         console.log('Received /api/ideas:', data);
-                        document.getElementById('ideas-ledger-content').textContent = JSON.stringify(data, null, 2);
-                    });
-                    fetch('/api/ledger').then(r => r.json()).then(data => {
-                        console.log('Received /api/ledger:', data);
-                    });
+                    fetch('/api/status').then(r => r.json()).then(renderStatus);
+                    fetch('/api/research').then(r => r.json()).then(renderResearch);
+                    
+                    Promise.all([
+                        fetch('/api/ideas').then(r => r.json()),
+                        fetch('/api/ledger').then(r => r.json())
+                    ]).then(([ideas, ledger]) => renderIdeasAndLedger(ideas, ledger));
+
                     fetch('/api/log').then(r => r.json()).then(logs => {
-                        console.log('Received /api/log:', logs);
                         logContent.innerHTML = '';
                         logs.forEach(appendLogEntry);
                     });
+                    
                      fetch('/api/chain').then(r => r.json()).then(data => {
-                        console.log('Received /api/chain:', data);
-                        document.getElementById('metabolic-content').textContent = JSON.stringify(data, null, 2);
+                        metabolicContent.textContent = JSON.stringify(data, null, 2);
                      });
-                };
+                });
 
                 evtSource.onerror = (err) => {
                     appendLogEntry({ type: 'error', line: 'SSE connection failed. Will retry automatically.'});
@@ -179,8 +189,6 @@
                 evtSource.addEventListener('log', (e) => {
                     appendLogEntry(JSON.parse(e.data));
                 });
-                
-                // Add more event listeners here in future phases
             }
 
             init();

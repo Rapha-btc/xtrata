@@ -9,8 +9,11 @@ function sseHandler(req, res) {
     'Connection': 'keep-alive',
     'X-Accel-Buffering': 'no'
   });
+  
+  // Send an immediate 'open' event to establish the connection.
+  res.write('event: open\\ndata: {}\\n\\n');
 
-  console.log('SSE client connected.');
+  console.log('SSE client connected, open event sent.');
 
   clients.add(res);
 

@@ -49,4 +49,34 @@ describe('shouldAllowTokenUriPreview', () => {
       })
     ).toBe(true);
   });
+
+  it('blocks token uri preview for streamable media while on-chain load is pending', () => {
+    expect(
+      shouldAllowTokenUriPreview({
+        hasMeta: true,
+        contentError: false,
+        contentLoading: true,
+        streamPhase: 'idle',
+        hasPreviewContent: false,
+        shouldStream: false,
+        preferOnChainMedia: true,
+        loadRequested: true
+      })
+    ).toBe(false);
+  });
+
+  it('blocks token uri preview for streamable media before load is requested', () => {
+    expect(
+      shouldAllowTokenUriPreview({
+        hasMeta: true,
+        contentError: false,
+        contentLoading: false,
+        streamPhase: 'idle',
+        hasPreviewContent: false,
+        shouldStream: false,
+        preferOnChainMedia: true,
+        loadRequested: false
+      })
+    ).toBe(false);
+  });
 });
