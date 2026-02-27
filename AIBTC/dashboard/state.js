@@ -7,6 +7,7 @@ const STATE_FILE = path.join(__dirname, 'cycle-state.json');
 const DEFAULT_STATE = {
   runningPhase: null,      // e.g., 'pulse-1', 'inscribe'
   completedPhases: {},     // { '2026-02-27:pulse-1': '2026-02-27T08:05:12Z' }
+  missedPhases: {},        // { '2026-02-27:pulse-1': true }
   lastInscription: null,   // { date, tokenId, txid, stxCost }
   chainData: {},
   errors: [],

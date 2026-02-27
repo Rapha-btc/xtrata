@@ -4,35 +4,46 @@ const path = require('path');
 
 const WORKDIR = path.resolve(__dirname, '..');
 
-// --- Helper Functions ---
-
 function parseMarkdownTable(markdown, sectionHeader) {
   try {
     const sectionIdx = markdown.indexOf(`## ${sectionHeader}`);
     if (sectionIdx === -1) return [];
-    
-    const tableSlice = markdown.slice(sectionIdx);
-    const lines = tableSlice.split(/\\r?\\n/);
-    
-    let inTable = false;
-    let headers = null;
-    const rows = [];
 
-    for (const line of lines) {
-      if (line.trim().startsWith('|')) {
-        const cells = line.trim().split('|').slice(1, -1).map(c => c.trim());
-        if (!inTable && cells.length > 0 && !line.includes('---')) {
-          headers = cells;
-          inTable = true;
-        } else if (inTable && !line.includes('---')) {
-          if (cells.length === headers.length) {
-            let row = {};
-            headers.forEach((h, i) => row[h.toLowerCase()] = cells[i]);
-            rows.push(row);
-          }
+    const tableSlice = markdown.slice(sectionIdx);
+    // Use a simple string split, which is safer than a complex regex for this tool.
+    const lines = tableSlice.split('\n').map((l) => l.trim()).filter(Boolean);
+
+    let headerIndex = -1;
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].startsWith('|') && lines[i].endsWith('|') && !lines[i].includes('---')) {
+        headerIndex = i;
+        break;
+      }
+    }
+
+    if (headerIndex === -1) return [];
+
+    const headers = lines[headerIndex].split('|').slice(1, -1).map(h => h.trim().toLowerCase());
+    const separatorIndex = headerIndex + 1;
+
+    if (!lines[separatorIndex] || !lines[separatorIndex].includes('---')) {
+        return [];
+    }
+
+    const rows = [];
+    for (let i = separatorIndex + 1; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.startsWith('|') && line.endsWith('|')) {
+        const cells = line.split('|').slice(1, -1).map((c) => c.trim());
+        if (cells.length === headers.length) {
+          const row = {};
+          headers.forEach((h, j) => {
+            row[h] = cells[j];
+          });
+          rows.push(row);
         }
-      } else if (inTable) {
-        break; // End of table
+      } else {
+        break;
       }
     }
     return rows;
@@ -42,8 +53,6 @@ function parseMarkdownTable(markdown, sectionHeader) {
   }
 }
 
-// --- Parsers ---
-
 function parseResearchBuffer() {
   try {
     const raw = fs.readFileSync(path.join(WORKDIR, 'research-buffer.md'), 'utf8');
@@ -51,17 +60,19 @@ function parseResearchBuffer() {
     const sections = raw.split('## Pulse');
     
     for (let i = 1; i < sections.length; i++) {
-        const content = sections[i];
-        const headerMatch = content.match(/^ (\d+) — (.*)/m);
-        if (!headerMatch) continue;
+      const content = sections[i];
+      const headerMatch = content.match(/^\s*(\d+)\s+[—-]\s+(.*)$/m);
+      if (!headerMatch) continue;
 
-        pulses.push({
-            pulseNumber: headerMatch[1],
-            timestamp: headerMatch[2].trim(),
-            content: content
-        });
+      pulses.push({
+        pulseNumber: Number(headerMatch[1]),
+        timestamp: headerMatch[2].trim(),
+        content: content.trim()
+      });
     }
-    return { pulses: pulses.reverse(), raw }; // Newest first
+
+    pulses.sort((a, b) => b.pulseNumber - a.pulseNumber);
+    return { pulses, raw }; // Newest first
   } catch (e) {
     if (e.code === 'ENOENT') return { pulses: [], raw: 'research-buffer.md not found.' };
     return { pulses: [], raw: `Error reading research-buffer.md: ${e.message}` };
@@ -86,7 +97,6 @@ function parseLedger() {
 function parseIdeas() {
     try {
         const raw = fs.readFileSync(path.join(WORKDIR, 'future-inscription-ideas.md'), 'utf8');
-        // Simple raw content for now
         return { raw };
     } catch (e) {
         if (e.code === 'ENOENT') return { raw: 'future-inscription-ideas.md not found.'};

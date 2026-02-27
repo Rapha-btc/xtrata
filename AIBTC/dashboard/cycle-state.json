@@ -1,6 +1,11 @@
 {
   "runningPhase": null,
   "completedPhases": {},
+  "missedPhases": {
+    "2026-02-27:pulse-1": true,
+    "2026-02-27:pulse-2": true,
+    "2026-02-27:pulse-3": true
+  },
   "lastInscription": null,
   "chainData": {},
   "errors": [],

@@ -57,6 +57,8 @@ type TokenCardMediaProps = {
   letterboxNonSquare?: boolean;
 };
 
+const GIF_REPLAY_FALLBACK_MS = 8000;
+
 export default function TokenCardMedia(props: TokenCardMediaProps) {
   const isActiveTab = props.isActiveTab !== false;
   const queryClient = useQueryClient();
@@ -720,13 +722,31 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     ((displayMimeType ?? '').toLowerCase() === 'image/gif' ||
       sniffedMimeType === 'image/gif');
   const gifReplayDelayMs = useMemo(() => {
-    if (!isGifImage || !fullContentBytes || fullContentBytes.length === 0) {
+    if (!isGifImage || !imagePreviewSource) {
       return null;
     }
-    return getFiniteGifReplayDelayMs(fullContentBytes);
-  }, [isGifImage, fullContentBytes]);
+    if (fullContentBytes && fullContentBytes.length > 0) {
+      return getFiniteGifReplayDelayMs(fullContentBytes);
+    }
+    if (imagePreviewOrigin === 'thumbnail-cache') {
+      return null;
+    }
+    return GIF_REPLAY_FALLBACK_MS;
+  }, [isGifImage, fullContentBytes, imagePreviewSource, imagePreviewOrigin]);
   const shouldForceGifReplay =
-    imagePreviewOrigin === 'on-chain' && !!imagePreviewSource && !!gifReplayDelayMs;
+    !!imagePreviewSource && !!gifReplayDelayMs;
+  const replayImageSource = useMemo(() => {
+    if (!imagePreviewSource || !shouldForceGifReplay) {
+      return imagePreviewSource;
+    }
+    if (imagePreviewSource.startsWith('data:')) {
+      return imagePreviewSource;
+    }
+    const replayToken = `xtrata-replay-${gifReplayTick}`;
+    return imagePreviewSource.includes('#')
+      ? `${imagePreviewSource}&${replayToken}`
+      : `${imagePreviewSource}#${replayToken}`;
+  }, [imagePreviewSource, shouldForceGifReplay, gifReplayTick]);
 
   useEffect(() => {
     if (!shouldForceGifReplay || !gifReplayDelayMs) {
@@ -1031,6 +1051,14 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
             void playPromise.catch(() => undefined);
           }
         }}
+        onEnded={(event) => {
+          const media = event.currentTarget;
+          media.currentTime = 0;
+          const playPromise = media.play();
+          if (playPromise && typeof playPromise.catch === 'function') {
+            void playPromise.catch(() => undefined);
+          }
+        }}
         onError={() => {
           if (videoPreviewOrigin === 'on-chain') {
             setOnChainFailed(true);
@@ -1102,7 +1130,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
             ? `gif-replay-${props.token.id.toString()}-${gifReplayTick}`
             : undefined
         }
-        src={imagePreviewSource}
+        src={replayImageSource ?? imagePreviewSource}
         alt="token preview"
         loading="lazy"
         onLoad={handleImageLoad}

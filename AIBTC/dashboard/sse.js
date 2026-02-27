@@ -2,6 +2,11 @@
 
 const clients = new Set();
 
+function writeEvent(res, event, data) {
+  res.write(`event: ${event}\n`);
+  res.write(`data: ${JSON.stringify(data)}\n\n`);
+}
+
 function sseHandler(req, res) {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
@@ -9,32 +14,46 @@ function sseHandler(req, res) {
     'Connection': 'keep-alive',
     'X-Accel-Buffering': 'no'
   });
-  
-  // Send an immediate 'open' event to establish the connection.
-  res.write('event: open\\ndata: {}\\n\\n');
 
-  console.log('SSE client connected, open event sent.');
+  // Hint reconnect interval for EventSource clients.
+  res.write('retry: 5000\n\n');
+  writeEvent(res, 'log', { type: 'stdout', line: 'SSE stream connected.' });
+  console.log('SSE client connected.');
 
   clients.add(res);
 
   // Heartbeat every 30s to keep connection alive
   const heartbeat = setInterval(() => {
-    res.write(':heartbeat\\n\\n');
+    try {
+      res.write(':heartbeat\n\n');
+    } catch {
+      cleanup();
+    }
   }, 30000);
 
-  req.on('close', () => {
+  function cleanup() {
+    if (!clients.has(res)) return;
     clients.delete(res);
     clearInterval(heartbeat);
     console.log('SSE client disconnected.');
-  });
+  }
+
+  req.on('close', cleanup);
+  req.on('aborted', cleanup);
+  res.on('close', cleanup);
+  res.on('error', cleanup);
 }
 
 function broadcast({ event, data }) {
   if (!clients.size) return;
-  const payload = `event: ${event}\\ndata: ${JSON.stringify(data)}\\n\\n`;
+  const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
   // console.log(`Broadcasting SSE event: ${event}`);
   for (const client of clients) {
-    client.write(payload);
+    try {
+      client.write(payload);
+    } catch {
+      clients.delete(client);
+    }
   }
 }
 

@@ -12,6 +12,9 @@
             --accent-color: #ff7900;
             --border-color: #1a1a1a;
             --font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+            --amber-dim: #3a2a00;
+            --amber-mid: #7a5500;
+            --red-dim: #3a0000;
         }
         body {
             background-color: var(--bg-color);
@@ -24,7 +27,7 @@
         .container {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            grid-template-rows: auto auto auto;
+            grid-template-rows: auto auto auto auto auto;
             gap: 1rem;
             max-width: 1600px;
             margin: auto;
@@ -34,8 +37,12 @@
             border: 1px solid var(--border-color);
             padding: 0.5rem 1rem;
         }
+        .header { display: flex; justify-content: space-between; align-items: center; }
         .header h1, .header p { margin: 0; }
         .header h1 { color: var(--text-emphasis); }
+        .header-right { text-align: right; }
+        #countdown { color: var(--accent-color); font-size: 16px; }
+        #countdown-label { font-size: 12px; color: var(--text-color); }
         .footer { text-align: center; font-size: 12px; }
 
         .panel {
@@ -54,38 +61,187 @@
         .full-width { grid-column: 1 / -1; }
         .metabolic, .cycle-status { min-height: 250px; }
         .activity-log { min-height: 300px; }
-        
+        #cycle-status-content {
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+
         #activity-log-content {
             flex-grow: 1;
             overflow-y: auto;
+            max-height: 400px;
             font-size: 12px;
             line-height: 1.5;
             white-space: pre-wrap;
         }
         .log-line {
-            display: flex;
+            display: grid;
+            grid-template-columns: 170px 1fr;
+            gap: 0.75rem;
         }
-        .log-line .timestamp {
-            color: #666;
-            margin-right: 1rem;
-        }
+        .log-line .timestamp { color: #666; }
+        .log-line .type-http { color: #8aa7ff; }
+        .log-line .type-stdout { color: #d6d6d6; }
+        .log-line .type-stderr { color: #d6a06d; }
         .log-line .type-start { color: #87CEEB; }
-        .log-line .type-complete { color: #32CD32; }
+        .log-line .type-stop { color: #ffd27d; }
         .log-line .type-error { color: #FF6347; }
+        .metric-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem 1rem;
+            margin-bottom: 1rem;
+        }
+        .metric-label {
+            color: #777;
+            font-size: 12px;
+        }
+        .metric-value {
+            color: var(--text-emphasis);
+        }
+        .gauge {
+            width: 100%;
+            height: 12px;
+            border: 1px solid var(--border-color);
+            background: #111;
+            margin: 0.5rem 0;
+        }
+        .gauge-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff4d4d 0%, #ff7900 45%, #32cd32 100%);
+        }
+        .gauge-caption {
+            font-size: 12px;
+            color: #aaa;
+        }
 
+        /* --- Timeline --- */
+        .timeline-bar {
+            position: relative;
+            width: 100%;
+            height: 36px;
+            background: #111;
+            border: 1px solid var(--border-color);
+            display: flex;
+            margin-bottom: 0.75rem;
+        }
+        .timeline-segment {
+            position: relative;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: #999;
+            border-right: 1px solid var(--border-color);
+            box-sizing: border-box;
+            transition: background 0.3s;
+        }
+        .timeline-segment:last-child { border-right: none; }
+        .timeline-segment.completed { background: var(--amber-dim); color: var(--accent-color); }
+        .timeline-segment.running {
+            background: var(--amber-dim);
+            color: var(--accent-color);
+            animation: pulse-bg 2s ease-in-out infinite;
+        }
+        .timeline-segment.missed { background: var(--red-dim); color: #ff6347; }
+        .timeline-segment.pending { background: transparent; border-color: var(--border-color); }
+
+        @keyframes pulse-bg {
+            0%, 100% { background: var(--amber-dim); }
+            50% { background: var(--amber-mid); }
+        }
+
+        .timeline-marker {
+            position: absolute;
+            top: -4px;
+            bottom: -4px;
+            width: 2px;
+            background: var(--accent-color);
+            z-index: 10;
+            pointer-events: none;
+        }
+        .timeline-marker::after {
+            content: '';
+            position: absolute;
+            top: -3px;
+            left: -3px;
+            width: 8px;
+            height: 8px;
+            background: var(--accent-color);
+            border-radius: 50%;
+        }
+
+        .timeline-labels {
+            display: flex;
+            width: 100%;
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 0.25rem;
+        }
+        .timeline-labels span {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* --- Phase Checklist --- */
+        .phase-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .phase-list li {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.3rem 0;
+            font-size: 13px;
+        }
+        .phase-icon {
+            width: 16px;
+            text-align: center;
+        }
+        .phase-icon.completed { color: #32cd32; }
+        .phase-icon.running { color: var(--accent-color); }
+        .phase-icon.missed { color: #ff6347; }
+        .phase-icon.pending { color: #444; }
+        .phase-time { color: #666; min-width: 50px; }
+        .phase-label { color: var(--text-color); }
+        .phase-model { color: #555; font-size: 11px; }
+        .phase-status-text { font-size: 11px; margin-left: auto; }
+        .phase-status-text.completed { color: #32cd32; }
+        .phase-status-text.running { color: var(--accent-color); }
+        .phase-status-text.missed { color: #ff6347; }
+
+        @media (max-width: 900px) {
+            .container { grid-template-columns: 1fr; }
+            .metric-grid { grid-template-columns: 1fr; }
+            .header { flex-direction: column; gap: 0.5rem; }
+        }
     </style>
 </head>
 <body>
 
     <div class="container">
         <header class="header">
-            <h1>AGENT 27</h1>
-            <p>Autonomous On-Chain Journal</p>
+            <div>
+                <h1>AGENT 27</h1>
+                <p>Autonomous On-Chain Journal</p>
+            </div>
+            <div class="header-right">
+                <div id="countdown">--:--:--</div>
+                <div id="countdown-label">Next phase</div>
+            </div>
         </header>
 
         <div class="panel full-width timeline">
             <h2>24-Hour Cycle Timeline</h2>
-            <div id="timeline-content">Timeline visualization will be implemented here.</div>
+            <div class="timeline-labels" id="timeline-labels"></div>
+            <div class="timeline-bar" id="timeline-bar">
+                <div class="timeline-marker" id="timeline-marker"></div>
+            </div>
+            <ul class="phase-list" id="phase-list"></ul>
         </div>
 
         <div class="panel metabolic">
@@ -125,71 +281,405 @@
             const researchBufferContent = document.getElementById('research-buffer-content');
             const ideasLedgerContent = document.getElementById('ideas-ledger-content');
             const metabolicContent = document.getElementById('metabolic-content');
+            const timelineBar = document.getElementById('timeline-bar');
+            const timelineLabels = document.getElementById('timeline-labels');
+            const timelineMarker = document.getElementById('timeline-marker');
+            const phaseListEl = document.getElementById('phase-list');
+            const countdownEl = document.getElementById('countdown');
+            const countdownLabelEl = document.getElementById('countdown-label');
 
-            function appendLogEntry(entry) {
-                // ... (implementation is the same)
+            // Schedule data cached from /api/schedule
+            let scheduleCache = null;
+
+            function escapeHtml(value) {
+                return String(value ?? '')
+                    .replaceAll('&', '&amp;')
+                    .replaceAll('<', '&lt;')
+                    .replaceAll('>', '&gt;')
+                    .replaceAll('"', '&quot;')
+                    .replaceAll("'", '&#39;');
             }
 
+            function formatTimestamp(value) {
+                const date = value ? new Date(value) : null;
+                if (!date || Number.isNaN(date.getTime())) return new Date().toLocaleTimeString();
+                return date.toLocaleTimeString();
+            }
+
+            function appendLogEntry(entry) {
+                const type = String(entry.type || 'stdout').toLowerCase();
+                const row = document.createElement('div');
+                row.className = 'log-line';
+
+                const ts = document.createElement('span');
+                ts.className = 'timestamp';
+                ts.textContent = formatTimestamp(entry.timestamp);
+
+                const msg = document.createElement('span');
+                msg.className = `type-${type}`;
+                msg.textContent = entry.line || '';
+
+                row.appendChild(ts);
+                row.appendChild(msg);
+                logContent.appendChild(row);
+                logContent.scrollTop = logContent.scrollHeight;
+            }
+
+            function fetchJson(url) {
+                return fetch(url).then((r) => {
+                    if (!r.ok) throw new Error(`${url} returned ${r.status}`);
+                    return r.json();
+                });
+            }
+
+            // --- Timeline Rendering ---
+
+            // Phase hour boundaries define segments of the 24h bar
+            // Segments: [0-8], [8-16], [16-22], [22-24]
+            const SEGMENT_DEFS = [
+                { id: 'pulse-1',  startHour: 0,  endHour: 8,  widthPct: 33.33 },
+                { id: 'pulse-2',  startHour: 8,  endHour: 16, widthPct: 33.33 },
+                { id: 'pulse-3',  startHour: 16, endHour: 22, widthPct: 25.00 },
+                { id: 'inscribe', startHour: 22, endHour: 24, widthPct: 8.34  }
+            ];
+
+            function renderTimeline(schedule) {
+                if (!schedule || !schedule.phases) return;
+
+                const phaseMap = {};
+                schedule.phases.forEach((p) => { phaseMap[p.id] = p; });
+
+                // Build segments
+                timelineBar.innerHTML = '';
+                timelineBar.appendChild(timelineMarker);
+
+                SEGMENT_DEFS.forEach((seg) => {
+                    const div = document.createElement('div');
+                    div.className = 'timeline-segment';
+                    div.style.width = seg.widthPct + '%';
+                    const phase = phaseMap[seg.id];
+                    if (phase) {
+                        div.classList.add(phase.status);
+                        const icon = phase.status === 'completed' ? '\u2713' :
+                                     phase.status === 'running' ? '\u25CF' :
+                                     phase.status === 'missed' ? '\u2717' : '\u25CB';
+                        div.textContent = `${icon} ${phase.label}`;
+                    }
+                    timelineBar.appendChild(div);
+                });
+
+                // Labels
+                timelineLabels.innerHTML = '';
+                SEGMENT_DEFS.forEach((seg) => {
+                    const span = document.createElement('span');
+                    span.style.width = seg.widthPct + '%';
+                    span.textContent = `${String(seg.startHour).padStart(2, '0')}:00`;
+                    timelineLabels.appendChild(span);
+                });
+
+                // Phase checklist
+                phaseListEl.innerHTML = '';
+                schedule.phases.forEach((p) => {
+                    const li = document.createElement('li');
+
+                    const icon = document.createElement('span');
+                    icon.className = `phase-icon ${p.status}`;
+                    icon.textContent = p.status === 'completed' ? '\u2713' :
+                                       p.status === 'running' ? '\u25CF' :
+                                       p.status === 'missed' ? '\u2717' : '\u25CB';
+
+                    const time = document.createElement('span');
+                    time.className = 'phase-time';
+                    time.textContent = `${String(p.hour).padStart(2, '0')}:00`;
+
+                    const label = document.createElement('span');
+                    label.className = 'phase-label';
+                    label.textContent = p.label;
+
+                    const model = document.createElement('span');
+                    model.className = 'phase-model';
+                    model.textContent = `(${p.model}, $${p.budget.toFixed(2)})`;
+
+                    const statusText = document.createElement('span');
+                    statusText.className = `phase-status-text ${p.status}`;
+                    if (p.status === 'completed' && p.completedAt) {
+                        statusText.textContent = new Date(p.completedAt).toLocaleTimeString();
+                    } else {
+                        statusText.textContent = p.status;
+                    }
+
+                    li.append(icon, time, label, model, statusText);
+                    phaseListEl.appendChild(li);
+                });
+
+                updateTimelineMarker();
+            }
+
+            function updateTimelineMarker() {
+                const now = new Date();
+                const minutesInDay = now.getHours() * 60 + now.getMinutes();
+                const pct = (minutesInDay / 1440) * 100;
+                timelineMarker.style.left = pct + '%';
+            }
+
+            // --- Countdown ---
+
+            function updateCountdown() {
+                if (!scheduleCache || !scheduleCache.next) {
+                    countdownEl.textContent = '--:--:--';
+                    countdownLabelEl.textContent = 'No scheduled phases';
+                    return;
+                }
+
+                // Recalculate from the phase's hour rather than relying on a stale countdownMs
+                const next = scheduleCache.next;
+                const now = new Date();
+                const scheduled = new Date(now);
+                scheduled.setHours(
+                    SEGMENT_DEFS.find((s) => s.id === next.id)?.startHour ?? 0,
+                    0, 0, 0
+                );
+                if (scheduled.getTime() <= now.getTime()) {
+                    scheduled.setDate(scheduled.getDate() + 1);
+                }
+                let remaining = scheduled.getTime() - now.getTime();
+                if (remaining < 0) remaining = 0;
+
+                const h = Math.floor(remaining / 3600000);
+                const m = Math.floor((remaining % 3600000) / 60000);
+                const s = Math.floor((remaining % 60000) / 1000);
+                countdownEl.textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                countdownLabelEl.textContent = `Next: ${next.label}`;
+            }
+
+            // --- Panel Renderers ---
+
             function renderStatus(data) {
-                cycleStatusContent.textContent = `Running Phase: ${data.runningPhase || 'none'}\\n`;
-                cycleStatusContent.textContent += `Last Started: ${new Date(data.lastStartedAt).toLocaleString()}\\n`;
-                cycleStatusContent.textContent += `Errors: ${data.errors.length}`;
+                const lastStarted = data.lastStartedAt ? new Date(data.lastStartedAt).toLocaleString() : 'n/a';
+                const errors = Array.isArray(data.errors) ? data.errors.length : 0;
+                cycleStatusContent.textContent = [
+                    `Running Phase: ${data.runningPhase || 'none'}`,
+                    `Last Started: ${lastStarted}`,
+                    `Errors: ${errors}`
+                ].join('\n');
             }
 
             function renderResearch(data) {
                 if (data.pulses && data.pulses.length > 0) {
-                    researchBufferContent.textContent = data.pulses.map(p => `--- Pulse ${p.pulseNumber} @ ${p.timestamp} ---\\n${p.content.substring(0, 500)}...`).join('\\n\\n');
+                    researchBufferContent.textContent = data.pulses
+                        .map((p) => {
+                            const cleaned = p.content
+                                .replace(/^\s*\d+\s+[—-]\s+.*$/m, '')
+                                .trim();
+                            const preview = cleaned.length > 700
+                                ? `${cleaned.substring(0, 700)}...`
+                                : cleaned;
+                            return `--- Pulse ${p.pulseNumber} @ ${p.timestamp} ---\n${preview}`;
+                        })
+                        .join('\n\n');
                 } else {
                     researchBufferContent.textContent = data.raw;
                 }
             }
 
             function renderIdeasAndLedger(ideas, ledger) {
-                let content = '--- IDEAS ---\\n';
-                content += ideas.raw.substring(0, 500) + '...\\n\\n';
-                content += '--- LEDGER (Running Totals) ---\\n';
-                if(ledger.runningTotals && ledger.runningTotals.length > 0) {
-                   content += JSON.stringify(ledger.runningTotals, null, 2);
+                let content = '--- IDEAS ---\n';
+                content += ideas.raw.length > 500
+                    ? `${ideas.raw.substring(0, 500)}...\n\n`
+                    : `${ideas.raw}\n\n`;
+                content += '--- LEDGER (Running Totals) ---\n';
+                if (ledger.runningTotals && ledger.runningTotals.length > 0) {
+                    content += JSON.stringify(ledger.runningTotals, null, 2);
                 } else {
-                   content += 'Could not parse ledger totals.';
+                    content += 'Could not parse ledger totals.';
                 }
                 ideasLedgerContent.textContent = content;
             }
 
+            function renderMetabolic(data) {
+                const reservePercent = typeof data.reservePercent === 'number' ? data.reservePercent : 0;
+                const gaugeWidth = `${Math.max(0, Math.min(100, reservePercent)).toFixed(1)}%`;
+                const reserveLabel = typeof data.reservePercent === 'number'
+                    ? `${data.reservePercent.toFixed(1)}%`
+                    : 'n/a';
+
+                const graphSizeHtml = data.graphSize != null
+                    ? `<div><div class="metric-label">Graph Size</div><div class="metric-value">${escapeHtml(data.graphSize)} tokens</div></div>`
+                    : '';
+                const feeUnitHtml = data.feeUnit != null
+                    ? `<div><div class="metric-label">Fee Unit</div><div class="metric-value">${escapeHtml(data.feeUnit)} uSTX</div></div>`
+                    : '';
+                const lastPollHtml = data.lastPoll
+                    ? `<div style="font-size:11px;color:#555;margin-top:0.5rem">Live data @ ${new Date(data.lastPoll).toLocaleTimeString()}</div>`
+                    : '';
+
+                metabolicContent.innerHTML = `
+                    <div class="metric-grid">
+                        <div>
+                            <div class="metric-label">STX Remaining</div>
+                            <div class="metric-value">${escapeHtml(data.stxRemainingLabel || 'n/a')}</div>
+                        </div>
+                        <div>
+                            <div class="metric-label">Days of Life</div>
+                            <div class="metric-value">${escapeHtml(data.daysOfLifeLabel || 'n/a')}</div>
+                        </div>
+                        <div>
+                            <div class="metric-label">STX Spent</div>
+                            <div class="metric-value">${escapeHtml(data.stxSpentLabel || 'n/a')}</div>
+                        </div>
+                        <div>
+                            <div class="metric-label">Inscriptions</div>
+                            <div class="metric-value">${escapeHtml(data.inscriptionsLabel || 'n/a')}</div>
+                        </div>
+                        ${graphSizeHtml}
+                        ${feeUnitHtml}
+                    </div>
+                    <div class="gauge"><div class="gauge-fill" style="width:${gaugeWidth}"></div></div>
+                    <div class="gauge-caption">Sustenance Gauge: ${reserveLabel} of initial ${escapeHtml(data.initialBudget || 10)} STX budget.</div>
+                    ${lastPollHtml}
+                `;
+            }
+
+            // --- Data Loading ---
+
+            function loadInitialData() {
+                return Promise.all([
+                    fetchJson('/api/status'),
+                    fetchJson('/api/research'),
+                    fetchJson('/api/ideas'),
+                    fetchJson('/api/ledger'),
+                    fetchJson('/api/chain'),
+                    fetchJson('/api/log'),
+                    fetchJson('/api/schedule')
+                ]).then(([status, research, ideas, ledger, chain, logs, schedule]) => {
+                    renderStatus(status);
+                    renderResearch(research);
+                    renderIdeasAndLedger(ideas, ledger);
+                    renderMetabolic(chain);
+                    logContent.innerHTML = '';
+                    logs.forEach(appendLogEntry);
+                    scheduleCache = schedule;
+                    renderTimeline(schedule);
+                    updateCountdown();
+                });
+            }
+
+            // --- SSE ---
+
             function init() {
                 logContent.innerHTML = '';
                 const evtSource = new EventSource('/events');
+                let pageUnloading = false;
+                let lastSseState = 'connecting';
 
-                evtSource.addEventListener('open', () => {
-                    appendLogEntry({ type: 'stdout', line: 'SSE connection opened by server. Fetching initial data...'});
-                    
-                    fetch('/api/status').then(r => r.json()).then(renderStatus);
-                    fetch('/api/research').then(r => r.json()).then(renderResearch);
-                    
-                    Promise.all([
-                        fetch('/api/ideas').then(r => r.json()),
-                        fetch('/api/ledger').then(r => r.json())
-                    ]).then(([ideas, ledger]) => renderIdeasAndLedger(ideas, ledger));
-
-                    fetch('/api/log').then(r => r.json()).then(logs => {
-                        logContent.innerHTML = '';
-                        logs.forEach(appendLogEntry);
+                evtSource.onopen = () => {
+                    lastSseState = 'open';
+                    appendLogEntry({ type: 'stdout', line: 'SSE connection opened. Fetching initial data...' });
+                    loadInitialData().catch((err) => {
+                        appendLogEntry({ type: 'error', line: `Failed loading initial data: ${err.message}` });
                     });
-                    
-                     fetch('/api/chain').then(r => r.json()).then(data => {
-                        metabolicContent.textContent = JSON.stringify(data, null, 2);
-                     });
-                });
-
-                evtSource.onerror = (err) => {
-                    appendLogEntry({ type: 'error', line: 'SSE connection failed. Will retry automatically.'});
-                    console.error("EventSource failed:", err);
                 };
 
+                window.addEventListener('beforeunload', () => {
+                    pageUnloading = true;
+                    evtSource.close();
+                });
+
+                evtSource.onerror = () => {
+                    if (pageUnloading) return;
+                    if (evtSource.readyState === EventSource.CONNECTING) {
+                        if (lastSseState !== 'connecting') {
+                            lastSseState = 'connecting';
+                            appendLogEntry({ type: 'stdout', line: 'SSE reconnecting...' });
+                        }
+                        return;
+                    }
+                    if (evtSource.readyState === EventSource.CLOSED && lastSseState !== 'closed') {
+                        lastSseState = 'closed';
+                        appendLogEntry({ type: 'error', line: 'SSE closed. Reload page if live logs do not resume.' });
+                    }
+                };
+
+                // --- SSE Event Handlers ---
+
                 evtSource.addEventListener('log', (e) => {
-                    appendLogEntry(JSON.parse(e.data));
+                    try {
+                        appendLogEntry(JSON.parse(e.data));
+                    } catch (err) {
+                        appendLogEntry({ type: 'error', line: `Bad SSE payload: ${err.message}` });
+                    }
+                });
+
+                evtSource.addEventListener('chain', (e) => {
+                    try {
+                        const chainData = JSON.parse(e.data);
+                        // Re-fetch full metabolic data (merges live + ledger)
+                        fetchJson('/api/chain').then(renderMetabolic).catch(() => {});
+                    } catch {}
+                });
+
+                evtSource.addEventListener('file-change', (e) => {
+                    try {
+                        const payload = JSON.parse(e.data);
+                        if (payload.type === 'research') renderResearch(payload.data);
+                        else if (payload.type === 'ideas') {
+                            fetchJson('/api/ledger').then((ledger) => {
+                                renderIdeasAndLedger(payload.data, ledger);
+                            }).catch(() => {});
+                        }
+                        else if (payload.type === 'ledger') {
+                            fetchJson('/api/ideas').then((ideas) => {
+                                renderIdeasAndLedger(ideas, payload.data);
+                            }).catch(() => {});
+                            // Also refresh metabolic since ledger affects it
+                            fetchJson('/api/chain').then(renderMetabolic).catch(() => {});
+                        }
+                        else if (payload.type === 'agents') {
+                            fetchJson('/api/status').then(renderStatus).catch(() => {});
+                        }
+                    } catch {}
+                });
+
+                evtSource.addEventListener('phase-start', (e) => {
+                    try {
+                        // Refresh schedule to update timeline
+                        fetchJson('/api/schedule').then((schedule) => {
+                            scheduleCache = schedule;
+                            renderTimeline(schedule);
+                        }).catch(() => {});
+                    } catch {}
+                });
+
+                evtSource.addEventListener('phase-complete', (e) => {
+                    try {
+                        // Refresh schedule + status after phase completes
+                        Promise.all([
+                            fetchJson('/api/schedule'),
+                            fetchJson('/api/status'),
+                            fetchJson('/api/chain')
+                        ]).then(([schedule, status, chain]) => {
+                            scheduleCache = schedule;
+                            renderTimeline(schedule);
+                            renderStatus(status);
+                            renderMetabolic(chain);
+                        }).catch(() => {});
+                    } catch {}
                 });
             }
+
+            // --- Tick: update countdown + marker every second ---
+            setInterval(() => {
+                updateCountdown();
+                updateTimelineMarker();
+            }, 1000);
+
+            // Refresh schedule every 60s to stay in sync
+            setInterval(() => {
+                fetchJson('/api/schedule').then((schedule) => {
+                    scheduleCache = schedule;
+                    renderTimeline(schedule);
+                }).catch(() => {});
+            }, 60000);
 
             init();
         });
