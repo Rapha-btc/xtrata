@@ -43,11 +43,7 @@ import {
   type StreamPhase,
   shouldAllowTokenUriPreview
 } from '../lib/viewer/streaming';
-import {
-  getTokenContentKey,
-  getTokenSummaryKey,
-  getTokenThumbnailKey
-} from '../lib/viewer/queries';
+import { getTokenContentKey, getTokenThumbnailKey } from '../lib/viewer/queries';
 import {
   buildInscriptionThumbnailCacheKey,
   loadInscriptionPreviewFromCache,
@@ -218,8 +214,6 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
   const hasCachedContent = !!cachedContent && cachedContent.length > 0;
   const streamMimeType = mimeType ? mimeType.toLowerCase() : null;
   const isWebm = !!streamMimeType && streamMimeType.includes('webm');
-  const preferDirectVideoLoad =
-    !!streamMimeType && streamMimeType.startsWith('video/mp4');
   const isStreamableKind =
     !!streamMimeType &&
     (streamMimeType.startsWith('audio/') ||
@@ -235,27 +229,15 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     !!props.token.meta &&
     isStreamableKind &&
     !isWebm &&
-    !preferDirectVideoLoad &&
     mediaSourceAvailable &&
-    mediaSourceSupported &&
     totalSize !== null &&
     totalSize > MAX_AUTO_PREVIEW_BYTES;
-  const directVideoAutoLoad =
-    preferDirectVideoLoad &&
-    totalSize !== null &&
-    totalSize > MAX_AUTO_PREVIEW_BYTES &&
-    totalSize <= BigInt(TEMP_CACHE_MAX_BYTES);
   const preferFullImageLoad =
     mediaKind === 'image' || mediaKind === 'svg';
   const autoLoad =
     totalSize !== null &&
     !svgPreview &&
-    (
-      totalSize <= MAX_AUTO_PREVIEW_BYTES ||
-      isWebm ||
-      preferFullImageLoad ||
-      directVideoAutoLoad
-    );
+    (totalSize <= MAX_AUTO_PREVIEW_BYTES || isWebm || preferFullImageLoad);
 
   const [loadRequested, setLoadRequested] = useState(
     () => autoLoad || hasCachedContent || autoStream
@@ -322,9 +304,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     !svgPreview &&
     isStreamableKind &&
     !isWebm &&
-    !preferDirectVideoLoad &&
     mediaSourceAvailable &&
-    mediaSourceSupported &&
     isActiveTab;
 
   const contentQuery = useQuery({
@@ -352,20 +332,6 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     refetchOnReconnect: false
   });
 
-  const cachedPreviewQuery = useQuery({
-    queryKey: [
-      'viewer',
-      props.contractId,
-      'content-preview-cache',
-      props.token.id.toString()
-    ],
-    queryFn: () => loadInscriptionPreviewFromCache(props.contractId, props.token.id),
-    enabled: isWebm && !!props.token.meta,
-    staleTime: Infinity,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false
-  });
   const webmHeadQuery = useQuery({
     queryKey: [
       'viewer',
@@ -382,17 +348,14 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
         id: props.token.id,
         senderAddress: props.senderAddress
       }),
-    enabled: isWebm && !!props.token.meta,
+    enabled: isWebm && !!props.token.meta && !loadRequested,
     staleTime: Infinity,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false
   });
-  const previewCachedBytes =
-    isWebm && cachedPreviewQuery.data?.data
-      ? cachedPreviewQuery.data.data
-      : null;
-  const resolvedContentBytes = contentQuery.data ?? previewCachedBytes;
+
+  const resolvedContentBytes = contentQuery.data;
   const webmProbeBytes = resolvedContentBytes ?? webmHeadQuery.data ?? null;
   const resolvedMimeType = resolveMimeType(mimeType, resolvedContentBytes);
   const resolvedMediaKind = getMediaKind(resolvedMimeType);
@@ -529,7 +492,6 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
       streamable: isStreamableKind,
       mediaSourceAvailable,
       mediaSourceSupported,
-      preferDirectVideoLoad,
       candidateMimeTypes: streamMimeCandidates,
       autoStream,
       totalSize: totalSize !== null ? totalSize.toString() : null,
@@ -542,7 +504,6 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     isStreamableKind,
     mediaSourceAvailable,
     mediaSourceSupported,
-    preferDirectVideoLoad,
     streamMimeCandidates,
     autoStream,
     totalSize
@@ -996,7 +957,9 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
           id: props.token.id.toString(),
           error: message
         });
-        setForceFullLoad(true);
+        if (nextIndex === 0) {
+          setForceFullLoad(true);
+        }
       }
     };
 
@@ -1064,7 +1027,6 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
           id: props.token.id.toString(),
           error: message
         });
-        setForceFullLoad(true);
       }
     };
 
@@ -1173,28 +1135,28 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
   ]);
 
   const textPreview =
-    contentQuery.data &&
-    contentQuery.data.length > 0 &&
+    resolvedContentBytes &&
+    resolvedContentBytes.length > 0 &&
     resolvedMediaKind === 'text'
-      ? getTextPreview(contentQuery.data, contentQuery.data.length)
+      ? getTextPreview(resolvedContentBytes, resolvedContentBytes.length)
       : null;
   const jsonImagePreview = useMemo(() => {
-    if (!contentQuery.data || resolvedMimeType !== 'application/json') {
+    if (!resolvedContentBytes || resolvedMimeType !== 'application/json') {
       return null;
     }
     try {
-      const decoded = new TextDecoder().decode(contentQuery.data);
+      const decoded = new TextDecoder().decode(resolvedContentBytes);
       return extractImageFromMetadata(JSON.parse(decoded));
     } catch (error) {
       return null;
     }
-  }, [contentQuery.data, resolvedMimeType]);
+  }, [resolvedContentBytes, resolvedMimeType]);
   const htmlPreview = useMemo(() => {
-    if (!contentQuery.data || !isHtmlDocument) {
+    if (!resolvedContentBytes || !isHtmlDocument) {
       return null;
     }
-    return new TextDecoder().decode(contentQuery.data);
-  }, [contentQuery.data, isHtmlDocument]);
+    return new TextDecoder().decode(resolvedContentBytes);
+  }, [resolvedContentBytes, isHtmlDocument]);
 
   const setHtmlFrameRef = useCallback((node: HTMLIFrameElement | null) => {
     setBridgeSource(node?.contentWindow ?? null);
@@ -1284,48 +1246,6 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     contentQuery.isLoading
   ]);
 
-  useEffect(() => {
-    if (props.token.id !== 8n) {
-      return;
-    }
-    logDebug('preview', 'Token #8 preview media pipeline', {
-      id: props.token.id.toString(),
-      metaMimeType: mimeType,
-      resolvedMimeType,
-      resolvedMediaKind,
-      displayMediaKind,
-      loadRequested,
-      contentLoading: contentQuery.isLoading,
-      contentStatus: contentQuery.status,
-      bytesLoaded: contentBytes,
-      previewCachedBytes: previewCachedBytes?.length ?? null,
-      webmHeadProbeBytes: webmHeadQuery.data?.length ?? null,
-      detectedWebmTrackKind,
-      hasMediaSourceUrl: !!(streamUrl ?? contentUrl),
-      streamPhase,
-      allowTokenUriPreview,
-      tokenUriPreviewReady
-    });
-  }, [
-    props.token.id,
-    mimeType,
-    resolvedMimeType,
-    resolvedMediaKind,
-    displayMediaKind,
-    loadRequested,
-    contentQuery.isLoading,
-    contentQuery.status,
-    contentBytes,
-    previewCachedBytes,
-    webmHeadQuery.data,
-    detectedWebmTrackKind,
-    streamUrl,
-    contentUrl,
-    streamPhase,
-    allowTokenUriPreview,
-    tokenUriPreviewReady
-  ]);
-
   const tokenUriQuery = useQuery({
     queryKey: [
       'viewer',
@@ -1342,6 +1262,47 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     refetchOnReconnect: false
   });
   const tokenUriPreview = allowTokenUriPreview ? tokenUriQuery.data : null;
+  useEffect(() => {
+    if (props.token.id !== 8n) {
+      return;
+    }
+    logDebug('preview', 'Token #8 preview media pipeline', {
+      id: props.token.id.toString(),
+      contractId: props.contractId,
+      metaMimeType: mimeType,
+      resolvedMimeType,
+      resolvedMediaKind,
+      displayMediaKind,
+      detectedWebmTrackKind,
+      loadRequested,
+      contentLoading: contentQuery.isLoading,
+      contentStatus: contentQuery.status,
+      bytesLoaded: contentBytes,
+      webmHeadProbeBytes: webmHeadQuery.data?.length ?? null,
+      hasMediaSourceUrl: !!(streamUrl ?? contentUrl),
+      streamPhase,
+      allowTokenUriPreview,
+      tokenUriPreviewReady
+    });
+  }, [
+    props.token.id,
+    props.contractId,
+    mimeType,
+    resolvedMimeType,
+    resolvedMediaKind,
+    displayMediaKind,
+    detectedWebmTrackKind,
+    loadRequested,
+    contentQuery.isLoading,
+    contentQuery.status,
+    contentBytes,
+    webmHeadQuery.data,
+    streamUrl,
+    contentUrl,
+    streamPhase,
+    allowTokenUriPreview,
+    tokenUriPreviewReady
+  ]);
   useEffect(() => {
     setTokenUriPreviewReady(false);
   }, [tokenUriPreview, props.token.id]);
@@ -1547,21 +1508,21 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     thumbnailRecordKey
   ]);
   const imagePreviewOrigin = useMemo(() => {
-    if (resolvedMediaKind === 'svg' && svgPreview) {
+    if (displayMediaKind === 'svg' && svgPreview) {
       return 'svg-preview';
     }
-    if (resolvedMediaKind === 'image' && contentUrl) {
+    if (displayMediaKind === 'image' && contentUrl) {
       return 'on-chain';
     }
     if (tokenUriPreview) {
       return 'token-uri';
     }
-    if (resolvedMediaKind === 'text' && textPreview && jsonImagePreview) {
+    if (displayMediaKind === 'text' && textPreview && jsonImagePreview) {
       return 'metadata-image';
     }
     return null;
   }, [
-    resolvedMediaKind,
+    displayMediaKind,
     svgPreview,
     contentUrl,
     tokenUriPreview,
@@ -1590,7 +1551,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     !svgPreview &&
     !loadRequested;
   const runtimeOpenUrl = useMemo(() => {
-    if (!isExecutableRuntimeMimeType(resolvedMimeType ?? mimeType)) {
+    if (!isExecutableRuntimeMimeType(displayMimeType ?? mimeType)) {
       return null;
     }
     const fallbackContractId = props.fallbackClient
@@ -1606,7 +1567,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
       sourceUrl: fallbackSource
     });
   }, [
-    resolvedMimeType,
+    displayMimeType,
     mimeType,
     props.fallbackClient,
     props.contractId,
@@ -1632,11 +1593,6 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     if (anchor) {
       anchor.scrollIntoView({ behavior: 'auto', block: 'center', inline: 'nearest' });
     }
-  };
-  const handleRetryMetadata = () => {
-    const summaryKey = getTokenSummaryKey(props.contractId, props.token.id);
-    void queryClient.invalidateQueries({ queryKey: summaryKey });
-    void queryClient.refetchQueries({ queryKey: summaryKey, type: 'active' });
   };
   const handleOpenFullscreen = () => {
     if (typeof window === 'undefined') {
@@ -1932,8 +1888,8 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     logDebug('preview', 'Token preview source selected', {
       id: props.token.id.toString(),
       source: imagePreviewOrigin,
-      mimeType: resolvedMimeType ?? mimeType ?? null,
-      mediaKind: resolvedMediaKind,
+      mimeType: displayMimeType ?? mimeType ?? null,
+      mediaKind: displayMediaKind,
       totalSize: totalSize !== null ? totalSize.toString() : null,
       bytesLoaded: contentBytes,
       allowTokenUriFallback,
@@ -1942,9 +1898,9 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
   }, [
     imagePreviewOrigin,
     props.token.id,
-    resolvedMimeType,
+    displayMimeType,
     mimeType,
-    resolvedMediaKind,
+    displayMediaKind,
     totalSize,
     contentBytes,
     allowTokenUriFallback,
@@ -1976,7 +1932,12 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
                 type="button"
                 className="button button--ghost button--mini"
                 onClick={() => setLoadRequested(true)}
-                title="Fetch on-chain bytes for this token"
+                disabled={!isActiveTab}
+                title={
+                  isActiveTab
+                    ? 'Fetch on-chain bytes for this token'
+                    : 'Activate this tab to load on-chain content'
+                }
               >
                 Load
               </button>
@@ -1986,7 +1947,12 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
                 type="button"
                 className="button button--ghost button--mini"
                 onClick={() => setLoadRequested(true)}
-                title="Fetch on-chain bytes for this token"
+                disabled={!isActiveTab}
+                title={
+                  isActiveTab
+                    ? 'Fetch on-chain bytes for this token'
+                    : 'Activate this tab to load on-chain content'
+                }
               >
                 Load
               </button>
@@ -2007,14 +1973,6 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
               {!props.token.meta && (
                 <div className="preview-stage__empty">
                   <p>Metadata unavailable for this inscription.</p>
-                  <button
-                    type="button"
-                    className="button button--ghost button--mini"
-                    onClick={handleRetryMetadata}
-                    title="Retry inscription metadata"
-                  >
-                    Retry metadata
-                  </button>
                 </div>
               )}
 
@@ -2099,14 +2057,19 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
                         </div>
                       ) : (
                         <>
-                          {!onChainImageReady && thumbnailUrl && (
-                            <img
-                              src={thumbnailUrl}
-                              alt="Thumbnail preview"
-                              loading="lazy"
-                              className="preview-image--placeholder"
-                            />
-                          )}
+                          {!onChainImageReady &&
+                            (thumbnailUrl ? (
+                              <img
+                                src={thumbnailUrl}
+                                alt="Thumbnail preview"
+                                loading="lazy"
+                                className="preview-image--placeholder"
+                              />
+                            ) : (
+                              <div className="preview-stage__notice">
+                                <p>Loading image preview...</p>
+                              </div>
+                            ))}
                           <img
                             src={contentUrl}
                             alt="Image preview"
@@ -2114,9 +2077,9 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
                             className={
                               onChainImageReady
                                 ? previewImageClassName
-                                : thumbnailUrl && previewImageClassName
+                                : previewImageClassName
                                   ? `${previewImageClassName} preview-image--pending`
-                                  : previewImageClassName
+                                  : 'preview-image--pending'
                             }
                             onLoad={handlePreviewImageLoad('on-chain', contentUrl)}
                             onError={handlePreviewImageError('on-chain', contentUrl)}
@@ -2182,7 +2145,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
                           onError={handlePreviewImageError('token-uri', tokenUriPreview)}
                         />
                       </>
-                    ) : resolvedMediaKind === 'html' ? (
+                    ) : displayMediaKind === 'html' ? (
                       <div className="preview-stage__html">
                         {isPdf ? (
                           contentUrl ? (
@@ -2209,7 +2172,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
                           <p>HTML preview unavailable.</p>
                         )}
                       </div>
-                    ) : resolvedMediaKind === 'text' && textPreview ? (
+                    ) : displayMediaKind === 'text' && textPreview ? (
                       <div className="preview-stage__text">
                         {jsonImagePreview && (
                           <img
@@ -2243,7 +2206,6 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
                     )}
                   </>
                 )}
-
               {!contentQuery.isLoading &&
                 !contentQuery.isError &&
                 !isStreamError &&
