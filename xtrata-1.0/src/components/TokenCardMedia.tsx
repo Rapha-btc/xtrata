@@ -26,6 +26,7 @@ import {
 } from '../lib/viewer/content';
 import { getTokenContentKey, getTokenThumbnailKey } from '../lib/viewer/queries';
 import {
+  loadInscriptionFromCache,
   loadInscriptionThumbnailFromCache,
   saveInscriptionThumbnailToCache,
   deleteInscriptionThumbnailFromCache
@@ -116,6 +117,20 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false
   });
+  const cachedContentQuery = useQuery({
+    queryKey: [
+      'viewer',
+      props.contractId,
+      'content-cache',
+      props.token.id.toString()
+    ],
+    queryFn: () => loadInscriptionFromCache(props.contractId, props.token.id),
+    enabled: !!props.token.meta && !svgPreview && isActiveTab,
+    staleTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false
+  });
   const hasThumbnail =
     !thumbnailFailed &&
     !!thumbnailQuery.data?.data &&
@@ -166,12 +181,22 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     refetchOnReconnect: false
   });
 
-  const resolvedMimeType = resolveMimeType(mimeType, contentQuery.data);
+  const fullContentValue = contentQuery.data
+    ? {
+        data: contentQuery.data,
+        mimeType: mimeType ?? null
+      }
+    : cachedContentQuery.data ?? null;
+  const fullContentBytes = fullContentValue?.data ?? null;
+  const resolvedMimeType = resolveMimeType(
+    fullContentValue?.mimeType ?? mimeType,
+    fullContentBytes
+  );
   const resolvedKind = getMediaKind(resolvedMimeType);
-  const contentBytes = contentQuery.data ? contentQuery.data.length : null;
+  const contentBytes = fullContentBytes ? fullContentBytes.length : null;
   const sniffedMimeType = useMemo(
-    () => (contentQuery.data ? sniffMimeType(contentQuery.data) : null),
-    [contentQuery.data]
+    () => (fullContentBytes ? sniffMimeType(fullContentBytes) : null),
+    [fullContentBytes]
   );
   const sniffedKind = sniffedMimeType ? getMediaKind(sniffedMimeType) : null;
 
@@ -200,7 +225,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
   }, [resolvedThumbnailUrl]);
 
   const contentUrl = useMemo(() => {
-    if (!contentQuery.data || contentQuery.data.length === 0) {
+    if (!fullContentBytes || fullContentBytes.length === 0) {
       return null;
     }
     if (
@@ -210,8 +235,17 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     ) {
       return null;
     }
-    return createObjectUrl(contentQuery.data, resolvedMimeType ?? mimeType);
-  }, [contentQuery.data, resolvedKind, resolvedMimeType, mimeType]);
+    return createObjectUrl(
+      fullContentBytes,
+      resolvedMimeType ?? fullContentValue?.mimeType ?? mimeType
+    );
+  }, [
+    fullContentBytes,
+    fullContentValue?.mimeType,
+    resolvedKind,
+    resolvedMimeType,
+    mimeType
+  ]);
 
   useEffect(() => {
     if (contentUrlRef.current !== contentUrl) {
@@ -261,7 +295,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     if (!isActiveTab) {
       return;
     }
-    if (!contentQuery.data || contentQuery.data.length === 0) {
+    if (!fullContentBytes || fullContentBytes.length === 0) {
       return;
     }
     if (resolvedKind !== 'image') {
@@ -277,7 +311,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     const run = async () => {
       try {
         const result = await createImageThumbnail({
-          bytes: contentQuery.data,
+          bytes: fullContentBytes,
           mimeType: resolvedMimeType ?? mimeType,
           size: THUMBNAIL_SIZE
         });
@@ -319,7 +353,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     });
   }, [
     isActiveTab,
-    contentQuery.data,
+    fullContentBytes,
     resolvedKind,
     hasThumbnail,
     resolvedMimeType,
@@ -335,30 +369,30 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
   const isPdf = resolvedMimeType === 'application/pdf';
 
   const jsonImagePreview = useMemo(() => {
-    if (!contentQuery.data || resolvedMimeType !== 'application/json') {
+    if (!fullContentBytes || resolvedMimeType !== 'application/json') {
       return null;
     }
     try {
-      const decoded = new TextDecoder().decode(contentQuery.data);
+      const decoded = new TextDecoder().decode(fullContentBytes);
       return extractImageFromMetadata(JSON.parse(decoded));
     } catch (error) {
       return null;
     }
-  }, [contentQuery.data, resolvedMimeType]);
+  }, [fullContentBytes, resolvedMimeType]);
 
   const textPreview = useMemo(() => {
-    if (!contentQuery.data || resolvedKind !== 'text') {
+    if (!fullContentBytes || resolvedKind !== 'text') {
       return null;
     }
-    return getTextPreview(contentQuery.data, 2000);
-  }, [contentQuery.data, resolvedKind]);
+    return getTextPreview(fullContentBytes, 2000);
+  }, [fullContentBytes, resolvedKind]);
 
   const htmlPreview = useMemo(() => {
-    if (!contentQuery.data || !isHtmlDocument) {
+    if (!fullContentBytes || !isHtmlDocument) {
       return null;
     }
-    return new TextDecoder().decode(contentQuery.data);
-  }, [contentQuery.data, isHtmlDocument]);
+    return new TextDecoder().decode(fullContentBytes);
+  }, [fullContentBytes, isHtmlDocument]);
 
   const bridgeId = useMemo(() => {
     if (!isHtmlDocument || !htmlPreview) {
@@ -464,15 +498,12 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
   const onChainPreviewSource =
     !onChainFailed &&
     (resolvedKind === 'image' || resolvedKind === 'svg' ? contentUrl : null);
-  const preferFullResolution = !!props.preferFullResolution;
-  const primaryImageSource = preferFullResolution
-    ? onChainPreviewSource
-    : resolvedThumbnailUrl;
-  const primaryImageOrigin = preferFullResolution ? 'on-chain' : 'thumbnail-cache';
-  const secondaryImageSource = preferFullResolution
-    ? resolvedThumbnailUrl
-    : onChainPreviewSource;
-  const secondaryImageOrigin = preferFullResolution ? 'thumbnail-cache' : 'on-chain';
+  // Stage grid rendering: show thumbnail instantly, but promote to full bytes
+  // as soon as they are available from query cache or IndexedDB.
+  const primaryImageSource = onChainPreviewSource || resolvedThumbnailUrl;
+  const primaryImageOrigin = onChainPreviewSource ? 'on-chain' : 'thumbnail-cache';
+  const secondaryImageSource = resolvedThumbnailUrl;
+  const secondaryImageOrigin = 'thumbnail-cache';
   const imagePreviewSource =
     svgPreview ||
     primaryImageSource ||
@@ -645,7 +676,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
       ) {
         diagnosticHints.push('stale-blob-url');
       }
-      if (!contentQuery.data || contentQuery.data.length === 0) {
+      if (!fullContentBytes || fullContentBytes.length === 0) {
         diagnosticHints.push('no-bytes');
       }
       if (contentQuery.isError) {
@@ -702,8 +733,8 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
       sniffedKind,
       totalSize,
       contentBytes,
+      fullContentBytes,
       queryClient,
-      contentQuery.data,
       contentQuery.isError,
       contentQuery.status,
       allowTokenUriFallback,
