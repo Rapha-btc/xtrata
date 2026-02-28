@@ -1,7 +1,17 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { InscriptionMeta } from '../../protocol/types';
 import type { XtrataClient } from '../../contract/client';
+vi.mock('../cache', () => ({
+  loadTokenSummaryFromCache: vi.fn().mockResolvedValue(null),
+  saveTokenSummaryToCache: vi.fn().mockResolvedValue(undefined)
+}));
+
 import {
+  loadTokenSummaryFromCache,
+  saveTokenSummaryToCache
+} from '../cache';
+import {
+  DEGRADED_SUMMARY_CACHE_TTL_MS,
   fetchTokenSummary,
   fetchTokenSummaryWithFallback
 } from '../queries';
@@ -17,6 +27,16 @@ const createMeta = (mimeType: string, owner = 'SPOWNER'): InscriptionMeta => ({
 });
 
 describe('viewer queries', () => {
+  const loadTokenSummaryFromCacheMock = vi.mocked(loadTokenSummaryFromCache);
+  const saveTokenSummaryToCacheMock = vi.mocked(saveTokenSummaryToCache);
+
+  beforeEach(() => {
+    loadTokenSummaryFromCacheMock.mockReset();
+    saveTokenSummaryToCacheMock.mockReset();
+    loadTokenSummaryFromCacheMock.mockResolvedValue(null);
+    saveTokenSummaryToCacheMock.mockResolvedValue(undefined);
+  });
+
   it('skips svg fetch for non-svg mime types', async () => {
     const client = {
       contract: {
@@ -38,6 +58,13 @@ describe('viewer queries', () => {
 
     expect(client.getSvgDataUri).not.toHaveBeenCalled();
     expect(summary.svgDataUri).toBeNull();
+    expect(saveTokenSummaryToCacheMock).toHaveBeenCalledTimes(1);
+    expect(saveTokenSummaryToCacheMock).toHaveBeenCalledWith(
+      'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1',
+      1n,
+      expect.objectContaining({ id: 1n }),
+      undefined
+    );
   });
 
   it('handles svg errors and owner fallback', async () => {
@@ -62,6 +89,40 @@ describe('viewer queries', () => {
     expect(client.getSvgDataUri).toHaveBeenCalledTimes(1);
     expect(summary.svgDataUri).toBeNull();
     expect(summary.owner).toBe('SPMETA');
+    expect(saveTokenSummaryToCacheMock).toHaveBeenCalledTimes(1);
+    expect(saveTokenSummaryToCacheMock.mock.calls[0]?.length).toBe(4);
+    expect(saveTokenSummaryToCacheMock.mock.calls[0]?.[3]).toEqual({
+      maxAgeMs: DEGRADED_SUMMARY_CACHE_TTL_MS
+    });
+  });
+
+  it('uses short-lived cache window when metadata reads are degraded', async () => {
+    const client = {
+      contract: {
+        address: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
+        contractName: 'xtrata-v1-1-1',
+        network: 'mainnet'
+      },
+      getInscriptionMeta: vi.fn().mockRejectedValue(new Error('429')),
+      getTokenUri: vi.fn().mockResolvedValue(null),
+      getOwner: vi.fn().mockResolvedValue(null),
+      getSvgDataUri: vi.fn().mockResolvedValue(null)
+    } as unknown as XtrataClient;
+
+    const summary = await fetchTokenSummary({
+      client,
+      id: 99n,
+      senderAddress: 'SPTEST'
+    });
+
+    expect(summary.meta).toBeNull();
+    expect(saveTokenSummaryToCacheMock).toHaveBeenCalledTimes(1);
+    expect(saveTokenSummaryToCacheMock).toHaveBeenCalledWith(
+      'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1',
+      99n,
+      expect.objectContaining({ id: 99n, meta: null }),
+      { maxAgeMs: DEGRADED_SUMMARY_CACHE_TTL_MS }
+    );
   });
 
   it('uses primary ownership when legacy token is escrowed to v2 contract', async () => {

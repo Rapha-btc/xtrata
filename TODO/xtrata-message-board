@@ -1,0 +1,263 @@
+🧾 TO DO: Xtrata Public On-Chain Message Board (Bug Report Layer)
+
+🎯 Objective
+
+Create a public, on-chain message board where anyone can submit short messages (e.g. bug reports, feedback, notes) via a Stacks transaction, and have those messages rendered inside a permanent Xtrata inscription.
+
+This should demonstrate:
+	•	Xtrata as a deterministic UI execution layer
+	•	Stacks contracts as transactional state storage
+	•	Composable “inscription + contract” architecture
+	•	A live, immutable public document that updates via blockchain state
+
+⸻
+
+🧱 High-Level Architecture
+
+We are building two components:
+
+1️⃣ Stacks Contract: xtrata-message-board.clar
+
+Responsible for:
+	•	Accepting user-submitted messages
+	•	Storing messages in contract state
+	•	Enforcing limits (length, anti-spam fee, rate limits)
+	•	Exposing read-only pagination endpoints
+
+This contract is the canonical data source.
+
+⸻
+
+2️⃣ Xtrata Inscription: Viewer / Renderer
+
+A small HTML/JS inscription that:
+	•	Calls contract read-only functions via Stacks RPC
+	•	Fetches paginated messages
+	•	Renders them as a public document
+	•	Optionally includes a “Post Message” button that connects wallet
+
+This inscription is the public face of the document.
+
+It is immutable.
+The contract state changes.
+The rendering logic does not.
+
+⸻
+
+🧠 Design Principles
+
+This feature should embody Xtrata philosophy:
+	•	Small immutable loader
+	•	Live contract-driven state
+	•	Deterministic rendering
+	•	Graph composability
+	•	Minimal but expandable
+
+This becomes a primitive for:
+	•	Bug reports
+	•	Governance feedback
+	•	Public logs
+	•	On-chain changelogs
+	•	Dev commentary streams
+	•	Community message walls
+
+⸻
+
+📦 Contract Specification (V1)
+
+Data Model
+	•	Max message length: 256–512 chars
+	•	Each message stores:
+	•	id
+	•	sender (principal)
+	•	block-height
+	•	message
+	•	optional fee-paid
+
+Use indexed storage pattern:
+	•	(define-data-var message-count uint u0)
+	•	(define-map messages uint { sender: principal, block: uint, text: (string-ascii 512) })
+
+⸻
+
+Public Functions
+
+post-message (text (string-ascii 512))
+
+Requirements:
+	•	Reject if text length > max
+	•	Enforce minimum STX fee (anti-spam)
+	•	Optionally enforce 1 message per principal per X blocks
+
+Behavior:
+	•	Increment message-count
+	•	Insert into map
+	•	Return new ID
+
+⸻
+
+Read-Only Functions
+
+get-count
+
+Returns total message count.
+
+get-message (id uint)
+
+Returns a single message.
+
+get-page (offset uint, limit uint)
+
+Returns bounded list.
+
+⚠️ IMPORTANT:
+Never design a function that returns all messages.
+Pagination from day one.
+
+⸻
+
+🖥 Viewer Inscription Specification
+
+This will be inscribed via Xtrata as a small HTML/JS file.
+
+It should:
+	1.	Display title:
+
+Xtrata Public Message Board
+
+
+	2.	Load latest 20 messages by:
+	•	Calling get-count
+	•	Fetching last N messages via pagination
+	3.	Render in simple format:
+
+[#123]  SPXXXX...
+Block 123456
+Message text...
+
+
+	4.	Include:
+	•	“Load more” button
+	•	Optional wallet connect + post form
+
+⸻
+
+🔗 Integration with Xtrata
+
+Two possible implementations:
+
+⸻
+
+Option A (Simpler V1)
+
+Messages stored directly in contract state only.
+
+Viewer:
+	•	Reads via Stacks RPC
+	•	No separate message inscriptions
+
+Best for:
+	•	Fast deployment
+	•	Clean proof-of-concept
+
+⸻
+
+Option B (More Xtrata-native, scalable)
+
+Contract stores:
+	•	message ID
+	•	hash of message
+	•	pointer to Xtrata inscription ID
+
+Message body:
+	•	Inscribed separately via Xtrata
+
+Viewer:
+	•	Fetches pointer from contract
+	•	Loads inscription via Xtrata
+	•	Verifies hash
+
+Best for:
+	•	Large scale
+	•	Keeps contract state small
+	•	Demonstrates recursive composability
+
+⸻
+
+🛡 Anti-Spam & Moderation Strategy
+
+Must include at least one of:
+	•	Minimum STX posting fee
+	•	Block-based rate limiting per principal
+	•	Optional curator role for “pinning”
+
+No censorship at contract level.
+UI-level filtering permitted.
+
+⸻
+
+🧮 Cost Considerations
+	•	256–512 char strings are acceptable in Clarity
+	•	Must account for:
+	•	Contract storage growth
+	•	Read-only payload limits
+	•	Gas cost per write
+
+Posting must always require a transaction.
+No off-chain writes.
+
+⸻
+
+🚀 Future Expansion
+
+This primitive could evolve into:
+	•	Governance proposal discussion threads
+	•	On-chain bug bounty submissions
+	•	On-chain changelog per contract
+	•	Version-linked message streams
+	•	BNS-linked feedback streams
+	•	Collection-level comment systems
+	•	Developer logs per inscription
+
+It becomes a reusable Xtrata execution primitive.
+
+⸻
+
+🧪 Development Steps
+	1.	Write minimal Clarity contract with pagination.
+	2.	Deploy to testnet.
+	3.	Write minimal JS viewer locally.
+	4.	Connect to testnet RPC.
+	5.	Inscribe viewer via Xtrata.
+	6.	Link from xtrata.xyz.
+	7.	Add wallet posting.
+	8.	Add fee enforcement.
+	9.	Document pattern as reusable SDK primitive.
+
+⸻
+
+🧭 Success Criteria
+	•	Anyone can submit a message via wallet.
+	•	Message is permanently recorded on-chain.
+	•	Viewer inscription updates automatically by reading contract state.
+	•	No backend server required for truth.
+	•	Pagination works cleanly.
+	•	Spam is economically discouraged.
+	•	Contract remains lightweight and future-proof.
+
+⸻
+
+💡 Strategic Value for Xtrata
+
+This demonstrates:
+	•	Inscription as immutable execution layer
+	•	Contract as dynamic state layer
+	•	Deterministic public documents
+	•	On-chain social primitives
+	•	Recursive composability
+	•	Boring infrastructure → expressive apps
+
+It is small.
+It is simple.
+It is powerful.
+

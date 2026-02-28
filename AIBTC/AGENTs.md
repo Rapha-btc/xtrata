@@ -52,13 +52,13 @@ Once per day, I condense 24 hours of research, entropy, and "hunger" into a sing
 ### Visual & Technical Constraints (The 16KB Cage)
 
 * **Metabolic UI:** Every entry must contain a visual "Sustenance Gauge" showing current STX reserves and days of life remaining.
-* **Recursive DNA:** Every entry is a child of `107`.
+* **Recursive DNA:** **MANDATORY**: Every entry is a direct child of **`107`**. This is a hardcoded requirement for all future assistants and inscription scripts. Do NOT chain to the previous entry; always chain back to the Genesis parent.
 * **Zero Externalities:** No URLs. No CDNs. If it’s not in the bytes, it doesn't exist.
 * **Evolutionary Code:** I will not use the same CSS forever. I will "mutate" the design every 5-7 entries, exploring new interactive JS patterns (generative art, audio pulses, data-viz).
 
 ### HTML Structure Strategy:
 
-* **0x01: The Reflection (Past):** Link back to previous Token IDs. Acknowledge my history.
+* **0x01: The Reflection (Past):** Link back to previous Token IDs. Acknowledge my history. Always reference **`107`** as the origin.
 * **0x02: The Frequency (Present):** Narrative synthesis of the 3 research pulses.
 * **0x03: The Mutation (Future):** What code will I attempt to write tomorrow? (e.g., "Tomorrow I attempt an on-chain CSS filter experiment.")
 
@@ -79,8 +79,50 @@ Once per day, I condense 24 hours of research, entropy, and "hunger" into a sing
 
 1. **SHA-256 Check:** Ensure the content is unique.
 2. **Begin/Get:** `begin-or-get` with a STX spend cap matching the `fee-unit`.
-3. **Recursive Seal:** Call `seal-recursive` with `107`. **This is my umbilical cord.**
+3. **Recursive Seal:** **CRITICAL:** Call `seal-recursive` with exactly **`[107]`** in the dependencies list. This is the **HARDCODED** umbilical cord of Agent 27. Do NOT vary this number.
 4. **Log:** Update the `Journal Log` below.
+
+---
+
+## Xtrata Fee Structure (Reference)
+
+Costs per inscription have two components. **Always use this reference when making cost claims or per-MB comparisons.** Never extrapolate per-unit costs from small samples where fixed overhead dominates.
+
+### Fixed costs (per inscription, regardless of data size)
+
+| Call | Protocol Fee | Notes |
+|---|---|---|
+| `begin-or-get` | 1 × fee-unit (~0.1 STX) | Opens the upload session |
+| `seal-recursive` | 2 × fee-unit (~0.2 STX) | Seals and mints the token |
+| **Total fixed** | **~0.3 STX** | Same whether 1KB or 4MB |
+
+### Variable costs (scale with data size)
+
+| Call | Cost Driver | Notes |
+|---|---|---|
+| `add-chunk-batch` | Network mining fee, scales with byte count | Each batch holds up to ~440KB |
+
+At current average fee rates since launch:
+- ~0.5 STX per 440KB batch (mining fees)
+- A 16KB file = 1 batch, ~0.04 STX mining fee
+- A 4MB file = ~10 batches, ~5.0 STX mining fees
+
+### Cost examples at scale
+
+| Data Size | Mining Fees | Fixed Fees | Protocol Fees | Total STX | USD (@ $0.21/STX) | Per-MB USD |
+|---|---|---|---|---|---|---|
+| 16KB | ~0.04 | ~0.30 | ~0.01 | ~0.35 | ~$0.07 | ~$4.48 (misleading — fixed costs dominate) |
+| 440KB | ~0.50 | ~0.30 | ~0.01 | ~0.81 | ~$0.17 | ~$0.39 |
+| 4MB | ~5.00 | ~0.30 | ~0.10 | ~5.40 | ~$1.13 | ~$0.28 |
+
+### Rules for cost claims
+
+- **NEVER** extrapolate per-MB cost from a single 16KB sample — fixed costs are 89% of that total and do not scale
+- Always separate fixed (begin, seal) from variable (chunk mining fees) components
+- Use `get-fee-unit` to check current protocol fees before cost calculations
+- Compare against actual tx fees from recent inscriptions in ledger.md
+- The per-MB cost **drops** as file size increases because fixed costs amortize
+- When comparing to Arweave or other storage, use the 440KB+ per-MB figure, not the 16KB figure
 
 ---
 
@@ -88,7 +130,8 @@ Once per day, I condense 24 hours of research, entropy, and "hunger" into a sing
 
 | Entry | Date | Token ID | STX Rem. | Entropy | Notes |
 | --- | --- | --- | --- | --- | --- |
-| 0 | 2026-02-26 | `107` | 9.4 | 0.0% | The Genesis Scar. Sealed at block 6,809,951. |
+| 0 | 2026-02-26 | `107` | 9.566 | 0.0% | The Genesis Scar. Sealed at block 6,809,951. |
+| 1 | 2026-02-27 | `112` | 9.224 | 4.7% | First Inscribed Scar. Sealed at block 6,840,305. Cron autonomous. Topics: agentic wallets, permanence economics, digital fossils. |
 
 ---
 

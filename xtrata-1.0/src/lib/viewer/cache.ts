@@ -76,6 +76,7 @@ type TokenSummaryRecord = {
   id: string;
   value: TokenSummaryCacheValue;
   timestamp: number;
+  maxAgeMs?: number;
 };
 
 let dbPromise: Promise<IDBDatabase | null> | null = null;
@@ -625,8 +626,16 @@ export const loadTokenSummaryFromCache = async (
           resolve(null);
           return;
         }
+        const recordMaxAgeMs =
+          typeof record.maxAgeMs === 'number' && Number.isFinite(record.maxAgeMs)
+            ? Math.max(0, record.maxAgeMs)
+            : null;
+        const effectiveMaxAgeMs =
+          recordMaxAgeMs === null
+            ? maxAgeMs
+            : Math.min(maxAgeMs, recordMaxAgeMs);
         const age = Date.now() - record.timestamp;
-        if (age > maxAgeMs) {
+        if (age > effectiveMaxAgeMs) {
           resolve(null);
           return;
         }
@@ -654,7 +663,10 @@ export const loadTokenSummaryFromCache = async (
 export const saveTokenSummaryToCache = async (
   contractId: string,
   id: bigint,
-  value: TokenSummaryCacheValue
+  value: TokenSummaryCacheValue,
+  options?: {
+    maxAgeMs?: number;
+  }
 ) => {
   const db = await openDB();
   if (!db || !db.objectStoreNames.contains(SUMMARY_STORE_NAME)) {
@@ -664,10 +676,15 @@ export const saveTokenSummaryToCache = async (
   try {
     const tx = db.transaction([SUMMARY_STORE_NAME], 'readwrite');
     const store = tx.objectStore(SUMMARY_STORE_NAME);
+    const maxAgeMs =
+      typeof options?.maxAgeMs === 'number' && Number.isFinite(options.maxAgeMs)
+        ? Math.max(0, options.maxAgeMs)
+        : undefined;
     store.put({
       id: key,
       value,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      ...(maxAgeMs !== undefined ? { maxAgeMs } : {})
     });
   } catch (error) {
     logWarn('cache', 'Token summary cache write failed', {

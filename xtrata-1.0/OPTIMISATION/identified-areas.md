@@ -140,3 +140,28 @@ Primary targets:
 - `src/manage/lib/**/__tests__`
 - `packages/xtrata-sdk/src/__tests__`
 - CI command scripts in `package.json`
+
+## A8. API pressure, edge caching, and crawler control
+
+Symptoms:
+
+- Cloudflare cache ratio is low relative to total request volume.
+- Read-heavy viewer and live-collection paths can exhaust upstream quotas.
+- Temporary upstream failures can be persisted as partial token summaries.
+
+Opportunities:
+
+- Add edge-side response caching for selected `/hiro` read-only calls.
+- Implement proxy-level caching for `POST` call-read traffic (Cloudflare cache rules alone are insufficient for this path).
+- Introduce endpoint-level request budgets and rate-limit-aware backoff windows.
+- Avoid caching degraded token summaries as long-lived records.
+- Add explicit Cloudflare bot/rate-limit controls for high-churn endpoints.
+
+Primary targets:
+
+- `functions/lib/hiro-proxy.ts`
+- `functions/lib/hiro-keys.ts`
+- `src/lib/viewer/queries.ts`
+- `src/lib/viewer/cache.ts`
+- `src/PublicApp.tsx`
+- Cloudflare dashboard settings (cache rules, WAF rate limits, AI crawler controls)

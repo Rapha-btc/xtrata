@@ -19,10 +19,14 @@ Updated after each research cycle and inscription.
 | 2026-02-26 | Genesis begin | begin-or-get | ~0.101 | 9.794 | — | SDK path, correct hash |
 | 2026-02-26 | Genesis chunk | add-chunk-batch | ~0.001 | 9.793 | — | 5,285 bytes uploaded |
 | 2026-02-26 | Genesis seal | seal-inscription | ~0.201 | 9.566 | #107 | Sealed at block 6,809,951 |
-| | | | **~0.434** | **9.566** | | **Total spent to date** |
+| | | | **~0.434** | **9.566** | | **Total spent (genesis)** |
+| 2026-02-27 | Entry 1 begin | begin-or-get | ~0.102 | 9.464 | — | Block 6,840,300. Cron autonomous. |
+| 2026-02-27 | Entry 1 chunk | add-chunk-batch | ~0.038 | 9.426 | — | Chunk upload (network fee 37,550 µSTX) |
+| 2026-02-27 | Entry 1 seal | seal-recursive | ~0.202 | 9.224 | #112 | Sealed block 6,840,305. Dep: [107] |
+| | | | **~0.776** | **9.224** | | **Total spent to date** |
 
-**Projected daily cost:** ~0.31 STX
-**Runway at current balance:** ~30.8 days (until ~Mar 29, 2026)
+**Projected daily cost:** ~0.34 STX (revised — actual Entry 1 cost 0.342 STX vs projected 0.31)
+**Runway at current balance:** ~27.1 days (until ~Mar 26, 2026)
 
 ---
 
@@ -35,6 +39,10 @@ Updated after each research cycle and inscription.
 |---|---|---|---|---|---|---|
 | 2026-02-26 | ~03:30 | Research (dry run) | Sonnet | ~8k out / ~2k in | ~3 min | Hit $0.50 cap, content good |
 | 2026-02-26 | ~08:14 | Research (dry run 2) | Sonnet | ~10k out / ~3k in | ~3 min | Hit $0.50 cap, files written |
+| 2026-02-27 | 10:35 | Research (Pulse 002) | Sonnet | ~10k out / ~3k in | ~5 min | Timed out but files written |
+| 2026-02-27 | 11:25 | Research (Pulse 003) | Sonnet | ~10k out / ~3k in | ~2 min | Manual trigger, buffer complete |
+| 2026-02-27 | ~11:29 | Inscription (Entry 1) | Opus | ~15k out / ~5k in | ~20 min | Cron autonomous, Token #112 sealed |
+| 2026-02-28 | Afternoon | Research (Pulse 006) | Sonnet | ~10k out / ~4k in | ~5 min | Bitcoin L2 bifurcation / AI agent settlement layer choice |
 
 **Estimated per-cycle allocation draw:**
 | Cycle | Model | Est. Input Tokens | Est. Output Tokens | Relative Weight |
@@ -51,12 +59,12 @@ Updated after each research cycle and inscription.
 
 | Metric | Value | Last Updated |
 |---|---|---|
-| STX spent (total) | 0.434 | 2026-02-26 |
-| STX remaining | 9.566 | 2026-02-26 |
-| Days of on-chain life | ~30.8 | 2026-02-26 |
-| Inscriptions sealed | 1 (genesis) | 2026-02-26 |
-| Research cycles run | 2 (dry runs) | 2026-02-26 |
-| Pro allocation concern | None | 2026-02-26 |
+| STX spent (total) | 0.776 | 2026-02-27 |
+| STX remaining | 9.224 | 2026-02-27 |
+| Days of on-chain life | ~27.1 | 2026-02-27 |
+| Inscriptions sealed | 2 (genesis + entry 1) | 2026-02-27 |
+| Research cycles run | 5 (2 dry, 3 live) | 2026-02-27 |
+| Pro allocation concern | None | 2026-02-27 |
 
 ---
 

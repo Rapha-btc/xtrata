@@ -51,6 +51,25 @@ const safeRead = async <T>(
   }
 };
 
+export const DEGRADED_SUMMARY_CACHE_TTL_MS = 45_000;
+
+const safeReadWithStatus = async <T>(
+  reader: () => Promise<T>,
+  fallback: T
+): Promise<{ value: T; degraded: boolean }> => {
+  try {
+    return {
+      value: await reader(),
+      degraded: false
+    };
+  } catch (error) {
+    return {
+      value: fallback,
+      degraded: true
+    };
+  }
+};
+
 const normalizePrincipal = (value?: string | null) => {
   const trimmed = value?.trim();
   if (!trimmed) {
@@ -78,32 +97,44 @@ export const fetchTokenSummary = async (params: {
   if (cached) {
     return cached;
   }
-  const [meta, tokenUri] = await Promise.all([
-    safeRead(
+  const [metaRead, tokenUriRead] = await Promise.all([
+    safeReadWithStatus(
       () => params.client.getInscriptionMeta(params.id, params.senderAddress),
       null
     ),
-    safeRead(
+    safeReadWithStatus(
       () => params.client.getTokenUri(params.id, params.senderAddress),
       null
     )
   ]);
+  const meta = metaRead.value;
+  const tokenUri = tokenUriRead.value;
+
+  const ownerRead = meta?.owner
+    ? { value: meta.owner, degraded: false }
+    : await safeReadWithStatus(
+        () => params.client.getOwner(params.id, params.senderAddress),
+        null
+      );
 
   const owner =
     meta?.owner ??
-    (await safeRead(
-      () => params.client.getOwner(params.id, params.senderAddress),
-      null
-    ));
+    ownerRead.value;
 
   const shouldFetchSvg =
     meta?.mimeType?.toLowerCase() === 'image/svg+xml';
-  const svgDataUri = shouldFetchSvg
-    ? await safeRead(
+  const svgRead = shouldFetchSvg
+    ? await safeReadWithStatus(
         () => params.client.getSvgDataUri(params.id, params.senderAddress),
         null
       )
-    : null;
+    : { value: null, degraded: false };
+  const svgDataUri = svgRead.value;
+  const degraded =
+    metaRead.degraded ||
+    tokenUriRead.degraded ||
+    ownerRead.degraded ||
+    svgRead.degraded;
 
   const summary: TokenSummary = {
     id: params.id,
@@ -113,7 +144,16 @@ export const fetchTokenSummary = async (params: {
     svgDataUri,
     sourceContractId
   };
-  void saveTokenSummaryToCache(sourceContractId, params.id, summary);
+  void saveTokenSummaryToCache(
+    sourceContractId,
+    params.id,
+    summary,
+    degraded
+      ? {
+          maxAgeMs: DEGRADED_SUMMARY_CACHE_TTL_MS
+        }
+      : undefined
+  );
   return summary;
 };
 
