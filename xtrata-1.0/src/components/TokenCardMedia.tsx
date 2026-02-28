@@ -21,7 +21,6 @@ import {
   isDataUri,
   isHttpUrl,
   isLikelyImageUrl,
-  MAX_THUMBNAIL_BYTES,
   resolveMimeType,
   sniffMimeType
 } from '../lib/viewer/content';
@@ -40,7 +39,7 @@ import {
 } from '../lib/viewer/recursive';
 import { createObjectUrl } from '../lib/utils/blob';
 
-const MAX_GRID_VIDEO_AUTOLOAD_BYTES = 1024n * 1024n;
+const MAX_GRID_EAGER_FULL_LOAD_BYTES = 4n * 1024n * 1024n;
 const MAX_ANIMATED_PNG_PROBE_BYTES = 512n * 1024n;
 
 type TokenCardMediaProps = {
@@ -131,32 +130,32 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     normalizedMetaMimeType === 'image/png' &&
     totalSize !== null &&
     totalSize <= MAX_ANIMATED_PNG_PROBE_BYTES;
+  const isWithinGridEagerLoadWindow =
+    totalSize !== null && totalSize <= MAX_GRID_EAGER_FULL_LOAD_BYTES;
   const isAnimatedImageMetaCandidate =
     isGifMetaMimeType ||
     normalizedMetaMimeType === 'image/webp' ||
     normalizedMetaMimeType === 'image/apng' ||
     isPngAnimationProbeCandidate;
-  const shouldLoadVideo =
+  const shouldLoadPlaybackMedia =
     !!props.token.meta &&
-    totalSize !== null &&
-    (totalSize <= MAX_GRID_VIDEO_AUTOLOAD_BYTES || props.preferFullResolution) &&
+    (isWithinGridEagerLoadWindow || props.preferFullResolution) &&
     !svgPreview &&
-    mediaKind === 'video';
+    (mediaKind === 'video' || mediaKind === 'audio');
   const shouldLoadNonVideo =
     !!props.token.meta &&
-    totalSize !== null &&
-    (totalSize <= MAX_THUMBNAIL_BYTES || props.preferFullResolution) &&
+    (isWithinGridEagerLoadWindow || props.preferFullResolution) &&
     !svgPreview &&
     (!hasThumbnail ||
       props.preferFullResolution ||
+      isWithinGridEagerLoadWindow ||
       isAnimatedImageMetaCandidate) &&
     (mediaKind === 'image' ||
       mediaKind === 'svg' ||
       mediaKind === 'text' ||
       mediaKind === 'html' ||
       mediaKind === 'binary');
-  const shouldLoad =
-    shouldLoadVideo || shouldLoadNonVideo;
+  const shouldLoad = shouldLoadPlaybackMedia || shouldLoadNonVideo;
   const showStreamProgress =
     !!streamStatus &&
     (streamStatus.phase === 'buffering' || streamStatus.phase === 'loading');
@@ -421,8 +420,8 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
   const allowTokenUriFallback =
     !hasThumbnail &&
     ((mediaKind === 'video' || mediaKind === 'audio')
-      ? totalSize === null || totalSize > MAX_THUMBNAIL_BYTES
-      : totalSize !== null && totalSize > MAX_THUMBNAIL_BYTES);
+      ? totalSize === null || totalSize > MAX_GRID_EAGER_FULL_LOAD_BYTES
+      : totalSize !== null && totalSize > MAX_GRID_EAGER_FULL_LOAD_BYTES);
   const shouldDeferTokenUri = mediaKind === 'video' || mediaKind === 'audio';
   useEffect(() => {
     if (!allowTokenUriFallback || !shouldDeferTokenUri) {
@@ -506,6 +505,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     (resolvedKind === 'image' || resolvedKind === 'svg' ? contentUrl : null);
   const preferFullResolution =
     !!props.preferFullResolution ||
+    isWithinGridEagerLoadWindow ||
     isGifMetaMimeType ||
     !!finiteAnimatedReplayDelayMs;
   const primaryImageSource = preferFullResolution
