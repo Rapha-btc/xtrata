@@ -15,6 +15,7 @@ import {
   extractImageFromMetadata,
   fetchTokenImageFromUri,
   fetchOnChainContent,
+  getFiniteGifReplayDelayMs,
   getMediaKind,
   getTextPreview,
   isDataUri,
@@ -38,6 +39,8 @@ import {
   registerRecursiveBridge
 } from '../lib/viewer/recursive';
 import { createObjectUrl } from '../lib/utils/blob';
+
+const MAX_GRID_VIDEO_AUTOLOAD_BYTES = 1024n * 1024n;
 
 type TokenCardMediaProps = {
   token: TokenSummary;
@@ -66,6 +69,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
   const [tokenUriDeferred, setTokenUriDeferred] = useState(false);
   const [pixelatePreview, setPixelatePreview] = useState(false);
   const [letterboxPreview, setLetterboxPreview] = useState(false);
+  const [gifReplayTick, setGifReplayTick] = useState(0);
   const setHtmlFrameRef = useCallback((node: HTMLIFrameElement | null) => {
     setBridgeSource(node?.contentWindow ?? null);
   }, []);
@@ -120,17 +124,26 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     !thumbnailFailed &&
     !!thumbnailQuery.data?.data &&
     thumbnailQuery.data.data.length > 0;
-  const shouldLoad =
+  const isGifMetaMimeType = (mimeType ?? '').toLowerCase() === 'image/gif';
+  const shouldLoadVideo =
+    !!props.token.meta &&
+    totalSize !== null &&
+    (totalSize <= MAX_GRID_VIDEO_AUTOLOAD_BYTES || props.preferFullResolution) &&
+    !svgPreview &&
+    mediaKind === 'video';
+  const shouldLoadNonVideo =
     !!props.token.meta &&
     totalSize !== null &&
     (totalSize <= MAX_THUMBNAIL_BYTES || props.preferFullResolution) &&
     !svgPreview &&
-    (!hasThumbnail || props.preferFullResolution) &&
+    (!hasThumbnail || props.preferFullResolution || isGifMetaMimeType) &&
     (mediaKind === 'image' ||
       mediaKind === 'svg' ||
       mediaKind === 'text' ||
       mediaKind === 'html' ||
       mediaKind === 'binary');
+  const shouldLoad =
+    shouldLoadVideo || shouldLoadNonVideo;
   const showStreamProgress =
     !!streamStatus &&
     (streamStatus.phase === 'buffering' || streamStatus.phase === 'loading');
@@ -206,6 +219,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     if (
       resolvedKind !== 'image' &&
       resolvedKind !== 'svg' &&
+      resolvedKind !== 'video' &&
       resolvedMimeType !== 'application/pdf'
     ) {
       return null;
@@ -249,6 +263,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     setTokenUriDeferred(false);
     setPixelatePreview(false);
     setLetterboxPreview(false);
+    setGifReplayTick(0);
   }, [props.token.id]);
 
   useEffect(() => {
@@ -464,7 +479,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
   const onChainPreviewSource =
     !onChainFailed &&
     (resolvedKind === 'image' || resolvedKind === 'svg' ? contentUrl : null);
-  const preferFullResolution = !!props.preferFullResolution;
+  const preferFullResolution = !!props.preferFullResolution || isGifMetaMimeType;
   const primaryImageSource = preferFullResolution
     ? onChainPreviewSource
     : resolvedThumbnailUrl;
@@ -507,6 +522,39 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     }
     return null;
   })();
+  const finiteGifReplayDelayMs = useMemo(() => {
+    if (!contentQuery.data || contentQuery.data.length === 0) {
+      return null;
+    }
+    const normalizedMime = (resolvedMimeType ?? mimeType ?? '').toLowerCase();
+    if (resolvedKind !== 'image' || normalizedMime !== 'image/gif') {
+      return null;
+    }
+    return getFiniteGifReplayDelayMs(contentQuery.data);
+  }, [contentQuery.data, resolvedKind, resolvedMimeType, mimeType]);
+  const shouldReplayFiniteGif =
+    imagePreviewOrigin === 'on-chain' &&
+    !!imagePreviewSource &&
+    !!finiteGifReplayDelayMs;
+
+  useEffect(() => {
+    setGifReplayTick(0);
+  }, [props.token.id, imagePreviewSource, imagePreviewOrigin]);
+
+  useEffect(() => {
+    if (!isActiveTab || !shouldReplayFiniteGif || !finiteGifReplayDelayMs) {
+      return;
+    }
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const intervalId = window.setInterval(() => {
+      setGifReplayTick((previous) => previous + 1);
+    }, finiteGifReplayDelayMs);
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [isActiveTab, shouldReplayFiniteGif, finiteGifReplayDelayMs]);
 
   const handleImageLoad = useCallback(
     (event: SyntheticEvent<HTMLImageElement>) => {
@@ -806,6 +854,26 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
         src={contentUrl}
       />
     );
+  } else if (resolvedKind === 'video' && contentUrl) {
+    mediaElement = (
+      <video
+        src={contentUrl}
+        muted
+        loop
+        autoPlay
+        playsInline
+        preload="auto"
+        onLoadedData={(event) => {
+          const video = event.currentTarget;
+          const playAttempt = video.play();
+          if (playAttempt && typeof playAttempt.catch === 'function') {
+            void playAttempt.catch(() => {
+              // Browsers may still block autoplay in some contexts.
+            });
+          }
+        }}
+      />
+    );
   } else if (imagePreviewSource) {
     const sourceType = imagePreviewSource.startsWith('data:')
       ? 'data-uri'
@@ -835,6 +903,11 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
       .join(' ');
     mediaElement = (
       <img
+        key={
+          shouldReplayFiniteGif
+            ? `gif-loop-${props.token.id.toString()}-${gifReplayTick}`
+            : undefined
+        }
         src={imagePreviewSource}
         alt="token preview"
         loading="lazy"

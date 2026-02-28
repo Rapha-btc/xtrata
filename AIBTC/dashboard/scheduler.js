@@ -123,12 +123,14 @@ async function executePhase(phase) {
     }
   }
 
-  // Mark running
-  stateManager.updateState({ runningPhase: phase.id });
+  // Mark running with start time and timeout
+  const phaseStartedAt = new Date().toISOString();
+  const phaseTimeoutMs = phase.type === 'inscription' ? 20 * 60 * 1000 : 5 * 60 * 1000;
+  stateManager.updateState({ runningPhase: phase.id, phaseStartedAt, phaseTimeoutMs });
   const startMsg = `Phase ${phase.label} started (${phase.model}, $${phase.budget})`;
   console.log(startMsg);
   if (broadcastFn) {
-    broadcastFn({ event: 'phase-start', data: { phase: phase.id, label: phase.label, model: phase.model } });
+    broadcastFn({ event: 'phase-start', data: { phase: phase.id, label: phase.label, model: phase.model, startedAt: phaseStartedAt, timeoutMs: phaseTimeoutMs } });
     broadcastFn({ event: 'log', data: { type: 'start', line: startMsg, timestamp: new Date().toISOString() } });
   }
 
@@ -150,7 +152,7 @@ async function executePhase(phase) {
     const state = stateManager.getState();
     const completed = state.completedPhases || {};
     completed[phaseKey(phase.id)] = new Date().toISOString();
-    stateManager.updateState({ runningPhase: null, completedPhases: completed });
+    stateManager.updateState({ runningPhase: null, phaseStartedAt: null, phaseTimeoutMs: null, completedPhases: completed });
 
     const doneMsg = `Phase ${phase.label} completed`;
     console.log(doneMsg);
@@ -159,7 +161,7 @@ async function executePhase(phase) {
       broadcastFn({ event: 'log', data: { type: 'start', line: doneMsg, timestamp: new Date().toISOString() } });
     }
   } catch (err) {
-    stateManager.updateState({ runningPhase: null });
+    stateManager.updateState({ runningPhase: null, phaseStartedAt: null, phaseTimeoutMs: null });
     stateManager.addError(err);
     const errMsg = `Phase ${phase.label} failed: ${err.message}`;
     console.error(errMsg);
@@ -258,7 +260,9 @@ function getScheduleInfo() {
     today,
     phases,
     next: nextPhase ? { id: nextPhase.id, label: nextPhase.label, countdownMs } : null,
-    runningPhase: state.runningPhase
+    runningPhase: state.runningPhase,
+    phaseStartedAt: state.phaseStartedAt || null,
+    phaseTimeoutMs: state.phaseTimeoutMs || null
   };
 }
 

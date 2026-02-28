@@ -86,6 +86,55 @@
         .log-line .type-start { color: #87CEEB; }
         .log-line .type-stop { color: #ffd27d; }
         .log-line .type-error { color: #FF6347; }
+        .log-line .type-thinking { color: #8a6dba; font-style: italic; }
+        .log-line .type-thinking.hidden { display: none; }
+
+        /* Phase timer bar */
+        .phase-timer {
+            display: none;
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border-color);
+            margin-bottom: 0.5rem;
+            font-size: 12px;
+        }
+        .phase-timer.active { display: block; }
+        .phase-timer-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.4rem;
+            color: var(--accent-color);
+        }
+        .phase-timer-bar {
+            width: 100%;
+            height: 6px;
+            background: #111;
+            border: 1px solid var(--border-color);
+        }
+        .phase-timer-fill {
+            height: 100%;
+            background: var(--accent-color);
+            transition: width 1s linear;
+        }
+
+        /* Thinking toggle */
+        .log-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            font-size: 12px;
+        }
+        .log-controls label {
+            color: var(--text-color);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .log-controls input[type="checkbox"] {
+            accent-color: var(--accent-color);
+        }
+
         .metric-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -287,6 +336,16 @@
 
         <div class="panel activity-log full-width">
             <h2>Activity Log (Live)</h2>
+            <div class="phase-timer" id="phase-timer">
+                <div class="phase-timer-header">
+                    <span id="phase-timer-label">Pulse 1 running...</span>
+                    <span id="phase-timer-elapsed">0:00 / 5:00</span>
+                </div>
+                <div class="phase-timer-bar"><div class="phase-timer-fill" id="phase-timer-fill"></div></div>
+            </div>
+            <div class="log-controls">
+                <label><input type="checkbox" id="show-thinking"> Show thinking</label>
+            </div>
             <div id="activity-log-content">Connecting to event stream...</div>
         </div>
 
@@ -308,9 +367,22 @@
             const phaseListEl = document.getElementById('phase-list');
             const countdownEl = document.getElementById('countdown');
             const countdownLabelEl = document.getElementById('countdown-label');
+            const phaseTimerEl = document.getElementById('phase-timer');
+            const phaseTimerLabel = document.getElementById('phase-timer-label');
+            const phaseTimerElapsed = document.getElementById('phase-timer-elapsed');
+            const phaseTimerFill = document.getElementById('phase-timer-fill');
+            const showThinkingCheckbox = document.getElementById('show-thinking');
 
             // Schedule data cached from /api/schedule
             let scheduleCache = null;
+            let showThinking = false;
+
+            showThinkingCheckbox.addEventListener('change', () => {
+                showThinking = showThinkingCheckbox.checked;
+                logContent.querySelectorAll('.type-thinking').forEach((el) => {
+                    el.closest('.log-line').classList.toggle('hidden', !showThinking);
+                });
+            });
 
             function escapeHtml(value) {
                 return String(value ?? '')
@@ -331,6 +403,11 @@
                 const type = String(entry.type || 'stdout').toLowerCase();
                 const row = document.createElement('div');
                 row.className = 'log-line';
+
+                // Hide thinking lines unless toggle is on
+                if (type === 'thinking' && !showThinking) {
+                    row.classList.add('hidden');
+                }
 
                 const ts = document.createElement('span');
                 ts.className = 'timestamp';
@@ -747,10 +824,48 @@
                 });
             }
 
-            // --- Tick: update countdown + marker every second ---
+            // --- Phase timer ---
+            function updatePhaseTimer() {
+                if (!scheduleCache || !scheduleCache.runningPhase || !scheduleCache.phaseStartedAt) {
+                    phaseTimerEl.classList.remove('active');
+                    return;
+                }
+
+                phaseTimerEl.classList.add('active');
+                const startedAt = new Date(scheduleCache.phaseStartedAt).getTime();
+                const timeoutMs = scheduleCache.phaseTimeoutMs || (5 * 60 * 1000);
+                const elapsed = Date.now() - startedAt;
+                const pct = Math.min(100, (elapsed / timeoutMs) * 100);
+
+                const elapsedSec = Math.floor(elapsed / 1000);
+                const totalSec = Math.floor(timeoutMs / 1000);
+                const em = Math.floor(elapsedSec / 60);
+                const es = elapsedSec % 60;
+                const tm = Math.floor(totalSec / 60);
+                const ts = totalSec % 60;
+
+                const phase = scheduleCache.phases.find((p) => p.id === scheduleCache.runningPhase);
+                const label = phase ? phase.label : scheduleCache.runningPhase;
+
+                phaseTimerLabel.textContent = `${label} running...`;
+                phaseTimerElapsed.textContent = `${em}:${String(es).padStart(2, '0')} / ${tm}:${String(ts).padStart(2, '0')}`;
+                phaseTimerFill.style.width = pct + '%';
+
+                // Color shift as time runs out
+                if (pct > 80) {
+                    phaseTimerFill.style.background = '#ff4d4d';
+                } else if (pct > 60) {
+                    phaseTimerFill.style.background = '#ff7900';
+                } else {
+                    phaseTimerFill.style.background = 'var(--accent-color)';
+                }
+            }
+
+            // --- Tick: update countdown + marker + phase timer every second ---
             setInterval(() => {
                 updateCountdown();
                 updateTimelineMarker();
+                updatePhaseTimer();
             }, 1000);
 
             // Refresh schedule every 60s to stay in sync

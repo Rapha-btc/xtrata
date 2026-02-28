@@ -31,6 +31,13 @@ function loadState() {
     }
     saveState();
   }
+
+  // No child process survives a server restart — clear stale runningPhase
+  if (state.runningPhase) {
+    console.log(`Clearing stale runningPhase: ${state.runningPhase} (server restarted)`);
+    state.runningPhase = null;
+    saveState();
+  }
 }
 
 function saveState() {
