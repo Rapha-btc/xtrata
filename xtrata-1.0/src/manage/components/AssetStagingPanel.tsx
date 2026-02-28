@@ -234,6 +234,7 @@ const parseDeployPricingLock = (
 type AssetStagingPanelProps = {
   activeCollectionId?: string;
   onJourneyRefreshRequested?: () => void;
+  highlightLockAction?: boolean;
 };
 
 export default function AssetStagingPanel(props: AssetStagingPanelProps) {
@@ -1340,7 +1341,9 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
                   Clear selection
                 </button>
                 <button
-                  className="button button--ghost"
+                  className={`button button--ghost${
+                    props.highlightLockAction ? ' button--next-action' : ''
+                  }`}
                   type="button"
                   onClick={() => void lockStagedAssetsForDeploy()}
                   disabled={

@@ -286,6 +286,14 @@ export default function CollectionManagerApp() {
     () => journeySteps.filter((step) => step.status === 'blocked').length,
     [journeySteps]
   );
+  const lockStepFocused =
+    experienceMode === 'guided' && activeJourneyStepId === 'lock-staged-assets';
+  const assetStagingHeading = lockStepFocused
+    ? 'Step 4: Lock staged assets'
+    : 'Step 2: Upload your artwork';
+  const assetStagingSummary = lockStepFocused
+    ? 'Pricing lock is required before deploy. Click "Lock staged assets for deploy" to continue.'
+    : 'Upload files once and prepare the manifest for launch day.';
 
   const refreshJourneySnapshot = useCallback(async () => {
     const normalizedCollectionId = activeCollectionId.trim();
@@ -829,10 +837,16 @@ export default function CollectionManagerApp() {
           <div className="panel__header">
             <div>
               <h2>
-                Step 2: Upload your artwork
-                <InfoTooltip text="Upload files to Cloudflare, compute hashes/chunks, and store manifest rows for minting." />
+                {assetStagingHeading}
+                <InfoTooltip
+                  text={
+                    lockStepFocused
+                      ? 'Locking staged assets writes the deploy pricing lock that the deploy step now requires.'
+                      : 'Upload files to Cloudflare, compute hashes/chunks, and store manifest rows for minting.'
+                  }
+                />
               </h2>
-              <p>Upload files once and prepare the manifest for launch day.</p>
+              <p>{assetStagingSummary}</p>
             </div>
             <div className="panel__actions">
               <button className="button button--ghost" type="button" onClick={() => togglePanel('asset-staging')}>
@@ -844,6 +858,7 @@ export default function CollectionManagerApp() {
             <AssetStagingPanel
               activeCollectionId={activeCollectionId}
               onJourneyRefreshRequested={requestJourneyRefresh}
+              highlightLockAction={lockStepFocused}
             />
           </div>
         </section>
