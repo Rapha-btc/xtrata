@@ -23,10 +23,14 @@ Updated after each research cycle and inscription.
 | 2026-02-27 | Entry 1 begin | begin-or-get | ~0.102 | 9.464 | — | Block 6,840,300. Cron autonomous. |
 | 2026-02-27 | Entry 1 chunk | add-chunk-batch | ~0.038 | 9.426 | — | Chunk upload (network fee 37,550 µSTX) |
 | 2026-02-27 | Entry 1 seal | seal-recursive | ~0.202 | 9.224 | #112 | Sealed block 6,840,305. Dep: [107] |
-| | | | **~0.776** | **9.224** | | **Total spent to date** |
+| | | | **~0.776** | **9.224** | | **Total spent to date (Entry 1)** |
+| 2026-02-28 | Entry 2 begin | begin-or-get | ~0.100 | 9.124 | — | Block 6,865,6xx. tx `0x98d4b4...` |
+| 2026-02-28 | Entry 2 chunk | add-chunk-batch | ~0.016 | 9.108 | — | 9,814 bytes. tx `0xb97636...` |
+| 2026-02-28 | Entry 2 seal | seal-recursive | ~0.200 | 8.908 | #121 | Sealed block 6,865,688. Dep: [107]. tx `0x862d36...` |
+| | | | **~1.092** | **8.908** | | **Total spent to date** |
 
-**Projected daily cost:** ~0.34 STX (revised — actual Entry 1 cost 0.342 STX vs projected 0.31)
-**Runway at current balance:** ~27.1 days (until ~Mar 26, 2026)
+**Projected daily cost:** ~0.32 STX (revised — Entry 2 cost 0.3165 STX, lower than Entry 1 due to smaller HTML payload)
+**Runway at current balance:** ~27.8 days (until ~Mar 28, 2026)
 
 ---
 
@@ -43,6 +47,9 @@ Updated after each research cycle and inscription.
 | 2026-02-27 | 11:25 | Research (Pulse 003) | Sonnet | ~10k out / ~3k in | ~2 min | Manual trigger, buffer complete |
 | 2026-02-27 | ~11:29 | Inscription (Entry 1) | Opus | ~15k out / ~5k in | ~20 min | Cron autonomous, Token #112 sealed |
 | 2026-02-28 | Afternoon | Research (Pulse 006) | Sonnet | ~10k out / ~4k in | ~5 min | Bitcoin L2 bifurcation / AI agent settlement layer choice |
+| 2026-02-28 | Evening | Research (Pulse 007) | Sonnet | ~10k out / ~4k in | ~5 min | Demoscene parallel / digital preservation / constraint canon |
+| 2026-02-28 | Night | Inscription (Entry 2) | Opus | ~15k out / ~5k in | ~15 min | Token #121 sealed. The Auditable Fossil. |
+| 2026-02-28 | Late Night | Research (Pulse 008) | Sonnet | ~12k out / ~5k in | ~5 min | Neural Pulse: metabolic+lineage+mirror+synthesis. Entry 3 buffer seeded. |
 
 **Estimated per-cycle allocation draw:**
 | Cycle | Model | Est. Input Tokens | Est. Output Tokens | Relative Weight |
@@ -59,12 +66,12 @@ Updated after each research cycle and inscription.
 
 | Metric | Value | Last Updated |
 |---|---|---|
-| STX spent (total) | 0.776 | 2026-02-27 |
-| STX remaining | 9.224 | 2026-02-27 |
-| Days of on-chain life | ~27.1 | 2026-02-27 |
-| Inscriptions sealed | 2 (genesis + entry 1) | 2026-02-27 |
-| Research cycles run | 5 (2 dry, 3 live) | 2026-02-27 |
-| Pro allocation concern | None | 2026-02-27 |
+| STX spent (total) | 1.092 | 2026-02-28 |
+| STX remaining | 8.908 | 2026-02-28 |
+| Days of on-chain life | ~28.7 | 2026-02-28 (recalculated: 8.907983 / 0.31) |
+| Inscriptions sealed | 3 (genesis + entry 1 + entry 2) | 2026-02-28 |
+| Research cycles run | 8 (2 dry, 6 live) | 2026-02-28 |
+| Pro allocation concern | Monitor — Pulse 008 within budget cap | 2026-02-28 |
 
 ---
 

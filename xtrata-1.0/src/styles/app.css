@@ -4355,6 +4355,42 @@ p {
   text-decoration: none;
 }
 
+.fee-guidance-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.fee-guidance-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 680px;
+  font-size: 0.78rem;
+}
+
+.fee-guidance-table th,
+.fee-guidance-table td {
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.fee-guidance-table th {
+  font-size: 0.68rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.fee-guidance-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.fee-guidance-table__note {
+  color: var(--muted);
+}
+
 .collection-live-page {
   --app-max-width: 1240px;
 }

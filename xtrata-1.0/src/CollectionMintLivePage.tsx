@@ -33,6 +33,10 @@ import {
   resolveSealSpendCapMicroStx
 } from './lib/mint/post-conditions';
 import { resolveCollectionContractLink } from './lib/collections/contract-link';
+import {
+  formatMiningFeeMicroStx,
+  type CollectionMiningFeeGuidance
+} from './lib/collection-mint/mining-fee-guidance';
 import { parseDeployPricingLockSnapshot } from './lib/deploy/pricing-lock';
 import { PUBLIC_CONTRACT } from './config/public';
 import { DEFAULT_TOKEN_URI, TX_DELAY_SECONDS } from './lib/mint/constants';
@@ -131,6 +135,7 @@ type CollectionMintPaymentModel = 'begin' | 'seal' | 'unknown';
 type CollectionSnapshot = {
   collection: CollectionRecord;
   assets: CollectionAsset[];
+  feeGuidance: CollectionMiningFeeGuidance | null;
 };
 
 type TimedCacheEntry<T> = {
@@ -435,6 +440,9 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   const [walletPending, setWalletPending] = useState(false);
   const [collection, setCollection] = useState<CollectionRecord | null>(null);
   const [assets, setAssets] = useState<CollectionAsset[]>([]);
+  const [feeGuidance, setFeeGuidance] = useState<CollectionMiningFeeGuidance | null>(
+    null
+  );
   const [collectionLoading, setCollectionLoading] = useState(false);
   const [collectionMessage, setCollectionMessage] = useState<string | null>(null);
   const [contractStatus, setContractStatus] = useState<ContractStatus | null>(null);
@@ -910,6 +918,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     if (!normalizedCollectionKey) {
       setCollection(null);
       setAssets([]);
+      setFeeGuidance(null);
       setCollectionMessage('Collection key missing from URL.');
       return;
     }
@@ -944,19 +953,37 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
             if (!loadedCollectionId) {
               throw new Error('Collection record is missing an id.');
             }
-            const assetsResponse = await fetch(
-              `/collections/${encodeURIComponent(loadedCollectionId)}/assets`,
-              {
+            const [assetsResponse, feeGuidanceResponse] = await Promise.all([
+              fetch(`/collections/${encodeURIComponent(loadedCollectionId)}/assets`, {
                 cache: 'default'
-              }
-            );
+              }),
+              fetch(
+                `/collections/${encodeURIComponent(
+                  loadedCollectionId
+                )}/fee-guidance`,
+                {
+                  cache: 'default'
+                }
+              )
+            ]);
             const loadedAssets = await parseJsonResponse<CollectionAsset[]>(
               assetsResponse,
               'Collection assets'
             );
+            let loadedFeeGuidance: CollectionMiningFeeGuidance | null = null;
+            try {
+              loadedFeeGuidance =
+                await parseJsonResponse<CollectionMiningFeeGuidance>(
+                  feeGuidanceResponse,
+                  'Collection fee guidance'
+                );
+            } catch {
+              loadedFeeGuidance = null;
+            }
             const nextSnapshot = {
               collection: loadedCollection,
-              assets: loadedAssets
+              assets: loadedAssets,
+              feeGuidance: loadedFeeGuidance
             } satisfies CollectionSnapshot;
             writeTimedCache(
               collectionSnapshotCache,
@@ -975,10 +1002,12 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       }
       setCollection(snapshot.collection);
       setAssets(snapshot.assets);
+      setFeeGuidance(snapshot.feeGuidance);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       setCollection(null);
       setAssets([]);
+      setFeeGuidance(null);
       setCollectionMessage(message);
     } finally {
       setCollectionLoading(false);
@@ -2174,6 +2203,20 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       : minimumProtocolFeeTotal
         ? `from ${toMicroStxLabel(minimumProtocolFeeTotal)}`
         : 'Loading...';
+  const miningFeeBallparkLabel =
+    feeGuidance?.available && feeGuidance.totals.highBallparkMicroStx > 0
+      ? `${formatMiningFeeMicroStx(
+          feeGuidance.totals.lowBallparkMicroStx
+        )} - ${formatMiningFeeMicroStx(feeGuidance.totals.highBallparkMicroStx)}`
+      : null;
+  const miningFeeDefaultComparisonLabel =
+    feeGuidance?.available && feeGuidance.totals.walletDefaultMicroStx > 0
+      ? `${formatMiningFeeMicroStx(
+          feeGuidance.totals.recommendedMicroStx
+        )} vs wallet-default ${formatMiningFeeMicroStx(
+          feeGuidance.totals.walletDefaultMicroStx
+        )}`
+      : null;
   const pausedStatus = contractStatus?.paused;
   const pausedLabel =
     pausedStatus === null || pausedStatus === undefined
@@ -2283,6 +2326,10 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                 <span>
                   protocol fee range {protocolFeeRangeLabel}
                 </span>
+                <span>
+                  mining fee ballpark{' '}
+                  {miningFeeBallparkLabel ?? 'Upload at least one file to estimate'}
+                </span>
               </div>
             </div>
             {showMintGuide && (
@@ -2340,6 +2387,83 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                     Estimated protocol fee for a max-size mint in this collection:{' '}
                     {toMicroStxLabel(estimatedMaxProtocolFeeTotal)} total.
                   </p>
+                )}
+                {feeGuidance?.available && (
+                  <>
+                    <p className="collection-live-page__mint-guide-note">
+                      Largest-file mining-fee estimate from backend:{' '}
+                      {feeGuidance.largestAsset?.totalChunks.toLocaleString() ?? '0'} chunk(s) →{' '}
+                      {feeGuidance.batchCount.toLocaleString()} upload batch(es).
+                    </p>
+                    <div className="fee-guidance-table-wrapper">
+                      <table className="fee-guidance-table">
+                        <thead>
+                          <tr>
+                            <th>Step</th>
+                            <th>Tx count</th>
+                            <th>Chunk count</th>
+                            <th>Suggested mining fee</th>
+                            <th>Wallet default</th>
+                            <th>Note</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {feeGuidance.table.map((row) => (
+                            <tr key={row.step}>
+                              <td>{row.label}</td>
+                              <td>{row.txCount.toLocaleString()}</td>
+                              <td>
+                                {row.chunkCount > 0 ? row.chunkCount.toLocaleString() : '—'}
+                              </td>
+                              <td>
+                                {formatMiningFeeMicroStx(row.recommendedTotalMicroStx)}
+                                {row.recommendedPerTxMicroStx !== null
+                                  ? ` total (~${formatMiningFeeMicroStx(
+                                      row.recommendedPerTxMicroStx
+                                    )} each)`
+                                  : ' total'}
+                              </td>
+                              <td>
+                                {formatMiningFeeMicroStx(row.walletDefaultTotalMicroStx)}
+                                {row.walletDefaultPerTxMicroStx !== null
+                                  ? ` total (${formatMiningFeeMicroStx(
+                                      row.walletDefaultPerTxMicroStx
+                                    )} each)`
+                                  : ''}
+                              </td>
+                              <td className="fee-guidance-table__note">{row.note}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {miningFeeDefaultComparisonLabel && (
+                      <p className="collection-live-page__mint-guide-note">
+                        Suggested mining total vs wallet defaults:{' '}
+                        {miningFeeDefaultComparisonLabel}.
+                      </p>
+                    )}
+                    {feeGuidance.uploadBatches.length > 0 && (
+                      <ul className="collection-live-page__mint-guide-list">
+                        {feeGuidance.uploadBatches.map((batch) => (
+                          <li key={batch.label} className="collection-live-page__mint-guide-item">
+                            <strong>{batch.label}</strong>
+                            <span>
+                              {batch.batchCount.toLocaleString()} tx · suggested{' '}
+                              {formatMiningFeeMicroStx(batch.recommendedPerTxMicroStx)} each ·
+                              wallet default{' '}
+                              {formatMiningFeeMicroStx(batch.walletDefaultPerTxMicroStx)} each.
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {feeGuidance.warnings.map((warning) => (
+                      <p key={warning} className="collection-live-page__mint-guide-note">
+                        {warning}
+                      </p>
+                    ))}
+                  </>
                 )}
                 <p className="collection-live-page__mint-guide-note">
                   If mint price is 5 STX, wallet may currently show{' '}

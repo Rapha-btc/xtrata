@@ -12,6 +12,11 @@ import {
 import { getNetworkFromAddress } from '../../lib/network/guard';
 import { toStacksNetwork } from '../../lib/network/stacks';
 import {
+  formatMiningFeeMicroStx,
+  toChunkCountLabel,
+  type CollectionMiningFeeGuidance
+} from '../../lib/collection-mint/mining-fee-guidance';
+import {
   parseManageJsonResponse,
   toManageApiErrorMessage
 } from '../lib/api-errors';
@@ -198,9 +203,13 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
   const [coverMessage, setCoverMessage] = useState<string | null>(null);
   const [descriptionMessage, setDescriptionMessage] = useState<string | null>(null);
   const [liveLinkMessage, setLiveLinkMessage] = useState<string | null>(null);
+  const [feeGuidanceMessage, setFeeGuidanceMessage] = useState<string | null>(null);
   const [coverSaving, setCoverSaving] = useState(false);
   const [descriptionSaving, setDescriptionSaving] = useState(false);
   const [coverPreviewFailed, setCoverPreviewFailed] = useState(false);
+  const [feeGuidance, setFeeGuidance] = useState<CollectionMiningFeeGuidance | null>(
+    null
+  );
   const [onChainReservationOwner, setOnChainReservationOwner] = useState('');
   const [onChainReservationHash, setOnChainReservationHash] = useState('');
   const [onChainReservationStatus, setOnChainReservationStatus] =
@@ -462,6 +471,8 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       setSelectedCoverAssetId('');
       setInscribedCoverUrl('');
       setCollectionDescriptionInput('');
+      setFeeGuidance(null);
+      setFeeGuidanceMessage(null);
       setOnChainReservationStatus(null);
       setOnChainReservationMessage(null);
       setOnChainReservedCount(null);
@@ -478,10 +489,14 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
 
     setReadiness((prev) => ({ ...prev, loading: true, error: null }));
     setCoverMessage(null);
+    setFeeGuidanceMessage(null);
     try {
-      const [collectionResponse, assetsResponse] = await Promise.all([
+      const [collectionResponse, assetsResponse, feeGuidanceResponse] = await Promise.all([
         fetch(`/collections/${encodeURIComponent(normalizedCollectionId)}`),
-        fetch(`/collections/${encodeURIComponent(normalizedCollectionId)}/assets`)
+        fetch(`/collections/${encodeURIComponent(normalizedCollectionId)}/assets`),
+        fetch(
+          `/collections/${encodeURIComponent(normalizedCollectionId)}/fee-guidance`
+        )
       ]);
 
       const loadedCollection = await parseManageJsonResponse<CollectionRecord>(
@@ -492,6 +507,18 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
         assetsResponse,
         'Collection assets'
       );
+      let loadedFeeGuidance: CollectionMiningFeeGuidance | null = null;
+      try {
+        loadedFeeGuidance =
+          await parseManageJsonResponse<CollectionMiningFeeGuidance>(
+            feeGuidanceResponse,
+            'Mining fee guidance'
+          );
+      } catch (error) {
+        setFeeGuidanceMessage(
+          toManageApiErrorMessage(error, 'Unable to load mining fee guidance.')
+        );
+      }
 
       const loadedMetadata = toRecord(loadedCollection.metadata) ?? null;
       const mintTypeRaw =
@@ -528,6 +555,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       setSelectedCoverAssetId(savedAssetId);
       setInscribedCoverUrl(savedUrl);
       setCollectionDescriptionInput(savedDescription);
+      setFeeGuidance(loadedFeeGuidance);
       setReadiness({
         loading: false,
         contractConnected: !!loadedCollection.contract_address,
@@ -540,6 +568,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
     } catch (error) {
       setCollection(null);
       setAssets([]);
+      setFeeGuidance(null);
       setCollectionDescriptionInput('');
       setOnChainReservationStatus(null);
       setOnChainReservedCount(null);
@@ -764,6 +793,8 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
     setCoverMessage(null);
     setDescriptionMessage(null);
     setLiveLinkMessage(null);
+    setFeeGuidanceMessage(null);
+    setFeeGuidance(null);
     setOnChainReservationMessage(null);
     setOnChainReservationStatus(null);
   }, [normalizedActiveCollectionId]);
@@ -1312,6 +1343,98 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
         </div>
       </div>
 
+      <div className="deploy-wizard__defaults">
+        <p className="deploy-wizard__defaults-title info-label">
+          Mining fee guidance (largest file)
+          <InfoTooltip text="Server-side estimate of mining fees for begin, upload batch(es), and seal based on the largest staged file. Protocol fees and mint price are separate." />
+        </p>
+        {feeGuidance?.available ? (
+          <>
+            <p className="field__hint">
+              Largest file:{' '}
+              <code>
+                {feeGuidance.largestAsset?.filename ||
+                  feeGuidance.largestAsset?.path ||
+                  'Unknown file'}
+              </code>{' '}
+              · {toChunkCountLabel(feeGuidance.chunkCount)} chunk(s) ·{' '}
+              {feeGuidance.batchCount.toLocaleString()} upload batch(es)
+            </p>
+            <div className="fee-guidance-table-wrapper">
+              <table className="fee-guidance-table">
+                <thead>
+                  <tr>
+                    <th>Step</th>
+                    <th>Tx count</th>
+                    <th>Chunk count</th>
+                    <th>Suggested mining fee</th>
+                    <th>Wallet default</th>
+                    <th>Note</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {feeGuidance.table.map((row) => (
+                    <tr key={row.step}>
+                      <td>{row.label}</td>
+                      <td>{row.txCount.toLocaleString()}</td>
+                      <td>{row.chunkCount > 0 ? row.chunkCount.toLocaleString() : '—'}</td>
+                      <td>
+                        {formatMiningFeeMicroStx(row.recommendedTotalMicroStx)}
+                        {row.recommendedPerTxMicroStx !== null
+                          ? ` total (~${formatMiningFeeMicroStx(
+                              row.recommendedPerTxMicroStx
+                            )} each)`
+                          : ' total'}
+                      </td>
+                      <td>
+                        {formatMiningFeeMicroStx(row.walletDefaultTotalMicroStx)}
+                        {row.walletDefaultPerTxMicroStx !== null
+                          ? ` total (${formatMiningFeeMicroStx(
+                              row.walletDefaultPerTxMicroStx
+                            )} each)`
+                          : ''}
+                      </td>
+                      <td className="fee-guidance-table__note">{row.note}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {feeGuidance.uploadBatches.length > 0 && (
+              <ul>
+                {feeGuidance.uploadBatches.map((batch) => (
+                  <li key={batch.label}>
+                    {batch.label}: {batch.batchCount.toLocaleString()} tx · suggested{' '}
+                    {formatMiningFeeMicroStx(batch.recommendedPerTxMicroStx)} each ·
+                    wallet default{' '}
+                    {formatMiningFeeMicroStx(batch.walletDefaultPerTxMicroStx)} each.
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="field__hint">
+              Ballpark total mining fee for this largest file: roughly{' '}
+              <strong>
+                {formatMiningFeeMicroStx(feeGuidance.totals.lowBallparkMicroStx)} to{' '}
+                {formatMiningFeeMicroStx(feeGuidance.totals.highBallparkMicroStx)}
+              </strong>
+              . If a wallet rejects a lower fee, increase gradually and retry.
+            </p>
+            {feeGuidance.warnings.map((warning) => (
+              <p key={warning} className="field__hint">
+                {warning}
+              </p>
+            ))}
+          </>
+        ) : (
+          <p className="field__hint">
+            {feeGuidance?.warnings[0] ??
+              'Upload at least one file to generate mining fee guidance.'}
+          </p>
+        )}
+        {feeGuidanceMessage ? <p className="field__hint">{feeGuidanceMessage}</p> : null}
+      </div>
+
       <div className="mint-actions">
         <button
           className="button"
@@ -1347,7 +1470,8 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
           <ul>
             {reservations.map((reservation) => (
               <li key={String(reservation.reservation_id)}>
-                {reservation.asset_id} · {reservation.status} · expires{' '}
+                {toText(reservation.asset_id) || 'Unknown asset'} ·{' '}
+                {toText(reservation.status) || 'unknown'} · expires{' '}
                 {new Date(Number(reservation.expires_at ?? 0)).toLocaleString()}
               </li>
             ))}

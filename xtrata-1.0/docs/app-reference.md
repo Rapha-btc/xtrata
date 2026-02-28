@@ -64,7 +64,9 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 - `src/manage/CollectionManagerApp.tsx` composes the collapse-aware panels (`SdkToolkitPanel`, `CollectionListPanel`, `OwnerOversightPanel`, `DeployWizardPanel`, `CollectionSettingsPanel`, `AssetStagingPanel`, `PublishOpsPanel`, and `DiagnosticsPanel`).
 - `src/manage/components/SdkToolkitPanel.tsx` provides quick-start guidance, context-aware SDK snippets, and allowlist boundary notes for third-party builders.
 - `functions/collections/*` responds to the `CollectionList`/`CollectionRecord` endpoints, deploy/readiness checks, asset manifest uploads, reservation CRUD, publish action, owner oversight snapshots, and R2 upload URLs using the `DB`/`COLLECTION_ASSETS` bindings (legacy fallbacks: `ASSETS`, `R2`).
+- `functions/collections/[collectionId]/fee-guidance.ts` serves backend mining-fee guidance (begin/upload/seal estimates) based on the largest staged asset chunk profile.
 - `functions/lib/collections.ts` implements slug normalization and storage-limit helpers; `functions/lib/__tests__/collections.test.ts` guards them via Vitest.
+- `functions/lib/fee-guidance.ts` owns chunk-based mining-fee assumptions and estimate generation for collection guidance responses.
 - `functions/lib/collection-deploy.ts` validates whether a draft has a confirmed on-chain deploy transaction before upload/publish operations.
 - `functions/collections/health.ts` provides the `/collections/health` check used by the diagnostics panel to confirm D1 connectivity and table counts.
 
@@ -92,6 +94,7 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 - `src/lib/protocol/clarity.ts` maps protocol values to clarity values.
 - `src/lib/protocol/parsers.ts` parses contract read-only responses into app types.
 - `src/lib/chunking/hash.ts` hashes and slices files for chunked minting.
+- `src/lib/collection-mint/mining-fee-guidance.ts` defines shared types/formatting for backend mining-fee guidance rendered in manage/public collection pages.
 - `src/lib/mint/dependencies.ts` parses and validates recursive parent IDs for minting.
 - `src/lib/viewer/queries.ts` builds React Query calls for viewer data.
 - `src/lib/viewer/content.ts` resolves content bytes, batch reads, and media handling.
@@ -141,7 +144,9 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 ## Tests and fixtures
 
 - `src/lib/**/__tests__/*.test.ts` covers unit tests for protocol, viewer, network, contract, and wallet utilities.
+- `src/lib/collection-mint/__tests__/mining-fee-guidance.test.ts` validates collection mining-fee guidance label formatting.
 - `src/lib/skills/__tests__/xtrata-agent-skill.test.ts` validates the embedded AI training package (`XTRATA_AGENT_SKILL.md` + companion scripts) for required coverage and syntax checks.
+- `functions/lib/__tests__/fee-guidance.test.ts` and `functions/lib/__tests__/collection-fee-guidance-route.test.ts` cover backend mining-fee estimate math and route payload behavior.
 - `packages/xtrata-sdk/src/__tests__/*.test.ts` covers SDK public helper/unit behavior.
 - `packages/xtrata-reconstruction/src/__tests__/*.test.ts` covers deterministic reconstruction helpers.
 - `scripts/contract-variants.mjs` syncs and verifies SIP-009 trait variants for clarinet/testnet/mainnet.
