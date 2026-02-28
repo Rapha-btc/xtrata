@@ -7,11 +7,32 @@
     "2026-02-27:pulse-2": true,
     "2026-02-27:pulse-3": true,
     "2026-02-27:inscribe": true,
-    "2026-02-27:pulse-1": true
+    "2026-02-27:pulse-1": true,
+    "2026-02-28:pulse-2": true
   },
   "lastInscription": null,
   "chainData": {},
   "errors": [
+    {
+      "timestamp": "2026-02-28T09:28:14.720Z",
+      "message": "Claude exited with code null"
+    },
+    {
+      "timestamp": "2026-02-28T09:00:00.491Z",
+      "message": "Claude exited with code null"
+    },
+    {
+      "timestamp": "2026-02-28T08:44:13.198Z",
+      "message": "Claude exited with code null"
+    },
+    {
+      "timestamp": "2026-02-28T08:28:00.287Z",
+      "message": "Claude exited with code null"
+    },
+    {
+      "timestamp": "2026-02-28T08:09:59.346Z",
+      "message": "Claude exited with code null"
+    },
     {
       "timestamp": "2026-02-28T00:16:19.326Z",
       "message": "Claude exited with code null"
