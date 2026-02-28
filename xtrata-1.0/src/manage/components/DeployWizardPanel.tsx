@@ -86,6 +86,19 @@ const formatMicroStx = (value: bigint) => {
   return `${sign}${whole.toString()}.${fraction} STX`;
 };
 
+const formatMicroStxInput = (value: bigint) => {
+  const whole = value / MICROSTX_PER_STX;
+  const fraction = value % MICROSTX_PER_STX;
+  if (fraction === 0n) {
+    return whole.toString();
+  }
+  const fractionText = fraction
+    .toString()
+    .padStart(6, '0')
+    .replace(/0+$/g, '');
+  return `${whole.toString()}.${fractionText}`;
+};
+
 const readCoreFeeUnitMicroStx = async (params: {
   coreTarget: ArtistDeployCoreTarget;
   senderAddress: string;
@@ -820,10 +833,35 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     coreFeeUnitMicroStx,
     deployBuild.resolved.mintPriceMicroStx
   ]);
+  const minimumMintPriceMicroStx = useMemo(() => {
+    if (mintType !== 'standard' || !pricingPreflight) {
+      return null;
+    }
+    return pricingPreflight.worstCaseSealFeeMicroStx + 1n;
+  }, [mintType, pricingPreflight]);
+  const standardMintPriceLocked = mintType === 'standard' && !collectionDeployPricingLock;
+  const standardMintPriceBelowFloor =
+    mintType === 'standard' &&
+    minimumMintPriceMicroStx !== null &&
+    deployBuild.resolved.mintPriceMicroStx < minimumMintPriceMicroStx;
   const reviewDeployBlockedByPricing =
     mintType === 'standard' &&
-    collection !== null &&
-    (!collectionDeployPricingLock || (pricingPreflight ? !pricingPreflight.safe : false));
+    (!collectionDeployPricingLock || !pricingPreflight || !pricingPreflight.safe);
+
+  useEffect(() => {
+    if (mintType !== 'standard' || minimumMintPriceMicroStx === null) {
+      return;
+    }
+    if (deployBuild.resolved.mintPriceMicroStx >= minimumMintPriceMicroStx) {
+      return;
+    }
+    setMintPriceStx(formatMicroStxInput(minimumMintPriceMicroStx));
+  }, [
+    mintType,
+    minimumMintPriceMicroStx,
+    deployBuild.resolved.mintPriceMicroStx
+  ]);
+
   const preflightTemplateVersion = useMemo(() => {
     if (mintType === 'pre-inscribed') {
       return 'xtrata-preinscribed-collection-sale-v1.0';
@@ -1676,7 +1714,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         <label className="field">
           <span className="field__label info-label">
             Price per mint (STX)
-            <InfoTooltip text="Amount each buyer pays per piece. Use 0 for a free launch." />
+            <InfoTooltip text="Amount each buyer pays per piece. For standard mint, this unlocks after uploads are staged + locked so we can enforce a safe minimum." />
           </span>
           <input
             className="input"
@@ -1686,8 +1724,21 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
               setMintPriceStx(event.target.value);
               setStatus(null);
             }}
+            disabled={standardMintPriceLocked}
           />
-          <span className="field__hint">Set to 0 for a free mint.</span>
+          {mintType === 'standard' ? (
+            <span className="field__hint">
+              {standardMintPriceLocked
+                ? 'Upload and lock all files first in Step 2. Price unlocks after the largest-file fee floor is known.'
+                : minimumMintPriceMicroStx !== null
+                  ? `Minimum allowed from locked assets: ${formatMicroStx(
+                      minimumMintPriceMicroStx
+                    )}.`
+                  : 'Minimum price loads after lock + fee-unit read.'}
+            </span>
+          ) : (
+            <span className="field__hint">Set to 0 for a free mint.</span>
+          )}
         </label>
 
         {mintType === 'standard' && (
@@ -1884,11 +1935,24 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                   {pricingPreflight.feeBatches === 1 ? '' : 'es'} + seal).
                 </span>
               )}
+              {minimumMintPriceMicroStx !== null && (
+                <span className="meta-value">
+                  Minimum allowed mint price (worst-case + 1 microSTX):{' '}
+                  {formatMicroStx(minimumMintPriceMicroStx)}.
+                </span>
+              )}
               {pricingPreflight && (
                 <span className="meta-value">
                   Pricing inputs used: mint price {formatMicroStx(pricingPreflight.mintPriceMicroStx)} ·
                   max chunks {collectionDeployPricingLock.maxChunks.toString()} · fee unit{' '}
                   {formatMicroStx(pricingPreflight.feeUnitMicroStx)}.
+                </span>
+              )}
+              {standardMintPriceBelowFloor && minimumMintPriceMicroStx !== null && (
+                <span className="meta-value">
+                  Price was raised to the minimum safe floor ({formatMicroStx(
+                    minimumMintPriceMicroStx
+                  )}).
                 </span>
               )}
               {pricingPreflight && !pricingPreflight.safe && (
@@ -1966,17 +2030,24 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
           onClick={handleCreateDraftOnly}
           disabled={deployPending || draftPending}
         >
-          {draftPending ? 'Saving draft...' : 'Create draft ID (Step 2 upload)'}
+          {draftPending ? 'Saving draft...' : 'Create draft ID for uploads'}
         </button>
         <button
           className="button"
           type="button"
           onClick={handleOpenReview}
-          disabled={deployPending || draftPending}
+          disabled={deployPending || draftPending || reviewDeployBlockedByPricing}
         >
           {deployPending ? 'Waiting for wallet...' : 'Review deployment'}
         </button>
       </div>
+
+      {mintType === 'standard' && reviewDeployBlockedByPricing && (
+        <p className="meta-value">
+          Review unlocks after uploads are staged, pricing lock is saved, and price passes the
+          largest-file fee floor.
+        </p>
+      )}
 
       {status && <p className="meta-value">{status}</p>}
 
@@ -2153,6 +2224,13 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                       chunk batch{pricingPreflight.feeBatches === 1 ? '' : 'es'} + seal)
                     </p>
                   )}
+                  {deployBuild.resolved.mintType === 'standard' &&
+                    minimumMintPriceMicroStx !== null && (
+                      <p>
+                        <strong>Minimum allowed mint price:</strong>{' '}
+                        {formatMicroStx(minimumMintPriceMicroStx)} (worst-case + 1 microSTX)
+                      </p>
+                    )}
                   {deployBuild.resolved.mintType === 'standard' && pricingPreflight && (
                     <p className="meta-value">
                       <strong>Pricing inputs used:</strong> mint price{' '}
