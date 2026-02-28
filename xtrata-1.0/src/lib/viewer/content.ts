@@ -139,6 +139,17 @@ export const sniffMimeType = (bytes: Uint8Array) => {
     return 'audio/webm';
   }
   if (signature === '52494646') {
+    if (bytes.length >= 12) {
+      const riffKind = String.fromCharCode(
+        bytes[8] ?? 0,
+        bytes[9] ?? 0,
+        bytes[10] ?? 0,
+        bytes[11] ?? 0
+      );
+      if (riffKind === 'WEBP') {
+        return 'image/webp';
+      }
+    }
     return 'audio/wav';
   }
   if (signature === '89504e47') {
@@ -376,6 +387,233 @@ export const getFiniteGifReplayDelayMs = (bytes: Uint8Array) => {
   }
   const perLoopDurationMs = Math.max(totalDelayCs * 10, frameCount * 100);
   return perLoopDurationMs * resolvedLoops;
+};
+
+const readUint16BE = (bytes: Uint8Array, offset: number) => {
+  if (offset < 0 || offset + 2 > bytes.length) {
+    return null;
+  }
+  return (bytes[offset] << 8) | bytes[offset + 1];
+};
+
+const readUint16LE = (bytes: Uint8Array, offset: number) => {
+  if (offset < 0 || offset + 2 > bytes.length) {
+    return null;
+  }
+  return bytes[offset] | (bytes[offset + 1] << 8);
+};
+
+const readUint24LE = (bytes: Uint8Array, offset: number) => {
+  if (offset < 0 || offset + 3 > bytes.length) {
+    return null;
+  }
+  return bytes[offset] | (bytes[offset + 1] << 8) | (bytes[offset + 2] << 16);
+};
+
+const readUint32BE = (bytes: Uint8Array, offset: number) => {
+  if (offset < 0 || offset + 4 > bytes.length) {
+    return null;
+  }
+  return (
+    (bytes[offset] * 0x1000000) +
+    ((bytes[offset + 1] << 16) | (bytes[offset + 2] << 8) | bytes[offset + 3])
+  );
+};
+
+const readUint32LE = (bytes: Uint8Array, offset: number) => {
+  if (offset < 0 || offset + 4 > bytes.length) {
+    return null;
+  }
+  return (
+    bytes[offset] +
+    (bytes[offset + 1] << 8) +
+    (bytes[offset + 2] << 16) +
+    (bytes[offset + 3] * 0x1000000)
+  );
+};
+
+const isPngHeader = (bytes: Uint8Array) =>
+  bytes.length >= 8 &&
+  bytes[0] === 0x89 &&
+  bytes[1] === 0x50 &&
+  bytes[2] === 0x4e &&
+  bytes[3] === 0x47 &&
+  bytes[4] === 0x0d &&
+  bytes[5] === 0x0a &&
+  bytes[6] === 0x1a &&
+  bytes[7] === 0x0a;
+
+const getChunkType = (bytes: Uint8Array, offset: number) => {
+  if (offset < 0 || offset + 4 > bytes.length) {
+    return null;
+  }
+  return String.fromCharCode(
+    bytes[offset],
+    bytes[offset + 1],
+    bytes[offset + 2],
+    bytes[offset + 3]
+  );
+};
+
+// Returns one finite APNG run duration (all loops), or null for static/looping
+// forever payloads or malformed chunk layouts.
+const getFiniteApngReplayDelayMs = (bytes: Uint8Array) => {
+  if (!isPngHeader(bytes)) {
+    return null;
+  }
+  let cursor = 8;
+  let hasAnimationControl = false;
+  let loopCount: number | null = null;
+  let declaredFrameCount: number | null = null;
+  let parsedFrameCount = 0;
+  let totalFrameDurationMs = 0;
+
+  while (cursor + 8 <= bytes.length) {
+    const chunkLength = readUint32BE(bytes, cursor);
+    const chunkType = getChunkType(bytes, cursor + 4);
+    if (chunkLength === null || chunkType === null) {
+      break;
+    }
+    const dataStart = cursor + 8;
+    const dataEnd = dataStart + chunkLength;
+    const nextChunk = dataEnd + 4;
+    if (dataEnd > bytes.length || nextChunk > bytes.length) {
+      break;
+    }
+
+    if (chunkType === 'acTL' && chunkLength >= 8) {
+      hasAnimationControl = true;
+      declaredFrameCount = readUint32BE(bytes, dataStart);
+      loopCount = readUint32BE(bytes, dataStart + 4);
+    } else if (chunkType === 'fcTL' && chunkLength >= 26) {
+      parsedFrameCount += 1;
+      const delayNum = readUint16BE(bytes, dataStart + 20) ?? 0;
+      const delayDen = readUint16BE(bytes, dataStart + 22) ?? 100;
+      const resolvedDen = delayDen === 0 ? 100 : delayDen;
+      const frameDurationMs =
+        delayNum > 0
+          ? Math.max(10, Math.round((delayNum * 1000) / resolvedDen))
+          : 100;
+      totalFrameDurationMs += frameDurationMs;
+    }
+
+    cursor = nextChunk;
+    if (chunkType === 'IEND') {
+      break;
+    }
+  }
+
+  const resolvedFrameCount = Math.max(declaredFrameCount ?? 0, parsedFrameCount);
+  if (!hasAnimationControl || resolvedFrameCount < 2) {
+    return null;
+  }
+  if (loopCount === 0) {
+    return null;
+  }
+  const resolvedLoops = loopCount ?? 1;
+  if (resolvedLoops <= 0) {
+    return null;
+  }
+  const perLoopDurationMs = Math.max(
+    totalFrameDurationMs,
+    resolvedFrameCount * 10
+  );
+  return perLoopDurationMs * resolvedLoops;
+};
+
+const isWebpHeader = (bytes: Uint8Array) =>
+  bytes.length >= 12 &&
+  bytes[0] === 0x52 &&
+  bytes[1] === 0x49 &&
+  bytes[2] === 0x46 &&
+  bytes[3] === 0x46 &&
+  bytes[8] === 0x57 &&
+  bytes[9] === 0x45 &&
+  bytes[10] === 0x42 &&
+  bytes[11] === 0x50;
+
+// Returns one finite animated WebP run duration (all loops), or null for
+// static/infinite payloads or malformed RIFF chunk structure.
+const getFiniteWebpReplayDelayMs = (bytes: Uint8Array) => {
+  if (!isWebpHeader(bytes)) {
+    return null;
+  }
+  let cursor = 12;
+  let hasAnimationChunk = false;
+  let loopCount: number | null = null;
+  let frameCount = 0;
+  let totalFrameDurationMs = 0;
+
+  while (cursor + 8 <= bytes.length) {
+    const chunkType = getChunkType(bytes, cursor);
+    const chunkLength = readUint32LE(bytes, cursor + 4);
+    if (chunkType === null || chunkLength === null) {
+      break;
+    }
+    const dataStart = cursor + 8;
+    const dataEnd = dataStart + chunkLength;
+    if (dataEnd > bytes.length) {
+      break;
+    }
+
+    if (chunkType === 'ANIM' && chunkLength >= 6) {
+      hasAnimationChunk = true;
+      loopCount = readUint16LE(bytes, dataStart + 4);
+    } else if (chunkType === 'ANMF' && chunkLength >= 16) {
+      frameCount += 1;
+      const frameDurationMs = readUint24LE(bytes, dataStart + 12) ?? 0;
+      totalFrameDurationMs += frameDurationMs > 0 ? frameDurationMs : 100;
+    }
+
+    const paddedLength = chunkLength + (chunkLength % 2);
+    cursor = dataStart + paddedLength;
+  }
+
+  if (!hasAnimationChunk || frameCount < 2) {
+    return null;
+  }
+  if (loopCount === 0) {
+    return null;
+  }
+  const resolvedLoops = loopCount ?? 1;
+  if (resolvedLoops <= 0) {
+    return null;
+  }
+  const perLoopDurationMs = Math.max(totalFrameDurationMs, frameCount * 10);
+  return perLoopDurationMs * resolvedLoops;
+};
+
+// Returns playback duration of one finite animated-image run (all loops), or
+// null for static/infinite animations and non-animated payloads.
+export const getFiniteAnimatedImageReplayDelayMs = (
+  bytes: Uint8Array,
+  mimeType?: string | null
+) => {
+  if (!bytes || bytes.length === 0) {
+    return null;
+  }
+  const normalizedMimeType = normalizeMimeType(mimeType);
+  if (normalizedMimeType === 'image/gif') {
+    return getFiniteGifReplayDelayMs(bytes);
+  }
+  if (normalizedMimeType === 'image/apng' || normalizedMimeType === 'image/png') {
+    return getFiniteApngReplayDelayMs(bytes);
+  }
+  if (normalizedMimeType === 'image/webp') {
+    return getFiniteWebpReplayDelayMs(bytes);
+  }
+
+  const sniffedMimeType = sniffMimeType(bytes);
+  if (sniffedMimeType === 'image/gif') {
+    return getFiniteGifReplayDelayMs(bytes);
+  }
+  if (sniffedMimeType === 'image/png') {
+    return getFiniteApngReplayDelayMs(bytes);
+  }
+  if (sniffedMimeType === 'image/webp') {
+    return getFiniteWebpReplayDelayMs(bytes);
+  }
+  return null;
 };
 
 export const extractImageFromMetadata = (value: unknown) => {

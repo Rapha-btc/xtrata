@@ -15,7 +15,7 @@ import {
   extractImageFromMetadata,
   fetchTokenImageFromUri,
   fetchOnChainContent,
-  getFiniteGifReplayDelayMs,
+  getFiniteAnimatedImageReplayDelayMs,
   getMediaKind,
   getTextPreview,
   isDataUri,
@@ -41,6 +41,7 @@ import {
 import { createObjectUrl } from '../lib/utils/blob';
 
 const MAX_GRID_VIDEO_AUTOLOAD_BYTES = 1024n * 1024n;
+const MAX_ANIMATED_PNG_PROBE_BYTES = 512n * 1024n;
 
 type TokenCardMediaProps = {
   token: TokenSummary;
@@ -69,7 +70,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
   const [tokenUriDeferred, setTokenUriDeferred] = useState(false);
   const [pixelatePreview, setPixelatePreview] = useState(false);
   const [letterboxPreview, setLetterboxPreview] = useState(false);
-  const [gifReplayTick, setGifReplayTick] = useState(0);
+  const [animatedReplayTick, setAnimatedReplayTick] = useState(0);
   const setHtmlFrameRef = useCallback((node: HTMLIFrameElement | null) => {
     setBridgeSource(node?.contentWindow ?? null);
   }, []);
@@ -124,7 +125,17 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     !thumbnailFailed &&
     !!thumbnailQuery.data?.data &&
     thumbnailQuery.data.data.length > 0;
-  const isGifMetaMimeType = (mimeType ?? '').toLowerCase() === 'image/gif';
+  const normalizedMetaMimeType = (mimeType ?? '').toLowerCase();
+  const isGifMetaMimeType = normalizedMetaMimeType === 'image/gif';
+  const isPngAnimationProbeCandidate =
+    normalizedMetaMimeType === 'image/png' &&
+    totalSize !== null &&
+    totalSize <= MAX_ANIMATED_PNG_PROBE_BYTES;
+  const isAnimatedImageMetaCandidate =
+    isGifMetaMimeType ||
+    normalizedMetaMimeType === 'image/webp' ||
+    normalizedMetaMimeType === 'image/apng' ||
+    isPngAnimationProbeCandidate;
   const shouldLoadVideo =
     !!props.token.meta &&
     totalSize !== null &&
@@ -136,7 +147,9 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     totalSize !== null &&
     (totalSize <= MAX_THUMBNAIL_BYTES || props.preferFullResolution) &&
     !svgPreview &&
-    (!hasThumbnail || props.preferFullResolution || isGifMetaMimeType) &&
+    (!hasThumbnail ||
+      props.preferFullResolution ||
+      isAnimatedImageMetaCandidate) &&
     (mediaKind === 'image' ||
       mediaKind === 'svg' ||
       mediaKind === 'text' ||
@@ -263,7 +276,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     setTokenUriDeferred(false);
     setPixelatePreview(false);
     setLetterboxPreview(false);
-    setGifReplayTick(0);
+    setAnimatedReplayTick(0);
   }, [props.token.id]);
 
   useEffect(() => {
@@ -476,10 +489,25 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
       ? props.token.tokenUri
       : null;
 
+  const finiteAnimatedReplayDelayMs = useMemo(() => {
+    if (!contentQuery.data || contentQuery.data.length === 0) {
+      return null;
+    }
+    if (resolvedKind !== 'image') {
+      return null;
+    }
+    return getFiniteAnimatedImageReplayDelayMs(
+      contentQuery.data,
+      resolvedMimeType ?? mimeType ?? null
+    );
+  }, [contentQuery.data, resolvedKind, resolvedMimeType, mimeType]);
   const onChainPreviewSource =
     !onChainFailed &&
     (resolvedKind === 'image' || resolvedKind === 'svg' ? contentUrl : null);
-  const preferFullResolution = !!props.preferFullResolution || isGifMetaMimeType;
+  const preferFullResolution =
+    !!props.preferFullResolution ||
+    isGifMetaMimeType ||
+    !!finiteAnimatedReplayDelayMs;
   const primaryImageSource = preferFullResolution
     ? onChainPreviewSource
     : resolvedThumbnailUrl;
@@ -522,39 +550,33 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     }
     return null;
   })();
-  const finiteGifReplayDelayMs = useMemo(() => {
-    if (!contentQuery.data || contentQuery.data.length === 0) {
-      return null;
-    }
-    const normalizedMime = (resolvedMimeType ?? mimeType ?? '').toLowerCase();
-    if (resolvedKind !== 'image' || normalizedMime !== 'image/gif') {
-      return null;
-    }
-    return getFiniteGifReplayDelayMs(contentQuery.data);
-  }, [contentQuery.data, resolvedKind, resolvedMimeType, mimeType]);
-  const shouldReplayFiniteGif =
+  const shouldReplayFiniteAnimatedImage =
     imagePreviewOrigin === 'on-chain' &&
     !!imagePreviewSource &&
-    !!finiteGifReplayDelayMs;
+    !!finiteAnimatedReplayDelayMs;
 
   useEffect(() => {
-    setGifReplayTick(0);
+    setAnimatedReplayTick(0);
   }, [props.token.id, imagePreviewSource, imagePreviewOrigin]);
 
   useEffect(() => {
-    if (!isActiveTab || !shouldReplayFiniteGif || !finiteGifReplayDelayMs) {
+    if (
+      !isActiveTab ||
+      !shouldReplayFiniteAnimatedImage ||
+      !finiteAnimatedReplayDelayMs
+    ) {
       return;
     }
     if (typeof window === 'undefined') {
       return;
     }
     const intervalId = window.setInterval(() => {
-      setGifReplayTick((previous) => previous + 1);
-    }, finiteGifReplayDelayMs);
+      setAnimatedReplayTick((previous) => previous + 1);
+    }, finiteAnimatedReplayDelayMs);
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [isActiveTab, shouldReplayFiniteGif, finiteGifReplayDelayMs]);
+  }, [isActiveTab, shouldReplayFiniteAnimatedImage, finiteAnimatedReplayDelayMs]);
 
   const handleImageLoad = useCallback(
     (event: SyntheticEvent<HTMLImageElement>) => {
@@ -904,8 +926,8 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     mediaElement = (
       <img
         key={
-          shouldReplayFiniteGif
-            ? `gif-loop-${props.token.id.toString()}-${gifReplayTick}`
+          shouldReplayFiniteAnimatedImage
+            ? `animated-loop-${props.token.id.toString()}-${animatedReplayTick}`
             : undefined
         }
         src={imagePreviewSource}

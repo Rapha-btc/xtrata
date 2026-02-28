@@ -4,6 +4,7 @@ import {
   decodeTokenUriToImage,
   detectWebmTrackKind,
   extractImageFromMetadata,
+  getFiniteAnimatedImageReplayDelayMs,
   fetchTokenImageFromUri,
   getFiniteGifReplayDelayMs,
   getExpectedChunkCount,
@@ -64,6 +65,130 @@ const buildAnimatedGif = ({
   return new Uint8Array(bytes);
 };
 
+const writeUint16BE = (value: number) => [
+  (value >> 8) & 0xff,
+  value & 0xff
+];
+
+const writeUint32BE = (value: number) => [
+  (value >> 24) & 0xff,
+  (value >> 16) & 0xff,
+  (value >> 8) & 0xff,
+  value & 0xff
+];
+
+const writeUint32LE = (value: number) => [
+  value & 0xff,
+  (value >> 8) & 0xff,
+  (value >> 16) & 0xff,
+  (value >> 24) & 0xff
+];
+
+const pushPngChunk = (target: number[], type: string, data: number[]) => {
+  target.push(...writeUint32BE(data.length));
+  target.push(
+    type.charCodeAt(0),
+    type.charCodeAt(1),
+    type.charCodeAt(2),
+    type.charCodeAt(3)
+  );
+  target.push(...data);
+  target.push(0x00, 0x00, 0x00, 0x00);
+};
+
+const buildAnimatedApng = ({
+  frameCount = 2,
+  delayNum = 5,
+  delayDen = 100,
+  loopCount = 1
+}: {
+  frameCount?: number;
+  delayNum?: number;
+  delayDen?: number;
+  loopCount?: number;
+}) => {
+  const bytes: number[] = [
+    0x89, 0x50, 0x4e, 0x47,
+    0x0d, 0x0a, 0x1a, 0x0a
+  ];
+
+  pushPngChunk(bytes, 'IHDR', [
+    ...writeUint32BE(1),
+    ...writeUint32BE(1),
+    0x08, 0x06, 0x00, 0x00, 0x00
+  ]);
+  pushPngChunk(bytes, 'acTL', [
+    ...writeUint32BE(frameCount),
+    ...writeUint32BE(loopCount)
+  ]);
+  for (let index = 0; index < frameCount; index += 1) {
+    pushPngChunk(bytes, 'fcTL', [
+      ...writeUint32BE(index),
+      ...writeUint32BE(1),
+      ...writeUint32BE(1),
+      ...writeUint32BE(0),
+      ...writeUint32BE(0),
+      ...writeUint16BE(delayNum),
+      ...writeUint16BE(delayDen),
+      0x00,
+      0x00
+    ]);
+  }
+  pushPngChunk(bytes, 'IEND', []);
+  return new Uint8Array(bytes);
+};
+
+const pushRiffChunk = (target: number[], type: string, data: number[]) => {
+  target.push(
+    type.charCodeAt(0),
+    type.charCodeAt(1),
+    type.charCodeAt(2),
+    type.charCodeAt(3)
+  );
+  target.push(...writeUint32LE(data.length));
+  target.push(...data);
+  if (data.length % 2 !== 0) {
+    target.push(0x00);
+  }
+};
+
+const buildAnimatedWebp = ({
+  frameCount = 2,
+  frameDurationMs = 120,
+  loopCount = 1
+}: {
+  frameCount?: number;
+  frameDurationMs?: number;
+  loopCount?: number;
+}) => {
+  const chunks: number[] = [];
+  pushRiffChunk(chunks, 'ANIM', [
+    0x00, 0x00, 0x00, 0x00,
+    loopCount & 0xff,
+    (loopCount >> 8) & 0xff
+  ]);
+  for (let index = 0; index < frameCount; index += 1) {
+    pushRiffChunk(chunks, 'ANMF', [
+      0x00, 0x00, 0x00, // x
+      0x00, 0x00, 0x00, // y
+      0x00, 0x00, 0x00, // width - 1
+      0x00, 0x00, 0x00, // height - 1
+      frameDurationMs & 0xff,
+      (frameDurationMs >> 8) & 0xff,
+      (frameDurationMs >> 16) & 0xff,
+      0x00 // flags
+    ]);
+  }
+  const riffSize = 4 + chunks.length;
+  const bytes: number[] = [
+    0x52, 0x49, 0x46, 0x46, // RIFF
+    ...writeUint32LE(riffSize),
+    0x57, 0x45, 0x42, 0x50, // WEBP
+    ...chunks
+  ];
+  return new Uint8Array(bytes);
+};
+
 describe('viewer content helpers', () => {
   const originalFetch = globalThis.fetch;
 
@@ -115,6 +240,13 @@ describe('viewer content helpers', () => {
     expect(sniffMimeType(new Uint8Array([0x89, 0x50, 0x4e, 0x47]))).toBe(
       'image/png'
     );
+    expect(
+      sniffMimeType(
+        new Uint8Array([
+          0x52, 0x49, 0x46, 0x46, 0x0, 0x0, 0x0, 0x0, 0x57, 0x45, 0x42, 0x50
+        ])
+      )
+    ).toBe('image/webp');
     expect(sniffMimeType(new Uint8Array([0x25, 0x50, 0x44, 0x46]))).toBe(
       'application/pdf'
     );
@@ -137,6 +269,65 @@ describe('viewer content helpers', () => {
     expect(getFiniteGifReplayDelayMs(singleRunGif)).toBe(200);
     expect(getFiniteGifReplayDelayMs(infiniteGif)).toBeNull();
     expect(getFiniteGifReplayDelayMs(staticGif)).toBeNull();
+  });
+
+  it('computes finite animated replay durations for APNG and WebP', () => {
+    const finiteApng = buildAnimatedApng({
+      frameCount: 2,
+      delayNum: 5,
+      delayDen: 100,
+      loopCount: 2
+    });
+    const finiteWebp = buildAnimatedWebp({
+      frameCount: 2,
+      frameDurationMs: 120,
+      loopCount: 2
+    });
+
+    expect(
+      getFiniteAnimatedImageReplayDelayMs(finiteApng, 'image/png')
+    ).toBe(200);
+    expect(
+      getFiniteAnimatedImageReplayDelayMs(finiteWebp, 'image/webp')
+    ).toBe(480);
+  });
+
+  it('returns null for infinite or static animated image payloads', () => {
+    const infiniteApng = buildAnimatedApng({
+      frameCount: 2,
+      delayNum: 10,
+      delayDen: 100,
+      loopCount: 0
+    });
+    const staticApng = buildAnimatedApng({
+      frameCount: 1,
+      delayNum: 10,
+      delayDen: 100,
+      loopCount: 1
+    });
+    const infiniteWebp = buildAnimatedWebp({
+      frameCount: 2,
+      frameDurationMs: 100,
+      loopCount: 0
+    });
+    const staticWebp = buildAnimatedWebp({
+      frameCount: 1,
+      frameDurationMs: 100,
+      loopCount: 1
+    });
+
+    expect(
+      getFiniteAnimatedImageReplayDelayMs(infiniteApng, 'image/png')
+    ).toBeNull();
+    expect(
+      getFiniteAnimatedImageReplayDelayMs(staticApng, 'image/png')
+    ).toBeNull();
+    expect(
+      getFiniteAnimatedImageReplayDelayMs(infiniteWebp, 'image/webp')
+    ).toBeNull();
+    expect(
+      getFiniteAnimatedImageReplayDelayMs(staticWebp, 'image/webp')
+    ).toBeNull();
   });
 
   it('detects webm audio/video codec markers from header bytes', () => {
