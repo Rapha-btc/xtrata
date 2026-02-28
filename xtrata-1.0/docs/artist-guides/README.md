@@ -12,3 +12,4 @@ It explains:
 
 - `docs/artist-guides/collection-launch-guide.md`
 - `docs/artist-guides/collection-template-deploy-guide.md`
+- `docs/artist-guides/collection-mint-setup-flow-blueprint.md`

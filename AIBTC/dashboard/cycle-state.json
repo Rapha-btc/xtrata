@@ -1,15 +1,4 @@
 {
-  "runningPhase": null,
-  "completedPhases": {
-    "2026-02-28:pulse-1": "2026-02-28T00:21:43.959Z"
-  },
-  "missedPhases": {
-    "2026-02-27:pulse-2": true,
-    "2026-02-27:pulse-3": true,
-    "2026-02-27:inscribe": true,
-    "2026-02-27:pulse-1": true,
-    "2026-02-28:pulse-2": true
-  },
   "lastInscription": null,
   "chainData": {},
   "errors": [
@@ -46,7 +35,5 @@
       "message": "Claude exited with code 1"
     }
   ],
-  "lastStartedAt": "2026-02-27T14:25:03.904Z",
-  "phaseStartedAt": null,
-  "phaseTimeoutMs": null
+  "lastStartedAt": "2026-02-28T10:30:42.353Z"
 }

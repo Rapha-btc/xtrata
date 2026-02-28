@@ -1,13 +1,11 @@
-// dashboard/state.js
+// dashboard/state.js — Simplified persistent state
+// Only keeps data that should survive restarts: lastInscription, chainData, errors.
 const fs = require('fs');
 const path = require('path');
 
 const STATE_FILE = path.join(__dirname, 'cycle-state.json');
 
 const DEFAULT_STATE = {
-  runningPhase: null,      // e.g., 'pulse-1', 'inscribe'
-  completedPhases: {},     // { '2026-02-27:pulse-1': '2026-02-27T08:05:12Z' }
-  missedPhases: {},        // { '2026-02-27:pulse-1': true }
   lastInscription: null,   // { date, tokenId, txid, stxCost }
   chainData: {},
   errors: [],
@@ -19,25 +17,24 @@ let state;
 function loadState() {
   try {
     const raw = fs.readFileSync(STATE_FILE, 'utf8');
-    state = { ...DEFAULT_STATE, ...JSON.parse(raw) };
+    const loaded = JSON.parse(raw);
+    // Only keep the fields we care about — drop legacy scheduler fields
+    state = {
+      lastInscription: loaded.lastInscription || null,
+      chainData: loaded.chainData || {},
+      errors: Array.isArray(loaded.errors) ? loaded.errors : [],
+      lastStartedAt: new Date().toISOString()
+    };
     console.log('Loaded state from cycle-state.json');
   } catch (err) {
     if (err.code === 'ENOENT') {
       console.log('No state file found, creating with default state.');
-      state = { ...DEFAULT_STATE };
     } else {
       console.error('Error reading state file, using default state:', err);
-      state = { ...DEFAULT_STATE };
     }
-    saveState();
+    state = { ...DEFAULT_STATE };
   }
-
-  // No child process survives a server restart — clear stale runningPhase
-  if (state.runningPhase) {
-    console.log(`Clearing stale runningPhase: ${state.runningPhase} (server restarted)`);
-    state.runningPhase = null;
-    saveState();
-  }
+  saveState();
 }
 
 function saveState() {
@@ -48,8 +45,8 @@ function saveState() {
   }
 }
 
-function getState() { 
-  return { ...state }; 
+function getState() {
+  return { ...state };
 }
 
 function updateState(patch) {

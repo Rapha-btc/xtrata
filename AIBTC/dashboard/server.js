@@ -5,7 +5,7 @@ const { exec } = require('child_process');
 const { sseHandler, broadcast } = require('./sse');
 const stateManager = require('./state');
 const markdown = require('./markdown');
-const { initScheduler, stopScheduler, getScheduleInfo, triggerPhase } = require('./scheduler');
+const { initPhases, runPhase, cancelPhase, getPhaseStatus, getLatestDraft } = require('./phases');
 const { initWatcher, stopWatcher } = require('./watcher');
 const { startChainPoller, stopChainPoller, getChainData } = require('./chain');
 
@@ -90,7 +90,6 @@ app.get('/api/chain', (req, res) => {
   const inscriptionsLabel = getMetricValue(runningTotals, 'Inscriptions sealed');
   const researchCyclesLabel = getMetricValue(runningTotals, 'Research cycles run');
 
-  // Prefer live balance from Hiro API, fall back to ledger
   const stxRemaining = live.stxBalance !== null ? live.stxBalance : parseNumber(stxRemainingLabel);
   const daysOfLife = stxRemaining !== null ? Math.floor(stxRemaining / 0.31) : parseNumber(daysOfLifeLabel);
   const stxSpent = parseNumber(stxSpentLabel);
@@ -113,22 +112,36 @@ app.get('/api/chain', (req, res) => {
     graphSize: live.graphSize,
     feeUnit: live.feeUnit,
     lastPoll: live.lastPoll,
-    runningPhase: state.runningPhase,
     lastInscription: state.lastInscription,
     errors: state.errors || []
   });
 });
 
-app.get('/api/schedule', (req, res) => {
-  res.json(getScheduleInfo());
+// --- Phase routes (replaces scheduler) ---
+
+app.get('/api/phase-status', (req, res) => {
+  res.json(getPhaseStatus());
 });
 
-app.post('/api/trigger/:phaseId', (req, res) => {
-  const result = triggerPhase(req.params.phaseId);
+app.get('/api/draft', (req, res) => {
+  const draft = getLatestDraft();
+  res.json(draft || { name: null });
+});
+
+app.post('/api/run/:phaseId', (req, res) => {
+  const result = runPhase(req.params.phaseId);
   if (result.ok) {
-    addLog('start', `Manual trigger: ${req.params.phaseId}`);
+    addLog('start', `Run: ${req.params.phaseId}`);
   } else {
-    addLog('error', `Manual trigger rejected: ${result.error}`);
+    addLog('error', `Run rejected: ${result.error}`);
+  }
+  res.json(result);
+});
+
+app.post('/api/cancel', (req, res) => {
+  const result = cancelPhase();
+  if (result.ok) {
+    addLog('stop', 'Phase cancelled by user');
   }
   res.json(result);
 });
@@ -146,12 +159,10 @@ const server = app.listen(PORT, () => {
   console.log(line);
   addLog('start', line);
 
-  // Initialize automation modules
-  initScheduler(WORKDIR, broadcast);
+  initPhases(WORKDIR, broadcast);
   initWatcher(WORKDIR, broadcast);
   startChainPoller(broadcast);
 
-  // Auto-open browser on macOS
   if (process.platform === 'darwin') {
     exec(`open http://localhost:${PORT}`);
   }
@@ -170,7 +181,6 @@ server.on('error', (err) => {
 function gracefulShutdown() {
   console.log('\nShutting down Agent 27 Dashboard...');
   addLog('stop', 'Dashboard shutdown requested.');
-  stopScheduler();
   stopWatcher();
   stopChainPoller();
   server.close(() => process.exit(0));
