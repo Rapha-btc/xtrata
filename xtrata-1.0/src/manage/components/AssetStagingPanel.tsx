@@ -233,6 +233,7 @@ const parseDeployPricingLock = (
 
 type AssetStagingPanelProps = {
   activeCollectionId?: string;
+  onJourneyRefreshRequested?: () => void;
 };
 
 export default function AssetStagingPanel(props: AssetStagingPanelProps) {
@@ -325,6 +326,7 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
       );
       setAssets(payload);
       setAssetsForCollectionId(id);
+      props.onJourneyRefreshRequested?.();
     } catch (error) {
       setAssets([]);
       setAssetsForCollectionId(id);
@@ -401,6 +403,7 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
         );
         if (!controller.signal.aborted) {
           setReadiness(payload);
+          props.onJourneyRefreshRequested?.();
         }
       } catch (error) {
         if (!controller.signal.aborted) {
@@ -450,6 +453,7 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
         setCollectionTargetSupply(parseTargetSupply(metadata));
         setDeployPricingLock(parseDeployPricingLock(metadata));
         setCollectionState(String(payload.state ?? 'draft').trim().toLowerCase());
+        props.onJourneyRefreshRequested?.();
       } catch {
         if (!controller.signal.aborted) {
           setCollectionLabel(null);
@@ -736,6 +740,7 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
       const updatedMetadata = updated.metadata ?? null;
       setCollectionMetadata(updatedMetadata);
       setDeployPricingLock(parseDeployPricingLock(updatedMetadata));
+      props.onJourneyRefreshRequested?.();
       setStatus(
         `Pricing lock saved (${activeAssets.length} assets, max ${maxChunks} chunks, max ${formatBytes(
           BigInt(maxBytes)

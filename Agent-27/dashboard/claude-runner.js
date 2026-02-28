@@ -1,5 +1,5 @@
 // dashboard/claude-runner.js
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 
 const CLAUDE_BIN = '/Users/melophonic/.local/bin/claude';
 const LOG_LIMIT = 500;
@@ -7,13 +7,66 @@ const activityRing = [];
 
 // Kill timeouts per phase type (ms)
 const TIMEOUTS = {
-  research: 5 * 60 * 1000,    // 5 min — Sonnet pulse should complete in ~2 min
-  inscription: 20 * 60 * 1000  // 20 min — Opus inscription is heavier
+  research: 5 * 60 * 1000,     // 5 min — Sonnet pulse should complete in ~2 min
+  compose: 10 * 60 * 1000,     // 10 min — Opus draft composition
+  inscription: 20 * 60 * 1000  // 20 min — Opus on-chain inscription
 };
 
 function addToRing(entry) {
   activityRing.push(entry);
   if (activityRing.length > LOG_LIMIT) activityRing.shift();
+}
+
+function getRunnerEnv() {
+  return {
+    ...process.env,
+    PATH: `/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${process.env.HOME}/.local/bin:${process.env.PATH}`
+  };
+}
+
+function preflightAuthCheck() {
+  if (process.env.ANTHROPIC_API_KEY && String(process.env.ANTHROPIC_API_KEY).trim()) {
+    return { ok: true, source: 'env' };
+  }
+
+  const status = spawnSync(CLAUDE_BIN, ['auth', 'status'], {
+    env: getRunnerEnv(),
+    encoding: 'utf8'
+  });
+
+  const raw = (status.stdout || '').trim();
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed.loggedIn) {
+        return { ok: true, source: parsed.authMethod || 'cli' };
+      }
+    } catch {
+      // ignore parse issues and fall through to error
+    }
+  }
+
+  return {
+    ok: false,
+    reason: 'Claude CLI is not authenticated. Run `claude auth login` or set `ANTHROPIC_API_KEY`.'
+  };
+}
+
+function extractResultError(rawLines) {
+  for (let i = rawLines.length - 1; i >= 0; i--) {
+    try {
+      const evt = JSON.parse(rawLines[i]);
+      if (evt.type === 'result' && evt.is_error) {
+        if (Array.isArray(evt.errors) && evt.errors.length > 0) {
+          return String(evt.errors[0]).split('\n')[0];
+        }
+        if (evt.subtype) return evt.subtype;
+      }
+    } catch {
+      // ignore non-JSON lines
+    }
+  }
+  return null;
 }
 
 /**
@@ -104,6 +157,12 @@ function parseStreamEvent(raw) {
 
   // Final result
   if (evt.type === 'result') {
+    if (evt.is_error) {
+      const first = Array.isArray(evt.errors) && evt.errors.length
+        ? String(evt.errors[0]).split('\n')[0]
+        : (evt.subtype || 'execution error');
+      return { type: 'error', line: `[failed] ${first}` };
+    }
     const cost = evt.cost_usd != null ? ` ($${evt.cost_usd.toFixed(2)})` : '';
     const dur = evt.duration_ms != null ? ` ${Math.round(evt.duration_ms / 1000)}s` : '';
     const turns = evt.num_turns != null ? ` ${evt.num_turns} turns` : '';
@@ -119,10 +178,16 @@ function parseStreamEvent(raw) {
  */
 function runClaude({ model, budget, prompt, cwd, phaseType = 'research', onLine }) {
   return new Promise((resolve, reject) => {
+    const auth = preflightAuthCheck();
+    if (!auth.ok) {
+      return reject(new Error(auth.reason));
+    }
+
     const args = [
       '-p',
       '--verbose',
       '--output-format', 'stream-json',
+      '--no-session-persistence',
       '--model', model,
       '--max-budget-usd', String(budget),
       '--dangerously-skip-permissions',
@@ -131,10 +196,7 @@ function runClaude({ model, budget, prompt, cwd, phaseType = 'research', onLine 
 
     const proc = spawn(CLAUDE_BIN, args, {
       cwd,
-      env: {
-        ...process.env,
-        PATH: `/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${process.env.HOME}/.local/bin:${process.env.PATH}`
-      },
+      env: getRunnerEnv(),
       stdio: ['ignore', 'pipe', 'pipe']
     });
 
@@ -207,7 +269,9 @@ function runClaude({ model, budget, prompt, cwd, phaseType = 'research', onLine 
       if (code === 0) {
         resolve({ code, output });
       } else {
-        const err = new Error(`Claude exited with code ${code}`);
+        const detail = extractResultError(output);
+        const suffix = detail ? `: ${detail}` : '';
+        const err = new Error(`Claude exited with code ${code}${suffix}`);
         err.code = code;
         err.output = output;
         reject(err);

@@ -181,6 +181,7 @@ const unwrapReadOnly = (value: ClarityValue) => {
 
 type PublishOpsPanelProps = {
   activeCollectionId?: string;
+  onJourneyRefreshRequested?: () => void;
 };
 
 export default function PublishOpsPanel(props: PublishOpsPanelProps) {
@@ -535,6 +536,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
         supplyTarget,
         error: null
       });
+      props.onJourneyRefreshRequested?.();
     } catch (error) {
       setCollection(null);
       setAssets([]);
@@ -570,6 +572,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       await parseManageJsonResponse(response, 'Publish');
       setMessage('Collection published.');
       await loadReadiness();
+      props.onJourneyRefreshRequested?.();
     } catch (error) {
       setMessage(toManageApiErrorMessage(error, 'Publish failed'));
     }
@@ -676,6 +679,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       );
       setCollection(updated);
       setCoverMessage('Cover image settings saved.');
+      props.onJourneyRefreshRequested?.();
     } catch (error) {
       setCoverMessage(toManageApiErrorMessage(error, 'Unable to save cover image settings.'));
     } finally {
@@ -737,6 +741,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
           toMultilineText(updatedCollectionMetadata?.description)
       );
       setDescriptionMessage('Collection description saved.');
+      props.onJourneyRefreshRequested?.();
     } catch (error) {
       setDescriptionMessage(
         toManageApiErrorMessage(error, 'Unable to save collection description.')

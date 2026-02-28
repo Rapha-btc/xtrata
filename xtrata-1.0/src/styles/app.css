@@ -3438,17 +3438,29 @@ p {
 }
 
 .manage-app .manage-journey__step {
-  min-height: 60px;
-  padding: 6px 8px;
+  min-height: 112px;
+  padding: 8px 10px;
+}
+
+.manage-app .manage-journey__step-index {
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+.manage-app .manage-journey__step-status {
+  font-size: 0.68rem;
+  color: var(--accent-strong);
 }
 
 .manage-app .manage-journey__step strong {
   font-size: 0.82rem;
 }
 
-.manage-app .manage-journey__step span {
+.manage-app .manage-journey__step-note,
+.manage-app .manage-journey__step-reason {
   font-size: 0.7rem;
-  line-height: 1.3;
+  line-height: 1.35;
+  color: var(--muted);
 }
 
 .manage-app .deploy-wizard__grid {
@@ -3490,19 +3502,66 @@ p {
   display: grid;
   justify-items: flex-start;
   align-content: start;
-  gap: 4px;
+  gap: 5px;
   text-align: left;
-  min-height: 92px;
+  min-height: 106px;
   padding: 10px 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+}
+
+.manage-journey__step:disabled {
+  cursor: not-allowed;
+  opacity: 0.74;
+}
+
+.manage-journey__step--active {
+  border-color: var(--accent-strong);
+  box-shadow: inset 0 0 0 1px var(--accent-strong);
+}
+
+.manage-journey__step--locked {
+  border-style: dashed;
+  background: var(--surface-soft-2);
+}
+
+.manage-journey__step--todo {
+  border-color: rgba(245, 158, 11, 0.42);
+}
+
+.manage-journey__step--in-progress {
+  border-color: rgba(245, 158, 11, 0.62);
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.manage-journey__step--blocked {
+  border-color: rgba(248, 113, 113, 0.62);
+  background: rgba(248, 113, 113, 0.1);
+}
+
+.manage-journey__step--done {
+  border-color: rgba(16, 185, 129, 0.58);
+  background: rgba(16, 185, 129, 0.1);
 }
 
 .manage-journey__step strong {
   font-size: 0.86rem;
 }
 
-.manage-journey__step span {
+.manage-journey__step-note {
   font-size: 0.78rem;
   line-height: 1.4;
+  color: var(--muted);
+}
+
+.manage-journey__step-status {
+  font-size: 0.72rem;
+  color: var(--accent-strong);
+}
+
+.manage-journey__step-reason {
+  font-size: 0.72rem;
+  line-height: 1.35;
   color: var(--muted);
 }
 

@@ -275,6 +275,7 @@ type DeployWizardPanelProps = {
     label: string;
     deployed: boolean;
   }) => void;
+  onJourneyRefreshRequested?: () => void;
 };
 
 export default function DeployWizardPanel(props: DeployWizardPanelProps) {
@@ -925,6 +926,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
           pricingLockMaxChunks: lock?.maxChunks ?? null,
           pricingLockLockedAt: lock?.lockedAt ?? null
         });
+        props.onJourneyRefreshRequested?.();
         return payload;
       } catch (error) {
         appendDeployDebug('Selected draft refresh failed', {
@@ -937,7 +939,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         setSelectedDraftLoading(false);
       }
     },
-    [normalizedActiveCollectionId, collection?.id]
+    [normalizedActiveCollectionId, collection?.id, props.onJourneyRefreshRequested]
   );
 
   useEffect(() => {
@@ -1105,6 +1107,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         label: created.display_name ?? created.slug,
         deployed: false
       });
+      props.onJourneyRefreshRequested?.();
       setStatus(
         `Draft ready for Step 2 uploads. Collection ID: ${created.id}.`
       );
@@ -1292,6 +1295,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         label: created.display_name ?? created.slug,
         deployed: false
       });
+      props.onJourneyRefreshRequested?.();
     } catch (error) {
       appendDeployDebug('Draft creation failed', {
         attemptId,
@@ -1522,6 +1526,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
               label: updated.display_name ?? updated.slug,
               deployed: true
             });
+            props.onJourneyRefreshRequested?.();
             appendDeployDebug('Draft metadata synced after deploy submit', {
               attemptId,
               draftId: created.id,
@@ -1541,6 +1546,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                 'unknown error'
               )}`
             );
+            props.onJourneyRefreshRequested?.();
           } finally {
             setDeployPending(false);
           }
