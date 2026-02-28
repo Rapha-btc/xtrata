@@ -243,6 +243,79 @@ type DeployWizardDraftStorage = {
   marketplaceAddressTouched: boolean;
 };
 
+const toRecord = (value: unknown) =>
+  value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
+
+const toText = (value: unknown) =>
+  typeof value === 'string' ? value.trim() : '';
+
+const toPositiveIntegerText = (value: unknown) => {
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+    return Math.floor(value).toString();
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim();
+    if (/^\d+$/.test(normalized)) {
+      const parsed = Number.parseInt(normalized, 10);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        return parsed.toString();
+      }
+    }
+  }
+  return null;
+};
+
+const toParentIdsText = (value: unknown) => {
+  if (!Array.isArray(value)) {
+    return '';
+  }
+  return value
+    .map((entry) => toText(entry))
+    .filter((entry) => entry.length > 0)
+    .join(', ');
+};
+
+const toMintType = (value: unknown): ArtistMintType =>
+  value === 'pre-inscribed' ? 'pre-inscribed' : 'standard';
+
+const buildDraftFormFromCollection = (
+  collection: CollectionDraft
+): DeployWizardDraftStorage | null => {
+  const metadata = toRecord(collection.metadata);
+  const collectionMetadata = toRecord(metadata?.collection);
+  const hardcodedDefaults = toRecord(metadata?.hardcodedDefaults);
+  const recipients = toRecord(hardcodedDefaults?.recipients);
+  const resolvedCollectionName =
+    toText(collectionMetadata?.name) ||
+    toText(collection.display_name) ||
+    toText(collection.slug);
+  if (!resolvedCollectionName) {
+    return null;
+  }
+
+  const resolvedSymbol = toText(collectionMetadata?.symbol);
+  const resolvedDescription = toText(collectionMetadata?.description);
+  const resolvedSupply = toPositiveIntegerText(collectionMetadata?.supply) ?? '1000';
+  const resolvedMintPriceStx = toText(collectionMetadata?.mintPriceStx) || '0';
+  const resolvedArtistAddress = toText(recipients?.artist);
+  const resolvedMarketplaceAddress = toText(recipients?.marketplace);
+
+  return {
+    collectionName: resolvedCollectionName,
+    symbol: resolvedSymbol,
+    symbolTouched: resolvedSymbol.length > 0,
+    description: resolvedDescription,
+    supply: resolvedSupply,
+    mintPriceStx: resolvedMintPriceStx,
+    mintType: toMintType(metadata?.mintType),
+    parentInscriptions: toParentIdsText(collectionMetadata?.parentInscriptionIds),
+    artistAddress: resolvedArtistAddress,
+    artistAddressTouched: resolvedArtistAddress.length > 0,
+    marketplaceAddress: resolvedMarketplaceAddress,
+    marketplaceAddressTouched: resolvedMarketplaceAddress.length > 0
+  };
+};
+
 const parseStoredDraft = (value: string | null): DeployWizardDraftStorage | null => {
   if (!value) {
     return null;
@@ -317,6 +390,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
   const [coreFeeUnitMicroStx, setCoreFeeUnitMicroStx] = useState<bigint | null>(null);
   const reviewCloseButtonRef = useRef<HTMLButtonElement | null>(null);
   const hasHydratedDraftRef = useRef(false);
+  const hydratedCollectionFormIdRef = useRef<string | null>(null);
 
   const { walletSession, walletAdapter, connect } = useManageWallet();
   const normalizedActiveCollectionId = useMemo(
@@ -477,6 +551,37 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     void loadSelectedDraft();
     return () => controller.abort();
   }, [normalizedActiveCollectionId]);
+
+  useEffect(() => {
+    hydratedCollectionFormIdRef.current = null;
+  }, [normalizedActiveCollectionId]);
+
+  useEffect(() => {
+    const draftId = collection?.id?.trim() ?? '';
+    if (!draftId || draftId !== normalizedActiveCollectionId) {
+      return;
+    }
+    if (hydratedCollectionFormIdRef.current === draftId) {
+      return;
+    }
+    const hydrated = buildDraftFormFromCollection(collection);
+    hydratedCollectionFormIdRef.current = draftId;
+    if (!hydrated) {
+      return;
+    }
+    setCollectionName(hydrated.collectionName);
+    setSymbol(hydrated.symbol);
+    setSymbolTouched(hydrated.symbolTouched);
+    setDescription(hydrated.description);
+    setSupply(hydrated.supply);
+    setMintPriceStx(hydrated.mintPriceStx);
+    setMintType(hydrated.mintType);
+    setParentInscriptions(hydrated.parentInscriptions);
+    setArtistAddress(hydrated.artistAddress);
+    setArtistAddressTouched(hydrated.artistAddressTouched);
+    setMarketplaceAddress(hydrated.marketplaceAddress);
+    setMarketplaceAddressTouched(hydrated.marketplaceAddressTouched);
+  }, [collection, normalizedActiveCollectionId]);
 
   useEffect(() => {
     if (symbolTouched) {

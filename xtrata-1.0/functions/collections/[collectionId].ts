@@ -2,6 +2,7 @@ import { jsonResponse, badRequest, notFound, serverError } from '../lib/utils';
 import { queryAll, run } from '../lib/db';
 import { getCollectionDeployReadiness } from '../lib/collection-deploy';
 import {
+  mergeCollectionMetadata,
   isCollectionPublicVisible,
   isCollectionPublished
 } from '../lib/collections';
@@ -168,9 +169,13 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
         updates.push('contract_address = ?');
         binds.push(payload.contractAddress.trim());
       }
-      if (payload.metadata) {
+      if (Object.prototype.hasOwnProperty.call(payload, 'metadata')) {
+        const mergedMetadata = mergeCollectionMetadata(
+          existingRecord.metadata,
+          payload.metadata
+        );
         updates.push('metadata = ?');
-        binds.push(JSON.stringify(payload.metadata));
+        binds.push(JSON.stringify(mergedMetadata));
       }
       if (typeof payload.state === 'string') {
         updates.push('state = ?');
