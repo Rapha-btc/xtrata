@@ -34,6 +34,7 @@ export type JourneySignals = {
   activeAssetCount: number;
   deployPricingLockPresent: boolean;
   deployReady: boolean;
+  deployPending: boolean;
   launchMintPriceConfigured: boolean;
   launchMaxSupplyConfigured: boolean;
   hasLivePageCover: boolean;
@@ -219,6 +220,9 @@ const getBlockedReason = (
     if (!signals.hasActiveCollection) {
       return 'Create a drop draft first.';
     }
+    if (signals.deployPending) {
+      return null;
+    }
     if (signals.deployReadinessReason) {
       return signals.deployReadinessReason;
     }
@@ -284,6 +288,9 @@ export const deriveJourneyStepStates = (params: {
       lockedReason === null && !doneState.done
         ? getBlockedReason(step.id, params.signals)
         : null;
+    const isInProgress =
+      params.activeStepId === step.id ||
+      (step.id === 'deploy-contract' && params.signals.deployPending);
 
     let status: JourneyStepStatus;
     if (lockedReason) {
@@ -293,7 +300,7 @@ export const deriveJourneyStepStates = (params: {
       doneIds.add(step.id);
     } else if (blockedReason) {
       status = 'blocked';
-    } else if (params.activeStepId === step.id) {
+    } else if (isInProgress) {
       status = 'in-progress';
     } else {
       status = 'todo';

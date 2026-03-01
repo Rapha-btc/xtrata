@@ -1630,6 +1630,32 @@ p {
   color: var(--muted);
 }
 
+.field__hint--alert {
+  color: var(--accent-strong);
+}
+
+.field__hint--flash {
+  animation: field-hint-flash 1.1s ease-in-out 2;
+}
+
+@keyframes field-hint-flash {
+  0% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.8;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .field__hint--flash {
+    animation: none;
+  }
+}
+
 .field__error {
   font-size: 0.82rem;
   color: var(--accent-strong);
@@ -4253,6 +4279,24 @@ p {
 
 .deploy-wizard__grid .field--full {
   grid-column: 1 / -1;
+}
+
+.deploy-wizard__locked-input-wrap {
+  position: relative;
+}
+
+.deploy-wizard__locked-input-overlay {
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  border: 0;
+  cursor: not-allowed;
+  border-radius: 12px;
+}
+
+.deploy-wizard__locked-input-overlay:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
 }
 
 .deploy-wizard__description {

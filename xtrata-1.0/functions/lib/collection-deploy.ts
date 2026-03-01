@@ -240,7 +240,10 @@ const fetchWithHiroKeyFallback = async (params: {
 export async function getCollectionDeployReadiness(
   params: ReadinessParams
 ): Promise<CollectionDeployReadiness> {
-  const fetcher = params.fetcher ?? fetch;
+  const providedFetcher = params.fetcher;
+  const fetcher: typeof fetch = providedFetcher
+    ? (input, init) => providedFetcher(input, init)
+    : (input, init) => globalThis.fetch(input, init);
   const queryAllImpl = params.queryAllImpl ?? queryAll;
   const collectionId = params.collectionId.trim();
   if (!collectionId) {

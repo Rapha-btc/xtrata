@@ -367,6 +367,7 @@ type DeployWizardPanelProps = {
     deployed: boolean;
   }) => void;
   onJourneyRefreshRequested?: () => void;
+  journeyRefreshToken?: number;
 };
 
 export default function DeployWizardPanel(props: DeployWizardPanelProps) {
@@ -393,9 +394,11 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
   const [deployAttemptId, setDeployAttemptId] = useState<string | null>(null);
   const [deployDebugLog, setDeployDebugLog] = useState<string[]>([]);
   const [coreFeeUnitMicroStx, setCoreFeeUnitMicroStx] = useState<bigint | null>(null);
+  const [mintPriceLockHintActive, setMintPriceLockHintActive] = useState(false);
   const reviewCloseButtonRef = useRef<HTMLButtonElement | null>(null);
   const hasHydratedDraftRef = useRef(false);
   const hydratedCollectionFormIdRef = useRef<string | null>(null);
+  const mintPriceLockHintTimerRef = useRef<number | null>(null);
 
   const { walletSession, walletAdapter, connect } = useManageWallet();
   const normalizedActiveCollectionId = useMemo(
@@ -452,6 +455,18 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       previousActiveElement?.focus();
     };
   }, [reviewOpen, deployPending]);
+
+  useEffect(
+    () => () => {
+      if (
+        typeof window !== 'undefined' &&
+        mintPriceLockHintTimerRef.current !== null
+      ) {
+        window.clearTimeout(mintPriceLockHintTimerRef.current);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -532,7 +547,8 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         const response = await fetch(
           `/collections/${encodeURIComponent(normalizedActiveCollectionId)}`,
           {
-            signal: controller.signal
+            signal: controller.signal,
+            cache: 'no-store'
           }
         );
         const payload = await parseManageJsonResponse<CollectionDraft>(
@@ -968,6 +984,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     return pricingPreflight.worstCaseSealFeeMicroStx + 1n;
   }, [mintType, pricingPreflight]);
   const standardMintPriceLocked = mintType === 'standard' && !collectionDeployPricingLock;
+  const mintPriceHintId = 'deploy-mint-price-hint';
   const standardMintPriceBelowFloor =
     mintType === 'standard' &&
     minimumMintPriceMicroStx !== null &&
@@ -975,6 +992,37 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
   const reviewDeployBlockedByPricing =
     mintType === 'standard' &&
     (!collectionDeployPricingLock || !pricingPreflight || !pricingPreflight.safe);
+
+  const triggerMintPriceLockHint = useCallback(() => {
+    if (!standardMintPriceLocked) {
+      return;
+    }
+    setMintPriceLockHintActive(true);
+    if (typeof window === 'undefined') {
+      return;
+    }
+    if (mintPriceLockHintTimerRef.current !== null) {
+      window.clearTimeout(mintPriceLockHintTimerRef.current);
+    }
+    mintPriceLockHintTimerRef.current = window.setTimeout(() => {
+      setMintPriceLockHintActive(false);
+      mintPriceLockHintTimerRef.current = null;
+    }, 2600);
+  }, [standardMintPriceLocked]);
+
+  useEffect(() => {
+    if (standardMintPriceLocked) {
+      return;
+    }
+    setMintPriceLockHintActive(false);
+    if (
+      typeof window !== 'undefined' &&
+      mintPriceLockHintTimerRef.current !== null
+    ) {
+      window.clearTimeout(mintPriceLockHintTimerRef.current);
+      mintPriceLockHintTimerRef.current = null;
+    }
+  }, [standardMintPriceLocked]);
 
   useEffect(() => {
     if (mintType !== 'standard' || minimumMintPriceMicroStx === null) {
@@ -1075,7 +1123,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
   };
 
   const refreshSelectedDraft = useCallback(
-    async (reason: string) => {
+    async (reason: string, options?: { notifyJourney?: boolean }) => {
       const candidateId =
         normalizedActiveCollectionId || collection?.id?.trim() || '';
       if (!candidateId) {
@@ -1103,7 +1151,9 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
           pricingLockMaxChunks: lock?.maxChunks ?? null,
           pricingLockLockedAt: lock?.lockedAt ?? null
         });
-        props.onJourneyRefreshRequested?.();
+        if (options?.notifyJourney !== false) {
+          props.onJourneyRefreshRequested?.();
+        }
         return payload;
       } catch (error) {
         appendDeployDebug('Selected draft refresh failed', {
@@ -1118,6 +1168,22 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     },
     [normalizedActiveCollectionId, collection?.id, props.onJourneyRefreshRequested]
   );
+
+  useEffect(() => {
+    if (!normalizedActiveCollectionId) {
+      return;
+    }
+    if (typeof props.journeyRefreshToken !== 'number') {
+      return;
+    }
+    void refreshSelectedDraft('journey-refresh', {
+      notifyJourney: false
+    });
+  }, [
+    props.journeyRefreshToken,
+    normalizedActiveCollectionId,
+    refreshSelectedDraft
+  ]);
 
   useEffect(() => {
     const details = {
@@ -1946,18 +2012,36 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
             Price per mint (STX)
             <InfoTooltip text="Amount each buyer pays per piece. For standard mint, this unlocks after uploads are staged + locked so we can enforce a safe minimum." />
           </span>
-          <input
-            className="input"
-            inputMode="decimal"
-            value={mintPriceStx}
-            onChange={(event) => {
-              setMintPriceStx(event.target.value);
-              setStatus(null);
-            }}
-            disabled={standardMintPriceLocked}
-          />
+          <div className="deploy-wizard__locked-input-wrap">
+            <input
+              className="input"
+              inputMode="decimal"
+              value={mintPriceStx}
+              onChange={(event) => {
+                setMintPriceStx(event.target.value);
+                setStatus(null);
+              }}
+              disabled={standardMintPriceLocked}
+              aria-describedby={mintType === 'standard' ? mintPriceHintId : undefined}
+            />
+            {standardMintPriceLocked ? (
+              <button
+                className="deploy-wizard__locked-input-overlay"
+                type="button"
+                onClick={triggerMintPriceLockHint}
+                aria-label="Price is locked until staged assets are uploaded and locked in Step 2."
+              />
+            ) : null}
+          </div>
           {mintType === 'standard' ? (
-            <span className="field__hint">
+            <span
+              id={mintPriceHintId}
+              className={`field__hint${
+                standardMintPriceLocked && mintPriceLockHintActive
+                  ? ' field__hint--alert field__hint--flash'
+                  : ''
+              }`}
+            >
               {standardMintPriceLocked
                 ? 'Upload and lock all files first in Step 2. Price unlocks after the largest-file fee floor is known.'
                 : minimumMintPriceMicroStx !== null
@@ -1977,6 +2061,14 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
           ) : (
             <span className="field__hint">Set to 0 for a free mint.</span>
           )}
+          {mintType === 'standard' &&
+          standardMintPriceLocked &&
+          mintPriceLockHintActive ? (
+            <span className="field__hint field__hint--alert">
+              Price entry is locked right now. Complete Step 2 by uploading your
+              files, then click "Lock staged assets for deploy" to unlock pricing.
+            </span>
+          ) : null}
         </label>
 
         {mintType === 'standard' && (
@@ -2271,7 +2363,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
           onClick={() => void refreshSelectedDraft('manual-refresh')}
           disabled={deployPending || draftPending || selectedDraftLoading}
         >
-          {selectedDraftLoading ? 'Refreshing draft...' : 'Refresh draft lock status'}
+          {selectedDraftLoading ? 'Refreshing draft...' : 'Refresh draft now'}
         </button>
         <button
           className="button button--ghost"

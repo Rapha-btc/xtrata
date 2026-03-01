@@ -74,6 +74,7 @@ type JourneySnapshot = {
   activeAssetCount: number;
   deployPricingLockPresent: boolean;
   deployReady: boolean;
+  deployPending: boolean;
   launchMintPriceConfigured: boolean;
   launchMaxSupplyConfigured: boolean;
   unpaused: boolean | null;
@@ -103,6 +104,7 @@ const INITIAL_JOURNEY_SNAPSHOT: JourneySnapshot = {
   activeAssetCount: 0,
   deployPricingLockPresent: false,
   deployReady: false,
+  deployPending: false,
   launchMintPriceConfigured: false,
   launchMaxSupplyConfigured: false,
   unpaused: null,
@@ -254,6 +256,7 @@ export default function CollectionManagerApp() {
       activeAssetCount: journeySnapshot.activeAssetCount,
       deployPricingLockPresent: journeySnapshot.deployPricingLockPresent,
       deployReady: journeySnapshot.deployReady,
+      deployPending: journeySnapshot.deployPending,
       launchMintPriceConfigured: journeySnapshot.launchMintPriceConfigured,
       launchMaxSupplyConfigured: journeySnapshot.launchMaxSupplyConfigured,
       hasLivePageCover: journeySnapshot.hasLivePageCover,
@@ -311,8 +314,12 @@ export default function CollectionManagerApp() {
     try {
       const [collectionResponse, assetsResponse, readinessResponse] =
         await Promise.all([
-          fetch(`/collections/${encodeURIComponent(normalizedCollectionId)}`),
-          fetch(`/collections/${encodeURIComponent(normalizedCollectionId)}/assets`),
+          fetch(`/collections/${encodeURIComponent(normalizedCollectionId)}`, {
+            cache: 'no-store'
+          }),
+          fetch(`/collections/${encodeURIComponent(normalizedCollectionId)}/assets`, {
+            cache: 'no-store'
+          }),
           fetch(
             `/collections/${encodeURIComponent(normalizedCollectionId)}/readiness`,
             { cache: 'no-store' }
@@ -344,11 +351,15 @@ export default function CollectionManagerApp() {
       const activeAssetCount = assets.filter((asset) =>
         isActiveAssetState(asset.state)
       ).length;
+      const deployReady = readiness.deployReady === true;
+      const deploySubmitted =
+        toText(collection.contract_address).length > 0 &&
+        toText(metadata?.deployTxId).length > 0;
       let launchMintPriceConfigured = false;
       let launchMaxSupplyConfigured = false;
       let unpaused: boolean | null = null;
 
-      if (readiness.deployReady === true) {
+      if (deployReady) {
         const resolvedTarget = resolveCollectionContractLink({
           collectionId: toText(collection.id),
           collectionSlug: toText(collection.slug),
@@ -413,7 +424,8 @@ export default function CollectionManagerApp() {
         activeAssetCount,
         deployPricingLockPresent:
           toRecord(metadata?.deployPricingLock) !== null,
-        deployReady: readiness.deployReady === true,
+        deployReady,
+        deployPending: deploySubmitted && !deployReady,
         launchMintPriceConfigured,
         launchMaxSupplyConfigured,
         unpaused,
@@ -423,9 +435,7 @@ export default function CollectionManagerApp() {
         uploadReadinessReason:
           readiness.ready === true ? null : toText(readiness.reason) || null,
         deployReadinessReason:
-          readiness.deployReady === true
-            ? null
-            : toText(readiness.reason) || null
+          deployReady ? null : toText(readiness.reason) || null
       });
     } catch (error) {
       setJourneySnapshot((current) => ({
@@ -826,6 +836,7 @@ export default function CollectionManagerApp() {
               activeCollectionId={activeCollectionId}
               onDraftReady={handleDraftReady}
               onJourneyRefreshRequested={requestJourneyRefresh}
+              journeyRefreshToken={journeyRefreshKey}
             />
           </div>
         </section>

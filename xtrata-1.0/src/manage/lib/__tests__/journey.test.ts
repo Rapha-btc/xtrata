@@ -14,6 +14,7 @@ const createSignals = (
   activeAssetCount: 0,
   deployPricingLockPresent: false,
   deployReady: false,
+  deployPending: false,
   launchMintPriceConfigured: false,
   launchMaxSupplyConfigured: false,
   hasLivePageCover: false,
@@ -73,6 +74,24 @@ describe('journey helpers', () => {
     const deployStep = steps.find((step) => step.id === 'deploy-contract');
     expect(deployStep?.status).toBe('blocked');
     expect(deployStep?.blockedReason).toContain('pending');
+  });
+
+  it('shows deploy as in-progress while confirmation is pending', () => {
+    const steps = deriveJourneyStepStates({
+      signals: createSignals({
+        walletConnected: true,
+        hasActiveCollection: true,
+        mintType: 'standard',
+        activeAssetCount: 2,
+        deployPricingLockPresent: true,
+        deployPending: true,
+        deployReadinessReason: 'Deployment transaction is still pending.'
+      })
+    });
+
+    const deployStep = steps.find((step) => step.id === 'deploy-contract');
+    expect(deployStep?.status).toBe('in-progress');
+    expect(deployStep?.blockedReason).toBeNull();
   });
 
   it('returns the first todo or blocked step as the recommended target', () => {
