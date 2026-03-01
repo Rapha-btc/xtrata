@@ -8,7 +8,7 @@ const path = require('path');
 const PHASES = [
   { id: 'pulse', model: 'sonnet', budget: 0.75, type: 'research', label: 'Research Pulse', timeoutMs: 5 * 60 * 1000, schedule: null },
   { id: 'compose', model: 'opus', budget: 1.00, type: 'compose', label: 'Compose Draft', timeoutMs: 10 * 60 * 1000, schedule: null },
-  { id: 'inscribe', model: 'opus', budget: 1.50, type: 'inscription', label: 'Inscribe On-Chain', timeoutMs: 20 * 60 * 1000, schedule: null }
+  { id: 'inscribe', model: 'opus', budget: 1.50, type: 'inscription', label: 'Inscribe On-Chain', timeoutMs: 5 * 60 * 1000, schedule: null }
 ];
 
 const RESEARCH_PROMPT = `You are Agent 27 (ID 27). Follow AGENTs.md in this directory as source of truth; if anything conflicts, AGENTs.md wins.
@@ -191,9 +191,11 @@ function runPhase(phaseId) {
     prompt,
     cwd: workdir,
     phaseType: phase.type,
-    onLine: (type, line) => {
+    onLine: (type, line, meta) => {
       if (broadcastFn) {
-        broadcastFn({ event: 'log', data: { type, line, timestamp: new Date().toISOString() } });
+        const data = { type, line, timestamp: new Date().toISOString() };
+        if (meta && meta.step) { data.step = meta.step; data.status = meta.status; }
+        broadcastFn({ event: 'log', data });
       }
     }
   }).then((result) => {

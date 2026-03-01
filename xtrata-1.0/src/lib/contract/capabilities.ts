@@ -18,6 +18,7 @@ export type ContractCapabilities = {
   pendingChunkRequiresCreator: boolean;
   metaHasCreator: boolean;
   supportsNextTokenId: boolean;
+  supportsMintedIndex: boolean;
 };
 
 const CAPABILITIES_BY_VERSION: Record<ProtocolVersion, ContractCapabilities> = {
@@ -33,7 +34,8 @@ const CAPABILITIES_BY_VERSION: Record<ProtocolVersion, ContractCapabilities> = {
     supportsChunkBatchRead: true,
     pendingChunkRequiresCreator: true,
     metaHasCreator: true,
-    supportsNextTokenId: true
+    supportsNextTokenId: true,
+    supportsMintedIndex: false
   },
   '2.1.0': {
     version: '2.1.0',
@@ -47,7 +49,8 @@ const CAPABILITIES_BY_VERSION: Record<ProtocolVersion, ContractCapabilities> = {
     supportsChunkBatchRead: true,
     pendingChunkRequiresCreator: true,
     metaHasCreator: true,
-    supportsNextTokenId: true
+    supportsNextTokenId: true,
+    supportsMintedIndex: true
   }
 };
 

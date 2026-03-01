@@ -20,6 +20,11 @@ import {
 import type { ReadOnlyCaller, ReadOnlyCallOptions } from '../client';
 
 describe('xtrata contract client', () => {
+  const V2_CONTRACT = {
+    ...DEFAULT_CONTRACT,
+    contractName: 'xtrata-v2-1-0'
+  };
+
   it('calls get-last-token-id with correct args', async () => {
     const calls: ReadOnlyCallOptions[] = [];
     const caller: ReadOnlyCaller = {
@@ -110,5 +115,41 @@ describe('xtrata contract client', () => {
     expect(options.functionName).toBe('seal-inscription-batch');
     expect(options.functionArgs).toHaveLength(1);
     expect(options.functionArgs[0].type).toBe(ClarityType.List);
+  });
+
+  it('calls minted index readers for v2 contracts', async () => {
+    const calls: ReadOnlyCallOptions[] = [];
+    const caller: ReadOnlyCaller = {
+      callReadOnly: async (options) => {
+        calls.push(options);
+        if (options.functionName === 'get-minted-count') {
+          return responseOkCV(uintCV(7));
+        }
+        if (options.functionName === 'get-minted-id') {
+          return someCV(uintCV(3));
+        }
+        throw new Error(`Unexpected function: ${options.functionName}`);
+      }
+    };
+    const client = createXtrataClient({
+      contract: V2_CONTRACT,
+      caller
+    });
+
+    const count = await client.getMintedCount(
+      'SP2JXKMSH007NPYAQHKJPQMAQYAD90NQGTVJVQ02B'
+    );
+    const tokenId = await client.getMintedId(
+      1n,
+      'SP2JXKMSH007NPYAQHKJPQMAQYAD90NQGTVJVQ02B'
+    );
+
+    expect(client.supportsMintedIndex).toBe(true);
+    expect(count).toBe(7n);
+    expect(tokenId).toBe(3n);
+    expect(calls.map((call) => call.functionName)).toEqual([
+      'get-minted-count',
+      'get-minted-id'
+    ]);
   });
 });

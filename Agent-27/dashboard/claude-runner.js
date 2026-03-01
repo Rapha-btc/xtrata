@@ -9,7 +9,7 @@ const activityRing = [];
 const TIMEOUTS = {
   research: 5 * 60 * 1000,     // 5 min — Sonnet pulse should complete in ~2 min
   compose: 10 * 60 * 1000,     // 10 min — Opus draft composition
-  inscription: 20 * 60 * 1000  // 20 min — Opus on-chain inscription
+  inscription: 5 * 60 * 1000   // 5 min — Opus on-chain inscription
 };
 
 function addToRing(entry) {
@@ -82,6 +82,11 @@ function parseStreamEvent(raw) {
     return { type: 'stdout', line: raw };
   }
 
+  // Direct __xtrata_step line (e.g. from script stdout echoed as text)
+  if (evt.__xtrata_step) {
+    return { type: 'inscription', line: `[${evt.step}] ${evt.detail}`, step: evt.step, status: evt.status };
+  }
+
   // System/init messages
   if (evt.type === 'system') {
     return { type: 'stdout', line: `[system] ${evt.subtype || 'init'}` };
@@ -150,9 +155,23 @@ function parseStreamEvent(raw) {
     return null;
   }
 
-  // Tool result — brief acknowledgement
+  // Tool result — check for __xtrata_step events, suppress everything else
   if (evt.type === 'tool_result') {
-    return null; // suppress verbose tool results
+    const content = evt.content || evt.output || '';
+    const text = typeof content === 'string' ? content : JSON.stringify(content);
+    const stepEvents = [];
+    for (const line of text.split('\n')) {
+      if (line.includes('__xtrata_step')) {
+        try {
+          const parsed = JSON.parse(line);
+          if (parsed.__xtrata_step) {
+            stepEvents.push({ type: 'inscription', line: `[${parsed.step}] ${parsed.detail}`, step: parsed.step, status: parsed.status });
+          }
+        } catch {}
+      }
+    }
+    if (stepEvents.length > 0) return stepEvents;
+    return null;
   }
 
   // Final result
@@ -221,9 +240,12 @@ function runClaude({ model, budget, prompt, cwd, phaseType = 'research', onLine 
         output.push(raw);
         const parsed = parseStreamEvent(raw);
         if (parsed) {
-          const entry = { timestamp: new Date().toISOString(), ...parsed };
-          addToRing(entry);
-          if (onLine) onLine(parsed.type, parsed.line);
+          const events = Array.isArray(parsed) ? parsed : [parsed];
+          for (const p of events) {
+            const entry = { timestamp: new Date().toISOString(), ...p };
+            addToRing(entry);
+            if (onLine) onLine(p.type, p.line, p);
+          }
         }
       }
     });
@@ -232,8 +254,11 @@ function runClaude({ model, budget, prompt, cwd, phaseType = 'research', onLine 
         output.push(stdoutBuf);
         const parsed = parseStreamEvent(stdoutBuf);
         if (parsed) {
-          addToRing({ timestamp: new Date().toISOString(), ...parsed });
-          if (onLine) onLine(parsed.type, parsed.line);
+          const events = Array.isArray(parsed) ? parsed : [parsed];
+          for (const p of events) {
+            addToRing({ timestamp: new Date().toISOString(), ...p });
+            if (onLine) onLine(p.type, p.line, p);
+          }
         }
       }
     });

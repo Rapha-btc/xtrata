@@ -58,6 +58,11 @@ console.log('Genesis parent:', GENESIS_TOKEN);
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+/** Emit structured step event for the dashboard to parse. */
+function stepLog(step, status, detail) {
+  console.log(JSON.stringify({ __xtrata_step: true, step, status, detail }));
+}
+
 function computeHash(chunks) {
   let running = Buffer.alloc(32, 0);
   for (const chunk of chunks) {
@@ -66,26 +71,31 @@ function computeHash(chunks) {
   return running;
 }
 
-async function pollTx(txid) {
+async function pollTx(txid, step) {
   const url = `${network.coreApiUrl}/extended/v1/tx/${txid}`;
   for (let i = 0; i < MAX_POLLS; i++) {
     const res = await fetch(url);
     const data = await res.json();
     if (data.tx_status === 'success') return data;
     if (data.tx_status === 'abort_by_response' || data.tx_status === 'abort_by_post_condition') {
+      stepLog(step, 'error', `TX failed: ${data.tx_status}`);
       throw new Error(`TX failed: ${data.tx_status} — ${JSON.stringify(data.tx_result)}`);
     }
-    console.log(`  Polling ${txid.slice(0,12)}... (${data.tx_status})`);
+    stepLog(step, 'polling', `${data.tx_status} — waiting for confirmation (${i + 1}/${MAX_POLLS})`);
     await new Promise(r => setTimeout(r, POLL_INTERVAL));
   }
+  stepLog(step, 'error', 'TX not confirmed in time');
   throw new Error('TX not confirmed in time');
 }
 
-async function broadcast(tx) {
+async function broadcastTx(tx, step) {
   const result = await broadcastTransaction(tx, network);
-  if (result.error) throw new Error(`Broadcast: ${result.error} — ${result.reason}`);
+  if (result.error) {
+    stepLog(step, 'error', `Broadcast failed: ${result.error} — ${result.reason}`);
+    throw new Error(`Broadcast: ${result.error} — ${result.reason}`);
+  }
   const txid = result.txid || result;
-  console.log(`  Broadcast: ${txid}`);
+  stepLog(step, 'broadcast', `TX sent: ${txid}`);
   return txid;
 }
 
@@ -94,15 +104,16 @@ async function broadcast(tx) {
 async function main() {
   // Read file
   const fileData = fs.readFileSync(HTML_FILE);
-  console.log(`\nFile: ${fileData.length} bytes`);
+  stepLog('preflight', 'info', `File: ${fileData.length} bytes, Entry #${ENTRY_NUM}`);
 
   if (fileData.length > 16384) {
+    stepLog('preflight', 'error', `File too large: ${fileData.length} bytes (max 16384)`);
     throw new Error(`File too large: ${fileData.length} bytes (max 16384)`);
   }
 
   const chunks = [fileData]; // Single chunk (< 16384)
   const expectedHash = computeHash(chunks);
-  console.log(`Hash: 0x${expectedHash.toString('hex')}`);
+  stepLog('preflight', 'info', `Hash: 0x${expectedHash.toString('hex').slice(0, 16)}...`);
 
   // Check if already inscribed (dedup)
   const dedupResult = await callReadOnlyFunction({
@@ -115,14 +126,14 @@ async function main() {
   });
   const dedupJson = cvToJSON(dedupResult);
   if (dedupJson.value && dedupJson.value.value) {
-    console.log(`\nALREADY INSCRIBED as token #${dedupJson.value.value}. Skipping.`);
+    stepLog('preflight', 'error', `Already inscribed as token #${dedupJson.value.value}`);
+    console.log(`ALREADY INSCRIBED as token #${dedupJson.value.value}. Skipping.`);
     return;
   }
 
   // Get current nonce and fee unit
   const nonceInfo = await getNonce(senderAddress, network);
   let nonce = nonceInfo;
-  console.log(`Nonce: ${nonce}`);
 
   const feeResult = await callReadOnlyFunction({
     contractAddress: CONTRACT_ADDRESS,
@@ -133,10 +144,10 @@ async function main() {
     network
   });
   const feeUnit = BigInt(cvToJSON(feeResult).value.value);
-  console.log(`Fee unit: ${feeUnit} microSTX`);
+  stepLog('preflight', 'confirmed', `Nonce: ${nonce}, Fee unit: ${feeUnit} microSTX`);
 
   // Step 1: begin-or-get
-  console.log('\n--- Step 1: begin-or-get ---');
+  stepLog('begin', 'info', 'Step 1/3 — Opening upload session (begin-or-get)');
   const beginTx = await makeContractCall({
     contractAddress: CONTRACT_ADDRESS,
     contractName: CONTRACT_NAME,
@@ -156,13 +167,13 @@ async function main() {
     postConditionMode: PostConditionMode.Deny,
     anchorMode: AnchorMode.Any
   });
-  const beginTxid = await broadcast(beginTx);
-  await pollTx(beginTxid);
-  console.log('  Upload session started.');
+  const beginTxid = await broadcastTx(beginTx, 'begin');
+  await pollTx(beginTxid, 'begin');
+  stepLog('begin', 'confirmed', 'Upload session started');
   nonce = nonce + 1n;
 
   // Step 2: add-chunk-batch
-  console.log('\n--- Step 2: add-chunk-batch ---');
+  stepLog('chunk', 'info', 'Step 2/3 — Uploading data (add-chunk-batch)');
   const chunkTx = await makeContractCall({
     contractAddress: CONTRACT_ADDRESS,
     contractName: CONTRACT_NAME,
@@ -178,16 +189,15 @@ async function main() {
     postConditionMode: PostConditionMode.Deny,
     anchorMode: AnchorMode.Any
   });
-  const chunkTxid = await broadcast(chunkTx);
-  await pollTx(chunkTxid);
-  console.log('  Chunk uploaded.');
+  const chunkTxid = await broadcastTx(chunkTx, 'chunk');
+  await pollTx(chunkTxid, 'chunk');
+  stepLog('chunk', 'confirmed', 'Data uploaded and verified');
   nonce = nonce + 1n;
 
   // Step 3: seal-recursive (child of genesis #107)
-  console.log('\n--- Step 3: seal-recursive ---');
   const totalChunks = BigInt(chunks.length);
   const sealFee = feeUnit * (1n + ((totalChunks + 49n) / 50n));
-  console.log(`  Seal fee: ${sealFee} microSTX`);
+  stepLog('seal', 'info', `Step 3/3 — Sealing inscription (seal-recursive, fee: ${sealFee} microSTX)`);
 
   const sealTx = await makeContractCall({
     contractAddress: CONTRACT_ADDRESS,
@@ -207,11 +217,13 @@ async function main() {
     postConditionMode: PostConditionMode.Deny,
     anchorMode: AnchorMode.Any
   });
-  const sealTxid = await broadcast(sealTx);
-  const sealResult = await pollTx(sealTxid);
+  const sealTxid = await broadcastTx(sealTx, 'seal');
+  const sealResult = await pollTx(sealTxid, 'seal');
 
   // Extract token ID
   const tokenId = cvToJSON(sealResult.tx_result || { hex: sealResult.tx_result_hex }).value?.value;
+  stepLog('seal', 'confirmed', `SEALED — Token #${tokenId} | txid: ${sealTxid}`);
+
   console.log(`\n=== ENTRY ${ENTRY_NUM} SEALED ===`);
   console.log(`Token ID: ${tokenId}`);
   console.log(`Seal txid: ${sealTxid}`);
@@ -222,6 +234,7 @@ async function main() {
 }
 
 main().catch(err => {
+  stepLog('fatal', 'error', err.message);
   console.error('FAILED:', err.message);
   process.exit(1);
 });

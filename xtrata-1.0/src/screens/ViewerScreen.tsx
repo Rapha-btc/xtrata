@@ -76,10 +76,15 @@ import { formatBytes, truncateMiddle } from '../lib/utils/format';
 import { formatMicroStx } from '../lib/contract/fees';
 import {
   fetchParents,
-  findChildrenFromKnownTokens,
-  scanChildren,
-  type ParentScanProgress
+  findChildrenFromKnownTokens
 } from '../lib/viewer/relationships';
+import {
+  loadRelationshipChildren
+} from '../lib/viewer/relationship-index';
+import {
+  syncRelationshipIndex,
+  type RelationshipSyncProgress
+} from '../lib/viewer/relationship-sync';
 import { loadWalletHoldingsIndex } from '../lib/viewer/wallet-index';
 
 const PAGE_SIZE = 16;
@@ -365,6 +370,13 @@ const TokenDetails = (props: {
   onRequestGrid: () => void;
   knownChildren: bigint[];
   lastTokenId?: bigint;
+  onSyncChildren?: (params: {
+    parentId: bigint;
+    contractId: string;
+    client: ReturnType<typeof createXtrataClient>;
+    shouldCancel?: () => boolean;
+    onProgress?: (progress: RelationshipSyncProgress) => void;
+  }) => Promise<bigint[]>;
   onAddParentDraft?: (id: bigint) => void;
   onSelectToken: (id: bigint) => void;
   marketActionStatus: string | null;
@@ -388,7 +400,7 @@ const TokenDetails = (props: {
   const [childScanPending, setChildScanPending] = useState(false);
   const [childScanStatus, setChildScanStatus] = useState<string | null>(null);
   const [childScanProgress, setChildScanProgress] =
-    useState<ParentScanProgress | null>(null);
+    useState<RelationshipSyncProgress | null>(null);
   const [scannedChildren, setScannedChildren] = useState<bigint[]>([]);
   const scanCancelRef = useRef<{ cancelled: boolean } | null>(null);
   const isWalletView = props.mode === 'wallet';
@@ -532,8 +544,8 @@ const TokenDetails = (props: {
     if (!props.token) {
       return;
     }
-    if (props.lastTokenId === undefined) {
-      setChildScanStatus('Last token id unavailable. Refresh and retry.');
+    if (!props.onSyncChildren) {
+      setChildScanStatus('Child indexing unavailable for this contract.');
       return;
     }
     if (isReadOnlyBackoffActive()) {
@@ -543,21 +555,19 @@ const TokenDetails = (props: {
     const cancelState = { cancelled: false };
     scanCancelRef.current = cancelState;
     setChildScanPending(true);
-    setChildScanStatus('Scanning full collection...');
+    setChildScanStatus('Syncing child index...');
     setChildScanProgress({
       scanned: 0n,
-      total: props.lastTokenId + 1n,
+      total: 0n,
       found: 0n,
       currentId: 0n
     });
 
     try {
-      const children = await scanChildren({
-        client: props.client,
+      const children = await props.onSyncChildren({
         parentId: props.token.id,
-        lastTokenId: props.lastTokenId,
-        senderAddress: props.senderAddress,
-        concurrency: 4,
+        contractId: props.contractId,
+        client: props.client,
         shouldCancel: () => cancelState.cancelled,
         onProgress: (progress) => setChildScanProgress(progress)
       });
@@ -568,7 +578,7 @@ const TokenDetails = (props: {
       setChildScanStatus(
         children.length > 0
           ? `Found ${children.length} children.`
-          : 'No children found.'
+          : 'No children indexed yet.'
       );
     } catch (error) {
       if (cancelState.cancelled) {
@@ -1026,7 +1036,7 @@ const TokenDetails = (props: {
                 onClick={handleScanChildren}
                 disabled={childScanPending || isWalletView}
               >
-                {childScanPending ? 'Scanning...' : 'Scan full collection'}
+                {childScanPending ? 'Syncing...' : 'Sync child index'}
               </button>
               {childScanPending && (
                 <button
@@ -1665,6 +1675,8 @@ export default function ViewerScreen(props: ViewerScreenProps) {
   const [settledWalletTokens, setSettledWalletTokens] = useState<TokenSummary[]>(
     []
   );
+  const [relationshipIndexVersion, setRelationshipIndexVersion] = useState(0);
+  const relationshipSyncInFlightRef = useRef<Record<string, boolean>>({});
 
   const collectionMaxPage = useMemo(() => {
     if (lastTokenId === undefined) {
@@ -1984,7 +1996,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     return map;
   }, [knownTokens, queryClient, resolveTokenContractId]);
 
-  const knownChildren = useMemo(() => {
+  const knownChildrenFromLoadedTokens = useMemo(() => {
     if (!selectedTokenId) {
       return [];
     }
@@ -2612,6 +2624,135 @@ export default function ViewerScreen(props: ViewerScreenProps) {
   const selectedTokenSourceContractId = resolveTokenContractId(
     resolvedSelectedToken ?? null
   );
+  const indexedChildrenQuery = useQuery({
+    queryKey: [
+      'viewer',
+      selectedTokenSourceContractId,
+      'relationship-children',
+      selectedTokenId?.toString() ?? 'none',
+      relationshipIndexVersion
+    ],
+    enabled:
+      props.isActiveTab &&
+      !isWalletView &&
+      selectedTokenId !== null,
+    queryFn: () =>
+      selectedTokenId !== null
+        ? loadRelationshipChildren({
+            contractId: selectedTokenSourceContractId,
+            parentId: selectedTokenId
+          })
+        : Promise.resolve([]),
+    staleTime: 30_000,
+    refetchOnWindowFocus: false
+  });
+  const knownChildren = useMemo(() => {
+    const merged = new Set<string>();
+    knownChildrenFromLoadedTokens.forEach((id) => merged.add(id.toString()));
+    (indexedChildrenQuery.data ?? []).forEach((id) =>
+      merged.add(id.toString())
+    );
+    return Array.from(merged)
+      .map((value) => BigInt(value))
+      .sort(sortBigIntAsc);
+  }, [knownChildrenFromLoadedTokens, indexedChildrenQuery.data]);
+  const runRelationshipSync = useCallback(
+    (params: {
+      contractId: string;
+      client: ReturnType<typeof createXtrataClient>;
+      parentId?: bigint;
+      shouldCancel?: () => boolean;
+      onProgress?: (progress: RelationshipSyncProgress) => void;
+    }) =>
+      syncRelationshipIndex({
+        client: params.client,
+        contractId: params.contractId,
+        senderAddress: props.senderAddress,
+        parentId: params.parentId,
+        shouldCancel: params.shouldCancel,
+        onProgress: params.onProgress
+      }),
+    [props.senderAddress]
+  );
+  const syncChildrenForToken = useCallback(
+    async (params: {
+      parentId: bigint;
+      contractId: string;
+      client: ReturnType<typeof createXtrataClient>;
+      shouldCancel?: () => boolean;
+      onProgress?: (progress: RelationshipSyncProgress) => void;
+    }) => {
+      await runRelationshipSync({
+        contractId: params.contractId,
+        client: params.client,
+        parentId: params.parentId,
+        shouldCancel: params.shouldCancel,
+        onProgress: params.onProgress
+      });
+      const children = await loadRelationshipChildren({
+        contractId: params.contractId,
+        parentId: params.parentId
+      });
+      setRelationshipIndexVersion((version) => version + 1);
+      return children;
+    },
+    [runRelationshipSync]
+  );
+  useEffect(() => {
+    if (!props.isActiveTab || isWalletView) {
+      return;
+    }
+    let cancelled = false;
+    const targets: Array<{
+      contractId: string;
+      client: ReturnType<typeof createXtrataClient>;
+    }> = [{ contractId, client }];
+    if (legacyClient && legacyContractId) {
+      targets.push({ contractId: legacyContractId, client: legacyClient });
+    }
+    const runnableTargets = targets.filter((target) => target.client.supportsMintedIndex);
+    if (runnableTargets.length === 0) {
+      return;
+    }
+    const run = async () => {
+      for (const target of runnableTargets) {
+        if (cancelled) {
+          return;
+        }
+        if (relationshipSyncInFlightRef.current[target.contractId]) {
+          continue;
+        }
+        relationshipSyncInFlightRef.current[target.contractId] = true;
+        try {
+          const result = await runRelationshipSync({
+            contractId: target.contractId,
+            client: target.client,
+            shouldCancel: () => cancelled
+          });
+          if (!cancelled && result.scanned > 0n) {
+            setRelationshipIndexVersion((version) => version + 1);
+          }
+        } catch {
+          // noop: sync errors are surfaced by explicit sync actions.
+        } finally {
+          relationshipSyncInFlightRef.current[target.contractId] = false;
+        }
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    props.isActiveTab,
+    isWalletView,
+    contractId,
+    client,
+    legacyClient,
+    legacyContractId,
+    runRelationshipSync,
+    lastTokenId
+  ]);
   const selectedListingKey = resolvedSelectedToken
     ? buildMarketListingKey(
         selectedTokenSourceContractId,
@@ -3449,6 +3590,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
         onRequestGrid={handleMobileGridRequest}
         knownChildren={knownChildren}
         lastTokenId={lastTokenId}
+        onSyncChildren={syncChildrenForToken}
         onAddParentDraft={props.onAddParentDraft}
         onSelectToken={handleSelectToken}
         marketActionStatus={marketActionStatus}

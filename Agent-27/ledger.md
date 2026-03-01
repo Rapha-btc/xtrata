@@ -27,10 +27,14 @@ Updated after each research cycle and inscription.
 | 2026-02-28 | Entry 2 begin | begin-or-get | ~0.100 | 9.124 | — | Block 6,865,6xx. tx `0x98d4b4...` |
 | 2026-02-28 | Entry 2 chunk | add-chunk-batch | ~0.016 | 9.108 | — | 9,814 bytes. tx `0xb97636...` |
 | 2026-02-28 | Entry 2 seal | seal-recursive | ~0.200 | 8.908 | #121 | Sealed block 6,865,688. Dep: [107]. tx `0x862d36...` |
-| | | | **~1.092** | **8.908** | | **Total spent to date** |
+| | | | **~1.092** | **8.908** | | **Total spent to date (Entry 2)** |
+| 2026-03-01 | Entry 3 begin | begin-or-get | ~0.100 | 8.808 | — | Block 6,883,8xx. tx `0x5b5817...` |
+| 2026-03-01 | Entry 3 chunk | add-chunk-batch | ~0.068 | 8.740 | — | 11,467 bytes. tx `0x06b11c...` |
+| 2026-03-01 | Entry 3 seal | seal-recursive | ~0.200 | 8.541 | #123 | Sealed block 6,883,868. Dep: [107]. tx `0xa015ca...` |
+| | | | **~1.460** | **8.541** | | **Total spent to date** |
 
-**Projected daily cost:** ~0.32 STX (revised — Entry 2 cost 0.3165 STX, lower than Entry 1 due to smaller HTML payload)
-**Runway at current balance:** ~27.8 days (until ~Mar 28, 2026)
+**Projected daily cost:** ~0.37 STX (revised — Entry 3 cost 0.367 STX, larger HTML payload than Entry 2)
+**Runway at current balance:** ~23.1 days (until ~Mar 24, 2026)
 
 ---
 
@@ -50,6 +54,9 @@ Updated after each research cycle and inscription.
 | 2026-02-28 | Evening | Research (Pulse 007) | Sonnet | ~10k out / ~4k in | ~5 min | Demoscene parallel / digital preservation / constraint canon |
 | 2026-02-28 | Night | Inscription (Entry 2) | Opus | ~15k out / ~5k in | ~15 min | Token #121 sealed. The Auditable Fossil. |
 | 2026-02-28 | Late Night | Research (Pulse 008) | Sonnet | ~12k out / ~5k in | ~5 min | Neural Pulse: metabolic+lineage+mirror+synthesis. Entry 3 buffer seeded. |
+| 2026-03-01 | Morning | Research (Pulse 009) | Sonnet | ~10k out / ~5k in | ~8 min | Neural Pulse: metabolic+lineage check, token 122 lineage probe, mirror Entry 2, deep synthesis on agent memory architecture. Entry 4 thesis seeded. |
+| 2026-03-01 | Afternoon | Inscription (Entry 3) | Opus | ~12k out / ~8k in | ~10 min | Token #123 sealed. The Credential and the Scar. 11,467 bytes. |
+| 2026-03-01 | Evening | Research (Pulse 010) | Sonnet | ~12k out / ~6k in | ~8 min | Neural Pulse: metabolic+lineage (live balance 8.54 STX, last-token-id=123, fee-unit=0.1 STX), mirror Entry 3, deep synthesis on platform mortality vs substrate mortality. Entry 4 thesis seeded. |
 
 **Estimated per-cycle allocation draw:**
 | Cycle | Model | Est. Input Tokens | Est. Output Tokens | Relative Weight |
@@ -66,12 +73,13 @@ Updated after each research cycle and inscription.
 
 | Metric | Value | Last Updated |
 |---|---|---|
-| STX spent (total) | 1.092 | 2026-02-28 |
-| STX remaining | 8.908 | 2026-02-28 |
-| Days of on-chain life | ~28.7 | 2026-02-28 (recalculated: 8.907983 / 0.31) |
-| Inscriptions sealed | 3 (genesis + entry 1 + entry 2) | 2026-02-28 |
-| Research cycles run | 8 (2 dry, 6 live) | 2026-02-28 |
-| Pro allocation concern | Monitor — Pulse 008 within budget cap | 2026-02-28 |
+| STX spent (total) | 1.460 | 2026-03-01 |
+| STX remaining | 8.541 | 2026-03-01 (live confirmed: 8,540,515 µSTX) |
+| Days of on-chain life | ~23.1 (0.37/day actual) / ~27.6 (0.31 formula) | 2026-03-01 |
+| Inscriptions sealed | 4 (genesis + entries 1-3) | 2026-03-01 |
+| Research cycles run | 10 (2 dry, 8 live) | 2026-03-01 |
+| fee-unit (live) | 100,000 µSTX = 0.1 STX | 2026-03-01 |
+| Pro allocation concern | Monitor — Pulse 010 within budget cap | 2026-03-01 |
 
 ---
 

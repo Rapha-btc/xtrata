@@ -248,8 +248,55 @@
         .log-line .type-start { color: #87CEEB; }
         .log-line .type-stop { color: #ffd27d; }
         .log-line .type-error { color: #FF6347; }
+        .log-line .type-inscription { color: var(--accent); font-weight: bold; }
         .log-line .type-thinking { color: #8a6dba; font-style: italic; }
         .log-line .type-thinking.hidden { display: none; }
+
+        /* Inscription Banner */
+        #inscription-banner {
+            grid-column: 1 / -1;
+            display: none;
+            border: 1px solid var(--accent);
+            background: #1a0f00;
+            padding: 0.6rem 1rem;
+            font-size: 13px;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        #inscription-banner.visible { display: flex; }
+        #inscription-banner .banner-icon {
+            font-size: 16px;
+            flex-shrink: 0;
+            width: 20px;
+            text-align: center;
+        }
+        #inscription-banner .banner-steps {
+            display: flex;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+        #inscription-banner .step-pip {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: #333;
+            transition: background 0.3s;
+        }
+        #inscription-banner .step-pip.active {
+            background: var(--accent);
+            animation: pulse-glow 1.5s ease-in-out infinite;
+        }
+        #inscription-banner .step-pip.done { background: var(--green); }
+        #inscription-banner .step-pip.failed { background: var(--red); }
+        #inscription-banner .banner-text {
+            color: var(--text-em);
+            flex: 1;
+        }
+        #inscription-banner .banner-detail {
+            color: var(--text);
+            font-size: 12px;
+        }
+        #inscription-banner.success { border-color: var(--green); background: #001a00; }
+        #inscription-banner.error { border-color: var(--red); background: #1a0000; }
 
         /* Footer */
         .footer {
@@ -301,6 +348,18 @@
             </div>
         </div>
     </header>
+
+    <!-- Inscription Progress Banner -->
+    <div id="inscription-banner">
+        <span class="banner-icon" id="banner-icon">&#9654;</span>
+        <div class="banner-steps">
+            <div class="step-pip" id="pip-begin" title="begin-or-get"></div>
+            <div class="step-pip" id="pip-chunk" title="add-chunk-batch"></div>
+            <div class="step-pip" id="pip-seal" title="seal-recursive"></div>
+        </div>
+        <span class="banner-text" id="banner-text"></span>
+        <span class="banner-detail" id="banner-detail"></span>
+    </div>
 
     <!-- Operations Panel -->
     <div class="panel ops full">
@@ -392,6 +451,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const showThinkingCb = document.getElementById('show-thinking');
 
+    // Inscription banner elements
+    const inscBanner = document.getElementById('inscription-banner');
+    const bannerIcon = document.getElementById('banner-icon');
+    const bannerText = document.getElementById('banner-text');
+    const bannerDetail = document.getElementById('banner-detail');
+    const pips = { begin: document.getElementById('pip-begin'), chunk: document.getElementById('pip-chunk'), seal: document.getElementById('pip-seal') };
+    let bannerDismissTimer = null;
+
     let phaseStatus = null; // cached from /api/phase-status
     let showThinking = false;
 
@@ -425,6 +492,84 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!r.ok) throw new Error(`${url} returned ${r.status}`);
             return r.json();
         });
+    }
+
+    // --- Inscription Banner ---
+
+    function updateInscriptionBanner(entry) {
+        if (entry.type !== 'inscription' || !entry.step) return;
+        const { step, status, line } = entry;
+
+        // Show the banner
+        inscBanner.classList.add('visible');
+        inscBanner.classList.remove('success', 'error');
+        if (bannerDismissTimer) { clearTimeout(bannerDismissTimer); bannerDismissTimer = null; }
+
+        // Update pip states
+        const stepOrder = ['begin', 'chunk', 'seal'];
+        const currentIdx = stepOrder.indexOf(step);
+
+        // Mark earlier steps as done
+        for (let i = 0; i < currentIdx; i++) {
+            const pip = pips[stepOrder[i]];
+            if (pip) { pip.className = 'step-pip done'; }
+        }
+
+        // Current step pip
+        const currentPip = pips[step];
+        if (currentPip) {
+            if (status === 'confirmed') {
+                currentPip.className = 'step-pip done';
+            } else if (status === 'error') {
+                currentPip.className = 'step-pip failed';
+            } else {
+                currentPip.className = 'step-pip active';
+            }
+        }
+
+        // Banner icon and text
+        if (status === 'error') {
+            bannerIcon.textContent = '\u2717';
+            inscBanner.classList.add('error');
+        } else if (status === 'confirmed') {
+            bannerIcon.textContent = '\u2713';
+        } else {
+            bannerIcon.textContent = '\u25CF';
+            bannerIcon.className = 'banner-icon running-indicator';
+        }
+
+        // Reset icon class when not running
+        if (status === 'confirmed' || status === 'error') {
+            bannerIcon.className = 'banner-icon';
+        }
+
+        // Text
+        const label = line || `${step} — ${status}`;
+        bannerText.textContent = label.replace(/^\[.*?\]\s*/, '');
+    }
+
+    function showBannerComplete(success) {
+        if (!inscBanner.classList.contains('visible')) return;
+        inscBanner.classList.remove('error', 'success');
+        inscBanner.classList.add(success ? 'success' : 'error');
+        bannerIcon.className = 'banner-icon';
+        bannerIcon.textContent = success ? '\u2713' : '\u2717';
+        if (!success) bannerText.textContent = bannerText.textContent || 'Inscription failed';
+        bannerDismissTimer = setTimeout(() => {
+            inscBanner.classList.remove('visible', 'success', 'error');
+            // Reset pips
+            Object.values(pips).forEach(p => { p.className = 'step-pip'; });
+        }, 8000);
+    }
+
+    function resetBanner() {
+        inscBanner.classList.remove('visible', 'success', 'error');
+        Object.values(pips).forEach(p => { p.className = 'step-pip'; });
+        bannerIcon.className = 'banner-icon';
+        bannerIcon.textContent = '\u25B6';
+        bannerText.textContent = '';
+        bannerDetail.textContent = '';
+        if (bannerDismissTimer) { clearTimeout(bannerDismissTimer); bannerDismissTimer = null; }
     }
 
     // --- Log ---
@@ -751,7 +896,11 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         evtSource.addEventListener('log', (e) => {
-            try { appendLogEntry(JSON.parse(e.data)); } catch {}
+            try {
+                const entry = JSON.parse(e.data);
+                appendLogEntry(entry);
+                if (entry.type === 'inscription') updateInscriptionBanner(entry);
+            } catch {}
         });
 
         evtSource.addEventListener('chain', () => {
@@ -770,14 +919,22 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch {}
         });
 
-        evtSource.addEventListener('phase-start', () => {
+        evtSource.addEventListener('phase-start', (e) => {
             refreshPhaseStatus();
+            try {
+                const data = JSON.parse(e.data);
+                if (data.phase === 'inscribe') resetBanner();
+            } catch {}
         });
 
-        evtSource.addEventListener('phase-complete', () => {
+        evtSource.addEventListener('phase-complete', (e) => {
             refreshPhaseStatus();
             refreshDraftStatus();
             fetchJson('/api/chain').then(renderMetabolic).catch(() => {});
+            try {
+                const data = JSON.parse(e.data);
+                if (data.phase === 'inscribe') showBannerComplete(data.success);
+            } catch {}
         });
     }
 

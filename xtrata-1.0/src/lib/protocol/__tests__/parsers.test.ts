@@ -21,6 +21,8 @@ import {
   parseGetInscriptionMeta,
   parseGetIdByHash,
   parseGetLastTokenId,
+  parseGetMintedCount,
+  parseGetMintedId,
   parseGetNextTokenId,
   parseGetOwner,
   parseGetPendingChunk,
@@ -46,6 +48,12 @@ describe('contract parsers', () => {
   it('parses next token id', () => {
     const value = responseOkCV(uintCV(7));
     expect(parseGetNextTokenId(value)).toBe(7n);
+  });
+
+  it('parses minted index readers', () => {
+    expect(parseGetMintedCount(responseOkCV(uintCV(25)))).toBe(25n);
+    expect(parseGetMintedId(someCV(uintCV(42)))).toBe(42n);
+    expect(parseGetMintedId(noneCV())).toBeNull();
   });
 
   it('parses admin and royalty recipients', () => {
