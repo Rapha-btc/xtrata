@@ -1003,7 +1003,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
         </div>
       ) : null}
 
-      <div className="deploy-wizard__defaults">
+      <div className="deploy-wizard__defaults" id="manage-live-page-settings">
         <p className="deploy-wizard__defaults-title info-label">
           Publish readiness
           <InfoTooltip text="Checks if this drop has the minimum setup required before making it live." />
@@ -1330,7 +1330,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
             <span>Ticker: {previewSymbol}</span>
             <span>State: {liveState}</span>
             <span>Supply: {previewSupply > 0 ? previewSupply : 'TBD'}</span>
-            <span>Mint price: {previewMintPrice} STX</span>
+            <span>Advertised mint price: {previewMintPrice} STX</span>
           </div>
           <div className="mint-actions">
             <button className="button" type="button" disabled>
@@ -1346,7 +1346,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       <div className="deploy-wizard__defaults">
         <p className="deploy-wizard__defaults-title info-label">
           Mining fee guidance (largest file)
-          <InfoTooltip text="Server-side estimate of mining fees for begin, upload batch(es), and seal based on the largest staged file. Protocol fees and mint price are separate." />
+          <InfoTooltip text="Server-side estimate of mining fees for begin, upload batch(es), and seal based on the largest staged file. Protocol fees are separate from the advertised mint price." />
         </p>
         {feeGuidance?.available ? (
           <>
@@ -1439,6 +1439,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
         <button
           className="button"
           type="button"
+          id="manage-publish-collection-button"
           onClick={() => void publishCollection()}
           disabled={!canPublish}
         >

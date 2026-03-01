@@ -106,14 +106,15 @@ type MutableAction = {
 const MUTABLE_ACTIONS: MutableAction[] = [
   {
     key: 'set-mint-price',
-    label: 'Set mint price',
+    label: 'Set payout base price',
     group: 'Pricing and Payouts',
     functionName: 'set-mint-price',
-    description: 'Update the primary mint price.',
+    description:
+      'Update the on-chain payout base used for artist/marketplace split calculations.',
     fields: [
       {
         key: 'amount',
-        label: 'Mint price (STX)',
+        label: 'Payout base price (on-chain STX)',
         type: 'stx',
         allowZero: true,
         hint: 'Up to 6 decimals.'
@@ -378,7 +379,7 @@ const MUTABLE_ACTIONS: MutableAction[] = [
       },
       {
         key: 'phase-price',
-        label: 'Phase mint price (STX)',
+        label: 'Phase on-chain price (STX)',
         type: 'stx',
         allowZero: true
       },
@@ -917,6 +918,14 @@ const formatMicroStxInput = (value: bigint | null) => {
   return `${whole.toString()}.${fractionText}`;
 };
 
+const formatDraftStx = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return 'Not set';
+  }
+  return `${trimmed} STX`;
+};
+
 const getActionGroups = (actions: MutableAction[]) => {
   const groups = new Map<string, MutableAction[]>();
   actions.forEach((action) => {
@@ -926,6 +935,8 @@ const getActionGroups = (actions: MutableAction[]) => {
   });
   return Array.from(groups.entries());
 };
+
+const DEFAULT_ADVANCED_ACTION_KEY = 'set-paused';
 
 const getDefaultInputs = (params: {
   action: MutableAction;
@@ -1021,7 +1032,11 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
   );
 
   const [selectedActionKey, setSelectedActionKey] = useState(
-    MUTABLE_ACTIONS[0]?.key ?? ''
+    () =>
+      MUTABLE_ACTIONS.find((action) => action.key === DEFAULT_ADVANCED_ACTION_KEY)
+        ?.key ??
+      MUTABLE_ACTIONS[0]?.key ??
+      ''
   );
   const [actionInputs, setActionInputs] = useState<Record<string, string>>({});
   const [actionMessage, setActionMessage] = useState<string | null>(null);
@@ -1056,6 +1071,18 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
   const collectionDescriptionFromMetadata = toText(metadataCollection?.description);
   const collectionSupplyFromMetadata = toText(metadataCollection?.supply);
   const collectionMintPriceStx = toText(metadataCollection?.mintPriceStx);
+  const advertisedPriceLabel = preInscribedMint
+    ? 'Advertised sale price (live page)'
+    : 'Advertised mint price (live page)';
+  const onChainPriceLabel = preInscribedMint
+    ? 'On-chain sale price'
+    : 'On-chain payout base price';
+  const onChainPriceSummaryHint = preInscribedMint
+    ? 'This value is read directly from the contract.'
+    : 'This value is split to artist/marketplace recipients. Collector-facing mint price can be higher when seal fee absorption is enabled.';
+  const setPriceActionLabel = preInscribedMint
+    ? 'Set sale price'
+    : 'Set payout base price';
   const collectionParentIds = useMemo(() => {
     const value = metadataCollection?.parentInscriptionIds;
     if (!Array.isArray(value)) {
@@ -1239,6 +1266,13 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
     setCollectionId(normalizedActiveCollectionId);
     void loadCollectionById(normalizedActiveCollectionId);
   }, [normalizedActiveCollectionId, loadCollectionById]);
+
+  useEffect(() => {
+    if (guidedMode || !normalizedActiveCollectionId) {
+      return;
+    }
+    setSelectedActionKey(DEFAULT_ADVANCED_ACTION_KEY);
+  }, [guidedMode, normalizedActiveCollectionId]);
 
   const saveSettings = async () => {
     if (!collectionId.trim()) {
@@ -1605,7 +1639,9 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
               advertised
             )} - protocol seal fee ${formatMicroStx(
               sealProtocolFee
-            )} = on-chain mint price ${formatMicroStx(value)}. Begin anti-spam fee remains separate.`
+            )} = on-chain payout base price ${formatMicroStx(
+              value
+            )}. Begin anti-spam fee remains separate.`
           );
         }
         args.push(uintCV(value));
@@ -1773,14 +1809,16 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
   const runQuickSetMintPrice = async () => {
     const parsed = parseStxToMicro(quickMintPriceStx, true);
     if (parsed === null) {
-      setQuickActionMessage('Price must be a valid STX amount (up to 6 decimals).');
+      setQuickActionMessage(
+        'On-chain price must be a valid STX amount (up to 6 decimals).'
+      );
       return;
     }
     await runQuickAction({
       pendingKey: 'set-mint-price',
       functionName: priceWriteFunction,
       functionArgs: [uintCV(parsed)],
-      successLabel: preInscribedMint ? 'Set sale price' : 'Set mint price'
+      successLabel: setPriceActionLabel
     });
   };
 
@@ -1822,8 +1860,12 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
 
   if (guidedMode) {
     const quickActionsBusy = quickActionPending !== null;
-    const priceLabel = preInscribedMint ? 'Sale price' : 'Mint price';
-    const pauseStepNumber = preInscribedMint ? 2 : 3;
+    const onChainPriceFieldLabel = preInscribedMint
+      ? 'On-chain sale price'
+      : 'On-chain payout base price';
+    const pauseStepNumber = 1;
+    const priceStepNumber = 2;
+    const maxSupplyStepNumber = 3;
     const unpauseStepNumber = preInscribedMint ? 3 : 4;
     const pauseStatusLabel =
       pausedValue === null
@@ -1874,10 +1916,14 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
 
           <div className="collection-settings-panel__summary-grid">
             <div className="collection-settings-panel__summary-item">
-              <span className="meta-label">{priceLabel}</span>
+              <span className="meta-label">{onChainPriceLabel}</span>
               <span className="meta-value">
                 {formatMicroStx(summary?.mintPriceMicroStx ?? null)}
               </span>
+            </div>
+            <div className="collection-settings-panel__summary-item">
+              <span className="meta-label">{advertisedPriceLabel}</span>
+              <span className="meta-value">{formatDraftStx(collectionMintPriceStx)}</span>
             </div>
             {!preInscribedMint ? (
               <div className="collection-settings-panel__summary-item">
@@ -1903,12 +1949,32 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
         </div>
 
         <div className="collection-settings-panel__group">
-          <h3>1. Set {priceLabel.toLowerCase()}</h3>
+          <h3>{pauseStepNumber}. Pause before publish</h3>
           <p className="meta-value">
-            Set the {priceLabel.toLowerCase()} collectors will pay at mint time.
+            Keep minting paused while finishing live-page details and publish.
+          </p>
+          <div className="mint-actions">
+            <button
+              className="button"
+              type="button"
+              id="manage-pause-contract-button"
+              onClick={() => void runQuickPause()}
+              disabled={!contractReady || quickActionsBusy || pausedValue === true}
+            >
+              {quickActionPending === 'pause' ? 'Submitting...' : 'Pause contract'}
+            </button>
+          </div>
+        </div>
+
+        <div className="collection-settings-panel__group">
+          <h3>{priceStepNumber}. Set {onChainPriceFieldLabel.toLowerCase()}</h3>
+          <p className="meta-value">
+            {preInscribedMint
+              ? 'Set the on-chain sale price used by the contract.'
+              : 'Set the on-chain payout base split to artist/marketplace recipients. Collector-facing mint price is set in Step 4 live page settings.'}
           </p>
           <label className="field field--full">
-            <span className="field__label">{priceLabel} (STX)</span>
+            <span className="field__label">{onChainPriceFieldLabel} (STX)</span>
             <input
               className="input"
               value={quickMintPriceStx}
@@ -1928,14 +1994,14 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
             >
               {quickActionPending === 'set-mint-price'
                 ? 'Submitting...'
-                : `Set ${priceLabel.toLowerCase()}`}
+                : `Set ${onChainPriceFieldLabel.toLowerCase()}`}
             </button>
           </div>
         </div>
 
         {!preInscribedMint ? (
           <div className="collection-settings-panel__group">
-            <h3>2. Set max supply</h3>
+            <h3>{maxSupplyStepNumber}. Set max supply</h3>
             <p className="meta-value">Set the maximum number of tokens this drop can mint.</p>
             <label className="field field--full">
               <span className="field__label">Max supply</span>
@@ -1965,23 +2031,6 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
         ) : null}
 
         <div className="collection-settings-panel__group">
-          <h3>{pauseStepNumber}. Pause before publish</h3>
-          <p className="meta-value">
-            Keep minting paused while finishing live-page details and publish.
-          </p>
-          <div className="mint-actions">
-            <button
-              className="button"
-              type="button"
-              onClick={() => void runQuickPause()}
-              disabled={!contractReady || quickActionsBusy || pausedValue === true}
-            >
-              {quickActionPending === 'pause' ? 'Submitting...' : 'Pause contract'}
-            </button>
-          </div>
-        </div>
-
-        <div className="collection-settings-panel__group">
           <h3>{unpauseStepNumber}. Unpause to go live</h3>
           <p className="meta-value">
             Final launch milestone: unpause only after the collection is published.
@@ -1990,6 +2039,7 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
             <button
               className="button"
               type="button"
+              id="manage-unpause-contract-button"
               onClick={() => void runQuickUnpause()}
               disabled={
                 !contractReady ||
@@ -2132,6 +2182,7 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
           This section sends wallet transactions directly to the deployed
           collection contract.
         </p>
+        <p className="meta-value">{onChainPriceSummaryHint}</p>
         <p className="meta-value">
           Contract target:{' '}
           <code>{contractId ?? 'Set valid contract address + contract name'}</code>
@@ -2178,8 +2229,12 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
             </span>
           </div>
           <div className="collection-settings-panel__summary-item">
-            <span className="meta-label">Mint price</span>
+            <span className="meta-label">{onChainPriceLabel}</span>
             <span className="meta-value">{formatMicroStx(summary?.mintPriceMicroStx ?? null)}</span>
+          </div>
+          <div className="collection-settings-panel__summary-item">
+            <span className="meta-label">{advertisedPriceLabel}</span>
+            <span className="meta-value">{formatDraftStx(collectionMintPriceStx)}</span>
           </div>
           <div className="collection-settings-panel__summary-item">
             <span className="meta-label">Max supply</span>
@@ -2204,6 +2259,7 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
             <InfoTooltip text={selectedActionTooltipText} />
           </span>
           <select
+            id="manage-contract-action-select"
             className="select"
             value={selectedActionKey}
             onChange={(event) => {
@@ -2296,8 +2352,8 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
         {selectedAction?.functionName === 'set-mint-price' && (
           <div className="field field--full">
             <span className="field__label info-label">
-              Mint Price Mode
-              <InfoTooltip text="Optional helper: keep begin anti-spam fee separate, and absorb seal protocol fee into your advertised seal price." />
+              On-chain price input mode
+              <InfoTooltip text="Optional helper: keep begin anti-spam fee separate, and absorb seal protocol fee into your advertised mint price target." />
             </span>
             <select
               className="select"
@@ -2308,8 +2364,10 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
                 setActionMessage(null);
               }}
             >
-              <option value="raw">Raw on-chain mint price (no absorption)</option>
-              <option value="absorb">Advertised seal price (absorb seal protocol fee)</option>
+              <option value="raw">Raw on-chain payout base (no absorption)</option>
+              <option value="absorb">
+                Advertised mint target (auto-subtract seal protocol fee)
+              </option>
             </select>
             <span className="field__hint">
               Begin anti-spam fee is unchanged and always paid separately at mint-begin.
@@ -2344,6 +2402,7 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
           <button
             className="button"
             type="button"
+            id="manage-contract-action-submit"
             onClick={runAction}
             disabled={!contractReady || actionPending || !selectedAction}
           >

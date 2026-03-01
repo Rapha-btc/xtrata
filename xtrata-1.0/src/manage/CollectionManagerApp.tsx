@@ -58,6 +58,7 @@ type CollectionRecord = {
 
 type ManagedAsset = {
   state?: string | null;
+  mime_type?: string | null;
 };
 
 type CollectionReadiness = {
@@ -120,6 +121,12 @@ const isActiveAssetState = (value: unknown) => {
     .toLowerCase();
   return state !== 'expired' && state !== 'sold-out';
 };
+
+const isImageMimeType = (value: unknown) =>
+  String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .startsWith('image/');
 
 const toRecord = (value: unknown) =>
   value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
@@ -207,6 +214,27 @@ const getStepPanelKey = (stepId: JourneyStepId): PanelKey | null => {
     return 'publish-ops';
   }
   return 'collection-list';
+};
+
+const getJourneyTargetId = (
+  stepId: JourneyStepId,
+  mode: ExperienceMode
+): string | null => {
+  if (stepId === 'prepare-live-page') {
+    return 'manage-live-page-settings';
+  }
+  if (stepId === 'publish-backend') {
+    return 'manage-publish-collection-button';
+  }
+  if (stepId === 'unpause-contract') {
+    return mode === 'advanced'
+      ? 'manage-contract-action-select'
+      : 'manage-unpause-contract-button';
+  }
+  if (stepId === 'configure-launch' && mode === 'advanced') {
+    return 'manage-contract-action-select';
+  }
+  return null;
 };
 
 const GUIDED_PRIMARY_PANELS: PanelKey[] = [
@@ -340,6 +368,7 @@ export default function CollectionManagerApp() {
       );
 
       const metadata = toRecord(collection.metadata) ?? null;
+      const metadataCollection = toRecord(metadata?.collection) ?? null;
       const collectionPage = toRecord(metadata?.collectionPage) ?? null;
       const coverImage = toRecord(collectionPage?.coverImage) ?? null;
       const mintType =
@@ -351,6 +380,10 @@ export default function CollectionManagerApp() {
       const activeAssetCount = assets.filter((asset) =>
         isActiveAssetState(asset.state)
       ).length;
+      const hasFallbackCoverImage = assets.some(
+        (asset) =>
+          isActiveAssetState(asset.state) && isImageMimeType(asset.mime_type)
+      );
       const deployReady = readiness.deployReady === true;
       const deploySubmitted =
         toText(collection.contract_address).length > 0 &&
@@ -429,9 +462,10 @@ export default function CollectionManagerApp() {
         launchMintPriceConfigured,
         launchMaxSupplyConfigured,
         unpaused,
-        hasLivePageCover: hasCoverMetadata(coverImage),
+        hasLivePageCover: hasCoverMetadata(coverImage) || hasFallbackCoverImage,
         hasLivePageDescription:
-          toText(collectionPage?.description).length > 0,
+          toText(collectionPage?.description).length > 0 ||
+          toText(metadataCollection?.description).length > 0,
         uploadReadinessReason:
           readiness.ready === true ? null : toText(readiness.reason) || null,
         deployReadinessReason:
@@ -506,13 +540,30 @@ export default function CollectionManagerApp() {
     setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const jumpToPanel = (key: PanelKey) => {
+  const jumpToPanel = (key: PanelKey, targetId?: string | null) => {
     setCollapsed((prev) => ({ ...prev, [key]: false }));
     if (typeof window !== 'undefined') {
       window.requestAnimationFrame(() => {
         const panel = document.getElementById(MANAGE_PANEL_IDS[key]);
         if (panel) {
           panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        if (targetId) {
+          window.requestAnimationFrame(() => {
+            const target = document.getElementById(targetId);
+            if (!target) {
+              return;
+            }
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (
+              target instanceof HTMLButtonElement ||
+              target instanceof HTMLInputElement ||
+              target instanceof HTMLSelectElement ||
+              target instanceof HTMLTextAreaElement
+            ) {
+              target.focus({ preventScroll: true });
+            }
+          });
         }
       });
     }
@@ -587,11 +638,12 @@ export default function CollectionManagerApp() {
     ) {
       setAdvancedMode();
     }
+    const stepTargetId = getJourneyTargetId(stepId, experienceMode);
     if (panelKey === 'launch-controls' && experienceMode === 'advanced') {
-      jumpToPanel('collection-settings');
+      jumpToPanel('collection-settings', stepTargetId);
       return;
     }
-    jumpToPanel(panelKey);
+    jumpToPanel(panelKey, stepTargetId);
   };
 
   const handleConnectWallet = async () => {
@@ -885,7 +937,10 @@ export default function CollectionManagerApp() {
                   Step 3: Launch controls
                   <InfoTooltip text="Set essential contract launch values, then pause/unpause from one guided panel." />
                 </h2>
-                <p>Use quick actions to set mint price, supply, and launch pause state.</p>
+                <p>
+                  Use quick actions to set on-chain payout base price, supply, and launch
+                  pause state.
+                </p>
               </div>
               <div className="panel__actions">
                 <button
