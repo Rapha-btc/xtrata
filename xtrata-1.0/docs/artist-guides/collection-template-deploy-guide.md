@@ -43,7 +43,7 @@ These are fixed in the deploy template UI:
 
 ## Mint Type Notes
 
-1. `Standard mint` deploys the collection mint template (`xtrata-collection-mint-v1.2`).
+1. `Standard mint` deploys the collection mint template (`xtrata-collection-mint-v1.3`).
 2. `Pre-inscribed` deploys the escrow sale template (`xtrata-preinscribed-collection-sale-v1.0`).
 3. In pre-inscribed mode, supply is treated as your launch target and inventory plan.
 

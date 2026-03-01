@@ -1,6 +1,6 @@
 import type { ContractCapabilities, ProtocolVersion } from './types.js';
 
-export const PROTOCOL_VERSIONS = ['1.1.1', '2.1.0'] as const;
+export const PROTOCOL_VERSIONS = ['1.1.1', '2.1.0', '2.1.1'] as const;
 
 export const isProtocolVersion = (value: string): value is ProtocolVersion =>
   PROTOCOL_VERSIONS.includes(value as ProtocolVersion);
@@ -33,6 +33,20 @@ const CAPABILITIES_BY_VERSION: Record<ProtocolVersion, ContractCapabilities> = {
     pendingChunkRequiresCreator: true,
     metaHasCreator: true,
     supportsNextTokenId: true
+  },
+  '2.1.1': {
+    version: '2.1.1',
+    feeModel: 'fee-unit',
+    supportsFeeUnit: true,
+    supportsPause: true,
+    supportsAdminReadOnly: true,
+    supportsRoyaltyRecipientRead: true,
+    supportsOwnershipTransfer: true,
+    supportsAbandonUpload: true,
+    supportsChunkBatchRead: true,
+    pendingChunkRequiresCreator: true,
+    metaHasCreator: true,
+    supportsNextTokenId: true
   }
 };
 
@@ -43,6 +57,9 @@ const inferProtocolVersion = (contractName: string): ProtocolVersion | null => {
   }
   if (normalized.includes('v2-1-0') || normalized.includes('v2.1.0')) {
     return '2.1.0';
+  }
+  if (normalized.includes('v2-1-1') || normalized.includes('v2.1.1')) {
+    return '2.1.1';
   }
   return null;
 };

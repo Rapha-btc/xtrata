@@ -28,6 +28,14 @@ describe('contract capabilities', () => {
     expect(capabilities.supportsMintedIndex).toBe(true);
   });
 
+  it('infers v2.1.1 from contract name', () => {
+    const capabilities = resolveContractCapabilities({
+      contractName: 'xtrata-v2-1-1'
+    });
+    expect(capabilities.version).toBe('2.1.1');
+    expect(capabilities.supportsMintedIndex).toBe(true);
+  });
+
   it('defaults to v1.1.1 when version is missing', () => {
     const capabilities = resolveContractCapabilities({});
     expect(capabilities.version).toBe('1.1.1');

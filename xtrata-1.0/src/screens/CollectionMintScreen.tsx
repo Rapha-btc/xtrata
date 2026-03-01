@@ -1367,7 +1367,7 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
               : resolveFeePostConditions(feeSchedule.feeUnitMicroStx);
           if (mintTarget === 'collection' && !beginPostConditions) {
             throw new Error(
-              'Collection mint pricing or Xtrata fee unit is unavailable for wallet safety checks. Load collection status and retry.'
+              'Collection mint pricing data is unavailable for wallet safety checks. Load collection status and retry.'
             );
           }
           const beginTx = await requestContractCall({

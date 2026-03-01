@@ -1,6 +1,6 @@
-;; xtrata-v2.1.0
+;; xtrata-v2.1.1
 ;;
-;; Core posture (v2.1.0):
+;; Core posture (v2.1.1):
 ;; 1) Open participation: anyone can inscribe (fees apply) once unpaused.
 ;; 2) Content-addressed + canonical: a given final-hash can be sealed at most once.
 ;;    - HashToId provides on-chain lookup (final-hash -> canonical token-id)
@@ -9,7 +9,7 @@
 ;; 3) Content is immutable once sealed (no post-mint edits, no mutable pointers tied to an id).
 ;; 4) Creator is immutable provenance; owner can transfer.
 ;; 5) SIP-009 compatible: standard NFT interfaces for wallet/indexer interoperability.
-;; 6) Admin can: set fee unit (bounded), set royalty recipient, pause/unpause, transfer admin ownership.
+;; 6) Admin can: set split fees (bounded), set royalty recipient, pause/unpause, transfer admin ownership.
 ;; 7) Sealing requires ALL declared chunks uploaded (current-index == total-chunks) and hash verified.
 ;; 8) Upload sessions are start-or-resume and expire after inactivity (stacks-block-height based):
 ;;    - begin-inscription starts/resumes {uploader, file-hash} uploads
@@ -113,9 +113,16 @@
 (define-data-var max-minted-id uint u0)
 (define-data-var royalty-recipient principal tx-sender)
 
-;; Single pricing "knob" (microSTX), bounded for predictability
-;; Baseline 0.1 STX = 100_000 microSTX
-(define-data-var fee-unit uint u100000)
+;; Split fee controls (microSTX), bounded for predictability.
+;; Defaults preserve prior pricing at 50+ chunks while pro-rating the first batch.
+;; - begin-fee-unit: charged once per new upload session
+;; - upload-chunk-fee-unit: charged per chunk for the first batch only (up to 50 chunks)
+;; - upload-batch-fee-unit: charged per full batch after the first
+;; - seal-fee-unit: fixed extra fee charged at seal
+(define-data-var begin-fee-unit uint u100000)
+(define-data-var upload-chunk-fee-unit uint u2000)
+(define-data-var upload-batch-fee-unit uint u100000)
+(define-data-var seal-fee-unit uint u100000)
 
 ;; Pause switch (admin adjustable)
 ;; IMPORTANT: pause blocks inscription writes for non-owners; transfers and reads remain available.
@@ -317,6 +324,31 @@
   )
 )
 
+(define-private (first-batch-chunks (total-chunks uint))
+  (if (> total-chunks MAX-BATCH-SIZE)
+    MAX-BATCH-SIZE
+    total-chunks
+  )
+)
+
+(define-private (additional-batches (total-chunks uint))
+  (if (<= total-chunks MAX-BATCH-SIZE)
+    u0
+    (num-batches (- total-chunks MAX-BATCH-SIZE))
+  )
+)
+
+(define-private (seal-fee-for-chunks (total-chunks uint))
+  (let (
+    (first-chunks (first-batch-chunks total-chunks))
+    (extra-batches (additional-batches total-chunks))
+    (first-fee (* first-chunks (var-get upload-chunk-fee-unit)))
+    (extra-fee (* extra-batches (var-get upload-batch-fee-unit)))
+  )
+    (+ (var-get seal-fee-unit) (+ first-fee extra-fee))
+  )
+)
+
 (define-private (hash-in-list? (hash (buff 32)) (items (list 50 (buff 32))))
   (let ((res (fold hash-in-list-step items { hash: hash, found: false })))
     (get found res)
@@ -469,27 +501,91 @@
   )
 )
 
-;; One-knob fee model:
-;; - begin fee  = fee-unit
-;; - seal fee   = fee-unit * (1 + ceil(total-chunks / 50))
+;; Split fee model:
+;; - begin fee = begin-fee-unit
+;; - seal fee  = seal-fee-unit
+;;             + upload-chunk-fee-unit * min(total-chunks, 50)
+;;             + upload-batch-fee-unit * ceil(max(total-chunks - 50, 0) / 50)
 ;;
 ;; Governance constraints:
 ;; - absolute bounds: [0.001, 1.0] STX
 ;; - bounded change per update:
 ;;    * increases: new <= old*2
 ;;    * decreases: new >= old/10
-(define-public (set-fee-unit (new-fee uint))
-  (let ((old (var-get fee-unit)))
+
+(define-private (assert-valid-fee-update (old uint) (new-fee uint))
+  (begin
+    (asserts! (>= new-fee FEE-MIN) ERR-INVALID-FEE)
+    (asserts! (<= new-fee FEE-MAX) ERR-INVALID-FEE)
+    (asserts! (<= new-fee (* old u2)) ERR-INVALID-FEE)
+    (asserts! (>= new-fee (/ old u10)) ERR-INVALID-FEE)
+    (ok true)
+  )
+)
+
+(define-public (set-begin-fee-unit (new-fee uint))
+  (let ((old (var-get begin-fee-unit)))
     (begin
       (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-AUTHORIZED)
-      (asserts! (>= new-fee FEE-MIN) ERR-INVALID-FEE)
-      (asserts! (<= new-fee FEE-MAX) ERR-INVALID-FEE)
+      (try! (assert-valid-fee-update old new-fee))
+      (var-set begin-fee-unit new-fee)
+      (ok true)
+    )
+  )
+)
 
-      ;; bounded change
-      (asserts! (<= new-fee (* old u2)) ERR-INVALID-FEE)   ;; max 2x up
-      (asserts! (>= new-fee (/ old u10)) ERR-INVALID-FEE)  ;; max 10x down
+(define-public (set-upload-chunk-fee-unit (new-fee uint))
+  (let ((old (var-get upload-chunk-fee-unit)))
+    (begin
+      (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-AUTHORIZED)
+      (try! (assert-valid-fee-update old new-fee))
+      (var-set upload-chunk-fee-unit new-fee)
+      (ok true)
+    )
+  )
+)
 
-      (var-set fee-unit new-fee)
+(define-public (set-upload-batch-fee-unit (new-fee uint))
+  (let ((old (var-get upload-batch-fee-unit)))
+    (begin
+      (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-AUTHORIZED)
+      (try! (assert-valid-fee-update old new-fee))
+      (var-set upload-batch-fee-unit new-fee)
+      (ok true)
+    )
+  )
+)
+
+(define-public (set-seal-fee-unit (new-fee uint))
+  (let ((old (var-get seal-fee-unit)))
+    (begin
+      (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-AUTHORIZED)
+      (try! (assert-valid-fee-update old new-fee))
+      (var-set seal-fee-unit new-fee)
+      (ok true)
+    )
+  )
+)
+
+;; Backwards-compatible one-knob setter.
+;; Applies a legacy profile:
+;; - begin = unit
+;; - upload-chunk = max(FEE-MIN, floor(unit / 50))
+;; - upload-batch = unit
+;; - seal = unit
+(define-public (set-fee-unit (new-fee uint))
+  (let (
+    (old (var-get upload-batch-fee-unit))
+    (raw-chunk (/ new-fee MAX-BATCH-SIZE))
+    (chunk-fee (if (>= raw-chunk FEE-MIN) raw-chunk FEE-MIN))
+  )
+    (begin
+      (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-AUTHORIZED)
+      (try! (assert-valid-fee-update old new-fee))
+      (var-set begin-fee-unit new-fee)
+      (var-set upload-chunk-fee-unit chunk-fee)
+      (var-set upload-batch-fee-unit new-fee)
+      (var-set seal-fee-unit new-fee)
       (ok true)
     )
   )
@@ -550,8 +646,8 @@
       (asserts! (is-none (nft-get-owner? xtrata-inscription token-id)) ERR-DUPLICATE)
       (asserts! (is-none (map-get? HashToId hash)) ERR-DUPLICATE)
 
-      ;; charge a single xtrata fee for migration
-      (try! (maybe-pay (var-get fee-unit)))
+      ;; charge the begin fee for migration
+      (try! (maybe-pay (var-get begin-fee-unit)))
 
       ;; escrow the v1 token into this contract
       (try! (contract-call? .xtrata-v1-1-1 transfer token-id tx-sender CONTRACT-PRINCIPAL))
@@ -645,7 +741,7 @@
         )
       (begin
         ;; New session path: pay begin fee once
-        (try! (maybe-pay (var-get fee-unit)))
+        (try! (maybe-pay (var-get begin-fee-unit)))
 
         (map-insert UploadState
           { owner: tx-sender, hash: expected-hash }
@@ -777,9 +873,7 @@
     (state (unwrap! (map-get? UploadState { owner: tx-sender, hash: expected-hash }) ERR-NOT-FOUND))
     (final-hash (get running-hash state))
     (chunks (get total-chunks state))
-    (batches (num-batches chunks))
-    ;; seal fee = fee-unit * (1 + batches)
-    (seal-fee (* (var-get fee-unit) (+ u1 batches)))
+    (seal-fee (seal-fee-for-chunks chunks))
   )
     (begin
       (try! (assert-not-expired state))
@@ -1022,8 +1116,25 @@
   (ok (var-get royalty-recipient))
 )
 
+;; Backwards-compatible fee-unit reader (maps to upload-batch fee unit).
 (define-read-only (get-fee-unit)
-  (ok (var-get fee-unit))
+  (ok (var-get upload-batch-fee-unit))
+)
+
+(define-read-only (get-begin-fee-unit)
+  (ok (var-get begin-fee-unit))
+)
+
+(define-read-only (get-upload-chunk-fee-unit)
+  (ok (var-get upload-chunk-fee-unit))
+)
+
+(define-read-only (get-upload-batch-fee-unit)
+  (ok (var-get upload-batch-fee-unit))
+)
+
+(define-read-only (get-seal-fee-unit)
+  (ok (var-get seal-fee-unit))
 )
 
 (define-read-only (is-paused)

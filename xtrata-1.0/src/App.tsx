@@ -54,7 +54,7 @@ import CollectionMintAdminScreen from './screens/CollectionMintAdminScreen';
 import PreinscribedCollectionAdminScreen from './screens/PreinscribedCollectionAdminScreen';
 import PreinscribedCollectionSaleScreen from './screens/PreinscribedCollectionSaleScreen';
 import MarketScreen from './screens/MarketScreen';
-import collectionMintTemplateSource from '../contracts/clarinet/contracts/xtrata-collection-mint-v1.2.clar?raw';
+import collectionMintTemplateSource from '../contracts/clarinet/contracts/xtrata-collection-mint-v1.3.clar?raw';
 import {
   buildCollectionMintContractSource,
   COLLECTION_TEMPLATE_FIELD_KEYS,
@@ -68,7 +68,9 @@ import {
 
 const isV2Entry = (entry: { protocolVersion?: string; contractName?: string }) =>
   entry.protocolVersion === '2.1.0' ||
-  entry.contractName?.toLowerCase().includes('v2-1-0') === true;
+  entry.protocolVersion === '2.1.1' ||
+  entry.contractName?.toLowerCase().includes('v2-1-0') === true ||
+  entry.contractName?.toLowerCase().includes('v2-1-1') === true;
 
 const SELECTABLE_CONTRACTS = CONTRACT_REGISTRY.filter(isV2Entry);
 const ACTIVE_CONTRACTS =

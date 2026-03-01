@@ -359,7 +359,9 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
   const nextTokenLabel =
     status.nextTokenId !== null ? status.nextTokenId.toString() : 'Unknown';
   const showMigrationModule =
-    props.contract.protocolVersion === '2.1.0' && !!legacyContract;
+    (props.contract.protocolVersion === '2.1.0' ||
+      props.contract.protocolVersion === '2.1.1') &&
+    !!legacyContract;
   const v2ContractPrincipal = `${props.contract.address}.${props.contract.contractName}`;
 
   const handleCheckMigration = async () => {

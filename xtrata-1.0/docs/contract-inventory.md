@@ -125,6 +125,45 @@ Source: `contracts/live/xtrata-v2.1.0.clar`
 - `get-minted-id(index)`
 - `is-allowed-caller(caller)`
 
+## xtrata-v2.1.1
+
+Source: `contracts/live/xtrata-v2.1.1.clar`
+
+## Purpose
+- Fee-controls upgrade on top of v2.1.0 with split pricing knobs.
+- Keeps the same begin/upload/seal flow and v2 migration/indexing capabilities.
+
+## Fee Model (split knobs)
+- Begin fee: `begin-fee-unit`.
+- Seal fee:
+  - `seal-fee-unit`
+  - `+ upload-chunk-fee-unit * min(total-chunks, 50)`
+  - `+ upload-batch-fee-unit * ceil(max(total-chunks - 50, 0) / 50)`
+- Migration fee: `begin-fee-unit`.
+
+## New Public Fee Setters
+- `set-begin-fee-unit(new-fee)`
+- `set-upload-chunk-fee-unit(new-fee)`
+- `set-upload-batch-fee-unit(new-fee)`
+- `set-seal-fee-unit(new-fee)`
+
+## Compatibility Fee Setter
+- `set-fee-unit(new-fee)`
+  - Legacy convenience profile:
+    - `begin = new-fee`
+    - `upload-chunk = max(FEE-MIN, floor(new-fee / 50))`
+    - `upload-batch = new-fee`
+    - `seal = new-fee`
+
+## New Read-Only Fee Getters
+- `get-begin-fee-unit()`
+- `get-upload-chunk-fee-unit()`
+- `get-upload-batch-fee-unit()`
+- `get-seal-fee-unit()`
+
+## Compatibility Fee Getter
+- `get-fee-unit()` (maps to `upload-batch-fee-unit`)
+
 ## xtrata-arcade-scores-v1.0
 
 Source: `contracts/live/xtrata-arcade-scores-v1.0.clar`
@@ -222,13 +261,13 @@ Source: `contracts/live/xtrata-arcade-scores-v1.1.clar`
 - `get-fee-recipient()`
 - `get-verifier-pubkey-hash()`
 
-## xtrata-collection-mint-v1.0 (template, legacy)
+## xtrata-collection-mint-v1.3 (template, active)
 
-Source: `contracts/clarinet/contracts/xtrata-collection-mint-v1.0.clar`
+Source: `contracts/clarinet/contracts/xtrata-collection-mint-v1.3.clar`
 
 ## Purpose
 - Per-collection mint coordinator that charges a one-time mint fee split, supports allowlists and per-wallet caps, and proxies xtrata begin/chunk/seal calls.
-- SDK support note: archived for new SDK work. Active collection-mint SDK target is `xtrata-collection-mint-v1.2`.
+- SDK support note: archived for new SDK work. Active collection-mint SDK target is `xtrata-collection-mint-v1.3`.
 
 ## Core Admin Functions
 - `set-mint-price(amount)`
@@ -239,6 +278,10 @@ Source: `contracts/clarinet/contracts/xtrata-collection-mint-v1.0.clar`
 - `set-allowlist(owner, allowance)`
 - `clear-allowlist(owner)`
 - `set-allowlist-batch(entries)`
+- `set-recipient-editor-access(xtrata-contract, editor, can-marketplace, can-operator)` (core Xtrata admin signer)
+- `set-artist-recipient(artist)` (collection owner signer)
+- `set-marketplace-recipient(marketplace)` (recipient-editor signer)
+- `set-operator-recipient(operator)` (recipient-editor signer)
 - `set-recipients(artist, marketplace, operator)`
 - `set-splits(artist, marketplace, operator)`
 - `set-paused(value)`
@@ -246,10 +289,10 @@ Source: `contracts/clarinet/contracts/xtrata-collection-mint-v1.0.clar`
 - `release-reservation(owner, hash)`
 
 ## Core Mint Functions
-- `mint-begin(expected-hash, mime, total-size, total-chunks)`
-- `mint-add-chunk-batch(hash, chunks)`
-- `mint-seal(expected-hash, token-uri-string)`
-- `mint-seal-batch(items)`
+- `mint-begin(xtrata-contract, expected-hash, mime, total-size, total-chunks)`
+- `mint-add-chunk-batch(xtrata-contract, hash, chunks)`
+- `mint-seal(xtrata-contract, expected-hash, token-uri-string)`
+- `mint-seal-batch(xtrata-contract, items)`
 
 ## Additional Read-Only Functions
 - `get-allowlist-enabled()`
@@ -257,6 +300,7 @@ Source: `contracts/clarinet/contracts/xtrata-collection-mint-v1.0.clar`
 - `get-allowlist-entry(owner)`
 - `get-wallet-stats(owner)`
 - `get-finalized()`
+- `get-recipient-editor-access(editor)`
 
 ## Private Functions (internal)
 - Internal helpers cover fee math, upload expiry checks, and hashing logic. See contract source for details.

@@ -1617,7 +1617,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
           const beginPostConditions = resolveMintBeginPostConditions(senderAddress);
           if (!beginPostConditions) {
             throw new Error(
-              'Mint price or Xtrata fee unit is unavailable for wallet safety checks. Refresh status, then retry.'
+              'Mint pricing data is unavailable for wallet safety checks. Refresh status, then retry.'
             );
           }
           setBeginState('pending');
@@ -2375,7 +2375,6 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
               <span>Ticker: {collectionSymbol}</span>
               <span>State: {published ? 'Live' : collectionState || 'Unknown'}</span>
               <span>Mint price: {mintPriceLabel}</span>
-              <span>Xtrata fee unit: {protocolFeeUnitLabel}</span>
             </div>
             <div className="collection-live-page__hero-actions">
               <button

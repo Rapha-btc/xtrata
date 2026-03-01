@@ -13,5 +13,13 @@
     "network": "mainnet",
     "protocolVersion": "2.1.0",
     "legacyContractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1"
+  },
+  {
+    "label": "xtrata-v2-1-1",
+    "address": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X",
+    "contractName": "xtrata-v2-1-1",
+    "network": "mainnet",
+    "protocolVersion": "2.1.1",
+    "legacyContractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0"
   }
 ]

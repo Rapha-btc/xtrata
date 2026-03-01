@@ -31,7 +31,7 @@ Workflow guardrails:
 - deterministic spend-cap prerequisites are enforced (known mint price + fee unit)
 
 Collection-mint note:
-- Active SDK support target is `xtrata-collection-mint-v1.2`.
+- Active SDK support target is `xtrata-collection-mint-v1.3`.
 - Legacy collection-mint `v1.0` and `v1.1` are archived for new SDK work.
 
 ## Advanced path

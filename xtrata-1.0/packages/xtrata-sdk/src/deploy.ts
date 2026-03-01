@@ -68,7 +68,9 @@ const CONTRACT_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9-_]{0,127}$/;
 
 const isV2Entry = (entry: SdkContractRegistryEntry) =>
   entry.protocolVersion === '2.1.0' ||
-  entry.contractName.toLowerCase().includes('v2-1-0');
+  entry.protocolVersion === '2.1.1' ||
+  entry.contractName.toLowerCase().includes('v2-1-0') ||
+  entry.contractName.toLowerCase().includes('v2-1-1');
 
 const escapeClarityAscii = (value: string) =>
   value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
