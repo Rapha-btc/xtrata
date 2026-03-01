@@ -65,10 +65,11 @@ The mint screen now supports multiple parents:
 The viewer shows relationships in both directions:
 
 - **Parents**: read directly from `get-dependencies(id)` (authoritative).
-- **Children**: derived from known tokens in the current grid + an explicit
-  user-triggered scan of the collection (no automatic background scans).
-
-The scan is bounded and cancellable to avoid excessive read-only traffic.
+- **Children**: resolved from a local reverse-relationship index (IndexedDB),
+  combined with known currently loaded tokens.
+- The reverse index updates lazily in the background once the viewer is ready.
+  Sync progress is cursor-based and persisted, so already indexed ranges are
+  not re-scanned on every session.
 
 ## Batch mint scope
 

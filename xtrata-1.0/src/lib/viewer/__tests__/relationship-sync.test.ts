@@ -162,4 +162,38 @@ describe('relationship sync', () => {
       nextMintedIndex: 1n
     });
   });
+
+  it('skips dependency reads at or below the parent id floor', async () => {
+    const getDependencies = vi
+      .fn()
+      .mockResolvedValueOnce([8n]);
+    const client = makeClient({
+      getMintedCount: vi.fn().mockResolvedValue(3n),
+      getMintedId: vi
+        .fn()
+        .mockResolvedValueOnce(5n)
+        .mockResolvedValueOnce(8n)
+        .mockResolvedValueOnce(9n),
+      getDependencies
+    });
+
+    const result = await syncRelationshipIndex({
+      client,
+      contractId: 'SP123.xtrata-v2-1-0',
+      senderAddress: 'SPTEST',
+      parentId: 8n
+    });
+
+    expect(result.scanned).toBe(3n);
+    expect(result.total).toBe(3n);
+    expect(result.found).toBe(1n);
+    expect(getDependencies).toHaveBeenCalledTimes(1);
+    expect(getDependencies).toHaveBeenCalledWith(9n, 'SPTEST');
+    expect(saveRelationshipChildDependenciesMock).toHaveBeenCalledTimes(1);
+    expect(saveRelationshipChildDependenciesMock).toHaveBeenCalledWith({
+      contractId: 'SP123.xtrata-v2-1-0',
+      childId: 9n,
+      parentIds: [8n]
+    });
+  });
 });

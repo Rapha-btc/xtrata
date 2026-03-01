@@ -46,6 +46,8 @@ export const syncRelationshipIndex = async (params: {
   if (nextMintedIndex > mintedCount) {
     nextMintedIndex = mintedCount;
   }
+  const minChildTokenId =
+    params.parentId !== undefined ? params.parentId + 1n : null;
   const startIndex = nextMintedIndex;
   const total = mintedCount - startIndex;
   let scanned = 0n;
@@ -63,7 +65,29 @@ export const syncRelationshipIndex = async (params: {
     }
     const tokenId = await params.client.getMintedId(index, params.senderAddress);
     nextMintedIndex = index + 1n;
+    scanned += 1n;
     if (tokenId === null) {
+      params.onProgress?.({
+        scanned,
+        total,
+        found,
+        currentId: 0n
+      });
+      if ((nextMintedIndex - startIndex) % CURSOR_FLUSH_INTERVAL === 0n) {
+        await saveRelationshipSyncCursor({
+          contractId: params.contractId,
+          nextMintedIndex
+        });
+      }
+      continue;
+    }
+    if (minChildTokenId !== null && tokenId < minChildTokenId) {
+      params.onProgress?.({
+        scanned,
+        total,
+        found,
+        currentId: tokenId
+      });
       if ((nextMintedIndex - startIndex) % CURSOR_FLUSH_INTERVAL === 0n) {
         await saveRelationshipSyncCursor({
           contractId: params.contractId,
@@ -81,7 +105,6 @@ export const syncRelationshipIndex = async (params: {
       childId: tokenId,
       parentIds: dependencies
     });
-    scanned += 1n;
     if (
       params.parentId !== undefined &&
       dependencies.some((dependencyId) => dependencyId === params.parentId)

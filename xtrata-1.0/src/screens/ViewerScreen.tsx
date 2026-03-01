@@ -369,14 +369,6 @@ const TokenDetails = (props: {
   mobilePanel: 'grid' | 'preview';
   onRequestGrid: () => void;
   knownChildren: bigint[];
-  lastTokenId?: bigint;
-  onSyncChildren?: (params: {
-    parentId: bigint;
-    contractId: string;
-    client: ReturnType<typeof createXtrataClient>;
-    shouldCancel?: () => boolean;
-    onProgress?: (progress: RelationshipSyncProgress) => void;
-  }) => Promise<bigint[]>;
   onAddParentDraft?: (id: bigint) => void;
   onSelectToken: (id: bigint) => void;
   marketActionStatus: string | null;
@@ -397,12 +389,6 @@ const TokenDetails = (props: {
   const [cancelStatus, setCancelStatus] = useState<string | null>(null);
   const [cancelPending, setCancelPending] = useState(false);
   const [walletToolsOpen, setWalletToolsOpen] = useState(false);
-  const [childScanPending, setChildScanPending] = useState(false);
-  const [childScanStatus, setChildScanStatus] = useState<string | null>(null);
-  const [childScanProgress, setChildScanProgress] =
-    useState<RelationshipSyncProgress | null>(null);
-  const [scannedChildren, setScannedChildren] = useState<bigint[]>([]);
-  const scanCancelRef = useRef<{ cancelled: boolean } | null>(null);
   const isWalletView = props.mode === 'wallet';
   const mismatch = getNetworkMismatch(
     props.contract.network,
@@ -450,14 +436,6 @@ const TokenDetails = (props: {
     setListPriceInput('');
   }, [props.selectedTokenId, walletAddress]);
 
-  useEffect(() => {
-    setChildScanPending(false);
-    setChildScanStatus(null);
-    setChildScanProgress(null);
-    setScannedChildren([]);
-    scanCancelRef.current = null;
-  }, [props.token?.id]);
-
   const transferValidation = validateTransferRequest({
     senderAddress: walletAddress,
     recipientAddress: transferRecipient,
@@ -472,13 +450,11 @@ const TokenDetails = (props: {
     transferValidation.reason === 'self-recipient';
 
   const combinedChildren = useMemo(() => {
-    const merged = new Set<string>();
-    props.knownChildren.forEach((id) => merged.add(id.toString()));
-    scannedChildren.forEach((id) => merged.add(id.toString()));
-    return Array.from(merged)
-      .map((value) => BigInt(value))
-      .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
-  }, [props.knownChildren, scannedChildren]);
+    return Array.from(
+      new Set(props.knownChildren.map((id) => id.toString())),
+      (value) => BigInt(value)
+    ).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  }, [props.knownChildren]);
 
   const parentIds = dependenciesQuery.data ?? [];
   const parentThumbIds = parentIds.slice(0, RELATIONSHIP_THUMBNAIL_LIMIT);
@@ -527,10 +503,6 @@ const TokenDetails = (props: {
     combinedChildren.length - childThumbIds.length
   );
 
-  const scanProgressLabel = childScanProgress
-    ? `Scanned ${childScanProgress.scanned.toString()}/${childScanProgress.total.toString()} · found ${childScanProgress.found.toString()}`
-    : null;
-
   const appendTransferLog = (message: string) => {
     setTransferLog((prev) => {
       const next = [...prev, message];
@@ -538,67 +510,6 @@ const TokenDetails = (props: {
     });
     // eslint-disable-next-line no-console
     console.log(`[transfer] ${message}`);
-  };
-
-  const handleScanChildren = async () => {
-    if (!props.token) {
-      return;
-    }
-    if (!props.onSyncChildren) {
-      setChildScanStatus('Child indexing unavailable for this contract.');
-      return;
-    }
-    if (isReadOnlyBackoffActive()) {
-      setChildScanStatus('Read-only backoff active. Try again later.');
-      return;
-    }
-    const cancelState = { cancelled: false };
-    scanCancelRef.current = cancelState;
-    setChildScanPending(true);
-    setChildScanStatus('Syncing child index...');
-    setChildScanProgress({
-      scanned: 0n,
-      total: 0n,
-      found: 0n,
-      currentId: 0n
-    });
-
-    try {
-      const children = await props.onSyncChildren({
-        parentId: props.token.id,
-        contractId: props.contractId,
-        client: props.client,
-        shouldCancel: () => cancelState.cancelled,
-        onProgress: (progress) => setChildScanProgress(progress)
-      });
-      if (cancelState.cancelled) {
-        return;
-      }
-      setScannedChildren(children);
-      setChildScanStatus(
-        children.length > 0
-          ? `Found ${children.length} children.`
-          : 'No children indexed yet.'
-      );
-    } catch (error) {
-      if (cancelState.cancelled) {
-        return;
-      }
-      const message = error instanceof Error ? error.message : String(error);
-      setChildScanStatus(`Scan failed: ${message}`);
-    } finally {
-      if (!cancelState.cancelled) {
-        setChildScanPending(false);
-      }
-    }
-  };
-
-  const handleCancelScan = () => {
-    if (scanCancelRef.current) {
-      scanCancelRef.current.cancelled = true;
-    }
-    setChildScanPending(false);
-    setChildScanStatus('Scan cancelled.');
   };
 
   const refreshViewer = () => {
@@ -1028,31 +939,6 @@ const TokenDetails = (props: {
                   </span>
                 )}
               </div>
-            )}
-            <div className="transfer-panel__actions">
-              <button
-                className="button button--ghost button--mini"
-                type="button"
-                onClick={handleScanChildren}
-                disabled={childScanPending || isWalletView}
-              >
-                {childScanPending ? 'Syncing...' : 'Sync child index'}
-              </button>
-              {childScanPending && (
-                <button
-                  className="button button--ghost button--mini"
-                  type="button"
-                  onClick={handleCancelScan}
-                >
-                  Cancel scan
-                </button>
-              )}
-            </div>
-            {scanProgressLabel && (
-              <span className="meta-value">{scanProgressLabel}</span>
-            )}
-            {childScanStatus && (
-              <span className="meta-value">{childScanStatus}</span>
             )}
           </div>
           <div className="transfer-panel detail-summary-panel">
@@ -2660,7 +2546,6 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     (params: {
       contractId: string;
       client: ReturnType<typeof createXtrataClient>;
-      parentId?: bigint;
       shouldCancel?: () => boolean;
       onProgress?: (progress: RelationshipSyncProgress) => void;
     }) =>
@@ -2668,38 +2553,13 @@ export default function ViewerScreen(props: ViewerScreenProps) {
         client: params.client,
         contractId: params.contractId,
         senderAddress: props.senderAddress,
-        parentId: params.parentId,
         shouldCancel: params.shouldCancel,
         onProgress: params.onProgress
       }),
     [props.senderAddress]
   );
-  const syncChildrenForToken = useCallback(
-    async (params: {
-      parentId: bigint;
-      contractId: string;
-      client: ReturnType<typeof createXtrataClient>;
-      shouldCancel?: () => boolean;
-      onProgress?: (progress: RelationshipSyncProgress) => void;
-    }) => {
-      await runRelationshipSync({
-        contractId: params.contractId,
-        client: params.client,
-        parentId: params.parentId,
-        shouldCancel: params.shouldCancel,
-        onProgress: params.onProgress
-      });
-      const children = await loadRelationshipChildren({
-        contractId: params.contractId,
-        parentId: params.parentId
-      });
-      setRelationshipIndexVersion((version) => version + 1);
-      return children;
-    },
-    [runRelationshipSync]
-  );
   useEffect(() => {
-    if (!props.isActiveTab || isWalletView) {
+    if (!props.isActiveTab || isWalletView || !collectionGridReady) {
       return;
     }
     let cancelled = false;
@@ -2746,6 +2606,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
   }, [
     props.isActiveTab,
     isWalletView,
+    collectionGridReady,
     contractId,
     client,
     legacyClient,
@@ -3589,8 +3450,6 @@ export default function ViewerScreen(props: ViewerScreenProps) {
         mobilePanel={mobilePanel}
         onRequestGrid={handleMobileGridRequest}
         knownChildren={knownChildren}
-        lastTokenId={lastTokenId}
-        onSyncChildren={syncChildrenForToken}
         onAddParentDraft={props.onAddParentDraft}
         onSelectToken={handleSelectToken}
         marketActionStatus={marketActionStatus}
