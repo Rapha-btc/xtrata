@@ -968,6 +968,35 @@ const resolvePublicCollectionContractTarget = (
   };
 };
 
+const resolvePublicDisplayedMintPrice = (
+  collection: PublicLiveCollectionRecord,
+  status: PublicLiveMintStatus | null
+) => {
+  const onChainPrice = status?.effectiveMintPrice ?? null;
+  if (!status) {
+    return null;
+  }
+  if (status.activePhaseMintPrice !== null) {
+    return onChainPrice;
+  }
+  const metadata = toRecord(collection.metadata);
+  const pricing = toRecord(metadata?.pricing);
+  if (toText(pricing?.mode).toLowerCase() !== 'advertised-includes-seal-fee') {
+    return onChainPrice;
+  }
+  const advertised = toBigIntOrNull(pricing?.advertisedMintPriceMicroStx);
+  const onChainFromMetadata = toBigIntOrNull(pricing?.onChainMintPriceMicroStx);
+  if (
+    advertised === null ||
+    onChainFromMetadata === null ||
+    status.mintPrice === null ||
+    onChainFromMetadata !== status.mintPrice
+  ) {
+    return onChainPrice;
+  }
+  return advertised;
+};
+
 const getErrorMessage = (error: unknown) => {
   if (typeof error === 'string') {
     return error;
@@ -2320,7 +2349,10 @@ export default function PublicApp() {
                     liveMintStatusLoadingByCollectionId[collection.id]
                   );
                   const mintStatusError = liveMintStatusErrorByCollectionId[collection.id] ?? null;
-                  const effectiveMintPrice = mintStatus?.effectiveMintPrice ?? null;
+                  const effectiveMintPrice = resolvePublicDisplayedMintPrice(
+                    collection,
+                    mintStatus
+                  );
                   const maxSupply = mintStatus?.maxSupply ?? collection.fallbackSupply ?? null;
                   const mintedCount = mintStatus?.mintedCount ?? null;
                   const remainingCount =

@@ -99,6 +99,11 @@ const formatMicroStxInput = (value: bigint) => {
   return `${whole.toString()}.${fractionText}`;
 };
 
+const resolveOnChainMintPriceAfterSealAbsorption = (params: {
+  advertisedMintPriceMicroStx: bigint;
+  worstCaseSealFeeMicroStx: bigint;
+}) => params.advertisedMintPriceMicroStx - params.worstCaseSealFeeMicroStx;
+
 const readCoreFeeUnitMicroStx = async (params: {
   coreTarget: ArtistDeployCoreTarget;
   senderAddress: string;
@@ -557,6 +562,9 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
   }, [normalizedActiveCollectionId]);
 
   useEffect(() => {
+    if (!collection) {
+      return;
+    }
     const draftId = collection?.id?.trim() ?? '';
     if (!draftId || draftId !== normalizedActiveCollectionId) {
       return;
@@ -938,6 +946,21 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     coreFeeUnitMicroStx,
     deployBuild.resolved.mintPriceMicroStx
   ]);
+  const deployAbsorbsWorstCaseSealFee =
+    mintType === 'standard' && !useLegacyV11CompatTemplate;
+  const onChainMintPriceAfterAbsorptionMicroStx = useMemo(() => {
+    if (!deployAbsorbsWorstCaseSealFee || !pricingPreflight) {
+      return deployBuild.resolved.mintPriceMicroStx;
+    }
+    return resolveOnChainMintPriceAfterSealAbsorption({
+      advertisedMintPriceMicroStx: deployBuild.resolved.mintPriceMicroStx,
+      worstCaseSealFeeMicroStx: pricingPreflight.worstCaseSealFeeMicroStx
+    });
+  }, [
+    deployAbsorbsWorstCaseSealFee,
+    pricingPreflight,
+    deployBuild.resolved.mintPriceMicroStx
+  ]);
   const minimumMintPriceMicroStx = useMemo(() => {
     if (mintType !== 'standard' || !pricingPreflight) {
       return null;
@@ -998,6 +1021,15 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       pricingLockAssetCount: collectionDeployPricingLock?.assetCount ?? null,
       pricingLockMaxChunks: collectionDeployPricingLock?.maxChunks ?? null,
       pricingLockLockedAt: collectionDeployPricingLock?.lockedAt ?? null,
+      deployAbsorbsWorstCaseSealFee,
+      absorbedSealFeeMicroStx:
+        deployAbsorbsWorstCaseSealFee && pricingPreflight
+          ? pricingPreflight.worstCaseSealFeeMicroStx.toString()
+          : null,
+      onChainMintPriceMicroStx:
+        mintType === 'standard'
+          ? onChainMintPriceAfterAbsorptionMicroStx.toString()
+          : deployBuild.resolved.mintPriceMicroStx.toString(),
       worstCaseSealFeeMicroStx: pricingPreflight
         ? pricingPreflight.worstCaseSealFeeMicroStx.toString()
         : null,
@@ -1022,6 +1054,8 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       deployBuild.source.length,
       deploySourceByteLength,
       collectionDeployPricingLock,
+      deployAbsorbsWorstCaseSealFee,
+      onChainMintPriceAfterAbsorptionMicroStx,
       pricingPreflight,
       deployBuild.errors.length,
       deployBuild.warnings.length
@@ -1451,6 +1485,10 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       return;
     }
 
+    let deployPricingLock: ReturnType<typeof parseDeployPricingLockSnapshot> = null;
+    let deployPricingEvaluation: ReturnType<typeof evaluateDeployPriceSafety> | null =
+      null;
+
     if (mintType === 'standard') {
       const pricingLock = parseDeployPricingLockSnapshot(created.metadata);
       if (!pricingLock) {
@@ -1495,6 +1533,8 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         maxChunks: pricingLock.maxChunks,
         feeUnitMicroStx
       });
+      deployPricingLock = pricingLock;
+      deployPricingEvaluation = evaluation;
       appendDeployDebug('Pricing safety preflight evaluated', {
         attemptId,
         draftId: created.id,
@@ -1511,7 +1551,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       if (!evaluation.safe) {
         setDeployPending(false);
         setStatus(
-          `Deploy blocked. Price per mint (${formatMicroStx(
+          `Deploy blocked. Advertised mint price (${formatMicroStx(
             mintPriceMicroStx
           )}) must be greater than the worst-case seal protocol fee (${formatMicroStx(
             evaluation.worstCaseSealFeeMicroStx
@@ -1520,6 +1560,88 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         return;
       }
     }
+
+    let deployMintPriceStxForSource = mintPriceStx;
+    let deployAbsorbedSealFeeMicroStx = 0n;
+    let deployPricingLockMaxChunks: number | null = null;
+    let deployWorstCaseSealFeeMicroStx: bigint | null = null;
+    if (mintType === 'standard' && deployPricingLock && deployPricingEvaluation) {
+      deployPricingLockMaxChunks = deployPricingLock.maxChunks;
+      deployWorstCaseSealFeeMicroStx =
+        deployPricingEvaluation.worstCaseSealFeeMicroStx;
+      if (!useLegacyV11CompatTemplate) {
+        deployAbsorbedSealFeeMicroStx =
+          deployPricingEvaluation.worstCaseSealFeeMicroStx;
+        const onChainMintPriceMicroStx =
+          resolveOnChainMintPriceAfterSealAbsorption({
+            advertisedMintPriceMicroStx: refreshBuild.resolved.mintPriceMicroStx,
+            worstCaseSealFeeMicroStx: deployAbsorbedSealFeeMicroStx
+          });
+        if (onChainMintPriceMicroStx < 0n) {
+          setDeployPending(false);
+          setStatus(
+            'Deploy blocked. Unable to absorb seal protocol fee into on-chain mint price with current values.'
+          );
+          return;
+        }
+        deployMintPriceStxForSource = formatMicroStxInput(onChainMintPriceMicroStx);
+        appendDeployDebug('Seal fee absorption prepared for deploy source', {
+          attemptId,
+          advertisedMintPriceMicroStx:
+            refreshBuild.resolved.mintPriceMicroStx.toString(),
+          worstCaseSealFeeMicroStx: deployAbsorbedSealFeeMicroStx.toString(),
+          onChainMintPriceMicroStx: onChainMintPriceMicroStx.toString()
+        });
+      }
+    }
+
+    const deploySourceBuild = buildArtistDeployContractSource({
+      input: {
+        collectionName,
+        symbol,
+        description,
+        supply,
+        mintType,
+        mintPriceStx: deployMintPriceStxForSource,
+        parentInscriptions,
+        artistAddress,
+        marketplaceAddress
+      },
+      templateSources: {
+        standardSource: selectedStandardTemplateSource,
+        preinscribedSource: preinscribedTemplateSource
+      },
+      coreContractId: networkCoreTarget.contractId,
+      operatorAddress: networkCoreTarget.address
+    });
+    if (deploySourceBuild.errors.length > 0) {
+      appendDeployDebug('Deploy blocked by absorbed-price source build validation', {
+        attemptId,
+        firstError: deploySourceBuild.errors[0]
+      });
+      setDeployPending(false);
+      setStatus(deploySourceBuild.errors[0]);
+      return;
+    }
+    sourceBeforeCompaction = deploySourceBuild.source;
+
+    const deployMetadata = {
+      ...draftMetadata,
+      pricing: {
+        mode:
+          mintType === 'standard' && !useLegacyV11CompatTemplate
+            ? 'advertised-includes-seal-fee'
+            : 'raw-on-chain',
+        advertisedMintPriceMicroStx: refreshBuild.resolved.mintPriceMicroStx.toString(),
+        onChainMintPriceMicroStx: deploySourceBuild.resolved.mintPriceMicroStx.toString(),
+        absorbedSealFeeMicroStx: deployAbsorbedSealFeeMicroStx.toString(),
+        worstCaseSealFeeMicroStx:
+          deployWorstCaseSealFeeMicroStx !== null
+            ? deployWorstCaseSealFeeMicroStx.toString()
+            : null,
+        pricingLockMaxChunks: deployPricingLockMaxChunks
+      }
+    };
 
     const contractName = deriveArtistContractName({
       collectionName: refreshBuild.resolved.collectionName,
@@ -1624,7 +1746,10 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         deploySourceLengthBytes: sourceForDeployBytes,
         sourceCompacted,
         sourceCompactionMode: DEPLOY_SOURCE_COMPACTION_MODE,
-        coreContractId: networkCoreTarget.contractId
+        coreContractId: networkCoreTarget.contractId,
+        advertisedMintPriceMicroStx: refreshBuild.resolved.mintPriceMicroStx.toString(),
+        onChainMintPriceMicroStx: deploySourceBuild.resolved.mintPriceMicroStx.toString(),
+        absorbedSealFeeMicroStx: deployAbsorbedSealFeeMicroStx.toString()
       });
       appendDeployDebug(
         `Opening wallet deployment request (v=${DEPLOY_DEBUG_VERSION}, origBytes=${sourceOriginalBytes.toString()}, deployBytes=${sourceForDeployBytes.toString()}, compacted=${sourceCompacted ? 'yes' : 'no'})`
@@ -1651,7 +1776,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                 contractAddress: session.address,
                 metadata: {
                   ...(created.metadata ?? {}),
-                  ...draftMetadata,
+                  ...deployMetadata,
                   contractName,
                   deployTxId: payload.txId,
                   deployedAt: new Date().toISOString()
@@ -1836,9 +1961,17 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
               {standardMintPriceLocked
                 ? 'Upload and lock all files first in Step 2. Price unlocks after the largest-file fee floor is known.'
                 : minimumMintPriceMicroStx !== null
-                  ? `Minimum allowed from locked assets: ${formatMicroStx(
-                      minimumMintPriceMicroStx
-                    )}.`
+                  ? deployAbsorbsWorstCaseSealFee
+                    ? `Minimum all-in price from locked assets: ${formatMicroStx(
+                        minimumMintPriceMicroStx
+                      )}. On deploy, on-chain mint price will be ${formatMicroStx(
+                        onChainMintPriceAfterAbsorptionMicroStx >= 0n
+                          ? onChainMintPriceAfterAbsorptionMicroStx
+                          : 0n
+                      )} (all-in minus worst-case seal protocol fee).`
+                    : `Minimum allowed from locked assets: ${formatMicroStx(
+                        minimumMintPriceMicroStx
+                      )}.`
                   : 'Minimum price loads after lock + fee-unit read.'}
             </span>
           ) : (
@@ -2042,14 +2175,25 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
               )}
               {minimumMintPriceMicroStx !== null && (
                 <span className="meta-value">
-                  Minimum allowed mint price (worst-case + 1 microSTX):{' '}
+                  Minimum all-in mint price (worst-case + 1 microSTX):{' '}
                   {formatMicroStx(minimumMintPriceMicroStx)}.
+                </span>
+              )}
+              {pricingPreflight && deployAbsorbsWorstCaseSealFee && (
+                <span className="meta-value">
+                  On-chain mint price at deploy: {formatMicroStx(
+                    onChainMintPriceAfterAbsorptionMicroStx >= 0n
+                      ? onChainMintPriceAfterAbsorptionMicroStx
+                      : 0n
+                  )}{' '}
+                  (all-in price minus worst-case seal fee).
                 </span>
               )}
               {pricingPreflight && (
                 <span className="meta-value">
-                  Pricing inputs used: mint price {formatMicroStx(pricingPreflight.mintPriceMicroStx)} ·
-                  max chunks {collectionDeployPricingLock.maxChunks.toString()} · fee unit{' '}
+                  Pricing inputs used: advertised mint price{' '}
+                  {formatMicroStx(pricingPreflight.mintPriceMicroStx)} · max chunks{' '}
+                  {collectionDeployPricingLock.maxChunks.toString()} · fee unit{' '}
                   {formatMicroStx(pricingPreflight.feeUnitMicroStx)}.
                 </span>
               )}
@@ -2062,7 +2206,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
               )}
               {pricingPreflight && !pricingPreflight.safe && (
                 <span className="meta-value">
-                  Increase mint price above {formatMicroStx(
+                  Increase all-in mint price above {formatMicroStx(
                     pricingPreflight.worstCaseSealFeeMicroStx
                   )} before deploy.
                 </span>
@@ -2332,13 +2476,26 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                   {deployBuild.resolved.mintType === 'standard' &&
                     minimumMintPriceMicroStx !== null && (
                       <p>
-                        <strong>Minimum allowed mint price:</strong>{' '}
+                        <strong>Minimum all-in mint price:</strong>{' '}
                         {formatMicroStx(minimumMintPriceMicroStx)} (worst-case + 1 microSTX)
+                      </p>
+                    )}
+                  {deployBuild.resolved.mintType === 'standard' &&
+                    pricingPreflight &&
+                    deployAbsorbsWorstCaseSealFee && (
+                      <p>
+                        <strong>On-chain mint price at deploy:</strong>{' '}
+                        {formatMicroStx(
+                          onChainMintPriceAfterAbsorptionMicroStx >= 0n
+                            ? onChainMintPriceAfterAbsorptionMicroStx
+                            : 0n
+                        )}{' '}
+                        (all-in minus worst-case seal fee)
                       </p>
                     )}
                   {deployBuild.resolved.mintType === 'standard' && pricingPreflight && (
                     <p className="meta-value">
-                      <strong>Pricing inputs used:</strong> mint price{' '}
+                      <strong>Pricing inputs used:</strong> advertised mint price{' '}
                       {formatMicroStx(pricingPreflight.mintPriceMicroStx)} · max chunks{' '}
                       {collectionDeployPricingLock
                         ? collectionDeployPricingLock.maxChunks.toString()
@@ -2349,10 +2506,10 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                   {deployBuild.resolved.mintType === 'standard' && pricingPreflight && (
                     <p className="meta-value">
                       {pricingPreflight.safe
-                        ? `Price safety margin: ${formatMicroStx(
+                        ? `All-in price safety margin: ${formatMicroStx(
                             pricingPreflight.marginMicroStx
                           )} above worst-case seal fee.`
-                        : `Price safety check failed. Price must be greater than ${formatMicroStx(
+                        : `Price safety check failed. All-in price must be greater than ${formatMicroStx(
                             pricingPreflight.worstCaseSealFeeMicroStx
                           )}.`}
                     </p>
