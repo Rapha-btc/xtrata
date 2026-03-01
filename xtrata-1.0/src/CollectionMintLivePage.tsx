@@ -2399,33 +2399,27 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
               >
                 {showMintGuide ? 'Hide mint guide' : 'How minting works'}
               </button>
-              <div className="collection-live-page__hero-summary">
-                <span>
-                  For <strong>{collectionTitle}</strong>
-                </span>
-                <span>
-                  max size {collectionMaxSizeLabel ?? 'Loading...'}
-                </span>
-                <span>
-                  max upload batches {estimatedUploadTransactionCount ?? '...'}
-                </span>
-                <span>
-                  max total signatures {estimatedWalletApprovals ?? '...'}
-                </span>
-                <span>
-                  protocol fee range {protocolFeeRangeLabel}
-                </span>
-                <span>
-                  mining fee ballpark{' '}
-                  {miningFeeBallparkLabel ?? 'Upload at least one file to estimate'}
-                </span>
-              </div>
             </div>
             {showMintGuide && (
               <div id="live-mint-guide" className="collection-live-page__mint-guide">
                 <p className="collection-live-page__mint-guide-title">
                   Xtrata mint flow: minimum 3 wallet signatures
                 </p>
+                <div className="collection-live-page__mint-guide-summary">
+                  <p className="collection-live-page__mint-guide-summary-title">
+                    Collection-specific values for {collectionTitle}
+                  </p>
+                  <ul className="collection-live-page__mint-guide-summary-list">
+                    <li>Max size: {collectionMaxSizeLabel ?? 'Loading...'}</li>
+                    <li>Max upload batches: {estimatedUploadTransactionCount ?? '...'}</li>
+                    <li>Max total signatures: {estimatedWalletApprovals ?? '...'}</li>
+                    <li>Protocol fee range: {protocolFeeRangeLabel}</li>
+                    <li>
+                      Mining fee ballpark:{' '}
+                      {miningFeeBallparkLabel ?? 'Upload at least one file to estimate'}
+                    </li>
+                  </ul>
+                </div>
                 <ol className="collection-live-page__mint-guide-list">
                   <li className="collection-live-page__mint-guide-item">
                     <strong>Begin transaction</strong>

@@ -4629,25 +4629,6 @@ p {
   font-size: 0.79rem;
 }
 
-.collection-live-page__hero-summary {
-  flex: 1 1 320px;
-  min-width: min(100%, 320px);
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--surface-soft);
-  padding: 6px 10px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 10px;
-  align-items: center;
-  font-size: 0.74rem;
-  color: var(--muted);
-}
-
-.collection-live-page__hero-summary strong {
-  color: var(--text);
-}
-
 .collection-live-page__mint-guide {
   border-radius: 12px;
   border: 1px solid var(--border);
@@ -4664,6 +4645,32 @@ p {
   text-transform: uppercase;
   color: var(--muted);
   font-weight: 700;
+}
+
+.collection-live-page__mint-guide-summary {
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+  padding: 8px 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.collection-live-page__mint-guide-summary-title {
+  margin: 0;
+  font-size: 0.74rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.collection-live-page__mint-guide-summary-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  font-size: 0.82rem;
 }
 
 .collection-live-page__mint-guide-list {
