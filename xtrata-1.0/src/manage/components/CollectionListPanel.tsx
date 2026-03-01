@@ -4,6 +4,7 @@ import {
   toManageApiErrorMessage
 } from '../lib/api-errors';
 import { useManageWallet } from '../ManageWalletContext';
+import InfoTooltip from './InfoTooltip';
 
 type CollectionRecord = {
   id: string;
@@ -261,22 +262,28 @@ export default function CollectionListPanel(props: CollectionListPanelProps) {
   return (
     <div className="collection-list">
       <div className="mint-actions">
-        <button
-          className="button button--ghost button--mini"
-          type="button"
-          onClick={() => void loadCollections(showArchived)}
-          disabled={isLoading || pendingCollectionId !== null}
-        >
-          {isLoading ? 'Refreshing...' : 'Refresh'}
-        </button>
-        <button
-          className="button button--ghost button--mini"
-          type="button"
-          onClick={() => setShowArchived((current) => !current)}
-          disabled={isLoading || pendingCollectionId !== null}
-        >
-          {showArchived ? 'Hide removed drafts' : 'Show removed drafts'}
-        </button>
+        <span className="info-label">
+          <button
+            className="button button--ghost button--mini"
+            type="button"
+            onClick={() => void loadCollections(showArchived)}
+            disabled={isLoading || pendingCollectionId !== null}
+          >
+            {isLoading ? 'Refreshing...' : 'Refresh'}
+          </button>
+          <InfoTooltip text="Reload the drop list for the connected wallet and current archive filter." />
+        </span>
+        <span className="info-label">
+          <button
+            className="button button--ghost button--mini"
+            type="button"
+            onClick={() => setShowArchived((current) => !current)}
+            disabled={isLoading || pendingCollectionId !== null}
+          >
+            {showArchived ? 'Hide removed drafts' : 'Show removed drafts'}
+          </button>
+          <InfoTooltip text="Show or hide drafts you removed from the active list." />
+        </span>
       </div>
 
       <p className="meta-value">
@@ -311,40 +318,60 @@ export default function CollectionListPanel(props: CollectionListPanelProps) {
               {collection.slug} · {collection.state}
             </p>
             <p className="meta-value">
-              Collection ID: <code>{collection.id}</code>
+              <span className="info-label">
+                Collection ID
+                <InfoTooltip text="Unique manager identifier used across Step 2, Step 3, and Step 4." />
+              </span>
+              : <code>{collection.id}</code>
             </p>
             <p className="collection-list__status">
-              <strong>Lifecycle:</strong> {getLifecycleLabel(collection)}
+              <strong className="info-label">
+                Lifecycle
+                <InfoTooltip text="Draft-only means no deploy tx yet. Deployed draft means contract exists but drop is not published. Live means published." />
+              </strong>
+              : {getLifecycleLabel(collection)}
             </p>
             <div className="mint-actions">
-              <button
-                className="button button--ghost button--mini"
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  void copyCollectionId(collection.id);
-                }}
-                disabled={pendingCollectionId !== null}
-              >
-                {copiedCollectionId === collection.id ? 'Copied' : 'Copy ID'}
-              </button>
-              {!isPublished(collection) && (
+              <span className="info-label">
                 <button
                   className="button button--ghost button--mini"
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
-                    void archiveCollection(collection);
+                    void copyCollectionId(collection.id);
                   }}
                   disabled={pendingCollectionId !== null}
                 >
-                  {pendingCollectionId === collection.id
-                    ? 'Removing...'
-                    : 'Remove from list'}
+                  {copiedCollectionId === collection.id ? 'Copied' : 'Copy ID'}
                 </button>
+                <InfoTooltip text="Copy this drop ID to paste into other launch steps." />
+              </span>
+              {!isPublished(collection) && (
+                <span className="info-label">
+                  <button
+                    className="button button--ghost button--mini"
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void archiveCollection(collection);
+                    }}
+                    disabled={pendingCollectionId !== null}
+                  >
+                    {pendingCollectionId === collection.id
+                      ? 'Removing...'
+                      : 'Remove from list'}
+                  </button>
+                  <InfoTooltip text="Moves this draft to removed drafts. You can restore it later unless you permanently delete it." />
+                </span>
               )}
             </div>
-            <p>{collection.contract_address ?? 'contract pending'}</p>
+            <p>
+              <span className="info-label">
+                Contract
+                <InfoTooltip text="On-chain deploy address once contract deployment has been broadcast and saved." />
+              </span>
+              : {collection.contract_address ?? 'contract pending'}
+            </p>
           </div>
         ))
       )}
@@ -376,40 +403,60 @@ export default function CollectionListPanel(props: CollectionListPanelProps) {
                   {collection.slug} · {collection.state}
                 </p>
                 <p className="meta-value">
-                  Collection ID: <code>{collection.id}</code>
+                  <span className="info-label">
+                    Collection ID
+                    <InfoTooltip text="Unique manager identifier used across Step 2, Step 3, and Step 4." />
+                  </span>
+                  : <code>{collection.id}</code>
                 </p>
                 <p className="collection-list__status">
-                  <strong>Lifecycle:</strong> {getLifecycleLabel(collection)}
+                  <strong className="info-label">
+                    Lifecycle
+                    <InfoTooltip text="Archived drafts are hidden from active view until restored." />
+                  </strong>
+                  : {getLifecycleLabel(collection)}
                 </p>
                 <div className="mint-actions">
-                  <button
-                    className="button button--ghost button--mini"
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      void restoreCollection(collection);
-                    }}
-                    disabled={pendingCollectionId !== null}
-                  >
-                    {pendingCollectionId === collection.id
-                      ? 'Restoring...'
-                      : 'Restore'}
-                  </button>
-                  <button
-                    className="button button--ghost button--mini"
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      void deleteCollection(collection);
-                    }}
-                    disabled={pendingCollectionId !== null}
-                  >
-                    {pendingCollectionId === collection.id
-                      ? 'Deleting...'
-                      : 'Delete permanently'}
-                  </button>
+                  <span className="info-label">
+                    <button
+                      className="button button--ghost button--mini"
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void restoreCollection(collection);
+                      }}
+                      disabled={pendingCollectionId !== null}
+                    >
+                      {pendingCollectionId === collection.id
+                        ? 'Restoring...'
+                        : 'Restore'}
+                    </button>
+                    <InfoTooltip text="Move this draft back to active drops." />
+                  </span>
+                  <span className="info-label">
+                    <button
+                      className="button button--ghost button--mini"
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void deleteCollection(collection);
+                      }}
+                      disabled={pendingCollectionId !== null}
+                    >
+                      {pendingCollectionId === collection.id
+                        ? 'Deleting...'
+                        : 'Delete permanently'}
+                    </button>
+                    <InfoTooltip text="Permanent cleanup of this archived draft and linked storage records. This cannot be undone." />
+                  </span>
                 </div>
-                <p>{collection.contract_address ?? 'contract pending'}</p>
+                <p>
+                  <span className="info-label">
+                    Contract
+                    <InfoTooltip text="On-chain deploy address once contract deployment has been broadcast and saved." />
+                  </span>
+                  : {collection.contract_address ?? 'contract pending'}
+                </p>
               </div>
             ))
           )}

@@ -1882,63 +1882,95 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
     return (
       <div className="collection-settings-panel collection-settings-panel--guided">
         <div className="collection-settings-panel__group">
-          <h3>Guided launch quick actions</h3>
+          <h3 className="info-label">
+            Guided launch quick actions
+            <InfoTooltip text="Run these contract updates in sequence. This keeps launch state predictable for first-time creators." />
+          </h3>
           <p className="meta-value">
             Complete these contract actions in order, then refresh checklist status.
           </p>
           <p className="meta-value">
-            Active draft: <code>{collectionId || 'Select a drop in "Your drops"'}</code>
+            <span className="info-label">
+              Active draft
+              <InfoTooltip text="The selected drop ID from Step 1 and Step 2. Quick actions apply to this draft context." />
+            </span>
+            : <code>{collectionId || 'Select a drop in "Your drops"'}</code>
           </p>
           <p className="meta-value">
-            Contract target:{' '}
+            <span className="info-label">
+              Contract target
+              <InfoTooltip text="Address and contract name that wallet transactions will be sent to." />
+            </span>
+            :{' '}
             <code>{contractId ?? 'Load a deployed contract from the selected draft'}</code>
           </p>
 
           <div className="mint-actions">
-            <button
-              className="button button--ghost"
-              type="button"
-              onClick={() => void loadContractSummary()}
-              disabled={!contractReady || summaryLoading}
-            >
-              {summaryLoading ? 'Refreshing...' : 'Refresh on-chain status'}
-            </button>
-            {props.onRequestAdvancedControls ? (
+            <span className="info-label">
               <button
                 className="button button--ghost"
                 type="button"
-                onClick={props.onRequestAdvancedControls}
+                onClick={() => void loadContractSummary()}
+                disabled={!contractReady || summaryLoading}
               >
-                Open advanced controls
+                {summaryLoading ? 'Refreshing...' : 'Refresh on-chain status'}
               </button>
+              <InfoTooltip text="Reads current on-chain values (price, pause state, supply) from the deployed contract." />
+            </span>
+            {props.onRequestAdvancedControls ? (
+              <span className="info-label">
+                <button
+                  className="button button--ghost"
+                  type="button"
+                  onClick={props.onRequestAdvancedControls}
+                >
+                  Open advanced controls
+                </button>
+                <InfoTooltip text="Switches to detailed contract controls for expert/admin-level actions." />
+              </span>
             ) : null}
           </div>
 
           <div className="collection-settings-panel__summary-grid">
             <div className="collection-settings-panel__summary-item">
-              <span className="meta-label">{onChainPriceLabel}</span>
+              <span className="meta-label info-label">
+                {onChainPriceLabel}
+                <InfoTooltip text="Contract value used for recipient split calculations." />
+              </span>
               <span className="meta-value">
                 {formatMicroStx(summary?.mintPriceMicroStx ?? null)}
               </span>
             </div>
             <div className="collection-settings-panel__summary-item">
-              <span className="meta-label">{advertisedPriceLabel}</span>
+              <span className="meta-label info-label">
+                {advertisedPriceLabel}
+                <InfoTooltip text="Collector-facing price shown on the live mint page." />
+              </span>
               <span className="meta-value">{formatDraftStx(collectionMintPriceStx)}</span>
             </div>
             {!preInscribedMint ? (
               <div className="collection-settings-panel__summary-item">
-                <span className="meta-label">Max supply</span>
+                <span className="meta-label info-label">
+                  Max supply
+                  <InfoTooltip text="Hard cap for tokens this drop can mint." />
+                </span>
                 <span className="meta-value">
                   {maxSupplyValue === null ? 'Unknown' : maxSupplyValue.toString()}
                 </span>
               </div>
             ) : null}
             <div className="collection-settings-panel__summary-item">
-              <span className="meta-label">Contract pause status</span>
+              <span className="meta-label info-label">
+                Contract pause status
+                <InfoTooltip text="Paused means minting is blocked. Unpaused means minting is live." />
+              </span>
               <span className="meta-value">{pauseStatusLabel}</span>
             </div>
             <div className="collection-settings-panel__summary-item">
-              <span className="meta-label">Backend state</span>
+              <span className="meta-label info-label">
+                Backend state
+                <InfoTooltip text="Manager-side lifecycle marker such as draft or published." />
+              </span>
               <span className="meta-value">{collectionStateValue || 'draft'}</span>
             </div>
           </div>
@@ -1949,32 +1981,44 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
         </div>
 
         <div className="collection-settings-panel__group">
-          <h3>{pauseStepNumber}. Pause before publish</h3>
+          <h3 className="info-label">
+            {pauseStepNumber}. Pause before publish
+            <InfoTooltip text="Recommended first action: keep minting locked until setup and publish are complete." />
+          </h3>
           <p className="meta-value">
             Keep minting paused while finishing live-page details and publish.
           </p>
           <div className="mint-actions">
-            <button
-              className="button"
-              type="button"
-              id="manage-pause-contract-button"
-              onClick={() => void runQuickPause()}
-              disabled={!contractReady || quickActionsBusy || pausedValue === true}
-            >
-              {quickActionPending === 'pause' ? 'Submitting...' : 'Pause contract'}
-            </button>
+            <span className="info-label">
+              <button
+                className="button"
+                type="button"
+                id="manage-pause-contract-button"
+                onClick={() => void runQuickPause()}
+                disabled={!contractReady || quickActionsBusy || pausedValue === true}
+              >
+                {quickActionPending === 'pause' ? 'Submitting...' : 'Pause contract'}
+              </button>
+              <InfoTooltip text="Sends `set-paused true` to the collection contract." />
+            </span>
           </div>
         </div>
 
         <div className="collection-settings-panel__group">
-          <h3>{priceStepNumber}. Set {onChainPriceFieldLabel.toLowerCase()}</h3>
+          <h3 className="info-label">
+            {priceStepNumber}. Set {onChainPriceFieldLabel.toLowerCase()}
+            <InfoTooltip text="Updates the contract-side price value used during mint accounting." />
+          </h3>
           <p className="meta-value">
             {preInscribedMint
               ? 'Set the on-chain sale price used by the contract.'
               : 'Set the on-chain payout base split to artist/marketplace recipients. Collector-facing mint price is set in Step 4 live page settings.'}
           </p>
           <label className="field field--full">
-            <span className="field__label">{onChainPriceFieldLabel} (STX)</span>
+            <span className="field__label info-label">
+              {onChainPriceFieldLabel} (STX)
+              <InfoTooltip text="Up to 6 decimals. This is written on-chain." />
+            </span>
             <input
               className="input"
               value={quickMintPriceStx}
@@ -1986,25 +2030,34 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
             />
           </label>
           <div className="mint-actions">
-            <button
-              className="button"
-              type="button"
-              onClick={() => void runQuickSetMintPrice()}
-              disabled={!contractReady || quickActionsBusy}
-            >
-              {quickActionPending === 'set-mint-price'
-                ? 'Submitting...'
-                : `Set ${onChainPriceFieldLabel.toLowerCase()}`}
-            </button>
+            <span className="info-label">
+              <button
+                className="button"
+                type="button"
+                onClick={() => void runQuickSetMintPrice()}
+                disabled={!contractReady || quickActionsBusy}
+              >
+                {quickActionPending === 'set-mint-price'
+                  ? 'Submitting...'
+                  : `Set ${onChainPriceFieldLabel.toLowerCase()}`}
+              </button>
+              <InfoTooltip text="Submits the price update transaction with your connected signer wallet." />
+            </span>
           </div>
         </div>
 
         {!preInscribedMint ? (
           <div className="collection-settings-panel__group">
-            <h3>{maxSupplyStepNumber}. Set max supply</h3>
+            <h3 className="info-label">
+              {maxSupplyStepNumber}. Set max supply
+              <InfoTooltip text="Sets the maximum token count allowed by the contract." />
+            </h3>
             <p className="meta-value">Set the maximum number of tokens this drop can mint.</p>
             <label className="field field--full">
-              <span className="field__label">Max supply</span>
+              <span className="field__label info-label">
+                Max supply
+                <InfoTooltip text="Whole number only. Usually set once before launch." />
+              </span>
               <input
                 className="input"
                 value={quickMaxSupply}
@@ -2016,40 +2069,49 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
               />
             </label>
             <div className="mint-actions">
-              <button
-                className="button"
-                type="button"
-                onClick={() => void runQuickSetMaxSupply()}
-                disabled={!contractReady || quickActionsBusy}
-              >
-                {quickActionPending === 'set-max-supply'
-                  ? 'Submitting...'
-                  : 'Set max supply'}
-              </button>
+              <span className="info-label">
+                <button
+                  className="button"
+                  type="button"
+                  onClick={() => void runQuickSetMaxSupply()}
+                  disabled={!contractReady || quickActionsBusy}
+                >
+                  {quickActionPending === 'set-max-supply'
+                    ? 'Submitting...'
+                    : 'Set max supply'}
+                </button>
+                <InfoTooltip text="Sends `set-max-supply` to the contract owner/admin role." />
+              </span>
             </div>
           </div>
         ) : null}
 
         <div className="collection-settings-panel__group">
-          <h3>{unpauseStepNumber}. Unpause to go live</h3>
+          <h3 className="info-label">
+            {unpauseStepNumber}. Unpause to go live
+            <InfoTooltip text="Final launch action. Do this after publishing in Step 4." />
+          </h3>
           <p className="meta-value">
             Final launch milestone: unpause only after the collection is published.
           </p>
           <div className="mint-actions">
-            <button
-              className="button"
-              type="button"
-              id="manage-unpause-contract-button"
-              onClick={() => void runQuickUnpause()}
-              disabled={
-                !contractReady ||
-                quickActionsBusy ||
-                !collectionPublished ||
-                pausedValue !== true
-              }
-            >
-              {quickActionPending === 'unpause' ? 'Submitting...' : 'Unpause contract'}
-            </button>
+            <span className="info-label">
+              <button
+                className="button"
+                type="button"
+                id="manage-unpause-contract-button"
+                onClick={() => void runQuickUnpause()}
+                disabled={
+                  !contractReady ||
+                  quickActionsBusy ||
+                  !collectionPublished ||
+                  pausedValue !== true
+                }
+              >
+                {quickActionPending === 'unpause' ? 'Submitting...' : 'Unpause contract'}
+              </button>
+              <InfoTooltip text="Sends `set-paused false` so collectors can mint." />
+            </span>
           </div>
           {unpauseBlockedHint ? (
             <p className="meta-value">{unpauseBlockedHint}</p>
@@ -2062,7 +2124,10 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
   return (
     <div className="collection-settings-panel">
       <div className="collection-settings-panel__group">
-        <h3>Draft metadata</h3>
+        <h3 className="info-label">
+          Draft metadata
+          <InfoTooltip text="Backend-only draft details. Editing here does not send wallet transactions." />
+        </h3>
         <p className="meta-value">
           Update manager draft fields in D1. This does not send on-chain
           transactions.
@@ -2079,9 +2144,12 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
             value={collectionId}
             onChange={(event) => setCollectionId(event.target.value)}
           />
-          <button className="button button--ghost" type="button" onClick={loadCollection}>
-            Load draft
-          </button>
+          <span className="info-label">
+            <button className="button button--ghost" type="button" onClick={loadCollection}>
+              Load draft
+            </button>
+            <InfoTooltip text="Fetches the selected draft and pre-fills these fields." />
+          </span>
         </label>
 
         <label className="field">
@@ -2159,14 +2227,17 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
         </label>
 
         <div className="mint-actions">
-          <button
-            className="button"
-            type="button"
-            onClick={saveSettings}
-            disabled={draftSettingsLocked}
-          >
-            Save draft settings
-          </button>
+          <span className="info-label">
+            <button
+              className="button"
+              type="button"
+              onClick={saveSettings}
+              disabled={draftSettingsLocked}
+            >
+              Save draft settings
+            </button>
+            <InfoTooltip text="Writes updated draft metadata to the manager backend." />
+          </span>
         </div>
         {draftSettingsLocked && (
           <p className="meta-value">
@@ -2177,7 +2248,10 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
       </div>
 
       <div className="collection-settings-panel__group collection-settings-panel__group--onchain">
-        <h3>Deployed contract controls</h3>
+        <h3 className="info-label">
+          Deployed contract controls
+          <InfoTooltip text="Direct wallet transactions to contract functions. Use carefully in production collections." />
+        </h3>
         <p className="meta-value">
           This section sends wallet transactions directly to the deployed
           collection contract.
@@ -2189,55 +2263,85 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
         </p>
 
         <div className="mint-actions">
-          <button
-            className="button button--ghost"
-            type="button"
-            onClick={() => void loadContractSummary()}
-            disabled={!contractReady || summaryLoading}
-          >
-            {summaryLoading ? 'Refreshing...' : 'Refresh on-chain status'}
-          </button>
+          <span className="info-label">
+            <button
+              className="button button--ghost"
+              type="button"
+              onClick={() => void loadContractSummary()}
+              disabled={!contractReady || summaryLoading}
+            >
+              {summaryLoading ? 'Refreshing...' : 'Refresh on-chain status'}
+            </button>
+            <InfoTooltip text="Reads owner/admin roles, pause state, pricing, and core fee data from the contract." />
+          </span>
         </div>
 
         <div className="collection-settings-panel__summary-grid">
           <div className="collection-settings-panel__summary-item">
-            <span className="meta-label">Owner</span>
+            <span className="meta-label info-label">
+              Owner
+              <InfoTooltip text="Current contract owner wallet." />
+            </span>
             <span className="meta-value">{summary?.owner ?? 'Unknown'}</span>
           </div>
           <div className="collection-settings-panel__summary-item">
-            <span className="meta-label">Pending owner</span>
+            <span className="meta-label info-label">
+              Pending owner
+              <InfoTooltip text="Wallet waiting to accept ownership transfer, if any." />
+            </span>
             <span className="meta-value">{summary?.pendingOwner ?? 'None'}</span>
           </div>
           <div className="collection-settings-panel__summary-item">
-            <span className="meta-label">Operator admin</span>
+            <span className="meta-label info-label">
+              Operator admin
+              <InfoTooltip text="Admin role that can manage operational/config actions." />
+            </span>
             <span className="meta-value">{summary?.operatorAdmin ?? 'Unknown'}</span>
           </div>
           <div className="collection-settings-panel__summary-item">
-            <span className="meta-label">Finance admin</span>
+            <span className="meta-label info-label">
+              Finance admin
+              <InfoTooltip text="Admin role that can update finance actions like pricing and splits." />
+            </span>
             <span className="meta-value">{summary?.financeAdmin ?? 'Unknown'}</span>
           </div>
           <div className="collection-settings-panel__summary-item">
-            <span className="meta-label">Paused</span>
+            <span className="meta-label info-label">
+              Paused
+              <InfoTooltip text="Yes means mint functions are blocked. No means minting is enabled." />
+            </span>
             <span className="meta-value">
               {pausedValue === null ? 'Unknown' : pausedValue ? 'Yes' : 'No'}
             </span>
           </div>
           <div className="collection-settings-panel__summary-item">
-            <span className="meta-label">Finalized</span>
+            <span className="meta-label info-label">
+              Finalized
+              <InfoTooltip text="Finalized contracts lock selected mutable controls permanently." />
+            </span>
             <span className="meta-value">
               {finalizedValue === null ? 'Unknown' : finalizedValue ? 'Yes' : 'No'}
             </span>
           </div>
           <div className="collection-settings-panel__summary-item">
-            <span className="meta-label">{onChainPriceLabel}</span>
+            <span className="meta-label info-label">
+              {onChainPriceLabel}
+              <InfoTooltip text="Contract-side payout/sale value currently stored on-chain." />
+            </span>
             <span className="meta-value">{formatMicroStx(summary?.mintPriceMicroStx ?? null)}</span>
           </div>
           <div className="collection-settings-panel__summary-item">
-            <span className="meta-label">{advertisedPriceLabel}</span>
+            <span className="meta-label info-label">
+              {advertisedPriceLabel}
+              <InfoTooltip text="Collector-facing price from draft/live-page metadata." />
+            </span>
             <span className="meta-value">{formatDraftStx(collectionMintPriceStx)}</span>
           </div>
           <div className="collection-settings-panel__summary-item">
-            <span className="meta-label">Max supply</span>
+            <span className="meta-label info-label">
+              Max supply
+              <InfoTooltip text="Current contract cap for total mintable tokens." />
+            </span>
             <span className="meta-value">
               {summary?.maxSupply === null || summary?.maxSupply === undefined
                 ? 'Unknown'
@@ -2245,7 +2349,10 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
             </span>
           </div>
           <div className="collection-settings-panel__summary-item">
-            <span className="meta-label">Core fee unit</span>
+            <span className="meta-label info-label">
+              Core fee unit
+              <InfoTooltip text="Fee unit pulled from locked core contract, used for fee absorption helpers." />
+            </span>
             <span className="meta-value">
               {formatMicroStx(summary?.coreFeeUnitMicroStx ?? null)}
             </span>
@@ -2399,42 +2506,48 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
         )}
 
         <div className="mint-actions">
-          <button
-            className="button"
-            type="button"
-            id="manage-contract-action-submit"
-            onClick={runAction}
-            disabled={!contractReady || actionPending || !selectedAction}
-          >
-            {actionPending ? 'Submitting...' : 'Submit wallet transaction'}
-          </button>
-          <button
-            className="button button--ghost"
-            type="button"
-            onClick={() => {
-              if (!selectedAction) {
-                return;
-              }
-              setActionInputs(
-                getDefaultInputs({
-                  action: selectedAction,
-                  collectionName: collectionNameFromMetadata || displayName,
-                  collectionSymbol: collectionSymbolFromMetadata,
-                  collectionDescription: collectionDescriptionFromMetadata,
-                  supply: collectionSupplyFromMetadata,
-                  mintPriceStx: collectionMintPriceStx,
-                  parentIds: collectionParentIds,
-                  artistAddress,
-                  contractAddress,
-                  walletAddress: walletSession.address ?? ''
-                })
-              );
-              setActionMessage(null);
-            }}
-            disabled={!selectedAction}
-          >
-            Reset action fields
-          </button>
+          <span className="info-label">
+            <button
+              className="button"
+              type="button"
+              id="manage-contract-action-submit"
+              onClick={runAction}
+              disabled={!contractReady || actionPending || !selectedAction}
+            >
+              {actionPending ? 'Submitting...' : 'Submit wallet transaction'}
+            </button>
+            <InfoTooltip text="Opens wallet confirmation for the selected contract function call." />
+          </span>
+          <span className="info-label">
+            <button
+              className="button button--ghost"
+              type="button"
+              onClick={() => {
+                if (!selectedAction) {
+                  return;
+                }
+                setActionInputs(
+                  getDefaultInputs({
+                    action: selectedAction,
+                    collectionName: collectionNameFromMetadata || displayName,
+                    collectionSymbol: collectionSymbolFromMetadata,
+                    collectionDescription: collectionDescriptionFromMetadata,
+                    supply: collectionSupplyFromMetadata,
+                    mintPriceStx: collectionMintPriceStx,
+                    parentIds: collectionParentIds,
+                    artistAddress,
+                    contractAddress,
+                    walletAddress: walletSession.address ?? ''
+                  })
+                );
+                setActionMessage(null);
+              }}
+              disabled={!selectedAction}
+            >
+              Reset action fields
+            </button>
+            <InfoTooltip text="Restores this action form to suggested defaults from the current draft/context." />
+          </span>
         </div>
         {actionMessage && <div className="alert">{actionMessage}</div>}
       </div>

@@ -706,31 +706,40 @@ export default function CollectionManagerApp() {
               </p>
             </div>
             <div className="panel__actions">
-              <button
-                className="button button--ghost"
-                type="button"
-                onClick={handleJourneyRefresh}
-                disabled={journeySnapshot.loading}
-              >
-                {journeySnapshot.loading
-                  ? 'Refreshing checklist...'
-                  : 'Refresh checklist'}
-              </button>
+              <span className="info-label">
+                <button
+                  className="button button--ghost"
+                  type="button"
+                  onClick={handleJourneyRefresh}
+                  disabled={journeySnapshot.loading}
+                >
+                  {journeySnapshot.loading
+                    ? 'Refreshing checklist...'
+                    : 'Refresh checklist'}
+                </button>
+                <InfoTooltip text="Recompute all step states from latest backend and on-chain snapshots." />
+              </span>
               <div className="manage-journey__mode-toggle" role="group" aria-label="Experience mode">
-                <button
-                  className={`button ${experienceMode === 'guided' ? '' : 'button--ghost'}`}
-                  type="button"
-                  onClick={setGuidedMode}
-                >
-                  Guided mode
-                </button>
-                <button
-                  className={`button ${experienceMode === 'advanced' ? '' : 'button--ghost'}`}
-                  type="button"
-                  onClick={setAdvancedMode}
-                >
-                  Advanced mode
-                </button>
+                <span className="info-label">
+                  <button
+                    className={`button ${experienceMode === 'guided' ? '' : 'button--ghost'}`}
+                    type="button"
+                    onClick={setGuidedMode}
+                  >
+                    Guided mode
+                  </button>
+                  <InfoTooltip text="Shows the essential launch sequence with fewer controls." />
+                </span>
+                <span className="info-label">
+                  <button
+                    className={`button ${experienceMode === 'advanced' ? '' : 'button--ghost'}`}
+                    type="button"
+                    onClick={setAdvancedMode}
+                  >
+                    Advanced mode
+                  </button>
+                  <InfoTooltip text="Shows detailed contract/admin tools, diagnostics, and expert controls." />
+                </span>
               </div>
             </div>
           </div>
@@ -992,9 +1001,12 @@ export default function CollectionManagerApp() {
         {!showAdvancedPanels && (
           <div className="manage-advanced-teaser">
             <p>Need deeper controls? Switch to Advanced mode to edit contract settings and run diagnostics.</p>
-            <button className="button button--ghost" type="button" onClick={setAdvancedMode}>
-              Open advanced tools
-            </button>
+            <span className="info-label">
+              <button className="button button--ghost" type="button" onClick={setAdvancedMode}>
+                Open advanced tools
+              </button>
+              <InfoTooltip text="Switches from guided layout to full advanced panel set." />
+            </span>
           </div>
         )}
 

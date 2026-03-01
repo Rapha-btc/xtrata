@@ -2314,7 +2314,10 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       )}
 
       <div className="deploy-wizard__defaults">
-        <p className="deploy-wizard__defaults-title">Safe defaults we set for you</p>
+        <p className="deploy-wizard__defaults-title info-label">
+          Safe defaults we set for you
+          <InfoTooltip text="These guardrails are auto-applied so beginner launches use consistent, proven contract settings." />
+        </p>
         <ul>
           <li>Contract code is locked and generated internally by the app.</li>
           <li>Payout split starts at 95% artist, 2.5% marketplace, 2.5% operator.</li>
@@ -2325,7 +2328,10 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
 
       {debugEnabled && mintType === 'standard' && (
         <div className="deploy-wizard__defaults">
-          <p className="deploy-wizard__defaults-title">Debug template switch</p>
+          <p className="deploy-wizard__defaults-title info-label">
+            Debug template switch
+            <InfoTooltip text="Advanced troubleshooting control for comparing deploy behavior across template variants." />
+          </p>
           <label className="field">
             <span className="field__label info-label">
               Template mode (debug only)
@@ -2357,30 +2363,39 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       )}
 
       <div className="mint-actions">
-        <button
-          className="button button--ghost"
-          type="button"
-          onClick={() => void refreshSelectedDraft('manual-refresh')}
-          disabled={deployPending || draftPending || selectedDraftLoading}
-        >
-          {selectedDraftLoading ? 'Refreshing draft...' : 'Refresh draft now'}
-        </button>
-        <button
-          className="button button--ghost"
-          type="button"
-          onClick={handleCreateDraftOnly}
-          disabled={deployPending || draftPending}
-        >
-          {draftPending ? 'Saving draft...' : 'Create draft ID for uploads'}
-        </button>
-        <button
-          className="button"
-          type="button"
-          onClick={handleOpenReview}
-          disabled={deployPending || draftPending || reviewDeployBlockedByPricing}
-        >
-          {deployPending ? 'Waiting for wallet...' : 'Review deployment'}
-        </button>
+        <span className="info-label">
+          <button
+            className="button button--ghost"
+            type="button"
+            onClick={() => void refreshSelectedDraft('manual-refresh')}
+            disabled={deployPending || draftPending || selectedDraftLoading}
+          >
+            {selectedDraftLoading ? 'Refreshing draft...' : 'Refresh draft now'}
+          </button>
+          <InfoTooltip text="Reloads draft metadata and deploy status from backend for the selected collection." />
+        </span>
+        <span className="info-label">
+          <button
+            className="button button--ghost"
+            type="button"
+            onClick={handleCreateDraftOnly}
+            disabled={deployPending || draftPending}
+          >
+            {draftPending ? 'Saving draft...' : 'Create draft ID for uploads'}
+          </button>
+          <InfoTooltip text="Creates a draft record without deploying yet so you can move into staging and lock flow." />
+        </span>
+        <span className="info-label">
+          <button
+            className="button"
+            type="button"
+            onClick={handleOpenReview}
+            disabled={deployPending || draftPending || reviewDeployBlockedByPricing}
+          >
+            {deployPending ? 'Waiting for wallet...' : 'Review deployment'}
+          </button>
+          <InfoTooltip text="Opens final deploy checklist before wallet confirmation." />
+        </span>
       </div>
 
       {mintType === 'standard' && reviewDeployBlockedByPricing && (
@@ -2393,7 +2408,10 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       {status && <p className="meta-value">{status}</p>}
 
       <div className="deploy-wizard__defaults">
-        <p className="deploy-wizard__defaults-title">Deploy debug details</p>
+        <p className="deploy-wizard__defaults-title info-label">
+          Deploy debug details
+          <InfoTooltip text="Low-level diagnostics for template version, wallet context, pricing lock state, and deploy attempts." />
+        </p>
         <ul>
           <li>Debug version: {DEPLOY_DEBUG_VERSION}</li>
           <li>Template mode: {deployTemplateMode}</li>
@@ -2643,26 +2661,32 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
               )}
 
               <div className="modal__actions">
-                <button
-                  className="button button--ghost"
-                  type="button"
-                  onClick={() => setReviewOpen(false)}
-                  disabled={deployPending}
-                >
-                  Back
-                </button>
-                <button
-                  className="button"
-                  type="button"
-                  onClick={handleDeploy}
-                  disabled={
-                    deployPending ||
-                    deployBuild.errors.length > 0 ||
-                    reviewDeployBlockedByPricing
-                  }
-                >
-                  {deployPending ? 'Deploying...' : 'Deploy contract'}
-                </button>
+                <span className="info-label">
+                  <button
+                    className="button button--ghost"
+                    type="button"
+                    onClick={() => setReviewOpen(false)}
+                    disabled={deployPending}
+                  >
+                    Back
+                  </button>
+                  <InfoTooltip text="Returns to the draft form without sending a deploy transaction." />
+                </span>
+                <span className="info-label">
+                  <button
+                    className="button"
+                    type="button"
+                    onClick={handleDeploy}
+                    disabled={
+                      deployPending ||
+                      deployBuild.errors.length > 0 ||
+                      reviewDeployBlockedByPricing
+                    }
+                  >
+                    {deployPending ? 'Deploying...' : 'Deploy contract'}
+                  </button>
+                  <InfoTooltip text="Submits deploy transaction to wallet using the reviewed inputs and locked template." />
+                </span>
               </div>
             </div>
           </div>,
