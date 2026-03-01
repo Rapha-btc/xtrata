@@ -7,7 +7,8 @@ const WATCHED_FILES = [
   'research-buffer.md',
   'ledger.md',
   'future-inscription-ideas.md',
-  'AGENTs.md'
+  'AGENTs.md',
+  'EVOLUTION.md'
 ];
 
 // Map filename to its parser
@@ -15,7 +16,8 @@ const PARSERS = {
   'research-buffer.md': () => ({ type: 'research', data: markdown.parseResearchBuffer() }),
   'ledger.md': () => ({ type: 'ledger', data: markdown.parseLedger() }),
   'future-inscription-ideas.md': () => ({ type: 'ideas', data: markdown.parseIdeas() }),
-  'AGENTs.md': () => ({ type: 'agents', data: markdown.parseAgents() })
+  'AGENTs.md': () => ({ type: 'agents', data: markdown.parseAgents() }),
+  'EVOLUTION.md': () => ({ type: 'evolution', data: markdown.parseEvolution() })
 };
 
 let watcher = null;

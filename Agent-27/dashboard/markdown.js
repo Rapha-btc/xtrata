@@ -1,8 +1,7 @@
 // dashboard/markdown.js
 const fs = require('fs');
 const path = require('path');
-
-const WORKDIR = path.resolve(__dirname, '..');
+const { WORKDIR } = require('./config');
 
 function parseMarkdownTable(markdown, sectionHeader) {
   try {
@@ -117,9 +116,20 @@ function parseAgents() {
     }
 }
 
+function parseEvolution() {
+    try {
+        const raw = fs.readFileSync(path.join(WORKDIR, 'EVOLUTION.md'), 'utf8');
+        return { raw };
+    } catch (e) {
+        if (e.code === 'ENOENT') return { raw: 'EVOLUTION.md not found.' };
+        return { raw: `Error reading EVOLUTION.md: ${e.message}` };
+    }
+}
+
 module.exports = {
     parseResearchBuffer,
     parseLedger,
     parseIdeas,
-    parseAgents
+    parseAgents,
+    parseEvolution
 };

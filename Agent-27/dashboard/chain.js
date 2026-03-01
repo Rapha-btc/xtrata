@@ -1,8 +1,5 @@
 // dashboard/chain.js
-const WALLET = 'SP15T1W26JTNS26VG17HM468KW7TQD3124KTYA9EJ';
-const CONTRACT = 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X';
-const CONTRACT_NAME = 'xtrata-v2-1-0';
-const HIRO_BASE = 'https://stacks-node-api.mainnet.stacks.co';
+const { WALLET, CONTRACT_ADDRESS: CONTRACT, CONTRACT_NAME, HIRO_BASE } = require('./config');
 const POLL_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 let poller = null;

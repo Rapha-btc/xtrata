@@ -8,10 +8,10 @@ const markdown = require('./markdown');
 const { initPhases, runPhase, cancelPhase, getPhaseStatus, getLatestDraft } = require('./phases');
 const { initWatcher, stopWatcher } = require('./watcher');
 const { startChainPoller, stopChainPoller, getChainData } = require('./chain');
+const { WORKDIR, AVG_COST_PER_ENTRY } = require('./config');
 
 const app = express();
 const PORT = Number(process.env.PORT || 2727);
-const WORKDIR = path.resolve(__dirname, '..');
 const LOG_LIMIT = 200;
 const activityLog = [];
 
@@ -91,7 +91,7 @@ app.get('/api/chain', (req, res) => {
   const researchCyclesLabel = getMetricValue(runningTotals, 'Research cycles run');
 
   const stxRemaining = live.stxBalance !== null ? live.stxBalance : parseNumber(stxRemainingLabel);
-  const daysOfLife = stxRemaining !== null ? Math.floor(stxRemaining / 0.31) : parseNumber(daysOfLifeLabel);
+  const daysOfLife = stxRemaining !== null ? Math.floor(stxRemaining / AVG_COST_PER_ENTRY) : parseNumber(daysOfLifeLabel);
   const stxSpent = parseNumber(stxSpentLabel);
   const initialBudget = 10;
   const reservePercent = stxRemaining === null

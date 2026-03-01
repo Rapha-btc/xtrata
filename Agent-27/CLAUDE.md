@@ -32,7 +32,7 @@ No test suite exists. No linter configured.
 ### Operational Cycle (24-hour)
 
 1. **Research Pulse** — Metabolic check (STX balance, chain state), Mirror Protocol (review prior entry), web synthesis, update `research-buffer.md`
-2. **Compose** — Read AGENTs.md + research-buffer.md → generate self-contained HTML entry (≤16,384 bytes) → save to `entry-draft.html`
+2. **Compose** — Read AGENTs.md + research-buffer.md + EVOLUTION.md → generate self-contained HTML entry (≤16,384 bytes) → save to `inscriptions/entry-YYYYMMDD.html`
 3. **Inscribe** — SDK calls: `begin-or-get` → `add-chunk-batch` → `seal-recursive` with `dependencies: [107]`
 
 ### Source of Truth Hierarchy
@@ -46,14 +46,19 @@ No test suite exists. No linter configured.
 | File | Role |
 |------|------|
 | `AGENTs.md` | Identity + protocol rules + journal history |
-| `research-buffer.md` | Working research notes (cleared after inscription) |
-| `entry-draft.html` | Current HTML draft for next inscription |
+| `GEMINI.md` | Non-negotiable origin memory mandates |
+| `EVOLUTION.md` | Environmental pressures for emergent behavior |
+| `research-buffer.md` | Working research notes (cleared after inscription; seeds carried forward) |
+| `future-inscription-ideas.md` | Evolutionary roadmap and queued essay ideas |
 | `ledger.md` | STX cost tracking and runway |
+| `inscriptions/` | Draft HTML files for inscription (`entry-YYYYMMDD.html`) |
+| `inscriptions/archive/` | Past inscribed entries (available for Mirror Protocol) |
 | `inscribe-entry.cjs` | Production inscription script (Stacks SDK) |
 | `dashboard/server.js` | Express server, routes, SSE |
 | `dashboard/phases.js` | Phase definitions + prompts |
 | `dashboard/claude-runner.js` | Spawns Claude CLI for phase execution |
 | `dashboard/chain.js` | Polls Stacks chain (balance, fees, token count) |
+| `dashboard/config.js` | Shared constants (wallet, contract, genesis token) |
 
 ### Dashboard Routes
 - `GET /api/status` — Phase state + chain data
