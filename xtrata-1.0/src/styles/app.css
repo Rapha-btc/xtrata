@@ -4591,6 +4591,32 @@ p {
   color: var(--muted);
 }
 
+.collection-live-page__hero-stats {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+}
+
+.collection-live-page__hero-stat {
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  padding: 8px 10px;
+  display: grid;
+  gap: 2px;
+}
+
+.collection-live-page__hero-stat .meta-label {
+  margin-bottom: 0;
+  font-size: 0.64rem;
+  letter-spacing: 0.08em;
+}
+
+.collection-live-page__hero-stat strong {
+  font-size: 1rem;
+  line-height: 1.3;
+}
+
 .collection-live-page__hero-actions {
   display: flex;
   flex-wrap: wrap;
@@ -4696,6 +4722,17 @@ p {
 .collection-live-page .meta-value {
   word-break: normal;
   overflow-wrap: break-word;
+}
+
+.collection-live-page__traffic .panel__body,
+.collection-live-page__details .panel__body,
+.collection-live-page__activity .panel__body {
+  display: grid;
+  gap: 10px;
+}
+
+.collection-live-page__activity .mint-log {
+  max-height: 280px;
 }
 
 .collection-mint__steps {

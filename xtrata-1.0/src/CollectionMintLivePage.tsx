@@ -16,7 +16,6 @@ import {
   type ClarityValue
 } from '@stacks/transactions';
 import { createXtrataClient } from './lib/contract/client';
-import { useBnsNames } from './lib/bns/hooks';
 import {
   batchChunks,
   CHUNK_SIZE,
@@ -631,22 +630,6 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
         : null,
     [collectionContract, walletSession.network]
   );
-  const connectedAddress = useMemo(
-    () => walletSession.address?.trim() ?? '',
-    [walletSession.address]
-  );
-  const connectedAddressNetwork = useMemo(
-    () =>
-      walletSession.network ??
-      (connectedAddress ? getNetworkFromAddress(connectedAddress) : null),
-    [connectedAddress, walletSession.network]
-  );
-  const connectedBnsQuery = useBnsNames({
-    address: connectedAddress || null,
-    network: connectedAddressNetwork,
-    enabled: !!connectedAddress && !!connectedAddressNetwork
-  });
-  const connectedBnsName = connectedBnsQuery.data?.primary ?? null;
 
   const imageAssets = useMemo(
     () =>
@@ -2376,6 +2359,22 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
               <span>State: {published ? 'Live' : collectionState || 'Unknown'}</span>
               <span>Mint price: {mintPriceLabel}</span>
             </div>
+            <div className="collection-live-page__hero-stats">
+              <article className="collection-live-page__hero-stat">
+                <span className="meta-label">Minted / max</span>
+                <strong>
+                  {mintedCountLabel} / {maxSupplyLabel}
+                </strong>
+              </article>
+              <article className="collection-live-page__hero-stat">
+                <span className="meta-label">Reserved</span>
+                <strong>{reservedCountLabel}</strong>
+              </article>
+              <article className="collection-live-page__hero-stat">
+                <span className="meta-label">Remaining</span>
+                <strong>{remainingLabel}</strong>
+              </article>
+            </div>
             <div className="collection-live-page__hero-actions">
               <button
                 className="button"
@@ -2581,129 +2580,14 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       </header>
 
       <main className="app__main collection-live-page__main">
-        <section className="panel app-section collection-live-page__status">
+        <section className="panel app-section collection-live-page__traffic">
           <div className="panel__header">
             <div>
-              <h2>Collection status</h2>
-              <p>{statusRefreshNote}</p>
-            </div>
-            <div className="panel__actions">
-              <label className="theme-select" htmlFor="live-theme-select">
-                <span className="theme-select__label">Theme</span>
-                <select
-                  id="live-theme-select"
-                  className="theme-select__control"
-                  value={themeMode}
-                  onChange={(event) => setThemeMode(coerceThemeMode(event.target.value))}
-                  onInput={(event) =>
-                    setThemeMode(coerceThemeMode(event.currentTarget.value))
-                  }
-                >
-                  {THEME_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <h2>Mint traffic lights</h2>
+              <p>Begin, upload, and seal status for the current mint session.</p>
             </div>
           </div>
           <div className="panel__body">
-            <div className="meta-grid">
-              <div>
-                <span className="meta-label">Collection ID</span>
-                <span className="meta-value">
-                  <code>{resolvedCollectionId || 'Unknown'}</code>
-                </span>
-              </div>
-              <div>
-                <span className="meta-label">Collection slug</span>
-                <span className="meta-value">
-                  <code>{resolvedCollectionSlug || normalizedCollectionKey || 'Unknown'}</code>
-                </span>
-              </div>
-              <div>
-                <span className="meta-label">Minted / max</span>
-                <span className="meta-value">
-                  {mintedCountLabel} / {maxSupplyLabel}
-                </span>
-              </div>
-              <div>
-                <span className="meta-label">Reserved</span>
-                <span className="meta-value">{reservedCountLabel}</span>
-              </div>
-              <div>
-                <span className="meta-label">Remaining</span>
-                <span className="meta-value">{remainingLabel}</span>
-              </div>
-              <div>
-                <span className="meta-label">Paused</span>
-                <span className="meta-value">{pausedLabel}</span>
-              </div>
-              <div>
-                <span className="meta-label">Finalized</span>
-                <span className="meta-value">{finalizedLabel}</span>
-              </div>
-              <div>
-                <span className="meta-label">Wallet safety</span>
-                <span className="meta-value">
-                  {mintBeginSpendCap === null
-                    ? 'Loading protected spend cap...'
-                    : collectionMintPaymentModel === 'begin'
-                      ? `Deny mode caps: begin anti-spam <= ${toMicroStxLabel(
-                          mintBeginSpendCap
-                        )}. Upload enforces zero STX transfer. Seal <= fee-unit x (1 + ceil(chunks/50)) (mint price already charged at begin).`
-                      : collectionMintPaymentModel === 'seal'
-                        ? useAdvertisedSealPrice
-                          ? `Deny mode caps: begin anti-spam <= ${toMicroStxLabel(
-                              mintBeginSpendCap
-                            )}. Upload enforces zero STX transfer. Seal <= displayed mint price (worst-case seal fee absorbed into display pricing).`
-                          : `Deny mode caps: begin anti-spam <= ${toMicroStxLabel(
-                              mintBeginSpendCap
-                            )}. Upload enforces zero STX transfer. Seal <= mint price + fee-unit x (1 + ceil(chunks/50)).`
-                        : `Compatibility mode caps: begin anti-spam <= ${toMicroStxLabel(
-                            mintBeginSpendCap
-                          )}. Upload enforces zero STX transfer. Seal <= mint price + fee-unit x (1 + ceil(chunks/50)).`}
-                </span>
-              </div>
-              <div>
-                <span className="meta-label">Connected wallet (STX)</span>
-                <span className="meta-value">
-                  {connectedAddress ? (
-                    <span className="address-value--full">{connectedAddress}</span>
-                  ) : (
-                    'Not connected'
-                  )}
-                </span>
-              </div>
-              <div>
-                <span className="meta-label">Connected .btc</span>
-                <span className="meta-value">
-                  {!connectedAddress
-                    ? 'Not connected'
-                    : connectedBnsQuery.isLoading
-                      ? 'Checking...'
-                      : connectedBnsQuery.isError
-                        ? 'Lookup unavailable'
-                        : connectedBnsName ?? 'None'}
-                </span>
-              </div>
-              <div>
-                <span className="meta-label">Collection contract</span>
-                <span className="meta-value">
-                  {collectionContract
-                    ? `${collectionContract.address}.${collectionContract.contractName}`
-                    : 'Unknown'}
-                </span>
-              </div>
-              <div>
-                <span className="meta-label">Core contract</span>
-                <span className="meta-value">
-                  {`${coreContract.address}.${coreContract.contractName}`}
-                </span>
-              </div>
-            </div>
-
             <div className="mint-steps">
               <div className={`mint-step mint-step--${beginState}`}>
                 <strong>1. Begin</strong>
@@ -2728,48 +2612,9 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                 </div>
               )}
             </div>
-
             {resumeTargetAsset && !mintPending && (
               <div className="alert">
                 Resume target selected. Mint continues from the last confirmed on-chain step.
-              </div>
-            )}
-
-            {networkMismatch && (
-              <div className="alert">
-                Wallet is on {networkMismatch.actual}. Switch to {networkMismatch.expected} to mint.
-              </div>
-            )}
-
-            {!published && (
-              <div className="alert">
-                This collection is not live yet. Publishing is required before public minting.
-              </div>
-            )}
-
-            {collectionMessage && <div className="alert">{collectionMessage}</div>}
-            {statusMessage && <div className="alert">{statusMessage}</div>}
-            {mintUnavailableReason && !mintMessage && (
-              <div className="alert">{mintUnavailableReason}</div>
-            )}
-            {mintMessage && <div className="alert">{mintMessage}</div>}
-            {collectionLoading && <p className="meta-value">Loading collection...</p>}
-            {statusLoading && <p className="meta-value">Refreshing contract status...</p>}
-            {collectionIndexSyncPending && (
-              <p className="meta-value">Syncing collection numbering...</p>
-            )}
-            {mintedScanPending && (
-              <p className="meta-value">Refreshing minted gallery...</p>
-            )}
-            {collectionIndexSyncMessage && <div className="alert">{collectionIndexSyncMessage}</div>}
-
-            {mintLog.length > 0 && (
-              <div className="mint-log">
-                {mintLog.map((entry, index) => (
-                  <div key={`${entry}-${index}`} className="mint-log__item">
-                    {entry}
-                  </div>
-                ))}
               </div>
             )}
           </div>
@@ -2821,6 +2666,136 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                     </article>
                   );
                 })}
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section className="panel app-section collection-live-page__details">
+          <div className="panel__header">
+            <div>
+              <h2>Collection details</h2>
+              <p>{statusRefreshNote}</p>
+            </div>
+            <div className="panel__actions">
+              <label className="theme-select" htmlFor="live-theme-select">
+                <span className="theme-select__label">Theme</span>
+                <select
+                  id="live-theme-select"
+                  className="theme-select__control"
+                  value={themeMode}
+                  onChange={(event) => setThemeMode(coerceThemeMode(event.target.value))}
+                  onInput={(event) =>
+                    setThemeMode(coerceThemeMode(event.currentTarget.value))
+                  }
+                >
+                  {THEME_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </div>
+          <div className="panel__body">
+            <div className="meta-grid">
+              <div>
+                <span className="meta-label">Collection ID</span>
+                <span className="meta-value">
+                  <code>{resolvedCollectionId || 'Unknown'}</code>
+                </span>
+              </div>
+              <div>
+                <span className="meta-label">Collection slug</span>
+                <span className="meta-value">
+                  <code>{resolvedCollectionSlug || normalizedCollectionKey || 'Unknown'}</code>
+                </span>
+              </div>
+              <div>
+                <span className="meta-label">Paused</span>
+                <span className="meta-value">{pausedLabel}</span>
+              </div>
+              <div>
+                <span className="meta-label">Finalized</span>
+                <span className="meta-value">{finalizedLabel}</span>
+              </div>
+              <div>
+                <span className="meta-label">Protocol fee unit</span>
+                <span className="meta-value">{protocolFeeUnitLabel}</span>
+              </div>
+              <div>
+                <span className="meta-label">Protocol fee range</span>
+                <span className="meta-value">{protocolFeeRangeLabel}</span>
+              </div>
+              <div>
+                <span className="meta-label">Wallet safety</span>
+                <span className="meta-value">
+                  {mintBeginSpendCap === null
+                    ? 'Loading protected spend cap...'
+                    : collectionMintPaymentModel === 'begin'
+                      ? `Deny mode caps: begin anti-spam <= ${toMicroStxLabel(
+                          mintBeginSpendCap
+                        )}. Upload enforces zero STX transfer. Seal <= fee-unit x (1 + ceil(chunks/50)) (mint price already charged at begin).`
+                      : collectionMintPaymentModel === 'seal'
+                        ? useAdvertisedSealPrice
+                          ? `Deny mode caps: begin anti-spam <= ${toMicroStxLabel(
+                              mintBeginSpendCap
+                            )}. Upload enforces zero STX transfer. Seal <= displayed mint price (worst-case seal fee absorbed into display pricing).`
+                          : `Deny mode caps: begin anti-spam <= ${toMicroStxLabel(
+                              mintBeginSpendCap
+                            )}. Upload enforces zero STX transfer. Seal <= mint price + fee-unit x (1 + ceil(chunks/50)).`
+                        : `Compatibility mode caps: begin anti-spam <= ${toMicroStxLabel(
+                            mintBeginSpendCap
+                          )}. Upload enforces zero STX transfer. Seal <= mint price + fee-unit x (1 + ceil(chunks/50)).`}
+                </span>
+              </div>
+              <div>
+                <span className="meta-label">Collection contract</span>
+                <span className="meta-value">
+                  {collectionContract
+                    ? `${collectionContract.address}.${collectionContract.contractName}`
+                    : 'Unknown'}
+                </span>
+              </div>
+              <div>
+                <span className="meta-label">Core contract</span>
+                <span className="meta-value">
+                  {`${coreContract.address}.${coreContract.contractName}`}
+                </span>
+              </div>
+            </div>
+            {collectionLoading && <p className="meta-value">Loading collection...</p>}
+            {statusLoading && <p className="meta-value">Refreshing contract status...</p>}
+            {collectionIndexSyncPending && (
+              <p className="meta-value">Syncing collection numbering...</p>
+            )}
+            {mintedScanPending && (
+              <p className="meta-value">Refreshing minted gallery...</p>
+            )}
+            {collectionMessage && <div className="alert">{collectionMessage}</div>}
+            {statusMessage && <div className="alert">{statusMessage}</div>}
+            {collectionIndexSyncMessage && <div className="alert">{collectionIndexSyncMessage}</div>}
+          </div>
+        </section>
+
+        <section className="panel app-section collection-live-page__activity">
+          <div className="panel__header">
+            <div>
+              <h2>Activity logs</h2>
+              <p>Begin, upload, and seal events from this page session.</p>
+            </div>
+          </div>
+          <div className="panel__body">
+            {mintLog.length === 0 ? (
+              <p className="meta-value">No mint activity yet.</p>
+            ) : (
+              <div className="mint-log">
+                {mintLog.map((entry, index) => (
+                  <div key={`${entry}-${index}`} className="mint-log__item">
+                    {entry}
+                  </div>
+                ))}
               </div>
             )}
           </div>
