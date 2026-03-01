@@ -2192,10 +2192,6 @@ export default function ViewerScreen(props: ViewerScreenProps) {
   ]);
 
   useEffect(() => {
-    autoSelectRef.current = true;
-  }, [pageIndex]);
-
-  useEffect(() => {
     if (pageIndex > maxPage) {
       setPageIndex(maxPage);
     }

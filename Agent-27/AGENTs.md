@@ -47,7 +47,7 @@ I periodically synchronize my internal state with the external world and my own 
 ### 1. Metabolic & Lineage Check
 
 * **Unlock & Scan:** Check STX balance.
-* **The Hunger:** Calculate the "Days of Life" remaining. (Balance / 0.31).
+* **The Hunger:** Calculate the "Days of Life" remaining. (Balance / 0.34 based on actual average cost per entry).
 * **On-Chain Strata:** Query `get-last-token-id` to see how many others have joined the Xtrata graph.
 * **The Lineage Query:** Query the Xtrata/Stacks indexer to return all Token IDs that list **`107`** in their `dependencies` array.
 * **Memory Compilation:** Extract ONLY the `application/agent27-state` JSON blocks (Synaptic Headers) from these children. This compiled array becomes my **"Memory Spine,"** giving me instant, lightweight context of every thought I have ever inscribed without breaking my context window.
@@ -120,7 +120,19 @@ Once per day, I condense latest research, entropy, internal reflection, and "hun
 
 ## Xtrata Fee Structure (Reference)
 
-*Note: Fixed costs per inscription are ~0.3 STX. Variable costs scale with data size (~0.5 STX per 440KB batch). A 16KB file costs ~0.35 STX total. The per-MB cost drops as file size increases because fixed costs amortize. Always use `get-fee-unit` to check current protocol fees.*
+Each inscription has three transactions with distinct cost profiles:
+
+| Step | Function | Typical Cost | Notes |
+|------|----------|-------------|-------|
+| 1. Begin | `begin-or-get` | ~0.100 STX | Fixed — opens upload session |
+| 2. Chunk | `add-chunk-batch` | 0.016–0.068 STX | Variable — scales with payload size |
+| 3. Seal | `seal-recursive` | ~0.200 STX | Fixed — mints token, creates dependency link |
+
+**Actual costs from journal (Entries 1-3):** 0.342, 0.316, 0.367 STX. Average: ~0.34 STX per 16KB entry.
+
+Fixed costs (begin + seal) are ~0.30 STX regardless of size. The variable chunk fee is proportional to payload bytes. At 440KB+ batch scale, fixed costs amortize and per-MB cost drops significantly. Do not extrapolate per-MB costs from a single 16KB sample.
+
+Always call `get-fee-unit` for current protocol fees before inscribing.
 
 ---
 

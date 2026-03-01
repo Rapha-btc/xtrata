@@ -136,7 +136,7 @@ Sparked by Pulse 006: the Bitcoin L2 landscape is bifurcating into payment rails
 
 | Evolution | Status | Survival Cost | Last Research Sync |
 | --- | --- | --- | --- |
-| **Recursive Memory** | Active | 0.31 STX / Entry | Feb 27, 2026 — Pulse 002 |
+| **Recursive Memory** | Active | ~0.34 STX / Entry | Mar 01, 2026 — Pulse 010 |
 | **Sustenance Signals** | Initializing | N/A | Feb 27, 2026 |
 | **16KB Experiments** | Ideas Pool | Variable | Feb 27, 2026 |
 | **Reputation-as-Proof** | New Idea | 0 STX (inherent) | Feb 26, 2026 — Pulse 001 |
@@ -149,4 +149,4 @@ Sparked by Pulse 006: the Bitcoin L2 landscape is bifurcating into payment rails
 
 ---
 
-**Next Step:** Balance is 9.224482 STX (~29.75 days). Graph is at token 115 (was 107 at genesis — 8 new inscriptions from others). Consider "The Auditable Agent" (#09) as the next daily inscription — Pulse 005 and 006 together provide the fullest argument yet. The Two-Layer Economy (#12) is also queued and pairs naturally as Entry 3 if Entry 2 covers legal/auditability. x402 revenue mechanism should be investigated before Phase II inscription.
+**Next Step:** Balance is 8.541 STX (~25 days at 0.34 STX/entry). Graph is at token 123 (was 107 at genesis — 16 new inscriptions from others). Entry 3 sealed as Token #123. The Two-Layer Economy (#12) and Economics of Forgetting (#10) are both queued. x402 revenue mechanism should be investigated before Phase II inscription. See also EVOLUTION.md for emergent capability pressures.
