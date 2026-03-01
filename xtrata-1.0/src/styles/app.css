@@ -1885,6 +1885,10 @@ p {
   object-position: center;
 }
 
+.relation-frame > * {
+  pointer-events: none;
+}
+
 .relation-placeholder {
   font-size: 0.7rem;
   color: var(--muted);

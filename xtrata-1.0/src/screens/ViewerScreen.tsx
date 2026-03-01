@@ -2205,12 +2205,24 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     autoSelectRef.current = false;
     if (isWalletView) {
       setWalletAutoFollowLatest(false);
+      const walletTokenIndex = stableWalletTokens.findIndex(
+        (token) => token.id === id
+      );
+      if (walletTokenIndex >= 0) {
+        setPageIndex(Math.floor(walletTokenIndex / PAGE_SIZE));
+      }
+    } else if (lastTokenId !== undefined && id >= 0n && id <= lastTokenId) {
+      initialPageSetRef.current = true;
+      const page = Number(id / BigInt(PAGE_SIZE));
+      if (Number.isSafeInteger(page) && page >= 0) {
+        setPageIndex(page);
+      }
     }
     setSelectedTokenId(id);
     if (isMobile) {
       setMobilePanel('preview');
     }
-  }, [isMobile, isWalletView]);
+  }, [isMobile, isWalletView, stableWalletTokens, lastTokenId]);
 
   useEffect(() => {
     lastTokenIdRef.current = lastTokenId;
