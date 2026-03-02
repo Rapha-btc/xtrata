@@ -32,6 +32,8 @@ import {
   parseGetInscriptionMeta,
   parseGetLastTokenId,
   parseGetNextTokenId,
+  parseGetMintedCount,
+  parseGetMintedId,
   parseGetOwner,
   parseGetPendingChunk,
   parseGetRoyaltyRecipient,
@@ -311,8 +313,11 @@ export type XtrataClient = {
   contract: ContractConfig;
   network: NetworkType;
   supportsChunkBatchRead: boolean;
+  supportsMintedIndex: boolean;
   getLastTokenId: (senderAddress: string) => Promise<bigint>;
   getNextTokenId: (senderAddress: string) => Promise<bigint>;
+  getMintedCount: (senderAddress: string) => Promise<bigint>;
+  getMintedId: (index: bigint, senderAddress: string) => Promise<bigint | null>;
   getAdmin: (senderAddress: string) => Promise<string>;
   getRoyaltyRecipient: (senderAddress: string) => Promise<string>;
   getFeeUnit: (senderAddress: string) => Promise<bigint>;
@@ -364,6 +369,7 @@ export const createXtrataClient = (params: {
     contract: params.contract,
     network: params.contract.network,
     supportsChunkBatchRead: capabilities.supportsChunkBatchRead,
+    supportsMintedIndex: capabilities.supportsMintedIndex,
     getLastTokenId: async (senderAddress) => {
       const value = await callReadOnly({
         caller,
@@ -385,6 +391,34 @@ export const createXtrataClient = (params: {
         senderAddress
       });
       return parseGetNextTokenId(value);
+    },
+    getMintedCount: async (senderAddress) => {
+      if (!capabilities.supportsMintedIndex) {
+        throw new Error('Minted index readers not supported by this contract');
+      }
+      const value = await callReadOnly({
+        caller,
+        contract: params.contract,
+        network: stacksNetwork,
+        functionName: 'get-minted-count',
+        functionArgs: [],
+        senderAddress
+      });
+      return parseGetMintedCount(value);
+    },
+    getMintedId: async (index, senderAddress) => {
+      if (!capabilities.supportsMintedIndex) {
+        throw new Error('Minted index readers not supported by this contract');
+      }
+      const value = await callReadOnly({
+        caller,
+        contract: params.contract,
+        network: stacksNetwork,
+        functionName: 'get-minted-id',
+        functionArgs: [uintCV(index)],
+        senderAddress
+      });
+      return parseGetMintedId(value);
     },
     getAdmin: async (senderAddress) => {
       const value = await callReadOnly({

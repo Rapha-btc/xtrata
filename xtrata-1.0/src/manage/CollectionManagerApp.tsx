@@ -1,4 +1,10 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  callReadOnlyFunction,
+  ClarityType,
+  cvToValue,
+  type ClarityValue
+} from '@stacks/transactions';
 import CollectionListPanel from './components/CollectionListPanel';
 import OwnerOversightPanel from './components/OwnerOversightPanel';
 import DeployWizardPanel from './components/DeployWizardPanel';
@@ -11,13 +17,28 @@ import InfoTooltip from './components/InfoTooltip';
 import AddressLabel from '../components/AddressLabel';
 import WalletTopBar from '../components/WalletTopBar';
 import { isXtrataOwnerAddress } from '../config/manage';
+import { getNetworkFromAddress } from '../lib/network/guard';
+import { toStacksNetwork } from '../lib/network/stacks';
 import { useManageWallet } from './ManageWalletContext';
+import { resolveCollectionContractLink } from './lib/contract-link';
+import {
+  deriveJourneyStepStates,
+  getRecommendedJourneyStepId,
+  JOURNEY_STATUS_LABELS,
+  type JourneySignals,
+  type JourneyStepId
+} from './lib/journey';
+import {
+  parseManageJsonResponse,
+  toManageApiErrorMessage
+} from './lib/api-errors';
 
 const PANEL_KEYS = [
   'sdk-toolkit',
   'collection-list',
   'owner-oversight',
   'deploy-wizard',
+  'launch-controls',
   'collection-settings',
   'asset-staging',
   'publish-ops',
@@ -27,47 +48,201 @@ const PANEL_KEYS = [
 type PanelKey = (typeof PANEL_KEYS)[number];
 type ExperienceMode = 'guided' | 'advanced';
 
+type CollectionRecord = {
+  id?: string | null;
+  slug?: string | null;
+  contract_address?: string | null;
+  state?: string | null;
+  metadata?: Record<string, unknown> | null;
+};
+
+type ManagedAsset = {
+  state?: string | null;
+  mime_type?: string | null;
+};
+
+type CollectionReadiness = {
+  ready?: boolean;
+  reason?: string | null;
+  deployReady?: boolean;
+};
+
+type JourneySnapshot = {
+  loading: boolean;
+  error: string | null;
+  mintType: JourneySignals['mintType'];
+  collectionState: string;
+  activeAssetCount: number;
+  deployPricingLockPresent: boolean;
+  deployReady: boolean;
+  deployPending: boolean;
+  launchMintPriceConfigured: boolean;
+  launchMaxSupplyConfigured: boolean;
+  unpaused: boolean | null;
+  hasLivePageCover: boolean;
+  hasLivePageDescription: boolean;
+  uploadReadinessReason: string | null;
+  deployReadinessReason: string | null;
+};
+
 const MANAGE_PANEL_IDS: Record<PanelKey, string> = {
   'sdk-toolkit': 'manage-sdk-toolkit',
   'collection-list': 'manage-collection-list',
   'owner-oversight': 'manage-owner-oversight',
   'deploy-wizard': 'manage-deploy-wizard',
+  'launch-controls': 'manage-launch-controls',
   'collection-settings': 'manage-collection-settings',
   'asset-staging': 'manage-asset-staging',
   'publish-ops': 'manage-publish-ops',
   'debug-tools': 'manage-debug-tools'
 };
 
-const GUIDED_STEPS: Array<{
-  key: PanelKey;
-  label: string;
-  note: string;
-}> = [
-  {
-    key: 'sdk-toolkit',
-    label: 'SDK toolkit',
-    note: 'Copy starter snippets to integrate your own site, marketplace, or app.'
-  },
-  {
-    key: 'collection-list',
-    label: 'Your drops',
-    note: 'Check existing drafts before starting a new launch.'
-  },
-  {
-    key: 'deploy-wizard',
-    label: 'Step 1: Create drop',
-    note: 'Fill drop details + payout addresses, then deploy with one wallet confirmation.'
-  },
-  {
-    key: 'asset-staging',
-    label: 'Step 2: Upload artwork',
-    note: 'Upload files and prepare manifest rows for minting.'
-  },
-  {
-    key: 'publish-ops',
-    label: 'Step 3: Go live',
-    note: 'Publish when ready, then track and release reservations.'
+const INITIAL_JOURNEY_SNAPSHOT: JourneySnapshot = {
+  loading: false,
+  error: null,
+  mintType: null,
+  collectionState: 'draft',
+  activeAssetCount: 0,
+  deployPricingLockPresent: false,
+  deployReady: false,
+  deployPending: false,
+  launchMintPriceConfigured: false,
+  launchMaxSupplyConfigured: false,
+  unpaused: null,
+  hasLivePageCover: false,
+  hasLivePageDescription: false,
+  uploadReadinessReason: null,
+  deployReadinessReason: null
+};
+
+const isActiveAssetState = (value: unknown) => {
+  const state = String(value ?? '')
+    .trim()
+    .toLowerCase();
+  return state !== 'expired' && state !== 'sold-out';
+};
+
+const isImageMimeType = (value: unknown) =>
+  String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .startsWith('image/');
+
+const toRecord = (value: unknown) =>
+  value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
+
+const toText = (value: unknown) =>
+  typeof value === 'string' ? value.trim() : '';
+
+const unwrapReadOnlyResponse = (value: ClarityValue) => {
+  if (value.type === ClarityType.ResponseOk) {
+    return value.value;
   }
+  if (value.type === ClarityType.ResponseErr) {
+    const parsed = cvToValue(value.value) as { value?: unknown } | unknown;
+    const detail =
+      typeof parsed === 'string'
+        ? parsed
+        : parsed &&
+            typeof parsed === 'object' &&
+            'value' in (parsed as Record<string, unknown>)
+          ? (parsed as { value?: unknown }).value
+          : 'Unknown contract error';
+    throw new Error(String(detail));
+  }
+  return value;
+};
+
+const toClarityPrimitive = (value: ClarityValue): unknown => {
+  const parsed = cvToValue(value) as unknown;
+  if (
+    parsed &&
+    typeof parsed === 'object' &&
+    'value' in (parsed as Record<string, unknown>)
+  ) {
+    return (parsed as { value: unknown }).value;
+  }
+  return parsed;
+};
+
+const parseUintPrimitive = (value: unknown): bigint | null => {
+  if (typeof value === 'bigint') {
+    return value >= 0n ? value : null;
+  }
+  if (typeof value === 'number' && Number.isFinite(value) && value >= 0) {
+    return BigInt(Math.floor(value));
+  }
+  if (typeof value === 'string' && /^\d+$/.test(value)) {
+    return BigInt(value);
+  }
+  return null;
+};
+
+const hasCoverMetadata = (value: unknown) => {
+  const record = toRecord(value);
+  if (!record) {
+    return false;
+  }
+  const source = toText(record.source);
+  if (source === 'collection-asset') {
+    return toText(record.assetId).length > 0;
+  }
+  if (source === 'inscribed-image-url') {
+    return toText(record.imageUrl).length > 0;
+  }
+  return false;
+};
+
+const getStepPanelKey = (stepId: JourneyStepId): PanelKey | null => {
+  if (stepId === 'connect-wallet') {
+    return null;
+  }
+  if (stepId === 'create-draft' || stepId === 'deploy-contract') {
+    return 'deploy-wizard';
+  }
+  if (stepId === 'upload-artwork' || stepId === 'lock-staged-assets') {
+    return 'asset-staging';
+  }
+  if (stepId === 'configure-launch' || stepId === 'unpause-contract') {
+    return 'launch-controls';
+  }
+  if (
+    stepId === 'prepare-live-page' ||
+    stepId === 'publish-backend' ||
+    stepId === 'monitor-launch'
+  ) {
+    return 'publish-ops';
+  }
+  return 'collection-list';
+};
+
+const getJourneyTargetId = (
+  stepId: JourneyStepId,
+  mode: ExperienceMode
+): string | null => {
+  if (stepId === 'prepare-live-page') {
+    return 'manage-live-page-settings';
+  }
+  if (stepId === 'publish-backend') {
+    return 'manage-publish-collection-button';
+  }
+  if (stepId === 'unpause-contract') {
+    return mode === 'advanced'
+      ? 'manage-contract-action-select'
+      : 'manage-unpause-contract-button';
+  }
+  if (stepId === 'configure-launch' && mode === 'advanced') {
+    return 'manage-contract-action-select';
+  }
+  return null;
+};
+
+const GUIDED_PRIMARY_PANELS: PanelKey[] = [
+  'collection-list',
+  'deploy-wizard',
+  'asset-staging',
+  'launch-controls',
+  'publish-ops'
 ];
 
 export default function CollectionManagerApp() {
@@ -83,20 +258,289 @@ export default function CollectionManagerApp() {
     'collection-list': false,
     'owner-oversight': false,
     'deploy-wizard': false,
+    'launch-controls': false,
     'collection-settings': true,
     'asset-staging': false,
     'publish-ops': false,
     'debug-tools': true
   });
   const [experienceMode, setExperienceMode] = useState<ExperienceMode>('guided');
+  const [journeySnapshot, setJourneySnapshot] = useState<JourneySnapshot>(
+    INITIAL_JOURNEY_SNAPSHOT
+  );
+  const [journeyRefreshKey, setJourneyRefreshKey] = useState(0);
+  const [activeJourneyStepId, setActiveJourneyStepId] =
+    useState<JourneyStepId | null>(null);
 
   const showAdvancedPanels = experienceMode === 'advanced';
+  const walletConnected = Boolean(walletSession.address);
+  const hasActiveCollection = activeCollectionId.trim().length > 0;
+
+  const journeySignals = useMemo<JourneySignals>(
+    () => ({
+      walletConnected,
+      hasActiveCollection,
+      mintType: journeySnapshot.mintType,
+      activeAssetCount: journeySnapshot.activeAssetCount,
+      deployPricingLockPresent: journeySnapshot.deployPricingLockPresent,
+      deployReady: journeySnapshot.deployReady,
+      deployPending: journeySnapshot.deployPending,
+      launchMintPriceConfigured: journeySnapshot.launchMintPriceConfigured,
+      launchMaxSupplyConfigured: journeySnapshot.launchMaxSupplyConfigured,
+      hasLivePageCover: journeySnapshot.hasLivePageCover,
+      hasLivePageDescription: journeySnapshot.hasLivePageDescription,
+      published: journeySnapshot.collectionState === 'published',
+      unpaused: journeySnapshot.unpaused,
+      uploadReadinessReason: journeySnapshot.uploadReadinessReason,
+      deployReadinessReason: journeySnapshot.deployReadinessReason
+    }),
+    [walletConnected, hasActiveCollection, journeySnapshot]
+  );
+
+  const journeySteps = useMemo(
+    () =>
+      deriveJourneyStepStates({
+        signals: journeySignals,
+        activeStepId: activeJourneyStepId
+      }),
+    [journeySignals, activeJourneyStepId]
+  );
+  const recommendedJourneyStepId = useMemo(
+    () => getRecommendedJourneyStepId(journeySteps),
+    [journeySteps]
+  );
+  const doneJourneyStepCount = useMemo(
+    () => journeySteps.filter((step) => step.status === 'done').length,
+    [journeySteps]
+  );
+  const blockedJourneyStepCount = useMemo(
+    () => journeySteps.filter((step) => step.status === 'blocked').length,
+    [journeySteps]
+  );
+  const lockStepFocused =
+    experienceMode === 'guided' && activeJourneyStepId === 'lock-staged-assets';
+  const assetStagingHeading = lockStepFocused
+    ? 'Step 4: Lock staged assets'
+    : 'Step 2: Upload your artwork';
+  const assetStagingSummary = lockStepFocused
+    ? 'Pricing lock is required before deploy. Click "Lock staged assets for deploy" to continue.'
+    : 'Upload files once and prepare the manifest for launch day.';
+
+  const refreshJourneySnapshot = useCallback(async () => {
+    const normalizedCollectionId = activeCollectionId.trim();
+    if (!normalizedCollectionId) {
+      setJourneySnapshot(INITIAL_JOURNEY_SNAPSHOT);
+      return;
+    }
+
+    setJourneySnapshot((current) => ({
+      ...current,
+      loading: true,
+      error: null
+    }));
+
+    try {
+      const [collectionResponse, assetsResponse, readinessResponse] =
+        await Promise.all([
+          fetch(`/collections/${encodeURIComponent(normalizedCollectionId)}`, {
+            cache: 'no-store'
+          }),
+          fetch(`/collections/${encodeURIComponent(normalizedCollectionId)}/assets`, {
+            cache: 'no-store'
+          }),
+          fetch(
+            `/collections/${encodeURIComponent(normalizedCollectionId)}/readiness`,
+            { cache: 'no-store' }
+          )
+        ]);
+
+      const collection = await parseManageJsonResponse<CollectionRecord>(
+        collectionResponse,
+        'Collection'
+      );
+      const assets = await parseManageJsonResponse<ManagedAsset[]>(
+        assetsResponse,
+        'Collection assets'
+      );
+      const readiness = await parseManageJsonResponse<CollectionReadiness>(
+        readinessResponse,
+        'Collection readiness'
+      );
+
+      const metadata = toRecord(collection.metadata) ?? null;
+      const metadataCollection = toRecord(metadata?.collection) ?? null;
+      const collectionPage = toRecord(metadata?.collectionPage) ?? null;
+      const coverImage = toRecord(collectionPage?.coverImage) ?? null;
+      const mintType =
+        toText(metadata?.mintType) === 'pre-inscribed'
+          ? 'pre-inscribed'
+          : 'standard';
+      const preInscribedMint = mintType === 'pre-inscribed';
+      const collectionState = toText(collection.state).toLowerCase() || 'draft';
+      const activeAssetCount = assets.filter((asset) =>
+        isActiveAssetState(asset.state)
+      ).length;
+      const hasFallbackCoverImage = assets.some(
+        (asset) =>
+          isActiveAssetState(asset.state) && isImageMimeType(asset.mime_type)
+      );
+      const deployReady = readiness.deployReady === true;
+      const deploySubmitted =
+        toText(collection.contract_address).length > 0 &&
+        toText(metadata?.deployTxId).length > 0;
+      let launchMintPriceConfigured = false;
+      let launchMaxSupplyConfigured = false;
+      let unpaused: boolean | null = null;
+
+      if (deployReady) {
+        const resolvedTarget = resolveCollectionContractLink({
+          collectionId: toText(collection.id),
+          collectionSlug: toText(collection.slug),
+          contractAddress: toText(collection.contract_address),
+          metadata
+        });
+        if (resolvedTarget) {
+          try {
+            const network =
+              getNetworkFromAddress(resolvedTarget.address) ??
+              (walletSession.network === 'testnet' ? 'testnet' : 'mainnet');
+            const callReadOnly = async (functionName: string) => {
+              const response = await callReadOnlyFunction({
+                contractAddress: resolvedTarget.address,
+                contractName: resolvedTarget.contractName,
+                functionName,
+                functionArgs: [],
+                network: toStacksNetwork(network),
+                senderAddress: resolvedTarget.address
+              });
+              return toClarityPrimitive(unwrapReadOnlyResponse(response));
+            };
+
+            const pausedPromise = callReadOnly(
+              preInscribedMint ? 'get-paused' : 'is-paused'
+            );
+            const mintPricePromise = callReadOnly(
+              preInscribedMint ? 'get-price' : 'get-mint-price'
+            );
+            const maxSupplyPromise: Promise<unknown> = preInscribedMint
+              ? Promise.resolve(null)
+              : callReadOnly('get-max-supply');
+            const [pausedRaw, mintPriceRaw, maxSupplyRaw] = await Promise.all([
+              pausedPromise,
+              mintPricePromise,
+              maxSupplyPromise
+            ]);
+
+            const pausedValue =
+              typeof pausedRaw === 'boolean' ? pausedRaw : null;
+            const mintPriceValue = parseUintPrimitive(mintPriceRaw);
+            const maxSupplyValue = parseUintPrimitive(maxSupplyRaw);
+            unpaused =
+              pausedValue === null ? null : !pausedValue;
+            launchMintPriceConfigured = mintPriceValue !== null;
+            launchMaxSupplyConfigured =
+              preInscribedMint ||
+              (maxSupplyValue !== null && maxSupplyValue > 0n);
+          } catch {
+            unpaused = null;
+            launchMintPriceConfigured = false;
+            launchMaxSupplyConfigured = false;
+          }
+        }
+      }
+
+      setJourneySnapshot({
+        loading: false,
+        error: null,
+        mintType,
+        collectionState,
+        activeAssetCount,
+        deployPricingLockPresent:
+          toRecord(metadata?.deployPricingLock) !== null,
+        deployReady,
+        deployPending: deploySubmitted && !deployReady,
+        launchMintPriceConfigured,
+        launchMaxSupplyConfigured,
+        unpaused,
+        hasLivePageCover: hasCoverMetadata(coverImage) || hasFallbackCoverImage,
+        hasLivePageDescription:
+          toText(collectionPage?.description).length > 0 ||
+          toText(metadataCollection?.description).length > 0,
+        uploadReadinessReason:
+          readiness.ready === true ? null : toText(readiness.reason) || null,
+        deployReadinessReason:
+          deployReady ? null : toText(readiness.reason) || null
+      });
+    } catch (error) {
+      setJourneySnapshot((current) => ({
+        ...current,
+        loading: false,
+        error: toManageApiErrorMessage(
+          error,
+          'Unable to refresh checklist data.'
+        )
+      }));
+    }
+  }, [activeCollectionId, walletSession.network]);
+
+  const requestJourneyRefresh = useCallback(() => {
+    setJourneyRefreshKey((current) => current + 1);
+  }, []);
+
+  useEffect(() => {
+    void refreshJourneySnapshot();
+  }, [refreshJourneySnapshot, journeyRefreshKey]);
+
+  useEffect(() => {
+    if (experienceMode !== 'guided') {
+      return;
+    }
+
+    const current = journeySteps.find(
+      (step) => step.id === activeJourneyStepId
+    );
+    if (
+      !current ||
+      current.status === 'locked' ||
+      current.status === 'done'
+    ) {
+      setActiveJourneyStepId(recommendedJourneyStepId);
+    }
+  }, [
+    experienceMode,
+    journeySteps,
+    activeJourneyStepId,
+    recommendedJourneyStepId
+  ]);
+
+  useEffect(() => {
+    if (experienceMode !== 'guided') {
+      return;
+    }
+    const activeStep = journeySteps.find(
+      (step) => step.id === activeJourneyStepId
+    );
+    if (!activeStep) {
+      return;
+    }
+    const panelKey = getStepPanelKey(activeStep.id);
+    if (!panelKey || !GUIDED_PRIMARY_PANELS.includes(panelKey)) {
+      return;
+    }
+    setCollapsed((prev) => {
+      const next = { ...prev };
+      GUIDED_PRIMARY_PANELS.forEach((candidate) => {
+        next[candidate] = candidate !== panelKey;
+      });
+      return next;
+    });
+  }, [experienceMode, journeySteps, activeJourneyStepId]);
 
   const togglePanel = (key: PanelKey) => {
     setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const jumpToPanel = (key: PanelKey) => {
+  const jumpToPanel = (key: PanelKey, targetId?: string | null) => {
     setCollapsed((prev) => ({ ...prev, [key]: false }));
     if (typeof window !== 'undefined') {
       window.requestAnimationFrame(() => {
@@ -104,12 +548,30 @@ export default function CollectionManagerApp() {
         if (panel) {
           panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
+        if (targetId) {
+          window.requestAnimationFrame(() => {
+            const target = document.getElementById(targetId);
+            if (!target) {
+              return;
+            }
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (
+              target instanceof HTMLButtonElement ||
+              target instanceof HTMLInputElement ||
+              target instanceof HTMLSelectElement ||
+              target instanceof HTMLTextAreaElement
+            ) {
+              target.focus({ preventScroll: true });
+            }
+          });
+        }
       });
     }
   };
 
   const setGuidedMode = () => {
     setExperienceMode('guided');
+    setActiveJourneyStepId(recommendedJourneyStepId);
     setCollapsed((prev) => ({
       ...prev,
       'collection-settings': true,
@@ -134,6 +596,7 @@ export default function CollectionManagerApp() {
       'asset-staging': false,
       'publish-ops': false
     }));
+    requestJourneyRefresh();
   };
 
   const handleDraftReady = (collection: {
@@ -149,6 +612,38 @@ export default function CollectionManagerApp() {
       'deploy-wizard': collection.deployed,
       'asset-staging': false
     }));
+    requestJourneyRefresh();
+  };
+
+  const handleJourneyRefresh = () => {
+    requestJourneyRefresh();
+  };
+
+  const handleJourneyStepClick = (stepId: JourneyStepId) => {
+    const step = journeySteps.find((candidate) => candidate.id === stepId);
+    if (!step || step.status === 'locked') {
+      return;
+    }
+    setActiveJourneyStepId(stepId);
+    const panelKey = getStepPanelKey(stepId);
+    if (!panelKey) {
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      return;
+    }
+    if (
+      panelKey === 'collection-settings' &&
+      experienceMode === 'guided'
+    ) {
+      setAdvancedMode();
+    }
+    const stepTargetId = getJourneyTargetId(stepId, experienceMode);
+    if (panelKey === 'launch-controls' && experienceMode === 'advanced') {
+      jumpToPanel('collection-settings', stepTargetId);
+      return;
+    }
+    jumpToPanel(panelKey, stepTargetId);
   };
 
   const handleConnectWallet = async () => {
@@ -205,38 +700,96 @@ export default function CollectionManagerApp() {
                 Start here
                 <InfoTooltip text="Guided mode keeps only the essential launch steps visible. Advanced mode reveals contract controls and diagnostics." />
               </h2>
-              <p>Use these buttons to jump to each step in order.</p>
+              <p>
+                Complete steps in order. Locked items unlock automatically when
+                their prerequisites are complete.
+              </p>
             </div>
             <div className="panel__actions">
+              <span className="info-label">
+                <button
+                  className="button button--ghost"
+                  type="button"
+                  onClick={handleJourneyRefresh}
+                  disabled={journeySnapshot.loading}
+                >
+                  {journeySnapshot.loading
+                    ? 'Refreshing checklist...'
+                    : 'Refresh checklist'}
+                </button>
+                <InfoTooltip text="Recompute all step states from latest backend and on-chain snapshots." />
+              </span>
               <div className="manage-journey__mode-toggle" role="group" aria-label="Experience mode">
-                <button
-                  className={`button ${experienceMode === 'guided' ? '' : 'button--ghost'}`}
-                  type="button"
-                  onClick={setGuidedMode}
-                >
-                  Guided mode
-                </button>
-                <button
-                  className={`button ${experienceMode === 'advanced' ? '' : 'button--ghost'}`}
-                  type="button"
-                  onClick={setAdvancedMode}
-                >
-                  Advanced mode
-                </button>
+                <span className="info-label">
+                  <button
+                    className={`button ${experienceMode === 'guided' ? '' : 'button--ghost'}`}
+                    type="button"
+                    onClick={setGuidedMode}
+                  >
+                    Guided mode
+                  </button>
+                  <InfoTooltip text="Shows the essential launch sequence with fewer controls." />
+                </span>
+                <span className="info-label">
+                  <button
+                    className={`button ${experienceMode === 'advanced' ? '' : 'button--ghost'}`}
+                    type="button"
+                    onClick={setAdvancedMode}
+                  >
+                    Advanced mode
+                  </button>
+                  <InfoTooltip text="Shows detailed contract/admin tools, diagnostics, and expert controls." />
+                </span>
               </div>
             </div>
           </div>
           <div className="panel__body">
+            <p className="meta-value">
+              Progress: {doneJourneyStepCount}/{journeySteps.length} complete
+              {blockedJourneyStepCount > 0
+                ? ` · ${blockedJourneyStepCount} need attention`
+                : ''}
+            </p>
+            {journeySnapshot.error ? (
+              <div className="alert">{journeySnapshot.error}</div>
+            ) : null}
             <div className="manage-journey__steps">
-              {GUIDED_STEPS.map((step) => (
+              {journeySteps.map((step, index) => (
                 <button
-                  key={step.key}
+                  key={step.id}
                   type="button"
-                  className="button button--ghost manage-journey__step"
-                  onClick={() => jumpToPanel(step.key)}
+                  className={`button button--ghost manage-journey__step manage-journey__step--${step.status}${
+                    activeJourneyStepId === step.id ? ' manage-journey__step--active' : ''
+                  }`}
+                  onClick={() => handleJourneyStepClick(step.id)}
+                  disabled={step.status === 'locked'}
+                  aria-current={activeJourneyStepId === step.id ? 'step' : undefined}
                 >
-                  <strong>{step.label}</strong>
-                  <span>{step.note}</span>
+                  <span className="manage-journey__step-index">
+                    Step {index + 1}
+                  </span>
+                  <strong>{step.title}</strong>
+                  <span className="manage-journey__step-status">
+                    {JOURNEY_STATUS_LABELS[step.status]}
+                  </span>
+                  <span className="manage-journey__step-note">
+                    {step.summary}
+                  </span>
+                  {step.lockedReason ? (
+                    <span className="manage-journey__step-reason">
+                      {step.lockedReason}
+                    </span>
+                  ) : null}
+                  {step.blockedReason ? (
+                    <span className="manage-journey__step-reason">
+                      {step.blockedReason}
+                    </span>
+                  ) : null}
+                  {step.doneNote ? (
+                    <span className="manage-journey__step-reason">
+                      {step.doneNote}
+                    </span>
+                  ) : null}
                 </button>
               ))}
             </div>
@@ -331,7 +884,7 @@ export default function CollectionManagerApp() {
                 Step 1: Create your drop
                 <InfoTooltip text="Create and deploy with a locked template using drop basics plus artist and marketplace payout addresses." />
               </h2>
-              <p>Fill the guided fields, review, and deploy your contract. Going live happens in Step 3.</p>
+              <p>Fill the guided fields, review, and deploy your contract. Going live happens in Step 4.</p>
             </div>
             <div className="panel__actions">
               <button className="button button--ghost" type="button" onClick={() => togglePanel('deploy-wizard')}>
@@ -343,6 +896,8 @@ export default function CollectionManagerApp() {
             <DeployWizardPanel
               activeCollectionId={activeCollectionId}
               onDraftReady={handleDraftReady}
+              onJourneyRefreshRequested={requestJourneyRefresh}
+              journeyRefreshToken={journeyRefreshKey}
             />
           </div>
         </section>
@@ -354,10 +909,16 @@ export default function CollectionManagerApp() {
           <div className="panel__header">
             <div>
               <h2>
-                Step 2: Upload your artwork
-                <InfoTooltip text="Upload files to Cloudflare, compute hashes/chunks, and store manifest rows for minting." />
+                {assetStagingHeading}
+                <InfoTooltip
+                  text={
+                    lockStepFocused
+                      ? 'Locking staged assets writes the deploy pricing lock that the deploy step now requires.'
+                      : 'Upload files to Cloudflare, compute hashes/chunks, and store manifest rows for minting.'
+                  }
+                />
               </h2>
-              <p>Upload files once and prepare the manifest for launch day.</p>
+              <p>{assetStagingSummary}</p>
             </div>
             <div className="panel__actions">
               <button className="button button--ghost" type="button" onClick={() => togglePanel('asset-staging')}>
@@ -366,9 +927,50 @@ export default function CollectionManagerApp() {
             </div>
           </div>
           <div className="panel__body">
-            <AssetStagingPanel activeCollectionId={activeCollectionId} />
+            <AssetStagingPanel
+              activeCollectionId={activeCollectionId}
+              onJourneyRefreshRequested={requestJourneyRefresh}
+              highlightLockAction={lockStepFocused}
+            />
           </div>
         </section>
+
+        {!showAdvancedPanels && (
+          <section
+            className={`panel app-section${collapsed['launch-controls'] ? ' panel--collapsed' : ''}`}
+            id={MANAGE_PANEL_IDS['launch-controls']}
+          >
+            <div className="panel__header">
+              <div>
+                <h2>
+                  Step 3: Launch controls
+                  <InfoTooltip text="Set essential contract launch values, then pause/unpause from one guided panel." />
+                </h2>
+                <p>
+                  Use quick actions to set on-chain payout base price, supply, and launch
+                  pause state.
+                </p>
+              </div>
+              <div className="panel__actions">
+                <button
+                  className="button button--ghost"
+                  type="button"
+                  onClick={() => togglePanel('launch-controls')}
+                >
+                  {collapsed['launch-controls'] ? 'Expand' : 'Collapse'}
+                </button>
+              </div>
+            </div>
+            <div className="panel__body">
+              <CollectionSettingsPanel
+                mode="guided"
+                activeCollectionId={activeCollectionId}
+                onJourneyRefreshRequested={requestJourneyRefresh}
+                onRequestAdvancedControls={setAdvancedMode}
+              />
+            </div>
+          </section>
+        )}
 
         <section
           className={`panel app-section${collapsed['publish-ops'] ? ' panel--collapsed' : ''}`}
@@ -377,7 +979,7 @@ export default function CollectionManagerApp() {
           <div className="panel__header">
             <div>
               <h2>
-                Step 3: Go live
+                Step 4: Go live
                 <InfoTooltip text="Mark a collection published, refresh reservations, and release stuck slots." />
               </h2>
               <p>Publish when ready, then monitor reservations and clear expired slots.</p>
@@ -389,16 +991,22 @@ export default function CollectionManagerApp() {
             </div>
           </div>
           <div className="panel__body">
-            <PublishOpsPanel activeCollectionId={activeCollectionId} />
+            <PublishOpsPanel
+              activeCollectionId={activeCollectionId}
+              onJourneyRefreshRequested={requestJourneyRefresh}
+            />
           </div>
         </section>
 
         {!showAdvancedPanels && (
           <div className="manage-advanced-teaser">
             <p>Need deeper controls? Switch to Advanced mode to edit contract settings and run diagnostics.</p>
-            <button className="button button--ghost" type="button" onClick={setAdvancedMode}>
-              Open advanced tools
-            </button>
+            <span className="info-label">
+              <button className="button button--ghost" type="button" onClick={setAdvancedMode}>
+                Open advanced tools
+              </button>
+              <InfoTooltip text="Switches from guided layout to full advanced panel set." />
+            </span>
           </div>
         )}
 
@@ -427,7 +1035,11 @@ export default function CollectionManagerApp() {
                 </div>
               </div>
               <div className="panel__body">
-                <CollectionSettingsPanel activeCollectionId={activeCollectionId} />
+                <CollectionSettingsPanel
+                  mode="advanced"
+                  activeCollectionId={activeCollectionId}
+                  onJourneyRefreshRequested={requestJourneyRefresh}
+                />
               </div>
             </section>
 

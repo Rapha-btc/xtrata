@@ -5,6 +5,7 @@ import {
   bufferCV,
   callReadOnlyFunction,
   ClarityType,
+  contractPrincipalCV,
   cvToValue,
   listCV,
   principalCV,
@@ -32,6 +33,10 @@ const UINT_PATTERN = /^\d+$/;
 const STX_PATTERN = /^\d+(?:\.\d{0,6})?$/;
 const MICROSTX_PER_STX = 1_000_000n;
 const CHUNK_BATCH_SIZE = 50n;
+const TX_CONFIRMATION_TIMEOUT_MS = 180_000;
+const TX_CONFIRMATION_POLL_MS = 3_500;
+const XTRATA_FIXED_RECIPIENT_ADDRESS =
+  'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X';
 const XTRATA_APP_ICON_DATA_URI =
   'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%23f97316"/><path d="M18 20h28v6H18zm0 12h28v6H18zm0 12h28v6H18z" fill="white"/></svg>';
 
@@ -53,6 +58,7 @@ type ContractSummary = {
   paused: boolean | null;
   finalized: boolean | null;
   mintPriceMicroStx: bigint | null;
+  maxSupply: bigint | null;
   coreContractId: string | null;
   coreFeeUnitMicroStx: bigint | null;
 };
@@ -105,14 +111,15 @@ type MutableAction = {
 const MUTABLE_ACTIONS: MutableAction[] = [
   {
     key: 'set-mint-price',
-    label: 'Set mint price',
+    label: 'Set payout base price',
     group: 'Pricing and Payouts',
     functionName: 'set-mint-price',
-    description: 'Update the primary mint price.',
+    description:
+      'Update the on-chain payout base used for artist/marketplace split calculations.',
     fields: [
       {
         key: 'amount',
-        label: 'Mint price (STX)',
+        label: 'Payout base price (on-chain STX)',
         type: 'stx',
         allowZero: true,
         hint: 'Up to 6 decimals.'
@@ -124,11 +131,58 @@ const MUTABLE_ACTIONS: MutableAction[] = [
     label: 'Set payout recipients',
     group: 'Pricing and Payouts',
     functionName: 'set-recipients',
-    description: 'Set artist, marketplace, and operator payout addresses.',
+    description:
+      'Set artist payout address. Marketplace/operator recipients are fixed to Xtrata defaults in manage mode.',
     fields: [
-      { key: 'artist', label: 'Artist address', type: 'principal' },
-      { key: 'marketplace', label: 'Marketplace address', type: 'principal' },
-      { key: 'operator', label: 'Operator address', type: 'principal' }
+      {
+        key: 'artist',
+        label: 'Artist address',
+        type: 'principal',
+        hint: 'Marketplace and operator recipients are fixed by Xtrata in this flow.'
+      }
+    ]
+  },
+  {
+    key: 'set-artist-recipient',
+    label: 'Set artist recipient (v1.3+)',
+    group: 'Pricing and Payouts',
+    functionName: 'set-artist-recipient',
+    description: 'Set artist payout address without modifying marketplace/operator recipients.',
+    fields: [{ key: 'artist', label: 'Artist address', type: 'principal' }]
+  },
+  {
+    key: 'set-marketplace-recipient',
+    label: 'Set marketplace recipient (v1.3+)',
+    group: 'Pricing and Payouts',
+    functionName: 'set-marketplace-recipient',
+    description:
+      'Set marketplace payout address (requires on-chain recipient-editor access granted by main Xtrata admin).',
+    fields: [{ key: 'marketplace', label: 'Marketplace address', type: 'principal' }]
+  },
+  {
+    key: 'set-operator-recipient',
+    label: 'Set operator recipient (v1.3+)',
+    group: 'Pricing and Payouts',
+    functionName: 'set-operator-recipient',
+    description:
+      'Set operator payout address (requires on-chain recipient-editor access granted by main Xtrata admin).',
+    fields: [{ key: 'operator', label: 'Operator address', type: 'principal' }]
+  },
+  {
+    key: 'set-recipient-editor-access',
+    label: 'Set recipient editor access (v1.3+)',
+    group: 'Ownership and Roles',
+    functionName: 'set-recipient-editor-access',
+    description:
+      'Grant/revoke marketplace/operator recipient edit permissions for one wallet. Signer must be core Xtrata admin.',
+    fields: [
+      { key: 'editor', label: 'Editor wallet', type: 'principal' },
+      {
+        key: 'can-marketplace',
+        label: 'Can edit marketplace recipient',
+        type: 'bool'
+      },
+      { key: 'can-operator', label: 'Can edit operator recipient', type: 'bool' }
     ]
   },
   {
@@ -377,7 +431,7 @@ const MUTABLE_ACTIONS: MutableAction[] = [
       },
       {
         key: 'phase-price',
-        label: 'Phase mint price (STX)',
+        label: 'Phase on-chain price (STX)',
         type: 'stx',
         allowZero: true
       },
@@ -562,6 +616,7 @@ const MUTABLE_ACTIONS: MutableAction[] = [
 
 const OWNER_ONLY_FUNCTIONS = new Set<string>([
   'set-max-supply',
+  'set-artist-recipient',
   'finalize',
   'set-operator-admin',
   'set-finance-admin',
@@ -596,9 +651,15 @@ const CONFIG_ADMIN_FUNCTIONS = new Set<string>([
 
 const FINANCE_ADMIN_FUNCTIONS = new Set<string>([
   'set-mint-price',
-  'set-recipients',
   'set-splits'
 ]);
+
+const RECIPIENT_EDITOR_FUNCTIONS = new Set<string>([
+  'set-marketplace-recipient',
+  'set-operator-recipient'
+]);
+
+const CORE_ADMIN_FUNCTIONS = new Set<string>(['set-recipient-editor-access']);
 
 const getActionSignerHint = (action: MutableAction) => {
   if (OWNER_ONLY_FUNCTIONS.has(action.functionName)) {
@@ -609,6 +670,15 @@ const getActionSignerHint = (action: MutableAction) => {
   }
   if (FINANCE_ADMIN_FUNCTIONS.has(action.functionName)) {
     return 'Signer must be contract owner or finance admin wallet.';
+  }
+  if (RECIPIENT_EDITOR_FUNCTIONS.has(action.functionName)) {
+    return 'Signer wallet must have recipient-editor permission for this field.';
+  }
+  if (CORE_ADMIN_FUNCTIONS.has(action.functionName)) {
+    return 'Signer must be the admin of the linked core Xtrata contract.';
+  }
+  if (action.functionName === 'set-recipients') {
+    return 'Artist updates require collection owner signer; marketplace/operator updates require recipient-editor permissions.';
   }
   if (action.functionName === 'accept-contract-ownership') {
     return 'Signer must be the pending owner wallet.';
@@ -900,6 +970,79 @@ const formatMicroStx = (value: bigint | null) => {
   return `${whole.toString()}.${fractionText} STX`;
 };
 
+const formatMicroStxInput = (value: bigint | null) => {
+  if (value === null) {
+    return '';
+  }
+  const whole = value / MICROSTX_PER_STX;
+  const fraction = value % MICROSTX_PER_STX;
+  if (fraction === 0n) {
+    return whole.toString();
+  }
+  const fractionText = fraction
+    .toString()
+    .padStart(6, '0')
+    .replace(/0+$/g, '');
+  return `${whole.toString()}.${fractionText}`;
+};
+
+const formatDraftStx = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return 'Not set';
+  }
+  return `${trimmed} STX`;
+};
+
+const normalizeTxId = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return '';
+  }
+  return trimmed.startsWith('0x') ? trimmed : `0x${trimmed}`;
+};
+
+const sleep = (ms: number) =>
+  new Promise<void>((resolve) => {
+    window.setTimeout(() => resolve(), ms);
+  });
+
+const resolveFixedRecipientArgs = (): BuildActionArgsResult => {
+  if (!validateStacksAddress(XTRATA_FIXED_RECIPIENT_ADDRESS)) {
+    return {
+      args: [],
+      notices: [],
+      error:
+        'Xtrata fixed recipient address is invalid in this build. Contact support before submitting payout recipient updates.'
+    };
+  }
+  const fixedRecipientCv = principalCV(XTRATA_FIXED_RECIPIENT_ADDRESS);
+  return {
+    args: [fixedRecipientCv, fixedRecipientCv],
+    notices: [
+      `Marketplace and operator recipients are fixed to ${XTRATA_FIXED_RECIPIENT_ADDRESS} in manage mode.`
+    ],
+    error: null
+  };
+};
+
+const resolveCoreContractArgs = (coreContractId: string | null): BuildActionArgsResult => {
+  const parsed = parseContractPrincipal(coreContractId ?? '');
+  if (!parsed) {
+    return {
+      args: [],
+      notices: [],
+      error:
+        'Unable to resolve the locked core contract ID. Refresh on-chain status before setting recipient editor access.'
+    };
+  }
+  return {
+    args: [contractPrincipalCV(parsed.address, parsed.contractName)],
+    notices: [],
+    error: null
+  };
+};
+
 const getActionGroups = (actions: MutableAction[]) => {
   const groups = new Map<string, MutableAction[]>();
   actions.forEach((action) => {
@@ -909,6 +1052,8 @@ const getActionGroups = (actions: MutableAction[]) => {
   });
   return Array.from(groups.entries());
 };
+
+const DEFAULT_ADVANCED_ACTION_KEY = 'set-paused';
 
 const getDefaultInputs = (params: {
   action: MutableAction;
@@ -978,9 +1123,14 @@ const getDefaultInputs = (params: {
 
 type CollectionSettingsPanelProps = {
   activeCollectionId?: string;
+  onJourneyRefreshRequested?: () => void;
+  mode?: 'guided' | 'advanced';
+  onRequestAdvancedControls?: () => void;
 };
 
 export default function CollectionSettingsPanel(props: CollectionSettingsPanelProps) {
+  const mode = props.mode ?? 'advanced';
+  const guidedMode = mode === 'guided';
   const [collectionId, setCollectionId] = useState('');
   const [collectionSlug, setCollectionSlug] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -999,13 +1149,23 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
   );
 
   const [selectedActionKey, setSelectedActionKey] = useState(
-    MUTABLE_ACTIONS[0]?.key ?? ''
+    () =>
+      MUTABLE_ACTIONS.find((action) => action.key === DEFAULT_ADVANCED_ACTION_KEY)
+        ?.key ??
+      MUTABLE_ACTIONS[0]?.key ??
+      ''
   );
   const [actionInputs, setActionInputs] = useState<Record<string, string>>({});
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [actionPending, setActionPending] = useState(false);
   const [absorbSealFees, setAbsorbSealFees] = useState(false);
   const [sealChunkCountInput, setSealChunkCountInput] = useState('1');
+  const [quickMintPriceStx, setQuickMintPriceStx] = useState('');
+  const [quickMaxSupply, setQuickMaxSupply] = useState('');
+  const [quickActionMessage, setQuickActionMessage] = useState<string | null>(null);
+  const [quickActionPending, setQuickActionPending] = useState<
+    'set-mint-price' | 'set-max-supply' | 'pause' | 'unpause' | null
+  >(null);
 
   const { walletSession, walletAdapter, connect } = useManageWallet();
   const normalizedActiveCollectionId = useMemo(
@@ -1018,11 +1178,28 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
     () => toRecord(metadataRecord?.collection),
     [metadataRecord]
   );
+  const preInscribedMint =
+    toText(metadataRecord?.mintType).toLowerCase() === 'pre-inscribed';
+  const pausedReadOnlyFunction = preInscribedMint ? 'get-paused' : 'is-paused';
+  const priceReadOnlyFunction = preInscribedMint ? 'get-price' : 'get-mint-price';
+  const priceWriteFunction = preInscribedMint ? 'set-price' : 'set-mint-price';
   const collectionNameFromMetadata = toText(metadataCollection?.name);
   const collectionSymbolFromMetadata = toText(metadataCollection?.symbol);
   const collectionDescriptionFromMetadata = toText(metadataCollection?.description);
   const collectionSupplyFromMetadata = toText(metadataCollection?.supply);
   const collectionMintPriceStx = toText(metadataCollection?.mintPriceStx);
+  const advertisedPriceLabel = preInscribedMint
+    ? 'Advertised sale price (live page)'
+    : 'Advertised mint price (live page)';
+  const onChainPriceLabel = preInscribedMint
+    ? 'On-chain sale price'
+    : 'On-chain payout base price';
+  const onChainPriceSummaryHint = preInscribedMint
+    ? 'This value is read directly from the contract.'
+    : 'This value is split to artist/marketplace recipients. Collector-facing mint price can be higher when seal fee absorption is enabled.';
+  const setPriceActionLabel = preInscribedMint
+    ? 'Set sale price'
+    : 'Set payout base price';
   const collectionParentIds = useMemo(() => {
     const value = metadataCollection?.parentInscriptionIds;
     if (!Array.isArray(value)) {
@@ -1084,6 +1261,25 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
   ]);
 
   useEffect(() => {
+    const nextValue =
+      collectionMintPriceStx || formatMicroStxInput(summary?.mintPriceMicroStx ?? null);
+    if (!quickMintPriceStx && nextValue) {
+      setQuickMintPriceStx(nextValue);
+    }
+  }, [collectionMintPriceStx, summary?.mintPriceMicroStx, quickMintPriceStx]);
+
+  useEffect(() => {
+    const nextValue =
+      collectionSupplyFromMetadata ||
+      (summary?.maxSupply !== null && summary?.maxSupply !== undefined
+        ? summary.maxSupply.toString()
+        : '');
+    if (!quickMaxSupply && nextValue) {
+      setQuickMaxSupply(nextValue);
+    }
+  }, [collectionSupplyFromMetadata, summary?.maxSupply, quickMaxSupply]);
+
+  useEffect(() => {
     if (selectedAction?.functionName !== 'set-mint-price') {
       setAbsorbSealFees(false);
       setSealChunkCountInput('1');
@@ -1101,9 +1297,11 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
     : null;
   const pausedValue = summary?.paused ?? null;
   const finalizedValue = summary?.finalized ?? null;
+  const maxSupplyValue = summary?.maxSupply ?? null;
+  const collectionStateValue = state.trim().toLowerCase();
+  const collectionPublished = collectionStateValue === 'published';
   const draftSettingsLocked =
-    state.trim().toLowerCase() === 'published' ||
-    state.trim().toLowerCase() === 'archived';
+    collectionStateValue === 'published' || collectionStateValue === 'archived';
 
   const loadCollectionById = useCallback(async (nextCollectionId: string) => {
     if (!nextCollectionId.trim()) {
@@ -1145,6 +1343,9 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
       setSummary(null);
       setSummaryMessage(null);
       setActionMessage(null);
+      setQuickMintPriceStx('');
+      setQuickMaxSupply('');
+      setQuickActionMessage(null);
       if (
         validateStacksAddress(nextContractAddress) &&
         CONTRACT_NAME_PATTERN.test(nextContractName)
@@ -1162,10 +1363,11 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
           'Contract name was auto-resolved from draft slug/id. Click "Save draft settings" to store it in draft metadata.'
         );
       }
+      props.onJourneyRefreshRequested?.();
     } catch (error) {
       setMessage(toManageApiErrorMessage(error, 'Unable to load collection'));
     }
-  }, []);
+  }, [props.onJourneyRefreshRequested]);
 
   const loadCollection = async () => {
     await loadCollectionById(collectionId.trim());
@@ -1181,6 +1383,13 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
     setCollectionId(normalizedActiveCollectionId);
     void loadCollectionById(normalizedActiveCollectionId);
   }, [normalizedActiveCollectionId, loadCollectionById]);
+
+  useEffect(() => {
+    if (guidedMode || !normalizedActiveCollectionId) {
+      return;
+    }
+    setSelectedActionKey(DEFAULT_ADVANCED_ACTION_KEY);
+  }, [guidedMode, normalizedActiveCollectionId]);
 
   const saveSettings = async () => {
     if (!collectionId.trim()) {
@@ -1265,6 +1474,7 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
       setContractAddress(persistedAddress);
       setContractName(persistedTarget?.contractName ?? '');
       setMessage('Draft settings saved.');
+      props.onJourneyRefreshRequested?.();
     } catch (error) {
       setMessage(toManageApiErrorMessage(error, 'Update error'));
     }
@@ -1308,11 +1518,15 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
       !CONTRACT_NAME_PATTERN.test(resolvedName)
     ) {
       setSummaryMessage('Enter a valid deployed contract address and name first.');
-      return;
+      return null;
     }
     setSummaryLoading(true);
     setSummaryMessage(null);
     try {
+      const summaryTarget: ContractTarget = {
+        address: resolvedAddress,
+        contractName: resolvedName
+      };
       const [
         ownerCv,
         pendingOwnerCv,
@@ -1320,36 +1534,27 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
         financeAdminCv,
         pausedCv,
         finalizedCv,
-        mintPriceCv
+        mintPriceCv,
+        maxSupplyCv
       ] = await Promise.all([
-        callContractReadOnly('get-owner', [], {
-          address: resolvedAddress,
-          contractName: resolvedName
-        }),
-        callContractReadOnly('get-pending-owner', [], {
-          address: resolvedAddress,
-          contractName: resolvedName
-        }),
-        callContractReadOnly('get-operator-admin', [], {
-          address: resolvedAddress,
-          contractName: resolvedName
-        }),
-        callContractReadOnly('get-finance-admin', [], {
-          address: resolvedAddress,
-          contractName: resolvedName
-        }),
-        callContractReadOnly('is-paused', [], {
-          address: resolvedAddress,
-          contractName: resolvedName
-        }),
-        callContractReadOnly('get-finalized', [], {
-          address: resolvedAddress,
-          contractName: resolvedName
-        }),
-        callContractReadOnly('get-mint-price', [], {
-          address: resolvedAddress,
-          contractName: resolvedName
-        })
+        callContractReadOnly('get-owner', [], summaryTarget),
+        preInscribedMint
+          ? Promise.resolve(null)
+          : callContractReadOnly('get-pending-owner', [], summaryTarget),
+        preInscribedMint
+          ? Promise.resolve(null)
+          : callContractReadOnly('get-operator-admin', [], summaryTarget),
+        preInscribedMint
+          ? Promise.resolve(null)
+          : callContractReadOnly('get-finance-admin', [], summaryTarget),
+        callContractReadOnly(pausedReadOnlyFunction, [], summaryTarget),
+        preInscribedMint
+          ? Promise.resolve(null)
+          : callContractReadOnly('get-finalized', [], summaryTarget),
+        callContractReadOnly(priceReadOnlyFunction, [], summaryTarget),
+        preInscribedMint
+          ? Promise.resolve(null)
+          : callContractReadOnly('get-max-supply', [], summaryTarget)
       ]);
 
       let coreContractId: string | null = null;
@@ -1373,47 +1578,46 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
       }
 
       const pendingOwner =
-        pendingOwnerCv.type === ClarityType.OptionalSome
+        pendingOwnerCv && pendingOwnerCv.type === ClarityType.OptionalSome
           ? toText(toPrimitive(pendingOwnerCv.value))
           : '';
-      const parsedMintPrice = (() => {
-        const primitive = toPrimitive(mintPriceCv);
-        if (typeof primitive === 'bigint') {
-          return primitive;
-        }
-        if (typeof primitive === 'number') {
-          return BigInt(Math.floor(primitive));
-        }
-        if (typeof primitive === 'string' && UINT_PATTERN.test(primitive)) {
-          return BigInt(primitive);
-        }
-        return null;
-      })();
+      const parsedMintPrice = parseUintPrimitive(toPrimitive(mintPriceCv));
+      const parsedMaxSupply =
+        maxSupplyCv === null ? null : parseUintPrimitive(toPrimitive(maxSupplyCv));
+      const operatorAdmin =
+        operatorAdminCv === null ? null : toText(toPrimitive(operatorAdminCv)) || null;
+      const financeAdmin =
+        financeAdminCv === null ? null : toText(toPrimitive(financeAdminCv)) || null;
+      const finalized =
+        finalizedCv !== null && typeof toPrimitive(finalizedCv) === 'boolean'
+          ? (toPrimitive(finalizedCv) as boolean)
+          : null;
 
       const nextSummary: ContractSummary = {
         owner: toText(toPrimitive(ownerCv)) || null,
         pendingOwner: pendingOwner || null,
-        operatorAdmin: toText(toPrimitive(operatorAdminCv)) || null,
-        financeAdmin: toText(toPrimitive(financeAdminCv)) || null,
+        operatorAdmin,
+        financeAdmin,
         paused:
           typeof toPrimitive(pausedCv) === 'boolean'
             ? (toPrimitive(pausedCv) as boolean)
             : null,
-        finalized:
-          typeof toPrimitive(finalizedCv) === 'boolean'
-            ? (toPrimitive(finalizedCv) as boolean)
-            : null,
+        finalized,
         mintPriceMicroStx: parsedMintPrice,
+        maxSupply: parsedMaxSupply,
         coreContractId,
         coreFeeUnitMicroStx
       };
 
       setSummary(nextSummary);
       setSummaryMessage('On-chain status refreshed.');
+      props.onJourneyRefreshRequested?.();
+      return nextSummary;
     } catch (error) {
       setSummaryMessage(
         toManageApiErrorMessage(error, 'Unable to load on-chain status')
       );
+      return null;
     } finally {
       setSummaryLoading(false);
     }
@@ -1554,7 +1758,9 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
               advertised
             )} - protocol seal fee ${formatMicroStx(
               sealProtocolFee
-            )} = on-chain mint price ${formatMicroStx(value)}. Begin anti-spam fee remains separate.`
+            )} = on-chain payout base price ${formatMicroStx(
+              value
+            )}. Begin anti-spam fee remains separate.`
           );
         }
         args.push(uintCV(value));
@@ -1651,6 +1857,24 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
       }
     }
 
+    if (action.functionName === 'set-recipients') {
+      const fixedRecipients = resolveFixedRecipientArgs();
+      if (fixedRecipients.error) {
+        return fixedRecipients;
+      }
+      args.push(...fixedRecipients.args);
+      notices.push(...fixedRecipients.notices);
+    }
+
+    if (action.functionName === 'set-recipient-editor-access') {
+      const coreArgs = resolveCoreContractArgs(summary?.coreContractId ?? null);
+      if (coreArgs.error) {
+        return coreArgs;
+      }
+      args.unshift(...coreArgs.args);
+      notices.push(...coreArgs.notices);
+    }
+
     return { args, notices, error: null as string | null };
   };
 
@@ -1681,6 +1905,7 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
           selectedAction.label
         } submitted: ${payload.txId}. Refresh status after confirmation.`
       );
+      props.onJourneyRefreshRequested?.();
     } catch (error) {
       setActionMessage(toManageApiErrorMessage(error, `${selectedAction.label} failed`));
     } finally {
@@ -1688,10 +1913,478 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
     }
   };
 
+  const runQuickAction = async (params: {
+    pendingKey: 'set-mint-price' | 'set-max-supply' | 'pause' | 'unpause';
+    functionName: string;
+    functionArgs: ClarityValue[];
+    successLabel: string;
+    awaitOnChainConfirmation?: boolean;
+    expectedPausedState?: boolean;
+  }) => {
+    if (!contractReady) {
+      setQuickActionMessage('Set a valid deployed contract address and name first.');
+      return;
+    }
+
+    const waitForTxResult = async (
+      txId: string,
+      network: string
+    ): Promise<{ success: boolean; status: string } | null> => {
+      const normalizedNetwork = network === 'testnet' ? 'testnet' : 'mainnet';
+      const normalizedTxId = normalizeTxId(txId);
+      if (!normalizedTxId) {
+        return null;
+      }
+      const failedStatuses = new Set([
+        'abort_by_response',
+        'abort_by_post_condition',
+        'dropped_replace_by_fee',
+        'dropped_replace_across_fork',
+        'dropped_too_expensive',
+        'dropped_stale_garbage_collect',
+        'dropped_problematic'
+      ]);
+      const startedAt = Date.now();
+      while (Date.now() - startedAt < TX_CONFIRMATION_TIMEOUT_MS) {
+        try {
+          const response = await fetch(
+            `/hiro/${normalizedNetwork}/extended/v1/tx/${encodeURIComponent(
+              normalizedTxId
+            )}`,
+            { cache: 'no-store' }
+          );
+          if (response.ok) {
+            const payload = (await response.json()) as {
+              tx_status?: string;
+            };
+            const status = String(payload.tx_status ?? '').trim().toLowerCase();
+            if (status === 'success') {
+              return { success: true, status };
+            }
+            if (failedStatuses.has(status)) {
+              return { success: false, status };
+            }
+          }
+        } catch {
+          // keep polling until timeout
+        }
+        await sleep(TX_CONFIRMATION_POLL_MS);
+      }
+      return null;
+    };
+
+    setQuickActionPending(params.pendingKey);
+    setQuickActionMessage(null);
+    try {
+      const payload = await requestContractCall({
+        functionName: params.functionName,
+        functionArgs: params.functionArgs
+      });
+
+      if (!params.awaitOnChainConfirmation) {
+        setQuickActionMessage(
+          `${params.successLabel} submitted: ${payload.txId}. Refresh on-chain status after confirmation.`
+        );
+        props.onJourneyRefreshRequested?.();
+        return;
+      }
+
+      const resolvedNetwork =
+        walletAdapter.getSession().network ?? walletSession.network ?? null;
+      if (!resolvedNetwork) {
+        setQuickActionMessage(
+          `${params.successLabel} submitted: ${payload.txId}. Waiting for wallet/network sync before confirmation checks.`
+        );
+        props.onJourneyRefreshRequested?.();
+        return;
+      }
+
+      setQuickActionMessage(
+        `${params.successLabel} submitted: ${payload.txId}. Waiting for on-chain confirmation...`
+      );
+
+      const txResult = await waitForTxResult(payload.txId, resolvedNetwork);
+      if (!txResult) {
+        setQuickActionMessage(
+          `${params.successLabel} submitted: ${payload.txId}. Confirmation is still pending.`
+        );
+        props.onJourneyRefreshRequested?.();
+        return;
+      }
+
+      if (!txResult.success) {
+        await loadContractSummary();
+        setQuickActionMessage(
+          `${params.successLabel} failed on-chain (${txResult.status.replace(/_/g, ' ')}).`
+        );
+        props.onJourneyRefreshRequested?.();
+        return;
+      }
+
+      const refreshedSummary = await loadContractSummary();
+      if (
+        typeof params.expectedPausedState === 'boolean' &&
+        refreshedSummary?.paused !== params.expectedPausedState
+      ) {
+        setQuickActionMessage(
+          `${params.successLabel} confirmed, but pause state has not updated yet. Refresh again in a moment.`
+        );
+      } else {
+        setQuickActionMessage(`${params.successLabel} confirmed on-chain.`);
+      }
+      props.onJourneyRefreshRequested?.();
+    } catch (error) {
+      setQuickActionMessage(
+        toManageApiErrorMessage(error, `${params.successLabel} failed`)
+      );
+    } finally {
+      setQuickActionPending(null);
+    }
+  };
+
+  const runQuickSetMintPrice = async () => {
+    const parsed = parseStxToMicro(quickMintPriceStx, true);
+    if (parsed === null) {
+      setQuickActionMessage(
+        'On-chain price must be a valid STX amount (up to 6 decimals).'
+      );
+      return;
+    }
+    await runQuickAction({
+      pendingKey: 'set-mint-price',
+      functionName: priceWriteFunction,
+      functionArgs: [uintCV(parsed)],
+      successLabel: setPriceActionLabel
+    });
+  };
+
+  const runQuickSetMaxSupply = async () => {
+    const parsed = parseUintInput(quickMaxSupply, false);
+    if (parsed === null) {
+      setQuickActionMessage('Max supply must be a whole number greater than 0.');
+      return;
+    }
+    await runQuickAction({
+      pendingKey: 'set-max-supply',
+      functionName: 'set-max-supply',
+      functionArgs: [uintCV(parsed)],
+      successLabel: 'Set max supply'
+    });
+  };
+
+  const runQuickPause = async () => {
+    await runQuickAction({
+      pendingKey: 'pause',
+      functionName: 'set-paused',
+      functionArgs: [boolCV(true)],
+      successLabel: 'Pause contract',
+      awaitOnChainConfirmation: true,
+      expectedPausedState: true
+    });
+  };
+
+  const runQuickUnpause = async () => {
+    if (!collectionPublished) {
+      setQuickActionMessage('Publish the collection in Step 4 before unpausing.');
+      return;
+    }
+    await runQuickAction({
+      pendingKey: 'unpause',
+      functionName: 'set-paused',
+      functionArgs: [boolCV(false)],
+      successLabel: 'Unpause contract',
+      awaitOnChainConfirmation: true,
+      expectedPausedState: false
+    });
+  };
+
+  if (guidedMode) {
+    const quickActionsBusy = quickActionPending !== null;
+    const onChainPriceFieldLabel = preInscribedMint
+      ? 'On-chain sale price'
+      : 'On-chain payout base price';
+    const pauseStepNumber = 1;
+    const priceStepNumber = 2;
+    const maxSupplyStepNumber = 3;
+    const unpauseStepNumber = preInscribedMint ? 3 : 4;
+    const launchToggleTargetsUnpause = pausedValue !== false;
+    const launchToggleIsSubmitting =
+      quickActionPending === 'pause' || quickActionPending === 'unpause';
+    const launchToggleLabel = launchToggleTargetsUnpause
+      ? 'Unpause contract'
+      : 'Pause contract';
+    const pauseStatusLabel =
+      pausedValue === null
+        ? 'Unknown'
+        : pausedValue
+          ? 'Paused (safe pre-launch)'
+          : 'Unpaused (live)';
+    const unpauseBlockedHint =
+      !collectionPublished
+        ? 'Publish first in Step 4.'
+        : pausedValue === null
+          ? 'Refresh on-chain status first.'
+          : null;
+
+    return (
+      <div className="collection-settings-panel collection-settings-panel--guided">
+        <div className="collection-settings-panel__group">
+          <h3 className="info-label">
+            Guided launch quick actions
+            <InfoTooltip text="Run these contract updates in sequence. This keeps launch state predictable for first-time creators." />
+          </h3>
+          <p className="meta-value">
+            Complete these contract actions in order, then refresh checklist status.
+          </p>
+          <p className="meta-value">
+            <span className="info-label">
+              Active draft
+              <InfoTooltip text="The selected drop ID from Step 1 and Step 2. Quick actions apply to this draft context." />
+            </span>
+            : <code>{collectionId || 'Select a drop in "Your drops"'}</code>
+          </p>
+          <p className="meta-value">
+            <span className="info-label">
+              Contract target
+              <InfoTooltip text="Address and contract name that wallet transactions will be sent to." />
+            </span>
+            :{' '}
+            <code>{contractId ?? 'Load a deployed contract from the selected draft'}</code>
+          </p>
+
+          <div className="mint-actions">
+            <span className="info-label">
+              <button
+                className="button button--ghost"
+                type="button"
+                onClick={() => void loadContractSummary()}
+                disabled={!contractReady || summaryLoading}
+              >
+                {summaryLoading ? 'Refreshing...' : 'Refresh on-chain status'}
+              </button>
+              <InfoTooltip text="Reads current on-chain values (price, pause state, supply) from the deployed contract." />
+            </span>
+            {props.onRequestAdvancedControls ? (
+              <span className="info-label">
+                <button
+                  className="button button--ghost"
+                  type="button"
+                  onClick={props.onRequestAdvancedControls}
+                >
+                  Open advanced controls
+                </button>
+                <InfoTooltip text="Switches to detailed contract controls for expert/admin-level actions." />
+              </span>
+            ) : null}
+          </div>
+
+          <div className="collection-settings-panel__summary-grid">
+            <div className="collection-settings-panel__summary-item">
+              <span className="meta-label info-label">
+                {onChainPriceLabel}
+                <InfoTooltip text="Contract value used for recipient split calculations." />
+              </span>
+              <span className="meta-value">
+                {formatMicroStx(summary?.mintPriceMicroStx ?? null)}
+              </span>
+            </div>
+            <div className="collection-settings-panel__summary-item">
+              <span className="meta-label info-label">
+                {advertisedPriceLabel}
+                <InfoTooltip text="Collector-facing price shown on the live mint page." />
+              </span>
+              <span className="meta-value">{formatDraftStx(collectionMintPriceStx)}</span>
+            </div>
+            {!preInscribedMint ? (
+              <div className="collection-settings-panel__summary-item">
+                <span className="meta-label info-label">
+                  Max supply
+                  <InfoTooltip text="Hard cap for tokens this drop can mint." />
+                </span>
+                <span className="meta-value">
+                  {maxSupplyValue === null ? 'Unknown' : maxSupplyValue.toString()}
+                </span>
+              </div>
+            ) : null}
+            <div className="collection-settings-panel__summary-item">
+              <span className="meta-label info-label">
+                Contract pause status
+                <InfoTooltip text="Paused means minting is blocked. Unpaused means minting is live." />
+              </span>
+              <span className="meta-value">{pauseStatusLabel}</span>
+            </div>
+            <div className="collection-settings-panel__summary-item">
+              <span className="meta-label info-label">
+                Backend state
+                <InfoTooltip text="Manager-side lifecycle marker such as draft or published." />
+              </span>
+              <span className="meta-value">{collectionStateValue || 'draft'}</span>
+            </div>
+          </div>
+
+          {summaryMessage ? <p className="meta-value">{summaryMessage}</p> : null}
+          {message ? <div className="alert">{message}</div> : null}
+          {quickActionMessage ? <div className="alert">{quickActionMessage}</div> : null}
+        </div>
+
+        <div className="collection-settings-panel__group">
+          <h3 className="info-label">
+            {pauseStepNumber}. Pause before publish
+            <InfoTooltip text="Recommended first action: keep minting locked until setup and publish are complete." />
+          </h3>
+          <p className="meta-value">
+            Keep minting paused while finishing live-page details and publish.
+          </p>
+          <div className="mint-actions">
+            <span className="info-label">
+              <button
+                className="button"
+                type="button"
+                id="manage-pause-contract-button"
+                onClick={() => void runQuickPause()}
+                disabled={!contractReady || quickActionsBusy || pausedValue === true}
+              >
+                {quickActionPending === 'pause' ? 'Submitting...' : 'Pause contract'}
+              </button>
+              <InfoTooltip text="Sends `set-paused true` to the collection contract." />
+            </span>
+          </div>
+        </div>
+
+        <div className="collection-settings-panel__group">
+          <h3 className="info-label">
+            {priceStepNumber}. Set {onChainPriceFieldLabel.toLowerCase()}
+            <InfoTooltip text="Updates the contract-side price value used during mint accounting." />
+          </h3>
+          <p className="meta-value">
+            {preInscribedMint
+              ? 'Set the on-chain sale price used by the contract.'
+              : 'Set the on-chain payout base split to artist/marketplace recipients. Collector-facing mint price is set in Step 4 live page settings.'}
+          </p>
+          <label className="field field--full">
+            <span className="field__label info-label">
+              {onChainPriceFieldLabel} (STX)
+              <InfoTooltip text="Up to 6 decimals. This is written on-chain." />
+            </span>
+            <input
+              className="input"
+              value={quickMintPriceStx}
+              placeholder="0.00"
+              onChange={(event) => {
+                setQuickMintPriceStx(event.target.value.trim());
+                setQuickActionMessage(null);
+              }}
+            />
+          </label>
+          <div className="mint-actions">
+            <span className="info-label">
+              <button
+                className="button"
+                type="button"
+                onClick={() => void runQuickSetMintPrice()}
+                disabled={!contractReady || quickActionsBusy}
+              >
+                {quickActionPending === 'set-mint-price'
+                  ? 'Submitting...'
+                  : `Set ${onChainPriceFieldLabel.toLowerCase()}`}
+              </button>
+              <InfoTooltip text="Submits the price update transaction with your connected signer wallet." />
+            </span>
+          </div>
+        </div>
+
+        {!preInscribedMint ? (
+          <div className="collection-settings-panel__group">
+            <h3 className="info-label">
+              {maxSupplyStepNumber}. Set max supply
+              <InfoTooltip text="Sets the maximum token count allowed by the contract." />
+            </h3>
+            <p className="meta-value">Set the maximum number of tokens this drop can mint.</p>
+            <label className="field field--full">
+              <span className="field__label info-label">
+                Max supply
+                <InfoTooltip text="Whole number only. Usually set once before launch." />
+              </span>
+              <input
+                className="input"
+                value={quickMaxSupply}
+                placeholder="100"
+                onChange={(event) => {
+                  setQuickMaxSupply(event.target.value.trim());
+                  setQuickActionMessage(null);
+                }}
+              />
+            </label>
+            <div className="mint-actions">
+              <span className="info-label">
+                <button
+                  className="button"
+                  type="button"
+                  onClick={() => void runQuickSetMaxSupply()}
+                  disabled={!contractReady || quickActionsBusy}
+                >
+                  {quickActionPending === 'set-max-supply'
+                    ? 'Submitting...'
+                    : 'Set max supply'}
+                </button>
+                <InfoTooltip text="Sends `set-max-supply` to the contract owner/admin role." />
+              </span>
+            </div>
+          </div>
+        ) : null}
+
+        <div className="collection-settings-panel__group">
+          <h3 className="info-label">
+            {unpauseStepNumber}. {launchToggleTargetsUnpause ? 'Unpause to go live' : 'Pause live contract'}
+            <InfoTooltip text="Final launch control. Unpause after publish to go live, or pause again if you need to halt minting." />
+          </h3>
+          <p className="meta-value">
+            {launchToggleTargetsUnpause
+              ? 'Final launch milestone: unpause only after the collection is published.'
+              : 'Contract is currently live. You can pause again here if needed.'}
+          </p>
+          <div className="mint-actions">
+            <span className="info-label">
+              <button
+                className="button"
+                type="button"
+                id="manage-unpause-contract-button"
+                onClick={() =>
+                  void (launchToggleTargetsUnpause ? runQuickUnpause() : runQuickPause())
+                }
+                disabled={
+                  !contractReady ||
+                  quickActionsBusy ||
+                  !collectionPublished ||
+                  pausedValue === null
+                }
+              >
+                {launchToggleIsSubmitting ? 'Submitting...' : launchToggleLabel}
+              </button>
+              <InfoTooltip
+                text={
+                  launchToggleTargetsUnpause
+                    ? 'Sends `set-paused false` so collectors can mint.'
+                    : 'Sends `set-paused true` to pause minting again.'
+                }
+              />
+            </span>
+          </div>
+          {unpauseBlockedHint ? (
+            <p className="meta-value">{unpauseBlockedHint}</p>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="collection-settings-panel">
       <div className="collection-settings-panel__group">
-        <h3>Draft metadata</h3>
+        <h3 className="info-label">
+          Draft metadata
+          <InfoTooltip text="Backend-only draft details. Editing here does not send wallet transactions." />
+        </h3>
         <p className="meta-value">
           Update manager draft fields in D1. This does not send on-chain
           transactions.
@@ -1708,9 +2401,12 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
             value={collectionId}
             onChange={(event) => setCollectionId(event.target.value)}
           />
-          <button className="button button--ghost" type="button" onClick={loadCollection}>
-            Load draft
-          </button>
+          <span className="info-label">
+            <button className="button button--ghost" type="button" onClick={loadCollection}>
+              Load draft
+            </button>
+            <InfoTooltip text="Fetches the selected draft and pre-fills these fields." />
+          </span>
         </label>
 
         <label className="field">
@@ -1788,14 +2484,17 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
         </label>
 
         <div className="mint-actions">
-          <button
-            className="button"
-            type="button"
-            onClick={saveSettings}
-            disabled={draftSettingsLocked}
-          >
-            Save draft settings
-          </button>
+          <span className="info-label">
+            <button
+              className="button"
+              type="button"
+              onClick={saveSettings}
+              disabled={draftSettingsLocked}
+            >
+              Save draft settings
+            </button>
+            <InfoTooltip text="Writes updated draft metadata to the manager backend." />
+          </span>
         </div>
         {draftSettingsLocked && (
           <p className="meta-value">
@@ -1806,62 +2505,111 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
       </div>
 
       <div className="collection-settings-panel__group collection-settings-panel__group--onchain">
-        <h3>Deployed contract controls</h3>
+        <h3 className="info-label">
+          Deployed contract controls
+          <InfoTooltip text="Direct wallet transactions to contract functions. Use carefully in production collections." />
+        </h3>
         <p className="meta-value">
           This section sends wallet transactions directly to the deployed
           collection contract.
         </p>
+        <p className="meta-value">{onChainPriceSummaryHint}</p>
         <p className="meta-value">
           Contract target:{' '}
           <code>{contractId ?? 'Set valid contract address + contract name'}</code>
         </p>
 
         <div className="mint-actions">
-          <button
-            className="button button--ghost"
-            type="button"
-            onClick={() => void loadContractSummary()}
-            disabled={!contractReady || summaryLoading}
-          >
-            {summaryLoading ? 'Refreshing...' : 'Refresh on-chain status'}
-          </button>
+          <span className="info-label">
+            <button
+              className="button button--ghost"
+              type="button"
+              onClick={() => void loadContractSummary()}
+              disabled={!contractReady || summaryLoading}
+            >
+              {summaryLoading ? 'Refreshing...' : 'Refresh on-chain status'}
+            </button>
+            <InfoTooltip text="Reads owner/admin roles, pause state, pricing, and core fee data from the contract." />
+          </span>
         </div>
 
         <div className="collection-settings-panel__summary-grid">
           <div className="collection-settings-panel__summary-item">
-            <span className="meta-label">Owner</span>
+            <span className="meta-label info-label">
+              Owner
+              <InfoTooltip text="Current contract owner wallet." />
+            </span>
             <span className="meta-value">{summary?.owner ?? 'Unknown'}</span>
           </div>
           <div className="collection-settings-panel__summary-item">
-            <span className="meta-label">Pending owner</span>
+            <span className="meta-label info-label">
+              Pending owner
+              <InfoTooltip text="Wallet waiting to accept ownership transfer, if any." />
+            </span>
             <span className="meta-value">{summary?.pendingOwner ?? 'None'}</span>
           </div>
           <div className="collection-settings-panel__summary-item">
-            <span className="meta-label">Operator admin</span>
+            <span className="meta-label info-label">
+              Operator admin
+              <InfoTooltip text="Admin role that can manage operational/config actions." />
+            </span>
             <span className="meta-value">{summary?.operatorAdmin ?? 'Unknown'}</span>
           </div>
           <div className="collection-settings-panel__summary-item">
-            <span className="meta-label">Finance admin</span>
+            <span className="meta-label info-label">
+              Finance admin
+              <InfoTooltip text="Admin role that can update finance actions like pricing and splits." />
+            </span>
             <span className="meta-value">{summary?.financeAdmin ?? 'Unknown'}</span>
           </div>
           <div className="collection-settings-panel__summary-item">
-            <span className="meta-label">Paused</span>
+            <span className="meta-label info-label">
+              Paused
+              <InfoTooltip text="Yes means mint functions are blocked. No means minting is enabled." />
+            </span>
             <span className="meta-value">
               {pausedValue === null ? 'Unknown' : pausedValue ? 'Yes' : 'No'}
             </span>
           </div>
           <div className="collection-settings-panel__summary-item">
-            <span className="meta-label">Finalized</span>
+            <span className="meta-label info-label">
+              Finalized
+              <InfoTooltip text="Finalized contracts lock selected mutable controls permanently." />
+            </span>
             <span className="meta-value">
               {finalizedValue === null ? 'Unknown' : finalizedValue ? 'Yes' : 'No'}
             </span>
           </div>
           <div className="collection-settings-panel__summary-item">
-            <span className="meta-label">Mint price</span>
+            <span className="meta-label info-label">
+              {onChainPriceLabel}
+              <InfoTooltip text="Contract-side payout/sale value currently stored on-chain." />
+            </span>
             <span className="meta-value">{formatMicroStx(summary?.mintPriceMicroStx ?? null)}</span>
           </div>
           <div className="collection-settings-panel__summary-item">
-            <span className="meta-label">Core fee unit</span>
+            <span className="meta-label info-label">
+              {advertisedPriceLabel}
+              <InfoTooltip text="Collector-facing price from draft/live-page metadata." />
+            </span>
+            <span className="meta-value">{formatDraftStx(collectionMintPriceStx)}</span>
+          </div>
+          <div className="collection-settings-panel__summary-item">
+            <span className="meta-label info-label">
+              Max supply
+              <InfoTooltip text="Current contract cap for total mintable tokens." />
+            </span>
+            <span className="meta-value">
+              {summary?.maxSupply === null || summary?.maxSupply === undefined
+                ? 'Unknown'
+                : summary.maxSupply.toString()}
+            </span>
+          </div>
+          <div className="collection-settings-panel__summary-item">
+            <span className="meta-label info-label">
+              Core fee unit
+              <InfoTooltip text="Fee unit pulled from locked core contract, used for fee absorption helpers." />
+            </span>
             <span className="meta-value">
               {formatMicroStx(summary?.coreFeeUnitMicroStx ?? null)}
             </span>
@@ -1875,6 +2623,7 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
             <InfoTooltip text={selectedActionTooltipText} />
           </span>
           <select
+            id="manage-contract-action-select"
             className="select"
             value={selectedActionKey}
             onChange={(event) => {
@@ -1967,8 +2716,8 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
         {selectedAction?.functionName === 'set-mint-price' && (
           <div className="field field--full">
             <span className="field__label info-label">
-              Mint Price Mode
-              <InfoTooltip text="Optional helper: keep begin anti-spam fee separate, and absorb seal protocol fee into your advertised seal price." />
+              On-chain price input mode
+              <InfoTooltip text="Optional helper: keep begin anti-spam fee separate, and absorb seal protocol fee into your advertised mint price target." />
             </span>
             <select
               className="select"
@@ -1979,8 +2728,10 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
                 setActionMessage(null);
               }}
             >
-              <option value="raw">Raw on-chain mint price (no absorption)</option>
-              <option value="absorb">Advertised seal price (absorb seal protocol fee)</option>
+              <option value="raw">Raw on-chain payout base (no absorption)</option>
+              <option value="absorb">
+                Advertised mint target (auto-subtract seal protocol fee)
+              </option>
             </select>
             <span className="field__hint">
               Begin anti-spam fee is unchanged and always paid separately at mint-begin.
@@ -2012,41 +2763,48 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
         )}
 
         <div className="mint-actions">
-          <button
-            className="button"
-            type="button"
-            onClick={runAction}
-            disabled={!contractReady || actionPending || !selectedAction}
-          >
-            {actionPending ? 'Submitting...' : 'Submit wallet transaction'}
-          </button>
-          <button
-            className="button button--ghost"
-            type="button"
-            onClick={() => {
-              if (!selectedAction) {
-                return;
-              }
-              setActionInputs(
-                getDefaultInputs({
-                  action: selectedAction,
-                  collectionName: collectionNameFromMetadata || displayName,
-                  collectionSymbol: collectionSymbolFromMetadata,
-                  collectionDescription: collectionDescriptionFromMetadata,
-                  supply: collectionSupplyFromMetadata,
-                  mintPriceStx: collectionMintPriceStx,
-                  parentIds: collectionParentIds,
-                  artistAddress,
-                  contractAddress,
-                  walletAddress: walletSession.address ?? ''
-                })
-              );
-              setActionMessage(null);
-            }}
-            disabled={!selectedAction}
-          >
-            Reset action fields
-          </button>
+          <span className="info-label">
+            <button
+              className="button"
+              type="button"
+              id="manage-contract-action-submit"
+              onClick={runAction}
+              disabled={!contractReady || actionPending || !selectedAction}
+            >
+              {actionPending ? 'Submitting...' : 'Submit wallet transaction'}
+            </button>
+            <InfoTooltip text="Opens wallet confirmation for the selected contract function call." />
+          </span>
+          <span className="info-label">
+            <button
+              className="button button--ghost"
+              type="button"
+              onClick={() => {
+                if (!selectedAction) {
+                  return;
+                }
+                setActionInputs(
+                  getDefaultInputs({
+                    action: selectedAction,
+                    collectionName: collectionNameFromMetadata || displayName,
+                    collectionSymbol: collectionSymbolFromMetadata,
+                    collectionDescription: collectionDescriptionFromMetadata,
+                    supply: collectionSupplyFromMetadata,
+                    mintPriceStx: collectionMintPriceStx,
+                    parentIds: collectionParentIds,
+                    artistAddress,
+                    contractAddress,
+                    walletAddress: walletSession.address ?? ''
+                  })
+                );
+                setActionMessage(null);
+              }}
+              disabled={!selectedAction}
+            >
+              Reset action fields
+            </button>
+            <InfoTooltip text="Restores this action form to suggested defaults from the current draft/context." />
+          </span>
         </div>
         {actionMessage && <div className="alert">{actionMessage}</div>}
       </div>

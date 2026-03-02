@@ -9,12 +9,16 @@ const makeClient = (overrides: Partial<XtrataClient> = {}): XtrataClient => {
       contractName: 'xtrata-v1-1-1',
       network: 'mainnet'
     },
+    supportsChunkBatchRead: true,
+    supportsMintedIndex: false,
     getAdmin: vi.fn().mockResolvedValue('SPADMIN'),
     getRoyaltyRecipient: vi.fn().mockResolvedValue('SPROYALTY'),
     getFeeUnit: vi.fn().mockResolvedValue(100000n),
     isPaused: vi.fn().mockResolvedValue(false),
     getNextTokenId: vi.fn().mockResolvedValue(12n),
     getLastTokenId: vi.fn().mockResolvedValue(0n),
+    getMintedCount: vi.fn().mockResolvedValue(0n),
+    getMintedId: vi.fn().mockResolvedValue(null),
     getTokenUri: vi.fn(),
     getOwner: vi.fn(),
     getSvg: vi.fn(),
@@ -22,7 +26,9 @@ const makeClient = (overrides: Partial<XtrataClient> = {}): XtrataClient => {
     getInscriptionMeta: vi.fn(),
     getDependencies: vi.fn(),
     getChunk: vi.fn(),
+    getChunkBatch: vi.fn(),
     getUploadState: vi.fn(),
+    getIdByHash: vi.fn(),
     getPendingChunk: vi.fn()
   };
   return { ...base, ...overrides } as XtrataClient;

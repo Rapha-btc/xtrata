@@ -233,6 +233,8 @@ const parseDeployPricingLock = (
 
 type AssetStagingPanelProps = {
   activeCollectionId?: string;
+  onJourneyRefreshRequested?: () => void;
+  highlightLockAction?: boolean;
 };
 
 export default function AssetStagingPanel(props: AssetStagingPanelProps) {
@@ -325,6 +327,7 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
       );
       setAssets(payload);
       setAssetsForCollectionId(id);
+      props.onJourneyRefreshRequested?.();
     } catch (error) {
       setAssets([]);
       setAssetsForCollectionId(id);
@@ -401,6 +404,7 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
         );
         if (!controller.signal.aborted) {
           setReadiness(payload);
+          props.onJourneyRefreshRequested?.();
         }
       } catch (error) {
         if (!controller.signal.aborted) {
@@ -450,6 +454,7 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
         setCollectionTargetSupply(parseTargetSupply(metadata));
         setDeployPricingLock(parseDeployPricingLock(metadata));
         setCollectionState(String(payload.state ?? 'draft').trim().toLowerCase());
+        props.onJourneyRefreshRequested?.();
       } catch {
         if (!controller.signal.aborted) {
           setCollectionLabel(null);
@@ -736,6 +741,7 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
       const updatedMetadata = updated.metadata ?? null;
       setCollectionMetadata(updatedMetadata);
       setDeployPricingLock(parseDeployPricingLock(updatedMetadata));
+      props.onJourneyRefreshRequested?.();
       setStatus(
         `Pricing lock saved (${activeAssets.length} assets, max ${maxChunks} chunks, max ${formatBytes(
           BigInt(maxBytes)
@@ -1053,19 +1059,25 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
       >
         <div className="asset-staging__section-header">
           <div>
-            <h3>Upload controls</h3>
+            <h3 className="info-label">
+              Upload controls
+              <InfoTooltip text="Choose files, validate ordering/filters, then upload and lock staged assets for deploy safety." />
+            </h3>
             <p>Select a collection, choose files/folder, then run upload checks.</p>
           </div>
           <div className="mint-actions">
-            <button
-              className="button button--ghost button--mini"
-              type="button"
-              onClick={() =>
-                setUploadControlsCollapsed((current) => !current)
-              }
-            >
-              {uploadControlsCollapsed ? 'Expand upload controls' : 'Collapse upload controls'}
-            </button>
+            <span className="info-label">
+              <button
+                className="button button--ghost button--mini"
+                type="button"
+                onClick={() =>
+                  setUploadControlsCollapsed((current) => !current)
+                }
+              >
+                {uploadControlsCollapsed ? 'Expand upload controls' : 'Collapse upload controls'}
+              </button>
+              <InfoTooltip text="Collapses this setup area so you can focus on staged assets and preview checks." />
+            </span>
           </div>
         </div>
 
@@ -1135,16 +1147,19 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
               </label>
 
               <div className="mint-actions">
-                <button
-                  className="button button--ghost"
-                  type="button"
-                  onClick={() => setShowAdvanced((current) => !current)}
-                  disabled={uploading || uploadsLocked}
-                >
-                  {showAdvanced
-                    ? 'Hide advanced upload settings'
-                    : 'Show advanced upload settings'}
-                </button>
+                <span className="info-label">
+                  <button
+                    className="button button--ghost"
+                    type="button"
+                    onClick={() => setShowAdvanced((current) => !current)}
+                    disabled={uploading || uploadsLocked}
+                  >
+                    {showAdvanced
+                      ? 'Hide advanced upload settings'
+                      : 'Show advanced upload settings'}
+                  </button>
+                  <InfoTooltip text="Reveal optional ordering, duplicate, extension, and preflight controls." />
+                </span>
               </div>
 
               {showAdvanced && (
@@ -1317,38 +1332,49 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
               )}
 
               <div className="mint-actions">
-                <button className="button" type="submit" disabled={!canUpload}>
-                  {uploadsLocked
-                    ? 'Uploads locked'
-                    : uploading
-                    ? 'Uploading...'
-                    : preflightOnly
-                      ? 'Run preflight checks'
-                      : `Upload selected file${filesForUpload.length === 1 ? '' : 's'}`}
-                </button>
-                <button
-                  className="button button--ghost"
-                  type="button"
-                  onClick={clearSelectedFiles}
-                  disabled={selectedFiles.length === 0 || uploading}
-                >
-                  Clear selection
-                </button>
-                <button
-                  className="button button--ghost"
-                  type="button"
-                  onClick={() => void lockStagedAssetsForDeploy()}
-                  disabled={
-                    uploading ||
-                    loading ||
-                    lockPending ||
-                    !normalizedCollectionId ||
-                    assets.length === 0 ||
-                    uploadsLocked
-                  }
-                >
-                  {lockPending ? 'Locking...' : 'Lock staged assets for deploy'}
-                </button>
+                <span className="info-label">
+                  <button className="button" type="submit" disabled={!canUpload}>
+                    {uploadsLocked
+                      ? 'Uploads locked'
+                      : uploading
+                      ? 'Uploading...'
+                      : preflightOnly
+                        ? 'Run preflight checks'
+                        : `Upload selected file${filesForUpload.length === 1 ? '' : 's'}`}
+                  </button>
+                  <InfoTooltip text="Runs preflight-only checks or uploads selected files, depending on current mode." />
+                </span>
+                <span className="info-label">
+                  <button
+                    className="button button--ghost"
+                    type="button"
+                    onClick={clearSelectedFiles}
+                    disabled={selectedFiles.length === 0 || uploading}
+                  >
+                    Clear selection
+                  </button>
+                  <InfoTooltip text="Clears currently selected local files without touching already staged assets." />
+                </span>
+                <span className="info-label">
+                  <button
+                    className={`button button--ghost${
+                      props.highlightLockAction ? ' button--next-action' : ''
+                    }`}
+                    type="button"
+                    onClick={() => void lockStagedAssetsForDeploy()}
+                    disabled={
+                      uploading ||
+                      loading ||
+                      lockPending ||
+                      !normalizedCollectionId ||
+                      assets.length === 0 ||
+                      uploadsLocked
+                    }
+                  >
+                    {lockPending ? 'Locking...' : 'Lock staged assets for deploy'}
+                  </button>
+                  <InfoTooltip text="Saves pricing-lock snapshot (asset count + max chunks) required before deploy in standard mint flow." />
+                </span>
               </div>
 
               {!canUpload && uploadGate.reason ? (
@@ -1420,7 +1446,10 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
       </section>
 
       <section className="asset-staging__section asset-staging__list">
-        <h3>Staged assets checker</h3>
+        <h3 className="info-label">
+          Staged assets checker
+          <InfoTooltip text="Browse staged files, verify mint order, and inspect preview metadata before launch." />
+        </h3>
         <p className="field__hint">
           Browse uploaded items in 4x4 pages, verify ordering, and inspect one asset
           in detail before launch.
@@ -1428,7 +1457,10 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
 
         <div className="asset-staging__controls">
           <label className="field">
-            <span className="field__label">Mint order checker</span>
+            <span className="field__label info-label">
+              Mint order checker
+              <InfoTooltip text="Changes the sort mode used for this verification view only." />
+            </span>
             <select
               className="select"
               value={assetOrderMode}
@@ -1454,7 +1486,10 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
                 setAssetGridPage(1);
               }}
             />
-            <span className="field__label">Show images only</span>
+            <span className="field__label info-label">
+              Show images only
+              <InfoTooltip text="Filter to image assets when you want a purely visual QA pass." />
+            </span>
           </label>
         </div>
 
@@ -1464,28 +1499,34 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
             page {assetGridPage} of {totalAssetPages}
           </span>
           <div className="asset-staging__pager">
-            <button
-              className="button button--ghost button--mini"
-              type="button"
-              onClick={() =>
-                setAssetGridPage((current) => Math.max(1, current - 1))
-              }
-              disabled={assetGridPage <= 1}
-            >
-              Previous 16
-            </button>
-            <button
-              className="button button--ghost button--mini"
-              type="button"
-              onClick={() =>
-                setAssetGridPage((current) =>
-                  Math.min(totalAssetPages, current + 1)
-                )
-              }
-              disabled={assetGridPage >= totalAssetPages}
-            >
-              Next 16
-            </button>
+            <span className="info-label">
+              <button
+                className="button button--ghost button--mini"
+                type="button"
+                onClick={() =>
+                  setAssetGridPage((current) => Math.max(1, current - 1))
+                }
+                disabled={assetGridPage <= 1}
+              >
+                Previous 16
+              </button>
+              <InfoTooltip text="Go to the previous 4x4 page of staged assets." />
+            </span>
+            <span className="info-label">
+              <button
+                className="button button--ghost button--mini"
+                type="button"
+                onClick={() =>
+                  setAssetGridPage((current) =>
+                    Math.min(totalAssetPages, current + 1)
+                  )
+                }
+                disabled={assetGridPage >= totalAssetPages}
+              >
+                Next 16
+              </button>
+              <InfoTooltip text="Go to the next 4x4 page of staged assets." />
+            </span>
           </div>
         </div>
 
@@ -1585,28 +1626,34 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
                       role="group"
                       aria-label="Preview panel view"
                     >
-                      <button
-                        className={`asset-staging__preview-toggle-button${
-                          previewPanelView === 'image'
-                            ? ' asset-staging__preview-toggle-button--active'
-                            : ''
-                        }`}
-                        type="button"
-                        onClick={() => setPreviewPanelView('image')}
-                      >
-                        Image
-                      </button>
-                      <button
-                        className={`asset-staging__preview-toggle-button${
-                          previewPanelView === 'metadata'
-                            ? ' asset-staging__preview-toggle-button--active'
-                            : ''
-                        }`}
-                        type="button"
-                        onClick={() => setPreviewPanelView('metadata')}
-                      >
-                        Metadata
-                      </button>
+                      <span className="info-label">
+                        <button
+                          className={`asset-staging__preview-toggle-button${
+                            previewPanelView === 'image'
+                              ? ' asset-staging__preview-toggle-button--active'
+                              : ''
+                          }`}
+                          type="button"
+                          onClick={() => setPreviewPanelView('image')}
+                        >
+                          Image
+                        </button>
+                        <InfoTooltip text="Shows large visual preview for the selected staged asset." />
+                      </span>
+                      <span className="info-label">
+                        <button
+                          className={`asset-staging__preview-toggle-button${
+                            previewPanelView === 'metadata'
+                              ? ' asset-staging__preview-toggle-button--active'
+                              : ''
+                          }`}
+                          type="button"
+                          onClick={() => setPreviewPanelView('metadata')}
+                        >
+                          Metadata
+                        </button>
+                        <InfoTooltip text="Shows path, MIME, chunk count, size, and hash details for QA." />
+                      </span>
                     </div>
                   </div>
 

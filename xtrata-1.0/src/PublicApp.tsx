@@ -279,7 +279,7 @@ This section is a plain-language reference for artists and collection teams.
 
 ### Contracts and modules
 - Core NFT contract: \`xtrata-v2-1-0\`
-- Collection mint contract template: \`xtrata-collection-mint-v1.2\`
+- Collection mint contract template: \`xtrata-collection-mint-v1.3\`
 - Pre-inscribed sale contract template: \`xtrata-preinscribed-collection-sale-v1.0\`
 - Admin module: Collection mint admin
 - Admin module: Pre-inscribed sale admin
@@ -966,6 +966,35 @@ const resolvePublicCollectionContractTarget = (
     contractName: resolved.contractName,
     network: getNetworkFromAddress(resolved.address) ?? 'mainnet'
   };
+};
+
+const resolvePublicDisplayedMintPrice = (
+  collection: PublicLiveCollectionRecord,
+  status: PublicLiveMintStatus | null
+) => {
+  const onChainPrice = status?.effectiveMintPrice ?? null;
+  if (!status) {
+    return null;
+  }
+  if (status.activePhaseMintPrice !== null) {
+    return onChainPrice;
+  }
+  const metadata = toRecord(collection.metadata);
+  const pricing = toRecord(metadata?.pricing);
+  if (toText(pricing?.mode).toLowerCase() !== 'advertised-includes-seal-fee') {
+    return onChainPrice;
+  }
+  const advertised = toBigIntOrNull(pricing?.advertisedMintPriceMicroStx);
+  const onChainFromMetadata = toBigIntOrNull(pricing?.onChainMintPriceMicroStx);
+  if (
+    advertised === null ||
+    onChainFromMetadata === null ||
+    status.mintPrice === null ||
+    onChainFromMetadata !== status.mintPrice
+  ) {
+    return onChainPrice;
+  }
+  return advertised;
 };
 
 const getErrorMessage = (error: unknown) => {
@@ -2320,7 +2349,10 @@ export default function PublicApp() {
                     liveMintStatusLoadingByCollectionId[collection.id]
                   );
                   const mintStatusError = liveMintStatusErrorByCollectionId[collection.id] ?? null;
-                  const effectiveMintPrice = mintStatus?.effectiveMintPrice ?? null;
+                  const effectiveMintPrice = resolvePublicDisplayedMintPrice(
+                    collection,
+                    mintStatus
+                  );
                   const maxSupply = mintStatus?.maxSupply ?? collection.fallbackSupply ?? null;
                   const mintedCount = mintStatus?.mintedCount ?? null;
                   const remainingCount =

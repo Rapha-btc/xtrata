@@ -28,6 +28,7 @@ describe("viewer relationships", () => {
       { id: 3n, owner: null, tokenUri: null, meta: null, svgDataUri: null }
     ];
     const map = new Map<string, bigint[]>([
+      ["1", [1n]],
       ["2", [1n]],
       ["3", [4n, 1n]]
     ]);
@@ -36,10 +37,10 @@ describe("viewer relationships", () => {
   });
 
   it("scanChildren discovers all matches", async () => {
-    const client = makeClient((id) => (id === 2n || id === 4n ? [9n] : []));
+    const client = makeClient((id) => (id === 2n || id === 4n ? [1n] : []));
     const children = await scanChildren({
       client,
-      parentId: 9n,
+      parentId: 1n,
       lastTokenId: 5n,
       senderAddress: "SP123",
       concurrency: 2
@@ -48,11 +49,11 @@ describe("viewer relationships", () => {
   });
 
   it("scanChildren supports cancellation", async () => {
-    const client = makeClient((id) => (id <= 1n ? [5n] : []));
+    const client = makeClient((id) => (id === 1n || id === 2n ? [0n] : []));
     let cancel = false;
     const children = await scanChildren({
       client,
-      parentId: 5n,
+      parentId: 0n,
       lastTokenId: 4n,
       senderAddress: "SP123",
       concurrency: 1,
@@ -63,7 +64,7 @@ describe("viewer relationships", () => {
         }
       }
     });
-    expect(children).toEqual([0n, 1n]);
+    expect(children).toEqual([1n, 2n]);
   });
 
   it("scanChildren respects concurrency limit", async () => {
@@ -74,12 +75,12 @@ describe("viewer relationships", () => {
       maxActive = Math.max(maxActive, active);
       await new Promise((resolve) => setTimeout(resolve, 5));
       active -= 1;
-      return id === 3n ? [7n] : [];
+      return id === 3n ? [2n] : [];
     });
 
     await scanChildren({
       client,
-      parentId: 7n,
+      parentId: 2n,
       lastTokenId: 6n,
       senderAddress: "SP123",
       concurrency: 2

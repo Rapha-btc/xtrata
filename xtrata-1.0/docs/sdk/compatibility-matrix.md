@@ -21,7 +21,7 @@ Status legend:
 | --- | --- | --- | --- |
 | Collection mint | `xtrata-collection-mint-v1.0` | archived | Legacy only. New SDK development does not target this version. |
 | Collection mint | `xtrata-collection-mint-v1.1` | archived | Legacy only. New SDK development does not target this version. |
-| Collection mint | `xtrata-collection-mint-v1.2` | supported | **Only active collection-mint SDK target moving forward.** |
+| Collection mint | `xtrata-collection-mint-v1.3` | supported | **Only active collection-mint SDK target moving forward.** |
 | Preinscribed sale | `xtrata-preinscribed-collection-sale-v1.0` | baseline | Market/sale support available through market + workflow helpers. |
 
 ## SDK module-level support

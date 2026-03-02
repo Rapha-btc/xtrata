@@ -5,6 +5,7 @@ import {
   toManageApiErrorMessage
 } from '../lib/api-errors';
 import { useManageWallet } from '../ManageWalletContext';
+import InfoTooltip from './InfoTooltip';
 
 type SdkToolkitPanelProps = {
   activeCollectionId?: string;
@@ -239,62 +240,80 @@ console.log(plan.flow.nextAction);`,
       </div>
 
       <div className="mint-actions">
-        <button
-          className="button button--ghost button--mini"
-          type="button"
-          onClick={() => void handleCopy('Starter snippet', sdkStarterSnippet)}
-        >
-          Copy starter code
-        </button>
-        <a
-          className="button button--ghost button--mini"
-          href={SDK_DOCS_URL}
-          target="_blank"
-          rel="noreferrer"
-        >
-          Open SDK docs
-        </a>
-        <a
-          className="button button--ghost button--mini"
-          href={SDK_EXAMPLE_MARKETPLACE_URL}
-          target="_blank"
-          rel="noreferrer"
-        >
-          Open example repo
-        </a>
+        <span className="info-label">
+          <button
+            className="button button--ghost button--mini"
+            type="button"
+            onClick={() => void handleCopy('Starter snippet', sdkStarterSnippet)}
+          >
+            Copy starter code
+          </button>
+          <InfoTooltip text="Copies a prefilled SDK bootstrap snippet using current wallet/drop context." />
+        </span>
+        <span className="info-label">
+          <a
+            className="button button--ghost button--mini"
+            href={SDK_DOCS_URL}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Open SDK docs
+          </a>
+          <InfoTooltip text="Opens official SDK docs and workflow references." />
+        </span>
+        <span className="info-label">
+          <a
+            className="button button--ghost button--mini"
+            href={SDK_EXAMPLE_MARKETPLACE_URL}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Open example repo
+          </a>
+          <InfoTooltip text="Example project showing marketplace integration patterns with the SDK." />
+        </span>
       </div>
 
       {copyStatus && <p className="meta-value">{copyStatus}</p>}
       {collectionError && <div className="alert">{collectionError}</div>}
 
       <div className="sdk-toolkit__tabs" role="tablist" aria-label="SDK toolkit tabs">
-        <button
-          className={`button button--ghost button--mini${activeTab === 'quickstart' ? ' is-active' : ''}`}
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'quickstart'}
-          onClick={() => setActiveTab('quickstart')}
-        >
-          Quick start
-        </button>
-        <button
-          className={`button button--ghost button--mini${activeTab === 'snippets' ? ' is-active' : ''}`}
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'snippets'}
-          onClick={() => setActiveTab('snippets')}
-        >
-          Code snippets
-        </button>
-        <button
-          className={`button button--ghost button--mini${activeTab === 'advanced' ? ' is-active' : ''}`}
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'advanced'}
-          onClick={() => setActiveTab('advanced')}
-        >
-          Advanced
-        </button>
+        <span className="info-label">
+          <button
+            className={`button button--ghost button--mini${activeTab === 'quickstart' ? ' is-active' : ''}`}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'quickstart'}
+            onClick={() => setActiveTab('quickstart')}
+          >
+            Quick start
+          </button>
+          <InfoTooltip text="High-level path for first-time SDK integration." />
+        </span>
+        <span className="info-label">
+          <button
+            className={`button button--ghost button--mini${activeTab === 'snippets' ? ' is-active' : ''}`}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'snippets'}
+            onClick={() => setActiveTab('snippets')}
+          >
+            Code snippets
+          </button>
+          <InfoTooltip text="Ready-to-copy snippets prefilled from your selected collection and wallet network." />
+        </span>
+        <span className="info-label">
+          <button
+            className={`button button--ghost button--mini${activeTab === 'advanced' ? ' is-active' : ''}`}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'advanced'}
+            onClick={() => setActiveTab('advanced')}
+          >
+            Advanced
+          </button>
+          <InfoTooltip text="Release gates and deeper module guidance for production SDK work." />
+        </span>
       </div>
 
       {activeTab === 'quickstart' && (
@@ -358,14 +377,20 @@ console.log(plan.flow.nextAction);`,
 
           <article className="sdk-toolkit__snippet">
             <div className="sdk-toolkit__snippet-header">
-              <h3>Simple read client</h3>
-              <button
-                className="button button--ghost button--mini"
-                type="button"
-                onClick={() => void handleCopy('Simple read snippet', sdkStarterSnippet)}
-              >
-                Copy
-              </button>
+              <h3 className="info-label">
+                Simple read client
+                <InfoTooltip text="Minimal SDK setup for read-only collection/core lookups." />
+              </h3>
+              <span className="info-label">
+                <button
+                  className="button button--ghost button--mini"
+                  type="button"
+                  onClick={() => void handleCopy('Simple read snippet', sdkStarterSnippet)}
+                >
+                  Copy
+                </button>
+                <InfoTooltip text="Copy this snippet to start a read client quickly." />
+              </span>
             </div>
             <pre>
               <code>{sdkStarterSnippet}</code>
@@ -374,14 +399,20 @@ console.log(plan.flow.nextAction);`,
 
           <article className="sdk-toolkit__snippet">
             <div className="sdk-toolkit__snippet-header">
-              <h3>Collection mint workflow plan</h3>
-              <button
-                className="button button--ghost button--mini"
-                type="button"
-                onClick={() => void handleCopy('Workflow snippet', sdkWorkflowSnippet)}
-              >
-                Copy
-              </button>
+              <h3 className="info-label">
+                Collection mint workflow plan
+                <InfoTooltip text="Builds transaction workflow plans with safety summaries and next-action guidance." />
+              </h3>
+              <span className="info-label">
+                <button
+                  className="button button--ghost button--mini"
+                  type="button"
+                  onClick={() => void handleCopy('Workflow snippet', sdkWorkflowSnippet)}
+                >
+                  Copy
+                </button>
+                <InfoTooltip text="Copy this snippet for workflow-plan based mint orchestration." />
+              </span>
             </div>
             <pre>
               <code>{sdkWorkflowSnippet}</code>

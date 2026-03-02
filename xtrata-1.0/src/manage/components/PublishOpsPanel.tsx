@@ -12,6 +12,11 @@ import {
 import { getNetworkFromAddress } from '../../lib/network/guard';
 import { toStacksNetwork } from '../../lib/network/stacks';
 import {
+  formatMiningFeeMicroStx,
+  toChunkCountLabel,
+  type CollectionMiningFeeGuidance
+} from '../../lib/collection-mint/mining-fee-guidance';
+import {
   parseManageJsonResponse,
   toManageApiErrorMessage
 } from '../lib/api-errors';
@@ -181,6 +186,7 @@ const unwrapReadOnly = (value: ClarityValue) => {
 
 type PublishOpsPanelProps = {
   activeCollectionId?: string;
+  onJourneyRefreshRequested?: () => void;
 };
 
 export default function PublishOpsPanel(props: PublishOpsPanelProps) {
@@ -197,9 +203,13 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
   const [coverMessage, setCoverMessage] = useState<string | null>(null);
   const [descriptionMessage, setDescriptionMessage] = useState<string | null>(null);
   const [liveLinkMessage, setLiveLinkMessage] = useState<string | null>(null);
+  const [feeGuidanceMessage, setFeeGuidanceMessage] = useState<string | null>(null);
   const [coverSaving, setCoverSaving] = useState(false);
   const [descriptionSaving, setDescriptionSaving] = useState(false);
   const [coverPreviewFailed, setCoverPreviewFailed] = useState(false);
+  const [feeGuidance, setFeeGuidance] = useState<CollectionMiningFeeGuidance | null>(
+    null
+  );
   const [onChainReservationOwner, setOnChainReservationOwner] = useState('');
   const [onChainReservationHash, setOnChainReservationHash] = useState('');
   const [onChainReservationStatus, setOnChainReservationStatus] =
@@ -461,6 +471,8 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       setSelectedCoverAssetId('');
       setInscribedCoverUrl('');
       setCollectionDescriptionInput('');
+      setFeeGuidance(null);
+      setFeeGuidanceMessage(null);
       setOnChainReservationStatus(null);
       setOnChainReservationMessage(null);
       setOnChainReservedCount(null);
@@ -477,10 +489,14 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
 
     setReadiness((prev) => ({ ...prev, loading: true, error: null }));
     setCoverMessage(null);
+    setFeeGuidanceMessage(null);
     try {
-      const [collectionResponse, assetsResponse] = await Promise.all([
+      const [collectionResponse, assetsResponse, feeGuidanceResponse] = await Promise.all([
         fetch(`/collections/${encodeURIComponent(normalizedCollectionId)}`),
-        fetch(`/collections/${encodeURIComponent(normalizedCollectionId)}/assets`)
+        fetch(`/collections/${encodeURIComponent(normalizedCollectionId)}/assets`),
+        fetch(
+          `/collections/${encodeURIComponent(normalizedCollectionId)}/fee-guidance`
+        )
       ]);
 
       const loadedCollection = await parseManageJsonResponse<CollectionRecord>(
@@ -491,6 +507,18 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
         assetsResponse,
         'Collection assets'
       );
+      let loadedFeeGuidance: CollectionMiningFeeGuidance | null = null;
+      try {
+        loadedFeeGuidance =
+          await parseManageJsonResponse<CollectionMiningFeeGuidance>(
+            feeGuidanceResponse,
+            'Mining fee guidance'
+          );
+      } catch (error) {
+        setFeeGuidanceMessage(
+          toManageApiErrorMessage(error, 'Unable to load mining fee guidance.')
+        );
+      }
 
       const loadedMetadata = toRecord(loadedCollection.metadata) ?? null;
       const mintTypeRaw =
@@ -527,6 +555,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       setSelectedCoverAssetId(savedAssetId);
       setInscribedCoverUrl(savedUrl);
       setCollectionDescriptionInput(savedDescription);
+      setFeeGuidance(loadedFeeGuidance);
       setReadiness({
         loading: false,
         contractConnected: !!loadedCollection.contract_address,
@@ -535,9 +564,11 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
         supplyTarget,
         error: null
       });
+      props.onJourneyRefreshRequested?.();
     } catch (error) {
       setCollection(null);
       setAssets([]);
+      setFeeGuidance(null);
       setCollectionDescriptionInput('');
       setOnChainReservationStatus(null);
       setOnChainReservedCount(null);
@@ -570,6 +601,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       await parseManageJsonResponse(response, 'Publish');
       setMessage('Collection published.');
       await loadReadiness();
+      props.onJourneyRefreshRequested?.();
     } catch (error) {
       setMessage(toManageApiErrorMessage(error, 'Publish failed'));
     }
@@ -676,6 +708,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       );
       setCollection(updated);
       setCoverMessage('Cover image settings saved.');
+      props.onJourneyRefreshRequested?.();
     } catch (error) {
       setCoverMessage(toManageApiErrorMessage(error, 'Unable to save cover image settings.'));
     } finally {
@@ -737,6 +770,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
           toMultilineText(updatedCollectionMetadata?.description)
       );
       setDescriptionMessage('Collection description saved.');
+      props.onJourneyRefreshRequested?.();
     } catch (error) {
       setDescriptionMessage(
         toManageApiErrorMessage(error, 'Unable to save collection description.')
@@ -759,6 +793,8 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
     setCoverMessage(null);
     setDescriptionMessage(null);
     setLiveLinkMessage(null);
+    setFeeGuidanceMessage(null);
+    setFeeGuidance(null);
     setOnChainReservationMessage(null);
     setOnChainReservationStatus(null);
   }, [normalizedActiveCollectionId]);
@@ -928,13 +964,16 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
         <span className="field__hint">
           Refresh reservations to see pending buyer slots for this collection.
         </span>
-        <button
-          className="button button--ghost"
-          type="button"
-          onClick={() => void loadReservations()}
-        >
-          Refresh reservations
-        </button>
+        <span className="info-label">
+          <button
+            className="button button--ghost"
+            type="button"
+            onClick={() => void loadReservations()}
+          >
+            Refresh reservations
+          </button>
+          <InfoTooltip text="Reloads backend reservation rows and on-chain reservation counters for this drop." />
+        </span>
       </label>
 
       {livePagePath ? (
@@ -947,27 +986,33 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
             <code>{livePageUrl || livePagePath}</code>
           </p>
           <div className="mint-actions">
-            <a
-              className="button button--ghost button--mini collection-live-preview__link-button"
-              href={livePagePath}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Open live page
-            </a>
-            <button
-              className="button button--ghost button--mini"
-              type="button"
-              onClick={() => void copyLivePageLink()}
-            >
-              Copy live page link
-            </button>
+            <span className="info-label">
+              <a
+                className="button button--ghost button--mini collection-live-preview__link-button"
+                href={livePagePath}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open live page
+              </a>
+              <InfoTooltip text="Opens the public mint page exactly as collectors will see it." />
+            </span>
+            <span className="info-label">
+              <button
+                className="button button--ghost button--mini"
+                type="button"
+                onClick={() => void copyLivePageLink()}
+              >
+                Copy live page link
+              </button>
+              <InfoTooltip text="Copies the public mint URL so you can share it externally." />
+            </span>
           </div>
           {liveLinkMessage ? <p className="meta-value">{liveLinkMessage}</p> : null}
         </div>
       ) : null}
 
-      <div className="deploy-wizard__defaults">
+      <div className="deploy-wizard__defaults" id="manage-live-page-settings">
         <p className="deploy-wizard__defaults-title info-label">
           Publish readiness
           <InfoTooltip text="Checks if this drop has the minimum setup required before making it live." />
@@ -987,13 +1032,16 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
           </li>
         </ul>
         <div className="mint-actions">
-          <button
-            className="button button--ghost button--mini"
-            type="button"
-            onClick={() => void loadReadiness()}
-          >
-            Re-check readiness
-          </button>
+          <span className="info-label">
+            <button
+              className="button button--ghost button--mini"
+              type="button"
+              onClick={() => void loadReadiness()}
+            >
+              Re-check readiness
+            </button>
+            <InfoTooltip text="Re-runs readiness checks after you update launch controls, assets, or cover settings." />
+          </span>
         </div>
       </div>
 
@@ -1067,58 +1115,70 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
         </label>
 
         <div className="mint-actions">
-          <button
-            className="button button--ghost button--mini"
-            type="button"
-            onClick={() => void loadOnChainReservationStatus()}
-            disabled={reservationControlsDisabled}
-          >
-            {onChainReservationLoading ? 'Checking...' : 'Check on-chain reservation'}
-          </button>
-          <button
-            className="button button--ghost button--mini"
-            type="button"
-            onClick={() =>
-              void runOnChainReservationAction(
-                'Release expired reservation',
-                'release-expired-reservation',
-                true
-              )
-            }
-            disabled={reservationControlsDisabled}
-          >
-            {onChainReservationActionPending
-              ? 'Submitting...'
-              : 'Release expired reservation'}
-          </button>
-          <button
-            className="button button--ghost button--mini"
-            type="button"
-            onClick={() =>
-              void runOnChainReservationAction(
-                'Force release reservation',
-                'release-reservation',
-                true
-              )
-            }
-            disabled={reservationControlsDisabled}
-          >
-            {onChainReservationActionPending ? 'Submitting...' : 'Force release reservation'}
-          </button>
-          <button
-            className="button button--ghost button--mini"
-            type="button"
-            onClick={() =>
-              void runOnChainReservationAction(
-                'Cancel reservation',
-                'cancel-reservation',
-                false
-              )
-            }
-            disabled={reservationControlsDisabled}
-          >
-            {onChainReservationActionPending ? 'Submitting...' : 'Cancel as connected wallet'}
-          </button>
+          <span className="info-label">
+            <button
+              className="button button--ghost button--mini"
+              type="button"
+              onClick={() => void loadOnChainReservationStatus()}
+              disabled={reservationControlsDisabled}
+            >
+              {onChainReservationLoading ? 'Checking...' : 'Check on-chain reservation'}
+            </button>
+            <InfoTooltip text="Reads reservation details for the owner + hash pair from the collection contract." />
+          </span>
+          <span className="info-label">
+            <button
+              className="button button--ghost button--mini"
+              type="button"
+              onClick={() =>
+                void runOnChainReservationAction(
+                  'Release expired reservation',
+                  'release-expired-reservation',
+                  true
+                )
+              }
+              disabled={reservationControlsDisabled}
+            >
+              {onChainReservationActionPending
+                ? 'Submitting...'
+                : 'Release expired reservation'}
+            </button>
+            <InfoTooltip text="Owner/operator action for expired reservation cleanup." />
+          </span>
+          <span className="info-label">
+            <button
+              className="button button--ghost button--mini"
+              type="button"
+              onClick={() =>
+                void runOnChainReservationAction(
+                  'Force release reservation',
+                  'release-reservation',
+                  true
+                )
+              }
+              disabled={reservationControlsDisabled}
+            >
+              {onChainReservationActionPending ? 'Submitting...' : 'Force release reservation'}
+            </button>
+            <InfoTooltip text="Owner/operator override to release a reservation even before expiry." />
+          </span>
+          <span className="info-label">
+            <button
+              className="button button--ghost button--mini"
+              type="button"
+              onClick={() =>
+                void runOnChainReservationAction(
+                  'Cancel reservation',
+                  'cancel-reservation',
+                  false
+                )
+              }
+              disabled={reservationControlsDisabled}
+            >
+              {onChainReservationActionPending ? 'Submitting...' : 'Cancel as connected wallet'}
+            </button>
+            <InfoTooltip text="Cancels using the connected wallet as reservation owner." />
+          </span>
         </div>
 
         {onChainReservationStatus && (
@@ -1147,7 +1207,10 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       </div>
 
       <div className="deploy-wizard__defaults">
-        <p className="deploy-wizard__defaults-title">Collection cover image</p>
+        <p className="deploy-wizard__defaults-title info-label">
+          Collection cover image
+          <InfoTooltip text="Controls hero artwork and description shown at the top of the public mint page." />
+        </p>
         <p className="field__hint">
           Set the hero image for your live collection page. You can use an uploaded
           collection image or an existing inscribed image URL.
@@ -1249,22 +1312,28 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
         </label>
 
         <div className="mint-actions">
-          <button
-            className="button button--ghost button--mini"
-            type="button"
-            onClick={() => void saveCoverSettings()}
-            disabled={coverSaving || !collectionId.trim()}
-          >
-            {coverSaving ? 'Saving...' : 'Save cover image'}
-          </button>
-          <button
-            className="button button--ghost button--mini"
-            type="button"
-            onClick={() => void saveCollectionDescription()}
-            disabled={descriptionSaving || !collectionId.trim()}
-          >
-            {descriptionSaving ? 'Saving...' : 'Save description'}
-          </button>
+          <span className="info-label">
+            <button
+              className="button button--ghost button--mini"
+              type="button"
+              onClick={() => void saveCoverSettings()}
+              disabled={coverSaving || !collectionId.trim()}
+            >
+              {coverSaving ? 'Saving...' : 'Save cover image'}
+            </button>
+            <InfoTooltip text="Writes current cover source/selection to collection page metadata." />
+          </span>
+          <span className="info-label">
+            <button
+              className="button button--ghost button--mini"
+              type="button"
+              onClick={() => void saveCollectionDescription()}
+              disabled={descriptionSaving || !collectionId.trim()}
+            >
+              {descriptionSaving ? 'Saving...' : 'Save description'}
+            </button>
+            <InfoTooltip text="Saves the collection summary text shown on the live page." />
+          </span>
         </div>
         {coverMessage && <p className="meta-value">{coverMessage}</p>}
         {descriptionMessage && <p className="meta-value">{descriptionMessage}</p>}
@@ -1287,14 +1356,17 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
           )}
         </div>
         <div className="collection-live-preview__content">
-          <p className="collection-live-preview__eyebrow">Live collection page preview</p>
+          <p className="collection-live-preview__eyebrow info-label">
+            Live collection page preview
+            <InfoTooltip text="Preview of the public hero section using your saved metadata + cover settings." />
+          </p>
           <h3>{previewTitle}</h3>
           <p className="collection-live-preview__description">{previewDescription}</p>
           <div className="collection-live-preview__meta">
             <span>Ticker: {previewSymbol}</span>
             <span>State: {liveState}</span>
             <span>Supply: {previewSupply > 0 ? previewSupply : 'TBD'}</span>
-            <span>Mint price: {previewMintPrice} STX</span>
+            <span>Advertised mint price: {previewMintPrice} STX</span>
           </div>
           <div className="mint-actions">
             <button className="button" type="button" disabled>
@@ -1307,15 +1379,111 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
         </div>
       </div>
 
+      <div className="deploy-wizard__defaults">
+        <p className="deploy-wizard__defaults-title info-label">
+          Mining fee guidance (largest file)
+          <InfoTooltip text="Server-side estimate of mining fees for begin, upload batch(es), and seal based on the largest staged file. Protocol fees are separate from the advertised mint price." />
+        </p>
+        {feeGuidance?.available ? (
+          <>
+            <p className="field__hint">
+              Largest file:{' '}
+              <code>
+                {feeGuidance.largestAsset?.filename ||
+                  feeGuidance.largestAsset?.path ||
+                  'Unknown file'}
+              </code>{' '}
+              · {toChunkCountLabel(feeGuidance.chunkCount)} chunk(s) ·{' '}
+              {feeGuidance.batchCount.toLocaleString()} upload batch(es)
+            </p>
+            <div className="fee-guidance-table-wrapper">
+              <table className="fee-guidance-table">
+                <thead>
+                  <tr>
+                    <th>Step</th>
+                    <th>Tx count</th>
+                    <th>Chunk count</th>
+                    <th>Suggested mining fee</th>
+                    <th>Wallet default</th>
+                    <th>Note</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {feeGuidance.table.map((row) => (
+                    <tr key={row.step}>
+                      <td>{row.label}</td>
+                      <td>{row.txCount.toLocaleString()}</td>
+                      <td>{row.chunkCount > 0 ? row.chunkCount.toLocaleString() : '—'}</td>
+                      <td>
+                        {formatMiningFeeMicroStx(row.recommendedTotalMicroStx)}
+                        {row.recommendedPerTxMicroStx !== null
+                          ? ` total (~${formatMiningFeeMicroStx(
+                              row.recommendedPerTxMicroStx
+                            )} each)`
+                          : ' total'}
+                      </td>
+                      <td>
+                        {formatMiningFeeMicroStx(row.walletDefaultTotalMicroStx)}
+                        {row.walletDefaultPerTxMicroStx !== null
+                          ? ` total (${formatMiningFeeMicroStx(
+                              row.walletDefaultPerTxMicroStx
+                            )} each)`
+                          : ''}
+                      </td>
+                      <td className="fee-guidance-table__note">{row.note}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {feeGuidance.uploadBatches.length > 0 && (
+              <ul>
+                {feeGuidance.uploadBatches.map((batch) => (
+                  <li key={batch.label}>
+                    {batch.label}: {batch.batchCount.toLocaleString()} tx · suggested{' '}
+                    {formatMiningFeeMicroStx(batch.recommendedPerTxMicroStx)} each ·
+                    wallet default{' '}
+                    {formatMiningFeeMicroStx(batch.walletDefaultPerTxMicroStx)} each.
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="field__hint">
+              Ballpark total mining fee for this largest file: roughly{' '}
+              <strong>
+                {formatMiningFeeMicroStx(feeGuidance.totals.lowBallparkMicroStx)} to{' '}
+                {formatMiningFeeMicroStx(feeGuidance.totals.highBallparkMicroStx)}
+              </strong>
+              . If a wallet rejects a lower fee, increase gradually and retry.
+            </p>
+            {feeGuidance.warnings.map((warning) => (
+              <p key={warning} className="field__hint">
+                {warning}
+              </p>
+            ))}
+          </>
+        ) : (
+          <p className="field__hint">
+            {feeGuidance?.warnings[0] ??
+              'Upload at least one file to generate mining fee guidance.'}
+          </p>
+        )}
+        {feeGuidanceMessage ? <p className="field__hint">{feeGuidanceMessage}</p> : null}
+      </div>
+
       <div className="mint-actions">
-        <button
-          className="button"
-          type="button"
-          onClick={() => void publishCollection()}
-          disabled={!canPublish}
-        >
-          {alreadyPublished ? 'Collection already live' : 'Publish collection'}
-        </button>
+        <span className="info-label">
+          <button
+            className="button"
+            type="button"
+            id="manage-publish-collection-button"
+            onClick={() => void publishCollection()}
+            disabled={!canPublish}
+          >
+            {alreadyPublished ? 'Collection already live' : 'Publish collection'}
+          </button>
+          <InfoTooltip text="Marks the drop published in backend state so the live collection page can serve it." />
+        </span>
         <span className="field__hint">
           Publishing marks this drop as live in the manager backend.
         </span>
@@ -1338,11 +1506,15 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
 
       {reservations.length > 0 && (
         <div>
-          <h3>Pending reservations</h3>
+          <h3 className="info-label">
+            Pending reservations
+            <InfoTooltip text="Current reservation rows tracked by backend for this drop." />
+          </h3>
           <ul>
             {reservations.map((reservation) => (
               <li key={String(reservation.reservation_id)}>
-                {reservation.asset_id} · {reservation.status} · expires{' '}
+                {toText(reservation.asset_id) || 'Unknown asset'} ·{' '}
+                {toText(reservation.status) || 'unknown'} · expires{' '}
                 {new Date(Number(reservation.expires_at ?? 0)).toLocaleString()}
               </li>
             ))}

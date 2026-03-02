@@ -6,7 +6,7 @@ import {
 
 describe('sdk capabilities compatibility', () => {
   it('exposes the supported protocol versions in stable order', () => {
-    expect(PROTOCOL_VERSIONS).toEqual(['1.1.1', '2.1.0']);
+    expect(PROTOCOL_VERSIONS).toEqual(['1.1.1', '2.1.0', '2.1.1']);
   });
 
   it('resolves capabilities by explicit protocol version', () => {
@@ -22,6 +22,13 @@ describe('sdk capabilities compatibility', () => {
       contractName: 'xtrata-v2-1-0'
     });
     expect(resolved.version).toBe('2.1.0');
+  });
+
+  it('infers capabilities for xtrata-v2-1-1', () => {
+    const resolved = resolveContractCapabilities({
+      contractName: 'xtrata-v2-1-1'
+    });
+    expect(resolved.version).toBe('2.1.1');
   });
 
   it('falls back safely for unknown contracts', () => {

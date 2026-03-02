@@ -39,7 +39,7 @@ import {
 } from '../../lib/deploy/pricing-lock';
 import InfoTooltip from './InfoTooltip';
 import legacyV11TemplateSource from '../../../contracts/clarinet/contracts/xtrata-collection-mint-v1.1.clar?raw';
-import standardTemplateSource from '../../../contracts/clarinet/contracts/xtrata-collection-mint-v1.2.clar?raw';
+import standardTemplateSource from '../../../contracts/clarinet/contracts/xtrata-collection-mint-v1.3.clar?raw';
 import preinscribedTemplateSource from '../../../contracts/clarinet/contracts/xtrata-preinscribed-collection-sale-v1.0.clar?raw';
 
 type CollectionDraft = {
@@ -85,6 +85,24 @@ const formatMicroStx = (value: bigint) => {
   const fraction = (absolute % MICROSTX_PER_STX).toString().padStart(6, '0');
   return `${sign}${whole.toString()}.${fraction} STX`;
 };
+
+const formatMicroStxInput = (value: bigint) => {
+  const whole = value / MICROSTX_PER_STX;
+  const fraction = value % MICROSTX_PER_STX;
+  if (fraction === 0n) {
+    return whole.toString();
+  }
+  const fractionText = fraction
+    .toString()
+    .padStart(6, '0')
+    .replace(/0+$/g, '');
+  return `${whole.toString()}.${fractionText}`;
+};
+
+const resolveOnChainMintPriceAfterSealAbsorption = (params: {
+  advertisedMintPriceMicroStx: bigint;
+  worstCaseSealFeeMicroStx: bigint;
+}) => params.advertisedMintPriceMicroStx - params.worstCaseSealFeeMicroStx;
 
 const readCoreFeeUnitMicroStx = async (params: {
   coreTarget: ArtistDeployCoreTarget;
@@ -177,7 +195,7 @@ const compactClaritySourceForDeploy = (source: string) => {
   return result.length > 0 ? result : source;
 };
 
-type DeployTemplateMode = 'standard-v1.2' | 'legacy-v1.1-compat';
+type DeployTemplateMode = 'standard-v1.3' | 'legacy-v1.1-compat';
 
 type ContractNameAvailability = {
   exists: boolean;
@@ -230,6 +248,79 @@ type DeployWizardDraftStorage = {
   marketplaceAddressTouched: boolean;
 };
 
+const toRecord = (value: unknown) =>
+  value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
+
+const toText = (value: unknown) =>
+  typeof value === 'string' ? value.trim() : '';
+
+const toPositiveIntegerText = (value: unknown) => {
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+    return Math.floor(value).toString();
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim();
+    if (/^\d+$/.test(normalized)) {
+      const parsed = Number.parseInt(normalized, 10);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        return parsed.toString();
+      }
+    }
+  }
+  return null;
+};
+
+const toParentIdsText = (value: unknown) => {
+  if (!Array.isArray(value)) {
+    return '';
+  }
+  return value
+    .map((entry) => toText(entry))
+    .filter((entry) => entry.length > 0)
+    .join(', ');
+};
+
+const toMintType = (value: unknown): ArtistMintType =>
+  value === 'pre-inscribed' ? 'pre-inscribed' : 'standard';
+
+const buildDraftFormFromCollection = (
+  collection: CollectionDraft
+): DeployWizardDraftStorage | null => {
+  const metadata = toRecord(collection.metadata);
+  const collectionMetadata = toRecord(metadata?.collection);
+  const hardcodedDefaults = toRecord(metadata?.hardcodedDefaults);
+  const recipients = toRecord(hardcodedDefaults?.recipients);
+  const resolvedCollectionName =
+    toText(collectionMetadata?.name) ||
+    toText(collection.display_name) ||
+    toText(collection.slug);
+  if (!resolvedCollectionName) {
+    return null;
+  }
+
+  const resolvedSymbol = toText(collectionMetadata?.symbol);
+  const resolvedDescription = toText(collectionMetadata?.description);
+  const resolvedSupply = toPositiveIntegerText(collectionMetadata?.supply) ?? '1000';
+  const resolvedMintPriceStx = toText(collectionMetadata?.mintPriceStx) || '0';
+  const resolvedArtistAddress = toText(recipients?.artist);
+  const resolvedMarketplaceAddress = toText(recipients?.marketplace);
+
+  return {
+    collectionName: resolvedCollectionName,
+    symbol: resolvedSymbol,
+    symbolTouched: resolvedSymbol.length > 0,
+    description: resolvedDescription,
+    supply: resolvedSupply,
+    mintPriceStx: resolvedMintPriceStx,
+    mintType: toMintType(metadata?.mintType),
+    parentInscriptions: toParentIdsText(collectionMetadata?.parentInscriptionIds),
+    artistAddress: resolvedArtistAddress,
+    artistAddressTouched: resolvedArtistAddress.length > 0,
+    marketplaceAddress: resolvedMarketplaceAddress,
+    marketplaceAddressTouched: resolvedMarketplaceAddress.length > 0
+  };
+};
+
 const parseStoredDraft = (value: string | null): DeployWizardDraftStorage | null => {
   if (!value) {
     return null;
@@ -275,6 +366,8 @@ type DeployWizardPanelProps = {
     label: string;
     deployed: boolean;
   }) => void;
+  onJourneyRefreshRequested?: () => void;
+  journeyRefreshToken?: number;
 };
 
 export default function DeployWizardPanel(props: DeployWizardPanelProps) {
@@ -297,12 +390,15 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
   const [draftPending, setDraftPending] = useState(false);
   const [selectedDraftLoading, setSelectedDraftLoading] = useState(false);
   const [deployTemplateMode, setDeployTemplateMode] =
-    useState<DeployTemplateMode>('standard-v1.2');
+    useState<DeployTemplateMode>('standard-v1.3');
   const [deployAttemptId, setDeployAttemptId] = useState<string | null>(null);
   const [deployDebugLog, setDeployDebugLog] = useState<string[]>([]);
   const [coreFeeUnitMicroStx, setCoreFeeUnitMicroStx] = useState<bigint | null>(null);
+  const [mintPriceLockHintActive, setMintPriceLockHintActive] = useState(false);
   const reviewCloseButtonRef = useRef<HTMLButtonElement | null>(null);
   const hasHydratedDraftRef = useRef(false);
+  const hydratedCollectionFormIdRef = useRef<string | null>(null);
+  const mintPriceLockHintTimerRef = useRef<number | null>(null);
 
   const { walletSession, walletAdapter, connect } = useManageWallet();
   const normalizedActiveCollectionId = useMemo(
@@ -326,8 +422,8 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
   );
 
   useEffect(() => {
-    if (mintType !== 'standard' && deployTemplateMode !== 'standard-v1.2') {
-      setDeployTemplateMode('standard-v1.2');
+    if (mintType !== 'standard' && deployTemplateMode !== 'standard-v1.3') {
+      setDeployTemplateMode('standard-v1.3');
     }
   }, [mintType, deployTemplateMode]);
 
@@ -359,6 +455,18 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       previousActiveElement?.focus();
     };
   }, [reviewOpen, deployPending]);
+
+  useEffect(
+    () => () => {
+      if (
+        typeof window !== 'undefined' &&
+        mintPriceLockHintTimerRef.current !== null
+      ) {
+        window.clearTimeout(mintPriceLockHintTimerRef.current);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -439,7 +547,8 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         const response = await fetch(
           `/collections/${encodeURIComponent(normalizedActiveCollectionId)}`,
           {
-            signal: controller.signal
+            signal: controller.signal,
+            cache: 'no-store'
           }
         );
         const payload = await parseManageJsonResponse<CollectionDraft>(
@@ -463,6 +572,40 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     void loadSelectedDraft();
     return () => controller.abort();
   }, [normalizedActiveCollectionId]);
+
+  useEffect(() => {
+    hydratedCollectionFormIdRef.current = null;
+  }, [normalizedActiveCollectionId]);
+
+  useEffect(() => {
+    if (!collection) {
+      return;
+    }
+    const draftId = collection?.id?.trim() ?? '';
+    if (!draftId || draftId !== normalizedActiveCollectionId) {
+      return;
+    }
+    if (hydratedCollectionFormIdRef.current === draftId) {
+      return;
+    }
+    const hydrated = buildDraftFormFromCollection(collection);
+    hydratedCollectionFormIdRef.current = draftId;
+    if (!hydrated) {
+      return;
+    }
+    setCollectionName(hydrated.collectionName);
+    setSymbol(hydrated.symbol);
+    setSymbolTouched(hydrated.symbolTouched);
+    setDescription(hydrated.description);
+    setSupply(hydrated.supply);
+    setMintPriceStx(hydrated.mintPriceStx);
+    setMintType(hydrated.mintType);
+    setParentInscriptions(hydrated.parentInscriptions);
+    setArtistAddress(hydrated.artistAddress);
+    setArtistAddressTouched(hydrated.artistAddressTouched);
+    setMarketplaceAddress(hydrated.marketplaceAddress);
+    setMarketplaceAddressTouched(hydrated.marketplaceAddressTouched);
+  }, [collection, normalizedActiveCollectionId]);
 
   useEffect(() => {
     if (symbolTouched) {
@@ -819,17 +962,89 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     coreFeeUnitMicroStx,
     deployBuild.resolved.mintPriceMicroStx
   ]);
+  const deployAbsorbsWorstCaseSealFee =
+    mintType === 'standard' && !useLegacyV11CompatTemplate;
+  const onChainMintPriceAfterAbsorptionMicroStx = useMemo(() => {
+    if (!deployAbsorbsWorstCaseSealFee || !pricingPreflight) {
+      return deployBuild.resolved.mintPriceMicroStx;
+    }
+    return resolveOnChainMintPriceAfterSealAbsorption({
+      advertisedMintPriceMicroStx: deployBuild.resolved.mintPriceMicroStx,
+      worstCaseSealFeeMicroStx: pricingPreflight.worstCaseSealFeeMicroStx
+    });
+  }, [
+    deployAbsorbsWorstCaseSealFee,
+    pricingPreflight,
+    deployBuild.resolved.mintPriceMicroStx
+  ]);
+  const minimumMintPriceMicroStx = useMemo(() => {
+    if (mintType !== 'standard' || !pricingPreflight) {
+      return null;
+    }
+    return pricingPreflight.worstCaseSealFeeMicroStx + 1n;
+  }, [mintType, pricingPreflight]);
+  const standardMintPriceLocked = mintType === 'standard' && !collectionDeployPricingLock;
+  const mintPriceHintId = 'deploy-mint-price-hint';
+  const standardMintPriceBelowFloor =
+    mintType === 'standard' &&
+    minimumMintPriceMicroStx !== null &&
+    deployBuild.resolved.mintPriceMicroStx < minimumMintPriceMicroStx;
   const reviewDeployBlockedByPricing =
     mintType === 'standard' &&
-    collection !== null &&
-    (!collectionDeployPricingLock || (pricingPreflight ? !pricingPreflight.safe : false));
+    (!collectionDeployPricingLock || !pricingPreflight || !pricingPreflight.safe);
+
+  const triggerMintPriceLockHint = useCallback(() => {
+    if (!standardMintPriceLocked) {
+      return;
+    }
+    setMintPriceLockHintActive(true);
+    if (typeof window === 'undefined') {
+      return;
+    }
+    if (mintPriceLockHintTimerRef.current !== null) {
+      window.clearTimeout(mintPriceLockHintTimerRef.current);
+    }
+    mintPriceLockHintTimerRef.current = window.setTimeout(() => {
+      setMintPriceLockHintActive(false);
+      mintPriceLockHintTimerRef.current = null;
+    }, 2600);
+  }, [standardMintPriceLocked]);
+
+  useEffect(() => {
+    if (standardMintPriceLocked) {
+      return;
+    }
+    setMintPriceLockHintActive(false);
+    if (
+      typeof window !== 'undefined' &&
+      mintPriceLockHintTimerRef.current !== null
+    ) {
+      window.clearTimeout(mintPriceLockHintTimerRef.current);
+      mintPriceLockHintTimerRef.current = null;
+    }
+  }, [standardMintPriceLocked]);
+
+  useEffect(() => {
+    if (mintType !== 'standard' || minimumMintPriceMicroStx === null) {
+      return;
+    }
+    if (deployBuild.resolved.mintPriceMicroStx >= minimumMintPriceMicroStx) {
+      return;
+    }
+    setMintPriceStx(formatMicroStxInput(minimumMintPriceMicroStx));
+  }, [
+    mintType,
+    minimumMintPriceMicroStx,
+    deployBuild.resolved.mintPriceMicroStx
+  ]);
+
   const preflightTemplateVersion = useMemo(() => {
     if (mintType === 'pre-inscribed') {
       return 'xtrata-preinscribed-collection-sale-v1.0';
     }
     return useLegacyV11CompatTemplate
       ? 'xtrata-collection-mint-v1.1'
-      : 'xtrata-collection-mint-v1.2';
+      : 'xtrata-collection-mint-v1.3';
   }, [mintType, useLegacyV11CompatTemplate]);
   const deploySourceByteLength = useMemo(
     () => new TextEncoder().encode(deployBuild.source).byteLength,
@@ -854,6 +1069,15 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       pricingLockAssetCount: collectionDeployPricingLock?.assetCount ?? null,
       pricingLockMaxChunks: collectionDeployPricingLock?.maxChunks ?? null,
       pricingLockLockedAt: collectionDeployPricingLock?.lockedAt ?? null,
+      deployAbsorbsWorstCaseSealFee,
+      absorbedSealFeeMicroStx:
+        deployAbsorbsWorstCaseSealFee && pricingPreflight
+          ? pricingPreflight.worstCaseSealFeeMicroStx.toString()
+          : null,
+      onChainMintPriceMicroStx:
+        mintType === 'standard'
+          ? onChainMintPriceAfterAbsorptionMicroStx.toString()
+          : deployBuild.resolved.mintPriceMicroStx.toString(),
       worstCaseSealFeeMicroStx: pricingPreflight
         ? pricingPreflight.worstCaseSealFeeMicroStx.toString()
         : null,
@@ -878,6 +1102,8 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       deployBuild.source.length,
       deploySourceByteLength,
       collectionDeployPricingLock,
+      deployAbsorbsWorstCaseSealFee,
+      onChainMintPriceAfterAbsorptionMicroStx,
       pricingPreflight,
       deployBuild.errors.length,
       deployBuild.warnings.length
@@ -897,7 +1123,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
   };
 
   const refreshSelectedDraft = useCallback(
-    async (reason: string) => {
+    async (reason: string, options?: { notifyJourney?: boolean }) => {
       const candidateId =
         normalizedActiveCollectionId || collection?.id?.trim() || '';
       if (!candidateId) {
@@ -925,6 +1151,9 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
           pricingLockMaxChunks: lock?.maxChunks ?? null,
           pricingLockLockedAt: lock?.lockedAt ?? null
         });
+        if (options?.notifyJourney !== false) {
+          props.onJourneyRefreshRequested?.();
+        }
         return payload;
       } catch (error) {
         appendDeployDebug('Selected draft refresh failed', {
@@ -937,14 +1166,30 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         setSelectedDraftLoading(false);
       }
     },
-    [normalizedActiveCollectionId, collection?.id]
+    [normalizedActiveCollectionId, collection?.id, props.onJourneyRefreshRequested]
   );
+
+  useEffect(() => {
+    if (!normalizedActiveCollectionId) {
+      return;
+    }
+    if (typeof props.journeyRefreshToken !== 'number') {
+      return;
+    }
+    void refreshSelectedDraft('journey-refresh', {
+      notifyJourney: false
+    });
+  }, [
+    props.journeyRefreshToken,
+    normalizedActiveCollectionId,
+    refreshSelectedDraft
+  ]);
 
   useEffect(() => {
     const details = {
       debugVersion: DEPLOY_DEBUG_VERSION,
       clarityVersion: DEPLOY_CLARITY_VERSION,
-      defaultDeployTemplateMode: 'standard-v1.2',
+      defaultDeployTemplateMode: 'standard-v1.3',
       sourceCompactionMode: DEPLOY_SOURCE_COMPACTION_MODE
     };
     const timestamp = new Date().toISOString();
@@ -1037,7 +1282,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         ? 'xtrata-preinscribed-collection-sale-v1.0'
         : useLegacyV11CompatTemplate
           ? 'xtrata-collection-mint-v1.1'
-          : 'xtrata-collection-mint-v1.2';
+          : 'xtrata-collection-mint-v1.3';
 
     const draftMetadata = {
       mintType,
@@ -1105,6 +1350,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         label: created.display_name ?? created.slug,
         deployed: false
       });
+      props.onJourneyRefreshRequested?.();
       setStatus(
         `Draft ready for Step 2 uploads. Collection ID: ${created.id}.`
       );
@@ -1216,7 +1462,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         ? 'xtrata-preinscribed-collection-sale-v1.0'
         : useLegacyV11CompatTemplate
         ? 'xtrata-collection-mint-v1.1'
-        : 'xtrata-collection-mint-v1.2';
+        : 'xtrata-collection-mint-v1.3';
     let sourceTemplateLabel = templateVersion;
     let sourceBeforeCompaction = refreshBuild.source;
     if (useLegacyV11CompatTemplate) {
@@ -1292,6 +1538,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         label: created.display_name ?? created.slug,
         deployed: false
       });
+      props.onJourneyRefreshRequested?.();
     } catch (error) {
       appendDeployDebug('Draft creation failed', {
         attemptId,
@@ -1303,6 +1550,10 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       );
       return;
     }
+
+    let deployPricingLock: ReturnType<typeof parseDeployPricingLockSnapshot> = null;
+    let deployPricingEvaluation: ReturnType<typeof evaluateDeployPriceSafety> | null =
+      null;
 
     if (mintType === 'standard') {
       const pricingLock = parseDeployPricingLockSnapshot(created.metadata);
@@ -1348,6 +1599,8 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         maxChunks: pricingLock.maxChunks,
         feeUnitMicroStx
       });
+      deployPricingLock = pricingLock;
+      deployPricingEvaluation = evaluation;
       appendDeployDebug('Pricing safety preflight evaluated', {
         attemptId,
         draftId: created.id,
@@ -1364,7 +1617,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       if (!evaluation.safe) {
         setDeployPending(false);
         setStatus(
-          `Deploy blocked. Price per mint (${formatMicroStx(
+          `Deploy blocked. Advertised mint price (${formatMicroStx(
             mintPriceMicroStx
           )}) must be greater than the worst-case seal protocol fee (${formatMicroStx(
             evaluation.worstCaseSealFeeMicroStx
@@ -1373,6 +1626,88 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         return;
       }
     }
+
+    let deployMintPriceStxForSource = mintPriceStx;
+    let deployAbsorbedSealFeeMicroStx = 0n;
+    let deployPricingLockMaxChunks: number | null = null;
+    let deployWorstCaseSealFeeMicroStx: bigint | null = null;
+    if (mintType === 'standard' && deployPricingLock && deployPricingEvaluation) {
+      deployPricingLockMaxChunks = deployPricingLock.maxChunks;
+      deployWorstCaseSealFeeMicroStx =
+        deployPricingEvaluation.worstCaseSealFeeMicroStx;
+      if (!useLegacyV11CompatTemplate) {
+        deployAbsorbedSealFeeMicroStx =
+          deployPricingEvaluation.worstCaseSealFeeMicroStx;
+        const onChainMintPriceMicroStx =
+          resolveOnChainMintPriceAfterSealAbsorption({
+            advertisedMintPriceMicroStx: refreshBuild.resolved.mintPriceMicroStx,
+            worstCaseSealFeeMicroStx: deployAbsorbedSealFeeMicroStx
+          });
+        if (onChainMintPriceMicroStx < 0n) {
+          setDeployPending(false);
+          setStatus(
+            'Deploy blocked. Unable to absorb seal protocol fee into on-chain mint price with current values.'
+          );
+          return;
+        }
+        deployMintPriceStxForSource = formatMicroStxInput(onChainMintPriceMicroStx);
+        appendDeployDebug('Seal fee absorption prepared for deploy source', {
+          attemptId,
+          advertisedMintPriceMicroStx:
+            refreshBuild.resolved.mintPriceMicroStx.toString(),
+          worstCaseSealFeeMicroStx: deployAbsorbedSealFeeMicroStx.toString(),
+          onChainMintPriceMicroStx: onChainMintPriceMicroStx.toString()
+        });
+      }
+    }
+
+    const deploySourceBuild = buildArtistDeployContractSource({
+      input: {
+        collectionName,
+        symbol,
+        description,
+        supply,
+        mintType,
+        mintPriceStx: deployMintPriceStxForSource,
+        parentInscriptions,
+        artistAddress,
+        marketplaceAddress
+      },
+      templateSources: {
+        standardSource: selectedStandardTemplateSource,
+        preinscribedSource: preinscribedTemplateSource
+      },
+      coreContractId: networkCoreTarget.contractId,
+      operatorAddress: networkCoreTarget.address
+    });
+    if (deploySourceBuild.errors.length > 0) {
+      appendDeployDebug('Deploy blocked by absorbed-price source build validation', {
+        attemptId,
+        firstError: deploySourceBuild.errors[0]
+      });
+      setDeployPending(false);
+      setStatus(deploySourceBuild.errors[0]);
+      return;
+    }
+    sourceBeforeCompaction = deploySourceBuild.source;
+
+    const deployMetadata = {
+      ...draftMetadata,
+      pricing: {
+        mode:
+          mintType === 'standard' && !useLegacyV11CompatTemplate
+            ? 'advertised-includes-seal-fee'
+            : 'raw-on-chain',
+        advertisedMintPriceMicroStx: refreshBuild.resolved.mintPriceMicroStx.toString(),
+        onChainMintPriceMicroStx: deploySourceBuild.resolved.mintPriceMicroStx.toString(),
+        absorbedSealFeeMicroStx: deployAbsorbedSealFeeMicroStx.toString(),
+        worstCaseSealFeeMicroStx:
+          deployWorstCaseSealFeeMicroStx !== null
+            ? deployWorstCaseSealFeeMicroStx.toString()
+            : null,
+        pricingLockMaxChunks: deployPricingLockMaxChunks
+      }
+    };
 
     const contractName = deriveArtistContractName({
       collectionName: refreshBuild.resolved.collectionName,
@@ -1477,7 +1812,10 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         deploySourceLengthBytes: sourceForDeployBytes,
         sourceCompacted,
         sourceCompactionMode: DEPLOY_SOURCE_COMPACTION_MODE,
-        coreContractId: networkCoreTarget.contractId
+        coreContractId: networkCoreTarget.contractId,
+        advertisedMintPriceMicroStx: refreshBuild.resolved.mintPriceMicroStx.toString(),
+        onChainMintPriceMicroStx: deploySourceBuild.resolved.mintPriceMicroStx.toString(),
+        absorbedSealFeeMicroStx: deployAbsorbedSealFeeMicroStx.toString()
       });
       appendDeployDebug(
         `Opening wallet deployment request (v=${DEPLOY_DEBUG_VERSION}, origBytes=${sourceOriginalBytes.toString()}, deployBytes=${sourceForDeployBytes.toString()}, compacted=${sourceCompacted ? 'yes' : 'no'})`
@@ -1504,7 +1842,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                 contractAddress: session.address,
                 metadata: {
                   ...(created.metadata ?? {}),
-                  ...draftMetadata,
+                  ...deployMetadata,
                   contractName,
                   deployTxId: payload.txId,
                   deployedAt: new Date().toISOString()
@@ -1522,6 +1860,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
               label: updated.display_name ?? updated.slug,
               deployed: true
             });
+            props.onJourneyRefreshRequested?.();
             appendDeployDebug('Draft metadata synced after deploy submit', {
               attemptId,
               draftId: created.id,
@@ -1541,6 +1880,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                 'unknown error'
               )}`
             );
+            props.onJourneyRefreshRequested?.();
           } finally {
             setDeployPending(false);
           }
@@ -1670,18 +2010,65 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         <label className="field">
           <span className="field__label info-label">
             Price per mint (STX)
-            <InfoTooltip text="Amount each buyer pays per piece. Use 0 for a free launch." />
+            <InfoTooltip text="Amount each buyer pays per piece. For standard mint, this unlocks after uploads are staged + locked so we can enforce a safe minimum." />
           </span>
-          <input
-            className="input"
-            inputMode="decimal"
-            value={mintPriceStx}
-            onChange={(event) => {
-              setMintPriceStx(event.target.value);
-              setStatus(null);
-            }}
-          />
-          <span className="field__hint">Set to 0 for a free mint.</span>
+          <div className="deploy-wizard__locked-input-wrap">
+            <input
+              className="input"
+              inputMode="decimal"
+              value={mintPriceStx}
+              onChange={(event) => {
+                setMintPriceStx(event.target.value);
+                setStatus(null);
+              }}
+              disabled={standardMintPriceLocked}
+              aria-describedby={mintType === 'standard' ? mintPriceHintId : undefined}
+            />
+            {standardMintPriceLocked ? (
+              <button
+                className="deploy-wizard__locked-input-overlay"
+                type="button"
+                onClick={triggerMintPriceLockHint}
+                aria-label="Price is locked until staged assets are uploaded and locked in Step 2."
+              />
+            ) : null}
+          </div>
+          {mintType === 'standard' ? (
+            <span
+              id={mintPriceHintId}
+              className={`field__hint${
+                standardMintPriceLocked && mintPriceLockHintActive
+                  ? ' field__hint--alert field__hint--flash'
+                  : ''
+              }`}
+            >
+              {standardMintPriceLocked
+                ? 'Upload and lock all files first in Step 2. Price unlocks after the largest-file fee floor is known.'
+                : minimumMintPriceMicroStx !== null
+                  ? deployAbsorbsWorstCaseSealFee
+                    ? `Minimum all-in price from locked assets: ${formatMicroStx(
+                        minimumMintPriceMicroStx
+                      )}. On deploy, on-chain mint price will be ${formatMicroStx(
+                        onChainMintPriceAfterAbsorptionMicroStx >= 0n
+                          ? onChainMintPriceAfterAbsorptionMicroStx
+                          : 0n
+                      )} (all-in minus worst-case seal protocol fee).`
+                    : `Minimum allowed from locked assets: ${formatMicroStx(
+                        minimumMintPriceMicroStx
+                      )}.`
+                  : 'Minimum price loads after lock + fee-unit read.'}
+            </span>
+          ) : (
+            <span className="field__hint">Set to 0 for a free mint.</span>
+          )}
+          {mintType === 'standard' &&
+          standardMintPriceLocked &&
+          mintPriceLockHintActive ? (
+            <span className="field__hint field__hint--alert">
+              Price entry is locked right now. Complete Step 2 by uploading your
+              files, then click "Lock staged assets for deploy" to unlock pricing.
+            </span>
+          ) : null}
         </label>
 
         {mintType === 'standard' && (
@@ -1878,16 +2265,40 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                   {pricingPreflight.feeBatches === 1 ? '' : 'es'} + seal).
                 </span>
               )}
+              {minimumMintPriceMicroStx !== null && (
+                <span className="meta-value">
+                  Minimum all-in mint price (worst-case + 1 microSTX):{' '}
+                  {formatMicroStx(minimumMintPriceMicroStx)}.
+                </span>
+              )}
+              {pricingPreflight && deployAbsorbsWorstCaseSealFee && (
+                <span className="meta-value">
+                  On-chain mint price at deploy: {formatMicroStx(
+                    onChainMintPriceAfterAbsorptionMicroStx >= 0n
+                      ? onChainMintPriceAfterAbsorptionMicroStx
+                      : 0n
+                  )}{' '}
+                  (all-in price minus worst-case seal fee).
+                </span>
+              )}
               {pricingPreflight && (
                 <span className="meta-value">
-                  Pricing inputs used: mint price {formatMicroStx(pricingPreflight.mintPriceMicroStx)} ·
-                  max chunks {collectionDeployPricingLock.maxChunks.toString()} · fee unit{' '}
+                  Pricing inputs used: advertised mint price{' '}
+                  {formatMicroStx(pricingPreflight.mintPriceMicroStx)} · max chunks{' '}
+                  {collectionDeployPricingLock.maxChunks.toString()} · fee unit{' '}
                   {formatMicroStx(pricingPreflight.feeUnitMicroStx)}.
+                </span>
+              )}
+              {standardMintPriceBelowFloor && minimumMintPriceMicroStx !== null && (
+                <span className="meta-value">
+                  Price was raised to the minimum safe floor ({formatMicroStx(
+                    minimumMintPriceMicroStx
+                  )}).
                 </span>
               )}
               {pricingPreflight && !pricingPreflight.safe && (
                 <span className="meta-value">
-                  Increase mint price above {formatMicroStx(
+                  Increase all-in mint price above {formatMicroStx(
                     pricingPreflight.worstCaseSealFeeMicroStx
                   )} before deploy.
                 </span>
@@ -1903,7 +2314,10 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       )}
 
       <div className="deploy-wizard__defaults">
-        <p className="deploy-wizard__defaults-title">Safe defaults we set for you</p>
+        <p className="deploy-wizard__defaults-title info-label">
+          Safe defaults we set for you
+          <InfoTooltip text="These guardrails are auto-applied so beginner launches use consistent, proven contract settings." />
+        </p>
         <ul>
           <li>Contract code is locked and generated internally by the app.</li>
           <li>Payout split starts at 95% artist, 2.5% marketplace, 2.5% operator.</li>
@@ -1914,7 +2328,10 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
 
       {debugEnabled && mintType === 'standard' && (
         <div className="deploy-wizard__defaults">
-          <p className="deploy-wizard__defaults-title">Debug template switch</p>
+          <p className="deploy-wizard__defaults-title info-label">
+            Debug template switch
+            <InfoTooltip text="Advanced troubleshooting control for comparing deploy behavior across template variants." />
+          </p>
           <label className="field">
             <span className="field__label info-label">
               Template mode (debug only)
@@ -1926,7 +2343,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                 const nextMode =
                   event.target.value === 'legacy-v1.1-compat'
                     ? 'legacy-v1.1-compat'
-                    : 'standard-v1.2';
+                    : 'standard-v1.3';
                 setDeployTemplateMode(nextMode);
                 setStatus(null);
                 appendDeployDebug('Debug template mode changed', {
@@ -1935,7 +2352,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
               }}
               disabled={deployPending}
             >
-              <option value="standard-v1.2">Standard template (v1.2)</option>
+              <option value="standard-v1.3">Standard template (v1.3)</option>
               <option value="legacy-v1.1-compat">Legacy compatibility template (v1.1)</option>
             </select>
             <span className="field__hint">
@@ -1946,36 +2363,55 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       )}
 
       <div className="mint-actions">
-        <button
-          className="button button--ghost"
-          type="button"
-          onClick={() => void refreshSelectedDraft('manual-refresh')}
-          disabled={deployPending || draftPending || selectedDraftLoading}
-        >
-          {selectedDraftLoading ? 'Refreshing draft...' : 'Refresh draft lock status'}
-        </button>
-        <button
-          className="button button--ghost"
-          type="button"
-          onClick={handleCreateDraftOnly}
-          disabled={deployPending || draftPending}
-        >
-          {draftPending ? 'Saving draft...' : 'Create draft ID (Step 2 upload)'}
-        </button>
-        <button
-          className="button"
-          type="button"
-          onClick={handleOpenReview}
-          disabled={deployPending || draftPending}
-        >
-          {deployPending ? 'Waiting for wallet...' : 'Review deployment'}
-        </button>
+        <span className="info-label">
+          <button
+            className="button button--ghost"
+            type="button"
+            onClick={() => void refreshSelectedDraft('manual-refresh')}
+            disabled={deployPending || draftPending || selectedDraftLoading}
+          >
+            {selectedDraftLoading ? 'Refreshing draft...' : 'Refresh draft now'}
+          </button>
+          <InfoTooltip text="Reloads draft metadata and deploy status from backend for the selected collection." />
+        </span>
+        <span className="info-label">
+          <button
+            className="button button--ghost"
+            type="button"
+            onClick={handleCreateDraftOnly}
+            disabled={deployPending || draftPending}
+          >
+            {draftPending ? 'Saving draft...' : 'Create draft ID for uploads'}
+          </button>
+          <InfoTooltip text="Creates a draft record without deploying yet so you can move into staging and lock flow." />
+        </span>
+        <span className="info-label">
+          <button
+            className="button"
+            type="button"
+            onClick={handleOpenReview}
+            disabled={deployPending || draftPending || reviewDeployBlockedByPricing}
+          >
+            {deployPending ? 'Waiting for wallet...' : 'Review deployment'}
+          </button>
+          <InfoTooltip text="Opens final deploy checklist before wallet confirmation." />
+        </span>
       </div>
+
+      {mintType === 'standard' && reviewDeployBlockedByPricing && (
+        <p className="meta-value">
+          Review unlocks after uploads are staged, pricing lock is saved, and price passes the
+          largest-file fee floor.
+        </p>
+      )}
 
       {status && <p className="meta-value">{status}</p>}
 
       <div className="deploy-wizard__defaults">
-        <p className="deploy-wizard__defaults-title">Deploy debug details</p>
+        <p className="deploy-wizard__defaults-title info-label">
+          Deploy debug details
+          <InfoTooltip text="Low-level diagnostics for template version, wallet context, pricing lock state, and deploy attempts." />
+        </p>
         <ul>
           <li>Debug version: {DEPLOY_DEBUG_VERSION}</li>
           <li>Template mode: {deployTemplateMode}</li>
@@ -2147,9 +2583,29 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                       chunk batch{pricingPreflight.feeBatches === 1 ? '' : 'es'} + seal)
                     </p>
                   )}
+                  {deployBuild.resolved.mintType === 'standard' &&
+                    minimumMintPriceMicroStx !== null && (
+                      <p>
+                        <strong>Minimum all-in mint price:</strong>{' '}
+                        {formatMicroStx(minimumMintPriceMicroStx)} (worst-case + 1 microSTX)
+                      </p>
+                    )}
+                  {deployBuild.resolved.mintType === 'standard' &&
+                    pricingPreflight &&
+                    deployAbsorbsWorstCaseSealFee && (
+                      <p>
+                        <strong>On-chain mint price at deploy:</strong>{' '}
+                        {formatMicroStx(
+                          onChainMintPriceAfterAbsorptionMicroStx >= 0n
+                            ? onChainMintPriceAfterAbsorptionMicroStx
+                            : 0n
+                        )}{' '}
+                        (all-in minus worst-case seal fee)
+                      </p>
+                    )}
                   {deployBuild.resolved.mintType === 'standard' && pricingPreflight && (
                     <p className="meta-value">
-                      <strong>Pricing inputs used:</strong> mint price{' '}
+                      <strong>Pricing inputs used:</strong> advertised mint price{' '}
                       {formatMicroStx(pricingPreflight.mintPriceMicroStx)} · max chunks{' '}
                       {collectionDeployPricingLock
                         ? collectionDeployPricingLock.maxChunks.toString()
@@ -2160,10 +2616,10 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                   {deployBuild.resolved.mintType === 'standard' && pricingPreflight && (
                     <p className="meta-value">
                       {pricingPreflight.safe
-                        ? `Price safety margin: ${formatMicroStx(
+                        ? `All-in price safety margin: ${formatMicroStx(
                             pricingPreflight.marginMicroStx
                           )} above worst-case seal fee.`
-                        : `Price safety check failed. Price must be greater than ${formatMicroStx(
+                        : `Price safety check failed. All-in price must be greater than ${formatMicroStx(
                             pricingPreflight.worstCaseSealFeeMicroStx
                           )}.`}
                     </p>
@@ -2205,26 +2661,32 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
               )}
 
               <div className="modal__actions">
-                <button
-                  className="button button--ghost"
-                  type="button"
-                  onClick={() => setReviewOpen(false)}
-                  disabled={deployPending}
-                >
-                  Back
-                </button>
-                <button
-                  className="button"
-                  type="button"
-                  onClick={handleDeploy}
-                  disabled={
-                    deployPending ||
-                    deployBuild.errors.length > 0 ||
-                    reviewDeployBlockedByPricing
-                  }
-                >
-                  {deployPending ? 'Deploying...' : 'Deploy contract'}
-                </button>
+                <span className="info-label">
+                  <button
+                    className="button button--ghost"
+                    type="button"
+                    onClick={() => setReviewOpen(false)}
+                    disabled={deployPending}
+                  >
+                    Back
+                  </button>
+                  <InfoTooltip text="Returns to the draft form without sending a deploy transaction." />
+                </span>
+                <span className="info-label">
+                  <button
+                    className="button"
+                    type="button"
+                    onClick={handleDeploy}
+                    disabled={
+                      deployPending ||
+                      deployBuild.errors.length > 0 ||
+                      reviewDeployBlockedByPricing
+                    }
+                  >
+                    {deployPending ? 'Deploying...' : 'Deploy contract'}
+                  </button>
+                  <InfoTooltip text="Submits deploy transaction to wallet using the reviewed inputs and locked template." />
+                </span>
               </div>
             </div>
           </div>,

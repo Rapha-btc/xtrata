@@ -144,6 +144,17 @@ export const parseGetFeeUnit = (value: ClarityValue) =>
 export const parseGetNextTokenId = (value: ClarityValue) =>
   expectUInt(expectContractOk(value, 'get-next-token-id'), 'get-next-token-id');
 
+export const parseGetMintedCount = (value: ClarityValue) =>
+  expectUInt(expectContractOk(value, 'get-minted-count'), 'get-minted-count');
+
+export const parseGetMintedId = (value: ClarityValue) => {
+  const optional = expectOptional(value, 'get-minted-id');
+  if (!optional) {
+    return null;
+  }
+  return expectUInt(optional, 'get-minted-id');
+};
+
 export const parseGetAdmin = (value: ClarityValue) =>
   expectPrincipal(expectContractOk(value, 'get-admin'), 'get-admin');
 

@@ -5,6 +5,7 @@ import {
   boolCV,
   callReadOnlyFunction,
   ClarityType,
+  contractPrincipalCV,
   type ClarityValue,
   cvToValue,
   listCV,
@@ -357,6 +358,11 @@ export default function CollectionMintAdminScreen(
   const [artistInput, setArtistInput] = useState('');
   const [marketplaceInput, setMarketplaceInput] = useState('');
   const [operatorInput, setOperatorInput] = useState('');
+  const [recipientEditorInput, setRecipientEditorInput] = useState('');
+  const [recipientEditorMarketplaceInput, setRecipientEditorMarketplaceInput] =
+    useState('false');
+  const [recipientEditorOperatorInput, setRecipientEditorOperatorInput] =
+    useState('false');
   const [artistBpsInput, setArtistBpsInput] = useState('');
   const [marketplaceBpsInput, setMarketplaceBpsInput] = useState('');
   const [operatorBpsInput, setOperatorBpsInput] = useState('');
@@ -443,7 +449,9 @@ export default function CollectionMintAdminScreen(
 
   const coreSupportsAllowlist =
     props.contract.protocolVersion === '2.1.0' ||
-    props.contract.contractName.includes('v2-1-0');
+    props.contract.protocolVersion === '2.1.1' ||
+    props.contract.contractName.includes('v2-1-0') ||
+    props.contract.contractName.includes('v2-1-1');
 
   const isCollectionOwner =
     !!props.walletSession.address &&
@@ -452,6 +460,8 @@ export default function CollectionMintAdminScreen(
   const isFinalized = status?.finalized === true;
   const canManageCollection =
     canTransact && (!status?.owner || isCollectionOwner) && !isFinalized;
+  const canManageRecipientEditors =
+    canTransact && !isFinalized && !!collectionContract;
 
   const callCollectionReadOnly = async (
     functionName: string,
@@ -811,6 +821,25 @@ export default function CollectionMintAdminScreen(
           principalCV(artistInput.trim()),
           principalCV(marketplaceInput.trim()),
           principalCV(operatorInput.trim())
+        ]
+      })
+    );
+  };
+
+  const handleSetRecipientEditorAccess = async () => {
+    const editor = recipientEditorInput.trim();
+    if (!validateStacksAddress(editor)) {
+      setActionMessage('Enter a valid recipient editor wallet address.');
+      return;
+    }
+    await runAction('Set recipient editor access', () =>
+      requestCollectionCall({
+        functionName: 'set-recipient-editor-access',
+        functionArgs: [
+          contractPrincipalCV(props.contract.address, props.contract.contractName),
+          principalCV(editor),
+          boolCV(recipientEditorMarketplaceInput === 'true'),
+          boolCV(recipientEditorOperatorInput === 'true')
         ]
       })
     );
@@ -1349,11 +1378,11 @@ export default function CollectionMintAdminScreen(
             <LabelWithInfo
               tone="field"
               label="Collection contract name"
-              info="The exact deployed contract name, for example xtrata-collection-mint-v1-2."
+              info="The exact deployed contract name, for example xtrata-collection-mint-v1-3."
             />
             <input
               className="input"
-              placeholder="xtrata-collection-mint-v1-0"
+              placeholder="xtrata-collection-mint-v1-3"
               value={collectionName}
               onChange={(event) => setCollectionName(event.target.value)}
             />
@@ -1597,7 +1626,7 @@ export default function CollectionMintAdminScreen(
           )}
           {status?.owner && !isCollectionOwner && (
             <span className="meta-value">
-              Connect the collection owner wallet to update settings.
+              Connect the collection owner wallet to update owner-gated settings.
             </span>
           )}
         </div>
@@ -1710,6 +1739,71 @@ export default function CollectionMintAdminScreen(
                 ? 'Updating...'
                 : 'Set recipients'}
             </button>
+          </div>
+          <div className="meta-grid meta-grid--dense">
+            <label className="field field--address">
+              <LabelWithInfo
+                tone="field"
+                label="Recipient editor wallet"
+                info="Wallet that may be granted access to update marketplace and/or operator recipients."
+              />
+              <input
+                className="input input--address-fit"
+                placeholder="ST..."
+                value={recipientEditorInput}
+                onChange={(event) => setRecipientEditorInput(event.target.value)}
+              />
+            </label>
+            <label className="field">
+              <LabelWithInfo
+                tone="field"
+                label="Can edit marketplace recipient"
+                info="Enable to allow this wallet to call set-marketplace-recipient in v1.3."
+              />
+              <select
+                className="input"
+                value={recipientEditorMarketplaceInput}
+                onChange={(event) =>
+                  setRecipientEditorMarketplaceInput(event.target.value)
+                }
+              >
+                <option value="false">false</option>
+                <option value="true">true</option>
+              </select>
+            </label>
+            <label className="field">
+              <LabelWithInfo
+                tone="field"
+                label="Can edit operator recipient"
+                info="Enable to allow this wallet to call set-operator-recipient in v1.3."
+              />
+              <select
+                className="input"
+                value={recipientEditorOperatorInput}
+                onChange={(event) =>
+                  setRecipientEditorOperatorInput(event.target.value)
+                }
+              >
+                <option value="false">false</option>
+                <option value="true">true</option>
+              </select>
+            </label>
+          </div>
+          <div className="mint-actions">
+            <button
+              className="button"
+              type="button"
+              onClick={() => void handleSetRecipientEditorAccess()}
+              disabled={!canManageRecipientEditors || pendingAction !== null}
+            >
+              {pendingAction === 'Set recipient editor access'
+                ? 'Updating...'
+                : 'Set recipient editor access'}
+            </button>
+            <span className="field__hint">
+              Requires the connected wallet to be admin of the linked core Xtrata
+              contract.
+            </span>
           </div>
           <div className="meta-grid meta-grid--dense">
             <label className="field">

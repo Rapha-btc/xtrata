@@ -24,6 +24,9 @@ export const findChildrenFromKnownTokens = (
 ): bigint[] => {
   const matches = new Set<string>();
   for (const token of tokenSummaries) {
+    if (token.id <= parentId) {
+      continue;
+    }
     const deps =
       dependenciesById?.get(token.id.toString()) ?? [];
     if (deps.some((dep) => dep === parentId)) {
@@ -51,8 +54,12 @@ export const scanChildren = async (params: {
   const concurrency = Math.max(1, Math.min(params.concurrency ?? 4, 8));
   const shouldCancel = params.shouldCancel ?? (() => false);
   const maxId = params.lastTokenId;
-  const total = maxId + 1n;
-  let nextId = 0n;
+  const startId = params.parentId + 1n;
+  if (startId > maxId) {
+    return [];
+  }
+  const total = maxId - startId + 1n;
+  let nextId = startId;
   let scanned = 0n;
   let found = 0n;
   const results = new Set<string>();

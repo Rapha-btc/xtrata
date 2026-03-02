@@ -4,6 +4,7 @@ import {
   parseManageJsonResponse,
   toManageApiErrorMessage
 } from '../lib/api-errors';
+import InfoTooltip from './InfoTooltip';
 
 type DbHealth = {
   collectionsCount: number;
@@ -163,36 +164,62 @@ export default function DiagnosticsPanel(props: DiagnosticsPanelProps) {
     <div className="diagnostics-panel">
       <div className="meta-grid">
         <div>
-          <span className="meta-label">Database health</span>
+          <span className="meta-label info-label">
+            Database health
+            <InfoTooltip text="Checks the manage backend `/collections/health` route and D1 read access." />
+          </span>
           <span className="meta-value">Ping the D1 connection via `/collections/health`.</span>
         </div>
         <div className="panel__actions">
-          <button className="button button--ghost" type="button" onClick={runDatabaseCheck} disabled={dbLoading}>
-            {dbLoading ? 'Checking…' : 'Check database'}
-          </button>
+          <span className="info-label">
+            <button
+              className="button button--ghost"
+              type="button"
+              onClick={runDatabaseCheck}
+              disabled={dbLoading}
+            >
+              {dbLoading ? 'Checking…' : 'Check database'}
+            </button>
+            <InfoTooltip text="Runs a live backend check and returns table counts plus storage binding status." />
+          </span>
         </div>
       </div>
       {dbStatus && <p className="meta-value">{dbStatus}</p>}
       {dbHealth && (
         <div className="meta-grid">
           <div>
-            <span className="meta-label">collections</span>
+            <span className="meta-label info-label">
+              collections
+              <InfoTooltip text="Number of collection rows currently stored in D1." />
+            </span>
             <span className="meta-value">{dbHealth.collectionsCount}</span>
           </div>
           <div>
-            <span className="meta-label">assets</span>
+            <span className="meta-label info-label">
+              assets
+              <InfoTooltip text="Number of staged asset rows in D1." />
+            </span>
             <span className="meta-value">{dbHealth.assetsCount}</span>
           </div>
           <div>
-            <span className="meta-label">reservations</span>
+            <span className="meta-label info-label">
+              reservations
+              <InfoTooltip text="Number of reservation rows tracked by the manager backend." />
+            </span>
             <span className="meta-value">{dbHealth.reservationsCount}</span>
           </div>
           <div>
-            <span className="meta-label">request ID</span>
+            <span className="meta-label info-label">
+              request ID
+              <InfoTooltip text="Useful support/debug identifier for this backend check." />
+            </span>
             <span className="meta-value">{dbHealth.requestId ?? 'n/a'}</span>
           </div>
           <div>
-            <span className="meta-label">storage binding</span>
+            <span className="meta-label info-label">
+              storage binding
+              <InfoTooltip text="R2 binding currently selected by the backend for upload URL generation." />
+            </span>
             <span className="meta-value">
               {dbHealth.storage?.selectedBinding ?? 'none selected'}
             </span>
@@ -220,17 +247,26 @@ export default function DiagnosticsPanel(props: DiagnosticsPanelProps) {
       )}
 
       <label className="field">
-        <span className="field__label">Collection ID</span>
+        <span className="field__label info-label">
+          Collection ID
+          <InfoTooltip text="Drop ID to use for the storage round-trip test." />
+        </span>
         <input className="input" value={collectionId} onChange={(event) => setCollectionId(event.target.value)} />
       </label>
       <label className="field">
-        <span className="field__label">File to upload for storage test</span>
+        <span className="field__label info-label">
+          File to upload for storage test
+          <InfoTooltip text="Small file recommended. The test requests an upload URL, uploads to storage, then writes asset metadata." />
+        </span>
         <input className="input" type="file" onChange={handleFileChange} />
       </label>
       <div className="mint-actions">
-        <button className="button" type="button" onClick={runStorageTest} disabled={storageLoading}>
-          {storageLoading ? 'Uploading…' : 'Upload test file'}
-        </button>
+        <span className="info-label">
+          <button className="button" type="button" onClick={runStorageTest} disabled={storageLoading}>
+            {storageLoading ? 'Uploading…' : 'Upload test file'}
+          </button>
+          <InfoTooltip text="Runs the full upload path end-to-end so you can confirm storage write and metadata insert behavior." />
+        </span>
       </div>
       {storageStatus && <p className="meta-value">{storageStatus}</p>}
       {debugKey && (
