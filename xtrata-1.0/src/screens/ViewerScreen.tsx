@@ -1115,15 +1115,6 @@ const TokenDetails = (props: {
         <div
           className={`detail-panel__preview${showMediaPane ? '' : ' detail-panel__section--hidden'}`}
         >
-          {props.isMobile && props.mobilePanel === 'preview' && !isWalletView && (
-            <button
-              className="viewer-mobile-back"
-              type="button"
-              onClick={props.onRequestGrid}
-            >
-              Back to grid
-            </button>
-          )}
           {isWalletView ? (
             <div className="wallet-preview">
               <TokenContentPreview
