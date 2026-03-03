@@ -6438,11 +6438,26 @@ p {
   }
 
   .app__nav {
-    flex-wrap: wrap;
-    overflow-x: visible;
-    -webkit-overflow-scrolling: auto;
-    scrollbar-width: auto;
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    flex: 0 0 auto;
+    overflow: visible;
+    align-items: stretch;
+    align-content: start;
+  }
+
+  .app__nav-link {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+    min-height: 30px;
+    padding: 4px 6px;
+    font-size: 0.66rem;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .app__controls {
