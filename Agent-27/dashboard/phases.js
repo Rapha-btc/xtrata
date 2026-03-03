@@ -2,8 +2,11 @@
 // No timers, no ticks, no auto-fire. Just runPhase / cancelPhase / getPhaseStatus.
 const { runClaude } = require('./claude-runner');
 const { getChainData } = require('./chain');
+const stateManager = require('./state');
 const fs = require('fs');
 const path = require('path');
+
+const MAX_PULSES_BEFORE_COMPOSE = 3;
 
 const PHASES = [
   { id: 'pulse', model: 'sonnet', budget: 0.75, type: 'research', label: 'Research Pulse', timeoutMs: 5 * 60 * 1000, schedule: null },
@@ -137,9 +140,15 @@ function initPhases(wd, broadcast) {
 }
 
 function getPhaseStatus() {
+  const { pulsesSinceLastInscription } = stateManager.getState();
   return {
     running: running ? { phaseId: running.phaseId, startedAt: running.startedAt, timeoutMs: running.timeoutMs } : null,
-    history: history.slice()
+    history: history.slice(),
+    cadence: {
+      pulsesSinceLastInscription,
+      maxPulses: MAX_PULSES_BEFORE_COMPOSE,
+      ceilingReached: pulsesSinceLastInscription >= MAX_PULSES_BEFORE_COMPOSE
+    }
   };
 }
 
@@ -161,6 +170,14 @@ function runPhase(phaseId) {
       }
     } catch {
       return { ok: false, error: 'Could not read research-buffer.md' };
+    }
+  }
+
+  // Pulse cadence gate: block research if ceiling reached
+  if (phase.type === 'research') {
+    const { pulsesSinceLastInscription } = stateManager.getState();
+    if (pulsesSinceLastInscription >= MAX_PULSES_BEFORE_COMPOSE) {
+      return { ok: false, error: `Cadence ceiling reached (${pulsesSinceLastInscription}/${MAX_PULSES_BEFORE_COMPOSE} pulses) — compose and inscribe before running more research` };
     }
   }
 
@@ -221,6 +238,15 @@ function runPhase(phaseId) {
     }
 
     addHistory({ phaseId, startedAt, completedAt, success: true, cost, error: null, duration });
+
+    // Cadence tracking
+    if (phase.type === 'research') {
+      const s = stateManager.getState();
+      stateManager.updateState({ pulsesSinceLastInscription: s.pulsesSinceLastInscription + 1 });
+    } else if (phase.type === 'inscription') {
+      stateManager.updateState({ pulsesSinceLastInscription: 0 });
+    }
+
     running = null;
 
     const doneMsg = `Phase ${phase.label} completed (${Math.round(duration / 1000)}s${cost != null ? `, $${cost.toFixed(2)}` : ''})`;

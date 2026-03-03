@@ -9,6 +9,7 @@ const DEFAULT_STATE = {
   lastInscription: null,   // { date, tokenId, txid, stxCost }
   chainData: {},
   errors: [],
+  pulsesSinceLastInscription: 0,
   lastStartedAt: new Date().toISOString()
 };
 
@@ -23,6 +24,7 @@ function loadState() {
       lastInscription: loaded.lastInscription || null,
       chainData: loaded.chainData || {},
       errors: Array.isArray(loaded.errors) ? loaded.errors : [],
+      pulsesSinceLastInscription: loaded.pulsesSinceLastInscription || 0,
       lastStartedAt: new Date().toISOString()
     };
     console.log('Loaded state from cycle-state.json');
