@@ -4,7 +4,8 @@ import {
   useMemo,
   useRef,
   useState,
-  type CSSProperties
+  type CSSProperties,
+  type TouchEvent as ReactTouchEvent
 } from 'react';
 import { showContractCall } from '@stacks/connect';
 import {
@@ -372,6 +373,10 @@ const TokenDetails = (props: {
   knownChildren: bigint[];
   onAddParentDraft?: (id: bigint) => void;
   onSelectToken: (id: bigint) => void;
+  canSelectPrev: boolean;
+  canSelectNext: boolean;
+  onSelectPrev: () => void;
+  onSelectNext: () => void;
   marketActionStatus: string | null;
   marketActionPending: boolean;
   onBuyListing: (token: TokenSummary, listing: MarketActivityEvent) => void;
@@ -390,6 +395,7 @@ const TokenDetails = (props: {
   const [cancelStatus, setCancelStatus] = useState<string | null>(null);
   const [cancelPending, setCancelPending] = useState(false);
   const [walletToolsOpen, setWalletToolsOpen] = useState(false);
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const [detailPanelView, setDetailPanelView] = useState<'media' | 'metadata'>(
     'media'
   );
@@ -788,6 +794,38 @@ const TokenDetails = (props: {
     combinedChildren.length > 0
       ? combinedChildren.map((id) => id.toString()).join(', ')
       : 'None';
+  const handlePreviewTouchStart = (event: ReactTouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+    if (!touch) {
+      return;
+    }
+    swipeStartRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+  const handlePreviewTouchEnd = (event: ReactTouchEvent<HTMLDivElement>) => {
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    if (!start) {
+      return;
+    }
+    const touch = event.changedTouches[0];
+    if (!touch) {
+      return;
+    }
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+    if (absX < 44 || absX < absY * 1.2) {
+      return;
+    }
+    if (deltaX > 0 && props.canSelectPrev) {
+      props.onSelectPrev();
+      return;
+    }
+    if (deltaX < 0 && props.canSelectNext) {
+      props.onSelectNext();
+    }
+  };
 
   if (!props.token) {
     const pendingId = props.selectedTokenId;
@@ -1114,7 +1152,33 @@ const TokenDetails = (props: {
         </div>
         <div
           className={`detail-panel__preview${showMediaPane ? '' : ' detail-panel__section--hidden'}`}
+          onTouchStart={handlePreviewTouchStart}
+          onTouchEnd={handlePreviewTouchEnd}
         >
+          {(props.canSelectPrev || props.canSelectNext) && (
+            <>
+              <button
+                type="button"
+                className="preview-nav-button preview-nav-button--prev"
+                onClick={props.onSelectPrev}
+                disabled={!props.canSelectPrev}
+                aria-label="Previous inscription"
+                title="Previous inscription"
+              >
+                &#8249;
+              </button>
+              <button
+                type="button"
+                className="preview-nav-button preview-nav-button--next"
+                onClick={props.onSelectNext}
+                disabled={!props.canSelectNext}
+                aria-label="Next inscription"
+                title="Next inscription"
+              >
+                &#8250;
+              </button>
+            </>
+          )}
           {isWalletView ? (
             <div className="wallet-preview">
               <TokenContentPreview
@@ -2263,6 +2327,96 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       setMobilePanel('preview');
     }
   }, [isMobile, isWalletView, stableWalletTokens, lastTokenId]);
+  const walletSelectedTokenIndex = useMemo(() => {
+    if (!isWalletView || selectedTokenId === null) {
+      return -1;
+    }
+    return stableWalletTokens.findIndex((token) => token.id === selectedTokenId);
+  }, [isWalletView, selectedTokenId, stableWalletTokens]);
+  const canSelectPrev = useMemo(() => {
+    if (selectedTokenId === null) {
+      return false;
+    }
+    if (isWalletView) {
+      return walletSelectedTokenIndex > 0;
+    }
+    return selectedTokenId > 0n;
+  }, [isWalletView, selectedTokenId, walletSelectedTokenIndex]);
+  const canSelectNext = useMemo(() => {
+    if (selectedTokenId === null) {
+      return false;
+    }
+    if (isWalletView) {
+      return (
+        walletSelectedTokenIndex >= 0 &&
+        walletSelectedTokenIndex < stableWalletTokens.length - 1
+      );
+    }
+    if (lastTokenId === undefined) {
+      return false;
+    }
+    return selectedTokenId < lastTokenId;
+  }, [
+    isWalletView,
+    selectedTokenId,
+    walletSelectedTokenIndex,
+    stableWalletTokens.length,
+    lastTokenId
+  ]);
+  const handleSelectPreviousToken = useCallback(() => {
+    if (selectedTokenId === null) {
+      return;
+    }
+    if (isWalletView) {
+      if (walletSelectedTokenIndex <= 0) {
+        return;
+      }
+      const previous = stableWalletTokens[walletSelectedTokenIndex - 1];
+      if (!previous) {
+        return;
+      }
+      handleSelectToken(previous.id);
+      return;
+    }
+    if (selectedTokenId > 0n) {
+      handleSelectToken(selectedTokenId - 1n);
+    }
+  }, [
+    handleSelectToken,
+    isWalletView,
+    selectedTokenId,
+    stableWalletTokens,
+    walletSelectedTokenIndex
+  ]);
+  const handleSelectNextToken = useCallback(() => {
+    if (selectedTokenId === null) {
+      return;
+    }
+    if (isWalletView) {
+      if (
+        walletSelectedTokenIndex < 0 ||
+        walletSelectedTokenIndex >= stableWalletTokens.length - 1
+      ) {
+        return;
+      }
+      const next = stableWalletTokens[walletSelectedTokenIndex + 1];
+      if (!next) {
+        return;
+      }
+      handleSelectToken(next.id);
+      return;
+    }
+    if (lastTokenId !== undefined && selectedTokenId < lastTokenId) {
+      handleSelectToken(selectedTokenId + 1n);
+    }
+  }, [
+    handleSelectToken,
+    isWalletView,
+    selectedTokenId,
+    stableWalletTokens,
+    walletSelectedTokenIndex,
+    lastTokenId
+  ]);
 
   useEffect(() => {
     lastTokenIdRef.current = lastTokenId;
@@ -3506,6 +3660,10 @@ export default function ViewerScreen(props: ViewerScreenProps) {
         knownChildren={knownChildren}
         onAddParentDraft={props.onAddParentDraft}
         onSelectToken={handleSelectToken}
+        canSelectPrev={canSelectPrev}
+        canSelectNext={canSelectNext}
+        onSelectPrev={handleSelectPreviousToken}
+        onSelectNext={handleSelectNextToken}
         marketActionStatus={marketActionStatus}
         marketActionPending={marketActionPending}
         onBuyListing={handleBuyListing}

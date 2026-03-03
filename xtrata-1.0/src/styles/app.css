@@ -2825,6 +2825,7 @@ p {
   grid-row: 1 / span 2;
   position: relative;
   min-height: 0;
+  touch-action: pan-y;
 }
 
 .detail-panel__preview .preview-panel {
@@ -2843,6 +2844,41 @@ p {
 
 .detail-panel__preview .square-frame {
   flex: 1;
+}
+
+.preview-nav-button {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 5;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-overlay);
+  color: var(--ink);
+  font-size: 1.1rem;
+  line-height: 1;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.2);
+}
+
+.preview-nav-button--prev {
+  left: 10px;
+}
+
+.preview-nav-button--next {
+  right: 10px;
+}
+
+.preview-nav-button:disabled {
+  opacity: 0.36;
+  cursor: default;
+  box-shadow: none;
 }
 
 .transfer-panel {
@@ -6498,5 +6534,19 @@ p {
   .wallet-top-bar__actions .badge,
   .wallet-top-bar__actions .button {
     max-width: 100%;
+  }
+
+  .preview-nav-button {
+    width: 30px;
+    height: 30px;
+    font-size: 1rem;
+  }
+
+  .preview-nav-button--prev {
+    left: 6px;
+  }
+
+  .preview-nav-button--next {
+    right: 6px;
   }
 }
