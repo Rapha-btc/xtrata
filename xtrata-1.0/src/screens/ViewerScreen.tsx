@@ -366,6 +366,7 @@ const TokenDetails = (props: {
   marketMismatch: NetworkMismatch | null;
   marketNetworkMismatch: boolean;
   isMobile: boolean;
+  useCompactPreviewLayout: boolean;
   mobilePanel: 'grid' | 'preview';
   onRequestGrid: () => void;
   knownChildren: bigint[];
@@ -389,7 +390,13 @@ const TokenDetails = (props: {
   const [cancelStatus, setCancelStatus] = useState<string | null>(null);
   const [cancelPending, setCancelPending] = useState(false);
   const [walletToolsOpen, setWalletToolsOpen] = useState(false);
+  const [detailPanelView, setDetailPanelView] = useState<'media' | 'metadata'>(
+    'media'
+  );
   const isWalletView = props.mode === 'wallet';
+  const useSplitDetailTabs = props.useCompactPreviewLayout;
+  const showMediaPane = !useSplitDetailTabs || detailPanelView === 'media';
+  const showMetadataPane = !useSplitDetailTabs || detailPanelView === 'metadata';
   const mismatch = getNetworkMismatch(
     props.contract.network,
     props.walletSession.network
@@ -435,6 +442,15 @@ const TokenDetails = (props: {
     setCancelStatus(null);
     setListPriceInput('');
   }, [props.selectedTokenId, walletAddress]);
+
+  useEffect(() => {
+    setDetailPanelView('media');
+  }, [
+    props.selectedTokenId,
+    props.mobilePanel,
+    props.mode,
+    props.useCompactPreviewLayout
+  ]);
 
   const transferValidation = validateTransferRequest({
     senderAddress: walletAddress,
@@ -839,8 +855,36 @@ const TokenDetails = (props: {
           </button>
         </div>
       </div>
-      <div className="panel__body detail-panel">
-        <div className="detail-panel__meta">
+      <div
+        className={`panel__body detail-panel${useSplitDetailTabs ? ' detail-panel--mobile-split' : ''}`}
+      >
+        {useSplitDetailTabs && (
+          <div
+            className="viewer-detail-toggle"
+            role="tablist"
+            aria-label="Preview detail panel"
+          >
+            <button
+              type="button"
+              className={`viewer-detail-toggle__button${detailPanelView === 'media' ? ' is-active' : ''}`}
+              aria-pressed={detailPanelView === 'media'}
+              onClick={() => setDetailPanelView('media')}
+            >
+              Image
+            </button>
+            <button
+              type="button"
+              className={`viewer-detail-toggle__button${detailPanelView === 'metadata' ? ' is-active' : ''}`}
+              aria-pressed={detailPanelView === 'metadata'}
+              onClick={() => setDetailPanelView('metadata')}
+            >
+              Metadata
+            </button>
+          </div>
+        )}
+        <div
+          className={`detail-panel__meta${showMetadataPane ? '' : ' detail-panel__section--hidden'}`}
+        >
           <div className="transfer-panel detail-summary-panel">
             <div>
               <h3>Relationships</h3>
@@ -1068,7 +1112,9 @@ const TokenDetails = (props: {
             </div>
           )}
         </div>
-        <div className="detail-panel__preview">
+        <div
+          className={`detail-panel__preview${showMediaPane ? '' : ' detail-panel__section--hidden'}`}
+        >
           {props.isMobile && props.mobilePanel === 'preview' && !isWalletView && (
             <button
               className="viewer-mobile-back"
@@ -1117,11 +1163,11 @@ const TokenDetails = (props: {
           )}
         </div>
         <div
-          className={
+          className={`${
             isWalletView
               ? 'detail-panel__tools'
               : 'detail-panel__tools detail-panel__tools--advanced'
-          }
+          }${showMetadataPane ? '' : ' detail-panel__section--hidden'}`}
         >
           {isWalletView ? (
             <details
@@ -1418,6 +1464,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     !!props.walletLookupState.lookupName;
   const [mobilePanel, setMobilePanel] = useState<'grid' | 'preview'>('grid');
   const [isMobile, setIsMobile] = useState(false);
+  const [isCompactPreviewViewport, setIsCompactPreviewViewport] = useState(false);
   const [collectionGridReady, setCollectionGridReady] = useState(false);
   const lastTokenQuery = useCombinedLastTokenId({
     primary: client,
@@ -1726,15 +1773,21 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     if (typeof window === 'undefined') {
       return;
     }
-    const mediaQuery = window.matchMedia('(max-width: 959px)');
-    const handleChange = () => setIsMobile(mediaQuery.matches);
+    const mobileQuery = window.matchMedia('(max-width: 959px)');
+    const compactPreviewQuery = window.matchMedia(
+      '(max-width: 959px), ((max-width: 1180px) and (max-aspect-ratio: 4/5))'
+    );
+    const handleChange = () => {
+      setIsMobile(mobileQuery.matches);
+      setIsCompactPreviewViewport(compactPreviewQuery.matches);
+    };
     handleChange();
-    if ('addEventListener' in mediaQuery) {
-      mediaQuery.addEventListener('change', handleChange);
-      return () => mediaQuery.removeEventListener('change', handleChange);
-    }
-    mediaQuery.addListener(handleChange);
-    return () => mediaQuery.removeListener(handleChange);
+    mobileQuery.addEventListener('change', handleChange);
+    compactPreviewQuery.addEventListener('change', handleChange);
+    return () => {
+      mobileQuery.removeEventListener('change', handleChange);
+      compactPreviewQuery.removeEventListener('change', handleChange);
+    };
   }, []);
 
   const collectionTokenIds = useMemo(() => {
@@ -3148,6 +3201,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       (!walletUsingFastIndex &&
         walletTokenListSettled &&
         walletScanCountClamped < walletScanCap));
+  const useCompactPreviewLayout = isCompactPreviewViewport;
 
   return (
     <section
@@ -3455,6 +3509,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
         marketMismatch={marketMismatch}
         marketNetworkMismatch={marketNetworkMismatch}
         isMobile={isMobile}
+        useCompactPreviewLayout={useCompactPreviewLayout}
         mobilePanel={mobilePanel}
         onRequestGrid={handleMobileGridRequest}
         knownChildren={knownChildren}

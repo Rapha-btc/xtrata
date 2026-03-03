@@ -2184,6 +2184,31 @@ p {
   border-color: transparent;
 }
 
+.viewer-detail-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-soft);
+}
+
+.viewer-detail-toggle__button {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  padding: 5px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 999px;
+}
+
+.viewer-detail-toggle__button.is-active {
+  background: var(--accent-strong);
+  color: #fff;
+}
+
 .wallet {
   display: grid;
   gap: 24px;
@@ -2698,6 +2723,44 @@ p {
   min-height: 0;
   height: 100%;
   overflow: hidden;
+}
+
+.detail-panel__section--hidden {
+  display: none !important;
+}
+
+.viewer .detail-panel.detail-panel--mobile-split {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.viewer .detail-panel.detail-panel--mobile-split .detail-panel__preview,
+.viewer .detail-panel.detail-panel--mobile-split .detail-panel__meta,
+.viewer .detail-panel.detail-panel--mobile-split .detail-panel__tools {
+  grid-column: auto;
+  grid-row: auto;
+  padding-right: 0;
+}
+
+.viewer .detail-panel.detail-panel--mobile-split .detail-panel__preview {
+  min-height: clamp(340px, 68svh, 860px);
+  flex: 1 1 auto;
+}
+
+.viewer .detail-panel.detail-panel--mobile-split .detail-panel__meta {
+  max-height: min(44svh, 420px);
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+
+.viewer .detail-panel.detail-panel--mobile-split .detail-panel__tools {
+  max-height: min(36svh, 340px);
+  overflow: auto;
+  scrollbar-gutter: stable;
+  justify-content: flex-start;
+  align-self: stretch;
 }
 
 .detail-panel__meta {
