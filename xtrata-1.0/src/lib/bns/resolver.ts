@@ -1,8 +1,7 @@
 import { validateStacksAddress } from '@stacks/transactions';
 import type { NetworkType } from '../network/types';
-import { getApiBaseUrls } from '../network/config';
 import { logDebug, logWarn } from '../utils/logger';
-import { getBnsHubBaseUrls } from './config';
+import { getExplorerHtmlBaseUrls } from './config';
 import {
   buildBnsCacheKey,
   normalizeBnsName,
@@ -276,20 +275,9 @@ const callBnsWithRetry = async <T>(params: {
     : new Error(getErrorMessage(lastError)));
 };
 
-type BnsProvider = {
-  id: string;
-  getBaseUrls: (network: NetworkType) => string[];
-};
-
-type AddressNamesResponse = {
+type ExplorerHtmlResponse = {
   status: 'ok' | 'not-found';
-  names: string[];
-  displayName: string | null;
-};
-
-type NameDetailsResponse = {
-  status: 'ok' | 'not-found';
-  address: string | null;
+  html: string;
 };
 
 type AddressResolution = {
@@ -297,93 +285,221 @@ type AddressResolution = {
   cacheable: boolean;
 };
 
-const BNS_PROVIDERS: BnsProvider[] = [
-  { id: 'bns-hub', getBaseUrls: getBnsHubBaseUrls },
-  { id: 'stacks-api', getBaseUrls: getApiBaseUrls }
-];
+const EXPLORER_PROVIDER_ID = 'explorer-html';
+const HTML_TITLE_PATTERN = /<title[^>]*>([^<]+)<\/title>/i;
+const HTML_OG_TITLE_PATTERN =
+  /<meta[^>]+property=["']og:title["'][^>]*content=["']([^"']+)["'][^>]*>/i;
+const JSON_NAME_FIELD_PATTERN =
+  /"(?:displayName|primaryName|primary|name|bns_name)"\s*:\s*"([a-z0-9-]+(?:\.[a-z0-9-]+)+)"/gi;
+const JSON_NAME_LIST_PATTERN =
+  /"(?:bns_names|names|domains)"\s*:\s*\[([^\]]*)\]/gi;
+const JSON_LIST_ENTRY_PATTERN = /"([a-z0-9-]+(?:\.[a-z0-9-]+)+)"/gi;
+const NEXT_BNS_NAMES_BLOCK_PATTERN =
+  /\\?"initialAddressBNSNamesData\\?"\s*:\s*\{[\s\S]{0,600}?\\?"names\\?"\s*:\s*\[([^\]]*)\]/gi;
+const NEXT_BNS_LIST_ENTRY_PATTERN =
+  /\\?"([a-z0-9-]+(?:\.[a-z0-9-]+)+)\\?"/gi;
+const ASSOCIATED_BNS_NAME_PATTERN =
+  /Associated\s*BNS\s*Name[\s\S]{0,300}?([a-z0-9-]+(?:\.[a-z0-9-]+)+)/gi;
+const LINKED_ADDRESS_PATTERN = /\/address\/([A-Z0-9]{40,64})(?:[?"'/<#]|$)/gi;
+const JSON_ADDRESS_FIELD_PATTERN =
+  /"(?:address|owner|owner_address|principal)"\s*:\s*"([A-Z0-9.]+)"/gi;
+const RAW_ADDRESS_PATTERN = /\b(S[PTMN][A-Z0-9]{38})\b/g;
+const NON_BNS_DOMAIN_DENYLIST = new Set([
+  'explorer.hiro.so',
+  'api.hiro.so',
+  'hiro.so',
+  'stacks.co',
+  'stacks.org',
+  'localhost'
+]);
 
 const normalizeBaseUrl = (baseUrl: string) => baseUrl.replace(/\/+$/, '');
 
-const toStringArray = (value: unknown) => {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value.filter((entry) => typeof entry === 'string') as string[];
-};
+const decodeHtmlEntities = (value: string) =>
+  value
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;|&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&#x2F;/g, '/')
+    .replace(/&nbsp;/g, ' ')
+    .trim();
 
-const extractAddressNames = (data: unknown) => {
-  if (!data || typeof data !== 'object') {
-    return { names: [], displayName: null };
-  }
-  const record = data as Record<string, unknown>;
-  const names = toStringArray(record.names ?? record.bns_names ?? record.domains);
-  const displayName =
-    (typeof record.displayName === 'string' && record.displayName) ||
-    (typeof record.primaryName === 'string' && record.primaryName) ||
-    (typeof record.primary === 'string' && record.primary) ||
-    (typeof record.name === 'string' && record.name) ||
-    null;
-  return { names, displayName };
-};
-
-const extractNameAddress = (data: unknown) => {
-  if (!data || typeof data !== 'object') {
+const sanitizeBnsCandidate = (value: string) => {
+  const normalized = normalizeBnsName(value);
+  if (!normalized) {
     return null;
   }
-  const record = data as Record<string, unknown>;
-  return (
-    (typeof record.address === 'string' && record.address) ||
-    (typeof record.owner === 'string' && record.owner) ||
-    (typeof record.owner_address === 'string' && record.owner_address) ||
-    (typeof record.principal === 'string' && record.principal) ||
-    null
-  );
+  if (NON_BNS_DOMAIN_DENYLIST.has(normalized)) {
+    return null;
+  }
+  return normalized;
 };
 
-const fetchAddressNames = async (
+const addBnsCandidate = (
+  candidates: Set<string>,
+  value: string,
+  source: 'payload' | 'label' | 'title' | 'og' | 'json-field' | 'json-list'
+) => {
+  const normalized = sanitizeBnsCandidate(value);
+  if (!normalized) {
+    return;
+  }
+  // Generic page-level scans can match assets/domains; only trust those when they
+  // are explicit .btc names.
+  if (
+    source !== 'payload' &&
+    source !== 'label' &&
+    !normalized.endsWith('.btc')
+  ) {
+    return;
+  }
+  candidates.add(normalized);
+};
+
+const parseNamesFromTitle = (rawTitle: string | null) => {
+  if (!rawTitle) {
+    return [] as string[];
+  }
+  const title = decodeHtmlEntities(rawTitle);
+  const firstSegment = title.split('|')[0]?.trim() ?? '';
+  const candidates = new Set<string>();
+  const parenCandidate = firstSegment.includes('(')
+    ? firstSegment.split('(')[0]?.trim() ?? ''
+    : firstSegment;
+  const normalizedParen = sanitizeBnsCandidate(parenCandidate);
+  if (normalizedParen && normalizedParen.endsWith('.btc')) {
+    candidates.add(normalizedParen);
+  }
+  const fieldMatches = firstSegment.match(/[a-z0-9-]+(?:\.[a-z0-9-]+)+/gi) ?? [];
+  fieldMatches.forEach((entry) => {
+    const normalized = sanitizeBnsCandidate(entry);
+    if (normalized && normalized.endsWith('.btc')) {
+      candidates.add(normalized);
+    }
+  });
+  return Array.from(candidates.values());
+};
+
+const extractAddressNamesFromExplorerHtml = (html: string) => {
+  const candidates = new Set<string>();
+
+  NEXT_BNS_NAMES_BLOCK_PATTERN.lastIndex = 0;
+  let payloadMatch: RegExpExecArray | null = null;
+  while ((payloadMatch = NEXT_BNS_NAMES_BLOCK_PATTERN.exec(html)) !== null) {
+    const payloadBlock = payloadMatch[1] ?? '';
+    NEXT_BNS_LIST_ENTRY_PATTERN.lastIndex = 0;
+    let payloadEntry: RegExpExecArray | null = null;
+    while ((payloadEntry = NEXT_BNS_LIST_ENTRY_PATTERN.exec(payloadBlock)) !== null) {
+      addBnsCandidate(candidates, payloadEntry[1] ?? '', 'payload');
+    }
+  }
+
+  const titleMatch = html.match(HTML_TITLE_PATTERN);
+  parseNamesFromTitle(titleMatch ? titleMatch[1] : null).forEach((entry) =>
+    addBnsCandidate(candidates, entry, 'title')
+  );
+  const ogTitleMatch = html.match(HTML_OG_TITLE_PATTERN);
+  parseNamesFromTitle(ogTitleMatch ? ogTitleMatch[1] : null).forEach((entry) =>
+    addBnsCandidate(candidates, entry, 'og')
+  );
+
+  JSON_NAME_FIELD_PATTERN.lastIndex = 0;
+  let fieldMatch: RegExpExecArray | null = null;
+  while ((fieldMatch = JSON_NAME_FIELD_PATTERN.exec(html)) !== null) {
+    addBnsCandidate(candidates, fieldMatch[1] ?? '', 'json-field');
+  }
+
+  JSON_NAME_LIST_PATTERN.lastIndex = 0;
+  let listMatch: RegExpExecArray | null = null;
+  while ((listMatch = JSON_NAME_LIST_PATTERN.exec(html)) !== null) {
+    const block = listMatch[1] ?? '';
+    JSON_LIST_ENTRY_PATTERN.lastIndex = 0;
+    let entryMatch: RegExpExecArray | null = null;
+    while ((entryMatch = JSON_LIST_ENTRY_PATTERN.exec(block)) !== null) {
+      addBnsCandidate(candidates, entryMatch[1] ?? '', 'json-list');
+    }
+  }
+
+  ASSOCIATED_BNS_NAME_PATTERN.lastIndex = 0;
+  let labelMatch: RegExpExecArray | null = null;
+  while ((labelMatch = ASSOCIATED_BNS_NAME_PATTERN.exec(html)) !== null) {
+    addBnsCandidate(candidates, labelMatch[1] ?? '', 'label');
+  }
+
+  const names = sortBnsNames(Array.from(candidates.values()));
+  return {
+    names,
+    primary: pickPrimaryBnsName(names, names[0] ?? null)
+  };
+};
+
+const extractAddressFromPrincipalCandidate = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  const address = trimmed.split('.')[0] ?? trimmed;
+  return validateStacksAddress(address) ? address : null;
+};
+
+const extractAddressFromExplorerHtml = (html: string) => {
+  const candidates = new Set<string>();
+
+  LINKED_ADDRESS_PATTERN.lastIndex = 0;
+  let linkMatch: RegExpExecArray | null = null;
+  while ((linkMatch = LINKED_ADDRESS_PATTERN.exec(html)) !== null) {
+    const normalized = extractAddressFromPrincipalCandidate(linkMatch[1] ?? '');
+    if (normalized) {
+      candidates.add(normalized);
+    }
+  }
+
+  JSON_ADDRESS_FIELD_PATTERN.lastIndex = 0;
+  let fieldMatch: RegExpExecArray | null = null;
+  while ((fieldMatch = JSON_ADDRESS_FIELD_PATTERN.exec(html)) !== null) {
+    const normalized = extractAddressFromPrincipalCandidate(fieldMatch[1] ?? '');
+    if (normalized) {
+      candidates.add(normalized);
+    }
+  }
+
+  RAW_ADDRESS_PATTERN.lastIndex = 0;
+  let rawMatch: RegExpExecArray | null = null;
+  while ((rawMatch = RAW_ADDRESS_PATTERN.exec(html)) !== null) {
+    const normalized = extractAddressFromPrincipalCandidate(rawMatch[1] ?? '');
+    if (normalized) {
+      candidates.add(normalized);
+    }
+  }
+
+  return Array.from(candidates.values())[0] ?? null;
+};
+
+const fetchExplorerHtml = async (
   baseUrl: string,
-  address: string,
+  path: string,
+  network: NetworkType,
   signal?: AbortSignal
-): Promise<AddressNamesResponse> => {
-  const url = `${normalizeBaseUrl(baseUrl)}/v1/addresses/stacks/${encodeURIComponent(
-    address
+): Promise<ExplorerHtmlResponse> => {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  const querySeparator = normalizedPath.includes('?') ? '&' : '?';
+  const url = `${normalizeBaseUrl(baseUrl)}${normalizedPath}${querySeparator}chain=${encodeURIComponent(
+    network
   )}`;
   const response = await fetch(url, {
     method: 'GET',
-    headers: { accept: 'application/json' },
+    headers: { accept: 'text/html,application/xhtml+xml' },
     signal
   });
   if (response.status === 404) {
-    return { status: 'not-found', names: [], displayName: null };
+    return { status: 'not-found', html: '' };
   }
   if (!response.ok) {
-    throw new Error(`BNS address lookup failed (${response.status})`);
+    throw new Error(`Explorer page lookup failed (${response.status})`);
   }
-  const data = await response.json();
-  const { names, displayName } = extractAddressNames(data);
-  return { status: 'ok', names, displayName };
-};
-
-const fetchNameDetails = async (
-  baseUrl: string,
-  name: string,
-  signal?: AbortSignal
-): Promise<NameDetailsResponse> => {
-  const url = `${normalizeBaseUrl(baseUrl)}/v1/names/${encodeURIComponent(name)}`;
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: { accept: 'application/json' },
-    signal
-  });
-  if (response.status === 404) {
-    return { status: 'not-found', address: null };
-  }
-  if (!response.ok) {
-    throw new Error(`BNS name lookup failed (${response.status})`);
-  }
-  const data = await response.json();
-  const address = extractNameAddress(data);
-  return { status: 'ok', address };
+  return { status: 'ok', html: await response.text() };
 };
 
 type CacheEntry<T> = {
@@ -470,7 +586,7 @@ const resolveWithInFlight = async <T>(key: string, task: () => Promise<T>) => {
   return promise;
 };
 
-const resolveAddressNamesFromProviders = async (params: {
+const resolveAddressNamesFromExplorer = async (params: {
   address: string;
   network: NetworkType;
   signal?: AbortSignal;
@@ -478,53 +594,48 @@ const resolveAddressNamesFromProviders = async (params: {
   let lastError: unknown = null;
   let sawNotFound = false;
 
-  for (const provider of BNS_PROVIDERS) {
-    let providerBackoffActive = false;
-    const bases = provider.getBaseUrls(params.network);
-    for (const baseUrl of bases) {
-      try {
-        const response = await callBnsWithRetry({
-          task: () => fetchAddressNames(baseUrl, params.address, params.signal),
-          context: `${provider.id}:address:${params.address}`,
-          signal: params.signal
-        });
+  const bases = getExplorerHtmlBaseUrls(params.network);
+  for (const baseUrl of bases) {
+    try {
+      const response = await callBnsWithRetry({
+        task: () =>
+          fetchExplorerHtml(
+            baseUrl,
+            `/address/${encodeURIComponent(params.address)}`,
+            params.network,
+            params.signal
+          ),
+        context: `${EXPLORER_PROVIDER_ID}:address:${params.address}`,
+        signal: params.signal
+      });
 
-        if (response.status === 'not-found') {
-          sawNotFound = true;
-          continue;
-        }
-
-        const combined = sortBnsNames([
-          ...response.names,
-          ...(response.displayName ? [response.displayName] : [])
-        ]);
-        const primary = pickPrimaryBnsName(combined, response.displayName);
-        return {
-          result: {
-            address: params.address,
-            names: combined,
-            primary,
-            source: provider.id
-          },
-          cacheable: true
-        };
-      } catch (error) {
-        lastError = error;
-        if (error instanceof BnsBackoffError) {
-          providerBackoffActive = true;
-          break;
-        }
+      if (response.status === 'not-found') {
+        sawNotFound = true;
         continue;
       }
-    }
-    if (providerBackoffActive) {
+
+      const extracted = extractAddressNamesFromExplorerHtml(response.html);
+      return {
+        result: {
+          address: params.address,
+          names: extracted.names,
+          primary: extracted.primary,
+          source: extracted.names.length > 0 ? EXPLORER_PROVIDER_ID : null
+        },
+        cacheable: true
+      };
+    } catch (error) {
+      lastError = error;
+      if (error instanceof BnsBackoffError) {
+        break;
+      }
       continue;
     }
   }
 
   if (lastError) {
     if (isTransientBnsError(lastError)) {
-      logDebug('bns', 'BNS address lookup unavailable, using address fallback', {
+      logDebug('bns', 'Explorer address lookup unavailable, using address fallback', {
         address: params.address,
         error: getErrorMessage(lastError)
       });
@@ -538,7 +649,7 @@ const resolveAddressNamesFromProviders = async (params: {
         cacheable: false
       };
     }
-    logWarn('bns', 'BNS address lookup failed', {
+    logWarn('bns', 'Explorer address lookup failed', {
       address: params.address,
       error: getErrorMessage(lastError)
     });
@@ -568,7 +679,7 @@ const resolveAddressNamesFromProviders = async (params: {
   };
 };
 
-const resolveNameAddressFromProviders = async (params: {
+const resolveNameAddressFromExplorer = async (params: {
   name: string;
   network: NetworkType;
   signal?: AbortSignal;
@@ -576,58 +687,58 @@ const resolveNameAddressFromProviders = async (params: {
   let lastError: unknown = null;
   let sawNotFound = false;
 
-  for (const provider of BNS_PROVIDERS) {
-    let providerBackoffActive = false;
-    const bases = provider.getBaseUrls(params.network);
-    for (const baseUrl of bases) {
-      try {
-        const response = await callBnsWithRetry({
-          task: () => fetchNameDetails(baseUrl, params.name, params.signal),
-          context: `${provider.id}:name:${params.name}`,
-          signal: params.signal
-        });
+  const bases = getExplorerHtmlBaseUrls(params.network);
+  for (const baseUrl of bases) {
+    try {
+      const response = await callBnsWithRetry({
+        task: () =>
+          fetchExplorerHtml(
+            baseUrl,
+            `/name/${encodeURIComponent(params.name)}`,
+            params.network,
+            params.signal
+          ),
+        context: `${EXPLORER_PROVIDER_ID}:name:${params.name}`,
+        signal: params.signal
+      });
 
-        if (response.status === 'not-found') {
-          sawNotFound = true;
-          continue;
-        }
-
-        if (!response.address) {
-          sawNotFound = true;
-          continue;
-        }
-
-        if (!validateStacksAddress(response.address)) {
-          logWarn('bns', 'BNS name resolved to non-Stacks address', {
-            name: params.name,
-            address: response.address,
-            provider: provider.id
-          });
-          sawNotFound = true;
-          continue;
-        }
-
-        return {
-          name: params.name,
-          address: response.address,
-          source: provider.id
-        };
-      } catch (error) {
-        lastError = error;
-        if (error instanceof BnsBackoffError) {
-          providerBackoffActive = true;
-          break;
-        }
+      if (response.status === 'not-found') {
+        sawNotFound = true;
         continue;
       }
-    }
-    if (providerBackoffActive) {
+
+      const resolvedAddress = extractAddressFromExplorerHtml(response.html);
+      if (!resolvedAddress) {
+        sawNotFound = true;
+        continue;
+      }
+
+      if (!validateStacksAddress(resolvedAddress)) {
+        logWarn('bns', 'Explorer name resolved to non-Stacks address', {
+          name: params.name,
+          address: resolvedAddress,
+          source: EXPLORER_PROVIDER_ID
+        });
+        sawNotFound = true;
+        continue;
+      }
+
+      return {
+        name: params.name,
+        address: resolvedAddress,
+        source: EXPLORER_PROVIDER_ID
+      };
+    } catch (error) {
+      lastError = error;
+      if (error instanceof BnsBackoffError) {
+        break;
+      }
       continue;
     }
   }
 
   if (lastError) {
-    logWarn('bns', 'BNS name lookup failed', {
+    logWarn('bns', 'Explorer name lookup failed', {
       name: params.name,
       error: getErrorMessage(lastError)
     });
@@ -675,7 +786,7 @@ export const resolveBnsNames = async (params: {
   }
 
   return resolveWithInFlight(cacheKey, async () => {
-    const resolution = await resolveAddressNamesFromProviders({
+    const resolution = await resolveAddressNamesFromExplorer({
       address: trimmed,
       network: params.network,
       signal: params.signal
@@ -711,7 +822,7 @@ export const resolveBnsAddress = async (params: {
   }
 
   return resolveWithInFlight(cacheKey, async () => {
-    const result = await resolveNameAddressFromProviders({
+    const result = await resolveNameAddressFromExplorer({
       name: normalizedName,
       network: params.network,
       signal: params.signal

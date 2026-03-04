@@ -1,39 +1,7 @@
 {
   "lastInscription": null,
   "chainData": {},
-  "errors": [
-    {
-      "timestamp": "2026-02-28T09:28:14.720Z",
-      "message": "Claude exited with code null"
-    },
-    {
-      "timestamp": "2026-02-28T09:00:00.491Z",
-      "message": "Claude exited with code null"
-    },
-    {
-      "timestamp": "2026-02-28T08:44:13.198Z",
-      "message": "Claude exited with code null"
-    },
-    {
-      "timestamp": "2026-02-28T08:28:00.287Z",
-      "message": "Claude exited with code null"
-    },
-    {
-      "timestamp": "2026-02-28T08:09:59.346Z",
-      "message": "Claude exited with code null"
-    },
-    {
-      "timestamp": "2026-02-28T00:16:19.326Z",
-      "message": "Claude exited with code null"
-    },
-    {
-      "timestamp": "2026-02-28T00:11:55.964Z",
-      "message": "Claude exited with code 1"
-    },
-    {
-      "timestamp": "2026-02-28T00:11:37.434Z",
-      "message": "Claude exited with code 1"
-    }
-  ],
-  "lastStartedAt": "2026-03-01T17:11:25.594Z"
+  "errors": [],
+  "pulsesSinceLastInscription": 2,
+  "lastStartedAt": "2026-03-04T21:26:05.625Z"
 }

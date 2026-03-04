@@ -14,6 +14,7 @@ import { useBnsAddress } from './lib/bns/hooks';
 import { RATE_LIMIT_WARNING_EVENT } from './lib/network/rate-limit';
 import { getApiBaseUrls } from './lib/network/config';
 import { getNetworkFromAddress, getNetworkMismatch } from './lib/network/guard';
+import { getStacksExplorerContractUrl } from './lib/network/explorer';
 import { toStacksNetwork } from './lib/network/stacks';
 import type { NetworkType } from './lib/network/types';
 import { isRateLimitError, isReadOnlyNetworkError } from './lib/contract/read-only';
@@ -129,6 +130,10 @@ type PublicLiveCollectionCard = {
   fallbackSupply: bigint | null;
   contractId: string | null;
   contractTarget: PublicCollectionContractTarget | null;
+  templateVersion: string;
+  pricingMode: string;
+  pricingAdvertisedMintPriceMicroStx: bigint | null;
+  pricingOnChainMintPriceMicroStx: bigint | null;
 };
 
 const DOC_SECTIONS: DocSection[] = [
@@ -968,8 +973,22 @@ const resolvePublicCollectionContractTarget = (
   };
 };
 
+const resolveCollectionMintPaymentModel = (templateVersion: string) => {
+  const normalized = templateVersion.trim().toLowerCase();
+  if (!normalized) {
+    return 'unknown' as const;
+  }
+  if (normalized.includes('v1.0') || normalized.includes('v1.1')) {
+    return 'begin' as const;
+  }
+  if (normalized.includes('v1.2')) {
+    return 'seal' as const;
+  }
+  return 'unknown' as const;
+};
+
 const resolvePublicDisplayedMintPrice = (
-  collection: PublicLiveCollectionRecord,
+  collection: PublicLiveCollectionCard,
   status: PublicLiveMintStatus | null
 ) => {
   const onChainPrice = status?.effectiveMintPrice ?? null;
@@ -979,13 +998,15 @@ const resolvePublicDisplayedMintPrice = (
   if (status.activePhaseMintPrice !== null) {
     return onChainPrice;
   }
-  const metadata = toRecord(collection.metadata);
-  const pricing = toRecord(metadata?.pricing);
-  if (toText(pricing?.mode).toLowerCase() !== 'advertised-includes-seal-fee') {
+  const paymentModel = resolveCollectionMintPaymentModel(collection.templateVersion);
+  if (paymentModel !== 'seal') {
     return onChainPrice;
   }
-  const advertised = toBigIntOrNull(pricing?.advertisedMintPriceMicroStx);
-  const onChainFromMetadata = toBigIntOrNull(pricing?.onChainMintPriceMicroStx);
+  if (collection.pricingMode.toLowerCase() !== 'advertised-includes-seal-fee') {
+    return onChainPrice;
+  }
+  const advertised = collection.pricingAdvertisedMintPriceMicroStx;
+  const onChainFromMetadata = collection.pricingOnChainMintPriceMicroStx;
   if (
     advertised === null ||
     onChainFromMetadata === null ||
@@ -1132,11 +1153,6 @@ const parsePublicCollectionsResponse = async (response: Response) => {
   }
   return payload as PublicLiveCollectionRecord[];
 };
-
-const getStacksExplorerContractUrl = (
-  contractId: string,
-  network: 'mainnet' | 'testnet'
-) => `https://explorer.hiro.so/txid/${contractId}?chain=${network}`;
 
 type DocDetailToggleCopy = {
   open: string;
@@ -1488,7 +1504,7 @@ export default function PublicApp() {
   const queryClient = useQueryClient();
   const contractId = getContractId(contract);
   const contractExplorerUrl = useMemo(
-    () => getStacksExplorerContractUrl(contractId, contract.network),
+    () => getStacksExplorerContractUrl(contractId, contract.network) ?? '#',
     [contractId, contract.network]
   );
   const activeDoc = useMemo(
@@ -1534,6 +1550,7 @@ export default function PublicApp() {
         const metadata = toRecord(collection.metadata);
         const metadataCollection = toRecord(metadata?.collection);
         const metadataCollectionPage = toRecord(metadata?.collectionPage);
+        const metadataPricing = toRecord(metadata?.pricing);
         const fallbackSupply = toBigIntOrNull(metadataCollection?.supply);
         const name =
           toText(metadataCollection?.name) ||
@@ -1562,7 +1579,15 @@ export default function PublicApp() {
           coverImageUrl,
           fallbackSupply,
           contractId,
-          contractTarget
+          contractTarget,
+          templateVersion: toText(metadata?.templateVersion),
+          pricingMode: toText(metadataPricing?.mode),
+          pricingAdvertisedMintPriceMicroStx: toBigIntOrNull(
+            metadataPricing?.advertisedMintPriceMicroStx
+          ),
+          pricingOnChainMintPriceMicroStx: toBigIntOrNull(
+            metadataPricing?.onChainMintPriceMicroStx
+          )
         };
       })
       .sort((left, right) => left.name.localeCompare(right.name));
@@ -2369,31 +2394,42 @@ export default function PublicApp() {
                   );
 
                   return (
-                    <article className="public-live-collections__card" key={collection.id}>
+                    <a
+                      className="public-live-collections__card"
+                      key={collection.id}
+                      href={collection.livePath}
+                      aria-label={`Open ${collection.name} collection page`}
+                    >
                       {soldOut && <span className="collection-live-page__stamp">Sold out</span>}
-                      <div className="public-live-collections__media">
-                        {collection.coverImageUrl && !coverPreviewErrored ? (
-                          <img
-                            src={collection.coverImageUrl}
-                            alt={`${collection.name} cover`}
-                            onLoad={() =>
-                              setLiveCoverPreviewErrorByCollectionId((current) => ({
-                                ...current,
-                                [collection.id]: false
-                              }))
-                            }
-                            onError={() =>
-                              setLiveCoverPreviewErrorByCollectionId((current) => ({
-                                ...current,
-                                [collection.id]: true
-                              }))
-                            }
-                          />
-                        ) : (
-                          <div className="public-live-collections__media-placeholder">
-                            Collection cover image not set yet.
-                          </div>
-                        )}
+                      <div className="public-live-collections__media-stack">
+                        <div className="public-live-collections__media">
+                          {collection.coverImageUrl && !coverPreviewErrored ? (
+                            <img
+                              src={collection.coverImageUrl}
+                              alt={`${collection.name} cover`}
+                              onLoad={() =>
+                                setLiveCoverPreviewErrorByCollectionId((current) => ({
+                                  ...current,
+                                  [collection.id]: false
+                                }))
+                              }
+                              onError={() =>
+                                setLiveCoverPreviewErrorByCollectionId((current) => ({
+                                  ...current,
+                                  [collection.id]: true
+                                }))
+                              }
+                            />
+                          ) : (
+                            <div className="public-live-collections__media-placeholder">
+                              Collection cover image not set yet.
+                            </div>
+                          )}
+                        </div>
+                        <div className="public-live-collections__media-price">
+                          Mint price
+                          <strong>{formatMicroStxLabel(effectiveMintPrice)}</strong>
+                        </div>
                       </div>
                       <div className="public-live-collections__card-header">
                         <h3>{collection.name}</h3>
@@ -2413,9 +2449,6 @@ export default function PublicApp() {
                         <span className="public-live-collections__stat">
                           Remaining: <strong>{formatBigintLabel(remainingCount)}</strong>
                         </span>
-                        <span className="public-live-collections__stat">
-                          Mint price: <strong>{formatMicroStxLabel(effectiveMintPrice)}</strong>
-                        </span>
                       </div>
                       <div className="public-live-collections__card-meta">
                         <p className="meta-value">
@@ -2431,11 +2464,11 @@ export default function PublicApp() {
                         )}
                       </div>
                       <div className="mint-actions">
-                        <a className="button button--ghost button--mini" href={collection.livePath}>
+                        <span className="button button--ghost button--mini">
                           Open collection page
-                        </a>
+                        </span>
                       </div>
-                    </article>
+                    </a>
                   );
                 })}
               </div>

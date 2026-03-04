@@ -39,6 +39,7 @@ import {
 } from '../lib/wallet/transfer';
 import TokenCardMedia from '../components/TokenCardMedia';
 import TokenContentPreview from '../components/TokenContentPreview';
+import AddressLabel from '../components/AddressLabel';
 import { getMediaKind } from '../lib/viewer/content';
 
 const PAGE_SIZE = 16;
@@ -794,7 +795,15 @@ export default function MyWalletScreen(props: MyWalletScreenProps) {
                 </div>
                 <div>
                   <span className="meta-label">Market contract</span>
-                  <span className="meta-value">{marketLabel}</span>
+                  {marketContractIdLabel ? (
+                    <AddressLabel
+                      address={marketContractIdLabel}
+                      network={marketContract?.network ?? props.contract.network}
+                      className="meta-value"
+                    />
+                  ) : (
+                    <span className="meta-value">{marketLabel}</span>
+                  )}
                 </div>
                 <div>
                   <span className="meta-label">Listing status</span>
@@ -887,9 +896,11 @@ export default function MyWalletScreen(props: MyWalletScreenProps) {
                     </div>
                     <div>
                       <span className="meta-label">Owner</span>
-                      <span className="meta-value">
-                        {selectedToken?.owner ?? 'Unknown'}
-                      </span>
+                      <AddressLabel
+                        address={selectedToken?.owner}
+                        network={props.contract.network}
+                        className="meta-value"
+                      />
                     </div>
                   </div>
                   <label className="field">

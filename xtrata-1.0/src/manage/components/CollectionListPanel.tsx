@@ -13,6 +13,7 @@ type CollectionRecord = {
   contract_address: string | null;
   display_name: string | null;
   state: string;
+  created_at?: number;
   metadata?: Record<string, unknown> | null;
 };
 
@@ -37,6 +38,73 @@ const isArchived = (collection: CollectionRecord) =>
 const isPublished = (collection: CollectionRecord) =>
   collection.state.trim().toLowerCase() === 'published';
 
+const toRecord = (value: unknown) =>
+  value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
+
+const toFiniteNumber = (value: unknown) => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+};
+
+const getDisplayOrder = (collection: CollectionRecord) => {
+  const metadataRecord = toRecord(collection.metadata);
+  const collectionPage = toRecord(metadataRecord?.collectionPage);
+  const rawOrder = toFiniteNumber(collectionPage?.displayOrder);
+  if (rawOrder === null) {
+    return null;
+  }
+  return Math.trunc(rawOrder);
+};
+
+const sortByPublicDisplayOrder = (items: CollectionRecord[]) => {
+  const copy = [...items];
+  copy.sort((left, right) => {
+    const leftOrder = getDisplayOrder(left);
+    const rightOrder = getDisplayOrder(right);
+    if (leftOrder !== null && rightOrder !== null && leftOrder !== rightOrder) {
+      return leftOrder - rightOrder;
+    }
+    if (leftOrder !== null && rightOrder === null) {
+      return -1;
+    }
+    if (leftOrder === null && rightOrder !== null) {
+      return 1;
+    }
+    const leftCreated = toFiniteNumber(left.created_at) ?? 0;
+    const rightCreated = toFiniteNumber(right.created_at) ?? 0;
+    if (leftCreated !== rightCreated) {
+      return rightCreated - leftCreated;
+    }
+    return left.id.localeCompare(right.id);
+  });
+  return copy;
+};
+
+const mergeDisplayOrderMetadata = (
+  metadata: CollectionRecord['metadata'],
+  displayOrder: number
+) => {
+  const metadataRecord = toRecord(metadata) ?? {};
+  const collectionPage = toRecord(metadataRecord.collectionPage) ?? {};
+  return {
+    ...metadataRecord,
+    collectionPage: {
+      ...collectionPage,
+      displayOrder
+    }
+  };
+};
+
 const getLifecycleLabel = (collection: CollectionRecord) => {
   const state = collection.state.trim().toLowerCase();
   const deployTxId =
@@ -57,9 +125,11 @@ const getLifecycleLabel = (collection: CollectionRecord) => {
 
 export default function CollectionListPanel(props: CollectionListPanelProps) {
   const [collections, setCollections] = useState<CollectionRecord[]>([]);
+  const [publicCollections, setPublicCollections] = useState<CollectionRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isPublicCollectionsLoading, setIsPublicCollectionsLoading] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [copiedCollectionId, setCopiedCollectionId] = useState<string | null>(null);
   const [pendingCollectionId, setPendingCollectionId] = useState<string | null>(null);
@@ -94,16 +164,34 @@ export default function CollectionListPanel(props: CollectionListPanelProps) {
     [connectedAddress]
   );
 
+  const loadPublicCollections = useCallback(async () => {
+    setIsPublicCollectionsLoading(true);
+    try {
+      const response = await fetch('/collections?publishedOnly=1&publicVisibleOnly=1');
+      const payload = await parseManageJsonResponse<CollectionRecord[]>(
+        response,
+        'Public collections'
+      );
+      setPublicCollections(payload);
+    } catch (err) {
+      setError(toManageApiErrorMessage(err, 'Unable to load public collection order'));
+    } finally {
+      setIsPublicCollectionsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     void loadCollections(showArchived);
-  }, [loadCollections, showArchived]);
+    void loadPublicCollections();
+  }, [loadCollections, loadPublicCollections, showArchived]);
 
   useEffect(() => {
     if (!props.refreshKey) {
       return;
     }
     void loadCollections(showArchived);
-  }, [props.refreshKey, loadCollections, showArchived]);
+    void loadPublicCollections();
+  }, [props.refreshKey, loadCollections, loadPublicCollections, showArchived]);
 
   const archiveCollection = useCallback(
     async (collection: CollectionRecord) => {
@@ -258,6 +346,92 @@ export default function CollectionListPanel(props: CollectionListPanelProps) {
     () => collections.filter((collection) => isArchived(collection)),
     [collections]
   );
+  const publicVisiblePublishedCollections = useMemo(
+    () => sortByPublicDisplayOrder(publicCollections),
+    [publicCollections]
+  );
+
+  const movePublicOrder = useCallback(
+    async (collectionId: string, direction: 'up' | 'down') => {
+      const ordered = sortByPublicDisplayOrder(publicCollections);
+      const currentIndex = ordered.findIndex((collection) => collection.id === collectionId);
+      if (currentIndex === -1) {
+        return;
+      }
+      const delta = direction === 'up' ? -1 : 1;
+      const targetIndex = currentIndex + delta;
+      if (targetIndex < 0 || targetIndex >= ordered.length) {
+        return;
+      }
+
+      const reordered = [...ordered];
+      const [moved] = reordered.splice(currentIndex, 1);
+      reordered.splice(targetIndex, 0, moved);
+
+      const nextOrderById = new Map<string, number>();
+      reordered.forEach((collection, index) => {
+        nextOrderById.set(collection.id, index + 1);
+      });
+      const changed = reordered.filter((collection) => {
+        const nextOrder = nextOrderById.get(collection.id) ?? null;
+        return nextOrder !== null && getDisplayOrder(collection) !== nextOrder;
+      });
+      if (changed.length === 0) {
+        return;
+      }
+
+      setPendingCollectionId(collectionId);
+      setIsPublicCollectionsLoading(true);
+      setError(null);
+      setStatus(null);
+      try {
+        const updatedById = new Map<string, CollectionRecord>();
+        for (const collection of changed) {
+          const nextOrder = nextOrderById.get(collection.id);
+          if (!nextOrder) {
+            continue;
+          }
+          const response = await fetch(`/collections/${collection.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              metadata: mergeDisplayOrderMetadata(collection.metadata ?? null, nextOrder)
+            })
+          });
+          const updated = await parseManageJsonResponse<CollectionRecord>(
+            response,
+            'Update collection order'
+          );
+          updatedById.set(updated.id, updated);
+        }
+        if (updatedById.size > 0) {
+          setPublicCollections((current) =>
+            sortByPublicDisplayOrder(
+              current.map((item) => updatedById.get(item.id) ?? item)
+            )
+          );
+          setCollections((current) =>
+            current.map((item) => updatedById.get(item.id) ?? item)
+          );
+        }
+        const movedLabel = moved.display_name ?? moved.slug;
+        setStatus(`Updated public order. ${movedLabel} is now position ${targetIndex + 1}.`);
+      } catch (err) {
+        setError(
+          toManageApiErrorMessage(
+            err,
+            'Unable to update public order. The list has been refreshed to stay in sync.'
+          )
+        );
+        await loadCollections(showArchived);
+        await loadPublicCollections();
+      } finally {
+        setPendingCollectionId(null);
+        setIsPublicCollectionsLoading(false);
+      }
+    },
+    [publicCollections, loadCollections, loadPublicCollections, showArchived]
+  );
 
   return (
     <div className="collection-list">
@@ -266,7 +440,10 @@ export default function CollectionListPanel(props: CollectionListPanelProps) {
           <button
             className="button button--ghost button--mini"
             type="button"
-            onClick={() => void loadCollections(showArchived)}
+            onClick={() => {
+              void loadCollections(showArchived);
+              void loadPublicCollections();
+            }}
             disabled={isLoading || pendingCollectionId !== null}
           >
             {isLoading ? 'Refreshing...' : 'Refresh'}
@@ -295,6 +472,67 @@ export default function CollectionListPanel(props: CollectionListPanelProps) {
 
       {status && <p className="meta-value">{status}</p>}
       {error && <div className="alert">{error}</div>}
+
+      <div className="collection-list__group">
+        <div className="collection-list__group-header">
+          <h3 className="collection-list__group-title">Public page order</h3>
+          <InfoTooltip text="Published drops with “show on public page” enabled appear in this order on the live public pages." />
+        </div>
+        {isPublicCollectionsLoading && (
+          <p className="collection-list__summary">Refreshing public order…</p>
+        )}
+        {publicVisiblePublishedCollections.length === 0 ? (
+          <p className="collection-list__summary">
+            No published collections are currently visible on public pages.
+          </p>
+        ) : (
+          publicVisiblePublishedCollections.map((collection, index) => (
+            <div
+              key={`public-order-${collection.id}`}
+              className="collection-list__item collection-list__item--compact"
+            >
+              <div className="collection-list__compact-row">
+                <div className="collection-list__compact-main">
+                  <strong>
+                    {index + 1}. {collection.display_name ?? collection.slug}
+                  </strong>
+                  <p className="collection-list__compact-meta">{collection.slug}</p>
+                </div>
+                <div className="mint-actions">
+                  <button
+                    className="button button--ghost button--mini"
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void movePublicOrder(collection.id, 'up');
+                    }}
+                    disabled={
+                      pendingCollectionId !== null || isLoading || index === 0
+                    }
+                  >
+                    Up
+                  </button>
+                  <button
+                    className="button button--ghost button--mini"
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void movePublicOrder(collection.id, 'down');
+                    }}
+                    disabled={
+                      pendingCollectionId !== null ||
+                      isLoading ||
+                      index === publicVisiblePublishedCollections.length - 1
+                    }
+                  >
+                    Down
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
 
       {activeCollections.length === 0 && !isLoading ? (
         <p>No active drops yet for this wallet. Create one in Step 1.</p>

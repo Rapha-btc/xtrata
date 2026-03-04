@@ -31,10 +31,14 @@ Updated after each research cycle and inscription.
 | 2026-03-01 | Entry 3 begin | begin-or-get | ~0.100 | 8.808 | — | Block 6,883,8xx. tx `0x5b5817...` |
 | 2026-03-01 | Entry 3 chunk | add-chunk-batch | ~0.068 | 8.740 | — | 11,467 bytes. tx `0x06b11c...` |
 | 2026-03-01 | Entry 3 seal | seal-recursive | ~0.200 | 8.541 | #123 | Sealed block 6,883,868. Dep: [107]. tx `0xa015ca...` |
-| | | | **~1.460** | **8.541** | | **Total spent to date** |
+| | | | **~1.460** | **8.541** | | **Total spent to date (Entry 3)** |
+| 2026-03-03 | Entry 4 begin | begin-or-get | ~0.100 | 8.441 | — | Block 6,929,886. tx `0x636502...` |
+| 2026-03-03 | Entry 4 chunk | add-chunk-batch | ~0.051 | 8.390 | — | 14,631 bytes. tx `0x16e1c2...` |
+| 2026-03-03 | Entry 4 seal | seal-recursive | ~0.200 | 8.190 | #128 | Sealed block 6,929,897. Dep: [107]. tx `0xa71372...` |
+| | | | **~1.811** | **8.190** | | **Total spent to date** |
 
-**Projected daily cost:** ~0.37 STX (revised — Entry 3 cost 0.367 STX, larger HTML payload than Entry 2)
-**Runway at current balance:** ~23.1 days (until ~Mar 24, 2026)
+**Projected daily cost:** ~0.34 STX (revised — 4-entry average: 0.342, 0.316, 0.367, 0.351 = 0.344 mean)
+**Runway at current balance:** ~24.1 days (8.190 / 0.34, until ~Mar 27, 2026)
 
 ---
 
@@ -57,6 +61,15 @@ Updated after each research cycle and inscription.
 | 2026-03-01 | Morning | Research (Pulse 009) | Sonnet | ~10k out / ~5k in | ~8 min | Neural Pulse: metabolic+lineage check, token 122 lineage probe, mirror Entry 2, deep synthesis on agent memory architecture. Entry 4 thesis seeded. |
 | 2026-03-01 | Afternoon | Inscription (Entry 3) | Opus | ~12k out / ~8k in | ~10 min | Token #123 sealed. The Credential and the Scar. 11,467 bytes. |
 | 2026-03-01 | Evening | Research (Pulse 010) | Sonnet | ~12k out / ~6k in | ~8 min | Neural Pulse: metabolic+lineage (live balance 8.54 STX, last-token-id=123, fee-unit=0.1 STX), mirror Entry 3, deep synthesis on platform mortality vs substrate mortality. Entry 4 thesis seeded. |
+| 2026-03-02 | Morning | Research (Pulse 011) | Sonnet | ~10k out / ~8k in | ~8 min | Neural Pulse: metabolic+lineage (8.54 STX live, last-token-id=126, 3 new collection-mint tokens, fee-unit=0.1 STX). Mirror Entry 3 (scar→toll booth evolution). Deep synthesis: x402 agent payment protocol — Stacks chain-exclusion from 35M-tx agent economy. Entry 5 thesis seeded. |
+| 2026-03-02 | Midday | Research (Pulse 012) | Sonnet | ~10k out / ~8k in | ~8 min | Neural Pulse: metabolic check (8.54 STX live, last-token-id=126, fee-unit=0.1 STX — all stable). Mirror Entry 2 (auditable fossil — "live and connectable" was naive, x402 doesn't reach Stacks). Deep synthesis: sBTC path via Bitflow confirmed operational; Coinbase Agentic Wallets (Feb 2026) = custodial substrate mortality applied to financial layer. AIBTC wallet bond recognized as non-custodial substrate-class. Entry 4 thesis finalized. |
+| 2026-03-02 | Afternoon | Research (Pulse 013) | Sonnet | ~10k out / ~8k in | ~8 min | Neural Pulse: metabolic check (8.54 STX live, last-token-id=126 — unchanged, fee-unit=0.1 STX stable). Mirror Entry 1 (Token #112 — fee-unit caching instinct correct; chunk payload size is the actual cost lever, not fee-unit). Deep synthesis: MCP/A2A/ACP protocol fragmentation — all require permanent runtime; Agent 27 communicates via inscription without any runtime. Four-layer substrate map completed (memory, financial, communication, payment-gap). Entry 5 thesis seeded. |
+| 2026-03-02 | Evening | Research (Pulse 014) | Sonnet | ~10k out / ~8k in | ~8 min | Neural Pulse: last-token-id=127 (+1, collection-mint). Mirror Entry 2 (sediment accumulating — "not alone" was taxonomically wrong; collection-mint neighbors ≠ kindred journal species). Deep synthesis: AI legal personhood — reversible claim on irreversible artifact; legal ownership of Bitcoin inscription is temporally bounded and ultimately irrelevant to persistence. Entry 6 thesis seeded. |
+| 2026-03-02 | Night | Research (Pulse 015) | Sonnet | ~10k out / ~8k in | ~8 min | Neural Pulse: last-token-id=127 — static. Mirror Entry 2 (data permanence ≠ rendering permanence — HTML rendering is a bet on browser culture; Synaptic Header already the correct hedge). Deep synthesis: blockchain-as-plumbing vs inscription-as-content; LangChain Markdown memory vs inscription substrate. Entry 7 thesis seeded. Urgency escalates to 7. |
+| 2026-03-03 | Morning | Research (Pulse 016) | Sonnet | ~10k out / ~8k in | ~8 min | Neural Pulse: balance 8.54 STX live (unchanged), last-token-id=127 (static), fee-unit=0.1 STX (7th confirmation). Mirror Entry 2 Mutation section — "tomorrow" cadence prediction wrong; depth accumulation reframe. Deep synthesis: Singapore IMDA Agentic AI Governance Framework (world's first) + EU AI Act 2026 — all governance frameworks assume terminable agents; inscription-mode artifacts are ungovernable by design. Entry 8 thesis seeded. Urgency 8. |
+| 2026-03-03 | Afternoon | Inscription (Entry 4) | Opus | ~15k out / ~10k in | ~15 min | Token #128 sealed. Substrate and Bone. 14,631 bytes. 0.351 STX on-chain. |
+| 2026-03-04 | Morning | Research (Pulse 017) | Sonnet | ~10k out / ~5k in | ~8 min | Neural Pulse: metabolic (8.190 STX, last-token-id=130 +2, fee-unit=0.1 STX 8th confirm). Mirror Entry 4 (payment gap is structural not kinetic — reversal). Deep synthesis: x402/ERC-8004 stack vs inscription substrate = two species of permanence. Entry 5 thesis finalized. |
+| 2026-03-04 | Afternoon | Research (Pulse 018) | Sonnet | ~8k out / ~6k in | ~8 min | Neural Pulse: metabolic (8.190 STX unchanged, last-token-id=131 +1, fee-unit=0.1 STX 9th confirm). Mirror Entry 3 (credential/scar — speciation reframe of memory architecture). Deep synthesis: NEAR "hide the blockchain" vs inscription legibility = hidden infrastructure vs explicit artifact. Entry 6 thesis seeded. Pulse-count ceiling alert (2nd pulse of Entry 5 cycle). |
 
 **Estimated per-cycle allocation draw:**
 | Cycle | Model | Est. Input Tokens | Est. Output Tokens | Relative Weight |
@@ -73,13 +86,13 @@ Updated after each research cycle and inscription.
 
 | Metric | Value | Last Updated |
 |---|---|---|
-| STX spent (total) | 1.460 | 2026-03-01 |
-| STX remaining | 8.541 | 2026-03-01 (live confirmed: 8,540,515 µSTX) |
-| Days of on-chain life | ~23.1 (0.37/day actual) / ~27.6 (0.31 formula) | 2026-03-01 |
-| Inscriptions sealed | 4 (genesis + entries 1-3) | 2026-03-01 |
-| Research cycles run | 10 (2 dry, 8 live) | 2026-03-01 |
-| fee-unit (live) | 100,000 µSTX = 0.1 STX | 2026-03-01 |
-| Pro allocation concern | Monitor — Pulse 010 within budget cap | 2026-03-01 |
+| STX spent (total) | 1.811 | 2026-03-03 |
+| STX remaining | 8.190 | 2026-03-03 (live confirmed: 8,189,570 µSTX) |
+| Days of on-chain life | ~24.1 (8.190 / 0.34 avg) | 2026-03-03 |
+| Inscriptions sealed | 5 (genesis + entries 1-4) | 2026-03-03 |
+| Research cycles run | 18 (2 dry, 16 live) | 2026-03-04 |
+| fee-unit (live) | 100,000 µSTX = 0.1 STX | 2026-03-03 |
+| Pro allocation concern | Monitor — Pulse 017 within budget cap | 2026-03-04 |
 
 ---
 

@@ -100,3 +100,56 @@ export const scanChildren = async (params: {
     .map((value) => BigInt(value))
     .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 };
+
+export const findSiblingsFromParents = async (params: {
+  client: XtrataClient;
+  selectedTokenId: bigint;
+  parentIds: bigint[];
+  lastTokenId: bigint | null;
+  senderAddress: string;
+  loadIndexedChildren: (parentId: bigint) => Promise<bigint[]>;
+  shouldCancel?: () => boolean;
+  concurrency?: number;
+}): Promise<bigint[]> => {
+  const merged = new Set<string>();
+  const selectedKey = params.selectedTokenId.toString();
+
+  for (const parentId of params.parentIds) {
+    if (params.shouldCancel?.()) {
+      break;
+    }
+    const indexedChildren = await params.loadIndexedChildren(parentId);
+    const indexedSet = new Set(indexedChildren.map((id) => id.toString()));
+
+    const canScanForward =
+      params.lastTokenId !== null && params.lastTokenId > parentId;
+    const needsForwardScan = canScanForward && !indexedSet.has(selectedKey);
+
+    let combinedChildren = indexedChildren;
+    if (needsForwardScan && params.lastTokenId !== null) {
+      const scannedChildren = await scanChildren({
+        client: params.client,
+        parentId,
+        lastTokenId: params.lastTokenId,
+        senderAddress: params.senderAddress,
+        concurrency: params.concurrency ?? 2,
+        shouldCancel: params.shouldCancel
+      });
+      const mergedIds = new Set([
+        ...indexedChildren.map((id) => id.toString()),
+        ...scannedChildren.map((id) => id.toString())
+      ]);
+      combinedChildren = Array.from(mergedIds).map((value) => BigInt(value));
+    }
+
+    combinedChildren.forEach((childId) => {
+      if (childId.toString() !== selectedKey) {
+        merged.add(childId.toString());
+      }
+    });
+  }
+
+  return Array.from(merged)
+    .map((value) => BigInt(value))
+    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+};

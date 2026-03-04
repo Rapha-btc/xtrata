@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Xtrata Homepage Wireframe</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body data-mode="creator">
+    <div class="wf-shell">
+      <header class="wf-header">
+        <div class="wf-brand">
+          <p class="wf-brand__kicker">Draft homepage wireframe</p>
+          <h1>XTRATA</h1>
+        </div>
+        <div class="wf-header__actions">
+          <a class="wf-link" href="/workspace">Open Workspace</a>
+          <button class="wf-wallet" id="walletButton" type="button">Connect wallet</button>
+        </div>
+      </header>
+
+      <main class="wf-main">
+        <section class="wf-hero">
+          <div class="wf-hero__copy">
+            <p class="wf-chip">First-time builders + creators</p>
+            <h2 id="heroTitle">Inscribe data on-chain in three clear steps.</h2>
+            <p id="heroText">
+              Browse real inscriptions, preview quickly, and mint without learning the full
+              workspace first.
+            </p>
+            <div class="wf-hero__actions">
+              <a class="wf-button wf-button--primary" href="#inscribe">Start inscribing</a>
+              <a class="wf-button wf-button--ghost" href="#docs">Read quick docs</a>
+            </div>
+          </div>
+
+          <div class="wf-mode">
+            <p>Homepage view mode</p>
+            <div class="wf-mode__choices">
+              <button class="wf-mode__chip is-active" data-mode-target="creator" type="button">
+                Creator-first
+              </button>
+              <button class="wf-mode__chip" data-mode-target="protocol" type="button">
+                Protocol-first
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section class="wf-stage">
+          <article class="wf-panel">
+            <div class="wf-panel__header">
+              <h3>Explore inscriptions</h3>
+              <p>Click any tile to update preview and buy state.</p>
+            </div>
+            <div class="wf-grid" id="tokenGrid"></div>
+          </article>
+
+          <article class="wf-panel wf-preview">
+            <div class="wf-panel__header">
+              <h3>Preview</h3>
+              <p>Fast purchase from preview for listed items.</p>
+            </div>
+            <div class="wf-preview__frame">
+              <img id="previewImage" alt="Selected inscription preview" />
+            </div>
+            <div class="wf-preview__meta">
+              <p><span>Token</span><strong id="previewToken">#-</strong></p>
+              <p><span>Artist</span><strong id="previewArtist">-</strong></p>
+              <p><span>Type</span><strong id="previewType">-</strong></p>
+              <p><span>Status</span><strong id="previewStatus">-</strong></p>
+            </div>
+            <div class="wf-preview__actions">
+              <button class="wf-button wf-button--primary" id="buyButton" type="button">
+                Buy from preview
+              </button>
+              <button class="wf-button wf-button--ghost" type="button">Open full item page</button>
+            </div>
+          </article>
+        </section>
+
+        <section class="wf-panel" id="inscribe">
+          <div class="wf-panel__header">
+            <h3>Inscribe module (simplified)</h3>
+            <p>Main first action: inscription flow, not advanced controls.</p>
+          </div>
+          <ol class="wf-steps">
+            <li><strong>Begin:</strong> Choose file and lock inscription intent.</li>
+            <li><strong>Upload batches:</strong> Upload chunks with clear progress.</li>
+            <li><strong>Seal:</strong> Finalize on-chain and view in preview/grid.</li>
+          </ol>
+          <div class="wf-row">
+            <button class="wf-button wf-button--primary" type="button">Connect + start mint</button>
+            <a class="wf-link" href="/workspace">Need advanced settings? Open Workspace</a>
+          </div>
+        </section>
+
+        <section class="wf-panel" id="docs">
+          <div class="wf-panel__header">
+            <h3>Useful docs for first-time visitors</h3>
+            <p>Keep docs focused and actionable, not overwhelming.</p>
+          </div>
+          <div class="wf-docs">
+            <article class="wf-doc">
+              <h4>How inscriptions work</h4>
+              <p>Plain-language guide to begin, upload, seal, and verify content.</p>
+              <a href="#">Open quickstart</a>
+            </article>
+            <article class="wf-doc">
+              <h4>Artist collection access</h4>
+              <p>How artists request collection-mint access and launch collection pages.</p>
+              <a href="#">Open artist guide</a>
+            </article>
+            <article class="wf-doc">
+              <h4>Fees and what to expect</h4>
+              <p>Fixed vs variable costs with simple examples before first mint.</p>
+              <a href="#">Open fee guide</a>
+            </article>
+            <article class="wf-doc">
+              <h4>Safety checklist</h4>
+              <p>Network checks, wallet checks, and retry guidance before signing.</p>
+              <a href="#">Open checklist</a>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="./wireframe.js" type="module"></script>
+  </body>
+</html>

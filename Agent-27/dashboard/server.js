@@ -74,6 +74,23 @@ app.get('/api/agents', (req, res) => {
   res.json(markdown.parseAgents());
 });
 
+app.get('/api/evolution', (req, res) => {
+  res.json(markdown.parseEvolution());
+});
+
+app.post('/api/save/:docId', (req, res) => {
+  const { docId } = req.params;
+  const { content } = req.body || {};
+  if (typeof content !== 'string') {
+    return res.status(400).json({ ok: false, error: 'content required' });
+  }
+  const result = markdown.saveDocument(docId, content);
+  if (!result.ok) {
+    return res.status(400).json(result);
+  }
+  res.json(result);
+});
+
 app.get('/api/log', (req, res) => {
   res.json(activityLog);
 });
