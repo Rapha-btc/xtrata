@@ -5011,6 +5011,16 @@ p {
   overflow: hidden;
 }
 
+.collection-live-page__hero-banner {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  opacity: 0.2;
+  pointer-events: none;
+}
+
 .collection-live-page__stamp {
   position: absolute;
   top: 14px;
@@ -5042,6 +5052,8 @@ p {
   overflow: hidden;
   display: grid;
   place-items: center;
+  position: relative;
+  z-index: 1;
 }
 
 .collection-live-page__hero-media img {
@@ -5063,6 +5075,34 @@ p {
   display: grid;
   align-content: start;
   gap: 8px;
+  position: relative;
+  z-index: 1;
+}
+
+.collection-live-page__brand {
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  position: relative;
+  overflow: hidden;
+}
+
+.collection-live-page__brand-banner {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  opacity: 0.28;
+  pointer-events: none;
+}
+
+.collection-live-page__brand-content {
+  position: relative;
+  z-index: 1;
+  padding: 10px 12px;
+  display: grid;
+  gap: 2px;
 }
 
 .collection-live-page__eyebrow {
@@ -5071,6 +5111,15 @@ p {
   letter-spacing: 0.11em;
   text-transform: uppercase;
   color: var(--accent-strong);
+  font-weight: 700;
+}
+
+.collection-live-page__powered {
+  margin: 0;
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
   font-weight: 700;
 }
 

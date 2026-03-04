@@ -210,6 +210,13 @@ const toRecord = (value: unknown): Record<string, unknown> | null => {
   return value as Record<string, unknown>;
 };
 
+const isLikelyRenderableBannerUrl = (value: string) => {
+  if (!value) {
+    return false;
+  }
+  return /^(https?:\/\/|ipfs:\/\/)/i.test(value);
+};
+
 const toBigIntValue = (value: unknown): bigint | null => {
   if (typeof value === 'bigint') {
     return value;
@@ -569,6 +576,14 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     () => toRecord(metadataCollectionPage?.coverImage) ?? null,
     [metadataCollectionPage]
   );
+  const metadataHeroBanner = useMemo(
+    () => toRecord(metadataCollectionPage?.heroBannerImage) ?? null,
+    [metadataCollectionPage]
+  );
+  const metadataLogoBanner = useMemo(
+    () => toRecord(metadataCollectionPage?.logoBannerImage) ?? null,
+    [metadataCollectionPage]
+  );
   const resolvedCollectionId = useMemo(
     () => toText(collection?.id),
     [collection]
@@ -713,6 +728,30 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       resolvedCollectionId
     )}/asset-preview?assetId=${encodeURIComponent(fallback.asset_id)}`;
   }, [metadataCover, imageAssets, resolvedCollectionId]);
+
+  const heroBannerUrl = useMemo(() => {
+    const source = toText(metadataHeroBanner?.source);
+    const imageUrl = toText(metadataHeroBanner?.imageUrl);
+    if (source && source !== 'inscribed-image-url') {
+      return null;
+    }
+    if (!isLikelyRenderableBannerUrl(imageUrl)) {
+      return null;
+    }
+    return imageUrl;
+  }, [metadataHeroBanner]);
+
+  const logoBannerUrl = useMemo(() => {
+    const source = toText(metadataLogoBanner?.source);
+    const imageUrl = toText(metadataLogoBanner?.imageUrl);
+    if (source && source !== 'inscribed-image-url') {
+      return null;
+    }
+    if (!isLikelyRenderableBannerUrl(imageUrl)) {
+      return null;
+    }
+    return imageUrl;
+  }, [metadataLogoBanner]);
 
   const collectionTitle = useMemo(
     () =>
@@ -2340,6 +2379,13 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
           onDisconnect={handleDisconnectWallet}
         />
         <section className="collection-live-page__hero">
+          {heroBannerUrl && (
+            <div
+              className="collection-live-page__hero-banner"
+              style={{ backgroundImage: `url("${heroBannerUrl}")` }}
+              aria-hidden
+            />
+          )}
           {soldOut && <span className="collection-live-page__stamp">Sold out</span>}
           <div className="collection-live-page__hero-media">
             {coverUrl ? (
@@ -2351,8 +2397,20 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
             )}
           </div>
           <div className="collection-live-page__hero-copy">
-            <p className="collection-live-page__eyebrow">Live collection mint</p>
-            <h1>{collectionTitle}</h1>
+            <div className="collection-live-page__brand">
+              {logoBannerUrl && (
+                <div
+                  className="collection-live-page__brand-banner"
+                  style={{ backgroundImage: `url("${logoBannerUrl}")` }}
+                  aria-hidden
+                />
+              )}
+              <div className="collection-live-page__brand-content">
+                <p className="collection-live-page__eyebrow">Live collection mint</p>
+                <h1>{collectionTitle}</h1>
+                <p className="collection-live-page__powered">Powered by XTRATA</p>
+              </div>
+            </div>
             <p className="collection-live-page__description">{collectionDescription}</p>
             <div className="collection-live-page__hero-meta">
               <span>Ticker: {collectionSymbol}</span>

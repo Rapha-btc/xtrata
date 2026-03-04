@@ -128,6 +128,20 @@ const normalizeCoverSource = (value: unknown): CoverImageSource | null => {
 const isValidCoverUrl = (value: string) =>
   /^(https?:\/\/|ipfs:\/\/|data:image\/)/i.test(value);
 
+const isLikelyInscriptionImageUrl = (value: string) => {
+  if (!/^https?:\/\//i.test(value)) {
+    return false;
+  }
+  const normalized = value.toLowerCase();
+  return (
+    normalized.includes('/inscription/') ||
+    normalized.includes('/inscriptions/') ||
+    normalized.includes('inscription=') ||
+    normalized.includes('inscriptionid=') ||
+    normalized.includes('/content/')
+  );
+};
+
 const normalizeHashHex = (value: string) => {
   const normalized = value.trim().toLowerCase().replace(/^0x/, '');
   if (!HASH_HEX_PATTERN.test(normalized)) {
@@ -199,6 +213,8 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
   const [coverSource, setCoverSource] = useState<CoverImageSource>('collection-asset');
   const [selectedCoverAssetId, setSelectedCoverAssetId] = useState('');
   const [inscribedCoverUrl, setInscribedCoverUrl] = useState('');
+  const [heroBannerUrlInput, setHeroBannerUrlInput] = useState('');
+  const [logoBannerUrlInput, setLogoBannerUrlInput] = useState('');
   const [collectionDescriptionInput, setCollectionDescriptionInput] = useState('');
   const [coverMessage, setCoverMessage] = useState<string | null>(null);
   const [descriptionMessage, setDescriptionMessage] = useState<string | null>(null);
@@ -470,6 +486,8 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       setCoverSource('collection-asset');
       setSelectedCoverAssetId('');
       setInscribedCoverUrl('');
+      setHeroBannerUrlInput('');
+      setLogoBannerUrlInput('');
       setCollectionDescriptionInput('');
       setFeeGuidance(null);
       setFeeGuidanceMessage(null);
@@ -541,9 +559,13 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
 
       const loadedCollectionPage = toRecord(loadedMetadata?.collectionPage) ?? null;
       const loadedCover = toRecord(loadedCollectionPage?.coverImage) ?? null;
+      const loadedHeroBanner = toRecord(loadedCollectionPage?.heroBannerImage) ?? null;
+      const loadedLogoBanner = toRecord(loadedCollectionPage?.logoBannerImage) ?? null;
       const savedSource = normalizeCoverSource(loadedCover?.source);
       const savedAssetId = toText(loadedCover?.assetId);
       const savedUrl = toText(loadedCover?.imageUrl);
+      const savedHeroBannerUrl = toText(loadedHeroBanner?.imageUrl);
+      const savedLogoBannerUrl = toText(loadedLogoBanner?.imageUrl);
       const loadedCollectionMetadata = toRecord(loadedMetadata?.collection) ?? null;
       const savedDescription =
         toMultilineText(loadedCollectionPage?.description) ||
@@ -554,6 +576,8 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       setCoverSource(savedSource ?? 'collection-asset');
       setSelectedCoverAssetId(savedAssetId);
       setInscribedCoverUrl(savedUrl);
+      setHeroBannerUrlInput(savedHeroBannerUrl);
+      setLogoBannerUrlInput(savedLogoBannerUrl);
       setCollectionDescriptionInput(savedDescription);
       setFeeGuidance(loadedFeeGuidance);
       setReadiness({
@@ -569,6 +593,8 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       setCollection(null);
       setAssets([]);
       setFeeGuidance(null);
+      setHeroBannerUrlInput('');
+      setLogoBannerUrlInput('');
       setCollectionDescriptionInput('');
       setOnChainReservationStatus(null);
       setOnChainReservedCount(null);
@@ -680,6 +706,44 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       };
     }
 
+    const normalizedHeroBannerUrl = heroBannerUrlInput.trim();
+    if (
+      normalizedHeroBannerUrl.length > 0 &&
+      !isLikelyInscriptionImageUrl(normalizedHeroBannerUrl)
+    ) {
+      setCoverMessage(
+        'Hero banner must use an existing inscription image URL (https:// or http://).'
+      );
+      return;
+    }
+
+    const normalizedLogoBannerUrl = logoBannerUrlInput.trim();
+    if (
+      normalizedLogoBannerUrl.length > 0 &&
+      !isLikelyInscriptionImageUrl(normalizedLogoBannerUrl)
+    ) {
+      setCoverMessage(
+        'Logo banner must use an existing inscription image URL (https:// or http://).'
+      );
+      return;
+    }
+
+    const heroBannerImage =
+      normalizedHeroBannerUrl.length > 0
+        ? {
+            source: 'inscribed-image-url',
+            imageUrl: normalizedHeroBannerUrl
+          }
+        : null;
+
+    const logoBannerImage =
+      normalizedLogoBannerUrl.length > 0
+        ? {
+            source: 'inscribed-image-url',
+            imageUrl: normalizedLogoBannerUrl
+          }
+        : null;
+
     const currentMetadata = toRecord(collection.metadata) ?? {};
     const currentCollectionPage = toRecord(currentMetadata.collectionPage) ?? {};
     const nextMetadata = {
@@ -687,6 +751,8 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       collectionPage: {
         ...currentCollectionPage,
         coverImage,
+        heroBannerImage,
+        logoBannerImage,
         updatedAt: new Date().toISOString()
       }
     };
@@ -795,6 +861,8 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
     setLiveLinkMessage(null);
     setFeeGuidanceMessage(null);
     setFeeGuidance(null);
+    setHeroBannerUrlInput('');
+    setLogoBannerUrlInput('');
     setOnChainReservationMessage(null);
     setOnChainReservationStatus(null);
   }, [normalizedActiveCollectionId]);
@@ -1291,6 +1359,44 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
 
         <label className="field">
           <span className="field__label info-label">
+            Hero background banner (inscription URL)
+            <InfoTooltip text="Shown behind the top hero section on the public mint page. Use an existing inscription image URL only." />
+          </span>
+          <input
+            className="input"
+            placeholder="https://.../inscriptions/.../content"
+            value={heroBannerUrlInput}
+            onChange={(event) => {
+              setHeroBannerUrlInput(event.target.value);
+              setCoverMessage(null);
+            }}
+          />
+          <span className="field__hint">
+            Optional. Leave empty to keep the default hero background.
+          </span>
+        </label>
+
+        <label className="field">
+          <span className="field__label info-label">
+            Logo/title banner (inscription URL)
+            <InfoTooltip text="Shown behind the logo/title block on the public mint page. Use an existing inscription image URL only." />
+          </span>
+          <input
+            className="input"
+            placeholder="https://.../inscriptions/.../content"
+            value={logoBannerUrlInput}
+            onChange={(event) => {
+              setLogoBannerUrlInput(event.target.value);
+              setCoverMessage(null);
+            }}
+          />
+          <span className="field__hint">
+            Optional. Leave empty to keep the default logo/title block style.
+          </span>
+        </label>
+
+        <label className="field">
+          <span className="field__label info-label">
             Collection description
             <InfoTooltip text="Update the public collection summary text shown under the hero image. Line breaks are supported." />
           </span>
@@ -1319,9 +1425,9 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
               onClick={() => void saveCoverSettings()}
               disabled={coverSaving || !collectionId.trim()}
             >
-              {coverSaving ? 'Saving...' : 'Save cover image'}
+              {coverSaving ? 'Saving...' : 'Save cover + banners'}
             </button>
-            <InfoTooltip text="Writes current cover source/selection to collection page metadata." />
+            <InfoTooltip text="Writes current cover source plus hero/logo banner URLs to collection page metadata." />
           </span>
           <span className="info-label">
             <button
