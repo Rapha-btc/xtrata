@@ -403,10 +403,14 @@ const TokenDetails = (props: {
   const [detailPanelView, setDetailPanelView] = useState<'media' | 'metadata'>(
     'media'
   );
+  const [metadataColumnCollapsed, setMetadataColumnCollapsed] = useState(false);
   const isWalletView = props.mode === 'wallet';
   const useSplitDetailTabs = props.useCompactPreviewLayout;
+  const canToggleMetadataColumn = !useSplitDetailTabs;
+  const metadataColumnHidden = canToggleMetadataColumn && metadataColumnCollapsed;
   const showMediaPane = !useSplitDetailTabs || detailPanelView === 'media';
-  const showMetadataPane = !useSplitDetailTabs || detailPanelView === 'metadata';
+  const showMetadataPane =
+    (!useSplitDetailTabs || detailPanelView === 'metadata') && !metadataColumnHidden;
   const mismatch = getNetworkMismatch(
     props.contract.network,
     props.walletSession.network
@@ -976,8 +980,28 @@ const TokenDetails = (props: {
         </div>
       </div>
       <div
-        className={`panel__body detail-panel${useSplitDetailTabs ? ' detail-panel--mobile-split' : ''}`}
+        className={`panel__body detail-panel${useSplitDetailTabs ? ' detail-panel--mobile-split' : ''}${metadataColumnHidden ? ' detail-panel--metadata-collapsed' : ''}`}
       >
+        {canToggleMetadataColumn && (
+          <button
+            type="button"
+            className="detail-panel__meta-toggle"
+            onClick={() => setMetadataColumnCollapsed((current) => !current)}
+            aria-expanded={!metadataColumnHidden}
+            aria-label={
+              metadataColumnHidden
+                ? 'Expand metadata column'
+                : 'Collapse metadata column'
+            }
+            title={
+              metadataColumnHidden
+                ? 'Expand metadata column'
+                : 'Collapse metadata column'
+            }
+          >
+            {metadataColumnHidden ? '◀' : '▶'}
+          </button>
+        )}
         {useSplitDetailTabs && (
           <div
             className="viewer-detail-toggle"
