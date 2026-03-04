@@ -87,6 +87,10 @@ type LiveCollectionCard = {
   coverImageUrl: string | null;
   fallbackSupply: bigint | null;
   contractTarget: CollectionContractTarget | null;
+  templateVersion: string;
+  pricingMode: string;
+  pricingAdvertisedMintPriceMicroStx: bigint | null;
+  pricingOnChainMintPriceMicroStx: bigint | null;
 };
 
 const STARTER_DOCS: StarterDoc[] = [
@@ -277,6 +281,62 @@ const buildMintStateLabel = (status: LiveMintStatus | null) => {
     return 'Paused';
   }
   return 'Live';
+};
+
+const MICROSTX_PER_STX = 1_000_000n;
+
+const formatMicroStxLabel = (value: bigint | null) => {
+  if (value === null) {
+    return 'Unknown';
+  }
+  const whole = value / MICROSTX_PER_STX;
+  const fraction = value % MICROSTX_PER_STX;
+  return `${whole.toString()}.${fraction.toString().padStart(6, '0')} STX`;
+};
+
+const resolveCollectionMintPaymentModel = (templateVersion: string) => {
+  const normalized = templateVersion.trim().toLowerCase();
+  if (!normalized) {
+    return 'unknown' as const;
+  }
+  if (normalized.includes('v1.0') || normalized.includes('v1.1')) {
+    return 'begin' as const;
+  }
+  if (normalized.includes('v1.2')) {
+    return 'seal' as const;
+  }
+  return 'unknown' as const;
+};
+
+const resolveDisplayedMintPrice = (
+  collection: LiveCollectionCard,
+  status: LiveMintStatus | null
+) => {
+  const onChainPrice = status?.effectiveMintPrice ?? null;
+  if (!status) {
+    return null;
+  }
+  if (status.activePhaseMintPrice !== null) {
+    return onChainPrice;
+  }
+  const paymentModel = resolveCollectionMintPaymentModel(collection.templateVersion);
+  if (paymentModel !== 'seal') {
+    return onChainPrice;
+  }
+  if (collection.pricingMode.toLowerCase() !== 'advertised-includes-seal-fee') {
+    return onChainPrice;
+  }
+  const advertised = collection.pricingAdvertisedMintPriceMicroStx;
+  const onChainFromMetadata = collection.pricingOnChainMintPriceMicroStx;
+  if (
+    advertised === null ||
+    onChainFromMetadata === null ||
+    status.mintPrice === null ||
+    onChainFromMetadata !== status.mintPrice
+  ) {
+    return onChainPrice;
+  }
+  return advertised;
 };
 
 const resolveCollectionContractTarget = (
@@ -490,6 +550,7 @@ export default function SimplePublicHome() {
         const metadata = toRecord(collection.metadata);
         const metadataCollection = toRecord(metadata?.collection);
         const metadataCollectionPage = toRecord(metadata?.collectionPage);
+        const metadataPricing = toRecord(metadata?.pricing);
         const fallbackSupply = toBigIntOrNull(metadataCollection?.supply);
         const name =
           toText(metadataCollection?.name) ||
@@ -513,7 +574,15 @@ export default function SimplePublicHome() {
           livePath,
           coverImageUrl: resolveCollectionCoverUrl(collection),
           fallbackSupply,
-          contractTarget
+          contractTarget,
+          templateVersion: toText(metadata?.templateVersion),
+          pricingMode: toText(metadataPricing?.mode),
+          pricingAdvertisedMintPriceMicroStx: toBigIntOrNull(
+            metadataPricing?.advertisedMintPriceMicroStx
+          ),
+          pricingOnChainMintPriceMicroStx: toBigIntOrNull(
+            metadataPricing?.onChainMintPriceMicroStx
+          )
         };
       })
       .sort((left, right) => left.name.localeCompare(right.name));
@@ -969,6 +1038,7 @@ export default function SimplePublicHome() {
                     liveMintStatusLoadingByCollectionId[collection.id]
                   );
                   const mintStatusError = liveMintStatusErrorByCollectionId[collection.id] ?? null;
+                  const effectiveMintPrice = resolveDisplayedMintPrice(collection, mintStatus);
                   const maxSupply = mintStatus?.maxSupply ?? collection.fallbackSupply ?? null;
                   const mintedCount = mintStatus?.mintedCount ?? null;
                   const remainingCount =
@@ -984,31 +1054,42 @@ export default function SimplePublicHome() {
                     liveCoverPreviewErrorByCollectionId[collection.id]
                   );
                   return (
-                    <article className="public-live-collections__card" key={collection.id}>
+                    <a
+                      className="public-live-collections__card"
+                      key={collection.id}
+                      href={collection.livePath}
+                      aria-label={`Open ${collection.name} collection page`}
+                    >
                       {soldOut && <span className="collection-live-page__stamp">Sold out</span>}
-                      <div className="public-live-collections__media">
-                        {collection.coverImageUrl && !coverPreviewErrored ? (
-                          <img
-                            src={collection.coverImageUrl}
-                            alt={`${collection.name} cover`}
-                            onLoad={() =>
-                              setLiveCoverPreviewErrorByCollectionId((current) => ({
-                                ...current,
-                                [collection.id]: false
-                              }))
-                            }
-                            onError={() =>
-                              setLiveCoverPreviewErrorByCollectionId((current) => ({
-                                ...current,
-                                [collection.id]: true
-                              }))
-                            }
-                          />
-                        ) : (
-                          <div className="public-live-collections__media-placeholder">
-                            Collection cover image not set yet.
-                          </div>
-                        )}
+                      <div className="public-live-collections__media-stack">
+                        <div className="public-live-collections__media">
+                          {collection.coverImageUrl && !coverPreviewErrored ? (
+                            <img
+                              src={collection.coverImageUrl}
+                              alt={`${collection.name} cover`}
+                              onLoad={() =>
+                                setLiveCoverPreviewErrorByCollectionId((current) => ({
+                                  ...current,
+                                  [collection.id]: false
+                                }))
+                              }
+                              onError={() =>
+                                setLiveCoverPreviewErrorByCollectionId((current) => ({
+                                  ...current,
+                                  [collection.id]: true
+                                }))
+                              }
+                            />
+                          ) : (
+                            <div className="public-live-collections__media-placeholder">
+                              Collection cover image not set yet.
+                            </div>
+                          )}
+                        </div>
+                        <div className="public-live-collections__media-price">
+                          Mint price
+                          <strong>{formatMicroStxLabel(effectiveMintPrice)}</strong>
+                        </div>
                       </div>
                       <div className="public-live-collections__card-header">
                         <h3>{collection.name}</h3>
@@ -1043,11 +1124,11 @@ export default function SimplePublicHome() {
                         )}
                       </div>
                       <div className="mint-actions">
-                        <a className="button button--ghost button--mini" href={collection.livePath}>
+                        <span className="button button--ghost button--mini">
                           Open collection page
-                        </a>
+                        </span>
                       </div>
-                    </article>
+                    </a>
                   );
                 })}
               </div>

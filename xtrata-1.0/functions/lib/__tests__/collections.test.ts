@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   canStageUploadsBeforeDeploy,
   canReuseCollectionSlug,
+  getCollectionDisplayOrder,
   isCollectionUploadsLocked,
   isCollectionPublicVisible,
   isCollectionPublished,
@@ -9,6 +10,7 @@ import {
   mergeCollectionMetadata,
   normalizeSlug,
   parseCollectionMetadata,
+  sortCollectionsForPublicDisplay,
   stripDeployPricingLockFromMetadata,
   staysWithinLimit
 } from '../collections';
@@ -58,6 +60,56 @@ describe('collections helpers', () => {
     expect(isCollectionPublished('published')).toBe(true);
     expect(isCollectionPublished(' PUBLISHED ')).toBe(true);
     expect(isCollectionPublished('draft')).toBe(false);
+  });
+
+  it('reads collection display order from metadata', () => {
+    expect(
+      getCollectionDisplayOrder({
+        collectionPage: { displayOrder: 7 }
+      })
+    ).toBe(7);
+    expect(
+      getCollectionDisplayOrder({
+        collectionPage: { displayOrder: '12' }
+      })
+    ).toBe(12);
+    expect(
+      getCollectionDisplayOrder({
+        collectionPage: { displayOrder: ' 4.8 ' }
+      })
+    ).toBe(4);
+    expect(getCollectionDisplayOrder({ collectionPage: {} })).toBeNull();
+  });
+
+  it('sorts public collections by explicit order then fallback recency', () => {
+    const sorted = sortCollectionsForPublicDisplay([
+      {
+        id: 'zeta',
+        created_at: 3,
+        metadata: { collectionPage: { displayOrder: 3 } }
+      },
+      {
+        id: 'alpha',
+        created_at: 10,
+        metadata: { collectionPage: { displayOrder: 1 } }
+      },
+      {
+        id: 'no-order-new',
+        created_at: 20,
+        metadata: {}
+      },
+      {
+        id: 'no-order-old',
+        created_at: 5,
+        metadata: {}
+      }
+    ]);
+    expect(sorted.map((item) => item.id)).toEqual([
+      'alpha',
+      'zeta',
+      'no-order-new',
+      'no-order-old'
+    ]);
   });
 
   it('allows slug reuse for undeployed draft by same artist', () => {

@@ -78,7 +78,8 @@ import { formatBytes, truncateMiddle } from '../lib/utils/format';
 import { formatMicroStx } from '../lib/contract/fees';
 import {
   fetchParents,
-  findChildrenFromKnownTokens
+  findChildrenFromKnownTokens,
+  findSiblingsFromParents
 } from '../lib/viewer/relationships';
 import {
   loadRelationshipChildren
@@ -372,6 +373,8 @@ const TokenDetails = (props: {
   mobilePanel: 'grid' | 'preview';
   onRequestGrid: () => void;
   knownChildren: bigint[];
+  relationshipVersion: number;
+  lastTokenId: bigint | null;
   onAddParentDraft?: (id: bigint) => void;
   onSelectToken: (id: bigint) => void;
   canSelectPrev: boolean;
@@ -400,10 +403,14 @@ const TokenDetails = (props: {
   const [detailPanelView, setDetailPanelView] = useState<'media' | 'metadata'>(
     'media'
   );
+  const [metadataColumnCollapsed, setMetadataColumnCollapsed] = useState(false);
   const isWalletView = props.mode === 'wallet';
   const useSplitDetailTabs = props.useCompactPreviewLayout;
+  const canToggleMetadataColumn = !useSplitDetailTabs;
+  const metadataColumnHidden = canToggleMetadataColumn && metadataColumnCollapsed;
   const showMediaPane = !useSplitDetailTabs || detailPanelView === 'media';
-  const showMetadataPane = !useSplitDetailTabs || detailPanelView === 'metadata';
+  const showMetadataPane =
+    (!useSplitDetailTabs || detailPanelView === 'metadata') && !metadataColumnHidden;
   const mismatch = getNetworkMismatch(
     props.contract.network,
     props.walletSession.network
@@ -480,6 +487,48 @@ const TokenDetails = (props: {
   }, [props.knownChildren]);
 
   const parentIds = dependenciesQuery.data ?? [];
+  const parentIdsKey = useMemo(
+    () => parentIds.map((id) => id.toString()).join(','),
+    [parentIds]
+  );
+  const siblingsQuery = useQuery({
+    queryKey: props.token
+      ? [
+          'viewer',
+          props.contractId,
+          'relationship-siblings',
+          props.token.id.toString(),
+          parentIdsKey,
+          props.lastTokenId?.toString() ?? 'none',
+          props.relationshipVersion
+        ]
+      : ['viewer', props.contractId, 'relationship-siblings', 'none'],
+    enabled:
+      !!props.token &&
+      !isWalletView &&
+      props.isActiveTab &&
+      parentIds.length > 0,
+    queryFn: async () => {
+      if (!props.token || parentIds.length === 0) {
+        return [] as bigint[];
+      }
+      return findSiblingsFromParents({
+        client: props.client,
+        selectedTokenId: props.token.id,
+        parentIds,
+        lastTokenId: props.lastTokenId,
+        senderAddress: props.senderAddress,
+        loadIndexedChildren: (parentId) =>
+          loadRelationshipChildren({
+            contractId: props.contractId,
+            parentId
+          })
+      });
+    },
+    staleTime: 30_000,
+    refetchOnWindowFocus: false
+  });
+  const siblingIds = siblingsQuery.data ?? [];
   const parentThumbIds = parentIds.slice(0, RELATIONSHIP_THUMBNAIL_LIMIT);
   const { tokenQueries: parentThumbQueries } = useTokenSummaries({
     client: props.client,
@@ -524,6 +573,28 @@ const TokenDetails = (props: {
   const childOverflowCount = Math.max(
     0,
     combinedChildren.length - childThumbIds.length
+  );
+  const siblingThumbIds = siblingIds.slice(0, RELATIONSHIP_THUMBNAIL_LIMIT);
+  const { tokenQueries: siblingThumbQueries } = useTokenSummaries({
+    client: props.client,
+    senderAddress: props.senderAddress,
+    tokenIds: siblingThumbIds,
+    enabled:
+      props.isActiveTab && !isWalletView && siblingThumbIds.length > 0,
+    contractIdOverride: props.contractId
+  });
+  const siblingThumbItems = useMemo(
+    () =>
+      siblingThumbIds.map((id, index) => ({
+        id,
+        summary: siblingThumbQueries[index]?.data ?? null,
+        isLoading: siblingThumbQueries[index]?.isLoading ?? false
+      })),
+    [siblingThumbIds, siblingThumbQueries]
+  );
+  const siblingOverflowCount = Math.max(
+    0,
+    siblingIds.length - siblingThumbIds.length
   );
 
   const appendTransferLog = (message: string) => {
@@ -795,6 +866,13 @@ const TokenDetails = (props: {
     combinedChildren.length > 0
       ? combinedChildren.map((id) => id.toString()).join(', ')
       : 'None';
+  const relationshipSiblingsLabel = isWalletView
+    ? 'Unavailable in wallet view.'
+    : dependenciesQuery.isLoading || siblingsQuery.isLoading || siblingsQuery.isFetching
+      ? 'Loading...'
+      : siblingIds.length > 0
+        ? siblingIds.map((id) => id.toString()).join(', ')
+        : 'None';
   const handlePreviewTouchStart = (event: ReactTouchEvent<HTMLDivElement>) => {
     const touch = event.touches[0];
     if (!touch) {
@@ -902,8 +980,28 @@ const TokenDetails = (props: {
         </div>
       </div>
       <div
-        className={`panel__body detail-panel${useSplitDetailTabs ? ' detail-panel--mobile-split' : ''}`}
+        className={`panel__body detail-panel${useSplitDetailTabs ? ' detail-panel--mobile-split' : ''}${metadataColumnHidden ? ' detail-panel--metadata-collapsed' : ''}`}
       >
+        {canToggleMetadataColumn && (
+          <button
+            type="button"
+            className="detail-panel__meta-toggle"
+            onClick={() => setMetadataColumnCollapsed((current) => !current)}
+            aria-expanded={!metadataColumnHidden}
+            aria-label={
+              metadataColumnHidden
+                ? 'Expand metadata column'
+                : 'Collapse metadata column'
+            }
+            title={
+              metadataColumnHidden
+                ? 'Expand metadata column'
+                : 'Collapse metadata column'
+            }
+          >
+            {metadataColumnHidden ? '◀' : '▶'}
+          </button>
+        )}
         {useSplitDetailTabs && (
           <div
             className="viewer-detail-toggle"
@@ -948,6 +1046,10 @@ const TokenDetails = (props: {
               <div>
                 <span className="meta-label">Children</span>
                 <span className="meta-value">{relationshipChildrenLabel}</span>
+              </div>
+              <div>
+                <span className="meta-label">Siblings</span>
+                <span className="meta-value">{relationshipSiblingsLabel}</span>
               </div>
             </div>
             {!isWalletView && parentThumbItems.length > 0 && (
@@ -1026,6 +1128,46 @@ const TokenDetails = (props: {
                 {childOverflowCount > 0 && (
                   <span className="meta-value">
                     +{childOverflowCount} more children
+                  </span>
+                )}
+              </div>
+            )}
+            {!isWalletView && siblingThumbItems.length > 0 && (
+              <div className="relation-panel">
+                <span className="meta-label">Sibling thumbnails</span>
+                <div className="relation-grid">
+                  {siblingThumbItems.map((item) => (
+                    <button
+                      key={item.id.toString()}
+                      type="button"
+                      className="relation-card relation-card--button"
+                      onClick={() => props.onSelectToken(item.id)}
+                      aria-label={`View sibling token #${item.id.toString()}`}
+                    >
+                      <div className="relation-frame">
+                        {item.summary ? (
+                          <TokenCardMedia
+                            token={item.summary}
+                            contractId={props.contractId}
+                            senderAddress={props.senderAddress}
+                            client={props.client}
+                            isActiveTab={props.isActiveTab}
+                          />
+                        ) : (
+                          <span className="relation-placeholder">
+                            {item.isLoading ? 'Loading...' : 'Unavailable'}
+                          </span>
+                        )}
+                      </div>
+                      <span className="relation-label">
+                        #{item.id.toString()}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                {siblingOverflowCount > 0 && (
+                  <span className="meta-value">
+                    +{siblingOverflowCount} more siblings
                   </span>
                 )}
               </div>
@@ -2746,6 +2888,17 @@ export default function ViewerScreen(props: ViewerScreenProps) {
   const selectedTokenSourceContractId = resolveTokenContractId(
     resolvedSelectedToken ?? null
   );
+  const selectedSourceLastTokenId = useMemo(() => {
+    if (selectedTokenSourceContractId === legacyContractId) {
+      return legacyLastTokenId ?? null;
+    }
+    return lastTokenId ?? null;
+  }, [
+    selectedTokenSourceContractId,
+    legacyContractId,
+    legacyLastTokenId,
+    lastTokenId
+  ]);
   const indexedChildrenQuery = useQuery({
     queryKey: [
       'viewer',
@@ -3688,6 +3841,8 @@ export default function ViewerScreen(props: ViewerScreenProps) {
         mobilePanel={mobilePanel}
         onRequestGrid={handleMobileGridRequest}
         knownChildren={knownChildren}
+        relationshipVersion={relationshipIndexVersion}
+        lastTokenId={selectedSourceLastTokenId}
         onAddParentDraft={props.onAddParentDraft}
         onSelectToken={handleSelectToken}
         canSelectPrev={canSelectPrev}
