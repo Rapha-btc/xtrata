@@ -1,6 +1,7 @@
 import { validateStacksAddress } from '@stacks/transactions';
 import type { NetworkType } from '../lib/network/types';
 import { getNetworkFromAddress } from '../lib/network/guard';
+import { getStacksExplorerAddressUrl } from '../lib/network/explorer';
 import { useBnsNames } from '../lib/bns/hooks';
 import { truncateMiddle } from '../lib/utils/format';
 
@@ -15,6 +16,7 @@ type AddressLabelProps = {
   head?: number;
   tail?: number;
   fallback?: string;
+  linkToExplorer?: boolean;
 };
 
 export default function AddressLabel(props: AddressLabelProps) {
@@ -36,6 +38,10 @@ export default function AddressLabel(props: AddressLabelProps) {
   const primaryLabel = primaryName ?? truncated;
   const showSecondary = !!primaryName;
   const fallback = props.fallback ?? 'Unknown';
+  const explorerUrl =
+    props.linkToExplorer === false || !hasAddress
+      ? null
+      : getStacksExplorerAddressUrl(trimmed, inferredNetwork);
 
   if (!hasAddress) {
     return (
@@ -49,12 +55,8 @@ export default function AddressLabel(props: AddressLabelProps) {
     ? `${primaryName} (${trimmed})`
     : trimmed;
 
-  return (
-    <span
-      className={joinClassName('address-label', props.className)}
-      title={trimmed}
-      aria-label={ariaLabel}
-    >
+  const labelContent = (
+    <>
       <span className="address-label__name address-label__line">
         {primaryLabel}
       </span>
@@ -63,6 +65,31 @@ export default function AddressLabel(props: AddressLabelProps) {
           {truncated}
         </span>
       )}
+    </>
+  );
+
+  if (explorerUrl) {
+    return (
+      <a
+        className={joinClassName('address-label address-label__link', props.className)}
+        title={trimmed}
+        aria-label={ariaLabel}
+        href={explorerUrl}
+        target="_blank"
+        rel="noreferrer"
+      >
+        {labelContent}
+      </a>
+    );
+  }
+
+  return (
+    <span
+      className={joinClassName('address-label', props.className)}
+      title={trimmed}
+      aria-label={ariaLabel}
+    >
+      {labelContent}
     </span>
   );
 }

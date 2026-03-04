@@ -25,6 +25,7 @@ import {
 import { useBnsAddress } from './lib/bns/hooks';
 import { RATE_LIMIT_WARNING_EVENT } from './lib/network/rate-limit';
 import { getNetworkFromAddress, getNetworkMismatch } from './lib/network/guard';
+import { getStacksExplorerContractUrl } from './lib/network/explorer';
 import type { NetworkType } from './lib/network/types';
 import { getViewerKey } from './lib/viewer/queries';
 import { isRuntimeWalletBridgeTokenValid } from './lib/viewer/runtime-open';
@@ -621,6 +622,10 @@ export default function App() {
     walletSession.network
   );
   const contractId = getContractId(selectedContract);
+  const contractExplorerUrl = useMemo(
+    () => getStacksExplorerContractUrl(contractId, selectedContract.network),
+    [contractId, selectedContract.network]
+  );
   const readOnlySender =
     walletSession.address ?? selectedContract.address;
   const templatePolicyStore = useMemo(
@@ -1540,7 +1545,18 @@ export default function App() {
               <div className="meta-grid">
                 <div>
                   <span className="meta-label">Contract ID</span>
-                  <span className="meta-value">{contractId}</span>
+                  {contractExplorerUrl ? (
+                    <a
+                      className="meta-value active-contract__link"
+                      href={contractExplorerUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {contractId}
+                    </a>
+                  ) : (
+                    <span className="meta-value">{contractId}</span>
+                  )}
                 </div>
                 <div>
                   <span className="meta-label">Network</span>
