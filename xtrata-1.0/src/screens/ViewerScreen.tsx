@@ -78,7 +78,8 @@ import { formatBytes, truncateMiddle } from '../lib/utils/format';
 import { formatMicroStx } from '../lib/contract/fees';
 import {
   fetchParents,
-  findChildrenFromKnownTokens
+  findChildrenFromKnownTokens,
+  findSiblingsFromParents
 } from '../lib/viewer/relationships';
 import {
   loadRelationshipChildren
@@ -373,6 +374,7 @@ const TokenDetails = (props: {
   onRequestGrid: () => void;
   knownChildren: bigint[];
   relationshipVersion: number;
+  lastTokenId: bigint | null;
   onAddParentDraft?: (id: bigint) => void;
   onSelectToken: (id: bigint) => void;
   canSelectPrev: boolean;
@@ -493,6 +495,7 @@ const TokenDetails = (props: {
           'relationship-siblings',
           props.token.id.toString(),
           parentIdsKey,
+          props.lastTokenId?.toString() ?? 'none',
           props.relationshipVersion
         ]
       : ['viewer', props.contractId, 'relationship-siblings', 'none'],
@@ -505,24 +508,18 @@ const TokenDetails = (props: {
       if (!props.token || parentIds.length === 0) {
         return [] as bigint[];
       }
-      const selectedId = props.token.id;
-      const merged = new Set<string>();
-      const childrenByParent = await Promise.all(
-        parentIds.map((parentId) =>
+      return findSiblingsFromParents({
+        client: props.client,
+        selectedTokenId: props.token.id,
+        parentIds,
+        lastTokenId: props.lastTokenId,
+        senderAddress: props.senderAddress,
+        loadIndexedChildren: (parentId) =>
           loadRelationshipChildren({
             contractId: props.contractId,
             parentId
           })
-        )
-      );
-      childrenByParent.forEach((children) => {
-        children.forEach((childId) => {
-          if (childId !== selectedId) {
-            merged.add(childId.toString());
-          }
-        });
       });
-      return Array.from(merged).map((value) => BigInt(value)).sort(sortBigIntAsc);
     },
     staleTime: 30_000,
     refetchOnWindowFocus: false
@@ -845,7 +842,7 @@ const TokenDetails = (props: {
       : 'None';
   const relationshipSiblingsLabel = isWalletView
     ? 'Unavailable in wallet view.'
-    : dependenciesQuery.isLoading || siblingsQuery.isLoading
+    : dependenciesQuery.isLoading || siblingsQuery.isLoading || siblingsQuery.isFetching
       ? 'Loading...'
       : siblingIds.length > 0
         ? siblingIds.map((id) => id.toString()).join(', ')
@@ -2805,6 +2802,17 @@ export default function ViewerScreen(props: ViewerScreenProps) {
   const selectedTokenSourceContractId = resolveTokenContractId(
     resolvedSelectedToken ?? null
   );
+  const selectedSourceLastTokenId = useMemo(() => {
+    if (selectedTokenSourceContractId === legacyContractId) {
+      return legacyLastTokenId ?? null;
+    }
+    return lastTokenId ?? null;
+  }, [
+    selectedTokenSourceContractId,
+    legacyContractId,
+    legacyLastTokenId,
+    lastTokenId
+  ]);
   const indexedChildrenQuery = useQuery({
     queryKey: [
       'viewer',
@@ -3748,6 +3756,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
         onRequestGrid={handleMobileGridRequest}
         knownChildren={knownChildren}
         relationshipVersion={relationshipIndexVersion}
+        lastTokenId={selectedSourceLastTokenId}
         onAddParentDraft={props.onAddParentDraft}
         onSelectToken={handleSelectToken}
         canSelectPrev={canSelectPrev}

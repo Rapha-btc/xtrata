@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { XtrataClient } from "../../contract/client";
 import type { TokenSummary } from "../types";
-import { fetchParents, findChildrenFromKnownTokens, scanChildren } from "../relationships";
+import {
+  fetchParents,
+  findChildrenFromKnownTokens,
+  findSiblingsFromParents,
+  scanChildren
+} from "../relationships";
 
 const makeClient = (
   resolver: (id: bigint) => bigint[] | Promise<bigint[]>
@@ -86,5 +91,36 @@ describe("viewer relationships", () => {
       concurrency: 2
     });
     expect(maxActive).toBeLessThanOrEqual(2);
+  });
+
+  it("finds siblings from indexed parent children when coverage exists", async () => {
+    const client = makeClient(() => []);
+    const siblings = await findSiblingsFromParents({
+      client,
+      selectedTokenId: 9n,
+      parentIds: [3n],
+      lastTokenId: 12n,
+      senderAddress: "SP123",
+      loadIndexedChildren: async () => [7n, 9n, 11n]
+    });
+    expect(siblings).toEqual([7n, 11n]);
+  });
+
+  it("falls back to forward scan when parent index is missing selected child", async () => {
+    const client = makeClient((id) => {
+      if (id === 9n || id === 11n) {
+        return [3n];
+      }
+      return [];
+    });
+    const siblings = await findSiblingsFromParents({
+      client,
+      selectedTokenId: 9n,
+      parentIds: [3n],
+      lastTokenId: 12n,
+      senderAddress: "SP123",
+      loadIndexedChildren: async () => []
+    });
+    expect(siblings).toEqual([11n]);
   });
 });
