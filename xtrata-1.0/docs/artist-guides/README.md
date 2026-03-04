@@ -10,6 +10,7 @@ It explains:
 
 ## Start Here
 
+- `docs/artist-guides/collection-portal-access.md`
 - `docs/artist-guides/collection-launch-guide.md`
 - `docs/artist-guides/collection-template-deploy-guide.md`
 - `docs/artist-guides/collection-mint-setup-flow-blueprint.md`

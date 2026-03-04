@@ -847,14 +847,17 @@ export default function SimplePublicHome() {
 
           <div className="simple-home__tools">
             <div className="simple-home__actions">
+              <a className="button" href="#mint">
+                Inscribe
+              </a>
               <a className="button button--ghost" href="#live-drops">
-                Collections
+                Mint
               </a>
               <a className="button button--ghost" href="#starter-docs">
-                Quick docs
+                Docs
               </a>
               <a className="button button--ghost" href={WORKSPACE_PATH}>
-                Open Workspace
+                Workspace
               </a>
             </div>
             <label className="theme-select" htmlFor="simple-home-theme-select">
