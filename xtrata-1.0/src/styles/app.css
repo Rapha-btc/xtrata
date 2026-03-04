@@ -6475,6 +6475,10 @@ p {
   color: inherit;
   text-decoration: none;
   cursor: pointer;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease;
 }
 
 .public-live-collections__card:visited {
@@ -6484,6 +6488,25 @@ p {
 .public-live-collections__card:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+  background: linear-gradient(0deg, var(--ghost-hover), var(--ghost-hover)),
+    var(--surface-soft);
+  border-color: var(--border-strong);
+}
+
+@media (hover: hover) {
+  .public-live-collections__card:hover {
+    background: linear-gradient(0deg, var(--ghost-hover), var(--ghost-hover)),
+      var(--surface-soft);
+    border-color: var(--border-strong);
+    box-shadow: 0 8px 20px rgba(2, 6, 23, 0.24);
+  }
+
+  .public-live-collections__card:hover .public-live-collections__media-price,
+  .public-live-collections__card:hover .public-live-collections__stat {
+    background: linear-gradient(0deg, var(--ghost-hover), var(--ghost-hover)),
+      var(--surface);
+    border-color: var(--border-strong);
+  }
 }
 
 .public-live-collections__card > :not(.public-live-collections__media-stack) {
