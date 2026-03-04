@@ -1,88 +1,72 @@
-# Xtrata Quickstart (for integrators)
+# Xtrata Quickstart (inscribe any file now)
 
-This is a compact, practical guide to reading and displaying Xtrata inscriptions.
-For full detail, see `docs/xtrata-inscription-handbook.md`.
+This guide is for first-time users who want to inscribe a file immediately from the app.
 
----
-
-## 1) Pick the right contract
-
-- **Current:** `xtrata-v2.1.0`
-- **Legacy:** `xtrata-v1.1.1` (used for chunk data of migrated tokens)
-
-**Rule:** Ownership + metadata live in v2, but chunk data may still live in v1.
-If v2 chunks are empty, fall back to v1 for the same ID.
+For deeper technical detail, see `docs/xtrata-inscription-handbook.md`.
 
 ---
 
-## 2) Read a token
+## 1) Connect your wallet
 
-Recommended read-only calls:
-- `get-inscription-meta(id)`
-- `get-owner(id)`
-- `get-token-uri(id)` (optional metadata)
-- `get-chunk-batch(id, indexes)` (preferred)
+1. Open the Xtrata homepage.
+2. In the top header, click **Connect wallet**.
+3. Confirm your wallet is connected before continuing.
 
 ---
 
-## 3) Reconstruct content
+## 2) Open the inscribe panel
 
-1) Read `InscriptionMeta` to get `total-chunks` and `mime-type`.
-2) Build `indexes = 0..total-chunks-1`.
-3) Fetch chunks in batches of 50 with `get-chunk-batch`.
-4) Concatenate bytes in order.
-5) Render based on `mime-type` (image, audio, video, html, text).
+1. Click **Inscribe** in the top action row, or scroll to **Inscribe data**.
+2. This is the panel where single-file inscriptions are created.
 
 ---
 
-## 4) Handle migration
+## 3) Add your file
 
-For tokens migrated from v1 to v2:
-- Read metadata + ownership in v2.
-- Try `get-chunk-batch` in v2 first.
-- If empty, read chunks from v1.
-
----
-
-## 5) Enumeration (v2 only)
-
-Do **not** assume IDs are contiguous.
-Use:
-- `get-minted-count()`
-- `get-minted-id(index)`
-
-`get-last-token-id()` returns the **highest minted ID**, not the count.
+1. Click **Select a file** and choose any file you want to inscribe.
+2. Wait while Xtrata prepares the file.
+3. Optional fields (token URI, parents, delegate) can be left unchanged for a first inscription.
 
 ---
 
-## 6) Recursion
+## 4) Run the inscription flow
 
-If you need dependencies:
-- Use `get-dependencies(id)`.
-- Dependencies must exist before `seal-recursive`.
-- Max 50 dependencies.
-
----
-
-## 7) Rendering tips
-
-- Use `object-fit: contain` to avoid cropping.
-- Cache chunks and metadata locally (IndexedDB) to reduce API calls.
-- Avoid aggressive polling; batch reads and reuse cached data.
+1. Click **Begin inscription**.
+2. Approve wallet prompts when asked.
+3. Xtrata runs the steps in order:
+   1. Begin inscription
+   2. Upload batches
+   3. Seal inscription
 
 ---
 
-## 8) Minting flow (reference)
+## 5) Track progress
 
-Standard:
-1) `begin-or-get` 2) `add-chunk-batch` (repeat) 3) `seal-inscription`
-
-Recursive:
-- `seal-recursive(expected-hash, token-uri, dependencies)`
-
-Batch mint:
-- `seal-inscription-batch` (max 50 items)
+1. Watch the step tracker for `idle/pending/done/error`.
+2. Watch the status and log area for updates and transaction IDs.
+3. If a session was already started, click **Resume inscription**.
 
 ---
 
-If you need full details, read `docs/xtrata-inscription-handbook.md`.
+## 6) See your result
+
+1. After seal is submitted and confirmed, return to the viewer.
+2. Your inscription appears once indexing catches up.
+
+---
+
+## Quick troubleshooting
+
+- If mint is blocked, check wallet connection first.
+- If network mismatch appears, switch wallet network and retry.
+- If the file is too large, choose a smaller file.
+- If upload state expired, use **Start over** and begin again.
+
+---
+
+## Collections for artists and builders
+
+Collection launches use the allowlisted collection portal (`/manage`) and have a separate onboarding path.
+
+- Start here for access requests: `docs/artist-guides/collection-portal-access.md`
+- Then follow: `docs/artist-guides/collection-launch-guide.md`
