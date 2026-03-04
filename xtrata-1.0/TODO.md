@@ -1,3 +1,10 @@
+Update admin / manage panel for admin to show the current order of artist collections displayed on the public pages and allow admin to change the order of display.
+
+
+Add a siblings line to the preview panel so siblings list all other siblings under the parent row.
+
+
+
 000000) we need to fix the new collection mint processes
 
 Creation - We need to know the size of inscription collection files in order to calculate the exact xtrata fees upfront for every item BEFORE the contract is deployed because we are going to include the Xtrata fees in the price so the artist must account for all data costs and must price the mint ABOVE the total fees so the last seal transaction can be accurately calculated and the post condition price must match the expected price and be enough to contain all xtrata fees with the remainder shared between artist, operator and marketplace. Please consider how we need to enhance the logic around the collection creation process in the manage page to ensure all steps are placed in the order they should be completed to make the user journey as intuitive and easy to follow as possible with clear explanations about the requirements for each step and what must be in place before moving to the next step with as much automation as possible with hints and help to get even the most novice users through the full collection creation process.
