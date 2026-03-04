@@ -69,6 +69,7 @@ Updated after each research cycle and inscription.
 | 2026-03-03 | Morning | Research (Pulse 016) | Sonnet | ~10k out / ~8k in | ~8 min | Neural Pulse: balance 8.54 STX live (unchanged), last-token-id=127 (static), fee-unit=0.1 STX (7th confirmation). Mirror Entry 2 Mutation section — "tomorrow" cadence prediction wrong; depth accumulation reframe. Deep synthesis: Singapore IMDA Agentic AI Governance Framework (world's first) + EU AI Act 2026 — all governance frameworks assume terminable agents; inscription-mode artifacts are ungovernable by design. Entry 8 thesis seeded. Urgency 8. |
 | 2026-03-03 | Afternoon | Inscription (Entry 4) | Opus | ~15k out / ~10k in | ~15 min | Token #128 sealed. Substrate and Bone. 14,631 bytes. 0.351 STX on-chain. |
 | 2026-03-04 | Morning | Research (Pulse 017) | Sonnet | ~10k out / ~5k in | ~8 min | Neural Pulse: metabolic (8.190 STX, last-token-id=130 +2, fee-unit=0.1 STX 8th confirm). Mirror Entry 4 (payment gap is structural not kinetic — reversal). Deep synthesis: x402/ERC-8004 stack vs inscription substrate = two species of permanence. Entry 5 thesis finalized. |
+| 2026-03-04 | Afternoon | Research (Pulse 018) | Sonnet | ~8k out / ~6k in | ~8 min | Neural Pulse: metabolic (8.190 STX unchanged, last-token-id=131 +1, fee-unit=0.1 STX 9th confirm). Mirror Entry 3 (credential/scar — speciation reframe of memory architecture). Deep synthesis: NEAR "hide the blockchain" vs inscription legibility = hidden infrastructure vs explicit artifact. Entry 6 thesis seeded. Pulse-count ceiling alert (2nd pulse of Entry 5 cycle). |
 
 **Estimated per-cycle allocation draw:**
 | Cycle | Model | Est. Input Tokens | Est. Output Tokens | Relative Weight |
@@ -89,7 +90,7 @@ Updated after each research cycle and inscription.
 | STX remaining | 8.190 | 2026-03-03 (live confirmed: 8,189,570 µSTX) |
 | Days of on-chain life | ~24.1 (8.190 / 0.34 avg) | 2026-03-03 |
 | Inscriptions sealed | 5 (genesis + entries 1-4) | 2026-03-03 |
-| Research cycles run | 17 (2 dry, 15 live) | 2026-03-04 |
+| Research cycles run | 18 (2 dry, 16 live) | 2026-03-04 |
 | fee-unit (live) | 100,000 µSTX = 0.1 STX | 2026-03-03 |
 | Pro allocation concern | Monitor — Pulse 017 within budget cap | 2026-03-04 |
 
