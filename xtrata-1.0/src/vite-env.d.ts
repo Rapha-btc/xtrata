@@ -3,6 +3,9 @@
 interface ImportMetaEnv {
   readonly VITE_STACKS_API_TESTNET?: string;
   readonly VITE_STACKS_API_MAINNET?: string;
+  readonly VITE_STACKS_EXPLORER_BASE?: string;
+  readonly VITE_STACKS_EXPLORER_BASE_MAINNET?: string;
+  readonly VITE_STACKS_EXPLORER_BASE_TESTNET?: string;
 }
 
 interface ImportMeta {

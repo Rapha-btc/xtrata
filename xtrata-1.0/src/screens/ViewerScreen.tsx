@@ -67,6 +67,7 @@ import type { TokenSummary } from '../lib/viewer/types';
 import { bytesToHex } from '../lib/utils/encoding';
 import TokenContentPreview from '../components/TokenContentPreview';
 import TokenCardMedia from '../components/TokenCardMedia';
+import AddressLabel from '../components/AddressLabel';
 import { getMediaKind } from '../lib/viewer/content';
 import { loadInscriptionThumbnailFromCache } from '../lib/viewer/cache';
 import { logInfo } from '../lib/utils/logger';
@@ -571,8 +572,8 @@ const TokenDetails = (props: {
       ? formatMicroStx(Number(props.listing.price))
       : null;
   const marketLabel = props.marketContractId ?? 'Select in Market module';
-  const detailOwner = props.token?.owner ?? 'Unknown';
-  const detailCreator = props.token?.meta?.creator ?? 'Unknown';
+  const detailOwnerAddress = props.token?.owner ?? null;
+  const detailCreatorAddress = props.token?.meta?.creator ?? null;
   const detailTokenUri = props.token?.tokenUri ?? null;
   const detailTokenUriLabel = detailTokenUri
     ? truncateMiddle(detailTokenUri, 20, 18)
@@ -875,7 +876,14 @@ const TokenDetails = (props: {
       <div className="panel__header">
         <div>
           <h2>Token #{props.token.id.toString()}</h2>
-          <p>{`Owner: ${detailOwner}`}</p>
+          <p>
+            Owner:{' '}
+            <AddressLabel
+              address={detailOwnerAddress}
+              network={props.contract.network}
+              className="meta-value"
+            />
+          </p>
           {props.listing?.price !== undefined && (
             <p className="preview-pill preview-pill--strong">
               Listed · {formatMicroStx(Number(props.listing.price))}
@@ -1031,11 +1039,19 @@ const TokenDetails = (props: {
             <div className="meta-grid meta-grid--dense">
               <div>
                 <span className="meta-label">Owner</span>
-                <span className="meta-value">{detailOwner}</span>
+                <AddressLabel
+                  address={detailOwnerAddress}
+                  network={props.contract.network}
+                  className="meta-value"
+                />
               </div>
               <div>
                 <span className="meta-label">Creator</span>
-                <span className="meta-value">{detailCreator}</span>
+                <AddressLabel
+                  address={detailCreatorAddress}
+                  network={props.contract.network}
+                  className="meta-value"
+                />
               </div>
               <div>
                 <span className="meta-label">Token URI</span>
@@ -1110,7 +1126,11 @@ const TokenDetails = (props: {
                 {props.listing.seller && (
                   <div>
                     <span className="meta-label">Seller</span>
-                    <span className="meta-value">{props.listing.seller}</span>
+                    <AddressLabel
+                      address={props.listing.seller}
+                      network={props.contract.network}
+                      className="meta-value"
+                    />
                   </div>
                 )}
                 <div>
@@ -1246,7 +1266,15 @@ const TokenDetails = (props: {
                     </div>
                     <div>
                       <span className="meta-label">Market contract</span>
-                      <span className="meta-value">{marketLabel}</span>
+                      {props.marketContractId ? (
+                        <AddressLabel
+                          address={props.marketContractId}
+                          network={props.marketContract?.network ?? props.contract.network}
+                          className="meta-value"
+                        />
+                      ) : (
+                        <span className="meta-value">{marketLabel}</span>
+                      )}
                     </div>
                     <div>
                       <span className="meta-label">Listing status</span>
@@ -1339,9 +1367,11 @@ const TokenDetails = (props: {
                     </div>
                     <div>
                       <span className="meta-label">Owner</span>
-                      <span className="meta-value">
-                        {props.token.owner ?? 'Unknown'}
-                      </span>
+                      <AddressLabel
+                        address={props.token.owner}
+                        network={props.contract.network}
+                        className="meta-value"
+                      />
                     </div>
                   </div>
                   <label className="field">

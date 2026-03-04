@@ -83,7 +83,7 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 - `src/lib/network/stacks.ts` builds Stacks network objects.
 - `src/lib/network/guard.ts` and `src/lib/network/rate-limit.ts` protect against aggressive polling.
 - `functions/hiro/[network]/[[path]].ts` proxies Hiro API calls and injects API keys when present.
-- `functions/bns/[[path]].ts` proxies BNS lookups (configure base via env).
+- `functions/explorer/[[path]].ts` proxies Explorer HTML pages used by BNS name/address scraping.
 - `functions/arcade/attest-score.ts` signs `xtrata-arcade-scores-v1.1` submit attestations (nonce + expiry + RSV signature) for on-chain high-score verification.
 - `src/lib/wallet/session.ts` and `src/lib/wallet/storage.ts` persist wallet sessions.
 - `src/lib/wallet/adapter.ts` centralizes wallet request calls and types.
@@ -227,11 +227,10 @@ Notes: ensure tests or guards in `src/lib/network/__tests__/` still pass.
   - Optional build flag: `VITE_HIRO_API_KEY` only indicates key presence in the UI.
   - Pages note: set variables for both **Production** and **Preview** environments
     (the `*.pages.dev` URL uses Preview) to avoid 429s on preview builds.
-- **BNS base override**
-  - Default BNS hub is `https://api.bns.xyz`. If Cloudflare 525 occurs, set
-    `VITE_BNS_API_MAINNET=https://api.mainnet.hiro.so` (client) and/or
-    `BNS_API_BASE=https://api.mainnet.hiro.so` (Pages Functions `/bns` proxy).
-  - Local dev can use `VITE_BNS_API_MAINNET` to keep `/bns` proxy pointed at Hiro.
+- **Explorer HTML proxy for BNS labels**
+  - Address-label BNS names are scraped from Explorer HTML via `/functions/explorer`.
+  - Optional overrides: `VITE_STACKS_EXPLORER_BASE`, `VITE_STACKS_EXPLORER_BASE_MAINNET`, `VITE_STACKS_EXPLORER_BASE_TESTNET`.
+  - Pages Functions runtime override: `STACKS_EXPLORER_BASE`.
 - **Arcade score attestation (`xtrata-arcade-scores-v1.1`)**
   - Pages Functions signer key: `ARCADE_SCORE_ATTESTATION_PRIVATE_KEY` (required for `/arcade/attest-score`).
   - Optional expiry window in blocks: `ARCADE_SCORE_ATTESTATION_EXPIRY_BLOCKS` (default `30`, max `500`).

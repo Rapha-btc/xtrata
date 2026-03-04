@@ -58,6 +58,7 @@ import { createObjectUrl } from '../lib/utils/blob';
 import { formatBytes, truncateMiddle } from '../lib/utils/format';
 import { bytesToHex } from '../lib/utils/encoding';
 import { logDebug, logInfo, logWarn, shouldLog } from '../lib/utils/logger';
+import AddressLabel from './AddressLabel';
 
 type TokenContentPreviewProps = {
   token: TokenSummary;
@@ -362,7 +363,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
       streamPhase === 'loading' ||
       streamPhase === 'complete');
   const hasPreviewContent = hasContent || hasStreamPreview;
-  const ownerAddress = props.token.owner ?? 'Unknown';
+  const ownerAddress = props.token.owner ?? null;
   const creatorAddress = props.token.meta?.creator ?? null;
   const tokenIdLabel = `#${props.token.id.toString()}`;
   const tokenUriValue = props.token.tokenUri ?? null;
@@ -2140,14 +2141,17 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
                 <div className="meta-grid meta-grid--dense">
                   <div>
                     <span className="meta-label">Owner</span>
-                    <span className="meta-value meta-value--truncate" title={ownerAddress}>
-                      {ownerAddress}
-                    </span>
+                    <AddressLabel
+                      address={ownerAddress}
+                      network={props.client.network}
+                      className="meta-value"
+                    />
                     <div className="meta-actions">
                       <button
                         type="button"
                         className="button button--ghost button--mini"
                         onClick={() => handleCopyValue(ownerAddress)}
+                        disabled={!ownerAddress}
                       >
                         Copy
                       </button>
@@ -2155,12 +2159,11 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
                   </div>
                   <div>
                     <span className="meta-label">Creator</span>
-                    <span
-                      className="meta-value meta-value--truncate"
-                      title={creatorAddress ?? ''}
-                    >
-                      {creatorAddress ?? 'Unknown'}
-                    </span>
+                    <AddressLabel
+                      address={creatorAddress}
+                      network={props.client.network}
+                      className="meta-value"
+                    />
                     <div className="meta-actions">
                       <button
                         type="button"
