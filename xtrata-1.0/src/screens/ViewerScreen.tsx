@@ -570,6 +570,28 @@ const TokenDetails = (props: {
     0,
     combinedChildren.length - childThumbIds.length
   );
+  const siblingThumbIds = siblingIds.slice(0, RELATIONSHIP_THUMBNAIL_LIMIT);
+  const { tokenQueries: siblingThumbQueries } = useTokenSummaries({
+    client: props.client,
+    senderAddress: props.senderAddress,
+    tokenIds: siblingThumbIds,
+    enabled:
+      props.isActiveTab && !isWalletView && siblingThumbIds.length > 0,
+    contractIdOverride: props.contractId
+  });
+  const siblingThumbItems = useMemo(
+    () =>
+      siblingThumbIds.map((id, index) => ({
+        id,
+        summary: siblingThumbQueries[index]?.data ?? null,
+        isLoading: siblingThumbQueries[index]?.isLoading ?? false
+      })),
+    [siblingThumbIds, siblingThumbQueries]
+  );
+  const siblingOverflowCount = Math.max(
+    0,
+    siblingIds.length - siblingThumbIds.length
+  );
 
   const appendTransferLog = (message: string) => {
     setTransferLog((prev) => {
@@ -1082,6 +1104,46 @@ const TokenDetails = (props: {
                 {childOverflowCount > 0 && (
                   <span className="meta-value">
                     +{childOverflowCount} more children
+                  </span>
+                )}
+              </div>
+            )}
+            {!isWalletView && siblingThumbItems.length > 0 && (
+              <div className="relation-panel">
+                <span className="meta-label">Sibling thumbnails</span>
+                <div className="relation-grid">
+                  {siblingThumbItems.map((item) => (
+                    <button
+                      key={item.id.toString()}
+                      type="button"
+                      className="relation-card relation-card--button"
+                      onClick={() => props.onSelectToken(item.id)}
+                      aria-label={`View sibling token #${item.id.toString()}`}
+                    >
+                      <div className="relation-frame">
+                        {item.summary ? (
+                          <TokenCardMedia
+                            token={item.summary}
+                            contractId={props.contractId}
+                            senderAddress={props.senderAddress}
+                            client={props.client}
+                            isActiveTab={props.isActiveTab}
+                          />
+                        ) : (
+                          <span className="relation-placeholder">
+                            {item.isLoading ? 'Loading...' : 'Unavailable'}
+                          </span>
+                        )}
+                      </div>
+                      <span className="relation-label">
+                        #{item.id.toString()}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                {siblingOverflowCount > 0 && (
+                  <span className="meta-value">
+                    +{siblingOverflowCount} more siblings
                   </span>
                 )}
               </div>
