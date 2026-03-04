@@ -127,6 +127,21 @@ export const canReuseCollectionSlug = (params: {
 const toRecord = (value: unknown) =>
   value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
 
+const toFiniteNumber = (value: unknown) => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+};
+
 const toBoolean = (value: unknown) => {
   if (typeof value === 'boolean') {
     return value;
@@ -155,6 +170,50 @@ export const isCollectionPublicVisible = (metadata: unknown) => {
   const metadataRecord = parseCollectionMetadata(metadata);
   const collectionPage = toRecord(metadataRecord?.collectionPage);
   return toBoolean(collectionPage?.showOnPublicPage) === true;
+};
+
+export const getCollectionDisplayOrder = (metadata: unknown) => {
+  const metadataRecord = parseCollectionMetadata(metadata);
+  const collectionPage = toRecord(metadataRecord?.collectionPage);
+  const rawOrder = toFiniteNumber(collectionPage?.displayOrder);
+  if (rawOrder === null) {
+    return null;
+  }
+  return Math.trunc(rawOrder);
+};
+
+export const sortCollectionsForPublicDisplay = <
+  T extends {
+    id?: unknown;
+    created_at?: unknown;
+    metadata?: unknown;
+  }
+>(
+  rows: T[]
+) => {
+  const copy = [...rows];
+  copy.sort((left, right) => {
+    const leftOrder = getCollectionDisplayOrder(left.metadata);
+    const rightOrder = getCollectionDisplayOrder(right.metadata);
+    if (leftOrder !== null && rightOrder !== null && leftOrder !== rightOrder) {
+      return leftOrder - rightOrder;
+    }
+    if (leftOrder !== null && rightOrder === null) {
+      return -1;
+    }
+    if (leftOrder === null && rightOrder !== null) {
+      return 1;
+    }
+    const leftCreated = toFiniteNumber(left.created_at) ?? 0;
+    const rightCreated = toFiniteNumber(right.created_at) ?? 0;
+    if (leftCreated !== rightCreated) {
+      return rightCreated - leftCreated;
+    }
+    const leftId = String(left.id ?? '');
+    const rightId = String(right.id ?? '');
+    return leftId.localeCompare(rightId);
+  });
+  return copy;
 };
 
 export const isCollectionPublished = (state: unknown) =>

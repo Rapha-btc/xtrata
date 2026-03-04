@@ -372,6 +372,7 @@ const TokenDetails = (props: {
   mobilePanel: 'grid' | 'preview';
   onRequestGrid: () => void;
   knownChildren: bigint[];
+  relationshipVersion: number;
   onAddParentDraft?: (id: bigint) => void;
   onSelectToken: (id: bigint) => void;
   canSelectPrev: boolean;
@@ -480,6 +481,53 @@ const TokenDetails = (props: {
   }, [props.knownChildren]);
 
   const parentIds = dependenciesQuery.data ?? [];
+  const parentIdsKey = useMemo(
+    () => parentIds.map((id) => id.toString()).join(','),
+    [parentIds]
+  );
+  const siblingsQuery = useQuery({
+    queryKey: props.token
+      ? [
+          'viewer',
+          props.contractId,
+          'relationship-siblings',
+          props.token.id.toString(),
+          parentIdsKey,
+          props.relationshipVersion
+        ]
+      : ['viewer', props.contractId, 'relationship-siblings', 'none'],
+    enabled:
+      !!props.token &&
+      !isWalletView &&
+      props.isActiveTab &&
+      parentIds.length > 0,
+    queryFn: async () => {
+      if (!props.token || parentIds.length === 0) {
+        return [] as bigint[];
+      }
+      const selectedId = props.token.id;
+      const merged = new Set<string>();
+      const childrenByParent = await Promise.all(
+        parentIds.map((parentId) =>
+          loadRelationshipChildren({
+            contractId: props.contractId,
+            parentId
+          })
+        )
+      );
+      childrenByParent.forEach((children) => {
+        children.forEach((childId) => {
+          if (childId !== selectedId) {
+            merged.add(childId.toString());
+          }
+        });
+      });
+      return Array.from(merged).map((value) => BigInt(value)).sort(sortBigIntAsc);
+    },
+    staleTime: 30_000,
+    refetchOnWindowFocus: false
+  });
+  const siblingIds = siblingsQuery.data ?? [];
   const parentThumbIds = parentIds.slice(0, RELATIONSHIP_THUMBNAIL_LIMIT);
   const { tokenQueries: parentThumbQueries } = useTokenSummaries({
     client: props.client,
@@ -795,6 +843,13 @@ const TokenDetails = (props: {
     combinedChildren.length > 0
       ? combinedChildren.map((id) => id.toString()).join(', ')
       : 'None';
+  const relationshipSiblingsLabel = isWalletView
+    ? 'Unavailable in wallet view.'
+    : dependenciesQuery.isLoading || siblingsQuery.isLoading
+      ? 'Loading...'
+      : siblingIds.length > 0
+        ? siblingIds.map((id) => id.toString()).join(', ')
+        : 'None';
   const handlePreviewTouchStart = (event: ReactTouchEvent<HTMLDivElement>) => {
     const touch = event.touches[0];
     if (!touch) {
@@ -948,6 +1003,10 @@ const TokenDetails = (props: {
               <div>
                 <span className="meta-label">Children</span>
                 <span className="meta-value">{relationshipChildrenLabel}</span>
+              </div>
+              <div>
+                <span className="meta-label">Siblings</span>
+                <span className="meta-value">{relationshipSiblingsLabel}</span>
               </div>
             </div>
             {!isWalletView && parentThumbItems.length > 0 && (
@@ -3688,6 +3747,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
         mobilePanel={mobilePanel}
         onRequestGrid={handleMobileGridRequest}
         knownChildren={knownChildren}
+        relationshipVersion={relationshipIndexVersion}
         onAddParentDraft={props.onAddParentDraft}
         onSelectToken={handleSelectToken}
         canSelectPrev={canSelectPrev}

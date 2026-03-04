@@ -2,6 +2,7 @@ import { jsonResponse, badRequest, serverError } from './lib/utils';
 import { queryAll, run } from './lib/db';
 import {
   canReuseCollectionSlug,
+  sortCollectionsForPublicDisplay,
   mergeCollectionMetadata,
   isCollectionPublicVisible,
   isCollectionPublished,
@@ -74,7 +75,10 @@ export const onRequest: PagesFunction = async ({ request, env }) => {
         !includeArchived &&
         publishedOnly &&
         publicVisibleOnly;
-      return jsonResponse(filtered, 200, {
+      const ordered = isPublicLiveListRequest
+        ? sortCollectionsForPublicDisplay(filtered)
+        : filtered;
+      return jsonResponse(ordered, 200, {
         'Cache-Control': isPublicLiveListRequest
           ? PUBLIC_COLLECTIONS_CACHE_CONTROL
           : PRIVATE_NO_STORE_CACHE_CONTROL
