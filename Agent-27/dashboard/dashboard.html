@@ -18,6 +18,7 @@
             --amber-mid: #7a5500;
         }
         * { box-sizing: border-box; }
+        html { overflow-x: hidden; }
         body {
             background: var(--bg);
             color: var(--text);
@@ -25,12 +26,15 @@
             font-size: 14px;
             margin: 0;
             padding: 1rem;
+            max-width: 100vw;
+            overflow-x: hidden;
         }
         .container {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 1rem;
             max-width: 1600px;
+            width: 100%;
             margin: auto;
         }
         .full { grid-column: 1 / -1; }
@@ -62,6 +66,8 @@
             padding: 1rem;
             display: flex;
             flex-direction: column;
+            min-width: 0;
+            overflow: hidden;
         }
         .panel h2 {
             color: var(--text-em);
@@ -69,7 +75,19 @@
             font-size: 14px;
             border-bottom: 1px solid var(--border);
             padding-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
+        .panel h2 .save-indicator {
+            font-size: 11px;
+            font-weight: normal;
+            color: var(--green);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .panel h2 .save-indicator.visible { opacity: 1; }
+        .panel h2 .save-indicator.error { color: var(--red); }
 
         /* --- Operations Panel --- */
         .ops { grid-column: 1 / -1; }
@@ -81,8 +99,8 @@
         }
         .btn {
             font-family: var(--font);
-            font-size: 14px;
-            padding: 0.5rem 1.5rem;
+            font-size: 13px;
+            padding: 0.5rem 1rem;
             border: 1px solid var(--accent);
             background: transparent;
             color: var(--accent);
@@ -108,6 +126,39 @@
             color: #000;
         }
         .btn-cancel.visible { display: inline-block; }
+
+        /* Cadence bar */
+        .cadence-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 0.75rem;
+            padding: 0.4rem 0.75rem;
+            border: 1px solid var(--border);
+            font-size: 12px;
+        }
+        .cadence-label { color: #666; flex-shrink: 0; }
+        .cadence-pips {
+            display: flex;
+            gap: 0.35rem;
+            flex-shrink: 0;
+        }
+        .cadence-pip {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            background: #222;
+            border: 1px solid #333;
+            transition: background 0.3s, border-color 0.3s;
+        }
+        .cadence-pip.filled-1 { background: var(--green); border-color: var(--green); }
+        .cadence-pip.filled-2 { background: #ffaa00; border-color: #ffaa00; }
+        .cadence-pip.filled-3 { background: var(--red); border-color: var(--red); }
+        .cadence-text { color: var(--text); flex-shrink: 0; }
+        .cadence-bar.ceiling {
+            border-color: var(--red);
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+        .cadence-bar.ceiling .cadence-text { color: var(--red); }
 
         /* Draft status */
         .draft-status {
@@ -164,19 +215,64 @@
         }
         .history-list li {
             display: flex;
-            gap: 0.75rem;
+            gap: 0.5rem;
             align-items: baseline;
+            flex-wrap: wrap;
         }
-        .history-icon { width: 14px; text-align: center; }
+        .history-icon { width: 14px; text-align: center; flex-shrink: 0; }
         .history-icon.ok { color: var(--green); }
         .history-icon.fail { color: var(--red); }
-        .history-label { color: var(--text); min-width: 70px; }
-        .history-time { color: #666; min-width: 45px; }
-        .history-detail { color: #888; }
+        .history-label { color: var(--text); flex-shrink: 0; }
+        .history-time { color: #666; flex-shrink: 0; }
+        .history-detail { color: #888; overflow: hidden; text-overflow: ellipsis; }
 
         /* --- Content Panels --- */
-        .metabolic, .research-buf { min-height: 200px; }
+        .panel-content {
+            flex-grow: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            max-height: 500px;
+            min-width: 0;
+            word-wrap: break-word;
+        }
 
+        pre.content {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 12px;
+            line-height: 1.5;
+            margin: 0;
+            flex-grow: 1;
+            overflow-y: auto;
+            max-height: 500px;
+        }
+
+        /* Editable textarea panels */
+        .panel-editor {
+            width: 100%;
+            min-width: 0;
+            min-height: 200px;
+            max-height: 500px;
+            flex-grow: 1;
+            resize: vertical;
+            background: #0a0a0a;
+            color: var(--text);
+            border: 1px solid var(--border);
+            font-family: var(--font);
+            font-size: 12px;
+            line-height: 1.5;
+            padding: 0.5rem;
+            overflow-y: auto;
+            overflow-x: hidden;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        .panel-editor:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        /* Metabolic gauges */
         .metric-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -199,16 +295,40 @@
         .gauge-caption { font-size: 11px; color: #aaa; }
         .poll-time { font-size: 11px; color: #555; margin-top: 0.5rem; }
 
-        pre.content {
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            font-size: 12px;
-            line-height: 1.5;
-            margin: 0;
-            flex-grow: 1;
+        /* Journal log table */
+        .journal-table-wrap {
+            overflow-x: auto;
             overflow-y: auto;
-            max-height: 400px;
+            max-height: 500px;
+            min-width: 0;
+            -webkit-overflow-scrolling: touch;
         }
+        .journal-table {
+            width: 100%;
+            min-width: 300px;
+            border-collapse: collapse;
+            font-size: 12px;
+            table-layout: auto;
+        }
+        .journal-table th {
+            color: var(--text-em);
+            text-align: left;
+            padding: 0.3rem 0.5rem;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            background: var(--bg);
+            white-space: nowrap;
+        }
+        .journal-table td {
+            padding: 0.3rem 0.5rem;
+            border-bottom: 1px solid #111;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .journal-table tr:hover td { background: #0a0a0a; }
 
         /* --- Activity Log --- */
         .activity-log { min-height: 300px; }
@@ -235,11 +355,13 @@
             font-size: 12px;
             line-height: 1.5;
             white-space: pre-wrap;
+            overflow-x: hidden;
         }
         .log-line {
             display: grid;
-            grid-template-columns: 170px 1fr;
-            gap: 0.75rem;
+            grid-template-columns: minmax(0, 130px) minmax(0, 1fr);
+            gap: 0.5rem;
+            word-break: break-word;
         }
         .log-line .timestamp { color: #666; }
         .log-line .type-http { color: #8aa7ff; }
@@ -290,6 +412,9 @@
         #inscription-banner .banner-text {
             color: var(--text-em);
             flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         #inscription-banner .banner-detail {
             color: var(--text);
@@ -318,8 +443,16 @@
 
         @media (max-width: 900px) {
             .container { grid-template-columns: 1fr; }
+            .full { grid-column: 1; }
             .header { flex-direction: column; align-items: flex-start; }
             .header-stats { flex-wrap: wrap; }
+            body { padding: 0.5rem; }
+            .panel { padding: 0.75rem; }
+            .btn { font-size: 12px; padding: 0.4rem 0.75rem; }
+            .log-line { grid-template-columns: minmax(0, 80px) minmax(0, 1fr); gap: 0.3rem; }
+            .log-line .timestamp { font-size: 10px; }
+            .metric-grid { grid-template-columns: 1fr; }
+            .journal-table td { max-width: 120px; }
         }
     </style>
 </head>
@@ -372,6 +505,12 @@
             <button class="btn btn-cancel" id="btn-cancel">&#9632; CANCEL</button>
         </div>
 
+        <div class="cadence-bar" id="cadence-bar">
+            <span class="cadence-label">Pulses</span>
+            <span class="cadence-pips" id="cadence-pips"></span>
+            <span class="cadence-text" id="cadence-text">0/3</span>
+        </div>
+
         <div class="draft-status" id="draft-status"></div>
 
         <div class="phase-timer" id="phase-timer">
@@ -387,28 +526,43 @@
         </div>
     </div>
 
-    <!-- Metabolic Status -->
-    <div class="panel metabolic">
+    <!-- Row: Metabolic Status | Journal Log -->
+    <div class="panel">
         <h2>Metabolic Status</h2>
-        <div id="metabolic-content">Loading...</div>
+        <div class="panel-content" id="metabolic-content">Loading...</div>
     </div>
 
-    <!-- Research Buffer -->
-    <div class="panel research-buf">
-        <h2>Research Buffer</h2>
-        <pre class="content" id="research-content">Loading...</pre>
-    </div>
-
-    <!-- Ideas -->
     <div class="panel">
-        <h2>Ideas</h2>
-        <pre class="content" id="ideas-content">Loading...</pre>
+        <h2>Journal Log</h2>
+        <div class="journal-table-wrap" id="journal-content">Loading...</div>
     </div>
 
-    <!-- Ledger -->
+    <!-- Row: Identity & Memory (AGENTs.md) | Evolution (EVOLUTION.md) -->
     <div class="panel">
-        <h2>Ledger</h2>
-        <pre class="content" id="ledger-content">Loading...</pre>
+        <h2>Identity &amp; Memory <span class="save-indicator" id="save-agents">Saved</span></h2>
+        <textarea class="panel-editor" id="agents-editor" data-doc="agents" spellcheck="false">Loading...</textarea>
+    </div>
+
+    <div class="panel">
+        <h2>Evolution <span class="save-indicator" id="save-evolution">Saved</span></h2>
+        <textarea class="panel-editor" id="evolution-editor" data-doc="evolution" spellcheck="false">Loading...</textarea>
+    </div>
+
+    <!-- Row: Research Buffer | Ideas & Roadmap -->
+    <div class="panel">
+        <h2>Research Buffer <span class="save-indicator" id="save-research">Saved</span></h2>
+        <textarea class="panel-editor" id="research-editor" data-doc="research" spellcheck="false">Loading...</textarea>
+    </div>
+
+    <div class="panel">
+        <h2>Ideas &amp; Roadmap <span class="save-indicator" id="save-ideas">Saved</span></h2>
+        <textarea class="panel-editor" id="ideas-editor" data-doc="ideas" spellcheck="false">Loading...</textarea>
+    </div>
+
+    <!-- Full-width: Ledger -->
+    <div class="panel full">
+        <h2>Ledger <span class="save-indicator" id="save-ledger">Saved</span></h2>
+        <textarea class="panel-editor" id="ledger-editor" data-doc="ledger" spellcheck="false">Loading...</textarea>
     </div>
 
     <!-- Activity Log -->
@@ -429,10 +583,25 @@
 document.addEventListener('DOMContentLoaded', () => {
     const logContent = document.getElementById('activity-log-content');
     const metabolicContent = document.getElementById('metabolic-content');
-    const researchContent = document.getElementById('research-content');
-    const ideasContent = document.getElementById('ideas-content');
-    const ledgerContent = document.getElementById('ledger-content');
+    const journalContent = document.getElementById('journal-content');
     const historyList = document.getElementById('history-list');
+
+    // Editable panels
+    const editors = {
+        agents: document.getElementById('agents-editor'),
+        evolution: document.getElementById('evolution-editor'),
+        research: document.getElementById('research-editor'),
+        ideas: document.getElementById('ideas-editor'),
+        ledger: document.getElementById('ledger-editor')
+    };
+
+    const saveIndicators = {
+        agents: document.getElementById('save-agents'),
+        evolution: document.getElementById('save-evolution'),
+        research: document.getElementById('save-research'),
+        ideas: document.getElementById('save-ideas'),
+        ledger: document.getElementById('save-ledger')
+    };
 
     const btnPulse = document.getElementById('btn-pulse');
     const btnCompose = document.getElementById('btn-compose');
@@ -449,6 +618,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const hdrDays = document.getElementById('hdr-days');
     const hdrGraph = document.getElementById('hdr-graph');
 
+    const cadenceBar = document.getElementById('cadence-bar');
+    const cadencePips = document.getElementById('cadence-pips');
+    const cadenceText = document.getElementById('cadence-text');
+
     const showThinkingCb = document.getElementById('show-thinking');
 
     // Inscription banner elements
@@ -459,7 +632,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const pips = { begin: document.getElementById('pip-begin'), chunk: document.getElementById('pip-chunk'), seal: document.getElementById('pip-seal') };
     let bannerDismissTimer = null;
 
-    let phaseStatus = null; // cached from /api/phase-status
+    let phaseStatus = null;
     let showThinking = false;
 
     showThinkingCb.addEventListener('change', () => {
@@ -494,28 +667,54 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- Editable Panel Save ---
+
+    function flashSave(docId, success) {
+        const indicator = saveIndicators[docId];
+        if (!indicator) return;
+        indicator.textContent = success ? 'Saved' : 'Save failed';
+        indicator.classList.toggle('error', !success);
+        indicator.classList.add('visible');
+        setTimeout(() => { indicator.classList.remove('visible'); }, 2000);
+    }
+
+    function saveDocument(docId, content) {
+        return fetch(`/api/save/${docId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content })
+        }).then((r) => r.json()).then((res) => {
+            flashSave(docId, !!res.ok);
+        }).catch(() => {
+            flashSave(docId, false);
+        });
+    }
+
+    // Attach blur handlers to all editors
+    Object.entries(editors).forEach(([docId, textarea]) => {
+        textarea.addEventListener('blur', () => {
+            saveDocument(docId, textarea.value);
+        });
+    });
+
     // --- Inscription Banner ---
 
     function updateInscriptionBanner(entry) {
         if (entry.type !== 'inscription' || !entry.step) return;
         const { step, status, line } = entry;
 
-        // Show the banner
         inscBanner.classList.add('visible');
         inscBanner.classList.remove('success', 'error');
         if (bannerDismissTimer) { clearTimeout(bannerDismissTimer); bannerDismissTimer = null; }
 
-        // Update pip states
         const stepOrder = ['begin', 'chunk', 'seal'];
         const currentIdx = stepOrder.indexOf(step);
 
-        // Mark earlier steps as done
         for (let i = 0; i < currentIdx; i++) {
             const pip = pips[stepOrder[i]];
             if (pip) { pip.className = 'step-pip done'; }
         }
 
-        // Current step pip
         const currentPip = pips[step];
         if (currentPip) {
             if (status === 'confirmed') {
@@ -527,7 +726,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Banner icon and text
         if (status === 'error') {
             bannerIcon.textContent = '\u2717';
             inscBanner.classList.add('error');
@@ -538,12 +736,10 @@ document.addEventListener('DOMContentLoaded', () => {
             bannerIcon.className = 'banner-icon running-indicator';
         }
 
-        // Reset icon class when not running
         if (status === 'confirmed' || status === 'error') {
             bannerIcon.className = 'banner-icon';
         }
 
-        // Text
         const label = line || `${step} — ${status}`;
         bannerText.textContent = label.replace(/^\[.*?\]\s*/, '');
     }
@@ -557,7 +753,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!success) bannerText.textContent = bannerText.textContent || 'Inscription failed';
         bannerDismissTimer = setTimeout(() => {
             inscBanner.classList.remove('visible', 'success', 'error');
-            // Reset pips
             Object.values(pips).forEach(p => { p.className = 'step-pip'; });
         }, 8000);
     }
@@ -594,17 +789,46 @@ document.addEventListener('DOMContentLoaded', () => {
         logContent.scrollTop = logContent.scrollHeight;
     }
 
+    // --- Cadence ---
+
+    let currentCadence = null;
+
+    function renderCadence(cadence) {
+        if (!cadence) return;
+        currentCadence = cadence;
+        const { pulsesSinceLastInscription: count, maxPulses: max, ceilingReached } = cadence;
+        cadenceText.textContent = `${count}/${max}`;
+        cadenceBar.classList.toggle('ceiling', ceilingReached);
+
+        cadencePips.innerHTML = '';
+        for (let i = 0; i < max; i++) {
+            const pip = document.createElement('span');
+            pip.className = 'cadence-pip';
+            if (i < count) {
+                const level = count >= max ? 3 : count >= 2 ? 2 : 1;
+                pip.classList.add(`filled-${level}`);
+            }
+            cadencePips.appendChild(pip);
+        }
+    }
+
     // --- Operations ---
 
     function updateButtons() {
         const isRunning = phaseStatus && phaseStatus.running;
         const runId = isRunning ? phaseStatus.running.phaseId : null;
-        btnPulse.disabled = !!isRunning;
+        const ceiling = currentCadence && currentCadence.ceilingReached;
+
+        btnPulse.disabled = !!isRunning || !!ceiling;
         btnCompose.disabled = !!isRunning;
         btnInscribe.disabled = !!isRunning;
         btnCancel.classList.toggle('visible', !!isRunning);
 
-        btnPulse.textContent = runId === 'pulse' ? '\u25CF Running...' : '\u25B6 RUN PULSE';
+        if (ceiling && !isRunning) {
+            btnPulse.textContent = 'CEILING \u2014 COMPOSE REQUIRED';
+        } else {
+            btnPulse.textContent = runId === 'pulse' ? '\u25CF Running...' : '\u25B6 RUN PULSE';
+        }
         btnCompose.textContent = runId === 'compose' ? '\u25CF Composing...' : '\u25B6 COMPOSE DRAFT';
         btnInscribe.textContent = runId === 'inscribe' ? '\u25CF Inscribing...' : '\u25B6 INSCRIBE ON-CHAIN';
     }
@@ -750,6 +974,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function refreshPhaseStatus() {
         return fetchJson('/api/phase-status').then((data) => {
             phaseStatus = data;
+            if (data.cadence) renderCadence(data.cadence);
             updateButtons();
             renderHistory();
             updatePhaseTimer();
@@ -777,7 +1002,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const gw = `${Math.max(0, Math.min(100, rp)).toFixed(1)}%`;
         const rpLabel = typeof data.reservePercent === 'number' ? `${data.reservePercent.toFixed(1)}%` : 'n/a';
 
-        // Update header stats
         hdrStx.textContent = data.stxRemaining != null ? data.stxRemaining.toFixed(3) : '--';
         hdrDays.textContent = data.daysOfLife != null ? `~${data.daysOfLife}` : '--';
         hdrGraph.textContent = data.graphSize != null ? `${data.graphSize} tokens` : '--';
@@ -803,32 +1027,51 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     }
 
-    function renderResearch(data) {
-        if (data.pulses && data.pulses.length > 0) {
-            researchContent.textContent = data.pulses.map((p) => {
-                const cleaned = p.content.replace(/^\s*\d+\s+[—-]\s+.*$/m, '').trim();
-                const preview = cleaned.length > 700 ? cleaned.substring(0, 700) + '...' : cleaned;
-                return `--- Pulse ${p.pulseNumber} @ ${p.timestamp} ---\n${preview}`;
-            }).join('\n\n');
-        } else {
-            researchContent.textContent = data.raw || 'Empty';
+    function renderJournalLog(journalLog) {
+        if (!journalLog || journalLog.length === 0) {
+            journalContent.innerHTML = '<span style="color:#555">No journal entries found</span>';
+            return;
         }
+        const headers = Object.keys(journalLog[0]);
+        let html = '<table class="journal-table"><thead><tr>';
+        headers.forEach(h => { html += `<th>${escapeHtml(h)}</th>`; });
+        html += '</tr></thead><tbody>';
+        journalLog.forEach(row => {
+            html += '<tr>';
+            headers.forEach(h => { html += `<td>${escapeHtml(row[h])}</td>`; });
+            html += '</tr>';
+        });
+        html += '</tbody></table>';
+        journalContent.innerHTML = html;
+    }
+
+    function setEditorValue(docId, raw) {
+        const editor = editors[docId];
+        if (!editor) return;
+        // Don't clobber if user is actively editing
+        if (document.activeElement === editor) return;
+        editor.value = raw || '';
+    }
+
+    function renderResearch(data) {
+        setEditorValue('research', data.raw);
     }
 
     function renderIdeas(data) {
-        ideasContent.textContent = data.raw && data.raw.length > 800
-            ? data.raw.substring(0, 800) + '...'
-            : (data.raw || 'Empty');
+        setEditorValue('ideas', data.raw);
     }
 
     function renderLedger(data) {
-        if (data.runningTotals && data.runningTotals.length > 0) {
-            ledgerContent.textContent = data.runningTotals.map((r) =>
-                `${r.metric}: ${r.value}`
-            ).join('\n');
-        } else {
-            ledgerContent.textContent = 'Could not parse ledger totals.';
-        }
+        setEditorValue('ledger', data.raw);
+    }
+
+    function renderAgents(data) {
+        setEditorValue('agents', data.raw);
+        renderJournalLog(data.journalLog);
+    }
+
+    function renderEvolution(data) {
+        setEditorValue('evolution', data.raw);
     }
 
     // --- Initial Data Load ---
@@ -841,19 +1084,23 @@ document.addEventListener('DOMContentLoaded', () => {
             fetchJson('/api/chain'),
             fetchJson('/api/log'),
             fetchJson('/api/phase-status'),
-            fetchJson('/api/draft')
-        ]).then(([research, ideas, ledger, chain, logs, ps, draft]) => {
+            fetchJson('/api/draft'),
+            fetchJson('/api/agents'),
+            fetchJson('/api/evolution')
+        ]).then(([research, ideas, ledger, chain, logs, ps, draft, agents, evolution]) => {
             renderResearch(research);
             renderIdeas(ideas);
             renderLedger(ledger);
             renderMetabolic(chain);
+            renderAgents(agents);
+            renderEvolution(evolution);
             logContent.innerHTML = '';
             logs.forEach(appendLogEntry);
             phaseStatus = ps;
+            if (ps.cadence) renderCadence(ps.cadence);
             updateButtons();
             renderHistory();
             updatePhaseTimer();
-            // Render draft status inline
             if (draft && draft.name) {
                 draftStatusEl.className = 'draft-status has-draft';
                 const sizeKb = (draft.size / 1024).toFixed(1);
@@ -912,6 +1159,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const payload = JSON.parse(e.data);
                 if (payload.type === 'research') renderResearch(payload.data);
                 else if (payload.type === 'ideas') renderIdeas(payload.data);
+                else if (payload.type === 'agents') renderAgents(payload.data);
+                else if (payload.type === 'evolution') renderEvolution(payload.data);
                 else if (payload.type === 'ledger') {
                     renderLedger(payload.data);
                     fetchJson('/api/chain').then(renderMetabolic).catch(() => {});

@@ -126,10 +126,27 @@ function parseEvolution() {
     }
 }
 
+const DOC_ID_MAP = {
+  agents: 'AGENTs.md',
+  evolution: 'EVOLUTION.md',
+  research: 'research-buffer.md',
+  ideas: 'future-inscription-ideas.md',
+  ledger: 'ledger.md'
+};
+
+function saveDocument(docId, content) {
+  const filename = DOC_ID_MAP[docId];
+  if (!filename) return { ok: false, error: `Unknown docId: ${docId}` };
+  const filePath = path.join(WORKDIR, filename);
+  fs.writeFileSync(filePath, content, 'utf8');
+  return { ok: true };
+}
+
 module.exports = {
     parseResearchBuffer,
     parseLedger,
     parseIdeas,
     parseAgents,
-    parseEvolution
+    parseEvolution,
+    saveDocument
 };

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import AddressLabel from '../components/AddressLabel';
 import type { NetworkType } from '../lib/network/types';
 import { getApiBaseUrls } from '../lib/network/config';
+import { getStacksExplorerContractUrl } from '../lib/network/explorer';
 import {
   LOG_ENABLED_KEY,
   LOG_DEDUPE_KEY,
@@ -115,6 +117,10 @@ export default function AdminDiagnosticsScreen(props: AdminDiagnosticsScreenProp
     () => getApiBaseUrls(props.contractNetwork),
     [props.contractNetwork]
   );
+  const contractExplorerUrl = useMemo(
+    () => getStacksExplorerContractUrl(props.contractId, props.contractNetwork),
+    [props.contractId, props.contractNetwork]
+  );
   const effectiveTagsLabel = logConfig.tagsInput.trim()
     ? logConfig.tagsInput.trim()
     : 'all';
@@ -200,7 +206,18 @@ export default function AdminDiagnosticsScreen(props: AdminDiagnosticsScreenProp
         <div className="meta-grid meta-grid--dense">
           <div>
             <span className="meta-label">Contract</span>
-            <span className="meta-value">{props.contractId}</span>
+            {contractExplorerUrl ? (
+              <a
+                className="meta-value active-contract__link"
+                href={contractExplorerUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {props.contractId}
+              </a>
+            ) : (
+              <span className="meta-value">{props.contractId}</span>
+            )}
           </div>
           <div>
             <span className="meta-label">Network</span>
@@ -212,13 +229,25 @@ export default function AdminDiagnosticsScreen(props: AdminDiagnosticsScreenProp
           </div>
           <div>
             <span className="meta-label">Read-only sender</span>
-            <span className="meta-value">{props.readOnlySender}</span>
+            <AddressLabel
+              className="meta-value"
+              address={props.readOnlySender}
+              network={props.contractNetwork}
+              fallback="Unknown"
+            />
           </div>
           <div>
             <span className="meta-label">Wallet</span>
-            <span className="meta-value">
-              {props.walletAddress ?? 'Not connected'}
-            </span>
+            <AddressLabel
+              className="meta-value"
+              address={props.walletAddress}
+              network={
+                props.walletNetwork === 'mainnet' || props.walletNetwork === 'testnet'
+                  ? props.walletNetwork
+                  : null
+              }
+              fallback="Not connected"
+            />
           </div>
           <div>
             <span className="meta-label">Wallet network</span>

@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
 import PublicApp from './PublicApp';
+import SimplePublicHome from './SimplePublicHome';
 import CollectionMintLivePage from './CollectionMintLivePage';
 import AdminGate from './admin/AdminGate';
 import ArtistManagerGate from './manage/ArtistManagerGate';
@@ -51,6 +52,7 @@ if (!root) {
 applyThemeToDocument(resolveInitialTheme());
 
 const COLLECTION_LIVE_PATH_PREFIX = '/collection/';
+const WORKSPACE_PATH_PREFIX = '/workspace';
 const pathname = window.location.pathname;
 const collectionPathMatch = pathname.startsWith(COLLECTION_LIVE_PATH_PREFIX)
   ? pathname.slice(COLLECTION_LIVE_PATH_PREFIX.length)
@@ -80,8 +82,10 @@ ReactDOM.createRoot(root).render(
         <ArtistManagerGate>
           <CollectionManagerApp />
         </ArtistManagerGate>
-      ) : (
+      ) : pathname.startsWith(WORKSPACE_PATH_PREFIX) ? (
         <PublicApp />
+      ) : (
+        <SimplePublicHome />
       )}
     </QueryClientProvider>
   </React.StrictMode>

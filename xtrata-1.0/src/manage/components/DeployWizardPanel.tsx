@@ -6,6 +6,7 @@ import {
   type StacksProvider
 } from '@stacks/connect';
 import { getContractId } from '../../lib/contract/config';
+import { getStacksExplorerContractUrl } from '../../lib/network/explorer';
 import {
   CONTRACT_REGISTRY,
   getLegacyContract,
@@ -1736,7 +1737,8 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     });
     if (contractNameAvailability.exists) {
       const fullContractId = `${session.address}.${contractName}`;
-      const explorerUrl = `https://explorer.hiro.so/txid/${fullContractId}?chain=${session.network}`;
+      const explorerUrl =
+        getStacksExplorerContractUrl(fullContractId, session.network) ?? '';
       appendDeployDebug('Deploy blocked: contract name already exists on-chain', {
         attemptId,
         contractId: fullContractId,

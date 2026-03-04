@@ -4,7 +4,8 @@ import {
   useMemo,
   useRef,
   useState,
-  type CSSProperties
+  type CSSProperties,
+  type TouchEvent as ReactTouchEvent
 } from 'react';
 import { showContractCall } from '@stacks/connect';
 import {
@@ -66,6 +67,7 @@ import type { TokenSummary } from '../lib/viewer/types';
 import { bytesToHex } from '../lib/utils/encoding';
 import TokenContentPreview from '../components/TokenContentPreview';
 import TokenCardMedia from '../components/TokenCardMedia';
+import AddressLabel from '../components/AddressLabel';
 import { getMediaKind } from '../lib/viewer/content';
 import { loadInscriptionThumbnailFromCache } from '../lib/viewer/cache';
 import { logInfo } from '../lib/utils/logger';
@@ -366,11 +368,16 @@ const TokenDetails = (props: {
   marketMismatch: NetworkMismatch | null;
   marketNetworkMismatch: boolean;
   isMobile: boolean;
+  useCompactPreviewLayout: boolean;
   mobilePanel: 'grid' | 'preview';
   onRequestGrid: () => void;
   knownChildren: bigint[];
   onAddParentDraft?: (id: bigint) => void;
   onSelectToken: (id: bigint) => void;
+  canSelectPrev: boolean;
+  canSelectNext: boolean;
+  onSelectPrev: () => void;
+  onSelectNext: () => void;
   marketActionStatus: string | null;
   marketActionPending: boolean;
   onBuyListing: (token: TokenSummary, listing: MarketActivityEvent) => void;
@@ -389,7 +396,14 @@ const TokenDetails = (props: {
   const [cancelStatus, setCancelStatus] = useState<string | null>(null);
   const [cancelPending, setCancelPending] = useState(false);
   const [walletToolsOpen, setWalletToolsOpen] = useState(false);
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const [detailPanelView, setDetailPanelView] = useState<'media' | 'metadata'>(
+    'media'
+  );
   const isWalletView = props.mode === 'wallet';
+  const useSplitDetailTabs = props.useCompactPreviewLayout;
+  const showMediaPane = !useSplitDetailTabs || detailPanelView === 'media';
+  const showMetadataPane = !useSplitDetailTabs || detailPanelView === 'metadata';
   const mismatch = getNetworkMismatch(
     props.contract.network,
     props.walletSession.network
@@ -435,6 +449,15 @@ const TokenDetails = (props: {
     setCancelStatus(null);
     setListPriceInput('');
   }, [props.selectedTokenId, walletAddress]);
+
+  useEffect(() => {
+    setDetailPanelView('media');
+  }, [
+    props.selectedTokenId,
+    props.mobilePanel,
+    props.mode,
+    props.useCompactPreviewLayout
+  ]);
 
   const transferValidation = validateTransferRequest({
     senderAddress: walletAddress,
@@ -549,8 +572,8 @@ const TokenDetails = (props: {
       ? formatMicroStx(Number(props.listing.price))
       : null;
   const marketLabel = props.marketContractId ?? 'Select in Market module';
-  const detailOwner = props.token?.owner ?? 'Unknown';
-  const detailCreator = props.token?.meta?.creator ?? 'Unknown';
+  const detailOwnerAddress = props.token?.owner ?? null;
+  const detailCreatorAddress = props.token?.meta?.creator ?? null;
   const detailTokenUri = props.token?.tokenUri ?? null;
   const detailTokenUriLabel = detailTokenUri
     ? truncateMiddle(detailTokenUri, 20, 18)
@@ -772,6 +795,38 @@ const TokenDetails = (props: {
     combinedChildren.length > 0
       ? combinedChildren.map((id) => id.toString()).join(', ')
       : 'None';
+  const handlePreviewTouchStart = (event: ReactTouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+    if (!touch) {
+      return;
+    }
+    swipeStartRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+  const handlePreviewTouchEnd = (event: ReactTouchEvent<HTMLDivElement>) => {
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    if (!start) {
+      return;
+    }
+    const touch = event.changedTouches[0];
+    if (!touch) {
+      return;
+    }
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+    if (absX < 44 || absX < absY * 1.2) {
+      return;
+    }
+    if (deltaX > 0 && props.canSelectPrev) {
+      props.onSelectPrev();
+      return;
+    }
+    if (deltaX < 0 && props.canSelectNext) {
+      props.onSelectNext();
+    }
+  };
 
   if (!props.token) {
     const pendingId = props.selectedTokenId;
@@ -821,7 +876,14 @@ const TokenDetails = (props: {
       <div className="panel__header">
         <div>
           <h2>Token #{props.token.id.toString()}</h2>
-          <p>{`Owner: ${detailOwner}`}</p>
+          <p>
+            Owner:{' '}
+            <AddressLabel
+              address={detailOwnerAddress}
+              network={props.contract.network}
+              className="meta-value"
+            />
+          </p>
           {props.listing?.price !== undefined && (
             <p className="preview-pill preview-pill--strong">
               Listed · {formatMicroStx(Number(props.listing.price))}
@@ -839,8 +901,36 @@ const TokenDetails = (props: {
           </button>
         </div>
       </div>
-      <div className="panel__body detail-panel">
-        <div className="detail-panel__meta">
+      <div
+        className={`panel__body detail-panel${useSplitDetailTabs ? ' detail-panel--mobile-split' : ''}`}
+      >
+        {useSplitDetailTabs && (
+          <div
+            className="viewer-detail-toggle"
+            role="tablist"
+            aria-label="Preview detail panel"
+          >
+            <button
+              type="button"
+              className={`viewer-detail-toggle__button${detailPanelView === 'media' ? ' is-active' : ''}`}
+              aria-pressed={detailPanelView === 'media'}
+              onClick={() => setDetailPanelView('media')}
+            >
+              Image
+            </button>
+            <button
+              type="button"
+              className={`viewer-detail-toggle__button${detailPanelView === 'metadata' ? ' is-active' : ''}`}
+              aria-pressed={detailPanelView === 'metadata'}
+              onClick={() => setDetailPanelView('metadata')}
+            >
+              Metadata
+            </button>
+          </div>
+        )}
+        <div
+          className={`detail-panel__meta${showMetadataPane ? '' : ' detail-panel__section--hidden'}`}
+        >
           <div className="transfer-panel detail-summary-panel">
             <div>
               <h3>Relationships</h3>
@@ -949,11 +1039,19 @@ const TokenDetails = (props: {
             <div className="meta-grid meta-grid--dense">
               <div>
                 <span className="meta-label">Owner</span>
-                <span className="meta-value">{detailOwner}</span>
+                <AddressLabel
+                  address={detailOwnerAddress}
+                  network={props.contract.network}
+                  className="meta-value"
+                />
               </div>
               <div>
                 <span className="meta-label">Creator</span>
-                <span className="meta-value">{detailCreator}</span>
+                <AddressLabel
+                  address={detailCreatorAddress}
+                  network={props.contract.network}
+                  className="meta-value"
+                />
               </div>
               <div>
                 <span className="meta-label">Token URI</span>
@@ -1028,7 +1126,11 @@ const TokenDetails = (props: {
                 {props.listing.seller && (
                   <div>
                     <span className="meta-label">Seller</span>
-                    <span className="meta-value">{props.listing.seller}</span>
+                    <AddressLabel
+                      address={props.listing.seller}
+                      network={props.contract.network}
+                      className="meta-value"
+                    />
                   </div>
                 )}
                 <div>
@@ -1068,15 +1170,34 @@ const TokenDetails = (props: {
             </div>
           )}
         </div>
-        <div className="detail-panel__preview">
-          {props.isMobile && props.mobilePanel === 'preview' && !isWalletView && (
-            <button
-              className="viewer-mobile-back"
-              type="button"
-              onClick={props.onRequestGrid}
-            >
-              Back to grid
-            </button>
+        <div
+          className={`detail-panel__preview${showMediaPane ? '' : ' detail-panel__section--hidden'}`}
+          onTouchStart={handlePreviewTouchStart}
+          onTouchEnd={handlePreviewTouchEnd}
+        >
+          {(props.canSelectPrev || props.canSelectNext) && (
+            <>
+              <button
+                type="button"
+                className="preview-nav-button preview-nav-button--prev"
+                onClick={props.onSelectPrev}
+                disabled={!props.canSelectPrev}
+                aria-label="Previous inscription"
+                title="Previous inscription"
+              >
+                &#8249;
+              </button>
+              <button
+                type="button"
+                className="preview-nav-button preview-nav-button--next"
+                onClick={props.onSelectNext}
+                disabled={!props.canSelectNext}
+                aria-label="Next inscription"
+                title="Next inscription"
+              >
+                &#8250;
+              </button>
+            </>
           )}
           {isWalletView ? (
             <div className="wallet-preview">
@@ -1117,11 +1238,11 @@ const TokenDetails = (props: {
           )}
         </div>
         <div
-          className={
+          className={`${
             isWalletView
               ? 'detail-panel__tools'
               : 'detail-panel__tools detail-panel__tools--advanced'
-          }
+          }${showMetadataPane ? '' : ' detail-panel__section--hidden'}`}
         >
           {isWalletView ? (
             <details
@@ -1145,7 +1266,15 @@ const TokenDetails = (props: {
                     </div>
                     <div>
                       <span className="meta-label">Market contract</span>
-                      <span className="meta-value">{marketLabel}</span>
+                      {props.marketContractId ? (
+                        <AddressLabel
+                          address={props.marketContractId}
+                          network={props.marketContract?.network ?? props.contract.network}
+                          className="meta-value"
+                        />
+                      ) : (
+                        <span className="meta-value">{marketLabel}</span>
+                      )}
                     </div>
                     <div>
                       <span className="meta-label">Listing status</span>
@@ -1238,9 +1367,11 @@ const TokenDetails = (props: {
                     </div>
                     <div>
                       <span className="meta-label">Owner</span>
-                      <span className="meta-value">
-                        {props.token.owner ?? 'Unknown'}
-                      </span>
+                      <AddressLabel
+                        address={props.token.owner}
+                        network={props.contract.network}
+                        className="meta-value"
+                      />
                     </div>
                   </div>
                   <label className="field">
@@ -1418,6 +1549,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     !!props.walletLookupState.lookupName;
   const [mobilePanel, setMobilePanel] = useState<'grid' | 'preview'>('grid');
   const [isMobile, setIsMobile] = useState(false);
+  const [isCompactPreviewViewport, setIsCompactPreviewViewport] = useState(false);
   const [collectionGridReady, setCollectionGridReady] = useState(false);
   const lastTokenQuery = useCombinedLastTokenId({
     primary: client,
@@ -1726,15 +1858,21 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     if (typeof window === 'undefined') {
       return;
     }
-    const mediaQuery = window.matchMedia('(max-width: 959px)');
-    const handleChange = () => setIsMobile(mediaQuery.matches);
+    const mobileQuery = window.matchMedia('(max-width: 959px)');
+    const compactPreviewQuery = window.matchMedia(
+      '(max-width: 959px), ((max-width: 1180px) and (max-aspect-ratio: 4/5))'
+    );
+    const handleChange = () => {
+      setIsMobile(mobileQuery.matches);
+      setIsCompactPreviewViewport(compactPreviewQuery.matches);
+    };
     handleChange();
-    if ('addEventListener' in mediaQuery) {
-      mediaQuery.addEventListener('change', handleChange);
-      return () => mediaQuery.removeEventListener('change', handleChange);
-    }
-    mediaQuery.addListener(handleChange);
-    return () => mediaQuery.removeListener(handleChange);
+    mobileQuery.addEventListener('change', handleChange);
+    compactPreviewQuery.addEventListener('change', handleChange);
+    return () => {
+      mobileQuery.removeEventListener('change', handleChange);
+      compactPreviewQuery.removeEventListener('change', handleChange);
+    };
   }, []);
 
   const collectionTokenIds = useMemo(() => {
@@ -2219,6 +2357,96 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       setMobilePanel('preview');
     }
   }, [isMobile, isWalletView, stableWalletTokens, lastTokenId]);
+  const walletSelectedTokenIndex = useMemo(() => {
+    if (!isWalletView || selectedTokenId === null) {
+      return -1;
+    }
+    return stableWalletTokens.findIndex((token) => token.id === selectedTokenId);
+  }, [isWalletView, selectedTokenId, stableWalletTokens]);
+  const canSelectPrev = useMemo(() => {
+    if (selectedTokenId === null) {
+      return false;
+    }
+    if (isWalletView) {
+      return walletSelectedTokenIndex > 0;
+    }
+    return selectedTokenId > 0n;
+  }, [isWalletView, selectedTokenId, walletSelectedTokenIndex]);
+  const canSelectNext = useMemo(() => {
+    if (selectedTokenId === null) {
+      return false;
+    }
+    if (isWalletView) {
+      return (
+        walletSelectedTokenIndex >= 0 &&
+        walletSelectedTokenIndex < stableWalletTokens.length - 1
+      );
+    }
+    if (lastTokenId === undefined) {
+      return false;
+    }
+    return selectedTokenId < lastTokenId;
+  }, [
+    isWalletView,
+    selectedTokenId,
+    walletSelectedTokenIndex,
+    stableWalletTokens.length,
+    lastTokenId
+  ]);
+  const handleSelectPreviousToken = useCallback(() => {
+    if (selectedTokenId === null) {
+      return;
+    }
+    if (isWalletView) {
+      if (walletSelectedTokenIndex <= 0) {
+        return;
+      }
+      const previous = stableWalletTokens[walletSelectedTokenIndex - 1];
+      if (!previous) {
+        return;
+      }
+      handleSelectToken(previous.id);
+      return;
+    }
+    if (selectedTokenId > 0n) {
+      handleSelectToken(selectedTokenId - 1n);
+    }
+  }, [
+    handleSelectToken,
+    isWalletView,
+    selectedTokenId,
+    stableWalletTokens,
+    walletSelectedTokenIndex
+  ]);
+  const handleSelectNextToken = useCallback(() => {
+    if (selectedTokenId === null) {
+      return;
+    }
+    if (isWalletView) {
+      if (
+        walletSelectedTokenIndex < 0 ||
+        walletSelectedTokenIndex >= stableWalletTokens.length - 1
+      ) {
+        return;
+      }
+      const next = stableWalletTokens[walletSelectedTokenIndex + 1];
+      if (!next) {
+        return;
+      }
+      handleSelectToken(next.id);
+      return;
+    }
+    if (lastTokenId !== undefined && selectedTokenId < lastTokenId) {
+      handleSelectToken(selectedTokenId + 1n);
+    }
+  }, [
+    handleSelectToken,
+    isWalletView,
+    selectedTokenId,
+    stableWalletTokens,
+    walletSelectedTokenIndex,
+    lastTokenId
+  ]);
 
   useEffect(() => {
     lastTokenIdRef.current = lastTokenId;
@@ -3148,6 +3376,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       (!walletUsingFastIndex &&
         walletTokenListSettled &&
         walletScanCountClamped < walletScanCap));
+  const useCompactPreviewLayout = isCompactPreviewViewport;
 
   return (
     <section
@@ -3455,11 +3684,16 @@ export default function ViewerScreen(props: ViewerScreenProps) {
         marketMismatch={marketMismatch}
         marketNetworkMismatch={marketNetworkMismatch}
         isMobile={isMobile}
+        useCompactPreviewLayout={useCompactPreviewLayout}
         mobilePanel={mobilePanel}
         onRequestGrid={handleMobileGridRequest}
         knownChildren={knownChildren}
         onAddParentDraft={props.onAddParentDraft}
         onSelectToken={handleSelectToken}
+        canSelectPrev={canSelectPrev}
+        canSelectNext={canSelectNext}
+        onSelectPrev={handleSelectPreviousToken}
+        onSelectNext={handleSelectNextToken}
         marketActionStatus={marketActionStatus}
         marketActionPending={marketActionPending}
         onBuyListing={handleBuyListing}

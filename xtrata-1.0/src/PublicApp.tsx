@@ -14,6 +14,7 @@ import { useBnsAddress } from './lib/bns/hooks';
 import { RATE_LIMIT_WARNING_EVENT } from './lib/network/rate-limit';
 import { getApiBaseUrls } from './lib/network/config';
 import { getNetworkFromAddress, getNetworkMismatch } from './lib/network/guard';
+import { getStacksExplorerContractUrl } from './lib/network/explorer';
 import { toStacksNetwork } from './lib/network/stacks';
 import type { NetworkType } from './lib/network/types';
 import { isRateLimitError, isReadOnlyNetworkError } from './lib/contract/read-only';
@@ -1133,11 +1134,6 @@ const parsePublicCollectionsResponse = async (response: Response) => {
   return payload as PublicLiveCollectionRecord[];
 };
 
-const getStacksExplorerContractUrl = (
-  contractId: string,
-  network: 'mainnet' | 'testnet'
-) => `https://explorer.hiro.so/txid/${contractId}?chain=${network}`;
-
 type DocDetailToggleCopy = {
   open: string;
   close: string;
@@ -1488,7 +1484,7 @@ export default function PublicApp() {
   const queryClient = useQueryClient();
   const contractId = getContractId(contract);
   const contractExplorerUrl = useMemo(
-    () => getStacksExplorerContractUrl(contractId, contract.network),
+    () => getStacksExplorerContractUrl(contractId, contract.network) ?? '#',
     [contractId, contract.network]
   );
   const activeDoc = useMemo(
