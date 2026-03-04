@@ -1062,7 +1062,7 @@ body {
   }
 
   .simple-home .simple-home__tools {
-    min-width: clamp(340px, 30vw, 520px);
+    min-width: clamp(420px, 34vw, 560px);
     grid-template-columns: minmax(0, 1fr);
     gap: 5px;
     justify-items: center;
@@ -1071,12 +1071,14 @@ body {
   .simple-home .simple-home__tools .simple-home__actions {
     margin-top: 0;
     justify-content: center;
+    flex-wrap: nowrap;
     gap: 6px;
   }
 
   .simple-home .simple-home__tools .simple-home__actions .button {
-    padding: 5px 11px;
-    font-size: 0.72rem;
+    padding: 4px 9px;
+    font-size: 0.69rem;
+    white-space: nowrap;
   }
 
   .simple-home .theme-select {

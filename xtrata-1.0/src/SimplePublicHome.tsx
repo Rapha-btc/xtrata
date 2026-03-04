@@ -120,7 +120,7 @@ const STARTER_DOCS: StarterDoc[] = [
 const HOME_HERO_CONTENT = {
   title: 'On-chain executable inscription data for artists and apps',
   note: 'Xtrata is the executable inscription data layer on Stacks: publish in three steps (begin, upload, seal), then render and reuse inscriptions across experiences.',
-  tag: 'Executable inscription data layer'
+  tag: 'Executable data layer anchored to bitcoin'
 };
 
 const toRecord = (value: unknown): Record<string, unknown> | null =>
@@ -847,8 +847,8 @@ export default function SimplePublicHome() {
 
           <div className="simple-home__tools">
             <div className="simple-home__actions">
-              <a className="button" href="#mint">
-                Start inscribing
+              <a className="button button--ghost" href="#live-drops">
+                Collections
               </a>
               <a className="button button--ghost" href="#starter-docs">
                 Quick docs
@@ -946,9 +946,6 @@ export default function SimplePublicHome() {
               <span className="badge badge--neutral">
                 {liveCollectionsLoading ? 'Refreshing' : `${liveCollectionCards.length} live`}
               </span>
-              <a className="button button--ghost" href="#mint">
-                Mint from homepage
-              </a>
             </div>
           </div>
           <div className="panel__body">
@@ -1045,9 +1042,6 @@ export default function SimplePublicHome() {
                       <div className="mint-actions">
                         <a className="button button--ghost button--mini" href={collection.livePath}>
                           Open collection page
-                        </a>
-                        <a className="button button--ghost button--mini" href="#mint">
-                          Mint from homepage
                         </a>
                       </div>
                     </article>
