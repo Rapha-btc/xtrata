@@ -18,7 +18,6 @@ import { createWalletSessionStore } from './lib/wallet/session';
 import { getWalletLookupState } from './lib/wallet/lookup';
 import { RATE_LIMIT_WARNING_EVENT } from './lib/network/rate-limit';
 import { getNetworkFromAddress, getNetworkMismatch } from './lib/network/guard';
-import { getStacksExplorerContractUrl } from './lib/network/explorer';
 import { toStacksNetwork } from './lib/network/stacks';
 import type { NetworkType } from './lib/network/types';
 import {
@@ -30,7 +29,7 @@ import {
   writeThemePreference
 } from './lib/theme/preferences';
 import { useActiveTabGuard } from './lib/utils/tab-guard';
-import WalletTopBar from './components/WalletTopBar';
+import AddressLabel from './components/AddressLabel';
 import MintScreen from './screens/MintScreen';
 import ViewerScreen, { type ViewerMode } from './screens/ViewerScreen';
 
@@ -40,8 +39,7 @@ const WORKSPACE_PATH = '/workspace';
 const LIVE_MINT_REFRESH_INTERVAL_MS = 3 * 60_000;
 const LIVE_MINT_ERROR_BACKOFF_MS = 5 * 60_000;
 const LIVE_MINT_RATE_LIMIT_BACKOFF_MS = 15 * 60_000;
-
-type HomeMode = 'creator' | 'protocol';
+const SIMPLE_HOME_INITIAL_SCROLL_NUDGE_PX = 18;
 
 type StarterDoc = {
   title: string;
@@ -119,22 +117,10 @@ const STARTER_DOCS: StarterDoc[] = [
   }
 ];
 
-const HOME_MODE_CONTENT: Record<
-  HomeMode,
-  { tag: string; title: string; note: string; kicker: string }
-> = {
-  creator: {
-    tag: 'Creator-first',
-    title: 'Inscribe data on-chain in three clear steps',
-    note: 'Start by browsing real inscriptions at the top, then mint below using the simplified flow.',
-    kicker: 'Built for first-time creators and builders'
-  },
-  protocol: {
-    tag: 'Protocol-first',
-    title: 'Build on a verifiable on-chain data layer',
-    note: 'Use this guided homepage for fast entry, then switch to Workspace for deeper controls and diagnostics.',
-    kicker: 'Designed for builders integrating production flows'
-  }
+const HOME_HERO_CONTENT = {
+  title: 'On-chain executable inscription data for artists and apps',
+  note: 'Xtrata is the executable inscription data layer on Stacks: publish in three steps (begin, upload, seal), then render and reuse inscriptions across experiences.',
+  tag: 'Executable inscription data layer'
 };
 
 const toRecord = (value: unknown): Record<string, unknown> | null =>
@@ -457,7 +443,6 @@ export default function SimplePublicHome() {
   const [themeMode, setThemeMode] = useState<ThemeMode>(() =>
     resolveInitialTheme()
   );
-  const [homeMode, setHomeMode] = useState<HomeMode>('creator');
   const [walletSession, setWalletSession] = useState(() =>
     walletSessionStore.load()
   );
@@ -485,10 +470,6 @@ export default function SimplePublicHome() {
   const queryClient = useQueryClient();
 
   const contractId = getContractId(contract);
-  const contractExplorerUrl = useMemo(
-    () => getStacksExplorerContractUrl(contractId, contract.network) ?? '#',
-    [contractId, contract.network]
-  );
 
   const walletLookupState = useMemo(
     () => getWalletLookupState('', walletSession.address ?? null),
@@ -496,7 +477,6 @@ export default function SimplePublicHome() {
   );
   const readOnlySender = walletSession.address ?? contract.address;
   const mismatch = getNetworkMismatch(contract.network, walletSession.network);
-  const homeContent = HOME_MODE_CONTENT[homeMode];
   const liveCollectionCards = useMemo<LiveCollectionCard[]>(() => {
     return liveCollections
       .filter(
@@ -557,6 +537,39 @@ export default function SimplePublicHome() {
   useEffect(() => {
     setWalletSession(walletAdapter.getSession());
   }, [walletAdapter]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    if (window.matchMedia('(max-width: 959px)').matches) {
+      return;
+    }
+    if (window.scrollY > 4) {
+      return;
+    }
+    const hash = window.location.hash.trim().toLowerCase();
+    if (hash && hash !== '#') {
+      return;
+    }
+
+    let frameOne = 0;
+    let frameTwo = 0;
+    frameOne = window.requestAnimationFrame(() => {
+      frameTwo = window.requestAnimationFrame(() => {
+        window.scrollBy({
+          top: SIMPLE_HOME_INITIAL_SCROLL_NUDGE_PX,
+          left: 0,
+          behavior: 'auto'
+        });
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameOne);
+      window.cancelAnimationFrame(frameTwo);
+    };
+  }, []);
 
   useEffect(() => {
     if (hasHiroApiKey) {
@@ -780,16 +793,59 @@ export default function SimplePublicHome() {
   };
 
   return (
-    <div className={`app simple-home simple-home--${homeMode}`}>
+    <div className="app simple-home">
       <header className="app__header">
         <section className="panel simple-home__hero" aria-label="Simplified homepage">
           <div className="simple-home__hero-main">
-            <p className="simple-home__kicker">{homeContent.kicker}</p>
-            <h1 className="app__title">
-              XTRATA <span className="app__title-tag">{homeContent.tag}</span>
-            </h1>
-            <h2 className="simple-home__title">{homeContent.title}</h2>
-            <p className="simple-home__note">{homeContent.note}</p>
+            <div className="simple-home__hero-copy">
+              <h1 className="app__title">
+                XTRATA <span className="app__title-tag simple-home__title-tag">{HOME_HERO_CONTENT.tag}</span>
+              </h1>
+              <h2 className="simple-home__title">{HOME_HERO_CONTENT.title}</h2>
+              <p className="simple-home__note">{HOME_HERO_CONTENT.note}</p>
+            </div>
+          </div>
+
+          <div className="simple-home__wallet">
+            <div className="simple-home__wallet-actions">
+              <span className="badge badge--neutral">
+                {walletSession.isConnected ? 'Connected' : 'Disconnected'}
+              </span>
+              {walletSession.isConnected ? (
+                <button
+                  className="button button--ghost"
+                  type="button"
+                  onClick={handleDisconnectWallet}
+                  disabled={walletPending}
+                >
+                  Disconnect
+                </button>
+              ) : (
+                <button
+                  className="button"
+                  type="button"
+                  onClick={handleConnectWallet}
+                  disabled={walletPending}
+                >
+                  {walletPending ? 'Connecting...' : 'Connect wallet'}
+                </button>
+              )}
+            </div>
+            <div className="simple-home__wallet-identity">
+              <span className="simple-home__wallet-label">Connected wallet</span>
+              <AddressLabel
+                className="simple-home__wallet-address"
+                address={walletSession.address}
+                network={walletSession.network}
+                fallback="Not connected"
+              />
+              <span className="simple-home__wallet-network">
+                Network: {walletSession.network ?? 'unknown'}
+              </span>
+            </div>
+          </div>
+
+          <div className="simple-home__tools">
             <div className="simple-home__actions">
               <a className="button" href="#mint">
                 Start inscribing
@@ -800,25 +856,6 @@ export default function SimplePublicHome() {
               <a className="button button--ghost" href={WORKSPACE_PATH}>
                 Open Workspace
               </a>
-            </div>
-          </div>
-
-          <div className="simple-home__tools">
-            <div className="simple-home__mode-switch" role="group" aria-label="Homepage mode">
-              <button
-                className={`button button--ghost simple-home__mode-chip${homeMode === 'creator' ? ' is-active' : ''}`}
-                type="button"
-                onClick={() => setHomeMode('creator')}
-              >
-                Creator-first
-              </button>
-              <button
-                className={`button button--ghost simple-home__mode-chip${homeMode === 'protocol' ? ' is-active' : ''}`}
-                type="button"
-                onClick={() => setHomeMode('protocol')}
-              >
-                Protocol-first
-              </button>
             </div>
             <label className="theme-select" htmlFor="simple-home-theme-select">
               <span className="theme-select__label">Theme</span>
@@ -836,21 +873,8 @@ export default function SimplePublicHome() {
                 ))}
               </select>
             </label>
-            <div className="simple-home__contract-meta">
-              <span className="meta-label">Active contract</span>
-              <a href={contractExplorerUrl} target="_blank" rel="noreferrer">
-                {contractId}
-              </a>
-            </div>
           </div>
         </section>
-
-        <WalletTopBar
-          walletSession={walletSession}
-          walletPending={walletPending}
-          onConnect={handleConnectWallet}
-          onDisconnect={handleDisconnectWallet}
-        />
 
         {mismatch && (
           <div className="alert simple-home__alert">

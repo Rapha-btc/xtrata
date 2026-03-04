@@ -684,18 +684,17 @@ body {
 .simple-home {
   --simple-accent: #ea580c;
   --simple-accent-soft: rgba(234, 88, 12, 0.1);
-}
-
-.simple-home--protocol {
-  --simple-accent: #2563eb;
-  --simple-accent-soft: rgba(37, 99, 235, 0.12);
+  --app-gutter: clamp(8px, 1.8vw, 16px);
+  --app-top-offset: clamp(64px, 8.8svh, 118px);
+  gap: 6px;
 }
 
 .simple-home__hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 14px;
-  align-items: start;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.58fr) minmax(300px, 0.8fr);
+  gap: 8px;
+  align-items: stretch;
+  padding: 7px 11px;
   background:
     linear-gradient(130deg, var(--simple-accent-soft) 0%, transparent 62%),
     var(--surface-overlay);
@@ -703,50 +702,138 @@ body {
 
 .simple-home__hero-main {
   display: grid;
-  gap: 8px;
+  gap: 4px;
+  grid-template-columns: minmax(0, 1fr);
 }
 
-.simple-home__kicker {
-  margin: 0;
-  width: fit-content;
-  padding: 3px 9px;
-  border-radius: 999px;
-  background: var(--simple-accent-soft);
-  color: var(--simple-accent);
-  font-size: 0.72rem;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  font-weight: 700;
+.simple-home__hero-copy {
+  display: grid;
+  gap: 2px;
 }
 
 .simple-home__title {
-  margin: 2px 0 0;
-  font-size: clamp(1.08rem, 2vw, 1.35rem);
+  margin: 0;
+  font-size: clamp(1rem, 1.8vw, 1.22rem);
 }
 
 .simple-home__note {
-  max-width: 74ch;
+  max-width: 88ch;
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.26;
+}
+
+.simple-home__title-tag {
+  font-size: 0.42em;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  color: var(--simple-accent);
+  font-weight: 700;
+}
+
+.simple-home__wallet {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-soft);
+  padding: 5px 7px;
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  justify-items: center;
+}
+
+.simple-home__wallet-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  width: 100%;
+}
+
+.simple-home__wallet-actions .button {
+  padding: 4px 9px;
+  font-size: 0.69rem;
+}
+
+.simple-home__wallet-actions .badge {
+  font-size: 0.62rem;
+  letter-spacing: 0.07em;
+  padding: 4px 10px;
+}
+
+.simple-home__wallet-identity {
+  display: grid;
+  gap: 0;
+  justify-items: center;
+  text-align: center;
+}
+
+.simple-home__wallet-label {
+  font-size: 0.52rem;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.simple-home__wallet-address {
+  font-size: 0.74rem;
+  font-weight: 600;
+  align-items: center;
+  text-align: center;
+  line-height: 1.1;
+}
+
+.simple-home__wallet-network {
+  font-size: 0.62rem;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.1;
 }
 
 .simple-home__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 6px;
+  gap: 5px;
+  margin-top: 0;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
 }
 
 .simple-home__actions .button {
   text-decoration: none;
+  padding: 5px 10px;
+  font-size: 0.71rem;
 }
 
 .simple-home__tools {
-  min-width: 270px;
+  min-width: 300px;
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 12px;
   background: var(--surface-soft);
-  padding: 10px;
+  padding: 5px 7px;
   display: grid;
-  gap: 10px;
+  gap: 4px;
+  align-content: start;
+  justify-items: center;
+}
+
+.simple-home__tools .theme-select {
+  width: min(100%, 360px);
+  justify-content: space-between;
+  padding: 1px 7px;
+}
+
+.simple-home__tools .theme-select__label {
+  font-size: 0.56rem;
+}
+
+.simple-home__tools .theme-select__control {
+  min-width: 112px;
+  font-size: 0.74rem;
+  padding-top: 2px;
+  padding-bottom: 2px;
 }
 
 .simple-home__mode-switch {
@@ -796,7 +883,7 @@ body {
 }
 
 .simple-home__main {
-  gap: 12px;
+  gap: 8px;
 }
 
 .simple-home__docs .panel__body {
@@ -879,11 +966,25 @@ body {
 @media (max-width: 959px) {
   .simple-home__hero {
     grid-template-columns: minmax(0, 1fr);
+    padding: clamp(10px, 2.8vw, 14px);
+  }
+
+  .simple-home__wallet {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .simple-home__wallet-actions {
+    justify-content: center;
   }
 
   .simple-home__tools {
     min-width: 0;
     width: 100%;
+  }
+
+  .simple-home__actions {
+    justify-content: center;
   }
 
   .simple-home__alert {
@@ -899,6 +1000,99 @@ body {
 
   .simple-home__mode-switch {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 960px) {
+  .simple-home .app__header {
+    gap: 6px;
+  }
+
+  .simple-home .simple-home__hero-main .app__title {
+    font-size: clamp(1.2rem, 1.8vw, 1.55rem);
+    line-height: 1;
+    margin-right: 4px;
+  }
+
+  .simple-home .simple-home__hero {
+    grid-template-columns: minmax(0, 1fr) minmax(230px, 0.58fr) minmax(340px, 0.86fr);
+    gap: 6px;
+  }
+
+  .simple-home .simple-home__title-tag {
+    font-size: 0.36em;
+    letter-spacing: 0.04em;
+  }
+
+  .simple-home .simple-home__title {
+    font-size: clamp(0.9rem, 1.26vw, 1.02rem);
+    margin: 0;
+  }
+
+  .simple-home .simple-home__note {
+    font-size: 0.72rem;
+    max-width: 78ch;
+    line-height: 1.22;
+  }
+
+  .simple-home .simple-home__wallet {
+    min-width: clamp(230px, 21vw, 320px);
+    gap: 4px;
+  }
+
+  .simple-home .simple-home__wallet-actions .badge {
+    font-size: 0.6rem;
+  }
+
+  .simple-home .simple-home__wallet-actions .button {
+    padding: 3px 8px;
+    font-size: 0.68rem;
+  }
+
+  .simple-home .simple-home__wallet-label {
+    font-size: 0.5rem;
+  }
+
+  .simple-home .simple-home__wallet-address {
+    font-size: 0.72rem;
+  }
+
+  .simple-home .simple-home__wallet-network {
+    font-size: 0.6rem;
+  }
+
+  .simple-home .simple-home__tools {
+    min-width: clamp(340px, 30vw, 520px);
+    grid-template-columns: minmax(0, 1fr);
+    gap: 5px;
+    justify-items: center;
+  }
+
+  .simple-home .simple-home__tools .simple-home__actions {
+    margin-top: 0;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .simple-home .simple-home__tools .simple-home__actions .button {
+    padding: 5px 11px;
+    font-size: 0.72rem;
+  }
+
+  .simple-home .theme-select {
+    width: min(100%, 360px);
+    justify-content: space-between;
+    gap: 8px;
+    padding: 1px 7px;
+  }
+
+  .simple-home .theme-select__label {
+    font-size: 0.56rem;
+  }
+
+  .simple-home .theme-select__control {
+    min-width: 112px;
+    font-size: 0.74rem;
   }
 }
 
