@@ -716,11 +716,11 @@ body {
   font-size: clamp(1rem, 1.8vw, 1.22rem);
 }
 
-.simple-home__note {
-  max-width: 88ch;
+.simple-home__subline {
   margin: 0;
-  font-size: 0.76rem;
-  line-height: 1.26;
+  font-size: 0.69rem;
+  line-height: 1.15;
+  color: var(--muted);
 }
 
 .simple-home__title-tag {
@@ -1029,10 +1029,9 @@ body {
     margin: 0;
   }
 
-  .simple-home .simple-home__note {
-    font-size: 0.72rem;
-    max-width: 78ch;
-    line-height: 1.22;
+  .simple-home .simple-home__subline {
+    font-size: 0.64rem;
+    line-height: 1.12;
   }
 
   .simple-home .simple-home__wallet {
@@ -1062,7 +1061,7 @@ body {
   }
 
   .simple-home .simple-home__tools {
-    min-width: clamp(340px, 30vw, 520px);
+    min-width: clamp(420px, 34vw, 560px);
     grid-template-columns: minmax(0, 1fr);
     gap: 5px;
     justify-items: center;
@@ -1071,12 +1070,14 @@ body {
   .simple-home .simple-home__tools .simple-home__actions {
     margin-top: 0;
     justify-content: center;
+    flex-wrap: nowrap;
     gap: 6px;
   }
 
   .simple-home .simple-home__tools .simple-home__actions .button {
-    padding: 5px 11px;
-    font-size: 0.72rem;
+    padding: 4px 9px;
+    font-size: 0.69rem;
+    white-space: nowrap;
   }
 
   .simple-home .theme-select {
