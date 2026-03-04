@@ -6472,20 +6472,38 @@ p {
   column-gap: 10px;
   row-gap: 6px;
   align-items: start;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
 }
 
-.public-live-collections__card > :not(.public-live-collections__media) {
+.public-live-collections__card:visited {
+  color: inherit;
+}
+
+.public-live-collections__card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.public-live-collections__card > :not(.public-live-collections__media-stack) {
   grid-column: 2;
   min-width: 0;
 }
 
-.public-live-collections__media {
+.public-live-collections__media-stack {
   grid-column: 1;
-  grid-row: 1 / span 6;
+  grid-row: 1 / span 8;
+  width: 128px;
+  display: grid;
+  gap: 6px;
+}
+
+.public-live-collections__media {
   border-radius: 12px;
   border: 1px solid var(--border);
   background: var(--surface-muted);
-  width: 128px;
+  width: 100%;
   height: 128px;
   overflow: hidden;
   display: grid;
@@ -6505,6 +6523,29 @@ p {
   color: var(--muted);
   font-size: 0.8rem;
   line-height: 1.45;
+}
+
+.public-live-collections__media-price {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--muted);
+  display: grid;
+  gap: 1px;
+  justify-items: center;
+  padding: 5px 6px;
+  font-size: 0.67rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.public-live-collections__media-price strong {
+  color: var(--text);
+  font-size: 0.79rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: none;
 }
 
 .public-live-collections__card h3,
@@ -6565,14 +6606,34 @@ p {
 
 @media (max-width: 640px) {
   .public-live-collections__card {
-    grid-template-columns: 110px minmax(0, 1fr);
-    column-gap: 8px;
+    grid-template-columns: 1fr;
+    column-gap: 0;
     row-gap: 5px;
+  }
+
+  .public-live-collections__card > :not(.public-live-collections__media-stack) {
+    grid-column: 1;
+  }
+
+  .public-live-collections__media-stack {
+    grid-column: 1;
+    grid-row: auto;
+    width: 110px;
+    gap: 5px;
   }
 
   .public-live-collections__media {
     width: 110px;
     height: 110px;
+  }
+
+  .public-live-collections__media-price {
+    width: 110px;
+    font-size: 0.63rem;
+  }
+
+  .public-live-collections__media-price strong {
+    font-size: 0.74rem;
   }
 
   .public-live-collections__summary {

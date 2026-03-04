@@ -279,6 +279,46 @@ const buildMintStateLabel = (status: LiveMintStatus | null) => {
   return 'Live';
 };
 
+const MICROSTX_PER_STX = 1_000_000n;
+
+const formatMicroStxLabel = (value: bigint | null) => {
+  if (value === null) {
+    return 'Unknown';
+  }
+  const whole = value / MICROSTX_PER_STX;
+  const fraction = value % MICROSTX_PER_STX;
+  return `${whole.toString()}.${fraction.toString().padStart(6, '0')} STX`;
+};
+
+const resolveDisplayedMintPrice = (
+  collection: LiveCollectionRecord,
+  status: LiveMintStatus | null
+) => {
+  const onChainPrice = status?.effectiveMintPrice ?? null;
+  if (!status) {
+    return null;
+  }
+  if (status.activePhaseMintPrice !== null) {
+    return onChainPrice;
+  }
+  const metadata = toRecord(collection.metadata);
+  const pricing = toRecord(metadata?.pricing);
+  if (toText(pricing?.mode).toLowerCase() !== 'advertised-includes-seal-fee') {
+    return onChainPrice;
+  }
+  const advertised = toBigIntOrNull(pricing?.advertisedMintPriceMicroStx);
+  const onChainFromMetadata = toBigIntOrNull(pricing?.onChainMintPriceMicroStx);
+  if (
+    advertised === null ||
+    onChainFromMetadata === null ||
+    status.mintPrice === null ||
+    onChainFromMetadata !== status.mintPrice
+  ) {
+    return onChainPrice;
+  }
+  return advertised;
+};
+
 const resolveCollectionContractTarget = (
   collection: LiveCollectionRecord
 ): CollectionContractTarget | null => {
@@ -969,6 +1009,7 @@ export default function SimplePublicHome() {
                     liveMintStatusLoadingByCollectionId[collection.id]
                   );
                   const mintStatusError = liveMintStatusErrorByCollectionId[collection.id] ?? null;
+                  const effectiveMintPrice = resolveDisplayedMintPrice(collection, mintStatus);
                   const maxSupply = mintStatus?.maxSupply ?? collection.fallbackSupply ?? null;
                   const mintedCount = mintStatus?.mintedCount ?? null;
                   const remainingCount =
@@ -984,31 +1025,42 @@ export default function SimplePublicHome() {
                     liveCoverPreviewErrorByCollectionId[collection.id]
                   );
                   return (
-                    <article className="public-live-collections__card" key={collection.id}>
+                    <a
+                      className="public-live-collections__card"
+                      key={collection.id}
+                      href={collection.livePath}
+                      aria-label={`Open ${collection.name} collection page`}
+                    >
                       {soldOut && <span className="collection-live-page__stamp">Sold out</span>}
-                      <div className="public-live-collections__media">
-                        {collection.coverImageUrl && !coverPreviewErrored ? (
-                          <img
-                            src={collection.coverImageUrl}
-                            alt={`${collection.name} cover`}
-                            onLoad={() =>
-                              setLiveCoverPreviewErrorByCollectionId((current) => ({
-                                ...current,
-                                [collection.id]: false
-                              }))
-                            }
-                            onError={() =>
-                              setLiveCoverPreviewErrorByCollectionId((current) => ({
-                                ...current,
-                                [collection.id]: true
-                              }))
-                            }
-                          />
-                        ) : (
-                          <div className="public-live-collections__media-placeholder">
-                            Collection cover image not set yet.
-                          </div>
-                        )}
+                      <div className="public-live-collections__media-stack">
+                        <div className="public-live-collections__media">
+                          {collection.coverImageUrl && !coverPreviewErrored ? (
+                            <img
+                              src={collection.coverImageUrl}
+                              alt={`${collection.name} cover`}
+                              onLoad={() =>
+                                setLiveCoverPreviewErrorByCollectionId((current) => ({
+                                  ...current,
+                                  [collection.id]: false
+                                }))
+                              }
+                              onError={() =>
+                                setLiveCoverPreviewErrorByCollectionId((current) => ({
+                                  ...current,
+                                  [collection.id]: true
+                                }))
+                              }
+                            />
+                          ) : (
+                            <div className="public-live-collections__media-placeholder">
+                              Collection cover image not set yet.
+                            </div>
+                          )}
+                        </div>
+                        <div className="public-live-collections__media-price">
+                          Mint price
+                          <strong>{formatMicroStxLabel(effectiveMintPrice)}</strong>
+                        </div>
                       </div>
                       <div className="public-live-collections__card-header">
                         <h3>{collection.name}</h3>
@@ -1043,11 +1095,11 @@ export default function SimplePublicHome() {
                         )}
                       </div>
                       <div className="mint-actions">
-                        <a className="button button--ghost button--mini" href={collection.livePath}>
+                        <span className="button button--ghost button--mini">
                           Open collection page
-                        </a>
+                        </span>
                       </div>
-                    </article>
+                    </a>
                   );
                 })}
               </div>

@@ -2365,31 +2365,42 @@ export default function PublicApp() {
                   );
 
                   return (
-                    <article className="public-live-collections__card" key={collection.id}>
+                    <a
+                      className="public-live-collections__card"
+                      key={collection.id}
+                      href={collection.livePath}
+                      aria-label={`Open ${collection.name} collection page`}
+                    >
                       {soldOut && <span className="collection-live-page__stamp">Sold out</span>}
-                      <div className="public-live-collections__media">
-                        {collection.coverImageUrl && !coverPreviewErrored ? (
-                          <img
-                            src={collection.coverImageUrl}
-                            alt={`${collection.name} cover`}
-                            onLoad={() =>
-                              setLiveCoverPreviewErrorByCollectionId((current) => ({
-                                ...current,
-                                [collection.id]: false
-                              }))
-                            }
-                            onError={() =>
-                              setLiveCoverPreviewErrorByCollectionId((current) => ({
-                                ...current,
-                                [collection.id]: true
-                              }))
-                            }
-                          />
-                        ) : (
-                          <div className="public-live-collections__media-placeholder">
-                            Collection cover image not set yet.
-                          </div>
-                        )}
+                      <div className="public-live-collections__media-stack">
+                        <div className="public-live-collections__media">
+                          {collection.coverImageUrl && !coverPreviewErrored ? (
+                            <img
+                              src={collection.coverImageUrl}
+                              alt={`${collection.name} cover`}
+                              onLoad={() =>
+                                setLiveCoverPreviewErrorByCollectionId((current) => ({
+                                  ...current,
+                                  [collection.id]: false
+                                }))
+                              }
+                              onError={() =>
+                                setLiveCoverPreviewErrorByCollectionId((current) => ({
+                                  ...current,
+                                  [collection.id]: true
+                                }))
+                              }
+                            />
+                          ) : (
+                            <div className="public-live-collections__media-placeholder">
+                              Collection cover image not set yet.
+                            </div>
+                          )}
+                        </div>
+                        <div className="public-live-collections__media-price">
+                          Mint price
+                          <strong>{formatMicroStxLabel(effectiveMintPrice)}</strong>
+                        </div>
                       </div>
                       <div className="public-live-collections__card-header">
                         <h3>{collection.name}</h3>
@@ -2409,9 +2420,6 @@ export default function PublicApp() {
                         <span className="public-live-collections__stat">
                           Remaining: <strong>{formatBigintLabel(remainingCount)}</strong>
                         </span>
-                        <span className="public-live-collections__stat">
-                          Mint price: <strong>{formatMicroStxLabel(effectiveMintPrice)}</strong>
-                        </span>
                       </div>
                       <div className="public-live-collections__card-meta">
                         <p className="meta-value">
@@ -2427,11 +2435,11 @@ export default function PublicApp() {
                         )}
                       </div>
                       <div className="mint-actions">
-                        <a className="button button--ghost button--mini" href={collection.livePath}>
+                        <span className="button button--ghost button--mini">
                           Open collection page
-                        </a>
+                        </span>
                       </div>
-                    </article>
+                    </a>
                   );
                 })}
               </div>
