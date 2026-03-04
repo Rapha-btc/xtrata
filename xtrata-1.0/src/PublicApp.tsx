@@ -130,6 +130,10 @@ type PublicLiveCollectionCard = {
   fallbackSupply: bigint | null;
   contractId: string | null;
   contractTarget: PublicCollectionContractTarget | null;
+  templateVersion: string;
+  pricingMode: string;
+  pricingAdvertisedMintPriceMicroStx: bigint | null;
+  pricingOnChainMintPriceMicroStx: bigint | null;
 };
 
 const DOC_SECTIONS: DocSection[] = [
@@ -969,8 +973,22 @@ const resolvePublicCollectionContractTarget = (
   };
 };
 
+const resolveCollectionMintPaymentModel = (templateVersion: string) => {
+  const normalized = templateVersion.trim().toLowerCase();
+  if (!normalized) {
+    return 'unknown' as const;
+  }
+  if (normalized.includes('v1.0') || normalized.includes('v1.1')) {
+    return 'begin' as const;
+  }
+  if (normalized.includes('v1.2')) {
+    return 'seal' as const;
+  }
+  return 'unknown' as const;
+};
+
 const resolvePublicDisplayedMintPrice = (
-  collection: PublicLiveCollectionRecord,
+  collection: PublicLiveCollectionCard,
   status: PublicLiveMintStatus | null
 ) => {
   const onChainPrice = status?.effectiveMintPrice ?? null;
@@ -980,13 +998,15 @@ const resolvePublicDisplayedMintPrice = (
   if (status.activePhaseMintPrice !== null) {
     return onChainPrice;
   }
-  const metadata = toRecord(collection.metadata);
-  const pricing = toRecord(metadata?.pricing);
-  if (toText(pricing?.mode).toLowerCase() !== 'advertised-includes-seal-fee') {
+  const paymentModel = resolveCollectionMintPaymentModel(collection.templateVersion);
+  if (paymentModel !== 'seal') {
     return onChainPrice;
   }
-  const advertised = toBigIntOrNull(pricing?.advertisedMintPriceMicroStx);
-  const onChainFromMetadata = toBigIntOrNull(pricing?.onChainMintPriceMicroStx);
+  if (collection.pricingMode.toLowerCase() !== 'advertised-includes-seal-fee') {
+    return onChainPrice;
+  }
+  const advertised = collection.pricingAdvertisedMintPriceMicroStx;
+  const onChainFromMetadata = collection.pricingOnChainMintPriceMicroStx;
   if (
     advertised === null ||
     onChainFromMetadata === null ||
@@ -1530,6 +1550,7 @@ export default function PublicApp() {
         const metadata = toRecord(collection.metadata);
         const metadataCollection = toRecord(metadata?.collection);
         const metadataCollectionPage = toRecord(metadata?.collectionPage);
+        const metadataPricing = toRecord(metadata?.pricing);
         const fallbackSupply = toBigIntOrNull(metadataCollection?.supply);
         const name =
           toText(metadataCollection?.name) ||
@@ -1558,7 +1579,15 @@ export default function PublicApp() {
           coverImageUrl,
           fallbackSupply,
           contractId,
-          contractTarget
+          contractTarget,
+          templateVersion: toText(metadata?.templateVersion),
+          pricingMode: toText(metadataPricing?.mode),
+          pricingAdvertisedMintPriceMicroStx: toBigIntOrNull(
+            metadataPricing?.advertisedMintPriceMicroStx
+          ),
+          pricingOnChainMintPriceMicroStx: toBigIntOrNull(
+            metadataPricing?.onChainMintPriceMicroStx
+          )
         };
       })
       .sort((left, right) => left.name.localeCompare(right.name));
