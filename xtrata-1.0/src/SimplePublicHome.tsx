@@ -1,14 +1,26 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
+import {
+  callReadOnlyFunction,
+  ClarityType,
+  cvToValue,
+  uintCV,
+  type ClarityValue
+} from '@stacks/transactions';
 import { useQueryClient } from '@tanstack/react-query';
 import { PUBLIC_CONTRACT, PUBLIC_MINT_RESTRICTIONS } from './config/public';
 import { getContractId } from './lib/contract/config';
+import { resolveCollectionContractLink } from './lib/collections/contract-link';
+import { isRateLimitError, isReadOnlyNetworkError } from './lib/contract/read-only';
+import { getApiBaseUrls } from './lib/network/config';
 import { getViewerKey } from './lib/viewer/queries';
 import { createStacksWalletAdapter } from './lib/wallet/adapter';
 import { createWalletSessionStore } from './lib/wallet/session';
 import { getWalletLookupState } from './lib/wallet/lookup';
 import { RATE_LIMIT_WARNING_EVENT } from './lib/network/rate-limit';
-import { getNetworkMismatch } from './lib/network/guard';
+import { getNetworkFromAddress, getNetworkMismatch } from './lib/network/guard';
 import { getStacksExplorerContractUrl } from './lib/network/explorer';
+import { toStacksNetwork } from './lib/network/stacks';
+import type { NetworkType } from './lib/network/types';
 import {
   applyThemeToDocument,
   coerceThemeMode,
@@ -25,6 +37,9 @@ import ViewerScreen, { type ViewerMode } from './screens/ViewerScreen';
 const walletSessionStore = createWalletSessionStore();
 
 const WORKSPACE_PATH = '/workspace';
+const LIVE_MINT_REFRESH_INTERVAL_MS = 3 * 60_000;
+const LIVE_MINT_ERROR_BACKOFF_MS = 5 * 60_000;
+const LIVE_MINT_RATE_LIMIT_BACKOFF_MS = 15 * 60_000;
 
 type HomeMode = 'creator' | 'protocol';
 
@@ -40,7 +55,28 @@ type LiveCollectionRecord = {
   slug: string;
   display_name: string | null;
   state: string;
+  contract_address: string | null;
   metadata?: Record<string, unknown> | null;
+};
+
+type CollectionContractTarget = {
+  address: string;
+  contractName: string;
+  network: NetworkType;
+};
+
+type LiveMintStatus = {
+  paused: boolean | null;
+  finalized: boolean | null;
+  mintPrice: bigint | null;
+  activePhaseId: bigint | null;
+  activePhaseMintPrice: bigint | null;
+  effectiveMintPrice: bigint | null;
+  maxSupply: bigint | null;
+  mintedCount: bigint | null;
+  reservedCount: bigint | null;
+  remaining: bigint | null;
+  refreshedAt: number;
 };
 
 type LiveCollectionCard = {
@@ -51,7 +87,8 @@ type LiveCollectionCard = {
   description: string;
   livePath: string;
   coverImageUrl: string | null;
-  supplyLabel: string;
+  fallbackSupply: bigint | null;
+  contractTarget: CollectionContractTarget | null;
 };
 
 const STARTER_DOCS: StarterDoc[] = [
@@ -165,6 +202,213 @@ const toBigIntOrNull = (value: unknown) => {
 const formatBigintLabel = (value: bigint | null) =>
   value === null ? 'Unknown' : value.toString();
 
+const parseUintCv = (value: ClarityValue) => {
+  const parsed = cvToValue(value) as unknown;
+  if (parsed && typeof parsed === 'object' && 'value' in (parsed as Record<string, unknown>)) {
+    return toBigIntOrNull((parsed as { value?: unknown }).value);
+  }
+  return toBigIntOrNull(parsed);
+};
+
+const unwrapReadOnly = (value: ClarityValue) => {
+  if (value.type === ClarityType.ResponseOk) {
+    return value.value;
+  }
+  if (value.type === ClarityType.ResponseErr) {
+    const parsed = cvToValue(value.value) as unknown;
+    throw new Error(String(parsed ?? 'Read-only call failed.'));
+  }
+  return value;
+};
+
+const getErrorMessage = (error: unknown) => {
+  if (typeof error === 'string') {
+    return error;
+  }
+  if (error instanceof Error) {
+    return error.message || error.name || 'Unknown error';
+  }
+  if (!error) {
+    return 'Unknown error';
+  }
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+};
+
+const shouldTryReadOnlyFallback = (error: unknown) =>
+  isRateLimitError(error) || isReadOnlyNetworkError(error);
+
+const toMintStatusErrorMessage = (error: unknown) => {
+  if (isRateLimitError(error)) {
+    return `Upstream API rate-limited this request. Mint status refresh is paused and will retry in about ${Math.round(
+      LIVE_MINT_RATE_LIMIT_BACKOFF_MS / 60_000
+    )} minutes.`;
+  }
+  return getErrorMessage(error);
+};
+
+const isCollectionSoldOut = (status: LiveMintStatus | null) => {
+  if (!status) {
+    return false;
+  }
+  if (status.remaining !== null && status.remaining <= 0n) {
+    return true;
+  }
+  if (status.finalized === true) {
+    return true;
+  }
+  if (
+    status.maxSupply !== null &&
+    status.mintedCount !== null &&
+    status.mintedCount >= status.maxSupply
+  ) {
+    return true;
+  }
+  return false;
+};
+
+const buildMintStateLabel = (status: LiveMintStatus | null) => {
+  if (!status) {
+    return 'Published';
+  }
+  if (status.finalized) {
+    return 'Finalized';
+  }
+  if (status.remaining !== null && status.remaining <= 0n) {
+    return 'Sold out';
+  }
+  if (
+    status.maxSupply !== null &&
+    status.mintedCount !== null &&
+    status.mintedCount >= status.maxSupply
+  ) {
+    return 'Sold out';
+  }
+  if (status.paused) {
+    return 'Paused';
+  }
+  return 'Live';
+};
+
+const resolveCollectionContractTarget = (
+  collection: LiveCollectionRecord
+): CollectionContractTarget | null => {
+  const metadata = toRecord(collection.metadata);
+  const resolved = resolveCollectionContractLink({
+    collectionId: toText(collection.id),
+    collectionSlug: toText(collection.slug),
+    contractAddress: toText(collection.contract_address),
+    metadata
+  });
+  if (!resolved) {
+    return null;
+  }
+  return {
+    address: resolved.address,
+    contractName: resolved.contractName,
+    network: getNetworkFromAddress(resolved.address) ?? 'mainnet'
+  };
+};
+
+const loadPublicMintStatus = async (
+  contract: CollectionContractTarget
+): Promise<LiveMintStatus> => {
+  const apiBaseUrls = getApiBaseUrls(contract.network);
+  const senderAddress = contract.address;
+  const readOnly = async (functionName: string, functionArgs: ClarityValue[] = []) => {
+    let lastError: unknown = null;
+    for (let index = 0; index < apiBaseUrls.length; index += 1) {
+      const apiBaseUrl = apiBaseUrls[index];
+      try {
+        const response = await callReadOnlyFunction({
+          contractAddress: contract.address,
+          contractName: contract.contractName,
+          functionName,
+          functionArgs,
+          senderAddress,
+          network: toStacksNetwork(contract.network, apiBaseUrl)
+        });
+        return unwrapReadOnly(response);
+      } catch (error) {
+        lastError = error;
+        const hasFallback = index < apiBaseUrls.length - 1;
+        if (hasFallback && shouldTryReadOnlyFallback(error)) {
+          continue;
+        }
+        break;
+      }
+    }
+    if (lastError instanceof Error) {
+      throw lastError;
+    }
+    throw new Error(getErrorMessage(lastError));
+  };
+
+  const [
+    pausedCv,
+    finalizedCv,
+    mintPriceCv,
+    activePhaseCv,
+    maxSupplyCv,
+    mintedCountCv,
+    reservedCountCv
+  ] = await Promise.all([
+    readOnly('is-paused'),
+    readOnly('get-finalized'),
+    readOnly('get-mint-price'),
+    readOnly('get-active-phase'),
+    readOnly('get-max-supply'),
+    readOnly('get-minted-count'),
+    readOnly('get-reserved-count')
+  ]);
+
+  const paused = toBoolean(cvToValue(pausedCv)) ?? null;
+  const finalized = toBoolean(cvToValue(finalizedCv)) ?? null;
+  const mintPrice = parseUintCv(mintPriceCv);
+  const activePhaseId = parseUintCv(activePhaseCv);
+  let activePhaseMintPrice: bigint | null = null;
+  if (activePhaseId !== null && activePhaseId > 0n) {
+    const phaseValue = await readOnly('get-phase', [uintCV(activePhaseId)]);
+    if (phaseValue.type === ClarityType.OptionalSome) {
+      const tuple = phaseValue.value;
+      if (tuple.type === ClarityType.Tuple) {
+        const phasePriceCv = tuple.data['mint-price'];
+        if (phasePriceCv) {
+          activePhaseMintPrice = parseUintCv(phasePriceCv);
+        }
+      }
+    }
+  }
+
+  const maxSupply = parseUintCv(maxSupplyCv);
+  const mintedCount = parseUintCv(mintedCountCv);
+  const reservedCount = parseUintCv(reservedCountCv);
+  const effectiveMintPrice = activePhaseMintPrice ?? mintPrice;
+  const remaining =
+    maxSupply === null || mintedCount === null || reservedCount === null
+      ? null
+      : maxSupply <= mintedCount + reservedCount
+        ? 0n
+        : maxSupply - mintedCount - reservedCount;
+
+  return {
+    paused,
+    finalized,
+    mintPrice,
+    activePhaseId,
+    activePhaseMintPrice,
+    effectiveMintPrice,
+    maxSupply,
+    mintedCount,
+    reservedCount,
+    remaining,
+    refreshedAt: Date.now()
+  };
+};
+
 const resolveCollectionCoverUrl = (collection: LiveCollectionRecord) => {
   const metadata = toRecord(collection.metadata);
   const collectionPage = toRecord(metadata?.collectionPage);
@@ -227,6 +471,13 @@ export default function SimplePublicHome() {
   const [liveCollections, setLiveCollections] = useState<LiveCollectionRecord[]>([]);
   const [liveCollectionsLoading, setLiveCollectionsLoading] = useState(false);
   const [liveCollectionsError, setLiveCollectionsError] = useState<string | null>(null);
+  const [liveMintStatusByCollectionId, setLiveMintStatusByCollectionId] = useState<
+    Record<string, LiveMintStatus | null>
+  >({});
+  const [liveMintStatusLoadingByCollectionId, setLiveMintStatusLoadingByCollectionId] =
+    useState<Record<string, boolean>>({});
+  const [liveMintStatusErrorByCollectionId, setLiveMintStatusErrorByCollectionId] =
+    useState<Record<string, string | null>>({});
   const [liveCoverPreviewErrorByCollectionId, setLiveCoverPreviewErrorByCollectionId] = useState<
     Record<string, boolean>
   >({});
@@ -272,6 +523,7 @@ export default function SimplePublicHome() {
           'This collection is live and ready for minting.';
         const liveKey = toText(collection.slug) || collection.id;
         const livePath = `/collection/${encodeURIComponent(liveKey)}`;
+        const contractTarget = resolveCollectionContractTarget(collection);
         return {
           id: collection.id,
           slug: toText(collection.slug),
@@ -280,7 +532,8 @@ export default function SimplePublicHome() {
           description,
           livePath,
           coverImageUrl: resolveCollectionCoverUrl(collection),
-          supplyLabel: formatBigintLabel(fallbackSupply)
+          fallbackSupply,
+          contractTarget
         };
       })
       .sort((left, right) => left.name.localeCompare(right.name));
@@ -352,6 +605,140 @@ export default function SimplePublicHome() {
       controller.abort();
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    let timeoutId: number | null = null;
+
+    const activeIds = new Set(liveCollectionCards.map((collection) => collection.id));
+    setLiveMintStatusByCollectionId((current) =>
+      Object.fromEntries(
+        Object.entries(current).filter(([collectionId]) => activeIds.has(collectionId))
+      )
+    );
+    setLiveMintStatusLoadingByCollectionId((current) =>
+      Object.fromEntries(
+        Object.entries(current).filter(([collectionId]) => activeIds.has(collectionId))
+      )
+    );
+    setLiveMintStatusErrorByCollectionId((current) =>
+      Object.fromEntries(
+        Object.entries(current).filter(([collectionId]) => activeIds.has(collectionId))
+      )
+    );
+    setLiveCoverPreviewErrorByCollectionId((current) =>
+      Object.fromEntries(
+        Object.entries(current).filter(([collectionId]) => activeIds.has(collectionId))
+      )
+    );
+
+    const cardsWithContracts = liveCollectionCards.filter(
+      (
+        collection
+      ): collection is LiveCollectionCard & {
+        contractTarget: CollectionContractTarget;
+      } => collection.contractTarget !== null
+    );
+    const shouldRefreshLiveMintStatus =
+      cardsWithContracts.length > 0 && tabGuard.isActive;
+    if (!shouldRefreshLiveMintStatus) {
+      return () => {
+        cancelled = true;
+        if (timeoutId !== null) {
+          window.clearTimeout(timeoutId);
+        }
+      };
+    }
+
+    const scheduleRefresh = (delayMs: number) => {
+      if (cancelled) {
+        return;
+      }
+      timeoutId = window.setTimeout(() => {
+        void refreshMintStatus();
+      }, delayMs);
+    };
+
+    const refreshMintStatus = async () => {
+      setLiveMintStatusLoadingByCollectionId((current) => {
+        const next = { ...current };
+        cardsWithContracts.forEach((collection) => {
+          next[collection.id] = true;
+        });
+        return next;
+      });
+
+      const settled = await Promise.all(
+        cardsWithContracts.map(async (collection) => {
+          try {
+            const status = await loadPublicMintStatus(collection.contractTarget);
+            return {
+              id: collection.id,
+              status,
+              error: null as string | null,
+              rateLimited: false
+            };
+          } catch (error) {
+            return {
+              id: collection.id,
+              status: null as LiveMintStatus | null,
+              error: toMintStatusErrorMessage(error),
+              rateLimited: isRateLimitError(error)
+            };
+          }
+        })
+      );
+
+      if (cancelled) {
+        return;
+      }
+
+      const hasRateLimitedEntry = settled.some((entry) => entry.rateLimited);
+      const hasErrorEntry = settled.some((entry) => entry.error !== null);
+
+      setLiveMintStatusByCollectionId((current) => {
+        const next = { ...current };
+        settled.forEach((entry) => {
+          if (entry.status) {
+            next[entry.id] = entry.status;
+          } else if (!next[entry.id]) {
+            next[entry.id] = null;
+          }
+        });
+        return next;
+      });
+      setLiveMintStatusErrorByCollectionId((current) => {
+        const next = { ...current };
+        settled.forEach((entry) => {
+          next[entry.id] = entry.error;
+        });
+        return next;
+      });
+      setLiveMintStatusLoadingByCollectionId((current) => {
+        const next = { ...current };
+        cardsWithContracts.forEach((collection) => {
+          next[collection.id] = false;
+        });
+        return next;
+      });
+
+      const nextDelayMs = hasRateLimitedEntry
+        ? LIVE_MINT_RATE_LIMIT_BACKOFF_MS
+        : hasErrorEntry
+          ? LIVE_MINT_ERROR_BACKOFF_MS
+          : LIVE_MINT_REFRESH_INTERVAL_MS;
+      scheduleRefresh(nextDelayMs);
+    };
+
+    void refreshMintStatus();
+
+    return () => {
+      cancelled = true;
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, [liveCollectionCards, tabGuard.isActive]);
 
   const handleThemeChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const nextTheme = coerceThemeMode(event.target.value);
@@ -553,11 +940,28 @@ export default function SimplePublicHome() {
             {liveCollectionCards.length > 0 && (
               <div className="public-live-collections">
                 {liveCollectionCards.map((collection) => {
+                  const mintStatus = liveMintStatusByCollectionId[collection.id] ?? null;
+                  const mintStatusLoading = Boolean(
+                    liveMintStatusLoadingByCollectionId[collection.id]
+                  );
+                  const mintStatusError = liveMintStatusErrorByCollectionId[collection.id] ?? null;
+                  const maxSupply = mintStatus?.maxSupply ?? collection.fallbackSupply ?? null;
+                  const mintedCount = mintStatus?.mintedCount ?? null;
+                  const remainingCount =
+                    mintStatus?.remaining ??
+                    (maxSupply !== null && mintedCount !== null
+                      ? maxSupply <= mintedCount
+                        ? 0n
+                        : maxSupply - mintedCount
+                      : null);
+                  const mintStateLabel = buildMintStateLabel(mintStatus);
+                  const soldOut = isCollectionSoldOut(mintStatus);
                   const coverPreviewErrored = Boolean(
                     liveCoverPreviewErrorByCollectionId[collection.id]
                   );
                   return (
                     <article className="public-live-collections__card" key={collection.id}>
+                      {soldOut && <span className="collection-live-page__stamp">Sold out</span>}
                       <div className="public-live-collections__media">
                         {collection.coverImageUrl && !coverPreviewErrored ? (
                           <img
@@ -589,16 +993,30 @@ export default function SimplePublicHome() {
                       <p className="public-live-collections__description">{collection.description}</p>
                       <div className="public-live-collections__summary">
                         <span className="public-live-collections__stat">
-                          Supply: <strong>{collection.supplyLabel}</strong>
+                          Supply: <strong>{formatBigintLabel(maxSupply)}</strong>
                         </span>
                         <span className="public-live-collections__stat">
-                          State: <strong>Live</strong>
+                          Minted: <strong>{formatBigintLabel(mintedCount)}</strong>
+                        </span>
+                        <span className="public-live-collections__stat">
+                          Remaining: <strong>{formatBigintLabel(remainingCount)}</strong>
+                        </span>
+                        <span className="public-live-collections__stat">
+                          State: <strong>{mintStateLabel}</strong>
                         </span>
                       </div>
                       <div className="public-live-collections__card-meta">
                         <p className="meta-value">
                           Collection: <code>{collection.slug || collection.id}</code>
                         </p>
+                        {mintStatusLoading && (
+                          <p className="meta-value">Refreshing mint status...</p>
+                        )}
+                        {mintStatusError && (
+                          <p className="meta-value">
+                            Mint status unavailable: {mintStatusError}
+                          </p>
+                        )}
                       </div>
                       <div className="mint-actions">
                         <a className="button button--ghost button--mini" href={collection.livePath}>
