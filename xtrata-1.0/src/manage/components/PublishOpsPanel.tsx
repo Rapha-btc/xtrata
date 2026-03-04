@@ -214,7 +214,6 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
   const [selectedCoverAssetId, setSelectedCoverAssetId] = useState('');
   const [inscribedCoverUrl, setInscribedCoverUrl] = useState('');
   const [heroBannerUrlInput, setHeroBannerUrlInput] = useState('');
-  const [logoBannerUrlInput, setLogoBannerUrlInput] = useState('');
   const [collectionDescriptionInput, setCollectionDescriptionInput] = useState('');
   const [coverMessage, setCoverMessage] = useState<string | null>(null);
   const [descriptionMessage, setDescriptionMessage] = useState<string | null>(null);
@@ -487,7 +486,6 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       setSelectedCoverAssetId('');
       setInscribedCoverUrl('');
       setHeroBannerUrlInput('');
-      setLogoBannerUrlInput('');
       setCollectionDescriptionInput('');
       setFeeGuidance(null);
       setFeeGuidanceMessage(null);
@@ -560,12 +558,10 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       const loadedCollectionPage = toRecord(loadedMetadata?.collectionPage) ?? null;
       const loadedCover = toRecord(loadedCollectionPage?.coverImage) ?? null;
       const loadedHeroBanner = toRecord(loadedCollectionPage?.heroBannerImage) ?? null;
-      const loadedLogoBanner = toRecord(loadedCollectionPage?.logoBannerImage) ?? null;
       const savedSource = normalizeCoverSource(loadedCover?.source);
       const savedAssetId = toText(loadedCover?.assetId);
       const savedUrl = toText(loadedCover?.imageUrl);
       const savedHeroBannerUrl = toText(loadedHeroBanner?.imageUrl);
-      const savedLogoBannerUrl = toText(loadedLogoBanner?.imageUrl);
       const loadedCollectionMetadata = toRecord(loadedMetadata?.collection) ?? null;
       const savedDescription =
         toMultilineText(loadedCollectionPage?.description) ||
@@ -577,7 +573,6 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       setSelectedCoverAssetId(savedAssetId);
       setInscribedCoverUrl(savedUrl);
       setHeroBannerUrlInput(savedHeroBannerUrl);
-      setLogoBannerUrlInput(savedLogoBannerUrl);
       setCollectionDescriptionInput(savedDescription);
       setFeeGuidance(loadedFeeGuidance);
       setReadiness({
@@ -594,7 +589,6 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       setAssets([]);
       setFeeGuidance(null);
       setHeroBannerUrlInput('');
-      setLogoBannerUrlInput('');
       setCollectionDescriptionInput('');
       setOnChainReservationStatus(null);
       setOnChainReservedCount(null);
@@ -659,21 +653,21 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       return;
     }
     if (!collection) {
-      setCoverMessage('Load collection details before saving cover image settings.');
+      setCoverMessage('Load collection details before saving collection image settings.');
       return;
     }
 
     let coverImage: Record<string, unknown>;
     if (coverSource === 'collection-asset') {
       if (!selectedCoverAssetId) {
-        setCoverMessage('Choose an image from the collection first.');
+        setCoverMessage('Choose a logo image from the collection first.');
         return;
       }
       const selectedAsset = assets.find(
         (asset) => asset.asset_id === selectedCoverAssetId
       );
       if (!selectedAsset) {
-        setCoverMessage('Selected image is no longer available. Refresh and choose again.');
+        setCoverMessage('Selected logo image is no longer available. Refresh and choose again.');
         return;
       }
       if (!isImageMimeType(selectedAsset.mime_type)) {
@@ -717,30 +711,11 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       return;
     }
 
-    const normalizedLogoBannerUrl = logoBannerUrlInput.trim();
-    if (
-      normalizedLogoBannerUrl.length > 0 &&
-      !isLikelyInscriptionImageUrl(normalizedLogoBannerUrl)
-    ) {
-      setCoverMessage(
-        'Logo banner must use an existing inscription image URL (https:// or http://).'
-      );
-      return;
-    }
-
     const heroBannerImage =
       normalizedHeroBannerUrl.length > 0
         ? {
             source: 'inscribed-image-url',
             imageUrl: normalizedHeroBannerUrl
-          }
-        : null;
-
-    const logoBannerImage =
-      normalizedLogoBannerUrl.length > 0
-        ? {
-            source: 'inscribed-image-url',
-            imageUrl: normalizedLogoBannerUrl
           }
         : null;
 
@@ -752,13 +727,12 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
         ...currentCollectionPage,
         coverImage,
         heroBannerImage,
-        logoBannerImage,
         updatedAt: new Date().toISOString()
       }
     };
 
     setCoverSaving(true);
-    setCoverMessage('Saving cover image settings...');
+    setCoverMessage('Saving collection image settings...');
     try {
       const response = await fetch(
         `/collections/${encodeURIComponent(normalizedCollectionId)}`,
@@ -773,10 +747,12 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
         'Collection update'
       );
       setCollection(updated);
-      setCoverMessage('Cover image settings saved.');
+      setCoverMessage('Collection image settings saved.');
       props.onJourneyRefreshRequested?.();
     } catch (error) {
-      setCoverMessage(toManageApiErrorMessage(error, 'Unable to save cover image settings.'));
+      setCoverMessage(
+        toManageApiErrorMessage(error, 'Unable to save collection image settings.')
+      );
     } finally {
       setCoverSaving(false);
     }
@@ -862,7 +838,6 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
     setFeeGuidanceMessage(null);
     setFeeGuidance(null);
     setHeroBannerUrlInput('');
-    setLogoBannerUrlInput('');
     setOnChainReservationMessage(null);
     setOnChainReservationStatus(null);
   }, [normalizedActiveCollectionId]);
@@ -1276,18 +1251,19 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
 
       <div className="deploy-wizard__defaults">
         <p className="deploy-wizard__defaults-title info-label">
-          Collection cover image
-          <InfoTooltip text="Controls hero artwork and description shown at the top of the public mint page." />
+          Collection images
+          <InfoTooltip text="Configure the logo and banner artwork shown on the public collection mint page." />
         </p>
         <p className="field__hint">
-          Set the hero image for your live collection page. You can use an uploaded
-          collection image or an existing inscribed image URL.
+          Set a collection logo and hero banner in one place. Logo can come from
+          collection assets or an existing inscription URL. Banner uses an existing
+          inscription URL.
         </p>
 
         <label className="field">
           <span className="field__label info-label">
-            Cover source
-            <InfoTooltip text="Choose whether the live page hero image comes from staged collection artwork or an external inscribed image URL." />
+            Collection logo source
+            <InfoTooltip text="Choose whether the collection logo comes from staged artwork or an external inscription URL." />
           </span>
           <select
             className="select"
@@ -1309,7 +1285,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
         {coverSource === 'collection-asset' ? (
           <label className="field">
             <span className="field__label info-label">
-              Choose collection image
+              Choose collection logo image
               <InfoTooltip text="Only image files staged in Step 2 are listed here." />
             </span>
             <select
@@ -1333,7 +1309,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
             </select>
             <span className="field__hint">
               {availableImageAssets.length === 0
-                ? 'Upload at least one image in Step 2 to use it as collection cover art.'
+                ? 'Upload at least one image in Step 2 to use it as the collection logo.'
                 : `${availableImageAssets.length} image asset${
                     availableImageAssets.length === 1 ? '' : 's'
                   } available.`}
@@ -1342,12 +1318,12 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
         ) : (
           <label className="field">
             <span className="field__label info-label">
-              Existing inscribed image URL
+              Existing collection logo inscription URL
               <InfoTooltip text="Paste a direct image URL for an existing inscription (for example an inscription content URL)." />
             </span>
             <input
               className="input"
-              placeholder="https://... or ipfs://..."
+              placeholder="https://.../inscriptions/.../content"
               value={inscribedCoverUrl}
               onChange={(event) => {
                 setInscribedCoverUrl(event.target.value);
@@ -1359,7 +1335,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
 
         <label className="field">
           <span className="field__label info-label">
-            Hero background banner (inscription URL)
+            Collection banner (inscription URL)
             <InfoTooltip text="Shown behind the top hero section on the public mint page. Use an existing inscription image URL only." />
           </span>
           <input
@@ -1376,30 +1352,29 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
           </span>
         </label>
 
-        <label className="field">
-          <span className="field__label info-label">
-            Logo/title banner (inscription URL)
-            <InfoTooltip text="Shown behind the logo/title block on the public mint page. Use an existing inscription image URL only." />
+        <div className="mint-actions">
+          <span className="info-label">
+            <button
+              className="button button--ghost button--mini"
+              type="button"
+              onClick={() => void saveCoverSettings()}
+              disabled={coverSaving || !collectionId.trim()}
+            >
+              {coverSaving ? 'Saving...' : 'Save collection images'}
+            </button>
+            <InfoTooltip text="Writes current collection logo source/selection plus collection banner URL to collection page metadata." />
           </span>
-          <input
-            className="input"
-            placeholder="https://.../inscriptions/.../content"
-            value={logoBannerUrlInput}
-            onChange={(event) => {
-              setLogoBannerUrlInput(event.target.value);
-              setCoverMessage(null);
-            }}
-          />
-          <span className="field__hint">
-            Optional. Leave empty to keep the default logo/title block style.
-          </span>
-        </label>
+        </div>
+        {coverMessage && <p className="meta-value">{coverMessage}</p>}
+      </div>
 
+      <div className="deploy-wizard__defaults">
+        <p className="deploy-wizard__defaults-title info-label">
+          Collection description
+          <InfoTooltip text="Update the public collection summary text shown under the hero image. Line breaks are supported." />
+        </p>
         <label className="field">
-          <span className="field__label info-label">
-            Collection description
-            <InfoTooltip text="Update the public collection summary text shown under the hero image. Line breaks are supported." />
-          </span>
+          <span className="field__label">Description text</span>
           <textarea
             className="textarea"
             rows={6}
@@ -1416,19 +1391,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
             {COLLECTION_PAGE_DESCRIPTION_MAX_LENGTH.toString()} characters
           </span>
         </label>
-
         <div className="mint-actions">
-          <span className="info-label">
-            <button
-              className="button button--ghost button--mini"
-              type="button"
-              onClick={() => void saveCoverSettings()}
-              disabled={coverSaving || !collectionId.trim()}
-            >
-              {coverSaving ? 'Saving...' : 'Save cover + banners'}
-            </button>
-            <InfoTooltip text="Writes current cover source plus hero/logo banner URLs to collection page metadata." />
-          </span>
           <span className="info-label">
             <button
               className="button button--ghost button--mini"
@@ -1441,7 +1404,6 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
             <InfoTooltip text="Saves the collection summary text shown on the live page." />
           </span>
         </div>
-        {coverMessage && <p className="meta-value">{coverMessage}</p>}
         {descriptionMessage && <p className="meta-value">{descriptionMessage}</p>}
       </div>
 
@@ -1450,21 +1412,21 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
           {previewCoverUrl && !coverPreviewFailed ? (
             <img
               src={previewCoverUrl}
-              alt={`${previewTitle} cover`}
+              alt={`${previewTitle} logo`}
               onError={() => setCoverPreviewFailed(true)}
             />
           ) : (
             <div className="collection-live-preview__placeholder">
               {coverPreviewFailed
-                ? 'Cover image preview unavailable. Check the saved image source.'
-                : 'Choose a cover image to preview your live page hero.'}
+                ? 'Logo preview unavailable. Check the saved image source.'
+                : 'Choose a collection logo image to preview your live page hero.'}
             </div>
           )}
         </div>
         <div className="collection-live-preview__content">
           <p className="collection-live-preview__eyebrow info-label">
             Live collection page preview
-            <InfoTooltip text="Preview of the public hero section using your saved metadata + cover settings." />
+            <InfoTooltip text="Preview of the public hero section using your saved metadata + collection image settings." />
           </p>
           <h3>{previewTitle}</h3>
           <p className="collection-live-preview__description">{previewDescription}</p>

@@ -580,10 +580,6 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     () => toRecord(metadataCollectionPage?.heroBannerImage) ?? null,
     [metadataCollectionPage]
   );
-  const metadataLogoBanner = useMemo(
-    () => toRecord(metadataCollectionPage?.logoBannerImage) ?? null,
-    [metadataCollectionPage]
-  );
   const resolvedCollectionId = useMemo(
     () => toText(collection?.id),
     [collection]
@@ -740,18 +736,6 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     }
     return imageUrl;
   }, [metadataHeroBanner]);
-
-  const logoBannerUrl = useMemo(() => {
-    const source = toText(metadataLogoBanner?.source);
-    const imageUrl = toText(metadataLogoBanner?.imageUrl);
-    if (source && source !== 'inscribed-image-url') {
-      return null;
-    }
-    if (!isLikelyRenderableBannerUrl(imageUrl)) {
-      return null;
-    }
-    return imageUrl;
-  }, [metadataLogoBanner]);
 
   const collectionTitle = useMemo(
     () =>
@@ -2398,10 +2382,10 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
           </div>
           <div className="collection-live-page__hero-copy">
             <div className="collection-live-page__brand">
-              {logoBannerUrl && (
+              {heroBannerUrl && (
                 <div
                   className="collection-live-page__brand-banner"
-                  style={{ backgroundImage: `url("${logoBannerUrl}")` }}
+                  style={{ backgroundImage: `url("${heroBannerUrl}")` }}
                   aria-hidden
                 />
               )}
