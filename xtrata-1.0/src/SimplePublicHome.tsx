@@ -119,7 +119,7 @@ const STARTER_DOCS: StarterDoc[] = [
 
 const HOME_HERO_CONTENT = {
   title: 'On-chain executable inscription data for artists and apps',
-  note: 'Xtrata is the executable inscription data layer on Stacks: publish in three steps (begin, upload, seal), then render and reuse inscriptions across experiences.',
+  subline: 'Smart infrastructure for recursive web3 applications and NFTs.',
   tag: 'Executable data layer anchored to bitcoin'
 };
 
@@ -802,7 +802,7 @@ export default function SimplePublicHome() {
                 XTRATA <span className="app__title-tag simple-home__title-tag">{HOME_HERO_CONTENT.tag}</span>
               </h1>
               <h2 className="simple-home__title">{HOME_HERO_CONTENT.title}</h2>
-              <p className="simple-home__note">{HOME_HERO_CONTENT.note}</p>
+              <p className="simple-home__subline">{HOME_HERO_CONTENT.subline}</p>
             </div>
           </div>
 
