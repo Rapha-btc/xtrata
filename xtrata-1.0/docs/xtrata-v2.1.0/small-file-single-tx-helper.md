@@ -30,6 +30,27 @@ This helper adds a one-call write path for small payloads while keeping
 - If core is paused, helper must be allowlisted in core (`set-allowed-caller`)
   because v2 pause checks `contract-caller`.
 
+## SDK + UI integration details (2026-03-05)
+- SDK call builders:
+  - `buildSmallMintSingleTxCall(...)`
+  - `buildSmallMintSingleTxRecursiveCall(...)`
+- SDK workflow planner:
+  - `buildSmallMintSingleTxWorkflowPlan(...)`
+  - validates `<= 30` chunks and returns one deny-mode call plan
+- SDK spend-cap helper:
+  - `resolveSmallMintSingleTxSpendCapMicroStx(...)`
+  - cap basis is combined protocol fees for begin + seal (single wallet tx)
+- First-party app route rule:
+  - auto-route to helper when chunk count is `1..30`, no resume state exists,
+    and contract capability is not legacy `v1.1.1`
+  - route falls back to staged flow for `>30` chunks
+- Helper function selection:
+  - no dependencies: `mint-small-single-tx`
+  - with dependencies: `mint-small-single-tx-recursive`
+- UX behavior:
+  - single wallet approval marks init/upload/seal stages as complete together
+  - resume flow remains for staged minting path only
+
 ## Tradeoffs
 - Simpler UX/signing flow for small files.
 - Less granular resume behavior on the helper path (single call retries from
