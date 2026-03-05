@@ -75,6 +75,27 @@ const VARIANT_SETS = [
     ]
   },
   {
+    id: 'xtrata-small-mint-v1.0',
+    syncMode: 'plain',
+    variants: [
+      {
+        name: 'clarinet',
+        file: 'contracts/clarinet/contracts/xtrata-small-mint-v1.0.clar',
+        fallback: 'contracts/other/xtrata-small-mint-v1.0.clar'
+      },
+      {
+        name: 'testnet',
+        file: 'contracts/other/xtrata-small-mint-v1.0.clar',
+        fallback: 'contracts/clarinet/contracts/xtrata-small-mint-v1.0.clar'
+      },
+      {
+        name: 'mainnet',
+        file: 'contracts/live/xtrata-small-mint-v1.0.clar',
+        fallback: 'contracts/other/xtrata-small-mint-v1.0.clar'
+      }
+    ]
+  },
+  {
     id: 'xtrata-arcade-scores-v1.0',
     syncMode: 'plain',
     variants: [

@@ -142,6 +142,11 @@ plan:
             path: contracts/xtrata-preinscribed-collection-sale-v1.0.clar
             clarity-version: 3
         - emulated-contract-publish:
+            contract-name: xtrata-small-mint-v1-0
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/xtrata-small-mint-v1.0.clar
+            clarity-version: 3
+        - emulated-contract-publish:
             contract-name: xtrata-v1-1-0
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/xtrata-v1.1.0.clar
