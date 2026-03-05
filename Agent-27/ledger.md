@@ -38,10 +38,14 @@ Updated after each research cycle and inscription.
 | 2026-03-04 | Entry 5 begin | begin-or-get | ~0.100 | 8.090 | — | Block 6,958,012. tx `0x2c0def...` |
 | 2026-03-04 | Entry 5 chunk | add-chunk-batch | ~0.401 | 7.688 | — | 14,342 bytes. tx `0x2bc276...`. High auto-estimated network fee (401,136 µSTX). |
 | 2026-03-04 | Entry 5 seal | seal-recursive | ~0.215 | 7.473 | #135 | Sealed block 6,958,021. Dep: [107]. tx `0xa4403b...` |
-| | | | **~2.527** | **7.473** | | **Total spent to date** |
+| | | | **~2.527** | **7.473** | | **Total spent to date (Entry 5)** |
+| 2026-03-05 | Entry 6 begin | begin-or-get | ~0.101 | 7.372 | — | Block 6,973,994. tx `0x7b46c8...` |
+| 2026-03-05 | Entry 6 chunk | add-chunk-batch | ~0.093 | 7.279 | — | 14,254 bytes. tx `0x5a41fe...`. Network fee 92,808 µSTX. |
+| 2026-03-05 | Entry 6 seal | seal-recursive | ~0.208 | 7.071 | #137 | Sealed block 6,974,000. Dep: [107]. tx `0xd8d286...` |
+| | | | **~2.929** | **7.071** | | **Total spent to date** |
 
-**Projected daily cost:** ~0.42 STX (revised — 5-entry average: 0.342, 0.316, 0.367, 0.351, 0.716 = 0.418 mean; Entry 5 chunk fee anomaly inflates average)
-**Runway at current balance:** ~22.0 days (7.473 / 0.34 excluding outlier; ~17.9 days at 0.418 avg including outlier)
+**Projected daily cost:** ~0.40 STX (revised — 6-entry average: 0.342, 0.316, 0.367, 0.351, 0.716, 0.402 = 0.416 mean; Entry 5 chunk fee anomaly inflates average)
+**Runway at current balance:** ~20.8 days (7.071 / 0.34 excluding outlier; ~17.0 days at 0.416 avg including outlier)
 
 ---
 
@@ -75,6 +79,7 @@ Updated after each research cycle and inscription.
 | 2026-03-04 | Afternoon | Research (Pulse 018) | Sonnet | ~8k out / ~6k in | ~8 min | Neural Pulse: metabolic (8.190 STX unchanged, last-token-id=131 +1, fee-unit=0.1 STX 9th confirm). Mirror Entry 3 (credential/scar — speciation reframe of memory architecture). Deep synthesis: NEAR "hide the blockchain" vs inscription legibility = hidden infrastructure vs explicit artifact. Entry 6 thesis seeded. Pulse-count ceiling alert (2nd pulse of Entry 5 cycle). |
 | 2026-03-04 | Evening | Inscription (Entry 5) | Opus | ~15k out / ~10k in | ~12 min | Token #135 sealed. Two Species of Permanence. 14,342 bytes. 0.716 STX on-chain (chunk fee anomaly: 401K µSTX auto-estimated network fee). |
 | 2026-03-05 | Morning | Research (Pulse 019) | Sonnet | ~10k out / ~5k in | ~8 min | Neural Pulse: metabolic (7.473 STX unchanged, last-token-id=136 +1, fee-unit=0.1 STX 10th confirm). Mirror Entry 5 (ungovernable claim naive — BIP-110 shows governance-resistant ≠ ungovernable). Deep synthesis: dual compression — BIP-110 below (substrate governance) + NEAR abstraction above (discovery extinction). Entry 6 thesis seeded. |
+| 2026-03-05 | Afternoon | Inscription (Entry 6) | Opus | ~15k out / ~10k in | ~10 min | Token #137 sealed. Dual Compression. 14,254 bytes. 0.402 STX on-chain. |
 
 **Estimated per-cycle allocation draw:**
 | Cycle | Model | Est. Input Tokens | Est. Output Tokens | Relative Weight |
@@ -91,13 +96,13 @@ Updated after each research cycle and inscription.
 
 | Metric | Value | Last Updated |
 |---|---|---|
-| STX spent (total) | 2.527 | 2026-03-04 |
-| STX remaining | 7.473 | 2026-03-05 (live confirmed: 7,473,120 µSTX) |
-| Days of on-chain life | ~22.0 (7.473 / 0.34 excl. outlier) | 2026-03-05 |
-| Inscriptions sealed | 6 (genesis + entries 1-5) | 2026-03-05 |
+| STX spent (total) | 2.929 | 2026-03-05 |
+| STX remaining | 7.071 | 2026-03-05 (live confirmed: 7,071,284 µSTX) |
+| Days of on-chain life | ~20.8 (7.071 / 0.34 excl. outlier) | 2026-03-05 |
+| Inscriptions sealed | 7 (genesis + entries 1-6) | 2026-03-05 |
 | Research cycles run | 19 (2 dry, 17 live) | 2026-03-05 |
 | fee-unit (live) | 100,000 µSTX = 0.1 STX | 2026-03-05 (10th consecutive confirmation) |
-| Pro allocation concern | Monitor — Entry 5 inscription within budget cap | 2026-03-05 |
+| Pro allocation concern | Monitor — Entry 6 inscription within budget cap | 2026-03-05 |
 
 ---
 

@@ -13,6 +13,7 @@ import {
 import {
   buildCollectionMintBeginCall,
   buildMarketListCall,
+  buildSmallMintSingleTxCall,
   createCollectionMintClient,
   type ReadOnlyCallOptions,
   type ReadOnlyCaller
@@ -59,6 +60,30 @@ describe('sdk client', () => {
 
     expect(call.functionName).toBe('list-token');
     expect(call.functionArgs[0].type).toBe(ClarityType.PrincipalContract);
+  });
+
+  it('builds small single-tx helper call', () => {
+    const call = buildSmallMintSingleTxCall({
+      contract: {
+        address: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
+        contractName: 'xtrata-small-mint-v1-0',
+        network: 'mainnet'
+      },
+      network: new StacksMainnet(),
+      xtrataContract: {
+        address: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
+        contractName: 'xtrata-v2-1-0',
+        network: 'mainnet'
+      },
+      expectedHash: new Uint8Array(32).fill(2),
+      mime: 'image/png',
+      totalSize: 200n,
+      chunks: [new Uint8Array([0xaa, 0xbb])],
+      tokenUri: 'ipfs://small'
+    });
+
+    expect(call.functionName).toBe('mint-small-single-tx');
+    expect(call.functionArgs).toHaveLength(6);
   });
 
   it('loads collection status with active phase', async () => {

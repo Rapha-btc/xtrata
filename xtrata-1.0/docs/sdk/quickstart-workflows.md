@@ -67,7 +67,35 @@ const plan = buildCollectionMintWorkflowPlan({
 });
 ```
 
-## 3) Market list / buy / cancel plans
+## 3) Small-file single-tx helper plan (<= 30 chunks)
+
+```ts
+import { buildSmallMintSingleTxWorkflowPlan } from '@xtrata/sdk/workflows';
+
+const plan = buildSmallMintSingleTxWorkflowPlan({
+  helperContract: {
+    address: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
+    contractName: 'xtrata-small-mint-v1-0',
+    network: 'mainnet'
+  },
+  xtrataContract: {
+    address: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
+    contractName: 'xtrata-v2-1-0',
+    network: 'mainnet'
+  },
+  senderAddress: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
+  payloadBytes: new TextEncoder().encode('small payload'),
+  expectedHash: new Uint8Array(32),
+  mimeType: 'text/plain',
+  tokenUri: 'ipfs://example',
+  protocolFeeMicroStx: 100_000n
+});
+
+// Single wallet call, deny-mode spend cap included
+const singleTxCall = plan.call;
+```
+
+## 4) Market list / buy / cancel plans
 
 ```ts
 import {

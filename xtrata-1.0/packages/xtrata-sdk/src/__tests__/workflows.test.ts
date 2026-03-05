@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { SdkValidationError } from '../errors';
 import { chunkBytes, computeExpectedHash } from '../mint';
 import {
+  buildSmallMintSingleTxWorkflowPlan,
   buildCollectionMintWorkflowPlan,
   buildCoreMintWorkflowPlan,
   buildMarketBuyWorkflowPlan,
@@ -136,6 +137,60 @@ describe('sdk workflows', () => {
     expect((buyPlan.postConditions[1] as { conditionCode: number }).conditionCode).toBe(
       NonFungibleConditionCode.Sends
     );
+  });
+
+  it('builds small helper single-tx mint workflow plan', () => {
+    const payloadBytes = new Uint8Array(20_000);
+    const expectedHash = computeExpectedHash(chunkBytes(payloadBytes));
+    const plan = buildSmallMintSingleTxWorkflowPlan({
+      helperContract: {
+        address: mainnetAddress,
+        contractName: 'xtrata-small-mint-v1-0',
+        network: 'mainnet'
+      },
+      xtrataContract: {
+        address: mainnetAddress,
+        contractName: 'xtrata-v2-1-0',
+        network: 'mainnet'
+      },
+      senderAddress: mainnetAddress,
+      payloadBytes,
+      expectedHash,
+      mimeType: 'text/plain',
+      tokenUri: 'ipfs://small',
+      protocolFeeMicroStx: 100_000n
+    });
+
+    expect(plan.totalChunks).toBe(2);
+    expect(plan.call.functionName).toBe('mint-small-single-tx');
+    expect(plan.call.postConditionMode).toBe(PostConditionMode.Deny);
+    expect(plan.call.postConditions).toHaveLength(1);
+    expect((plan.call.postConditions?.[0] as { amount: bigint }).amount).toBe(300_000n);
+  });
+
+  it('throws validation error when small helper payload exceeds 30 chunks', () => {
+    const payloadBytes = new Uint8Array(16_384 * 31);
+    const expectedHash = computeExpectedHash(chunkBytes(payloadBytes));
+    expect(() =>
+      buildSmallMintSingleTxWorkflowPlan({
+        helperContract: {
+          address: mainnetAddress,
+          contractName: 'xtrata-small-mint-v1-0',
+          network: 'mainnet'
+        },
+        xtrataContract: {
+          address: mainnetAddress,
+          contractName: 'xtrata-v2-1-0',
+          network: 'mainnet'
+        },
+        senderAddress: mainnetAddress,
+        payloadBytes,
+        expectedHash,
+        mimeType: 'text/plain',
+        tokenUri: 'ipfs://small',
+        protocolFeeMicroStx: 100_000n
+      })
+    ).toThrow('supports at most 30 chunks');
   });
 
   it('throws validation error for malformed core mint inputs', () => {
