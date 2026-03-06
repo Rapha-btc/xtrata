@@ -978,7 +978,11 @@ const resolvePublicDisplayedMintPrice = (
   if (paymentModel !== 'seal') {
     return onChainPrice;
   }
-  if (collection.pricingMode.toLowerCase() !== 'advertised-includes-seal-fee') {
+  const pricingMode = collection.pricingMode.toLowerCase();
+  if (
+    pricingMode !== 'advertised-includes-seal-fee' &&
+    pricingMode !== 'advertised-includes-total-fees'
+  ) {
     return onChainPrice;
   }
   const advertised = collection.pricingAdvertisedMintPriceMicroStx;
