@@ -25,6 +25,8 @@ import {
   toChunkCountLabel,
   type CollectionMiningFeeGuidance
 } from '../../lib/collection-mint/mining-fee-guidance';
+import { supportsCollectionSmallSingleTx } from '../../lib/collection-mint/routing';
+import { SMALL_MINT_HELPER_MAX_CHUNKS } from '../../lib/mint/constants';
 import {
   parseManageJsonResponse,
   toManageApiErrorMessage
@@ -332,6 +334,23 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
     () => toText(metadataCollection?.mintPriceStx) || '0',
     [metadataCollection]
   );
+  const templateVersion = useMemo(
+    () => toText(metadata?.templateVersion),
+    [metadata]
+  );
+  const largestFileUsesSingleTxFlow = useMemo(() => {
+    if (!feeGuidance?.available) {
+      return false;
+    }
+    if (readiness.mintType !== 'standard') {
+      return false;
+    }
+    if (!supportsCollectionSmallSingleTx(templateVersion)) {
+      return false;
+    }
+    const chunkCount = Math.floor(feeGuidance.chunkCount);
+    return chunkCount > 0 && chunkCount <= SMALL_MINT_HELPER_MAX_CHUNKS;
+  }, [feeGuidance, readiness.mintType, templateVersion]);
 
   const callCollectionReadOnly = async (
     functionName: string,
@@ -1578,7 +1597,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       <div className="deploy-wizard__defaults">
         <p className="deploy-wizard__defaults-title info-label">
           Mining fee guidance (largest file)
-          <InfoTooltip text="Server-side estimate of mining fees for begin, upload batch(es), and seal based on the largest staged file. Protocol fees are separate from the advertised mint price." />
+          <InfoTooltip text="Server-side estimate of mining fees for begin, upload batch(es), and seal based on the largest staged file. If largest file is <=30 chunks on v1.4+, mint can route to one wallet transaction. Protocol fees are separate from the advertised mint price." />
         </p>
         {feeGuidance?.available ? (
           <>
@@ -1592,6 +1611,20 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
               · {toChunkCountLabel(feeGuidance.chunkCount)} chunk(s) ·{' '}
               {feeGuidance.batchCount.toLocaleString()} upload batch(es)
             </p>
+            <p className="field__hint">
+              Mint flow for largest file:{' '}
+              <strong>
+                {largestFileUsesSingleTxFlow
+                  ? `Single transaction (begin + upload + seal in one wallet confirmation, <=${SMALL_MINT_HELPER_MAX_CHUNKS} chunks).`
+                  : 'Standard 3-stage route (begin -> upload batch(es) -> seal).'}
+              </strong>
+            </p>
+            {largestFileUsesSingleTxFlow ? (
+              <p className="field__hint">
+                The table below still breaks out begin/upload/seal mining-fee components,
+                even though this largest-file route submits in one transaction.
+              </p>
+            ) : null}
             <div className="fee-guidance-table-wrapper">
               <table className="fee-guidance-table">
                 <thead>
