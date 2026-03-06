@@ -39,7 +39,6 @@ import {
   parseDeployPricingLockSnapshot
 } from '../../lib/deploy/pricing-lock';
 import InfoTooltip from './InfoTooltip';
-import legacyV11TemplateSource from '../../../contracts/clarinet/contracts/xtrata-collection-mint-v1.1.clar?raw';
 import standardTemplateSource from '../../../contracts/clarinet/contracts/xtrata-collection-mint-v1.4.clar?raw';
 import preinscribedTemplateSource from '../../../contracts/clarinet/contracts/xtrata-preinscribed-collection-sale-v1.0.clar?raw';
 
@@ -196,7 +195,7 @@ const compactClaritySourceForDeploy = (source: string) => {
   return result.length > 0 ? result : source;
 };
 
-type DeployTemplateMode = 'standard-v1.4' | 'legacy-v1.1-compat';
+type DeployTemplateMode = 'standard-v1.4';
 
 type ContractNameAvailability = {
   exists: boolean;
@@ -390,8 +389,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
   const [deployPending, setDeployPending] = useState(false);
   const [draftPending, setDraftPending] = useState(false);
   const [selectedDraftLoading, setSelectedDraftLoading] = useState(false);
-  const [deployTemplateMode, setDeployTemplateMode] =
-    useState<DeployTemplateMode>('standard-v1.4');
+  const deployTemplateMode: DeployTemplateMode = 'standard-v1.4';
   const [deployAttemptId, setDeployAttemptId] = useState<string | null>(null);
   const [deployDebugLog, setDeployDebugLog] = useState<string[]>([]);
   const [coreFeeUnitMicroStx, setCoreFeeUnitMicroStx] = useState<bigint | null>(null);
@@ -406,27 +404,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     () => props.activeCollectionId?.trim() ?? '',
     [props.activeCollectionId]
   );
-  const debugEnabled = useMemo(() => {
-    if (typeof window === 'undefined') {
-      return false;
-    }
-    return new URLSearchParams(window.location.search).get('debug') === '1';
-  }, []);
-  const useLegacyV11CompatTemplate =
-    mintType === 'standard' && deployTemplateMode === 'legacy-v1.1-compat';
-  const selectedStandardTemplateSource = useMemo(
-    () =>
-      useLegacyV11CompatTemplate
-        ? legacyV11TemplateSource
-        : standardTemplateSource,
-    [useLegacyV11CompatTemplate]
-  );
-
-  useEffect(() => {
-    if (mintType !== 'standard' && deployTemplateMode !== 'standard-v1.4') {
-      setDeployTemplateMode('standard-v1.4');
-    }
-  }, [mintType, deployTemplateMode]);
+  const selectedStandardTemplateSource = standardTemplateSource;
 
   useEffect(() => {
     if (!reviewOpen || typeof window === 'undefined') {
@@ -964,7 +942,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     deployBuild.resolved.mintPriceMicroStx
   ]);
   const deployAbsorbsWorstCaseSealFee =
-    mintType === 'standard' && !useLegacyV11CompatTemplate;
+    mintType === 'standard';
   const onChainMintPriceAfterAbsorptionMicroStx = useMemo(() => {
     if (!deployAbsorbsWorstCaseSealFee || !pricingPreflight) {
       return deployBuild.resolved.mintPriceMicroStx;
@@ -1043,10 +1021,8 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     if (mintType === 'pre-inscribed') {
       return 'xtrata-preinscribed-collection-sale-v1.0';
     }
-    return useLegacyV11CompatTemplate
-      ? 'xtrata-collection-mint-v1.1'
-      : 'xtrata-collection-mint-v1.4';
-  }, [mintType, useLegacyV11CompatTemplate]);
+    return 'xtrata-collection-mint-v1.4';
+  }, [mintType]);
   const deploySourceByteLength = useMemo(
     () => new TextEncoder().encode(deployBuild.source).byteLength,
     [deployBuild.source]
@@ -1281,9 +1257,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     const templateVersion =
       mintType === 'pre-inscribed'
         ? 'xtrata-preinscribed-collection-sale-v1.0'
-        : useLegacyV11CompatTemplate
-          ? 'xtrata-collection-mint-v1.1'
-          : 'xtrata-collection-mint-v1.4';
+        : 'xtrata-collection-mint-v1.4';
 
     const draftMetadata = {
       mintType,
@@ -1458,20 +1432,12 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     }
 
     const slug = buildCollectionSlug(refreshBuild.resolved.collectionName);
-    let templateVersion =
+    const templateVersion =
       mintType === 'pre-inscribed'
         ? 'xtrata-preinscribed-collection-sale-v1.0'
-        : useLegacyV11CompatTemplate
-        ? 'xtrata-collection-mint-v1.1'
         : 'xtrata-collection-mint-v1.4';
-    let sourceTemplateLabel = templateVersion;
+    const sourceTemplateLabel = templateVersion;
     let sourceBeforeCompaction = refreshBuild.source;
-    if (useLegacyV11CompatTemplate) {
-      appendDeployDebug('Using legacy v1.1 compatibility deploy template', {
-        attemptId,
-        templateVersion
-      });
-    }
 
     const draftMetadata = {
       mintType,
@@ -1636,30 +1602,28 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       deployPricingLockMaxChunks = deployPricingLock.maxChunks;
       deployWorstCaseSealFeeMicroStx =
         deployPricingEvaluation.worstCaseSealFeeMicroStx;
-      if (!useLegacyV11CompatTemplate) {
-        deployAbsorbedSealFeeMicroStx =
-          deployPricingEvaluation.worstCaseSealFeeMicroStx;
-        const onChainMintPriceMicroStx =
-          resolveOnChainMintPriceAfterSealAbsorption({
-            advertisedMintPriceMicroStx: refreshBuild.resolved.mintPriceMicroStx,
-            worstCaseSealFeeMicroStx: deployAbsorbedSealFeeMicroStx
-          });
-        if (onChainMintPriceMicroStx < 0n) {
-          setDeployPending(false);
-          setStatus(
-            'Deploy blocked. Unable to absorb seal protocol fee into on-chain mint price with current values.'
-          );
-          return;
-        }
-        deployMintPriceStxForSource = formatMicroStxInput(onChainMintPriceMicroStx);
-        appendDeployDebug('Seal fee absorption prepared for deploy source', {
-          attemptId,
-          advertisedMintPriceMicroStx:
-            refreshBuild.resolved.mintPriceMicroStx.toString(),
-          worstCaseSealFeeMicroStx: deployAbsorbedSealFeeMicroStx.toString(),
-          onChainMintPriceMicroStx: onChainMintPriceMicroStx.toString()
+      deployAbsorbedSealFeeMicroStx =
+        deployPricingEvaluation.worstCaseSealFeeMicroStx;
+      const onChainMintPriceMicroStx =
+        resolveOnChainMintPriceAfterSealAbsorption({
+          advertisedMintPriceMicroStx: refreshBuild.resolved.mintPriceMicroStx,
+          worstCaseSealFeeMicroStx: deployAbsorbedSealFeeMicroStx
         });
+      if (onChainMintPriceMicroStx < 0n) {
+        setDeployPending(false);
+        setStatus(
+          'Deploy blocked. Unable to absorb seal protocol fee into on-chain mint price with current values.'
+        );
+        return;
       }
+      deployMintPriceStxForSource = formatMicroStxInput(onChainMintPriceMicroStx);
+      appendDeployDebug('Seal fee absorption prepared for deploy source', {
+        attemptId,
+        advertisedMintPriceMicroStx:
+          refreshBuild.resolved.mintPriceMicroStx.toString(),
+        worstCaseSealFeeMicroStx: deployAbsorbedSealFeeMicroStx.toString(),
+        onChainMintPriceMicroStx: onChainMintPriceMicroStx.toString()
+      });
     }
 
     const deploySourceBuild = buildArtistDeployContractSource({
@@ -1696,7 +1660,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       ...draftMetadata,
       pricing: {
         mode:
-          mintType === 'standard' && !useLegacyV11CompatTemplate
+          mintType === 'standard'
             ? 'advertised-includes-seal-fee'
             : 'raw-on-chain',
         advertisedMintPriceMicroStx: refreshBuild.resolved.mintPriceMicroStx.toString(),
@@ -2327,42 +2291,6 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
           <li>Advanced royalty and URI logic is hidden in this beginner flow.</li>
         </ul>
       </div>
-
-      {debugEnabled && mintType === 'standard' && (
-        <div className="deploy-wizard__defaults">
-          <p className="deploy-wizard__defaults-title info-label">
-            Debug template switch
-            <InfoTooltip text="Advanced troubleshooting control for comparing deploy behavior across template variants." />
-          </p>
-          <label className="field">
-            <span className="field__label info-label">
-              Template mode (debug only)
-            </span>
-            <select
-              className="select"
-              value={deployTemplateMode}
-              onChange={(event) => {
-                const nextMode =
-                  event.target.value === 'legacy-v1.1-compat'
-                    ? 'legacy-v1.1-compat'
-                    : 'standard-v1.4';
-                setDeployTemplateMode(nextMode);
-                setStatus(null);
-                appendDeployDebug('Debug template mode changed', {
-                  nextMode
-                });
-              }}
-              disabled={deployPending}
-            >
-              <option value="standard-v1.4">Standard template (v1.4)</option>
-              <option value="legacy-v1.1-compat">Legacy compatibility template (v1.1)</option>
-            </select>
-            <span className="field__hint">
-              Deploy the previously proven v1.1 template wiring to compare wallet broadcast behavior directly.
-            </span>
-          </label>
-        </div>
-      )}
 
       <div className="mint-actions">
         <span className="info-label">
