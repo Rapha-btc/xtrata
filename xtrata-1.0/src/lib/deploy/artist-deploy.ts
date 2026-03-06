@@ -70,6 +70,25 @@ const STX_DECIMAL_PATTERN = /^\d+(?:\.\d{0,6})?$/;
 const SYMBOL_PATTERN = /^[A-Z0-9-]{1,16}$/;
 const CONTRACT_ID_PATTERN = /^[A-Z0-9]+\.[a-zA-Z][a-zA-Z0-9-_]{0,127}$/;
 const CONTRACT_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9-_]{0,127}$/;
+const ASCII_DESCRIPTION_NORMALIZATION_REPLACEMENTS: ReadonlyArray<
+  readonly [RegExp, string]
+> = [
+  [/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'"],
+  [/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"'],
+  [/[\u2010\u2011\u2012\u2013\u2014\u2015]/g, '-'],
+  [/\u2026/g, '...'],
+  [/[\u2022\u2023\u25E6\u2043\u2219]/g, '-'],
+  [/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, ' '],
+  [/[\u200B-\u200D\u2060\uFEFF]/g, ''],
+  [/[\r\n\t]+/g, ' '],
+  [/ß/g, 'ss'],
+  [/[Ææ]/g, 'ae'],
+  [/[Œœ]/g, 'oe'],
+  [/[Øø]/g, 'o'],
+  [/[Ðð]/g, 'd'],
+  [/[Þþ]/g, 'th'],
+  [/[Łł]/g, 'l']
+];
 
 const isV2Entry = (entry: ContractRegistryEntry) =>
   entry.protocolVersion === '2.1.0' ||
@@ -134,6 +153,14 @@ export const deriveArtistCollectionSlug = (collectionName: string) => {
   return `xtrata-${shortened}`.slice(0, 64);
 };
 
+export const normalizeArtistDeployDescription = (value: string) => {
+  let normalized = value.replace(/\r\n?/g, '\n').normalize('NFKD');
+  ASCII_DESCRIPTION_NORMALIZATION_REPLACEMENTS.forEach(([pattern, replacement]) => {
+    normalized = normalized.replace(pattern, replacement);
+  });
+  return normalized.replace(/[^\x20-\x7E]/g, '').replace(/ {2,}/g, ' ').trim();
+};
+
 export const deriveArtistContractName = (params: {
   collectionName: string;
   mintType: ArtistMintType;
@@ -193,11 +220,18 @@ export const buildArtistDeployContractSource = (params: {
   const collectionName = params.input.collectionName.trim();
   const symbolInput = params.input.symbol.trim().toUpperCase();
   const symbol = symbolInput || deriveArtistCollectionSymbol(collectionName);
-  const description = params.input.description.trim();
+  const descriptionInput = params.input.description.trim();
+  const description = normalizeArtistDeployDescription(descriptionInput);
   const mintType = params.input.mintType;
   const artistAddress = params.input.artistAddress.trim();
   const marketplaceAddress = params.input.marketplaceAddress.trim();
   const operatorAddress = params.operatorAddress.trim();
+
+  if (description !== descriptionInput) {
+    warnings.push(
+      'Description was normalized to printable ASCII for contract compatibility.'
+    );
+  }
 
   const mintPriceMicroStx = toMicroStx(params.input.mintPriceStx);
   if (mintPriceMicroStx === null) {

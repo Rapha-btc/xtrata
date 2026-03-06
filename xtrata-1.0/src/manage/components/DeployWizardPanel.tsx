@@ -25,6 +25,7 @@ import {
   deriveArtistCollectionSlug,
   deriveArtistCollectionSymbol,
   deriveArtistContractName,
+  normalizeArtistDeployDescription,
   resolveArtistDeployCoreTarget,
   type ArtistDeployCoreTarget,
   type ArtistMintType
@@ -299,7 +300,9 @@ const buildDraftFormFromCollection = (
   }
 
   const resolvedSymbol = toText(collectionMetadata?.symbol);
-  const resolvedDescription = toText(collectionMetadata?.description);
+  const resolvedDescription = normalizeArtistDeployDescription(
+    toText(collectionMetadata?.description)
+  );
   const resolvedSupply = toPositiveIntegerText(collectionMetadata?.supply) ?? '1000';
   const resolvedMintPriceStx = toText(collectionMetadata?.mintPriceStx) || '0';
   const resolvedArtistAddress = toText(recipients?.artist);
@@ -335,7 +338,10 @@ const parseStoredDraft = (value: string | null): DeployWizardDraftStorage | null
         typeof payload.collectionName === 'string' ? payload.collectionName : '',
       symbol: typeof payload.symbol === 'string' ? payload.symbol : '',
       symbolTouched: payload.symbolTouched === true,
-      description: typeof payload.description === 'string' ? payload.description : '',
+      description:
+        typeof payload.description === 'string'
+          ? normalizeArtistDeployDescription(payload.description)
+          : '',
       supply: typeof payload.supply === 'string' ? payload.supply : '1000',
       mintPriceStx:
         typeof payload.mintPriceStx === 'string' ? payload.mintPriceStx : '0',
@@ -458,7 +464,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       setCollectionName(stored.collectionName);
       setSymbol(stored.symbol);
       setSymbolTouched(stored.symbolTouched);
-      setDescription(stored.description);
+      setDescription(normalizeArtistDeployDescription(stored.description));
       setSupply(stored.supply);
       setMintPriceStx(stored.mintPriceStx);
       setMintType(stored.mintType);
@@ -575,7 +581,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     setCollectionName(hydrated.collectionName);
     setSymbol(hydrated.symbol);
     setSymbolTouched(hydrated.symbolTouched);
-    setDescription(hydrated.description);
+    setDescription(normalizeArtistDeployDescription(hydrated.description));
     setSupply(hydrated.supply);
     setMintPriceStx(hydrated.mintPriceStx);
     setMintType(hydrated.mintType);
@@ -1929,11 +1935,14 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
             value={description}
             placeholder="One-line summary of your collection."
             onChange={(event) => {
-              setDescription(event.target.value);
+              setDescription(normalizeArtistDeployDescription(event.target.value));
               setStatus(null);
             }}
           />
-          <span className="field__hint">Plain language is best. Keep it short and clear.</span>
+          <span className="field__hint">
+            Plain language is best. Smart punctuation, emoji, and line breaks are
+            auto-cleaned for on-chain compatibility.
+          </span>
         </label>
 
         <label className="field">

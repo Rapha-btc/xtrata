@@ -102,6 +102,36 @@ describe('artist deploy helpers', () => {
     );
   });
 
+  it('normalizes non-ascii description text before validation', () => {
+    const result = buildArtistDeployContractSource({
+      input: {
+        collectionName: 'Neon River',
+        symbol: 'NRIV',
+        description: 'Artist’s vision — deja vu 🚀\nline two',
+        supply: '777',
+        mintType: 'standard',
+        mintPriceStx: '0.42',
+        artistAddress: 'SP3K8BC0PPEVCV7NZ6QSRWPQ2JE9E5B6N3PA0KBR9',
+        marketplaceAddress: 'SP000000000000000000002Q6VF78'
+      },
+      templateSources: {
+        standardSource: STANDARD_TEMPLATE,
+        preinscribedSource: PREINSCRIBED_TEMPLATE
+      },
+      coreContractId: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0',
+      operatorAddress: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X'
+    });
+
+    expect(result.errors).toEqual([]);
+    expect(result.warnings).toContain(
+      'Description was normalized to printable ASCII for contract compatibility.'
+    );
+    expect(result.resolved.description).toBe("Artist's vision - deja vu line two");
+    expect(result.source).toContain(
+      `(define-data-var collection-description (string-ascii 256) "Artist's vision - deja vu line two")`
+    );
+  });
+
   it('builds pre-inscribed template source and warns about supply target', () => {
     const result = buildArtistDeployContractSource({
       input: {

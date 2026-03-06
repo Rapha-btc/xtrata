@@ -14,12 +14,13 @@ with deterministic fee caps, confirmations, and error recovery.
 
 ## Required capabilities
 
-- MCP wallet tools:
-  - `wallet_get_address`
-  - `wallet_get_balance`
-  - `stacks_call_read_only`
-  - `stacks_call_contract`
-  - `stacks_get_transaction`
+- MCP wallet tools (aibtc tool names):
+  - `get_wallet_info`
+  - `get_stx_balance`
+  - `call_read_only_function`
+  - `call_contract`
+  - `broadcast_transaction`
+  - `get_transaction_status`
 - Access to Stacks mainnet/testnet API endpoints.
 - STX balance for protocol + network fees.
 
@@ -63,13 +64,14 @@ with deterministic fee caps, confirmations, and error recovery.
 
 ## MCP mapping reference
 
-| Xtrata operation | aibtc/MCP tool |
+| Xtrata operation | aibtc MCP tool |
 |---|---|
-| balance check | `wallet_get_balance` |
-| caller address | `wallet_get_address` |
-| read-only checks | `stacks_call_read_only` |
-| write calls | `stacks_call_contract` |
-| tx status | `stacks_get_transaction` |
+| balance check | `get_stx_balance` |
+| caller address | `get_wallet_info` |
+| read-only checks | `call_read_only_function` |
+| write calls | `call_contract` |
+| broadcast signed tx | `broadcast_transaction` |
+| tx status | `get_transaction_status` |
 
 ## Recommended run loop
 
@@ -77,8 +79,8 @@ with deterministic fee caps, confirmations, and error recovery.
 2. Chunk data and compute expected hash.
 3. Dedup check (`get-id-by-hash`) or call `begin-or-get`.
 4. Execute begin tx with spend cap.
-5. Upload chunk batches with 5s delay between writes.
-6. Seal with computed cap.
+5. Upload chunk batches — wait for each batch tx to confirm before proceeding.
+6. Seal with computed cap (all chunks must be confirmed on-chain first).
 7. Verify metadata and canonical hash->id mapping.
 8. Return structured output (`tokenId`, `txids`, `hash`, `mimeType`, `totalSize`).
 
@@ -91,9 +93,10 @@ data inside `add-chunk-batch`). If the contract's running hash after upload equa
 the MCP tool sent an empty buffer instead of your chunk data.
 
 **Workaround:** Use the `@stacks/transactions` SDK directly for `add-chunk-batch`
-calls. The `begin-or-get` and `seal-inscription` calls (which use small buffer
-arguments) work correctly via MCP tools. See `inscribe-genesis.cjs` in the AIBTC
-directory for a working SDK-based reference.
+calls. The `begin-or-get` and `seal-inscription`/`seal-recursive` calls (which use
+small buffer arguments) work correctly via MCP `call_contract`. See
+`scripts/xtrata-mint-example.js` for a complete SDK-based reference, or
+Agent 27's `inscribe-entry.cjs` for a working recursive inscription example.
 
 ## Resume path
 
