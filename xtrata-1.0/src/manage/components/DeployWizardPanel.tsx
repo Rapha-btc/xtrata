@@ -40,7 +40,7 @@ import {
 } from '../../lib/deploy/pricing-lock';
 import InfoTooltip from './InfoTooltip';
 import legacyV11TemplateSource from '../../../contracts/clarinet/contracts/xtrata-collection-mint-v1.1.clar?raw';
-import standardTemplateSource from '../../../contracts/clarinet/contracts/xtrata-collection-mint-v1.3.clar?raw';
+import standardTemplateSource from '../../../contracts/clarinet/contracts/xtrata-collection-mint-v1.4.clar?raw';
 import preinscribedTemplateSource from '../../../contracts/clarinet/contracts/xtrata-preinscribed-collection-sale-v1.0.clar?raw';
 
 type CollectionDraft = {
@@ -196,7 +196,7 @@ const compactClaritySourceForDeploy = (source: string) => {
   return result.length > 0 ? result : source;
 };
 
-type DeployTemplateMode = 'standard-v1.3' | 'legacy-v1.1-compat';
+type DeployTemplateMode = 'standard-v1.4' | 'legacy-v1.1-compat';
 
 type ContractNameAvailability = {
   exists: boolean;
@@ -391,7 +391,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
   const [draftPending, setDraftPending] = useState(false);
   const [selectedDraftLoading, setSelectedDraftLoading] = useState(false);
   const [deployTemplateMode, setDeployTemplateMode] =
-    useState<DeployTemplateMode>('standard-v1.3');
+    useState<DeployTemplateMode>('standard-v1.4');
   const [deployAttemptId, setDeployAttemptId] = useState<string | null>(null);
   const [deployDebugLog, setDeployDebugLog] = useState<string[]>([]);
   const [coreFeeUnitMicroStx, setCoreFeeUnitMicroStx] = useState<bigint | null>(null);
@@ -423,8 +423,8 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
   );
 
   useEffect(() => {
-    if (mintType !== 'standard' && deployTemplateMode !== 'standard-v1.3') {
-      setDeployTemplateMode('standard-v1.3');
+    if (mintType !== 'standard' && deployTemplateMode !== 'standard-v1.4') {
+      setDeployTemplateMode('standard-v1.4');
     }
   }, [mintType, deployTemplateMode]);
 
@@ -1045,7 +1045,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     }
     return useLegacyV11CompatTemplate
       ? 'xtrata-collection-mint-v1.1'
-      : 'xtrata-collection-mint-v1.3';
+      : 'xtrata-collection-mint-v1.4';
   }, [mintType, useLegacyV11CompatTemplate]);
   const deploySourceByteLength = useMemo(
     () => new TextEncoder().encode(deployBuild.source).byteLength,
@@ -1190,7 +1190,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     const details = {
       debugVersion: DEPLOY_DEBUG_VERSION,
       clarityVersion: DEPLOY_CLARITY_VERSION,
-      defaultDeployTemplateMode: 'standard-v1.3',
+      defaultDeployTemplateMode: 'standard-v1.4',
       sourceCompactionMode: DEPLOY_SOURCE_COMPACTION_MODE
     };
     const timestamp = new Date().toISOString();
@@ -1283,7 +1283,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         ? 'xtrata-preinscribed-collection-sale-v1.0'
         : useLegacyV11CompatTemplate
           ? 'xtrata-collection-mint-v1.1'
-          : 'xtrata-collection-mint-v1.3';
+          : 'xtrata-collection-mint-v1.4';
 
     const draftMetadata = {
       mintType,
@@ -1463,7 +1463,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         ? 'xtrata-preinscribed-collection-sale-v1.0'
         : useLegacyV11CompatTemplate
         ? 'xtrata-collection-mint-v1.1'
-        : 'xtrata-collection-mint-v1.3';
+        : 'xtrata-collection-mint-v1.4';
     let sourceTemplateLabel = templateVersion;
     let sourceBeforeCompaction = refreshBuild.source;
     if (useLegacyV11CompatTemplate) {
@@ -2345,7 +2345,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                 const nextMode =
                   event.target.value === 'legacy-v1.1-compat'
                     ? 'legacy-v1.1-compat'
-                    : 'standard-v1.3';
+                    : 'standard-v1.4';
                 setDeployTemplateMode(nextMode);
                 setStatus(null);
                 appendDeployDebug('Debug template mode changed', {
@@ -2354,7 +2354,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
               }}
               disabled={deployPending}
             >
-              <option value="standard-v1.3">Standard template (v1.3)</option>
+              <option value="standard-v1.4">Standard template (v1.4)</option>
               <option value="legacy-v1.1-compat">Legacy compatibility template (v1.1)</option>
             </select>
             <span className="field__hint">

@@ -3,7 +3,7 @@
 Use the collection client + lifecycle helpers to derive live/public state.
 
 Policy:
-- Active SDK support target is `xtrata-collection-mint-v1.3`.
+- Active SDK support target is `xtrata-collection-mint-v1.4`.
 - Legacy `v1.0` and `v1.1` collection-mint contracts are archived for new SDK work.
 
 ```ts

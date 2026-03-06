@@ -294,13 +294,14 @@ Source: `contracts/live/xtrata-arcade-scores-v1.1.clar`
 - `get-fee-recipient()`
 - `get-verifier-pubkey-hash()`
 
-## xtrata-collection-mint-v1.3 (template, active)
+## xtrata-collection-mint-v1.4 (template, active)
 
-Source: `contracts/clarinet/contracts/xtrata-collection-mint-v1.3.clar`
+Source: `contracts/clarinet/contracts/xtrata-collection-mint-v1.4.clar`
 
 ## Purpose
 - Per-collection mint coordinator that charges a one-time mint fee split, supports allowlists and per-wallet caps, and proxies xtrata begin/chunk/seal calls.
-- SDK support note: archived for new SDK work. Active collection-mint SDK target is `xtrata-collection-mint-v1.3`.
+- Adds direct single-tx small-file mint path (`<=30` chunks) while preserving collection reservation + accounting invariants.
+- SDK support note: archived for new SDK work. Active collection-mint SDK target is `xtrata-collection-mint-v1.4`.
 
 ## Core Admin Functions
 - `set-mint-price(amount)`
@@ -326,6 +327,8 @@ Source: `contracts/clarinet/contracts/xtrata-collection-mint-v1.3.clar`
 - `mint-add-chunk-batch(xtrata-contract, hash, chunks)`
 - `mint-seal(xtrata-contract, expected-hash, token-uri-string)`
 - `mint-seal-batch(xtrata-contract, items)`
+- `mint-small-single-tx(xtrata-contract, expected-hash, mime, total-size, chunks, token-uri-string)`
+- `mint-small-single-tx-recursive(xtrata-contract, expected-hash, mime, total-size, chunks, token-uri-string, dependencies)`
 
 ## Additional Read-Only Functions
 - `get-allowlist-enabled()`
