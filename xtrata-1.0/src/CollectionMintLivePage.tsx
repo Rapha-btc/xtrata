@@ -36,6 +36,10 @@ import {
   formatMiningFeeMicroStx,
   type CollectionMiningFeeGuidance
 } from './lib/collection-mint/mining-fee-guidance';
+import {
+  resolveCollectionMintPaymentModel,
+  type CollectionMintPaymentModel
+} from './lib/collection-mint/payment-model';
 import { resolveCollectionCoverImageUrl } from './lib/collections/cover-image';
 import { parseDeployPricingLockSnapshot } from './lib/deploy/pricing-lock';
 import { PUBLIC_CONTRACT } from './config/public';
@@ -130,7 +134,6 @@ type MintProgress = {
   tokenId: bigint | null;
 };
 
-type CollectionMintPaymentModel = 'begin' | 'seal' | 'unknown';
 type CollectionMintPriceDisplayMode = 'raw-on-chain' | 'advertised-includes-seal-fee';
 type CollectionMintPricingConfig = {
   mode: CollectionMintPriceDisplayMode;
@@ -439,22 +442,6 @@ const shuffleAssets = (assets: CollectionAsset[]) => {
     next[target] = current;
   }
   return next;
-};
-
-const resolveCollectionMintPaymentModel = (
-  templateVersion: string
-): CollectionMintPaymentModel => {
-  const normalized = templateVersion.trim().toLowerCase();
-  if (!normalized) {
-    return 'unknown';
-  }
-  if (normalized.includes('v1.0') || normalized.includes('v1.1')) {
-    return 'begin';
-  }
-  if (normalized.includes('v1.2')) {
-    return 'seal';
-  }
-  return 'unknown';
 };
 
 const resolveCollectionMintPricingConfig = (

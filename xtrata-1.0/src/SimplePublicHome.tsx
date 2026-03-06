@@ -9,6 +9,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { PUBLIC_CONTRACT, PUBLIC_MINT_RESTRICTIONS } from './config/public';
 import { getContractId } from './lib/contract/config';
+import { resolveCollectionMintPaymentModel } from './lib/collection-mint/payment-model';
 import { resolveCollectionCoverImageUrl } from './lib/collections/cover-image';
 import { resolveCollectionContractLink } from './lib/collections/contract-link';
 import { isRateLimitError, isReadOnlyNetworkError } from './lib/contract/read-only';
@@ -293,20 +294,6 @@ const formatMicroStxLabel = (value: bigint | null) => {
   const whole = value / MICROSTX_PER_STX;
   const fraction = value % MICROSTX_PER_STX;
   return `${whole.toString()}.${fraction.toString().padStart(6, '0')} STX`;
-};
-
-const resolveCollectionMintPaymentModel = (templateVersion: string) => {
-  const normalized = templateVersion.trim().toLowerCase();
-  if (!normalized) {
-    return 'unknown' as const;
-  }
-  if (normalized.includes('v1.0') || normalized.includes('v1.1')) {
-    return 'begin' as const;
-  }
-  if (normalized.includes('v1.2')) {
-    return 'seal' as const;
-  }
-  return 'unknown' as const;
 };
 
 const resolveDisplayedMintPrice = (
