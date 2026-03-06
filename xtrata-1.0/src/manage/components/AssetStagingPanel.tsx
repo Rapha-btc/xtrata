@@ -6,6 +6,7 @@ import {
   type ChangeEvent,
   type FormEvent
 } from 'react';
+import { getMediaKind, getTextPreview, type MediaKind } from '../../lib/viewer/content';
 import { formatBytes } from '../../lib/utils/format';
 import { chunkCount, hexDigest } from '../lib/asset-utils';
 import {
@@ -118,12 +119,16 @@ const naturalCompare = (left: string, right: string) =>
     sensitivity: 'base'
   });
 
-const isImageAsset = (asset: ManagedAsset) =>
-  asset.mime_type.trim().toLowerCase().startsWith('image/');
+const getAssetMediaKind = (asset: ManagedAsset): MediaKind =>
+  getMediaKind(asset.mime_type);
+
+const isImageAsset = (asset: ManagedAsset) => {
+  const kind = getAssetMediaKind(asset);
+  return kind === 'image' || kind === 'svg';
+};
 
 const isHtmlAsset = (asset: ManagedAsset) => {
-  const mime = asset.mime_type.trim().toLowerCase();
-  return mime === 'text/html' || mime === 'application/xhtml+xml';
+  return getAssetMediaKind(asset) === 'html';
 };
 
 const getAssetDisplayName = (asset: ManagedAsset) => asset.filename ?? asset.path;
@@ -282,6 +287,12 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
     null
   );
   const [assetImageErrors, setAssetImageErrors] = useState<Record<string, true>>({});
+  const [selectedPreviewText, setSelectedPreviewText] = useState<string | null>(null);
+  const [selectedPreviewTextTruncated, setSelectedPreviewTextTruncated] = useState(false);
+  const [selectedPreviewTextPending, setSelectedPreviewTextPending] = useState(false);
+  const [selectedPreviewTextError, setSelectedPreviewTextError] = useState<string | null>(
+    null
+  );
   const [assetsForCollectionId, setAssetsForCollectionId] = useState('');
   const [uploadControlsCollapsed, setUploadControlsCollapsed] = useState(false);
   const [lastUploadTrace, setLastUploadTrace] = useState<{
@@ -661,10 +672,72 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
     );
   }, [selectedPreviewAsset, normalizedCollectionId]);
 
+  const selectedPreviewMediaKind = useMemo(
+    () => (selectedPreviewAsset ? getAssetMediaKind(selectedPreviewAsset) : null),
+    [selectedPreviewAsset]
+  );
+
   const selectedPreviewTraits = useMemo(
     () => (selectedPreviewAsset ? extractPathTraits(selectedPreviewAsset.path) : []),
     [selectedPreviewAsset]
   );
+
+  useEffect(() => {
+    if (!selectedPreviewAsset || !selectedPreviewUrl || selectedPreviewMediaKind !== 'text') {
+      setSelectedPreviewText(null);
+      setSelectedPreviewTextTruncated(false);
+      setSelectedPreviewTextPending(false);
+      setSelectedPreviewTextError(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    setSelectedPreviewTextPending(true);
+    setSelectedPreviewTextError(null);
+
+    const loadTextPreview = async () => {
+      try {
+        const response = await fetch(selectedPreviewUrl, {
+          cache: 'default',
+          signal: controller.signal
+        });
+        if (!response.ok) {
+          const body = (await response.text())
+            .slice(0, 180)
+            .replace(/\s+/g, ' ')
+            .trim();
+          throw new Error(
+            `Unable to load text preview (${response.status})${body ? `: ${body}` : ''}.`
+          );
+        }
+        const bytes = new Uint8Array(await response.arrayBuffer());
+        const preview = getTextPreview(bytes);
+        if (controller.signal.aborted) {
+          return;
+        }
+        setSelectedPreviewText(preview.text);
+        setSelectedPreviewTextTruncated(preview.truncated);
+      } catch (error) {
+        if (controller.signal.aborted) {
+          return;
+        }
+        setSelectedPreviewText(null);
+        setSelectedPreviewTextTruncated(false);
+        setSelectedPreviewTextError(
+          error instanceof Error
+            ? error.message
+            : 'Unable to load a text preview for this asset.'
+        );
+      } finally {
+        if (!controller.signal.aborted) {
+          setSelectedPreviewTextPending(false);
+        }
+      }
+    };
+
+    void loadTextPreview();
+    return () => controller.abort();
+  }, [selectedPreviewAsset, selectedPreviewMediaKind, selectedPreviewUrl]);
 
   const markAssetImageError = (assetId: string) => {
     setAssetImageErrors((current) =>
@@ -1550,6 +1623,7 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
               {currentAssetPage.map((asset, index) => {
                 const isSelected = selectedPreviewAssetId === asset.asset_id;
                 const imageFailed = Boolean(assetImageErrors[asset.asset_id]);
+                const mediaKind = getAssetMediaKind(asset);
                 const gridIndex = pageStartIndex + index + 1;
                 const previewUrl = buildAssetPreviewUrl(
                   normalizedCollectionId,
@@ -1579,7 +1653,9 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
                         />
                       ) : (
                         <span className="asset-staging__thumb-placeholder">
-                          {isImageAsset(asset) ? 'Preview unavailable' : asset.mime_type}
+                          {isImageAsset(asset)
+                            ? 'Preview unavailable'
+                            : `${mediaKind} · ${asset.mime_type}`}
                         </span>
                       )}
                     </span>
@@ -1643,7 +1719,7 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
                         >
                           Preview
                         </button>
-                        <InfoTooltip text="Shows the best available preview for the selected staged asset (image or HTML)." />
+                        <InfoTooltip text="Shows best-available preview by MIME type (image, video, audio, HTML/PDF, or text)." />
                       </span>
                       <span className="info-label">
                         <button
@@ -1675,17 +1751,50 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
                               markAssetImageError(selectedPreviewAsset.asset_id)
                             }
                           />
+                        ) : selectedPreviewUrl &&
+                          selectedPreviewMediaKind === 'video' ? (
+                          <video
+                            src={selectedPreviewUrl}
+                            controls
+                            preload="metadata"
+                          />
+                        ) : selectedPreviewUrl &&
+                          selectedPreviewMediaKind === 'audio' ? (
+                          <audio
+                            src={selectedPreviewUrl}
+                            controls
+                            preload="metadata"
+                          />
                         ) : selectedPreviewUrl && isHtmlAsset(selectedPreviewAsset) ? (
                           <iframe
                             src={selectedPreviewUrl}
                             title={getAssetDisplayName(selectedPreviewAsset)}
                             sandbox="allow-scripts allow-same-origin"
                           />
+                        ) : selectedPreviewMediaKind === 'text' ? (
+                          selectedPreviewTextPending ? (
+                            <span className="asset-staging__thumb-placeholder">
+                              Loading text preview...
+                            </span>
+                          ) : selectedPreviewTextError ? (
+                            <span className="asset-staging__thumb-placeholder">
+                              {selectedPreviewTextError}
+                            </span>
+                          ) : (
+                            <pre className="asset-staging__preview-text">
+                              {selectedPreviewText ?? ''}
+                              {selectedPreviewTextTruncated
+                                ? '\n\n[preview truncated]'
+                                : ''}
+                            </pre>
+                          )
                         ) : (
                           <span className="asset-staging__thumb-placeholder">
                             {isImageAsset(selectedPreviewAsset)
                               ? 'Preview unavailable'
-                              : selectedPreviewAsset.mime_type}
+                              : `${selectedPreviewMediaKind ?? 'binary'} · ${
+                                  selectedPreviewAsset.mime_type
+                                }`}
                           </span>
                         )}
                       </div>

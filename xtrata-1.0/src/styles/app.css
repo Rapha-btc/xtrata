@@ -4777,11 +4777,39 @@ p {
   object-fit: contain;
 }
 
+.asset-staging__preview-frame video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
+.asset-staging__preview-frame audio {
+  width: calc(100% - 24px);
+  max-width: 620px;
+}
+
 .asset-staging__preview-frame iframe {
   width: 100%;
   height: 100%;
   border: 0;
   background: #fff;
+}
+
+.asset-staging__preview-text {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 10px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas,
+    'Liberation Mono', monospace;
+  color: var(--text);
+  scrollbar-gutter: stable;
 }
 
 .asset-staging__preview-meta {

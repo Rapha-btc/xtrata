@@ -702,9 +702,13 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     if (!fallback || !resolvedCollectionId) {
       return null;
     }
+    const query = new URLSearchParams({
+      assetId: fallback.asset_id,
+      purpose: 'cover'
+    });
     return `/collections/${encodeURIComponent(
       resolvedCollectionId
-    )}/asset-preview?assetId=${encodeURIComponent(fallback.asset_id)}`;
+    )}/asset-preview?${query.toString()}`;
   }, [metadataCover, imageAssets, resolvedCollectionId, metadata]);
 
   const collectionTitle = useMemo(

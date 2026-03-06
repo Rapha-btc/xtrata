@@ -46,7 +46,7 @@ describe('collection cover image helpers', () => {
         coverImage: { source: 'collection-asset', assetId: 'asset-1' },
         collectionId: 'drop-123'
       })
-    ).toBe('/collections/drop-123/asset-preview?assetId=asset-1');
+    ).toBe('/collections/drop-123/asset-preview?assetId=asset-1&purpose=cover');
 
     expect(
       resolveCollectionCoverImageUrl({

@@ -92,9 +92,11 @@ export const resolveCollectionCoverImageUrl = (params: {
     if (!collectionId || !assetId) {
       return null;
     }
-    return `/collections/${encodeURIComponent(
-      collectionId
-    )}/asset-preview?assetId=${encodeURIComponent(assetId)}`;
+    const query = new URLSearchParams({
+      assetId,
+      purpose: 'cover'
+    });
+    return `/collections/${encodeURIComponent(collectionId)}/asset-preview?${query.toString()}`;
   }
 
   if (source === 'inscribed-image-url') {
