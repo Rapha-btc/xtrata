@@ -56,6 +56,7 @@ import {
   type ThemeMode,
   writeThemePreference
 } from './lib/theme/preferences';
+import { getMediaKind } from './lib/viewer/content';
 import { bytesToHex } from './lib/utils/encoding';
 import { formatBytes } from './lib/utils/format';
 import { createStacksWalletAdapter } from './lib/wallet/adapter';
@@ -665,7 +666,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   }, [mintableAssets]);
 
   const mintedGallery = useMemo(() => {
-    const minted = imageAssets.filter(
+    const minted = mintableAssets.filter(
       (asset) => typeof mintedTokenIds[asset.asset_id] === 'string'
     );
     minted.sort((left, right) => {
@@ -687,7 +688,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       return leftName.localeCompare(rightName);
     });
     return minted;
-  }, [collectionTokenNumberByGlobalId, imageAssets, mintedTokenIds]);
+  }, [collectionTokenNumberByGlobalId, mintableAssets, mintedTokenIds]);
 
   const coverUrl = useMemo(() => {
     const configuredCoverUrl = resolveCollectionCoverImageUrl({
@@ -2615,18 +2616,19 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
           <div className="panel__header">
             <div>
               <h2>Previously inscribed</h2>
-              <p>Thumbnails of minted images from this live collection.</p>
+              <p>Minted assets from this live collection across all supported file types.</p>
             </div>
           </div>
           <div className="panel__body">
             {mintedGallery.length === 0 ? (
               <p className="meta-value">
-                No minted thumbnails yet. This gallery updates as new mints are confirmed.
+                No minted assets yet. This gallery updates as new mints are confirmed.
               </p>
             ) : (
               <div className="collection-live-page__gallery-grid">
                 {mintedGallery.map((asset) => {
                   const tokenId = mintedTokenIds[asset.asset_id] ?? null;
+                  const mediaKind = getMediaKind(asset.mime_type);
                   const localTokenNumber =
                     tokenId && tokenId.length > 0
                       ? collectionTokenNumberByGlobalId[tokenId]
@@ -2640,11 +2642,27 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                       className="collection-live-page__gallery-item"
                     >
                       <div className="collection-live-page__gallery-frame">
-                        <img
-                          src={previewUrl}
-                          alt={`${collectionTitle} artwork`}
-                          loading="lazy"
-                        />
+                        {mediaKind === 'image' || mediaKind === 'svg' ? (
+                          <img
+                            src={previewUrl}
+                            alt={`${collectionTitle} artwork`}
+                            loading="lazy"
+                          />
+                        ) : mediaKind === 'video' ? (
+                          <video src={previewUrl} controls preload="metadata" />
+                        ) : mediaKind === 'audio' ? (
+                          <audio src={previewUrl} controls preload="metadata" />
+                        ) : mediaKind === 'html' || mediaKind === 'text' ? (
+                          <iframe
+                            src={previewUrl}
+                            title={asset.filename ?? asset.path}
+                            sandbox="allow-scripts allow-same-origin"
+                          />
+                        ) : (
+                          <span className="collection-live-page__gallery-fallback">
+                            {asset.mime_type || 'binary'}
+                          </span>
+                        )}
                       </div>
                       <div className="collection-live-page__gallery-meta">
                         <span className="meta-value">{collectionTitle}</span>
@@ -2653,6 +2671,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                             ? `${collectionTitle} #${localTokenNumber}`
                             : `${collectionTitle} #...`}
                         </span>
+                        <span className="meta-label">{asset.mime_type}</span>
                       </div>
                     </article>
                   );
