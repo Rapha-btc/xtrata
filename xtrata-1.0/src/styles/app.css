@@ -541,6 +541,14 @@
   color: #fb923c;
 }
 
+[data-theme]:not([data-theme='light']) .field__hint--ok {
+  color: #4ade80;
+}
+
+[data-theme]:not([data-theme='light']) .field__hint--error {
+  color: #f87171;
+}
+
 [data-theme]:not([data-theme='light']) .relation-status--error,
 [data-theme]:not([data-theme='light']) .token-uri-status--error {
   color: #f87171;
@@ -2029,6 +2037,14 @@ p {
 
 .field__hint--alert {
   color: var(--accent-strong);
+}
+
+.field__hint--error {
+  color: #b91c1c;
+}
+
+.field__hint--ok {
+  color: #047857;
 }
 
 .field__hint--flash {
@@ -4837,6 +4853,14 @@ p {
   position: relative;
 }
 
+.deploy-wizard__mint-price-input--error {
+  color: #b91c1c;
+}
+
+.deploy-wizard__mint-price-input--ok {
+  color: #047857;
+}
+
 .deploy-wizard__locked-input-overlay {
   position: absolute;
   inset: 0;
@@ -4849,6 +4873,14 @@ p {
 .deploy-wizard__locked-input-overlay:focus-visible {
   outline: 2px solid var(--accent-strong);
   outline-offset: 2px;
+}
+
+[data-theme]:not([data-theme='light']) .deploy-wizard__mint-price-input--error {
+  color: #fca5a5;
+}
+
+[data-theme]:not([data-theme='light']) .deploy-wizard__mint-price-input--ok {
+  color: #6ee7b7;
 }
 
 .deploy-wizard__description {

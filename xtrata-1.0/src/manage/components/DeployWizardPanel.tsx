@@ -974,6 +974,21 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     mintType === 'standard' &&
     minimumMintPriceMicroStx !== null &&
     deployBuild.resolved.mintPriceMicroStx < minimumMintPriceMicroStx;
+  const standardMintPriceFormatInvalid =
+    mintType === 'standard' &&
+    deployBuild.errors.some((error) =>
+      error.startsWith('Mint price must be a valid STX amount')
+    );
+  const standardMintPriceValidationState =
+    mintType !== 'standard' || standardMintPriceLocked
+      ? 'pending'
+      : standardMintPriceFormatInvalid
+        ? 'invalid'
+        : pricingPreflight === null
+          ? 'pending'
+          : pricingPreflight.safe
+            ? 'valid'
+            : 'invalid';
   const reviewDeployBlockedByPricing =
     mintType === 'standard' &&
     (!collectionDeployPricingLock || !pricingPreflight || !pricingPreflight.safe);
@@ -1008,20 +1023,6 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       mintPriceLockHintTimerRef.current = null;
     }
   }, [standardMintPriceLocked]);
-
-  useEffect(() => {
-    if (mintType !== 'standard' || minimumMintPriceMicroStx === null) {
-      return;
-    }
-    if (deployBuild.resolved.mintPriceMicroStx >= minimumMintPriceMicroStx) {
-      return;
-    }
-    setMintPriceStx(formatMicroStxInput(minimumMintPriceMicroStx));
-  }, [
-    mintType,
-    minimumMintPriceMicroStx,
-    deployBuild.resolved.mintPriceMicroStx
-  ]);
 
   const preflightTemplateVersion = useMemo(() => {
     if (mintType === 'pre-inscribed') {
@@ -1989,7 +1990,13 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
           </span>
           <div className="deploy-wizard__locked-input-wrap">
             <input
-              className="input"
+              className={`input deploy-wizard__mint-price-input${
+                standardMintPriceValidationState === 'valid'
+                  ? ' deploy-wizard__mint-price-input--ok'
+                  : standardMintPriceValidationState === 'invalid'
+                    ? ' input--alert deploy-wizard__mint-price-input--error'
+                    : ''
+              }`}
               inputMode="decimal"
               value={mintPriceStx}
               onChange={(event) => {
@@ -2036,6 +2043,29 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
           ) : (
             <span className="field__hint">Set to 0 for a free mint.</span>
           )}
+          {mintType === 'standard' &&
+          !standardMintPriceLocked &&
+          minimumMintPriceMicroStx !== null &&
+          standardMintPriceValidationState === 'invalid' ? (
+            <span className="field__hint field__hint--error">
+              {standardMintPriceFormatInvalid
+                ? 'Enter a valid STX amount (up to 6 decimals) to continue.'
+                : `Price is below minimum. Enter at least ${formatMicroStx(
+                    minimumMintPriceMicroStx
+                  )} to continue.`}
+            </span>
+          ) : null}
+          {mintType === 'standard' &&
+          !standardMintPriceLocked &&
+          minimumMintPriceMicroStx !== null &&
+          standardMintPriceValidationState === 'valid' &&
+          pricingPreflight ? (
+            <span className="field__hint field__hint--ok">
+              Price is in range. Safety margin: {formatMicroStx(
+                pricingPreflight.marginMicroStx
+              )}.
+            </span>
+          ) : null}
           {mintType === 'standard' &&
           standardMintPriceLocked &&
           mintPriceLockHintActive ? (
@@ -2264,22 +2294,29 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                   {formatMicroStx(pricingPreflight.feeUnitMicroStx)}.
                 </span>
               )}
-              {standardMintPriceBelowFloor && minimumMintPriceMicroStx !== null && (
-                <span className="meta-value">
-                  Price was raised to the minimum safe floor ({formatMicroStx(
+              {standardMintPriceFormatInvalid && (
+                <span className="meta-value field__hint--error">
+                  Enter a valid STX amount (up to 6 decimals) before deploy.
+                </span>
+              )}
+              {!standardMintPriceFormatInvalid &&
+                standardMintPriceBelowFloor &&
+                minimumMintPriceMicroStx !== null && (
+                <span className="meta-value field__hint--error">
+                  Current all-in price is below the minimum safe floor ({formatMicroStx(
                     minimumMintPriceMicroStx
                   )}).
                 </span>
               )}
-              {pricingPreflight && !pricingPreflight.safe && (
-                <span className="meta-value">
+              {pricingPreflight && !pricingPreflight.safe && !standardMintPriceFormatInvalid && (
+                <span className="meta-value field__hint--error">
                   Increase all-in mint price above {formatMicroStx(
                     pricingPreflight.worstCaseSealFeeMicroStx
                   )} before deploy.
                 </span>
               )}
               {pricingPreflight?.safe && (
-                <span className="meta-value">
+                <span className="meta-value field__hint--ok">
                   Safety margin: {formatMicroStx(pricingPreflight.marginMicroStx)} above worst-case seal fee.
                 </span>
               )}
