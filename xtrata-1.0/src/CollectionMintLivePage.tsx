@@ -190,6 +190,11 @@ const writeTimedCache = <T,>(
 
 const cloneBytes = (value: Uint8Array) => new Uint8Array(value);
 
+const isActiveCollectionAssetState = (value: unknown) => {
+  const state = String(value ?? '').trim().toLowerCase();
+  return state !== 'expired' && state !== 'sold-out';
+};
+
 const toText = (value: unknown) => {
   if (typeof value !== 'string') {
     return '';
@@ -635,19 +640,27 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   const imageAssets = useMemo(
     () =>
       assets.filter((asset) => {
+        if (!isActiveCollectionAssetState(asset.state)) {
+          return false;
+        }
         const mime = asset.mime_type.trim().toLowerCase();
         return mime.startsWith('image/');
       }),
     [assets]
   );
 
-  const largestImageMintAsset = useMemo(() => {
-    if (imageAssets.length === 0) {
+  const mintableAssets = useMemo(
+    () => assets.filter((asset) => isActiveCollectionAssetState(asset.state)),
+    [assets]
+  );
+
+  const largestMintableAsset = useMemo(() => {
+    if (mintableAssets.length === 0) {
       return null;
     }
     let selected: CollectionAsset | null = null;
     let maxChunks = 0;
-    imageAssets.forEach((asset) => {
+    mintableAssets.forEach((asset) => {
       const chunkCount = resolveAssetChunkCount(asset);
       if (chunkCount <= maxChunks) {
         return;
@@ -662,7 +675,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       totalChunks: maxChunks,
       totalBytes: toPositiveInteger(selected.total_bytes)
     };
-  }, [imageAssets]);
+  }, [mintableAssets]);
 
   const mintedGallery = useMemo(() => {
     const minted = imageAssets.filter(
@@ -783,8 +796,8 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       }
       return 'This collection is sold out.';
     }
-    if (imageAssets.length === 0) {
-      return 'No image assets are available for minting.';
+    if (mintableAssets.length === 0) {
+      return 'No staged assets are available for minting.';
     }
     return null;
   }, [
@@ -792,7 +805,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     contractStatus?.finalized,
     contractStatus?.paused,
     contractStatus?.reservedCount,
-    imageAssets.length,
+    mintableAssets.length,
     published,
     remaining
   ]);
@@ -1232,7 +1245,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   );
 
   const scanMintedAssets = useCallback(async () => {
-    if (!resolvedCollectionId || imageAssets.length === 0) {
+    if (!resolvedCollectionId || mintableAssets.length === 0) {
       setMintedTokenIds({});
       return;
     }
@@ -1258,8 +1271,8 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
         }
       };
 
-      for (let offset = 0; offset < imageAssets.length; offset += MINTED_SCAN_BATCH_SIZE) {
-        const batch = imageAssets.slice(offset, offset + MINTED_SCAN_BATCH_SIZE);
+      for (let offset = 0; offset < mintableAssets.length; offset += MINTED_SCAN_BATCH_SIZE) {
+        const batch = mintableAssets.slice(offset, offset + MINTED_SCAN_BATCH_SIZE);
         const settled = await Promise.all(
           batch.map(async (asset) => {
             const knownHashHex =
@@ -1324,7 +1337,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     coreClient,
     coreContract.address,
     fetchAssetBytes,
-    imageAssets,
+    mintableAssets,
     resolvedCollectionId,
     walletSession.address
   ]);
@@ -1441,7 +1454,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
 
   const findResumableAssetForWallet = useCallback(
     async (owner: string) => {
-      const candidates = imageAssets.filter(
+      const candidates = mintableAssets.filter(
         (asset) =>
           !pendingMintAssetIds.includes(asset.asset_id) &&
           !mintedTokenIds[asset.asset_id]
@@ -1489,7 +1502,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       canonicalHashHexByAssetId,
       checkReservationForHash,
       fetchAssetBytes,
-      imageAssets,
+      mintableAssets,
       mintedTokenIds,
       pendingMintAssetIds
     ]
@@ -1851,12 +1864,12 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       }
       const senderAddress = session.address;
 
-      const shuffled = shuffleAssets(imageAssets);
+      const shuffled = shuffleAssets(mintableAssets);
       const nextMinted = { ...mintedTokenIds };
       let target: CollectionAsset | null = null;
 
       if (resumeAssetId) {
-        const resumeTarget = imageAssets.find((asset) => asset.asset_id === resumeAssetId);
+        const resumeTarget = mintableAssets.find((asset) => asset.asset_id === resumeAssetId);
         if (
           resumeTarget &&
           !pendingMintAssetIds.includes(resumeTarget.asset_id) &&
@@ -1974,7 +1987,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     coreClient,
     ensureConnectedWallet,
     findResumableAssetForWallet,
-    imageAssets,
+    mintableAssets,
     loadContractStatus,
     mintAsset,
     mintPending,
@@ -2171,14 +2184,14 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   }, [collectionContract, contractStatus?.mintedCount, syncCollectionTokenNumbers]);
 
   useEffect(() => {
-    if (!collection || !published || !collectionContract || imageAssets.length === 0) {
+    if (!collection || !published || !collectionContract || mintableAssets.length === 0) {
       return;
     }
     void scanMintedAssets();
   }, [
     collection,
     collectionContract,
-    imageAssets.length,
+    mintableAssets.length,
     published,
     scanMintedAssets,
     contractStatus?.mintedCount
@@ -2223,8 +2236,8 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     chargeMintPriceAtBegin
   });
   const protocolFeeUnitLabel = toMicroStxLabel(contractStatus?.coreFeeUnitMicroStx ?? null);
-  const fallbackMaxChunkCount = largestImageMintAsset?.totalChunks ?? null;
-  const fallbackMaxBytes = largestImageMintAsset?.totalBytes ?? null;
+  const fallbackMaxChunkCount = largestMintableAsset?.totalChunks ?? null;
+  const fallbackMaxBytes = largestMintableAsset?.totalBytes ?? null;
   const collectionMaxChunkCount = deployPricingLock?.maxChunks ?? fallbackMaxChunkCount;
   const collectionMaxBytes = deployPricingLock?.maxBytes ?? fallbackMaxBytes;
   const estimatedUploadTransactionCount =
@@ -2301,9 +2314,9 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   const resumeTargetAsset = useMemo(
     () =>
       resumeAssetId
-        ? imageAssets.find((asset) => asset.asset_id === resumeAssetId) ?? null
+        ? mintableAssets.find((asset) => asset.asset_id === resumeAssetId) ?? null
         : null,
-    [imageAssets, resumeAssetId]
+    [mintableAssets, resumeAssetId]
   );
   const heroMintStatusMessage = useMemo(() => {
     if (mintMessage) {

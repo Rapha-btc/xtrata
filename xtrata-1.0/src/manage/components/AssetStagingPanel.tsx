@@ -121,6 +121,11 @@ const naturalCompare = (left: string, right: string) =>
 const isImageAsset = (asset: ManagedAsset) =>
   asset.mime_type.trim().toLowerCase().startsWith('image/');
 
+const isHtmlAsset = (asset: ManagedAsset) => {
+  const mime = asset.mime_type.trim().toLowerCase();
+  return mime === 'text/html' || mime === 'application/xhtml+xml';
+};
+
 const getAssetDisplayName = (asset: ManagedAsset) => asset.filename ?? asset.path;
 
 const sortManagedAssets = (assets: ManagedAsset[], mode: AssetOrderMode) => {
@@ -1636,9 +1641,9 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
                           type="button"
                           onClick={() => setPreviewPanelView('image')}
                         >
-                          Image
+                          Preview
                         </button>
-                        <InfoTooltip text="Shows large visual preview for the selected staged asset." />
+                        <InfoTooltip text="Shows the best available preview for the selected staged asset (image or HTML)." />
                       </span>
                       <span className="info-label">
                         <button
@@ -1669,6 +1674,12 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
                             onError={() =>
                               markAssetImageError(selectedPreviewAsset.asset_id)
                             }
+                          />
+                        ) : selectedPreviewUrl && isHtmlAsset(selectedPreviewAsset) ? (
+                          <iframe
+                            src={selectedPreviewUrl}
+                            title={getAssetDisplayName(selectedPreviewAsset)}
+                            sandbox="allow-scripts allow-same-origin"
                           />
                         ) : (
                           <span className="asset-staging__thumb-placeholder">
