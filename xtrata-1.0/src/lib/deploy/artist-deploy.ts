@@ -70,6 +70,7 @@ const STX_DECIMAL_PATTERN = /^\d+(?:\.\d{0,6})?$/;
 const SYMBOL_PATTERN = /^[A-Z0-9-]{1,16}$/;
 const CONTRACT_ID_PATTERN = /^[A-Z0-9]+\.[a-zA-Z][a-zA-Z0-9-_]{0,127}$/;
 const CONTRACT_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9-_]{0,127}$/;
+const MAX_NEW_CONTRACT_NAME_LENGTH = 40;
 const ASCII_DESCRIPTION_NORMALIZATION_REPLACEMENTS: ReadonlyArray<
   readonly [RegExp, string]
 > = [
@@ -165,12 +166,14 @@ export const deriveArtistContractName = (params: {
   collectionName: string;
   mintType: ArtistMintType;
   seed: string;
+  slug?: string;
 }) => {
   const prefix =
     params.mintType === 'pre-inscribed'
       ? 'xtrata-preinscribed'
       : 'xtrata-collection';
-  const slug = deriveArtistCollectionSlug(params.collectionName)
+  const slugSource = (params.slug ?? params.collectionName).trim();
+  const slug = deriveArtistCollectionSlug(slugSource)
     .replace(/[^a-z0-9-]/g, '-')
     .replace(/^-+|-+$/g, '');
   const seed = params.seed
@@ -178,15 +181,18 @@ export const deriveArtistContractName = (params: {
     .toLowerCase()
     .replace(/[^a-z0-9]/g, '')
     .slice(0, 8);
-
-  let name = `${prefix}-${slug}`;
-  if (seed) {
-    name = `${name}-${seed}`;
+  const suffix = seed.length > 0 ? `-${seed}` : '';
+  const maxBaseLength = MAX_NEW_CONTRACT_NAME_LENGTH - suffix.length;
+  const baseCandidate = `${prefix}-${slug}`.replace(/-+$/g, '');
+  let base = baseCandidate.slice(0, Math.max(1, maxBaseLength)).replace(/-+$/g, '');
+  if (!base) {
+    base = prefix.slice(0, Math.max(1, maxBaseLength)).replace(/-+$/g, '');
   }
-
-  name = name.slice(0, 128).replace(/-+$/g, '');
+  let name = `${base}${suffix}`.slice(0, MAX_NEW_CONTRACT_NAME_LENGTH).replace(/-+$/g, '');
   if (!CONTRACT_NAME_PATTERN.test(name)) {
-    return `${prefix}-deploy`.slice(0, 128);
+    name = `${prefix}-deploy`
+      .slice(0, MAX_NEW_CONTRACT_NAME_LENGTH)
+      .replace(/-+$/g, '');
   }
   return name;
 };

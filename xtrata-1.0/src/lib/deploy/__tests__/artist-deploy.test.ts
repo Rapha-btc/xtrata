@@ -50,7 +50,19 @@ describe('artist deploy helpers', () => {
       mintType: 'standard',
       seed: '0f95ac11-1234'
     });
-    expect(name).toBe('xtrata-collection-neon-river-collective-0f95ac11');
+    expect(name).toBe('xtrata-collection-neon-river-co-0f95ac11');
+    expect(name.length).toBeLessThanOrEqual(40);
+  });
+
+  it('prefers draft slug for readable contract names and keeps the seed suffix', () => {
+    const name = deriveArtistContractName({
+      collectionName: 'Ignored fallback collection name',
+      slug: 'russian-rampage-v0',
+      mintType: 'standard',
+      seed: '9ac4dc21-0000'
+    });
+    expect(name).toBe('xtrata-collection-russian-rampa-9ac4dc21');
+    expect(name.length).toBeLessThanOrEqual(40);
   });
 
   it('builds standard template source with hardcoded defaults', () => {

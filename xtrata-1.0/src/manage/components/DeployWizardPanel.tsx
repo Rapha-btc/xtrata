@@ -66,6 +66,7 @@ const DEPLOY_DEBUG_LOG_LIMIT = 60;
 const DEPLOY_CLARITY_VERSION = 2;
 const DEPLOY_DEBUG_TEXT_MAX = 1200;
 const DEPLOY_DEBUG_VERSION = 'deploy-debug-v5-2026-02-23';
+const DEPLOY_DEBUG_TAG = 'debug-1.4';
 const DEPLOY_SOURCE_COMPACTION_MODE = 'strip-indent-comments-blank-lines';
 const MANAGE_APP_ICON =
   'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%23f97316"/><path d="M18 20h28v6H18zm0 12h28v6H18zm0 12h28v6H18z" fill="white"/></svg>';
@@ -410,6 +411,12 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     () => props.activeCollectionId?.trim() ?? '',
     [props.activeCollectionId]
   );
+  const debug14Enabled = useMemo(() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    return new URLSearchParams(window.location.search).get('debug') === '1.4';
+  }, []);
   const selectedStandardTemplateSource = standardTemplateSource;
 
   useEffect(() => {
@@ -1106,6 +1113,22 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     console.debug('[xtrata:deploy]', message, details ?? {});
   };
 
+  const appendDeployDebug14 = useCallback(
+    (stage: string, details?: Record<string, unknown>) => {
+      if (!debug14Enabled) {
+        return;
+      }
+      const payload = {
+        stage,
+        timestamp: new Date().toISOString(),
+        ...(details ?? {})
+      };
+      // eslint-disable-next-line no-console
+      console.info(`[${DEPLOY_DEBUG_TAG}]`, payload);
+    },
+    [debug14Enabled]
+  );
+
   const refreshSelectedDraft = useCallback(
     async (reason: string, options?: { notifyJourney?: boolean }) => {
       const candidateId =
@@ -1174,7 +1197,8 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       debugVersion: DEPLOY_DEBUG_VERSION,
       clarityVersion: DEPLOY_CLARITY_VERSION,
       defaultDeployTemplateMode: 'standard-v1.4',
-      sourceCompactionMode: DEPLOY_SOURCE_COMPACTION_MODE
+      sourceCompactionMode: DEPLOY_SOURCE_COMPACTION_MODE,
+      debug14Enabled
     };
     const timestamp = new Date().toISOString();
     const line = `${timestamp} Runtime ready ${debugStringify(details)}`;
@@ -1184,7 +1208,8 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     ]);
     // eslint-disable-next-line no-console
     console.debug('[xtrata:deploy] Runtime ready', details);
-  }, []);
+    appendDeployDebug14('runtime-ready', details);
+  }, [appendDeployDebug14, debug14Enabled]);
 
   const handleOpenReview = async () => {
     setStatus(null);
@@ -1356,6 +1381,10 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       .slice(2, 8)}`;
     setDeployAttemptId(attemptId);
     appendDeployDebug('Deploy started', {
+      attemptId,
+      ...preflightSummary
+    });
+    appendDeployDebug14('deploy-start', {
       attemptId,
       ...preflightSummary
     });
@@ -1684,7 +1713,13 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     const contractName = deriveArtistContractName({
       collectionName: refreshBuild.resolved.collectionName,
       mintType,
-      seed: created.id
+      seed: created.id,
+      slug: created.slug
+    });
+    appendDeployDebug14('contract-name-derived', {
+      attemptId,
+      contractName,
+      contractNameLength: contractName.length
     });
     appendDeployDebug('Checking contract-name availability', {
       attemptId,
@@ -1726,6 +1761,17 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     const sourceOriginalBytes = new TextEncoder().encode(sourceBeforeCompaction).byteLength;
     const sourceForDeployBytes = new TextEncoder().encode(sourceForDeploy).byteLength;
     const sourceCompacted = sourceForDeploy !== sourceBeforeCompaction;
+    appendDeployDebug14('deploy-source-prepared', {
+      attemptId,
+      contractName,
+      contractNameLength: contractName.length,
+      sourceLengthChars: sourceBeforeCompaction.length,
+      sourceLengthBytes: sourceOriginalBytes,
+      deploySourceLengthChars: sourceForDeploy.length,
+      deploySourceLengthBytes: sourceForDeployBytes,
+      sourceCompacted,
+      codeBody: sourceForDeploy
+    });
 
     setReviewOpen(false);
     setStatus('Open your wallet and approve contract deployment.');
@@ -1748,6 +1794,29 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                 attemptId,
                 payloadLength: payload.length
               });
+              appendDeployDebug14('provider-transaction-request:invoked', {
+                attemptId,
+                payloadLength: payload.length,
+                payload
+              });
+              if (debug14Enabled) {
+                try {
+                  const parsedPayload = JSON.parse(payload) as Record<string, unknown>;
+                  appendDeployDebug14('provider-transaction-request:parsed', {
+                    attemptId,
+                    payloadKeys: Object.keys(parsedPayload),
+                    method:
+                      typeof parsedPayload.method === 'string'
+                        ? parsedPayload.method
+                        : null
+                  });
+                } catch (parseError) {
+                  appendDeployDebug14('provider-transaction-request:parse-error', {
+                    attemptId,
+                    error: toErrorMessage(parseError)
+                  });
+                }
+              }
               try {
                 const providerResult = await selectedProvider.transactionRequest.call(
                   selectedProvider,
@@ -1760,9 +1829,21 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                       ? providerResult.txId
                       : null
                 });
+                appendDeployDebug14('provider-transaction-request:resolved', {
+                  attemptId,
+                  txId:
+                    'txId' in providerResult && typeof providerResult.txId === 'string'
+                      ? providerResult.txId
+                      : null,
+                  providerResult
+                });
                 return providerResult;
               } catch (error) {
                 appendDeployDebug('Provider transactionRequest rejected', {
+                  attemptId,
+                  ...extractErrorDebug(error)
+                });
+                appendDeployDebug14('provider-transaction-request:rejected', {
                   attemptId,
                   ...extractErrorDebug(error)
                 });
@@ -1789,6 +1870,20 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         advertisedMintPriceMicroStx: refreshBuild.resolved.mintPriceMicroStx.toString(),
         onChainMintPriceMicroStx: deploySourceBuild.resolved.mintPriceMicroStx.toString(),
         absorbedSealFeeMicroStx: deployAbsorbedSealFeeMicroStx.toString()
+      });
+      appendDeployDebug14('wallet-deploy-request', {
+        attemptId,
+        contractName,
+        contractNameLength: contractName.length,
+        templateVersion: sourceTemplateLabel,
+        network: session.network,
+        clarityVersion: DEPLOY_CLARITY_VERSION,
+        sourceLengthChars: sourceBeforeCompaction.length,
+        sourceLengthBytes: sourceOriginalBytes,
+        deploySourceLengthChars: sourceForDeploy.length,
+        deploySourceLengthBytes: sourceForDeployBytes,
+        sourceCompacted,
+        coreContractId: networkCoreTarget.contractId
       });
       appendDeployDebug(
         `Opening wallet deployment request (v=${DEPLOY_DEBUG_VERSION}, origBytes=${sourceOriginalBytes.toString()}, deployBytes=${sourceForDeployBytes.toString()}, compacted=${sourceCompacted ? 'yes' : 'no'})`
@@ -1863,6 +1958,9 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
             attemptId,
             hint:
               'Wallet onCancel can represent an explicit cancel or a broadcast failure such as non-JSON node response.'
+          });
+          appendDeployDebug14('wallet-deploy-cancel-or-broadcast-fail', {
+            attemptId
           });
           setDeployPending(false);
           setStatus(
