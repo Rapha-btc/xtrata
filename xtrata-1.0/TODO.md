@@ -6,7 +6,7 @@ We need to save all hashes in a DB and perform this much more quickly.
 
 We also need to animate the waiting sections while processing is taking place so it looks like there is cvisual activity animations, progress bars etc so users know they must be patient between batches etc
 
-
+Text for push
 
 
 000000) we need to fix the new collection mint processes
