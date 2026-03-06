@@ -7,6 +7,7 @@ import {
 
 export const CHUNK_SIZE = 16_384;
 export const MAX_BATCH_SIZE = 50;
+export const MAX_SMALL_MINT_CHUNKS = 30;
 export const EMPTY_HASH = new Uint8Array(32);
 
 export const DEFAULT_BATCH_SIZE = Math.min(30, MAX_BATCH_SIZE);
@@ -215,6 +216,25 @@ export const resolveSealSpendCapMicroStx = (params: SealSpendCapParams) => {
   return feeUnit * (1n + feeBatches);
 };
 
+type SmallMintSingleTxSpendCapParams = {
+  protocolFeeMicroStx: bigint | null;
+  totalChunks: number | bigint | null;
+};
+
+export const resolveSmallMintSingleTxSpendCapMicroStx = (
+  params: SmallMintSingleTxSpendCapParams
+) => {
+  const beginFee = toPositiveProtocolFee(params.protocolFeeMicroStx);
+  const sealFee = resolveSealSpendCapMicroStx({
+    protocolFeeMicroStx: params.protocolFeeMicroStx,
+    totalChunks: params.totalChunks
+  });
+  if (beginFee === null || sealFee === null) {
+    return null;
+  }
+  return beginFee + sealFee;
+};
+
 type BatchSealSpendCapParams = {
   protocolFeeMicroStx: bigint | null;
   totalChunks: Array<number | bigint>;
@@ -311,6 +331,35 @@ export const buildSealStxPostConditions = (
       sender,
       FungibleConditionCode.LessEqual,
       sealCap
+    )
+  ];
+};
+
+type SmallMintSingleTxPostConditionParams = {
+  sender?: string | null;
+  protocolFeeMicroStx: bigint | null;
+  totalChunks: number | bigint | null;
+};
+
+export const buildSmallMintSingleTxStxPostConditions = (
+  params: SmallMintSingleTxPostConditionParams
+): PostCondition[] | null => {
+  const sender = params.sender?.trim() ?? '';
+  if (!sender) {
+    return null;
+  }
+  const spendCap = resolveSmallMintSingleTxSpendCapMicroStx({
+    protocolFeeMicroStx: params.protocolFeeMicroStx,
+    totalChunks: params.totalChunks
+  });
+  if (spendCap === null) {
+    return null;
+  }
+  return [
+    makeStandardSTXPostCondition(
+      sender,
+      FungibleConditionCode.LessEqual,
+      spendCap
     )
   ];
 };

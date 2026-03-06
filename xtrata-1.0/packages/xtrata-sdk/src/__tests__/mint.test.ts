@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { FungibleConditionCode } from '@stacks/transactions';
 import {
+  buildSmallMintSingleTxStxPostConditions,
   buildSealStxPostConditions,
   normalizeDependencyIds,
   parseDependencyInput,
   resolveCollectionBeginSpendCapMicroStx,
+  resolveSmallMintSingleTxSpendCapMicroStx,
   resolveSealSpendCapMicroStx,
   validateDependencyIds
 } from '../mint';
@@ -36,6 +38,26 @@ describe('sdk mint helpers', () => {
       totalChunks: 51
     });
 
+    expect(conditions).toHaveLength(1);
+    expect(conditions?.[0].conditionCode).toBe(FungibleConditionCode.LessEqual);
+    expect(conditions?.[0].amount).toBe(300_000n);
+  });
+
+  it('computes small single-tx spend cap (begin + seal)', () => {
+    expect(
+      resolveSmallMintSingleTxSpendCapMicroStx({
+        protocolFeeMicroStx: 100_000n,
+        totalChunks: 2
+      })
+    ).toBe(300_000n);
+  });
+
+  it('builds small single-tx spend post condition', () => {
+    const conditions = buildSmallMintSingleTxStxPostConditions({
+      sender: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
+      protocolFeeMicroStx: 100_000n,
+      totalChunks: 2
+    });
     expect(conditions).toHaveLength(1);
     expect(conditions?.[0].conditionCode).toBe(FungibleConditionCode.LessEqual);
     expect(conditions?.[0].amount).toBe(300_000n);

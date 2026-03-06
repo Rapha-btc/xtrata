@@ -164,6 +164,39 @@ Source: `contracts/live/xtrata-v2.1.1.clar`
 ## Compatibility Fee Getter
 - `get-fee-unit()` (maps to `upload-batch-fee-unit`)
 
+## xtrata-small-mint-v1.0
+
+Source: `contracts/live/xtrata-small-mint-v1.0.clar`
+
+## Purpose
+- Optional small-file mint helper that composes core xtrata writes into one call.
+- Targets `xtrata-v2.1.0` by default, with owner-configurable core contract.
+- Enforces helper-side small upload cap (`<= 30` chunks).
+
+## Core Behavior
+- One-call path runs `begin-or-get -> add-chunk-batch -> seal` in a single tx.
+- Duplicate hashes return the existing canonical token id (no new mint).
+- Recursive sealing is supported through `mint-small-single-tx-recursive`.
+- Core protocol fees and core pause/allowlist semantics still apply.
+
+## Constants
+- `CHUNK-SIZE` -> `u16384`
+- `MAX-SMALL-CHUNKS` -> `u30`
+- `DEFAULT-XTRATA-CONTRACT` -> default core principal
+
+## Public Functions
+- `mint-small-single-tx(xtrata-contract, expected-hash, mime, total-size, chunks, token-uri-string)`
+- `mint-small-single-tx-recursive(xtrata-contract, expected-hash, mime, total-size, chunks, token-uri-string, dependencies)`
+- `set-paused(value)`
+- `set-core-contract(new-core)`
+- `transfer-contract-ownership(new-owner)`
+
+## Read-Only Functions
+- `get-owner()`
+- `is-paused()`
+- `get-core-contract()`
+- `get-max-small-chunks()`
+
 ## xtrata-arcade-scores-v1.0
 
 Source: `contracts/live/xtrata-arcade-scores-v1.0.clar`

@@ -26,7 +26,7 @@ import { formatBytes } from '../lib/utils/format';
 import { logInfo, logWarn } from '../lib/utils/logger';
 import { getNetworkMismatch } from '../lib/network/guard';
 import { getApiBaseUrl } from '../lib/network/config';
-import { getContractId } from '../lib/contract/config';
+import { getContractId, type ContractConfig } from '../lib/contract/config';
 import { resolveContractCapabilities } from '../lib/contract/capabilities';
 import { useContractAdminStatus } from '../lib/contract/admin-status';
 import { createXtrataClient } from '../lib/contract/client';
@@ -42,6 +42,9 @@ import {
   SIP16_PREVIEW_HOST_PLACEHOLDER,
   SIP16_RESOLVER_HOST_PLACEHOLDER,
   SIP16_TOKEN_ID_PLACEHOLDER,
+  SMALL_MINT_HELPER_MAINNET_ADDRESS,
+  SMALL_MINT_HELPER_CONTRACT_NAME,
+  SMALL_MINT_HELPER_MAX_CHUNKS,
   TX_DELAY_SECONDS
 } from '../lib/mint/constants';
 import {
@@ -405,6 +408,20 @@ export default function MintScreen(props: MintScreenProps) {
     [legacyContract]
   );
   const contractId = getContractId(props.contract);
+  const smallMintHelperContract = useMemo<ContractConfig | null>(
+    () =>
+      props.contract.network === 'mainnet'
+        ? {
+            address: SMALL_MINT_HELPER_MAINNET_ADDRESS,
+            contractName: SMALL_MINT_HELPER_CONTRACT_NAME,
+            network: 'mainnet'
+          }
+        : null,
+    [props.contract.network]
+  );
+  const smallMintHelperContractId = smallMintHelperContract
+    ? getContractId(smallMintHelperContract)
+    : null;
   const [file, setFile] = useState<File | null>(null);
   const [fileBytes, setFileBytes] = useState<Uint8Array | null>(null);
   const [chunks, setChunks] = useState<Uint8Array[]>([]);
@@ -773,6 +790,13 @@ export default function MintScreen(props: MintScreenProps) {
   }, [resumeState, file, fileBytes, chunks.length]);
   const resumeBlocked =
     !!resumeMismatch || (resumeInfo ? 'error' in resumeInfo : false);
+  const supportsSmallMintHelper =
+    capabilities.version !== '1.1.1' && !!smallMintHelperContract;
+  const shouldAutoRouteSmallMint =
+    supportsSmallMintHelper &&
+    !resumeState &&
+    chunks.length > 0 &&
+    chunks.length <= SMALL_MINT_HELPER_MAX_CHUNKS;
   const totalBytes = fileBytes ? BigInt(fileBytes.length) : 0n;
   const uploadBatchCount = batches.length;
   const feeUnitNumber = useMemo(() => {
@@ -831,13 +855,16 @@ export default function MintScreen(props: MintScreenProps) {
     if (!fileBytes) {
       return null;
     }
+    if (shouldAutoRouteSmallMint) {
+      return 920 + fileBytes.length;
+    }
     let uploadBytes = 0;
     for (const batch of batches) {
       const batchBytes = batch.reduce((sum, chunk) => sum + chunk.length, 0);
       uploadBytes += 520 + batchBytes;
     }
     return 380 + 420 + uploadBytes;
-  }, [batches, fileBytes]);
+  }, [batches, fileBytes, shouldAutoRouteSmallMint]);
   const networkFeeEstimate =
     feeRate && estimatedTxBytes
       ? Math.ceil(estimatedTxBytes * feeRate)
@@ -1448,16 +1475,19 @@ export default function MintScreen(props: MintScreenProps) {
   };
 
   const requestContractCall = (options: {
+    contract?: ContractConfig;
     functionName: string;
     functionArgs: ClarityValue[];
     logDetails?: Record<string, unknown>;
     postConditionMode?: PostConditionMode;
     postConditions?: PostCondition[];
   }) => {
-    const network = props.walletSession.network ?? props.contract.network;
+    const targetContract = options.contract ?? props.contract;
+    const targetContractId = getContractId(targetContract);
+    const network = props.walletSession.network ?? targetContract.network;
     const stxAddress = props.walletSession.address;
     logInfo('mint', 'Requesting contract call', {
-      contractId,
+      contractId: targetContractId,
       functionName: options.functionName,
       network,
       sender: stxAddress ?? null,
@@ -1465,8 +1495,8 @@ export default function MintScreen(props: MintScreenProps) {
     });
     return new Promise<TxPayload>((resolve, reject) => {
       showContractCall({
-        contractAddress: props.contract.address,
-        contractName: props.contract.contractName,
+        contractAddress: targetContract.address,
+        contractName: targetContract.contractName,
         functionName: options.functionName,
         functionArgs: options.functionArgs,
         network,
@@ -1476,7 +1506,7 @@ export default function MintScreen(props: MintScreenProps) {
         onFinish: (payload) => {
           const resolved = payload as TxPayload;
           logInfo('mint', 'Contract call broadcast', {
-            contractId,
+            contractId: targetContractId,
             functionName: options.functionName,
             txId: resolved.txId
           });
@@ -1484,7 +1514,7 @@ export default function MintScreen(props: MintScreenProps) {
         },
         onCancel: () => {
           logWarn('mint', 'Contract call cancelled', {
-            contractId,
+            contractId: targetContractId,
             functionName: options.functionName
           });
           reject(new Error('Wallet cancelled or failed to broadcast.'));
@@ -1913,9 +1943,118 @@ export default function MintScreen(props: MintScreenProps) {
     resetSteps();
     appendLog('Starting inscription.');
 
-    let activeStage: 'begin' | 'upload' | 'seal' = 'begin';
+    let activeStage: 'begin' | 'upload' | 'seal' | 'single' = 'begin';
 
     try {
+      if (shouldAutoRouteSmallMint) {
+        if (!smallMintHelperContract) {
+          throw new Error('Small mint helper deployment is unavailable for this network.');
+        }
+        const helperContractId = getContractId(smallMintHelperContract);
+        activeStage = 'single';
+        setBeginState('pending');
+        setUploadState('pending');
+        setSealState('pending');
+        appendLog(
+          `Small-file helper route active (<=${SMALL_MINT_HELPER_MAX_CHUNKS} chunks).`
+        );
+
+        const dependencyCheck = await checkDependencyPresence(
+          mintInputs.dependencyIds
+        );
+        if (!dependencyCheck.ok) {
+          const missingList = dependencyCheck.missing
+            .map((id) => id.toString())
+            .join(', ');
+          const legacyList = dependencyCheck.legacyAvailable
+            .map((id) => id.toString())
+            .join(', ');
+          const legacyLabel = legacyContract?.label ?? 'legacy contract';
+          const stillMissing = dependencyCheck.missing.filter(
+            (id) => !dependencyCheck.legacyAvailable.includes(id)
+          );
+          const stillMissingList = stillMissing
+            .map((id) => id.toString())
+            .join(', ');
+          const message =
+            dependencyCheck.legacyAvailable.length > 0
+              ? stillMissing.length > 0
+                ? `Parent IDs missing in ${props.contract.label}: ${stillMissingList}. IDs found in ${legacyLabel}: ${legacyList}. Migrate legacy parents before sealing.`
+                : `Parent IDs found in ${legacyLabel} but not yet migrated: ${legacyList}. Migrate them before sealing.`
+              : `Parent IDs not found in ${props.contract.label}: ${missingList}.`;
+          setMintStatus(message);
+          appendLog(`Mint blocked: ${message}`);
+          setBeginState('error');
+          setUploadState('error');
+          setSealState('error');
+          setResumeCheckKey((prev) => prev + 1);
+          return;
+        }
+
+        const helperPostConditions = resolveFeePostConditions(
+          feeEstimate.totalMicroStx
+        );
+        const helperTx = await requestContractCall({
+          contract: smallMintHelperContract,
+          functionName:
+            mintInputs.dependencyIds.length > 0
+              ? 'mint-small-single-tx-recursive'
+              : 'mint-small-single-tx',
+          functionArgs:
+            mintInputs.dependencyIds.length > 0
+              ? [
+                  principalCV(getContractId(props.contract)),
+                  bufferCV(expectedHash),
+                  stringAsciiCV(mintInputs.mimeType),
+                  uintCV(BigInt(fileBytes.length)),
+                  listCV(chunks.map((chunk) => bufferCV(chunk))),
+                  stringAsciiCV(mintInputs.tokenUriValue),
+                  listCV(mintInputs.dependencyIds.map((id) => uintCV(id)))
+                ]
+              : [
+                  principalCV(getContractId(props.contract)),
+                  bufferCV(expectedHash),
+                  stringAsciiCV(mintInputs.mimeType),
+                  uintCV(BigInt(fileBytes.length)),
+                  listCV(chunks.map((chunk) => bufferCV(chunk))),
+                  stringAsciiCV(mintInputs.tokenUriValue)
+                ],
+          postConditionMode: helperPostConditions
+            ? PostConditionMode.Deny
+            : undefined,
+          postConditions: helperPostConditions,
+          logDetails: {
+            action:
+              mintInputs.dependencyIds.length > 0
+                ? 'mint-small-single-tx-recursive'
+                : 'mint-small-single-tx',
+            helperContractId,
+            targetCoreContractId: getContractId(props.contract),
+            totalChunks: chunks.length,
+            tokenUriLength: mintInputs.tokenUriValue.length,
+            dependencyCount: mintInputs.dependencyIds.length,
+            expectedHash: bytesToHex(expectedHash)
+          }
+        });
+
+        appendLog(`Single-tx mint sent: ${helperTx.txId}`);
+        setBeginState('done');
+        setUploadState('done');
+        setSealState('done');
+        setMintStatus(
+          'Single-transaction mint submitted. Await on-chain confirmation.'
+        );
+        appendLog(
+          'Single-tx mint submitted. Final success depends on chain confirmation.'
+        );
+        props.onInscriptionSealed?.({ txId: helperTx.txId });
+        void clearMintAttempt(contractId);
+        setLastAttempt(null);
+        setResumeHint(null);
+        setResumeState(null);
+        return;
+      }
+
       setBeginState('pending');
       appendLog('Step 1: begin-inscription');
       const beginPostConditions = resolveFeePostConditions(feeEstimate.beginMicroStx);
@@ -2067,6 +2206,10 @@ export default function MintScreen(props: MintScreenProps) {
       } else if (activeStage === 'upload') {
         setUploadState('error');
       } else if (activeStage === 'seal') {
+        setSealState('error');
+      } else if (activeStage === 'single') {
+        setBeginState('error');
+        setUploadState('error');
         setSealState('error');
       }
       if (activeStage !== 'begin') {
@@ -2316,8 +2459,16 @@ export default function MintScreen(props: MintScreenProps) {
     }
   };
 
-  const mintActionLabel = resumeState ? 'Resume inscription' : 'Begin inscription';
-  const mintActionPendingLabel = resumeState ? 'Resuming...' : 'Minting...';
+  const mintActionLabel = resumeState
+    ? 'Resume inscription'
+    : shouldAutoRouteSmallMint
+      ? 'Begin single-tx inscription'
+      : 'Begin inscription';
+  const mintActionPendingLabel = resumeState
+    ? 'Resuming...'
+    : shouldAutoRouteSmallMint
+      ? 'Submitting single-tx...'
+      : 'Minting...';
   const allowDuplicateOverride = disableDuplicateOverride ? false : allowDuplicate;
   const mintActionDisabled =
     mintPending ||
@@ -2357,7 +2508,11 @@ export default function MintScreen(props: MintScreenProps) {
             <h2>Inscribe data</h2>
             <InfoTip
               label="About inscribing data"
-              text="Full inscription workflow: prepare file, review plan and fees, then run init, upload batches, and seal transactions."
+              text={
+                shouldAutoRouteSmallMint
+                  ? `Small-file helper route is active for <=${SMALL_MINT_HELPER_MAX_CHUNKS} chunks: one transaction performs init, upload, and seal.`
+                  : 'Full inscription workflow: prepare file, review plan and fees, then run init, upload batches, and seal transactions.'
+              }
             />
           </div>
           <p>Upload a file, review fees, and inscribe on-chain.</p>
@@ -2722,6 +2877,18 @@ export default function MintScreen(props: MintScreenProps) {
                   />
                   <span className="meta-value">{uploadBatchCount}</span>
                 </div>
+                {shouldAutoRouteSmallMint && (
+                  <div>
+                    <LabelWithInfo
+                      tone="meta"
+                      label="Route"
+                      info="Small-file helper route uses one transaction and internally executes begin, upload, and seal."
+                    />
+                    <span className="meta-value">
+                      Single transaction via {smallMintHelperContractId}
+                    </span>
+                  </div>
+                )}
                 {resolvedDependencyIds.length > 0 && (
                   <div>
                     <LabelWithInfo
@@ -2960,13 +3127,22 @@ export default function MintScreen(props: MintScreenProps) {
           )}
         </div>
 
-        <div className="alert">
-          <strong>Automated sequence.</strong> After you approve the first
-          transaction, all remaining transactions will appear automatically in
-          order. If anything goes wrong, reload the page and re-select the exact
-          same file — your latest upload is stored locally (IndexedDB) and will
-          rehydrate the mint state so you can resume where you left off.
-        </div>
+        {shouldAutoRouteSmallMint ? (
+          <div className="alert">
+            <strong>Single transaction route.</strong> This file is within the
+            helper limit ({SMALL_MINT_HELPER_MAX_CHUNKS} chunks), so minting
+            will run in one wallet approval via {smallMintHelperContractId}.
+          </div>
+        ) : (
+          <div className="alert">
+            <strong>Automated sequence.</strong> After you approve the first
+            transaction, all remaining transactions will appear automatically in
+            order. If anything goes wrong, reload the page and re-select the
+            exact same file — your latest upload is stored locally (IndexedDB)
+            and will rehydrate the mint state so you can resume where you left
+            off.
+          </div>
+        )}
 
         {resumeHint && <div className="alert">{resumeHint}</div>}
 

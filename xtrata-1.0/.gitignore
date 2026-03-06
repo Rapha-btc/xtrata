@@ -12,3 +12,5 @@ coverage
 Archive/
 !docs/sdk/archive/
 !docs/sdk/archive/**
+
+/AAA-Collection

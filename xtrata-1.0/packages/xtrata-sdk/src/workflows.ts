@@ -19,14 +19,18 @@ import {
   buildMarketBuyCall,
   buildMarketCancelCall,
   buildMarketListCall,
-  buildSealInscriptionCall
+  buildSealInscriptionCall,
+  buildSmallMintSingleTxCall,
+  buildSmallMintSingleTxRecursiveCall
 } from './client.js';
 import {
   DEFAULT_BATCH_SIZE,
+  MAX_SMALL_MINT_CHUNKS,
   MAX_BATCH_SIZE,
   MAX_MIME_LENGTH,
   MAX_TOKEN_URI_LENGTH,
   batchChunks,
+  buildSmallMintSingleTxStxPostConditions,
   chunkBytes
 } from './mint.js';
 import { toStacksNetwork } from './network.js';
@@ -387,6 +391,92 @@ export const buildCollectionMintWorkflowPlan = (
     beginCall,
     addChunkBatchCalls,
     sealCall
+  };
+};
+
+export type SmallMintSingleTxWorkflowPlan = {
+  totalChunks: number;
+  call: ContractCallOptions;
+  postConditions: PostCondition[] | null;
+  summaryLines: string[];
+};
+
+export type SmallMintSingleTxWorkflowParams = {
+  helperContract: ContractConfig;
+  xtrataContract: ContractConfig;
+  senderAddress: string;
+  payloadBytes: Uint8Array;
+  expectedHash: Uint8Array;
+  mimeType: string;
+  tokenUri: string;
+  protocolFeeMicroStx: bigint | null;
+  dependencies?: bigint[];
+  apiBaseUrl?: string;
+};
+
+export const buildSmallMintSingleTxWorkflowPlan = (
+  params: SmallMintSingleTxWorkflowParams
+): SmallMintSingleTxWorkflowPlan => {
+  assertTrimmedString(params.senderAddress, 'senderAddress');
+  assertPayload(params.payloadBytes);
+  assertExpectedHash(params.expectedHash);
+  assertMimeType(params.mimeType);
+  assertTokenUri(params.tokenUri);
+  assertPositiveBigint(params.protocolFeeMicroStx, 'protocolFeeMicroStx');
+  assertMatchingNetwork(params.helperContract, params.xtrataContract);
+
+  const dependencies = params.dependencies ?? [];
+  const chunks = chunkBytes(params.payloadBytes);
+  if (chunks.length > MAX_SMALL_MINT_CHUNKS) {
+    throw new SdkValidationError(
+      'invalid-input',
+      `Small mint helper supports at most ${MAX_SMALL_MINT_CHUNKS} chunks.`
+    );
+  }
+
+  const network = toStacksNetwork(params.helperContract.network, params.apiBaseUrl);
+  const postConditions = buildSmallMintSingleTxStxPostConditions({
+    sender: params.senderAddress,
+    protocolFeeMicroStx: params.protocolFeeMicroStx,
+    totalChunks: chunks.length
+  });
+  const call = withDenyPostConditions(
+    dependencies.length > 0
+      ? buildSmallMintSingleTxRecursiveCall({
+          contract: params.helperContract,
+          network,
+          xtrataContract: params.xtrataContract,
+          expectedHash: params.expectedHash,
+          mime: params.mimeType,
+          totalSize: BigInt(params.payloadBytes.length),
+          chunks,
+          tokenUri: params.tokenUri,
+          dependencies
+        })
+      : buildSmallMintSingleTxCall({
+          contract: params.helperContract,
+          network,
+          xtrataContract: params.xtrataContract,
+          expectedHash: params.expectedHash,
+          mime: params.mimeType,
+          totalSize: BigInt(params.payloadBytes.length),
+          chunks,
+          tokenUri: params.tokenUri
+        }),
+    postConditions
+  );
+
+  return {
+    totalChunks: chunks.length,
+    call,
+    postConditions,
+    summaryLines: [
+      `Single-tx helper route with ${chunks.length} chunk(s).`,
+      dependencies.length > 0
+        ? `Recursive sealing enabled with ${dependencies.length} dependency id(s).`
+        : 'Non-recursive single mint.',
+      `Deny mode spend cap set for combined begin+seal fees (${params.protocolFeeMicroStx.toString()} fee-unit basis).`
+    ]
   };
 };
 
