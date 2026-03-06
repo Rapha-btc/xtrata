@@ -1,7 +1,11 @@
 Update admin / manage panel for admin to show the current order of artist collections displayed on the public pages and allow admin to change the order of display.
 
 
-Add a siblings line to the preview panel so siblings list all other siblings under the parent row.
+Checking for existing inscriptions of this hash... - This takes too long.
+We need to save all hashes in a DB and perform this much more quickly.
+
+We also need to animate the waiting sections while processing is taking place so it looks like there is cvisual activity animations, progress bars etc so users know they must be patient between batches etc
+
 
 
 
