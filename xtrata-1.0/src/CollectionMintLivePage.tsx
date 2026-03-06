@@ -24,10 +24,12 @@ import {
   MAX_BATCH_SIZE
 } from './lib/chunking/hash';
 import {
+  buildCollectionSmallSingleTxStxPostConditions,
   buildCollectionSealStxPostConditions,
   buildMintBeginStxPostConditions,
   buildSealStxPostConditions,
   resolveCollectionBeginSpendCapMicroStx,
+  resolveCollectionSmallSingleTxSpendCapMicroStx,
   resolveCollectionSealSpendCapMicroStx,
   resolveSealSpendCapMicroStx
 } from './lib/mint/post-conditions';
@@ -40,10 +42,18 @@ import {
   resolveCollectionMintPaymentModel,
   type CollectionMintPaymentModel
 } from './lib/collection-mint/payment-model';
+import {
+  shouldUseCollectionSmallSingleTx,
+  supportsCollectionSmallSingleTx
+} from './lib/collection-mint/routing';
 import { resolveCollectionCoverImageUrl } from './lib/collections/cover-image';
 import { parseDeployPricingLockSnapshot } from './lib/deploy/pricing-lock';
 import { PUBLIC_CONTRACT } from './config/public';
-import { DEFAULT_TOKEN_URI, TX_DELAY_SECONDS } from './lib/mint/constants';
+import {
+  DEFAULT_TOKEN_URI,
+  SMALL_MINT_HELPER_MAX_CHUNKS,
+  TX_DELAY_SECONDS
+} from './lib/mint/constants';
 import { getNetworkFromAddress, getNetworkMismatch } from './lib/network/guard';
 import { toStacksNetwork } from './lib/network/stacks';
 import type { NetworkType } from './lib/network/types';
@@ -837,6 +847,9 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     if (normalized.includes('(err u2)')) {
       return 'STX payout transfer failed (err u2). A payout recipient is likely the same as the minting wallet. Use a different minter wallet or update payout recipients/splits.';
     }
+    if (normalized.includes('(err u122)') || normalized.includes('contract error u122')) {
+      return 'This asset hash is already sealed on-chain (u122). Refresh collection status and continue with the next item.';
+    }
     if (normalized.includes('post-condition check failure')) {
       return 'Wallet safety checks blocked this transaction. This usually means payout settings or mint price changed. Refresh status and retry.';
     }
@@ -845,6 +858,15 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     }
     return raw;
   }, []);
+
+  const useAdvertisedSealCap =
+    collectionMintPaymentModel === 'seal' &&
+    contractStatus?.activePhaseMintPrice === null &&
+    collectionMintPricingConfig.mode === 'advertised-includes-seal-fee' &&
+    collectionMintPricingConfig.onChainMintPriceMicroStx !== null &&
+    collectionMintPricingConfig.onChainMintPriceMicroStx ===
+      (contractStatus?.mintPrice ?? null) &&
+    collectionMintPricingConfig.advertisedMintPriceMicroStx !== null;
 
   const resolveMintBeginPostConditions = useCallback(
     (sender: string) => {
@@ -880,14 +902,6 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
           totalChunks
         });
       }
-      const useAdvertisedSealCap =
-        collectionMintPaymentModel === 'seal' &&
-        contractStatus?.activePhaseMintPrice === null &&
-        collectionMintPricingConfig.mode === 'advertised-includes-seal-fee' &&
-        collectionMintPricingConfig.onChainMintPriceMicroStx !== null &&
-        collectionMintPricingConfig.onChainMintPriceMicroStx ===
-          (contractStatus?.mintPrice ?? null) &&
-        collectionMintPricingConfig.advertisedMintPriceMicroStx !== null;
       if (useAdvertisedSealCap) {
         return buildMintBeginStxPostConditions({
           sender,
@@ -907,9 +921,55 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       collectionMintPricingConfig.advertisedMintPriceMicroStx,
       collectionMintPricingConfig.mode,
       collectionMintPricingConfig.onChainMintPriceMicroStx,
+      useAdvertisedSealCap,
       contractStatus?.activePhaseMintPrice,
       contractStatus?.coreFeeUnitMicroStx,
       contractStatus?.mintPrice
+    ]
+  );
+
+  const resolveSmallSingleTxSpendCap = useCallback(
+    (totalChunks: number) =>
+      resolveCollectionSmallSingleTxSpendCapMicroStx({
+        mintPrice: contractStatus?.mintPrice ?? null,
+        activePhaseMintPrice: contractStatus?.activePhaseMintPrice ?? null,
+        protocolFeeMicroStx: contractStatus?.coreFeeUnitMicroStx ?? null,
+        totalChunks,
+        chargeMintPriceAtBegin,
+        sealSpendCapMicroStx: useAdvertisedSealCap
+          ? collectionMintPricingConfig.advertisedMintPriceMicroStx
+          : null
+      }),
+    [
+      chargeMintPriceAtBegin,
+      collectionMintPricingConfig.advertisedMintPriceMicroStx,
+      contractStatus?.activePhaseMintPrice,
+      contractStatus?.coreFeeUnitMicroStx,
+      contractStatus?.mintPrice,
+      useAdvertisedSealCap
+    ]
+  );
+
+  const resolveSmallSingleTxPostConditions = useCallback(
+    (sender: string, totalChunks: number) =>
+      buildCollectionSmallSingleTxStxPostConditions({
+        sender,
+        mintPrice: contractStatus?.mintPrice ?? null,
+        activePhaseMintPrice: contractStatus?.activePhaseMintPrice ?? null,
+        protocolFeeMicroStx: contractStatus?.coreFeeUnitMicroStx ?? null,
+        totalChunks,
+        chargeMintPriceAtBegin,
+        sealSpendCapMicroStx: useAdvertisedSealCap
+          ? collectionMintPricingConfig.advertisedMintPriceMicroStx
+          : null
+      }),
+    [
+      chargeMintPriceAtBegin,
+      collectionMintPricingConfig.advertisedMintPriceMicroStx,
+      contractStatus?.activePhaseMintPrice,
+      contractStatus?.coreFeeUnitMicroStx,
+      contractStatus?.mintPrice,
+      useAdvertisedSealCap
     ]
   );
 
@@ -1526,7 +1586,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
 
   const mintAsset = useCallback(
     async (asset: CollectionAsset, session: WalletSession) => {
-      let activeStage: 'begin' | 'upload' | 'seal' = 'begin';
+      let activeStage: 'begin' | 'upload' | 'seal' | 'single' = 'begin';
       const senderAddress = session.address;
       if (!senderAddress) {
         throw new Error('Connect a wallet before minting.');
@@ -1580,6 +1640,83 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
           setSealState('done');
           return existing;
         }
+
+        const useSmallSingleTxRoute = shouldUseCollectionSmallSingleTx({
+          templateVersion,
+          chunkCount: chunks.length,
+          hasReservation: progress.hasReservation,
+          hasUploadState: progress.uploadState !== null
+        });
+        if (useSmallSingleTxRoute) {
+          activeStage = 'single';
+          setBeginState('pending');
+          setUploadState('pending');
+          setSealState('pending');
+          appendMintLog(
+            `Small-file single-tx route active (<=${SMALL_MINT_HELPER_MAX_CHUNKS} chunks).`
+          );
+
+          const singleTxSpendCap = resolveSmallSingleTxSpendCap(chunks.length);
+          if (singleTxSpendCap === null) {
+            throw new Error(
+              'Single-tx safety cap is unavailable. Refresh on-chain status, then retry.'
+            );
+          }
+          appendMintLog(
+            collectionMintPaymentModel === 'begin'
+              ? `Single-tx safety cap <= ${toMicroStxLabel(singleTxSpendCap)} (begin fee + seal protocol fee; mint price settled at begin).`
+              : useAdvertisedSealCap
+                ? `Single-tx safety cap <= ${toMicroStxLabel(singleTxSpendCap)} (displayed mint price + begin anti-spam fee).`
+                : `Single-tx safety cap <= ${toMicroStxLabel(singleTxSpendCap)} (mint price + begin anti-spam + seal protocol fee).`
+          );
+
+          const singleTxPostConditions = resolveSmallSingleTxPostConditions(
+            senderAddress,
+            chunks.length
+          );
+          if (!singleTxPostConditions) {
+            throw new Error(
+              'Single-tx wallet safety checks are unavailable. Refresh status, then retry.'
+            );
+          }
+
+          setMintMessage('Approve single-transaction mint in wallet.');
+          const singleTx = await requestCollectionContractCall(
+            {
+              functionName: 'mint-small-single-tx',
+              functionArgs: [
+                principalCV(coreContractId),
+                bufferCV(expectedHashBytes),
+                stringAsciiCV(asset.mime_type || 'application/octet-stream'),
+                uintCV(BigInt(rawBytes.length)),
+                listCV(chunks.map((chunk) => bufferCV(chunk))),
+                stringAsciiCV(tokenUri)
+              ],
+              postConditionMode: PostConditionMode.Deny,
+              postConditions: singleTxPostConditions
+            },
+            session
+          );
+          appendMintLog(`Single-tx mint submitted: ${singleTx.txId}`);
+          progress = await waitForMintProgress(
+            expectedHashBytes,
+            session,
+            'Waiting for single-tx mint confirmation',
+            (next) => next.tokenId !== null
+          );
+          if (progress.tokenId === null) {
+            throw new Error(
+              'Single-tx mint submitted but token id is not confirmed yet. Wait for confirmation, then resume.'
+            );
+          }
+          const tokenId = progress.tokenId.toString();
+          setMintedTokenIds((current) => ({ ...current, [asset.asset_id]: tokenId }));
+          setBeginState('done');
+          setUploadState('done');
+          setSealState('done');
+          return tokenId;
+        }
+
         const needsBegin = !progress.hasReservation || progress.uploadState === null;
         if (needsBegin) {
           const beginSpendCap = resolveCollectionBeginSpendCapMicroStx({
@@ -1736,14 +1873,6 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
             'Seal fee safety cap is unavailable. Refresh contract status and retry.'
           );
         }
-        const useAdvertisedSealCap =
-          collectionMintPaymentModel === 'seal' &&
-          contractStatus?.activePhaseMintPrice === null &&
-          collectionMintPricingConfig.mode === 'advertised-includes-seal-fee' &&
-          collectionMintPricingConfig.onChainMintPriceMicroStx !== null &&
-          collectionMintPricingConfig.onChainMintPriceMicroStx ===
-            (contractStatus?.mintPrice ?? null) &&
-          collectionMintPricingConfig.advertisedMintPriceMicroStx !== null;
         const sealSpendCap =
           collectionMintPaymentModel === 'begin'
             ? resolveSealSpendCapMicroStx({
@@ -1802,6 +1931,10 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       } catch (error) {
         if (activeStage === 'begin') {
           setBeginState('error');
+        } else if (activeStage === 'single') {
+          setBeginState('error');
+          setUploadState('error');
+          setSealState('error');
         } else if (activeStage === 'upload') {
           setUploadState('error');
         } else {
@@ -1814,15 +1947,25 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     [
       appendMintLog,
       canonicalHashHexByAssetId,
+      chargeMintPriceAtBegin,
+      collectionMintPaymentModel,
+      collectionMintPricingConfig.advertisedMintPriceMicroStx,
+      contractStatus?.activePhaseMintPrice,
+      contractStatus?.coreFeeUnitMicroStx,
+      contractStatus?.mintPrice,
       coreContract.address,
       coreContract.contractName,
       fetchAssetBytes,
       formatTokenReference,
       getMintProgress,
       pauseBeforeNextTx,
+      resolveSmallSingleTxPostConditions,
+      resolveSmallSingleTxSpendCap,
       resolveSealPostConditions,
       resolveMintBeginPostConditions,
       requestCollectionContractCall,
+      templateVersion,
+      useAdvertisedSealCap,
       waitForMintProgress
     ]
   );
@@ -2209,14 +2352,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     : 'Auto-refreshing every ~6s while active. Waiting for first sync...';
   const effectiveOnChainMintPrice =
     contractStatus?.activePhaseMintPrice ?? contractStatus?.mintPrice ?? null;
-  const useAdvertisedSealPrice =
-    collectionMintPaymentModel === 'seal' &&
-    contractStatus?.activePhaseMintPrice === null &&
-    collectionMintPricingConfig.mode === 'advertised-includes-seal-fee' &&
-    collectionMintPricingConfig.onChainMintPriceMicroStx !== null &&
-    collectionMintPricingConfig.onChainMintPriceMicroStx ===
-      (contractStatus?.mintPrice ?? null) &&
-    collectionMintPricingConfig.advertisedMintPriceMicroStx !== null;
+  const useAdvertisedSealPrice = useAdvertisedSealCap;
   const displayedMintPriceMicroStx = useAdvertisedSealPrice
     ? collectionMintPricingConfig.advertisedMintPriceMicroStx
     : effectiveOnChainMintPrice;
@@ -2240,6 +2376,13 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     estimatedUploadTransactionCount === null
       ? null
       : 2 + estimatedUploadTransactionCount;
+  const supportsSingleTxRoute = supportsCollectionSmallSingleTx(templateVersion);
+  const hasSingleTxEligibleAssets =
+    supportsSingleTxRoute &&
+    mintableAssets.some((asset) => {
+      const chunkCount = resolveAssetChunkCount(asset);
+      return chunkCount > 0 && chunkCount <= SMALL_MINT_HELPER_MAX_CHUNKS;
+    });
   const estimatedSealFeeUnits =
     collectionMaxChunkCount === null || collectionMaxChunkCount <= 0
       ? null
@@ -2401,7 +2544,9 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
             {showMintGuide && (
               <div id="live-mint-guide" className="collection-live-page__mint-guide">
                 <p className="collection-live-page__mint-guide-title">
-                  Xtrata mint flow: minimum 3 wallet signatures
+                  {hasSingleTxEligibleAssets
+                    ? `Xtrata mint flow: 1-3 wallet signatures (<=${SMALL_MINT_HELPER_MAX_CHUNKS} chunks auto-route to single-tx)`
+                    : 'Xtrata mint flow: minimum 3 wallet signatures'}
                 </p>
                 <div className="collection-live-page__mint-guide-summary">
                   <p className="collection-live-page__mint-guide-summary-title">
@@ -2411,6 +2556,12 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                     <li>Max size: {collectionMaxSizeLabel ?? 'Loading...'}</li>
                     <li>Max upload batches: {estimatedUploadTransactionCount ?? '...'}</li>
                     <li>Max total signatures: {estimatedWalletApprovals ?? '...'}</li>
+                    {hasSingleTxEligibleAssets && (
+                      <li>
+                        Small-file route: one signature for assets up to{' '}
+                        {SMALL_MINT_HELPER_MAX_CHUNKS} chunks
+                      </li>
+                    )}
                     <li>Protocol fee range: {protocolFeeRangeLabel}</li>
                     <li>
                       Mining fee ballpark:{' '}
@@ -2437,9 +2588,11 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                       {estimatedUploadTransactionCount ?? '...'} upload signatures or fewer.
                     </span>
                     <span className="collection-live-page__mint-guide-note">
-                      {estimatedWalletApprovals === null
-                        ? 'Expected wallet prompts: at least 3 total (begin, upload, seal).'
-                        : `Expected wallet prompts for a max-size mint in this collection: up to ${estimatedWalletApprovals} total (${estimatedUploadTransactionCount} upload batch signatures).`}
+                      {hasSingleTxEligibleAssets
+                        ? `Expected wallet prompts: 1 total for <=${SMALL_MINT_HELPER_MAX_CHUNKS} chunks, otherwise 3+ based on upload batches.`
+                        : estimatedWalletApprovals === null
+                          ? 'Expected wallet prompts: at least 3 total (begin, upload, seal).'
+                          : `Expected wallet prompts for a max-size mint in this collection: up to ${estimatedWalletApprovals} total (${estimatedUploadTransactionCount} upload batch signatures).`}
                     </span>
                     {collectionMaxChunkCount !== null && (
                       <span className="collection-live-page__mint-guide-note">

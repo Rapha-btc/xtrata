@@ -3,6 +3,7 @@ import { FungibleConditionCode } from '@stacks/transactions';
 import {
   buildBatchSealStxPostConditions,
   buildCollectionBatchSealStxPostConditions,
+  buildCollectionSmallSingleTxStxPostConditions,
   buildCollectionSealStxPostConditions,
   buildProtocolFeeStxPostConditions,
   buildSealStxPostConditions,
@@ -10,6 +11,7 @@ import {
   resolveCollectionBatchSealSpendCapMicroStx,
   resolveBatchSealSpendCapMicroStx,
   resolveCollectionBeginSpendCapMicroStx,
+  resolveCollectionSmallSingleTxSpendCapMicroStx,
   resolveCollectionSealSpendCapMicroStx,
   resolveMintBeginSpendCapMicroStx,
   resolveSealSpendCapMicroStx
@@ -219,5 +221,41 @@ describe('mint post conditions', () => {
     const condition = postConditions?.[0];
     expect(condition?.conditionCode).toBe(FungibleConditionCode.LessEqual);
     expect(condition?.amount).toBe(2_500_000n);
+  });
+
+  it('computes collection small single-tx cap as begin plus seal spend for v1.4 model', () => {
+    const cap = resolveCollectionSmallSingleTxSpendCapMicroStx({
+      mintPrice: 1_000_000n,
+      protocolFeeMicroStx: 100_000n,
+      totalChunks: 1,
+      chargeMintPriceAtBegin: false
+    });
+    expect(cap).toBe(1_300_000n);
+  });
+
+  it('supports collection small single-tx cap override for advertised seal pricing', () => {
+    const cap = resolveCollectionSmallSingleTxSpendCapMicroStx({
+      mintPrice: 1_000_000n,
+      protocolFeeMicroStx: 100_000n,
+      totalChunks: 1,
+      chargeMintPriceAtBegin: false,
+      sealSpendCapMicroStx: 1_200_000n
+    });
+    expect(cap).toBe(1_300_000n);
+  });
+
+  it('builds collection small single-tx post condition from combined spend cap', () => {
+    const postConditions = buildCollectionSmallSingleTxStxPostConditions({
+      sender: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
+      mintPrice: 1_000_000n,
+      protocolFeeMicroStx: 100_000n,
+      totalChunks: 30,
+      chargeMintPriceAtBegin: false
+    });
+    expect(postConditions).not.toBeNull();
+    expect(postConditions).toHaveLength(1);
+    const condition = postConditions?.[0];
+    expect(condition?.conditionCode).toBe(FungibleConditionCode.LessEqual);
+    expect(condition?.amount).toBe(1_300_000n);
   });
 });

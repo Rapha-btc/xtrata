@@ -278,6 +278,52 @@ export const resolveCollectionBatchSealSpendCapMicroStx = (
   return mintPrice * BigInt(params.totalChunks.length) + batchSealCap;
 };
 
+type CollectionSmallSingleTxSpendCapParams = {
+  mintPrice: bigint | null;
+  activePhaseMintPrice?: bigint | null;
+  protocolFeeMicroStx: bigint | null;
+  totalChunks: number | bigint | null;
+  chargeMintPriceAtBegin?: boolean;
+  beginFeeMicroStx?: bigint | null;
+  sealSpendCapMicroStx?: bigint | null;
+};
+
+export const resolveCollectionSmallSingleTxSpendCapMicroStx = (
+  params: CollectionSmallSingleTxSpendCapParams
+) => {
+  const beginCap = resolveCollectionBeginSpendCapMicroStx({
+    mintPrice: params.mintPrice,
+    activePhaseMintPrice: params.activePhaseMintPrice,
+    protocolFeeMicroStx: params.protocolFeeMicroStx,
+    chargeMintPriceAtBegin: params.chargeMintPriceAtBegin,
+    beginFeeMicroStx: params.beginFeeMicroStx
+  });
+  if (beginCap === null) {
+    return null;
+  }
+
+  let sealCap = params.sealSpendCapMicroStx;
+  if (sealCap === undefined || sealCap === null) {
+    sealCap = params.chargeMintPriceAtBegin
+      ? resolveSealSpendCapMicroStx({
+          protocolFeeMicroStx: params.protocolFeeMicroStx,
+          totalChunks: params.totalChunks
+        })
+      : resolveCollectionSealSpendCapMicroStx({
+          mintPrice: params.mintPrice,
+          activePhaseMintPrice: params.activePhaseMintPrice,
+          protocolFeeMicroStx: params.protocolFeeMicroStx,
+          totalChunks: params.totalChunks
+        });
+  }
+
+  if (sealCap === null || sealCap < 0n) {
+    return null;
+  }
+
+  return beginCap + sealCap;
+};
+
 type CollectionSealPostConditionParams = {
   sender?: string | null;
   mintPrice: bigint | null;
@@ -322,6 +368,31 @@ export const buildCollectionBatchSealStxPostConditions = (
     return null;
   }
   const cap = resolveCollectionBatchSealSpendCapMicroStx(params);
+  if (cap === null) {
+    return null;
+  }
+  return [
+    makeStandardSTXPostCondition(
+      sender,
+      FungibleConditionCode.LessEqual,
+      cap
+    )
+  ];
+};
+
+type CollectionSmallSingleTxPostConditionParams =
+  CollectionSmallSingleTxSpendCapParams & {
+    sender?: string | null;
+  };
+
+export const buildCollectionSmallSingleTxStxPostConditions = (
+  params: CollectionSmallSingleTxPostConditionParams
+): PostCondition[] | null => {
+  const sender = params.sender?.trim() ?? '';
+  if (!sender) {
+    return null;
+  }
+  const cap = resolveCollectionSmallSingleTxSpendCapMicroStx(params);
   if (cap === null) {
     return null;
   }
