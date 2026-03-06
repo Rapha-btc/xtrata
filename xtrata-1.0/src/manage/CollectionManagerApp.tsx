@@ -17,6 +17,7 @@ import InfoTooltip from './components/InfoTooltip';
 import AddressLabel from '../components/AddressLabel';
 import WalletTopBar from '../components/WalletTopBar';
 import { isXtrataOwnerAddress } from '../config/manage';
+import { hasCoverImageMetadata } from '../lib/collections/cover-image';
 import { getNetworkFromAddress } from '../lib/network/guard';
 import { toStacksNetwork } from '../lib/network/stacks';
 import { useManageWallet } from './ManageWalletContext';
@@ -176,21 +177,6 @@ const parseUintPrimitive = (value: unknown): bigint | null => {
     return BigInt(value);
   }
   return null;
-};
-
-const hasCoverMetadata = (value: unknown) => {
-  const record = toRecord(value);
-  if (!record) {
-    return false;
-  }
-  const source = toText(record.source);
-  if (source === 'collection-asset') {
-    return toText(record.assetId).length > 0;
-  }
-  if (source === 'inscribed-image-url') {
-    return toText(record.imageUrl).length > 0;
-  }
-  return false;
 };
 
 const getStepPanelKey = (stepId: JourneyStepId): PanelKey | null => {
@@ -462,7 +448,7 @@ export default function CollectionManagerApp() {
         launchMintPriceConfigured,
         launchMaxSupplyConfigured,
         unpaused,
-        hasLivePageCover: hasCoverMetadata(coverImage) || hasFallbackCoverImage,
+        hasLivePageCover: hasCoverImageMetadata(coverImage) || hasFallbackCoverImage,
         hasLivePageDescription:
           toText(collectionPage?.description).length > 0 ||
           toText(metadataCollection?.description).length > 0,

@@ -9,6 +9,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { PUBLIC_CONTRACT, PUBLIC_MINT_RESTRICTIONS } from './config/public';
 import { getContractId } from './lib/contract/config';
+import { resolveCollectionCoverImageUrl } from './lib/collections/cover-image';
 import { resolveCollectionContractLink } from './lib/collections/contract-link';
 import { isRateLimitError, isReadOnlyNetworkError } from './lib/contract/read-only';
 import { getApiBaseUrls } from './lib/network/config';
@@ -458,23 +459,11 @@ const loadPublicMintStatus = async (
 const resolveCollectionCoverUrl = (collection: LiveCollectionRecord) => {
   const metadata = toRecord(collection.metadata);
   const collectionPage = toRecord(metadata?.collectionPage);
-  const coverImage = toRecord(collectionPage?.coverImage);
-  const source = toText(coverImage?.source);
-  const collectionId = toText(collection.id);
-  if (source === 'collection-asset') {
-    const assetId = toText(coverImage?.assetId);
-    if (!collectionId || !assetId) {
-      return null;
-    }
-    return `/collections/${encodeURIComponent(collectionId)}/asset-preview?assetId=${encodeURIComponent(assetId)}`;
-  }
-  if (source === 'inscribed-image-url') {
-    const imageUrl = toText(coverImage?.imageUrl);
-    if (imageUrl) {
-      return imageUrl;
-    }
-  }
-  return null;
+  return resolveCollectionCoverImageUrl({
+    coverImage: collectionPage?.coverImage,
+    collectionId: toText(collection.id),
+    fallbackCoreContractId: toText(metadata?.coreContractId)
+  });
 };
 
 const parseLiveCollectionsResponse = async (response: Response) => {

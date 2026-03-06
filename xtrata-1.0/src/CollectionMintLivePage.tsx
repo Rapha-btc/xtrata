@@ -36,6 +36,7 @@ import {
   formatMiningFeeMicroStx,
   type CollectionMiningFeeGuidance
 } from './lib/collection-mint/mining-fee-guidance';
+import { resolveCollectionCoverImageUrl } from './lib/collections/cover-image';
 import { parseDeployPricingLockSnapshot } from './lib/deploy/pricing-lock';
 import { PUBLIC_CONTRACT } from './config/public';
 import { DEFAULT_TOKEN_URI, TX_DELAY_SECONDS } from './lib/mint/constants';
@@ -689,21 +690,13 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   }, [collectionTokenNumberByGlobalId, imageAssets, mintedTokenIds]);
 
   const coverUrl = useMemo(() => {
-    const source = toText(metadataCover?.source);
-    if (source === 'collection-asset') {
-      const assetId = toText(metadataCover?.assetId);
-      if (!assetId || !resolvedCollectionId) {
-        return null;
-      }
-      return `/collections/${encodeURIComponent(
-        resolvedCollectionId
-      )}/asset-preview?assetId=${encodeURIComponent(assetId)}`;
-    }
-    if (source === 'inscribed-image-url') {
-      const imageUrl = toText(metadataCover?.imageUrl);
-      if (imageUrl) {
-        return imageUrl;
-      }
+    const configuredCoverUrl = resolveCollectionCoverImageUrl({
+      coverImage: metadataCover,
+      collectionId: resolvedCollectionId,
+      fallbackCoreContractId: toText(metadata?.coreContractId)
+    });
+    if (configuredCoverUrl) {
+      return configuredCoverUrl;
     }
     const fallback = imageAssets[0];
     if (!fallback || !resolvedCollectionId) {
@@ -712,7 +705,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     return `/collections/${encodeURIComponent(
       resolvedCollectionId
     )}/asset-preview?assetId=${encodeURIComponent(fallback.asset_id)}`;
-  }, [metadataCover, imageAssets, resolvedCollectionId]);
+  }, [metadataCover, imageAssets, resolvedCollectionId, metadata]);
 
   const collectionTitle = useMemo(
     () =>
