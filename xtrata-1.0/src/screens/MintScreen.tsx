@@ -42,6 +42,7 @@ import {
   SIP16_PREVIEW_HOST_PLACEHOLDER,
   SIP16_RESOLVER_HOST_PLACEHOLDER,
   SIP16_TOKEN_ID_PLACEHOLDER,
+  SMALL_MINT_HELPER_MAINNET_ADDRESS,
   SMALL_MINT_HELPER_CONTRACT_NAME,
   SMALL_MINT_HELPER_MAX_CHUNKS,
   TX_DELAY_SECONDS
@@ -407,15 +408,20 @@ export default function MintScreen(props: MintScreenProps) {
     [legacyContract]
   );
   const contractId = getContractId(props.contract);
-  const smallMintHelperContract = useMemo<ContractConfig>(
-    () => ({
-      address: props.contract.address,
-      contractName: SMALL_MINT_HELPER_CONTRACT_NAME,
-      network: props.contract.network
-    }),
-    [props.contract.address, props.contract.network]
+  const smallMintHelperContract = useMemo<ContractConfig | null>(
+    () =>
+      props.contract.network === 'mainnet'
+        ? {
+            address: SMALL_MINT_HELPER_MAINNET_ADDRESS,
+            contractName: SMALL_MINT_HELPER_CONTRACT_NAME,
+            network: 'mainnet'
+          }
+        : null,
+    [props.contract.network]
   );
-  const smallMintHelperContractId = getContractId(smallMintHelperContract);
+  const smallMintHelperContractId = smallMintHelperContract
+    ? getContractId(smallMintHelperContract)
+    : null;
   const [file, setFile] = useState<File | null>(null);
   const [fileBytes, setFileBytes] = useState<Uint8Array | null>(null);
   const [chunks, setChunks] = useState<Uint8Array[]>([]);
@@ -784,7 +790,8 @@ export default function MintScreen(props: MintScreenProps) {
   }, [resumeState, file, fileBytes, chunks.length]);
   const resumeBlocked =
     !!resumeMismatch || (resumeInfo ? 'error' in resumeInfo : false);
-  const supportsSmallMintHelper = capabilities.version !== '1.1.1';
+  const supportsSmallMintHelper =
+    capabilities.version !== '1.1.1' && !!smallMintHelperContract;
   const shouldAutoRouteSmallMint =
     supportsSmallMintHelper &&
     !resumeState &&
@@ -1940,6 +1947,10 @@ export default function MintScreen(props: MintScreenProps) {
 
     try {
       if (shouldAutoRouteSmallMint) {
+        if (!smallMintHelperContract) {
+          throw new Error('Small mint helper deployment is unavailable for this network.');
+        }
+        const helperContractId = getContractId(smallMintHelperContract);
         activeStage = 'single';
         setBeginState('pending');
         setUploadState('pending');
@@ -2017,7 +2028,7 @@ export default function MintScreen(props: MintScreenProps) {
               mintInputs.dependencyIds.length > 0
                 ? 'mint-small-single-tx-recursive'
                 : 'mint-small-single-tx',
-            helperContractId: smallMintHelperContractId,
+            helperContractId,
             targetCoreContractId: getContractId(props.contract),
             totalChunks: chunks.length,
             tokenUriLength: mintInputs.tokenUriValue.length,

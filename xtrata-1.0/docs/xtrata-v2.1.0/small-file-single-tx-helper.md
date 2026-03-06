@@ -1,6 +1,7 @@
 # Small File Single-Tx Helper (Optional)
 
 Contract: `xtrata-small-mint-v1.0`
+Mainnet deployment: `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-small-mint-v1-0`
 
 This helper adds a one-call write path for small payloads while keeping
 `xtrata-v2.1.0` as the canonical inscription core.

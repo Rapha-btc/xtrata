@@ -7,6 +7,8 @@ export const DEFAULT_TOKEN_URI =
 export const MAX_TOKEN_URI_LENGTH = 256;
 export const MAX_MIME_LENGTH = 64;
 export const SMALL_MINT_HELPER_MAX_CHUNKS = 30;
+export const SMALL_MINT_HELPER_MAINNET_ADDRESS =
+  'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X';
 export const SMALL_MINT_HELPER_CONTRACT_NAME = 'xtrata-small-mint-v1-0';
 export const SIP16_TOKEN_ID_PLACEHOLDER = '{id}';
 export const SIP16_RESOLVER_HOST_PLACEHOLDER = '{resolver-host}';
