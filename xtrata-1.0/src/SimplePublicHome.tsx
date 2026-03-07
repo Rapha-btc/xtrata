@@ -988,10 +988,9 @@ export default function SimplePublicHome() {
         <section className="panel app-section simple-home__drops" id="live-drops">
           <div className="panel__header">
             <div>
-              <h2>Live drops on homepage</h2>
+              <h2>Live Collection Mints</h2>
               <p>
-                This section shows artists how featured collections appear to visitors and how fast
-                users can move from discovery to mint.
+                Featured Collections
               </p>
             </div>
             <div className="panel__actions">
