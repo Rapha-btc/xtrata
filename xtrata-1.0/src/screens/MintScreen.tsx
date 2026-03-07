@@ -2518,7 +2518,7 @@ export default function MintScreen(props: MintScreenProps) {
           <p>Upload a file, review fees, and inscribe on-chain.</p>
           <p className="meta-value">
             Public inscriptions are open. Partner contracts are available now. Contact Jim.BTC
-            (@JimDotBTC) to request Artist Portal access.
+            (@JimDotBTC) to request Creator Portal access.
           </p>
         </div>
         <div className="panel__actions">
