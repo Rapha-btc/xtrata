@@ -1,7 +1,15 @@
 Update admin / manage panel for admin to show the current order of artist collections displayed on the public pages and allow admin to change the order of display.
 
 
-Add a siblings line to the preview panel so siblings list all other siblings under the parent row.
+Checking for existing inscriptions of this hash... - This takes too long.
+We need to save all hashes in a DB and perform this much more quickly.
+
+We also need to animate the waiting sections while processing is taking place so it looks like there is cvisual activity animations, progress bars etc so users know they must be patient between batches etc
+
+Some todos for Xtrata UI: Preview in inscribe section does not show the full image. Room must be given to the preview so users can actually see what they are about to pay to inscribe - it is important this is handled correctly. Images must be handled gracefully and never resized or forced into a differemnt ratio. Images must be truthfully represented in their original form resized to fit insid OUR square display spaces everywhere but their own ratios and full size images must be respected.
+
+The checking for hashes check needs some animated dots to show an ongoing process. Patience it required throughout the process so we need to try to make sure that all parts that involve waiting involve some animations and visual activity signals, or  progress where available so users know they need to be patiuent. Also less red - it feels like warnings, orange or even blue would be better than red unles it actually is an error.
+
 
 
 

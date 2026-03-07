@@ -50,7 +50,19 @@ describe('artist deploy helpers', () => {
       mintType: 'standard',
       seed: '0f95ac11-1234'
     });
-    expect(name).toBe('xtrata-collection-neon-river-collective-0f95ac11');
+    expect(name).toBe('xtrata-collection-neon-river-co-0f95ac11');
+    expect(name.length).toBeLessThanOrEqual(40);
+  });
+
+  it('prefers draft slug for readable contract names and keeps the seed suffix', () => {
+    const name = deriveArtistContractName({
+      collectionName: 'Ignored fallback collection name',
+      slug: 'russian-rampage-v0',
+      mintType: 'standard',
+      seed: '9ac4dc21-0000'
+    });
+    expect(name).toBe('xtrata-collection-russian-rampa-9ac4dc21');
+    expect(name.length).toBeLessThanOrEqual(40);
   });
 
   it('builds standard template source with hardcoded defaults', () => {
@@ -99,6 +111,36 @@ describe('artist deploy helpers', () => {
     );
     expect(result.source).toContain(
       `(define-data-var operator-bps uint u${ARTIST_DEPLOY_DEFAULTS.operatorBps.toString()})`
+    );
+  });
+
+  it('normalizes non-ascii description text before validation', () => {
+    const result = buildArtistDeployContractSource({
+      input: {
+        collectionName: 'Neon River',
+        symbol: 'NRIV',
+        description: 'Artist’s vision — deja vu 🚀\nline two',
+        supply: '777',
+        mintType: 'standard',
+        mintPriceStx: '0.42',
+        artistAddress: 'SP3K8BC0PPEVCV7NZ6QSRWPQ2JE9E5B6N3PA0KBR9',
+        marketplaceAddress: 'SP000000000000000000002Q6VF78'
+      },
+      templateSources: {
+        standardSource: STANDARD_TEMPLATE,
+        preinscribedSource: PREINSCRIBED_TEMPLATE
+      },
+      coreContractId: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0',
+      operatorAddress: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X'
+    });
+
+    expect(result.errors).toEqual([]);
+    expect(result.warnings).toContain(
+      'Description was normalized to printable ASCII for contract compatibility.'
+    );
+    expect(result.resolved.description).toBe("Artist's vision - deja vu line two");
+    expect(result.source).toContain(
+      `(define-data-var collection-description (string-ascii 256) "Artist's vision - deja vu line two")`
     );
   });
 

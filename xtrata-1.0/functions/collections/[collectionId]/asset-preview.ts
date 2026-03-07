@@ -74,6 +74,8 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
   if (!assetId) {
     return badRequest(`assetId query param is required. Request ID: ${requestId}`);
   }
+  const purpose = toNullableString(url.searchParams.get('purpose'))?.toLowerCase();
+  const coverPreviewOnly = purpose === 'cover';
 
   try {
     const result = await queryAll(
@@ -104,7 +106,7 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
     if (!storageKey) {
       return badRequest(`Asset is missing a storage key. Request ID: ${requestId}`);
     }
-    if (!isImageMimeType(mimeType)) {
+    if (coverPreviewOnly && !isImageMimeType(mimeType)) {
       return badRequest(
         `Selected asset is not an image and cannot be used as cover art. Request ID: ${requestId}`
       );

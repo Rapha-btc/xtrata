@@ -117,6 +117,11 @@ plan:
             path: contracts/xtrata-collection-mint-v1.3.clar
             clarity-version: 3
         - emulated-contract-publish:
+            contract-name: xtrata-collection-mint-v1-4
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/xtrata-collection-mint-v1.4.clar
+            clarity-version: 3
+        - emulated-contract-publish:
             contract-name: xtrata-market-v1-0
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/xtrata-market-v1.0.clar
@@ -140,6 +145,11 @@ plan:
             contract-name: xtrata-preinscribed-collection-sale-v1-0
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/xtrata-preinscribed-collection-sale-v1.0.clar
+            clarity-version: 3
+        - emulated-contract-publish:
+            contract-name: xtrata-small-mint-v1-0
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/xtrata-small-mint-v1.0.clar
             clarity-version: 3
         - emulated-contract-publish:
             contract-name: xtrata-v1-1-0

@@ -343,6 +343,66 @@ export const buildCollectionMintSealBatchCall = (params: {
     overrides: params.overrides
   });
 
+export const buildSmallMintSingleTxCall = (params: {
+  contract: ContractConfig;
+  network: StacksNetwork;
+  xtrataContract: ContractConfig;
+  expectedHash: Uint8Array;
+  mime: string;
+  totalSize: bigint;
+  chunks: Uint8Array[];
+  tokenUri: string;
+  overrides?: ContractCallOverrides;
+}) =>
+  buildContractCallOptions({
+    contract: params.contract,
+    network: params.network,
+    functionName: 'mint-small-single-tx',
+    functionArgs: [
+      contractPrincipalCV(
+        params.xtrataContract.address,
+        params.xtrataContract.contractName
+      ),
+      bufferCV(params.expectedHash),
+      stringAsciiCV(params.mime),
+      uintCV(params.totalSize),
+      listCV(params.chunks.map((chunk) => bufferCV(chunk))),
+      stringAsciiCV(params.tokenUri)
+    ],
+    overrides: params.overrides
+  });
+
+export const buildSmallMintSingleTxRecursiveCall = (params: {
+  contract: ContractConfig;
+  network: StacksNetwork;
+  xtrataContract: ContractConfig;
+  expectedHash: Uint8Array;
+  mime: string;
+  totalSize: bigint;
+  chunks: Uint8Array[];
+  tokenUri: string;
+  dependencies: bigint[];
+  overrides?: ContractCallOverrides;
+}) =>
+  buildContractCallOptions({
+    contract: params.contract,
+    network: params.network,
+    functionName: 'mint-small-single-tx-recursive',
+    functionArgs: [
+      contractPrincipalCV(
+        params.xtrataContract.address,
+        params.xtrataContract.contractName
+      ),
+      bufferCV(params.expectedHash),
+      stringAsciiCV(params.mime),
+      uintCV(params.totalSize),
+      listCV(params.chunks.map((chunk) => bufferCV(chunk))),
+      stringAsciiCV(params.tokenUri),
+      listCV(params.dependencies.map((dependency) => uintCV(dependency)))
+    ],
+    overrides: params.overrides
+  });
+
 export const buildMarketListCall = (params: {
   contract: ContractConfig;
   network: StacksNetwork;

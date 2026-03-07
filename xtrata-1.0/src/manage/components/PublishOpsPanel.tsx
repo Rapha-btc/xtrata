@@ -9,6 +9,15 @@ import {
   validateStacksAddress,
   type ClarityValue
 } from '@stacks/transactions';
+import { PUBLIC_CONTRACT } from '../../config/public';
+import { createXtrataClient } from '../../lib/contract/client';
+import {
+  buildRuntimeInscriptionContentUrl,
+  normalizeCoverImageSource,
+  parseInscriptionTokenId,
+  resolveCollectionCoverImageUrl,
+  type CoverImageSource
+} from '../../lib/collections/cover-image';
 import { getNetworkFromAddress } from '../../lib/network/guard';
 import { toStacksNetwork } from '../../lib/network/stacks';
 import {
@@ -16,10 +25,13 @@ import {
   toChunkCountLabel,
   type CollectionMiningFeeGuidance
 } from '../../lib/collection-mint/mining-fee-guidance';
+import { supportsCollectionSmallSingleTx } from '../../lib/collection-mint/routing';
+import { SMALL_MINT_HELPER_MAX_CHUNKS } from '../../lib/mint/constants';
 import {
   parseManageJsonResponse,
   toManageApiErrorMessage
 } from '../lib/api-errors';
+import { parseContractPrincipal } from '../lib/contract-link';
 import { useManageWallet } from '../ManageWalletContext';
 import InfoTooltip from './InfoTooltip';
 
@@ -50,12 +62,14 @@ type PublishReadiness = {
   error: string | null;
 };
 
-type CoverImageSource = 'collection-asset' | 'inscribed-image-url';
-
 type ContractTarget = {
   address: string;
   contractName: string;
   network: 'mainnet' | 'testnet';
+};
+
+type CoreContractTarget = ContractTarget & {
+  contractId: string;
 };
 
 type OnChainReservationStatus = {
@@ -115,16 +129,6 @@ const toMultilineText = (value: unknown) => {
 const isImageMimeType = (mimeType: string) =>
   mimeType.trim().toLowerCase().startsWith('image/');
 
-const normalizeCoverSource = (value: unknown): CoverImageSource | null => {
-  if (value === 'collection-asset') {
-    return 'collection-asset';
-  }
-  if (value === 'inscribed-image-url') {
-    return 'inscribed-image-url';
-  }
-  return null;
-};
-
 const isValidCoverUrl = (value: string) =>
   /^(https?:\/\/|ipfs:\/\/|data:image\/)/i.test(value);
 
@@ -167,6 +171,28 @@ const parseUintCv = (value: ClarityValue | null | undefined) => {
   return null;
 };
 
+const normalizePrincipal = (value: string) =>
+  value.trim().replace(/^'+/, '').toUpperCase();
+
+const parsePrincipalCv = (value: ClarityValue | null | undefined) => {
+  if (!value) {
+    return null;
+  }
+  const parsed = cvToValue(value) as unknown;
+  if (typeof parsed === 'string') {
+    const normalized = normalizePrincipal(parsed);
+    return normalized.length > 0 ? normalized : null;
+  }
+  if (parsed && typeof parsed === 'object' && 'value' in parsed) {
+    const raw = (parsed as { value?: unknown }).value;
+    if (typeof raw === 'string') {
+      const normalized = normalizePrincipal(raw);
+      return normalized.length > 0 ? normalized : null;
+    }
+  }
+  return null;
+};
+
 const unwrapReadOnly = (value: ClarityValue) => {
   if (value.type === ClarityType.ResponseOk) {
     return value.value;
@@ -199,6 +225,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
   const [coverSource, setCoverSource] = useState<CoverImageSource>('collection-asset');
   const [selectedCoverAssetId, setSelectedCoverAssetId] = useState('');
   const [inscribedCoverUrl, setInscribedCoverUrl] = useState('');
+  const [inscriptionCoverTokenId, setInscriptionCoverTokenId] = useState('');
   const [collectionDescriptionInput, setCollectionDescriptionInput] = useState('');
   const [coverMessage, setCoverMessage] = useState<string | null>(null);
   const [descriptionMessage, setDescriptionMessage] = useState<string | null>(null);
@@ -262,6 +289,23 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       network: getNetworkFromAddress(address) ?? 'mainnet'
     };
   }, [collection, metadata]);
+  const coreContractTarget = useMemo((): CoreContractTarget => {
+    const configured = parseContractPrincipal(toText(metadata?.coreContractId));
+    if (configured) {
+      return {
+        address: configured.address,
+        contractName: configured.contractName,
+        contractId: `${configured.address}.${configured.contractName}`,
+        network: getNetworkFromAddress(configured.address) ?? 'mainnet'
+      };
+    }
+    return {
+      address: PUBLIC_CONTRACT.address,
+      contractName: PUBLIC_CONTRACT.contractName,
+      contractId: `${PUBLIC_CONTRACT.address}.${PUBLIC_CONTRACT.contractName}`,
+      network: PUBLIC_CONTRACT.network
+    };
+  }, [metadata]);
 
   const previewTitle = useMemo(
     () =>
@@ -290,6 +334,27 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
     () => toText(metadataCollection?.mintPriceStx) || '0',
     [metadataCollection]
   );
+  const templateVersion = useMemo(
+    () => toText(metadata?.templateVersion),
+    [metadata]
+  );
+  const supportsSingleTxTemplate = useMemo(
+    () => supportsCollectionSmallSingleTx(templateVersion),
+    [templateVersion]
+  );
+  const largestFileUsesSingleTxFlow = useMemo(() => {
+    if (!feeGuidance?.available) {
+      return false;
+    }
+    if (readiness.mintType !== 'standard') {
+      return false;
+    }
+    if (!supportsSingleTxTemplate) {
+      return false;
+    }
+    const chunkCount = Math.floor(feeGuidance.chunkCount);
+    return chunkCount > 0 && chunkCount <= SMALL_MINT_HELPER_MAX_CHUNKS;
+  }, [feeGuidance, readiness.mintType, supportsSingleTxTemplate]);
 
   const callCollectionReadOnly = async (
     functionName: string,
@@ -352,13 +417,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
     return { owner, hashHex };
   };
 
-  const requestCollectionContractCall = async (options: {
-    functionName: string;
-    functionArgs: ClarityValue[];
-  }) => {
-    if (!collectionContractTarget) {
-      throw new Error('Collection contract is not configured yet.');
-    }
+  const ensureWalletSession = async () => {
     let session = walletSession;
     if (!session.address || !session.network) {
       await connect();
@@ -367,6 +426,21 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
     if (!session.address || !session.network) {
       throw new Error('Connect a wallet before submitting this action.');
     }
+    return {
+      ...session,
+      address: session.address,
+      network: session.network
+    };
+  };
+
+  const requestCollectionContractCall = async (options: {
+    functionName: string;
+    functionArgs: ClarityValue[];
+  }) => {
+    if (!collectionContractTarget) {
+      throw new Error('Collection contract is not configured yet.');
+    }
+    const session = await ensureWalletSession();
     return new Promise<TxPayload>((resolve, reject) => {
       showContractCall({
         contractAddress: collectionContractTarget.address,
@@ -470,6 +544,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       setCoverSource('collection-asset');
       setSelectedCoverAssetId('');
       setInscribedCoverUrl('');
+      setInscriptionCoverTokenId('');
       setCollectionDescriptionInput('');
       setFeeGuidance(null);
       setFeeGuidanceMessage(null);
@@ -541,9 +616,12 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
 
       const loadedCollectionPage = toRecord(loadedMetadata?.collectionPage) ?? null;
       const loadedCover = toRecord(loadedCollectionPage?.coverImage) ?? null;
-      const savedSource = normalizeCoverSource(loadedCover?.source);
+      const savedSource = normalizeCoverImageSource(loadedCover?.source);
       const savedAssetId = toText(loadedCover?.assetId);
       const savedUrl = toText(loadedCover?.imageUrl);
+      const savedInscriptionTokenId =
+        parseInscriptionTokenId(loadedCover?.tokenId ?? loadedCover?.inscriptionId) ??
+        '';
       const loadedCollectionMetadata = toRecord(loadedMetadata?.collection) ?? null;
       const savedDescription =
         toMultilineText(loadedCollectionPage?.description) ||
@@ -554,6 +632,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       setCoverSource(savedSource ?? 'collection-asset');
       setSelectedCoverAssetId(savedAssetId);
       setInscribedCoverUrl(savedUrl);
+      setInscriptionCoverTokenId(savedInscriptionTokenId);
       setCollectionDescriptionInput(savedDescription);
       setFeeGuidance(loadedFeeGuidance);
       setReadiness({
@@ -568,6 +647,10 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
     } catch (error) {
       setCollection(null);
       setAssets([]);
+      setCoverSource('collection-asset');
+      setSelectedCoverAssetId('');
+      setInscribedCoverUrl('');
+      setInscriptionCoverTokenId('');
       setFeeGuidance(null);
       setCollectionDescriptionInput('');
       setOnChainReservationStatus(null);
@@ -662,7 +745,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
         mimeType: selectedAsset.mime_type,
         storageKey: selectedAsset.storage_key
       };
-    } else {
+    } else if (coverSource === 'inscribed-image-url') {
       const normalizedUrl = inscribedCoverUrl.trim();
       if (!normalizedUrl) {
         setCoverMessage('Enter an existing inscribed image URL first.');
@@ -678,6 +761,93 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
         source: 'inscribed-image-url',
         imageUrl: normalizedUrl
       };
+    } else {
+      const normalizedTokenId = parseInscriptionTokenId(inscriptionCoverTokenId);
+      if (!normalizedTokenId) {
+        setCoverMessage('Enter a valid inscription ID (whole number).');
+        return;
+      }
+      if (!collectionContractTarget) {
+        setCoverMessage('Collection contract is not configured yet.');
+        return;
+      }
+      let session;
+      try {
+        session = await ensureWalletSession();
+      } catch (error) {
+        setCoverMessage(toManageApiErrorMessage(error, 'Connect wallet to validate owner.'));
+        return;
+      }
+
+      const connectedOwner = normalizePrincipal(session.address);
+      setCoverMessage('Checking collection owner and inscription ownership...');
+      try {
+        const collectionOwnerCv = await callCollectionReadOnly('get-owner');
+        const collectionOwner = parsePrincipalCv(collectionOwnerCv);
+        if (!collectionOwner) {
+          setCoverMessage('Unable to read collection contract owner.');
+          return;
+        }
+        if (collectionOwner !== connectedOwner) {
+          setCoverMessage(
+            `Connected wallet (${session.address}) is not the collection owner (${collectionOwner}).`
+          );
+          return;
+        }
+
+        const coreClient = createXtrataClient({
+          contract: {
+            address: coreContractTarget.address,
+            contractName: coreContractTarget.contractName,
+            network: coreContractTarget.network
+          }
+        });
+        const inscriptionMeta = await coreClient.getInscriptionMeta(
+          BigInt(normalizedTokenId),
+          connectedOwner
+        );
+        if (!inscriptionMeta) {
+          setCoverMessage(
+            `Inscription #${normalizedTokenId} was not found on ${coreContractTarget.contractId}.`
+          );
+          return;
+        }
+        const inscriptionOwner = normalizePrincipal(inscriptionMeta.owner);
+        if (inscriptionOwner !== connectedOwner) {
+          setCoverMessage(
+            `Inscription #${normalizedTokenId} is owned by ${inscriptionMeta.owner}, not ${session.address}.`
+          );
+          return;
+        }
+        if (!isImageMimeType(inscriptionMeta.mimeType)) {
+          setCoverMessage(
+            `Inscription #${normalizedTokenId} mime type is ${inscriptionMeta.mimeType}, not image/*.`
+          );
+          return;
+        }
+
+        const runtimeContentUrl = buildRuntimeInscriptionContentUrl({
+          coreContractId: coreContractTarget.contractId,
+          tokenId: normalizedTokenId
+        });
+        if (!runtimeContentUrl) {
+          setCoverMessage('Unable to build runtime URL for this inscription.');
+          return;
+        }
+
+        coverImage = {
+          source: 'inscription-id',
+          tokenId: normalizedTokenId,
+          coreContractId: coreContractTarget.contractId,
+          mimeType: inscriptionMeta.mimeType,
+          imageUrl: runtimeContentUrl
+        };
+      } catch (error) {
+        setCoverMessage(
+          toManageApiErrorMessage(error, 'Unable to validate inscription ownership.')
+        );
+        return;
+      }
     }
 
     const currentMetadata = toRecord(collection.metadata) ?? {};
@@ -849,18 +1019,48 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
   );
 
   const previewCoverUrl = useMemo(() => {
+    const normalizedCollectionId = collectionId.trim();
+    if (coverSource === 'collection-asset') {
+      if (!normalizedCollectionId || !selectedCoverAsset) {
+        return null;
+      }
+      return resolveCollectionCoverImageUrl({
+        coverImage: {
+          source: 'collection-asset',
+          assetId: selectedCoverAsset.asset_id
+        },
+        collectionId: normalizedCollectionId
+      });
+    }
     if (coverSource === 'inscribed-image-url') {
       const normalized = inscribedCoverUrl.trim();
-      return normalized.length > 0 ? normalized : null;
+      return normalized.length > 0
+        ? resolveCollectionCoverImageUrl({
+            coverImage: {
+              source: 'inscribed-image-url',
+              imageUrl: normalized
+            },
+            collectionId: normalizedCollectionId
+          })
+        : null;
     }
-    const normalizedCollectionId = collectionId.trim();
-    if (!normalizedCollectionId || !selectedCoverAsset) {
-      return null;
-    }
-    return `/collections/${encodeURIComponent(
-      normalizedCollectionId
-    )}/asset-preview?assetId=${encodeURIComponent(selectedCoverAsset.asset_id)}`;
-  }, [coverSource, inscribedCoverUrl, collectionId, selectedCoverAsset]);
+    return resolveCollectionCoverImageUrl({
+      coverImage: {
+        source: 'inscription-id',
+        tokenId: inscriptionCoverTokenId,
+        coreContractId: coreContractTarget.contractId
+      },
+      collectionId: normalizedCollectionId,
+      fallbackCoreContractId: coreContractTarget.contractId
+    });
+  }, [
+    coverSource,
+    inscribedCoverUrl,
+    inscriptionCoverTokenId,
+    collectionId,
+    selectedCoverAsset,
+    coreContractTarget
+  ]);
 
   useEffect(() => {
     setCoverPreviewFailed(false);
@@ -1213,28 +1413,28 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
         </p>
         <p className="field__hint">
           Set the hero image for your live collection page. You can use an uploaded
-          collection image or an existing inscribed image URL.
+          collection image, an existing inscribed image URL, or an inscription ID
+          you own.
         </p>
 
         <label className="field">
           <span className="field__label info-label">
             Cover source
-            <InfoTooltip text="Choose whether the live page hero image comes from staged collection artwork or an external inscribed image URL." />
+            <InfoTooltip text="Choose whether the live page hero image comes from staged artwork, a direct URL, or an on-chain inscription ID." />
           </span>
           <select
             className="select"
             value={coverSource}
             onChange={(event) => {
               const next =
-                event.target.value === 'inscribed-image-url'
-                  ? 'inscribed-image-url'
-                  : 'collection-asset';
+                normalizeCoverImageSource(event.target.value) ?? 'collection-asset';
               setCoverSource(next);
               setCoverMessage(null);
             }}
           >
             <option value="collection-asset">Image from this collection</option>
             <option value="inscribed-image-url">Existing inscribed image URL</option>
+            <option value="inscription-id">Existing inscription ID (on-chain)</option>
           </select>
         </label>
 
@@ -1271,7 +1471,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
                   } available.`}
             </span>
           </label>
-        ) : (
+        ) : coverSource === 'inscribed-image-url' ? (
           <label className="field">
             <span className="field__label info-label">
               Existing inscribed image URL
@@ -1286,6 +1486,25 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
                 setCoverMessage(null);
               }}
             />
+          </label>
+        ) : (
+          <label className="field">
+            <span className="field__label info-label">
+              Existing inscription ID
+              <InfoTooltip text="Enter an inscription token ID. Save checks that connected wallet is the collection owner and also owns this inscription." />
+            </span>
+            <input
+              className="input"
+              placeholder="Token ID (e.g. 12345)"
+              value={inscriptionCoverTokenId}
+              onChange={(event) => {
+                setInscriptionCoverTokenId(event.target.value);
+                setCoverMessage(null);
+              }}
+            />
+            <span className="field__hint">
+              Runtime source contract: <code>{coreContractTarget.contractId}</code>
+            </span>
           </label>
         )}
 
@@ -1382,7 +1601,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       <div className="deploy-wizard__defaults">
         <p className="deploy-wizard__defaults-title info-label">
           Mining fee guidance (largest file)
-          <InfoTooltip text="Server-side estimate of mining fees for begin, upload batch(es), and seal based on the largest staged file. Protocol fees are separate from the advertised mint price." />
+          <InfoTooltip text="Server-side estimate of mining fees for begin, upload batch(es), and seal based on the largest staged file. If largest file is <=30 chunks on v1.4+, mint can route to one wallet transaction. Protocol fees are separate from the advertised mint price." />
         </p>
         {feeGuidance?.available ? (
           <>
@@ -1396,6 +1615,26 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
               · {toChunkCountLabel(feeGuidance.chunkCount)} chunk(s) ·{' '}
               {feeGuidance.batchCount.toLocaleString()} upload batch(es)
             </p>
+            <p className="field__hint">
+              Template single-tx support:{' '}
+              {supportsSingleTxTemplate
+                ? `Enabled (${templateVersion || 'v1.4+'}).`
+                : `Disabled (requires v1.4+, current template ${templateVersion || 'unknown'}).`}
+            </p>
+            <p className="field__hint">
+              Mint flow for largest file:{' '}
+              <strong>
+                {largestFileUsesSingleTxFlow
+                  ? `Single transaction (begin + upload + seal in one wallet confirmation, <=${SMALL_MINT_HELPER_MAX_CHUNKS} chunks).`
+                  : 'Standard 3-stage route (begin -> upload batch(es) -> seal).'}
+              </strong>
+            </p>
+            {largestFileUsesSingleTxFlow ? (
+              <p className="field__hint">
+                The table below still breaks out begin/upload/seal mining-fee components,
+                even though this largest-file route submits in one transaction.
+              </p>
+            ) : null}
             <div className="fee-guidance-table-wrapper">
               <table className="fee-guidance-table">
                 <thead>
@@ -1528,6 +1767,12 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
           {toText(metadataCover.source) || 'not set'}
           {toText(metadataCover.assetId)
             ? ` · asset ${toText(metadataCover.assetId)}`
+            : ''}
+          {toText(metadataCover.tokenId)
+            ? ` · inscription #${toText(metadataCover.tokenId)}`
+            : ''}
+          {toText(metadataCover.coreContractId)
+            ? ` · core ${toText(metadataCover.coreContractId)}`
             : ''}
           {toText(metadataCover.imageUrl) ? ` · ${toText(metadataCover.imageUrl)}` : ''}
         </p>

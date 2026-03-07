@@ -9,6 +9,8 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { PUBLIC_CONTRACT, PUBLIC_MINT_RESTRICTIONS } from './config/public';
 import { getContractId } from './lib/contract/config';
+import { resolveCollectionMintPaymentModel } from './lib/collection-mint/payment-model';
+import { resolveCollectionCoverImageUrl } from './lib/collections/cover-image';
 import { resolveCollectionContractLink } from './lib/collections/contract-link';
 import { useBnsAddress } from './lib/bns/hooks';
 import { RATE_LIMIT_WARNING_EVENT } from './lib/network/rate-limit';
@@ -284,7 +286,7 @@ This section is a plain-language reference for artists and collection teams.
 
 ### Contracts and modules
 - Core NFT contract: \`xtrata-v2-1-0\`
-- Collection mint contract template: \`xtrata-collection-mint-v1.3\`
+- Collection mint contract template: \`xtrata-collection-mint-v1.4\`
 - Pre-inscribed sale contract template: \`xtrata-preinscribed-collection-sale-v1.0\`
 - Admin module: Collection mint admin
 - Admin module: Pre-inscribed sale admin
@@ -317,7 +319,7 @@ For the full artist documentation, see \`docs/artist-guides/collection-launch-gu
     description:
       'How the manage portal and allowlist connect to production-ready SDK tooling for third-party builders.',
     content: `## SDK integration model
-Xtrata's artist portal is the no-code control layer. The SDK is the reusable build layer for third-party apps.
+Xtrata's creator portal is the no-code control layer. The SDK is the reusable build layer for third-party apps.
 
 ### What this means in practice
 - Artists can launch and manage drops in \`/manage\` without touching raw contract code.
@@ -934,23 +936,11 @@ const buildMintStateLabel = (status: PublicLiveMintStatus | null) => {
 const resolvePublicCollectionCoverUrl = (collection: PublicLiveCollectionRecord) => {
   const metadata = toRecord(collection.metadata);
   const collectionPage = toRecord(metadata?.collectionPage);
-  const coverImage = toRecord(collectionPage?.coverImage);
-  const source = toText(coverImage?.source);
-  const collectionId = toText(collection.id);
-  if (source === 'collection-asset') {
-    const assetId = toText(coverImage?.assetId);
-    if (!collectionId || !assetId) {
-      return null;
-    }
-    return `/collections/${encodeURIComponent(collectionId)}/asset-preview?assetId=${encodeURIComponent(assetId)}`;
-  }
-  if (source === 'inscribed-image-url') {
-    const imageUrl = toText(coverImage?.imageUrl);
-    if (imageUrl) {
-      return imageUrl;
-    }
-  }
-  return null;
+  return resolveCollectionCoverImageUrl({
+    coverImage: collectionPage?.coverImage,
+    collectionId: toText(collection.id),
+    fallbackCoreContractId: toText(metadata?.coreContractId)
+  });
 };
 
 const resolvePublicCollectionContractTarget = (
@@ -973,20 +963,6 @@ const resolvePublicCollectionContractTarget = (
   };
 };
 
-const resolveCollectionMintPaymentModel = (templateVersion: string) => {
-  const normalized = templateVersion.trim().toLowerCase();
-  if (!normalized) {
-    return 'unknown' as const;
-  }
-  if (normalized.includes('v1.0') || normalized.includes('v1.1')) {
-    return 'begin' as const;
-  }
-  if (normalized.includes('v1.2')) {
-    return 'seal' as const;
-  }
-  return 'unknown' as const;
-};
-
 const resolvePublicDisplayedMintPrice = (
   collection: PublicLiveCollectionCard,
   status: PublicLiveMintStatus | null
@@ -1002,7 +978,11 @@ const resolvePublicDisplayedMintPrice = (
   if (paymentModel !== 'seal') {
     return onChainPrice;
   }
-  if (collection.pricingMode.toLowerCase() !== 'advertised-includes-seal-fee') {
+  const pricingMode = collection.pricingMode.toLowerCase();
+  if (
+    pricingMode !== 'advertised-includes-seal-fee' &&
+    pricingMode !== 'advertised-includes-total-fees'
+  ) {
     return onChainPrice;
   }
   const advertised = collection.pricingAdvertisedMintPriceMicroStx;
@@ -1303,12 +1283,12 @@ const CREATIVE_STORY = {
 };
 
 const ARTIST_PORTAL_GUIDE = {
-  title: 'Artist Portal and collection mint guide',
-  intro: 'Public inscriptions are open. Partner contracts are available now.',
+  title: 'Creator Portal and collection mint guide',
+  intro: 'Public inscriptions are open. Collection contracts are available now.',
   access:
-    'Contact Jim.BTC (@JimDotBTC on X) to request access to the Artist Portal.',
+    'Contact Jim.BTC (@JimDotBTC on X) to request access to the Creator Portal.',
   portalSteps: [
-    'Connect your approved wallet in the Artist Portal.',
+    'Connect your approved wallet in the Creator Portal.',
     'Configure collection details, pricing, and sale settings.',
     'Upload assets, stage metadata, and publish when your drop is ready.',
     'Share your collection page so buyers can mint directly from your release.'
@@ -2104,7 +2084,7 @@ export default function PublicApp() {
                   type="button"
                   onClick={openArtistPortalGuide}
                 >
-                  Artist portal
+                  Creator portal
                 </button>
                 <button
                   className="button button--ghost"
@@ -2756,7 +2736,7 @@ export default function PublicApp() {
               </p>
 
               <section className="story-modal__section">
-                <h3>How the Artist Portal works</h3>
+                <h3>How the Creator Portal works</h3>
                 <ul className="story-modal__proof-list">
                   {ARTIST_PORTAL_GUIDE.portalSteps.map((step) => (
                     <li key={step}>{step}</li>
