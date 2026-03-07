@@ -968,23 +968,6 @@ export default function SimplePublicHome() {
       )}
 
       <main className="app__main simple-home__main">
-        <div id="home-viewer">
-          <ViewerScreen
-            contract={contract}
-            senderAddress={readOnlySender}
-            walletSession={walletSession}
-            walletLookupState={walletLookupState}
-            focusKey={viewerFocusKey ?? undefined}
-            collapsed={viewerCollapsed}
-            onToggleCollapse={() => setViewerCollapsed((prev) => !prev)}
-            isActiveTab={tabGuard.isActive}
-            mode={viewerMode}
-            onModeChange={setViewerMode}
-            modeLabels={{ collection: 'Explore', wallet: 'Wallet' }}
-            viewerTitles={{ collection: 'Live inscription viewer', wallet: 'Wallet viewer' }}
-          />
-        </div>
-
         <section className="panel app-section simple-home__drops" id="live-drops">
           <div className="panel__header">
             <div>
@@ -1114,6 +1097,23 @@ export default function SimplePublicHome() {
             )}
           </div>
         </section>
+
+        <div id="home-viewer">
+          <ViewerScreen
+            contract={contract}
+            senderAddress={readOnlySender}
+            walletSession={walletSession}
+            walletLookupState={walletLookupState}
+            focusKey={viewerFocusKey ?? undefined}
+            collapsed={viewerCollapsed}
+            onToggleCollapse={() => setViewerCollapsed((prev) => !prev)}
+            isActiveTab={tabGuard.isActive}
+            mode={viewerMode}
+            onModeChange={setViewerMode}
+            modeLabels={{ collection: 'Explore', wallet: 'Wallet' }}
+            viewerTitles={{ collection: 'Live inscription viewer', wallet: 'Wallet viewer' }}
+          />
+        </div>
 
         <MintScreen
           contract={contract}
