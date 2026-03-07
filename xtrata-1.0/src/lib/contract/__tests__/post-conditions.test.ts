@@ -1,8 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { ClarityType, NonFungibleConditionCode } from '@stacks/transactions';
+import {
+  ClarityType,
+  FungibleConditionCode,
+  NonFungibleConditionCode
+} from '@stacks/transactions';
 import { DEFAULT_CONTRACT } from '../config';
+import { getKnownFungibleAsset } from '../fungible-assets';
 import {
   DEFAULT_NFT_ASSET_NAME,
+  buildFungibleSpendPostCondition,
   buildContractTransferPostCondition,
   buildTransferPostCondition
 } from '../post-conditions';
@@ -44,5 +50,25 @@ describe('contract post conditions', () => {
       DEFAULT_NFT_ASSET_NAME
     );
     expect(condition.assetName.type).toBe(ClarityType.UInt);
+  });
+
+  it('builds a fungible spend post condition for known SIP-010 assets', () => {
+    const token = getKnownFungibleAsset(
+      'SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.usdcx'
+    );
+    if (!token) {
+      throw new Error('Expected known fungible token');
+    }
+
+    const condition = buildFungibleSpendPostCondition({
+      token,
+      senderAddress: 'SP2JXKMSH007NPYAQHKJPQMAQYAD90NQGTVJVQ02B',
+      amount: 2_500_000n
+    });
+
+    expect(condition.conditionCode).toBe(FungibleConditionCode.Equal);
+    expect(condition.assetInfo.contractName.content).toBe(token.contractName);
+    expect(condition.assetInfo.assetName.content).toBe(token.assetName);
+    expect(condition.amount).toBe(2_500_000n);
   });
 });

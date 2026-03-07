@@ -384,3 +384,62 @@ Source: `contracts/clarinet/contracts/xtrata-preinscribed-collection-sale-v1.0.c
 - `get-inventory(token-id)`
 - `is-token-available(token-id)`
 - `get-allowed-xtrata-contract()`
+
+## xtrata-commerce
+
+Source: `contracts/live/xtrata-commerce.clar`
+
+## Purpose
+- Fixed-price USDCx entitlement listings for Xtrata assets.
+- Sellers list asset ids they currently control in the core contract.
+- Buyers pay USDCx and receive one-time entitlements keyed by `{buyer, asset-id}`.
+
+## Core Functions
+- `create-listing(asset-id, price)`
+- `set-listing-active(listing-id, active)`
+- `buy-with-usdc(listing-id)`
+
+## Read-Only Functions
+- `get-owner()`
+- `get-core-contract()`
+- `get-payment-token()`
+- `get-next-listing-id()`
+- `get-listing(listing-id)`
+- `has-entitlement(asset-id, owner)`
+
+## Notes
+- No auctions, royalties, multi-splits, or x402 logic in this MVP.
+- Purchase path re-checks seller control against the core Xtrata contract before transferring USDCx.
+
+## xtrata-vault
+
+Source: `contracts/live/xtrata-vault.clar`
+
+## Purpose
+- sBTC reserve vaults tied to Xtrata asset ids.
+- Asset owners open one vault per asset, deposit additional sBTC, and track a reserve marker.
+- Premium access is derived from deterministic deposit thresholds.
+
+## Core Functions
+- `open-vault(asset-id, initial-amount)`
+- `deposit-sbtc(vault-id, amount)`
+- `mark-reserved(vault-id, reserved)`
+
+## Read-Only Functions
+- `get-owner()`
+- `get-core-contract()`
+- `get-reserve-token()`
+- `get-next-vault-id()`
+- `get-vault(vault-id)`
+- `get-tier-for-amount(amount)`
+- `has-premium-access(asset-id, user)`
+
+## Tier Thresholds
+- `u0` below `TIER-1-MIN`
+- `u1` at or above `TIER-1-MIN`
+- `u2` at or above `TIER-2-MIN`
+- `u3` at or above `TIER-3-MIN`
+
+## Notes
+- No withdrawals or vault ownership migration in this MVP.
+- Vault actions re-check core asset ownership before allowing top-ups or reserve-state changes.

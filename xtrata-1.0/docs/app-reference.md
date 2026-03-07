@@ -53,6 +53,9 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 - `src/screens/CampaignConsoleScreen.tsx` owns the campaign console (drafts, assets, AI copy, post runner).
 - `src/screens/ViewerScreen.tsx` owns the collection viewer grid, selection logic, and detailed preview panel.
 - `src/screens/MyWalletScreen.tsx` owns the wallet grid, pagination, selection, and wallet preview panel.
+- `src/screens/CommerceScreen.tsx` owns the dedicated USDCx commerce UI (contract selection, listing lookup, listing creation, purchase, and entitlement checks).
+- `src/screens/PublicCommerceScreen.tsx` wraps the public-facing commerce view around the default registry contract.
+- `src/screens/VaultScreen.tsx` owns the dedicated sBTC vault UI (contract selection, vault lookup, tier checks, premium access checks, and owner vault actions).
 - `src/components/TokenCardMedia.tsx` renders grid cell media (image/audio/video/html/text) and handles per-token loading.
 - `src/components/TokenContentPreview.tsx` renders the large preview, resolves content, and exposes preview actions.
 
@@ -73,11 +76,17 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 ## Contracts, network, and wallet plumbing
 
 - `src/data/contract-registry.json` stores the named contract list used by the selector.
+- `src/data/commerce-registry.json` stores the app-side commerce contract list used for USDCx listing/purchase helpers.
+- `src/data/vault-registry.json` stores the app-side vault contract list used for sBTC premium/reserve helpers.
 - `src/lib/contract/registry.ts` loads the registry, normalizes entries, and exposes selection helpers.
 - `src/lib/contract/config.ts` defines contract config types and helpers like `getContractId`.
 - `src/lib/contract/client.ts` builds contract call options and read-only callers.
 - `src/lib/contract/read-only.ts` wraps read-only calls with retry behavior.
 - `src/lib/contract/selection.ts` manages contract selection logic for UI defaults.
+- `src/lib/contract/fungible-assets.ts` maps known SIP-010 token contracts used by first-party commerce and vault flows to the asset metadata needed for wallet post-conditions.
+- `src/lib/commerce/registry.ts`, `src/lib/commerce/contract.ts`, `src/lib/commerce/client.ts`, `src/lib/commerce/parsers.ts`, and `src/lib/commerce/types.ts` provide registry loading, contract-id parsing, transaction builders, and read-only helpers for `xtrata-commerce`.
+- `src/lib/vault/registry.ts`, `src/lib/vault/contract.ts`, `src/lib/vault/client.ts`, `src/lib/vault/parsers.ts`, and `src/lib/vault/types.ts` provide registry loading, contract-id parsing, transaction builders, and read-only helpers for `xtrata-vault`.
+- `src/lib/utils/amounts.ts` parses and formats fixed-decimal SIP-010 token amounts used by commerce and vault forms.
 - `src/lib/utils/tab-guard.ts` manages multi-tab activity so only one tab performs heavy reads.
 - `src/lib/network/config.ts` defines network defaults and endpoints.
 - `src/lib/network/stacks.ts` builds Stacks network objects.
@@ -144,6 +153,10 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 ## Tests and fixtures
 
 - `src/lib/**/__tests__/*.test.ts` covers unit tests for protocol, viewer, network, contract, and wallet utilities.
+- `src/lib/contract/__tests__/config.test.ts`, `src/lib/contract/__tests__/fungible-assets.test.ts`, and `src/lib/contract/__tests__/post-conditions.test.ts` cover generic contract-id parsing plus fungible/NFT post-condition helpers used by the new commerce and vault screens.
+- `src/lib/commerce/__tests__/*.test.ts` covers commerce registry, contract-id parsing, Clarity response parsing, and transaction/read-only helper behavior.
+- `src/lib/vault/__tests__/*.test.ts` covers vault registry, contract-id parsing, Clarity response parsing, and transaction/read-only helper behavior.
+- `src/lib/utils/__tests__/amounts.test.ts` covers fixed-decimal SIP-010 amount parsing/formatting used by commerce and vault input handling.
 - `src/lib/collection-mint/__tests__/mining-fee-guidance.test.ts` validates collection mining-fee guidance label formatting.
 - `src/lib/skills/__tests__/xtrata-agent-skill.test.ts` validates the embedded AI training package (`XTRATA_AGENT_SKILL.md` + companion scripts) for required coverage and syntax checks.
 - `functions/lib/__tests__/fee-guidance.test.ts` and `functions/lib/__tests__/collection-fee-guidance-route.test.ts` cover backend mining-fee estimate math and route payload behavior.
