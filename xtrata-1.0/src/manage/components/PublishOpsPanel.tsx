@@ -338,6 +338,10 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
     () => toText(metadata?.templateVersion),
     [metadata]
   );
+  const supportsSingleTxTemplate = useMemo(
+    () => supportsCollectionSmallSingleTx(templateVersion),
+    [templateVersion]
+  );
   const largestFileUsesSingleTxFlow = useMemo(() => {
     if (!feeGuidance?.available) {
       return false;
@@ -345,12 +349,12 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
     if (readiness.mintType !== 'standard') {
       return false;
     }
-    if (!supportsCollectionSmallSingleTx(templateVersion)) {
+    if (!supportsSingleTxTemplate) {
       return false;
     }
     const chunkCount = Math.floor(feeGuidance.chunkCount);
     return chunkCount > 0 && chunkCount <= SMALL_MINT_HELPER_MAX_CHUNKS;
-  }, [feeGuidance, readiness.mintType, templateVersion]);
+  }, [feeGuidance, readiness.mintType, supportsSingleTxTemplate]);
 
   const callCollectionReadOnly = async (
     functionName: string,
@@ -1610,6 +1614,12 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
               </code>{' '}
               · {toChunkCountLabel(feeGuidance.chunkCount)} chunk(s) ·{' '}
               {feeGuidance.batchCount.toLocaleString()} upload batch(es)
+            </p>
+            <p className="field__hint">
+              Template single-tx support:{' '}
+              {supportsSingleTxTemplate
+                ? `Enabled (${templateVersion || 'v1.4+'}).`
+                : `Disabled (requires v1.4+, current template ${templateVersion || 'unknown'}).`}
             </p>
             <p className="field__hint">
               Mint flow for largest file:{' '}
