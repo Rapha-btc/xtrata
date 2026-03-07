@@ -33,8 +33,11 @@ ordering, and verification:
 1. Load [`XTRATA_AGENT_SKILL.md`](https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/XTRATA_AGENT_SKILL.md).
 2. Train chunking and hash routines exactly.
 3. Train fee estimation and spend-cap post-conditions.
-4. Train nonce sequencing for multi-transaction mint workflows.
-5. Train read-after-write verification before reporting success.
+4. Train nonce sequencing for multi-transaction mint workflows (explicit nonce
+   management: increment nonce after each confirmed tx to avoid mempool conflicts).
+5. Train confirmation gating: every tx (begin, each chunk batch, seal) must reach
+   `success` status before the next tx is broadcast.
+6. Train read-after-write verification before reporting success.
 
 ## Generic orchestration pattern
 
@@ -43,9 +46,9 @@ ordering, and verification:
    - fee-unit lookup
    - optional dedupe lookup
 2. Mint execution:
-   - begin
-   - upload batches
-   - seal
+   - begin (wait for confirmation)
+   - upload batches (wait for each batch to confirm before next)
+   - seal (all chunks must be confirmed on-chain first)
 3. Verification:
    - tx success checks
    - `get-inscription-meta`

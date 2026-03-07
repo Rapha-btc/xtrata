@@ -64,6 +64,9 @@ describe('deploy pricing lock helpers', () => {
       feeUnitMicroStx: 100_000n
     });
     expect(safe.worstCaseSealFeeMicroStx).toBe(400_000n);
+    expect(safe.worstCaseBeginFeeMicroStx).toBe(0n);
+    expect(safe.absorbedProtocolFeeMicroStx).toBe(400_000n);
+    expect(safe.absorptionModel).toBe('seal-fee-only');
     expect(safe.marginMicroStx).toBe(600_000n);
     expect(safe.safe).toBe(true);
 
@@ -74,5 +77,20 @@ describe('deploy pricing lock helpers', () => {
     });
     expect(unsafe.marginMicroStx).toBe(0n);
     expect(unsafe.safe).toBe(false);
+  });
+
+  it('uses single-tx total protocol fee floor when max chunks fit helper route', () => {
+    const evaluation = evaluateDeployPriceSafety({
+      mintPriceMicroStx: 1_000_000n,
+      maxChunks: 30,
+      feeUnitMicroStx: 100_000n
+    });
+    expect(evaluation.worstCaseSealFeeMicroStx).toBe(200_000n);
+    expect(evaluation.worstCaseBeginFeeMicroStx).toBe(100_000n);
+    expect(evaluation.absorbedProtocolFeeMicroStx).toBe(300_000n);
+    expect(evaluation.worstCaseTotalProtocolFeeMicroStx).toBe(300_000n);
+    expect(evaluation.absorptionModel).toBe('single-tx-total-fees');
+    expect(evaluation.marginMicroStx).toBe(700_000n);
+    expect(evaluation.safe).toBe(true);
   });
 });

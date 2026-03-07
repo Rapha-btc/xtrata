@@ -10,7 +10,7 @@ This guide tracks safe upgrade steps for SDK consumers.
 
 ## Current support policy
 
-- Active collection-mint target: `xtrata-collection-mint-v1.3`
+- Active collection-mint target: `xtrata-collection-mint-v1.4`
 - Archived for new SDK work: `v1.0`, `v1.1`
 
 If your app still depends on v1.0/v1.1 contract-specific behavior, keep those integrations in legacy codepaths and avoid adding new SDK feature assumptions there.

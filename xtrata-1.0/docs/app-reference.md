@@ -119,7 +119,7 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 - `docs/sdk/test-gates.md` defines required tests and release-quality gates.
 - `docs/sdk/changelog.md` tracks completed delivery iterations.
 - `docs/sdk/compatibility-matrix.md` tracks protocol/template version support and SDK readiness status.
-  - Active collection-mint SDK target: `xtrata-collection-mint-v1.3` (`v1.0`/`v1.1` archived for new SDK work).
+  - Active collection-mint SDK target: `xtrata-collection-mint-v1.4` (`v1.0`/`v1.1` archived for new SDK work).
   - SDK implementation status: fully implemented and release-automated.
 - `docs/sdk/quickstart-first-30-minutes.md` is the beginner onboarding path.
 - `docs/sdk/quickstart-simple-mode.md` is the default onboarding path for low-friction SDK integration.

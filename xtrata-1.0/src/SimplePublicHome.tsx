@@ -9,6 +9,8 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { PUBLIC_CONTRACT, PUBLIC_MINT_RESTRICTIONS } from './config/public';
 import { getContractId } from './lib/contract/config';
+import { resolveCollectionMintPaymentModel } from './lib/collection-mint/payment-model';
+import { resolveCollectionCoverImageUrl } from './lib/collections/cover-image';
 import { resolveCollectionContractLink } from './lib/collections/contract-link';
 import { isRateLimitError, isReadOnlyNetworkError } from './lib/contract/read-only';
 import { getApiBaseUrls } from './lib/network/config';
@@ -294,20 +296,6 @@ const formatMicroStxLabel = (value: bigint | null) => {
   return `${whole.toString()}.${fraction.toString().padStart(6, '0')} STX`;
 };
 
-const resolveCollectionMintPaymentModel = (templateVersion: string) => {
-  const normalized = templateVersion.trim().toLowerCase();
-  if (!normalized) {
-    return 'unknown' as const;
-  }
-  if (normalized.includes('v1.0') || normalized.includes('v1.1')) {
-    return 'begin' as const;
-  }
-  if (normalized.includes('v1.2')) {
-    return 'seal' as const;
-  }
-  return 'unknown' as const;
-};
-
 const resolveDisplayedMintPrice = (
   collection: LiveCollectionCard,
   status: LiveMintStatus | null
@@ -323,7 +311,11 @@ const resolveDisplayedMintPrice = (
   if (paymentModel !== 'seal') {
     return onChainPrice;
   }
-  if (collection.pricingMode.toLowerCase() !== 'advertised-includes-seal-fee') {
+  const pricingMode = collection.pricingMode.toLowerCase();
+  if (
+    pricingMode !== 'advertised-includes-seal-fee' &&
+    pricingMode !== 'advertised-includes-total-fees'
+  ) {
     return onChainPrice;
   }
   const advertised = collection.pricingAdvertisedMintPriceMicroStx;
@@ -458,23 +450,11 @@ const loadPublicMintStatus = async (
 const resolveCollectionCoverUrl = (collection: LiveCollectionRecord) => {
   const metadata = toRecord(collection.metadata);
   const collectionPage = toRecord(metadata?.collectionPage);
-  const coverImage = toRecord(collectionPage?.coverImage);
-  const source = toText(coverImage?.source);
-  const collectionId = toText(collection.id);
-  if (source === 'collection-asset') {
-    const assetId = toText(coverImage?.assetId);
-    if (!collectionId || !assetId) {
-      return null;
-    }
-    return `/collections/${encodeURIComponent(collectionId)}/asset-preview?assetId=${encodeURIComponent(assetId)}`;
-  }
-  if (source === 'inscribed-image-url') {
-    const imageUrl = toText(coverImage?.imageUrl);
-    if (imageUrl) {
-      return imageUrl;
-    }
-  }
-  return null;
+  return resolveCollectionCoverImageUrl({
+    coverImage: collectionPage?.coverImage,
+    collectionId: toText(collection.id),
+    fallbackCoreContractId: toText(metadata?.coreContractId)
+  });
 };
 
 const parseLiveCollectionsResponse = async (response: Response) => {

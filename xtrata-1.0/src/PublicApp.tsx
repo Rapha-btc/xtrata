@@ -9,6 +9,8 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { PUBLIC_CONTRACT, PUBLIC_MINT_RESTRICTIONS } from './config/public';
 import { getContractId } from './lib/contract/config';
+import { resolveCollectionMintPaymentModel } from './lib/collection-mint/payment-model';
+import { resolveCollectionCoverImageUrl } from './lib/collections/cover-image';
 import { resolveCollectionContractLink } from './lib/collections/contract-link';
 import { useBnsAddress } from './lib/bns/hooks';
 import { RATE_LIMIT_WARNING_EVENT } from './lib/network/rate-limit';
@@ -284,7 +286,7 @@ This section is a plain-language reference for artists and collection teams.
 
 ### Contracts and modules
 - Core NFT contract: \`xtrata-v2-1-0\`
-- Collection mint contract template: \`xtrata-collection-mint-v1.3\`
+- Collection mint contract template: \`xtrata-collection-mint-v1.4\`
 - Pre-inscribed sale contract template: \`xtrata-preinscribed-collection-sale-v1.0\`
 - Admin module: Collection mint admin
 - Admin module: Pre-inscribed sale admin
@@ -934,23 +936,11 @@ const buildMintStateLabel = (status: PublicLiveMintStatus | null) => {
 const resolvePublicCollectionCoverUrl = (collection: PublicLiveCollectionRecord) => {
   const metadata = toRecord(collection.metadata);
   const collectionPage = toRecord(metadata?.collectionPage);
-  const coverImage = toRecord(collectionPage?.coverImage);
-  const source = toText(coverImage?.source);
-  const collectionId = toText(collection.id);
-  if (source === 'collection-asset') {
-    const assetId = toText(coverImage?.assetId);
-    if (!collectionId || !assetId) {
-      return null;
-    }
-    return `/collections/${encodeURIComponent(collectionId)}/asset-preview?assetId=${encodeURIComponent(assetId)}`;
-  }
-  if (source === 'inscribed-image-url') {
-    const imageUrl = toText(coverImage?.imageUrl);
-    if (imageUrl) {
-      return imageUrl;
-    }
-  }
-  return null;
+  return resolveCollectionCoverImageUrl({
+    coverImage: collectionPage?.coverImage,
+    collectionId: toText(collection.id),
+    fallbackCoreContractId: toText(metadata?.coreContractId)
+  });
 };
 
 const resolvePublicCollectionContractTarget = (
@@ -973,20 +963,6 @@ const resolvePublicCollectionContractTarget = (
   };
 };
 
-const resolveCollectionMintPaymentModel = (templateVersion: string) => {
-  const normalized = templateVersion.trim().toLowerCase();
-  if (!normalized) {
-    return 'unknown' as const;
-  }
-  if (normalized.includes('v1.0') || normalized.includes('v1.1')) {
-    return 'begin' as const;
-  }
-  if (normalized.includes('v1.2')) {
-    return 'seal' as const;
-  }
-  return 'unknown' as const;
-};
-
 const resolvePublicDisplayedMintPrice = (
   collection: PublicLiveCollectionCard,
   status: PublicLiveMintStatus | null
@@ -1002,7 +978,11 @@ const resolvePublicDisplayedMintPrice = (
   if (paymentModel !== 'seal') {
     return onChainPrice;
   }
-  if (collection.pricingMode.toLowerCase() !== 'advertised-includes-seal-fee') {
+  const pricingMode = collection.pricingMode.toLowerCase();
+  if (
+    pricingMode !== 'advertised-includes-seal-fee' &&
+    pricingMode !== 'advertised-includes-total-fees'
+  ) {
     return onChainPrice;
   }
   const advertised = collection.pricingAdvertisedMintPriceMicroStx;

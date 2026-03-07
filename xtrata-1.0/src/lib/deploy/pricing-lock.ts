@@ -1,4 +1,5 @@
 import { MAX_BATCH_SIZE } from '../chunking/hash';
+import { SMALL_MINT_HELPER_MAX_CHUNKS } from '../mint/constants';
 
 export type DeployPricingLockSnapshot = {
   version: 'v1';
@@ -69,15 +70,37 @@ export const evaluateDeployPriceSafety = (params: {
   mintPriceMicroStx: bigint;
   maxChunks: number;
   feeUnitMicroStx: bigint;
+  singleTxChunkThreshold?: number;
 }) => {
+  const singleTxChunkThreshold =
+    typeof params.singleTxChunkThreshold === 'number' &&
+    Number.isFinite(params.singleTxChunkThreshold) &&
+    params.singleTxChunkThreshold > 0
+      ? Math.floor(params.singleTxChunkThreshold)
+      : SMALL_MINT_HELPER_MAX_CHUNKS;
   const estimate = estimateWorstCaseSealFeeMicroStx({
     maxChunks: params.maxChunks,
     feeUnitMicroStx: params.feeUnitMicroStx
   });
-  const marginMicroStx = params.mintPriceMicroStx - estimate.sealMicroStx;
+  const normalizedMaxChunks = Math.max(0, Math.floor(params.maxChunks));
+  const useSingleTxFeeProfile =
+    normalizedMaxChunks > 0 && normalizedMaxChunks <= singleTxChunkThreshold;
+  const worstCaseBeginFeeMicroStx = useSingleTxFeeProfile
+    ? params.feeUnitMicroStx
+    : 0n;
+  const absorbedProtocolFeeMicroStx =
+    estimate.sealMicroStx + worstCaseBeginFeeMicroStx;
+  const marginMicroStx = params.mintPriceMicroStx - absorbedProtocolFeeMicroStx;
   return {
     feeBatches: estimate.batchCount,
     worstCaseSealFeeMicroStx: estimate.sealMicroStx,
+    worstCaseBeginFeeMicroStx,
+    absorbedProtocolFeeMicroStx,
+    worstCaseTotalProtocolFeeMicroStx: absorbedProtocolFeeMicroStx,
+    absorptionModel: useSingleTxFeeProfile
+      ? ('single-tx-total-fees' as const)
+      : ('seal-fee-only' as const),
+    singleTxChunkThreshold,
     marginMicroStx,
     safe: marginMicroStx > 0n
   };

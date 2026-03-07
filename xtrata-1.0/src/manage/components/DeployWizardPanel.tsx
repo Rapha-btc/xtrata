@@ -25,6 +25,7 @@ import {
   deriveArtistCollectionSlug,
   deriveArtistCollectionSymbol,
   deriveArtistContractName,
+  normalizeArtistDeployDescription,
   resolveArtistDeployCoreTarget,
   type ArtistDeployCoreTarget,
   type ArtistMintType
@@ -39,8 +40,7 @@ import {
   parseDeployPricingLockSnapshot
 } from '../../lib/deploy/pricing-lock';
 import InfoTooltip from './InfoTooltip';
-import legacyV11TemplateSource from '../../../contracts/clarinet/contracts/xtrata-collection-mint-v1.1.clar?raw';
-import standardTemplateSource from '../../../contracts/clarinet/contracts/xtrata-collection-mint-v1.3.clar?raw';
+import standardTemplateSource from '../../../contracts/clarinet/contracts/xtrata-collection-mint-v1.4.clar?raw';
 import preinscribedTemplateSource from '../../../contracts/clarinet/contracts/xtrata-preinscribed-collection-sale-v1.0.clar?raw';
 
 type CollectionDraft = {
@@ -66,6 +66,7 @@ const DEPLOY_DEBUG_LOG_LIMIT = 60;
 const DEPLOY_CLARITY_VERSION = 2;
 const DEPLOY_DEBUG_TEXT_MAX = 1200;
 const DEPLOY_DEBUG_VERSION = 'deploy-debug-v5-2026-02-23';
+const DEPLOY_DEBUG_TAG = 'debug-1.4';
 const DEPLOY_SOURCE_COMPACTION_MODE = 'strip-indent-comments-blank-lines';
 const MANAGE_APP_ICON =
   'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%23f97316"/><path d="M18 20h28v6H18zm0 12h28v6H18zm0 12h28v6H18z" fill="white"/></svg>';
@@ -100,10 +101,10 @@ const formatMicroStxInput = (value: bigint) => {
   return `${whole.toString()}.${fractionText}`;
 };
 
-const resolveOnChainMintPriceAfterSealAbsorption = (params: {
+const resolveOnChainMintPriceAfterProtocolAbsorption = (params: {
   advertisedMintPriceMicroStx: bigint;
-  worstCaseSealFeeMicroStx: bigint;
-}) => params.advertisedMintPriceMicroStx - params.worstCaseSealFeeMicroStx;
+  absorbedProtocolFeeMicroStx: bigint;
+}) => params.advertisedMintPriceMicroStx - params.absorbedProtocolFeeMicroStx;
 
 const readCoreFeeUnitMicroStx = async (params: {
   coreTarget: ArtistDeployCoreTarget;
@@ -196,7 +197,7 @@ const compactClaritySourceForDeploy = (source: string) => {
   return result.length > 0 ? result : source;
 };
 
-type DeployTemplateMode = 'standard-v1.3' | 'legacy-v1.1-compat';
+type DeployTemplateMode = 'standard-v1.4';
 
 type ContractNameAvailability = {
   exists: boolean;
@@ -300,7 +301,9 @@ const buildDraftFormFromCollection = (
   }
 
   const resolvedSymbol = toText(collectionMetadata?.symbol);
-  const resolvedDescription = toText(collectionMetadata?.description);
+  const resolvedDescription = normalizeArtistDeployDescription(
+    toText(collectionMetadata?.description)
+  );
   const resolvedSupply = toPositiveIntegerText(collectionMetadata?.supply) ?? '1000';
   const resolvedMintPriceStx = toText(collectionMetadata?.mintPriceStx) || '0';
   const resolvedArtistAddress = toText(recipients?.artist);
@@ -336,7 +339,10 @@ const parseStoredDraft = (value: string | null): DeployWizardDraftStorage | null
         typeof payload.collectionName === 'string' ? payload.collectionName : '',
       symbol: typeof payload.symbol === 'string' ? payload.symbol : '',
       symbolTouched: payload.symbolTouched === true,
-      description: typeof payload.description === 'string' ? payload.description : '',
+      description:
+        typeof payload.description === 'string'
+          ? normalizeArtistDeployDescription(payload.description)
+          : '',
       supply: typeof payload.supply === 'string' ? payload.supply : '1000',
       mintPriceStx:
         typeof payload.mintPriceStx === 'string' ? payload.mintPriceStx : '0',
@@ -390,8 +396,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
   const [deployPending, setDeployPending] = useState(false);
   const [draftPending, setDraftPending] = useState(false);
   const [selectedDraftLoading, setSelectedDraftLoading] = useState(false);
-  const [deployTemplateMode, setDeployTemplateMode] =
-    useState<DeployTemplateMode>('standard-v1.3');
+  const deployTemplateMode: DeployTemplateMode = 'standard-v1.4';
   const [deployAttemptId, setDeployAttemptId] = useState<string | null>(null);
   const [deployDebugLog, setDeployDebugLog] = useState<string[]>([]);
   const [coreFeeUnitMicroStx, setCoreFeeUnitMicroStx] = useState<bigint | null>(null);
@@ -406,27 +411,13 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     () => props.activeCollectionId?.trim() ?? '',
     [props.activeCollectionId]
   );
-  const debugEnabled = useMemo(() => {
+  const debug14Enabled = useMemo(() => {
     if (typeof window === 'undefined') {
       return false;
     }
-    return new URLSearchParams(window.location.search).get('debug') === '1';
+    return new URLSearchParams(window.location.search).get('debug') === '1.4';
   }, []);
-  const useLegacyV11CompatTemplate =
-    mintType === 'standard' && deployTemplateMode === 'legacy-v1.1-compat';
-  const selectedStandardTemplateSource = useMemo(
-    () =>
-      useLegacyV11CompatTemplate
-        ? legacyV11TemplateSource
-        : standardTemplateSource,
-    [useLegacyV11CompatTemplate]
-  );
-
-  useEffect(() => {
-    if (mintType !== 'standard' && deployTemplateMode !== 'standard-v1.3') {
-      setDeployTemplateMode('standard-v1.3');
-    }
-  }, [mintType, deployTemplateMode]);
+  const selectedStandardTemplateSource = standardTemplateSource;
 
   useEffect(() => {
     if (!reviewOpen || typeof window === 'undefined') {
@@ -480,7 +471,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       setCollectionName(stored.collectionName);
       setSymbol(stored.symbol);
       setSymbolTouched(stored.symbolTouched);
-      setDescription(stored.description);
+      setDescription(normalizeArtistDeployDescription(stored.description));
       setSupply(stored.supply);
       setMintPriceStx(stored.mintPriceStx);
       setMintType(stored.mintType);
@@ -597,7 +588,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     setCollectionName(hydrated.collectionName);
     setSymbol(hydrated.symbol);
     setSymbolTouched(hydrated.symbolTouched);
-    setDescription(hydrated.description);
+    setDescription(normalizeArtistDeployDescription(hydrated.description));
     setSupply(hydrated.supply);
     setMintPriceStx(hydrated.mintPriceStx);
     setMintType(hydrated.mintType);
@@ -953,6 +944,10 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       mintPriceMicroStx,
       feeUnitMicroStx: coreFeeUnitMicroStx,
       worstCaseSealFeeMicroStx: evaluation.worstCaseSealFeeMicroStx,
+      worstCaseBeginFeeMicroStx: evaluation.worstCaseBeginFeeMicroStx,
+      absorbedProtocolFeeMicroStx: evaluation.absorbedProtocolFeeMicroStx,
+      absorptionModel: evaluation.absorptionModel,
+      singleTxChunkThreshold: evaluation.singleTxChunkThreshold,
       feeBatches: evaluation.feeBatches,
       marginMicroStx: evaluation.marginMicroStx,
       safe: evaluation.safe
@@ -964,14 +959,14 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     deployBuild.resolved.mintPriceMicroStx
   ]);
   const deployAbsorbsWorstCaseSealFee =
-    mintType === 'standard' && !useLegacyV11CompatTemplate;
+    mintType === 'standard';
   const onChainMintPriceAfterAbsorptionMicroStx = useMemo(() => {
     if (!deployAbsorbsWorstCaseSealFee || !pricingPreflight) {
       return deployBuild.resolved.mintPriceMicroStx;
     }
-    return resolveOnChainMintPriceAfterSealAbsorption({
+    return resolveOnChainMintPriceAfterProtocolAbsorption({
       advertisedMintPriceMicroStx: deployBuild.resolved.mintPriceMicroStx,
-      worstCaseSealFeeMicroStx: pricingPreflight.worstCaseSealFeeMicroStx
+      absorbedProtocolFeeMicroStx: pricingPreflight.absorbedProtocolFeeMicroStx
     });
   }, [
     deployAbsorbsWorstCaseSealFee,
@@ -982,7 +977,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     if (mintType !== 'standard' || !pricingPreflight) {
       return null;
     }
-    return pricingPreflight.worstCaseSealFeeMicroStx + 1n;
+    return pricingPreflight.absorbedProtocolFeeMicroStx + 1n;
   }, [mintType, pricingPreflight]);
   const standardMintPriceLocked = mintType === 'standard' && !collectionDeployPricingLock;
   const mintPriceHintId = 'deploy-mint-price-hint';
@@ -990,6 +985,21 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     mintType === 'standard' &&
     minimumMintPriceMicroStx !== null &&
     deployBuild.resolved.mintPriceMicroStx < minimumMintPriceMicroStx;
+  const standardMintPriceFormatInvalid =
+    mintType === 'standard' &&
+    deployBuild.errors.some((error) =>
+      error.startsWith('Mint price must be a valid STX amount')
+    );
+  const standardMintPriceValidationState =
+    mintType !== 'standard' || standardMintPriceLocked
+      ? 'pending'
+      : standardMintPriceFormatInvalid
+        ? 'invalid'
+        : pricingPreflight === null
+          ? 'pending'
+          : pricingPreflight.safe
+            ? 'valid'
+            : 'invalid';
   const reviewDeployBlockedByPricing =
     mintType === 'standard' &&
     (!collectionDeployPricingLock || !pricingPreflight || !pricingPreflight.safe);
@@ -1025,28 +1035,12 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     }
   }, [standardMintPriceLocked]);
 
-  useEffect(() => {
-    if (mintType !== 'standard' || minimumMintPriceMicroStx === null) {
-      return;
-    }
-    if (deployBuild.resolved.mintPriceMicroStx >= minimumMintPriceMicroStx) {
-      return;
-    }
-    setMintPriceStx(formatMicroStxInput(minimumMintPriceMicroStx));
-  }, [
-    mintType,
-    minimumMintPriceMicroStx,
-    deployBuild.resolved.mintPriceMicroStx
-  ]);
-
   const preflightTemplateVersion = useMemo(() => {
     if (mintType === 'pre-inscribed') {
       return 'xtrata-preinscribed-collection-sale-v1.0';
     }
-    return useLegacyV11CompatTemplate
-      ? 'xtrata-collection-mint-v1.1'
-      : 'xtrata-collection-mint-v1.3';
-  }, [mintType, useLegacyV11CompatTemplate]);
+    return 'xtrata-collection-mint-v1.4';
+  }, [mintType]);
   const deploySourceByteLength = useMemo(
     () => new TextEncoder().encode(deployBuild.source).byteLength,
     [deployBuild.source]
@@ -1075,6 +1069,17 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         deployAbsorbsWorstCaseSealFee && pricingPreflight
           ? pricingPreflight.worstCaseSealFeeMicroStx.toString()
           : null,
+      absorbedBeginFeeMicroStx:
+        deployAbsorbsWorstCaseSealFee && pricingPreflight
+          ? pricingPreflight.worstCaseBeginFeeMicroStx.toString()
+          : null,
+      absorbedProtocolFeeMicroStx:
+        deployAbsorbsWorstCaseSealFee && pricingPreflight
+          ? pricingPreflight.absorbedProtocolFeeMicroStx.toString()
+          : null,
+      pricingAbsorptionModel: pricingPreflight
+        ? pricingPreflight.absorptionModel
+        : null,
       onChainMintPriceMicroStx:
         mintType === 'standard'
           ? onChainMintPriceAfterAbsorptionMicroStx.toString()
@@ -1122,6 +1127,22 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     // eslint-disable-next-line no-console
     console.debug('[xtrata:deploy]', message, details ?? {});
   };
+
+  const appendDeployDebug14 = useCallback(
+    (stage: string, details?: Record<string, unknown>) => {
+      if (!debug14Enabled) {
+        return;
+      }
+      const payload = {
+        stage,
+        timestamp: new Date().toISOString(),
+        ...(details ?? {})
+      };
+      // eslint-disable-next-line no-console
+      console.info(`[${DEPLOY_DEBUG_TAG}]`, payload);
+    },
+    [debug14Enabled]
+  );
 
   const refreshSelectedDraft = useCallback(
     async (reason: string, options?: { notifyJourney?: boolean }) => {
@@ -1190,8 +1211,9 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     const details = {
       debugVersion: DEPLOY_DEBUG_VERSION,
       clarityVersion: DEPLOY_CLARITY_VERSION,
-      defaultDeployTemplateMode: 'standard-v1.3',
-      sourceCompactionMode: DEPLOY_SOURCE_COMPACTION_MODE
+      defaultDeployTemplateMode: 'standard-v1.4',
+      sourceCompactionMode: DEPLOY_SOURCE_COMPACTION_MODE,
+      debug14Enabled
     };
     const timestamp = new Date().toISOString();
     const line = `${timestamp} Runtime ready ${debugStringify(details)}`;
@@ -1201,7 +1223,8 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     ]);
     // eslint-disable-next-line no-console
     console.debug('[xtrata:deploy] Runtime ready', details);
-  }, []);
+    appendDeployDebug14('runtime-ready', details);
+  }, [appendDeployDebug14, debug14Enabled]);
 
   const handleOpenReview = async () => {
     setStatus(null);
@@ -1281,9 +1304,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     const templateVersion =
       mintType === 'pre-inscribed'
         ? 'xtrata-preinscribed-collection-sale-v1.0'
-        : useLegacyV11CompatTemplate
-          ? 'xtrata-collection-mint-v1.1'
-          : 'xtrata-collection-mint-v1.3';
+        : 'xtrata-collection-mint-v1.4';
 
     const draftMetadata = {
       mintType,
@@ -1378,6 +1399,10 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       attemptId,
       ...preflightSummary
     });
+    appendDeployDebug14('deploy-start', {
+      attemptId,
+      ...preflightSummary
+    });
 
     if (deployBuild.errors.length > 0) {
       appendDeployDebug('Deploy blocked by form validation', {
@@ -1458,20 +1483,12 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     }
 
     const slug = buildCollectionSlug(refreshBuild.resolved.collectionName);
-    let templateVersion =
+    const templateVersion =
       mintType === 'pre-inscribed'
         ? 'xtrata-preinscribed-collection-sale-v1.0'
-        : useLegacyV11CompatTemplate
-        ? 'xtrata-collection-mint-v1.1'
-        : 'xtrata-collection-mint-v1.3';
-    let sourceTemplateLabel = templateVersion;
+        : 'xtrata-collection-mint-v1.4';
+    const sourceTemplateLabel = templateVersion;
     let sourceBeforeCompaction = refreshBuild.source;
-    if (useLegacyV11CompatTemplate) {
-      appendDeployDebug('Using legacy v1.1 compatibility deploy template', {
-        attemptId,
-        templateVersion
-      });
-    }
 
     const draftMetadata = {
       mintType,
@@ -1611,17 +1628,24 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         feeUnitMicroStx: feeUnitMicroStx.toString(),
         feeBatches: evaluation.feeBatches,
         worstCaseSealFeeMicroStx: evaluation.worstCaseSealFeeMicroStx.toString(),
+        worstCaseBeginFeeMicroStx: evaluation.worstCaseBeginFeeMicroStx.toString(),
+        absorbedProtocolFeeMicroStx: evaluation.absorbedProtocolFeeMicroStx.toString(),
+        absorptionModel: evaluation.absorptionModel,
         mintPriceMicroStx: mintPriceMicroStx.toString(),
         marginMicroStx: evaluation.marginMicroStx.toString(),
         safe: evaluation.safe
       });
       if (!evaluation.safe) {
+        const floorLabel =
+          evaluation.absorptionModel === 'single-tx-total-fees'
+            ? `single-tx protocol fee floor (begin + seal, <=${evaluation.singleTxChunkThreshold.toString()} chunks)`
+            : 'worst-case seal protocol fee';
         setDeployPending(false);
         setStatus(
           `Deploy blocked. Advertised mint price (${formatMicroStx(
             mintPriceMicroStx
-          )}) must be greater than the worst-case seal protocol fee (${formatMicroStx(
-            evaluation.worstCaseSealFeeMicroStx
+          )}) must be greater than the ${floorLabel} (${formatMicroStx(
+            evaluation.absorbedProtocolFeeMicroStx
           )}) for your largest locked asset. Increase price or reduce max chunk size, then lock again.`
         );
         return;
@@ -1629,37 +1653,46 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     }
 
     let deployMintPriceStxForSource = mintPriceStx;
+    let deployAbsorbedProtocolFeeMicroStx = 0n;
     let deployAbsorbedSealFeeMicroStx = 0n;
+    let deployAbsorbedBeginFeeMicroStx = 0n;
+    let deployPricingAbsorptionModel: string | null = null;
     let deployPricingLockMaxChunks: number | null = null;
     let deployWorstCaseSealFeeMicroStx: bigint | null = null;
     if (mintType === 'standard' && deployPricingLock && deployPricingEvaluation) {
       deployPricingLockMaxChunks = deployPricingLock.maxChunks;
       deployWorstCaseSealFeeMicroStx =
         deployPricingEvaluation.worstCaseSealFeeMicroStx;
-      if (!useLegacyV11CompatTemplate) {
-        deployAbsorbedSealFeeMicroStx =
-          deployPricingEvaluation.worstCaseSealFeeMicroStx;
-        const onChainMintPriceMicroStx =
-          resolveOnChainMintPriceAfterSealAbsorption({
-            advertisedMintPriceMicroStx: refreshBuild.resolved.mintPriceMicroStx,
-            worstCaseSealFeeMicroStx: deployAbsorbedSealFeeMicroStx
-          });
-        if (onChainMintPriceMicroStx < 0n) {
-          setDeployPending(false);
-          setStatus(
-            'Deploy blocked. Unable to absorb seal protocol fee into on-chain mint price with current values.'
-          );
-          return;
-        }
-        deployMintPriceStxForSource = formatMicroStxInput(onChainMintPriceMicroStx);
-        appendDeployDebug('Seal fee absorption prepared for deploy source', {
-          attemptId,
-          advertisedMintPriceMicroStx:
-            refreshBuild.resolved.mintPriceMicroStx.toString(),
-          worstCaseSealFeeMicroStx: deployAbsorbedSealFeeMicroStx.toString(),
-          onChainMintPriceMicroStx: onChainMintPriceMicroStx.toString()
+      deployAbsorbedBeginFeeMicroStx =
+        deployPricingEvaluation.worstCaseBeginFeeMicroStx;
+      deployAbsorbedProtocolFeeMicroStx =
+        deployPricingEvaluation.absorbedProtocolFeeMicroStx;
+      deployAbsorbedSealFeeMicroStx =
+        deployPricingEvaluation.worstCaseSealFeeMicroStx;
+      deployPricingAbsorptionModel = deployPricingEvaluation.absorptionModel;
+      const onChainMintPriceMicroStx =
+        resolveOnChainMintPriceAfterProtocolAbsorption({
+          advertisedMintPriceMicroStx: refreshBuild.resolved.mintPriceMicroStx,
+          absorbedProtocolFeeMicroStx: deployAbsorbedProtocolFeeMicroStx
         });
+      if (onChainMintPriceMicroStx < 0n) {
+        setDeployPending(false);
+        setStatus(
+          'Deploy blocked. Unable to absorb protocol fee floor into on-chain mint price with current values.'
+        );
+        return;
       }
+      deployMintPriceStxForSource = formatMicroStxInput(onChainMintPriceMicroStx);
+      appendDeployDebug('Protocol fee absorption prepared for deploy source', {
+        attemptId,
+        advertisedMintPriceMicroStx:
+          refreshBuild.resolved.mintPriceMicroStx.toString(),
+        absorptionModel: deployPricingAbsorptionModel,
+        absorbedProtocolFeeMicroStx: deployAbsorbedProtocolFeeMicroStx.toString(),
+        absorbedBeginFeeMicroStx: deployAbsorbedBeginFeeMicroStx.toString(),
+        worstCaseSealFeeMicroStx: deployAbsorbedSealFeeMicroStx.toString(),
+        onChainMintPriceMicroStx: onChainMintPriceMicroStx.toString()
+      });
     }
 
     const deploySourceBuild = buildArtistDeployContractSource({
@@ -1696,12 +1729,17 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       ...draftMetadata,
       pricing: {
         mode:
-          mintType === 'standard' && !useLegacyV11CompatTemplate
-            ? 'advertised-includes-seal-fee'
+          mintType === 'standard'
+            ? deployPricingAbsorptionModel === 'single-tx-total-fees'
+              ? 'advertised-includes-total-fees'
+              : 'advertised-includes-seal-fee'
             : 'raw-on-chain',
         advertisedMintPriceMicroStx: refreshBuild.resolved.mintPriceMicroStx.toString(),
         onChainMintPriceMicroStx: deploySourceBuild.resolved.mintPriceMicroStx.toString(),
         absorbedSealFeeMicroStx: deployAbsorbedSealFeeMicroStx.toString(),
+        absorbedBeginFeeMicroStx: deployAbsorbedBeginFeeMicroStx.toString(),
+        absorbedProtocolFeeMicroStx: deployAbsorbedProtocolFeeMicroStx.toString(),
+        absorptionModel: deployPricingAbsorptionModel,
         worstCaseSealFeeMicroStx:
           deployWorstCaseSealFeeMicroStx !== null
             ? deployWorstCaseSealFeeMicroStx.toString()
@@ -1713,7 +1751,13 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     const contractName = deriveArtistContractName({
       collectionName: refreshBuild.resolved.collectionName,
       mintType,
-      seed: created.id
+      seed: created.id,
+      slug: created.slug
+    });
+    appendDeployDebug14('contract-name-derived', {
+      attemptId,
+      contractName,
+      contractNameLength: contractName.length
     });
     appendDeployDebug('Checking contract-name availability', {
       attemptId,
@@ -1755,6 +1799,17 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     const sourceOriginalBytes = new TextEncoder().encode(sourceBeforeCompaction).byteLength;
     const sourceForDeployBytes = new TextEncoder().encode(sourceForDeploy).byteLength;
     const sourceCompacted = sourceForDeploy !== sourceBeforeCompaction;
+    appendDeployDebug14('deploy-source-prepared', {
+      attemptId,
+      contractName,
+      contractNameLength: contractName.length,
+      sourceLengthChars: sourceBeforeCompaction.length,
+      sourceLengthBytes: sourceOriginalBytes,
+      deploySourceLengthChars: sourceForDeploy.length,
+      deploySourceLengthBytes: sourceForDeployBytes,
+      sourceCompacted,
+      codeBody: sourceForDeploy
+    });
 
     setReviewOpen(false);
     setStatus('Open your wallet and approve contract deployment.');
@@ -1777,6 +1832,29 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                 attemptId,
                 payloadLength: payload.length
               });
+              appendDeployDebug14('provider-transaction-request:invoked', {
+                attemptId,
+                payloadLength: payload.length,
+                payload
+              });
+              if (debug14Enabled) {
+                try {
+                  const parsedPayload = JSON.parse(payload) as Record<string, unknown>;
+                  appendDeployDebug14('provider-transaction-request:parsed', {
+                    attemptId,
+                    payloadKeys: Object.keys(parsedPayload),
+                    method:
+                      typeof parsedPayload.method === 'string'
+                        ? parsedPayload.method
+                        : null
+                  });
+                } catch (parseError) {
+                  appendDeployDebug14('provider-transaction-request:parse-error', {
+                    attemptId,
+                    error: toErrorMessage(parseError)
+                  });
+                }
+              }
               try {
                 const providerResult = await selectedProvider.transactionRequest.call(
                   selectedProvider,
@@ -1789,9 +1867,21 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                       ? providerResult.txId
                       : null
                 });
+                appendDeployDebug14('provider-transaction-request:resolved', {
+                  attemptId,
+                  txId:
+                    'txId' in providerResult && typeof providerResult.txId === 'string'
+                      ? providerResult.txId
+                      : null,
+                  providerResult
+                });
                 return providerResult;
               } catch (error) {
                 appendDeployDebug('Provider transactionRequest rejected', {
+                  attemptId,
+                  ...extractErrorDebug(error)
+                });
+                appendDeployDebug14('provider-transaction-request:rejected', {
                   attemptId,
                   ...extractErrorDebug(error)
                 });
@@ -1815,9 +1905,26 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         sourceCompacted,
         sourceCompactionMode: DEPLOY_SOURCE_COMPACTION_MODE,
         coreContractId: networkCoreTarget.contractId,
+        pricingAbsorptionModel: deployPricingAbsorptionModel,
         advertisedMintPriceMicroStx: refreshBuild.resolved.mintPriceMicroStx.toString(),
         onChainMintPriceMicroStx: deploySourceBuild.resolved.mintPriceMicroStx.toString(),
+        absorbedProtocolFeeMicroStx: deployAbsorbedProtocolFeeMicroStx.toString(),
+        absorbedBeginFeeMicroStx: deployAbsorbedBeginFeeMicroStx.toString(),
         absorbedSealFeeMicroStx: deployAbsorbedSealFeeMicroStx.toString()
+      });
+      appendDeployDebug14('wallet-deploy-request', {
+        attemptId,
+        contractName,
+        contractNameLength: contractName.length,
+        templateVersion: sourceTemplateLabel,
+        network: session.network,
+        clarityVersion: DEPLOY_CLARITY_VERSION,
+        sourceLengthChars: sourceBeforeCompaction.length,
+        sourceLengthBytes: sourceOriginalBytes,
+        deploySourceLengthChars: sourceForDeploy.length,
+        deploySourceLengthBytes: sourceForDeployBytes,
+        sourceCompacted,
+        coreContractId: networkCoreTarget.contractId
       });
       appendDeployDebug(
         `Opening wallet deployment request (v=${DEPLOY_DEBUG_VERSION}, origBytes=${sourceOriginalBytes.toString()}, deployBytes=${sourceForDeployBytes.toString()}, compacted=${sourceCompacted ? 'yes' : 'no'})`
@@ -1893,6 +2000,9 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
             hint:
               'Wallet onCancel can represent an explicit cancel or a broadcast failure such as non-JSON node response.'
           });
+          appendDeployDebug14('wallet-deploy-cancel-or-broadcast-fail', {
+            attemptId
+          });
           setDeployPending(false);
           setStatus(
             'Wallet cancelled deployment or failed to broadcast. Check Deploy debug details below, then retry.'
@@ -1965,11 +2075,14 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
             value={description}
             placeholder="One-line summary of your collection."
             onChange={(event) => {
-              setDescription(event.target.value);
+              setDescription(normalizeArtistDeployDescription(event.target.value));
               setStatus(null);
             }}
           />
-          <span className="field__hint">Plain language is best. Keep it short and clear.</span>
+          <span className="field__hint">
+            Plain language is best. Smart punctuation, emoji, and line breaks are
+            auto-cleaned for on-chain compatibility.
+          </span>
         </label>
 
         <label className="field">
@@ -2016,7 +2129,13 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
           </span>
           <div className="deploy-wizard__locked-input-wrap">
             <input
-              className="input"
+              className={`input deploy-wizard__mint-price-input${
+                standardMintPriceValidationState === 'valid'
+                  ? ' deploy-wizard__mint-price-input--ok'
+                  : standardMintPriceValidationState === 'invalid'
+                    ? ' input--alert deploy-wizard__mint-price-input--error'
+                    : ''
+              }`}
               inputMode="decimal"
               value={mintPriceStx}
               onChange={(event) => {
@@ -2054,7 +2173,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                         onChainMintPriceAfterAbsorptionMicroStx >= 0n
                           ? onChainMintPriceAfterAbsorptionMicroStx
                           : 0n
-                      )} (all-in minus worst-case seal protocol fee).`
+                      )} (all-in minus absorbed protocol fee floor).`
                     : `Minimum allowed from locked assets: ${formatMicroStx(
                         minimumMintPriceMicroStx
                       )}.`
@@ -2063,6 +2182,29 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
           ) : (
             <span className="field__hint">Set to 0 for a free mint.</span>
           )}
+          {mintType === 'standard' &&
+          !standardMintPriceLocked &&
+          minimumMintPriceMicroStx !== null &&
+          standardMintPriceValidationState === 'invalid' ? (
+            <span className="field__hint field__hint--error">
+              {standardMintPriceFormatInvalid
+                ? 'Enter a valid STX amount (up to 6 decimals) to continue.'
+                : `Price is below minimum. Enter at least ${formatMicroStx(
+                    minimumMintPriceMicroStx
+                  )} to continue.`}
+            </span>
+          ) : null}
+          {mintType === 'standard' &&
+          !standardMintPriceLocked &&
+          minimumMintPriceMicroStx !== null &&
+          standardMintPriceValidationState === 'valid' &&
+          pricingPreflight ? (
+            <span className="field__hint field__hint--ok">
+              Price is in range. Safety margin: {formatMicroStx(
+                pricingPreflight.marginMicroStx
+              )}.
+            </span>
+          ) : null}
           {mintType === 'standard' &&
           standardMintPriceLocked &&
           mintPriceLockHintActive ? (
@@ -2260,11 +2402,19 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
               )}
               {pricingPreflight && (
                 <span className="meta-value">
-                  Worst-case seal protocol fee: {formatMicroStx(
-                    pricingPreflight.worstCaseSealFeeMicroStx
-                  )}{' '}
-                  ({pricingPreflight.feeBatches} chunk batch
-                  {pricingPreflight.feeBatches === 1 ? '' : 'es'} + seal).
+                  {pricingPreflight.absorptionModel === 'single-tx-total-fees'
+                    ? `Single-tx protocol fee floor: ${formatMicroStx(
+                        pricingPreflight.absorbedProtocolFeeMicroStx
+                      )} (begin ${formatMicroStx(
+                        pricingPreflight.worstCaseBeginFeeMicroStx
+                      )} + seal ${formatMicroStx(
+                        pricingPreflight.worstCaseSealFeeMicroStx
+                      )}, max ${pricingPreflight.singleTxChunkThreshold.toString()} chunks).`
+                    : `Worst-case seal protocol fee: ${formatMicroStx(
+                        pricingPreflight.worstCaseSealFeeMicroStx
+                      )} (${pricingPreflight.feeBatches} chunk batch${
+                        pricingPreflight.feeBatches === 1 ? '' : 'es'
+                      } + seal).`}
                 </span>
               )}
               {minimumMintPriceMicroStx !== null && (
@@ -2280,7 +2430,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                       ? onChainMintPriceAfterAbsorptionMicroStx
                       : 0n
                   )}{' '}
-                  (all-in price minus worst-case seal fee).
+                  (all-in price minus absorbed protocol fee floor).
                 </span>
               )}
               {pricingPreflight && (
@@ -2291,23 +2441,30 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                   {formatMicroStx(pricingPreflight.feeUnitMicroStx)}.
                 </span>
               )}
-              {standardMintPriceBelowFloor && minimumMintPriceMicroStx !== null && (
-                <span className="meta-value">
-                  Price was raised to the minimum safe floor ({formatMicroStx(
+              {standardMintPriceFormatInvalid && (
+                <span className="meta-value field__hint--error">
+                  Enter a valid STX amount (up to 6 decimals) before deploy.
+                </span>
+              )}
+              {!standardMintPriceFormatInvalid &&
+                standardMintPriceBelowFloor &&
+                minimumMintPriceMicroStx !== null && (
+                <span className="meta-value field__hint--error">
+                  Current all-in price is below the minimum safe floor ({formatMicroStx(
                     minimumMintPriceMicroStx
                   )}).
                 </span>
               )}
-              {pricingPreflight && !pricingPreflight.safe && (
-                <span className="meta-value">
+              {pricingPreflight && !pricingPreflight.safe && !standardMintPriceFormatInvalid && (
+                <span className="meta-value field__hint--error">
                   Increase all-in mint price above {formatMicroStx(
-                    pricingPreflight.worstCaseSealFeeMicroStx
+                    pricingPreflight.absorbedProtocolFeeMicroStx
                   )} before deploy.
                 </span>
               )}
               {pricingPreflight?.safe && (
-                <span className="meta-value">
-                  Safety margin: {formatMicroStx(pricingPreflight.marginMicroStx)} above worst-case seal fee.
+                <span className="meta-value field__hint--ok">
+                  Safety margin: {formatMicroStx(pricingPreflight.marginMicroStx)} above absorbed protocol fee floor.
                 </span>
               )}
             </>
@@ -2327,42 +2484,6 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
           <li>Advanced royalty and URI logic is hidden in this beginner flow.</li>
         </ul>
       </div>
-
-      {debugEnabled && mintType === 'standard' && (
-        <div className="deploy-wizard__defaults">
-          <p className="deploy-wizard__defaults-title info-label">
-            Debug template switch
-            <InfoTooltip text="Advanced troubleshooting control for comparing deploy behavior across template variants." />
-          </p>
-          <label className="field">
-            <span className="field__label info-label">
-              Template mode (debug only)
-            </span>
-            <select
-              className="select"
-              value={deployTemplateMode}
-              onChange={(event) => {
-                const nextMode =
-                  event.target.value === 'legacy-v1.1-compat'
-                    ? 'legacy-v1.1-compat'
-                    : 'standard-v1.3';
-                setDeployTemplateMode(nextMode);
-                setStatus(null);
-                appendDeployDebug('Debug template mode changed', {
-                  nextMode
-                });
-              }}
-              disabled={deployPending}
-            >
-              <option value="standard-v1.3">Standard template (v1.3)</option>
-              <option value="legacy-v1.1-compat">Legacy compatibility template (v1.1)</option>
-            </select>
-            <span className="field__hint">
-              Deploy the previously proven v1.1 template wiring to compare wallet broadcast behavior directly.
-            </span>
-          </label>
-        </div>
-      )}
 
       <div className="mint-actions">
         <span className="info-label">
@@ -2580,9 +2701,24 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                   )}
                   {deployBuild.resolved.mintType === 'standard' && pricingPreflight && (
                     <p>
-                      <strong>Worst-case seal fee:</strong>{' '}
-                      {formatMicroStx(pricingPreflight.worstCaseSealFeeMicroStx)} ({pricingPreflight.feeBatches}{' '}
-                      chunk batch{pricingPreflight.feeBatches === 1 ? '' : 'es'} + seal)
+                      <strong>
+                        {pricingPreflight.absorptionModel === 'single-tx-total-fees'
+                          ? 'Single-tx protocol fee floor:'
+                          : 'Worst-case seal fee:'}
+                      </strong>{' '}
+                      {pricingPreflight.absorptionModel === 'single-tx-total-fees'
+                        ? `${formatMicroStx(
+                            pricingPreflight.absorbedProtocolFeeMicroStx
+                          )} (begin ${formatMicroStx(
+                            pricingPreflight.worstCaseBeginFeeMicroStx
+                          )} + seal ${formatMicroStx(
+                            pricingPreflight.worstCaseSealFeeMicroStx
+                          )}, max ${pricingPreflight.singleTxChunkThreshold.toString()} chunks)`
+                        : `${formatMicroStx(
+                            pricingPreflight.worstCaseSealFeeMicroStx
+                          )} (${pricingPreflight.feeBatches} chunk batch${
+                            pricingPreflight.feeBatches === 1 ? '' : 'es'
+                          } + seal)`}
                     </p>
                   )}
                   {deployBuild.resolved.mintType === 'standard' &&
@@ -2602,7 +2738,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                             ? onChainMintPriceAfterAbsorptionMicroStx
                             : 0n
                         )}{' '}
-                        (all-in minus worst-case seal fee)
+                        (all-in minus absorbed protocol fee floor)
                       </p>
                     )}
                   {deployBuild.resolved.mintType === 'standard' && pricingPreflight && (
@@ -2620,9 +2756,9 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                       {pricingPreflight.safe
                         ? `All-in price safety margin: ${formatMicroStx(
                             pricingPreflight.marginMicroStx
-                          )} above worst-case seal fee.`
+                          )} above absorbed protocol fee floor.`
                         : `Price safety check failed. All-in price must be greater than ${formatMicroStx(
-                            pricingPreflight.worstCaseSealFeeMicroStx
+                            pricingPreflight.absorbedProtocolFeeMicroStx
                           )}.`}
                     </p>
                   )}
@@ -2655,7 +2791,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                     <div className="alert">
                       <p>
                         Deploy is blocked until pricing safety passes. Lock staged assets in
-                        Step 2, then ensure mint price is higher than the worst-case seal protocol fee.
+                        Step 2, then ensure mint price is higher than the absorbed protocol fee floor.
                       </p>
                     </div>
                   )}

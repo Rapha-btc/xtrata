@@ -627,6 +627,7 @@ export async function inscribeFile({ fileData, mimeType, tokenUri, senderAddress
 
     const chunkResult = await broadcastTransaction(chunkTx, network);
     if (chunkResult.error) throw new Error(`${chunkResult.error}: ${chunkResult.reason}`);
+    await waitForConfirmation(chunkResult.txid || chunkResult);
     if (i < batches.length - 1) {
       await new Promise((r) => setTimeout(r, TX_DELAY_MS));
     }
@@ -767,15 +768,15 @@ export async function resumeUpload({ expectedHash, allChunks, senderAddress, sen
 
 ## aibtc Integration
 
-### MCP Tool Mapping
-| Xtrata need | MCP tool |
+### MCP Tool Mapping (aibtc)
+| Xtrata need | aibtc MCP tool |
 |---|---|
-| Get wallet address | `wallet_get_address` |
-| Check STX balance | `wallet_get_balance` |
-| Read-only calls | `stacks_call_read_only` |
-| Write contract call | `stacks_call_contract` |
-| Broadcast signed tx | `stacks_broadcast_transaction` |
-| Poll tx status | `stacks_get_transaction` |
+| Get wallet address | `get_wallet_info` |
+| Check STX balance | `get_stx_balance` |
+| Read-only calls | `call_read_only_function` |
+| Write contract call | `call_contract` |
+| Broadcast signed tx | `broadcast_transaction` |
+| Poll tx status | `get_transaction_status` |
 
 ### Autonomous 10-Step Loop
 1. Receive instruction to inscribe content.
@@ -784,7 +785,7 @@ export async function resumeUpload({ expectedHash, allChunks, senderAddress, sen
 4. Compute incremental expected hash.
 5. Dedupe check (`get-id-by-hash`) or call `begin-or-get` directly.
 6. Broadcast begin tx and wait for confirmation.
-7. Upload chunk batches (<=50 per tx), delay 5s between txs.
+7. Upload chunk batches (<=50 per tx), wait for each batch to confirm before proceeding.
 8. Broadcast seal tx with strict post-condition cap.
 9. Verify `get-inscription-meta` and final canonical ID.
 10. Return `{ tokenId, txids, hash, mimeType, totalSize }` or structured error.
