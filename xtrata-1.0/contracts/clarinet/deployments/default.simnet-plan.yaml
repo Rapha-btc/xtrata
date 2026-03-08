@@ -147,6 +147,16 @@ plan:
             path: contracts/xtrata-commerce.clar
             clarity-version: 3
         - emulated-contract-publish:
+            contract-name: xtrata-market-sbtc-v1-0
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/xtrata-market-sbtc-v1.0.clar
+            clarity-version: 3
+        - emulated-contract-publish:
+            contract-name: xtrata-market-usdc-v1-0
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/xtrata-market-usdc-v1.0.clar
+            clarity-version: 3
+        - emulated-contract-publish:
             contract-name: xtrata-market-v1-0
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/xtrata-market-v1.0.clar
