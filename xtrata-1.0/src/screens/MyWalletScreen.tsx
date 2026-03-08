@@ -217,6 +217,8 @@ export default function MyWalletScreen(props: MyWalletScreenProps) {
   const marketSettlementSupported = isMarketSettlementSupported(marketSettlement);
   const marketSettlementMessage =
     getMarketSettlementSupportMessage(marketSettlement);
+  const marketPresetValue =
+    marketRegistryEntry && marketContractIdLabel ? marketContractIdLabel : '';
 
   const targetAddress = props.lookupAddress ?? walletAddress ?? '';
 
@@ -619,6 +621,16 @@ export default function MyWalletScreen(props: MyWalletScreenProps) {
     });
   };
 
+  const handleSelectMarketContract = useCallback((nextId: string) => {
+    setListStatus(null);
+    setCancelStatus(null);
+    if (!nextId) {
+      return;
+    }
+    setMarketContractId(nextId);
+    marketSelectionStore.save(nextId);
+  }, []);
+
   const handleCancel = () => {
     setCancelStatus(null);
     setListStatus(null);
@@ -864,6 +876,38 @@ export default function MyWalletScreen(props: MyWalletScreenProps) {
               {marketNetworkMismatch && (
                 <span className="meta-value">
                   Market network must match the active NFT contract.
+                </span>
+              )}
+              <label className="field">
+                <span className="field__label">Settlement market</span>
+                <select
+                  className="select"
+                  value={marketPresetValue}
+                  onChange={(event) =>
+                    handleSelectMarketContract(event.target.value)
+                  }
+                  disabled={listPending || cancelPending}
+                >
+                  {!marketPresetValue && (
+                    <option value="">Custom market (set in Market module)</option>
+                  )}
+                  {MARKET_REGISTRY.map((entry) => {
+                    const id = getMarketContractId(entry);
+                    const settlement = getMarketSettlementAsset(
+                      entry.paymentTokenContractId
+                    );
+                    return (
+                      <option key={id} value={id}>
+                        {`${entry.label} · ${getMarketSettlementLabel(settlement)}`}
+                      </option>
+                    );
+                  })}
+                </select>
+              </label>
+              {!marketPresetValue && marketContractIdLabel && (
+                <span className="meta-value">
+                  Custom market active. Open the Market module to edit the raw
+                  contract ID directly.
                 </span>
               )}
               {!marketSettlementSupported && marketSettlementMessage && (

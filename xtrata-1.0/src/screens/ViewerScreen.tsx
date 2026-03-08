@@ -448,6 +448,11 @@ const TokenDetails = (props: {
   const marketSettlementSupported = isMarketSettlementSupported(marketSettlement);
   const marketSettlementMessage =
     getMarketSettlementSupportMessage(marketSettlement);
+  const marketRegistryEntry = props.marketContractId
+    ? getMarketRegistryEntry(props.marketContractId)
+    : null;
+  const marketPresetValue =
+    marketRegistryEntry && props.marketContractId ? props.marketContractId : '';
   const listPriceAmount = parseMarketPriceInput(listPriceInput, marketSettlement);
 
   const dependenciesQuery = useQuery({
@@ -503,15 +508,33 @@ const TokenDetails = (props: {
     }
   }, [showMetadataPane]);
 
-  const handleOpenWalletTools = useCallback(() => {
+  const revealWalletTools = useCallback(() => {
     if (useSplitDetailTabs) {
       setDetailPanelView('metadata');
     }
     if (metadataColumnHidden) {
       setMetadataColumnCollapsed(false);
     }
-    setWalletToolsOpen(true);
   }, [metadataColumnHidden, useSplitDetailTabs]);
+
+  const handleOpenWalletTools = useCallback(() => {
+    revealWalletTools();
+    setWalletToolsOpen(true);
+  }, [revealWalletTools]);
+
+  const handleSelectWalletMarket = useCallback(
+    (nextId: string) => {
+      setListStatus(null);
+      setCancelStatus(null);
+      if (!nextId) {
+        return;
+      }
+      revealWalletTools();
+      setWalletToolsOpen(true);
+      marketSelectionStore.save(nextId);
+    },
+    [revealWalletTools]
+  );
 
   const transferValidation = validateTransferRequest({
     senderAddress: walletAddress,
@@ -1518,6 +1541,38 @@ const TokenDetails = (props: {
                   {props.marketNetworkMismatch && (
                     <span className="meta-value">
                       Market network must match the active NFT contract.
+                    </span>
+                  )}
+                  <label className="field">
+                    <span className="field__label">Settlement market</span>
+                    <select
+                      className="select"
+                      value={marketPresetValue}
+                      onChange={(event) =>
+                        handleSelectWalletMarket(event.target.value)
+                      }
+                      disabled={listPending || cancelPending}
+                    >
+                      {!marketPresetValue && (
+                        <option value="">Custom market (set in Market module)</option>
+                      )}
+                      {MARKET_REGISTRY.map((entry) => {
+                        const id = getMarketContractId(entry);
+                        const settlement = getMarketSettlementAsset(
+                          entry.paymentTokenContractId
+                        );
+                        return (
+                          <option key={id} value={id}>
+                            {`${entry.label} · ${getMarketSettlementLabel(settlement)}`}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </label>
+                  {!marketPresetValue && props.marketContractId && (
+                    <span className="meta-value">
+                      Custom market active. Open the Market module to edit the raw
+                      contract ID directly.
                     </span>
                   )}
                   <label className="field">
