@@ -4,8 +4,6 @@ import { showContractCall } from '@stacks/connect';
 import {
   type ClarityValue,
   contractPrincipalCV,
-  makeStandardSTXPostCondition,
-  FungibleConditionCode,
   PostConditionMode,
   type PostCondition,
   uintCV
@@ -19,7 +17,6 @@ import {
   buildTransferPostCondition,
   DEFAULT_NFT_ASSET_NAME
 } from '../lib/contract/post-conditions';
-import { formatMicroStx } from '../lib/contract/fees';
 import { getNetworkMismatch } from '../lib/network/guard';
 import { createXtrataClient } from '../lib/contract/client';
 import { createMarketClient } from '../lib/market/client';
@@ -29,10 +26,26 @@ import {
   loadMarketActivity,
   loadNftActivity
 } from '../lib/market/indexer';
-import { MARKET_REGISTRY, getMarketContractId } from '../lib/market/registry';
+import {
+  MARKET_REGISTRY,
+  getMarketContractId,
+  getMarketRegistryEntry
+} from '../lib/market/registry';
 import { createMarketSelectionStore } from '../lib/market/selection';
 import { parseMarketContractId } from '../lib/market/contract';
-import { isSameAddress, parsePriceMicroStx } from '../lib/market/actions';
+import { isSameAddress } from '../lib/market/actions';
+import {
+  buildMarketBuyPostConditions,
+  formatMarketPrice,
+  getMarketBuyFailureMessage,
+  getMarketPriceInputLabel,
+  getMarketSettlementAsset,
+  getMarketSettlementBadgeVariant,
+  getMarketSettlementLabel,
+  getMarketSettlementSupportMessage,
+  isMarketSettlementSupported,
+  parseMarketPriceInput
+} from '../lib/market/settlement';
 import { logInfo, logWarn } from '../lib/utils/logger';
 import type {
   MarketListing,
@@ -196,9 +209,22 @@ export default function MarketScreen(props: MarketScreenProps) {
     ? getNetworkMismatch(marketContract.network, props.walletSession.network)
     : null;
   const marketContractIdLabel = marketContract ? getContractId(marketContract) : null;
+  const marketRegistryEntry = getMarketRegistryEntry(marketContractIdLabel);
   const nftContractId = getContractId(props.contract);
   const nftNetworkMismatch =
     marketContract && marketContract.network !== props.contract.network;
+  const marketPaymentTokenQuery = useQuery({
+    queryKey: ['market', marketContractIdLabel, 'payment-token'],
+    enabled: !!marketClient && !!marketContract && !props.collapsed,
+    staleTime: MARKET_DATA_STALE_MS,
+    refetchOnWindowFocus: false,
+    queryFn: async () => {
+      if (!marketClient) {
+        return null;
+      }
+      return marketClient.getPaymentToken(readOnlySender);
+    }
+  });
   const canTransact =
     !!props.walletSession.address &&
     !marketMismatch &&
@@ -257,13 +283,14 @@ export default function MarketScreen(props: MarketScreenProps) {
         throw new Error('Market client unavailable');
       }
       const sender = readOnlySender;
-      const [owner, nftContract, feeBps, lastListingId] = await Promise.all([
+      const [owner, nftContract, paymentToken, feeBps, lastListingId] = await Promise.all([
         marketClient.getOwner(sender),
         marketClient.getNftContract(sender),
+        marketClient.getPaymentToken(sender),
         marketClient.getFeeBps(sender),
         marketClient.getLastListingId(sender)
       ]);
-      return { owner, nftContract, feeBps, lastListingId };
+      return { owner, nftContract, paymentToken, feeBps, lastListingId };
     }
   });
 
@@ -575,9 +602,12 @@ export default function MarketScreen(props: MarketScreenProps) {
       setListStatus('Enter a valid token ID.');
       return;
     }
-    const priceMicro = parsePriceMicroStx(listPriceInput);
-    if (priceMicro === null) {
-      setListStatus('Enter a valid price in STX.');
+    if (!marketSettlementSupported) {
+      setListStatus(marketSettlementMessage ?? 'Unsupported payment token.');
+      return;
+    }
+    if (listPriceAmount === null) {
+      setListStatus(`Enter a valid price in ${marketSettlement.symbol}.`);
       return;
     }
 
@@ -596,7 +626,7 @@ export default function MarketScreen(props: MarketScreenProps) {
         functionArgs: [
           contractPrincipalCV(props.contract.address, props.contract.contractName),
           uintCV(tokenId),
-          uintCV(priceMicro)
+          uintCV(listPriceAmount)
         ],
         postConditionMode: PostConditionMode.Deny,
         postConditions
@@ -685,18 +715,18 @@ export default function MarketScreen(props: MarketScreenProps) {
         seller: listing.seller,
         price: listing.price.toString()
       });
-      const postConditions = [
-        makeStandardSTXPostCondition(
-          props.walletSession.address,
-          FungibleConditionCode.Equal,
-          listing.price
-        ),
-        buildContractTransferPostCondition({
-          nftContract: listingContract,
-          senderContract: marketContract,
-          tokenId: listing.tokenId
-        })
-      ];
+      const postConditions = buildMarketBuyPostConditions({
+        settlement: marketSettlement,
+        buyerAddress: props.walletSession.address,
+        amount: listing.price,
+        nftContract: listingContract,
+        senderContract: marketContract,
+        tokenId: listing.tokenId
+      });
+      if (!postConditions) {
+        setBuyStatus(marketSettlementMessage ?? 'Unsupported payment token.');
+        return;
+      }
       const tx = await requestContractCall({
         functionName: 'buy',
         functionArgs: [
@@ -717,9 +747,7 @@ export default function MarketScreen(props: MarketScreenProps) {
           listingId: listingId.toString(),
           buyer: props.walletSession.address ?? null
         });
-        setBuyStatus(
-          'Purchase failed: no STX was transferred. Check listing status and your balance.'
-        );
+        setBuyStatus(getMarketBuyFailureMessage(marketSettlement));
       } else {
         logWarn('market', 'Buy failed', {
           listingId: listingId.toString(),
@@ -981,8 +1009,21 @@ export default function MarketScreen(props: MarketScreenProps) {
         ? 'Escrowed'
         : 'Not escrowed'
       : 'Unknown';
+  const paymentTokenContractId = marketPaymentTokenQuery.status === 'success'
+    ? marketPaymentTokenQuery.data
+    : statusQuery.data
+      ? statusQuery.data.paymentToken
+      : marketRegistryEntry?.paymentTokenContractId;
+  const marketSettlement = getMarketSettlementAsset(paymentTokenContractId);
+  const marketSettlementLabel = getMarketSettlementLabel(marketSettlement);
+  const marketSettlementBadgeVariant =
+    getMarketSettlementBadgeVariant(marketSettlement);
+  const marketSettlementSupported = isMarketSettlementSupported(marketSettlement);
+  const marketSettlementMessage =
+    getMarketSettlementSupportMessage(marketSettlement);
+  const listPriceAmount = parseMarketPriceInput(listPriceInput, marketSettlement);
   const listingPriceLabel = displayedListing
-    ? formatMicroStx(Number(displayedListing.price))
+    ? formatMarketPrice(displayedListing.price, marketSettlement)
     : '—';
   const buyPriceLabel = listingPriceLabel;
   const marketActivityItems = useMemo(
@@ -1045,7 +1086,7 @@ export default function MarketScreen(props: MarketScreenProps) {
       parts.push(`Token ${event.tokenId.toString()}`);
     }
     if (event.price !== undefined) {
-      parts.push(formatMicroStx(Number(event.price)));
+      parts.push(formatMarketPrice(event.price, marketSettlement));
     }
     if (showSource) {
       parts.push(event.source === 'market' ? 'Market' : 'NFT');
@@ -1171,9 +1212,14 @@ export default function MarketScreen(props: MarketScreenProps) {
         </div>
         <div className="panel__actions">
           {marketContract && (
-            <span className={`badge badge--${marketContract.network}`}>
-              {marketContract.network}
-            </span>
+            <>
+              <span className={`badge badge--compact ${marketSettlementBadgeVariant}`}>
+                {marketSettlementLabel}
+              </span>
+              <span className={`badge badge--${marketContract.network}`}>
+                {marketContract.network}
+              </span>
+            </>
           )}
           <button
             className="button button--ghost button--collapse"
@@ -1200,9 +1246,12 @@ export default function MarketScreen(props: MarketScreenProps) {
                   <option value="">Custom</option>
                   {MARKET_REGISTRY.map((entry) => {
                     const id = getMarketContractId(entry);
+                    const settlement = getMarketSettlementAsset(
+                      entry.paymentTokenContractId
+                    );
                     return (
                       <option key={id} value={id}>
-                        {entry.label}
+                        {`${entry.label} · ${getMarketSettlementLabel(settlement)}`}
                       </option>
                     );
                   })}
@@ -1244,6 +1293,16 @@ export default function MarketScreen(props: MarketScreenProps) {
                   <div>
                     <span className="meta-label">Market contract</span>
                     <span className="meta-value">{marketContractIdLabel}</span>
+                  </div>
+                  <div>
+                    <span className="meta-label">Settlement</span>
+                    <span className="market-badge-row">
+                      <span
+                        className={`badge badge--compact ${marketSettlementBadgeVariant}`}
+                      >
+                        {marketSettlementLabel}
+                      </span>
+                    </span>
                   </div>
                   <div>
                     <span className="meta-label">NFT contract</span>
@@ -1305,6 +1364,22 @@ export default function MarketScreen(props: MarketScreenProps) {
                       </span>
                     </div>
                     <div>
+                      <span className="meta-label">Settlement</span>
+                      <span className="market-badge-row">
+                        <span
+                          className={`badge badge--compact ${marketSettlementBadgeVariant}`}
+                        >
+                          {marketSettlementLabel}
+                        </span>
+                        {marketSettlement.kind === 'fungible-token' &&
+                        marketSettlement.paymentTokenContractId ? (
+                          <span className="meta-value">
+                            {marketSettlement.paymentTokenContractId}
+                          </span>
+                        ) : null}
+                      </span>
+                    </div>
+                    <div>
                       <span className="meta-label">Last listing</span>
                       <span className="meta-value">
                         {statusQuery.data.lastListingId.toString()}
@@ -1345,6 +1420,9 @@ export default function MarketScreen(props: MarketScreenProps) {
             {activeListingsQuery.error && (
               <div className="field__error">Unable to load active listings.</div>
             )}
+            {!marketSettlementSupported && marketSettlementMessage && (
+              <p className="field__hint">{marketSettlementMessage}</p>
+            )}
             {!activeListingsQuery.isFetching && activeListings.length === 0 && (
               <p className="field__hint">
                 No active listings found. Try loading older listings.
@@ -1373,6 +1451,7 @@ export default function MarketScreen(props: MarketScreenProps) {
                       listing.listingId === selectedListingId;
                     const canQuickBuy =
                       canTransact &&
+                      marketSettlementSupported &&
                       listing.status === 'escrowed' &&
                       !isSeller &&
                       !buyPending;
@@ -1425,7 +1504,17 @@ export default function MarketScreen(props: MarketScreenProps) {
                           <div>
                             <span className="meta-label">Price</span>
                             <span className="meta-value">
-                              {formatMicroStx(Number(listing.price))}
+                              {formatMarketPrice(listing.price, marketSettlement)}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="meta-label">Settlement</span>
+                            <span className="market-badge-row">
+                              <span
+                                className={`badge badge--compact ${marketSettlementBadgeVariant}`}
+                              >
+                                {marketSettlementLabel}
+                              </span>
                             </span>
                           </div>
                           <div>
@@ -1645,6 +1734,16 @@ export default function MarketScreen(props: MarketScreenProps) {
                     <span className="meta-value">{listingPriceLabel}</span>
                   </div>
                   <div>
+                    <span className="meta-label">Settlement</span>
+                    <span className="market-badge-row">
+                      <span
+                        className={`badge badge--compact ${marketSettlementBadgeVariant}`}
+                      >
+                        {marketSettlementLabel}
+                      </span>
+                    </span>
+                  </div>
+                  <div>
                     <span className="meta-label">Seller</span>
                     <span className="meta-value">{displayedListing.seller}</span>
                   </div>
@@ -1697,6 +1796,7 @@ export default function MarketScreen(props: MarketScreenProps) {
                         }
                         disabled={
                           !canTransact ||
+                          !marketSettlementSupported ||
                           buyPending ||
                           displayedListing.status !== 'escrowed'
                         }
@@ -1746,7 +1846,9 @@ export default function MarketScreen(props: MarketScreenProps) {
                     />
                   </label>
                   <label className="field">
-                    <span className="field__label">Price (STX)</span>
+                    <span className="field__label">
+                      {getMarketPriceInputLabel(marketSettlement)}
+                    </span>
                     <input
                       className="input"
                       placeholder="1.25"
@@ -1758,10 +1860,13 @@ export default function MarketScreen(props: MarketScreenProps) {
                     className="button"
                     type="button"
                     onClick={handleList}
-                    disabled={!canTransact || listPending}
+                    disabled={!canTransact || !marketSettlementSupported || listPending}
                   >
                     {listPending ? 'Listing...' : 'Create listing'}
                   </button>
+                  {!listStatus && marketSettlementMessage && (
+                    <p className="field__hint">{marketSettlementMessage}</p>
+                  )}
                   {listStatus && <p className="field__hint">{listStatus}</p>}
                 </div>
 
@@ -1795,10 +1900,13 @@ export default function MarketScreen(props: MarketScreenProps) {
                     onClick={() => {
                       void handleBuy();
                     }}
-                    disabled={!canTransact || buyPending}
+                    disabled={!canTransact || !marketSettlementSupported || buyPending}
                   >
                     {buyPending ? 'Buying...' : 'Buy now'}
                   </button>
+                  {!buyStatus && marketSettlementMessage && (
+                    <p className="field__hint">{marketSettlementMessage}</p>
+                  )}
                   {buyStatus && <p className="field__hint">{buyStatus}</p>}
                 </div>
 

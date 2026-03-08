@@ -9,7 +9,6 @@ import {
 import { buildTransferCall, createXtrataClient } from '../lib/contract/client';
 import type { ContractRegistryEntry } from '../lib/contract/registry';
 import { buildTransferPostCondition } from '../lib/contract/post-conditions';
-import { MICROSTX_PER_STX, formatMicroStx } from '../lib/contract/fees';
 import type { WalletSession } from '../lib/wallet/types';
 import { getNetworkMismatch } from '../lib/network/guard';
 import { toStacksNetwork } from '../lib/network/stacks';
@@ -18,13 +17,28 @@ import {
   buildMarketListingKey,
   loadMarketActivity
 } from '../lib/market/indexer';
-import { MARKET_REGISTRY, getMarketContractId } from '../lib/market/registry';
+import {
+  MARKET_REGISTRY,
+  getMarketContractId,
+  getMarketRegistryEntry
+} from '../lib/market/registry';
 import {
   createMarketSelectionStore,
   MARKET_SELECTION_EVENT
 } from '../lib/market/selection';
 import { parseMarketContractId } from '../lib/market/contract';
+import { createMarketClient } from '../lib/market/client';
 import type { MarketActivityEvent } from '../lib/market/types';
+import {
+  formatMarketPrice,
+  getMarketPriceInputLabel,
+  getMarketSettlementAsset,
+  getMarketSettlementBadgeVariant,
+  getMarketSettlementLabel,
+  getMarketSettlementSupportMessage,
+  isMarketSettlementSupported,
+  parseMarketPriceInput
+} from '../lib/market/settlement';
 import {
   getViewerKey,
   useLastTokenId,
@@ -77,18 +91,6 @@ const getMediaLabel = (mimeType: string | null | undefined) => {
   }
 };
 
-const parseStxInput = (value: string) => {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-  const parsed = Number(trimmed);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return null;
-  }
-  return parsed;
-};
-
 const OwnedTokenCard = (props: {
   token: TokenSummary;
   contractId: string;
@@ -96,6 +98,8 @@ const OwnedTokenCard = (props: {
   client: ReturnType<typeof createXtrataClient>;
   isSelected: boolean;
   isListed: boolean;
+  listingBadgeLabel: string;
+  listingBadgeVariant: string;
   onSelect: (id: bigint) => void;
   isActiveTab: boolean;
 }) => {
@@ -110,11 +114,11 @@ const OwnedTokenCard = (props: {
     >
       {props.isListed && (
         <span
-          className="token-card__badge token-card__badge--listed"
-          title="Listed for sale"
+          className={`token-card__badge token-card__badge--listed token-card__badge--market ${props.listingBadgeVariant}`}
+          title={`Listed for sale in ${props.listingBadgeLabel}`}
           aria-hidden="true"
         >
-          Listed
+          {props.listingBadgeLabel}
         </span>
       )}
       <div className="token-card__header" aria-hidden="true">
@@ -180,12 +184,39 @@ export default function MyWalletScreen(props: MyWalletScreenProps) {
   );
   const marketContract = parsedMarket.config;
   const marketContractIdLabel = marketContract ? getContractId(marketContract) : null;
+  const marketRegistryEntry = getMarketRegistryEntry(marketContractIdLabel);
   const marketNetworkMismatch = marketContract
     ? marketContract.network !== props.contract.network
     : false;
   const marketMismatch = marketContract
     ? getNetworkMismatch(marketContract.network, props.walletSession.network)
     : null;
+  const marketClient = useMemo(
+    () => (marketContract ? createMarketClient({ contract: marketContract }) : null),
+    [marketContract]
+  );
+  const marketPaymentTokenQuery = useQuery({
+    queryKey: ['market', marketContractIdLabel, 'payment-token'],
+    enabled: !!marketClient && !!marketContractIdLabel && props.isActiveTab,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    queryFn: async () => {
+      if (!marketClient) {
+        return null;
+      }
+      return marketClient.getPaymentToken(props.senderAddress);
+    }
+  });
+  const marketPaymentTokenContractId = marketPaymentTokenQuery.status === 'success'
+    ? marketPaymentTokenQuery.data
+    : marketRegistryEntry?.paymentTokenContractId;
+  const marketSettlement = getMarketSettlementAsset(marketPaymentTokenContractId);
+  const marketSettlementLabel = getMarketSettlementLabel(marketSettlement);
+  const marketSettlementBadgeVariant =
+    getMarketSettlementBadgeVariant(marketSettlement);
+  const marketSettlementSupported = isMarketSettlementSupported(marketSettlement);
+  const marketSettlementMessage =
+    getMarketSettlementSupportMessage(marketSettlement);
 
   const targetAddress = props.lookupAddress ?? walletAddress ?? '';
 
@@ -380,7 +411,7 @@ export default function MyWalletScreen(props: MyWalletScreenProps) {
     : 'Not listed';
   const listingPriceLabel =
     selectedListing?.price !== undefined
-      ? formatMicroStx(Number(selectedListing.price))
+      ? formatMarketPrice(selectedListing.price, marketSettlement)
       : null;
   const marketLabel = marketContractIdLabel ?? 'Select in Market module';
   const transferValidation = validateTransferRequest({
@@ -527,14 +558,13 @@ export default function MyWalletScreen(props: MyWalletScreenProps) {
       return;
     }
 
-    const stxAmount = parseStxInput(listPriceInput);
-    if (stxAmount === null) {
-      setListStatus('Enter a valid price in STX.');
+    if (!marketSettlementSupported) {
+      setListStatus(marketSettlementMessage ?? 'Unsupported payment token.');
       return;
     }
-    const priceMicro = Math.round(stxAmount * MICROSTX_PER_STX);
-    if (priceMicro <= 0) {
-      setListStatus('Price must be greater than 0.');
+    const priceAmount = parseMarketPriceInput(listPriceInput, marketSettlement);
+    if (priceAmount === null) {
+      setListStatus(`Enter a valid price in ${marketSettlement.symbol}.`);
       return;
     }
 
@@ -549,7 +579,7 @@ export default function MyWalletScreen(props: MyWalletScreenProps) {
         functionArgs: [
           contractPrincipalCV(props.contract.address, props.contract.contractName),
           uintCV(selectedToken.id),
-          uintCV(BigInt(priceMicro))
+          uintCV(priceAmount)
         ],
         network: props.walletSession.network ?? marketContract.network,
         stxAddress: walletAddress,
@@ -735,6 +765,8 @@ export default function MyWalletScreen(props: MyWalletScreenProps) {
                         client={client}
                         isSelected={token.id === selectedTokenId}
                         isListed={isTokenListed(token)}
+                        listingBadgeLabel={marketSettlementLabel}
+                        listingBadgeVariant={marketSettlementBadgeVariant}
                         onSelect={handleSelectToken}
                         isActiveTab={props.isActiveTab}
                       />
@@ -771,11 +803,11 @@ export default function MyWalletScreen(props: MyWalletScreenProps) {
               {selectedListing && (
                 <button
                   type="button"
-                  className="wallet-preview__badge"
+                  className={`wallet-preview__badge ${marketSettlementBadgeVariant}`}
                   onClick={handleOpenListingTools}
                   title="Open listing tools"
                 >
-                  Listed
+                  {`Listed · ${marketSettlementLabel}`}
                 </button>
               )}
             </div>
@@ -809,6 +841,16 @@ export default function MyWalletScreen(props: MyWalletScreenProps) {
                   <span className="meta-label">Listing status</span>
                   <span className="meta-value">{listingStatusLabel}</span>
                 </div>
+                <div>
+                  <span className="meta-label">Settlement</span>
+                  <span className="market-badge-row">
+                    <span
+                      className={`badge badge--compact ${marketSettlementBadgeVariant}`}
+                    >
+                      {marketSettlementLabel}
+                    </span>
+                  </span>
+                </div>
                 {listingPriceLabel && (
                   <div>
                     <span className="meta-label">Listing price</span>
@@ -824,8 +866,13 @@ export default function MyWalletScreen(props: MyWalletScreenProps) {
                   Market network must match the active NFT contract.
                 </span>
               )}
+              {!marketSettlementSupported && marketSettlementMessage && (
+                <span className="meta-value">{marketSettlementMessage}</span>
+              )}
               <label className="field">
-                <span className="field__label">Price (STX)</span>
+                <span className="field__label">
+                  {getMarketPriceInputLabel(marketSettlement)}
+                </span>
                 <input
                   className="input"
                   placeholder="0.25"
@@ -844,7 +891,12 @@ export default function MyWalletScreen(props: MyWalletScreenProps) {
                   className="button button--mini"
                   type="button"
                   onClick={handleList}
-                  disabled={listPending || cancelPending || !selectedToken}
+                  disabled={
+                    listPending ||
+                    cancelPending ||
+                    !selectedToken ||
+                    !marketSettlementSupported
+                  }
                 >
                   {listPending ? 'Listing...' : 'List'}
                 </button>

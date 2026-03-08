@@ -9,10 +9,8 @@ import {
 } from 'react';
 import { showContractCall } from '@stacks/connect';
 import {
-  FungibleConditionCode,
   PostConditionMode,
   contractPrincipalCV,
-  makeStandardSTXPostCondition,
   uintCV
 } from '@stacks/transactions';
 import { buildTransferCall, createXtrataClient } from '../lib/contract/client';
@@ -31,7 +29,11 @@ import {
   buildMarketListingKey,
   loadMarketActivity
 } from '../lib/market/indexer';
-import { MARKET_REGISTRY, getMarketContractId } from '../lib/market/registry';
+import {
+  MARKET_REGISTRY,
+  getMarketContractId,
+  getMarketRegistryEntry
+} from '../lib/market/registry';
 import {
   createMarketSelectionStore,
   MARKET_SELECTION_EVENT
@@ -48,6 +50,18 @@ import {
   validateCancelAction,
   validateListAction
 } from '../lib/market/actions';
+import {
+  buildMarketBuyPostConditions,
+  formatMarketPrice,
+  getMarketBuyFailureMessage,
+  getMarketPriceInputLabel,
+  getMarketSettlementAsset,
+  getMarketSettlementBadgeVariant,
+  getMarketSettlementLabel,
+  getMarketSettlementSupportMessage,
+  isMarketSettlementSupported,
+  parseMarketPriceInput
+} from '../lib/market/settlement';
 import {
   mergeListingIndexes,
   resolveMissingListingsForTokens
@@ -75,7 +89,6 @@ import { getTransferValidationMessage, validateTransferRequest } from '../lib/wa
 import type { WalletSession } from '../lib/wallet/types';
 import type { WalletLookupState } from '../lib/wallet/lookup';
 import { formatBytes, truncateMiddle } from '../lib/utils/format';
-import { formatMicroStx } from '../lib/contract/fees';
 import {
   fetchParents,
   findChildrenFromKnownTokens,
@@ -234,6 +247,9 @@ const TokenCard = (props: {
   onBuyListing: (token: TokenSummary, listing: MarketActivityEvent) => void;
   onCancelListing: (token: TokenSummary, listing: MarketActivityEvent) => void;
   marketActionPending: boolean;
+  marketBuySupported: boolean;
+  listingBadgeLabel: string;
+  listingBadgeVariant: string;
   client: ReturnType<typeof createXtrataClient>;
   fallbackClient?: ReturnType<typeof createXtrataClient> | null;
   senderAddress: string;
@@ -264,11 +280,11 @@ const TokenCard = (props: {
       >
         {props.isListed && (
           <span
-            className="token-card__badge token-card__badge--listed"
-            title="Listed for sale"
+            className={`token-card__badge token-card__badge--listed token-card__badge--market ${props.listingBadgeVariant}`}
+            title={`Listed for sale in ${props.listingBadgeLabel}`}
             aria-hidden="true"
           >
-            Listed
+            {props.listingBadgeLabel}
           </span>
         )}
         <div className="token-card__header" aria-hidden="true">
@@ -295,7 +311,7 @@ const TokenCard = (props: {
           <button
             type="button"
             className={`button button--mini${showCancel ? ' button--ghost' : ''}`}
-            disabled={props.marketActionPending}
+            disabled={props.marketActionPending || (showBuy && !props.marketBuySupported)}
             onClick={(event) => {
               event.stopPropagation();
               props.onSelect(props.token.id);
@@ -366,6 +382,7 @@ const TokenDetails = (props: {
   marketContract: ContractConfig | null;
   marketContractError: string | null;
   marketContractId: string | null;
+  marketPaymentTokenContractId: string | null | undefined;
   marketMismatch: NetworkMismatch | null;
   marketNetworkMismatch: boolean;
   isMobile: boolean;
@@ -422,6 +439,16 @@ const TokenDetails = (props: {
     isSameAddress(props.listing.seller, walletAddress);
   const showQuickBuy = !!props.listing && !listingOwnedByWallet;
   const showQuickCancel = !!props.listing && listingOwnedByWallet;
+  const marketSettlement = getMarketSettlementAsset(
+    props.marketPaymentTokenContractId
+  );
+  const marketSettlementLabel = getMarketSettlementLabel(marketSettlement);
+  const marketSettlementBadgeVariant =
+    getMarketSettlementBadgeVariant(marketSettlement);
+  const marketSettlementSupported = isMarketSettlementSupported(marketSettlement);
+  const marketSettlementMessage =
+    getMarketSettlementSupportMessage(marketSettlement);
+  const listPriceAmount = parseMarketPriceInput(listPriceInput, marketSettlement);
 
   const dependenciesQuery = useQuery({
     queryKey: props.token
@@ -640,7 +667,7 @@ const TokenDetails = (props: {
     : 'Not listed';
   const listingPriceLabel =
     props.listing?.price !== undefined
-      ? formatMicroStx(Number(props.listing.price))
+      ? formatMarketPrice(props.listing.price, marketSettlement)
       : null;
   const marketLabel = props.marketContractId ?? 'Select in Market module';
   const detailOwnerAddress = props.token?.owner ?? null;
@@ -675,9 +702,12 @@ const TokenDetails = (props: {
     tokenId: props.token?.id ?? null,
     tokenOwner: props.token?.owner ?? null,
     isListed: selectedListed,
-    priceInput: listPriceInput
+    priceInput: listPriceInput,
+    parsePriceInput: (value) => parseMarketPriceInput(value, marketSettlement)
   });
-  const listValidationMessage = getListActionValidationMessage(listValidation.reason);
+  const listValidationMessage = getListActionValidationMessage(listValidation.reason, {
+    priceSymbol: marketSettlement.symbol
+  });
   const cancelValidation = validateCancelAction({
     hasMarketContract: !!props.marketContract,
     walletAddress,
@@ -767,6 +797,10 @@ const TokenDetails = (props: {
       setListStatus(message);
       return;
     }
+    if (!marketSettlementSupported || listPriceAmount === null) {
+      setListStatus(marketSettlementMessage ?? 'Unsupported payment token.');
+      return;
+    }
 
     setListPending(true);
     setListStatus('Waiting for wallet confirmation...');
@@ -778,7 +812,7 @@ const TokenDetails = (props: {
         functionArgs: [
           contractPrincipalCV(props.contract.address, props.contract.contractName),
           uintCV(props.token.id),
-          uintCV(listValidation.priceMicroStx)
+          uintCV(listValidation.priceAmount)
         ],
         network: props.walletSession.network ?? props.marketContract.network,
         stxAddress: walletAddress,
@@ -964,7 +998,7 @@ const TokenDetails = (props: {
           </p>
           {props.listing?.price !== undefined && (
             <p className="preview-pill preview-pill--strong">
-              Listed · {formatMicroStx(Number(props.listing.price))}
+              Listed · {formatMarketPrice(props.listing.price, marketSettlement)}
             </p>
           )}
         </div>
@@ -1249,11 +1283,21 @@ const TokenDetails = (props: {
                     #{props.listing.listingId.toString()}
                   </span>
                 </div>
+                <div>
+                  <span className="meta-label">Settlement</span>
+                  <span className="market-badge-row">
+                    <span
+                      className={`badge badge--compact ${marketSettlementBadgeVariant}`}
+                    >
+                      {marketSettlementLabel}
+                    </span>
+                  </span>
+                </div>
                 {props.listing.price !== undefined && (
                   <div>
                     <span className="meta-label">Price</span>
                     <span className="meta-value">
-                      {formatMicroStx(Number(props.listing.price))}
+                      {formatMarketPrice(props.listing.price, marketSettlement)}
                     </span>
                   </div>
                 )}
@@ -1261,7 +1305,7 @@ const TokenDetails = (props: {
                   <div>
                     <span className="meta-label">Fee</span>
                     <span className="meta-value">
-                      {formatMicroStx(Number(props.listing.fee))}
+                      {formatMarketPrice(props.listing.fee, marketSettlement)}
                     </span>
                   </div>
                 )}
@@ -1288,7 +1332,7 @@ const TokenDetails = (props: {
                     <button
                       className="button button--mini"
                       type="button"
-                      disabled={props.marketActionPending}
+                      disabled={props.marketActionPending || !marketSettlementSupported}
                       onClick={() => props.onBuyListing(props.token!, props.listing!)}
                     >
                       {props.marketActionPending ? 'Buying...' : 'Buy'}
@@ -1308,6 +1352,9 @@ const TokenDetails = (props: {
               )}
               {props.marketActionStatus && (
                 <span className="meta-value">{props.marketActionStatus}</span>
+              )}
+              {!props.marketActionStatus && marketSettlementMessage && (
+                <span className="meta-value">{marketSettlementMessage}</span>
               )}
             </div>
           )}
@@ -1355,11 +1402,11 @@ const TokenDetails = (props: {
               {props.listing && (
                 <button
                   type="button"
-                  className="wallet-preview__badge"
+                  className={`wallet-preview__badge ${marketSettlementBadgeVariant}`}
                   onClick={() => setWalletToolsOpen(true)}
                   title="Open listing tools"
                 >
-                  Listed
+                  {`Listed · ${marketSettlementLabel}`}
                 </button>
               )}
             </div>
@@ -1422,6 +1469,16 @@ const TokenDetails = (props: {
                       <span className="meta-label">Listing status</span>
                       <span className="meta-value">{listingStatusLabel}</span>
                     </div>
+                    <div>
+                      <span className="meta-label">Settlement</span>
+                      <span className="market-badge-row">
+                        <span
+                          className={`badge badge--compact ${marketSettlementBadgeVariant}`}
+                        >
+                          {marketSettlementLabel}
+                        </span>
+                      </span>
+                    </div>
                     {listingPriceLabel && (
                       <div>
                         <span className="meta-label">Listing price</span>
@@ -1444,7 +1501,9 @@ const TokenDetails = (props: {
                     </span>
                   )}
                   <label className="field">
-                    <span className="field__label">Price (STX)</span>
+                    <span className="field__label">
+                      {getMarketPriceInputLabel(marketSettlement)}
+                    </span>
                     <input
                       className="input"
                       placeholder="0.25"
@@ -1457,6 +1516,9 @@ const TokenDetails = (props: {
                     />
                   </label>
                   {listStatus && <span className="meta-value">{listStatus}</span>}
+                  {!listStatus && marketSettlementMessage && (
+                    <span className="meta-value">{marketSettlementMessage}</span>
+                  )}
                   {!listStatus && listValidationMessage && (
                     <span className="meta-value">{listValidationMessage}</span>
                   )}
@@ -1469,7 +1531,12 @@ const TokenDetails = (props: {
                       className="button button--mini"
                       type="button"
                       onClick={handleList}
-                      disabled={!listValidation.ok || listPending || cancelPending}
+                      disabled={
+                        !listValidation.ok ||
+                        !marketSettlementSupported ||
+                        listPending ||
+                        cancelPending
+                      }
                     >
                       {listPending ? 'Listing...' : 'List'}
                     </button>
@@ -1733,6 +1800,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
   const marketContract = parsedMarket.config;
   const marketContractError = parsedMarket.error;
   const marketContractIdLabel = marketContract ? getContractId(marketContract) : null;
+  const marketRegistryEntry = getMarketRegistryEntry(marketContractIdLabel);
   const marketNetworkMismatch = marketContract
     ? marketContract.network !== props.contract.network
     : false;
@@ -1743,6 +1811,27 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     () => (marketContract ? createMarketClient({ contract: marketContract }) : null),
     [marketContract]
   );
+  const marketPaymentTokenQuery = useQuery({
+    queryKey: ['market', marketContractIdLabel, 'payment-token'],
+    enabled: !!marketClient && !!marketContractIdLabel && props.isActiveTab,
+    staleTime: MARKET_DATA_STALE_MS,
+    refetchOnWindowFocus: false,
+    queryFn: async () => {
+      if (!marketClient) {
+        return null;
+      }
+      return marketClient.getPaymentToken(props.senderAddress);
+    }
+  });
+  const marketPaymentTokenContractId = marketPaymentTokenQuery.status === 'success'
+    ? marketPaymentTokenQuery.data
+    : marketRegistryEntry?.paymentTokenContractId;
+  const marketSettlement = getMarketSettlementAsset(marketPaymentTokenContractId);
+  const marketSettlementLabel = getMarketSettlementLabel(marketSettlement);
+  const marketSettlementBadgeVariant =
+    getMarketSettlementBadgeVariant(marketSettlement);
+  const marketSettlementMessage =
+    getMarketSettlementSupportMessage(marketSettlement);
 
   const marketActivityQuery = useQuery({
     queryKey: ['market', marketContractIdLabel, 'activity'],
@@ -3197,6 +3286,21 @@ export default function ViewerScreen(props: ViewerScreenProps) {
           );
           return;
         }
+        const postConditions = buildMarketBuyPostConditions({
+          settlement: marketSettlement,
+          buyerAddress: walletAddress,
+          amount: target.price,
+          nftContract: listingContract,
+          senderContract: marketContract,
+          tokenId: target.tokenId
+        });
+        if (!postConditions) {
+          setMarketActionPending(false);
+          setMarketActionStatus(
+            marketSettlementMessage ?? 'Unsupported payment token.'
+          );
+          return;
+        }
         showContractCall({
           contractAddress: marketContract.address,
           contractName: marketContract.contractName,
@@ -3211,18 +3315,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
           network: props.walletSession.network ?? marketContract.network,
           stxAddress: walletAddress,
           postConditionMode: PostConditionMode.Deny,
-          postConditions: [
-            makeStandardSTXPostCondition(
-              walletAddress,
-              FungibleConditionCode.Equal,
-              target.price
-            ),
-            buildContractTransferPostCondition({
-              nftContract: listingContract,
-              senderContract: marketContract,
-              tokenId: target.tokenId
-            })
-          ],
+          postConditions,
           onFinish: (payload) => {
             setMarketActionPending(false);
             setMarketActionStatus(`Purchase submitted: ${payload.txId}`);
@@ -3237,9 +3330,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
         const message = error instanceof Error ? error.message : String(error);
         setMarketActionPending(false);
         if (message.toLowerCase().includes('post-condition')) {
-          setMarketActionStatus(
-            'Purchase failed: no STX was transferred. Check listing status and balance.'
-          );
+          setMarketActionStatus(getMarketBuyFailureMessage(marketSettlement));
           return;
         }
         setMarketActionStatus(`Purchase failed: ${message}`);
@@ -3250,6 +3341,8 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       walletAddress,
       marketMismatch,
       marketNetworkMismatch,
+      marketSettlement,
+      marketSettlementMessage,
       resolveListingActionTarget,
       resolveListingContractConfig,
       props.walletSession.network,
@@ -3743,6 +3836,9 @@ export default function ViewerScreen(props: ViewerScreenProps) {
                           onBuyListing={handleBuyListing}
                           onCancelListing={handleCancelListing}
                           marketActionPending={marketActionPending}
+                          marketBuySupported={isMarketSettlementSupported(marketSettlement)}
+                          listingBadgeLabel={marketSettlementLabel}
+                          listingBadgeVariant={marketSettlementBadgeVariant}
                           client={tokenClient}
                           fallbackClient={fallbackClient}
                           senderAddress={props.senderAddress}
@@ -3777,6 +3873,9 @@ export default function ViewerScreen(props: ViewerScreenProps) {
                             onBuyListing={handleBuyListing}
                             onCancelListing={handleCancelListing}
                             marketActionPending={marketActionPending}
+                            marketBuySupported={isMarketSettlementSupported(marketSettlement)}
+                            listingBadgeLabel={marketSettlementLabel}
+                            listingBadgeVariant={marketSettlementBadgeVariant}
                             client={tokenClient}
                             fallbackClient={fallbackClient}
                             senderAddress={props.senderAddress}
@@ -3834,6 +3933,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
         marketContract={marketContract}
         marketContractError={marketContractError}
         marketContractId={marketContractIdLabel}
+        marketPaymentTokenContractId={marketPaymentTokenContractId}
         marketMismatch={marketMismatch}
         marketNetworkMismatch={marketNetworkMismatch}
         isMobile={isMobile}

@@ -76,6 +76,7 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 ## Contracts, network, and wallet plumbing
 
 - `src/data/contract-registry.json` stores the named contract list used by the selector.
+- `src/data/market-registry.json` stores the app-side market contract list used by the selector, including optional payment-token metadata for STX, USDCx, and sBTC settlement-aware market flows.
 - `src/data/commerce-registry.json` stores the app-side commerce contract list used for USDCx listing/purchase helpers.
 - `src/data/vault-registry.json` stores the app-side vault contract list used for sBTC premium/reserve helpers.
 - `src/lib/contract/registry.ts` loads the registry, normalizes entries, and exposes selection helpers.
@@ -114,6 +115,7 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 - `src/lib/viewer/relationships.ts` fetches parent IDs and scans for child relationships.
 - `src/lib/viewer/types.ts` defines viewer models.
 - `src/lib/market/actions.ts` centralizes market list/cancel validation helpers.
+- `src/lib/market/settlement.ts` centralizes market settlement asset detection, price parsing/formatting, and buy post-condition building for STX and first-party SIP-010 market flows.
 - `src/lib/market/listing-resolution.ts` resolves page-scoped listing data when activity indexes are incomplete.
 
 ## SDK and ecosystem docs
