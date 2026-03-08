@@ -53,6 +53,7 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 - `src/screens/CampaignConsoleScreen.tsx` owns the campaign console (drafts, assets, AI copy, post runner).
 - `src/screens/ViewerScreen.tsx` owns the collection viewer grid, selection logic, and detailed preview panel.
 - `src/screens/MyWalletScreen.tsx` owns the wallet grid, pagination, selection, and wallet preview panel.
+- `src/screens/MarketScreen.tsx` owns the aggregate market browser (STX, USDCx, and sBTC listing filters), selected-listing detail view, and advanced direct market actions.
 - `src/screens/CommerceScreen.tsx` owns the dedicated USDCx commerce UI (contract selection, listing lookup, listing creation, purchase, and entitlement checks).
 - `src/screens/PublicCommerceScreen.tsx` wraps the public-facing commerce view around the default registry contract.
 - `src/screens/VaultScreen.tsx` owns the dedicated sBTC vault UI (contract selection, vault lookup, tier checks, premium access checks, and owner vault actions).

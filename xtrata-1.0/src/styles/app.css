@@ -5562,6 +5562,69 @@ p {
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
 
+.market-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.market-filter-bar__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.market-filter-bar__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.market-filter-bar__button {
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.market-filter-bar__button:hover {
+  background: var(--ghost-hover);
+  color: var(--ink);
+}
+
+.market-filter-bar__button.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.market-filter-bar__button--settlement.badge--market-stx.is-active {
+  background: #475569;
+  border-color: #475569;
+}
+
+.market-filter-bar__button--settlement.badge--market-usdcx.is-active {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+.market-filter-bar__button--settlement.badge--market-sbtc.is-active {
+  background: #f59e0b;
+  border-color: #f59e0b;
+  color: #111827;
+}
+
 .market-block {
   display: grid;
   gap: 8px;
