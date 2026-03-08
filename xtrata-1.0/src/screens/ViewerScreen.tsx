@@ -485,6 +485,10 @@ const TokenDetails = (props: {
   }, [props.selectedTokenId, walletAddress]);
 
   useEffect(() => {
+    setWalletToolsOpen(false);
+  }, [props.selectedTokenId, props.mode]);
+
+  useEffect(() => {
     setDetailPanelView('media');
   }, [
     props.selectedTokenId,
@@ -492,6 +496,22 @@ const TokenDetails = (props: {
     props.mode,
     props.useCompactPreviewLayout
   ]);
+
+  useEffect(() => {
+    if (!showMetadataPane) {
+      setWalletToolsOpen(false);
+    }
+  }, [showMetadataPane]);
+
+  const handleOpenWalletTools = useCallback(() => {
+    if (useSplitDetailTabs) {
+      setDetailPanelView('metadata');
+    }
+    if (metadataColumnHidden) {
+      setMetadataColumnCollapsed(false);
+    }
+    setWalletToolsOpen(true);
+  }, [metadataColumnHidden, useSplitDetailTabs]);
 
   const transferValidation = validateTransferRequest({
     senderAddress: walletAddress,
@@ -1403,7 +1423,7 @@ const TokenDetails = (props: {
                 <button
                   type="button"
                   className={`wallet-preview__badge ${marketSettlementBadgeVariant}`}
-                  onClick={() => setWalletToolsOpen(true)}
+                  onClick={handleOpenWalletTools}
                   title="Open listing tools"
                 >
                   {`Listed · ${marketSettlementLabel}`}

@@ -1928,6 +1928,7 @@ p {
     max-height: min(35svh, 340px);
     overflow: auto;
     scrollbar-gutter: stable;
+    overscroll-behavior: contain;
     justify-content: flex-start;
   }
 
@@ -3508,7 +3509,23 @@ p {
 }
 
 .detail-panel__tools .preview-drawer__body {
-  max-height: none;
+  min-height: 0;
+  max-height: min(32svh, 320px);
+  overflow: auto;
+  padding-right: 2px;
+  scrollbar-gutter: stable;
+}
+
+.detail-panel__tools .preview-drawer {
+  min-height: 0;
+}
+
+.detail-panel__tools .preview-drawer > summary {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: inherit;
+  padding-bottom: 4px;
 }
 
 .detail-panel__tools--advanced .preview-drawer__body {
