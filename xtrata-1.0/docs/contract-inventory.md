@@ -411,6 +411,35 @@ Source: `contracts/live/xtrata-commerce.clar`
 - No auctions, royalties, multi-splits, or x402 logic in this MVP.
 - Purchase path re-checks seller control against the core Xtrata contract before transferring USDCx.
 
+## xtrata-market-stx-v1.0
+
+Source: `contracts/live/xtrata-market-stx-v1.0.clar`
+
+## Purpose
+- Fixed-price STX escrow marketplace for Xtrata `v2.1.0` inscriptions.
+- Sellers escrow inscriptions into the market contract on listing.
+- Buyers pay STX and receive immediate ownership transfer from escrow.
+
+## Core Functions
+- `set-fee-bps(new-fee)`
+- `list-token(nft-contract, token-id, price)`
+- `cancel(nft-contract, listing-id)`
+- `buy(nft-contract, listing-id)`
+
+## Read-Only Functions
+- `get-owner()`
+- `get-nft-contract()`
+- `get-fee-bps()`
+- `get-last-listing-id()`
+- `get-listing(listing-id)`
+- `get-listing-by-token(nft-contract, token-id)`
+- `get-listing-id-by-token(nft-contract, token-id)`
+
+## Notes
+- This is the default first-party STX market entry in the app market selector.
+- It is pinned to `xtrata-v2.1.0`, unlike the older legacy STX market family.
+- It mirrors the dedicated USDCx and sBTC market shape while keeping STX settlement.
+
 ## xtrata-market-usdc-v1.0
 
 Source: `contracts/live/xtrata-market-usdc-v1.0.clar`
@@ -437,9 +466,10 @@ Source: `contracts/live/xtrata-market-usdc-v1.0.clar`
 - `get-listing-id-by-token(nft-contract, token-id)`
 
 ## Notes
-- Mirrors the existing `xtrata-market-v1.1` escrow model closely so later UI work can stay aligned with the current market module shape.
+- Mirrors the dedicated STX `xtrata-market-stx-v1.0` escrow shape closely so later UI work can stay aligned across settlement assets.
 - Settlement is in USDCx base units rather than STX micro-units.
-- This contract is not registered in the current app market selector yet because the live market UI still assumes STX settlement on the buy path.
+- This contract is registered in the current app market selector.
+- The first-party market UI now reads `get-payment-token()` and uses settlement-aware formatting and post-conditions for STX, USDCx, and sBTC market flows.
 
 ## xtrata-market-sbtc-v1.0
 
@@ -467,9 +497,10 @@ Source: `contracts/live/xtrata-market-sbtc-v1.0.clar`
 - `get-listing-id-by-token(nft-contract, token-id)`
 
 ## Notes
-- Mirrors the existing `xtrata-market-v1.1` escrow model closely so later UI work can stay aligned with the current market module shape.
+- Mirrors the dedicated STX `xtrata-market-stx-v1.0` escrow shape closely so later UI work can stay aligned across settlement assets.
 - Settlement is in sBTC base units rather than STX micro-units.
-- This contract is not registered in the current app market selector yet because the live market UI still assumes STX settlement on the buy path.
+- This contract is registered in the current app market selector.
+- The first-party market UI now reads `get-payment-token()` and uses settlement-aware formatting and post-conditions for STX, USDCx, and sBTC market flows.
 
 ## xtrata-vault
 

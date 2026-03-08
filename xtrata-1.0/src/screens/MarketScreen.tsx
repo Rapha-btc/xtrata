@@ -1261,7 +1261,7 @@ export default function MarketScreen(props: MarketScreenProps) {
                 <span className="field__label">Contract ID</span>
                 <input
                   className="input"
-                  placeholder="SP...xtrata-market-v1-1"
+                  placeholder="SP...xtrata-market-stx-v1-0"
                   value={marketInput}
                   onChange={(event) => setMarketInput(event.target.value)}
                 />

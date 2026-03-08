@@ -126,6 +126,7 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 - `docs/ai-skills/README.md` is the AI training package index and onboarding entry point.
 - `docs/ai-skills/aibtc-agent-training.md` is the track-specific guide for aibtc MCP agents.
 - `docs/ai-skills/generic-agent-training.md` is the track-specific guide for non-aibtc AI agents and frameworks.
+- `docs/product-contract-ui-reference.md` maps first-party product ownership and UI boundaries for core, market, commerce, vault, and collection-sale contracts.
 - `docs/sdk/README.md` defines SDK mission, package boundaries, and implementation posture.
 - `docs/sdk/test-gates.md` defines required tests and release-quality gates.
 - `docs/sdk/changelog.md` tracks completed delivery iterations.

@@ -91,6 +91,11 @@ path = 'contracts/xtrata-market-v1.1.clar'
 clarity_version = 3
 epoch = 'latest'
 
+[contracts.xtrata-market-stx-v1-0]
+path = 'contracts/xtrata-market-stx-v1.0.clar'
+clarity_version = 3
+epoch = 'latest'
+
 [contracts.xtrata-market-usdc-v1-0]
 path = 'contracts/xtrata-market-usdc-v1.0.clar'
 clarity_version = 3
