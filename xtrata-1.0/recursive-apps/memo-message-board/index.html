@@ -90,14 +90,10 @@
               <p class="meta-label">Memo Composer</p>
               <div class="composer-grid">
                 <div class="composer-controls">
-                  <label class="composer-control">
-                    <span class="meta-label">Command Type</span>
-                    <select id="memo-kind-select" class="design-select" aria-label="Choose memo command type">
-                      <option value="message">Message Update</option>
-                      <option value="theme">Theme Switch</option>
-                      <option value="both">Message + Theme</option>
-                    </select>
-                  </label>
+                  <div class="composer-control">
+                    <span class="meta-label">Auto Mode</span>
+                    <span class="chip" id="memo-mode-chip">Nothing selected</span>
+                  </div>
                   <label class="composer-control">
                     <span class="meta-label">Prefix Style</span>
                     <select id="memo-prefix-select" class="design-select" aria-label="Choose memo prefix style">
@@ -118,12 +114,6 @@
                     <div class="memo-palette-grid" id="emoji-palette"></div>
                     <div class="memo-palette-grid" id="symbol-palette"></div>
                   </div>
-                </div>
-                <div id="theme-composer-panel" class="composer-grid is-hidden">
-                  <label class="composer-control">
-                    <span class="meta-label">Choose A Theme</span>
-                    <select id="memo-theme-select" class="design-select" aria-label="Choose a live theme"></select>
-                  </label>
                 </div>
               </div>
               <div class="memo-meter">
@@ -169,7 +159,7 @@
         network: 'mainnet',
         apiBase: 'https://api.hiro.so',
         explorerBase: 'https://explorer.hiro.so',
-        targetAddress: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
+        targetAddress: 'SPNRA47CQGS61HQNCBZMVF2HHT7AKZCP2CXH3NP3',
         minAmountMicroStx: '1',
         requiredPrefix: '',
         defaultMessage: 'SEND A MEMO TO TAKE OVER THIS BOARD',
@@ -403,12 +393,9 @@
         instructionStep2: $('instruction-step-2'),
         instructionStep3: $('instruction-step-3'),
         instructionNote: $('instruction-note'),
-        memoKindSelect: $('memo-kind-select'),
+        memoModeChip: $('memo-mode-chip'),
         memoPrefixSelect: $('memo-prefix-select'),
-        memoThemeSelect: $('memo-theme-select'),
         composerNote: $('composer-note'),
-        messageComposerPanel: $('message-composer-panel'),
-        themeComposerPanel: $('theme-composer-panel'),
         memoInput: $('memo-input'),
         memoFitChip: $('memo-fit-chip'),
         memoMeterText: $('memo-meter-text'),
@@ -531,6 +518,29 @@
 
       function themeMemoToken(themeId) {
         return String(getTheme(themeId).index);
+      }
+
+      function inferComposerState() {
+        const messagePayload = text(els.memoInput.value);
+        const themeId = state.previewThemeId === 'live' ? '' : getTheme(state.previewThemeId).id;
+        const themePayload = themeId ? themeMemoToken(themeId) : '';
+        const includeMessage = Boolean(messagePayload);
+        const includeTheme = Boolean(themePayload);
+
+        return {
+          mode: includeMessage && includeTheme
+            ? 'both'
+            : includeMessage
+              ? 'message'
+              : includeTheme
+                ? 'theme'
+                : 'empty',
+          includeMessage: includeMessage,
+          includeTheme: includeTheme,
+          messagePayload: messagePayload,
+          themeId: themeId,
+          themePayload: themePayload
+        };
       }
 
       function parseMemoSegment(segment, allowPlainMessage) {
@@ -719,38 +729,45 @@
       }
 
       function updateMemoTester() {
-        const kind = els.memoKindSelect.value;
         const prefixStyle = els.memoPrefixSelect.value;
-        const includeMessage = kind !== 'theme';
-        const includeTheme = kind !== 'message';
-        const messagePayload = includeMessage ? text(els.memoInput.value) : '';
-        const themePayload = includeTheme ? themeMemoToken(els.memoThemeSelect.value) : '';
+        const draft = inferComposerState();
+        const messagePayload = draft.messagePayload;
+        const themePayload = draft.themePayload;
         const commandParts = [];
-        if (messagePayload) commandParts.push(commandPrefix('message', prefixStyle) + messagePayload);
-        if (themePayload) commandParts.push(commandPrefix('theme', prefixStyle) + themePayload);
+        if (draft.includeMessage) commandParts.push(commandPrefix('message', prefixStyle) + messagePayload);
+        if (draft.includeTheme) commandParts.push(commandPrefix('theme', prefixStyle) + themePayload);
         const finalMemo = commandParts.length ? (CONFIG.requiredPrefix ? CONFIG.requiredPrefix : '') + commandParts.join('|') : '';
         const payloadBytes = memoBytes(messagePayload) + memoBytes(themePayload);
         const prefixBytes =
           (CONFIG.requiredPrefix ? memoBytes(CONFIG.requiredPrefix) : 0) +
-          (messagePayload ? memoBytes(commandPrefix('message', prefixStyle)) : 0) +
-          (themePayload ? memoBytes(commandPrefix('theme', prefixStyle)) : 0) +
+          (draft.includeMessage ? memoBytes(commandPrefix('message', prefixStyle)) : 0) +
+          (draft.includeTheme ? memoBytes(commandPrefix('theme', prefixStyle)) : 0) +
           (commandParts.length > 1 ? memoBytes('|') : 0);
         const finalBytes = memoBytes(finalMemo);
-        const hasText = kind === 'both'
-          ? Boolean(messagePayload && themePayload)
-          : Boolean(messagePayload || themePayload);
+        const hasText = draft.mode !== 'empty';
         const fits = hasText && finalBytes <= CONFIG.memoByteLimit;
-        const selectedTheme = getTheme(els.memoThemeSelect.value);
+        const selectedTheme = draft.themeId ? getTheme(draft.themeId) : null;
 
         state.finalMemo = finalMemo;
         state.memoFits = fits;
-        els.messageComposerPanel.classList.toggle('is-hidden', !includeMessage);
-        els.themeComposerPanel.classList.toggle('is-hidden', !includeTheme);
-        els.composerNote.textContent = kind === 'message'
-          ? 'Message updates use ' + COMMANDS.message.code + ' or ' + COMMANDS.message.emoji + ' and rewrite the live text.'
-          : kind === 'theme'
-            ? 'Theme switches use ' + COMMANDS.theme.code + ' or ' + COMMANDS.theme.emoji + ' followed by a theme index, for example t:12 or 🎨12.'
-            : 'Both mode emits two commands in one memo, separated by |. Use numeric theme indexes to save bytes, for example m:GM|t:88.';
+        setChip(
+          els.memoModeChip,
+          draft.mode === 'empty'
+            ? 'Nothing selected'
+            : draft.mode === 'message'
+              ? 'Auto: message'
+              : draft.mode === 'theme'
+                ? 'Auto: theme'
+                : 'Auto: message + theme',
+          draft.mode === 'empty' ? '' : 'good'
+        );
+        els.composerNote.textContent = draft.mode === 'empty'
+          ? 'Type a message below and/or pick a preview theme above. The memo builder will infer the right command format automatically.'
+          : draft.mode === 'message'
+            ? 'Text only is selected because the theme preview is still following the live on-chain theme.'
+            : draft.mode === 'theme'
+              ? 'Theme only is selected from the preview control above. The memo will use ' + COMMANDS.theme.code + themePayload + ' or ' + COMMANDS.theme.emoji + themePayload + '.'
+              : 'Both are selected automatically: your text plus preview theme #' + selectedTheme.index + ' ' + selectedTheme.label + ' will be combined in one memo with |.';
 
         setChip(
           els.memoFitChip,
@@ -773,8 +790,10 @@
           !hasText ? '' : fits ? 'good' : 'error'
         );
 
-        if (includeTheme) {
-          els.memoThemeSelect.title = '#' + selectedTheme.index + ' ' + selectedTheme.label + ' — ' + selectedTheme.group;
+        if (selectedTheme) {
+          els.designSelect.title = '#' + selectedTheme.index + ' ' + selectedTheme.label + ' — ' + selectedTheme.group;
+        } else {
+          els.designSelect.title = 'Follow live on-chain theme';
         }
       }
 
@@ -884,7 +903,6 @@
 
       function renderThemeOptions() {
         let previewHtml = '<option value="live">Follow live on-chain theme</option>';
-        let memoHtml = '';
 
         THEME_GROUPS.forEach(function (group) {
           const groupThemes = THEMES.filter(function (theme) {
@@ -892,19 +910,15 @@
           });
 
           previewHtml += '<optgroup label="' + group.label + '">';
-          memoHtml += '<optgroup label="' + group.label + '">';
 
           groupThemes.forEach(function (theme) {
             previewHtml += '<option value="' + theme.id + '">#' + theme.index + ' · ' + theme.label + '</option>';
-            memoHtml += '<option value="' + theme.id + '">#' + theme.index + ' · ' + theme.label + '</option>';
           });
 
           previewHtml += '</optgroup>';
-          memoHtml += '</optgroup>';
         });
 
         els.designSelect.innerHTML = previewHtml;
-        els.memoThemeSelect.innerHTML = memoHtml;
       }
 
       function setPreviewTheme(id) {
@@ -927,27 +941,23 @@
         els.instructionStep1.innerHTML =
           'Send any positive amount, at least <code>' + minimum + ' STX</code>, to <code>' + CONFIG.targetAddress + '</code>.';
         els.instructionStep2.innerHTML =
-          'Use <code>' + COMMANDS.message.code + '</code> or <code>' + COMMANDS.message.emoji +
-          '</code> for text updates, and <code>' + COMMANDS.theme.code + '</code> or <code>' +
-          COMMANDS.theme.emoji + '</code> for theme switches. Theme values can be numeric indexes like <code>12</code> or <code>#12</code>. You can combine commands with <code>|</code>.';
+          'Type a message below and/or choose a preview theme above. The composer automatically builds <code>' + COMMANDS.message.code + '</code>, <code>' + COMMANDS.theme.code + '</code>, or both together.';
         els.instructionStep3.textContent =
-          'Message and theme lanes resolve independently: the newest valid text command controls the message, and the newest valid theme command controls the default theme.';
+          'If the preview stays on follow-live, your memo only changes the text. If you choose a preview theme, the memo automatically includes that theme switch too.';
         els.instructionNote.textContent =
-          'There are 100 themes. Compact theme indexes are best for the memo byte budget. Example memos: m:HELLO, t:12, m:GM|t:88, 📝GM|🎨7. Default fallback theme is #' + defaultTheme.index + ' ' + defaultTheme.label + '.';
+          'There are 100 themes. Compact theme indexes are best for the memo byte budget. Example memos: m:HELLO, t:12, m:GM|t:88, 📝GM|🎨7. The top preview selector also doubles as the theme input for the memo composer. Default fallback theme is #' + defaultTheme.index + ' ' + defaultTheme.label + '.';
         els.memoInput.placeholder = CONFIG.requiredPrefix
           ? 'Type only the board text. The required prefix will be added automatically in the counter.'
           : 'Type a message here to see whether it fits in the STX transfer memo.';
-        els.memoThemeSelect.value = state.liveThemeId;
         renderPalette(els.emojiPalette, CONFIG.quickInsert.emoji);
         renderPalette(els.symbolPalette, CONFIG.quickInsert.symbol);
       }
 
       els.memoInput.addEventListener('input', updateMemoTester);
-      els.memoKindSelect.addEventListener('change', updateMemoTester);
       els.memoPrefixSelect.addEventListener('change', updateMemoTester);
-      els.memoThemeSelect.addEventListener('change', updateMemoTester);
       els.designSelect.addEventListener('change', function (event) {
         setPreviewTheme(event.target.value);
+        updateMemoTester();
       });
       document.addEventListener('click', function (event) {
         const insertButton = event.target.closest('[data-insert]');
