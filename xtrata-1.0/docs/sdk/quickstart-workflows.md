@@ -106,7 +106,7 @@ import {
 
 const marketContract = {
   address: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
-  contractName: 'xtrata-market-v1-1',
+  contractName: 'xtrata-market-stx-v1-0',
   network: 'mainnet' as const
 };
 const nftContract = {

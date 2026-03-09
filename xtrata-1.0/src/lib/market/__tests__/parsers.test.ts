@@ -15,7 +15,8 @@ import {
   parseGetListingByToken,
   parseGetListingIdByToken,
   parseGetMarketOwner,
-  parseGetNftContract
+  parseGetNftContract,
+  parseGetPaymentToken
 } from '../parsers';
 
 const seller = standardPrincipalCV('SP2JXKMSH007NPYAQHKJPQMAQYAD90NQGTVJVQ02B');
@@ -44,6 +45,15 @@ describe('market parsers', () => {
     const value = responseOkCV(nftContract);
     expect(parseGetNftContract(value)).toBe(
       'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1'
+    );
+  });
+
+  it('parses payment token contract', () => {
+    const value = responseOkCV(
+      contractPrincipalCV('SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE', 'usdcx')
+    );
+    expect(parseGetPaymentToken(value)).toBe(
+      'SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.usdcx'
     );
   });
 

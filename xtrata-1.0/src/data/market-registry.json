@@ -1,14 +1,37 @@
 [
   {
-    "label": "Xtrata Market v1.1",
+    "label": "Xtrata Market STX v1.0",
     "address": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X",
-    "contractName": "xtrata-market-v1-1",
-    "network": "mainnet"
+    "contractName": "xtrata-market-stx-v1-0",
+    "network": "mainnet",
+    "paymentTokenContractId": null
   },
   {
-    "label": "Xtrata Market v1.0",
+    "label": "Xtrata Market v1.1 (Legacy)",
+    "address": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X",
+    "contractName": "xtrata-market-v1-1",
+    "network": "mainnet",
+    "paymentTokenContractId": null
+  },
+  {
+    "label": "Xtrata Market v1.0 (Legacy)",
     "address": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X",
     "contractName": "xtrata-market-v1-0",
-    "network": "mainnet"
+    "network": "mainnet",
+    "paymentTokenContractId": null
+  },
+  {
+    "label": "Xtrata Market USDC v1.0",
+    "address": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X",
+    "contractName": "xtrata-market-usdc-v1-0",
+    "network": "mainnet",
+    "paymentTokenContractId": "SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.usdcx"
+  },
+  {
+    "label": "Xtrata Market sBTC v1.0",
+    "address": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X",
+    "contractName": "xtrata-market-sbtc-v1-0",
+    "network": "mainnet",
+    "paymentTokenContractId": "SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token"
   }
 ]

@@ -50,7 +50,7 @@ console.log({
 import { createMarketReadClient } from '@xtrata/sdk/simple';
 
 const market = createMarketReadClient({
-  contractId: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-market-v1-1',
+  contractId: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-market-stx-v1-0',
   senderAddress: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X'
 });
 

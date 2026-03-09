@@ -23,6 +23,13 @@ import {
   parseManageJsonResponse,
   toManageApiErrorMessage
 } from '../lib/api-errors';
+import {
+  getCollectionPublicDisplayOrder,
+  isCollectionVisibleOnPublicPage,
+  mergeCollectionPublicDisplayOrderMetadata,
+  mergeCollectionPublicVisibilityMetadata,
+  sortCollectionsForPublicPage
+} from '../lib/public-page';
 import { resolveCollectionContractLink } from '../lib/contract-link';
 
 type CollectionRecord = {
@@ -32,6 +39,7 @@ type CollectionRecord = {
   contract_address: string | null;
   display_name: string | null;
   state: string;
+  created_at?: number;
   metadata?: Record<string, unknown> | null;
 };
 
@@ -173,30 +181,6 @@ const toStringOrNull = (value: unknown) => {
 const toRecord = (value: unknown): Record<string, unknown> | null =>
   value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
 
-const toBoolean = (value: unknown) => {
-  if (typeof value === 'boolean') {
-    return value;
-  }
-  if (typeof value === 'string') {
-    const normalized = value.trim().toLowerCase();
-    if (normalized === 'true' || normalized === '1' || normalized === 'yes') {
-      return true;
-    }
-    if (normalized === 'false' || normalized === '0' || normalized === 'no') {
-      return false;
-    }
-  }
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    if (value === 1) {
-      return true;
-    }
-    if (value === 0) {
-      return false;
-    }
-  }
-  return null;
-};
-
 const toNumberOrNull = (value: unknown) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
@@ -309,12 +293,6 @@ const getLivePagePath = (collection: Pick<CollectionRecord, 'slug' | 'id'>) => {
   return `/collection/${encodeURIComponent(key)}`;
 };
 
-const isCollectionVisibleOnPublicPage = (collection: CollectionRecord) => {
-  const metadata = toRecord(collection.metadata);
-  const collectionPage = toRecord(metadata?.collectionPage);
-  return toBoolean(collectionPage?.showOnPublicPage) === true;
-};
-
 const resolveCollectionContractTarget = (
   collection: CollectionRecord,
   oversight: CollectionOversightResponse | null
@@ -404,6 +382,9 @@ export default function OwnerOversightPanel() {
     useState<Record<string, boolean>>({});
   const [publicVisibilityMessageByCollectionId, setPublicVisibilityMessageByCollectionId] =
     useState<Record<string, string | null>>({});
+  const [publicOrderPendingCollectionId, setPublicOrderPendingCollectionId] = useState<
+    string | null
+  >(null);
   const [showDraftsByArtistAddress, setShowDraftsByArtistAddress] = useState<
     Record<string, boolean>
   >({});
@@ -608,9 +589,40 @@ export default function OwnerOversightPanel() {
       filteredCollections.filter(
         (collection) =>
           isPublishedCollectionState(collection.state) &&
-          isCollectionVisibleOnPublicPage(collection)
+          isCollectionVisibleOnPublicPage(collection.metadata)
       ).length,
     [filteredCollections]
+  );
+  const publishedCollections = useMemo(
+    () =>
+      filteredCollections.filter((collection) =>
+        isPublishedCollectionState(collection.state)
+      ),
+    [filteredCollections]
+  );
+  const publicVisiblePublishedCollections = useMemo(
+    () =>
+      sortCollectionsForPublicPage(
+        publishedCollections.filter((collection) =>
+          isCollectionVisibleOnPublicPage(collection.metadata)
+        )
+      ),
+    [publishedCollections]
+  );
+  const hiddenPublishedCollections = useMemo(
+    () =>
+      [...publishedCollections]
+        .filter((collection) => !isCollectionVisibleOnPublicPage(collection.metadata))
+        .sort((left, right) => {
+          const leftLabel = left.display_name ?? left.slug;
+          const rightLabel = right.display_name ?? right.slug;
+          return leftLabel.localeCompare(rightLabel);
+        }),
+    [publishedCollections]
+  );
+  const curatedPublishedCollections = useMemo(
+    () => [...publicVisiblePublishedCollections, ...hiddenPublishedCollections],
+    [hiddenPublishedCollections, publicVisiblePublishedCollections]
   );
 
   const copyCollectionId = async (collectionId: string) => {
@@ -797,15 +809,16 @@ export default function OwnerOversightPanel() {
       }));
       return;
     }
-    const metadata = toRecord(collection.metadata) ?? {};
-    const collectionPage = toRecord(metadata.collectionPage) ?? {};
-    const nextMetadata = {
-      ...metadata,
-      collectionPage: {
-        ...collectionPage,
-        showOnPublicPage: visible
-      }
-    };
+    let nextMetadata = mergeCollectionPublicVisibilityMetadata(
+      collection.metadata ?? null,
+      visible
+    );
+    if (visible) {
+      nextMetadata = mergeCollectionPublicDisplayOrderMetadata(
+        nextMetadata,
+        publicVisiblePublishedCollections.length + 1
+      );
+    }
 
     setPublicVisibilitySavingByCollectionId((current) => ({
       ...current,
@@ -848,6 +861,95 @@ export default function OwnerOversightPanel() {
         ...current,
         [collection.id]: false
       }));
+    }
+  };
+
+  const movePublicOrder = async (
+    collectionId: string,
+    direction: 'up' | 'down'
+  ) => {
+    const ordered = sortCollectionsForPublicPage(publicVisiblePublishedCollections);
+    const currentIndex = ordered.findIndex((collection) => collection.id === collectionId);
+    if (currentIndex === -1) {
+      return;
+    }
+    const delta = direction === 'up' ? -1 : 1;
+    const targetIndex = currentIndex + delta;
+    if (targetIndex < 0 || targetIndex >= ordered.length) {
+      return;
+    }
+
+    const reordered = [...ordered];
+    const [moved] = reordered.splice(currentIndex, 1);
+    reordered.splice(targetIndex, 0, moved);
+
+    const nextOrderById = new Map<string, number>();
+    reordered.forEach((collection, index) => {
+      nextOrderById.set(collection.id, index + 1);
+    });
+    const changed = reordered.filter((collection) => {
+      const nextOrder = nextOrderById.get(collection.id) ?? null;
+      return (
+        nextOrder !== null &&
+        getCollectionPublicDisplayOrder(collection.metadata) !== nextOrder
+      );
+    });
+    if (changed.length === 0) {
+      return;
+    }
+
+    setPublicOrderPendingCollectionId(collectionId);
+    setPublicVisibilityMessageByCollectionId((current) => ({
+      ...current,
+      [collectionId]: null
+    }));
+
+    try {
+      const updatedById = new Map<string, CollectionRecord>();
+      for (const collection of changed) {
+        const nextOrder = nextOrderById.get(collection.id);
+        if (!nextOrder) {
+          continue;
+        }
+        const response = await fetch(`/collections/${collection.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            metadata: mergeCollectionPublicDisplayOrderMetadata(
+              collection.metadata ?? null,
+              nextOrder
+            )
+          })
+        });
+        const updated = await parseManageJsonResponse<CollectionRecord>(
+          response,
+          'Update public display order'
+        );
+        updatedById.set(updated.id, updated);
+      }
+
+      if (updatedById.size > 0) {
+        setCollections((current) =>
+          current.map((entry) => updatedById.get(entry.id) ?? entry)
+        );
+      }
+
+      setPublicVisibilityMessageByCollectionId((current) => ({
+        ...current,
+        [collectionId]: `${moved.display_name ?? moved.slug} is now position ${
+          targetIndex + 1
+        } on the public page.`
+      }));
+    } catch (updateError) {
+      setPublicVisibilityMessageByCollectionId((current) => ({
+        ...current,
+        [collectionId]: toManageApiErrorMessage(
+          updateError,
+          'Unable to update public page order.'
+        )
+      }));
+    } finally {
+      setPublicOrderPendingCollectionId(null);
     }
   };
 
@@ -927,6 +1029,110 @@ export default function OwnerOversightPanel() {
       {bnsResolutionPending && (
         <p className="collection-list__summary">Resolving .btc allowlist names...</p>
       )}
+      <div className="collection-list__group">
+        <div className="collection-list__group-header">
+          <h3 className="collection-list__group-title">Public page curation</h3>
+          <span className="badge badge--neutral">
+            {publicVisiblePublishedCollections.length} visible
+          </span>
+        </div>
+        <p className="collection-list__summary">
+          Only Xtrata admin can choose which published drops appear on the public
+          page and set their display order.
+        </p>
+        {publishedCollections.length === 0 ? (
+          <p className="collection-list__summary">
+            No published collections are ready for public curation yet.
+          </p>
+        ) : (
+          curatedPublishedCollections.map((collection) => {
+            const isPublicVisible = isCollectionVisibleOnPublicPage(collection.metadata);
+            const visibilitySaving = Boolean(
+              publicVisibilitySavingByCollectionId[collection.id]
+            );
+            const visibilityMessage =
+              publicVisibilityMessageByCollectionId[collection.id] ?? null;
+            const orderedIndex = publicVisiblePublishedCollections.findIndex(
+              (entry) => entry.id === collection.id
+            );
+
+            return (
+              <div
+                key={`public-curation-${collection.id}`}
+                className="collection-list__item collection-list__item--compact"
+              >
+                <div className="collection-list__compact-row">
+                  <div className="collection-list__compact-main">
+                    <strong>
+                      {isPublicVisible && orderedIndex >= 0
+                        ? `${orderedIndex + 1}. `
+                        : ''}
+                      {collection.display_name ?? collection.slug}
+                    </strong>
+                    <p className="collection-list__compact-meta">
+                      {collection.slug} ·{' '}
+                      <AddressLabel
+                        address={collection.artist_address}
+                        network={walletSession.network}
+                      />{' '}
+                      · {isPublicVisible ? 'Visible on public page' : 'Hidden from public page'}
+                    </p>
+                    {visibilityMessage && (
+                      <p className="collection-list__summary">{visibilityMessage}</p>
+                    )}
+                  </div>
+                  <div className="mint-actions">
+                    <button
+                      className="button button--ghost button--mini"
+                      type="button"
+                      onClick={() =>
+                        void setCollectionPublicVisibility(
+                          collection,
+                          !isPublicVisible
+                        )
+                      }
+                      disabled={visibilitySaving || publicOrderPendingCollectionId !== null}
+                    >
+                      {visibilitySaving
+                        ? 'Saving...'
+                        : isPublicVisible
+                          ? 'Hide'
+                          : 'Show'}
+                    </button>
+                    <button
+                      className="button button--ghost button--mini"
+                      type="button"
+                      onClick={() => void movePublicOrder(collection.id, 'up')}
+                      disabled={
+                        !isPublicVisible ||
+                        visibilitySaving ||
+                        publicOrderPendingCollectionId !== null ||
+                        orderedIndex <= 0
+                      }
+                    >
+                      Up
+                    </button>
+                    <button
+                      className="button button--ghost button--mini"
+                      type="button"
+                      onClick={() => void movePublicOrder(collection.id, 'down')}
+                      disabled={
+                        !isPublicVisible ||
+                        visibilitySaving ||
+                        publicOrderPendingCollectionId !== null ||
+                        orderedIndex === -1 ||
+                        orderedIndex === publicVisiblePublishedCollections.length - 1
+                      }
+                    >
+                      Down
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
       {isLoadingCollections && <p>Loading allowlisted artist activity...</p>}
       {!isLoadingCollections && filteredCollections.length === 0 && (
         <p>No collections found yet for other allowlisted artists.</p>
@@ -1024,12 +1230,7 @@ export default function OwnerOversightPanel() {
                 : !isMintLiveOnChain
                   ? 'Unavailable while contract is paused or finalized.'
                   : 'Unavailable';
-            const isPublicVisible = isCollectionVisibleOnPublicPage(collection);
-            const visibilitySaving = Boolean(
-              publicVisibilitySavingByCollectionId[collection.id]
-            );
-            const visibilityMessage =
-              publicVisibilityMessageByCollectionId[collection.id] ?? null;
+            const isPublicVisible = isCollectionVisibleOnPublicPage(collection.metadata);
             const deployTxId = collectionOversight?.deploy.txId ?? null;
             const deployTxUrl = deployTxId
               ? buildExplorerTxUrl(deployTxId, walletSession.network ?? null)
@@ -1185,20 +1386,9 @@ export default function OwnerOversightPanel() {
                         </a>
                       )}
                       {isPublished ? (
-                        <button
-                          className="button button--ghost button--mini"
-                          type="button"
-                          onClick={() =>
-                            void setCollectionPublicVisibility(collection, !isPublicVisible)
-                          }
-                          disabled={visibilitySaving}
-                        >
-                          {visibilitySaving
-                            ? 'Saving...'
-                            : isPublicVisible
-                              ? 'Hide from public page'
-                              : 'Show on public page'}
-                        </button>
+                        <span className="meta-value">
+                          Public page curation lives in the owner-only list above.
+                        </span>
                       ) : (
                         <span className="meta-value">
                           Publish first to enable public visibility.
@@ -1217,9 +1407,6 @@ export default function OwnerOversightPanel() {
                         </button>
                       )}
                     </div>
-                    {visibilityMessage && (
-                      <p className="meta-value">{visibilityMessage}</p>
-                    )}
                     <p className="meta-value">
                       Contract owner:{' '}
                       {collection.contract_address ? (

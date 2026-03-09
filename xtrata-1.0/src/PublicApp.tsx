@@ -38,6 +38,7 @@ import WalletTopBar from './components/WalletTopBar';
 import MintScreen from './screens/MintScreen';
 import ViewerScreen, { type ViewerMode } from './screens/ViewerScreen';
 import WalletLookupScreen from './screens/WalletLookupScreen';
+import PublicCommerceScreen from './screens/PublicCommerceScreen';
 import PublicMarketScreen from './screens/PublicMarketScreen';
 
 const walletSessionStore = createWalletSessionStore();
@@ -49,6 +50,7 @@ const SECTION_KEYS = [
   'docs',
   'mint',
   'market',
+  'commerce',
   'collection-viewer',
   'live-collections'
 ] as const;
@@ -2048,6 +2050,13 @@ export default function PublicApp() {
               </a>
               <a
                 className="button button--ghost app__nav-link"
+                href="#commerce"
+                onClick={(event) => handleNavJump(event, 'commerce')}
+              >
+                Commerce
+              </a>
+              <a
+                className="button button--ghost app__nav-link"
                 href="#live-collections"
                 onClick={(event) => handleNavJump(event, 'live-collections')}
               >
@@ -2309,6 +2318,13 @@ export default function PublicApp() {
           walletSession={walletSession}
           collapsed={collapsedSections.market}
           onToggleCollapse={() => toggleSection('market')}
+        />
+
+        <PublicCommerceScreen
+          contract={contract}
+          walletSession={walletSession}
+          collapsed={collapsedSections['commerce']}
+          onToggleCollapse={() => toggleSection('commerce')}
         />
 
         <section

@@ -16,6 +16,16 @@ path = "contracts/sip010-ft-trait.clar"
 clarity_version = 2
 epoch = 2.5
 
+[contracts.mock-usdcx]
+path = 'contracts/mock-usdcx.clar'
+clarity_version = 3
+epoch = 'latest'
+
+[contracts.mock-sbtc]
+path = 'contracts/mock-sbtc.clar'
+clarity_version = 3
+epoch = 'latest'
+
 [contracts.xtrata-v1-1-0]
 path = 'contracts/xtrata-v1.1.0.clar'
 clarity_version = 3
@@ -78,6 +88,31 @@ epoch = 'latest'
 
 [contracts.xtrata-market-v1-1]
 path = 'contracts/xtrata-market-v1.1.clar'
+clarity_version = 3
+epoch = 'latest'
+
+[contracts.xtrata-market-stx-v1-0]
+path = 'contracts/xtrata-market-stx-v1.0.clar'
+clarity_version = 3
+epoch = 'latest'
+
+[contracts.xtrata-market-usdc-v1-0]
+path = 'contracts/xtrata-market-usdc-v1.0.clar'
+clarity_version = 3
+epoch = 'latest'
+
+[contracts.xtrata-market-sbtc-v1-0]
+path = 'contracts/xtrata-market-sbtc-v1.0.clar'
+clarity_version = 3
+epoch = 'latest'
+
+[contracts.xtrata-commerce]
+path = 'contracts/xtrata-commerce.clar'
+clarity_version = 3
+epoch = 'latest'
+
+[contracts.xtrata-vault]
+path = 'contracts/xtrata-vault.clar'
 clarity_version = 3
 epoch = 'latest'
 

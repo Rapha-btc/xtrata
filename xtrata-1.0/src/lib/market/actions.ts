@@ -55,7 +55,7 @@ export type ListActionValidationResult =
   | {
       ok: true;
       reason: null;
-      priceMicroStx: bigint;
+      priceAmount: bigint;
     }
   | {
       ok: false;
@@ -71,6 +71,7 @@ export const validateListAction = (params: {
   tokenOwner?: string | null;
   isListed?: boolean;
   priceInput: string;
+  parsePriceInput?: (value: string) => bigint | null;
 }): ListActionValidationResult => {
   if (!params.hasMarketContract) {
     return { ok: false, reason: 'missing-market' };
@@ -96,15 +97,20 @@ export const validateListAction = (params: {
   if (params.isListed) {
     return { ok: false, reason: 'already-listed' };
   }
-  const priceMicroStx = parsePriceMicroStx(params.priceInput);
-  if (priceMicroStx === null) {
+  const priceAmount = (params.parsePriceInput ?? parsePriceMicroStx)(
+    params.priceInput
+  );
+  if (priceAmount === null) {
     return { ok: false, reason: 'invalid-price' };
   }
-  return { ok: true, reason: null, priceMicroStx };
+  return { ok: true, reason: null, priceAmount };
 };
 
 export const getListActionValidationMessage = (
-  reason: ListActionValidationReason
+  reason: ListActionValidationReason,
+  options?: {
+    priceSymbol?: string;
+  }
 ) => {
   switch (reason) {
     case 'missing-market':
@@ -122,7 +128,7 @@ export const getListActionValidationMessage = (
     case 'already-listed':
       return 'This inscription is already listed.';
     case 'invalid-price':
-      return 'Enter a valid price in STX.';
+      return `Enter a valid price in ${options?.priceSymbol ?? 'STX'}.`;
     default:
       return null;
   }
