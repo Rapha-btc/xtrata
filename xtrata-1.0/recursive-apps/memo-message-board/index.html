@@ -76,7 +76,7 @@
         </section>
 
         <details>
-          <summary>How to program this</summary>
+          <summary>How to program this inscription yourself</summary>
           <div class="details-body">
             <p id="instruction-blurb">
               Send the minimum amount to the configured address and put your new message in the transfer memo.
@@ -95,6 +95,7 @@
                     <select id="memo-kind-select" class="design-select" aria-label="Choose memo command type">
                       <option value="message">Message Update</option>
                       <option value="theme">Theme Switch</option>
+                      <option value="both">Message + Theme</option>
                     </select>
                   </label>
                   <label class="composer-control">
@@ -187,6 +188,7 @@
       const DESIGNS = [
         {
           id: 'signal-wall',
+          alias: 'sw',
           label: 'Signal Wall',
           file: 'theme-signal-wall.css',
           eyebrow: 'Public Programmable State',
@@ -196,6 +198,7 @@
         },
         {
           id: 'chain-pulse',
+          alias: 'cp',
           label: 'Chain Pulse',
           file: 'theme-chain-pulse.css',
           eyebrow: 'Live Chain Input',
@@ -205,6 +208,7 @@
         },
         {
           id: 'state-beacon',
+          alias: 'sb',
           label: 'State Beacon',
           file: 'theme-state-beacon.css',
           eyebrow: 'Shared State Beacon',
@@ -214,6 +218,7 @@
         },
         {
           id: 'open-feed',
+          alias: 'of',
           label: 'Open Feed',
           file: 'theme-open-feed.css',
           eyebrow: 'Open Chain Feed',
@@ -223,6 +228,7 @@
         },
         {
           id: 'message-reactor',
+          alias: 'mr',
           label: 'Message Reactor',
           file: 'theme-message-reactor.css',
           eyebrow: 'Programmable Reaction Surface',
@@ -232,6 +238,7 @@
         },
         {
           id: 'public-console',
+          alias: 'pc',
           label: 'Public Console',
           file: 'theme-public-console.css',
           eyebrow: 'Open Command Surface',
@@ -241,6 +248,7 @@
         },
         {
           id: 'live-signal',
+          alias: 'ls',
           label: 'Live Signal',
           file: 'theme-live-signal.css',
           eyebrow: 'Micro-Transaction Media',
@@ -252,6 +260,9 @@
 
       const DESIGN_MAP = Object.fromEntries(DESIGNS.map(function (design) {
         return [design.id, design];
+      }));
+      const DESIGN_ALIAS_MAP = Object.fromEntries(DESIGNS.map(function (design) {
+        return [design.alias, design.id];
       }));
 
       const COMMANDS = {
@@ -348,11 +359,6 @@
         return COMMANDS[kind][style];
       };
 
-      const buildMemo = function (kind, style, payload) {
-        const memo = commandPrefix(kind, style) + payload;
-        return CONFIG.requiredPrefix ? CONFIG.requiredPrefix + memo : memo;
-      };
-
       const sortNewest = function (a, b) {
         return b.timestamp - a.timestamp;
       };
@@ -365,11 +371,16 @@
         return DESIGN_MAP[id] || DESIGNS[0];
       };
 
-      const normalizeThemeId = function (value) {
-        return clean(value)
+      const normalizeThemeToken = function (value) {
+        const token = clean(value)
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, '-')
           .replace(/^-+|-+$/g, '');
+        return DESIGN_ALIAS_MAP[token] || token;
+      };
+
+      const themeMemoToken = function (value) {
+        return getDesign(value).alias || getDesign(value).id;
       };
 
       const effectiveDesignId = function () {
@@ -404,14 +415,7 @@
         }
       }
 
-      function parseMemoCommand(raw) {
-        const memo = clean(decodeMemo(raw));
-        if (!memo || memoBytes(memo) > CONFIG.memoByteLimit) return null;
-        if (CONFIG.requiredPrefix && !memo.startsWith(CONFIG.requiredPrefix)) return null;
-
-        const payload = clean(CONFIG.requiredPrefix ? memo.slice(CONFIG.requiredPrefix.length) : memo);
-        if (!payload) return null;
-
+      function parseMemoSegment(segment, allowPlainMessage) {
         const prefixes = [
           { kind: 'theme', prefix: COMMANDS.theme.code },
           { kind: 'theme', prefix: COMMANDS.theme.emoji },
@@ -420,20 +424,47 @@
         ];
 
         const matched = prefixes.find(function (entry) {
-          return payload.startsWith(entry.prefix);
+          return segment.startsWith(entry.prefix);
         });
 
-        const kind = matched ? matched.kind : 'message';
-        const value = clean(matched ? payload.slice(matched.prefix.length) : payload);
-        if (!value) return null;
-
-        if (kind === 'theme') {
-          const themeId = normalizeThemeId(value);
-          if (!hasDesign(themeId)) return null;
-          return { kind: 'theme', themeId: themeId };
+        if (!matched) {
+          return allowPlainMessage ? { message: clean(segment) } : null;
         }
 
-        return { kind: 'message', message: value };
+        const value = clean(segment.slice(matched.prefix.length));
+        if (!value) return null;
+
+        if (matched.kind === 'theme') {
+          const themeId = normalizeThemeToken(value);
+          if (!hasDesign(themeId)) return null;
+          return { themeId: themeId };
+        }
+
+        return { message: value };
+      }
+
+      function parseMemoCommand(raw) {
+        const memo = clean(decodeMemo(raw));
+        if (!memo || memoBytes(memo) > CONFIG.memoByteLimit) return null;
+        if (CONFIG.requiredPrefix && !memo.startsWith(CONFIG.requiredPrefix)) return null;
+
+        const payload = clean(CONFIG.requiredPrefix ? memo.slice(CONFIG.requiredPrefix.length) : memo);
+        if (!payload) return null;
+
+        const segments = payload.split(/[|\n;]/).map(clean).filter(Boolean);
+        if (!segments.length) return null;
+
+        const parsed = { message: '', themeId: '' };
+        const allowPlainMessage = segments.length === 1;
+
+        for (const segment of segments) {
+          const next = parseMemoSegment(segment, allowPlainMessage);
+          if (!next) return null;
+          if (next.message) parsed.message = next.message;
+          if (next.themeId) parsed.themeId = next.themeId;
+        }
+
+        return parsed.message || parsed.themeId ? parsed : null;
       }
 
       function parseTimestamp(tx) {
@@ -458,7 +489,6 @@
           txId: tx.tx_id,
           sender: tx.sender_address || '',
           amountMicroStx: transfer.amount || '0',
-          kind: command.kind,
           message: command.message || '',
           themeId: command.themeId || '',
           pending: source === 'pending' || String(tx.tx_status || '').startsWith('pending'),
@@ -555,20 +585,35 @@
       function updateMemoTester() {
         const kind = els.memoKindSelect.value;
         const prefixStyle = els.memoPrefixSelect.value;
-        const payload = kind === 'theme' ? els.memoThemeSelect.value : text(els.memoInput.value);
-        const finalMemo = payload ? buildMemo(kind, prefixStyle, payload) : '';
-        const prefixBytes = memoBytes(commandPrefix(kind, prefixStyle)) + (CONFIG.requiredPrefix ? memoBytes(CONFIG.requiredPrefix) : 0);
+        const includeMessage = kind !== 'theme';
+        const includeTheme = kind !== 'message';
+        const messagePayload = includeMessage ? text(els.memoInput.value) : '';
+        const themePayload = includeTheme ? themeMemoToken(els.memoThemeSelect.value) : '';
+        const commandParts = [];
+        if (messagePayload) commandParts.push(commandPrefix('message', prefixStyle) + messagePayload);
+        if (themePayload) commandParts.push(commandPrefix('theme', prefixStyle) + themePayload);
+        const finalMemo = commandParts.length ? (CONFIG.requiredPrefix ? CONFIG.requiredPrefix : '') + commandParts.join('|') : '';
+        const payloadBytes = memoBytes(messagePayload) + memoBytes(themePayload);
+        const prefixBytes =
+          (CONFIG.requiredPrefix ? memoBytes(CONFIG.requiredPrefix) : 0) +
+          (messagePayload ? memoBytes(commandPrefix('message', prefixStyle)) : 0) +
+          (themePayload ? memoBytes(commandPrefix('theme', prefixStyle)) : 0) +
+          (commandParts.length > 1 ? memoBytes('|') : 0);
         const finalBytes = memoBytes(finalMemo);
-        const hasText = payload.length > 0;
+        const hasText = kind === 'both'
+          ? Boolean(messagePayload && themePayload)
+          : Boolean(messagePayload || themePayload);
         const fits = hasText && finalBytes <= CONFIG.memoByteLimit;
 
         state.finalMemo = finalMemo;
         state.memoFits = fits;
-        els.messageComposerPanel.classList.toggle('is-hidden', kind !== 'message');
-        els.themeComposerPanel.classList.toggle('is-hidden', kind !== 'theme');
+        els.messageComposerPanel.classList.toggle('is-hidden', !includeMessage);
+        els.themeComposerPanel.classList.toggle('is-hidden', !includeTheme);
         els.composerNote.textContent = kind === 'message'
           ? 'Message updates use ' + COMMANDS.message.code + ' or ' + COMMANDS.message.emoji + ' and rewrite the live text.'
-          : 'Theme switches use ' + COMMANDS.theme.code + ' or ' + COMMANDS.theme.emoji + ' and change the live default skin.';
+          : kind === 'theme'
+            ? 'Theme switches use ' + COMMANDS.theme.code + ' or ' + COMMANDS.theme.emoji + ' and change the live default skin.'
+            : 'Both mode emits two commands in one memo, separated by |. Short theme aliases like cp and ls save bytes.';
 
         setChip(
           els.memoFitChip,
@@ -577,9 +622,9 @@
         );
 
         els.memoMeterText.innerHTML = prefixBytes
-          ? 'Payload: <strong>' + memoBytes(payload) + '</strong> bytes. Prefix bytes: <strong>' + prefixBytes +
+          ? 'Payload: <strong>' + payloadBytes + '</strong> bytes. Prefix bytes: <strong>' + prefixBytes +
               '</strong> bytes. Final memo: <strong>' + finalBytes + ' / ' + CONFIG.memoByteLimit + '</strong> bytes.'
-          : 'Payload: <strong>' + memoBytes(payload) + '</strong> bytes. Final memo: <strong>' + finalBytes +
+          : 'Payload: <strong>' + payloadBytes + '</strong> bytes. Final memo: <strong>' + finalBytes +
               ' / ' + CONFIG.memoByteLimit + '</strong> bytes.';
 
         els.memoPreviewText.textContent = hasText ? finalMemo : 'Nothing to copy yet.';
@@ -666,10 +711,10 @@
             .sort(sortNewest);
 
           const messageCandidate = candidates.find(function (candidate) {
-            return candidate.kind === 'message';
+            return Boolean(candidate.message);
           }) || null;
           const themeCandidate = candidates.find(function (candidate) {
-            return candidate.kind === 'theme';
+            return Boolean(candidate.themeId);
           }) || null;
 
           state.lastRefreshAt = Date.now();
@@ -722,7 +767,7 @@
           }).join('');
         els.memoThemeSelect.innerHTML = DESIGNS
           .map(function (design) {
-            return '<option value="' + design.id + '">' + design.label + ' (' + design.id + ')</option>';
+            return '<option value="' + design.id + '">' + design.label + ' (' + design.alias + ')</option>';
           })
           .join('');
       }
@@ -748,11 +793,11 @@
         els.instructionStep2.innerHTML =
           'Use <code>' + COMMANDS.message.code + '</code> or <code>' + COMMANDS.message.emoji +
             '</code> for text updates, and <code>' + COMMANDS.theme.code + '</code> or <code>' +
-            COMMANDS.theme.emoji + '</code> for theme switches.';
+            COMMANDS.theme.emoji + '</code> for theme switches. You can combine them in one memo with <code>|</code>.';
         els.instructionStep3.textContent =
           'Message and theme lanes resolve independently: the newest valid text command controls the message, and the newest valid theme command controls the default skin.';
         els.instructionNote.textContent =
-          'Compact code prefixes are better for byte budget. Example memos: m:HELLO WORLD, t:chain-pulse, 📝GM, 🎨live-signal.';
+          'Compact code prefixes are better for byte budget. Theme aliases are sw, cp, sb, of, mr, pc, ls. Example memos: m:HELLO, t:cp, m:GM|t:ls, 📝GM|🎨cp.';
         els.memoInput.placeholder = CONFIG.requiredPrefix
           ? 'Type only the board text. The required prefix will be added automatically in the counter.'
           : 'Type a message here to see whether it fits in the STX transfer memo.';

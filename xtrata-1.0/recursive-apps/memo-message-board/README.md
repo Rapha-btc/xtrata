@@ -14,8 +14,19 @@ Local design test harness for the Xtrata public programmable-state demo.
 ## Memo command protocol
 
 - Message update: `m:HELLO` or `📝HELLO`
-- Theme switch: `t:chain-pulse` or `🎨chain-pulse`
+- Theme switch: `t:cp` or `🎨cp`
+- Combined update: `m:GM|t:cp` or `📝GM|🎨cp`
 - Plain unprefixed memos still count as message updates for compatibility.
+
+Theme aliases:
+
+- `sw` = Signal Wall
+- `cp` = Chain Pulse
+- `sb` = State Beacon
+- `of` = Open Feed
+- `mr` = Message Reactor
+- `pc` = Public Console
+- `ls` = Live Signal
 
 State lanes resolve independently:
 
