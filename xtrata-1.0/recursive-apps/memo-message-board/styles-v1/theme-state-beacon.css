@@ -1,0 +1,51 @@
+:root {
+  --bg: #dbe7f5;
+  --bg-glow: rgba(255, 255, 255, 0.7);
+  --board: #a8bfd8;
+  --paper: #f9fcff;
+  --ink: #0d2740;
+  --muted: #5e7790;
+  --line: rgba(53, 95, 133, 0.08);
+  --accent: #2f82d3;
+  --accent-soft: rgba(47, 130, 211, 0.12);
+  --good: #25815c;
+  --pending: #a56a1a;
+  --error: #b53a52;
+  --surface: rgba(255, 255, 255, 0.78);
+  --surface-alt: rgba(243, 248, 254, 0.9);
+  --card: rgba(255, 255, 255, 0.84);
+  --card-strong: rgba(255, 255, 255, 0.96);
+  --border: rgba(46, 103, 154, 0.12);
+  --chip: rgba(47, 130, 211, 0.08);
+  --body-font: "Avenir Next", "Segoe UI", sans-serif;
+  --display-font: "Baskerville", "Georgia", serif;
+  --board-radius: 36px;
+  --note-radius: 28px;
+  --panel-radius: 22px;
+  --field-radius: 16px;
+  --button-radius: 999px;
+}
+
+body {
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.8), transparent 40%),
+    linear-gradient(180deg, #edf4fb 0%, #dbe7f5 100%);
+}
+
+.board {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 24px 64px rgba(77, 118, 156, 0.18);
+}
+
+.board::after {
+  background: radial-gradient(circle at 30% 30%, #ffffff 0%, #b7d4f0 48%, #6f97c0 100%);
+}
+
+.message {
+  letter-spacing: -0.06em;
+}
+
+.innovation-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}

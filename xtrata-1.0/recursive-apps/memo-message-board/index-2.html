@@ -1,0 +1,1324 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Xtrata Memo Message Board</title>
+  <style>
+    :root {
+      --bg: #1d1308;
+      --bg-glow: rgba(255, 212, 140, 0.16);
+      --board: #6b4423;
+      --board-edge: #3b2411;
+      --paper: #f5ecd8;
+      --paper-shadow: rgba(30, 18, 7, 0.24);
+      --ink: #21160d;
+      --muted: #6d5948;
+      --line: rgba(70, 43, 20, 0.18);
+      --accent: #d04c29;
+      --accent-soft: rgba(208, 76, 41, 0.12);
+      --good: #1d7a48;
+      --pending: #a35f0f;
+      --error: #a51d2d;
+      --chip: rgba(29, 22, 13, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+    }
+
+    body {
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top, var(--bg-glow), transparent 38%),
+        linear-gradient(180deg, #130d08 0%, var(--bg) 100%);
+      padding: 20px;
+    }
+
+    .shell {
+      width: min(100%, 940px);
+      margin: 0 auto;
+      display: grid;
+      gap: 16px;
+    }
+
+    .board {
+      position: relative;
+      border-radius: 28px;
+      padding: clamp(18px, 4vw, 34px);
+      background:
+        linear-gradient(155deg, #8a5b30 0%, var(--board) 46%, #573618 100%);
+      border: 1px solid rgba(255, 236, 206, 0.12);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 236, 206, 0.14),
+        0 22px 70px rgba(0, 0, 0, 0.34);
+      overflow: hidden;
+    }
+
+    .board::before,
+    .board::after {
+      content: "";
+      position: absolute;
+      inset: 12px;
+      border-radius: 22px;
+      border: 1px solid rgba(255, 241, 220, 0.08);
+      pointer-events: none;
+    }
+
+    .board::after {
+      inset: auto;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #f9dcb0 0%, #c48b4f 48%, #71461d 100%);
+      box-shadow:
+        calc(100vw * 0) 0 0 0 transparent,
+        0 0 0 1px rgba(44, 24, 9, 0.2),
+        0 3px 8px rgba(0, 0, 0, 0.28);
+      top: 22px;
+      right: 22px;
+    }
+
+    .note {
+      position: relative;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0)),
+        var(--paper);
+      border-radius: 18px;
+      padding: clamp(20px, 4vw, 34px);
+      min-height: min(72vh, 520px);
+      box-shadow:
+        0 20px 44px var(--paper-shadow),
+        inset 0 0 0 1px rgba(92, 62, 34, 0.08);
+      display: grid;
+      gap: 18px;
+      align-content: start;
+    }
+
+    .note::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 18px;
+      background:
+        linear-gradient(transparent 31px, var(--line) 32px, transparent 33px);
+      background-size: 100% 33px;
+      opacity: 0.38;
+      pointer-events: none;
+    }
+
+    .header,
+    .meta,
+    details,
+    .status-panel {
+      position: relative;
+      z-index: 1;
+    }
+
+    .eyebrow {
+      margin: 0;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      font-size: 0.74rem;
+      font-weight: 700;
+    }
+
+    .title {
+      margin: 8px 0 0;
+      font-size: clamp(1.8rem, 4vw, 3rem);
+      line-height: 0.96;
+      letter-spacing: -0.04em;
+      font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+    }
+
+    .subtitle {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 0.98rem;
+      line-height: 1.5;
+      max-width: 56ch;
+    }
+
+    .message-wrap {
+      margin-top: 2px;
+      padding: clamp(16px, 3vw, 26px);
+      border-radius: 16px;
+      background: rgba(255, 252, 245, 0.72);
+      border: 1px solid rgba(99, 67, 36, 0.12);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    }
+
+    .message {
+      margin: 0;
+      font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+      font-size: clamp(2.4rem, 7vw, 5.8rem);
+      line-height: 0.96;
+      font-weight: 700;
+      letter-spacing: -0.055em;
+      word-break: break-word;
+      text-wrap: balance;
+    }
+
+    .message.is-placeholder {
+      color: #7f6650;
+    }
+
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .meta-card {
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(255, 251, 243, 0.7);
+      border: 1px solid rgba(88, 56, 28, 0.1);
+      display: grid;
+      gap: 5px;
+    }
+
+    .meta-label {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      font-weight: 700;
+    }
+
+    .meta-value {
+      margin: 0;
+      color: var(--ink);
+      font-size: 0.95rem;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    .meta-value code {
+      font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+      font-size: 0.9em;
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 34px;
+      padding: 0 12px;
+      border-radius: 999px;
+      background: var(--chip);
+      color: var(--ink);
+      border: 1px solid rgba(70, 43, 20, 0.1);
+      font-size: 0.88rem;
+      font-weight: 600;
+    }
+
+    .chip.good {
+      color: var(--good);
+      background: rgba(29, 122, 72, 0.11);
+      border-color: rgba(29, 122, 72, 0.16);
+    }
+
+    .chip.pending {
+      color: var(--pending);
+      background: rgba(163, 95, 15, 0.11);
+      border-color: rgba(163, 95, 15, 0.18);
+    }
+
+    .chip.error {
+      color: var(--error);
+      background: rgba(165, 29, 45, 0.11);
+      border-color: rgba(165, 29, 45, 0.18);
+    }
+
+    button {
+      appearance: none;
+      border: 0;
+      border-radius: 999px;
+      padding: 11px 16px;
+      background: var(--accent);
+      color: #fff8f3;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 10px 24px rgba(208, 76, 41, 0.26);
+    }
+
+    button:hover {
+      filter: brightness(1.04);
+    }
+
+    details,
+    .status-panel {
+      border-radius: 16px;
+      background: rgba(255, 251, 243, 0.72);
+      border: 1px solid rgba(88, 56, 28, 0.1);
+      padding: 14px 16px;
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: 800;
+      list-style: none;
+      font-size: 0.95rem;
+    }
+
+    summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .details-body {
+      margin-top: 12px;
+      display: grid;
+      gap: 12px;
+      color: var(--ink);
+      line-height: 1.55;
+      font-size: 0.95rem;
+    }
+
+    .details-body p,
+    .details-body ol {
+      margin: 0;
+    }
+
+    .memo-tester {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(255, 248, 235, 0.72);
+      border: 1px solid rgba(88, 56, 28, 0.1);
+    }
+
+    .memo-tester-label {
+      margin: 0;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .composer-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .composer-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+    }
+
+    .design-select {
+      width: 100%;
+      min-height: 44px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(88, 56, 28, 0.16);
+      background: rgba(255, 255, 255, 0.76);
+      color: var(--ink);
+      font: inherit;
+      font-weight: 600;
+    }
+
+    .design-select:focus {
+      outline: 2px solid rgba(208, 76, 41, 0.22);
+      outline-offset: 1px;
+      border-color: rgba(208, 76, 41, 0.36);
+    }
+
+    .composer-note {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+
+    .memo-input {
+      width: 100%;
+      min-height: 88px;
+      resize: vertical;
+      border-radius: 12px;
+      border: 1px solid rgba(88, 56, 28, 0.16);
+      background: rgba(255, 255, 255, 0.76);
+      color: var(--ink);
+      padding: 12px 14px;
+      font: inherit;
+      line-height: 1.45;
+    }
+
+    .memo-input:focus {
+      outline: 2px solid rgba(208, 76, 41, 0.22);
+      outline-offset: 1px;
+      border-color: rgba(208, 76, 41, 0.36);
+    }
+
+    .memo-meter {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .memo-meter-text {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .memo-meter-text strong {
+      color: var(--ink);
+    }
+
+    .memo-palette {
+      display: grid;
+      gap: 8px;
+    }
+
+    .memo-palette-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .insert-button,
+    .button-secondary {
+      box-shadow: none;
+      min-height: 38px;
+    }
+
+    .insert-button {
+      padding: 8px 11px;
+      background: rgba(255, 255, 255, 0.78);
+      color: var(--ink);
+      border: 1px solid rgba(88, 56, 28, 0.12);
+      font-weight: 700;
+    }
+
+    .insert-button:hover,
+    .button-secondary:hover {
+      filter: none;
+      background: rgba(255, 255, 255, 0.92);
+    }
+
+    .button-secondary {
+      background: rgba(255, 255, 255, 0.8);
+      color: var(--ink);
+      border: 1px solid rgba(88, 56, 28, 0.14);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.58;
+      box-shadow: none;
+    }
+
+    .memo-preview {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.62);
+      border: 1px solid rgba(88, 56, 28, 0.1);
+    }
+
+    .memo-preview-text {
+      margin: 0;
+      min-height: 48px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(255, 248, 235, 0.88);
+      border: 1px solid rgba(88, 56, 28, 0.08);
+      color: var(--ink);
+      font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+      font-size: 0.9rem;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .memo-preview-text.is-placeholder {
+      color: var(--muted);
+    }
+
+    .memo-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .is-hidden {
+      display: none;
+    }
+
+    .details-body ol {
+      padding-left: 18px;
+    }
+
+    .details-body code,
+    .status-panel code {
+      font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+      font-size: 0.92em;
+      background: var(--accent-soft);
+      padding: 2px 5px;
+      border-radius: 6px;
+    }
+
+    .status-panel {
+      display: grid;
+      gap: 12px;
+    }
+
+    .status-text {
+      margin: 0;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      color: var(--muted);
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    @media (max-width: 760px) {
+      body {
+        padding: 14px;
+      }
+
+      .board {
+        border-radius: 22px;
+        padding: 14px;
+      }
+
+      .note {
+        min-height: auto;
+      }
+
+      .meta {
+        grid-template-columns: 1fr;
+      }
+
+      .row {
+        align-items: stretch;
+      }
+
+      button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="board">
+      <article class="note">
+        <header class="header">
+          <p class="eyebrow">Transactional Demo</p>
+          <h1 class="title" id="board-title">Open Bulletin Board</h1>
+          <p class="subtitle">
+            This inscription does not mutate its own bytes. It reads the latest qualifying
+            on-chain transfer and renders that memo as the live board message.
+          </p>
+        </header>
+
+        <section class="message-wrap" aria-live="polite">
+          <p class="message is-placeholder" id="message-text">Waiting for the first valid memo...</p>
+        </section>
+
+        <section class="meta" aria-label="Message metadata">
+          <article class="meta-card">
+            <p class="meta-label">Current Source</p>
+            <p class="meta-value" id="message-source">No qualifying transfer found yet.</p>
+          </article>
+          <article class="meta-card">
+            <p class="meta-label">Board Rule</p>
+            <p class="meta-value" id="board-rule">Latest incoming transfer with a non-empty memo wins.</p>
+          </article>
+          <article class="meta-card">
+            <p class="meta-label">Latest Transaction</p>
+            <p class="meta-value" id="tx-meta">No transaction selected.</p>
+          </article>
+          <article class="meta-card">
+            <p class="meta-label">Refresh</p>
+            <p class="meta-value" id="refresh-meta">Polling the chain for updates.</p>
+          </article>
+        </section>
+
+        <details>
+          <summary>How to change this board</summary>
+          <div class="details-body">
+            <p id="instruction-blurb">
+              Send the minimum amount to the configured address and put your new message in the transfer memo.
+            </p>
+            <ol>
+              <li id="instruction-step-1"></li>
+              <li id="instruction-step-2"></li>
+              <li id="instruction-step-3"></li>
+            </ol>
+            <div class="memo-tester">
+              <p class="memo-tester-label">Memo Size Tester</p>
+              <div class="composer-grid">
+                <div class="composer-row">
+                  <label>
+                    <p class="memo-tester-label">Memo Command</p>
+                    <select id="memo-kind-select" class="design-select" aria-label="Choose memo command type">
+                      <option value="message">Message Update</option>
+                      <option value="both">Message + Theme</option>
+                      <option value="theme">Theme Switch</option>
+                    </select>
+                  </label>
+                  <label>
+                    <p class="memo-tester-label">Prefix Style</p>
+                    <select id="memo-prefix-select" class="design-select" aria-label="Choose memo prefix style">
+                      <option value="code">Code Prefix</option>
+                      <option value="emoji">Emoji Prefix</option>
+                    </select>
+                  </label>
+                </div>
+                <div id="theme-composer-panel" class="composer-row is-hidden">
+                  <label>
+                    <p class="memo-tester-label">Theme Alias</p>
+                    <select id="memo-theme-select" class="design-select" aria-label="Choose a theme alias"></select>
+                  </label>
+                </div>
+                <p id="composer-note" class="composer-note">
+                  Message updates use <code>m:</code> or <code>📝</code> and rewrite the live text.
+                </p>
+              </div>
+              <div id="message-composer-panel" class="composer-grid">
+                <textarea
+                  id="memo-input"
+                  class="memo-input"
+                  placeholder="Type a message here to see whether it fits in the STX transfer memo."
+                ></textarea>
+                <div class="memo-palette">
+                  <p class="memo-tester-label">Quick Insert</p>
+                  <div class="memo-palette-grid" id="emoji-palette"></div>
+                  <div class="memo-palette-grid" id="symbol-palette"></div>
+                </div>
+              </div>
+              <div class="memo-meter">
+                <span class="chip" id="memo-fit-chip">Empty memo</span>
+                <p class="memo-meter-text" id="memo-meter-text">
+                  Payload: <strong>0</strong> bytes. Final memo: <strong>0 / 34</strong> bytes.
+                </p>
+              </div>
+              <div class="memo-preview">
+                <p class="memo-tester-label">Wallet Memo Preview</p>
+                <p class="memo-preview-text is-placeholder" id="memo-preview-text">Nothing to copy yet.</p>
+                <div class="memo-actions">
+                  <button type="button" id="copy-memo-button" class="button-secondary" disabled>Copy wallet memo</button>
+                  <span class="chip" id="copy-state-chip">Copy disabled</span>
+                </div>
+              </div>
+            </div>
+            <p id="instruction-note" class="muted"></p>
+          </div>
+        </details>
+
+        <section class="status-panel">
+          <div class="row">
+            <span class="chip" id="network-chip">Network: mainnet</span>
+            <span class="chip" id="state-chip">Searching for a message</span>
+            <span class="chip" id="length-chip">0 / 34 bytes</span>
+          </div>
+          <div class="row">
+            <button type="button" id="refresh-button">Refresh now</button>
+          </div>
+          <p class="status-text" id="status-text">
+            Loading chain activity...
+          </p>
+        </section>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      if (window.__xtrataMemoBoardStarted) {
+        return;
+      }
+      window.__xtrataMemoBoardStarted = true;
+
+      const CONFIG = {
+        boardTitle: 'Open Bulletin Board',
+        network: 'mainnet',
+        apiBase: 'https://api.hiro.so',
+        explorerBase: 'https://explorer.hiro.so',
+
+        // Replace this before inscribing if you want a different target.
+        targetAddress: 'SPNRA47CQGS61HQNCBZMVF2HHT7AKZCP2CXH3NP3',
+        minAmountMicroStx: '1',
+        requiredPrefix: '',
+
+        defaultMessage: 'SEND A MEMO TO TAKE OVER THIS BOARD',
+        emptyBoardMessage: 'Waiting for the first valid memo...',
+
+        memoByteLimit: 34,
+        pendingLimit: 12,
+        confirmedLimit: 30,
+        pollVisibleMs: 4000,
+        pollHiddenMs: 15000,
+        requestTimeoutMs: 10000,
+        apiKey: ''
+      };
+
+      const THEMES = [
+        { id: 'signal-wall', alias: 'sw', label: 'Signal Wall' },
+        { id: 'chain-pulse', alias: 'cp', label: 'Chain Pulse' },
+        { id: 'state-beacon', alias: 'sb', label: 'State Beacon' },
+        { id: 'open-feed', alias: 'of', label: 'Open Feed' },
+        { id: 'message-reactor', alias: 'mr', label: 'Message Reactor' },
+        { id: 'public-console', alias: 'pc', label: 'Public Console' },
+        { id: 'live-signal', alias: 'ls', label: 'Live Signal' }
+      ];
+
+      const THEME_TOKEN_MAP = Object.fromEntries(THEMES.flatMap(function (theme) {
+        return [
+          [theme.alias, theme.alias],
+          [theme.id, theme.alias]
+        ];
+      }));
+
+      const COMMANDS = {
+        message: {
+          code: 'm:',
+          emoji: '📝'
+        },
+        theme: {
+          code: 't:',
+          emoji: '🎨'
+        }
+      };
+
+      const elements = {
+        boardTitle: document.getElementById('board-title'),
+        messageText: document.getElementById('message-text'),
+        messageSource: document.getElementById('message-source'),
+        boardRule: document.getElementById('board-rule'),
+        txMeta: document.getElementById('tx-meta'),
+        refreshMeta: document.getElementById('refresh-meta'),
+        networkChip: document.getElementById('network-chip'),
+        stateChip: document.getElementById('state-chip'),
+        lengthChip: document.getElementById('length-chip'),
+        refreshButton: document.getElementById('refresh-button'),
+        statusText: document.getElementById('status-text'),
+        instructionBlurb: document.getElementById('instruction-blurb'),
+        instructionStep1: document.getElementById('instruction-step-1'),
+        instructionStep2: document.getElementById('instruction-step-2'),
+        instructionStep3: document.getElementById('instruction-step-3'),
+        instructionNote: document.getElementById('instruction-note'),
+        memoKindSelect: document.getElementById('memo-kind-select'),
+        memoPrefixSelect: document.getElementById('memo-prefix-select'),
+        memoThemeSelect: document.getElementById('memo-theme-select'),
+        composerNote: document.getElementById('composer-note'),
+        messageComposerPanel: document.getElementById('message-composer-panel'),
+        themeComposerPanel: document.getElementById('theme-composer-panel'),
+        memoInput: document.getElementById('memo-input'),
+        memoFitChip: document.getElementById('memo-fit-chip'),
+        memoMeterText: document.getElementById('memo-meter-text'),
+        memoPreviewText: document.getElementById('memo-preview-text'),
+        copyMemoButton: document.getElementById('copy-memo-button'),
+        copyStateChip: document.getElementById('copy-state-chip'),
+        emojiPalette: document.getElementById('emoji-palette'),
+        symbolPalette: document.getElementById('symbol-palette')
+      };
+
+      const state = {
+        timerId: null,
+        busy: false,
+        lastRefreshAt: 0,
+        currentTxId: '',
+        currentMessage: '',
+        memoTester: {
+          finalMemo: '',
+          fits: false
+        }
+      };
+
+      const QUICK_INSERT_GROUPS = {
+        emoji: ['🔥', '✨', '🚀', '🎉', '✅', '👀', '❤️', '⭐', '💥', '💡'],
+        symbol: ['!', '?', '@', '#', '&', '+', '-', '/', '→', '•']
+      };
+
+      function setChipState(el, text, variant) {
+        el.className = 'chip';
+        if (variant) {
+          el.classList.add(variant);
+        }
+        el.textContent = text;
+      }
+
+      function sanitizeText(value) {
+        return String(value || '')
+          .replace(/\u0000/g, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+      }
+
+      function memoByteLength(value) {
+        return new TextEncoder().encode(value).length;
+      }
+
+      function buildMemoDraft(value) {
+        return CONFIG.requiredPrefix ? CONFIG.requiredPrefix + value : value;
+      }
+
+      function commandPrefix(kind, style) {
+        return COMMANDS[kind][style];
+      }
+
+      function normalizeThemeToken(value) {
+        const token = sanitizeText(value)
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+        return THEME_TOKEN_MAP[token] || '';
+      }
+
+      function themeMemoToken(value) {
+        return normalizeThemeToken(value) || THEMES[0].alias;
+      }
+
+      function isHexMemo(value) {
+        return typeof value === 'string' && /^0x[0-9a-fA-F]*$/.test(value);
+      }
+
+      function decodeHexMemo(value) {
+        if (!isHexMemo(value)) {
+          return String(value || '');
+        }
+
+        const hex = value.slice(2);
+        if (!hex.length || hex.length % 2 !== 0) {
+          return String(value || '');
+        }
+
+        const bytes = [];
+        for (let index = 0; index < hex.length; index += 2) {
+          bytes.push(parseInt(hex.slice(index, index + 2), 16));
+        }
+
+        while (bytes.length && bytes[bytes.length - 1] === 0) {
+          bytes.pop();
+        }
+
+        try {
+          return new TextDecoder().decode(new Uint8Array(bytes));
+        } catch (_error) {
+          return String(value || '');
+        }
+      }
+
+      function formatStx(microStx) {
+        const amount = Number(BigInt(microStx)) / 1_000_000;
+        return new Intl.NumberFormat('en-GB', {
+          maximumFractionDigits: 6
+        }).format(amount);
+      }
+
+      function shortAddress(address) {
+        if (!address || address.length < 12) {
+          return address || 'unknown';
+        }
+        return address.slice(0, 6) + '...' + address.slice(-4);
+      }
+
+      function shortTxId(txId) {
+        if (!txId || txId.length < 14) {
+          return txId || 'unknown';
+        }
+        return txId.slice(0, 10) + '...' + txId.slice(-6);
+      }
+
+      function buildExplorerUrl(txId) {
+        return CONFIG.explorerBase + '/txid/' + encodeURIComponent(txId) + '?chain=' + encodeURIComponent(CONFIG.network);
+      }
+
+      function buildAddressUrl() {
+        return CONFIG.explorerBase + '/address/' + encodeURIComponent(CONFIG.targetAddress) + '?chain=' + encodeURIComponent(CONFIG.network);
+      }
+
+      function parseTimestamp(tx) {
+        const iso = tx.receipt_time_iso || tx.block_time_iso || tx.burn_block_time_iso || '';
+        const numeric = tx.receipt_time || tx.block_time || tx.burn_block_time || 0;
+        const millis = iso ? Date.parse(iso) : Number(numeric) * 1000;
+        return Number.isFinite(millis) ? millis : 0;
+      }
+
+      function parseMemoSegment(segment, allowPlainMessage) {
+        const prefixes = [
+          { kind: 'theme', prefix: COMMANDS.theme.code },
+          { kind: 'theme', prefix: COMMANDS.theme.emoji },
+          { kind: 'message', prefix: COMMANDS.message.code },
+          { kind: 'message', prefix: COMMANDS.message.emoji }
+        ];
+
+        const matched = prefixes.find(function (entry) {
+          return segment.startsWith(entry.prefix);
+        });
+
+        if (!matched) {
+          return allowPlainMessage ? { message: sanitizeText(segment) } : null;
+        }
+
+        const value = sanitizeText(segment.slice(matched.prefix.length));
+        if (!value) {
+          return null;
+        }
+
+        if (matched.kind === 'theme') {
+          const themeToken = normalizeThemeToken(value);
+          return themeToken ? { themeToken: themeToken } : null;
+        }
+
+        return { message: value };
+      }
+
+      function parseMemoCommand(rawMemo) {
+        const memo = sanitizeText(decodeHexMemo(rawMemo));
+        if (!memo || memoByteLength(memo) > CONFIG.memoByteLimit) {
+          return null;
+        }
+        if (CONFIG.requiredPrefix && !memo.startsWith(CONFIG.requiredPrefix)) {
+          return null;
+        }
+
+        const payload = CONFIG.requiredPrefix ? sanitizeText(memo.slice(CONFIG.requiredPrefix.length)) : memo;
+        if (!payload) {
+          return null;
+        }
+
+        const segments = payload.split(/[|\n;]/).map(sanitizeText).filter(Boolean);
+        if (!segments.length) {
+          return null;
+        }
+
+        const allowPlainMessage = segments.length === 1;
+        const parsed = {
+          message: '',
+          themeToken: ''
+        };
+
+        for (const segment of segments) {
+          const next = parseMemoSegment(segment, allowPlainMessage);
+          if (!next) {
+            return null;
+          }
+          if (next.message) {
+            parsed.message = next.message;
+          }
+          if (next.themeToken) {
+            parsed.themeToken = next.themeToken;
+          }
+        }
+
+        return parsed.message || parsed.themeToken ? parsed : null;
+      }
+
+      function toCandidate(tx, source) {
+        if (!tx || tx.tx_type !== 'token_transfer' || !tx.token_transfer) {
+          return null;
+        }
+
+        const transfer = tx.token_transfer;
+        if (transfer.recipient_address !== CONFIG.targetAddress) {
+          return null;
+        }
+
+        const amount = BigInt(transfer.amount || '0');
+        if (amount < BigInt(CONFIG.minAmountMicroStx)) {
+          return null;
+        }
+
+        const command = parseMemoCommand(transfer.memo);
+        if (!command || !command.message) {
+          return null;
+        }
+
+        return {
+          txId: tx.tx_id,
+          sender: tx.sender_address || '',
+          amountMicroStx: amount.toString(),
+          message: command.message,
+          status: tx.tx_status || (source === 'pending' ? 'pending' : 'success'),
+          source,
+          timestamp: parseTimestamp(tx),
+          tx
+        };
+      }
+
+      function sortNewestFirst(a, b) {
+        return b.timestamp - a.timestamp;
+      }
+
+      async function fetchJson(path) {
+        const controller = new AbortController();
+        const timer = window.setTimeout(function () {
+          controller.abort();
+        }, CONFIG.requestTimeoutMs);
+
+        const headers = {
+          Accept: 'application/json'
+        };
+        if (CONFIG.apiKey) {
+          headers['x-api-key'] = CONFIG.apiKey;
+        }
+
+        try {
+          const response = await fetch(CONFIG.apiBase + path, {
+            headers: headers,
+            signal: controller.signal
+          });
+          if (!response.ok) {
+            throw new Error('HTTP ' + response.status);
+          }
+          return await response.json();
+        } finally {
+          window.clearTimeout(timer);
+        }
+      }
+
+      async function fetchPendingCandidates() {
+        const data = await fetchJson(
+          '/extended/v1/tx/mempool?recipient_address=' +
+            encodeURIComponent(CONFIG.targetAddress) +
+            '&limit=' +
+            encodeURIComponent(CONFIG.pendingLimit) +
+            '&order=desc'
+        );
+        return Array.isArray(data.results) ? data.results.map(function (tx) {
+          return toCandidate(tx, 'pending');
+        }).filter(Boolean) : [];
+      }
+
+      async function fetchConfirmedCandidates() {
+        const data = await fetchJson(
+          '/extended/v2/addresses/' +
+            encodeURIComponent(CONFIG.targetAddress) +
+            '/transactions?limit=' +
+            encodeURIComponent(CONFIG.confirmedLimit)
+        );
+        return Array.isArray(data.results) ? data.results.map(function (entry) {
+          return toCandidate(entry && entry.tx ? entry.tx : entry, 'confirmed');
+        }).filter(Boolean) : [];
+      }
+
+      function renderEmptyState(reason) {
+        elements.messageText.textContent = CONFIG.defaultMessage || CONFIG.emptyBoardMessage;
+        elements.messageText.classList.add('is-placeholder');
+        elements.messageSource.innerHTML =
+          'No qualifying transfer found yet. Send the first memo to <a href="' +
+          buildAddressUrl() +
+          '" target="_blank" rel="noreferrer"><code>' +
+          CONFIG.targetAddress +
+          '</code></a>.';
+        elements.txMeta.textContent = 'No transaction selected.';
+        elements.refreshMeta.textContent = 'Watching mempool and recent confirmed transfers.';
+        elements.statusText.textContent = reason || 'No qualifying transfer found yet.';
+        setChipState(elements.stateChip, 'Waiting for a message', '');
+        setChipState(elements.lengthChip, '0 / ' + CONFIG.memoByteLimit + ' bytes', '');
+        state.currentTxId = '';
+        state.currentMessage = '';
+      }
+
+      function renderCandidate(candidate) {
+        const txUrl = buildExplorerUrl(candidate.txId);
+        const amountStx = formatStx(candidate.amountMicroStx);
+        const byteLength = memoByteLength(candidate.message);
+        const pending = candidate.source === 'pending' || String(candidate.status).indexOf('pending') === 0;
+
+        state.currentTxId = candidate.txId;
+        state.currentMessage = candidate.message;
+
+        elements.messageText.textContent = candidate.message;
+        elements.messageText.classList.remove('is-placeholder');
+        elements.messageSource.innerHTML =
+          (pending ? 'Pending takeover from ' : 'Confirmed takeover from ') +
+          '<code>' + shortAddress(candidate.sender) + '</code>' +
+          ' for ' + amountStx + ' STX.';
+        elements.txMeta.innerHTML =
+          '<a href="' + txUrl + '" target="_blank" rel="noreferrer"><code>' + shortTxId(candidate.txId) + '</code></a>' +
+          ' · from <code>' + shortAddress(candidate.sender) + '</code>';
+        elements.refreshMeta.textContent =
+          'Last checked ' + new Date(state.lastRefreshAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) +
+          '. Pending memos can appear before confirmation.';
+        elements.statusText.textContent =
+          pending
+            ? 'Showing the newest qualifying mempool transfer. If it confirms, this becomes the canonical board state.'
+            : 'Showing the newest confirmed qualifying transfer.';
+
+        setChipState(elements.stateChip, pending ? 'Pending message live' : 'Confirmed message live', pending ? 'pending' : 'good');
+        setChipState(elements.lengthChip, byteLength + ' / ' + CONFIG.memoByteLimit + ' bytes', pending ? 'pending' : 'good');
+      }
+
+      function scheduleNextPoll() {
+        window.clearTimeout(state.timerId);
+        state.timerId = window.setTimeout(refreshBoard, document.hidden ? CONFIG.pollHiddenMs : CONFIG.pollVisibleMs);
+      }
+
+      function renderPalette(container, values) {
+        container.innerHTML = '';
+        values.forEach(function (value) {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'insert-button';
+          button.dataset.insertValue = value;
+          button.textContent = value;
+          container.appendChild(button);
+        });
+      }
+
+      function insertMemoText(value) {
+        const input = elements.memoInput;
+        const start = input.selectionStart || 0;
+        const end = input.selectionEnd || 0;
+        const nextValue = input.value.slice(0, start) + value + input.value.slice(end);
+        const nextCaret = start + value.length;
+
+        input.value = nextValue;
+        input.focus();
+        input.setSelectionRange(nextCaret, nextCaret);
+        updateMemoTester();
+      }
+
+      async function copyMemoToClipboard(value) {
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+          await navigator.clipboard.writeText(value);
+          return;
+        }
+
+        const helper = document.createElement('textarea');
+        helper.value = value;
+        helper.setAttribute('readonly', 'readonly');
+        helper.style.position = 'fixed';
+        helper.style.opacity = '0';
+        helper.style.pointerEvents = 'none';
+        document.body.appendChild(helper);
+        helper.focus();
+        helper.select();
+
+        const copied = document.execCommand('copy');
+        document.body.removeChild(helper);
+        if (!copied) {
+          throw new Error('Clipboard copy failed');
+        }
+      }
+
+      function updateMemoTester() {
+        const kind = elements.memoKindSelect.value;
+        const prefixStyle = elements.memoPrefixSelect.value;
+        const includeMessage = kind !== 'theme';
+        const includeTheme = kind !== 'message';
+        const rawMessage = includeMessage ? String(elements.memoInput.value || '') : '';
+        const themePayload = includeTheme ? themeMemoToken(elements.memoThemeSelect.value) : '';
+        const commandParts = [];
+
+        if (rawMessage) {
+          commandParts.push(commandPrefix('message', prefixStyle) + rawMessage);
+        }
+        if (themePayload) {
+          commandParts.push(commandPrefix('theme', prefixStyle) + themePayload);
+        }
+
+        const finalMemo = commandParts.length ? buildMemoDraft(commandParts.join('|')) : '';
+        const payloadBytes = memoByteLength(rawMessage) + memoByteLength(themePayload);
+        const prefixBytes =
+          (CONFIG.requiredPrefix ? memoByteLength(CONFIG.requiredPrefix) : 0) +
+          (rawMessage ? memoByteLength(commandPrefix('message', prefixStyle)) : 0) +
+          (themePayload ? memoByteLength(commandPrefix('theme', prefixStyle)) : 0) +
+          (commandParts.length > 1 ? memoByteLength('|') : 0);
+        const finalBytes = memoByteLength(finalMemo);
+        const hasText = kind === 'both'
+          ? Boolean(rawMessage && themePayload)
+          : Boolean(rawMessage || themePayload);
+        const fits = finalBytes > 0 && finalBytes <= CONFIG.memoByteLimit;
+
+        state.memoTester.finalMemo = finalMemo;
+        state.memoTester.fits = fits;
+        elements.messageComposerPanel.classList.toggle('is-hidden', !includeMessage);
+        elements.themeComposerPanel.classList.toggle('is-hidden', !includeTheme);
+        elements.composerNote.textContent = kind === 'message'
+          ? 'Message updates use ' + COMMANDS.message.code + ' or ' + COMMANDS.message.emoji + ' and rewrite the live text.'
+          : kind === 'theme'
+            ? 'Theme switches use ' + COMMANDS.theme.code + ' or ' + COMMANDS.theme.emoji + ' and fit best with short aliases like cp or ls.'
+            : 'Both mode emits two commands in one memo, separated by |. Short theme aliases save bytes.';
+
+        if (!hasText) {
+          setChipState(elements.memoFitChip, 'Empty memo', '');
+        } else if (fits) {
+          setChipState(elements.memoFitChip, 'Fits in memo', 'good');
+        } else {
+          setChipState(elements.memoFitChip, 'Too long', 'error');
+        }
+
+        elements.memoMeterText.innerHTML = prefixBytes
+          ? 'Payload: <strong>' + payloadBytes + '</strong> bytes. Prefix bytes: <strong>' + prefixBytes +
+              '</strong> bytes. Final memo: <strong>' + finalBytes + ' / ' + CONFIG.memoByteLimit + '</strong> bytes.'
+          : 'Payload: <strong>' + payloadBytes + '</strong> bytes. Final memo: <strong>' + finalBytes + ' / ' + CONFIG.memoByteLimit + '</strong> bytes.';
+
+        if (!hasText) {
+          elements.memoPreviewText.textContent = 'Nothing to copy yet.';
+          elements.memoPreviewText.classList.add('is-placeholder');
+          elements.copyMemoButton.disabled = true;
+          setChipState(elements.copyStateChip, 'Copy disabled', '');
+          return;
+        }
+
+        elements.memoPreviewText.textContent = finalMemo;
+        elements.memoPreviewText.classList.remove('is-placeholder');
+        elements.copyMemoButton.disabled = !fits;
+        if (fits) {
+          setChipState(elements.copyStateChip, 'Ready to copy', 'good');
+        } else {
+          setChipState(elements.copyStateChip, 'Copy blocked', 'error');
+        }
+      }
+
+      async function refreshBoard() {
+        if (state.busy) {
+          return;
+        }
+
+        state.busy = true;
+        elements.refreshButton.disabled = true;
+        setChipState(elements.stateChip, 'Refreshing', '');
+        elements.statusText.textContent = 'Fetching mempool and recent confirmed transfers...';
+
+        try {
+          const settled = await Promise.allSettled([
+            fetchPendingCandidates(),
+            fetchConfirmedCandidates()
+          ]);
+
+          const pending = settled[0].status === 'fulfilled' ? settled[0].value : [];
+          const confirmed = settled[1].status === 'fulfilled' ? settled[1].value : [];
+          const all = pending.concat(confirmed).sort(sortNewestFirst);
+
+          state.lastRefreshAt = Date.now();
+
+          if (!all.length) {
+            renderEmptyState('No qualifying memo transfer is visible yet.');
+          } else {
+            renderCandidate(all[0]);
+          }
+
+          if (settled[0].status === 'rejected' && settled[1].status === 'rejected') {
+            throw new Error('Both pending and confirmed lookups failed.');
+          }
+        } catch (error) {
+          const message = error && error.message ? error.message : 'Unknown network error';
+          if (!state.currentMessage) {
+            renderEmptyState('Lookup failed: ' + message);
+          }
+          setChipState(elements.stateChip, 'Lookup error', 'error');
+          elements.statusText.textContent =
+            'Could not refresh from the chain right now: ' + message + '. The board will retry automatically.';
+        } finally {
+          state.busy = false;
+          elements.refreshButton.disabled = false;
+          scheduleNextPoll();
+        }
+      }
+
+      function renderStaticConfig() {
+        elements.boardTitle.textContent = CONFIG.boardTitle;
+        elements.networkChip.textContent = 'Network: ' + CONFIG.network;
+        elements.boardRule.textContent =
+          'Latest valid message command wins here. Combined memos can also carry a theme command.';
+
+        elements.instructionBlurb.innerHTML =
+          'To update this, send a standard STX transfer to ' +
+          '<a href="' + buildAddressUrl() + '" target="_blank" rel="noreferrer"><code>' +
+          CONFIG.targetAddress +
+          '</code></a> and start the memo with a command prefix.';
+        elements.instructionStep1.innerHTML =
+          'Send any positive amount, at least <code>' + formatStx(CONFIG.minAmountMicroStx) + ' STX</code>, to <code>' + CONFIG.targetAddress + '</code>.';
+        elements.instructionStep2.innerHTML =
+          'Use <code>' + COMMANDS.message.code + '</code> or <code>' + COMMANDS.message.emoji + '</code> for text updates, and <code>' +
+          COMMANDS.theme.code + '</code> or <code>' + COMMANDS.theme.emoji + '</code> for theme switches. You can combine them with <code>|</code>.';
+        elements.instructionStep3.innerHTML =
+          'This layout follows the newest valid message command. Confirmation speed comes from the wallet fee, not from sending a larger transfer amount.';
+        elements.instructionNote.textContent =
+          'Theme aliases are sw, cp, sb, of, mr, pc, ls. Example memos: m:HELLO, 📝HELLO, m:GM|t:cp, 📝GM|🎨ls.';
+
+        elements.memoInput.placeholder = CONFIG.requiredPrefix
+          ? 'Type only the board text. The required prefix will be added automatically in the counter.'
+          : 'Type a message here to see whether it fits in the STX transfer memo.';
+
+        elements.memoThemeSelect.innerHTML = THEMES.map(function (theme) {
+          return '<option value="' + theme.alias + '">' + theme.label + ' (' + theme.alias + ')</option>';
+        }).join('');
+        renderPalette(elements.emojiPalette, QUICK_INSERT_GROUPS.emoji);
+        renderPalette(elements.symbolPalette, QUICK_INSERT_GROUPS.symbol);
+      }
+
+      elements.memoInput.addEventListener('input', updateMemoTester);
+      elements.memoKindSelect.addEventListener('change', updateMemoTester);
+      elements.memoPrefixSelect.addEventListener('change', updateMemoTester);
+      elements.memoThemeSelect.addEventListener('change', updateMemoTester);
+      elements.emojiPalette.addEventListener('click', function (event) {
+        const button = event.target.closest('[data-insert-value]');
+        if (button) {
+          insertMemoText(button.dataset.insertValue || '');
+        }
+      });
+      elements.symbolPalette.addEventListener('click', function (event) {
+        const button = event.target.closest('[data-insert-value]');
+        if (button) {
+          insertMemoText(button.dataset.insertValue || '');
+        }
+      });
+      elements.copyMemoButton.addEventListener('click', async function () {
+        if (!state.memoTester.fits || !state.memoTester.finalMemo) {
+          return;
+        }
+
+        try {
+          await copyMemoToClipboard(state.memoTester.finalMemo);
+          setChipState(elements.copyStateChip, 'Copied', 'good');
+        } catch (_error) {
+          setChipState(elements.copyStateChip, 'Copy failed', 'error');
+        }
+      });
+      elements.refreshButton.addEventListener('click', function () {
+        refreshBoard();
+      });
+
+      document.addEventListener('visibilitychange', function () {
+        scheduleNextPoll();
+        if (!document.hidden) {
+          refreshBoard();
+        }
+      });
+
+      renderStaticConfig();
+      updateMemoTester();
+      renderEmptyState('Waiting for chain activity...');
+      refreshBoard();
+    })();
+  </script>
+</body>
+</html>

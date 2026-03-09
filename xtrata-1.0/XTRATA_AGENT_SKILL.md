@@ -20,6 +20,11 @@ Current production contract:
 - Contract name: `xtrata-v2-1-0`
 - Full ID: `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0`
 
+Small-file helper (mainnet default):
+- Address: `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X`
+- Contract name: `xtrata-small-mint-v1-0`
+- Full ID: `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-small-mint-v1-0`
+
 Legacy (read compatibility for migrated chunk data):
 - `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1`
 
@@ -42,13 +47,19 @@ npm install @stacks/transactions @stacks/network @noble/hashes
 ```
 
 ## Core Concepts
-1. Upload flow is strictly ordered: `begin-or-get` (or `begin-inscription`) -> one or more `add-chunk-batch` -> `seal-inscription` (or `seal-recursive` / `seal-inscription-batch`).
+1. There are two valid mint routes:
+   - Small helper route: `mint-small-single-tx` or `mint-small-single-tx-recursive`
+   - Standard staged route: `begin-or-get` (or `begin-inscription`) -> one or more `add-chunk-batch` -> `seal-inscription` (or `seal-recursive` / `seal-inscription-batch`)
 2. Chunking is fixed at 16,384 bytes. Maximum file size is 32 MiB (2,048 chunks).
 3. Hashing is incremental SHA-256 chain hashing, not a single hash of full bytes.
 4. Dedupe is native: `HashToId` guarantees one canonical token per final hash.
-5. Uploads are resumable via `UploadState`; sessions expire after 4,320 blocks.
-6. Always use `PostConditionMode.Deny` for fee-paying calls.
-7. Transfers and reads still work while writes are paused.
+5. Default route selection for first-party-compatible agents:
+   - Use helper route only when helper deployment is available, chunk count is `1..30`, and there is no active upload session to resume.
+   - Use staged route for `>30` chunks, legacy core contracts, or whenever a partial upload already exists.
+6. Uploads on the staged route are resumable via `UploadState`; sessions expire after 4,320 blocks.
+7. Helper-route retries restart the entire single call; staged-route retries can resume from the next missing chunk.
+8. Always use `PostConditionMode.Deny` for fee-paying calls.
+9. Transfers and reads still work while writes are paused.
 
 ## Contract and Network Reference
 
@@ -60,6 +71,7 @@ npm install @stacks/transactions @stacks/network @noble/hashes
 
 ### Contract IDs
 - Mainnet (active): `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0`
+- Mainnet (small helper): `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-small-mint-v1-0`
 - Mainnet (legacy): `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1`
 - Testnet: deploy from `contracts/live/xtrata-v2.1.0.clar` (no canonical shared testnet deployment is pinned in this repository).
 
@@ -163,6 +175,9 @@ function computeExpectedHash(chunks) {
 - Atomic begin+dedupe path: `begin-or-get(...)`
   - `(ok (some id))` -> content already sealed
   - `(ok none)` -> new/resumed upload session
+- Helper dedupe path: `mint-small-single-tx(...)` and `mint-small-single-tx-recursive(...)`
+  - `(ok { token-id: id, existed: true })` -> canonical token already existed
+  - `(ok { token-id: id, existed: false })` -> helper minted a new token through core
 
 ### UploadState Lifecycle
 1. Create/resume: `begin-or-get` or `begin-inscription`
@@ -234,6 +249,28 @@ function computeExpectedHash(chunks) {
 | `get-royalty-recipient` | none | `(response principal uint)` |
 | `get-fee-unit` | none | `(response uint uint)` |
 | `is-paused` | none | `(response bool uint)` |
+
+## Small Helper Contract API (`xtrata-small-mint-v1-0`)
+
+Use this helper only for small uploads that fit within `30` chunks and do not
+need staged resume behavior.
+
+### Public Functions
+| Function | Parameters (exact types) | Returns | Notes |
+|---|---|---|---|
+| `mint-small-single-tx` | `xtrata-contract: <xtrata-trait>, expected-hash: (buff 32), mime: (string-ascii 64), total-size: uint, chunks: (list 50 (buff 16384)), token-uri-string: (string-ascii 256)` | `(response { token-id: uint, existed: bool } uint)` | Single-call begin + upload + seal |
+| `mint-small-single-tx-recursive` | `xtrata-contract: <xtrata-trait>, expected-hash: (buff 32), mime: (string-ascii 64), total-size: uint, chunks: (list 50 (buff 16384)), token-uri-string: (string-ascii 256), dependencies: (list 50 uint)` | `(response { token-id: uint, existed: bool } uint)` | Single-call recursive seal |
+| `set-paused` | `value: bool` | `(response bool uint)` | Admin only |
+| `set-core-contract` | `new-core: principal` | `(response bool uint)` | Admin only |
+| `transfer-contract-ownership` | `new-owner: principal` | `(response bool uint)` | Admin only |
+
+### Read-Only Functions
+| Function | Parameters (exact types) | Returns |
+|---|---|---|
+| `get-owner` | none | `(response principal uint)` |
+| `is-paused` | none | `(response bool uint)` |
+| `get-core-contract` | none | `(response principal uint)` |
+| `get-max-small-chunks` | none | `(response uint uint)` |
 
 ## Transaction Construction
 
@@ -491,7 +528,17 @@ export async function broadcastTx(transaction, network) {
 
 ## Workflows
 
-### Workflow 1: Mint (begin -> upload -> seal)
+### Workflow 1: Route Selection
+- Use the helper route when all of the following are true:
+  - helper deployment is available
+  - `chunks.length` is between `1` and `30`
+  - there is no existing staged upload to resume for `{ expected-hash, owner }`
+- Use the staged route for everything else.
+- If an agent is driving the first-party app or wallet flow instead of raw
+  contract calls, expect one wallet approval on the helper route and multiple
+  approvals (`begin`, upload batch txs, `seal`) on the staged route.
+
+### Workflow 1A: Small Mint via Helper (single transaction)
 ```javascript
 import { sha256 } from '@noble/hashes/sha256';
 import {
@@ -499,6 +546,8 @@ import {
   broadcastTransaction,
   callReadOnlyFunction,
   bufferCV,
+  contractPrincipalCV,
+  principalCV,
   uintCV,
   stringAsciiCV,
   listCV,
@@ -513,6 +562,9 @@ import { StacksMainnet } from '@stacks/network';
 const network = new StacksMainnet();
 const CONTRACT_ADDRESS = 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X';
 const CONTRACT_NAME = 'xtrata-v2-1-0';
+const HELPER_CONTRACT_ADDRESS = 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X';
+const HELPER_CONTRACT_NAME = 'xtrata-small-mint-v1-0';
+const MAX_SMALL_MINT_CHUNKS = 30;
 const TX_DELAY_MS = 5000;
 
 function chunkBytes(data) {
@@ -560,6 +612,15 @@ async function getIdByHash(expectedHash, senderAddress) {
   return json.value ? BigInt(json.value.value) : null;
 }
 
+async function getUploadState(expectedHash, owner, senderAddress) {
+  const r = await callReadOnly(
+    'get-upload-state',
+    [bufferCV(expectedHash), principalCV(owner)],
+    senderAddress
+  );
+  return cvToJSON(r);
+}
+
 async function waitForConfirmation(txid) {
   const url = `${network.coreApiUrl}/extended/v1/tx/${txid}`;
   for (let i = 0; i < 60; i++) {
@@ -574,9 +635,8 @@ async function waitForConfirmation(txid) {
   throw new Error(`TX not confirmed in time: ${txid}`);
 }
 
-export async function inscribeFile({ fileData, mimeType, tokenUri, senderAddress, senderKey }) {
+export async function inscribeFile({ fileData, mimeType, tokenUri, dependencies = [], senderAddress, senderKey }) {
   const chunks = chunkBytes(fileData);
-  const batches = batchChunks(chunks);
   const expectedHash = computeExpectedHash(chunks);
   const totalChunks = BigInt(chunks.length);
   const totalSize = BigInt(fileData.length);
@@ -585,6 +645,92 @@ export async function inscribeFile({ fileData, mimeType, tokenUri, senderAddress
   if (existing !== null) return { tokenId: existing, alreadyExisted: true };
 
   const feeUnit = await getFeeUnit(senderAddress);
+  const uploadState = await getUploadState(expectedHash, senderAddress, senderAddress);
+  const canUseHelper =
+    chunks.length > 0 &&
+    chunks.length <= MAX_SMALL_MINT_CHUNKS &&
+    !uploadState.value;
+
+  if (!canUseHelper) {
+    return inscribeFileStaged({
+      chunks,
+      expectedHash,
+      fileData,
+      mimeType,
+      tokenUri,
+      dependencies,
+      senderAddress,
+      senderKey,
+      feeUnit
+    });
+  }
+
+  const sealFee = feeUnit * (1n + ((totalChunks + 49n) / 50n));
+  const spendCap = feeUnit + sealFee;
+  const helperTx = await makeContractCall({
+    contractAddress: HELPER_CONTRACT_ADDRESS,
+    contractName: HELPER_CONTRACT_NAME,
+    functionName:
+      dependencies.length > 0
+        ? 'mint-small-single-tx-recursive'
+        : 'mint-small-single-tx',
+    functionArgs:
+      dependencies.length > 0
+        ? [
+            contractPrincipalCV(CONTRACT_ADDRESS, CONTRACT_NAME),
+            bufferCV(expectedHash),
+            stringAsciiCV(mimeType),
+            uintCV(totalSize),
+            listCV(chunks.map((chunk) => bufferCV(chunk))),
+            stringAsciiCV(tokenUri),
+            listCV(dependencies.map((id) => uintCV(id)))
+          ]
+        : [
+            contractPrincipalCV(CONTRACT_ADDRESS, CONTRACT_NAME),
+            bufferCV(expectedHash),
+            stringAsciiCV(mimeType),
+            uintCV(totalSize),
+            listCV(chunks.map((chunk) => bufferCV(chunk))),
+            stringAsciiCV(tokenUri)
+          ],
+    senderKey,
+    network,
+    postConditions: [
+      makeStandardSTXPostCondition(
+        senderAddress,
+        FungibleConditionCode.LessEqual,
+        spendCap
+      )
+    ],
+    postConditionMode: PostConditionMode.Deny,
+    anchorMode: AnchorMode.Any
+  });
+
+  const helperResult = await broadcastTransaction(helperTx, network);
+  if (helperResult.error) throw new Error(`${helperResult.error}: ${helperResult.reason}`);
+  await waitForConfirmation(helperResult.txid || helperResult);
+
+  const tokenId = await getIdByHash(expectedHash, senderAddress);
+  return { tokenId, alreadyExisted: false, helperTxid: helperResult.txid, route: 'helper' };
+}
+```
+
+### Workflow 1B: Standard Staged Mint (begin -> upload -> seal)
+```javascript
+export async function inscribeFileStaged({
+  chunks,
+  expectedHash,
+  fileData,
+  mimeType,
+  tokenUri,
+  dependencies = [],
+  senderAddress,
+  senderKey,
+  feeUnit
+}) {
+  const batches = batchChunks(chunks);
+  const totalChunks = BigInt(chunks.length);
+  const totalSize = BigInt(fileData.length);
 
   const beginTx = await makeContractCall({
     contractAddress: CONTRACT_ADDRESS,
@@ -637,8 +783,15 @@ export async function inscribeFile({ fileData, mimeType, tokenUri, senderAddress
   const sealTx = await makeContractCall({
     contractAddress: CONTRACT_ADDRESS,
     contractName: CONTRACT_NAME,
-    functionName: 'seal-inscription',
-    functionArgs: [bufferCV(expectedHash), stringAsciiCV(tokenUri)],
+    functionName: dependencies.length > 0 ? 'seal-recursive' : 'seal-inscription',
+    functionArgs:
+      dependencies.length > 0
+        ? [
+            bufferCV(expectedHash),
+            stringAsciiCV(tokenUri),
+            listCV(dependencies.map((id) => uintCV(id)))
+          ]
+        : [bufferCV(expectedHash), stringAsciiCV(tokenUri)],
     senderKey,
     network,
     postConditions: [
@@ -653,7 +806,13 @@ export async function inscribeFile({ fileData, mimeType, tokenUri, senderAddress
   await waitForConfirmation(sealResult.txid || sealResult);
 
   const tokenId = await getIdByHash(expectedHash, senderAddress);
-  return { tokenId, alreadyExisted: false, beginTxid: beginResult.txid, sealTxid: sealResult.txid };
+  return {
+    tokenId,
+    alreadyExisted: false,
+    beginTxid: beginResult.txid,
+    sealTxid: sealResult.txid,
+    route: 'staged'
+  };
 }
 ```
 
@@ -730,8 +889,10 @@ export async function readInscriptionContent(tokenId, senderAddress, network) {
 ```
 
 ### Workflow 4: Recursive Seal
-- Execute the same begin + upload steps as standard mint.
-- Seal call is `seal-recursive(expected-hash, token-uri, dependencies)`.
+- Helper route: `mint-small-single-tx-recursive(...)` when `chunks <= 30` and
+  no staged upload exists yet.
+- Staged route: execute the same begin + upload steps as standard mint, then
+  call `seal-recursive(expected-hash, token-uri, dependencies)`.
 - Validate dependencies first with `inscription-exists(id)`.
 
 ### Workflow 5: Resume Interrupted Upload
@@ -766,6 +927,9 @@ export async function resumeUpload({ expectedHash, allChunks, senderAddress, sen
 }
 ```
 
+Resume applies to the staged route only. If `get-upload-state` returns an active
+session, do not switch that mint attempt onto the helper contract.
+
 ## aibtc Integration
 
 ### MCP Tool Mapping (aibtc)
@@ -778,17 +942,30 @@ export async function resumeUpload({ expectedHash, allChunks, senderAddress, sen
 | Broadcast signed tx | `broadcast_transaction` |
 | Poll tx status | `get_transaction_status` |
 
+### aibtc Routing Notes
+- If the first-party app auto-selects the helper route, expect a single wallet
+  approval and a single submitted tx, not separate begin/upload/seal prompts.
+- If the first-party app does not select the helper route, expect the staged
+  sequence and wait for each tx to confirm before watching for the next prompt.
+- Direct MCP `call_contract` remains unsafe for any call that carries chunk data
+  in `list(buff)` arguments. That includes:
+  - `add-chunk-batch`
+  - `mint-small-single-tx`
+  - `mint-small-single-tx-recursive`
+- For aibtc agents, use MCP for read-only checks and balance/status polling, but
+  use a direct `@stacks/transactions` signing path for chunk-bearing writes.
+
 ### Autonomous 10-Step Loop
 1. Receive instruction to inscribe content.
 2. Query wallet balance and enforce minimum requirement.
 3. Convert content to bytes, detect MIME, chunk to 16,384-byte pieces.
 4. Compute incremental expected hash.
-5. Dedupe check (`get-id-by-hash`) or call `begin-or-get` directly.
-6. Broadcast begin tx and wait for confirmation.
-7. Upload chunk batches (<=50 per tx), wait for each batch to confirm before proceeding.
-8. Broadcast seal tx with strict post-condition cap.
+5. Dedupe check with `get-id-by-hash`, then query `get-upload-state(expected-hash, owner)`.
+6. If helper deployment is available, chunk count is `1..30`, and no upload state exists, send one helper tx with a combined begin+seal spend cap.
+7. Otherwise send staged begin tx and wait for confirmation.
+8. On staged flow, upload chunk batches (<=50 per tx), wait for each batch to confirm before proceeding, then seal with the strict spend cap.
 9. Verify `get-inscription-meta` and final canonical ID.
-10. Return `{ tokenId, txids, hash, mimeType, totalSize }` or structured error.
+10. Return `{ tokenId, txids, hash, mimeType, totalSize, route }` or structured error.
 
 ## Error Handling
 

@@ -8,7 +8,7 @@ enough to inscribe on-chain — a skill that teaches itself.
 
 | File | Description |
 |------|-------------|
-| [`skill-inscribe.md`](skill-inscribe.md) | Inscribe data on Stacks via Xtrata. Covers the full 3-step flow (begin, upload, seal) with cost estimation and user confirmation gate. On-chain ready (<16KB). |
+| [`skill-inscribe.md`](skill-inscribe.md) | Inscribe data on Stacks via Xtrata. Covers helper-route single-tx minting for `<=30` chunks plus the standard staged flow, with cost estimation and user confirmation gate. On-chain ready (<16KB). |
 | `skill-transfer.md` | Transfer inscriptions between wallets. *(planned)* |
 | `skill-query.md` | Query inscription state, metadata, and content. *(planned)* |
 
@@ -33,7 +33,7 @@ agent training and on-chain inscription.
 
 1. Read the relevant `skill-*.md` for your use case.
 2. Choose a training track (`aibtc` or `generic`) for environment-specific setup.
-3. Run companion scripts against testnet with small files first.
+3. Rehearse both helper-route small files and staged larger files before production use.
 4. Promote to mainnet only after successful dry runs and post-condition checks.
 
 ## Safety Baseline

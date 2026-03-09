@@ -8,6 +8,7 @@ transactions (direct key management or wallet adapter flow).
 Train an agent to execute Xtrata contract calls with correct typing, fees,
 ordering, and verification:
 
+- `mint-small-single-tx` / `mint-small-single-tx-recursive`
 - `begin-or-get`
 - `add-chunk-batch`
 - `seal-inscription` / `seal-recursive`
@@ -33,11 +34,15 @@ ordering, and verification:
 1. Load [`XTRATA_AGENT_SKILL.md`](https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/XTRATA_AGENT_SKILL.md).
 2. Train chunking and hash routines exactly.
 3. Train fee estimation and spend-cap post-conditions.
-4. Train nonce sequencing for multi-transaction mint workflows (explicit nonce
+4. Train route selection:
+   - use helper only when chunk count is `1..30`, helper deployment exists, and
+     no staged upload state is active
+   - otherwise use staged flow
+5. Train nonce sequencing for multi-transaction mint workflows (explicit nonce
    management: increment nonce after each confirmed tx to avoid mempool conflicts).
-5. Train confirmation gating: every tx (begin, each chunk batch, seal) must reach
+6. Train confirmation gating: every tx (helper, begin, each chunk batch, seal) must reach
    `success` status before the next tx is broadcast.
-6. Train read-after-write verification before reporting success.
+7. Train read-after-write verification before reporting success.
 
 ## Generic orchestration pattern
 
@@ -45,10 +50,13 @@ ordering, and verification:
    - network/contract check
    - fee-unit lookup
    - optional dedupe lookup
+   - helper availability check
+   - upload-state check
 2. Mint execution:
-   - begin (wait for confirmation)
-   - upload batches (wait for each batch to confirm before next)
-   - seal (all chunks must be confirmed on-chain first)
+   - helper single-tx path when eligible
+   - otherwise begin (wait for confirmation)
+   - staged upload batches (wait for each batch to confirm before next)
+   - staged seal (all chunks must be confirmed on-chain first)
 3. Verification:
    - tx success checks
    - `get-inscription-meta`

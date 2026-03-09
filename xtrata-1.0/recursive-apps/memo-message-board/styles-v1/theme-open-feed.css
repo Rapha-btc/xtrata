@@ -1,0 +1,53 @@
+:root {
+  --bg: #f4ede4;
+  --bg-glow: rgba(255, 255, 255, 0.6);
+  --board: #c4332a;
+  --paper: #fff9f0;
+  --ink: #1f1a18;
+  --muted: #7e6257;
+  --line: rgba(124, 85, 70, 0.08);
+  --accent: #c4332a;
+  --accent-soft: rgba(196, 51, 42, 0.14);
+  --good: #0f7d58;
+  --pending: #a35c17;
+  --error: #af2334;
+  --surface: rgba(255, 252, 247, 0.88);
+  --surface-alt: rgba(255, 247, 240, 0.92);
+  --card: rgba(255, 255, 255, 0.86);
+  --card-strong: rgba(255, 255, 255, 0.96);
+  --border: rgba(117, 73, 57, 0.14);
+  --chip: rgba(196, 51, 42, 0.08);
+  --body-font: "Helvetica Neue", Arial, sans-serif;
+  --display-font: "Helvetica Neue Condensed Bold", "Arial Narrow", sans-serif;
+  --board-radius: 8px;
+  --note-radius: 8px;
+  --panel-radius: 8px;
+  --field-radius: 8px;
+  --button-radius: 8px;
+}
+
+body {
+  background:
+    linear-gradient(0deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0.32)),
+    repeating-linear-gradient(180deg, #f7f1ea 0, #f7f1ea 28px, #f1e7db 28px, #f1e7db 29px);
+}
+
+.board {
+  border-color: rgba(142, 61, 48, 0.2);
+}
+
+.message {
+  text-transform: uppercase;
+  letter-spacing: -0.035em;
+}
+
+.innovation-grid {
+  grid-template-columns: 1fr;
+}
+
+.design-switcher,
+.innovation-panel,
+details,
+.status-panel {
+  box-shadow: 0 10px 24px rgba(90, 55, 40, 0.05);
+}
