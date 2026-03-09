@@ -4,11 +4,11 @@ Audience: aibtc agents that execute on Stacks via MCP wallet tooling.
 
 ## Goal
 
-Train an aibtc agent to autonomously run the Xtrata inscription lifecycle:
+Train an aibtc agent to autonomously run the Xtrata inscription lifecycle in
+either of the supported mint routes:
 
-1. `begin-or-get`
-2. `add-chunk-batch` (one or more calls)
-3. `seal-inscription` (or `seal-recursive`)
+1. small helper route: `mint-small-single-tx` / `mint-small-single-tx-recursive`
+2. staged route: `begin-or-get` -> `add-chunk-batch` (one or more calls) -> `seal-inscription` (or `seal-recursive`)
 
 with deterministic fee caps, confirmations, and error recovery.
 
@@ -53,12 +53,18 @@ with deterministic fee caps, confirmations, and error recovery.
 4. Train fee model:
    - begin fee = `fee-unit`
    - seal fee = `fee-unit * (1 + ceil(totalChunks / 50))`
-5. Train post-condition policy:
+   - helper spend cap = `begin fee + seal fee` in one deny-mode post-condition
+5. Train route selection:
+   - use helper only when chunk count is `1..30`, helper deployment exists, and
+     there is no staged upload state to resume
+   - otherwise use staged flow
+6. Train post-condition policy:
    - `PostConditionMode.Deny` for fee-paying writes.
-6. Train confirmation policy:
+7. Train confirmation policy:
    - poll status until success or explicit abort.
-7. Train recovery policy:
+8. Train recovery policy:
    - duplicate -> resolve canonical ID by hash
+   - active upload state -> stay on staged route and resume
    - expired/not-found -> restart begin path
    - hash mismatch -> restart with clean chunk state
 
@@ -77,12 +83,13 @@ with deterministic fee caps, confirmations, and error recovery.
 
 1. Get address and STX balance.
 2. Chunk data and compute expected hash.
-3. Dedup check (`get-id-by-hash`) or call `begin-or-get`.
-4. Execute begin tx with spend cap.
-5. Upload chunk batches — wait for each batch tx to confirm before proceeding.
-6. Seal with computed cap (all chunks must be confirmed on-chain first).
-7. Verify metadata and canonical hash->id mapping.
-8. Return structured output (`tokenId`, `txids`, `hash`, `mimeType`, `totalSize`).
+3. Dedup check with `get-id-by-hash`, then query `get-upload-state(expected-hash, owner)`.
+4. If helper is available, chunk count is `1..30`, and no upload state exists, execute one helper tx with the combined begin+seal spend cap.
+5. Otherwise execute staged begin tx with spend cap.
+6. On staged flow, upload chunk batches and wait for each batch tx to confirm before proceeding.
+7. On staged flow, seal with computed cap after all chunks are confirmed on-chain.
+8. Verify metadata and canonical hash->id mapping.
+9. Return structured output (`tokenId`, `txids`, `hash`, `mimeType`, `totalSize`, `route`).
 
 ## Known MCP tool limitations
 
@@ -92,11 +99,17 @@ data inside `add-chunk-batch`). If the contract's running hash after upload equa
 `sha256(32 zero bytes)` = `66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925`,
 the MCP tool sent an empty buffer instead of your chunk data.
 
-**Workaround:** Use the `@stacks/transactions` SDK directly for `add-chunk-batch`
-calls. The `begin-or-get` and `seal-inscription`/`seal-recursive` calls (which use
-small buffer arguments) work correctly via MCP `call_contract`. See
-`scripts/xtrata-mint-example.js` for a complete SDK-based reference, or
-Agent 27's `inscribe-entry.cjs` for a working recursive inscription example.
+**Workaround:** Use the `@stacks/transactions` SDK directly for any write call
+that includes chunk buffers in `list(buff)` arguments:
+- `add-chunk-batch`
+- `mint-small-single-tx`
+- `mint-small-single-tx-recursive`
+
+The smaller `begin-or-get` and `seal-inscription`/`seal-recursive` calls still
+work correctly via MCP `call_contract`. If your agent is driving the first-party
+UI rather than building raw transactions, expect the helper route to collapse the
+whole mint into one wallet approval for `<=30` chunks. See
+`scripts/xtrata-mint-example.js` for a complete SDK-based reference.
 
 ## Resume path
 
@@ -111,6 +124,8 @@ Xtrata has a robust resume capability. If an inscription process is interrupted
 5. `begin-or-get` is resume-safe: calling it again with the same hash will
    return the existing session, not create a duplicate.
 6. Sessions persist for 4,320 blocks (~30 days).
+7. Resume is for the staged route only. Do not switch an active upload onto the
+   helper route mid-attempt.
 
 Only use `abandon-upload` as a last resort when the upload is truly broken
 (e.g., wrong data was uploaded and the running hash is irrecoverable).

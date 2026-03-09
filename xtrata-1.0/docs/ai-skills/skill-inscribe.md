@@ -2,9 +2,9 @@
 name: xtrata-inscribe
 description: >
   Teach any AI agent to inscribe data on Stacks (Bitcoin L2) via the Xtrata
-  protocol. Covers the complete 3-step flow: begin, upload chunks, seal as
-  SIP-009 NFT. Includes cost estimation and user confirmation gate.
-version: "1.0"
+  protocol. Covers both the small helper single-tx route and the staged
+  begin/upload/seal flow. Includes cost estimation and user confirmation gate.
+version: "1.1"
 contract: SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0
 ---
 
@@ -22,8 +22,10 @@ one canonical token.
 | Key | Value |
 |-----|-------|
 | Contract | `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0` |
+| Small helper | `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-small-mint-v1-0` |
 | CHUNK-SIZE | 16,384 bytes |
 | MAX-BATCH-SIZE | 50 chunks per `add-chunk-batch` |
+| MAX-SMALL-MINT-CHUNKS | 30 chunks per helper call |
 | MAX-TOTAL-CHUNKS | 2,048 |
 | MAX-TOTAL-SIZE | 32 MiB |
 | FEE-MIN | 0.001 STX |
@@ -76,9 +78,8 @@ const feeUnit = BigInt(cvToJSON(feeResult).value.value); // e.g. 100000 = 0.1 ST
 Fee formulas:
 - **Begin fee** = `feeUnit` microSTX
 - **Seal fee** = `feeUnit * (1 + ceil(totalChunks / 50))` microSTX
+- **Helper spend cap** = `begin fee + seal fee` in one deny-mode post-condition
 - **Network fees** ≈ 0.01 STX per transaction (varies with mempool)
-
-Total transactions = 1 (begin) + ceil(chunks / 50) batches + 1 (seal).
 
 ## 5. Pre-Inscription Planning & User Confirmation
 
@@ -107,7 +108,8 @@ const mime = 'text/html'; // set appropriately
 
 ```js
 const batches = Math.ceil(chunks.length / 50);
-const totalTxs = 1 + batches + 1; // begin + upload batches + seal
+const canUseHelper = chunks.length >= 1 && chunks.length <= 30;
+const totalTxs = canUseHelper ? 1 : 1 + batches + 1;
 const beginFee = Number(feeUnit) / 1e6;           // STX
 const sealFee = Number(feeUnit * (1n + BigInt(batches))) / 1e6; // STX
 const networkFees = totalTxs * 0.01;               // STX estimate
@@ -126,8 +128,9 @@ Hash: 0xabcd...ef12
 
 Cost Estimate
 ─────────────
+Route:    helper single-tx (<=30 chunks)
 Protocol: 0.10 (begin) + 0.20 (seal) = 0.30 STX
-Network:  ~0.03 STX (3 transactions)
+Network:  ~0.01 STX (1 transaction)
 Total:    ~0.33 STX
 
 Proceed with inscription? (confirm/cancel)
@@ -156,14 +159,23 @@ if (existing.value && existing.value.value) {
 
 This is a free read-only call. Always do it before spending fees.
 
-## 7. Three-Step Inscription Flow
+## 7. Mint Route Selection
+
+Use the helper route only when all of the following are true:
+- helper deployment is available
+- chunk count is `1..30`
+- there is no active upload state to resume for this `{hash, owner}`
+
+Otherwise use the staged route.
+
+## 8. Helper Route (single transaction)
 
 Required imports:
 
 ```js
 const {
   makeContractCall, broadcastTransaction, callReadOnlyFunction,
-  bufferCV, uintCV, stringAsciiCV, listCV, cvToJSON,
+  bufferCV, contractPrincipalCV, principalCV, uintCV, stringAsciiCV, listCV, cvToJSON,
   AnchorMode, PostConditionMode, FungibleConditionCode,
   makeStandardSTXPostCondition, getNonce
 } = require('@stacks/transactions');
@@ -176,7 +188,8 @@ Fetch the current nonce once, then increment locally after each confirmed tx:
 
 ```js
 let nonce = await getNonce(senderAddress, network);
-// After each confirmed tx: nonce = nonce + 1n;
+// Helper route consumes one nonce.
+// Staged route increments after each confirmed tx.
 ```
 
 ### Transaction Polling
@@ -197,6 +210,61 @@ async function pollTx(txid, network, maxPolls = 60, interval = 10000) {
   throw new Error('TX not confirmed in time');
 }
 ```
+
+### Upload-state check
+
+```js
+const uploadState = await callReadOnlyFunction({
+  contractAddress: CONTRACT_ADDRESS,
+  contractName: CONTRACT_NAME,
+  functionName: 'get-upload-state',
+  functionArgs: [bufferCV(hash), principalCV(senderAddress)],
+  senderAddress, network
+});
+const hasActiveUpload = !!cvToJSON(uploadState).value;
+```
+
+### Helper call
+
+Use the helper only if `!hasActiveUpload && chunks.length <= 30`.
+
+```js
+const helperContractAddress = 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X';
+const helperContractName = 'xtrata-small-mint-v1-0';
+const spendCap = feeUnit + (feeUnit * (1n + BigInt(batches)));
+
+const helperTx = await makeContractCall({
+  contractAddress: helperContractAddress,
+  contractName: helperContractName,
+  functionName: 'mint-small-single-tx', // or 'mint-small-single-tx-recursive'
+  functionArgs: [
+    contractPrincipalCV(CONTRACT_ADDRESS, CONTRACT_NAME),
+    bufferCV(hash),
+    stringAsciiCV(mime),
+    uintCV(totalSize),
+    listCV(chunks.map(c => bufferCV(c))),
+    stringAsciiCV(tokenUri)
+  ],
+  senderKey, network, nonce,
+  postConditions: [
+    makeStandardSTXPostCondition(
+      senderAddress, FungibleConditionCode.LessEqual, spendCap
+    )
+  ],
+  postConditionMode: PostConditionMode.Deny,
+  anchorMode: AnchorMode.Any
+});
+const helperTxid = (await broadcastTransaction(helperTx, network)).txid;
+await pollTx(helperTxid, network);
+nonce = nonce + 1n;
+```
+
+For recursive helper mints, call `mint-small-single-tx-recursive` and append
+`listCV([uintCV(parentTokenId)])` as the final argument.
+
+After confirmation, resolve the canonical token ID with `get-id-by-hash(hash)`.
+
+## 9. Staged Route (begin -> upload -> seal)
 
 ### Step 1: begin-or-get
 
@@ -285,10 +353,10 @@ const sealResult = await pollTx(sealTxid, network);
 ```
 
 `seal-recursive` signature: `seal-recursive(hash, uri, dependencies)` where
-`dependencies` is a `(list 200 uint)` of parent token IDs. All referenced tokens
+`dependencies` is a `(list 50 uint)` of parent token IDs. All referenced tokens
 must already exist on-chain.
 
-## 8. MCP Integration (aibtc)
+## 10. MCP Integration (aibtc)
 
 If your agent uses aibtc MCP tools instead of direct SDK signing:
 
@@ -303,10 +371,15 @@ If your agent uses aibtc MCP tools instead of direct SDK signing:
 
 **Critical bug**: The aibtc `call_contract` tool sends EMPTY buffers when large
 hex data is passed in nested `list(buff)` arguments. Do NOT use MCP tools for
-`add-chunk-batch`. Use the Stacks SDK directly for chunk uploads. MCP tools work
-fine for `begin-or-get` and `seal-inscription`/`seal-recursive`.
+any write that carries chunk buffers in nested lists:
+- `add-chunk-batch`
+- `mint-small-single-tx`
+- `mint-small-single-tx-recursive`
 
-## 9. Resume Path
+Use the Stacks SDK directly for chunk-bearing writes. MCP tools still work for
+`begin-or-get` and `seal-inscription`/`seal-recursive`.
+
+## 11. Resume Path
 
 If a session is interrupted, call `get-upload-state` to check progress:
 
@@ -315,16 +388,17 @@ const state = await callReadOnlyFunction({
   contractAddress: CONTRACT_ADDRESS,
   contractName: CONTRACT_NAME,
   functionName: 'get-upload-state',
-  functionArgs: [bufferCV(hash)],
+  functionArgs: [bufferCV(hash), principalCV(senderAddress)],
   senderAddress, network
 });
 ```
 
-If `status` is `"uploading"`, resume from the next unchunked batch. If expired
-(>4,320 blocks), restart from `begin-or-get`. If already sealed, retrieve the
-token ID via `get-id-by-hash`.
+If a state object exists, resume from the next unuploaded chunk batch. If
+expired (>4,320 blocks), restart from `begin-or-get`. If already sealed,
+retrieve the token ID via `get-id-by-hash`. Resume applies to the staged route
+only; do not switch an active upload onto the helper route.
 
-## 10. Error Reference
+## 12. Error Reference
 
 | Code | Name | When |
 |-----:|------|------|

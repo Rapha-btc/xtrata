@@ -11,6 +11,7 @@ const MINT_SCRIPT = path.join(REPO_ROOT, 'scripts', 'xtrata-mint-example.js');
 const TRANSFER_SCRIPT = path.join(REPO_ROOT, 'scripts', 'xtrata-transfer-example.js');
 const QUERY_SCRIPT = path.join(REPO_ROOT, 'scripts', 'xtrata-query-example.js');
 const AI_SKILLS_DOCS_INDEX = path.join(REPO_ROOT, 'docs', 'ai-skills', 'README.md');
+const AI_SKILLS_INSCRIBE_DOC = path.join(REPO_ROOT, 'docs', 'ai-skills', 'skill-inscribe.md');
 const AI_SKILLS_AIBTC_DOC = path.join(REPO_ROOT, 'docs', 'ai-skills', 'aibtc-agent-training.md');
 const AI_SKILLS_GENERIC_DOC = path.join(REPO_ROOT, 'docs', 'ai-skills', 'generic-agent-training.md');
 
@@ -75,6 +76,7 @@ describe('XTRATA_AGENT_SKILL package', () => {
 
   it('ships a dedicated AI docs set for aibtc and generic agent tracks', () => {
     expect(existsSync(AI_SKILLS_DOCS_INDEX)).toBe(true);
+    expect(existsSync(AI_SKILLS_INSCRIBE_DOC)).toBe(true);
     expect(existsSync(AI_SKILLS_AIBTC_DOC)).toBe(true);
     expect(existsSync(AI_SKILLS_GENERIC_DOC)).toBe(true);
 
@@ -84,12 +86,24 @@ describe('XTRATA_AGENT_SKILL package', () => {
     expect(docsIndex).toContain('XTRATA_AGENT_SKILL.md');
     expect(docsIndex).toContain('https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/XTRATA_AGENT_SKILL.md');
     expect(docsIndex).toContain('https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/scripts/xtrata-mint-example.js');
+    expect(docsIndex).toContain('helper-route single-tx minting');
+
+    const inscribeDoc = readFileSync(AI_SKILLS_INSCRIBE_DOC, 'utf8');
+    expect(inscribeDoc).toContain('mint-small-single-tx');
+    expect(inscribeDoc).toContain('mint-small-single-tx-recursive');
+    expect(inscribeDoc).toContain('get-upload-state');
+    expect(inscribeDoc).toContain('principalCV(senderAddress)');
 
     const aibtcDoc = readFileSync(AI_SKILLS_AIBTC_DOC, 'utf8');
+    expect(aibtcDoc).toContain('mint-small-single-tx');
+    expect(aibtcDoc).toContain('mint-small-single-tx-recursive');
+    expect(aibtcDoc).toContain('get-upload-state(expected-hash, owner)');
     expect(aibtcDoc).toContain('https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/XTRATA_AGENT_SKILL.md');
     expect(aibtcDoc).toContain('https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/scripts/xtrata-transfer-example.js');
 
     const genericDoc = readFileSync(AI_SKILLS_GENERIC_DOC, 'utf8');
+    expect(genericDoc).toContain('mint-small-single-tx');
+    expect(genericDoc).toContain('upload-state check');
     expect(genericDoc).toContain('https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/ai-skills/README.md');
     expect(genericDoc).toContain('https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/scripts/xtrata-query-example.js');
   });
@@ -99,8 +113,11 @@ describe('XTRATA_AGENT_SKILL package', () => {
 
     expect(content).toContain('SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X');
     expect(content).toContain('xtrata-v2-1-0');
+    expect(content).toContain('xtrata-small-mint-v1-0');
     expect(content).toContain('SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0');
     expect(content).toContain('fee-unit * (1 + ceil(total_chunks / 50))');
+    expect(content).toContain('mint-small-single-tx');
+    expect(content).toContain('mint-small-single-tx-recursive');
     expect(content).toContain('PostConditionMode.Deny');
     expect(content).toContain('TX_DELAY_MS = 5000');
   });
@@ -139,8 +156,11 @@ describe('XTRATA_AGENT_SKILL package', () => {
   it('companion scripts include required call flow and network controls', () => {
     const mint = readFileSync(MINT_SCRIPT, 'utf8');
     expect(mint).toContain('XTRATA_NETWORK');
+    expect(mint).toContain('XTRATA_USE_SMALL_MINT_HELPER');
+    expect(mint).toContain('mint-small-single-tx');
     expect(mint).toContain('begin-or-get');
     expect(mint).toContain('add-chunk-batch');
+    expect(mint).toContain('seal-recursive');
     expect(mint).toContain('seal-inscription');
 
     const transfer = readFileSync(TRANSFER_SCRIPT, 'utf8');
