@@ -912,8 +912,6 @@ export default function MintScreen(props: MintScreenProps) {
     setDuplicateState('checking');
     setDuplicateMatch(null);
     setAllowDuplicate(false);
-    const expectedHex = bytesToHex(expectedHash);
-
     const runCheck = async () => {
       let uploadState: UploadState | null = null;
       if (props.walletSession.address) {
@@ -946,7 +944,7 @@ export default function MintScreen(props: MintScreenProps) {
       }
 
       // When an upload session exists for this hash+owner, prioritize resume flow.
-      // Skip full-history duplicate scanning to avoid unnecessary read-only load.
+      // Otherwise check the contract's hash index directly instead of scanning history.
       if (uploadState) {
         setDuplicateState('clear');
         setDuplicateMatch(null);
@@ -954,22 +952,28 @@ export default function MintScreen(props: MintScreenProps) {
       }
 
       try {
-        const lastTokenId = await client.getLastTokenId(readOnlySender);
-        for (let id = lastTokenId; ; id -= 1n) {
-          const meta = await client.getInscriptionMeta(id, readOnlySender);
+        const duplicateId = await client.getIdByHash(expectedHash, readOnlySender);
+        if (duplicateCheckRef.current !== checkId) {
+          return;
+        }
+        if (duplicateId === null) {
+          setDuplicateState('clear');
+          return;
+        }
+
+        let owner: string | null = null;
+        try {
+          const meta = await client.getInscriptionMeta(duplicateId, readOnlySender);
           if (duplicateCheckRef.current !== checkId) {
             return;
           }
-          if (meta && bytesToHex(meta.finalHash) === expectedHex) {
-            setDuplicateMatch({ id, owner: meta.owner ?? null });
-            setDuplicateState('found');
-            return;
-          }
-          if (id === 0n) {
-            break;
-          }
+          owner = meta?.owner ?? null;
+        } catch {
+          owner = null;
         }
-        setDuplicateState('clear');
+
+        setDuplicateMatch({ id: duplicateId, owner });
+        setDuplicateState('found');
       } catch (error) {
         if (duplicateCheckRef.current !== checkId) {
           return;
