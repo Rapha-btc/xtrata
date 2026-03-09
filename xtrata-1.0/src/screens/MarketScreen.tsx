@@ -1399,10 +1399,10 @@ export default function MarketScreen(props: MarketScreenProps) {
     >
       <div className="panel__header">
         <div>
-          <h2>Market</h2>
+          <h2>{isPublicVariant ? 'Marketplace' : 'Market'}</h2>
           <p>
             {isPublicVariant
-              ? 'Browse active listings across STX, USDCx, and sBTC markets.'
+              ? 'Browse current listings across STX, USDCx, and sBTC markets.'
               : 'Browse listings across STX, USDCx, and sBTC markets. Direct contract controls stay below for advanced operations.'}
           </p>
         </div>
