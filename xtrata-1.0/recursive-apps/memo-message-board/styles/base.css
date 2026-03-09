@@ -367,6 +367,50 @@ hr {
   padding: clamp(0.85rem, 2vw, 2rem) var(--content-gutter) clamp(2rem, 5vw, 3.5rem);
 }
 
+.preflight-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: clamp(1rem, 3vw, 2rem);
+  background: rgba(6, 10, 15, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.preflight-card {
+  width: min(100%, 680px);
+  display: grid;
+  gap: 0.9rem;
+  padding: clamp(1rem, 2.4vw, 1.5rem);
+  background: color-mix(in srgb, var(--panel-background-strong) 92%, black 8%);
+  border: 1px solid color-mix(in srgb, var(--warning) 26%, var(--border));
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+}
+
+.preflight-copy {
+  margin: 0;
+  color: var(--text-soft);
+  line-height: 1.6;
+}
+
+.preflight-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 0.6rem;
+  color: var(--text-soft);
+}
+
+.preflight-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .board {
   position: relative;
   z-index: 1;

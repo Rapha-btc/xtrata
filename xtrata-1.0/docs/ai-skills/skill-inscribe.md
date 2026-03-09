@@ -1,23 +1,32 @@
 ---
 name: xtrata-inscribe
 description: >
-  Teach any AI agent to inscribe data on Stacks (Bitcoin L2) via the Xtrata
+  Teach any AI agent to inscribe one item on Stacks (Bitcoin L2) via the Xtrata
   protocol. Covers both the small helper single-tx route and the staged
   begin/upload/seal flow. Includes cost estimation and user confirmation gate.
-version: "1.1"
+  Multi-item batch jobs are handled by `skill-batch-mint.md`.
+version: "1.2"
 contract: SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0
 ---
 
 # Xtrata Inscription Skill
 
-## 1. Protocol Overview
+## 1. Scope
+
+This skill is for one-item minting.
+
+Use it when the request is a single file that should become one inscription.
+If the request is a coordinated drop of multiple files, hand off to
+[`skill-batch-mint.md`](skill-batch-mint.md).
+
+## 2. Protocol Overview
 
 Xtrata is a contract-native inscription protocol on Stacks (Bitcoin L2). Data is
 split into fixed 16,384-byte chunks, uploaded on-chain, then sealed into a
 SIP-009 NFT. Content is deduplicated by hash — identical data always resolves to
 one canonical token.
 
-## 2. Contract Reference
+## 3. Contract Reference
 
 | Key | Value |
 |-----|-------|
@@ -36,9 +45,9 @@ Network endpoints:
 - Mainnet: `https://stacks-node-api.mainnet.stacks.co`
 - Fallback: `https://api.mainnet.hiro.so`
 
-## 3. Incremental Hashing
+## 4. Incremental Hashing
 
-Xtrata uses an incremental SHA-256 chain — NOT a single hash of the full file.
+Xtrata uses an incremental SHA-256 chain — not a single hash of the full file.
 Start with 32 zero bytes. For each chunk, concatenate the running hash with the
 raw chunk bytes and SHA-256 the result.
 
@@ -57,9 +66,9 @@ function computeHash(chunks) {
 ```
 
 This must match what the contract computes in `process-chunk`. Get it wrong and
-you'll hit error `u103 HASH-MISMATCH`.
+you will hit error `u103 HASH-MISMATCH`.
 
-## 4. Fee Model
+## 5. Fee Model
 
 Protocol fees are denominated in microSTX. Fetch the current rate on-chain:
 
@@ -72,76 +81,34 @@ const feeResult = await callReadOnlyFunction({
   senderAddress,
   network
 });
-const feeUnit = BigInt(cvToJSON(feeResult).value.value); // e.g. 100000 = 0.1 STX
+const feeUnit = BigInt(cvToJSON(feeResult).value.value);
 ```
 
 Fee formulas:
-- **Begin fee** = `feeUnit` microSTX
-- **Seal fee** = `feeUnit * (1 + ceil(totalChunks / 50))` microSTX
-- **Helper spend cap** = `begin fee + seal fee` in one deny-mode post-condition
-- **Network fees** ≈ 0.01 STX per transaction (varies with mempool)
+- begin fee = `feeUnit` microSTX
+- seal fee = `feeUnit * (1 + ceil(totalChunks / 50))` microSTX
+- helper spend cap = `begin fee + seal fee` in one deny-mode post-condition
+- network fees are separate and vary with mempool conditions
 
-## 5. Pre-Inscription Planning & User Confirmation
+## 6. Pre-Inscription Planning and User Confirmation
 
-**Before sending any transaction, agents MUST present costs and get explicit user
-confirmation.** This is non-negotiable.
+Before sending any transaction, the agent must present the plan and get explicit
+user confirmation.
 
-### Step-by-step
+1. Read the file.
+2. Compute size, chunk count, MIME type, and incremental hash.
+3. Fetch live `fee-unit`.
+4. Decide route:
+   - helper single-tx when one item, `1..30` chunks, helper exists, and there is no resumable staged upload
+   - staged flow otherwise
+5. Present route, cost estimate, and hash to the user.
+6. Proceed only after explicit confirmation.
 
-1. **Read the file** and compute size, chunk count, MIME type, and hash:
+If the user cancels, stop immediately.
 
-```js
-const fileData = fs.readFileSync(filePath);
-const totalSize = fileData.length;
-const chunkSize = 16384;
-const chunks = [];
-for (let i = 0; i < totalSize; i += chunkSize) {
-  chunks.push(fileData.subarray(i, i + chunkSize));
-}
-const hash = computeHash(chunks);
-const mime = 'text/html'; // set appropriately
-```
+## 7. Deduplication Check
 
-2. **Fetch live fee-unit** from the contract (see Section 4).
-
-3. **Calculate costs**:
-
-```js
-const batches = Math.ceil(chunks.length / 50);
-const canUseHelper = chunks.length >= 1 && chunks.length <= 30;
-const totalTxs = canUseHelper ? 1 : 1 + batches + 1;
-const beginFee = Number(feeUnit) / 1e6;           // STX
-const sealFee = Number(feeUnit * (1n + BigInt(batches))) / 1e6; // STX
-const networkFees = totalTxs * 0.01;               // STX estimate
-const totalCost = beginFee + sealFee + networkFees;
-```
-
-4. **Present the plan to the user**:
-
-```
-Inscription Plan
-─────────────────
-File: example.html (12,847 bytes)
-Type: text/html
-Chunks: 1 (1 batch)
-Hash: 0xabcd...ef12
-
-Cost Estimate
-─────────────
-Route:    helper single-tx (<=30 chunks)
-Protocol: 0.10 (begin) + 0.20 (seal) = 0.30 STX
-Network:  ~0.01 STX (1 transaction)
-Total:    ~0.33 STX
-
-Proceed with inscription? (confirm/cancel)
-```
-
-5. **Only proceed after explicit user confirmation.** If the user cancels, stop
-   immediately. No transactions should be sent without approval.
-
-## 6. Deduplication Check
-
-Before beginning, check if the content already exists on-chain:
+Before beginning, check whether the content already exists on-chain:
 
 ```js
 const result = await callReadOnlyFunction({
@@ -149,270 +116,70 @@ const result = await callReadOnlyFunction({
   contractName: CONTRACT_NAME,
   functionName: 'get-id-by-hash',
   functionArgs: [bufferCV(hash)],
-  senderAddress, network
+  senderAddress,
+  network
 });
-const existing = cvToJSON(result);
-if (existing.value && existing.value.value) {
-  // Already inscribed as token #<id> — skip
-}
 ```
 
-This is a free read-only call. Always do it before spending fees.
+If the hash already resolves to a token ID, skip the mint and return the
+canonical existing token.
 
-## 7. Mint Route Selection
+## 8. Mint Route Selection
 
 Use the helper route only when all of the following are true:
 - helper deployment is available
+- there is exactly one item to mint
 - chunk count is `1..30`
-- there is no active upload state to resume for this `{hash, owner}`
+- there is no active upload state to resume for `{hash, owner}`
 
 Otherwise use the staged route.
 
-## 8. Helper Route (single transaction)
+If the user asks to mint multiple files together, do not improvise a loop here.
+Hand the request to [`skill-batch-mint.md`](skill-batch-mint.md).
 
-Required imports:
+## 9. Helper Route
 
-```js
-const {
-  makeContractCall, broadcastTransaction, callReadOnlyFunction,
-  bufferCV, contractPrincipalCV, principalCV, uintCV, stringAsciiCV, listCV, cvToJSON,
-  AnchorMode, PostConditionMode, FungibleConditionCode,
-  makeStandardSTXPostCondition, getNonce
-} = require('@stacks/transactions');
-const { StacksMainnet } = require('@stacks/network');
-```
+The helper route compresses begin, upload, and seal into one transaction for a
+single qualifying item.
 
-### Nonce Management
+Execution rules:
+- fetch upload state first
+- do not use helper if a staged upload already exists
+- set one deny-mode STX post-condition with `begin fee + seal fee`
+- wait for confirmation before reporting success
 
-Fetch the current nonce once, then increment locally after each confirmed tx:
+Recursive variant:
+- use `mint-small-single-tx-recursive` only for one-item recursive mints
+- do not project recursive support onto batch jobs
 
-```js
-let nonce = await getNonce(senderAddress, network);
-// Helper route consumes one nonce.
-// Staged route increments after each confirmed tx.
-```
+## 10. Staged Route
 
-### Transaction Polling
+The staged route remains the default for larger one-item uploads and for any
+single-item job that must be resumed.
 
-Wait for confirmation before proceeding to the next step:
+Execution order:
+1. `begin-or-get`
+2. one or more `add-chunk-batch` calls
+3. `seal-inscription` or `seal-recursive`
 
-```js
-async function pollTx(txid, network, maxPolls = 60, interval = 10000) {
-  const url = `${network.coreApiUrl}/extended/v1/tx/${txid}`;
-  for (let i = 0; i < maxPolls; i++) {
-    const res = await fetch(url);
-    const data = await res.json();
-    if (data.tx_status === 'success') return data;
-    if (data.tx_status?.startsWith('abort'))
-      throw new Error(`TX failed: ${data.tx_status}`);
-    await new Promise(r => setTimeout(r, interval));
-  }
-  throw new Error('TX not confirmed in time');
-}
-```
+Rules:
+- confirm every tx before the next dependent tx
+- resume from `get-upload-state` when possible
+- use `seal-recursive` only when explicit dependencies are required
 
-### Upload-state check
+## 11. Resume Rules
 
-```js
-const uploadState = await callReadOnlyFunction({
-  contractAddress: CONTRACT_ADDRESS,
-  contractName: CONTRACT_NAME,
-  functionName: 'get-upload-state',
-  functionArgs: [bufferCV(hash), principalCV(senderAddress)],
-  senderAddress, network
-});
-const hasActiveUpload = !!cvToJSON(uploadState).value;
-```
+Xtrata staged uploads are resume-safe.
 
-### Helper call
+1. Call `get-upload-state(expected-hash, owner)`.
+2. Read `current-index`.
+3. Restart upload from the next missing chunk.
+4. Seal only after all chunks are confirmed on-chain.
+5. Do not switch an active staged upload onto the helper route mid-attempt.
 
-Use the helper only if `!hasActiveUpload && chunks.length <= 30`.
+## 12. Operational Notes
 
-```js
-const helperContractAddress = 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X';
-const helperContractName = 'xtrata-small-mint-v1-0';
-const spendCap = feeUnit + (feeUnit * (1n + BigInt(batches)));
-
-const helperTx = await makeContractCall({
-  contractAddress: helperContractAddress,
-  contractName: helperContractName,
-  functionName: 'mint-small-single-tx', // or 'mint-small-single-tx-recursive'
-  functionArgs: [
-    contractPrincipalCV(CONTRACT_ADDRESS, CONTRACT_NAME),
-    bufferCV(hash),
-    stringAsciiCV(mime),
-    uintCV(totalSize),
-    listCV(chunks.map(c => bufferCV(c))),
-    stringAsciiCV(tokenUri)
-  ],
-  senderKey, network, nonce,
-  postConditions: [
-    makeStandardSTXPostCondition(
-      senderAddress, FungibleConditionCode.LessEqual, spendCap
-    )
-  ],
-  postConditionMode: PostConditionMode.Deny,
-  anchorMode: AnchorMode.Any
-});
-const helperTxid = (await broadcastTransaction(helperTx, network)).txid;
-await pollTx(helperTxid, network);
-nonce = nonce + 1n;
-```
-
-For recursive helper mints, call `mint-small-single-tx-recursive` and append
-`listCV([uintCV(parentTokenId)])` as the final argument.
-
-After confirmation, resolve the canonical token ID with `get-id-by-hash(hash)`.
-
-## 9. Staged Route (begin -> upload -> seal)
-
-### Step 1: begin-or-get
-
-Opens an upload session. Pays `feeUnit` as the begin fee.
-
-```js
-const beginTx = await makeContractCall({
-  contractAddress: CONTRACT_ADDRESS,
-  contractName: CONTRACT_NAME,
-  functionName: 'begin-or-get',
-  functionArgs: [
-    bufferCV(hash),
-    stringAsciiCV(mime),
-    uintCV(totalSize),
-    uintCV(chunks.length)
-  ],
-  senderKey, network, nonce,
-  postConditions: [
-    makeStandardSTXPostCondition(
-      senderAddress, FungibleConditionCode.LessEqual, feeUnit
-    )
-  ],
-  postConditionMode: PostConditionMode.Deny,
-  anchorMode: AnchorMode.Any
-});
-const beginTxid = (await broadcastTransaction(beginTx, network)).txid;
-await pollTx(beginTxid, network);
-nonce = nonce + 1n;
-```
-
-### Step 2: add-chunk-batch
-
-Uploads chunk data. No protocol fee. Send chunks in batches of up to 50.
-
-```js
-for (let b = 0; b < batches; b++) {
-  const batch = chunks.slice(b * 50, (b + 1) * 50);
-  const chunkTx = await makeContractCall({
-    contractAddress: CONTRACT_ADDRESS,
-    contractName: CONTRACT_NAME,
-    functionName: 'add-chunk-batch',
-    functionArgs: [
-      bufferCV(hash),
-      listCV(batch.map(c => bufferCV(c)))
-    ],
-    senderKey, network, nonce,
-    postConditions: [],
-    postConditionMode: PostConditionMode.Deny,
-    anchorMode: AnchorMode.Any
-  });
-  const chunkTxid = (await broadcastTransaction(chunkTx, network)).txid;
-  await pollTx(chunkTxid, network);
-  nonce = nonce + 1n;
-}
-```
-
-### Step 3: Seal
-
-Use `seal-inscription` for standalone tokens or `seal-recursive` for tokens that
-reference parent inscriptions (e.g. building a collection tree).
-
-```js
-const sealFeeAmount = feeUnit * (1n + BigInt(batches));
-
-const sealTx = await makeContractCall({
-  contractAddress: CONTRACT_ADDRESS,
-  contractName: CONTRACT_NAME,
-  functionName: 'seal-inscription', // or 'seal-recursive'
-  functionArgs: [
-    bufferCV(hash),
-    stringAsciiCV(tokenUri),
-    // For seal-recursive, add: listCV([uintCV(parentTokenId)])
-  ],
-  senderKey, network, nonce,
-  postConditions: [
-    makeStandardSTXPostCondition(
-      senderAddress, FungibleConditionCode.LessEqual, sealFeeAmount
-    )
-  ],
-  postConditionMode: PostConditionMode.Deny,
-  anchorMode: AnchorMode.Any
-});
-const sealTxid = (await broadcastTransaction(sealTx, network)).txid;
-const sealResult = await pollTx(sealTxid, network);
-// Token ID is in sealResult.tx_result
-```
-
-`seal-recursive` signature: `seal-recursive(hash, uri, dependencies)` where
-`dependencies` is a `(list 50 uint)` of parent token IDs. All referenced tokens
-must already exist on-chain.
-
-## 10. MCP Integration (aibtc)
-
-If your agent uses aibtc MCP tools instead of direct SDK signing:
-
-| Xtrata need | aibtc MCP tool |
-|---|---|
-| Wallet address | `get_wallet_info` |
-| STX balance | `get_stx_balance` |
-| Read-only calls | `call_read_only_function` |
-| Write calls | `call_contract` |
-| Broadcast | `broadcast_transaction` |
-| Poll tx status | `get_transaction_status` |
-
-**Critical bug**: The aibtc `call_contract` tool sends EMPTY buffers when large
-hex data is passed in nested `list(buff)` arguments. Do NOT use MCP tools for
-any write that carries chunk buffers in nested lists:
-- `add-chunk-batch`
-- `mint-small-single-tx`
-- `mint-small-single-tx-recursive`
-
-Use the Stacks SDK directly for chunk-bearing writes. MCP tools still work for
-`begin-or-get` and `seal-inscription`/`seal-recursive`.
-
-## 11. Resume Path
-
-If a session is interrupted, call `get-upload-state` to check progress:
-
-```js
-const state = await callReadOnlyFunction({
-  contractAddress: CONTRACT_ADDRESS,
-  contractName: CONTRACT_NAME,
-  functionName: 'get-upload-state',
-  functionArgs: [bufferCV(hash), principalCV(senderAddress)],
-  senderAddress, network
-});
-```
-
-If a state object exists, resume from the next unuploaded chunk batch. If
-expired (>4,320 blocks), restart from `begin-or-get`. If already sealed,
-retrieve the token ID via `get-id-by-hash`. Resume applies to the staged route
-only; do not switch an active upload onto the helper route.
-
-## 12. Error Reference
-
-| Code | Name | When |
-|-----:|------|------|
-| u100 | NOT-AUTHORIZED | Caller is not the upload owner |
-| u101 | NOT-FOUND | No upload session for this hash |
-| u102 | INVALID-BATCH | Empty batch or exceeds 50 chunks |
-| u103 | HASH-MISMATCH | Final hash doesn't match expected |
-| u107 | INVALID-URI | Empty or malformed token URI |
-| u109 | PAUSED | Contract writes are paused |
-| u110 | INVALID-FEE | Fee-unit out of allowed range |
-| u111 | DEPENDENCY-MISSING | Referenced parent token doesn't exist |
-| u112 | EXPIRED | Upload session expired (>4,320 blocks) |
-| u114 | DUPLICATE | Content already sealed (use get-id-by-hash) |
-
-Recovery: On `u112`/`u101`, restart from begin. On `u103`, recompute hash and
-restart. On `u114`, retrieve the existing token. On post-condition abort, refresh
-`get-fee-unit` and rebuild spend caps.
+- Use `PostConditionMode.Deny` on fee-paying writes.
+- Keep retries bounded and back off on `429` / `5xx` responses.
+- Log tx IDs, expected hash, token ID, route, and total fees.
+- If the task becomes multi-item, switch skills rather than stretching this one.
