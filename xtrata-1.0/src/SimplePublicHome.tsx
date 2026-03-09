@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+  type MouseEvent
+} from 'react';
 import {
   callReadOnlyFunction,
   ClarityType,
@@ -37,6 +43,7 @@ import {
 import { useActiveTabGuard } from './lib/utils/tab-guard';
 import AddressLabel from './components/AddressLabel';
 import MintScreen from './screens/MintScreen';
+import PublicMarketScreen from './screens/PublicMarketScreen';
 import ViewerScreen, { type ViewerMode } from './screens/ViewerScreen';
 
 const walletSessionStore = createWalletSessionStore();
@@ -99,6 +106,8 @@ type LiveCollectionCard = {
   pricingAdvertisedMintPriceMicroStx: bigint | null;
   pricingOnChainMintPriceMicroStx: bigint | null;
 };
+
+type SimpleHomeSectionKey = 'live-drops' | 'home-viewer' | 'market' | 'mint' | 'starter-docs';
 
 const STARTER_DOCS: StarterDoc[] = [
   {
@@ -496,6 +505,7 @@ export default function SimplePublicHome() {
   const [viewerFocusKey, setViewerFocusKey] = useState<number | null>(null);
   const [viewerMode, setViewerMode] = useState<ViewerMode>('collection');
   const [viewerCollapsed, setViewerCollapsed] = useState(false);
+  const [marketCollapsed, setMarketCollapsed] = useState(true);
   const [mintCollapsed, setMintCollapsed] = useState(false);
   const [docsCollapsed, setDocsCollapsed] = useState(false);
   const [liveCollections, setLiveCollections] = useState<LiveCollectionRecord[]>([]);
@@ -815,6 +825,38 @@ export default function SimplePublicHome() {
     writeThemePreference(nextTheme);
   };
 
+  const focusSection = (key: SimpleHomeSectionKey) => {
+    if (key === 'home-viewer') {
+      setViewerCollapsed(false);
+    }
+    if (key === 'market') {
+      setMarketCollapsed(false);
+    }
+    if (key === 'mint') {
+      setMintCollapsed(false);
+    }
+    if (key === 'starter-docs') {
+      setDocsCollapsed(false);
+    }
+    if (typeof window !== 'undefined') {
+      window.requestAnimationFrame(() => {
+        const anchor = document.getElementById(key);
+        if (anchor) {
+          anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        window.history.replaceState(null, '', `#${key}`);
+      });
+    }
+  };
+
+  const handleNavJump = (
+    event: MouseEvent<HTMLAnchorElement>,
+    key: SimpleHomeSectionKey
+  ) => {
+    event.preventDefault();
+    focusSection(key);
+  };
+
   const handleConnectWallet = async () => {
     setWalletPending(true);
     try {
@@ -902,13 +944,28 @@ export default function SimplePublicHome() {
 
           <div className="simple-home__tools">
             <div className="simple-home__actions">
-              <a className="button" href="#mint">
+              <a className="button" href="#mint" onClick={(event) => handleNavJump(event, 'mint')}>
                 Inscribe
               </a>
-              <a className="button button--ghost" href="#live-drops">
+              <a
+                className="button button--ghost"
+                href="#live-drops"
+                onClick={(event) => handleNavJump(event, 'live-drops')}
+              >
                 Mint
               </a>
-              <a className="button button--ghost" href="#starter-docs">
+              <a
+                className="button button--ghost"
+                href="#market"
+                onClick={(event) => handleNavJump(event, 'market')}
+              >
+                Marketplace
+              </a>
+              <a
+                className="button button--ghost"
+                href="#starter-docs"
+                onClick={(event) => handleNavJump(event, 'starter-docs')}
+              >
                 Docs
               </a>
               <a className="button button--ghost" href={WORKSPACE_PATH}>
@@ -1120,6 +1177,13 @@ export default function SimplePublicHome() {
             viewerTitles={{ collection: 'Live inscription viewer', wallet: 'Wallet viewer' }}
           />
         </div>
+
+        <PublicMarketScreen
+          contract={contract}
+          walletSession={walletSession}
+          collapsed={marketCollapsed}
+          onToggleCollapse={() => setMarketCollapsed((prev) => !prev)}
+        />
 
         <MintScreen
           contract={contract}
