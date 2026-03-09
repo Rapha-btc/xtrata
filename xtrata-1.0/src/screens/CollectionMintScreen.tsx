@@ -45,6 +45,7 @@ import {
   MAX_TOKEN_URI_LENGTH,
   TX_DELAY_SECONDS
 } from '../lib/mint/constants';
+import { confirmMintWalletGuidance } from '../lib/mint/wallet-guidance';
 import {
   buildCollectionBatchSealStxPostConditions,
   buildCollectionSealStxPostConditions,
@@ -1265,6 +1266,13 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
     if (!isAscii(tokenUriValue) || tokenUriValue.length > MAX_TOKEN_URI_LENGTH) {
       setMintStatus('Token URI must be ASCII and <= 256 characters.');
       appendLog('Batch mint blocked: invalid token URI.');
+      return;
+    }
+    if (!confirmMintWalletGuidance('collection')) {
+      setMintStatus(
+        'Batch mint cancelled. Review the wallet guidance and fee settings before retrying.'
+      );
+      appendLog('Batch mint cancelled before wallet flow.');
       return;
     }
     setMintPending(true);

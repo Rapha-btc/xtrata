@@ -133,8 +133,12 @@ export default function WalletLookupScreen(props: WalletLookupScreenProps) {
             <AddressLabel
               className="meta-value"
               address={viewingAddress}
-              name={props.lookupState.lookupName}
             />
+            {props.lookupState.lookupName && (
+              <span className="wallet-lookup__note">
+                Resolved from {props.lookupState.lookupName}.
+              </span>
+            )}
           </div>
         )}
       </div>

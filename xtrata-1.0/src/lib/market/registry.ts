@@ -8,6 +8,7 @@ export type MarketRegistryEntry = {
   address: string;
   contractName: string;
   network: NetworkType;
+  paymentTokenContractId?: string | null;
 };
 
 const isValidEntry = (entry: MarketRegistryEntry) => {
@@ -36,5 +37,18 @@ export const MARKET_REGISTRY = normalizeRegistry(
   registry as MarketRegistryEntry[]
 );
 
+const MARKET_REGISTRY_BY_ID = new Map(
+  MARKET_REGISTRY.map((entry) => [getContractId(entry), entry])
+);
+
 export const getMarketContractId = (entry: MarketRegistryEntry) =>
   getContractId(entry);
+
+export const getMarketRegistryEntry = (
+  contractId: string | null | undefined
+) => {
+  if (!contractId) {
+    return null;
+  }
+  return MARKET_REGISTRY_BY_ID.get(contractId) ?? null;
+};

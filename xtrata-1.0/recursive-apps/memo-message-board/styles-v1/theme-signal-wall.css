@@ -1,0 +1,26 @@
+:root {
+  --bg: #1d1308;
+  --bg-glow: rgba(255, 212, 140, 0.16);
+  --board: #6b4423;
+  --paper: #f5ecd8;
+  --ink: #21160d;
+  --muted: #6d5948;
+  --line: rgba(70, 43, 20, 0.18);
+  --accent: #d04c29;
+  --accent-soft: rgba(208, 76, 41, 0.12);
+  --good: #1d7a48;
+  --pending: #a35f0f;
+  --error: #a51d2d;
+  --surface: rgba(255, 251, 243, 0.72);
+  --surface-alt: rgba(255, 248, 235, 0.72);
+  --card: rgba(255, 255, 255, 0.62);
+  --card-strong: rgba(255, 255, 255, 0.76);
+  --border: rgba(88, 56, 28, 0.1);
+  --chip: rgba(29, 22, 13, 0.08);
+}
+
+.message-wrap {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 12px 22px rgba(48, 24, 7, 0.08);
+}

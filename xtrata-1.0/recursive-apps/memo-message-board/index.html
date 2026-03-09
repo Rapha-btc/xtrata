@@ -1,0 +1,1015 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Xtrata Signal Wall</title>
+  <link rel="stylesheet" href="./styles/base.css">
+  <link rel="stylesheet" href="./styles/themes.css">
+</head>
+<body data-theme="neon-cyan">
+  <div class="preflight-overlay" id="preflight-modal" role="dialog" aria-modal="true" aria-labelledby="preflight-title" aria-describedby="preflight-copy">
+    <section class="preflight-card">
+      <p class="meta-label">Before You Inscribe</p>
+      <h2 class="panel-title" id="preflight-title">Use Xverse and check fees manually</h2>
+      <p class="preflight-copy" id="preflight-copy">
+        Avoid Leather wallet for this flow. Use Xverse for a better inscription experience.
+      </p>
+      <ul class="preflight-list">
+        <li>Always inspect the fee the wallet suggests before sending.</li>
+        <li>Manually increase or decrease the fee to the right amount for current conditions.</li>
+        <li>If the wallet returns errors, the most likely cause is the fee being too low.</li>
+      </ul>
+      <div class="preflight-actions">
+        <button type="button" id="preflight-dismiss">I understand</button>
+        <span class="chip pending">Low fees cause most wallet errors</span>
+      </div>
+    </section>
+  </div>
+  <main class="shell">
+    <section class="board">
+      <article class="note">
+        <header class="header">
+          <p class="eyebrow" id="eyebrow">Public Programmable State</p>
+          <h1 class="title" id="board-title">Signal Wall</h1>
+          <p class="subtitle" id="hero-subtitle">
+            Anyone can change this board with a tiny STX transfer. The inscription itself
+            stays fixed on-chain, but its live state is programmable by the public: the
+            newest valid memo becomes the current board message.
+          </p>
+          <section class="design-switcher" aria-label="Theme selector">
+            <p class="meta-label">Preview Theme</p>
+            <div class="design-switcher-row">
+              <select id="design-select" class="design-select" aria-label="Choose a theme"></select>
+              <span class="chip" id="design-chip">Live: Neon Cyan</span>
+            </div>
+            <p class="design-description" id="design-description"></p>
+          </section>
+        </header>
+
+        <section class="message-wrap" aria-live="polite">
+          <p class="message is-placeholder" id="message-text">Waiting for the first valid memo...</p>
+        </section>
+
+        <section class="innovation-panel" aria-label="Why this matters">
+          <p class="meta-label">Why This Matters</p>
+          <p class="innovation-copy">
+            This is more than a text surface. It is an inscription with public programmable
+            state: immutable code, open on-chain inputs, and multiple state lanes that anyone
+            can update with a micro-transaction.
+          </p>
+          <div class="innovation-grid">
+            <article class="innovation-card">
+              <p class="meta-label">Immutable App</p>
+              <p class="meta-value">The inscription bytes do not change. The app logic stays fixed on-chain.</p>
+            </article>
+            <article class="innovation-card">
+              <p class="meta-label">Open State</p>
+              <p class="meta-value">Anyone can submit the next state by sending a valid transfer memo.</p>
+            </article>
+            <article class="innovation-card">
+              <p class="meta-label">Transparent History</p>
+              <p class="meta-value">Every board update is publicly ordered, replayable, and verifiable from chain data.</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="meta" aria-label="Message metadata">
+          <article class="meta-card">
+            <p class="meta-label">Current Source</p>
+            <p class="meta-value" id="message-source">No qualifying transfer found yet.</p>
+          </article>
+          <article class="meta-card">
+            <p class="meta-label">Board Rule</p>
+            <p class="meta-value" id="board-rule">Latest incoming transfer with a non-empty memo wins.</p>
+          </article>
+          <article class="meta-card">
+            <p class="meta-label">Latest Transaction</p>
+            <p class="meta-value" id="tx-meta">No transaction selected.</p>
+          </article>
+          <article class="meta-card">
+            <p class="meta-label">Refresh</p>
+            <p class="meta-value" id="refresh-meta">Polling the chain for updates.</p>
+          </article>
+        </section>
+
+        <details>
+          <summary>How to program this inscription yourself</summary>
+          <div class="details-body">
+            <p id="instruction-blurb">
+              Send the minimum amount to the configured address and put your new message in the transfer memo.
+            </p>
+            <ol>
+              <li id="instruction-step-1"></li>
+              <li id="instruction-step-2"></li>
+              <li id="instruction-step-3"></li>
+            </ol>
+            <div class="memo-tester">
+              <p class="meta-label">Memo Composer</p>
+              <div class="composer-grid">
+                <div class="composer-controls">
+                  <div class="composer-control">
+                    <span class="meta-label">Auto Mode</span>
+                    <span class="chip" id="memo-mode-chip">Nothing selected</span>
+                  </div>
+                  <label class="composer-control">
+                    <span class="meta-label">Prefix Style</span>
+                    <select id="memo-prefix-select" class="design-select" aria-label="Choose memo prefix style">
+                      <option value="code">Code Prefix</option>
+                      <option value="emoji">Emoji Prefix</option>
+                    </select>
+                  </label>
+                </div>
+                <p class="composer-note" id="composer-note"></p>
+                <div id="message-composer-panel" class="composer-grid">
+                  <textarea
+                    id="memo-input"
+                    class="memo-input"
+                    placeholder="Type a message here to see whether it fits in the STX transfer memo."
+                  ></textarea>
+                  <div class="memo-palette">
+                    <p class="meta-label">Quick Insert</p>
+                    <div class="memo-palette-grid" id="emoji-palette"></div>
+                    <div class="memo-palette-grid" id="symbol-palette"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="memo-meter">
+                <span class="chip" id="memo-fit-chip">Empty memo</span>
+                <p class="memo-meter-text" id="memo-meter-text">
+                  Payload: <strong>0</strong> bytes. Final memo: <strong>0 / 34</strong> bytes.
+                </p>
+              </div>
+              <div class="memo-preview">
+                <p class="meta-label">Wallet Memo Preview</p>
+                <p class="memo-preview-text is-placeholder" id="memo-preview-text">Nothing to copy yet.</p>
+                <div class="memo-actions">
+                  <button type="button" id="copy-memo-button" class="button-secondary" disabled>Copy wallet memo</button>
+                  <span class="chip" id="copy-state-chip">Copy disabled</span>
+                </div>
+              </div>
+            </div>
+            <p id="instruction-note" class="muted"></p>
+          </div>
+        </details>
+
+        <section class="status-panel">
+          <div class="row">
+            <span class="chip" id="network-chip">Network: mainnet</span>
+            <span class="chip" id="state-chip">Searching for a message</span>
+            <span class="chip" id="length-chip">0 / 34 bytes</span>
+          </div>
+          <div class="row">
+            <button type="button" id="refresh-button">Refresh now</button>
+          </div>
+          <p class="status-text" id="status-text">Loading chain activity...</p>
+        </section>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      if (window.__xtrataMemoBoardStarted) return;
+      window.__xtrataMemoBoardStarted = true;
+
+      const CONFIG = {
+        network: 'mainnet',
+        apiBase: 'https://api.hiro.so',
+        explorerBase: 'https://explorer.hiro.so',
+        targetAddress: 'SPNRA47CQGS61HQNCBZMVF2HHT7AKZCP2CXH3NP3',
+        minAmountMicroStx: '1',
+        requiredPrefix: '',
+        defaultMessage: 'SEND A MEMO TO TAKE OVER THIS BOARD',
+        memoByteLimit: 34,
+        pendingLimit: 12,
+        confirmedLimit: 30,
+        pollVisibleMs: 4000,
+        pollHiddenMs: 15000,
+        requestTimeoutMs: 10000,
+        apiKey: '',
+        defaultThemeIndex: 1,
+        quickInsert: {
+          emoji: ['🔥', '✨', '🚀', '🎉', '✅', '👀', '❤️', '⭐', '💥', '💡'],
+          symbol: ['!', '?', '@', '#', '&', '+', '-', '/', '→', '•']
+        }
+      };
+
+      const THEME_GROUPS = [
+        {
+          label: 'Neon / Synth / Digital',
+          themes: [
+            ['neon-cyan', 'Neon Cyan'],
+            ['neon-magenta', 'Neon Magenta'],
+            ['neon-lime', 'Neon Lime'],
+            ['synth-sunset', 'Synth Sunset'],
+            ['laser-grid', 'Laser Grid'],
+            ['ultraviolet', 'Ultraviolet'],
+            ['cyber-blueprint', 'Cyber Blueprint'],
+            ['plasma-rose', 'Plasma Rose'],
+            ['arcade-tube', 'Arcade Tube'],
+            ['hologram', 'Hologram']
+          ]
+        },
+        {
+          label: 'Terminal / Monitor / Monochrome',
+          themes: [
+            ['terminal-green', 'Terminal Green'],
+            ['terminal-amber', 'Terminal Amber'],
+            ['terminal-ice', 'Terminal Ice'],
+            ['dos-blue', 'DOS Blue'],
+            ['phosphor', 'Phosphor'],
+            ['white-terminal', 'White Terminal'],
+            ['graphite-mono', 'Graphite Mono'],
+            ['inkscreen', 'Inkscreen'],
+            ['code-editor', 'Code Editor'],
+            ['retro-workstation', 'Retro Workstation']
+          ]
+        },
+        {
+          label: 'Paper / Editorial / Print / Quiet Light',
+          themes: [
+            ['paper-ivory', 'Paper Ivory'],
+            ['paper-cream', 'Paper Cream'],
+            ['newsprint', 'Newsprint'],
+            ['editorial-slate', 'Editorial Slate'],
+            ['quiet-book', 'Quiet Book'],
+            ['frost-paper', 'Frost Paper'],
+            ['linen', 'Linen'],
+            ['chalk-boardlight', 'Chalk Boardlight'],
+            ['minimal-air', 'Minimal Air'],
+            ['soft-newsroom', 'Soft Newsroom']
+          ]
+        },
+        {
+          label: 'Luxury / Cinematic / Premium Dark',
+          themes: [
+            ['obsidian-gold', 'Obsidian Gold'],
+            ['midnight-velvet', 'Midnight Velvet'],
+            ['emerald-club', 'Emerald Club'],
+            ['ruby-lounge', 'Ruby Lounge'],
+            ['champagne', 'Champagne'],
+            ['bronze-noir', 'Bronze Noir'],
+            ['luxury-ink', 'Luxury Ink'],
+            ['royal-plum', 'Royal Plum'],
+            ['teal-velour', 'Teal Velour'],
+            ['cinema-red', 'Cinema Red']
+          ]
+        },
+        {
+          label: 'Nature / Earth / Organic',
+          themes: [
+            ['forest-deep', 'Forest Deep'],
+            ['moss', 'Moss'],
+            ['sage', 'Sage'],
+            ['clay', 'Clay'],
+            ['sandstone', 'Sandstone'],
+            ['ocean-kelp', 'Ocean Kelp'],
+            ['pine-fog', 'Pine Fog'],
+            ['wildflower', 'Wildflower'],
+            ['earth-after-rain', 'Earth After Rain'],
+            ['terracotta-night', 'Terracotta Night']
+          ]
+        },
+        {
+          label: 'Ocean / Sky / Water',
+          themes: [
+            ['deep-ocean', 'Deep Ocean'],
+            ['tropical-water', 'Tropical Water'],
+            ['sea-glass', 'Sea Glass'],
+            ['cloud-blue', 'Cloud Blue'],
+            ['storm', 'Storm'],
+            ['polar', 'Polar'],
+            ['navy-signal', 'Navy Signal'],
+            ['lagoon', 'Lagoon'],
+            ['iceberg', 'Iceberg'],
+            ['rain', 'Rain']
+          ]
+        },
+        {
+          label: 'Pastel / Playful / Soft UI',
+          themes: [
+            ['cotton-candy', 'Cotton Candy'],
+            ['bubblegum', 'Bubblegum'],
+            ['lavender-milk', 'Lavender Milk'],
+            ['peach-sorbet', 'Peach Sorbet'],
+            ['mint-gelato', 'Mint Gelato'],
+            ['baby-blue', 'Baby Blue'],
+            ['lemon-cream', 'Lemon Cream'],
+            ['strawberry-cream', 'Strawberry Cream'],
+            ['pastel-rainbow', 'Pastel Rainbow'],
+            ['toybox', 'Toybox']
+          ]
+        },
+        {
+          label: 'Brutal / High Contrast / Graphic',
+          themes: [
+            ['brutal-blackwhite', 'Brutal Blackwhite'],
+            ['brutal-warning', 'Brutal Warning'],
+            ['brutal-red', 'Brutal Red'],
+            ['brutal-blue', 'Brutal Blue'],
+            ['brutal-green', 'Brutal Green'],
+            ['xerox', 'Xerox'],
+            ['poster-noir', 'Poster Noir'],
+            ['signal-blackyellow', 'Signal Blackyellow'],
+            ['high-contrast-light', 'High Contrast Light'],
+            ['high-contrast-dark', 'High Contrast Dark']
+          ]
+        },
+        {
+          label: 'Retro / VHS / Arcade / Analogue',
+          themes: [
+            ['vhs-night', 'VHS Night'],
+            ['cassette', 'Cassette'],
+            ['arcade-neon', 'Arcade Neon'],
+            ['crt-amber', 'CRT Amber'],
+            ['crt-mint', 'CRT Mint'],
+            ['jukebox', 'Jukebox'],
+            ['retro-console', 'Retro Console'],
+            ['miami-night', 'Miami Night'],
+            ['outrun-sun', 'Outrun Sun'],
+            ['tape-deck', 'Tape Deck']
+          ]
+        },
+        {
+          label: 'Experimental / Specialty / System States',
+          themes: [
+            ['glass-clear', 'Glass Clear'],
+            ['glass-frost', 'Glass Frost'],
+            ['matrix-lite', 'Matrix Lite'],
+            ['matrix-hard', 'Matrix Hard'],
+            ['wireframe', 'Wireframe'],
+            ['blueprint-paper', 'Blueprint Paper'],
+            ['infrared', 'Infrared'],
+            ['xray', 'Xray'],
+            ['alarm', 'Alarm'],
+            ['stealth', 'Stealth']
+          ]
+        }
+      ];
+
+      const THEMES = THEME_GROUPS.flatMap(function (group, groupIndex) {
+        return group.themes.map(function (entry, entryIndex) {
+          const index = groupIndex * 10 + entryIndex + 1;
+          return {
+            index: index,
+            id: entry[0],
+            label: entry[1],
+            group: group.label,
+            shortLabel: entry[1],
+            memoIndex: String(index),
+            memoHash: '#' + index,
+            memoPadded: String(index).padStart(2, '0')
+          };
+        });
+      });
+
+      const THEME_BY_ID = Object.fromEntries(THEMES.map(function (theme) {
+        return [theme.id, theme];
+      }));
+      const THEME_BY_INDEX = Object.fromEntries(THEMES.map(function (theme) {
+        return [String(theme.index), theme];
+      }));
+
+      const COMMANDS = {
+        message: {
+          label: 'Message Update',
+          code: 'm:',
+          emoji: '📝'
+        },
+        theme: {
+          label: 'Theme Switch',
+          code: 't:',
+          emoji: '🎨'
+        }
+      };
+
+      const $ = function (id) {
+        return document.getElementById(id);
+      };
+
+      const els = {
+        body: document.body,
+        eyebrow: $('eyebrow'),
+        boardTitle: $('board-title'),
+        heroSubtitle: $('hero-subtitle'),
+        designSelect: $('design-select'),
+        designChip: $('design-chip'),
+        designDescription: $('design-description'),
+        messageText: $('message-text'),
+        messageSource: $('message-source'),
+        boardRule: $('board-rule'),
+        txMeta: $('tx-meta'),
+        refreshMeta: $('refresh-meta'),
+        networkChip: $('network-chip'),
+        stateChip: $('state-chip'),
+        lengthChip: $('length-chip'),
+        refreshButton: $('refresh-button'),
+        statusText: $('status-text'),
+        instructionBlurb: $('instruction-blurb'),
+        instructionStep1: $('instruction-step-1'),
+        instructionStep2: $('instruction-step-2'),
+        instructionStep3: $('instruction-step-3'),
+        instructionNote: $('instruction-note'),
+        preflightModal: $('preflight-modal'),
+        preflightDismiss: $('preflight-dismiss'),
+        memoModeChip: $('memo-mode-chip'),
+        memoPrefixSelect: $('memo-prefix-select'),
+        composerNote: $('composer-note'),
+        memoInput: $('memo-input'),
+        memoFitChip: $('memo-fit-chip'),
+        memoMeterText: $('memo-meter-text'),
+        memoPreviewText: $('memo-preview-text'),
+        copyMemoButton: $('copy-memo-button'),
+        copyStateChip: $('copy-state-chip'),
+        emojiPalette: $('emoji-palette'),
+        symbolPalette: $('symbol-palette')
+      };
+
+      const memoEncoder = new TextEncoder();
+      const memoDecoder = new TextDecoder();
+      const stxFormatter = new Intl.NumberFormat('en-GB', { maximumFractionDigits: 6 });
+      const state = {
+        timer: 0,
+        busy: false,
+        lastRefreshAt: 0,
+        hasMessage: false,
+        finalMemo: '',
+        memoFits: false,
+        liveThemeId: getDefaultTheme().id,
+        previewThemeId: 'live'
+      };
+
+      function getDefaultTheme() {
+        return THEME_BY_INDEX[String(CONFIG.defaultThemeIndex)] || THEMES[0];
+      }
+
+      function text(value) {
+        return String(value == null ? '' : value);
+      }
+
+      function memoBytes(value) {
+        return memoEncoder.encode(text(value)).length;
+      }
+
+      function clean(value) {
+        return text(value).replace(/\u0000/g, '').replace(/\s+/g, ' ').trim();
+      }
+
+      function shorten(value, head, tail) {
+        return value && value.length > head + tail ? value.slice(0, head) + '...' + value.slice(-tail) : value || 'unknown';
+      }
+
+      function formatStx(microStx) {
+        return stxFormatter.format(Number(BigInt(microStx)) / 1000000);
+      }
+
+      function commandPrefix(kind, style) {
+        return COMMANDS[kind][style];
+      }
+
+      function sortNewest(a, b) {
+        return b.timestamp - a.timestamp;
+      }
+
+      function hasTheme(value) {
+        return Boolean(resolveThemeToken(value));
+      }
+
+      function getTheme(id) {
+        return THEME_BY_ID[id] || getDefaultTheme();
+      }
+
+      function effectiveThemeId() {
+        return state.previewThemeId === 'live' ? state.liveThemeId : state.previewThemeId;
+      }
+
+      function explorerUrl(type, value) {
+        return CONFIG.explorerBase + '/' + type + '/' + encodeURIComponent(value) + '?chain=' + encodeURIComponent(CONFIG.network);
+      }
+
+      function setChip(el, label, tone) {
+        el.className = tone ? 'chip ' + tone : 'chip';
+        el.textContent = label;
+      }
+
+      function decodeMemo(raw) {
+        const value = text(raw);
+        if (!/^0x[\da-f]+$/i.test(value) || value.length % 2 !== 0) return value;
+
+        const bytes = [];
+        for (let index = 2; index < value.length; index += 2) {
+          bytes.push(parseInt(value.slice(index, index + 2), 16));
+        }
+        while (bytes.length && bytes[bytes.length - 1] === 0) {
+          bytes.pop();
+        }
+
+        try {
+          return memoDecoder.decode(Uint8Array.from(bytes));
+        } catch (_error) {
+          return value;
+        }
+      }
+
+      function resolveThemeToken(value) {
+        const raw = clean(value);
+        if (!raw) return null;
+
+        const stripped = raw.toLowerCase().replace(/^theme\s*/i, '').trim();
+        const numericMatch = stripped.match(/^#?(\d{1,3})$/);
+        if (numericMatch) {
+          return THEME_BY_INDEX[String(Number(numericMatch[1]))] || null;
+        }
+
+        const normalized = stripped
+          .replace(/^#/, '')
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+
+        if (THEME_BY_ID[normalized]) return THEME_BY_ID[normalized];
+
+        const byLabel = THEMES.find(function (theme) {
+          return theme.label.toLowerCase() === raw.toLowerCase() ||
+                 theme.label.toLowerCase().replace(/[^a-z0-9]+/g, '-') === normalized;
+        });
+        return byLabel || null;
+      }
+
+      function themeMemoToken(themeId) {
+        return String(getTheme(themeId).index);
+      }
+
+      function inferComposerState() {
+        const messagePayload = text(els.memoInput.value);
+        const themeId = state.previewThemeId === 'live' ? '' : getTheme(state.previewThemeId).id;
+        const themePayload = themeId ? themeMemoToken(themeId) : '';
+        const includeMessage = Boolean(messagePayload);
+        const includeTheme = Boolean(themePayload);
+
+        return {
+          mode: includeMessage && includeTheme
+            ? 'both'
+            : includeMessage
+              ? 'message'
+              : includeTheme
+                ? 'theme'
+                : 'empty',
+          includeMessage: includeMessage,
+          includeTheme: includeTheme,
+          messagePayload: messagePayload,
+          themeId: themeId,
+          themePayload: themePayload
+        };
+      }
+
+      function parseMemoSegment(segment, allowPlainMessage) {
+        const prefixes = [
+          { kind: 'theme', prefix: COMMANDS.theme.code },
+          { kind: 'theme', prefix: COMMANDS.theme.emoji },
+          { kind: 'message', prefix: COMMANDS.message.code },
+          { kind: 'message', prefix: COMMANDS.message.emoji }
+        ];
+
+        const matched = prefixes.find(function (entry) {
+          return segment.startsWith(entry.prefix);
+        });
+
+        if (!matched) {
+          return allowPlainMessage ? { message: clean(segment) } : null;
+        }
+
+        const value = clean(segment.slice(matched.prefix.length));
+        if (!value) return null;
+
+        if (matched.kind === 'theme') {
+          const theme = resolveThemeToken(value);
+          if (!theme) return null;
+          return { themeId: theme.id };
+        }
+
+        return { message: value };
+      }
+
+      function parseMemoCommand(raw) {
+        const memo = clean(decodeMemo(raw));
+        if (!memo || memoBytes(memo) > CONFIG.memoByteLimit) return null;
+        if (CONFIG.requiredPrefix && !memo.startsWith(CONFIG.requiredPrefix)) return null;
+
+        const payload = clean(CONFIG.requiredPrefix ? memo.slice(CONFIG.requiredPrefix.length) : memo);
+        if (!payload) return null;
+
+        const segments = payload.split(/[|\n;]/).map(clean).filter(Boolean);
+        if (!segments.length) return null;
+
+        const parsed = { message: '', themeId: '' };
+        const allowPlainMessage = segments.length === 1;
+
+        for (const segment of segments) {
+          const next = parseMemoSegment(segment, allowPlainMessage);
+          if (!next) return null;
+          if (next.message) parsed.message = next.message;
+          if (next.themeId) parsed.themeId = next.themeId;
+        }
+
+        return parsed.message || parsed.themeId ? parsed : null;
+      }
+
+      function parseTimestamp(tx) {
+        return (
+          Date.parse(tx.receipt_time_iso || tx.block_time_iso || tx.burn_block_time_iso || '') ||
+          Number(tx.receipt_time || tx.block_time || tx.burn_block_time || 0) * 1000 ||
+          0
+        );
+      }
+
+      function candidateFrom(tx, source) {
+        if (tx == null || tx.tx_type !== 'token_transfer' || !tx.token_transfer) return null;
+
+        const transfer = tx.token_transfer;
+        if (transfer.recipient_address !== CONFIG.targetAddress) return null;
+        if (BigInt(transfer.amount || '0') < BigInt(CONFIG.minAmountMicroStx)) return null;
+
+        const command = parseMemoCommand(transfer.memo);
+        if (!command) return null;
+
+        return {
+          txId: tx.tx_id,
+          sender: tx.sender_address || '',
+          amountMicroStx: transfer.amount || '0',
+          message: command.message || '',
+          themeId: command.themeId || '',
+          pending: source === 'pending' || String(tx.tx_status || '').startsWith('pending'),
+          timestamp: parseTimestamp(tx)
+        };
+      }
+
+      async function fetchJson(path) {
+        const controller = new AbortController();
+        const timer = window.setTimeout(function () {
+          controller.abort();
+        }, CONFIG.requestTimeoutMs);
+        const headers = { Accept: 'application/json' };
+        if (CONFIG.apiKey) headers['x-api-key'] = CONFIG.apiKey;
+
+        try {
+          const response = await fetch(CONFIG.apiBase + path, {
+            headers: headers,
+            signal: controller.signal
+          });
+          if (!response.ok) throw new Error('HTTP ' + response.status);
+          return await response.json();
+        } finally {
+          window.clearTimeout(timer);
+        }
+      }
+
+      async function fetchCandidates(path, source, mapTx) {
+        const data = await fetchJson(path);
+        if (!Array.isArray(data.results)) return [];
+
+        return data.results
+          .map(function (entry) {
+            return candidateFrom(mapTx ? mapTx(entry) : entry, source);
+          })
+          .filter(Boolean);
+      }
+
+      function applyThemeFromState() {
+        const liveTheme = getTheme(state.liveThemeId);
+        const activeTheme = getTheme(effectiveThemeId());
+        const followingLive = state.previewThemeId === 'live';
+
+        els.body.dataset.theme = activeTheme.id;
+        els.designSelect.value = followingLive ? 'live' : activeTheme.id;
+        els.designDescription.textContent = followingLive
+          ? 'Following live on-chain theme. ' + liveTheme.label + ' is theme #' + liveTheme.index + '.'
+          : 'Preview override active. Live on-chain theme is ' + liveTheme.label + ' (#' + liveTheme.index + ').';
+        setChip(els.designChip, (followingLive ? 'Live: ' : 'Preview: ') + activeTheme.label + ' #' + activeTheme.index);
+        document.title = 'Xtrata Signal Wall — ' + activeTheme.label;
+        document.documentElement.setAttribute('data-theme-preview', activeTheme.id);
+      }
+
+      function renderBoard(candidate, themeCandidate, fallbackText) {
+        const liveTheme = getTheme(state.liveThemeId);
+
+        if (!candidate) {
+          state.hasMessage = false;
+          els.messageText.textContent = CONFIG.defaultMessage;
+          els.messageText.classList.add('is-placeholder');
+          els.messageSource.innerHTML =
+            'No qualifying transfer found yet. Send the first memo to <a href="' +
+            explorerUrl('address', CONFIG.targetAddress) +
+            '" target="_blank" rel="noreferrer"><code>' +
+            CONFIG.targetAddress +
+            '</code></a>.';
+          els.txMeta.textContent = 'No transaction selected.';
+          els.refreshMeta.textContent = 'Live theme: #' + liveTheme.index + ' ' + liveTheme.label + '. Watching mempool and recent confirmed transfers.';
+          els.statusText.textContent = fallbackText || 'No qualifying transfer found yet.';
+          setChip(els.stateChip, 'Waiting for a message');
+          setChip(els.lengthChip, '0 / ' + CONFIG.memoByteLimit + ' bytes');
+          return;
+        }
+
+        const sender = shorten(candidate.sender, 6, 4);
+        const txId = shorten(candidate.txId, 10, 6);
+        const checkedAt = new Date(state.lastRefreshAt).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        });
+        const themeText = themeCandidate
+          ? ' Latest theme command: #' + getTheme(themeCandidate.themeId).index + ' ' + getTheme(themeCandidate.themeId).label + '.'
+          : '';
+
+        state.hasMessage = true;
+        els.messageText.textContent = candidate.message;
+        els.messageText.classList.remove('is-placeholder');
+        els.messageSource.innerHTML =
+          (candidate.pending ? 'Pending takeover from ' : 'Confirmed takeover from ') +
+          '<code>' + sender + '</code> for ' + formatStx(candidate.amountMicroStx) + ' STX.';
+        els.txMeta.innerHTML =
+          '<a href="' + explorerUrl('txid', candidate.txId) + '" target="_blank" rel="noreferrer"><code>' + txId + '</code></a>' +
+          ' · from <code>' + sender + '</code>';
+        els.refreshMeta.textContent =
+          'Live theme: #' + liveTheme.index + ' ' + liveTheme.label + '. Last checked ' + checkedAt + '. Pending memos can appear before confirmation.';
+        els.statusText.textContent = (candidate.pending
+          ? 'Showing the newest qualifying mempool transfer. If it confirms, this becomes the canonical board state.'
+          : 'Showing the newest confirmed qualifying transfer.') + themeText;
+        setChip(els.stateChip, candidate.pending ? 'Pending message live' : 'Confirmed message live', candidate.pending ? 'pending' : 'good');
+        setChip(els.lengthChip, memoBytes(candidate.message) + ' / ' + CONFIG.memoByteLimit + ' bytes', candidate.pending ? 'pending' : 'good');
+      }
+
+      function renderPalette(container, values) {
+        container.innerHTML = values
+          .map(function (value) {
+            return '<button type="button" class="insert-button" data-insert="' + value + '">' + value + '</button>';
+          })
+          .join('');
+      }
+
+      function updateMemoTester() {
+        const prefixStyle = els.memoPrefixSelect.value;
+        const draft = inferComposerState();
+        const messagePayload = draft.messagePayload;
+        const themePayload = draft.themePayload;
+        const commandParts = [];
+        if (draft.includeMessage) commandParts.push(commandPrefix('message', prefixStyle) + messagePayload);
+        if (draft.includeTheme) commandParts.push(commandPrefix('theme', prefixStyle) + themePayload);
+        const finalMemo = commandParts.length ? (CONFIG.requiredPrefix ? CONFIG.requiredPrefix : '') + commandParts.join('|') : '';
+        const payloadBytes = memoBytes(messagePayload) + memoBytes(themePayload);
+        const prefixBytes =
+          (CONFIG.requiredPrefix ? memoBytes(CONFIG.requiredPrefix) : 0) +
+          (draft.includeMessage ? memoBytes(commandPrefix('message', prefixStyle)) : 0) +
+          (draft.includeTheme ? memoBytes(commandPrefix('theme', prefixStyle)) : 0) +
+          (commandParts.length > 1 ? memoBytes('|') : 0);
+        const finalBytes = memoBytes(finalMemo);
+        const hasText = draft.mode !== 'empty';
+        const fits = hasText && finalBytes <= CONFIG.memoByteLimit;
+        const selectedTheme = draft.themeId ? getTheme(draft.themeId) : null;
+
+        state.finalMemo = finalMemo;
+        state.memoFits = fits;
+        setChip(
+          els.memoModeChip,
+          draft.mode === 'empty'
+            ? 'Nothing selected'
+            : draft.mode === 'message'
+              ? 'Auto: message'
+              : draft.mode === 'theme'
+                ? 'Auto: theme'
+                : 'Auto: message + theme',
+          draft.mode === 'empty' ? '' : 'good'
+        );
+        els.composerNote.textContent = draft.mode === 'empty'
+          ? 'Type a message below and/or pick a preview theme above. The memo builder will infer the right command format automatically.'
+          : draft.mode === 'message'
+            ? 'Text only is selected because the theme preview is still following the live on-chain theme.'
+            : draft.mode === 'theme'
+              ? 'Theme only is selected from the preview control above. The memo will use ' + COMMANDS.theme.code + themePayload + ' or ' + COMMANDS.theme.emoji + themePayload + '.'
+              : 'Both are selected automatically: your text plus preview theme #' + selectedTheme.index + ' ' + selectedTheme.label + ' will be combined in one memo with |.';
+
+        setChip(
+          els.memoFitChip,
+          !hasText ? 'Empty memo' : fits ? 'Fits in memo' : 'Too long',
+          !hasText ? '' : fits ? 'good' : 'error'
+        );
+
+        els.memoMeterText.innerHTML = prefixBytes
+          ? 'Payload: <strong>' + payloadBytes + '</strong> bytes. Prefix bytes: <strong>' + prefixBytes +
+              '</strong> bytes. Final memo: <strong>' + finalBytes + ' / ' + CONFIG.memoByteLimit + '</strong> bytes.'
+          : 'Payload: <strong>' + payloadBytes + '</strong> bytes. Final memo: <strong>' + finalBytes +
+              ' / ' + CONFIG.memoByteLimit + '</strong> bytes.';
+
+        els.memoPreviewText.textContent = hasText ? finalMemo : 'Nothing to copy yet.';
+        els.memoPreviewText.classList.toggle('is-placeholder', !hasText);
+        els.copyMemoButton.disabled = !fits;
+        setChip(
+          els.copyStateChip,
+          !hasText ? 'Copy disabled' : fits ? 'Ready to copy' : 'Copy blocked',
+          !hasText ? '' : fits ? 'good' : 'error'
+        );
+
+        if (selectedTheme) {
+          els.designSelect.title = '#' + selectedTheme.index + ' ' + selectedTheme.label + ' — ' + selectedTheme.group;
+        } else {
+          els.designSelect.title = 'Follow live on-chain theme';
+        }
+      }
+
+      function insertMemoText(value) {
+        const input = els.memoInput;
+        const start = input.selectionStart == null ? input.value.length : input.selectionStart;
+        const end = input.selectionEnd == null ? input.value.length : input.selectionEnd;
+        input.value = input.value.slice(0, start) + value + input.value.slice(end);
+        input.focus();
+        input.setSelectionRange(start + value.length, start + value.length);
+        updateMemoTester();
+      }
+
+      function fallbackCopy(value) {
+        const helper = document.createElement('textarea');
+        helper.value = value;
+        helper.readOnly = true;
+        helper.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
+        document.body.appendChild(helper);
+        helper.focus();
+        helper.select();
+        const copied = document.execCommand('copy');
+        helper.remove();
+        if (!copied) throw new Error('Clipboard copy failed');
+      }
+
+      async function copyMemo() {
+        if (!state.memoFits || !state.finalMemo) return;
+
+        try {
+          if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+            await navigator.clipboard.writeText(state.finalMemo);
+          } else {
+            fallbackCopy(state.finalMemo);
+          }
+          setChip(els.copyStateChip, 'Copied', 'good');
+        } catch (_error) {
+          setChip(els.copyStateChip, 'Copy failed', 'error');
+        }
+      }
+
+      function dismissPreflight() {
+        els.preflightModal.classList.add('is-hidden');
+      }
+
+      function scheduleNextPoll() {
+        window.clearTimeout(state.timer);
+        state.timer = window.setTimeout(refreshBoard, document.hidden ? CONFIG.pollHiddenMs : CONFIG.pollVisibleMs);
+      }
+
+      async function refreshBoard() {
+        if (state.busy) return;
+
+        state.busy = true;
+        els.refreshButton.disabled = true;
+        setChip(els.stateChip, 'Refreshing');
+        els.statusText.textContent = 'Fetching mempool and recent confirmed transfers...';
+
+        try {
+          const results = await Promise.allSettled([
+            fetchCandidates(
+              '/extended/v1/tx/mempool?recipient_address=' + encodeURIComponent(CONFIG.targetAddress) +
+                '&limit=' + CONFIG.pendingLimit + '&order=desc',
+              'pending'
+            ),
+            fetchCandidates(
+              '/extended/v2/addresses/' + encodeURIComponent(CONFIG.targetAddress) +
+                '/transactions?limit=' + CONFIG.confirmedLimit,
+              'confirmed',
+              function (entry) {
+                return entry && entry.tx ? entry.tx : entry;
+              }
+            )
+          ]);
+
+          const candidates = []
+            .concat(results[0].status === 'fulfilled' ? results[0].value : [])
+            .concat(results[1].status === 'fulfilled' ? results[1].value : [])
+            .sort(sortNewest);
+
+          const messageCandidate = candidates.find(function (candidate) {
+            return Boolean(candidate.message);
+          }) || null;
+          const themeCandidate = candidates.find(function (candidate) {
+            return Boolean(candidate.themeId);
+          }) || null;
+
+          state.lastRefreshAt = Date.now();
+          state.liveThemeId = themeCandidate ? themeCandidate.themeId : getDefaultTheme().id;
+          applyThemeFromState();
+
+          if (!candidates.length && results[0].status === 'rejected' && results[1].status === 'rejected') {
+            throw new Error('Both pending and confirmed lookups failed.');
+          }
+
+          renderBoard(messageCandidate, themeCandidate, 'No qualifying memo transfer is visible yet.');
+        } catch (error) {
+          const message = error && error.message ? error.message : 'Unknown network error';
+          if (!state.hasMessage) {
+            renderBoard(null, null, 'Lookup failed: ' + message);
+          }
+          setChip(els.stateChip, 'Lookup error', 'error');
+          els.statusText.textContent =
+            'Could not refresh from the chain right now: ' + message + '. The board will retry automatically.';
+        } finally {
+          state.busy = false;
+          els.refreshButton.disabled = false;
+          scheduleNextPoll();
+        }
+      }
+
+      function renderThemeOptions() {
+        let previewHtml = '<option value="live">Follow live on-chain theme</option>';
+
+        THEME_GROUPS.forEach(function (group) {
+          const groupThemes = THEMES.filter(function (theme) {
+            return theme.group === group.label;
+          });
+
+          previewHtml += '<optgroup label="' + group.label + '">';
+
+          groupThemes.forEach(function (theme) {
+            previewHtml += '<option value="' + theme.id + '">#' + theme.index + ' · ' + theme.label + '</option>';
+          });
+
+          previewHtml += '</optgroup>';
+        });
+
+        els.designSelect.innerHTML = previewHtml;
+      }
+
+      function setPreviewTheme(id) {
+        state.previewThemeId = id === 'live' ? 'live' : getTheme(id).id;
+        applyThemeFromState();
+      }
+
+      function renderStaticConfig() {
+        const minimum = formatStx(CONFIG.minAmountMicroStx);
+        const defaultTheme = getDefaultTheme();
+        els.networkChip.textContent = 'Network: ' + CONFIG.network;
+        els.boardRule.textContent =
+          'Latest message command wins. Latest theme command sets the live default theme. Theme commands accept indexes like 1–100.';
+        els.instructionBlurb.innerHTML =
+          'To program this, send a standard STX transfer to <a href="' +
+          explorerUrl('address', CONFIG.targetAddress) +
+          '" target="_blank" rel="noreferrer"><code>' +
+          CONFIG.targetAddress +
+          '</code></a> and start the memo with a command prefix.';
+        els.instructionStep1.innerHTML =
+          'Send any positive amount, at least <code>' + minimum + ' STX</code>, to <code>' + CONFIG.targetAddress + '</code>.';
+        els.instructionStep2.innerHTML =
+          'Type a message below and/or choose a preview theme above. The composer automatically builds <code>' + COMMANDS.message.code + '</code>, <code>' + COMMANDS.theme.code + '</code>, or both together.';
+        els.instructionStep3.textContent =
+          'If the preview stays on follow-live, your memo only changes the text. If you choose a preview theme, the memo automatically includes that theme switch too.';
+        els.instructionNote.textContent =
+          'There are 100 themes. Compact theme indexes are best for the memo byte budget. Example memos: m:HELLO, t:12, m:GM|t:88, 📝GM|🎨7. The top preview selector also doubles as the theme input for the memo composer. Avoid Leather, use Xverse, and always check wallet fees manually because most wallet errors are caused by fees being too low. Default fallback theme is #' + defaultTheme.index + ' ' + defaultTheme.label + '.';
+        els.memoInput.placeholder = CONFIG.requiredPrefix
+          ? 'Type only the board text. The required prefix will be added automatically in the counter.'
+          : 'Type a message here to see whether it fits in the STX transfer memo.';
+        renderPalette(els.emojiPalette, CONFIG.quickInsert.emoji);
+        renderPalette(els.symbolPalette, CONFIG.quickInsert.symbol);
+      }
+
+      els.memoInput.addEventListener('input', updateMemoTester);
+      els.memoPrefixSelect.addEventListener('change', updateMemoTester);
+      els.designSelect.addEventListener('change', function (event) {
+        setPreviewTheme(event.target.value);
+        updateMemoTester();
+      });
+      document.addEventListener('click', function (event) {
+        const insertButton = event.target.closest('[data-insert]');
+        if (insertButton) {
+          insertMemoText(insertButton.dataset.insert || '');
+          return;
+        }
+        if (event.target === els.refreshButton) refreshBoard();
+      });
+      els.copyMemoButton.addEventListener('click', copyMemo);
+      els.preflightDismiss.addEventListener('click', dismissPreflight);
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && !els.preflightModal.classList.contains('is-hidden')) {
+          dismissPreflight();
+        }
+      });
+      document.addEventListener('visibilitychange', function () {
+        scheduleNextPoll();
+        if (!document.hidden) refreshBoard();
+      });
+
+      renderThemeOptions();
+      applyThemeFromState();
+      renderStaticConfig();
+      updateMemoTester();
+      renderBoard(null, null, 'Waiting for chain activity...');
+      refreshBoard();
+    })();
+  </script>
+</body>
+</html>

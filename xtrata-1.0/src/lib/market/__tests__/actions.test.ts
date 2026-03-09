@@ -47,7 +47,7 @@ describe('market action helpers', () => {
     if (!result.ok) {
       throw new Error('Expected list action to be valid');
     }
-    expect(result.priceMicroStx).toBe(500_000n);
+    expect(result.priceAmount).toBe(500_000n);
   });
 
   it('blocks list action when token owner mismatches wallet', () => {
@@ -63,6 +63,26 @@ describe('market action helpers', () => {
     expect(getListActionValidationMessage(result.reason)).toBe(
       'Only the owner can list this inscription.'
     );
+  });
+
+  it('supports custom price parsers and symbols', () => {
+    const result = validateListAction({
+      hasMarketContract: true,
+      walletAddress: WALLET,
+      tokenId: 7n,
+      tokenOwner: WALLET,
+      isListed: false,
+      priceInput: '2.5',
+      parsePriceInput: (value) => (value === '2.5' ? 250_000_000n : null)
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      throw new Error('Expected list action to be valid');
+    }
+    expect(result.priceAmount).toBe(250_000_000n);
+    expect(
+      getListActionValidationMessage('invalid-price', { priceSymbol: 'USDCx' })
+    ).toBe('Enter a valid price in USDCx.');
   });
 
   it('blocks list action for expected guard conditions', () => {

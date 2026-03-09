@@ -93,6 +93,9 @@ The UI is built with Vite + React + TypeScript and drives:
 Release notes
 	•	docs/release-notes-xtrata-v1.1.0.md
 
+Product oversight
+	•	docs/product-contract-ui-reference.md
+
 Artist guides
 	•	docs/artist-guides/README.md
 	•	docs/artist-guides/collection-launch-guide.md

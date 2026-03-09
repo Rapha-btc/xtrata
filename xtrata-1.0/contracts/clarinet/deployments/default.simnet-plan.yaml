@@ -64,18 +64,28 @@ plan:
     - id: 0
       transactions:
         - emulated-contract-publish:
-            contract-name: sip009-nft-trait
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/sip009-nft-trait.clar
-            clarity-version: 2
-        - emulated-contract-publish:
             contract-name: sip010-ft-trait
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/sip010-ft-trait.clar
             clarity-version: 2
+        - emulated-contract-publish:
+            contract-name: sip009-nft-trait
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/sip009-nft-trait.clar
+            clarity-version: 2
       epoch: "2.5"
     - id: 1
       transactions:
+        - emulated-contract-publish:
+            contract-name: mock-sbtc
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/mock-sbtc.clar
+            clarity-version: 3
+        - emulated-contract-publish:
+            contract-name: mock-usdcx
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/mock-usdcx.clar
+            clarity-version: 3
         - emulated-contract-publish:
             contract-name: xtrata-arcade-scores-v1-0
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
@@ -122,16 +132,6 @@ plan:
             path: contracts/xtrata-collection-mint-v1.4.clar
             clarity-version: 3
         - emulated-contract-publish:
-            contract-name: xtrata-market-v1-0
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-market-v1.0.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: xtrata-market-v1-1
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-market-v1.1.clar
-            clarity-version: 3
-        - emulated-contract-publish:
             contract-name: xtrata-v1-1-1
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/xtrata-v1.1.1.clar
@@ -140,6 +140,36 @@ plan:
             contract-name: xtrata-v2-1-0
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/xtrata-v2.1.0.clar
+            clarity-version: 3
+        - emulated-contract-publish:
+            contract-name: xtrata-commerce
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/xtrata-commerce.clar
+            clarity-version: 3
+        - emulated-contract-publish:
+            contract-name: xtrata-market-sbtc-v1-0
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/xtrata-market-sbtc-v1.0.clar
+            clarity-version: 3
+        - emulated-contract-publish:
+            contract-name: xtrata-market-stx-v1-0
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/xtrata-market-stx-v1.0.clar
+            clarity-version: 3
+        - emulated-contract-publish:
+            contract-name: xtrata-market-usdc-v1-0
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/xtrata-market-usdc-v1.0.clar
+            clarity-version: 3
+        - emulated-contract-publish:
+            contract-name: xtrata-market-v1-0
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/xtrata-market-v1.0.clar
+            clarity-version: 3
+        - emulated-contract-publish:
+            contract-name: xtrata-market-v1-1
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/xtrata-market-v1.1.clar
             clarity-version: 3
         - emulated-contract-publish:
             contract-name: xtrata-preinscribed-collection-sale-v1-0
@@ -160,5 +190,10 @@ plan:
             contract-name: xtrata-v2-1-1
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/xtrata-v2.1.1.clar
+            clarity-version: 3
+        - emulated-contract-publish:
+            contract-name: xtrata-vault
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/xtrata-vault.clar
             clarity-version: 3
       epoch: "3.3"

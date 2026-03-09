@@ -55,6 +55,8 @@ import CollectionMintAdminScreen from './screens/CollectionMintAdminScreen';
 import PreinscribedCollectionAdminScreen from './screens/PreinscribedCollectionAdminScreen';
 import PreinscribedCollectionSaleScreen from './screens/PreinscribedCollectionSaleScreen';
 import MarketScreen from './screens/MarketScreen';
+import CommerceScreen from './screens/CommerceScreen';
+import VaultScreen from './screens/VaultScreen';
 import collectionMintTemplateSource from '../contracts/clarinet/contracts/xtrata-collection-mint-v1.4.clar?raw';
 import {
   buildCollectionMintContractSource,
@@ -131,7 +133,9 @@ const SECTION_KEYS = [
   'collection-mint',
   'mint',
   'collection-viewer',
-  'market'
+  'market',
+  'commerce',
+  'vault'
 ] as const;
 type SectionKey = (typeof SECTION_KEYS)[number];
 
@@ -1235,6 +1239,20 @@ export default function App() {
                   >
                     Market
                   </a>
+                  <a
+                    className="button button--ghost app__nav-link"
+                    href="#commerce"
+                    onClick={(event) => handleNavJump(event, 'commerce')}
+                  >
+                    Commerce
+                  </a>
+                  <a
+                    className="button button--ghost app__nav-link"
+                    href="#vault"
+                    onClick={(event) => handleNavJump(event, 'vault')}
+                  >
+                    Vault
+                  </a>
                 </div>
               </section>
 
@@ -1589,6 +1607,20 @@ export default function App() {
           walletSession={walletSession}
           collapsed={collapsedSections.market}
           onToggleCollapse={() => toggleSection('market')}
+        />
+
+        <CommerceScreen
+          contract={selectedContract}
+          walletSession={walletSession}
+          collapsed={collapsedSections['commerce']}
+          onToggleCollapse={() => toggleSection('commerce')}
+        />
+
+        <VaultScreen
+          contract={selectedContract}
+          walletSession={walletSession}
+          collapsed={collapsedSections['vault']}
+          onToggleCollapse={() => toggleSection('vault')}
         />
 
         <section

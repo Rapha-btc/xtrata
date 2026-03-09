@@ -48,6 +48,9 @@ export const parseGetMarketOwner = (value: ClarityValue) =>
 export const parseGetNftContract = (value: ClarityValue) =>
   expectPrincipal(expectContractOk(value, 'get-nft-contract'), 'get-nft-contract');
 
+export const parseGetPaymentToken = (value: ClarityValue) =>
+  expectPrincipal(expectContractOk(value, 'get-payment-token'), 'get-payment-token');
+
 export const parseGetFeeBps = (value: ClarityValue) =>
   expectUInt(expectContractOk(value, 'get-fee-bps'), 'get-fee-bps');
 

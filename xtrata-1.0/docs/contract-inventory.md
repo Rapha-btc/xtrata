@@ -384,3 +384,153 @@ Source: `contracts/clarinet/contracts/xtrata-preinscribed-collection-sale-v1.0.c
 - `get-inventory(token-id)`
 - `is-token-available(token-id)`
 - `get-allowed-xtrata-contract()`
+
+## xtrata-commerce
+
+Source: `contracts/live/xtrata-commerce.clar`
+
+## Purpose
+- Fixed-price USDCx entitlement listings for Xtrata assets.
+- Sellers list asset ids they currently control in the core contract.
+- Buyers pay USDCx and receive one-time entitlements keyed by `{buyer, asset-id}`.
+
+## Core Functions
+- `create-listing(asset-id, price)`
+- `set-listing-active(listing-id, active)`
+- `buy-with-usdc(listing-id)`
+
+## Read-Only Functions
+- `get-owner()`
+- `get-core-contract()`
+- `get-payment-token()`
+- `get-next-listing-id()`
+- `get-listing(listing-id)`
+- `has-entitlement(asset-id, owner)`
+
+## Notes
+- No auctions, royalties, multi-splits, or x402 logic in this MVP.
+- Purchase path re-checks seller control against the core Xtrata contract before transferring USDCx.
+
+## xtrata-market-stx-v1.0
+
+Source: `contracts/live/xtrata-market-stx-v1.0.clar`
+
+## Purpose
+- Fixed-price STX escrow marketplace for Xtrata `v2.1.0` inscriptions.
+- Sellers escrow inscriptions into the market contract on listing.
+- Buyers pay STX and receive immediate ownership transfer from escrow.
+
+## Core Functions
+- `set-fee-bps(new-fee)`
+- `list-token(nft-contract, token-id, price)`
+- `cancel(nft-contract, listing-id)`
+- `buy(nft-contract, listing-id)`
+
+## Read-Only Functions
+- `get-owner()`
+- `get-nft-contract()`
+- `get-fee-bps()`
+- `get-last-listing-id()`
+- `get-listing(listing-id)`
+- `get-listing-by-token(nft-contract, token-id)`
+- `get-listing-id-by-token(nft-contract, token-id)`
+
+## Notes
+- This is the default first-party STX market entry in the app market selector.
+- It is pinned to `xtrata-v2.1.0`, unlike the older legacy STX market family.
+- It mirrors the dedicated USDCx and sBTC market shape while keeping STX settlement.
+
+## xtrata-market-usdc-v1.0
+
+Source: `contracts/live/xtrata-market-usdc-v1.0.clar`
+
+## Purpose
+- Fixed-price USDCx escrow marketplace for Xtrata `v2.1.0` inscriptions.
+- Sellers escrow inscriptions into the market contract on listing.
+- Buyers pay USDCx and receive immediate ownership transfer from escrow.
+
+## Core Functions
+- `set-fee-bps(new-fee)`
+- `list-token(nft-contract, token-id, price)`
+- `cancel(nft-contract, listing-id)`
+- `buy(nft-contract, listing-id)`
+
+## Read-Only Functions
+- `get-owner()`
+- `get-nft-contract()`
+- `get-payment-token()`
+- `get-fee-bps()`
+- `get-last-listing-id()`
+- `get-listing(listing-id)`
+- `get-listing-by-token(nft-contract, token-id)`
+- `get-listing-id-by-token(nft-contract, token-id)`
+
+## Notes
+- Mirrors the dedicated STX `xtrata-market-stx-v1.0` escrow shape closely so later UI work can stay aligned across settlement assets.
+- Settlement is in USDCx base units rather than STX micro-units.
+- This contract is registered in the current app market selector.
+- The first-party market UI now reads `get-payment-token()` and uses settlement-aware formatting and post-conditions for STX, USDCx, and sBTC market flows.
+
+## xtrata-market-sbtc-v1.0
+
+Source: `contracts/live/xtrata-market-sbtc-v1.0.clar`
+
+## Purpose
+- Fixed-price sBTC escrow marketplace for Xtrata `v2.1.0` inscriptions.
+- Sellers escrow inscriptions into the market contract on listing.
+- Buyers pay sBTC and receive immediate ownership transfer from escrow.
+
+## Core Functions
+- `set-fee-bps(new-fee)`
+- `list-token(nft-contract, token-id, price)`
+- `cancel(nft-contract, listing-id)`
+- `buy(nft-contract, listing-id)`
+
+## Read-Only Functions
+- `get-owner()`
+- `get-nft-contract()`
+- `get-payment-token()`
+- `get-fee-bps()`
+- `get-last-listing-id()`
+- `get-listing(listing-id)`
+- `get-listing-by-token(nft-contract, token-id)`
+- `get-listing-id-by-token(nft-contract, token-id)`
+
+## Notes
+- Mirrors the dedicated STX `xtrata-market-stx-v1.0` escrow shape closely so later UI work can stay aligned across settlement assets.
+- Settlement is in sBTC base units rather than STX micro-units.
+- This contract is registered in the current app market selector.
+- The first-party market UI now reads `get-payment-token()` and uses settlement-aware formatting and post-conditions for STX, USDCx, and sBTC market flows.
+
+## xtrata-vault
+
+Source: `contracts/live/xtrata-vault.clar`
+
+## Purpose
+- sBTC reserve vaults tied to Xtrata asset ids.
+- Asset owners open one vault per asset, deposit additional sBTC, and track a reserve marker.
+- Premium access is derived from deterministic deposit thresholds.
+
+## Core Functions
+- `open-vault(asset-id, initial-amount)`
+- `deposit-sbtc(vault-id, amount)`
+- `mark-reserved(vault-id, reserved)`
+
+## Read-Only Functions
+- `get-owner()`
+- `get-core-contract()`
+- `get-reserve-token()`
+- `get-next-vault-id()`
+- `get-vault(vault-id)`
+- `get-tier-for-amount(amount)`
+- `has-premium-access(asset-id, user)`
+
+## Tier Thresholds
+- `u0` below `TIER-1-MIN`
+- `u1` at or above `TIER-1-MIN`
+- `u2` at or above `TIER-2-MIN`
+- `u3` at or above `TIER-3-MIN`
+
+## Notes
+- No withdrawals or vault ownership migration in this MVP.
+- Vault actions re-check core asset ownership before allowing top-ups or reserve-state changes.

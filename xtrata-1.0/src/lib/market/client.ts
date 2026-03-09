@@ -23,9 +23,22 @@ import {
   parseGetListingIdByToken,
   parseGetListingByToken,
   parseGetMarketOwner,
-  parseGetNftContract
+  parseGetNftContract,
+  parseGetPaymentToken
 } from './parsers';
 import type { MarketListing } from './types';
+
+const MISSING_FUNCTION_PATTERN =
+  /NoSuchPublicFunction|NoSuchContractFunction|does not exist|Unknown function/i;
+
+const isMissingFunctionError = (error: unknown, functionName: string) => {
+  const message =
+    error instanceof Error ? error.message : String(error ?? '');
+  if (!MISSING_FUNCTION_PATTERN.test(message)) {
+    return false;
+  }
+  return message.includes(functionName) || !message.includes('get-');
+};
 
 const shouldTryFallback = (error: unknown) => {
   const message =
@@ -118,6 +131,7 @@ export type MarketClient = {
   network: NetworkType;
   getOwner: (senderAddress: string) => Promise<string>;
   getNftContract: (senderAddress: string) => Promise<string>;
+  getPaymentToken: (senderAddress: string) => Promise<string | null>;
   getFeeBps: (senderAddress: string) => Promise<bigint>;
   getLastListingId: (senderAddress: string) => Promise<bigint>;
   getListing: (id: bigint, senderAddress: string) => Promise<MarketListing | null>;
@@ -170,6 +184,42 @@ export const createMarketClient = (params: {
         senderAddress
       });
       return parseGetNftContract(value);
+    },
+    getPaymentToken: async (senderAddress) => {
+      const backoffMs = getReadOnlyBackoffMs();
+      if (backoffMs > 0) {
+        throw new ReadOnlyBackoffError(backoffMs);
+      }
+      let lastError: unknown = null;
+      for (let index = 0; index < stacksNetwork.length; index += 1) {
+        const activeNetwork = stacksNetwork[index];
+        try {
+          const value = await caller.callReadOnly({
+            contract: params.contract,
+            functionName: 'get-payment-token',
+            functionArgs: [],
+            senderAddress,
+            network: activeNetwork
+          });
+          noteReadOnlySuccess();
+          return parseGetPaymentToken(value);
+        } catch (error) {
+          if (isMissingFunctionError(error, 'get-payment-token')) {
+            return null;
+          }
+          lastError = error;
+          const hasFallback = index < stacksNetwork.length - 1;
+          if (hasFallback && shouldTryFallback(error)) {
+            continue;
+          }
+          break;
+        }
+      }
+      noteReadOnlyFailure(lastError);
+      if (lastError instanceof Error) {
+        throw lastError;
+      }
+      throw new Error(String(lastError ?? 'Read-only call failed'));
     },
     getFeeBps: async (senderAddress) => {
       const value = await callReadOnly({
