@@ -374,6 +374,50 @@ hr {
   padding: clamp(0.85rem, 2vw, 2rem) var(--content-gutter) clamp(2rem, 5vw, 3.5rem);
 }
 
+.preflight-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: clamp(1rem, 3vw, 2rem);
+  background: rgba(6, 10, 15, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.preflight-card {
+  width: min(100%, 680px);
+  display: grid;
+  gap: 0.9rem;
+  padding: clamp(1rem, 2.4vw, 1.5rem);
+  background: color-mix(in srgb, var(--panel-background-strong) 92%, black 8%);
+  border: 1px solid color-mix(in srgb, var(--warning) 26%, var(--border));
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+}
+
+.preflight-copy {
+  margin: 0;
+  color: var(--text-soft);
+  line-height: 1.6;
+}
+
+.preflight-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 0.6rem;
+  color: var(--text-soft);
+}
+
+.preflight-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .board {
   position: relative;
   z-index: 1;
@@ -1839,6 +1883,24 @@ stealth
   </style>
 </head>
 <body data-theme="neon-cyan">
+  <div class="preflight-overlay" id="preflight-modal" role="dialog" aria-modal="true" aria-labelledby="preflight-title" aria-describedby="preflight-copy">
+    <section class="preflight-card">
+      <p class="meta-label">Before You Inscribe</p>
+      <h2 class="panel-title" id="preflight-title">Use Xverse and check fees manually</h2>
+      <p class="preflight-copy" id="preflight-copy">
+        Avoid Leather wallet for this flow. Use Xverse for a better inscription experience.
+      </p>
+      <ul class="preflight-list">
+        <li>Always inspect the fee the wallet suggests before sending.</li>
+        <li>Manually increase or decrease the fee to the right amount for current conditions.</li>
+        <li>If the wallet returns errors, the most likely cause is the fee being too low.</li>
+      </ul>
+      <div class="preflight-actions">
+        <button type="button" id="preflight-dismiss">I understand</button>
+        <span class="chip pending">Low fees cause most wallet errors</span>
+      </div>
+    </section>
+  </div>
   <main class="shell">
     <section class="board">
       <article class="note">
@@ -2224,6 +2286,8 @@ stealth
         instructionStep2: $('instruction-step-2'),
         instructionStep3: $('instruction-step-3'),
         instructionNote: $('instruction-note'),
+        preflightModal: $('preflight-modal'),
+        preflightDismiss: $('preflight-dismiss'),
         memoModeChip: $('memo-mode-chip'),
         memoPrefixSelect: $('memo-prefix-select'),
         composerNote: $('composer-note'),
@@ -2666,6 +2730,10 @@ stealth
         }
       }
 
+      function dismissPreflight() {
+        els.preflightModal.classList.add('is-hidden');
+      }
+
       function scheduleNextPoll() {
         window.clearTimeout(state.timer);
         state.timer = window.setTimeout(refreshBoard, document.hidden ? CONFIG.pollHiddenMs : CONFIG.pollVisibleMs);
@@ -2776,7 +2844,7 @@ stealth
         els.instructionStep3.textContent =
           'If the preview stays on follow-live, your memo only changes the text. If you choose a preview theme, the memo automatically includes that theme switch too.';
         els.instructionNote.textContent =
-          'There are 100 themes. Compact theme indexes are best for the memo byte budget. Example memos: m:HELLO, t:12, m:GM|t:88, 📝GM|🎨7. The top preview selector also doubles as the theme input for the memo composer. Default fallback theme is #' + defaultTheme.index + ' ' + defaultTheme.label + '.';
+          'There are 100 themes. Compact theme indexes are best for the memo byte budget. Example memos: m:HELLO, t:12, m:GM|t:88, 📝GM|🎨7. The top preview selector also doubles as the theme input for the memo composer. Avoid Leather, use Xverse, and always check wallet fees manually because most wallet errors are caused by fees being too low. Default fallback theme is #' + defaultTheme.index + ' ' + defaultTheme.label + '.';
         els.memoInput.placeholder = CONFIG.requiredPrefix
           ? 'Type only the board text. The required prefix will be added automatically in the counter.'
           : 'Type a message here to see whether it fits in the STX transfer memo.';
@@ -2799,6 +2867,12 @@ stealth
         if (event.target === els.refreshButton) refreshBoard();
       });
       els.copyMemoButton.addEventListener('click', copyMemo);
+      els.preflightDismiss.addEventListener('click', dismissPreflight);
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && !els.preflightModal.classList.contains('is-hidden')) {
+          dismissPreflight();
+        }
+      });
       document.addEventListener('visibilitychange', function () {
         scheduleNextPoll();
         if (!document.hidden) refreshBoard();

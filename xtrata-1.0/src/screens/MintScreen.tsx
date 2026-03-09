@@ -60,6 +60,7 @@ import {
   toDependencyStrings,
   validateDependencyIds
 } from '../lib/mint/dependencies';
+import { confirmMintWalletGuidance } from '../lib/mint/wallet-guidance';
 import {
   estimateContractFees,
   formatMicroStx,
@@ -1941,6 +1942,13 @@ export default function MintScreen(props: MintScreenProps) {
       dependencyCount: mintInputs.dependencyIds.length,
       expectedHash: bytesToHex(expectedHash)
     });
+    if (!confirmMintWalletGuidance('single')) {
+      setMintStatus(
+        'Inscription cancelled. Review the wallet guidance and fee settings before retrying.'
+      );
+      appendLog('Inscription cancelled before wallet flow.');
+      return;
+    }
 
     setMintPending(true);
     setMintStatus('Preparing transactions...');
@@ -2274,6 +2282,13 @@ export default function MintScreen(props: MintScreenProps) {
       dependencyCount: mintInputs.dependencyIds.length,
       expectedHash: bytesToHex(expectedHash)
     });
+    if (!confirmMintWalletGuidance('resume')) {
+      setMintStatus(
+        'Resume cancelled. Review the wallet guidance and fee settings before retrying.'
+      );
+      appendLog('Resume cancelled before wallet flow.');
+      return;
+    }
 
     setMintPending(true);
     setMintStatus('Confirming on-chain upload state...');
