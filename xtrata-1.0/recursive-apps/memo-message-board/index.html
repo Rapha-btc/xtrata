@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Xtrata Signal Wall</title>
   <link rel="stylesheet" href="./styles/base.css">
-  <link id="theme-stylesheet" rel="stylesheet" href="./styles/theme-signal-wall.css">
+  <link rel="stylesheet" href="./styles/themes.css">
 </head>
-<body>
+<body data-theme="neon-cyan">
   <main class="shell">
     <section class="board">
       <article class="note">
@@ -19,11 +19,11 @@
             stays fixed on-chain, but its live state is programmable by the public: the
             newest valid memo becomes the current board message.
           </p>
-          <section class="design-switcher" aria-label="Design selector">
-            <p class="meta-label">Preview Design</p>
+          <section class="design-switcher" aria-label="Theme selector">
+            <p class="meta-label">Preview Theme</p>
             <div class="design-switcher-row">
-              <select id="design-select" class="design-select" aria-label="Choose a design"></select>
-              <span class="chip" id="design-chip">Live: Signal Wall</span>
+              <select id="design-select" class="design-select" aria-label="Choose a theme"></select>
+              <span class="chip" id="design-chip">Live: Neon Cyan</span>
             </div>
             <p class="design-description" id="design-description"></p>
           </section>
@@ -121,8 +121,8 @@
                 </div>
                 <div id="theme-composer-panel" class="composer-grid is-hidden">
                   <label class="composer-control">
-                    <span class="meta-label">Choose A Skin</span>
-                    <select id="memo-theme-select" class="design-select" aria-label="Choose a live skin"></select>
+                    <span class="meta-label">Choose A Theme</span>
+                    <select id="memo-theme-select" class="design-select" aria-label="Choose a live theme"></select>
                   </label>
                 </div>
               </div>
@@ -176,93 +176,191 @@
         memoByteLimit: 34,
         pendingLimit: 12,
         confirmedLimit: 30,
-        pollVisibleMs: 20000,
-        pollHiddenMs: 60000,
+        pollVisibleMs: 4000,
+        pollHiddenMs: 15000,
         requestTimeoutMs: 10000,
         apiKey: '',
+        defaultThemeIndex: 1,
         quickInsert: {
           emoji: ['🔥', '✨', '🚀', '🎉', '✅', '👀', '❤️', '⭐', '💥', '💡'],
           symbol: ['!', '?', '@', '#', '&', '+', '-', '/', '→', '•']
         }
       };
-      const DESIGNS = [
+
+      const THEME_GROUPS = [
         {
-          id: 'signal-wall',
-          alias: 'sw',
-          label: 'Signal Wall',
-          file: 'theme-signal-wall.css',
-          eyebrow: 'Public Programmable State',
-          title: 'Signal Wall',
-          subtitle: 'An open on-chain signal surface. Tiny transfers rewrite the live state without changing the inscription itself.',
-          description: 'Warm flagship version with the clearest programmable-state story.'
+          label: 'Neon / Synth / Digital',
+          themes: [
+            ['neon-cyan', 'Neon Cyan'],
+            ['neon-magenta', 'Neon Magenta'],
+            ['neon-lime', 'Neon Lime'],
+            ['synth-sunset', 'Synth Sunset'],
+            ['laser-grid', 'Laser Grid'],
+            ['ultraviolet', 'Ultraviolet'],
+            ['cyber-blueprint', 'Cyber Blueprint'],
+            ['plasma-rose', 'Plasma Rose'],
+            ['arcade-tube', 'Arcade Tube'],
+            ['hologram', 'Hologram']
+          ]
         },
         {
-          id: 'chain-pulse',
-          alias: 'cp',
-          label: 'Chain Pulse',
-          file: 'theme-chain-pulse.css',
-          eyebrow: 'Live Chain Input',
-          title: 'Chain Pulse',
-          subtitle: 'A high-visibility pulse display where the latest valid memo becomes the current on-chain signal.',
-          description: 'Neon dashboard mode built to feel like a live on-chain heartbeat.'
+          label: 'Terminal / Monitor / Monochrome',
+          themes: [
+            ['terminal-green', 'Terminal Green'],
+            ['terminal-amber', 'Terminal Amber'],
+            ['terminal-ice', 'Terminal Ice'],
+            ['dos-blue', 'DOS Blue'],
+            ['phosphor', 'Phosphor'],
+            ['white-terminal', 'White Terminal'],
+            ['graphite-mono', 'Graphite Mono'],
+            ['inkscreen', 'Inkscreen'],
+            ['code-editor', 'Code Editor'],
+            ['retro-workstation', 'Retro Workstation']
+          ]
         },
         {
-          id: 'state-beacon',
-          alias: 'sb',
-          label: 'State Beacon',
-          file: 'theme-state-beacon.css',
-          eyebrow: 'Shared State Beacon',
-          title: 'State Beacon',
-          subtitle: 'An elegant public beacon whose visible state can be updated by anyone with a micro-transaction.',
-          description: 'Light premium direction for polished demos and screenshare moments.'
+          label: 'Paper / Editorial / Print / Quiet Light',
+          themes: [
+            ['paper-ivory', 'Paper Ivory'],
+            ['paper-cream', 'Paper Cream'],
+            ['newsprint', 'Newsprint'],
+            ['editorial-slate', 'Editorial Slate'],
+            ['quiet-book', 'Quiet Book'],
+            ['frost-paper', 'Frost Paper'],
+            ['linen', 'Linen'],
+            ['chalk-boardlight', 'Chalk Boardlight'],
+            ['minimal-air', 'Minimal Air'],
+            ['soft-newsroom', 'Soft Newsroom']
+          ]
         },
         {
-          id: 'open-feed',
-          alias: 'of',
-          label: 'Open Feed',
-          file: 'theme-open-feed.css',
-          eyebrow: 'Open Chain Feed',
-          title: 'Open Feed',
-          subtitle: 'A public feed where the chain determines the newest valid message and everyone can compete for the headline.',
-          description: 'Editorial front-page treatment that frames updates like breaking news.'
+          label: 'Luxury / Cinematic / Premium Dark',
+          themes: [
+            ['obsidian-gold', 'Obsidian Gold'],
+            ['midnight-velvet', 'Midnight Velvet'],
+            ['emerald-club', 'Emerald Club'],
+            ['ruby-lounge', 'Ruby Lounge'],
+            ['champagne', 'Champagne'],
+            ['bronze-noir', 'Bronze Noir'],
+            ['luxury-ink', 'Luxury Ink'],
+            ['royal-plum', 'Royal Plum'],
+            ['teal-velour', 'Teal Velour'],
+            ['cinema-red', 'Cinema Red']
+          ]
         },
         {
-          id: 'message-reactor',
-          alias: 'mr',
-          label: 'Message Reactor',
-          file: 'theme-message-reactor.css',
-          eyebrow: 'Programmable Reaction Surface',
-          title: 'Message Reactor',
-          subtitle: 'An immutable display core driven by micro-transactions, turning each valid memo into the next visible state.',
-          description: 'Industrial caution energy that makes the app feel active and volatile.'
+          label: 'Nature / Earth / Organic',
+          themes: [
+            ['forest-deep', 'Forest Deep'],
+            ['moss', 'Moss'],
+            ['sage', 'Sage'],
+            ['clay', 'Clay'],
+            ['sandstone', 'Sandstone'],
+            ['ocean-kelp', 'Ocean Kelp'],
+            ['pine-fog', 'Pine Fog'],
+            ['wildflower', 'Wildflower'],
+            ['earth-after-rain', 'Earth After Rain'],
+            ['terracotta-night', 'Terracotta Night']
+          ]
         },
         {
-          id: 'public-console',
-          alias: 'pc',
-          label: 'Public Console',
-          file: 'theme-public-console.css',
-          eyebrow: 'Open Command Surface',
-          title: 'Public Console',
-          subtitle: 'A terminal-like public interface where anyone can write the next state by sending a valid on-chain memo.',
-          description: 'Terminal mode that leans hard into the programmable-state concept.'
+          label: 'Ocean / Sky / Water',
+          themes: [
+            ['deep-ocean', 'Deep Ocean'],
+            ['tropical-water', 'Tropical Water'],
+            ['sea-glass', 'Sea Glass'],
+            ['cloud-blue', 'Cloud Blue'],
+            ['storm', 'Storm'],
+            ['polar', 'Polar'],
+            ['navy-signal', 'Navy Signal'],
+            ['lagoon', 'Lagoon'],
+            ['iceberg', 'Iceberg'],
+            ['rain', 'Rain']
+          ]
         },
         {
-          id: 'live-signal',
-          alias: 'ls',
-          label: 'Live Signal',
-          file: 'theme-live-signal.css',
-          eyebrow: 'Micro-Transaction Media',
-          title: 'Live Signal',
-          subtitle: 'A bold poster-style state display made for attention, screenshots, and fast understanding.',
-          description: 'High-contrast poster layout designed to capture attention instantly.'
+          label: 'Pastel / Playful / Soft UI',
+          themes: [
+            ['cotton-candy', 'Cotton Candy'],
+            ['bubblegum', 'Bubblegum'],
+            ['lavender-milk', 'Lavender Milk'],
+            ['peach-sorbet', 'Peach Sorbet'],
+            ['mint-gelato', 'Mint Gelato'],
+            ['baby-blue', 'Baby Blue'],
+            ['lemon-cream', 'Lemon Cream'],
+            ['strawberry-cream', 'Strawberry Cream'],
+            ['pastel-rainbow', 'Pastel Rainbow'],
+            ['toybox', 'Toybox']
+          ]
+        },
+        {
+          label: 'Brutal / High Contrast / Graphic',
+          themes: [
+            ['brutal-blackwhite', 'Brutal Blackwhite'],
+            ['brutal-warning', 'Brutal Warning'],
+            ['brutal-red', 'Brutal Red'],
+            ['brutal-blue', 'Brutal Blue'],
+            ['brutal-green', 'Brutal Green'],
+            ['xerox', 'Xerox'],
+            ['poster-noir', 'Poster Noir'],
+            ['signal-blackyellow', 'Signal Blackyellow'],
+            ['high-contrast-light', 'High Contrast Light'],
+            ['high-contrast-dark', 'High Contrast Dark']
+          ]
+        },
+        {
+          label: 'Retro / VHS / Arcade / Analogue',
+          themes: [
+            ['vhs-night', 'VHS Night'],
+            ['cassette', 'Cassette'],
+            ['arcade-neon', 'Arcade Neon'],
+            ['crt-amber', 'CRT Amber'],
+            ['crt-mint', 'CRT Mint'],
+            ['jukebox', 'Jukebox'],
+            ['retro-console', 'Retro Console'],
+            ['miami-night', 'Miami Night'],
+            ['outrun-sun', 'Outrun Sun'],
+            ['tape-deck', 'Tape Deck']
+          ]
+        },
+        {
+          label: 'Experimental / Specialty / System States',
+          themes: [
+            ['glass-clear', 'Glass Clear'],
+            ['glass-frost', 'Glass Frost'],
+            ['matrix-lite', 'Matrix Lite'],
+            ['matrix-hard', 'Matrix Hard'],
+            ['wireframe', 'Wireframe'],
+            ['blueprint-paper', 'Blueprint Paper'],
+            ['infrared', 'Infrared'],
+            ['xray', 'Xray'],
+            ['alarm', 'Alarm'],
+            ['stealth', 'Stealth']
+          ]
         }
       ];
 
-      const DESIGN_MAP = Object.fromEntries(DESIGNS.map(function (design) {
-        return [design.id, design];
+      const THEMES = THEME_GROUPS.flatMap(function (group, groupIndex) {
+        return group.themes.map(function (entry, entryIndex) {
+          const index = groupIndex * 10 + entryIndex + 1;
+          return {
+            index: index,
+            id: entry[0],
+            label: entry[1],
+            group: group.label,
+            shortLabel: entry[1],
+            memoIndex: String(index),
+            memoHash: '#' + index,
+            memoPadded: String(index).padStart(2, '0')
+          };
+        });
+      });
+
+      const THEME_BY_ID = Object.fromEntries(THEMES.map(function (theme) {
+        return [theme.id, theme];
       }));
-      const DESIGN_ALIAS_MAP = Object.fromEntries(DESIGNS.map(function (design) {
-        return [design.alias, design.id];
+      const THEME_BY_INDEX = Object.fromEntries(THEMES.map(function (theme) {
+        return [String(theme.index), theme];
       }));
 
       const COMMANDS = {
@@ -283,7 +381,7 @@
       };
 
       const els = {
-        themeStylesheet: $('theme-stylesheet'),
+        body: document.body,
         eyebrow: $('eyebrow'),
         boardTitle: $('board-title'),
         heroSubtitle: $('hero-subtitle'),
@@ -331,65 +429,57 @@
         hasMessage: false,
         finalMemo: '',
         memoFits: false,
-        liveDesignId: DESIGNS[0].id,
-        previewDesignId: 'live'
+        liveThemeId: getDefaultTheme().id,
+        previewThemeId: 'live'
       };
 
-      const text = function (value) {
+      function getDefaultTheme() {
+        return THEME_BY_INDEX[String(CONFIG.defaultThemeIndex)] || THEMES[0];
+      }
+
+      function text(value) {
         return String(value == null ? '' : value);
-      };
+      }
 
-      const memoBytes = function (value) {
+      function memoBytes(value) {
         return memoEncoder.encode(text(value)).length;
-      };
+      }
 
-      const clean = function (value) {
+      function clean(value) {
         return text(value).replace(/\u0000/g, '').replace(/\s+/g, ' ').trim();
-      };
+      }
 
-      const shorten = function (value, head, tail) {
+      function shorten(value, head, tail) {
         return value && value.length > head + tail ? value.slice(0, head) + '...' + value.slice(-tail) : value || 'unknown';
-      };
+      }
 
-      const formatStx = function (microStx) {
+      function formatStx(microStx) {
         return stxFormatter.format(Number(BigInt(microStx)) / 1000000);
-      };
+      }
 
-      const commandPrefix = function (kind, style) {
+      function commandPrefix(kind, style) {
         return COMMANDS[kind][style];
-      };
+      }
 
-      const sortNewest = function (a, b) {
+      function sortNewest(a, b) {
         return b.timestamp - a.timestamp;
-      };
+      }
 
-      const hasDesign = function (id) {
-        return Boolean(id && DESIGN_MAP[id]);
-      };
+      function hasTheme(value) {
+        return Boolean(resolveThemeToken(value));
+      }
 
-      const getDesign = function (id) {
-        return DESIGN_MAP[id] || DESIGNS[0];
-      };
+      function getTheme(id) {
+        return THEME_BY_ID[id] || getDefaultTheme();
+      }
 
-      const normalizeThemeToken = function (value) {
-        const token = clean(value)
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-+|-+$/g, '');
-        return DESIGN_ALIAS_MAP[token] || token;
-      };
+      function effectiveThemeId() {
+        return state.previewThemeId === 'live' ? state.liveThemeId : state.previewThemeId;
+      }
 
-      const themeMemoToken = function (value) {
-        return getDesign(value).alias || getDesign(value).id;
-      };
-
-      const effectiveDesignId = function () {
-        return state.previewDesignId === 'live' ? state.liveDesignId : state.previewDesignId;
-      };
-
-      const explorerUrl = function (type, value) {
+      function explorerUrl(type, value) {
         return CONFIG.explorerBase + '/' + type + '/' + encodeURIComponent(value) + '?chain=' + encodeURIComponent(CONFIG.network);
-      };
+      }
 
       function setChip(el, label, tone) {
         el.className = tone ? 'chip ' + tone : 'chip';
@@ -415,6 +505,34 @@
         }
       }
 
+      function resolveThemeToken(value) {
+        const raw = clean(value);
+        if (!raw) return null;
+
+        const stripped = raw.toLowerCase().replace(/^theme\s*/i, '').trim();
+        const numericMatch = stripped.match(/^#?(\d{1,3})$/);
+        if (numericMatch) {
+          return THEME_BY_INDEX[String(Number(numericMatch[1]))] || null;
+        }
+
+        const normalized = stripped
+          .replace(/^#/, '')
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+
+        if (THEME_BY_ID[normalized]) return THEME_BY_ID[normalized];
+
+        const byLabel = THEMES.find(function (theme) {
+          return theme.label.toLowerCase() === raw.toLowerCase() ||
+                 theme.label.toLowerCase().replace(/[^a-z0-9]+/g, '-') === normalized;
+        });
+        return byLabel || null;
+      }
+
+      function themeMemoToken(themeId) {
+        return String(getTheme(themeId).index);
+      }
+
       function parseMemoSegment(segment, allowPlainMessage) {
         const prefixes = [
           { kind: 'theme', prefix: COMMANDS.theme.code },
@@ -435,9 +553,9 @@
         if (!value) return null;
 
         if (matched.kind === 'theme') {
-          const themeId = normalizeThemeToken(value);
-          if (!hasDesign(themeId)) return null;
-          return { themeId: themeId };
+          const theme = resolveThemeToken(value);
+          if (!theme) return null;
+          return { themeId: theme.id };
         }
 
         return { message: value };
@@ -527,8 +645,23 @@
           .filter(Boolean);
       }
 
+      function applyThemeFromState() {
+        const liveTheme = getTheme(state.liveThemeId);
+        const activeTheme = getTheme(effectiveThemeId());
+        const followingLive = state.previewThemeId === 'live';
+
+        els.body.dataset.theme = activeTheme.id;
+        els.designSelect.value = followingLive ? 'live' : activeTheme.id;
+        els.designDescription.textContent = followingLive
+          ? 'Following live on-chain theme. ' + liveTheme.label + ' is theme #' + liveTheme.index + '.'
+          : 'Preview override active. Live on-chain theme is ' + liveTheme.label + ' (#' + liveTheme.index + ').';
+        setChip(els.designChip, (followingLive ? 'Live: ' : 'Preview: ') + activeTheme.label + ' #' + activeTheme.index);
+        document.title = 'Xtrata Signal Wall — ' + activeTheme.label;
+        document.documentElement.setAttribute('data-theme-preview', activeTheme.id);
+      }
+
       function renderBoard(candidate, themeCandidate, fallbackText) {
-        const liveDesign = getDesign(state.liveDesignId);
+        const liveTheme = getTheme(state.liveThemeId);
 
         if (!candidate) {
           state.hasMessage = false;
@@ -541,7 +674,7 @@
             CONFIG.targetAddress +
             '</code></a>.';
           els.txMeta.textContent = 'No transaction selected.';
-          els.refreshMeta.textContent = 'Live skin: ' + liveDesign.label + '. Watching mempool and recent confirmed transfers.';
+          els.refreshMeta.textContent = 'Live theme: #' + liveTheme.index + ' ' + liveTheme.label + '. Watching mempool and recent confirmed transfers.';
           els.statusText.textContent = fallbackText || 'No qualifying transfer found yet.';
           setChip(els.stateChip, 'Waiting for a message');
           setChip(els.lengthChip, '0 / ' + CONFIG.memoByteLimit + ' bytes');
@@ -555,6 +688,9 @@
           minute: '2-digit',
           second: '2-digit'
         });
+        const themeText = themeCandidate
+          ? ' Latest theme command: #' + getTheme(themeCandidate.themeId).index + ' ' + getTheme(themeCandidate.themeId).label + '.'
+          : '';
 
         state.hasMessage = true;
         els.messageText.textContent = candidate.message;
@@ -566,10 +702,10 @@
           '<a href="' + explorerUrl('txid', candidate.txId) + '" target="_blank" rel="noreferrer"><code>' + txId + '</code></a>' +
           ' · from <code>' + sender + '</code>';
         els.refreshMeta.textContent =
-          'Live skin: ' + liveDesign.label + '. Last checked ' + checkedAt + '. Pending memos can appear before confirmation.';
-        els.statusText.textContent = candidate.pending
+          'Live theme: #' + liveTheme.index + ' ' + liveTheme.label + '. Last checked ' + checkedAt + '. Pending memos can appear before confirmation.';
+        els.statusText.textContent = (candidate.pending
           ? 'Showing the newest qualifying mempool transfer. If it confirms, this becomes the canonical board state.'
-          : 'Showing the newest confirmed qualifying transfer.';
+          : 'Showing the newest confirmed qualifying transfer.') + themeText;
         setChip(els.stateChip, candidate.pending ? 'Pending message live' : 'Confirmed message live', candidate.pending ? 'pending' : 'good');
         setChip(els.lengthChip, memoBytes(candidate.message) + ' / ' + CONFIG.memoByteLimit + ' bytes', candidate.pending ? 'pending' : 'good');
       }
@@ -604,6 +740,7 @@
           ? Boolean(messagePayload && themePayload)
           : Boolean(messagePayload || themePayload);
         const fits = hasText && finalBytes <= CONFIG.memoByteLimit;
+        const selectedTheme = getTheme(els.memoThemeSelect.value);
 
         state.finalMemo = finalMemo;
         state.memoFits = fits;
@@ -612,8 +749,8 @@
         els.composerNote.textContent = kind === 'message'
           ? 'Message updates use ' + COMMANDS.message.code + ' or ' + COMMANDS.message.emoji + ' and rewrite the live text.'
           : kind === 'theme'
-            ? 'Theme switches use ' + COMMANDS.theme.code + ' or ' + COMMANDS.theme.emoji + ' and change the live default skin.'
-            : 'Both mode emits two commands in one memo, separated by |. Short theme aliases like cp and ls save bytes.';
+            ? 'Theme switches use ' + COMMANDS.theme.code + ' or ' + COMMANDS.theme.emoji + ' followed by a theme index, for example t:12 or 🎨12.'
+            : 'Both mode emits two commands in one memo, separated by |. Use numeric theme indexes to save bytes, for example m:GM|t:88.';
 
         setChip(
           els.memoFitChip,
@@ -635,6 +772,10 @@
           !hasText ? 'Copy disabled' : fits ? 'Ready to copy' : 'Copy blocked',
           !hasText ? '' : fits ? 'good' : 'error'
         );
+
+        if (includeTheme) {
+          els.memoThemeSelect.title = '#' + selectedTheme.index + ' ' + selectedTheme.label + ' — ' + selectedTheme.group;
+        }
       }
 
       function insertMemoText(value) {
@@ -718,7 +859,7 @@
           }) || null;
 
           state.lastRefreshAt = Date.now();
-          state.liveDesignId = themeCandidate ? themeCandidate.themeId : DESIGNS[0].id;
+          state.liveThemeId = themeCandidate ? themeCandidate.themeId : getDefaultTheme().id;
           applyThemeFromState();
 
           if (!candidates.length && results[0].status === 'rejected' && results[1].status === 'rejected') {
@@ -741,47 +882,42 @@
         }
       }
 
-      function applyThemeFromState() {
-        const liveDesign = getDesign(state.liveDesignId);
-        const activeDesign = getDesign(effectiveDesignId());
-        const followingLive = state.previewDesignId === 'live';
+      function renderThemeOptions() {
+        let previewHtml = '<option value="live">Follow live on-chain theme</option>';
+        let memoHtml = '';
 
-        els.themeStylesheet.setAttribute('href', './styles/' + activeDesign.file);
-        els.eyebrow.textContent = activeDesign.eyebrow;
-        els.boardTitle.textContent = activeDesign.title;
-        els.heroSubtitle.textContent = activeDesign.subtitle;
-        els.designSelect.value = followingLive ? 'live' : activeDesign.id;
-        els.designDescription.textContent = followingLive
-          ? 'Following live on-chain skin. ' + liveDesign.description
-          : 'Preview override active. Live skin is ' + liveDesign.label + '.';
-        setChip(els.designChip, (followingLive ? 'Live: ' : 'Preview: ') + activeDesign.label);
-        document.title = 'Xtrata ' + activeDesign.title;
-        document.documentElement.setAttribute('data-design', activeDesign.id);
+        THEME_GROUPS.forEach(function (group) {
+          const groupThemes = THEMES.filter(function (theme) {
+            return theme.group === group.label;
+          });
+
+          previewHtml += '<optgroup label="' + group.label + '">';
+          memoHtml += '<optgroup label="' + group.label + '">';
+
+          groupThemes.forEach(function (theme) {
+            previewHtml += '<option value="' + theme.id + '">#' + theme.index + ' · ' + theme.label + '</option>';
+            memoHtml += '<option value="' + theme.id + '">#' + theme.index + ' · ' + theme.label + '</option>';
+          });
+
+          previewHtml += '</optgroup>';
+          memoHtml += '</optgroup>';
+        });
+
+        els.designSelect.innerHTML = previewHtml;
+        els.memoThemeSelect.innerHTML = memoHtml;
       }
 
-      function renderDesignOptions() {
-        els.designSelect.innerHTML =
-          '<option value="live">Follow live skin</option>' +
-          DESIGNS.map(function (design) {
-            return '<option value="' + design.id + '">' + design.label + '</option>';
-          }).join('');
-        els.memoThemeSelect.innerHTML = DESIGNS
-          .map(function (design) {
-            return '<option value="' + design.id + '">' + design.label + ' (' + design.alias + ')</option>';
-          })
-          .join('');
-      }
-
-      function setPreviewDesign(id) {
-        state.previewDesignId = id === 'live' ? 'live' : getDesign(id).id;
+      function setPreviewTheme(id) {
+        state.previewThemeId = id === 'live' ? 'live' : getTheme(id).id;
         applyThemeFromState();
       }
 
       function renderStaticConfig() {
         const minimum = formatStx(CONFIG.minAmountMicroStx);
+        const defaultTheme = getDefaultTheme();
         els.networkChip.textContent = 'Network: ' + CONFIG.network;
         els.boardRule.textContent =
-          'Latest message command wins. Latest theme command sets the live default skin.';
+          'Latest message command wins. Latest theme command sets the live default theme. Theme commands accept indexes like 1–100.';
         els.instructionBlurb.innerHTML =
           'To program this, send a standard STX transfer to <a href="' +
           explorerUrl('address', CONFIG.targetAddress) +
@@ -792,16 +928,16 @@
           'Send any positive amount, at least <code>' + minimum + ' STX</code>, to <code>' + CONFIG.targetAddress + '</code>.';
         els.instructionStep2.innerHTML =
           'Use <code>' + COMMANDS.message.code + '</code> or <code>' + COMMANDS.message.emoji +
-            '</code> for text updates, and <code>' + COMMANDS.theme.code + '</code> or <code>' +
-            COMMANDS.theme.emoji + '</code> for theme switches. You can combine them in one memo with <code>|</code>.';
+          '</code> for text updates, and <code>' + COMMANDS.theme.code + '</code> or <code>' +
+          COMMANDS.theme.emoji + '</code> for theme switches. Theme values can be numeric indexes like <code>12</code> or <code>#12</code>. You can combine commands with <code>|</code>.';
         els.instructionStep3.textContent =
-          'Message and theme lanes resolve independently: the newest valid text command controls the message, and the newest valid theme command controls the default skin.';
+          'Message and theme lanes resolve independently: the newest valid text command controls the message, and the newest valid theme command controls the default theme.';
         els.instructionNote.textContent =
-          'Compact code prefixes are better for byte budget. Theme aliases are sw, cp, sb, of, mr, pc, ls. Example memos: m:HELLO, t:cp, m:GM|t:ls, 📝GM|🎨cp.';
+          'There are 100 themes. Compact theme indexes are best for the memo byte budget. Example memos: m:HELLO, t:12, m:GM|t:88, 📝GM|🎨7. Default fallback theme is #' + defaultTheme.index + ' ' + defaultTheme.label + '.';
         els.memoInput.placeholder = CONFIG.requiredPrefix
           ? 'Type only the board text. The required prefix will be added automatically in the counter.'
           : 'Type a message here to see whether it fits in the STX transfer memo.';
-        els.memoThemeSelect.value = state.liveDesignId;
+        els.memoThemeSelect.value = state.liveThemeId;
         renderPalette(els.emojiPalette, CONFIG.quickInsert.emoji);
         renderPalette(els.symbolPalette, CONFIG.quickInsert.symbol);
       }
@@ -811,7 +947,7 @@
       els.memoPrefixSelect.addEventListener('change', updateMemoTester);
       els.memoThemeSelect.addEventListener('change', updateMemoTester);
       els.designSelect.addEventListener('change', function (event) {
-        setPreviewDesign(event.target.value);
+        setPreviewTheme(event.target.value);
       });
       document.addEventListener('click', function (event) {
         const insertButton = event.target.closest('[data-insert]');
@@ -827,7 +963,7 @@
         if (!document.hidden) refreshBoard();
       });
 
-      renderDesignOptions();
+      renderThemeOptions();
       applyThemeFromState();
       renderStaticConfig();
       updateMemoTester();
