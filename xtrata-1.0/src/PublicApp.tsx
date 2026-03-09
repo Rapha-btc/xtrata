@@ -12,6 +12,10 @@ import { getContractId } from './lib/contract/config';
 import { resolveCollectionMintPaymentModel } from './lib/collection-mint/payment-model';
 import { resolveCollectionCoverImageUrl } from './lib/collections/cover-image';
 import { resolveCollectionContractLink } from './lib/collections/contract-link';
+import {
+  getCollectionPageDisplayOrder,
+  sortPublicCollectionCards
+} from './lib/collections/public-order';
 import { useBnsAddress } from './lib/bns/hooks';
 import { RATE_LIMIT_WARNING_EVENT } from './lib/network/rate-limit';
 import { getApiBaseUrls } from './lib/network/config';
@@ -127,6 +131,7 @@ type PublicLiveCollectionCard = {
   id: string;
   slug: string;
   name: string;
+  displayOrder: number | null;
   symbol: string;
   description: string;
   livePath: string;
@@ -1520,7 +1525,7 @@ export default function PublicApp() {
     };
   }, [activeDocId]);
   const liveCollectionCards = useMemo<PublicLiveCollectionCard[]>(() => {
-    return liveCollections
+    const cards = liveCollections
       .filter(
         (collection) =>
           String(collection.state ?? '')
@@ -1555,6 +1560,7 @@ export default function PublicApp() {
           id: collection.id,
           slug: toText(collection.slug),
           name,
+          displayOrder: getCollectionPageDisplayOrder(collection.metadata),
           symbol: symbol.length > 0 ? symbol : 'N/A',
           description,
           livePath,
@@ -1571,8 +1577,8 @@ export default function PublicApp() {
             metadataPricing?.onChainMintPriceMicroStx
           )
         };
-      })
-      .sort((left, right) => left.name.localeCompare(right.name));
+      });
+    return sortPublicCollectionCards(cards);
   }, [liveCollections]);
   const mismatch = getNetworkMismatch(contract.network, walletSession.network);
   const readOnlySender = walletSession.address ?? contract.address;

@@ -1,0 +1,54 @@
+:root {
+  --bg: #050805;
+  --bg-glow: rgba(76, 255, 120, 0.12);
+  --board: #081108;
+  --paper: #091109;
+  --ink: #9effaa;
+  --muted: #63a56c;
+  --line: rgba(78, 255, 120, 0.08);
+  --accent: #44e45e;
+  --accent-soft: rgba(68, 228, 94, 0.12);
+  --good: #86ff9d;
+  --pending: #f5db6d;
+  --error: #ff7b7b;
+  --surface: rgba(8, 17, 8, 0.84);
+  --surface-alt: rgba(8, 17, 8, 0.94);
+  --card: rgba(11, 20, 11, 0.82);
+  --card-strong: rgba(14, 24, 14, 0.94);
+  --border: rgba(76, 255, 120, 0.12);
+  --chip: rgba(76, 255, 120, 0.08);
+  --body-font: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+  --display-font: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+  --board-radius: 16px;
+  --note-radius: 10px;
+  --panel-radius: 10px;
+  --field-radius: 8px;
+  --button-radius: 8px;
+}
+
+body {
+  background:
+    radial-gradient(circle at top, rgba(68, 228, 94, 0.14), transparent 32%),
+    linear-gradient(180deg, #020302 0%, #050805 100%);
+}
+
+.note::before {
+  opacity: 0.18;
+  background: linear-gradient(transparent 16px, rgba(78, 255, 120, 0.08) 17px, transparent 18px);
+  background-size: 100% 18px;
+}
+
+.message,
+.meta-value,
+.subtitle,
+.innovation-copy {
+  font-family: var(--mono-font);
+}
+
+.message {
+  font-size: clamp(2rem, 6vw, 4.6rem);
+}
+
+.board::after {
+  display: none;
+}

@@ -1,0 +1,55 @@
+:root {
+  --bg: #09235d;
+  --bg-glow: rgba(255, 111, 0, 0.16);
+  --board: #0d3a95;
+  --paper: #fdf5ea;
+  --ink: #10234a;
+  --muted: #5f6f92;
+  --line: rgba(16, 35, 74, 0.08);
+  --accent: #ff6f00;
+  --accent-soft: rgba(255, 111, 0, 0.12);
+  --good: #207d53;
+  --pending: #bf6d0e;
+  --error: #c5334a;
+  --surface: rgba(255, 252, 247, 0.82);
+  --surface-alt: rgba(255, 248, 237, 0.92);
+  --card: rgba(255, 255, 255, 0.78);
+  --card-strong: rgba(255, 255, 255, 0.94);
+  --border: rgba(16, 35, 74, 0.12);
+  --chip: rgba(255, 111, 0, 0.08);
+  --body-font: "Avenir Next", "Segoe UI", sans-serif;
+  --display-font: "Arial Black", Impact, sans-serif;
+  --board-radius: 0;
+  --note-radius: 0;
+  --panel-radius: 0;
+  --field-radius: 0;
+  --button-radius: 0;
+}
+
+body {
+  background:
+    radial-gradient(circle at 80% 0%, rgba(255, 111, 0, 0.16), transparent 26%),
+    linear-gradient(180deg, #07183c 0%, #09235d 100%);
+}
+
+.board,
+.note,
+.innovation-panel,
+details,
+.status-panel,
+.meta-card,
+.innovation-card,
+.memo-tester,
+.memo-preview,
+.message-wrap {
+  box-shadow: none;
+}
+
+.message {
+  text-transform: uppercase;
+  letter-spacing: -0.03em;
+}
+
+.innovation-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}

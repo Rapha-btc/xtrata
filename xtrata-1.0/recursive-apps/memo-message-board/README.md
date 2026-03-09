@@ -1,13 +1,36 @@
-# Memo Message Board
+# Public State Surface
 
-Single-file bulletin board demo for Xtrata.
+Local design test harness for the Xtrata public programmable-state demo.
 
 ## What it does
 
-- Displays one large board message.
+- Displays one large live message.
 - Watches incoming STX transfers for a configured address.
-- Uses the newest qualifying transfer memo as the live message.
+- Uses the newest valid message command as the live message.
+- Uses the newest valid theme command as the live default skin.
 - Shows pending memos before confirmation so the board feels transactional.
+- Loads a shared base stylesheet plus 7 swappable theme files for rapid design testing.
+
+## Memo command protocol
+
+- Message update: `m:HELLO` or `📝HELLO`
+- Theme switch: `t:chain-pulse` or `🎨chain-pulse`
+- Plain unprefixed memos still count as message updates for compatibility.
+
+State lanes resolve independently:
+
+- newest valid message command controls the text
+- newest valid theme command controls the default skin
+
+## Design names
+
+- Signal Wall
+- Chain Pulse
+- State Beacon
+- Open Feed
+- Message Reactor
+- Public Console
+- Live Signal
 
 ## Important limit
 
@@ -26,4 +49,14 @@ Edit `index.html`:
 - Optionally set `CONFIG.requiredPrefix`
 - Optionally set `CONFIG.apiKey`
 
-Then inscribe that single `index.html` file.
+Default `CONFIG.minAmountMicroStx` is now `1` microSTX (`0.000001 STX`).
+That keeps the transfer amount minimal. Confirmation speed depends on the
+transaction fee selected by the wallet, not on sending a larger amount.
+
+For local design testing, `index.html` now loads:
+
+- `styles/base.css`
+- one of the 7 `styles/theme-*.css` files
+
+For a final inscription, either inline the chosen CSS back into the HTML or
+inscribe the CSS assets alongside the HTML and update the references accordingly.
