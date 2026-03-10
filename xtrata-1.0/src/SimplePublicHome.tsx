@@ -16,6 +16,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { PUBLIC_CONTRACT, PUBLIC_MINT_RESTRICTIONS } from './config/public';
 import { getContractId } from './lib/contract/config';
 import { resolveCollectionMintPaymentModel } from './lib/collection-mint/payment-model';
+import { summarizeLiveMintStatusError } from './lib/collection-mint/status-errors';
 import { resolveCollectionCoverImageUrl } from './lib/collections/cover-image';
 import { resolveCollectionContractLink } from './lib/collections/contract-link';
 import {
@@ -248,12 +249,9 @@ const shouldTryReadOnlyFallback = (error: unknown) =>
   isRateLimitError(error) || isReadOnlyNetworkError(error);
 
 const toMintStatusErrorMessage = (error: unknown) => {
-  if (isRateLimitError(error)) {
-    return `Upstream API rate-limited this request. Mint status refresh is paused and will retry in about ${Math.round(
-      LIVE_MINT_RATE_LIMIT_BACKOFF_MS / 60_000
-    )} minutes.`;
-  }
-  return getErrorMessage(error);
+  return summarizeLiveMintStatusError(error, {
+    rateLimitBackoffMs: LIVE_MINT_RATE_LIMIT_BACKOFF_MS
+  });
 };
 
 const isCollectionSoldOut = (status: LiveMintStatus | null) => {
@@ -1143,8 +1141,8 @@ export default function SimplePublicHome() {
                           <p className="meta-value">Refreshing mint status...</p>
                         )}
                         {mintStatusError && (
-                          <p className="meta-value">
-                            Mint status unavailable: {mintStatusError}
+                          <p className="meta-value public-live-collections__status-warning">
+                            {mintStatusError}
                           </p>
                         )}
                       </div>
@@ -1173,6 +1171,7 @@ export default function SimplePublicHome() {
             isActiveTab={tabGuard.isActive}
             mode={viewerMode}
             onModeChange={setViewerMode}
+            onOpenMarket={() => focusSection('market')}
             modeLabels={{ collection: 'Explore', wallet: 'Wallet' }}
             viewerTitles={{ collection: 'Live inscription viewer', wallet: 'Wallet viewer' }}
           />

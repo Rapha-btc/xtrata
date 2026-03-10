@@ -38,6 +38,7 @@ import {
   createMarketSelectionStore,
   MARKET_SELECTION_EVENT
 } from '../lib/market/selection';
+import { createMarketFocusStore } from '../lib/market/focus';
 import { parseMarketContractId } from '../lib/market/contract';
 import { createMarketClient } from '../lib/market/client';
 import type { MarketActivityEvent } from '../lib/market/types';
@@ -64,7 +65,8 @@ import {
 } from '../lib/market/settlement';
 import {
   mergeListingIndexes,
-  resolveMissingListingsForTokens
+  attachListingMetadata,
+  resolveMissingListingsAcrossMarkets
 } from '../lib/market/listing-resolution';
 import {
   getChunkKey,
@@ -125,6 +127,7 @@ const sortBigIntAsc = (left: bigint, right: bigint) =>
 export type ViewerMode = 'collection' | 'wallet';
 
 const marketSelectionStore = createMarketSelectionStore();
+const marketFocusStore = createMarketFocusStore();
 
 type ViewerScreenProps = {
   contract: ContractRegistryEntry;
@@ -139,6 +142,7 @@ type ViewerScreenProps = {
   onModeChange: (mode: ViewerMode) => void;
   onClearWalletLookup?: () => void;
   onAddParentDraft?: (id: bigint) => void;
+  onOpenMarket?: () => void;
   modeLabels?: {
     collection?: string;
     wallet?: string;
@@ -240,16 +244,13 @@ const parseStoredIds = (pages: string[][]) => {
 const TokenCard = (props: {
   token: TokenSummary;
   isSelected: boolean;
-  isListed: boolean;
   listing: MarketActivityEvent | null;
   walletAddress: string | null;
   onSelect: (id: bigint) => void;
+  onOpenMarketListing: (token: TokenSummary, listing: MarketActivityEvent) => void;
   onBuyListing: (token: TokenSummary, listing: MarketActivityEvent) => void;
   onCancelListing: (token: TokenSummary, listing: MarketActivityEvent) => void;
   marketActionPending: boolean;
-  marketBuySupported: boolean;
-  listingBadgeLabel: string;
-  listingBadgeVariant: string;
   client: ReturnType<typeof createXtrataClient>;
   fallbackClient?: ReturnType<typeof createXtrataClient> | null;
   senderAddress: string;
@@ -262,6 +263,18 @@ const TokenCard = (props: {
     !!props.listing?.seller &&
     !!props.walletAddress &&
     isSameAddress(props.listing.seller, props.walletAddress);
+  const listingSettlement = getMarketSettlementAsset(
+    props.listing?.paymentTokenContractId
+  );
+  const listingBadgeVariant = getMarketSettlementBadgeVariant(listingSettlement);
+  const marketBuySupported = isMarketSettlementSupported(listingSettlement);
+  const listingPriceLabel =
+    props.listing?.price !== undefined
+      ? formatMarketPrice(props.listing.price, listingSettlement)
+      : null;
+  const saleTagDetail = listingPriceLabel
+    ? `Market · ${listingPriceLabel}`
+    : null;
   const showBuy = !!props.listing && !listedByWallet;
   const showCancel = !!props.listing && listedByWallet;
   const showActionButton = showBuy || showCancel;
@@ -272,21 +285,27 @@ const TokenCard = (props: {
     <div
       className={`token-card${props.isSelected ? ' token-card--active' : ''}`}
     >
+      {props.listing && (
+        <button
+          type="button"
+          className={`token-card__sale-tag token-card__badge token-card__badge--listed token-card__badge--market ${listingBadgeVariant}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            props.onOpenMarketListing(props.token, props.listing!);
+          }}
+          data-sale-detail={saleTagDetail ?? undefined}
+          title={listingPriceLabel ? `For sale · ${listingPriceLabel}` : 'For sale'}
+          aria-label={`Open market listing for token #${props.token.id.toString()}${listingPriceLabel ? ` listed for ${listingPriceLabel}` : ''}`}
+        >
+          For sale
+        </button>
+      )}
       <button
         type="button"
         className="token-card__surface"
         onClick={() => props.onSelect(props.token.id)}
         aria-label={`Select token #${props.token.id.toString()}`}
       >
-        {props.isListed && (
-          <span
-            className={`token-card__badge token-card__badge--listed token-card__badge--market ${props.listingBadgeVariant}`}
-            title={`Listed for sale in ${props.listingBadgeLabel}`}
-            aria-hidden="true"
-          >
-            {props.listingBadgeLabel}
-          </span>
-        )}
         <div className="token-card__header" aria-hidden="true">
           <span className="token-card__id">#{props.token.id.toString()}</span>
         </div>
@@ -311,7 +330,7 @@ const TokenCard = (props: {
           <button
             type="button"
             className={`button button--mini${showCancel ? ' button--ghost' : ''}`}
-            disabled={props.marketActionPending || (showBuy && !props.marketBuySupported)}
+            disabled={props.marketActionPending || (showBuy && !marketBuySupported)}
             onClick={(event) => {
               event.stopPropagation();
               props.onSelect(props.token.id);
@@ -451,6 +470,22 @@ const TokenDetails = (props: {
   const marketRegistryEntry = props.marketContractId
     ? getMarketRegistryEntry(props.marketContractId)
     : null;
+  const listingMarketContractId =
+    props.listing?.marketContractId ?? props.marketContractId;
+  const listingMarketRegistryEntry = listingMarketContractId
+    ? getMarketRegistryEntry(listingMarketContractId)
+    : null;
+  const listingSettlement = getMarketSettlementAsset(
+    props.listing?.paymentTokenContractId ??
+      props.marketPaymentTokenContractId ??
+      listingMarketRegistryEntry?.paymentTokenContractId
+  );
+  const listingSettlementLabel = getMarketSettlementLabel(listingSettlement);
+  const listingSettlementBadgeVariant =
+    getMarketSettlementBadgeVariant(listingSettlement);
+  const listingSettlementSupported = isMarketSettlementSupported(listingSettlement);
+  const listingSettlementMessage =
+    getMarketSettlementSupportMessage(listingSettlement);
   const marketPresetValue =
     marketRegistryEntry && props.marketContractId ? props.marketContractId : '';
   const listPriceAmount = parseMarketPriceInput(listPriceInput, marketSettlement);
@@ -701,8 +736,8 @@ const TokenDetails = (props: {
 
   const selectedListed =
     !!props.listing &&
-    !!props.marketContractId &&
-    isSameAddress(props.token?.owner, props.marketContractId);
+    !!listingMarketContractId &&
+    isSameAddress(props.token?.owner, listingMarketContractId);
   const listingStatusLabel = props.listing
     ? selectedListed
       ? `Listed (#${props.listing.listingId.toString()})`
@@ -710,9 +745,12 @@ const TokenDetails = (props: {
     : 'Not listed';
   const listingPriceLabel =
     props.listing?.price !== undefined
-      ? formatMarketPrice(props.listing.price, marketSettlement)
+      ? formatMarketPrice(props.listing.price, listingSettlement)
       : null;
-  const marketLabel = props.marketContractId ?? 'Select in Market module';
+  const marketLabel =
+    props.listing?.marketLabel ??
+    listingMarketContractId ??
+    'Select in Market module';
   const detailOwnerAddress = props.token?.owner ?? null;
   const detailCreatorAddress = props.token?.meta?.creator ?? null;
   const detailTokenUri = props.token?.tokenUri ?? null;
@@ -1041,7 +1079,7 @@ const TokenDetails = (props: {
           </p>
           {props.listing?.price !== undefined && (
             <p className="preview-pill preview-pill--strong">
-              Listed · {formatMarketPrice(props.listing.price, marketSettlement)}
+              Listed · {formatMarketPrice(props.listing.price, listingSettlement)}
             </p>
           )}
         </div>
@@ -1330,9 +1368,9 @@ const TokenDetails = (props: {
                   <span className="meta-label">Settlement</span>
                   <span className="market-badge-row">
                     <span
-                      className={`badge badge--compact ${marketSettlementBadgeVariant}`}
+                      className={`badge badge--compact ${listingSettlementBadgeVariant}`}
                     >
-                      {marketSettlementLabel}
+                      {listingSettlementLabel}
                     </span>
                   </span>
                 </div>
@@ -1340,7 +1378,7 @@ const TokenDetails = (props: {
                   <div>
                     <span className="meta-label">Price</span>
                     <span className="meta-value">
-                      {formatMarketPrice(props.listing.price, marketSettlement)}
+                      {formatMarketPrice(props.listing.price, listingSettlement)}
                     </span>
                   </div>
                 )}
@@ -1348,7 +1386,7 @@ const TokenDetails = (props: {
                   <div>
                     <span className="meta-label">Fee</span>
                     <span className="meta-value">
-                      {formatMarketPrice(props.listing.fee, marketSettlement)}
+                      {formatMarketPrice(props.listing.fee, listingSettlement)}
                     </span>
                   </div>
                 )}
@@ -1375,7 +1413,7 @@ const TokenDetails = (props: {
                     <button
                       className="button button--mini"
                       type="button"
-                      disabled={props.marketActionPending || !marketSettlementSupported}
+                      disabled={props.marketActionPending || !listingSettlementSupported}
                       onClick={() => props.onBuyListing(props.token!, props.listing!)}
                     >
                       {props.marketActionPending ? 'Buying...' : 'Buy'}
@@ -1396,8 +1434,8 @@ const TokenDetails = (props: {
               {props.marketActionStatus && (
                 <span className="meta-value">{props.marketActionStatus}</span>
               )}
-              {!props.marketActionStatus && marketSettlementMessage && (
-                <span className="meta-value">{marketSettlementMessage}</span>
+              {!props.marketActionStatus && listingSettlementMessage && (
+                <span className="meta-value">{listingSettlementMessage}</span>
               )}
             </div>
           )}
@@ -1445,11 +1483,11 @@ const TokenDetails = (props: {
               {props.listing && (
                 <button
                   type="button"
-                  className={`wallet-preview__badge ${marketSettlementBadgeVariant}`}
+                  className={`wallet-preview__badge ${listingSettlementBadgeVariant}`}
                   onClick={handleOpenWalletTools}
                   title="Open listing tools"
                 >
-                  {`Listed · ${marketSettlementLabel}`}
+                  {`Listed · ${listingSettlementLabel}`}
                 </button>
               )}
             </div>
@@ -1498,10 +1536,14 @@ const TokenDetails = (props: {
                     </div>
                     <div>
                       <span className="meta-label">Market contract</span>
-                      {props.marketContractId ? (
+                      {listingMarketContractId ? (
                         <AddressLabel
-                          address={props.marketContractId}
-                          network={props.marketContract?.network ?? props.contract.network}
+                          address={listingMarketContractId}
+                          network={
+                            listingMarketRegistryEntry?.network ??
+                            props.marketContract?.network ??
+                            props.contract.network
+                          }
                           className="meta-value"
                         />
                       ) : (
@@ -1516,9 +1558,9 @@ const TokenDetails = (props: {
                       <span className="meta-label">Settlement</span>
                       <span className="market-badge-row">
                         <span
-                          className={`badge badge--compact ${marketSettlementBadgeVariant}`}
+                          className={`badge badge--compact ${listingSettlementBadgeVariant}`}
                         >
-                          {marketSettlementLabel}
+                          {listingSettlementLabel}
                         </span>
                       </span>
                     </div>
@@ -1901,18 +1943,80 @@ export default function ViewerScreen(props: ViewerScreenProps) {
   const marketPaymentTokenContractId = marketPaymentTokenQuery.status === 'success'
     ? marketPaymentTokenQuery.data
     : marketRegistryEntry?.paymentTokenContractId;
-  const marketSettlement = getMarketSettlementAsset(marketPaymentTokenContractId);
-  const marketSettlementLabel = getMarketSettlementLabel(marketSettlement);
-  const marketSettlementBadgeVariant =
-    getMarketSettlementBadgeVariant(marketSettlement);
-  const marketSettlementMessage =
-    getMarketSettlementSupportMessage(marketSettlement);
-
+  const networkMarketEntries = useMemo(
+    () =>
+      MARKET_REGISTRY.filter(
+        (entry) =>
+          entry.network === props.contract.network &&
+          !entry.label.includes('(Legacy)')
+      ),
+    [props.contract.network]
+  );
+  const networkMarketContractIds = useMemo(
+    () => networkMarketEntries.map((entry) => getMarketContractId(entry)),
+    [networkMarketEntries]
+  );
+  const networkMarketLookupTargets = useMemo(
+    () =>
+      networkMarketEntries.map((entry) => ({
+        marketContractId: getMarketContractId(entry),
+        paymentTokenContractId: entry.paymentTokenContractId ?? null,
+        marketLabel: entry.label,
+        marketClient: createMarketClient({
+          contract: {
+            address: entry.address,
+            contractName: entry.contractName,
+            network: entry.network
+          }
+        })
+      })),
+    [networkMarketEntries]
+  );
   const marketActivityQuery = useQuery({
-    queryKey: ['market', marketContractIdLabel, 'activity'],
-    enabled:
-      !!marketContract && !marketNetworkMismatch && props.isActiveTab,
-    queryFn: () => loadMarketActivity({ contract: marketContract! }),
+    queryKey: [
+      ...getViewerKey(contractId),
+      'market-activity',
+      networkMarketContractIds.join(',')
+    ],
+    enabled: props.isActiveTab && networkMarketEntries.length > 0,
+    queryFn: async () => {
+      const snapshots = await Promise.all(
+        networkMarketEntries.map(async (entry) => {
+          const contract = {
+            address: entry.address,
+            contractName: entry.contractName,
+            network: entry.network
+          } satisfies ContractConfig;
+          const snapshot = await loadMarketActivity({ contract });
+          return {
+            snapshot,
+            marketContractId: getMarketContractId(entry),
+            paymentTokenContractId: entry.paymentTokenContractId ?? null,
+            marketLabel: entry.label
+          };
+        })
+      );
+
+      const events = new Map<string, MarketActivityEvent>();
+      snapshots.forEach((result) => {
+        result.snapshot.events.forEach((event) => {
+          const annotated = attachListingMetadata(event, {
+            marketContractId: result.marketContractId,
+            paymentTokenContractId: result.paymentTokenContractId,
+            marketLabel: result.marketLabel
+          });
+          events.set(`${result.marketContractId}:${annotated.id}`, annotated);
+        });
+      });
+
+      return {
+        updatedAt: snapshots.reduce(
+          (latest, result) => Math.max(latest, result.snapshot.updatedAt),
+          0
+        ),
+        events: Array.from(events.values())
+      };
+    },
     staleTime: MARKET_DATA_STALE_MS,
     refetchOnWindowFocus: false
   });
@@ -2338,7 +2442,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
   }, [knownTokens, selectedTokenId, dependencyCache]);
 
   const activeListingIndex = useMemo(() => {
-    if (!marketActivityQuery.data || !marketContractIdLabel || marketNetworkMismatch) {
+    if (!marketActivityQuery.data) {
       return new Map<string, MarketActivityEvent>();
     }
     const merged = new Map<string, MarketActivityEvent>();
@@ -2354,8 +2458,6 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     return merged;
   }, [
     marketActivityQuery.data,
-    marketContractIdLabel,
-    marketNetworkMismatch,
     contractId,
     legacyContractId
   ]);
@@ -2492,23 +2594,6 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     [walletQueries]
   );
 
-  const isTokenListed = useCallback(
-    (token: TokenSummary | null) => {
-      if (!token || !marketContractIdLabel) {
-        return false;
-      }
-      if (isSameAddress(token.owner, marketContractIdLabel)) {
-        return true;
-      }
-      const key = buildMarketListingKey(
-        resolveTokenContractId(token),
-        token.id
-      );
-      return activeListingIndex.has(key);
-    },
-    [activeListingIndex, marketContractIdLabel, resolveTokenContractId]
-  );
-
   const walletMaxPage = useMemo(() => {
     if (stableWalletTokens.length === 0) {
       return 0;
@@ -2528,8 +2613,8 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     const start = activePageIndex * PAGE_SIZE;
     return stableWalletTokens.slice(start, start + PAGE_SIZE);
   }, [isWalletView, stableWalletTokens, activePageIndex, tokenSummaries]);
-  const walletPageListingTargets = useMemo(() => {
-    if (!isWalletView || pageTokens.length === 0) {
+  const pageListingTargets = useMemo(() => {
+    if (pageTokens.length === 0) {
       return [] as Array<{
         nftContract: string;
         tokenId: bigint;
@@ -2541,46 +2626,41 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       tokenId: token.id,
       owner: token.owner
     }));
-  }, [isWalletView, pageTokens, resolveTokenContractId]);
-  const walletPageListingsQuery = useQuery({
+  }, [pageTokens, resolveTokenContractId]);
+  const pageListingsQuery = useQuery({
     queryKey: [
-      'market',
-      marketContractIdLabel,
-      contractId,
-      'wallet-page-listings',
+      ...getViewerKey(contractId),
+      'page-listings',
       activePageIndex,
       marketActivityQuery.data?.updatedAt ?? 0,
-      walletPageListingTargets.map(
+      networkMarketContractIds.join(','),
+      pageListingTargets.map(
         (token) =>
           `${token.nftContract}:${token.tokenId.toString()}:${token.owner ?? 'none'}`
       )
     ],
     enabled:
-      !!marketClient &&
-      !!marketContractIdLabel &&
-      !marketNetworkMismatch &&
       props.isActiveTab &&
-      isWalletView &&
-      walletPageListingTargets.length > 0,
+      networkMarketLookupTargets.length > 0 &&
+      pageListingTargets.length > 0,
     staleTime: 30_000,
     refetchOnWindowFocus: false,
     queryFn: () => {
-      if (!marketClient || !marketContractIdLabel) {
+      if (networkMarketLookupTargets.length === 0) {
         return Promise.resolve(new Map<string, MarketActivityEvent>());
       }
-      return resolveMissingListingsForTokens({
-        marketClient,
+      return resolveMissingListingsAcrossMarkets({
+        targets: networkMarketLookupTargets,
         senderAddress: props.senderAddress,
-        marketContractId: marketContractIdLabel,
-        tokens: walletPageListingTargets,
+        tokens: pageListingTargets,
         existing: activeListingIndex,
-        concurrency: 2
+        concurrencyPerMarket: 2
       });
     }
   });
   const listingIndex = useMemo(
-    () => mergeListingIndexes(activeListingIndex, walletPageListingsQuery.data),
-    [activeListingIndex, walletPageListingsQuery.data]
+    () => mergeListingIndexes(activeListingIndex, pageListingsQuery.data),
+    [activeListingIndex, pageListingsQuery.data]
   );
 
   const currentPageIds = useMemo(() => {
@@ -3217,7 +3297,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       if (!listing) {
         return null;
       }
-      return {
+      return attachListingMetadata({
         id: `onchain:${listingId.toString()}`,
         type: 'list',
         listingId,
@@ -3225,7 +3305,11 @@ export default function ViewerScreen(props: ViewerScreenProps) {
         price: listing.price,
         seller: listing.seller,
         nftContract: listing.nftContract
-      } as MarketActivityEvent;
+      }, {
+        marketContractId: marketContractIdLabel,
+        paymentTokenContractId: marketPaymentTokenContractId,
+        marketLabel: marketRegistryEntry?.label
+      }) as MarketActivityEvent;
     }
   });
   const selectedListing = selectedListingFromIndex ?? selectedListingQuery.data ?? null;
@@ -3236,21 +3320,28 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     setMarketActionStatus(null);
   }, [selectedTokenId, walletAddress]);
 
-  const refreshMarketAndViewer = useCallback(() => {
+  const refreshMarketAndViewer = useCallback((targetMarketContractId?: string | null) => {
     void queryClient.invalidateQueries({ queryKey: getViewerKey(contractId) });
     void queryClient.refetchQueries({
       queryKey: getViewerKey(contractId),
       type: 'active'
     });
+    const marketContractIds = new Set<string>();
     if (marketContractIdLabel) {
+      marketContractIds.add(marketContractIdLabel);
+    }
+    if (targetMarketContractId) {
+      marketContractIds.add(targetMarketContractId);
+    }
+    marketContractIds.forEach((contractIdValue) => {
       void queryClient.invalidateQueries({
-        queryKey: ['market', marketContractIdLabel]
+        queryKey: ['market', contractIdValue]
       });
       void queryClient.refetchQueries({
-        queryKey: ['market', marketContractIdLabel],
+        queryKey: ['market', contractIdValue],
         type: 'active'
       });
-    }
+    });
   }, [contractId, marketContractIdLabel, queryClient]);
 
   const resolveListingContractConfig = useCallback(
@@ -3268,6 +3359,45 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       return null;
     },
     [contractId, legacyContract, legacyContractId, props.contract]
+  );
+
+  const resolveListingMarketContext = useCallback(
+    (listing: MarketActivityEvent) => {
+      const resolvedMarketContractId =
+        listing.marketContractId ?? marketContractIdLabel;
+      const parsedListingMarket = resolvedMarketContractId
+        ? parseMarketContractId(resolvedMarketContractId)
+        : { config: null, error: null };
+      const resolvedMarketContract = parsedListingMarket.config;
+      const resolvedRegistryEntry = getMarketRegistryEntry(resolvedMarketContractId);
+      const paymentTokenContractId =
+        listing.paymentTokenContractId !== undefined
+          ? listing.paymentTokenContractId
+          : resolvedRegistryEntry?.paymentTokenContractId ??
+            marketPaymentTokenContractId;
+      const settlement = getMarketSettlementAsset(paymentTokenContractId);
+      return {
+        marketContractId: resolvedMarketContractId,
+        marketContract: resolvedMarketContract,
+        marketMismatch: resolvedMarketContract
+          ? getNetworkMismatch(
+              resolvedMarketContract.network,
+              props.walletSession.network
+            )
+          : null,
+        marketNetworkMismatch: resolvedMarketContract
+          ? resolvedMarketContract.network !== props.contract.network
+          : false,
+        settlement,
+        settlementMessage: getMarketSettlementSupportMessage(settlement)
+      };
+    },
+    [
+      marketContractIdLabel,
+      marketPaymentTokenContractId,
+      props.walletSession.network,
+      props.contract.network
+    ]
   );
 
   const resolveListingActionTarget = useCallback(
@@ -3295,10 +3425,14 @@ export default function ViewerScreen(props: ViewerScreenProps) {
           price: listing.price ?? null
         };
       }
-      if (!marketClient) {
+      const listingMarket = resolveListingMarketContext(listing);
+      if (!listingMarket.marketContract) {
         return null;
       }
-      const fetched = await marketClient.getListing(
+      const listingMarketClient = createMarketClient({
+        contract: listingMarket.marketContract
+      });
+      const fetched = await listingMarketClient.getListing(
         listing.listingId,
         props.senderAddress
       );
@@ -3313,21 +3447,34 @@ export default function ViewerScreen(props: ViewerScreenProps) {
         price: fetched.price
       };
     },
-    [marketClient, props.senderAddress]
+    [props.senderAddress, resolveListingMarketContext]
+  );
+
+  const handleOpenMarketListing = useCallback(
+    (_token: TokenSummary, listing: MarketActivityEvent) => {
+      const request = marketFocusStore.saveFromListing(listing);
+      if (!request) {
+        setMarketActionStatus('Listing market details are unavailable.');
+        return;
+      }
+      props.onOpenMarket?.();
+    },
+    [props.onOpenMarket]
   );
 
   const handleBuyListing = useCallback(
     async (token: TokenSummary, listing: MarketActivityEvent) => {
       setMarketActionStatus(null);
+      const listingMarket = resolveListingMarketContext(listing);
       const validation = validateBuyAction({
-        hasMarketContract: !!marketContract,
+        hasMarketContract: !!listingMarket.marketContract,
         walletAddress,
-        networkMismatch: !!marketMismatch,
-        marketNetworkMismatch,
+        networkMismatch: !!listingMarket.marketMismatch,
+        marketNetworkMismatch: listingMarket.marketNetworkMismatch,
         listingId: listing.listingId,
         listingSeller: listing.seller ?? null
       });
-      if (!validation.ok || !marketContract || !walletAddress) {
+      if (!validation.ok || !listingMarket.marketContract || !walletAddress) {
         const message =
           getBuyActionValidationMessage(validation.reason) ??
           'Buy blocked: invalid inputs.';
@@ -3362,23 +3509,23 @@ export default function ViewerScreen(props: ViewerScreenProps) {
           return;
         }
         const postConditions = buildMarketBuyPostConditions({
-          settlement: marketSettlement,
+          settlement: listingMarket.settlement,
           buyerAddress: walletAddress,
           amount: target.price,
           nftContract: listingContract,
-          senderContract: marketContract,
+          senderContract: listingMarket.marketContract,
           tokenId: target.tokenId
         });
         if (!postConditions) {
           setMarketActionPending(false);
           setMarketActionStatus(
-            marketSettlementMessage ?? 'Unsupported payment token.'
+            listingMarket.settlementMessage ?? 'Unsupported payment token.'
           );
           return;
         }
         showContractCall({
-          contractAddress: marketContract.address,
-          contractName: marketContract.contractName,
+          contractAddress: listingMarket.marketContract.address,
+          contractName: listingMarket.marketContract.contractName,
           functionName: 'buy',
           functionArgs: [
             contractPrincipalCV(
@@ -3387,14 +3534,14 @@ export default function ViewerScreen(props: ViewerScreenProps) {
             ),
             uintCV(target.listingId)
           ],
-          network: props.walletSession.network ?? marketContract.network,
+          network: props.walletSession.network ?? listingMarket.marketContract.network,
           stxAddress: walletAddress,
           postConditionMode: PostConditionMode.Deny,
           postConditions,
           onFinish: (payload) => {
             setMarketActionPending(false);
             setMarketActionStatus(`Purchase submitted: ${payload.txId}`);
-            refreshMarketAndViewer();
+            refreshMarketAndViewer(listingMarket.marketContractId);
           },
           onCancel: () => {
             setMarketActionPending(false);
@@ -3405,20 +3552,18 @@ export default function ViewerScreen(props: ViewerScreenProps) {
         const message = error instanceof Error ? error.message : String(error);
         setMarketActionPending(false);
         if (message.toLowerCase().includes('post-condition')) {
-          setMarketActionStatus(getMarketBuyFailureMessage(marketSettlement));
+          setMarketActionStatus(
+            getMarketBuyFailureMessage(listingMarket.settlement)
+          );
           return;
         }
         setMarketActionStatus(`Purchase failed: ${message}`);
       }
     },
     [
-      marketContract,
       walletAddress,
-      marketMismatch,
-      marketNetworkMismatch,
-      marketSettlement,
-      marketSettlementMessage,
       resolveListingActionTarget,
+      resolveListingMarketContext,
       resolveListingContractConfig,
       props.walletSession.network,
       refreshMarketAndViewer
@@ -3428,16 +3573,17 @@ export default function ViewerScreen(props: ViewerScreenProps) {
   const handleCancelListing = useCallback(
     async (token: TokenSummary, listing: MarketActivityEvent) => {
       setMarketActionStatus(null);
+      const listingMarket = resolveListingMarketContext(listing);
       const validation = validateCancelAction({
-        hasMarketContract: !!marketContract,
+        hasMarketContract: !!listingMarket.marketContract,
         walletAddress,
-        networkMismatch: !!marketMismatch,
-        marketNetworkMismatch,
+        networkMismatch: !!listingMarket.marketMismatch,
+        marketNetworkMismatch: listingMarket.marketNetworkMismatch,
         tokenId: token.id,
         listingId: listing.listingId,
         listingSeller: listing.seller ?? null
       });
-      if (!validation.ok || !marketContract || !walletAddress) {
+      if (!validation.ok || !listingMarket.marketContract || !walletAddress) {
         const message =
           getCancelActionValidationMessage(validation.reason) ??
           'Cancel blocked: invalid inputs.';
@@ -3472,8 +3618,8 @@ export default function ViewerScreen(props: ViewerScreenProps) {
           return;
         }
         showContractCall({
-          contractAddress: marketContract.address,
-          contractName: marketContract.contractName,
+          contractAddress: listingMarket.marketContract.address,
+          contractName: listingMarket.marketContract.contractName,
           functionName: 'cancel',
           functionArgs: [
             contractPrincipalCV(
@@ -3482,20 +3628,20 @@ export default function ViewerScreen(props: ViewerScreenProps) {
             ),
             uintCV(target.listingId)
           ],
-          network: props.walletSession.network ?? marketContract.network,
+          network: props.walletSession.network ?? listingMarket.marketContract.network,
           stxAddress: walletAddress,
           postConditionMode: PostConditionMode.Deny,
           postConditions: [
             buildContractTransferPostCondition({
               nftContract: listingContract,
-              senderContract: marketContract,
+              senderContract: listingMarket.marketContract,
               tokenId: target.tokenId
             })
           ],
           onFinish: (payload) => {
             setMarketActionPending(false);
             setMarketActionStatus(`Cancel submitted: ${payload.txId}`);
-            refreshMarketAndViewer();
+            refreshMarketAndViewer(listingMarket.marketContractId);
           },
           onCancel: () => {
             setMarketActionPending(false);
@@ -3509,11 +3655,9 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       }
     },
     [
-      marketContract,
       walletAddress,
-      marketMismatch,
-      marketNetworkMismatch,
       resolveListingActionTarget,
+      resolveListingMarketContext,
       resolveListingContractConfig,
       props.walletSession.network,
       refreshMarketAndViewer
@@ -3904,16 +4048,13 @@ export default function ViewerScreen(props: ViewerScreenProps) {
                           key={token.id.toString()}
                           token={token}
                           isSelected={token.id === selectedTokenId}
-                          isListed={isTokenListed(token)}
                           listing={tokenListing}
                           walletAddress={walletAddress}
                           onSelect={handleSelectToken}
+                          onOpenMarketListing={handleOpenMarketListing}
                           onBuyListing={handleBuyListing}
                           onCancelListing={handleCancelListing}
                           marketActionPending={marketActionPending}
-                          marketBuySupported={isMarketSettlementSupported(marketSettlement)}
-                          listingBadgeLabel={marketSettlementLabel}
-                          listingBadgeVariant={marketSettlementBadgeVariant}
                           client={tokenClient}
                           fallbackClient={fallbackClient}
                           senderAddress={props.senderAddress}
@@ -3941,16 +4082,13 @@ export default function ViewerScreen(props: ViewerScreenProps) {
                             key={token.id.toString()}
                             token={token}
                             isSelected={token.id === selectedTokenId}
-                            isListed={isTokenListed(token)}
                             listing={tokenListing}
                             walletAddress={walletAddress}
                             onSelect={handleSelectToken}
+                            onOpenMarketListing={handleOpenMarketListing}
                             onBuyListing={handleBuyListing}
                             onCancelListing={handleCancelListing}
                             marketActionPending={marketActionPending}
-                            marketBuySupported={isMarketSettlementSupported(marketSettlement)}
-                            listingBadgeLabel={marketSettlementLabel}
-                            listingBadgeVariant={marketSettlementBadgeVariant}
                             client={tokenClient}
                             fallbackClient={fallbackClient}
                             senderAddress={props.senderAddress}

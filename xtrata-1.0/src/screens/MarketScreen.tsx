@@ -35,6 +35,10 @@ import {
   createMarketSelectionStore,
   MARKET_SELECTION_EVENT
 } from '../lib/market/selection';
+import {
+  createMarketFocusStore,
+  MARKET_FOCUS_EVENT
+} from '../lib/market/focus';
 import { parseMarketContractId } from '../lib/market/contract';
 import { isSameAddress } from '../lib/market/actions';
 import {
@@ -72,6 +76,7 @@ type MarketSettlementFilterKey =
   (typeof MARKET_SETTLEMENT_FILTER_KEYS)[number];
 
 const marketSelectionStore = createMarketSelectionStore();
+const marketFocusStore = createMarketFocusStore();
 
 export type MarketScreenProps = {
   contract: ContractRegistryEntry;
@@ -150,6 +155,7 @@ export default function MarketScreen(props: MarketScreenProps) {
     MarketSettlementFilterKey[]
   >(() => [...MARKET_SETTLEMENT_FILTER_KEYS]);
   const [selectedListingKey, setSelectedListingKey] = useState<string | null>(null);
+  const [pendingFocusListingKey, setPendingFocusListingKey] = useState<string | null>(null);
   const [listingIdInput, setListingIdInput] = useState('');
   const [tokenLookupInput, setTokenLookupInput] = useState('');
   const [listingLookupId, setListingLookupId] = useState<bigint | null>(null);
@@ -204,6 +210,57 @@ export default function MarketScreen(props: MarketScreenProps) {
   const marketPresetValue = marketRegistryIds.includes(marketInput.trim())
     ? marketInput.trim()
     : '';
+
+  const applyFocusedListingRequest = useCallback(() => {
+    const request = marketFocusStore.load();
+    if (!request) {
+      return;
+    }
+    try {
+      const listingId = BigInt(request.listingId);
+      const nextSelectedKey = buildSelectedListingKey(
+        request.marketContractId,
+        listingId
+      );
+      setSelectedSettlementFilters([
+        getSettlementFilterKey(request.paymentTokenContractId)
+      ]);
+      setSelectedListingKey(nextSelectedKey);
+      setPendingFocusListingKey(nextSelectedKey);
+      setListingLookupId(null);
+      setTokenLookupId(null);
+      setListingIdInput(listingId.toString());
+      setBuyListingIdInput(listingId.toString());
+      setCancelListingIdInput(listingId.toString());
+      setBuyListingTouched(false);
+      setCancelListingTouched(false);
+      setBuyStatus(null);
+      setCancelStatus(null);
+      if (!isPublicVariant) {
+        setMarketContractId(request.marketContractId);
+        setMarketInput(request.marketContractId);
+        marketSelectionStore.save(request.marketContractId);
+      }
+    } catch {
+      // ignore invalid focus requests
+    } finally {
+      marketFocusStore.clear();
+    }
+  }, [isPublicVariant]);
+
+  useEffect(() => {
+    applyFocusedListingRequest();
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const handleFocusRequest = () => {
+      applyFocusedListingRequest();
+    };
+    window.addEventListener(MARKET_FOCUS_EVENT, handleFocusRequest);
+    return () => {
+      window.removeEventListener(MARKET_FOCUS_EVENT, handleFocusRequest);
+    };
+  }, [applyFocusedListingRequest]);
 
   useEffect(() => {
     setListingLookupId(null);
@@ -1021,9 +1078,17 @@ export default function MarketScreen(props: MarketScreenProps) {
 
   useEffect(() => {
     if (activeListings.length === 0) {
-      if (selectedListingKey !== null) {
+      if (selectedListingKey !== null && pendingFocusListingKey === null) {
         setSelectedListingKey(null);
       }
+      return;
+    }
+    if (
+      pendingFocusListingKey !== null &&
+      activeListings.some((listing) => listing.selectedKey === pendingFocusListingKey)
+    ) {
+      setSelectedListingKey(pendingFocusListingKey);
+      setPendingFocusListingKey(null);
       return;
     }
     if (
@@ -1032,8 +1097,11 @@ export default function MarketScreen(props: MarketScreenProps) {
     ) {
       return;
     }
+    if (pendingFocusListingKey !== null) {
+      setPendingFocusListingKey(null);
+    }
     setSelectedListingKey(activeListings[0].selectedKey);
-  }, [activeListings, selectedListingKey]);
+  }, [activeListings, pendingFocusListingKey, selectedListingKey]);
   const listingTokenGroups = useMemo(() => {
     const primary: bigint[] = [];
     const legacy: bigint[] = [];

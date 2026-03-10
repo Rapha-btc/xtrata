@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  attachListingMetadata,
   mergeListingIndexes,
+  resolveMissingListingsAcrossMarkets,
   resolveMissingListingsForTokens
 } from '../listing-resolution';
 import { buildMarketListingKey } from '../indexer';
@@ -8,6 +10,8 @@ import type { MarketActivityEvent, MarketListing } from '../types';
 
 const MARKET_CONTRACT =
   'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-market-v1-1';
+const MARKET_CONTRACT_USDCX =
+  'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-market-usdcx-v1-0';
 const NFT_CONTRACT =
   'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1';
 const SENDER = 'SP2JXKMSH007NPYAQHKJPQMAQYAD90NQGTVJVQ02B';
@@ -86,6 +90,7 @@ describe('listing resolution helpers', () => {
     expect(event?.listingId).toBe(7n);
     expect(event?.price).toBe(250_000n);
     expect(event?.seller).toBe(SENDER);
+    expect(event?.marketContractId).toBe(MARKET_CONTRACT);
   });
 
   it('skips non-escrow owners', async () => {
@@ -186,5 +191,68 @@ describe('listing resolution helpers', () => {
     expect(merged.size).toBe(2);
     expect(merged.get(keyOne)?.listingId).toBe(1n);
     expect(merged.get(keyTwo)?.listingId).toBe(9n);
+  });
+
+  it('attaches market metadata to activity events', () => {
+    const event = attachListingMetadata(
+      {
+        id: 'event-1',
+        type: 'list',
+        listingId: 3n,
+        tokenId: 5n,
+        nftContract: NFT_CONTRACT
+      },
+      {
+        marketContractId: MARKET_CONTRACT,
+        paymentTokenContractId: null,
+        marketLabel: 'STX market'
+      }
+    );
+
+    expect(event.marketContractId).toBe(MARKET_CONTRACT);
+    expect(event.paymentTokenContractId).toBeNull();
+    expect(event.marketLabel).toBe('STX market');
+  });
+
+  it('resolves missing listings across multiple markets', async () => {
+    const stxClient = {
+      getListingIdByToken: async () => 11n,
+      getListing: async () => createListing({ tokenId: 11n, price: 200_000n })
+    };
+    const usdcxClient = {
+      getListingIdByToken: async () => 22n,
+      getListing: async () => createListing({ tokenId: 22n, price: 500_000n })
+    };
+
+    const resolved = await resolveMissingListingsAcrossMarkets({
+      targets: [
+        {
+          marketContractId: MARKET_CONTRACT,
+          paymentTokenContractId: null,
+          marketLabel: 'STX market',
+          marketClient: stxClient
+        },
+        {
+          marketContractId: MARKET_CONTRACT_USDCX,
+          paymentTokenContractId:
+            'SP3Y2Y3K4P7ZJ2Y4Q4M6P6V5R3K3XG0ZQ8N8YQ7R7.token-usdcx',
+          marketLabel: 'USDCx market',
+          marketClient: usdcxClient
+        }
+      ],
+      senderAddress: SENDER,
+      tokens: [
+        { nftContract: NFT_CONTRACT, tokenId: 11n, owner: MARKET_CONTRACT },
+        { nftContract: NFT_CONTRACT, tokenId: 22n, owner: MARKET_CONTRACT_USDCX }
+      ],
+      existing: new Map()
+    });
+
+    expect(resolved.get(buildMarketListingKey(NFT_CONTRACT, 11n))?.marketContractId).toBe(
+      MARKET_CONTRACT
+    );
+    expect(
+      resolved.get(buildMarketListingKey(NFT_CONTRACT, 22n))?.paymentTokenContractId
+    ).toBe('SP3Y2Y3K4P7ZJ2Y4Q4M6P6V5R3K3XG0ZQ8N8YQ7R7.token-usdcx');
   });
 });

@@ -14,15 +14,39 @@ export type ListingResolutionToken = {
   owner: string | null;
 };
 
+export type ListingResolutionMetadata = {
+  marketContractId: string;
+  paymentTokenContractId?: string | null;
+  marketLabel?: string;
+};
+
+export type ListingResolutionTarget = ListingResolutionMetadata & {
+  marketClient: ListingLookupClient;
+};
+
+export const attachListingMetadata = (
+  event: MarketActivityEvent,
+  metadata: ListingResolutionMetadata
+): MarketActivityEvent => ({
+  ...event,
+  marketContractId: metadata.marketContractId,
+  paymentTokenContractId:
+    metadata.paymentTokenContractId === undefined
+      ? event.paymentTokenContractId
+      : metadata.paymentTokenContractId,
+  marketLabel: metadata.marketLabel ?? event.marketLabel
+});
+
 const buildListingEvent = (params: {
   listingId: bigint;
   token: ListingResolutionToken;
   listing: Awaited<ReturnType<ListingLookupClient['getListing']>>;
+  metadata: ListingResolutionMetadata;
 }): MarketActivityEvent | null => {
   if (!params.listing) {
     return null;
   }
-  return {
+  return attachListingMetadata({
     id: `onchain:${params.listingId.toString()}`,
     type: 'list',
     listingId: params.listingId,
@@ -30,7 +54,7 @@ const buildListingEvent = (params: {
     price: params.listing.price,
     seller: params.listing.seller,
     nftContract: params.listing.nftContract
-  };
+  }, params.metadata);
 };
 
 const buildCandidateList = (params: {
@@ -56,6 +80,8 @@ export const resolveMissingListingsForTokens = async (params: {
   marketClient: ListingLookupClient;
   senderAddress: string;
   marketContractId: string | null;
+  paymentTokenContractId?: string | null;
+  marketLabel?: string;
   tokens: ListingResolutionToken[];
   existing: Map<string, MarketActivityEvent>;
   concurrency?: number;
@@ -100,7 +126,16 @@ export const resolveMissingListingsForTokens = async (params: {
         listingId,
         params.senderAddress
       );
-      const event = buildListingEvent({ listingId, token, listing });
+      const event = buildListingEvent({
+        listingId,
+        token,
+        listing,
+        metadata: {
+          marketContractId: params.marketContractId,
+          paymentTokenContractId: params.paymentTokenContractId,
+          marketLabel: params.marketLabel
+        }
+      });
       if (event) {
         results[next] = event;
       }
@@ -118,6 +153,41 @@ export const resolveMissingListingsForTokens = async (params: {
     resolved.set(key, event);
   });
   return resolved;
+};
+
+export const resolveMissingListingsAcrossMarkets = async (params: {
+  targets: ListingResolutionTarget[];
+  senderAddress: string;
+  tokens: ListingResolutionToken[];
+  existing: Map<string, MarketActivityEvent>;
+  concurrencyPerMarket?: number;
+}): Promise<Map<string, MarketActivityEvent>> => {
+  if (params.targets.length === 0 || params.tokens.length === 0) {
+    return new Map();
+  }
+
+  const resolvedGroups = await Promise.all(
+    params.targets.map((target) =>
+      resolveMissingListingsForTokens({
+        marketClient: target.marketClient,
+        senderAddress: params.senderAddress,
+        marketContractId: target.marketContractId,
+        paymentTokenContractId: target.paymentTokenContractId,
+        marketLabel: target.marketLabel,
+        tokens: params.tokens.filter((token) =>
+          isSameAddress(token.owner, target.marketContractId)
+        ),
+        existing: params.existing,
+        concurrency: params.concurrencyPerMarket
+      })
+    )
+  );
+
+  const merged = new Map<string, MarketActivityEvent>();
+  resolvedGroups.forEach((group) => {
+    group.forEach((event, key) => merged.set(key, event));
+  });
+  return merged;
 };
 
 export const mergeListingIndexes = (

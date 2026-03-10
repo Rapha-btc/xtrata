@@ -1596,6 +1596,7 @@ export default function App() {
           isActiveTab={tabGuard.isActive}
           mode={viewerMode}
           onModeChange={setViewerMode}
+          onOpenMarket={() => focusSection('market')}
           onClearWalletLookup={handleClearWalletLookup}
           onAddParentDraft={handleAddParentDraft}
           modeLabels={{ collection: 'Chain', wallet: 'Wallet' }}

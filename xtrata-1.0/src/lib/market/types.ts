@@ -18,6 +18,9 @@ export type MarketActivityEvent = {
   seller?: string;
   buyer?: string;
   nftContract?: string;
+  marketContractId?: string;
+  marketLabel?: string;
+  paymentTokenContractId?: string | null;
   txId?: string;
   blockHeight?: number;
   eventIndex?: number;
@@ -67,6 +70,9 @@ export type UnifiedActivityEvent = {
   from?: string;
   to?: string;
   nftContract?: string;
+  marketContractId?: string;
+  marketLabel?: string;
+  paymentTokenContractId?: string | null;
   txId?: string;
   blockHeight?: number;
   eventIndex?: number;
