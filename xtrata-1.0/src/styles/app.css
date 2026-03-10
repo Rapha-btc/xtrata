@@ -7439,3 +7439,289 @@ p {
     right: 6px;
   }
 }
+
+.dora-demo {
+  --app-max-width: 1280px;
+  gap: 10px;
+}
+
+.dora-demo__hero {
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top right, rgba(11, 114, 133, 0.2), transparent 34%),
+    linear-gradient(135deg, rgba(224, 90, 42, 0.18) 0%, rgba(245, 158, 11, 0.1) 38%, rgba(255, 255, 255, 0) 100%),
+    var(--surface-overlay);
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.9fr);
+  gap: 16px 20px;
+  align-items: stretch;
+}
+
+.dora-demo__hero-copy {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.dora-demo__eyebrow {
+  margin: 0;
+  font-size: 0.74rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.dora-demo__subline {
+  max-width: 62ch;
+  margin: 0;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.dora-demo__hero-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dora-demo__hero-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.dora-demo__meta-card {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: linear-gradient(180deg, var(--surface-soft), var(--surface-soft-2));
+}
+
+.dora-demo__wallet-bar {
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.dora-demo__config-panel {
+  border-color: var(--alert-border);
+}
+
+.dora-demo__config-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+}
+
+.dora-demo__modules {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dora-demo__panel {
+  grid-column: span 4;
+  min-width: 0;
+}
+
+.dora-demo__panel--wide {
+  grid-column: span 6;
+}
+
+.dora-demo__preview-frame {
+  aspect-ratio: 1 / 1;
+  border-radius: 18px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(15, 23, 42, 0.04)),
+    var(--surface-soft);
+  border: 1px solid var(--border);
+  margin-bottom: 14px;
+}
+
+.dora-demo__token-card {
+  height: 100%;
+  min-height: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.dora-demo__token-card .token-card__media {
+  min-height: 0;
+}
+
+.dora-demo__preview-empty {
+  height: 100%;
+  padding: 18px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  color: var(--muted);
+}
+
+.dora-demo__preview-empty p {
+  margin: 0;
+  max-width: 28ch;
+}
+
+.dora-demo__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 14px;
+}
+
+.dora-demo__actions > * {
+  min-width: 0;
+}
+
+.dora-demo__inline-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.dora-demo__x402-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.dora-demo__x402-stage {
+  min-width: 0;
+}
+
+.dora-demo__premium-frame,
+.dora-demo__premium-json {
+  width: 100%;
+  min-height: 520px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface-soft);
+}
+
+.dora-demo__premium-frame {
+  display: block;
+}
+
+.dora-demo__premium-json {
+  margin: 0;
+  padding: 18px;
+  overflow: auto;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  background: var(--surface-code);
+}
+
+.dora-demo__x402-controls {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.dora-demo__locked-note {
+  padding: 14px 16px;
+  border: 1px solid var(--alert-border);
+  border-radius: 16px;
+  background: var(--alert-bg);
+}
+
+.dora-demo__locked-note strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.dora-demo__locked-note p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.dora-demo__event-empty {
+  margin: 0;
+  color: var(--muted);
+}
+
+.dora-demo__event-list {
+  list-style: none;
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+}
+
+.dora-demo__event-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.dora-demo__event-time {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.dora-demo__event-message {
+  min-width: 0;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+@media (max-width: 1080px) {
+  .dora-demo__panel {
+    grid-column: span 6;
+  }
+
+  .dora-demo__panel--wide {
+    grid-column: span 12;
+  }
+
+  .dora-demo__hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dora-demo__x402-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .dora-demo__modules {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dora-demo__panel,
+  .dora-demo__panel--wide {
+    grid-column: auto;
+  }
+
+  .dora-demo__hero-meta {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dora-demo__premium-frame,
+  .dora-demo__premium-json {
+    min-height: 420px;
+  }
+
+  .dora-demo__event-item {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+}

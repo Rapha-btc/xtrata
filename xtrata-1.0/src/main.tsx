@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
 import PublicApp from './PublicApp';
 import SimplePublicHome from './SimplePublicHome';
+import DoraHacksDemoPage from './DoraHacksDemoPage';
 import CollectionMintLivePage from './CollectionMintLivePage';
 import AdminGate from './admin/AdminGate';
 import ArtistManagerGate from './manage/ArtistManagerGate';
@@ -53,6 +54,7 @@ applyThemeToDocument(resolveInitialTheme());
 
 const COLLECTION_LIVE_PATH_PREFIX = '/collection/';
 const WORKSPACE_PATH_PREFIX = '/workspace';
+const DORA_HACKS_PATH = '/workspace/dora-hacks';
 const pathname = window.location.pathname;
 const collectionPathMatch = pathname.startsWith(COLLECTION_LIVE_PATH_PREFIX)
   ? pathname.slice(COLLECTION_LIVE_PATH_PREFIX.length)
@@ -82,6 +84,8 @@ ReactDOM.createRoot(root).render(
         <ArtistManagerGate>
           <CollectionManagerApp />
         </ArtistManagerGate>
+      ) : pathname.startsWith(DORA_HACKS_PATH) ? (
+        <DoraHacksDemoPage />
       ) : pathname.startsWith(WORKSPACE_PATH_PREFIX) ? (
         <PublicApp />
       ) : (
