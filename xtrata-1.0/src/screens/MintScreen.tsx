@@ -60,7 +60,7 @@ import {
   toDependencyStrings,
   validateDependencyIds
 } from '../lib/mint/dependencies';
-import { confirmMintWalletGuidance } from '../lib/mint/wallet-guidance';
+import { confirmMintWalletGuidanceOrAbort } from '../lib/mint/wallet-guidance';
 import {
   estimateContractFees,
   formatMicroStx,
@@ -1942,11 +1942,12 @@ export default function MintScreen(props: MintScreenProps) {
       dependencyCount: mintInputs.dependencyIds.length,
       expectedHash: bytesToHex(expectedHash)
     });
-    if (!confirmMintWalletGuidance('single')) {
-      setMintStatus(
-        'Inscription cancelled. Review the wallet guidance and fee settings before retrying.'
-      );
-      appendLog('Inscription cancelled before wallet flow.');
+    if (
+      !confirmMintWalletGuidanceOrAbort('single', {
+        setStatus: setMintStatus,
+        appendLog
+      })
+    ) {
       return;
     }
 
@@ -2282,11 +2283,12 @@ export default function MintScreen(props: MintScreenProps) {
       dependencyCount: mintInputs.dependencyIds.length,
       expectedHash: bytesToHex(expectedHash)
     });
-    if (!confirmMintWalletGuidance('resume')) {
-      setMintStatus(
-        'Resume cancelled. Review the wallet guidance and fee settings before retrying.'
-      );
-      appendLog('Resume cancelled before wallet flow.');
+    if (
+      !confirmMintWalletGuidanceOrAbort('resume', {
+        setStatus: setMintStatus,
+        appendLog
+      })
+    ) {
       return;
     }
 

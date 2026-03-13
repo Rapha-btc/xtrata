@@ -45,7 +45,7 @@ import {
   MAX_TOKEN_URI_LENGTH,
   TX_DELAY_SECONDS
 } from '../lib/mint/constants';
-import { confirmMintWalletGuidance } from '../lib/mint/wallet-guidance';
+import { confirmMintWalletGuidanceOrAbort } from '../lib/mint/wallet-guidance';
 import {
   buildCollectionBatchSealStxPostConditions,
   buildCollectionSealStxPostConditions,
@@ -1268,11 +1268,12 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
       appendLog('Batch mint blocked: invalid token URI.');
       return;
     }
-    if (!confirmMintWalletGuidance('collection')) {
-      setMintStatus(
-        'Batch mint cancelled. Review the wallet guidance and fee settings before retrying.'
-      );
-      appendLog('Batch mint cancelled before wallet flow.');
+    if (
+      !confirmMintWalletGuidanceOrAbort('collection-batch', {
+        setStatus: setMintStatus,
+        appendLog
+      })
+    ) {
       return;
     }
     setMintPending(true);
