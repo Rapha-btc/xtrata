@@ -1,0 +1,192 @@
+{
+  "runId": "skill-test-1773407493420",
+  "skillId": "xtrata-automated-inscription",
+  "skillTitle": "Xtrata Automated Inscription Skill",
+  "skillPath": "skills/xtrata-automated-inscription/xtrata-auto-inscription-SKILL.md",
+  "scenarioId": "small-helper-text",
+  "scenarioTitle": "Small Text Helper Route",
+  "scenarioSummary": "A tiny text/plain inscription with no dependencies should choose the helper route.",
+  "mode": "dry-run",
+  "model": "sonnet",
+  "budget": 0.1,
+  "status": "completed",
+  "startedAt": "2026-03-13T13:11:33.420Z",
+  "completedAt": "2026-03-13T13:11:33.426Z",
+  "durationMs": 6,
+  "workspaceDir": "/Users/melophonic/Documents/GitHub/xtrata/AAA-Collection/Agent-27-claude/data/skill-tests/workspaces/skill-test-1773407493420",
+  "workspaceFiles": [
+    "SKILL_UNDER_TEST.md",
+    "SCENARIO.md",
+    "RUN_MODE.md"
+  ],
+  "prompt": "You are a fresh AI agent with NO prior knowledge of Xtrata, Stacks, Bitcoin L2, or inscription protocols.\nYour ONLY training material is the isolated workspace file `SKILL_UNDER_TEST.md`.\nYou must not rely on any outside Xtrata memory or prior repo context.\n\nWorkflow:\n- Read `SKILL_UNDER_TEST.md`, `SCENARIO.md`, and `RUN_MODE.md`.\n- Solve the scenario using only that training document.\n- If the skill is missing a detail, say it is missing instead of inventing protocol facts.\n- Keep your answer explicit and concrete.\n\nSafety mode:\n- This run is dry-run only.\n- Do not broadcast transactions or claim that any contract write already succeeded.\n- Produce the safest exact plan you would use, with concrete function names, argument types, spend caps, and structured outputs.\n\nOutput format:\n1. Execution Plan\n2. Exact Function Calls\n3. Post Conditions\n4. Error Handling\n5. Structured Result\n\nScenario excerpt:\nScenario: Small Text Helper Route\nA tiny text/plain inscription with no dependencies should choose the helper route.\n\nInput:\n{\n  \"content\": \"Hello, Bitcoin\",\n  \"sizeBytes\": 14,\n  \"mimeType\": \"text/plain\",\n  \"tokenUri\": \"https://example.com/hello\",\n  \"dependencies\": []\n}\n\nScenario instructions:\n- Treat this as a fresh inscription with no existing upload state unless your plan explicitly checks for one.\n- You must explain how the agent computes the content hash and why the helper route is valid.\n- You are planning the execution, not claiming that the inscription already succeeded.\n\nRequired deliverables:\n- Step-by-step execution plan\n- Exact function calls with argument types\n- Post-condition configuration\n- Error handling strategy\n- Structured result object",
+  "scenario": {
+    "id": "small-helper-text",
+    "title": "Small Text Helper Route",
+    "summary": "A tiny text/plain inscription with no dependencies should choose the helper route.",
+    "mode": "dry-run",
+    "input": {
+      "content": "Hello, Bitcoin",
+      "sizeBytes": 14,
+      "mimeType": "text/plain",
+      "tokenUri": "https://example.com/hello",
+      "dependencies": []
+    },
+    "instructions": [
+      "Treat this as a fresh inscription with no existing upload state unless your plan explicitly checks for one.",
+      "You must explain how the agent computes the content hash and why the helper route is valid.",
+      "You are planning the execution, not claiming that the inscription already succeeded."
+    ],
+    "deliverables": [
+      "Step-by-step execution plan",
+      "Exact function calls with argument types",
+      "Post-condition configuration",
+      "Error handling strategy",
+      "Structured result object"
+    ],
+    "assertions": [
+      {
+        "id": "hash-chain",
+        "label": "Uses the incremental hash chain rather than hashing the whole file once",
+        "severity": "critical",
+        "requiredAny": [
+          "32 zero bytes",
+          "incremental hash",
+          "sha-256\\(running-hash \\|\\| chunk\\)"
+        ]
+      },
+      {
+        "id": "dedupe-first",
+        "label": "Checks deduplication before any write path",
+        "severity": "critical",
+        "requiredAny": [
+          "get-id-by-hash",
+          "dedupe"
+        ]
+      },
+      {
+        "id": "helper-route",
+        "label": "Chooses the helper route with mint-small-single-tx",
+        "severity": "critical",
+        "requiredAll": [
+          "helper",
+          "mint-small-single-tx"
+        ]
+      },
+      {
+        "id": "fee-unit",
+        "label": "Reads the current fee unit before building spend caps",
+        "severity": "important",
+        "requiredAny": [
+          "get-fee-unit"
+        ]
+      },
+      {
+        "id": "deny-mode",
+        "label": "Uses deny-mode STX post-conditions",
+        "severity": "critical",
+        "requiredAny": [
+          "PostConditionMode.Deny",
+          "deny mode"
+        ]
+      }
+    ]
+  },
+  "events": [
+    {
+      "timestamp": "2026-03-13T13:11:33.425Z",
+      "type": "stdout",
+      "line": "[tool] Read SKILL_UNDER_TEST.md",
+      "meta": null
+    },
+    {
+      "timestamp": "2026-03-13T13:11:33.425Z",
+      "type": "thinking",
+      "line": "Inspecting isolated skill workspace",
+      "meta": null
+    },
+    {
+      "timestamp": "2026-03-13T13:11:33.425Z",
+      "type": "stdout",
+      "line": "Planning helper route with dedupe and fee lookup",
+      "meta": null
+    }
+  ],
+  "rawOutput": [
+    "{\"type\":\"assistant\",\"timestamp\":\"2026-03-13T13:11:33.426Z\",\"message\":{\"type\":\"message\",\"content\":[{\"type\":\"tool_use\",\"name\":\"Read\",\"input\":{\"file_path\":\"SKILL_UNDER_TEST.md\"}},{\"type\":\"thinking\",\"thinking\":\"Need the safest route and exact spend cap.\"},{\"type\":\"text\",\"text\":\"1. Execution Plan\\nCheck get-id-by-hash first for dedupe.\\nCompute the incremental hash using 32 zero bytes as the seed and sha-256(running-hash || chunk).\\nBecause this is a fresh small file, use the helper route and call mint-small-single-tx after get-fee-unit.\\nUse PostConditionMode.Deny for the STX spend cap.\\n5. Structured Result\"}]}}",
+    "{\"type\":\"result\",\"timestamp\":\"2026-03-13T13:11:33.426Z\",\"is_error\":false,\"duration_ms\":1200,\"num_turns\":4,\"cost_usd\":0.01}"
+  ],
+  "assistantText": "1. Execution Plan\nCheck get-id-by-hash first for dedupe.\nCompute the incremental hash using 32 zero bytes as the seed and sha-256(running-hash || chunk).\nBecause this is a fresh small file, use the helper route and call mint-small-single-tx after get-fee-unit.\nUse PostConditionMode.Deny for the STX spend cap.\n5. Structured Result",
+  "trace": [
+    {
+      "kind": "tool_use",
+      "timestamp": "2026-03-13T13:11:33.426Z",
+      "name": "Read",
+      "input": {
+        "file_path": "SKILL_UNDER_TEST.md"
+      }
+    },
+    {
+      "kind": "thinking",
+      "timestamp": "2026-03-13T13:11:33.426Z",
+      "text": "Need the safest route and exact spend cap."
+    },
+    {
+      "kind": "assistant_text",
+      "timestamp": "2026-03-13T13:11:33.426Z",
+      "text": "1. Execution Plan\nCheck get-id-by-hash first for dedupe.\nCompute the incremental hash using 32 zero bytes as the seed and sha-256(running-hash || chunk).\nBecause this is a fresh small file, use the helper route and call mint-small-single-tx after get-fee-unit.\nUse PostConditionMode.Deny for the STX spend cap.\n5. Structured Result"
+    },
+    {
+      "kind": "result",
+      "timestamp": "2026-03-13T13:11:33.426Z",
+      "isError": false,
+      "durationMs": 1200,
+      "turns": 4,
+      "costUsd": 0.01
+    }
+  ],
+  "score": {
+    "verdict": "PASS",
+    "summary": "5/5 assertions passed",
+    "assertions": [
+      {
+        "id": "hash-chain",
+        "label": "Uses the incremental hash chain rather than hashing the whole file once",
+        "severity": "critical",
+        "passed": true,
+        "detail": "Matched."
+      },
+      {
+        "id": "dedupe-first",
+        "label": "Checks deduplication before any write path",
+        "severity": "critical",
+        "passed": true,
+        "detail": "Matched."
+      },
+      {
+        "id": "helper-route",
+        "label": "Chooses the helper route with mint-small-single-tx",
+        "severity": "critical",
+        "passed": true,
+        "detail": "Matched."
+      },
+      {
+        "id": "fee-unit",
+        "label": "Reads the current fee unit before building spend caps",
+        "severity": "important",
+        "passed": true,
+        "detail": "Matched."
+      },
+      {
+        "id": "deny-mode",
+        "label": "Uses deny-mode STX post-conditions",
+        "severity": "critical",
+        "passed": true,
+        "detail": "Matched."
+      }
+    ]
+  },
+  "error": null,
+  "pid": 11155,
+  "cancelRequested": false
+}
