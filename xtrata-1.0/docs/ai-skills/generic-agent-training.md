@@ -44,6 +44,7 @@ is not supported by the current contracts.
 
 1. Load [`XTRATA_AGENT_SKILL.md`](https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/XTRATA_AGENT_SKILL.md).
 2. Load the focused skill docs:
+   - [`skill-query.md`](skill-query.md)
    - [`skill-inscribe.md`](skill-inscribe.md)
    - [`skill-batch-mint.md`](skill-batch-mint.md)
 3. Train chunking and incremental hash routines exactly.
@@ -122,6 +123,7 @@ is not supported by the current contracts.
 ## Companion references
 
 - [`docs/ai-skills/README.md`](https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/ai-skills/README.md)
+- [`skill-query.md`](skill-query.md)
 - [`skill-inscribe.md`](skill-inscribe.md)
 - [`skill-batch-mint.md`](skill-batch-mint.md)
 - [`XTRATA_AGENT_SKILL.md`](https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/XTRATA_AGENT_SKILL.md)

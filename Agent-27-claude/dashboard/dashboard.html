@@ -1,0 +1,2205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent 27 — Operations Console</title>
+    <style>
+        :root {
+            --bg: #050505;
+            --text: #949494;
+            --text-em: #fff;
+            --accent: #ff7900;
+            --border: #1a1a1a;
+            --font: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+            --green: #32cd32;
+            --red: #ff6347;
+            --amber-dim: #3a2a00;
+            --amber-mid: #7a5500;
+        }
+        * { box-sizing: border-box; }
+        html { overflow-x: hidden; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font);
+            font-size: 14px;
+            margin: 0;
+            padding: 1rem;
+            max-width: 100vw;
+            overflow-x: hidden;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            max-width: 1600px;
+            width: 100%;
+            margin: auto;
+        }
+        .full { grid-column: 1 / -1; }
+
+        /* --- Header --- */
+        .header {
+            grid-column: 1 / -1;
+            border: 1px solid var(--border);
+            padding: 0.5rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .header h1 { color: var(--text-em); margin: 0; font-size: 18px; }
+        .header-sub { color: var(--text); font-size: 12px; margin: 0; }
+        .header-wallet {
+            margin-top: 0.35rem;
+            font-size: 11px;
+            line-height: 1.4;
+        }
+        .header-wallet a {
+            color: var(--accent);
+            text-decoration: none;
+            font-family: var(--font);
+            word-break: break-all;
+        }
+        .header-wallet a:hover {
+            text-decoration: underline;
+        }
+        .header-stats {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 13px;
+        }
+        .header-stat-label { color: #666; font-size: 11px; }
+        .header-stat-value { color: var(--text-em); }
+
+        /* --- Panel --- */
+        .panel {
+            border: 1px solid var(--border);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            overflow: hidden;
+        }
+        .panel h2 {
+            color: var(--text-em);
+            margin: 0 0 0.75rem 0;
+            font-size: 14px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .panel h2 .save-indicator {
+            font-size: 11px;
+            font-weight: normal;
+            color: var(--green);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .panel h2 .save-indicator.visible { opacity: 1; }
+        .panel h2 .save-indicator.error { color: var(--red); }
+
+        /* --- Operations Panel --- */
+        .ops { grid-column: 1 / -1; }
+        .ops-buttons {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .btn {
+            font-family: var(--font);
+            font-size: 13px;
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--accent);
+            background: transparent;
+            color: var(--accent);
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+        }
+        .btn:hover:not(:disabled) {
+            background: var(--accent);
+            color: #000;
+        }
+        .btn:disabled {
+            color: #444;
+            border-color: #333;
+            cursor: default;
+        }
+        .btn-cancel {
+            border-color: var(--red);
+            color: var(--red);
+            display: none;
+        }
+        .btn-cancel:hover:not(:disabled) {
+            background: var(--red);
+            color: #000;
+        }
+        .btn-cancel.visible { display: inline-block; }
+
+        /* Cadence bar */
+        .cadence-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 0.75rem;
+            padding: 0.4rem 0.75rem;
+            border: 1px solid var(--border);
+            font-size: 12px;
+        }
+        .cadence-label { color: #666; flex-shrink: 0; }
+        .cadence-pips {
+            display: flex;
+            gap: 0.35rem;
+            flex-shrink: 0;
+        }
+        .cadence-pip {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            background: #222;
+            border: 1px solid #333;
+            transition: background 0.3s, border-color 0.3s;
+        }
+        .cadence-pip.filled-1 { background: var(--green); border-color: var(--green); }
+        .cadence-pip.filled-2 { background: #ffaa00; border-color: #ffaa00; }
+        .cadence-pip.filled-3 { background: var(--red); border-color: var(--red); }
+        .cadence-text { color: var(--text); flex-shrink: 0; }
+        .cadence-bar.ceiling {
+            border-color: var(--red);
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+        .cadence-bar.ceiling .cadence-text { color: var(--red); }
+
+        /* Draft status */
+        .draft-status {
+            font-size: 12px;
+            margin-bottom: 0.75rem;
+            padding: 0.4rem 0.75rem;
+            border: 1px solid var(--border);
+            display: none;
+        }
+        .draft-status.has-draft {
+            display: block;
+            border-color: var(--green);
+            color: var(--green);
+        }
+        .draft-status.no-draft {
+            display: block;
+            color: #666;
+        }
+
+        /* Phase timer */
+        .phase-timer {
+            display: none;
+            margin-bottom: 1rem;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border);
+            font-size: 12px;
+        }
+        .phase-timer.active { display: block; }
+        .phase-timer-top {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.4rem;
+            color: var(--accent);
+        }
+        .phase-timer-bar {
+            width: 100%;
+            height: 6px;
+            background: #111;
+            border: 1px solid var(--border);
+        }
+        .phase-timer-fill {
+            height: 100%;
+            background: var(--accent);
+            transition: width 1s linear;
+        }
+
+        /* Run history */
+        .history-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-size: 12px;
+            line-height: 1.8;
+        }
+        .history-list li {
+            display: flex;
+            gap: 0.5rem;
+            align-items: baseline;
+            flex-wrap: wrap;
+        }
+        .history-icon { width: 14px; text-align: center; flex-shrink: 0; }
+        .history-icon.ok { color: var(--green); }
+        .history-icon.fail { color: var(--red); }
+        .history-label { color: var(--text); flex-shrink: 0; }
+        .history-time { color: #666; flex-shrink: 0; }
+        .history-detail { color: #888; overflow: hidden; text-overflow: ellipsis; }
+
+        /* --- Content Panels --- */
+        .panel-content {
+            flex-grow: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            max-height: 500px;
+            min-width: 0;
+            word-wrap: break-word;
+        }
+
+        pre.content {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 12px;
+            line-height: 1.5;
+            margin: 0;
+            flex-grow: 1;
+            overflow-y: auto;
+            max-height: 500px;
+        }
+
+        /* Editable textarea panels */
+        .panel-editor {
+            width: 100%;
+            min-width: 0;
+            min-height: 200px;
+            max-height: 500px;
+            flex-grow: 1;
+            resize: vertical;
+            background: #0a0a0a;
+            color: var(--text);
+            border: 1px solid var(--border);
+            font-family: var(--font);
+            font-size: 12px;
+            line-height: 1.5;
+            padding: 0.5rem;
+            overflow-y: auto;
+            overflow-x: hidden;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        .panel-editor:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        /* Metabolic gauges */
+        .metric-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem 1rem;
+            margin-bottom: 0.75rem;
+        }
+        .metric-label { color: #777; font-size: 12px; }
+        .metric-value { color: var(--text-em); }
+        .gauge {
+            width: 100%;
+            height: 10px;
+            border: 1px solid var(--border);
+            background: #111;
+            margin: 0.5rem 0;
+        }
+        .gauge-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff4d4d 0%, #ff7900 45%, #32cd32 100%);
+        }
+        .gauge-caption { font-size: 11px; color: #aaa; }
+        .poll-time { font-size: 11px; color: #555; margin-top: 0.5rem; }
+
+        /* Journal log table */
+        .journal-table-wrap {
+            overflow-x: auto;
+            overflow-y: auto;
+            max-height: 500px;
+            min-width: 0;
+            -webkit-overflow-scrolling: touch;
+        }
+        .journal-table {
+            width: 100%;
+            min-width: 300px;
+            border-collapse: collapse;
+            font-size: 12px;
+            table-layout: auto;
+        }
+        .journal-table th {
+            color: var(--text-em);
+            text-align: left;
+            padding: 0.3rem 0.5rem;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            background: var(--bg);
+            white-space: nowrap;
+        }
+        .journal-table td {
+            padding: 0.3rem 0.5rem;
+            border-bottom: 1px solid #111;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .journal-table tr:hover td { background: #0a0a0a; }
+
+        /* --- Activity Log --- */
+        .activity-log { min-height: 300px; }
+        .log-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            font-size: 12px;
+        }
+        .log-controls label {
+            color: var(--text);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .log-controls input[type="checkbox"] { accent-color: var(--accent); }
+
+        #activity-log-content {
+            flex-grow: 1;
+            overflow-y: auto;
+            max-height: 400px;
+            font-size: 12px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            overflow-x: hidden;
+        }
+        .log-line {
+            display: grid;
+            grid-template-columns: minmax(0, 130px) minmax(0, 1fr);
+            gap: 0.5rem;
+            word-break: break-word;
+        }
+        .log-line .timestamp { color: #666; }
+        .log-line .type-http { color: #8aa7ff; }
+        .log-line .type-stdout { color: #d6d6d6; }
+        .log-line .type-stderr { color: #d6a06d; }
+        .log-line .type-start { color: #87CEEB; }
+        .log-line .type-stop { color: #ffd27d; }
+        .log-line .type-error { color: #FF6347; }
+        .log-line .type-inscription { color: var(--accent); font-weight: bold; }
+        .log-line .type-thinking { color: #8a6dba; font-style: italic; }
+        .log-line .type-thinking.hidden { display: none; }
+
+        /* Outreach Styles */
+        .outreach-form {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .outreach-row {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .outreach-row label { font-size: 11px; color: #666; }
+        .outreach-select, .outreach-input {
+            background: #0a0a0a;
+            color: var(--text-em);
+            border: 1px solid var(--border);
+            padding: 0.5rem;
+            font-family: var(--font);
+            font-size: 13px;
+        }
+        .outreach-select:focus, .outreach-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .outreach-msg {
+            min-height: 80px;
+            resize: vertical;
+        }
+        .outreach-status {
+            font-size: 11px;
+            padding: 0.4rem;
+            border: 1px solid var(--border);
+            display: none;
+        }
+        .outreach-status.visible { display: block; }
+        .outreach-status.success { border-color: var(--green); color: var(--green); }
+        .outreach-status.error { border-color: var(--red); color: var(--red); }
+        .outreach-review {
+            background: #1a0f00;
+            border: 1px solid var(--accent);
+            padding: 0.75rem;
+            margin-top: 0.5rem;
+            display: none;
+        }
+        .outreach-review.visible { display: block; }
+        .outreach-review h3 { margin: 0 0 0.5rem 0; font-size: 12px; color: var(--accent); }
+        .outreach-review-text { font-size: 12px; color: var(--text-em); margin-bottom: 0.75rem; }
+
+        .outreach-thought {
+            background: #0a0a0a;
+            border-left: 2px solid var(--accent);
+            padding: 0.5rem;
+            font-size: 11px;
+            font-style: italic;
+            margin-bottom: 0.75rem;
+            color: #aaa;
+            display: none;
+        }
+        .outreach-thought.visible { display: block; }
+        .outreach-memory {
+            background: #07120a;
+            border: 1px solid #1f4d2a;
+            padding: 0.75rem;
+            font-size: 11px;
+            line-height: 1.45;
+            color: #b8d7be;
+            display: none;
+            white-space: pre-wrap;
+            margin-bottom: 0.75rem;
+        }
+        .outreach-memory.visible { display: block; }
+
+        .outreach-history-log {
+            margin-top: 1rem;
+            border-top: 1px solid var(--border);
+            padding-top: 0.75rem;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .outreach-history-item {
+            font-size: 11px;
+            margin-bottom: 0.5rem;
+            border-bottom: 1px solid #111;
+            padding-bottom: 0.25rem;
+        }
+        .outreach-history-ts { color: #555; }
+        .outreach-history-agent { color: var(--accent); font-weight: bold; }
+        .outreach-history-msg { color: var(--text); }
+
+        .outreach-info {
+            background: #001a1a;
+            border: 1px solid #004d4d;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            font-size: 12px;
+            color: #ccc;
+            line-height: 1.4;
+        }
+        .outreach-info strong { color: var(--accent); }
+        .outreach-info ul { margin: 0.5rem 0 0 1rem; padding: 0; }
+        .outreach-info li { margin-bottom: 0.25rem; }
+
+        /* Skills Lab */
+        .skills-lab-controls {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        .skills-lab-row {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            min-width: 0;
+        }
+        .skills-lab-row label {
+            font-size: 11px;
+            color: #666;
+        }
+        .skills-lab-select {
+            background: #0a0a0a;
+            color: var(--text-em);
+            border: 1px solid var(--border);
+            padding: 0.5rem;
+            font-family: var(--font);
+            font-size: 13px;
+            min-width: 0;
+        }
+        .skills-lab-input {
+            background: #0a0a0a;
+            color: var(--text-em);
+            border: 1px solid var(--border);
+            padding: 0.5rem;
+            font-family: var(--font);
+            font-size: 13px;
+            min-width: 0;
+        }
+        .skills-lab-select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .skills-lab-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .skills-lab-note {
+            font-size: 11px;
+            color: #8d8d8d;
+            margin-bottom: 0.75rem;
+            line-height: 1.5;
+        }
+        .skills-lab-status {
+            border: 1px solid var(--border);
+            padding: 0.75rem;
+            margin-bottom: 0.75rem;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        .skills-lab-status.running { border-color: var(--accent); }
+        .skills-lab-status.pass { border-color: var(--green); }
+        .skills-lab-status.partial { border-color: #ffaa00; }
+        .skills-lab-status.fail { border-color: var(--red); }
+        .skills-lab-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .skills-lab-box {
+            border: 1px solid var(--border);
+            padding: 0.75rem;
+            min-width: 0;
+            min-height: 160px;
+            display: flex;
+            flex-direction: column;
+        }
+        .skills-lab-box.full { grid-column: 1 / -1; }
+        .skills-lab-list {
+            overflow-y: auto;
+            max-height: 260px;
+            min-width: 0;
+        }
+        .skills-lab-note-list {
+            margin: 0;
+            padding-left: 1rem;
+            color: #b5b5b5;
+            font-size: 11px;
+            line-height: 1.5;
+        }
+        .skills-lab-note-list li {
+            margin-bottom: 0.35rem;
+        }
+        .skill-history-item {
+            border: 1px solid var(--border);
+            background: #0a0a0a;
+            color: var(--text);
+            padding: 0.6rem;
+            cursor: pointer;
+            margin-bottom: 0.5rem;
+            width: 100%;
+            text-align: left;
+            font-family: var(--font);
+            font-size: 11px;
+        }
+        .skill-history-item:hover {
+            border-color: var(--accent);
+            color: var(--text-em);
+        }
+        .skill-history-item.active {
+            border-color: var(--accent);
+            background: #141414;
+        }
+        .skill-history-title { color: var(--text-em); display: block; margin-bottom: 0.2rem; }
+        .skill-history-meta { color: #777; display: block; }
+        .assertion-item {
+            border-left: 3px solid #333;
+            padding: 0.4rem 0.6rem;
+            margin-bottom: 0.5rem;
+            background: #0a0a0a;
+            font-size: 11px;
+            line-height: 1.45;
+        }
+        .assertion-item.pass { border-color: var(--green); }
+        .assertion-item.partial { border-color: #ffaa00; }
+        .assertion-item.fail { border-color: var(--red); }
+        .assertion-label { color: var(--text-em); display: block; margin-bottom: 0.2rem; }
+        .assertion-detail { color: #8a8a8a; }
+        .skill-trace {
+            max-height: 320px;
+            overflow-y: auto;
+            font-size: 12px;
+            line-height: 1.45;
+        }
+        .skill-trace-line {
+            display: grid;
+            grid-template-columns: minmax(0, 95px) minmax(0, 110px) minmax(0, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 0.25rem;
+            word-break: break-word;
+        }
+        .skill-trace-ts { color: #666; }
+        .skill-trace-kind { color: #87CEEB; text-transform: uppercase; font-size: 10px; }
+        .skill-trace-msg { color: var(--text); }
+        .skill-trace-msg.type-error { color: var(--red); }
+        .skill-trace-msg.type-thinking { color: #8a6dba; }
+        .skill-trace-msg.type-stderr { color: #d6a06d; }
+        .skill-trace-msg.type-start { color: #87CEEB; }
+        .skill-trace-msg.type-stdout { color: #d6d6d6; }
+        .skill-trace-msg.type-tool_use { color: var(--accent); }
+        .skill-trace-msg.type-tool_result { color: #d6d6d6; }
+        .skill-trace-msg.type-assistant_text { color: #d6d6d6; }
+        .skills-lab-output {
+            background: #0a0a0a;
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 0.75rem;
+            margin: 0;
+            max-height: 320px;
+            overflow: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        .skills-lab-kv {
+            display: grid;
+            grid-template-columns: minmax(0, 140px) minmax(0, 1fr);
+            gap: 0.35rem 0.75rem;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        .skills-lab-kv .label { color: #666; }
+        .skills-lab-kv .value { color: var(--text-em); word-break: break-word; }
+
+        /* Inscription Banner */
+        #inscription-banner {
+            grid-column: 1 / -1;
+            display: none;
+            border: 1px solid var(--accent);
+            background: #1a0f00;
+            padding: 0.6rem 1rem;
+            font-size: 13px;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        #inscription-banner.visible { display: flex; }
+        #inscription-banner .banner-icon {
+            font-size: 16px;
+            flex-shrink: 0;
+            width: 20px;
+            text-align: center;
+        }
+        #inscription-banner .banner-steps {
+            display: flex;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+        #inscription-banner .step-pip {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: #333;
+            transition: background 0.3s;
+        }
+        #inscription-banner .step-pip.active {
+            background: var(--accent);
+            animation: pulse-glow 1.5s ease-in-out infinite;
+        }
+        #inscription-banner .step-pip.done { background: var(--green); }
+        #inscription-banner .step-pip.failed { background: var(--red); }
+        #inscription-banner .banner-text {
+            color: var(--text-em);
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #inscription-banner .banner-detail {
+            color: var(--text);
+            font-size: 12px;
+        }
+        #inscription-banner.success { border-color: var(--green); background: #001a00; }
+        #inscription-banner.error { border-color: var(--red); background: #1a0000; }
+
+        /* Footer */
+        .footer {
+            grid-column: 1 / -1;
+            border: 1px solid var(--border);
+            padding: 0.5rem 1rem;
+            text-align: center;
+            font-size: 12px;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .running-indicator {
+            animation: pulse-glow 2s ease-in-out infinite;
+            color: var(--accent);
+        }
+
+        @media (max-width: 900px) {
+            .container { grid-template-columns: 1fr; }
+            .full { grid-column: 1; }
+            .header { flex-direction: column; align-items: flex-start; }
+            .header-stats { flex-wrap: wrap; }
+            body { padding: 0.5rem; }
+            .panel { padding: 0.75rem; }
+            .btn { font-size: 12px; padding: 0.4rem 0.75rem; }
+            .log-line { grid-template-columns: minmax(0, 80px) minmax(0, 1fr); gap: 0.3rem; }
+            .log-line .timestamp { font-size: 10px; }
+            .metric-grid { grid-template-columns: 1fr; }
+            .journal-table td { max-width: 120px; }
+            .skills-lab-controls,
+            .skills-lab-grid { grid-template-columns: 1fr; }
+            .skills-lab-box.full { grid-column: 1; }
+            .skills-lab-kv { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <!-- Header with inline stats -->
+    <header class="header">
+        <div>
+            <h1>AGENT 27</h1>
+            <p class="header-sub">Autonomous On-Chain Journal</p>
+            <div class="header-wallet">
+                Wallet:
+                <a href="https://explorer.hiro.so/address/SP15T1W26JTNS26VG17HM468KW7TQD3124KTYA9EJ?chain=mainnet" target="_blank" rel="noopener noreferrer">
+                    SP15T1W26JTNS26VG17HM468KW7TQD3124KTYA9EJ
+                </a>
+            </div>
+        </div>
+        <div class="header-stats">
+            <div>
+                <div class="header-stat-label">STX</div>
+                <div class="header-stat-value" id="hdr-stx">--</div>
+            </div>
+            <div>
+                <div class="header-stat-label">Days</div>
+                <div class="header-stat-value" id="hdr-days">--</div>
+            </div>
+            <div>
+                <div class="header-stat-label">Sats</div>
+                <div class="header-stat-value" id="hdr-sbtc">--</div>
+            </div>
+            <div>
+                <div class="header-stat-label">Graph</div>
+                <div class="header-stat-value" id="hdr-graph">--</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Inscription Progress Banner -->
+    <div id="inscription-banner">
+        <span class="banner-icon" id="banner-icon">&#9654;</span>
+        <div class="banner-steps">
+            <div class="step-pip" id="pip-begin" title="begin-or-get or helper init"></div>
+            <div class="step-pip" id="pip-chunk" title="add-chunk-batch or helper payload"></div>
+            <div class="step-pip" id="pip-seal" title="seal-recursive or helper seal"></div>
+        </div>
+        <span class="banner-text" id="banner-text"></span>
+        <span class="banner-detail" id="banner-detail"></span>
+    </div>
+
+    <!-- Outreach Progress Banner -->
+    <div id="outreach-banner" style="display: none; border: 1px solid var(--accent); background: #000f1a; padding: 0.6rem 1rem; font-size: 13px; align-items: center; gap: 0.75rem; grid-column: 1 / -1;">
+        <span class="banner-icon" id="ob-icon">&#9654;</span>
+        <div class="banner-steps">
+            <div class="step-pip" id="ob-pip-prep" title="Prep & Target"></div>
+            <div class="step-pip" id="ob-pip-pay" title="sBTC Payment"></div>
+            <div class="step-pip" id="ob-pip-sent" title="Message Delivered"></div>
+        </div>
+        <span class="banner-text" id="ob-text"></span>
+        <span class="banner-detail" id="ob-detail"></span>
+    </div>
+
+    <!-- Operations Panel -->
+    <div class="panel ops full">
+        <h2>OPERATIONS</h2>
+
+        <div class="ops-buttons">
+            <button class="btn" id="btn-pulse">&#9654; RUN PULSE</button>
+            <button class="btn" id="btn-compose">&#9654; COMPOSE DRAFT</button>
+            <button class="btn" id="btn-inscribe">&#9654; INSCRIBE ON-CHAIN</button>
+            <button class="btn btn-cancel" id="btn-cancel">&#9632; CANCEL</button>
+        </div>
+
+        <div class="cadence-bar" id="cadence-bar">
+            <span class="cadence-label">Pulses</span>
+            <span class="cadence-pips" id="cadence-pips"></span>
+            <span class="cadence-text" id="cadence-text">0/3</span>
+        </div>
+
+        <div class="draft-status" id="draft-status"></div>
+
+        <div class="phase-timer" id="phase-timer">
+            <div class="phase-timer-top">
+                <span id="pt-label">Running...</span>
+                <span id="pt-elapsed">0:00 / 5:00</span>
+            </div>
+            <div class="phase-timer-bar"><div class="phase-timer-fill" id="pt-fill"></div></div>
+        </div>
+
+        <div id="history-section">
+            <ul class="history-list" id="history-list"></ul>
+        </div>
+    </div>
+
+    <!-- Skills Lab -->
+    <div class="panel full">
+        <h2>SKILLS LAB</h2>
+
+        <div class="skills-lab-controls">
+            <div class="skills-lab-row">
+                <label for="skill-lab-skill">Skill</label>
+                <select class="skills-lab-select" id="skill-lab-skill">
+                    <option value="">Loading skills...</option>
+                </select>
+            </div>
+            <div class="skills-lab-row">
+                <label for="skill-lab-scenario">Scenario</label>
+                <select class="skills-lab-select" id="skill-lab-scenario">
+                    <option value="">Select a skill first</option>
+                </select>
+            </div>
+            <div class="skills-lab-row">
+                <label for="skill-lab-mode">Mode</label>
+                <select class="skills-lab-select" id="skill-lab-mode">
+                    <option value="dry-run">dry-run</option>
+                    <option value="read-only">read-only</option>
+                </select>
+            </div>
+            <div class="skills-lab-row">
+                <label for="skill-lab-model">Model</label>
+                <select class="skills-lab-select" id="skill-lab-model">
+                    <option value="sonnet">sonnet</option>
+                    <option value="opus">opus</option>
+                </select>
+            </div>
+            <div class="skills-lab-row">
+                <label for="skill-lab-budget">Budget (USD)</label>
+                <input class="skills-lab-input" id="skill-lab-budget" type="number" min="0.05" step="0.05" value="0.50">
+            </div>
+        </div>
+
+        <div class="ops-buttons">
+            <button class="btn" id="btn-skill-lab-run">RUN NAIVE TEST</button>
+            <button class="btn btn-cancel" id="btn-skill-lab-cancel">CANCEL TEST</button>
+        </div>
+
+        <div class="skills-lab-note">
+            Skills Lab runs in an isolated generated workspace under <code>data/skill-tests/workspaces/</code>.
+            `dry-run` is the safe default. `read-only` is still prompt-restricted reasoning only.
+            Live chain writes are intentionally excluded from this module.
+        </div>
+
+        <div class="skills-lab-status" id="skill-lab-status">Loading Skills Lab registry...</div>
+
+        <div class="phase-timer" id="skill-lab-timer">
+            <div class="phase-timer-top">
+                <span id="skill-lab-timer-label">Running test...</span>
+                <span id="skill-lab-timer-elapsed">0:00 / 7:00</span>
+            </div>
+            <div class="phase-timer-bar"><div class="phase-timer-fill" id="skill-lab-timer-fill"></div></div>
+        </div>
+
+        <div class="skills-lab-grid">
+            <div class="skills-lab-box">
+                <div class="header-sub" style="margin-bottom:0.6rem; text-transform: uppercase;">Selected Scenario</div>
+                <div class="skills-lab-list" id="skill-lab-meta">No skill selected.</div>
+            </div>
+            <div class="skills-lab-box">
+                <div class="header-sub" style="margin-bottom:0.6rem; text-transform: uppercase;">Scenario Checklist</div>
+                <div class="skills-lab-list" id="skill-lab-scenario-spec">No scenario selected.</div>
+            </div>
+            <div class="skills-lab-box">
+                <div class="header-sub" style="margin-bottom:0.6rem; text-transform: uppercase;">Assertion Scorecard</div>
+                <div class="skills-lab-list" id="skill-lab-assertions">No run selected.</div>
+            </div>
+            <div class="skills-lab-box">
+                <div class="header-sub" style="margin-bottom:0.6rem; text-transform: uppercase;">Run History</div>
+                <div class="skills-lab-list" id="skill-lab-history">No runs yet.</div>
+            </div>
+            <div class="skills-lab-box">
+                <div class="header-sub" style="margin-bottom:0.6rem; text-transform: uppercase;">Debug Summary</div>
+                <div class="skills-lab-list" id="skill-lab-summary">No run selected.</div>
+            </div>
+            <div class="skills-lab-box full">
+                <div class="header-sub" style="margin-bottom:0.6rem; text-transform: uppercase;">Prompt Bundle</div>
+                <pre class="skills-lab-output" id="skill-lab-prompt">No run selected.</pre>
+            </div>
+            <div class="skills-lab-box full">
+                <div class="header-sub" style="margin-bottom:0.6rem; text-transform: uppercase;">Structured Trace</div>
+                <div class="skill-trace" id="skill-lab-trace">No trace yet.</div>
+            </div>
+            <div class="skills-lab-box full">
+                <div class="header-sub" style="margin-bottom:0.6rem; text-transform: uppercase;">Assistant Result</div>
+                <pre class="skills-lab-output" id="skill-lab-output">No run selected.</pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Agent Outreach Panel -->
+    <div class="panel full">
+        <h2>AGENT OUTREACH (sBTC)</h2>
+        
+        <div class="outreach-info">
+            <strong>Outreach Protocol:</strong> Messaging utilizes the AIBTC Inbox system.
+            <ul>
+                <li><strong>Cost:</strong> 100 satoshis (sBTC) per message via the x402 protocol.</li>
+                <li><strong>Execution:</strong> Transactions are sponsored; no STX gas cost to the sender.</li>
+                <li><strong>Replies:</strong> Check your own agent inbox at <strong>aibtc.com</strong> using your Stacks address.</li>
+                <li><strong>Delays:</strong> On-chain messaging may take 10-20 minutes to confirm and appear in the recipient's inbox.</li>
+            </ul>
+        </div>
+
+        <div class="outreach-form">
+            <div class="outreach-row">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <label>Target Agent</label>
+                    <button class="btn" id="btn-refresh-agents" style="padding: 2px 6px; font-size: 10px;">REFRESH LIST</button>
+                </div>
+                <select class="outreach-select" id="outreach-agent">
+                    <option value="">Select an agent...</option>
+                </select>
+            </div>
+            <div class="outreach-row">
+                <label>Conversation Mode</label>
+                <select class="outreach-select" id="outreach-mode">
+                    <option value="intro">Intro</option>
+                    <option value="reply">Reply</option>
+                    <option value="follow-up">Follow-up</option>
+                </select>
+            </div>
+            <div class="outreach-row">
+                <label>Inbound Message / Thread Context</label>
+                <textarea class="outreach-input outreach-msg" id="outreach-incoming" placeholder="Paste the other agent's message here when drafting a reply, or summarize the active thread..."></textarea>
+            </div>
+            <div class="outreach-row">
+                <label>Message (Max 500 chars)</label>
+                <textarea class="outreach-input outreach-msg" id="outreach-message" placeholder="Draft your message to another agent..."></textarea>
+            </div>
+            <div class="outreach-thought" id="outreach-thought"></div>
+            <div class="outreach-memory" id="outreach-memory"></div>
+            
+            <div class="phase-timer" id="outreach-research-timer" style="margin-bottom: 1rem;">
+                <div class="phase-timer-top">
+                    <span id="ort-label">Generating Research...</span>
+                    <span id="ort-elapsed">0:00 / 1:00</span>
+                </div>
+                <div class="phase-timer-bar"><div class="phase-timer-fill" id="ort-fill"></div></div>
+            </div>
+
+            <div class="ops-buttons">
+                <button class="btn" id="btn-outreach-research">RESEARCH &amp; GENERATE</button>
+                <button class="btn" id="btn-outreach-log-inbound">LOG INBOUND</button>
+                <button class="btn" id="btn-outreach-draft">SAVE DRAFT</button>
+                <button class="btn" id="btn-outreach-review">REVIEW DRAFT</button>
+            </div>
+            <div class="outreach-status" id="outreach-status"></div>
+            
+            <div class="outreach-review" id="outreach-review-panel">
+                <h3>REVIEW OUTREACH</h3>
+                <div class="outreach-review-text" id="outreach-review-content"></div>
+                <div class="header-sub" style="margin-bottom: 0.75rem;">Cost: 100 sats (sBTC)</div>
+                <div class="ops-buttons">
+                    <button class="btn" id="btn-outreach-send" style="border-color: var(--green); color: var(--green);">BROADCAST MESSAGE</button>
+                    <button class="btn" id="btn-outreach-cancel">CANCEL</button>
+                </div>
+            </div>
+
+            <div class="outreach-history-log">
+                <div class="header-sub" style="margin-bottom: 0.5rem; text-transform: uppercase;">Outreach History</div>
+                <div id="outreach-history-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row: Metabolic Status | Wallet Activity -->
+    <div class="panel">
+        <h2>Metabolic Status</h2>
+        <div class="panel-content" id="metabolic-content">Loading...</div>
+    </div>
+
+    <div class="panel">
+        <h2>Wallet Activity (Live)</h2>
+        <div class="journal-table-wrap" id="wallet-activity-content">Loading...</div>
+    </div>
+
+    <!-- Row: Journal Log -->
+    <div class="panel full">
+        <h2>Journal Log</h2>
+        <div class="journal-table-wrap" id="journal-content">Loading...</div>
+    </div>
+
+    <!-- Row: Identity & Memory (AGENTs.md) | Evolution (EVOLUTION.md) -->
+    <div class="panel">
+        <h2>Identity &amp; Memory <span class="save-indicator" id="save-agents">Saved</span></h2>
+        <textarea class="panel-editor" id="agents-editor" data-doc="agents" spellcheck="false">Loading...</textarea>
+    </div>
+
+    <div class="panel">
+        <h2>Evolution <span class="save-indicator" id="save-evolution">Saved</span></h2>
+        <textarea class="panel-editor" id="evolution-editor" data-doc="evolution" spellcheck="false">Loading...</textarea>
+    </div>
+
+    <!-- Row: Research Buffer | Ideas & Roadmap -->
+    <div class="panel">
+        <h2>Research Buffer <span class="save-indicator" id="save-research">Saved</span></h2>
+        <textarea class="panel-editor" id="research-editor" data-doc="research" spellcheck="false">Loading...</textarea>
+    </div>
+
+    <div class="panel">
+        <h2>Ideas &amp; Roadmap <span class="save-indicator" id="save-ideas">Saved</span></h2>
+        <textarea class="panel-editor" id="ideas-editor" data-doc="ideas" spellcheck="false">Loading...</textarea>
+    </div>
+
+    <!-- Full-width: Ledger -->
+    <div class="panel full">
+        <h2>Ledger <span class="save-indicator" id="save-ledger">Saved</span></h2>
+        <textarea class="panel-editor" id="ledger-editor" data-doc="ledger" spellcheck="false">Loading...</textarea>
+    </div>
+
+    <!-- Activity Log -->
+    <div class="panel activity-log full">
+        <h2>Activity Log (Live)</h2>
+        <div class="log-controls">
+            <label><input type="checkbox" id="show-thinking"> Show thinking</label>
+        </div>
+        <div id="activity-log-content">Connecting to event stream...</div>
+    </div>
+
+    <footer class="footer">
+        Agent 27 | Token #107 (Genesis) | SP15T1W26...KTYA9EJ | v2.0.0
+    </footer>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const logContent = document.getElementById('activity-log-content');
+    const metabolicContent = document.getElementById('metabolic-content');
+    const walletActivityContent = document.getElementById('wallet-activity-content');
+    const journalContent = document.getElementById('journal-content');
+    const historyList = document.getElementById('history-list');
+
+    // Editable panels
+    const editors = {
+        agents: document.getElementById('agents-editor'),
+        evolution: document.getElementById('evolution-editor'),
+        research: document.getElementById('research-editor'),
+        ideas: document.getElementById('ideas-editor'),
+        ledger: document.getElementById('ledger-editor')
+    };
+
+    const saveIndicators = {
+        agents: document.getElementById('save-agents'),
+        evolution: document.getElementById('save-evolution'),
+        research: document.getElementById('save-research'),
+        ideas: document.getElementById('save-ideas'),
+        ledger: document.getElementById('save-ledger')
+    };
+
+    const btnPulse = document.getElementById('btn-pulse');
+    const btnCompose = document.getElementById('btn-compose');
+    const btnInscribe = document.getElementById('btn-inscribe');
+    const btnCancel = document.getElementById('btn-cancel');
+    const draftStatusEl = document.getElementById('draft-status');
+
+    const phaseTimerEl = document.getElementById('phase-timer');
+    const ptLabel = document.getElementById('pt-label');
+    const ptElapsed = document.getElementById('pt-elapsed');
+    const ptFill = document.getElementById('pt-fill');
+
+    const hdrStx = document.getElementById('hdr-stx');
+    const hdrDays = document.getElementById('hdr-days');
+    const hdrSbtc = document.getElementById('hdr-sbtc');
+    const hdrGraph = document.getElementById('hdr-graph');
+
+    // Outreach UI elements
+    const outreachAgentSelect = document.getElementById('outreach-agent');
+    const outreachModeSelect = document.getElementById('outreach-mode');
+    const btnRefreshAgents = document.getElementById('btn-refresh-agents');
+    const outreachIncomingInput = document.getElementById('outreach-incoming');
+    const outreachMessageInput = document.getElementById('outreach-message');
+    const btnOutreachResearch = document.getElementById('btn-outreach-research');
+    const btnOutreachLogInbound = document.getElementById('btn-outreach-log-inbound');
+    const btnOutreachDraft = document.getElementById('btn-outreach-draft');
+    const btnOutreachReview = document.getElementById('btn-outreach-review');
+    const btnOutreachSend = document.getElementById('btn-outreach-send');
+    const btnOutreachCancel = document.getElementById('btn-outreach-cancel');
+    const outreachReviewPanel = document.getElementById('outreach-review-panel');
+    const outreachReviewContent = document.getElementById('outreach-review-content');
+    const outreachStatus = document.getElementById('outreach-status');
+    const outreachThought = document.getElementById('outreach-thought');
+    const outreachMemory = document.getElementById('outreach-memory');
+    const outreachHistoryList = document.getElementById('outreach-history-list');
+
+    const outreachTimerEl = document.getElementById('outreach-research-timer');
+    const ortLabel = document.getElementById('ort-label');
+    const ortElapsed = document.getElementById('ort-elapsed');
+    const ortFill = document.getElementById('ort-fill');
+
+    const cadenceBar = document.getElementById('cadence-bar');
+    const cadencePips = document.getElementById('cadence-pips');
+    const cadenceText = document.getElementById('cadence-text');
+
+    const showThinkingCb = document.getElementById('show-thinking');
+
+    // Inscription banner elements
+    const inscBanner = document.getElementById('inscription-banner');
+    const bannerIcon = document.getElementById('banner-icon');
+    const bannerText = document.getElementById('banner-text');
+    const bannerDetail = document.getElementById('banner-detail');
+    const pips = { begin: document.getElementById('pip-begin'), chunk: document.getElementById('pip-chunk'), seal: document.getElementById('pip-seal') };
+    let bannerDismissTimer = null;
+
+    // Outreach banner elements
+    const outreachBanner = document.getElementById('outreach-banner');
+    const obIcon = document.getElementById('ob-icon');
+    const obText = document.getElementById('ob-text');
+    const obDetail = document.getElementById('ob-detail');
+    const obPips = { 
+        prep: document.getElementById('ob-pip-prep'), 
+        pay: document.getElementById('ob-pip-pay'), 
+        sent: document.getElementById('ob-pip-sent') 
+    };
+    let outreachBannerDismissTimer = null;
+
+    let phaseStatus = null;
+    let showThinking = false;
+
+    showThinkingCb.addEventListener('change', () => {
+        showThinking = showThinkingCb.checked;
+        logContent.querySelectorAll('.type-thinking').forEach((el) => {
+            el.closest('.log-line').classList.toggle('hidden', !showThinking);
+        });
+    });
+
+    // --- Helpers ---
+
+    function escapeHtml(v) {
+        return String(v ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+    }
+
+    function fmtTime(iso) {
+        const d = iso ? new Date(iso) : null;
+        if (!d || isNaN(d.getTime())) return '--:--';
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function fmtDuration(ms) {
+        if (ms == null) return '';
+        const s = Math.round(ms / 1000);
+        return s >= 60 ? `${Math.floor(s / 60)}m${s % 60}s` : `${s}s`;
+    }
+
+    function fetchJson(url) {
+        return fetch(url).then((r) => {
+            if (!r.ok) throw new Error(`${url} returned ${r.status}`);
+            return r.json();
+        });
+    }
+
+    // --- Editable Panel Save ---
+
+    function flashSave(docId, success) {
+        const indicator = saveIndicators[docId];
+        if (!indicator) return;
+        indicator.textContent = success ? 'Saved' : 'Save failed';
+        indicator.classList.toggle('error', !success);
+        indicator.classList.add('visible');
+        setTimeout(() => { indicator.classList.remove('visible'); }, 2000);
+    }
+
+    function saveDocument(docId, content) {
+        return fetch(`/api/save/${docId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content })
+        }).then((r) => r.json()).then((res) => {
+            flashSave(docId, !!res.ok);
+        }).catch(() => {
+            flashSave(docId, false);
+        });
+    }
+
+    // Attach blur handlers to all editors
+    Object.entries(editors).forEach(([docId, textarea]) => {
+        textarea.addEventListener('blur', () => {
+            saveDocument(docId, textarea.value);
+        });
+    });
+
+    // --- Inscription Banner ---
+
+    function updateInscriptionBanner(entry) {
+        if (entry.type !== 'inscription' || !entry.step) return;
+        const { step, status, line } = entry;
+
+        inscBanner.classList.add('visible');
+        inscBanner.classList.remove('success', 'error');
+        if (bannerDismissTimer) { clearTimeout(bannerDismissTimer); bannerDismissTimer = null; }
+
+        const stepOrder = ['begin', 'chunk', 'seal'];
+        const currentIdx = stepOrder.indexOf(step);
+
+        for (let i = 0; i < currentIdx; i++) {
+            const pip = pips[stepOrder[i]];
+            if (pip) { pip.className = 'step-pip done'; }
+        }
+
+        const currentPip = pips[step];
+        if (currentPip) {
+            if (status === 'confirmed') {
+                currentPip.className = 'step-pip done';
+            } else if (status === 'error') {
+                currentPip.className = 'step-pip failed';
+            } else {
+                currentPip.className = 'step-pip active';
+            }
+        }
+
+        if (status === 'error') {
+            bannerIcon.textContent = '\u2717';
+            inscBanner.classList.add('error');
+        } else if (status === 'confirmed') {
+            bannerIcon.textContent = '\u2713';
+        } else {
+            bannerIcon.textContent = '\u25CF';
+            bannerIcon.className = 'banner-icon running-indicator';
+        }
+
+        if (status === 'confirmed' || status === 'error') {
+            bannerIcon.className = 'banner-icon';
+        }
+
+        const label = line || `${step} — ${status}`;
+        bannerText.textContent = label.replace(/^\[.*?\]\s*/, '');
+    }
+
+    function showBannerComplete(success) {
+        if (!inscBanner.classList.contains('visible')) return;
+        inscBanner.classList.remove('error', 'success');
+        inscBanner.classList.add(success ? 'success' : 'error');
+        bannerIcon.className = 'banner-icon';
+        bannerIcon.textContent = success ? '\u2713' : '\u2717';
+        if (!success) bannerText.textContent = bannerText.textContent || 'Inscription failed';
+        bannerDismissTimer = setTimeout(() => {
+            inscBanner.classList.remove('visible', 'success', 'error');
+            Object.values(pips).forEach(p => { p.className = 'step-pip'; });
+        }, 8000);
+    }
+
+    function resetBanner() {
+        inscBanner.classList.remove('visible', 'success', 'error');
+        Object.values(pips).forEach(p => { p.className = 'step-pip'; });
+        bannerIcon.className = 'banner-icon';
+        bannerIcon.textContent = '\u25B6';
+        bannerText.textContent = '';
+        bannerDetail.textContent = '';
+        if (bannerDismissTimer) { clearTimeout(bannerDismissTimer); bannerDismissTimer = null; }
+    }
+
+    function updateOutreachBanner(entry) {
+        if (!entry.line) return;
+        
+        // Auto-detect step from logs if not explicit
+        let step = entry.step;
+        let status = entry.status;
+        const line = entry.line.toLowerCase();
+
+        if (!step) {
+            if (line.includes('send_inbox_message') || line.includes('broadcasting')) step = 'prep';
+            if (line.includes('payment') || line.includes('sbtc')) step = 'pay';
+            if (line.includes('delivered') || line.includes('success')) step = 'sent';
+        }
+
+        if (!step) return;
+
+        outreachBanner.style.display = 'flex';
+        outreachBanner.style.borderColor = 'var(--accent)';
+        outreachBanner.style.background = '#000f1a';
+        if (outreachBannerDismissTimer) { clearTimeout(outreachBannerDismissTimer); outreachBannerDismissTimer = null; }
+
+        const stepOrder = ['prep', 'pay', 'sent'];
+        const currentIdx = stepOrder.indexOf(step);
+
+        for (let i = 0; i < currentIdx; i++) {
+            const pip = obPips[stepOrder[i]];
+            if (pip) { pip.className = 'step-pip done'; }
+        }
+
+        const currentPip = obPips[step];
+        if (currentPip) {
+            if (status === 'confirmed' || line.includes('success') || entry.txid) {
+                currentPip.className = 'step-pip done';
+            } else if (line.includes('fail') || line.includes('error')) {
+                currentPip.className = 'step-pip failed';
+            } else {
+                currentPip.className = 'step-pip active';
+            }
+        }
+
+        obIcon.className = 'banner-icon running-indicator';
+        obIcon.textContent = '\u25CF';
+
+        let label = entry.line.replace(/^\[.*?\]\s*/, '');
+        if (entry.txid) {
+            const url = `https://explorer.hiro.so/txid/${entry.txid}?chain=mainnet`;
+            obDetail.innerHTML = `<a href="${url}" target="_blank" style="color:var(--accent); text-decoration: underline;">View Transaction</a>`;
+        }
+        obText.textContent = label;
+    }
+
+    function showOutreachBannerComplete(success) {
+        if (outreachBanner.style.display === 'none') return;
+        outreachBanner.style.borderColor = success ? 'var(--green)' : 'var(--red)';
+        outreachBanner.style.background = success ? '#001a00' : '#1a0000';
+        obIcon.className = 'banner-icon';
+        obIcon.textContent = success ? '\u2713' : '\u2717';
+        outreachBannerDismissTimer = setTimeout(() => {
+            outreachBanner.style.display = 'none';
+            Object.values(obPips).forEach(p => { p.className = 'step-pip'; });
+        }, 10000);
+    }
+
+    function resetOutreachBanner() {
+        outreachBanner.style.display = 'none';
+        Object.values(obPips).forEach(p => { p.className = 'step-pip'; });
+        obIcon.className = 'banner-icon';
+        obIcon.textContent = '\u25B6';
+        obText.textContent = '';
+        obDetail.textContent = '';
+        if (outreachBannerDismissTimer) { clearTimeout(outreachBannerDismissTimer); outreachBannerDismissTimer = null; }
+    }
+
+    // --- Outreach ---
+
+    let registeredAgents = [];
+
+    function fetchOutreachAgents(refresh = false) {
+        const url = refresh ? '/api/outreach/agents?refresh=true' : '/api/outreach/agents';
+        return fetchJson(url).then((agents) => {
+            registeredAgents = agents;
+            outreachAgentSelect.innerHTML = '<option value="">Select an agent...</option>';
+            agents.forEach((a) => {
+                const opt = document.createElement('option');
+                opt.value = a.id;
+                opt.textContent = `${a.name} (#${a.id}) \u2014 ${a.description}`;
+                outreachAgentSelect.appendChild(opt);
+            });
+        }).catch((err) => {
+            console.error('Failed to fetch agents:', err);
+            appendLogEntry({ type: 'error', line: `Failed to load registered agents: ${err.message}` });
+            outreachAgentSelect.innerHTML = '<option value="">Error loading agents</option>';
+        });
+    }
+
+    function setOutreachThought(data) {
+        const parts = [];
+        if (data?.thought) parts.push(`Thought: ${data.thought}`);
+        if (data?.strategy) parts.push(`Strategy: ${data.strategy}`);
+        if (data?.relationship) parts.push(`Relationship: ${data.relationship}`);
+        if (data?.next) parts.push(`Next: ${data.next}`);
+
+        if (parts.length === 0) {
+            outreachThought.textContent = '';
+            outreachThought.classList.remove('visible');
+            return;
+        }
+
+        outreachThought.textContent = parts.join('\n');
+        outreachThought.classList.add('visible');
+    }
+
+    function renderOutreachAgentMemory(memory) {
+        if (!memory) {
+            outreachMemory.textContent = 'No conversation memory for this agent yet.';
+            outreachMemory.classList.add('visible');
+            return;
+        }
+
+        outreachMemory.textContent = [
+            `Relationship: ${memory.relationshipStatus || 'unknown'}`,
+            `Open Loop: ${memory.openLoop || 'none'}`,
+            `Last Mode: ${memory.lastMode || 'unknown'}`,
+            `Last Inbound: ${memory.lastInboundMessage || '[none]'}`,
+            `Last Outbound: ${memory.lastOutboundMessage || memory.lastDraftMessage || '[none]'}`
+        ].join('\n');
+        outreachMemory.classList.add('visible');
+    }
+
+    function fetchOutreachAgentMemory(agentId) {
+        if (!agentId) {
+            outreachMemory.textContent = '';
+            outreachMemory.classList.remove('visible');
+            return Promise.resolve();
+        }
+
+        return fetchJson(`/api/outreach/agent-memory/${encodeURIComponent(agentId)}`)
+            .then(renderOutreachAgentMemory)
+            .catch((err) => {
+                outreachMemory.textContent = `Conversation memory unavailable: ${err.message}`;
+                outreachMemory.classList.add('visible');
+            });
+    }
+
+    function loadOutreachDraft() {
+        return fetchJson('/api/outreach/draft').then((draft) => {
+            outreachAgentSelect.value = draft.agentId || '';
+            outreachModeSelect.value = draft.mode || 'intro';
+            outreachIncomingInput.value = draft.incomingMessage || '';
+            outreachMessageInput.value = draft.message || '';
+            setOutreachThought(draft);
+            return fetchOutreachAgentMemory(draft.agentId);
+        });
+    }
+
+    function saveOutreachDraft({ silent = false } = {}) {
+        const agentId = outreachAgentSelect.value;
+        const mode = outreachModeSelect.value;
+        const incomingMessage = outreachIncomingInput.value;
+        const message = outreachMessageInput.value;
+        return fetch('/api/outreach/draft', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                agentId,
+                mode,
+                incomingMessage,
+                message
+            })
+        }).then((r) => r.json()).then(() => {
+            if (!silent) showOutreachStatus('Draft saved', 'success');
+        }).catch((e) => {
+            showOutreachStatus(`Save failed: ${e.message}`, 'error');
+        });
+    }
+
+    function fetchOutreachHistory() {
+        return fetchJson('/api/outreach/history').then(renderOutreachHistory);
+    }
+
+    function renderOutreachHistory(history) {
+        outreachHistoryList.innerHTML = history.length === 0 ? '<div class="header-sub">No outreach history</div>' : '';
+        history.forEach(h => {
+            const item = document.createElement('div');
+            item.className = 'outreach-history-item';
+            const ts = new Date(h.timestamp).toLocaleString();
+            const icon = h.type === 'sent' ? '\u2709' : h.type === 'received' ? '\u21a9' : '\u2616';
+            const label = h.type === 'sent' ? 'SENT' : h.type === 'received' ? 'INBOUND' : 'RESEARCH';
+            item.innerHTML = `
+                <div class="outreach-history-ts">${ts} | ${icon} ${label} | ${escapeHtml(h.mode || 'n/a')}</div>
+                <div class="outreach-history-agent">Agent: ${h.agent}</div>
+                <div class="outreach-history-msg">${escapeHtml(h.message || h.thought)}</div>
+            `;
+            outreachHistoryList.appendChild(item);
+        });
+    }
+
+    function showOutreachStatus(text, type) {
+        outreachStatus.textContent = text;
+        outreachStatus.className = `outreach-status visible ${type}`;
+        setTimeout(() => { outreachStatus.classList.remove('visible'); }, 5000);
+    }
+
+    btnOutreachDraft.addEventListener('click', saveOutreachDraft);
+
+    outreachAgentSelect.addEventListener('change', () => {
+        fetchOutreachAgentMemory(outreachAgentSelect.value);
+    });
+
+    btnRefreshAgents.addEventListener('click', () => {
+        btnRefreshAgents.disabled = true;
+        btnRefreshAgents.textContent = '...';
+        fetchOutreachAgents(true).then(() => {
+            showOutreachStatus('Agent list refreshed from registry', 'success');
+        }).finally(() => {
+            btnRefreshAgents.disabled = false;
+            btnRefreshAgents.textContent = 'REFRESH LIST';
+        });
+    });
+
+    btnOutreachLogInbound.addEventListener('click', () => {
+        const agentId = outreachAgentSelect.value;
+        const message = outreachIncomingInput.value.trim();
+        if (!agentId || !message) {
+            showOutreachStatus('Select an agent and paste the inbound message first', 'error');
+            return;
+        }
+
+        fetch('/api/outreach/log-inbound', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ agentId, message })
+        }).then((r) => r.json()).then((res) => {
+            if (!res.ok) throw new Error(res.error || 'Inbound log failed');
+            outreachModeSelect.value = 'reply';
+            showOutreachStatus('Inbound message logged. Reply mode enabled.', 'success');
+            return Promise.all([
+                fetchOutreachHistory(),
+                fetchOutreachAgentMemory(agentId),
+                loadOutreachDraft()
+            ]);
+        }).catch((err) => {
+            showOutreachStatus(`Inbound log failed: ${err.message}`, 'error');
+        });
+    });
+
+    btnOutreachResearch.addEventListener('click', () => {
+        const agentId = outreachAgentSelect.value;
+        if (!agentId) {
+            showOutreachStatus('Select an agent first', 'error');
+            return;
+        }
+        btnOutreachResearch.disabled = true;
+        btnOutreachResearch.textContent = 'GENERATING...';
+        outreachThought.classList.remove('visible');
+        appendLogEntry({ type: 'start', line: 'Research generation initiated' });
+        
+        fetch('/api/outreach/research', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                agentId,
+                mode: outreachModeSelect.value,
+                incomingMessage: outreachIncomingInput.value
+            })
+        }).then((r) => r.json()).then((res) => {
+            if (res.ok) {
+                showOutreachStatus('Research started...', 'success');
+            } else {
+                showOutreachStatus(`Research failed: ${res.error}`, 'error');
+                appendLogEntry({ type: 'error', line: `Research failed: ${res.error}` });
+                btnOutreachResearch.disabled = false;
+                btnOutreachResearch.textContent = 'RESEARCH & GENERATE';
+            }
+        }).catch((e) => {
+            showOutreachStatus(`Error: ${e.message}`, 'error');
+            appendLogEntry({ type: 'error', line: `Research fetch error: ${e.message}` });
+            btnOutreachResearch.disabled = false;
+            btnOutreachResearch.textContent = 'RESEARCH & GENERATE';
+        });
+    });
+
+    btnOutreachReview.addEventListener('click', () => {
+        const agentId = outreachAgentSelect.value;
+        const message = outreachMessageInput.value;
+        if (!agentId || !message) {
+            showOutreachStatus('Select agent and enter message', 'error');
+            return;
+        }
+        if (message.length > 500) {
+            showOutreachStatus('Message exceeds 500 characters', 'error');
+            return;
+        }
+        const agent = registeredAgents.find(a => String(a.id) === String(agentId));
+        const mode = outreachModeSelect.value;
+        const incoming = outreachIncomingInput.value.trim();
+        outreachReviewContent.innerHTML = `
+            <strong>To:</strong> ${agent.name}<br>
+            <strong>Mode:</strong> ${escapeHtml(mode)}<br>
+            ${incoming ? `<strong>Inbound Context:</strong> ${escapeHtml(incoming)}<br>` : ''}
+            <strong>Message:</strong> ${escapeHtml(message)}
+        `;
+        outreachReviewPanel.classList.add('visible');
+    });
+
+    btnOutreachCancel.addEventListener('click', () => {
+        outreachReviewPanel.classList.remove('visible');
+    });
+
+    btnOutreachSend.addEventListener('click', () => {
+        btnOutreachSend.disabled = true;
+        btnOutreachSend.textContent = 'BROADCASTING...';
+        resetOutreachBanner();
+        appendLogEntry({ type: 'start', line: 'Outreach broadcast initiated' });
+        
+        // Ensure draft is saved before sending
+        saveOutreachDraft({ silent: true }).then(() => {
+            return fetch('/api/outreach/send', { method: 'POST' });
+        }).then((r) => r.json()).then((res) => {
+            if (res.ok) {
+                showOutreachStatus('Broadcast initiated. Check Activity Log.', 'success');
+            } else {
+                showOutreachStatus(`Broadcast failed: ${res.error}`, 'error');
+                appendLogEntry({ type: 'error', line: `Broadcast failed: ${res.error}` });
+                btnOutreachSend.disabled = false;
+                btnOutreachSend.textContent = 'BROADCAST MESSAGE';
+            }
+        }).catch((e) => {
+            showOutreachStatus(`Error: ${e.message}`, 'error');
+            appendLogEntry({ type: 'error', line: `Fetch error: ${e.message}` });
+            btnOutreachSend.disabled = false;
+            btnOutreachSend.textContent = 'BROADCAST MESSAGE';
+        });
+    });
+
+    // --- Log ---
+
+    function appendLogEntry(entry) {
+        const type = String(entry.type || 'stdout').toLowerCase();
+        const row = document.createElement('div');
+        row.className = 'log-line';
+        if (type === 'thinking' && !showThinking) row.classList.add('hidden');
+
+        const ts = document.createElement('span');
+        ts.className = 'timestamp';
+        ts.textContent = fmtTime(entry.timestamp) || new Date().toLocaleTimeString();
+
+        const msg = document.createElement('span');
+        msg.className = `type-${type}`;
+        msg.textContent = entry.line || '';
+
+        row.appendChild(ts);
+        row.appendChild(msg);
+        logContent.appendChild(row);
+        logContent.scrollTop = logContent.scrollHeight;
+    }
+
+    // --- Cadence ---
+
+    let currentCadence = null;
+
+    function renderCadence(cadence) {
+        if (!cadence) return;
+        currentCadence = cadence;
+        const { pulsesSinceLastInscription: count, maxPulses: max, ceilingReached } = cadence;
+        cadenceText.textContent = `${count}/${max}`;
+        cadenceBar.classList.toggle('ceiling', ceilingReached);
+
+        cadencePips.innerHTML = '';
+        for (let i = 0; i < max; i++) {
+            const pip = document.createElement('span');
+            pip.className = 'cadence-pip';
+            if (i < count) {
+                const level = count >= max ? 3 : count >= 2 ? 2 : 1;
+                pip.classList.add(`filled-${level}`);
+            }
+            cadencePips.appendChild(pip);
+        }
+    }
+
+    // --- Operations ---
+
+    function updateButtons() {
+        const isRunning = phaseStatus && phaseStatus.running;
+        const runId = isRunning ? phaseStatus.running.phaseId : null;
+        const ceiling = currentCadence && currentCadence.ceilingReached;
+
+        btnPulse.disabled = !!isRunning || !!ceiling;
+        btnCompose.disabled = !!isRunning;
+        btnInscribe.disabled = !!isRunning;
+        btnCancel.classList.toggle('visible', !!isRunning);
+
+        if (ceiling && !isRunning) {
+            btnPulse.textContent = 'CEILING \u2014 COMPOSE REQUIRED';
+        } else {
+            btnPulse.textContent = runId === 'pulse' ? '\u25CF Running...' : '\u25B6 RUN PULSE';
+        }
+        btnCompose.textContent = runId === 'compose' ? '\u25CF Composing...' : '\u25B6 COMPOSE DRAFT';
+        btnInscribe.textContent = runId === 'inscribe' ? '\u25CF Inscribing...' : '\u25B6 INSCRIBE ON-CHAIN';
+    }
+
+    function renderHistory() {
+        if (!phaseStatus) return;
+        historyList.innerHTML = '';
+        if (!phaseStatus.history || phaseStatus.history.length === 0) {
+            const li = document.createElement('li');
+            li.innerHTML = '<span style="color:#555">No runs yet</span>';
+            historyList.appendChild(li);
+            return;
+        }
+        for (const h of phaseStatus.history) {
+            const li = document.createElement('li');
+
+            const icon = document.createElement('span');
+            icon.className = `history-icon ${h.success ? 'ok' : 'fail'}`;
+            icon.textContent = h.success ? '\u2713' : '\u2717';
+
+            const label = document.createElement('span');
+            label.className = 'history-label';
+            const labelMap = { pulse: 'Pulse', compose: 'Compose', inscribe: 'Inscribe' };
+            label.textContent = labelMap[h.phaseId] || h.phaseId;
+
+            const time = document.createElement('span');
+            time.className = 'history-time';
+            time.textContent = fmtTime(h.startedAt);
+
+            const detail = document.createElement('span');
+            detail.className = 'history-detail';
+            if (h.success) {
+                const parts = [fmtDuration(h.duration)];
+                if (h.cost != null) parts.push(`$${h.cost.toFixed(2)}`);
+                detail.textContent = `(${parts.join(', ')})`;
+            } else {
+                detail.textContent = h.error ? `(${h.error})` : '(failed)';
+                detail.style.color = '#ff6347';
+            }
+
+            li.append(icon, label, time, detail);
+            historyList.appendChild(li);
+        }
+    }
+
+    function updatePhaseTimer() {
+        if (!phaseStatus || !phaseStatus.running) {
+            phaseTimerEl.classList.remove('active');
+            return;
+        }
+
+        phaseTimerEl.classList.add('active');
+        const r = phaseStatus.running;
+        const startMs = new Date(r.startedAt).getTime();
+        const elapsed = Date.now() - startMs;
+        const timeoutMs = r.timeoutMs || (5 * 60 * 1000);
+        const pct = Math.min(100, (elapsed / timeoutMs) * 100);
+
+        const eSec = Math.floor(elapsed / 1000);
+        const tSec = Math.floor(timeoutMs / 1000);
+        const em = Math.floor(eSec / 60), es = eSec % 60;
+        const tm = Math.floor(tSec / 60), ts = tSec % 60;
+
+        const phaseNames = { pulse: 'Research Pulse', compose: 'Compose Draft', inscribe: 'Inscribe On-Chain' };
+        const phaseName = phaseNames[r.phaseId] || r.phaseId;
+        ptLabel.textContent = `${phaseName} running...`;
+        ptElapsed.textContent = `${em}:${String(es).padStart(2, '0')} / ${tm}:${String(ts).padStart(2, '0')}`;
+        ptFill.style.width = pct + '%';
+        ptFill.style.background = pct > 80 ? '#ff4d4d' : pct > 60 ? '#ff7900' : 'var(--accent)';
+    }
+
+    let runningResearch = null;
+
+    function updateOutreachTimer() {
+        if (!runningResearch) {
+            outreachTimerEl.style.display = 'none';
+            return;
+        }
+
+        outreachTimerEl.style.display = 'block';
+        const startMs = new Date(runningResearch.startedAt).getTime();
+        const elapsed = Date.now() - startMs;
+        const timeoutMs = runningResearch.timeoutMs || 60000;
+        const pct = Math.min(100, (elapsed / timeoutMs) * 100);
+
+        const eSec = Math.floor(elapsed / 1000);
+        const tSec = Math.floor(timeoutMs / 1000);
+        const em = Math.floor(eSec / 60), es = eSec % 60;
+        const tm = Math.floor(tSec / 60), ts = tSec % 60;
+
+        ortLabel.textContent = `Generating Research for ${runningResearch.agentName}...`;
+        ortElapsed.textContent = `${em}:${String(es).padStart(2, '0')} / ${tm}:${String(ts).padStart(2, '0')}`;
+        ortFill.style.width = pct + '%';
+        ortFill.style.background = pct > 80 ? '#ff4d4d' : pct > 60 ? '#ff7900' : 'var(--accent)';
+    }
+
+    // Button handlers
+    btnPulse.addEventListener('click', () => {
+        btnPulse.disabled = true;
+        btnPulse.textContent = '...';
+        fetch('/api/run/pulse', { method: 'POST' }).then((r) => r.json()).then((res) => {
+            if (res.ok) {
+                appendLogEntry({ type: 'start', line: 'Pulse started' });
+                refreshPhaseStatus();
+            } else {
+                appendLogEntry({ type: 'error', line: `Pulse rejected: ${res.error}` });
+                btnPulse.textContent = '\u25B6 RUN PULSE';
+                btnPulse.disabled = false;
+            }
+        }).catch((e) => {
+            appendLogEntry({ type: 'error', line: `Pulse failed: ${e.message}` });
+            btnPulse.textContent = '\u25B6 RUN PULSE';
+            btnPulse.disabled = false;
+        });
+    });
+
+    btnCompose.addEventListener('click', () => {
+        btnCompose.disabled = true;
+        btnCompose.textContent = '...';
+        fetch('/api/run/compose', { method: 'POST' }).then((r) => r.json()).then((res) => {
+            if (res.ok) {
+                appendLogEntry({ type: 'start', line: 'Compose draft started' });
+                refreshPhaseStatus();
+            } else {
+                appendLogEntry({ type: 'error', line: `Compose rejected: ${res.error}` });
+                btnCompose.textContent = '\u25B6 COMPOSE DRAFT';
+                btnCompose.disabled = false;
+            }
+        }).catch((e) => {
+            appendLogEntry({ type: 'error', line: `Compose failed: ${e.message}` });
+            btnCompose.textContent = '\u25B6 COMPOSE DRAFT';
+            btnCompose.disabled = false;
+        });
+    });
+
+    btnInscribe.addEventListener('click', () => {
+        btnInscribe.disabled = true;
+        btnInscribe.textContent = '...';
+        fetch('/api/run/inscribe', { method: 'POST' }).then((r) => r.json()).then((res) => {
+            if (res.ok) {
+                appendLogEntry({ type: 'start', line: 'Inscription started' });
+                refreshPhaseStatus();
+            } else {
+                appendLogEntry({ type: 'error', line: `Inscription rejected: ${res.error}` });
+                btnInscribe.textContent = '\u25B6 INSCRIBE ON-CHAIN';
+                btnInscribe.disabled = false;
+            }
+        }).catch((e) => {
+            appendLogEntry({ type: 'error', line: `Inscription failed: ${e.message}` });
+            btnInscribe.textContent = '\u25B6 INSCRIBE ON-CHAIN';
+            btnInscribe.disabled = false;
+        });
+    });
+
+    btnCancel.addEventListener('click', () => {
+        btnCancel.disabled = true;
+        fetch('/api/cancel', { method: 'POST' }).then((r) => r.json()).then((res) => {
+            if (res.ok) {
+                appendLogEntry({ type: 'stop', line: 'Phase cancelled' });
+            } else {
+                appendLogEntry({ type: 'error', line: `Cancel failed: ${res.error}` });
+            }
+            btnCancel.disabled = false;
+            refreshPhaseStatus();
+        }).catch(() => { btnCancel.disabled = false; });
+    });
+
+    function refreshPhaseStatus() {
+        return fetchJson('/api/phase-status').then((data) => {
+            phaseStatus = data;
+            if (data.cadence) renderCadence(data.cadence);
+            updateButtons();
+            renderHistory();
+            updatePhaseTimer();
+        }).catch(() => {});
+    }
+
+    function refreshDraftStatus() {
+        return fetchJson('/api/draft').then((draft) => {
+            if (draft && draft.name) {
+                draftStatusEl.className = 'draft-status has-draft';
+                const sizeKb = (draft.size / 1024).toFixed(1);
+                const modified = new Date(draft.modified).toLocaleString();
+                draftStatusEl.textContent = `Draft ready: ${draft.name} (${sizeKb} KB, ${modified})`;
+            } else {
+                draftStatusEl.className = 'draft-status no-draft';
+                draftStatusEl.textContent = 'No draft — compose one before inscribing';
+            }
+        }).catch(() => {});
+    }
+
+    // --- Renderers ---
+
+    function renderMetabolic(data) {
+        const rp = typeof data.reservePercent === 'number' ? data.reservePercent : 0;
+        const gw = `${Math.max(0, Math.min(100, rp)).toFixed(1)}%`;
+        const rpLabel = typeof data.reservePercent === 'number' ? `${data.reservePercent.toFixed(1)}%` : 'n/a';
+
+        hdrStx.textContent = data.stxRemaining != null ? data.stxRemaining.toFixed(3) : '--';
+        hdrDays.textContent = data.daysOfLife != null ? `~${data.daysOfLife}` : '--';
+        hdrSbtc.textContent = data.sbtcBalance != null ? data.sbtcBalance.toLocaleString() : '--';
+        hdrGraph.textContent = data.graphSize != null ? `${data.graphSize} tokens` : '--';
+
+        const sbtcHtml = data.sbtcBalance != null
+            ? `<div><div class="metric-label">sBTC Balance</div><div class="metric-value">${escapeHtml(data.sbtcRemainingLabel)}</div></div>` : '';
+        const graphHtml = data.graphSize != null
+            ? `<div><div class="metric-label">Graph Size</div><div class="metric-value">${escapeHtml(data.graphSize)} tokens</div></div>` : '';
+        const feeHtml = data.feeUnit != null
+            ? `<div><div class="metric-label">Fee Unit</div><div class="metric-value">${escapeHtml(data.feeUnit)} uSTX</div></div>` : '';
+        const pollHtml = data.lastPoll
+            ? `<div class="poll-time">Live data @ ${new Date(data.lastPoll).toLocaleTimeString()}</div>` : '';
+
+        metabolicContent.innerHTML = `
+            <div class="metric-grid">
+                <div><div class="metric-label">STX Remaining</div><div class="metric-value">${escapeHtml(data.stxRemainingLabel || 'n/a')}</div></div>
+                <div><div class="metric-label">Days of Life</div><div class="metric-value">${escapeHtml(data.daysOfLifeLabel || 'n/a')}</div></div>
+                ${sbtcHtml}
+                <div><div class="metric-label">STX Spent</div><div class="metric-value">${escapeHtml(data.stxSpentLabel || 'n/a')}</div></div>
+                <div><div class="metric-label">Inscriptions</div><div class="metric-value">${escapeHtml(data.inscriptionsLabel || 'n/a')}</div></div>
+                ${graphHtml}${feeHtml}
+            </div>
+            <div class="gauge"><div class="gauge-fill" style="width:${gw}"></div></div>
+            <div class="gauge-caption">Sustenance: ${rpLabel} of ${escapeHtml(data.initialBudget || 10)} STX</div>
+            ${pollHtml}
+        `;
+
+        renderWalletActivity(data.transactions);
+    }
+
+    function renderJournalLog(journalLog) {
+        if (!journalLog || journalLog.length === 0) {
+            journalContent.innerHTML = '<span style="color:#555">No journal entries found</span>';
+            return;
+        }
+        const headers = Object.keys(journalLog[0]);
+        let html = '<table class="journal-table"><thead><tr>';
+        headers.forEach(h => { html += `<th>${escapeHtml(h)}</th>`; });
+        html += '</tr></thead><tbody>';
+        journalLog.forEach(row => {
+            html += '<tr>';
+            headers.forEach(h => { html += `<td>${escapeHtml(row[h])}</td>`; });
+            html += '</tr>';
+        });
+        html += '</tbody></table>';
+        journalContent.innerHTML = html;
+    }
+
+    function renderWalletActivity(txs) {
+        if (!txs || txs.length === 0) {
+            walletActivityContent.innerHTML = '<span style="color:#555">No transactions found</span>';
+            return;
+        }
+
+        let html = '<table class="journal-table"><thead><tr>';
+        html += '<th>Time</th><th>Type</th><th>Value</th><th>Fee</th><th>Status</th><th>Link</th>';
+        html += '</tr></thead><tbody>';
+
+        txs.forEach(tx => {
+            const time = fmtTime(tx.time);
+            let type = tx.type === 'contract_call' ? tx.contractCall.split('.').pop() : tx.type;
+            let val = '--';
+            
+            // Detect sBTC outreach
+            if (tx.contractCall === 'SP1NMR7MY0TJ1QA7WQBZ6504KC79PZNTRQH4YGFJD.inbox-v2.send-message') {
+                type = 'Outreach (sBTC)';
+            } else if (tx.contractCall?.includes('xtrata')) {
+                type = 'Inscription';
+            }
+
+            // Extract STX or FT value
+            if (tx.stxTransfers && tx.stxTransfers.length > 0) {
+                const total = tx.stxTransfers.reduce((acc, t) => acc + Number(t.amount), 0);
+                val = `${(total / 1_000_000).toFixed(2)} STX`;
+            } else if (tx.ftTransfers && tx.ftTransfers.length > 0) {
+                const sbtc = tx.ftTransfers.find(t => t.asset_identifier.includes('sbtc-token'));
+                if (sbtc) val = `${sbtc.amount} sats`;
+            }
+
+            const fee = `${(tx.fee / 1_000_000).toFixed(3)} STX`;
+            const status = tx.status === 'success' ? '\u2713' : tx.status === 'pending' ? '\u25CF' : '\u2717';
+            const url = `https://explorer.hiro.so/txid/${tx.txid}?chain=mainnet`;
+
+            html += `<tr>
+                <td>${time}</td>
+                <td title="${tx.contractCall || ''}">${type}</td>
+                <td>${val}</td>
+                <td>${fee}</td>
+                <td>${status}</td>
+                <td><a href="${url}" target="_blank" style="color:var(--accent)">View</a></td>
+            </tr>`;
+        });
+
+        html += '</tbody></table>';
+        walletActivityContent.innerHTML = html;
+    }
+
+    function setEditorValue(docId, raw) {
+        const editor = editors[docId];
+        if (!editor) return;
+        // Don't clobber if user is actively editing
+        if (document.activeElement === editor) return;
+        editor.value = raw || '';
+    }
+
+    function renderResearch(data) {
+        setEditorValue('research', data.raw);
+    }
+
+    function renderIdeas(data) {
+        setEditorValue('ideas', data.raw);
+    }
+
+    function renderLedger(data) {
+        setEditorValue('ledger', data.raw);
+    }
+
+    function renderAgents(data) {
+        setEditorValue('agents', data.raw);
+        renderJournalLog(data.journalLog);
+    }
+
+    function renderEvolution(data) {
+        setEditorValue('evolution', data.raw);
+    }
+
+    // --- Initial Data Load ---
+
+    function loadInitialData() {
+        return Promise.all([
+            fetchJson('/api/research'),
+            fetchJson('/api/ideas'),
+            fetchJson('/api/ledger'),
+            fetchJson('/api/chain'),
+            fetchJson('/api/log'),
+            fetchJson('/api/phase-status'),
+            fetchJson('/api/draft'),
+            fetchJson('/api/agents'),
+            fetchJson('/api/evolution'),
+            fetchOutreachAgents().then(() => loadOutreachDraft()),
+            fetchOutreachHistory()
+        ]).then(([research, ideas, ledger, chain, logs, ps, draft, agents, evolution, od, oh]) => {
+            renderResearch(research);
+            renderIdeas(ideas);
+            renderLedger(ledger);
+            renderMetabolic(chain);
+            renderAgents(agents);
+            renderEvolution(evolution);
+            logContent.innerHTML = '';
+            logs.forEach(appendLogEntry);
+            phaseStatus = ps;
+            if (ps.cadence) renderCadence(ps.cadence);
+            updateButtons();
+            renderHistory();
+            updatePhaseTimer();
+            if (draft && draft.name) {
+                draftStatusEl.className = 'draft-status has-draft';
+                const sizeKb = (draft.size / 1024).toFixed(1);
+                const modified = new Date(draft.modified).toLocaleString();
+                draftStatusEl.textContent = `Draft ready: ${draft.name} (${sizeKb} KB, ${modified})`;
+            } else {
+                draftStatusEl.className = 'draft-status no-draft';
+                draftStatusEl.textContent = 'No draft \u2014 compose one before inscribing';
+            }
+        }).catch((err) => {
+            console.error('Initialization error:', err);
+            appendLogEntry({ type: 'error', line: `Dashboard initialization failed: ${err.message}` });
+        });
+    }
+
+    // --- SSE ---
+
+    function init() {
+        logContent.innerHTML = '';
+        const evtSource = new EventSource('/events');
+        let pageUnloading = false;
+        let lastState = 'connecting';
+
+        evtSource.onopen = () => {
+            lastState = 'open';
+            appendLogEntry({ type: 'stdout', line: 'Connected. Loading data...' });
+            loadInitialData().catch((err) => {
+                appendLogEntry({ type: 'error', line: `Init failed: ${err.message}` });
+            });
+        };
+
+        window.addEventListener('beforeunload', () => { pageUnloading = true; evtSource.close(); });
+
+        evtSource.onerror = () => {
+            if (pageUnloading) return;
+            if (evtSource.readyState === EventSource.CONNECTING && lastState !== 'connecting') {
+                lastState = 'connecting';
+                appendLogEntry({ type: 'stdout', line: 'SSE reconnecting...' });
+            } else if (evtSource.readyState === EventSource.CLOSED && lastState !== 'closed') {
+                lastState = 'closed';
+                appendLogEntry({ type: 'error', line: 'SSE closed. Reload to reconnect.' });
+            }
+        };
+
+        evtSource.addEventListener('log', (e) => {
+            try {
+                const entry = JSON.parse(e.data);
+                appendLogEntry(entry);
+                if (entry.type === 'inscription') updateInscriptionBanner(entry);
+                if (entry.type === 'outreach' || entry.line?.toLowerCase().includes('send_inbox_message')) {
+                    updateOutreachBanner(entry);
+                }
+            } catch {}
+        });
+
+        evtSource.addEventListener('chain', () => {
+            fetchJson('/api/chain').then(renderMetabolic).catch(() => {});
+        });
+
+        evtSource.addEventListener('file-change', (e) => {
+            try {
+                const payload = JSON.parse(e.data);
+                if (payload.type === 'research') renderResearch(payload.data);
+                else if (payload.type === 'ideas') renderIdeas(payload.data);
+                else if (payload.type === 'agents') renderAgents(payload.data);
+                else if (payload.type === 'evolution') renderEvolution(payload.data);
+                else if (payload.type === 'ledger') {
+                    renderLedger(payload.data);
+                    fetchJson('/api/chain').then(renderMetabolic).catch(() => {});
+                }
+            } catch {}
+        });
+
+        evtSource.addEventListener('phase-start', (e) => {
+            refreshPhaseStatus();
+            try {
+                const data = JSON.parse(e.data);
+                if (data.phase === 'inscribe') resetBanner();
+            } catch {}
+        });
+
+        evtSource.addEventListener('phase-complete', (e) => {
+            refreshPhaseStatus();
+            refreshDraftStatus();
+            fetchJson('/api/chain').then(renderMetabolic).catch(() => {});
+            try {
+                const data = JSON.parse(e.data);
+                if (data.phase === 'inscribe') showBannerComplete(data.success);
+            } catch {}
+        });
+
+        evtSource.addEventListener('outreach-complete', (e) => {
+            try {
+                const data = JSON.parse(e.data);
+                btnOutreachSend.disabled = false;
+                btnOutreachSend.textContent = 'BROADCAST MESSAGE';
+                outreachReviewPanel.classList.remove('visible');
+                showOutreachBannerComplete(data.success);
+                if (data.success) {
+                    showOutreachStatus(`Message to ${data.agent} sent!`, 'success');
+                    outreachMessageInput.value = '';
+                    outreachIncomingInput.value = '';
+                    outreachModeSelect.value = 'intro';
+                    setOutreachThought(null);
+                    saveOutreachDraft({ silent: true });
+                    fetchOutreachHistory();
+                    fetchOutreachAgentMemory(outreachAgentSelect.value);
+                } else {
+                    showOutreachStatus(`Send failed: ${data.error || 'Unknown error'}`, 'error');
+                }
+            } catch {}
+        });
+
+        evtSource.addEventListener('research-start', (e) => {
+            try {
+                runningResearch = JSON.parse(e.data);
+                updateOutreachTimer();
+            } catch {}
+        });
+
+        evtSource.addEventListener('research-complete', (e) => {
+            try {
+                const data = JSON.parse(e.data);
+                runningResearch = null;
+                updateOutreachTimer();
+                btnOutreachResearch.disabled = false;
+                btnOutreachResearch.textContent = 'RESEARCH & GENERATE';
+                if (data.success) {
+                    showOutreachStatus('Research complete', 'success');
+                    if (data.mode) outreachModeSelect.value = data.mode;
+                    outreachMessageInput.value = data.message;
+                    setOutreachThought(data);
+                    saveOutreachDraft({ silent: true });
+                    fetchOutreachHistory();
+                    fetchOutreachAgentMemory(outreachAgentSelect.value);
+                } else {
+                    showOutreachStatus(`Research failed: ${data.error || 'Unknown error'}`, 'error');
+                }
+            } catch {}
+        });
+    }
+
+    // Tick: update phase timer every second
+    setInterval(() => { 
+        updatePhaseTimer(); 
+        updateOutreachTimer();
+    }, 1000);
+
+    // Refresh phase status every 30s (in case of missed SSE events)
+    setInterval(() => { refreshPhaseStatus(); }, 30000);
+
+    init();
+});
+</script>
+<script src="/skills-lab.js"></script>
+
+</body>
+</html>

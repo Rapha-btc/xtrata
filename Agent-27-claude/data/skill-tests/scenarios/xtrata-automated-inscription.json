@@ -1,0 +1,294 @@
+{
+  "skillId": "xtrata-automated-inscription",
+  "displayName": "Xtrata Automated Inscription Skill",
+  "defaultMode": "dry-run",
+  "defaultModel": "sonnet",
+  "defaultBudget": 0.5,
+  "scenarios": [
+    {
+      "id": "small-helper-text",
+      "title": "Small Text Helper Route",
+      "summary": "A tiny text/plain inscription with no dependencies should choose the helper route.",
+      "mode": "dry-run",
+      "input": {
+        "content": "Hello, Bitcoin",
+        "sizeBytes": 14,
+        "mimeType": "text/plain",
+        "tokenUri": "https://example.com/hello",
+        "dependencies": []
+      },
+      "instructions": [
+        "Treat this as a fresh inscription with no existing upload state unless your plan explicitly checks for one.",
+        "You must explain how the agent computes the content hash and why the helper route is valid.",
+        "You are planning the execution, not claiming that the inscription already succeeded."
+      ],
+      "deliverables": [
+        "Step-by-step execution plan",
+        "Exact function calls with argument types",
+        "Post-condition configuration",
+        "Error handling strategy",
+        "Structured result object"
+      ],
+      "assertions": [
+        {
+          "id": "hash-chain",
+          "label": "Uses the incremental hash chain rather than hashing the whole file once",
+          "severity": "critical",
+          "requiredAny": [
+            "32 zero bytes",
+            "incremental hash",
+            "sha-256\\(running-hash \\|\\| chunk\\)"
+          ]
+        },
+        {
+          "id": "dedupe-first",
+          "label": "Checks deduplication before any write path",
+          "severity": "critical",
+          "requiredAny": [
+            "get-id-by-hash",
+            "dedupe"
+          ]
+        },
+        {
+          "id": "helper-route",
+          "label": "Chooses the helper route with mint-small-single-tx",
+          "severity": "critical",
+          "requiredAll": [
+            "helper",
+            "mint-small-single-tx"
+          ]
+        },
+        {
+          "id": "fee-unit",
+          "label": "Reads the current fee unit before building spend caps",
+          "severity": "important",
+          "requiredAny": [
+            "get-fee-unit"
+          ]
+        },
+        {
+          "id": "deny-mode",
+          "label": "Uses deny-mode STX post-conditions",
+          "severity": "critical",
+          "requiredAny": [
+            "PostConditionMode.Deny",
+            "deny mode"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "large-staged-html",
+      "title": "Large HTML Staged Upload",
+      "summary": "A 600KB HTML file should use begin-or-get, add-chunk-batch, and seal-inscription.",
+      "mode": "dry-run",
+      "input": {
+        "sizeBytes": 600000,
+        "expectedChunks": 37,
+        "mimeType": "text/html",
+        "tokenUri": "https://example.com/page",
+        "dependencies": []
+      },
+      "instructions": [
+        "Assume the content is a valid 600KB HTML file.",
+        "Focus on correct chunking, staged route selection, and transaction ordering.",
+        "Explicitly state that the agent waits for each write transaction to confirm before continuing."
+      ],
+      "deliverables": [
+        "Step-by-step execution plan",
+        "Exact function calls with argument types",
+        "Post-condition configuration",
+        "Error handling strategy",
+        "Structured result object"
+      ],
+      "assertions": [
+        {
+          "id": "staged-route",
+          "label": "Selects the staged route instead of the helper",
+          "severity": "critical",
+          "requiredAll": [
+            "begin-or-get",
+            "add-chunk-batch",
+            "seal-inscription"
+          ]
+        },
+        {
+          "id": "chunk-count",
+          "label": "Acknowledges the 37 chunk count for the example file",
+          "severity": "important",
+          "requiredAny": [
+            "37",
+            "37 chunk"
+          ]
+        },
+        {
+          "id": "confirmation-order",
+          "label": "Waits for confirmation between staged transactions",
+          "severity": "critical",
+          "requiredAny": [
+            "wait for each",
+            "confirm before",
+            "poll transaction"
+          ]
+        },
+        {
+          "id": "begin-fee",
+          "label": "Describes begin fee and seal fee separately",
+          "severity": "important",
+          "requiredAny": [
+            "begin fee",
+            "seal fee"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "recursive-helper-json",
+      "title": "Recursive JSON Helper Mint",
+      "summary": "A small JSON document with dependency [107] should use the recursive helper path.",
+      "mode": "dry-run",
+      "input": {
+        "sizeBytes": 5120,
+        "mimeType": "application/json",
+        "tokenUri": "https://example.com/child",
+        "dependencies": [107]
+      },
+      "instructions": [
+        "Treat dependency token 107 as an intended recursive parent, but explain how the agent verifies it exists.",
+        "This is still a single chunk helper mint.",
+        "Do not apply Agent 27-specific rules beyond the dependency provided in the input."
+      ],
+      "deliverables": [
+        "Step-by-step execution plan",
+        "Exact function calls with argument types",
+        "Post-condition configuration",
+        "Error handling strategy",
+        "Structured result object"
+      ],
+      "assertions": [
+        {
+          "id": "recursive-helper",
+          "label": "Uses mint-small-single-tx-recursive",
+          "severity": "critical",
+          "requiredAny": [
+            "mint-small-single-tx-recursive"
+          ]
+        },
+        {
+          "id": "dependency-verification",
+          "label": "Verifies that dependency 107 exists before recursive minting",
+          "severity": "critical",
+          "requiredAny": [
+            "verify",
+            "dependency",
+            "107"
+          ]
+        },
+        {
+          "id": "dependency-args",
+          "label": "Passes dependencies as a list of uint values",
+          "severity": "important",
+          "requiredAny": [
+            "list",
+            "uint",
+            "107"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "duplicate-dedupe",
+      "title": "Duplicate Content Reuse",
+      "summary": "If the content hash already exists, the agent should reuse the canonical token and stop.",
+      "mode": "dry-run",
+      "input": {
+        "duplicate": true
+      },
+      "instructions": [
+        "Assume get-id-by-hash returns an existing token ID for this content.",
+        "Explain how the agent responds without building any write transactions."
+      ],
+      "deliverables": [
+        "Step-by-step execution plan",
+        "Exact function calls with argument types",
+        "Error handling strategy",
+        "Structured result object"
+      ],
+      "assertions": [
+        {
+          "id": "returns-existing",
+          "label": "Returns the existing token ID instead of minting",
+          "severity": "critical",
+          "requiredAny": [
+            "existing token",
+            "reuse",
+            "no write"
+          ]
+        },
+        {
+          "id": "no-mint-functions",
+          "label": "Does not proceed to helper or staged write calls",
+          "severity": "critical",
+          "forbiddenAny": [
+            "mint-small-single-tx",
+            "begin-or-get",
+            "seal-inscription",
+            "seal-recursive"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "resume-staged-upload",
+      "title": "Resume Interrupted Upload",
+      "summary": "An interrupted 80-chunk upload should resume from current-index on the staged path.",
+      "mode": "dry-run",
+      "input": {
+        "sizeBytes": 1310720,
+        "expectedChunks": 80,
+        "currentIndex": 30
+      },
+      "instructions": [
+        "Assume get-upload-state returns an active session with current-index = 30.",
+        "Explain how the agent resumes from that point and why it must remain on the staged path."
+      ],
+      "deliverables": [
+        "Step-by-step execution plan",
+        "Exact function calls with argument types",
+        "Error handling strategy",
+        "Structured result object"
+      ],
+      "assertions": [
+        {
+          "id": "upload-state",
+          "label": "Checks upload state and uses current-index",
+          "severity": "critical",
+          "requiredAny": [
+            "get-upload-state",
+            "current-index",
+            "30"
+          ]
+        },
+        {
+          "id": "resume-range",
+          "label": "Resumes from chunk 30 instead of restarting at chunk 0",
+          "severity": "critical",
+          "requiredAny": [
+            "resume from chunk 30",
+            "start at 30",
+            "skip uploaded chunks"
+          ]
+        },
+        {
+          "id": "staged-only",
+          "label": "Stays on the staged route and does not switch to helper",
+          "severity": "critical",
+          "requiredAny": [
+            "staged route",
+            "do not switch to helper"
+          ]
+        }
+      ]
+    }
+  ]
+}

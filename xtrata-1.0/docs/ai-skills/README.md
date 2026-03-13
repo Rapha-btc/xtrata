@@ -10,8 +10,8 @@ enough to inscribe on-chain where practical.
 |------|-------------|
 | [`skill-inscribe.md`](skill-inscribe.md) | Single-item inscription skill. Covers helper-route single-tx minting for `<=30` chunks plus the standard staged flow, with cost estimation and user confirmation gate. |
 | [`skill-batch-mint.md`](skill-batch-mint.md) | Batch mint skill for coordinated drops of `1..50` non-recursive items. Covers core `seal-inscription-batch` and collection `mint-seal-batch`, with deterministic ordering, dedupe, staged uploads, and final batch seal. |
+| [`skill-query.md`](skill-query.md) | V2-only viewing/query skill. Covers resolving one inscription from a token ID, validating chunk `0`, rebuilding bytes with ordered batch reads, and returning a clear unsupported message for V1 or migrated V1-backed tokens. |
 | `skill-transfer.md` | Transfer inscriptions between wallets. *(planned)* |
-| `skill-query.md` | Query inscription state, metadata, and content. *(planned)* |
 
 ## Canonical Skill File
 
@@ -33,6 +33,7 @@ agent training and on-chain inscription.
 ## Suggested Order
 
 1. Read the relevant `skill-*.md` for your use case:
+   - [`skill-query.md`](skill-query.md) for viewing one V2 inscription from only a token ID.
    - [`skill-inscribe.md`](skill-inscribe.md) for one-item mints.
    - [`skill-batch-mint.md`](skill-batch-mint.md) for coordinated drops of `2..50` items.
 2. Choose a training track (`aibtc` or `generic`) for environment-specific setup.
