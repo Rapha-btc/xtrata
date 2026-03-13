@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { showContractCall } from '@stacks/connect';
 import { sha256 } from '@noble/hashes/sha256';
 import {
@@ -42,6 +42,7 @@ import {
   resolveCollectionMintPaymentModel,
   type CollectionMintPaymentModel
 } from './lib/collection-mint/payment-model';
+import { findFirstMatchInBatches } from './lib/collection-mint/resume-scan';
 import {
   shouldUseCollectionSmallSingleTx,
   supportsCollectionSmallSingleTx
@@ -89,6 +90,9 @@ const COLLECTION_UPLOAD_EXPIRY_BLOCKS = 4_320;
 const APPROX_BLOCKS_PER_DAY = 144;
 const COLLECTION_SNAPSHOT_CACHE_MS = 2 * 60_000;
 const COLLECTION_ASSET_BYTES_CACHE_MS = 10 * 60_000;
+const RESUMABLE_LOOKUP_CACHE_MS = 10_000;
+const RESERVATION_SCAN_BATCH_SIZE = 6;
+const RESERVATION_SCAN_COMPUTE_BATCH_SIZE = 3;
 const XTRATA_APP_ICON_DATA_URI =
   'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%23f97316"/><path d="M18 20h28v6H18zm0 12h28v6H18zm0 12h28v6H18z" fill="white"/></svg>';
 
@@ -144,6 +148,13 @@ type MintProgress = {
   hasReservation: boolean;
   uploadState: UploadState | null;
   tokenId: bigint | null;
+};
+
+type ResumableLookupCacheEntry = {
+  owner: string;
+  checkedAt: number;
+  assetId: string | null;
+  promise: Promise<string | null> | null;
 };
 
 type CollectionMintPriceDisplayMode =
@@ -521,6 +532,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   const [collectionIndexSyncMessage, setCollectionIndexSyncMessage] = useState<string | null>(
     null
   );
+  const resumableLookupCacheRef = useRef<ResumableLookupCacheEntry | null>(null);
   const [canonicalHashHexByAssetId, setCanonicalHashHexByAssetId] = useState<
     Record<string, string>
   >({});
@@ -1600,49 +1612,128 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
 
   const findResumableAssetForWallet = useCallback(
     async (owner: string) => {
-      const candidates = mintableAssets.filter(
-        (asset) =>
-          !pendingMintAssetIds.includes(asset.asset_id) &&
-          !mintedTokenIds[asset.asset_id]
-      );
-      if (candidates.length === 0) {
-        return null;
-      }
+      const resolveAsset = (assetId: string | null) => {
+        if (!assetId) {
+          return null;
+        }
+        return mintableAssets.find((asset) => asset.asset_id === assetId) ?? null;
+      };
 
-      for (const candidate of candidates) {
-        const knownHashHex =
-          normalizeHashHex(canonicalHashHexByAssetId[candidate.asset_id]) ??
-          normalizeHashHex(candidate.expected_hash ?? '');
-        if (!knownHashHex) {
-          continue;
+      const cached = resumableLookupCacheRef.current;
+      if (cached && cached.owner === owner) {
+        if (cached.promise) {
+          return resolveAsset(await cached.promise);
         }
-        const knownHashBytes = hashHexToBytes(knownHashHex);
-        if (!knownHashBytes) {
-          continue;
-        }
-        if (await checkReservationForHash(owner, knownHashBytes)) {
-          return candidate;
+        if (Date.now() - cached.checkedAt < RESUMABLE_LOOKUP_CACHE_MS) {
+          return resolveAsset(cached.assetId);
         }
       }
 
-      for (const candidate of candidates) {
-        try {
-          const rawBytes = await fetchAssetBytes(candidate.asset_id);
-          const computedHash = computeExpectedHash(chunkBytes(rawBytes));
-          if (await checkReservationForHash(owner, computedHash)) {
-            const computedHex = bytesToHex(computedHash);
-            setCanonicalHashHexByAssetId((current) => ({
-              ...current,
-              [candidate.asset_id]: computedHex
-            }));
-            return candidate;
+      const scanPromise = (async (): Promise<string | null> => {
+        const candidates = mintableAssets.filter(
+          (asset) =>
+            !pendingMintAssetIds.includes(asset.asset_id) &&
+            !mintedTokenIds[asset.asset_id]
+        );
+        if (candidates.length === 0) {
+          return null;
+        }
+
+        const knownHashCandidates = candidates.flatMap((candidate) => {
+          const knownHashHex =
+            normalizeHashHex(canonicalHashHexByAssetId[candidate.asset_id]) ??
+            normalizeHashHex(candidate.expected_hash ?? '');
+          if (!knownHashHex) {
+            return [];
           }
-        } catch {
-          // Ignore candidate fetch/read failures while scanning for resumable mints.
-        }
-      }
+          const knownHashBytes = hashHexToBytes(knownHashHex);
+          if (!knownHashBytes) {
+            return [];
+          }
+          return [{ asset: candidate, hashBytes: knownHashBytes }];
+        });
 
-      return null;
+        const knownMatch = await findFirstMatchInBatches({
+          items: knownHashCandidates,
+          batchSize: RESERVATION_SCAN_BATCH_SIZE,
+          predicate: async ({ hashBytes }) => checkReservationForHash(owner, hashBytes)
+        });
+        if (knownMatch) {
+          return knownMatch.asset.asset_id;
+        }
+
+        const hashCorrections: Record<string, string> = {};
+        let matchedAssetId: string | null = null;
+        await findFirstMatchInBatches({
+          items: candidates,
+          batchSize: RESERVATION_SCAN_COMPUTE_BATCH_SIZE,
+          predicate: async (candidate) => {
+            try {
+              const rawBytes = await fetchAssetBytes(candidate.asset_id);
+              const computedHash = computeExpectedHash(chunkBytes(rawBytes));
+              const computedHex = bytesToHex(computedHash);
+              const rawShaHex = bytesToHex(sha256(rawBytes));
+              const knownHashHex =
+                normalizeHashHex(canonicalHashHexByAssetId[candidate.asset_id]) ??
+                normalizeHashHex(candidate.expected_hash ?? '');
+
+              if (knownHashHex && knownHashHex !== computedHex) {
+                if (knownHashHex === rawShaHex) {
+                  hashCorrections[candidate.asset_id] = computedHex;
+                } else {
+                  return false;
+                }
+              }
+
+              if (!knownHashHex) {
+                hashCorrections[candidate.asset_id] = computedHex;
+              }
+
+              if (await checkReservationForHash(owner, computedHash)) {
+                matchedAssetId = candidate.asset_id;
+                return true;
+              }
+            } catch {
+              // Ignore candidate fetch/read failures while scanning for resumable mints.
+            }
+            return false;
+          }
+        });
+
+        if (Object.keys(hashCorrections).length > 0) {
+          setCanonicalHashHexByAssetId((current) => ({
+            ...current,
+            ...hashCorrections
+          }));
+        }
+
+        return matchedAssetId;
+      })();
+
+      resumableLookupCacheRef.current = {
+        owner,
+        checkedAt: Date.now(),
+        assetId: null,
+        promise: scanPromise
+      };
+
+      try {
+        const assetId = await scanPromise;
+        if (resumableLookupCacheRef.current?.promise === scanPromise) {
+          resumableLookupCacheRef.current = {
+            owner,
+            checkedAt: Date.now(),
+            assetId,
+            promise: null
+          };
+        }
+        return resolveAsset(assetId);
+      } catch (error) {
+        if (resumableLookupCacheRef.current?.promise === scanPromise) {
+          resumableLookupCacheRef.current = null;
+        }
+        throw error;
+      }
     },
     [
       canonicalHashHexByAssetId,
@@ -2262,10 +2353,24 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   ]);
 
   useEffect(() => {
+    resumableLookupCacheRef.current = null;
+  }, [
+    canonicalHashHexByAssetId,
+    contractStatus?.reservedCount,
+    mintableAssets,
+    mintedTokenIds,
+    pendingMintAssetIds,
+    resolvedCollectionId
+  ]);
+
+  useEffect(() => {
     if (!walletSession.address || (contractStatus?.reservedCount ?? 0n) <= 0n) {
       return;
     }
     if (mintPending) {
+      return;
+    }
+    if (resumeAssetId && !mintedTokenIds[resumeAssetId]) {
       return;
     }
 
@@ -2288,6 +2393,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     findResumableAssetForWallet,
     mintPending,
     mintedTokenIds,
+    resumeAssetId,
     walletSession.address
   ]);
 
