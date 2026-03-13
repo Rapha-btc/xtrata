@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   buildMintWalletGuidanceMessage,
-  confirmMintWalletGuidance
+  confirmMintWalletGuidance,
+  confirmMintWalletGuidanceOrAbort,
+  getMintWalletGuidanceCancelCopy
 } from '../wallet-guidance';
 
 describe('mint wallet guidance', () => {
@@ -20,7 +22,7 @@ describe('mint wallet guidance', () => {
     const originalConfirm = globalThis.confirm;
     delete (globalThis as typeof globalThis & { confirm?: typeof confirm }).confirm;
 
-    expect(confirmMintWalletGuidance('collection')).toBe(true);
+    expect(confirmMintWalletGuidance('collection-live')).toBe(true);
 
     globalThis.confirm = originalConfirm;
   });
@@ -33,6 +35,32 @@ describe('mint wallet guidance', () => {
     expect(confirmMintWalletGuidance('resume')).toBe(false);
     expect(confirmSpy).toHaveBeenCalledWith(
       buildMintWalletGuidanceMessage('resume')
+    );
+
+    globalThis.confirm = originalConfirm;
+  });
+
+  it('applies centralized cancel copy for opted-in flows', () => {
+    const originalConfirm = globalThis.confirm;
+    const confirmSpy = vi.fn(() => false);
+    const setStatus = vi.fn();
+    const appendLog = vi.fn();
+    globalThis.confirm = confirmSpy;
+
+    expect(
+      confirmMintWalletGuidanceOrAbort('collection-batch', {
+        setStatus,
+        appendLog
+      })
+    ).toBe(false);
+    expect(confirmSpy).toHaveBeenCalledWith(
+      buildMintWalletGuidanceMessage('collection-batch')
+    );
+    expect(setStatus).toHaveBeenCalledWith(
+      getMintWalletGuidanceCancelCopy('collection-batch').statusMessage
+    );
+    expect(appendLog).toHaveBeenCalledWith(
+      getMintWalletGuidanceCancelCopy('collection-batch').logMessage
     );
 
     globalThis.confirm = originalConfirm;

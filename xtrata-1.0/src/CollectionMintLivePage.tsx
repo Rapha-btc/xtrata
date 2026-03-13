@@ -54,6 +54,7 @@ import {
   SMALL_MINT_HELPER_MAX_CHUNKS,
   TX_DELAY_SECONDS
 } from './lib/mint/constants';
+import { confirmMintWalletGuidanceOrAbort } from './lib/mint/wallet-guidance';
 import { getNetworkFromAddress, getNetworkMismatch } from './lib/network/guard';
 import { toStacksNetwork } from './lib/network/stacks';
 import type { NetworkType } from './lib/network/types';
@@ -2182,6 +2183,15 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
         setResumeAssetId(null);
         await loadContractStatus();
         await scanMintedAssets();
+        return;
+      }
+
+      if (
+        !confirmMintWalletGuidanceOrAbort('collection-live', {
+          setStatus: setMintMessage,
+          appendLog: appendMintLog
+        })
+      ) {
         return;
       }
 
