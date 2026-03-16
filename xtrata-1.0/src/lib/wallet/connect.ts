@@ -18,11 +18,11 @@ import {
 } from '@stacks/connect-ui';
 import { defineCustomElements } from '@stacks/connect-ui/loader';
 import {
+  deserializeTransaction,
   PostConditionMode,
   serializeCV,
   serializePostCondition,
-  validateStacksAddress,
-  type PostCondition
+  validateStacksAddress
 } from '@stacks/transactions';
 import { getNetworkFromAddress } from '../network/guard';
 import type { NetworkType } from '../network/types';
@@ -55,6 +55,15 @@ type WalletContractFunctionArg = ContractCallOptions['functionArgs'][number];
 type WalletContractPostCondition = NonNullable<ContractCallOptions['postConditions']>[number];
 type SerializableClarityValue = Parameters<typeof serializeCV>[0];
 type SerializablePostCondition = Parameters<typeof serializePostCondition>[0];
+const TX_RESULT_NESTED_KEYS = ['result', 'data', 'payload', 'response', 'params'] as const;
+const TX_RESULT_RAW_KEYS = [
+  'txRaw',
+  'rawTx',
+  'rawTransaction',
+  'transaction',
+  'hex',
+  'serializedTx'
+] as const;
 
 type WalletActionBase = {
   appDetails?: ContractCallOptions['appDetails'];
@@ -91,6 +100,42 @@ const disconnectedSession = (): WalletSession => ({ isConnected: false });
 
 const stripHexPrefix = (value: string) =>
   value.startsWith('0x') || value.startsWith('0X') ? value.slice(2) : value;
+
+const toNonEmptyText = (value: unknown) => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+const normalizeStandaloneTxId = (value: unknown) => {
+  const text = toNonEmptyText(value);
+  if (!text) {
+    return null;
+  }
+  const normalized = stripHexPrefix(text);
+  if (!/^[0-9a-f]+$/i.test(normalized) || normalized.length !== 64) {
+    return null;
+  }
+  return text.startsWith('0x') || text.startsWith('0X') ? text : `0x${normalized}`;
+};
+
+const normalizeRawTxHex = (value: unknown) => {
+  const text = toNonEmptyText(value);
+  if (!text) {
+    return null;
+  }
+  const normalized = stripHexPrefix(text);
+  if (
+    normalized.length < 128 ||
+    normalized.length % 2 !== 0 ||
+    !/^[0-9a-f]+$/i.test(normalized)
+  ) {
+    return null;
+  }
+  return normalized;
+};
 
 const normalizeNetwork = (
   value: unknown,
@@ -303,25 +348,100 @@ const requestProvider = async (
   return provider.request(method, params as unknown as any[]);
 };
 
-const normalizeTxResult = (payload: unknown): WalletTxResult => {
-  if (!payload || typeof payload !== 'object') {
-    throw new Error('Wallet response did not include a transaction id.');
+const deriveTxIdFromRawPayload = (value: unknown) => {
+  const rawTxHex = normalizeRawTxHex(value);
+  if (!rawTxHex) {
+    return null;
   }
+  try {
+    const txId = deserializeTransaction(rawTxHex).txid();
+    return txId.startsWith('0x') ? txId : `0x${txId}`;
+  } catch {
+    return null;
+  }
+};
+
+const normalizeTxResultPayload = (
+  payload: unknown,
+  depth = 0
+): WalletTxResult | null => {
+  if (depth > 6 || typeof payload === 'undefined' || payload === null) {
+    return null;
+  }
+
+  const standaloneTxId =
+    normalizeStandaloneTxId(payload) ?? deriveTxIdFromRawPayload(payload);
+  if (standaloneTxId) {
+    return {
+      txId: standaloneTxId,
+      txid: standaloneTxId
+    };
+  }
+
+  if (Array.isArray(payload)) {
+    for (const entry of payload) {
+      const nested = normalizeTxResultPayload(entry, depth + 1);
+      if (nested) {
+        return nested;
+      }
+    }
+    return null;
+  }
+
+  if (typeof payload !== 'object') {
+    return null;
+  }
+
   const candidate = payload as Record<string, unknown>;
-  const txId =
-    (typeof candidate.txId === 'string' && candidate.txId) ||
-    (typeof candidate.txid === 'string' && candidate.txid) ||
-    '';
-
-  if (!txId) {
-    throw new Error('Wallet response did not include a transaction id.');
+  const explicitTxId =
+    toNonEmptyText(candidate.txId) ||
+    toNonEmptyText(candidate.txid) ||
+    toNonEmptyText(candidate.transactionId);
+  if (explicitTxId) {
+    return {
+      ...candidate,
+      txId: explicitTxId,
+      txid: explicitTxId
+    };
   }
 
-  return {
-    ...candidate,
-    txId,
-    txid: txId
-  };
+  for (const key of TX_RESULT_RAW_KEYS) {
+    const txId = deriveTxIdFromRawPayload(candidate[key]);
+    if (txId) {
+      return {
+        ...candidate,
+        txId,
+        txid: txId,
+        txRaw: toNonEmptyText(candidate[key]) ?? undefined
+      };
+    }
+  }
+
+  for (const key of TX_RESULT_NESTED_KEYS) {
+    const nestedPayload = candidate[key];
+    const nested = normalizeTxResultPayload(nestedPayload, depth + 1);
+    if (nested) {
+      return {
+        ...candidate,
+        ...(nestedPayload && typeof nestedPayload === 'object'
+          ? (nestedPayload as Record<string, unknown>)
+          : {}),
+        ...nested,
+        txId: nested.txId,
+        txid: nested.txid ?? nested.txId
+      };
+    }
+  }
+
+  return null;
+};
+
+const normalizeTxResult = (payload: unknown): WalletTxResult => {
+  const normalized = normalizeTxResultPayload(payload);
+  if (normalized) {
+    return normalized;
+  }
+  throw new Error('Wallet response did not include a transaction id.');
 };
 
 const toLegacyContractCallOptions = (
@@ -678,5 +798,6 @@ export const __testing = {
   isMethodUnsupportedError,
   isUserCancelledError,
   normalizeNetwork,
+  normalizeTxResultPayload,
   normalizeTxResult
 };

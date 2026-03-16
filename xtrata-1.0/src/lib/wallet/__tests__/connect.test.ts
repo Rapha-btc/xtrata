@@ -54,6 +54,19 @@ describe('wallet connect helpers', () => {
     });
   });
 
+  it('unwraps JSON-RPC transaction results returned by Leather-style request handlers', () => {
+    expect(
+      __testing.normalizeTxResult({
+        jsonrpc: '2.0',
+        id: '1',
+        result: { txid: '0xdef456' }
+      })
+    ).toMatchObject({
+      txId: '0xdef456',
+      txid: '0xdef456'
+    });
+  });
+
   it('extracts a stacks address from nested provider payloads', () => {
     expect(
       __testing.extractStacksAddress({
