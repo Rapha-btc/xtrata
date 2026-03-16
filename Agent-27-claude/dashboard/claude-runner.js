@@ -8,9 +8,9 @@ const activityRing = [];
 
 // Kill timeouts per phase type (ms)
 const TIMEOUTS = {
-  research: 5 * 60 * 1000,     // 5 min — Sonnet pulse should complete in ~2 min
+  research: 10 * 60 * 1000,    // 10 min — pulse does wallet + lineage + MCP + web search + file writes
   compose: 10 * 60 * 1000,     // 10 min — Opus draft composition
-  inscription: 5 * 60 * 1000,  // 5 min — Opus on-chain inscription
+  inscription: 10 * 60 * 1000, // 10 min — Opus on-chain inscription (tx confirmation can be slow)
   skillTest: 7 * 60 * 1000
 };
 
@@ -223,10 +223,13 @@ function parseStreamEvent(raw) {
  */
 function runClaude({ model, budget, prompt, cwd, phaseType = 'research', onLine, onSpawn }) {
   return new Promise((resolve, reject) => {
+    console.log(`[claude-runner] Auth preflight...`);
     const auth = preflightAuthCheck();
     if (!auth.ok) {
+      console.error(`[claude-runner] Auth FAILED: ${auth.reason}`);
       return reject(new Error(auth.reason));
     }
+    console.log(`[claude-runner] Auth OK (${auth.source})`);
 
     const mcpConfigPath = path.join(__dirname, '..', '.mcp.json');
     const args = [
@@ -242,12 +245,14 @@ function runClaude({ model, budget, prompt, cwd, phaseType = 'research', onLine,
       prompt
     ];
 
+    console.log(`[claude-runner] Spawning: ${CLAUDE_BIN} -p --model ${model} --max-budget-usd ${budget} (prompt: ${prompt.length} chars, cwd: ${cwd})`);
     const proc = spawn(CLAUDE_BIN, args, {
       cwd,
       env: getRunnerEnv(),
       stdio: ['ignore', 'pipe', 'pipe']
     });
 
+    console.log(`[claude-runner] Process spawned: pid=${proc.pid}`);
     if (onSpawn) onSpawn(proc);
 
     const output = [];
@@ -316,12 +321,14 @@ function runClaude({ model, budget, prompt, cwd, phaseType = 'research', onLine,
 
     proc.on('error', (err) => {
       clearTimeout(killTimer);
+      console.error(`[claude-runner] Process error (pid=${proc.pid}): ${err.message}`);
       addToRing({ timestamp: new Date().toISOString(), type: 'error', line: err.message });
       reject(err);
     });
 
     proc.on('close', (code) => {
       clearTimeout(killTimer);
+      console.log(`[claude-runner] Process closed (pid=${proc.pid}): code=${code}, output lines=${output.length}`);
       if (code === 0) {
         resolve({ code, output });
       } else {
@@ -330,6 +337,7 @@ function runClaude({ model, budget, prompt, cwd, phaseType = 'research', onLine,
         const err = new Error(`Claude exited with code ${code}${suffix}`);
         err.code = code;
         err.output = output;
+        console.error(`[claude-runner] Non-zero exit: ${err.message}`);
         reject(err);
       }
     });

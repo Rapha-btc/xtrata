@@ -187,6 +187,11 @@
             border-color: var(--green);
             color: var(--green);
         }
+        .draft-status.inscribed-draft {
+            display: block;
+            border-color: #4a9eff;
+            color: #4a9eff;
+        }
         .draft-status.no-draft {
             display: block;
             color: #666;
@@ -811,10 +816,14 @@
     <div class="panel ops full">
         <h2>OPERATIONS</h2>
 
-        <div class="ops-buttons">
+        <div class="ops-buttons" style="align-items: center;">
             <button class="btn" id="btn-pulse">&#9654; RUN PULSE</button>
             <button class="btn" id="btn-compose">&#9654; COMPOSE DRAFT</button>
             <button class="btn" id="btn-inscribe">&#9654; INSCRIBE ON-CHAIN</button>
+            <select class="skills-lab-select" id="ops-model" style="padding: 0.4rem 0.5rem; max-width: 100px;">
+                <option value="sonnet" selected>sonnet</option>
+                <option value="opus">opus</option>
+            </select>
             <button class="btn btn-cancel" id="btn-cancel">&#9632; CANCEL</button>
         </div>
 
@@ -1160,6 +1169,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let outreachBannerDismissTimer = null;
 
     let phaseStatus = null;
+    let currentDraft = null;   // { name, size, modified, stale } or null
     let showThinking = false;
 
     showThinkingCb.addEventListener('change', () => {
@@ -1680,10 +1690,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const isRunning = phaseStatus && phaseStatus.running;
         const runId = isRunning ? phaseStatus.running.phaseId : null;
         const ceiling = currentCadence && currentCadence.ceilingReached;
+        const hasFreshDraft = currentDraft && currentDraft.name && !currentDraft.stale;
 
         btnPulse.disabled = !!isRunning || !!ceiling;
         btnCompose.disabled = !!isRunning;
-        btnInscribe.disabled = !!isRunning;
+        btnInscribe.disabled = !!isRunning || !hasFreshDraft;
         btnCancel.classList.toggle('visible', !!isRunning);
 
         if (ceiling && !isRunning) {
@@ -1692,7 +1703,11 @@ document.addEventListener('DOMContentLoaded', () => {
             btnPulse.textContent = runId === 'pulse' ? '\u25CF Running...' : '\u25B6 RUN PULSE';
         }
         btnCompose.textContent = runId === 'compose' ? '\u25CF Composing...' : '\u25B6 COMPOSE DRAFT';
-        btnInscribe.textContent = runId === 'inscribe' ? '\u25CF Inscribing...' : '\u25B6 INSCRIBE ON-CHAIN';
+        if (!hasFreshDraft && !isRunning) {
+            btnInscribe.textContent = 'INSCRIBE \u2014 NO DRAFT';
+        } else {
+            btnInscribe.textContent = runId === 'inscribe' ? '\u25CF Inscribing...' : '\u25B6 INSCRIBE ON-CHAIN';
+        }
     }
 
     function renderHistory() {
@@ -1756,7 +1771,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const phaseNames = { pulse: 'Research Pulse', compose: 'Compose Draft', inscribe: 'Inscribe On-Chain' };
         const phaseName = phaseNames[r.phaseId] || r.phaseId;
-        ptLabel.textContent = `${phaseName} running...`;
+        const modelTag = r.model ? ` (${r.model})` : '';
+        ptLabel.textContent = `${phaseName}${modelTag} running...`;
         ptElapsed.textContent = `${em}:${String(es).padStart(2, '0')} / ${tm}:${String(ts).padStart(2, '0')}`;
         ptFill.style.width = pct + '%';
         ptFill.style.background = pct > 80 ? '#ff4d4d' : pct > 60 ? '#ff7900' : 'var(--accent)';
@@ -1788,62 +1804,35 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Button handlers
-    btnPulse.addEventListener('click', () => {
-        btnPulse.disabled = true;
-        btnPulse.textContent = '...';
-        fetch('/api/run/pulse', { method: 'POST' }).then((r) => r.json()).then((res) => {
-            if (res.ok) {
-                appendLogEntry({ type: 'start', line: 'Pulse started' });
-                refreshPhaseStatus();
-            } else {
-                appendLogEntry({ type: 'error', line: `Pulse rejected: ${res.error}` });
-                btnPulse.textContent = '\u25B6 RUN PULSE';
-                btnPulse.disabled = false;
-            }
-        }).catch((e) => {
-            appendLogEntry({ type: 'error', line: `Pulse failed: ${e.message}` });
-            btnPulse.textContent = '\u25B6 RUN PULSE';
-            btnPulse.disabled = false;
-        });
-    });
+    const opsModelSelect = document.getElementById('ops-model');
 
-    btnCompose.addEventListener('click', () => {
-        btnCompose.disabled = true;
-        btnCompose.textContent = '...';
-        fetch('/api/run/compose', { method: 'POST' }).then((r) => r.json()).then((res) => {
+    function runPhaseRequest(phaseId, btn, defaultLabel) {
+        const model = opsModelSelect.value;
+        btn.disabled = true;
+        btn.textContent = '...';
+        fetch(`/api/run/${phaseId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model })
+        }).then((r) => r.json()).then((res) => {
             if (res.ok) {
-                appendLogEntry({ type: 'start', line: 'Compose draft started' });
+                appendLogEntry({ type: 'start', line: `${defaultLabel} started (${model})` });
                 refreshPhaseStatus();
             } else {
-                appendLogEntry({ type: 'error', line: `Compose rejected: ${res.error}` });
-                btnCompose.textContent = '\u25B6 COMPOSE DRAFT';
-                btnCompose.disabled = false;
+                appendLogEntry({ type: 'error', line: `${defaultLabel} rejected: ${res.error}` });
+                btn.textContent = `\u25B6 ${defaultLabel.toUpperCase()}`;
+                btn.disabled = false;
             }
         }).catch((e) => {
-            appendLogEntry({ type: 'error', line: `Compose failed: ${e.message}` });
-            btnCompose.textContent = '\u25B6 COMPOSE DRAFT';
-            btnCompose.disabled = false;
+            appendLogEntry({ type: 'error', line: `${defaultLabel} failed: ${e.message}` });
+            btn.textContent = `\u25B6 ${defaultLabel.toUpperCase()}`;
+            btn.disabled = false;
         });
-    });
+    }
 
-    btnInscribe.addEventListener('click', () => {
-        btnInscribe.disabled = true;
-        btnInscribe.textContent = '...';
-        fetch('/api/run/inscribe', { method: 'POST' }).then((r) => r.json()).then((res) => {
-            if (res.ok) {
-                appendLogEntry({ type: 'start', line: 'Inscription started' });
-                refreshPhaseStatus();
-            } else {
-                appendLogEntry({ type: 'error', line: `Inscription rejected: ${res.error}` });
-                btnInscribe.textContent = '\u25B6 INSCRIBE ON-CHAIN';
-                btnInscribe.disabled = false;
-            }
-        }).catch((e) => {
-            appendLogEntry({ type: 'error', line: `Inscription failed: ${e.message}` });
-            btnInscribe.textContent = '\u25B6 INSCRIBE ON-CHAIN';
-            btnInscribe.disabled = false;
-        });
-    });
+    btnPulse.addEventListener('click', () => runPhaseRequest('pulse', btnPulse, 'Pulse'));
+    btnCompose.addEventListener('click', () => runPhaseRequest('compose', btnCompose, 'Compose Draft'));
+    btnInscribe.addEventListener('click', () => runPhaseRequest('inscribe', btnInscribe, 'Inscribe'));
 
     btnCancel.addEventListener('click', () => {
         btnCancel.disabled = true;
@@ -1868,18 +1857,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }).catch(() => {});
     }
 
+    function renderDraftStatus(draft) {
+        currentDraft = (draft && draft.name) ? draft : null;
+        if (draft && draft.name && !draft.stale) {
+            draftStatusEl.className = 'draft-status has-draft';
+            const sizeKb = (draft.size / 1024).toFixed(1);
+            const modified = new Date(draft.modified).toLocaleString();
+            draftStatusEl.textContent = `\u2713 Draft ready to inscribe: ${draft.name} (${sizeKb} KB, ${modified})`;
+        } else if (draft && draft.name && draft.stale) {
+            draftStatusEl.className = 'draft-status inscribed-draft';
+            const sizeKb = (draft.size / 1024).toFixed(1);
+            const label = draft.lastInscriptionDate ? `inscribed ${draft.lastInscriptionDate}` : 'already inscribed';
+            draftStatusEl.textContent = `\u2714 ${draft.name} ${label} (${sizeKb} KB) \u2014 run Compose for a new draft`;
+        } else {
+            draftStatusEl.className = 'draft-status no-draft';
+            draftStatusEl.textContent = 'No draft \u2014 compose one before inscribing';
+        }
+        updateButtons();
+    }
+
     function refreshDraftStatus() {
-        return fetchJson('/api/draft').then((draft) => {
-            if (draft && draft.name) {
-                draftStatusEl.className = 'draft-status has-draft';
-                const sizeKb = (draft.size / 1024).toFixed(1);
-                const modified = new Date(draft.modified).toLocaleString();
-                draftStatusEl.textContent = `Draft ready: ${draft.name} (${sizeKb} KB, ${modified})`;
-            } else {
-                draftStatusEl.className = 'draft-status no-draft';
-                draftStatusEl.textContent = 'No draft — compose one before inscribing';
-            }
-        }).catch(() => {});
+        return fetchJson('/api/draft').then(renderDraftStatus).catch(() => {});
     }
 
     // --- Renderers ---
@@ -2045,15 +2043,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateButtons();
             renderHistory();
             updatePhaseTimer();
-            if (draft && draft.name) {
-                draftStatusEl.className = 'draft-status has-draft';
-                const sizeKb = (draft.size / 1024).toFixed(1);
-                const modified = new Date(draft.modified).toLocaleString();
-                draftStatusEl.textContent = `Draft ready: ${draft.name} (${sizeKb} KB, ${modified})`;
-            } else {
-                draftStatusEl.className = 'draft-status no-draft';
-                draftStatusEl.textContent = 'No draft \u2014 compose one before inscribing';
-            }
+            renderDraftStatus(draft);
         }).catch((err) => {
             console.error('Initialization error:', err);
             appendLogEntry({ type: 'error', line: `Dashboard initialization failed: ${err.message}` });

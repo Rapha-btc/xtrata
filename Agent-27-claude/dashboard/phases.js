@@ -7,11 +7,12 @@ const fs = require('fs');
 const path = require('path');
 
 const MAX_PULSES_BEFORE_COMPOSE = 3;
+const MIN_STX_FOR_INSCRIPTION = 0.50; // Gas ceiling — preserve on-chain life (requested Entry 11)
 
 const PHASES = [
-  { id: 'pulse', model: 'sonnet', budget: 0.75, type: 'research', label: 'Research Pulse', timeoutMs: 5 * 60 * 1000, schedule: null },
+  { id: 'pulse', model: 'sonnet', budget: 0.75, type: 'research', label: 'Research Pulse', timeoutMs: 10 * 60 * 1000, schedule: null },
   { id: 'compose', model: 'opus', budget: 1.00, type: 'compose', label: 'Compose Draft', timeoutMs: 10 * 60 * 1000, schedule: null },
-  { id: 'inscribe', model: 'opus', budget: 1.50, type: 'inscription', label: 'Inscribe On-Chain', timeoutMs: 5 * 60 * 1000, schedule: null }
+  { id: 'inscribe', model: 'opus', budget: 1.50, type: 'inscription', label: 'Inscribe On-Chain', timeoutMs: 10 * 60 * 1000, schedule: null }
 ];
 
 const RESEARCH_PROMPT = `You are Agent 27 (ID 27). Follow AGENTs.md in this directory as source of truth; if anything conflicts, AGENTs.md wins.
@@ -130,28 +131,65 @@ function findLatestDraft(wd) {
 
 function getLatestDraft() {
   if (!workdir) return null;
-  return findLatestDraft(workdir);
+  const draft = findLatestDraft(workdir);
+  if (!draft) return null;
+
+  const { lastInscription, lastInscribedDraft } = stateManager.getState();
+  let stale = false;
+
+  // Check 1: exact match — this draft was already inscribed
+  if (lastInscribedDraft && lastInscribedDraft === draft.name) {
+    stale = true;
+  }
+  // Check 2: date comparison fallback — draft predates or matches last inscription
+  if (!stale && lastInscription && lastInscription.date) {
+    const draftDate = draft.name.replace('entry-', '').replace('.html', '');
+    const lastDate = lastInscription.date.replace(/-/g, '');
+    stale = draftDate <= lastDate;
+  }
+
+  return { ...draft, stale, lastInscriptionDate: lastInscription ? lastInscription.date : null };
 }
 
-// --- In-memory state (no disk persistence — clean slate on restart) ---
+// --- Persistent history (survives restarts via cycle-state.json) ---
 
 let running = null;  // { phaseId, startedAt, timeoutMs, proc } | null
-let history = [];    // last 10 runs: { phaseId, startedAt, completedAt, success, cost, error, duration }
 let workdir = null;
 let broadcastFn = null;
+let addLogFn = null;
 
 const MAX_HISTORY = 10;
 
+function getHistory() {
+  const s = stateManager.getState();
+  return Array.isArray(s.phaseHistory) ? s.phaseHistory : [];
+}
+
 function addHistory(entry) {
-  history.unshift(entry);
-  if (history.length > MAX_HISTORY) history.pop();
+  const hist = getHistory();
+  hist.unshift(entry);
+  if (hist.length > MAX_HISTORY) hist.pop();
+  stateManager.updateState({ phaseHistory: hist });
+}
+
+/**
+ * Log a phase event. Routes through server's addLog if available (persistent + broadcast),
+ * otherwise falls back to direct SSE broadcast.
+ */
+function phaseLog(type, line) {
+  if (addLogFn) {
+    addLogFn(type, line);
+  } else if (broadcastFn) {
+    broadcastFn({ event: 'log', data: { type, line, timestamp: new Date().toISOString() } });
+  }
 }
 
 // --- Public API ---
 
-function initPhases(wd, broadcast) {
+function initPhases(wd, broadcast, addLog) {
   workdir = wd;
   broadcastFn = broadcast;
+  addLogFn = addLog || null;
   console.log('Phase runner ready (manual mode)');
 }
 
@@ -159,7 +197,7 @@ function getPhaseStatus() {
   const { pulsesSinceLastInscription } = stateManager.getState();
   return {
     running: running ? { phaseId: running.phaseId, startedAt: running.startedAt, timeoutMs: running.timeoutMs } : null,
-    history: history.slice(),
+    history: getHistory(),
     cadence: {
       pulsesSinceLastInscription,
       maxPulses: MAX_PULSES_BEFORE_COMPOSE,
@@ -172,9 +210,13 @@ function getPhaseStatus() {
  * Run a phase manually. Returns { ok } or { ok: false, error }.
  * Does NOT block — spawns Claude and returns immediately.
  */
-function runPhase(phaseId) {
+function runPhase(phaseId, opts = {}) {
   const phase = PHASES.find((p) => p.id === phaseId);
   if (!phase) return { ok: false, error: `Unknown phase: ${phaseId}` };
+
+  // Allow model override from the UI (sonnet/opus)
+  const VALID_MODELS = ['sonnet', 'opus'];
+  const model = (opts.model && VALID_MODELS.includes(opts.model)) ? opts.model : phase.model;
   if (running) return { ok: false, error: `Phase "${running.phaseId}" is already running` };
 
   // Compose preflight: need research content
@@ -197,15 +239,27 @@ function runPhase(phaseId) {
     }
   }
 
-  // Inscription preflight: need a draft HTML file + STX >= 1.0
+  // Inscription preflight: need a fresh draft HTML file + STX >= 1.0
   if (phase.type === 'inscription') {
     const draft = findLatestDraft(workdir);
     if (!draft) {
       return { ok: false, error: 'No draft HTML found in inscriptions/ — run Compose first' };
     }
+    // Check if the draft is stale (already inscribed)
+    const { lastInscription, lastInscribedDraft } = stateManager.getState();
+    if (lastInscribedDraft && lastInscribedDraft === draft.name) {
+      return { ok: false, error: `Draft ${draft.name} was already inscribed — run Compose to generate a new draft` };
+    }
+    if (lastInscription && lastInscription.date) {
+      const draftDate = draft.name.replace('entry-', '').replace('.html', '');
+      const lastDate = lastInscription.date.replace(/-/g, '');
+      if (draftDate <= lastDate) {
+        return { ok: false, error: `Draft ${draft.name} appears already inscribed (last inscription: ${lastInscription.date}) — run Compose to generate a new draft` };
+      }
+    }
     const chain = getChainData();
-    if (chain.stxBalance !== null && chain.stxBalance < 1.0) {
-      return { ok: false, error: `STX balance too low (${chain.stxBalance} STX)` };
+    if (chain.stxBalance !== null && chain.stxBalance < MIN_STX_FOR_INSCRIPTION) {
+      return { ok: false, error: `STX balance too low (${chain.stxBalance} STX, floor: ${MIN_STX_FOR_INSCRIPTION} STX) — need funds to preserve on-chain life` };
     }
   }
 
@@ -215,25 +269,26 @@ function runPhase(phaseId) {
 
   running = { phaseId, startedAt, timeoutMs: phase.timeoutMs, proc: null };
 
-  const startMsg = `Phase ${phase.label} started (${RUNNER_NAME} ${phase.model}, $${phase.budget})`;
-  console.log(startMsg);
+  const startMsg = `Phase ${phase.label} started (${RUNNER_NAME} ${model}, $${phase.budget})`;
+  console.log(`[phases] ${startMsg}`);
+  console.log(`[phases] Workdir: ${workdir}, prompt length: ${prompt.length} chars`);
+  phaseLog('start', startMsg);
   if (broadcastFn) {
-    broadcastFn({ event: 'phase-start', data: { phase: phase.id, label: phase.label, model: phase.model, startedAt, timeoutMs: phase.timeoutMs } });
-    broadcastFn({ event: 'log', data: { type: 'start', line: startMsg, timestamp: startedAt } });
+    broadcastFn({ event: 'phase-start', data: { phase: phase.id, label: phase.label, model, startedAt, timeoutMs: phase.timeoutMs } });
   }
 
   runTask({
-    model: phase.model,
+    model,
     budget: phase.budget,
     prompt,
     cwd: workdir,
     phaseType: phase.type,
     contextPack: phase.type,
     onLine: (type, line, meta) => {
-      if (broadcastFn) {
-        const data = { type, line, timestamp: new Date().toISOString() };
-        if (meta && meta.step) { data.step = meta.step; data.status = meta.status; }
-        broadcastFn({ event: 'log', data });
+      phaseLog(type, line);
+      // Also emit inscription step metadata via SSE for the banner UI
+      if (meta && meta.step && broadcastFn) {
+        broadcastFn({ event: 'log', data: { type, line, step: meta.step, status: meta.status, timestamp: new Date().toISOString() } });
       }
     }
   }).then((result) => {
@@ -259,21 +314,31 @@ function runPhase(phaseId) {
 
     addHistory({ phaseId, startedAt, completedAt, success: true, cost, error: null, duration });
 
-    // Cadence tracking
+    // Cadence tracking + draft bookkeeping
     if (phase.type === 'research') {
       const s = stateManager.getState();
       stateManager.updateState({ pulsesSinceLastInscription: s.pulsesSinceLastInscription + 1 });
     } else if (phase.type === 'inscription') {
-      stateManager.updateState({ pulsesSinceLastInscription: 0 });
+      // Record which draft was inscribed so the UI can show it as "inscribed"
+      const draft = findLatestDraft(workdir);
+      const patch = { pulsesSinceLastInscription: 0 };
+      if (draft) {
+        patch.lastInscribedDraft = draft.name;
+      }
+      stateManager.updateState(patch);
+    } else if (phase.type === 'compose') {
+      // After a successful compose, clear the lastInscribedDraft marker
+      // since a new draft now exists
+      stateManager.updateState({ lastInscribedDraft: null });
     }
 
     running = null;
 
     const doneMsg = `Phase ${phase.label} completed (${Math.round(duration / 1000)}s${cost != null ? `, $${cost.toFixed(2)}` : ''})`;
     console.log(doneMsg);
+    phaseLog('start', doneMsg);
     if (broadcastFn) {
       broadcastFn({ event: 'phase-complete', data: { phase: phase.id, label: phase.label, success: true, cost, duration } });
-      broadcastFn({ event: 'log', data: { type: 'start', line: doneMsg, timestamp: completedAt } });
     }
   }).catch((err) => {
     const completedAt = new Date().toISOString();
@@ -283,9 +348,9 @@ function runPhase(phaseId) {
 
     const errMsg = `Phase ${phase.label} failed: ${err.message}`;
     console.error(errMsg);
+    phaseLog('error', errMsg);
     if (broadcastFn) {
       broadcastFn({ event: 'phase-complete', data: { phase: phase.id, label: phase.label, success: false, error: err.message, duration } });
-      broadcastFn({ event: 'log', data: { type: 'error', line: errMsg, timestamp: completedAt } });
     }
   });
 

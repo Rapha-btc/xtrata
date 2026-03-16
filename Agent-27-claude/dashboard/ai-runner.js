@@ -51,24 +51,45 @@ async function runTask({
   extraFiles,
   onLine
 }) {
-  const pack = buildContextPack({
-    workdir: cwd,
-    pack: contextPack || phaseType,
-    extraFiles
-  });
+  console.log(`[ai-runner] runTask starting: model=${model}, budget=${budget}, phaseType=${phaseType}, contextPack=${contextPack || phaseType}`);
+
+  let pack;
+  try {
+    pack = buildContextPack({
+      workdir: cwd,
+      pack: contextPack || phaseType,
+      extraFiles
+    });
+    console.log(`[ai-runner] Context pack built: ${pack.name}, ${pack.files.length} files, prompt ${pack.prompt.length} chars`);
+  } catch (err) {
+    console.error(`[ai-runner] Context pack FAILED:`, err.message);
+    if (onLine) onLine('error', `[context] Build failed: ${err.message}`);
+    throw err;
+  }
 
   if (onLine) {
     onLine('stdout', `[context] ${pack.summary}`);
   }
 
-  const result = await runClaude({
-    model,
-    budget,
-    prompt: `${pack.prompt}\n\nTask Instructions:\n${prompt}`,
-    cwd,
-    phaseType,
-    onLine
-  });
+  const fullPrompt = `${pack.prompt}\n\nTask Instructions:\n${prompt}`;
+  console.log(`[ai-runner] Spawning Claude: prompt ${fullPrompt.length} chars, model ${model}`);
+
+  let result;
+  try {
+    result = await runClaude({
+      model,
+      budget,
+      prompt: fullPrompt,
+      cwd,
+      phaseType,
+      onLine
+    });
+    console.log(`[ai-runner] Claude completed: ${result.output.length} output lines, code ${result.code}`);
+  } catch (err) {
+    console.error(`[ai-runner] Claude runner FAILED:`, err.message);
+    if (onLine) onLine('error', `[runner] ${err.message}`);
+    throw err;
+  }
 
   return {
     ...result,

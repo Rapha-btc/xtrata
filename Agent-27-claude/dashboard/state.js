@@ -9,6 +9,7 @@ const DEFAULT_STATE = {
   chainData: {},
   errors: [],
   pulsesSinceLastInscription: 0,
+  phaseHistory: [],        // last 10 runs: { phaseId, startedAt, completedAt, success, cost, error, duration }
   lastStartedAt: new Date().toISOString()
 };
 
@@ -43,6 +44,7 @@ function loadState() {
       chainData: loaded.chainData || {},
       errors: Array.isArray(loaded.errors) ? loaded.errors : [],
       pulsesSinceLastInscription: loaded.pulsesSinceLastInscription || 0,
+      phaseHistory: Array.isArray(loaded.phaseHistory) ? loaded.phaseHistory : [],
       lastStartedAt: new Date().toISOString()
     };
     console.log(`Loaded state from ${path.relative(process.cwd(), source)}`);

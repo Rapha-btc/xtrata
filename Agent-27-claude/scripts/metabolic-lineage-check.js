@@ -6,32 +6,7 @@ const {
   HIRO_BASE,
   AVG_COST_PER_ENTRY
 } = require('../dashboard/config');
-
-async function fetchStxBalance() {
-  const res = await fetch(`${HIRO_BASE}/extended/v1/address/${WALLET}/stx`);
-  if (!res.ok) throw new Error(`STX balance fetch failed: ${res.status}`);
-  const data = await res.json();
-  return Number(data.balance) / 1_000_000;
-}
-
-async function callReadOnly(functionName, args = []) {
-  const res = await fetch(
-    `${HIRO_BASE}/v2/contracts/call-read/${CONTRACT_ADDRESS}/${CONTRACT_NAME}/${functionName}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sender: WALLET,
-        arguments: args
-      })
-    }
-  );
-  if (!res.ok) throw new Error(`${functionName} call failed: ${res.status}`);
-  const raw = await res.json();
-  const str = typeof raw === 'string' ? raw : (raw.result || raw.value || '');
-  const match = str.match(/u(\d+)/);
-  return match ? Number(match[1]) : null;
-}
+const { fetchStxBalance, callReadOnly, parseClarityUint } = require('../dashboard/chain');
 
 async function getDeps(tokenId) {
   const res = await fetch(
@@ -104,8 +79,10 @@ async function main() {
   console.log(`Days of Life remaining: ${daysOfLife}`);
 
   console.log('\n--- ON-CHAIN STRATA ---');
-  const lastTokenId = await callReadOnly('get-last-token-id');
-  const feeUnit = await callReadOnly('get-fee-unit');
+  const lastTokenIdResp = await callReadOnly('get-last-token-id');
+  const feeUnitResp = await callReadOnly('get-fee-unit');
+  const lastTokenId = parseClarityUint(lastTokenIdResp);
+  const feeUnit = parseClarityUint(feeUnitResp);
   console.log(`Last Token ID: ${lastTokenId}`);
   console.log(`Fee Unit: ${feeUnit}`);
 
