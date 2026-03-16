@@ -1,10 +1,7 @@
 import { validateStacksAddress } from '@stacks/transactions';
 import type { NetworkType } from '../lib/network/types';
 import { getNetworkFromAddress } from '../lib/network/guard';
-import {
-  getStacksExplorerAddressUrl,
-  getStacksExplorerBnsUrl
-} from '../lib/network/explorer';
+import { getStacksExplorerAddressUrl } from '../lib/network/explorer';
 import { useBnsNames } from '../lib/bns/hooks';
 import { truncateMiddle } from '../lib/utils/format';
 
@@ -44,10 +41,7 @@ export default function AddressLabel(props: AddressLabelProps) {
   const explorerUrl =
     props.linkToExplorer === false || !hasAddress
       ? null
-      : primaryName
-        ? getStacksExplorerBnsUrl(primaryName, inferredNetwork) ??
-          getStacksExplorerAddressUrl(trimmed, inferredNetwork)
-        : getStacksExplorerAddressUrl(trimmed, inferredNetwork);
+      : getStacksExplorerAddressUrl(trimmed, inferredNetwork);
 
   if (!hasAddress) {
     return (
