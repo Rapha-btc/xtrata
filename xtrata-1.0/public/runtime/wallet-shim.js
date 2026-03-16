@@ -380,6 +380,32 @@
     );
   }
 
+  function isMethodUnsupportedError(error) {
+    var message = error && error.message ? String(error.message).toLowerCase() : '';
+    return (
+      message.indexOf('method not found') >= 0 ||
+      message.indexOf('unsupported') >= 0 ||
+      message.indexOf('not implemented') >= 0 ||
+      message.indexOf('request function is not implemented') >= 0
+    );
+  }
+
+  function isUserCancelledError(error) {
+    if (error && typeof error.code !== 'undefined') {
+      var numericCode = Number(error.code);
+      if (numericCode === 4001 || numericCode === -32000 || numericCode === -31001) {
+        return true;
+      }
+    }
+    var message = error && error.message ? String(error.message).toLowerCase() : '';
+    return (
+      message.indexOf('cancel') >= 0 ||
+      message.indexOf('reject') >= 0 ||
+      message.indexOf('denied') >= 0 ||
+      message.indexOf('closed') >= 0
+    );
+  }
+
   function parseRequestArgs(methodOrPayload, maybeParams) {
     if (typeof methodOrPayload === 'string') {
       return { method: methodOrPayload, params: maybeParams };
@@ -473,7 +499,63 @@
     return null;
   }
 
-  function connectViaShim(provider) {
+  function connectViaProviderRequest(provider) {
+    if (!provider || typeof provider.request !== 'function') {
+      return Promise.reject(
+        createShimError('Wallet provider does not support request-based connect.', -32601)
+      );
+    }
+
+    var attempts = [
+      'stx_getAddresses',
+      'getAddresses',
+      'stx_getAccounts',
+      'getAccounts',
+      'wallet_getAccount',
+      'stx_requestAccounts',
+      'requestAccounts',
+      'stx_connect',
+      'connect',
+      'wallet_connect'
+    ];
+
+    var lastError = null;
+
+    function tryNext(index) {
+      if (index >= attempts.length) {
+        if (lastError) throw lastError;
+        return null;
+      }
+
+      var method = attempts[index];
+      return Promise.resolve()
+        .then(function () {
+          return provider.request(method);
+        })
+        .then(function (payload) {
+          var session = resolveSessionFromPayload(payload);
+          if (session) {
+            writeStoredSession(session);
+            return session;
+          }
+          return tryNext(index + 1);
+        })
+        .catch(function (error) {
+          lastError = error;
+          if (isUserCancelledError(error)) {
+            return null;
+          }
+          if (isMethodUnsupportedError(error)) {
+            return tryNext(index + 1);
+          }
+          throw error;
+        });
+    }
+
+    return tryNext(0);
+  }
+
+  function connectViaLegacySdk(provider) {
     if (connectInFlight) return connectInFlight;
 
     connectInFlight = loadConnectModule()
@@ -550,7 +632,7 @@
           var options = {
             appDetails: {
               name: 'Xtrata Runtime',
-              icon: window.location.origin + '/favicon.ico'
+              icon: window.location.origin + '/favicon.svg'
             },
             manifestPath: '/manifest.json',
             redirectTo: resolveRedirectPath(),
@@ -586,6 +668,22 @@
       });
 
     return connectInFlight;
+  }
+
+  function connectViaShim(provider) {
+    if (!provider) {
+      return connectViaLegacySdk(provider);
+    }
+
+    return connectViaProviderRequest(provider).catch(function (error) {
+      if (isUserCancelledError(error)) {
+        return null;
+      }
+      if (!isMethodUnsupportedError(error)) {
+        throw error;
+      }
+      return connectViaLegacySdk(provider);
+    });
   }
 
   function shimRequest(method, provider, params) {

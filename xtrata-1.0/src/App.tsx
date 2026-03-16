@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type MouseEvent } from 'react';
-import { showContractCall, showContractDeploy } from '@stacks/connect';
+import { showContractCall, showContractDeploy } from './lib/wallet/connect';
 import { hexToBytes } from '@stacks/common';
 import { useQueryClient } from '@tanstack/react-query';
 import {

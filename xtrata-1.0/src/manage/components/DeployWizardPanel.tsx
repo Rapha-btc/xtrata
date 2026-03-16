@@ -4,7 +4,7 @@ import {
   getStacksProvider,
   showContractDeploy,
   type StacksProvider
-} from '@stacks/connect';
+} from '../../lib/wallet/connect';
 import { getContractId } from '../../lib/contract/config';
 import { getStacksExplorerContractUrl } from '../../lib/network/explorer';
 import {
@@ -1827,6 +1827,58 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       const instrumentedProvider: StacksProvider | undefined = selectedProvider
         ? {
             ...selectedProvider,
+            request: async (method, params) => {
+              appendDeployDebug('Provider request invoked', {
+                attemptId,
+                method
+              });
+              appendDeployDebug14('provider-request:invoked', {
+                attemptId,
+                method,
+                params
+              });
+              try {
+                const providerResult = await selectedProvider.request?.call(
+                  selectedProvider,
+                  method,
+                  params
+                );
+                appendDeployDebug('Provider request resolved', {
+                  attemptId,
+                  method,
+                  txId:
+                    providerResult &&
+                    typeof providerResult === 'object' &&
+                    'txid' in providerResult &&
+                    typeof providerResult.txid === 'string'
+                      ? providerResult.txid
+                      : providerResult &&
+                          typeof providerResult === 'object' &&
+                          'txId' in providerResult &&
+                          typeof providerResult.txId === 'string'
+                        ? providerResult.txId
+                        : null
+                });
+                appendDeployDebug14('provider-request:resolved', {
+                  attemptId,
+                  method,
+                  providerResult
+                });
+                return providerResult as Record<string, any>;
+              } catch (error) {
+                appendDeployDebug('Provider request rejected', {
+                  attemptId,
+                  method,
+                  ...extractErrorDebug(error)
+                });
+                appendDeployDebug14('provider-request:rejected', {
+                  attemptId,
+                  method,
+                  ...extractErrorDebug(error)
+                });
+                throw error;
+              }
+            },
             transactionRequest: async (payload: string) => {
               appendDeployDebug('Provider transactionRequest invoked', {
                 attemptId,

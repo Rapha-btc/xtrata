@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { showContractCall } from '@stacks/connect';
+import { showContractCall } from '../lib/wallet/connect';
 import {
   bufferCV,
   callReadOnlyFunction,

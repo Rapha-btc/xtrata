@@ -44,7 +44,7 @@ export const buildMintWalletGuidanceMessage = (
   return [
     title,
     '',
-    'Avoid Leather wallet for inscriptions. Use Xverse wallet for a better inscription experience.',
+    'Confirm the transaction details carefully before approving.',
     'Check the fee suggested by your wallet and increase or decrease it manually to the correct amount before approving.',
     'If the wallet returns errors or the transaction fails, the most likely cause is that the fee is too low.',
     '',

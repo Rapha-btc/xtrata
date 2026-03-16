@@ -10,8 +10,7 @@ describe('mint wallet guidance', () => {
   it('includes wallet and fee guidance in the popup copy', () => {
     const message = buildMintWalletGuidanceMessage('single');
 
-    expect(message).toContain('Avoid Leather wallet for inscriptions.');
-    expect(message).toContain('Use Xverse wallet for a better inscription experience.');
+    expect(message).toContain('Confirm the transaction details carefully before approving.');
     expect(message).toContain(
       'increase or decrease it manually to the correct amount before approving.'
     );

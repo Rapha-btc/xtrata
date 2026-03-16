@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { showContractCall } from '@stacks/connect';
+import { showContractCall } from '../lib/wallet/connect';
 import {
   bufferCV,
   type ClarityValue,

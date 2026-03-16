@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { showContractCall } from '@stacks/connect';
+import { showContractCall } from '../lib/wallet/connect';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   PostConditionMode,
