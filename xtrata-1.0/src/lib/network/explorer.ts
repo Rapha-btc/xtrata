@@ -1,5 +1,6 @@
 import type { NetworkType } from './types';
 import { getNetworkFromAddress } from './guard';
+import { normalizeBnsName } from '../bns/helpers';
 
 const STACKS_EXPLORER_BASE_URL = 'https://explorer.hiro.so';
 
@@ -19,6 +20,18 @@ export const getStacksExplorerAddressUrl = (
     return null;
   }
   return `${STACKS_EXPLORER_BASE_URL}/address/${encodeURIComponent(trimmed)}?chain=${chain}`;
+};
+
+export const getStacksExplorerBnsUrl = (
+  name: string,
+  network?: NetworkType | null
+) => {
+  const normalizedName = normalizeBnsName(name);
+  const chain = resolveNetwork(network);
+  if (!normalizedName || !chain) {
+    return null;
+  }
+  return `${STACKS_EXPLORER_BASE_URL}/name/${encodeURIComponent(normalizedName)}?chain=${chain}`;
 };
 
 export const getStacksExplorerContractUrl = (

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { showContractCall } from '@stacks/connect';
+import { showContractCall } from './lib/wallet/connect';
 import { sha256 } from '@noble/hashes/sha256';
 import {
   bufferCV,
@@ -55,7 +55,6 @@ import {
   SMALL_MINT_HELPER_MAX_CHUNKS,
   TX_DELAY_SECONDS
 } from './lib/mint/constants';
-import { confirmMintWalletGuidanceOrAbort } from './lib/mint/wallet-guidance';
 import { getNetworkFromAddress, getNetworkMismatch } from './lib/network/guard';
 import { toStacksNetwork } from './lib/network/stacks';
 import type { NetworkType } from './lib/network/types';
@@ -93,6 +92,7 @@ const COLLECTION_ASSET_BYTES_CACHE_MS = 10 * 60_000;
 const RESUMABLE_LOOKUP_CACHE_MS = 10_000;
 const RESERVATION_SCAN_BATCH_SIZE = 6;
 const RESERVATION_SCAN_COMPUTE_BATCH_SIZE = 3;
+const CANONICAL_HASH_STORAGE_PREFIX = 'xtrata-live-canonical-hashes';
 const XTRATA_APP_ICON_DATA_URI =
   'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%23f97316"/><path d="M18 20h28v6H18zm0 12h28v6H18zm0 12h28v6H18z" fill="white"/></svg>';
 
@@ -462,6 +462,13 @@ const toResumeStorageKey = (collectionId: string, address: string | null) => {
   return `xtrata-live-resume:${collectionId}:${address.toUpperCase()}`;
 };
 
+const toCanonicalHashStorageKey = (collectionId: string) => {
+  if (!collectionId) {
+    return null;
+  }
+  return `${CANONICAL_HASH_STORAGE_PREFIX}:${collectionId}`;
+};
+
 const shuffleAssets = (assets: CollectionAsset[]) => {
   const next = [...assets];
   for (let index = next.length - 1; index > 0; index -= 1) {
@@ -533,6 +540,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     null
   );
   const resumableLookupCacheRef = useRef<ResumableLookupCacheEntry | null>(null);
+  const canonicalHashStorageLoadedRef = useRef(false);
   const [canonicalHashHexByAssetId, setCanonicalHashHexByAssetId] = useState<
     Record<string, string>
   >({});
@@ -609,6 +617,10 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     () => toResumeStorageKey(resolvedCollectionId, walletSession.address ?? null),
     [resolvedCollectionId, walletSession.address]
   );
+  const canonicalHashStorageKey = useMemo(
+    () => toCanonicalHashStorageKey(resolvedCollectionId),
+    [resolvedCollectionId]
+  );
 
   const collectionContract = useMemo(() => {
     const resolved = resolveCollectionContractLink({
@@ -682,14 +694,14 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     }
     let selected: CollectionAsset | null = null;
     let maxChunks = 0;
-    mintableAssets.forEach((asset) => {
+    for (const asset of mintableAssets) {
       const chunkCount = resolveAssetChunkCount(asset);
       if (chunkCount <= maxChunks) {
-        return;
+        continue;
       }
       maxChunks = chunkCount;
       selected = asset;
-    });
+    }
     if (!selected) {
       return null;
     }
@@ -802,6 +814,10 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     }
     return false;
   }, [contractStatus, remaining]);
+  const shouldProbeWalletReservation = useMemo(
+    () => (contractStatus?.reservedCount ?? 0n) > 0n && remaining !== null && remaining <= 0n,
+    [contractStatus?.reservedCount, remaining]
+  );
 
   const mintUnavailableReason = useMemo(() => {
     if (!published) {
@@ -2219,8 +2235,8 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
         }
       }
 
-      if (!target && (contractStatus?.reservedCount ?? 0n) > 0n) {
-        setMintMessage('Checking your wallet for an active reservation...');
+      if (!target && shouldProbeWalletReservation) {
+        setMintMessage('Checking for one of your existing reservations...');
         const reservable = await findResumableAssetForWallet(senderAddress);
         if (reservable) {
           target = reservable;
@@ -2277,15 +2293,6 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
         return;
       }
 
-      if (
-        !confirmMintWalletGuidanceOrAbort('collection-live', {
-          setStatus: setMintMessage,
-          appendLog: appendMintLog
-        })
-      ) {
-        return;
-      }
-
       selectedAssetId = target.asset_id;
       setResumeAssetId(target.asset_id);
       setPendingMintAssetIds((current) =>
@@ -2331,7 +2338,6 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     collectionContract,
     contractStatus?.finalized,
     contractStatus?.paused,
-    contractStatus?.reservedCount,
     coreClient,
     ensureConnectedWallet,
     findResumableAssetForWallet,
@@ -2348,6 +2354,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     remaining,
     scanMintedAssets,
     setResumeAssetId,
+    shouldProbeWalletReservation,
     syncCollectionTokenNumbers,
     walletPending
   ]);
@@ -2364,7 +2371,8 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   ]);
 
   useEffect(() => {
-    if (!walletSession.address || (contractStatus?.reservedCount ?? 0n) <= 0n) {
+    const walletAddress = walletSession.address;
+    if (!walletAddress || !shouldProbeWalletReservation) {
       return;
     }
     if (mintPending) {
@@ -2376,7 +2384,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
 
     let cancelled = false;
     void (async () => {
-      const resumable = await findResumableAssetForWallet(walletSession.address);
+      const resumable = await findResumableAssetForWallet(walletAddress);
       if (cancelled) {
         return;
       }
@@ -2389,7 +2397,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       cancelled = true;
     };
   }, [
-    contractStatus?.reservedCount,
+    shouldProbeWalletReservation,
     findResumableAssetForWallet,
     mintPending,
     mintedTokenIds,
@@ -2462,6 +2470,61 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     }
     window.localStorage.removeItem(resumeStorageKey);
   }, [resumeAssetId, resumeStorageKey]);
+
+  useEffect(() => {
+    canonicalHashStorageLoadedRef.current = false;
+    if (!canonicalHashStorageKey) {
+      setCanonicalHashHexByAssetId({});
+      canonicalHashStorageLoadedRef.current = true;
+      return;
+    }
+    if (typeof window === 'undefined') {
+      canonicalHashStorageLoadedRef.current = true;
+      return;
+    }
+    const stored = window.localStorage.getItem(canonicalHashStorageKey);
+    if (!stored) {
+      setCanonicalHashHexByAssetId({});
+      canonicalHashStorageLoadedRef.current = true;
+      return;
+    }
+    try {
+      const parsed = JSON.parse(stored) as Record<string, unknown>;
+      const normalizedEntries = Object.entries(parsed).flatMap(([assetId, value]) => {
+        const normalized = normalizeHashHex(typeof value === 'string' ? value : null);
+        return normalized ? [[assetId, normalized] as const] : [];
+      });
+      setCanonicalHashHexByAssetId(Object.fromEntries(normalizedEntries));
+    } catch {
+      setCanonicalHashHexByAssetId({});
+    } finally {
+      canonicalHashStorageLoadedRef.current = true;
+    }
+  }, [canonicalHashStorageKey]);
+
+  useEffect(() => {
+    if (
+      !canonicalHashStorageLoadedRef.current ||
+      !canonicalHashStorageKey ||
+      typeof window === 'undefined'
+    ) {
+      return;
+    }
+    const normalizedEntries = Object.entries(canonicalHashHexByAssetId).flatMap(
+      ([assetId, hashHex]) => {
+        const normalized = normalizeHashHex(hashHex);
+        return normalized ? [[assetId, normalized] as const] : [];
+      }
+    );
+    if (normalizedEntries.length === 0) {
+      window.localStorage.removeItem(canonicalHashStorageKey);
+      return;
+    }
+    window.localStorage.setItem(
+      canonicalHashStorageKey,
+      JSON.stringify(Object.fromEntries(normalizedEntries))
+    );
+  }, [canonicalHashHexByAssetId, canonicalHashStorageKey]);
 
   useEffect(() => {
     setCanonicalHashHexByAssetId({});
@@ -2844,7 +2907,8 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                     ? ` (begin ${protocolFeeUnitLabel} + seal ${toMicroStxLabel(sealMinProtocolFee)} for <=50 chunks).`
                     : '.'}
                 </p>
-                {estimatedMaxProtocolFeeTotal && collectionMaxChunkCount !== null && (
+                {estimatedMaxProtocolFeeTotal !== null &&
+                  collectionMaxChunkCount !== null && (
                   <p className="collection-live-page__mint-guide-note">
                     Estimated protocol fee for a max-size mint in this collection:{' '}
                     {toMicroStxLabel(estimatedMaxProtocolFeeTotal)} total.

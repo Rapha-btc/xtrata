@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { showContractCall } from '@stacks/connect';
+import { showContractCall } from '../lib/wallet/connect';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   boolCV,
