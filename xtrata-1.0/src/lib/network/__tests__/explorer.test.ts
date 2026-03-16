@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   getStacksExplorerAddressUrl,
+  getStacksExplorerBnsUrl,
   getStacksExplorerContractUrl,
   getStacksExplorerTxUrl
 } from '../explorer';
@@ -25,8 +26,15 @@ describe('network explorer urls', () => {
     );
   });
 
+  it('builds explorer bns URL from normalized name', () => {
+    expect(getStacksExplorerBnsUrl(' Alice.BTC ', 'mainnet')).toBe(
+      'https://explorer.hiro.so/name/alice.btc?chain=mainnet'
+    );
+  });
+
   it('returns null for unknown-chain values', () => {
     expect(getStacksExplorerAddressUrl('invalid-address')).toBeNull();
+    expect(getStacksExplorerBnsUrl('alice.btc')).toBeNull();
   });
 
   it('normalizes tx IDs for tx links', () => {

@@ -60,7 +60,6 @@ import {
   toDependencyStrings,
   validateDependencyIds
 } from '../lib/mint/dependencies';
-import { confirmMintWalletGuidanceOrAbort } from '../lib/mint/wallet-guidance';
 import {
   estimateContractFees,
   formatMicroStx,
@@ -1942,15 +1941,6 @@ export default function MintScreen(props: MintScreenProps) {
       dependencyCount: mintInputs.dependencyIds.length,
       expectedHash: bytesToHex(expectedHash)
     });
-    if (
-      !confirmMintWalletGuidanceOrAbort('single', {
-        setStatus: setMintStatus,
-        appendLog
-      })
-    ) {
-      return;
-    }
-
     setMintPending(true);
     setMintStatus('Preparing transactions...');
     resetSteps();
@@ -2283,15 +2273,6 @@ export default function MintScreen(props: MintScreenProps) {
       dependencyCount: mintInputs.dependencyIds.length,
       expectedHash: bytesToHex(expectedHash)
     });
-    if (
-      !confirmMintWalletGuidanceOrAbort('resume', {
-        setStatus: setMintStatus,
-        appendLog
-      })
-    ) {
-      return;
-    }
-
     setMintPending(true);
     setMintStatus('Confirming on-chain upload state...');
     resetSteps();
