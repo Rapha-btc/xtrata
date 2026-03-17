@@ -2498,6 +2498,12 @@ export default function MintScreen(props: MintScreenProps) {
   const metadataDisabled = isPreparing || !file || !expectedHashHex;
   const formattedTxDelay =
     txDelaySeconds === null ? null : txDelaySeconds.toString().padStart(2, '0');
+  const isImagePreview = Boolean(previewUrl && file?.type.startsWith('image/'));
+  const isAudioPreview = Boolean(previewUrl && file?.type.startsWith('audio/'));
+  const isVideoPreview = Boolean(previewUrl && file?.type.startsWith('video/'));
+  const isRenderedHtmlPreview = Boolean(previewHtml && !showHtmlSource);
+  const useSquareMintPreview =
+    isImagePreview || isVideoPreview || isRenderedHtmlPreview;
 
   return (
     <section
@@ -2791,25 +2797,36 @@ export default function MintScreen(props: MintScreenProps) {
                   )}
                 </div>
               </div>
-              <div className="mint-preview">
+              <div
+                className={`mint-preview${useSquareMintPreview ? ' mint-preview--square' : ''}`}
+              >
                 {!previewUrl && !previewText && !previewHtml && (
                   <span className="mint-placeholder">No preview available.</span>
                 )}
-                {previewUrl && file.type.startsWith('image/') && (
-                  <img src={previewUrl} alt={file.name} />
+                {isImagePreview && (
+                  <img
+                    className="mint-preview__media"
+                    src={previewUrl ?? undefined}
+                    alt={file.name}
+                  />
                 )}
-                {previewUrl && file.type.startsWith('audio/') && (
-                  <audio controls src={previewUrl} />
+                {isAudioPreview && (
+                  <audio controls src={previewUrl ?? undefined} />
                 )}
-                {previewUrl && file.type.startsWith('video/') && (
-                  <video controls src={previewUrl} />
+                {isVideoPreview && (
+                  <video
+                    className="mint-preview__media"
+                    controls
+                    src={previewUrl ?? undefined}
+                  />
                 )}
-                {previewHtml && !showHtmlSource && (
+                {isRenderedHtmlPreview && (
                   <iframe
+                    className="mint-preview__media mint-preview__media--frame"
                     title="Mint HTML preview"
                     sandbox="allow-scripts"
                     referrerPolicy="no-referrer"
-                    srcDoc={previewHtml}
+                    srcDoc={previewHtml ?? undefined}
                   />
                 )}
                 {previewHtml && showHtmlSource && (
