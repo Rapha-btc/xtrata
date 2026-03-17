@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   canStageUploadsBeforeDeploy,
   canReuseCollectionSlug,
+  canonicalizeManageCollectionMetadata,
   getCollectionDisplayOrder,
   isCollectionUploadsLocked,
   isCollectionPublicVisible,
@@ -181,6 +182,50 @@ describe('collections helpers', () => {
       deployPricingLock: { version: 'v1', maxChunks: 99 },
       existingOnly: true,
       collection: { name: 'Test' }
+    });
+  });
+
+  it('canonicalizes manage payout recipients to the locked core address', () => {
+    expect(
+      canonicalizeManageCollectionMetadata({
+        coreContractId: 'SP1234567890ABCDEFG.collection-core',
+        hardcodedDefaults: {
+          recipients: {
+            artist: 'SPARTIST123',
+            marketplace: 'SPMARKET999',
+            operator: 'SPOPERATOR999'
+          }
+        }
+      })
+    ).toEqual({
+      coreContractId: 'SP1234567890ABCDEFG.collection-core',
+      hardcodedDefaults: {
+        recipients: {
+          artist: 'SPARTIST123',
+          marketplace: 'SP1234567890ABCDEFG',
+          operator: 'SP1234567890ABCDEFG'
+        }
+      }
+    });
+  });
+
+  it('falls back to the default Xtrata address when metadata has no core contract id', () => {
+    expect(
+      canonicalizeManageCollectionMetadata({
+        hardcodedDefaults: {
+          recipients: {
+            artist: 'SPARTIST123'
+          }
+        }
+      })
+    ).toEqual({
+      hardcodedDefaults: {
+        recipients: {
+          artist: 'SPARTIST123',
+          marketplace: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
+          operator: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X'
+        }
+      }
     });
   });
 

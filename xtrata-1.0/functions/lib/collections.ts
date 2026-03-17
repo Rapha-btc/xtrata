@@ -1,4 +1,6 @@
 const slugPattern = /^[a-z0-9-]{3,64}$/;
+const XTRATA_MANAGE_FIXED_RECIPIENT_ADDRESS =
+  'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X';
 
 export const normalizeSlug = (value: string) =>
   value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
@@ -69,6 +71,34 @@ export const mergeCollectionMetadata = (
   return {
     ...(existing ?? {}),
     ...(incoming ?? {})
+  };
+};
+
+export const canonicalizeManageCollectionMetadata = (metadata: unknown) => {
+  const parsed = parseCollectionMetadata(metadata);
+  if (!parsed) {
+    return null;
+  }
+
+  const toRecord = (value: unknown) =>
+    value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
+  const coreContractId = toNullableString(parsed.coreContractId);
+  const [coreAddress = ''] = coreContractId?.split('.') ?? [];
+  const lockedRecipient =
+    coreAddress.trim().toUpperCase() || XTRATA_MANAGE_FIXED_RECIPIENT_ADDRESS;
+  const hardcodedDefaults = toRecord(parsed.hardcodedDefaults);
+  const recipients = toRecord(hardcodedDefaults?.recipients);
+
+  return {
+    ...parsed,
+    hardcodedDefaults: {
+      ...(hardcodedDefaults ?? {}),
+      recipients: {
+        ...(recipients ?? {}),
+        marketplace: lockedRecipient,
+        operator: lockedRecipient
+      }
+    }
   };
 };
 

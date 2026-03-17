@@ -2,6 +2,7 @@ import { jsonResponse, badRequest, serverError } from './lib/utils';
 import { queryAll, run } from './lib/db';
 import {
   canReuseCollectionSlug,
+  canonicalizeManageCollectionMetadata,
   sortCollectionsForPublicDisplay,
   mergeCollectionMetadata,
   isCollectionPublicVisible,
@@ -125,9 +126,8 @@ export const onRequest: PagesFunction = async ({ request, env }) => {
             return serverError('Existing slug record is missing an id.');
           }
           const now = Date.now();
-          const mergedMetadata = mergeCollectionMetadata(
-            existingRecord.metadata,
-            payload.metadata
+          const mergedMetadata = canonicalizeManageCollectionMetadata(
+            mergeCollectionMetadata(existingRecord.metadata, payload.metadata)
           );
           const metadata = mergedMetadata ? JSON.stringify(mergedMetadata) : null;
           await run(
@@ -163,7 +163,8 @@ export const onRequest: PagesFunction = async ({ request, env }) => {
       }
       const now = Date.now();
       const id = crypto.randomUUID();
-      const metadata = payload.metadata ? JSON.stringify(payload.metadata) : null;
+      const metadataRecord = canonicalizeManageCollectionMetadata(payload.metadata);
+      const metadata = metadataRecord ? JSON.stringify(metadataRecord) : null;
       await run(
         env,
         'INSERT INTO collections (id, slug, artist_address, contract_address, display_name, metadata, state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',

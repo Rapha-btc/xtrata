@@ -7,7 +7,7 @@ import {
   type CSSProperties,
   type TouchEvent as ReactTouchEvent
 } from 'react';
-import { showContractCall } from '@stacks/connect';
+import { showContractCall } from '../lib/wallet/connect';
 import {
   PostConditionMode,
   contractPrincipalCV,

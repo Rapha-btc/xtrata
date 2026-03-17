@@ -868,7 +868,7 @@ export default function CollectionManagerApp() {
             <div>
               <h2>
                 Step 1: Create your drop
-                <InfoTooltip text="Create and deploy with a locked template using drop basics plus artist and marketplace payout addresses." />
+                <InfoTooltip text="Create and deploy with a locked template using drop basics, artist payout address, and Xtrata-managed marketplace/operator defaults." />
               </h2>
               <p>Fill the guided fields, review, and deploy your contract. Going live happens in Step 4.</p>
             </div>
@@ -881,6 +881,7 @@ export default function CollectionManagerApp() {
           <div className="panel__body">
             <DeployWizardPanel
               activeCollectionId={activeCollectionId}
+              isXtrataOwner={isXtrataOwner}
               onDraftReady={handleDraftReady}
               onJourneyRefreshRequested={requestJourneyRefresh}
               journeyRefreshToken={journeyRefreshKey}
@@ -951,6 +952,7 @@ export default function CollectionManagerApp() {
               <CollectionSettingsPanel
                 mode="guided"
                 activeCollectionId={activeCollectionId}
+                isXtrataOwner={isXtrataOwner}
                 onJourneyRefreshRequested={requestJourneyRefresh}
                 onRequestAdvancedControls={setAdvancedMode}
               />
@@ -1024,6 +1026,7 @@ export default function CollectionManagerApp() {
                 <CollectionSettingsPanel
                   mode="advanced"
                   activeCollectionId={activeCollectionId}
+                  isXtrataOwner={isXtrataOwner}
                   onJourneyRefreshRequested={requestJourneyRefresh}
                 />
               </div>

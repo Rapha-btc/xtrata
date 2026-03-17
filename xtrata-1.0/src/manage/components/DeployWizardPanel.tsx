@@ -4,7 +4,7 @@ import {
   getStacksProvider,
   showContractDeploy,
   type StacksProvider
-} from '@stacks/connect';
+} from '../../lib/wallet/connect';
 import { getContractId } from '../../lib/contract/config';
 import { getStacksExplorerContractUrl } from '../../lib/network/explorer';
 import {
@@ -368,6 +368,7 @@ const parseStoredDraft = (value: string | null): DeployWizardDraftStorage | null
 
 type DeployWizardPanelProps = {
   activeCollectionId?: string;
+  isXtrataOwner?: boolean;
   onDraftReady?: (collection: {
     id: string;
     label: string;
@@ -407,6 +408,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
   const mintPriceLockHintTimerRef = useRef<number | null>(null);
 
   const { walletSession, walletAdapter, connect } = useManageWallet();
+  const canEditMarketplaceRecipient = props.isXtrataOwner === true;
   const normalizedActiveCollectionId = useMemo(
     () => props.activeCollectionId?.trim() ?? '',
     [props.activeCollectionId]
@@ -418,6 +420,19 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     return new URLSearchParams(window.location.search).get('debug') === '1.4';
   }, []);
   const selectedStandardTemplateSource = standardTemplateSource;
+  const fallbackCoreTarget = useMemo(
+    () => resolveArtistDeployCoreTarget('mainnet'),
+    []
+  );
+  const activeNetwork = walletSession.network ?? 'mainnet';
+  const coreTarget = useMemo(
+    () => resolveArtistDeployCoreTarget(activeNetwork) ?? fallbackCoreTarget,
+    [activeNetwork, fallbackCoreTarget]
+  );
+  const lockedMarketplaceAddress = coreTarget?.address ?? '';
+  const effectiveMarketplaceAddress = canEditMarketplaceRecipient
+    ? marketplaceAddress
+    : lockedMarketplaceAddress || marketplaceAddress;
 
   useEffect(() => {
     if (!reviewOpen || typeof window === 'undefined') {
@@ -499,8 +514,12 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       parentInscriptions,
       artistAddress,
       artistAddressTouched,
-      marketplaceAddress,
-      marketplaceAddressTouched
+      marketplaceAddress: canEditMarketplaceRecipient
+        ? marketplaceAddress
+        : lockedMarketplaceAddress || marketplaceAddress,
+      marketplaceAddressTouched: canEditMarketplaceRecipient
+        ? marketplaceAddressTouched
+        : false
     };
     try {
       window.localStorage.setItem(
@@ -522,7 +541,9 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     artistAddress,
     artistAddressTouched,
     marketplaceAddress,
-    marketplaceAddressTouched
+    marketplaceAddressTouched,
+    canEditMarketplaceRecipient,
+    lockedMarketplaceAddress
   ]);
 
   useEffect(() => {
@@ -613,15 +634,6 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     setArtistAddress(walletSession.address);
   }, [walletSession.address, artistAddressTouched]);
 
-  const fallbackCoreTarget = useMemo(
-    () => resolveArtistDeployCoreTarget('mainnet'),
-    []
-  );
-  const activeNetwork = walletSession.network ?? 'mainnet';
-  const coreTarget = useMemo(
-    () => resolveArtistDeployCoreTarget(activeNetwork) ?? fallbackCoreTarget,
-    [activeNetwork, fallbackCoreTarget]
-  );
   const coreContractEntry = useMemo(
     () =>
       coreTarget
@@ -848,11 +860,28 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
   );
 
   useEffect(() => {
-    if (marketplaceAddressTouched || !coreTarget?.address) {
+    if (!coreTarget?.address) {
+      return;
+    }
+    if (!canEditMarketplaceRecipient) {
+      if (marketplaceAddress !== coreTarget.address) {
+        setMarketplaceAddress(coreTarget.address);
+      }
+      if (marketplaceAddressTouched) {
+        setMarketplaceAddressTouched(false);
+      }
+      return;
+    }
+    if (marketplaceAddressTouched) {
       return;
     }
     setMarketplaceAddress(coreTarget.address);
-  }, [coreTarget, marketplaceAddressTouched]);
+  }, [
+    canEditMarketplaceRecipient,
+    coreTarget,
+    marketplaceAddress,
+    marketplaceAddressTouched
+  ]);
 
   useEffect(() => {
     if (!coreTarget) {
@@ -897,7 +926,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
           mintPriceStx,
           parentInscriptions,
           artistAddress,
-          marketplaceAddress
+          marketplaceAddress: effectiveMarketplaceAddress
         },
         templateSources: {
           standardSource: selectedStandardTemplateSource,
@@ -918,7 +947,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       mintPriceStx,
       parentInscriptions,
       artistAddress,
-      marketplaceAddress,
+      effectiveMarketplaceAddress,
       coreTarget,
       selectedStandardTemplateSource
     ]
@@ -1281,7 +1310,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         mintPriceStx,
         parentInscriptions,
         artistAddress,
-        marketplaceAddress
+        marketplaceAddress: effectiveMarketplaceAddress
       },
       templateSources: {
         standardSource: selectedStandardTemplateSource,
@@ -1462,7 +1491,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         mintPriceStx,
         parentInscriptions,
         artistAddress,
-        marketplaceAddress
+        marketplaceAddress: effectiveMarketplaceAddress
       },
       templateSources: {
         standardSource: selectedStandardTemplateSource,
@@ -1705,7 +1734,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         mintPriceStx: deployMintPriceStxForSource,
         parentInscriptions,
         artistAddress,
-        marketplaceAddress
+        marketplaceAddress: effectiveMarketplaceAddress
       },
       templateSources: {
         standardSource: selectedStandardTemplateSource,
@@ -1827,6 +1856,58 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       const instrumentedProvider: StacksProvider | undefined = selectedProvider
         ? {
             ...selectedProvider,
+            request: async (method, params) => {
+              appendDeployDebug('Provider request invoked', {
+                attemptId,
+                method
+              });
+              appendDeployDebug14('provider-request:invoked', {
+                attemptId,
+                method,
+                params
+              });
+              try {
+                const providerResult = await selectedProvider.request?.call(
+                  selectedProvider,
+                  method,
+                  params
+                );
+                appendDeployDebug('Provider request resolved', {
+                  attemptId,
+                  method,
+                  txId:
+                    providerResult &&
+                    typeof providerResult === 'object' &&
+                    'txid' in providerResult &&
+                    typeof providerResult.txid === 'string'
+                      ? providerResult.txid
+                      : providerResult &&
+                          typeof providerResult === 'object' &&
+                          'txId' in providerResult &&
+                          typeof providerResult.txId === 'string'
+                        ? providerResult.txId
+                        : null
+                });
+                appendDeployDebug14('provider-request:resolved', {
+                  attemptId,
+                  method,
+                  providerResult
+                });
+                return providerResult as Record<string, any>;
+              } catch (error) {
+                appendDeployDebug('Provider request rejected', {
+                  attemptId,
+                  method,
+                  ...extractErrorDebug(error)
+                });
+                appendDeployDebug14('provider-request:rejected', {
+                  attemptId,
+                  method,
+                  ...extractErrorDebug(error)
+                });
+                throw error;
+              }
+            },
             transactionRequest: async (payload: string) => {
               appendDeployDebug('Provider transactionRequest invoked', {
                 attemptId,
@@ -2331,19 +2412,35 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         <label className="field field--full field--address">
           <span className="field__label info-label">
             Marketplace payout address
-            <InfoTooltip text="Wallet receiving the marketplace share (2.5%) of primary mint proceeds." />
+            <InfoTooltip
+              text={
+                canEditMarketplaceRecipient
+                  ? 'Owner-only override for the wallet receiving the marketplace share (2.5%) of primary mint proceeds.'
+                  : 'Locked to the Xtrata core address for creator-managed deploys.'
+              }
+            />
           </span>
           <input
             className="input input--address-fit"
-            value={marketplaceAddress}
+            value={effectiveMarketplaceAddress}
             placeholder="SP..."
-            onChange={(event) => {
-              setMarketplaceAddressTouched(true);
-              setMarketplaceAddress(event.target.value.trim().toUpperCase());
-              setStatus(null);
-            }}
+            onChange={
+              canEditMarketplaceRecipient
+                ? (event) => {
+                    setMarketplaceAddressTouched(true);
+                    setMarketplaceAddress(event.target.value.trim().toUpperCase());
+                    setStatus(null);
+                  }
+                : undefined
+            }
+            readOnly={!canEditMarketplaceRecipient}
+            aria-readonly={!canEditMarketplaceRecipient}
           />
-          <span className="field__hint">Set this now so deployment ships with your chosen marketplace.</span>
+          <span className="field__hint">
+            {canEditMarketplaceRecipient
+              ? 'Owner-only override. Draft storage remains canonicalized to Xtrata defaults.'
+              : 'Locked to Xtrata in creator mode. Only the artist payout address is editable here.'}
+          </span>
         </label>
       </div>
 
@@ -2769,7 +2866,10 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                     </span>
                   </p>
                   <p>
-                    <strong>Marketplace recipient:</strong>{' '}
+                    <strong>
+                      Marketplace recipient
+                      {canEditMarketplaceRecipient ? ' (owner override)' : ' (locked)'}:
+                    </strong>{' '}
                     <span className="address-value--full">
                       {deployBuild.resolved.marketplaceAddress}
                     </span>
