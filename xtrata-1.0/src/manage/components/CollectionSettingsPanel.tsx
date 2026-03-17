@@ -660,6 +660,11 @@ const RECIPIENT_EDITOR_FUNCTIONS = new Set<string>([
 ]);
 
 const CORE_ADMIN_FUNCTIONS = new Set<string>(['set-recipient-editor-access']);
+const XTRATA_OWNER_ONLY_ACTION_KEYS = new Set<string>([
+  'set-marketplace-recipient',
+  'set-operator-recipient',
+  'set-recipient-editor-access'
+]);
 
 const getActionSignerHint = (action: MutableAction) => {
   if (OWNER_ONLY_FUNCTIONS.has(action.functionName)) {
@@ -1007,8 +1012,15 @@ const sleep = (ms: number) =>
     window.setTimeout(() => resolve(), ms);
   });
 
-const resolveFixedRecipientArgs = (): BuildActionArgsResult => {
-  if (!validateStacksAddress(XTRATA_FIXED_RECIPIENT_ADDRESS)) {
+const resolveLockedRecipientAddress = (coreContractId: string | null) => {
+  const parsed = parseContractPrincipal(coreContractId ?? '');
+  const candidate = parsed?.address ?? XTRATA_FIXED_RECIPIENT_ADDRESS;
+  return candidate.trim().toUpperCase();
+};
+
+const resolveFixedRecipientArgs = (coreContractId: string | null): BuildActionArgsResult => {
+  const lockedRecipientAddress = resolveLockedRecipientAddress(coreContractId);
+  if (!validateStacksAddress(lockedRecipientAddress)) {
     return {
       args: [],
       notices: [],
@@ -1016,11 +1028,11 @@ const resolveFixedRecipientArgs = (): BuildActionArgsResult => {
         'Xtrata fixed recipient address is invalid in this build. Contact support before submitting payout recipient updates.'
     };
   }
-  const fixedRecipientCv = principalCV(XTRATA_FIXED_RECIPIENT_ADDRESS);
+  const fixedRecipientCv = principalCV(lockedRecipientAddress);
   return {
     args: [fixedRecipientCv, fixedRecipientCv],
     notices: [
-      `Marketplace and operator recipients are fixed to ${XTRATA_FIXED_RECIPIENT_ADDRESS} in manage mode.`
+      `Marketplace and operator recipients are fixed to ${lockedRecipientAddress} in manage mode.`
     ],
     error: null
   };
@@ -1126,11 +1138,13 @@ type CollectionSettingsPanelProps = {
   onJourneyRefreshRequested?: () => void;
   mode?: 'guided' | 'advanced';
   onRequestAdvancedControls?: () => void;
+  isXtrataOwner?: boolean;
 };
 
 export default function CollectionSettingsPanel(props: CollectionSettingsPanelProps) {
   const mode = props.mode ?? 'advanced';
   const guidedMode = mode === 'guided';
+  const canManageLockedRecipients = props.isXtrataOwner === true;
   const [collectionId, setCollectionId] = useState('');
   const [collectionSlug, setCollectionSlug] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -1149,11 +1163,7 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
   );
 
   const [selectedActionKey, setSelectedActionKey] = useState(
-    () =>
-      MUTABLE_ACTIONS.find((action) => action.key === DEFAULT_ADVANCED_ACTION_KEY)
-        ?.key ??
-      MUTABLE_ACTIONS[0]?.key ??
-      ''
+    DEFAULT_ADVANCED_ACTION_KEY
   );
   const [actionInputs, setActionInputs] = useState<Record<string, string>>({});
   const [actionMessage, setActionMessage] = useState<string | null>(null);
@@ -1210,10 +1220,19 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
       .filter(Boolean)
       .join(', ');
   }, [metadataCollection]);
+  const availableActions = useMemo(
+    () =>
+      canManageLockedRecipients
+        ? MUTABLE_ACTIONS
+        : MUTABLE_ACTIONS.filter(
+            (action) => !XTRATA_OWNER_ONLY_ACTION_KEYS.has(action.key)
+          ),
+    [canManageLockedRecipients]
+  );
 
   const selectedAction = useMemo(
-    () => MUTABLE_ACTIONS.find((action) => action.key === selectedActionKey) ?? null,
-    [selectedActionKey]
+    () => availableActions.find((action) => action.key === selectedActionKey) ?? null,
+    [availableActions, selectedActionKey]
   );
   const selectedActionSignerHint = useMemo(
     () => (selectedAction ? getActionSignerHint(selectedAction) : null),
@@ -1225,7 +1244,18 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
     }
     return `${selectedAction.description} ${getActionSignerHint(selectedAction)}`;
   }, [selectedAction]);
-  const actionGroups = useMemo(() => getActionGroups(MUTABLE_ACTIONS), []);
+  const actionGroups = useMemo(() => getActionGroups(availableActions), [availableActions]);
+
+  useEffect(() => {
+    if (availableActions.some((action) => action.key === selectedActionKey)) {
+      return;
+    }
+    setSelectedActionKey(
+      availableActions.find((action) => action.key === DEFAULT_ADVANCED_ACTION_KEY)?.key ??
+        availableActions[0]?.key ??
+        ''
+    );
+  }, [availableActions, selectedActionKey]);
 
   useEffect(() => {
     if (!selectedAction) {
@@ -1858,7 +1888,7 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
     }
 
     if (action.functionName === 'set-recipients') {
-      const fixedRecipients = resolveFixedRecipientArgs();
+      const fixedRecipients = resolveFixedRecipientArgs(summary?.coreContractId ?? null);
       if (fixedRecipients.error) {
         return fixedRecipients;
       }
