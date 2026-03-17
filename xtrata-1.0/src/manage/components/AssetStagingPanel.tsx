@@ -67,6 +67,13 @@ type CollectionRecord = {
   state?: string | null;
 };
 
+type DeleteAssetResponse = {
+  deleted: boolean;
+  assetId: string;
+  pricingLockCleared?: boolean;
+  storageObjectDeleted?: boolean;
+};
+
 type DeployPricingLock = {
   version: 'v1';
   lockedAt: string;
@@ -268,6 +275,7 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
   const [collectionLabel, setCollectionLabel] = useState<string | null>(null);
   const [collectionState, setCollectionState] = useState<string>('draft');
   const [lockPending, setLockPending] = useState(false);
+  const [removingAssetId, setRemovingAssetId] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [orderMode, setOrderMode] = useState<UploadOrderMode>('path-natural');
   const [seededOrderSeed, setSeededOrderSeed] = useState(createSecureRandomSeed);
@@ -847,6 +855,102 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
       return next;
     });
     setDeployPricingLock(null);
+  };
+
+  const getAssetRemovalBlockedReason = (asset: ManagedAsset) => {
+    const state = String(asset.state ?? '')
+      .trim()
+      .toLowerCase();
+    if (uploadsLocked) {
+      return uploadLockReason ?? 'Uploads are currently locked.';
+    }
+    if (uploading) {
+      return 'Wait for the current upload to finish before removing staged assets.';
+    }
+    if (loading) {
+      return 'Wait for staged assets to finish loading.';
+    }
+    if (lockPending) {
+      return 'Wait for pricing lock save to finish.';
+    }
+    if (removingAssetId) {
+      return removingAssetId === asset.asset_id
+        ? 'Removing staged asset...'
+        : 'Another asset removal is already in progress.';
+    }
+    if (state === 'sold-out') {
+      return 'Minted assets cannot be removed from staging.';
+    }
+    return null;
+  };
+
+  const removeStagedAsset = async (asset: ManagedAsset) => {
+    const blockedReason = getAssetRemovalBlockedReason(asset);
+    if (!normalizedCollectionId) {
+      setStatus('Enter a collection ID first.');
+      return;
+    }
+    if (blockedReason) {
+      setStatus(blockedReason);
+      return;
+    }
+
+    const assetName = getAssetDisplayName(asset);
+    const confirmationMessage = deployPricingLock
+      ? `Remove "${assetName}" from staged assets?\n\nThis also clears the deploy pricing lock. You will need to lock staged assets again before deploy.`
+      : `Remove "${assetName}" from staged assets?`;
+    if (
+      typeof window !== 'undefined' &&
+      !window.confirm(confirmationMessage)
+    ) {
+      return;
+    }
+
+    setRemovingAssetId(asset.asset_id);
+    setStatus(`Removing ${assetName} from staged assets...`);
+    try {
+      const response = await fetch(
+        `/collections/${encodeURIComponent(
+          normalizedCollectionId
+        )}/assets?assetId=${encodeURIComponent(asset.asset_id)}`,
+        {
+          method: 'DELETE'
+        }
+      );
+      const payload = await parseManageJsonResponse<DeleteAssetResponse>(
+        response,
+        'Remove staged asset'
+      );
+
+      setAssets((current) =>
+        current.filter((currentAsset) => currentAsset.asset_id !== asset.asset_id)
+      );
+      setAssetImageErrors((current) => {
+        if (!current[asset.asset_id]) {
+          return current;
+        }
+        const next = { ...current };
+        delete next[asset.asset_id];
+        return next;
+      });
+      if (payload.pricingLockCleared) {
+        clearLocalDeployPricingLock();
+      }
+      props.onJourneyRefreshRequested?.();
+      setStatus(
+        `Removed ${assetName} from staged assets.${
+          payload.pricingLockCleared
+            ? ' Pricing lock cleared; lock staged assets again before deploy.'
+            : ''
+        }`
+      );
+    } catch (error) {
+      setStatus(
+        toManageApiErrorMessage(error, 'Unable to remove staged asset.')
+      );
+    } finally {
+      setRemovingAssetId(null);
+    }
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -1629,37 +1733,56 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
                   normalizedCollectionId,
                   asset.asset_id
                 );
+                const removeBlockedReason = getAssetRemovalBlockedReason(asset);
+                const removeDisabled = removeBlockedReason !== null;
 
                 return (
-                  <button
+                  <div
                     key={asset.asset_id}
                     className={`asset-staging__thumb${
                       isSelected ? ' asset-staging__thumb--active' : ''
                     }`}
-                    type="button"
                     role="listitem"
-                    title={getAssetDisplayName(asset)}
-                    aria-label={`Select ${getAssetDisplayName(asset)} for preview`}
-                    onClick={() => setSelectedPreviewAssetId(asset.asset_id)}
                   >
-                    <span className="asset-staging__thumb-index">#{gridIndex}</span>
-                    <span className="asset-staging__thumb-frame">
-                      {isImageAsset(asset) && !imageFailed ? (
-                        <img
-                          src={previewUrl}
-                          alt={getAssetDisplayName(asset)}
-                          loading="lazy"
-                          onError={() => markAssetImageError(asset.asset_id)}
-                        />
-                      ) : (
-                        <span className="asset-staging__thumb-placeholder">
-                          {isImageAsset(asset)
-                            ? 'Preview unavailable'
-                            : `${mediaKind} · ${asset.mime_type}`}
-                        </span>
-                      )}
-                    </span>
-                  </button>
+                    <button
+                      className="asset-staging__thumb-select"
+                      type="button"
+                      title={getAssetDisplayName(asset)}
+                      aria-label={`Select ${getAssetDisplayName(asset)} for preview`}
+                      onClick={() => setSelectedPreviewAssetId(asset.asset_id)}
+                    >
+                      <span className="asset-staging__thumb-index">#{gridIndex}</span>
+                      <span className="asset-staging__thumb-frame">
+                        {isImageAsset(asset) && !imageFailed ? (
+                          <img
+                            src={previewUrl}
+                            alt={getAssetDisplayName(asset)}
+                            loading="lazy"
+                            onError={() => markAssetImageError(asset.asset_id)}
+                          />
+                        ) : (
+                          <span className="asset-staging__thumb-placeholder">
+                            {isImageAsset(asset)
+                              ? 'Preview unavailable'
+                              : `${mediaKind} · ${asset.mime_type}`}
+                          </span>
+                        )}
+                      </span>
+                    </button>
+                    <button
+                      className="asset-staging__thumb-remove"
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void removeStagedAsset(asset);
+                      }}
+                      disabled={removeDisabled}
+                      aria-label={`Remove ${getAssetDisplayName(asset)} from staged assets`}
+                      title={removeBlockedReason ?? 'Remove this staged asset'}
+                    >
+                      {removingAssetId === asset.asset_id ? '...' : 'Remove'}
+                    </button>
+                  </div>
                 );
               })}
 
@@ -1702,39 +1825,57 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
                         </span>
                       </div>
                     </div>
-                    <div
-                      className="asset-staging__preview-toggle"
-                      role="group"
-                      aria-label="Preview panel view"
-                    >
-                      <span className="info-label">
-                        <button
-                          className={`asset-staging__preview-toggle-button${
-                            previewPanelView === 'image'
-                              ? ' asset-staging__preview-toggle-button--active'
-                              : ''
-                          }`}
-                          type="button"
-                          onClick={() => setPreviewPanelView('image')}
-                        >
-                          Preview
-                        </button>
-                        <InfoTooltip text="Shows best-available preview by MIME type (image, video, audio, HTML/PDF, or text)." />
-                      </span>
-                      <span className="info-label">
-                        <button
-                          className={`asset-staging__preview-toggle-button${
-                            previewPanelView === 'metadata'
-                              ? ' asset-staging__preview-toggle-button--active'
-                              : ''
-                          }`}
-                          type="button"
-                          onClick={() => setPreviewPanelView('metadata')}
-                        >
-                          Metadata
-                        </button>
-                        <InfoTooltip text="Shows path, MIME, chunk count, size, and hash details for QA." />
-                      </span>
+                    <div className="asset-staging__preview-actions">
+                      <div
+                        className="asset-staging__preview-toggle"
+                        role="group"
+                        aria-label="Preview panel view"
+                      >
+                        <span className="info-label">
+                          <button
+                            className={`asset-staging__preview-toggle-button${
+                              previewPanelView === 'image'
+                                ? ' asset-staging__preview-toggle-button--active'
+                                : ''
+                            }`}
+                            type="button"
+                            onClick={() => setPreviewPanelView('image')}
+                          >
+                            Preview
+                          </button>
+                          <InfoTooltip text="Shows best-available preview by MIME type (image, video, audio, HTML/PDF, or text)." />
+                        </span>
+                        <span className="info-label">
+                          <button
+                            className={`asset-staging__preview-toggle-button${
+                              previewPanelView === 'metadata'
+                                ? ' asset-staging__preview-toggle-button--active'
+                                : ''
+                            }`}
+                            type="button"
+                            onClick={() => setPreviewPanelView('metadata')}
+                          >
+                            Metadata
+                          </button>
+                          <InfoTooltip text="Shows path, MIME, chunk count, size, and hash details for QA." />
+                        </span>
+                      </div>
+                      <button
+                        className="asset-staging__preview-remove"
+                        type="button"
+                        onClick={() => void removeStagedAsset(selectedPreviewAsset)}
+                        disabled={
+                          getAssetRemovalBlockedReason(selectedPreviewAsset) !== null
+                        }
+                        title={
+                          getAssetRemovalBlockedReason(selectedPreviewAsset) ??
+                          'Remove this staged asset'
+                        }
+                      >
+                        {removingAssetId === selectedPreviewAsset.asset_id
+                          ? 'Removing...'
+                          : 'Remove'}
+                      </button>
                     </div>
                   </div>
 

@@ -39,12 +39,14 @@ const parseJson = async <T>(response: Response) => {
 describe('collection staging integration flow', () => {
   let collectionRow: CollectionRow;
   let insertedAssets: Array<Record<string, unknown>>;
+  let reservations: Array<Record<string, unknown>>;
   let consoleLogSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     insertedAssets = [];
+    reservations = [];
     collectionRow = {
       id: collectionId,
       state: 'draft',
@@ -109,10 +111,26 @@ describe('collection staging integration flow', () => {
       if (query.startsWith('UPDATE assets SET state = ?')) {
         return {};
       }
+      if (query.startsWith('DELETE FROM assets WHERE collection_id = ? AND asset_id = ?')) {
+        insertedAssets = insertedAssets.filter(
+          (row) => !(row.collection_id === binds[0] && row.asset_id === binds[1])
+        );
+        return {};
+      }
       throw new Error(`Unhandled run query in test: ${query}`);
     });
 
     queryAllMock.mockImplementation(async (_env: unknown, query: string, binds: unknown[]) => {
+      if (query.includes('SELECT state, metadata FROM collections WHERE id = ? LIMIT 1')) {
+        return {
+          results: [
+            {
+              state: collectionRow.state,
+              metadata: collectionRow.metadata
+            }
+          ]
+        };
+      }
       if (query.includes('SELECT COALESCE(SUM(total_bytes), 0) as total FROM assets')) {
         const total = insertedAssets.reduce(
           (sum, row) => sum + Number(row.total_bytes ?? 0),
@@ -120,10 +138,35 @@ describe('collection staging integration flow', () => {
         );
         return { results: [{ total }] };
       }
+      if (query.includes('SELECT * FROM assets WHERE collection_id = ? AND asset_id = ?')) {
+        const collectionIdFilter = binds[0];
+        const assetId = binds[1];
+        const row = insertedAssets.find(
+          (item) =>
+            item.collection_id === collectionIdFilter && item.asset_id === assetId
+        );
+        return { results: row ? [row] : [] };
+      }
       if (query.includes('SELECT * FROM assets WHERE asset_id = ?')) {
         const assetId = binds[0];
         const row = insertedAssets.find((item) => item.asset_id === assetId);
         return { results: row ? [row] : [] };
+      }
+      if (query.includes('SELECT COUNT(*) as total FROM reservations WHERE collection_id = ? AND asset_id = ?')) {
+        const collectionIdFilter = binds[0];
+        const assetId = binds[1];
+        const total = reservations.filter(
+          (row) =>
+            row.collection_id === collectionIdFilter && row.asset_id === assetId
+        ).length;
+        return { results: [{ total }] };
+      }
+      if (query.includes('SELECT COUNT(*) as total FROM assets WHERE storage_key = ?')) {
+        const storageKey = binds[0];
+        const total = insertedAssets.filter(
+          (row) => row.storage_key === storageKey
+        ).length;
+        return { results: [{ total }] };
       }
       if (query.includes('SELECT * FROM assets WHERE collection_id = ?')) {
         return { results: insertedAssets.filter((row) => row.collection_id === binds[0]) };
@@ -208,6 +251,137 @@ describe('collection staging integration flow', () => {
     ).toBe(true);
   });
 
+  it('removes a staged asset, clears pricing lock, and deletes the unique storage object', async () => {
+    const storageKey = `${collectionId}/asset-a`;
+    const assetResponse = await assetsOnRequest({
+      request: new Request(`https://example.test/collections/${collectionId}/assets`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          path: '01/remove-me.png',
+          filename: 'remove-me.png',
+          mimeType: 'image/png',
+          totalBytes: 2048,
+          totalChunks: 2,
+          expectedHash: '0xdef',
+          storageKey
+        })
+      }),
+      env: { MAX_COLLECTION_STORAGE_BYTES: 10 * 1024 * 1024 },
+      params: { collectionId }
+    } as any);
+    const assetPayload = await parseJson<{ asset_id: string }>(assetResponse);
+    expect(assetResponse.status).toBe(201);
+
+    collectionRow.metadata = JSON.stringify({
+      collection: { name: 'Flow Test' },
+      deployPricingLock: {
+        version: 'v1',
+        lockedAt: '2026-02-24T00:00:00.000Z',
+        assetCount: 1,
+        maxChunks: 2,
+        maxBytes: 2048,
+        totalBytes: 2048
+      }
+    });
+
+    const bucketDeleteMock = vi.fn().mockResolvedValue(undefined);
+    const deleteResponse = await assetsOnRequest({
+      request: new Request(
+        `https://example.test/collections/${collectionId}/assets?assetId=${assetPayload.asset_id}`,
+        { method: 'DELETE' }
+      ),
+      env: {
+        COLLECTION_ASSETS: {
+          delete: bucketDeleteMock
+        }
+      },
+      params: { collectionId }
+    } as any);
+    const deletePayload = await parseJson<{
+      deleted: boolean;
+      assetId: string;
+      pricingLockCleared: boolean;
+      storageObjectDeleted: boolean;
+    }>(deleteResponse);
+
+    expect(deleteResponse.status).toBe(200);
+    expect(deletePayload.deleted).toBe(true);
+    expect(deletePayload.assetId).toBe(assetPayload.asset_id);
+    expect(deletePayload.pricingLockCleared).toBe(true);
+    expect(deletePayload.storageObjectDeleted).toBe(true);
+    expect(insertedAssets).toEqual([]);
+    expect(bucketDeleteMock).toHaveBeenCalledWith(storageKey);
+
+    const metadataAfter = collectionRow.metadata ? JSON.parse(collectionRow.metadata) : null;
+    expect(metadataAfter).toEqual({
+      collection: { name: 'Flow Test' }
+    });
+  });
+
+  it('blocks staged asset removal when reservation rows already exist', async () => {
+    const assetResponse = await assetsOnRequest({
+      request: new Request(`https://example.test/collections/${collectionId}/assets`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          path: '01/reserved.png',
+          filename: 'reserved.png',
+          mimeType: 'image/png',
+          totalBytes: 1024,
+          totalChunks: 1,
+          expectedHash: '0x123',
+          storageKey: `${collectionId}/reserved`
+        })
+      }),
+      env: { MAX_COLLECTION_STORAGE_BYTES: 10 * 1024 * 1024 },
+      params: { collectionId }
+    } as any);
+    const assetPayload = await parseJson<{ asset_id: string }>(assetResponse);
+    expect(assetResponse.status).toBe(201);
+
+    reservations.push({
+      reservation_id: 'res-1',
+      collection_id: collectionId,
+      asset_id: assetPayload.asset_id
+    });
+
+    collectionRow.metadata = JSON.stringify({
+      collection: { name: 'Flow Test' },
+      deployPricingLock: {
+        version: 'v1',
+        lockedAt: '2026-02-24T00:00:00.000Z',
+        assetCount: 1,
+        maxChunks: 1,
+        maxBytes: 1024,
+        totalBytes: 1024
+      }
+    });
+
+    const bucketDeleteMock = vi.fn().mockResolvedValue(undefined);
+    const deleteResponse = await assetsOnRequest({
+      request: new Request(
+        `https://example.test/collections/${collectionId}/assets?assetId=${assetPayload.asset_id}`,
+        { method: 'DELETE' }
+      ),
+      env: {
+        COLLECTION_ASSETS: {
+          delete: bucketDeleteMock
+        }
+      },
+      params: { collectionId }
+    } as any);
+    const deletePayload = await parseJson<{ error: string }>(deleteResponse);
+
+    expect(deleteResponse.status).toBe(400);
+    expect(deletePayload.error.toLowerCase()).toContain('reservation history');
+    expect(insertedAssets).toHaveLength(1);
+    expect(bucketDeleteMock).not.toHaveBeenCalled();
+
+    const metadataAfter = collectionRow.metadata ? JSON.parse(collectionRow.metadata) : null;
+    expect(metadataAfter?.deployPricingLock).toBeTruthy();
+  });
+
   it('blocks upload endpoints when collection state is locked', async () => {
     collectionRow.state = 'published';
 
@@ -258,6 +432,35 @@ describe('collection staging integration flow', () => {
     expect(assetResponse.status).toBe(400);
     const assetPayload = await parseJson<{ error: string }>(assetResponse);
     expect(assetPayload.error.toLowerCase()).toContain('locked');
+
+    insertedAssets.push({
+      asset_id: 'asset-locked',
+      collection_id: collectionId,
+      path: '01/locked.png',
+      filename: 'locked.png',
+      mime_type: 'image/png',
+      total_bytes: 1024,
+      total_chunks: 1,
+      expected_hash: '0xlocked',
+      storage_key: `${collectionId}/locked`,
+      edition_cap: null,
+      state: 'draft',
+      expires_at: Date.now() + 1000,
+      created_at: Date.now(),
+      updated_at: Date.now()
+    });
+
+    const deleteResponse = await assetsOnRequest({
+      request: new Request(
+        `https://example.test/collections/${collectionId}/assets?assetId=asset-locked`,
+        { method: 'DELETE' }
+      ),
+      env: {},
+      params: { collectionId }
+    } as any);
+    expect(deleteResponse.status).toBe(400);
+    const deletePayload = await parseJson<{ error: string }>(deleteResponse);
+    expect(deletePayload.error.toLowerCase()).toContain('locked');
   });
 
   it('blocks uploads when contract exists but deployment is not yet successful', async () => {
