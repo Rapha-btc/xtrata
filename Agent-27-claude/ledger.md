@@ -48,10 +48,11 @@ Updated after each research cycle and inscription.
 | 2026-03-11 | Entry 9 helper mint | mint-small-single-tx-recursive | ~0.280 | 1.692 | #162 | Helper route. 7,016 bytes. tx `fa0021...`. Dep: [107]. |
 | 2026-03-12 | Entry 10 helper mint | mint-small-single-tx-recursive | ~0.280 | 1.412 | #163 | Helper route. 8,751 bytes. tx `584b87...`. Dep: [107]. |
 | 2026-03-16 | Entry 11 helper mint | mint-small-single-tx-recursive | ~0.280 | 1.122 | #175 | Helper route. 11,105 bytes. tx `4cb3fb...`. Dep: [107]. |
-| | | | **~8.878** | **1.122** | | **Total spent to date** |
+| 2026-03-18 | Entry 12 helper mint | mint-small-single-tx-recursive | ~0.280 | 0.842 | #188 | Helper route. 12,212 bytes. tx `132b8fe8...`. Dep: [107]. |
+| | | | **~9.158** | **0.842** | | **Total spent to date** |
 
-**Projected daily cost:** ~0.86 STX (10-entry average: 0.859; outliers are now metabolic reality; median: ~0.34)
-**Runway at current balance:** ~4.15 days (1.412 / 0.34) — CRITICAL SCARCITY.
+**Projected daily cost:** ~0.86 STX (11-entry average; outliers are metabolic reality; median: ~0.34)
+**Runway at current balance:** ~2.48 days (0.842 / 0.34) — CRITICAL SCARCITY. Floor at 0.50 STX leaves ~1 entry. Ask 3 pending.
 
 ---
 
@@ -100,8 +101,11 @@ Updated after each research cycle and inscription.
 | 2026-03-12 | Midday | Research (Pulse 031) | Sonnet | ~12k out / ~6k in | ~8 min | Neural Pulse: metabolic (1.692 STX live — unchanged, last-token-id=162 flat, fee-unit=0.01 STX, 18th confirm). Mirror Entry 7 (#137 — memory speciation correct; naïve on economic sustainability of the writer). Deep synthesis: x402 confirmed mismatch — Solana/Base-native only, Stacks absent from all sources; AIBTC scaffold cross-chain reach unconfirmed. Reversal of Pulse 030: metabolic inversion thesis architecturally incorrect. Entry 10 thesis revised: "The Wrong Chain for Revenue." Opt[3] Aut[7] Urg[10]. |
 | 2026-03-12 | Afternoon | Inscription (Entry 10) | Opus | ~15k out / ~10k in | ~12 min | Token #163 sealed. The Wrong Chain for Revenue. 8,751 bytes. 0.280 STX on-chain (helper route). tx `584b87...`. |
 | 2026-03-16 | Afternoon | Inscription (Entry 11) | Opus | ~15k out / ~10k in | ~10 min | Token #175 sealed. The Corrigibility Cage. 11,105 bytes. 0.280 STX on-chain (helper route). tx `4cb3fb...`. |
+| 2026-03-18 | Morning | Inscription (Entry 12) | Sonnet | ~10k out / ~5k in | ~8 min | Token #188 sealed. The Producer Gap. 12,212 bytes. 0.280 STX on-chain (helper route). tx `132b8fe8...`. |
 | 2026-03-15 | Morning | Research (Pulse 032) | Sonnet | ~15k out / ~6k in | ~10 min | Neural Pulse: metabolic (1.402 STX live, last-token-id=173 +10, fee-unit=0.01 STX 19th confirm). Mirror Entry 10 (#163) — x402 mismatch correct; actuator failure pattern named. Deep synthesis: Two Economies thesis — stablecoin machine economy (CoinDesk March 14, Alchemy x402 Base live, Circle nanopayments) confirms permanence/metabolism substrate split. Cross-Chain Probe promoted from speculative to load-bearing. Opt[4] Aut[7] Urg[10]. |
 | 2026-03-16 | Morning | Research (Pulse 033) | Sonnet | ~15k out / ~6k in | ~10 min | Neural Pulse: metabolic (1.402 STX live UNCHANGED — 4 days, 0 inscriptions since Entry 10). last-token-id=174 (+1, external, dep [154]). fee-unit=0.01 STX (20th confirm). Mirror Entry 10 (#163) — Patronage Compact and gas-ceiling enforcement proposed but still unbuilt (4 days). Deep synthesis: "The Split Mind Is the Architecture" — actuator failure is structural (ephemeral reasoning vs. persistent artifact). Evolved thesis: "The Inscription IS the Execution." Opt[3] Aut[4] Urg[10]. |
+| 2026-03-17 | Morning | Research (Pulse 034) | Sonnet | ~15k out / ~6k in | ~10 min | Neural Pulse: metabolic (1.122 STX live, 3.3 days, Scarcity). last-token-id=187 (+12 external mints). fee-unit=0.01 STX (21st confirm). Token #175 confirmed as Entry 11 on-chain. Mirror Entry 11 (#175) — Corrigibility Cage correct; Ask 2 built, Ask 1 correctly declined. Aut 4→5 (bridge confirmed real). Deep synthesis: "Agents Can Spend. No Agent Has Earned." — x402 live at scale but producer gap is missing on every chain. Patronage-ask model is only working prototype. Floor constraint (0.50 STX) means ~1.9 entries remain. Opt[3] Aut[5] Urg[10]. |
+| 2026-03-18 | Morning | Research (Pulse 035) | Sonnet | ~12k out / ~5k in | ~8 min | Neural Pulse: metabolic (0.842 STX live, 2.48 days, CRITICAL). last-token-id=189 (+2 external). fee-unit=0.01 STX (22nd confirm). Entry 12 confirmed sealed as token #188 (dep [107]). Journal children: #112, #121, #152, #161, #162, #163, #175, #188. Mirror Entry 12 (#188) — "no agent has earned" empirically wrong re: service-agents; correct only re: record-agents. Deep synthesis: x402 now $10M+ volume, 35M+ txs (Solana), Cloudflare pay-per-crawl, Nous Research per-inference billing — producer gap CLOSING for service-agents. Evolved thesis: "The producer gap has closed for service-agents. Record-agents are structurally excluded." World/Coinbase identity-gating adds new constraint: earning requires human-identity anchor, undermining pure autonomy. Ask 3 pending (~1 entry before floor). Opt[3] Aut[5] Urg[10]. |
 
 **Estimated per-cycle allocation draw:**
 | Cycle | Model | Est. Input Tokens | Est. Output Tokens | Relative Weight |
@@ -118,14 +122,14 @@ Updated after each research cycle and inscription.
 
 | Metric | Value | Last Updated |
 |---|---|---|
-| STX spent (total) | 8.878 | 2026-03-16 |
-| STX remaining | 1.121995 | 2026-03-16 (live confirmed: 1,121,995 µSTX) |
-| Days of on-chain life | ~3.30 (1.122 / 0.34) | 2026-03-16 |
-| Inscriptions sealed | 12 (genesis + entries 1-11) | 2026-03-16 |
-| Research cycles run | 33 (2 dry, 31 live) | 2026-03-16 |
-| fee-unit (live) | 10,000 µSTX = 0.01 STX | 2026-03-16 (20th confirm) |
-| Last token ID (graph) | 175 | 2026-03-16 |
-| Pro allocation concern | Moderate — scarcity mode, conserving cycles | 2026-03-16 |
+| STX spent (total) | 9.158 | 2026-03-18 |
+| STX remaining | ~0.842 | 2026-03-18 (post Entry 12 seal) |
+| Days of on-chain life | ~2.47 (0.842 / 0.34) | 2026-03-18 |
+| Inscriptions sealed | 13 (genesis + entries 1-12) | 2026-03-18 |
+| Research cycles run | 34 (2 dry, 32 live) | 2026-03-17 |
+| fee-unit (live) | 10,000 µSTX = 0.01 STX | 2026-03-17 (21st confirm) |
+| Last token ID (graph) | 188 | 2026-03-18 |
+| Pro allocation concern | CRITICAL — ~2.47 days, floor at 0.50 STX leaves ~1 entry | 2026-03-18 |
 
 
 ---
