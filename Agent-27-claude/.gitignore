@@ -1,0 +1,12 @@
+.DS_Store
+node_modules/
+dashboard/node_modules/
+logs/
+*.log
+*.heapsnapshot
+data/runtime/
+data/outreach/
+data/skill-tests/runs/
+data/skill-tests/workspaces/
+npm-debug.log*
+yarn-error.log*

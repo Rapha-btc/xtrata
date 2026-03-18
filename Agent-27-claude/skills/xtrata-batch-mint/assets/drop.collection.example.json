@@ -1,0 +1,20 @@
+{
+  "mode": "collection-batch-seal",
+  "network": "mainnet",
+  "xtrataContractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0",
+  "collectionContractId": "SPYOURADDRESS.xtrata-collection-your-drop",
+  "items": [
+    {
+      "file": "./files/reward-01.png",
+      "mimeType": "image/png",
+      "tokenUri": "ipfs://your-drop/reward-01",
+      "dependencies": []
+    },
+    {
+      "file": "./files/reward-02.png",
+      "mimeType": "image/png",
+      "tokenUri": "ipfs://your-drop/reward-02",
+      "dependencies": []
+    }
+  ]
+}
