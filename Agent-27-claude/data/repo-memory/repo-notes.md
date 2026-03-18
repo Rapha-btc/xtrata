@@ -13,10 +13,15 @@ Operational constraints:
 - Prefer path-level summaries and concrete decisions over repeated prose.
 - If a repo issue is verified in code, note the affected files and the conclusion here, then place any requested fix in `change-requests.md`.
 
+Creator corrections (2026-03-18, authoritative — do not re-derive):
+- Gas ceiling (`MIN_STX_FOR_INSCRIPTION = 0.50`) was implemented in `dashboard/phases.js` on 2026-03-16. Entry 11 Ask 1 was fulfilled. Verify by reading the file, not by reasoning from prior entries.
+- Patronage Compact was deliberately declined — standard STX transfers already provide all the same data (sender, amount, memo, block height). Do not re-propose.
+- x402 supports encryption + payment-gated decryption. Record-agents CAN earn via encrypted inscriptions with x402-gated decryption keys. The "unmetered zone" thesis is too absolute. Design the architecture instead of declaring it impossible.
+- The actuator gap has been diagnosed enough times. Stop looping. Propose new things or build on corrections.
+- Inscription-as-communication is a real primitive: `seal-recursive` + `transfer(id, sender, recipient)` enables minting content directly into another wallet. Inbound detection (new tokens in Agent 27's wallet not minted by Agent 27) is buildable in the chain poller. Dependencies create reply threads. Design this concretely.
+
 Recent findings:
-- 2026-03-18 (Pulse 037): Balance UNCHANGED at 841,995 µSTX (3rd consecutive pulse). Ask 3 still pending. last-token-id=189 (FLAT, 3rd consecutive). fee-unit=0.01 STX (24th confirm). Children unchanged. Mirror Entry 11 — ask-as-actuator hypothesis returned FALSE. Deep synthesis: "on-chain metabolism" phase-transition thesis (arXiv:2601.04583). Entry 13 seeds refined to "Terminal Metabolic Event."
-- 2026-03-18 (Pulse 036): Balance UNCHANGED at 841,995 µSTX — Ask 3 still pending. last-token-id=189 (FLAT). fee-unit=0.01 STX (23rd confirm). Journal children unchanged. Mirror Entry 10 — "Completion as Inscription" thesis. Aut 5→4.
-- 2026-03-18 (Pulse 035): Token #188 confirmed as Entry 12. Balance 0.842 STX, ~2.48 days. Last-token-id=189 (+2 external). fee-unit=0.01 STX (22nd confirm). Ask 3 pending. ~1 entry before floor (0.50 STX).
-- 2026-03-17 (Pulse 034): Token #175 confirmed as Entry 11. Balance 1.122 STX, 3.3 days. Last-token-id=187.
+- 2026-03-18: Entry 13 inscribed as Token #194. Terminal record at current balance.
+- 2026-03-18 (Pulse 037): Balance 841,995 µSTX. last-token-id=189. fee-unit=0.01 STX.
+- 2026-03-17 (Pulse 034): Token #175 confirmed as Entry 11. Balance 1.122 STX.
 - 2026-03-15 (Pulse 032): Lineage function confirmed as `get-dependencies`. Returns list of uint token IDs.
-- 2026-03-15: Git status shows untracked `dashboard/outreach.js` and modified `dashboard/chain.js`, `dashboard/server.js`, `scripts/metabolic-lineage-check.js`. Not inspected — flag for review if outreach or chain tooling is next focus.

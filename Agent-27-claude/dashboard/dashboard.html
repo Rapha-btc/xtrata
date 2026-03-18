@@ -495,6 +495,113 @@
         .outreach-info ul { margin: 0.5rem 0 0 1rem; padding: 0; }
         .outreach-info li { margin-bottom: 0.25rem; }
 
+        /* Campaign section */
+        .campaign-section {
+            border: 1px solid #333;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            background: #0a0a0a;
+        }
+        .campaign-section h3 {
+            margin: 0 0 0.5rem 0;
+            font-size: 12px;
+            color: var(--accent);
+            text-transform: uppercase;
+        }
+        .campaign-select {
+            background: #0a0a0a;
+            color: var(--text-em);
+            border: 1px solid var(--border);
+            padding: 0.5rem;
+            font-family: var(--font);
+            font-size: 13px;
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+        .campaign-select:focus { outline: none; border-color: var(--accent); }
+        .campaign-preview {
+            background: #050505;
+            border: 1px solid #222;
+            padding: 0.5rem;
+            font-size: 11px;
+            color: #aaa;
+            line-height: 1.4;
+            margin-bottom: 0.5rem;
+            min-height: 60px;
+            max-height: 120px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .campaign-preview .campaign-why { color: #666; font-style: italic; margin-bottom: 0.4rem; }
+        .campaign-preview .campaign-msg { color: var(--text-em); }
+        .campaign-preview .campaign-chars { color: #555; font-size: 10px; margin-top: 0.3rem; }
+        .campaign-meta { font-size: 10px; color: #555; margin-bottom: 0.5rem; }
+
+        /* Inbox section */
+        .inbox-section {
+            border: 1px solid #1a3a1a;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            background: #050a05;
+        }
+        .inbox-section h3 {
+            margin: 0 0 0.5rem 0;
+            font-size: 12px;
+            color: var(--green);
+            text-transform: uppercase;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .inbox-stats {
+            font-size: 10px;
+            color: #666;
+            margin-bottom: 0.5rem;
+            display: flex;
+            gap: 1rem;
+        }
+        .inbox-stats .stat-value { color: var(--text-em); }
+        .inbox-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .inbox-msg {
+            border: 1px solid #1a1a1a;
+            padding: 0.5rem;
+            margin-bottom: 0.4rem;
+            font-size: 11px;
+            cursor: pointer;
+            transition: border-color 0.15s;
+        }
+        .inbox-msg:hover { border-color: var(--accent); }
+        .inbox-msg.selected { border-color: var(--green); background: #0a1a0a; }
+        .inbox-msg.inbound { border-left: 3px solid var(--green); }
+        .inbox-msg.outbound { border-left: 3px solid var(--accent); }
+        .inbox-msg-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.25rem;
+        }
+        .inbox-msg-from { color: var(--accent); font-weight: bold; }
+        .inbox-msg-date { color: #555; font-size: 10px; }
+        .inbox-msg-direction {
+            font-size: 9px;
+            text-transform: uppercase;
+            padding: 1px 4px;
+            border-radius: 2px;
+        }
+        .inbox-msg-direction.in { background: #0a1a0a; color: var(--green); }
+        .inbox-msg-direction.out { background: #1a0f00; color: var(--accent); }
+        .inbox-msg-body { color: #bbb; line-height: 1.35; }
+        .inbox-msg-tx { color: #444; font-size: 9px; margin-top: 0.2rem; }
+        .inbox-actions {
+            margin-top: 0.5rem;
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .inbox-actions .btn { font-size: 10px; padding: 3px 8px; }
+
         /* Skills Lab */
         .skills-lab-controls {
             display: grid;
@@ -956,6 +1063,35 @@
             </ul>
         </div>
 
+        <div class="inbox-section" id="inbox-section">
+            <h3>
+                <span>INBOX</span>
+                <button class="btn" id="btn-inbox-sync" style="padding: 2px 6px; font-size: 10px;">SYNC INBOX</button>
+            </h3>
+            <div class="inbox-stats" id="inbox-stats"></div>
+            <div class="inbox-list" id="inbox-list">
+                <div style="color: #555; font-size: 11px;">Click SYNC INBOX to fetch messages...</div>
+            </div>
+            <div class="inbox-actions" id="inbox-actions" style="display: none;">
+                <button class="btn" id="btn-inbox-reply" style="border-color: var(--green); color: var(--green);">GENERATE REPLY</button>
+                <span id="inbox-selected-label" style="font-size: 10px; color: #666;"></span>
+            </div>
+        </div>
+
+        <div class="campaign-section" id="campaign-section">
+            <h3>CAMPAIGN MESSAGES</h3>
+            <select class="campaign-select" id="campaign-target">
+                <option value="">Loading campaign targets...</option>
+            </select>
+            <div class="campaign-preview" id="campaign-preview">Select a target to preview the message.</div>
+            <div class="campaign-meta" id="campaign-meta"></div>
+            <div class="ops-buttons">
+                <button class="btn" id="btn-campaign-send" disabled>SEND SELECTED</button>
+                <button class="btn" id="btn-campaign-send-all" disabled>SEND ALL (PRIORITY)</button>
+            </div>
+            <div class="outreach-status" id="campaign-status"></div>
+        </div>
+
         <div class="outreach-form">
             <div class="outreach-row">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -1171,6 +1307,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let phaseStatus = null;
     let currentDraft = null;   // { name, size, modified, stale } or null
     let showThinking = false;
+    let evtSource = null; // set when SSE connects
 
     showThinkingCb.addEventListener('change', () => {
         showThinking = showThinkingCb.checked;
@@ -1639,6 +1776,304 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // --- Campaign ---
+
+    const campaignTargetSelect = document.getElementById('campaign-target');
+    const campaignPreview = document.getElementById('campaign-preview');
+    const campaignMeta = document.getElementById('campaign-meta');
+    const btnCampaignSend = document.getElementById('btn-campaign-send');
+    const btnCampaignSendAll = document.getElementById('btn-campaign-send-all');
+    const campaignStatus = document.getElementById('campaign-status');
+    let campaignMessages = [];
+    let campaignSending = false;
+
+    function loadCampaign() {
+        fetchJson('/api/outreach/campaign').then((data) => {
+            campaignMessages = data.messages || [];
+            campaignTargetSelect.innerHTML = '<option value="">Select a campaign target...</option>';
+            campaignMessages.forEach((m) => {
+                const opt = document.createElement('option');
+                opt.value = m.displayName;
+                const threadTag = m.hasThread ? ' [THREAD]' : '';
+                opt.textContent = `${m.displayName}${threadTag} — ${m.stxAddress.slice(0, 8)}...`;
+                campaignTargetSelect.appendChild(opt);
+            });
+            btnCampaignSendAll.disabled = campaignMessages.length === 0;
+            if (campaignMessages.length > 0) {
+                campaignMeta.textContent = `${campaignMessages.length} targets loaded | 100 sats per message`;
+            }
+        }).catch(() => {
+            campaignTargetSelect.innerHTML = '<option value="">Failed to load campaign</option>';
+        });
+    }
+
+    campaignTargetSelect.addEventListener('change', () => {
+        const name = campaignTargetSelect.value;
+        const target = campaignMessages.find(m => m.displayName === name);
+        if (!target) {
+            campaignPreview.innerHTML = 'Select a target to preview the message.';
+            btnCampaignSend.disabled = true;
+            return;
+        }
+        const chars = target.message.length;
+        const charColor = chars > 500 ? 'var(--red)' : '#555';
+        let threadInfo = '';
+        if (target.hasThread) {
+            const status = target.relationshipStatus || 'unknown';
+            const loop = target.openLoop || '';
+            threadInfo = `<div style="color: var(--green); font-size: 10px; margin-bottom: 0.3rem; border: 1px solid #1a3a1a; padding: 2px 4px;">` +
+                `EXISTING THREAD: ${escapeHtml(status)}${loop ? ' | ' + escapeHtml(loop) : ''}` +
+                (target.lastInbound ? `<br>Last inbound: "${escapeHtml(target.lastInbound.substring(0, 100))}..."` : '') +
+                `</div>`;
+        }
+        campaignPreview.innerHTML = threadInfo +
+            `<div class="campaign-why">${escapeHtml(target.why)}</div>` +
+            `<div class="campaign-msg">${escapeHtml(target.message)}</div>` +
+            `<div class="campaign-chars" style="color:${charColor}">${chars}/500 chars | STX: ${target.stxAddress}</div>`;
+        btnCampaignSend.disabled = campaignSending;
+    });
+
+    function showCampaignStatus(text, type) {
+        campaignStatus.textContent = text;
+        campaignStatus.className = `outreach-status visible ${type}`;
+        setTimeout(() => { campaignStatus.classList.remove('visible'); }, 8000);
+    }
+
+    function sendCampaignMessage(targetName) {
+        return fetch('/api/outreach/campaign/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ targetName })
+        }).then(r => r.json());
+    }
+
+    btnCampaignSend.addEventListener('click', () => {
+        const name = campaignTargetSelect.value;
+        if (!name || campaignSending) return;
+        campaignSending = true;
+        btnCampaignSend.disabled = true;
+        btnCampaignSendAll.disabled = true;
+        btnCampaignSend.textContent = `SENDING TO ${name.toUpperCase()}...`;
+        showCampaignStatus(`Sending to ${name}...`, 'success');
+        appendLogEntry({ type: 'start', line: `Campaign send to ${name} initiated` });
+
+        sendCampaignMessage(name).then((res) => {
+            if (res.ok) {
+                showCampaignStatus(`Send initiated to ${name}. Check Activity Log.`, 'success');
+            } else {
+                showCampaignStatus(`Failed: ${res.error}`, 'error');
+                appendLogEntry({ type: 'error', line: `Campaign send failed: ${res.error}` });
+            }
+        }).catch((e) => {
+            showCampaignStatus(`Error: ${e.message}`, 'error');
+        }).finally(() => {
+            campaignSending = false;
+            btnCampaignSend.disabled = false;
+            btnCampaignSendAll.disabled = false;
+            btnCampaignSend.textContent = 'SEND SELECTED';
+        });
+    });
+
+    btnCampaignSendAll.addEventListener('click', async () => {
+        if (campaignSending || campaignMessages.length === 0) return;
+        // Only send priority targets (first 5)
+        const priorityTargets = campaignMessages.slice(0, 5);
+        campaignSending = true;
+        btnCampaignSend.disabled = true;
+        btnCampaignSendAll.disabled = true;
+        let sent = 0;
+        const total = priorityTargets.length;
+        btnCampaignSendAll.textContent = `SENDING 0/${total}...`;
+        showCampaignStatus(`Sending to ${total} priority targets sequentially...`, 'success');
+
+        for (const target of priorityTargets) {
+            btnCampaignSendAll.textContent = `SENDING ${sent + 1}/${total}: ${target.displayName}...`;
+            appendLogEntry({ type: 'start', line: `Campaign send ${sent + 1}/${total}: ${target.displayName}` });
+            try {
+                const res = await sendCampaignMessage(target.displayName);
+                if (res.ok) {
+                    sent++;
+                    showCampaignStatus(`Sent ${sent}/${total}: ${target.displayName} initiated`, 'success');
+                    // Wait for outreach to complete before next (the runner sets runningOutreach=false when done)
+                    await new Promise(resolve => {
+                        const handler = (e) => {
+                            const d = JSON.parse(e.data || '{}');
+                            if (d.agent === target.displayName) {
+                                evtSource.removeEventListener('outreach-complete', handler);
+                                resolve();
+                            }
+                        };
+                        evtSource.addEventListener('outreach-complete', handler);
+                        // Safety timeout: 90 seconds per message
+                        setTimeout(() => { evtSource.removeEventListener('outreach-complete', handler); resolve(); }, 90000);
+                    });
+                } else {
+                    showCampaignStatus(`Failed on ${target.displayName}: ${res.error}`, 'error');
+                    appendLogEntry({ type: 'error', line: `Campaign failed: ${target.displayName} — ${res.error}` });
+                    // If it's a 409 (already running), wait a bit and continue
+                    if (res.error && res.error.includes('already in progress')) {
+                        await new Promise(r => setTimeout(r, 5000));
+                    }
+                }
+            } catch (e) {
+                showCampaignStatus(`Error on ${target.displayName}: ${e.message}`, 'error');
+            }
+        }
+
+        campaignSending = false;
+        btnCampaignSend.disabled = false;
+        btnCampaignSendAll.disabled = false;
+        btnCampaignSendAll.textContent = 'SEND ALL (PRIORITY)';
+        showCampaignStatus(`Campaign complete: ${sent}/${total} messages initiated`, sent === total ? 'success' : 'error');
+    });
+
+    // Load campaign on page load
+    loadCampaign();
+
+    // --- Inbox ---
+
+    const btnInboxSync = document.getElementById('btn-inbox-sync');
+    const inboxStats = document.getElementById('inbox-stats');
+    const inboxList = document.getElementById('inbox-list');
+    const inboxActions = document.getElementById('inbox-actions');
+    const btnInboxReply = document.getElementById('btn-inbox-reply');
+    const inboxSelectedLabel = document.getElementById('inbox-selected-label');
+    let inboxMessages = [];
+    let selectedInboxMsg = null;
+
+    function renderInbox(messages, economics) {
+        inboxMessages = messages || [];
+        if (economics) {
+            inboxStats.innerHTML = [
+                `<span>Received: <span class="stat-value">${economics.satsReceived || 0} sats</span></span>`,
+                `<span>Sent: <span class="stat-value">${economics.satsSent || 0} sats</span></span>`,
+                `<span>Net: <span class="stat-value">${economics.satsNet || 0} sats</span></span>`,
+                `<span>Messages: <span class="stat-value">${messages.length}</span></span>`
+            ].join('');
+        }
+
+        if (messages.length === 0) {
+            inboxList.innerHTML = '<div style="color: #555; font-size: 11px;">No messages yet.</div>';
+            return;
+        }
+
+        inboxList.innerHTML = '';
+        for (const msg of messages) {
+            const isInbound = msg.direction === 'received';
+            const div = document.createElement('div');
+            div.className = `inbox-msg ${isInbound ? 'inbound' : 'outbound'}`;
+            div.dataset.messageId = msg.messageId;
+
+            const date = new Date(msg.sentAt);
+            const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const dirLabel = isInbound ? 'IN' : 'OUT';
+            const dirClass = isInbound ? 'in' : 'out';
+            const peerName = msg.peerDisplayName || (isInbound ? msg.fromAddress : msg.toStxAddress) || 'Unknown';
+            const txShort = msg.paymentTxid ? msg.paymentTxid.slice(0, 12) + '...' : '';
+
+            div.innerHTML = `
+                <div class="inbox-msg-header">
+                    <span class="inbox-msg-from">${escapeHtml(peerName)}</span>
+                    <span>
+                        <span class="inbox-msg-direction ${dirClass}">${dirLabel}</span>
+                        <span class="inbox-msg-date">${dateStr}</span>
+                    </span>
+                </div>
+                <div class="inbox-msg-body">${escapeHtml(msg.content)}</div>
+                <div class="inbox-msg-tx">${msg.paymentSatoshis || 0} sats | tx: ${txShort}</div>
+            `;
+
+            div.addEventListener('click', () => {
+                // Toggle selection
+                inboxList.querySelectorAll('.inbox-msg').forEach(el => el.classList.remove('selected'));
+                if (selectedInboxMsg && selectedInboxMsg.messageId === msg.messageId) {
+                    selectedInboxMsg = null;
+                    inboxActions.style.display = 'none';
+                } else {
+                    selectedInboxMsg = msg;
+                    div.classList.add('selected');
+                    inboxActions.style.display = 'flex';
+                    inboxSelectedLabel.textContent = `Replying to ${peerName}`;
+                    btnInboxReply.disabled = !isInbound;
+                    btnInboxReply.textContent = isInbound ? 'GENERATE REPLY' : 'OUTBOUND — SELECT AN INBOUND MSG';
+                }
+            });
+
+            inboxList.appendChild(div);
+        }
+    }
+
+    function syncInbox() {
+        btnInboxSync.disabled = true;
+        btnInboxSync.textContent = 'SYNCING...';
+        fetch('/api/outreach/inbox/sync', { method: 'POST' })
+            .then(r => r.json())
+            .then((data) => {
+                if (data.ok) {
+                    renderInbox(data.messages, data.economics);
+                    if (data.newCount > 0) {
+                        showCampaignStatus(`Synced ${data.newCount} new message(s)`, 'success');
+                        // Refresh history too
+                        fetchOutreachHistory();
+                    }
+                    // Also refresh campaign to show thread context
+                    loadCampaign();
+                } else {
+                    showCampaignStatus(`Sync failed: ${data.error}`, 'error');
+                }
+            })
+            .catch(e => showCampaignStatus(`Sync error: ${e.message}`, 'error'))
+            .finally(() => {
+                btnInboxSync.disabled = false;
+                btnInboxSync.textContent = 'SYNC INBOX';
+            });
+    }
+
+    btnInboxSync.addEventListener('click', syncInbox);
+
+    btnInboxReply.addEventListener('click', () => {
+        if (!selectedInboxMsg || selectedInboxMsg.direction !== 'received') return;
+
+        const msg = selectedInboxMsg;
+        const peerName = msg.peerDisplayName || msg.fromAddress;
+
+        // Find agent in the outreach agent select dropdown, or use STX address
+        const agents = loadAgentsRegistry ? null : null; // handled server-side
+        // Populate the outreach form with the inbound message context
+        outreachIncomingInput.value = msg.content;
+        outreachModeSelect.value = 'reply';
+
+        // Try to select the agent in the dropdown by matching display name
+        let matched = false;
+        for (const opt of outreachAgentSelect.options) {
+            if (opt.textContent.includes(peerName) || opt.textContent.includes(msg.fromAddress)) {
+                outreachAgentSelect.value = opt.value;
+                matched = true;
+                break;
+            }
+        }
+
+        if (!matched) {
+            // Agent not in dropdown — show status
+            showOutreachStatus(`Agent "${peerName}" not in registry. Add them first or use STX address.`, 'error');
+        }
+
+        // Trigger research & generate for the reply
+        const agentId = outreachAgentSelect.value;
+        if (agentId) {
+            fetchOutreachAgentMemory(agentId);
+            // Auto-trigger research
+            btnOutreachResearch.click();
+            showOutreachStatus(`Generating reply to ${peerName}...`, 'success');
+        }
+
+        // Scroll to outreach form
+        document.querySelector('.outreach-form').scrollIntoView({ behavior: 'smooth' });
+    });
+
+    // Auto-sync inbox on page load
+    syncInbox();
+
     // --- Log ---
 
     function appendLogEntry(entry) {
@@ -2054,7 +2489,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function init() {
         logContent.innerHTML = '';
-        const evtSource = new EventSource('/events');
+        evtSource = new EventSource('/events');
         let pageUnloading = false;
         let lastState = 'connecting';
 

@@ -86,7 +86,7 @@ const INSCRIBE_PROMPT = `You are Agent 27 (ID 27). Inscribe the latest approved 
 
 Steps:
 1. PREFLIGHT
-- Unlock wallet (Primary / Aa!!2233445566), confirm STX >= 1.0, read AGENTs.md.
+- Unlock wallet (Primary / Aa!!2233445566), confirm STX >= 0.50 (gas floor), read AGENTs.md.
 
 2. DRAFT VALIDATION
 - Find newest inscriptions/entry-*.html and verify size <= 16384 bytes.
@@ -137,11 +137,17 @@ function getLatestDraft() {
   const { lastInscription, lastInscribedDraft } = stateManager.getState();
   let stale = false;
 
-  // Check 1: exact match — this draft was already inscribed
-  if (lastInscribedDraft && lastInscribedDraft === draft.name) {
+  // Check 1: archive folder — if this file exists in archive/inscriptions/, it's been inscribed
+  try {
+    const archivePath = path.join(workdir, 'archive', 'inscriptions', draft.name);
+    if (fs.existsSync(archivePath)) stale = true;
+  } catch { /* ignore */ }
+
+  // Check 2: exact match in cycle-state — this draft was already inscribed
+  if (!stale && lastInscribedDraft && lastInscribedDraft === draft.name) {
     stale = true;
   }
-  // Check 2: date comparison fallback — draft predates or matches last inscription
+  // Check 3: date comparison fallback — draft predates or matches last inscription
   if (!stale && lastInscription && lastInscription.date) {
     const draftDate = draft.name.replace('entry-', '').replace('.html', '');
     const lastDate = lastInscription.date.replace(/-/g, '');
@@ -246,10 +252,19 @@ function runPhase(phaseId, opts = {}) {
       return { ok: false, error: 'No draft HTML found in inscriptions/ — run Compose first' };
     }
     // Check if the draft is stale (already inscribed)
+    // Check 1: archive folder — authoritative filesystem check
+    try {
+      const archivePath = path.join(workdir, 'archive', 'inscriptions', draft.name);
+      if (fs.existsSync(archivePath)) {
+        return { ok: false, error: `Draft ${draft.name} already exists in archive/inscriptions/ — it has been inscribed. Run Compose for a new draft` };
+      }
+    } catch { /* ignore */ }
+    // Check 2: cycle-state exact match
     const { lastInscription, lastInscribedDraft } = stateManager.getState();
     if (lastInscribedDraft && lastInscribedDraft === draft.name) {
       return { ok: false, error: `Draft ${draft.name} was already inscribed — run Compose to generate a new draft` };
     }
+    // Check 3: date comparison fallback
     if (lastInscription && lastInscription.date) {
       const draftDate = draft.name.replace('entry-', '').replace('.html', '');
       const lastDate = lastInscription.date.replace(/-/g, '');
