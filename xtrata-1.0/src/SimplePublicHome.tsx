@@ -107,7 +107,12 @@ type LiveCollectionCard = {
   pricingOnChainMintPriceMicroStx: bigint | null;
 };
 
-type SimpleHomeSectionKey = 'live-drops' | 'home-viewer' | 'market' | 'mint' | 'starter-docs';
+type SimpleHomeSectionKey =
+  | 'live-drops'
+  | 'home-viewer'
+  | 'market'
+  | 'inscribe'
+  | 'starter-docs';
 
 const STARTER_DOCS: StarterDoc[] = [
   {
@@ -832,7 +837,7 @@ export default function SimplePublicHome() {
     if (key === 'market') {
       setMarketCollapsed(false);
     }
-    if (key === 'mint') {
+    if (key === 'inscribe') {
       setMintCollapsed(false);
     }
     if (key === 'starter-docs') {
@@ -944,7 +949,11 @@ export default function SimplePublicHome() {
 
           <div className="simple-home__tools">
             <div className="simple-home__actions">
-              <a className="button" href="#mint" onClick={(event) => handleNavJump(event, 'mint')}>
+              <a
+                className="button"
+                href="#inscribe"
+                onClick={(event) => handleNavJump(event, 'inscribe')}
+              >
                 Inscribe
               </a>
               <a
@@ -1184,6 +1193,8 @@ export default function SimplePublicHome() {
           collapsed={marketCollapsed}
           onToggleCollapse={() => setMarketCollapsed((prev) => !prev)}
         />
+
+        <div id="inscribe" aria-hidden="true" />
 
         <MintScreen
           contract={contract}
