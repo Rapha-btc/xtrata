@@ -5003,6 +5003,17 @@ p {
   position: relative;
 }
 
+.deploy-wizard__free-mint-option {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.deploy-wizard__free-mint-option .toggle {
+  color: var(--text);
+  font-size: 0.82rem;
+}
+
 .deploy-wizard__mint-price-input--error {
   color: #b91c1c;
 }

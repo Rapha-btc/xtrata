@@ -32,6 +32,10 @@ import {
   type ArtistMintType
 } from '../../lib/deploy/artist-deploy';
 import {
+  isDeployFreeMintMode,
+  resolveDeployMintPriceOverrideMicroStx
+} from '../../lib/deploy/free-mint';
+import {
   parseManageJsonResponse,
   toManageApiErrorMessage
 } from '../lib/api-errors';
@@ -252,6 +256,7 @@ type DeployWizardDraftStorage = {
   description: string;
   supply: string;
   mintPriceStx: string;
+  freeMintEnabled: boolean;
   mintType: ArtistMintType;
   parentInscriptions: string;
   artistAddress: string;
@@ -265,6 +270,8 @@ const toRecord = (value: unknown) =>
 
 const toText = (value: unknown) =>
   typeof value === 'string' ? value.trim() : '';
+
+const toBoolean = (value: unknown) => value === true;
 
 const toPositiveIntegerText = (value: unknown) => {
   if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
@@ -300,6 +307,7 @@ const buildDraftFormFromCollection = (
 ): DeployWizardDraftStorage | null => {
   const metadata = toRecord(collection.metadata);
   const collectionMetadata = toRecord(metadata?.collection);
+  const creatorOptions = toRecord(metadata?.creatorOptions);
   const hardcodedDefaults = toRecord(metadata?.hardcodedDefaults);
   const recipients = toRecord(hardcodedDefaults?.recipients);
   const resolvedCollectionName =
@@ -326,6 +334,7 @@ const buildDraftFormFromCollection = (
     description: resolvedDescription,
     supply: resolvedSupply,
     mintPriceStx: resolvedMintPriceStx,
+    freeMintEnabled: toBoolean(creatorOptions?.freeMintEnabled),
     mintType: toMintType(metadata?.mintType),
     parentInscriptions: toParentIdsText(collectionMetadata?.parentInscriptionIds),
     artistAddress: resolvedArtistAddress,
@@ -356,6 +365,7 @@ const parseStoredDraft = (value: string | null): DeployWizardDraftStorage | null
       supply: typeof payload.supply === 'string' ? payload.supply : '1000',
       mintPriceStx:
         typeof payload.mintPriceStx === 'string' ? payload.mintPriceStx : '0',
+      freeMintEnabled: payload.freeMintEnabled === true,
       mintType:
         payload.mintType === 'pre-inscribed' ? 'pre-inscribed' : 'standard',
       parentInscriptions:
@@ -396,6 +406,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
   const [description, setDescription] = useState('');
   const [supply, setSupply] = useState('1000');
   const [mintPriceStx, setMintPriceStx] = useState('0');
+  const [freeMintEnabled, setFreeMintEnabled] = useState(false);
   const [mintType, setMintType] = useState<ArtistMintType>('standard');
   const [parentInscriptions, setParentInscriptions] = useState('');
   const [artistAddress, setArtistAddress] = useState('');
@@ -451,6 +462,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     setDescription(normalizeArtistDeployDescription(draft.description));
     setSupply(draft.supply);
     setMintPriceStx(draft.mintPriceStx);
+    setFreeMintEnabled(draft.freeMintEnabled);
     setMintType(draft.mintType);
     setParentInscriptions(draft.parentInscriptions);
     setArtistAddress(draft.artistAddress);
@@ -466,6 +478,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       description: '',
       supply: '1000',
       mintPriceStx: '0',
+      freeMintEnabled: false,
       mintType: 'standard',
       parentInscriptions: '',
       artistAddress: walletSession.address ?? '',
@@ -541,6 +554,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       description,
       supply,
       mintPriceStx,
+      freeMintEnabled,
       mintType,
       parentInscriptions,
       artistAddress,
@@ -567,6 +581,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     description,
     supply,
     mintPriceStx,
+    freeMintEnabled,
     mintType,
     parentInscriptions,
     artistAddress,
@@ -959,7 +974,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     };
   }, [coreTarget, walletSession.address]);
 
-  const deployBuild = useMemo(
+  const rawDeployBuild = useMemo(
     () =>
       buildArtistDeployContractSource({
         input: {
@@ -1001,6 +1016,98 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     () => parseDeployPricingLockSnapshot(collection?.metadata),
     [collection?.metadata]
   );
+  const freeMintModeEnabled = isDeployFreeMintMode({
+    mintType,
+    freeMintEnabled
+  });
+  const pricingFloorPreflight = useMemo(() => {
+    if (mintType !== 'standard') {
+      return null;
+    }
+    if (!collectionDeployPricingLock || coreFeeUnitMicroStx === null) {
+      return null;
+    }
+    const mintPriceMicroStx = rawDeployBuild.resolved.mintPriceMicroStx;
+    const evaluation = evaluateDeployPriceSafety({
+      mintPriceMicroStx,
+      maxChunks: collectionDeployPricingLock.maxChunks,
+      feeUnitMicroStx: coreFeeUnitMicroStx
+    });
+    return {
+      mintPriceMicroStx,
+      feeUnitMicroStx: coreFeeUnitMicroStx,
+      worstCaseSealFeeMicroStx: evaluation.worstCaseSealFeeMicroStx,
+      worstCaseBeginFeeMicroStx: evaluation.worstCaseBeginFeeMicroStx,
+      absorbedProtocolFeeMicroStx: evaluation.absorbedProtocolFeeMicroStx,
+      absorptionModel: evaluation.absorptionModel,
+      singleTxChunkThreshold: evaluation.singleTxChunkThreshold,
+      feeBatches: evaluation.feeBatches,
+      marginMicroStx: evaluation.marginMicroStx,
+      safe: evaluation.safe
+    };
+  }, [
+    mintType,
+    collectionDeployPricingLock,
+    coreFeeUnitMicroStx,
+    rawDeployBuild.resolved.mintPriceMicroStx
+  ]);
+  const minimumMintPriceMicroStx = useMemo(() => {
+    if (mintType !== 'standard' || !pricingFloorPreflight) {
+      return null;
+    }
+    return pricingFloorPreflight.absorbedProtocolFeeMicroStx;
+  }, [mintType, pricingFloorPreflight]);
+  const freeMintPriceOverrideMicroStx = useMemo(
+    () =>
+      resolveDeployMintPriceOverrideMicroStx({
+        mintType,
+        freeMintEnabled,
+        feeFloorMintPriceMicroStx: minimumMintPriceMicroStx
+      }),
+    [mintType, freeMintEnabled, minimumMintPriceMicroStx]
+  );
+  const deployMintPriceStxForBuild =
+    freeMintPriceOverrideMicroStx !== null
+      ? formatMicroStxInput(freeMintPriceOverrideMicroStx)
+      : mintPriceStx;
+  const deployBuild = useMemo(
+    () =>
+      buildArtistDeployContractSource({
+        input: {
+          collectionName,
+          symbol,
+          description,
+          supply,
+          mintType,
+          mintPriceStx: deployMintPriceStxForBuild,
+          parentInscriptions,
+          artistAddress,
+          marketplaceAddress: effectiveMarketplaceAddress
+        },
+        templateSources: {
+          standardSource: selectedStandardTemplateSource,
+          preinscribedSource: preinscribedTemplateSource
+        },
+        coreContractId:
+          coreTarget?.contractId ??
+          'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0',
+        operatorAddress:
+          coreTarget?.address ?? 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X'
+      }),
+    [
+      collectionName,
+      symbol,
+      description,
+      supply,
+      mintType,
+      deployMintPriceStxForBuild,
+      parentInscriptions,
+      artistAddress,
+      effectiveMarketplaceAddress,
+      coreTarget,
+      selectedStandardTemplateSource
+    ]
+  );
   const pricingPreflight = useMemo(() => {
     if (mintType !== 'standard') {
       return null;
@@ -1032,8 +1139,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     coreFeeUnitMicroStx,
     deployBuild.resolved.mintPriceMicroStx
   ]);
-  const deployAbsorbsWorstCaseSealFee =
-    mintType === 'standard';
+  const deployAbsorbsWorstCaseSealFee = mintType === 'standard';
   const onChainMintPriceAfterAbsorptionMicroStx = useMemo(() => {
     if (!deployAbsorbsWorstCaseSealFee || !pricingPreflight) {
       return deployBuild.resolved.mintPriceMicroStx;
@@ -1047,12 +1153,6 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     pricingPreflight,
     deployBuild.resolved.mintPriceMicroStx
   ]);
-  const minimumMintPriceMicroStx = useMemo(() => {
-    if (mintType !== 'standard' || !pricingPreflight) {
-      return null;
-    }
-    return pricingPreflight.absorbedProtocolFeeMicroStx;
-  }, [mintType, pricingPreflight]);
   const standardMintPriceLocked = mintType === 'standard' && !collectionDeployPricingLock;
   const mintPriceHintId = 'deploy-mint-price-hint';
   const standardMintPriceBelowFloor =
@@ -1352,7 +1452,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         description,
         supply,
         mintType,
-        mintPriceStx,
+        mintPriceStx: deployMintPriceStxForBuild,
         parentInscriptions,
         artistAddress,
         marketplaceAddress: effectiveMarketplaceAddress
@@ -1382,6 +1482,9 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
 
     const draftMetadata = {
       mintType,
+      creatorOptions: {
+        freeMintEnabled: freeMintModeEnabled
+      },
       templateVersion,
       coreContractId: networkCoreTarget.contractId,
       collection: {
@@ -1389,7 +1492,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         symbol: refreshBuild.resolved.symbol,
         description: refreshBuild.resolved.description,
         supply: refreshBuild.resolved.supply.toString(),
-        mintPriceStx,
+        mintPriceStx: deployMintPriceStxForBuild,
         mintPriceMicroStx: refreshBuild.resolved.mintPriceMicroStx.toString(),
         parentInscriptionIds: refreshBuild.resolved.defaultDependencyIds.map((id) =>
           id.toString()
@@ -1529,7 +1632,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         description,
         supply,
         mintType,
-        mintPriceStx,
+        mintPriceStx: deployMintPriceStxForBuild,
         parentInscriptions,
         artistAddress,
         marketplaceAddress: effectiveMarketplaceAddress
@@ -1562,6 +1665,9 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
 
     const draftMetadata = {
       mintType,
+      creatorOptions: {
+        freeMintEnabled: freeMintModeEnabled
+      },
       templateVersion,
       coreContractId: networkCoreTarget.contractId,
       collection: {
@@ -1569,7 +1675,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         symbol: refreshBuild.resolved.symbol,
         description: refreshBuild.resolved.description,
         supply: refreshBuild.resolved.supply.toString(),
-        mintPriceStx,
+        mintPriceStx: deployMintPriceStxForBuild,
         mintPriceMicroStx: refreshBuild.resolved.mintPriceMicroStx.toString(),
         parentInscriptionIds: refreshBuild.resolved.defaultDependencyIds.map((id) =>
           id.toString()
@@ -1718,7 +1824,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       }
     }
 
-    let deployMintPriceStxForSource = mintPriceStx;
+    let deployMintPriceStxForSource = deployMintPriceStxForBuild;
     let deployAbsorbedProtocolFeeMicroStx = 0n;
     let deployAbsorbedSealFeeMicroStx = 0n;
     let deployAbsorbedBeginFeeMicroStx = 0n;
@@ -2251,6 +2357,25 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
             Price per mint (STX)
             <InfoTooltip text="Amount each buyer pays per piece. For standard mint, this unlocks after uploads are staged + locked so we can enforce a safe minimum." />
           </span>
+          {mintType === 'standard' ? (
+            <div className="deploy-wizard__free-mint-option">
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={freeMintEnabled}
+                  onChange={(event) => {
+                    setFreeMintEnabled(event.target.checked);
+                    setStatus(null);
+                  }}
+                />
+                <span>Free mint mode</span>
+              </label>
+              <span className="field__hint">
+                Auto-sets the advertised price to the exact Xtrata fee floor once assets are
+                locked, then deploys a 0 STX on-chain mint price with 0/0/0 payout splits.
+              </span>
+            </div>
+          ) : null}
           <div className="deploy-wizard__locked-input-wrap">
             <input
               className={`input deploy-wizard__mint-price-input${
@@ -2261,15 +2386,15 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                     : ''
               }`}
               inputMode="decimal"
-              value={mintPriceStx}
+              value={freeMintModeEnabled ? deployMintPriceStxForBuild : mintPriceStx}
               onChange={(event) => {
                 setMintPriceStx(event.target.value);
                 setStatus(null);
               }}
-              disabled={standardMintPriceLocked}
+              disabled={standardMintPriceLocked || freeMintModeEnabled}
               aria-describedby={mintType === 'standard' ? mintPriceHintId : undefined}
             />
-            {standardMintPriceLocked ? (
+            {standardMintPriceLocked && !freeMintModeEnabled ? (
               <button
                 className="deploy-wizard__locked-input-overlay"
                 type="button"
@@ -2282,12 +2407,18 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
             <span
               id={mintPriceHintId}
               className={`field__hint${
-                standardMintPriceLocked && mintPriceLockHintActive
+                standardMintPriceLocked && mintPriceLockHintActive && !freeMintModeEnabled
                   ? ' field__hint--alert field__hint--flash'
                   : ''
               }`}
             >
-              {standardMintPriceLocked
+              {freeMintModeEnabled
+                ? minimumMintPriceMicroStx !== null
+                  ? `Free mint mode auto-sets the advertised price to ${formatMicroStx(
+                      minimumMintPriceMicroStx
+                    )}. On deploy, on-chain mint price will be 0 STX with 0/0/0 payout splits.`
+                  : 'Free mint mode is on. Upload and lock all files first in Step 2 so we can auto-set the exact fee-floor price.'
+                : standardMintPriceLocked
                 ? 'Upload and lock all files first in Step 2. Price unlocks after the largest-file fee floor is known.'
                 : minimumMintPriceMicroStx !== null
                   ? deployAbsorbsWorstCaseSealFee
@@ -2324,13 +2455,16 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
           standardMintPriceValidationState === 'valid' &&
           pricingPreflight ? (
             <span className="field__hint field__hint--ok">
-              Price is in range. Safety margin: {formatMicroStx(
-                pricingPreflight.marginMicroStx
-              )}.
+              {freeMintModeEnabled
+                ? 'Free mint is ready. Buyers only cover the absorbed Xtrata fee floor.'
+                : `Price is in range. Safety margin: ${formatMicroStx(
+                    pricingPreflight.marginMicroStx
+                  )}.`}
             </span>
           ) : null}
           {mintType === 'standard' &&
           standardMintPriceLocked &&
+          !freeMintModeEnabled &&
           mintPriceLockHintActive ? (
             <span className="field__hint field__hint--alert">
               Price entry is locked right now. Complete Step 2 by uploading your
@@ -2792,7 +2926,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                       : 'Standard mint'}
                   </p>
                   <p>
-                    <strong>Price per mint:</strong> {mintPriceStx.trim() || '0'} STX
+                    <strong>Price per mint:</strong> {deployMintPriceStxForBuild.trim() || '0'} STX
                   </p>
                   {deployBuild.resolved.mintType === 'standard' && (
                     <p>
