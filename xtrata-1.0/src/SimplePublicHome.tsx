@@ -22,6 +22,7 @@ import {
   resolveDisplayedCollectionMintPrice,
   type CollectionMintPricingMetadata
 } from './lib/collection-mint/pricing-metadata';
+import { resolveCollectionMintPriceTone } from './lib/collection-mint/price-tone';
 import { resolveCollectionCoverImageUrl } from './lib/collections/cover-image';
 import { resolveCollectionContractLink } from './lib/collections/contract-link';
 import {
@@ -1078,6 +1079,10 @@ export default function SimplePublicHome() {
                   const mintStateLabel = buildMintStateLabel(mintStatus);
                   const soldOut = isCollectionSoldOut(mintStatus);
                   const freeMint = isCollectionFreeMint(collection, mintStatus);
+                  const priceTone = resolveCollectionMintPriceTone({
+                    displayedMintPriceMicroStx: effectiveMintPrice,
+                    freeMint
+                  });
                   const statusBadge = soldOut ? (
                     <span className="badge badge--compact badge--sold-out">Sold out</span>
                   ) : freeMint ? (
@@ -1118,7 +1123,9 @@ export default function SimplePublicHome() {
                             </div>
                           )}
                         </div>
-                        <div className="public-live-collections__media-price">
+                        <div
+                          className={`public-live-collections__media-price public-live-collections__media-price--${priceTone}`}
+                        >
                           Mint price
                           <strong>{formatMicroStxLabel(effectiveMintPrice)}</strong>
                         </div>

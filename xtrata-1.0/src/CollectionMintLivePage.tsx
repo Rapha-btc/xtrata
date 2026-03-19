@@ -43,6 +43,7 @@ import {
   resolveCollectionMintPricingMetadata,
   type CollectionMintPricingMetadata
 } from './lib/collection-mint/pricing-metadata';
+import { resolveCollectionMintPriceTone } from './lib/collection-mint/price-tone';
 import {
   resolveCollectionMintPaymentModel,
   type CollectionMintPaymentModel
@@ -2671,18 +2672,12 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
         : published
           ? 'live'
           : 'unknown';
-  const mintPriceBandBucket =
-    displayedMintPriceMicroStx === null
-      ? null
-      : (displayedMintPriceMicroStx <= 0n ? 0n : displayedMintPriceMicroStx - 1n) /
-        10_000_000n;
-  const mintPriceBandIndex =
-    mintPriceBandBucket === null ? null : Number(mintPriceBandBucket > 9n ? 9n : mintPriceBandBucket);
-  const mintPriceToneClass = freeMint
-    ? 'collection-live-page__hero-price-card--free'
-    : mintPriceBandIndex === null
-      ? 'collection-live-page__hero-price-card--unknown'
-      : `collection-live-page__hero-price-card--band-${Math.max(0, mintPriceBandIndex)}`;
+  const mintPriceTone =
+    resolveCollectionMintPriceTone({
+      displayedMintPriceMicroStx,
+      freeMint
+    });
+  const mintPriceToneClass = `collection-live-page__hero-price-card--${mintPriceTone}`;
   const heroStatusLabel = soldOut ? 'Sold out' : freeMint ? 'Free mint' : null;
   const mintBeginSpendCap = resolveCollectionBeginSpendCapMicroStx({
     mintPrice: contractStatus?.mintPrice ?? null,

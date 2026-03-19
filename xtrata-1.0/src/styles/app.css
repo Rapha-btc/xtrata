@@ -7115,10 +7115,10 @@ p {
 }
 
 .public-live-collections__media-price {
-  border: 1px solid var(--border);
+  border: 1px solid var(--public-live-price-border, var(--border));
   border-radius: 10px;
-  background: var(--surface);
-  color: var(--muted);
+  background: var(--public-live-price-bg, var(--surface));
+  color: var(--public-live-price-color, var(--muted));
   display: grid;
   gap: 1px;
   justify-items: center;
@@ -7127,14 +7127,99 @@ p {
   font-weight: 600;
   letter-spacing: 0.03em;
   text-transform: uppercase;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .public-live-collections__media-price strong {
-  color: var(--text);
+  color: var(--public-live-price-strong, var(--text));
   font-size: 0.79rem;
   font-weight: 700;
   letter-spacing: 0.01em;
   text-transform: none;
+}
+
+.public-live-collections__media-price--free {
+  --public-live-price-border: rgba(74, 222, 128, 0.38);
+  --public-live-price-bg: rgba(22, 163, 74, 0.86);
+  --public-live-price-color: #dcfce7;
+  --public-live-price-strong: #dcfce7;
+}
+
+.public-live-collections__media-price--unknown {
+  --public-live-price-border: rgba(148, 163, 184, 0.38);
+  --public-live-price-bg: rgba(51, 65, 85, 0.84);
+  --public-live-price-color: #e2e8f0;
+  --public-live-price-strong: #e2e8f0;
+}
+
+.public-live-collections__media-price--band-0 {
+  --public-live-price-border: rgba(234, 179, 8, 0.45);
+  --public-live-price-bg: #a16207;
+  --public-live-price-color: #fef3c7;
+  --public-live-price-strong: #fef3c7;
+}
+
+.public-live-collections__media-price--band-1 {
+  --public-live-price-border: rgba(245, 158, 11, 0.45);
+  --public-live-price-bg: #b45309;
+  --public-live-price-color: #fffbeb;
+  --public-live-price-strong: #fffbeb;
+}
+
+.public-live-collections__media-price--band-2 {
+  --public-live-price-border: rgba(249, 115, 22, 0.45);
+  --public-live-price-bg: #c2410c;
+  --public-live-price-color: #fff7ed;
+  --public-live-price-strong: #fff7ed;
+}
+
+.public-live-collections__media-price--band-3 {
+  --public-live-price-border: rgba(249, 115, 22, 0.45);
+  --public-live-price-bg: #d97706;
+  --public-live-price-color: #fff7ed;
+  --public-live-price-strong: #fff7ed;
+}
+
+.public-live-collections__media-price--band-4 {
+  --public-live-price-border: rgba(249, 115, 22, 0.45);
+  --public-live-price-bg: #ea580c;
+  --public-live-price-color: #fff7ed;
+  --public-live-price-strong: #fff7ed;
+}
+
+.public-live-collections__media-price--band-5 {
+  --public-live-price-border: rgba(234, 88, 12, 0.45);
+  --public-live-price-bg: #c2410c;
+  --public-live-price-color: #fff7ed;
+  --public-live-price-strong: #fff7ed;
+}
+
+.public-live-collections__media-price--band-6 {
+  --public-live-price-border: rgba(239, 68, 68, 0.45);
+  --public-live-price-bg: #dc2626;
+  --public-live-price-color: #fef2f2;
+  --public-live-price-strong: #fef2f2;
+}
+
+.public-live-collections__media-price--band-7 {
+  --public-live-price-border: rgba(239, 68, 68, 0.45);
+  --public-live-price-bg: #b91c1c;
+  --public-live-price-color: #fef2f2;
+  --public-live-price-strong: #fef2f2;
+}
+
+.public-live-collections__media-price--band-8 {
+  --public-live-price-border: rgba(220, 38, 38, 0.45);
+  --public-live-price-bg: #991b1b;
+  --public-live-price-color: #fee2e2;
+  --public-live-price-strong: #fee2e2;
+}
+
+.public-live-collections__media-price--band-9 {
+  --public-live-price-border: rgba(185, 28, 28, 0.45);
+  --public-live-price-bg: #7f1d1d;
+  --public-live-price-color: #fee2e2;
+  --public-live-price-strong: #fee2e2;
 }
 
 .public-live-collections__card h3,
