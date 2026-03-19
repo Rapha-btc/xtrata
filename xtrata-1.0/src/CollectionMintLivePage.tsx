@@ -67,6 +67,7 @@ import {
   type ThemeMode,
   writeThemePreference
 } from './lib/theme/preferences';
+import { useBnsNames } from './lib/bns/hooks';
 import { getMediaKind } from './lib/viewer/content';
 import { bytesToHex } from './lib/utils/encoding';
 import { formatBytes } from './lib/utils/format';
@@ -106,6 +107,7 @@ type CollectionRecord = {
   id: string;
   slug: string;
   display_name: string | null;
+  artist_address: string | null;
   contract_address: string | null;
   state: string;
   metadata?: Record<string, unknown> | null;
@@ -774,6 +776,20 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       'This collection is live on Xtrata.',
     [metadataCollection, metadataCollectionPage]
   );
+  const artistAddress = useMemo(() => toText(collection?.artist_address), [collection]);
+  const artistNetwork = useMemo(
+    () =>
+      (artistAddress ? getNetworkFromAddress(artistAddress) : null) ??
+      collectionContract?.network ??
+      null,
+    [artistAddress, collectionContract]
+  );
+  const artistBnsQuery = useBnsNames({
+    address: artistAddress || null,
+    network: artistNetwork,
+    enabled: Boolean(artistAddress && validateStacksAddress(artistAddress) && artistNetwork)
+  });
+  const artistBnsName = artistBnsQuery.data?.primary ?? null;
 
   const collectionSymbol = useMemo(
     () => toText(metadataCollection?.symbol) || 'NO-TICKER',
@@ -2765,6 +2781,19 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   return (
     <div className="app collection-live-page">
       <header className="app__header collection-live-page__header">
+        <div className="collection-live-page__brandbar">
+          <a
+            className="collection-live-page__brand"
+            href="/"
+            aria-label="Go to the Xtrata homepage"
+          >
+            <span className="collection-live-page__brand-mark">XTRATA</span>
+            <span className="collection-live-page__brand-context">Live collection mint</span>
+          </a>
+          <a className="collection-live-page__brand-link" href="/">
+            Back to homepage
+          </a>
+        </div>
         <WalletTopBar
           walletSession={walletSession}
           walletPending={walletPending}
@@ -2783,8 +2812,21 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
             )}
           </div>
           <div className="collection-live-page__hero-copy">
-            <p className="collection-live-page__eyebrow">Live collection mint</p>
-            <h1>{collectionTitle}</h1>
+            <div className="collection-live-page__title-row">
+              <div className="collection-live-page__title-block">
+                <p className="collection-live-page__eyebrow">Live collection mint</p>
+                <h1>{collectionTitle}</h1>
+              </div>
+              <div className="collection-live-page__artist-card">
+                <span className="meta-label">Artist address</span>
+                {artistBnsName && (
+                  <span className="collection-live-page__artist-bns">{artistBnsName}</span>
+                )}
+                <span className="collection-live-page__artist-address">
+                  {artistAddress || 'Artist address unavailable'}
+                </span>
+              </div>
+            </div>
             <p className="collection-live-page__description">{collectionDescription}</p>
             <div className="collection-live-page__hero-meta">
               <span>Ticker: {collectionSymbol}</span>

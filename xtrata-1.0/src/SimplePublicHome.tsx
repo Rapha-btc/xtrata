@@ -65,6 +65,7 @@ type LiveCollectionRecord = {
   id: string;
   slug: string;
   display_name: string | null;
+  artist_address: string | null;
   state: string;
   contract_address: string | null;
   metadata?: Record<string, unknown> | null;
@@ -94,6 +95,7 @@ type LiveCollectionCard = {
   id: string;
   slug: string;
   name: string;
+  artistAddress: string;
   displayOrder: number | null;
   symbol: string;
   description: string;
@@ -564,6 +566,7 @@ export default function SimplePublicHome() {
           id: collection.id,
           slug: toText(collection.slug),
           name,
+          artistAddress: toText(collection.artist_address),
           displayOrder: getCollectionPageDisplayOrder(collection.metadata),
           symbol: symbol.length > 0 ? symbol : 'N/A',
           description,
@@ -1119,6 +1122,14 @@ export default function SimplePublicHome() {
                       <div className="public-live-collections__card-header">
                         <h3>{collection.name}</h3>
                         <span className="badge badge--neutral">{collection.symbol}</span>
+                      </div>
+                      <div className="public-live-collections__artist">
+                        <span className="meta-label">Artist</span>
+                        <AddressLabel
+                          className="public-live-collections__artist-label"
+                          address={collection.artistAddress || null}
+                          fallback="Artist unavailable"
+                        />
                       </div>
                       <p className="public-live-collections__description">{collection.description}</p>
                       <div className="public-live-collections__summary">
