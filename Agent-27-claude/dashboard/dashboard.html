@@ -2080,16 +2080,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         sendCampaignMessage(name).then((res) => {
             if (res.ok) {
-                showCampaignStatus(`Send initiated to ${name}. Check Activity Log.`, 'success');
-                // Immediately remove from dropdown
+                showCampaignStatus(`Send initiated to ${name}. Waiting for delivery...`, 'success');
+                // Mark sent immediately in dropdown, but keep buttons disabled
+                // until outreach-complete SSE fires (Claude process still running)
                 markCampaignSent(name);
+                btnCampaignSend.textContent = 'DELIVERING...';
             } else {
                 showCampaignStatus(`Failed: ${res.error}`, 'error');
                 appendLogEntry({ type: 'error', line: `Campaign send failed: ${res.error}` });
+                // Only re-enable on failure (backend didn't start a process)
+                campaignSending = false;
+                btnCampaignSend.disabled = false;
+                btnCampaignSendAll.disabled = false;
+                btnCampaignSend.textContent = 'SEND SELECTED';
             }
         }).catch((e) => {
             showCampaignStatus(`Error: ${e.message}`, 'error');
-        }).finally(() => {
             campaignSending = false;
             btnCampaignSend.disabled = false;
             btnCampaignSendAll.disabled = false;
@@ -2800,8 +2806,13 @@ document.addEventListener('DOMContentLoaded', () => {
         evtSource.addEventListener('outreach-complete', (e) => {
             try {
                 const data = JSON.parse(e.data);
+                // Re-enable all send buttons — outreach process finished
                 btnOutreachSend.disabled = false;
                 btnOutreachSend.textContent = 'BROADCAST MESSAGE';
+                campaignSending = false;
+                btnCampaignSend.disabled = false;
+                btnCampaignSendAll.disabled = false;
+                btnCampaignSend.textContent = 'SEND SELECTED';
                 outreachReviewPanel.classList.remove('visible');
                 showOutreachBannerComplete(data.success);
                 if (data.success) {
@@ -2813,8 +2824,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     saveOutreachDraft({ silent: true });
                     fetchOutreachHistory();
                     fetchOutreachAgentMemory(outreachAgentSelect.value);
-                    // Instantly remove sent message from campaign dropdown
+                    // Remove sent message from campaign dropdown and refresh
                     if (data.agent) markCampaignSent(data.agent);
+                    loadCampaign();
                 } else {
                     showOutreachStatus(`Send failed: ${data.error || 'Unknown error'}`, 'error');
                 }

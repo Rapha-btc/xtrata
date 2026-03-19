@@ -7,6 +7,8 @@ const { WORKDIR, WALLET } = require('./config');
 const router = express.Router();
 
 let runningOutreach = false;
+let _addLog = () => {};
+let _broadcast = () => {};
 
 // --- Inbox sync (direct HTTP to aibtc.com — free endpoint, no MCP needed) ---
 
@@ -266,35 +268,42 @@ If the tool call succeeds, respond with "OUTREACH_SUCCESS".
 If it fails, explain why.`;
 
   runningOutreach = true;
-  addLog('start', `${logPrefix} send to ${displayName}...`);
+  _addLog('start', `${logPrefix} send to ${displayName}...`);
 
   return runTask({
     model: model || 'sonnet', budget: 0.10, prompt, cwd: WORKDIR,
     phaseType: 'research', contextPack: 'outreachSend',
     onLine: (type, line) => {
       if (type === 'stdout' && (line.includes('[tool]') || line.length > 40)) {
-        addLog('stdout', `[${logPrefix}] ${line.substring(0, 100)}...`);
+        _addLog('stdout', `[${logPrefix}] ${line.substring(0, 100)}...`);
       }
     }
   }).then((result) => {
     runningOutreach = false;
     const fullText = (result.text || '').trim();
     const isSuccess = fullText.includes('OUTREACH_SUCCESS') || result.output.some(l => l.includes('OUTREACH_SUCCESS'));
-    if (isSuccess) {
-      addLog('stop', `${logPrefix} to ${displayName} delivered.`);
-      if (onSuccess) onSuccess(fullText);
-    } else {
-      const preview = fullText ? fullText.substring(0, 300) : '(empty response)';
-      addLog('error', `${logPrefix} to ${displayName} failed to confirm.`);
-      addLog('stderr', `[send-response] ${preview}`);
-      if (onFailure) onFailure(fullText);
+    try {
+      if (isSuccess) {
+        _addLog('stop', `${logPrefix} to ${displayName} delivered.`);
+        if (onSuccess) onSuccess(fullText);
+      } else {
+        const preview = fullText ? fullText.substring(0, 300) : '(empty response)';
+        _addLog('error', `${logPrefix} to ${displayName} failed to confirm.`);
+        _addLog('stderr', `[send-response] ${preview}`);
+        if (onFailure) onFailure(fullText);
+      }
+    } catch (cbErr) {
+      console.error(`[executeSend] Callback error: ${cbErr.message}`);
     }
     return { success: isSuccess, text: fullText };
   }).catch((err) => {
     runningOutreach = false;
-    addLog('error', `${logPrefix} error: ${err.message}`);
-    if (onFailure) onFailure(err.message);
+    try { _addLog('error', `${logPrefix} error: ${err.message}`); } catch {}
+    if (onFailure) try { onFailure(err.message); } catch {}
     return { success: false, error: err.message };
+  }).finally(() => {
+    // Safety net: always clear the lock no matter what
+    runningOutreach = false;
   });
 }
 
@@ -412,6 +421,8 @@ async function discoverAgents(registryFile) {
 function mount({ addLog, broadcast, registryFile, legacyRegistryFile }) {
   _registryFile = registryFile;
   _legacyRegistryFile = legacyRegistryFile;
+  _addLog = addLog;
+  _broadcast = broadcast;
 
   // --- Inbox routes ---
 
@@ -626,10 +637,18 @@ function mount({ addLog, broadcast, registryFile, legacyRegistryFile }) {
       }
 
       // Clean reply queue: remove entries already sent, then merge remainder
+      // Also build agentId-based sent set for entries that might lack stxAddress
+      const sentByAgentId = new Set(
+        history
+          .filter(h => h.direction === 'outbound' && h.type === 'sent')
+          .map(h => `${h.agentId}::${h.message}`)
+      );
       const replyQueue = markdown.parseReplyQueue();
       const staleIds = [];
       for (const rq of replyQueue) {
-        if (sentMessages.has(`${rq.stxAddress}::${rq.message}`)) {
+        const matchStx = rq.stxAddress && sentMessages.has(`${rq.stxAddress}::${rq.message}`);
+        const matchId = sentByAgentId.has(`${rq.agentId}::${rq.message}`);
+        if (matchStx || matchId) {
           staleIds.push({ agentId: rq.agentId, message: rq.message });
         }
       }
@@ -852,16 +871,19 @@ function mount({ addLog, broadcast, registryFile, legacyRegistryFile }) {
     const agents = loadAgentsRegistry(registryFile, legacyRegistryFile);
 
     // First, clean reply queue of already-sent messages
-    const sentSet = new Set();
+    const sentByStx = new Set();
+    const sentByAgentId = new Set();
     for (const h of history) {
-      if (h.direction === 'outbound' && h.type === 'sent' && h.stxAddress) {
-        sentSet.add(`${h.stxAddress}::${h.message}`);
-      }
+      if (h.direction !== 'outbound' || h.type !== 'sent') continue;
+      if (h.stxAddress) sentByStx.add(`${h.stxAddress}::${h.message}`);
+      sentByAgentId.add(`${h.agentId}::${h.message}`);
     }
     const replyQueue = markdown.parseReplyQueue();
     let cleaned = 0;
     for (const rq of replyQueue) {
-      if (sentSet.has(`${rq.stxAddress}::${rq.message}`)) {
+      const matchStx = rq.stxAddress && sentByStx.has(`${rq.stxAddress}::${rq.message}`);
+      const matchId = sentByAgentId.has(`${rq.agentId}::${rq.message}`);
+      if (matchStx || matchId) {
         markdown.removeFromReplyQueue(rq.agentId, rq.message);
         cleaned++;
       }
