@@ -25,6 +25,7 @@ import {
   toChunkCountLabel,
   type CollectionMiningFeeGuidance
 } from '../../lib/collection-mint/mining-fee-guidance';
+import { resolveCollectionMintPricingMetadata } from '../../lib/collection-mint/pricing-metadata';
 import { supportsCollectionSmallSingleTx } from '../../lib/collection-mint/routing';
 import { SMALL_MINT_HELPER_MAX_CHUNKS } from '../../lib/mint/constants';
 import {
@@ -267,6 +268,10 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
   );
   const metadataCollection = useMemo(
     () => toRecord(metadata?.collection) ?? null,
+    [metadata]
+  );
+  const metadataPricing = useMemo(
+    () => resolveCollectionMintPricingMetadata(metadata?.pricing),
     [metadata]
   );
   const metadataCollectionPage = useMemo(
@@ -1092,8 +1097,16 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
     if (readiness.mintType !== 'pre-inscribed' && readiness.activeAssets <= 0) {
       blockers.push('Upload at least one artwork file in Step 2 before publishing.');
     }
+    if (
+      readiness.mintType === 'standard' &&
+      metadataPricing.mode === 'raw-on-chain'
+    ) {
+      blockers.push(
+        'Set the mint price in Step 3 before publishing. Standard deploys start with a 0 STX on-chain payout base.'
+      );
+    }
     return blockers;
-  }, [collection?.state, collectionId, readiness]);
+  }, [collection?.state, collectionId, metadataPricing.mode, readiness]);
 
   const canPublish = publishBlockers.length === 0;
   const normalizedCollectionId = collectionId.trim();
@@ -1585,7 +1598,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
             <span>Ticker: {previewSymbol}</span>
             <span>State: {liveState}</span>
             <span>Supply: {previewSupply > 0 ? previewSupply : 'TBD'}</span>
-            <span>Advertised mint price: {previewMintPrice} STX</span>
+            <span>Mint price: {previewMintPrice} STX</span>
           </div>
           <div className="mint-actions">
             <button className="button" type="button" disabled>
@@ -1601,7 +1614,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       <div className="deploy-wizard__defaults">
         <p className="deploy-wizard__defaults-title info-label">
           Mining fee guidance (largest file)
-          <InfoTooltip text="Server-side estimate of mining fees for begin, upload batch(es), and seal based on the largest staged file. If largest file is <=30 chunks on v1.4+, mint can route to one wallet transaction. Protocol fees are separate from the advertised mint price." />
+          <InfoTooltip text="Server-side estimate of mining fees for begin, upload batch(es), and seal based on the largest staged file. If largest file is <=30 chunks on v1.4+, mint can route to one wallet transaction. This estimate is separate from the collection mint price." />
         </p>
         {feeGuidance?.available ? (
           <>

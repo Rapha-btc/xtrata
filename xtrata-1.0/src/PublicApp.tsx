@@ -10,6 +10,13 @@ import { useQueryClient } from '@tanstack/react-query';
 import { PUBLIC_CONTRACT, PUBLIC_MINT_RESTRICTIONS } from './config/public';
 import { getContractId } from './lib/contract/config';
 import { resolveCollectionMintPaymentModel } from './lib/collection-mint/payment-model';
+import {
+  isDisplayedCollectionMintFree,
+  resolveCollectionMintPricingMetadata,
+  resolveDisplayedCollectionMintPrice,
+  type CollectionMintPricingMetadata
+} from './lib/collection-mint/pricing-metadata';
+import { resolveCollectionMintPriceTone } from './lib/collection-mint/price-tone';
 import { resolveCollectionCoverImageUrl } from './lib/collections/cover-image';
 import { resolveCollectionContractLink } from './lib/collections/contract-link';
 import {
@@ -102,6 +109,7 @@ type PublicLiveCollectionRecord = {
   id: string;
   slug: string;
   display_name: string | null;
+  artist_address: string | null;
   state: string;
   contract_address: string | null;
   metadata?: Record<string, unknown> | null;
@@ -131,6 +139,7 @@ type PublicLiveCollectionCard = {
   id: string;
   slug: string;
   name: string;
+  artistAddress: string;
   displayOrder: number | null;
   symbol: string;
   description: string;
@@ -140,9 +149,7 @@ type PublicLiveCollectionCard = {
   contractId: string | null;
   contractTarget: PublicCollectionContractTarget | null;
   templateVersion: string;
-  pricingMode: string;
-  pricingAdvertisedMintPriceMicroStx: bigint | null;
-  pricingOnChainMintPriceMicroStx: bigint | null;
+  pricing: CollectionMintPricingMetadata;
 };
 
 const DOC_SECTIONS: DocSection[] = [
@@ -982,27 +989,28 @@ const resolvePublicDisplayedMintPrice = (
     return onChainPrice;
   }
   const paymentModel = resolveCollectionMintPaymentModel(collection.templateVersion);
-  if (paymentModel !== 'seal') {
-    return onChainPrice;
+  return resolveDisplayedCollectionMintPrice({
+    activePhaseMintPriceMicroStx: status.activePhaseMintPrice,
+    onChainMintPriceMicroStx: onChainPrice,
+    paymentModel,
+    pricing: collection.pricing,
+    statusMintPriceMicroStx: status.mintPrice
+  });
+};
+
+const isPublicCollectionFreeMint = (
+  collection: PublicLiveCollectionCard,
+  status: PublicLiveMintStatus | null
+) => {
+  if (!status) {
+    return false;
   }
-  const pricingMode = collection.pricingMode.toLowerCase();
-  if (
-    pricingMode !== 'advertised-includes-seal-fee' &&
-    pricingMode !== 'advertised-includes-total-fees'
-  ) {
-    return onChainPrice;
-  }
-  const advertised = collection.pricingAdvertisedMintPriceMicroStx;
-  const onChainFromMetadata = collection.pricingOnChainMintPriceMicroStx;
-  if (
-    advertised === null ||
-    onChainFromMetadata === null ||
-    status.mintPrice === null ||
-    onChainFromMetadata !== status.mintPrice
-  ) {
-    return onChainPrice;
-  }
-  return advertised;
+  return isDisplayedCollectionMintFree({
+    activePhaseMintPriceMicroStx: status.activePhaseMintPrice,
+    paymentModel: resolveCollectionMintPaymentModel(collection.templateVersion),
+    pricing: collection.pricing,
+    statusMintPriceMicroStx: status.mintPrice
+  });
 };
 
 const getErrorMessage = (error: unknown) => {
@@ -1560,6 +1568,7 @@ export default function PublicApp() {
           id: collection.id,
           slug: toText(collection.slug),
           name,
+          artistAddress: toText(collection.artist_address),
           displayOrder: getCollectionPageDisplayOrder(collection.metadata),
           symbol: symbol.length > 0 ? symbol : 'N/A',
           description,
@@ -1569,13 +1578,7 @@ export default function PublicApp() {
           contractId,
           contractTarget,
           templateVersion: toText(metadata?.templateVersion),
-          pricingMode: toText(metadataPricing?.mode),
-          pricingAdvertisedMintPriceMicroStx: toBigIntOrNull(
-            metadataPricing?.advertisedMintPriceMicroStx
-          ),
-          pricingOnChainMintPriceMicroStx: toBigIntOrNull(
-            metadataPricing?.onChainMintPriceMicroStx
-          )
+          pricing: resolveCollectionMintPricingMetadata(metadataPricing)
         };
       });
     return sortPublicCollectionCards(cards);
@@ -2391,6 +2394,16 @@ export default function PublicApp() {
                       : null);
                   const mintStateLabel = buildMintStateLabel(mintStatus);
                   const soldOut = isPublicMintSoldOut(mintStatus);
+                  const freeMint = isPublicCollectionFreeMint(collection, mintStatus);
+                  const priceTone = resolveCollectionMintPriceTone({
+                    displayedMintPriceMicroStx: effectiveMintPrice,
+                    freeMint
+                  });
+                  const statusBadge = soldOut ? (
+                    <span className="badge badge--compact badge--sold-out">Sold out</span>
+                  ) : freeMint ? (
+                    <span className="badge badge--compact badge--free-mint">Free mint</span>
+                  ) : null;
                   const coverPreviewErrored = Boolean(
                     liveCoverPreviewErrorByCollectionId[collection.id]
                   );
@@ -2402,7 +2415,6 @@ export default function PublicApp() {
                       href={collection.livePath}
                       aria-label={`Open ${collection.name} collection page`}
                     >
-                      {soldOut && <span className="collection-live-page__stamp">Sold out</span>}
                       <div className="public-live-collections__media-stack">
                         <div className="public-live-collections__media">
                           {collection.coverImageUrl && !coverPreviewErrored ? (
@@ -2428,14 +2440,27 @@ export default function PublicApp() {
                             </div>
                           )}
                         </div>
-                        <div className="public-live-collections__media-price">
+                        <div
+                          className={`public-live-collections__media-price public-live-collections__media-price--${priceTone}`}
+                        >
                           Mint price
                           <strong>{formatMicroStxLabel(effectiveMintPrice)}</strong>
                         </div>
                       </div>
                       <div className="public-live-collections__card-header">
                         <h3>{collection.name}</h3>
-                        <span className="badge badge--neutral">{collection.symbol}</span>
+                        <div className="public-live-collections__card-badges">
+                          <span className="badge badge--neutral">{collection.symbol}</span>
+                          {statusBadge}
+                        </div>
+                      </div>
+                      <div className="public-live-collections__artist">
+                        <span className="meta-label">Artist</span>
+                        <AddressLabel
+                          className="public-live-collections__artist-label"
+                          address={collection.artistAddress || null}
+                          fallback="Artist unavailable"
+                        />
                       </div>
                       <p className="public-live-collections__description">{collection.description}</p>
                       <div className="public-live-collections__summary">

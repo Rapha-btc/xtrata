@@ -1243,7 +1243,7 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
           <div>
             <h3 className="info-label">
               Upload controls
-              <InfoTooltip text="Choose files, validate ordering/filters, then upload and lock staged assets for deploy safety." />
+              <InfoTooltip text="Choose files, validate ordering/filters, then upload and lock staged assets so launch pricing can use a fixed fee floor." />
             </h3>
             <p>Select a collection, choose files/folder, then run upload checks.</p>
           </div>
@@ -1553,9 +1553,9 @@ export default function AssetStagingPanel(props: AssetStagingPanelProps) {
                       uploadsLocked
                     }
                   >
-                    {lockPending ? 'Locking...' : 'Lock staged assets for deploy'}
+                    {lockPending ? 'Locking...' : 'Lock staged assets for pricing'}
                   </button>
-                  <InfoTooltip text="Saves pricing-lock snapshot (asset count + max chunks) required before deploy in standard mint flow." />
+                  <InfoTooltip text="Saves the pricing-lock snapshot (asset count + max chunks) used later by Step 3 to calculate the standard-mint fee floor." />
                 </span>
               </div>
 

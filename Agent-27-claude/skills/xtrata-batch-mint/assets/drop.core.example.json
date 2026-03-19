@@ -1,0 +1,19 @@
+{
+  "mode": "core-batch-seal",
+  "network": "mainnet",
+  "xtrataContractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0",
+  "items": [
+    {
+      "file": "./files/loot-01.png",
+      "mimeType": "image/png",
+      "tokenUri": "ipfs://your-drop/loot-01",
+      "dependencies": []
+    },
+    {
+      "file": "./files/loot-02.png",
+      "mimeType": "image/png",
+      "tokenUri": "ipfs://your-drop/loot-02",
+      "dependencies": []
+    }
+  ]
+}

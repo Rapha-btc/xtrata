@@ -64,6 +64,21 @@ export const ARTIST_DEPLOY_DEFAULTS = {
   pausedByDefault: true
 } as const;
 
+export const resolveArtistDeployPayoutSplits = (mintPriceMicroStx: bigint) => {
+  if (mintPriceMicroStx === 0n) {
+    return {
+      artistBps: 0,
+      marketplaceBps: 0,
+      operatorBps: 0
+    };
+  }
+  return {
+    artistBps: ARTIST_DEPLOY_DEFAULTS.artistBps,
+    marketplaceBps: ARTIST_DEPLOY_DEFAULTS.marketplaceBps,
+    operatorBps: ARTIST_DEPLOY_DEFAULTS.operatorBps
+  };
+};
+
 const PRINTABLE_ASCII_PATTERN = /^[\x20-\x7E]*$/;
 const UINT_PATTERN = /^\d+$/;
 const STX_DECIMAL_PATTERN = /^\d+(?:\.\d{0,6})?$/;
@@ -330,6 +345,7 @@ export const buildArtistDeployContractSource = (params: {
     operatorAddress,
     defaultDependencyIds
   };
+  const payoutSplits = resolveArtistDeployPayoutSplits(resolved.mintPriceMicroStx);
 
   if (errors.length > 0) {
     return {
@@ -384,7 +400,7 @@ export const buildArtistDeployContractSource = (params: {
     source,
     marker: 'artist-bps',
     pattern: /^\(define-data-var artist-bps uint u\d+\)$/m,
-    replacement: `(define-data-var artist-bps uint u${ARTIST_DEPLOY_DEFAULTS.artistBps.toString()})`,
+    replacement: `(define-data-var artist-bps uint u${payoutSplits.artistBps.toString()})`,
     errors
   });
 
@@ -392,7 +408,7 @@ export const buildArtistDeployContractSource = (params: {
     source,
     marker: 'marketplace-bps',
     pattern: /^\(define-data-var marketplace-bps uint u\d+\)$/m,
-    replacement: `(define-data-var marketplace-bps uint u${ARTIST_DEPLOY_DEFAULTS.marketplaceBps.toString()})`,
+    replacement: `(define-data-var marketplace-bps uint u${payoutSplits.marketplaceBps.toString()})`,
     errors
   });
 
@@ -400,7 +416,7 @@ export const buildArtistDeployContractSource = (params: {
     source,
     marker: 'operator-bps',
     pattern: /^\(define-data-var operator-bps uint u\d+\)$/m,
-    replacement: `(define-data-var operator-bps uint u${ARTIST_DEPLOY_DEFAULTS.operatorBps.toString()})`,
+    replacement: `(define-data-var operator-bps uint u${payoutSplits.operatorBps.toString()})`,
     errors
   });
 

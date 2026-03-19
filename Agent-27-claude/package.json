@@ -1,0 +1,24 @@
+{
+  "name": "agent-27",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "inscribe:entry": "node scripts/inscribe-entry.cjs",
+    "lineage:check": "node scripts/lineage-check.js",
+    "metabolic:check": "node scripts/metabolic-lineage-check.js",
+    "batch-mint": "node skills/xtrata-batch-mint/scripts/xtrata-batch-mint.cjs",
+    "batch-mint:template:core": "node skills/xtrata-batch-mint/scripts/xtrata-batch-mint.cjs --print-template core",
+    "batch-mint:template:collection": "node skills/xtrata-batch-mint/scripts/xtrata-batch-mint.cjs --print-template collection"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@scure/bip32": "^2.0.1",
+    "@scure/bip39": "^2.0.1",
+    "@stacks/network": "^6.17.0",
+    "@stacks/transactions": "^6.17.0"
+  }
+}
