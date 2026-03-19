@@ -8,7 +8,7 @@ export type SpotPriceEntry = {
 };
 
 export type SpotPriceSnapshot = {
-  provider: 'coingecko';
+  provider: 'coingecko' | 'coinbase';
   generatedAt: number;
   prices: Record<PriceAssetKey, SpotPriceEntry | null>;
 };
@@ -21,11 +21,32 @@ type CoinGeckoEntry = {
   last_updated_at?: unknown;
 };
 
+type CoinbaseEntry = {
+  data?: {
+    amount?: unknown;
+    base?: unknown;
+    currency?: unknown;
+  };
+};
+
 const toFinitePositiveNumber = (value: unknown) => {
   if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
     return null;
   }
   return value;
+};
+
+const toFinitePositiveNumberish = (value: unknown) => {
+  const normalized =
+    typeof value === 'string' ? Number.parseFloat(value) : value;
+  if (
+    typeof normalized !== 'number' ||
+    !Number.isFinite(normalized) ||
+    normalized <= 0
+  ) {
+    return null;
+  }
+  return normalized;
 };
 
 const toUnixMilliseconds = (value: unknown, fallbackMs: number) => {
@@ -40,6 +61,13 @@ const toEntryRecord = (value: unknown): CoinGeckoEntry | null => {
     return null;
   }
   return value as CoinGeckoEntry;
+};
+
+const toCoinbaseEntryRecord = (value: unknown): CoinbaseEntry | null => {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+  return value as CoinbaseEntry;
 };
 
 const buildPriceEntry = (
@@ -88,6 +116,65 @@ export const parseCoinGeckoSpotPayload = (
     prices: {
       stx,
       sbtc: sbtcDirect ?? bitcoinFallback,
+      usdc
+    }
+  };
+};
+
+const buildCoinbasePriceEntry = (
+  value: unknown,
+  sourceId: string,
+  fallbackMs: number,
+  isFallback = false
+): SpotPriceEntry | null => {
+  const entry = toCoinbaseEntryRecord(value);
+  if (!entry?.data || typeof entry.data !== 'object') {
+    return null;
+  }
+  const usd = toFinitePositiveNumberish(entry.data.amount);
+  if (usd === null) {
+    return null;
+  }
+  const currency =
+    typeof entry.data.currency === 'string' ? entry.data.currency.trim() : '';
+  if (currency && currency.toUpperCase() !== 'USD') {
+    return null;
+  }
+  return {
+    usd,
+    updatedAt: fallbackMs,
+    sourceId,
+    isFallback
+  };
+};
+
+export const parseCoinbaseSpotPayload = (
+  payload: {
+    stx?: unknown;
+    bitcoin?: unknown;
+    usdc?: unknown;
+  },
+  generatedAt = Date.now()
+): SpotPriceSnapshot => {
+  const stx = buildCoinbasePriceEntry(payload.stx, 'STX-USD', generatedAt);
+  const bitcoin = buildCoinbasePriceEntry(
+    payload.bitcoin,
+    'BTC-USD',
+    generatedAt
+  );
+  const usdc = buildCoinbasePriceEntry(payload.usdc, 'USDC-USD', generatedAt);
+
+  return {
+    provider: 'coinbase',
+    generatedAt,
+    prices: {
+      stx,
+      sbtc: bitcoin
+        ? {
+            ...bitcoin,
+            isFallback: true
+          }
+        : null,
       usdc
     }
   };
