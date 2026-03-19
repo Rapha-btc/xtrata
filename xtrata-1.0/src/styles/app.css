@@ -1771,6 +1771,15 @@ p {
   display: none;
 }
 
+.manage-app .panel--collapsed {
+  cursor: pointer;
+}
+
+.manage-app .panel--collapsed:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
+}
+
 .wallet-lookup-panel.panel--collapsed .panel__body {
   display: grid;
 }
