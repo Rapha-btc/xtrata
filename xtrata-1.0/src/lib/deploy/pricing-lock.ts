@@ -102,6 +102,6 @@ export const evaluateDeployPriceSafety = (params: {
       : ('seal-fee-only' as const),
     singleTxChunkThreshold,
     marginMicroStx,
-    safe: marginMicroStx > 0n
+    safe: marginMicroStx >= 0n
   };
 };

@@ -18,6 +18,12 @@ describe('query cache persistence', () => {
     expect(ttl).toBeGreaterThan(0);
   });
 
+  it('persists USD pricing snapshots with a TTL', () => {
+    const ttl = getQueryCacheTtlMs(['pricing', 'usd-spot']);
+    expect(ttl).toBeGreaterThan(0);
+    expect(shouldPersistQuery(['pricing', 'usd-spot'])).toBe(true);
+  });
+
   it('skips unrelated queries', () => {
     expect(getQueryCacheTtlMs(['market', 'activity'])).toBeNull();
     expect(shouldPersistQuery(['market', 'activity'])).toBe(false);

@@ -9,6 +9,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { PUBLIC_CONTRACT, PUBLIC_MINT_RESTRICTIONS } from './config/public';
 import { getContractId } from './lib/contract/config';
+import { isCollectionFreeMint } from './lib/collection-mint/pricing-badges';
 import { resolveCollectionMintPaymentModel } from './lib/collection-mint/payment-model';
 import { resolveCollectionCoverImageUrl } from './lib/collections/cover-image';
 import { resolveCollectionContractLink } from './lib/collections/contract-link';
@@ -143,6 +144,7 @@ type PublicLiveCollectionCard = {
   pricingMode: string;
   pricingAdvertisedMintPriceMicroStx: bigint | null;
   pricingOnChainMintPriceMicroStx: bigint | null;
+  pricingAbsorbedProtocolFeeMicroStx: bigint | null;
 };
 
 const DOC_SECTIONS: DocSection[] = [
@@ -1575,6 +1577,9 @@ export default function PublicApp() {
           ),
           pricingOnChainMintPriceMicroStx: toBigIntOrNull(
             metadataPricing?.onChainMintPriceMicroStx
+          ),
+          pricingAbsorbedProtocolFeeMicroStx: toBigIntOrNull(
+            metadataPricing?.absorbedProtocolFeeMicroStx
           )
         };
       });
@@ -2391,6 +2396,12 @@ export default function PublicApp() {
                       : null);
                   const mintStateLabel = buildMintStateLabel(mintStatus);
                   const soldOut = isPublicMintSoldOut(mintStatus);
+                  const freeMint = isCollectionFreeMint({
+                    pricingMode: collection.pricingMode,
+                    displayedMintPriceMicroStx: effectiveMintPrice,
+                    absorbedProtocolFeeMicroStx:
+                      collection.pricingAbsorbedProtocolFeeMicroStx
+                  });
                   const coverPreviewErrored = Boolean(
                     liveCoverPreviewErrorByCollectionId[collection.id]
                   );
@@ -2402,7 +2413,16 @@ export default function PublicApp() {
                       href={collection.livePath}
                       aria-label={`Open ${collection.name} collection page`}
                     >
-                      {soldOut && <span className="collection-live-page__stamp">Sold out</span>}
+                      {(soldOut || freeMint) && (
+                        <div className="collection-live-page__stamps" aria-hidden="true">
+                          {soldOut && <span className="collection-live-page__stamp">Sold out</span>}
+                          {freeMint && (
+                            <span className="collection-live-page__stamp collection-live-page__stamp--free-mint">
+                              Free mint
+                            </span>
+                          )}
+                        </div>
+                      )}
                       <div className="public-live-collections__media-stack">
                         <div className="public-live-collections__media">
                           {collection.coverImageUrl && !coverPreviewErrored ? (

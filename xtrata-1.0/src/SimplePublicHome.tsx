@@ -15,6 +15,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { PUBLIC_CONTRACT, PUBLIC_MINT_RESTRICTIONS } from './config/public';
 import { getContractId } from './lib/contract/config';
+import { isCollectionFreeMint } from './lib/collection-mint/pricing-badges';
 import { resolveCollectionMintPaymentModel } from './lib/collection-mint/payment-model';
 import { resolveCollectionCoverImageUrl } from './lib/collections/cover-image';
 import { resolveCollectionContractLink } from './lib/collections/contract-link';
@@ -24,6 +25,8 @@ import {
 } from './lib/collections/public-order';
 import { isRateLimitError, isReadOnlyNetworkError } from './lib/contract/read-only';
 import { getApiBaseUrls } from './lib/network/config';
+import { formatMicroStxWithUsd } from './lib/pricing/format';
+import { useUsdPriceBook } from './lib/pricing/hooks';
 import { getViewerKey } from './lib/viewer/queries';
 import { createStacksWalletAdapter } from './lib/wallet/adapter';
 import { createWalletSessionStore } from './lib/wallet/session';
@@ -105,6 +108,7 @@ type LiveCollectionCard = {
   pricingMode: string;
   pricingAdvertisedMintPriceMicroStx: bigint | null;
   pricingOnChainMintPriceMicroStx: bigint | null;
+  pricingAbsorbedProtocolFeeMicroStx: bigint | null;
 };
 
 type SimpleHomeSectionKey = 'live-drops' | 'home-viewer' | 'market' | 'mint' | 'starter-docs';
@@ -297,17 +301,6 @@ const buildMintStateLabel = (status: LiveMintStatus | null) => {
     return 'Paused';
   }
   return 'Live';
-};
-
-const MICROSTX_PER_STX = 1_000_000n;
-
-const formatMicroStxLabel = (value: bigint | null) => {
-  if (value === null) {
-    return 'Unknown';
-  }
-  const whole = value / MICROSTX_PER_STX;
-  const fraction = value % MICROSTX_PER_STX;
-  return `${whole.toString()}.${fraction.toString().padStart(6, '0')} STX`;
 };
 
 const resolveDisplayedMintPrice = (
@@ -578,11 +571,17 @@ export default function SimplePublicHome() {
           ),
           pricingOnChainMintPriceMicroStx: toBigIntOrNull(
             metadataPricing?.onChainMintPriceMicroStx
+          ),
+          pricingAbsorbedProtocolFeeMicroStx: toBigIntOrNull(
+            metadataPricing?.absorbedProtocolFeeMicroStx
           )
         };
       });
     return sortPublicCollectionCards(cards);
   }, [liveCollections]);
+  const usdPriceBook = useUsdPriceBook({
+    enabled: liveCollectionCards.length > 0
+  }).data ?? null;
 
   const walletAdapter = useMemo(
     () =>
@@ -1064,6 +1063,10 @@ export default function SimplePublicHome() {
                   );
                   const mintStatusError = liveMintStatusErrorByCollectionId[collection.id] ?? null;
                   const effectiveMintPrice = resolveDisplayedMintPrice(collection, mintStatus);
+                  const effectiveMintPriceDisplay = formatMicroStxWithUsd(
+                    effectiveMintPrice,
+                    usdPriceBook
+                  );
                   const maxSupply = mintStatus?.maxSupply ?? collection.fallbackSupply ?? null;
                   const mintedCount = mintStatus?.mintedCount ?? null;
                   const remainingCount =
@@ -1075,6 +1078,12 @@ export default function SimplePublicHome() {
                       : null);
                   const mintStateLabel = buildMintStateLabel(mintStatus);
                   const soldOut = isCollectionSoldOut(mintStatus);
+                  const freeMint = isCollectionFreeMint({
+                    pricingMode: collection.pricingMode,
+                    displayedMintPriceMicroStx: effectiveMintPrice,
+                    absorbedProtocolFeeMicroStx:
+                      collection.pricingAbsorbedProtocolFeeMicroStx
+                  });
                   const coverPreviewErrored = Boolean(
                     liveCoverPreviewErrorByCollectionId[collection.id]
                   );
@@ -1085,7 +1094,16 @@ export default function SimplePublicHome() {
                       href={collection.livePath}
                       aria-label={`Open ${collection.name} collection page`}
                     >
-                      {soldOut && <span className="collection-live-page__stamp">Sold out</span>}
+                      {(soldOut || freeMint) && (
+                        <div className="collection-live-page__stamps" aria-hidden="true">
+                          {soldOut && <span className="collection-live-page__stamp">Sold out</span>}
+                          {freeMint && (
+                            <span className="collection-live-page__stamp collection-live-page__stamp--free-mint">
+                              Free mint
+                            </span>
+                          )}
+                        </div>
+                      )}
                       <div className="public-live-collections__media-stack">
                         <div className="public-live-collections__media">
                           {collection.coverImageUrl && !coverPreviewErrored ? (
@@ -1113,7 +1131,10 @@ export default function SimplePublicHome() {
                         </div>
                         <div className="public-live-collections__media-price">
                           Mint price
-                          <strong>{formatMicroStxLabel(effectiveMintPrice)}</strong>
+                          <strong>{effectiveMintPriceDisplay.primary}</strong>
+                          <span className="public-live-collections__media-price-subtle">
+                            {effectiveMintPriceDisplay.secondary ?? '\u00a0'}
+                          </span>
                         </div>
                       </div>
                       <div className="public-live-collections__card-header">

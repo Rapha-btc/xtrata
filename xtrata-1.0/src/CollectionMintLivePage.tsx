@@ -38,10 +38,13 @@ import {
   formatMiningFeeMicroStx,
   type CollectionMiningFeeGuidance
 } from './lib/collection-mint/mining-fee-guidance';
+import { formatMicroStxWithUsd } from './lib/pricing/format';
+import { useUsdPriceBook } from './lib/pricing/hooks';
 import {
   resolveCollectionMintPaymentModel,
   type CollectionMintPaymentModel
 } from './lib/collection-mint/payment-model';
+import { isCollectionFreeMint } from './lib/collection-mint/pricing-badges';
 import { findFirstMatchInBatches } from './lib/collection-mint/resume-scan';
 import {
   shouldUseCollectionSmallSingleTx,
@@ -516,6 +519,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     walletSessionStore.load()
   );
   const [walletPending, setWalletPending] = useState(false);
+  const usdPriceBook = useUsdPriceBook().data ?? null;
   const [collection, setCollection] = useState<CollectionRecord | null>(null);
   const [assets, setAssets] = useState<CollectionAsset[]>([]);
   const [feeGuidance, setFeeGuidance] = useState<CollectionMiningFeeGuidance | null>(
@@ -2647,7 +2651,16 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   const displayedMintPriceMicroStx = useAdvertisedSealPrice
     ? collectionMintPricingConfig.advertisedMintPriceMicroStx
     : effectiveOnChainMintPrice;
-  const mintPriceLabel = toMicroStxLabel(displayedMintPriceMicroStx);
+  const freeMint = isCollectionFreeMint({
+    pricingMode: collectionMintPricingConfig.mode,
+    displayedMintPriceMicroStx,
+    absorbedProtocolFeeMicroStx:
+      collectionMintPricingConfig.absorbedProtocolFeeMicroStx
+  });
+  const mintPriceDisplay = formatMicroStxWithUsd(
+    displayedMintPriceMicroStx,
+    usdPriceBook
+  );
   const mintBeginSpendCap = resolveCollectionBeginSpendCapMicroStx({
     mintPrice: contractStatus?.mintPrice ?? null,
     activePhaseMintPrice: contractStatus?.activePhaseMintPrice ?? null,
@@ -2772,7 +2785,16 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
           onDisconnect={handleDisconnectWallet}
         />
         <section className="collection-live-page__hero">
-          {soldOut && <span className="collection-live-page__stamp">Sold out</span>}
+          {(soldOut || freeMint) && (
+            <div className="collection-live-page__stamps" aria-hidden="true">
+              {soldOut && <span className="collection-live-page__stamp">Sold out</span>}
+              {freeMint && (
+                <span className="collection-live-page__stamp collection-live-page__stamp--free-mint">
+                  Free mint
+                </span>
+              )}
+            </div>
+          )}
           <div className="collection-live-page__hero-media">
             {coverUrl ? (
               <img src={coverUrl} alt={`${collectionTitle} cover`} />
@@ -2789,7 +2811,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
             <div className="collection-live-page__hero-meta">
               <span>Ticker: {collectionSymbol}</span>
               <span>State: {published ? 'Live' : collectionState || 'Unknown'}</span>
-              <span>Mint price: {mintPriceLabel}</span>
+              <span>Mint price: {mintPriceDisplay.combined}</span>
             </div>
             <div className="collection-live-page__hero-stats">
               <article className="collection-live-page__hero-stat">

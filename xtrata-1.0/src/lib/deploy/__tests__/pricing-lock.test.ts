@@ -70,12 +70,20 @@ describe('deploy pricing lock helpers', () => {
     expect(safe.marginMicroStx).toBe(600_000n);
     expect(safe.safe).toBe(true);
 
-    const unsafe = evaluateDeployPriceSafety({
+    const exactFloorMatch = evaluateDeployPriceSafety({
       mintPriceMicroStx: 400_000n,
       maxChunks: 120,
       feeUnitMicroStx: 100_000n
     });
-    expect(unsafe.marginMicroStx).toBe(0n);
+    expect(exactFloorMatch.marginMicroStx).toBe(0n);
+    expect(exactFloorMatch.safe).toBe(true);
+
+    const unsafe = evaluateDeployPriceSafety({
+      mintPriceMicroStx: 399_999n,
+      maxChunks: 120,
+      feeUnitMicroStx: 100_000n
+    });
+    expect(unsafe.marginMicroStx).toBe(-1n);
     expect(unsafe.safe).toBe(false);
   });
 

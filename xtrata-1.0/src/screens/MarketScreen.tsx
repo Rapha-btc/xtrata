@@ -39,7 +39,7 @@ import { parseMarketContractId } from '../lib/market/contract';
 import { isSameAddress } from '../lib/market/actions';
 import {
   buildMarketBuyPostConditions,
-  formatMarketPrice,
+  formatMarketPriceWithUsd,
   getMarketBuyFailureMessage,
   getMarketPriceInputLabel,
   getMarketSettlementAsset,
@@ -50,6 +50,7 @@ import {
   isMarketSettlementSupported,
   parseMarketPriceInput
 } from '../lib/market/settlement';
+import { useUsdPriceBook } from '../lib/pricing/hooks';
 import { logInfo, logWarn } from '../lib/utils/logger';
 import type {
   MarketListing,
@@ -166,6 +167,9 @@ export default function MarketScreen(props: MarketScreenProps) {
   const [listPending, setListPending] = useState(false);
   const [buyPending, setBuyPending] = useState(false);
   const [cancelPending, setCancelPending] = useState(false);
+  const usdPriceBook = useUsdPriceBook({
+    enabled: !props.collapsed
+  }).data ?? null;
 
   useEffect(() => {
     if (isPublicVariant) {
@@ -1202,7 +1206,11 @@ export default function MarketScreen(props: MarketScreenProps) {
         : 'Not escrowed'
       : 'Unknown';
   const listingPriceLabel = displayedListing
-    ? formatMarketPrice(displayedListing.price, displayedListing.settlement)
+    ? formatMarketPriceWithUsd(
+        displayedListing.price,
+        displayedListing.settlement,
+        usdPriceBook
+      )
     : '—';
   const buyPriceLabel = listingPriceLabel;
   const displayedListingMarketMismatch = displayedListing
@@ -1279,7 +1287,7 @@ export default function MarketScreen(props: MarketScreenProps) {
       parts.push(`Token ${event.tokenId.toString()}`);
     }
     if (event.price !== undefined) {
-      parts.push(formatMarketPrice(event.price, marketSettlement));
+      parts.push(formatMarketPriceWithUsd(event.price, marketSettlement, usdPriceBook));
     }
     if (showSource) {
       parts.push(event.source === 'market' ? 'Market' : 'NFT');
@@ -1724,7 +1732,11 @@ export default function MarketScreen(props: MarketScreenProps) {
                           <div>
                             <span className="meta-label">Price</span>
                             <span className="meta-value">
-                              {formatMarketPrice(listing.price, listing.settlement)}
+                              {formatMarketPriceWithUsd(
+                                listing.price,
+                                listing.settlement,
+                                usdPriceBook
+                              )}
                             </span>
                           </div>
                           <div>
