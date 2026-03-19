@@ -4999,51 +4999,6 @@ p {
   grid-column: 1 / -1;
 }
 
-.deploy-wizard__locked-input-wrap {
-  position: relative;
-}
-
-.deploy-wizard__free-mint-option {
-  display: grid;
-  gap: 6px;
-  margin-bottom: 8px;
-}
-
-.deploy-wizard__free-mint-option .toggle {
-  color: var(--text);
-  font-size: 0.82rem;
-}
-
-.deploy-wizard__mint-price-input--error {
-  color: #b91c1c;
-}
-
-.deploy-wizard__mint-price-input--ok {
-  color: #047857;
-}
-
-.deploy-wizard__locked-input-overlay {
-  position: absolute;
-  inset: 0;
-  background: transparent;
-  border: 0;
-  cursor: not-allowed;
-  border-radius: 12px;
-}
-
-.deploy-wizard__locked-input-overlay:focus-visible {
-  outline: 2px solid var(--accent-strong);
-  outline-offset: 2px;
-}
-
-[data-theme]:not([data-theme='light']) .deploy-wizard__mint-price-input--error {
-  color: #fca5a5;
-}
-
-[data-theme]:not([data-theme='light']) .deploy-wizard__mint-price-input--ok {
-  color: #6ee7b7;
-}
-
 .deploy-wizard__description {
   min-height: 120px;
 }

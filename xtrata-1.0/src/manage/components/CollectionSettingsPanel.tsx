@@ -25,6 +25,14 @@ import {
   parseContractPrincipal,
   resolveCollectionContractLink
 } from '../lib/contract-link';
+import { parseDeployPricingLockSnapshot } from '../../lib/deploy/pricing-lock';
+import { resolveCollectionMintPaymentModel } from '../../lib/collection-mint/payment-model';
+import {
+  resolveLockedCollectionMintFeeFloor,
+  resolveManagedCollectionMintPrice,
+  resolveOnChainMintPriceFromDisplayedMintPrice
+} from '../../lib/collection-mint/launch-pricing';
+import { resolveCollectionMintPricingMetadata } from '../../lib/collection-mint/pricing-metadata';
 import InfoTooltip from './InfoTooltip';
 
 const ASCII_PATTERN = /^[\x00-\x7F]*$/;
@@ -1172,6 +1180,7 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
   const [sealChunkCountInput, setSealChunkCountInput] = useState('1');
   const [quickMintPriceStx, setQuickMintPriceStx] = useState('');
   const [quickMaxSupply, setQuickMaxSupply] = useState('');
+  const [guidedFreeMintEnabled, setGuidedFreeMintEnabled] = useState(false);
   const [quickActionMessage, setQuickActionMessage] = useState<string | null>(null);
   const [quickActionPending, setQuickActionPending] = useState<
     'set-mint-price' | 'set-max-supply' | 'pause' | 'unpause' | null
@@ -1188,8 +1197,21 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
     () => toRecord(metadataRecord?.collection),
     [metadataRecord]
   );
+  const collectionPricingMetadata = useMemo(
+    () => resolveCollectionMintPricingMetadata(metadataRecord?.pricing),
+    [metadataRecord]
+  );
+  const deployPricingLock = useMemo(
+    () => parseDeployPricingLockSnapshot(metadataRecord),
+    [metadataRecord]
+  );
   const preInscribedMint =
     toText(metadataRecord?.mintType).toLowerCase() === 'pre-inscribed';
+  const templateVersion = toText(metadataRecord?.templateVersion);
+  const collectionMintPaymentModel = useMemo(
+    () => resolveCollectionMintPaymentModel(templateVersion),
+    [templateVersion]
+  );
   const pausedReadOnlyFunction = preInscribedMint ? 'get-paused' : 'is-paused';
   const priceReadOnlyFunction = preInscribedMint ? 'get-price' : 'get-mint-price';
   const priceWriteFunction = preInscribedMint ? 'set-price' : 'set-mint-price';
@@ -1210,6 +1232,39 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
   const setPriceActionLabel = preInscribedMint
     ? 'Set sale price'
     : 'Set payout base price';
+  const lockedMintFeeFloor = useMemo(
+    () =>
+      !preInscribedMint &&
+      deployPricingLock &&
+      summary?.coreFeeUnitMicroStx !== null &&
+      summary?.coreFeeUnitMicroStx !== undefined
+        ? resolveLockedCollectionMintFeeFloor({
+            maxChunks: deployPricingLock.maxChunks,
+            feeUnitMicroStx: summary.coreFeeUnitMicroStx
+          })
+        : null,
+    [preInscribedMint, deployPricingLock, summary?.coreFeeUnitMicroStx]
+  );
+  const collectorMintPriceMicroStx = useMemo(() => {
+    if (preInscribedMint) {
+      return summary?.mintPriceMicroStx ?? parseStxToMicro(collectionMintPriceStx, true);
+    }
+    return resolveManagedCollectionMintPrice({
+      paymentModel: collectionMintPaymentModel,
+      contractMintPriceMicroStx: summary?.mintPriceMicroStx ?? null,
+      pricing: collectionPricingMetadata,
+      pricingLockMaxChunks: deployPricingLock?.maxChunks ?? null,
+      feeUnitMicroStx: summary?.coreFeeUnitMicroStx ?? null
+    });
+  }, [
+    preInscribedMint,
+    summary?.mintPriceMicroStx,
+    collectionMintPriceStx,
+    collectionMintPaymentModel,
+    collectionPricingMetadata,
+    deployPricingLock?.maxChunks,
+    summary?.coreFeeUnitMicroStx
+  ]);
   const collectionParentIds = useMemo(() => {
     const value = metadataCollection?.parentInscriptionIds;
     if (!Array.isArray(value)) {
@@ -1291,12 +1346,50 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
   ]);
 
   useEffect(() => {
-    const nextValue =
-      collectionMintPriceStx || formatMicroStxInput(summary?.mintPriceMicroStx ?? null);
+    const nextValue = preInscribedMint
+      ? collectionMintPriceStx || formatMicroStxInput(summary?.mintPriceMicroStx ?? null)
+      : formatMicroStxInput(collectorMintPriceMicroStx);
     if (!quickMintPriceStx && nextValue) {
       setQuickMintPriceStx(nextValue);
     }
-  }, [collectionMintPriceStx, summary?.mintPriceMicroStx, quickMintPriceStx]);
+  }, [
+    preInscribedMint,
+    collectionMintPriceStx,
+    summary?.mintPriceMicroStx,
+    collectorMintPriceMicroStx,
+    quickMintPriceStx
+  ]);
+
+  useEffect(() => {
+    const pricePendingSetup =
+      !preInscribedMint &&
+      state.trim().toLowerCase() !== 'published' &&
+      collectionPricingMetadata.mode === 'raw-on-chain';
+    if (
+      preInscribedMint ||
+      pricePendingSetup ||
+      !lockedMintFeeFloor ||
+      !collectorMintPriceMicroStx
+    ) {
+      if (guidedFreeMintEnabled) {
+        setGuidedFreeMintEnabled(false);
+      }
+      return;
+    }
+    if (!quickMintPriceStx) {
+      setGuidedFreeMintEnabled(
+        collectorMintPriceMicroStx === lockedMintFeeFloor.totalProtocolFeeMicroStx
+      );
+    }
+  }, [
+    preInscribedMint,
+    state,
+    collectionPricingMetadata.mode,
+    lockedMintFeeFloor,
+    collectorMintPriceMicroStx,
+    quickMintPriceStx,
+    guidedFreeMintEnabled
+  ]);
 
   useEffect(() => {
     const nextValue =
@@ -1330,6 +1423,10 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
   const maxSupplyValue = summary?.maxSupply ?? null;
   const collectionStateValue = state.trim().toLowerCase();
   const collectionPublished = collectionStateValue === 'published';
+  const standardMintPricePendingSetup =
+    !preInscribedMint &&
+    !collectionPublished &&
+    collectionPricingMetadata.mode === 'raw-on-chain';
   const draftSettingsLocked =
     collectionStateValue === 'published' || collectionStateValue === 'archived';
 
@@ -1375,6 +1472,7 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
       setActionMessage(null);
       setQuickMintPriceStx('');
       setQuickMaxSupply('');
+      setGuidedFreeMintEnabled(false);
       setQuickActionMessage(null);
       if (
         validateStacksAddress(nextContractAddress) &&
@@ -1509,6 +1607,51 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
       setMessage(toManageApiErrorMessage(error, 'Update error'));
     }
   };
+
+  const syncStandardMintPricingMetadata = useCallback(
+    async (params: {
+      displayedMintPriceMicroStx: bigint;
+      onChainMintPriceMicroStx: bigint;
+      feeFloor: NonNullable<typeof lockedMintFeeFloor>;
+    }) => {
+      if (!collectionId.trim()) {
+        throw new Error('Set a collection ID first.');
+      }
+      const nextMetadata: Record<string, unknown> = {
+        ...(metadataRecord ?? {})
+      };
+      nextMetadata.collection = {
+        ...(metadataCollection ?? {}),
+        mintPriceStx: formatMicroStxInput(params.displayedMintPriceMicroStx),
+        mintPriceMicroStx: params.displayedMintPriceMicroStx.toString()
+      };
+      nextMetadata.pricing = {
+        ...toRecord(metadataRecord?.pricing),
+        mode: 'price-includes-total-fees',
+        mintPriceMicroStx: params.displayedMintPriceMicroStx.toString(),
+        onChainMintPriceMicroStx: params.onChainMintPriceMicroStx.toString(),
+        absorbedSealFeeMicroStx: params.feeFloor.sealFeeMicroStx.toString(),
+        absorbedBeginFeeMicroStx: params.feeFloor.beginFeeMicroStx.toString(),
+        absorbedProtocolFeeMicroStx: params.feeFloor.totalProtocolFeeMicroStx.toString(),
+        absorptionModel: 'total-fees',
+        worstCaseSealFeeMicroStx: params.feeFloor.sealFeeMicroStx.toString(),
+        pricingLockMaxChunks: params.feeFloor.maxChunks
+      };
+
+      const response = await fetch(`/collections/${collectionId.trim()}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ metadata: nextMetadata })
+      });
+      const payload = await parseManageJsonResponse<CollectionPayload>(
+        response,
+        'Collection pricing update'
+      );
+      setMetadata(toRecord(payload.metadata));
+      props.onJourneyRefreshRequested?.();
+    },
+    [collectionId, metadataCollection, metadataRecord, props]
+  );
 
   const callContractReadOnly = async (
     functionName: string,
@@ -1950,10 +2093,17 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
     successLabel: string;
     awaitOnChainConfirmation?: boolean;
     expectedPausedState?: boolean;
-  }) => {
+  }): Promise<
+    | {
+        status: 'submitted' | 'pending' | 'confirmed' | 'failed';
+        txId: string;
+        refreshedSummary: ContractSummary | null;
+      }
+    | null
+  > => {
     if (!contractReady) {
       setQuickActionMessage('Set a valid deployed contract address and name first.');
-      return;
+      return null;
     }
 
     const waitForTxResult = async (
@@ -2016,7 +2166,11 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
           `${params.successLabel} submitted: ${payload.txId}. Refresh on-chain status after confirmation.`
         );
         props.onJourneyRefreshRequested?.();
-        return;
+        return {
+          status: 'submitted',
+          txId: payload.txId,
+          refreshedSummary: null
+        };
       }
 
       const resolvedNetwork =
@@ -2026,7 +2180,11 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
           `${params.successLabel} submitted: ${payload.txId}. Waiting for wallet/network sync before confirmation checks.`
         );
         props.onJourneyRefreshRequested?.();
-        return;
+        return {
+          status: 'pending',
+          txId: payload.txId,
+          refreshedSummary: null
+        };
       }
 
       setQuickActionMessage(
@@ -2039,16 +2197,24 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
           `${params.successLabel} submitted: ${payload.txId}. Confirmation is still pending.`
         );
         props.onJourneyRefreshRequested?.();
-        return;
+        return {
+          status: 'pending',
+          txId: payload.txId,
+          refreshedSummary: null
+        };
       }
 
       if (!txResult.success) {
-        await loadContractSummary();
+        const refreshedSummary = await loadContractSummary();
         setQuickActionMessage(
           `${params.successLabel} failed on-chain (${txResult.status.replace(/_/g, ' ')}).`
         );
         props.onJourneyRefreshRequested?.();
-        return;
+        return {
+          status: 'failed',
+          txId: payload.txId,
+          refreshedSummary
+        };
       }
 
       const refreshedSummary = await loadContractSummary();
@@ -2063,16 +2229,89 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
         setQuickActionMessage(`${params.successLabel} confirmed on-chain.`);
       }
       props.onJourneyRefreshRequested?.();
+      return {
+        status: 'confirmed',
+        txId: payload.txId,
+        refreshedSummary
+      };
     } catch (error) {
       setQuickActionMessage(
         toManageApiErrorMessage(error, `${params.successLabel} failed`)
       );
+      return null;
     } finally {
       setQuickActionPending(null);
     }
   };
 
   const runQuickSetMintPrice = async () => {
+    if (!preInscribedMint) {
+      if (!deployPricingLock) {
+        setQuickActionMessage(
+          'Lock staged assets in Step 2 before setting the mint price collectors pay.'
+        );
+        return;
+      }
+      if (!lockedMintFeeFloor) {
+        setQuickActionMessage(
+          'Refresh on-chain status first so the locked Xtrata fee floor can be calculated.'
+        );
+        return;
+      }
+      const displayedMintPriceMicroStx = guidedFreeMintEnabled
+        ? lockedMintFeeFloor.totalProtocolFeeMicroStx
+        : parseStxToMicro(quickMintPriceStx, true);
+      if (displayedMintPriceMicroStx === null) {
+        setQuickActionMessage(
+          'Mint price must be a valid STX amount (up to 6 decimals).'
+        );
+        return;
+      }
+      const onChainMintPriceMicroStx = resolveOnChainMintPriceFromDisplayedMintPrice({
+        displayedMintPriceMicroStx,
+        feeFloorMicroStx: lockedMintFeeFloor.totalProtocolFeeMicroStx
+      });
+      if (onChainMintPriceMicroStx === null) {
+        setQuickActionMessage(
+          `Mint price must be at least ${formatMicroStx(
+            lockedMintFeeFloor.totalProtocolFeeMicroStx
+          )} so collectors only pay the locked Xtrata fee floor or more.`
+        );
+        return;
+      }
+      const result = await runQuickAction({
+        pendingKey: 'set-mint-price',
+        functionName: priceWriteFunction,
+        functionArgs: [uintCV(onChainMintPriceMicroStx)],
+        successLabel: guidedFreeMintEnabled ? 'Set free mint price' : 'Set mint price',
+        awaitOnChainConfirmation: true
+      });
+      if (result?.status !== 'confirmed') {
+        return;
+      }
+      try {
+        await syncStandardMintPricingMetadata({
+          displayedMintPriceMicroStx,
+          onChainMintPriceMicroStx,
+          feeFloor: lockedMintFeeFloor
+        });
+        setQuickMintPriceStx(formatMicroStxInput(displayedMintPriceMicroStx));
+        setQuickActionMessage(
+          guidedFreeMintEnabled
+            ? 'Free mint confirmed on-chain and synced to the live page price.'
+            : 'Mint price confirmed on-chain and synced to the live page price.'
+        );
+      } catch (error) {
+        setQuickActionMessage(
+          toManageApiErrorMessage(
+            error,
+            'Mint price confirmed on-chain, but syncing live-page pricing failed'
+          )
+        );
+      }
+      return;
+    }
+
     const parsed = parseStxToMicro(quickMintPriceStx, true);
     if (parsed === null) {
       setQuickActionMessage(
@@ -2133,6 +2372,9 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
     const onChainPriceFieldLabel = preInscribedMint
       ? 'On-chain sale price'
       : 'On-chain payout base price';
+    const collectorMintPriceLabel = preInscribedMint
+      ? 'Sale price collectors pay'
+      : 'Mint price collectors pay';
     const pauseStepNumber = 1;
     const priceStepNumber = 2;
     const maxSupplyStepNumber = 3;
@@ -2149,6 +2391,24 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
         : pausedValue
           ? 'Paused (safe pre-launch)'
           : 'Unpaused (live)';
+    const guidedMintPriceInputValue =
+      !preInscribedMint && guidedFreeMintEnabled && lockedMintFeeFloor
+        ? formatMicroStxInput(lockedMintFeeFloor.totalProtocolFeeMicroStx)
+        : quickMintPriceStx;
+    const guidedDisplayedMintPriceMicroStx = preInscribedMint
+      ? parseStxToMicro(quickMintPriceStx, true)
+      : guidedFreeMintEnabled && lockedMintFeeFloor
+        ? lockedMintFeeFloor.totalProtocolFeeMicroStx
+        : parseStxToMicro(quickMintPriceStx, true);
+    const guidedDerivedOnChainMintPriceMicroStx =
+      !preInscribedMint &&
+      guidedDisplayedMintPriceMicroStx !== null &&
+      lockedMintFeeFloor !== null
+        ? resolveOnChainMintPriceFromDisplayedMintPrice({
+            displayedMintPriceMicroStx: guidedDisplayedMintPriceMicroStx,
+            feeFloorMicroStx: lockedMintFeeFloor.totalProtocolFeeMicroStx
+          })
+        : guidedDisplayedMintPriceMicroStx;
     const unpauseBlockedHint =
       !collectionPublished
         ? 'Publish first in Step 4.'
@@ -2220,10 +2480,14 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
             </div>
             <div className="collection-settings-panel__summary-item">
               <span className="meta-label info-label">
-                {livePagePriceLabel}
-                <InfoTooltip text="Collector-facing price shown on the live mint page." />
+                {collectorMintPriceLabel}
+                <InfoTooltip text="Total price collectors should expect to pay on the mint page." />
               </span>
-              <span className="meta-value">{formatDraftStx(collectionMintPriceStx)}</span>
+              <span className="meta-value">
+                {standardMintPricePendingSetup
+                  ? 'Not set yet'
+                  : formatMicroStx(collectorMintPriceMicroStx)}
+              </span>
             </div>
             {!preInscribedMint ? (
               <div className="collection-settings-panel__summary-item">
@@ -2283,42 +2547,144 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
 
         <div className="collection-settings-panel__group">
           <h3 className="info-label">
-            {priceStepNumber}. Set {onChainPriceFieldLabel.toLowerCase()}
-            <InfoTooltip text="Updates the contract-side price value used during mint accounting." />
+            {priceStepNumber}. Set {preInscribedMint ? onChainPriceFieldLabel.toLowerCase() : 'mint price collectors pay'}
+            <InfoTooltip text="For standard mints this is the one collector-facing price. Xtrata protocol fees are absorbed underneath it automatically from the locked fee floor." />
           </h3>
           <p className="meta-value">
             {preInscribedMint
               ? 'Set the on-chain sale price used by the contract.'
-              : 'Set the on-chain payout base split to artist/marketplace recipients. Collector-facing mint price is set in Step 4 live page settings.'}
+              : 'Set the single mint price collectors see and pay. The app automatically converts that into the on-chain payout base using the locked Xtrata fee floor from Step 2.'}
           </p>
+          {standardMintPricePendingSetup ? (
+            <div className="alert">
+              Standard mint pricing is not configured yet. Step 1 deploys with a 0 STX
+              on-chain payout base by default; save the collector-facing mint price here
+              before publishing.
+            </div>
+          ) : null}
+          {!preInscribedMint && (
+            <span className="meta-value">
+              {!deployPricingLock
+                ? 'Lock staged assets in Step 2 first. Pricing becomes available after the collection fee floor is locked.'
+                : lockedMintFeeFloor
+                  ? `Locked Xtrata fee floor: ${formatMicroStx(
+                      lockedMintFeeFloor.totalProtocolFeeMicroStx
+                    )} (begin ${formatMicroStx(
+                      lockedMintFeeFloor.beginFeeMicroStx
+                    )} + seal ${formatMicroStx(
+                      lockedMintFeeFloor.sealFeeMicroStx
+                    )}, max ${lockedMintFeeFloor.maxChunks.toString()} chunks).`
+                  : 'Refresh on-chain status to load the locked Xtrata fee floor for this collection.'}
+            </span>
+          )}
+          {!preInscribedMint && (
+            <div className="field field--full">
+              <span className="field__label info-label">
+                Free mint
+                <InfoTooltip text="Sets the mint price collectors pay to the exact locked Xtrata fee floor." />
+              </span>
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={guidedFreeMintEnabled}
+                  onChange={(event) => {
+                    const nextEnabled = event.target.checked;
+                    setGuidedFreeMintEnabled(nextEnabled);
+                    if (nextEnabled && lockedMintFeeFloor) {
+                      setQuickMintPriceStx(
+                        formatMicroStxInput(lockedMintFeeFloor.totalProtocolFeeMicroStx)
+                      );
+                    }
+                    setQuickActionMessage(null);
+                  }}
+                  disabled={!lockedMintFeeFloor}
+                />
+                <span>
+                  {lockedMintFeeFloor
+                    ? `Use ${formatMicroStx(lockedMintFeeFloor.totalProtocolFeeMicroStx)}`
+                    : 'Available after Step 2 lock + on-chain refresh'}
+                </span>
+              </label>
+            </div>
+          )}
           <label className="field field--full">
             <span className="field__label info-label">
-              {onChainPriceFieldLabel} (STX)
-              <InfoTooltip text="Up to 6 decimals. This is written on-chain." />
+              {preInscribedMint ? `${onChainPriceFieldLabel} (STX)` : 'Mint price collectors pay (STX)'}
+              <InfoTooltip
+                text={
+                  preInscribedMint
+                    ? 'Up to 6 decimals. This is written on-chain.'
+                    : 'Up to 6 decimals. This is the total price shown to collectors on the mint page.'
+                }
+              />
             </span>
             <input
               className="input"
-              value={quickMintPriceStx}
+              value={guidedMintPriceInputValue}
               placeholder="0.00"
               onChange={(event) => {
                 setQuickMintPriceStx(event.target.value.trim());
+                if (!preInscribedMint && guidedFreeMintEnabled) {
+                  setGuidedFreeMintEnabled(false);
+                }
                 setQuickActionMessage(null);
               }}
+              disabled={!preInscribedMint && guidedFreeMintEnabled}
             />
           </label>
+          {!preInscribedMint && (
+            <>
+              {guidedDisplayedMintPriceMicroStx === null && quickMintPriceStx.trim().length > 0 ? (
+                <p className="meta-value field__hint--error">
+                  Enter a valid STX amount (up to 6 decimals).
+                </p>
+              ) : null}
+              {guidedDisplayedMintPriceMicroStx !== null &&
+              lockedMintFeeFloor !== null &&
+              guidedDerivedOnChainMintPriceMicroStx === null ? (
+                <p className="meta-value field__hint--error">
+                  Mint price must be at least{' '}
+                  {formatMicroStx(lockedMintFeeFloor.totalProtocolFeeMicroStx)}.
+                </p>
+              ) : null}
+              {guidedDisplayedMintPriceMicroStx !== null &&
+              guidedDerivedOnChainMintPriceMicroStx !== null &&
+              lockedMintFeeFloor !== null ? (
+                <p className="meta-value">
+                  On save, on-chain payout base price will be{' '}
+                  {formatMicroStx(guidedDerivedOnChainMintPriceMicroStx)} and the live mint
+                  page will show {formatMicroStx(guidedDisplayedMintPriceMicroStx)}.
+                </p>
+              ) : null}
+            </>
+          )}
           <div className="mint-actions">
             <span className="info-label">
               <button
                 className="button"
                 type="button"
                 onClick={() => void runQuickSetMintPrice()}
-                disabled={!contractReady || quickActionsBusy}
+                disabled={
+                  !contractReady ||
+                  quickActionsBusy ||
+                  (!preInscribedMint && (!deployPricingLock || lockedMintFeeFloor === null))
+                }
               >
                 {quickActionPending === 'set-mint-price'
                   ? 'Submitting...'
-                  : `Set ${onChainPriceFieldLabel.toLowerCase()}`}
+                  : preInscribedMint
+                    ? `Set ${onChainPriceFieldLabel.toLowerCase()}`
+                    : guidedFreeMintEnabled
+                      ? 'Set free mint'
+                      : 'Set mint price'}
               </button>
-              <InfoTooltip text="Submits the price update transaction with your connected signer wallet." />
+              <InfoTooltip
+                text={
+                  preInscribedMint
+                    ? 'Submits the price update transaction with your connected signer wallet.'
+                    : 'Submits the derived on-chain payout base update, then syncs the collector-facing mint price in backend metadata.'
+                }
+              />
             </span>
           </div>
         </div>
