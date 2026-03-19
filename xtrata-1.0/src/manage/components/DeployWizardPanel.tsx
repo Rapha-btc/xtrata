@@ -27,6 +27,7 @@ import {
   deriveArtistContractName,
   normalizeArtistDeployDescription,
   resolveArtistDeployCoreTarget,
+  resolveArtistDeployPayoutSplits,
   type ArtistDeployCoreTarget,
   type ArtistMintType
 } from '../../lib/deploy/artist-deploy';
@@ -99,6 +100,15 @@ const formatMicroStxInput = (value: bigint) => {
     .padStart(6, '0')
     .replace(/0+$/g, '');
   return `${whole.toString()}.${fractionText}`;
+};
+
+const toDeployHardcodedSplitMetadata = (mintPriceMicroStx: bigint) => {
+  const splits = resolveArtistDeployPayoutSplits(mintPriceMicroStx);
+  return {
+    artist: splits.artistBps,
+    marketplace: splits.marketplaceBps,
+    operator: splits.operatorBps
+  };
 };
 
 const resolveOnChainMintPriceAfterProtocolAbsorption = (params: {
@@ -1041,7 +1051,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     if (mintType !== 'standard' || !pricingPreflight) {
       return null;
     }
-    return pricingPreflight.absorbedProtocolFeeMicroStx + 1n;
+    return pricingPreflight.absorbedProtocolFeeMicroStx;
   }, [mintType, pricingPreflight]);
   const standardMintPriceLocked = mintType === 'standard' && !collectionDeployPricingLock;
   const mintPriceHintId = 'deploy-mint-price-hint';
@@ -1388,11 +1398,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       hardcodedDefaults: {
         paused: ARTIST_DEPLOY_DEFAULTS.pausedByDefault,
         royaltyTotalBps: ARTIST_DEPLOY_DEFAULTS.royaltyTotalBps,
-        splits: {
-          artist: ARTIST_DEPLOY_DEFAULTS.artistBps,
-          marketplace: ARTIST_DEPLOY_DEFAULTS.marketplaceBps,
-          operator: ARTIST_DEPLOY_DEFAULTS.operatorBps
-        },
+        splits: toDeployHardcodedSplitMetadata(refreshBuild.resolved.mintPriceMicroStx),
         recipients: {
           artist: refreshBuild.resolved.artistAddress,
           marketplace: refreshBuild.resolved.marketplaceAddress,
@@ -1572,11 +1578,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       hardcodedDefaults: {
         paused: ARTIST_DEPLOY_DEFAULTS.pausedByDefault,
         royaltyTotalBps: ARTIST_DEPLOY_DEFAULTS.royaltyTotalBps,
-        splits: {
-          artist: ARTIST_DEPLOY_DEFAULTS.artistBps,
-          marketplace: ARTIST_DEPLOY_DEFAULTS.marketplaceBps,
-          operator: ARTIST_DEPLOY_DEFAULTS.operatorBps
-        },
+        splits: toDeployHardcodedSplitMetadata(refreshBuild.resolved.mintPriceMicroStx),
         recipients: {
           artist: refreshBuild.resolved.artistAddress,
           marketplace: refreshBuild.resolved.marketplaceAddress,
@@ -1708,7 +1710,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         setStatus(
           `Deploy blocked. Advertised mint price (${formatMicroStx(
             mintPriceMicroStx
-          )}) must be greater than the ${floorLabel} (${formatMicroStx(
+          )}) must be at least the ${floorLabel} (${formatMicroStx(
             evaluation.absorbedProtocolFeeMicroStx
           )}) for your largest locked asset. Increase price or reduce max chunk size, then lock again.`
         );
@@ -1791,6 +1793,12 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
 
     const deployMetadata = {
       ...draftMetadata,
+      hardcodedDefaults: {
+        ...draftMetadata.hardcodedDefaults,
+        splits: toDeployHardcodedSplitMetadata(
+          deploySourceBuild.resolved.mintPriceMicroStx
+        )
+      },
       pricing: {
         mode:
           mintType === 'standard'
@@ -2551,7 +2559,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
               )}
               {minimumMintPriceMicroStx !== null && (
                 <span className="meta-value">
-                  Minimum all-in mint price (worst-case + 1 microSTX):{' '}
+                  Minimum all-in mint price (absorbed protocol fee floor):{' '}
                   {formatMicroStx(minimumMintPriceMicroStx)}.
                 </span>
               )}
@@ -2589,7 +2597,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
               )}
               {pricingPreflight && !pricingPreflight.safe && !standardMintPriceFormatInvalid && (
                 <span className="meta-value field__hint--error">
-                  Increase all-in mint price above {formatMicroStx(
+                  Set all-in mint price to at least {formatMicroStx(
                     pricingPreflight.absorbedProtocolFeeMicroStx
                   )} before deploy.
                 </span>
@@ -2611,7 +2619,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         </p>
         <ul>
           <li>Contract code is locked and generated internally by the app.</li>
-          <li>Payout split starts at 95% artist, 2.5% marketplace, 2.5% operator.</li>
+          <li>Payout split defaults to 95% artist, 2.5% marketplace, 2.5% operator unless the deployed on-chain mint price is 0 STX, in which case deploy writes 0/0/0.</li>
           <li>Operator payout address is fixed to Xtrata defaults for this flow.</li>
           <li>Advanced royalty and URI logic is hidden in this beginner flow.</li>
         </ul>
@@ -2857,7 +2865,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                     minimumMintPriceMicroStx !== null && (
                       <p>
                         <strong>Minimum all-in mint price:</strong>{' '}
-                        {formatMicroStx(minimumMintPriceMicroStx)} (worst-case + 1 microSTX)
+                        {formatMicroStx(minimumMintPriceMicroStx)} (absorbed protocol fee floor)
                       </p>
                     )}
                   {deployBuild.resolved.mintType === 'standard' &&
@@ -2889,7 +2897,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                         ? `All-in price safety margin: ${formatMicroStx(
                             pricingPreflight.marginMicroStx
                           )} above absorbed protocol fee floor.`
-                        : `Price safety check failed. All-in price must be greater than ${formatMicroStx(
+                        : `Price safety check failed. All-in price must be at least ${formatMicroStx(
                             pricingPreflight.absorbedProtocolFeeMicroStx
                           )}.`}
                     </p>
@@ -2926,7 +2934,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                     <div className="alert">
                       <p>
                         Deploy is blocked until pricing safety passes. Lock staged assets in
-                        Step 2, then ensure mint price is higher than the absorbed protocol fee floor.
+                        Step 2, then ensure mint price is at least the absorbed protocol fee floor.
                       </p>
                     </div>
                   )}
