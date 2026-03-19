@@ -5264,6 +5264,12 @@ p {
   overflow: hidden;
 }
 
+.collection-live-page__hero-media-column {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
 .collection-live-page__hero-media {
   border-radius: 14px;
   border: 1px solid var(--border);
@@ -5309,13 +5315,6 @@ p {
   gap: 4px;
 }
 
-.collection-live-page__title-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 2px;
-}
-
 .collection-live-page__eyebrow {
   margin: 0;
   font-size: 0.68rem;
@@ -5327,6 +5326,169 @@ p {
 
 .collection-live-page__hero-copy h1 {
   font-size: clamp(1.52rem, 2.8vw, 2.1rem);
+}
+
+.collection-live-page__hero-media-summary {
+  display: grid;
+  gap: 10px;
+}
+
+.collection-live-page__hero-pills {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.collection-live-page__hero-pill {
+  min-width: 0;
+  border-radius: 999px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1.1;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.collection-live-page__hero-pill--ticker {
+  border-color: rgba(148, 163, 184, 0.36);
+  background: rgba(71, 85, 105, 0.78);
+  color: #f8fafc;
+}
+
+.collection-live-page__hero-pill--state-live {
+  border-color: rgba(74, 222, 128, 0.4);
+  background: rgba(22, 163, 74, 0.82);
+  color: #dcfce7;
+}
+
+.collection-live-page__hero-pill--state-paused {
+  border-color: rgba(251, 191, 36, 0.4);
+  background: rgba(180, 83, 9, 0.86);
+  color: #fef3c7;
+}
+
+.collection-live-page__hero-pill--state-finalized,
+.collection-live-page__hero-pill--state-unknown {
+  border-color: rgba(148, 163, 184, 0.4);
+  background: rgba(51, 65, 85, 0.84);
+  color: #e2e8f0;
+}
+
+.collection-live-page__hero-pill--state-sold-out {
+  border-color: rgba(248, 113, 113, 0.45);
+  background: rgba(153, 27, 27, 0.85);
+  color: #fee2e2;
+}
+
+.collection-live-page__hero-price-card {
+  border-radius: 16px;
+  border: 1px solid transparent;
+  padding: 12px 14px 14px;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  text-align: center;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.collection-live-page__hero-price-label {
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  line-height: 1.1;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+.collection-live-page__hero-price-card strong {
+  font-size: clamp(1.28rem, 2vw, 1.62rem);
+  line-height: 1.1;
+}
+
+.collection-live-page__hero-price-card--free {
+  border-color: rgba(74, 222, 128, 0.38);
+  background: rgba(22, 163, 74, 0.86);
+  color: #dcfce7;
+}
+
+.collection-live-page__hero-price-card--unknown {
+  border-color: rgba(148, 163, 184, 0.38);
+  background: rgba(51, 65, 85, 0.84);
+  color: #e2e8f0;
+}
+
+.collection-live-page__hero-price-card--band-0 {
+  border-color: rgba(234, 179, 8, 0.45);
+  background: #a16207;
+  color: #fef3c7;
+}
+
+.collection-live-page__hero-price-card--band-1 {
+  border-color: rgba(245, 158, 11, 0.45);
+  background: #b45309;
+  color: #fffbeb;
+}
+
+.collection-live-page__hero-price-card--band-2 {
+  border-color: rgba(249, 115, 22, 0.45);
+  background: #c2410c;
+  color: #fff7ed;
+}
+
+.collection-live-page__hero-price-card--band-3 {
+  border-color: rgba(249, 115, 22, 0.45);
+  background: #d97706;
+  color: #fff7ed;
+}
+
+.collection-live-page__hero-price-card--band-4 {
+  border-color: rgba(249, 115, 22, 0.45);
+  background: #ea580c;
+  color: #fff7ed;
+}
+
+.collection-live-page__hero-price-card--band-5 {
+  border-color: rgba(234, 88, 12, 0.45);
+  background: #c2410c;
+  color: #fff7ed;
+}
+
+.collection-live-page__hero-price-card--band-6 {
+  border-color: rgba(239, 68, 68, 0.45);
+  background: #dc2626;
+  color: #fef2f2;
+}
+
+.collection-live-page__hero-price-card--band-7 {
+  border-color: rgba(239, 68, 68, 0.45);
+  background: #b91c1c;
+  color: #fef2f2;
+}
+
+.collection-live-page__hero-price-card--band-8 {
+  border-color: rgba(220, 38, 38, 0.45);
+  background: #991b1b;
+  color: #fee2e2;
+}
+
+.collection-live-page__hero-price-card--band-9 {
+  border-color: rgba(185, 28, 28, 0.45);
+  background: #7f1d1d;
+  color: #fee2e2;
+}
+
+.collection-live-page__hero-media-note {
+  text-align: center;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: #86efac;
+}
+
+.collection-live-page__hero-media-note strong {
+  color: inherit;
 }
 
 .collection-live-page__hero-badge-slot {
@@ -5428,25 +5590,6 @@ p {
 .collection-live-page__description {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-}
-
-.collection-live-page__hero-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 10px;
-  font-size: 0.78rem;
-  color: var(--muted);
-}
-
-.collection-live-page__price-note {
-  max-width: 52ch;
-  font-size: 0.82rem;
-  line-height: 1.45;
-  color: #166534;
-}
-
-[data-theme]:not([data-theme='light']) .collection-live-page__price-note {
-  color: #86efac;
 }
 
 .collection-live-page__hero-stats {
@@ -6181,10 +6324,14 @@ p {
     grid-template-columns: 1fr;
   }
 
-  .collection-live-page__hero-media {
+  .collection-live-page__hero-media-column {
     max-width: 320px;
     width: 100%;
     margin: 0 auto;
+  }
+
+  .collection-live-page__hero-media {
+    width: 100%;
   }
 
   .collection-live-page__title-row {

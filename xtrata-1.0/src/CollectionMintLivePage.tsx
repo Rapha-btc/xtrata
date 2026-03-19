@@ -393,6 +393,14 @@ const toMicroStxLabel = (value: bigint | null) => {
   return `${negative ? '-' : ''}${base} STX`;
 };
 
+const humanizeStateLabel = (value: string) => {
+  const normalized = value.trim().replace(/[-_]+/g, ' ');
+  if (!normalized) {
+    return 'Unknown';
+  }
+  return normalized.replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
 const formatCount = (value: bigint | null) => {
   if (value === null) {
     return 'Unknown';
@@ -2645,6 +2653,36 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     pricing: collectionMintPricingConfig,
     statusMintPriceMicroStx: contractStatus?.mintPrice ?? null
   });
+  const statePillLabel = soldOut
+    ? 'Sold out'
+    : contractStatus?.finalized
+      ? 'Finalized'
+      : contractStatus?.paused
+        ? 'Paused'
+        : published
+          ? 'Live'
+          : humanizeStateLabel(collectionState);
+  const statePillTone = soldOut
+    ? 'sold-out'
+    : contractStatus?.finalized
+      ? 'finalized'
+      : contractStatus?.paused
+        ? 'paused'
+        : published
+          ? 'live'
+          : 'unknown';
+  const mintPriceBandBucket =
+    displayedMintPriceMicroStx === null
+      ? null
+      : (displayedMintPriceMicroStx <= 0n ? 0n : displayedMintPriceMicroStx - 1n) /
+        10_000_000n;
+  const mintPriceBandIndex =
+    mintPriceBandBucket === null ? null : Number(mintPriceBandBucket > 9n ? 9n : mintPriceBandBucket);
+  const mintPriceToneClass = freeMint
+    ? 'collection-live-page__hero-price-card--free'
+    : mintPriceBandIndex === null
+      ? 'collection-live-page__hero-price-card--unknown'
+      : `collection-live-page__hero-price-card--band-${Math.max(0, mintPriceBandIndex)}`;
   const heroStatusLabel = soldOut ? 'Sold out' : freeMint ? 'Free mint' : null;
   const mintBeginSpendCap = resolveCollectionBeginSpendCapMicroStx({
     mintPrice: contractStatus?.mintPrice ?? null,
@@ -2783,23 +2821,44 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
           onDisconnect={handleDisconnectWallet}
         />
         <section className="collection-live-page__hero">
-          <div className="collection-live-page__hero-media">
-            {coverUrl ? (
-              <img src={coverUrl} alt={`${collectionTitle} cover`} />
-            ) : (
-              <div className="collection-live-page__hero-placeholder">
-                Cover image unavailable
+          <div className="collection-live-page__hero-media-column">
+            <div className="collection-live-page__hero-media">
+              {coverUrl ? (
+                <img src={coverUrl} alt={`${collectionTitle} cover`} />
+              ) : (
+                <div className="collection-live-page__hero-placeholder">
+                  Cover image unavailable
+                </div>
+              )}
+            </div>
+            <div className="collection-live-page__hero-media-summary">
+              <div className="collection-live-page__hero-pills">
+                <span className="collection-live-page__hero-pill collection-live-page__hero-pill--ticker">
+                  {collectionSymbol}
+                </span>
+                <span
+                  className={`collection-live-page__hero-pill collection-live-page__hero-pill--state collection-live-page__hero-pill--state-${statePillTone}`}
+                >
+                  {statePillLabel}
+                </span>
               </div>
-            )}
+              <div className={`collection-live-page__hero-price-card ${mintPriceToneClass}`}>
+                <span className="collection-live-page__hero-price-label">Mint price</span>
+                <strong>{mintPriceLabel}</strong>
+              </div>
+              {freeMint && (
+                <p className="collection-live-page__hero-media-note">
+                  This price covers Xtrata protocol fees only. Collectors still pay wallet mining
+                  fees, while artist, marketplace, and operator payouts stay at 0 STX.
+                </p>
+              )}
+            </div>
           </div>
           <div className="collection-live-page__hero-copy">
             <div className="collection-live-page__title-row">
               <div className="collection-live-page__title-block">
                 <p className="collection-live-page__eyebrow">Live collection mint</p>
                 <h1>{collectionTitle}</h1>
-                <div className="collection-live-page__title-badges">
-                  <span className="badge badge--neutral">{collectionSymbol}</span>
-                </div>
               </div>
               {heroStatusLabel && (
                 <div className="collection-live-page__hero-badge-slot">
@@ -2836,16 +2895,6 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
               </div>
             </div>
             <p className="collection-live-page__description">{collectionDescription}</p>
-            <div className="collection-live-page__hero-meta">
-              <span>State: {published ? 'Live' : collectionState || 'Unknown'}</span>
-              <span>Mint price: {mintPriceLabel}</span>
-            </div>
-            {freeMint && (
-              <p className="collection-live-page__price-note">
-                This {mintPriceLabel} price is the Xtrata protocol fee only. Collectors still pay
-                wallet mining fees, while artist, marketplace, and operator payouts stay at 0 STX.
-              </p>
-            )}
             <div className="collection-live-page__hero-stats">
               <article className="collection-live-page__hero-stat">
                 <span className="meta-label">Minted / max</span>
