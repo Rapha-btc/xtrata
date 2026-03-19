@@ -30,7 +30,7 @@ import { parseMarketContractId } from '../lib/market/contract';
 import { createMarketClient } from '../lib/market/client';
 import type { MarketActivityEvent } from '../lib/market/types';
 import {
-  formatMarketPrice,
+  formatMarketPriceWithUsd,
   getMarketPriceInputLabel,
   getMarketSettlementAsset,
   getMarketSettlementBadgeVariant,
@@ -39,6 +39,7 @@ import {
   isMarketSettlementSupported,
   parseMarketPriceInput
 } from '../lib/market/settlement';
+import { useUsdPriceBook } from '../lib/pricing/hooks';
 import {
   getViewerKey,
   useLastTokenId,
@@ -143,6 +144,9 @@ const OwnedTokenCard = (props: {
 };
 
 export default function MyWalletScreen(props: MyWalletScreenProps) {
+  const usdPriceBook = useUsdPriceBook({
+    enabled: props.isActiveTab && !props.collapsed
+  }).data ?? null;
   const client = useMemo(
     () => createXtrataClient({ contract: props.contract }),
     [props.contract]
@@ -413,7 +417,11 @@ export default function MyWalletScreen(props: MyWalletScreenProps) {
     : 'Not listed';
   const listingPriceLabel =
     selectedListing?.price !== undefined
-      ? formatMarketPrice(selectedListing.price, marketSettlement)
+      ? formatMarketPriceWithUsd(
+          selectedListing.price,
+          marketSettlement,
+          usdPriceBook
+        )
       : null;
   const marketLabel = marketContractIdLabel ?? 'Select in Market module';
   const transferValidation = validateTransferRequest({

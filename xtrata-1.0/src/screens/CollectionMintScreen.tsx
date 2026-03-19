@@ -38,6 +38,8 @@ import {
   formatMicroStx,
   getFeeSchedule
 } from '../lib/contract/fees';
+import { formatMicroStxWithUsd } from '../lib/pricing/format';
+import { useUsdPriceBook } from '../lib/pricing/hooks';
 import {
   DEFAULT_BATCH_SIZE,
   DEFAULT_TOKEN_URI,
@@ -306,6 +308,9 @@ const parseUintListCv = (value: ClarityValue) => {
 };
 
 export default function CollectionMintScreen(props: CollectionMintScreenProps) {
+  const usdPriceBook = useUsdPriceBook({
+    enabled: !props.collapsed
+  }).data ?? null;
   const isCollectionOnly = props.mode === 'collection-only';
   const sectionId =
     props.sectionId ?? (isCollectionOnly ? 'collection-mint-user' : 'collection-mint');
@@ -585,6 +590,12 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
       }),
     [feeSchedule, items]
   );
+  const activeCollectionMintPrice =
+    collectionStatus?.activePhaseMintPrice ?? collectionStatus?.mintPrice ?? null;
+  const activeCollectionMintPriceLabel = formatMicroStxWithUsd(
+    activeCollectionMintPrice,
+    usdPriceBook
+  ).combined;
   const feeUnitValue =
     feeSchedule.model === 'fee-unit' ? feeSchedule.feeUnitMicroStx : null;
 
@@ -1802,17 +1813,7 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
                   </div>
                   <div>
                     <span className="meta-label">Mint price</span>
-                    <span className="meta-value">
-                      {(collectionStatus.activePhaseMintPrice ?? collectionStatus.mintPrice) !==
-                      null
-                        ? formatMicroStx(
-                            Number(
-                              collectionStatus.activePhaseMintPrice ??
-                                collectionStatus.mintPrice
-                            )
-                          )
-                        : 'Unknown'}
-                    </span>
+                    <span className="meta-value">{activeCollectionMintPriceLabel}</span>
                   </div>
                   <div>
                     <span className="meta-label">Wallet safety</span>
@@ -2129,17 +2130,9 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
             <div>
               <span className="meta-label">Collection mint price</span>
               <span className="meta-value">
-                {(collectionStatus?.activePhaseMintPrice ??
-                  collectionStatus?.mintPrice ??
-                  null) !== null
-                  ? formatMicroStx(
-                      Number(
-                        collectionStatus?.activePhaseMintPrice ??
-                          collectionStatus?.mintPrice ??
-                          null
-                      )
-                    )
-                  : 'Unknown (load status)'}
+                {activeCollectionMintPrice === null
+                  ? 'Unknown (load status)'
+                  : activeCollectionMintPriceLabel}
               </span>
             </div>
           )}

@@ -1,10 +1,12 @@
 import type { ContractConfig } from './config';
 import { getContractId } from './config';
+import type { PriceAssetKey } from '../pricing/types';
 
 export type FungibleAssetConfig = ContractConfig & {
   assetName: string;
   symbol: string;
   decimals: number;
+  priceAssetKey: PriceAssetKey | null;
 };
 
 const KNOWN_FUNGIBLE_ASSETS: FungibleAssetConfig[] = [
@@ -14,7 +16,8 @@ const KNOWN_FUNGIBLE_ASSETS: FungibleAssetConfig[] = [
     network: 'mainnet',
     assetName: 'usdcx-token',
     symbol: 'USDCx',
-    decimals: 6
+    decimals: 6,
+    priceAssetKey: 'usdc'
   },
   {
     address: 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4',
@@ -22,7 +25,8 @@ const KNOWN_FUNGIBLE_ASSETS: FungibleAssetConfig[] = [
     network: 'mainnet',
     assetName: 'sbtc-token',
     symbol: 'sBTC',
-    decimals: 8
+    decimals: 8,
+    priceAssetKey: 'sbtc'
   }
 ];
 
