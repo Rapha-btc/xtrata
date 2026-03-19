@@ -5325,6 +5325,47 @@ p {
   gap: 12px;
 }
 
+.collection-live-page__stamps {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  z-index: 2;
+}
+
+.collection-live-page__stamp {
+  border-radius: 999px;
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  background: rgba(239, 68, 68, 0.15);
+  color: #b91c1c;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.66rem;
+  padding: 5px 10px;
+}
+
+[data-theme]:not([data-theme='light']) .collection-live-page__stamp {
+  border-color: rgba(248, 113, 113, 0.55);
+  background: rgba(127, 29, 29, 0.5);
+  color: #fecaca;
+}
+
+.collection-live-page__stamp--free-mint {
+  border-color: rgba(22, 163, 74, 0.4);
+  background: rgba(34, 197, 94, 0.16);
+  color: #166534;
+}
+
+[data-theme]:not([data-theme='light']) .collection-live-page__stamp--free-mint {
+  border-color: rgba(74, 222, 128, 0.45);
+  background: rgba(20, 83, 45, 0.58);
+  color: #bbf7d0;
+}
+
 .collection-live-page__hero-media {
   border-radius: 14px;
   border: 1px solid var(--border);
@@ -5461,6 +5502,15 @@ p {
 .collection-live-page__hero-price-card strong {
   font-size: clamp(1.28rem, 2vw, 1.62rem);
   line-height: 1.1;
+}
+
+.collection-live-page__hero-price-subtle {
+  min-height: 0.9rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+  opacity: 0.86;
 }
 
 .collection-live-page__hero-price-card--free {
@@ -7275,6 +7325,15 @@ p {
   --public-live-price-bg: #7f1d1d;
   --public-live-price-color: #fee2e2;
   --public-live-price-strong: #fee2e2;
+}
+
+.public-live-collections__media-price-subtle {
+  min-height: 0.9rem;
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--muted);
 }
 
 .public-live-collections__card h3,

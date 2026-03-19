@@ -3,6 +3,7 @@ import { FungibleConditionCode, NonFungibleConditionCode } from '@stacks/transac
 import {
   buildMarketBuyPostConditions,
   formatMarketPrice,
+  formatMarketPriceWithUsd,
   getMarketSettlementBadgeVariant,
   getMarketBuyFailureMessage,
   getMarketPriceInputLabel,
@@ -12,6 +13,7 @@ import {
   isMarketSettlementSupported,
   parseMarketPriceInput
 } from '../settlement';
+import type { UsdPriceBook } from '../../pricing/types';
 
 const nftContract = {
   address: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
@@ -25,6 +27,33 @@ const marketContract = {
   network: 'mainnet' as const
 };
 
+const now = Date.now();
+
+const priceBook: UsdPriceBook = {
+  provider: 'coingecko',
+  generatedAt: now,
+  prices: {
+    stx: {
+      usd: 0.2952,
+      updatedAt: now,
+      sourceId: 'stacks',
+      isFallback: false
+    },
+    sbtc: {
+      usd: 87_500.12,
+      updatedAt: now,
+      sourceId: 'sbtc',
+      isFallback: false
+    },
+    usdc: {
+      usd: 1.0001,
+      updatedAt: now,
+      sourceId: 'usd-coin',
+      isFallback: false
+    }
+  }
+};
+
 describe('market settlement helpers', () => {
   it('treats null payment token as STX settlement', () => {
     const settlement = getMarketSettlementAsset(null);
@@ -35,6 +64,9 @@ describe('market settlement helpers', () => {
     expect(getMarketPriceInputLabel(settlement)).toBe('Price (STX)');
     expect(parseMarketPriceInput('1.25', settlement)).toBe(1_250_000n);
     expect(formatMarketPrice(1_250_000n, settlement)).toBe('1.25 STX');
+    expect(formatMarketPriceWithUsd(1_250_000n, settlement, priceBook)).toBe(
+      '1.25 STX · ~$0.37'
+    );
   });
 
   it('supports known USDCx settlements', () => {
@@ -50,6 +82,9 @@ describe('market settlement helpers', () => {
     expect(getMarketPriceInputLabel(settlement)).toBe('Price (USDCx)');
     expect(parseMarketPriceInput('2.5', settlement)).toBe(2_500_000n);
     expect(formatMarketPrice(2_500_000n, settlement)).toBe('2.5 USDCx');
+    expect(formatMarketPriceWithUsd(2_500_000n, settlement, priceBook)).toBe(
+      '2.5 USDCx · ~$2.50'
+    );
   });
 
   it('supports known sBTC settlements', () => {

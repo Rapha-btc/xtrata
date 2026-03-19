@@ -26,6 +26,8 @@ import {
 import { useBnsAddress } from './lib/bns/hooks';
 import { RATE_LIMIT_WARNING_EVENT } from './lib/network/rate-limit';
 import { getApiBaseUrls } from './lib/network/config';
+import { formatMicroStxWithUsd } from './lib/pricing/format';
+import { useUsdPriceBook } from './lib/pricing/hooks';
 import { getNetworkFromAddress, getNetworkMismatch } from './lib/network/guard';
 import { getStacksExplorerContractUrl } from './lib/network/explorer';
 import { toStacksNetwork } from './lib/network/stacks';
@@ -1583,6 +1585,9 @@ export default function PublicApp() {
       });
     return sortPublicCollectionCards(cards);
   }, [liveCollections]);
+  const usdPriceBook = useUsdPriceBook({
+    enabled: liveCollectionCards.length > 0
+  }).data ?? null;
   const mismatch = getNetworkMismatch(contract.network, walletSession.network);
   const readOnlySender = walletSession.address ?? contract.address;
   const baseLookupState = useMemo(
@@ -2383,6 +2388,10 @@ export default function PublicApp() {
                     collection,
                     mintStatus
                   );
+                  const effectiveMintPriceDisplay = formatMicroStxWithUsd(
+                    effectiveMintPrice,
+                    usdPriceBook
+                  );
                   const maxSupply = mintStatus?.maxSupply ?? collection.fallbackSupply ?? null;
                   const mintedCount = mintStatus?.mintedCount ?? null;
                   const remainingCount =
@@ -2444,7 +2453,10 @@ export default function PublicApp() {
                           className={`public-live-collections__media-price public-live-collections__media-price--${priceTone}`}
                         >
                           Mint price
-                          <strong>{formatMicroStxLabel(effectiveMintPrice)}</strong>
+                          <strong>{effectiveMintPriceDisplay.primary}</strong>
+                          <span className="public-live-collections__media-price-subtle">
+                            {effectiveMintPriceDisplay.secondary ?? '\u00a0'}
+                          </span>
                         </div>
                       </div>
                       <div className="public-live-collections__card-header">

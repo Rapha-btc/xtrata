@@ -27,7 +27,9 @@ import {
 } from '../lib/commerce/registry';
 import { isSameAddress } from '../lib/market/actions';
 import { getKnownFungibleAsset } from '../lib/contract/fungible-assets';
-import { formatDecimalAmount, parseDecimalAmount } from '../lib/utils/amounts';
+import { parseDecimalAmount } from '../lib/utils/amounts';
+import { formatTokenAmountWithUsd } from '../lib/pricing/format';
+import { useUsdPriceBook } from '../lib/pricing/hooks';
 
 const parseUintInput = (value: string) => {
   const trimmed = value.trim();
@@ -52,17 +54,6 @@ const getErrorMessage = (error: unknown) => {
     return 'Unknown error';
   }
   return String(error);
-};
-
-const formatTokenAmount = (
-  value: bigint | null,
-  decimals: number,
-  symbol: string
-) => {
-  if (value === null) {
-    return 'Unknown';
-  }
-  return `${formatDecimalAmount(value, decimals)} ${symbol}`;
 };
 
 export type CommerceScreenProps = {
@@ -100,6 +91,9 @@ type CommerceListingDetails = {
 export default function CommerceScreen(props: CommerceScreenProps) {
   const isPublicVariant = props.variant === 'public';
   const queryClient = useQueryClient();
+  const usdPriceBook = useUsdPriceBook({
+    enabled: !props.collapsed
+  }).data ?? null;
   const defaultCommerceId =
     props.defaultCommerceContractId ?? getCommerceContractId(COMMERCE_REGISTRY[0]);
   const [commerceInput, setCommerceInput] = useState(() => defaultCommerceId);
@@ -774,7 +768,15 @@ export default function CommerceScreen(props: CommerceScreenProps) {
                   <div>
                     <span className="meta-label">Price</span>
                     <span className="meta-value">
-                      {formatTokenAmount(displayedListing.price, paymentDecimals, paymentSymbol)}
+                      {
+                        formatTokenAmountWithUsd({
+                          amount: displayedListing.price,
+                          decimals: paymentDecimals,
+                          symbol: paymentSymbol,
+                          assetKey: paymentTokenAsset?.priceAssetKey ?? null,
+                          priceBook: usdPriceBook
+                        }).combined
+                      }
                     </span>
                   </div>
                   <div>

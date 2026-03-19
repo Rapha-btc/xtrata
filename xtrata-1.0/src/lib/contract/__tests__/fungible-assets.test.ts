@@ -11,7 +11,8 @@ describe('known fungible assets', () => {
       network: 'mainnet',
       assetName: 'usdcx-token',
       symbol: 'USDCx',
-      decimals: 6
+      decimals: 6,
+      priceAssetKey: 'usdc'
     });
   });
 

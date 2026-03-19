@@ -59,6 +59,9 @@ export const getQueryCacheTtlMs = (queryKey: QueryKey) => {
   if (parts[0] === 'contract-admin') {
     return 30 * 1000;
   }
+  if (parts[0] === 'pricing' && parts[1] === 'usd-spot') {
+    return 5 * 60 * 1000;
+  }
   return null;
 };
 

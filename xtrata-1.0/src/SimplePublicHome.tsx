@@ -31,6 +31,8 @@ import {
 } from './lib/collections/public-order';
 import { isRateLimitError, isReadOnlyNetworkError } from './lib/contract/read-only';
 import { getApiBaseUrls } from './lib/network/config';
+import { formatMicroStxWithUsd } from './lib/pricing/format';
+import { useUsdPriceBook } from './lib/pricing/hooks';
 import { getViewerKey } from './lib/viewer/queries';
 import { createStacksWalletAdapter } from './lib/wallet/adapter';
 import { createWalletSessionStore } from './lib/wallet/session';
@@ -306,17 +308,6 @@ const buildMintStateLabel = (status: LiveMintStatus | null) => {
   return 'Live';
 };
 
-const MICROSTX_PER_STX = 1_000_000n;
-
-const formatMicroStxLabel = (value: bigint | null) => {
-  if (value === null) {
-    return 'Unknown';
-  }
-  const whole = value / MICROSTX_PER_STX;
-  const fraction = value % MICROSTX_PER_STX;
-  return `${whole.toString()}.${fraction.toString().padStart(6, '0')} STX`;
-};
-
 const resolveDisplayedMintPrice = (
   collection: LiveCollectionCard,
   status: LiveMintStatus | null
@@ -586,6 +577,9 @@ export default function SimplePublicHome() {
       });
     return sortPublicCollectionCards(cards);
   }, [liveCollections]);
+  const usdPriceBook = useUsdPriceBook({
+    enabled: liveCollectionCards.length > 0
+  }).data ?? null;
 
   const walletAdapter = useMemo(
     () =>
@@ -1067,6 +1061,10 @@ export default function SimplePublicHome() {
                   );
                   const mintStatusError = liveMintStatusErrorByCollectionId[collection.id] ?? null;
                   const effectiveMintPrice = resolveDisplayedMintPrice(collection, mintStatus);
+                  const effectiveMintPriceDisplay = formatMicroStxWithUsd(
+                    effectiveMintPrice,
+                    usdPriceBook
+                  );
                   const maxSupply = mintStatus?.maxSupply ?? collection.fallbackSupply ?? null;
                   const mintedCount = mintStatus?.mintedCount ?? null;
                   const remainingCount =
@@ -1127,7 +1125,10 @@ export default function SimplePublicHome() {
                           className={`public-live-collections__media-price public-live-collections__media-price--${priceTone}`}
                         >
                           Mint price
-                          <strong>{formatMicroStxLabel(effectiveMintPrice)}</strong>
+                          <strong>{effectiveMintPriceDisplay.primary}</strong>
+                          <span className="public-live-collections__media-price-subtle">
+                            {effectiveMintPriceDisplay.secondary ?? '\u00a0'}
+                          </span>
                         </div>
                       </div>
                       <div className="public-live-collections__card-header">

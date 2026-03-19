@@ -38,6 +38,8 @@ import {
   formatMiningFeeMicroStx,
   type CollectionMiningFeeGuidance
 } from './lib/collection-mint/mining-fee-guidance';
+import { formatMicroStxWithUsd } from './lib/pricing/format';
+import { useUsdPriceBook } from './lib/pricing/hooks';
 import {
   isDisplayedCollectionMintFree,
   resolveCollectionMintPricingMetadata,
@@ -501,6 +503,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     walletSessionStore.load()
   );
   const [walletPending, setWalletPending] = useState(false);
+  const usdPriceBook = useUsdPriceBook().data ?? null;
   const [collection, setCollection] = useState<CollectionRecord | null>(null);
   const [assets, setAssets] = useState<CollectionAsset[]>([]);
   const [feeGuidance, setFeeGuidance] = useState<CollectionMiningFeeGuidance | null>(
@@ -2648,6 +2651,10 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     ? collectionMintPricingConfig.mintPriceMicroStx
     : effectiveOnChainMintPrice;
   const mintPriceLabel = toMicroStxLabel(displayedMintPriceMicroStx);
+  const mintPriceDisplay = formatMicroStxWithUsd(
+    displayedMintPriceMicroStx,
+    usdPriceBook
+  );
   const freeMint = isDisplayedCollectionMintFree({
     activePhaseMintPriceMicroStx: contractStatus?.activePhaseMintPrice ?? null,
     paymentModel: collectionMintPaymentModel,
@@ -2840,6 +2847,9 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
               <div className={`collection-live-page__hero-price-card ${mintPriceToneClass}`}>
                 <span className="collection-live-page__hero-price-label">Mint price</span>
                 <strong>{mintPriceLabel}</strong>
+                <span className="collection-live-page__hero-price-subtle">
+                  {mintPriceDisplay.secondary ?? '\u00a0'}
+                </span>
               </div>
               {freeMint && (
                 <p className="collection-live-page__hero-media-note">

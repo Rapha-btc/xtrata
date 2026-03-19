@@ -14,7 +14,6 @@ import {
   type PostCondition
 } from '@stacks/transactions';
 import AddressLabel from '../components/AddressLabel';
-import { formatMicroStx } from '../lib/contract/fees';
 import { getContractId } from '../lib/contract/config';
 import {
   buildContractTransferPostCondition
@@ -23,6 +22,8 @@ import { createXtrataClient } from '../lib/contract/client';
 import type { ContractRegistryEntry } from '../lib/contract/registry';
 import { getNetworkMismatch } from '../lib/network/guard';
 import { toStacksNetwork } from '../lib/network/stacks';
+import { formatMicroStxWithUsd } from '../lib/pricing/format';
+import { useUsdPriceBook } from '../lib/pricing/hooks';
 import { parsePreinscribedSaleContractId } from '../lib/preinscribed-sale/contract';
 import type { WalletSession } from '../lib/wallet/types';
 
@@ -196,20 +197,12 @@ const parseStringValue = (value: unknown): string | null => {
   return String(primitive);
 };
 
-const formatMicroStxValue = (value: bigint | null) => {
-  if (value === null) {
-    return 'Unknown';
-  }
-  const asNumber = Number(value);
-  if (!Number.isFinite(asNumber)) {
-    return `${value.toString()} microSTX`;
-  }
-  return formatMicroStx(asNumber);
-};
-
 export default function PreinscribedCollectionSaleScreen(
   props: PreinscribedCollectionSaleScreenProps
 ) {
+  const usdPriceBook = useUsdPriceBook({
+    enabled: !props.collapsed
+  }).data ?? null;
   const [saleContractInput, setSaleContractInput] = useState(
     props.defaultSaleContractId ?? ''
   );
@@ -683,7 +676,10 @@ export default function PreinscribedCollectionSaleScreen(
               <div>
                 <span className="meta-label">Price</span>
                 <span className="meta-value">
-                  {formatMicroStxValue(statusQuery.data.price)}
+                  {formatMicroStxWithUsd(
+                    statusQuery.data.price,
+                    usdPriceBook
+                  ).combined}
                 </span>
               </div>
               <div>
