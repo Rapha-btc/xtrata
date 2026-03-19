@@ -5210,6 +5210,54 @@ p {
   gap: 12px;
 }
 
+.collection-live-page__brandbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+
+.collection-live-page__brand {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.collection-live-page__brand:hover {
+  text-decoration: none;
+}
+
+.collection-live-page__brand-mark {
+  font-size: clamp(1.05rem, 2vw, 1.28rem);
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.collection-live-page__brand-context {
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.collection-live-page__brand-link {
+  color: var(--accent-strong);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.collection-live-page__brand-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .collection-live-page__hero {
   border: 1px solid var(--border);
   border-radius: 18px;
@@ -5285,6 +5333,19 @@ p {
   gap: 8px;
 }
 
+.collection-live-page__title-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 320px);
+  align-items: start;
+  gap: 10px 16px;
+}
+
+.collection-live-page__title-block {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
 .collection-live-page__eyebrow {
   margin: 0;
   font-size: 0.68rem;
@@ -5296,6 +5357,32 @@ p {
 
 .collection-live-page__hero-copy h1 {
   font-size: clamp(1.52rem, 2.8vw, 2.1rem);
+}
+
+.collection-live-page__artist-card {
+  min-width: 0;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  padding: 10px 12px;
+  display: grid;
+  gap: 4px;
+}
+
+.collection-live-page__artist-bns {
+  font-size: 0.94rem;
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.collection-live-page__artist-address {
+  font-size: 0.79rem;
+  font-family: "IBM Plex Mono", "SFMono-Regular", ui-monospace, monospace;
+  color: var(--muted);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .collection-live-page__hero-copy p {
@@ -6040,6 +6127,10 @@ p {
 }
 
 @media (max-width: 720px) {
+  .collection-live-page__brandbar {
+    align-items: flex-start;
+  }
+
   .collection-live-page__hero {
     grid-template-columns: 1fr;
   }
@@ -6048,6 +6139,10 @@ p {
     max-width: 320px;
     width: 100%;
     margin: 0 auto;
+  }
+
+  .collection-live-page__title-row {
+    grid-template-columns: 1fr;
   }
 
   .manage-app .manage-journey {
@@ -6866,6 +6961,19 @@ p {
   justify-content: space-between;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.public-live-collections__artist {
+  display: grid;
+  gap: 2px;
+}
+
+.public-live-collections__artist .meta-label {
+  margin-bottom: 0;
+}
+
+.public-live-collections__artist-label {
+  font-size: 0.82rem;
 }
 
 .public-live-collections__card-meta {
