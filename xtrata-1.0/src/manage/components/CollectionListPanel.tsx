@@ -24,6 +24,7 @@ type CollectionReadiness = {
 
 type CollectionListPanelProps = {
   activeCollectionId?: string;
+  preferredCollectionId?: string;
   refreshKey?: number;
   onSelectCollection?: (collection: {
     id: string;
@@ -228,18 +229,21 @@ export default function CollectionListPanel(props: CollectionListPanelProps) {
     }
   };
 
-  const handleSelectCollection = (collection: CollectionRecord) => {
-    const deployTxId =
-      collection.metadata && typeof collection.metadata === 'object'
-        ? String((collection.metadata as Record<string, unknown>).deployTxId ?? '').trim()
-        : '';
-    const deployed = Boolean(collection.contract_address?.trim() && deployTxId);
-    props.onSelectCollection?.({
-      id: collection.id,
-      label: collection.display_name ?? collection.slug,
-      deployed
-    });
-  };
+  const handleSelectCollection = useCallback(
+    (collection: CollectionRecord) => {
+      const deployTxId =
+        collection.metadata && typeof collection.metadata === 'object'
+          ? String((collection.metadata as Record<string, unknown>).deployTxId ?? '').trim()
+          : '';
+      const deployed = Boolean(collection.contract_address?.trim() && deployTxId);
+      props.onSelectCollection?.({
+        id: collection.id,
+        label: collection.display_name ?? collection.slug,
+        deployed
+      });
+    },
+    [props.onSelectCollection]
+  );
 
   const handleCardKeyDown = (
     event: KeyboardEvent<HTMLDivElement>,
@@ -259,6 +263,27 @@ export default function CollectionListPanel(props: CollectionListPanelProps) {
     () => collections.filter((collection) => isArchived(collection)),
     [collections]
   );
+
+  useEffect(() => {
+    const preferredCollectionId = props.preferredCollectionId?.trim() ?? '';
+    const activeCollectionId = props.activeCollectionId?.trim() ?? '';
+    if (!preferredCollectionId || activeCollectionId) {
+      return;
+    }
+    const preferredCollection = activeCollections.find(
+      (collection) => collection.id === preferredCollectionId
+    );
+    if (!preferredCollection) {
+      return;
+    }
+    handleSelectCollection(preferredCollection);
+  }, [
+    props.preferredCollectionId,
+    props.activeCollectionId,
+    activeCollections,
+    handleSelectCollection
+  ]);
+
   return (
     <div className="collection-list">
       <div className="mint-actions">

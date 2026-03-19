@@ -368,6 +368,7 @@ const parseStoredDraft = (value: string | null): DeployWizardDraftStorage | null
 
 type DeployWizardPanelProps = {
   activeCollectionId?: string;
+  createNewToken?: number;
   isXtrataOwner?: boolean;
   onDraftReady?: (collection: {
     id: string;
@@ -433,6 +434,37 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
   const effectiveMarketplaceAddress = canEditMarketplaceRecipient
     ? marketplaceAddress
     : lockedMarketplaceAddress || marketplaceAddress;
+  const applyDraftForm = useCallback((draft: DeployWizardDraftStorage) => {
+    setCollectionName(draft.collectionName);
+    setSymbol(draft.symbol);
+    setSymbolTouched(draft.symbolTouched);
+    setDescription(normalizeArtistDeployDescription(draft.description));
+    setSupply(draft.supply);
+    setMintPriceStx(draft.mintPriceStx);
+    setMintType(draft.mintType);
+    setParentInscriptions(draft.parentInscriptions);
+    setArtistAddress(draft.artistAddress);
+    setArtistAddressTouched(draft.artistAddressTouched);
+    setMarketplaceAddress(draft.marketplaceAddress);
+    setMarketplaceAddressTouched(draft.marketplaceAddressTouched);
+  }, []);
+  const buildEmptyDraftForm = useCallback(
+    (): DeployWizardDraftStorage => ({
+      collectionName: '',
+      symbol: '',
+      symbolTouched: false,
+      description: '',
+      supply: '1000',
+      mintPriceStx: '0',
+      mintType: 'standard',
+      parentInscriptions: '',
+      artistAddress: walletSession.address ?? '',
+      artistAddressTouched: false,
+      marketplaceAddress: lockedMarketplaceAddress || '',
+      marketplaceAddressTouched: false
+    }),
+    [walletSession.address, lockedMarketplaceAddress]
+  );
 
   useEffect(() => {
     if (!reviewOpen || typeof window === 'undefined') {
@@ -483,21 +515,10 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       window.localStorage.getItem(DEPLOY_WIZARD_DRAFT_STORAGE_KEY)
     );
     if (stored) {
-      setCollectionName(stored.collectionName);
-      setSymbol(stored.symbol);
-      setSymbolTouched(stored.symbolTouched);
-      setDescription(normalizeArtistDeployDescription(stored.description));
-      setSupply(stored.supply);
-      setMintPriceStx(stored.mintPriceStx);
-      setMintType(stored.mintType);
-      setParentInscriptions(stored.parentInscriptions);
-      setArtistAddress(stored.artistAddress);
-      setArtistAddressTouched(stored.artistAddressTouched);
-      setMarketplaceAddress(stored.marketplaceAddress);
-      setMarketplaceAddressTouched(stored.marketplaceAddressTouched);
+      applyDraftForm(stored);
     }
     hasHydratedDraftRef.current = true;
-  }, []);
+  }, [applyDraftForm]);
 
   useEffect(() => {
     if (!hasHydratedDraftRef.current || typeof window === 'undefined') {
@@ -548,6 +569,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
 
   useEffect(() => {
     if (!normalizedActiveCollectionId) {
+      setCollection(null);
       setSelectedDraftLoading(false);
       return;
     }
@@ -606,19 +628,32 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     if (!hydrated) {
       return;
     }
-    setCollectionName(hydrated.collectionName);
-    setSymbol(hydrated.symbol);
-    setSymbolTouched(hydrated.symbolTouched);
-    setDescription(normalizeArtistDeployDescription(hydrated.description));
-    setSupply(hydrated.supply);
-    setMintPriceStx(hydrated.mintPriceStx);
-    setMintType(hydrated.mintType);
-    setParentInscriptions(hydrated.parentInscriptions);
-    setArtistAddress(hydrated.artistAddress);
-    setArtistAddressTouched(hydrated.artistAddressTouched);
-    setMarketplaceAddress(hydrated.marketplaceAddress);
-    setMarketplaceAddressTouched(hydrated.marketplaceAddressTouched);
-  }, [collection, normalizedActiveCollectionId]);
+    applyDraftForm(hydrated);
+  }, [applyDraftForm, collection, normalizedActiveCollectionId]);
+
+  useEffect(() => {
+    if (!props.createNewToken) {
+      return;
+    }
+    hydratedCollectionFormIdRef.current = null;
+    setCollection(null);
+    setStatus(null);
+    setReviewOpen(false);
+    setDeployPending(false);
+    setDraftPending(false);
+    setSelectedDraftLoading(false);
+    setDeployAttemptId(null);
+    setMintPriceLockHintActive(false);
+    applyDraftForm(buildEmptyDraftForm());
+    if (typeof window === 'undefined') {
+      return;
+    }
+    try {
+      window.localStorage.removeItem(DEPLOY_WIZARD_DRAFT_STORAGE_KEY);
+    } catch {
+      // Ignore storage failures; the in-memory reset is enough to continue.
+    }
+  }, [applyDraftForm, buildEmptyDraftForm, props.createNewToken]);
 
   useEffect(() => {
     if (symbolTouched) {

@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent
+} from 'react';
 import {
   callReadOnlyFunction,
   ClarityType,
@@ -230,6 +237,7 @@ const GUIDED_PRIMARY_PANELS: PanelKey[] = [
   'launch-controls',
   'publish-ops'
 ];
+const ACTIVE_COLLECTION_STORAGE_PREFIX = 'xtrata-manage-active-collection-v1';
 
 export default function CollectionManagerApp() {
   const { walletSession, connect, disconnect } = useManageWallet();
@@ -237,7 +245,9 @@ export default function CollectionManagerApp() {
   const [walletPending, setWalletPending] = useState(false);
   const [activeCollectionId, setActiveCollectionId] = useState('');
   const [activeCollectionLabel, setActiveCollectionLabel] = useState('');
+  const [storedActiveCollectionId, setStoredActiveCollectionId] = useState('');
   const [collectionListRefreshKey, setCollectionListRefreshKey] = useState(0);
+  const [createNewCollectionToken, setCreateNewCollectionToken] = useState(0);
 
   const [collapsed, setCollapsed] = useState<Record<PanelKey, boolean>>({
     'sdk-toolkit': true,
@@ -261,6 +271,41 @@ export default function CollectionManagerApp() {
   const showAdvancedPanels = experienceMode === 'advanced';
   const walletConnected = Boolean(walletSession.address);
   const hasActiveCollection = activeCollectionId.trim().length > 0;
+  const selectionScopeKey = walletSession.address?.trim().toUpperCase() ?? '';
+  const activeCollectionStorageKey = selectionScopeKey
+    ? `${ACTIVE_COLLECTION_STORAGE_PREFIX}:${selectionScopeKey}`
+    : '';
+
+  useEffect(() => {
+    setActiveCollectionId('');
+    setActiveCollectionLabel('');
+    if (typeof window === 'undefined' || !activeCollectionStorageKey) {
+      setStoredActiveCollectionId('');
+      return;
+    }
+    try {
+      setStoredActiveCollectionId(
+        window.localStorage.getItem(activeCollectionStorageKey)?.trim() ?? ''
+      );
+    } catch {
+      setStoredActiveCollectionId('');
+    }
+  }, [activeCollectionStorageKey]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !activeCollectionStorageKey) {
+      return;
+    }
+    try {
+      if (activeCollectionId.trim()) {
+        window.localStorage.setItem(activeCollectionStorageKey, activeCollectionId.trim());
+      } else {
+        window.localStorage.removeItem(activeCollectionStorageKey);
+      }
+    } catch {
+      // Ignore storage write failures; selection remains in-memory.
+    }
+  }, [activeCollectionId, activeCollectionStorageKey]);
 
   const journeySignals = useMemo<JourneySignals>(
     () => ({
@@ -522,9 +567,56 @@ export default function CollectionManagerApp() {
     });
   }, [experienceMode, journeySteps, activeJourneyStepId]);
 
-  const togglePanel = (key: PanelKey) => {
-    setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
+  const expandPanel = useCallback((key: PanelKey) => {
+    setCollapsed((prev) => (prev[key] ? { ...prev, [key]: false } : prev));
+  }, []);
+
+  const collapsePanel = useCallback((key: PanelKey) => {
+    setCollapsed((prev) => (!prev[key] ? { ...prev, [key]: true } : prev));
+  }, []);
+
+  const handlePanelToggleButtonClick = useCallback(
+    (event: MouseEvent<HTMLButtonElement>, key: PanelKey) => {
+      event.stopPropagation();
+      if (collapsed[key]) {
+        expandPanel(key);
+        return;
+      }
+      collapsePanel(key);
+    },
+    [collapsed, collapsePanel, expandPanel]
+  );
+
+  const handleCollapsedPanelKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLElement>, key: PanelKey) => {
+      if (!collapsed[key]) {
+        return;
+      }
+      if (event.key !== 'Enter' && event.key !== ' ') {
+        return;
+      }
+      event.preventDefault();
+      expandPanel(key);
+    },
+    [collapsed, expandPanel]
+  );
+
+  const getCollapsedPanelInteractionProps = useCallback(
+    (key: PanelKey) =>
+      collapsed[key]
+        ? {
+            role: 'button' as const,
+            tabIndex: 0,
+            'aria-expanded': false,
+            onClick: () => expandPanel(key),
+            onKeyDown: (event: KeyboardEvent<HTMLElement>) =>
+              handleCollapsedPanelKeyDown(event, key)
+          }
+        : {
+            'aria-expanded': true
+          },
+    [collapsed, expandPanel, handleCollapsedPanelKeyDown]
+  );
 
   const jumpToPanel = (key: PanelKey, targetId?: string | null) => {
     setCollapsed((prev) => ({ ...prev, [key]: false }));
@@ -605,6 +697,16 @@ export default function CollectionManagerApp() {
     requestJourneyRefresh();
   };
 
+  const handleCreateNewCollection = useCallback(() => {
+    setStoredActiveCollectionId('');
+    setActiveCollectionId('');
+    setActiveCollectionLabel('');
+    setCreateNewCollectionToken((current) => current + 1);
+    setActiveJourneyStepId('create-draft');
+    requestJourneyRefresh();
+    jumpToPanel('deploy-wizard');
+  }, [jumpToPanel, requestJourneyRefresh]);
+
   const handleJourneyStepClick = (stepId: JourneyStepId) => {
     const step = journeySteps.find((candidate) => candidate.id === stepId);
     if (!step || step.status === 'locked') {
@@ -671,12 +773,28 @@ export default function CollectionManagerApp() {
           onConnect={handleConnectWallet}
           onDisconnect={handleDisconnectWallet}
         />
-        {activeCollectionId ? (
-          <p className="meta-value">
-            Active drop: {activeCollectionLabel || 'Selected drop'} ·{' '}
-            <code>{activeCollectionId}</code>
-          </p>
-        ) : null}
+        <div className="mint-actions">
+          <span className="meta-value">
+            {activeCollectionId ? (
+              <>
+                Active drop: {activeCollectionLabel || 'Selected drop'} ·{' '}
+                <code>{activeCollectionId}</code>
+              </>
+            ) : (
+              'No active drop selected. Choose an existing drop below or start a new one.'
+            )}
+          </span>
+          <span className="info-label">
+            <button
+              className="button button--ghost"
+              type="button"
+              onClick={handleCreateNewCollection}
+            >
+              Create new collection
+            </button>
+            <InfoTooltip text="Clears the selected drop and resets Step 1 so you can start a fresh draft." />
+          </span>
+        </div>
       </header>
       <main className="app__main">
         <section className="panel app-section manage-journey">
@@ -785,6 +903,7 @@ export default function CollectionManagerApp() {
         <section
           className={`panel app-section${collapsed['sdk-toolkit'] ? ' panel--collapsed' : ''}`}
           id={MANAGE_PANEL_IDS['sdk-toolkit']}
+          {...getCollapsedPanelInteractionProps('sdk-toolkit')}
         >
           <div className="panel__header">
             <div>
@@ -795,7 +914,13 @@ export default function CollectionManagerApp() {
               <p>Build on Xtrata without rebuilding contract logic from scratch.</p>
             </div>
             <div className="panel__actions">
-              <button className="button button--ghost" type="button" onClick={() => togglePanel('sdk-toolkit')}>
+              <button
+                className="button button--ghost"
+                type="button"
+                onClick={(event) =>
+                  handlePanelToggleButtonClick(event, 'sdk-toolkit')
+                }
+              >
                 {collapsed['sdk-toolkit'] ? 'Expand' : 'Collapse'}
               </button>
             </div>
@@ -811,6 +936,7 @@ export default function CollectionManagerApp() {
         <section
           className={`panel app-section${collapsed['collection-list'] ? ' panel--collapsed' : ''}`}
           id={MANAGE_PANEL_IDS['collection-list']}
+          {...getCollapsedPanelInteractionProps('collection-list')}
         >
           <div className="panel__header">
             <div>
@@ -821,7 +947,13 @@ export default function CollectionManagerApp() {
               <p>See what is in progress and what is already deployed.</p>
             </div>
             <div className="panel__actions">
-              <button className="button button--ghost" type="button" onClick={() => togglePanel('collection-list')}>
+              <button
+                className="button button--ghost"
+                type="button"
+                onClick={(event) =>
+                  handlePanelToggleButtonClick(event, 'collection-list')
+                }
+              >
                 {collapsed['collection-list'] ? 'Expand' : 'Collapse'}
               </button>
             </div>
@@ -829,6 +961,7 @@ export default function CollectionManagerApp() {
           <div className="panel__body">
             <CollectionListPanel
               activeCollectionId={activeCollectionId}
+              preferredCollectionId={activeCollectionId || storedActiveCollectionId}
               refreshKey={collectionListRefreshKey}
               onSelectCollection={handleSelectCollection}
             />
@@ -839,6 +972,7 @@ export default function CollectionManagerApp() {
           <section
             className={`panel app-section${collapsed['owner-oversight'] ? ' panel--collapsed' : ''}`}
             id={MANAGE_PANEL_IDS['owner-oversight']}
+            {...getCollapsedPanelInteractionProps('owner-oversight')}
           >
             <div className="panel__header">
               <div>
@@ -849,7 +983,13 @@ export default function CollectionManagerApp() {
                 <p>Monitor launch progress across all allowlisted artists from one place.</p>
               </div>
               <div className="panel__actions">
-                <button className="button button--ghost" type="button" onClick={() => togglePanel('owner-oversight')}>
+                <button
+                  className="button button--ghost"
+                  type="button"
+                  onClick={(event) =>
+                    handlePanelToggleButtonClick(event, 'owner-oversight')
+                  }
+                >
                   {collapsed['owner-oversight'] ? 'Expand' : 'Collapse'}
                 </button>
               </div>
@@ -863,6 +1003,7 @@ export default function CollectionManagerApp() {
         <section
           className={`panel app-section${collapsed['deploy-wizard'] ? ' panel--collapsed' : ''}`}
           id={MANAGE_PANEL_IDS['deploy-wizard']}
+          {...getCollapsedPanelInteractionProps('deploy-wizard')}
         >
           <div className="panel__header">
             <div>
@@ -873,7 +1014,13 @@ export default function CollectionManagerApp() {
               <p>Fill the guided fields, review, and deploy your contract. Going live happens in Step 4.</p>
             </div>
             <div className="panel__actions">
-              <button className="button button--ghost" type="button" onClick={() => togglePanel('deploy-wizard')}>
+              <button
+                className="button button--ghost"
+                type="button"
+                onClick={(event) =>
+                  handlePanelToggleButtonClick(event, 'deploy-wizard')
+                }
+              >
                 {collapsed['deploy-wizard'] ? 'Expand' : 'Collapse'}
               </button>
             </div>
@@ -881,6 +1028,7 @@ export default function CollectionManagerApp() {
           <div className="panel__body">
             <DeployWizardPanel
               activeCollectionId={activeCollectionId}
+              createNewToken={createNewCollectionToken}
               isXtrataOwner={isXtrataOwner}
               onDraftReady={handleDraftReady}
               onJourneyRefreshRequested={requestJourneyRefresh}
@@ -892,6 +1040,7 @@ export default function CollectionManagerApp() {
         <section
           className={`panel app-section${collapsed['asset-staging'] ? ' panel--collapsed' : ''}`}
           id={MANAGE_PANEL_IDS['asset-staging']}
+          {...getCollapsedPanelInteractionProps('asset-staging')}
         >
           <div className="panel__header">
             <div>
@@ -908,7 +1057,13 @@ export default function CollectionManagerApp() {
               <p>{assetStagingSummary}</p>
             </div>
             <div className="panel__actions">
-              <button className="button button--ghost" type="button" onClick={() => togglePanel('asset-staging')}>
+              <button
+                className="button button--ghost"
+                type="button"
+                onClick={(event) =>
+                  handlePanelToggleButtonClick(event, 'asset-staging')
+                }
+              >
                 {collapsed['asset-staging'] ? 'Expand' : 'Collapse'}
               </button>
             </div>
@@ -926,6 +1081,7 @@ export default function CollectionManagerApp() {
           <section
             className={`panel app-section${collapsed['launch-controls'] ? ' panel--collapsed' : ''}`}
             id={MANAGE_PANEL_IDS['launch-controls']}
+            {...getCollapsedPanelInteractionProps('launch-controls')}
           >
             <div className="panel__header">
               <div>
@@ -942,7 +1098,9 @@ export default function CollectionManagerApp() {
                 <button
                   className="button button--ghost"
                   type="button"
-                  onClick={() => togglePanel('launch-controls')}
+                  onClick={(event) =>
+                    handlePanelToggleButtonClick(event, 'launch-controls')
+                  }
                 >
                   {collapsed['launch-controls'] ? 'Expand' : 'Collapse'}
                 </button>
@@ -963,6 +1121,7 @@ export default function CollectionManagerApp() {
         <section
           className={`panel app-section${collapsed['publish-ops'] ? ' panel--collapsed' : ''}`}
           id={MANAGE_PANEL_IDS['publish-ops']}
+          {...getCollapsedPanelInteractionProps('publish-ops')}
         >
           <div className="panel__header">
             <div>
@@ -973,7 +1132,13 @@ export default function CollectionManagerApp() {
               <p>Publish when ready, then monitor reservations and clear expired slots.</p>
             </div>
             <div className="panel__actions">
-              <button className="button button--ghost" type="button" onClick={() => togglePanel('publish-ops')}>
+              <button
+                className="button button--ghost"
+                type="button"
+                onClick={(event) =>
+                  handlePanelToggleButtonClick(event, 'publish-ops')
+                }
+              >
                 {collapsed['publish-ops'] ? 'Expand' : 'Collapse'}
               </button>
             </div>
@@ -1003,6 +1168,7 @@ export default function CollectionManagerApp() {
             <section
               className={`panel app-section${collapsed['collection-settings'] ? ' panel--collapsed' : ''}`}
               id={MANAGE_PANEL_IDS['collection-settings']}
+              {...getCollapsedPanelInteractionProps('collection-settings')}
             >
               <div className="panel__header">
                 <div>
@@ -1016,7 +1182,9 @@ export default function CollectionManagerApp() {
                   <button
                     className="button button--ghost"
                     type="button"
-                    onClick={() => togglePanel('collection-settings')}
+                    onClick={(event) =>
+                      handlePanelToggleButtonClick(event, 'collection-settings')
+                    }
                   >
                     {collapsed['collection-settings'] ? 'Expand' : 'Collapse'}
                   </button>
@@ -1035,6 +1203,7 @@ export default function CollectionManagerApp() {
             <section
               className={`panel app-section${collapsed['debug-tools'] ? ' panel--collapsed' : ''}`}
               id={MANAGE_PANEL_IDS['debug-tools']}
+              {...getCollapsedPanelInteractionProps('debug-tools')}
             >
               <div className="panel__header">
                 <div>
@@ -1045,7 +1214,13 @@ export default function CollectionManagerApp() {
                   <p>Technical checks for troubleshooting backend availability.</p>
                 </div>
                 <div className="panel__actions">
-                  <button className="button button--ghost" type="button" onClick={() => togglePanel('debug-tools')}>
+                  <button
+                    className="button button--ghost"
+                    type="button"
+                    onClick={(event) =>
+                      handlePanelToggleButtonClick(event, 'debug-tools')
+                    }
+                  >
                     {collapsed['debug-tools'] ? 'Expand' : 'Collapse'}
                   </button>
                 </div>
