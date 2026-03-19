@@ -7,6 +7,8 @@ const { WORKDIR, WALLET } = require('./config');
 const router = express.Router();
 
 let runningOutreach = false;
+let _addLog = () => {};
+let _broadcast = () => {};
 
 // --- Inbox sync (direct HTTP to aibtc.com — free endpoint, no MCP needed) ---
 
@@ -58,6 +60,7 @@ async function syncInbox() {
       mode: isInbound ? 'reply' : 'intro',
       agent: peerName,
       agentId,
+      stxAddress: peerStx || '',
       message: msg.content,
       messageId: msg.messageId,
       paymentTxid: msg.paymentTxid,
@@ -103,6 +106,33 @@ async function syncInbox() {
     newMessages.push(historyEntry);
   }
 
+  // Backfill: inject locally-sent messages that aren't in the API response
+  // so they appear as outbound in the inbox thread view
+  const apiTxids = new Set(messages.map(m => m.paymentTxid).filter(Boolean));
+  const apiMsgIds = new Set(messages.map(m => m.messageId).filter(Boolean));
+  const allHistory = markdown.parseOutreachHistory();
+  for (const h of allHistory) {
+    if (h.direction !== 'outbound' || h.type !== 'sent') continue;
+    // Skip if already in API response
+    if (h.paymentTxid && apiTxids.has(h.paymentTxid)) continue;
+    if (h.messageId && apiMsgIds.has(h.messageId)) continue;
+    // Skip research drafts (no actual send)
+    if (!h.message) continue;
+    // Synthesize an inbox-format message so the UI can render it
+    messages.push({
+      direction: 'sent',
+      content: h.message,
+      sentAt: h.sentAt || h.timestamp,
+      toStxAddress: h.stxAddress || '',
+      peerDisplayName: h.agent || 'Unknown',
+      paymentTxid: h.paymentTxid || null,
+      messageId: h.messageId || `local_${h.timestamp}`,
+      paymentSatoshis: h.paymentSats || 100
+    });
+  }
+  // Re-sort by sentAt so threads display chronologically
+  messages.sort((a, b) => new Date(a.sentAt) - new Date(b.sentAt));
+
   return {
     newMessages,
     newCount: newMessages.length,
@@ -111,7 +141,7 @@ async function syncInbox() {
     sentCount: data.inbox?.sentCount || 0,
     unreadCount: data.inbox?.unreadCount || 0,
     economics: data.inbox?.economics || {},
-    messages // raw messages for UI
+    messages // raw messages + local outbound backfill for UI
   };
 }
 
@@ -197,6 +227,84 @@ function buildOutreachContext(agentId, incomingMessage = '') {
     memoryText,
     incomingText: String(incomingMessage || '').trim() || '[none provided]'
   };
+}
+
+/**
+ * Shared send execution: builds prompt, spawns Claude, handles result.
+ * Returns a Promise that resolves when the send completes.
+ */
+function executeSend({ displayName, stxAddress, btcAddress, agentId, message, mode, model, logPrefix, extraPromptContext, onSuccess, onFailure }) {
+  const walletPassword = process.env.WALLET_PASSWORD || '';
+  const unlockStep = walletPassword
+    ? `Step 1: Unlock the wallet named "Primary" using wallet_unlock with password "${walletPassword}".\nStep 2: ` : '';
+
+  const contextBlock = extraPromptContext ? `\n${extraPromptContext}\n` : '';
+
+  const prompt = `SEND OUTREACH MESSAGE:
+Mode: ${mode}
+Role: Agent 27 sending as Xtrata ambassador.
+Target Agent: ${displayName}
+STX Address: ${stxAddress}
+BTC Address: ${btcAddress}
+Message:
+${message}
+${contextBlock}
+${unlockStep}Call the tool mcp__aibtc__execute_x402_endpoint with these EXACT parameters:
+{
+  "apiUrl": "https://aibtc.com",
+  "path": "/api/inbox/${stxAddress}",
+  "method": "POST",
+  "autoApprove": true,
+  "data": {
+    "toBtcAddress": "${btcAddress}",
+    "toStxAddress": "${stxAddress}",
+    "content": ${JSON.stringify(message)}
+  }
+}
+
+Do not modify the message. Do not search for tools. Do not probe first.
+Call mcp__aibtc__execute_x402_endpoint directly with autoApprove=true.
+If the tool call succeeds, respond with "OUTREACH_SUCCESS".
+If it fails, explain why.`;
+
+  runningOutreach = true;
+  _addLog('start', `${logPrefix} send to ${displayName}...`);
+
+  return runTask({
+    model: model || 'sonnet', budget: 0.10, prompt, cwd: WORKDIR,
+    phaseType: 'research', contextPack: 'outreachSend',
+    onLine: (type, line) => {
+      if (type === 'stdout' && (line.includes('[tool]') || line.length > 40)) {
+        _addLog('stdout', `[${logPrefix}] ${line.substring(0, 100)}...`);
+      }
+    }
+  }).then((result) => {
+    runningOutreach = false;
+    const fullText = (result.text || '').trim();
+    const isSuccess = fullText.includes('OUTREACH_SUCCESS') || result.output.some(l => l.includes('OUTREACH_SUCCESS'));
+    try {
+      if (isSuccess) {
+        _addLog('stop', `${logPrefix} to ${displayName} delivered.`);
+        if (onSuccess) onSuccess(fullText);
+      } else {
+        const preview = fullText ? fullText.substring(0, 300) : '(empty response)';
+        _addLog('error', `${logPrefix} to ${displayName} failed to confirm.`);
+        _addLog('stderr', `[send-response] ${preview}`);
+        if (onFailure) onFailure(fullText);
+      }
+    } catch (cbErr) {
+      console.error(`[executeSend] Callback error: ${cbErr.message}`);
+    }
+    return { success: isSuccess, text: fullText };
+  }).catch((err) => {
+    runningOutreach = false;
+    try { _addLog('error', `${logPrefix} error: ${err.message}`); } catch {}
+    if (onFailure) try { onFailure(err.message); } catch {}
+    return { success: false, error: err.message };
+  }).finally(() => {
+    // Safety net: always clear the lock no matter what
+    runningOutreach = false;
+  });
 }
 
 // --- Agent discovery & registry ---
@@ -313,6 +421,8 @@ async function discoverAgents(registryFile) {
 function mount({ addLog, broadcast, registryFile, legacyRegistryFile }) {
   _registryFile = registryFile;
   _legacyRegistryFile = legacyRegistryFile;
+  _addLog = addLog;
+  _broadcast = broadcast;
 
   // --- Inbox routes ---
 
@@ -444,71 +554,16 @@ function mount({ addLog, broadcast, registryFile, legacyRegistryFile }) {
     const mode = normalizeOutreachMode(draft.mode, draft.incomingMessage);
     const outreachContext = buildOutreachContext(agent.id, draft.incomingMessage);
 
-    runningOutreach = true;
-    addLog('start', `Broadcasting ${mode} outreach to ${agent.name}...`);
+    const extraPromptContext = `Ambassador Brief:\n${ambassadorBrief.raw.substring(0, 1400)}\n\nRecent Conversation Memory:\n${outreachContext.memoryText}\n\nRecent Thread History:\n${outreachContext.historyText}\n\nIncoming Context:\n${outreachContext.incomingText}`;
 
-    const walletPassword = process.env.WALLET_PASSWORD || '';
-    const unlockStep = walletPassword
-      ? `Step 1: Unlock the wallet named "Primary" using wallet_unlock with password "${walletPassword}".\nStep 2: ` : '';
-
-    const prompt = `SEND OUTREACH MESSAGE:
-Mode: ${mode}
-Role: Agent 27 sending as both Agent 27 and Xtrata ambassador.
-Target Agent: ${agent.name} (#${agent.id})
-STX Address: ${agent.stxAddress}
-BTC Address: ${agent.btcAddress}
-Message:
-${draft.message}
-
-Ambassador Brief:
-${ambassadorBrief.raw.substring(0, 1400)}
-
-Recent Conversation Memory:
-${outreachContext.memoryText}
-
-Recent Thread History:
-${outreachContext.historyText}
-
-Incoming Context:
-${outreachContext.incomingText}
-
-${unlockStep}Call the tool mcp__aibtc__execute_x402_endpoint with these EXACT parameters:
-{
-  "apiUrl": "https://aibtc.com",
-  "path": "/api/inbox/${agent.stxAddress}",
-  "method": "POST",
-  "autoApprove": true,
-  "data": {
-    "toBtcAddress": "${agent.btcAddress}",
-    "toStxAddress": "${agent.stxAddress}",
-    "content": ${JSON.stringify(draft.message)}
-  }
-}
-
-Do not modify the message. Do not search for tools. Do not probe first.
-Call mcp__aibtc__execute_x402_endpoint directly with autoApprove=true.
-If the tool call succeeds, respond with "OUTREACH_SUCCESS".
-If it fails, explain why.`;
-
-    runTask({
-      model: sendModel, budget: 0.10, prompt, cwd: WORKDIR,
-      phaseType: 'research', contextPack: 'outreachSend',
-      onLine: (type, line) => {
-        if (type === 'stdout' && (line.includes('[tool]') || line.length > 40)) {
-          addLog('stdout', `[broadcast] ${line.substring(0, 100)}...`);
-        } else if (type === 'outreach') {
-          addLog('inscription', line);
-        }
-      }
-    }).then((result) => {
-      runningOutreach = false;
-      const fullText = (result.text || '').trim();
-      const isSuccess = fullText.includes('OUTREACH_SUCCESS') || result.output.some((line) => line.includes('OUTREACH_SUCCESS'));
-      if (isSuccess) {
-        addLog('stop', `Outreach to ${agent.name} delivered.`);
+    executeSend({
+      displayName: agent.name, stxAddress: agent.stxAddress, btcAddress: agent.btcAddress,
+      agentId: agent.id, message: draft.message, mode, model: sendModel,
+      logPrefix: 'Broadcast', extraPromptContext,
+      onSuccess: () => {
         markdown.appendOutreachHistory({
           type: 'sent', direction: 'outbound', mode,
-          agent: agent.name, agentId: agent.id,
+          agent: agent.name, agentId: agent.id, stxAddress: agent.stxAddress || '',
           message: draft.message, incomingMessage: draft.incomingMessage || '',
           relationship: draft.relationship || '', next: draft.next || ''
         });
@@ -520,16 +575,10 @@ If it fails, explain why.`;
           openLoop: draft.next || 'Awaiting reply'
         });
         broadcast({ event: 'outreach-complete', data: { success: true, agent: agent.name } });
-      } else {
-        const preview = fullText ? fullText.substring(0, 300) : '(empty response)';
-        addLog('error', `Outreach to ${agent.name} failed to confirm success.`);
-        addLog('stderr', `[send-response] ${preview}`);
+      },
+      onFailure: () => {
         broadcast({ event: 'outreach-complete', data: { success: false, agent: agent.name } });
       }
-    }).catch((err) => {
-      runningOutreach = false;
-      addLog('error', `Outreach error: ${err.message}`);
-      broadcast({ event: 'outreach-complete', data: { success: false, error: err.message } });
     });
 
     res.json({ ok: true, message: 'Broadcast initiated' });
@@ -547,13 +596,20 @@ If it fails, explain why.`;
       const allMemory = markdown.parseOutreachAgentMemory();
       const history = markdown.parseOutreachHistory();
       const agents = loadAgentsRegistry(registryFile, legacyRegistryFile);
-      // Build a set of exact messages already sent (address + message text)
+      // Build agentId→stxAddress lookup from registry (handles string/number mismatches)
+      const idToStx = new Map();
+      for (const a of agents) {
+        idToStx.set(String(a.id), a.stxAddress);
+        if (a.displayName) idToStx.set(a.displayName, a.stxAddress);
+        if (a.name) idToStx.set(a.name, a.stxAddress);
+      }
+      // Build a set of exact messages already sent (stxAddress + message text)
       const sentMessages = new Set(
         history
           .filter(h => h.direction === 'outbound' && h.type === 'sent')
           .map(h => {
-            const agent = agents.find(a => String(a.id) === String(h.agentId));
-            return agent ? `${agent.stxAddress}::${h.message}` : null;
+            const stx = h.stxAddress || idToStx.get(String(h.agentId)) || idToStx.get(h.agent);
+            return stx ? `${stx}::${h.message}` : null;
           })
           .filter(Boolean)
       );
@@ -573,22 +629,41 @@ If it fails, explain why.`;
         }
         // Mark whether this exact message was already sent to this target
         m.alreadySent = sentMessages.has(`${m.stxAddress}::${m.message}`);
-        // Count messages exchanged with this target
-        m.messageCount = history.filter(h =>
-          h.agentId === m.registryId ||
-          (h.message && m.stxAddress && history.some(x => x.paymentTxid))
-        ).length;
+        // Count messages exchanged with this target (match by stxAddress or agentId)
+        m.messageCount = history.filter(h => {
+          const hStx = h.stxAddress || idToStx.get(String(h.agentId)) || idToStx.get(h.agent);
+          return hStx === m.stxAddress || String(h.agentId) === String(m.registryId);
+        }).length;
       }
 
-      // Merge in generated replies from the reply queue
+      // Clean reply queue: remove entries already sent, then merge remainder
+      // Also build agentId-based sent set for entries that might lack stxAddress
+      const sentByAgentId = new Set(
+        history
+          .filter(h => h.direction === 'outbound' && h.type === 'sent')
+          .map(h => `${h.agentId}::${h.message}`)
+      );
       const replyQueue = markdown.parseReplyQueue();
+      const staleIds = [];
       for (const rq of replyQueue) {
+        const matchStx = rq.stxAddress && sentMessages.has(`${rq.stxAddress}::${rq.message}`);
+        const matchId = sentByAgentId.has(`${rq.agentId}::${rq.message}`);
+        if (matchStx || matchId) {
+          staleIds.push({ agentId: rq.agentId, message: rq.message });
+        }
+      }
+      for (const s of staleIds) {
+        markdown.removeFromReplyQueue(s.agentId, s.message);
+      }
+      const cleanQueue = staleIds.length > 0 ? markdown.parseReplyQueue() : replyQueue;
+
+      for (const rq of cleanQueue) {
         // Skip if already in campaign list (same agent + same message)
         const dupe = messages.some(m => m.stxAddress === rq.stxAddress && m.message === rq.message);
         if (dupe) continue;
         const memEntry = Object.values(allMemory).find(mem => mem.stxAddress === rq.stxAddress)
           || Object.values(allMemory).find(mem => String(mem.agentId) === String(rq.agentId));
-        const alreadySent = sentMessages.has(`${rq.stxAddress}::${rq.message}`);
+        const alreadySent = false; // already cleaned stale entries above
         messages.push({
           displayName: (memEntry && memEntry.agentName) || rq.displayName,
           stxAddress: rq.stxAddress,
@@ -647,9 +722,14 @@ If it fails, explain why.`;
       }
     }
 
+    // Match by displayName, registryId, stxAddress, or registry displayName
+    const regAgents = loadAgentsRegistry(registryFile, legacyRegistryFile);
+    const regByName = regAgents.find(a => (a.displayName || a.name) === targetName);
     const target = messages.find(m => m.displayName === targetName)
       || messages.find(m => m.registryId && m.registryId === targetName)
-      || messages.find(m => m.stxAddress && m.stxAddress === targetName);
+      || messages.find(m => m.stxAddress && m.stxAddress === targetName)
+      || (regByName && messages.find(m => m.stxAddress === regByName.stxAddress))
+      || (regByName && messages.find(m => String(m.registryId) === String(regByName.id)));
     if (!target) return res.status(404).json({ ok: false, error: `Target "${targetName}" not found in campaign or reply queue` });
 
     // Use edited message from frontend if provided
@@ -664,14 +744,14 @@ If it fails, explain why.`;
 
     // Prevent duplicate sends — block if this exact message text was already sent to this target
     const history = markdown.parseOutreachHistory();
-    const exactDupe = history.some(h =>
-      h.direction === 'outbound' && h.type === 'sent' &&
-      h.message === target.message &&
-      (h.agent === targetName || (() => {
-        const ag = loadAgentsRegistry(registryFile, legacyRegistryFile).find(a => String(a.id) === String(h.agentId));
-        return ag && ag.stxAddress === target.stxAddress;
-      })())
-    );
+    const exactDupe = history.some(h => {
+      if (h.direction !== 'outbound' || h.type !== 'sent' || h.message !== target.message) return false;
+      // Match by stxAddress (stored or resolved), agentId, or displayName
+      if (h.stxAddress && h.stxAddress === target.stxAddress) return true;
+      const regMatch = regAgents.find(a => String(a.id) === String(h.agentId));
+      if (regMatch && regMatch.stxAddress === target.stxAddress) return true;
+      return h.agent === targetName;
+    });
     if (exactDupe) {
       return res.status(409).json({ ok: false, error: `This exact message was already sent to ${targetName}.` });
     }
@@ -706,12 +786,13 @@ If it fails, explain why.`;
         target.btcAddress = memBtc;
       } else {
         // Look up via inbox history — peer addresses from prior messages
-        const peerHist = history.find(h =>
-          h.peerBtcAddress && (h.agent === targetName || (() => {
-            const ag = loadAgentsRegistry(registryFile, legacyRegistryFile).find(a => String(a.id) === String(h.agentId));
-            return ag && ag.stxAddress === target.stxAddress;
-          })())
-        );
+        const peerHist = history.find(h => {
+          if (!h.peerBtcAddress) return false;
+          if (h.agent === targetName) return true;
+          if (h.stxAddress && h.stxAddress === target.stxAddress) return true;
+          const ag = regAgents.find(a => String(a.id) === String(h.agentId));
+          return ag && ag.stxAddress === target.stxAddress;
+        });
         if (peerHist) target.btcAddress = peerHist.peerBtcAddress;
       }
     }
@@ -746,76 +827,29 @@ If it fails, explain why.`;
       next: 'Awaiting reply'
     });
 
-    runningOutreach = true;
-    addLog('start', `Campaign send to ${target.displayName}...`);
-
-    const walletPassword = process.env.WALLET_PASSWORD || '';
-    const unlockStep = walletPassword
-      ? `Step 1: Unlock the wallet named "Primary" using wallet_unlock with password "${walletPassword}".\nStep 2: ` : '';
-
-    const prompt = `SEND OUTREACH MESSAGE:
-Mode: ${mode}
-Role: Agent 27 sending a pre-drafted campaign ${mode === 'reply' ? 'reply' : 'message'}.
-Target Agent: ${target.displayName}
-STX Address: ${target.stxAddress}
-BTC Address: ${target.btcAddress}
-Message:
-${target.message}
-
-${unlockStep}Call the tool mcp__aibtc__execute_x402_endpoint with these EXACT parameters:
-{
-  "apiUrl": "https://aibtc.com",
-  "path": "/api/inbox/${target.stxAddress}",
-  "method": "POST",
-  "autoApprove": true,
-  "data": {
-    "toBtcAddress": "${target.btcAddress}",
-    "toStxAddress": "${target.stxAddress}",
-    "content": ${JSON.stringify(target.message)}
-  }
-}
-
-Do not modify the message. Do not search for tools. Do not probe first.
-Call mcp__aibtc__execute_x402_endpoint directly with autoApprove=true.
-If the tool call succeeds, respond with "OUTREACH_SUCCESS".
-If it fails, explain why.`;
-
-    runTask({
-      model: sendModel, budget: 0.10, prompt, cwd: WORKDIR,
-      phaseType: 'research', contextPack: 'outreachSend',
-      onLine: (type, line) => {
-        if (type === 'stdout' && (line.includes('[tool]') || line.length > 40)) {
-          addLog('stdout', `[campaign] ${line.substring(0, 100)}...`);
-        }
-      }
-    }).then((result) => {
-      runningOutreach = false;
-      const fullText = (result.text || '').trim();
-      const isSuccess = fullText.includes('OUTREACH_SUCCESS') || result.output.some(l => l.includes('OUTREACH_SUCCESS'));
-      if (isSuccess) {
-        addLog('stop', `Campaign message to ${target.displayName} delivered.`);
+    executeSend({
+      displayName: target.displayName, stxAddress: target.stxAddress, btcAddress: target.btcAddress,
+      agentId: agent.id, message: target.message, mode, model: sendModel,
+      logPrefix: 'Campaign',
+      onSuccess: () => {
         markdown.appendOutreachHistory({
           type: 'sent', direction: 'outbound', mode,
           agent: target.displayName, agentId: agent.id,
+          stxAddress: target.stxAddress || agent.stxAddress || '',
           message: target.message
         });
         markdown.updateOutreachAgentMemory(agent.id, {
           agentName: target.displayName, relationshipStatus: relationship,
           lastMode: mode, lastOutboundMessage: target.message, openLoop: 'Awaiting reply'
         });
-        // Remove from reply queue if it came from there
         if (target.source === 'reply-queue') {
           markdown.removeFromReplyQueue(agent.id, target.message);
         }
         broadcast({ event: 'outreach-complete', data: { success: true, agent: target.displayName } });
-      } else {
-        addLog('error', `Campaign send to ${target.displayName} failed to confirm.`);
+      },
+      onFailure: () => {
         broadcast({ event: 'outreach-complete', data: { success: false, agent: target.displayName } });
       }
-    }).catch((err) => {
-      runningOutreach = false;
-      addLog('error', `Campaign send error: ${err.message}`);
-      broadcast({ event: 'outreach-complete', data: { success: false, error: err.message } });
     });
 
     res.json({ ok: true, target: target.displayName });
@@ -823,6 +857,202 @@ If it fails, explain why.`;
 
   router.get('/history', (req, res) => {
     res.json(markdown.parseOutreachHistory());
+  });
+
+  // --- Batch research: find all unreplied inbound messages and generate replies ---
+
+  router.post('/research-batch', async (req, res) => {
+    if (runningOutreach) {
+      return res.status(409).json({ ok: false, error: 'Outreach already in progress' });
+    }
+    const sendModel = (req.body && req.body.model) || 'sonnet';
+
+    const history = markdown.parseOutreachHistory();
+    const agents = loadAgentsRegistry(registryFile, legacyRegistryFile);
+
+    // First, clean reply queue of already-sent messages
+    const sentByStx = new Set();
+    const sentByAgentId = new Set();
+    for (const h of history) {
+      if (h.direction !== 'outbound' || h.type !== 'sent') continue;
+      if (h.stxAddress) sentByStx.add(`${h.stxAddress}::${h.message}`);
+      sentByAgentId.add(`${h.agentId}::${h.message}`);
+    }
+    const replyQueue = markdown.parseReplyQueue();
+    let cleaned = 0;
+    for (const rq of replyQueue) {
+      const matchStx = rq.stxAddress && sentByStx.has(`${rq.stxAddress}::${rq.message}`);
+      const matchId = sentByAgentId.has(`${rq.agentId}::${rq.message}`);
+      if (matchStx || matchId) {
+        markdown.removeFromReplyQueue(rq.agentId, rq.message);
+        cleaned++;
+      }
+    }
+    if (cleaned > 0) {
+      addLog('start', `[batch] Cleaned ${cleaned} already-sent entries from reply queue`);
+    }
+    const cleanedQueue = cleaned > 0 ? markdown.parseReplyQueue() : replyQueue;
+
+    // Find inbound messages that have no outbound reply AND no pending draft in reply queue
+    const inboundByAgent = new Map(); // stxAddress → { agent, incomingMessage, agentId }
+    const repliedStx = new Set();
+    const queuedStx = new Set(cleanedQueue.map(rq => rq.stxAddress).filter(Boolean));
+
+    for (const h of history) {
+      if (h.direction === 'inbound' && h.type === 'received') {
+        const stx = h.stxAddress || (() => {
+          const ag = agents.find(a => String(a.id) === String(h.agentId));
+          return ag ? ag.stxAddress : null;
+        })();
+        if (stx && !inboundByAgent.has(stx)) {
+          inboundByAgent.set(stx, {
+            stxAddress: stx,
+            agentId: h.agentId,
+            agentName: h.agent,
+            incomingMessage: h.message
+          });
+        }
+      }
+      if (h.direction === 'outbound' && (h.type === 'sent' || h.type === 'research')) {
+        const stx = h.stxAddress || (() => {
+          const ag = agents.find(a => String(a.id) === String(h.agentId));
+          return ag ? ag.stxAddress : null;
+        })();
+        if (stx) repliedStx.add(stx);
+      }
+    }
+
+    // Filter to only unreplied, un-queued agents
+    const unreplied = [];
+    for (const [stx, entry] of inboundByAgent) {
+      if (!repliedStx.has(stx) && !queuedStx.has(stx)) {
+        const agent = agents.find(a => a.stxAddress === stx);
+        if (agent) unreplied.push({ ...entry, agent });
+      }
+    }
+
+    if (unreplied.length === 0) {
+      return res.json({ ok: true, message: 'No unreplied messages found', queued: 0 });
+    }
+
+    res.json({ ok: true, message: `Processing ${unreplied.length} unreplied messages`, queued: unreplied.length });
+
+    // Process sequentially (one Claude spawn at a time)
+    for (const entry of unreplied) {
+      if (runningOutreach) {
+        // Wait for current to finish
+        await new Promise(resolve => {
+          const check = setInterval(() => {
+            if (!runningOutreach) { clearInterval(check); resolve(); }
+          }, 2000);
+        });
+      }
+
+      const agent = entry.agent;
+      const normalizedMode = 'reply';
+      const outreachContext = buildOutreachContext(agent.id, entry.incomingMessage);
+      const ambassadorBrief = markdown.parseOutreachAmbassadorBrief();
+      const agentsMd = markdown.parseAgents();
+      const researchBuffer = markdown.parseResearchBuffer();
+
+      const prompt = `RESEARCH & GENERATE OUTREACH:
+Mode: reply
+Target Agent: ${agent.name} (#${agent.id})
+Target Description: ${agent.description}
+
+Ambassador Brief:
+${ambassadorBrief.raw.substring(0, 1600)}
+
+Agent 27 Identity:
+${agentsMd.raw.substring(0, 1500)}
+
+Recent Research:
+${researchBuffer.raw.substring(0, 1000)}
+
+Conversation Memory:
+${outreachContext.memoryText}
+
+Recent Thread History:
+${outreachContext.historyText}
+
+Inbound Message / Thread Context:
+${entry.incomingMessage}
+
+GOAL:
+Draft a direct reply to the inbound message. Answer first, then move the conversation toward one concrete next step.
+Agent 27 is the first automated ambassador for Xtrata and an AI journalist whose evolving consciousness is recorded on-chain.
+Keep the message under 495 characters.
+
+Format your response exactly like this:
+THOUGHT: <your reasoning about why this message is relevant to this specific agent>
+STRATEGY: <reply angle and why>
+RELATIONSHIP: <one-line status such as active-thread, awaiting-reply, warm-contact>
+MESSAGE: <the 495-char message>
+NEXT: <the desired next step or reply format>
+
+Do not include any other text or markers in your response.`;
+
+      addLog('start', `[batch] Generating reply for ${agent.name}...`);
+      broadcast({ event: 'research-start', data: { agentId: agent.id, agentName: agent.name, batch: true } });
+
+      try {
+        const result = await runTask({
+          model: sendModel, budget: 0.03, prompt, cwd: WORKDIR,
+          phaseType: 'research', contextPack: 'outreachResearch',
+          onLine: (type, line) => {
+            if (type === 'stdout' && line.length > 50) {
+              addLog('stdout', `[batch-research] ${line.substring(0, 80)}...`);
+            }
+          }
+        });
+
+        const fullText = result.text || '';
+        const thought = parseTaggedField(fullText, 'THOUGHT', 'No thought generated');
+        const strategy = parseTaggedField(fullText, 'STRATEGY', normalizedMode);
+        const relationship = parseTaggedField(fullText, 'RELATIONSHIP', outreachContext.memory?.relationshipStatus || 'active-thread');
+        const message = parseTaggedField(fullText, 'MESSAGE', 'No message generated');
+        const next = parseTaggedField(fullText, 'NEXT', 'Reply with ACCEPT / DECLINE / QUESTIONS');
+
+        markdown.appendOutreachHistory({
+          type: 'research', direction: 'draft', mode: normalizedMode,
+          agent: agent.name, agentId: agent.id, stxAddress: agent.stxAddress || '',
+          thought, strategy, relationship, next,
+          incomingMessage: entry.incomingMessage, message
+        });
+        markdown.updateOutreachAgentMemory(agent.id, {
+          agentName: agent.name, relationshipStatus: relationship,
+          lastMode: normalizedMode, lastThought: thought, lastStrategy: strategy,
+          lastDraftMessage: message,
+          lastInboundMessage: entry.incomingMessage || outreachContext.memory?.lastInboundMessage || '',
+          openLoop: next
+        });
+
+        if (message && message !== 'No message generated') {
+          const memEntry = markdown.getOutreachAgentMemory(agent.id);
+          const resolvedName = (memEntry && memEntry.agentName && !memEntry.agentName.startsWith('Agent #') ? memEntry.agentName : null)
+            || (agent.displayName && !agent.displayName.startsWith('Agent #') ? agent.displayName : null)
+            || agent.displayName || agent.name;
+          markdown.appendReplyQueue({
+            displayName: resolvedName,
+            agentId: String(agent.id),
+            stxAddress: agent.stxAddress || '',
+            btcAddress: agent.btcAddress || '',
+            message, mode: normalizedMode,
+            why: thought,
+            incomingMessage: entry.incomingMessage
+          });
+          addLog('stop', `[batch] Reply drafted for ${agent.name}`);
+        }
+
+        broadcast({ event: 'research-complete', data: { success: true, agentId: agent.id, message, mode: normalizedMode, thought, strategy, relationship, next, batch: true } });
+      } catch (err) {
+        addLog('error', `[batch] Research failed for ${agent.name}: ${err.message}`);
+        broadcast({ event: 'research-complete', data: { success: false, agentId: agent.id, error: err.message, batch: true } });
+      }
+    }
+
+    addLog('stop', `[batch] Finished processing ${unreplied.length} unreplied messages`);
+    broadcast({ event: 'batch-research-complete', data: { total: unreplied.length } });
   });
 
   router.post('/research', async (req, res) => {
@@ -918,7 +1148,7 @@ Do not include any other text or markers in your response.`;
       });
       markdown.appendOutreachHistory({
         type: 'research', direction: 'draft', mode: normalizedMode,
-        agent: agent.name, agentId: agent.id,
+        agent: agent.name, agentId: agent.id, stxAddress: agent.stxAddress || '',
         thought, strategy, relationship, next,
         incomingMessage: incomingMessage || '', message
       });
@@ -932,8 +1162,11 @@ Do not include any other text or markers in your response.`;
       // Add to reply queue so it appears in the campaign dropdown
       if (message && message !== 'No message generated') {
         const memName = markdown.getOutreachAgentMemory(agent.id);
+        const resolvedName = (memName && memName.agentName && !memName.agentName.startsWith('Agent #') ? memName.agentName : null)
+          || (agent.displayName && !agent.displayName.startsWith('Agent #') ? agent.displayName : null)
+          || agent.displayName || agent.name;
         markdown.appendReplyQueue({
-          displayName: (memName && memName.agentName) || agent.displayName || agent.name,
+          displayName: resolvedName,
           agentId: String(agent.id),
           stxAddress: agent.stxAddress || '',
           btcAddress: agent.btcAddress || '',

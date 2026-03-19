@@ -271,14 +271,12 @@ function parseReplyQueue() {
 }
 
 function appendReplyQueue(entry) {
-  const queue = parseReplyQueue();
-  // Dedupe by agentId + message
-  const exists = queue.some(q => q.agentId === entry.agentId && q.message === entry.message);
-  if (!exists) {
-    queue.push({ ...entry, queuedAt: new Date().toISOString() });
-    fs.mkdirSync(path.dirname(OUTREACH_REPLY_QUEUE_FILE), { recursive: true });
-    fs.writeFileSync(OUTREACH_REPLY_QUEUE_FILE, JSON.stringify(queue, null, 2));
-  }
+  let queue = parseReplyQueue();
+  // Replace any existing entry for the same agent (keep only latest draft per agent)
+  queue = queue.filter(q => String(q.agentId) !== String(entry.agentId));
+  queue.push({ ...entry, queuedAt: new Date().toISOString() });
+  fs.mkdirSync(path.dirname(OUTREACH_REPLY_QUEUE_FILE), { recursive: true });
+  fs.writeFileSync(OUTREACH_REPLY_QUEUE_FILE, JSON.stringify(queue, null, 2));
   return { ok: true };
 }
 

@@ -1146,6 +1146,7 @@
 
             <div class="ops-buttons">
                 <button class="btn" id="btn-outreach-research">RESEARCH &amp; GENERATE</button>
+                <button class="btn" id="btn-outreach-research-batch" title="Find all unreplied inbox messages and generate replies for each">BATCH REPLIES</button>
                 <button class="btn" id="btn-outreach-log-inbound">LOG INBOUND</button>
                 <button class="btn" id="btn-outreach-draft">SAVE DRAFT</button>
                 <button class="btn" id="btn-outreach-review">REVIEW DRAFT</button>
@@ -1276,6 +1277,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const outreachIncomingInput = document.getElementById('outreach-incoming');
     const outreachMessageInput = document.getElementById('outreach-message');
     const btnOutreachResearch = document.getElementById('btn-outreach-research');
+    const btnOutreachResearchBatch = document.getElementById('btn-outreach-research-batch');
     const btnOutreachLogInbound = document.getElementById('btn-outreach-log-inbound');
     const btnOutreachDraft = document.getElementById('btn-outreach-draft');
     const btnOutreachReview = document.getElementById('btn-outreach-review');
@@ -1804,6 +1806,37 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    btnOutreachResearchBatch.addEventListener('click', () => {
+        btnOutreachResearchBatch.disabled = true;
+        btnOutreachResearchBatch.textContent = 'PROCESSING...';
+        appendLogEntry({ type: 'start', line: 'Batch reply generation initiated' });
+        showOutreachStatus('Finding unreplied messages...', 'success');
+
+        fetch('/api/outreach/research-batch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: outreachModelSelect.value })
+        }).then(r => r.json()).then(res => {
+            if (res.ok) {
+                showOutreachStatus(res.message, 'success');
+                appendLogEntry({ type: 'start', line: res.message });
+                if (res.queued === 0) {
+                    btnOutreachResearchBatch.disabled = false;
+                    btnOutreachResearchBatch.textContent = 'BATCH REPLIES';
+                }
+                // Button re-enabled when batch-research-complete SSE fires
+            } else {
+                showOutreachStatus(`Batch failed: ${res.error}`, 'error');
+                btnOutreachResearchBatch.disabled = false;
+                btnOutreachResearchBatch.textContent = 'BATCH REPLIES';
+            }
+        }).catch(e => {
+            showOutreachStatus(`Error: ${e.message}`, 'error');
+            btnOutreachResearchBatch.disabled = false;
+            btnOutreachResearchBatch.textContent = 'BATCH REPLIES';
+        });
+    });
+
     btnOutreachReview.addEventListener('click', () => {
         const agentId = outreachAgentSelect.value;
         const message = outreachMessageInput.value;
@@ -1898,8 +1931,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function markCampaignSent(displayName) {
-        const target = campaignMessages.find(m => m.displayName === displayName);
-        if (target) target.alreadySent = true;
+        // Match by stxAddress first (reliable), fall back to displayName
+        const byStx = campaignMessages.find(m => m.stxAddress && m.displayName === displayName);
+        const target = byStx || campaignMessages.find(m => m.displayName === displayName);
+        if (target) {
+            target.alreadySent = true;
+            // Also mark any other entries for the same stxAddress
+            if (target.stxAddress) {
+                campaignMessages.filter(m => m.stxAddress === target.stxAddress).forEach(m => m.alreadySent = true);
+            }
+        }
         renderCampaignDropdown();
     }
 
@@ -2039,16 +2080,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         sendCampaignMessage(name).then((res) => {
             if (res.ok) {
-                showCampaignStatus(`Send initiated to ${name}. Check Activity Log.`, 'success');
-                // Immediately remove from dropdown
+                showCampaignStatus(`Send initiated to ${name}. Waiting for delivery...`, 'success');
+                // Mark sent immediately in dropdown, but keep buttons disabled
+                // until outreach-complete SSE fires (Claude process still running)
                 markCampaignSent(name);
+                btnCampaignSend.textContent = 'DELIVERING...';
             } else {
                 showCampaignStatus(`Failed: ${res.error}`, 'error');
                 appendLogEntry({ type: 'error', line: `Campaign send failed: ${res.error}` });
+                // Only re-enable on failure (backend didn't start a process)
+                campaignSending = false;
+                btnCampaignSend.disabled = false;
+                btnCampaignSendAll.disabled = false;
+                btnCampaignSend.textContent = 'SEND SELECTED';
             }
         }).catch((e) => {
             showCampaignStatus(`Error: ${e.message}`, 'error');
-        }).finally(() => {
             campaignSending = false;
             btnCampaignSend.disabled = false;
             btnCampaignSendAll.disabled = false;
@@ -2759,8 +2806,13 @@ document.addEventListener('DOMContentLoaded', () => {
         evtSource.addEventListener('outreach-complete', (e) => {
             try {
                 const data = JSON.parse(e.data);
+                // Re-enable all send buttons — outreach process finished
                 btnOutreachSend.disabled = false;
                 btnOutreachSend.textContent = 'BROADCAST MESSAGE';
+                campaignSending = false;
+                btnCampaignSend.disabled = false;
+                btnCampaignSendAll.disabled = false;
+                btnCampaignSend.textContent = 'SEND SELECTED';
                 outreachReviewPanel.classList.remove('visible');
                 showOutreachBannerComplete(data.success);
                 if (data.success) {
@@ -2772,8 +2824,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     saveOutreachDraft({ silent: true });
                     fetchOutreachHistory();
                     fetchOutreachAgentMemory(outreachAgentSelect.value);
-                    // Instantly remove sent message from campaign dropdown
+                    // Remove sent message from campaign dropdown and refresh
                     if (data.agent) markCampaignSent(data.agent);
+                    loadCampaign();
                 } else {
                     showOutreachStatus(`Send failed: ${data.error || 'Unknown error'}`, 'error');
                 }
@@ -2807,26 +2860,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     fetchOutreachHistory();
                     fetchOutreachAgentMemory(selectedAgentId);
-                    // Instantly add generated reply to campaign dropdown
-                    const agentId = selectedAgentId || researchAgentId;
-                    const agent = registeredAgents.find(a => String(a.id) === String(agentId));
-                    if (agent && data.message) {
-                        addToCampaign({
-                            displayName: agent.displayName || agent.name,
-                            stxAddress: agent.stxAddress || '',
-                            btcAddress: agent.btcAddress || '',
-                            message: data.message,
-                            why: data.thought || '',
-                            registryId: String(agent.id),
-                            source: 'reply-queue',
-                            hasThread: true,
-                            alreadySent: false,
-                            messageCount: 0
-                        });
-                    }
+                    // Refresh campaign dropdown from server (reply-queue is already merged there)
+                    loadCampaign();
                 } else {
                     showOutreachStatus(`Research failed: ${data.error || 'Unknown error'}`, 'error');
                 }
+            } catch {}
+        });
+
+        evtSource.addEventListener('batch-research-complete', (e) => {
+            try {
+                const data = JSON.parse(e.data);
+                btnOutreachResearchBatch.disabled = false;
+                btnOutreachResearchBatch.textContent = 'BATCH REPLIES';
+                showOutreachStatus(`Batch complete — ${data.total} replies processed`, 'success');
+                appendLogEntry({ type: 'stop', line: `Batch research complete: ${data.total} replies` });
+                loadCampaign();
             } catch {}
         });
     }

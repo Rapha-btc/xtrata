@@ -52,7 +52,7 @@ import {
 } from '../lib/market/actions';
 import {
   buildMarketBuyPostConditions,
-  formatMarketPrice,
+  formatMarketPriceWithUsd,
   getMarketBuyFailureMessage,
   getMarketPriceInputLabel,
   getMarketSettlementAsset,
@@ -62,6 +62,7 @@ import {
   isMarketSettlementSupported,
   parseMarketPriceInput
 } from '../lib/market/settlement';
+import { useUsdPriceBook } from '../lib/pricing/hooks';
 import {
   mergeListingIndexes,
   resolveMissingListingsForTokens
@@ -400,6 +401,7 @@ const TokenDetails = (props: {
   onSelectNext: () => void;
   marketActionStatus: string | null;
   marketActionPending: boolean;
+  usdPriceBook: ReturnType<typeof useUsdPriceBook>['data'] | null;
   onBuyListing: (token: TokenSummary, listing: MarketActivityEvent) => void;
   onCancelListing: (token: TokenSummary, listing: MarketActivityEvent) => void;
 }) => {
@@ -710,7 +712,11 @@ const TokenDetails = (props: {
     : 'Not listed';
   const listingPriceLabel =
     props.listing?.price !== undefined
-      ? formatMarketPrice(props.listing.price, marketSettlement)
+      ? formatMarketPriceWithUsd(
+          props.listing.price,
+          marketSettlement,
+          props.usdPriceBook
+        )
       : null;
   const marketLabel = props.marketContractId ?? 'Select in Market module';
   const detailOwnerAddress = props.token?.owner ?? null;
@@ -1041,7 +1047,12 @@ const TokenDetails = (props: {
           </p>
           {props.listing?.price !== undefined && (
             <p className="preview-pill preview-pill--strong">
-              Listed · {formatMarketPrice(props.listing.price, marketSettlement)}
+              Listed ·{' '}
+              {formatMarketPriceWithUsd(
+                props.listing.price,
+                marketSettlement,
+                props.usdPriceBook
+              )}
             </p>
           )}
         </div>
@@ -1340,7 +1351,11 @@ const TokenDetails = (props: {
                   <div>
                     <span className="meta-label">Price</span>
                     <span className="meta-value">
-                      {formatMarketPrice(props.listing.price, marketSettlement)}
+                      {formatMarketPriceWithUsd(
+                        props.listing.price,
+                        marketSettlement,
+                        props.usdPriceBook
+                      )}
                     </span>
                   </div>
                 )}
@@ -1348,7 +1363,11 @@ const TokenDetails = (props: {
                   <div>
                     <span className="meta-label">Fee</span>
                     <span className="meta-value">
-                      {formatMarketPrice(props.listing.fee, marketSettlement)}
+                      {formatMarketPriceWithUsd(
+                        props.listing.fee,
+                        marketSettlement,
+                        props.usdPriceBook
+                      )}
                     </span>
                   </div>
                 )}
@@ -1800,6 +1819,9 @@ const TokenDetails = (props: {
 };
 
 export default function ViewerScreen(props: ViewerScreenProps) {
+  const usdPriceBook = useUsdPriceBook({
+    enabled: props.isActiveTab && !props.collapsed
+  }).data ?? null;
   const client = useMemo(
     () => createXtrataClient({ contract: props.contract }),
     [props.contract]
@@ -2797,8 +2819,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
           await queryClient.prefetchQuery({
             queryKey: getTokenSummaryKey(contractId, id),
             queryFn: () => fetchTokenSummaryForView(id),
-            staleTime: 300_000,
-            refetchOnWindowFocus: false
+            staleTime: 300_000
           });
         }
       };
@@ -4026,6 +4047,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
         onSelectNext={handleSelectNextToken}
         marketActionStatus={marketActionStatus}
         marketActionPending={marketActionPending}
+        usdPriceBook={usdPriceBook}
         onBuyListing={handleBuyListing}
         onCancelListing={handleCancelListing}
       />

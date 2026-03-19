@@ -1,4 +1,4 @@
-import { jsonResponse, badRequest, serverError } from '../../lib/utils';
+import { jsonResponse, badRequest, notFound, serverError } from '../../lib/utils';
 import { queryAll, run } from '../../lib/db';
 import {
   canStageUploadsBeforeDeploy,
@@ -22,6 +22,20 @@ const logAssetDebug = (
 const PUBLIC_ASSETS_CACHE_CONTROL =
   'public, max-age=120, s-maxage=300, stale-while-revalidate=600';
 const PRIVATE_NO_STORE_CACHE_CONTROL = 'private, no-store, max-age=0';
+
+const toNullableString = (value: unknown) => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+const resolveAssetsBucket = (env: Record<string, unknown>) =>
+  (env.COLLECTION_ASSETS as R2Bucket | undefined) ??
+  (env.ASSETS as R2Bucket | undefined) ??
+  (env.R2 as R2Bucket | undefined) ??
+  null;
 
 const clearDeployPricingLock = async (params: {
   env: Parameters<typeof run>[0];
@@ -208,6 +222,131 @@ export const onRequest: PagesFunction = async ({ request, env, params }) => {
       return serverError(
         `${
           error instanceof Error ? error.message : 'Failed to add asset'
+        } (Request ID: ${requestId})`
+      );
+    }
+  }
+
+  if (request.method === 'DELETE') {
+    try {
+      const assetId = new URL(request.url).searchParams.get('assetId')?.trim() ?? '';
+      if (!assetId) {
+        return badRequest('assetId is required.');
+      }
+
+      const collectionResult = await queryAll(
+        env,
+        'SELECT state, metadata FROM collections WHERE id = ? LIMIT 1',
+        [collectionId]
+      );
+      const collectionRow = (collectionResult.results ?? [])[0] as
+        | Record<string, unknown>
+        | undefined;
+      if (!collectionRow) {
+        return notFound('Collection not found.');
+      }
+
+      const collectionState = String(collectionRow.state ?? 'draft')
+        .trim()
+        .toLowerCase();
+      if (isCollectionUploadsLocked(collectionState)) {
+        return badRequest(
+          `Uploads are locked while collection state is "${collectionState}".`
+        );
+      }
+
+      const assetResult = await queryAll(
+        env,
+        'SELECT * FROM assets WHERE collection_id = ? AND asset_id = ? LIMIT 1',
+        [collectionId, assetId]
+      );
+      const assetRow = (assetResult.results ?? [])[0] as
+        | Record<string, unknown>
+        | undefined;
+      if (!assetRow) {
+        return notFound('Asset not found.');
+      }
+
+      const assetState = String(assetRow.state ?? 'draft')
+        .trim()
+        .toLowerCase();
+      if (assetState === 'sold-out') {
+        return badRequest('Minted assets cannot be removed from staging.');
+      }
+
+      const reservationCountResult = await queryAll(
+        env,
+        'SELECT COUNT(*) as total FROM reservations WHERE collection_id = ? AND asset_id = ?',
+        [collectionId, assetId]
+      );
+      const reservationCount = Number(
+        reservationCountResult.results?.[0]?.total ?? 0
+      );
+      if (reservationCount > 0) {
+        return badRequest(
+          'This asset has reservation history and cannot be removed from staging.'
+        );
+      }
+
+      const pricingLockCleared = await clearDeployPricingLock({
+        env,
+        collectionId,
+        metadata: collectionRow.metadata,
+        requestId
+      });
+
+      await run(env, 'DELETE FROM assets WHERE collection_id = ? AND asset_id = ?', [
+        collectionId,
+        assetId
+      ]);
+
+      const storageKey = toNullableString(assetRow.storage_key);
+      let storageObjectDeleted = false;
+      if (storageKey) {
+        const remainingRefsResult = await queryAll(
+          env,
+          'SELECT COUNT(*) as total FROM assets WHERE storage_key = ?',
+          [storageKey]
+        );
+        const remainingRefs = Number(remainingRefsResult.results?.[0]?.total ?? 0);
+        if (remainingRefs <= 0) {
+          const bucket = resolveAssetsBucket(env as Record<string, unknown>);
+          if (bucket) {
+            try {
+              await bucket.delete(storageKey);
+              storageObjectDeleted = true;
+            } catch (error) {
+              logAssetDebug(requestId, 'storage.delete.error', {
+                assetId,
+                storageKey,
+                message: error instanceof Error ? error.message : String(error)
+              });
+            }
+          }
+        }
+      }
+
+      logAssetDebug(requestId, 'asset.deleted', {
+        assetId,
+        collectionId,
+        pricingLockCleared,
+        storageObjectDeleted
+      });
+
+      return jsonResponse({
+        deleted: true,
+        assetId,
+        pricingLockCleared,
+        storageObjectDeleted
+      });
+    } catch (error) {
+      logAssetDebug(requestId, 'request.error', {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack ?? null : null
+      });
+      return serverError(
+        `${
+          error instanceof Error ? error.message : 'Failed to remove asset'
         } (Request ID: ${requestId})`
       );
     }

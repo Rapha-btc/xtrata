@@ -4,7 +4,8 @@ import {
   buildArtistDeployContractSource,
   deriveArtistCollectionSlug,
   deriveArtistCollectionSymbol,
-  deriveArtistContractName
+  deriveArtistContractName,
+  resolveArtistDeployPayoutSplits
 } from '../artist-deploy';
 
 const STANDARD_TEMPLATE = `
@@ -112,6 +113,39 @@ describe('artist deploy helpers', () => {
     expect(result.source).toContain(
       `(define-data-var operator-bps uint u${ARTIST_DEPLOY_DEFAULTS.operatorBps.toString()})`
     );
+  });
+
+  it('uses zero payout splits when on-chain mint price is zero', () => {
+    expect(resolveArtistDeployPayoutSplits(0n)).toEqual({
+      artistBps: 0,
+      marketplaceBps: 0,
+      operatorBps: 0
+    });
+
+    const result = buildArtistDeployContractSource({
+      input: {
+        collectionName: 'Free Mint',
+        symbol: 'FREE',
+        description: 'Zero payout free mint',
+        supply: '777',
+        mintType: 'standard',
+        mintPriceStx: '0',
+        artistAddress: 'SP3K8BC0PPEVCV7NZ6QSRWPQ2JE9E5B6N3PA0KBR9',
+        marketplaceAddress: 'SP000000000000000000002Q6VF78'
+      },
+      templateSources: {
+        standardSource: STANDARD_TEMPLATE,
+        preinscribedSource: PREINSCRIBED_TEMPLATE
+      },
+      coreContractId: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0',
+      operatorAddress: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X'
+    });
+
+    expect(result.errors).toEqual([]);
+    expect(result.source).toContain('(define-data-var mint-price uint u0)');
+    expect(result.source).toContain('(define-data-var artist-bps uint u0)');
+    expect(result.source).toContain('(define-data-var marketplace-bps uint u0)');
+    expect(result.source).toContain('(define-data-var operator-bps uint u0)');
   });
 
   it('normalizes non-ascii description text before validation', () => {

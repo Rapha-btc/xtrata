@@ -12,13 +12,15 @@ import {
   buildContractTransferPostCondition,
   buildFungibleSpendPostCondition
 } from '../contract/post-conditions';
-import { formatDecimalAmount, parseDecimalAmount } from '../utils/amounts';
+import { parseDecimalAmount } from '../utils/amounts';
+import {
+  formatTokenAmountForDisplay,
+  formatTokenAmountWithUsd
+} from '../pricing/format';
+import type { PriceAssetKey, UsdPriceBook } from '../pricing/types';
 
 const STX_DECIMALS = 6;
 const STX_SYMBOL = 'STX';
-
-const trimTrailingZeroes = (value: string) =>
-  value.replace(/(\.\d*?[1-9])0+$/u, '$1').replace(/\.0+$/u, '');
 
 export type MarketSettlementAsset =
   | {
@@ -27,6 +29,7 @@ export type MarketSettlementAsset =
       decimals: null;
       paymentTokenContractId: undefined;
       token: null;
+      priceAssetKey: null;
     }
   | {
       kind: 'stx';
@@ -34,6 +37,7 @@ export type MarketSettlementAsset =
       decimals: 6;
       paymentTokenContractId: null;
       token: null;
+      priceAssetKey: 'stx';
     }
   | {
       kind: 'fungible-token';
@@ -41,6 +45,7 @@ export type MarketSettlementAsset =
       decimals: number | null;
       paymentTokenContractId: string;
       token: FungibleAssetConfig | null;
+      priceAssetKey: PriceAssetKey | null;
     };
 
 export const getMarketSettlementAsset = (
@@ -52,7 +57,8 @@ export const getMarketSettlementAsset = (
       symbol: 'Token',
       decimals: null,
       paymentTokenContractId: undefined,
-      token: null
+      token: null,
+      priceAssetKey: null
     };
   }
   if (paymentTokenContractId === null) {
@@ -61,7 +67,8 @@ export const getMarketSettlementAsset = (
       symbol: STX_SYMBOL,
       decimals: STX_DECIMALS,
       paymentTokenContractId: null,
-      token: null
+      token: null,
+      priceAssetKey: 'stx'
     };
   }
   const token = getKnownFungibleAsset(paymentTokenContractId);
@@ -70,7 +77,8 @@ export const getMarketSettlementAsset = (
     symbol: token?.symbol ?? 'Token',
     decimals: token?.decimals ?? null,
     paymentTokenContractId,
-    token
+    token,
+    priceAssetKey: token?.priceAssetKey ?? null
   };
 };
 
@@ -134,10 +142,31 @@ export const formatMarketPrice = (
   if (settlement.kind === 'unresolved' || settlement.decimals === null) {
     return `${amount.toString()} units`;
   }
-  const value = trimTrailingZeroes(
-    formatDecimalAmount(amount, settlement.decimals)
+  return formatTokenAmountForDisplay(
+    amount,
+    settlement.decimals,
+    settlement.symbol
   );
-  return `${value} ${settlement.symbol}`;
+};
+
+export const formatMarketPriceWithUsd = (
+  amount: bigint | null | undefined,
+  settlement: MarketSettlementAsset,
+  priceBook: UsdPriceBook | null | undefined
+) => {
+  if (amount === null || amount === undefined) {
+    return '—';
+  }
+  if (settlement.kind === 'unresolved' || settlement.decimals === null) {
+    return `${amount.toString()} units`;
+  }
+  return formatTokenAmountWithUsd({
+    amount,
+    decimals: settlement.decimals,
+    symbol: settlement.symbol,
+    assetKey: settlement.priceAssetKey,
+    priceBook
+  }).combined;
 };
 
 export const buildMarketBuyPostConditions = (params: {

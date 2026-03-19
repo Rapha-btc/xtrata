@@ -38,6 +38,14 @@ import {
   formatMiningFeeMicroStx,
   type CollectionMiningFeeGuidance
 } from './lib/collection-mint/mining-fee-guidance';
+import { formatMicroStxWithUsd } from './lib/pricing/format';
+import { useUsdPriceBook } from './lib/pricing/hooks';
+import {
+  isDisplayedCollectionMintFree,
+  resolveCollectionMintPricingMetadata,
+  type CollectionMintPricingMetadata
+} from './lib/collection-mint/pricing-metadata';
+import { resolveCollectionMintPriceTone } from './lib/collection-mint/price-tone';
 import {
   resolveCollectionMintPaymentModel,
   type CollectionMintPaymentModel
@@ -55,6 +63,7 @@ import {
   SMALL_MINT_HELPER_MAX_CHUNKS,
   TX_DELAY_SECONDS
 } from './lib/mint/constants';
+import { getStacksExplorerAddressUrl } from './lib/network/explorer';
 import { getNetworkFromAddress, getNetworkMismatch } from './lib/network/guard';
 import { toStacksNetwork } from './lib/network/stacks';
 import type { NetworkType } from './lib/network/types';
@@ -159,13 +168,9 @@ type ResumableLookupCacheEntry = {
   promise: Promise<string | null> | null;
 };
 
-type CollectionMintPriceDisplayMode =
-  | 'raw-on-chain'
-  | 'advertised-includes-seal-fee'
-  | 'advertised-includes-total-fees';
 type CollectionMintPricingConfig = {
-  mode: CollectionMintPriceDisplayMode;
-  advertisedMintPriceMicroStx: bigint | null;
+  mode: CollectionMintPricingMetadata['mode'];
+  mintPriceMicroStx: bigint | null;
   onChainMintPriceMicroStx: bigint | null;
   absorbedSealFeeMicroStx: bigint | null;
   absorbedBeginFeeMicroStx: bigint | null;
@@ -248,27 +253,6 @@ const toRecord = (value: unknown): Record<string, unknown> | null => {
     return null;
   }
   return value as Record<string, unknown>;
-};
-
-const toBigIntValue = (value: unknown): bigint | null => {
-  if (typeof value === 'bigint') {
-    return value;
-  }
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return BigInt(Math.floor(value));
-  }
-  if (typeof value === 'string') {
-    const normalized = value.trim();
-    if (!/^\d+$/.test(normalized)) {
-      return null;
-    }
-    try {
-      return BigInt(normalized);
-    } catch {
-      return null;
-    }
-  }
-  return null;
 };
 
 const parseJsonResponse = async <T,>(response: Response, label: string) => {
@@ -412,6 +396,14 @@ const toMicroStxLabel = (value: bigint | null) => {
   return `${negative ? '-' : ''}${base} STX`;
 };
 
+const humanizeStateLabel = (value: string) => {
+  const normalized = value.trim().replace(/[-_]+/g, ' ');
+  if (!normalized) {
+    return 'Unknown';
+  }
+  return normalized.replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
 const formatCount = (value: bigint | null) => {
   if (value === null) {
     return 'Unknown';
@@ -485,22 +477,15 @@ const shuffleAssets = (assets: CollectionAsset[]) => {
 const resolveCollectionMintPricingConfig = (
   metadata: Record<string, unknown> | null
 ): CollectionMintPricingConfig => {
-  const pricing = toRecord(metadata?.pricing);
-  const modeRaw = toText(pricing?.mode).toLowerCase();
-  const mode: CollectionMintPriceDisplayMode =
-    modeRaw === 'advertised-includes-total-fees'
-      ? 'advertised-includes-total-fees'
-      : modeRaw === 'advertised-includes-seal-fee'
-      ? 'advertised-includes-seal-fee'
-      : 'raw-on-chain';
+  const pricing = resolveCollectionMintPricingMetadata(metadata?.pricing);
   return {
-    mode,
-    advertisedMintPriceMicroStx: toBigIntValue(pricing?.advertisedMintPriceMicroStx),
-    onChainMintPriceMicroStx: toBigIntValue(pricing?.onChainMintPriceMicroStx),
-    absorbedSealFeeMicroStx: toBigIntValue(pricing?.absorbedSealFeeMicroStx),
-    absorbedBeginFeeMicroStx: toBigIntValue(pricing?.absorbedBeginFeeMicroStx),
-    absorbedProtocolFeeMicroStx: toBigIntValue(pricing?.absorbedProtocolFeeMicroStx),
-    absorptionModel: toText(pricing?.absorptionModel) || null
+    mode: pricing.mode,
+    mintPriceMicroStx: pricing.mintPriceMicroStx,
+    onChainMintPriceMicroStx: pricing.onChainMintPriceMicroStx,
+    absorbedSealFeeMicroStx: pricing.absorbedSealFeeMicroStx,
+    absorbedBeginFeeMicroStx: pricing.absorbedBeginFeeMicroStx,
+    absorbedProtocolFeeMicroStx: pricing.absorbedProtocolFeeMicroStx,
+    absorptionModel: pricing.absorptionModel
   };
 };
 
@@ -518,6 +503,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     walletSessionStore.load()
   );
   const [walletPending, setWalletPending] = useState(false);
+  const usdPriceBook = useUsdPriceBook().data ?? null;
   const [collection, setCollection] = useState<CollectionRecord | null>(null);
   const [assets, setAssets] = useState<CollectionAsset[]>([]);
   const [feeGuidance, setFeeGuidance] = useState<CollectionMiningFeeGuidance | null>(
@@ -790,6 +776,10 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     enabled: Boolean(artistAddress && validateStacksAddress(artistAddress) && artistNetwork)
   });
   const artistBnsName = artistBnsQuery.data?.primary ?? null;
+  const artistExplorerUrl = useMemo(
+    () => (artistAddress ? getStacksExplorerAddressUrl(artistAddress, artistNetwork) : null),
+    [artistAddress, artistNetwork]
+  );
 
   const collectionSymbol = useMemo(
     () => toText(metadataCollection?.symbol) || 'NO-TICKER',
@@ -915,25 +905,25 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     return raw;
   }, []);
 
-  const useAdvertisedSealCap =
+  const useMintPriceSealCap =
     collectionMintPaymentModel === 'seal' &&
     contractStatus?.activePhaseMintPrice === null &&
-    collectionMintPricingConfig.mode === 'advertised-includes-seal-fee' &&
+    collectionMintPricingConfig.mode === 'price-includes-seal-fee' &&
     collectionMintPricingConfig.onChainMintPriceMicroStx !== null &&
     collectionMintPricingConfig.onChainMintPriceMicroStx ===
       (contractStatus?.mintPrice ?? null) &&
-    collectionMintPricingConfig.advertisedMintPriceMicroStx !== null;
-  const useAdvertisedTotalCap =
+    collectionMintPricingConfig.mintPriceMicroStx !== null;
+  const useMintPriceTotalCap =
     collectionMintPaymentModel === 'seal' &&
     contractStatus?.activePhaseMintPrice === null &&
-    collectionMintPricingConfig.mode === 'advertised-includes-total-fees' &&
+    collectionMintPricingConfig.mode === 'price-includes-total-fees' &&
     collectionMintPricingConfig.onChainMintPriceMicroStx !== null &&
     collectionMintPricingConfig.onChainMintPriceMicroStx ===
       (contractStatus?.mintPrice ?? null) &&
-    collectionMintPricingConfig.advertisedMintPriceMicroStx !== null;
+    collectionMintPricingConfig.mintPriceMicroStx !== null;
 
-  const resolveBeginSpendCapForAdvertisedTotal = useCallback(() => {
-    if (!useAdvertisedTotalCap) {
+  const resolveBeginSpendCapForMintPriceTotal = useCallback(() => {
+    if (!useMintPriceTotalCap) {
       return null;
     }
     return resolveCollectionBeginSpendCapMicroStx({
@@ -947,7 +937,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     contractStatus?.activePhaseMintPrice,
     contractStatus?.coreFeeUnitMicroStx,
     contractStatus?.mintPrice,
-    useAdvertisedTotalCap
+    useMintPriceTotalCap
   ]);
 
   const resolveMintBeginPostConditions = useCallback(
@@ -984,16 +974,15 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
           totalChunks
         });
       }
-      if (useAdvertisedTotalCap) {
-        const beginCap = resolveBeginSpendCapForAdvertisedTotal();
+      if (useMintPriceTotalCap) {
+        const beginCap = resolveBeginSpendCapForMintPriceTotal();
         if (
           beginCap === null ||
-          collectionMintPricingConfig.advertisedMintPriceMicroStx === null
+          collectionMintPricingConfig.mintPriceMicroStx === null
         ) {
           return null;
         }
-        const sealCap =
-          collectionMintPricingConfig.advertisedMintPriceMicroStx - beginCap;
+        const sealCap = collectionMintPricingConfig.mintPriceMicroStx - beginCap;
         if (sealCap < 0n) {
           return null;
         }
@@ -1002,10 +991,10 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
           mintPrice: sealCap
         });
       }
-      if (useAdvertisedSealCap) {
+      if (useMintPriceSealCap) {
         return buildMintBeginStxPostConditions({
           sender,
-          mintPrice: collectionMintPricingConfig.advertisedMintPriceMicroStx
+          mintPrice: collectionMintPricingConfig.mintPriceMicroStx
         });
       }
       return buildCollectionSealStxPostConditions({
@@ -1018,12 +1007,12 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     },
     [
       collectionMintPaymentModel,
-      collectionMintPricingConfig.advertisedMintPriceMicroStx,
+      collectionMintPricingConfig.mintPriceMicroStx,
       collectionMintPricingConfig.mode,
       collectionMintPricingConfig.onChainMintPriceMicroStx,
-      resolveBeginSpendCapForAdvertisedTotal,
-      useAdvertisedTotalCap,
-      useAdvertisedSealCap,
+      resolveBeginSpendCapForMintPriceTotal,
+      useMintPriceTotalCap,
+      useMintPriceSealCap,
       contractStatus?.activePhaseMintPrice,
       contractStatus?.coreFeeUnitMicroStx,
       contractStatus?.mintPrice
@@ -1031,27 +1020,26 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   );
 
   const resolveSingleTxSealSpendCapOverride = useCallback(() => {
-    if (useAdvertisedSealCap) {
-      return collectionMintPricingConfig.advertisedMintPriceMicroStx;
+    if (useMintPriceSealCap) {
+      return collectionMintPricingConfig.mintPriceMicroStx;
     }
-    if (useAdvertisedTotalCap) {
-      const beginCap = resolveBeginSpendCapForAdvertisedTotal();
+    if (useMintPriceTotalCap) {
+      const beginCap = resolveBeginSpendCapForMintPriceTotal();
       if (
         beginCap === null ||
-        collectionMintPricingConfig.advertisedMintPriceMicroStx === null
+        collectionMintPricingConfig.mintPriceMicroStx === null
       ) {
         return null;
       }
-      const sealCap =
-        collectionMintPricingConfig.advertisedMintPriceMicroStx - beginCap;
+      const sealCap = collectionMintPricingConfig.mintPriceMicroStx - beginCap;
       return sealCap >= 0n ? sealCap : null;
     }
     return undefined;
   }, [
-    collectionMintPricingConfig.advertisedMintPriceMicroStx,
-    resolveBeginSpendCapForAdvertisedTotal,
-    useAdvertisedSealCap,
-    useAdvertisedTotalCap
+    collectionMintPricingConfig.mintPriceMicroStx,
+    resolveBeginSpendCapForMintPriceTotal,
+    useMintPriceSealCap,
+    useMintPriceTotalCap
   ]);
 
   const resolveSmallSingleTxSpendCap = useCallback(
@@ -1072,13 +1060,13 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     },
     [
       chargeMintPriceAtBegin,
-      collectionMintPricingConfig.advertisedMintPriceMicroStx,
+      collectionMintPricingConfig.mintPriceMicroStx,
       contractStatus?.activePhaseMintPrice,
       contractStatus?.coreFeeUnitMicroStx,
       contractStatus?.mintPrice,
       resolveSingleTxSealSpendCapOverride,
-      useAdvertisedTotalCap,
-      useAdvertisedSealCap
+      useMintPriceTotalCap,
+      useMintPriceSealCap
     ]
   );
 
@@ -1101,13 +1089,13 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     },
     [
       chargeMintPriceAtBegin,
-      collectionMintPricingConfig.advertisedMintPriceMicroStx,
+      collectionMintPricingConfig.mintPriceMicroStx,
       contractStatus?.activePhaseMintPrice,
       contractStatus?.coreFeeUnitMicroStx,
       contractStatus?.mintPrice,
       resolveSingleTxSealSpendCapOverride,
-      useAdvertisedTotalCap,
-      useAdvertisedSealCap
+      useMintPriceTotalCap,
+      useMintPriceSealCap
     ]
   );
 
@@ -1882,9 +1870,9 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
           appendMintLog(
             collectionMintPaymentModel === 'begin'
               ? `Single-tx safety cap <= ${toMicroStxLabel(singleTxSpendCap)} (begin fee + seal protocol fee; mint price settled at begin).`
-              : useAdvertisedTotalCap
+              : useMintPriceTotalCap
                 ? `Single-tx safety cap <= ${toMicroStxLabel(singleTxSpendCap)} (displayed mint price includes begin + seal protocol fees).`
-              : useAdvertisedSealCap
+              : useMintPriceSealCap
                 ? `Single-tx safety cap <= ${toMicroStxLabel(singleTxSpendCap)} (displayed mint price + begin anti-spam fee).`
                 : `Single-tx safety cap <= ${toMicroStxLabel(singleTxSpendCap)} (mint price + begin anti-spam + seal protocol fee).`
           );
@@ -2098,21 +2086,20 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                 protocolFeeMicroStx: contractStatus?.coreFeeUnitMicroStx ?? null,
                 totalChunks: chunks.length
               })
-            : useAdvertisedTotalCap
+            : useMintPriceTotalCap
               ? (() => {
-                  const beginCap = resolveBeginSpendCapForAdvertisedTotal();
+                  const beginCap = resolveBeginSpendCapForMintPriceTotal();
                   if (
                     beginCap === null ||
-                    collectionMintPricingConfig.advertisedMintPriceMicroStx === null
+                    collectionMintPricingConfig.mintPriceMicroStx === null
                   ) {
                     return null;
                   }
-                  const cap =
-                    collectionMintPricingConfig.advertisedMintPriceMicroStx - beginCap;
+                  const cap = collectionMintPricingConfig.mintPriceMicroStx - beginCap;
                   return cap >= 0n ? cap : null;
                 })()
-            : useAdvertisedSealCap
-              ? collectionMintPricingConfig.advertisedMintPriceMicroStx
+            : useMintPriceSealCap
+              ? collectionMintPricingConfig.mintPriceMicroStx
               : resolveCollectionSealSpendCapMicroStx({
                   mintPrice: contractStatus?.mintPrice ?? null,
                   activePhaseMintPrice: contractStatus?.activePhaseMintPrice ?? null,
@@ -2123,9 +2110,9 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
           appendMintLog(
             collectionMintPaymentModel === 'begin'
               ? `Seal safety cap <= ${toMicroStxLabel(sealSpendCap)} for ${chunks.length} chunk(s) (protocol seal fee only; mint price was charged at begin).`
-              : useAdvertisedTotalCap
+              : useMintPriceTotalCap
                 ? `Seal safety cap <= ${toMicroStxLabel(sealSpendCap)} for ${chunks.length} chunk(s) (displayed mint price includes begin + seal protocol fees).`
-              : useAdvertisedSealCap
+              : useMintPriceSealCap
                 ? `Seal safety cap <= ${toMicroStxLabel(sealSpendCap)} for ${chunks.length} chunk(s) (displayed mint price includes worst-case seal fee).`
                 : `Seal safety cap <= ${toMicroStxLabel(sealSpendCap)} for ${chunks.length} chunk(s) (mint price + protocol seal fee).`
           );
@@ -2183,7 +2170,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       canonicalHashHexByAssetId,
       chargeMintPriceAtBegin,
       collectionMintPaymentModel,
-      collectionMintPricingConfig.advertisedMintPriceMicroStx,
+      collectionMintPricingConfig.mintPriceMicroStx,
       contractStatus?.activePhaseMintPrice,
       contractStatus?.coreFeeUnitMicroStx,
       contractStatus?.mintPrice,
@@ -2195,13 +2182,13 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       pauseBeforeNextTx,
       resolveSmallSingleTxPostConditions,
       resolveSmallSingleTxSpendCap,
-      resolveBeginSpendCapForAdvertisedTotal,
+      resolveBeginSpendCapForMintPriceTotal,
       resolveSealPostConditions,
       resolveMintBeginPostConditions,
       requestCollectionContractCall,
       templateVersion,
-      useAdvertisedTotalCap,
-      useAdvertisedSealCap,
+      useMintPriceTotalCap,
+      useMintPriceSealCap,
       waitForMintProgress
     ]
   );
@@ -2659,11 +2646,46 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     : 'Auto-refreshing every ~6s while active. Waiting for first sync...';
   const effectiveOnChainMintPrice =
     contractStatus?.activePhaseMintPrice ?? contractStatus?.mintPrice ?? null;
-  const useAdvertisedSealPrice = useAdvertisedSealCap || useAdvertisedTotalCap;
-  const displayedMintPriceMicroStx = useAdvertisedSealPrice
-    ? collectionMintPricingConfig.advertisedMintPriceMicroStx
+  const useDisplayedMintPrice = useMintPriceSealCap || useMintPriceTotalCap;
+  const displayedMintPriceMicroStx = useDisplayedMintPrice
+    ? collectionMintPricingConfig.mintPriceMicroStx
     : effectiveOnChainMintPrice;
   const mintPriceLabel = toMicroStxLabel(displayedMintPriceMicroStx);
+  const mintPriceDisplay = formatMicroStxWithUsd(
+    displayedMintPriceMicroStx,
+    usdPriceBook
+  );
+  const freeMint = isDisplayedCollectionMintFree({
+    activePhaseMintPriceMicroStx: contractStatus?.activePhaseMintPrice ?? null,
+    paymentModel: collectionMintPaymentModel,
+    pricing: collectionMintPricingConfig,
+    statusMintPriceMicroStx: contractStatus?.mintPrice ?? null
+  });
+  const statePillLabel = soldOut
+    ? 'Sold out'
+    : contractStatus?.finalized
+      ? 'Finalized'
+      : contractStatus?.paused
+        ? 'Paused'
+        : published
+          ? 'Live'
+          : humanizeStateLabel(collectionState);
+  const statePillTone = soldOut
+    ? 'sold-out'
+    : contractStatus?.finalized
+      ? 'finalized'
+      : contractStatus?.paused
+        ? 'paused'
+        : published
+          ? 'live'
+          : 'unknown';
+  const mintPriceTone =
+    resolveCollectionMintPriceTone({
+      displayedMintPriceMicroStx,
+      freeMint
+    });
+  const mintPriceToneClass = `collection-live-page__hero-price-card--${mintPriceTone}`;
+  const heroStatusLabel = soldOut ? 'Sold out' : freeMint ? 'Free mint' : null;
   const mintBeginSpendCap = resolveCollectionBeginSpendCapMicroStx({
     mintPrice: contractStatus?.mintPrice ?? null,
     activePhaseMintPrice: contractStatus?.activePhaseMintPrice ?? null,
@@ -2801,15 +2823,41 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
           onDisconnect={handleDisconnectWallet}
         />
         <section className="collection-live-page__hero">
-          {soldOut && <span className="collection-live-page__stamp">Sold out</span>}
-          <div className="collection-live-page__hero-media">
-            {coverUrl ? (
-              <img src={coverUrl} alt={`${collectionTitle} cover`} />
-            ) : (
-              <div className="collection-live-page__hero-placeholder">
-                Cover image unavailable
+          <div className="collection-live-page__hero-media-column">
+            <div className="collection-live-page__hero-media">
+              {coverUrl ? (
+                <img src={coverUrl} alt={`${collectionTitle} cover`} />
+              ) : (
+                <div className="collection-live-page__hero-placeholder">
+                  Cover image unavailable
+                </div>
+              )}
+            </div>
+            <div className="collection-live-page__hero-media-summary">
+              <div className="collection-live-page__hero-pills">
+                <span className="collection-live-page__hero-pill collection-live-page__hero-pill--ticker">
+                  {collectionSymbol}
+                </span>
+                <span
+                  className={`collection-live-page__hero-pill collection-live-page__hero-pill--state collection-live-page__hero-pill--state-${statePillTone}`}
+                >
+                  {statePillLabel}
+                </span>
               </div>
-            )}
+              <div className={`collection-live-page__hero-price-card ${mintPriceToneClass}`}>
+                <span className="collection-live-page__hero-price-label">Mint price</span>
+                <strong>{mintPriceLabel}</strong>
+                <span className="collection-live-page__hero-price-subtle">
+                  {mintPriceDisplay.secondary ?? '\u00a0'}
+                </span>
+              </div>
+              {freeMint && (
+                <p className="collection-live-page__hero-media-note">
+                  This price covers Xtrata protocol fees only. Collectors still pay wallet mining
+                  fees, while artist, marketplace, and operator payouts stay at 0 STX.
+                </p>
+              )}
+            </div>
           </div>
           <div className="collection-live-page__hero-copy">
             <div className="collection-live-page__title-row">
@@ -2817,22 +2865,41 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                 <p className="collection-live-page__eyebrow">Live collection mint</p>
                 <h1>{collectionTitle}</h1>
               </div>
+              {heroStatusLabel && (
+                <div className="collection-live-page__hero-badge-slot">
+                  <span
+                    className={`collection-live-page__hero-banner ${
+                      soldOut
+                        ? 'collection-live-page__hero-banner--sold-out'
+                        : 'collection-live-page__hero-banner--free-mint'
+                    }`}
+                  >
+                    {heroStatusLabel}
+                  </span>
+                </div>
+              )}
               <div className="collection-live-page__artist-card">
                 <span className="meta-label">Artist address</span>
                 {artistBnsName && (
                   <span className="collection-live-page__artist-bns">{artistBnsName}</span>
                 )}
-                <span className="collection-live-page__artist-address">
-                  {artistAddress || 'Artist address unavailable'}
-                </span>
+                {artistExplorerUrl ? (
+                  <a
+                    className="collection-live-page__artist-address collection-live-page__artist-link"
+                    href={artistExplorerUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {artistAddress || 'Artist address unavailable'}
+                  </a>
+                ) : (
+                  <span className="collection-live-page__artist-address">
+                    {artistAddress || 'Artist address unavailable'}
+                  </span>
+                )}
               </div>
             </div>
             <p className="collection-live-page__description">{collectionDescription}</p>
-            <div className="collection-live-page__hero-meta">
-              <span>Ticker: {collectionSymbol}</span>
-              <span>State: {published ? 'Live' : collectionState || 'Unknown'}</span>
-              <span>Mint price: {mintPriceLabel}</span>
-            </div>
             <div className="collection-live-page__hero-stats">
               <article className="collection-live-page__hero-stat">
                 <span className="meta-label">Minted / max</span>
@@ -3034,9 +3101,9 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                   </>
                 )}
                 <p className="collection-live-page__mint-guide-note">
-                  {useAdvertisedTotalCap
+                  {useMintPriceTotalCap
                     ? 'Single-tx wallet cap is locked to the displayed mint price for this collection mode (begin + seal protocol fees absorbed).'
-                    : useAdvertisedSealCap
+                    : useMintPriceSealCap
                       ? 'Wallet seal cap is set to the displayed mint price for this collection mode.'
                     : `If mint price is 5 STX, wallet may currently show ${
                         exampleSealTotalForFiveStx
@@ -3237,11 +3304,11 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                           mintBeginSpendCap
                         )}. Upload enforces zero STX transfer. Seal <= fee-unit x (1 + ceil(chunks/50)) (mint price already charged at begin).`
                       : collectionMintPaymentModel === 'seal'
-                        ? useAdvertisedTotalCap
+                        ? useMintPriceTotalCap
                           ? `Deny mode caps: begin anti-spam <= ${toMicroStxLabel(
                               mintBeginSpendCap
                             )}. Upload enforces zero STX transfer. Single-tx cap <= displayed mint price (begin + seal protocol fees absorbed into display pricing).`
-                          : useAdvertisedSealCap
+                          : useMintPriceSealCap
                           ? `Deny mode caps: begin anti-spam <= ${toMicroStxLabel(
                               mintBeginSpendCap
                             )}. Upload enforces zero STX transfer. Seal <= displayed mint price (worst-case seal fee absorbed into display pricing).`

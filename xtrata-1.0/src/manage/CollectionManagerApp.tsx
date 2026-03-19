@@ -25,6 +25,7 @@ import AddressLabel from '../components/AddressLabel';
 import WalletTopBar from '../components/WalletTopBar';
 import { isXtrataOwnerAddress } from '../config/manage';
 import { hasCoverImageMetadata } from '../lib/collections/cover-image';
+import { resolveCollectionMintPricingMetadata } from '../lib/collection-mint/pricing-metadata';
 import { getNetworkFromAddress } from '../lib/network/guard';
 import { toStacksNetwork } from '../lib/network/stacks';
 import { useManageWallet } from './ManageWalletContext';
@@ -354,7 +355,7 @@ export default function CollectionManagerApp() {
     ? 'Step 4: Lock staged assets'
     : 'Step 2: Upload your artwork';
   const assetStagingSummary = lockStepFocused
-    ? 'Pricing lock is required before deploy. Click "Lock staged assets for deploy" to continue.'
+    ? 'Lock the collection so Step 3 can calculate the fee floor. Click "Lock staged assets for pricing" to continue.'
     : 'Upload files once and prepare the manifest for launch day.';
 
   const refreshJourneySnapshot = useCallback(async () => {
@@ -402,6 +403,7 @@ export default function CollectionManagerApp() {
       const metadataCollection = toRecord(metadata?.collection) ?? null;
       const collectionPage = toRecord(metadata?.collectionPage) ?? null;
       const coverImage = toRecord(collectionPage?.coverImage) ?? null;
+      const pricingMetadata = resolveCollectionMintPricingMetadata(metadata?.pricing);
       const mintType =
         toText(metadata?.mintType) === 'pre-inscribed'
           ? 'pre-inscribed'
@@ -468,7 +470,10 @@ export default function CollectionManagerApp() {
             const maxSupplyValue = parseUintPrimitive(maxSupplyRaw);
             unpaused =
               pausedValue === null ? null : !pausedValue;
-            launchMintPriceConfigured = mintPriceValue !== null;
+            launchMintPriceConfigured = preInscribedMint
+              ? mintPriceValue !== null
+              : pricingMetadata.mode !== 'raw-on-chain' ||
+                  (collectionState === 'published' && mintPriceValue !== null);
             launchMaxSupplyConfigured =
               preInscribedMint ||
               (maxSupplyValue !== null && maxSupplyValue > 0n);
@@ -1008,10 +1013,10 @@ export default function CollectionManagerApp() {
           <div className="panel__header">
             <div>
               <h2>
-                Step 1: Create your drop
-                <InfoTooltip text="Create and deploy with a locked template using drop basics, artist payout address, and Xtrata-managed marketplace/operator defaults." />
+                Step 1: Deploy / draft setup
+                <InfoTooltip text="Create a draft and deploy with a locked template using drop basics plus Xtrata-managed payout defaults. Standard-mint pricing is set later in Step 3." />
               </h2>
-              <p>Fill the guided fields, review, and deploy your contract. Going live happens in Step 4.</p>
+              <p>Set drop basics and deploy the contract template here. Standard mint price is configured later in Step 3 after Step 2 locks the fee floor.</p>
             </div>
             <div className="panel__actions">
               <button
@@ -1049,7 +1054,7 @@ export default function CollectionManagerApp() {
                 <InfoTooltip
                   text={
                     lockStepFocused
-                      ? 'Locking staged assets writes the deploy pricing lock that the deploy step now requires.'
+                      ? 'Locking staged assets writes the pricing lock that Step 3 uses to calculate the standard-mint fee floor.'
                       : 'Upload files to Cloudflare, compute hashes/chunks, and store manifest rows for minting.'
                   }
                 />
@@ -1087,11 +1092,11 @@ export default function CollectionManagerApp() {
               <div>
                 <h2>
                   Step 3: Launch controls
-                  <InfoTooltip text="Set essential contract launch values, then pause/unpause from one guided panel." />
+                  <InfoTooltip text="Set the single collector-facing mint price, supply, and pause state from one guided panel." />
                 </h2>
                 <p>
-                  Use quick actions to set on-chain payout base price, supply, and launch
-                  pause state.
+                  Use quick actions to set the collector-facing mint price, supply, and
+                  launch pause state.
                 </p>
               </div>
               <div className="panel__actions">
