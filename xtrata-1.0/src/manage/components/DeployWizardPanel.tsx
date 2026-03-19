@@ -116,9 +116,9 @@ const toDeployHardcodedSplitMetadata = (mintPriceMicroStx: bigint) => {
 };
 
 const resolveOnChainMintPriceAfterProtocolAbsorption = (params: {
-  advertisedMintPriceMicroStx: bigint;
+  mintPriceMicroStx: bigint;
   absorbedProtocolFeeMicroStx: bigint;
-}) => params.advertisedMintPriceMicroStx - params.absorbedProtocolFeeMicroStx;
+}) => params.mintPriceMicroStx - params.absorbedProtocolFeeMicroStx;
 
 const readCoreFeeUnitMicroStx = async (params: {
   coreTarget: ArtistDeployCoreTarget;
@@ -1145,7 +1145,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       return deployBuild.resolved.mintPriceMicroStx;
     }
     return resolveOnChainMintPriceAfterProtocolAbsorption({
-      advertisedMintPriceMicroStx: deployBuild.resolved.mintPriceMicroStx,
+      mintPriceMicroStx: deployBuild.resolved.mintPriceMicroStx,
       absorbedProtocolFeeMicroStx: pricingPreflight.absorbedProtocolFeeMicroStx
     });
   }, [
@@ -1814,7 +1814,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
             : 'worst-case seal protocol fee';
         setDeployPending(false);
         setStatus(
-          `Deploy blocked. Advertised mint price (${formatMicroStx(
+          `Deploy blocked. Mint price (${formatMicroStx(
             mintPriceMicroStx
           )}) must be at least the ${floorLabel} (${formatMicroStx(
             evaluation.absorbedProtocolFeeMicroStx
@@ -1844,7 +1844,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       deployPricingAbsorptionModel = deployPricingEvaluation.absorptionModel;
       const onChainMintPriceMicroStx =
         resolveOnChainMintPriceAfterProtocolAbsorption({
-          advertisedMintPriceMicroStx: refreshBuild.resolved.mintPriceMicroStx,
+          mintPriceMicroStx: refreshBuild.resolved.mintPriceMicroStx,
           absorbedProtocolFeeMicroStx: deployAbsorbedProtocolFeeMicroStx
         });
       if (onChainMintPriceMicroStx < 0n) {
@@ -1857,8 +1857,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       deployMintPriceStxForSource = formatMicroStxInput(onChainMintPriceMicroStx);
       appendDeployDebug('Protocol fee absorption prepared for deploy source', {
         attemptId,
-        advertisedMintPriceMicroStx:
-          refreshBuild.resolved.mintPriceMicroStx.toString(),
+        mintPriceMicroStx: refreshBuild.resolved.mintPriceMicroStx.toString(),
         absorptionModel: deployPricingAbsorptionModel,
         absorbedProtocolFeeMicroStx: deployAbsorbedProtocolFeeMicroStx.toString(),
         absorbedBeginFeeMicroStx: deployAbsorbedBeginFeeMicroStx.toString(),
@@ -1909,10 +1908,10 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         mode:
           mintType === 'standard'
             ? deployPricingAbsorptionModel === 'single-tx-total-fees'
-              ? 'advertised-includes-total-fees'
-              : 'advertised-includes-seal-fee'
+              ? 'price-includes-total-fees'
+              : 'price-includes-seal-fee'
             : 'raw-on-chain',
-        advertisedMintPriceMicroStx: refreshBuild.resolved.mintPriceMicroStx.toString(),
+        mintPriceMicroStx: refreshBuild.resolved.mintPriceMicroStx.toString(),
         onChainMintPriceMicroStx: deploySourceBuild.resolved.mintPriceMicroStx.toString(),
         absorbedSealFeeMicroStx: deployAbsorbedSealFeeMicroStx.toString(),
         absorbedBeginFeeMicroStx: deployAbsorbedBeginFeeMicroStx.toString(),
@@ -2136,7 +2135,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         sourceCompactionMode: DEPLOY_SOURCE_COMPACTION_MODE,
         coreContractId: networkCoreTarget.contractId,
         pricingAbsorptionModel: deployPricingAbsorptionModel,
-        advertisedMintPriceMicroStx: refreshBuild.resolved.mintPriceMicroStx.toString(),
+        mintPriceMicroStx: refreshBuild.resolved.mintPriceMicroStx.toString(),
         onChainMintPriceMicroStx: deploySourceBuild.resolved.mintPriceMicroStx.toString(),
         absorbedProtocolFeeMicroStx: deployAbsorbedProtocolFeeMicroStx.toString(),
         absorbedBeginFeeMicroStx: deployAbsorbedBeginFeeMicroStx.toString(),
@@ -2371,7 +2370,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                 <span>Free mint mode</span>
               </label>
               <span className="field__hint">
-                Auto-sets the advertised price to the exact Xtrata fee floor once assets are
+                Auto-sets the mint price to the exact Xtrata fee floor once assets are
                 locked, then deploys a 0 STX on-chain mint price with 0/0/0 payout splits.
               </span>
             </div>
@@ -2414,7 +2413,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
             >
               {freeMintModeEnabled
                 ? minimumMintPriceMicroStx !== null
-                  ? `Free mint mode auto-sets the advertised price to ${formatMicroStx(
+                  ? `Free mint mode auto-sets the mint price to ${formatMicroStx(
                       minimumMintPriceMicroStx
                     )}. On deploy, on-chain mint price will be 0 STX with 0/0/0 payout splits.`
                   : 'Free mint mode is on. Upload and lock all files first in Step 2 so we can auto-set the exact fee-floor price.'
@@ -2709,7 +2708,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
               )}
               {pricingPreflight && (
                 <span className="meta-value">
-                  Pricing inputs used: advertised mint price{' '}
+                  Pricing inputs used: mint price{' '}
                   {formatMicroStx(pricingPreflight.mintPriceMicroStx)} · max chunks{' '}
                   {collectionDeployPricingLock.maxChunks.toString()} · fee unit{' '}
                   {formatMicroStx(pricingPreflight.feeUnitMicroStx)}.
@@ -3017,7 +3016,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                     )}
                   {deployBuild.resolved.mintType === 'standard' && pricingPreflight && (
                     <p className="meta-value">
-                      <strong>Pricing inputs used:</strong> advertised mint price{' '}
+                      <strong>Pricing inputs used:</strong> mint price{' '}
                       {formatMicroStx(pricingPreflight.mintPriceMicroStx)} · max chunks{' '}
                       {collectionDeployPricingLock
                         ? collectionDeployPricingLock.maxChunks.toString()

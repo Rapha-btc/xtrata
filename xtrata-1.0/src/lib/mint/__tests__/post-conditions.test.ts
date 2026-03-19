@@ -233,7 +233,7 @@ describe('mint post conditions', () => {
     expect(cap).toBe(1_300_000n);
   });
 
-  it('supports collection small single-tx cap override for advertised seal pricing', () => {
+  it('supports collection small single-tx cap override for display-price seal pricing', () => {
     const cap = resolveCollectionSmallSingleTxSpendCapMicroStx({
       mintPrice: 1_000_000n,
       protocolFeeMicroStx: 100_000n,

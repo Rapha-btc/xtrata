@@ -1198,9 +1198,9 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
   const collectionDescriptionFromMetadata = toText(metadataCollection?.description);
   const collectionSupplyFromMetadata = toText(metadataCollection?.supply);
   const collectionMintPriceStx = toText(metadataCollection?.mintPriceStx);
-  const advertisedPriceLabel = preInscribedMint
-    ? 'Advertised sale price (live page)'
-    : 'Advertised mint price (live page)';
+  const livePagePriceLabel = preInscribedMint
+    ? 'Sale price (live page)'
+    : 'Mint price (live page)';
   const onChainPriceLabel = preInscribedMint
     ? 'On-chain sale price'
     : 'On-chain payout base price';
@@ -1778,14 +1778,14 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
               args: [],
               notices: [],
               error:
-                'Advertised seal price is lower than the protocol seal fee. Increase advertised price or lower expected chunks.'
+                'Mint price is lower than the protocol seal fee. Increase price or lower expected chunks.'
             };
           }
-          const advertised = value;
-          value = advertised - sealProtocolFee;
+          const mintPrice = value;
+          value = mintPrice - sealProtocolFee;
           notices.push(
-            `Fee absorption enabled: advertised seal ${formatMicroStx(
-              advertised
+            `Fee absorption enabled: mint price ${formatMicroStx(
+              mintPrice
             )} - protocol seal fee ${formatMicroStx(
               sealProtocolFee
             )} = on-chain payout base price ${formatMicroStx(
@@ -2220,7 +2220,7 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
             </div>
             <div className="collection-settings-panel__summary-item">
               <span className="meta-label info-label">
-                {advertisedPriceLabel}
+                {livePagePriceLabel}
                 <InfoTooltip text="Collector-facing price shown on the live mint page." />
               </span>
               <span className="meta-value">{formatDraftStx(collectionMintPriceStx)}</span>
@@ -2619,7 +2619,7 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
           </div>
           <div className="collection-settings-panel__summary-item">
             <span className="meta-label info-label">
-              {advertisedPriceLabel}
+              {livePagePriceLabel}
               <InfoTooltip text="Collector-facing price from draft/live-page metadata." />
             </span>
             <span className="meta-value">{formatDraftStx(collectionMintPriceStx)}</span>
@@ -2747,7 +2747,7 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
           <div className="field field--full">
             <span className="field__label info-label">
               On-chain price input mode
-              <InfoTooltip text="Optional helper: keep begin anti-spam fee separate, and absorb seal protocol fee into your advertised mint price target." />
+              <InfoTooltip text="Optional helper: keep begin anti-spam fee separate, and absorb seal protocol fee into your mint price target." />
             </span>
             <select
               className="select"
@@ -2760,7 +2760,7 @@ export default function CollectionSettingsPanel(props: CollectionSettingsPanelPr
             >
               <option value="raw">Raw on-chain payout base (no absorption)</option>
               <option value="absorb">
-                Advertised mint target (auto-subtract seal protocol fee)
+                Mint price target (auto-subtract seal protocol fee)
               </option>
             </select>
             <span className="field__hint">

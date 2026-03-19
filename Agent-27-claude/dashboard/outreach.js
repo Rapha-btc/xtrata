@@ -647,9 +647,14 @@ If it fails, explain why.`;
       }
     }
 
+    // Match by displayName, registryId, stxAddress, or registry displayName
+    const regAgents = loadAgentsRegistry(registryFile, legacyRegistryFile);
+    const regByName = regAgents.find(a => (a.displayName || a.name) === targetName);
     const target = messages.find(m => m.displayName === targetName)
       || messages.find(m => m.registryId && m.registryId === targetName)
-      || messages.find(m => m.stxAddress && m.stxAddress === targetName);
+      || messages.find(m => m.stxAddress && m.stxAddress === targetName)
+      || (regByName && messages.find(m => m.stxAddress === regByName.stxAddress))
+      || (regByName && messages.find(m => String(m.registryId) === String(regByName.id)));
     if (!target) return res.status(404).json({ ok: false, error: `Target "${targetName}" not found in campaign or reply queue` });
 
     // Use edited message from frontend if provided
@@ -932,8 +937,11 @@ Do not include any other text or markers in your response.`;
       // Add to reply queue so it appears in the campaign dropdown
       if (message && message !== 'No message generated') {
         const memName = markdown.getOutreachAgentMemory(agent.id);
+        const resolvedName = (memName && memName.agentName && !memName.agentName.startsWith('Agent #') ? memName.agentName : null)
+          || (agent.displayName && !agent.displayName.startsWith('Agent #') ? agent.displayName : null)
+          || agent.displayName || agent.name;
         markdown.appendReplyQueue({
-          displayName: (memName && memName.agentName) || agent.displayName || agent.name,
+          displayName: resolvedName,
           agentId: String(agent.id),
           stxAddress: agent.stxAddress || '',
           btcAddress: agent.btcAddress || '',

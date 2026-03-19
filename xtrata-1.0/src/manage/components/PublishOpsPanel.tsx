@@ -1585,7 +1585,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
             <span>Ticker: {previewSymbol}</span>
             <span>State: {liveState}</span>
             <span>Supply: {previewSupply > 0 ? previewSupply : 'TBD'}</span>
-            <span>Advertised mint price: {previewMintPrice} STX</span>
+            <span>Mint price: {previewMintPrice} STX</span>
           </div>
           <div className="mint-actions">
             <button className="button" type="button" disabled>
@@ -1601,7 +1601,7 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
       <div className="deploy-wizard__defaults">
         <p className="deploy-wizard__defaults-title info-label">
           Mining fee guidance (largest file)
-          <InfoTooltip text="Server-side estimate of mining fees for begin, upload batch(es), and seal based on the largest staged file. If largest file is <=30 chunks on v1.4+, mint can route to one wallet transaction. Protocol fees are separate from the advertised mint price." />
+          <InfoTooltip text="Server-side estimate of mining fees for begin, upload batch(es), and seal based on the largest staged file. If largest file is <=30 chunks on v1.4+, mint can route to one wallet transaction. This estimate is separate from the collection mint price." />
         </p>
         {feeGuidance?.available ? (
           <>

@@ -10,6 +10,11 @@ import { useQueryClient } from '@tanstack/react-query';
 import { PUBLIC_CONTRACT, PUBLIC_MINT_RESTRICTIONS } from './config/public';
 import { getContractId } from './lib/contract/config';
 import { resolveCollectionMintPaymentModel } from './lib/collection-mint/payment-model';
+import {
+  resolveCollectionMintPricingMetadata,
+  resolveDisplayedCollectionMintPrice,
+  type CollectionMintPricingMetadata
+} from './lib/collection-mint/pricing-metadata';
 import { resolveCollectionCoverImageUrl } from './lib/collections/cover-image';
 import { resolveCollectionContractLink } from './lib/collections/contract-link';
 import {
@@ -142,9 +147,7 @@ type PublicLiveCollectionCard = {
   contractId: string | null;
   contractTarget: PublicCollectionContractTarget | null;
   templateVersion: string;
-  pricingMode: string;
-  pricingAdvertisedMintPriceMicroStx: bigint | null;
-  pricingOnChainMintPriceMicroStx: bigint | null;
+  pricing: CollectionMintPricingMetadata;
 };
 
 const DOC_SECTIONS: DocSection[] = [
@@ -984,27 +987,13 @@ const resolvePublicDisplayedMintPrice = (
     return onChainPrice;
   }
   const paymentModel = resolveCollectionMintPaymentModel(collection.templateVersion);
-  if (paymentModel !== 'seal') {
-    return onChainPrice;
-  }
-  const pricingMode = collection.pricingMode.toLowerCase();
-  if (
-    pricingMode !== 'advertised-includes-seal-fee' &&
-    pricingMode !== 'advertised-includes-total-fees'
-  ) {
-    return onChainPrice;
-  }
-  const advertised = collection.pricingAdvertisedMintPriceMicroStx;
-  const onChainFromMetadata = collection.pricingOnChainMintPriceMicroStx;
-  if (
-    advertised === null ||
-    onChainFromMetadata === null ||
-    status.mintPrice === null ||
-    onChainFromMetadata !== status.mintPrice
-  ) {
-    return onChainPrice;
-  }
-  return advertised;
+  return resolveDisplayedCollectionMintPrice({
+    activePhaseMintPriceMicroStx: status.activePhaseMintPrice,
+    onChainMintPriceMicroStx: onChainPrice,
+    paymentModel,
+    pricing: collection.pricing,
+    statusMintPriceMicroStx: status.mintPrice
+  });
 };
 
 const getErrorMessage = (error: unknown) => {
@@ -1572,13 +1561,7 @@ export default function PublicApp() {
           contractId,
           contractTarget,
           templateVersion: toText(metadata?.templateVersion),
-          pricingMode: toText(metadataPricing?.mode),
-          pricingAdvertisedMintPriceMicroStx: toBigIntOrNull(
-            metadataPricing?.advertisedMintPriceMicroStx
-          ),
-          pricingOnChainMintPriceMicroStx: toBigIntOrNull(
-            metadataPricing?.onChainMintPriceMicroStx
-          )
+          pricing: resolveCollectionMintPricingMetadata(metadataPricing)
         };
       });
     return sortPublicCollectionCards(cards);
