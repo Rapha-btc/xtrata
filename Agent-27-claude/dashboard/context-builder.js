@@ -103,7 +103,10 @@ function uniqFileSpecs(fileSpecs) {
 
 function readFileSnippet(absPath, maxBytes) {
   try {
-    const raw = fs.readFileSync(absPath, 'utf8');
+    // Strip null bytes and control chars (except \n \r \t) — some registry
+    // entries contain binary prefixes that crash spawn() via args.
+    const raw = fs.readFileSync(absPath, 'utf8')
+      .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '');
     if (Buffer.byteLength(raw, 'utf8') <= maxBytes) return raw;
 
     let snippet = raw;

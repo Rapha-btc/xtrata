@@ -1614,12 +1614,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function loadOutreachDraft() {
         return fetchJson('/api/outreach/draft').then((draft) => {
-            outreachAgentSelect.value = draft.agentId || '';
-            outreachModeSelect.value = draft.mode || 'intro';
-            outreachIncomingInput.value = draft.incomingMessage || '';
-            outreachMessageInput.value = draft.message || '';
-            setOutreachThought(draft);
-            return fetchOutreachAgentMemory(draft.agentId);
+            // Only restore draft if it has a valid agent and message
+            if (draft.agentId && draft.message) {
+                outreachAgentSelect.value = draft.agentId || '';
+                outreachModeSelect.value = draft.mode || 'intro';
+                outreachIncomingInput.value = draft.incomingMessage || '';
+                outreachMessageInput.value = draft.message || '';
+                setOutreachThought(draft);
+                return fetchOutreachAgentMemory(draft.agentId);
+            }
         });
     }
 
@@ -1689,11 +1692,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!agentId) {
             outreachMemory.classList.remove('visible');
             outreachIncomingInput.value = '';
+            outreachMessageInput.value = '';
             renderOutreachHistory([]); // clear filtered view
             return;
         }
         const agent = registeredAgents.find(a => String(a.id) === String(agentId));
         fetchOutreachAgentMemory(agentId);
+
+        // Clear stale message from previous agent
+        outreachMessageInput.value = '';
 
         // Auto-populate context from agent enrichment data
         if (agent) {
@@ -1706,6 +1713,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 outreachModeSelect.value = 'intro';
                 outreachIncomingInput.value = '';
             }
+        }
+
+        // Load draft from reply queue if one exists for this agent
+        const queued = campaignMessages.find(m =>
+            String(m.registryId) === String(agentId) && m.source === 'reply-queue' && !m.alreadySent
+        );
+        if (queued) {
+            outreachMessageInput.value = queued.message;
         }
 
         // Show only this agent's history
@@ -2781,14 +2796,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 btnOutreachResearch.textContent = 'RESEARCH & GENERATE';
                 if (data.success) {
                     showOutreachStatus('Research complete — reply added to campaign queue', 'success');
-                    if (data.mode) outreachModeSelect.value = data.mode;
-                    outreachMessageInput.value = data.message;
-                    setOutreachThought(data);
-                    saveOutreachDraft({ silent: true });
+                    // Only update the textarea if the selected agent matches
+                    const selectedAgentId = outreachAgentSelect.value;
+                    const researchAgentId = data.agentId || selectedAgentId;
+                    if (String(selectedAgentId) === String(researchAgentId)) {
+                        if (data.mode) outreachModeSelect.value = data.mode;
+                        outreachMessageInput.value = data.message;
+                        setOutreachThought(data);
+                        saveOutreachDraft({ silent: true });
+                    }
                     fetchOutreachHistory();
-                    fetchOutreachAgentMemory(outreachAgentSelect.value);
+                    fetchOutreachAgentMemory(selectedAgentId);
                     // Instantly add generated reply to campaign dropdown
-                    const agentId = outreachAgentSelect.value || data.agentId;
+                    const agentId = selectedAgentId || researchAgentId;
                     const agent = registeredAgents.find(a => String(a.id) === String(agentId));
                     if (agent && data.message) {
                         addToCampaign({

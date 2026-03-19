@@ -86,6 +86,20 @@ async function syncInbox() {
     }
     markdown.updateOutreachAgentMemory(agentId, memoryPatch);
 
+    // Backfill btcAddress and displayName into registry if resolved
+    if (agent) {
+      let dirty = false;
+      if (memoryPatch.btcAddress && !agent.btcAddress) {
+        agent.btcAddress = memoryPatch.btcAddress;
+        dirty = true;
+      }
+      if (memoryPatch.agentName && (!agent.displayName || agent.displayName.startsWith('Agent #'))) {
+        agent.displayName = memoryPatch.agentName;
+        dirty = true;
+      }
+      if (dirty) saveAgentsRegistry(_registryFile, agents);
+    }
+
     newMessages.push(historyEntry);
   }
 
@@ -685,6 +699,26 @@ If it fails, explain why.`;
       next: 'Awaiting reply'
     });
 
+    // Resolve btcAddress if missing — check agent memory, then registry
+    if (!target.btcAddress) {
+      const memBtc = memEntry?.btcAddress;
+      if (memBtc) {
+        target.btcAddress = memBtc;
+      } else {
+        // Look up via inbox history — peer addresses from prior messages
+        const peerHist = history.find(h =>
+          h.peerBtcAddress && (h.agent === targetName || (() => {
+            const ag = loadAgentsRegistry(registryFile, legacyRegistryFile).find(a => String(a.id) === String(h.agentId));
+            return ag && ag.stxAddress === target.stxAddress;
+          })())
+        );
+        if (peerHist) target.btcAddress = peerHist.peerBtcAddress;
+      }
+    }
+    if (!target.btcAddress) {
+      return res.status(400).json({ ok: false, error: `No BTC address found for ${targetName}. Sync inbox first to resolve addresses.` });
+    }
+
     // Trigger send via the existing Claude-based flow
     // First, set the agent registry entry if needed
     const agents = loadAgentsRegistry(registryFile, legacyRegistryFile);
@@ -692,6 +726,11 @@ If it fails, explain why.`;
     if (!agent) {
       agent = { id: target.registryId || target.displayName, name: target.displayName, stxAddress: target.stxAddress, btcAddress: target.btcAddress, description: '' };
       agents.push(agent);
+      saveAgentsRegistry(registryFile, agents);
+    }
+    // Backfill btcAddress in registry if it was resolved
+    if (target.btcAddress && !agent.btcAddress) {
+      agent.btcAddress = target.btcAddress;
       saveAgentsRegistry(registryFile, agents);
     }
 

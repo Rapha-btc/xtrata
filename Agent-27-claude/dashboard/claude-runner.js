@@ -232,6 +232,9 @@ function runClaude({ model, budget, prompt, cwd, phaseType = 'research', onLine,
     console.log(`[claude-runner] Auth OK (${auth.source})`);
 
     const mcpConfigPath = path.join(__dirname, '..', '.mcp.json');
+    // Strip null bytes and control chars that crash spawn() — registry data
+    // can contain binary prefixes (e.g. \x00, \x1a in agent descriptions).
+    const safePrompt = prompt.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '');
     const args = [
       '-p',
       '--verbose',
@@ -242,7 +245,7 @@ function runClaude({ model, budget, prompt, cwd, phaseType = 'research', onLine,
       '--dangerously-skip-permissions',
       '--mcp-config', mcpConfigPath,
       '--',
-      prompt
+      safePrompt
     ];
 
     console.log(`[claude-runner] Spawning: ${CLAUDE_BIN} -p --model ${model} --max-budget-usd ${budget} (prompt: ${prompt.length} chars, cwd: ${cwd})`);
