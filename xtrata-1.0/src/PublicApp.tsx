@@ -2394,6 +2394,11 @@ export default function PublicApp() {
                   const mintStateLabel = buildMintStateLabel(mintStatus);
                   const soldOut = isPublicMintSoldOut(mintStatus);
                   const freeMint = isPublicCollectionFreeMint(collection, mintStatus);
+                  const statusBadge = soldOut ? (
+                    <span className="badge badge--compact badge--sold-out">Sold out</span>
+                  ) : freeMint ? (
+                    <span className="badge badge--compact badge--free-mint">Free mint</span>
+                  ) : null;
                   const coverPreviewErrored = Boolean(
                     liveCoverPreviewErrorByCollectionId[collection.id]
                   );
@@ -2405,13 +2410,6 @@ export default function PublicApp() {
                       href={collection.livePath}
                       aria-label={`Open ${collection.name} collection page`}
                     >
-                      {soldOut ? (
-                        <span className="collection-live-page__stamp">Sold out</span>
-                      ) : freeMint ? (
-                        <span className="collection-live-page__stamp collection-live-page__stamp--free-mint">
-                          Free mint
-                        </span>
-                      ) : null}
                       <div className="public-live-collections__media-stack">
                         <div className="public-live-collections__media">
                           {collection.coverImageUrl && !coverPreviewErrored ? (
@@ -2444,7 +2442,10 @@ export default function PublicApp() {
                       </div>
                       <div className="public-live-collections__card-header">
                         <h3>{collection.name}</h3>
-                        <span className="badge badge--neutral">{collection.symbol}</span>
+                        <div className="public-live-collections__card-badges">
+                          <span className="badge badge--neutral">{collection.symbol}</span>
+                          {statusBadge}
+                        </div>
                       </div>
                       <div className="public-live-collections__artist">
                         <span className="meta-label">Artist</span>

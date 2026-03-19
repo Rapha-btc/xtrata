@@ -60,6 +60,7 @@ import {
   SMALL_MINT_HELPER_MAX_CHUNKS,
   TX_DELAY_SECONDS
 } from './lib/mint/constants';
+import { getStacksExplorerAddressUrl } from './lib/network/explorer';
 import { getNetworkFromAddress, getNetworkMismatch } from './lib/network/guard';
 import { toStacksNetwork } from './lib/network/stacks';
 import type { NetworkType } from './lib/network/types';
@@ -763,6 +764,10 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     enabled: Boolean(artistAddress && validateStacksAddress(artistAddress) && artistNetwork)
   });
   const artistBnsName = artistBnsQuery.data?.primary ?? null;
+  const artistExplorerUrl = useMemo(
+    () => (artistAddress ? getStacksExplorerAddressUrl(artistAddress, artistNetwork) : null),
+    [artistAddress, artistNetwork]
+  );
 
   const collectionSymbol = useMemo(
     () => toText(metadataCollection?.symbol) || 'NO-TICKER',
@@ -2640,6 +2645,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     pricing: collectionMintPricingConfig,
     statusMintPriceMicroStx: contractStatus?.mintPrice ?? null
   });
+  const heroStatusLabel = soldOut ? 'Sold out' : freeMint ? 'Free mint' : null;
   const mintBeginSpendCap = resolveCollectionBeginSpendCapMicroStx({
     mintPrice: contractStatus?.mintPrice ?? null,
     activePhaseMintPrice: contractStatus?.activePhaseMintPrice ?? null,
@@ -2777,15 +2783,6 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
           onDisconnect={handleDisconnectWallet}
         />
         <section className="collection-live-page__hero">
-          {soldOut ? (
-            <span className="collection-live-page__stamp collection-live-page__stamp--hero">
-              Sold out
-            </span>
-          ) : freeMint ? (
-            <span className="collection-live-page__stamp collection-live-page__stamp--hero collection-live-page__stamp--free-mint">
-              Free mint
-            </span>
-          ) : null}
           <div className="collection-live-page__hero-media">
             {coverUrl ? (
               <img src={coverUrl} alt={`${collectionTitle} cover`} />
@@ -2800,27 +2797,53 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
               <div className="collection-live-page__title-block">
                 <p className="collection-live-page__eyebrow">Live collection mint</p>
                 <h1>{collectionTitle}</h1>
+                <div className="collection-live-page__title-badges">
+                  <span className="badge badge--neutral">{collectionSymbol}</span>
+                </div>
               </div>
+              {heroStatusLabel && (
+                <div className="collection-live-page__hero-badge-slot">
+                  <span
+                    className={`collection-live-page__hero-banner ${
+                      soldOut
+                        ? 'collection-live-page__hero-banner--sold-out'
+                        : 'collection-live-page__hero-banner--free-mint'
+                    }`}
+                  >
+                    {heroStatusLabel}
+                  </span>
+                </div>
+              )}
               <div className="collection-live-page__artist-card">
                 <span className="meta-label">Artist address</span>
                 {artistBnsName && (
                   <span className="collection-live-page__artist-bns">{artistBnsName}</span>
                 )}
-                <span className="collection-live-page__artist-address">
-                  {artistAddress || 'Artist address unavailable'}
-                </span>
+                {artistExplorerUrl ? (
+                  <a
+                    className="collection-live-page__artist-address collection-live-page__artist-link"
+                    href={artistExplorerUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {artistAddress || 'Artist address unavailable'}
+                  </a>
+                ) : (
+                  <span className="collection-live-page__artist-address">
+                    {artistAddress || 'Artist address unavailable'}
+                  </span>
+                )}
               </div>
             </div>
             <p className="collection-live-page__description">{collectionDescription}</p>
             <div className="collection-live-page__hero-meta">
-              <span>Ticker: {collectionSymbol}</span>
               <span>State: {published ? 'Live' : collectionState || 'Unknown'}</span>
               <span>Mint price: {mintPriceLabel}</span>
             </div>
             {freeMint && (
               <p className="collection-live-page__price-note">
-                Free mint: collectors only cover Xtrata protocol fees. Artist, marketplace, and
-                operator payouts are 0 STX on this mint.
+                This {mintPriceLabel} price is the Xtrata protocol fee only. Collectors still pay
+                wallet mining fees, while artist, marketplace, and operator payouts stay at 0 STX.
               </p>
             )}
             <div className="collection-live-page__hero-stats">
