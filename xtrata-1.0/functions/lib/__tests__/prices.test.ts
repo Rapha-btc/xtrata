@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { hasSpotPriceData, parseCoinGeckoSpotPayload } from '../prices';
+import {
+  hasSpotPriceData,
+  parseCoinGeckoSpotPayload,
+  parseCoinbaseSpotPayload
+} from '../prices';
 
 describe('public price helpers', () => {
   it('parses direct CoinGecko spot prices', () => {
@@ -50,5 +54,29 @@ describe('public price helpers', () => {
     expect(snapshot.prices.sbtc).toBeNull();
     expect(snapshot.prices.usdc).toBeNull();
     expect(hasSpotPriceData(snapshot)).toBe(false);
+  });
+
+  it('parses Coinbase fallback spot prices', () => {
+    const snapshot = parseCoinbaseSpotPayload(
+      {
+        stx: {
+          data: { amount: '0.24475', base: 'STX', currency: 'USD' }
+        },
+        bitcoin: {
+          data: { amount: '69856.52', base: 'BTC', currency: 'USD' }
+        },
+        usdc: {
+          data: { amount: '1', base: 'USDC', currency: 'USD' }
+        }
+      },
+      1_711_111_115_000
+    );
+
+    expect(snapshot.provider).toBe('coinbase');
+    expect(snapshot.prices.stx?.usd).toBe(0.24475);
+    expect(snapshot.prices.sbtc?.usd).toBe(69_856.52);
+    expect(snapshot.prices.sbtc?.isFallback).toBe(true);
+    expect(snapshot.prices.usdc?.usd).toBe(1);
+    expect(hasSpotPriceData(snapshot)).toBe(true);
   });
 });
