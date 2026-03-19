@@ -5270,10 +5270,30 @@ p {
   z-index: 2;
 }
 
+.collection-live-page__stamp--hero {
+  top: 18px;
+  right: 18px;
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  padding: 8px 14px;
+}
+
+.collection-live-page__stamp--free-mint {
+  border-color: rgba(22, 163, 74, 0.4);
+  background: rgba(22, 163, 74, 0.14);
+  color: #166534;
+}
+
 [data-theme]:not([data-theme='light']) .collection-live-page__stamp {
   border-color: rgba(248, 113, 113, 0.55);
   background: rgba(127, 29, 29, 0.5);
   color: #fecaca;
+}
+
+[data-theme]:not([data-theme='light']) .collection-live-page__stamp--free-mint {
+  border-color: rgba(74, 222, 128, 0.55);
+  background: rgba(20, 83, 45, 0.55);
+  color: #bbf7d0;
 }
 
 .collection-live-page__hero-media {
@@ -5376,6 +5396,17 @@ p {
   gap: 6px 10px;
   font-size: 0.78rem;
   color: var(--muted);
+}
+
+.collection-live-page__price-note {
+  max-width: 52ch;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: #166534;
+}
+
+[data-theme]:not([data-theme='light']) .collection-live-page__price-note {
+  color: #86efac;
 }
 
 .collection-live-page__hero-stats {

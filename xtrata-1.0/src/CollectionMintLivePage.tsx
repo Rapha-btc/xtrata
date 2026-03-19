@@ -39,6 +39,7 @@ import {
   type CollectionMiningFeeGuidance
 } from './lib/collection-mint/mining-fee-guidance';
 import {
+  isDisplayedCollectionMintFree,
   resolveCollectionMintPricingMetadata,
   type CollectionMintPricingMetadata
 } from './lib/collection-mint/pricing-metadata';
@@ -2633,6 +2634,12 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     ? collectionMintPricingConfig.mintPriceMicroStx
     : effectiveOnChainMintPrice;
   const mintPriceLabel = toMicroStxLabel(displayedMintPriceMicroStx);
+  const freeMint = isDisplayedCollectionMintFree({
+    activePhaseMintPriceMicroStx: contractStatus?.activePhaseMintPrice ?? null,
+    paymentModel: collectionMintPaymentModel,
+    pricing: collectionMintPricingConfig,
+    statusMintPriceMicroStx: contractStatus?.mintPrice ?? null
+  });
   const mintBeginSpendCap = resolveCollectionBeginSpendCapMicroStx({
     mintPrice: contractStatus?.mintPrice ?? null,
     activePhaseMintPrice: contractStatus?.activePhaseMintPrice ?? null,
@@ -2770,7 +2777,15 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
           onDisconnect={handleDisconnectWallet}
         />
         <section className="collection-live-page__hero">
-          {soldOut && <span className="collection-live-page__stamp">Sold out</span>}
+          {soldOut ? (
+            <span className="collection-live-page__stamp collection-live-page__stamp--hero">
+              Sold out
+            </span>
+          ) : freeMint ? (
+            <span className="collection-live-page__stamp collection-live-page__stamp--hero collection-live-page__stamp--free-mint">
+              Free mint
+            </span>
+          ) : null}
           <div className="collection-live-page__hero-media">
             {coverUrl ? (
               <img src={coverUrl} alt={`${collectionTitle} cover`} />
@@ -2802,6 +2817,12 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
               <span>State: {published ? 'Live' : collectionState || 'Unknown'}</span>
               <span>Mint price: {mintPriceLabel}</span>
             </div>
+            {freeMint && (
+              <p className="collection-live-page__price-note">
+                Free mint: collectors only cover Xtrata protocol fees. Artist, marketplace, and
+                operator payouts are 0 STX on this mint.
+              </p>
+            )}
             <div className="collection-live-page__hero-stats">
               <article className="collection-live-page__hero-stat">
                 <span className="meta-label">Minted / max</span>

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  isDisplayedCollectionMintFree,
   resolveCollectionMintPricingMetadata,
   resolveDisplayedCollectionMintPrice
 } from '../pricing-metadata';
@@ -63,5 +64,51 @@ describe('resolveDisplayedCollectionMintPrice', () => {
     });
 
     expect(displayed).toBe(120_000n);
+  });
+});
+
+describe('isDisplayedCollectionMintFree', () => {
+  it('returns true when metadata matches an absorbed-fee-only free mint', () => {
+    const freeMint = isDisplayedCollectionMintFree({
+      activePhaseMintPriceMicroStx: null,
+      paymentModel: 'seal',
+      pricing: resolveCollectionMintPricingMetadata({
+        mode: 'price-includes-total-fees',
+        mintPriceMicroStx: '300000',
+        onChainMintPriceMicroStx: '0',
+        absorbedProtocolFeeMicroStx: '300000'
+      }),
+      statusMintPriceMicroStx: 0n
+    });
+
+    expect(freeMint).toBe(true);
+  });
+
+  it('returns false when phase pricing is active or metadata is out of sync', () => {
+    const activePhaseFreeMint = isDisplayedCollectionMintFree({
+      activePhaseMintPriceMicroStx: 250_000n,
+      paymentModel: 'seal',
+      pricing: resolveCollectionMintPricingMetadata({
+        mode: 'price-includes-total-fees',
+        mintPriceMicroStx: '300000',
+        onChainMintPriceMicroStx: '0',
+        absorbedProtocolFeeMicroStx: '300000'
+      }),
+      statusMintPriceMicroStx: 0n
+    });
+    const staleMetadataFreeMint = isDisplayedCollectionMintFree({
+      activePhaseMintPriceMicroStx: null,
+      paymentModel: 'seal',
+      pricing: resolveCollectionMintPricingMetadata({
+        mode: 'price-includes-total-fees',
+        mintPriceMicroStx: '300000',
+        onChainMintPriceMicroStx: '0',
+        absorbedProtocolFeeMicroStx: '300000'
+      }),
+      statusMintPriceMicroStx: 10_000n
+    });
+
+    expect(activePhaseFreeMint).toBe(false);
+    expect(staleMetadataFreeMint).toBe(false);
   });
 });

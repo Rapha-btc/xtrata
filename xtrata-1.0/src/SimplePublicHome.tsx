@@ -17,6 +17,7 @@ import { PUBLIC_CONTRACT, PUBLIC_MINT_RESTRICTIONS } from './config/public';
 import { getContractId } from './lib/contract/config';
 import { resolveCollectionMintPaymentModel } from './lib/collection-mint/payment-model';
 import {
+  isDisplayedCollectionMintFree,
   resolveCollectionMintPricingMetadata,
   resolveDisplayedCollectionMintPrice,
   type CollectionMintPricingMetadata
@@ -331,6 +332,21 @@ const resolveDisplayedMintPrice = (
     activePhaseMintPriceMicroStx: status.activePhaseMintPrice,
     onChainMintPriceMicroStx: onChainPrice,
     paymentModel,
+    pricing: collection.pricing,
+    statusMintPriceMicroStx: status.mintPrice
+  });
+};
+
+const isCollectionFreeMint = (
+  collection: LiveCollectionCard,
+  status: LiveMintStatus | null
+) => {
+  if (!status) {
+    return false;
+  }
+  return isDisplayedCollectionMintFree({
+    activePhaseMintPriceMicroStx: status.activePhaseMintPrice,
+    paymentModel: resolveCollectionMintPaymentModel(collection.templateVersion),
     pricing: collection.pricing,
     statusMintPriceMicroStx: status.mintPrice
   });
@@ -1061,6 +1077,7 @@ export default function SimplePublicHome() {
                       : null);
                   const mintStateLabel = buildMintStateLabel(mintStatus);
                   const soldOut = isCollectionSoldOut(mintStatus);
+                  const freeMint = isCollectionFreeMint(collection, mintStatus);
                   const coverPreviewErrored = Boolean(
                     liveCoverPreviewErrorByCollectionId[collection.id]
                   );
@@ -1071,7 +1088,13 @@ export default function SimplePublicHome() {
                       href={collection.livePath}
                       aria-label={`Open ${collection.name} collection page`}
                     >
-                      {soldOut && <span className="collection-live-page__stamp">Sold out</span>}
+                      {soldOut ? (
+                        <span className="collection-live-page__stamp">Sold out</span>
+                      ) : freeMint ? (
+                        <span className="collection-live-page__stamp collection-live-page__stamp--free-mint">
+                          Free mint
+                        </span>
+                      ) : null}
                       <div className="public-live-collections__media-stack">
                         <div className="public-live-collections__media">
                           {collection.coverImageUrl && !coverPreviewErrored ? (

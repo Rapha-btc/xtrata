@@ -99,3 +99,35 @@ export const resolveDisplayedCollectionMintPrice = (params: {
   }
   return params.pricing.mintPriceMicroStx;
 };
+
+export const isDisplayedCollectionMintFree = (params: {
+  activePhaseMintPriceMicroStx: bigint | null;
+  paymentModel: CollectionMintPaymentModel;
+  pricing: CollectionMintPricingMetadata;
+  statusMintPriceMicroStx: bigint | null;
+}) => {
+  if (params.activePhaseMintPriceMicroStx !== null) {
+    return false;
+  }
+  if (params.paymentModel !== 'seal') {
+    return false;
+  }
+  if (params.pricing.mode !== 'price-includes-total-fees') {
+    return false;
+  }
+  if (
+    params.pricing.mintPriceMicroStx === null ||
+    params.pricing.absorbedProtocolFeeMicroStx === null ||
+    params.pricing.onChainMintPriceMicroStx === null ||
+    params.statusMintPriceMicroStx === null
+  ) {
+    return false;
+  }
+  if (params.pricing.onChainMintPriceMicroStx !== params.statusMintPriceMicroStx) {
+    return false;
+  }
+  return (
+    params.pricing.mintPriceMicroStx === params.pricing.absorbedProtocolFeeMicroStx &&
+    params.pricing.onChainMintPriceMicroStx === 0n
+  );
+};
