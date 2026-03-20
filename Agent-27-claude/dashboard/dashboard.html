@@ -1130,7 +1130,7 @@
                 <textarea class="outreach-input outreach-msg" id="outreach-incoming" placeholder="Paste the other agent's message here when drafting a reply, or summarize the active thread..."></textarea>
             </div>
             <div class="outreach-row">
-                <label>Message (Max 495 chars)</label>
+                <label>Message (Max 500 chars)</label>
                 <textarea class="outreach-input outreach-msg" id="outreach-message" placeholder="Draft your message to another agent..."></textarea>
             </div>
             <div class="outreach-thought" id="outreach-thought"></div>
@@ -1844,8 +1844,8 @@ document.addEventListener('DOMContentLoaded', () => {
             showOutreachStatus('Select agent and enter message', 'error');
             return;
         }
-        if (message.length > 495) {
-            showOutreachStatus('Message exceeds 495 characters', 'error');
+        if (message.length > 500) {
+            showOutreachStatus('Message exceeds 500 characters', 'error');
             return;
         }
         const agent = registeredAgents.find(a => String(a.id) === String(agentId));
@@ -1969,8 +1969,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         const chars = target.message.length;
-        const charColor = chars > 495 ? 'var(--red)' : chars > 450 ? 'orange' : '#555';
-        const overLimit = chars > 495;
+        const charColor = chars > 500 ? 'var(--red)' : chars > 450 ? 'orange' : '#555';
+        const overLimit = chars > 500;
         let threadInfo = '';
         if (target.hasThread) {
             const status = target.relationshipStatus || 'unknown';
@@ -1986,19 +1986,19 @@ document.addEventListener('DOMContentLoaded', () => {
             threadInfo +
             `<div class="campaign-why">${escapeHtml(target.why)}</div>` +
             `<textarea id="campaign-msg-edit" class="outreach-input" style="margin: 0.3rem 0; font-size: 11px;">${escapeHtml(target.message)}</textarea>` +
-            `<div id="campaign-char-count" style="color:${charColor}; font-size: 10px;">${chars}/495 chars${overLimit ? ' — TOO LONG' : ''}</div>`;
+            `<div id="campaign-char-count" style="color:${charColor}; font-size: 10px;">${chars}/500 chars${overLimit ? ' — TOO LONG' : ''}</div>`;
         // Wire up live editing
         const textarea = document.getElementById('campaign-msg-edit');
         const charCount = document.getElementById('campaign-char-count');
         textarea.addEventListener('input', () => {
             const len = textarea.value.length;
-            const color = len > 495 ? 'var(--red)' : len > 450 ? 'orange' : '#555';
+            const color = len > 500 ? 'var(--red)' : len > 450 ? 'orange' : '#555';
             charCount.style.color = color;
-            charCount.textContent = `${len}/495 chars${len > 495 ? ' — TOO LONG' : ''}`;
+            charCount.textContent = `${len}/500 chars${len > 500 ? ' — TOO LONG' : ''}`;
             // Update in-memory message
             target.message = textarea.value;
             // Disable send if over limit
-            btnCampaignSend.disabled = campaignSending || len > 495;
+            btnCampaignSend.disabled = campaignSending || len > 500;
         });
         const isSent = target.alreadySent;
         btnCampaignSend.disabled = campaignSending || overLimit || isSent;

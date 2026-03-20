@@ -542,8 +542,8 @@ function mount({ addLog, broadcast, registryFile, legacyRegistryFile }) {
     if (!draft.agentId || !draft.message) {
       return res.status(400).json({ error: 'Agent and message required' });
     }
-    if (String(draft.message).length > 495) {
-      return res.status(400).json({ error: 'Outreach message exceeds 495 characters' });
+    if (String(draft.message).length > 500) {
+      return res.status(400).json({ error: 'Outreach message exceeds 500 characters' });
     }
 
     const agents = loadAgentsRegistry(registryFile, legacyRegistryFile);
@@ -737,9 +737,9 @@ function mount({ addLog, broadcast, registryFile, legacyRegistryFile }) {
       target.message = editedMessage;
     }
 
-    // Enforce 495-char limit
-    if (!target.message || target.message.length > 495) {
-      return res.status(400).json({ ok: false, error: `Message must be 1-495 characters (got ${(target.message || '').length})` });
+    // Enforce 500-char send limit (drafts aim for 495 but allow up to 500)
+    if (!target.message || target.message.length > 500) {
+      return res.status(400).json({ ok: false, error: `Message must be 1-500 characters (got ${(target.message || '').length})` });
     }
 
     // Prevent duplicate sends — block if this exact message text was already sent to this target
