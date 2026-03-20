@@ -665,7 +665,7 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
             <div className="mint-panel">
               <span className="meta-label">V1 → V2 migration</span>
               <p className="meta-value">
-                Migrate a V1 inscription into V2 to unlock parent/child linking
+                Migrate a V1 inscription into V2 to unlock dependency linking
                 and keep IDs in sync. This transfers the V1 token into the V2
                 contract escrow and mints the V2 token with the same ID.
               </p>

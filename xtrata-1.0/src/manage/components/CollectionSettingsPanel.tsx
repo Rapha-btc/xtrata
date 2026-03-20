@@ -348,14 +348,14 @@ const MUTABLE_ACTIONS: MutableAction[] = [
   },
   {
     key: 'set-default-dependencies',
-    label: 'Set default parent IDs',
+    label: 'Set default dependency IDs',
     group: 'Collection Configuration',
     functionName: 'set-default-dependencies',
-    description: 'Set parent inscription IDs applied by default.',
+    description: 'Set dependency inscription IDs applied by default.',
     fields: [
       {
         key: 'dependencies',
-        label: 'Parent IDs',
+        label: 'Dependency IDs',
         type: 'uintList',
         maxItems: 50,
         placeholder: 'Example: 40, 56, 57',

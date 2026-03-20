@@ -1929,8 +1929,8 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         {mintType === 'standard' && (
           <label className="field field--full">
             <span className="field__label info-label">
-              Parent inscriptions (optional)
-              <InfoTooltip text="Token IDs that should be attached as parents to every mint in this collection." />
+              Dependency IDs (optional)
+              <InfoTooltip text="Token IDs that should be attached as dependencies to every mint in this collection." />
             </span>
             <textarea
               className="textarea deploy-wizard__description"
@@ -1949,19 +1949,19 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         )}
         {mintType === 'standard' && parsedParentInput.invalidTokens.length > 0 && (
           <span className="relation-status relation-status--error">
-            Invalid parent IDs ignored: {parsedParentInput.invalidTokens.join(', ')}
+            Invalid dependency IDs ignored: {parsedParentInput.invalidTokens.join(', ')}
           </span>
         )}
         {mintType === 'standard' && previewParentIds.length > 0 && (
           <span className="meta-value">
-            Resolved parents: {previewParentIds.map((id) => id.toString()).join(', ')}
+            Resolved dependencies: {previewParentIds.map((id) => id.toString()).join(', ')}
           </span>
         )}
         {mintType === 'standard' && previewParentIds.length > 0 && (
           <div className="relation-panel">
-            <span className="meta-label">Parent thumbnails</span>
+            <span className="meta-label">Dependency thumbnails</span>
             {parentStatusSummary.loading.length > 0 && (
-              <span className="meta-value">Loading parent status...</span>
+              <span className="meta-value">Loading dependency status...</span>
             )}
             {parentStatusSummary.legacyOnly.length > 0 && (
               <span className="relation-status relation-status--warn">
@@ -1998,7 +1998,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                   </div>
                   <span className="relation-label">#{item.id.toString()}</span>
                   {item.status === 'owned' && (
-                    <span className="relation-status relation-status--ok">Owned</span>
+                    <span className="relation-status relation-status--ok">In wallet</span>
                   )}
                   {item.status === 'not-owned' && (
                     <span className="relation-status relation-status--error">Not in wallet</span>
@@ -2016,7 +2016,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
               ))}
             </div>
             {parentOverflowCount > 0 && (
-              <span className="meta-value">+{parentOverflowCount} more parents</span>
+              <span className="meta-value">+{parentOverflowCount} more dependencies</span>
             )}
           </div>
         )}
@@ -2076,8 +2076,8 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
 
       {mintType === 'standard' && parentInscriptions.trim().length > 0 && (
         <div className="alert">
-          Parent inscriptions enabled: collectors can still mint multiple items in one flow,
-          but final sealing must run one transaction per item so parent links are enforced.
+          Dependency IDs enabled: collectors can still mint multiple items in one flow,
+          but final sealing must run one transaction per item so dependency links are enforced.
           Begin/upload can still use chunk batching.
         </div>
       )}
@@ -2301,7 +2301,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                   )}
                   {deployBuild.resolved.mintType === 'standard' && (
                     <p>
-                      <strong>Default parent IDs:</strong>{' '}
+                      <strong>Default dependency IDs:</strong>{' '}
                       {deployBuild.resolved.defaultDependencyIds.length === 0
                         ? 'None'
                         : deployBuild.resolved.defaultDependencyIds
@@ -2313,7 +2313,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                     deployBuild.resolved.defaultDependencyIds.length > 0 && (
                       <p className="meta-value">
                         Minting behavior note: batch upload stays available, but seal runs as
-                        one transaction per item because parent links require recursive sealing.
+                        one transaction per item because dependency links require recursive sealing.
                       </p>
                     )}
                   <p>
