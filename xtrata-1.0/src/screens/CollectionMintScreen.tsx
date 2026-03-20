@@ -1547,7 +1547,7 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
         mintTarget === 'collection' && collectionDefaultDependencies.length > 0;
       if (useSequentialCollectionSeal) {
         appendLog(
-          `Default parent inscriptions detected (${collectionDefaultDependencies.length}). Sealing items one-by-one so parents are auto-applied.`
+          `Default dependencies detected (${collectionDefaultDependencies.length}). Sealing items one-by-one so dependencies are auto-applied.`
         );
         for (let index = 0; index < itemsToSeal.length; index += 1) {
           const item = itemsToSeal[index];
@@ -1649,7 +1649,7 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
       setSealState('done');
       setMintStatus(
         useSequentialCollectionSeal
-          ? 'Sequential seal transactions submitted with default parent inscriptions.'
+          ? 'Sequential seal transactions submitted with default dependencies.'
           : 'Batch seal submitted. IDs will mint sequentially.'
       );
     } catch (error) {
@@ -1859,7 +1859,7 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
                     </span>
                   </div>
                   <div>
-                    <span className="meta-label">Default parent IDs</span>
+                    <span className="meta-label">Default dependency IDs</span>
                     <span className="meta-value">
                       {collectionStatus.defaultDependencies === null
                         ? 'Unknown'
@@ -1877,9 +1877,9 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
               )}
               {(collectionStatus?.defaultDependencies?.length ?? 0) > 0 && (
                 <div className="alert">
-                  Parent inscriptions are active for this collection. Multiple items
+                  Default dependencies are active for this collection. Multiple items
                   can still be minted in one run, but final sealing is one wallet
-                  transaction per item so parent links are enforced.
+                  transaction per item so dependency links are enforced.
                 </div>
               )}
               {collectionStatusMessage && (
@@ -1913,9 +1913,9 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
           <div>
             <span className="meta-label">Step 3</span>
             <span className="meta-value">
-              Begin + upload chunk data, then seal for sequential IDs. If parent
+              Begin + upload chunk data, then seal for sequential IDs. If dependency
               inscriptions are configured on the collection contract, sealing runs one
-              item per transaction so parent links are enforced. Incomplete mints should
+              item per transaction so dependency links are enforced. Incomplete mints should
               be cancelled before reservation expiry ({reservationExpiryLabel}).
             </span>
           </div>
@@ -2165,7 +2165,7 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
           {mintTarget === 'collection' && hasCollectionDefaultDependencies && (
             <div>
               <span className="meta-label">Seal mode</span>
-              <span className="meta-value">One transaction per item (parents enabled)</span>
+              <span className="meta-value">One transaction per item (dependencies enabled)</span>
             </div>
           )}
         </div>

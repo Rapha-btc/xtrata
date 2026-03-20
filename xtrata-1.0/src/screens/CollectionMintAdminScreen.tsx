@@ -1135,7 +1135,7 @@ export default function CollectionMintAdminScreen(
     const parsed = parseDependencyInput(defaultDependenciesInput);
     if (parsed.invalidTokens.length > 0) {
       setActionMessage(
-        `Invalid parent inscription IDs: ${parsed.invalidTokens.join(', ')}`
+        `Invalid dependency inscription IDs: ${parsed.invalidTokens.join(', ')}`
       );
       return;
     }
@@ -1143,13 +1143,13 @@ export default function CollectionMintAdminScreen(
     const validation = validateDependencyIds(normalized);
     if (!validation.ok) {
       if (validation.reason === 'max-50') {
-        setActionMessage('You can set up to 50 parent inscription IDs.');
+        setActionMessage('You can set up to 50 dependency inscription IDs.');
         return;
       }
-      setActionMessage('Parent inscription IDs are invalid.');
+      setActionMessage('Dependency inscription IDs are invalid.');
       return;
     }
-    await runAction('Set default parent inscriptions', () =>
+    await runAction('Set default dependencies', () =>
       requestCollectionCall({
         functionName: 'set-default-dependencies',
         functionArgs: [listCV(normalized.map((id) => uintCV(id)))]
@@ -1527,8 +1527,8 @@ export default function CollectionMintAdminScreen(
             <div>
               <LabelWithInfo
                 tone="meta"
-                label="Default parent IDs"
-                info="Parent inscription IDs automatically attached to every mint when set."
+                label="Default dependency IDs"
+                info="Dependency inscription IDs automatically attached to every mint when set."
               />
               <span className="meta-value">
                 {defaultDependencyCount === null
@@ -1861,25 +1861,25 @@ export default function CollectionMintAdminScreen(
         <div className="mint-panel">
           <LabelWithInfo
             tone="meta"
-            label="3. Parent inscription defaults"
-            info="Apply one shared parent inscription list to every mint from this collection contract."
+            label="3. Default dependencies"
+            info="Apply one shared dependency list to every mint from this collection contract."
           />
           {defaultDependenciesSupported === false && (
             <span className="meta-value">
-              This collection contract does not expose default parent controls.
+              This collection contract does not expose default dependency controls.
             </span>
           )}
           {defaultDependenciesSupported !== false && (
             <>
               <p className="meta-value">
-                When default parents are set, upload can still be batched, but
+                When default dependencies are set, upload can still be batched, but
                 final sealing must run one transaction per item so each mint can
-                include the parent links.
+                include the dependency links.
               </p>
               <label className="field">
                 <LabelWithInfo
                   tone="field"
-                  label="Parent inscription IDs"
+                  label="Dependency inscription IDs"
                   info="Comma, space, or newline separated inscription IDs to attach to every mint."
                 />
                 <textarea
@@ -1889,7 +1889,7 @@ export default function CollectionMintAdminScreen(
                   onChange={(event) => setDefaultDependenciesInput(event.target.value)}
                 />
                 <span className="field__hint">
-                  Leave blank to disable default parents. Max 50 IDs.
+                  Leave blank to disable default dependencies. Max 50 IDs.
                 </span>
               </label>
               <div className="mint-actions">
@@ -1899,9 +1899,9 @@ export default function CollectionMintAdminScreen(
                   onClick={() => void handleSetDefaultDependencies()}
                   disabled={!canManageCollection || pendingAction !== null}
                 >
-                  {pendingAction === 'Set default parent inscriptions'
+                  {pendingAction === 'Set default dependencies'
                     ? 'Updating...'
-                    : 'Set default parents'}
+                    : 'Set default dependencies'}
                 </button>
               </div>
             </>

@@ -1376,12 +1376,12 @@ export default function MintScreen(props: MintScreenProps) {
     if (!validation.ok) {
       const message =
         validation.reason === 'max-50'
-          ? 'A maximum of 50 parent IDs is allowed.'
+          ? 'A maximum of 50 dependency IDs is allowed.'
           : validation.reason === 'duplicate-ids'
-            ? 'Duplicate parent IDs are not allowed.'
+            ? 'Duplicate dependency IDs are not allowed.'
             : validation.reason === 'negative-id'
-              ? 'Parent IDs must be non-negative.'
-              : 'Invalid parent IDs.';
+              ? 'Dependency IDs must be non-negative.'
+              : 'Invalid dependency IDs.';
       setDependencyUiError(message);
       return;
     }
@@ -1598,12 +1598,12 @@ export default function MintScreen(props: MintScreenProps) {
     if (!dependencyValidation.ok) {
       const message =
         dependencyValidation.reason === 'max-50'
-          ? 'Parent list exceeds the maximum of 50 ids.'
+          ? 'Dependency list exceeds the maximum of 50 ids.'
           : dependencyValidation.reason === 'duplicate-ids'
-            ? 'Parent list contains duplicate ids.'
+            ? 'Dependency list contains duplicate ids.'
             : dependencyValidation.reason === 'negative-id'
-              ? 'Parent list includes a negative id.'
-              : 'Parent list is invalid.';
+              ? 'Dependency list includes a negative id.'
+              : 'Dependency list is invalid.';
       setMintStatus(message);
       appendLog(`Mint blocked: ${message}`);
       logWarn('mint', 'Mint blocked: invalid dependencies', {
@@ -1614,9 +1614,9 @@ export default function MintScreen(props: MintScreenProps) {
     }
     if (dependencyIds.length > 0) {
       if (parentStatusSummary.loading.length > 0) {
-        setMintStatus('Waiting for parent status checks to finish.');
-        appendLog('Mint blocked: parent status checks still loading.');
-        logWarn('mint', 'Mint blocked: parent checks loading');
+        setMintStatus('Waiting for dependency status checks to finish.');
+        appendLog('Mint blocked: dependency status checks still loading.');
+        logWarn('mint', 'Mint blocked: dependency checks loading');
         return null;
       }
       if (parentStatusSummary.legacyOnly.length > 0) {
@@ -1624,19 +1624,19 @@ export default function MintScreen(props: MintScreenProps) {
           .map((id) => id.toString())
           .join(', ');
         setMintStatus(
-          `Parent IDs only exist in the legacy contract. Migrate before minting: ${ids}.`
+          `Dependency IDs only exist in the legacy contract. Migrate before minting: ${ids}.`
         );
-        appendLog('Mint blocked: parent ids require migration.');
-        logWarn('mint', 'Mint blocked: parent ids require migration', { ids });
+        appendLog('Mint blocked: dependency ids require migration.');
+        logWarn('mint', 'Mint blocked: dependency ids require migration', { ids });
         return null;
       }
       if (parentStatusSummary.missing.length > 0) {
         const ids = parentStatusSummary.missing
           .map((id) => id.toString())
           .join(', ');
-        setMintStatus(`Parent IDs not found on-chain: ${ids}.`);
-        appendLog('Mint blocked: parent ids missing.');
-        logWarn('mint', 'Mint blocked: parent ids missing', { ids });
+        setMintStatus(`Dependency IDs not found on-chain: ${ids}.`);
+        appendLog('Mint blocked: dependency ids missing.');
+        logWarn('mint', 'Mint blocked: dependency ids missing', { ids });
         return null;
       }
       if (parentStatusSummary.notOwned.length > 0) {
@@ -1644,10 +1644,10 @@ export default function MintScreen(props: MintScreenProps) {
           .map((id) => id.toString())
           .join(', ');
         setMintStatus(
-          `Parent IDs are not in the connected wallet and cannot be used: ${ids}.`
+          `Dependency IDs are not in the connected wallet for this mint flow: ${ids}.`
         );
-        appendLog('Mint blocked: parent ids not owned by wallet.');
-        logWarn('mint', 'Mint blocked: parent ids not owned', { ids });
+        appendLog('Mint blocked: dependency ids not in wallet.');
+        logWarn('mint', 'Mint blocked: dependency ids not in wallet', { ids });
         return null;
       }
     }
@@ -1675,7 +1675,7 @@ export default function MintScreen(props: MintScreenProps) {
         legacyAvailable: [] as bigint[]
       };
     }
-    appendLog('Checking parent IDs on-chain...');
+    appendLog('Checking dependency IDs on-chain...');
     const metaResults = await runWithConcurrency(
       dependencyIds,
       4,
@@ -1982,9 +1982,9 @@ export default function MintScreen(props: MintScreenProps) {
           const message =
             dependencyCheck.legacyAvailable.length > 0
               ? stillMissing.length > 0
-                ? `Parent IDs missing in ${props.contract.label}: ${stillMissingList}. IDs found in ${legacyLabel}: ${legacyList}. Migrate legacy parents before sealing.`
-                : `Parent IDs found in ${legacyLabel} but not yet migrated: ${legacyList}. Migrate them before sealing.`
-              : `Parent IDs not found in ${props.contract.label}: ${missingList}.`;
+                ? `Dependency IDs missing in ${props.contract.label}: ${stillMissingList}. IDs found in ${legacyLabel}: ${legacyList}. Migrate legacy dependencies before sealing.`
+                : `Dependency IDs found in ${legacyLabel} but not yet migrated: ${legacyList}. Migrate them before sealing.`
+              : `Dependency IDs not found in ${props.contract.label}: ${missingList}.`;
           setMintStatus(message);
           appendLog(`Mint blocked: ${message}`);
           setBeginState('error');
@@ -2138,9 +2138,9 @@ export default function MintScreen(props: MintScreenProps) {
         const message =
           dependencyCheck.legacyAvailable.length > 0
             ? stillMissing.length > 0
-              ? `Parent IDs missing in ${props.contract.label}: ${stillMissingList}. IDs found in ${legacyLabel}: ${legacyList}. Migrate legacy parents before sealing.`
-              : `Parent IDs found in ${legacyLabel} but not yet migrated: ${legacyList}. Migrate them before sealing.`
-            : `Parent IDs not found in ${props.contract.label}: ${missingList}.`;
+              ? `Dependency IDs missing in ${props.contract.label}: ${stillMissingList}. IDs found in ${legacyLabel}: ${legacyList}. Migrate legacy dependencies before sealing.`
+              : `Dependency IDs found in ${legacyLabel} but not yet migrated: ${legacyList}. Migrate them before sealing.`
+            : `Dependency IDs not found in ${props.contract.label}: ${missingList}.`;
         setMintStatus(message);
         appendLog(`Mint blocked: ${message}`);
         logWarn('mint', 'Mint blocked: dependency ids missing on-chain', {
@@ -2379,9 +2379,9 @@ export default function MintScreen(props: MintScreenProps) {
         const message =
           dependencyCheck.legacyAvailable.length > 0
             ? stillMissing.length > 0
-              ? `Parent IDs missing in ${props.contract.label}: ${stillMissingList}. IDs found in ${legacyLabel}: ${legacyList}. Migrate legacy parents before sealing.`
-              : `Parent IDs found in ${legacyLabel} but not yet migrated: ${legacyList}. Migrate them before sealing.`
-            : `Parent IDs not found in ${props.contract.label}: ${missingList}.`;
+              ? `Dependency IDs missing in ${props.contract.label}: ${stillMissingList}. IDs found in ${legacyLabel}: ${legacyList}. Migrate legacy dependencies before sealing.`
+              : `Dependency IDs found in ${legacyLabel} but not yet migrated: ${legacyList}. Migrate them before sealing.`
+            : `Dependency IDs not found in ${props.contract.label}: ${missingList}.`;
         setMintStatus(message);
         appendLog(`Resume blocked: ${message}`);
         logWarn('mint', 'Resume blocked: dependency ids missing on-chain', {
@@ -2621,16 +2621,16 @@ export default function MintScreen(props: MintScreenProps) {
         <div className="mint-panel mint-dependencies">
           <LabelWithInfo
             tone="meta"
-            label="Parents (optional)"
-            info="Parent token IDs create on-chain recursive relationships between inscriptions."
+            label="Dependencies (optional)"
+            info="Dependency token IDs create on-chain dependency links between inscriptions."
           />
           <p className="meta-value">
-            Add one or more parent IDs to link recursive inscriptions.
+            Add one or more dependency IDs to link inscriptions through on-chain dependencies.
           </p>
           <label className="field">
             <LabelWithInfo
               tone="field"
-              label="Parent IDs"
+              label="Dependency IDs"
               info="Enter one or more existing token IDs separated by spaces, commas, or new lines."
             />
             <textarea
@@ -2650,7 +2650,7 @@ export default function MintScreen(props: MintScreenProps) {
               onClick={applyDependencyInput}
               disabled={!dependencyInput.trim()}
             >
-              Add parents
+              Add dependencies
             </button>
             {manualDependencyIds.length > 0 && (
               <button
@@ -2658,7 +2658,7 @@ export default function MintScreen(props: MintScreenProps) {
                 type="button"
                 onClick={clearManualDependencies}
               >
-                Clear parents
+                Clear dependencies
               </button>
             )}
           </div>
@@ -2682,7 +2682,7 @@ export default function MintScreen(props: MintScreenProps) {
           {importedDependencyIds.length > 0 && (
             <div className="mint-actions">
               <span className="meta-value">
-                Imported parents: {importedDependencyIds.map((id) => id.toString()).join(', ')}
+                Imported dependencies: {importedDependencyIds.map((id) => id.toString()).join(', ')}
               </span>
               {props.onClearParentDrafts && (
                 <button
@@ -2697,18 +2697,18 @@ export default function MintScreen(props: MintScreenProps) {
           )}
           {resolvedDependencyIds.length > 0 && (
             <span className="meta-value">
-              Resolved parents: {resolvedDependencyIds.map((id) => id.toString()).join(', ')}
+              Resolved dependencies: {resolvedDependencyIds.map((id) => id.toString()).join(', ')}
             </span>
           )}
           {resolvedDependencyIds.length > 0 && (
             <div className="relation-panel">
               <LabelWithInfo
                 tone="meta"
-                label="Parent thumbnails"
-                info="Preview cards for selected parents, including ownership and migration status checks."
+                label="Dependency thumbnails"
+                info="Preview cards for selected dependencies, including wallet and migration status checks."
               />
               {parentStatusSummary.loading.length > 0 && (
-                <span className="meta-value">Loading parent status...</span>
+                <span className="meta-value">Loading dependency status...</span>
               )}
               {parentStatusSummary.legacyOnly.length > 0 && (
                 <span className="relation-status relation-status--warn">
@@ -2745,7 +2745,7 @@ export default function MintScreen(props: MintScreenProps) {
                     </div>
                     <span className="relation-label">#{item.id.toString()}</span>
                     {item.status === 'owned' && (
-                      <span className="relation-status relation-status--ok">Owned</span>
+                      <span className="relation-status relation-status--ok">In wallet</span>
                     )}
                     {item.status === 'not-owned' && (
                       <span className="relation-status relation-status--error">Not in wallet</span>
@@ -2763,7 +2763,7 @@ export default function MintScreen(props: MintScreenProps) {
                 ))}
               </div>
               {parentOverflowCount > 0 && (
-                <span className="meta-value">+{parentOverflowCount} more parents</span>
+                <span className="meta-value">+{parentOverflowCount} more dependencies</span>
               )}
             </div>
           )}
@@ -2912,8 +2912,8 @@ export default function MintScreen(props: MintScreenProps) {
                   <div>
                     <LabelWithInfo
                       tone="meta"
-                      label="Parents"
-                      info="Resolved parent token IDs that will be linked during seal."
+                      label="Dependencies"
+                      info="Resolved dependency token IDs that will be linked during seal."
                     />
                     <span className="meta-value">
                       {resolvedDependencyIds

@@ -264,7 +264,7 @@ export const buildArtistDeployContractSource = (params: {
   );
   if (parsedParentDependencies.invalidTokens.length > 0) {
     errors.push(
-      `Parent inscriptions must be numeric token IDs only: ${parsedParentDependencies.invalidTokens.join(
+      `Dependency inscriptions must be numeric token IDs only: ${parsedParentDependencies.invalidTokens.join(
         ', '
       )}.`
     );
@@ -273,9 +273,9 @@ export const buildArtistDeployContractSource = (params: {
   const parentValidation = validateDependencyIds(defaultDependencyIds);
   if (!parentValidation.ok) {
     if (parentValidation.reason === 'max-50') {
-      errors.push('Parent inscriptions allow up to 50 token IDs.');
+      errors.push('Dependency inscriptions allow up to 50 token IDs.');
     } else {
-      errors.push('Parent inscriptions are invalid.');
+      errors.push('Dependency inscriptions are invalid.');
     }
   }
 
