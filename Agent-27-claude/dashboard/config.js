@@ -43,8 +43,8 @@ const LEGACY_OUTREACH_DRAFT_FILE = path.join(WORKDIR, 'outreach-draft.json');
 const LEGACY_OUTREACH_HISTORY_FILE = path.join(WORKDIR, 'outreach-history.json');
 const LEGACY_INSCRIPTION_ARCHIVE_DIR = path.join(INSCRIPTIONS_DIR, 'archive');
 
-// Cost model (updated from actual Entry 1-3 data)
-const AVG_COST_PER_ENTRY = 0.34; // STX — used for days-of-life calculation
+// Cost model (updated 2026-03-20: protocol fees dropped to 0.003 STX)
+const AVG_COST_PER_ENTRY = 0.04; // STX — protocol 0.003 + mining ~0.01-0.05 for 16KB
 const MAX_ENTRY_BYTES = 16384;
 
 const CONTEXT_EXCLUDE_PATTERNS = [

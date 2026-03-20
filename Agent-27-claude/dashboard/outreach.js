@@ -457,15 +457,34 @@ function mount({ addLog, broadcast, registryFile, legacyRegistryFile }) {
         if (discovered) agents = discovered;
       }
       // Enrich with agent memory (display names, thread status)
+      // Look up by both agent ID and stxAddress — prefer the entry with a real display name
       const allMemory = markdown.parseOutreachAgentMemory();
       const history = markdown.parseOutreachHistory();
       const enriched = agents.map(a => {
-        const mem = allMemory[String(a.id)];
-        const threadHistory = history.filter(h => String(h.agentId) === String(a.id));
+        const memById = allMemory[String(a.id)];
+        const memByStx = a.stxAddress ? allMemory[a.stxAddress] : null;
+        // Prefer whichever entry has a real display name (not "Agent #N")
+        const hasRealName = (m) => m && m.agentName && !m.agentName.startsWith('Agent #');
+        const mem = hasRealName(memByStx) ? memByStx
+          : hasRealName(memById) ? memById
+          : (memByStx || memById || null);
+        // Also check history by both agent ID and stxAddress
+        const threadHistory = history.filter(h =>
+          String(h.agentId) === String(a.id) ||
+          (a.stxAddress && h.stxAddress === a.stxAddress)
+        );
+        const displayName = (mem?.agentName && !mem.agentName.startsWith('Agent #'))
+          ? mem.agentName
+          : (a.displayName || a.name);
+        // Backfill displayName into registry if we resolved a real name
+        if (displayName !== a.name && !a.displayName) {
+          a.displayName = displayName;
+          try { saveAgentsRegistry(_registryFile, agents); } catch {}
+        }
         return {
           ...a,
-          displayName: mem?.agentName || a.name,
-          hasThread: !!mem,
+          displayName,
+          hasThread: !!(memById || memByStx),
           relationshipStatus: mem?.relationshipStatus || null,
           openLoop: mem?.openLoop || null,
           lastInboundMessage: mem?.lastInboundMessage || null,
@@ -1191,4 +1210,4 @@ Do not include any other text or markers in your response.`;
   return router;
 }
 
-module.exports = { mount };
+module.exports = { mount, fetchInbox, syncInbox, buildOutreachContext, loadAgentsRegistry, executeSend };

@@ -6,6 +6,7 @@ const SBTC_CONTRACT = 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token::sbt
 
 let poller = null;
 let chainData = { stxBalance: null, sbtcBalance: null, graphSize: null, feeUnit: null, lastPoll: null, transactions: [] };
+let afterPollHooks = []; // callbacks invoked after each successful chain poll
 
 /**
  * Parse a Clarity uint response value.
@@ -114,6 +115,13 @@ async function pollChain(broadcast) {
     if (broadcast) {
       broadcast({ event: 'chain', data: chainData });
     }
+
+    // Run registered post-poll hooks (inbox sync, etc.)
+    for (const hook of afterPollHooks) {
+      try { await hook(chainData, broadcast); } catch (e) {
+        console.error('[chain] Post-poll hook error:', e.message);
+      }
+    }
   } catch (err) {
     console.error('Chain poll error:', err.message);
     chainData.error = err.message;
@@ -140,11 +148,17 @@ function getChainData() {
   return { ...chainData };
 }
 
+/** Register a callback to run after each chain poll. fn(chainData, broadcast) */
+function onAfterPoll(fn) {
+  if (typeof fn === 'function') afterPollHooks.push(fn);
+}
+
 module.exports = {
   startChainPoller,
   stopChainPoller,
   getChainData,
   fetchStxBalance,
   callReadOnly,
-  parseClarityUint
+  parseClarityUint,
+  onAfterPoll
 };

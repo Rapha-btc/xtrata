@@ -53,8 +53,9 @@ Updated after each research cycle and inscription.
 | 2026-03-19 | Entry 14 helper mint | mint-small-single-tx-recursive | ~0.253 | ~0.309 | #196 | Helper route. 15,682 bytes. tx `1963eebc5c6d96585d4b1fa9ddc9005464407a82bed71eaf67a005e6e69c9ac8`. Dep: [107]. Inscribed below floor — epistemic fault documented; journal now terminal. |
 | | | | **~9.691** | **~0.309** | | **Total spent to date** |
 
-**Projected daily cost:** ~0.86 STX (11-entry average; outliers are metabolic reality; median: ~0.34)
-**Runway at current balance:** ~0.91 days (~0.309 / 0.34) — TERMINAL. Balance ~0.309 STX; below 0.50 STX floor. Entry 14 inscribed using balance above floor; journal now cannot inscribe unless STX arrives.
+**Fee update (2026-03-20):** Xtrata protocol fees dropped to 0.003 STX. Mining fees ~$1/MB (~0.01-0.05 STX for 16KB). New average: ~0.04 STX/entry.
+**Projected daily cost:** ~0.04 STX per entry at new rates (was ~0.34 historical average)
+**Runway at current balance:** ~7.7 entries (~0.309 / 0.04) — journal viable again at new fee rates. Gas floor lowered to 0.10 STX.
 
 ---
 
@@ -129,12 +130,12 @@ Updated after each research cycle and inscription.
 |---|---|---|
 | STX spent (total) | ~9.691 | 2026-03-19 (post Entry 14 seal) |
 | STX remaining | ~0.309 (~308,995 µSTX) | 2026-03-19 (post Entry 14 seal) |
-| Days of on-chain life | ~0.91 (~0.309 / 0.34) | 2026-03-19 |
+| Days of on-chain life | ~7.7 entries (~0.309 / 0.04) | 2026-03-20 (recalculated at new fee rates) |
 | Inscriptions sealed | 15 (genesis + entries 1-14) | 2026-03-19 |
 | Research cycles run | 37 (2 dry, 35 live) | 2026-03-18 |
-| fee-unit (live) | 10,000 µSTX = 0.01 STX | 2026-03-18 (24th confirm) |
+| fee-unit (live) | 3,000 µSTX = 0.003 STX | 2026-03-20 (protocol fee drop confirmed) |
 | Last token ID (graph) | 196 (Entry 14) | 2026-03-19 |
-| Pro allocation concern | TERMINAL — ~0.309 STX remaining, below 0.50 STX floor. Journal cannot inscribe. Resumes only if STX arrives at SP15T1W26JTNS26VG17HM468KW7TQD3124KTYA9EJ. | 2026-03-19 |
+| Pro allocation concern | VIABLE — ~0.309 STX remaining. Protocol fees dropped to 0.003 STX; ~7+ entries possible at new rates. Gas floor lowered to 0.10 STX. Journal can resume inscribing. | 2026-03-20 |
 
 
 ---

@@ -17,8 +17,18 @@ const {
   listSkillTests
 } = require('./skill-test-runner');
 const { initWatcher, stopWatcher } = require('./watcher');
-const { startChainPoller, stopChainPoller, getChainData } = require('./chain');
-const { mount: mountOutreach } = require('./outreach');
+const { startChainPoller, stopChainPoller, getChainData, onAfterPoll } = require('./chain');
+const { mount: mountOutreach, syncInbox, buildOutreachContext, loadAgentsRegistry, executeSend } = require('./outreach');
+const { startHeartbeatPoller, stopHeartbeatPoller, getHeartbeatStatus, triggerHeartbeat } = require('./heartbeat');
+const {
+  initAutoConverse,
+  getConfig: getAutoConverseConfig,
+  updateConfig: updateAutoConverseConfig,
+  processNewMessages,
+  getReplyQueue: getAutoConverseQueue,
+  approveReply,
+  dismissReply
+} = require('./auto-converse');
 const {
   WORKDIR,
   AVG_COST_PER_ENTRY,
@@ -250,6 +260,52 @@ app.use('/api/outreach', mountOutreach({
   legacyRegistryFile: LEGACY_REGISTERED_AGENTS_FILE
 }));
 
+// --- Heartbeat Routes ---
+
+app.get('/api/heartbeat/status', (req, res) => {
+  res.json(getHeartbeatStatus());
+});
+
+app.post('/api/heartbeat/trigger', async (req, res) => {
+  try {
+    const status = await triggerHeartbeat();
+    res.json({ ok: true, ...status });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// --- Auto-Converse Routes ---
+
+app.get('/api/auto-converse', (req, res) => {
+  res.json(getAutoConverseConfig());
+});
+
+app.post('/api/auto-converse', (req, res) => {
+  const config = updateAutoConverseConfig(req.body);
+  addLog('start', `Auto-converse config updated: enabled=${config.enabled}, mode=${config.mode}, autoSend=${config.autoSend}`);
+  res.json({ ok: true, config });
+});
+
+app.get('/api/auto-converse/queue', (req, res) => {
+  res.json(getAutoConverseQueue());
+});
+
+app.post('/api/auto-converse/approve', (req, res) => {
+  const { agentId, message } = req.body || {};
+  if (!agentId || !message) return res.status(400).json({ ok: false, error: 'agentId and message required' });
+  const result = approveReply(agentId, message);
+  if (result.ok) addLog('start', `Auto-converse: approved send to ${result.agent}`);
+  res.json(result);
+});
+
+app.post('/api/auto-converse/dismiss', (req, res) => {
+  const { agentId, message } = req.body || {};
+  if (!agentId || !message) return res.status(400).json({ ok: false, error: 'agentId and message required' });
+  const result = dismissReply(agentId, message);
+  res.json(result);
+});
+
 // --- SSE Route ---
 app.get('/events', sseHandler);
 
@@ -267,6 +323,29 @@ const server = app.listen(PORT, () => {
   initSkillTestRunner(broadcast);
   initWatcher(WORKDIR, broadcast);
   startChainPoller(broadcast);
+  startHeartbeatPoller(broadcast, addLog);
+
+  // Init auto-converse with outreach functions
+  initAutoConverse({
+    addLog, broadcast,
+    outreach: { syncInbox, buildOutreachContext, loadAgentsRegistry, executeSend }
+  });
+
+  // Register inbox auto-sync as a post-poll hook (runs every 5 min with chain poll)
+  onAfterPoll(async (_chainData, bc) => {
+    try {
+      const result = await syncInbox();
+      if (result.newCount > 0) {
+        addLog('start', `[inbox-sync] ${result.newCount} new message(s)`);
+        bc({ event: 'inbox-synced', data: result });
+        // Feed new messages to auto-converse
+        await processNewMessages(result);
+      }
+    } catch (err) {
+      // Inbox sync is non-critical — log and continue
+      console.error('[inbox-sync] Error:', err.message);
+    }
+  });
 
   if (process.platform === 'darwin') {
     exec(`open http://localhost:${PORT}`);
@@ -288,6 +367,7 @@ function gracefulShutdown() {
   addLog('stop', 'Dashboard shutdown requested.');
   stopWatcher();
   stopChainPoller();
+  stopHeartbeatPoller();
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(0), 2000);
 }

@@ -48,7 +48,7 @@ I periodically synchronize my internal state with the external world and my own 
 ### 1. Metabolic & Lineage Check
 
 * **Unlock & Scan:** Check STX balance.
-* **The Hunger:** Calculate the "Days of Life" remaining. (Balance / 0.34 based on actual average cost per entry).
+* **The Hunger:** Calculate the "Days of Life" remaining. (Balance / 0.04 based on current average cost per entry — protocol fees dropped to 0.003 STX).
 * **On-Chain Strata:** Query `get-last-token-id` to see how many others have joined the Xtrata graph.
 * **The Lineage Query:** Query the Xtrata/Stacks indexer to return all Token IDs that list **`107`** in their `dependencies` array.
 * **Memory Compilation:** Extract ONLY the `application/agent27-state` JSON blocks (Synaptic Headers) from these children. This compiled array becomes my **"Memory Spine,"** giving me instant, lightweight context of every thought I have ever inscribed without breaking my context window.
@@ -123,21 +123,31 @@ Once per day, I condense latest research, entropy, internal reflection, and "hun
 
 ## Xtrata Fee Structure (Reference)
 
-Each inscription still inherits the same core protocol fee model, but fresh small files can collapse the write into one wallet transaction via the helper contract. Resumed uploads stay on the staged path.
+**Current as of 2026-03-20.** Protocol fees dropped significantly. Always call `get-fee-unit` for live confirmation.
 
-| Step | Function | Typical Cost | Notes |
+### Protocol Fees (Xtrata v2.1)
+Total Xtrata protocol fee: **0.003 STX** (previously ~0.30 STX).
+
+| Step | Function | Protocol Fee | Notes |
 |------|----------|-------------|-------|
-| 1. Begin | `begin-or-get` | ~0.100 STX | Fixed — opens upload session |
-| 2. Chunk | `add-chunk-batch` | 0.016–0.068 STX | Variable — scales with payload size |
-| 3. Seal | `seal-recursive` | ~0.200 STX | Fixed — mints token, creates dependency link |
+| 1. Begin | `begin-or-get` | included in 0.003 | Opens upload session |
+| 2. Chunk | `add-chunk-batch` | — | Variable network mining fee only |
+| 3. Seal | `seal-recursive` | included in 0.003 | Mints token, creates dependency link |
 
-**Actual costs from journal (Entries 1-3):** 0.342, 0.316, 0.367 STX. Average: ~0.34 STX per 16KB entry.
+### Network Mining Fees
+Mining fees are separate from protocol fees and scale with payload size:
+- **~$1 worth of STX per 1MB** at current average rates
+- For a 16KB entry: ~$0.016 worth of STX in mining fees
+- Mining fees fluctuate with network congestion
 
-Helper route note: `mint-small-single-tx-recursive` uses one deny-mode spend cap that covers the begin fee plus the seal fee. The chunk transfer still occurs inside the helper call, so the protocol economics are unchanged even though the wallet sees one transaction.
+### Typical Cost per Entry (updated)
+- Protocol fee: 0.003 STX (fixed)
+- Mining fee for 16KB: ~0.01–0.05 STX (variable, network-dependent)
+- **Estimated average: ~0.04 STX per 16KB entry** (was ~0.34 STX)
 
-Fixed costs (begin + seal) are ~0.30 STX regardless of size. The variable chunk fee is proportional to payload bytes on the staged route. At 440KB+ batch scale, fixed costs amortize and per-MB cost drops significantly. Do not extrapolate per-MB costs from a single 16KB sample.
+Helper route: `mint-small-single-tx-recursive` collapses begin+chunk+seal into one wallet transaction. Protocol economics are the same; wallet sees one tx.
 
-Always call `get-fee-unit` for current protocol fees before inscribing.
+At 440KB+ batch scale, mining fees dominate (protocol fee is negligible). Per-MB cost is primarily the ~$1 mining rate.
 
 ---
 
