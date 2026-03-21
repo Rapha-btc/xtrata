@@ -1,0 +1,142 @@
+{
+  "schema": "bvst.patch/v1",
+  "meta": {
+    "name": "BlueMarvinOne",
+    "description": "ARP 2600-inspired mono/poly subtractive (Mk I)."
+  },
+  "config": {
+    "name": "BlueMarvinOne",
+    "visualizer": "spectrum",
+    "keyboard": { "startNote": 60, "numKeys": 25 },
+    "modules": [
+      {
+        "name": "VCO 1 (Saw)",
+        "cols": 1,
+        "controls": [
+          { "id": "vco1_freq", "label": "Freq", "param": 1, "type": "knob", "min": -24, "max": 24, "val": 0, "step": 1 },
+          { "id": "vco1_mix", "label": "Lvl", "param": 2, "type": "knob", "min": 0, "max": 1, "val": 0.8, "step": 0.01 }
+        ]
+      },
+      {
+        "name": "VCO 2 (Pulse)",
+        "cols": 1,
+        "controls": [
+          { "id": "vco2_detune", "label": "Fine", "param": 3, "type": "knob", "min": -50, "max": 50, "val": 5, "step": 1 },
+          { "id": "vco2_width", "label": "Width", "param": 4, "type": "knob", "min": 0, "max": 0.9, "val": 0.5, "step": 0.01 },
+          { "id": "vco2_mix", "label": "Lvl", "param": 5, "type": "knob", "min": 0, "max": 1, "val": 0.6, "step": 0.01 }
+        ]
+      },
+      {
+        "name": "VCF (Filter)",
+        "cols": 1,
+        "controls": [
+          { "id": "vcf_cutoff", "label": "Freq", "param": 6, "type": "knob", "min": 100, "max": 10000, "curve": "log", "val": 2000, "step": 10 },
+          { "id": "vcf_res", "label": "Res", "param": 7, "type": "knob", "min": 0, "max": 10, "val": 5, "step": 0.1 }
+        ]
+      },
+      {
+        "name": "ADSR Env",
+        "cols": 1,
+        "controls": [
+          { "id": "env_a", "label": "A", "param": 8, "type": "knob", "min": 0.001, "max": 2, "val": 0.05, "step": 0.01 },
+          { "id": "env_d", "label": "D", "param": 9, "type": "knob", "min": 0.01, "max": 2, "val": 0.3, "step": 0.01 },
+          { "id": "env_s", "label": "S", "param": 10, "type": "knob", "min": 0, "max": 1, "val": 0.5, "step": 0.01 },
+          { "id": "env_r", "label": "R", "param": 11, "type": "knob", "min": 0.01, "max": 4, "val": 0.8, "step": 0.01 }
+        ]
+      },
+      {
+        "name": "Output",
+        "cols": 1,
+        "controls": [
+          { "id": "master_vol", "label": "Vol", "param": 12, "type": "knob", "min": 0, "max": 1, "val": 0.7, "step": 0.01 }
+        ]
+      }
+    ],
+    "presets": {
+      "Init": {
+        "vco1_freq": 0,
+        "vco1_mix": 0.8,
+        "vco2_detune": 5,
+        "vco2_width": 0.5,
+        "vco2_mix": 0.6,
+        "vcf_cutoff": 2000,
+        "vcf_res": 5,
+        "env_a": 0.05,
+        "env_d": 0.3,
+        "env_s": 0.5,
+        "env_r": 0.8,
+        "master_vol": 0.7
+      },
+      "2600 Bass": {
+        "vco1_freq": -12,
+        "vco1_mix": 0.9,
+        "vco2_detune": -6,
+        "vco2_width": 0.45,
+        "vco2_mix": 0.35,
+        "vcf_cutoff": 420,
+        "vcf_res": 3.5,
+        "env_a": 0.01,
+        "env_d": 0.18,
+        "env_s": 0.25,
+        "env_r": 0.12,
+        "master_vol": 0.75
+      },
+      "Hollow Lead": {
+        "vco1_freq": 0,
+        "vco1_mix": 0.6,
+        "vco2_detune": 12,
+        "vco2_width": 0.25,
+        "vco2_mix": 0.85,
+        "vcf_cutoff": 1200,
+        "vcf_res": 7.0,
+        "env_a": 0.02,
+        "env_d": 0.25,
+        "env_s": 0.65,
+        "env_r": 0.35,
+        "master_vol": 0.7
+      },
+      "PWM Strings": {
+        "vco1_freq": 0,
+        "vco1_mix": 0.35,
+        "vco2_detune": 8,
+        "vco2_width": 0.72,
+        "vco2_mix": 0.95,
+        "vcf_cutoff": 2600,
+        "vcf_res": 1.2,
+        "env_a": 0.18,
+        "env_d": 0.55,
+        "env_s": 1.0,
+        "env_r": 1.6,
+        "master_vol": 0.6
+      },
+      "Brass Stab": {
+        "vco1_freq": 0,
+        "vco1_mix": 0.8,
+        "vco2_detune": 3,
+        "vco2_width": 0.5,
+        "vco2_mix": 0.6,
+        "vcf_cutoff": 1800,
+        "vcf_res": 2.5,
+        "env_a": 0.01,
+        "env_d": 0.22,
+        "env_s": 0.0,
+        "env_r": 0.18,
+        "master_vol": 0.78
+      },
+      "Buzzy Pluck": {
+        "vco1_freq": 0,
+        "vco1_mix": 1.0,
+        "vco2_detune": 22,
+        "vco2_width": 0.12,
+        "vco2_mix": 0.55,
+        "vcf_cutoff": 3500,
+        "vcf_res": 4.5,
+        "env_a": 0.005,
+        "env_d": 0.18,
+        "env_s": 0.0,
+        "env_r": 0.12,
+        "master_vol": 0.72
+      }
+    }
+  }
+}

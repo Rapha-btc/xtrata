@@ -1,0 +1,18 @@
+{
+  "network": "stacks-mainnet",
+  "chunk_size": 16384,
+  "helper_chunk_limit": 30,
+  "staged_batch_chunk_limit": 50,
+  "xtrata_core_contract": "",
+  "xtrata_helper_contract": "",
+  "deployer_address": "",
+  "fee_strategy": {
+    "helper": "single-tx-recursive",
+    "staged": [
+      "begin-or-get",
+      "add-chunk-batch",
+      "seal-recursive"
+    ]
+  },
+  "notes": "Fill live contract IDs and deployer settings before inscription."
+}

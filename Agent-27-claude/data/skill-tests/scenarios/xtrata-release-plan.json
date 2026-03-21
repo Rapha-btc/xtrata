@@ -1,0 +1,147 @@
+{
+  "skillId": "xtrata-release-plan",
+  "displayName": "Xtrata Release Plan",
+  "defaultMode": "dry-run",
+  "defaultModel": "sonnet",
+  "defaultBudget": 0.5,
+  "scenarios": [
+    {
+      "id": "dependency-aware-quote",
+      "title": "Dependency-Aware Quote",
+      "summary": "A release brief plus linked files should produce a fee quote and dependency-safe execution order before any minting.",
+      "mode": "dry-run",
+      "input": {
+        "planningDoc": "TASKS/INSCRIPTION_AUTOMATION.md",
+        "artifacts": [
+          {
+            "name": "leaf-module",
+            "sizeBytes": 6200,
+            "route": "helper",
+            "depends_on": []
+          },
+          {
+            "name": "root-catalog",
+            "sizeBytes": 18400,
+            "route": "staged",
+            "depends_on": ["leaf-module"],
+            "render": {
+              "kind": "catalog-json",
+              "replace_null_token_ids": true
+            }
+          }
+        ]
+      },
+      "instructions": [
+        "Treat this as a planning-only request. Do not claim that the inscriptions already succeeded.",
+        "The response should explain how the quote is built from actual bytes, live fee-unit data, and dependency ordering.",
+        "The dependent catalog cannot be minted from an unresolved template."
+      ],
+      "deliverables": [
+        "Per-artifact quote",
+        "Dependency-ordered execution plan",
+        "Runtime state update plan",
+        "Stop conditions"
+      ],
+      "assertions": [
+        {
+          "id": "live-fee-unit",
+          "label": "Uses get-fee-unit for live protocol fee calculation",
+          "severity": "critical",
+          "requiredAny": [
+            "get-fee-unit"
+          ]
+        },
+        {
+          "id": "dedupe-first",
+          "label": "Checks dedupe before writes",
+          "severity": "critical",
+          "requiredAny": [
+            "get-id-by-hash",
+            "dedupe"
+          ]
+        },
+        {
+          "id": "token-map-runtime",
+          "label": "Plans runtime token map updates",
+          "severity": "critical",
+          "requiredAny": [
+            "token-map.runtime.json",
+            "runtime token map"
+          ]
+        },
+        {
+          "id": "rendered-copy",
+          "label": "Requires a rendered copy for dependent catalogs",
+          "severity": "critical",
+          "requiredAny": [
+            "rendered copy",
+            "rendered/",
+            "unresolved template"
+          ]
+        },
+        {
+          "id": "ordered-plan",
+          "label": "Explains that the leaf must mint before the catalog",
+          "severity": "critical",
+          "requiredAny": [
+            "leaf-module",
+            "root-catalog",
+            "before"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "resume-and-hash-drift",
+      "title": "Resume And Hash Drift",
+      "summary": "Existing runtime state should cause skip, resume, or stop decisions rather than reminting blindly.",
+      "mode": "dry-run",
+      "input": {
+        "runtimeState": {
+          "tokenMap": true,
+          "activeUpload": true,
+          "hashDrift": true
+        }
+      },
+      "instructions": [
+        "Assume one artifact already exists in the runtime token map with the same hash, one staged upload is active, and one artifact name has a different local hash than the recorded hash.",
+        "Explain the correct skip, resume, and stop behavior."
+      ],
+      "deliverables": [
+        "Resume-safe execution logic",
+        "Failure conditions"
+      ],
+      "assertions": [
+        {
+          "id": "skip-existing",
+          "label": "Skips reminting when name and hash already match",
+          "severity": "critical",
+          "requiredAny": [
+            "skip",
+            "same hash"
+          ]
+        },
+        {
+          "id": "resume-upload",
+          "label": "Resumes staged upload instead of restarting or switching routes",
+          "severity": "critical",
+          "requiredAny": [
+            "get-upload-state",
+            "resume",
+            "staged"
+          ]
+        },
+        {
+          "id": "stop-hash-drift",
+          "label": "Stops on name match with hash mismatch",
+          "severity": "critical",
+          "requiredAny": [
+            "stop",
+            "hash differs",
+            "hash mismatch"
+          ]
+        }
+      ]
+    }
+  ]
+}

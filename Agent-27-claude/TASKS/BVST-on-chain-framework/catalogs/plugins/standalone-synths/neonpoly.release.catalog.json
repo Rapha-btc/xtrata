@@ -1,0 +1,52 @@
+{
+  "name": "bvst.plugin.neonpoly.release.v1.0.0",
+  "type": "plugin-release-catalog",
+  "plugin_name": "NeonPoly",
+  "plugin_family": "standalone-synths",
+  "category": "Instruments",
+  "runtime_major": 1,
+  "engine_major": 1,
+  "schema_major": 1,
+  "dependencies": {
+    "foundation_catalog": "bvst.catalog.foundation.v1",
+    "runtime_major_catalog": "bvst.catalog.runtime.v1",
+    "engine_major_catalog": "bvst.catalog.engine.v1",
+    "schema_major_catalog": "bvst.catalog.schema.v1",
+    "manifest": {
+      "name": "bvst.plugin.neonpoly.manifest.v1.0.0",
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "path": "on-chain-modules/workspace/Plugins/Instruments/NeonPoly/manifest.json",
+      "mime_type": "application/json",
+      "sha256": "d4f749963d9e9351acb40a6ebe3881d29fa08b04483c6e6b27a7e986ba9c2443",
+      "bytes": 356,
+      "chunks": 1,
+      "route": "helper"
+    },
+    "patch": {
+      "name": "bvst.plugin.neonpoly.patch.v1.0.0",
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "path": "on-chain-modules/workspace/Plugins/Instruments/NeonPoly/patch.json",
+      "mime_type": "application/json",
+      "sha256": "06675262945155a0dc31d4c1f55312156ba800ca81d7cb4975a48c7f56718e6b",
+      "bytes": 4620,
+      "chunks": 1,
+      "route": "helper"
+    },
+    "shell": {
+      "name": "bvst.plugin.neonpoly.shell.v1.0.0",
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "path": "on-chain-modules/workspace/Plugins/Instruments/NeonPoly/gui.html",
+      "mime_type": "text/html",
+      "sha256": "e6173d6633d0693f0f98a2e5989002870059f077d6bcd061ae9d4f07dd0d2c27",
+      "bytes": 834,
+      "chunks": 1,
+      "route": "helper"
+    }
+  }
+}

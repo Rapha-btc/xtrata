@@ -1,0 +1,47 @@
+{
+  "request_name": "bvst-release-v1",
+  "network": "mainnet",
+  "wallet_context": {
+    "address": "SP000000000000000000002Q6VF78",
+    "execution_authorized": false,
+    "fee_policy": {
+      "mode": "quote-only",
+      "network_fee_confidence": "estimate"
+    }
+  },
+  "planning_docs": [
+    {
+      "label": "automation-brief",
+      "source": "TASKS/INSCRIPTION_AUTOMATION.md"
+    }
+  ],
+  "state": {
+    "token_map_template": "on-chain-modules/configs/token-map.template.json",
+    "runtime_token_map": "on-chain-modules/configs/token-map.runtime.json",
+    "inscription_log": "on-chain-modules/verification/inscription-log.json",
+    "render_dir": "on-chain-modules/rendered/"
+  },
+  "artifacts": [
+    {
+      "name": "foundation-schema",
+      "source": "https://example.com/releases/foundation-schema.json",
+      "mime_type": "application/json",
+      "route": "helper",
+      "depends_on": []
+    },
+    {
+      "name": "engine-catalog",
+      "source": "https://example.com/releases/engine-catalog.json",
+      "mime_type": "application/json",
+      "route": "staged",
+      "depends_on": ["foundation-schema"],
+      "render": {
+        "kind": "catalog-json",
+        "replace_null_token_ids": true,
+        "companion_fields": [
+          "foundation_catalog"
+        ]
+      }
+    }
+  ]
+}

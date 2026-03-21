@@ -1,0 +1,14 @@
+{
+  "name": "UniversalSynth",
+  "version": "1.0.13",
+  "type": "Instrument",
+  "description": "Reference instrument demonstrating the patch-based UI runtime over the unified engine (Oscillators, Filter, LFO, Delay, Drive, Sequencer).",
+  "components": {
+    "audio_engine": "../../../System/shared/bvst_unified_bg.wasm",
+    "ui_html": "gui.html"
+  },
+  "io": {
+    "inputs": 0,
+    "outputs": 2
+  }
+}

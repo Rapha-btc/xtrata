@@ -1,0 +1,52 @@
+{
+  "name": "bvst.plugin.jms10.release.v1.0.0",
+  "type": "plugin-release-catalog",
+  "plugin_name": "JMS10",
+  "plugin_family": "universalsynth-family",
+  "category": "Instruments",
+  "runtime_major": 1,
+  "engine_major": 1,
+  "schema_major": 1,
+  "dependencies": {
+    "foundation_catalog": "bvst.catalog.foundation.v1",
+    "runtime_major_catalog": "bvst.catalog.runtime.v1",
+    "engine_major_catalog": "bvst.catalog.engine.v1",
+    "schema_major_catalog": "bvst.catalog.schema.v1",
+    "manifest": {
+      "name": "bvst.plugin.jms10.manifest.v1.0.0",
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "path": "on-chain-modules/workspace/Plugins/Instruments/JMS10/manifest.json",
+      "mime_type": "application/json",
+      "sha256": "c6633e5339c7b5592237c26bf0e3a798acca5b388d0c976129313ab9e2340990",
+      "bytes": 322,
+      "chunks": 1,
+      "route": "helper"
+    },
+    "patch": {
+      "name": "bvst.plugin.jms10.patch.v1.0.0",
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "path": "on-chain-modules/workspace/Plugins/Instruments/JMS10/patch.json",
+      "mime_type": "application/json",
+      "sha256": "15bb93588509c0b264e2350e2cd1a90505de14ff9da2f8b741e9684be185fd79",
+      "bytes": 5613,
+      "chunks": 1,
+      "route": "helper"
+    },
+    "shell": {
+      "name": "bvst.plugin.jms10.shell.v1.0.0",
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "path": "on-chain-modules/workspace/Plugins/Instruments/JMS10/gui.html",
+      "mime_type": "text/html",
+      "sha256": "e6ea7b790e1c3225fd84116064de6c983248cab9a9daa9ac664c0a628f6a19eb",
+      "bytes": 826,
+      "chunks": 1,
+      "route": "helper"
+    }
+  }
+}

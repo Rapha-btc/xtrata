@@ -1,0 +1,13 @@
+{
+  "name": "bvst.catalog.root.v1",
+  "type": "root-catalog",
+  "planning_docs": [
+    "on-chain-planning/README.md",
+    "on-chain-planning/02-module-strata.md",
+    "on-chain-planning/03-recursive-dependency-graph.md",
+    "on-chain-planning/04-xtrata-inscription-workflow.md",
+    "on-chain-planning/05-roadmap.md"
+  ],
+  "foundation_catalog": "bvst.catalog.foundation.v1",
+  "first_wave_catalog": "bvst.catalog.release.firstwaveinstruments.v1"
+}

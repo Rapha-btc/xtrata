@@ -1,0 +1,15 @@
+{
+  "name": "RetroKeys",
+  "version": "1.0.0",
+  "type": "Instrument",
+  "description": "Electric Piano Emulation with FM and Tremolo (shared unified engine/worklet).",
+  "components": {
+    "audio_engine": "../../../System/shared/bvst_unified_bg.wasm",
+    "ui_html": "gui.html"
+  },
+  "io": {
+    "inputs": 0,
+    "outputs": 2
+  }
+}
+

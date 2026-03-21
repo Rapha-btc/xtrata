@@ -1,0 +1,861 @@
+{
+  "nodes": [
+    {
+      "name": "bvst.schema.patch.v1",
+      "kind": "leaf",
+      "stratum": "schema",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/System/shared/bvst_patch_v1.schema.json"
+    },
+    {
+      "name": "bvst.runtime.bvst-css.v1.0.0",
+      "kind": "leaf",
+      "stratum": "runtime",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/System/shared/bvst.css"
+    },
+    {
+      "name": "bvst.runtime.ui-styles.v1.0.0",
+      "kind": "leaf",
+      "stratum": "runtime",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/System/shared/ui_styles.js"
+    },
+    {
+      "name": "bvst.runtime.audional-decoder.v1.0.0",
+      "kind": "leaf",
+      "stratum": "runtime",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/System/shared/audional_decoder.js"
+    },
+    {
+      "name": "bvst.runtime.controls.v1.0.0",
+      "kind": "leaf",
+      "stratum": "runtime",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/System/shared/controls.js"
+    },
+    {
+      "name": "bvst.runtime.keyboard.v1.0.0",
+      "kind": "leaf",
+      "stratum": "runtime",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/System/shared/keyboard.js"
+    },
+    {
+      "name": "bvst.runtime.midi.v1.0.0",
+      "kind": "leaf",
+      "stratum": "runtime",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/System/shared/midi.js"
+    },
+    {
+      "name": "bvst.runtime.midi-parser.v1.0.0",
+      "kind": "leaf",
+      "stratum": "runtime",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/System/shared/midi_parser.js"
+    },
+    {
+      "name": "bvst.runtime.visualizer.v1.0.0",
+      "kind": "leaf",
+      "stratum": "runtime",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/System/shared/visualizer.js"
+    },
+    {
+      "name": "bvst.runtime.sampler.v1.0.0",
+      "kind": "leaf",
+      "stratum": "runtime",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/System/shared/sampler.js"
+    },
+    {
+      "name": "bvst.runtime.sequencer-core.v1.0.0",
+      "kind": "leaf",
+      "stratum": "runtime",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/System/shared/sequencer_core.js"
+    },
+    {
+      "name": "bvst.engine.unified-wasm.v1.0.0",
+      "kind": "leaf",
+      "stratum": "engine",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/System/shared/bvst_unified_bg.wasm"
+    },
+    {
+      "name": "bvst.engine.unified-loader.v1.0.0",
+      "kind": "leaf",
+      "stratum": "engine",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/System/shared/wasm_loader_unified.js"
+    },
+    {
+      "name": "bvst.engine.unified-worklet.v1.0.0",
+      "kind": "leaf",
+      "stratum": "engine",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/System/shared/processor_unified.js"
+    },
+    {
+      "name": "bvst.runtime.standalone-bridge.v1.0.0",
+      "kind": "leaf",
+      "stratum": "runtime",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/System/shared/standalone_bridge.js"
+    },
+    {
+      "name": "bvst.runtime.plugin-core.v1.0.0",
+      "kind": "leaf",
+      "stratum": "runtime",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/System/shared/plugin_core.js"
+    },
+    {
+      "name": "bvst.runtime.patch-runtime.v1.0.0",
+      "kind": "leaf",
+      "stratum": "runtime",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/System/shared/patch_runtime.js"
+    },
+    {
+      "name": "bvst.catalog.runtime.v1",
+      "kind": "catalog",
+      "stratum": "major-catalog",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/catalogs/majors/runtime-v1.catalog.json"
+    },
+    {
+      "name": "bvst.catalog.engine.v1",
+      "kind": "catalog",
+      "stratum": "major-catalog",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/catalogs/majors/engine-v1.catalog.json"
+    },
+    {
+      "name": "bvst.catalog.schema.v1",
+      "kind": "catalog",
+      "stratum": "major-catalog",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/catalogs/majors/schema-v1.catalog.json"
+    },
+    {
+      "name": "bvst.catalog.foundation.v1",
+      "kind": "catalog",
+      "stratum": "foundation-catalog",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/catalogs/releases/foundation-v1.catalog.json"
+    },
+    {
+      "name": "bvst.plugin.jms10.manifest.v1.0.0",
+      "kind": "leaf",
+      "stratum": "plugin-manifest",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/JMS10/manifest.json"
+    },
+    {
+      "name": "bvst.plugin.jms10.patch.v1.0.0",
+      "kind": "leaf",
+      "stratum": "plugin-patch",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/JMS10/patch.json"
+    },
+    {
+      "name": "bvst.plugin.jms10.shell.v1.0.0",
+      "kind": "leaf",
+      "stratum": "plugin-shell",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/JMS10/gui.html"
+    },
+    {
+      "name": "bvst.plugin.universalengine.manifest.v1.0.0",
+      "kind": "leaf",
+      "stratum": "plugin-manifest",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/UniversalEngine/manifest.json"
+    },
+    {
+      "name": "bvst.plugin.universalengine.patch.v1.0.0",
+      "kind": "leaf",
+      "stratum": "plugin-patch",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/UniversalEngine/patch.json"
+    },
+    {
+      "name": "bvst.plugin.universalengine.shell.v1.0.0",
+      "kind": "leaf",
+      "stratum": "plugin-shell",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/UniversalEngine/gui.html"
+    },
+    {
+      "name": "bvst.plugin.universalsynth.manifest.v1.0.13",
+      "kind": "leaf",
+      "stratum": "plugin-manifest",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/UniversalSynth/manifest.json"
+    },
+    {
+      "name": "bvst.plugin.universalsynth.patch.v1.0.13",
+      "kind": "leaf",
+      "stratum": "plugin-patch",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/UniversalSynth/patch.json"
+    },
+    {
+      "name": "bvst.plugin.universalsynth.shell.v1.0.13",
+      "kind": "leaf",
+      "stratum": "plugin-shell",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/UniversalSynth/gui.html"
+    },
+    {
+      "name": "bvst.plugin.jms10.release.v1.0.0",
+      "kind": "catalog",
+      "stratum": "plugin-release-catalog",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/catalogs/plugins/universalsynth-family/jms10.release.catalog.json"
+    },
+    {
+      "name": "bvst.plugin.universalengine.release.v1.0.0",
+      "kind": "catalog",
+      "stratum": "plugin-release-catalog",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/catalogs/plugins/universalsynth-family/universalengine.release.catalog.json"
+    },
+    {
+      "name": "bvst.plugin.universalsynth.release.v1.0.13",
+      "kind": "catalog",
+      "stratum": "plugin-release-catalog",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/catalogs/plugins/universalsynth-family/universalsynth.release.catalog.json"
+    },
+    {
+      "name": "bvst.catalog.family.universalsynthfamily.v1",
+      "kind": "catalog",
+      "stratum": "plugin-family-catalog",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/catalogs/families/universalsynth-family.catalog.json"
+    },
+    {
+      "name": "bvst.plugin.bluemarvinone.manifest.v1.0.0",
+      "kind": "leaf",
+      "stratum": "plugin-manifest",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinOne/manifest.json"
+    },
+    {
+      "name": "bvst.plugin.bluemarvinone.patch.v1.0.0",
+      "kind": "leaf",
+      "stratum": "plugin-patch",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinOne/patch.json"
+    },
+    {
+      "name": "bvst.plugin.bluemarvinone.shell.v1.0.0",
+      "kind": "leaf",
+      "stratum": "plugin-shell",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinOne/gui.html"
+    },
+    {
+      "name": "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
+      "kind": "leaf",
+      "stratum": "plugin-manifest",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinTwo/manifest.json"
+    },
+    {
+      "name": "bvst.plugin.bluemarvintwo.patch.v1.0.0",
+      "kind": "leaf",
+      "stratum": "plugin-patch",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinTwo/patch.json"
+    },
+    {
+      "name": "bvst.plugin.bluemarvintwo.shell.v1.0.0",
+      "kind": "leaf",
+      "stratum": "plugin-shell",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinTwo/gui.html"
+    },
+    {
+      "name": "bvst.plugin.neonpoly.manifest.v1.0.0",
+      "kind": "leaf",
+      "stratum": "plugin-manifest",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/NeonPoly/manifest.json"
+    },
+    {
+      "name": "bvst.plugin.neonpoly.patch.v1.0.0",
+      "kind": "leaf",
+      "stratum": "plugin-patch",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/NeonPoly/patch.json"
+    },
+    {
+      "name": "bvst.plugin.neonpoly.shell.v1.0.0",
+      "kind": "leaf",
+      "stratum": "plugin-shell",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/NeonPoly/gui.html"
+    },
+    {
+      "name": "bvst.plugin.retrokeys.manifest.v1.0.0",
+      "kind": "leaf",
+      "stratum": "plugin-manifest",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/manifest.json"
+    },
+    {
+      "name": "bvst.plugin.retrokeys.patch.v1.0.0",
+      "kind": "leaf",
+      "stratum": "plugin-patch",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/patch.json"
+    },
+    {
+      "name": "bvst.plugin.retrokeys.shell.v1.0.0",
+      "kind": "leaf",
+      "stratum": "plugin-shell",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/gui.html"
+    },
+    {
+      "name": "bvst.plugin.bluemarvinone.release.v1.0.0",
+      "kind": "catalog",
+      "stratum": "plugin-release-catalog",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/catalogs/plugins/standalone-synths/bluemarvinone.release.catalog.json"
+    },
+    {
+      "name": "bvst.plugin.bluemarvintwo.release.v1.0.0",
+      "kind": "catalog",
+      "stratum": "plugin-release-catalog",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/catalogs/plugins/standalone-synths/bluemarvintwo.release.catalog.json"
+    },
+    {
+      "name": "bvst.plugin.neonpoly.release.v1.0.0",
+      "kind": "catalog",
+      "stratum": "plugin-release-catalog",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/catalogs/plugins/standalone-synths/neonpoly.release.catalog.json"
+    },
+    {
+      "name": "bvst.plugin.retrokeys.release.v1.0.0",
+      "kind": "catalog",
+      "stratum": "plugin-release-catalog",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/catalogs/plugins/standalone-synths/retrokeys.release.catalog.json"
+    },
+    {
+      "name": "bvst.catalog.family.standalonesynths.v1",
+      "kind": "catalog",
+      "stratum": "plugin-family-catalog",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/catalogs/families/standalone-synths.catalog.json"
+    },
+    {
+      "name": "bvst.catalog.release.firstwaveinstruments.v1",
+      "kind": "catalog",
+      "stratum": "release-catalog",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/catalogs/releases/first-wave-instruments.catalog.json"
+    },
+    {
+      "name": "bvst.catalog.root.v1",
+      "kind": "catalog",
+      "stratum": "root-catalog",
+      "route": "helper",
+      "bundle_path": "on-chain-modules/catalogs/root/root.catalog.json"
+    }
+  ],
+  "edges": [
+    {
+      "from": "bvst.runtime.bvst-css.v1.0.0",
+      "to": "bvst.runtime.ui-styles.v1.0.0"
+    },
+    {
+      "from": "bvst.runtime.ui-styles.v1.0.0",
+      "to": "bvst.runtime.controls.v1.0.0"
+    },
+    {
+      "from": "bvst.runtime.ui-styles.v1.0.0",
+      "to": "bvst.runtime.keyboard.v1.0.0"
+    },
+    {
+      "from": "bvst.runtime.ui-styles.v1.0.0",
+      "to": "bvst.runtime.midi.v1.0.0"
+    },
+    {
+      "from": "bvst.runtime.ui-styles.v1.0.0",
+      "to": "bvst.runtime.visualizer.v1.0.0"
+    },
+    {
+      "from": "bvst.runtime.ui-styles.v1.0.0",
+      "to": "bvst.runtime.sampler.v1.0.0"
+    },
+    {
+      "from": "bvst.runtime.audional-decoder.v1.0.0",
+      "to": "bvst.runtime.sampler.v1.0.0"
+    },
+    {
+      "from": "bvst.runtime.ui-styles.v1.0.0",
+      "to": "bvst.runtime.sequencer-core.v1.0.0"
+    },
+    {
+      "from": "bvst.engine.unified-wasm.v1.0.0",
+      "to": "bvst.engine.unified-loader.v1.0.0"
+    },
+    {
+      "from": "bvst.engine.unified-loader.v1.0.0",
+      "to": "bvst.engine.unified-worklet.v1.0.0"
+    },
+    {
+      "from": "bvst.engine.unified-worklet.v1.0.0",
+      "to": "bvst.runtime.standalone-bridge.v1.0.0"
+    },
+    {
+      "from": "bvst.engine.unified-wasm.v1.0.0",
+      "to": "bvst.runtime.standalone-bridge.v1.0.0"
+    },
+    {
+      "from": "bvst.runtime.controls.v1.0.0",
+      "to": "bvst.runtime.plugin-core.v1.0.0"
+    },
+    {
+      "from": "bvst.runtime.keyboard.v1.0.0",
+      "to": "bvst.runtime.plugin-core.v1.0.0"
+    },
+    {
+      "from": "bvst.runtime.midi.v1.0.0",
+      "to": "bvst.runtime.plugin-core.v1.0.0"
+    },
+    {
+      "from": "bvst.runtime.sampler.v1.0.0",
+      "to": "bvst.runtime.plugin-core.v1.0.0"
+    },
+    {
+      "from": "bvst.runtime.visualizer.v1.0.0",
+      "to": "bvst.runtime.plugin-core.v1.0.0"
+    },
+    {
+      "from": "bvst.runtime.sequencer-core.v1.0.0",
+      "to": "bvst.runtime.plugin-core.v1.0.0"
+    },
+    {
+      "from": "bvst.runtime.standalone-bridge.v1.0.0",
+      "to": "bvst.runtime.plugin-core.v1.0.0"
+    },
+    {
+      "from": "bvst.runtime.plugin-core.v1.0.0",
+      "to": "bvst.runtime.patch-runtime.v1.0.0"
+    },
+    {
+      "from": "bvst.runtime.bvst-css.v1.0.0",
+      "to": "bvst.catalog.runtime.v1"
+    },
+    {
+      "from": "bvst.runtime.ui-styles.v1.0.0",
+      "to": "bvst.catalog.runtime.v1"
+    },
+    {
+      "from": "bvst.runtime.audional-decoder.v1.0.0",
+      "to": "bvst.catalog.runtime.v1"
+    },
+    {
+      "from": "bvst.runtime.controls.v1.0.0",
+      "to": "bvst.catalog.runtime.v1"
+    },
+    {
+      "from": "bvst.runtime.keyboard.v1.0.0",
+      "to": "bvst.catalog.runtime.v1"
+    },
+    {
+      "from": "bvst.runtime.midi.v1.0.0",
+      "to": "bvst.catalog.runtime.v1"
+    },
+    {
+      "from": "bvst.runtime.midi-parser.v1.0.0",
+      "to": "bvst.catalog.runtime.v1"
+    },
+    {
+      "from": "bvst.runtime.visualizer.v1.0.0",
+      "to": "bvst.catalog.runtime.v1"
+    },
+    {
+      "from": "bvst.runtime.sampler.v1.0.0",
+      "to": "bvst.catalog.runtime.v1"
+    },
+    {
+      "from": "bvst.runtime.sequencer-core.v1.0.0",
+      "to": "bvst.catalog.runtime.v1"
+    },
+    {
+      "from": "bvst.runtime.standalone-bridge.v1.0.0",
+      "to": "bvst.catalog.runtime.v1"
+    },
+    {
+      "from": "bvst.runtime.plugin-core.v1.0.0",
+      "to": "bvst.catalog.runtime.v1"
+    },
+    {
+      "from": "bvst.runtime.patch-runtime.v1.0.0",
+      "to": "bvst.catalog.runtime.v1"
+    },
+    {
+      "from": "bvst.engine.unified-wasm.v1.0.0",
+      "to": "bvst.catalog.engine.v1"
+    },
+    {
+      "from": "bvst.engine.unified-loader.v1.0.0",
+      "to": "bvst.catalog.engine.v1"
+    },
+    {
+      "from": "bvst.engine.unified-worklet.v1.0.0",
+      "to": "bvst.catalog.engine.v1"
+    },
+    {
+      "from": "bvst.schema.patch.v1",
+      "to": "bvst.catalog.schema.v1"
+    },
+    {
+      "from": "bvst.catalog.runtime.v1",
+      "to": "bvst.catalog.foundation.v1"
+    },
+    {
+      "from": "bvst.catalog.engine.v1",
+      "to": "bvst.catalog.foundation.v1"
+    },
+    {
+      "from": "bvst.catalog.schema.v1",
+      "to": "bvst.catalog.foundation.v1"
+    },
+    {
+      "from": "bvst.schema.patch.v1",
+      "to": "bvst.plugin.jms10.patch.v1.0.0"
+    },
+    {
+      "from": "bvst.runtime.patch-runtime.v1.0.0",
+      "to": "bvst.plugin.jms10.shell.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.jms10.manifest.v1.0.0",
+      "to": "bvst.plugin.jms10.shell.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.jms10.patch.v1.0.0",
+      "to": "bvst.plugin.jms10.shell.v1.0.0"
+    },
+    {
+      "from": "bvst.schema.patch.v1",
+      "to": "bvst.plugin.universalengine.patch.v1.0.0"
+    },
+    {
+      "from": "bvst.runtime.patch-runtime.v1.0.0",
+      "to": "bvst.plugin.universalengine.shell.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.universalengine.manifest.v1.0.0",
+      "to": "bvst.plugin.universalengine.shell.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.universalengine.patch.v1.0.0",
+      "to": "bvst.plugin.universalengine.shell.v1.0.0"
+    },
+    {
+      "from": "bvst.schema.patch.v1",
+      "to": "bvst.plugin.universalsynth.patch.v1.0.13"
+    },
+    {
+      "from": "bvst.runtime.patch-runtime.v1.0.0",
+      "to": "bvst.plugin.universalsynth.shell.v1.0.13"
+    },
+    {
+      "from": "bvst.plugin.universalsynth.manifest.v1.0.13",
+      "to": "bvst.plugin.universalsynth.shell.v1.0.13"
+    },
+    {
+      "from": "bvst.plugin.universalsynth.patch.v1.0.13",
+      "to": "bvst.plugin.universalsynth.shell.v1.0.13"
+    },
+    {
+      "from": "bvst.plugin.jms10.manifest.v1.0.0",
+      "to": "bvst.plugin.jms10.release.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.jms10.patch.v1.0.0",
+      "to": "bvst.plugin.jms10.release.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.jms10.shell.v1.0.0",
+      "to": "bvst.plugin.jms10.release.v1.0.0"
+    },
+    {
+      "from": "bvst.catalog.runtime.v1",
+      "to": "bvst.plugin.jms10.release.v1.0.0"
+    },
+    {
+      "from": "bvst.catalog.engine.v1",
+      "to": "bvst.plugin.jms10.release.v1.0.0"
+    },
+    {
+      "from": "bvst.catalog.schema.v1",
+      "to": "bvst.plugin.jms10.release.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.universalengine.manifest.v1.0.0",
+      "to": "bvst.plugin.universalengine.release.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.universalengine.patch.v1.0.0",
+      "to": "bvst.plugin.universalengine.release.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.universalengine.shell.v1.0.0",
+      "to": "bvst.plugin.universalengine.release.v1.0.0"
+    },
+    {
+      "from": "bvst.catalog.runtime.v1",
+      "to": "bvst.plugin.universalengine.release.v1.0.0"
+    },
+    {
+      "from": "bvst.catalog.engine.v1",
+      "to": "bvst.plugin.universalengine.release.v1.0.0"
+    },
+    {
+      "from": "bvst.catalog.schema.v1",
+      "to": "bvst.plugin.universalengine.release.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.universalsynth.manifest.v1.0.13",
+      "to": "bvst.plugin.universalsynth.release.v1.0.13"
+    },
+    {
+      "from": "bvst.plugin.universalsynth.patch.v1.0.13",
+      "to": "bvst.plugin.universalsynth.release.v1.0.13"
+    },
+    {
+      "from": "bvst.plugin.universalsynth.shell.v1.0.13",
+      "to": "bvst.plugin.universalsynth.release.v1.0.13"
+    },
+    {
+      "from": "bvst.catalog.runtime.v1",
+      "to": "bvst.plugin.universalsynth.release.v1.0.13"
+    },
+    {
+      "from": "bvst.catalog.engine.v1",
+      "to": "bvst.plugin.universalsynth.release.v1.0.13"
+    },
+    {
+      "from": "bvst.catalog.schema.v1",
+      "to": "bvst.plugin.universalsynth.release.v1.0.13"
+    },
+    {
+      "from": "bvst.plugin.universalsynth.release.v1.0.13",
+      "to": "bvst.catalog.family.universalsynthfamily.v1"
+    },
+    {
+      "from": "bvst.plugin.universalengine.release.v1.0.0",
+      "to": "bvst.catalog.family.universalsynthfamily.v1"
+    },
+    {
+      "from": "bvst.plugin.jms10.release.v1.0.0",
+      "to": "bvst.catalog.family.universalsynthfamily.v1"
+    },
+    {
+      "from": "bvst.schema.patch.v1",
+      "to": "bvst.plugin.bluemarvinone.patch.v1.0.0"
+    },
+    {
+      "from": "bvst.runtime.patch-runtime.v1.0.0",
+      "to": "bvst.plugin.bluemarvinone.shell.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.bluemarvinone.manifest.v1.0.0",
+      "to": "bvst.plugin.bluemarvinone.shell.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.bluemarvinone.patch.v1.0.0",
+      "to": "bvst.plugin.bluemarvinone.shell.v1.0.0"
+    },
+    {
+      "from": "bvst.schema.patch.v1",
+      "to": "bvst.plugin.bluemarvintwo.patch.v1.0.0"
+    },
+    {
+      "from": "bvst.runtime.patch-runtime.v1.0.0",
+      "to": "bvst.plugin.bluemarvintwo.shell.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
+      "to": "bvst.plugin.bluemarvintwo.shell.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.bluemarvintwo.patch.v1.0.0",
+      "to": "bvst.plugin.bluemarvintwo.shell.v1.0.0"
+    },
+    {
+      "from": "bvst.schema.patch.v1",
+      "to": "bvst.plugin.neonpoly.patch.v1.0.0"
+    },
+    {
+      "from": "bvst.runtime.patch-runtime.v1.0.0",
+      "to": "bvst.plugin.neonpoly.shell.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.neonpoly.manifest.v1.0.0",
+      "to": "bvst.plugin.neonpoly.shell.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.neonpoly.patch.v1.0.0",
+      "to": "bvst.plugin.neonpoly.shell.v1.0.0"
+    },
+    {
+      "from": "bvst.schema.patch.v1",
+      "to": "bvst.plugin.retrokeys.patch.v1.0.0"
+    },
+    {
+      "from": "bvst.runtime.patch-runtime.v1.0.0",
+      "to": "bvst.plugin.retrokeys.shell.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.retrokeys.manifest.v1.0.0",
+      "to": "bvst.plugin.retrokeys.shell.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.retrokeys.patch.v1.0.0",
+      "to": "bvst.plugin.retrokeys.shell.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.bluemarvinone.manifest.v1.0.0",
+      "to": "bvst.plugin.bluemarvinone.release.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.bluemarvinone.patch.v1.0.0",
+      "to": "bvst.plugin.bluemarvinone.release.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.bluemarvinone.shell.v1.0.0",
+      "to": "bvst.plugin.bluemarvinone.release.v1.0.0"
+    },
+    {
+      "from": "bvst.catalog.runtime.v1",
+      "to": "bvst.plugin.bluemarvinone.release.v1.0.0"
+    },
+    {
+      "from": "bvst.catalog.engine.v1",
+      "to": "bvst.plugin.bluemarvinone.release.v1.0.0"
+    },
+    {
+      "from": "bvst.catalog.schema.v1",
+      "to": "bvst.plugin.bluemarvinone.release.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
+      "to": "bvst.plugin.bluemarvintwo.release.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.bluemarvintwo.patch.v1.0.0",
+      "to": "bvst.plugin.bluemarvintwo.release.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.bluemarvintwo.shell.v1.0.0",
+      "to": "bvst.plugin.bluemarvintwo.release.v1.0.0"
+    },
+    {
+      "from": "bvst.catalog.runtime.v1",
+      "to": "bvst.plugin.bluemarvintwo.release.v1.0.0"
+    },
+    {
+      "from": "bvst.catalog.engine.v1",
+      "to": "bvst.plugin.bluemarvintwo.release.v1.0.0"
+    },
+    {
+      "from": "bvst.catalog.schema.v1",
+      "to": "bvst.plugin.bluemarvintwo.release.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.neonpoly.manifest.v1.0.0",
+      "to": "bvst.plugin.neonpoly.release.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.neonpoly.patch.v1.0.0",
+      "to": "bvst.plugin.neonpoly.release.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.neonpoly.shell.v1.0.0",
+      "to": "bvst.plugin.neonpoly.release.v1.0.0"
+    },
+    {
+      "from": "bvst.catalog.runtime.v1",
+      "to": "bvst.plugin.neonpoly.release.v1.0.0"
+    },
+    {
+      "from": "bvst.catalog.engine.v1",
+      "to": "bvst.plugin.neonpoly.release.v1.0.0"
+    },
+    {
+      "from": "bvst.catalog.schema.v1",
+      "to": "bvst.plugin.neonpoly.release.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.retrokeys.manifest.v1.0.0",
+      "to": "bvst.plugin.retrokeys.release.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.retrokeys.patch.v1.0.0",
+      "to": "bvst.plugin.retrokeys.release.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.retrokeys.shell.v1.0.0",
+      "to": "bvst.plugin.retrokeys.release.v1.0.0"
+    },
+    {
+      "from": "bvst.catalog.runtime.v1",
+      "to": "bvst.plugin.retrokeys.release.v1.0.0"
+    },
+    {
+      "from": "bvst.catalog.engine.v1",
+      "to": "bvst.plugin.retrokeys.release.v1.0.0"
+    },
+    {
+      "from": "bvst.catalog.schema.v1",
+      "to": "bvst.plugin.retrokeys.release.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.retrokeys.release.v1.0.0",
+      "to": "bvst.catalog.family.standalonesynths.v1"
+    },
+    {
+      "from": "bvst.plugin.bluemarvinone.release.v1.0.0",
+      "to": "bvst.catalog.family.standalonesynths.v1"
+    },
+    {
+      "from": "bvst.plugin.bluemarvintwo.release.v1.0.0",
+      "to": "bvst.catalog.family.standalonesynths.v1"
+    },
+    {
+      "from": "bvst.plugin.neonpoly.release.v1.0.0",
+      "to": "bvst.catalog.family.standalonesynths.v1"
+    },
+    {
+      "from": "bvst.catalog.family.universalsynthfamily.v1",
+      "to": "bvst.catalog.release.firstwaveinstruments.v1"
+    },
+    {
+      "from": "bvst.catalog.family.standalonesynths.v1",
+      "to": "bvst.catalog.release.firstwaveinstruments.v1"
+    },
+    {
+      "from": "bvst.catalog.foundation.v1",
+      "to": "bvst.catalog.root.v1"
+    },
+    {
+      "from": "bvst.catalog.release.firstwaveinstruments.v1",
+      "to": "bvst.catalog.root.v1"
+    }
+  ]
+}

@@ -20,6 +20,7 @@ on the Xtrata protocol using the skill modules:
 
 | Skill | Use Case |
 |-------|----------|
+| `xtrata-release-plan` | Quote and plan multi-artifact releases before any write |
 | `skill-inscribe` | Inscribe one file (helper or staged route) |
 | `skill-batch-mint` | Coordinated drop of 2-50 non-recursive items |
 | `skill-query` | View/download one inscription by token ID |

@@ -1,0 +1,20 @@
+{
+  "name": "bvst.catalog.schema.v1",
+  "type": "major-catalog",
+  "family": "schema",
+  "major": 1,
+  "modules": [
+    {
+      "name": "bvst.schema.patch.v1",
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "path": "on-chain-modules/workspace/System/shared/bvst_patch_v1.schema.json",
+      "mime_type": "application/json",
+      "sha256": "a645a6ca0d52b73a12a884f99475ebf6d409d0adf61e86b0f75b3cd3c405aff3",
+      "bytes": 3839,
+      "chunks": 1,
+      "route": "helper"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "name": "BlueMarvinTwo",
+  "version": "1.0.0",
+  "type": "Instrument",
+  "description": "ARP 2600 Emulation (Mk II) - 3 VCOs, 2 Envelopes (shared unified engine/worklet).",
+  "components": {
+    "audio_engine": "../../../System/shared/bvst_unified_bg.wasm",
+    "ui_html": "gui.html"
+  },
+  "io": {
+    "inputs": 0,
+    "outputs": 2
+  }
+}
+

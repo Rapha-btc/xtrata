@@ -46,6 +46,7 @@ npm install @stacks/transactions @stacks/network @noble/hashes
 ## Training Sequence
 
 1. Load the focused skill modules:
+   - `xtrata-release-plan` — dependency-aware preflight quote and execution order
    - `skill-inscribe` — single item minting with full code
    - `skill-batch-mint` — coordinated drops with full code
    - `skill-query` — read-only viewing with full code

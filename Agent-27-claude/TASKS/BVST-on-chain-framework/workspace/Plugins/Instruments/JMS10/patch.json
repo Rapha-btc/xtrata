@@ -1,0 +1,260 @@
+{
+  "schema": "bvst.patch/v1",
+  "meta": {
+    "name": "JMS10",
+    "description": "Legacy port: MS-10 style monosynth preset (shared engine)."
+  },
+  "config": {
+    "name": "JMS10",
+    "visualizer": "spectrum",
+    "keyboard": {
+      "startNote": 36,
+      "numKeys": 49
+    },
+    "sequencer": false,
+    "modules": [
+      {
+        "name": "Osc",
+        "cols": 1,
+        "controls": [
+          {
+            "id": "osc1_wave",
+            "param": 0,
+            "type": "select",
+            "options": [
+              "Sine",
+              "Saw",
+              "Square",
+              "Pulse"
+            ],
+            "val": 2,
+            "label": "Wave"
+          },
+          {
+            "id": "osc1_mix",
+            "param": 2,
+            "type": "slider",
+            "min": 0,
+            "max": 1,
+            "val": 0.9,
+            "label": "Level"
+          },
+          {
+            "id": "noise",
+            "param": 8,
+            "type": "slider",
+            "min": 0,
+            "max": 1,
+            "val": 0.05,
+            "label": "Noise"
+          }
+        ]
+      },
+      {
+        "name": "Filter",
+        "cols": 1,
+        "controls": [
+          {
+            "id": "filt_mode",
+            "param": 12,
+            "type": "select",
+            "options": [
+              "LP",
+              "HP",
+              "BP",
+              "Notch"
+            ],
+            "val": 0,
+            "label": "Mode"
+          },
+          {
+            "id": "filt_cut",
+            "param": 10,
+            "type": "knob",
+            "min": 20,
+            "max": 20000,
+            "val": 1100,
+            "curve": "log",
+            "label": "Cutoff"
+          },
+          {
+            "id": "filt_res",
+            "param": 11,
+            "type": "knob",
+            "min": 0.5,
+            "max": 10,
+            "val": 3.5,
+            "label": "Res"
+          },
+          {
+            "id": "filt_env",
+            "param": 13,
+            "type": "knob",
+            "min": -1,
+            "max": 1,
+            "val": 0.5,
+            "label": "Env Amt"
+          }
+        ]
+      },
+      {
+        "name": "Env",
+        "cols": 1,
+        "controls": [
+          {
+            "id": "amp_a",
+            "param": 14,
+            "type": "slider",
+            "min": 0.001,
+            "max": 2,
+            "val": 0.005,
+            "label": "A"
+          },
+          {
+            "id": "amp_d",
+            "param": 15,
+            "type": "slider",
+            "min": 0.001,
+            "max": 2,
+            "val": 0.18,
+            "label": "D"
+          },
+          {
+            "id": "amp_s",
+            "param": 16,
+            "type": "slider",
+            "min": 0,
+            "max": 1,
+            "val": 0.0,
+            "label": "S"
+          },
+          {
+            "id": "amp_r",
+            "param": 17,
+            "type": "slider",
+            "min": 0.001,
+            "max": 5,
+            "val": 0.12,
+            "label": "R"
+          }
+        ]
+      },
+      {
+        "name": "Out",
+        "cols": 1,
+        "controls": [
+          {
+            "id": "drive",
+            "param": 9,
+            "type": "knob",
+            "min": 0,
+            "max": 1,
+            "val": 0.15,
+            "label": "Drive"
+          },
+          {
+            "id": "master",
+            "param": 29,
+            "type": "slider",
+            "min": 0,
+            "max": 2,
+            "val": 0.8,
+            "label": "Master"
+          }
+        ]
+      }
+    ],
+    "presets": {
+      "Init": {
+        "osc1_wave": 2,
+        "osc1_mix": 0.9,
+        "noise": 0.05,
+        "filt_mode": 0,
+        "filt_cut": 1100,
+        "filt_res": 3.5,
+        "filt_env": 0.5,
+        "amp_a": 0.005,
+        "amp_d": 0.18,
+        "amp_s": 0.0,
+        "amp_r": 0.12,
+        "drive": 0.15,
+        "master": 0.8
+      },
+      "MS Pluck": {
+        "osc1_wave": 1,
+        "osc1_mix": 0.95,
+        "noise": 0.02,
+        "filt_mode": 0,
+        "filt_cut": 1800,
+        "filt_res": 1.2,
+        "filt_env": -0.4,
+        "amp_a": 0.002,
+        "amp_d": 0.22,
+        "amp_s": 0.0,
+        "amp_r": 0.08,
+        "drive": 0.08,
+        "master": 0.85
+      },
+      "Snare Zap": {
+        "osc1_wave": 2,
+        "osc1_mix": 0.25,
+        "noise": 0.85,
+        "filt_mode": 3,
+        "filt_cut": 2200,
+        "filt_res": 2.2,
+        "filt_env": 0.15,
+        "amp_a": 0.002,
+        "amp_d": 0.12,
+        "amp_s": 0.0,
+        "amp_r": 0.05,
+        "drive": 0.35,
+        "master": 0.7
+      },
+      "Noise Lead": {
+        "osc1_wave": 3,
+        "osc1_mix": 0.75,
+        "noise": 0.25,
+        "filt_mode": 0,
+        "filt_cut": 750,
+        "filt_res": 6.5,
+        "filt_env": 0.9,
+        "amp_a": 0.005,
+        "amp_d": 0.2,
+        "amp_s": 0.55,
+        "amp_r": 0.25,
+        "drive": 0.55,
+        "master": 0.75
+      },
+      "Bass Growl": {
+        "osc1_wave": 2,
+        "osc1_mix": 0.9,
+        "noise": 0.02,
+        "filt_mode": 0,
+        "filt_cut": 280,
+        "filt_res": 5.5,
+        "filt_env": 0.6,
+        "amp_a": 0.002,
+        "amp_d": 0.12,
+        "amp_s": 0.25,
+        "amp_r": 0.12,
+        "drive": 0.7,
+        "master": 0.8
+      },
+      "FX Sweep": {
+        "osc1_wave": 0,
+        "osc1_mix": 0.6,
+        "noise": 0.35,
+        "filt_mode": 1,
+        "filt_cut": 6000,
+        "filt_res": 9.5,
+        "filt_env": -0.8,
+        "amp_a": 0.05,
+        "amp_d": 1.2,
+        "amp_s": 0.0,
+        "amp_r": 1.5,
+        "drive": 0.45,
+        "master": 0.65
+      }
+    }
+  }
+}

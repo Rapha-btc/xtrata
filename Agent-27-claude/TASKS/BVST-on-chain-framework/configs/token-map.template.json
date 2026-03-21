@@ -1,0 +1,270 @@
+{
+  "generated_for": "on-chain-modules",
+  "entries": {
+    "bvst.catalog.engine.v1": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.catalog.family.standalonesynths.v1": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.catalog.family.universalsynthfamily.v1": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.catalog.foundation.v1": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.catalog.release.firstwaveinstruments.v1": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.catalog.root.v1": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.catalog.runtime.v1": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.catalog.schema.v1": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.engine.unified-loader.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.engine.unified-wasm.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.engine.unified-worklet.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.plugin.bluemarvinone.manifest.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.plugin.bluemarvinone.patch.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.plugin.bluemarvinone.release.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.plugin.bluemarvinone.shell.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.plugin.bluemarvintwo.manifest.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.plugin.bluemarvintwo.patch.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.plugin.bluemarvintwo.release.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.plugin.bluemarvintwo.shell.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.plugin.jms10.manifest.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.plugin.jms10.patch.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.plugin.jms10.release.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.plugin.jms10.shell.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.plugin.neonpoly.manifest.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.plugin.neonpoly.patch.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.plugin.neonpoly.release.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.plugin.neonpoly.shell.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.plugin.retrokeys.manifest.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.plugin.retrokeys.patch.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.plugin.retrokeys.release.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.plugin.retrokeys.shell.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.plugin.universalengine.manifest.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.plugin.universalengine.patch.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.plugin.universalengine.release.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.plugin.universalengine.shell.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.plugin.universalsynth.manifest.v1.0.13": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.plugin.universalsynth.patch.v1.0.13": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.plugin.universalsynth.release.v1.0.13": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.plugin.universalsynth.shell.v1.0.13": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.runtime.audional-decoder.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.runtime.bvst-css.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.runtime.controls.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.runtime.keyboard.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.runtime.midi-parser.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.runtime.midi.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.runtime.patch-runtime.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.runtime.plugin-core.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.runtime.sampler.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.runtime.sequencer-core.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.runtime.standalone-bridge.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.runtime.ui-styles.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.runtime.visualizer.v1.0.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.schema.patch.v1": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    }
+  }
+}

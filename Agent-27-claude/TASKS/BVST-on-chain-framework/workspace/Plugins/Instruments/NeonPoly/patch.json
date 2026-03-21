@@ -1,0 +1,158 @@
+{
+  "schema": "bvst.patch/v1",
+  "meta": {
+    "name": "NeonPoly",
+    "description": "Poly synth patch."
+  },
+  "config": {
+    "name": "NeonPoly",
+    "visualizer": "spectrum",
+    "keyboard": { "startNote": 48, "numKeys": 25 },
+    "modules": [
+      {
+        "name": "Oscillators",
+        "cols": 1,
+        "controls": [
+          { "id": "mix", "label": "Mix", "param": 1, "type": "knob", "min": 0, "max": 1, "step": 0.01, "val": 0.4 },
+          { "id": "detune", "label": "Detune (c)", "param": 2, "type": "knob", "min": 0, "max": 20, "step": 0.5, "val": 6 },
+          { "id": "noise", "label": "Noise", "param": 3, "type": "knob", "min": 0, "max": 0.3, "step": 0.01, "val": 0.05 }
+        ]
+      },
+      {
+        "name": "Filter",
+        "cols": 1,
+        "controls": [
+          { "id": "cutoff", "label": "Cutoff", "param": 4, "type": "knob", "min": 80, "max": 12000, "curve": "log", "val": 1800 },
+          { "id": "res", "label": "Res", "param": 5, "type": "knob", "min": 0.2, "max": 1.5, "step": 0.01, "val": 0.4 },
+          { "id": "env_amt", "label": "Env Amt", "param": 6, "type": "knob", "min": 0, "max": 4000, "step": 10, "val": 1500 }
+        ]
+      },
+      {
+        "name": "Envelopes",
+        "cols": 1,
+        "controls": [
+          { "id": "amp_a", "label": "Amp A", "param": 7, "type": "knob", "min": 0.002, "max": 0.2, "step": 0.001, "val": 0.01 },
+          { "id": "amp_r", "label": "Amp R", "param": 8, "type": "knob", "min": 0.02, "max": 1, "step": 0.01, "val": 0.2 },
+          { "id": "filt_a", "label": "Filt A", "param": 9, "type": "knob", "min": 0.005, "max": 0.3, "step": 0.001, "val": 0.02 },
+          { "id": "filt_r", "label": "Filt R", "param": 10, "type": "knob", "min": 0.02, "max": 1, "step": 0.01, "val": 0.3 }
+        ]
+      },
+      {
+        "name": "Modulation",
+        "cols": 1,
+        "controls": [
+          { "id": "lfo_rate", "label": "LFO Rate", "param": 11, "type": "knob", "min": 0.1, "max": 8, "step": 0.05, "val": 1 },
+          { "id": "lfo_depth", "label": "LFO Depth", "param": 12, "type": "knob", "min": 0, "max": 2000, "step": 10, "val": 500 },
+          { "id": "glide", "label": "Glide", "param": 13, "type": "knob", "min": 0, "max": 0.3, "step": 0.005, "val": 0.02 }
+        ]
+      }
+    ],
+    "presets": {
+      "Init": {
+        "mix": 0.4,
+        "detune": 6,
+        "noise": 0.05,
+        "cutoff": 1800,
+        "res": 0.4,
+        "env_amt": 1500,
+        "amp_a": 0.01,
+        "amp_r": 0.2,
+        "filt_a": 0.02,
+        "filt_r": 0.3,
+        "lfo_rate": 1,
+        "lfo_depth": 500,
+        "glide": 0.02
+      },
+      "Neon Pad": {
+        "mix": 0.55,
+        "detune": 12,
+        "noise": 0.03,
+        "cutoff": 2400,
+        "res": 0.35,
+        "env_amt": 900,
+        "amp_a": 0.08,
+        "amp_r": 0.7,
+        "filt_a": 0.12,
+        "filt_r": 0.8,
+        "lfo_rate": 0.35,
+        "lfo_depth": 900,
+        "glide": 0.02
+      },
+      "Chord Stab": {
+        "mix": 0.4,
+        "detune": 3,
+        "noise": 0.02,
+        "cutoff": 2200,
+        "res": 0.55,
+        "env_amt": 2500,
+        "amp_a": 0.01,
+        "amp_r": 0.12,
+        "filt_a": 0.01,
+        "filt_r": 0.18,
+        "lfo_rate": 2.5,
+        "lfo_depth": 150,
+        "glide": 0.0
+      },
+      "Sweep Lead": {
+        "mix": 0.35,
+        "detune": 8,
+        "noise": 0.01,
+        "cutoff": 1200,
+        "res": 0.65,
+        "env_amt": 3200,
+        "amp_a": 0.01,
+        "amp_r": 0.25,
+        "filt_a": 0.01,
+        "filt_r": 0.22,
+        "lfo_rate": 5.5,
+        "lfo_depth": 350,
+        "glide": 0.06
+      },
+      "Poly Pluck": {
+        "mix": 0.65,
+        "detune": 2,
+        "noise": 0.0,
+        "cutoff": 5000,
+        "res": 0.25,
+        "env_amt": 800,
+        "amp_a": 0.004,
+        "amp_r": 0.15,
+        "filt_a": 0.008,
+        "filt_r": 0.2,
+        "lfo_rate": 1.5,
+        "lfo_depth": 250,
+        "glide": 0.0
+      },
+      "Detuned Stack": {
+        "mix": 0.5,
+        "detune": 18,
+        "noise": 0.04,
+        "cutoff": 900,
+        "res": 0.75,
+        "env_amt": 1100,
+        "amp_a": 0.02,
+        "amp_r": 0.45,
+        "filt_a": 0.02,
+        "filt_r": 0.55,
+        "lfo_rate": 0.9,
+        "lfo_depth": 1200,
+        "glide": 0.02
+      },
+      "Noise Keys": {
+        "mix": 0.3,
+        "detune": 5,
+        "noise": 0.18,
+        "cutoff": 3500,
+        "res": 0.3,
+        "env_amt": 1200,
+        "amp_a": 0.01,
+        "amp_r": 0.28,
+        "filt_a": 0.01,
+        "filt_r": 0.28,
+        "lfo_rate": 6.0,
+        "lfo_depth": 700,
+        "glide": 0.02
+      }
+    }
+  }
+}

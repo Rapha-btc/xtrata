@@ -1,0 +1,14 @@
+{
+  "name": "JMS10",
+  "version": "1.0.0",
+  "type": "Instrument",
+  "description": "Analog monosynth inspired by the Korg MS-10 (shared engine/worklet).",
+  "components": {
+    "audio_engine": "../../../System/shared/bvst_unified_bg.wasm",
+    "ui_html": "gui.html"
+  },
+  "io": {
+    "inputs": 0,
+    "outputs": 2
+  }
+}
