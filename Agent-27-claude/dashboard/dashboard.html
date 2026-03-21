@@ -2995,6 +2995,17 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchJson('/api/heartbeat/status').then(renderHeartbeatStatus).catch(() => {});
     }, 30000);
 
+    // Refresh chain data (balances, txs) every 60s as fallback for missed SSE events
+    setInterval(() => {
+        fetchJson('/api/chain').then(renderMetabolic).catch(() => {});
+    }, 60000);
+
+    // Refresh outreach inbox and auto-converse queue every 2 min
+    setInterval(() => {
+        fetchOutreachHistory();
+        loadAutoConverseQueue();
+    }, 120000);
+
     // --- Autopilot: Heartbeat + Auto-Converse ---
 
     let autopilotConfig = { enabled: false, mode: 'selective', autoSend: false, agents: {} };
