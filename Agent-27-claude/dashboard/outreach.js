@@ -260,7 +260,7 @@ function parsePaymentSats(payment) {
  * Shared send execution: builds prompt, spawns Claude, handles result.
  * Returns a Promise that resolves when the send completes.
  */
-function executeSend({ displayName, stxAddress, btcAddress, agentId, message, mode, model, logPrefix, extraPromptContext, onSuccess, onFailure }) {
+function executeSend({ displayName, stxAddress, btcAddress, agentId, message, mode, model, logPrefix, extraPromptContext, paymentTxid, onSuccess, onFailure }) {
   const walletPassword = process.env.WALLET_PASSWORD || '';
   runningOutreach = true;
   _addLog('start', `${logPrefix} send to ${displayName}...`);
@@ -274,7 +274,11 @@ function executeSend({ displayName, stxAddress, btcAddress, agentId, message, mo
     recipientBtcAddress: btcAddress,
     recipientStxAddress: stxAddress,
     content: message,
-    walletPassword
+    walletPassword,
+    paymentTxid,
+    onStatus: (statusLine) => {
+      _addLog('stdout', `[${logPrefix}] [mcp-direct] ${statusLine}`);
+    }
   }).then((data) => {
     runningOutreach = false;
     const fullText = JSON.stringify(data);
@@ -291,10 +295,11 @@ function executeSend({ displayName, stxAddress, btcAddress, agentId, message, mo
   }).catch((err) => {
     runningOutreach = false;
     const failureText = err.message || 'Unknown inbox send error';
+    const failureResult = { isSuccess: false, recovery: err.recovery || null };
     try { _addLog('error', `${logPrefix} error: ${err.message}`); } catch {}
     try { _addLog('stderr', `[send-response] ${failureText}`); } catch {}
-    if (onFailure) try { onFailure(failureText, { isSuccess: false }); } catch {}
-    return { success: false, error: failureText };
+    if (onFailure) try { onFailure(failureText, failureResult); } catch {}
+    return { success: false, error: failureText, recovery: failureResult.recovery };
   }).finally(() => {
     // Safety net: always clear the lock no matter what
     runningOutreach = false;
@@ -562,6 +567,10 @@ function mount({ addLog, broadcast, registryFile, legacyRegistryFile }) {
     const agents = loadAgentsRegistry(registryFile, legacyRegistryFile);
     const agent = agents.find(a => String(a.id) === String(draft.agentId));
     if (!agent) return res.status(404).json({ error: 'Agent not found' });
+    const queuedReply = markdown.parseReplyQueue().find((entry) =>
+      String(entry.agentId) === String(agent.id) &&
+      entry.message === draft.message
+    );
 
     const ambassadorBrief = markdown.parseOutreachAmbassadorBrief();
     const mode = normalizeOutreachMode(draft.mode, draft.incomingMessage);
@@ -572,6 +581,7 @@ function mount({ addLog, broadcast, registryFile, legacyRegistryFile }) {
     executeSend({
       displayName: agent.name, stxAddress: agent.stxAddress, btcAddress: agent.btcAddress,
       agentId: agent.id, message: draft.message, mode, model: sendModel,
+      paymentTxid: draft.paymentTxid || queuedReply?.paymentTxid || '',
       logPrefix: 'Broadcast', extraPromptContext,
       onSuccess: (_text, sendResult) => {
         const payment = sendResult?.data?.payment || {};
@@ -591,9 +601,19 @@ function mount({ addLog, broadcast, registryFile, legacyRegistryFile }) {
           lastInboundMessage: draft.incomingMessage || outreachContext.memory?.lastInboundMessage || '',
           openLoop: draft.next || 'Awaiting reply'
         });
+        markdown.saveOutreachDraft({ paymentTxid: null });
         broadcast({ event: 'outreach-complete', data: { success: true, agent: agent.name } });
       },
-      onFailure: (errorText) => {
+      onFailure: (errorText, failureResult) => {
+        if (failureResult?.recovery?.paymentTxid) {
+          markdown.saveOutreachDraft({ paymentTxid: failureResult.recovery.paymentTxid });
+          if (queuedReply) {
+            markdown.appendReplyQueue({
+              ...queuedReply,
+              paymentTxid: failureResult.recovery.paymentTxid
+            });
+          }
+        }
         broadcast({ event: 'outreach-complete', data: { success: false, agent: agent.name, error: errorText } });
       }
     });
@@ -733,6 +753,7 @@ function mount({ addLog, broadcast, registryFile, legacyRegistryFile }) {
           btcAddress: rq.btcAddress,
           message: rq.message,
           why: rq.why || '',
+          paymentTxid: rq.paymentTxid || '',
           registryId: rq.agentId,
           source: 'reply-queue'
         });
@@ -847,6 +868,7 @@ function mount({ addLog, broadcast, registryFile, legacyRegistryFile }) {
     executeSend({
       displayName: target.displayName, stxAddress: target.stxAddress, btcAddress: target.btcAddress,
       agentId: agent.id, message: target.message, mode, model: sendModel,
+      paymentTxid: target.paymentTxid || '',
       logPrefix: 'Campaign',
       onSuccess: (_text, sendResult) => {
         const payment = sendResult?.data?.payment || {};
@@ -868,7 +890,20 @@ function mount({ addLog, broadcast, registryFile, legacyRegistryFile }) {
         }
         broadcast({ event: 'outreach-complete', data: { success: true, agent: target.displayName } });
       },
-      onFailure: (errorText) => {
+      onFailure: (errorText, failureResult) => {
+        if (target.source === 'reply-queue' && failureResult?.recovery?.paymentTxid) {
+          markdown.appendReplyQueue({
+            displayName: target.displayName,
+            agentId: String(agent.id),
+            stxAddress: target.stxAddress || agent.stxAddress || '',
+            btcAddress: target.btcAddress || agent.btcAddress || '',
+            message: target.message,
+            mode,
+            why: target.why || '',
+            incomingMessage: memEntry?.lastInboundMessage || '',
+            paymentTxid: failureResult.recovery.paymentTxid
+          });
+        }
         broadcast({ event: 'outreach-complete', data: { success: false, agent: target.displayName, error: errorText } });
       }
     });

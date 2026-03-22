@@ -108,6 +108,7 @@ function approveReply(agentId, message) {
     btcAddress: entry.btcAddress,
     agentId,
     message: entry.message,
+    paymentTxid: entry.paymentTxid || '',
     mode: entry.mode || 'reply',
     model: 'sonnet',
     logPrefix: 'AutoConverse-Approved',
@@ -129,7 +130,7 @@ function approveReply(agentId, message) {
       });
       _broadcast({ event: 'outreach-complete', data: { success: true, agent: displayName, source: 'auto-converse' } });
     },
-    onFailure: (errText) => {
+    onFailure: (errText, failureResult) => {
       markdown.appendReplyQueue({
         displayName,
         agentId: String(agentId),
@@ -138,7 +139,8 @@ function approveReply(agentId, message) {
         message: entry.message,
         mode: entry.mode || 'reply',
         why: entry.why || '',
-        incomingMessage: entry.incomingMessage || ''
+        incomingMessage: entry.incomingMessage || '',
+        paymentTxid: failureResult?.recovery?.paymentTxid || entry.paymentTxid || ''
       });
       _addLog('error', `AutoConverse approved send failed for ${displayName}: ${errText}`);
       _broadcast({ event: 'outreach-complete', data: { success: false, agent: displayName, source: 'auto-converse', error: errText } });
@@ -288,7 +290,18 @@ NEXT: <desired next step>`;
             });
             _broadcast({ event: 'outreach-complete', data: { success: true, agent: agent.name, source: 'auto-converse' } });
           },
-          onFailure: (errText) => {
+          onFailure: (errText, failureResult) => {
+            markdown.appendReplyQueue({
+              displayName: agent.name,
+              agentId: String(agent.id),
+              stxAddress: peerStx,
+              btcAddress: agent.btcAddress || '',
+              message,
+              mode: 'reply',
+              why: thought,
+              incomingMessage: msg.message,
+              paymentTxid: failureResult?.recovery?.paymentTxid || ''
+            });
             _broadcast({ event: 'outreach-complete', data: { success: false, agent: agent.name, source: 'auto-converse', error: errText } });
           }
         });
