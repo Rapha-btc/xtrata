@@ -1,0 +1,75 @@
+{
+  "release": "bvst-sampler-wave-catalogs-v1",
+  "experimental": true,
+  "artifacts": [
+    {
+      "order": 10,
+      "name": "bvst.catalog.source.samplerlab.defaultset.v1",
+      "kind": "catalog",
+      "path": "sampler-wave/catalogs/sources/samplerlab.default-sources.catalog.json",
+      "mime": "application/json",
+      "route": "helper",
+      "depends_on": [
+        "bvst.sample.samplerlab.sine220.source-manifest.v1",
+        "bvst.sample.samplerlab.sine220.audio.v1",
+        "bvst.sample.samplerlab.sine440.source-manifest.v1",
+        "bvst.sample.samplerlab.sine440.audio.v1"
+      ],
+      "bytes": 1080,
+      "chunks": 1,
+      "sha256": "48fa428299353591a146b6930f32e953dc7fe5fbfba43d2aa1b14f7b64d3cf0a"
+    },
+    {
+      "order": 20,
+      "name": "bvst.plugin.samplerlab.release.v0.1.0",
+      "kind": "catalog",
+      "path": "sampler-wave/catalogs/plugins/sampler-wave/samplerlab.release.catalog.json",
+      "mime": "application/json",
+      "route": "helper",
+      "depends_on": [
+        "bvst.catalog.foundation.v1",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1",
+        "bvst.schema.sample-source.v1",
+        "bvst.catalog.source.samplerlab.defaultset.v1",
+        "bvst.plugin.samplerlab.manifest.v0.1.0",
+        "bvst.plugin.samplerlab.patch.v0.1.0",
+        "bvst.plugin.samplerlab.shell.v0.1.0"
+      ],
+      "bytes": 2288,
+      "chunks": 1,
+      "sha256": "9aeb02ad036ce64a665a19f02b71cd59f09d38b3c14a071fb7887bfa42f9975c"
+    },
+    {
+      "order": 30,
+      "name": "bvst.catalog.family.samplerwave.v1",
+      "kind": "catalog",
+      "path": "sampler-wave/catalogs/families/sampler-wave.catalog.json",
+      "mime": "application/json",
+      "route": "helper",
+      "depends_on": [
+        "bvst.plugin.samplerlab.release.v0.1.0"
+      ],
+      "bytes": 356,
+      "chunks": 1,
+      "sha256": "dc4b7ebc695395564e485ca1d4b077006468c241c0820adf146ace2ab6f7268b"
+    },
+    {
+      "order": 40,
+      "name": "bvst.catalog.release.samplerwave.v1",
+      "kind": "catalog",
+      "path": "sampler-wave/catalogs/releases/sampler-wave.catalog.json",
+      "mime": "application/json",
+      "route": "helper",
+      "depends_on": [
+        "bvst.catalog.family.samplerwave.v1",
+        "bvst.plugin.samplerlab.release.v0.1.0",
+        "bvst.catalog.source.samplerlab.defaultset.v1"
+      ],
+      "bytes": 472,
+      "chunks": 1,
+      "sha256": "d3fad4f31e2ec6653fb8f76cec61a66a98f13f034c9b2cf5f8f7633feef39c49"
+    }
+  ]
+}

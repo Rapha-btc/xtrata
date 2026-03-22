@@ -1,0 +1,1869 @@
+{
+  "generated_at": "2026-03-22T01:19:47.658Z",
+  "bundle_root": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework",
+  "token_map": "configs/token-map.runtime.json",
+  "inscription_log": "verification/inscription-log.json",
+  "rendered_index": "verification/rendered-index.json",
+  "summary": {
+    "total": 53,
+    "minted": 0,
+    "ready": 5,
+    "blocked": 48,
+    "hard_stop": 0
+  },
+  "next_ready": {
+    "batch": "10-foundation.batch.json",
+    "order": 10,
+    "name": "bvst.schema.patch.v1",
+    "kind": "leaf",
+    "route": "helper",
+    "mime": "application/json",
+    "dependency_names": [],
+    "dependency_token_ids": [],
+    "missing_dependencies": [],
+    "token_id": null,
+    "txid": null,
+    "block_height": null,
+    "rendered_status": null,
+    "rendered_path": null,
+    "resolution_signature": null,
+    "log_recorded": false,
+    "source": {
+      "logical_path": "on-chain-modules/workspace/System/shared/bvst_patch_v1.schema.json",
+      "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/System/shared/bvst_patch_v1.schema.json",
+      "bytes": 5689,
+      "chunks": 1,
+      "sha256": "ff2506820eaf82235bf90338f9e6170aaeabb1040b1cfc8e7dad99d7ffbabb38",
+      "route": "helper"
+    },
+    "execution": {
+      "route": "helper",
+      "function": "mint-small-single-tx",
+      "recursive_dependencies": [],
+      "apply_result_command": "node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name bvst.schema.patch.v1 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+    },
+    "notes": [],
+    "status": "ready"
+  },
+  "ready_now": [
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 10,
+      "name": "bvst.schema.patch.v1",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/bvst_patch_v1.schema.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/System/shared/bvst_patch_v1.schema.json",
+        "bytes": 5689,
+        "chunks": 1,
+        "sha256": "ff2506820eaf82235bf90338f9e6170aaeabb1040b1cfc8e7dad99d7ffbabb38",
+        "route": "helper"
+      },
+      "execution": {
+        "route": "helper",
+        "function": "mint-small-single-tx",
+        "recursive_dependencies": [],
+        "apply_result_command": "node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name bvst.schema.patch.v1 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+      },
+      "notes": [],
+      "status": "ready"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 20,
+      "name": "bvst.runtime.bvst-css.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "text/css",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/bvst.css",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/System/shared/bvst.css",
+        "bytes": 9233,
+        "chunks": 1,
+        "sha256": "a642eb5ce475e76e407439751442374111bc63b1fd0389d48fd64bc3ef830e8a",
+        "route": "helper"
+      },
+      "execution": {
+        "route": "helper",
+        "function": "mint-small-single-tx",
+        "recursive_dependencies": [],
+        "apply_result_command": "node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name bvst.runtime.bvst-css.v1.0.0 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+      },
+      "notes": [],
+      "status": "ready"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 40,
+      "name": "bvst.runtime.audional-decoder.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/javascript",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/audional_decoder.js",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/System/shared/audional_decoder.js",
+        "bytes": 9564,
+        "chunks": 1,
+        "sha256": "bec66efd0382c49ff15c5f401124cff350412177458ee91151b46224a2116916",
+        "route": "helper"
+      },
+      "execution": {
+        "route": "helper",
+        "function": "mint-small-single-tx",
+        "recursive_dependencies": [],
+        "apply_result_command": "node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name bvst.runtime.audional-decoder.v1.0.0 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+      },
+      "notes": [],
+      "status": "ready"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 80,
+      "name": "bvst.runtime.midi-parser.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/javascript",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/midi_parser.js",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/System/shared/midi_parser.js",
+        "bytes": 4389,
+        "chunks": 1,
+        "sha256": "71c5ab0c9d9e2a5f13c6aa14e2194247bd72a5ea69adfe377309ebcdc7692fd2",
+        "route": "helper"
+      },
+      "execution": {
+        "route": "helper",
+        "function": "mint-small-single-tx",
+        "recursive_dependencies": [],
+        "apply_result_command": "node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name bvst.runtime.midi-parser.v1.0.0 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+      },
+      "notes": [],
+      "status": "ready"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 120,
+      "name": "bvst.engine.unified-wasm.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/wasm",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/bvst_unified_bg.wasm",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/System/shared/bvst_unified_bg.wasm",
+        "bytes": 100109,
+        "chunks": 7,
+        "sha256": "4246b1b3431abb565e7ee4b9cc2c3f9da64478b9a2ff7e8c3bc22713868a6fd3",
+        "route": "helper"
+      },
+      "execution": {
+        "route": "helper",
+        "function": "mint-small-single-tx",
+        "recursive_dependencies": [],
+        "apply_result_command": "node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name bvst.engine.unified-wasm.v1.0.0 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+      },
+      "notes": [],
+      "status": "ready"
+    }
+  ],
+  "hard_stops": [],
+  "items": [
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 10,
+      "name": "bvst.schema.patch.v1",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/bvst_patch_v1.schema.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/System/shared/bvst_patch_v1.schema.json",
+        "bytes": 5689,
+        "chunks": 1,
+        "sha256": "ff2506820eaf82235bf90338f9e6170aaeabb1040b1cfc8e7dad99d7ffbabb38",
+        "route": "helper"
+      },
+      "execution": {
+        "route": "helper",
+        "function": "mint-small-single-tx",
+        "recursive_dependencies": [],
+        "apply_result_command": "node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name bvst.schema.patch.v1 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+      },
+      "notes": [],
+      "status": "ready"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 20,
+      "name": "bvst.runtime.bvst-css.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "text/css",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/bvst.css",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/System/shared/bvst.css",
+        "bytes": 9233,
+        "chunks": 1,
+        "sha256": "a642eb5ce475e76e407439751442374111bc63b1fd0389d48fd64bc3ef830e8a",
+        "route": "helper"
+      },
+      "execution": {
+        "route": "helper",
+        "function": "mint-small-single-tx",
+        "recursive_dependencies": [],
+        "apply_result_command": "node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name bvst.runtime.bvst-css.v1.0.0 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+      },
+      "notes": [],
+      "status": "ready"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 30,
+      "name": "bvst.runtime.ui-styles.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/javascript",
+      "dependency_names": [
+        "bvst.runtime.bvst-css.v1.0.0"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.runtime.bvst-css.v1.0.0"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Direct dependencies are not fully resolved yet."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 40,
+      "name": "bvst.runtime.audional-decoder.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/javascript",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/audional_decoder.js",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/System/shared/audional_decoder.js",
+        "bytes": 9564,
+        "chunks": 1,
+        "sha256": "bec66efd0382c49ff15c5f401124cff350412177458ee91151b46224a2116916",
+        "route": "helper"
+      },
+      "execution": {
+        "route": "helper",
+        "function": "mint-small-single-tx",
+        "recursive_dependencies": [],
+        "apply_result_command": "node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name bvst.runtime.audional-decoder.v1.0.0 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+      },
+      "notes": [],
+      "status": "ready"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 50,
+      "name": "bvst.runtime.controls.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/javascript",
+      "dependency_names": [
+        "bvst.runtime.ui-styles.v1.0.0"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.runtime.ui-styles.v1.0.0"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Direct dependencies are not fully resolved yet."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 60,
+      "name": "bvst.runtime.keyboard.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/javascript",
+      "dependency_names": [
+        "bvst.runtime.ui-styles.v1.0.0"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.runtime.ui-styles.v1.0.0"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Direct dependencies are not fully resolved yet."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 70,
+      "name": "bvst.runtime.midi.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/javascript",
+      "dependency_names": [
+        "bvst.runtime.ui-styles.v1.0.0"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.runtime.ui-styles.v1.0.0"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Direct dependencies are not fully resolved yet."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 80,
+      "name": "bvst.runtime.midi-parser.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/javascript",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/midi_parser.js",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/System/shared/midi_parser.js",
+        "bytes": 4389,
+        "chunks": 1,
+        "sha256": "71c5ab0c9d9e2a5f13c6aa14e2194247bd72a5ea69adfe377309ebcdc7692fd2",
+        "route": "helper"
+      },
+      "execution": {
+        "route": "helper",
+        "function": "mint-small-single-tx",
+        "recursive_dependencies": [],
+        "apply_result_command": "node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name bvst.runtime.midi-parser.v1.0.0 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+      },
+      "notes": [],
+      "status": "ready"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 90,
+      "name": "bvst.runtime.visualizer.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/javascript",
+      "dependency_names": [
+        "bvst.runtime.ui-styles.v1.0.0"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.runtime.ui-styles.v1.0.0"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Direct dependencies are not fully resolved yet."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 100,
+      "name": "bvst.runtime.sampler.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/javascript",
+      "dependency_names": [
+        "bvst.runtime.ui-styles.v1.0.0",
+        "bvst.runtime.audional-decoder.v1.0.0"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.runtime.ui-styles.v1.0.0",
+        "bvst.runtime.audional-decoder.v1.0.0"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Direct dependencies are not fully resolved yet."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 110,
+      "name": "bvst.runtime.sequencer-core.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/javascript",
+      "dependency_names": [
+        "bvst.runtime.ui-styles.v1.0.0"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.runtime.ui-styles.v1.0.0"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Direct dependencies are not fully resolved yet."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 120,
+      "name": "bvst.engine.unified-wasm.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/wasm",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/bvst_unified_bg.wasm",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/System/shared/bvst_unified_bg.wasm",
+        "bytes": 100109,
+        "chunks": 7,
+        "sha256": "4246b1b3431abb565e7ee4b9cc2c3f9da64478b9a2ff7e8c3bc22713868a6fd3",
+        "route": "helper"
+      },
+      "execution": {
+        "route": "helper",
+        "function": "mint-small-single-tx",
+        "recursive_dependencies": [],
+        "apply_result_command": "node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name bvst.engine.unified-wasm.v1.0.0 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+      },
+      "notes": [],
+      "status": "ready"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 130,
+      "name": "bvst.engine.unified-loader.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/javascript",
+      "dependency_names": [
+        "bvst.engine.unified-wasm.v1.0.0"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.engine.unified-wasm.v1.0.0"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Direct dependencies are not fully resolved yet."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 140,
+      "name": "bvst.engine.unified-worklet.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/javascript",
+      "dependency_names": [
+        "bvst.engine.unified-loader.v1.0.0"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.engine.unified-loader.v1.0.0"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Direct dependencies are not fully resolved yet."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 150,
+      "name": "bvst.runtime.standalone-bridge.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/javascript",
+      "dependency_names": [
+        "bvst.engine.unified-worklet.v1.0.0",
+        "bvst.engine.unified-wasm.v1.0.0"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.engine.unified-worklet.v1.0.0",
+        "bvst.engine.unified-wasm.v1.0.0"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Direct dependencies are not fully resolved yet."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 160,
+      "name": "bvst.runtime.plugin-core.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/javascript",
+      "dependency_names": [
+        "bvst.runtime.controls.v1.0.0",
+        "bvst.runtime.keyboard.v1.0.0",
+        "bvst.runtime.midi.v1.0.0",
+        "bvst.runtime.sampler.v1.0.0",
+        "bvst.runtime.visualizer.v1.0.0",
+        "bvst.runtime.sequencer-core.v1.0.0",
+        "bvst.runtime.standalone-bridge.v1.0.0"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.runtime.controls.v1.0.0",
+        "bvst.runtime.keyboard.v1.0.0",
+        "bvst.runtime.midi.v1.0.0",
+        "bvst.runtime.sampler.v1.0.0",
+        "bvst.runtime.visualizer.v1.0.0",
+        "bvst.runtime.sequencer-core.v1.0.0",
+        "bvst.runtime.standalone-bridge.v1.0.0"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Direct dependencies are not fully resolved yet."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 170,
+      "name": "bvst.runtime.patch-runtime.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/javascript",
+      "dependency_names": [
+        "bvst.runtime.plugin-core.v1.0.0"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.runtime.plugin-core.v1.0.0"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Direct dependencies are not fully resolved yet."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 180,
+      "name": "bvst.catalog.runtime.v1",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.runtime.bvst-css.v1.0.0",
+        "bvst.runtime.ui-styles.v1.0.0",
+        "bvst.runtime.audional-decoder.v1.0.0",
+        "bvst.runtime.controls.v1.0.0",
+        "bvst.runtime.keyboard.v1.0.0",
+        "bvst.runtime.midi.v1.0.0",
+        "bvst.runtime.midi-parser.v1.0.0",
+        "bvst.runtime.visualizer.v1.0.0",
+        "bvst.runtime.sampler.v1.0.0",
+        "bvst.runtime.sequencer-core.v1.0.0",
+        "bvst.runtime.standalone-bridge.v1.0.0",
+        "bvst.runtime.plugin-core.v1.0.0",
+        "bvst.runtime.patch-runtime.v1.0.0"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.runtime.bvst-css.v1.0.0",
+        "bvst.runtime.ui-styles.v1.0.0",
+        "bvst.runtime.audional-decoder.v1.0.0",
+        "bvst.runtime.controls.v1.0.0",
+        "bvst.runtime.keyboard.v1.0.0",
+        "bvst.runtime.midi.v1.0.0",
+        "bvst.runtime.midi-parser.v1.0.0",
+        "bvst.runtime.visualizer.v1.0.0",
+        "bvst.runtime.sampler.v1.0.0",
+        "bvst.runtime.sequencer-core.v1.0.0",
+        "bvst.runtime.standalone-bridge.v1.0.0",
+        "bvst.runtime.plugin-core.v1.0.0",
+        "bvst.runtime.patch-runtime.v1.0.0"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": "pending",
+      "rendered_path": null,
+      "resolution_signature": "1113d78d2aec5c1fe9872b6ded3393e92230550f486bfa79ed92ddd17138143b",
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Rendered catalog is not ready yet (pending)."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 190,
+      "name": "bvst.catalog.engine.v1",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.engine.unified-wasm.v1.0.0",
+        "bvst.engine.unified-loader.v1.0.0",
+        "bvst.engine.unified-worklet.v1.0.0"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.engine.unified-wasm.v1.0.0",
+        "bvst.engine.unified-loader.v1.0.0",
+        "bvst.engine.unified-worklet.v1.0.0"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": "pending",
+      "rendered_path": null,
+      "resolution_signature": "8e2e0cba20994a0da1b2b9103249cbf14edfed0b42129f09a49d21adad7430d6",
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Rendered catalog is not ready yet (pending)."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 200,
+      "name": "bvst.catalog.schema.v1",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.schema.patch.v1"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.schema.patch.v1"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": "pending",
+      "rendered_path": null,
+      "resolution_signature": "a2ed20cc5a9fb0548daa76d19f27660447349c59ef242effe6c866d185342e44",
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Rendered catalog is not ready yet (pending)."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 210,
+      "name": "bvst.catalog.foundation.v1",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": "pending",
+      "rendered_path": null,
+      "resolution_signature": "47f1a4289e19efc11f9fc2114b97f3bfd38ceac4e47419556af21abce0515158",
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Rendered catalog is not ready yet (pending)."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "20-universalsynth-family.batch.json",
+      "order": 10,
+      "name": "bvst.plugin.jms10.manifest.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "20-universalsynth-family.batch.json",
+      "order": 20,
+      "name": "bvst.plugin.jms10.patch.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.schema.patch.v1"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.schema.patch.v1"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "20-universalsynth-family.batch.json",
+      "order": 30,
+      "name": "bvst.plugin.jms10.shell.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "text/html",
+      "dependency_names": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.plugin.jms10.manifest.v1.0.0",
+        "bvst.plugin.jms10.patch.v1.0.0"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.plugin.jms10.manifest.v1.0.0",
+        "bvst.plugin.jms10.patch.v1.0.0"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "20-universalsynth-family.batch.json",
+      "order": 40,
+      "name": "bvst.plugin.universalengine.manifest.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "20-universalsynth-family.batch.json",
+      "order": 50,
+      "name": "bvst.plugin.universalengine.patch.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.schema.patch.v1"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.schema.patch.v1"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "20-universalsynth-family.batch.json",
+      "order": 60,
+      "name": "bvst.plugin.universalengine.shell.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "text/html",
+      "dependency_names": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.plugin.universalengine.manifest.v1.0.0",
+        "bvst.plugin.universalengine.patch.v1.0.0"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.plugin.universalengine.manifest.v1.0.0",
+        "bvst.plugin.universalengine.patch.v1.0.0"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "20-universalsynth-family.batch.json",
+      "order": 70,
+      "name": "bvst.plugin.universalsynth.manifest.v1.0.13",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "20-universalsynth-family.batch.json",
+      "order": 80,
+      "name": "bvst.plugin.universalsynth.patch.v1.0.13",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.schema.patch.v1"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.schema.patch.v1"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "20-universalsynth-family.batch.json",
+      "order": 90,
+      "name": "bvst.plugin.universalsynth.shell.v1.0.13",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "text/html",
+      "dependency_names": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.plugin.universalsynth.manifest.v1.0.13",
+        "bvst.plugin.universalsynth.patch.v1.0.13"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.plugin.universalsynth.manifest.v1.0.13",
+        "bvst.plugin.universalsynth.patch.v1.0.13"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "20-universalsynth-family.batch.json",
+      "order": 100,
+      "name": "bvst.plugin.jms10.release.v1.0.0",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.plugin.jms10.manifest.v1.0.0",
+        "bvst.plugin.jms10.patch.v1.0.0",
+        "bvst.plugin.jms10.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.plugin.jms10.manifest.v1.0.0",
+        "bvst.plugin.jms10.patch.v1.0.0",
+        "bvst.plugin.jms10.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": "pending",
+      "rendered_path": null,
+      "resolution_signature": "3a7af0fb0a0bdd35b42888f766ccd453bdc2110705587a22cece7d487321daa3",
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "20-universalsynth-family.batch.json",
+      "order": 110,
+      "name": "bvst.plugin.universalengine.release.v1.0.0",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.plugin.universalengine.manifest.v1.0.0",
+        "bvst.plugin.universalengine.patch.v1.0.0",
+        "bvst.plugin.universalengine.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.plugin.universalengine.manifest.v1.0.0",
+        "bvst.plugin.universalengine.patch.v1.0.0",
+        "bvst.plugin.universalengine.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": "pending",
+      "rendered_path": null,
+      "resolution_signature": "cde87285f873fa58bd444d483bf8df538d6578e87300c399b63d3ff23e303e04",
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "20-universalsynth-family.batch.json",
+      "order": 120,
+      "name": "bvst.plugin.universalsynth.release.v1.0.13",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.plugin.universalsynth.manifest.v1.0.13",
+        "bvst.plugin.universalsynth.patch.v1.0.13",
+        "bvst.plugin.universalsynth.shell.v1.0.13",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.plugin.universalsynth.manifest.v1.0.13",
+        "bvst.plugin.universalsynth.patch.v1.0.13",
+        "bvst.plugin.universalsynth.shell.v1.0.13",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": "pending",
+      "rendered_path": null,
+      "resolution_signature": "039b415c12fb3b91801028e7a737cedcfaa90064178b3be18c3dbe49ffe5f3cb",
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "20-universalsynth-family.batch.json",
+      "order": 130,
+      "name": "bvst.catalog.family.universalsynthfamily.v1",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.plugin.universalsynth.release.v1.0.13",
+        "bvst.plugin.universalengine.release.v1.0.0",
+        "bvst.plugin.jms10.release.v1.0.0"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.plugin.universalsynth.release.v1.0.13",
+        "bvst.plugin.universalengine.release.v1.0.0",
+        "bvst.plugin.jms10.release.v1.0.0"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": "pending",
+      "rendered_path": null,
+      "resolution_signature": "7c0c1898c481481b5eca1c9c419faae420ad85eb7d9b47ef5cc25ffe602ecf47",
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 10,
+      "name": "bvst.plugin.bluemarvinone.manifest.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 20,
+      "name": "bvst.plugin.bluemarvinone.patch.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.schema.patch.v1"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.schema.patch.v1"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 30,
+      "name": "bvst.plugin.bluemarvinone.shell.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "text/html",
+      "dependency_names": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.plugin.bluemarvinone.manifest.v1.0.0",
+        "bvst.plugin.bluemarvinone.patch.v1.0.0"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.plugin.bluemarvinone.manifest.v1.0.0",
+        "bvst.plugin.bluemarvinone.patch.v1.0.0"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 40,
+      "name": "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 50,
+      "name": "bvst.plugin.bluemarvintwo.patch.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.schema.patch.v1"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.schema.patch.v1"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 60,
+      "name": "bvst.plugin.bluemarvintwo.shell.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "text/html",
+      "dependency_names": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
+        "bvst.plugin.bluemarvintwo.patch.v1.0.0"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
+        "bvst.plugin.bluemarvintwo.patch.v1.0.0"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 70,
+      "name": "bvst.plugin.neonpoly.manifest.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 80,
+      "name": "bvst.plugin.neonpoly.patch.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.schema.patch.v1"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.schema.patch.v1"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 90,
+      "name": "bvst.plugin.neonpoly.shell.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "text/html",
+      "dependency_names": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.plugin.neonpoly.manifest.v1.0.0",
+        "bvst.plugin.neonpoly.patch.v1.0.0"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.plugin.neonpoly.manifest.v1.0.0",
+        "bvst.plugin.neonpoly.patch.v1.0.0"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 100,
+      "name": "bvst.plugin.retrokeys.manifest.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 110,
+      "name": "bvst.plugin.retrokeys.patch.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.schema.patch.v1"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.schema.patch.v1"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 120,
+      "name": "bvst.plugin.retrokeys.shell.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "text/html",
+      "dependency_names": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.plugin.retrokeys.manifest.v1.0.0",
+        "bvst.plugin.retrokeys.patch.v1.0.0"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.plugin.retrokeys.manifest.v1.0.0",
+        "bvst.plugin.retrokeys.patch.v1.0.0"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 130,
+      "name": "bvst.plugin.bluemarvinone.release.v1.0.0",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.plugin.bluemarvinone.manifest.v1.0.0",
+        "bvst.plugin.bluemarvinone.patch.v1.0.0",
+        "bvst.plugin.bluemarvinone.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.plugin.bluemarvinone.manifest.v1.0.0",
+        "bvst.plugin.bluemarvinone.patch.v1.0.0",
+        "bvst.plugin.bluemarvinone.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": "pending",
+      "rendered_path": null,
+      "resolution_signature": "81ac6e14ea5c3a8af2fa3b74c81c7e79241e7895e5d0a9b71713b3a7369bd77a",
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 140,
+      "name": "bvst.plugin.bluemarvintwo.release.v1.0.0",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
+        "bvst.plugin.bluemarvintwo.patch.v1.0.0",
+        "bvst.plugin.bluemarvintwo.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
+        "bvst.plugin.bluemarvintwo.patch.v1.0.0",
+        "bvst.plugin.bluemarvintwo.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": "pending",
+      "rendered_path": null,
+      "resolution_signature": "e95a2821396e7c21608c073ccf5f518ce11f277e513bae41061e03c9a6878271",
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 150,
+      "name": "bvst.plugin.neonpoly.release.v1.0.0",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.plugin.neonpoly.manifest.v1.0.0",
+        "bvst.plugin.neonpoly.patch.v1.0.0",
+        "bvst.plugin.neonpoly.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.plugin.neonpoly.manifest.v1.0.0",
+        "bvst.plugin.neonpoly.patch.v1.0.0",
+        "bvst.plugin.neonpoly.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": "pending",
+      "rendered_path": null,
+      "resolution_signature": "b6a5e01e5c1117eacb25acba44252480e231bf57695a486dd6ad9688b05a4efa",
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 160,
+      "name": "bvst.plugin.retrokeys.release.v1.0.0",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.plugin.retrokeys.manifest.v1.0.0",
+        "bvst.plugin.retrokeys.patch.v1.0.0",
+        "bvst.plugin.retrokeys.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.plugin.retrokeys.manifest.v1.0.0",
+        "bvst.plugin.retrokeys.patch.v1.0.0",
+        "bvst.plugin.retrokeys.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": "pending",
+      "rendered_path": null,
+      "resolution_signature": "05df6f429e48c67fde7dd6ddc5a9453093372487de5a5e1930fcefb16afb68b8",
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 170,
+      "name": "bvst.catalog.family.standalonesynths.v1",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.plugin.retrokeys.release.v1.0.0",
+        "bvst.plugin.bluemarvinone.release.v1.0.0",
+        "bvst.plugin.bluemarvintwo.release.v1.0.0",
+        "bvst.plugin.neonpoly.release.v1.0.0"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.plugin.retrokeys.release.v1.0.0",
+        "bvst.plugin.bluemarvinone.release.v1.0.0",
+        "bvst.plugin.bluemarvintwo.release.v1.0.0",
+        "bvst.plugin.neonpoly.release.v1.0.0"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": "pending",
+      "rendered_path": null,
+      "resolution_signature": "22907776336c89f9a947291b3e79c1736d9b7faa2d4e0a5dfdde1229e027fff4",
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "40-root-catalogs.batch.json",
+      "order": 10,
+      "name": "bvst.catalog.release.firstwaveinstruments.v1",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.catalog.family.universalsynthfamily.v1",
+        "bvst.catalog.family.standalonesynths.v1"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.catalog.family.universalsynthfamily.v1",
+        "bvst.catalog.family.standalonesynths.v1"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": "pending",
+      "rendered_path": null,
+      "resolution_signature": "92c488df3a39709c79bff830a930cc63c6c38a98630db9d400b85d18113b98b7",
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json, 20-universalsynth-family.batch.json, 30-standalone-synths.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "40-root-catalogs.batch.json",
+      "order": 20,
+      "name": "bvst.catalog.root.v1",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.catalog.foundation.v1",
+        "bvst.catalog.release.firstwaveinstruments.v1"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.catalog.foundation.v1",
+        "bvst.catalog.release.firstwaveinstruments.v1"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": "pending",
+      "rendered_path": null,
+      "resolution_signature": "031cae6ed4012b9f83babca8356606e5209d0183208c5335ee527bf91f497948",
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json, 20-universalsynth-family.batch.json, 30-standalone-synths.batch.json."
+      ],
+      "status": "blocked"
+    }
+  ]
+}

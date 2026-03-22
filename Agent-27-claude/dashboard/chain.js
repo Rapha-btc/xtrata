@@ -1,11 +1,14 @@
 // dashboard/chain.js
 const { WALLET, CONTRACT_ADDRESS: CONTRACT, CONTRACT_NAME, HIRO_BASE } = require('./config');
-const POLL_INTERVAL = 5 * 60 * 1000; // 5 minutes
+const FULL_POLL_INTERVAL = 2 * 60 * 1000; // 2 minutes — full chain poll (balances + contract + txs)
+const BALANCE_POLL_INTERVAL = 60 * 1000;  // 60 seconds — lightweight balance-only refresh
 
 const SBTC_CONTRACT = 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token::sbtc-token';
 
 let poller = null;
+let balancePoller = null;
 let chainData = { stxBalance: null, sbtcBalance: null, graphSize: null, feeUnit: null, lastPoll: null, transactions: [] };
+let afterPollHooks = []; // callbacks invoked after each successful chain poll
 
 /**
  * Parse a Clarity uint response value.
@@ -114,6 +117,13 @@ async function pollChain(broadcast) {
     if (broadcast) {
       broadcast({ event: 'chain', data: chainData });
     }
+
+    // Run registered post-poll hooks (inbox sync, etc.)
+    for (const hook of afterPollHooks) {
+      try { await hook(chainData, broadcast); } catch (e) {
+        console.error('[chain] Post-poll hook error:', e.message);
+      }
+    }
   } catch (err) {
     console.error('Chain poll error:', err.message);
     chainData.error = err.message;
@@ -121,23 +131,52 @@ async function pollChain(broadcast) {
   }
 }
 
+async function pollBalances(broadcast) {
+  try {
+    const [balance, sbtc] = await Promise.all([
+      fetchStxBalance(),
+      fetchSbtcBalance()
+    ]);
+    const changed = chainData.stxBalance !== balance || chainData.sbtcBalance !== sbtc;
+    chainData.stxBalance = balance;
+    chainData.sbtcBalance = sbtc;
+    chainData.lastPoll = new Date().toISOString();
+    if (changed && broadcast) {
+      broadcast({ event: 'chain', data: chainData });
+    }
+  } catch (err) {
+    console.error('Balance poll error:', err.message);
+  }
+}
+
 function startChainPoller(broadcast) {
-  // Initial poll immediately
+  // Initial full poll immediately
   pollChain(broadcast);
-  poller = setInterval(() => pollChain(broadcast), POLL_INTERVAL);
-  console.log('Chain poller started (5-min interval)');
+  poller = setInterval(() => pollChain(broadcast), FULL_POLL_INTERVAL);
+  // Lightweight balance refresh between full polls
+  balancePoller = setInterval(() => pollBalances(broadcast), BALANCE_POLL_INTERVAL);
+  console.log('Chain poller started (full: 2min, balances: 60s)');
 }
 
 function stopChainPoller() {
   if (poller) {
     clearInterval(poller);
     poller = null;
-    console.log('Chain poller stopped');
   }
+  if (balancePoller) {
+    clearInterval(balancePoller);
+    balancePoller = null;
+  }
+  console.log('Chain poller stopped');
 }
 
 function getChainData() {
   return { ...chainData };
+}
+
+/** Register a callback to run after each chain poll. fn(chainData, broadcast) */
+function onAfterPoll(fn) {
+  if (typeof fn === 'function') afterPollHooks.push(fn);
 }
 
 module.exports = {
@@ -146,5 +185,6 @@ module.exports = {
   getChainData,
   fetchStxBalance,
   callReadOnly,
-  parseClarityUint
+  parseClarityUint,
+  onAfterPoll
 };

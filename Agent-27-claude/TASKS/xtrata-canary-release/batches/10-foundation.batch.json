@@ -1,0 +1,56 @@
+{
+  "release_name": "xtrata-canary-foundation-v1",
+  "network_template": "on-chain-modules/configs/xtrata-network.template.json",
+  "prerequisite_batches": [],
+  "chunk_size": 16384,
+  "helper_chunk_limit": 30,
+  "staged_batch_chunk_limit": 50,
+  "artifacts": [
+    {
+      "order": 10,
+      "name": "canary.schema.release.v1",
+      "path": "on-chain-modules/workspace/System/shared/canary-release.schema.json",
+      "mime": "application/json",
+      "bytes": 347,
+      "chunks": 1,
+      "sha256": "4f3a5da323b1fb8f655aab91291bf45d672124b0ca3c5af7d32727b70ea1918d",
+      "route": "helper",
+      "depends_on": []
+    },
+    {
+      "order": 20,
+      "name": "canary.runtime.copy.v1",
+      "path": "on-chain-modules/workspace/System/shared/canary-copy.json",
+      "mime": "application/json",
+      "bytes": 1618,
+      "chunks": 1,
+      "sha256": "349a84b1d478174c6cc9acc7090b1eb3eae8bad0b1ca7c16f2177efd0c8bf608",
+      "route": "helper",
+      "depends_on": []
+    },
+    {
+      "order": 30,
+      "name": "canary.runtime.theme.v1",
+      "path": "on-chain-modules/workspace/System/shared/canary-theme.css",
+      "mime": "text/css",
+      "bytes": 1462,
+      "chunks": 1,
+      "sha256": "f4513b76d6066516e7e278e401f87747e298d74dbd25dd8c6fc2a98aaaf9425b",
+      "route": "helper",
+      "depends_on": []
+    },
+    {
+      "order": 40,
+      "name": "canary.runtime.core.v1",
+      "path": "on-chain-modules/workspace/System/shared/canary-core.js",
+      "mime": "application/javascript",
+      "bytes": 344,
+      "chunks": 1,
+      "sha256": "f9564b12621d0b1d4eaaf19abf8f92b4ce7296c4f96965fa88bcb15fc0e80455",
+      "route": "helper",
+      "depends_on": [
+        "canary.runtime.copy.v1"
+      ]
+    }
+  ]
+}

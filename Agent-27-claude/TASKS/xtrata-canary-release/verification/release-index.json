@@ -1,0 +1,6 @@
+{
+  "runtime_catalog": "canary.catalog.runtime.v1",
+  "release_catalog": "canary.catalog.release.v1",
+  "root_catalog": "canary.catalog.root.v1",
+  "proof_viewer": "canary.proof.viewer.v1"
+}

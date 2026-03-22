@@ -1,0 +1,79 @@
+{
+  "generated_at": "2026-03-21T19:32:24.245Z",
+  "token_map": "sampler-wave/configs/token-map.runtime.json",
+  "catalogs": [
+    {
+      "name": "bvst.sample.samplerlab.sine220.source-manifest.v1",
+      "template_path": "sampler-wave/manifests/sources/samplerlab.sine220.source-manifest.json",
+      "status": "pending",
+      "missing_dependencies": [
+        "bvst.sample.samplerlab.sine220.audio.v1"
+      ],
+      "rendered_path": null,
+      "resolution_signature": "e170745441e0acd55e2312bb75e424006fdea53ad9eab8195ec82f5335e94433"
+    },
+    {
+      "name": "bvst.sample.samplerlab.sine440.source-manifest.v1",
+      "template_path": "sampler-wave/manifests/sources/samplerlab.sine440.source-manifest.json",
+      "status": "pending",
+      "missing_dependencies": [
+        "bvst.sample.samplerlab.sine440.audio.v1"
+      ],
+      "rendered_path": null,
+      "resolution_signature": "6293e1c986f6233241c7516f189eff334c3c02904b7598ed41018e508320cf82"
+    },
+    {
+      "name": "bvst.catalog.source.samplerlab.defaultset.v1",
+      "template_path": "sampler-wave/catalogs/sources/samplerlab.default-sources.catalog.json",
+      "status": "pending",
+      "missing_dependencies": [
+        "bvst.sample.samplerlab.sine220.source-manifest.v1",
+        "bvst.sample.samplerlab.sine220.audio.v1",
+        "bvst.sample.samplerlab.sine440.source-manifest.v1",
+        "bvst.sample.samplerlab.sine440.audio.v1"
+      ],
+      "rendered_path": null,
+      "resolution_signature": "62d4bdfc3a4e34bf676db6b6dfcf5697d3349ae59666b70278a20b8f9790f104"
+    },
+    {
+      "name": "bvst.plugin.samplerlab.release.v0.1.0",
+      "template_path": "sampler-wave/catalogs/plugins/sampler-wave/samplerlab.release.catalog.json",
+      "status": "pending",
+      "missing_dependencies": [
+        "bvst.catalog.foundation.v1",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1",
+        "bvst.schema.sample-source.v1",
+        "bvst.catalog.source.samplerlab.defaultset.v1",
+        "bvst.plugin.samplerlab.manifest.v0.1.0",
+        "bvst.plugin.samplerlab.patch.v0.1.0",
+        "bvst.plugin.samplerlab.shell.v0.1.0"
+      ],
+      "rendered_path": null,
+      "resolution_signature": "48088495dd332eb7b5b045aaa938b2009725c1db56f7ec82c1eea65338e495d5"
+    },
+    {
+      "name": "bvst.catalog.family.samplerwave.v1",
+      "template_path": "sampler-wave/catalogs/families/sampler-wave.catalog.json",
+      "status": "pending",
+      "missing_dependencies": [
+        "bvst.plugin.samplerlab.release.v0.1.0"
+      ],
+      "rendered_path": null,
+      "resolution_signature": "b07bb29f9c1d9c759e49c02cef695080769cef34147273ebe441086af311322d"
+    },
+    {
+      "name": "bvst.catalog.release.samplerwave.v1",
+      "template_path": "sampler-wave/catalogs/releases/sampler-wave.catalog.json",
+      "status": "pending",
+      "missing_dependencies": [
+        "bvst.catalog.family.samplerwave.v1",
+        "bvst.plugin.samplerlab.release.v0.1.0",
+        "bvst.catalog.source.samplerlab.defaultset.v1"
+      ],
+      "rendered_path": null,
+      "resolution_signature": "a46dc1174bc7c51932a9b43ec90bb6e7140cfc18745b1fa7de3c63c856a302a5"
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Xtrata Release Plan"
+  short_description: "Quote and plan dependency-aware Xtrata releases"
+  default_prompt: "Analyze a multi-artifact Xtrata release, quote live fees, and produce an execution plan before any minting."

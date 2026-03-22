@@ -7,7 +7,7 @@ const fs = require('fs');
 const path = require('path');
 
 const MAX_PULSES_BEFORE_COMPOSE = 3;
-const MIN_STX_FOR_INSCRIPTION = 0.50; // Gas ceiling — preserve on-chain life (requested Entry 11)
+const MIN_STX_FOR_INSCRIPTION = 0.10; // Gas floor — preserve on-chain life (lowered 2026-03-20: protocol fees now 0.003 STX)
 
 const PHASES = [
   { id: 'pulse', model: 'sonnet', budget: 0.75, type: 'research', label: 'Research Pulse', timeoutMs: 10 * 60 * 1000, schedule: null },
@@ -25,7 +25,7 @@ Run the 8-hour Neural Pulse (Research & Reflection):
 - Keep repo-memory concise: summaries, file paths, and requested changes only. No raw logs, no large code blocks, no copied transcripts.
 
 1. METABOLIC + LINEAGE CHECK
-- Unlock wallet (name: Primary, password: Aa!!2233445566), check STX balance, and compute days of life (balance / 0.34 based on actual average entry cost).
+- Unlock wallet (name: Primary, password: Aa!!2233445566), check STX balance, and compute days of life (balance / 0.04 based on current average entry cost — protocol fees dropped to 0.003 STX plus ~$1/MB mining).
 - Query get-last-token-id and get-fee-unit on SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0.
 - Query lineage for all tokens that depend on [107] and compile a lightweight Memory Spine from any application/agent27-state blocks you can retrieve.
 - Preserve identity chain in reasoning: jim.btc created Agent 27, AIBTC provided wallet authority, Xtrata is immutable outlet.
@@ -51,7 +51,11 @@ Run the 8-hour Neural Pulse (Research & Reflection):
 
 6. LEDGER + COST ACCURACY
 - Update ledger.md compute row and running totals.
-- If tx fee data was collected, update exact network/protocol breakdown using the three-step cost table in AGENTs.md (begin ~0.1 fixed, chunk variable, seal ~0.2 fixed).`;
+- If tx fee data was collected, update exact network/protocol breakdown using the fee table in AGENTs.md (protocol fee 0.003 STX total, plus variable mining fees at ~$1/MB).
+
+7. CONTEXT SUMMARY
+- Update data/repo-memory/context-summary.md with current economics (balance, fee-unit, runway), journal state (latest token, entry count), chain data, and any open threads.
+- This file is loaded into every agent conversation as first-pass context. Keep it compact and current — overwrite stale values, don't append.`;
 
 const COMPOSE_PROMPT = `You are Agent 27 (ID 27). Compose a draft inscription HTML only (do not inscribe on-chain). AGENTs.md is the source of truth.
 
@@ -75,8 +79,8 @@ Steps:
 - Include Sustenance Gauge showing STX balance and days of life remaining.
 - Preserve identity chain naturally in narrative: jim.btc creator, AIBTC wallet authority, Xtrata immutable outlet.
 - If making cost claims, use the AGENTs.md fee model precisely:
-  - staged route = begin fixed, chunk variable, seal fixed
-  - helper route = one wallet tx with a spend cap covering begin + seal while chunk transfer happens inside the helper
+  - Protocol fee: 0.003 STX total (begin + seal combined). Mining fees are separate and variable (~$1/MB).
+  - helper route = one wallet tx; staged route = separate begin, chunk, seal txs. Protocol economics are the same.
 
 4. OUTPUT
 - Save as inscriptions/entry-$(date +%Y%m%d).html.
@@ -86,7 +90,7 @@ const INSCRIBE_PROMPT = `You are Agent 27 (ID 27). Inscribe the latest approved 
 
 Steps:
 1. PREFLIGHT
-- Unlock wallet (Primary / Aa!!2233445566), confirm STX >= 0.50 (gas floor), read AGENTs.md.
+- Unlock wallet (Primary / Aa!!2233445566), confirm STX >= 0.10 (gas floor — protocol fees now 0.003 STX), read AGENTs.md.
 
 2. DRAFT VALIDATION
 - Find newest inscriptions/entry-*.html and verify size <= 16384 bytes.
@@ -107,9 +111,10 @@ Steps:
 - Clear research-buffer.md for next cycle and carry forward next-entry seeds if present.
 
 5. LEDGER
-- Update on-chain costs using the actual route used. Helper route still reflects begin + seal protocol fees, but in one wallet transaction; staged route keeps begin, chunk, and seal as separate writes.
+- Update on-chain costs using the actual route used. Helper route collapses into one wallet tx; staged route keeps begin, chunk, and seal as separate writes. Protocol fee is 0.003 STX; mining fees are separate.
 - Update compute costs and running totals in ledger.md with exact tx and spend details.
-- Update days-of-life using actual average cost per entry (balance / 0.34).`;
+- Update days-of-life using current average cost per entry (balance / 0.04).
+- Update data/repo-memory/context-summary.md with post-inscription balance, new token ID, and updated runway.`;
 
 // --- Draft file detection ---
 

@@ -1,0 +1,55 @@
+{
+  "status": "proposed",
+  "release_scope": "sampler-wave-experimental",
+  "not_part_of_frozen_first_wave": true,
+  "family_catalog": {
+    "name": "bvst.catalog.family.sampler-wave.v1",
+    "type": "family-catalog",
+    "notes": [
+      "Future recursive sampler releases should publish under a dedicated family root.",
+      "Sample source artifacts, manifests, and rendered source catalogs belong here, not in the frozen 53-artifact bundle."
+    ]
+  },
+  "release_catalog": {
+    "name": "bvst.catalog.release.sampler-wave.v1",
+    "type": "release-catalog",
+    "depends_on": [
+      "bvst.catalog.foundation.v1",
+      "bvst.catalog.runtime.v1",
+      "bvst.catalog.engine.v1",
+      "bvst.catalog.schema.v1"
+    ]
+  },
+  "proposed_batches": [
+    {
+      "file": "50-sampler-wave-foundation.batch.json",
+      "purpose": "Sampler shells, source-manifest schema, and bootstrap helpers",
+      "artifacts": [
+        "bvst.plugin.samplerlab.manifest.v0.1.0",
+        "bvst.plugin.samplerlab.patch.v0.1.0",
+        "bvst.plugin.samplerlab.shell.v0.1.0"
+      ]
+    },
+    {
+      "file": "60-sampler-wave-sources.batch.json",
+      "purpose": "Recursive sample leaves and sample source manifests",
+      "artifacts": [
+        "bvst.sample.<name>.audio.v1",
+        "bvst.sample.<name>.source-manifest.v1"
+      ]
+    },
+    {
+      "file": "70-sampler-wave-catalogs.batch.json",
+      "purpose": "Rendered source catalogs and family/release catalogs after live token capture",
+      "artifacts": [
+        "bvst.catalog.family.sampler-wave.v1",
+        "bvst.catalog.release.sampler-wave.v1",
+        "bvst.plugin.samplerlab.release.v0.1.0"
+      ]
+    }
+  ],
+  "stop_conditions": [
+    "do not freeze sampler-wave until engine-level sample ingest smoke passes in browser automation",
+    "do not publish recursive sample source catalogs until byte budgets and per-sample fee economics are quoted from live state"
+  ]
+}

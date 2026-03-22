@@ -1,0 +1,52 @@
+{
+  "name": "bvst.plugin.retrokeys.release.v1.0.0",
+  "type": "plugin-release-catalog",
+  "plugin_name": "RetroKeys",
+  "plugin_family": "standalone-synths",
+  "category": "Instruments",
+  "runtime_major": 1,
+  "engine_major": 1,
+  "schema_major": 1,
+  "dependencies": {
+    "foundation_catalog": "bvst.catalog.foundation.v1",
+    "runtime_major_catalog": "bvst.catalog.runtime.v1",
+    "engine_major_catalog": "bvst.catalog.engine.v1",
+    "schema_major_catalog": "bvst.catalog.schema.v1",
+    "manifest": {
+      "name": "bvst.plugin.retrokeys.manifest.v1.0.0",
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "path": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/manifest.json",
+      "mime_type": "application/json",
+      "sha256": "c17d1d6983ce58a56ca8bf3d3aed9426e044937e88b5c159c85306fbd81cabc7",
+      "bytes": 336,
+      "chunks": 1,
+      "route": "helper"
+    },
+    "patch": {
+      "name": "bvst.plugin.retrokeys.patch.v1.0.0",
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "path": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/patch.json",
+      "mime_type": "application/json",
+      "sha256": "0d880724099a2270c69e4c0f979e2c8848c58959d3b02ffaaf9faaec71cf5b72",
+      "bytes": 2163,
+      "chunks": 1,
+      "route": "helper"
+    },
+    "shell": {
+      "name": "bvst.plugin.retrokeys.shell.v1.0.0",
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "path": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/gui.html",
+      "mime_type": "text/html",
+      "sha256": "cb3a3d3c19338229b87954703bdb13b9b84c71845b3cbcc604c45ea6fc1c3cb7",
+      "bytes": 819,
+      "chunks": 1,
+      "route": "helper"
+    }
+  }
+}

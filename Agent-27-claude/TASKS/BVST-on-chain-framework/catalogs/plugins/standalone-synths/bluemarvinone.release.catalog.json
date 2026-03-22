@@ -1,0 +1,52 @@
+{
+  "name": "bvst.plugin.bluemarvinone.release.v1.0.0",
+  "type": "plugin-release-catalog",
+  "plugin_name": "BlueMarvinOne",
+  "plugin_family": "standalone-synths",
+  "category": "Instruments",
+  "runtime_major": 1,
+  "engine_major": 1,
+  "schema_major": 1,
+  "dependencies": {
+    "foundation_catalog": "bvst.catalog.foundation.v1",
+    "runtime_major_catalog": "bvst.catalog.runtime.v1",
+    "engine_major_catalog": "bvst.catalog.engine.v1",
+    "schema_major_catalog": "bvst.catalog.schema.v1",
+    "manifest": {
+      "name": "bvst.plugin.bluemarvinone.manifest.v1.0.0",
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinOne/manifest.json",
+      "mime_type": "application/json",
+      "sha256": "1a4fca458a6e9cce130828ac7aed1aa179ea01e3acf773ba438b4b80603b1075",
+      "bytes": 342,
+      "chunks": 1,
+      "route": "helper"
+    },
+    "patch": {
+      "name": "bvst.plugin.bluemarvinone.patch.v1.0.0",
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinOne/patch.json",
+      "mime_type": "application/json",
+      "sha256": "315321c2f56d3c32941ddb9d2af3465b21b7b98d1b3eeed5014d0b90722a36e3",
+      "bytes": 4268,
+      "chunks": 1,
+      "route": "helper"
+    },
+    "shell": {
+      "name": "bvst.plugin.bluemarvinone.shell.v1.0.0",
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinOne/gui.html",
+      "mime_type": "text/html",
+      "sha256": "e0b67a72ee60252d6542da13eff9e49522e39ab3ba24afb59b25f603d010acb1",
+      "bytes": 833,
+      "chunks": 1,
+      "route": "helper"
+    }
+  }
+}

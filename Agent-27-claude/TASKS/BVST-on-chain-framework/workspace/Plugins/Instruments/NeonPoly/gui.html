@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeonPoly</title>
+    <style>
+        body { margin: 0; padding: 20px; background: #0c0f1a; color: #e0f2ff; display: flex; justify-content: center; }
+        #app-container { width: 100%; max-width: 900px; }
+    </style>
+</head>
+<body>
+    <div id="app-container"></div>
+    <script type="module">
+        (async () => {
+            const t = new URLSearchParams(location.search).get('t') || String(Date.now());
+            const { runPatch } = await import(`../../../System/shared/patch_runtime.js?t=${encodeURIComponent(t)}`);
+            runPatch({ patchUrl: `./patch.json?t=${encodeURIComponent(t)}`, containerId: 'app-container' });
+        })();
+    </script>
+</body>
+</html>

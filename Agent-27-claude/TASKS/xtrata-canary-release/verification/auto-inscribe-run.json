@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "bundle_root": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/xtrata-canary-release",
+  "status": "completed",
+  "started_at": "2026-03-22T03:35:13.088Z",
+  "updated_at": "2026-03-22T03:35:26.867Z",
+  "finished_at": "2026-03-22T03:35:26.867Z",
+  "network": "mainnet",
+  "sender_address": "SP15T1W26JTNS26VG17HM468KW7TQD3124KTYA9EJ",
+  "signer_source": "agent27-default-mnemonic",
+  "core_contract": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0",
+  "helper_contract": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-small-mint-v1-0",
+  "test_mode": null,
+  "test_fail_stage": null,
+  "fee_rate_microstx_per_byte": "35",
+  "tx_fee_strategy": "live-transfer-fee-rate-plus-15pct",
+  "debug": {
+    "run_id": "run-20260322-033512859Z",
+    "event_log": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/xtrata-canary-release/verification/auto-inscribe-events.jsonl",
+    "chain_log": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/xtrata-canary-release/verification/auto-inscribe-chain.jsonl",
+    "failure_snapshot": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/xtrata-canary-release/verification/auto-inscribe-failure.json",
+    "events_logged": 20,
+    "chain_observations_logged": 21
+  },
+  "summary": {
+    "attempted": 1,
+    "minted": 1,
+    "remaining": 0
+  },
+  "entries": [
+    {
+      "name": "canary.proof.viewer.v1",
+      "batch": "40-proof-viewer.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx-recursive",
+      "started_at": "2026-03-22T03:35:13.353Z",
+      "status": "minted",
+      "dependencies": [
+        202,
+        203,
+        204,
+        205,
+        206,
+        207,
+        208,
+        209,
+        210
+      ],
+      "source": {
+        "path": "on-chain-modules/rendered/catalogs/views/proof-viewer.v1.html",
+        "bytes": 21657,
+        "chunks": 2
+      },
+      "finished_at": "2026-03-22T03:35:26.867Z",
+      "token_id": "211",
+      "txid": "149481b1237685b333dda9ed7f955dd68a8a33a454077fde7a05bc74c29d0bad",
+      "block_height": 7280130,
+      "direct_sha256": "a840326e1776744d5d65ac327fe511852cb834f98f6cb882aba25e3a697702b2",
+      "content_hash": "d91668a332889b7ec5c708da3a69bd8c89146300b5bd917915b0faad58787f6a",
+      "token_uri": "on-chain-modules/catalogs/views/proof-viewer.v1.html",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "894275",
+      "serialized_bytes": 22218,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP15T1W26JTNS26VG17HM468KW7TQD3124KTYA9EJ",
+        "mimeType": "text/html",
+        "totalSize": "21657",
+        "totalChunks": "2",
+        "tokenUri": "on-chain-modules/catalogs/views/proof-viewer.v1.html",
+        "dependencyIds": [
+          "202",
+          "203",
+          "204",
+          "205",
+          "206",
+          "207",
+          "208",
+          "209",
+          "210"
+        ]
+      }
+    }
+  ],
+  "errors": []
+}

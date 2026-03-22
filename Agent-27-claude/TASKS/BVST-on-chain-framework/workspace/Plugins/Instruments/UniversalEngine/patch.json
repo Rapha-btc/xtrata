@@ -1,0 +1,54 @@
+{
+  "schema": "bvst.patch/v1",
+  "meta": {
+    "name": "UniversalEngine",
+    "description": "Reference template patch routed to UniversalSynth (edit this to start a new instrument)."
+  },
+  "config": {
+    "name": "UniversalEngine",
+    "visualizer": "spectrum",
+    "keyboard": { "startNote": 36, "numKeys": 49 },
+    "modules": [
+      {
+        "name": "Oscillator",
+        "cols": 1,
+        "controls": [
+          { "id": "osc1_wave", "param": 0, "type": "select", "options": ["Sine", "Saw", "Square", "Pulse"], "val": 1, "label": "Wave" },
+          { "id": "osc1_tune", "param": 1, "type": "knob", "min": -24, "max": 24, "step": 1, "val": 0, "label": "Tune" },
+          { "id": "osc1_mix", "param": 2, "type": "slider", "min": 0, "max": 1, "val": 0.8, "label": "Level" }
+        ]
+      },
+      {
+        "name": "Filter",
+        "cols": 1,
+        "controls": [
+          { "id": "filt_mode", "param": 12, "type": "select", "options": ["LP", "HP", "BP", "Notch"], "val": 0, "label": "Mode" },
+          { "id": "filt_cut", "param": 10, "type": "knob", "min": 20, "max": 20000, "val": 20000, "curve": "log", "label": "Cutoff" },
+          { "id": "filt_res", "param": 11, "type": "knob", "min": 0.5, "max": 10, "val": 0.7, "label": "Res" }
+        ]
+      },
+      {
+        "name": "Amp",
+        "cols": 1,
+        "controls": [
+          { "id": "amp_a", "param": 14, "type": "slider", "min": 0.001, "max": 2, "val": 0.01, "label": "A" },
+          { "id": "amp_r", "param": 17, "type": "slider", "min": 0.001, "max": 5, "val": 0.2, "label": "R" },
+          { "id": "master", "param": 29, "type": "slider", "min": 0, "max": 2, "val": 0.8, "label": "Master" }
+        ]
+      }
+    ],
+    "presets": {
+      "Init": {
+        "osc1_wave": 1,
+        "osc1_tune": 0,
+        "osc1_mix": 0.8,
+        "filt_mode": 0,
+        "filt_cut": 20000,
+        "filt_res": 0.7,
+        "amp_a": 0.01,
+        "amp_r": 0.2,
+        "master": 0.8
+      }
+    }
+  }
+}

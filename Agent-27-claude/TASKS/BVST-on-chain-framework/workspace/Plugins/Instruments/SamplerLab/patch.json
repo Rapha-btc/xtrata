@@ -1,0 +1,79 @@
+{
+  "schema": "bvst.patch/v1",
+  "meta": {
+    "name": "SamplerLab",
+    "description": "Experimental sampler-wave reference shell. Base profile is inscription-safe; standalone profile unlocks dev/sample smoke behaviors."
+  },
+  "config": {
+    "name": "UniversalSampler",
+    "visualizer": "off",
+    "keyboard": { "startNote": 48, "numKeys": 25 },
+    "sampler": {
+      "enabled": true,
+      "sourcePolicy": "declared-only",
+      "allowFileDrop": false,
+      "allowDataUrls": false,
+      "maxSampleBytes": 262144,
+      "maxSampleSeconds": 2,
+      "sources": [
+        {
+          "id": "future-recursive-sample",
+          "label": "Future Recursive Sample",
+          "url": "/content/0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdefi0"
+        }
+      ],
+      "defaults": {
+        "playSpeed": 1,
+        "loopStart": 0.05,
+        "loopEnd": 0.95,
+        "loopEnabled": true,
+        "reverse": false,
+        "grainPos": 0.25,
+        "grainSize": 0.1
+      }
+    },
+    "profiles": {
+      "standalone": {
+        "sampler": {
+          "sourcePolicy": "standalone-dev",
+          "allowFileDrop": true,
+          "allowDataUrls": true
+        }
+      }
+    },
+    "modules": [
+      {
+        "name": "Sample Source",
+        "cols": 2,
+        "controls": [
+          { "id": "speed", "param": 18, "type": "slider", "min": 0.25, "max": 2, "val": 1, "label": "Speed" },
+          { "id": "loop_start", "param": 19, "type": "slider", "min": 0, "max": 1, "val": 0.05, "label": "Loop Start" },
+          { "id": "loop_end", "param": 20, "type": "slider", "min": 0, "max": 1, "val": 0.95, "label": "Loop End" },
+          { "id": "loop_enable", "param": 21, "type": "switch", "min": 0, "max": 1, "val": 1, "label": "Loop" },
+          { "id": "reverse", "param": 22, "type": "switch", "min": 0, "max": 1, "val": 0, "label": "Reverse" },
+          { "id": "master", "param": 29, "type": "slider", "min": 0, "max": 1, "val": 0.5, "label": "Master" }
+        ]
+      },
+      {
+        "name": "Grain Scan",
+        "cols": 2,
+        "controls": [
+          { "id": "pos", "param": 30, "type": "slider", "min": 0, "max": 1, "val": 0.25, "label": "Position" },
+          { "id": "spread", "param": 31, "type": "slider", "min": 0, "max": 1, "val": 0.1, "label": "Spread" }
+        ]
+      }
+    ],
+    "presets": {
+      "Init": {
+        "speed": 1,
+        "loop_start": 0.05,
+        "loop_end": 0.95,
+        "loop_enable": 1,
+        "reverse": 0,
+        "master": 0.5,
+        "pos": 0.25,
+        "spread": 0.1
+      }
+    }
+  }
+}

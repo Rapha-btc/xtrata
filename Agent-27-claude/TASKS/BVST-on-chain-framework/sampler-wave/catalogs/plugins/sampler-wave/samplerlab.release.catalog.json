@@ -1,0 +1,68 @@
+{
+  "name": "bvst.plugin.samplerlab.release.v0.1.0",
+  "type": "plugin-release-catalog",
+  "plugin_name": "SamplerLab",
+  "plugin_family": "sampler-wave",
+  "category": "Instruments",
+  "runtime_major": 1,
+  "engine_major": 1,
+  "schema_major": 1,
+  "dependencies": {
+    "foundation_catalog": "bvst.catalog.foundation.v1",
+    "runtime_major_catalog": "bvst.catalog.runtime.v1",
+    "engine_major_catalog": "bvst.catalog.engine.v1",
+    "schema_major_catalog": "bvst.catalog.schema.v1",
+    "sample_source_schema": {
+      "name": "bvst.schema.sample-source.v1",
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "path": "sampler-wave/schemas/bvst_sample_source_v1.schema.json",
+      "mime_type": "application/json",
+      "sha256": "2b264234dee842b1e6af690f97b9b926b0ee2de865ad86f8d65d41f5ceda61a4",
+      "bytes": 2350,
+      "chunks": 1,
+      "route": "helper"
+    },
+    "sample_source_catalog": {
+      "name": "bvst.catalog.source.samplerlab.defaultset.v1",
+      "token_id": null
+    },
+    "manifest": {
+      "name": "bvst.plugin.samplerlab.manifest.v0.1.0",
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "path": "on-chain-modules/workspace/Plugins/Instruments/SamplerLab/manifest.json",
+      "mime_type": "application/json",
+      "sha256": "bfa6cbc18bb9d0d051edc49bc95b34533a337be2c227bb5e0174310dd609805d",
+      "bytes": 490,
+      "chunks": 1,
+      "route": "helper"
+    },
+    "patch": {
+      "name": "bvst.plugin.samplerlab.patch.v0.1.0",
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "path": "on-chain-modules/workspace/Plugins/Instruments/SamplerLab/patch.json",
+      "mime_type": "application/json",
+      "sha256": "2ff38d0c8ef0387794212f7d2b74f2b0d698bc2adc77444233c96548ced06077",
+      "bytes": 2565,
+      "chunks": 1,
+      "route": "helper"
+    },
+    "shell": {
+      "name": "bvst.plugin.samplerlab.shell.v0.1.0",
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "path": "on-chain-modules/workspace/Plugins/Instruments/SamplerLab/gui.html",
+      "mime_type": "text/html",
+      "sha256": "3d341c69e3eb2e64624def71eb80fcf42e7a3b21054524c89a68dcae8147c30b",
+      "bytes": 740,
+      "chunks": 1,
+      "route": "helper"
+    }
+  }
+}

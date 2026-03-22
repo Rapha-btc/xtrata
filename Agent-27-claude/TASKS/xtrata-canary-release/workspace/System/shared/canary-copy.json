@@ -1,0 +1,27 @@
+{
+  "title": "Xtrata Recursive Canary",
+  "subtitle": "Agentic preflight artefact for the first automated recursive release flow in this repo.",
+  "message": "If this bundle lands cleanly, the BVST first-wave release can follow with materially lower operational risk and a proven dependency-aware mint path.",
+  "provenance": [
+    "Prepared as a small Xtrata collection before the BVST first-wave bundle.",
+    "Designed to be minted by an agent-managed loop with on-chain verification after every step.",
+    "Kept intentionally legible so future viewers can reconstruct how the release graph closes."
+  ],
+  "proof_points": [
+    "Leaf artifacts must mint before rendered catalogs can be finalized.",
+    "Rendered catalogs must absorb real token IDs before they become mintable.",
+    "The root catalog should only close after the runtime and release catalogs resolve."
+  ],
+  "trace_guide": [
+    "Start with the shell artifact to understand the public-facing intent.",
+    "Inspect the runtime catalog to see the leaf modules that support the shell.",
+    "Inspect the release catalog to see how the shell, schema, and runtime catalog are bound.",
+    "Inspect the root catalog to see the final closure point for the recursive graph."
+  ],
+  "operator_checklist": [
+    "Confirm the rendered catalogs stayed stable.",
+    "Confirm the root catalog resolves after the release catalog is minted.",
+    "Open the final shell HTML and confirm it renders the success state."
+  ],
+  "footer_note": "This shell is intentionally standalone. The deeper provenance lives in the recursive catalogs that close around it."
+}

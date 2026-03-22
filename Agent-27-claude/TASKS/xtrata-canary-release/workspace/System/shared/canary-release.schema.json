@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Xtrata Canary Release Schema",
+  "type": "object",
+  "required": ["name", "message", "status"],
+  "properties": {
+    "name": { "type": "string" },
+    "message": { "type": "string" },
+    "status": { "type": "string", "enum": ["planned", "inscribed", "verified"] }
+  }
+}

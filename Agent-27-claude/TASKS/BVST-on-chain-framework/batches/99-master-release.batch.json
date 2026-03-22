@@ -1,0 +1,755 @@
+{
+  "release_name": "bvst-master-release-v1",
+  "network_template": "on-chain-modules/configs/xtrata-network.template.json",
+  "prerequisite_batches": [],
+  "chunk_size": 16384,
+  "helper_chunk_limit": 30,
+  "staged_batch_chunk_limit": 50,
+  "artifacts": [
+    {
+      "order": 10,
+      "name": "bvst.schema.patch.v1",
+      "path": "on-chain-modules/workspace/System/shared/bvst_patch_v1.schema.json",
+      "mime": "application/json",
+      "bytes": 5689,
+      "chunks": 1,
+      "sha256": "ff2506820eaf82235bf90338f9e6170aaeabb1040b1cfc8e7dad99d7ffbabb38",
+      "route": "helper",
+      "depends_on": []
+    },
+    {
+      "order": 20,
+      "name": "bvst.runtime.bvst-css.v1.0.0",
+      "path": "on-chain-modules/workspace/System/shared/bvst.css",
+      "mime": "text/css",
+      "bytes": 9233,
+      "chunks": 1,
+      "sha256": "a642eb5ce475e76e407439751442374111bc63b1fd0389d48fd64bc3ef830e8a",
+      "route": "helper",
+      "depends_on": []
+    },
+    {
+      "order": 30,
+      "name": "bvst.runtime.ui-styles.v1.0.0",
+      "path": "on-chain-modules/workspace/System/shared/ui_styles.js",
+      "mime": "application/javascript",
+      "bytes": 930,
+      "chunks": 1,
+      "sha256": "caf8264dbc429fefb0641f8e26a13924a3507fe5acbab7123a9ea71136075e29",
+      "route": "helper",
+      "depends_on": [
+        "bvst.runtime.bvst-css.v1.0.0"
+      ]
+    },
+    {
+      "order": 40,
+      "name": "bvst.runtime.audional-decoder.v1.0.0",
+      "path": "on-chain-modules/workspace/System/shared/audional_decoder.js",
+      "mime": "application/javascript",
+      "bytes": 9564,
+      "chunks": 1,
+      "sha256": "bec66efd0382c49ff15c5f401124cff350412177458ee91151b46224a2116916",
+      "route": "helper",
+      "depends_on": []
+    },
+    {
+      "order": 50,
+      "name": "bvst.runtime.controls.v1.0.0",
+      "path": "on-chain-modules/workspace/System/shared/controls.js",
+      "mime": "application/javascript",
+      "bytes": 20723,
+      "chunks": 2,
+      "sha256": "ee52bc817032489f4bfa09cc972cc7c82a5bdf4ce7bc0dbe96f9f6a567a871cc",
+      "route": "helper",
+      "depends_on": [
+        "bvst.runtime.ui-styles.v1.0.0"
+      ]
+    },
+    {
+      "order": 60,
+      "name": "bvst.runtime.keyboard.v1.0.0",
+      "path": "on-chain-modules/workspace/System/shared/keyboard.js",
+      "mime": "application/javascript",
+      "bytes": 9051,
+      "chunks": 1,
+      "sha256": "cde14fe643151fd4624bee175a1ea3027c66a9d8611e402c785fe6f8d788572e",
+      "route": "helper",
+      "depends_on": [
+        "bvst.runtime.ui-styles.v1.0.0"
+      ]
+    },
+    {
+      "order": 70,
+      "name": "bvst.runtime.midi.v1.0.0",
+      "path": "on-chain-modules/workspace/System/shared/midi.js",
+      "mime": "application/javascript",
+      "bytes": 4938,
+      "chunks": 1,
+      "sha256": "deb7301dc06443126b2c4ca904d61ba2f29f7aaffb174910a2581c67546a4f38",
+      "route": "helper",
+      "depends_on": [
+        "bvst.runtime.ui-styles.v1.0.0"
+      ]
+    },
+    {
+      "order": 80,
+      "name": "bvst.runtime.midi-parser.v1.0.0",
+      "path": "on-chain-modules/workspace/System/shared/midi_parser.js",
+      "mime": "application/javascript",
+      "bytes": 4389,
+      "chunks": 1,
+      "sha256": "71c5ab0c9d9e2a5f13c6aa14e2194247bd72a5ea69adfe377309ebcdc7692fd2",
+      "route": "helper",
+      "depends_on": []
+    },
+    {
+      "order": 90,
+      "name": "bvst.runtime.visualizer.v1.0.0",
+      "path": "on-chain-modules/workspace/System/shared/visualizer.js",
+      "mime": "application/javascript",
+      "bytes": 5303,
+      "chunks": 1,
+      "sha256": "8bfeb3312b734384ddccecc183f56dd4eaeb7a6911dadde87fd8ad7294c586e7",
+      "route": "helper",
+      "depends_on": [
+        "bvst.runtime.ui-styles.v1.0.0"
+      ]
+    },
+    {
+      "order": 100,
+      "name": "bvst.runtime.sampler.v1.0.0",
+      "path": "on-chain-modules/workspace/System/shared/sampler.js",
+      "mime": "application/javascript",
+      "bytes": 30490,
+      "chunks": 2,
+      "sha256": "55b04c8cb098ac2943b3627173ce12e5f320a1fc04136813f25d04e7cf5e1d39",
+      "route": "helper",
+      "depends_on": [
+        "bvst.runtime.ui-styles.v1.0.0",
+        "bvst.runtime.audional-decoder.v1.0.0"
+      ]
+    },
+    {
+      "order": 110,
+      "name": "bvst.runtime.sequencer-core.v1.0.0",
+      "path": "on-chain-modules/workspace/System/shared/sequencer_core.js",
+      "mime": "application/javascript",
+      "bytes": 19539,
+      "chunks": 2,
+      "sha256": "3f22aa13f9b662d34a7b8fbb4c9ad3a8278e0d3d8b24eccfd4b5fa7ea71f270d",
+      "route": "helper",
+      "depends_on": [
+        "bvst.runtime.ui-styles.v1.0.0"
+      ]
+    },
+    {
+      "order": 120,
+      "name": "bvst.engine.unified-wasm.v1.0.0",
+      "path": "on-chain-modules/workspace/System/shared/bvst_unified_bg.wasm",
+      "mime": "application/wasm",
+      "bytes": 100109,
+      "chunks": 7,
+      "sha256": "4246b1b3431abb565e7ee4b9cc2c3f9da64478b9a2ff7e8c3bc22713868a6fd3",
+      "route": "helper",
+      "depends_on": []
+    },
+    {
+      "order": 130,
+      "name": "bvst.engine.unified-loader.v1.0.0",
+      "path": "on-chain-modules/workspace/System/shared/wasm_loader_unified.js",
+      "mime": "application/javascript",
+      "bytes": 16567,
+      "chunks": 2,
+      "sha256": "a099d8f7b8eac71db02a00925019481b42af3dc87a2a14a829ac1dbc90ad30a3",
+      "route": "helper",
+      "depends_on": [
+        "bvst.engine.unified-wasm.v1.0.0"
+      ]
+    },
+    {
+      "order": 140,
+      "name": "bvst.engine.unified-worklet.v1.0.0",
+      "path": "on-chain-modules/workspace/System/shared/processor_unified.js",
+      "mime": "application/javascript",
+      "bytes": 12730,
+      "chunks": 1,
+      "sha256": "3ad68b432cafffac6be69d1c67ea282aa259d0705456163a4dd9f7a66e88c78d",
+      "route": "helper",
+      "depends_on": [
+        "bvst.engine.unified-loader.v1.0.0"
+      ]
+    },
+    {
+      "order": 150,
+      "name": "bvst.runtime.standalone-bridge.v1.0.0",
+      "path": "on-chain-modules/workspace/System/shared/standalone_bridge.js",
+      "mime": "application/javascript",
+      "bytes": 10276,
+      "chunks": 1,
+      "sha256": "edbc817f7547b16b517a1a16bc1e30a69046535dcb0e756c7c89941406212b45",
+      "route": "helper",
+      "depends_on": [
+        "bvst.engine.unified-worklet.v1.0.0",
+        "bvst.engine.unified-wasm.v1.0.0"
+      ]
+    },
+    {
+      "order": 160,
+      "name": "bvst.runtime.plugin-core.v1.0.0",
+      "path": "on-chain-modules/workspace/System/shared/plugin_core.js",
+      "mime": "application/javascript",
+      "bytes": 25354,
+      "chunks": 2,
+      "sha256": "7291f7c40b50253403be270fe3fc6763227f083fcd2f066b5051179621de8dc5",
+      "route": "helper",
+      "depends_on": [
+        "bvst.runtime.controls.v1.0.0",
+        "bvst.runtime.keyboard.v1.0.0",
+        "bvst.runtime.midi.v1.0.0",
+        "bvst.runtime.sampler.v1.0.0",
+        "bvst.runtime.visualizer.v1.0.0",
+        "bvst.runtime.sequencer-core.v1.0.0",
+        "bvst.runtime.standalone-bridge.v1.0.0"
+      ]
+    },
+    {
+      "order": 170,
+      "name": "bvst.runtime.patch-runtime.v1.0.0",
+      "path": "on-chain-modules/workspace/System/shared/patch_runtime.js",
+      "mime": "application/javascript",
+      "bytes": 4360,
+      "chunks": 1,
+      "sha256": "ed5ce7a38fba5072559a2ce3e746e98578a6a536d7f6d34469f836175effaf47",
+      "route": "helper",
+      "depends_on": [
+        "bvst.runtime.plugin-core.v1.0.0"
+      ]
+    },
+    {
+      "order": 180,
+      "name": "bvst.catalog.runtime.v1",
+      "path": "on-chain-modules/catalogs/majors/runtime-v1.catalog.json",
+      "mime": "application/json",
+      "bytes": 5296,
+      "chunks": 1,
+      "sha256": "427bc895ab9f9e29ae3cdb31af5ad4a7c866c489e4f71b2efd3a82f674788285",
+      "route": "helper",
+      "depends_on": [
+        "bvst.runtime.bvst-css.v1.0.0",
+        "bvst.runtime.ui-styles.v1.0.0",
+        "bvst.runtime.audional-decoder.v1.0.0",
+        "bvst.runtime.controls.v1.0.0",
+        "bvst.runtime.keyboard.v1.0.0",
+        "bvst.runtime.midi.v1.0.0",
+        "bvst.runtime.midi-parser.v1.0.0",
+        "bvst.runtime.visualizer.v1.0.0",
+        "bvst.runtime.sampler.v1.0.0",
+        "bvst.runtime.sequencer-core.v1.0.0",
+        "bvst.runtime.standalone-bridge.v1.0.0",
+        "bvst.runtime.plugin-core.v1.0.0",
+        "bvst.runtime.patch-runtime.v1.0.0"
+      ]
+    },
+    {
+      "order": 190,
+      "name": "bvst.catalog.engine.v1",
+      "path": "on-chain-modules/catalogs/majors/engine-v1.catalog.json",
+      "mime": "application/json",
+      "bytes": 1344,
+      "chunks": 1,
+      "sha256": "32922b2ac26ae69ee08ebdd3f13aca3dab4a31c167857f67802025d14f791438",
+      "route": "helper",
+      "depends_on": [
+        "bvst.engine.unified-wasm.v1.0.0",
+        "bvst.engine.unified-loader.v1.0.0",
+        "bvst.engine.unified-worklet.v1.0.0"
+      ]
+    },
+    {
+      "order": 200,
+      "name": "bvst.catalog.schema.v1",
+      "path": "on-chain-modules/catalogs/majors/schema-v1.catalog.json",
+      "mime": "application/json",
+      "bytes": 515,
+      "chunks": 1,
+      "sha256": "c3ad8205f79cb6a2e54be0149c87f8687f1b62848471e55cd3fb20078d689263",
+      "route": "helper",
+      "depends_on": [
+        "bvst.schema.patch.v1"
+      ]
+    },
+    {
+      "order": 210,
+      "name": "bvst.catalog.foundation.v1",
+      "path": "on-chain-modules/catalogs/releases/foundation-v1.catalog.json",
+      "mime": "application/json",
+      "bytes": 7517,
+      "chunks": 1,
+      "sha256": "5e646213648c7d533efa17c09896f72279d35e910d3225423eea60215460f60a",
+      "route": "helper",
+      "depends_on": [
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ]
+    },
+    {
+      "order": 220,
+      "name": "bvst.plugin.jms10.manifest.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/JMS10/manifest.json",
+      "mime": "application/json",
+      "bytes": 322,
+      "chunks": 1,
+      "sha256": "c6633e5339c7b5592237c26bf0e3a798acca5b388d0c976129313ab9e2340990",
+      "route": "helper",
+      "depends_on": []
+    },
+    {
+      "order": 230,
+      "name": "bvst.plugin.jms10.patch.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/JMS10/patch.json",
+      "mime": "application/json",
+      "bytes": 5613,
+      "chunks": 1,
+      "sha256": "15bb93588509c0b264e2350e2cd1a90505de14ff9da2f8b741e9684be185fd79",
+      "route": "helper",
+      "depends_on": [
+        "bvst.schema.patch.v1"
+      ]
+    },
+    {
+      "order": 240,
+      "name": "bvst.plugin.jms10.shell.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/JMS10/gui.html",
+      "mime": "text/html",
+      "bytes": 826,
+      "chunks": 1,
+      "sha256": "e6ea7b790e1c3225fd84116064de6c983248cab9a9daa9ac664c0a628f6a19eb",
+      "route": "helper",
+      "depends_on": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.plugin.jms10.manifest.v1.0.0",
+        "bvst.plugin.jms10.patch.v1.0.0"
+      ]
+    },
+    {
+      "order": 250,
+      "name": "bvst.plugin.universalengine.manifest.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/UniversalEngine/manifest.json",
+      "mime": "application/json",
+      "bytes": 334,
+      "chunks": 1,
+      "sha256": "47834dcc0111f2f1ea6074f5f0a9bc7f1de2b2619849363f1afa9b511c3388f9",
+      "route": "helper",
+      "depends_on": []
+    },
+    {
+      "order": 260,
+      "name": "bvst.plugin.universalengine.patch.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/UniversalEngine/patch.json",
+      "mime": "application/json",
+      "bytes": 1970,
+      "chunks": 1,
+      "sha256": "302fff185112df6729b67fa9e5000c20e45a3fc64d93053ffe45c3b2498bb682",
+      "route": "helper",
+      "depends_on": [
+        "bvst.schema.patch.v1"
+      ]
+    },
+    {
+      "order": 270,
+      "name": "bvst.plugin.universalengine.shell.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/UniversalEngine/gui.html",
+      "mime": "text/html",
+      "bytes": 836,
+      "chunks": 1,
+      "sha256": "3d82ee8a6ec07877d704303e3bf83a8946e9bc3ea9b5d336829312ccb658b13e",
+      "route": "helper",
+      "depends_on": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.plugin.universalengine.manifest.v1.0.0",
+        "bvst.plugin.universalengine.patch.v1.0.0"
+      ]
+    },
+    {
+      "order": 280,
+      "name": "bvst.plugin.universalsynth.manifest.v1.0.13",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/UniversalSynth/manifest.json",
+      "mime": "application/json",
+      "bytes": 402,
+      "chunks": 1,
+      "sha256": "444f1212e9c12efb86514a917c5edfab1fd7842f9202a6316cdfa462241cdeae",
+      "route": "helper",
+      "depends_on": []
+    },
+    {
+      "order": 290,
+      "name": "bvst.plugin.universalsynth.patch.v1.0.13",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/UniversalSynth/patch.json",
+      "mime": "application/json",
+      "bytes": 9259,
+      "chunks": 1,
+      "sha256": "e73a992780a6e3dc3c5ced06e1f72e00bfa2d9a8db60d20ebb99455b13fe25c8",
+      "route": "helper",
+      "depends_on": [
+        "bvst.schema.patch.v1"
+      ]
+    },
+    {
+      "order": 300,
+      "name": "bvst.plugin.universalsynth.shell.v1.0.13",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/UniversalSynth/gui.html",
+      "mime": "text/html",
+      "bytes": 837,
+      "chunks": 1,
+      "sha256": "c45d54395f5d139562fbdf308330caeefc9eb981d4c1fe1ed8455e15bbba194c",
+      "route": "helper",
+      "depends_on": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.plugin.universalsynth.manifest.v1.0.13",
+        "bvst.plugin.universalsynth.patch.v1.0.13"
+      ]
+    },
+    {
+      "order": 310,
+      "name": "bvst.plugin.jms10.release.v1.0.0",
+      "path": "on-chain-modules/catalogs/plugins/universalsynth-family/jms10.release.catalog.json",
+      "mime": "application/json",
+      "bytes": 1720,
+      "chunks": 1,
+      "sha256": "6051af3cd8d79c46e4a62fff8be80e9dbd63d7ccf91c60dafcabdd47b7a5e72f",
+      "route": "helper",
+      "depends_on": [
+        "bvst.plugin.jms10.manifest.v1.0.0",
+        "bvst.plugin.jms10.patch.v1.0.0",
+        "bvst.plugin.jms10.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ]
+    },
+    {
+      "order": 320,
+      "name": "bvst.plugin.universalengine.release.v1.0.0",
+      "path": "on-chain-modules/catalogs/plugins/universalsynth-family/universalengine.release.catalog.json",
+      "mime": "application/json",
+      "bytes": 1800,
+      "chunks": 1,
+      "sha256": "c0043dd656b5495592a14f8f7447c6941102685e7d66fa3b89c8fdf580d091f2",
+      "route": "helper",
+      "depends_on": [
+        "bvst.plugin.universalengine.manifest.v1.0.0",
+        "bvst.plugin.universalengine.patch.v1.0.0",
+        "bvst.plugin.universalengine.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ]
+    },
+    {
+      "order": 330,
+      "name": "bvst.plugin.universalsynth.release.v1.0.13",
+      "path": "on-chain-modules/catalogs/plugins/universalsynth-family/universalsynth.release.catalog.json",
+      "mime": "application/json",
+      "bytes": 1796,
+      "chunks": 1,
+      "sha256": "fcb24c743503724582428092fbaa4e99c3da7882f00ef8e97d8206ec931e96e5",
+      "route": "helper",
+      "depends_on": [
+        "bvst.plugin.universalsynth.manifest.v1.0.13",
+        "bvst.plugin.universalsynth.patch.v1.0.13",
+        "bvst.plugin.universalsynth.shell.v1.0.13",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ]
+    },
+    {
+      "order": 340,
+      "name": "bvst.catalog.family.universalsynthfamily.v1",
+      "path": "on-chain-modules/catalogs/families/universalsynth-family.catalog.json",
+      "mime": "application/json",
+      "bytes": 563,
+      "chunks": 1,
+      "sha256": "53db3fc0dcbfefcbed06f10251ff935bb43b1f37d223708389b7ca1a7dd67fc8",
+      "route": "helper",
+      "depends_on": [
+        "bvst.plugin.universalsynth.release.v1.0.13",
+        "bvst.plugin.universalengine.release.v1.0.0",
+        "bvst.plugin.jms10.release.v1.0.0"
+      ]
+    },
+    {
+      "order": 350,
+      "name": "bvst.plugin.bluemarvinone.manifest.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinOne/manifest.json",
+      "mime": "application/json",
+      "bytes": 342,
+      "chunks": 1,
+      "sha256": "1a4fca458a6e9cce130828ac7aed1aa179ea01e3acf773ba438b4b80603b1075",
+      "route": "helper",
+      "depends_on": []
+    },
+    {
+      "order": 360,
+      "name": "bvst.plugin.bluemarvinone.patch.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinOne/patch.json",
+      "mime": "application/json",
+      "bytes": 4268,
+      "chunks": 1,
+      "sha256": "315321c2f56d3c32941ddb9d2af3465b21b7b98d1b3eeed5014d0b90722a36e3",
+      "route": "helper",
+      "depends_on": [
+        "bvst.schema.patch.v1"
+      ]
+    },
+    {
+      "order": 370,
+      "name": "bvst.plugin.bluemarvinone.shell.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinOne/gui.html",
+      "mime": "text/html",
+      "bytes": 833,
+      "chunks": 1,
+      "sha256": "e0b67a72ee60252d6542da13eff9e49522e39ab3ba24afb59b25f603d010acb1",
+      "route": "helper",
+      "depends_on": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.plugin.bluemarvinone.manifest.v1.0.0",
+        "bvst.plugin.bluemarvinone.patch.v1.0.0"
+      ]
+    },
+    {
+      "order": 380,
+      "name": "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinTwo/manifest.json",
+      "mime": "application/json",
+      "bytes": 344,
+      "chunks": 1,
+      "sha256": "9829d6c837bf51fa8e95f827e6f8cb72eb788e3a573ec5d770b542c15edf6261",
+      "route": "helper",
+      "depends_on": []
+    },
+    {
+      "order": 390,
+      "name": "bvst.plugin.bluemarvintwo.patch.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinTwo/patch.json",
+      "mime": "application/json",
+      "bytes": 7067,
+      "chunks": 1,
+      "sha256": "1a12ef8a5ed1cce012111d42c501f80db5bfb6fd76edb390cae070711b645901",
+      "route": "helper",
+      "depends_on": [
+        "bvst.schema.patch.v1"
+      ]
+    },
+    {
+      "order": 400,
+      "name": "bvst.plugin.bluemarvintwo.shell.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinTwo/gui.html",
+      "mime": "text/html",
+      "bytes": 834,
+      "chunks": 1,
+      "sha256": "41ddfb74186bf6a62fa3f23cf681fb525631554a3f7ddda5407e8b25fafa3a52",
+      "route": "helper",
+      "depends_on": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
+        "bvst.plugin.bluemarvintwo.patch.v1.0.0"
+      ]
+    },
+    {
+      "order": 410,
+      "name": "bvst.plugin.neonpoly.manifest.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/NeonPoly/manifest.json",
+      "mime": "application/json",
+      "bytes": 356,
+      "chunks": 1,
+      "sha256": "d4f749963d9e9351acb40a6ebe3881d29fa08b04483c6e6b27a7e986ba9c2443",
+      "route": "helper",
+      "depends_on": []
+    },
+    {
+      "order": 420,
+      "name": "bvst.plugin.neonpoly.patch.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/NeonPoly/patch.json",
+      "mime": "application/json",
+      "bytes": 4620,
+      "chunks": 1,
+      "sha256": "06675262945155a0dc31d4c1f55312156ba800ca81d7cb4975a48c7f56718e6b",
+      "route": "helper",
+      "depends_on": [
+        "bvst.schema.patch.v1"
+      ]
+    },
+    {
+      "order": 430,
+      "name": "bvst.plugin.neonpoly.shell.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/NeonPoly/gui.html",
+      "mime": "text/html",
+      "bytes": 834,
+      "chunks": 1,
+      "sha256": "e6173d6633d0693f0f98a2e5989002870059f077d6bcd061ae9d4f07dd0d2c27",
+      "route": "helper",
+      "depends_on": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.plugin.neonpoly.manifest.v1.0.0",
+        "bvst.plugin.neonpoly.patch.v1.0.0"
+      ]
+    },
+    {
+      "order": 440,
+      "name": "bvst.plugin.retrokeys.manifest.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/manifest.json",
+      "mime": "application/json",
+      "bytes": 336,
+      "chunks": 1,
+      "sha256": "c17d1d6983ce58a56ca8bf3d3aed9426e044937e88b5c159c85306fbd81cabc7",
+      "route": "helper",
+      "depends_on": []
+    },
+    {
+      "order": 450,
+      "name": "bvst.plugin.retrokeys.patch.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/patch.json",
+      "mime": "application/json",
+      "bytes": 2163,
+      "chunks": 1,
+      "sha256": "0d880724099a2270c69e4c0f979e2c8848c58959d3b02ffaaf9faaec71cf5b72",
+      "route": "helper",
+      "depends_on": [
+        "bvst.schema.patch.v1"
+      ]
+    },
+    {
+      "order": 460,
+      "name": "bvst.plugin.retrokeys.shell.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/gui.html",
+      "mime": "text/html",
+      "bytes": 819,
+      "chunks": 1,
+      "sha256": "cb3a3d3c19338229b87954703bdb13b9b84c71845b3cbcc604c45ea6fc1c3cb7",
+      "route": "helper",
+      "depends_on": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.plugin.retrokeys.manifest.v1.0.0",
+        "bvst.plugin.retrokeys.patch.v1.0.0"
+      ]
+    },
+    {
+      "order": 470,
+      "name": "bvst.plugin.bluemarvinone.release.v1.0.0",
+      "path": "on-chain-modules/catalogs/plugins/standalone-synths/bluemarvinone.release.catalog.json",
+      "mime": "application/json",
+      "bytes": 1780,
+      "chunks": 1,
+      "sha256": "594b052dff3099f175da2cb5476b8c91d09854b21c73a053e5a67a708d95bffc",
+      "route": "helper",
+      "depends_on": [
+        "bvst.plugin.bluemarvinone.manifest.v1.0.0",
+        "bvst.plugin.bluemarvinone.patch.v1.0.0",
+        "bvst.plugin.bluemarvinone.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ]
+    },
+    {
+      "order": 480,
+      "name": "bvst.plugin.bluemarvintwo.release.v1.0.0",
+      "path": "on-chain-modules/catalogs/plugins/standalone-synths/bluemarvintwo.release.catalog.json",
+      "mime": "application/json",
+      "bytes": 1780,
+      "chunks": 1,
+      "sha256": "a92296284c1d803d2584aaa4e77780598b5600b79f784edae0f99b643d990a38",
+      "route": "helper",
+      "depends_on": [
+        "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
+        "bvst.plugin.bluemarvintwo.patch.v1.0.0",
+        "bvst.plugin.bluemarvintwo.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ]
+    },
+    {
+      "order": 490,
+      "name": "bvst.plugin.neonpoly.release.v1.0.0",
+      "path": "on-chain-modules/catalogs/plugins/standalone-synths/neonpoly.release.catalog.json",
+      "mime": "application/json",
+      "bytes": 1740,
+      "chunks": 1,
+      "sha256": "8c96baf3023b57e0039e72bf9b831c29ab9184be70468608472ad92a817b178e",
+      "route": "helper",
+      "depends_on": [
+        "bvst.plugin.neonpoly.manifest.v1.0.0",
+        "bvst.plugin.neonpoly.patch.v1.0.0",
+        "bvst.plugin.neonpoly.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ]
+    },
+    {
+      "order": 500,
+      "name": "bvst.plugin.retrokeys.release.v1.0.0",
+      "path": "on-chain-modules/catalogs/plugins/standalone-synths/retrokeys.release.catalog.json",
+      "mime": "application/json",
+      "bytes": 1748,
+      "chunks": 1,
+      "sha256": "c2267ebdb7b56e28e03edc99391df8277bd2e7ba6fb0074cca585d27c1cc8bf5",
+      "route": "helper",
+      "depends_on": [
+        "bvst.plugin.retrokeys.manifest.v1.0.0",
+        "bvst.plugin.retrokeys.patch.v1.0.0",
+        "bvst.plugin.retrokeys.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ]
+    },
+    {
+      "order": 510,
+      "name": "bvst.catalog.family.standalonesynths.v1",
+      "path": "on-chain-modules/catalogs/families/standalone-synths.catalog.json",
+      "mime": "application/json",
+      "bytes": 647,
+      "chunks": 1,
+      "sha256": "88aba20c6867b911e83cc1eb06fb9629679f7f441d0e1a686ac8c3ffa7595690",
+      "route": "helper",
+      "depends_on": [
+        "bvst.plugin.retrokeys.release.v1.0.0",
+        "bvst.plugin.bluemarvinone.release.v1.0.0",
+        "bvst.plugin.bluemarvintwo.release.v1.0.0",
+        "bvst.plugin.neonpoly.release.v1.0.0"
+      ]
+    },
+    {
+      "order": 520,
+      "name": "bvst.catalog.release.firstwaveinstruments.v1",
+      "path": "on-chain-modules/catalogs/releases/first-wave-instruments.catalog.json",
+      "mime": "application/json",
+      "bytes": 1009,
+      "chunks": 1,
+      "sha256": "6bbdbce961136844816ef35e4c8d2779c65cfd246ef9778fd60efcad132b6b9f",
+      "route": "helper",
+      "depends_on": [
+        "bvst.catalog.family.universalsynthfamily.v1",
+        "bvst.catalog.family.standalonesynths.v1"
+      ]
+    },
+    {
+      "order": 530,
+      "name": "bvst.catalog.root.v1",
+      "path": "on-chain-modules/catalogs/root/root.catalog.json",
+      "mime": "application/json",
+      "bytes": 450,
+      "chunks": 1,
+      "sha256": "c20c53711b5ac1a3c58560cd43aa93df026944a46ddba6b7704303970101ea81",
+      "route": "helper",
+      "depends_on": [
+        "bvst.catalog.foundation.v1",
+        "bvst.catalog.release.firstwaveinstruments.v1"
+      ]
+    }
+  ]
+}

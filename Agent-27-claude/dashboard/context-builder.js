@@ -6,6 +6,7 @@ const {
 } = require('./config');
 
 const DEFAULT_PACK = [
+  { path: 'data/repo-memory/context-summary.md', maxBytes: 1800 },
   { path: 'AGENTs.md', maxBytes: 5000 },
   { path: 'CLAUDE.md', maxBytes: 2200 },
   { path: 'dashboard/config.js', maxBytes: 2200 }

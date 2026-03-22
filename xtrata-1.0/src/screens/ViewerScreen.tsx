@@ -148,6 +148,8 @@ type ViewerScreenProps = {
     collection?: string;
     wallet?: string;
   };
+  allowSummaryPrefetch?: boolean;
+  allowBackgroundRelationshipSync?: boolean;
 };
 
 const getMediaLabel = (mimeType: string | null | undefined) => {
@@ -1847,6 +1849,9 @@ export default function ViewerScreen(props: ViewerScreenProps) {
   const walletModeLabel = props.modeLabels?.wallet ?? 'Wallet';
   const collectionViewerTitle = props.viewerTitles?.collection ?? 'Collection viewer';
   const walletViewerTitle = props.viewerTitles?.wallet ?? 'Wallet viewer';
+  const allowSummaryPrefetch = props.allowSummaryPrefetch ?? true;
+  const allowBackgroundRelationshipSync =
+    props.allowBackgroundRelationshipSync ?? true;
   const walletAddress = props.walletSession.address ?? null;
   const resolvedWalletAddress = props.walletLookupState.resolvedAddress;
   const hasWalletTarget = !!resolvedWalletAddress;
@@ -3133,7 +3138,12 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     [props.senderAddress]
   );
   useEffect(() => {
-    if (!props.isActiveTab || isWalletView || !collectionGridReady) {
+    if (
+      !allowBackgroundRelationshipSync ||
+      !props.isActiveTab ||
+      isWalletView ||
+      !collectionGridReady
+    ) {
       return;
     }
     let cancelled = false;
@@ -3178,6 +3188,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       cancelled = true;
     };
   }, [
+    allowBackgroundRelationshipSync,
     props.isActiveTab,
     isWalletView,
     collectionGridReady,
@@ -3605,10 +3616,12 @@ export default function ViewerScreen(props: ViewerScreenProps) {
         pageIds.length > 0
           ? `${pageIds[0].toString()}–${pageIds[pageIds.length - 1].toString()}`
           : 'none',
-      prefetchTargetPage: activePageIndex > 0 ? activePageIndex - 1 : null,
-      prefetchStrategy: 'previous-page'
+      prefetchTargetPage:
+        allowSummaryPrefetch && activePageIndex > 0 ? activePageIndex - 1 : null,
+      prefetchStrategy: allowSummaryPrefetch ? 'previous-page' : 'disabled'
     });
   }, [
+    allowSummaryPrefetch,
     contractId,
     isWalletView,
     props.isActiveTab,
@@ -3624,6 +3637,9 @@ export default function ViewerScreen(props: ViewerScreenProps) {
 
   useEffect(() => {
     if (isWalletView) {
+      return;
+    }
+    if (!allowSummaryPrefetch) {
       return;
     }
     if (!props.isActiveTab) {
@@ -3667,6 +3683,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     };
   }, [
     activePageIndex,
+    allowSummaryPrefetch,
     collectionGridReady,
     collectionPageSettled,
     contractId,

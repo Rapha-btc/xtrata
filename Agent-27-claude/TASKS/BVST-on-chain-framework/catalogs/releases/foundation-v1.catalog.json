@@ -1,0 +1,219 @@
+{
+  "name": "bvst.catalog.foundation.v1",
+  "type": "foundation-catalog",
+  "runtime_major_catalog": "bvst.catalog.runtime.v1",
+  "engine_major_catalog": "bvst.catalog.engine.v1",
+  "schema_major_catalog": "bvst.catalog.schema.v1",
+  "modules": {
+    "runtime": [
+      {
+        "name": "bvst.runtime.bvst-css.v1.0.0",
+        "token_id": null,
+        "txid": null,
+        "block_height": null,
+        "path": "on-chain-modules/workspace/System/shared/bvst.css",
+        "mime_type": "text/css",
+        "sha256": "a642eb5ce475e76e407439751442374111bc63b1fd0389d48fd64bc3ef830e8a",
+        "bytes": 9233,
+        "chunks": 1,
+        "route": "helper"
+      },
+      {
+        "name": "bvst.runtime.ui-styles.v1.0.0",
+        "token_id": null,
+        "txid": null,
+        "block_height": null,
+        "path": "on-chain-modules/workspace/System/shared/ui_styles.js",
+        "mime_type": "application/javascript",
+        "sha256": "caf8264dbc429fefb0641f8e26a13924a3507fe5acbab7123a9ea71136075e29",
+        "bytes": 930,
+        "chunks": 1,
+        "route": "helper"
+      },
+      {
+        "name": "bvst.runtime.audional-decoder.v1.0.0",
+        "token_id": null,
+        "txid": null,
+        "block_height": null,
+        "path": "on-chain-modules/workspace/System/shared/audional_decoder.js",
+        "mime_type": "application/javascript",
+        "sha256": "bec66efd0382c49ff15c5f401124cff350412177458ee91151b46224a2116916",
+        "bytes": 9564,
+        "chunks": 1,
+        "route": "helper"
+      },
+      {
+        "name": "bvst.runtime.controls.v1.0.0",
+        "token_id": null,
+        "txid": null,
+        "block_height": null,
+        "path": "on-chain-modules/workspace/System/shared/controls.js",
+        "mime_type": "application/javascript",
+        "sha256": "ee52bc817032489f4bfa09cc972cc7c82a5bdf4ce7bc0dbe96f9f6a567a871cc",
+        "bytes": 20723,
+        "chunks": 2,
+        "route": "helper"
+      },
+      {
+        "name": "bvst.runtime.keyboard.v1.0.0",
+        "token_id": null,
+        "txid": null,
+        "block_height": null,
+        "path": "on-chain-modules/workspace/System/shared/keyboard.js",
+        "mime_type": "application/javascript",
+        "sha256": "cde14fe643151fd4624bee175a1ea3027c66a9d8611e402c785fe6f8d788572e",
+        "bytes": 9051,
+        "chunks": 1,
+        "route": "helper"
+      },
+      {
+        "name": "bvst.runtime.midi.v1.0.0",
+        "token_id": null,
+        "txid": null,
+        "block_height": null,
+        "path": "on-chain-modules/workspace/System/shared/midi.js",
+        "mime_type": "application/javascript",
+        "sha256": "deb7301dc06443126b2c4ca904d61ba2f29f7aaffb174910a2581c67546a4f38",
+        "bytes": 4938,
+        "chunks": 1,
+        "route": "helper"
+      },
+      {
+        "name": "bvst.runtime.midi-parser.v1.0.0",
+        "token_id": null,
+        "txid": null,
+        "block_height": null,
+        "path": "on-chain-modules/workspace/System/shared/midi_parser.js",
+        "mime_type": "application/javascript",
+        "sha256": "71c5ab0c9d9e2a5f13c6aa14e2194247bd72a5ea69adfe377309ebcdc7692fd2",
+        "bytes": 4389,
+        "chunks": 1,
+        "route": "helper"
+      },
+      {
+        "name": "bvst.runtime.visualizer.v1.0.0",
+        "token_id": null,
+        "txid": null,
+        "block_height": null,
+        "path": "on-chain-modules/workspace/System/shared/visualizer.js",
+        "mime_type": "application/javascript",
+        "sha256": "8bfeb3312b734384ddccecc183f56dd4eaeb7a6911dadde87fd8ad7294c586e7",
+        "bytes": 5303,
+        "chunks": 1,
+        "route": "helper"
+      },
+      {
+        "name": "bvst.runtime.sampler.v1.0.0",
+        "token_id": null,
+        "txid": null,
+        "block_height": null,
+        "path": "on-chain-modules/workspace/System/shared/sampler.js",
+        "mime_type": "application/javascript",
+        "sha256": "55b04c8cb098ac2943b3627173ce12e5f320a1fc04136813f25d04e7cf5e1d39",
+        "bytes": 30490,
+        "chunks": 2,
+        "route": "helper"
+      },
+      {
+        "name": "bvst.runtime.sequencer-core.v1.0.0",
+        "token_id": null,
+        "txid": null,
+        "block_height": null,
+        "path": "on-chain-modules/workspace/System/shared/sequencer_core.js",
+        "mime_type": "application/javascript",
+        "sha256": "3f22aa13f9b662d34a7b8fbb4c9ad3a8278e0d3d8b24eccfd4b5fa7ea71f270d",
+        "bytes": 19539,
+        "chunks": 2,
+        "route": "helper"
+      },
+      {
+        "name": "bvst.runtime.standalone-bridge.v1.0.0",
+        "token_id": null,
+        "txid": null,
+        "block_height": null,
+        "path": "on-chain-modules/workspace/System/shared/standalone_bridge.js",
+        "mime_type": "application/javascript",
+        "sha256": "edbc817f7547b16b517a1a16bc1e30a69046535dcb0e756c7c89941406212b45",
+        "bytes": 10276,
+        "chunks": 1,
+        "route": "helper"
+      },
+      {
+        "name": "bvst.runtime.plugin-core.v1.0.0",
+        "token_id": null,
+        "txid": null,
+        "block_height": null,
+        "path": "on-chain-modules/workspace/System/shared/plugin_core.js",
+        "mime_type": "application/javascript",
+        "sha256": "7291f7c40b50253403be270fe3fc6763227f083fcd2f066b5051179621de8dc5",
+        "bytes": 25354,
+        "chunks": 2,
+        "route": "helper"
+      },
+      {
+        "name": "bvst.runtime.patch-runtime.v1.0.0",
+        "token_id": null,
+        "txid": null,
+        "block_height": null,
+        "path": "on-chain-modules/workspace/System/shared/patch_runtime.js",
+        "mime_type": "application/javascript",
+        "sha256": "ed5ce7a38fba5072559a2ce3e746e98578a6a536d7f6d34469f836175effaf47",
+        "bytes": 4360,
+        "chunks": 1,
+        "route": "helper"
+      }
+    ],
+    "engine": [
+      {
+        "name": "bvst.engine.unified-wasm.v1.0.0",
+        "token_id": null,
+        "txid": null,
+        "block_height": null,
+        "path": "on-chain-modules/workspace/System/shared/bvst_unified_bg.wasm",
+        "mime_type": "application/wasm",
+        "sha256": "4246b1b3431abb565e7ee4b9cc2c3f9da64478b9a2ff7e8c3bc22713868a6fd3",
+        "bytes": 100109,
+        "chunks": 7,
+        "route": "helper"
+      },
+      {
+        "name": "bvst.engine.unified-loader.v1.0.0",
+        "token_id": null,
+        "txid": null,
+        "block_height": null,
+        "path": "on-chain-modules/workspace/System/shared/wasm_loader_unified.js",
+        "mime_type": "application/javascript",
+        "sha256": "a099d8f7b8eac71db02a00925019481b42af3dc87a2a14a829ac1dbc90ad30a3",
+        "bytes": 16567,
+        "chunks": 2,
+        "route": "helper"
+      },
+      {
+        "name": "bvst.engine.unified-worklet.v1.0.0",
+        "token_id": null,
+        "txid": null,
+        "block_height": null,
+        "path": "on-chain-modules/workspace/System/shared/processor_unified.js",
+        "mime_type": "application/javascript",
+        "sha256": "3ad68b432cafffac6be69d1c67ea282aa259d0705456163a4dd9f7a66e88c78d",
+        "bytes": 12730,
+        "chunks": 1,
+        "route": "helper"
+      }
+    ],
+    "schema": [
+      {
+        "name": "bvst.schema.patch.v1",
+        "token_id": null,
+        "txid": null,
+        "block_height": null,
+        "path": "on-chain-modules/workspace/System/shared/bvst_patch_v1.schema.json",
+        "mime_type": "application/json",
+        "sha256": "ff2506820eaf82235bf90338f9e6170aaeabb1040b1cfc8e7dad99d7ffbabb38",
+        "bytes": 5689,
+        "chunks": 1,
+        "route": "helper"
+      }
+    ]
+  }
+}

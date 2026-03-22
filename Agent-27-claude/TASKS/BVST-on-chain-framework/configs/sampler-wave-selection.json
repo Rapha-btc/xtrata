@@ -1,0 +1,25 @@
+{
+  "release_scope": "sampler-wave-experimental",
+  "status": "not-frozen",
+  "rationale": [
+    "Sampler support should evolve in this repo without disturbing the frozen first-wave synth release.",
+    "The current SamplerLab shell exercises source policy, runtime bootstrap, and engine sample-ingest acknowledgements before dedicated recursive sample modules exist.",
+    "Future sampler releases should publish their own family and release catalogs once source manifests and sample asset economics are finalized."
+  ],
+  "families": [
+    {
+      "key": "sampler-wave",
+      "title": "Sampler Wave",
+      "description": "Experimental sampler shells and future recursive sample-module releases.",
+      "plugins": [
+        "SamplerLab"
+      ]
+    }
+  ],
+  "readiness_gates": [
+    "sampler patch base profile must remain declared-only",
+    "standalone profile may override to standalone-dev for authoring and smoke tests",
+    "browser smoke must reach BVST_READY, sampler-loaded, and sampler-engine-loaded",
+    "sample source modules and catalogs stay out of the frozen first-wave release until dedicated economics are modeled"
+  ]
+}

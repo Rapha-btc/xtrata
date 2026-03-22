@@ -1,0 +1,42 @@
+{
+  "release_name": "bvst-root-catalogs-v1",
+  "network_template": "on-chain-modules/configs/xtrata-network.template.json",
+  "prerequisite_batches": [
+    "10-foundation.batch.json",
+    "20-universalsynth-family.batch.json",
+    "30-standalone-synths.batch.json"
+  ],
+  "chunk_size": 16384,
+  "helper_chunk_limit": 30,
+  "staged_batch_chunk_limit": 50,
+  "artifacts": [
+    {
+      "order": 10,
+      "name": "bvst.catalog.release.firstwaveinstruments.v1",
+      "path": "on-chain-modules/catalogs/releases/first-wave-instruments.catalog.json",
+      "mime": "application/json",
+      "bytes": 1009,
+      "chunks": 1,
+      "sha256": "6bbdbce961136844816ef35e4c8d2779c65cfd246ef9778fd60efcad132b6b9f",
+      "route": "helper",
+      "depends_on": [
+        "bvst.catalog.family.universalsynthfamily.v1",
+        "bvst.catalog.family.standalonesynths.v1"
+      ]
+    },
+    {
+      "order": 20,
+      "name": "bvst.catalog.root.v1",
+      "path": "on-chain-modules/catalogs/root/root.catalog.json",
+      "mime": "application/json",
+      "bytes": 450,
+      "chunks": 1,
+      "sha256": "c20c53711b5ac1a3c58560cd43aa93df026944a46ddba6b7704303970101ea81",
+      "route": "helper",
+      "depends_on": [
+        "bvst.catalog.foundation.v1",
+        "bvst.catalog.release.firstwaveinstruments.v1"
+      ]
+    }
+  ]
+}

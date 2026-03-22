@@ -1,0 +1,256 @@
+{
+  "release_name": "bvst-standalone-synths-v1",
+  "network_template": "on-chain-modules/configs/xtrata-network.template.json",
+  "prerequisite_batches": [
+    "10-foundation.batch.json"
+  ],
+  "chunk_size": 16384,
+  "helper_chunk_limit": 30,
+  "staged_batch_chunk_limit": 50,
+  "artifacts": [
+    {
+      "order": 10,
+      "name": "bvst.plugin.bluemarvinone.manifest.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinOne/manifest.json",
+      "mime": "application/json",
+      "bytes": 342,
+      "chunks": 1,
+      "sha256": "1a4fca458a6e9cce130828ac7aed1aa179ea01e3acf773ba438b4b80603b1075",
+      "route": "helper",
+      "depends_on": []
+    },
+    {
+      "order": 20,
+      "name": "bvst.plugin.bluemarvinone.patch.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinOne/patch.json",
+      "mime": "application/json",
+      "bytes": 4268,
+      "chunks": 1,
+      "sha256": "315321c2f56d3c32941ddb9d2af3465b21b7b98d1b3eeed5014d0b90722a36e3",
+      "route": "helper",
+      "depends_on": [
+        "bvst.schema.patch.v1"
+      ]
+    },
+    {
+      "order": 30,
+      "name": "bvst.plugin.bluemarvinone.shell.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinOne/gui.html",
+      "mime": "text/html",
+      "bytes": 833,
+      "chunks": 1,
+      "sha256": "e0b67a72ee60252d6542da13eff9e49522e39ab3ba24afb59b25f603d010acb1",
+      "route": "helper",
+      "depends_on": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.plugin.bluemarvinone.manifest.v1.0.0",
+        "bvst.plugin.bluemarvinone.patch.v1.0.0"
+      ]
+    },
+    {
+      "order": 40,
+      "name": "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinTwo/manifest.json",
+      "mime": "application/json",
+      "bytes": 344,
+      "chunks": 1,
+      "sha256": "9829d6c837bf51fa8e95f827e6f8cb72eb788e3a573ec5d770b542c15edf6261",
+      "route": "helper",
+      "depends_on": []
+    },
+    {
+      "order": 50,
+      "name": "bvst.plugin.bluemarvintwo.patch.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinTwo/patch.json",
+      "mime": "application/json",
+      "bytes": 7067,
+      "chunks": 1,
+      "sha256": "1a12ef8a5ed1cce012111d42c501f80db5bfb6fd76edb390cae070711b645901",
+      "route": "helper",
+      "depends_on": [
+        "bvst.schema.patch.v1"
+      ]
+    },
+    {
+      "order": 60,
+      "name": "bvst.plugin.bluemarvintwo.shell.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinTwo/gui.html",
+      "mime": "text/html",
+      "bytes": 834,
+      "chunks": 1,
+      "sha256": "41ddfb74186bf6a62fa3f23cf681fb525631554a3f7ddda5407e8b25fafa3a52",
+      "route": "helper",
+      "depends_on": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
+        "bvst.plugin.bluemarvintwo.patch.v1.0.0"
+      ]
+    },
+    {
+      "order": 70,
+      "name": "bvst.plugin.neonpoly.manifest.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/NeonPoly/manifest.json",
+      "mime": "application/json",
+      "bytes": 356,
+      "chunks": 1,
+      "sha256": "d4f749963d9e9351acb40a6ebe3881d29fa08b04483c6e6b27a7e986ba9c2443",
+      "route": "helper",
+      "depends_on": []
+    },
+    {
+      "order": 80,
+      "name": "bvst.plugin.neonpoly.patch.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/NeonPoly/patch.json",
+      "mime": "application/json",
+      "bytes": 4620,
+      "chunks": 1,
+      "sha256": "06675262945155a0dc31d4c1f55312156ba800ca81d7cb4975a48c7f56718e6b",
+      "route": "helper",
+      "depends_on": [
+        "bvst.schema.patch.v1"
+      ]
+    },
+    {
+      "order": 90,
+      "name": "bvst.plugin.neonpoly.shell.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/NeonPoly/gui.html",
+      "mime": "text/html",
+      "bytes": 834,
+      "chunks": 1,
+      "sha256": "e6173d6633d0693f0f98a2e5989002870059f077d6bcd061ae9d4f07dd0d2c27",
+      "route": "helper",
+      "depends_on": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.plugin.neonpoly.manifest.v1.0.0",
+        "bvst.plugin.neonpoly.patch.v1.0.0"
+      ]
+    },
+    {
+      "order": 100,
+      "name": "bvst.plugin.retrokeys.manifest.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/manifest.json",
+      "mime": "application/json",
+      "bytes": 336,
+      "chunks": 1,
+      "sha256": "c17d1d6983ce58a56ca8bf3d3aed9426e044937e88b5c159c85306fbd81cabc7",
+      "route": "helper",
+      "depends_on": []
+    },
+    {
+      "order": 110,
+      "name": "bvst.plugin.retrokeys.patch.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/patch.json",
+      "mime": "application/json",
+      "bytes": 2163,
+      "chunks": 1,
+      "sha256": "0d880724099a2270c69e4c0f979e2c8848c58959d3b02ffaaf9faaec71cf5b72",
+      "route": "helper",
+      "depends_on": [
+        "bvst.schema.patch.v1"
+      ]
+    },
+    {
+      "order": 120,
+      "name": "bvst.plugin.retrokeys.shell.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/gui.html",
+      "mime": "text/html",
+      "bytes": 819,
+      "chunks": 1,
+      "sha256": "cb3a3d3c19338229b87954703bdb13b9b84c71845b3cbcc604c45ea6fc1c3cb7",
+      "route": "helper",
+      "depends_on": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.plugin.retrokeys.manifest.v1.0.0",
+        "bvst.plugin.retrokeys.patch.v1.0.0"
+      ]
+    },
+    {
+      "order": 130,
+      "name": "bvst.plugin.bluemarvinone.release.v1.0.0",
+      "path": "on-chain-modules/catalogs/plugins/standalone-synths/bluemarvinone.release.catalog.json",
+      "mime": "application/json",
+      "bytes": 1780,
+      "chunks": 1,
+      "sha256": "594b052dff3099f175da2cb5476b8c91d09854b21c73a053e5a67a708d95bffc",
+      "route": "helper",
+      "depends_on": [
+        "bvst.plugin.bluemarvinone.manifest.v1.0.0",
+        "bvst.plugin.bluemarvinone.patch.v1.0.0",
+        "bvst.plugin.bluemarvinone.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ]
+    },
+    {
+      "order": 140,
+      "name": "bvst.plugin.bluemarvintwo.release.v1.0.0",
+      "path": "on-chain-modules/catalogs/plugins/standalone-synths/bluemarvintwo.release.catalog.json",
+      "mime": "application/json",
+      "bytes": 1780,
+      "chunks": 1,
+      "sha256": "a92296284c1d803d2584aaa4e77780598b5600b79f784edae0f99b643d990a38",
+      "route": "helper",
+      "depends_on": [
+        "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
+        "bvst.plugin.bluemarvintwo.patch.v1.0.0",
+        "bvst.plugin.bluemarvintwo.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ]
+    },
+    {
+      "order": 150,
+      "name": "bvst.plugin.neonpoly.release.v1.0.0",
+      "path": "on-chain-modules/catalogs/plugins/standalone-synths/neonpoly.release.catalog.json",
+      "mime": "application/json",
+      "bytes": 1740,
+      "chunks": 1,
+      "sha256": "8c96baf3023b57e0039e72bf9b831c29ab9184be70468608472ad92a817b178e",
+      "route": "helper",
+      "depends_on": [
+        "bvst.plugin.neonpoly.manifest.v1.0.0",
+        "bvst.plugin.neonpoly.patch.v1.0.0",
+        "bvst.plugin.neonpoly.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ]
+    },
+    {
+      "order": 160,
+      "name": "bvst.plugin.retrokeys.release.v1.0.0",
+      "path": "on-chain-modules/catalogs/plugins/standalone-synths/retrokeys.release.catalog.json",
+      "mime": "application/json",
+      "bytes": 1748,
+      "chunks": 1,
+      "sha256": "c2267ebdb7b56e28e03edc99391df8277bd2e7ba6fb0074cca585d27c1cc8bf5",
+      "route": "helper",
+      "depends_on": [
+        "bvst.plugin.retrokeys.manifest.v1.0.0",
+        "bvst.plugin.retrokeys.patch.v1.0.0",
+        "bvst.plugin.retrokeys.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ]
+    },
+    {
+      "order": 170,
+      "name": "bvst.catalog.family.standalonesynths.v1",
+      "path": "on-chain-modules/catalogs/families/standalone-synths.catalog.json",
+      "mime": "application/json",
+      "bytes": 647,
+      "chunks": 1,
+      "sha256": "88aba20c6867b911e83cc1eb06fb9629679f7f441d0e1a686ac8c3ffa7595690",
+      "route": "helper",
+      "depends_on": [
+        "bvst.plugin.retrokeys.release.v1.0.0",
+        "bvst.plugin.bluemarvinone.release.v1.0.0",
+        "bvst.plugin.bluemarvintwo.release.v1.0.0",
+        "bvst.plugin.neonpoly.release.v1.0.0"
+      ]
+    }
+  ]
+}

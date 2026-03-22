@@ -1,0 +1,426 @@
+{
+  "schema": "bvst.patch/v1",
+  "meta": {
+    "name": "Universal Synth",
+    "description": "A subtractive synth patch demonstrating BVST modules (Osc/Filter/Env/LFO/Delay/Drive)."
+  },
+  "config": {
+    "name": "Universal Synth",
+    "visualizer": "spectrum",
+    "keyboard": {
+      "startNote": 36,
+      "numKeys": 49
+    },
+    "sequencer": {
+      "type": "step",
+      "steps": 16,
+      "paramMap": {
+        "gate": 129,
+        "note": 128,
+        "accent": -1,
+        "slide": -1
+      }
+    },
+    "modules": [
+      {
+        "name": "Transport",
+        "cols": 1,
+        "controls": [
+          {
+            "id": "btn-power",
+            "param": -1,
+            "type": "button",
+            "text": "PWR",
+            "label": "Context"
+          },
+          {
+            "id": "btn-play",
+            "param": -1,
+            "type": "button",
+            "text": "PLAY",
+            "label": "Seq"
+          },
+          {
+            "id": "btn-stop",
+            "param": -1,
+            "type": "button",
+            "text": "STOP",
+            "label": "Seq"
+          }
+        ]
+      },
+      {
+        "name": "Oscillator 1",
+        "cols": 1,
+        "controls": [
+          {
+            "id": "osc1_wave",
+            "param": 0,
+            "type": "select",
+            "options": [
+              "Sine",
+              "Saw",
+              "Square",
+              "Pulse"
+            ],
+            "val": 1,
+            "label": "Wave"
+          },
+          {
+            "id": "osc1_tune",
+            "param": 1,
+            "type": "knob",
+            "min": -24,
+            "max": 24,
+            "step": 1,
+            "val": 0,
+            "label": "Tune"
+          },
+          {
+            "id": "osc1_mix",
+            "param": 2,
+            "type": "slider",
+            "min": 0,
+            "max": 1,
+            "val": 0.7,
+            "label": "Level"
+          }
+        ]
+      },
+      {
+        "name": "Oscillator 2",
+        "cols": 1,
+        "controls": [
+          {
+            "id": "osc2_wave",
+            "param": 4,
+            "type": "select",
+            "options": [
+              "Sine",
+              "Saw",
+              "Square",
+              "Pulse"
+            ],
+            "val": 2,
+            "label": "Wave"
+          },
+          {
+            "id": "osc2_tune",
+            "param": 5,
+            "type": "knob",
+            "min": -24,
+            "max": 24,
+            "step": 1,
+            "val": 0,
+            "label": "Tune"
+          },
+          {
+            "id": "osc2_det",
+            "param": 6,
+            "type": "knob",
+            "min": 0,
+            "max": 0.5,
+            "val": 0.1,
+            "label": "Fine"
+          },
+          {
+            "id": "osc2_mix",
+            "param": 7,
+            "type": "slider",
+            "min": 0,
+            "max": 1,
+            "val": 0.4,
+            "label": "Level"
+          }
+        ]
+      },
+      {
+        "name": "Filter",
+        "cols": 1,
+        "controls": [
+          {
+            "id": "filt_mode",
+            "param": 12,
+            "type": "select",
+            "options": [
+              "LP",
+              "HP",
+              "BP",
+              "Notch"
+            ],
+            "val": 0,
+            "label": "Mode"
+          },
+          {
+            "id": "filt_cut",
+            "param": 10,
+            "type": "knob",
+            "min": 20,
+            "max": 20000,
+            "val": 2500,
+            "curve": "log",
+            "label": "Cutoff"
+          },
+          {
+            "id": "filt_res",
+            "param": 11,
+            "type": "knob",
+            "min": 0.5,
+            "max": 10,
+            "val": 2.0,
+            "label": "Res"
+          },
+          {
+            "id": "filt_env",
+            "param": 13,
+            "type": "knob",
+            "min": -1,
+            "max": 1,
+            "val": 0.5,
+            "label": "Env Amt"
+          }
+        ]
+      },
+      {
+        "name": "Amp Env",
+        "cols": 1,
+        "controls": [
+          {
+            "id": "amp_a",
+            "param": 14,
+            "type": "slider",
+            "min": 0.001,
+            "max": 2,
+            "val": 0.01,
+            "label": "A"
+          },
+          {
+            "id": "amp_d",
+            "param": 15,
+            "type": "slider",
+            "min": 0.001,
+            "max": 2,
+            "val": 0.1,
+            "label": "D"
+          },
+          {
+            "id": "amp_s",
+            "param": 16,
+            "type": "slider",
+            "min": 0,
+            "max": 1,
+            "val": 0.7,
+            "label": "S"
+          },
+          {
+            "id": "amp_r",
+            "param": 17,
+            "type": "slider",
+            "min": 0.001,
+            "max": 5,
+            "val": 0.5,
+            "label": "R"
+          }
+        ]
+      },
+      {
+        "name": "Filter Env",
+        "cols": 1,
+        "controls": [
+          {
+            "id": "filt_a",
+            "param": 18,
+            "type": "slider",
+            "min": 0.001,
+            "max": 2,
+            "val": 0.01,
+            "label": "A"
+          },
+          {
+            "id": "filt_d",
+            "param": 19,
+            "type": "slider",
+            "min": 0.001,
+            "max": 2,
+            "val": 0.4,
+            "label": "D"
+          },
+          {
+            "id": "filt_s",
+            "param": 20,
+            "type": "slider",
+            "min": 0,
+            "max": 1,
+            "val": 0.2,
+            "label": "S"
+          },
+          {
+            "id": "filt_r",
+            "param": 21,
+            "type": "slider",
+            "min": 0.001,
+            "max": 5,
+            "val": 0.5,
+            "label": "R"
+          }
+        ]
+      },
+      {
+        "name": "LFO",
+        "cols": 1,
+        "controls": [
+          {
+            "id": "lfo_wave",
+            "param": 25,
+            "type": "select",
+            "options": [
+              "Sine",
+              "Saw",
+              "Sqr"
+            ],
+            "val": 0,
+            "label": "Shape"
+          },
+          {
+            "id": "lfo_rate",
+            "param": 22,
+            "type": "knob",
+            "min": 0.1,
+            "max": 20,
+            "val": 4.0,
+            "label": "Rate"
+          },
+          {
+            "id": "lfo_depth",
+            "param": 23,
+            "type": "knob",
+            "min": 0,
+            "max": 1,
+            "val": 0.05,
+            "label": "Depth"
+          },
+          {
+            "id": "lfo_dest",
+            "param": 24,
+            "type": "select",
+            "options": [
+              "Off",
+              "Cutoff",
+              "Pitch"
+            ],
+            "val": 2,
+            "label": "Dest"
+          }
+        ]
+      },
+      {
+        "name": "Effects / Mix",
+        "cols": 1,
+        "controls": [
+          {
+            "id": "dly_time",
+            "param": 26,
+            "type": "knob",
+            "min": 0,
+            "max": 1,
+            "val": 0.3,
+            "label": "Dly Time"
+          },
+          {
+            "id": "dly_feed",
+            "param": 27,
+            "type": "knob",
+            "min": 0,
+            "max": 0.95,
+            "val": 0.4,
+            "label": "Feedbk"
+          },
+          {
+            "id": "dly_mix",
+            "param": 28,
+            "type": "knob",
+            "min": 0,
+            "max": 1,
+            "val": 0.2,
+            "label": "Dly Mix"
+          },
+          {
+            "id": "drive",
+            "param": 9,
+            "type": "knob",
+            "min": 0,
+            "max": 1,
+            "val": 0.1,
+            "label": "Drive"
+          },
+          {
+            "id": "noise",
+            "param": 8,
+            "type": "slider",
+            "min": 0,
+            "max": 1,
+            "val": 0,
+            "label": "Noise"
+          },
+          {
+            "id": "master",
+            "param": 29,
+            "type": "slider",
+            "min": 0,
+            "max": 2,
+            "val": 0.8,
+            "label": "Master"
+          }
+        ]
+      }
+    ],
+    "presets": {
+      "Default": {
+        "osc1_wave": 1,
+        "osc1_tune": 0,
+        "osc1_mix": 0.7,
+        "osc2_wave": 2,
+        "osc2_tune": 0,
+        "osc2_det": 0.1,
+        "osc2_mix": 0.4,
+        "filt_cut": 2500,
+        "filt_res": 2.0,
+        "filt_env": 0.5,
+        "amp_s": 0.7,
+        "amp_r": 0.5,
+        "lfo_rate": 4.0,
+        "lfo_depth": 0.05,
+        "lfo_dest": 2,
+        "dly_mix": 0.2,
+        "dly_feed": 0.4,
+        "drive": 0.1
+      },
+      "Bass": {
+        "osc1_wave": 1,
+        "osc1_mix": 1,
+        "osc2_wave": 2,
+        "osc2_mix": 0.5,
+        "osc2_tune": -12,
+        "filt_cut": 600,
+        "filt_res": 3,
+        "filt_env": 0.6,
+        "filt_d": 0.4,
+        "amp_d": 0.4,
+        "drive": 0.4,
+        "dly_mix": 0
+      },
+      "Pad": {
+        "osc1_wave": 1,
+        "osc2_wave": 1,
+        "osc2_det": 0.15,
+        "osc2_mix": 0.8,
+        "filt_cut": 2000,
+        "amp_a": 1.0,
+        "amp_r": 2.0,
+        "dly_mix": 0.4,
+        "dly_time": 0.5,
+        "dly_feed": 0.6
+      }
+    }
+  }
+}

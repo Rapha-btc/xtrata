@@ -1,0 +1,9 @@
+{
+  "name": "canary.catalog.root.v1",
+  "type": "root-catalog",
+  "planning_docs": [
+    "README.md",
+    "INSCRIPTION_AUTOMATION.md"
+  ],
+  "release_catalog": "canary.catalog.release.v1"
+}

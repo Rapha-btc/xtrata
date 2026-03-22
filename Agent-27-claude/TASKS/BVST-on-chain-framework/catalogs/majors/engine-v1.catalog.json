@@ -1,0 +1,44 @@
+{
+  "name": "bvst.catalog.engine.v1",
+  "type": "major-catalog",
+  "family": "engine",
+  "major": 1,
+  "modules": [
+    {
+      "name": "bvst.engine.unified-wasm.v1.0.0",
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "path": "on-chain-modules/workspace/System/shared/bvst_unified_bg.wasm",
+      "mime_type": "application/wasm",
+      "sha256": "4246b1b3431abb565e7ee4b9cc2c3f9da64478b9a2ff7e8c3bc22713868a6fd3",
+      "bytes": 100109,
+      "chunks": 7,
+      "route": "helper"
+    },
+    {
+      "name": "bvst.engine.unified-loader.v1.0.0",
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "path": "on-chain-modules/workspace/System/shared/wasm_loader_unified.js",
+      "mime_type": "application/javascript",
+      "sha256": "a099d8f7b8eac71db02a00925019481b42af3dc87a2a14a829ac1dbc90ad30a3",
+      "bytes": 16567,
+      "chunks": 2,
+      "route": "helper"
+    },
+    {
+      "name": "bvst.engine.unified-worklet.v1.0.0",
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "path": "on-chain-modules/workspace/System/shared/processor_unified.js",
+      "mime_type": "application/javascript",
+      "sha256": "3ad68b432cafffac6be69d1c67ea282aa259d0705456163a4dd9f7a66e88c78d",
+      "bytes": 12730,
+      "chunks": 1,
+      "route": "helper"
+    }
+  ]
+}

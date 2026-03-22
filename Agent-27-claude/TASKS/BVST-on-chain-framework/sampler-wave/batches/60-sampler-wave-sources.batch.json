@@ -1,0 +1,60 @@
+{
+  "release": "bvst-sampler-wave-sources-v1",
+  "experimental": true,
+  "artifacts": [
+    {
+      "order": 10,
+      "name": "bvst.sample.samplerlab.sine220.audio.v1",
+      "kind": "leaf",
+      "path": "sampler-wave/assets/audio/samplerlab.sine220.audio.wav",
+      "mime": "audio/wav",
+      "route": "helper",
+      "depends_on": [],
+      "bytes": 15478,
+      "chunks": 1,
+      "sha256": "874fba51133a73b99d436d5d1743a4f03dab9887fd636813d5e5882a777ece4a"
+    },
+    {
+      "order": 20,
+      "name": "bvst.sample.samplerlab.sine220.source-manifest.v1",
+      "kind": "leaf",
+      "path": "sampler-wave/manifests/sources/samplerlab.sine220.source-manifest.json",
+      "mime": "application/json",
+      "route": "helper",
+      "depends_on": [
+        "bvst.schema.sample-source.v1",
+        "bvst.sample.samplerlab.sine220.audio.v1"
+      ],
+      "bytes": 954,
+      "chunks": 1,
+      "sha256": "acced8cabdebd61880a4b0ddddb9e537b18071bde55e312af1d1a54a23827a25"
+    },
+    {
+      "order": 30,
+      "name": "bvst.sample.samplerlab.sine440.audio.v1",
+      "kind": "leaf",
+      "path": "sampler-wave/assets/audio/samplerlab.sine440.audio.wav",
+      "mime": "audio/wav",
+      "route": "helper",
+      "depends_on": [],
+      "bytes": 15478,
+      "chunks": 1,
+      "sha256": "a8487cb0c43da14aa2551248d4af80eb79c152c99e4445dc653376d94b7041a6"
+    },
+    {
+      "order": 40,
+      "name": "bvst.sample.samplerlab.sine440.source-manifest.v1",
+      "kind": "leaf",
+      "path": "sampler-wave/manifests/sources/samplerlab.sine440.source-manifest.json",
+      "mime": "application/json",
+      "route": "helper",
+      "depends_on": [
+        "bvst.schema.sample-source.v1",
+        "bvst.sample.samplerlab.sine440.audio.v1"
+      ],
+      "bytes": 954,
+      "chunks": 1,
+      "sha256": "c4659929fdd800f1813c866091372e18a0ccb3d03dab8e00aa694ebe391bbe39"
+    }
+  ]
+}

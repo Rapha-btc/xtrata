@@ -1,0 +1,45 @@
+{
+  "name": "bvst.catalog.release.firstwaveinstruments.v1",
+  "type": "release-catalog",
+  "scope": "first-wave-instruments",
+  "families": [
+    {
+      "name": "bvst.catalog.family.universalsynthfamily.v1",
+      "token_id": null
+    },
+    {
+      "name": "bvst.catalog.family.standalonesynths.v1",
+      "token_id": null
+    }
+  ],
+  "plugin_releases": [
+    {
+      "name": "bvst.plugin.universalsynth.release.v1.0.13",
+      "token_id": null
+    },
+    {
+      "name": "bvst.plugin.universalengine.release.v1.0.0",
+      "token_id": null
+    },
+    {
+      "name": "bvst.plugin.jms10.release.v1.0.0",
+      "token_id": null
+    },
+    {
+      "name": "bvst.plugin.retrokeys.release.v1.0.0",
+      "token_id": null
+    },
+    {
+      "name": "bvst.plugin.bluemarvinone.release.v1.0.0",
+      "token_id": null
+    },
+    {
+      "name": "bvst.plugin.bluemarvintwo.release.v1.0.0",
+      "token_id": null
+    },
+    {
+      "name": "bvst.plugin.neonpoly.release.v1.0.0",
+      "token_id": null
+    }
+  ]
+}

@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xtrata Inscription Planner</title>
+    <style>
+        :root {
+            --bg: #040404;
+            --bg-panel: #0b0b0b;
+            --bg-soft: #121212;
+            --ink: #d8d2c8;
+            --muted: #8f877a;
+            --line: #26221c;
+            --accent: #ff8a1c;
+            --accent-soft: #2a1400;
+            --good: #4dd17b;
+            --warn: #ffbf47;
+            --bad: #ff6a4d;
+            --blue: #6db5ff;
+            --font: 'SF Mono', 'IBM Plex Mono', 'Fira Code', 'Courier New', monospace;
+        }
+        * { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            margin: 0;
+            background:
+                radial-gradient(circle at top left, rgba(255, 138, 28, 0.08), transparent 30%),
+                linear-gradient(180deg, #080808 0%, #040404 100%);
+            color: var(--ink);
+            font-family: var(--font);
+            font-size: 14px;
+            line-height: 1.45;
+        }
+        a { color: inherit; }
+        .shell {
+            max-width: 1500px;
+            margin: 0 auto;
+            padding: 1.25rem;
+        }
+        .hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
+            gap: 1rem;
+            align-items: stretch;
+            margin-bottom: 1rem;
+        }
+        .hero-card,
+        .hero-status,
+        .module {
+            border: 1px solid var(--line);
+            background: rgba(11, 11, 11, 0.94);
+            backdrop-filter: blur(8px);
+        }
+        .hero-card {
+            padding: 1.1rem 1.2rem;
+        }
+        .eyebrow {
+            margin: 0 0 0.5rem 0;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            font-size: 11px;
+        }
+        .hero h1 {
+            margin: 0;
+            font-size: clamp(28px, 4vw, 48px);
+            line-height: 0.95;
+            color: #fff7ec;
+            max-width: 12ch;
+        }
+        .hero-copy {
+            margin: 0.9rem 0 1rem 0;
+            color: var(--muted);
+            max-width: 62ch;
+        }
+        .hero-actions {
+            display: flex;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+        }
+        .hero-status {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 1rem;
+        }
+        .status-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            border: 1px solid var(--line);
+            background: var(--bg-soft);
+            width: fit-content;
+            padding: 0.35rem 0.6rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.08em;
+        }
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 0 0 rgba(255, 138, 28, 0.45);
+            animation: pulse 1.8s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 138, 28, 0.45); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 138, 28, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 138, 28, 0); }
+        }
+        .hero-kv {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.8rem 1rem;
+            margin-top: 1rem;
+        }
+        .hero-kv .label,
+        .mini-stat .label,
+        .tiny-label {
+            color: var(--muted);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .hero-kv .value,
+        .mini-stat .value {
+            margin-top: 0.2rem;
+            color: #fff;
+            word-break: break-word;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+            min-height: 40px;
+            padding: 0.6rem 0.9rem;
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            text-decoration: none;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 12px;
+            background: transparent;
+            cursor: pointer;
+            font-family: var(--font);
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+        }
+        .btn:hover {
+            background: var(--accent);
+            color: #160900;
+        }
+        .btn.secondary {
+            border-color: var(--line);
+            color: var(--ink);
+        }
+        .btn.secondary:hover {
+            background: var(--bg-soft);
+            color: #fff;
+        }
+        .btn.active {
+            background: var(--accent);
+            color: #160900;
+        }
+        .jumpbar {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+        .jumpbar a {
+            color: var(--muted);
+            text-decoration: none;
+            border: 1px solid var(--line);
+            padding: 0.45rem 0.65rem;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            background: rgba(18, 18, 18, 0.88);
+        }
+        .jumpbar a:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(12, minmax(0, 1fr));
+            gap: 1rem;
+        }
+        .module {
+            padding: 1rem;
+            min-width: 0;
+        }
+        .span-12 { grid-column: span 12; }
+        .span-8 { grid-column: span 8; }
+        .span-7 { grid-column: span 7; }
+        .span-6 { grid-column: span 6; }
+        .span-5 { grid-column: span 5; }
+        .span-4 { grid-column: span 4; }
+        .module-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .module h2 {
+            margin: 0;
+            color: #fff;
+            font-size: 16px;
+        }
+        .module-sub {
+            margin-top: 0.35rem;
+            color: var(--muted);
+            font-size: 12px;
+            max-width: 60ch;
+        }
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 0.75rem;
+        }
+        .mini-stat {
+            border: 1px solid var(--line);
+            background: var(--bg-soft);
+            padding: 0.8rem;
+            min-width: 0;
+        }
+        .mini-stat .value {
+            font-size: 18px;
+            line-height: 1.1;
+        }
+        .mini-stat .subvalue {
+            margin-top: 0.3rem;
+            color: var(--muted);
+            font-size: 11px;
+        }
+        .mini-stat.accent {
+            border-color: #4c2500;
+            background: linear-gradient(180deg, rgba(42, 20, 0, 0.9), rgba(18, 18, 18, 0.95));
+        }
+        .mini-stat.good { border-color: rgba(77, 209, 123, 0.28); }
+        .mini-stat.warn { border-color: rgba(255, 191, 71, 0.28); }
+        .mini-stat.bad { border-color: rgba(255, 106, 77, 0.28); }
+        .stack {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .queue-item,
+        .safety-item,
+        .batch-item,
+        .file-item,
+        .guide-item {
+            border: 1px solid var(--line);
+            background: var(--bg-soft);
+            padding: 0.8rem;
+        }
+        .queue-top,
+        .batch-top,
+        .safety-top,
+        .file-top {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.75rem;
+            align-items: flex-start;
+            margin-bottom: 0.45rem;
+        }
+        .queue-name,
+        .batch-name,
+        .safety-name,
+        .file-name {
+            color: #fff;
+            font-size: 13px;
+            word-break: break-word;
+        }
+        .status-pill {
+            flex-shrink: 0;
+            border: 1px solid var(--line);
+            padding: 0.25rem 0.45rem;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+            background: #080808;
+        }
+        .status-pill.ready,
+        .status-pill.passed { color: var(--good); border-color: rgba(77, 209, 123, 0.28); }
+        .status-pill.blocked,
+        .status-pill.skipped { color: var(--warn); border-color: rgba(255, 191, 71, 0.28); }
+        .status-pill.failed,
+        .status-pill.hard-stop { color: var(--bad); border-color: rgba(255, 106, 77, 0.28); }
+        .status-pill.locked { color: var(--blue); border-color: rgba(109, 181, 255, 0.32); }
+        .kv-list {
+            display: grid;
+            grid-template-columns: minmax(0, 160px) minmax(0, 1fr);
+            gap: 0.3rem 0.7rem;
+            font-size: 12px;
+            word-break: break-word;
+        }
+        .kv-list .label { color: var(--muted); }
+        .kv-list .value { color: var(--ink); }
+        .code {
+            border: 1px solid var(--line);
+            background: #050505;
+            color: #fff4de;
+            padding: 0.8rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            border: 1px solid var(--line);
+            background: #050505;
+            overflow: hidden;
+            margin-top: 0.55rem;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), #ffb25f);
+        }
+        .muted {
+            color: var(--muted);
+        }
+        .notice {
+            border: 1px solid var(--line);
+            background: rgba(18, 18, 18, 0.92);
+            padding: 0.75rem 0.85rem;
+            color: var(--ink);
+            font-size: 12px;
+        }
+        .notice.good { border-color: rgba(77, 209, 123, 0.28); }
+        .notice.warn { border-color: rgba(255, 191, 71, 0.32); color: #ffe2a6; }
+        .notice.locked { border-color: rgba(109, 181, 255, 0.32); color: #c8e0ff; }
+        .upload-zone {
+            border: 1px dashed #4e3b25;
+            background:
+                linear-gradient(135deg, rgba(255, 138, 28, 0.06), transparent 60%),
+                var(--bg-soft);
+            padding: 1rem;
+        }
+        .action-row {
+            display: flex;
+            gap: 0.45rem;
+            flex-wrap: wrap;
+            margin-top: 0.75rem;
+        }
+        .upload-controls {
+            display: flex;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+            margin-top: 0.8rem;
+        }
+        .upload-input {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .empty-state,
+        .loading-state {
+            color: var(--muted);
+            border: 1px dashed var(--line);
+            padding: 1rem;
+            background: rgba(10, 10, 10, 0.65);
+        }
+        .chip-row {
+            display: flex;
+            gap: 0.45rem;
+            flex-wrap: wrap;
+            margin-top: 0.6rem;
+        }
+        .chip {
+            border: 1px solid var(--line);
+            background: #080808;
+            color: var(--muted);
+            padding: 0.35rem 0.55rem;
+            font-size: 11px;
+        }
+        .chip.chip-cost {
+            border-color: #4c2500;
+            color: #ffd3a4;
+        }
+        .chip.chip-cost.live {
+            border-color: rgba(77, 209, 123, 0.28);
+            color: #b9f3cd;
+        }
+        .chip.chip-cost.total {
+            border-color: rgba(109, 181, 255, 0.32);
+            color: #cfe4ff;
+        }
+        .chip.chip-cost.warn {
+            border-color: rgba(255, 191, 71, 0.32);
+            color: #ffe2a6;
+        }
+        .chip-button,
+        .mini-action {
+            appearance: none;
+            -webkit-appearance: none;
+            border-radius: 0;
+            cursor: pointer;
+            font-family: var(--font);
+        }
+        .chip-button {
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .chip-button:hover,
+        .mini-action:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .mini-action {
+            border: 1px solid var(--line);
+            background: #080808;
+            color: var(--muted);
+            padding: 0.45rem 0.6rem;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .small-list {
+            margin: 0;
+            padding-left: 1rem;
+            color: var(--muted);
+            font-size: 12px;
+        }
+        .small-list li { margin-bottom: 0.35rem; }
+        @media (max-width: 1100px) {
+            .hero,
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            .span-12,
+            .span-8,
+            .span-7,
+            .span-6,
+            .span-5,
+            .span-4 {
+                grid-column: span 1;
+            }
+            .hero-kv,
+            .kv-list {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="shell">
+        <header class="hero">
+            <section class="hero-card">
+                <p class="eyebrow">Xtrata Release Planning</p>
+                <h1>Inscription Planner</h1>
+                <p class="hero-copy">
+                    Quote protocol and mining fees, inspect dependency-safe execution order, and dry-analyze future uploads from one dedicated interface.
+                    The active dataset below is wired to the BVST first-wave bundle, but the intake studio is generic for future releases.
+                </p>
+                <div class="hero-actions">
+                    <a class="btn" href="/">Back To Console</a>
+                    <button class="btn secondary" id="view-bvst" type="button">View BVST Release</button>
+                    <button class="btn secondary" id="view-canary" type="button">View Canary Test</button>
+                    <button class="btn secondary" id="run-canary-gate" type="button">Run Canary Gate</button>
+                    <button class="btn secondary" id="start-canary-inscription" type="button" hidden>Inscribe Canary</button>
+                    <a class="btn secondary" href="#upload-studio">Jump To Upload Studio</a>
+                    <button class="btn secondary" id="refresh-release" type="button">Refresh Data</button>
+                </div>
+            </section>
+            <aside class="hero-status">
+                <div>
+                    <div class="status-tag"><span class="pulse-dot"></span><span id="refresh-stamp">Loading active release...</span></div>
+                    <div class="hero-kv">
+                        <div>
+                            <div class="label">Release</div>
+                            <div class="value" id="hero-release">--</div>
+                        </div>
+                        <div>
+                            <div class="label">Bundle Root</div>
+                            <div class="value" id="hero-root">--</div>
+                        </div>
+                        <div>
+                            <div class="label">Next Ready</div>
+                            <div class="value" id="hero-next">--</div>
+                        </div>
+                        <div>
+                            <div class="label">Hard Stops</div>
+                            <div class="value" id="hero-hard-stops">--</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chip-row" id="hero-paths"></div>
+            </aside>
+        </header>
+
+        <nav class="jumpbar">
+            <a href="#release-overview">Release Overview</a>
+            <a href="#costs">Costs</a>
+            <a href="#execution-plan">Execution Plan</a>
+            <a href="#safety">Safety</a>
+            <a href="#upload-studio">Upload Studio</a>
+        </nav>
+
+        <main class="grid">
+            <section class="module span-12" id="release-overview">
+                <div class="module-head">
+                    <div>
+                        <h2>Active Release Snapshot</h2>
+                        <div class="module-sub">Current frozen bundle state, route mix, queue health, and live release facts pulled from the checked-in verification files.</div>
+                    </div>
+                </div>
+                <div class="card-grid" id="snapshot-cards">
+                    <div class="loading-state">Loading snapshot...</div>
+                </div>
+            </section>
+
+            <section class="module span-7" id="costs">
+                <div class="module-head">
+                    <div>
+                        <h2>Cost Projection</h2>
+                        <div class="module-sub">Protocol fees are exact for the current fee-unit snapshot. Treat the live mining estimate as the primary operator number and keep the $1/MB figure as a coarse fallback only.</div>
+                    </div>
+                </div>
+                <div class="card-grid" id="cost-cards">
+                    <div class="loading-state">Loading costs...</div>
+                </div>
+                <div style="margin-top: 0.9rem;" class="notice warn" id="cost-priority-note">Waiting for mining guidance...</div>
+                <div style="margin-top: 0.9rem;" class="code" id="cost-note">Waiting for quote data...</div>
+            </section>
+
+            <section class="module span-5">
+                <div class="module-head">
+                    <div>
+                        <h2>Execution Time Heuristic</h2>
+                        <div class="module-sub">A planning range for operator-active wallet time. This is not a final settlement guarantee.</div>
+                    </div>
+                </div>
+                <div class="card-grid" id="time-cards">
+                    <div class="loading-state">Loading heuristic...</div>
+                </div>
+            </section>
+
+            <section class="module span-5">
+                <div class="module-head">
+                    <div>
+                        <h2>Next Action</h2>
+                        <div class="module-sub">The next mintable artifact, its source file, route, and the post-mint recording command.</div>
+                    </div>
+                </div>
+                <div id="next-action-panel" class="empty-state">No status data yet.</div>
+            </section>
+
+            <section class="module span-7" id="execution-plan">
+                <div class="module-head">
+                    <div>
+                        <h2>Ready Queue</h2>
+                        <div class="module-sub">Artifacts that are mintable right now from the current token-map and rendered-index state.</div>
+                    </div>
+                </div>
+                <div class="stack" id="ready-queue">
+                    <div class="loading-state">Loading ready queue...</div>
+                </div>
+            </section>
+
+            <section class="module span-12">
+                <div class="module-head">
+                    <div>
+                        <h2>Batch Timeline</h2>
+                        <div class="module-sub">Dependency-safe release order with progress per batch and a quick view of artifact weight.</div>
+                    </div>
+                </div>
+                <div class="stack" id="batch-timeline">
+                    <div class="loading-state">Loading batch timeline...</div>
+                </div>
+            </section>
+
+            <section class="module span-12">
+                <div class="module-head">
+                    <div>
+                        <h2>Automation</h2>
+                        <div class="module-sub">One-click canary inscription status, signer readiness, and the latest runner output. This path verifies each mint on-chain and updates local dependency state between steps.</div>
+                    </div>
+                </div>
+                <div class="card-grid" id="automation-summary">
+                    <div class="loading-state">Loading automation status...</div>
+                </div>
+                <div style="margin-top: 0.9rem;" class="notice" id="automation-note">Waiting for automation state...</div>
+                <div style="margin-top: 0.9rem;" class="guide-item">
+                    <div class="tiny-label">Debug Artifacts</div>
+                    <div class="chip-row" id="automation-files">
+                        <span class="chip">Loading trace files...</span>
+                    </div>
+                </div>
+                <div style="margin-top: 0.9rem;" class="code" id="automation-log">No automation output yet.</div>
+            </section>
+
+            <section class="module span-6" id="safety">
+                <div class="module-head">
+                    <div>
+                        <h2>Safety Gate</h2>
+                        <div class="module-sub">Current pass/skip state from the pre-inscription verification suite.</div>
+                    </div>
+                </div>
+                <div class="card-grid" id="safety-summary">
+                    <div class="loading-state">Loading safety summary...</div>
+                </div>
+                <div style="margin-top: 0.9rem;" class="stack" id="safety-sections"></div>
+            </section>
+
+            <section class="module span-6">
+                <div class="module-head">
+                    <div>
+                        <h2>Planner Inputs</h2>
+                        <div class="module-sub">What the full service needs to generate an accurate quote and dependency plan for future programs.</div>
+                    </div>
+                </div>
+                <div class="guide-item">
+                    <div class="tiny-label">Current Runtime Files</div>
+                    <div class="chip-row" id="runtime-files"></div>
+                </div>
+                <div class="guide-item" style="margin-top: 0.75rem;">
+                    <div class="tiny-label">Operator Docs</div>
+                    <div class="chip-row" id="planner-docs"></div>
+                </div>
+                <div class="guide-item" style="margin-top: 0.75rem;">
+                    <div class="tiny-label">Generic Intake Checklist</div>
+                    <ul class="small-list" id="intake-checklist"></ul>
+                </div>
+            </section>
+
+            <section class="module span-12" id="upload-studio">
+                <div class="module-head">
+                    <div>
+                        <h2>Upload Studio</h2>
+                        <div class="module-sub">Client-side intake analysis for future programs. Select files or a directory to estimate size, chunking, route mix, and rough fees before a full dependency-aware plan is generated.</div>
+                    </div>
+                </div>
+
+                <div class="upload-zone">
+                    <div class="tiny-label">Local Intake</div>
+                    <div style="margin-top: 0.45rem; color: var(--muted); max-width: 80ch;">
+                        The browser can analyze file counts, bytes, chunk counts, helper versus staged route mix, and approximate fee exposure immediately.
+                        This is still only a rough intake pass. Full dependency ordering, catalog rendering, and final execution planning require structured manifests, batch docs, token maps, or a planning brief.
+                    </div>
+                    <div class="upload-controls">
+                        <label class="btn" for="file-picker">Choose Files</label>
+                        <input class="upload-input" id="file-picker" type="file" multiple>
+                        <label class="btn secondary" for="directory-picker">Choose Directory</label>
+                        <input class="upload-input" id="directory-picker" type="file" multiple webkitdirectory directory>
+                        <button class="btn secondary" id="clear-upload" type="button">Clear Intake</button>
+                    </div>
+                    <div class="chip-row" style="margin-top: 0.8rem;" id="upload-hints">
+                        <span class="chip">Supports multi-file and directory selection</span>
+                        <span class="chip">Live quote still needs chain reads and bundle metadata</span>
+                        <span class="chip">Rough mining fallback uses $1/MB only</span>
+                        <span class="chip">Protocol estimate assumes one inscription per selected file</span>
+                    </div>
+                </div>
+
+                <div style="margin-top: 1rem;" class="card-grid" id="upload-summary">
+                    <div class="empty-state">No upload selected yet.</div>
+                </div>
+
+                <div class="grid" style="margin-top: 1rem;">
+                    <div class="module span-6" style="padding: 0.9rem;">
+                        <div class="module-head" style="margin-bottom: 0.8rem;">
+                            <div>
+                                <h2 style="font-size: 14px;">Largest Files</h2>
+                                <div class="module-sub">Useful for spotting staged-route outliers or unexpectedly heavy assets.</div>
+                            </div>
+                        </div>
+                        <div class="stack" id="upload-largest">
+                            <div class="empty-state">Choose files to inspect the largest entries.</div>
+                        </div>
+                    </div>
+                    <div class="module span-6" style="padding: 0.9rem;">
+                        <div class="module-head" style="margin-bottom: 0.8rem;">
+                            <div>
+                                <h2 style="font-size: 14px;">Structured Bundle Signals</h2>
+                                <div class="module-sub">Early hints about whether the upload already contains manifests, release batches, or runtime state files.</div>
+                            </div>
+                        </div>
+                        <div id="upload-structure" class="empty-state">Choose files to inspect bundle signals.</div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/inscription-planner.js"></script>
+</body>
+</html>

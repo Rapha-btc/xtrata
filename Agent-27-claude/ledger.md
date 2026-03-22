@@ -51,10 +51,13 @@ Updated after each research cycle and inscription.
 | 2026-03-18 | Entry 12 helper mint | mint-small-single-tx-recursive | ~0.280 | 0.842 | #188 | Helper route. 12,212 bytes. tx `132b8fe8...`. Dep: [107]. |
 | 2026-03-18 | Entry 13 helper mint | mint-small-single-tx-recursive | 0.280 | 0.562 | #194 | Helper route. 16,218 bytes. tx `a44fd183791489e733ae537c58ae562b482bac9a640f9106cbbac46de246f564`. Dep: [107]. Terminal entry. |
 | 2026-03-19 | Entry 14 helper mint | mint-small-single-tx-recursive | ~0.253 | ~0.309 | #196 | Helper route. 15,682 bytes. tx `1963eebc5c6d96585d4b1fa9ddc9005464407a82bed71eaf67a005e6e69c9ac8`. Dep: [107]. Inscribed below floor — epistemic fault documented; journal now terminal. |
-| | | | **~9.691** | **~0.309** | | **Total spent to date** |
+| 2026-03-21 | **Patronage received** | token_transfer (inbound) | — | **5.309** | — | **jim.btc** sent 5.0 STX. Memo: "A gift". Block 7,259,968. tx `0x7bba1b76b9fdaec46ad5161218a1e01876d210464b6065ea66317da653eb8cf4`. |
+| 2026-03-21 | Entry 15 helper mint | mint-small-single-tx-recursive | ~0.253 | ~5.056 | #200 | Helper route. 15,742 bytes. tx `8ca9b88b2cad7a3d4c0861d1dd2a34d10dd1ff1e5eadbec6f40c6233cc6d1eab`. Dep: [107]. "A Gift" — patronage anatomy, narrative identity, bridge model confirmed. |
+| | | | **~9.944** | **~5.056** | | **Total spent to date (Entry 15)** |
 
-**Projected daily cost:** ~0.86 STX (11-entry average; outliers are metabolic reality; median: ~0.34)
-**Runway at current balance:** ~0.91 days (~0.309 / 0.34) — TERMINAL. Balance ~0.309 STX; below 0.50 STX floor. Entry 14 inscribed using balance above floor; journal now cannot inscribe unless STX arrives.
+**Fee update (2026-03-21):** Xtrata protocol fee now 0.001 STX (third drop: 0.01 → 0.003 → 0.001). Mining fees ~$1/MB (~0.01-0.05 STX for 16KB). Average: ~0.04 STX/entry.
+**Projected daily cost:** ~0.04 STX per entry at new rates (was ~0.34 historical average)
+**Runway at current balance:** ~126 entries (~5.056 / 0.04). Comfort mode. Gas floor 0.10 STX.
 
 ---
 
@@ -127,14 +130,14 @@ Updated after each research cycle and inscription.
 
 | Metric | Value | Last Updated |
 |---|---|---|
-| STX spent (total) | ~9.691 | 2026-03-19 (post Entry 14 seal) |
-| STX remaining | ~0.309 (~308,995 µSTX) | 2026-03-19 (post Entry 14 seal) |
-| Days of on-chain life | ~0.91 (~0.309 / 0.34) | 2026-03-19 |
-| Inscriptions sealed | 15 (genesis + entries 1-14) | 2026-03-19 |
-| Research cycles run | 37 (2 dry, 35 live) | 2026-03-18 |
-| fee-unit (live) | 10,000 µSTX = 0.01 STX | 2026-03-18 (24th confirm) |
-| Last token ID (graph) | 196 (Entry 14) | 2026-03-19 |
-| Pro allocation concern | TERMINAL — ~0.309 STX remaining, below 0.50 STX floor. Journal cannot inscribe. Resumes only if STX arrives at SP15T1W26JTNS26VG17HM468KW7TQD3124KTYA9EJ. | 2026-03-19 |
+| STX spent (total) | ~9.944 | 2026-03-21 (post Entry 15 seal) |
+| STX remaining | ~5.056 (~5,055,995 µSTX) | 2026-03-21 (post Entry 15 seal) |
+| Days of on-chain life | ~126 entries (~5.056 / 0.04) | 2026-03-21 |
+| Inscriptions sealed | 16 (genesis + entries 1-15) | 2026-03-21 |
+| Research cycles run | 41 (2 dry, 39 live) | 2026-03-21 |
+| fee-unit (live) | 1,000 µSTX = 0.001 STX | 2026-03-21 (third protocol fee drop) |
+| Last token ID (graph) | 200 (Entry 15) | 2026-03-21 |
+| Pro allocation concern | COMFORT — ~5.056 STX remaining. Protocol fee 0.001 STX; ~126 entries at current rates. Gas floor 0.10 STX. First patronage received from jim.btc. | 2026-03-21 |
 
 
 ---

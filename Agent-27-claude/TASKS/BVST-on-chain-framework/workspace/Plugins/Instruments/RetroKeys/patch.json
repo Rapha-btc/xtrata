@@ -1,0 +1,49 @@
+{
+  "schema": "bvst.patch/v1",
+  "meta": {
+    "name": "RetroKeys",
+    "description": "FM electric piano with tremolo and reverb."
+  },
+  "config": {
+    "name": "RetroKeys",
+    "visualizer": "spectrum",
+    "keyboard": { "startNote": 48, "numKeys": 25 },
+    "modules": [
+      {
+        "name": "Tone",
+        "cols": 1,
+        "controls": [
+          { "id": "fm", "label": "Tine (FM)", "param": 1, "type": "knob", "min": 0, "max": 500, "val": 100 },
+          { "id": "tone", "label": "Dark/Bright", "param": 4, "type": "knob", "min": 200, "max": 8000, "curve": "log", "val": 2000 },
+          { "id": "decay", "label": "Decay", "param": 5, "type": "knob", "min": 0.1, "max": 3.0, "val": 1.0 }
+        ]
+      },
+      {
+        "name": "Tremolo",
+        "cols": 1,
+        "controls": [
+          { "id": "rate", "label": "Rate", "param": 2, "type": "knob", "min": 0.5, "max": 15, "val": 4 },
+          { "id": "depth", "label": "Depth", "param": 3, "type": "knob", "min": 0, "max": 0.8, "val": 0 }
+        ]
+      },
+      {
+        "name": "Master",
+        "cols": 1,
+        "controls": [
+          { "id": "verb", "label": "Reverb", "param": 7, "type": "knob", "min": 0, "max": 0.6, "val": 0.1 },
+          { "id": "vol", "label": "Volume", "param": 6, "type": "knob", "min": 0, "max": 1, "val": 0.5 }
+        ]
+      }
+    ],
+    "presets": {
+      "Init": { "fm": 100, "tone": 2000, "decay": 1.0, "rate": 4, "depth": 0, "verb": 0.1, "vol": 0.5 },
+      "Classic EP": { "fm": 150, "tone": 3000, "decay": 1.5, "rate": 2, "depth": 0.2, "verb": 0.2, "vol": 0.6 },
+      "Dreamy Vibraphone": { "fm": 20, "tone": 800, "decay": 2.5, "rate": 6, "depth": 0.6, "verb": 0.5, "vol": 0.5 },
+      "Aggressive Tine": { "fm": 400, "tone": 8000, "decay": 0.8, "rate": 0.5, "depth": 0.0, "verb": 0.1, "vol": 0.6 },
+      "Wurli-ish": { "fm": 80, "tone": 1500, "decay": 1.2, "rate": 5, "depth": 0.4, "verb": 0.1, "vol": 0.6 },
+      "Dark Keys": { "fm": 50, "tone": 400, "decay": 2.0, "rate": 1, "depth": 0.1, "verb": 0.4, "vol": 0.7 },
+      "Broken Bell": { "fm": 480, "tone": 5000, "decay": 0.4, "rate": 12, "depth": 0.7, "verb": 0.2, "vol": 0.5 }
+    }
+  }
+}
+

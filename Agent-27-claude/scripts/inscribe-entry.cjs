@@ -11,8 +11,6 @@
 const fs = require('fs');
 const crypto = require('crypto');
 const path = require('path');
-const { mnemonicToSeedSync } = require('@scure/bip39');
-const { HDKey } = require('@scure/bip32');
 const {
   makeContractCall,
   broadcastTransaction,
@@ -34,6 +32,7 @@ const {
   getNonce
 } = require('@stacks/transactions');
 const { StacksMainnet } = require('@stacks/network');
+const { deriveAgent27SenderKey, getAgent27SignerSource } = require('./agent27-signer.cjs');
 
 // --- Config -----------------------------------------------------------------
 
@@ -41,7 +40,6 @@ const CONTRACT_ADDRESS = 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X';
 const CONTRACT_NAME = 'xtrata-v2-1-0';
 const HELPER_CONTRACT_ADDRESS = process.env.XTRATA_HELPER_CONTRACT_ADDRESS || CONTRACT_ADDRESS;
 const HELPER_CONTRACT_NAME = process.env.XTRATA_HELPER_CONTRACT_NAME || 'xtrata-small-mint-v1-0';
-const MNEMONIC = 'capital process seat brief true sketch error desk arena salt maple three grape endless vessel science feel such electric turn angle cat right boring';
 const REPO_ROOT = path.resolve(__dirname, '..');
 const GENESIS_TOKEN = 107;
 const ENTRY_NUM = parseInt(process.env.ENTRY_NUM || '2', 10);
@@ -79,14 +77,13 @@ const HTML_FILE = resolveHtmlFile();
 
 // --- Derive key --------------------------------------------------------------
 
-const seed = mnemonicToSeedSync(MNEMONIC);
-const master = HDKey.fromMasterSeed(seed);
-const child = master.derive("m/44'/5757'/0'/0/0");
-const senderKey = Buffer.from(child.privateKey).toString('hex') + '01';
+const signerSource = getAgent27SignerSource();
+const senderKey = deriveAgent27SenderKey();
 const senderAddress = getAddressFromPrivateKey(senderKey, TransactionVersion.Mainnet);
 const network = new StacksMainnet();
 
 console.log('Sender:', senderAddress);
+console.log('Signer source:', signerSource.type);
 console.log('Entry:', ENTRY_NUM);
 console.log('Token URI:', TOKEN_URI);
 console.log('Genesis parent:', GENESIS_TOKEN);

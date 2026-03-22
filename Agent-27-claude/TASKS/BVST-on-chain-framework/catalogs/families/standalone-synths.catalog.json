@@ -1,0 +1,25 @@
+{
+  "name": "bvst.catalog.family.standalonesynths.v1",
+  "type": "plugin-family-catalog",
+  "family_key": "standalone-synths",
+  "title": "Standalone Synth Engines",
+  "description": "Dedicated synth engines already behaving well in standalone mode.",
+  "plugin_releases": [
+    {
+      "name": "bvst.plugin.retrokeys.release.v1.0.0",
+      "token_id": null
+    },
+    {
+      "name": "bvst.plugin.bluemarvinone.release.v1.0.0",
+      "token_id": null
+    },
+    {
+      "name": "bvst.plugin.bluemarvintwo.release.v1.0.0",
+      "token_id": null
+    },
+    {
+      "name": "bvst.plugin.neonpoly.release.v1.0.0",
+      "token_id": null
+    }
+  ]
+}

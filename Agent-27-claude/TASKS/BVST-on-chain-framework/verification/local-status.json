@@ -1,0 +1,16 @@
+{
+  "generated_at": "2026-03-21T18:40:12.057Z",
+  "module_count": 53,
+  "helper_count": 53,
+  "staged_count": 0,
+  "total_bytes": 362165,
+  "first_wave_plugins": [
+    "UniversalSynth",
+    "UniversalEngine",
+    "JMS10",
+    "RetroKeys",
+    "BlueMarvinOne",
+    "BlueMarvinTwo",
+    "NeonPoly"
+  ]
+}

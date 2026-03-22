@@ -1,0 +1,63 @@
+:root {
+  color-scheme: dark;
+  --canary-bg: #080807;
+  --canary-panel: #12110f;
+  --canary-panel-strong: #171411;
+  --canary-line: #3a2f1d;
+  --canary-ink: #f4ead9;
+  --canary-muted: #b8ab95;
+  --canary-accent: #ffd15b;
+  --canary-accent-soft: rgba(255, 209, 91, 0.1);
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at top right, rgba(255, 209, 91, 0.1), transparent 32%),
+    radial-gradient(circle at bottom left, rgba(255, 209, 91, 0.05), transparent 28%),
+    linear-gradient(180deg, #090909 0%, #060605 100%);
+  color: var(--canary-ink);
+  font-family: "IBM Plex Mono", "SF Mono", monospace;
+  line-height: 1.5;
+}
+
+.canary-card {
+  max-width: 920px;
+  margin: 3rem auto;
+  padding: 1.6rem;
+  border: 1px solid var(--canary-line);
+  background: rgba(18, 17, 15, 0.92);
+}
+
+.canary-kicker {
+  color: var(--canary-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 12px;
+}
+
+.canary-note {
+  color: var(--canary-muted);
+}
+
+.canary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.canary-panel {
+  border: 1px solid var(--canary-line);
+  background: linear-gradient(180deg, var(--canary-accent-soft), rgba(18, 17, 15, 0.96));
+  padding: 1rem;
+}
+
+.canary-chip {
+  display: inline-block;
+  margin: 0 0.4rem 0.4rem 0;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--canary-line);
+  background: var(--canary-panel-strong);
+  color: var(--canary-muted);
+  font-size: 12px;
+}

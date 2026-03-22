@@ -1,0 +1,23 @@
+{
+  "name": "bvst.catalog.release.samplerwave.v1",
+  "type": "release-catalog",
+  "scope": "sampler-wave-experimental",
+  "families": [
+    {
+      "name": "bvst.catalog.family.samplerwave.v1",
+      "token_id": null
+    }
+  ],
+  "plugin_releases": [
+    {
+      "name": "bvst.plugin.samplerlab.release.v0.1.0",
+      "token_id": null
+    }
+  ],
+  "source_catalogs": [
+    {
+      "name": "bvst.catalog.source.samplerlab.defaultset.v1",
+      "token_id": null
+    }
+  ]
+}

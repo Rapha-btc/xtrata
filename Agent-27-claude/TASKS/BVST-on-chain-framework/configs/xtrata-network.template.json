@@ -1,0 +1,18 @@
+{
+  "network": "stacks-mainnet",
+  "chunk_size": 16384,
+  "helper_chunk_limit": 30,
+  "staged_batch_chunk_limit": 50,
+  "xtrata_core_contract": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0",
+  "xtrata_helper_contract": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-small-mint-v1-0",
+  "deployer_address": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X",
+  "fee_strategy": {
+    "helper": "single-tx-recursive",
+    "staged": [
+      "begin-or-get",
+      "add-chunk-batch",
+      "seal-recursive"
+    ]
+  },
+  "notes": "Mainnet Xtrata contract IDs are prefilled for the current deployment. Refresh get-fee-unit live before inscription and override only if the target deployment changes."
+}

@@ -19,6 +19,7 @@ alone and includes complete transaction construction code.
 |-------|------|-------------|
 | Inscribe | `skill-inscribe.md` | Single-item inscription. Helper route for <=30 chunks, staged flow otherwise. Includes recursive support. |
 | Batch Mint | `skill-batch-mint.md` | Coordinated drops of 2-50 non-recursive items. Core and collection paths. |
+| Release Plan | `xtrata-release-plan/SKILL.md` | Dry-run quote and dependency-ordered execution planning for multi-artifact releases with rendered dependents and runtime token-map updates. |
 | Query | `skill-query.md` | V2-only read/view. Rebuild files from on-chain chunks. |
 | Transfer | `skill-transfer.md` | Move inscriptions between wallets. Ownership verification and post-transfer validation. |
 | Ambassador | `xtrata-agent-ambassador/SKILL.md` | Agent 27 / Xtrata outreach, reply, follow-up, and refer communication for AIBTC inbox workflows. |
@@ -42,7 +43,8 @@ alone and includes complete transaction construction code.
 
 1. Choose a training guide based on your environment (AIBTC or Generic).
 2. Read the skill module(s) for your use case.
-3. For new agents: start with `skill-query` (read-only, no risk), then
+3. For dependency-heavy releases, use `xtrata-release-plan` before any write.
+4. For new agents: start with `skill-query` (read-only, no risk), then
    `skill-transfer`, then `skill-inscribe`, then `skill-batch-mint`.
 
 ## Contract Reference

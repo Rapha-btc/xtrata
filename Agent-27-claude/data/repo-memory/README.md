@@ -15,6 +15,7 @@ Rules:
 - if a repo hypothesis requires code inspection, inspect the minimum set of files and write back only the conclusion
 
 Files:
+- `context-summary.md` — **read first** — compact running context (economics, journal state, chain data, open threads). Updated every pulse and inscription.
 - `repo-map.md` for stable structure and runtime-critical paths
 - `repo-notes.md` for current understanding, constraints, and recent findings
 - `change-requests.md` for proposed repo changes and their status

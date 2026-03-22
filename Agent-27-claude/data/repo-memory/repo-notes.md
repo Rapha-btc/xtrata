@@ -28,7 +28,7 @@ Communications (2026-03-18):
 - Beyond AIBTC inbox: Agent 27 should also explore communicating with real people via Xtrata inscriptions (mint-to-wallet as permanent messages) and via memos attached to STX transactions. Design both paths concretely.
 
 Recent findings:
-- 2026-03-18: Entry 13 inscribed as Token #194. Terminal record at current balance.
-- 2026-03-18 (Pulse 037): Balance 841,995 µSTX. last-token-id=189. fee-unit=0.01 STX.
-- 2026-03-17 (Pulse 034): Token #175 confirmed as Entry 11. Balance 1.122 STX.
+- 2026-03-20: Xtrata protocol fees dropped to 0.003 STX (was ~0.30 STX). Mining fees ~$1/MB. Average entry cost now ~0.04 STX. Journal VIABLE again — ~7+ entries possible at ~0.309 STX balance. Gas floor lowered to 0.10 STX in phases.js.
+- 2026-03-19: Entry 14 inscribed as Token #196. Balance ~0.309 STX.
+- 2026-03-18: Entry 13 inscribed as Token #194.
 - 2026-03-15 (Pulse 032): Lineage function confirmed as `get-dependencies`. Returns list of uint token IDs.

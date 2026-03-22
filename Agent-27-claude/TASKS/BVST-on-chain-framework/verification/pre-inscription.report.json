@@ -1,0 +1,166 @@
+{
+  "generated_at": "2026-03-22T01:18:35.399Z",
+  "bundle_root": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework",
+  "summary": {
+    "failed": 0,
+    "passed_with_warnings": 0,
+    "passed": 5,
+    "skipped": 2
+  },
+  "sections": [
+    {
+      "name": "bundle_integrity",
+      "status": "passed",
+      "errors": [],
+      "warnings": [],
+      "details": {
+        "module_count": 53
+      }
+    },
+    {
+      "name": "plugin_semantics",
+      "status": "passed",
+      "errors": [],
+      "warnings": [],
+      "details": {
+        "plugins": [
+          {
+            "plugin": "UniversalSynth",
+            "family": "universalsynth-family",
+            "version": "1.0.13",
+            "control_count": 32,
+            "preset_count": 3
+          },
+          {
+            "plugin": "UniversalEngine",
+            "family": "universalsynth-family",
+            "version": "1.0.0",
+            "control_count": 9,
+            "preset_count": 1
+          },
+          {
+            "plugin": "JMS10",
+            "family": "universalsynth-family",
+            "version": "1.0.0",
+            "control_count": 13,
+            "preset_count": 6
+          },
+          {
+            "plugin": "RetroKeys",
+            "family": "standalone-synths",
+            "version": "1.0.0",
+            "control_count": 7,
+            "preset_count": 7
+          },
+          {
+            "plugin": "BlueMarvinOne",
+            "family": "standalone-synths",
+            "version": "1.0.0",
+            "control_count": 12,
+            "preset_count": 6
+          },
+          {
+            "plugin": "BlueMarvinTwo",
+            "family": "standalone-synths",
+            "version": "1.0.0",
+            "control_count": 22,
+            "preset_count": 6
+          },
+          {
+            "plugin": "NeonPoly",
+            "family": "standalone-synths",
+            "version": "1.0.0",
+            "control_count": 13,
+            "preset_count": 7
+          }
+        ]
+      }
+    },
+    {
+      "name": "sampler_runtime",
+      "status": "passed",
+      "errors": [],
+      "warnings": [],
+      "details": {
+        "schema_ref": "#/$defs/SamplerConfig",
+        "source_policies": [
+          "standalone-dev",
+          "inscriptions-only",
+          "declared-only"
+        ],
+        "sampler_smoke_html": "workspace/System/tests/sampler-smoke.html",
+        "sampler_smoke_js": "workspace/System/tests/sampler-smoke.js"
+      }
+    },
+    {
+      "name": "externalities",
+      "status": "passed",
+      "errors": [],
+      "warnings": [],
+      "details": {
+        "literal_url_count": 6,
+        "literals": [
+          {
+            "file": "workspace/Plugins/Instruments/SamplerLab/sampler_lab_boot.js",
+            "literal": "data:audio/wav;base64,${encodeBase64(bytes"
+          },
+          {
+            "file": "workspace/System/shared/audional_decoder.js",
+            "literal": "data:audio/wav;base64,..."
+          },
+          {
+            "file": "workspace/System/shared/audional_decoder.js",
+            "literal": "data:audio/...;base64,..."
+          },
+          {
+            "file": "workspace/System/shared/audional_decoder.js",
+            "literal": "data:audio/..."
+          },
+          {
+            "file": "workspace/System/shared/bvst_patch_v1.schema.json",
+            "literal": "https://json-schema.org/draft/2020-12/schema"
+          },
+          {
+            "file": "workspace/System/tests/sampler-smoke.js",
+            "literal": "data:audio/wav;base64,${encodeBase64(bytes"
+          }
+        ]
+      }
+    },
+    {
+      "name": "http_workspace_smoke",
+      "status": "skipped",
+      "errors": [],
+      "warnings": [],
+      "details": {
+        "reason": "Local HTTP bind was blocked by the current execution environment."
+      }
+    },
+    {
+      "name": "inscription_simulation",
+      "status": "passed",
+      "errors": [],
+      "warnings": [],
+      "details": {
+        "tempRoot": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/bvst-inscription-sim-qMsHoq",
+        "startTokenId": 202,
+        "endTokenId": 254,
+        "moduleCount": 53,
+        "catalogCount": 15,
+        "mintedTotal": 53,
+        "nullTokenEntries": 0,
+        "renderedReadyCount": 15,
+        "renderedInscribedCount": 15
+      }
+    },
+    {
+      "name": "browser_smoke",
+      "status": "skipped",
+      "errors": [],
+      "warnings": [],
+      "details": {
+        "reason": "Run with --with-browser-smoke to attempt headless browser bootstrap checks."
+      }
+    }
+  ]
+}

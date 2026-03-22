@@ -1,0 +1,218 @@
+{
+  "schema": "bvst.patch/v1",
+  "meta": {
+    "name": "BlueMarvinTwo",
+    "description": "ARP 2600-inspired poly synth (Mk II)."
+  },
+  "config": {
+    "name": "BlueMarvinTwo",
+    "visualizer": "spectrum",
+    "keyboard": { "startNote": 60, "numKeys": 25 },
+    "modules": [
+      {
+        "name": "VCO 1",
+        "cols": 1,
+        "controls": [
+          { "id": "vco1_wave", "param": 1, "type": "select", "options": ["Sine", "Saw", "Square", "Pulse", "Tri"], "val": 1, "label": "Wave" },
+          { "id": "vco1_coarse", "label": "Coarse", "param": 2, "type": "knob", "min": -24, "max": 24, "val": 0, "step": 1 },
+          { "id": "vco1_fine", "label": "Fine", "param": 3, "type": "knob", "min": -100, "max": 100, "val": 0, "step": 1 },
+          { "id": "vco1_lvl", "label": "Lvl", "param": 10, "type": "knob", "min": 0, "max": 1, "val": 0.7, "step": 0.01 }
+        ]
+      },
+      {
+        "name": "VCO 2",
+        "cols": 1,
+        "controls": [
+          { "id": "vco2_wave", "param": 4, "type": "select", "options": ["Sine", "Saw", "Square", "Pulse", "Tri"], "val": 2, "label": "Wave" },
+          { "id": "vco2_coarse", "label": "Coarse", "param": 5, "type": "knob", "min": -24, "max": 24, "val": 0, "step": 1 },
+          { "id": "vco2_fine", "label": "Fine", "param": 6, "type": "knob", "min": -100, "max": 100, "val": 5, "step": 1 },
+          { "id": "vco2_lvl", "label": "Lvl", "param": 11, "type": "knob", "min": 0, "max": 1, "val": 0.7, "step": 0.01 }
+        ]
+      },
+      {
+        "name": "VCO 3",
+        "cols": 1,
+        "controls": [
+          { "id": "vco3_wave", "param": 7, "type": "select", "options": ["Sine", "Saw", "Square", "Pulse", "Tri"], "val": 1, "label": "Wave" },
+          { "id": "vco3_coarse", "label": "Coarse", "param": 8, "type": "knob", "min": -36, "max": 12, "val": -12, "step": 1 },
+          { "id": "vco3_fine", "label": "Fine", "param": 9, "type": "knob", "min": -100, "max": 100, "val": 0, "step": 1 },
+          { "id": "vco3_lvl", "label": "Lvl", "param": 12, "type": "knob", "min": 0, "max": 1, "val": 0.0, "step": 0.01 }
+        ]
+      },
+      {
+        "name": "VCF",
+        "cols": 1,
+        "controls": [
+          { "id": "vcf_freq", "label": "Freq", "param": 13, "type": "knob", "min": 20, "max": 12000, "curve": "log", "val": 500, "step": 10 },
+          { "id": "vcf_res", "label": "Res", "param": 14, "type": "knob", "min": 0, "max": 25, "val": 0, "step": 0.1 },
+          { "id": "vcf_env", "label": "Env", "param": 15, "type": "knob", "min": 0, "max": 5000, "val": 1500, "step": 10 }
+        ]
+      },
+      {
+        "name": "Filter ADSR",
+        "cols": 1,
+        "controls": [
+          { "id": "adsr_a", "label": "A", "param": 16, "type": "knob", "min": 0.001, "max": 2, "val": 0.01, "step": 0.01 },
+          { "id": "adsr_d", "label": "D", "param": 17, "type": "knob", "min": 0.01, "max": 2, "val": 0.4, "step": 0.01 },
+          { "id": "adsr_s", "label": "S", "param": 18, "type": "knob", "min": 0, "max": 1, "val": 0.2, "step": 0.01 },
+          { "id": "adsr_r", "label": "R", "param": 19, "type": "knob", "min": 0.01, "max": 5, "val": 0.8, "step": 0.01 }
+        ]
+      },
+      {
+        "name": "Amp AR",
+        "cols": 1,
+        "controls": [
+          { "id": "ar_a", "label": "A", "param": 20, "type": "knob", "min": 0.001, "max": 2, "val": 0.01, "step": 0.01 },
+          { "id": "ar_r", "label": "R", "param": 21, "type": "knob", "min": 0.01, "max": 5, "val": 0.5, "step": 0.01 },
+          { "id": "master_vol", "label": "Vol", "param": 22, "type": "knob", "min": 0, "max": 1, "val": 0.8, "step": 0.01 }
+        ]
+      }
+    ],
+    "presets": {
+      "Init": {
+        "vco1_wave": 1,
+        "vco1_coarse": 0,
+        "vco1_fine": 0,
+        "vco1_lvl": 0.7,
+        "vco2_wave": 2,
+        "vco2_coarse": 0,
+        "vco2_fine": 5,
+        "vco2_lvl": 0.7,
+        "vco3_wave": 1,
+        "vco3_coarse": -12,
+        "vco3_fine": 0,
+        "vco3_lvl": 0.0,
+        "vcf_freq": 500,
+        "vcf_res": 0,
+        "vcf_env": 1500,
+        "adsr_a": 0.01,
+        "adsr_d": 0.4,
+        "adsr_s": 0.2,
+        "adsr_r": 0.8,
+        "ar_a": 0.01,
+        "ar_r": 0.5,
+        "master_vol": 0.8
+      },
+      "Poly Brass": {
+        "vco1_wave": 1,
+        "vco1_coarse": 0,
+        "vco1_fine": 0,
+        "vco1_lvl": 0.75,
+        "vco2_wave": 1,
+        "vco2_coarse": 0,
+        "vco2_fine": -7,
+        "vco2_lvl": 0.65,
+        "vco3_wave": 4,
+        "vco3_coarse": 0,
+        "vco3_fine": 0,
+        "vco3_lvl": 0.25,
+        "vcf_freq": 1200,
+        "vcf_res": 3.5,
+        "vcf_env": 2800,
+        "adsr_a": 0.01,
+        "adsr_d": 0.35,
+        "adsr_s": 0.0,
+        "adsr_r": 0.25,
+        "ar_a": 0.005,
+        "ar_r": 0.22,
+        "master_vol": 0.78
+      },
+      "String Pad": {
+        "vco1_wave": 4,
+        "vco1_coarse": 0,
+        "vco1_fine": 0,
+        "vco1_lvl": 0.6,
+        "vco2_wave": 4,
+        "vco2_coarse": 0,
+        "vco2_fine": 9,
+        "vco2_lvl": 0.6,
+        "vco3_wave": 4,
+        "vco3_coarse": 0,
+        "vco3_fine": -9,
+        "vco3_lvl": 0.4,
+        "vcf_freq": 2200,
+        "vcf_res": 1.2,
+        "vcf_env": 900,
+        "adsr_a": 0.25,
+        "adsr_d": 0.9,
+        "adsr_s": 0.7,
+        "adsr_r": 2.5,
+        "ar_a": 0.15,
+        "ar_r": 2.0,
+        "master_vol": 0.6
+      },
+      "Organ Stack": {
+        "vco1_wave": 2,
+        "vco1_coarse": 0,
+        "vco1_fine": 0,
+        "vco1_lvl": 0.7,
+        "vco2_wave": 2,
+        "vco2_coarse": 12,
+        "vco2_fine": 0,
+        "vco2_lvl": 0.55,
+        "vco3_wave": 2,
+        "vco3_coarse": -12,
+        "vco3_fine": 0,
+        "vco3_lvl": 0.45,
+        "vcf_freq": 4500,
+        "vcf_res": 0.2,
+        "vcf_env": 0,
+        "adsr_a": 0.01,
+        "adsr_d": 0.25,
+        "adsr_s": 1.0,
+        "adsr_r": 0.35,
+        "ar_a": 0.005,
+        "ar_r": 0.25,
+        "master_vol": 0.72
+      },
+      "Fifths": {
+        "vco1_wave": 1,
+        "vco1_coarse": 0,
+        "vco1_fine": 0,
+        "vco1_lvl": 0.75,
+        "vco2_wave": 1,
+        "vco2_coarse": 7,
+        "vco2_fine": 0,
+        "vco2_lvl": 0.6,
+        "vco3_wave": 0,
+        "vco3_coarse": 0,
+        "vco3_fine": 0,
+        "vco3_lvl": 0.25,
+        "vcf_freq": 1600,
+        "vcf_res": 2.2,
+        "vcf_env": 1900,
+        "adsr_a": 0.02,
+        "adsr_d": 0.4,
+        "adsr_s": 0.0,
+        "adsr_r": 0.35,
+        "ar_a": 0.01,
+        "ar_r": 0.4,
+        "master_vol": 0.75
+      },
+      "Bell Keys": {
+        "vco1_wave": 0,
+        "vco1_coarse": 0,
+        "vco1_fine": 0,
+        "vco1_lvl": 0.7,
+        "vco2_wave": 4,
+        "vco2_coarse": 12,
+        "vco2_fine": 7,
+        "vco2_lvl": 0.55,
+        "vco3_wave": 0,
+        "vco3_coarse": 12,
+        "vco3_fine": 0,
+        "vco3_lvl": 0.15,
+        "vcf_freq": 6500,
+        "vcf_res": 0.5,
+        "vcf_env": 800,
+        "adsr_a": 0.005,
+        "adsr_d": 0.3,
+        "adsr_s": 0.0,
+        "adsr_r": 1.2,
+        "ar_a": 0.001,
+        "ar_r": 1.0,
+        "master_vol": 0.6
+      }
+    }
+  }
+}

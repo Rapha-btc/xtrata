@@ -1,0 +1,9 @@
+{
+  "foundation_catalog": "bvst.catalog.foundation.v1",
+  "family_catalogs": [
+    "bvst.catalog.family.universalsynthfamily.v1",
+    "bvst.catalog.family.standalonesynths.v1"
+  ],
+  "first_wave_release_catalog": "bvst.catalog.release.firstwaveinstruments.v1",
+  "root_catalog": "bvst.catalog.root.v1"
+}
