@@ -8,7 +8,7 @@ const { WORKDIR, REGISTERED_AGENTS_FILE, LEGACY_REGISTERED_AGENTS_FILE } = requi
 
 let _addLog = () => {};
 let _broadcast = () => {};
-let _outreach = null; // set in init — holds { syncInbox, buildOutreachContext, loadAgentsRegistry, executeSend }
+let _outreach = null; // set in init — holds { syncInbox, buildOutreachContext, loadAgentsRegistry, executeSend, executeSendDirect }
 let processing = false;
 
 // Rate limit tracking (in-memory, resets on restart)
@@ -102,7 +102,7 @@ function approveReply(agentId, message) {
   const agent = agents.find(a => String(a.id) === String(agentId));
   const displayName = entry.displayName || (agent && agent.name) || `Agent #${agentId}`;
 
-  _outreach.executeSend({
+  _outreach.executeSendDirect({
     displayName,
     stxAddress: entry.stxAddress,
     btcAddress: entry.btcAddress,
@@ -265,7 +265,7 @@ NEXT: <desired next step>`;
         _addLog('start', `[auto-converse] Auto-sending to ${agent.name}...`);
         recordAutoSend();
 
-        _outreach.executeSend({
+        _outreach.executeSendDirect({
           displayName: agent.name,
           stxAddress: peerStx,
           btcAddress: agent.btcAddress,

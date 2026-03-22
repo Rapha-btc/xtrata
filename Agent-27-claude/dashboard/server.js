@@ -33,7 +33,7 @@ const {
 } = require('./skill-test-runner');
 const { initWatcher, stopWatcher } = require('./watcher');
 const { startChainPoller, stopChainPoller, getChainData, onAfterPoll } = require('./chain');
-const { mount: mountOutreach, syncInbox, buildOutreachContext, loadAgentsRegistry, executeSend } = require('./outreach');
+const { mount: mountOutreach, syncInbox, buildOutreachContext, loadAgentsRegistry, executeSend, executeSendDirect } = require('./outreach');
 const { startHeartbeatPoller, stopHeartbeatPoller, getHeartbeatStatus, triggerHeartbeat } = require('./heartbeat');
 const {
   initAutoConverse,
@@ -976,7 +976,7 @@ const server = app.listen(PORT, () => {
   // Init auto-converse with outreach functions
   initAutoConverse({
     addLog, broadcast,
-    outreach: { syncInbox, buildOutreachContext, loadAgentsRegistry, executeSend }
+    outreach: { syncInbox, buildOutreachContext, loadAgentsRegistry, executeSend, executeSendDirect }
   });
 
   // Register inbox auto-sync as a post-poll hook (runs every 5 min with chain poll)

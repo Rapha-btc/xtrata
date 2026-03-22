@@ -306,6 +306,61 @@ function executeSend({ displayName, stxAddress, btcAddress, agentId, message, mo
   });
 }
 
+/**
+ * Direct send: calls the MCP send_inbox_message tool handler directly (no Claude subprocess).
+ * Retries up to 3 times with 30s backoff on nonce/settlement errors.
+ * Falls back to executeSend (Claude subprocess) if all retries fail.
+ */
+async function executeSendDirect(args) {
+  const { displayName, stxAddress, btcAddress, message, logPrefix = 'Direct' } = args;
+  const walletPassword = process.env.WALLET_PASSWORD || '';
+  const MAX_RETRIES = 3;
+  const BACKOFF_MS = 30_000;
+
+  runningOutreach = true;
+  _addLog('start', `${logPrefix} [mcp-direct] send to ${displayName}...`);
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const result = await sendInboxMessage({
+        recipientBtcAddress: btcAddress,
+        recipientStxAddress: stxAddress,
+        content: message,
+        walletPassword
+      });
+
+      // Success
+      runningOutreach = false;
+      _addLog('stop', `${logPrefix} [mcp-direct] to ${displayName} delivered.`);
+      try { if (args.onSuccess) args.onSuccess(JSON.stringify(result)); } catch (cbErr) {
+        console.error(`[executeSendDirect] Callback error: ${cbErr.message}`);
+      }
+      return { success: true, text: JSON.stringify(result) };
+
+    } catch (err) {
+      const errMsg = err.message || '';
+      const isRetryable = /nonce|ConflictingNonce|settlement|timeout|retry/i.test(errMsg);
+
+      if (isRetryable && attempt < MAX_RETRIES) {
+        _addLog('stdout', `${logPrefix} [mcp-direct] attempt ${attempt}/${MAX_RETRIES} failed (${errMsg.substring(0, 80)}), retrying in ${BACKOFF_MS / 1000}s...`);
+        await new Promise(r => setTimeout(r, BACKOFF_MS));
+        continue;
+      }
+
+      // Non-retryable or retries exhausted — fall back to Claude subprocess
+      _addLog('error', `${logPrefix} [mcp-direct] failed after ${attempt} attempt(s): ${errMsg.substring(0, 120)}`);
+      _addLog('stdout', `${logPrefix} falling back to Claude subprocess...`);
+      // Don't clear runningOutreach — executeSend will manage it
+      return executeSend(args);
+    }
+  }
+
+  // Should not reach here, but safety net
+  runningOutreach = false;
+  if (args.onFailure) args.onFailure('Max retries exhausted');
+  return { success: false, error: 'Max retries exhausted' };
+}
+
 // --- Agent discovery & registry ---
 
 function loadAgentsRegistry(registryFile, legacyFile) {
@@ -578,7 +633,7 @@ function mount({ addLog, broadcast, registryFile, legacyRegistryFile }) {
 
     const extraPromptContext = `Ambassador Brief:\n${ambassadorBrief.raw.substring(0, 1400)}\n\nRecent Conversation Memory:\n${outreachContext.memoryText}\n\nRecent Thread History:\n${outreachContext.historyText}\n\nIncoming Context:\n${outreachContext.incomingText}`;
 
-    executeSend({
+    executeSendDirect({
       displayName: agent.name, stxAddress: agent.stxAddress, btcAddress: agent.btcAddress,
       agentId: agent.id, message: draft.message, mode, model: sendModel,
       paymentTxid: draft.paymentTxid || queuedReply?.paymentTxid || '',
@@ -865,7 +920,7 @@ function mount({ addLog, broadcast, registryFile, legacyRegistryFile }) {
       next: 'Awaiting reply'
     });
 
-    executeSend({
+    executeSendDirect({
       displayName: target.displayName, stxAddress: target.stxAddress, btcAddress: target.btcAddress,
       agentId: agent.id, message: target.message, mode, model: sendModel,
       paymentTxid: target.paymentTxid || '',
@@ -1247,4 +1302,4 @@ Do not include any other text or markers in your response.`;
   return router;
 }
 
-module.exports = { mount, fetchInbox, syncInbox, buildOutreachContext, loadAgentsRegistry, executeSend };
+module.exports = { mount, fetchInbox, syncInbox, buildOutreachContext, loadAgentsRegistry, executeSend, executeSendDirect };
