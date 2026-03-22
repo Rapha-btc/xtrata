@@ -1,0 +1,32 @@
+{
+  "name": "bvst.catalog.source.samplerlab.defaultset.v1",
+  "type": "sample-source-catalog",
+  "plugin_name": "SamplerLab",
+  "release_scope": "sampler-wave-experimental",
+  "sources": [
+    {
+      "name": "bvst.sample.samplerlab.sine220.source-manifest.v1",
+      "token_id": null,
+      "audio_leaf_name": "bvst.sample.samplerlab.sine220.audio.v1",
+      "audio_leaf_token_id": null,
+      "audio_leaf_txid": null,
+      "audio_leaf_block_height": null,
+      "runtime_source_id": "sine220",
+      "runtime_source_label": "Sine 220",
+      "content_url": null,
+      "content_url_template": "/content/{audio_leaf_txid}"
+    },
+    {
+      "name": "bvst.sample.samplerlab.sine440.source-manifest.v1",
+      "token_id": null,
+      "audio_leaf_name": "bvst.sample.samplerlab.sine440.audio.v1",
+      "audio_leaf_token_id": null,
+      "audio_leaf_txid": null,
+      "audio_leaf_block_height": null,
+      "runtime_source_id": "sine440",
+      "runtime_source_label": "Sine 440",
+      "content_url": null,
+      "content_url_template": "/content/{audio_leaf_txid}"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "schema": "bvst.sample-source/v1",
+  "name": "bvst.sample.samplerlab.sine440.source-manifest.v1",
+  "sample_id": "samplerlab-sine440",
+  "release_scope": "sampler-wave-experimental",
+  "plugin_targets": [
+    "SamplerLab"
+  ],
+  "audio_leaf": {
+    "name": "bvst.sample.samplerlab.sine440.audio.v1",
+    "token_id": null,
+    "txid": null,
+    "block_height": null,
+    "path": "sampler-wave/assets/audio/samplerlab.sine440.audio.wav",
+    "mime_type": "audio/wav",
+    "sha256": "a8487cb0c43da14aa2551248d4af80eb79c152c99e4445dc653376d94b7041a6",
+    "bytes": 15478,
+    "chunks": 1,
+    "route": "helper"
+  },
+  "playback": {
+    "root_note": 69,
+    "loop_start_pct": 0.05,
+    "loop_end_pct": 0.95,
+    "one_shot": false,
+    "channels": 1,
+    "sample_rate": 22050,
+    "duration_seconds": 0.35
+  },
+  "runtime_source": {
+    "id": "sine440",
+    "label": "Sine 440",
+    "content_url": null,
+    "content_url_template": "/content/{txid}"
+  }
+}

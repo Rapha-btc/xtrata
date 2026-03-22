@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Xtrata Canary Proof Viewer</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #060605;
+      --panel: rgba(18, 16, 13, 0.94);
+      --panel-strong: #15120e;
+      --line: #3d2f1d;
+      --ink: #f4ead8;
+      --muted: #baad97;
+      --accent: #ffd15b;
+      --accent-soft: rgba(255, 209, 91, 0.08);
+      --good: #99ffc1;
+      --blue: #9fd0ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top right, rgba(255, 209, 91, 0.12), transparent 30%),
+        radial-gradient(circle at bottom left, rgba(159, 208, 255, 0.08), transparent 22%),
+        linear-gradient(180deg, #090807 0%, #050504 100%);
+      color: var(--ink);
+      font-family: "IBM Plex Mono", "SF Mono", monospace;
+      line-height: 1.45;
+    }
+    .shell {
+      width: min(1180px, calc(100% - 28px));
+      margin: 24px auto 40px;
+    }
+    .hero,
+    .panel {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: 0 18px 80px rgba(0, 0, 0, 0.35);
+    }
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
+      gap: 16px;
+      padding: 18px;
+    }
+    .hero-main,
+    .hero-side {
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, var(--accent-soft), rgba(18, 16, 13, 0.96));
+      padding: 16px;
+    }
+    .kicker {
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      font-size: 11px;
+    }
+    h1 {
+      margin: 10px 0 14px;
+      font-size: clamp(34px, 6vw, 66px);
+      line-height: 0.9;
+      max-width: 10ch;
+    }
+    .lede {
+      margin: 0 0 14px;
+      max-width: 62ch;
+      color: var(--muted);
+    }
+    .hero-tags,
+    .chip-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .tag,
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--line);
+      background: var(--panel-strong);
+      color: var(--muted);
+      padding: 5px 9px;
+      font-size: 11px;
+    }
+    .tag.good { color: var(--good); }
+    .tag.blue { color: var(--blue); }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px 14px;
+    }
+    .meta-label {
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 11px;
+    }
+    .meta-value {
+      margin-top: 5px;
+      word-break: break-word;
+      color: var(--ink);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .span-12 { grid-column: span 12; }
+    .span-7 { grid-column: span 7; }
+    .span-5 { grid-column: span 5; }
+    .span-6 { grid-column: span 6; }
+    .panel {
+      padding: 16px;
+    }
+    h2 {
+      margin: 0 0 10px;
+      font-size: 15px;
+      color: #fff7e4;
+    }
+    .subcopy {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+    }
+    .stat {
+      border: 1px solid var(--line);
+      background: var(--panel-strong);
+      padding: 11px;
+    }
+    .stat .label {
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 10px;
+    }
+    .stat .value {
+      margin-top: 6px;
+      font-size: 18px;
+      color: #fff;
+    }
+    .stack {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .card {
+      border: 1px solid var(--line);
+      background: rgba(10, 9, 8, 0.84);
+      padding: 12px;
+    }
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+    .card-name {
+      color: #fff;
+      font-size: 13px;
+      word-break: break-word;
+    }
+    .pill {
+      border: 1px solid var(--line);
+      background: var(--panel-strong);
+      color: var(--muted);
+      padding: 3px 7px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+    }
+    .kv {
+      display: grid;
+      grid-template-columns: minmax(0, 120px) minmax(0, 1fr);
+      gap: 4px 10px;
+      font-size: 12px;
+      word-break: break-word;
+    }
+    .kv .label { color: var(--muted); }
+    .graph-list {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .graph-list li + li { margin-top: 7px; }
+    .footer {
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12px;
+    }
+    @media (max-width: 920px) {
+      .hero,
+      .grid {
+        grid-template-columns: 1fr;
+      }
+      .span-12,
+      .span-7,
+      .span-6,
+      .span-5 {
+        grid-column: span 1;
+      }
+      .meta-grid,
+      .kv {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div class="hero-main">
+        <div class="kicker">Resolved On-Chain Proof</div>
+        <h1>Xtrata Canary Proof Viewer</h1>
+        <p class="lede" id="hero-summary"></p>
+        <div class="hero-tags" id="hero-tags"></div>
+      </div>
+      <aside class="hero-side">
+        <div class="meta-grid" id="meta-grid"></div>
+      </aside>
+    </section>
+
+    <section class="grid">
+      <article class="panel span-12">
+        <h2>Resolved Graph Snapshot</h2>
+        <p class="subcopy">These values were injected into this HTML during the release flow itself, after the dependency graph had been resolved and before this final proof viewer was minted.</p>
+        <div class="stats" id="stats"></div>
+      </article>
+
+      <article class="panel span-7">
+        <h2>Artifacts</h2>
+        <p class="subcopy">Every artifact below is part of the recursive canary release. The IDs and txids are the actual resolved values written into this proof viewer before mint.</p>
+        <div class="stack" id="artifact-cards"></div>
+      </article>
+
+      <article class="panel span-5">
+        <h2>Dependency Edges</h2>
+        <p class="subcopy">This is the shape the agent had to satisfy on-chain: every edge below had to resolve before the dependent artifact could move forward.</p>
+        <ol class="graph-list" id="edge-list"></ol>
+      </article>
+
+      <article class="panel span-6">
+        <h2>Why This Matters</h2>
+        <div class="stack" id="proof-points"></div>
+      </article>
+
+      <article class="panel span-6">
+        <h2>Trace Guide</h2>
+        <div class="stack" id="trace-guide"></div>
+      </article>
+    </section>
+
+    <div class="footer" id="footer"></div>
+  </div>
+
+  <script>
+    const context = __XTRATA_RENDER_CONTEXT__;
+
+    const copy = {
+      summary: 'This is the final public-facing artefact of the canary release: a rendered HTML proof page minted only after the recursive graph had fully resolved.',
+      proof_points: [
+        'An agent-managed loop can mint a multi-batch recursive release without losing dependency order.',
+        'Rendered artefacts can absorb real token IDs before their own inscription step.',
+        'The finished collection can explain itself clearly to future viewers directly from chain-hosted bytes.'
+      ],
+      trace_guide: [
+        'Start with the runtime leaves to see the primitive modules.',
+        'Move to the runtime and release catalogs to inspect the recursive binding layer.',
+        'Inspect the root catalog as the closure point of the canary graph.',
+        'Use this proof viewer as the final human-readable summary of the resolved IDs.'
+      ],
+      footer: 'Prepared as the final proof surface for the Xtrata canary release. This page is rendered late in the sequence so it can carry real resolved token IDs instead of planning placeholders.'
+    };
+
+    const entries = Array.isArray(context.included_entries) ? context.included_entries : [];
+    const dependencyEntries = Array.isArray(context.dependency_entries) ? context.dependency_entries : [];
+    const sorted = [...entries].sort((a, b) => (a.topo_order || 0) - (b.topo_order || 0));
+    const edges = [];
+    sorted.forEach((entry) => {
+      (entry.dependency_names || []).forEach((dependency) => {
+        if (entries.some((candidate) => candidate.name === dependency)) {
+          edges.push(`${dependency} -> ${entry.name}`);
+        }
+      });
+    });
+
+    document.getElementById('hero-summary').textContent = copy.summary;
+    document.getElementById('footer').textContent = copy.footer;
+
+    const tagHost = document.getElementById('hero-tags');
+    ['Agent-managed', 'Recursive', 'Resolved IDs', 'Final proof', 'On-chain readable'].forEach((tag, index) => {
+      const node = document.createElement('span');
+      node.className = `tag${index === 3 ? ' good' : index === 2 ? ' blue' : ''}`;
+      node.textContent = tag;
+      tagHost.appendChild(node);
+    });
+
+    const metaRows = [
+      ['Viewer Record', context.record_name || 'unknown'],
+      ['Resolved At', context.resolved_at || 'unknown'],
+      ['Dependencies', String(dependencyEntries.length)],
+      ['Included Entries', String(entries.length)],
+      ['Signature', context.resolution_signature || 'unknown']
+    ];
+    const metaHost = document.getElementById('meta-grid');
+    metaRows.forEach(([label, value]) => {
+      const wrap = document.createElement('div');
+      const title = document.createElement('div');
+      title.className = 'meta-label';
+      title.textContent = label;
+      const body = document.createElement('div');
+      body.className = 'meta-value';
+      body.textContent = value;
+      wrap.appendChild(title);
+      wrap.appendChild(body);
+      metaHost.appendChild(wrap);
+    });
+
+    const strataCounts = sorted.reduce((acc, entry) => {
+      const key = entry.stratum || 'unknown';
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+
+    const stats = [
+      ['Artifacts', sorted.length],
+      ['Edges', edges.length],
+      ['Runtime', strataCounts.runtime || 0],
+      ['Catalog', strataCounts.catalog || 0],
+      ['Application', strataCounts.application || 0],
+      ['Schema', strataCounts.schema || 0]
+    ];
+    const statsHost = document.getElementById('stats');
+    stats.forEach(([label, value]) => {
+      const box = document.createElement('div');
+      box.className = 'stat';
+      box.innerHTML = `<div class="label">${label}</div><div class="value">${value}</div>`;
+      statsHost.appendChild(box);
+    });
+
+    const cardsHost = document.getElementById('artifact-cards');
+    sorted.forEach((entry) => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      const dependencies = Array.isArray(entry.dependency_names) && entry.dependency_names.length
+        ? entry.dependency_names.join(', ')
+        : 'None';
+      card.innerHTML = `
+        <div class="card-top">
+          <div class="card-name">${entry.name}</div>
+          <div class="pill">${entry.stratum || entry.kind || 'entry'}</div>
+        </div>
+        <div class="kv">
+          <div class="label">Token ID</div><div>${entry.token_id ?? 'pending'}</div>
+          <div class="label">TXID</div><div>${entry.txid || 'pending'}</div>
+          <div class="label">Block Height</div><div>${entry.block_height ?? 'pending'}</div>
+          <div class="label">MIME</div><div>${entry.mime_type || 'unknown'}</div>
+          <div class="label">Dependencies</div><div>${dependencies}</div>
+        </div>
+      `;
+      cardsHost.appendChild(card);
+    });
+
+    const edgeHost = document.getElementById('edge-list');
+    edges.forEach((edge) => {
+      const li = document.createElement('li');
+      li.textContent = edge;
+      edgeHost.appendChild(li);
+    });
+
+    function renderTextCards(hostId, titlePrefix, items) {
+      const host = document.getElementById(hostId);
+      items.forEach((item, index) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `<div class="card-name">${titlePrefix} ${index + 1}</div><div style="margin-top:8px; color:var(--muted);">${item}</div>`;
+        host.appendChild(card);
+      });
+    }
+
+    renderTextCards('proof-points', 'Proof', copy.proof_points);
+    renderTextCards('trace-guide', 'Trace', copy.trace_guide);
+  </script>
+</body>
+</html>

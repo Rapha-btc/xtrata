@@ -1,0 +1,66 @@
+{
+  "generated_at": "2026-03-21T19:32:14.013Z",
+  "sampler_wave_root": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/sampler-wave",
+  "summary": {
+    "failed": 0,
+    "passed_with_warnings": 0,
+    "passed": 3
+  },
+  "sections": [
+    {
+      "name": "sampler_wave_assets",
+      "status": "passed",
+      "errors": [],
+      "warnings": [],
+      "details": {
+        "sources": [
+          {
+            "name": "bvst.sample.samplerlab.sine220.source-manifest.v1",
+            "sample_id": "samplerlab-sine220",
+            "audio_leaf": "bvst.sample.samplerlab.sine220.audio.v1",
+            "bytes": 15478
+          },
+          {
+            "name": "bvst.sample.samplerlab.sine440.source-manifest.v1",
+            "sample_id": "samplerlab-sine440",
+            "audio_leaf": "bvst.sample.samplerlab.sine440.audio.v1",
+            "bytes": 15478
+          }
+        ],
+        "module_count": 12
+      }
+    },
+    {
+      "name": "sampler_wave_batches",
+      "status": "passed",
+      "errors": [],
+      "warnings": [],
+      "details": {
+        "batches": [
+          {
+            "file": "50-sampler-wave-foundation.batch.json",
+            "artifact_count": 4
+          },
+          {
+            "file": "60-sampler-wave-sources.batch.json",
+            "artifact_count": 4
+          },
+          {
+            "file": "70-sampler-wave-catalogs.batch.json",
+            "artifact_count": 4
+          }
+        ]
+      }
+    },
+    {
+      "name": "sampler_wave_render",
+      "status": "passed",
+      "errors": [],
+      "warnings": [],
+      "details": {
+        "render_root": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/bvst-sampler-wave-render-1774121534009",
+        "ready_count": 6
+      }
+    }
+  ]
+}

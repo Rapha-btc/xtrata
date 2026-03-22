@@ -1,34 +1,163 @@
 import { injectSamplerStyles } from './ui_styles.js';
 // Cache-bust to avoid browsers serving an older, broken decoder module during rapid iteration.
-import { fetchAudionalAudioBytes } from './audional_decoder.js?v=1';
+import { canonicalizeOrdinalContentUrl, fetchAudionalAudioBytes } from './audional_decoder.js?v=1';
+
+const DEFAULT_MAX_SAMPLE_BYTES = 4 * 1024 * 1024;
+const DEFAULT_MAX_SAMPLE_SECONDS = 30;
+const SOURCE_POLICIES = new Set(['standalone-dev', 'inscriptions-only', 'declared-only']);
+
+function sanitizeDatasetValue(value) {
+    return String(value || '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 240);
+}
+
+function toFloat32Array(value) {
+    if (value instanceof Float32Array) return value;
+    if (Array.isArray(value)) return Float32Array.from(value);
+    if (ArrayBuffer.isView(value) && typeof value.length === 'number') return Float32Array.from(value);
+    return null;
+}
+
+function normalizeSourcePolicy(policy, runtimeProfile) {
+    const explicit = String(policy || '').trim();
+    if (SOURCE_POLICIES.has(explicit)) return explicit;
+    return runtimeProfile === 'standalone' ? 'standalone-dev' : 'inscriptions-only';
+}
+
+function normalizeDeclaredSources(sources, singleSource) {
+    const list = [];
+    if (typeof singleSource === 'string' && singleSource.trim()) {
+        list.push({
+            id: 'default',
+            label: 'Default',
+            url: canonicalizeOrdinalContentUrl(singleSource.trim())
+        });
+    }
+    if (Array.isArray(sources)) {
+        for (const entry of sources) {
+            if (!entry || typeof entry !== 'object') continue;
+            if (typeof entry.url !== 'string' || !entry.url.trim()) continue;
+            list.push({
+                id: typeof entry.id === 'string' && entry.id.trim() ? entry.id.trim() : '',
+                label: typeof entry.label === 'string' && entry.label.trim() ? entry.label.trim() : '',
+                url: canonicalizeOrdinalContentUrl(entry.url.trim())
+            });
+        }
+    }
+    return list;
+}
+
+function normalizeSamplePayload(input, fallbackMeta = {}) {
+    if (!input) return null;
+
+    const direct = toFloat32Array(input);
+    if (direct) {
+        return {
+            schema: 'bvst.sample/v1',
+            channelCount: 1,
+            frameCount: direct.length,
+            sampleRate: Number(fallbackMeta.sampleRate) || 0,
+            durationSeconds:
+                Number(fallbackMeta.sampleRate) > 0
+                    ? direct.length / Number(fallbackMeta.sampleRate)
+                    : 0,
+            channels: [direct],
+            samples: direct,
+            sourceUrl: typeof fallbackMeta.sourceUrl === 'string' ? fallbackMeta.sourceUrl : '',
+            sourceLabel: typeof fallbackMeta.sourceLabel === 'string' ? fallbackMeta.sourceLabel : '',
+            fileName: typeof fallbackMeta.fileName === 'string' ? fallbackMeta.fileName : ''
+        };
+    }
+
+    if (typeof input !== 'object') return null;
+
+    const channels = Array.isArray(input.channels)
+        ? input.channels.map((channel) => toFloat32Array(channel)).filter(Boolean)
+        : [];
+    const sampleData = channels[0] || toFloat32Array(input.samples);
+    if (!sampleData) return null;
+    const normalizedChannels = channels.length > 0 ? channels : [sampleData];
+    const sampleRate = Number(input.sampleRate) || Number(fallbackMeta.sampleRate) || 0;
+    const frameCount = Number(input.frameCount) || sampleData.length;
+
+    return {
+        schema: typeof input.schema === 'string' && input.schema.trim() ? input.schema.trim() : 'bvst.sample/v1',
+        channelCount: Number(input.channelCount) || normalizedChannels.length,
+        frameCount,
+        sampleRate,
+        durationSeconds:
+            Number(input.durationSeconds) ||
+            (sampleRate > 0 ? frameCount / sampleRate : 0),
+        channels: normalizedChannels,
+        samples: sampleData,
+        sourceUrl:
+            typeof input.sourceUrl === 'string'
+                ? input.sourceUrl
+                : (typeof fallbackMeta.sourceUrl === 'string' ? fallbackMeta.sourceUrl : ''),
+        sourceLabel:
+            typeof input.sourceLabel === 'string'
+                ? input.sourceLabel
+                : (typeof fallbackMeta.sourceLabel === 'string' ? fallbackMeta.sourceLabel : ''),
+        fileName:
+            typeof input.fileName === 'string'
+                ? input.fileName
+                : (typeof fallbackMeta.fileName === 'string' ? fallbackMeta.fileName : '')
+    };
+}
 
 export class SamplerUI {
     constructor(options = {}) {
         this.onSampleLoad = options.onSampleLoad || (() => {});
-        this.onPreviewTrigger = options.onPreviewTrigger || ((active) => {});
-        this.onSeek = options.onSeek || ((pct) => {});
-        
+        this.onPreviewTrigger = options.onPreviewTrigger || (() => {});
+        this.onSeek = options.onSeek || (() => {});
+
         this.audioContext = options.audioContext || new (window.AudioContext || window.webkitAudioContext)();
-        this.sampleData = null; // Float32Array
-        this.peaks = null;      // Pre-calculated display data
+        this.runtimeProfile =
+            typeof options.runtimeProfile === 'string' && options.runtimeProfile.trim()
+                ? options.runtimeProfile.trim()
+                : 'host';
+        this.sourcePolicy = normalizeSourcePolicy(options.sourcePolicy, this.runtimeProfile);
+        this.allowFileDrop =
+            options.allowFileDrop === undefined
+                ? this.sourcePolicy === 'standalone-dev'
+                : Boolean(options.allowFileDrop);
+        this.allowDataUrls =
+            options.allowDataUrls === undefined
+                ? this.sourcePolicy === 'standalone-dev'
+                : Boolean(options.allowDataUrls);
+        this.declaredSources = normalizeDeclaredSources(options.sources, options.source);
+        this.maxSampleBytes =
+            Number.isFinite(options.maxSampleBytes) && options.maxSampleBytes > 0
+                ? Math.floor(options.maxSampleBytes)
+                : DEFAULT_MAX_SAMPLE_BYTES;
+        this.maxSampleSeconds =
+            Number.isFinite(options.maxSampleSeconds) && options.maxSampleSeconds > 0
+                ? Number(options.maxSampleSeconds)
+                : DEFAULT_MAX_SAMPLE_SECONDS;
+
+        this.samplePayload = null;
+        this.sampleData = null;
+        this.peaks = null;
         this.sampleRate = this.audioContext.sampleRate;
         this.lastSourceUrl = '';
+        this.lastSourceLabel = '';
         this.lastFileName = '';
 
-        // Playback State
         this.state = {
             isPlaying: false,
             startTime: 0,
-            startOffsetPct: 0.0, // Start position normalized 0-1
+            startOffsetPct: 0.0,
             playSpeed: 1.0,
             reverse: false,
-            loopStart: 0.0, // 0.0 to 1.0
-            loopEnd: 1.0,   // 0.0 to 1.0
+            loopStart: 0.0,
+            loopEnd: 1.0,
             loopEnabled: false,
-            note: 60, // Base note for tracking pitch shifts
-            sliceGrid: 0, // Number of slices to visualize (0 = off)
-            grainSize: 0.0, // Width of grain window (0.0 = off)
-            grainPos: 0.0   // Center position of grain
+            note: 60,
+            sliceGrid: 0,
+            grainSize: 0.0,
+            grainPos: 0.0
         };
 
         this.animFrame = null;
@@ -49,10 +178,10 @@ export class SamplerUI {
                         <div class="bvst-marker bvst-marker-end" style="left: 100%;"></div>
                         <div class="bvst-playhead" style="display:none; left: 0%;"></div>
                     </div>
-                    <div class="bvst-drop-hint">DROP AUDIO HERE OR PASTE URL BELOW</div>
+                    <div class="bvst-drop-hint">${this._dropHintText()}</div>
                 </div>
                 <div class="bvst-sampler-loader">
-                    <input type="text" class="bvst-url-input" placeholder="https://example.com/sample.mp3">
+                    <input type="text" class="bvst-url-input" placeholder="${this._inputPlaceholder()}">
                     <button class="bvst-load-btn">LOAD</button>
                 </div>
             </div>
@@ -66,13 +195,74 @@ export class SamplerUI {
         this.urlInput = container.querySelector('.bvst-url-input');
         this.loadBtn = container.querySelector('.bvst-load-btn');
 
+        if (this.urlInput) {
+            this.urlInput.dataset.policy = this.sourcePolicy;
+        }
+
+        this._setDiagnostics({
+            bvstSamplerPolicy: this.sourcePolicy,
+            bvstSamplerLoaded: '0'
+        }, { clear: ['bvstSamplerError', 'bvstSamplerSource', 'bvstSamplerFile'] });
+
         this._bindEvents();
         this._setupSizing();
-        this.draw(); // Initial draw
+        this.draw();
     }
 
     injectStyles() {
         injectSamplerStyles();
+    }
+
+    _inputPlaceholder() {
+        if (this.sourcePolicy === 'declared-only') {
+            return 'Declared source ID or /content/<inscription-id>';
+        }
+        if (this.sourcePolicy === 'inscriptions-only') {
+            return 'Inscription ID or /content/<inscription-id>';
+        }
+        return 'Paste inscription ID, /content URL, or data:audio URI';
+    }
+
+    _dropHintText() {
+        if (this.allowFileDrop) {
+            return 'DROP AUDIO HERE OR PASTE A DECLARED SOURCE BELOW';
+        }
+        return 'PASTE A DECLARED INSCRIPTION SOURCE BELOW';
+    }
+
+    _setDiagnostics(values = {}, { clear = [] } = {}) {
+        try {
+            const root = document.documentElement;
+            if (!root || !root.dataset) return;
+            for (const key of clear) {
+                delete root.dataset[key];
+            }
+            for (const [key, value] of Object.entries(values)) {
+                if (value === undefined || value === null || value === '') {
+                    delete root.dataset[key];
+                } else {
+                    root.dataset[key] = sanitizeDatasetValue(value);
+                }
+            }
+        } catch (_) {}
+    }
+
+    _setError(message) {
+        this._setDiagnostics({
+            bvstSamplerLoaded: '0',
+            bvstSamplerError: message
+        });
+    }
+
+    _setLoadedDiagnostics(payload) {
+        this._setDiagnostics({
+            bvstSamplerLoaded: '1',
+            bvstSamplerChannels: payload.channelCount,
+            bvstSamplerFrames: payload.frameCount,
+            bvstSamplerRate: payload.sampleRate,
+            bvstSamplerSource: payload.sourceLabel || payload.sourceUrl || payload.fileName || '',
+            bvstSamplerFile: payload.fileName || ''
+        }, { clear: ['bvstSamplerError'] });
     }
 
     _setupSizing() {
@@ -86,7 +276,6 @@ export class SamplerUI {
             const cssH = Math.max(1, Math.floor(wrapper.clientHeight || 140));
             const dpr = Math.max(1, Math.floor(window.devicePixelRatio || 1));
 
-            // Only resize when needed to avoid blowing away the drawing state constantly.
             const desiredW = cssW * dpr;
             const desiredH = cssH * dpr;
             if (this.canvas.width !== desiredW || this.canvas.height !== desiredH) {
@@ -113,30 +302,99 @@ export class SamplerUI {
         }
     }
 
-    _bindEvents() {
-        const canonicalizeOrdinalContentUrl = (raw) => {
-            const input = String(raw || '').trim();
-            if (!input) return '';
-            const isId = (s) => /^[0-9a-f]{64}i\d+$/i.test(s);
-            try {
-                const u = new URL(input, window.location.href);
-                const seg = u.pathname.split('/').filter(Boolean).pop() || '';
-                if (isId(seg)) {
-                    u.pathname = `/content/${seg}`;
-                    u.search = '';
-                    u.hash = '';
-                    return u.toString();
-                }
-                return input;
-            } catch (_) {
-                const m = input.match(/([0-9a-f]{64}i\d+)$/i);
-                if (m) return `/content/${m[1]}`;
-                return input;
+    _findDeclaredSource(raw) {
+        const input = String(raw || '').trim();
+        if (!input) return null;
+        const canonical = canonicalizeOrdinalContentUrl(input);
+        for (const entry of this.declaredSources) {
+            if (entry.url === canonical || entry.id === input || entry.label === input) {
+                return entry;
             }
-        };
+        }
+        return null;
+    }
 
+    _resolveSourceInput(raw) {
+        const input = String(raw || '').trim();
+        if (!input) {
+            return { ok: false, error: 'Please enter a sample source.' };
+        }
+
+        const declared = this._findDeclaredSource(input);
+        if (declared) {
+            return {
+                ok: true,
+                canonicalUrl: declared.url,
+                sourceLabel: declared.label || declared.id || declared.url
+            };
+        }
+
+        const canonical = canonicalizeOrdinalContentUrl(input);
+        if (/^data:audio\//i.test(canonical)) {
+            if (!this.allowDataUrls) {
+                return { ok: false, error: 'Data URIs are disabled for this sampler profile.' };
+            }
+            return {
+                ok: true,
+                canonicalUrl: canonical,
+                sourceLabel: 'data:audio'
+            };
+        }
+
+        let parsed;
+        try {
+            parsed = new URL(canonical, window.location.href);
+        } catch (_) {
+            return { ok: false, error: 'Invalid sample source.' };
+        }
+
+        const sameOrigin = parsed.origin === window.location.origin;
+        const isOrdinalPath = /^\/content\/[0-9a-f]{64}i\d+$/i.test(parsed.pathname);
+
+        if (this.sourcePolicy === 'declared-only') {
+            return {
+                ok: false,
+                error: 'This sampler accepts only declared on-chain sources.'
+            };
+        }
+
+        if (this.sourcePolicy === 'inscriptions-only') {
+            if (!sameOrigin || !isOrdinalPath) {
+                return {
+                    ok: false,
+                    error: 'Only same-origin /content/<inscription-id> sources are allowed in inscription mode.'
+                };
+            }
+            return {
+                ok: true,
+                canonicalUrl: parsed.toString(),
+                sourceLabel: parsed.pathname
+            };
+        }
+
+        if (parsed.protocol === 'http:' || parsed.protocol === 'https:' || parsed.protocol === 'blob:') {
+            return {
+                ok: true,
+                canonicalUrl: parsed.toString(),
+                sourceLabel: sameOrigin ? parsed.pathname : parsed.origin
+            };
+        }
+
+        return {
+            ok: true,
+            canonicalUrl: parsed.toString(),
+            sourceLabel: parsed.pathname || parsed.toString()
+        };
+    }
+
+    _bindEvents() {
         const canonicalizeUrlInput = () => {
             if (!this.urlInput) return;
+            const declared = this._findDeclaredSource(this.urlInput.value);
+            if (declared) {
+                this.urlInput.value = declared.id || declared.url;
+                return;
+            }
             const canon = canonicalizeOrdinalContentUrl(this.urlInput.value);
             if (canon && canon !== this.urlInput.value) this.urlInput.value = canon;
         };
@@ -165,7 +423,7 @@ export class SamplerUI {
 
         this.canvas.addEventListener('mousedown', startPreview);
         this.canvas.addEventListener('touchstart', startPreview);
-        
+
         this.canvas.addEventListener('mouseup', endPreview);
         this.canvas.addEventListener('mouseleave', endPreview);
         this.canvas.addEventListener('touchend', endPreview);
@@ -184,32 +442,44 @@ export class SamplerUI {
             });
         }
 
-        const container = this.canvas.parentElement; 
-        const prevent = (e) => { e.preventDefault(); e.stopPropagation(); };
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => document.body.addEventListener(evt, prevent, false));
+        const prevent = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        };
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach((evt) => document.body.addEventListener(evt, prevent, false));
         document.body.addEventListener('drop', (e) => this._handleDrop(e));
 
         window.addEventListener('message', (e) => {
-            if (e.data.type === 'BVST_SAMPLE_DATA') this.loadSampleData(e.data.samples);
+            if (!e || !e.data) return;
+            if (e.data.type === 'BVST_SAMPLE_DATA') {
+                if (e.data.samplePayload) {
+                    this.loadSamplePayload(e.data.samplePayload);
+                } else {
+                    this.loadSampleData(e.data.samples, {
+                        sourceUrl: e.data.url || '',
+                        sourceLabel: e.data.label || '',
+                        fileName: e.data.fileName || ''
+                    });
+                }
+            }
             if (e.data.type === 'BVST_SAMPLE_SOURCE') {
-                const url = (e.data && typeof e.data.url === 'string') ? e.data.url : '';
+                const url = (typeof e.data.url === 'string') ? e.data.url : '';
                 const canon = canonicalizeOrdinalContentUrl(url);
                 if (this.urlInput) this.urlInput.value = canon;
                 this.lastSourceUrl = canon;
+                this.lastSourceLabel = (typeof e.data.label === 'string' && e.data.label.trim())
+                    ? e.data.label.trim()
+                    : canon;
             }
         });
     }
 
-    // --- API ---
-
     updateParam(key, value) {
-        if (this.state.hasOwnProperty(key)) {
+        if (Object.prototype.hasOwnProperty.call(this.state, key)) {
             this.state[key] = value;
-            // Update UI markers immediately if needed
             if (key === 'loopStart') this.setStartMarker(value);
             if (key === 'loopEnd') this.setEndMarker(value);
-            
-            // Redraw to update shading and grids
+
             if (['loopStart', 'loopEnd', 'loopEnabled', 'sliceGrid', 'grainSize', 'grainPos'].includes(key)) {
                 this.draw();
             }
@@ -231,36 +501,29 @@ export class SamplerUI {
         if (this.animFrame) cancelAnimationFrame(this.animFrame);
     }
 
-    // --- LOGIC ---
-
     _animate() {
         if (!this.state.isPlaying) return;
 
         const now = this.audioContext.currentTime;
         const elapsed = now - this.state.startTime;
-        
-        // Calculate Playhead Position
+
         const noteRatio = Math.pow(2, (this.state.note - 60) / 12);
         const effectiveSpeed = this.state.playSpeed * noteRatio;
-        
+
         const totalSamples = this.sampleData.length;
         const playedSamples = elapsed * this.sampleRate * effectiveSpeed;
-        
+
         const startSample = this.state.startOffsetPct * totalSamples;
         let currentPos;
 
-        if (this.state.reverse) {
-            currentPos = startSample - playedSamples;
-        } else {
-            currentPos = startSample + playedSamples;
-        }
+        if (this.state.reverse) currentPos = startSample - playedSamples;
+        else currentPos = startSample + playedSamples;
 
-        // Loop Logic
         if (this.state.loopEnabled) {
             const loopStartSamp = Math.floor(this.state.loopStart * totalSamples);
             const loopEndSamp = Math.floor(this.state.loopEnd * totalSamples);
             const loopLen = loopEndSamp - loopStartSamp;
-            
+
             if (loopLen > 0) {
                 if (!this.state.reverse && currentPos >= loopEndSamp) {
                     const overrun = currentPos - loopEndSamp;
@@ -273,89 +536,138 @@ export class SamplerUI {
         }
 
         const pct = currentPos / totalSamples;
-        
-        // Stop conditions (if no loop)
         const inBounds = this.state.reverse ? (pct >= 0.0) : (pct <= 1.0);
-        
+
         if (inBounds) {
-            this.playhead.style.left = (pct * 100) + '%';
+            this.playhead.style.left = `${pct * 100}%`;
             this.animFrame = requestAnimationFrame(() => this._animate());
         } else {
-            this.release(); 
+            this.release();
         }
     }
 
-    // --- LOADING & DRAWING ---
-
     async _loadFromUrl() {
-        const url = this.urlInput.value.trim();
-        if (!url) return alert("Please enter a URL");
+        const raw = this.urlInput ? this.urlInput.value.trim() : '';
+        if (!raw) return alert('Please enter a sample source');
         const debugDecoder = (() => {
             try { return new URLSearchParams(window.location.search).has('debugDecoder'); }
             catch (_) { return false; }
         })();
-        // If an Ordinals inscription ID is present as the last URL segment, use `/content/<id>`.
-        const canonUrl = (() => {
-            const isId = (s) => /^[0-9a-f]{64}i\d+$/i.test(s);
-            try {
-                const u = new URL(url, window.location.href);
-                const seg = u.pathname.split('/').filter(Boolean).pop() || '';
-                if (isId(seg)) {
-                    u.pathname = `/content/${seg}`;
-                    u.search = '';
-                    u.hash = '';
-                    return u.toString();
-                }
-            } catch (_) {}
-            const m = url.match(/([0-9a-f]{64}i\d+)$/i);
-            return m ? `/content/${m[1]}` : url;
-        })();
-        if (canonUrl !== url && this.urlInput) this.urlInput.value = canonUrl;
+        const resolved = this._resolveSourceInput(raw);
+        if (!resolved.ok) {
+            this._setError(resolved.error);
+            if (this.loadBtn) {
+                const originalText = this.loadBtn.innerText;
+                this.loadBtn.innerText = 'ERR';
+                setTimeout(() => {
+                    this.loadBtn.innerText = originalText;
+                }, 2000);
+            }
+            alert(resolved.error);
+            return;
+        }
+
+        if (this.urlInput && resolved.canonicalUrl !== raw && !resolved.sourceLabel.startsWith('data:')) {
+            this.urlInput.value = resolved.canonicalUrl;
+        }
+
         const originalText = this.loadBtn.innerText;
-        this.loadBtn.innerText = "...";
+        this.loadBtn.innerText = '...';
         try {
-            const result = await fetchAudionalAudioBytes(canonUrl, { debug: debugDecoder });
-            await this._decodeAndLoad(result.audioBytes, { sourceUrl: result.canonicalUrl || canonUrl });
-            this.loadBtn.innerText = "OK";
-            setTimeout(() => this.loadBtn.innerText = originalText, 1000);
+            const result = await fetchAudionalAudioBytes(resolved.canonicalUrl, { debug: debugDecoder });
+            await this._decodeAndLoad(result.audioBytes, {
+                sourceUrl: resolved.canonicalUrl.startsWith('data:') ? '' : (result.canonicalUrl || resolved.canonicalUrl),
+                sourceLabel: resolved.sourceLabel,
+                fileName: resolved.canonicalUrl.startsWith('data:') ? '' : (result.filename || '')
+            });
+            this.loadBtn.innerText = 'OK';
+            setTimeout(() => {
+                this.loadBtn.innerText = originalText;
+            }, 1000);
         } catch (e) {
+            const message = e && e.message ? e.message : String(e);
             console.error(e);
-            this.loadBtn.innerText = "ERR";
-            alert(e.message);
-            setTimeout(() => this.loadBtn.innerText = originalText, 2000);
+            this._setError(message);
+            this.loadBtn.innerText = 'ERR';
+            alert(message);
+            setTimeout(() => {
+                this.loadBtn.innerText = originalText;
+            }, 2000);
         }
     }
 
     async _handleDrop(e) {
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            try {
-                const file = files[0];
-                const buffer = await file.arrayBuffer();
-                await this._decodeAndLoad(buffer, { fileName: file.name });
-            } catch (err) { alert("Drop Error: " + err.message); }
+        const files = e && e.dataTransfer ? e.dataTransfer.files : null;
+        if (!files || files.length === 0) return;
+        if (!this.allowFileDrop) {
+            const message = 'Local file drop is disabled for this sampler profile.';
+            this._setError(message);
+            alert(message);
+            return;
+        }
+        try {
+            const file = files[0];
+            const buffer = await file.arrayBuffer();
+            await this._decodeAndLoad(buffer, {
+                sourceUrl: '',
+                sourceLabel: 'local-file',
+                fileName: file.name
+            });
+        } catch (err) {
+            const message = `Drop Error: ${err && err.message ? err.message : String(err)}`;
+            this._setError(message);
+            alert(message);
         }
     }
 
     async _decodeAndLoad(arrayBuffer, meta = {}) {
-        const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
-        const data = audioBuffer.getChannelData(0);
-        this.loadSampleData(data);
-        const sourceUrl = meta && typeof meta.sourceUrl === 'string' ? meta.sourceUrl : '';
-        const fileName = meta && typeof meta.fileName === 'string' ? meta.fileName : '';
-        if (sourceUrl) {
-            this.lastSourceUrl = sourceUrl;
-            this.lastFileName = '';
-        } else if (fileName) {
-            this.lastFileName = fileName;
-            this.lastSourceUrl = '';
+        const byteLength =
+            arrayBuffer && typeof arrayBuffer.byteLength === 'number'
+                ? arrayBuffer.byteLength
+                : (ArrayBuffer.isView(arrayBuffer) ? arrayBuffer.byteLength : 0);
+        if (byteLength > this.maxSampleBytes) {
+            throw new Error(`Sample is too large (${byteLength} bytes; max ${this.maxSampleBytes}).`);
         }
-        this.onSampleLoad({ samples: data, sourceUrl: this.lastSourceUrl, fileName: this.lastFileName });
+
+        const decoded = await this.audioContext.decodeAudioData(arrayBuffer);
+        if (decoded.duration > this.maxSampleSeconds) {
+            throw new Error(`Sample is too long (${decoded.duration.toFixed(2)}s; max ${this.maxSampleSeconds}s).`);
+        }
+
+        const channels = [];
+        for (let index = 0; index < decoded.numberOfChannels; index += 1) {
+            channels.push(Float32Array.from(decoded.getChannelData(index)));
+        }
+
+        const payload = {
+            schema: 'bvst.sample/v1',
+            channelCount: channels.length,
+            frameCount: decoded.length,
+            sampleRate: decoded.sampleRate,
+            durationSeconds: decoded.duration,
+            channels,
+            samples: channels[0] || null,
+            sourceUrl: typeof meta.sourceUrl === 'string' ? meta.sourceUrl : '',
+            sourceLabel: typeof meta.sourceLabel === 'string' ? meta.sourceLabel : '',
+            fileName: typeof meta.fileName === 'string' ? meta.fileName : ''
+        };
+
+        this.loadSamplePayload(payload);
+        this.onSampleLoad(this.samplePayload);
     }
 
-    loadSampleData(float32Array) {
-        this.sampleData = float32Array;
-        // Pre-compute peaks for the current canvas width
+    loadSamplePayload(payload) {
+        const normalized = normalizeSamplePayload(payload, {
+            sampleRate: this.audioContext.sampleRate
+        });
+        if (!normalized) return;
+        this.samplePayload = normalized;
+        this.sampleData = normalized.samples;
+        this.sampleRate = normalized.sampleRate || this.audioContext.sampleRate;
+        this.lastSourceUrl = normalized.sourceUrl || '';
+        this.lastSourceLabel = normalized.sourceLabel || normalized.sourceUrl || '';
+        this.lastFileName = normalized.fileName || '';
+        this._setLoadedDiagnostics(normalized);
         if (this.canvas) {
             const cssW = this._canvasCssW || Math.max(1, Math.floor(this.canvas.getBoundingClientRect().width || this.canvas.width || 300));
             this._computePeaks(cssW);
@@ -363,16 +675,28 @@ export class SamplerUI {
         this.draw();
     }
 
+    loadSampleData(float32Array, meta = {}) {
+        this.loadSamplePayload({
+            schema: 'bvst.sample/v1',
+            sampleRate: Number(meta.sampleRate) || this.audioContext.sampleRate,
+            channels: [float32Array],
+            samples: float32Array,
+            sourceUrl: typeof meta.sourceUrl === 'string' ? meta.sourceUrl : '',
+            sourceLabel: typeof meta.sourceLabel === 'string' ? meta.sourceLabel : '',
+            fileName: typeof meta.fileName === 'string' ? meta.fileName : ''
+        });
+    }
+
     _computePeaks(width) {
         if (!this.sampleData) return;
-        this.peaks = new Float32Array(width * 2); // pairs of min, max
+        this.peaks = new Float32Array(width * 2);
         const step = Math.max(1, Math.floor(this.sampleData.length / width));
-        
-        for (let i = 0; i < width; i++) {
+
+        for (let i = 0; i < width; i += 1) {
             let min = 1.0;
             let max = -1.0;
             const startIdx = i * step;
-            for (let j = 0; j < step; j++) {
+            for (let j = 0; j < step; j += 1) {
                 const idx = startIdx + j;
                 if (idx < this.sampleData.length) {
                     const val = this.sampleData[idx];
@@ -381,111 +705,103 @@ export class SamplerUI {
                 }
             }
             if (min > max) min = max = 0;
-            this.peaks[i*2] = min;
-            this.peaks[i*2+1] = max;
+            this.peaks[i * 2] = min;
+            this.peaks[i * 2 + 1] = max;
         }
     }
 
     draw() {
         if (!this.canvas) return;
-        
-        // Handle resize: recompute peaks if width changed significantly
+
         const wCss = this._canvasCssW || Math.max(1, Math.floor(this.canvas.getBoundingClientRect().width || this.canvas.width || 300));
         const hCss = this._canvasCssH || Math.max(1, Math.floor(this.canvas.getBoundingClientRect().height || this.canvas.height || 140));
         if (this.sampleData && (!this.peaks || this.peaks.length !== wCss * 2)) {
-             this._computePeaks(wCss);
+            this._computePeaks(wCss);
         }
 
         const w = wCss;
         const h = hCss;
         const ctx = this.ctx;
 
-        // Background
         ctx.fillStyle = '#111';
         ctx.fillRect(0, 0, w, h);
-        
-        // Zero Line
+
         ctx.strokeStyle = '#222';
-        ctx.beginPath(); ctx.moveTo(0, h/2); ctx.lineTo(w, h/2); ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, h / 2);
+        ctx.lineTo(w, h / 2);
+        ctx.stroke();
 
         if (!this.peaks) return;
 
-        // Waveform
         ctx.lineWidth = 1;
         ctx.strokeStyle = '#00f0ff';
         ctx.beginPath();
-        
+
         const amp = h / 2;
 
-        for (let i = 0; i < w; i++) {
-            const min = this.peaks[i*2];
-            const max = this.peaks[i*2+1];
-            
+        for (let i = 0; i < w; i += 1) {
+            const min = this.peaks[i * 2];
+            const max = this.peaks[i * 2 + 1];
+
             ctx.moveTo(i, amp + min * amp * 0.9);
             ctx.lineTo(i, amp + max * amp * 0.9);
         }
         ctx.stroke();
 
-        // Loop Regions Shading (Dim the non-active parts)
         if (this.state.loopEnabled || (this.state.loopStart > 0 || this.state.loopEnd < 1)) {
             const startX = this.state.loopStart * w;
             const endX = this.state.loopEnd * w;
-            
+
             ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-            
-            // Left Dim
+
             if (startX > 0) ctx.fillRect(0, 0, startX, h);
-            
-            // Right Dim
             if (endX < w) ctx.fillRect(endX, 0, w - endX, h);
-            
-            // Active Region Highlight (subtle)
+
             ctx.fillStyle = 'rgba(0, 255, 200, 0.05)';
             ctx.fillRect(startX, 0, endX - startX, h);
         }
 
-        // Slice Grid
         if (this.state.sliceGrid > 0) {
             ctx.strokeStyle = 'rgba(255, 255, 0, 0.5)';
             ctx.lineWidth = 1;
             ctx.beginPath();
             const sliceCount = Math.floor(this.state.sliceGrid);
             const sliceW = w / sliceCount;
-            for (let i = 1; i < sliceCount; i++) {
+            for (let i = 1; i < sliceCount; i += 1) {
                 const x = i * sliceW;
                 ctx.moveTo(x, 0);
                 ctx.lineTo(x, h);
             }
             ctx.stroke();
-            
-            // Draw slice numbers
+
             ctx.fillStyle = 'rgba(255,255,0,0.8)';
             ctx.font = '10px monospace';
-            for (let i = 0; i < sliceCount; i++) {
-                ctx.fillText((i+1).toString(), i * sliceW + 5, 12);
+            for (let i = 0; i < sliceCount; i += 1) {
+                ctx.fillText(String(i + 1), i * sliceW + 5, 12);
             }
         }
 
-        // Grain Window
         if (this.state.grainSize > 0) {
             const cx = this.state.grainPos * w;
             const halfW = (this.state.grainSize * w) / 2;
-            
+
             ctx.fillStyle = 'rgba(255, 0, 255, 0.2)';
             ctx.fillRect(cx - halfW, 0, halfW * 2, h);
-            
+
             ctx.strokeStyle = '#f0f';
             ctx.beginPath();
-            ctx.moveTo(cx, 0); ctx.lineTo(cx, h);
+            ctx.moveTo(cx, 0);
+            ctx.lineTo(cx, h);
             ctx.stroke();
         }
     }
 
     setStartMarker(percent) {
-        if (this.startMarker) this.startMarker.style.left = (percent * 100) + '%';
+        if (this.startMarker) this.startMarker.style.left = `${percent * 100}%`;
     }
 
     setEndMarker(percent) {
-        if (this.endMarker) this.endMarker.style.left = (percent * 100) + '%';
+        if (this.endMarker) this.endMarker.style.left = `${percent * 100}%`;
     }
 }

@@ -31,7 +31,7 @@
       "block_height": null,
       "path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinTwo/patch.json",
       "mime_type": "application/json",
-      "sha256": "10c923adbea8103928c459deaf4d35e4cb12dd0443a65fbe69c813ba0dd6ca4f",
+      "sha256": "1a12ef8a5ed1cce012111d42c501f80db5bfb6fd76edb390cae070711b645901",
       "bytes": 7067,
       "chunks": 1,
       "route": "helper"

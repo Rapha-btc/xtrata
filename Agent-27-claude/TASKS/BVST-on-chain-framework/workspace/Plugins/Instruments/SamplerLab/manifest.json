@@ -1,0 +1,19 @@
+{
+  "name": "SamplerLab",
+  "version": "0.1.0",
+  "type": "Instrument",
+  "description": "Experimental sampler-wave shell routed through the UniversalSampler backend until dedicated sampler modules are frozen.",
+  "components": {
+    "audio_engine": "../../../System/shared/bvst_unified_bg.wasm",
+    "ui_html": "gui.html"
+  },
+  "io": {
+    "inputs": 0,
+    "outputs": 2
+  },
+  "xtrata": {
+    "experimental": true,
+    "wave": "sampler-wave",
+    "engine_alias": "UniversalSampler"
+  }
+}

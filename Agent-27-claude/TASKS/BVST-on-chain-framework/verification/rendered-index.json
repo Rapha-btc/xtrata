@@ -1,0 +1,727 @@
+{
+  "generated_at": "2026-03-21T17:36:22.194Z",
+  "token_map": "configs/token-map.runtime.json",
+  "render_root": "rendered",
+  "catalog_count": 15,
+  "ready_count": 0,
+  "pending_count": 15,
+  "route_mismatch_count": 0,
+  "unresolved_count": 0,
+  "inscribed_count": 0,
+  "catalogs": [
+    {
+      "name": "bvst.catalog.runtime.v1",
+      "batch_file": "10-foundation.batch.json",
+      "order": 180,
+      "status": "pending",
+      "template_path": "on-chain-modules/catalogs/majors/runtime-v1.catalog.json",
+      "template_sha256": "f056a3e07a3d09f2d746f620f0b902321d4aa1e402546371e72bed4a65bb3704",
+      "direct_dependency_names": [
+        "bvst.runtime.bvst-css.v1.0.0",
+        "bvst.runtime.ui-styles.v1.0.0",
+        "bvst.runtime.audional-decoder.v1.0.0",
+        "bvst.runtime.controls.v1.0.0",
+        "bvst.runtime.keyboard.v1.0.0",
+        "bvst.runtime.midi.v1.0.0",
+        "bvst.runtime.midi-parser.v1.0.0",
+        "bvst.runtime.visualizer.v1.0.0",
+        "bvst.runtime.sampler.v1.0.0",
+        "bvst.runtime.sequencer-core.v1.0.0",
+        "bvst.runtime.standalone-bridge.v1.0.0",
+        "bvst.runtime.plugin-core.v1.0.0",
+        "bvst.runtime.patch-runtime.v1.0.0"
+      ],
+      "direct_dependency_token_ids": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "resolved_dependency_names": [
+        "bvst.runtime.bvst-css.v1.0.0",
+        "bvst.runtime.ui-styles.v1.0.0",
+        "bvst.runtime.audional-decoder.v1.0.0",
+        "bvst.runtime.controls.v1.0.0",
+        "bvst.runtime.keyboard.v1.0.0",
+        "bvst.runtime.midi.v1.0.0",
+        "bvst.runtime.midi-parser.v1.0.0",
+        "bvst.runtime.visualizer.v1.0.0",
+        "bvst.runtime.sampler.v1.0.0",
+        "bvst.runtime.sequencer-core.v1.0.0",
+        "bvst.runtime.standalone-bridge.v1.0.0",
+        "bvst.runtime.plugin-core.v1.0.0",
+        "bvst.runtime.patch-runtime.v1.0.0"
+      ],
+      "missing_dependencies": [
+        "bvst.runtime.bvst-css.v1.0.0",
+        "bvst.runtime.ui-styles.v1.0.0",
+        "bvst.runtime.audional-decoder.v1.0.0",
+        "bvst.runtime.controls.v1.0.0",
+        "bvst.runtime.keyboard.v1.0.0",
+        "bvst.runtime.midi.v1.0.0",
+        "bvst.runtime.midi-parser.v1.0.0",
+        "bvst.runtime.visualizer.v1.0.0",
+        "bvst.runtime.sampler.v1.0.0",
+        "bvst.runtime.sequencer-core.v1.0.0",
+        "bvst.runtime.standalone-bridge.v1.0.0",
+        "bvst.runtime.plugin-core.v1.0.0",
+        "bvst.runtime.patch-runtime.v1.0.0"
+      ],
+      "resolution_signature": "1113d78d2aec5c1fe9872b6ded3393e92230550f486bfa79ed92ddd17138143b",
+      "resolved_at": null,
+      "rendered_path": null,
+      "rendered_sha256": null,
+      "rendered_bytes": null,
+      "rendered_chunks": null,
+      "rendered_route": null,
+      "inscribed": null
+    },
+    {
+      "name": "bvst.catalog.engine.v1",
+      "batch_file": "10-foundation.batch.json",
+      "order": 190,
+      "status": "pending",
+      "template_path": "on-chain-modules/catalogs/majors/engine-v1.catalog.json",
+      "template_sha256": "80c7d4d181f11562cf4e0cd219c9579d0a2eface236f90ed63757fe67405a2c1",
+      "direct_dependency_names": [
+        "bvst.engine.unified-wasm.v1.0.0",
+        "bvst.engine.unified-loader.v1.0.0",
+        "bvst.engine.unified-worklet.v1.0.0"
+      ],
+      "direct_dependency_token_ids": [
+        null,
+        null,
+        null
+      ],
+      "resolved_dependency_names": [
+        "bvst.engine.unified-wasm.v1.0.0",
+        "bvst.engine.unified-loader.v1.0.0",
+        "bvst.engine.unified-worklet.v1.0.0"
+      ],
+      "missing_dependencies": [
+        "bvst.engine.unified-wasm.v1.0.0",
+        "bvst.engine.unified-loader.v1.0.0",
+        "bvst.engine.unified-worklet.v1.0.0"
+      ],
+      "resolution_signature": "8e2e0cba20994a0da1b2b9103249cbf14edfed0b42129f09a49d21adad7430d6",
+      "resolved_at": null,
+      "rendered_path": null,
+      "rendered_sha256": null,
+      "rendered_bytes": null,
+      "rendered_chunks": null,
+      "rendered_route": null,
+      "inscribed": null
+    },
+    {
+      "name": "bvst.catalog.schema.v1",
+      "batch_file": "10-foundation.batch.json",
+      "order": 200,
+      "status": "pending",
+      "template_path": "on-chain-modules/catalogs/majors/schema-v1.catalog.json",
+      "template_sha256": "2a0b449657ce2fc06be29ac9c72ea7ab660bd7cf3d98ad23cff522118e557503",
+      "direct_dependency_names": [
+        "bvst.schema.patch.v1"
+      ],
+      "direct_dependency_token_ids": [
+        null
+      ],
+      "resolved_dependency_names": [
+        "bvst.schema.patch.v1"
+      ],
+      "missing_dependencies": [
+        "bvst.schema.patch.v1"
+      ],
+      "resolution_signature": "a2ed20cc5a9fb0548daa76d19f27660447349c59ef242effe6c866d185342e44",
+      "resolved_at": null,
+      "rendered_path": null,
+      "rendered_sha256": null,
+      "rendered_bytes": null,
+      "rendered_chunks": null,
+      "rendered_route": null,
+      "inscribed": null
+    },
+    {
+      "name": "bvst.catalog.foundation.v1",
+      "batch_file": "10-foundation.batch.json",
+      "order": 210,
+      "status": "pending",
+      "template_path": "on-chain-modules/catalogs/releases/foundation-v1.catalog.json",
+      "template_sha256": "4825b2370c354ea04cf14cda496121d45da8050e9365a1f9844f8c03c2e86772",
+      "direct_dependency_names": [
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "direct_dependency_token_ids": [
+        null,
+        null,
+        null
+      ],
+      "resolved_dependency_names": [
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1",
+        "bvst.runtime.bvst-css.v1.0.0",
+        "bvst.runtime.ui-styles.v1.0.0",
+        "bvst.runtime.audional-decoder.v1.0.0",
+        "bvst.runtime.controls.v1.0.0",
+        "bvst.runtime.keyboard.v1.0.0",
+        "bvst.runtime.midi.v1.0.0",
+        "bvst.runtime.midi-parser.v1.0.0",
+        "bvst.runtime.visualizer.v1.0.0",
+        "bvst.runtime.sampler.v1.0.0",
+        "bvst.runtime.sequencer-core.v1.0.0",
+        "bvst.runtime.standalone-bridge.v1.0.0",
+        "bvst.runtime.plugin-core.v1.0.0",
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.engine.unified-wasm.v1.0.0",
+        "bvst.engine.unified-loader.v1.0.0",
+        "bvst.engine.unified-worklet.v1.0.0",
+        "bvst.schema.patch.v1"
+      ],
+      "missing_dependencies": [
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1",
+        "bvst.runtime.bvst-css.v1.0.0",
+        "bvst.runtime.ui-styles.v1.0.0",
+        "bvst.runtime.audional-decoder.v1.0.0",
+        "bvst.runtime.controls.v1.0.0",
+        "bvst.runtime.keyboard.v1.0.0",
+        "bvst.runtime.midi.v1.0.0",
+        "bvst.runtime.midi-parser.v1.0.0",
+        "bvst.runtime.visualizer.v1.0.0",
+        "bvst.runtime.sampler.v1.0.0",
+        "bvst.runtime.sequencer-core.v1.0.0",
+        "bvst.runtime.standalone-bridge.v1.0.0",
+        "bvst.runtime.plugin-core.v1.0.0",
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.engine.unified-wasm.v1.0.0",
+        "bvst.engine.unified-loader.v1.0.0",
+        "bvst.engine.unified-worklet.v1.0.0",
+        "bvst.schema.patch.v1"
+      ],
+      "resolution_signature": "47f1a4289e19efc11f9fc2114b97f3bfd38ceac4e47419556af21abce0515158",
+      "resolved_at": null,
+      "rendered_path": null,
+      "rendered_sha256": null,
+      "rendered_bytes": null,
+      "rendered_chunks": null,
+      "rendered_route": null,
+      "inscribed": null
+    },
+    {
+      "name": "bvst.plugin.jms10.release.v1.0.0",
+      "batch_file": "20-universalsynth-family.batch.json",
+      "order": 100,
+      "status": "pending",
+      "template_path": "on-chain-modules/catalogs/plugins/universalsynth-family/jms10.release.catalog.json",
+      "template_sha256": "6051af3cd8d79c46e4a62fff8be80e9dbd63d7ccf91c60dafcabdd47b7a5e72f",
+      "direct_dependency_names": [
+        "bvst.plugin.jms10.manifest.v1.0.0",
+        "bvst.plugin.jms10.patch.v1.0.0",
+        "bvst.plugin.jms10.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "direct_dependency_token_ids": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "resolved_dependency_names": [
+        "bvst.catalog.foundation.v1",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1",
+        "bvst.plugin.jms10.manifest.v1.0.0",
+        "bvst.plugin.jms10.patch.v1.0.0",
+        "bvst.plugin.jms10.shell.v1.0.0"
+      ],
+      "missing_dependencies": [
+        "bvst.catalog.foundation.v1",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1",
+        "bvst.plugin.jms10.manifest.v1.0.0",
+        "bvst.plugin.jms10.patch.v1.0.0",
+        "bvst.plugin.jms10.shell.v1.0.0"
+      ],
+      "resolution_signature": "3a7af0fb0a0bdd35b42888f766ccd453bdc2110705587a22cece7d487321daa3",
+      "resolved_at": null,
+      "rendered_path": null,
+      "rendered_sha256": null,
+      "rendered_bytes": null,
+      "rendered_chunks": null,
+      "rendered_route": null,
+      "inscribed": null
+    },
+    {
+      "name": "bvst.plugin.universalengine.release.v1.0.0",
+      "batch_file": "20-universalsynth-family.batch.json",
+      "order": 110,
+      "status": "pending",
+      "template_path": "on-chain-modules/catalogs/plugins/universalsynth-family/universalengine.release.catalog.json",
+      "template_sha256": "c0043dd656b5495592a14f8f7447c6941102685e7d66fa3b89c8fdf580d091f2",
+      "direct_dependency_names": [
+        "bvst.plugin.universalengine.manifest.v1.0.0",
+        "bvst.plugin.universalengine.patch.v1.0.0",
+        "bvst.plugin.universalengine.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "direct_dependency_token_ids": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "resolved_dependency_names": [
+        "bvst.catalog.foundation.v1",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1",
+        "bvst.plugin.universalengine.manifest.v1.0.0",
+        "bvst.plugin.universalengine.patch.v1.0.0",
+        "bvst.plugin.universalengine.shell.v1.0.0"
+      ],
+      "missing_dependencies": [
+        "bvst.catalog.foundation.v1",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1",
+        "bvst.plugin.universalengine.manifest.v1.0.0",
+        "bvst.plugin.universalengine.patch.v1.0.0",
+        "bvst.plugin.universalengine.shell.v1.0.0"
+      ],
+      "resolution_signature": "cde87285f873fa58bd444d483bf8df538d6578e87300c399b63d3ff23e303e04",
+      "resolved_at": null,
+      "rendered_path": null,
+      "rendered_sha256": null,
+      "rendered_bytes": null,
+      "rendered_chunks": null,
+      "rendered_route": null,
+      "inscribed": null
+    },
+    {
+      "name": "bvst.plugin.universalsynth.release.v1.0.13",
+      "batch_file": "20-universalsynth-family.batch.json",
+      "order": 120,
+      "status": "pending",
+      "template_path": "on-chain-modules/catalogs/plugins/universalsynth-family/universalsynth.release.catalog.json",
+      "template_sha256": "fcb24c743503724582428092fbaa4e99c3da7882f00ef8e97d8206ec931e96e5",
+      "direct_dependency_names": [
+        "bvst.plugin.universalsynth.manifest.v1.0.13",
+        "bvst.plugin.universalsynth.patch.v1.0.13",
+        "bvst.plugin.universalsynth.shell.v1.0.13",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "direct_dependency_token_ids": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "resolved_dependency_names": [
+        "bvst.catalog.foundation.v1",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1",
+        "bvst.plugin.universalsynth.manifest.v1.0.13",
+        "bvst.plugin.universalsynth.patch.v1.0.13",
+        "bvst.plugin.universalsynth.shell.v1.0.13"
+      ],
+      "missing_dependencies": [
+        "bvst.catalog.foundation.v1",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1",
+        "bvst.plugin.universalsynth.manifest.v1.0.13",
+        "bvst.plugin.universalsynth.patch.v1.0.13",
+        "bvst.plugin.universalsynth.shell.v1.0.13"
+      ],
+      "resolution_signature": "039b415c12fb3b91801028e7a737cedcfaa90064178b3be18c3dbe49ffe5f3cb",
+      "resolved_at": null,
+      "rendered_path": null,
+      "rendered_sha256": null,
+      "rendered_bytes": null,
+      "rendered_chunks": null,
+      "rendered_route": null,
+      "inscribed": null
+    },
+    {
+      "name": "bvst.catalog.family.universalsynthfamily.v1",
+      "batch_file": "20-universalsynth-family.batch.json",
+      "order": 130,
+      "status": "pending",
+      "template_path": "on-chain-modules/catalogs/families/universalsynth-family.catalog.json",
+      "template_sha256": "53db3fc0dcbfefcbed06f10251ff935bb43b1f37d223708389b7ca1a7dd67fc8",
+      "direct_dependency_names": [
+        "bvst.plugin.universalsynth.release.v1.0.13",
+        "bvst.plugin.universalengine.release.v1.0.0",
+        "bvst.plugin.jms10.release.v1.0.0"
+      ],
+      "direct_dependency_token_ids": [
+        null,
+        null,
+        null
+      ],
+      "resolved_dependency_names": [
+        "bvst.plugin.universalsynth.release.v1.0.13",
+        "bvst.plugin.universalengine.release.v1.0.0",
+        "bvst.plugin.jms10.release.v1.0.0"
+      ],
+      "missing_dependencies": [
+        "bvst.plugin.universalsynth.release.v1.0.13",
+        "bvst.plugin.universalengine.release.v1.0.0",
+        "bvst.plugin.jms10.release.v1.0.0"
+      ],
+      "resolution_signature": "7c0c1898c481481b5eca1c9c419faae420ad85eb7d9b47ef5cc25ffe602ecf47",
+      "resolved_at": null,
+      "rendered_path": null,
+      "rendered_sha256": null,
+      "rendered_bytes": null,
+      "rendered_chunks": null,
+      "rendered_route": null,
+      "inscribed": null
+    },
+    {
+      "name": "bvst.plugin.bluemarvinone.release.v1.0.0",
+      "batch_file": "30-standalone-synths.batch.json",
+      "order": 130,
+      "status": "pending",
+      "template_path": "on-chain-modules/catalogs/plugins/standalone-synths/bluemarvinone.release.catalog.json",
+      "template_sha256": "594b052dff3099f175da2cb5476b8c91d09854b21c73a053e5a67a708d95bffc",
+      "direct_dependency_names": [
+        "bvst.plugin.bluemarvinone.manifest.v1.0.0",
+        "bvst.plugin.bluemarvinone.patch.v1.0.0",
+        "bvst.plugin.bluemarvinone.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "direct_dependency_token_ids": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "resolved_dependency_names": [
+        "bvst.catalog.foundation.v1",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1",
+        "bvst.plugin.bluemarvinone.manifest.v1.0.0",
+        "bvst.plugin.bluemarvinone.patch.v1.0.0",
+        "bvst.plugin.bluemarvinone.shell.v1.0.0"
+      ],
+      "missing_dependencies": [
+        "bvst.catalog.foundation.v1",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1",
+        "bvst.plugin.bluemarvinone.manifest.v1.0.0",
+        "bvst.plugin.bluemarvinone.patch.v1.0.0",
+        "bvst.plugin.bluemarvinone.shell.v1.0.0"
+      ],
+      "resolution_signature": "81ac6e14ea5c3a8af2fa3b74c81c7e79241e7895e5d0a9b71713b3a7369bd77a",
+      "resolved_at": null,
+      "rendered_path": null,
+      "rendered_sha256": null,
+      "rendered_bytes": null,
+      "rendered_chunks": null,
+      "rendered_route": null,
+      "inscribed": null
+    },
+    {
+      "name": "bvst.plugin.bluemarvintwo.release.v1.0.0",
+      "batch_file": "30-standalone-synths.batch.json",
+      "order": 140,
+      "status": "pending",
+      "template_path": "on-chain-modules/catalogs/plugins/standalone-synths/bluemarvintwo.release.catalog.json",
+      "template_sha256": "744e47f42bae56c16a7093556e85f54574c2511e5df895fd6c718d85babee482",
+      "direct_dependency_names": [
+        "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
+        "bvst.plugin.bluemarvintwo.patch.v1.0.0",
+        "bvst.plugin.bluemarvintwo.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "direct_dependency_token_ids": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "resolved_dependency_names": [
+        "bvst.catalog.foundation.v1",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1",
+        "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
+        "bvst.plugin.bluemarvintwo.patch.v1.0.0",
+        "bvst.plugin.bluemarvintwo.shell.v1.0.0"
+      ],
+      "missing_dependencies": [
+        "bvst.catalog.foundation.v1",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1",
+        "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
+        "bvst.plugin.bluemarvintwo.patch.v1.0.0",
+        "bvst.plugin.bluemarvintwo.shell.v1.0.0"
+      ],
+      "resolution_signature": "e95a2821396e7c21608c073ccf5f518ce11f277e513bae41061e03c9a6878271",
+      "resolved_at": null,
+      "rendered_path": null,
+      "rendered_sha256": null,
+      "rendered_bytes": null,
+      "rendered_chunks": null,
+      "rendered_route": null,
+      "inscribed": null
+    },
+    {
+      "name": "bvst.plugin.neonpoly.release.v1.0.0",
+      "batch_file": "30-standalone-synths.batch.json",
+      "order": 150,
+      "status": "pending",
+      "template_path": "on-chain-modules/catalogs/plugins/standalone-synths/neonpoly.release.catalog.json",
+      "template_sha256": "8c96baf3023b57e0039e72bf9b831c29ab9184be70468608472ad92a817b178e",
+      "direct_dependency_names": [
+        "bvst.plugin.neonpoly.manifest.v1.0.0",
+        "bvst.plugin.neonpoly.patch.v1.0.0",
+        "bvst.plugin.neonpoly.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "direct_dependency_token_ids": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "resolved_dependency_names": [
+        "bvst.catalog.foundation.v1",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1",
+        "bvst.plugin.neonpoly.manifest.v1.0.0",
+        "bvst.plugin.neonpoly.patch.v1.0.0",
+        "bvst.plugin.neonpoly.shell.v1.0.0"
+      ],
+      "missing_dependencies": [
+        "bvst.catalog.foundation.v1",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1",
+        "bvst.plugin.neonpoly.manifest.v1.0.0",
+        "bvst.plugin.neonpoly.patch.v1.0.0",
+        "bvst.plugin.neonpoly.shell.v1.0.0"
+      ],
+      "resolution_signature": "b6a5e01e5c1117eacb25acba44252480e231bf57695a486dd6ad9688b05a4efa",
+      "resolved_at": null,
+      "rendered_path": null,
+      "rendered_sha256": null,
+      "rendered_bytes": null,
+      "rendered_chunks": null,
+      "rendered_route": null,
+      "inscribed": null
+    },
+    {
+      "name": "bvst.plugin.retrokeys.release.v1.0.0",
+      "batch_file": "30-standalone-synths.batch.json",
+      "order": 160,
+      "status": "pending",
+      "template_path": "on-chain-modules/catalogs/plugins/standalone-synths/retrokeys.release.catalog.json",
+      "template_sha256": "c2267ebdb7b56e28e03edc99391df8277bd2e7ba6fb0074cca585d27c1cc8bf5",
+      "direct_dependency_names": [
+        "bvst.plugin.retrokeys.manifest.v1.0.0",
+        "bvst.plugin.retrokeys.patch.v1.0.0",
+        "bvst.plugin.retrokeys.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "direct_dependency_token_ids": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "resolved_dependency_names": [
+        "bvst.catalog.foundation.v1",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1",
+        "bvst.plugin.retrokeys.manifest.v1.0.0",
+        "bvst.plugin.retrokeys.patch.v1.0.0",
+        "bvst.plugin.retrokeys.shell.v1.0.0"
+      ],
+      "missing_dependencies": [
+        "bvst.catalog.foundation.v1",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1",
+        "bvst.plugin.retrokeys.manifest.v1.0.0",
+        "bvst.plugin.retrokeys.patch.v1.0.0",
+        "bvst.plugin.retrokeys.shell.v1.0.0"
+      ],
+      "resolution_signature": "05df6f429e48c67fde7dd6ddc5a9453093372487de5a5e1930fcefb16afb68b8",
+      "resolved_at": null,
+      "rendered_path": null,
+      "rendered_sha256": null,
+      "rendered_bytes": null,
+      "rendered_chunks": null,
+      "rendered_route": null,
+      "inscribed": null
+    },
+    {
+      "name": "bvst.catalog.family.standalonesynths.v1",
+      "batch_file": "30-standalone-synths.batch.json",
+      "order": 170,
+      "status": "pending",
+      "template_path": "on-chain-modules/catalogs/families/standalone-synths.catalog.json",
+      "template_sha256": "88aba20c6867b911e83cc1eb06fb9629679f7f441d0e1a686ac8c3ffa7595690",
+      "direct_dependency_names": [
+        "bvst.plugin.retrokeys.release.v1.0.0",
+        "bvst.plugin.bluemarvinone.release.v1.0.0",
+        "bvst.plugin.bluemarvintwo.release.v1.0.0",
+        "bvst.plugin.neonpoly.release.v1.0.0"
+      ],
+      "direct_dependency_token_ids": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "resolved_dependency_names": [
+        "bvst.plugin.retrokeys.release.v1.0.0",
+        "bvst.plugin.bluemarvinone.release.v1.0.0",
+        "bvst.plugin.bluemarvintwo.release.v1.0.0",
+        "bvst.plugin.neonpoly.release.v1.0.0"
+      ],
+      "missing_dependencies": [
+        "bvst.plugin.retrokeys.release.v1.0.0",
+        "bvst.plugin.bluemarvinone.release.v1.0.0",
+        "bvst.plugin.bluemarvintwo.release.v1.0.0",
+        "bvst.plugin.neonpoly.release.v1.0.0"
+      ],
+      "resolution_signature": "22907776336c89f9a947291b3e79c1736d9b7faa2d4e0a5dfdde1229e027fff4",
+      "resolved_at": null,
+      "rendered_path": null,
+      "rendered_sha256": null,
+      "rendered_bytes": null,
+      "rendered_chunks": null,
+      "rendered_route": null,
+      "inscribed": null
+    },
+    {
+      "name": "bvst.catalog.release.firstwaveinstruments.v1",
+      "batch_file": "40-root-catalogs.batch.json",
+      "order": 10,
+      "status": "pending",
+      "template_path": "on-chain-modules/catalogs/releases/first-wave-instruments.catalog.json",
+      "template_sha256": "6bbdbce961136844816ef35e4c8d2779c65cfd246ef9778fd60efcad132b6b9f",
+      "direct_dependency_names": [
+        "bvst.catalog.family.universalsynthfamily.v1",
+        "bvst.catalog.family.standalonesynths.v1"
+      ],
+      "direct_dependency_token_ids": [
+        null,
+        null
+      ],
+      "resolved_dependency_names": [
+        "bvst.catalog.family.universalsynthfamily.v1",
+        "bvst.catalog.family.standalonesynths.v1",
+        "bvst.plugin.universalsynth.release.v1.0.13",
+        "bvst.plugin.universalengine.release.v1.0.0",
+        "bvst.plugin.jms10.release.v1.0.0",
+        "bvst.plugin.retrokeys.release.v1.0.0",
+        "bvst.plugin.bluemarvinone.release.v1.0.0",
+        "bvst.plugin.bluemarvintwo.release.v1.0.0",
+        "bvst.plugin.neonpoly.release.v1.0.0"
+      ],
+      "missing_dependencies": [
+        "bvst.catalog.family.universalsynthfamily.v1",
+        "bvst.catalog.family.standalonesynths.v1",
+        "bvst.plugin.universalsynth.release.v1.0.13",
+        "bvst.plugin.universalengine.release.v1.0.0",
+        "bvst.plugin.jms10.release.v1.0.0",
+        "bvst.plugin.retrokeys.release.v1.0.0",
+        "bvst.plugin.bluemarvinone.release.v1.0.0",
+        "bvst.plugin.bluemarvintwo.release.v1.0.0",
+        "bvst.plugin.neonpoly.release.v1.0.0"
+      ],
+      "resolution_signature": "92c488df3a39709c79bff830a930cc63c6c38a98630db9d400b85d18113b98b7",
+      "resolved_at": null,
+      "rendered_path": null,
+      "rendered_sha256": null,
+      "rendered_bytes": null,
+      "rendered_chunks": null,
+      "rendered_route": null,
+      "inscribed": null
+    },
+    {
+      "name": "bvst.catalog.root.v1",
+      "batch_file": "40-root-catalogs.batch.json",
+      "order": 20,
+      "status": "pending",
+      "template_path": "on-chain-modules/catalogs/root/root.catalog.json",
+      "template_sha256": "c20c53711b5ac1a3c58560cd43aa93df026944a46ddba6b7704303970101ea81",
+      "direct_dependency_names": [
+        "bvst.catalog.foundation.v1",
+        "bvst.catalog.release.firstwaveinstruments.v1"
+      ],
+      "direct_dependency_token_ids": [
+        null,
+        null
+      ],
+      "resolved_dependency_names": [
+        "bvst.catalog.foundation.v1",
+        "bvst.catalog.release.firstwaveinstruments.v1"
+      ],
+      "missing_dependencies": [
+        "bvst.catalog.foundation.v1",
+        "bvst.catalog.release.firstwaveinstruments.v1"
+      ],
+      "resolution_signature": "031cae6ed4012b9f83babca8356606e5209d0183208c5335ee527bf91f497948",
+      "resolved_at": null,
+      "rendered_path": null,
+      "rendered_sha256": null,
+      "rendered_bytes": null,
+      "rendered_chunks": null,
+      "rendered_route": null,
+      "inscribed": null
+    }
+  ]
+}

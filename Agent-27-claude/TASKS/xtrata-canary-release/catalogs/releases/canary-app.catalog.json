@@ -1,0 +1,30 @@
+{
+  "name": "canary.catalog.release.v1",
+  "type": "release-catalog",
+  "runtime_catalog": "canary.catalog.runtime.v1",
+  "shell": {
+    "name": "canary.app.shell.v1",
+    "token_id": null,
+    "txid": null,
+    "block_height": null,
+    "path": "on-chain-modules/workspace/Apps/Canary/index.html",
+    "mime_type": "text/html",
+    "sha256": "3a46362f70bd51369faf5e08dfd7cc7035747fe8c5899bccd07cf97c6eb76c06",
+    "bytes": 10620,
+    "chunks": 1,
+    "route": "helper"
+  },
+  "schema": {
+    "name": "canary.schema.release.v1",
+    "token_id": null,
+    "txid": null,
+    "block_height": null,
+    "path": "on-chain-modules/workspace/System/shared/canary-release.schema.json",
+    "mime_type": "application/json",
+    "sha256": "4f3a5da323b1fb8f655aab91291bf45d672124b0ca3c5af7d32727b70ea1918d",
+    "bytes": 347,
+    "chunks": 1,
+    "route": "helper"
+  },
+  "notes": "Recursive canary release used before the BVST first-wave inscription."
+}

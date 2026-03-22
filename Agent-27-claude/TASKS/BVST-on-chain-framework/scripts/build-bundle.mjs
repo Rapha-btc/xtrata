@@ -7,9 +7,9 @@ const CHUNK_SIZE = 16_384;
 const HELPER_LIMIT = 30;
 const STAGED_BATCH_LIMIT = 50;
 
-const repoRoot = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
-const bundleRoot = path.join(repoRoot, 'on-chain-modules');
+const bundleRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const workspaceRoot = path.join(bundleRoot, 'workspace');
+const defaultSourceRoot = path.resolve(bundleRoot, '..', '..');
 
 const foundationModules = [
   {
@@ -293,6 +293,33 @@ async function ensureDir(dir) {
   await fs.mkdir(dir, { recursive: true });
 }
 
+async function pathExists(absPath) {
+  try {
+    await fs.access(absPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function resolveSourceRoot() {
+  const candidates = [];
+  if (process.env.BVST_SOURCE_ROOT) {
+    candidates.push(path.resolve(process.env.BVST_SOURCE_ROOT));
+  }
+  candidates.push(defaultSourceRoot);
+
+  for (const candidate of candidates) {
+    if (await pathExists(path.join(candidate, 'System')) && await pathExists(path.join(candidate, 'Plugins'))) {
+      return candidate;
+    }
+  }
+
+  throw new Error(
+    'build-bundle.mjs requires the original BVST source tree. Set BVST_SOURCE_ROOT to a repo containing System/ and Plugins/, or use verify-bundle.mjs plus the inscription prep scripts for this frozen TASKS bundle.'
+  );
+}
+
 async function resetGeneratedDirs() {
   for (const dir of generatedDirs) {
     await fs.rm(path.join(bundleRoot, dir), { recursive: true, force: true });
@@ -300,8 +327,8 @@ async function resetGeneratedDirs() {
   }
 }
 
-async function copyToWorkspace(sourceRel) {
-  const src = path.join(repoRoot, sourceRel);
+async function copyToWorkspace(sourceRoot, sourceRel) {
+  const src = path.join(sourceRoot, sourceRel);
   const dst = path.join(workspaceRoot, sourceRel);
   await ensureDir(path.dirname(dst));
   await fs.copyFile(src, dst);
@@ -407,18 +434,18 @@ function moduleRef(record) {
   };
 }
 
-async function buildLeafRecords() {
+async function buildLeafRecords(sourceRoot) {
   const records = [];
 
   for (const def of foundationModules) {
-    const bundlePath = await copyToWorkspace(def.source);
+    const bundlePath = await copyToWorkspace(sourceRoot, def.source);
     const metrics = await fileMetrics(path.join(bundleRoot, bundlePath));
     records.push(moduleRecordFromDef(def, bundlePath, metrics));
   }
 
   for (const family of firstWaveFamilies) {
     for (const pluginName of family.plugins) {
-      const manifestPath = path.join(repoRoot, 'Plugins', 'Instruments', pluginName, 'manifest.json');
+      const manifestPath = path.join(sourceRoot, 'Plugins', 'Instruments', pluginName, 'manifest.json');
       const manifestJson = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
       const version = typeof manifestJson.version === 'string' && manifestJson.version.trim()
         ? manifestJson.version.trim()
@@ -472,7 +499,7 @@ async function buildLeafRecords() {
       ];
 
       for (const def of pluginDefs) {
-        const bundlePath = await copyToWorkspace(def.source);
+        const bundlePath = await copyToWorkspace(sourceRoot, def.source);
         const metrics = await fileMetrics(path.join(bundleRoot, bundlePath));
         records.push(moduleRecordFromDef(def, bundlePath, metrics));
       }
@@ -921,8 +948,9 @@ async function writeVerificationFiles(allRecords) {
 }
 
 async function main() {
+  const sourceRoot = await resolveSourceRoot();
   await resetGeneratedDirs();
-  const leafRecords = await buildLeafRecords();
+  const leafRecords = await buildLeafRecords(sourceRoot);
   const catalogRecords = await buildCatalogRecords(leafRecords);
   const allRecords = [...leafRecords, ...catalogRecords];
   await writeSupportFiles(allRecords);

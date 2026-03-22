@@ -1,0 +1,85 @@
+{
+  "generated_for": "sampler-wave",
+  "entries": {
+    "bvst.schema.sample-source.v1": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.plugin.samplerlab.manifest.v0.1.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.plugin.samplerlab.patch.v0.1.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.plugin.samplerlab.shell.v0.1.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.sample.samplerlab.sine220.audio.v1": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.sample.samplerlab.sine220.source-manifest.v1": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.sample.samplerlab.sine440.audio.v1": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.sample.samplerlab.sine440.source-manifest.v1": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.catalog.source.samplerlab.defaultset.v1": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.plugin.samplerlab.release.v0.1.0": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.catalog.family.samplerwave.v1": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.catalog.release.samplerwave.v1": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.catalog.foundation.v1": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.catalog.runtime.v1": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.catalog.engine.v1": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "bvst.catalog.schema.v1": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    }
+  }
+}

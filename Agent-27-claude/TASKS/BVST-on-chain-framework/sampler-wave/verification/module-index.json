@@ -1,0 +1,122 @@
+[
+  {
+    "name": "bvst.schema.sample-source.v1",
+    "kind": "leaf",
+    "path": "sampler-wave/schemas/bvst_sample_source_v1.schema.json",
+    "mime_type": "application/json",
+    "sha256": "2b264234dee842b1e6af690f97b9b926b0ee2de865ad86f8d65d41f5ceda61a4",
+    "bytes": 2350,
+    "chunks": 1,
+    "route": "helper"
+  },
+  {
+    "name": "bvst.plugin.samplerlab.manifest.v0.1.0",
+    "kind": "leaf",
+    "path": "on-chain-modules/workspace/Plugins/Instruments/SamplerLab/manifest.json",
+    "mime_type": "application/json",
+    "sha256": "bfa6cbc18bb9d0d051edc49bc95b34533a337be2c227bb5e0174310dd609805d",
+    "bytes": 490,
+    "chunks": 1,
+    "route": "helper"
+  },
+  {
+    "name": "bvst.plugin.samplerlab.patch.v0.1.0",
+    "kind": "leaf",
+    "path": "on-chain-modules/workspace/Plugins/Instruments/SamplerLab/patch.json",
+    "mime_type": "application/json",
+    "sha256": "2ff38d0c8ef0387794212f7d2b74f2b0d698bc2adc77444233c96548ced06077",
+    "bytes": 2565,
+    "chunks": 1,
+    "route": "helper"
+  },
+  {
+    "name": "bvst.plugin.samplerlab.shell.v0.1.0",
+    "kind": "leaf",
+    "path": "on-chain-modules/workspace/Plugins/Instruments/SamplerLab/gui.html",
+    "mime_type": "text/html",
+    "sha256": "3d341c69e3eb2e64624def71eb80fcf42e7a3b21054524c89a68dcae8147c30b",
+    "bytes": 740,
+    "chunks": 1,
+    "route": "helper"
+  },
+  {
+    "name": "bvst.sample.samplerlab.sine220.audio.v1",
+    "kind": "leaf",
+    "path": "sampler-wave/assets/audio/samplerlab.sine220.audio.wav",
+    "mime_type": "audio/wav",
+    "sha256": "874fba51133a73b99d436d5d1743a4f03dab9887fd636813d5e5882a777ece4a",
+    "bytes": 15478,
+    "chunks": 1,
+    "route": "helper"
+  },
+  {
+    "name": "bvst.sample.samplerlab.sine220.source-manifest.v1",
+    "kind": "leaf",
+    "path": "sampler-wave/manifests/sources/samplerlab.sine220.source-manifest.json",
+    "mime_type": "application/json",
+    "sha256": "acced8cabdebd61880a4b0ddddb9e537b18071bde55e312af1d1a54a23827a25",
+    "bytes": 954,
+    "chunks": 1,
+    "route": "helper"
+  },
+  {
+    "name": "bvst.sample.samplerlab.sine440.audio.v1",
+    "kind": "leaf",
+    "path": "sampler-wave/assets/audio/samplerlab.sine440.audio.wav",
+    "mime_type": "audio/wav",
+    "sha256": "a8487cb0c43da14aa2551248d4af80eb79c152c99e4445dc653376d94b7041a6",
+    "bytes": 15478,
+    "chunks": 1,
+    "route": "helper"
+  },
+  {
+    "name": "bvst.sample.samplerlab.sine440.source-manifest.v1",
+    "kind": "leaf",
+    "path": "sampler-wave/manifests/sources/samplerlab.sine440.source-manifest.json",
+    "mime_type": "application/json",
+    "sha256": "c4659929fdd800f1813c866091372e18a0ccb3d03dab8e00aa694ebe391bbe39",
+    "bytes": 954,
+    "chunks": 1,
+    "route": "helper"
+  },
+  {
+    "name": "bvst.catalog.source.samplerlab.defaultset.v1",
+    "kind": "catalog",
+    "path": "sampler-wave/catalogs/sources/samplerlab.default-sources.catalog.json",
+    "mime_type": "application/json",
+    "sha256": "48fa428299353591a146b6930f32e953dc7fe5fbfba43d2aa1b14f7b64d3cf0a",
+    "bytes": 1080,
+    "chunks": 1,
+    "route": "helper"
+  },
+  {
+    "name": "bvst.plugin.samplerlab.release.v0.1.0",
+    "kind": "catalog",
+    "path": "sampler-wave/catalogs/plugins/sampler-wave/samplerlab.release.catalog.json",
+    "mime_type": "application/json",
+    "sha256": "9aeb02ad036ce64a665a19f02b71cd59f09d38b3c14a071fb7887bfa42f9975c",
+    "bytes": 2288,
+    "chunks": 1,
+    "route": "helper"
+  },
+  {
+    "name": "bvst.catalog.family.samplerwave.v1",
+    "kind": "catalog",
+    "path": "sampler-wave/catalogs/families/sampler-wave.catalog.json",
+    "mime_type": "application/json",
+    "sha256": "dc4b7ebc695395564e485ca1d4b077006468c241c0820adf146ace2ab6f7268b",
+    "bytes": 356,
+    "chunks": 1,
+    "route": "helper"
+  },
+  {
+    "name": "bvst.catalog.release.samplerwave.v1",
+    "kind": "catalog",
+    "path": "sampler-wave/catalogs/releases/sampler-wave.catalog.json",
+    "mime_type": "application/json",
+    "sha256": "d3fad4f31e2ec6653fb8f76cec61a66a98f13f034c9b2cf5f8f7633feef39c49",
+    "bytes": 472,
+    "chunks": 1,
+    "route": "helper"
+  }
+]

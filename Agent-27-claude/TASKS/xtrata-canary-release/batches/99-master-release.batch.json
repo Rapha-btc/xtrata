@@ -1,0 +1,10 @@
+{
+  "release_name": "xtrata-canary-release-v1",
+  "bundle_root": "on-chain-modules",
+  "batches": [
+    "10-foundation.batch.json",
+    "20-application.batch.json",
+    "30-catalogs.batch.json",
+    "40-proof-viewer.batch.json"
+  ]
+}

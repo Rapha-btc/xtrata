@@ -1,0 +1,60 @@
+{
+  "release": "bvst-sampler-wave-foundation-v1",
+  "experimental": true,
+  "artifacts": [
+    {
+      "order": 10,
+      "name": "bvst.schema.sample-source.v1",
+      "kind": "leaf",
+      "path": "sampler-wave/schemas/bvst_sample_source_v1.schema.json",
+      "mime": "application/json",
+      "route": "helper",
+      "depends_on": [],
+      "bytes": 2350,
+      "chunks": 1,
+      "sha256": "2b264234dee842b1e6af690f97b9b926b0ee2de865ad86f8d65d41f5ceda61a4"
+    },
+    {
+      "order": 20,
+      "name": "bvst.plugin.samplerlab.manifest.v0.1.0",
+      "kind": "leaf",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/SamplerLab/manifest.json",
+      "mime": "application/json",
+      "route": "helper",
+      "depends_on": [],
+      "bytes": 490,
+      "chunks": 1,
+      "sha256": "bfa6cbc18bb9d0d051edc49bc95b34533a337be2c227bb5e0174310dd609805d"
+    },
+    {
+      "order": 30,
+      "name": "bvst.plugin.samplerlab.patch.v0.1.0",
+      "kind": "leaf",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/SamplerLab/patch.json",
+      "mime": "application/json",
+      "route": "helper",
+      "depends_on": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.runtime.sampler.v1.0.0",
+        "bvst.schema.sample-source.v1"
+      ],
+      "bytes": 2565,
+      "chunks": 1,
+      "sha256": "2ff38d0c8ef0387794212f7d2b74f2b0d698bc2adc77444233c96548ced06077"
+    },
+    {
+      "order": 40,
+      "name": "bvst.plugin.samplerlab.shell.v0.1.0",
+      "kind": "leaf",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/SamplerLab/gui.html",
+      "mime": "text/html",
+      "route": "helper",
+      "depends_on": [
+        "bvst.runtime.patch-runtime.v1.0.0"
+      ],
+      "bytes": 740,
+      "chunks": 1,
+      "sha256": "3d341c69e3eb2e64624def71eb80fcf42e7a3b21054524c89a68dcae8147c30b"
+    }
+  ]
+}

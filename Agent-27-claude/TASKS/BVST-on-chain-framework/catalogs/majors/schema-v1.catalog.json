@@ -11,8 +11,8 @@
       "block_height": null,
       "path": "on-chain-modules/workspace/System/shared/bvst_patch_v1.schema.json",
       "mime_type": "application/json",
-      "sha256": "a645a6ca0d52b73a12a884f99475ebf6d409d0adf61e86b0f75b3cd3c405aff3",
-      "bytes": 3839,
+      "sha256": "ff2506820eaf82235bf90338f9e6170aaeabb1040b1cfc8e7dad99d7ffbabb38",
+      "bytes": 5689,
       "chunks": 1,
       "route": "helper"
     }

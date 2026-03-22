@@ -63,7 +63,7 @@
             }
           ]
         },
-        "sampler": { "type": "object", "additionalProperties": true },
+        "sampler": { "$ref": "#/$defs/SamplerConfig" },
         "midiMap": { "type": "object", "additionalProperties": true },
         "defaultPreset": { "type": "string" },
         "profiles": {
@@ -117,6 +117,55 @@
         "curve": { "enum": ["linear", "log"] },
         "orientation": { "enum": ["horizontal", "vertical"] },
         "options": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": true
+    },
+    "SamplerSource": {
+      "type": "object",
+      "required": ["url"],
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "url": { "type": "string" },
+        "rootNote": { "type": "integer" },
+        "loopStart": { "type": "number", "minimum": 0, "maximum": 1 },
+        "loopEnd": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": true
+    },
+    "SamplerConfig": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "showVisualizer": { "type": "boolean" },
+        "runtimeProfile": { "type": "string" },
+        "sourcePolicy": {
+          "enum": ["standalone-dev", "inscriptions-only", "declared-only"]
+        },
+        "allowFileDrop": { "type": "boolean" },
+        "allowDataUrls": { "type": "boolean" },
+        "maxSampleBytes": { "type": "integer", "minimum": 1 },
+        "maxSampleSeconds": { "type": "number", "exclusiveMinimum": 0 },
+        "source": { "type": "string" },
+        "sources": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/SamplerSource" }
+        },
+        "defaults": {
+          "type": "object",
+          "properties": {
+            "playSpeed": { "type": "number" },
+            "reverse": { "type": "boolean" },
+            "loopStart": { "type": "number", "minimum": 0, "maximum": 1 },
+            "loopEnd": { "type": "number", "minimum": 0, "maximum": 1 },
+            "loopEnabled": { "type": "boolean" },
+            "note": { "type": "integer" },
+            "sliceGrid": { "type": "number", "minimum": 0 },
+            "grainSize": { "type": "number", "minimum": 0 },
+            "grainPos": { "type": "number", "minimum": 0, "maximum": 1 }
+          },
+          "additionalProperties": true
+        }
       },
       "additionalProperties": true
     }

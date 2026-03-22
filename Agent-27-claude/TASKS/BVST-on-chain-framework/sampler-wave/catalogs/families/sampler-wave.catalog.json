@@ -1,0 +1,13 @@
+{
+  "name": "bvst.catalog.family.samplerwave.v1",
+  "type": "plugin-family-catalog",
+  "family_key": "sampler-wave",
+  "title": "Sampler Wave",
+  "description": "Experimental sampler shells and future recursive sample-module releases.",
+  "plugin_releases": [
+    {
+      "name": "bvst.plugin.samplerlab.release.v0.1.0",
+      "token_id": null
+    }
+  ]
+}

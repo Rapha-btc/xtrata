@@ -1,0 +1,6 @@
+{
+  "network": "mainnet",
+  "core_contract": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0",
+  "helper_contract": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-small-mint-v1-0",
+  "notes": "Canary bundle uses the same Xtrata contracts as the production BVST release."
+}

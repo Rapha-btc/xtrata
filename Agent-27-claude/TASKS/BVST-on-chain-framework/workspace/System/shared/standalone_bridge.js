@@ -208,8 +208,15 @@ export class StandaloneBridge {
         }
 
         if (data.type === 'BVST_LOAD_SAMPLE_FROM_GUI') {
-            if (data.samples) {
-                this._sendOrQueue({ type: 'LOAD_SAMPLE', samples: data.samples });
+            if (data.samplePayload || data.samples) {
+                this._sendOrQueue({
+                    type: 'LOAD_SAMPLE',
+                    samplePayload: data.samplePayload || null,
+                    samples: data.samples || null,
+                    sourceUrl: data.sourceUrl || '',
+                    sourceLabel: data.sourceLabel || '',
+                    fileName: data.fileName || ''
+                });
             }
         }
     }

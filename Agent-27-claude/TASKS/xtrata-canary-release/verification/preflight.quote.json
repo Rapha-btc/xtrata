@@ -1,0 +1,314 @@
+{
+  "bundleRoot": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/xtrata-canary-release",
+  "verifiedAt": "2026-03-22T12:13:53.397Z",
+  "verification": {
+    "moduleCount": 10,
+    "totalBytes": 30447,
+    "routeCounts": {
+      "helper": 10,
+      "staged": 0
+    },
+    "mismatchCount": 0,
+    "mismatches": [],
+    "tokenTemplateEntryCount": 10,
+    "tokenTemplateMissing": []
+  },
+  "execution": {
+    "orderedBatches": [
+      {
+        "file": "10-foundation.batch.json",
+        "release": "xtrata-canary-foundation-v1",
+        "artifactCount": 4,
+        "bytes": 3771
+      },
+      {
+        "file": "20-application.batch.json",
+        "release": "xtrata-canary-application-v1",
+        "artifactCount": 2,
+        "bytes": 11140
+      },
+      {
+        "file": "30-catalogs.batch.json",
+        "release": "xtrata-canary-catalogs-v1",
+        "artifactCount": 3,
+        "bytes": 2935
+      },
+      {
+        "file": "40-proof-viewer.batch.json",
+        "release": "xtrata-canary-proof-viewer-v1",
+        "artifactCount": 1,
+        "bytes": 12601
+      }
+    ],
+    "unresolvedDependenciesInBatchOrder": [],
+    "steps": [
+      {
+        "batch": "10-foundation.batch.json",
+        "release": "xtrata-canary-foundation-v1",
+        "order": 10,
+        "name": "canary.schema.release.v1",
+        "kind": "leaf",
+        "route": "helper",
+        "bytes": 347,
+        "chunks": 1,
+        "bundlePath": "on-chain-modules/workspace/System/shared/canary-release.schema.json",
+        "dependsOn": [],
+        "needsRenderedCopy": false,
+        "template": null
+      },
+      {
+        "batch": "10-foundation.batch.json",
+        "release": "xtrata-canary-foundation-v1",
+        "order": 20,
+        "name": "canary.runtime.copy.v1",
+        "kind": "leaf",
+        "route": "helper",
+        "bytes": 1618,
+        "chunks": 1,
+        "bundlePath": "on-chain-modules/workspace/System/shared/canary-copy.json",
+        "dependsOn": [],
+        "needsRenderedCopy": false,
+        "template": null
+      },
+      {
+        "batch": "10-foundation.batch.json",
+        "release": "xtrata-canary-foundation-v1",
+        "order": 30,
+        "name": "canary.runtime.theme.v1",
+        "kind": "leaf",
+        "route": "helper",
+        "bytes": 1462,
+        "chunks": 1,
+        "bundlePath": "on-chain-modules/workspace/System/shared/canary-theme.css",
+        "dependsOn": [],
+        "needsRenderedCopy": false,
+        "template": null
+      },
+      {
+        "batch": "10-foundation.batch.json",
+        "release": "xtrata-canary-foundation-v1",
+        "order": 40,
+        "name": "canary.runtime.core.v1",
+        "kind": "leaf",
+        "route": "helper",
+        "bytes": 344,
+        "chunks": 1,
+        "bundlePath": "on-chain-modules/workspace/System/shared/canary-core.js",
+        "dependsOn": [
+          "canary.runtime.copy.v1"
+        ],
+        "needsRenderedCopy": false,
+        "template": null
+      },
+      {
+        "batch": "20-application.batch.json",
+        "release": "xtrata-canary-application-v1",
+        "order": 10,
+        "name": "canary.runtime.widget.v1",
+        "kind": "leaf",
+        "route": "helper",
+        "bytes": 520,
+        "chunks": 1,
+        "bundlePath": "on-chain-modules/workspace/System/shared/canary-widget.js",
+        "dependsOn": [
+          "canary.runtime.core.v1",
+          "canary.runtime.copy.v1"
+        ],
+        "needsRenderedCopy": false,
+        "template": null
+      },
+      {
+        "batch": "20-application.batch.json",
+        "release": "xtrata-canary-application-v1",
+        "order": 20,
+        "name": "canary.app.shell.v1",
+        "kind": "leaf",
+        "route": "helper",
+        "bytes": 10620,
+        "chunks": 1,
+        "bundlePath": "on-chain-modules/workspace/Apps/Canary/index.html",
+        "dependsOn": [
+          "canary.runtime.theme.v1",
+          "canary.runtime.widget.v1"
+        ],
+        "needsRenderedCopy": false,
+        "template": null
+      },
+      {
+        "batch": "30-catalogs.batch.json",
+        "release": "xtrata-canary-catalogs-v1",
+        "order": 10,
+        "name": "canary.catalog.runtime.v1",
+        "kind": "catalog",
+        "route": "helper",
+        "bytes": 1801,
+        "chunks": 1,
+        "bundlePath": "on-chain-modules/catalogs/majors/runtime-v1.catalog.json",
+        "dependsOn": [
+          "canary.runtime.copy.v1",
+          "canary.runtime.theme.v1",
+          "canary.runtime.core.v1",
+          "canary.runtime.widget.v1"
+        ],
+        "needsRenderedCopy": true,
+        "template": {
+          "nullTokenIds": 4,
+          "catalogRefs": [],
+          "helperHeadroomBytes": 14583
+        }
+      },
+      {
+        "batch": "30-catalogs.batch.json",
+        "release": "xtrata-canary-catalogs-v1",
+        "order": 20,
+        "name": "canary.catalog.release.v1",
+        "kind": "catalog",
+        "route": "helper",
+        "bytes": 944,
+        "chunks": 1,
+        "bundlePath": "on-chain-modules/catalogs/releases/canary-app.catalog.json",
+        "dependsOn": [
+          "canary.catalog.runtime.v1",
+          "canary.app.shell.v1",
+          "canary.schema.release.v1"
+        ],
+        "needsRenderedCopy": true,
+        "template": {
+          "nullTokenIds": 2,
+          "catalogRefs": [
+            {
+              "field": "runtime_catalog",
+              "value": "canary.catalog.runtime.v1"
+            }
+          ],
+          "helperHeadroomBytes": 15440
+        }
+      },
+      {
+        "batch": "30-catalogs.batch.json",
+        "release": "xtrata-canary-catalogs-v1",
+        "order": 30,
+        "name": "canary.catalog.root.v1",
+        "kind": "catalog",
+        "route": "helper",
+        "bytes": 190,
+        "chunks": 1,
+        "bundlePath": "on-chain-modules/catalogs/root/root.catalog.json",
+        "dependsOn": [
+          "canary.catalog.release.v1"
+        ],
+        "needsRenderedCopy": true,
+        "template": {
+          "nullTokenIds": 0,
+          "catalogRefs": [
+            {
+              "field": "release_catalog",
+              "value": "canary.catalog.release.v1"
+            }
+          ],
+          "helperHeadroomBytes": 16194
+        }
+      },
+      {
+        "batch": "40-proof-viewer.batch.json",
+        "release": "xtrata-canary-proof-viewer-v1",
+        "order": 10,
+        "name": "canary.proof.viewer.v1",
+        "kind": "catalog",
+        "route": "helper",
+        "bytes": 12601,
+        "chunks": 1,
+        "bundlePath": "on-chain-modules/catalogs/views/proof-viewer.v1.html",
+        "dependsOn": [
+          "canary.schema.release.v1",
+          "canary.runtime.copy.v1",
+          "canary.runtime.theme.v1",
+          "canary.runtime.core.v1",
+          "canary.runtime.widget.v1",
+          "canary.app.shell.v1",
+          "canary.catalog.runtime.v1",
+          "canary.catalog.release.v1",
+          "canary.catalog.root.v1"
+        ],
+        "needsRenderedCopy": true,
+        "template": {
+          "nullTokenIds": 0,
+          "catalogRefs": [],
+          "helperHeadroomBytes": 3783
+        }
+      }
+    ]
+  },
+  "renderSummary": {
+    "count": 4,
+    "allRemainHelperEligible": true,
+    "catalogs": [
+      {
+        "name": "canary.catalog.runtime.v1",
+        "batch": "30-catalogs.batch.json",
+        "bundlePath": "on-chain-modules/catalogs/majors/runtime-v1.catalog.json",
+        "nullTokenIds": 4,
+        "catalogRefs": [],
+        "helperHeadroomBytes": 14583
+      },
+      {
+        "name": "canary.catalog.release.v1",
+        "batch": "30-catalogs.batch.json",
+        "bundlePath": "on-chain-modules/catalogs/releases/canary-app.catalog.json",
+        "nullTokenIds": 2,
+        "catalogRefs": [
+          {
+            "field": "runtime_catalog",
+            "value": "canary.catalog.runtime.v1"
+          }
+        ],
+        "helperHeadroomBytes": 15440
+      },
+      {
+        "name": "canary.catalog.root.v1",
+        "batch": "30-catalogs.batch.json",
+        "bundlePath": "on-chain-modules/catalogs/root/root.catalog.json",
+        "nullTokenIds": 0,
+        "catalogRefs": [
+          {
+            "field": "release_catalog",
+            "value": "canary.catalog.release.v1"
+          }
+        ],
+        "helperHeadroomBytes": 16194
+      },
+      {
+        "name": "canary.proof.viewer.v1",
+        "batch": "40-proof-viewer.batch.json",
+        "bundlePath": "on-chain-modules/catalogs/views/proof-viewer.v1.html",
+        "nullTokenIds": 0,
+        "catalogRefs": [],
+        "helperHeadroomBytes": 3783
+      }
+    ]
+  },
+  "quote": {
+    "live": false,
+    "feeUnitMicroStx": null,
+    "feeUnitStx": null,
+    "protocolFeeMicroStx": null,
+    "protocolFeeStx": null,
+    "miningFee": {
+      "rough": {
+        "model": "usd-per-mb",
+        "basis": "$1 per MB using decimal MB (1,000,000 bytes)",
+        "bytes": 30447,
+        "megabytes": 0.030447,
+        "estimatedUsd": 0.030447
+      },
+      "live": {
+        "available": false,
+        "note": "Offline mode. Live mining-fee estimation requires network access."
+      }
+    },
+    "mintCountAfterDedupe": 10,
+    "duplicateCount": null,
+    "predictedTokenRange": null,
+    "note": "Offline mode. Protocol fee requires live get-fee-unit. Rough mining-fee estimate is based on total bytes at $1 per MB."
+  }
+}

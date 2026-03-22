@@ -77,9 +77,22 @@ class BvstProcessor extends AudioWorkletProcessor {
                         this.synth.set_state(evt.state);
                     }
                 } else if (evt.type === 'LOAD_SAMPLE') {
-                    if (typeof this.synth.load_sample === 'function') {
-                        this.synth.load_sample(evt.samples);
-                        this.port.postMessage({ type: 'STATUS', msg: 'Sample Loaded' });
+                    const payload = evt.samplePayload && typeof evt.samplePayload === 'object' ? evt.samplePayload : null;
+                    const sampleData =
+                        (payload && Array.isArray(payload.channels) && payload.channels[0]) ||
+                        (payload && payload.samples) ||
+                        evt.samples;
+                    const summary =
+                        payload && Number.isFinite(payload.sampleRate) && Number.isFinite(payload.frameCount)
+                            ? `${payload.channelCount || 1}ch ${payload.frameCount}f @ ${payload.sampleRate}Hz`
+                            : 'legacy payload';
+
+                    if (payload && typeof this.synth.load_sample_descriptor === 'function') {
+                        this.synth.load_sample_descriptor(payload);
+                        this.port.postMessage({ type: 'STATUS', msg: `Sample Loaded (${summary})` });
+                    } else if (sampleData && typeof this.synth.load_sample === 'function') {
+                        this.synth.load_sample(sampleData);
+                        this.port.postMessage({ type: 'STATUS', msg: `Sample Loaded (${summary})` });
                     }
                 } else if (evt.type === 'NOTE_ON') {
                     if (typeof this.synth.note_on === 'function') {

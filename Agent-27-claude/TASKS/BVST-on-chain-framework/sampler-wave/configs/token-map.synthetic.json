@@ -1,0 +1,85 @@
+{
+  "generated_for": "sampler-wave-synthetic-tests",
+  "entries": {
+    "bvst.schema.sample-source.v1": {
+      "token_id": 801,
+      "txid": "1111111111111111111111111111111111111111111111111111111111111111i0",
+      "block_height": 100001
+    },
+    "bvst.plugin.samplerlab.manifest.v0.1.0": {
+      "token_id": 802,
+      "txid": "2222222222222222222222222222222222222222222222222222222222222222i0",
+      "block_height": 100002
+    },
+    "bvst.plugin.samplerlab.patch.v0.1.0": {
+      "token_id": 803,
+      "txid": "3333333333333333333333333333333333333333333333333333333333333333i0",
+      "block_height": 100003
+    },
+    "bvst.plugin.samplerlab.shell.v0.1.0": {
+      "token_id": 804,
+      "txid": "4444444444444444444444444444444444444444444444444444444444444444i0",
+      "block_height": 100004
+    },
+    "bvst.sample.samplerlab.sine220.audio.v1": {
+      "token_id": 805,
+      "txid": "5555555555555555555555555555555555555555555555555555555555555555i0",
+      "block_height": 100005
+    },
+    "bvst.sample.samplerlab.sine220.source-manifest.v1": {
+      "token_id": 806,
+      "txid": "6666666666666666666666666666666666666666666666666666666666666666i0",
+      "block_height": 100006
+    },
+    "bvst.sample.samplerlab.sine440.audio.v1": {
+      "token_id": 807,
+      "txid": "7777777777777777777777777777777777777777777777777777777777777777i0",
+      "block_height": 100007
+    },
+    "bvst.sample.samplerlab.sine440.source-manifest.v1": {
+      "token_id": 808,
+      "txid": "8888888888888888888888888888888888888888888888888888888888888888i0",
+      "block_height": 100008
+    },
+    "bvst.catalog.source.samplerlab.defaultset.v1": {
+      "token_id": 809,
+      "txid": "9999999999999999999999999999999999999999999999999999999999999999i0",
+      "block_height": 100009
+    },
+    "bvst.plugin.samplerlab.release.v0.1.0": {
+      "token_id": 810,
+      "txid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaai0",
+      "block_height": 100010
+    },
+    "bvst.catalog.family.samplerwave.v1": {
+      "token_id": 811,
+      "txid": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbi0",
+      "block_height": 100011
+    },
+    "bvst.catalog.release.samplerwave.v1": {
+      "token_id": 812,
+      "txid": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccci0",
+      "block_height": 100012
+    },
+    "bvst.catalog.foundation.v1": {
+      "token_id": 101,
+      "txid": "ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddi0",
+      "block_height": 90001
+    },
+    "bvst.catalog.runtime.v1": {
+      "token_id": 102,
+      "txid": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeei0",
+      "block_height": 90002
+    },
+    "bvst.catalog.engine.v1": {
+      "token_id": 103,
+      "txid": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffi0",
+      "block_height": 90003
+    },
+    "bvst.catalog.schema.v1": {
+      "token_id": 104,
+      "txid": "ababababababababababababababababababababababababababababababababi0",
+      "block_height": 90004
+    }
+  }
+}

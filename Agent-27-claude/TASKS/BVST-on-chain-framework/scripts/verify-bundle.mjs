@@ -1,30 +1,14 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import crypto from 'node:crypto';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-
-const CHUNK_SIZE = 16_384;
-const HELPER_LIMIT = 30;
-
-const repoRoot = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
-const bundleRoot = path.join(repoRoot, 'on-chain-modules');
-
-function toPosix(value) {
-  return value.split(path.sep).join(path.posix.sep);
-}
-
-async function readJson(relPath) {
-  return JSON.parse(await fs.readFile(path.join(bundleRoot, relPath), 'utf8'));
-}
-
-async function fileMetrics(absPath) {
-  const buf = await fs.readFile(absPath);
-  const sha256 = crypto.createHash('sha256').update(buf).digest('hex');
-  const bytes = buf.length;
-  const chunks = bytes === 0 ? 0 : Math.ceil(bytes / CHUNK_SIZE);
-  const route = chunks <= HELPER_LIMIT ? 'helper' : 'staged';
-  return { sha256, bytes, chunks, route };
-}
+import {
+  absFromLogicalPath,
+  bundleRoot,
+  fileMetrics,
+  loadModuleIndex,
+  readJson,
+  toPosix
+} from './_inscription-helpers.mjs';
 
 function parseJsRelativeDeps(source) {
   const deps = new Set();
@@ -37,11 +21,11 @@ function parseJsRelativeDeps(source) {
 }
 
 async function verifyModuleIndex() {
-  const moduleIndex = await readJson('verification/module-index.json');
+  const moduleIndex = await loadModuleIndex();
   const byName = new Map(moduleIndex.map((record) => [record.name, record]));
 
   for (const record of moduleIndex) {
-    const absPath = path.join(repoRoot, record.bundle_path);
+    const absPath = absFromLogicalPath(record.bundle_path);
     const stats = await fileMetrics(absPath);
     if (stats.sha256 !== record.expected_sha256) {
       throw new Error(`Hash mismatch: ${record.name}`);
@@ -122,10 +106,33 @@ async function verifyBatches(moduleIndex) {
       if (!knownNames.has(artifact.name)) {
         throw new Error(`Unknown artifact in ${file}: ${artifact.name}`);
       }
+      const moduleRecord = moduleIndex.find((record) => record.name === artifact.name);
+      if (!moduleRecord) {
+        throw new Error(`Missing module index record for ${artifact.name}`);
+      }
       if (artifact.order <= lastOrder) {
         throw new Error(`Out-of-order artifact sequence in ${file}`);
       }
       lastOrder = artifact.order;
+      if (artifact.path !== moduleRecord.bundle_path) {
+        throw new Error(`Path mismatch in ${file}: ${artifact.name}`);
+      }
+      if (artifact.mime !== moduleRecord.mime_type) {
+        throw new Error(`MIME mismatch in ${file}: ${artifact.name}`);
+      }
+      const stats = await fileMetrics(absFromLogicalPath(artifact.path));
+      if (stats.sha256 !== artifact.sha256) {
+        throw new Error(`Batch hash mismatch in ${file}: ${artifact.name}`);
+      }
+      if (stats.bytes !== artifact.bytes) {
+        throw new Error(`Batch byte mismatch in ${file}: ${artifact.name}`);
+      }
+      if (stats.chunks !== artifact.chunks) {
+        throw new Error(`Batch chunk mismatch in ${file}: ${artifact.name}`);
+      }
+      if (stats.route !== artifact.route) {
+        throw new Error(`Batch route mismatch in ${file}: ${artifact.name}`);
+      }
       for (const dep of artifact.depends_on || []) {
         if (!knownNames.has(dep)) {
           throw new Error(`Unknown batch dependency in ${file}: ${dep}`);
@@ -148,17 +155,24 @@ async function verifyTokenTemplate(moduleIndex) {
   }
 }
 
-async function main() {
+export async function verifyBundle() {
   const moduleIndex = await verifyModuleIndex();
   await verifyWorkspaceImports();
   await verifyBundledImportsParse();
   await verifyPluginShells();
   await verifyBatches(moduleIndex);
   await verifyTokenTemplate(moduleIndex);
+  return { moduleIndex };
+}
+
+async function main() {
+  const { moduleIndex } = await verifyBundle();
   console.log(`Verified on-chain bundle: ${moduleIndex.length} modules ready for staging.`);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exitCode = 1;
-});
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((err) => {
+    console.error(err);
+    process.exitCode = 1;
+  });
+}

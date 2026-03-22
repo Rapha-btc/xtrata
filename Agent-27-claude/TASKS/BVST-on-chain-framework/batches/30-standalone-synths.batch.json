@@ -65,7 +65,7 @@
       "mime": "application/json",
       "bytes": 7067,
       "chunks": 1,
-      "sha256": "10c923adbea8103928c459deaf4d35e4cb12dd0443a65fbe69c813ba0dd6ca4f",
+      "sha256": "1a12ef8a5ed1cce012111d42c501f80db5bfb6fd76edb390cae070711b645901",
       "route": "helper",
       "depends_on": [
         "bvst.schema.patch.v1"
@@ -189,7 +189,7 @@
       "mime": "application/json",
       "bytes": 1780,
       "chunks": 1,
-      "sha256": "744e47f42bae56c16a7093556e85f54574c2511e5df895fd6c718d85babee482",
+      "sha256": "a92296284c1d803d2584aaa4e77780598b5600b79f784edae0f99b643d990a38",
       "route": "helper",
       "depends_on": [
         "bvst.plugin.bluemarvintwo.manifest.v1.0.0",

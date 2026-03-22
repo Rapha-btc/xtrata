@@ -66,6 +66,29 @@
         .header-wallet a:hover {
             text-decoration: underline;
         }
+        .header-links {
+            margin-top: 0.6rem;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .header-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            padding: 0.35rem 0.65rem;
+            text-decoration: none;
+            transition: background 0.15s, color 0.15s;
+        }
+        .header-link:hover {
+            background: var(--accent);
+            color: #000;
+        }
         .header-stats {
             display: flex;
             gap: 1.5rem;
@@ -878,6 +901,9 @@
                 <a href="https://explorer.hiro.so/address/SP15T1W26JTNS26VG17HM468KW7TQD3124KTYA9EJ?chain=mainnet" target="_blank" rel="noopener noreferrer">
                     SP15T1W26JTNS26VG17HM468KW7TQD3124KTYA9EJ
                 </a>
+            </div>
+            <div class="header-links">
+                <a class="header-link" href="/inscription-planner">Inscription Planner</a>
             </div>
         </div>
         <div class="header-stats">

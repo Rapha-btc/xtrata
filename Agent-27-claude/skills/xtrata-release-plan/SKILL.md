@@ -177,3 +177,5 @@ Read [references/service-contract.md](references/service-contract.md) when you n
 - a suggested customer-facing intake contract
 - the recommended service outputs
 - guidance on when a quote is exact versus estimated
+
+Use [scripts/xtrata-release-preflight.cjs](scripts/xtrata-release-preflight.cjs) when you want a deterministic dry-run over a real bundle directory. It verifies hashes and batch order, inspects catalog templates, fetches live `get-fee-unit` / `get-last-token-id`, optionally runs dedupe checks, and emits a machine-readable quote and execution plan.

@@ -109,8 +109,8 @@
         "block_height": null,
         "path": "on-chain-modules/workspace/System/shared/sampler.js",
         "mime_type": "application/javascript",
-        "sha256": "94a9d3b541c66d68e51372ddd643d3c33f12297266556f39c22764120a17f2f4",
-        "bytes": 18893,
+        "sha256": "55b04c8cb098ac2943b3627173ce12e5f320a1fc04136813f25d04e7cf5e1d39",
+        "bytes": 30490,
         "chunks": 2,
         "route": "helper"
       },
@@ -133,8 +133,8 @@
         "block_height": null,
         "path": "on-chain-modules/workspace/System/shared/standalone_bridge.js",
         "mime_type": "application/javascript",
-        "sha256": "1517ce0b6d8c5d136bea067abb84a894cab95f648354d0f7f108a94cb0d0a89e",
-        "bytes": 9966,
+        "sha256": "edbc817f7547b16b517a1a16bc1e30a69046535dcb0e756c7c89941406212b45",
+        "bytes": 10276,
         "chunks": 1,
         "route": "helper"
       },
@@ -145,8 +145,8 @@
         "block_height": null,
         "path": "on-chain-modules/workspace/System/shared/plugin_core.js",
         "mime_type": "application/javascript",
-        "sha256": "0c450245f1f28ee258019b4b5cd1a80e0dd7887f635e3140d07e5c11b99128fa",
-        "bytes": 22644,
+        "sha256": "7291f7c40b50253403be270fe3fc6763227f083fcd2f066b5051179621de8dc5",
+        "bytes": 25354,
         "chunks": 2,
         "route": "helper"
       },
@@ -195,8 +195,8 @@
         "block_height": null,
         "path": "on-chain-modules/workspace/System/shared/processor_unified.js",
         "mime_type": "application/javascript",
-        "sha256": "90d464350cfcda15da8907d3cd32ad6c42d2d16e6ed4813819e088a62eb1fbfa",
-        "bytes": 11776,
+        "sha256": "3ad68b432cafffac6be69d1c67ea282aa259d0705456163a4dd9f7a66e88c78d",
+        "bytes": 12730,
         "chunks": 1,
         "route": "helper"
       }
@@ -209,8 +209,8 @@
         "block_height": null,
         "path": "on-chain-modules/workspace/System/shared/bvst_patch_v1.schema.json",
         "mime_type": "application/json",
-        "sha256": "a645a6ca0d52b73a12a884f99475ebf6d409d0adf61e86b0f75b3cd3c405aff3",
-        "bytes": 3839,
+        "sha256": "ff2506820eaf82235bf90338f9e6170aaeabb1040b1cfc8e7dad99d7ffbabb38",
+        "bytes": 5689,
         "chunks": 1,
         "route": "helper"
       }

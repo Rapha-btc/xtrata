@@ -11,9 +11,9 @@
       "name": "bvst.schema.patch.v1",
       "path": "on-chain-modules/workspace/System/shared/bvst_patch_v1.schema.json",
       "mime": "application/json",
-      "bytes": 3839,
+      "bytes": 5689,
       "chunks": 1,
-      "sha256": "a645a6ca0d52b73a12a884f99475ebf6d409d0adf61e86b0f75b3cd3c405aff3",
+      "sha256": "ff2506820eaf82235bf90338f9e6170aaeabb1040b1cfc8e7dad99d7ffbabb38",
       "route": "helper",
       "depends_on": []
     },
@@ -120,9 +120,9 @@
       "name": "bvst.runtime.sampler.v1.0.0",
       "path": "on-chain-modules/workspace/System/shared/sampler.js",
       "mime": "application/javascript",
-      "bytes": 18893,
+      "bytes": 30490,
       "chunks": 2,
-      "sha256": "94a9d3b541c66d68e51372ddd643d3c33f12297266556f39c22764120a17f2f4",
+      "sha256": "55b04c8cb098ac2943b3627173ce12e5f320a1fc04136813f25d04e7cf5e1d39",
       "route": "helper",
       "depends_on": [
         "bvst.runtime.ui-styles.v1.0.0",
@@ -171,9 +171,9 @@
       "name": "bvst.engine.unified-worklet.v1.0.0",
       "path": "on-chain-modules/workspace/System/shared/processor_unified.js",
       "mime": "application/javascript",
-      "bytes": 11776,
+      "bytes": 12730,
       "chunks": 1,
-      "sha256": "90d464350cfcda15da8907d3cd32ad6c42d2d16e6ed4813819e088a62eb1fbfa",
+      "sha256": "3ad68b432cafffac6be69d1c67ea282aa259d0705456163a4dd9f7a66e88c78d",
       "route": "helper",
       "depends_on": [
         "bvst.engine.unified-loader.v1.0.0"
@@ -184,9 +184,9 @@
       "name": "bvst.runtime.standalone-bridge.v1.0.0",
       "path": "on-chain-modules/workspace/System/shared/standalone_bridge.js",
       "mime": "application/javascript",
-      "bytes": 9966,
+      "bytes": 10276,
       "chunks": 1,
-      "sha256": "1517ce0b6d8c5d136bea067abb84a894cab95f648354d0f7f108a94cb0d0a89e",
+      "sha256": "edbc817f7547b16b517a1a16bc1e30a69046535dcb0e756c7c89941406212b45",
       "route": "helper",
       "depends_on": [
         "bvst.engine.unified-worklet.v1.0.0",
@@ -198,9 +198,9 @@
       "name": "bvst.runtime.plugin-core.v1.0.0",
       "path": "on-chain-modules/workspace/System/shared/plugin_core.js",
       "mime": "application/javascript",
-      "bytes": 22644,
+      "bytes": 25354,
       "chunks": 2,
-      "sha256": "0c450245f1f28ee258019b4b5cd1a80e0dd7887f635e3140d07e5c11b99128fa",
+      "sha256": "7291f7c40b50253403be270fe3fc6763227f083fcd2f066b5051179621de8dc5",
       "route": "helper",
       "depends_on": [
         "bvst.runtime.controls.v1.0.0",
@@ -230,9 +230,9 @@
       "name": "bvst.catalog.runtime.v1",
       "path": "on-chain-modules/catalogs/majors/runtime-v1.catalog.json",
       "mime": "application/json",
-      "bytes": 5295,
+      "bytes": 5296,
       "chunks": 1,
-      "sha256": "f056a3e07a3d09f2d746f620f0b902321d4aa1e402546371e72bed4a65bb3704",
+      "sha256": "427bc895ab9f9e29ae3cdb31af5ad4a7c866c489e4f71b2efd3a82f674788285",
       "route": "helper",
       "depends_on": [
         "bvst.runtime.bvst-css.v1.0.0",
@@ -257,7 +257,7 @@
       "mime": "application/json",
       "bytes": 1344,
       "chunks": 1,
-      "sha256": "80c7d4d181f11562cf4e0cd219c9579d0a2eface236f90ed63757fe67405a2c1",
+      "sha256": "32922b2ac26ae69ee08ebdd3f13aca3dab4a31c167857f67802025d14f791438",
       "route": "helper",
       "depends_on": [
         "bvst.engine.unified-wasm.v1.0.0",
@@ -272,7 +272,7 @@
       "mime": "application/json",
       "bytes": 515,
       "chunks": 1,
-      "sha256": "2a0b449657ce2fc06be29ac9c72ea7ab660bd7cf3d98ad23cff522118e557503",
+      "sha256": "c3ad8205f79cb6a2e54be0149c87f8687f1b62848471e55cd3fb20078d689263",
       "route": "helper",
       "depends_on": [
         "bvst.schema.patch.v1"
@@ -283,9 +283,9 @@
       "name": "bvst.catalog.foundation.v1",
       "path": "on-chain-modules/catalogs/releases/foundation-v1.catalog.json",
       "mime": "application/json",
-      "bytes": 7516,
+      "bytes": 7517,
       "chunks": 1,
-      "sha256": "4825b2370c354ea04cf14cda496121d45da8050e9365a1f9844f8c03c2e86772",
+      "sha256": "5e646213648c7d533efa17c09896f72279d35e910d3225423eea60215460f60a",
       "route": "helper",
       "depends_on": [
         "bvst.catalog.runtime.v1",
@@ -536,7 +536,7 @@
       "mime": "application/json",
       "bytes": 7067,
       "chunks": 1,
-      "sha256": "10c923adbea8103928c459deaf4d35e4cb12dd0443a65fbe69c813ba0dd6ca4f",
+      "sha256": "1a12ef8a5ed1cce012111d42c501f80db5bfb6fd76edb390cae070711b645901",
       "route": "helper",
       "depends_on": [
         "bvst.schema.patch.v1"
@@ -660,7 +660,7 @@
       "mime": "application/json",
       "bytes": 1780,
       "chunks": 1,
-      "sha256": "744e47f42bae56c16a7093556e85f54574c2511e5df895fd6c718d85babee482",
+      "sha256": "a92296284c1d803d2584aaa4e77780598b5600b79f784edae0f99b643d990a38",
       "route": "helper",
       "depends_on": [
         "bvst.plugin.bluemarvintwo.manifest.v1.0.0",

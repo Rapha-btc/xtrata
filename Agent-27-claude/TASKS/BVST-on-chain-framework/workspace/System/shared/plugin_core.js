@@ -22,6 +22,43 @@ function getParamIdForControlId(controlId) {
 }
 
 export const BVST = {
+    _sanitizeDiagnosticValue: function(value) {
+        return String(value || '')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .slice(0, 240);
+    },
+
+    _setBootDiagnostics: function(state, detail = '') {
+        try {
+            const root = document.documentElement;
+            if (!root || !root.dataset) return;
+            root.dataset.bvstState = state;
+            root.dataset.bvstReady = state === 'ready' ? '1' : '0';
+            if (detail) {
+                root.dataset.bvstDetail = this._sanitizeDiagnosticValue(detail);
+            }
+            if (state !== 'error') {
+                delete root.dataset.bvstError;
+            }
+            if (state !== 'ready') {
+                delete root.dataset.bvstReadyAt;
+            }
+        } catch (_) {}
+    },
+
+    _setBootError: function(message) {
+        const text = this._sanitizeDiagnosticValue(message || 'Unknown runtime error');
+        try {
+            const root = document.documentElement;
+            if (root && root.dataset) {
+                root.dataset.bvstState = 'error';
+                root.dataset.bvstReady = '0';
+                root.dataset.bvstError = text;
+            }
+        } catch (_) {}
+    },
+
     _ensureStatusPanel: function() {
         if (this.statusPanel && this.statusPanel.isConnected) {
             return this.statusPanel;
@@ -56,6 +93,9 @@ export const BVST = {
     _showStatusMessage: function(kind, message) {
         const text = String(message || '').trim();
         if (!text) return;
+
+        if (kind === 'error') this._setBootError(text);
+        else this._setBootDiagnostics('status', text);
 
         const panel = this._ensureStatusPanel();
         if (!panel) return;
@@ -103,6 +143,7 @@ export const BVST = {
     },
 
     init: function(config) {
+        this._setBootDiagnostics('booting', 'Initializing BVST runtime');
         const containerId = config.containerId || 'app-container';
         const instanceId =
             (config && typeof config.instanceId === 'string' && config.instanceId.trim())
@@ -116,6 +157,10 @@ export const BVST = {
             standaloneParam === 'true' ||
             standaloneParam === 'yes' ||
             window.parent === window;
+        this.runtimeProfile =
+            (config && typeof config.runtimeProfile === 'string' && config.runtimeProfile.trim())
+                ? config.runtimeProfile.trim()
+                : (standalone ? 'standalone' : 'host');
 
         const hostMidiParam = (getQueryParam('hostMidi') || '').toString().trim().toLowerCase();
         const hostMidi =
@@ -223,6 +268,7 @@ export const BVST = {
         });
 
         const uiRefs = controls.buildUI(containerId, config);
+        this._setBootDiagnostics('ui-ready', 'Control surface rendered');
 
         if (standalone) {
             this._attachRuntimeDiagnostics();
@@ -391,10 +437,15 @@ export const BVST = {
                     const data = event.data || {};
                     const instanceId = (data && typeof data.instanceId === 'string') ? data.instanceId : null;
                     if (instanceId && instanceId !== this.instanceId) return;
+                    this._setBootDiagnostics('status', data.msg || data.message || 'Runtime status update');
                     this._showStatusMessage('status', data.msg || data.message || 'Runtime status update');
                 }
 
                 if (event.data && event.data.type === 'BVST_READY') {
+                    this._setBootDiagnostics('ready', 'Standalone bridge reported ready');
+                    try {
+                        document.documentElement.dataset.bvstReadyAt = new Date().toISOString();
+                    } catch (_) {}
                     this.syncAllParams();
                 }
 
@@ -481,17 +532,29 @@ export const BVST = {
 
     _initSampler: function(samplerConfig) {
         this.sampler = new SamplerUI({
+            ...samplerConfig,
             audioContext: this.audioContext,
+            runtimeProfile:
+                (samplerConfig && typeof samplerConfig.runtimeProfile === 'string' && samplerConfig.runtimeProfile.trim())
+                    ? samplerConfig.runtimeProfile.trim()
+                    : this.runtimeProfile,
             onSampleLoad: (data) => {
                 const payload = (data && data.samples) ? data : { samples: data };
                 window.parent.postMessage({
                     type: 'BVST_LOAD_SAMPLE_FROM_GUI',
                     instanceId: this.instanceId,
-                    samples: payload.samples,
+                    samplePayload: payload,
+                    samples: payload.samples || (Array.isArray(payload.channels) ? payload.channels[0] : null),
                     sourceUrl: payload.sourceUrl || '',
+                    sourceLabel: payload.sourceLabel || '',
                     fileName: payload.fileName || ''
                 }, '*');
-                if (samplerConfig.onLoad) samplerConfig.onLoad(payload.samples);
+                if (samplerConfig.onLoad) {
+                    samplerConfig.onLoad(
+                        payload.samples || (Array.isArray(payload.channels) ? payload.channels[0] : null),
+                        payload
+                    );
+                }
             },
             onSeek: (pct) => {
                 if (samplerConfig.onSeek) samplerConfig.onSeek(pct);

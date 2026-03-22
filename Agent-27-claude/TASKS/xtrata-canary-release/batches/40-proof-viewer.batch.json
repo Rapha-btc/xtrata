@@ -1,0 +1,35 @@
+{
+  "release_name": "xtrata-canary-proof-viewer-v1",
+  "network_template": "on-chain-modules/configs/xtrata-network.template.json",
+  "prerequisite_batches": [
+    "10-foundation.batch.json",
+    "20-application.batch.json",
+    "30-catalogs.batch.json"
+  ],
+  "chunk_size": 16384,
+  "helper_chunk_limit": 30,
+  "staged_batch_chunk_limit": 50,
+  "artifacts": [
+    {
+      "order": 10,
+      "name": "canary.proof.viewer.v1",
+      "path": "on-chain-modules/catalogs/views/proof-viewer.v1.html",
+      "mime": "text/html",
+      "bytes": 12601,
+      "chunks": 1,
+      "sha256": "c0b4fa937549f0634b8dd9f375e788eabe57bf716057e02e416f748780f48f10",
+      "route": "helper",
+      "depends_on": [
+        "canary.schema.release.v1",
+        "canary.runtime.copy.v1",
+        "canary.runtime.theme.v1",
+        "canary.runtime.core.v1",
+        "canary.runtime.widget.v1",
+        "canary.app.shell.v1",
+        "canary.catalog.runtime.v1",
+        "canary.catalog.release.v1",
+        "canary.catalog.root.v1"
+      ]
+    }
+  ]
+}

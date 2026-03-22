@@ -1,0 +1,62 @@
+{
+  "generated_at": "2026-03-22T12:13:53.518Z",
+  "bundle_root": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/xtrata-canary-release",
+  "summary": {
+    "failed": 0,
+    "passed_with_warnings": 1,
+    "passed": 3,
+    "skipped": 0
+  },
+  "sections": [
+    {
+      "name": "metadata_refresh",
+      "status": "passed",
+      "errors": [],
+      "warnings": [],
+      "details": {
+        "module_count": 10,
+        "bundle_root": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/xtrata-canary-release"
+      }
+    },
+    {
+      "name": "preflight_quote",
+      "status": "passed_with_warnings",
+      "errors": [],
+      "warnings": [
+        "Quote was generated in offline mode; the planner overlays live fee context from the current BVST production snapshot."
+      ],
+      "details": {
+        "module_count": 10,
+        "total_bytes": 30447
+      }
+    },
+    {
+      "name": "state_init",
+      "status": "passed",
+      "errors": [],
+      "warnings": [],
+      "details": {
+        "ready": 3,
+        "blocked": 7,
+        "hard_stop": 0
+      }
+    },
+    {
+      "name": "inscription_simulation",
+      "status": "passed",
+      "errors": [],
+      "warnings": [],
+      "details": {
+        "tempRoot": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/bvst-inscription-sim-J18Hxf",
+        "startTokenId": 9001,
+        "endTokenId": 9010,
+        "moduleCount": 10,
+        "catalogCount": 4,
+        "mintedTotal": 10,
+        "nullTokenEntries": 0,
+        "renderedReadyCount": 4,
+        "renderedInscribedCount": 4
+      }
+    }
+  ]
+}

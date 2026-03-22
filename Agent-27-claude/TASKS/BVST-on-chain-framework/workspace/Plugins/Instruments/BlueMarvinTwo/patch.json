@@ -199,7 +199,7 @@
         "vco2_fine": 7,
         "vco2_lvl": 0.55,
         "vco3_wave": 0,
-        "vco3_coarse": 24,
+        "vco3_coarse": 12,
         "vco3_fine": 0,
         "vco3_lvl": 0.15,
         "vcf_freq": 6500,

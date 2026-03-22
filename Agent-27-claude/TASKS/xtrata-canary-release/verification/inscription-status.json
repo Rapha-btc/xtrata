@@ -1,0 +1,483 @@
+{
+  "generated_at": "2026-03-22T12:13:53.480Z",
+  "bundle_root": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/xtrata-canary-release",
+  "token_map": "configs/token-map.runtime.json",
+  "inscription_log": "verification/inscription-log.json",
+  "rendered_index": "verification/rendered-index.json",
+  "summary": {
+    "total": 10,
+    "minted": 0,
+    "ready": 3,
+    "blocked": 7,
+    "hard_stop": 0
+  },
+  "next_ready": {
+    "batch": "10-foundation.batch.json",
+    "order": 10,
+    "name": "canary.schema.release.v1",
+    "kind": "leaf",
+    "route": "helper",
+    "mime": "application/json",
+    "dependency_names": [],
+    "dependency_token_ids": [],
+    "missing_dependencies": [],
+    "token_id": null,
+    "txid": null,
+    "block_height": null,
+    "rendered_status": null,
+    "rendered_path": null,
+    "resolution_signature": null,
+    "log_recorded": false,
+    "source": {
+      "logical_path": "on-chain-modules/workspace/System/shared/canary-release.schema.json",
+      "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/xtrata-canary-release/workspace/System/shared/canary-release.schema.json",
+      "bytes": 347,
+      "chunks": 1,
+      "sha256": "4f3a5da323b1fb8f655aab91291bf45d672124b0ca3c5af7d32727b70ea1918d",
+      "route": "helper"
+    },
+    "execution": {
+      "route": "helper",
+      "function": "mint-small-single-tx",
+      "recursive_dependencies": [],
+      "apply_result_command": "XTRATA_BUNDLE_ROOT=/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/xtrata-canary-release node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name canary.schema.release.v1 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+    },
+    "notes": [],
+    "status": "ready"
+  },
+  "ready_now": [
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 10,
+      "name": "canary.schema.release.v1",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/canary-release.schema.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/xtrata-canary-release/workspace/System/shared/canary-release.schema.json",
+        "bytes": 347,
+        "chunks": 1,
+        "sha256": "4f3a5da323b1fb8f655aab91291bf45d672124b0ca3c5af7d32727b70ea1918d",
+        "route": "helper"
+      },
+      "execution": {
+        "route": "helper",
+        "function": "mint-small-single-tx",
+        "recursive_dependencies": [],
+        "apply_result_command": "XTRATA_BUNDLE_ROOT=/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/xtrata-canary-release node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name canary.schema.release.v1 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+      },
+      "notes": [],
+      "status": "ready"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 20,
+      "name": "canary.runtime.copy.v1",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/canary-copy.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/xtrata-canary-release/workspace/System/shared/canary-copy.json",
+        "bytes": 1618,
+        "chunks": 1,
+        "sha256": "349a84b1d478174c6cc9acc7090b1eb3eae8bad0b1ca7c16f2177efd0c8bf608",
+        "route": "helper"
+      },
+      "execution": {
+        "route": "helper",
+        "function": "mint-small-single-tx",
+        "recursive_dependencies": [],
+        "apply_result_command": "XTRATA_BUNDLE_ROOT=/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/xtrata-canary-release node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name canary.runtime.copy.v1 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+      },
+      "notes": [],
+      "status": "ready"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 30,
+      "name": "canary.runtime.theme.v1",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "text/css",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/canary-theme.css",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/xtrata-canary-release/workspace/System/shared/canary-theme.css",
+        "bytes": 1462,
+        "chunks": 1,
+        "sha256": "f4513b76d6066516e7e278e401f87747e298d74dbd25dd8c6fc2a98aaaf9425b",
+        "route": "helper"
+      },
+      "execution": {
+        "route": "helper",
+        "function": "mint-small-single-tx",
+        "recursive_dependencies": [],
+        "apply_result_command": "XTRATA_BUNDLE_ROOT=/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/xtrata-canary-release node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name canary.runtime.theme.v1 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+      },
+      "notes": [],
+      "status": "ready"
+    }
+  ],
+  "hard_stops": [],
+  "items": [
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 10,
+      "name": "canary.schema.release.v1",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/canary-release.schema.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/xtrata-canary-release/workspace/System/shared/canary-release.schema.json",
+        "bytes": 347,
+        "chunks": 1,
+        "sha256": "4f3a5da323b1fb8f655aab91291bf45d672124b0ca3c5af7d32727b70ea1918d",
+        "route": "helper"
+      },
+      "execution": {
+        "route": "helper",
+        "function": "mint-small-single-tx",
+        "recursive_dependencies": [],
+        "apply_result_command": "XTRATA_BUNDLE_ROOT=/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/xtrata-canary-release node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name canary.schema.release.v1 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+      },
+      "notes": [],
+      "status": "ready"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 20,
+      "name": "canary.runtime.copy.v1",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/canary-copy.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/xtrata-canary-release/workspace/System/shared/canary-copy.json",
+        "bytes": 1618,
+        "chunks": 1,
+        "sha256": "349a84b1d478174c6cc9acc7090b1eb3eae8bad0b1ca7c16f2177efd0c8bf608",
+        "route": "helper"
+      },
+      "execution": {
+        "route": "helper",
+        "function": "mint-small-single-tx",
+        "recursive_dependencies": [],
+        "apply_result_command": "XTRATA_BUNDLE_ROOT=/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/xtrata-canary-release node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name canary.runtime.copy.v1 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+      },
+      "notes": [],
+      "status": "ready"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 30,
+      "name": "canary.runtime.theme.v1",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "text/css",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/canary-theme.css",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/xtrata-canary-release/workspace/System/shared/canary-theme.css",
+        "bytes": 1462,
+        "chunks": 1,
+        "sha256": "f4513b76d6066516e7e278e401f87747e298d74dbd25dd8c6fc2a98aaaf9425b",
+        "route": "helper"
+      },
+      "execution": {
+        "route": "helper",
+        "function": "mint-small-single-tx",
+        "recursive_dependencies": [],
+        "apply_result_command": "XTRATA_BUNDLE_ROOT=/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/xtrata-canary-release node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name canary.runtime.theme.v1 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+      },
+      "notes": [],
+      "status": "ready"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 40,
+      "name": "canary.runtime.core.v1",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/javascript",
+      "dependency_names": [
+        "canary.runtime.copy.v1"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "canary.runtime.copy.v1"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Direct dependencies are not fully resolved yet."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "20-application.batch.json",
+      "order": 10,
+      "name": "canary.runtime.widget.v1",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/javascript",
+      "dependency_names": [
+        "canary.runtime.core.v1",
+        "canary.runtime.copy.v1"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "canary.runtime.core.v1",
+        "canary.runtime.copy.v1"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "20-application.batch.json",
+      "order": 20,
+      "name": "canary.app.shell.v1",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "text/html",
+      "dependency_names": [
+        "canary.runtime.theme.v1",
+        "canary.runtime.widget.v1"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "canary.runtime.theme.v1",
+        "canary.runtime.widget.v1"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "30-catalogs.batch.json",
+      "order": 10,
+      "name": "canary.catalog.runtime.v1",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "canary.runtime.copy.v1",
+        "canary.runtime.theme.v1",
+        "canary.runtime.core.v1",
+        "canary.runtime.widget.v1"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "canary.runtime.copy.v1",
+        "canary.runtime.theme.v1",
+        "canary.runtime.core.v1",
+        "canary.runtime.widget.v1"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": "pending",
+      "rendered_path": null,
+      "resolution_signature": "3a9f9fd7ba22aae3fb9dbabc5a1cf7c1f0178c25418253b8ef2f0fa2634e15a7",
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json, 20-application.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "30-catalogs.batch.json",
+      "order": 20,
+      "name": "canary.catalog.release.v1",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "canary.catalog.runtime.v1",
+        "canary.app.shell.v1",
+        "canary.schema.release.v1"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "canary.catalog.runtime.v1",
+        "canary.app.shell.v1",
+        "canary.schema.release.v1"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": "pending",
+      "rendered_path": null,
+      "resolution_signature": "16af01500462b497c2fee31a65e023c388799bfa0a4ed62160ceecc13118e97b",
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json, 20-application.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "30-catalogs.batch.json",
+      "order": 30,
+      "name": "canary.catalog.root.v1",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "canary.catalog.release.v1"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "canary.catalog.release.v1"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": "pending",
+      "rendered_path": null,
+      "resolution_signature": "c602b1f590cfcaaaa65b5aca5bbddc7e90dfdde3127fce07a7a920de027f2aac",
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json, 20-application.batch.json."
+      ],
+      "status": "blocked"
+    },
+    {
+      "batch": "40-proof-viewer.batch.json",
+      "order": 10,
+      "name": "canary.proof.viewer.v1",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "text/html",
+      "dependency_names": [
+        "canary.schema.release.v1",
+        "canary.runtime.copy.v1",
+        "canary.runtime.theme.v1",
+        "canary.runtime.core.v1",
+        "canary.runtime.widget.v1",
+        "canary.app.shell.v1",
+        "canary.catalog.runtime.v1",
+        "canary.catalog.release.v1",
+        "canary.catalog.root.v1"
+      ],
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "canary.schema.release.v1",
+        "canary.runtime.copy.v1",
+        "canary.runtime.theme.v1",
+        "canary.runtime.core.v1",
+        "canary.runtime.widget.v1",
+        "canary.app.shell.v1",
+        "canary.catalog.runtime.v1",
+        "canary.catalog.release.v1",
+        "canary.catalog.root.v1"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": "pending",
+      "rendered_path": null,
+      "resolution_signature": "cbbff2c798d5614daec460afeae5bf59f7248472401de3e6665cc1615fd95652",
+      "log_recorded": false,
+      "source": null,
+      "execution": null,
+      "notes": [
+        "Prerequisite batches are not complete: 10-foundation.batch.json, 20-application.batch.json, 30-catalogs.batch.json."
+      ],
+      "status": "blocked"
+    }
+  ]
+}

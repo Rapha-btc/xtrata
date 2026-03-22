@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Xtrata Recursive Canary</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #070706;
+      --panel: rgba(19, 17, 14, 0.92);
+      --panel-strong: #15120f;
+      --line: #3f311d;
+      --ink: #f5e9d5;
+      --muted: #b9ab93;
+      --accent: #ffd15b;
+      --accent-soft: rgba(255, 209, 91, 0.09);
+      --good: #9bffc2;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top right, rgba(255, 209, 91, 0.11), transparent 28%),
+        radial-gradient(circle at bottom left, rgba(255, 209, 91, 0.05), transparent 24%),
+        linear-gradient(180deg, #0a0908 0%, #060605 100%);
+      color: var(--ink);
+      font-family: "IBM Plex Mono", "SF Mono", monospace;
+      line-height: 1.5;
+    }
+    main {
+      width: min(1040px, calc(100% - 32px));
+      margin: 32px auto 48px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.4);
+    }
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.75fr);
+      gap: 18px;
+      align-items: stretch;
+    }
+    .hero-copy,
+    .hero-meta,
+    .panel {
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, var(--accent-soft), rgba(16, 15, 13, 0.96));
+      padding: 18px;
+    }
+    .kicker {
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      font-size: 11px;
+    }
+    h1 {
+      margin: 10px 0 14px;
+      font-size: clamp(34px, 7vw, 68px);
+      line-height: 0.9;
+      max-width: 9ch;
+    }
+    .lede,
+    .muted {
+      color: var(--muted);
+    }
+    .lede {
+      max-width: 60ch;
+      margin: 0 0 14px;
+    }
+    .tag-row,
+    .chip-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .tag,
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--line);
+      background: var(--panel-strong);
+      padding: 5px 9px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .tag.good {
+      color: var(--good);
+      border-color: rgba(155, 255, 194, 0.24);
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px 16px;
+    }
+    .meta-label {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .meta-value {
+      margin-top: 5px;
+      color: var(--ink);
+      word-break: break-word;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 18px;
+    }
+    .span-7 { grid-column: span 7; }
+    .span-5 { grid-column: span 5; }
+    .span-6 { grid-column: span 6; }
+    .span-12 { grid-column: span 12; }
+    h2 {
+      margin: 0 0 10px;
+      font-size: 15px;
+      color: #fff5df;
+    }
+    .panel-copy {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .stack {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .item {
+      border: 1px solid var(--line);
+      background: rgba(10, 9, 8, 0.8);
+      padding: 11px 12px;
+    }
+    .item strong {
+      display: block;
+      margin-bottom: 5px;
+      color: #fff;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    ol,
+    ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+    li + li {
+      margin-top: 8px;
+    }
+    .footer {
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12px;
+    }
+    @media (max-width: 900px) {
+      .hero,
+      .grid {
+        grid-template-columns: 1fr;
+      }
+      .span-7,
+      .span-5,
+      .span-6,
+      .span-12 {
+        grid-column: span 1;
+      }
+      .meta-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <div class="kicker">Pre-BVST Canary</div>
+        <h1>Xtrata Recursive Canary</h1>
+        <p class="lede" id="summary"></p>
+        <div class="tag-row" id="hero-tags"></div>
+      </div>
+      <aside class="hero-meta">
+        <div class="meta-grid" id="hero-meta"></div>
+      </aside>
+    </section>
+
+    <section class="grid">
+      <article class="panel span-7">
+        <h2>Why This Exists</h2>
+        <p class="panel-copy">
+          This is a deliberately small recursive release. Its job is not to impress with product scope. Its job is to prove that an agent-managed mint loop can order leaves correctly, update dependency IDs, re-render dependent catalogs, verify the result on-chain, and only then move forward.
+        </p>
+        <div class="stack" id="provenance-list"></div>
+      </article>
+
+      <article class="panel span-5">
+        <h2>What It Proves</h2>
+        <div class="stack" id="proof-points"></div>
+      </article>
+
+      <article class="panel span-6">
+        <h2>How To Trace The Lineage</h2>
+        <div class="stack" id="trace-guide"></div>
+      </article>
+
+      <article class="panel span-6">
+        <h2>Operator Checklist</h2>
+        <div class="item">
+          <ol id="operator-checklist"></ol>
+        </div>
+      </article>
+
+      <article class="panel span-12">
+        <h2>Graph Closure</h2>
+        <p class="panel-copy">
+          The shell is intentionally readable on its own, but the full provenance closes through the recursive catalogs around it.
+        </p>
+        <div class="chip-row" id="lineage-chips"></div>
+      </article>
+    </section>
+
+    <div class="footer" id="footer-note"></div>
+  </main>
+
+  <script>
+    const copy = {
+      title: 'Xtrata Recursive Canary',
+      subtitle: 'Agentic preflight artefact for the first automated recursive release flow in this repo.',
+      message: 'If this bundle lands cleanly, the BVST first-wave release can follow with materially lower operational risk and a proven dependency-aware mint path.',
+      provenance: [
+        'Prepared as a compact Xtrata collection before the BVST first-wave bundle.',
+        'Structured so each mint updates local runtime state before the next dependency edge is attempted.',
+        'Written to remain legible as a permanent public artefact rather than an opaque internal test.'
+      ],
+      proof_points: [
+        'Leaf artifacts mint before any dependent catalog can become ready.',
+        'Rendered catalogs only move forward once real token IDs are known.',
+        'The root catalog closes only after the runtime and release catalogs resolve.'
+      ],
+      trace_guide: [
+        'Read the shell to understand the public-facing intent of the release.',
+        'Inspect the runtime catalog to see the leaf modules that support the shell.',
+        'Inspect the release catalog to see how shell, schema, and runtime catalog are bound together.',
+        'Inspect the root catalog to see the final recursive closure point.'
+      ],
+      operator_checklist: [
+        'Confirm the foundation leaves minted before the application shell.',
+        'Confirm rendered catalogs changed only when dependency token IDs were recorded.',
+        'Confirm the root catalog stayed blocked until the release catalog resolved.',
+        'Open this shell after inscription and confirm the public explanation still reads clearly.'
+      ],
+      tags: [
+        'Recursive',
+        'Helper-route',
+        'Dependency-aware',
+        'Agent-managed',
+        'Standalone shell'
+      ],
+      meta: [
+        ['Role', 'Pre-BVST on-chain canary'],
+        ['Release Shape', '9 artifacts / 3 batches / 3 rendered catalogs'],
+        ['Primary Goal', 'Prove the mint-update-verify loop before BVST'],
+        ['Public Read', 'This page is the human-facing shell of the test graph']
+      ],
+      lineage: [
+        'canary.catalog.runtime.v1',
+        'canary.catalog.release.v1',
+        'canary.catalog.root.v1'
+      ],
+      footer_note: 'This shell is intentionally standalone. The deeper provenance lives in the recursive catalogs that close around it, making the surrounding collection traceable even long after the original planning context is gone.'
+    };
+
+    document.getElementById('summary').textContent = `${copy.subtitle} ${copy.message}`;
+
+    const tagHost = document.getElementById('hero-tags');
+    copy.tags.forEach((tag, index) => {
+      const node = document.createElement('span');
+      node.className = `tag${index === 3 ? ' good' : ''}`;
+      node.textContent = tag;
+      tagHost.appendChild(node);
+    });
+
+    const metaHost = document.getElementById('hero-meta');
+    copy.meta.forEach(([label, value]) => {
+      const wrapper = document.createElement('div');
+      const name = document.createElement('div');
+      name.className = 'meta-label';
+      name.textContent = label;
+      const body = document.createElement('div');
+      body.className = 'meta-value';
+      body.textContent = value;
+      wrapper.appendChild(name);
+      wrapper.appendChild(body);
+      metaHost.appendChild(wrapper);
+    });
+
+    function renderItems(hostId, items, titlePrefix) {
+      const host = document.getElementById(hostId);
+      items.forEach((item, index) => {
+        const box = document.createElement('div');
+        box.className = 'item';
+        const title = document.createElement('strong');
+        title.textContent = `${titlePrefix} ${index + 1}`;
+        const body = document.createElement('div');
+        body.textContent = item;
+        box.appendChild(title);
+        box.appendChild(body);
+        host.appendChild(box);
+      });
+    }
+
+    renderItems('provenance-list', copy.provenance, 'Provenance');
+    renderItems('proof-points', copy.proof_points, 'Proof');
+    renderItems('trace-guide', copy.trace_guide, 'Trace');
+
+    const checklist = document.getElementById('operator-checklist');
+    copy.operator_checklist.forEach((item) => {
+      const li = document.createElement('li');
+      li.textContent = item;
+      checklist.appendChild(li);
+    });
+
+    const lineageChips = document.getElementById('lineage-chips');
+    copy.lineage.forEach((name) => {
+      const chip = document.createElement('span');
+      chip.className = 'chip';
+      chip.textContent = name;
+      lineageChips.appendChild(chip);
+    });
+
+    document.getElementById('footer-note').textContent = copy.footer_note;
+  </script>
+</body>
+</html>

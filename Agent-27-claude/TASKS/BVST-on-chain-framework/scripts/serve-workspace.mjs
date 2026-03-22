@@ -112,6 +112,62 @@ const server = http.createServer(async (req, res) => {
   await sendFile(res, pathname);
 });
 
-server.listen(port, '127.0.0.1', () => {
-  console.log(`Serving on-chain-modules/workspace at http://127.0.0.1:${port}`);
-});
+export function createWorkspaceServer() {
+  return http.createServer(async (req, res) => {
+    const method = req.method || 'GET';
+    if (method !== 'GET' && method !== 'HEAD') {
+      res.writeHead(405, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('Method not allowed');
+      return;
+    }
+
+    const pathname = safePathname(req.url || '/');
+    if (!pathname) {
+      res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('Bad request');
+      return;
+    }
+
+    if (method === 'HEAD') {
+      try {
+        const stat = await fs.stat(pathname);
+        const filePath = stat.isDirectory() ? path.join(pathname, 'index.html') : pathname;
+        const ext = path.extname(filePath).toLowerCase();
+        res.writeHead(200, {
+          'Content-Type': mimeTypes.get(ext) || 'application/octet-stream',
+          'Cache-Control': 'no-store'
+        });
+        res.end();
+      } catch (_) {
+        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end();
+      }
+      return;
+    }
+
+    await sendFile(res, pathname);
+  });
+}
+
+export async function startWorkspaceServer({ port = defaultPort, host = '127.0.0.1' } = {}) {
+  const server = createWorkspaceServer();
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(port, host, resolve);
+  });
+  const address = server.address();
+  return { server, address };
+}
+
+async function main() {
+  const port = parsePort(process.argv.slice(2));
+  const { address } = await startWorkspaceServer({ port, host: '127.0.0.1' });
+  console.log(`Serving BVST bundle workspace at http://127.0.0.1:${address.port}`);
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((err) => {
+    console.error(err);
+    process.exitCode = 1;
+  });
+}

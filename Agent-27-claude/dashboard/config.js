@@ -26,6 +26,8 @@ const INSCRIPTION_ARCHIVE_DIR = path.join(ARCHIVE_DIR, 'inscriptions');
 const LOG_ARCHIVE_DIR = path.join(ARCHIVE_DIR, 'logs');
 const LEGACY_DIR = path.join(ARCHIVE_DIR, 'legacy');
 const SKILLS_DIR = path.join(WORKDIR, 'skills');
+const BVST_BUNDLE_DIR = path.join(WORKDIR, 'TASKS', 'BVST-on-chain-framework');
+const XTRATA_CANARY_BUNDLE_DIR = path.join(WORKDIR, 'TASKS', 'xtrata-canary-release');
 
 // Runtime data files
 const CYCLE_STATE_FILE = path.join(RUNTIME_DIR, 'cycle-state.json');
@@ -83,6 +85,8 @@ module.exports = {
   LOG_ARCHIVE_DIR,
   LEGACY_DIR,
   SKILLS_DIR,
+  BVST_BUNDLE_DIR,
+  XTRATA_CANARY_BUNDLE_DIR,
   CYCLE_STATE_FILE,
   REGISTERED_AGENTS_FILE,
   OUTREACH_DRAFT_FILE,

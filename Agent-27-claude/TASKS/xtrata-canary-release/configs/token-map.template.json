@@ -1,0 +1,55 @@
+{
+  "generated_for": "on-chain-modules",
+  "entries": {
+    "canary.schema.release.v1": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "canary.runtime.copy.v1": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "canary.runtime.theme.v1": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "canary.runtime.core.v1": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "canary.runtime.widget.v1": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "canary.app.shell.v1": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "canary.catalog.runtime.v1": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "canary.catalog.release.v1": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "canary.catalog.root.v1": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    },
+    "canary.proof.viewer.v1": {
+      "token_id": null,
+      "txid": null,
+      "block_height": null
+    }
+  }
+}
