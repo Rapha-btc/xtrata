@@ -37,7 +37,13 @@
         clearUpload: document.getElementById('clear-upload'),
         uploadSummary: document.getElementById('upload-summary'),
         uploadLargest: document.getElementById('upload-largest'),
-        uploadStructure: document.getElementById('upload-structure')
+        uploadStructure: document.getElementById('upload-structure'),
+        canaryAchievement: document.getElementById('canary-achievement'),
+        achievementNarrative: document.getElementById('achievement-narrative'),
+        achievementStatus: document.getElementById('achievement-status'),
+        achievementStats: document.getElementById('achievement-stats'),
+        achievementGraph: document.getElementById('achievement-graph'),
+        achievementBatches: document.getElementById('achievement-batches')
     };
 
     const state = {
@@ -766,6 +772,220 @@
         els.automationLog.textContent = traceLines.join('\n');
     }
 
+    function renderCanaryAchievement(data) {
+        const achievement = data.canaryAchievement;
+        if (!achievement || achievement.status !== 'completed') {
+            els.canaryAchievement.hidden = true;
+            return;
+        }
+        els.canaryAchievement.hidden = false;
+
+        const XTRATA_CONTRACT = achievement.contract || 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0';
+        const EXPLORER_BASE = 'https://explorer.hiro.so';
+
+        function tokenUrl(tokenId) {
+            return `${EXPLORER_BASE}/token/${XTRATA_CONTRACT}/${tokenId}?chain=mainnet`;
+        }
+
+        function txUrl(txid) {
+            return txid ? `${EXPLORER_BASE}/txid/${txid}?chain=mainnet` : null;
+        }
+
+        // Narrative
+        els.achievementNarrative.textContent = achievement.narrative;
+
+        // Stats cards
+        const totalBytes = achievement.artifacts.reduce((s, a) => s + (a.bytes || 0), 0);
+        const totalChunks = achievement.artifacts.reduce((s, a) => s + (a.chunks || 0), 0);
+        const mimeTypes = new Set(achievement.artifacts.map(a => a.mime));
+        const range = achievement.token_range || [];
+        const statsCards = [
+            { label: 'Tokens', value: `#${range[0]} \u2013 #${range[1]}`, subvalue: `${achievement.total_artifacts} artifacts sealed on-chain`, className: 'accent' },
+            { label: 'Batches', value: String(achievement.total_batches), subvalue: 'Foundation \u2192 Application \u2192 Catalogs \u2192 Proof', className: 'accent' },
+            { label: 'Total Size', value: formatBytes(totalBytes), subvalue: `${formatNumber(totalChunks)} chunks across ${mimeTypes.size} content types`, className: 'accent' },
+            { label: 'Proof Viewer', value: `Token #${achievement.proof_viewer_token}`, subvalue: 'Self-verifying HTML app with 9 dependencies', className: 'good' },
+            { label: 'Network', value: achievement.network || 'mainnet', subvalue: escapeHtml(achievement.creator), className: 'accent' },
+            { label: 'Sealed', value: formatDate(achievement.sealed_at), subvalue: 'All artifacts verified on-chain', className: 'good' }
+        ];
+        els.achievementStats.innerHTML = statsCards.map(c => `
+            <div class="mini-stat ${c.className}">
+                <div class="label">${escapeHtml(c.label)}</div>
+                <div class="value">${escapeHtml(c.value)}</div>
+                <div class="subvalue">${escapeHtml(c.subvalue)}</div>
+            </div>
+        `).join('');
+
+        // Dependency graph visualization
+        renderAchievementGraph(achievement);
+
+        // Batch-grouped artifact cards
+        const batchOrder = achievement.batches || [];
+        const artifactsByBatch = new Map();
+        for (const batch of batchOrder) {
+            artifactsByBatch.set(batch.name, []);
+        }
+        for (const artifact of achievement.artifacts) {
+            const list = artifactsByBatch.get(artifact.batch);
+            if (list) list.push(artifact);
+        }
+
+        els.achievementBatches.innerHTML = batchOrder.map(batch => {
+            const artifacts = artifactsByBatch.get(batch.name) || [];
+            return `
+                <div class="batch-group">
+                    <div class="batch-group-head">
+                        <span class="batch-group-title">${escapeHtml(batch.name)}</span>
+                        <span class="status-pill ready">${artifacts.length} artifact${artifacts.length !== 1 ? 's' : ''}</span>
+                    </div>
+                    <div class="batch-group-desc">${escapeHtml(batch.description)}</div>
+                    <div class="card-grid">
+                        ${artifacts.map(a => renderArtifactCard(a, tokenUrl, txUrl)).join('')}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function renderArtifactCard(artifact, tokenUrl, txUrl) {
+        const depChips = artifact.dependencies.length
+            ? artifact.dependencies.map(d => `<span class="chip">\u2190 #${d}</span>`).join('')
+            : '<span class="chip">no dependencies</span>';
+
+        const viewLink = `<a class="chip" href="${tokenUrl(artifact.token_id)}" target="_blank" rel="noopener">#${artifact.token_id} on-chain</a>`;
+        const txLink = artifact.txid
+            ? `<a class="chip" href="${txUrl(artifact.txid)}" target="_blank" rel="noopener">tx</a>`
+            : '';
+
+        return `
+            <div class="artifact-card">
+                <div class="artifact-head">
+                    <span class="artifact-name">${escapeHtml(artifact.name)}</span>
+                    <span class="artifact-token">#${artifact.token_id}</span>
+                </div>
+                <div class="artifact-role">${escapeHtml(artifact.role)}</div>
+                <div class="artifact-desc">${escapeHtml(artifact.description)}</div>
+                <div class="artifact-meta">
+                    <span class="chip">${escapeHtml(artifact.mime)}</span>
+                    <span class="chip">${formatBytes(artifact.bytes)}</span>
+                    <span class="chip">${artifact.chunks} chunk${artifact.chunks !== 1 ? 's' : ''}</span>
+                    ${viewLink}
+                    ${txLink}
+                    ${depChips}
+                </div>
+            </div>
+        `;
+    }
+
+    function renderAchievementGraph(achievement) {
+        const artifacts = achievement.artifacts || [];
+        const depGraph = achievement.artifacts.reduce((m, a) => { m.set(a.token_id, a); return m; }, new Map());
+        const COLS = 4;
+        const COL_W = 220;
+        const ROW_H = 52;
+        const NODE_W = 190;
+        const NODE_H = 36;
+        const PAD_X = 40;
+        const PAD_Y = 30;
+
+        // Group by batch for column layout
+        const batchNames = [...new Set(artifacts.map(a => a.batch))];
+        const batchCols = new Map();
+        batchNames.forEach((name, i) => batchCols.set(name, i));
+
+        // Position nodes
+        const positions = new Map();
+        const batchRowCount = new Map();
+        for (const a of artifacts) {
+            const col = batchCols.get(a.batch) || 0;
+            const row = batchRowCount.get(a.batch) || 0;
+            batchRowCount.set(a.batch, row + 1);
+            positions.set(a.token_id, {
+                x: PAD_X + col * COL_W,
+                y: PAD_Y + row * ROW_H,
+                cx: PAD_X + col * COL_W + NODE_W / 2,
+                cy: PAD_Y + row * ROW_H + NODE_H / 2
+            });
+        }
+
+        const maxRow = Math.max(...[...batchRowCount.values()]);
+        const svgW = PAD_X * 2 + batchNames.length * COL_W;
+        const svgH = PAD_Y * 2 + maxRow * ROW_H + 20;
+
+        const stratumColors = {
+            schema: '#6db5ff',
+            runtime: '#4dd17b',
+            application: '#ffbf47',
+            catalog: '#ff8a1c'
+        };
+
+        // Draw edges
+        let edgesSvg = '';
+        for (const a of artifacts) {
+            const to = positions.get(a.token_id);
+            if (!to) continue;
+            for (const depId of a.dependencies) {
+                const from = positions.get(depId);
+                if (!from) continue;
+                edgesSvg += `<line x1="${from.cx}" y1="${from.cy}" x2="${to.cx}" y2="${to.cy}" stroke="#26221c" stroke-width="1.5"/>`;
+            }
+        }
+
+        // Draw edge arrows (subtle directional indicators)
+        let arrowsSvg = '';
+        for (const a of artifacts) {
+            const to = positions.get(a.token_id);
+            if (!to) continue;
+            for (const depId of a.dependencies) {
+                const from = positions.get(depId);
+                if (!from) continue;
+                const dx = to.cx - from.cx;
+                const dy = to.cy - from.cy;
+                const len = Math.sqrt(dx * dx + dy * dy);
+                if (len < 1) continue;
+                const mx = from.cx + dx * 0.65;
+                const my = from.cy + dy * 0.65;
+                arrowsSvg += `<circle cx="${mx}" cy="${my}" r="2.5" fill="#26221c"/>`;
+            }
+        }
+
+        // Draw batch labels
+        let labelsSvg = '';
+        batchNames.forEach((name, i) => {
+            const x = PAD_X + i * COL_W + NODE_W / 2;
+            labelsSvg += `<text x="${x}" y="16" text-anchor="middle" fill="#8f877a" font-size="10" font-family="var(--font)" text-transform="uppercase" letter-spacing="0.08em">${escapeHtml(name)}</text>`;
+        });
+
+        // Draw nodes
+        let nodesSvg = '';
+        for (const a of artifacts) {
+            const pos = positions.get(a.token_id);
+            if (!pos) continue;
+            const fill = stratumColors[a.stratum] || '#8f877a';
+            nodesSvg += `
+                <g>
+                    <rect x="${pos.x}" y="${pos.y}" width="${NODE_W}" height="${NODE_H}" rx="3" fill="#0b0b0b" stroke="${fill}" stroke-width="1.5"/>
+                    <text x="${pos.x + 8}" y="${pos.y + 15}" fill="${fill}" font-size="11" font-weight="bold" font-family="var(--font)">#${a.token_id}</text>
+                    <text x="${pos.x + 8}" y="${pos.y + 28}" fill="#d8d2c8" font-size="10" font-family="var(--font)">${escapeHtml(a.role)}</text>
+                </g>
+            `;
+        }
+
+        els.achievementGraph.innerHTML = `
+            <svg width="100%" viewBox="0 0 ${svgW} ${svgH}" style="max-width: ${svgW}px;">
+                ${labelsSvg}
+                ${edgesSvg}
+                ${arrowsSvg}
+                ${nodesSvg}
+            </svg>
+            <div style="margin-top: 0.6rem; display: flex; gap: 0.8rem; flex-wrap: wrap;">
+                <span class="chip" style="border-left: 3px solid #6db5ff;">Schema</span>
+                <span class="chip" style="border-left: 3px solid #4dd17b;">Runtime</span>
+                <span class="chip" style="border-left: 3px solid #ffbf47;">Application</span>
+                <span class="chip" style="border-left: 3px solid #ff8a1c;">Catalog</span>
+            </div>
+        `;
+    }
+
     function renderSupportingData(data) {
         els.runtimeFiles.innerHTML = (data.runtimeFiles || []).map(item => renderPathChip(item, { segments: 2 })).join('');
         els.plannerDocs.innerHTML = (data.docs || []).map(item => renderPathChip(item, { segments: 3 })).join('');
@@ -783,6 +1003,7 @@
         renderReadyQueue(data);
         renderBatchTimeline(data);
         renderAutomation(data);
+        renderCanaryAchievement(data);
         renderSafety(data);
         renderSupportingData(data);
         renderUploadAnalysis();

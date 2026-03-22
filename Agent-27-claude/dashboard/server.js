@@ -537,6 +537,8 @@ async function loadInscriptionPlannerData(releaseId = 'bvst-first-wave') {
   const renderedIndex = safeReadJson(renderedIndexPath);
   const tokenMap = safeReadJson(tokenMapPath);
   const inscriptionLog = safeReadJson(logPath);
+  const dependencyGraph = safeReadJson(path.join(bundleDir, 'verification', 'dependency-graph.json'));
+  const canaryAchievement = safeReadJson(path.join(bundleDir, 'verification', 'canary-achievement.json'));
   const runLog = readPlannerRunLog(bundleDir);
   const traceArtifacts = readPlannerTraceArtifacts(bundleDir);
   const activeRun = plannerAutomationState.active?.releaseId === releaseConfig.id
@@ -603,9 +605,11 @@ async function loadInscriptionPlannerData(releaseId = 'bvst-first-wave') {
     safety,
     pricing,
     moduleIndex,
+    dependencyGraph,
     renderedIndex,
     tokenMap,
     inscriptionLog,
+    canaryAchievement,
     automation: {
       signerConfigured: signerConfigured(),
       activeRun,

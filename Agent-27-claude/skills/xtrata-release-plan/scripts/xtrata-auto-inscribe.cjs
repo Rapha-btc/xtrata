@@ -47,7 +47,7 @@ const FALLBACK_TX_FEE = 250_000n;
 
 function usage() {
   throw new Error(
-    'Usage: node skills/xtrata-release-plan/scripts/xtrata-auto-inscribe.cjs <bundle-root> [--run-log <path>] [--status-out <path>] [--event-log <path>] [--chain-log <path>] [--failure-snapshot <path>] [--max-items <count>] [--test-mode <local-dry-run|simulate-release>]'
+    'Usage: node skills/xtrata-release-plan/scripts/xtrata-auto-inscribe.cjs <bundle-root> [--run-log <path>] [--status-out <path>] [--event-log <path>] [--chain-log <path>] [--failure-snapshot <path>] [--max-items <count>] [--test-mode <local-dry-run|simulate-release>] [--continue-on-error]'
   );
 }
 
@@ -65,7 +65,8 @@ function parseArgs(argv) {
     failureSnapshotPath: null,
     testMode: null,
     testFailStage: null,
-    maxItems: null
+    maxItems: null,
+    continueOnError: false
   };
 
   for (let index = 1; index < argv.length; index += 1) {
@@ -74,6 +75,10 @@ function parseArgs(argv) {
       usage();
     }
     const key = arg.slice(2);
+    if (key === 'continue-on-error') {
+      args.continueOnError = true;
+      continue;
+    }
     const value = argv[index + 1];
     if (!value || value.startsWith('--')) {
       usage();
@@ -943,6 +948,7 @@ function createRunState(args, context) {
     helper_contract: `${context.helperContract.address}.${context.helperContract.contractName}`,
     test_mode: args.testMode || null,
     test_fail_stage: args.testFailStage || null,
+    continue_on_error: args.continueOnError || false,
     fee_rate_microstx_per_byte: context.transferFeeRate ? context.transferFeeRate.toString() : null,
     tx_fee_strategy: context.transferFeeRate ? 'live-transfer-fee-rate-plus-15pct' : 'fixed-fallback-250000',
     debug: {
@@ -956,6 +962,8 @@ function createRunState(args, context) {
     summary: {
       attempted: 0,
       minted: 0,
+      failed: 0,
+      skipped: 0,
       remaining: null
     },
     entries: [],
@@ -1165,6 +1173,8 @@ async function main() {
     currentArtifact: null,
     testMode: args.testMode || null,
     testFailStage: args.testFailStage || null,
+    continueOnError: args.continueOnError,
+    failedBatches: new Set(),
     simulation: args.testMode === 'simulate-release'
       ? { nextTokenId: predictedTokenStart(args.executionBundleRoot) }
       : null
@@ -1248,10 +1258,19 @@ async function main() {
   }
 
   const moduleByName = new Map((context.moduleIndex || []).map((record) => [record.name, record]));
+  const skippedNames = new Set();
   let processed = 0;
 
-  while (status.next_ready && processed < args.maxItems) {
-    const item = status.next_ready;
+  // Find the next ready item, skipping any in failed batches or already skipped
+  function nextReadyItem(currentStatus) {
+    if (!context.continueOnError) return currentStatus.next_ready;
+    const readyItems = currentStatus.ready_now || (currentStatus.next_ready ? [currentStatus.next_ready] : []);
+    return readyItems.find((i) => !skippedNames.has(i.name) && !context.failedBatches.has(i.batch)) || null;
+  }
+
+  let nextItem = nextReadyItem(status);
+  while (nextItem && processed < args.maxItems) {
+    const item = nextItem;
     context.currentArtifact = item.name;
     const moduleRecord = moduleByName.get(item.name);
     if (!moduleRecord) {
@@ -1344,7 +1363,52 @@ async function main() {
         at: entry.finished_at,
         error: entry.error
       });
+      runState.summary.failed += 1;
       persistRunState(args.runLogPath, runState);
+
+      if (context.continueOnError) {
+        context.failedBatches.add(item.batch);
+        emitTraceEvent(context, 'batch-failed', `Marking batch ${item.batch} as failed due to ${item.name}`, {
+          artifact: item.name,
+          batch: item.batch,
+          error: entry.error
+        });
+        log(`Batch ${item.batch} marked failed — continuing with remaining batches`);
+        // Record skipped siblings from the same batch in ready_now
+        const readyItems = status.ready_now || [];
+        for (const sibling of readyItems) {
+          if (sibling.name !== item.name && sibling.batch === item.batch && !skippedNames.has(sibling.name)) {
+            skippedNames.add(sibling.name);
+            runState.summary.skipped += 1;
+            runState.entries.push({
+              name: sibling.name,
+              batch: sibling.batch,
+              route: sibling.execution?.route || sibling.route,
+              function: sibling.execution?.function || null,
+              started_at: new Date().toISOString(),
+              status: 'skipped',
+              finished_at: new Date().toISOString(),
+              skip_reason: `Batch ${sibling.batch} has a prior failure (${item.name})`,
+              dependencies: sibling.execution?.recursive_dependencies || [],
+              source: {
+                path: sibling.source?.logical_path || null,
+                bytes: sibling.source?.bytes || null,
+                chunks: sibling.source?.chunks || null
+              }
+            });
+            emitTraceEvent(context, 'item-skipped', `Skipped ${sibling.name} — batch ${sibling.batch} failed`, {
+              artifact: sibling.name,
+              batch: sibling.batch,
+              caused_by: item.name
+            });
+            log(`Skipped ${sibling.name} (batch ${sibling.batch} failed)`);
+          }
+        }
+        persistRunState(args.runLogPath, runState);
+        processed += 1;
+        nextItem = nextReadyItem(status);
+        continue;
+      }
       throw err;
     }
 
@@ -1356,18 +1420,34 @@ async function main() {
       throw new Error(`Release entered hard-stop state after minting ${item.name}.`);
     }
     processed += 1;
+    nextItem = nextReadyItem(status);
   }
 
   runState.summary.remaining = Math.max(0, (status.summary?.total || 0) - (status.summary?.minted || 0));
-  runState.status = status.summary?.minted === status.summary?.total ? 'completed' : 'stopped';
+  if (runState.errors.length > 0 && runState.summary.minted > 0) {
+    runState.status = 'completed-with-errors';
+  } else if (runState.errors.length > 0) {
+    runState.status = 'failed';
+  } else if (status.summary?.minted === status.summary?.total) {
+    runState.status = 'completed';
+  } else {
+    runState.status = 'stopped';
+  }
   runState.finished_at = new Date().toISOString();
+  if (context.failedBatches.size > 0) {
+    runState.failed_batches = [...context.failedBatches];
+  }
   emitTraceEvent(context, 'run-complete', `Auto-inscribe ${runState.status}`, {
     summary: runState.summary,
     minted_total: status.summary?.minted || 0,
-    total: status.summary?.total || 0
+    total: status.summary?.total || 0,
+    failed_batches: [...context.failedBatches]
   });
   persistRunState(args.runLogPath, runState);
-  log(`Auto-inscribe ${runState.status}: ${status.summary?.minted || 0}/${status.summary?.total || 0} minted.`);
+  const statusParts = [`${status.summary?.minted || 0}/${status.summary?.total || 0} minted`];
+  if (runState.summary.failed > 0) statusParts.push(`${runState.summary.failed} failed`);
+  if (runState.summary.skipped > 0) statusParts.push(`${runState.summary.skipped} skipped`);
+  log(`Auto-inscribe ${runState.status}: ${statusParts.join(', ')}.`);
 }
 
 main().catch((err) => {

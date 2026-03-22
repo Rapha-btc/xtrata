@@ -435,6 +435,95 @@
             font-size: 12px;
         }
         .small-list li { margin-bottom: 0.35rem; }
+        .artifact-card {
+            border: 1px solid var(--line);
+            background: var(--bg-soft);
+            padding: 0.8rem;
+        }
+        .artifact-card .artifact-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 0.5rem;
+            margin-bottom: 0.4rem;
+        }
+        .artifact-card .artifact-name {
+            color: #fff;
+            font-size: 13px;
+            word-break: break-word;
+        }
+        .artifact-card .artifact-token {
+            flex-shrink: 0;
+            color: var(--accent);
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .artifact-card .artifact-role {
+            color: var(--muted);
+            font-size: 12px;
+            margin-bottom: 0.35rem;
+        }
+        .artifact-card .artifact-desc {
+            color: var(--ink);
+            font-size: 12px;
+            margin-bottom: 0.45rem;
+        }
+        .artifact-card .artifact-meta {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+        }
+        .artifact-card .artifact-meta .chip {
+            font-size: 10px;
+            padding: 0.2rem 0.4rem;
+        }
+        .artifact-card a.chip:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            text-decoration: none;
+        }
+        .batch-group {
+            border: 1px solid var(--line);
+            background: rgba(11, 11, 11, 0.94);
+            padding: 0.9rem;
+        }
+        .batch-group-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.6rem;
+        }
+        .batch-group-title {
+            color: #fff;
+            font-size: 14px;
+        }
+        .batch-group-desc {
+            color: var(--muted);
+            font-size: 12px;
+            margin-bottom: 0.65rem;
+        }
+        .batch-group .card-grid {
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        }
+        .graph-node {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            border: 1px solid var(--line);
+            background: var(--bg-soft);
+            padding: 0.3rem 0.5rem;
+            font-size: 11px;
+            color: var(--ink);
+            white-space: nowrap;
+        }
+        .graph-node .node-id {
+            color: var(--accent);
+            font-weight: bold;
+        }
+        .graph-node.stratum-schema { border-left: 3px solid var(--blue); }
+        .graph-node.stratum-runtime { border-left: 3px solid var(--good); }
+        .graph-node.stratum-application { border-left: 3px solid var(--warn); }
+        .graph-node.stratum-catalog { border-left: 3px solid var(--accent); }
         @media (max-width: 1100px) {
             .hero,
             .grid {
@@ -505,6 +594,7 @@
             <a href="#release-overview">Release Overview</a>
             <a href="#costs">Costs</a>
             <a href="#execution-plan">Execution Plan</a>
+            <a href="#canary-achievement">Canary Achievement</a>
             <a href="#safety">Safety</a>
             <a href="#upload-studio">Upload Studio</a>
         </nav>
@@ -600,6 +690,25 @@
                     </div>
                 </div>
                 <div style="margin-top: 0.9rem;" class="code" id="automation-log">No automation output yet.</div>
+            </section>
+
+            <section class="module span-12" id="canary-achievement" hidden>
+                <div class="module-head">
+                    <div>
+                        <h2>Recursive Canary Achievement</h2>
+                        <div class="module-sub" id="achievement-narrative"></div>
+                    </div>
+                    <div class="status-tag" id="achievement-status"><span class="pulse-dot"></span><span>Completed</span></div>
+                </div>
+                <div class="card-grid" id="achievement-stats"></div>
+                <div style="margin-top: 1.25rem;">
+                    <div class="tiny-label" style="margin-bottom: 0.6rem;">Dependency Graph</div>
+                    <div id="achievement-graph" style="border: 1px solid var(--line); background: #050505; padding: 1rem; overflow-x: auto;"></div>
+                </div>
+                <div style="margin-top: 1.25rem;">
+                    <div class="tiny-label" style="margin-bottom: 0.6rem;">Inscribed Artifacts</div>
+                    <div id="achievement-batches" class="stack"></div>
+                </div>
             </section>
 
             <section class="module span-6" id="safety">

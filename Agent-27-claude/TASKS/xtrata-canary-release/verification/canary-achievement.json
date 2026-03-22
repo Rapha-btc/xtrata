@@ -1,0 +1,164 @@
+{
+  "status": "completed",
+  "title": "Recursive Canary Release",
+  "sealed_at": "2026-03-22T03:35:26.867Z",
+  "contract": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0",
+  "helper_contract": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-small-mint-v1-0",
+  "creator": "SP15T1W26JTNS26VG17HM468KW7TQD3124KTYA9EJ",
+  "network": "mainnet",
+  "token_range": [202, 211],
+  "total_artifacts": 10,
+  "total_batches": 4,
+  "proof_viewer_token": 211,
+  "narrative": "Agent 27 inscribed the first recursive multi-artifact application on Xtrata. Ten SIP-009 tokens form a dependency graph where each artifact — schema, runtime modules, application shell, catalogs, and a self-verifying proof viewer — is sealed on-chain with cryptographic content hashes and explicit dependency links. The proof viewer (token 211) depends on all nine prior tokens, forming a complete on-chain application that can reconstruct and verify itself from its own dependency graph.",
+  "batches": [
+    {
+      "name": "Foundation",
+      "file": "10-foundation.batch.json",
+      "order": 10,
+      "description": "Core schema and runtime primitives. No dependencies — these are the roots of the graph."
+    },
+    {
+      "name": "Application",
+      "file": "20-application.batch.json",
+      "order": 20,
+      "description": "Widget and shell artifacts that compose foundation modules into a UI layer."
+    },
+    {
+      "name": "Catalogs",
+      "file": "30-catalogs.batch.json",
+      "order": 30,
+      "description": "Machine-readable indexes that bind runtime, release, and root layers into a navigable structure."
+    },
+    {
+      "name": "Proof Viewer",
+      "file": "40-proof-viewer.batch.json",
+      "order": 40,
+      "description": "A self-contained HTML viewer that depends on all prior tokens and can verify the integrity of the entire graph."
+    }
+  ],
+  "artifacts": [
+    {
+      "name": "canary.schema.release.v1",
+      "token_id": 202,
+      "batch": "Foundation",
+      "stratum": "schema",
+      "mime": "application/json",
+      "bytes": 347,
+      "chunks": 1,
+      "role": "Release metadata schema",
+      "description": "Defines the structure for canary release metadata. The foundational contract that all catalogs validate against.",
+      "dependencies": []
+    },
+    {
+      "name": "canary.runtime.copy.v1",
+      "token_id": 203,
+      "batch": "Foundation",
+      "stratum": "runtime",
+      "mime": "application/json",
+      "bytes": 1618,
+      "chunks": 1,
+      "role": "Human-readable copy",
+      "description": "Operator-facing text strings and labels. Consumed by the core runtime and widget for display.",
+      "dependencies": []
+    },
+    {
+      "name": "canary.runtime.theme.v1",
+      "token_id": 204,
+      "batch": "Foundation",
+      "stratum": "runtime",
+      "mime": "text/css",
+      "bytes": 1462,
+      "chunks": 1,
+      "role": "Visual theme",
+      "description": "Shared CSS styling for all visual components in the canary runtime.",
+      "dependencies": []
+    },
+    {
+      "name": "canary.runtime.core.v1",
+      "token_id": 205,
+      "batch": "Foundation",
+      "stratum": "runtime",
+      "mime": "application/javascript",
+      "bytes": 344,
+      "chunks": 1,
+      "role": "Core runtime helper",
+      "description": "JavaScript helper used by the widget. Depends on copy data for text resolution.",
+      "dependencies": [203]
+    },
+    {
+      "name": "canary.runtime.widget.v1",
+      "token_id": 206,
+      "batch": "Application",
+      "stratum": "runtime",
+      "mime": "application/javascript",
+      "bytes": 520,
+      "chunks": 1,
+      "role": "UI widget",
+      "description": "Interactive widget component that composes core runtime and copy into a user-facing element.",
+      "dependencies": [205, 203]
+    },
+    {
+      "name": "canary.app.shell.v1",
+      "token_id": 207,
+      "batch": "Application",
+      "stratum": "application",
+      "mime": "text/html",
+      "bytes": 10620,
+      "chunks": 1,
+      "role": "Application shell",
+      "description": "Self-contained HTML page that loads the theme and widget to render the canary application.",
+      "dependencies": [204, 206]
+    },
+    {
+      "name": "canary.catalog.runtime.v1",
+      "token_id": 208,
+      "batch": "Catalogs",
+      "stratum": "catalog",
+      "mime": "application/json",
+      "bytes": 1801,
+      "chunks": 1,
+      "role": "Runtime catalog",
+      "description": "Machine-readable index of all runtime-layer modules. Resolves copy, theme, core, and widget by token ID.",
+      "dependencies": [203, 204, 205, 206]
+    },
+    {
+      "name": "canary.catalog.release.v1",
+      "token_id": 209,
+      "batch": "Catalogs",
+      "stratum": "catalog",
+      "mime": "application/json",
+      "bytes": 944,
+      "chunks": 1,
+      "role": "Release catalog",
+      "description": "Binds the application shell to the runtime catalog and validates against the release schema.",
+      "dependencies": [208, 207, 202]
+    },
+    {
+      "name": "canary.catalog.root.v1",
+      "token_id": 210,
+      "batch": "Catalogs",
+      "stratum": "catalog",
+      "mime": "application/json",
+      "bytes": 190,
+      "chunks": 1,
+      "role": "Root catalog",
+      "description": "Top-level entry point that closes the recursive catalog chain. Points to the release catalog.",
+      "dependencies": [209]
+    },
+    {
+      "name": "canary.proof.viewer.v1",
+      "token_id": 211,
+      "batch": "Proof Viewer",
+      "stratum": "catalog",
+      "mime": "text/html",
+      "bytes": 21657,
+      "chunks": 2,
+      "role": "Self-verifying proof viewer",
+      "description": "An HTML application that depends on all nine prior tokens. It can reconstruct and display the complete dependency graph, verify content hashes, and prove the integrity of the recursive release.",
+      "dependencies": [202, 203, 204, 205, 206, 207, 208, 209, 210],
+      "txid": "149481b1237685b333dda9ed7f955dd68a8a33a454077fde7a05bc74c29d0bad",
+      "block_height": 7280130
+    }
+  ]
+}
