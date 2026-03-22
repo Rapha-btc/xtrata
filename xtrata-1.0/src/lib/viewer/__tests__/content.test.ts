@@ -4,6 +4,7 @@ import {
   decodeTokenUriToImage,
   detectWebmTrackKind,
   extractImageFromMetadata,
+  IMMUTABLE_VIEWER_FETCH_CACHE_MODE,
   getFiniteAnimatedImageReplayDelayMs,
   fetchTokenImageFromUri,
   getFiniteGifReplayDelayMs,
@@ -375,6 +376,13 @@ describe('viewer content helpers', () => {
     const uri = 'https://example.com/metadata.json';
     const image = await fetchTokenImageFromUri(uri);
     expect(image).toBe('https://ipfs.io/ipfs/bafy123/cover.png');
+    expect(fetchMock).toHaveBeenCalledWith(
+      uri,
+      expect.objectContaining({
+        cache: IMMUTABLE_VIEWER_FETCH_CACHE_MODE,
+        redirect: 'follow'
+      })
+    );
   });
 
   it('detects likely image urls', () => {
@@ -396,6 +404,13 @@ describe('viewer content helpers', () => {
     expect(first).toBe('https://example.com/image.png');
     expect(second).toBe('https://example.com/image.png');
     expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith(
+      uri,
+      expect.objectContaining({
+        cache: IMMUTABLE_VIEWER_FETCH_CACHE_MODE,
+        redirect: 'follow'
+      })
+    );
   });
 
   it('resolves relative token-uri images against the metadata url', async () => {

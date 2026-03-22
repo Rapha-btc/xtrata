@@ -16,6 +16,7 @@ import {
   fetchTokenImageFromUri,
   getMediaKind,
   getTextPreview,
+  IMMUTABLE_VIEWER_FETCH_CACHE_MODE,
   isDataUri,
   isHttpUrl,
   joinChunks,
@@ -1286,7 +1287,10 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     normalizeImageUrl
   ]);
   const fetchImageBytes = useCallback(async (url: string) => {
-    const response = await fetch(url, { cache: 'no-store', redirect: 'follow' });
+    const response = await fetch(url, {
+      cache: IMMUTABLE_VIEWER_FETCH_CACHE_MODE,
+      redirect: 'follow'
+    });
     if (!response.ok) {
       throw new Error(`Fetch failed (${response.status})`);
     }

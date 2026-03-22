@@ -1201,6 +1201,8 @@ export default function SimplePublicHome() {
             onModeChange={setViewerMode}
             modeLabels={{ collection: 'Explore', wallet: 'Wallet' }}
             viewerTitles={{ collection: 'Live inscription viewer', wallet: 'Wallet viewer' }}
+            allowSummaryPrefetch={false}
+            allowBackgroundRelationshipSync={false}
           />
         </div>
 

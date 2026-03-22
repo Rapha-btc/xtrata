@@ -743,6 +743,7 @@ const resolveTokenUriImage = (
 };
 
 const TOKEN_URI_CACHE_LIMIT = 200;
+export const IMMUTABLE_VIEWER_FETCH_CACHE_MODE: RequestCache = 'force-cache';
 const tokenUriImageCache = new Map<string, string | null>();
 const tokenUriInFlight = new Map<string, Promise<string | null>>();
 const tokenUriCacheLog = new Set<string>();
@@ -775,7 +776,7 @@ export const fetchJsonFromUrl = async (
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     const response = await fetch(url, {
-      cache: 'no-store',
+      cache: IMMUTABLE_VIEWER_FETCH_CACHE_MODE,
       redirect: 'follow',
       signal: controller.signal
     });

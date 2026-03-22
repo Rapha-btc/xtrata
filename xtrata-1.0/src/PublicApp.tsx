@@ -2325,6 +2325,8 @@ export default function PublicApp() {
           onClearWalletLookup={handleClearWalletLookup}
           modeLabels={{ collection: 'Chain', wallet: 'Wallet' }}
           viewerTitles={{ collection: 'Chain viewer', wallet: 'Wallet viewer' }}
+          allowSummaryPrefetch={false}
+          allowBackgroundRelationshipSync={false}
         />
 
         <PublicMarketScreen
