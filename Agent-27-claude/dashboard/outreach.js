@@ -307,57 +307,70 @@ function executeSend({ displayName, stxAddress, btcAddress, agentId, message, mo
 }
 
 /**
- * Direct send: calls the MCP send_inbox_message tool handler directly (no Claude subprocess).
- * Retries up to 3 times with 30s backoff on nonce/settlement errors.
- * Falls back to executeSend (Claude subprocess) if all retries fail.
+ * Direct send with retry: calls sendInboxMessage directly with automatic
+ * retry on nonce/settlement errors (up to 3 attempts, 30s backoff).
+ * Recovers paymentTxid from failed attempts and forwards it on retry.
+ * Callbacks (onSuccess/onFailure) fire exactly once, after final outcome.
  */
 async function executeSendDirect(args) {
   const { displayName, stxAddress, btcAddress, message, logPrefix = 'Direct' } = args;
   const walletPassword = process.env.WALLET_PASSWORD || '';
   const MAX_RETRIES = 3;
   const BACKOFF_MS = 30_000;
+  let currentPaymentTxid = args.paymentTxid || '';
 
   runningOutreach = true;
   _addLog('start', `${logPrefix} [mcp-direct] send to ${displayName}...`);
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      const result = await sendInboxMessage({
+      const data = await sendInboxMessage({
         recipientBtcAddress: btcAddress,
         recipientStxAddress: stxAddress,
         content: message,
-        walletPassword
+        walletPassword,
+        paymentTxid: currentPaymentTxid || undefined,
+        onStatus: (statusLine) => {
+          _addLog('stdout', `[${logPrefix}] [mcp-direct] ${statusLine}`);
+        }
       });
 
       // Success
       runningOutreach = false;
+      const fullText = JSON.stringify(data);
+      const sendResult = { isSuccess: true, data };
       _addLog('stop', `${logPrefix} [mcp-direct] to ${displayName} delivered.`);
-      try { if (args.onSuccess) args.onSuccess(JSON.stringify(result)); } catch (cbErr) {
-        console.error(`[executeSendDirect] Callback error: ${cbErr.message}`);
+      try { if (args.onSuccess) args.onSuccess(fullText, sendResult); } catch (cbErr) {
+        console.error(`[executeSendDirect] onSuccess callback error: ${cbErr.message}`);
       }
-      return { success: true, text: JSON.stringify(result) };
+      return { success: true, text: fullText, analysis: sendResult };
 
     } catch (err) {
       const errMsg = err.message || '';
-      const isRetryable = /nonce|ConflictingNonce|settlement|timeout|retry/i.test(errMsg);
+      const recoveryTxid = err.recovery?.paymentTxid;
+      if (recoveryTxid) currentPaymentTxid = recoveryTxid;
 
+      const isRetryable = /nonce|ConflictingNonce|settlement|timeout|retry/i.test(errMsg);
       if (isRetryable && attempt < MAX_RETRIES) {
         _addLog('stdout', `${logPrefix} [mcp-direct] attempt ${attempt}/${MAX_RETRIES} failed (${errMsg.substring(0, 80)}), retrying in ${BACKOFF_MS / 1000}s...`);
         await new Promise(r => setTimeout(r, BACKOFF_MS));
         continue;
       }
 
-      // Non-retryable or retries exhausted — fall back to Claude subprocess
-      _addLog('error', `${logPrefix} [mcp-direct] failed after ${attempt} attempt(s): ${errMsg.substring(0, 120)}`);
-      _addLog('stdout', `${logPrefix} falling back to Claude subprocess...`);
-      // Don't clear runningOutreach — executeSend will manage it
-      return executeSend(args);
+      // Non-retryable or retries exhausted
+      runningOutreach = false;
+      const failureText = errMsg || 'Unknown inbox send error';
+      const failureResult = { isSuccess: false, recovery: err.recovery || null };
+      _addLog('error', `${logPrefix} [mcp-direct] failed after ${attempt} attempt(s): ${failureText.substring(0, 120)}`);
+      try { if (args.onFailure) args.onFailure(failureText, failureResult); } catch (cbErr) {
+        console.error(`[executeSendDirect] onFailure callback error: ${cbErr.message}`);
+      }
+      return { success: false, error: failureText, recovery: failureResult.recovery };
     }
   }
 
-  // Should not reach here, but safety net
+  // Safety net
   runningOutreach = false;
-  if (args.onFailure) args.onFailure('Max retries exhausted');
   return { success: false, error: 'Max retries exhausted' };
 }
 
