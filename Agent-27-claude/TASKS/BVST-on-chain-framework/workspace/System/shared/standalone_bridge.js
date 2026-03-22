@@ -109,7 +109,7 @@ export class StandaloneBridge {
         this.analyser = analyser;
         this.node.port.onmessage = this._portHandler;
 
-        const wasmRes = await fetch(withCacheBust(wasmUrl), { cache: 'no-store' });
+        const wasmRes = await fetch(withCacheBust(wasmUrl));
         if (!wasmRes.ok) {
             throw new Error(`Failed to load WASM: ${wasmUrl} (${wasmRes.status})`);
         }
@@ -125,7 +125,7 @@ export class StandaloneBridge {
 
     async _ensureManifest() {
         if (this.manifest) return this.manifest;
-        const res = await fetch(withCacheBust(this.manifestUrl), { cache: 'no-store' });
+        const res = await fetch(withCacheBust(this.manifestUrl));
         if (!res.ok) {
             throw new Error(`Failed to load manifest: ${this.manifestUrl} (${res.status})`);
         }

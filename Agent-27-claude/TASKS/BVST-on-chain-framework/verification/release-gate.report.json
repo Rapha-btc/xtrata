@@ -1,0 +1,81 @@
+{
+  "generated_at": "2026-03-22T14:05:57.504Z",
+  "bundle_root": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework",
+  "summary": {
+    "status": "passed",
+    "total_steps": 3,
+    "with_browser_smoke": false,
+    "with_live_quote": false
+  },
+  "steps": [
+    {
+      "name": "pre_inscription_safety",
+      "status": "passed",
+      "startedAt": "2026-03-22T14:05:51.184Z",
+      "finishedAt": "2026-03-22T14:05:51.712Z",
+      "withBrowserSmoke": false,
+      "report": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/verification/pre-inscription.report.json"
+    },
+    {
+      "name": "status_refresh",
+      "status": "passed",
+      "startedAt": "2026-03-22T14:05:51.712Z",
+      "finishedAt": "2026-03-22T14:05:51.757Z",
+      "report": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/verification/inscription-status.json"
+    },
+    {
+      "name": "auto_runner_simulation",
+      "status": "passed",
+      "startedAt": "2026-03-22T14:05:51.757Z",
+      "finishedAt": "2026-03-22T14:05:57.501Z",
+      "report": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/verification/auto-inscribe-sim-run.json"
+    }
+  ],
+  "readiness": {
+    "safety": {
+      "failed": 0,
+      "passed_with_warnings": 0,
+      "passed": 5,
+      "skipped": 2
+    },
+    "live_status": {
+      "total": 53,
+      "minted": 0,
+      "ready": 5,
+      "blocked": 48,
+      "hard_stop": 0
+    },
+    "simulated_run": {
+      "attempted": 53,
+      "minted": 53,
+      "remaining": 0
+    },
+    "simulated_status": {
+      "total": 53,
+      "minted": 53,
+      "ready": 0,
+      "blocked": 0,
+      "hard_stop": 0
+    },
+    "quote": {
+      "verifiedAt": "2026-03-21T23:48:44.650Z",
+      "feeUnitMicroStx": "1000",
+      "protocolFeeStx": 0.159,
+      "liveMiningFeeStx": 11.984259,
+      "predictedTokenRange": {
+        "start": 202,
+        "end": 254
+      }
+    }
+  },
+  "artifacts": {
+    "safety_report": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/verification/pre-inscription.report.json",
+    "live_status": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/verification/inscription-status.json",
+    "simulated_status": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/verification/inscription-status.simulated.json",
+    "live_quote": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/verification/preflight.quote.json",
+    "simulation_run": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/verification/auto-inscribe-sim-run.json",
+    "simulation_events": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/verification/auto-inscribe-sim-events.jsonl",
+    "simulation_chain": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/verification/auto-inscribe-sim-chain.jsonl",
+    "simulation_failure": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/verification/auto-inscribe-sim-failure.json"
+  }
+}

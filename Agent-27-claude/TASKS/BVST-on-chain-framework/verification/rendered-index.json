@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-21T17:36:22.194Z",
+  "generated_at": "2026-03-22T13:41:47.107Z",
   "token_map": "configs/token-map.runtime.json",
   "render_root": "rendered",
   "catalog_count": 15,
@@ -15,7 +15,7 @@
       "order": 180,
       "status": "pending",
       "template_path": "on-chain-modules/catalogs/majors/runtime-v1.catalog.json",
-      "template_sha256": "f056a3e07a3d09f2d746f620f0b902321d4aa1e402546371e72bed4a65bb3704",
+      "template_sha256": "427bc895ab9f9e29ae3cdb31af5ad4a7c866c489e4f71b2efd3a82f674788285",
       "direct_dependency_names": [
         "bvst.runtime.bvst-css.v1.0.0",
         "bvst.runtime.ui-styles.v1.0.0",
@@ -91,7 +91,7 @@
       "order": 190,
       "status": "pending",
       "template_path": "on-chain-modules/catalogs/majors/engine-v1.catalog.json",
-      "template_sha256": "80c7d4d181f11562cf4e0cd219c9579d0a2eface236f90ed63757fe67405a2c1",
+      "template_sha256": "32922b2ac26ae69ee08ebdd3f13aca3dab4a31c167857f67802025d14f791438",
       "direct_dependency_names": [
         "bvst.engine.unified-wasm.v1.0.0",
         "bvst.engine.unified-loader.v1.0.0",
@@ -127,7 +127,7 @@
       "order": 200,
       "status": "pending",
       "template_path": "on-chain-modules/catalogs/majors/schema-v1.catalog.json",
-      "template_sha256": "2a0b449657ce2fc06be29ac9c72ea7ab660bd7cf3d98ad23cff522118e557503",
+      "template_sha256": "c3ad8205f79cb6a2e54be0149c87f8687f1b62848471e55cd3fb20078d689263",
       "direct_dependency_names": [
         "bvst.schema.patch.v1"
       ],
@@ -155,7 +155,7 @@
       "order": 210,
       "status": "pending",
       "template_path": "on-chain-modules/catalogs/releases/foundation-v1.catalog.json",
-      "template_sha256": "4825b2370c354ea04cf14cda496121d45da8050e9365a1f9844f8c03c2e86772",
+      "template_sha256": "5e646213648c7d533efa17c09896f72279d35e910d3225423eea60215460f60a",
       "direct_dependency_names": [
         "bvst.catalog.runtime.v1",
         "bvst.catalog.engine.v1",
@@ -461,7 +461,7 @@
       "order": 140,
       "status": "pending",
       "template_path": "on-chain-modules/catalogs/plugins/standalone-synths/bluemarvintwo.release.catalog.json",
-      "template_sha256": "744e47f42bae56c16a7093556e85f54574c2511e5df895fd6c718d85babee482",
+      "template_sha256": "a92296284c1d803d2584aaa4e77780598b5600b79f784edae0f99b643d990a38",
       "direct_dependency_names": [
         "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
         "bvst.plugin.bluemarvintwo.patch.v1.0.0",

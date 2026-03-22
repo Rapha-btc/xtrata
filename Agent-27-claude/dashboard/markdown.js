@@ -209,41 +209,148 @@ function appendOutreachHistory(entry) {
   return { ok: true };
 }
 
+function isStacksAddress(value) {
+  return /^(SP|ST)[A-Z0-9]{8,}$/i.test(String(value || '').trim());
+}
+
+function compareIsoDates(a, b) {
+  const aTime = Date.parse(a || '') || 0;
+  const bTime = Date.parse(b || '') || 0;
+  return aTime - bTime;
+}
+
+function mergeOutreachMemoryRecords(records) {
+  const merged = {};
+  const ordered = [...records].sort((a, b) => compareIsoDates(a.lastUpdated, b.lastUpdated));
+  for (const record of ordered) {
+    if (!record || typeof record !== 'object') continue;
+    for (const [key, value] of Object.entries(record)) {
+      if (value !== undefined && value !== '') {
+        merged[key] = value;
+      } else if (!(key in merged) && value !== undefined) {
+        merged[key] = value;
+      }
+    }
+  }
+  return merged;
+}
+
+function chooseOutreachMemoryCanonicalKey(fallbackKey, record) {
+  const agentId = String(record.agentId || '').trim();
+  const stxAddress = String(record.stxAddress || '').trim();
+  if (agentId && !isStacksAddress(agentId)) return agentId;
+  if (stxAddress) return stxAddress;
+  if (agentId) return agentId;
+  return String(fallbackKey || '').trim();
+}
+
+function normalizeOutreachAgentMemory(rawMemory) {
+  const memory = rawMemory && typeof rawMemory === 'object' ? rawMemory : {};
+  const groups = new Map();
+
+  for (const [key, value] of Object.entries(memory)) {
+    if (!value || typeof value !== 'object') continue;
+    const record = { ...value };
+    if (!record.agentId) record.agentId = key;
+    const groupKey = record.stxAddress
+      ? `stx:${record.stxAddress}`
+      : record.agentId
+        ? `id:${record.agentId}`
+        : `key:${key}`;
+    const group = groups.get(groupKey) || [];
+    group.push({ key, record });
+    groups.set(groupKey, group);
+  }
+
+  const normalized = {};
+  for (const entries of groups.values()) {
+    const merged = mergeOutreachMemoryRecords(entries.map(({ record }) => record));
+    const preferredAgentId = entries
+      .map(({ key, record }) => String(record.agentId || key || '').trim())
+      .find((value) => value && !isStacksAddress(value));
+    const canonicalKey = chooseOutreachMemoryCanonicalKey(entries[0]?.key, {
+      ...merged,
+      agentId: preferredAgentId || merged.agentId
+    });
+    normalized[canonicalKey] = {
+      ...merged,
+      agentId: preferredAgentId || merged.agentId || canonicalKey
+    };
+  }
+
+  return normalized;
+}
+
 function parseOutreachAgentMemory() {
   try {
     const raw = fs.readFileSync(OUTREACH_AGENT_MEMORY_FILE, 'utf8');
-    return JSON.parse(raw);
+    return normalizeOutreachAgentMemory(JSON.parse(raw));
   } catch {
     return {};
   }
 }
 
 function saveOutreachAgentMemory(memory) {
+  const normalized = normalizeOutreachAgentMemory(memory);
   fs.mkdirSync(path.dirname(OUTREACH_AGENT_MEMORY_FILE), { recursive: true });
-  fs.writeFileSync(OUTREACH_AGENT_MEMORY_FILE, JSON.stringify(memory, null, 2), 'utf8');
+  fs.writeFileSync(OUTREACH_AGENT_MEMORY_FILE, JSON.stringify(normalized, null, 2), 'utf8');
   return { ok: true };
 }
 
 function getOutreachAgentMemory(agentId) {
   const memory = parseOutreachAgentMemory();
-  return memory[String(agentId)] || null;
+  const key = String(agentId || '').trim();
+  if (!key) return null;
+  if (memory[key]) return memory[key];
+  return Object.values(memory).find((entry) =>
+    String(entry.agentId || '').trim() === key ||
+    String(entry.stxAddress || '').trim() === key
+  ) || null;
 }
 
 function updateOutreachAgentMemory(agentId, patch) {
-  const key = String(agentId);
+  const key = String(agentId || '').trim();
   const memory = parseOutreachAgentMemory();
-  const existing = memory[key] || {};
   const filteredPatch = Object.fromEntries(
     Object.entries(patch || {}).filter(([, value]) => value !== undefined)
   );
-  memory[key] = {
+  const aliasMatches = Object.entries(memory)
+    .filter(([entryKey, entry]) => {
+      if (entryKey === key) return true;
+      const agentIdValue = String(entry.agentId || '').trim();
+      const stxValue = String(entry.stxAddress || '').trim();
+      const patchAgentId = String(filteredPatch.agentId || '').trim();
+      const patchStx = String(filteredPatch.stxAddress || '').trim();
+      return (
+        agentIdValue === key ||
+        stxValue === key ||
+        (patchAgentId && agentIdValue === patchAgentId) ||
+        (patchStx && stxValue === patchStx) ||
+        (patchStx && entryKey === patchStx)
+      );
+    })
+    .map(([, entry]) => entry);
+  const existing = mergeOutreachMemoryRecords(aliasMatches);
+  const preferredAgentId = String(
+    filteredPatch.agentId
+    || (!isStacksAddress(key) ? key : '')
+    || existing.agentId
+    || key
+  ).trim();
+  const canonicalKey = chooseOutreachMemoryCanonicalKey(key, {
+    ...filteredPatch,
+    ...existing,
+    agentId: preferredAgentId
+  });
+  memory[canonicalKey] = {
     ...existing,
     ...filteredPatch,
-    agentId: existing.agentId || filteredPatch.agentId || key,
+    agentId: preferredAgentId || canonicalKey,
+    stxAddress: filteredPatch.stxAddress || existing.stxAddress || '',
     lastUpdated: new Date().toISOString()
   };
   saveOutreachAgentMemory(memory);
-  return memory[key];
+  return getOutreachAgentMemory(canonicalKey);
 }
 
 function parseOutreachAmbassadorBrief() {

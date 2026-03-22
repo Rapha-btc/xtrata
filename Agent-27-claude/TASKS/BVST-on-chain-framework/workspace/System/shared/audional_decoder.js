@@ -166,7 +166,7 @@ export async function fetchAudionalAudioBytes(url, options = {}) {
     if (!fetchUrl) throw new Error('Missing URL');
 
     if (options.debug) console.log('[AudionalDecoder] fetch', { originalUrl, canonicalUrl: fetchUrl });
-    const res = await fetch(fetchUrl, { cache: 'no-store', ...(options.fetchOptions || {}) });
+    const res = await fetch(fetchUrl, options.fetchOptions || undefined);
     if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
 
     const ct = res.headers.get('content-type') || '';

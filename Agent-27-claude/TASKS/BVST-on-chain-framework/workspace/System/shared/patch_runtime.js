@@ -109,7 +109,7 @@ export async function runPatch(options = {}) {
     if (options.patch && typeof options.patch === 'object') {
         patchDoc = options.patch;
     } else {
-        const res = await fetch(patchUrl, { cache: 'no-store' });
+        const res = await fetch(patchUrl);
         if (!res.ok) throw new Error(`Failed to load patch: ${patchUrl} (${res.status})`);
         patchDoc = await res.json();
     }
@@ -120,7 +120,7 @@ export async function runPatch(options = {}) {
         manifest = options.manifest;
     } else {
         try {
-            const manifestRes = await fetch(manifestUrl, { cache: 'no-store' });
+            const manifestRes = await fetch(manifestUrl);
             if (manifestRes.ok) manifest = await manifestRes.json();
         } catch (_) {}
     }

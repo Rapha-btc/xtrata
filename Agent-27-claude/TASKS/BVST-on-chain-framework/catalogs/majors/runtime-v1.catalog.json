@@ -35,8 +35,8 @@
       "block_height": null,
       "path": "on-chain-modules/workspace/System/shared/audional_decoder.js",
       "mime_type": "application/javascript",
-      "sha256": "bec66efd0382c49ff15c5f401124cff350412177458ee91151b46224a2116916",
-      "bytes": 9564,
+      "sha256": "5755e7c345e8db646933916ebc8391795d9315dfd71d2d84c676259ef1defeb3",
+      "bytes": 9543,
       "chunks": 1,
       "route": "helper"
     },
@@ -131,8 +131,8 @@
       "block_height": null,
       "path": "on-chain-modules/workspace/System/shared/standalone_bridge.js",
       "mime_type": "application/javascript",
-      "sha256": "edbc817f7547b16b517a1a16bc1e30a69046535dcb0e756c7c89941406212b45",
-      "bytes": 10276,
+      "sha256": "e5d9c4542a65ba73a2b6bfba7b9fc996594453264b3942d1a978aa56edb2069e",
+      "bytes": 10230,
       "chunks": 1,
       "route": "helper"
     },
@@ -155,8 +155,8 @@
       "block_height": null,
       "path": "on-chain-modules/workspace/System/shared/patch_runtime.js",
       "mime_type": "application/javascript",
-      "sha256": "ed5ce7a38fba5072559a2ce3e746e98578a6a536d7f6d34469f836175effaf47",
-      "bytes": 4360,
+      "sha256": "6fc6798fc69e8700a7e185ae6876b5330e8e5cd8008d13d07983b0fde8bc9fa3",
+      "bytes": 4314,
       "chunks": 1,
       "route": "helper"
     }

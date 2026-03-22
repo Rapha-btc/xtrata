@@ -318,6 +318,44 @@ function execFileAsync(file, args, options = {}) {
   });
 }
 
+function setShortApiCache(res, seconds = 5) {
+  res.setHeader('Cache-Control', `public, max-age=${seconds}, stale-while-revalidate=${Math.max(seconds * 5, 25)}`);
+}
+
+function setStaticCacheHeaders(res, filePath) {
+  const rel = path.relative(__dirname, filePath).split(path.sep).join(path.posix.sep);
+  if (rel.endsWith('.html')) {
+    res.setHeader('Cache-Control', 'no-store');
+    return;
+  }
+  if (/\.(?:js|mjs|css)$/.test(rel)) {
+    res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=300');
+    return;
+  }
+  if (/\.(?:png|jpg|jpeg|gif|svg|ico|woff2?|ttf|otf)$/.test(rel)) {
+    res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
+  }
+}
+
+function shouldSuppressHttpActivityLog(req) {
+  const pathname = String(req.path || req.url || '').split('?')[0];
+  if (pathname === '/events') return true;
+  if (
+    req.method === 'GET' && (
+      pathname === '/api/chain' ||
+      pathname === '/api/heartbeat/status' ||
+      pathname === '/api/phase-status' ||
+      pathname === '/api/inscription-planner/current-release'
+    )
+  ) {
+    return true;
+  }
+  if (req.method === 'GET' && /\.(?:js|mjs|css|map|png|jpg|jpeg|gif|svg|ico|woff2?|ttf|otf)$/.test(pathname)) {
+    return true;
+  }
+  return false;
+}
+
 function protocolFeeForChunks(chunks, feeUnitMicroStx) {
   const begin = feeUnitMicroStx;
   const seal = feeUnitMicroStx * (1n + ((BigInt(chunks) + 49n) / 50n));
@@ -619,6 +657,7 @@ async function loadInscriptionPlannerData(releaseId = 'bvst-first-wave') {
 app.use((req, res, next) => {
   const start = Date.now();
   res.on('finish', () => {
+    if (shouldSuppressHttpActivityLog(req)) return;
     const line = `${req.method} ${req.url} -> ${res.statusCode} (${Date.now() - start}ms)`;
     console.log(`[${new Date().toISOString()}] ${line}`);
     addLog('http', line);
@@ -628,7 +667,11 @@ app.use((req, res, next) => {
 
 // Middleware
 app.use(express.json());
-app.use(express.static(__dirname));
+app.use(express.static(__dirname, {
+  etag: true,
+  lastModified: true,
+  setHeaders: setStaticCacheHeaders
+}));
 
 // --- API Routes ---
 
@@ -674,6 +717,7 @@ app.get('/api/log', (req, res) => {
 });
 
 app.get('/api/chain', (req, res) => {
+  setShortApiCache(res, 5);
   const ledger = markdown.parseLedger();
   const runningTotals = ledger.runningTotals || [];
   const state = stateManager.getState();
@@ -718,6 +762,7 @@ app.get('/api/chain', (req, res) => {
 // --- Phase routes (replaces scheduler) ---
 
 app.get('/api/phase-status', (req, res) => {
+  setShortApiCache(res, 5);
   res.json(getPhaseStatus());
 });
 
@@ -815,6 +860,7 @@ app.use('/api/outreach', mountOutreach({
 // --- Heartbeat Routes ---
 
 app.get('/api/heartbeat/status', (req, res) => {
+  setShortApiCache(res, 5);
   res.json(getHeartbeatStatus());
 });
 
@@ -863,6 +909,7 @@ app.get('/events', sseHandler);
 
 app.get('/api/inscription-planner/current-release', (req, res) => {
   try {
+    setShortApiCache(res, 10);
     Promise.resolve(loadInscriptionPlannerData(req.query.release))
       .then((data) => res.json(data))
       .catch((err) => res.status(500).json({ ok: false, error: err.message }));

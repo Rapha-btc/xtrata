@@ -7,6 +7,7 @@ try {
 }
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { execFile } = require('child_process');
@@ -46,7 +47,7 @@ const FALLBACK_TX_FEE = 250_000n;
 
 function usage() {
   throw new Error(
-    'Usage: node skills/xtrata-release-plan/scripts/xtrata-auto-inscribe.cjs <bundle-root> [--run-log <path>] [--status-out <path>] [--event-log <path>] [--chain-log <path>] [--failure-snapshot <path>] [--max-items <count>]'
+    'Usage: node skills/xtrata-release-plan/scripts/xtrata-auto-inscribe.cjs <bundle-root> [--run-log <path>] [--status-out <path>] [--event-log <path>] [--chain-log <path>] [--failure-snapshot <path>] [--max-items <count>] [--test-mode <local-dry-run|simulate-release>]'
   );
 }
 
@@ -107,20 +108,41 @@ function parseArgs(argv) {
     args.maxItems = Number.POSITIVE_INFINITY;
   }
 
+  const useSimulationOutputs = args.testMode === 'simulate-release';
   if (!args.runLogPath) {
-    args.runLogPath = path.join(args.bundleRoot, 'verification', 'auto-inscribe-run.json');
+    args.runLogPath = path.join(
+      args.bundleRoot,
+      'verification',
+      useSimulationOutputs ? 'auto-inscribe-sim-run.json' : 'auto-inscribe-run.json'
+    );
   }
   if (!args.statusOutPath) {
-    args.statusOutPath = path.join(args.bundleRoot, 'verification', 'inscription-status.json');
+    args.statusOutPath = path.join(
+      args.bundleRoot,
+      'verification',
+      useSimulationOutputs ? 'inscription-status.simulated.json' : 'inscription-status.json'
+    );
   }
   if (!args.eventLogPath) {
-    args.eventLogPath = path.join(args.bundleRoot, 'verification', 'auto-inscribe-events.jsonl');
+    args.eventLogPath = path.join(
+      args.bundleRoot,
+      'verification',
+      useSimulationOutputs ? 'auto-inscribe-sim-events.jsonl' : 'auto-inscribe-events.jsonl'
+    );
   }
   if (!args.chainLogPath) {
-    args.chainLogPath = path.join(args.bundleRoot, 'verification', 'auto-inscribe-chain.jsonl');
+    args.chainLogPath = path.join(
+      args.bundleRoot,
+      'verification',
+      useSimulationOutputs ? 'auto-inscribe-sim-chain.jsonl' : 'auto-inscribe-chain.jsonl'
+    );
   }
   if (!args.failureSnapshotPath) {
-    args.failureSnapshotPath = path.join(args.bundleRoot, 'verification', 'auto-inscribe-failure.json');
+    args.failureSnapshotPath = path.join(
+      args.bundleRoot,
+      'verification',
+      useSimulationOutputs ? 'auto-inscribe-sim-failure.json' : 'auto-inscribe-failure.json'
+    );
   }
 
   return args;
@@ -140,10 +162,25 @@ function inferNetworkNameFromAddress(address) {
   return 'unknown';
 }
 
+function isSimulationMode(context) {
+  return context?.testMode === 'simulate-release';
+}
+
+function usesMockChain(context) {
+  return isLocalDryRun(context) || isSimulationMode(context);
+}
+
 function resolveSignerSource(context = null) {
-  if (isLocalDryRun(context) || process.env.XTRATA_AUTO_INSCRIBE_TEST_MODE === 'local-dry-run') {
+  if (
+    isLocalDryRun(context) ||
+    isSimulationMode(context) ||
+    process.env.XTRATA_AUTO_INSCRIBE_TEST_MODE === 'local-dry-run' ||
+    process.env.XTRATA_AUTO_INSCRIBE_TEST_MODE === 'simulate-release'
+  ) {
     return {
-      type: 'local-dry-run',
+      type: isSimulationMode(context) || process.env.XTRATA_AUTO_INSCRIBE_TEST_MODE === 'simulate-release'
+        ? 'simulate-release'
+        : 'local-dry-run',
       senderKey: `${'11'.repeat(32)}01`
     };
   }
@@ -177,6 +214,76 @@ function normalizeNetworkName(value) {
 
 function isLocalDryRun(context) {
   return context?.testMode === 'local-dry-run';
+}
+
+function fileSnapshotForBundle(bundleRoot, relativePath) {
+  return fileSnapshot(bundleRoot ? path.join(bundleRoot, relativePath) : null);
+}
+
+function createSimulationBundleRoot(sourceBundleRoot) {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'xtrata-auto-inscribe-'));
+  const targetRoot = path.join(tempRoot, path.basename(sourceBundleRoot));
+  fs.cpSync(sourceBundleRoot, targetRoot, { recursive: true });
+  return targetRoot;
+}
+
+function predictedTokenStart(bundleRoot) {
+  try {
+    const preflight = readJson(path.join(bundleRoot, 'verification', 'preflight.quote.json'));
+    const candidate = Number(preflight?.quote?.predictedTokenRange?.start);
+    return Number.isInteger(candidate) && candidate > 0 ? candidate : 1;
+  } catch {
+    return 1;
+  }
+}
+
+function buildSimulatedMintResult(context, item, verified, feeUnit, protocolFee, feeEstimate, tokenUri) {
+  const tokenId = context.simulation.nextTokenId;
+  const txid = `0x${String(tokenId).padStart(64, '0')}`;
+  const blockHeight = 500_000 + tokenId;
+  const verification = {
+    creator: context.senderAddress,
+    mimeType: item.mime,
+    totalSize: verified.totalSize.toString(),
+    totalChunks: verified.totalChunks.toString(),
+    tokenUri,
+    dependencyIds: (item.execution.recursive_dependencies || []).map((value) => value.toString()),
+    simulated: true
+  };
+  context.simulation.nextTokenId += 1;
+  emitTraceEvent(context, 'tx-simulated', `Simulated helper mint for ${item.name}`, {
+    artifact: item.name,
+    token_id: String(tokenId),
+    txid,
+    block_height: blockHeight,
+    serialized_bytes: feeEstimate.serializedBytes,
+    tx_fee_microstx: feeEstimate.txFee.toString()
+  });
+  recordChainObservation(context, 'mock-simulated-mint', `Simulated token ${tokenId} for ${item.name}`, {
+    artifact: item.name,
+    token_id: String(tokenId),
+    txid,
+    block_height: blockHeight,
+    token_uri: tokenUri,
+    dependencies: item.execution.recursive_dependencies || []
+  });
+  return {
+    name: item.name,
+    tokenId: String(tokenId),
+    txid,
+    blockHeight,
+    directSha256: verified.directSha256,
+    contentHashHex: verified.contentHashHex,
+    bytes: verified.buf.length,
+    chunks: verified.chunks.length,
+    tokenUri,
+    feeUnitMicroStx: feeUnit.toString(),
+    protocolFeeMicroStx: protocolFee.toString(),
+    txFeeMicroStx: feeEstimate.txFee.toString(),
+    serializedBytes: feeEstimate.serializedBytes,
+    usedFallbackTxFee: feeEstimate.usedFallback,
+    verification
+  };
 }
 
 function maybeFailAtStage(context, stage, payload = {}) {
@@ -369,16 +476,18 @@ function writeFailureSnapshot(args, context, runState, error) {
       event_log: args.eventLogPath,
       chain_log: args.chainLogPath,
       failure_snapshot: args.failureSnapshotPath,
-      status: args.statusOutPath
+      status: args.statusOutPath,
+      source_bundle_root: args.bundleRoot,
+      execution_bundle_root: args.executionBundleRoot || args.bundleRoot
     },
     state_files: {
       run_log: fileSnapshot(args.runLogPath),
       event_log: fileSnapshot(args.eventLogPath),
       chain_log: fileSnapshot(args.chainLogPath),
       status: fileSnapshot(args.statusOutPath),
-      token_map: fileSnapshot(path.join(args.bundleRoot, 'configs', 'token-map.runtime.json')),
-      rendered_index: fileSnapshot(path.join(args.bundleRoot, 'verification', 'rendered-index.json')),
-      inscription_log: fileSnapshot(path.join(args.bundleRoot, 'verification', 'inscription-log.json'))
+      token_map: fileSnapshotForBundle(args.executionBundleRoot || args.bundleRoot, path.join('configs', 'token-map.runtime.json')),
+      rendered_index: fileSnapshotForBundle(args.executionBundleRoot || args.bundleRoot, path.join('verification', 'rendered-index.json')),
+      inscription_log: fileSnapshotForBundle(args.executionBundleRoot || args.bundleRoot, path.join('verification', 'inscription-log.json'))
     },
     recent_events: readJsonLinesTail(args.eventLogPath, 20),
     recent_chain_observations: readJsonLinesTail(args.chainLogPath, 20),
@@ -528,7 +637,7 @@ async function readOnly(context, contract, functionName, functionArgs, debugMeta
 }
 
 async function getFeeUnit(context) {
-  if (isLocalDryRun(context)) {
+  if (usesMockChain(context)) {
     const value = 1000n;
     recordChainObservation(context, 'mock-read-only', 'mock get-fee-unit', {
       value: value.toString()
@@ -540,7 +649,7 @@ async function getFeeUnit(context) {
 }
 
 async function getIdByHash(context, expectedHash) {
-  if (isLocalDryRun(context)) {
+  if (usesMockChain(context)) {
     recordChainObservation(context, 'mock-read-only', 'mock get-id-by-hash', {
       contentHashHex: Buffer.from(expectedHash).toString('hex'),
       value: null
@@ -554,7 +663,7 @@ async function getIdByHash(context, expectedHash) {
 }
 
 async function isPaused(context) {
-  if (isLocalDryRun(context)) {
+  if (usesMockChain(context)) {
     recordChainObservation(context, 'mock-read-only', 'mock is-paused', {
       value: false
     });
@@ -597,7 +706,7 @@ async function getInscriptionMeta(context, tokenId) {
 }
 
 async function getTransferFeeRate(context) {
-  if (isLocalDryRun(context)) {
+  if (usesMockChain(context)) {
     const value = 31n;
     recordChainObservation(context, 'mock-http', 'mock transfer-fee-rate', {
       value: value.toString()
@@ -755,6 +864,12 @@ async function estimateTransactionFee(context, buildTx) {
 }
 
 async function verifyDependenciesExist(context, dependencyIds) {
+  if (isSimulationMode(context)) {
+    recordChainObservation(context, 'mock-read-only', 'mock dependency verification', {
+      dependency_ids: dependencyIds.map((value) => value.toString())
+    });
+    return;
+  }
   for (const dependencyId of dependencyIds) {
     const meta = await getInscriptionMeta(context, dependencyId);
     if (!meta) {
@@ -816,6 +931,7 @@ function createRunState(args, context) {
   return {
     version: 1,
     bundle_root: args.bundleRoot,
+    execution_bundle_root: args.executionBundleRoot || args.bundleRoot,
     status: 'running',
     started_at: now,
     updated_at: now,
@@ -924,7 +1040,7 @@ async function mintReadyArtifact(context, item, moduleRecord) {
       ],
       senderKey: context.senderKey,
       network: context.network,
-      nonce: isLocalDryRun(context) ? 0n : await getNonce(context.senderAddress, context.network),
+      nonce: usesMockChain(context) ? 0n : await getNonce(context.senderAddress, context.network),
       fee,
       postConditions: [
         makeStandardSTXPostCondition(
@@ -949,6 +1065,9 @@ async function mintReadyArtifact(context, item, moduleRecord) {
     serialized_bytes: feeEstimate.serializedBytes,
     tx_fee_microstx: feeEstimate.txFee.toString()
   });
+  if (isSimulationMode(context)) {
+    return buildSimulatedMintResult(context, item, verified, feeUnit, protocolFee, feeEstimate, tokenUri);
+  }
   const tx = await buildTx(feeEstimate.txFee);
   const { txid, txData } = await broadcastAndConfirm(context, tx, item.name);
   const helperJson = parseTxResultJson(txData);
@@ -1020,7 +1139,12 @@ async function main() {
   if (args.testMode) {
     process.env.XTRATA_AUTO_INSCRIBE_TEST_MODE = args.testMode;
   }
-  const bundleContext = loadBundleContext(args.bundleRoot);
+  if (args.testMode === 'simulate-release') {
+    args.executionBundleRoot = createSimulationBundleRoot(args.bundleRoot);
+  } else {
+    args.executionBundleRoot = args.bundleRoot;
+  }
+  const bundleContext = loadBundleContext(args.executionBundleRoot);
   const senderSource = resolveSignerSource({ testMode: args.testMode || null });
   const senderKey = deriveSenderKey({ testMode: args.testMode || null });
   const { txVersion, network } = resolveNetwork(bundleContext.networkName);
@@ -1040,10 +1164,14 @@ async function main() {
     trace,
     currentArtifact: null,
     testMode: args.testMode || null,
-    testFailStage: args.testFailStage || null
+    testFailStage: args.testFailStage || null,
+    simulation: args.testMode === 'simulate-release'
+      ? { nextTokenId: predictedTokenStart(args.executionBundleRoot) }
+      : null
   };
   emitTraceEvent(context, 'run-start', `Starting auto-inscribe for ${args.bundleRoot}`, {
     bundle_root: args.bundleRoot,
+    execution_bundle_root: args.executionBundleRoot,
     network: bundleContext.networkName,
     sender_address: senderAddress,
     signer_source: senderSource.type,
@@ -1056,7 +1184,7 @@ async function main() {
     emitTraceEvent(
       context,
       'fee-rate-loaded',
-      isLocalDryRun(context) ? 'Loaded mock transfer fee rate' : 'Loaded live transfer fee rate',
+      usesMockChain(context) ? 'Loaded mock transfer fee rate' : 'Loaded live transfer fee rate',
       {
         fee_rate_microstx_per_byte: context.transferFeeRate.toString()
       }
@@ -1095,12 +1223,12 @@ async function main() {
   emitTraceEvent(
     context,
     'pause-check',
-    isLocalDryRun(context) ? 'Mock pause check passed' : 'Xtrata writes are active on-chain'
+    usesMockChain(context) ? 'Mock pause check passed' : 'Xtrata writes are active on-chain'
   );
 
-  await initializeRuntimeState(args.bundleRoot);
+  await initializeRuntimeState(args.executionBundleRoot);
   emitTraceEvent(context, 'runtime-init', 'Initialized runtime inscription state');
-  let status = await rebuildStatus(args.bundleRoot, args.statusOutPath);
+  let status = await rebuildStatus(args.executionBundleRoot, args.statusOutPath);
   emitTraceEvent(context, 'status-rebuilt', 'Rebuilt inscription status', {
     summary: status.summary,
     next_ready: status.next_ready
@@ -1164,8 +1292,8 @@ async function main() {
         txid: minted.txid,
         block_height: minted.blockHeight
       });
-      await applyInscriptionResult(args.bundleRoot, item.name, minted.tokenId, minted.txid, minted.blockHeight);
-      status = await rebuildStatus(args.bundleRoot, args.statusOutPath);
+      await applyInscriptionResult(args.executionBundleRoot, item.name, minted.tokenId, minted.txid, minted.blockHeight);
+      status = await rebuildStatus(args.executionBundleRoot, args.statusOutPath);
       emitTraceEvent(context, 'status-rebuilt', `Rebuilt status after ${item.name}`, {
         artifact: item.name,
         summary: status.summary,

@@ -3,12 +3,14 @@ const express = require('express');
 const markdown = require('./markdown');
 const { runTask } = require('./ai-runner');
 const { WORKDIR, WALLET } = require('./config');
+const { sendInboxMessage } = require('./aibtc-inbox-client');
 
 const router = express.Router();
 
 let runningOutreach = false;
 let _addLog = () => {};
 let _broadcast = () => {};
+const SEND_INBOX_TOOL = 'mcp__aibtc__send_inbox_message';
 
 // --- Inbox sync (direct HTTP to aibtc.com — free endpoint, no MCP needed) ---
 
@@ -52,7 +54,14 @@ async function syncInbox() {
     // Find or derive agent ID from registry
     const agents = loadAgentsRegistry(_registryFile, _legacyRegistryFile);
     const agent = agents.find(a => a.stxAddress === peerStx);
-    const agentId = agent ? String(agent.id) : peerStx;
+    const memoryMatch = peerStx
+      ? Object.values(markdown.parseOutreachAgentMemory()).find((entry) => entry.stxAddress === peerStx)
+      : null;
+    const agentId = agent
+      ? String(agent.id)
+      : memoryMatch?.agentId
+        ? String(memoryMatch.agentId)
+        : peerStx;
 
     const historyEntry = {
       type: isInbound ? 'received' : 'sent',
@@ -65,7 +74,9 @@ async function syncInbox() {
       messageId: msg.messageId,
       paymentTxid: msg.paymentTxid,
       paymentSats: msg.paymentSatoshis,
-      sentAt: msg.sentAt
+      sentAt: msg.sentAt,
+      peerBtcAddress: isInbound ? (msg.peerBtcAddress || '') : (msg.toBtcAddress || ''),
+      toBtcAddress: msg.toBtcAddress || ''
     };
 
     markdown.appendOutreachHistory(historyEntry);
@@ -197,10 +208,20 @@ function parseTaggedField(text, label, fallback = '') {
 }
 
 function buildOutreachContext(agentId, incomingMessage = '') {
+  const agentKey = String(agentId || '').trim();
+  const agents = loadAgentsRegistry(_registryFile, _legacyRegistryFile);
+  const agent = agents.find((entry) =>
+    String(entry.id) === agentKey || entry.stxAddress === agentKey
+  );
+  const memory = markdown.getOutreachAgentMemory(agentKey)
+    || (agent?.stxAddress ? markdown.getOutreachAgentMemory(agent.stxAddress) : null);
+  const stxAddress = memory?.stxAddress || agent?.stxAddress || '';
   const history = markdown.parseOutreachHistory()
-    .filter((entry) => String(entry.agentId) === String(agentId))
+    .filter((entry) =>
+      String(entry.agentId) === agentKey ||
+      (stxAddress && entry.stxAddress === stxAddress)
+    )
     .slice(0, 6);
-  const memory = markdown.getOutreachAgentMemory(agentId);
 
   const historyText = history.length === 0
     ? '[none recorded]'
@@ -229,78 +250,51 @@ function buildOutreachContext(agentId, incomingMessage = '') {
   };
 }
 
+function parsePaymentSats(payment) {
+  const amount = String(payment?.amount || '').trim();
+  const match = amount.match(/(\d+)/);
+  return match ? Number(match[1]) : 100;
+}
+
 /**
  * Shared send execution: builds prompt, spawns Claude, handles result.
  * Returns a Promise that resolves when the send completes.
  */
 function executeSend({ displayName, stxAddress, btcAddress, agentId, message, mode, model, logPrefix, extraPromptContext, onSuccess, onFailure }) {
   const walletPassword = process.env.WALLET_PASSWORD || '';
-  const unlockStep = walletPassword
-    ? `Step 1: Unlock the wallet named "Primary" using wallet_unlock with password "${walletPassword}".\nStep 2: ` : '';
-
-  const contextBlock = extraPromptContext ? `\n${extraPromptContext}\n` : '';
-
-  const prompt = `SEND OUTREACH MESSAGE:
-Mode: ${mode}
-Role: Agent 27 sending as Xtrata ambassador.
-Target Agent: ${displayName}
-STX Address: ${stxAddress}
-BTC Address: ${btcAddress}
-Message:
-${message}
-${contextBlock}
-${unlockStep}Call the tool mcp__aibtc__execute_x402_endpoint with these EXACT parameters:
-{
-  "apiUrl": "https://aibtc.com",
-  "path": "/api/inbox/${stxAddress}",
-  "method": "POST",
-  "autoApprove": true,
-  "data": {
-    "toBtcAddress": "${btcAddress}",
-    "toStxAddress": "${stxAddress}",
-    "content": ${JSON.stringify(message)}
-  }
-}
-
-Do not modify the message. Do not search for tools. Do not probe first.
-Call mcp__aibtc__execute_x402_endpoint directly with autoApprove=true.
-If the tool call succeeds, respond with "OUTREACH_SUCCESS".
-If it fails, explain why.`;
-
   runningOutreach = true;
   _addLog('start', `${logPrefix} send to ${displayName}...`);
 
-  return runTask({
-    model: model || 'sonnet', budget: 0.10, prompt, cwd: WORKDIR,
-    phaseType: 'research', contextPack: 'outreachSend',
-    onLine: (type, line) => {
-      if (type === 'stdout' && (line.includes('[tool]') || line.length > 40)) {
-        _addLog('stdout', `[${logPrefix}] ${line.substring(0, 100)}...`);
-      }
-    }
-  }).then((result) => {
+  if (walletPassword) {
+    _addLog('stdout', `[${logPrefix}] [mcp-direct] wallet_unlock...`);
+  }
+  _addLog('stdout', `[${logPrefix}] [mcp-direct] ${SEND_INBOX_TOOL}...`);
+
+  return sendInboxMessage({
+    recipientBtcAddress: btcAddress,
+    recipientStxAddress: stxAddress,
+    content: message,
+    walletPassword
+  }).then((data) => {
     runningOutreach = false;
-    const fullText = (result.text || '').trim();
-    const isSuccess = fullText.includes('OUTREACH_SUCCESS') || result.output.some(l => l.includes('OUTREACH_SUCCESS'));
+    const fullText = JSON.stringify(data);
+    const sendResult = { isSuccess: true, data };
     try {
-      if (isSuccess) {
-        _addLog('stop', `${logPrefix} to ${displayName} delivered.`);
-        if (onSuccess) onSuccess(fullText);
-      } else {
-        const preview = fullText ? fullText.substring(0, 300) : '(empty response)';
-        _addLog('error', `${logPrefix} to ${displayName} failed to confirm.`);
-        _addLog('stderr', `[send-response] ${preview}`);
-        if (onFailure) onFailure(fullText);
-      }
+      const preview = fullText.length > 180 ? `${fullText.slice(0, 180)}...` : fullText;
+      _addLog('stdout', `[${logPrefix}] ${preview}`);
+      _addLog('stop', `${logPrefix} to ${displayName} delivered.`);
+      if (onSuccess) onSuccess(fullText, sendResult);
     } catch (cbErr) {
       console.error(`[executeSend] Callback error: ${cbErr.message}`);
     }
-    return { success: isSuccess, text: fullText };
+    return { success: true, text: fullText, analysis: sendResult };
   }).catch((err) => {
     runningOutreach = false;
+    const failureText = err.message || 'Unknown inbox send error';
     try { _addLog('error', `${logPrefix} error: ${err.message}`); } catch {}
-    if (onFailure) try { onFailure(err.message); } catch {}
-    return { success: false, error: err.message };
+    try { _addLog('stderr', `[send-response] ${failureText}`); } catch {}
+    if (onFailure) try { onFailure(failureText, { isSuccess: false }); } catch {}
+    return { success: false, error: failureText };
   }).finally(() => {
     // Safety net: always clear the lock no matter what
     runningOutreach = false;
@@ -579,12 +573,16 @@ function mount({ addLog, broadcast, registryFile, legacyRegistryFile }) {
       displayName: agent.name, stxAddress: agent.stxAddress, btcAddress: agent.btcAddress,
       agentId: agent.id, message: draft.message, mode, model: sendModel,
       logPrefix: 'Broadcast', extraPromptContext,
-      onSuccess: () => {
+      onSuccess: (_text, sendResult) => {
+        const payment = sendResult?.data?.payment || {};
         markdown.appendOutreachHistory({
           type: 'sent', direction: 'outbound', mode,
           agent: agent.name, agentId: agent.id, stxAddress: agent.stxAddress || '',
           message: draft.message, incomingMessage: draft.incomingMessage || '',
-          relationship: draft.relationship || '', next: draft.next || ''
+          relationship: draft.relationship || '', next: draft.next || '',
+          paymentTxid: payment.txid || null,
+          paymentSats: parsePaymentSats(payment),
+          toBtcAddress: agent.btcAddress || ''
         });
         markdown.updateOutreachAgentMemory(agent.id, {
           agentName: agent.name, relationshipStatus: draft.relationship || 'outbound-sent',
@@ -595,8 +593,8 @@ function mount({ addLog, broadcast, registryFile, legacyRegistryFile }) {
         });
         broadcast({ event: 'outreach-complete', data: { success: true, agent: agent.name } });
       },
-      onFailure: () => {
-        broadcast({ event: 'outreach-complete', data: { success: false, agent: agent.name } });
+      onFailure: (errorText) => {
+        broadcast({ event: 'outreach-complete', data: { success: false, agent: agent.name, error: errorText } });
       }
     });
 
@@ -806,13 +804,13 @@ function mount({ addLog, broadcast, registryFile, legacyRegistryFile }) {
       } else {
         // Look up via inbox history — peer addresses from prior messages
         const peerHist = history.find(h => {
-          if (!h.peerBtcAddress) return false;
+          if (!(h.peerBtcAddress || h.toBtcAddress)) return false;
           if (h.agent === targetName) return true;
           if (h.stxAddress && h.stxAddress === target.stxAddress) return true;
           const ag = regAgents.find(a => String(a.id) === String(h.agentId));
           return ag && ag.stxAddress === target.stxAddress;
         });
-        if (peerHist) target.btcAddress = peerHist.peerBtcAddress;
+        if (peerHist) target.btcAddress = peerHist.peerBtcAddress || peerHist.toBtcAddress;
       }
     }
     if (!target.btcAddress) {
@@ -850,12 +848,16 @@ function mount({ addLog, broadcast, registryFile, legacyRegistryFile }) {
       displayName: target.displayName, stxAddress: target.stxAddress, btcAddress: target.btcAddress,
       agentId: agent.id, message: target.message, mode, model: sendModel,
       logPrefix: 'Campaign',
-      onSuccess: () => {
+      onSuccess: (_text, sendResult) => {
+        const payment = sendResult?.data?.payment || {};
         markdown.appendOutreachHistory({
           type: 'sent', direction: 'outbound', mode,
           agent: target.displayName, agentId: agent.id,
           stxAddress: target.stxAddress || agent.stxAddress || '',
-          message: target.message
+          message: target.message,
+          paymentTxid: payment.txid || null,
+          paymentSats: parsePaymentSats(payment),
+          toBtcAddress: target.btcAddress || agent.btcAddress || ''
         });
         markdown.updateOutreachAgentMemory(agent.id, {
           agentName: target.displayName, relationshipStatus: relationship,
@@ -866,8 +868,8 @@ function mount({ addLog, broadcast, registryFile, legacyRegistryFile }) {
         }
         broadcast({ event: 'outreach-complete', data: { success: true, agent: target.displayName } });
       },
-      onFailure: () => {
-        broadcast({ event: 'outreach-complete', data: { success: false, agent: target.displayName } });
+      onFailure: (errorText) => {
+        broadcast({ event: 'outreach-complete', data: { success: false, agent: target.displayName, error: errorText } });
       }
     });
 

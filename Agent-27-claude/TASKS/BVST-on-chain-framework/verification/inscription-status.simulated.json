@@ -1,0 +1,1880 @@
+{
+  "generated_at": "2026-03-22T14:05:57.489Z",
+  "bundle_root": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework",
+  "token_map": "configs/token-map.runtime.json",
+  "inscription_log": "verification/inscription-log.json",
+  "rendered_index": "verification/rendered-index.json",
+  "summary": {
+    "total": 53,
+    "minted": 53,
+    "ready": 0,
+    "blocked": 0,
+    "hard_stop": 0
+  },
+  "next_ready": null,
+  "ready_now": [],
+  "hard_stops": [],
+  "items": [
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 10,
+      "name": "bvst.schema.patch.v1",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": 202,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000202",
+      "block_height": 500202,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/bvst_patch_v1.schema.json",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/System/shared/bvst_patch_v1.schema.json",
+        "bytes": 5689,
+        "chunks": 1,
+        "sha256": "ff2506820eaf82235bf90338f9e6170aaeabb1040b1cfc8e7dad99d7ffbabb38",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 20,
+      "name": "bvst.runtime.bvst-css.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "text/css",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": 203,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000203",
+      "block_height": 500203,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/bvst.css",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/System/shared/bvst.css",
+        "bytes": 9233,
+        "chunks": 1,
+        "sha256": "a642eb5ce475e76e407439751442374111bc63b1fd0389d48fd64bc3ef830e8a",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 30,
+      "name": "bvst.runtime.ui-styles.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/javascript",
+      "dependency_names": [
+        "bvst.runtime.bvst-css.v1.0.0"
+      ],
+      "dependency_token_ids": [
+        203
+      ],
+      "missing_dependencies": [],
+      "token_id": 204,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000204",
+      "block_height": 500204,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/ui_styles.js",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/System/shared/ui_styles.js",
+        "bytes": 930,
+        "chunks": 1,
+        "sha256": "caf8264dbc429fefb0641f8e26a13924a3507fe5acbab7123a9ea71136075e29",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 40,
+      "name": "bvst.runtime.audional-decoder.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/javascript",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": 205,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000205",
+      "block_height": 500205,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/audional_decoder.js",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/System/shared/audional_decoder.js",
+        "bytes": 9543,
+        "chunks": 1,
+        "sha256": "5755e7c345e8db646933916ebc8391795d9315dfd71d2d84c676259ef1defeb3",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 50,
+      "name": "bvst.runtime.controls.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/javascript",
+      "dependency_names": [
+        "bvst.runtime.ui-styles.v1.0.0"
+      ],
+      "dependency_token_ids": [
+        204
+      ],
+      "missing_dependencies": [],
+      "token_id": 206,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000206",
+      "block_height": 500206,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/controls.js",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/System/shared/controls.js",
+        "bytes": 20723,
+        "chunks": 2,
+        "sha256": "ee52bc817032489f4bfa09cc972cc7c82a5bdf4ce7bc0dbe96f9f6a567a871cc",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 60,
+      "name": "bvst.runtime.keyboard.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/javascript",
+      "dependency_names": [
+        "bvst.runtime.ui-styles.v1.0.0"
+      ],
+      "dependency_token_ids": [
+        204
+      ],
+      "missing_dependencies": [],
+      "token_id": 207,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000207",
+      "block_height": 500207,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/keyboard.js",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/System/shared/keyboard.js",
+        "bytes": 9051,
+        "chunks": 1,
+        "sha256": "cde14fe643151fd4624bee175a1ea3027c66a9d8611e402c785fe6f8d788572e",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 70,
+      "name": "bvst.runtime.midi.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/javascript",
+      "dependency_names": [
+        "bvst.runtime.ui-styles.v1.0.0"
+      ],
+      "dependency_token_ids": [
+        204
+      ],
+      "missing_dependencies": [],
+      "token_id": 208,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000208",
+      "block_height": 500208,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/midi.js",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/System/shared/midi.js",
+        "bytes": 4938,
+        "chunks": 1,
+        "sha256": "deb7301dc06443126b2c4ca904d61ba2f29f7aaffb174910a2581c67546a4f38",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 80,
+      "name": "bvst.runtime.midi-parser.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/javascript",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": 209,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000209",
+      "block_height": 500209,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/midi_parser.js",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/System/shared/midi_parser.js",
+        "bytes": 4389,
+        "chunks": 1,
+        "sha256": "71c5ab0c9d9e2a5f13c6aa14e2194247bd72a5ea69adfe377309ebcdc7692fd2",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 90,
+      "name": "bvst.runtime.visualizer.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/javascript",
+      "dependency_names": [
+        "bvst.runtime.ui-styles.v1.0.0"
+      ],
+      "dependency_token_ids": [
+        204
+      ],
+      "missing_dependencies": [],
+      "token_id": 210,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000210",
+      "block_height": 500210,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/visualizer.js",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/System/shared/visualizer.js",
+        "bytes": 5303,
+        "chunks": 1,
+        "sha256": "8bfeb3312b734384ddccecc183f56dd4eaeb7a6911dadde87fd8ad7294c586e7",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 100,
+      "name": "bvst.runtime.sampler.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/javascript",
+      "dependency_names": [
+        "bvst.runtime.ui-styles.v1.0.0",
+        "bvst.runtime.audional-decoder.v1.0.0"
+      ],
+      "dependency_token_ids": [
+        204,
+        205
+      ],
+      "missing_dependencies": [],
+      "token_id": 211,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000211",
+      "block_height": 500211,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/sampler.js",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/System/shared/sampler.js",
+        "bytes": 30490,
+        "chunks": 2,
+        "sha256": "55b04c8cb098ac2943b3627173ce12e5f320a1fc04136813f25d04e7cf5e1d39",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 110,
+      "name": "bvst.runtime.sequencer-core.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/javascript",
+      "dependency_names": [
+        "bvst.runtime.ui-styles.v1.0.0"
+      ],
+      "dependency_token_ids": [
+        204
+      ],
+      "missing_dependencies": [],
+      "token_id": 212,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000212",
+      "block_height": 500212,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/sequencer_core.js",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/System/shared/sequencer_core.js",
+        "bytes": 19539,
+        "chunks": 2,
+        "sha256": "3f22aa13f9b662d34a7b8fbb4c9ad3a8278e0d3d8b24eccfd4b5fa7ea71f270d",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 120,
+      "name": "bvst.engine.unified-wasm.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/wasm",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": 213,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000213",
+      "block_height": 500213,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/bvst_unified_bg.wasm",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/System/shared/bvst_unified_bg.wasm",
+        "bytes": 100109,
+        "chunks": 7,
+        "sha256": "4246b1b3431abb565e7ee4b9cc2c3f9da64478b9a2ff7e8c3bc22713868a6fd3",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 130,
+      "name": "bvst.engine.unified-loader.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/javascript",
+      "dependency_names": [
+        "bvst.engine.unified-wasm.v1.0.0"
+      ],
+      "dependency_token_ids": [
+        213
+      ],
+      "missing_dependencies": [],
+      "token_id": 214,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000214",
+      "block_height": 500214,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/wasm_loader_unified.js",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/System/shared/wasm_loader_unified.js",
+        "bytes": 16567,
+        "chunks": 2,
+        "sha256": "a099d8f7b8eac71db02a00925019481b42af3dc87a2a14a829ac1dbc90ad30a3",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 140,
+      "name": "bvst.engine.unified-worklet.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/javascript",
+      "dependency_names": [
+        "bvst.engine.unified-loader.v1.0.0"
+      ],
+      "dependency_token_ids": [
+        214
+      ],
+      "missing_dependencies": [],
+      "token_id": 215,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000215",
+      "block_height": 500215,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/processor_unified.js",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/System/shared/processor_unified.js",
+        "bytes": 12730,
+        "chunks": 1,
+        "sha256": "3ad68b432cafffac6be69d1c67ea282aa259d0705456163a4dd9f7a66e88c78d",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 150,
+      "name": "bvst.runtime.standalone-bridge.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/javascript",
+      "dependency_names": [
+        "bvst.engine.unified-worklet.v1.0.0",
+        "bvst.engine.unified-wasm.v1.0.0"
+      ],
+      "dependency_token_ids": [
+        215,
+        213
+      ],
+      "missing_dependencies": [],
+      "token_id": 216,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000216",
+      "block_height": 500216,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/standalone_bridge.js",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/System/shared/standalone_bridge.js",
+        "bytes": 10230,
+        "chunks": 1,
+        "sha256": "e5d9c4542a65ba73a2b6bfba7b9fc996594453264b3942d1a978aa56edb2069e",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 160,
+      "name": "bvst.runtime.plugin-core.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/javascript",
+      "dependency_names": [
+        "bvst.runtime.controls.v1.0.0",
+        "bvst.runtime.keyboard.v1.0.0",
+        "bvst.runtime.midi.v1.0.0",
+        "bvst.runtime.sampler.v1.0.0",
+        "bvst.runtime.visualizer.v1.0.0",
+        "bvst.runtime.sequencer-core.v1.0.0",
+        "bvst.runtime.standalone-bridge.v1.0.0"
+      ],
+      "dependency_token_ids": [
+        206,
+        207,
+        208,
+        211,
+        210,
+        212,
+        216
+      ],
+      "missing_dependencies": [],
+      "token_id": 217,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000217",
+      "block_height": 500217,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/plugin_core.js",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/System/shared/plugin_core.js",
+        "bytes": 25354,
+        "chunks": 2,
+        "sha256": "7291f7c40b50253403be270fe3fc6763227f083fcd2f066b5051179621de8dc5",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 170,
+      "name": "bvst.runtime.patch-runtime.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/javascript",
+      "dependency_names": [
+        "bvst.runtime.plugin-core.v1.0.0"
+      ],
+      "dependency_token_ids": [
+        217
+      ],
+      "missing_dependencies": [],
+      "token_id": 218,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000218",
+      "block_height": 500218,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/System/shared/patch_runtime.js",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/System/shared/patch_runtime.js",
+        "bytes": 4314,
+        "chunks": 1,
+        "sha256": "6fc6798fc69e8700a7e185ae6876b5330e8e5cd8008d13d07983b0fde8bc9fa3",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 180,
+      "name": "bvst.catalog.runtime.v1",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.runtime.bvst-css.v1.0.0",
+        "bvst.runtime.ui-styles.v1.0.0",
+        "bvst.runtime.audional-decoder.v1.0.0",
+        "bvst.runtime.controls.v1.0.0",
+        "bvst.runtime.keyboard.v1.0.0",
+        "bvst.runtime.midi.v1.0.0",
+        "bvst.runtime.midi-parser.v1.0.0",
+        "bvst.runtime.visualizer.v1.0.0",
+        "bvst.runtime.sampler.v1.0.0",
+        "bvst.runtime.sequencer-core.v1.0.0",
+        "bvst.runtime.standalone-bridge.v1.0.0",
+        "bvst.runtime.plugin-core.v1.0.0",
+        "bvst.runtime.patch-runtime.v1.0.0"
+      ],
+      "dependency_token_ids": [
+        203,
+        204,
+        205,
+        206,
+        207,
+        208,
+        209,
+        210,
+        211,
+        212,
+        216,
+        217,
+        218
+      ],
+      "missing_dependencies": [],
+      "token_id": 219,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000219",
+      "block_height": 500219,
+      "rendered_status": "ready",
+      "rendered_path": "on-chain-modules/rendered/catalogs/majors/runtime-v1.catalog.json",
+      "resolution_signature": "3fb9cf957769ca442e9ad151792617e6580ad5af70c40203644124c05ee2e198",
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/rendered/catalogs/majors/runtime-v1.catalog.json",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/rendered/catalogs/majors/runtime-v1.catalog.json",
+        "bytes": 6925,
+        "chunks": 1,
+        "sha256": "7ec0e37e2965daada95b29f519d485bcfdbe541ec30ea9db985040b32cbc6afe",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 190,
+      "name": "bvst.catalog.engine.v1",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.engine.unified-wasm.v1.0.0",
+        "bvst.engine.unified-loader.v1.0.0",
+        "bvst.engine.unified-worklet.v1.0.0"
+      ],
+      "dependency_token_ids": [
+        213,
+        214,
+        215
+      ],
+      "missing_dependencies": [],
+      "token_id": 220,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000220",
+      "block_height": 500220,
+      "rendered_status": "ready",
+      "rendered_path": "on-chain-modules/rendered/catalogs/majors/engine-v1.catalog.json",
+      "resolution_signature": "f6b0d934e200d7f0cb1770c70954026af024a3ec27b3e4b2af53ac8fc48ff03d",
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/rendered/catalogs/majors/engine-v1.catalog.json",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/rendered/catalogs/majors/engine-v1.catalog.json",
+        "bytes": 1855,
+        "chunks": 1,
+        "sha256": "b31f90ac1ab3dc5f1d0b06577b19a7704050722fb7761fe17b3483f83beb56fd",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 200,
+      "name": "bvst.catalog.schema.v1",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.schema.patch.v1"
+      ],
+      "dependency_token_ids": [
+        202
+      ],
+      "missing_dependencies": [],
+      "token_id": 221,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000221",
+      "block_height": 500221,
+      "rendered_status": "ready",
+      "rendered_path": "on-chain-modules/rendered/catalogs/majors/schema-v1.catalog.json",
+      "resolution_signature": "d3b6341046badde5cf910e1bb3339e1b07faa41feef936793ebec36a5d35ca5d",
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/rendered/catalogs/majors/schema-v1.catalog.json",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/rendered/catalogs/majors/schema-v1.catalog.json",
+        "bytes": 784,
+        "chunks": 1,
+        "sha256": "f40954fe56cd837b4e4ccaf3f654a1f59608c2f32f52c22daceb4302c854e936",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "10-foundation.batch.json",
+      "order": 210,
+      "name": "bvst.catalog.foundation.v1",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "dependency_token_ids": [
+        219,
+        220,
+        221
+      ],
+      "missing_dependencies": [],
+      "token_id": 222,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000222",
+      "block_height": 500222,
+      "rendered_status": "ready",
+      "rendered_path": "on-chain-modules/rendered/catalogs/releases/foundation-v1.catalog.json",
+      "resolution_signature": "662bcb352e573359294ab126e5528e3b7a69a89d3fca767811afb03437cf8840",
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/rendered/catalogs/releases/foundation-v1.catalog.json",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/rendered/catalogs/releases/foundation-v1.catalog.json",
+        "bytes": 10124,
+        "chunks": 1,
+        "sha256": "ecc50fae5e63a1c1d49f4f83ad3c9001b1cb72541a4a588de5b69a981491075f",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "20-universalsynth-family.batch.json",
+      "order": 10,
+      "name": "bvst.plugin.jms10.manifest.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": 223,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000223",
+      "block_height": 500223,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/Plugins/Instruments/JMS10/manifest.json",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/Plugins/Instruments/JMS10/manifest.json",
+        "bytes": 322,
+        "chunks": 1,
+        "sha256": "c6633e5339c7b5592237c26bf0e3a798acca5b388d0c976129313ab9e2340990",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "20-universalsynth-family.batch.json",
+      "order": 20,
+      "name": "bvst.plugin.jms10.patch.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.schema.patch.v1"
+      ],
+      "dependency_token_ids": [
+        202
+      ],
+      "missing_dependencies": [],
+      "token_id": 224,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000224",
+      "block_height": 500224,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/Plugins/Instruments/JMS10/patch.json",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/Plugins/Instruments/JMS10/patch.json",
+        "bytes": 5613,
+        "chunks": 1,
+        "sha256": "15bb93588509c0b264e2350e2cd1a90505de14ff9da2f8b741e9684be185fd79",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "20-universalsynth-family.batch.json",
+      "order": 30,
+      "name": "bvst.plugin.jms10.shell.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "text/html",
+      "dependency_names": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.plugin.jms10.manifest.v1.0.0",
+        "bvst.plugin.jms10.patch.v1.0.0"
+      ],
+      "dependency_token_ids": [
+        218,
+        223,
+        224
+      ],
+      "missing_dependencies": [],
+      "token_id": 225,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000225",
+      "block_height": 500225,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/Plugins/Instruments/JMS10/gui.html",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/Plugins/Instruments/JMS10/gui.html",
+        "bytes": 826,
+        "chunks": 1,
+        "sha256": "e6ea7b790e1c3225fd84116064de6c983248cab9a9daa9ac664c0a628f6a19eb",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "20-universalsynth-family.batch.json",
+      "order": 40,
+      "name": "bvst.plugin.universalengine.manifest.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": 226,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000226",
+      "block_height": 500226,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/Plugins/Instruments/UniversalEngine/manifest.json",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/Plugins/Instruments/UniversalEngine/manifest.json",
+        "bytes": 334,
+        "chunks": 1,
+        "sha256": "47834dcc0111f2f1ea6074f5f0a9bc7f1de2b2619849363f1afa9b511c3388f9",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "20-universalsynth-family.batch.json",
+      "order": 50,
+      "name": "bvst.plugin.universalengine.patch.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.schema.patch.v1"
+      ],
+      "dependency_token_ids": [
+        202
+      ],
+      "missing_dependencies": [],
+      "token_id": 227,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000227",
+      "block_height": 500227,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/Plugins/Instruments/UniversalEngine/patch.json",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/Plugins/Instruments/UniversalEngine/patch.json",
+        "bytes": 1970,
+        "chunks": 1,
+        "sha256": "302fff185112df6729b67fa9e5000c20e45a3fc64d93053ffe45c3b2498bb682",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "20-universalsynth-family.batch.json",
+      "order": 60,
+      "name": "bvst.plugin.universalengine.shell.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "text/html",
+      "dependency_names": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.plugin.universalengine.manifest.v1.0.0",
+        "bvst.plugin.universalengine.patch.v1.0.0"
+      ],
+      "dependency_token_ids": [
+        218,
+        226,
+        227
+      ],
+      "missing_dependencies": [],
+      "token_id": 228,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000228",
+      "block_height": 500228,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/Plugins/Instruments/UniversalEngine/gui.html",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/Plugins/Instruments/UniversalEngine/gui.html",
+        "bytes": 836,
+        "chunks": 1,
+        "sha256": "3d82ee8a6ec07877d704303e3bf83a8946e9bc3ea9b5d336829312ccb658b13e",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "20-universalsynth-family.batch.json",
+      "order": 70,
+      "name": "bvst.plugin.universalsynth.manifest.v1.0.13",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": 229,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000229",
+      "block_height": 500229,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/Plugins/Instruments/UniversalSynth/manifest.json",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/Plugins/Instruments/UniversalSynth/manifest.json",
+        "bytes": 402,
+        "chunks": 1,
+        "sha256": "444f1212e9c12efb86514a917c5edfab1fd7842f9202a6316cdfa462241cdeae",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "20-universalsynth-family.batch.json",
+      "order": 80,
+      "name": "bvst.plugin.universalsynth.patch.v1.0.13",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.schema.patch.v1"
+      ],
+      "dependency_token_ids": [
+        202
+      ],
+      "missing_dependencies": [],
+      "token_id": 230,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000230",
+      "block_height": 500230,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/Plugins/Instruments/UniversalSynth/patch.json",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/Plugins/Instruments/UniversalSynth/patch.json",
+        "bytes": 9259,
+        "chunks": 1,
+        "sha256": "e73a992780a6e3dc3c5ced06e1f72e00bfa2d9a8db60d20ebb99455b13fe25c8",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "20-universalsynth-family.batch.json",
+      "order": 90,
+      "name": "bvst.plugin.universalsynth.shell.v1.0.13",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "text/html",
+      "dependency_names": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.plugin.universalsynth.manifest.v1.0.13",
+        "bvst.plugin.universalsynth.patch.v1.0.13"
+      ],
+      "dependency_token_ids": [
+        218,
+        229,
+        230
+      ],
+      "missing_dependencies": [],
+      "token_id": 231,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000231",
+      "block_height": 500231,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/Plugins/Instruments/UniversalSynth/gui.html",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/Plugins/Instruments/UniversalSynth/gui.html",
+        "bytes": 837,
+        "chunks": 1,
+        "sha256": "c45d54395f5d139562fbdf308330caeefc9eb981d4c1fe1ed8455e15bbba194c",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "20-universalsynth-family.batch.json",
+      "order": 100,
+      "name": "bvst.plugin.jms10.release.v1.0.0",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.plugin.jms10.manifest.v1.0.0",
+        "bvst.plugin.jms10.patch.v1.0.0",
+        "bvst.plugin.jms10.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "dependency_token_ids": [
+        223,
+        224,
+        225,
+        219,
+        220,
+        221
+      ],
+      "missing_dependencies": [],
+      "token_id": 232,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000232",
+      "block_height": 500232,
+      "rendered_status": "ready",
+      "rendered_path": "on-chain-modules/rendered/catalogs/plugins/universalsynth-family/jms10.release.catalog.json",
+      "resolution_signature": "16c13949e177d9edfcd01f005761f3001dc19c9695451b519eba38d52223f0c2",
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/rendered/catalogs/plugins/universalsynth-family/jms10.release.catalog.json",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/rendered/catalogs/plugins/universalsynth-family/jms10.release.catalog.json",
+        "bytes": 3151,
+        "chunks": 1,
+        "sha256": "e5164a6f40afaaebd5021e2f5d797ca2198fe83c99a09778230abfd537b3c19c",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "20-universalsynth-family.batch.json",
+      "order": 110,
+      "name": "bvst.plugin.universalengine.release.v1.0.0",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.plugin.universalengine.manifest.v1.0.0",
+        "bvst.plugin.universalengine.patch.v1.0.0",
+        "bvst.plugin.universalengine.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "dependency_token_ids": [
+        226,
+        227,
+        228,
+        219,
+        220,
+        221
+      ],
+      "missing_dependencies": [],
+      "token_id": 233,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000233",
+      "block_height": 500233,
+      "rendered_status": "ready",
+      "rendered_path": "on-chain-modules/rendered/catalogs/plugins/universalsynth-family/universalengine.release.catalog.json",
+      "resolution_signature": "1eafbbdd174ff1e5f38547341ae1f7099cc3ece8545b3e44bcedb108c2878805",
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/rendered/catalogs/plugins/universalsynth-family/universalengine.release.catalog.json",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/rendered/catalogs/plugins/universalsynth-family/universalengine.release.catalog.json",
+        "bytes": 3261,
+        "chunks": 1,
+        "sha256": "1decc18614379ba2434c2082ffc21c1420a44c3e23284f7fd9d84515c708eb2d",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "20-universalsynth-family.batch.json",
+      "order": 120,
+      "name": "bvst.plugin.universalsynth.release.v1.0.13",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.plugin.universalsynth.manifest.v1.0.13",
+        "bvst.plugin.universalsynth.patch.v1.0.13",
+        "bvst.plugin.universalsynth.shell.v1.0.13",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "dependency_token_ids": [
+        229,
+        230,
+        231,
+        219,
+        220,
+        221
+      ],
+      "missing_dependencies": [],
+      "token_id": 234,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000234",
+      "block_height": 500234,
+      "rendered_status": "ready",
+      "rendered_path": "on-chain-modules/rendered/catalogs/plugins/universalsynth-family/universalsynth.release.catalog.json",
+      "resolution_signature": "08572a92a6e898aed54be2abeffd8913e5c1bf930208f1287d933673ad224dc1",
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/rendered/catalogs/plugins/universalsynth-family/universalsynth.release.catalog.json",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/rendered/catalogs/plugins/universalsynth-family/universalsynth.release.catalog.json",
+        "bytes": 3257,
+        "chunks": 1,
+        "sha256": "325da8f08165b06d06420f42960a4d03e50bdd5c127f072c08d4bfa6dec4ab1d",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "20-universalsynth-family.batch.json",
+      "order": 130,
+      "name": "bvst.catalog.family.universalsynthfamily.v1",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.plugin.universalsynth.release.v1.0.13",
+        "bvst.plugin.universalengine.release.v1.0.0",
+        "bvst.plugin.jms10.release.v1.0.0"
+      ],
+      "dependency_token_ids": [
+        234,
+        233,
+        232
+      ],
+      "missing_dependencies": [],
+      "token_id": 235,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000235",
+      "block_height": 500235,
+      "rendered_status": "ready",
+      "rendered_path": "on-chain-modules/rendered/catalogs/families/universalsynth-family.catalog.json",
+      "resolution_signature": "2781578edb47f847ab617fc5e53bf8005c0cc24de018dec96bbc27357323deb0",
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/rendered/catalogs/families/universalsynth-family.catalog.json",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/rendered/catalogs/families/universalsynth-family.catalog.json",
+        "bytes": 894,
+        "chunks": 1,
+        "sha256": "366ccce3439fe289bace5cd93cf3bd6e43caf14e70a3e870b3454573312b104f",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 10,
+      "name": "bvst.plugin.bluemarvinone.manifest.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": 236,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000236",
+      "block_height": 500236,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinOne/manifest.json",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/Plugins/Instruments/BlueMarvinOne/manifest.json",
+        "bytes": 342,
+        "chunks": 1,
+        "sha256": "1a4fca458a6e9cce130828ac7aed1aa179ea01e3acf773ba438b4b80603b1075",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 20,
+      "name": "bvst.plugin.bluemarvinone.patch.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.schema.patch.v1"
+      ],
+      "dependency_token_ids": [
+        202
+      ],
+      "missing_dependencies": [],
+      "token_id": 237,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000237",
+      "block_height": 500237,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinOne/patch.json",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/Plugins/Instruments/BlueMarvinOne/patch.json",
+        "bytes": 4268,
+        "chunks": 1,
+        "sha256": "315321c2f56d3c32941ddb9d2af3465b21b7b98d1b3eeed5014d0b90722a36e3",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 30,
+      "name": "bvst.plugin.bluemarvinone.shell.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "text/html",
+      "dependency_names": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.plugin.bluemarvinone.manifest.v1.0.0",
+        "bvst.plugin.bluemarvinone.patch.v1.0.0"
+      ],
+      "dependency_token_ids": [
+        218,
+        236,
+        237
+      ],
+      "missing_dependencies": [],
+      "token_id": 238,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000238",
+      "block_height": 500238,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinOne/gui.html",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/Plugins/Instruments/BlueMarvinOne/gui.html",
+        "bytes": 833,
+        "chunks": 1,
+        "sha256": "e0b67a72ee60252d6542da13eff9e49522e39ab3ba24afb59b25f603d010acb1",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 40,
+      "name": "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": 239,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000239",
+      "block_height": 500239,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinTwo/manifest.json",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/Plugins/Instruments/BlueMarvinTwo/manifest.json",
+        "bytes": 344,
+        "chunks": 1,
+        "sha256": "9829d6c837bf51fa8e95f827e6f8cb72eb788e3a573ec5d770b542c15edf6261",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 50,
+      "name": "bvst.plugin.bluemarvintwo.patch.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.schema.patch.v1"
+      ],
+      "dependency_token_ids": [
+        202
+      ],
+      "missing_dependencies": [],
+      "token_id": 240,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000240",
+      "block_height": 500240,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinTwo/patch.json",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/Plugins/Instruments/BlueMarvinTwo/patch.json",
+        "bytes": 7067,
+        "chunks": 1,
+        "sha256": "1a12ef8a5ed1cce012111d42c501f80db5bfb6fd76edb390cae070711b645901",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 60,
+      "name": "bvst.plugin.bluemarvintwo.shell.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "text/html",
+      "dependency_names": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
+        "bvst.plugin.bluemarvintwo.patch.v1.0.0"
+      ],
+      "dependency_token_ids": [
+        218,
+        239,
+        240
+      ],
+      "missing_dependencies": [],
+      "token_id": 241,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000241",
+      "block_height": 500241,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinTwo/gui.html",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/Plugins/Instruments/BlueMarvinTwo/gui.html",
+        "bytes": 834,
+        "chunks": 1,
+        "sha256": "41ddfb74186bf6a62fa3f23cf681fb525631554a3f7ddda5407e8b25fafa3a52",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 70,
+      "name": "bvst.plugin.neonpoly.manifest.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": 242,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000242",
+      "block_height": 500242,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/Plugins/Instruments/NeonPoly/manifest.json",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/Plugins/Instruments/NeonPoly/manifest.json",
+        "bytes": 356,
+        "chunks": 1,
+        "sha256": "d4f749963d9e9351acb40a6ebe3881d29fa08b04483c6e6b27a7e986ba9c2443",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 80,
+      "name": "bvst.plugin.neonpoly.patch.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.schema.patch.v1"
+      ],
+      "dependency_token_ids": [
+        202
+      ],
+      "missing_dependencies": [],
+      "token_id": 243,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000243",
+      "block_height": 500243,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/Plugins/Instruments/NeonPoly/patch.json",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/Plugins/Instruments/NeonPoly/patch.json",
+        "bytes": 4620,
+        "chunks": 1,
+        "sha256": "06675262945155a0dc31d4c1f55312156ba800ca81d7cb4975a48c7f56718e6b",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 90,
+      "name": "bvst.plugin.neonpoly.shell.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "text/html",
+      "dependency_names": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.plugin.neonpoly.manifest.v1.0.0",
+        "bvst.plugin.neonpoly.patch.v1.0.0"
+      ],
+      "dependency_token_ids": [
+        218,
+        242,
+        243
+      ],
+      "missing_dependencies": [],
+      "token_id": 244,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000244",
+      "block_height": 500244,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/Plugins/Instruments/NeonPoly/gui.html",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/Plugins/Instruments/NeonPoly/gui.html",
+        "bytes": 834,
+        "chunks": 1,
+        "sha256": "e6173d6633d0693f0f98a2e5989002870059f077d6bcd061ae9d4f07dd0d2c27",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 100,
+      "name": "bvst.plugin.retrokeys.manifest.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": 245,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000245",
+      "block_height": 500245,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/manifest.json",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/Plugins/Instruments/RetroKeys/manifest.json",
+        "bytes": 336,
+        "chunks": 1,
+        "sha256": "c17d1d6983ce58a56ca8bf3d3aed9426e044937e88b5c159c85306fbd81cabc7",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 110,
+      "name": "bvst.plugin.retrokeys.patch.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.schema.patch.v1"
+      ],
+      "dependency_token_ids": [
+        202
+      ],
+      "missing_dependencies": [],
+      "token_id": 246,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000246",
+      "block_height": 500246,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/patch.json",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/Plugins/Instruments/RetroKeys/patch.json",
+        "bytes": 2163,
+        "chunks": 1,
+        "sha256": "0d880724099a2270c69e4c0f979e2c8848c58959d3b02ffaaf9faaec71cf5b72",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 120,
+      "name": "bvst.plugin.retrokeys.shell.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "text/html",
+      "dependency_names": [
+        "bvst.runtime.patch-runtime.v1.0.0",
+        "bvst.plugin.retrokeys.manifest.v1.0.0",
+        "bvst.plugin.retrokeys.patch.v1.0.0"
+      ],
+      "dependency_token_ids": [
+        218,
+        245,
+        246
+      ],
+      "missing_dependencies": [],
+      "token_id": 247,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000247",
+      "block_height": 500247,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/gui.html",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/workspace/Plugins/Instruments/RetroKeys/gui.html",
+        "bytes": 819,
+        "chunks": 1,
+        "sha256": "cb3a3d3c19338229b87954703bdb13b9b84c71845b3cbcc604c45ea6fc1c3cb7",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 130,
+      "name": "bvst.plugin.bluemarvinone.release.v1.0.0",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.plugin.bluemarvinone.manifest.v1.0.0",
+        "bvst.plugin.bluemarvinone.patch.v1.0.0",
+        "bvst.plugin.bluemarvinone.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "dependency_token_ids": [
+        236,
+        237,
+        238,
+        219,
+        220,
+        221
+      ],
+      "missing_dependencies": [],
+      "token_id": 248,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000248",
+      "block_height": 500248,
+      "rendered_status": "ready",
+      "rendered_path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/bluemarvinone.release.catalog.json",
+      "resolution_signature": "ac5ed7530165cc068f48506625ad43bf5fd73ba683d10bb86cd5ba8dc25f2465",
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/bluemarvinone.release.catalog.json",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/rendered/catalogs/plugins/standalone-synths/bluemarvinone.release.catalog.json",
+        "bytes": 3235,
+        "chunks": 1,
+        "sha256": "9bc9e241063049ccb31a3d326aa4a7747f739acb46fad9ed454c2371fcf2b82f",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 140,
+      "name": "bvst.plugin.bluemarvintwo.release.v1.0.0",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
+        "bvst.plugin.bluemarvintwo.patch.v1.0.0",
+        "bvst.plugin.bluemarvintwo.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "dependency_token_ids": [
+        239,
+        240,
+        241,
+        219,
+        220,
+        221
+      ],
+      "missing_dependencies": [],
+      "token_id": 249,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000249",
+      "block_height": 500249,
+      "rendered_status": "ready",
+      "rendered_path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/bluemarvintwo.release.catalog.json",
+      "resolution_signature": "cdb32c13ee375f12595729f20c7e7df7cff2aec829cb05809f6e14b30535965b",
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/bluemarvintwo.release.catalog.json",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/rendered/catalogs/plugins/standalone-synths/bluemarvintwo.release.catalog.json",
+        "bytes": 3235,
+        "chunks": 1,
+        "sha256": "118fa57f197b9449321d540499301d6ecbb4fb5c77553585626d3c1f3156de21",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 150,
+      "name": "bvst.plugin.neonpoly.release.v1.0.0",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.plugin.neonpoly.manifest.v1.0.0",
+        "bvst.plugin.neonpoly.patch.v1.0.0",
+        "bvst.plugin.neonpoly.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "dependency_token_ids": [
+        242,
+        243,
+        244,
+        219,
+        220,
+        221
+      ],
+      "missing_dependencies": [],
+      "token_id": 250,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000250",
+      "block_height": 500250,
+      "rendered_status": "ready",
+      "rendered_path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/neonpoly.release.catalog.json",
+      "resolution_signature": "780d72e5164e545d63bc7b3fd64a35d0406a9fedb98fb2be54dc7001a85f5dbd",
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/neonpoly.release.catalog.json",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/rendered/catalogs/plugins/standalone-synths/neonpoly.release.catalog.json",
+        "bytes": 3180,
+        "chunks": 1,
+        "sha256": "9dc64ae6e512f191aa52572e4a648ccad18e4b9ba9968f5731edd9e867f426e5",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 160,
+      "name": "bvst.plugin.retrokeys.release.v1.0.0",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.plugin.retrokeys.manifest.v1.0.0",
+        "bvst.plugin.retrokeys.patch.v1.0.0",
+        "bvst.plugin.retrokeys.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "dependency_token_ids": [
+        245,
+        246,
+        247,
+        219,
+        220,
+        221
+      ],
+      "missing_dependencies": [],
+      "token_id": 251,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000251",
+      "block_height": 500251,
+      "rendered_status": "ready",
+      "rendered_path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/retrokeys.release.catalog.json",
+      "resolution_signature": "ca73418c69e7ad9f2a03bb02974658e4614ed3e59a825431405bfa865e496f54",
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/retrokeys.release.catalog.json",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/rendered/catalogs/plugins/standalone-synths/retrokeys.release.catalog.json",
+        "bytes": 3191,
+        "chunks": 1,
+        "sha256": "05b5aeec75da4b3bc8f7ba251cb10b9adf96f3916a34946ee8f9250ba2ad96e2",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 170,
+      "name": "bvst.catalog.family.standalonesynths.v1",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.plugin.retrokeys.release.v1.0.0",
+        "bvst.plugin.bluemarvinone.release.v1.0.0",
+        "bvst.plugin.bluemarvintwo.release.v1.0.0",
+        "bvst.plugin.neonpoly.release.v1.0.0"
+      ],
+      "dependency_token_ids": [
+        251,
+        248,
+        249,
+        250
+      ],
+      "missing_dependencies": [],
+      "token_id": 252,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000252",
+      "block_height": 500252,
+      "rendered_status": "ready",
+      "rendered_path": "on-chain-modules/rendered/catalogs/families/standalone-synths.catalog.json",
+      "resolution_signature": "e44ccc629e7b71bd5d7bb40545e33ac39abf0171251ed2e1ee1242017b4f03e2",
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/rendered/catalogs/families/standalone-synths.catalog.json",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/rendered/catalogs/families/standalone-synths.catalog.json",
+        "bytes": 1029,
+        "chunks": 1,
+        "sha256": "92c60ea51adcfab5950ddb9f9ae4feb7f7dd5ee3dbd938b77693bddb51989603",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "40-root-catalogs.batch.json",
+      "order": 10,
+      "name": "bvst.catalog.release.firstwaveinstruments.v1",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.catalog.family.universalsynthfamily.v1",
+        "bvst.catalog.family.standalonesynths.v1"
+      ],
+      "dependency_token_ids": [
+        235,
+        252
+      ],
+      "missing_dependencies": [],
+      "token_id": 253,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000253",
+      "block_height": 500253,
+      "rendered_status": "ready",
+      "rendered_path": "on-chain-modules/rendered/catalogs/releases/first-wave-instruments.catalog.json",
+      "resolution_signature": "fe7a5e7ca78c1d1c14f504ed32873cdff4a389edcb7636fd5602246df6d4654d",
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/rendered/catalogs/releases/first-wave-instruments.catalog.json",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/rendered/catalogs/releases/first-wave-instruments.catalog.json",
+        "bytes": 1606,
+        "chunks": 1,
+        "sha256": "311e45f519d3ae2cfabdf6bbbbcf4f46512af8d371e5f3339cbe9bfab43f9ead",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    },
+    {
+      "batch": "40-root-catalogs.batch.json",
+      "order": 20,
+      "name": "bvst.catalog.root.v1",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.catalog.foundation.v1",
+        "bvst.catalog.release.firstwaveinstruments.v1"
+      ],
+      "dependency_token_ids": [
+        222,
+        253
+      ],
+      "missing_dependencies": [],
+      "token_id": 254,
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000254",
+      "block_height": 500254,
+      "rendered_status": "ready",
+      "rendered_path": "on-chain-modules/rendered/catalogs/root/root.catalog.json",
+      "resolution_signature": "cae85a391525061ddc336237a80767b9fd60ec4d44a7cac8eaa66dcc1e42d6c4",
+      "log_recorded": true,
+      "source": {
+        "logical_path": "on-chain-modules/rendered/catalogs/root/root.catalog.json",
+        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-Eou86E/BVST-on-chain-framework/rendered/catalogs/root/root.catalog.json",
+        "bytes": 1085,
+        "chunks": 1,
+        "sha256": "bc1183757b81635bc1b18c54d3fe0c15a5cbf822a7f975d46a05b2b68a91da35",
+        "route": "helper"
+      },
+      "execution": null,
+      "notes": [],
+      "status": "minted"
+    }
+  ]
+}

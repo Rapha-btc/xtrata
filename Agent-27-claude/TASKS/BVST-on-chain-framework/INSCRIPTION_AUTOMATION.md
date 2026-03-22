@@ -49,12 +49,14 @@ Run these commands from the repo root before the first mint:
 
 ```bash
 node TASKS/BVST-on-chain-framework/scripts/verify-bundle.mjs
+node TASKS/BVST-on-chain-framework/scripts/run-release-gate.mjs
 node TASKS/BVST-on-chain-framework/scripts/preflight-quote.mjs --out TASKS/BVST-on-chain-framework/verification/preflight.quote.json
 node TASKS/BVST-on-chain-framework/scripts/init-inscription-state.mjs
 node TASKS/BVST-on-chain-framework/scripts/inscription-status.mjs --out TASKS/BVST-on-chain-framework/verification/inscription-status.json
 ```
 
 `init-inscription-state.mjs` creates the runtime token map, inscription log, rendered index, and `rendered/` directory if they do not already exist.
+`run-release-gate.mjs` also writes `verification/release-gate.report.json` plus dedicated simulation traces under `verification/auto-inscribe-sim-*` so the exact one-click runner path can be rehearsed without any on-chain writes.
 
 ## Execution Order
 

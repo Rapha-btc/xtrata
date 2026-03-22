@@ -1,7 +1,7 @@
 (function () {
     const CHUNK_SIZE = 16384;
     const HELPER_LIMIT = 30;
-    const ACTIVE_REFRESH_MS = 30000;
+    const ACTIVE_REFRESH_MS = 120000;
 
     const els = {
         refreshStamp: document.getElementById('refresh-stamp'),
@@ -44,7 +44,9 @@
         selectedRelease: new URLSearchParams(window.location.search).get('release') || 'bvst-first-wave',
         release: null,
         selectedFiles: [],
-        refreshTimer: null
+        refreshTimer: null,
+        refreshInterval: null,
+        releaseLoadPromise: null
     };
 
     function escapeHtml(value) {
@@ -257,7 +259,7 @@
     }
 
     async function fetchJson(url) {
-        const response = await fetch(url, { cache: 'no-store' });
+        const response = await fetch(url);
         if (!response.ok) {
             throw new Error(`Request failed: ${response.status}`);
         }
@@ -287,11 +289,22 @@
         updateReleaseUrl();
     }
 
-    async function loadReleaseData() {
-        els.refreshStamp.textContent = 'Refreshing release data...';
-        const data = await fetchJson(`/api/inscription-planner/current-release?release=${encodeURIComponent(state.selectedRelease)}`);
-        state.release = data;
-        renderRelease();
+    async function loadReleaseData(options = {}) {
+        if (state.releaseLoadPromise) return state.releaseLoadPromise;
+        const silent = options.silent === true;
+        if (!silent) {
+            els.refreshStamp.textContent = 'Refreshing release data...';
+        }
+        state.releaseLoadPromise = fetchJson(`/api/inscription-planner/current-release?release=${encodeURIComponent(state.selectedRelease)}`)
+            .then((data) => {
+                state.release = data;
+                renderRelease();
+                return data;
+            })
+            .finally(() => {
+                state.releaseLoadPromise = null;
+            });
+        return state.releaseLoadPromise;
     }
 
     function renderHero(data) {
@@ -1007,24 +1020,35 @@
         stream.addEventListener('planner-run', (event) => {
             const payload = JSON.parse(event.data || '{}');
             if (!payload.releaseId) return;
-            if (payload.releaseId === 'xtrata-canary') {
+            if (payload.releaseId === state.selectedRelease) {
                 scheduleReleaseRefresh();
             }
         });
+    }
+
+    function startRefreshLoop() {
+        if (state.refreshInterval) return;
+        state.refreshInterval = window.setInterval(() => {
+            if (document.visibilityState === 'hidden') return;
+            loadReleaseData({ silent: true }).catch(() => {});
+        }, ACTIVE_REFRESH_MS);
     }
 
     async function init() {
         bindEvents();
         bindUploadInputs();
         bindEventStream();
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                loadReleaseData({ silent: true }).catch(() => {});
+            }
+        });
         try {
             await loadReleaseData();
         } catch (err) {
             els.refreshStamp.textContent = `Release data unavailable: ${err.message}`;
         }
-        setInterval(() => {
-            loadReleaseData().catch(() => {});
-        }, ACTIVE_REFRESH_MS);
+        startRefreshLoop();
     }
 
     document.addEventListener('DOMContentLoaded', init);

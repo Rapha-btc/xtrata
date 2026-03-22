@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "bundle_root": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework",
+  "status": "failed",
+  "started_at": "2026-03-22T13:41:47.077Z",
+  "updated_at": "2026-03-22T13:41:47.418Z",
+  "finished_at": "2026-03-22T13:41:47.418Z",
+  "network": "mainnet",
+  "sender_address": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+  "signer_source": "local-dry-run",
+  "core_contract": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0",
+  "helper_contract": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-small-mint-v1-0",
+  "test_mode": "local-dry-run",
+  "test_fail_stage": null,
+  "fee_rate_microstx_per_byte": "31",
+  "tx_fee_strategy": "live-transfer-fee-rate-plus-15pct",
+  "debug": {
+    "run_id": "run-20260322-134147069Z",
+    "event_log": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/verification/auto-inscribe-events.jsonl",
+    "chain_log": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/verification/auto-inscribe-chain.jsonl",
+    "failure_snapshot": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/verification/auto-inscribe-failure.json",
+    "events_logged": 15,
+    "chain_observations_logged": 4
+  },
+  "summary": {
+    "attempted": 1,
+    "minted": 0,
+    "remaining": null
+  },
+  "entries": [
+    {
+      "name": "bvst.schema.patch.v1",
+      "batch": "10-foundation.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx",
+      "started_at": "2026-03-22T13:41:47.148Z",
+      "status": "failed",
+      "dependencies": [],
+      "source": {
+        "path": "on-chain-modules/workspace/System/shared/bvst_patch_v1.schema.json",
+        "bytes": 5689,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-22T13:41:47.417Z",
+      "error": "bvst.schema.patch.v1 broadcast failed: transaction rejected — NotEnoughFunds"
+    }
+  ],
+  "errors": [
+    {
+      "name": "bvst.schema.patch.v1",
+      "at": "2026-03-22T13:41:47.417Z",
+      "error": "bvst.schema.patch.v1 broadcast failed: transaction rejected — NotEnoughFunds"
+    },
+    {
+      "at": "2026-03-22T13:41:47.418Z",
+      "error": "bvst.schema.patch.v1 broadcast failed: transaction rejected — NotEnoughFunds"
+    }
+  ]
+}

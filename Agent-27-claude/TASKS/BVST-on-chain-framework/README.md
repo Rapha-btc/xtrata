@@ -51,11 +51,14 @@ From the repo root:
 
 ```bash
 node TASKS/BVST-on-chain-framework/scripts/verify-bundle.mjs
+node TASKS/BVST-on-chain-framework/scripts/run-release-gate.mjs
 node TASKS/BVST-on-chain-framework/scripts/preflight-quote.mjs --out TASKS/BVST-on-chain-framework/verification/preflight.quote.json
 node TASKS/BVST-on-chain-framework/scripts/init-inscription-state.mjs
 node TASKS/BVST-on-chain-framework/scripts/inscription-status.mjs --out TASKS/BVST-on-chain-framework/verification/inscription-status.json
 node TASKS/BVST-on-chain-framework/scripts/serve-workspace.mjs --port 8123
 ```
+
+`run-release-gate.mjs` is the highest-signal pre-mint rehearsal. It reruns the safety suite, refreshes the live queue, and then drives the full BVST auto-runner in `simulate-release` mode so the exact dependency-aware mint loop is exercised without broadcasting transactions or mutating the live BVST runtime state.
 
 After each successful mint, record the on-chain result and refresh downstream rendered catalogs:
 

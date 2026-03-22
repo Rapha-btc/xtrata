@@ -111,11 +111,15 @@ function approveReply(agentId, message) {
     mode: entry.mode || 'reply',
     model: 'sonnet',
     logPrefix: 'AutoConverse-Approved',
-    onSuccess: () => {
+    onSuccess: (_text, sendResult) => {
+      const payment = sendResult?.data?.payment || {};
       markdown.appendOutreachHistory({
         type: 'sent', direction: 'outbound', mode: entry.mode || 'reply',
         agent: displayName, agentId, stxAddress: entry.stxAddress,
-        message: entry.message
+        message: entry.message,
+        paymentTxid: payment.txid || null,
+        paymentSats: Number(String(payment.amount || '').match(/(\d+)/)?.[1] || 100),
+        toBtcAddress: entry.btcAddress || ''
       });
       markdown.updateOutreachAgentMemory(agentId, {
         agentName: displayName,
@@ -126,8 +130,18 @@ function approveReply(agentId, message) {
       _broadcast({ event: 'outreach-complete', data: { success: true, agent: displayName, source: 'auto-converse' } });
     },
     onFailure: (errText) => {
+      markdown.appendReplyQueue({
+        displayName,
+        agentId: String(agentId),
+        stxAddress: entry.stxAddress,
+        btcAddress: entry.btcAddress,
+        message: entry.message,
+        mode: entry.mode || 'reply',
+        why: entry.why || '',
+        incomingMessage: entry.incomingMessage || ''
+      });
       _addLog('error', `AutoConverse approved send failed for ${displayName}: ${errText}`);
-      _broadcast({ event: 'outreach-complete', data: { success: false, agent: displayName, source: 'auto-converse' } });
+      _broadcast({ event: 'outreach-complete', data: { success: false, agent: displayName, source: 'auto-converse', error: errText } });
     }
   });
 
@@ -258,11 +272,15 @@ NEXT: <desired next step>`;
           mode: 'reply',
           model: 'sonnet',
           logPrefix: 'AutoConverse',
-          onSuccess: () => {
+          onSuccess: (_text, sendResult) => {
+            const payment = sendResult?.data?.payment || {};
             markdown.appendOutreachHistory({
               type: 'sent', direction: 'outbound', mode: 'reply',
               agent: agent.name, agentId: agent.id, stxAddress: peerStx,
-              message
+              message,
+              paymentTxid: payment.txid || null,
+              paymentSats: Number(String(payment.amount || '').match(/(\d+)/)?.[1] || 100),
+              toBtcAddress: agent.btcAddress || ''
             });
             markdown.updateOutreachAgentMemory(agent.id, {
               agentName: agent.name, relationshipStatus: 'outbound-sent',
@@ -270,8 +288,8 @@ NEXT: <desired next step>`;
             });
             _broadcast({ event: 'outreach-complete', data: { success: true, agent: agent.name, source: 'auto-converse' } });
           },
-          onFailure: () => {
-            _broadcast({ event: 'outreach-complete', data: { success: false, agent: agent.name, source: 'auto-converse' } });
+          onFailure: (errText) => {
+            _broadcast({ event: 'outreach-complete', data: { success: false, agent: agent.name, source: 'auto-converse', error: errText } });
           }
         });
       } else {

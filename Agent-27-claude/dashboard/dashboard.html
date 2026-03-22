@@ -1450,6 +1450,23 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function isSseLive() {
+        return typeof EventSource === 'function' && evtSource && evtSource.readyState === EventSource.OPEN;
+    }
+
+    function shouldRunFallbackPolls() {
+        return document.visibilityState === 'visible' && !isSseLive();
+    }
+
+    function refreshVisibleSnapshots() {
+        if (document.visibilityState !== 'visible') return;
+        refreshPhaseStatus();
+        fetchJson('/api/heartbeat/status').then(renderHeartbeatStatus).catch(() => {});
+        fetchJson('/api/chain').then(renderMetabolic).catch(() => {});
+        fetchOutreachHistory();
+        loadAutoConverseQueue();
+    }
+
     // --- Editable Panel Save ---
 
     function flashSave(docId, success) {
@@ -2878,8 +2895,12 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch {}
         });
 
-        evtSource.addEventListener('chain', () => {
-            fetchJson('/api/chain').then(renderMetabolic).catch(() => {});
+        evtSource.addEventListener('chain', (e) => {
+            try {
+                renderMetabolic(JSON.parse(e.data));
+            } catch {
+                fetchJson('/api/chain').then(renderMetabolic).catch(() => {});
+            }
         });
 
         evtSource.addEventListener('file-change', (e) => {
@@ -2891,7 +2912,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 else if (payload.type === 'evolution') renderEvolution(payload.data);
                 else if (payload.type === 'ledger') {
                     renderLedger(payload.data);
-                    fetchJson('/api/chain').then(renderMetabolic).catch(() => {});
                 }
             } catch {}
         });
@@ -3005,6 +3025,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadCampaign();
             } catch {}
         });
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                refreshVisibleSnapshots();
+            }
+        });
     }
 
     // Tick: update phase timer every second
@@ -3013,24 +3039,30 @@ document.addEventListener('DOMContentLoaded', () => {
         updateOutreachTimer();
     }, 1000);
 
-    // Refresh phase status every 30s (in case of missed SSE events)
-    setInterval(() => { refreshPhaseStatus(); }, 30000);
-
-    // Refresh heartbeat status every 30s
+    // Refresh phase status every 2 min only when SSE is unavailable and the tab is visible.
     setInterval(() => {
+        if (!shouldRunFallbackPolls()) return;
+        refreshPhaseStatus();
+    }, 120000);
+
+    // Refresh heartbeat status every 2 min only when SSE is unavailable and the tab is visible.
+    setInterval(() => {
+        if (!shouldRunFallbackPolls()) return;
         fetchJson('/api/heartbeat/status').then(renderHeartbeatStatus).catch(() => {});
-    }, 30000);
+    }, 120000);
 
-    // Refresh chain data (balances, txs) every 60s as fallback for missed SSE events
+    // Refresh chain data every 3 min only when SSE is unavailable and the tab is visible.
     setInterval(() => {
+        if (!shouldRunFallbackPolls()) return;
         fetchJson('/api/chain').then(renderMetabolic).catch(() => {});
-    }, 60000);
+    }, 180000);
 
-    // Refresh outreach inbox and auto-converse queue every 2 min
+    // Refresh outreach inbox and auto-converse queue every 5 min only while visible.
     setInterval(() => {
+        if (document.visibilityState !== 'visible') return;
         fetchOutreachHistory();
         loadAutoConverseQueue();
-    }, 120000);
+    }, 300000);
 
     // --- Autopilot: Heartbeat + Auto-Converse ---
 

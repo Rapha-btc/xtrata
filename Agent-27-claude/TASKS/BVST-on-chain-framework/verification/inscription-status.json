@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-22T01:19:47.658Z",
+  "generated_at": "2026-03-22T14:05:51.751Z",
   "bundle_root": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework",
   "token_map": "configs/token-map.runtime.json",
   "inscription_log": "verification/inscription-log.json",
@@ -134,9 +134,9 @@
       "source": {
         "logical_path": "on-chain-modules/workspace/System/shared/audional_decoder.js",
         "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/System/shared/audional_decoder.js",
-        "bytes": 9564,
+        "bytes": 9543,
         "chunks": 1,
-        "sha256": "bec66efd0382c49ff15c5f401124cff350412177458ee91151b46224a2116916",
+        "sha256": "5755e7c345e8db646933916ebc8391795d9315dfd71d2d84c676259ef1defeb3",
         "route": "helper"
       },
       "execution": {
@@ -335,9 +335,9 @@
       "source": {
         "logical_path": "on-chain-modules/workspace/System/shared/audional_decoder.js",
         "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/System/shared/audional_decoder.js",
-        "bytes": 9564,
+        "bytes": 9543,
         "chunks": 1,
-        "sha256": "bec66efd0382c49ff15c5f401124cff350412177458ee91151b46224a2116916",
+        "sha256": "5755e7c345e8db646933916ebc8391795d9315dfd71d2d84c676259ef1defeb3",
         "route": "helper"
       },
       "execution": {
