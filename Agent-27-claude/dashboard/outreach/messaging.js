@@ -155,7 +155,19 @@ async function sendMessage({ displayName, stxAddress, btcAddress, agentId, messa
       _runningOutreach = false;
       const failureText = errMsg || 'Unknown inbox send error';
 
-      // Re-queue with recovery txid
+      // Re-queue so the user can retry from the dashboard UI
+      store.appendReplyQueue({
+        displayName,
+        agentId: String(agentId),
+        stxAddress: stxAddress || '',
+        btcAddress: btcAddress || '',
+        message,
+        mode: mode || 'reply',
+        why: `Send failed: ${failureText.substring(0, 80)}`,
+        paymentTxid: currentPaymentTxid || ''
+      });
+
+      // Also persist recovery txid in draft
       if (currentPaymentTxid) {
         store.saveDraft(agentId, { paymentTxid: currentPaymentTxid });
       }
