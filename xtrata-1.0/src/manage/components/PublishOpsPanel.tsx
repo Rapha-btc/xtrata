@@ -10,12 +10,12 @@ import {
   type ClarityValue
 } from '@stacks/transactions';
 import { PUBLIC_CONTRACT } from '../../config/public';
+import CollectionCoverImage from '../../components/CollectionCoverImage';
 import { createXtrataClient } from '../../lib/contract/client';
 import {
   buildRuntimeInscriptionContentUrl,
   normalizeCoverImageSource,
   parseInscriptionTokenId,
-  resolveCollectionCoverImageUrl,
   type CoverImageSource
 } from '../../lib/collections/cover-image';
 import { getNetworkFromAddress } from '../../lib/network/guard';
@@ -234,7 +234,6 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
   const [feeGuidanceMessage, setFeeGuidanceMessage] = useState<string | null>(null);
   const [coverSaving, setCoverSaving] = useState(false);
   const [descriptionSaving, setDescriptionSaving] = useState(false);
-  const [coverPreviewFailed, setCoverPreviewFailed] = useState(false);
   const [feeGuidance, setFeeGuidance] = useState<CollectionMiningFeeGuidance | null>(
     null
   );
@@ -1023,53 +1022,40 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
     [availableImageAssets, selectedCoverAssetId]
   );
 
-  const previewCoverUrl = useMemo(() => {
-    const normalizedCollectionId = collectionId.trim();
+  const previewCoverImage = useMemo(() => {
     if (coverSource === 'collection-asset') {
-      if (!normalizedCollectionId || !selectedCoverAsset) {
+      if (!selectedCoverAsset) {
         return null;
       }
-      return resolveCollectionCoverImageUrl({
-        coverImage: {
-          source: 'collection-asset',
-          assetId: selectedCoverAsset.asset_id
-        },
-        collectionId: normalizedCollectionId
-      });
+      return {
+        source: 'collection-asset',
+        assetId: selectedCoverAsset.asset_id
+      };
     }
     if (coverSource === 'inscribed-image-url') {
       const normalized = inscribedCoverUrl.trim();
       return normalized.length > 0
-        ? resolveCollectionCoverImageUrl({
-            coverImage: {
-              source: 'inscribed-image-url',
-              imageUrl: normalized
-            },
-            collectionId: normalizedCollectionId
-          })
+        ? {
+            source: 'inscribed-image-url',
+            imageUrl: normalized
+          }
         : null;
     }
-    return resolveCollectionCoverImageUrl({
-      coverImage: {
-        source: 'inscription-id',
-        tokenId: inscriptionCoverTokenId,
-        coreContractId: coreContractTarget.contractId
-      },
-      collectionId: normalizedCollectionId,
-      fallbackCoreContractId: coreContractTarget.contractId
-    });
+    const normalizedTokenId = inscriptionCoverTokenId.trim();
+    return normalizedTokenId.length > 0
+      ? {
+          source: 'inscription-id',
+          tokenId: normalizedTokenId,
+          coreContractId: coreContractTarget.contractId
+        }
+      : null;
   }, [
     coverSource,
     inscribedCoverUrl,
     inscriptionCoverTokenId,
-    collectionId,
     selectedCoverAsset,
     coreContractTarget
   ]);
-
-  useEffect(() => {
-    setCoverPreviewFailed(false);
-  }, [previewCoverUrl]);
 
   const publishBlockers = useMemo(() => {
     const blockers: string[] = [];
@@ -1573,19 +1559,17 @@ export default function PublishOpsPanel(props: PublishOpsPanelProps) {
 
       <div className="collection-live-preview">
         <div className="collection-live-preview__media">
-          {previewCoverUrl && !coverPreviewFailed ? (
-            <img
-              src={previewCoverUrl}
-              alt={`${previewTitle} cover`}
-              onError={() => setCoverPreviewFailed(true)}
-            />
-          ) : (
-            <div className="collection-live-preview__placeholder">
-              {coverPreviewFailed
-                ? 'Cover image preview unavailable. Check the saved image source.'
-                : 'Choose a cover image to preview your live page hero.'}
-            </div>
-          )}
+          <CollectionCoverImage
+            coverImage={previewCoverImage}
+            collectionId={collectionId.trim() || null}
+            fallbackCoreContractId={coreContractTarget.contractId}
+            alt={`${previewTitle} cover`}
+            placeholderClassName="collection-live-preview__placeholder"
+            emptyMessage="Choose a cover image to preview your live page hero."
+            loadingMessage="Resolving cover image preview..."
+            errorMessage="Cover image preview unavailable. Check the saved image source."
+            debugLabel={`manage-cover-preview:${collectionId.trim() || 'draft'}`}
+          />
         </div>
         <div className="collection-live-preview__content">
           <p className="collection-live-preview__eyebrow info-label">
