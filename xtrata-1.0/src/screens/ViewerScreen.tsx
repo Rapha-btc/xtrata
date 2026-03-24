@@ -1122,7 +1122,7 @@ const TokenDetails = (props: {
           <div className="transfer-panel detail-summary-panel">
             <div>
               <h3>Relationships</h3>
-              <p>Token context and linked parent/child inscriptions.</p>
+              <p>Token context and linked dependencies/dependents.</p>
             </div>
             <div className="meta-grid meta-grid--dense">
               <div>
@@ -1130,21 +1130,21 @@ const TokenDetails = (props: {
                 <span className="meta-value">#{props.token.id.toString()}</span>
               </div>
               <div>
-                <span className="meta-label">Parents</span>
+                <span className="meta-label">Dependencies</span>
                 <span className="meta-value">{relationshipParentsLabel}</span>
               </div>
               <div>
-                <span className="meta-label">Children</span>
+                <span className="meta-label">Dependents</span>
                 <span className="meta-value">{relationshipChildrenLabel}</span>
               </div>
               <div>
-                <span className="meta-label">Siblings</span>
+                <span className="meta-label">Related tokens</span>
                 <span className="meta-value">{relationshipSiblingsLabel}</span>
               </div>
             </div>
             {!isWalletView && parentThumbItems.length > 0 && (
               <div className="relation-panel">
-                <span className="meta-label">Parent thumbnails</span>
+                <span className="meta-label">Dependency thumbnails</span>
                 <div className="relation-grid">
                   {parentThumbItems.map((item) => (
                     <button
@@ -1152,7 +1152,7 @@ const TokenDetails = (props: {
                       type="button"
                       className="relation-card relation-card--button"
                       onClick={() => props.onSelectToken(item.id)}
-                      aria-label={`View parent token #${item.id.toString()}`}
+                      aria-label={`View dependency token #${item.id.toString()}`}
                     >
                       <div className="relation-frame">
                         {item.summary ? (
@@ -1177,14 +1177,14 @@ const TokenDetails = (props: {
                 </div>
                 {parentOverflowCount > 0 && (
                   <span className="meta-value">
-                    +{parentOverflowCount} more parents
+                    +{parentOverflowCount} more dependencies
                   </span>
                 )}
               </div>
             )}
             {!isWalletView && childThumbItems.length > 0 && (
               <div className="relation-panel">
-                <span className="meta-label">Child thumbnails</span>
+                <span className="meta-label">Dependent thumbnails</span>
                 <div className="relation-grid">
                   {childThumbItems.map((item) => (
                     <button
@@ -1192,7 +1192,7 @@ const TokenDetails = (props: {
                       type="button"
                       className="relation-card relation-card--button"
                       onClick={() => props.onSelectToken(item.id)}
-                      aria-label={`View child token #${item.id.toString()}`}
+                      aria-label={`View dependent token #${item.id.toString()}`}
                     >
                       <div className="relation-frame">
                         {item.summary ? (
@@ -1217,14 +1217,14 @@ const TokenDetails = (props: {
                 </div>
                 {childOverflowCount > 0 && (
                   <span className="meta-value">
-                    +{childOverflowCount} more children
+                    +{childOverflowCount} more dependents
                   </span>
                 )}
               </div>
             )}
             {!isWalletView && siblingThumbItems.length > 0 && (
               <div className="relation-panel">
-                <span className="meta-label">Sibling thumbnails</span>
+                <span className="meta-label">Related token thumbnails</span>
                 <div className="relation-grid">
                   {siblingThumbItems.map((item) => (
                     <button
@@ -1232,7 +1232,7 @@ const TokenDetails = (props: {
                       type="button"
                       className="relation-card relation-card--button"
                       onClick={() => props.onSelectToken(item.id)}
-                      aria-label={`View sibling token #${item.id.toString()}`}
+                      aria-label={`View related token #${item.id.toString()}`}
                     >
                       <div className="relation-frame">
                         {item.summary ? (
@@ -1321,7 +1321,7 @@ const TokenDetails = (props: {
                   type="button"
                   onClick={() => props.onAddParentDraft?.(props.token!.id)}
                 >
-                  Use as parent
+                  Use as dependency
                 </button>
               </div>
             )}

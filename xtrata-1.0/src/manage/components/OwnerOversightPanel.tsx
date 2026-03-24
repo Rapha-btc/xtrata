@@ -1074,6 +1074,7 @@ export default function OwnerOversightPanel() {
                       <AddressLabel
                         address={collection.artist_address}
                         network={walletSession.network}
+                        showAddressWhenNamed
                       />{' '}
                       · {isPublicVisible ? 'Visible on public page' : 'Hidden from public page'}
                     </p>
@@ -1163,6 +1164,7 @@ export default function OwnerOversightPanel() {
                 <AddressLabel
                   address={artistAddress}
                   network={walletSession.network}
+                  showAddressWhenNamed
                 />
               </p>
               <span className="badge badge--neutral">
@@ -1413,6 +1415,7 @@ export default function OwnerOversightPanel() {
                         <AddressLabel
                           address={collection.contract_address}
                           network={walletSession.network}
+                          showAddressWhenNamed
                         />
                       ) : (
                         'contract pending'

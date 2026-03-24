@@ -17,6 +17,7 @@ type AddressLabelProps = {
   tail?: number;
   fallback?: string;
   linkToExplorer?: boolean;
+  showAddressWhenNamed?: boolean;
 };
 
 export default function AddressLabel(props: AddressLabelProps) {
@@ -36,7 +37,7 @@ export default function AddressLabel(props: AddressLabelProps) {
     ? truncateMiddle(trimmed, props.head ?? 6, props.tail ?? 6)
     : '';
   const primaryLabel = primaryName ?? truncated;
-  const showSecondary = !!primaryName;
+  const showSecondary = !!primaryName && !!props.showAddressWhenNamed;
   const fallback = props.fallback ?? 'Unknown';
   const explorerUrl =
     props.linkToExplorer === false || !hasAddress

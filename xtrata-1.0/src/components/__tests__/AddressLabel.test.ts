@@ -24,6 +24,20 @@ describe('AddressLabel', () => {
     expect(html).toContain(
       `href="https://explorer.hiro.so/address/${address}?chain=mainnet"`
     );
+    expect(html).not.toContain('address-label__address');
     expect(html).not.toContain('/name/alice.btc');
+  });
+
+  it('can still show the raw address as a secondary line when requested', () => {
+    const html = renderToStaticMarkup(
+      createElement(AddressLabel, {
+        address: 'SP2JXKMSH007NPYAQHKJPQMAQYAD90NQGTVJVQ02B',
+        name: 'alice.btc',
+        network: 'mainnet',
+        showAddressWhenNamed: true
+      })
+    );
+
+    expect(html).toContain('address-label__address');
   });
 });

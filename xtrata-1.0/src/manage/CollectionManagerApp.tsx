@@ -769,6 +769,7 @@ export default function CollectionManagerApp() {
             address={walletSession.address}
             network={walletSession.network}
             fallback="Not connected"
+            showAddressWhenNamed
           />
         </p>
         <p>Follow the guided steps below. Advanced controls are optional and hidden by default.</p>
@@ -777,6 +778,7 @@ export default function CollectionManagerApp() {
           walletPending={walletPending}
           onConnect={handleConnectWallet}
           onDisconnect={handleDisconnectWallet}
+          showAddressWhenNamed
         />
         <div className="mint-actions">
           <span className="meta-value">
