@@ -145,8 +145,8 @@
         "block_height": null,
         "path": "on-chain-modules/workspace/System/shared/plugin_core.js",
         "mime_type": "application/javascript",
-        "sha256": "7291f7c40b50253403be270fe3fc6763227f083fcd2f066b5051179621de8dc5",
-        "bytes": 25354,
+        "sha256": "79280a30719a574de78a7fc99f0fcafe5092fd8c75554b3269b12380f6d4683d",
+        "bytes": 26459,
         "chunks": 2,
         "route": "helper"
       },

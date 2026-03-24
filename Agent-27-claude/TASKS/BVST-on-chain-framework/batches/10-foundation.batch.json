@@ -198,9 +198,9 @@
       "name": "bvst.runtime.plugin-core.v1.0.0",
       "path": "on-chain-modules/workspace/System/shared/plugin_core.js",
       "mime": "application/javascript",
-      "bytes": 25354,
+      "bytes": 26459,
       "chunks": 2,
-      "sha256": "7291f7c40b50253403be270fe3fc6763227f083fcd2f066b5051179621de8dc5",
+      "sha256": "79280a30719a574de78a7fc99f0fcafe5092fd8c75554b3269b12380f6d4683d",
       "route": "helper",
       "depends_on": [
         "bvst.runtime.controls.v1.0.0",

@@ -507,9 +507,32 @@ export const BVST = {
 
     _initSequencer: function(seqConfig) {
         seqConfig.audioContext = this.audioContext;
+        const noteParamId = (seqConfig.paramMap && Number.isFinite(seqConfig.paramMap.note)) ? seqConfig.paramMap.note : 128;
+        const gateParamId = (seqConfig.paramMap && Number.isFinite(seqConfig.paramMap.gate)) ? seqConfig.paramMap.gate : 129;
+        let _seqPendingNote = 60;
+
+        const seqParamSender = (id, val) => {
+            if (id === noteParamId && noteParamId >= 128) {
+                _seqPendingNote = val;
+                return;
+            }
+            if (id === gateParamId && gateParamId >= 128) {
+                if (this.audioContext && this.audioContext.state === 'suspended') {
+                    try { this.audioContext.resume(); } catch (_) {}
+                }
+                if (val > 0) {
+                    window.parent.postMessage({ type: 'NOTE_ON', instanceId: this.instanceId, note: _seqPendingNote, velocity: 1.0 }, '*');
+                } else {
+                    window.parent.postMessage({ type: 'NOTE_OFF', instanceId: this.instanceId, note: _seqPendingNote }, '*');
+                }
+                return;
+            }
+            this.sendParam(id, val);
+        };
+
         this.sequencer = new SequencerManager(
-            seqConfig, 
-            (id, val) => this.sendParam(id, val),
+            seqConfig,
+            seqParamSender,
             this.controls
         );
         
