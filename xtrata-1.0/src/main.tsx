@@ -5,6 +5,7 @@ import App from './App';
 import PublicApp from './PublicApp';
 import SimplePublicHome from './SimplePublicHome';
 import CollectionMintLivePage from './CollectionMintLivePage';
+import LabLandingPage from './LabLandingPage';
 import AdminGate from './admin/AdminGate';
 import ArtistManagerGate from './manage/ArtistManagerGate';
 import CollectionManagerApp from './manage/CollectionManagerApp';
@@ -53,7 +54,9 @@ applyThemeToDocument(resolveInitialTheme());
 
 const COLLECTION_LIVE_PATH_PREFIX = '/collection/';
 const WORKSPACE_PATH_PREFIX = '/workspace';
+const LAB_PATH_PREFIX = '/lab';
 const pathname = window.location.pathname;
+const isLabPath = pathname === LAB_PATH_PREFIX || pathname.startsWith(`${LAB_PATH_PREFIX}/`);
 const collectionPathMatch = pathname.startsWith(COLLECTION_LIVE_PATH_PREFIX)
   ? pathname.slice(COLLECTION_LIVE_PATH_PREFIX.length)
   : '';
@@ -82,6 +85,8 @@ ReactDOM.createRoot(root).render(
         <ArtistManagerGate>
           <CollectionManagerApp />
         </ArtistManagerGate>
+      ) : isLabPath ? (
+        <LabLandingPage />
       ) : pathname.startsWith(WORKSPACE_PATH_PREFIX) ? (
         <PublicApp />
       ) : (
