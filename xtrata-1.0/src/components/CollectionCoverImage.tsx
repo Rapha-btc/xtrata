@@ -9,7 +9,9 @@ import {
 import { parseContractPrincipal } from '../lib/collections/contract-link';
 import { createXtrataClient } from '../lib/contract/client';
 import { getNetworkFromAddress } from '../lib/network/guard';
+import { fetchOnChainContent } from '../lib/viewer/content';
 import { isExecutableRuntimeMimeType } from '../lib/viewer/runtime-open';
+import { createObjectUrl } from '../lib/utils/blob';
 import { logDebug, logWarn, shouldLog } from '../lib/utils/logger';
 
 type CollectionCoverImageProps = {
@@ -144,7 +146,7 @@ export default function CollectionCoverImage(props: CollectionCoverImageProps) {
     inscriptionReference?.mimeType ?? coverSummary.mimeType ?? null;
 
   const inscriptionContract = useMemo(() => {
-    if (!inscriptionReference || !shouldResolveSvg) {
+    if (!inscriptionReference) {
       return null;
     }
     const parsed = parseContractPrincipal(inscriptionReference.coreContractId);
@@ -165,6 +167,28 @@ export default function CollectionCoverImage(props: CollectionCoverImageProps) {
         : null,
     [inscriptionContract]
   );
+  const inscriptionMetaQuery = useQuery({
+    queryKey: [
+      'collection-cover',
+      'meta',
+      inscriptionReference?.coreContractId ?? 'none',
+      inscriptionReference?.tokenId ?? 'none'
+    ],
+    queryFn: async () => {
+      if (!inscriptionClient || !inscriptionReference) {
+        return null;
+      }
+      return inscriptionClient.getInscriptionMeta(
+        BigInt(inscriptionReference.tokenId),
+        inscriptionClient.contract.address
+      );
+    },
+    enabled: !!inscriptionClient && !!inscriptionReference,
+    staleTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false
+  });
 
   const svgDataUriQuery = useQuery({
     queryKey: [
@@ -217,6 +241,67 @@ export default function CollectionCoverImage(props: CollectionCoverImageProps) {
       isExecutableRuntimeMimeType(coverMimeType),
     [runtimeEndpointUrl, coverMimeType]
   );
+  const shouldUseInscriptionBlob = useMemo(
+    () =>
+      !!inscriptionReference &&
+      !shouldResolveSvg &&
+      !shouldUseRuntimeFrame,
+    [inscriptionReference, shouldResolveSvg, shouldUseRuntimeFrame]
+  );
+  const inscriptionImageBytesQuery = useQuery({
+    queryKey: [
+      'collection-cover',
+      'bytes',
+      inscriptionReference?.coreContractId ?? 'none',
+      inscriptionReference?.tokenId ?? 'none'
+    ],
+    queryFn: async () => {
+      if (
+        !inscriptionClient ||
+        !inscriptionReference ||
+        !inscriptionMetaQuery.data
+      ) {
+        return null;
+      }
+      return fetchOnChainContent({
+        client: inscriptionClient,
+        id: BigInt(inscriptionReference.tokenId),
+        senderAddress: inscriptionClient.contract.address,
+        totalSize: inscriptionMetaQuery.data.totalSize,
+        mimeType: inscriptionMetaQuery.data.mimeType
+      });
+    },
+    enabled:
+      shouldUseInscriptionBlob &&
+      !!inscriptionClient &&
+      !!inscriptionReference &&
+      !!inscriptionMetaQuery.data,
+    staleTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false
+  });
+  const inscriptionBlobUrl = useMemo(() => {
+    if (!shouldUseInscriptionBlob || !inscriptionImageBytesQuery.data) {
+      return null;
+    }
+    const mimeType =
+      inscriptionMetaQuery.data?.mimeType ?? coverMimeType ?? 'application/octet-stream';
+    return createObjectUrl(inscriptionImageBytesQuery.data, mimeType);
+  }, [
+    shouldUseInscriptionBlob,
+    inscriptionImageBytesQuery.data,
+    inscriptionMetaQuery.data,
+    coverMimeType
+  ]);
+  useEffect(() => {
+    if (!inscriptionBlobUrl) {
+      return;
+    }
+    return () => {
+      URL.revokeObjectURL(inscriptionBlobUrl);
+    };
+  }, [inscriptionBlobUrl]);
   const runtimeLauncherUrl = useMemo(
     () =>
       shouldUseRuntimeFrame
@@ -304,6 +389,9 @@ export default function CollectionCoverImage(props: CollectionCoverImageProps) {
       runtimeLauncherUrlKind: classifyUrl(runtimeLauncherUrl),
       runtimeSourceState,
       coverMimeType,
+      shouldUseInscriptionBlob,
+      inscriptionMetaStatus: inscriptionMetaQuery.status,
+      inscriptionBytesStatus: inscriptionImageBytesQuery.status,
       shouldUseRuntimeFrame,
       cover: coverSummary,
       inscriptionReference,
@@ -319,6 +407,9 @@ export default function CollectionCoverImage(props: CollectionCoverImageProps) {
     runtimeLauncherUrl,
     runtimeSourceState,
     coverMimeType,
+    shouldUseInscriptionBlob,
+    inscriptionMetaQuery.status,
+    inscriptionImageBytesQuery.status,
     shouldUseRuntimeFrame,
     coverSummary,
     inscriptionReference,
@@ -377,6 +468,48 @@ export default function CollectionCoverImage(props: CollectionCoverImageProps) {
   ]);
 
   useEffect(() => {
+    if (!shouldUseInscriptionBlob) {
+      return;
+    }
+    if (inscriptionMetaQuery.isError) {
+      logWarn('cover', 'Collection cover inscription meta lookup failed', {
+        label: debugLabel,
+        collectionId: props.collectionId ?? null,
+        inscriptionReference,
+        error:
+          inscriptionMetaQuery.error instanceof Error
+            ? inscriptionMetaQuery.error.message
+            : String(inscriptionMetaQuery.error ?? 'unknown')
+      });
+      return;
+    }
+    if (inscriptionImageBytesQuery.isError) {
+      logWarn('cover', 'Collection cover inscription bytes fetch failed', {
+        label: debugLabel,
+        collectionId: props.collectionId ?? null,
+        inscriptionReference,
+        metaMimeType: inscriptionMetaQuery.data?.mimeType ?? null,
+        metaTotalSize:
+          inscriptionMetaQuery.data?.totalSize?.toString() ?? null,
+        error:
+          inscriptionImageBytesQuery.error instanceof Error
+            ? inscriptionImageBytesQuery.error.message
+            : String(inscriptionImageBytesQuery.error ?? 'unknown')
+      });
+    }
+  }, [
+    shouldUseInscriptionBlob,
+    inscriptionMetaQuery.isError,
+    inscriptionMetaQuery.error,
+    inscriptionMetaQuery.data,
+    inscriptionImageBytesQuery.isError,
+    inscriptionImageBytesQuery.error,
+    debugLabel,
+    props.collectionId,
+    inscriptionReference
+  ]);
+
+  useEffect(() => {
     setLoadFailed(false);
   }, [resolvedUrl]);
 
@@ -430,10 +563,17 @@ export default function CollectionCoverImage(props: CollectionCoverImageProps) {
   if (
     !resolvedUrl ||
     loadFailed ||
+    (shouldUseInscriptionBlob &&
+      (inscriptionMetaQuery.status === 'pending' ||
+        inscriptionImageBytesQuery.status === 'pending')) ||
     (shouldUseRuntimeFrame && runtimeSourceState === 'pending')
   ) {
     const message = loadFailed
       ? props.errorMessage ?? props.emptyMessage
+      : shouldUseInscriptionBlob &&
+          (inscriptionMetaQuery.status === 'pending' ||
+            inscriptionImageBytesQuery.status === 'pending')
+        ? props.loadingMessage ?? props.emptyMessage
       : shouldUseRuntimeFrame && runtimeSourceState === 'pending'
         ? props.loadingMessage ?? props.emptyMessage
       : shouldResolveSvg && !resolvedUrl
@@ -477,7 +617,7 @@ export default function CollectionCoverImage(props: CollectionCoverImageProps) {
 
   return (
     <img
-      src={resolvedUrl}
+      src={inscriptionBlobUrl ?? resolvedUrl}
       alt={props.alt}
       loading={props.loading ?? 'lazy'}
       decoding="async"
@@ -493,15 +633,17 @@ export default function CollectionCoverImage(props: CollectionCoverImageProps) {
         logDebug('cover', 'Collection cover image loaded', {
           label: debugLabel,
           collectionId: props.collectionId ?? null,
-          resolvedUrlKind: classifyUrl(resolvedUrl),
+          resolvedUrlKind: classifyUrl(inscriptionBlobUrl ?? resolvedUrl),
+          inscriptionBlobUrl: !!inscriptionBlobUrl,
           cover: coverSummary,
           inscriptionReference,
+          shouldUseInscriptionBlob,
           shouldResolveSvg
         });
       }}
       onError={() => {
         setLoadFailed(true);
-        const logKey = `${debugLabel}|img-error|${resolvedUrl}`;
+        const logKey = `${debugLabel}|img-error|${inscriptionBlobUrl ?? resolvedUrl}`;
         if (errorLogRef.current === logKey) {
           return;
         }
@@ -509,12 +651,14 @@ export default function CollectionCoverImage(props: CollectionCoverImageProps) {
         logWarn('cover', 'Collection cover image element failed to load', {
           label: debugLabel,
           collectionId: props.collectionId ?? null,
-          resolvedUrlKind: classifyUrl(resolvedUrl),
+          resolvedUrlKind: classifyUrl(inscriptionBlobUrl ?? resolvedUrl),
+          inscriptionBlobUrl: !!inscriptionBlobUrl,
           runtimeEndpointUrlKind: classifyUrl(runtimeEndpointUrl),
           runtimeLauncherUrlKind: classifyUrl(runtimeLauncherUrl),
           shouldUseRuntimeFrame,
           cover: coverSummary,
           inscriptionReference,
+          shouldUseInscriptionBlob,
           shouldResolveSvg
         });
       }}
