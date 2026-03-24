@@ -7,6 +7,7 @@ type WalletTopBarProps = {
   onConnect: () => void | Promise<void>;
   onDisconnect: () => void | Promise<void>;
   className?: string;
+  showAddressWhenNamed?: boolean;
 };
 
 const joinClassName = (...values: Array<string | null | undefined>) =>
@@ -22,6 +23,7 @@ export default function WalletTopBar(props: WalletTopBarProps) {
           address={props.walletSession.address}
           network={props.walletSession.network}
           fallback="Not connected"
+          showAddressWhenNamed={props.showAddressWhenNamed}
         />
         <span className="wallet-top-bar__network">
           Network: {props.walletSession.network ?? 'unknown'}

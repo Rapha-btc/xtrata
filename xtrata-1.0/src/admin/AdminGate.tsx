@@ -155,6 +155,7 @@ export default function AdminGate({ children }: AdminGateProps) {
               walletPending={walletPending}
               onConnect={handleConnectWallet}
               onDisconnect={handleDisconnectWallet}
+              showAddressWhenNamed
             />
             <div className="meta-grid">
               <div>

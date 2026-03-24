@@ -221,6 +221,7 @@ function GateContent({ children }: ArtistManagerGateProps) {
               walletPending={walletPending}
               onConnect={handleConnectWallet}
               onDisconnect={handleDisconnectWallet}
+              showAddressWhenNamed
             />
             <div className="meta-grid">
               <div>
@@ -231,6 +232,7 @@ function GateContent({ children }: ArtistManagerGateProps) {
                       className="meta-value"
                       address={connectedAddress}
                       network={walletSession.network}
+                      showAddressWhenNamed
                     />
                   ) : (
                     'Not connected'

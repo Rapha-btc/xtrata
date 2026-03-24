@@ -62,7 +62,6 @@ import {
   SMALL_MINT_HELPER_MAX_CHUNKS,
   TX_DELAY_SECONDS
 } from './lib/mint/constants';
-import { getStacksExplorerAddressUrl } from './lib/network/explorer';
 import { getNetworkFromAddress, getNetworkMismatch } from './lib/network/guard';
 import { toStacksNetwork } from './lib/network/stacks';
 import type { NetworkType } from './lib/network/types';
@@ -75,13 +74,13 @@ import {
   type ThemeMode,
   writeThemePreference
 } from './lib/theme/preferences';
-import { useBnsNames } from './lib/bns/hooks';
 import { getMediaKind } from './lib/viewer/content';
 import { bytesToHex } from './lib/utils/encoding';
 import { formatBytes } from './lib/utils/format';
 import { createStacksWalletAdapter } from './lib/wallet/adapter';
 import { createWalletSessionStore } from './lib/wallet/session';
 import type { WalletSession } from './lib/wallet/types';
+import AddressLabel from './components/AddressLabel';
 import CollectionCoverImage from './components/CollectionCoverImage';
 import WalletTopBar from './components/WalletTopBar';
 
@@ -761,16 +760,6 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       collectionContract?.network ??
       null,
     [artistAddress, collectionContract]
-  );
-  const artistBnsQuery = useBnsNames({
-    address: artistAddress || null,
-    network: artistNetwork,
-    enabled: Boolean(artistAddress && validateStacksAddress(artistAddress) && artistNetwork)
-  });
-  const artistBnsName = artistBnsQuery.data?.primary ?? null;
-  const artistExplorerUrl = useMemo(
-    () => (artistAddress ? getStacksExplorerAddressUrl(artistAddress, artistNetwork) : null),
-    [artistAddress, artistNetwork]
   );
 
   const collectionSymbol = useMemo(
@@ -2878,23 +2867,12 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
               )}
               <div className="collection-live-page__artist-card">
                 <span className="meta-label">Artist address</span>
-                {artistBnsName && (
-                  <span className="collection-live-page__artist-bns">{artistBnsName}</span>
-                )}
-                {artistExplorerUrl ? (
-                  <a
-                    className="collection-live-page__artist-address collection-live-page__artist-link"
-                    href={artistExplorerUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {artistAddress || 'Artist address unavailable'}
-                  </a>
-                ) : (
-                  <span className="collection-live-page__artist-address">
-                    {artistAddress || 'Artist address unavailable'}
-                  </span>
-                )}
+                <AddressLabel
+                  className="collection-live-page__artist-label"
+                  address={artistAddress || null}
+                  network={artistNetwork}
+                  fallback="Artist address unavailable"
+                />
               </div>
             </div>
             <p className="collection-live-page__description">{collectionDescription}</p>
