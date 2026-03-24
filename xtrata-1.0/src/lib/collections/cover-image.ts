@@ -6,6 +6,13 @@ export type CoverImageSource =
   | 'inscribed-image-url'
   | 'inscription-id';
 
+export type CollectionCoverInscriptionReference = {
+  coreContractId: string;
+  tokenId: string;
+  mimeType: string | null;
+  preferDataUriRender: boolean;
+};
+
 const UINT_PATTERN = /^\d+$/;
 
 const toRecord = (value: unknown) =>
@@ -51,6 +58,73 @@ export const parseInscriptionTokenId = (value: unknown): string | null => {
   } catch {
     return null;
   }
+};
+
+export const isSvgCoverImageMimeType = (value: unknown) =>
+  toText(value).toLowerCase() === 'image/svg+xml';
+
+const parseRuntimeContentUrl = (value: unknown) => {
+  const imageUrl = toText(value);
+  if (!imageUrl) {
+    return null;
+  }
+  try {
+    const parsed = new URL(imageUrl, 'https://xtrata.local');
+    if (parsed.pathname !== '/runtime/content') {
+      return null;
+    }
+    const coreContractId = toText(parsed.searchParams.get('contractId'));
+    const tokenId = parseInscriptionTokenId(parsed.searchParams.get('tokenId'));
+    if (!coreContractId || !tokenId) {
+      return null;
+    }
+    return {
+      coreContractId,
+      tokenId
+    };
+  } catch {
+    return null;
+  }
+};
+
+export const resolveCollectionCoverInscriptionReference = (params: {
+  coverImage: unknown;
+  fallbackCoreContractId?: string | null;
+}): CollectionCoverInscriptionReference | null => {
+  const coverImage = toRecord(params.coverImage);
+  if (!coverImage) {
+    return null;
+  }
+  const source = normalizeCoverImageSource(coverImage.source);
+  if (source === 'inscription-id') {
+    const tokenId = parseInscriptionTokenId(
+      coverImage.tokenId ?? coverImage.inscriptionId
+    );
+    const coreContractId =
+      toText(coverImage.coreContractId) || toText(params.fallbackCoreContractId);
+    if (!tokenId || !coreContractId) {
+      return null;
+    }
+    return {
+      coreContractId,
+      tokenId,
+      mimeType: toText(coverImage.mimeType) || null,
+      preferDataUriRender: isSvgCoverImageMimeType(coverImage.mimeType)
+    };
+  }
+  if (source !== 'inscribed-image-url') {
+    return null;
+  }
+  const runtimeContentTarget = parseRuntimeContentUrl(coverImage.imageUrl);
+  if (!runtimeContentTarget) {
+    return null;
+  }
+  return {
+    coreContractId: runtimeContentTarget.coreContractId,
+    tokenId: runtimeContentTarget.tokenId,
+    mimeType: toText(coverImage.mimeType) || null,
+    preferDataUriRender: true
+  };
 };
 
 export const buildRuntimeInscriptionContentUrl = (params: {

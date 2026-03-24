@@ -8,6 +8,7 @@ import {
 } from '@stacks/transactions';
 import { useQueryClient } from '@tanstack/react-query';
 import { PUBLIC_CONTRACT, PUBLIC_MINT_RESTRICTIONS } from './config/public';
+import CollectionCoverImage from './components/CollectionCoverImage';
 import { getContractId } from './lib/contract/config';
 import { resolveCollectionMintPaymentModel } from './lib/collection-mint/payment-model';
 import {
@@ -17,7 +18,6 @@ import {
   type CollectionMintPricingMetadata
 } from './lib/collection-mint/pricing-metadata';
 import { resolveCollectionMintPriceTone } from './lib/collection-mint/price-tone';
-import { resolveCollectionCoverImageUrl } from './lib/collections/cover-image';
 import { resolveCollectionContractLink } from './lib/collections/contract-link';
 import {
   getCollectionPageDisplayOrder,
@@ -146,7 +146,8 @@ type PublicLiveCollectionCard = {
   symbol: string;
   description: string;
   livePath: string;
-  coverImageUrl: string | null;
+  coverImage: Record<string, unknown> | null;
+  fallbackCoreContractId: string | null;
   fallbackSupply: bigint | null;
   contractId: string | null;
   contractTarget: PublicCollectionContractTarget | null;
@@ -949,16 +950,6 @@ const buildMintStateLabel = (status: PublicLiveMintStatus | null) => {
   return 'Live';
 };
 
-const resolvePublicCollectionCoverUrl = (collection: PublicLiveCollectionRecord) => {
-  const metadata = toRecord(collection.metadata);
-  const collectionPage = toRecord(metadata?.collectionPage);
-  return resolveCollectionCoverImageUrl({
-    coverImage: collectionPage?.coverImage,
-    collectionId: toText(collection.id),
-    fallbackCoreContractId: toText(metadata?.coreContractId)
-  });
-};
-
 const resolvePublicCollectionContractTarget = (
   collection: PublicLiveCollectionRecord
 ): PublicCollectionContractTarget | null => {
@@ -1482,9 +1473,6 @@ export default function PublicApp() {
     useState<Record<string, boolean>>({});
   const [liveMintStatusErrorByCollectionId, setLiveMintStatusErrorByCollectionId] =
     useState<Record<string, string | null>>({});
-  const [liveCoverPreviewErrorByCollectionId, setLiveCoverPreviewErrorByCollectionId] = useState<
-    Record<string, boolean>
-  >({});
   const [collapsedSections, setCollapsedSections] = useState(() => {
     const initial = buildCollapsedState(false);
     initial['wallet-lookup'] = true;
@@ -1561,7 +1549,6 @@ export default function PublicApp() {
           'This collection is live and ready for minting.';
         const liveKey = toText(collection.slug) || collection.id;
         const livePath = `/collection/${encodeURIComponent(liveKey)}`;
-        const coverImageUrl = resolvePublicCollectionCoverUrl(collection);
         const contractTarget = resolvePublicCollectionContractTarget(collection);
         const contractId = contractTarget
           ? `${contractTarget.address}.${contractTarget.contractName}`
@@ -1575,7 +1562,8 @@ export default function PublicApp() {
           symbol: symbol.length > 0 ? symbol : 'N/A',
           description,
           livePath,
-          coverImageUrl,
+          coverImage: toRecord(metadataCollectionPage?.coverImage),
+          fallbackCoreContractId: toText(metadata?.coreContractId) || null,
           fallbackSupply,
           contractId,
           contractTarget,
@@ -1791,11 +1779,6 @@ export default function PublicApp() {
       )
     );
     setLiveMintStatusErrorByCollectionId((current) =>
-      Object.fromEntries(
-        Object.entries(current).filter(([collectionId]) => activeIds.has(collectionId))
-      )
-    );
-    setLiveCoverPreviewErrorByCollectionId((current) =>
       Object.fromEntries(
         Object.entries(current).filter(([collectionId]) => activeIds.has(collectionId))
       )
@@ -2415,10 +2398,6 @@ export default function PublicApp() {
                   ) : freeMint ? (
                     <span className="badge badge--compact badge--free-mint">Free mint</span>
                   ) : null;
-                  const coverPreviewErrored = Boolean(
-                    liveCoverPreviewErrorByCollectionId[collection.id]
-                  );
-
                   return (
                     <a
                       className="public-live-collections__card"
@@ -2428,28 +2407,16 @@ export default function PublicApp() {
                     >
                       <div className="public-live-collections__media-stack">
                         <div className="public-live-collections__media">
-                          {collection.coverImageUrl && !coverPreviewErrored ? (
-                            <img
-                              src={collection.coverImageUrl}
-                              alt={`${collection.name} cover`}
-                              onLoad={() =>
-                                setLiveCoverPreviewErrorByCollectionId((current) => ({
-                                  ...current,
-                                  [collection.id]: false
-                                }))
-                              }
-                              onError={() =>
-                                setLiveCoverPreviewErrorByCollectionId((current) => ({
-                                  ...current,
-                                  [collection.id]: true
-                                }))
-                              }
-                            />
-                          ) : (
-                            <div className="public-live-collections__media-placeholder">
-                              Collection cover image not set yet.
-                            </div>
-                          )}
+                          <CollectionCoverImage
+                            coverImage={collection.coverImage}
+                            collectionId={collection.id}
+                            fallbackCoreContractId={collection.fallbackCoreContractId}
+                            alt={`${collection.name} cover`}
+                            placeholderClassName="public-live-collections__media-placeholder"
+                            emptyMessage="Collection cover image not set yet."
+                            loadingMessage="Resolving cover image..."
+                            errorMessage="Collection cover image unavailable."
+                          />
                         </div>
                         <div
                           className={`public-live-collections__media-price public-live-collections__media-price--${priceTone}`}

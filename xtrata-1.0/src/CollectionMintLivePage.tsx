@@ -55,7 +55,6 @@ import {
   shouldUseCollectionSmallSingleTx,
   supportsCollectionSmallSingleTx
 } from './lib/collection-mint/routing';
-import { resolveCollectionCoverImageUrl } from './lib/collections/cover-image';
 import { parseDeployPricingLockSnapshot } from './lib/deploy/pricing-lock';
 import { PUBLIC_CONTRACT } from './config/public';
 import {
@@ -83,6 +82,7 @@ import { formatBytes } from './lib/utils/format';
 import { createStacksWalletAdapter } from './lib/wallet/adapter';
 import { createWalletSessionStore } from './lib/wallet/session';
 import type { WalletSession } from './lib/wallet/types';
+import CollectionCoverImage from './components/CollectionCoverImage';
 import WalletTopBar from './components/WalletTopBar';
 
 const walletSessionStore = createWalletSessionStore();
@@ -724,15 +724,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     return minted;
   }, [collectionTokenNumberByGlobalId, mintableAssets, mintedTokenIds]);
 
-  const coverUrl = useMemo(() => {
-    const configuredCoverUrl = resolveCollectionCoverImageUrl({
-      coverImage: metadataCover,
-      collectionId: resolvedCollectionId,
-      fallbackCoreContractId: toText(metadata?.coreContractId)
-    });
-    if (configuredCoverUrl) {
-      return configuredCoverUrl;
-    }
+  const fallbackCoverUrl = useMemo(() => {
     const fallback = imageAssets[0];
     if (!fallback || !resolvedCollectionId) {
       return null;
@@ -744,7 +736,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     return `/collections/${encodeURIComponent(
       resolvedCollectionId
     )}/asset-preview?${query.toString()}`;
-  }, [metadataCover, imageAssets, resolvedCollectionId, metadata]);
+  }, [imageAssets, resolvedCollectionId]);
 
   const collectionTitle = useMemo(
     () =>
@@ -2825,13 +2817,18 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
         <section className="collection-live-page__hero">
           <div className="collection-live-page__hero-media-column">
             <div className="collection-live-page__hero-media">
-              {coverUrl ? (
-                <img src={coverUrl} alt={`${collectionTitle} cover`} />
-              ) : (
-                <div className="collection-live-page__hero-placeholder">
-                  Cover image unavailable
-                </div>
-              )}
+              <CollectionCoverImage
+                coverImage={metadataCover}
+                collectionId={resolvedCollectionId}
+                fallbackCoreContractId={toText(metadata?.coreContractId)}
+                fallbackUrl={fallbackCoverUrl}
+                alt={`${collectionTitle} cover`}
+                placeholderClassName="collection-live-page__hero-placeholder"
+                emptyMessage="Cover image unavailable"
+                loadingMessage="Resolving cover image..."
+                errorMessage="Cover image unavailable"
+                loading="eager"
+              />
             </div>
             <div className="collection-live-page__hero-media-summary">
               <div className="collection-live-page__hero-pills">
