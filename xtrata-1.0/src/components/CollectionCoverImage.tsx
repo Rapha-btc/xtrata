@@ -9,6 +9,7 @@ import {
 import { parseContractPrincipal } from '../lib/collections/contract-link';
 import { createXtrataClient } from '../lib/contract/client';
 import { getNetworkFromAddress } from '../lib/network/guard';
+import { isExecutableRuntimeMimeType } from '../lib/viewer/runtime-open';
 import { logDebug, logWarn, shouldLog } from '../lib/utils/logger';
 
 type CollectionCoverImageProps = {
@@ -55,7 +56,7 @@ const classifyUrl = (value: string | null) => {
   return 'other';
 };
 
-const toRuntimeLauncherUrl = (value: string | null) => {
+const toRuntimeLauncherUrl = (value: string | null, sourceUrl?: string | null) => {
   if (!value) {
     return null;
   }
@@ -65,6 +66,9 @@ const toRuntimeLauncherUrl = (value: string | null) => {
       return null;
     }
     parsed.pathname = '/runtime/';
+    if (sourceUrl) {
+      parsed.searchParams.set('source', sourceUrl);
+    }
     return `${parsed.pathname}${parsed.search}${parsed.hash}`;
   } catch {
     return null;
@@ -73,6 +77,10 @@ const toRuntimeLauncherUrl = (value: string | null) => {
 
 export default function CollectionCoverImage(props: CollectionCoverImageProps) {
   const [loadFailed, setLoadFailed] = useState(false);
+  const [runtimeSourceUrl, setRuntimeSourceUrl] = useState<string | null>(null);
+  const [runtimeSourceState, setRuntimeSourceState] = useState<
+    'idle' | 'pending' | 'ready' | 'error'
+  >('idle');
   const unresolvedLogRef = useRef<string | null>(null);
   const fallbackLogRef = useRef<string | null>(null);
   const loadLogRef = useRef<string | null>(null);
@@ -132,6 +140,8 @@ export default function CollectionCoverImage(props: CollectionCoverImageProps) {
     !!inscriptionReference &&
     (inscriptionReference.preferDataUriRender ||
       isSvgCoverImageMimeType(inscriptionReference.mimeType));
+  const coverMimeType =
+    inscriptionReference?.mimeType ?? coverSummary.mimeType ?? null;
 
   const inscriptionContract = useMemo(() => {
     if (!inscriptionReference || !shouldResolveSvg) {
@@ -197,10 +207,88 @@ export default function CollectionCoverImage(props: CollectionCoverImageProps) {
     svgDataUriQuery.isError,
     svgDataUriQuery.status
   ]);
-  const runtimeLauncherUrl = useMemo(
-    () => toRuntimeLauncherUrl(resolvedUrl),
+  const runtimeEndpointUrl = useMemo(
+    () => (classifyUrl(resolvedUrl) === 'runtime-content' ? resolvedUrl : null),
     [resolvedUrl]
   );
+  const shouldUseRuntimeFrame = useMemo(
+    () =>
+      !!runtimeEndpointUrl &&
+      isExecutableRuntimeMimeType(coverMimeType),
+    [runtimeEndpointUrl, coverMimeType]
+  );
+  const runtimeLauncherUrl = useMemo(
+    () =>
+      shouldUseRuntimeFrame
+        ? toRuntimeLauncherUrl(resolvedUrl, runtimeSourceUrl)
+        : null,
+    [resolvedUrl, runtimeSourceUrl, shouldUseRuntimeFrame]
+  );
+
+  useEffect(() => {
+    if (!runtimeEndpointUrl || !shouldUseRuntimeFrame) {
+      setRuntimeSourceUrl(null);
+      setRuntimeSourceState('idle');
+      return;
+    }
+
+    let cancelled = false;
+    let objectUrl: string | null = null;
+    setRuntimeSourceUrl(null);
+    setRuntimeSourceState('pending');
+
+    void fetch(runtimeEndpointUrl, {
+      method: 'GET',
+      credentials: 'same-origin',
+      redirect: 'follow'
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`Runtime cover source returned HTTP ${response.status}.`);
+        }
+        const blob = await response.blob();
+        if (blob.size <= 0) {
+          throw new Error('Runtime cover source was empty.');
+        }
+        objectUrl = URL.createObjectURL(blob);
+        if (cancelled) {
+          if (objectUrl) {
+            URL.revokeObjectURL(objectUrl);
+          }
+          return;
+        }
+        setRuntimeSourceUrl(objectUrl);
+        setRuntimeSourceState('ready');
+        if (shouldLog('cover', 'debug')) {
+          logDebug('cover', 'Collection cover runtime source prepared', {
+            label: debugLabel,
+            collectionId: props.collectionId ?? null,
+            runtimeEndpointUrl,
+            blobBytes: blob.size
+          });
+        }
+      })
+      .catch((error) => {
+        if (cancelled) {
+          return;
+        }
+        setRuntimeSourceUrl(null);
+        setRuntimeSourceState('error');
+        logWarn('cover', 'Collection cover runtime source fetch failed', {
+          label: debugLabel,
+          collectionId: props.collectionId ?? null,
+          runtimeEndpointUrl,
+          error: error instanceof Error ? error.message : String(error)
+        });
+      });
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [runtimeEndpointUrl, shouldUseRuntimeFrame, debugLabel, props.collectionId]);
 
   useEffect(() => {
     if (!shouldLog('cover', 'debug')) {
@@ -212,7 +300,11 @@ export default function CollectionCoverImage(props: CollectionCoverImageProps) {
       fallbackCoreContractId: props.fallbackCoreContractId ?? null,
       fallbackUrlKind: classifyUrl(toNullableText(props.fallbackUrl)),
       directUrlKind: classifyUrl(directUrl),
+      runtimeEndpointUrlKind: classifyUrl(runtimeEndpointUrl),
       runtimeLauncherUrlKind: classifyUrl(runtimeLauncherUrl),
+      runtimeSourceState,
+      coverMimeType,
+      shouldUseRuntimeFrame,
       cover: coverSummary,
       inscriptionReference,
       shouldResolveSvg
@@ -223,7 +315,11 @@ export default function CollectionCoverImage(props: CollectionCoverImageProps) {
     props.fallbackCoreContractId,
     props.fallbackUrl,
     directUrl,
+    runtimeEndpointUrl,
     runtimeLauncherUrl,
+    runtimeSourceState,
+    coverMimeType,
+    shouldUseRuntimeFrame,
     coverSummary,
     inscriptionReference,
     shouldResolveSvg
@@ -240,7 +336,9 @@ export default function CollectionCoverImage(props: CollectionCoverImageProps) {
         cover: coverSummary,
         inscriptionReference,
         directUrlKind: classifyUrl(directUrl),
+        runtimeEndpointUrlKind: classifyUrl(runtimeEndpointUrl),
         runtimeLauncherUrlKind: classifyUrl(runtimeLauncherUrl),
+        shouldUseRuntimeFrame,
         error:
           svgDataUriQuery.error instanceof Error
             ? svgDataUriQuery.error.message
@@ -273,7 +371,9 @@ export default function CollectionCoverImage(props: CollectionCoverImageProps) {
     coverSummary,
     inscriptionReference,
     directUrl,
-    runtimeLauncherUrl
+    runtimeEndpointUrl,
+    runtimeLauncherUrl,
+    shouldUseRuntimeFrame
   ]);
 
   useEffect(() => {
@@ -299,7 +399,10 @@ export default function CollectionCoverImage(props: CollectionCoverImageProps) {
       fallbackCoreContractId: props.fallbackCoreContractId ?? null,
       fallbackUrlKind: classifyUrl(toNullableText(props.fallbackUrl)),
       directUrlKind: classifyUrl(directUrl),
+      runtimeEndpointUrlKind: classifyUrl(runtimeEndpointUrl),
       runtimeLauncherUrlKind: classifyUrl(runtimeLauncherUrl),
+      runtimeSourceState,
+      shouldUseRuntimeFrame,
       cover: coverSummary,
       inscriptionReference,
       shouldResolveSvg,
@@ -314,23 +417,32 @@ export default function CollectionCoverImage(props: CollectionCoverImageProps) {
     resolvedUrl,
     loadFailed,
     directUrl,
+    runtimeEndpointUrl,
     runtimeLauncherUrl,
+    runtimeSourceState,
+    shouldUseRuntimeFrame,
     coverSummary,
     inscriptionReference,
     shouldResolveSvg,
     svgDataUriQuery.status
   ]);
 
-  if (!resolvedUrl || loadFailed) {
+  if (
+    !resolvedUrl ||
+    loadFailed ||
+    (shouldUseRuntimeFrame && runtimeSourceState === 'pending')
+  ) {
     const message = loadFailed
       ? props.errorMessage ?? props.emptyMessage
+      : shouldUseRuntimeFrame && runtimeSourceState === 'pending'
+        ? props.loadingMessage ?? props.emptyMessage
       : shouldResolveSvg && !resolvedUrl
         ? props.loadingMessage ?? props.emptyMessage
         : props.emptyMessage;
     return <div className={props.placeholderClassName}>{message}</div>;
   }
 
-  if (runtimeLauncherUrl) {
+  if (shouldUseRuntimeFrame && runtimeLauncherUrl) {
     return (
       <iframe
         title={props.alt}
@@ -351,7 +463,10 @@ export default function CollectionCoverImage(props: CollectionCoverImageProps) {
             label: debugLabel,
             collectionId: props.collectionId ?? null,
             resolvedUrlKind: classifyUrl(resolvedUrl),
+            runtimeEndpointUrl,
             runtimeLauncherUrl,
+            runtimeSourceState,
+            shouldUseRuntimeFrame,
             cover: coverSummary,
             inscriptionReference
           });
@@ -395,7 +510,9 @@ export default function CollectionCoverImage(props: CollectionCoverImageProps) {
           label: debugLabel,
           collectionId: props.collectionId ?? null,
           resolvedUrlKind: classifyUrl(resolvedUrl),
+          runtimeEndpointUrlKind: classifyUrl(runtimeEndpointUrl),
           runtimeLauncherUrlKind: classifyUrl(runtimeLauncherUrl),
+          shouldUseRuntimeFrame,
           cover: coverSummary,
           inscriptionReference,
           shouldResolveSvg
