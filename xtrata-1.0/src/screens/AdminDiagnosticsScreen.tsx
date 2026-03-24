@@ -234,6 +234,7 @@ export default function AdminDiagnosticsScreen(props: AdminDiagnosticsScreenProp
               address={props.readOnlySender}
               network={props.contractNetwork}
               fallback="Unknown"
+              showAddressWhenNamed
             />
           </div>
           <div>
@@ -247,6 +248,7 @@ export default function AdminDiagnosticsScreen(props: AdminDiagnosticsScreenProp
                   : null
               }
               fallback="Not connected"
+              showAddressWhenNamed
             />
           </div>
           <div>
