@@ -2828,6 +2828,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                 loadingMessage="Resolving cover image..."
                 errorMessage="Cover image unavailable"
                 loading="eager"
+                debugLabel={`live-hero:${resolvedCollectionId || collectionTitle}`}
               />
             </div>
             <div className="collection-live-page__hero-media-summary">

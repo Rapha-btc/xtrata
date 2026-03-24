@@ -2416,6 +2416,7 @@ export default function PublicApp() {
                             emptyMessage="Collection cover image not set yet."
                             loadingMessage="Resolving cover image..."
                             errorMessage="Collection cover image unavailable."
+                            debugLabel={`public-app-card:${collection.id}`}
                           />
                         </div>
                         <div

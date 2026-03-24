@@ -1088,6 +1088,7 @@ export default function SimplePublicHome() {
                             emptyMessage="Collection cover image not set yet."
                             loadingMessage="Resolving cover image..."
                             errorMessage="Collection cover image unavailable."
+                            debugLabel={`simple-home-card:${collection.id}`}
                           />
                         </div>
                         <div

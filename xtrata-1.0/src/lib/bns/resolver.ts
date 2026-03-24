@@ -1,5 +1,6 @@
 import { validateStacksAddress } from '@stacks/transactions';
 import type { NetworkType } from '../network/types';
+import { getApiBaseUrls } from '../network/config';
 import { logDebug, logWarn } from '../utils/logger';
 import { getExplorerHtmlBaseUrls } from './config';
 import {
@@ -285,6 +286,7 @@ type AddressResolution = {
   cacheable: boolean;
 };
 
+const BNS_API_PROVIDER_ID = 'hiro-names-api';
 const EXPLORER_PROVIDER_ID = 'explorer-html';
 const HTML_TITLE_PATTERN = /<title[^>]*>([^<]+)<\/title>/i;
 const HTML_OG_TITLE_PATTERN =
@@ -477,6 +479,103 @@ const extractAddressFromExplorerHtml = (html: string) => {
   return Array.from(candidates.values())[0] ?? null;
 };
 
+type BnsJsonResponse = {
+  status: 'ok' | 'not-found';
+  json: unknown;
+};
+
+const toRecord = (value: unknown): Record<string, unknown> | null =>
+  value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+
+const extractNamesFromApiResponse = (value: unknown) => {
+  const candidates: string[] = [];
+  const pushName = (entry: unknown) => {
+    if (typeof entry !== 'string') {
+      return;
+    }
+    const normalized = normalizeBnsName(entry);
+    if (!normalized) {
+      return;
+    }
+    candidates.push(normalized);
+  };
+
+  if (Array.isArray(value)) {
+    value.forEach(pushName);
+  }
+
+  const record = toRecord(value);
+  if (record) {
+    const names = record.names;
+    if (Array.isArray(names)) {
+      names.forEach(pushName);
+    }
+    const results = record.results;
+    if (Array.isArray(results)) {
+      results.forEach((entry) => {
+        if (typeof entry === 'string') {
+          pushName(entry);
+          return;
+        }
+        const entryRecord = toRecord(entry);
+        if (!entryRecord) {
+          return;
+        }
+        pushName(entryRecord.name);
+        pushName(entryRecord.fqdn);
+      });
+    }
+  }
+
+  return sortBnsNames(candidates);
+};
+
+const extractAddressFromApiResponse = (value: unknown) => {
+  const record = toRecord(value);
+  if (!record) {
+    return null;
+  }
+  const candidates = [
+    record.address,
+    record.owner,
+    record.owner_address,
+    record.principal
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate !== 'string') {
+      continue;
+    }
+    const normalized = extractAddressFromPrincipalCandidate(candidate);
+    if (normalized) {
+      return normalized;
+    }
+  }
+  return null;
+};
+
+const fetchBnsApiJson = async (
+  baseUrl: string,
+  path: string,
+  signal?: AbortSignal
+): Promise<BnsJsonResponse> => {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  const url = `${normalizeBaseUrl(baseUrl)}${normalizedPath}`;
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: { accept: 'application/json' },
+    signal
+  });
+  if (response.status === 404) {
+    return { status: 'not-found', json: null };
+  }
+  if (!response.ok) {
+    throw new Error(`BNS API lookup failed (${response.status})`);
+  }
+  return { status: 'ok', json: await response.json() };
+};
+
 const fetchExplorerHtml = async (
   baseUrl: string,
   path: string,
@@ -586,6 +685,60 @@ const resolveWithInFlight = async <T>(key: string, task: () => Promise<T>) => {
   return promise;
 };
 
+const resolveAddressNamesFromApi = async (params: {
+  address: string;
+  network: NetworkType;
+  signal?: AbortSignal;
+}): Promise<AddressResolution | null> => {
+  let lastError: unknown = null;
+
+  const bases = getApiBaseUrls(params.network);
+  for (const baseUrl of bases) {
+    try {
+      const response = await callBnsWithRetry({
+        task: () =>
+          fetchBnsApiJson(
+            baseUrl,
+            `/v1/addresses/stacks/${encodeURIComponent(params.address)}`,
+            params.signal
+          ),
+        context: `${BNS_API_PROVIDER_ID}:address:${params.address}`,
+        signal: params.signal
+      });
+
+      if (response.status === 'not-found') {
+        continue;
+      }
+
+      const names = extractNamesFromApiResponse(response.json);
+      if (names.length === 0) {
+        continue;
+      }
+
+      return {
+        result: {
+          address: params.address,
+          names,
+          primary: pickPrimaryBnsName(names, names[0] ?? null),
+          source: BNS_API_PROVIDER_ID
+        },
+        cacheable: true
+      };
+    } catch (error) {
+      lastError = error;
+      if (error instanceof BnsBackoffError) {
+        break;
+      }
+    }
+  }
+
+  if (lastError) {
+    throw lastError;
+  }
+
+  return null;
+};
+
 const resolveAddressNamesFromExplorer = async (params: {
   address: string;
   network: NetworkType;
@@ -677,6 +830,56 @@ const resolveAddressNamesFromExplorer = async (params: {
     },
     cacheable: true
   };
+};
+
+const resolveNameAddressFromApi = async (params: {
+  name: string;
+  network: NetworkType;
+  signal?: AbortSignal;
+}): Promise<BnsAddressResult | null> => {
+  let lastError: unknown = null;
+
+  const bases = getApiBaseUrls(params.network);
+  for (const baseUrl of bases) {
+    try {
+      const response = await callBnsWithRetry({
+        task: () =>
+          fetchBnsApiJson(
+            baseUrl,
+            `/v1/names/${encodeURIComponent(params.name)}`,
+            params.signal
+          ),
+        context: `${BNS_API_PROVIDER_ID}:name:${params.name}`,
+        signal: params.signal
+      });
+
+      if (response.status === 'not-found') {
+        continue;
+      }
+
+      const resolvedAddress = extractAddressFromApiResponse(response.json);
+      if (!resolvedAddress) {
+        continue;
+      }
+
+      return {
+        name: params.name,
+        address: resolvedAddress,
+        source: BNS_API_PROVIDER_ID
+      };
+    } catch (error) {
+      lastError = error;
+      if (error instanceof BnsBackoffError) {
+        break;
+      }
+    }
+  }
+
+  if (lastError) {
+    throw lastError;
+  }
+
+  return null;
 };
 
 const resolveNameAddressFromExplorer = async (params: {
@@ -786,11 +989,40 @@ export const resolveBnsNames = async (params: {
   }
 
   return resolveWithInFlight(cacheKey, async () => {
-    const resolution = await resolveAddressNamesFromExplorer({
-      address: trimmed,
-      network: params.network,
-      signal: params.signal
-    });
+    let resolution: AddressResolution | null = null;
+    let apiError: unknown = null;
+
+    try {
+      resolution = await resolveAddressNamesFromApi({
+        address: trimmed,
+        network: params.network,
+        signal: params.signal
+      });
+    } catch (error) {
+      apiError = error;
+    }
+
+    if (!resolution) {
+      try {
+        resolution = await resolveAddressNamesFromExplorer({
+          address: trimmed,
+          network: params.network,
+          signal: params.signal
+        });
+      } catch (error) {
+        if (apiError) {
+          throw apiError;
+        }
+        throw error;
+      }
+    }
+
+    if (!resolution) {
+      throw (apiError instanceof Error
+        ? apiError
+        : new Error(getErrorMessage(apiError)));
+    }
+
     if (resolution.cacheable) {
       writeCache(cacheKey, resolution.result);
       clearTransientFallback(cacheKey);
@@ -822,11 +1054,40 @@ export const resolveBnsAddress = async (params: {
   }
 
   return resolveWithInFlight(cacheKey, async () => {
-    const result = await resolveNameAddressFromExplorer({
-      name: normalizedName,
-      network: params.network,
-      signal: params.signal
-    });
+    let result: BnsAddressResult | null = null;
+    let apiError: unknown = null;
+
+    try {
+      result = await resolveNameAddressFromApi({
+        name: normalizedName,
+        network: params.network,
+        signal: params.signal
+      });
+    } catch (error) {
+      apiError = error;
+    }
+
+    if (!result) {
+      try {
+        result = await resolveNameAddressFromExplorer({
+          name: normalizedName,
+          network: params.network,
+          signal: params.signal
+        });
+      } catch (error) {
+        if (apiError) {
+          throw apiError;
+        }
+        throw error;
+      }
+    }
+
+    if (!result) {
+      throw (apiError instanceof Error
+        ? apiError
+        : new Error(getErrorMessage(apiError)));
+    }
+
     writeCache(cacheKey, result);
     return result;
   });
