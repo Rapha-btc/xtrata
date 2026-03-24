@@ -67,6 +67,9 @@ describe('bns resolver', () => {
     const address = 'SPXGFH9JTKPF2TQZJ2AH7NSMMMXJ72VMGH8PR654';
     const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input);
+      if (url.includes(`/names/address/${address}/valid`)) {
+        return jsonResponse(404, null);
+      }
       if (url.includes(`/v1/addresses/stacks/${address}`)) {
         return jsonResponse(404, null);
       }
@@ -91,6 +94,9 @@ describe('bns resolver', () => {
     const address = 'SPXGFH9JTKPF2TQZJ2AH7NSMMMXJ72VMGH8PR654';
     const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input);
+      if (url.includes(`/names/address/${address}/valid`)) {
+        return jsonResponse(404, null);
+      }
       if (url.includes(`/v1/addresses/stacks/${address}`)) {
         return jsonResponse(404, null);
       }
@@ -115,6 +121,9 @@ describe('bns resolver', () => {
     const address = 'SPXGFH9JTKPF2TQZJ2AH7NSMMMXJ72VMGH8PR654';
     const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input);
+      if (url.includes(`/names/address/${address}/valid`)) {
+        return jsonResponse(404, null);
+      }
       if (url.includes(`/v1/addresses/stacks/${address}`)) {
         return jsonResponse(404, null);
       }
@@ -135,10 +144,41 @@ describe('bns resolver', () => {
     expect(result.source).toBe('explorer-html');
   });
 
-  it('resolves BNSv2 names from the Hiro names API before explorer scraping', async () => {
+  it('resolves BNSv2 names from the public BNSv2 API before legacy lookups', async () => {
     const address = 'SP10W2EEM757922QTVDZZ5CSEW55JEFNN30J69TM7';
     const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input);
+      if (url.includes(`/names/address/${address}/valid`)) {
+        return jsonResponse(200, {
+          total: 1,
+          names: [{ full_name: 'jim.btc', owner: address }]
+        });
+      }
+      throw new Error(`Unexpected URL: ${url}`);
+    });
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    const result = await resolveBnsNames({
+      address,
+      network: 'mainnet'
+    });
+
+    expect(result).toEqual({
+      address,
+      names: ['jim.btc'],
+      primary: 'jim.btc',
+      source: 'bnsv2-api'
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('falls back to the Hiro names API when the BNSv2 valid-name lookup misses', async () => {
+    const address = 'SP10W2EEM757922QTVDZZ5CSEW55JEFNN30J69TM7';
+    const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes(`/names/address/${address}/valid`)) {
+        return jsonResponse(404, null);
+      }
       if (url.includes(`/v1/addresses/stacks/${address}`)) {
         return jsonResponse(200, { names: ['jim.btc'] });
       }
@@ -157,7 +197,7 @@ describe('bns resolver', () => {
       primary: 'jim.btc',
       source: 'hiro-names-api'
     });
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('applies short cooldown after transient address fallback to avoid repeat hammering', async () => {
@@ -238,6 +278,33 @@ describe('bns resolver', () => {
     });
   });
 
+  it('resolves a Stacks address from BNSv2 zonefile owner data when Hiro returns a bitcoin owner', async () => {
+    const address = 'SP10W2EEM757922QTVDZZ5CSEW55JEFNN30J69TM7';
+    const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/v1/names/jim.btc')) {
+        return jsonResponse(200, {
+          address: 'bc1qexampleowner0000000000000000000000000',
+          blockchain: 'bitcoin',
+          zonefile: JSON.stringify({ owner: address })
+        });
+      }
+      throw new Error(`Unexpected URL: ${url}`);
+    });
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    const result = await resolveBnsAddress({
+      name: 'jim.btc',
+      network: 'mainnet'
+    });
+
+    expect(result).toEqual({
+      name: 'jim.btc',
+      address,
+      source: 'hiro-names-api'
+    });
+  });
+
   it('resolves BNSv2 name details from the Hiro names API before explorer scraping', async () => {
     const address = 'SP10W2EEM757922QTVDZZ5CSEW55JEFNN30J69TM7';
     const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
@@ -265,6 +332,9 @@ describe('bns resolver', () => {
   it('caches successful address-name lookups', async () => {
     const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input);
+      if (url.includes('/names/address/SP2JXKMSH007NPYAQHKJPQMAQYAD90NQGTVJVQ02B/valid')) {
+        return jsonResponse(404, null);
+      }
       if (url.includes('/v1/addresses/stacks/SP2JXKMSH007NPYAQHKJPQMAQYAD90NQGTVJVQ02B')) {
         return jsonResponse(200, { names: ['alice.btc'] });
       }
@@ -287,6 +357,6 @@ describe('bns resolver', () => {
 
     expect(first.primary).toBe('alice.btc');
     expect(second.primary).toBe('alice.btc');
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
