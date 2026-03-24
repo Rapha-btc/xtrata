@@ -67,6 +67,20 @@
           }
         }
 
+        function logRuntime(level, message, payload) {
+          try {
+            var logger =
+              console && typeof console[level] === 'function'
+                ? console[level].bind(console)
+                : console.log.bind(console);
+            if (payload !== undefined) {
+              logger('[xtrata:runtime] ' + message, payload);
+            } else {
+              logger('[xtrata:runtime] ' + message);
+            }
+          } catch (error) {}
+        }
+
         function escapeHtml(value) {
           return String(value == null ? '' : value)
             .replace(/&/g, '&amp;')
@@ -77,6 +91,9 @@
         }
 
         function setError(message, detail) {
+          logRuntime('warn', message || 'Runtime launch failed', {
+            detail: detail || null
+          });
           if (!shell) {
             return;
           }
@@ -109,15 +126,26 @@
 
         function loadFromRuntimeEndpoint(params) {
           var endpoint = toRuntimeEndpoint(params);
+          logRuntime('debug', 'Fetching runtime endpoint', {
+            endpoint: endpoint,
+            params: params
+          });
           return fetch(endpoint, {
             method: 'GET',
             credentials: 'same-origin',
             redirect: 'follow'
           }).then(function (response) {
             if (!response.ok) {
-              throw new Error('Runtime endpoint returned HTTP ' + response.status + '.');
+              var error = new Error('Runtime endpoint returned HTTP ' + response.status + '.');
+              error.runtimeEndpoint = endpoint;
+              throw error;
             }
             return response.text();
+          }).catch(function (error) {
+            if (error && !error.runtimeEndpoint) {
+              error.runtimeEndpoint = endpoint;
+            }
+            throw error;
           });
         }
 
@@ -125,6 +153,9 @@
           if (!source) {
             return Promise.reject(new Error('No source URL provided.'));
           }
+          logRuntime('debug', 'Fetching source URL fallback', {
+            source: source
+          });
           return fetch(source, {
             method: 'GET',
             credentials: 'same-origin',
@@ -209,18 +240,25 @@
         }
 
         setStatus('Loading inscription content from runtime endpoint...');
+        logRuntime('debug', 'Runtime launcher params resolved', params);
 
         loadFromRuntimeEndpoint(params)
           .then(function (html) {
             launchHtml(html, 'runtime-endpoint');
           })
           .catch(function (runtimeError) {
+            var runtimeMessage =
+              runtimeError && runtimeError.message
+                ? runtimeError.message
+                : String(runtimeError);
+            var runtimeEndpoint =
+              runtimeError && runtimeError.runtimeEndpoint
+                ? runtimeError.runtimeEndpoint
+                : toRuntimeEndpoint(params);
             if (!params.source) {
               setError(
                 'Runtime endpoint failed and no fallback source was provided.',
-                runtimeError && runtimeError.message
-                  ? runtimeError.message
-                  : String(runtimeError)
+                runtimeMessage + ' | endpoint=' + runtimeEndpoint
               );
               return;
             }
@@ -230,15 +268,20 @@
                 launchHtml(html, 'source-url');
               })
               .catch(function (sourceError) {
-                var runtimeMessage =
-                  runtimeError && runtimeError.message
-                    ? runtimeError.message
-                    : String(runtimeError);
                 var sourceMessage =
                   sourceError && sourceError.message
                     ? sourceError.message
                     : String(sourceError);
-                setError('Unable to load runtime content.', runtimeMessage + ' | ' + sourceMessage);
+                setError(
+                  'Unable to load runtime content.',
+                  runtimeMessage +
+                    ' | endpoint=' +
+                    runtimeEndpoint +
+                    ' | source=' +
+                    params.source +
+                    ' | ' +
+                    sourceMessage
+                );
               });
           });
       })();

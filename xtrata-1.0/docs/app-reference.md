@@ -93,7 +93,9 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 - `src/lib/network/config.ts` defines network defaults and endpoints.
 - `src/lib/network/stacks.ts` builds Stacks network objects.
 - `src/lib/network/guard.ts` and `src/lib/network/rate-limit.ts` protect against aggressive polling.
+- `src/lib/bns/config.ts`, `src/lib/bns/helpers.ts`, `src/lib/bns/hooks.ts`, and `src/lib/bns/resolver.ts` handle BNS name/address resolution, caching, and UI-facing hooks.
 - `functions/hiro/[network]/[[path]].ts` proxies Hiro API calls and injects API keys when present.
+- `functions/bnsv2/[network]/[[path]].ts` proxies BNSv2 API lookups used for address-to-name resolution.
 - `functions/explorer/[[path]].ts` proxies Explorer HTML pages used by BNS name/address scraping.
 - `functions/arcade/attest-score.ts` signs `xtrata-arcade-scores-v1.1` submit attestations (nonce + expiry + RSV signature) for on-chain high-score verification.
 - `src/lib/wallet/session.ts` and `src/lib/wallet/storage.ts` persist wallet sessions.
@@ -244,10 +246,14 @@ Notes: ensure tests or guards in `src/lib/network/__tests__/` still pass.
   - Optional build flag: `VITE_HIRO_API_KEY` only indicates key presence in the UI.
   - Pages note: set variables for both **Production** and **Preview** environments
     (the `*.pages.dev` URL uses Preview) to avoid 429s on preview builds.
-- **Explorer HTML proxy for BNS labels**
-  - Address-label BNS names are scraped from Explorer HTML via `/functions/explorer`.
-  - Optional overrides: `VITE_STACKS_EXPLORER_BASE`, `VITE_STACKS_EXPLORER_BASE_MAINNET`, `VITE_STACKS_EXPLORER_BASE_TESTNET`.
-  - Pages Functions runtime override: `STACKS_EXPLORER_BASE`.
+- **BNS resolution proxies**
+  - Address-label BNS names resolve through the BNSv2 valid-names API first, then Hiro name APIs, then Explorer HTML fallback.
+  - `/functions/bnsv2/[network]/[[path]].ts` proxies BNSv2 API requests.
+  - Optional BNSv2 overrides: `VITE_BNSV2_API_BASE`, `VITE_BNSV2_API_BASE_MAINNET`, `VITE_BNSV2_API_BASE_TESTNET`.
+  - Pages Functions runtime overrides: `BNSV2_API_BASE_MAINNET`, `BNSV2_API_BASE_TESTNET`.
+  - `/functions/explorer` remains the HTML fallback path.
+  - Optional Explorer overrides: `VITE_STACKS_EXPLORER_BASE`, `VITE_STACKS_EXPLORER_BASE_MAINNET`, `VITE_STACKS_EXPLORER_BASE_TESTNET`.
+  - Explorer runtime override: `STACKS_EXPLORER_BASE`.
 - **Arcade score attestation (`xtrata-arcade-scores-v1.1`)**
   - Pages Functions signer key: `ARCADE_SCORE_ATTESTATION_PRIVATE_KEY` (required for `/arcade/attest-score`).
   - Optional expiry window in blocks: `ARCADE_SCORE_ATTESTATION_EXPIRY_BLOCKS` (default `30`, max `500`).

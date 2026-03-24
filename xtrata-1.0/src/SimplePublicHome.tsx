@@ -14,6 +14,7 @@ import {
 } from '@stacks/transactions';
 import { useQueryClient } from '@tanstack/react-query';
 import { PUBLIC_CONTRACT, PUBLIC_MINT_RESTRICTIONS } from './config/public';
+import CollectionCoverImage from './components/CollectionCoverImage';
 import { getContractId } from './lib/contract/config';
 import { resolveCollectionMintPaymentModel } from './lib/collection-mint/payment-model';
 import {
@@ -23,7 +24,6 @@ import {
   type CollectionMintPricingMetadata
 } from './lib/collection-mint/pricing-metadata';
 import { resolveCollectionMintPriceTone } from './lib/collection-mint/price-tone';
-import { resolveCollectionCoverImageUrl } from './lib/collections/cover-image';
 import { resolveCollectionContractLink } from './lib/collections/contract-link';
 import {
   getCollectionPageDisplayOrder,
@@ -109,7 +109,8 @@ type LiveCollectionCard = {
   symbol: string;
   description: string;
   livePath: string;
-  coverImageUrl: string | null;
+  coverImage: Record<string, unknown> | null;
+  fallbackCoreContractId: string | null;
   fallbackSupply: bigint | null;
   contractTarget: CollectionContractTarget | null;
   templateVersion: string;
@@ -460,16 +461,6 @@ const loadPublicMintStatus = async (
   };
 };
 
-const resolveCollectionCoverUrl = (collection: LiveCollectionRecord) => {
-  const metadata = toRecord(collection.metadata);
-  const collectionPage = toRecord(metadata?.collectionPage);
-  return resolveCollectionCoverImageUrl({
-    coverImage: collectionPage?.coverImage,
-    collectionId: toText(collection.id),
-    fallbackCoreContractId: toText(metadata?.coreContractId)
-  });
-};
-
 const parseLiveCollectionsResponse = async (response: Response) => {
   const text = await response.text();
   let payload: unknown = null;
@@ -517,9 +508,6 @@ export default function SimplePublicHome() {
     useState<Record<string, boolean>>({});
   const [liveMintStatusErrorByCollectionId, setLiveMintStatusErrorByCollectionId] =
     useState<Record<string, string | null>>({});
-  const [liveCoverPreviewErrorByCollectionId, setLiveCoverPreviewErrorByCollectionId] = useState<
-    Record<string, boolean>
-  >({});
   const tabGuard = useActiveTabGuard();
   const queryClient = useQueryClient();
 
@@ -568,7 +556,8 @@ export default function SimplePublicHome() {
           symbol: symbol.length > 0 ? symbol : 'N/A',
           description,
           livePath,
-          coverImageUrl: resolveCollectionCoverUrl(collection),
+          coverImage: toRecord(metadataCollectionPage?.coverImage),
+          fallbackCoreContractId: toText(metadata?.coreContractId) || null,
           fallbackSupply,
           contractTarget,
           templateVersion: toText(metadata?.templateVersion),
@@ -697,11 +686,6 @@ export default function SimplePublicHome() {
       )
     );
     setLiveMintStatusErrorByCollectionId((current) =>
-      Object.fromEntries(
-        Object.entries(current).filter(([collectionId]) => activeIds.has(collectionId))
-      )
-    );
-    setLiveCoverPreviewErrorByCollectionId((current) =>
       Object.fromEntries(
         Object.entries(current).filter(([collectionId]) => activeIds.has(collectionId))
       )
@@ -1086,9 +1070,6 @@ export default function SimplePublicHome() {
                   ) : freeMint ? (
                     <span className="badge badge--compact badge--free-mint">Free mint</span>
                   ) : null;
-                  const coverPreviewErrored = Boolean(
-                    liveCoverPreviewErrorByCollectionId[collection.id]
-                  );
                   return (
                     <a
                       className="public-live-collections__card"
@@ -1098,28 +1079,17 @@ export default function SimplePublicHome() {
                     >
                       <div className="public-live-collections__media-stack">
                         <div className="public-live-collections__media">
-                          {collection.coverImageUrl && !coverPreviewErrored ? (
-                            <img
-                              src={collection.coverImageUrl}
-                              alt={`${collection.name} cover`}
-                              onLoad={() =>
-                                setLiveCoverPreviewErrorByCollectionId((current) => ({
-                                  ...current,
-                                  [collection.id]: false
-                                }))
-                              }
-                              onError={() =>
-                                setLiveCoverPreviewErrorByCollectionId((current) => ({
-                                  ...current,
-                                  [collection.id]: true
-                                }))
-                              }
-                            />
-                          ) : (
-                            <div className="public-live-collections__media-placeholder">
-                              Collection cover image not set yet.
-                            </div>
-                          )}
+                          <CollectionCoverImage
+                            coverImage={collection.coverImage}
+                            collectionId={collection.id}
+                            fallbackCoreContractId={collection.fallbackCoreContractId}
+                            alt={`${collection.name} cover`}
+                            placeholderClassName="public-live-collections__media-placeholder"
+                            emptyMessage="Collection cover image not set yet."
+                            loadingMessage="Resolving cover image..."
+                            errorMessage="Collection cover image unavailable."
+                            debugLabel={`simple-home-card:${collection.id}`}
+                          />
                         </div>
                         <div
                           className={`public-live-collections__media-price public-live-collections__media-price--${priceTone}`}

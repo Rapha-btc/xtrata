@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   buildRuntimeInscriptionContentUrl,
   hasCoverImageMetadata,
+  isSvgCoverImageMimeType,
   normalizeCoverImageSource,
   parseInscriptionTokenId,
+  resolveCollectionCoverInscriptionReference,
   resolveCollectionCoverImageUrl
 } from '../cover-image';
 
@@ -68,6 +70,43 @@ describe('collection cover image helpers', () => {
     });
     expect(inscriptionUrl).toContain('/runtime/content?');
     expect(inscriptionUrl).toContain('tokenId=987');
+  });
+
+  it('resolves inscription cover references for recursive svg rendering', () => {
+    expect(
+      resolveCollectionCoverInscriptionReference({
+        coverImage: {
+          source: 'inscription-id',
+          tokenId: '00044',
+          coreContractId: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0',
+          mimeType: 'image/svg+xml'
+        }
+      })
+    ).toEqual({
+      coreContractId: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0',
+      tokenId: '44',
+      mimeType: 'image/svg+xml',
+      preferDataUriRender: true
+    });
+    expect(isSvgCoverImageMimeType('image/svg+xml')).toBe(true);
+    expect(isSvgCoverImageMimeType('image/png')).toBe(false);
+  });
+
+  it('parses runtime reconstruction urls back into inscription references', () => {
+    expect(
+      resolveCollectionCoverInscriptionReference({
+        coverImage: {
+          source: 'inscribed-image-url',
+          imageUrl:
+            '/runtime/content?contractId=SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0&tokenId=987&network=mainnet'
+        }
+      })
+    ).toEqual({
+      coreContractId: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0',
+      tokenId: '987',
+      mimeType: null,
+      preferDataUriRender: true
+    });
   });
 
   it('detects whether cover metadata is configured', () => {

@@ -1,7 +1,8 @@
 import { validateStacksAddress } from '@stacks/transactions';
 import type { NetworkType } from '../network/types';
+import { getApiBaseUrls } from '../network/config';
 import { logDebug, logWarn } from '../utils/logger';
-import { getExplorerHtmlBaseUrls } from './config';
+import { getBnsV2ApiBaseUrls, getExplorerHtmlBaseUrls } from './config';
 import {
   buildBnsCacheKey,
   normalizeBnsName,
@@ -285,6 +286,8 @@ type AddressResolution = {
   cacheable: boolean;
 };
 
+const BNS_V2_PROVIDER_ID = 'bnsv2-api';
+const BNS_API_PROVIDER_ID = 'hiro-names-api';
 const EXPLORER_PROVIDER_ID = 'explorer-html';
 const HTML_TITLE_PATTERN = /<title[^>]*>([^<]+)<\/title>/i;
 const HTML_OG_TITLE_PATTERN =
@@ -477,6 +480,241 @@ const extractAddressFromExplorerHtml = (html: string) => {
   return Array.from(candidates.values())[0] ?? null;
 };
 
+type BnsJsonResponse = {
+  status: 'ok' | 'not-found';
+  json: unknown;
+};
+
+type ExtractedNames = {
+  names: string[];
+  preferred: string | null;
+};
+
+const toRecord = (value: unknown): Record<string, unknown> | null =>
+  value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+
+const normalizeBnsNameCandidate = (value: unknown) =>
+  typeof value === 'string' ? normalizeBnsName(value) : null;
+
+const extractNamesFromApiResponse = (value: unknown): ExtractedNames => {
+  const candidates: string[] = [];
+  let preferred: string | null = null;
+
+  const notePreferred = (entry: unknown) => {
+    const normalized = normalizeBnsNameCandidate(entry);
+    if (!normalized) {
+      return;
+    }
+    preferred = normalized;
+  };
+
+  const pushName = (entry: unknown) => {
+    const normalized = normalizeBnsNameCandidate(entry);
+    if (normalized) {
+      candidates.push(normalized);
+    }
+  };
+
+  const pushNameRecord = (entry: unknown) => {
+    const entryRecord = toRecord(entry);
+    if (!entryRecord) {
+      pushName(entry);
+      return;
+    }
+    const resolvedName =
+      normalizeBnsNameCandidate(entryRecord.full_name) ||
+      normalizeBnsNameCandidate(entryRecord.fqdn) ||
+      normalizeBnsNameCandidate(entryRecord.name);
+    if (resolvedName) {
+      candidates.push(resolvedName);
+      if (
+        entryRecord.primary === true ||
+        entryRecord.is_primary === true ||
+        entryRecord.isPrimary === true
+      ) {
+        preferred = resolvedName;
+      }
+    }
+    notePreferred(entryRecord.primary_name);
+    notePreferred(entryRecord.primaryName);
+    notePreferred(entryRecord.preferred_name);
+    notePreferred(entryRecord.preferredName);
+  };
+
+  if (Array.isArray(value)) {
+    value.forEach(pushNameRecord);
+  }
+
+  const record = toRecord(value);
+  if (record) {
+    pushNameRecord(record);
+    notePreferred(record.primary_name);
+    notePreferred(record.primaryName);
+    notePreferred(record.preferred_name);
+    notePreferred(record.preferredName);
+    const names = record.names;
+    if (Array.isArray(names)) {
+      names.forEach(pushNameRecord);
+    }
+    const results = record.results;
+    if (Array.isArray(results)) {
+      results.forEach(pushNameRecord);
+    }
+  }
+
+  return {
+    names: sortBnsNames(candidates),
+    preferred
+  };
+};
+
+const extractAddressFromApiResponse = (value: unknown) => {
+  const record = toRecord(value);
+  if (!record) {
+    return null;
+  }
+  const candidates = [
+    record.address,
+    record.owner,
+    record.owner_address,
+    record.principal
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate !== 'string') {
+      continue;
+    }
+    const normalized = extractAddressFromPrincipalCandidate(candidate);
+    if (normalized) {
+      return normalized;
+    }
+  }
+
+  const extractAddressFromZonefileData = (entry: unknown): string | null => {
+    if (!entry) {
+      return null;
+    }
+    if (typeof entry === 'string') {
+      const normalized = extractAddressFromPrincipalCandidate(entry);
+      if (normalized) {
+        return normalized;
+      }
+      const trimmed = entry.trim();
+      if (
+        (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+        (trimmed.startsWith('[') && trimmed.endsWith(']'))
+      ) {
+        try {
+          return extractAddressFromZonefileData(JSON.parse(trimmed));
+        } catch (error) {
+          return null;
+        }
+      }
+      return null;
+    }
+    if (Array.isArray(entry)) {
+      for (const item of entry) {
+        const normalized = extractAddressFromZonefileData(item);
+        if (normalized) {
+          return normalized;
+        }
+      }
+      return null;
+    }
+    const entryRecord = toRecord(entry);
+    if (!entryRecord) {
+      return null;
+    }
+    const directCandidates = [
+      entryRecord.owner,
+      entryRecord.address,
+      entryRecord.owner_address,
+      entryRecord.principal,
+      entryRecord.stx,
+      entryRecord.stacks,
+      entryRecord.stacks_address,
+      entryRecord.stacksAddress
+    ];
+    for (const candidate of directCandidates) {
+      if (typeof candidate !== 'string') {
+        continue;
+      }
+      const normalized = extractAddressFromPrincipalCandidate(candidate);
+      if (normalized) {
+        return normalized;
+      }
+    }
+    const addresses = entryRecord.addresses;
+    if (Array.isArray(addresses)) {
+      for (const addressEntry of addresses) {
+        const addressRecord = toRecord(addressEntry);
+        if (!addressRecord || typeof addressRecord.address !== 'string') {
+          continue;
+        }
+        const network =
+          typeof addressRecord.network === 'string'
+            ? addressRecord.network.trim().toLowerCase()
+            : '';
+        if (
+          network &&
+          network !== 'stx' &&
+          network !== 'stacks' &&
+          network !== 'stacks-mainnet' &&
+          network !== 'stacks-testnet'
+        ) {
+          continue;
+        }
+        const normalized = extractAddressFromPrincipalCandidate(
+          addressRecord.address
+        );
+        if (normalized) {
+          return normalized;
+        }
+      }
+    }
+    return null;
+  };
+
+  const nestedCandidates = [
+    record.zonefile,
+    record.zonefile_json,
+    record.zonefileJson,
+    record.resolved_zonefile,
+    record.resolvedZonefile,
+    record.profile,
+    record.data
+  ];
+  for (const candidate of nestedCandidates) {
+    const normalized = extractAddressFromZonefileData(candidate);
+    if (normalized) {
+      return normalized;
+    }
+  }
+  return null;
+};
+
+const fetchBnsApiJson = async (
+  baseUrl: string,
+  path: string,
+  signal?: AbortSignal
+): Promise<BnsJsonResponse> => {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  const url = `${normalizeBaseUrl(baseUrl)}${normalizedPath}`;
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: { accept: 'application/json' },
+    signal
+  });
+  if (response.status === 404) {
+    return { status: 'not-found', json: null };
+  }
+  if (!response.ok) {
+    throw new Error(`BNS API lookup failed (${response.status})`);
+  }
+  return { status: 'ok', json: await response.json() };
+};
+
 const fetchExplorerHtml = async (
   baseUrl: string,
   path: string,
@@ -586,6 +824,114 @@ const resolveWithInFlight = async <T>(key: string, task: () => Promise<T>) => {
   return promise;
 };
 
+const resolveAddressNamesFromApi = async (params: {
+  address: string;
+  network: NetworkType;
+  signal?: AbortSignal;
+}): Promise<AddressResolution | null> => {
+  let lastError: unknown = null;
+
+  const bases = getApiBaseUrls(params.network);
+  for (const baseUrl of bases) {
+    try {
+      const response = await callBnsWithRetry({
+        task: () =>
+          fetchBnsApiJson(
+            baseUrl,
+            `/v1/addresses/stacks/${encodeURIComponent(params.address)}`,
+            params.signal
+          ),
+        context: `${BNS_API_PROVIDER_ID}:address:${params.address}`,
+        signal: params.signal
+      });
+
+      if (response.status === 'not-found') {
+        continue;
+      }
+
+      const extracted = extractNamesFromApiResponse(response.json);
+      if (extracted.names.length === 0) {
+        continue;
+      }
+
+      return {
+        result: {
+          address: params.address,
+          names: extracted.names,
+          primary: pickPrimaryBnsName(extracted.names, extracted.preferred),
+          source: BNS_API_PROVIDER_ID
+        },
+        cacheable: true
+      };
+    } catch (error) {
+      lastError = error;
+      if (error instanceof BnsBackoffError) {
+        break;
+      }
+    }
+  }
+
+  if (lastError) {
+    throw lastError;
+  }
+
+  return null;
+};
+
+const resolveAddressNamesFromBnsV2 = async (params: {
+  address: string;
+  network: NetworkType;
+  signal?: AbortSignal;
+}): Promise<AddressResolution | null> => {
+  let lastError: unknown = null;
+
+  const bases = getBnsV2ApiBaseUrls(params.network);
+  for (const baseUrl of bases) {
+    try {
+      const response = await callBnsWithRetry({
+        task: () =>
+          fetchBnsApiJson(
+            baseUrl,
+            `/names/address/${encodeURIComponent(params.address)}/valid`,
+            params.signal
+          ),
+        context: `${BNS_V2_PROVIDER_ID}:address:${params.address}`,
+        signal: params.signal
+      });
+
+      if (response.status === 'not-found') {
+        continue;
+      }
+
+      const extracted = extractNamesFromApiResponse(response.json);
+      if (extracted.names.length === 0) {
+        continue;
+      }
+
+      return {
+        result: {
+          address: params.address,
+          names: extracted.names,
+          primary: pickPrimaryBnsName(extracted.names, extracted.preferred),
+          source: BNS_V2_PROVIDER_ID
+        },
+        cacheable: true
+      };
+    } catch (error) {
+      lastError = error;
+      if (error instanceof BnsBackoffError) {
+        break;
+      }
+    }
+  }
+
+  if (lastError) {
+    throw lastError;
+  }
+
+  return null;
+};
+
 const resolveAddressNamesFromExplorer = async (params: {
   address: string;
   network: NetworkType;
@@ -677,6 +1023,56 @@ const resolveAddressNamesFromExplorer = async (params: {
     },
     cacheable: true
   };
+};
+
+const resolveNameAddressFromApi = async (params: {
+  name: string;
+  network: NetworkType;
+  signal?: AbortSignal;
+}): Promise<BnsAddressResult | null> => {
+  let lastError: unknown = null;
+
+  const bases = getApiBaseUrls(params.network);
+  for (const baseUrl of bases) {
+    try {
+      const response = await callBnsWithRetry({
+        task: () =>
+          fetchBnsApiJson(
+            baseUrl,
+            `/v1/names/${encodeURIComponent(params.name)}`,
+            params.signal
+          ),
+        context: `${BNS_API_PROVIDER_ID}:name:${params.name}`,
+        signal: params.signal
+      });
+
+      if (response.status === 'not-found') {
+        continue;
+      }
+
+      const resolvedAddress = extractAddressFromApiResponse(response.json);
+      if (!resolvedAddress) {
+        continue;
+      }
+
+      return {
+        name: params.name,
+        address: resolvedAddress,
+        source: BNS_API_PROVIDER_ID
+      };
+    } catch (error) {
+      lastError = error;
+      if (error instanceof BnsBackoffError) {
+        break;
+      }
+    }
+  }
+
+  if (lastError) {
+    throw lastError;
+  }
+
+  return null;
 };
 
 const resolveNameAddressFromExplorer = async (params: {
@@ -786,11 +1182,57 @@ export const resolveBnsNames = async (params: {
   }
 
   return resolveWithInFlight(cacheKey, async () => {
-    const resolution = await resolveAddressNamesFromExplorer({
-      address: trimmed,
-      network: params.network,
-      signal: params.signal
-    });
+    let resolution: AddressResolution | null = null;
+    let bnsV2Error: unknown = null;
+    let apiError: unknown = null;
+
+    try {
+      resolution = await resolveAddressNamesFromBnsV2({
+        address: trimmed,
+        network: params.network,
+        signal: params.signal
+      });
+    } catch (error) {
+      bnsV2Error = error;
+    }
+
+    if (!resolution) {
+      try {
+        resolution = await resolveAddressNamesFromApi({
+          address: trimmed,
+          network: params.network,
+          signal: params.signal
+        });
+      } catch (error) {
+        apiError = error;
+      }
+    }
+
+    if (!resolution) {
+      try {
+        resolution = await resolveAddressNamesFromExplorer({
+          address: trimmed,
+          network: params.network,
+          signal: params.signal
+        });
+      } catch (error) {
+        if (bnsV2Error) {
+          throw bnsV2Error;
+        }
+        if (apiError) {
+          throw apiError;
+        }
+        throw error;
+      }
+    }
+
+    if (!resolution) {
+      const resolvedError = bnsV2Error ?? apiError;
+      throw (resolvedError instanceof Error
+        ? resolvedError
+        : new Error(getErrorMessage(resolvedError)));
+    }
+
     if (resolution.cacheable) {
       writeCache(cacheKey, resolution.result);
       clearTransientFallback(cacheKey);
@@ -822,11 +1264,40 @@ export const resolveBnsAddress = async (params: {
   }
 
   return resolveWithInFlight(cacheKey, async () => {
-    const result = await resolveNameAddressFromExplorer({
-      name: normalizedName,
-      network: params.network,
-      signal: params.signal
-    });
+    let result: BnsAddressResult | null = null;
+    let apiError: unknown = null;
+
+    try {
+      result = await resolveNameAddressFromApi({
+        name: normalizedName,
+        network: params.network,
+        signal: params.signal
+      });
+    } catch (error) {
+      apiError = error;
+    }
+
+    if (!result) {
+      try {
+        result = await resolveNameAddressFromExplorer({
+          name: normalizedName,
+          network: params.network,
+          signal: params.signal
+        });
+      } catch (error) {
+        if (apiError) {
+          throw apiError;
+        }
+        throw error;
+      }
+    }
+
+    if (!result) {
+      throw (apiError instanceof Error
+        ? apiError
+        : new Error(getErrorMessage(apiError)));
+    }
+
     writeCache(cacheKey, result);
     return result;
   });

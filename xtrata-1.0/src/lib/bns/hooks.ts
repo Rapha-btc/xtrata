@@ -7,6 +7,7 @@ import { resolveBnsAddress, resolveBnsNames } from './resolver';
 
 const BNS_QUERY_STALE_MS = 60 * 60 * 1000;
 const BNS_QUERY_GC_MS = 6 * 60 * 60 * 1000;
+const BNS_QUERY_KEY_VERSION = 'v2';
 
 export const useBnsNames = (params: {
   address: string | null | undefined;
@@ -21,7 +22,7 @@ export const useBnsNames = (params: {
     (params.enabled ?? true) && isValidAddress && !!resolvedNetwork;
 
   return useQuery({
-    queryKey: ['bns', 'address', resolvedNetwork, trimmed],
+    queryKey: ['bns', BNS_QUERY_KEY_VERSION, 'address', resolvedNetwork, trimmed],
     enabled,
     queryFn: ({ signal }) =>
       resolveBnsNames({
@@ -45,7 +46,7 @@ export const useBnsAddress = (params: {
     (params.enabled ?? true) && !!normalizedName && !!params.network;
 
   return useQuery({
-    queryKey: ['bns', 'name', params.network, normalizedName],
+    queryKey: ['bns', BNS_QUERY_KEY_VERSION, 'name', params.network, normalizedName],
     enabled,
     queryFn: ({ signal }) =>
       resolveBnsAddress({
