@@ -447,9 +447,12 @@ async function testSimulatedRender(moduleIndex, tokenMap) {
     console.log(`  Using live token map (${resolved}/${entries.size} resolved)`);
   }
 
-  // For each catalog, check if its dependencies are all resolved
-  const catalogs = moduleIndex.filter(m => m.kind === 'catalog');
+  // Process catalogs in topological order so simulated IDs cascade correctly
+  const catalogs = moduleIndex
+    .filter(m => m.kind === 'catalog')
+    .sort((a, b) => (a.topo_order || 999) - (b.topo_order || 999));
   const batchLookup = await loadBatchArtifactLookup();
+  let nextCatalogFakeId = 2000;
 
   for (const cat of catalogs) {
     const batchEntry = batchLookup.get(cat.name);
@@ -474,6 +477,17 @@ async function testSimulatedRender(moduleIndex, tokenMap) {
     }
 
     pass('render-sim', `${cat.name} all ${depNames.length} deps resolved`);
+
+    // In simulated mode, assign a fake token ID to this catalog NOW
+    // so downstream catalogs can resolve their dependency on it
+    if (simulated && !isTokenResolved(entries.get(cat.name))) {
+      entries.set(cat.name, {
+        token_id: nextCatalogFakeId,
+        txid: `0x${'a'.repeat(60)}${String(nextCatalogFakeId).padStart(4, '0')}`,
+        block_height: 7002000 + nextCatalogFakeId
+      });
+      nextCatalogFakeId++;
+    }
 
     // Try actually rendering the template
     const absPath = absFromLogicalPath(cat.bundle_path);
@@ -510,16 +524,6 @@ async function testSimulatedRender(moduleIndex, tokenMap) {
         pass('render-sim', `${cat.name} no null token_ids post-render`);
       }
 
-      // If simulated, also assign a fake token ID to the catalog itself
-      // (so downstream catalogs can depend on it)
-      if (simulated && !entries.has(cat.name)) {
-        const fakeId = 2000 + catalogs.indexOf(cat);
-        entries.set(cat.name, {
-          token_id: fakeId,
-          txid: `0x${'a'.repeat(60)}${String(fakeId).padStart(4, '0')}`,
-          block_height: 7002000 + fakeId
-        });
-      }
     } catch (e) {
       fail('render-sim', `${cat.name} render attempt`, e.message);
     }
