@@ -1,6 +1,7 @@
 import type { NetworkType } from '../network/types';
 
 const BNS_NAME_PATTERN = /^[a-z0-9-]+(\.[a-z0-9-]+)+$/;
+const BNS_CACHE_VERSION = 'v2';
 
 export type BnsCacheKeyParams = {
   network: NetworkType;
@@ -26,7 +27,9 @@ export const isValidBnsName = (value?: string | null) =>
   !!normalizeBnsName(value);
 
 export const buildBnsCacheKey = (params: BnsCacheKeyParams) =>
-  `xtrata.bns.${params.network}.${params.kind}.${normalizeKeySegment(params.value)}`;
+  `xtrata.bns.${BNS_CACHE_VERSION}.${params.network}.${params.kind}.${normalizeKeySegment(
+    params.value
+  )}`;
 
 const isBtcName = (value: string) => value.endsWith('.btc');
 
