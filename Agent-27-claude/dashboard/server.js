@@ -33,7 +33,7 @@ const {
 } = require('./skill-test-runner');
 const { initWatcher, stopWatcher } = require('./watcher');
 const { startChainPoller, stopChainPoller, getChainData, onAfterPoll } = require('./chain');
-const { mount: mountOutreach, syncInbox, buildOutreachContext, loadAgentsRegistry, executeSend, executeSendDirect } = require('./outreach');
+const { mount: mountOutreach, syncInbox } = require('./outreach/routes');
 const { startHeartbeatPoller, stopHeartbeatPoller, getHeartbeatStatus, triggerHeartbeat } = require('./heartbeat');
 const {
   initAutoConverse,
@@ -854,12 +854,7 @@ app.post('/api/skill-tests/cancel', (req, res) => {
 });
 
 // --- Outreach Routes (delegated to outreach.js) ---
-app.use('/api/outreach', mountOutreach({
-  addLog,
-  broadcast,
-  registryFile: REGISTERED_AGENTS_FILE,
-  legacyRegistryFile: LEGACY_REGISTERED_AGENTS_FILE
-}));
+app.use('/api/outreach', mountOutreach({ addLog, broadcast }));
 
 // --- Heartbeat Routes ---
 
@@ -977,11 +972,8 @@ const server = app.listen(PORT, () => {
   startChainPoller(broadcast);
   startHeartbeatPoller(broadcast, addLog);
 
-  // Init auto-converse with outreach functions
-  initAutoConverse({
-    addLog, broadcast,
-    outreach: { syncInbox, buildOutreachContext, loadAgentsRegistry, executeSend, executeSendDirect }
-  });
+  // Init auto-converse
+  initAutoConverse({ addLog, broadcast });
 
   // Register inbox auto-sync as a post-poll hook (runs every 5 min with chain poll)
   onAfterPoll(async (_chainData, bc) => {

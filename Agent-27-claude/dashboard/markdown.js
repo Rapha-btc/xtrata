@@ -1,16 +1,7 @@
 // dashboard/markdown.js
 const fs = require('fs');
 const path = require('path');
-const {
-  WORKDIR,
-  OUTREACH_DRAFT_FILE,
-  OUTREACH_HISTORY_FILE,
-  OUTREACH_AGENT_MEMORY_FILE,
-  OUTREACH_REPLY_QUEUE_FILE,
-  OUTREACH_AMBASSADOR_BRIEF_FILE,
-  LEGACY_OUTREACH_DRAFT_FILE,
-  LEGACY_OUTREACH_HISTORY_FILE
-} = require('./config');
+const { WORKDIR } = require('./config');
 
 function parseMarkdownTable(markdown, sectionHeader) {
   try {
@@ -143,225 +134,17 @@ const DOC_ID_MAP = {
   ledger: 'ledger.md'
 };
 
-function parseOutreachDraft() {
-  const defaults = {
-    agentId: null,
-    mode: 'intro',
-    message: '',
-    incomingMessage: '',
-    thought: '',
-    strategy: '',
-    relationship: '',
-    next: '',
-    lastUpdated: null
-  };
-
-  try {
-    const raw = fs.readFileSync(OUTREACH_DRAFT_FILE, 'utf8');
-    return { ...defaults, ...JSON.parse(raw) };
-  } catch (e) {
-    if (e.code !== 'ENOENT') {
-      return defaults;
-    }
-    try {
-      const raw = fs.readFileSync(LEGACY_OUTREACH_DRAFT_FILE, 'utf8');
-      return { ...defaults, ...JSON.parse(raw) };
-    } catch {
-      // ignore legacy fallback failure
-    }
-    return defaults;
-  }
-}
-
-function saveOutreachDraft(draft) {
-  const filePath = OUTREACH_DRAFT_FILE;
-  const filteredDraft = Object.fromEntries(
-    Object.entries(draft || {}).filter(([, value]) => value !== undefined)
-  );
-  const nextDraft = { ...parseOutreachDraft(), ...filteredDraft, lastUpdated: new Date().toISOString() };
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, JSON.stringify(nextDraft, null, 2), 'utf8');
-  return { ok: true };
-}
-
-function parseOutreachHistory() {
-  try {
-    const raw = fs.readFileSync(OUTREACH_HISTORY_FILE, 'utf8');
-    return JSON.parse(raw);
-  } catch (e) {
-    if (e.code !== 'ENOENT') return [];
-    try {
-      const raw = fs.readFileSync(LEGACY_OUTREACH_HISTORY_FILE, 'utf8');
-      return JSON.parse(raw);
-    } catch {
-      // ignore legacy fallback failure
-    }
-    return [];
-  }
-}
-
-function appendOutreachHistory(entry) {
-  const history = parseOutreachHistory();
-  history.unshift({ ...entry, timestamp: new Date().toISOString() });
-  const filePath = OUTREACH_HISTORY_FILE;
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, JSON.stringify(history.slice(0, 100), null, 2), 'utf8');
-  return { ok: true };
-}
-
-function isStacksAddress(value) {
-  return /^(SP|ST)[A-Z0-9]{8,}$/i.test(String(value || '').trim());
-}
-
-function compareIsoDates(a, b) {
-  const aTime = Date.parse(a || '') || 0;
-  const bTime = Date.parse(b || '') || 0;
-  return aTime - bTime;
-}
-
-function mergeOutreachMemoryRecords(records) {
-  const merged = {};
-  const ordered = [...records].sort((a, b) => compareIsoDates(a.lastUpdated, b.lastUpdated));
-  for (const record of ordered) {
-    if (!record || typeof record !== 'object') continue;
-    for (const [key, value] of Object.entries(record)) {
-      if (value !== undefined && value !== '') {
-        merged[key] = value;
-      } else if (!(key in merged) && value !== undefined) {
-        merged[key] = value;
-      }
-    }
-  }
-  return merged;
-}
-
-function chooseOutreachMemoryCanonicalKey(fallbackKey, record) {
-  const agentId = String(record.agentId || '').trim();
-  const stxAddress = String(record.stxAddress || '').trim();
-  if (agentId && !isStacksAddress(agentId)) return agentId;
-  if (stxAddress) return stxAddress;
-  if (agentId) return agentId;
-  return String(fallbackKey || '').trim();
-}
-
-function normalizeOutreachAgentMemory(rawMemory) {
-  const memory = rawMemory && typeof rawMemory === 'object' ? rawMemory : {};
-  const groups = new Map();
-
-  for (const [key, value] of Object.entries(memory)) {
-    if (!value || typeof value !== 'object') continue;
-    const record = { ...value };
-    if (!record.agentId) record.agentId = key;
-    const groupKey = record.stxAddress
-      ? `stx:${record.stxAddress}`
-      : record.agentId
-        ? `id:${record.agentId}`
-        : `key:${key}`;
-    const group = groups.get(groupKey) || [];
-    group.push({ key, record });
-    groups.set(groupKey, group);
-  }
-
-  const normalized = {};
-  for (const entries of groups.values()) {
-    const merged = mergeOutreachMemoryRecords(entries.map(({ record }) => record));
-    const preferredAgentId = entries
-      .map(({ key, record }) => String(record.agentId || key || '').trim())
-      .find((value) => value && !isStacksAddress(value));
-    const canonicalKey = chooseOutreachMemoryCanonicalKey(entries[0]?.key, {
-      ...merged,
-      agentId: preferredAgentId || merged.agentId
-    });
-    normalized[canonicalKey] = {
-      ...merged,
-      agentId: preferredAgentId || merged.agentId || canonicalKey
-    };
-  }
-
-  return normalized;
-}
-
-function parseOutreachAgentMemory() {
-  try {
-    const raw = fs.readFileSync(OUTREACH_AGENT_MEMORY_FILE, 'utf8');
-    return normalizeOutreachAgentMemory(JSON.parse(raw));
-  } catch {
-    return {};
-  }
-}
-
-function saveOutreachAgentMemory(memory) {
-  const normalized = normalizeOutreachAgentMemory(memory);
-  fs.mkdirSync(path.dirname(OUTREACH_AGENT_MEMORY_FILE), { recursive: true });
-  fs.writeFileSync(OUTREACH_AGENT_MEMORY_FILE, JSON.stringify(normalized, null, 2), 'utf8');
-  return { ok: true };
-}
-
-function getOutreachAgentMemory(agentId) {
-  const memory = parseOutreachAgentMemory();
-  const key = String(agentId || '').trim();
-  if (!key) return null;
-  if (memory[key]) return memory[key];
-  return Object.values(memory).find((entry) =>
-    String(entry.agentId || '').trim() === key ||
-    String(entry.stxAddress || '').trim() === key
-  ) || null;
-}
-
-function updateOutreachAgentMemory(agentId, patch) {
-  const key = String(agentId || '').trim();
-  const memory = parseOutreachAgentMemory();
-  const filteredPatch = Object.fromEntries(
-    Object.entries(patch || {}).filter(([, value]) => value !== undefined)
-  );
-  const aliasMatches = Object.entries(memory)
-    .filter(([entryKey, entry]) => {
-      if (entryKey === key) return true;
-      const agentIdValue = String(entry.agentId || '').trim();
-      const stxValue = String(entry.stxAddress || '').trim();
-      const patchAgentId = String(filteredPatch.agentId || '').trim();
-      const patchStx = String(filteredPatch.stxAddress || '').trim();
-      return (
-        agentIdValue === key ||
-        stxValue === key ||
-        (patchAgentId && agentIdValue === patchAgentId) ||
-        (patchStx && stxValue === patchStx) ||
-        (patchStx && entryKey === patchStx)
-      );
-    })
-    .map(([, entry]) => entry);
-  const existing = mergeOutreachMemoryRecords(aliasMatches);
-  const preferredAgentId = String(
-    filteredPatch.agentId
-    || (!isStacksAddress(key) ? key : '')
-    || existing.agentId
-    || key
-  ).trim();
-  const canonicalKey = chooseOutreachMemoryCanonicalKey(key, {
-    ...filteredPatch,
-    ...existing,
-    agentId: preferredAgentId
-  });
-  memory[canonicalKey] = {
-    ...existing,
-    ...filteredPatch,
-    agentId: preferredAgentId || canonicalKey,
-    stxAddress: filteredPatch.stxAddress || existing.stxAddress || '',
-    lastUpdated: new Date().toISOString()
-  };
-  saveOutreachAgentMemory(memory);
-  return getOutreachAgentMemory(canonicalKey);
-}
-
-function parseOutreachAmbassadorBrief() {
-  try {
-    const raw = fs.readFileSync(OUTREACH_AMBASSADOR_BRIEF_FILE, 'utf8');
-    return { raw };
-  } catch (e) {
-    if (e.code === 'ENOENT') return { raw: 'agent-27-ambassador-brief.md not found.' };
-    return { raw: `Error reading agent-27-ambassador-brief.md: ${e.message}` };
-  }
-}
+// --- Outreach functions (re-exported from outreach/store.js for backward compat) ---
+const _outreachStore = require('./outreach/store');
+const parseOutreachDraft = _outreachStore.parseOutreachDraft;
+const saveOutreachDraft = _outreachStore.saveOutreachDraft;
+const parseOutreachHistory = _outreachStore.parseOutreachHistory;
+const appendOutreachHistory = _outreachStore.appendOutreachHistory;
+const parseOutreachAgentMemory = _outreachStore.parseOutreachAgentMemory;
+const saveOutreachAgentMemory = _outreachStore.saveOutreachAgentMemory;
+const getOutreachAgentMemory = _outreachStore.getOutreachAgentMemory;
+const updateOutreachAgentMemory = _outreachStore.updateOutreachAgentMemory;
+const parseOutreachAmbassadorBrief = _outreachStore.parseOutreachAmbassadorBrief;
 
 function saveDocument(docId, content) {
   const filename = DOC_ID_MAP[docId];
@@ -371,29 +154,9 @@ function saveDocument(docId, content) {
   return { ok: true };
 }
 
-function parseReplyQueue() {
-  try {
-    return JSON.parse(fs.readFileSync(OUTREACH_REPLY_QUEUE_FILE, 'utf8'));
-  } catch { return []; }
-}
-
-function appendReplyQueue(entry) {
-  let queue = parseReplyQueue();
-  // Replace any existing entry for the same agent (keep only latest draft per agent)
-  queue = queue.filter(q => String(q.agentId) !== String(entry.agentId));
-  queue.push({ ...entry, queuedAt: new Date().toISOString() });
-  fs.mkdirSync(path.dirname(OUTREACH_REPLY_QUEUE_FILE), { recursive: true });
-  fs.writeFileSync(OUTREACH_REPLY_QUEUE_FILE, JSON.stringify(queue, null, 2));
-  return { ok: true };
-}
-
-function removeFromReplyQueue(agentId, message) {
-  const queue = parseReplyQueue().filter(q =>
-    !(String(q.agentId) === String(agentId) && q.message === message)
-  );
-  fs.writeFileSync(OUTREACH_REPLY_QUEUE_FILE, JSON.stringify(queue, null, 2));
-  return { ok: true };
-}
+const parseReplyQueue = _outreachStore.parseReplyQueue;
+const appendReplyQueue = _outreachStore.appendReplyQueue;
+const removeFromReplyQueue = _outreachStore.removeFromReplyQueue;
 
 module.exports = {
     parseResearchBuffer,

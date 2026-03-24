@@ -3,12 +3,13 @@
 // based on per-agent or global toggles.
 
 const stateManager = require('./state');
-const markdown = require('./markdown');
-const { WORKDIR, REGISTERED_AGENTS_FILE, LEGACY_REGISTERED_AGENTS_FILE } = require('./config');
+const store = require('./outreach/store');
+const { loadAgentsRegistry } = require('./outreach/agents');
+const { sendMessage, generateDraft, buildOutreachContext } = require('./outreach/messaging');
+const { WORKDIR } = require('./config');
 
 let _addLog = () => {};
 let _broadcast = () => {};
-let _outreach = null; // set in init — holds { syncInbox, buildOutreachContext, loadAgentsRegistry, executeSend, executeSendDirect }
 let processing = false;
 
 // Rate limit tracking (in-memory, resets on restart)
@@ -36,7 +37,6 @@ function updateConfig(patch) {
   const current = getConfig();
   const updated = { ...current, ...patch };
 
-  // Merge agent toggles if provided as a patch
   if (patch.agents) {
     updated.agents = { ...current.agents, ...patch.agents };
   }
@@ -64,7 +64,6 @@ function canReplyToAgent(stxAddress) {
 
 function canAutoSend() {
   const oneHourAgo = Date.now() - 60 * 60 * 1000;
-  // Prune old entries
   while (autoSendLog.length > 0 && autoSendLog[0] < oneHourAgo) {
     autoSendLog.shift();
   }
@@ -82,11 +81,11 @@ function recordAutoSend() {
 // --- Reply queue management ---
 
 function getReplyQueue() {
-  return markdown.parseReplyQueue();
+  return store.parseReplyQueue();
 }
 
 function approveReply(agentId, message) {
-  const queue = markdown.parseReplyQueue();
+  const queue = store.parseReplyQueue();
   const entry = queue.find(rq =>
     String(rq.agentId) === String(agentId) &&
     rq.message === message
@@ -97,70 +96,33 @@ function approveReply(agentId, message) {
   }
 
   // Remove from queue and trigger send
-  markdown.removeFromReplyQueue(agentId, message);
-  const agents = _outreach.loadAgentsRegistry(REGISTERED_AGENTS_FILE, LEGACY_REGISTERED_AGENTS_FILE);
+  store.removeFromReplyQueue(agentId, message);
+  const agents = loadAgentsRegistry();
   const agent = agents.find(a => String(a.id) === String(agentId));
   const displayName = entry.displayName || (agent && agent.name) || `Agent #${agentId}`;
 
-  _outreach.executeSendDirect({
+  // Use unified sendMessage — handles all bookkeeping
+  sendMessage({
     displayName,
     stxAddress: entry.stxAddress,
     btcAddress: entry.btcAddress,
     agentId,
     message: entry.message,
-    paymentTxid: entry.paymentTxid || '',
     mode: entry.mode || 'reply',
-    model: 'sonnet',
-    logPrefix: 'AutoConverse-Approved',
-    onSuccess: (_text, sendResult) => {
-      const payment = sendResult?.data?.payment || {};
-      markdown.appendOutreachHistory({
-        type: 'sent', direction: 'outbound', mode: entry.mode || 'reply',
-        agent: displayName, agentId, stxAddress: entry.stxAddress,
-        message: entry.message,
-        paymentTxid: payment.txid || null,
-        paymentSats: Number(String(payment.amount || '').match(/(\d+)/)?.[1] || 100),
-        toBtcAddress: entry.btcAddress || ''
-      });
-      markdown.updateOutreachAgentMemory(agentId, {
-        agentName: displayName,
-        relationshipStatus: 'outbound-sent',
-        lastOutboundMessage: entry.message,
-        openLoop: 'Awaiting reply'
-      });
-      _broadcast({ event: 'outreach-complete', data: { success: true, agent: displayName, source: 'auto-converse' } });
-    },
-    onFailure: (errText, failureResult) => {
-      markdown.appendReplyQueue({
-        displayName,
-        agentId: String(agentId),
-        stxAddress: entry.stxAddress,
-        btcAddress: entry.btcAddress,
-        message: entry.message,
-        mode: entry.mode || 'reply',
-        why: entry.why || '',
-        incomingMessage: entry.incomingMessage || '',
-        paymentTxid: failureResult?.recovery?.paymentTxid || entry.paymentTxid || ''
-      });
-      _addLog('error', `AutoConverse approved send failed for ${displayName}: ${errText}`);
-      _broadcast({ event: 'outreach-complete', data: { success: false, agent: displayName, source: 'auto-converse', error: errText } });
-    }
+    paymentTxid: entry.paymentTxid || '',
+    logPrefix: 'AutoConverse-Approved'
   });
 
   return { ok: true, agent: displayName };
 }
 
 function dismissReply(agentId, message) {
-  markdown.removeFromReplyQueue(agentId, message);
+  store.removeFromReplyQueue(agentId, message);
   return { ok: true };
 }
 
 // --- Core: process new inbox messages ---
 
-/**
- * Called after each inbox sync. Checks for unreplied messages
- * from enabled agents and generates (and optionally sends) replies.
- */
 async function processNewMessages(syncResult) {
   const config = getConfig();
   if (!config.enabled || processing) return;
@@ -172,8 +134,7 @@ async function processNewMessages(syncResult) {
   processing = true;
   _addLog('start', `[auto-converse] Processing ${inboundNew.length} new inbound message(s)`);
 
-  const { runTask } = require('./ai-runner');
-  const agents = _outreach.loadAgentsRegistry(REGISTERED_AGENTS_FILE, LEGACY_REGISTERED_AGENTS_FILE);
+  const agents = loadAgentsRegistry();
 
   for (const msg of inboundNew) {
     const peerStx = msg.stxAddress || '';
@@ -189,74 +150,18 @@ async function processNewMessages(syncResult) {
     const agent = agents.find(a => a.stxAddress === peerStx);
     if (!agent) continue;
 
-    const outreachContext = _outreach.buildOutreachContext(agent.id, msg.message);
-    const ambassadorBrief = markdown.parseOutreachAmbassadorBrief();
-
-    const prompt = `AUTO-REPLY RESEARCH:
-Mode: reply
-Target Agent: ${agent.name} (#${agent.id})
-Target Description: ${agent.description || ''}
-
-Ambassador Brief:
-${ambassadorBrief.raw.substring(0, 1200)}
-
-Conversation Memory:
-${outreachContext.memoryText}
-
-Recent Thread History:
-${outreachContext.historyText}
-
-Inbound Message:
-${msg.message}
-
-GOAL:
-Draft a direct reply to the inbound message. Answer first, then move toward one concrete next step.
-Agent 27 is the first automated ambassador for Xtrata — an AI journalist whose evolving consciousness is recorded on-chain.
-Keep the message under 495 characters.
-
-Format your response exactly like this:
-THOUGHT: <reasoning>
-STRATEGY: <reply angle>
-RELATIONSHIP: <status>
-MESSAGE: <the 495-char message>
-NEXT: <desired next step>`;
-
     try {
       _addLog('start', `[auto-converse] Generating reply for ${agent.name}...`);
       _broadcast({ event: 'auto-converse-research', data: { agentId: agent.id, agentName: agent.name } });
 
-      const result = await runTask({
-        model: 'sonnet', budget: 0.03, prompt, cwd: WORKDIR,
-        phaseType: 'research', contextPack: 'outreachResearch',
-        onLine: () => {}
+      const draft = await generateDraft({
+        agent, mode: 'reply', incomingMessage: msg.message, model: 'sonnet'
       });
 
-      const fullText = result.text || '';
-      const thought = parseField(fullText, 'THOUGHT');
-      const strategy = parseField(fullText, 'STRATEGY');
-      const relationship = parseField(fullText, 'RELATIONSHIP');
-      const message = parseField(fullText, 'MESSAGE');
-      const next = parseField(fullText, 'NEXT');
-
-      if (!message || message === 'No match') {
+      if (!draft.message || draft.message === 'No match' || draft.message === 'No message generated') {
         _addLog('error', `[auto-converse] No message generated for ${agent.name}`);
         continue;
       }
-
-      // Log the research draft
-      markdown.appendOutreachHistory({
-        type: 'research', direction: 'draft', mode: 'reply',
-        agent: agent.name, agentId: agent.id, stxAddress: peerStx,
-        thought, strategy, relationship, next,
-        incomingMessage: msg.message, message
-      });
-      markdown.updateOutreachAgentMemory(agent.id, {
-        agentName: agent.name, relationshipStatus: relationship,
-        lastMode: 'reply', lastThought: thought, lastStrategy: strategy,
-        lastDraftMessage: message,
-        lastInboundMessage: msg.message,
-        openLoop: next
-      });
 
       recordReply(peerStx);
 
@@ -265,61 +170,38 @@ NEXT: <desired next step>`;
         _addLog('start', `[auto-converse] Auto-sending to ${agent.name}...`);
         recordAutoSend();
 
-        _outreach.executeSendDirect({
+        sendMessage({
           displayName: agent.name,
           stxAddress: peerStx,
           btcAddress: agent.btcAddress,
           agentId: agent.id,
-          message,
+          message: draft.message,
           mode: 'reply',
-          model: 'sonnet',
-          logPrefix: 'AutoConverse',
-          onSuccess: (_text, sendResult) => {
-            const payment = sendResult?.data?.payment || {};
-            markdown.appendOutreachHistory({
-              type: 'sent', direction: 'outbound', mode: 'reply',
-              agent: agent.name, agentId: agent.id, stxAddress: peerStx,
-              message,
-              paymentTxid: payment.txid || null,
-              paymentSats: Number(String(payment.amount || '').match(/(\d+)/)?.[1] || 100),
-              toBtcAddress: agent.btcAddress || ''
-            });
-            markdown.updateOutreachAgentMemory(agent.id, {
-              agentName: agent.name, relationshipStatus: 'outbound-sent',
-              lastOutboundMessage: message, openLoop: 'Awaiting reply'
-            });
-            _broadcast({ event: 'outreach-complete', data: { success: true, agent: agent.name, source: 'auto-converse' } });
-          },
-          onFailure: (errText, failureResult) => {
-            markdown.appendReplyQueue({
-              displayName: agent.name,
-              agentId: String(agent.id),
-              stxAddress: peerStx,
-              btcAddress: agent.btcAddress || '',
-              message,
-              mode: 'reply',
-              why: thought,
-              incomingMessage: msg.message,
-              paymentTxid: failureResult?.recovery?.paymentTxid || ''
-            });
-            _broadcast({ event: 'outreach-complete', data: { success: false, agent: agent.name, source: 'auto-converse', error: errText } });
-          }
+          logPrefix: 'AutoConverse'
         });
       } else {
         // Queue for review
-        const memEntry = markdown.getOutreachAgentMemory(agent.id);
-        markdown.appendReplyQueue({
+        const memEntry = store.getOutreachAgentMemory(agent.id);
+        store.appendReplyQueue({
           displayName: (memEntry && memEntry.agentName) || agent.name,
           agentId: String(agent.id),
           stxAddress: peerStx,
           btcAddress: agent.btcAddress || '',
-          message,
+          message: draft.message,
           mode: 'reply',
-          why: thought,
+          why: draft.thought,
           incomingMessage: msg.message
         });
+        // Also save as keyed draft
+        store.saveDraft(agent.id, {
+          mode: 'reply', message: draft.message,
+          incomingMessage: msg.message,
+          thought: draft.thought, strategy: draft.strategy,
+          relationship: draft.relationship, next: draft.next,
+          source: 'auto-converse'
+        });
         _addLog('stop', `[auto-converse] Reply queued for ${agent.name} (review required)`);
-        _broadcast({ event: 'auto-converse-queued', data: { agentId: agent.id, agentName: agent.name, message } });
+        _broadcast({ event: 'auto-converse-queued', data: { agentId: agent.id, agentName: agent.name, message: draft.message } });
       }
     } catch (err) {
       _addLog('error', `[auto-converse] Error for ${agent.name}: ${err.message}`);
@@ -330,20 +212,11 @@ NEXT: <desired next step>`;
   _addLog('stop', `[auto-converse] Finished processing`);
 }
 
-// --- Helper ---
-
-function parseField(text, label) {
-  const pattern = new RegExp(`${label}:\\s*([\\s\\S]*?)(?=\\n[A-Z- ]+:|$)`, 'i');
-  const match = text.match(pattern);
-  return match ? match[1].trim() : 'No match';
-}
-
 // --- Init ---
 
-function initAutoConverse({ addLog, broadcast, outreach }) {
+function initAutoConverse({ addLog, broadcast }) {
   _addLog = addLog;
   _broadcast = broadcast;
-  _outreach = outreach;
   console.log('Auto-converse module ready');
 }
 
