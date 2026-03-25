@@ -44,7 +44,7 @@ Status: ready to inscribe
 
 Scope:
 
-- UniversalSynth family batch
+- BVSTSynth family batch
 - standalone synth family batch
 - total across both batches: `21` leaves and `9` catalogs
 

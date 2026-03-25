@@ -119,8 +119,8 @@
       "block_height": null,
       "path": "on-chain-modules/workspace/System/shared/sequencer_core.js",
       "mime_type": "application/javascript",
-      "sha256": "3f22aa13f9b662d34a7b8fbb4c9ad3a8278e0d3d8b24eccfd4b5fa7ea71f270d",
-      "bytes": 19539,
+      "sha256": "12746ea67444b361eb84ab46fb4b812a0e81935f6fa62a739c76e541c29a7cbb",
+      "bytes": 19549,
       "chunks": 2,
       "route": "helper"
     },

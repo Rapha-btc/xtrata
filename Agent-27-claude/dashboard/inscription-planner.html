@@ -692,6 +692,55 @@
                 <div style="margin-top: 0.9rem;" class="code" id="automation-log">No automation output yet.</div>
             </section>
 
+            <section class="module span-12" id="bvst-achievement" hidden>
+                <div class="module-head">
+                    <div>
+                        <h2 id="bvst-achievement-title">BVST First-Wave: Fully On-Chain</h2>
+                        <div class="module-sub" id="bvst-achievement-narrative"></div>
+                    </div>
+                    <div class="status-tag" id="bvst-achievement-status"><span class="pulse-dot"></span><span>Complete</span></div>
+                </div>
+
+                <div class="card-grid" id="bvst-achievement-stats"></div>
+
+                <div style="margin-top: 1.5rem; padding: 1.25rem; border: 1px solid var(--line); background: #080808;">
+                    <div class="tiny-label" style="margin-bottom: 0.75rem; color: var(--accent);">What Was Built</div>
+                    <div id="bvst-achievement-what" style="color: var(--muted); font-size: 13px; line-height: 1.7; max-width: 90ch;"></div>
+                </div>
+
+                <div style="margin-top: 1.25rem; padding: 1.25rem; border: 1px solid var(--line); background: #080808;">
+                    <div class="tiny-label" style="margin-bottom: 0.75rem; color: #4dd17b;">How It Was Done</div>
+                    <div id="bvst-achievement-how" style="color: var(--muted); font-size: 13px; line-height: 1.7; max-width: 90ch;"></div>
+                </div>
+
+                <div style="margin-top: 1.25rem; padding: 1.25rem; border: 1px solid var(--line); background: #080808;">
+                    <div class="tiny-label" style="margin-bottom: 0.75rem; color: #6db5ff;">Why It Matters</div>
+                    <div id="bvst-achievement-why" style="color: var(--muted); font-size: 13px; line-height: 1.7; max-width: 90ch;"></div>
+                </div>
+
+                <div style="margin-top: 1.25rem;">
+                    <div class="tiny-label" style="margin-bottom: 0.6rem;">Dependency Graph</div>
+                    <div id="bvst-achievement-graph" style="border: 1px solid var(--line); background: #050505; padding: 1rem; overflow-x: auto;"></div>
+                </div>
+
+                <div style="margin-top: 1.25rem;">
+                    <div class="tiny-label" style="margin-bottom: 0.6rem;">Inscribed Artifacts</div>
+                    <div id="bvst-achievement-batches" class="stack"></div>
+                </div>
+
+            </section>
+
+            <section class="module span-12" id="dependency-graph-section" hidden>
+                <div class="module-head">
+                    <div>
+                        <h2>Dependency Graph</h2>
+                        <div class="module-sub" id="dep-graph-sub">Planned inscription order with dependency edges. Artifacts are grouped by execution batch.</div>
+                    </div>
+                    <div class="chip-row" id="dep-graph-legend"></div>
+                </div>
+                <div id="dep-graph-container" style="border: 1px solid var(--line); background: #050505; padding: 1rem; overflow-x: auto;"></div>
+            </section>
+
             <section class="module span-12" id="canary-achievement" hidden>
                 <div class="module-head">
                     <div>

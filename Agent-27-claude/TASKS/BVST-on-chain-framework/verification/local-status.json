@@ -5,12 +5,12 @@
   "staged_count": 0,
   "total_bytes": 362052,
   "first_wave_plugins": [
-    "UniversalSynth",
-    "UniversalEngine",
+    "BVSTSynth",
+    "BVSTEngine",
     "JMS10",
     "RetroKeys",
-    "BlueMarvinOne",
-    "BlueMarvinTwo",
-    "NeonPoly"
+    "MinerOne",
+    "MinerTwo",
+    "ChainPoly"
   ]
 }

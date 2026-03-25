@@ -10,3 +10,4 @@ data/skill-tests/runs/
 data/skill-tests/workspaces/
 npm-debug.log*
 yarn-error.log*
+/image-refs/

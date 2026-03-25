@@ -1,5 +1,5 @@
 {
-  "name": "NeonPoly",
+  "name": "ChainPoly",
   "version": "1.0.0",
   "type": "Instrument",
   "description": "Poly subtractive synth with dual oscillators, filter env, and LFO (shared unified engine/worklet).",

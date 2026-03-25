@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-22T12:13:53.518Z",
+  "generated_at": "2026-03-25T11:07:19.333Z",
   "bundle_root": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/xtrata-canary-release",
   "summary": {
     "failed": 0,
@@ -47,7 +47,7 @@
       "errors": [],
       "warnings": [],
       "details": {
-        "tempRoot": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/bvst-inscription-sim-J18Hxf",
+        "tempRoot": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/bvst-inscription-sim-ToFijq",
         "startTokenId": 9001,
         "endTokenId": 9010,
         "moduleCount": 10,

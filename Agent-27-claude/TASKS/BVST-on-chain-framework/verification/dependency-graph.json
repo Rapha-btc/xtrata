@@ -169,137 +169,137 @@
       "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/JMS10/gui.html"
     },
     {
-      "name": "bvst.plugin.universalengine.manifest.v1.0.0",
+      "name": "bvst.plugin.bvstengine.manifest.v1.0.0",
       "kind": "leaf",
       "stratum": "plugin-manifest",
       "route": "helper",
-      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/UniversalEngine/manifest.json"
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/BVSTEngine/manifest.json"
     },
     {
-      "name": "bvst.plugin.universalengine.patch.v1.0.0",
+      "name": "bvst.plugin.bvstengine.patch.v1.0.0",
       "kind": "leaf",
       "stratum": "plugin-patch",
       "route": "helper",
-      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/UniversalEngine/patch.json"
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/BVSTEngine/patch.json"
     },
     {
-      "name": "bvst.plugin.universalengine.shell.v1.0.0",
+      "name": "bvst.plugin.bvstengine.shell.v1.0.0",
       "kind": "leaf",
       "stratum": "plugin-shell",
       "route": "helper",
-      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/UniversalEngine/gui.html"
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/BVSTEngine/gui.html"
     },
     {
-      "name": "bvst.plugin.universalsynth.manifest.v1.0.13",
+      "name": "bvst.plugin.bvstsynth.manifest.v1.0.13",
       "kind": "leaf",
       "stratum": "plugin-manifest",
       "route": "helper",
-      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/UniversalSynth/manifest.json"
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/BVSTSynth/manifest.json"
     },
     {
-      "name": "bvst.plugin.universalsynth.patch.v1.0.13",
+      "name": "bvst.plugin.bvstsynth.patch.v1.0.13",
       "kind": "leaf",
       "stratum": "plugin-patch",
       "route": "helper",
-      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/UniversalSynth/patch.json"
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/BVSTSynth/patch.json"
     },
     {
-      "name": "bvst.plugin.universalsynth.shell.v1.0.13",
+      "name": "bvst.plugin.bvstsynth.shell.v1.0.13",
       "kind": "leaf",
       "stratum": "plugin-shell",
       "route": "helper",
-      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/UniversalSynth/gui.html"
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/BVSTSynth/gui.html"
     },
     {
       "name": "bvst.plugin.jms10.release.v1.0.0",
       "kind": "catalog",
       "stratum": "plugin-release-catalog",
       "route": "helper",
-      "bundle_path": "on-chain-modules/catalogs/plugins/universalsynth-family/jms10.release.catalog.json"
+      "bundle_path": "on-chain-modules/catalogs/plugins/bvstsynth-family/jms10.release.catalog.json"
     },
     {
-      "name": "bvst.plugin.universalengine.release.v1.0.0",
+      "name": "bvst.plugin.bvstengine.release.v1.0.0",
       "kind": "catalog",
       "stratum": "plugin-release-catalog",
       "route": "helper",
-      "bundle_path": "on-chain-modules/catalogs/plugins/universalsynth-family/universalengine.release.catalog.json"
+      "bundle_path": "on-chain-modules/catalogs/plugins/bvstsynth-family/bvstengine.release.catalog.json"
     },
     {
-      "name": "bvst.plugin.universalsynth.release.v1.0.13",
+      "name": "bvst.plugin.bvstsynth.release.v1.0.13",
       "kind": "catalog",
       "stratum": "plugin-release-catalog",
       "route": "helper",
-      "bundle_path": "on-chain-modules/catalogs/plugins/universalsynth-family/universalsynth.release.catalog.json"
+      "bundle_path": "on-chain-modules/catalogs/plugins/bvstsynth-family/bvstsynth.release.catalog.json"
     },
     {
-      "name": "bvst.catalog.family.universalsynthfamily.v1",
+      "name": "bvst.catalog.family.bvstsynthfamily.v1",
       "kind": "catalog",
       "stratum": "plugin-family-catalog",
       "route": "helper",
-      "bundle_path": "on-chain-modules/catalogs/families/universalsynth-family.catalog.json"
+      "bundle_path": "on-chain-modules/catalogs/families/bvstsynth-family.catalog.json"
     },
     {
-      "name": "bvst.plugin.bluemarvinone.manifest.v1.0.0",
+      "name": "bvst.plugin.minerone.manifest.v1.0.0",
       "kind": "leaf",
       "stratum": "plugin-manifest",
       "route": "helper",
-      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinOne/manifest.json"
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/MinerOne/manifest.json"
     },
     {
-      "name": "bvst.plugin.bluemarvinone.patch.v1.0.0",
+      "name": "bvst.plugin.minerone.patch.v1.0.0",
       "kind": "leaf",
       "stratum": "plugin-patch",
       "route": "helper",
-      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinOne/patch.json"
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/MinerOne/patch.json"
     },
     {
-      "name": "bvst.plugin.bluemarvinone.shell.v1.0.0",
+      "name": "bvst.plugin.minerone.shell.v1.0.0",
       "kind": "leaf",
       "stratum": "plugin-shell",
       "route": "helper",
-      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinOne/gui.html"
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/MinerOne/gui.html"
     },
     {
-      "name": "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
+      "name": "bvst.plugin.minertwo.manifest.v1.0.0",
       "kind": "leaf",
       "stratum": "plugin-manifest",
       "route": "helper",
-      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinTwo/manifest.json"
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/manifest.json"
     },
     {
-      "name": "bvst.plugin.bluemarvintwo.patch.v1.0.0",
+      "name": "bvst.plugin.minertwo.patch.v1.0.0",
       "kind": "leaf",
       "stratum": "plugin-patch",
       "route": "helper",
-      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinTwo/patch.json"
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/patch.json"
     },
     {
-      "name": "bvst.plugin.bluemarvintwo.shell.v1.0.0",
+      "name": "bvst.plugin.minertwo.shell.v1.0.0",
       "kind": "leaf",
       "stratum": "plugin-shell",
       "route": "helper",
-      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinTwo/gui.html"
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/gui.html"
     },
     {
-      "name": "bvst.plugin.neonpoly.manifest.v1.0.0",
+      "name": "bvst.plugin.chainpoly.manifest.v1.0.0",
       "kind": "leaf",
       "stratum": "plugin-manifest",
       "route": "helper",
-      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/NeonPoly/manifest.json"
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/manifest.json"
     },
     {
-      "name": "bvst.plugin.neonpoly.patch.v1.0.0",
+      "name": "bvst.plugin.chainpoly.patch.v1.0.0",
       "kind": "leaf",
       "stratum": "plugin-patch",
       "route": "helper",
-      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/NeonPoly/patch.json"
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/patch.json"
     },
     {
-      "name": "bvst.plugin.neonpoly.shell.v1.0.0",
+      "name": "bvst.plugin.chainpoly.shell.v1.0.0",
       "kind": "leaf",
       "stratum": "plugin-shell",
       "route": "helper",
-      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/NeonPoly/gui.html"
+      "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/gui.html"
     },
     {
       "name": "bvst.plugin.retrokeys.manifest.v1.0.0",
@@ -323,25 +323,25 @@
       "bundle_path": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/gui.html"
     },
     {
-      "name": "bvst.plugin.bluemarvinone.release.v1.0.0",
+      "name": "bvst.plugin.minerone.release.v1.0.0",
       "kind": "catalog",
       "stratum": "plugin-release-catalog",
       "route": "helper",
-      "bundle_path": "on-chain-modules/catalogs/plugins/standalone-synths/bluemarvinone.release.catalog.json"
+      "bundle_path": "on-chain-modules/catalogs/plugins/standalone-synths/minerone.release.catalog.json"
     },
     {
-      "name": "bvst.plugin.bluemarvintwo.release.v1.0.0",
+      "name": "bvst.plugin.minertwo.release.v1.0.0",
       "kind": "catalog",
       "stratum": "plugin-release-catalog",
       "route": "helper",
-      "bundle_path": "on-chain-modules/catalogs/plugins/standalone-synths/bluemarvintwo.release.catalog.json"
+      "bundle_path": "on-chain-modules/catalogs/plugins/standalone-synths/minertwo.release.catalog.json"
     },
     {
-      "name": "bvst.plugin.neonpoly.release.v1.0.0",
+      "name": "bvst.plugin.chainpoly.release.v1.0.0",
       "kind": "catalog",
       "stratum": "plugin-release-catalog",
       "route": "helper",
-      "bundle_path": "on-chain-modules/catalogs/plugins/standalone-synths/neonpoly.release.catalog.json"
+      "bundle_path": "on-chain-modules/catalogs/plugins/standalone-synths/chainpoly.release.catalog.json"
     },
     {
       "name": "bvst.plugin.retrokeys.release.v1.0.0",
@@ -551,35 +551,35 @@
     },
     {
       "from": "bvst.schema.patch.v1",
-      "to": "bvst.plugin.universalengine.patch.v1.0.0"
+      "to": "bvst.plugin.bvstengine.patch.v1.0.0"
     },
     {
       "from": "bvst.runtime.patch-runtime.v1.0.0",
-      "to": "bvst.plugin.universalengine.shell.v1.0.0"
+      "to": "bvst.plugin.bvstengine.shell.v1.0.0"
     },
     {
-      "from": "bvst.plugin.universalengine.manifest.v1.0.0",
-      "to": "bvst.plugin.universalengine.shell.v1.0.0"
+      "from": "bvst.plugin.bvstengine.manifest.v1.0.0",
+      "to": "bvst.plugin.bvstengine.shell.v1.0.0"
     },
     {
-      "from": "bvst.plugin.universalengine.patch.v1.0.0",
-      "to": "bvst.plugin.universalengine.shell.v1.0.0"
+      "from": "bvst.plugin.bvstengine.patch.v1.0.0",
+      "to": "bvst.plugin.bvstengine.shell.v1.0.0"
     },
     {
       "from": "bvst.schema.patch.v1",
-      "to": "bvst.plugin.universalsynth.patch.v1.0.13"
+      "to": "bvst.plugin.bvstsynth.patch.v1.0.13"
     },
     {
       "from": "bvst.runtime.patch-runtime.v1.0.0",
-      "to": "bvst.plugin.universalsynth.shell.v1.0.13"
+      "to": "bvst.plugin.bvstsynth.shell.v1.0.13"
     },
     {
-      "from": "bvst.plugin.universalsynth.manifest.v1.0.13",
-      "to": "bvst.plugin.universalsynth.shell.v1.0.13"
+      "from": "bvst.plugin.bvstsynth.manifest.v1.0.13",
+      "to": "bvst.plugin.bvstsynth.shell.v1.0.13"
     },
     {
-      "from": "bvst.plugin.universalsynth.patch.v1.0.13",
-      "to": "bvst.plugin.universalsynth.shell.v1.0.13"
+      "from": "bvst.plugin.bvstsynth.patch.v1.0.13",
+      "to": "bvst.plugin.bvstsynth.shell.v1.0.13"
     },
     {
       "from": "bvst.plugin.jms10.manifest.v1.0.0",
@@ -606,112 +606,112 @@
       "to": "bvst.plugin.jms10.release.v1.0.0"
     },
     {
-      "from": "bvst.plugin.universalengine.manifest.v1.0.0",
-      "to": "bvst.plugin.universalengine.release.v1.0.0"
+      "from": "bvst.plugin.bvstengine.manifest.v1.0.0",
+      "to": "bvst.plugin.bvstengine.release.v1.0.0"
     },
     {
-      "from": "bvst.plugin.universalengine.patch.v1.0.0",
-      "to": "bvst.plugin.universalengine.release.v1.0.0"
+      "from": "bvst.plugin.bvstengine.patch.v1.0.0",
+      "to": "bvst.plugin.bvstengine.release.v1.0.0"
     },
     {
-      "from": "bvst.plugin.universalengine.shell.v1.0.0",
-      "to": "bvst.plugin.universalengine.release.v1.0.0"
-    },
-    {
-      "from": "bvst.catalog.runtime.v1",
-      "to": "bvst.plugin.universalengine.release.v1.0.0"
-    },
-    {
-      "from": "bvst.catalog.engine.v1",
-      "to": "bvst.plugin.universalengine.release.v1.0.0"
-    },
-    {
-      "from": "bvst.catalog.schema.v1",
-      "to": "bvst.plugin.universalengine.release.v1.0.0"
-    },
-    {
-      "from": "bvst.plugin.universalsynth.manifest.v1.0.13",
-      "to": "bvst.plugin.universalsynth.release.v1.0.13"
-    },
-    {
-      "from": "bvst.plugin.universalsynth.patch.v1.0.13",
-      "to": "bvst.plugin.universalsynth.release.v1.0.13"
-    },
-    {
-      "from": "bvst.plugin.universalsynth.shell.v1.0.13",
-      "to": "bvst.plugin.universalsynth.release.v1.0.13"
+      "from": "bvst.plugin.bvstengine.shell.v1.0.0",
+      "to": "bvst.plugin.bvstengine.release.v1.0.0"
     },
     {
       "from": "bvst.catalog.runtime.v1",
-      "to": "bvst.plugin.universalsynth.release.v1.0.13"
+      "to": "bvst.plugin.bvstengine.release.v1.0.0"
     },
     {
       "from": "bvst.catalog.engine.v1",
-      "to": "bvst.plugin.universalsynth.release.v1.0.13"
+      "to": "bvst.plugin.bvstengine.release.v1.0.0"
     },
     {
       "from": "bvst.catalog.schema.v1",
-      "to": "bvst.plugin.universalsynth.release.v1.0.13"
+      "to": "bvst.plugin.bvstengine.release.v1.0.0"
     },
     {
-      "from": "bvst.plugin.universalsynth.release.v1.0.13",
-      "to": "bvst.catalog.family.universalsynthfamily.v1"
+      "from": "bvst.plugin.bvstsynth.manifest.v1.0.13",
+      "to": "bvst.plugin.bvstsynth.release.v1.0.13"
     },
     {
-      "from": "bvst.plugin.universalengine.release.v1.0.0",
-      "to": "bvst.catalog.family.universalsynthfamily.v1"
+      "from": "bvst.plugin.bvstsynth.patch.v1.0.13",
+      "to": "bvst.plugin.bvstsynth.release.v1.0.13"
+    },
+    {
+      "from": "bvst.plugin.bvstsynth.shell.v1.0.13",
+      "to": "bvst.plugin.bvstsynth.release.v1.0.13"
+    },
+    {
+      "from": "bvst.catalog.runtime.v1",
+      "to": "bvst.plugin.bvstsynth.release.v1.0.13"
+    },
+    {
+      "from": "bvst.catalog.engine.v1",
+      "to": "bvst.plugin.bvstsynth.release.v1.0.13"
+    },
+    {
+      "from": "bvst.catalog.schema.v1",
+      "to": "bvst.plugin.bvstsynth.release.v1.0.13"
+    },
+    {
+      "from": "bvst.plugin.bvstsynth.release.v1.0.13",
+      "to": "bvst.catalog.family.bvstsynthfamily.v1"
+    },
+    {
+      "from": "bvst.plugin.bvstengine.release.v1.0.0",
+      "to": "bvst.catalog.family.bvstsynthfamily.v1"
     },
     {
       "from": "bvst.plugin.jms10.release.v1.0.0",
-      "to": "bvst.catalog.family.universalsynthfamily.v1"
+      "to": "bvst.catalog.family.bvstsynthfamily.v1"
     },
     {
       "from": "bvst.schema.patch.v1",
-      "to": "bvst.plugin.bluemarvinone.patch.v1.0.0"
+      "to": "bvst.plugin.minerone.patch.v1.0.0"
     },
     {
       "from": "bvst.runtime.patch-runtime.v1.0.0",
-      "to": "bvst.plugin.bluemarvinone.shell.v1.0.0"
+      "to": "bvst.plugin.minerone.shell.v1.0.0"
     },
     {
-      "from": "bvst.plugin.bluemarvinone.manifest.v1.0.0",
-      "to": "bvst.plugin.bluemarvinone.shell.v1.0.0"
+      "from": "bvst.plugin.minerone.manifest.v1.0.0",
+      "to": "bvst.plugin.minerone.shell.v1.0.0"
     },
     {
-      "from": "bvst.plugin.bluemarvinone.patch.v1.0.0",
-      "to": "bvst.plugin.bluemarvinone.shell.v1.0.0"
+      "from": "bvst.plugin.minerone.patch.v1.0.0",
+      "to": "bvst.plugin.minerone.shell.v1.0.0"
     },
     {
       "from": "bvst.schema.patch.v1",
-      "to": "bvst.plugin.bluemarvintwo.patch.v1.0.0"
+      "to": "bvst.plugin.minertwo.patch.v1.0.0"
     },
     {
       "from": "bvst.runtime.patch-runtime.v1.0.0",
-      "to": "bvst.plugin.bluemarvintwo.shell.v1.0.0"
+      "to": "bvst.plugin.minertwo.shell.v1.0.0"
     },
     {
-      "from": "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
-      "to": "bvst.plugin.bluemarvintwo.shell.v1.0.0"
+      "from": "bvst.plugin.minertwo.manifest.v1.0.0",
+      "to": "bvst.plugin.minertwo.shell.v1.0.0"
     },
     {
-      "from": "bvst.plugin.bluemarvintwo.patch.v1.0.0",
-      "to": "bvst.plugin.bluemarvintwo.shell.v1.0.0"
+      "from": "bvst.plugin.minertwo.patch.v1.0.0",
+      "to": "bvst.plugin.minertwo.shell.v1.0.0"
     },
     {
       "from": "bvst.schema.patch.v1",
-      "to": "bvst.plugin.neonpoly.patch.v1.0.0"
+      "to": "bvst.plugin.chainpoly.patch.v1.0.0"
     },
     {
       "from": "bvst.runtime.patch-runtime.v1.0.0",
-      "to": "bvst.plugin.neonpoly.shell.v1.0.0"
+      "to": "bvst.plugin.chainpoly.shell.v1.0.0"
     },
     {
-      "from": "bvst.plugin.neonpoly.manifest.v1.0.0",
-      "to": "bvst.plugin.neonpoly.shell.v1.0.0"
+      "from": "bvst.plugin.chainpoly.manifest.v1.0.0",
+      "to": "bvst.plugin.chainpoly.shell.v1.0.0"
     },
     {
-      "from": "bvst.plugin.neonpoly.patch.v1.0.0",
-      "to": "bvst.plugin.neonpoly.shell.v1.0.0"
+      "from": "bvst.plugin.chainpoly.patch.v1.0.0",
+      "to": "bvst.plugin.chainpoly.shell.v1.0.0"
     },
     {
       "from": "bvst.schema.patch.v1",
@@ -730,76 +730,76 @@
       "to": "bvst.plugin.retrokeys.shell.v1.0.0"
     },
     {
-      "from": "bvst.plugin.bluemarvinone.manifest.v1.0.0",
-      "to": "bvst.plugin.bluemarvinone.release.v1.0.0"
+      "from": "bvst.plugin.minerone.manifest.v1.0.0",
+      "to": "bvst.plugin.minerone.release.v1.0.0"
     },
     {
-      "from": "bvst.plugin.bluemarvinone.patch.v1.0.0",
-      "to": "bvst.plugin.bluemarvinone.release.v1.0.0"
+      "from": "bvst.plugin.minerone.patch.v1.0.0",
+      "to": "bvst.plugin.minerone.release.v1.0.0"
     },
     {
-      "from": "bvst.plugin.bluemarvinone.shell.v1.0.0",
-      "to": "bvst.plugin.bluemarvinone.release.v1.0.0"
-    },
-    {
-      "from": "bvst.catalog.runtime.v1",
-      "to": "bvst.plugin.bluemarvinone.release.v1.0.0"
-    },
-    {
-      "from": "bvst.catalog.engine.v1",
-      "to": "bvst.plugin.bluemarvinone.release.v1.0.0"
-    },
-    {
-      "from": "bvst.catalog.schema.v1",
-      "to": "bvst.plugin.bluemarvinone.release.v1.0.0"
-    },
-    {
-      "from": "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
-      "to": "bvst.plugin.bluemarvintwo.release.v1.0.0"
-    },
-    {
-      "from": "bvst.plugin.bluemarvintwo.patch.v1.0.0",
-      "to": "bvst.plugin.bluemarvintwo.release.v1.0.0"
-    },
-    {
-      "from": "bvst.plugin.bluemarvintwo.shell.v1.0.0",
-      "to": "bvst.plugin.bluemarvintwo.release.v1.0.0"
+      "from": "bvst.plugin.minerone.shell.v1.0.0",
+      "to": "bvst.plugin.minerone.release.v1.0.0"
     },
     {
       "from": "bvst.catalog.runtime.v1",
-      "to": "bvst.plugin.bluemarvintwo.release.v1.0.0"
+      "to": "bvst.plugin.minerone.release.v1.0.0"
     },
     {
       "from": "bvst.catalog.engine.v1",
-      "to": "bvst.plugin.bluemarvintwo.release.v1.0.0"
+      "to": "bvst.plugin.minerone.release.v1.0.0"
     },
     {
       "from": "bvst.catalog.schema.v1",
-      "to": "bvst.plugin.bluemarvintwo.release.v1.0.0"
+      "to": "bvst.plugin.minerone.release.v1.0.0"
     },
     {
-      "from": "bvst.plugin.neonpoly.manifest.v1.0.0",
-      "to": "bvst.plugin.neonpoly.release.v1.0.0"
+      "from": "bvst.plugin.minertwo.manifest.v1.0.0",
+      "to": "bvst.plugin.minertwo.release.v1.0.0"
     },
     {
-      "from": "bvst.plugin.neonpoly.patch.v1.0.0",
-      "to": "bvst.plugin.neonpoly.release.v1.0.0"
+      "from": "bvst.plugin.minertwo.patch.v1.0.0",
+      "to": "bvst.plugin.minertwo.release.v1.0.0"
     },
     {
-      "from": "bvst.plugin.neonpoly.shell.v1.0.0",
-      "to": "bvst.plugin.neonpoly.release.v1.0.0"
+      "from": "bvst.plugin.minertwo.shell.v1.0.0",
+      "to": "bvst.plugin.minertwo.release.v1.0.0"
     },
     {
       "from": "bvst.catalog.runtime.v1",
-      "to": "bvst.plugin.neonpoly.release.v1.0.0"
+      "to": "bvst.plugin.minertwo.release.v1.0.0"
     },
     {
       "from": "bvst.catalog.engine.v1",
-      "to": "bvst.plugin.neonpoly.release.v1.0.0"
+      "to": "bvst.plugin.minertwo.release.v1.0.0"
     },
     {
       "from": "bvst.catalog.schema.v1",
-      "to": "bvst.plugin.neonpoly.release.v1.0.0"
+      "to": "bvst.plugin.minertwo.release.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.chainpoly.manifest.v1.0.0",
+      "to": "bvst.plugin.chainpoly.release.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.chainpoly.patch.v1.0.0",
+      "to": "bvst.plugin.chainpoly.release.v1.0.0"
+    },
+    {
+      "from": "bvst.plugin.chainpoly.shell.v1.0.0",
+      "to": "bvst.plugin.chainpoly.release.v1.0.0"
+    },
+    {
+      "from": "bvst.catalog.runtime.v1",
+      "to": "bvst.plugin.chainpoly.release.v1.0.0"
+    },
+    {
+      "from": "bvst.catalog.engine.v1",
+      "to": "bvst.plugin.chainpoly.release.v1.0.0"
+    },
+    {
+      "from": "bvst.catalog.schema.v1",
+      "to": "bvst.plugin.chainpoly.release.v1.0.0"
     },
     {
       "from": "bvst.plugin.retrokeys.manifest.v1.0.0",
@@ -830,19 +830,19 @@
       "to": "bvst.catalog.family.standalonesynths.v1"
     },
     {
-      "from": "bvst.plugin.bluemarvinone.release.v1.0.0",
+      "from": "bvst.plugin.minerone.release.v1.0.0",
       "to": "bvst.catalog.family.standalonesynths.v1"
     },
     {
-      "from": "bvst.plugin.bluemarvintwo.release.v1.0.0",
+      "from": "bvst.plugin.minertwo.release.v1.0.0",
       "to": "bvst.catalog.family.standalonesynths.v1"
     },
     {
-      "from": "bvst.plugin.neonpoly.release.v1.0.0",
+      "from": "bvst.plugin.chainpoly.release.v1.0.0",
       "to": "bvst.catalog.family.standalonesynths.v1"
     },
     {
-      "from": "bvst.catalog.family.universalsynthfamily.v1",
+      "from": "bvst.catalog.family.bvstsynthfamily.v1",
       "to": "bvst.catalog.release.firstwaveinstruments.v1"
     },
     {

@@ -4,7 +4,7 @@
   "scope": "first-wave-instruments",
   "families": [
     {
-      "name": "bvst.catalog.family.universalsynthfamily.v1",
+      "name": "bvst.catalog.family.bvstsynthfamily.v1",
       "token_id": null
     },
     {
@@ -14,11 +14,11 @@
   ],
   "plugin_releases": [
     {
-      "name": "bvst.plugin.universalsynth.release.v1.0.13",
+      "name": "bvst.plugin.bvstsynth.release.v1.0.13",
       "token_id": null
     },
     {
-      "name": "bvst.plugin.universalengine.release.v1.0.0",
+      "name": "bvst.plugin.bvstengine.release.v1.0.0",
       "token_id": null
     },
     {
@@ -30,15 +30,15 @@
       "token_id": null
     },
     {
-      "name": "bvst.plugin.bluemarvinone.release.v1.0.0",
+      "name": "bvst.plugin.minerone.release.v1.0.0",
       "token_id": null
     },
     {
-      "name": "bvst.plugin.bluemarvintwo.release.v1.0.0",
+      "name": "bvst.plugin.minertwo.release.v1.0.0",
       "token_id": null
     },
     {
-      "name": "bvst.plugin.neonpoly.release.v1.0.0",
+      "name": "bvst.plugin.chainpoly.release.v1.0.0",
       "token_id": null
     }
   ]

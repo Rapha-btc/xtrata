@@ -221,10 +221,10 @@
     },
     {
       "name": "bvst.plugin.jms10.release.v1.0.0",
-      "batch_file": "20-universalsynth-family.batch.json",
+      "batch_file": "20-bvstsynth-family.batch.json",
       "order": 100,
       "status": "pending",
-      "template_path": "on-chain-modules/catalogs/plugins/universalsynth-family/jms10.release.catalog.json",
+      "template_path": "on-chain-modules/catalogs/plugins/bvstsynth-family/jms10.release.catalog.json",
       "template_sha256": "6051af3cd8d79c46e4a62fff8be80e9dbd63d7ccf91c60dafcabdd47b7a5e72f",
       "direct_dependency_names": [
         "bvst.plugin.jms10.manifest.v1.0.0",
@@ -270,16 +270,16 @@
       "inscribed": null
     },
     {
-      "name": "bvst.plugin.universalengine.release.v1.0.0",
-      "batch_file": "20-universalsynth-family.batch.json",
+      "name": "bvst.plugin.bvstengine.release.v1.0.0",
+      "batch_file": "20-bvstsynth-family.batch.json",
       "order": 110,
       "status": "pending",
-      "template_path": "on-chain-modules/catalogs/plugins/universalsynth-family/universalengine.release.catalog.json",
+      "template_path": "on-chain-modules/catalogs/plugins/bvstsynth-family/bvstengine.release.catalog.json",
       "template_sha256": "c0043dd656b5495592a14f8f7447c6941102685e7d66fa3b89c8fdf580d091f2",
       "direct_dependency_names": [
-        "bvst.plugin.universalengine.manifest.v1.0.0",
-        "bvst.plugin.universalengine.patch.v1.0.0",
-        "bvst.plugin.universalengine.shell.v1.0.0",
+        "bvst.plugin.bvstengine.manifest.v1.0.0",
+        "bvst.plugin.bvstengine.patch.v1.0.0",
+        "bvst.plugin.bvstengine.shell.v1.0.0",
         "bvst.catalog.runtime.v1",
         "bvst.catalog.engine.v1",
         "bvst.catalog.schema.v1"
@@ -297,18 +297,18 @@
         "bvst.catalog.runtime.v1",
         "bvst.catalog.engine.v1",
         "bvst.catalog.schema.v1",
-        "bvst.plugin.universalengine.manifest.v1.0.0",
-        "bvst.plugin.universalengine.patch.v1.0.0",
-        "bvst.plugin.universalengine.shell.v1.0.0"
+        "bvst.plugin.bvstengine.manifest.v1.0.0",
+        "bvst.plugin.bvstengine.patch.v1.0.0",
+        "bvst.plugin.bvstengine.shell.v1.0.0"
       ],
       "missing_dependencies": [
         "bvst.catalog.foundation.v1",
         "bvst.catalog.runtime.v1",
         "bvst.catalog.engine.v1",
         "bvst.catalog.schema.v1",
-        "bvst.plugin.universalengine.manifest.v1.0.0",
-        "bvst.plugin.universalengine.patch.v1.0.0",
-        "bvst.plugin.universalengine.shell.v1.0.0"
+        "bvst.plugin.bvstengine.manifest.v1.0.0",
+        "bvst.plugin.bvstengine.patch.v1.0.0",
+        "bvst.plugin.bvstengine.shell.v1.0.0"
       ],
       "resolution_signature": "cde87285f873fa58bd444d483bf8df538d6578e87300c399b63d3ff23e303e04",
       "resolved_at": null,
@@ -320,16 +320,16 @@
       "inscribed": null
     },
     {
-      "name": "bvst.plugin.universalsynth.release.v1.0.13",
-      "batch_file": "20-universalsynth-family.batch.json",
+      "name": "bvst.plugin.bvstsynth.release.v1.0.13",
+      "batch_file": "20-bvstsynth-family.batch.json",
       "order": 120,
       "status": "pending",
-      "template_path": "on-chain-modules/catalogs/plugins/universalsynth-family/universalsynth.release.catalog.json",
+      "template_path": "on-chain-modules/catalogs/plugins/bvstsynth-family/bvstsynth.release.catalog.json",
       "template_sha256": "fcb24c743503724582428092fbaa4e99c3da7882f00ef8e97d8206ec931e96e5",
       "direct_dependency_names": [
-        "bvst.plugin.universalsynth.manifest.v1.0.13",
-        "bvst.plugin.universalsynth.patch.v1.0.13",
-        "bvst.plugin.universalsynth.shell.v1.0.13",
+        "bvst.plugin.bvstsynth.manifest.v1.0.13",
+        "bvst.plugin.bvstsynth.patch.v1.0.13",
+        "bvst.plugin.bvstsynth.shell.v1.0.13",
         "bvst.catalog.runtime.v1",
         "bvst.catalog.engine.v1",
         "bvst.catalog.schema.v1"
@@ -347,18 +347,18 @@
         "bvst.catalog.runtime.v1",
         "bvst.catalog.engine.v1",
         "bvst.catalog.schema.v1",
-        "bvst.plugin.universalsynth.manifest.v1.0.13",
-        "bvst.plugin.universalsynth.patch.v1.0.13",
-        "bvst.plugin.universalsynth.shell.v1.0.13"
+        "bvst.plugin.bvstsynth.manifest.v1.0.13",
+        "bvst.plugin.bvstsynth.patch.v1.0.13",
+        "bvst.plugin.bvstsynth.shell.v1.0.13"
       ],
       "missing_dependencies": [
         "bvst.catalog.foundation.v1",
         "bvst.catalog.runtime.v1",
         "bvst.catalog.engine.v1",
         "bvst.catalog.schema.v1",
-        "bvst.plugin.universalsynth.manifest.v1.0.13",
-        "bvst.plugin.universalsynth.patch.v1.0.13",
-        "bvst.plugin.universalsynth.shell.v1.0.13"
+        "bvst.plugin.bvstsynth.manifest.v1.0.13",
+        "bvst.plugin.bvstsynth.patch.v1.0.13",
+        "bvst.plugin.bvstsynth.shell.v1.0.13"
       ],
       "resolution_signature": "039b415c12fb3b91801028e7a737cedcfaa90064178b3be18c3dbe49ffe5f3cb",
       "resolved_at": null,
@@ -370,15 +370,15 @@
       "inscribed": null
     },
     {
-      "name": "bvst.catalog.family.universalsynthfamily.v1",
-      "batch_file": "20-universalsynth-family.batch.json",
+      "name": "bvst.catalog.family.bvstsynthfamily.v1",
+      "batch_file": "20-bvstsynth-family.batch.json",
       "order": 130,
       "status": "pending",
-      "template_path": "on-chain-modules/catalogs/families/universalsynth-family.catalog.json",
+      "template_path": "on-chain-modules/catalogs/families/bvstsynth-family.catalog.json",
       "template_sha256": "53db3fc0dcbfefcbed06f10251ff935bb43b1f37d223708389b7ca1a7dd67fc8",
       "direct_dependency_names": [
-        "bvst.plugin.universalsynth.release.v1.0.13",
-        "bvst.plugin.universalengine.release.v1.0.0",
+        "bvst.plugin.bvstsynth.release.v1.0.13",
+        "bvst.plugin.bvstengine.release.v1.0.0",
         "bvst.plugin.jms10.release.v1.0.0"
       ],
       "direct_dependency_token_ids": [
@@ -387,13 +387,13 @@
         null
       ],
       "resolved_dependency_names": [
-        "bvst.plugin.universalsynth.release.v1.0.13",
-        "bvst.plugin.universalengine.release.v1.0.0",
+        "bvst.plugin.bvstsynth.release.v1.0.13",
+        "bvst.plugin.bvstengine.release.v1.0.0",
         "bvst.plugin.jms10.release.v1.0.0"
       ],
       "missing_dependencies": [
-        "bvst.plugin.universalsynth.release.v1.0.13",
-        "bvst.plugin.universalengine.release.v1.0.0",
+        "bvst.plugin.bvstsynth.release.v1.0.13",
+        "bvst.plugin.bvstengine.release.v1.0.0",
         "bvst.plugin.jms10.release.v1.0.0"
       ],
       "resolution_signature": "7c0c1898c481481b5eca1c9c419faae420ad85eb7d9b47ef5cc25ffe602ecf47",
@@ -406,16 +406,16 @@
       "inscribed": null
     },
     {
-      "name": "bvst.plugin.bluemarvinone.release.v1.0.0",
+      "name": "bvst.plugin.minerone.release.v1.0.0",
       "batch_file": "30-standalone-synths.batch.json",
       "order": 130,
       "status": "pending",
-      "template_path": "on-chain-modules/catalogs/plugins/standalone-synths/bluemarvinone.release.catalog.json",
+      "template_path": "on-chain-modules/catalogs/plugins/standalone-synths/minerone.release.catalog.json",
       "template_sha256": "594b052dff3099f175da2cb5476b8c91d09854b21c73a053e5a67a708d95bffc",
       "direct_dependency_names": [
-        "bvst.plugin.bluemarvinone.manifest.v1.0.0",
-        "bvst.plugin.bluemarvinone.patch.v1.0.0",
-        "bvst.plugin.bluemarvinone.shell.v1.0.0",
+        "bvst.plugin.minerone.manifest.v1.0.0",
+        "bvst.plugin.minerone.patch.v1.0.0",
+        "bvst.plugin.minerone.shell.v1.0.0",
         "bvst.catalog.runtime.v1",
         "bvst.catalog.engine.v1",
         "bvst.catalog.schema.v1"
@@ -433,18 +433,18 @@
         "bvst.catalog.runtime.v1",
         "bvst.catalog.engine.v1",
         "bvst.catalog.schema.v1",
-        "bvst.plugin.bluemarvinone.manifest.v1.0.0",
-        "bvst.plugin.bluemarvinone.patch.v1.0.0",
-        "bvst.plugin.bluemarvinone.shell.v1.0.0"
+        "bvst.plugin.minerone.manifest.v1.0.0",
+        "bvst.plugin.minerone.patch.v1.0.0",
+        "bvst.plugin.minerone.shell.v1.0.0"
       ],
       "missing_dependencies": [
         "bvst.catalog.foundation.v1",
         "bvst.catalog.runtime.v1",
         "bvst.catalog.engine.v1",
         "bvst.catalog.schema.v1",
-        "bvst.plugin.bluemarvinone.manifest.v1.0.0",
-        "bvst.plugin.bluemarvinone.patch.v1.0.0",
-        "bvst.plugin.bluemarvinone.shell.v1.0.0"
+        "bvst.plugin.minerone.manifest.v1.0.0",
+        "bvst.plugin.minerone.patch.v1.0.0",
+        "bvst.plugin.minerone.shell.v1.0.0"
       ],
       "resolution_signature": "81ac6e14ea5c3a8af2fa3b74c81c7e79241e7895e5d0a9b71713b3a7369bd77a",
       "resolved_at": null,
@@ -456,16 +456,16 @@
       "inscribed": null
     },
     {
-      "name": "bvst.plugin.bluemarvintwo.release.v1.0.0",
+      "name": "bvst.plugin.minertwo.release.v1.0.0",
       "batch_file": "30-standalone-synths.batch.json",
       "order": 140,
       "status": "pending",
-      "template_path": "on-chain-modules/catalogs/plugins/standalone-synths/bluemarvintwo.release.catalog.json",
+      "template_path": "on-chain-modules/catalogs/plugins/standalone-synths/minertwo.release.catalog.json",
       "template_sha256": "a92296284c1d803d2584aaa4e77780598b5600b79f784edae0f99b643d990a38",
       "direct_dependency_names": [
-        "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
-        "bvst.plugin.bluemarvintwo.patch.v1.0.0",
-        "bvst.plugin.bluemarvintwo.shell.v1.0.0",
+        "bvst.plugin.minertwo.manifest.v1.0.0",
+        "bvst.plugin.minertwo.patch.v1.0.0",
+        "bvst.plugin.minertwo.shell.v1.0.0",
         "bvst.catalog.runtime.v1",
         "bvst.catalog.engine.v1",
         "bvst.catalog.schema.v1"
@@ -483,18 +483,18 @@
         "bvst.catalog.runtime.v1",
         "bvst.catalog.engine.v1",
         "bvst.catalog.schema.v1",
-        "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
-        "bvst.plugin.bluemarvintwo.patch.v1.0.0",
-        "bvst.plugin.bluemarvintwo.shell.v1.0.0"
+        "bvst.plugin.minertwo.manifest.v1.0.0",
+        "bvst.plugin.minertwo.patch.v1.0.0",
+        "bvst.plugin.minertwo.shell.v1.0.0"
       ],
       "missing_dependencies": [
         "bvst.catalog.foundation.v1",
         "bvst.catalog.runtime.v1",
         "bvst.catalog.engine.v1",
         "bvst.catalog.schema.v1",
-        "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
-        "bvst.plugin.bluemarvintwo.patch.v1.0.0",
-        "bvst.plugin.bluemarvintwo.shell.v1.0.0"
+        "bvst.plugin.minertwo.manifest.v1.0.0",
+        "bvst.plugin.minertwo.patch.v1.0.0",
+        "bvst.plugin.minertwo.shell.v1.0.0"
       ],
       "resolution_signature": "e95a2821396e7c21608c073ccf5f518ce11f277e513bae41061e03c9a6878271",
       "resolved_at": null,
@@ -506,16 +506,16 @@
       "inscribed": null
     },
     {
-      "name": "bvst.plugin.neonpoly.release.v1.0.0",
+      "name": "bvst.plugin.chainpoly.release.v1.0.0",
       "batch_file": "30-standalone-synths.batch.json",
       "order": 150,
       "status": "pending",
-      "template_path": "on-chain-modules/catalogs/plugins/standalone-synths/neonpoly.release.catalog.json",
+      "template_path": "on-chain-modules/catalogs/plugins/standalone-synths/chainpoly.release.catalog.json",
       "template_sha256": "8c96baf3023b57e0039e72bf9b831c29ab9184be70468608472ad92a817b178e",
       "direct_dependency_names": [
-        "bvst.plugin.neonpoly.manifest.v1.0.0",
-        "bvst.plugin.neonpoly.patch.v1.0.0",
-        "bvst.plugin.neonpoly.shell.v1.0.0",
+        "bvst.plugin.chainpoly.manifest.v1.0.0",
+        "bvst.plugin.chainpoly.patch.v1.0.0",
+        "bvst.plugin.chainpoly.shell.v1.0.0",
         "bvst.catalog.runtime.v1",
         "bvst.catalog.engine.v1",
         "bvst.catalog.schema.v1"
@@ -533,18 +533,18 @@
         "bvst.catalog.runtime.v1",
         "bvst.catalog.engine.v1",
         "bvst.catalog.schema.v1",
-        "bvst.plugin.neonpoly.manifest.v1.0.0",
-        "bvst.plugin.neonpoly.patch.v1.0.0",
-        "bvst.plugin.neonpoly.shell.v1.0.0"
+        "bvst.plugin.chainpoly.manifest.v1.0.0",
+        "bvst.plugin.chainpoly.patch.v1.0.0",
+        "bvst.plugin.chainpoly.shell.v1.0.0"
       ],
       "missing_dependencies": [
         "bvst.catalog.foundation.v1",
         "bvst.catalog.runtime.v1",
         "bvst.catalog.engine.v1",
         "bvst.catalog.schema.v1",
-        "bvst.plugin.neonpoly.manifest.v1.0.0",
-        "bvst.plugin.neonpoly.patch.v1.0.0",
-        "bvst.plugin.neonpoly.shell.v1.0.0"
+        "bvst.plugin.chainpoly.manifest.v1.0.0",
+        "bvst.plugin.chainpoly.patch.v1.0.0",
+        "bvst.plugin.chainpoly.shell.v1.0.0"
       ],
       "resolution_signature": "b6a5e01e5c1117eacb25acba44252480e231bf57695a486dd6ad9688b05a4efa",
       "resolved_at": null,
@@ -614,9 +614,9 @@
       "template_sha256": "88aba20c6867b911e83cc1eb06fb9629679f7f441d0e1a686ac8c3ffa7595690",
       "direct_dependency_names": [
         "bvst.plugin.retrokeys.release.v1.0.0",
-        "bvst.plugin.bluemarvinone.release.v1.0.0",
-        "bvst.plugin.bluemarvintwo.release.v1.0.0",
-        "bvst.plugin.neonpoly.release.v1.0.0"
+        "bvst.plugin.minerone.release.v1.0.0",
+        "bvst.plugin.minertwo.release.v1.0.0",
+        "bvst.plugin.chainpoly.release.v1.0.0"
       ],
       "direct_dependency_token_ids": [
         null,
@@ -626,15 +626,15 @@
       ],
       "resolved_dependency_names": [
         "bvst.plugin.retrokeys.release.v1.0.0",
-        "bvst.plugin.bluemarvinone.release.v1.0.0",
-        "bvst.plugin.bluemarvintwo.release.v1.0.0",
-        "bvst.plugin.neonpoly.release.v1.0.0"
+        "bvst.plugin.minerone.release.v1.0.0",
+        "bvst.plugin.minertwo.release.v1.0.0",
+        "bvst.plugin.chainpoly.release.v1.0.0"
       ],
       "missing_dependencies": [
         "bvst.plugin.retrokeys.release.v1.0.0",
-        "bvst.plugin.bluemarvinone.release.v1.0.0",
-        "bvst.plugin.bluemarvintwo.release.v1.0.0",
-        "bvst.plugin.neonpoly.release.v1.0.0"
+        "bvst.plugin.minerone.release.v1.0.0",
+        "bvst.plugin.minertwo.release.v1.0.0",
+        "bvst.plugin.chainpoly.release.v1.0.0"
       ],
       "resolution_signature": "22907776336c89f9a947291b3e79c1736d9b7faa2d4e0a5dfdde1229e027fff4",
       "resolved_at": null,
@@ -653,7 +653,7 @@
       "template_path": "on-chain-modules/catalogs/releases/first-wave-instruments.catalog.json",
       "template_sha256": "6bbdbce961136844816ef35e4c8d2779c65cfd246ef9778fd60efcad132b6b9f",
       "direct_dependency_names": [
-        "bvst.catalog.family.universalsynthfamily.v1",
+        "bvst.catalog.family.bvstsynthfamily.v1",
         "bvst.catalog.family.standalonesynths.v1"
       ],
       "direct_dependency_token_ids": [
@@ -661,26 +661,26 @@
         null
       ],
       "resolved_dependency_names": [
-        "bvst.catalog.family.universalsynthfamily.v1",
+        "bvst.catalog.family.bvstsynthfamily.v1",
         "bvst.catalog.family.standalonesynths.v1",
-        "bvst.plugin.universalsynth.release.v1.0.13",
-        "bvst.plugin.universalengine.release.v1.0.0",
+        "bvst.plugin.bvstsynth.release.v1.0.13",
+        "bvst.plugin.bvstengine.release.v1.0.0",
         "bvst.plugin.jms10.release.v1.0.0",
         "bvst.plugin.retrokeys.release.v1.0.0",
-        "bvst.plugin.bluemarvinone.release.v1.0.0",
-        "bvst.plugin.bluemarvintwo.release.v1.0.0",
-        "bvst.plugin.neonpoly.release.v1.0.0"
+        "bvst.plugin.minerone.release.v1.0.0",
+        "bvst.plugin.minertwo.release.v1.0.0",
+        "bvst.plugin.chainpoly.release.v1.0.0"
       ],
       "missing_dependencies": [
-        "bvst.catalog.family.universalsynthfamily.v1",
+        "bvst.catalog.family.bvstsynthfamily.v1",
         "bvst.catalog.family.standalonesynths.v1",
-        "bvst.plugin.universalsynth.release.v1.0.13",
-        "bvst.plugin.universalengine.release.v1.0.0",
+        "bvst.plugin.bvstsynth.release.v1.0.13",
+        "bvst.plugin.bvstengine.release.v1.0.0",
         "bvst.plugin.jms10.release.v1.0.0",
         "bvst.plugin.retrokeys.release.v1.0.0",
-        "bvst.plugin.bluemarvinone.release.v1.0.0",
-        "bvst.plugin.bluemarvintwo.release.v1.0.0",
-        "bvst.plugin.neonpoly.release.v1.0.0"
+        "bvst.plugin.minerone.release.v1.0.0",
+        "bvst.plugin.minertwo.release.v1.0.0",
+        "bvst.plugin.chainpoly.release.v1.0.0"
       ],
       "resolution_signature": "92c488df3a39709c79bff830a930cc63c6c38a98630db9d400b85d18113b98b7",
       "resolved_at": null,

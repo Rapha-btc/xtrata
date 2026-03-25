@@ -1,5 +1,5 @@
 {
-  "release_name": "bvst-universalsynth-family-v1",
+  "release_name": "bvst-bvstsynth-family-v1",
   "network_template": "on-chain-modules/configs/xtrata-network.template.json",
   "prerequisite_batches": [
     "10-foundation.batch.json"
@@ -49,23 +49,23 @@
     },
     {
       "order": 40,
-      "name": "bvst.plugin.universalengine.manifest.v1.0.0",
-      "path": "on-chain-modules/workspace/Plugins/Instruments/UniversalEngine/manifest.json",
+      "name": "bvst.plugin.bvstengine.manifest.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/BVSTEngine/manifest.json",
       "mime": "application/json",
-      "bytes": 334,
+      "bytes": 324,
       "chunks": 1,
-      "sha256": "47834dcc0111f2f1ea6074f5f0a9bc7f1de2b2619849363f1afa9b511c3388f9",
+      "sha256": "01beefdc0b97ab86353a581eeda12bd10dcf259afca3b1e3b1f4903c883efee2",
       "route": "helper",
       "depends_on": []
     },
     {
       "order": 50,
-      "name": "bvst.plugin.universalengine.patch.v1.0.0",
-      "path": "on-chain-modules/workspace/Plugins/Instruments/UniversalEngine/patch.json",
+      "name": "bvst.plugin.bvstengine.patch.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/BVSTEngine/patch.json",
       "mime": "application/json",
-      "bytes": 1970,
+      "bytes": 1955,
       "chunks": 1,
-      "sha256": "302fff185112df6729b67fa9e5000c20e45a3fc64d93053ffe45c3b2498bb682",
+      "sha256": "b28a916152cc277a8f4e45bd208c1c3cfb313e11d9baa56d49345aa598432511",
       "route": "helper",
       "depends_on": [
         "bvst.schema.patch.v1"
@@ -73,34 +73,34 @@
     },
     {
       "order": 60,
-      "name": "bvst.plugin.universalengine.shell.v1.0.0",
-      "path": "on-chain-modules/workspace/Plugins/Instruments/UniversalEngine/gui.html",
+      "name": "bvst.plugin.bvstengine.shell.v1.0.0",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/BVSTEngine/gui.html",
       "mime": "text/html",
-      "bytes": 836,
+      "bytes": 831,
       "chunks": 1,
-      "sha256": "3d82ee8a6ec07877d704303e3bf83a8946e9bc3ea9b5d336829312ccb658b13e",
+      "sha256": "273dfebc41e8013d21f0dadfef55f10805aee117b8ab53b62ad68e56a4004268",
       "route": "helper",
       "depends_on": [
         "bvst.runtime.patch-runtime.v1.0.0",
-        "bvst.plugin.universalengine.manifest.v1.0.0",
-        "bvst.plugin.universalengine.patch.v1.0.0"
+        "bvst.plugin.bvstengine.manifest.v1.0.0",
+        "bvst.plugin.bvstengine.patch.v1.0.0"
       ]
     },
     {
       "order": 70,
-      "name": "bvst.plugin.universalsynth.manifest.v1.0.13",
-      "path": "on-chain-modules/workspace/Plugins/Instruments/UniversalSynth/manifest.json",
+      "name": "bvst.plugin.bvstsynth.manifest.v1.0.13",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/BVSTSynth/manifest.json",
       "mime": "application/json",
-      "bytes": 402,
+      "bytes": 397,
       "chunks": 1,
-      "sha256": "444f1212e9c12efb86514a917c5edfab1fd7842f9202a6316cdfa462241cdeae",
+      "sha256": "0fa1872669743a0284f20b73a464a83c94418d65845ecdf861669fb97506f2d7",
       "route": "helper",
       "depends_on": []
     },
     {
       "order": 80,
-      "name": "bvst.plugin.universalsynth.patch.v1.0.13",
-      "path": "on-chain-modules/workspace/Plugins/Instruments/UniversalSynth/patch.json",
+      "name": "bvst.plugin.bvstsynth.patch.v1.0.13",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/BVSTSynth/patch.json",
       "mime": "application/json",
       "bytes": 9259,
       "chunks": 1,
@@ -112,27 +112,27 @@
     },
     {
       "order": 90,
-      "name": "bvst.plugin.universalsynth.shell.v1.0.13",
-      "path": "on-chain-modules/workspace/Plugins/Instruments/UniversalSynth/gui.html",
+      "name": "bvst.plugin.bvstsynth.shell.v1.0.13",
+      "path": "on-chain-modules/workspace/Plugins/Instruments/BVSTSynth/gui.html",
       "mime": "text/html",
-      "bytes": 837,
+      "bytes": 14086,
       "chunks": 1,
-      "sha256": "c45d54395f5d139562fbdf308330caeefc9eb981d4c1fe1ed8455e15bbba194c",
+      "sha256": "219b193434f6642c35a2186f3777a90db1297151f9f5d487aab3569e79eef670",
       "route": "helper",
       "depends_on": [
         "bvst.runtime.patch-runtime.v1.0.0",
-        "bvst.plugin.universalsynth.manifest.v1.0.13",
-        "bvst.plugin.universalsynth.patch.v1.0.13"
+        "bvst.plugin.bvstsynth.manifest.v1.0.13",
+        "bvst.plugin.bvstsynth.patch.v1.0.13"
       ]
     },
     {
       "order": 100,
       "name": "bvst.plugin.jms10.release.v1.0.0",
-      "path": "on-chain-modules/catalogs/plugins/universalsynth-family/jms10.release.catalog.json",
+      "path": "on-chain-modules/catalogs/plugins/bvstsynth-family/jms10.release.catalog.json",
       "mime": "application/json",
-      "bytes": 1720,
+      "bytes": 1715,
       "chunks": 1,
-      "sha256": "6051af3cd8d79c46e4a62fff8be80e9dbd63d7ccf91c60dafcabdd47b7a5e72f",
+      "sha256": "e79dd436addd4d5e6f17c633a03a2cac261df34902fa0abe8064b6e015e4975f",
       "route": "helper",
       "depends_on": [
         "bvst.plugin.jms10.manifest.v1.0.0",
@@ -145,17 +145,17 @@
     },
     {
       "order": 110,
-      "name": "bvst.plugin.universalengine.release.v1.0.0",
-      "path": "on-chain-modules/catalogs/plugins/universalsynth-family/universalengine.release.catalog.json",
+      "name": "bvst.plugin.bvstengine.release.v1.0.0",
+      "path": "on-chain-modules/catalogs/plugins/bvstsynth-family/bvstengine.release.catalog.json",
       "mime": "application/json",
-      "bytes": 1800,
+      "bytes": 1704,
       "chunks": 1,
-      "sha256": "c0043dd656b5495592a14f8f7447c6941102685e7d66fa3b89c8fdf580d091f2",
+      "sha256": "193fb4ccda5dc0f32640d256ada8f6e7bb944f9ac755002fa70b29a5729160d5",
       "route": "helper",
       "depends_on": [
-        "bvst.plugin.universalengine.manifest.v1.0.0",
-        "bvst.plugin.universalengine.patch.v1.0.0",
-        "bvst.plugin.universalengine.shell.v1.0.0",
+        "bvst.plugin.bvstengine.manifest.v1.0.0",
+        "bvst.plugin.bvstengine.patch.v1.0.0",
+        "bvst.plugin.bvstengine.shell.v1.0.0",
         "bvst.catalog.runtime.v1",
         "bvst.catalog.engine.v1",
         "bvst.catalog.schema.v1"
@@ -163,17 +163,17 @@
     },
     {
       "order": 120,
-      "name": "bvst.plugin.universalsynth.release.v1.0.13",
-      "path": "on-chain-modules/catalogs/plugins/universalsynth-family/universalsynth.release.catalog.json",
+      "name": "bvst.plugin.bvstsynth.release.v1.0.13",
+      "path": "on-chain-modules/catalogs/plugins/bvstsynth-family/bvstsynth.release.catalog.json",
       "mime": "application/json",
-      "bytes": 1796,
+      "bytes": 1719,
       "chunks": 1,
-      "sha256": "fcb24c743503724582428092fbaa4e99c3da7882f00ef8e97d8206ec931e96e5",
+      "sha256": "a055b7b4e50ad1d82473ee5be7fb46c1c4d545a5822e856b3bd6faf7ff1e339a",
       "route": "helper",
       "depends_on": [
-        "bvst.plugin.universalsynth.manifest.v1.0.13",
-        "bvst.plugin.universalsynth.patch.v1.0.13",
-        "bvst.plugin.universalsynth.shell.v1.0.13",
+        "bvst.plugin.bvstsynth.manifest.v1.0.13",
+        "bvst.plugin.bvstsynth.patch.v1.0.13",
+        "bvst.plugin.bvstsynth.shell.v1.0.13",
         "bvst.catalog.runtime.v1",
         "bvst.catalog.engine.v1",
         "bvst.catalog.schema.v1"
@@ -181,16 +181,16 @@
     },
     {
       "order": 130,
-      "name": "bvst.catalog.family.universalsynthfamily.v1",
-      "path": "on-chain-modules/catalogs/families/universalsynth-family.catalog.json",
+      "name": "bvst.catalog.family.bvstsynthfamily.v1",
+      "path": "on-chain-modules/catalogs/families/bvstsynth-family.catalog.json",
       "mime": "application/json",
-      "bytes": 563,
+      "bytes": 533,
       "chunks": 1,
-      "sha256": "53db3fc0dcbfefcbed06f10251ff935bb43b1f37d223708389b7ca1a7dd67fc8",
+      "sha256": "bdad33041d7ccd5c65709a1df5883a161c061faff304419dd72479d80d649df5",
       "route": "helper",
       "depends_on": [
-        "bvst.plugin.universalsynth.release.v1.0.13",
-        "bvst.plugin.universalengine.release.v1.0.0",
+        "bvst.plugin.bvstsynth.release.v1.0.13",
+        "bvst.plugin.bvstengine.release.v1.0.0",
         "bvst.plugin.jms10.release.v1.0.0"
       ]
     }

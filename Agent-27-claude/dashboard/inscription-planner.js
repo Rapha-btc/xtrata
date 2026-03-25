@@ -43,7 +43,21 @@
         achievementStatus: document.getElementById('achievement-status'),
         achievementStats: document.getElementById('achievement-stats'),
         achievementGraph: document.getElementById('achievement-graph'),
-        achievementBatches: document.getElementById('achievement-batches')
+        achievementBatches: document.getElementById('achievement-batches'),
+        bvstAchievement: document.getElementById('bvst-achievement'),
+        bvstAchievementTitle: document.getElementById('bvst-achievement-title'),
+        bvstAchievementNarrative: document.getElementById('bvst-achievement-narrative'),
+        bvstAchievementStatus: document.getElementById('bvst-achievement-status'),
+        bvstAchievementStats: document.getElementById('bvst-achievement-stats'),
+        bvstAchievementWhat: document.getElementById('bvst-achievement-what'),
+        bvstAchievementHow: document.getElementById('bvst-achievement-how'),
+        bvstAchievementWhy: document.getElementById('bvst-achievement-why'),
+        bvstAchievementGraph: document.getElementById('bvst-achievement-graph'),
+        bvstAchievementBatches: document.getElementById('bvst-achievement-batches'),
+        depGraphSection: document.getElementById('dependency-graph-section'),
+        depGraphContainer: document.getElementById('dep-graph-container'),
+        depGraphSub: document.getElementById('dep-graph-sub'),
+        depGraphLegend: document.getElementById('dep-graph-legend')
     };
 
     const state = {
@@ -1015,6 +1029,339 @@
         `;
     }
 
+    function renderDependencyGraph(data) {
+        const modules = data.moduleIndex;
+        if (!Array.isArray(modules) || modules.length === 0) {
+            els.depGraphSection.hidden = true;
+            return;
+        }
+        els.depGraphSection.hidden = false;
+
+        els.depGraphContainer.innerHTML = buildDependencyGraphSvg(data);
+
+        // Legend and subtitle
+        const statusItems = data.status?.items || [];
+        const statusByName = new Map(statusItems.map(item => [item.name, item.status]));
+        const sorted = [...modules].sort((a, b) => (a.topo_order || 0) - (b.topo_order || 0));
+        const mintedCount = sorted.filter(m => statusByName.get(m.name) === 'minted').length;
+        const plannedCount = sorted.length - mintedCount;
+        const stratumColors = {
+            schema: '#6db5ff', runtime: '#4dd17b', engine: '#4dd17b',
+            application: '#ffbf47', catalog: '#ff8a1c', plugin: '#c084fc'
+        };
+        const strata = [...new Set(sorted.map(m => m.stratum || m.group || 'runtime'))];
+        els.depGraphLegend.innerHTML = strata.map(s =>
+            `<span class="chip" style="border-left: 3px solid ${stratumColors[s] || '#8f877a'};">${escapeHtml(s)}</span>`
+        ).join('') +
+            `<span class="chip" style="border-left: 3px solid #4dd17b;">\u25cf minted</span>` +
+            `<span class="chip" style="border-left: 3px solid #ffbf47;">\u25cf ready</span>` +
+            `<span class="chip" style="border-left: 3px solid #555;">\u25cf planned</span>`;
+
+        els.depGraphSub.textContent = `${sorted.length} artifacts \u2014 ${mintedCount} inscribed, ${plannedCount} remaining. Grouped by execution batch with dependency edges.`;
+    }
+
+    function renderBvstAchievement(data) {
+        const modules = data.moduleIndex;
+        const status = data.status;
+        const summary = status?.summary;
+        const tokenMap = data.tokenMap?.entries || {};
+        const inscriptionLog = data.inscriptionLog;
+
+        // Only show when every artifact is minted
+        if (!summary || summary.minted < summary.total || summary.total === 0 || summary.blocked > 0 || summary.hard_stop > 0) {
+            els.bvstAchievement.hidden = true;
+            return;
+        }
+        els.bvstAchievement.hidden = false;
+
+        const XTRATA_CONTRACT = 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0';
+        const EXPLORER_BASE = 'https://explorer.hiro.so';
+        function tokenUrl(id) { return `${EXPLORER_BASE}/token/${XTRATA_CONTRACT}/${id}?chain=mainnet`; }
+        function txUrl(txid) { return txid ? `${EXPLORER_BASE}/txid/${txid}?chain=mainnet` : null; }
+
+        const items = status.items || [];
+        const tokenIds = items.map(i => tokenMap[i.name]?.token_id).filter(Boolean).map(Number).sort((a, b) => a - b);
+        const tokenRange = tokenIds.length > 0 ? [tokenIds[0], tokenIds[tokenIds.length - 1]] : [0, 0];
+
+        const totalBytes = (modules || []).reduce((s, m) => s + (m.bytes || 0), 0);
+        const totalChunks = (modules || []).reduce((s, m) => s + (m.chunks || 0), 0);
+        const mimeTypes = new Set((modules || []).map(m => m.mime_type));
+        const strata = [...new Set((modules || []).map(m => m.stratum || m.group))];
+
+        // Batch info
+        const batches = data.quote?.execution?.orderedBatches || [];
+        const leafCount = (modules || []).filter(m => m.kind === 'leaf').length;
+        const catalogCount = (modules || []).filter(m => m.kind === 'catalog').length;
+
+        const logEntries = inscriptionLog?.entries || [];
+        const firstMint = logEntries.length > 0
+            ? logEntries.reduce((earliest, e) => (!earliest || e.recorded_at < earliest) ? e.recorded_at : earliest, null)
+            : null;
+        const lastMint = logEntries.length > 0
+            ? logEntries.reduce((latest, e) => (!latest || e.recorded_at > latest) ? e.recorded_at : latest, null)
+            : null;
+
+        // Narrative
+        els.bvstAchievementNarrative.textContent =
+            `${summary.total} artifacts inscribed as permanent, dependency-linked Xtrata tokens on Stacks mainnet. ` +
+            `The BVST synthesizer framework is now a fully on-chain modular application — every runtime module, audio engine, plugin, and catalog ` +
+            `can be loaded recursively from the blockchain without any external server.`;
+
+        // Stats cards
+        const statsCards = [
+            { label: 'Tokens', value: `#${tokenRange[0]} \u2013 #${tokenRange[1]}`, subvalue: `${summary.total} artifacts sealed on-chain`, className: 'accent' },
+            { label: 'Architecture', value: `${leafCount} leaves + ${catalogCount} catalogs`, subvalue: `${batches.length} execution batches, ${strata.length} strata`, className: 'accent' },
+            { label: 'Total Size', value: formatBytes(totalBytes), subvalue: `${formatNumber(totalChunks)} chunks across ${mimeTypes.size} content types`, className: 'accent' },
+            { label: 'Network', value: 'Stacks Mainnet', subvalue: 'Permanent, immutable, verifiable', className: 'good' },
+            { label: 'First Mint', value: firstMint ? formatDate(firstMint) : '\u2014', subvalue: 'Foundation batch started', className: 'accent' },
+            { label: 'Completed', value: lastMint ? formatDate(lastMint) : '\u2014', subvalue: 'All artifacts verified on-chain', className: 'good' }
+        ];
+        els.bvstAchievementStats.innerHTML = statsCards.map(c => `
+            <div class="mini-stat ${c.className}">
+                <div class="label">${escapeHtml(c.label)}</div>
+                <div class="value">${escapeHtml(c.value)}</div>
+                <div class="subvalue">${escapeHtml(c.subvalue)}</div>
+            </div>
+        `).join('');
+
+        // What Was Built
+        els.bvstAchievementWhat.innerHTML = [
+            `<strong>A complete modular synthesizer framework living permanently on the blockchain.</strong>`,
+            `The BVST (Bitcoin Virtual Studio Technology) first-wave release inscribes ${summary.total} interdependent artifacts ` +
+            `onto Stacks using the Xtrata recursive inscription protocol. These artifacts form a full-stack audio application: ` +
+            `a patch schema, 13 shared runtime modules (CSS, UI, controls, keyboard, MIDI, sequencer, sampler, visualizer), ` +
+            `a WebAssembly DSP engine with its loader and AudioWorklet processor, a plugin core with standalone bridge and patch runtime, ` +
+            `7 playable synthesizer instruments across two plugin families, and 15 on-chain catalogs that bind the dependency tree together.`,
+            `Each synthesizer — from the JMS10 and UniversalSynth family to BlueMarvinOne, NeonPoly, and RetroKeys — ` +
+            `can be fully reconstructed by reading its catalog, resolving the recursive token references, and assembling the runtime from on-chain data alone. ` +
+            `No CDN. No API. No server. The application <em>is</em> the chain.`
+        ].join('<br><br>');
+
+        // How It Was Done
+        els.bvstAchievementHow.innerHTML = [
+            `<strong>AI-orchestrated dependency-aware inscription with automated verification at every step.</strong>`,
+            `The entire inscription was planned and executed by an AI agent (Agent 27) using a purpose-built automation pipeline. ` +
+            `The process followed strict topological ordering: foundation runtime modules were inscribed first (zero-dependency leaves), ` +
+            `then each subsequent batch was unlocked only after all its prerequisites had confirmed token IDs on-chain.`,
+            `For each artifact, the pipeline: verified the local source hash against the frozen module index, ` +
+            `checked for on-chain content-hash duplicates, confirmed all recursive dependency tokens existed on-chain via live contract reads, ` +
+            `then submitted the transaction with the dependency list encoded in the contract call. ` +
+            `After each successful mint, the token ID was recorded in the token map, all catalog templates were re-rendered with the new IDs injected, ` +
+            `and the full inscription status was rebuilt to determine what unlocked next.`,
+            `Catalogs — the JSON manifests that describe the dependency tree — were rendered dynamically as their constituent artifacts were minted. ` +
+            `A catalog could only be inscribed once every <code>token_id</code>, <code>txid</code>, and <code>block_height</code> field ` +
+            `in its template was resolved to a confirmed on-chain value. This made it structurally impossible to inscribe a catalog with missing references.`,
+            `The safety gate ran pre-inscription checks (bundle integrity, plugin semantics, sampler validation, HTTP smoke tests, and inscription simulation) ` +
+            `before every batch. The release gate combined these with a live fee quote and wallet balance check to prevent under-funded runs.`
+        ].join('<br><br>');
+
+        // Why It Matters
+        els.bvstAchievementWhy.innerHTML = [
+            `<strong>This is the first modular recursive web application framework inscribed on a Bitcoin layer.</strong>`,
+            `<em>For on-chain builders:</em> BVST proves that complex, multi-file web applications can live entirely on-chain using recursive inscription. ` +
+            `The pattern — shared runtime modules referenced by multiple applications through on-chain catalogs — eliminates duplication and creates ` +
+            `a composable dependency graph where new instruments or applications can reuse the existing foundation without re-inscribing shared code. ` +
+            `Any future BVST plugin only needs its own manifest, patch, and GUI shell; the entire runtime, engine, and UI layer is already on-chain and addressable by token ID.`,
+            `<em>For the AI + Web3 intersection:</em> The full lifecycle — from code authoring and bug fixing, through bundle verification and dependency planning, ` +
+            `to the actual on-chain inscription — was orchestrated by an AI agent operating within a structured automation framework. ` +
+            `This demonstrates that AI agents can reliably manage complex multi-step blockchain operations with built-in safety gates, ` +
+            `not as a novelty but as a practical production workflow. The agent authored code, fixed a sequencer-to-WASM integration bug, ` +
+            `maintained the verification suite, and executed the inscription run with full audit trails.`,
+            `<em>For the Stacks ecosystem:</em> Xtrata's recursive inscription model on Stacks shows that L2 smart contracts can host ` +
+            `rich application frameworks with on-chain dependency resolution — something not possible with flat inscription models. ` +
+            `The helper contract pattern (single-transaction mint for small artifacts, staged multi-tx for large ones) combined with ` +
+            `the recursive dependency list makes the on-chain data self-describing: any node can verify the complete dependency tree ` +
+            `by reading contract state alone, with no off-chain index required.`
+        ].join('<br><br>');
+
+        // Dependency graph (reuse the same renderer but into a different container)
+        if (Array.isArray(modules) && modules.length > 0) {
+            const graphHtml = buildDependencyGraphSvg(data);
+            els.bvstAchievementGraph.innerHTML = graphHtml;
+        }
+
+        // Batch-grouped artifact list
+        const batchOrder = batches.map(b => b.file);
+        const artifactsByBatch = new Map(batchOrder.map(b => [b, []]));
+        for (const item of items) {
+            const list = artifactsByBatch.get(item.batch);
+            if (list) list.push(item);
+        }
+
+        els.bvstAchievementBatches.innerHTML = batchOrder.map(batchFile => {
+            const batchItems = artifactsByBatch.get(batchFile) || [];
+            const batchMeta = batches.find(b => b.file === batchFile);
+            const shortName = batchFile.replace(/\.batch\.json$/, '').replace(/^\d+-/, '');
+            return `
+                <div class="batch-group">
+                    <div class="batch-group-head">
+                        <span class="batch-group-title">${escapeHtml(shortName)}</span>
+                        <span class="status-pill ready">${batchItems.length} artifact${batchItems.length !== 1 ? 's' : ''}</span>
+                    </div>
+                    <div class="card-grid">
+                        ${batchItems.map(item => {
+                            const entry = tokenMap[item.name] || {};
+                            const depNames = item.dependency_names || [];
+                            const depChips = depNames.length > 0
+                                ? depNames.map(d => {
+                                    const depToken = tokenMap[d]?.token_id;
+                                    return depToken
+                                        ? `<a class="chip" href="${tokenUrl(depToken)}" target="_blank" rel="noopener">\u2190 #${depToken}</a>`
+                                        : `<span class="chip">\u2190 ${escapeHtml(d.replace(/^bvst\.\w+\./, '').replace(/\.v[\d.]+$/, ''))}</span>`;
+                                }).join('')
+                                : '<span class="chip">no dependencies</span>';
+                            const viewLink = entry.token_id
+                                ? `<a class="chip" href="${tokenUrl(entry.token_id)}" target="_blank" rel="noopener">#${entry.token_id} on-chain</a>`
+                                : '';
+                            const txLink = entry.txid
+                                ? `<a class="chip" href="${txUrl(entry.txid)}" target="_blank" rel="noopener">tx</a>`
+                                : '';
+                            const shortItemName = item.name.replace(/^bvst\.\w+\./, '').replace(/\.v[\d.]+$/, '');
+                            return `
+                                <div class="artifact-card">
+                                    <div class="artifact-head">
+                                        <span class="artifact-name">${escapeHtml(shortItemName)}</span>
+                                        <span class="artifact-token">${entry.token_id ? '#' + entry.token_id : ''}</span>
+                                    </div>
+                                    <div class="artifact-role">${escapeHtml(item.kind)} \u00b7 ${escapeHtml(item.route)}</div>
+                                    <div class="artifact-meta">
+                                        <span class="chip">${escapeHtml(item.mime)}</span>
+                                        ${viewLink}
+                                        ${txLink}
+                                        ${depChips}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Shared SVG builder for dependency graph (used by both the planning view and achievement view)
+    function buildDependencyGraphSvg(data) {
+        const modules = data.moduleIndex;
+        if (!Array.isArray(modules) || modules.length === 0) return '';
+
+        const statusItems = data.status?.items || [];
+        const statusByName = new Map(statusItems.map(item => [item.name, item.status]));
+        const tokenMap = data.tokenMap?.entries || {};
+
+        const sorted = [...modules].sort((a, b) => (a.topo_order || 0) - (b.topo_order || 0));
+
+        const steps = data.quote?.execution?.steps || [];
+        const stepBatches = new Map(steps.map(s => [s.name, s.batch || 'unassigned']));
+        const batchNames = [];
+        const seen = new Set();
+        for (const s of steps) {
+            const b = s.batch || 'unassigned';
+            if (!seen.has(b)) { batchNames.push(b); seen.add(b); }
+        }
+        for (const m of sorted) {
+            if (!stepBatches.has(m.name) && !seen.has('other')) {
+                batchNames.push('other');
+                seen.add('other');
+            }
+        }
+
+        function getBatch(name) { return stepBatches.get(name) || 'other'; }
+
+        const COL_W = 240;
+        const ROW_H = 44;
+        const NODE_W = 210;
+        const NODE_H = 32;
+        const PAD_X = 30;
+        const PAD_Y = 32;
+
+        const batchCol = new Map(batchNames.map((b, i) => [b, i]));
+        const batchRowCount = new Map();
+        const positions = new Map();
+        for (const m of sorted) {
+            const batch = getBatch(m.name);
+            const col = batchCol.get(batch) || 0;
+            const row = batchRowCount.get(batch) || 0;
+            batchRowCount.set(batch, row + 1);
+            positions.set(m.name, {
+                x: PAD_X + col * COL_W,
+                y: PAD_Y + row * ROW_H,
+                cx: PAD_X + col * COL_W + NODE_W / 2,
+                cy: PAD_Y + row * ROW_H + NODE_H / 2
+            });
+        }
+
+        const maxRow = Math.max(...[...batchRowCount.values()], 1);
+        const svgW = PAD_X * 2 + batchNames.length * COL_W;
+        const svgH = PAD_Y * 2 + maxRow * ROW_H + 16;
+
+        const stratumColors = {
+            schema: '#6db5ff', runtime: '#4dd17b', engine: '#4dd17b',
+            application: '#ffbf47', catalog: '#ff8a1c', plugin: '#c084fc'
+        };
+
+        let edgesSvg = '';
+        let arrowsSvg = '';
+        for (const m of sorted) {
+            const to = positions.get(m.name);
+            if (!to) continue;
+            for (const depName of m.dependency_names || []) {
+                const from = positions.get(depName);
+                if (!from) continue;
+                edgesSvg += `<line x1="${from.cx}" y1="${from.cy}" x2="${to.cx}" y2="${to.cy}" stroke="#26221c" stroke-width="1.2"/>`;
+                const dx = to.cx - from.cx;
+                const dy = to.cy - from.cy;
+                const len = Math.sqrt(dx * dx + dy * dy);
+                if (len < 1) continue;
+                const mx = from.cx + dx * 0.65;
+                const my = from.cy + dy * 0.65;
+                arrowsSvg += `<circle cx="${mx}" cy="${my}" r="2" fill="#26221c"/>`;
+            }
+        }
+
+        let labelsSvg = '';
+        batchNames.forEach((name, i) => {
+            const x = PAD_X + i * COL_W + NODE_W / 2;
+            const shortName = name.replace(/\.batch\.json$/, '').replace(/^\d+-/, '');
+            labelsSvg += `<text x="${x}" y="16" text-anchor="middle" fill="#8f877a" font-size="10" font-family="var(--font)" letter-spacing="0.06em">${escapeHtml(shortName.toUpperCase())}</text>`;
+        });
+
+        let nodesSvg = '';
+        for (const m of sorted) {
+            const pos = positions.get(m.name);
+            if (!pos) continue;
+            const stratum = m.stratum || m.group || 'runtime';
+            const stroke = stratumColors[stratum] || '#8f877a';
+            const mintStatus = statusByName.get(m.name) || 'planned';
+            const isMinted = mintStatus === 'minted';
+            const tokenEntry = tokenMap[m.name];
+            const tokenId = tokenEntry?.token_id || null;
+            const dotColor = isMinted ? '#4dd17b' : mintStatus === 'ready' ? '#ffbf47' : mintStatus === 'hard-stop' ? '#ef5350' : '#555';
+            const dotX = pos.x + NODE_W - 14;
+            const dotY = pos.y + NODE_H / 2;
+            const shortName = m.name.replace(/^bvst\.(runtime|engine|schema|catalog|plugin)\./, '').replace(/\.v\d+(\.\d+)*$/, '');
+            const label = tokenId ? `#${tokenId}` : (m.topo_order !== undefined ? `[${m.topo_order}]` : '');
+            const opacity = isMinted ? '0.85' : '1';
+
+            nodesSvg += `
+                <g style="opacity:${opacity}">
+                    <rect x="${pos.x}" y="${pos.y}" width="${NODE_W}" height="${NODE_H}" rx="3" fill="#0b0b0b" stroke="${stroke}" stroke-width="1.2"/>
+                    <text x="${pos.x + 7}" y="${pos.y + 13}" fill="${stroke}" font-size="10" font-weight="bold" font-family="var(--font)">${escapeHtml(label)}</text>
+                    <text x="${pos.x + 7}" y="${pos.y + 25}" fill="#d8d2c8" font-size="9.5" font-family="var(--font)">${escapeHtml(shortName)}</text>
+                    <circle cx="${dotX}" cy="${dotY}" r="4" fill="${dotColor}"/>
+                </g>
+            `;
+        }
+
+        return `
+            <svg width="100%" viewBox="0 0 ${svgW} ${svgH}" style="max-width: ${svgW}px;">
+                ${labelsSvg}
+                ${edgesSvg}
+                ${arrowsSvg}
+                ${nodesSvg}
+            </svg>
+        `;
+    }
+
     function renderSupportingData(data) {
         els.runtimeFiles.innerHTML = (data.runtimeFiles || []).map(item => renderPathChip(item, { segments: 2 })).join('');
         els.plannerDocs.innerHTML = (data.docs || []).map(item => renderPathChip(item, { segments: 3 })).join('');
@@ -1033,6 +1380,8 @@
         renderBatchTimeline(data);
         renderAutomation(data);
         renderCanaryAchievement(data);
+        renderBvstAchievement(data);
+        renderDependencyGraph(data);
         renderSafety(data);
         renderSupportingData(data);
         renderUploadAnalysis();

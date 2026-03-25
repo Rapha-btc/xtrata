@@ -1,8 +1,8 @@
 {
-  "name": "BlueMarvinOne",
+  "name": "MinerTwo",
   "version": "1.0.0",
   "type": "Instrument",
-  "description": "ARP 2600 Emulation (Mk I) - 2 VCOs, 1 Envelope (shared unified engine/worklet).",
+  "description": "ARP 2600 Emulation (Mk II) - 3 VCOs, 2 Envelopes (shared unified engine/worklet).",
   "components": {
     "audio_engine": "../../../System/shared/bvst_unified_bg.wasm",
     "ui_html": "gui.html"

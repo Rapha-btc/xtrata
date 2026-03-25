@@ -1,11 +1,11 @@
 {
   "schema": "bvst.patch/v1",
   "meta": {
-    "name": "BlueMarvinTwo",
+    "name": "MinerTwo",
     "description": "ARP 2600-inspired poly synth (Mk II)."
   },
   "config": {
-    "name": "BlueMarvinTwo",
+    "name": "MinerTwo",
     "visualizer": "spectrum",
     "keyboard": { "startNote": 60, "numKeys": 25 },
     "modules": [

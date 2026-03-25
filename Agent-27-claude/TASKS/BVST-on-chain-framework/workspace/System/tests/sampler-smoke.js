@@ -113,7 +113,7 @@ const patch = {
     description: 'Deterministic sampler harness used by browser smoke tests.'
   },
   config: {
-    name: 'UniversalEngine',
+    name: 'BVSTEngine',
     visualizer: 'off',
     keyboard: false,
     sampler: {
@@ -165,10 +165,10 @@ const patch = {
 };
 
 const manifest = {
-  name: 'UniversalEngine',
+  name: 'BVSTEngine',
   version: '1.0.0',
   type: 'Instrument',
-  description: 'Standalone sampler smoke harness routed to the shared UniversalSynth engine.',
+  description: 'Standalone sampler smoke harness routed to the shared BVSTSynth engine.',
   components: {
     audio_engine: '../shared/bvst_unified_bg.wasm',
     ui_html: 'sampler-smoke.html'

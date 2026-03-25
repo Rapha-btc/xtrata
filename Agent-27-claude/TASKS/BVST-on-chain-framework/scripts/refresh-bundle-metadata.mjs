@@ -48,13 +48,13 @@ function buildLocalStatus(records) {
     staged_count: records.filter((record) => record.route === 'staged').length,
     total_bytes: records.reduce((sum, record) => sum + record.bytes, 0),
     first_wave_plugins: [
-      'UniversalSynth',
-      'UniversalEngine',
+      'BVSTSynth',
+      'BVSTEngine',
       'JMS10',
       'RetroKeys',
-      'BlueMarvinOne',
-      'BlueMarvinTwo',
-      'NeonPoly'
+      'MinerOne',
+      'MinerTwo',
+      'ChainPoly'
     ]
   };
 }

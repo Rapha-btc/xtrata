@@ -3,7 +3,7 @@
   "network_template": "on-chain-modules/configs/xtrata-network.template.json",
   "prerequisite_batches": [
     "10-foundation.batch.json",
-    "20-universalsynth-family.batch.json",
+    "20-bvstsynth-family.batch.json",
     "30-standalone-synths.batch.json"
   ],
   "chunk_size": 16384,
@@ -15,12 +15,12 @@
       "name": "bvst.catalog.release.firstwaveinstruments.v1",
       "path": "on-chain-modules/catalogs/releases/first-wave-instruments.catalog.json",
       "mime": "application/json",
-      "bytes": 1009,
+      "bytes": 985,
       "chunks": 1,
-      "sha256": "6bbdbce961136844816ef35e4c8d2779c65cfd246ef9778fd60efcad132b6b9f",
+      "sha256": "c3f1d3f7008f2ac3b530f7dd3c607ada93f9be2cc8dba19b9b4deee8caee7742",
       "route": "helper",
       "depends_on": [
-        "bvst.catalog.family.universalsynthfamily.v1",
+        "bvst.catalog.family.bvstsynthfamily.v1",
         "bvst.catalog.family.standalonesynths.v1"
       ]
     },

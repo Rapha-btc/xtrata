@@ -1,8 +1,8 @@
 {
-  "name": "UniversalEngine",
+  "name": "BVSTEngine",
   "version": "1.0.0",
   "type": "Instrument",
-  "description": "Reference template plugin routed to the shared UniversalSynth engine.",
+  "description": "Reference template plugin routed to the shared BVSTSynth engine.",
   "components": {
     "audio_engine": "../../../System/shared/bvst_unified_bg.wasm",
     "ui_html": "gui.html"

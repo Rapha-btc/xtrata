@@ -46,7 +46,7 @@ This keeps old plugin families stable even when v2 exists.
 Each release catalog assembles a compatible set of exact token IDs, such as:
 
 - `BVST Foundation Release 2026-04`
-- `UniversalSynth On-Chain Release 1.0.0`
+- `BVSTSynth On-Chain Release 1.0.0`
 - `Sampler Factory Pack Release 1.0.0`
 
 ### Layer 4: Leaf modules
@@ -70,7 +70,7 @@ root catalog
 |- foundation engine v1 catalog
 |- foundation schema v1 catalog
 `- plugin family catalog
-   `- UniversalSynth release 1.0.0 catalog
+   `- BVSTSynth release 1.0.0 catalog
       |- manifest token
       |- patch token
       |- preset token

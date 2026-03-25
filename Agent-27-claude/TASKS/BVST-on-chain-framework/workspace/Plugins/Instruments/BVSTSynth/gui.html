@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BVST Synth</title>
+    <style>
+        body { margin: 0; padding: 20px; background: #111; color: #eee; display: flex; justify-content: center; }
+        #app-container { width: 100%; max-width: 1000px; }
+    </style>
+</head>
+<body>
+    <div id="app-container"></div>
+
+    <script type="module">
+        (async () => {
+            const t = new URLSearchParams(location.search).get('t') || String(Date.now());
+            const cacheToken = encodeURIComponent(t);
+            const standaloneParam = (new URLSearchParams(location.search).get('standalone') || '').trim().toLowerCase();
+            const standalone =
+                standaloneParam === '1' ||
+                standaloneParam === 'true' ||
+                standaloneParam === 'yes' ||
+                window.parent === window;
+
+            const [{ runPatch }, { BVST }] = await Promise.all([
+                import(`../../../System/shared/patch_runtime.js?t=${cacheToken}`),
+                import(`../../../System/shared/plugin_core.js?t=${cacheToken}`)
+            ]);
+
+            const debugMessageTypes = new Set([
+                'BVST_READY',
+                'STATUS',
+                'ERROR',
+                'BVST_POWER',
+                'BVST_PARAM',
+                'NOTE_ON',
+                'NOTE_OFF'
+            ]);
+
+            const getSequencerState = () => {
+                const sequencer = BVST.sequencer || null;
+                const steps = sequencer && sequencer.ui && Array.isArray(sequencer.ui.steps) ? sequencer.ui.steps : null;
+                return {
+                    isPlaying: !!(sequencer && sequencer.isPlaying),
+                    currentStep: sequencer && Number.isFinite(sequencer.currentStep) ? sequencer.currentStep : null,
+                    activeSteps: steps ? steps.filter((step) => step && step.active).length : null
+                };
+            };
+
+            const getRuntimeState = () => ({
+                audioState: BVST.audioContext ? BVST.audioContext.state : 'missing',
+                bridgeReady: !!(BVST.standaloneBridge && BVST.standaloneBridge._ready),
+                queuedMessages:
+                    BVST.standaloneBridge && Array.isArray(BVST.standaloneBridge._queuedMessages)
+                        ? BVST.standaloneBridge._queuedMessages.length
+                        : null,
+                ...getSequencerState()
+            });
+
+            const debugLog = (label, detail) => {
+                const payload = getRuntimeState();
+                if (detail !== undefined) payload.detail = detail;
+                console.info('[BVSTSynth debug]', label, payload);
+            };
+
+            const installMessageDebug = () => {
+                if (window.__bvstBVSTSynthDebugInstalled) return;
+                window.__bvstBVSTSynthDebugInstalled = true;
+
+                if (standalone && window.parent === window && !window.__bvstBVSTSynthPostMessageWrapped) {
+                    try {
+                        const originalPostMessage = window.postMessage.bind(window);
+                        window.postMessage = function(message, targetOrigin, transfer) {
+                            if (message && typeof message.type === 'string') {
+                                debugLog(`postMessage:${message.type}`, message);
+                            }
+                            if (transfer === undefined) return originalPostMessage(message, targetOrigin);
+                            return originalPostMessage(message, targetOrigin, transfer);
+                        };
+                        window.__bvstBVSTSynthPostMessageWrapped = true;
+                    } catch (_) {}
+                }
+
+                window.addEventListener('message', (event) => {
+                    const data = event && event.data ? event.data : null;
+                    if (!data || typeof data.type !== 'string' || !debugMessageTypes.has(data.type)) return;
+                    debugLog(`message:${data.type}`, data);
+                }, { capture: true });
+            };
+
+            const installStateDebug = () => {
+                if (document.documentElement.dataset.bvstBVSTSynthStateDebug === '1') return;
+                document.documentElement.dataset.bvstBVSTSynthStateDebug = '1';
+
+                let lastSignature = '';
+                const observer = new MutationObserver(() => {
+                    const root = document.documentElement;
+                    const detail = root.dataset.bvstDetail || root.dataset.bvstError || '';
+                    const signature = `${root.dataset.bvstState || ''}|${root.dataset.bvstReady || ''}|${detail}`;
+                    if (signature === lastSignature) return;
+                    lastSignature = signature;
+                    debugLog('root-state', {
+                        state: root.dataset.bvstState || '',
+                        ready: root.dataset.bvstReady || '',
+                        detail
+                    });
+                });
+
+                observer.observe(document.documentElement, {
+                    attributes: true,
+                    attributeFilter: ['data-bvst-state', 'data-bvst-ready', 'data-bvst-detail', 'data-bvst-error']
+                });
+            };
+
+            const installActionDebug = () => {
+                const appRoot = document.getElementById('bvst-app-root');
+                if (!appRoot) return;
+
+                const bindButton = (id, label, detailBuilder = null) => {
+                    const element = document.getElementById(id);
+                    if (!element || element.dataset.debugBound === '1') return;
+                    element.dataset.debugBound = '1';
+                    element.addEventListener('pointerdown', () => {
+                        debugLog(`${label}:pointerdown`, detailBuilder ? detailBuilder() : undefined);
+                    }, { capture: true });
+                    element.addEventListener('click', () => {
+                        debugLog(`${label}:click`, detailBuilder ? detailBuilder() : undefined);
+                    });
+                };
+
+                bindButton('btn-power', 'button:power');
+                bindButton('btn-play', 'button:play', () => getSequencerState());
+                bindButton('btn-stop', 'button:stop', () => getSequencerState());
+
+                const presetSelector = document.getElementById('preset-selector');
+                if (presetSelector && presetSelector.dataset.debugBound !== '1') {
+                    presetSelector.dataset.debugBound = '1';
+                    presetSelector.addEventListener('change', () => {
+                        debugLog('preset:change', { preset: presetSelector.value });
+                    });
+                }
+
+                const piano = document.getElementById('piano');
+                if (piano && piano.dataset.debugBound !== '1') {
+                    piano.dataset.debugBound = '1';
+                    piano.addEventListener('pointerdown', (event) => {
+                        const key = event.target.closest('.key');
+                        if (!key) return;
+                        debugLog('keyboard:pointerdown', { midi: Number(key.dataset.midi) });
+                    }, { capture: true });
+                    piano.addEventListener('pointerup', (event) => {
+                        const key = event.target.closest('.key');
+                        if (!key) return;
+                        debugLog('keyboard:pointerup', { midi: Number(key.dataset.midi) });
+                    }, { capture: true });
+                }
+
+                if (appRoot.dataset.debugBound !== '1') {
+                    appRoot.dataset.debugBound = '1';
+
+                    appRoot.addEventListener('click', (event) => {
+                        const stepButton = event.target.closest('.step-col .seq-btn');
+                        if (!stepButton) return;
+
+                        const stepCol = stepButton.closest('.step-col');
+                        const stepIndex =
+                            stepCol && stepCol.parentElement
+                                ? Array.from(stepCol.parentElement.children).indexOf(stepCol)
+                                : null;
+                        const note = stepCol ? (stepCol.querySelector('.note-select') || {}).value || null : null;
+                        const lane = stepButton.classList.contains('accent')
+                            ? 'accent'
+                            : stepButton.classList.contains('slide')
+                                ? 'slide'
+                                : 'active';
+
+                        debugLog(`step:${lane}:click`, {
+                            stepIndex,
+                            note,
+                            nextValue: !stepButton.classList.contains('active')
+                        });
+                    }, { capture: true });
+
+                    appRoot.addEventListener('change', (event) => {
+                        const noteSelect = event.target.closest('.note-select');
+                        if (!noteSelect) return;
+
+                        const stepCol = noteSelect.closest('.step-col');
+                        const stepIndex =
+                            stepCol && stepCol.parentElement
+                                ? Array.from(stepCol.parentElement.children).indexOf(stepCol)
+                                : null;
+
+                        debugLog('step:note:change', {
+                            stepIndex,
+                            note: noteSelect.value
+                        });
+                    }, { capture: true });
+                }
+            };
+
+            const resumeStandaloneAudio = async (reason = 'unknown') => {
+                debugLog('audio:resume:requested', { reason });
+                try {
+                    if (BVST.audioContext && BVST.audioContext.state === 'suspended') {
+                        await BVST.audioContext.resume();
+                    }
+                } catch (_) {}
+
+                try {
+                    if (BVST.standaloneBridge && typeof BVST.standaloneBridge.resume === 'function') {
+                        await BVST.standaloneBridge.resume();
+                    }
+                } catch (_) {}
+                debugLog('audio:resume:complete', { reason });
+            };
+
+            const installStandaloneGuards = () => {
+                if (!standalone) return;
+
+                const appRoot = document.getElementById('bvst-app-root');
+                const powerButton = document.getElementById('btn-power');
+                const playButton = document.getElementById('btn-play');
+                if (!appRoot || !powerButton) return;
+
+                let powerLatched = false;
+                let unlockArmed = true;
+
+                const syncPowerVisual = () => {
+                    powerButton.dataset.value = powerLatched ? '1' : '0';
+                    powerButton.dataset.val = powerLatched ? '1' : '0';
+                    powerButton.classList.toggle('active', powerLatched);
+                    powerButton.setAttribute('aria-pressed', powerLatched ? 'true' : 'false');
+                };
+
+                const unlockAudio = (reason = 'unlock') => {
+                    void resumeStandaloneAudio(reason);
+                    if (!powerLatched) {
+                        powerLatched = true;
+                        syncPowerVisual();
+                    }
+                    debugLog('audio:unlock', { reason, powerLatched });
+                };
+
+                const gestureUnlock = (event) => {
+                    if (event && event.target && typeof event.target.closest === 'function' && event.target.closest('#btn-power')) {
+                        return;
+                    }
+                    if (!unlockArmed) return;
+                    unlockArmed = false;
+                    debugLog('gesture:unlock', {
+                        source: event && event.type ? event.type : 'unknown',
+                        targetId: event && event.target && event.target.id ? event.target.id : ''
+                    });
+                    unlockAudio(event && event.type ? event.type : 'gesture');
+                };
+
+                powerButton.addEventListener('click', () => {
+                    powerLatched = !powerLatched;
+                    debugLog('button:power:latch', { powerLatched });
+                    if (powerLatched) {
+                        unlockArmed = false;
+                        unlockAudio('power-click');
+                    } else {
+                        syncPowerVisual();
+                    }
+                });
+
+                if (playButton) {
+                    playButton.addEventListener('pointerdown', gestureUnlock, { capture: true });
+                    playButton.addEventListener('click', () => unlockAudio('play-click'));
+                }
+
+                appRoot.addEventListener('pointerdown', gestureUnlock, { capture: true });
+                window.addEventListener('keydown', gestureUnlock, { capture: true });
+
+                const powerObserver = new MutationObserver(() => {
+                    if (powerLatched && !powerButton.classList.contains('active')) {
+                        syncPowerVisual();
+                    }
+                });
+                powerObserver.observe(powerButton, {
+                    attributes: true,
+                    attributeFilter: ['class', 'data-value', 'data-val']
+                });
+
+                syncPowerVisual();
+            };
+
+            installMessageDebug();
+            installStateDebug();
+            debugLog('boot', { standalone, cacheToken: t });
+
+            await runPatch({
+                patchUrl: `./patch.json?t=${cacheToken}`,
+                containerId: 'app-container'
+            });
+
+            debugLog('patch-mounted');
+            installStandaloneGuards();
+            installActionDebug();
+            debugLog('debug-installed');
+        })();
+    </script>
+</body>
+</html>

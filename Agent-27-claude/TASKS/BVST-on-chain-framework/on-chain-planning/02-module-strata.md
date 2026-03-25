@@ -58,8 +58,8 @@ Use names that encode layer, role, and version:
 - `bvst.runtime.plugin-core.v1.0.0`
 - `bvst.engine.unified-wasm.v1.0.0`
 - `bvst.schema.patch.v1`
-- `bvst.plugin.universalsynth.manifest.v1.2.0`
-- `bvst.plugin.universalsynth.patch.v1.2.0`
+- `bvst.plugin.bvstsynth.manifest.v1.2.0`
+- `bvst.plugin.bvstsynth.patch.v1.2.0`
 - `bvst.asset.cosmosampler.factory-pack.v1`
 
 Keep the human-readable name stable even though the real dependency points to immutable token IDs.

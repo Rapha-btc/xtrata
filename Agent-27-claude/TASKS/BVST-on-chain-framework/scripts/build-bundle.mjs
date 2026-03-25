@@ -262,16 +262,16 @@ const foundationModules = [
 
 const firstWaveFamilies = [
   {
-    key: 'universalsynth-family',
-    title: 'UniversalSynth Family',
-    description: 'Patch-defined instruments sharing the UniversalSynth engine path.',
-    plugins: ['UniversalSynth', 'UniversalEngine', 'JMS10']
+    key: 'bvstsynth-family',
+    title: 'BVSTSynth Family',
+    description: 'Patch-defined instruments sharing the BVSTSynth engine path.',
+    plugins: ['BVSTSynth', 'BVSTEngine', 'JMS10']
   },
   {
     key: 'standalone-synths',
     title: 'Standalone Synth Engines',
     description: 'Dedicated synth engines already behaving well in standalone mode.',
-    plugins: ['RetroKeys', 'BlueMarvinOne', 'BlueMarvinTwo', 'NeonPoly']
+    plugins: ['RetroKeys', 'MinerOne', 'MinerTwo', 'ChainPoly']
   }
 ];
 
@@ -458,7 +458,7 @@ async function buildLeafRecords(sourceRoot) {
         runtimeMajor: 1,
         engineMajor: 1,
         schemaMajor: 1,
-        orderHint: family.key === 'universalsynth-family' ? 230 : 330
+        orderHint: family.key === 'bvstsynth-family' ? 230 : 330
       };
 
       const pluginDefs = [
@@ -661,7 +661,7 @@ function buildCatalogDefinitions(leafRecords) {
             'bvst.catalog.engine.v1',
             'bvst.catalog.schema.v1'
           ],
-          orderHint: family.key === 'universalsynth-family' ? 240 : 340,
+          orderHint: family.key === 'bvstsynth-family' ? 240 : 340,
           notes: `${pluginName} release catalog pinned to foundation v1.`
         },
         {
@@ -702,7 +702,7 @@ function buildCatalogDefinitions(leafRecords) {
         engineMajor: 1,
         schemaMajor: 1,
         dependsOn: familyReleaseNames,
-        orderHint: family.key === 'universalsynth-family' ? 250 : 350,
+        orderHint: family.key === 'bvstsynth-family' ? 250 : 350,
         notes: `${family.title} family catalog.`
       },
       {
@@ -790,7 +790,7 @@ function buildSelectionConfig() {
   return {
     release_scope: 'first-wave-instruments',
     rationale: [
-      'UniversalSynth family maximizes recursive reuse because the engine is already shared.',
+      'BVSTSynth family maximizes recursive reuse because the engine is already shared.',
       'Dedicated standalone synths provide clear canaries for future engine-specific releases.',
       'Sequencer-heavy and sampler-heavy instruments are deferred until later waves.'
     ],
@@ -838,7 +838,7 @@ async function writeSupportFiles(allRecords) {
 async function writeBatches(allRecords) {
   const ordered = topoSort(allRecords);
   const byName = new Map(ordered.map((record) => [record.name, record]));
-  const universalsynthPluginNames = new Set(firstWaveFamilies[0].plugins);
+  const bvstsynthPluginNames = new Set(firstWaveFamilies[0].plugins);
   const standalonePluginNames = new Set(firstWaveFamilies[1].plugins);
 
   const foundationNames = ordered
@@ -859,7 +859,7 @@ async function writeBatches(allRecords) {
       )
       .map((record) => record.name);
 
-  const universalsynthNames = familyBatchNames(universalsynthPluginNames, 'universalsynth-family');
+  const bvstsynthNames = familyBatchNames(bvstsynthPluginNames, 'bvstsynth-family');
   const standaloneNames = familyBatchNames(standalonePluginNames, 'standalone-synths');
   const releaseRootNames = ['bvst.catalog.release.firstwaveinstruments.v1', 'bvst.catalog.root.v1'];
 
@@ -888,8 +888,8 @@ async function writeBatches(allRecords) {
 
   await writeJson('batches/10-foundation.batch.json', makeBatch('bvst-foundation-v1', foundationNames));
   await writeJson(
-    'batches/20-universalsynth-family.batch.json',
-    makeBatch('bvst-universalsynth-family-v1', universalsynthNames, ['10-foundation.batch.json'])
+    'batches/20-bvstsynth-family.batch.json',
+    makeBatch('bvst-bvstsynth-family-v1', bvstsynthNames, ['10-foundation.batch.json'])
   );
   await writeJson(
     'batches/30-standalone-synths.batch.json',
@@ -897,7 +897,7 @@ async function writeBatches(allRecords) {
   );
   await writeJson(
     'batches/40-root-catalogs.batch.json',
-    makeBatch('bvst-root-catalogs-v1', releaseRootNames, ['10-foundation.batch.json', '20-universalsynth-family.batch.json', '30-standalone-synths.batch.json'])
+    makeBatch('bvst-root-catalogs-v1', releaseRootNames, ['10-foundation.batch.json', '20-bvstsynth-family.batch.json', '30-standalone-synths.batch.json'])
   );
   await writeJson(
     'batches/99-master-release.batch.json',
@@ -939,7 +939,7 @@ async function writeVerificationFiles(allRecords) {
   await writeJson('verification/release-index.json', {
     foundation_catalog: 'bvst.catalog.foundation.v1',
     family_catalogs: [
-      'bvst.catalog.family.universalsynthfamily.v1',
+      'bvst.catalog.family.bvstsynthfamily.v1',
       'bvst.catalog.family.standalonesynths.v1'
     ],
     first_wave_release_catalog: 'bvst.catalog.release.firstwaveinstruments.v1',

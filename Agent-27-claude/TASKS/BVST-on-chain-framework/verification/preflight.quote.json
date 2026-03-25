@@ -22,8 +22,8 @@
         "bytes": 303917
       },
       {
-        "file": "20-universalsynth-family.batch.json",
-        "release": "bvst-universalsynth-family-v1",
+        "file": "20-bvstsynth-family.batch.json",
+        "release": "bvst-bvstsynth-family-v1",
         "artifactCount": 13,
         "bytes": 26278
       },
@@ -422,8 +422,8 @@
         }
       },
       {
-        "batch": "20-universalsynth-family.batch.json",
-        "release": "bvst-universalsynth-family-v1",
+        "batch": "20-bvstsynth-family.batch.json",
+        "release": "bvst-bvstsynth-family-v1",
         "order": 10,
         "name": "bvst.plugin.jms10.manifest.v1.0.0",
         "kind": "leaf",
@@ -436,8 +436,8 @@
         "template": null
       },
       {
-        "batch": "20-universalsynth-family.batch.json",
-        "release": "bvst-universalsynth-family-v1",
+        "batch": "20-bvstsynth-family.batch.json",
+        "release": "bvst-bvstsynth-family-v1",
         "order": 20,
         "name": "bvst.plugin.jms10.patch.v1.0.0",
         "kind": "leaf",
@@ -452,8 +452,8 @@
         "template": null
       },
       {
-        "batch": "20-universalsynth-family.batch.json",
-        "release": "bvst-universalsynth-family-v1",
+        "batch": "20-bvstsynth-family.batch.json",
+        "release": "bvst-bvstsynth-family-v1",
         "order": 30,
         "name": "bvst.plugin.jms10.shell.v1.0.0",
         "kind": "leaf",
@@ -470,29 +470,29 @@
         "template": null
       },
       {
-        "batch": "20-universalsynth-family.batch.json",
-        "release": "bvst-universalsynth-family-v1",
+        "batch": "20-bvstsynth-family.batch.json",
+        "release": "bvst-bvstsynth-family-v1",
         "order": 40,
-        "name": "bvst.plugin.universalengine.manifest.v1.0.0",
+        "name": "bvst.plugin.bvstengine.manifest.v1.0.0",
         "kind": "leaf",
         "route": "helper",
         "bytes": 334,
         "chunks": 1,
-        "bundlePath": "on-chain-modules/workspace/Plugins/Instruments/UniversalEngine/manifest.json",
+        "bundlePath": "on-chain-modules/workspace/Plugins/Instruments/BVSTEngine/manifest.json",
         "dependsOn": [],
         "needsRenderedCopy": false,
         "template": null
       },
       {
-        "batch": "20-universalsynth-family.batch.json",
-        "release": "bvst-universalsynth-family-v1",
+        "batch": "20-bvstsynth-family.batch.json",
+        "release": "bvst-bvstsynth-family-v1",
         "order": 50,
-        "name": "bvst.plugin.universalengine.patch.v1.0.0",
+        "name": "bvst.plugin.bvstengine.patch.v1.0.0",
         "kind": "leaf",
         "route": "helper",
         "bytes": 1970,
         "chunks": 1,
-        "bundlePath": "on-chain-modules/workspace/Plugins/Instruments/UniversalEngine/patch.json",
+        "bundlePath": "on-chain-modules/workspace/Plugins/Instruments/BVSTEngine/patch.json",
         "dependsOn": [
           "bvst.schema.patch.v1"
         ],
@@ -500,47 +500,47 @@
         "template": null
       },
       {
-        "batch": "20-universalsynth-family.batch.json",
-        "release": "bvst-universalsynth-family-v1",
+        "batch": "20-bvstsynth-family.batch.json",
+        "release": "bvst-bvstsynth-family-v1",
         "order": 60,
-        "name": "bvst.plugin.universalengine.shell.v1.0.0",
+        "name": "bvst.plugin.bvstengine.shell.v1.0.0",
         "kind": "leaf",
         "route": "helper",
         "bytes": 836,
         "chunks": 1,
-        "bundlePath": "on-chain-modules/workspace/Plugins/Instruments/UniversalEngine/gui.html",
+        "bundlePath": "on-chain-modules/workspace/Plugins/Instruments/BVSTEngine/gui.html",
         "dependsOn": [
           "bvst.runtime.patch-runtime.v1.0.0",
-          "bvst.plugin.universalengine.manifest.v1.0.0",
-          "bvst.plugin.universalengine.patch.v1.0.0"
+          "bvst.plugin.bvstengine.manifest.v1.0.0",
+          "bvst.plugin.bvstengine.patch.v1.0.0"
         ],
         "needsRenderedCopy": false,
         "template": null
       },
       {
-        "batch": "20-universalsynth-family.batch.json",
-        "release": "bvst-universalsynth-family-v1",
+        "batch": "20-bvstsynth-family.batch.json",
+        "release": "bvst-bvstsynth-family-v1",
         "order": 70,
-        "name": "bvst.plugin.universalsynth.manifest.v1.0.13",
+        "name": "bvst.plugin.bvstsynth.manifest.v1.0.13",
         "kind": "leaf",
         "route": "helper",
         "bytes": 402,
         "chunks": 1,
-        "bundlePath": "on-chain-modules/workspace/Plugins/Instruments/UniversalSynth/manifest.json",
+        "bundlePath": "on-chain-modules/workspace/Plugins/Instruments/BVSTSynth/manifest.json",
         "dependsOn": [],
         "needsRenderedCopy": false,
         "template": null
       },
       {
-        "batch": "20-universalsynth-family.batch.json",
-        "release": "bvst-universalsynth-family-v1",
+        "batch": "20-bvstsynth-family.batch.json",
+        "release": "bvst-bvstsynth-family-v1",
         "order": 80,
-        "name": "bvst.plugin.universalsynth.patch.v1.0.13",
+        "name": "bvst.plugin.bvstsynth.patch.v1.0.13",
         "kind": "leaf",
         "route": "helper",
         "bytes": 9259,
         "chunks": 1,
-        "bundlePath": "on-chain-modules/workspace/Plugins/Instruments/UniversalSynth/patch.json",
+        "bundlePath": "on-chain-modules/workspace/Plugins/Instruments/BVSTSynth/patch.json",
         "dependsOn": [
           "bvst.schema.patch.v1"
         ],
@@ -548,33 +548,33 @@
         "template": null
       },
       {
-        "batch": "20-universalsynth-family.batch.json",
-        "release": "bvst-universalsynth-family-v1",
+        "batch": "20-bvstsynth-family.batch.json",
+        "release": "bvst-bvstsynth-family-v1",
         "order": 90,
-        "name": "bvst.plugin.universalsynth.shell.v1.0.13",
+        "name": "bvst.plugin.bvstsynth.shell.v1.0.13",
         "kind": "leaf",
         "route": "helper",
         "bytes": 837,
         "chunks": 1,
-        "bundlePath": "on-chain-modules/workspace/Plugins/Instruments/UniversalSynth/gui.html",
+        "bundlePath": "on-chain-modules/workspace/Plugins/Instruments/BVSTSynth/gui.html",
         "dependsOn": [
           "bvst.runtime.patch-runtime.v1.0.0",
-          "bvst.plugin.universalsynth.manifest.v1.0.13",
-          "bvst.plugin.universalsynth.patch.v1.0.13"
+          "bvst.plugin.bvstsynth.manifest.v1.0.13",
+          "bvst.plugin.bvstsynth.patch.v1.0.13"
         ],
         "needsRenderedCopy": false,
         "template": null
       },
       {
-        "batch": "20-universalsynth-family.batch.json",
-        "release": "bvst-universalsynth-family-v1",
+        "batch": "20-bvstsynth-family.batch.json",
+        "release": "bvst-bvstsynth-family-v1",
         "order": 100,
         "name": "bvst.plugin.jms10.release.v1.0.0",
         "kind": "catalog",
         "route": "helper",
         "bytes": 1720,
         "chunks": 1,
-        "bundlePath": "on-chain-modules/catalogs/plugins/universalsynth-family/jms10.release.catalog.json",
+        "bundlePath": "on-chain-modules/catalogs/plugins/bvstsynth-family/jms10.release.catalog.json",
         "dependsOn": [
           "bvst.plugin.jms10.manifest.v1.0.0",
           "bvst.plugin.jms10.patch.v1.0.0",
@@ -608,19 +608,19 @@
         }
       },
       {
-        "batch": "20-universalsynth-family.batch.json",
-        "release": "bvst-universalsynth-family-v1",
+        "batch": "20-bvstsynth-family.batch.json",
+        "release": "bvst-bvstsynth-family-v1",
         "order": 110,
-        "name": "bvst.plugin.universalengine.release.v1.0.0",
+        "name": "bvst.plugin.bvstengine.release.v1.0.0",
         "kind": "catalog",
         "route": "helper",
         "bytes": 1800,
         "chunks": 1,
-        "bundlePath": "on-chain-modules/catalogs/plugins/universalsynth-family/universalengine.release.catalog.json",
+        "bundlePath": "on-chain-modules/catalogs/plugins/bvstsynth-family/bvstengine.release.catalog.json",
         "dependsOn": [
-          "bvst.plugin.universalengine.manifest.v1.0.0",
-          "bvst.plugin.universalengine.patch.v1.0.0",
-          "bvst.plugin.universalengine.shell.v1.0.0",
+          "bvst.plugin.bvstengine.manifest.v1.0.0",
+          "bvst.plugin.bvstengine.patch.v1.0.0",
+          "bvst.plugin.bvstengine.shell.v1.0.0",
           "bvst.catalog.runtime.v1",
           "bvst.catalog.engine.v1",
           "bvst.catalog.schema.v1"
@@ -650,19 +650,19 @@
         }
       },
       {
-        "batch": "20-universalsynth-family.batch.json",
-        "release": "bvst-universalsynth-family-v1",
+        "batch": "20-bvstsynth-family.batch.json",
+        "release": "bvst-bvstsynth-family-v1",
         "order": 120,
-        "name": "bvst.plugin.universalsynth.release.v1.0.13",
+        "name": "bvst.plugin.bvstsynth.release.v1.0.13",
         "kind": "catalog",
         "route": "helper",
         "bytes": 1796,
         "chunks": 1,
-        "bundlePath": "on-chain-modules/catalogs/plugins/universalsynth-family/universalsynth.release.catalog.json",
+        "bundlePath": "on-chain-modules/catalogs/plugins/bvstsynth-family/bvstsynth.release.catalog.json",
         "dependsOn": [
-          "bvst.plugin.universalsynth.manifest.v1.0.13",
-          "bvst.plugin.universalsynth.patch.v1.0.13",
-          "bvst.plugin.universalsynth.shell.v1.0.13",
+          "bvst.plugin.bvstsynth.manifest.v1.0.13",
+          "bvst.plugin.bvstsynth.patch.v1.0.13",
+          "bvst.plugin.bvstsynth.shell.v1.0.13",
           "bvst.catalog.runtime.v1",
           "bvst.catalog.engine.v1",
           "bvst.catalog.schema.v1"
@@ -692,18 +692,18 @@
         }
       },
       {
-        "batch": "20-universalsynth-family.batch.json",
-        "release": "bvst-universalsynth-family-v1",
+        "batch": "20-bvstsynth-family.batch.json",
+        "release": "bvst-bvstsynth-family-v1",
         "order": 130,
-        "name": "bvst.catalog.family.universalsynthfamily.v1",
+        "name": "bvst.catalog.family.bvstsynthfamily.v1",
         "kind": "catalog",
         "route": "helper",
         "bytes": 563,
         "chunks": 1,
-        "bundlePath": "on-chain-modules/catalogs/families/universalsynth-family.catalog.json",
+        "bundlePath": "on-chain-modules/catalogs/families/bvstsynth-family.catalog.json",
         "dependsOn": [
-          "bvst.plugin.universalsynth.release.v1.0.13",
-          "bvst.plugin.universalengine.release.v1.0.0",
+          "bvst.plugin.bvstsynth.release.v1.0.13",
+          "bvst.plugin.bvstengine.release.v1.0.0",
           "bvst.plugin.jms10.release.v1.0.0"
         ],
         "needsRenderedCopy": true,
@@ -717,12 +717,12 @@
         "batch": "30-standalone-synths.batch.json",
         "release": "bvst-standalone-synths-v1",
         "order": 10,
-        "name": "bvst.plugin.bluemarvinone.manifest.v1.0.0",
+        "name": "bvst.plugin.minerone.manifest.v1.0.0",
         "kind": "leaf",
         "route": "helper",
         "bytes": 342,
         "chunks": 1,
-        "bundlePath": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinOne/manifest.json",
+        "bundlePath": "on-chain-modules/workspace/Plugins/Instruments/MinerOne/manifest.json",
         "dependsOn": [],
         "needsRenderedCopy": false,
         "template": null
@@ -731,12 +731,12 @@
         "batch": "30-standalone-synths.batch.json",
         "release": "bvst-standalone-synths-v1",
         "order": 20,
-        "name": "bvst.plugin.bluemarvinone.patch.v1.0.0",
+        "name": "bvst.plugin.minerone.patch.v1.0.0",
         "kind": "leaf",
         "route": "helper",
         "bytes": 4268,
         "chunks": 1,
-        "bundlePath": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinOne/patch.json",
+        "bundlePath": "on-chain-modules/workspace/Plugins/Instruments/MinerOne/patch.json",
         "dependsOn": [
           "bvst.schema.patch.v1"
         ],
@@ -747,16 +747,16 @@
         "batch": "30-standalone-synths.batch.json",
         "release": "bvst-standalone-synths-v1",
         "order": 30,
-        "name": "bvst.plugin.bluemarvinone.shell.v1.0.0",
+        "name": "bvst.plugin.minerone.shell.v1.0.0",
         "kind": "leaf",
         "route": "helper",
         "bytes": 833,
         "chunks": 1,
-        "bundlePath": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinOne/gui.html",
+        "bundlePath": "on-chain-modules/workspace/Plugins/Instruments/MinerOne/gui.html",
         "dependsOn": [
           "bvst.runtime.patch-runtime.v1.0.0",
-          "bvst.plugin.bluemarvinone.manifest.v1.0.0",
-          "bvst.plugin.bluemarvinone.patch.v1.0.0"
+          "bvst.plugin.minerone.manifest.v1.0.0",
+          "bvst.plugin.minerone.patch.v1.0.0"
         ],
         "needsRenderedCopy": false,
         "template": null
@@ -765,12 +765,12 @@
         "batch": "30-standalone-synths.batch.json",
         "release": "bvst-standalone-synths-v1",
         "order": 40,
-        "name": "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
+        "name": "bvst.plugin.minertwo.manifest.v1.0.0",
         "kind": "leaf",
         "route": "helper",
         "bytes": 344,
         "chunks": 1,
-        "bundlePath": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinTwo/manifest.json",
+        "bundlePath": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/manifest.json",
         "dependsOn": [],
         "needsRenderedCopy": false,
         "template": null
@@ -779,12 +779,12 @@
         "batch": "30-standalone-synths.batch.json",
         "release": "bvst-standalone-synths-v1",
         "order": 50,
-        "name": "bvst.plugin.bluemarvintwo.patch.v1.0.0",
+        "name": "bvst.plugin.minertwo.patch.v1.0.0",
         "kind": "leaf",
         "route": "helper",
         "bytes": 7067,
         "chunks": 1,
-        "bundlePath": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinTwo/patch.json",
+        "bundlePath": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/patch.json",
         "dependsOn": [
           "bvst.schema.patch.v1"
         ],
@@ -795,16 +795,16 @@
         "batch": "30-standalone-synths.batch.json",
         "release": "bvst-standalone-synths-v1",
         "order": 60,
-        "name": "bvst.plugin.bluemarvintwo.shell.v1.0.0",
+        "name": "bvst.plugin.minertwo.shell.v1.0.0",
         "kind": "leaf",
         "route": "helper",
         "bytes": 834,
         "chunks": 1,
-        "bundlePath": "on-chain-modules/workspace/Plugins/Instruments/BlueMarvinTwo/gui.html",
+        "bundlePath": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/gui.html",
         "dependsOn": [
           "bvst.runtime.patch-runtime.v1.0.0",
-          "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
-          "bvst.plugin.bluemarvintwo.patch.v1.0.0"
+          "bvst.plugin.minertwo.manifest.v1.0.0",
+          "bvst.plugin.minertwo.patch.v1.0.0"
         ],
         "needsRenderedCopy": false,
         "template": null
@@ -813,12 +813,12 @@
         "batch": "30-standalone-synths.batch.json",
         "release": "bvst-standalone-synths-v1",
         "order": 70,
-        "name": "bvst.plugin.neonpoly.manifest.v1.0.0",
+        "name": "bvst.plugin.chainpoly.manifest.v1.0.0",
         "kind": "leaf",
         "route": "helper",
         "bytes": 356,
         "chunks": 1,
-        "bundlePath": "on-chain-modules/workspace/Plugins/Instruments/NeonPoly/manifest.json",
+        "bundlePath": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/manifest.json",
         "dependsOn": [],
         "needsRenderedCopy": false,
         "template": null
@@ -827,12 +827,12 @@
         "batch": "30-standalone-synths.batch.json",
         "release": "bvst-standalone-synths-v1",
         "order": 80,
-        "name": "bvst.plugin.neonpoly.patch.v1.0.0",
+        "name": "bvst.plugin.chainpoly.patch.v1.0.0",
         "kind": "leaf",
         "route": "helper",
         "bytes": 4620,
         "chunks": 1,
-        "bundlePath": "on-chain-modules/workspace/Plugins/Instruments/NeonPoly/patch.json",
+        "bundlePath": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/patch.json",
         "dependsOn": [
           "bvst.schema.patch.v1"
         ],
@@ -843,16 +843,16 @@
         "batch": "30-standalone-synths.batch.json",
         "release": "bvst-standalone-synths-v1",
         "order": 90,
-        "name": "bvst.plugin.neonpoly.shell.v1.0.0",
+        "name": "bvst.plugin.chainpoly.shell.v1.0.0",
         "kind": "leaf",
         "route": "helper",
         "bytes": 834,
         "chunks": 1,
-        "bundlePath": "on-chain-modules/workspace/Plugins/Instruments/NeonPoly/gui.html",
+        "bundlePath": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/gui.html",
         "dependsOn": [
           "bvst.runtime.patch-runtime.v1.0.0",
-          "bvst.plugin.neonpoly.manifest.v1.0.0",
-          "bvst.plugin.neonpoly.patch.v1.0.0"
+          "bvst.plugin.chainpoly.manifest.v1.0.0",
+          "bvst.plugin.chainpoly.patch.v1.0.0"
         ],
         "needsRenderedCopy": false,
         "template": null
@@ -909,16 +909,16 @@
         "batch": "30-standalone-synths.batch.json",
         "release": "bvst-standalone-synths-v1",
         "order": 130,
-        "name": "bvst.plugin.bluemarvinone.release.v1.0.0",
+        "name": "bvst.plugin.minerone.release.v1.0.0",
         "kind": "catalog",
         "route": "helper",
         "bytes": 1780,
         "chunks": 1,
-        "bundlePath": "on-chain-modules/catalogs/plugins/standalone-synths/bluemarvinone.release.catalog.json",
+        "bundlePath": "on-chain-modules/catalogs/plugins/standalone-synths/minerone.release.catalog.json",
         "dependsOn": [
-          "bvst.plugin.bluemarvinone.manifest.v1.0.0",
-          "bvst.plugin.bluemarvinone.patch.v1.0.0",
-          "bvst.plugin.bluemarvinone.shell.v1.0.0",
+          "bvst.plugin.minerone.manifest.v1.0.0",
+          "bvst.plugin.minerone.patch.v1.0.0",
+          "bvst.plugin.minerone.shell.v1.0.0",
           "bvst.catalog.runtime.v1",
           "bvst.catalog.engine.v1",
           "bvst.catalog.schema.v1"
@@ -951,16 +951,16 @@
         "batch": "30-standalone-synths.batch.json",
         "release": "bvst-standalone-synths-v1",
         "order": 140,
-        "name": "bvst.plugin.bluemarvintwo.release.v1.0.0",
+        "name": "bvst.plugin.minertwo.release.v1.0.0",
         "kind": "catalog",
         "route": "helper",
         "bytes": 1780,
         "chunks": 1,
-        "bundlePath": "on-chain-modules/catalogs/plugins/standalone-synths/bluemarvintwo.release.catalog.json",
+        "bundlePath": "on-chain-modules/catalogs/plugins/standalone-synths/minertwo.release.catalog.json",
         "dependsOn": [
-          "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
-          "bvst.plugin.bluemarvintwo.patch.v1.0.0",
-          "bvst.plugin.bluemarvintwo.shell.v1.0.0",
+          "bvst.plugin.minertwo.manifest.v1.0.0",
+          "bvst.plugin.minertwo.patch.v1.0.0",
+          "bvst.plugin.minertwo.shell.v1.0.0",
           "bvst.catalog.runtime.v1",
           "bvst.catalog.engine.v1",
           "bvst.catalog.schema.v1"
@@ -993,16 +993,16 @@
         "batch": "30-standalone-synths.batch.json",
         "release": "bvst-standalone-synths-v1",
         "order": 150,
-        "name": "bvst.plugin.neonpoly.release.v1.0.0",
+        "name": "bvst.plugin.chainpoly.release.v1.0.0",
         "kind": "catalog",
         "route": "helper",
         "bytes": 1740,
         "chunks": 1,
-        "bundlePath": "on-chain-modules/catalogs/plugins/standalone-synths/neonpoly.release.catalog.json",
+        "bundlePath": "on-chain-modules/catalogs/plugins/standalone-synths/chainpoly.release.catalog.json",
         "dependsOn": [
-          "bvst.plugin.neonpoly.manifest.v1.0.0",
-          "bvst.plugin.neonpoly.patch.v1.0.0",
-          "bvst.plugin.neonpoly.shell.v1.0.0",
+          "bvst.plugin.chainpoly.manifest.v1.0.0",
+          "bvst.plugin.chainpoly.patch.v1.0.0",
+          "bvst.plugin.chainpoly.shell.v1.0.0",
           "bvst.catalog.runtime.v1",
           "bvst.catalog.engine.v1",
           "bvst.catalog.schema.v1"
@@ -1085,9 +1085,9 @@
         "bundlePath": "on-chain-modules/catalogs/families/standalone-synths.catalog.json",
         "dependsOn": [
           "bvst.plugin.retrokeys.release.v1.0.0",
-          "bvst.plugin.bluemarvinone.release.v1.0.0",
-          "bvst.plugin.bluemarvintwo.release.v1.0.0",
-          "bvst.plugin.neonpoly.release.v1.0.0"
+          "bvst.plugin.minerone.release.v1.0.0",
+          "bvst.plugin.minertwo.release.v1.0.0",
+          "bvst.plugin.chainpoly.release.v1.0.0"
         ],
         "needsRenderedCopy": true,
         "template": {
@@ -1107,7 +1107,7 @@
         "chunks": 1,
         "bundlePath": "on-chain-modules/catalogs/releases/first-wave-instruments.catalog.json",
         "dependsOn": [
-          "bvst.catalog.family.universalsynthfamily.v1",
+          "bvst.catalog.family.bvstsynthfamily.v1",
           "bvst.catalog.family.standalonesynths.v1"
         ],
         "needsRenderedCopy": true,
@@ -1200,8 +1200,8 @@
       },
       {
         "name": "bvst.plugin.jms10.release.v1.0.0",
-        "batch": "20-universalsynth-family.batch.json",
-        "bundlePath": "on-chain-modules/catalogs/plugins/universalsynth-family/jms10.release.catalog.json",
+        "batch": "20-bvstsynth-family.batch.json",
+        "bundlePath": "on-chain-modules/catalogs/plugins/bvstsynth-family/jms10.release.catalog.json",
         "nullTokenIds": 3,
         "catalogRefs": [
           {
@@ -1224,9 +1224,9 @@
         "helperHeadroomBytes": 14664
       },
       {
-        "name": "bvst.plugin.universalengine.release.v1.0.0",
-        "batch": "20-universalsynth-family.batch.json",
-        "bundlePath": "on-chain-modules/catalogs/plugins/universalsynth-family/universalengine.release.catalog.json",
+        "name": "bvst.plugin.bvstengine.release.v1.0.0",
+        "batch": "20-bvstsynth-family.batch.json",
+        "bundlePath": "on-chain-modules/catalogs/plugins/bvstsynth-family/bvstengine.release.catalog.json",
         "nullTokenIds": 3,
         "catalogRefs": [
           {
@@ -1249,9 +1249,9 @@
         "helperHeadroomBytes": 14584
       },
       {
-        "name": "bvst.plugin.universalsynth.release.v1.0.13",
-        "batch": "20-universalsynth-family.batch.json",
-        "bundlePath": "on-chain-modules/catalogs/plugins/universalsynth-family/universalsynth.release.catalog.json",
+        "name": "bvst.plugin.bvstsynth.release.v1.0.13",
+        "batch": "20-bvstsynth-family.batch.json",
+        "bundlePath": "on-chain-modules/catalogs/plugins/bvstsynth-family/bvstsynth.release.catalog.json",
         "nullTokenIds": 3,
         "catalogRefs": [
           {
@@ -1274,17 +1274,17 @@
         "helperHeadroomBytes": 14588
       },
       {
-        "name": "bvst.catalog.family.universalsynthfamily.v1",
-        "batch": "20-universalsynth-family.batch.json",
-        "bundlePath": "on-chain-modules/catalogs/families/universalsynth-family.catalog.json",
+        "name": "bvst.catalog.family.bvstsynthfamily.v1",
+        "batch": "20-bvstsynth-family.batch.json",
+        "bundlePath": "on-chain-modules/catalogs/families/bvstsynth-family.catalog.json",
         "nullTokenIds": 3,
         "catalogRefs": [],
         "helperHeadroomBytes": 15821
       },
       {
-        "name": "bvst.plugin.bluemarvinone.release.v1.0.0",
+        "name": "bvst.plugin.minerone.release.v1.0.0",
         "batch": "30-standalone-synths.batch.json",
-        "bundlePath": "on-chain-modules/catalogs/plugins/standalone-synths/bluemarvinone.release.catalog.json",
+        "bundlePath": "on-chain-modules/catalogs/plugins/standalone-synths/minerone.release.catalog.json",
         "nullTokenIds": 3,
         "catalogRefs": [
           {
@@ -1307,9 +1307,9 @@
         "helperHeadroomBytes": 14604
       },
       {
-        "name": "bvst.plugin.bluemarvintwo.release.v1.0.0",
+        "name": "bvst.plugin.minertwo.release.v1.0.0",
         "batch": "30-standalone-synths.batch.json",
-        "bundlePath": "on-chain-modules/catalogs/plugins/standalone-synths/bluemarvintwo.release.catalog.json",
+        "bundlePath": "on-chain-modules/catalogs/plugins/standalone-synths/minertwo.release.catalog.json",
         "nullTokenIds": 3,
         "catalogRefs": [
           {
@@ -1332,9 +1332,9 @@
         "helperHeadroomBytes": 14604
       },
       {
-        "name": "bvst.plugin.neonpoly.release.v1.0.0",
+        "name": "bvst.plugin.chainpoly.release.v1.0.0",
         "batch": "30-standalone-synths.batch.json",
-        "bundlePath": "on-chain-modules/catalogs/plugins/standalone-synths/neonpoly.release.catalog.json",
+        "bundlePath": "on-chain-modules/catalogs/plugins/standalone-synths/chainpoly.release.catalog.json",
         "nullTokenIds": 3,
         "catalogRefs": [
           {

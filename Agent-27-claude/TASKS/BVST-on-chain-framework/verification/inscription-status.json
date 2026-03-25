@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-22T14:05:51.751Z",
+  "generated_at": "2026-03-25T12:44:39.036Z",
   "bundle_root": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework",
   "token_map": "configs/token-map.runtime.json",
   "inscription_log": "verification/inscription-log.json",
@@ -886,7 +886,7 @@
       "status": "blocked"
     },
     {
-      "batch": "20-universalsynth-family.batch.json",
+      "batch": "20-bvstsynth-family.batch.json",
       "order": 10,
       "name": "bvst.plugin.jms10.manifest.v1.0.0",
       "kind": "leaf",
@@ -910,7 +910,7 @@
       "status": "blocked"
     },
     {
-      "batch": "20-universalsynth-family.batch.json",
+      "batch": "20-bvstsynth-family.batch.json",
       "order": 20,
       "name": "bvst.plugin.jms10.patch.v1.0.0",
       "kind": "leaf",
@@ -938,7 +938,7 @@
       "status": "blocked"
     },
     {
-      "batch": "20-universalsynth-family.batch.json",
+      "batch": "20-bvstsynth-family.batch.json",
       "order": 30,
       "name": "bvst.plugin.jms10.shell.v1.0.0",
       "kind": "leaf",
@@ -970,9 +970,9 @@
       "status": "blocked"
     },
     {
-      "batch": "20-universalsynth-family.batch.json",
+      "batch": "20-bvstsynth-family.batch.json",
       "order": 40,
-      "name": "bvst.plugin.universalengine.manifest.v1.0.0",
+      "name": "bvst.plugin.bvstengine.manifest.v1.0.0",
       "kind": "leaf",
       "route": "helper",
       "mime": "application/json",
@@ -994,9 +994,9 @@
       "status": "blocked"
     },
     {
-      "batch": "20-universalsynth-family.batch.json",
+      "batch": "20-bvstsynth-family.batch.json",
       "order": 50,
-      "name": "bvst.plugin.universalengine.patch.v1.0.0",
+      "name": "bvst.plugin.bvstengine.patch.v1.0.0",
       "kind": "leaf",
       "route": "helper",
       "mime": "application/json",
@@ -1022,22 +1022,22 @@
       "status": "blocked"
     },
     {
-      "batch": "20-universalsynth-family.batch.json",
+      "batch": "20-bvstsynth-family.batch.json",
       "order": 60,
-      "name": "bvst.plugin.universalengine.shell.v1.0.0",
+      "name": "bvst.plugin.bvstengine.shell.v1.0.0",
       "kind": "leaf",
       "route": "helper",
       "mime": "text/html",
       "dependency_names": [
         "bvst.runtime.patch-runtime.v1.0.0",
-        "bvst.plugin.universalengine.manifest.v1.0.0",
-        "bvst.plugin.universalengine.patch.v1.0.0"
+        "bvst.plugin.bvstengine.manifest.v1.0.0",
+        "bvst.plugin.bvstengine.patch.v1.0.0"
       ],
       "dependency_token_ids": [],
       "missing_dependencies": [
         "bvst.runtime.patch-runtime.v1.0.0",
-        "bvst.plugin.universalengine.manifest.v1.0.0",
-        "bvst.plugin.universalengine.patch.v1.0.0"
+        "bvst.plugin.bvstengine.manifest.v1.0.0",
+        "bvst.plugin.bvstengine.patch.v1.0.0"
       ],
       "token_id": null,
       "txid": null,
@@ -1054,9 +1054,9 @@
       "status": "blocked"
     },
     {
-      "batch": "20-universalsynth-family.batch.json",
+      "batch": "20-bvstsynth-family.batch.json",
       "order": 70,
-      "name": "bvst.plugin.universalsynth.manifest.v1.0.13",
+      "name": "bvst.plugin.bvstsynth.manifest.v1.0.13",
       "kind": "leaf",
       "route": "helper",
       "mime": "application/json",
@@ -1078,9 +1078,9 @@
       "status": "blocked"
     },
     {
-      "batch": "20-universalsynth-family.batch.json",
+      "batch": "20-bvstsynth-family.batch.json",
       "order": 80,
-      "name": "bvst.plugin.universalsynth.patch.v1.0.13",
+      "name": "bvst.plugin.bvstsynth.patch.v1.0.13",
       "kind": "leaf",
       "route": "helper",
       "mime": "application/json",
@@ -1106,22 +1106,22 @@
       "status": "blocked"
     },
     {
-      "batch": "20-universalsynth-family.batch.json",
+      "batch": "20-bvstsynth-family.batch.json",
       "order": 90,
-      "name": "bvst.plugin.universalsynth.shell.v1.0.13",
+      "name": "bvst.plugin.bvstsynth.shell.v1.0.13",
       "kind": "leaf",
       "route": "helper",
       "mime": "text/html",
       "dependency_names": [
         "bvst.runtime.patch-runtime.v1.0.0",
-        "bvst.plugin.universalsynth.manifest.v1.0.13",
-        "bvst.plugin.universalsynth.patch.v1.0.13"
+        "bvst.plugin.bvstsynth.manifest.v1.0.13",
+        "bvst.plugin.bvstsynth.patch.v1.0.13"
       ],
       "dependency_token_ids": [],
       "missing_dependencies": [
         "bvst.runtime.patch-runtime.v1.0.0",
-        "bvst.plugin.universalsynth.manifest.v1.0.13",
-        "bvst.plugin.universalsynth.patch.v1.0.13"
+        "bvst.plugin.bvstsynth.manifest.v1.0.13",
+        "bvst.plugin.bvstsynth.patch.v1.0.13"
       ],
       "token_id": null,
       "txid": null,
@@ -1138,7 +1138,7 @@
       "status": "blocked"
     },
     {
-      "batch": "20-universalsynth-family.batch.json",
+      "batch": "20-bvstsynth-family.batch.json",
       "order": 100,
       "name": "bvst.plugin.jms10.release.v1.0.0",
       "kind": "catalog",
@@ -1176,25 +1176,25 @@
       "status": "blocked"
     },
     {
-      "batch": "20-universalsynth-family.batch.json",
+      "batch": "20-bvstsynth-family.batch.json",
       "order": 110,
-      "name": "bvst.plugin.universalengine.release.v1.0.0",
+      "name": "bvst.plugin.bvstengine.release.v1.0.0",
       "kind": "catalog",
       "route": "helper",
       "mime": "application/json",
       "dependency_names": [
-        "bvst.plugin.universalengine.manifest.v1.0.0",
-        "bvst.plugin.universalengine.patch.v1.0.0",
-        "bvst.plugin.universalengine.shell.v1.0.0",
+        "bvst.plugin.bvstengine.manifest.v1.0.0",
+        "bvst.plugin.bvstengine.patch.v1.0.0",
+        "bvst.plugin.bvstengine.shell.v1.0.0",
         "bvst.catalog.runtime.v1",
         "bvst.catalog.engine.v1",
         "bvst.catalog.schema.v1"
       ],
       "dependency_token_ids": [],
       "missing_dependencies": [
-        "bvst.plugin.universalengine.manifest.v1.0.0",
-        "bvst.plugin.universalengine.patch.v1.0.0",
-        "bvst.plugin.universalengine.shell.v1.0.0",
+        "bvst.plugin.bvstengine.manifest.v1.0.0",
+        "bvst.plugin.bvstengine.patch.v1.0.0",
+        "bvst.plugin.bvstengine.shell.v1.0.0",
         "bvst.catalog.runtime.v1",
         "bvst.catalog.engine.v1",
         "bvst.catalog.schema.v1"
@@ -1214,25 +1214,25 @@
       "status": "blocked"
     },
     {
-      "batch": "20-universalsynth-family.batch.json",
+      "batch": "20-bvstsynth-family.batch.json",
       "order": 120,
-      "name": "bvst.plugin.universalsynth.release.v1.0.13",
+      "name": "bvst.plugin.bvstsynth.release.v1.0.13",
       "kind": "catalog",
       "route": "helper",
       "mime": "application/json",
       "dependency_names": [
-        "bvst.plugin.universalsynth.manifest.v1.0.13",
-        "bvst.plugin.universalsynth.patch.v1.0.13",
-        "bvst.plugin.universalsynth.shell.v1.0.13",
+        "bvst.plugin.bvstsynth.manifest.v1.0.13",
+        "bvst.plugin.bvstsynth.patch.v1.0.13",
+        "bvst.plugin.bvstsynth.shell.v1.0.13",
         "bvst.catalog.runtime.v1",
         "bvst.catalog.engine.v1",
         "bvst.catalog.schema.v1"
       ],
       "dependency_token_ids": [],
       "missing_dependencies": [
-        "bvst.plugin.universalsynth.manifest.v1.0.13",
-        "bvst.plugin.universalsynth.patch.v1.0.13",
-        "bvst.plugin.universalsynth.shell.v1.0.13",
+        "bvst.plugin.bvstsynth.manifest.v1.0.13",
+        "bvst.plugin.bvstsynth.patch.v1.0.13",
+        "bvst.plugin.bvstsynth.shell.v1.0.13",
         "bvst.catalog.runtime.v1",
         "bvst.catalog.engine.v1",
         "bvst.catalog.schema.v1"
@@ -1252,21 +1252,21 @@
       "status": "blocked"
     },
     {
-      "batch": "20-universalsynth-family.batch.json",
+      "batch": "20-bvstsynth-family.batch.json",
       "order": 130,
-      "name": "bvst.catalog.family.universalsynthfamily.v1",
+      "name": "bvst.catalog.family.bvstsynthfamily.v1",
       "kind": "catalog",
       "route": "helper",
       "mime": "application/json",
       "dependency_names": [
-        "bvst.plugin.universalsynth.release.v1.0.13",
-        "bvst.plugin.universalengine.release.v1.0.0",
+        "bvst.plugin.bvstsynth.release.v1.0.13",
+        "bvst.plugin.bvstengine.release.v1.0.0",
         "bvst.plugin.jms10.release.v1.0.0"
       ],
       "dependency_token_ids": [],
       "missing_dependencies": [
-        "bvst.plugin.universalsynth.release.v1.0.13",
-        "bvst.plugin.universalengine.release.v1.0.0",
+        "bvst.plugin.bvstsynth.release.v1.0.13",
+        "bvst.plugin.bvstengine.release.v1.0.0",
         "bvst.plugin.jms10.release.v1.0.0"
       ],
       "token_id": null,
@@ -1286,7 +1286,7 @@
     {
       "batch": "30-standalone-synths.batch.json",
       "order": 10,
-      "name": "bvst.plugin.bluemarvinone.manifest.v1.0.0",
+      "name": "bvst.plugin.minerone.manifest.v1.0.0",
       "kind": "leaf",
       "route": "helper",
       "mime": "application/json",
@@ -1310,7 +1310,7 @@
     {
       "batch": "30-standalone-synths.batch.json",
       "order": 20,
-      "name": "bvst.plugin.bluemarvinone.patch.v1.0.0",
+      "name": "bvst.plugin.minerone.patch.v1.0.0",
       "kind": "leaf",
       "route": "helper",
       "mime": "application/json",
@@ -1338,20 +1338,20 @@
     {
       "batch": "30-standalone-synths.batch.json",
       "order": 30,
-      "name": "bvst.plugin.bluemarvinone.shell.v1.0.0",
+      "name": "bvst.plugin.minerone.shell.v1.0.0",
       "kind": "leaf",
       "route": "helper",
       "mime": "text/html",
       "dependency_names": [
         "bvst.runtime.patch-runtime.v1.0.0",
-        "bvst.plugin.bluemarvinone.manifest.v1.0.0",
-        "bvst.plugin.bluemarvinone.patch.v1.0.0"
+        "bvst.plugin.minerone.manifest.v1.0.0",
+        "bvst.plugin.minerone.patch.v1.0.0"
       ],
       "dependency_token_ids": [],
       "missing_dependencies": [
         "bvst.runtime.patch-runtime.v1.0.0",
-        "bvst.plugin.bluemarvinone.manifest.v1.0.0",
-        "bvst.plugin.bluemarvinone.patch.v1.0.0"
+        "bvst.plugin.minerone.manifest.v1.0.0",
+        "bvst.plugin.minerone.patch.v1.0.0"
       ],
       "token_id": null,
       "txid": null,
@@ -1370,7 +1370,7 @@
     {
       "batch": "30-standalone-synths.batch.json",
       "order": 40,
-      "name": "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
+      "name": "bvst.plugin.minertwo.manifest.v1.0.0",
       "kind": "leaf",
       "route": "helper",
       "mime": "application/json",
@@ -1394,7 +1394,7 @@
     {
       "batch": "30-standalone-synths.batch.json",
       "order": 50,
-      "name": "bvst.plugin.bluemarvintwo.patch.v1.0.0",
+      "name": "bvst.plugin.minertwo.patch.v1.0.0",
       "kind": "leaf",
       "route": "helper",
       "mime": "application/json",
@@ -1422,20 +1422,20 @@
     {
       "batch": "30-standalone-synths.batch.json",
       "order": 60,
-      "name": "bvst.plugin.bluemarvintwo.shell.v1.0.0",
+      "name": "bvst.plugin.minertwo.shell.v1.0.0",
       "kind": "leaf",
       "route": "helper",
       "mime": "text/html",
       "dependency_names": [
         "bvst.runtime.patch-runtime.v1.0.0",
-        "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
-        "bvst.plugin.bluemarvintwo.patch.v1.0.0"
+        "bvst.plugin.minertwo.manifest.v1.0.0",
+        "bvst.plugin.minertwo.patch.v1.0.0"
       ],
       "dependency_token_ids": [],
       "missing_dependencies": [
         "bvst.runtime.patch-runtime.v1.0.0",
-        "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
-        "bvst.plugin.bluemarvintwo.patch.v1.0.0"
+        "bvst.plugin.minertwo.manifest.v1.0.0",
+        "bvst.plugin.minertwo.patch.v1.0.0"
       ],
       "token_id": null,
       "txid": null,
@@ -1454,7 +1454,7 @@
     {
       "batch": "30-standalone-synths.batch.json",
       "order": 70,
-      "name": "bvst.plugin.neonpoly.manifest.v1.0.0",
+      "name": "bvst.plugin.chainpoly.manifest.v1.0.0",
       "kind": "leaf",
       "route": "helper",
       "mime": "application/json",
@@ -1478,7 +1478,7 @@
     {
       "batch": "30-standalone-synths.batch.json",
       "order": 80,
-      "name": "bvst.plugin.neonpoly.patch.v1.0.0",
+      "name": "bvst.plugin.chainpoly.patch.v1.0.0",
       "kind": "leaf",
       "route": "helper",
       "mime": "application/json",
@@ -1506,20 +1506,20 @@
     {
       "batch": "30-standalone-synths.batch.json",
       "order": 90,
-      "name": "bvst.plugin.neonpoly.shell.v1.0.0",
+      "name": "bvst.plugin.chainpoly.shell.v1.0.0",
       "kind": "leaf",
       "route": "helper",
       "mime": "text/html",
       "dependency_names": [
         "bvst.runtime.patch-runtime.v1.0.0",
-        "bvst.plugin.neonpoly.manifest.v1.0.0",
-        "bvst.plugin.neonpoly.patch.v1.0.0"
+        "bvst.plugin.chainpoly.manifest.v1.0.0",
+        "bvst.plugin.chainpoly.patch.v1.0.0"
       ],
       "dependency_token_ids": [],
       "missing_dependencies": [
         "bvst.runtime.patch-runtime.v1.0.0",
-        "bvst.plugin.neonpoly.manifest.v1.0.0",
-        "bvst.plugin.neonpoly.patch.v1.0.0"
+        "bvst.plugin.chainpoly.manifest.v1.0.0",
+        "bvst.plugin.chainpoly.patch.v1.0.0"
       ],
       "token_id": null,
       "txid": null,
@@ -1622,23 +1622,23 @@
     {
       "batch": "30-standalone-synths.batch.json",
       "order": 130,
-      "name": "bvst.plugin.bluemarvinone.release.v1.0.0",
+      "name": "bvst.plugin.minerone.release.v1.0.0",
       "kind": "catalog",
       "route": "helper",
       "mime": "application/json",
       "dependency_names": [
-        "bvst.plugin.bluemarvinone.manifest.v1.0.0",
-        "bvst.plugin.bluemarvinone.patch.v1.0.0",
-        "bvst.plugin.bluemarvinone.shell.v1.0.0",
+        "bvst.plugin.minerone.manifest.v1.0.0",
+        "bvst.plugin.minerone.patch.v1.0.0",
+        "bvst.plugin.minerone.shell.v1.0.0",
         "bvst.catalog.runtime.v1",
         "bvst.catalog.engine.v1",
         "bvst.catalog.schema.v1"
       ],
       "dependency_token_ids": [],
       "missing_dependencies": [
-        "bvst.plugin.bluemarvinone.manifest.v1.0.0",
-        "bvst.plugin.bluemarvinone.patch.v1.0.0",
-        "bvst.plugin.bluemarvinone.shell.v1.0.0",
+        "bvst.plugin.minerone.manifest.v1.0.0",
+        "bvst.plugin.minerone.patch.v1.0.0",
+        "bvst.plugin.minerone.shell.v1.0.0",
         "bvst.catalog.runtime.v1",
         "bvst.catalog.engine.v1",
         "bvst.catalog.schema.v1"
@@ -1660,23 +1660,23 @@
     {
       "batch": "30-standalone-synths.batch.json",
       "order": 140,
-      "name": "bvst.plugin.bluemarvintwo.release.v1.0.0",
+      "name": "bvst.plugin.minertwo.release.v1.0.0",
       "kind": "catalog",
       "route": "helper",
       "mime": "application/json",
       "dependency_names": [
-        "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
-        "bvst.plugin.bluemarvintwo.patch.v1.0.0",
-        "bvst.plugin.bluemarvintwo.shell.v1.0.0",
+        "bvst.plugin.minertwo.manifest.v1.0.0",
+        "bvst.plugin.minertwo.patch.v1.0.0",
+        "bvst.plugin.minertwo.shell.v1.0.0",
         "bvst.catalog.runtime.v1",
         "bvst.catalog.engine.v1",
         "bvst.catalog.schema.v1"
       ],
       "dependency_token_ids": [],
       "missing_dependencies": [
-        "bvst.plugin.bluemarvintwo.manifest.v1.0.0",
-        "bvst.plugin.bluemarvintwo.patch.v1.0.0",
-        "bvst.plugin.bluemarvintwo.shell.v1.0.0",
+        "bvst.plugin.minertwo.manifest.v1.0.0",
+        "bvst.plugin.minertwo.patch.v1.0.0",
+        "bvst.plugin.minertwo.shell.v1.0.0",
         "bvst.catalog.runtime.v1",
         "bvst.catalog.engine.v1",
         "bvst.catalog.schema.v1"
@@ -1698,23 +1698,23 @@
     {
       "batch": "30-standalone-synths.batch.json",
       "order": 150,
-      "name": "bvst.plugin.neonpoly.release.v1.0.0",
+      "name": "bvst.plugin.chainpoly.release.v1.0.0",
       "kind": "catalog",
       "route": "helper",
       "mime": "application/json",
       "dependency_names": [
-        "bvst.plugin.neonpoly.manifest.v1.0.0",
-        "bvst.plugin.neonpoly.patch.v1.0.0",
-        "bvst.plugin.neonpoly.shell.v1.0.0",
+        "bvst.plugin.chainpoly.manifest.v1.0.0",
+        "bvst.plugin.chainpoly.patch.v1.0.0",
+        "bvst.plugin.chainpoly.shell.v1.0.0",
         "bvst.catalog.runtime.v1",
         "bvst.catalog.engine.v1",
         "bvst.catalog.schema.v1"
       ],
       "dependency_token_ids": [],
       "missing_dependencies": [
-        "bvst.plugin.neonpoly.manifest.v1.0.0",
-        "bvst.plugin.neonpoly.patch.v1.0.0",
-        "bvst.plugin.neonpoly.shell.v1.0.0",
+        "bvst.plugin.chainpoly.manifest.v1.0.0",
+        "bvst.plugin.chainpoly.patch.v1.0.0",
+        "bvst.plugin.chainpoly.shell.v1.0.0",
         "bvst.catalog.runtime.v1",
         "bvst.catalog.engine.v1",
         "bvst.catalog.schema.v1"
@@ -1780,16 +1780,16 @@
       "mime": "application/json",
       "dependency_names": [
         "bvst.plugin.retrokeys.release.v1.0.0",
-        "bvst.plugin.bluemarvinone.release.v1.0.0",
-        "bvst.plugin.bluemarvintwo.release.v1.0.0",
-        "bvst.plugin.neonpoly.release.v1.0.0"
+        "bvst.plugin.minerone.release.v1.0.0",
+        "bvst.plugin.minertwo.release.v1.0.0",
+        "bvst.plugin.chainpoly.release.v1.0.0"
       ],
       "dependency_token_ids": [],
       "missing_dependencies": [
         "bvst.plugin.retrokeys.release.v1.0.0",
-        "bvst.plugin.bluemarvinone.release.v1.0.0",
-        "bvst.plugin.bluemarvintwo.release.v1.0.0",
-        "bvst.plugin.neonpoly.release.v1.0.0"
+        "bvst.plugin.minerone.release.v1.0.0",
+        "bvst.plugin.minertwo.release.v1.0.0",
+        "bvst.plugin.chainpoly.release.v1.0.0"
       ],
       "token_id": null,
       "txid": null,
@@ -1813,12 +1813,12 @@
       "route": "helper",
       "mime": "application/json",
       "dependency_names": [
-        "bvst.catalog.family.universalsynthfamily.v1",
+        "bvst.catalog.family.bvstsynthfamily.v1",
         "bvst.catalog.family.standalonesynths.v1"
       ],
       "dependency_token_ids": [],
       "missing_dependencies": [
-        "bvst.catalog.family.universalsynthfamily.v1",
+        "bvst.catalog.family.bvstsynthfamily.v1",
         "bvst.catalog.family.standalonesynths.v1"
       ],
       "token_id": null,
@@ -1831,7 +1831,7 @@
       "source": null,
       "execution": null,
       "notes": [
-        "Prerequisite batches are not complete: 10-foundation.batch.json, 20-universalsynth-family.batch.json, 30-standalone-synths.batch.json."
+        "Prerequisite batches are not complete: 10-foundation.batch.json, 20-bvstsynth-family.batch.json, 30-standalone-synths.batch.json."
       ],
       "status": "blocked"
     },
@@ -1861,7 +1861,7 @@
       "source": null,
       "execution": null,
       "notes": [
-        "Prerequisite batches are not complete: 10-foundation.batch.json, 20-universalsynth-family.batch.json, 30-standalone-synths.batch.json."
+        "Prerequisite batches are not complete: 10-foundation.batch.json, 20-bvstsynth-family.batch.json, 30-standalone-synths.batch.json."
       ],
       "status": "blocked"
     }

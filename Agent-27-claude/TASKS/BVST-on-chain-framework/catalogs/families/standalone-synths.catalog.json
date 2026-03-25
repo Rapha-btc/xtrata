@@ -10,15 +10,15 @@
       "token_id": null
     },
     {
-      "name": "bvst.plugin.bluemarvinone.release.v1.0.0",
+      "name": "bvst.plugin.minerone.release.v1.0.0",
       "token_id": null
     },
     {
-      "name": "bvst.plugin.bluemarvintwo.release.v1.0.0",
+      "name": "bvst.plugin.minertwo.release.v1.0.0",
       "token_id": null
     },
     {
-      "name": "bvst.plugin.neonpoly.release.v1.0.0",
+      "name": "bvst.plugin.chainpoly.release.v1.0.0",
       "token_id": null
     }
   ]

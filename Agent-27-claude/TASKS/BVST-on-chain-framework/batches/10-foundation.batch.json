@@ -134,9 +134,9 @@
       "name": "bvst.runtime.sequencer-core.v1.0.0",
       "path": "on-chain-modules/workspace/System/shared/sequencer_core.js",
       "mime": "application/javascript",
-      "bytes": 19539,
+      "bytes": 19549,
       "chunks": 2,
-      "sha256": "3f22aa13f9b662d34a7b8fbb4c9ad3a8278e0d3d8b24eccfd4b5fa7ea71f270d",
+      "sha256": "12746ea67444b361eb84ab46fb4b812a0e81935f6fa62a739c76e541c29a7cbb",
       "route": "helper",
       "depends_on": [
         "bvst.runtime.ui-styles.v1.0.0"
@@ -232,7 +232,7 @@
       "mime": "application/json",
       "bytes": 5296,
       "chunks": 1,
-      "sha256": "368ae6a69d49f539e3dbe79f0e00cd49e8d04109057685d5cf0514d412ff899f",
+      "sha256": "5b03d5acd4606b62ea0002a1a7b1b10ff066f0f743d57dbcb7bbee82b1b4dc3f",
       "route": "helper",
       "depends_on": [
         "bvst.runtime.bvst-css.v1.0.0",
@@ -285,7 +285,7 @@
       "mime": "application/json",
       "bytes": 7517,
       "chunks": 1,
-      "sha256": "9a472b1604848b9616c78af5a1174bd37c613d909ce0f9bfcb1100cce6a23e16",
+      "sha256": "d86b54e2f8735d19ab73ee37ad7f9c057784625f0970d04ffb961876f204bf65",
       "route": "helper",
       "depends_on": [
         "bvst.catalog.runtime.v1",

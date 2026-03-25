@@ -1168,8 +1168,8 @@ async function handlePlannerInscribe(req, res, releaseOverride = null) {
   }
 }
 
-app.post('/api/inscription-planner/:releaseId/run', handlePlannerGate);
-app.post('/api/inscription-planner/:releaseId/inscribe', handlePlannerInscribe);
+app.post('/api/inscription-planner/:releaseId/run', (req, res) => handlePlannerGate(req, res));
+app.post('/api/inscription-planner/:releaseId/inscribe', (req, res) => handlePlannerInscribe(req, res));
 
 // --- Main Route ---
 app.get('/inscription-planner', (req, res) => {

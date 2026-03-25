@@ -1,18 +1,18 @@
 {
   "release_scope": "first-wave-instruments",
   "rationale": [
-    "UniversalSynth family maximizes recursive reuse because the engine is already shared.",
+    "BVSTSynth family maximizes recursive reuse because the engine is already shared.",
     "Dedicated standalone synths provide clear canaries for future engine-specific releases.",
     "Sequencer-heavy and sampler-heavy instruments are deferred until later waves."
   ],
   "families": [
     {
-      "key": "universalsynth-family",
-      "title": "UniversalSynth Family",
-      "description": "Patch-defined instruments sharing the UniversalSynth engine path.",
+      "key": "bvstsynth-family",
+      "title": "BVSTSynth Family",
+      "description": "Patch-defined instruments sharing the BVSTSynth engine path.",
       "plugins": [
-        "UniversalSynth",
-        "UniversalEngine",
+        "BVSTSynth",
+        "BVSTEngine",
         "JMS10"
       ]
     },
@@ -22,9 +22,9 @@
       "description": "Dedicated synth engines already behaving well in standalone mode.",
       "plugins": [
         "RetroKeys",
-        "BlueMarvinOne",
-        "BlueMarvinTwo",
-        "NeonPoly"
+        "MinerOne",
+        "MinerTwo",
+        "ChainPoly"
       ]
     }
   ]

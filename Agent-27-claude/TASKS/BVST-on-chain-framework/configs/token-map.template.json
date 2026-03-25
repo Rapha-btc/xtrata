@@ -11,7 +11,7 @@
       "txid": null,
       "block_height": null
     },
-    "bvst.catalog.family.universalsynthfamily.v1": {
+    "bvst.catalog.family.bvstsynthfamily.v1": {
       "token_id": null,
       "txid": null,
       "block_height": null
@@ -56,42 +56,42 @@
       "txid": null,
       "block_height": null
     },
-    "bvst.plugin.bluemarvinone.manifest.v1.0.0": {
+    "bvst.plugin.minerone.manifest.v1.0.0": {
       "token_id": null,
       "txid": null,
       "block_height": null
     },
-    "bvst.plugin.bluemarvinone.patch.v1.0.0": {
+    "bvst.plugin.minerone.patch.v1.0.0": {
       "token_id": null,
       "txid": null,
       "block_height": null
     },
-    "bvst.plugin.bluemarvinone.release.v1.0.0": {
+    "bvst.plugin.minerone.release.v1.0.0": {
       "token_id": null,
       "txid": null,
       "block_height": null
     },
-    "bvst.plugin.bluemarvinone.shell.v1.0.0": {
+    "bvst.plugin.minerone.shell.v1.0.0": {
       "token_id": null,
       "txid": null,
       "block_height": null
     },
-    "bvst.plugin.bluemarvintwo.manifest.v1.0.0": {
+    "bvst.plugin.minertwo.manifest.v1.0.0": {
       "token_id": null,
       "txid": null,
       "block_height": null
     },
-    "bvst.plugin.bluemarvintwo.patch.v1.0.0": {
+    "bvst.plugin.minertwo.patch.v1.0.0": {
       "token_id": null,
       "txid": null,
       "block_height": null
     },
-    "bvst.plugin.bluemarvintwo.release.v1.0.0": {
+    "bvst.plugin.minertwo.release.v1.0.0": {
       "token_id": null,
       "txid": null,
       "block_height": null
     },
-    "bvst.plugin.bluemarvintwo.shell.v1.0.0": {
+    "bvst.plugin.minertwo.shell.v1.0.0": {
       "token_id": null,
       "txid": null,
       "block_height": null
@@ -116,22 +116,22 @@
       "txid": null,
       "block_height": null
     },
-    "bvst.plugin.neonpoly.manifest.v1.0.0": {
+    "bvst.plugin.chainpoly.manifest.v1.0.0": {
       "token_id": null,
       "txid": null,
       "block_height": null
     },
-    "bvst.plugin.neonpoly.patch.v1.0.0": {
+    "bvst.plugin.chainpoly.patch.v1.0.0": {
       "token_id": null,
       "txid": null,
       "block_height": null
     },
-    "bvst.plugin.neonpoly.release.v1.0.0": {
+    "bvst.plugin.chainpoly.release.v1.0.0": {
       "token_id": null,
       "txid": null,
       "block_height": null
     },
-    "bvst.plugin.neonpoly.shell.v1.0.0": {
+    "bvst.plugin.chainpoly.shell.v1.0.0": {
       "token_id": null,
       "txid": null,
       "block_height": null
@@ -156,42 +156,42 @@
       "txid": null,
       "block_height": null
     },
-    "bvst.plugin.universalengine.manifest.v1.0.0": {
+    "bvst.plugin.bvstengine.manifest.v1.0.0": {
       "token_id": null,
       "txid": null,
       "block_height": null
     },
-    "bvst.plugin.universalengine.patch.v1.0.0": {
+    "bvst.plugin.bvstengine.patch.v1.0.0": {
       "token_id": null,
       "txid": null,
       "block_height": null
     },
-    "bvst.plugin.universalengine.release.v1.0.0": {
+    "bvst.plugin.bvstengine.release.v1.0.0": {
       "token_id": null,
       "txid": null,
       "block_height": null
     },
-    "bvst.plugin.universalengine.shell.v1.0.0": {
+    "bvst.plugin.bvstengine.shell.v1.0.0": {
       "token_id": null,
       "txid": null,
       "block_height": null
     },
-    "bvst.plugin.universalsynth.manifest.v1.0.13": {
+    "bvst.plugin.bvstsynth.manifest.v1.0.13": {
       "token_id": null,
       "txid": null,
       "block_height": null
     },
-    "bvst.plugin.universalsynth.patch.v1.0.13": {
+    "bvst.plugin.bvstsynth.patch.v1.0.13": {
       "token_id": null,
       "txid": null,
       "block_height": null
     },
-    "bvst.plugin.universalsynth.release.v1.0.13": {
+    "bvst.plugin.bvstsynth.release.v1.0.13": {
       "token_id": null,
       "txid": null,
       "block_height": null
     },
-    "bvst.plugin.universalsynth.shell.v1.0.13": {
+    "bvst.plugin.bvstsynth.shell.v1.0.13": {
       "token_id": null,
       "txid": null,
       "block_height": null

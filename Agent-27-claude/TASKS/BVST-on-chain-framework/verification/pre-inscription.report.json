@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-03-22T14:05:51.706Z",
+  "generated_at": "2026-03-25T12:43:47.572Z",
   "bundle_root": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework",
   "summary": {
     "failed": 0,
     "passed_with_warnings": 0,
-    "passed": 5,
-    "skipped": 2
+    "passed": 6,
+    "skipped": 1
   },
   "sections": [
     {
@@ -25,22 +25,22 @@
       "details": {
         "plugins": [
           {
-            "plugin": "UniversalSynth",
-            "family": "universalsynth-family",
+            "plugin": "BVSTSynth",
+            "family": "bvstsynth-family",
             "version": "1.0.13",
             "control_count": 32,
             "preset_count": 3
           },
           {
-            "plugin": "UniversalEngine",
-            "family": "universalsynth-family",
+            "plugin": "BVSTEngine",
+            "family": "bvstsynth-family",
             "version": "1.0.0",
             "control_count": 9,
             "preset_count": 1
           },
           {
             "plugin": "JMS10",
-            "family": "universalsynth-family",
+            "family": "bvstsynth-family",
             "version": "1.0.0",
             "control_count": 13,
             "preset_count": 6
@@ -53,21 +53,21 @@
             "preset_count": 7
           },
           {
-            "plugin": "BlueMarvinOne",
+            "plugin": "MinerOne",
             "family": "standalone-synths",
             "version": "1.0.0",
             "control_count": 12,
             "preset_count": 6
           },
           {
-            "plugin": "BlueMarvinTwo",
+            "plugin": "MinerTwo",
             "family": "standalone-synths",
             "version": "1.0.0",
             "control_count": 22,
             "preset_count": 6
           },
           {
-            "plugin": "NeonPoly",
+            "plugin": "ChainPoly",
             "family": "standalone-synths",
             "version": "1.0.0",
             "control_count": 13,
@@ -129,11 +129,80 @@
     },
     {
       "name": "http_workspace_smoke",
-      "status": "skipped",
+      "status": "passed",
       "errors": [],
       "warnings": [],
       "details": {
-        "reason": "Local HTTP bind was blocked by the current execution environment."
+        "baseUrl": "http://127.0.0.1:53059",
+        "workspaceLeafCount": 38,
+        "pluginCount": 7,
+        "pluginChecks": [
+          {
+            "plugin": "BVSTSynth",
+            "page": "/Plugins/Instruments/BVSTSynth/gui.html?standalone=1&t=http-smoke",
+            "manifest": "/Plugins/Instruments/BVSTSynth/manifest.json",
+            "patch": "/Plugins/Instruments/BVSTSynth/patch.json",
+            "wasm": "/System/shared/bvst_unified_bg.wasm",
+            "processor": "/System/shared/processor_unified.js"
+          },
+          {
+            "plugin": "BVSTEngine",
+            "page": "/Plugins/Instruments/BVSTEngine/gui.html?standalone=1&t=http-smoke",
+            "manifest": "/Plugins/Instruments/BVSTEngine/manifest.json",
+            "patch": "/Plugins/Instruments/BVSTEngine/patch.json",
+            "wasm": "/System/shared/bvst_unified_bg.wasm",
+            "processor": "/System/shared/processor_unified.js"
+          },
+          {
+            "plugin": "JMS10",
+            "page": "/Plugins/Instruments/JMS10/gui.html?standalone=1&t=http-smoke",
+            "manifest": "/Plugins/Instruments/JMS10/manifest.json",
+            "patch": "/Plugins/Instruments/JMS10/patch.json",
+            "wasm": "/System/shared/bvst_unified_bg.wasm",
+            "processor": "/System/shared/processor_unified.js"
+          },
+          {
+            "plugin": "RetroKeys",
+            "page": "/Plugins/Instruments/RetroKeys/gui.html?standalone=1&t=http-smoke",
+            "manifest": "/Plugins/Instruments/RetroKeys/manifest.json",
+            "patch": "/Plugins/Instruments/RetroKeys/patch.json",
+            "wasm": "/System/shared/bvst_unified_bg.wasm",
+            "processor": "/System/shared/processor_unified.js"
+          },
+          {
+            "plugin": "MinerOne",
+            "page": "/Plugins/Instruments/MinerOne/gui.html?standalone=1&t=http-smoke",
+            "manifest": "/Plugins/Instruments/MinerOne/manifest.json",
+            "patch": "/Plugins/Instruments/MinerOne/patch.json",
+            "wasm": "/System/shared/bvst_unified_bg.wasm",
+            "processor": "/System/shared/processor_unified.js"
+          },
+          {
+            "plugin": "MinerTwo",
+            "page": "/Plugins/Instruments/MinerTwo/gui.html?standalone=1&t=http-smoke",
+            "manifest": "/Plugins/Instruments/MinerTwo/manifest.json",
+            "patch": "/Plugins/Instruments/MinerTwo/patch.json",
+            "wasm": "/System/shared/bvst_unified_bg.wasm",
+            "processor": "/System/shared/processor_unified.js"
+          },
+          {
+            "plugin": "ChainPoly",
+            "page": "/Plugins/Instruments/ChainPoly/gui.html?standalone=1&t=http-smoke",
+            "manifest": "/Plugins/Instruments/ChainPoly/manifest.json",
+            "patch": "/Plugins/Instruments/ChainPoly/patch.json",
+            "wasm": "/System/shared/bvst_unified_bg.wasm",
+            "processor": "/System/shared/processor_unified.js"
+          }
+        ],
+        "samplerChecks": [
+          {
+            "page": "/System/tests/sampler-smoke.html?t=http-smoke",
+            "script": "/System/tests/sampler-smoke.js",
+            "patchRuntime": "/System/shared/patch_runtime.js",
+            "processor": "/System/shared/processor_unified.js",
+            "wasm": "/System/shared/bvst_unified_bg.wasm"
+          }
+        ]
       }
     },
     {
@@ -142,7 +211,7 @@
       "errors": [],
       "warnings": [],
       "details": {
-        "tempRoot": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/bvst-inscription-sim-SHGvF8",
+        "tempRoot": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/bvst-inscription-sim-c5hUCf",
         "startTokenId": 202,
         "endTokenId": 254,
         "moduleCount": 53,

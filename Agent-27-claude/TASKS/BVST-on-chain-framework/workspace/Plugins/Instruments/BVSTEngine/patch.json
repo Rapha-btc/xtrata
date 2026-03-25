@@ -1,11 +1,11 @@
 {
   "schema": "bvst.patch/v1",
   "meta": {
-    "name": "UniversalEngine",
-    "description": "Reference template patch routed to UniversalSynth (edit this to start a new instrument)."
+    "name": "BVSTEngine",
+    "description": "Reference template patch routed to BVSTSynth (edit this to start a new instrument)."
   },
   "config": {
-    "name": "UniversalEngine",
+    "name": "BVSTEngine",
     "visualizer": "spectrum",
     "keyboard": { "startNote": 36, "numKeys": 49 },
     "modules": [

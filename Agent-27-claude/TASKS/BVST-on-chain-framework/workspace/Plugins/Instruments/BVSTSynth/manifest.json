@@ -1,5 +1,5 @@
 {
-  "name": "UniversalSynth",
+  "name": "BVSTSynth",
   "version": "1.0.13",
   "type": "Instrument",
   "description": "Reference instrument demonstrating the patch-based UI runtime over the unified engine (Oscillators, Filter, LFO, Delay, Drive, Sequencer).",

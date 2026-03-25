@@ -370,271 +370,271 @@
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.universalengine.manifest.v1.0.0 sha256",
+      "test": "bvst.plugin.bvstengine.manifest.v1.0.0 sha256",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.universalengine.manifest.v1.0.0 bytes",
+      "test": "bvst.plugin.bvstengine.manifest.v1.0.0 bytes",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.universalengine.manifest.v1.0.0 chunks",
+      "test": "bvst.plugin.bvstengine.manifest.v1.0.0 chunks",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.universalengine.patch.v1.0.0 sha256",
+      "test": "bvst.plugin.bvstengine.patch.v1.0.0 sha256",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.universalengine.patch.v1.0.0 bytes",
+      "test": "bvst.plugin.bvstengine.patch.v1.0.0 bytes",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.universalengine.patch.v1.0.0 chunks",
+      "test": "bvst.plugin.bvstengine.patch.v1.0.0 chunks",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.universalengine.shell.v1.0.0 sha256",
+      "test": "bvst.plugin.bvstengine.shell.v1.0.0 sha256",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.universalengine.shell.v1.0.0 bytes",
+      "test": "bvst.plugin.bvstengine.shell.v1.0.0 bytes",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.universalengine.shell.v1.0.0 chunks",
+      "test": "bvst.plugin.bvstengine.shell.v1.0.0 chunks",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.universalsynth.manifest.v1.0.13 sha256",
+      "test": "bvst.plugin.bvstsynth.manifest.v1.0.13 sha256",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.universalsynth.manifest.v1.0.13 bytes",
+      "test": "bvst.plugin.bvstsynth.manifest.v1.0.13 bytes",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.universalsynth.manifest.v1.0.13 chunks",
+      "test": "bvst.plugin.bvstsynth.manifest.v1.0.13 chunks",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.universalsynth.patch.v1.0.13 sha256",
+      "test": "bvst.plugin.bvstsynth.patch.v1.0.13 sha256",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.universalsynth.patch.v1.0.13 bytes",
+      "test": "bvst.plugin.bvstsynth.patch.v1.0.13 bytes",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.universalsynth.patch.v1.0.13 chunks",
+      "test": "bvst.plugin.bvstsynth.patch.v1.0.13 chunks",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.universalsynth.shell.v1.0.13 sha256",
+      "test": "bvst.plugin.bvstsynth.shell.v1.0.13 sha256",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.universalsynth.shell.v1.0.13 bytes",
+      "test": "bvst.plugin.bvstsynth.shell.v1.0.13 bytes",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.universalsynth.shell.v1.0.13 chunks",
+      "test": "bvst.plugin.bvstsynth.shell.v1.0.13 chunks",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.bluemarvinone.manifest.v1.0.0 sha256",
+      "test": "bvst.plugin.minerone.manifest.v1.0.0 sha256",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.bluemarvinone.manifest.v1.0.0 bytes",
+      "test": "bvst.plugin.minerone.manifest.v1.0.0 bytes",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.bluemarvinone.manifest.v1.0.0 chunks",
+      "test": "bvst.plugin.minerone.manifest.v1.0.0 chunks",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.bluemarvinone.patch.v1.0.0 sha256",
+      "test": "bvst.plugin.minerone.patch.v1.0.0 sha256",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.bluemarvinone.patch.v1.0.0 bytes",
+      "test": "bvst.plugin.minerone.patch.v1.0.0 bytes",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.bluemarvinone.patch.v1.0.0 chunks",
+      "test": "bvst.plugin.minerone.patch.v1.0.0 chunks",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.bluemarvinone.shell.v1.0.0 sha256",
+      "test": "bvst.plugin.minerone.shell.v1.0.0 sha256",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.bluemarvinone.shell.v1.0.0 bytes",
+      "test": "bvst.plugin.minerone.shell.v1.0.0 bytes",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.bluemarvinone.shell.v1.0.0 chunks",
+      "test": "bvst.plugin.minerone.shell.v1.0.0 chunks",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.bluemarvintwo.manifest.v1.0.0 sha256",
+      "test": "bvst.plugin.minertwo.manifest.v1.0.0 sha256",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.bluemarvintwo.manifest.v1.0.0 bytes",
+      "test": "bvst.plugin.minertwo.manifest.v1.0.0 bytes",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.bluemarvintwo.manifest.v1.0.0 chunks",
+      "test": "bvst.plugin.minertwo.manifest.v1.0.0 chunks",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.bluemarvintwo.patch.v1.0.0 sha256",
+      "test": "bvst.plugin.minertwo.patch.v1.0.0 sha256",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.bluemarvintwo.patch.v1.0.0 bytes",
+      "test": "bvst.plugin.minertwo.patch.v1.0.0 bytes",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.bluemarvintwo.patch.v1.0.0 chunks",
+      "test": "bvst.plugin.minertwo.patch.v1.0.0 chunks",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.bluemarvintwo.shell.v1.0.0 sha256",
+      "test": "bvst.plugin.minertwo.shell.v1.0.0 sha256",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.bluemarvintwo.shell.v1.0.0 bytes",
+      "test": "bvst.plugin.minertwo.shell.v1.0.0 bytes",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.bluemarvintwo.shell.v1.0.0 chunks",
+      "test": "bvst.plugin.minertwo.shell.v1.0.0 chunks",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.neonpoly.manifest.v1.0.0 sha256",
+      "test": "bvst.plugin.chainpoly.manifest.v1.0.0 sha256",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.neonpoly.manifest.v1.0.0 bytes",
+      "test": "bvst.plugin.chainpoly.manifest.v1.0.0 bytes",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.neonpoly.manifest.v1.0.0 chunks",
+      "test": "bvst.plugin.chainpoly.manifest.v1.0.0 chunks",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.neonpoly.patch.v1.0.0 sha256",
+      "test": "bvst.plugin.chainpoly.patch.v1.0.0 sha256",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.neonpoly.patch.v1.0.0 bytes",
+      "test": "bvst.plugin.chainpoly.patch.v1.0.0 bytes",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.neonpoly.patch.v1.0.0 chunks",
+      "test": "bvst.plugin.chainpoly.patch.v1.0.0 chunks",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.neonpoly.shell.v1.0.0 sha256",
+      "test": "bvst.plugin.chainpoly.shell.v1.0.0 sha256",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.neonpoly.shell.v1.0.0 bytes",
+      "test": "bvst.plugin.chainpoly.shell.v1.0.0 bytes",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "integrity",
-      "test": "bvst.plugin.neonpoly.shell.v1.0.0 chunks",
+      "test": "bvst.plugin.chainpoly.shell.v1.0.0 chunks",
       "status": "pass",
       "detail": ""
     },
@@ -814,91 +814,91 @@
     },
     {
       "suite": "mime",
-      "test": "bvst.plugin.universalengine.manifest.v1.0.0 MIME",
+      "test": "bvst.plugin.bvstengine.manifest.v1.0.0 MIME",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "mime",
-      "test": "bvst.plugin.universalengine.patch.v1.0.0 MIME",
+      "test": "bvst.plugin.bvstengine.patch.v1.0.0 MIME",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "mime",
-      "test": "bvst.plugin.universalengine.shell.v1.0.0 MIME",
+      "test": "bvst.plugin.bvstengine.shell.v1.0.0 MIME",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "mime",
-      "test": "bvst.plugin.universalsynth.manifest.v1.0.13 MIME",
+      "test": "bvst.plugin.bvstsynth.manifest.v1.0.13 MIME",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "mime",
-      "test": "bvst.plugin.universalsynth.patch.v1.0.13 MIME",
+      "test": "bvst.plugin.bvstsynth.patch.v1.0.13 MIME",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "mime",
-      "test": "bvst.plugin.universalsynth.shell.v1.0.13 MIME",
+      "test": "bvst.plugin.bvstsynth.shell.v1.0.13 MIME",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "mime",
-      "test": "bvst.plugin.bluemarvinone.manifest.v1.0.0 MIME",
+      "test": "bvst.plugin.minerone.manifest.v1.0.0 MIME",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "mime",
-      "test": "bvst.plugin.bluemarvinone.patch.v1.0.0 MIME",
+      "test": "bvst.plugin.minerone.patch.v1.0.0 MIME",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "mime",
-      "test": "bvst.plugin.bluemarvinone.shell.v1.0.0 MIME",
+      "test": "bvst.plugin.minerone.shell.v1.0.0 MIME",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "mime",
-      "test": "bvst.plugin.bluemarvintwo.manifest.v1.0.0 MIME",
+      "test": "bvst.plugin.minertwo.manifest.v1.0.0 MIME",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "mime",
-      "test": "bvst.plugin.bluemarvintwo.patch.v1.0.0 MIME",
+      "test": "bvst.plugin.minertwo.patch.v1.0.0 MIME",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "mime",
-      "test": "bvst.plugin.bluemarvintwo.shell.v1.0.0 MIME",
+      "test": "bvst.plugin.minertwo.shell.v1.0.0 MIME",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "mime",
-      "test": "bvst.plugin.neonpoly.manifest.v1.0.0 MIME",
+      "test": "bvst.plugin.chainpoly.manifest.v1.0.0 MIME",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "mime",
-      "test": "bvst.plugin.neonpoly.patch.v1.0.0 MIME",
+      "test": "bvst.plugin.chainpoly.patch.v1.0.0 MIME",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "mime",
-      "test": "bvst.plugin.neonpoly.shell.v1.0.0 MIME",
+      "test": "bvst.plugin.chainpoly.shell.v1.0.0 MIME",
       "status": "pass",
       "detail": ""
     },
@@ -1162,181 +1162,181 @@
     },
     {
       "suite": "chunks",
-      "test": "bvst.plugin.universalengine.manifest.v1.0.0 chunk calc",
+      "test": "bvst.plugin.bvstengine.manifest.v1.0.0 chunk calc",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "chunks",
-      "test": "bvst.plugin.universalengine.manifest.v1.0.0 within limit",
+      "test": "bvst.plugin.bvstengine.manifest.v1.0.0 within limit",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "chunks",
-      "test": "bvst.plugin.universalengine.patch.v1.0.0 chunk calc",
+      "test": "bvst.plugin.bvstengine.patch.v1.0.0 chunk calc",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "chunks",
-      "test": "bvst.plugin.universalengine.patch.v1.0.0 within limit",
+      "test": "bvst.plugin.bvstengine.patch.v1.0.0 within limit",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "chunks",
-      "test": "bvst.plugin.universalengine.shell.v1.0.0 chunk calc",
+      "test": "bvst.plugin.bvstengine.shell.v1.0.0 chunk calc",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "chunks",
-      "test": "bvst.plugin.universalengine.shell.v1.0.0 within limit",
+      "test": "bvst.plugin.bvstengine.shell.v1.0.0 within limit",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "chunks",
-      "test": "bvst.plugin.universalsynth.manifest.v1.0.13 chunk calc",
+      "test": "bvst.plugin.bvstsynth.manifest.v1.0.13 chunk calc",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "chunks",
-      "test": "bvst.plugin.universalsynth.manifest.v1.0.13 within limit",
+      "test": "bvst.plugin.bvstsynth.manifest.v1.0.13 within limit",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "chunks",
-      "test": "bvst.plugin.universalsynth.patch.v1.0.13 chunk calc",
+      "test": "bvst.plugin.bvstsynth.patch.v1.0.13 chunk calc",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "chunks",
-      "test": "bvst.plugin.universalsynth.patch.v1.0.13 within limit",
+      "test": "bvst.plugin.bvstsynth.patch.v1.0.13 within limit",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "chunks",
-      "test": "bvst.plugin.universalsynth.shell.v1.0.13 chunk calc",
+      "test": "bvst.plugin.bvstsynth.shell.v1.0.13 chunk calc",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "chunks",
-      "test": "bvst.plugin.universalsynth.shell.v1.0.13 within limit",
+      "test": "bvst.plugin.bvstsynth.shell.v1.0.13 within limit",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "chunks",
-      "test": "bvst.plugin.bluemarvinone.manifest.v1.0.0 chunk calc",
+      "test": "bvst.plugin.minerone.manifest.v1.0.0 chunk calc",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "chunks",
-      "test": "bvst.plugin.bluemarvinone.manifest.v1.0.0 within limit",
+      "test": "bvst.plugin.minerone.manifest.v1.0.0 within limit",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "chunks",
-      "test": "bvst.plugin.bluemarvinone.patch.v1.0.0 chunk calc",
+      "test": "bvst.plugin.minerone.patch.v1.0.0 chunk calc",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "chunks",
-      "test": "bvst.plugin.bluemarvinone.patch.v1.0.0 within limit",
+      "test": "bvst.plugin.minerone.patch.v1.0.0 within limit",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "chunks",
-      "test": "bvst.plugin.bluemarvinone.shell.v1.0.0 chunk calc",
+      "test": "bvst.plugin.minerone.shell.v1.0.0 chunk calc",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "chunks",
-      "test": "bvst.plugin.bluemarvinone.shell.v1.0.0 within limit",
+      "test": "bvst.plugin.minerone.shell.v1.0.0 within limit",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "chunks",
-      "test": "bvst.plugin.bluemarvintwo.manifest.v1.0.0 chunk calc",
+      "test": "bvst.plugin.minertwo.manifest.v1.0.0 chunk calc",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "chunks",
-      "test": "bvst.plugin.bluemarvintwo.manifest.v1.0.0 within limit",
+      "test": "bvst.plugin.minertwo.manifest.v1.0.0 within limit",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "chunks",
-      "test": "bvst.plugin.bluemarvintwo.patch.v1.0.0 chunk calc",
+      "test": "bvst.plugin.minertwo.patch.v1.0.0 chunk calc",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "chunks",
-      "test": "bvst.plugin.bluemarvintwo.patch.v1.0.0 within limit",
+      "test": "bvst.plugin.minertwo.patch.v1.0.0 within limit",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "chunks",
-      "test": "bvst.plugin.bluemarvintwo.shell.v1.0.0 chunk calc",
+      "test": "bvst.plugin.minertwo.shell.v1.0.0 chunk calc",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "chunks",
-      "test": "bvst.plugin.bluemarvintwo.shell.v1.0.0 within limit",
+      "test": "bvst.plugin.minertwo.shell.v1.0.0 within limit",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "chunks",
-      "test": "bvst.plugin.neonpoly.manifest.v1.0.0 chunk calc",
+      "test": "bvst.plugin.chainpoly.manifest.v1.0.0 chunk calc",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "chunks",
-      "test": "bvst.plugin.neonpoly.manifest.v1.0.0 within limit",
+      "test": "bvst.plugin.chainpoly.manifest.v1.0.0 within limit",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "chunks",
-      "test": "bvst.plugin.neonpoly.patch.v1.0.0 chunk calc",
+      "test": "bvst.plugin.chainpoly.patch.v1.0.0 chunk calc",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "chunks",
-      "test": "bvst.plugin.neonpoly.patch.v1.0.0 within limit",
+      "test": "bvst.plugin.chainpoly.patch.v1.0.0 within limit",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "chunks",
-      "test": "bvst.plugin.neonpoly.shell.v1.0.0 chunk calc",
+      "test": "bvst.plugin.chainpoly.shell.v1.0.0 chunk calc",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "chunks",
-      "test": "bvst.plugin.neonpoly.shell.v1.0.0 within limit",
+      "test": "bvst.plugin.chainpoly.shell.v1.0.0 within limit",
       "status": "pass",
       "detail": ""
     },
@@ -1642,49 +1642,49 @@
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.universalengine.patch.v1.0.0 → bvst.schema.patch.v1 exists",
+      "test": "bvst.plugin.bvstengine.patch.v1.0.0 → bvst.schema.patch.v1 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.universalengine.shell.v1.0.0 → bvst.runtime.patch-runtime.v1.0.0 exists",
+      "test": "bvst.plugin.bvstengine.shell.v1.0.0 → bvst.runtime.patch-runtime.v1.0.0 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.universalengine.shell.v1.0.0 → bvst.plugin.universalengine.manifest.v1.0.0 exists",
+      "test": "bvst.plugin.bvstengine.shell.v1.0.0 → bvst.plugin.bvstengine.manifest.v1.0.0 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.universalengine.shell.v1.0.0 → bvst.plugin.universalengine.patch.v1.0.0 exists",
+      "test": "bvst.plugin.bvstengine.shell.v1.0.0 → bvst.plugin.bvstengine.patch.v1.0.0 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.universalsynth.patch.v1.0.13 → bvst.schema.patch.v1 exists",
+      "test": "bvst.plugin.bvstsynth.patch.v1.0.13 → bvst.schema.patch.v1 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.universalsynth.shell.v1.0.13 → bvst.runtime.patch-runtime.v1.0.0 exists",
+      "test": "bvst.plugin.bvstsynth.shell.v1.0.13 → bvst.runtime.patch-runtime.v1.0.0 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.universalsynth.shell.v1.0.13 → bvst.plugin.universalsynth.manifest.v1.0.13 exists",
+      "test": "bvst.plugin.bvstsynth.shell.v1.0.13 → bvst.plugin.bvstsynth.manifest.v1.0.13 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.universalsynth.shell.v1.0.13 → bvst.plugin.universalsynth.patch.v1.0.13 exists",
+      "test": "bvst.plugin.bvstsynth.shell.v1.0.13 → bvst.plugin.bvstsynth.patch.v1.0.13 exists",
       "status": "pass",
       "detail": ""
     },
@@ -1726,163 +1726,163 @@
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.universalengine.release.v1.0.0 → bvst.plugin.universalengine.manifest.v1.0.0 exists",
+      "test": "bvst.plugin.bvstengine.release.v1.0.0 → bvst.plugin.bvstengine.manifest.v1.0.0 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.universalengine.release.v1.0.0 → bvst.plugin.universalengine.patch.v1.0.0 exists",
+      "test": "bvst.plugin.bvstengine.release.v1.0.0 → bvst.plugin.bvstengine.patch.v1.0.0 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.universalengine.release.v1.0.0 → bvst.plugin.universalengine.shell.v1.0.0 exists",
+      "test": "bvst.plugin.bvstengine.release.v1.0.0 → bvst.plugin.bvstengine.shell.v1.0.0 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.universalengine.release.v1.0.0 → bvst.catalog.runtime.v1 exists",
+      "test": "bvst.plugin.bvstengine.release.v1.0.0 → bvst.catalog.runtime.v1 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.universalengine.release.v1.0.0 → bvst.catalog.engine.v1 exists",
+      "test": "bvst.plugin.bvstengine.release.v1.0.0 → bvst.catalog.engine.v1 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.universalengine.release.v1.0.0 → bvst.catalog.schema.v1 exists",
+      "test": "bvst.plugin.bvstengine.release.v1.0.0 → bvst.catalog.schema.v1 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.universalsynth.release.v1.0.13 → bvst.plugin.universalsynth.manifest.v1.0.13 exists",
+      "test": "bvst.plugin.bvstsynth.release.v1.0.13 → bvst.plugin.bvstsynth.manifest.v1.0.13 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.universalsynth.release.v1.0.13 → bvst.plugin.universalsynth.patch.v1.0.13 exists",
+      "test": "bvst.plugin.bvstsynth.release.v1.0.13 → bvst.plugin.bvstsynth.patch.v1.0.13 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.universalsynth.release.v1.0.13 → bvst.plugin.universalsynth.shell.v1.0.13 exists",
+      "test": "bvst.plugin.bvstsynth.release.v1.0.13 → bvst.plugin.bvstsynth.shell.v1.0.13 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.universalsynth.release.v1.0.13 → bvst.catalog.runtime.v1 exists",
+      "test": "bvst.plugin.bvstsynth.release.v1.0.13 → bvst.catalog.runtime.v1 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.universalsynth.release.v1.0.13 → bvst.catalog.engine.v1 exists",
+      "test": "bvst.plugin.bvstsynth.release.v1.0.13 → bvst.catalog.engine.v1 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.universalsynth.release.v1.0.13 → bvst.catalog.schema.v1 exists",
+      "test": "bvst.plugin.bvstsynth.release.v1.0.13 → bvst.catalog.schema.v1 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.catalog.family.universalsynthfamily.v1 → bvst.plugin.universalsynth.release.v1.0.13 exists",
+      "test": "bvst.catalog.family.bvstsynthfamily.v1 → bvst.plugin.bvstsynth.release.v1.0.13 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.catalog.family.universalsynthfamily.v1 → bvst.plugin.universalengine.release.v1.0.0 exists",
+      "test": "bvst.catalog.family.bvstsynthfamily.v1 → bvst.plugin.bvstengine.release.v1.0.0 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.catalog.family.universalsynthfamily.v1 → bvst.plugin.jms10.release.v1.0.0 exists",
+      "test": "bvst.catalog.family.bvstsynthfamily.v1 → bvst.plugin.jms10.release.v1.0.0 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.bluemarvinone.patch.v1.0.0 → bvst.schema.patch.v1 exists",
+      "test": "bvst.plugin.minerone.patch.v1.0.0 → bvst.schema.patch.v1 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.bluemarvinone.shell.v1.0.0 → bvst.runtime.patch-runtime.v1.0.0 exists",
+      "test": "bvst.plugin.minerone.shell.v1.0.0 → bvst.runtime.patch-runtime.v1.0.0 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.bluemarvinone.shell.v1.0.0 → bvst.plugin.bluemarvinone.manifest.v1.0.0 exists",
+      "test": "bvst.plugin.minerone.shell.v1.0.0 → bvst.plugin.minerone.manifest.v1.0.0 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.bluemarvinone.shell.v1.0.0 → bvst.plugin.bluemarvinone.patch.v1.0.0 exists",
+      "test": "bvst.plugin.minerone.shell.v1.0.0 → bvst.plugin.minerone.patch.v1.0.0 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.bluemarvintwo.patch.v1.0.0 → bvst.schema.patch.v1 exists",
+      "test": "bvst.plugin.minertwo.patch.v1.0.0 → bvst.schema.patch.v1 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.bluemarvintwo.shell.v1.0.0 → bvst.runtime.patch-runtime.v1.0.0 exists",
+      "test": "bvst.plugin.minertwo.shell.v1.0.0 → bvst.runtime.patch-runtime.v1.0.0 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.bluemarvintwo.shell.v1.0.0 → bvst.plugin.bluemarvintwo.manifest.v1.0.0 exists",
+      "test": "bvst.plugin.minertwo.shell.v1.0.0 → bvst.plugin.minertwo.manifest.v1.0.0 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.bluemarvintwo.shell.v1.0.0 → bvst.plugin.bluemarvintwo.patch.v1.0.0 exists",
+      "test": "bvst.plugin.minertwo.shell.v1.0.0 → bvst.plugin.minertwo.patch.v1.0.0 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.neonpoly.patch.v1.0.0 → bvst.schema.patch.v1 exists",
+      "test": "bvst.plugin.chainpoly.patch.v1.0.0 → bvst.schema.patch.v1 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.neonpoly.shell.v1.0.0 → bvst.runtime.patch-runtime.v1.0.0 exists",
+      "test": "bvst.plugin.chainpoly.shell.v1.0.0 → bvst.runtime.patch-runtime.v1.0.0 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.neonpoly.shell.v1.0.0 → bvst.plugin.neonpoly.manifest.v1.0.0 exists",
+      "test": "bvst.plugin.chainpoly.shell.v1.0.0 → bvst.plugin.chainpoly.manifest.v1.0.0 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.neonpoly.shell.v1.0.0 → bvst.plugin.neonpoly.patch.v1.0.0 exists",
+      "test": "bvst.plugin.chainpoly.shell.v1.0.0 → bvst.plugin.chainpoly.patch.v1.0.0 exists",
       "status": "pass",
       "detail": ""
     },
@@ -1912,109 +1912,109 @@
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.bluemarvinone.release.v1.0.0 → bvst.plugin.bluemarvinone.manifest.v1.0.0 exists",
+      "test": "bvst.plugin.minerone.release.v1.0.0 → bvst.plugin.minerone.manifest.v1.0.0 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.bluemarvinone.release.v1.0.0 → bvst.plugin.bluemarvinone.patch.v1.0.0 exists",
+      "test": "bvst.plugin.minerone.release.v1.0.0 → bvst.plugin.minerone.patch.v1.0.0 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.bluemarvinone.release.v1.0.0 → bvst.plugin.bluemarvinone.shell.v1.0.0 exists",
+      "test": "bvst.plugin.minerone.release.v1.0.0 → bvst.plugin.minerone.shell.v1.0.0 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.bluemarvinone.release.v1.0.0 → bvst.catalog.runtime.v1 exists",
+      "test": "bvst.plugin.minerone.release.v1.0.0 → bvst.catalog.runtime.v1 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.bluemarvinone.release.v1.0.0 → bvst.catalog.engine.v1 exists",
+      "test": "bvst.plugin.minerone.release.v1.0.0 → bvst.catalog.engine.v1 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.bluemarvinone.release.v1.0.0 → bvst.catalog.schema.v1 exists",
+      "test": "bvst.plugin.minerone.release.v1.0.0 → bvst.catalog.schema.v1 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.bluemarvintwo.release.v1.0.0 → bvst.plugin.bluemarvintwo.manifest.v1.0.0 exists",
+      "test": "bvst.plugin.minertwo.release.v1.0.0 → bvst.plugin.minertwo.manifest.v1.0.0 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.bluemarvintwo.release.v1.0.0 → bvst.plugin.bluemarvintwo.patch.v1.0.0 exists",
+      "test": "bvst.plugin.minertwo.release.v1.0.0 → bvst.plugin.minertwo.patch.v1.0.0 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.bluemarvintwo.release.v1.0.0 → bvst.plugin.bluemarvintwo.shell.v1.0.0 exists",
+      "test": "bvst.plugin.minertwo.release.v1.0.0 → bvst.plugin.minertwo.shell.v1.0.0 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.bluemarvintwo.release.v1.0.0 → bvst.catalog.runtime.v1 exists",
+      "test": "bvst.plugin.minertwo.release.v1.0.0 → bvst.catalog.runtime.v1 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.bluemarvintwo.release.v1.0.0 → bvst.catalog.engine.v1 exists",
+      "test": "bvst.plugin.minertwo.release.v1.0.0 → bvst.catalog.engine.v1 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.bluemarvintwo.release.v1.0.0 → bvst.catalog.schema.v1 exists",
+      "test": "bvst.plugin.minertwo.release.v1.0.0 → bvst.catalog.schema.v1 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.neonpoly.release.v1.0.0 → bvst.plugin.neonpoly.manifest.v1.0.0 exists",
+      "test": "bvst.plugin.chainpoly.release.v1.0.0 → bvst.plugin.chainpoly.manifest.v1.0.0 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.neonpoly.release.v1.0.0 → bvst.plugin.neonpoly.patch.v1.0.0 exists",
+      "test": "bvst.plugin.chainpoly.release.v1.0.0 → bvst.plugin.chainpoly.patch.v1.0.0 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.neonpoly.release.v1.0.0 → bvst.plugin.neonpoly.shell.v1.0.0 exists",
+      "test": "bvst.plugin.chainpoly.release.v1.0.0 → bvst.plugin.chainpoly.shell.v1.0.0 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.neonpoly.release.v1.0.0 → bvst.catalog.runtime.v1 exists",
+      "test": "bvst.plugin.chainpoly.release.v1.0.0 → bvst.catalog.runtime.v1 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.neonpoly.release.v1.0.0 → bvst.catalog.engine.v1 exists",
+      "test": "bvst.plugin.chainpoly.release.v1.0.0 → bvst.catalog.engine.v1 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.plugin.neonpoly.release.v1.0.0 → bvst.catalog.schema.v1 exists",
+      "test": "bvst.plugin.chainpoly.release.v1.0.0 → bvst.catalog.schema.v1 exists",
       "status": "pass",
       "detail": ""
     },
@@ -2062,25 +2062,25 @@
     },
     {
       "suite": "deps",
-      "test": "bvst.catalog.family.standalonesynths.v1 → bvst.plugin.bluemarvinone.release.v1.0.0 exists",
+      "test": "bvst.catalog.family.standalonesynths.v1 → bvst.plugin.minerone.release.v1.0.0 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.catalog.family.standalonesynths.v1 → bvst.plugin.bluemarvintwo.release.v1.0.0 exists",
+      "test": "bvst.catalog.family.standalonesynths.v1 → bvst.plugin.minertwo.release.v1.0.0 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.catalog.family.standalonesynths.v1 → bvst.plugin.neonpoly.release.v1.0.0 exists",
+      "test": "bvst.catalog.family.standalonesynths.v1 → bvst.plugin.chainpoly.release.v1.0.0 exists",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "deps",
-      "test": "bvst.catalog.release.firstwaveinstruments.v1 → bvst.catalog.family.universalsynthfamily.v1 exists",
+      "test": "bvst.catalog.release.firstwaveinstruments.v1 → bvst.catalog.family.bvstsynthfamily.v1 exists",
       "status": "pass",
       "detail": ""
     },
@@ -2116,7 +2116,7 @@
     },
     {
       "suite": "deps",
-      "test": "20-universalsynth-family.batch.json topological order valid",
+      "test": "20-bvstsynth-family.batch.json topological order valid",
       "status": "pass",
       "detail": ""
     },
@@ -2302,307 +2302,307 @@
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.universalengine.release.v1.0.0 valid JSON",
+      "test": "bvst.plugin.bvstengine.release.v1.0.0 valid JSON",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.universalengine.release.v1.0.0 name matches",
+      "test": "bvst.plugin.bvstengine.release.v1.0.0 name matches",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.universalengine.release.v1.0.0 has type",
+      "test": "bvst.plugin.bvstengine.release.v1.0.0 has type",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.universalengine.release.v1.0.0 dep coverage",
+      "test": "bvst.plugin.bvstengine.release.v1.0.0 dep coverage",
       "status": "warn",
-      "detail": "dependency \"bvst.plugin.universalengine.manifest.v1.0.0\" not directly listed as a module entry"
+      "detail": "dependency \"bvst.plugin.bvstengine.manifest.v1.0.0\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.universalengine.release.v1.0.0 dep coverage",
+      "test": "bvst.plugin.bvstengine.release.v1.0.0 dep coverage",
       "status": "warn",
-      "detail": "dependency \"bvst.plugin.universalengine.patch.v1.0.0\" not directly listed as a module entry"
+      "detail": "dependency \"bvst.plugin.bvstengine.patch.v1.0.0\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.universalengine.release.v1.0.0 dep coverage",
+      "test": "bvst.plugin.bvstengine.release.v1.0.0 dep coverage",
       "status": "warn",
-      "detail": "dependency \"bvst.plugin.universalengine.shell.v1.0.0\" not directly listed as a module entry"
+      "detail": "dependency \"bvst.plugin.bvstengine.shell.v1.0.0\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.universalengine.release.v1.0.0 dep coverage",
+      "test": "bvst.plugin.bvstengine.release.v1.0.0 dep coverage",
       "status": "warn",
       "detail": "dependency \"bvst.catalog.runtime.v1\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.universalengine.release.v1.0.0 dep coverage",
+      "test": "bvst.plugin.bvstengine.release.v1.0.0 dep coverage",
       "status": "warn",
       "detail": "dependency \"bvst.catalog.engine.v1\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.universalengine.release.v1.0.0 dep coverage",
+      "test": "bvst.plugin.bvstengine.release.v1.0.0 dep coverage",
       "status": "warn",
       "detail": "dependency \"bvst.catalog.schema.v1\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.universalsynth.release.v1.0.13 valid JSON",
+      "test": "bvst.plugin.bvstsynth.release.v1.0.13 valid JSON",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.universalsynth.release.v1.0.13 name matches",
+      "test": "bvst.plugin.bvstsynth.release.v1.0.13 name matches",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.universalsynth.release.v1.0.13 has type",
+      "test": "bvst.plugin.bvstsynth.release.v1.0.13 has type",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.universalsynth.release.v1.0.13 dep coverage",
+      "test": "bvst.plugin.bvstsynth.release.v1.0.13 dep coverage",
       "status": "warn",
-      "detail": "dependency \"bvst.plugin.universalsynth.manifest.v1.0.13\" not directly listed as a module entry"
+      "detail": "dependency \"bvst.plugin.bvstsynth.manifest.v1.0.13\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.universalsynth.release.v1.0.13 dep coverage",
+      "test": "bvst.plugin.bvstsynth.release.v1.0.13 dep coverage",
       "status": "warn",
-      "detail": "dependency \"bvst.plugin.universalsynth.patch.v1.0.13\" not directly listed as a module entry"
+      "detail": "dependency \"bvst.plugin.bvstsynth.patch.v1.0.13\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.universalsynth.release.v1.0.13 dep coverage",
+      "test": "bvst.plugin.bvstsynth.release.v1.0.13 dep coverage",
       "status": "warn",
-      "detail": "dependency \"bvst.plugin.universalsynth.shell.v1.0.13\" not directly listed as a module entry"
+      "detail": "dependency \"bvst.plugin.bvstsynth.shell.v1.0.13\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.universalsynth.release.v1.0.13 dep coverage",
+      "test": "bvst.plugin.bvstsynth.release.v1.0.13 dep coverage",
       "status": "warn",
       "detail": "dependency \"bvst.catalog.runtime.v1\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.universalsynth.release.v1.0.13 dep coverage",
+      "test": "bvst.plugin.bvstsynth.release.v1.0.13 dep coverage",
       "status": "warn",
       "detail": "dependency \"bvst.catalog.engine.v1\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.universalsynth.release.v1.0.13 dep coverage",
+      "test": "bvst.plugin.bvstsynth.release.v1.0.13 dep coverage",
       "status": "warn",
       "detail": "dependency \"bvst.catalog.schema.v1\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.catalog.family.universalsynthfamily.v1 valid JSON",
+      "test": "bvst.catalog.family.bvstsynthfamily.v1 valid JSON",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.catalog.family.universalsynthfamily.v1 name matches",
+      "test": "bvst.catalog.family.bvstsynthfamily.v1 name matches",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.catalog.family.universalsynthfamily.v1 has type",
+      "test": "bvst.catalog.family.bvstsynthfamily.v1 has type",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.catalog.family.universalsynthfamily.v1 dep coverage",
+      "test": "bvst.catalog.family.bvstsynthfamily.v1 dep coverage",
       "status": "warn",
-      "detail": "dependency \"bvst.plugin.universalsynth.release.v1.0.13\" not directly listed as a module entry"
+      "detail": "dependency \"bvst.plugin.bvstsynth.release.v1.0.13\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.catalog.family.universalsynthfamily.v1 dep coverage",
+      "test": "bvst.catalog.family.bvstsynthfamily.v1 dep coverage",
       "status": "warn",
-      "detail": "dependency \"bvst.plugin.universalengine.release.v1.0.0\" not directly listed as a module entry"
+      "detail": "dependency \"bvst.plugin.bvstengine.release.v1.0.0\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.catalog.family.universalsynthfamily.v1 dep coverage",
+      "test": "bvst.catalog.family.bvstsynthfamily.v1 dep coverage",
       "status": "warn",
       "detail": "dependency \"bvst.plugin.jms10.release.v1.0.0\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.bluemarvinone.release.v1.0.0 valid JSON",
+      "test": "bvst.plugin.minerone.release.v1.0.0 valid JSON",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.bluemarvinone.release.v1.0.0 name matches",
+      "test": "bvst.plugin.minerone.release.v1.0.0 name matches",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.bluemarvinone.release.v1.0.0 has type",
+      "test": "bvst.plugin.minerone.release.v1.0.0 has type",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.bluemarvinone.release.v1.0.0 dep coverage",
+      "test": "bvst.plugin.minerone.release.v1.0.0 dep coverage",
       "status": "warn",
-      "detail": "dependency \"bvst.plugin.bluemarvinone.manifest.v1.0.0\" not directly listed as a module entry"
+      "detail": "dependency \"bvst.plugin.minerone.manifest.v1.0.0\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.bluemarvinone.release.v1.0.0 dep coverage",
+      "test": "bvst.plugin.minerone.release.v1.0.0 dep coverage",
       "status": "warn",
-      "detail": "dependency \"bvst.plugin.bluemarvinone.patch.v1.0.0\" not directly listed as a module entry"
+      "detail": "dependency \"bvst.plugin.minerone.patch.v1.0.0\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.bluemarvinone.release.v1.0.0 dep coverage",
+      "test": "bvst.plugin.minerone.release.v1.0.0 dep coverage",
       "status": "warn",
-      "detail": "dependency \"bvst.plugin.bluemarvinone.shell.v1.0.0\" not directly listed as a module entry"
+      "detail": "dependency \"bvst.plugin.minerone.shell.v1.0.0\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.bluemarvinone.release.v1.0.0 dep coverage",
+      "test": "bvst.plugin.minerone.release.v1.0.0 dep coverage",
       "status": "warn",
       "detail": "dependency \"bvst.catalog.runtime.v1\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.bluemarvinone.release.v1.0.0 dep coverage",
+      "test": "bvst.plugin.minerone.release.v1.0.0 dep coverage",
       "status": "warn",
       "detail": "dependency \"bvst.catalog.engine.v1\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.bluemarvinone.release.v1.0.0 dep coverage",
+      "test": "bvst.plugin.minerone.release.v1.0.0 dep coverage",
       "status": "warn",
       "detail": "dependency \"bvst.catalog.schema.v1\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.bluemarvintwo.release.v1.0.0 valid JSON",
+      "test": "bvst.plugin.minertwo.release.v1.0.0 valid JSON",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.bluemarvintwo.release.v1.0.0 name matches",
+      "test": "bvst.plugin.minertwo.release.v1.0.0 name matches",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.bluemarvintwo.release.v1.0.0 has type",
+      "test": "bvst.plugin.minertwo.release.v1.0.0 has type",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.bluemarvintwo.release.v1.0.0 dep coverage",
+      "test": "bvst.plugin.minertwo.release.v1.0.0 dep coverage",
       "status": "warn",
-      "detail": "dependency \"bvst.plugin.bluemarvintwo.manifest.v1.0.0\" not directly listed as a module entry"
+      "detail": "dependency \"bvst.plugin.minertwo.manifest.v1.0.0\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.bluemarvintwo.release.v1.0.0 dep coverage",
+      "test": "bvst.plugin.minertwo.release.v1.0.0 dep coverage",
       "status": "warn",
-      "detail": "dependency \"bvst.plugin.bluemarvintwo.patch.v1.0.0\" not directly listed as a module entry"
+      "detail": "dependency \"bvst.plugin.minertwo.patch.v1.0.0\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.bluemarvintwo.release.v1.0.0 dep coverage",
+      "test": "bvst.plugin.minertwo.release.v1.0.0 dep coverage",
       "status": "warn",
-      "detail": "dependency \"bvst.plugin.bluemarvintwo.shell.v1.0.0\" not directly listed as a module entry"
+      "detail": "dependency \"bvst.plugin.minertwo.shell.v1.0.0\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.bluemarvintwo.release.v1.0.0 dep coverage",
+      "test": "bvst.plugin.minertwo.release.v1.0.0 dep coverage",
       "status": "warn",
       "detail": "dependency \"bvst.catalog.runtime.v1\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.bluemarvintwo.release.v1.0.0 dep coverage",
+      "test": "bvst.plugin.minertwo.release.v1.0.0 dep coverage",
       "status": "warn",
       "detail": "dependency \"bvst.catalog.engine.v1\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.bluemarvintwo.release.v1.0.0 dep coverage",
+      "test": "bvst.plugin.minertwo.release.v1.0.0 dep coverage",
       "status": "warn",
       "detail": "dependency \"bvst.catalog.schema.v1\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.neonpoly.release.v1.0.0 valid JSON",
+      "test": "bvst.plugin.chainpoly.release.v1.0.0 valid JSON",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.neonpoly.release.v1.0.0 name matches",
+      "test": "bvst.plugin.chainpoly.release.v1.0.0 name matches",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.neonpoly.release.v1.0.0 has type",
+      "test": "bvst.plugin.chainpoly.release.v1.0.0 has type",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.neonpoly.release.v1.0.0 dep coverage",
+      "test": "bvst.plugin.chainpoly.release.v1.0.0 dep coverage",
       "status": "warn",
-      "detail": "dependency \"bvst.plugin.neonpoly.manifest.v1.0.0\" not directly listed as a module entry"
+      "detail": "dependency \"bvst.plugin.chainpoly.manifest.v1.0.0\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.neonpoly.release.v1.0.0 dep coverage",
+      "test": "bvst.plugin.chainpoly.release.v1.0.0 dep coverage",
       "status": "warn",
-      "detail": "dependency \"bvst.plugin.neonpoly.patch.v1.0.0\" not directly listed as a module entry"
+      "detail": "dependency \"bvst.plugin.chainpoly.patch.v1.0.0\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.neonpoly.release.v1.0.0 dep coverage",
+      "test": "bvst.plugin.chainpoly.release.v1.0.0 dep coverage",
       "status": "warn",
-      "detail": "dependency \"bvst.plugin.neonpoly.shell.v1.0.0\" not directly listed as a module entry"
+      "detail": "dependency \"bvst.plugin.chainpoly.shell.v1.0.0\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.neonpoly.release.v1.0.0 dep coverage",
+      "test": "bvst.plugin.chainpoly.release.v1.0.0 dep coverage",
       "status": "warn",
       "detail": "dependency \"bvst.catalog.runtime.v1\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.neonpoly.release.v1.0.0 dep coverage",
+      "test": "bvst.plugin.chainpoly.release.v1.0.0 dep coverage",
       "status": "warn",
       "detail": "dependency \"bvst.catalog.engine.v1\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
-      "test": "bvst.plugin.neonpoly.release.v1.0.0 dep coverage",
+      "test": "bvst.plugin.chainpoly.release.v1.0.0 dep coverage",
       "status": "warn",
       "detail": "dependency \"bvst.catalog.schema.v1\" not directly listed as a module entry"
     },
@@ -2688,19 +2688,19 @@
       "suite": "catalog-tmpl",
       "test": "bvst.catalog.family.standalonesynths.v1 dep coverage",
       "status": "warn",
-      "detail": "dependency \"bvst.plugin.bluemarvinone.release.v1.0.0\" not directly listed as a module entry"
+      "detail": "dependency \"bvst.plugin.minerone.release.v1.0.0\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
       "test": "bvst.catalog.family.standalonesynths.v1 dep coverage",
       "status": "warn",
-      "detail": "dependency \"bvst.plugin.bluemarvintwo.release.v1.0.0\" not directly listed as a module entry"
+      "detail": "dependency \"bvst.plugin.minertwo.release.v1.0.0\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
       "test": "bvst.catalog.family.standalonesynths.v1 dep coverage",
       "status": "warn",
-      "detail": "dependency \"bvst.plugin.neonpoly.release.v1.0.0\" not directly listed as a module entry"
+      "detail": "dependency \"bvst.plugin.chainpoly.release.v1.0.0\" not directly listed as a module entry"
     },
     {
       "suite": "catalog-tmpl",
@@ -2878,145 +2878,145 @@
     },
     {
       "suite": "render-sim",
-      "test": "bvst.plugin.universalengine.release.v1.0.0 all 6 deps resolved",
+      "test": "bvst.plugin.bvstengine.release.v1.0.0 all 6 deps resolved",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "render-sim",
-      "test": "bvst.plugin.universalengine.release.v1.0.0 renders cleanly",
+      "test": "bvst.plugin.bvstengine.release.v1.0.0 renders cleanly",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "render-sim",
-      "test": "bvst.plugin.universalengine.release.v1.0.0 rendered JSON valid",
+      "test": "bvst.plugin.bvstengine.release.v1.0.0 rendered JSON valid",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "render-sim",
-      "test": "bvst.plugin.universalengine.release.v1.0.0 no null token_ids post-render",
+      "test": "bvst.plugin.bvstengine.release.v1.0.0 no null token_ids post-render",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "render-sim",
-      "test": "bvst.plugin.universalsynth.release.v1.0.13 all 6 deps resolved",
+      "test": "bvst.plugin.bvstsynth.release.v1.0.13 all 6 deps resolved",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "render-sim",
-      "test": "bvst.plugin.universalsynth.release.v1.0.13 renders cleanly",
+      "test": "bvst.plugin.bvstsynth.release.v1.0.13 renders cleanly",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "render-sim",
-      "test": "bvst.plugin.universalsynth.release.v1.0.13 rendered JSON valid",
+      "test": "bvst.plugin.bvstsynth.release.v1.0.13 rendered JSON valid",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "render-sim",
-      "test": "bvst.plugin.universalsynth.release.v1.0.13 no null token_ids post-render",
+      "test": "bvst.plugin.bvstsynth.release.v1.0.13 no null token_ids post-render",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "render-sim",
-      "test": "bvst.catalog.family.universalsynthfamily.v1 all 3 deps resolved",
+      "test": "bvst.catalog.family.bvstsynthfamily.v1 all 3 deps resolved",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "render-sim",
-      "test": "bvst.catalog.family.universalsynthfamily.v1 renders cleanly",
+      "test": "bvst.catalog.family.bvstsynthfamily.v1 renders cleanly",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "render-sim",
-      "test": "bvst.catalog.family.universalsynthfamily.v1 rendered JSON valid",
+      "test": "bvst.catalog.family.bvstsynthfamily.v1 rendered JSON valid",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "render-sim",
-      "test": "bvst.catalog.family.universalsynthfamily.v1 no null token_ids post-render",
+      "test": "bvst.catalog.family.bvstsynthfamily.v1 no null token_ids post-render",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "render-sim",
-      "test": "bvst.plugin.bluemarvinone.release.v1.0.0 all 6 deps resolved",
+      "test": "bvst.plugin.minerone.release.v1.0.0 all 6 deps resolved",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "render-sim",
-      "test": "bvst.plugin.bluemarvinone.release.v1.0.0 renders cleanly",
+      "test": "bvst.plugin.minerone.release.v1.0.0 renders cleanly",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "render-sim",
-      "test": "bvst.plugin.bluemarvinone.release.v1.0.0 rendered JSON valid",
+      "test": "bvst.plugin.minerone.release.v1.0.0 rendered JSON valid",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "render-sim",
-      "test": "bvst.plugin.bluemarvinone.release.v1.0.0 no null token_ids post-render",
+      "test": "bvst.plugin.minerone.release.v1.0.0 no null token_ids post-render",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "render-sim",
-      "test": "bvst.plugin.bluemarvintwo.release.v1.0.0 all 6 deps resolved",
+      "test": "bvst.plugin.minertwo.release.v1.0.0 all 6 deps resolved",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "render-sim",
-      "test": "bvst.plugin.bluemarvintwo.release.v1.0.0 renders cleanly",
+      "test": "bvst.plugin.minertwo.release.v1.0.0 renders cleanly",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "render-sim",
-      "test": "bvst.plugin.bluemarvintwo.release.v1.0.0 rendered JSON valid",
+      "test": "bvst.plugin.minertwo.release.v1.0.0 rendered JSON valid",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "render-sim",
-      "test": "bvst.plugin.bluemarvintwo.release.v1.0.0 no null token_ids post-render",
+      "test": "bvst.plugin.minertwo.release.v1.0.0 no null token_ids post-render",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "render-sim",
-      "test": "bvst.plugin.neonpoly.release.v1.0.0 all 6 deps resolved",
+      "test": "bvst.plugin.chainpoly.release.v1.0.0 all 6 deps resolved",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "render-sim",
-      "test": "bvst.plugin.neonpoly.release.v1.0.0 renders cleanly",
+      "test": "bvst.plugin.chainpoly.release.v1.0.0 renders cleanly",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "render-sim",
-      "test": "bvst.plugin.neonpoly.release.v1.0.0 rendered JSON valid",
+      "test": "bvst.plugin.chainpoly.release.v1.0.0 rendered JSON valid",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "render-sim",
-      "test": "bvst.plugin.neonpoly.release.v1.0.0 no null token_ids post-render",
+      "test": "bvst.plugin.chainpoly.release.v1.0.0 no null token_ids post-render",
       "status": "pass",
       "detail": ""
     },
@@ -3262,37 +3262,37 @@
     },
     {
       "suite": "token-map",
-      "test": "bvst.plugin.universalengine.manifest.v1.0.0 in token map",
+      "test": "bvst.plugin.bvstengine.manifest.v1.0.0 in token map",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "token-map",
-      "test": "bvst.plugin.universalengine.patch.v1.0.0 in token map",
+      "test": "bvst.plugin.bvstengine.patch.v1.0.0 in token map",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "token-map",
-      "test": "bvst.plugin.universalengine.shell.v1.0.0 in token map",
+      "test": "bvst.plugin.bvstengine.shell.v1.0.0 in token map",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "token-map",
-      "test": "bvst.plugin.universalsynth.manifest.v1.0.13 in token map",
+      "test": "bvst.plugin.bvstsynth.manifest.v1.0.13 in token map",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "token-map",
-      "test": "bvst.plugin.universalsynth.patch.v1.0.13 in token map",
+      "test": "bvst.plugin.bvstsynth.patch.v1.0.13 in token map",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "token-map",
-      "test": "bvst.plugin.universalsynth.shell.v1.0.13 in token map",
+      "test": "bvst.plugin.bvstsynth.shell.v1.0.13 in token map",
       "status": "pass",
       "detail": ""
     },
@@ -3304,73 +3304,73 @@
     },
     {
       "suite": "token-map",
-      "test": "bvst.plugin.universalengine.release.v1.0.0 in token map",
+      "test": "bvst.plugin.bvstengine.release.v1.0.0 in token map",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "token-map",
-      "test": "bvst.plugin.universalsynth.release.v1.0.13 in token map",
+      "test": "bvst.plugin.bvstsynth.release.v1.0.13 in token map",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "token-map",
-      "test": "bvst.catalog.family.universalsynthfamily.v1 in token map",
+      "test": "bvst.catalog.family.bvstsynthfamily.v1 in token map",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "token-map",
-      "test": "bvst.plugin.bluemarvinone.manifest.v1.0.0 in token map",
+      "test": "bvst.plugin.minerone.manifest.v1.0.0 in token map",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "token-map",
-      "test": "bvst.plugin.bluemarvinone.patch.v1.0.0 in token map",
+      "test": "bvst.plugin.minerone.patch.v1.0.0 in token map",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "token-map",
-      "test": "bvst.plugin.bluemarvinone.shell.v1.0.0 in token map",
+      "test": "bvst.plugin.minerone.shell.v1.0.0 in token map",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "token-map",
-      "test": "bvst.plugin.bluemarvintwo.manifest.v1.0.0 in token map",
+      "test": "bvst.plugin.minertwo.manifest.v1.0.0 in token map",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "token-map",
-      "test": "bvst.plugin.bluemarvintwo.patch.v1.0.0 in token map",
+      "test": "bvst.plugin.minertwo.patch.v1.0.0 in token map",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "token-map",
-      "test": "bvst.plugin.bluemarvintwo.shell.v1.0.0 in token map",
+      "test": "bvst.plugin.minertwo.shell.v1.0.0 in token map",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "token-map",
-      "test": "bvst.plugin.neonpoly.manifest.v1.0.0 in token map",
+      "test": "bvst.plugin.chainpoly.manifest.v1.0.0 in token map",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "token-map",
-      "test": "bvst.plugin.neonpoly.patch.v1.0.0 in token map",
+      "test": "bvst.plugin.chainpoly.patch.v1.0.0 in token map",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "token-map",
-      "test": "bvst.plugin.neonpoly.shell.v1.0.0 in token map",
+      "test": "bvst.plugin.chainpoly.shell.v1.0.0 in token map",
       "status": "pass",
       "detail": ""
     },
@@ -3394,19 +3394,19 @@
     },
     {
       "suite": "token-map",
-      "test": "bvst.plugin.bluemarvinone.release.v1.0.0 in token map",
+      "test": "bvst.plugin.minerone.release.v1.0.0 in token map",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "token-map",
-      "test": "bvst.plugin.bluemarvintwo.release.v1.0.0 in token map",
+      "test": "bvst.plugin.minertwo.release.v1.0.0 in token map",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "token-map",
-      "test": "bvst.plugin.neonpoly.release.v1.0.0 in token map",
+      "test": "bvst.plugin.chainpoly.release.v1.0.0 in token map",
       "status": "pass",
       "detail": ""
     },
@@ -3994,145 +3994,145 @@
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.universalengine.manifest.v1.0.0 sha256 match",
+      "test": "bvst.plugin.bvstengine.manifest.v1.0.0 sha256 match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.universalengine.manifest.v1.0.0 bytes match",
+      "test": "bvst.plugin.bvstengine.manifest.v1.0.0 bytes match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.universalengine.manifest.v1.0.0 chunks match",
+      "test": "bvst.plugin.bvstengine.manifest.v1.0.0 chunks match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.universalengine.manifest.v1.0.0 route match",
+      "test": "bvst.plugin.bvstengine.manifest.v1.0.0 route match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.universalengine.patch.v1.0.0 sha256 match",
+      "test": "bvst.plugin.bvstengine.patch.v1.0.0 sha256 match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.universalengine.patch.v1.0.0 bytes match",
+      "test": "bvst.plugin.bvstengine.patch.v1.0.0 bytes match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.universalengine.patch.v1.0.0 chunks match",
+      "test": "bvst.plugin.bvstengine.patch.v1.0.0 chunks match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.universalengine.patch.v1.0.0 route match",
+      "test": "bvst.plugin.bvstengine.patch.v1.0.0 route match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.universalengine.shell.v1.0.0 sha256 match",
+      "test": "bvst.plugin.bvstengine.shell.v1.0.0 sha256 match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.universalengine.shell.v1.0.0 bytes match",
+      "test": "bvst.plugin.bvstengine.shell.v1.0.0 bytes match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.universalengine.shell.v1.0.0 chunks match",
+      "test": "bvst.plugin.bvstengine.shell.v1.0.0 chunks match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.universalengine.shell.v1.0.0 route match",
+      "test": "bvst.plugin.bvstengine.shell.v1.0.0 route match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.universalsynth.manifest.v1.0.13 sha256 match",
+      "test": "bvst.plugin.bvstsynth.manifest.v1.0.13 sha256 match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.universalsynth.manifest.v1.0.13 bytes match",
+      "test": "bvst.plugin.bvstsynth.manifest.v1.0.13 bytes match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.universalsynth.manifest.v1.0.13 chunks match",
+      "test": "bvst.plugin.bvstsynth.manifest.v1.0.13 chunks match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.universalsynth.manifest.v1.0.13 route match",
+      "test": "bvst.plugin.bvstsynth.manifest.v1.0.13 route match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.universalsynth.patch.v1.0.13 sha256 match",
+      "test": "bvst.plugin.bvstsynth.patch.v1.0.13 sha256 match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.universalsynth.patch.v1.0.13 bytes match",
+      "test": "bvst.plugin.bvstsynth.patch.v1.0.13 bytes match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.universalsynth.patch.v1.0.13 chunks match",
+      "test": "bvst.plugin.bvstsynth.patch.v1.0.13 chunks match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.universalsynth.patch.v1.0.13 route match",
+      "test": "bvst.plugin.bvstsynth.patch.v1.0.13 route match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.universalsynth.shell.v1.0.13 sha256 match",
+      "test": "bvst.plugin.bvstsynth.shell.v1.0.13 sha256 match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.universalsynth.shell.v1.0.13 bytes match",
+      "test": "bvst.plugin.bvstsynth.shell.v1.0.13 bytes match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.universalsynth.shell.v1.0.13 chunks match",
+      "test": "bvst.plugin.bvstsynth.shell.v1.0.13 chunks match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.universalsynth.shell.v1.0.13 route match",
+      "test": "bvst.plugin.bvstsynth.shell.v1.0.13 route match",
       "status": "pass",
       "detail": ""
     },
@@ -4156,271 +4156,271 @@
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.universalengine.release.v1.0.0 bytes match",
+      "test": "bvst.plugin.bvstengine.release.v1.0.0 bytes match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.universalengine.release.v1.0.0 chunks match",
+      "test": "bvst.plugin.bvstengine.release.v1.0.0 chunks match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.universalengine.release.v1.0.0 route match",
+      "test": "bvst.plugin.bvstengine.release.v1.0.0 route match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.universalsynth.release.v1.0.13 bytes match",
+      "test": "bvst.plugin.bvstsynth.release.v1.0.13 bytes match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.universalsynth.release.v1.0.13 chunks match",
+      "test": "bvst.plugin.bvstsynth.release.v1.0.13 chunks match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.universalsynth.release.v1.0.13 route match",
+      "test": "bvst.plugin.bvstsynth.release.v1.0.13 route match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.catalog.family.universalsynthfamily.v1 bytes match",
+      "test": "bvst.catalog.family.bvstsynthfamily.v1 bytes match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.catalog.family.universalsynthfamily.v1 chunks match",
+      "test": "bvst.catalog.family.bvstsynthfamily.v1 chunks match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.catalog.family.universalsynthfamily.v1 route match",
+      "test": "bvst.catalog.family.bvstsynthfamily.v1 route match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.bluemarvinone.manifest.v1.0.0 sha256 match",
+      "test": "bvst.plugin.minerone.manifest.v1.0.0 sha256 match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.bluemarvinone.manifest.v1.0.0 bytes match",
+      "test": "bvst.plugin.minerone.manifest.v1.0.0 bytes match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.bluemarvinone.manifest.v1.0.0 chunks match",
+      "test": "bvst.plugin.minerone.manifest.v1.0.0 chunks match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.bluemarvinone.manifest.v1.0.0 route match",
+      "test": "bvst.plugin.minerone.manifest.v1.0.0 route match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.bluemarvinone.patch.v1.0.0 sha256 match",
+      "test": "bvst.plugin.minerone.patch.v1.0.0 sha256 match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.bluemarvinone.patch.v1.0.0 bytes match",
+      "test": "bvst.plugin.minerone.patch.v1.0.0 bytes match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.bluemarvinone.patch.v1.0.0 chunks match",
+      "test": "bvst.plugin.minerone.patch.v1.0.0 chunks match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.bluemarvinone.patch.v1.0.0 route match",
+      "test": "bvst.plugin.minerone.patch.v1.0.0 route match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.bluemarvinone.shell.v1.0.0 sha256 match",
+      "test": "bvst.plugin.minerone.shell.v1.0.0 sha256 match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.bluemarvinone.shell.v1.0.0 bytes match",
+      "test": "bvst.plugin.minerone.shell.v1.0.0 bytes match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.bluemarvinone.shell.v1.0.0 chunks match",
+      "test": "bvst.plugin.minerone.shell.v1.0.0 chunks match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.bluemarvinone.shell.v1.0.0 route match",
+      "test": "bvst.plugin.minerone.shell.v1.0.0 route match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.bluemarvintwo.manifest.v1.0.0 sha256 match",
+      "test": "bvst.plugin.minertwo.manifest.v1.0.0 sha256 match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.bluemarvintwo.manifest.v1.0.0 bytes match",
+      "test": "bvst.plugin.minertwo.manifest.v1.0.0 bytes match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.bluemarvintwo.manifest.v1.0.0 chunks match",
+      "test": "bvst.plugin.minertwo.manifest.v1.0.0 chunks match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.bluemarvintwo.manifest.v1.0.0 route match",
+      "test": "bvst.plugin.minertwo.manifest.v1.0.0 route match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.bluemarvintwo.patch.v1.0.0 sha256 match",
+      "test": "bvst.plugin.minertwo.patch.v1.0.0 sha256 match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.bluemarvintwo.patch.v1.0.0 bytes match",
+      "test": "bvst.plugin.minertwo.patch.v1.0.0 bytes match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.bluemarvintwo.patch.v1.0.0 chunks match",
+      "test": "bvst.plugin.minertwo.patch.v1.0.0 chunks match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.bluemarvintwo.patch.v1.0.0 route match",
+      "test": "bvst.plugin.minertwo.patch.v1.0.0 route match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.bluemarvintwo.shell.v1.0.0 sha256 match",
+      "test": "bvst.plugin.minertwo.shell.v1.0.0 sha256 match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.bluemarvintwo.shell.v1.0.0 bytes match",
+      "test": "bvst.plugin.minertwo.shell.v1.0.0 bytes match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.bluemarvintwo.shell.v1.0.0 chunks match",
+      "test": "bvst.plugin.minertwo.shell.v1.0.0 chunks match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.bluemarvintwo.shell.v1.0.0 route match",
+      "test": "bvst.plugin.minertwo.shell.v1.0.0 route match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.neonpoly.manifest.v1.0.0 sha256 match",
+      "test": "bvst.plugin.chainpoly.manifest.v1.0.0 sha256 match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.neonpoly.manifest.v1.0.0 bytes match",
+      "test": "bvst.plugin.chainpoly.manifest.v1.0.0 bytes match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.neonpoly.manifest.v1.0.0 chunks match",
+      "test": "bvst.plugin.chainpoly.manifest.v1.0.0 chunks match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.neonpoly.manifest.v1.0.0 route match",
+      "test": "bvst.plugin.chainpoly.manifest.v1.0.0 route match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.neonpoly.patch.v1.0.0 sha256 match",
+      "test": "bvst.plugin.chainpoly.patch.v1.0.0 sha256 match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.neonpoly.patch.v1.0.0 bytes match",
+      "test": "bvst.plugin.chainpoly.patch.v1.0.0 bytes match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.neonpoly.patch.v1.0.0 chunks match",
+      "test": "bvst.plugin.chainpoly.patch.v1.0.0 chunks match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.neonpoly.patch.v1.0.0 route match",
+      "test": "bvst.plugin.chainpoly.patch.v1.0.0 route match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.neonpoly.shell.v1.0.0 sha256 match",
+      "test": "bvst.plugin.chainpoly.shell.v1.0.0 sha256 match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.neonpoly.shell.v1.0.0 bytes match",
+      "test": "bvst.plugin.chainpoly.shell.v1.0.0 bytes match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.neonpoly.shell.v1.0.0 chunks match",
+      "test": "bvst.plugin.chainpoly.shell.v1.0.0 chunks match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.neonpoly.shell.v1.0.0 route match",
+      "test": "bvst.plugin.chainpoly.shell.v1.0.0 route match",
       "status": "pass",
       "detail": ""
     },
@@ -4498,55 +4498,55 @@
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.bluemarvinone.release.v1.0.0 bytes match",
+      "test": "bvst.plugin.minerone.release.v1.0.0 bytes match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.bluemarvinone.release.v1.0.0 chunks match",
+      "test": "bvst.plugin.minerone.release.v1.0.0 chunks match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.bluemarvinone.release.v1.0.0 route match",
+      "test": "bvst.plugin.minerone.release.v1.0.0 route match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.bluemarvintwo.release.v1.0.0 bytes match",
+      "test": "bvst.plugin.minertwo.release.v1.0.0 bytes match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.bluemarvintwo.release.v1.0.0 chunks match",
+      "test": "bvst.plugin.minertwo.release.v1.0.0 chunks match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.bluemarvintwo.release.v1.0.0 route match",
+      "test": "bvst.plugin.minertwo.release.v1.0.0 route match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.neonpoly.release.v1.0.0 bytes match",
+      "test": "bvst.plugin.chainpoly.release.v1.0.0 bytes match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.neonpoly.release.v1.0.0 chunks match",
+      "test": "bvst.plugin.chainpoly.release.v1.0.0 chunks match",
       "status": "pass",
       "detail": ""
     },
     {
       "suite": "cross-index",
-      "test": "bvst.plugin.neonpoly.release.v1.0.0 route match",
+      "test": "bvst.plugin.chainpoly.release.v1.0.0 route match",
       "status": "pass",
       "detail": ""
     },

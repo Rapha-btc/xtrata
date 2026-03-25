@@ -1,11 +1,11 @@
 {
   "schema": "bvst.patch/v1",
   "meta": {
-    "name": "NeonPoly",
+    "name": "ChainPoly",
     "description": "Poly synth patch."
   },
   "config": {
-    "name": "NeonPoly",
+    "name": "ChainPoly",
     "visualizer": "spectrum",
     "keyboard": { "startNote": 48, "numKeys": 25 },
     "modules": [

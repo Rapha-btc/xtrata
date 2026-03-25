@@ -1,0 +1,21 @@
+{
+  "name": "bvst.catalog.family.bvstsynthfamily.v1",
+  "type": "plugin-family-catalog",
+  "family_key": "bvstsynth-family",
+  "title": "BVSTSynth Family",
+  "description": "Patch-defined instruments sharing the BVSTSynth engine path.",
+  "plugin_releases": [
+    {
+      "name": "bvst.plugin.bvstsynth.release.v1.0.13",
+      "token_id": null
+    },
+    {
+      "name": "bvst.plugin.bvstengine.release.v1.0.0",
+      "token_id": null
+    },
+    {
+      "name": "bvst.plugin.jms10.release.v1.0.0",
+      "token_id": null
+    }
+  ]
+}

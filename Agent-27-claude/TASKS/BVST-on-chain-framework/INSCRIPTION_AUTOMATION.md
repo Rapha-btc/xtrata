@@ -63,7 +63,7 @@ node TASKS/BVST-on-chain-framework/scripts/inscription-status.mjs --out TASKS/BV
 Process the execution batches in this order:
 
 1. `batches/10-foundation.batch.json`
-2. `batches/20-universalsynth-family.batch.json`
+2. `batches/20-bvstsynth-family.batch.json`
 3. `batches/30-standalone-synths.batch.json`
 4. `batches/40-root-catalogs.batch.json`
 

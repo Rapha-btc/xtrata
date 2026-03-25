@@ -22,7 +22,7 @@ The predicted token range is only a planning aid. Actual IDs must come from the 
 | Batch | Total | Leaves | Catalogs | Notes |
 | --- | --- | --- | --- | --- |
 | `10-foundation.batch.json` | 21 | 17 | 4 | shared runtime, engine, schema, then foundation catalogs |
-| `20-universalsynth-family.batch.json` | 13 | 9 | 4 | three UniversalSynth-family plugin leaves, then family catalogs |
+| `20-bvstsynth-family.batch.json` | 13 | 9 | 4 | three BVSTSynth-family plugin leaves, then family catalogs |
 | `30-standalone-synths.batch.json` | 17 | 12 | 5 | four standalone synth leaves, then family catalogs |
 | `40-root-catalogs.batch.json` | 2 | 0 | 2 | release rollup and root catalog |
 

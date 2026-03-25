@@ -23,16 +23,16 @@ These templates match the runtime files and operator flow now used by the frozen
 
 ```json
 {
-  "name": "bvst.plugin.universalsynth.release.v1.0.13",
-  "batch_file": "20-universalsynth-family.batch.json",
+  "name": "bvst.plugin.bvstsynth.release.v1.0.13",
+  "batch_file": "20-bvstsynth-family.batch.json",
   "order": 120,
   "status": "ready",
-  "template_path": "on-chain-modules/catalogs/plugins/universalsynth-family/universalsynth.release.catalog.json",
+  "template_path": "on-chain-modules/catalogs/plugins/bvstsynth-family/bvstsynth.release.catalog.json",
   "template_sha256": "fcb24c743503724582428092fbaa4e99c3da7882f00ef8e97d8206ec931e96e5",
   "direct_dependency_names": [
-    "bvst.plugin.universalsynth.manifest.v1.0.13",
-    "bvst.plugin.universalsynth.patch.v1.0.13",
-    "bvst.plugin.universalsynth.shell.v1.0.13",
+    "bvst.plugin.bvstsynth.manifest.v1.0.13",
+    "bvst.plugin.bvstsynth.patch.v1.0.13",
+    "bvst.plugin.bvstsynth.shell.v1.0.13",
     "bvst.catalog.runtime.v1",
     "bvst.catalog.engine.v1",
     "bvst.catalog.schema.v1"
@@ -43,15 +43,15 @@ These templates match the runtime files and operator flow now used by the frozen
     "bvst.catalog.runtime.v1",
     "bvst.catalog.engine.v1",
     "bvst.catalog.schema.v1",
-    "bvst.plugin.universalsynth.manifest.v1.0.13",
-    "bvst.plugin.universalsynth.patch.v1.0.13",
-    "bvst.plugin.universalsynth.shell.v1.0.13"
+    "bvst.plugin.bvstsynth.manifest.v1.0.13",
+    "bvst.plugin.bvstsynth.patch.v1.0.13",
+    "bvst.plugin.bvstsynth.shell.v1.0.13"
   ],
   "missing_dependencies": [],
   "resolution_signature": "abc123...",
   "resolved_at": "2026-03-21T17:36:41.889Z",
   "resolved_from": "configs/token-map.runtime.json",
-  "rendered_path": "on-chain-modules/rendered/catalogs/plugins/universalsynth-family/universalsynth.release.catalog.json",
+  "rendered_path": "on-chain-modules/rendered/catalogs/plugins/bvstsynth-family/bvstsynth.release.catalog.json",
   "rendered_sha256": "def456...",
   "rendered_bytes": 2195,
   "rendered_chunks": 1,

@@ -1,33 +1,40 @@
 {
-  "generated_at": "2026-03-22T14:05:57.504Z",
+  "generated_at": "2026-03-25T12:44:42.964Z",
   "bundle_root": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework",
   "summary": {
     "status": "passed",
-    "total_steps": 3,
+    "total_steps": 4,
     "with_browser_smoke": false,
-    "with_live_quote": false
+    "with_live_quote": true
   },
   "steps": [
     {
       "name": "pre_inscription_safety",
       "status": "passed",
-      "startedAt": "2026-03-22T14:05:51.184Z",
-      "finishedAt": "2026-03-22T14:05:51.712Z",
+      "startedAt": "2026-03-25T12:43:47.136Z",
+      "finishedAt": "2026-03-25T12:43:47.580Z",
       "withBrowserSmoke": false,
       "report": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/verification/pre-inscription.report.json"
     },
     {
+      "name": "live_quote_refresh",
+      "status": "passed",
+      "startedAt": "2026-03-25T12:43:47.580Z",
+      "finishedAt": "2026-03-25T12:44:38.945Z",
+      "report": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/verification/preflight.quote.json"
+    },
+    {
       "name": "status_refresh",
       "status": "passed",
-      "startedAt": "2026-03-22T14:05:51.712Z",
-      "finishedAt": "2026-03-22T14:05:51.757Z",
+      "startedAt": "2026-03-25T12:44:38.945Z",
+      "finishedAt": "2026-03-25T12:44:39.046Z",
       "report": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/verification/inscription-status.json"
     },
     {
       "name": "auto_runner_simulation",
       "status": "passed",
-      "startedAt": "2026-03-22T14:05:51.757Z",
-      "finishedAt": "2026-03-22T14:05:57.501Z",
+      "startedAt": "2026-03-25T12:44:39.046Z",
+      "finishedAt": "2026-03-25T12:44:42.962Z",
       "report": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/verification/auto-inscribe-sim-run.json"
     }
   ],
@@ -35,8 +42,8 @@
     "safety": {
       "failed": 0,
       "passed_with_warnings": 0,
-      "passed": 5,
-      "skipped": 2
+      "passed": 6,
+      "skipped": 1
     },
     "live_status": {
       "total": 53,
@@ -48,6 +55,8 @@
     "simulated_run": {
       "attempted": 53,
       "minted": 53,
+      "failed": 0,
+      "skipped": 0,
       "remaining": 0
     },
     "simulated_status": {
