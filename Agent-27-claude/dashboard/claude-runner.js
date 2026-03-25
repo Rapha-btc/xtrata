@@ -8,9 +8,9 @@ const activityRing = [];
 
 // Kill timeouts per phase type (ms)
 const TIMEOUTS = {
-  research: 10 * 60 * 1000,    // 10 min — pulse does wallet + lineage + MCP + web search + file writes
+  research: 10 * 60 * 1000,    // 10 min — pulse does wallet + web search + file writes
   compose: 10 * 60 * 1000,     // 10 min — Opus draft composition
-  inscription: 10 * 60 * 1000, // 10 min — Opus on-chain inscription (tx confirmation can be slow)
+  inscription: 18 * 60 * 1000, // 18 min — tx broadcast + post-inscription file hygiene (AGENTs.md journal, ledger, archive)
   skillTest: 7 * 60 * 1000
 };
 

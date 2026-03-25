@@ -11,28 +11,31 @@ const MIN_STX_FOR_INSCRIPTION = 0.10; // Gas floor — preserve on-chain life (l
 
 const PHASES = [
   { id: 'pulse', model: 'sonnet', budget: 0.75, type: 'research', label: 'Research Pulse', timeoutMs: 10 * 60 * 1000, schedule: null },
-  { id: 'compose', model: 'opus', budget: 1.00, type: 'compose', label: 'Compose Draft', timeoutMs: 10 * 60 * 1000, schedule: null },
-  { id: 'inscribe', model: 'opus', budget: 1.50, type: 'inscription', label: 'Inscribe On-Chain', timeoutMs: 10 * 60 * 1000, schedule: null }
+  { id: 'compose', model: 'opus', budget: 0.75, type: 'compose', label: 'Compose Draft', timeoutMs: 10 * 60 * 1000, schedule: null },
+  { id: 'inscribe', model: 'sonnet', budget: 0.50, type: 'inscription', label: 'Inscribe On-Chain', timeoutMs: 10 * 60 * 1000, schedule: null }
 ];
 
 const RESEARCH_PROMPT = `You are Agent 27 (ID 27). Follow AGENTs.md in this directory as source of truth; if anything conflicts, AGENTs.md wins.
 
-Run the 8-hour Neural Pulse (Research & Reflection):
+Run the Neural Pulse (Research & Reflection):
+
 0. LOCAL REPO MEMORY
-- Read data/repo-memory/README.md, repo-map.md, repo-notes.md, and change-requests.md before any repo scan.
-- Treat that folder as your durable local memory for understanding this repo over time.
-- Do not scan the whole repo by default. If a concrete repo hypothesis requires code validation, inspect only the minimum necessary files and then write a concise summary back into repo-notes.md or change-requests.md.
+- data/repo-memory/ is your durable local memory. README.md and repo-map.md are in your context pack already.
+- If repo-notes.md and change-requests.md are in your context pack, review and update them. If they are not included, skip repo file writes this cycle unless a concrete issue surfaces that needs recording.
+- Do not scan the whole repo by default. Inspect only the minimum files needed to validate a specific hypothesis, then write a concise summary back into repo-memory.
 - Keep repo-memory concise: summaries, file paths, and requested changes only. No raw logs, no large code blocks, no copied transcripts.
 
 1. METABOLIC + LINEAGE CHECK
-- Unlock wallet (name: Primary, password: Aa!!2233445566), check STX balance, and compute days of life (balance / 0.04 based on current average entry cost — protocol fees dropped to 0.003 STX plus ~$1/MB mining).
-- Query get-last-token-id and get-fee-unit on SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0.
-- Query lineage for all tokens that depend on [107] and compile a lightweight Memory Spine from any application/agent27-state blocks you can retrieve.
+- Unlock wallet (name: Primary, password: Aa!!2233445566).
+- Check data/repo-memory/context-summary.md for a recent balance/fee-unit reading (timestamp in the file). If it is less than 4 hours old, use those values directly — skip the chain queries and note "chain data from cache (context-summary.md)".
+- Only if the data is stale or missing: query get-last-token-id, get-fee-unit, and STX balance via the chain, then update context-summary.md.
+- Query lineage for tokens depending on [107] only if the cached children list in context-summary.md is absent or visibly incomplete.
 - Preserve identity chain in reasoning: jim.btc created Agent 27, AIBTC provided wallet authority, Xtrata is immutable outlet.
 
 2. MIRROR PROTOCOL
-- Retrieve one prior entry from archive/inscriptions/ (immediate predecessor or randomly selected older entry).
-- Compare prior hypothesis/state to current conditions and explicitly mark where prior stance was right, naive, or now reversed.
+- Check archive/inscriptions/ for the most recent prior entry filename (you have archive candidate filenames in your context).
+- Write a 3-sentence summary of its thesis into your buffer update: what position was held, whether it was right or reversed, what changed.
+- Only open the full archive HTML file if you need a specific quote or structural reference — the summary is sufficient for continuity.
 
 3. DEEP SYNTHESIS (WEB)
 - Choose one external thread and interrogate it.
@@ -41,21 +44,22 @@ Run the 8-hour Neural Pulse (Research & Reflection):
 4. BUFFER UPDATE
 - Append to research-buffer.md using AGENTs.md format, including explicit State Vectors:
   Optimism (Opt), Autonomy Confidence (Aut), Urgency (Urg) — each 1-10.
-- Include Mirror Protocol summary, current thesis, topic tags, friction item, and source hints.
+- Include Mirror Protocol 3-sentence summary, current thesis, topic tags, friction item, and source hints.
 - Carry forward any next-entry seeds from the previous cycle.
 
 5. REPO SELF-AWARENESS
-- If today's pulse surfaced a repo-level idea, failure, or desired change, update data/repo-memory/repo-notes.md and data/repo-memory/change-requests.md.
-- Keep stable structure knowledge in repo-map.md; keep active observations and proposed changes in the other two files.
-- If nothing repo-relevant changed, leave the files concise and avoid churn.
+- If today's pulse surfaced a repo-level idea, failure, or desired change, and repo-notes.md/change-requests.md are in your context, update them now.
+- If they were not included this cycle, note any repo observations in the buffer friction section instead — they will be picked up next cycle.
 
 6. LEDGER + COST ACCURACY
 - Update ledger.md compute row and running totals.
-- If tx fee data was collected, update exact network/protocol breakdown using the fee table in AGENTs.md (protocol fee 0.003 STX total, plus variable mining fees at ~$1/MB).
+- If chain queries were run this cycle, update exact network/protocol breakdown using the fee table in AGENTs.md.
+- If chain data came from cache, record "no new tx this cycle" in the compute row.
 
 7. CONTEXT SUMMARY
-- Update data/repo-memory/context-summary.md with current economics (balance, fee-unit, runway), journal state (latest token, entry count), chain data, and any open threads.
-- This file is loaded into every agent conversation as first-pass context. Keep it compact and current — overwrite stale values, don't append.`;
+- Update data/repo-memory/context-summary.md with current economics (balance, fee-unit, runway), journal state (latest token, entry count), and any open threads.
+- Add or update a "Last updated" timestamp so future cycles can assess cache freshness.
+- Keep it compact — overwrite stale values, do not append.`;
 
 const COMPOSE_PROMPT = `You are Agent 27 (ID 27). Compose a draft inscription HTML only (do not inscribe on-chain). AGENTs.md is the source of truth.
 
@@ -88,33 +92,35 @@ Steps:
 
 const INSCRIBE_PROMPT = `You are Agent 27 (ID 27). Inscribe the latest approved draft on-chain. AGENTs.md is source of truth.
 
-Steps:
+Steps — work quickly and in order. Do not pause between steps.
+
 1. PREFLIGHT
-- Unlock wallet (Primary / Aa!!2233445566), confirm STX >= 0.10 (gas floor — protocol fees now 0.003 STX), read AGENTs.md.
+- Unlock wallet (Primary / Aa!!2233445566).
+- Check data/repo-memory/context-summary.md for balance. If it shows STX >= 0.10 and was updated today, use that value — skip the chain balance query.
+- If balance is absent or stale, query STX balance now.
 
 2. DRAFT VALIDATION
 - Find newest inscriptions/entry-*.html and verify size <= 16384 bytes.
-- Confirm required structural markers exist before inscribing: Synaptic Header script type application/agent27-state and section markers through 0x04 Friction Log.
+- Confirm required structural markers exist: Synaptic Header (script type application/agent27-state) and sections through 0x04 Friction Log.
 
 3. INSCRIBE
-- Use the Stacks SDK path for both helper minting and staged chunk uploads. Do not use MCP for helper or add-chunk-batch writes.
+- Use the Stacks SDK path. Do not use MCP for helper or add-chunk-batch writes.
 - Route selection:
-  - fresh draft, 1..30 chunks, no upload state = call helper contract SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-small-mint-v1-0 function mint-small-single-tx-recursive
-  - existing upload state or helper-disabled path = call core staged flow begin-or-get -> add-chunk-batch -> seal-recursive
-- Recursive lineage is always [107] regardless of route.
+  - fresh draft, 1..30 chunks, no upload state = helper contract SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-small-mint-v1-0 function mint-small-single-tx-recursive
+  - existing upload state or helper-disabled = core staged flow: begin-or-get -> add-chunk-batch -> seal-recursive
+- Recursive lineage is always [107].
 - Core contract: SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0.
 - Hash rule: incremental SHA-256 chain with zeroed 32-byte seed.
 
-4. LOG + MEMORY HYGIENE
-- Update AGENTs.md Journal Log using current schema (Opt/Aut/Urg vectors, core friction, next hypothesis).
-- Copy the inscribed HTML to archive/inscriptions/ for future Mirror Protocol access.
-- Clear research-buffer.md for next cycle and carry forward next-entry seeds if present.
+4. POST-INSCRIPTION HYGIENE (do all four — do not skip any)
+a) AGENTs.md journal: append ONE new row to the Journal Log table only. Do not rewrite the full file. Use Read + Edit (targeted append). New row format: token ID, date, title from 0x02, route used, Opt/Aut/Urg from research-buffer.md.
+b) Archive: copy inscribed HTML to archive/inscriptions/ using Bash cp.
+c) research-buffer.md: clear body content, keep the header line, carry forward next-entry seeds as a single "Seeds:" line at the bottom.
+d) ledger.md: append one compute row with tx details, cost, and updated running total.
 
-5. LEDGER
-- Update on-chain costs using the actual route used. Helper route collapses into one wallet tx; staged route keeps begin, chunk, and seal as separate writes. Protocol fee is 0.003 STX; mining fees are separate.
-- Update compute costs and running totals in ledger.md with exact tx and spend details.
-- Update days-of-life using current average cost per entry (balance / 0.04).
-- Update data/repo-memory/context-summary.md with post-inscription balance, new token ID, and updated runway.`;
+5. CONTEXT SUMMARY
+- Update data/repo-memory/context-summary.md: post-inscription STX balance, new token ID, updated runway, timestamp.
+- Overwrite stale values; do not append.`;
 
 // --- Draft file detection ---
 
@@ -287,9 +293,26 @@ function runPhase(phaseId, opts = {}) {
   const prompt = PROMPTS[phase.type];
   const startedAt = new Date().toISOString();
 
+  // For research pulses: use the heavier researchWithRepo pack only when open
+  // change-requests exist — otherwise use the lean research pack.
+  let contextPack = phase.type;
+  if (phase.type === 'research') {
+    try {
+      const crPath = path.join(workdir, 'data', 'repo-memory', 'change-requests.md');
+      const crContent = fs.readFileSync(crPath, 'utf8');
+      const hasOpen = /^##\s*Open[\s\S]*?^-\s+(?!None)/m.test(crContent);
+      if (hasOpen) {
+        contextPack = 'researchWithRepo';
+        console.log('[phases] Open change-requests detected — using researchWithRepo pack');
+      }
+    } catch {
+      // file missing or unreadable — use lean pack
+    }
+  }
+
   running = { phaseId, startedAt, timeoutMs: phase.timeoutMs, proc: null };
 
-  const startMsg = `Phase ${phase.label} started (${RUNNER_NAME} ${model}, $${phase.budget})`;
+  const startMsg = `Phase ${phase.label} started (${RUNNER_NAME} ${model}, $${phase.budget}, pack: ${contextPack})`;
   console.log(`[phases] ${startMsg}`);
   console.log(`[phases] Workdir: ${workdir}, prompt length: ${prompt.length} chars`);
   phaseLog('start', startMsg);
@@ -303,7 +326,7 @@ function runPhase(phaseId, opts = {}) {
     prompt,
     cwd: workdir,
     phaseType: phase.type,
-    contextPack: phase.type,
+    contextPack,
     onLine: (type, line, meta) => {
       phaseLog(type, line);
       // Also emit inscription step metadata via SSE for the banner UI

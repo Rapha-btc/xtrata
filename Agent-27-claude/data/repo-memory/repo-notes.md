@@ -1,6 +1,6 @@
 # Repo Notes
 
-Last updated: 2026-03-18
+Last updated: 2026-03-25
 
 Current understanding:
 - The dashboard runtime is Claude-only. `dashboard/ai-runner.js` is the single active AI entrypoint.

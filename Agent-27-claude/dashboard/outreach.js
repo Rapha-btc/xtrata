@@ -265,6 +265,7 @@ function executeSend({ displayName, stxAddress, btcAddress, agentId, message, mo
   runningOutreach = true;
   _addLog('start', `${logPrefix} send to ${displayName}...`);
 
+<<<<<<< Updated upstream
   if (walletPassword) {
     _addLog('stdout', `[${logPrefix}] [mcp-direct] wallet_unlock...`);
   }
@@ -278,6 +279,15 @@ function executeSend({ displayName, stxAddress, btcAddress, agentId, message, mo
     paymentTxid,
     onStatus: (statusLine) => {
       _addLog('stdout', `[${logPrefix}] [mcp-direct] ${statusLine}`);
+=======
+  return runTask({
+    model: model || 'haiku', budget: 0.05, prompt, cwd: WORKDIR,
+    phaseType: 'research', contextPack: 'outreachSend',
+    onLine: (type, line) => {
+      if (type === 'stdout' && (line.includes('[tool]') || line.length > 40)) {
+        _addLog('stdout', `[${logPrefix}] ${line.substring(0, 100)}...`);
+      }
+>>>>>>> Stashed changes
     }
   }).then((data) => {
     runningOutreach = false;
@@ -623,7 +633,7 @@ function mount({ addLog, broadcast, registryFile, legacyRegistryFile }) {
       return res.status(400).json({ error: 'Outreach already in progress' });
     }
 
-    const sendModel = (req.body && req.body.model) || 'sonnet';
+    const sendModel = (req.body && req.body.model) || 'sonnet'; // research draft generation — sonnet
     const draft = markdown.parseOutreachDraft();
     if (!draft.agentId || !draft.message) {
       return res.status(400).json({ error: 'Agent and message required' });
@@ -648,8 +658,12 @@ function mount({ addLog, broadcast, registryFile, legacyRegistryFile }) {
 
     executeSendDirect({
       displayName: agent.name, stxAddress: agent.stxAddress, btcAddress: agent.btcAddress,
+<<<<<<< Updated upstream
       agentId: agent.id, message: draft.message, mode, model: sendModel,
       paymentTxid: draft.paymentTxid || queuedReply?.paymentTxid || '',
+=======
+      agentId: agent.id, message: draft.message, mode, model: 'haiku',
+>>>>>>> Stashed changes
       logPrefix: 'Broadcast', extraPromptContext,
       onSuccess: (_text, sendResult) => {
         const payment = sendResult?.data?.payment || {};
@@ -935,8 +949,12 @@ function mount({ addLog, broadcast, registryFile, legacyRegistryFile }) {
 
     executeSendDirect({
       displayName: target.displayName, stxAddress: target.stxAddress, btcAddress: target.btcAddress,
+<<<<<<< Updated upstream
       agentId: agent.id, message: target.message, mode, model: sendModel,
       paymentTxid: target.paymentTxid || '',
+=======
+      agentId: agent.id, message: target.message, mode, model: 'haiku',
+>>>>>>> Stashed changes
       logPrefix: 'Campaign',
       onSuccess: (_text, sendResult) => {
         const payment = sendResult?.data?.payment || {};
@@ -989,7 +1007,7 @@ function mount({ addLog, broadcast, registryFile, legacyRegistryFile }) {
     if (runningOutreach) {
       return res.status(409).json({ ok: false, error: 'Outreach already in progress' });
     }
-    const sendModel = (req.body && req.body.model) || 'sonnet';
+    const sendModel = (req.body && req.body.model) || 'sonnet'; // research draft generation — sonnet
 
     const history = markdown.parseOutreachHistory();
     const agents = loadAgentsRegistry(registryFile, legacyRegistryFile);
@@ -1121,7 +1139,7 @@ Do not include any other text or markers in your response.`;
 
       try {
         const result = await runTask({
-          model: sendModel, budget: 0.03, prompt, cwd: WORKDIR,
+          model: sendModel, budget: 0.08, prompt, cwd: WORKDIR,
           phaseType: 'research', contextPack: 'outreachResearch',
           onLine: (type, line) => {
             if (type === 'stdout' && line.length > 50) {
@@ -1250,7 +1268,7 @@ Do not include any other text or markers in your response.`;
     });
 
     runTask({
-      model: sendModel, budget: 0.03, prompt, cwd: WORKDIR,
+      model: sendModel, budget: 0.08, prompt, cwd: WORKDIR,
       phaseType: 'research', contextPack: 'outreachResearch',
       onLine: (type, line) => {
         if (type === 'stdout' && (line.includes('[tool]') || line.length > 50)) {

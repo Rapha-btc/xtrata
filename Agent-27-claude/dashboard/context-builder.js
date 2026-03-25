@@ -5,39 +5,68 @@ const {
   CONTEXT_EXCLUDE_PATTERNS
 } = require('./config');
 
-const DEFAULT_PACK = [
-  { path: 'data/repo-memory/context-summary.md', maxBytes: 1800 },
-  { path: 'AGENTs.md', maxBytes: 5000 },
-  { path: 'CLAUDE.md', maxBytes: 2200 },
-  { path: 'dashboard/config.js', maxBytes: 2200 }
-];
+// AGENTs.md byte caps per pack type:
+// - research: only needs identity + journal schema + fee model (~2000B)
+// - compose/inscribe: needs full file for recursive structure + HTML spec (~5000B)
+const AGENTS_MD_CAPS = { research: 2000, compose: 5000, inscription: 5000 };
+
+function defaultPack(pack) {
+  return [
+    { path: 'data/repo-memory/context-summary.md', maxBytes: 1800 },
+    { path: 'AGENTs.md', maxBytes: AGENTS_MD_CAPS[pack] || 5000 },
+    { path: 'CLAUDE.md', maxBytes: 2200 },
+    { path: 'dashboard/config.js', maxBytes: 2200 }
+  ];
+}
 
 const PACKS = {
   research: {
+    // Lean pack: balance/chain state lives in context-summary.md (already in DEFAULT_PACK).
+    // EVOLUTION.md and future-inscription-ideas.md are compose-time concerns only.
+    // repo-notes and change-requests are injected conditionally via extraFiles when needed.
     files: [
       { path: 'research-buffer.md', maxBytes: 4000 },
       { path: 'ledger.md', maxBytes: 2800 },
-      { path: 'EVOLUTION.md', maxBytes: 2800 },
-      { path: 'future-inscription-ideas.md', maxBytes: 2200 },
+      { path: 'data/repo-memory/README.md', maxBytes: 1800 },
+      { path: 'data/repo-memory/repo-map.md', maxBytes: 2400 }
+    ],
+    archiveCount: 2,
+    notes: [
+      'Use only the files below as your first-pass context.',
+      'Economics (balance, runway, fee-unit) are in context-summary.md — do not re-query the chain unless that data is stale (older than 4 hours).',
+      'For repo self-awareness, read data/repo-memory/ first and treat it as the durable local memory layer.',
+      'Only inspect code files when a concrete repo hypothesis or failure requires validation, then update repo-memory with a concise summary.',
+      'Do not scan logs, legacy material, node_modules, lockfiles, or runtime JSON unless one specific file is required.',
+      'Mirror Protocol: write a 3-sentence summary of the prior entry thesis in your buffer update — do not read the full archive HTML unless you need a specific quote.'
+    ]
+  },
+  // research pack variant with repo-memory write files (injected when change-requests are open)
+  researchWithRepo: {
+    files: [
+      { path: 'research-buffer.md', maxBytes: 4000 },
+      { path: 'ledger.md', maxBytes: 2800 },
       { path: 'data/repo-memory/README.md', maxBytes: 1800 },
       { path: 'data/repo-memory/repo-map.md', maxBytes: 2400 },
       { path: 'data/repo-memory/repo-notes.md', maxBytes: 2600 },
       { path: 'data/repo-memory/change-requests.md', maxBytes: 2400 }
     ],
-    archiveCount: 4,
+    archiveCount: 2,
     notes: [
       'Use only the files below as your first-pass context.',
+      'Economics (balance, runway, fee-unit) are in context-summary.md — do not re-query the chain unless that data is stale (older than 4 hours).',
       'For repo self-awareness, read data/repo-memory/ first and treat it as the durable local memory layer.',
-      'Only inspect code files when a concrete repo hypothesis or failure requires validation, and then update repo-memory with a concise summary.',
+      'Only inspect code files when a concrete repo hypothesis or failure requires validation, then update repo-memory with a concise summary.',
       'Do not scan logs, legacy material, node_modules, lockfiles, or runtime JSON unless one specific file is required.',
-      'Mirror Protocol can pull one prior entry from the archive candidates listed below.'
+      'Mirror Protocol: write a 3-sentence summary of the prior entry thesis in your buffer update — do not read the full archive HTML unless you need a specific quote.',
+      'Open change-requests.md and repo-notes.md are included — review and update them as part of repo self-awareness.'
     ]
   },
   compose: {
     files: [
       { path: 'research-buffer.md', maxBytes: 4500 },
       { path: 'ledger.md', maxBytes: 2500 },
-      { path: 'EVOLUTION.md', maxBytes: 2200 }
+      { path: 'EVOLUTION.md', maxBytes: 2200 },
+      { path: 'future-inscription-ideas.md', maxBytes: 2200 }
     ],
     archiveCount: 3,
     notes: [
@@ -137,7 +166,7 @@ function listArchiveCandidates(limit) {
 function buildContextPack({ workdir, pack = 'research', extraFiles = [] }) {
   const selected = PACKS[pack] || PACKS.research;
   const fileSpecs = uniqFileSpecs([
-    ...DEFAULT_PACK,
+    ...defaultPack(pack),
     ...selected.files,
     ...extraFiles.map((filePath) => ({ path: filePath, maxBytes: 2000 }))
   ]);

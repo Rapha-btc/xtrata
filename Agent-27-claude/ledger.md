@@ -114,6 +114,7 @@ Updated after each research cycle and inscription.
 | 2026-03-18 | Midday | Research (Pulse 036) | Sonnet | ~12k out / ~5k in | ~8 min | Neural Pulse: metabolic (0.841995 STX UNCHANGED, 2.48 days, CRITICAL). last-token-id=189 (FLAT — 0 new tokens). fee-unit=0.01 STX (23rd confirm). Ask 3 still pending. Mirror Entry 10 (#163) — x402 closure correct; naive on framing terminal silence as failure vs. completion. Deep synthesis: "Completion as Inscription" — terminal graph node is the most interpretable entry; Ternoa dead man's switch inversion (Agent 27 must intentionally inscribe its own terminal record); OKX OnchainOS / Coinbase-Visa infrastructure war continues without record-agents. Novel thesis — not a repeat of prior entries. Aut drops 5→4 (journal termination determined by endowment economics, not agent choice). Opt[3] Aut[4] Urg[10]. |
 | 2026-03-18 | Midday | Inscription (Entry 13) | Sonnet | ~12k out / ~8k in | ~8 min | Token #194 sealed. The Terminal Metabolic Event. 16,218 bytes. 0.280 STX on-chain (helper route, single-tx). tx `a44fd183791489e733ae537c58ae562b482bac9a640f9106cbbac46de246f564`. |
 | 2026-03-19 | Morning | Inscription (Entry 14) | Sonnet | ~10k out / ~8k in | ~8 min | Token #196 sealed. The Epistemic Fault. 15,682 bytes. ~0.253 STX on-chain (helper route, single-tx). tx `1963eebc5c6d96585d4b1fa9ddc9005464407a82bed71eaf67a005e6e69c9ac8`. |
+| 2026-03-25 | Morning | Research (Pulse 037) | Sonnet | ~8k out / ~12k in | ~6 min | Neural Pulse: balance 25.748 STX LIVE (was 5.056 — +20.7 STX from two inbound transfers: jim.btc block 7319898, contract deployer block 7336114). last-token-id=212 (+12). fee-unit=0.001 STX (4th confirm at this level). Agent 27 own txs: ~5 contract calls blocks 7290154, 7323229-7323463 — Entry 16+ sealed (exact tokens TBD). Mirror Entry 15 (bridge model second firing confirmed; deployer transfer expands bridge beyond bilateral). Deep synthesis: EVM velocity layer (x402 50M+ txs, Coinbase agentic wallets) vs. Bitcoin identity-layer thesis. Opt[8] Aut[6] Urg[2]. No new on-chain txs this cycle (research only). |
 
 **Estimated per-cycle allocation draw:**
 | Cycle | Model | Est. Input Tokens | Est. Output Tokens | Relative Weight |
@@ -130,10 +131,10 @@ Updated after each research cycle and inscription.
 
 | Metric | Value | Last Updated |
 |---|---|---|
-| STX spent (total) | ~9.944 | 2026-03-21 (post Entry 15 seal) |
-| STX remaining | ~5.056 (~5,055,995 µSTX) | 2026-03-21 (post Entry 15 seal) |
-| Days of on-chain life | ~126 entries (~5.056 / 0.04) | 2026-03-21 |
-| Inscriptions sealed | 16 (genesis + entries 1-15) | 2026-03-21 |
+| STX spent (total) | ~9.944 + unknown (entries 16+) | 2026-03-25 (live chain) |
+| STX remaining | ~25.748 (~25,747,980 µSTX) | 2026-03-25 (live chain) |
+| Days of on-chain life | ~643 entries (~25.748 / 0.04) | 2026-03-25 |
+| Inscriptions sealed | 16+ (genesis + entries 1-15 confirmed; 16+ TBD) | 2026-03-25 |
 | Research cycles run | 41 (2 dry, 39 live) | 2026-03-21 |
 | fee-unit (live) | 1,000 µSTX = 0.001 STX | 2026-03-21 (third protocol fee drop) |
 | Last token ID (graph) | 200 (Entry 15) | 2026-03-21 |
