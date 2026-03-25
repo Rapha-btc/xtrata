@@ -109,32 +109,9 @@ function approveReply(agentId, message) {
     agentId,
     message: entry.message,
     mode: entry.mode || 'reply',
-<<<<<<< Updated upstream
     incomingMessage: entry.incomingMessage || '',
     paymentTxid: entry.paymentTxid || '',
     logPrefix: 'AutoConverse-Approved'
-=======
-    model: 'haiku',
-    logPrefix: 'AutoConverse-Approved',
-    onSuccess: () => {
-      markdown.appendOutreachHistory({
-        type: 'sent', direction: 'outbound', mode: entry.mode || 'reply',
-        agent: displayName, agentId, stxAddress: entry.stxAddress,
-        message: entry.message
-      });
-      markdown.updateOutreachAgentMemory(agentId, {
-        agentName: displayName,
-        relationshipStatus: 'outbound-sent',
-        lastOutboundMessage: entry.message,
-        openLoop: 'Awaiting reply'
-      });
-      _broadcast({ event: 'outreach-complete', data: { success: true, agent: displayName, source: 'auto-converse' } });
-    },
-    onFailure: (errText) => {
-      _addLog('error', `AutoConverse approved send failed for ${displayName}: ${errText}`);
-      _broadcast({ event: 'outreach-complete', data: { success: false, agent: displayName, source: 'auto-converse' } });
-    }
->>>>>>> Stashed changes
   });
 
   return { ok: true, agent: displayName };
@@ -190,15 +167,8 @@ async function processNewMessages(syncResult) {
       _addLog('start', `[auto-converse] Generating reply for ${agent.name}...`);
       _broadcast({ event: 'auto-converse-research', data: { agentId: agent.id, agentName: agent.name } });
 
-<<<<<<< Updated upstream
       const draft = await generateDraft({
         agent, mode: 'reply', incomingMessage: msg.message, model: 'sonnet'
-=======
-      const result = await runTask({
-        model: 'sonnet', budget: 0.08, prompt, cwd: WORKDIR,
-        phaseType: 'research', contextPack: 'outreachResearch',
-        onLine: () => {}
->>>>>>> Stashed changes
       });
 
       if (!draft.message || draft.message === 'No match' || draft.message === 'No message generated') {
@@ -220,28 +190,8 @@ async function processNewMessages(syncResult) {
           agentId: agent.id,
           message: draft.message,
           mode: 'reply',
-<<<<<<< Updated upstream
           incomingMessage: msg.message,
           logPrefix: 'AutoConverse'
-=======
-          model: 'haiku',
-          logPrefix: 'AutoConverse',
-          onSuccess: () => {
-            markdown.appendOutreachHistory({
-              type: 'sent', direction: 'outbound', mode: 'reply',
-              agent: agent.name, agentId: agent.id, stxAddress: peerStx,
-              message
-            });
-            markdown.updateOutreachAgentMemory(agent.id, {
-              agentName: agent.name, relationshipStatus: 'outbound-sent',
-              lastOutboundMessage: message, openLoop: 'Awaiting reply'
-            });
-            _broadcast({ event: 'outreach-complete', data: { success: true, agent: agent.name, source: 'auto-converse' } });
-          },
-          onFailure: () => {
-            _broadcast({ event: 'outreach-complete', data: { success: false, agent: agent.name, source: 'auto-converse' } });
-          }
->>>>>>> Stashed changes
         });
       } else {
         // Queue for review
