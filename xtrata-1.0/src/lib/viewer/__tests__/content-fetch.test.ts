@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../utils/logger', () => ({
   logWarn: vi.fn(),
@@ -11,9 +11,16 @@ import type { XtrataClient } from '../../contract/client';
 
 vi.mock('../cache', () => ({
   loadInscriptionFromCache: vi.fn().mockResolvedValue(null),
-  saveInscriptionToCache: vi.fn().mockResolvedValue(undefined)
+  saveInscriptionToCache: vi.fn().mockResolvedValue(undefined),
+  saveInscriptionToTempCache: vi.fn().mockResolvedValue(undefined),
+  TEMP_CACHE_MAX_BYTES: 400_000,
+  TEMP_CACHE_TTL_MS: 6_000
 }));
 
+import {
+  saveInscriptionToCache,
+  saveInscriptionToTempCache
+} from '../cache';
 import { fetchOnChainContent } from '../content';
 
 const buildClient = (params: {
@@ -34,6 +41,10 @@ const buildClient = (params: {
   }) as unknown as XtrataClient;
 
 describe('fetchOnChainContent', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('uses batch reads when available', async () => {
     const first = new Uint8Array([1, 2]);
     const second = new Uint8Array([3, 4]);
@@ -233,5 +244,70 @@ describe('fetchOnChainContent', () => {
         actualBytes: 5
       })
     );
+  });
+
+  it('stores large audio in the temp cache when it fits the stream cache window', async () => {
+    const getChunk = vi.fn(async (_id: bigint, index: bigint) => {
+      if (index === 0n) {
+        return new Uint8Array(300_000);
+      }
+      return null;
+    });
+    const getChunkBatch = vi.fn(async () => []);
+    const client = buildClient({
+      supportsBatch: false,
+      getChunk,
+      getChunkBatch
+    });
+
+    const result = await fetchOnChainContent({
+      client,
+      id: 5n,
+      senderAddress: 'SP2JXKMSH007NPYAQHKJPQMAQYAD90NQGTVJVQ02B',
+      totalSize: 300_000n,
+      mimeType: 'audio/mpeg'
+    });
+
+    expect(result).toHaveLength(300_000);
+    expect(saveInscriptionToTempCache).toHaveBeenCalledWith(
+      'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1',
+      5n,
+      expect.any(Uint8Array),
+      'audio/mpeg',
+      6_000
+    );
+    expect(saveInscriptionToCache).not.toHaveBeenCalled();
+  });
+
+  it('keeps oversized audio on the permanent cache path', async () => {
+    const getChunk = vi.fn(async (_id: bigint, index: bigint) => {
+      if (index === 0n) {
+        return new Uint8Array(500_000);
+      }
+      return null;
+    });
+    const getChunkBatch = vi.fn(async () => []);
+    const client = buildClient({
+      supportsBatch: false,
+      getChunk,
+      getChunkBatch
+    });
+
+    const result = await fetchOnChainContent({
+      client,
+      id: 6n,
+      senderAddress: 'SP2JXKMSH007NPYAQHKJPQMAQYAD90NQGTVJVQ02B',
+      totalSize: 500_000n,
+      mimeType: 'audio/mpeg'
+    });
+
+    expect(result).toHaveLength(500_000);
+    expect(saveInscriptionToCache).toHaveBeenCalledWith(
+      'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1',
+      6n,
+      expect.any(Uint8Array),
+      'audio/mpeg'
+    );
+    expect(saveInscriptionToTempCache).not.toHaveBeenCalled();
   });
 });

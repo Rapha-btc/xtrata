@@ -4,7 +4,11 @@ import {
   buildInscriptionTempCacheKey,
   buildInscriptionPreviewCacheKey,
   buildTokenSummaryCacheKey,
-  clearInscriptionCache
+  clearInscriptionCache,
+  STREAM_TEMP_CACHE_MAX_BYTES,
+  TEMP_CACHE_MAX_BYTES,
+  TEMP_CACHE_TTL_MS,
+  THUMBNAIL_CACHE_LIMIT
 } from '../cache';
 
 describe('viewer cache', () => {
@@ -40,5 +44,11 @@ describe('viewer cache', () => {
     const result = await clearInscriptionCache();
     expect(result.cleared).toBe(false);
     expect(result.reason).toBe('unavailable');
+  });
+
+  it('extends media retention and thumbnail capacity for return visits', () => {
+    expect(TEMP_CACHE_TTL_MS).toBe(7 * 24 * 60 * 60 * 1000);
+    expect(THUMBNAIL_CACHE_LIMIT).toBe(4000);
+    expect(STREAM_TEMP_CACHE_MAX_BYTES).toBeGreaterThan(TEMP_CACHE_MAX_BYTES);
   });
 });
