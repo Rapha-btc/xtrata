@@ -7,9 +7,16 @@ const TEMP_STORE_NAME = 'inscription-temp';
 const PREVIEW_STORE_NAME = 'inscription-previews';
 const THUMBNAIL_STORE_NAME = 'inscription-thumbnails';
 const SUMMARY_STORE_NAME = 'token-summaries';
-export const TEMP_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+// Keep streamed media around longer so return visits can reuse previously
+// buffered files without stretching owner/summary cache freshness.
+export const TEMP_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+// Preserve the existing temp-cache cutoff for reconstructed media so very large
+// audio/video files still fall back to the permanent cache path when available.
 export const TEMP_CACHE_MAX_BYTES = 25 * 1024 * 1024;
-export const THUMBNAIL_CACHE_LIMIT = 1000;
+// Allow the preview streamer to persist larger fully-buffered media without
+// changing the more conservative reconstruction cache threshold above.
+export const STREAM_TEMP_CACHE_MAX_BYTES = 100 * 1024 * 1024;
+export const THUMBNAIL_CACHE_LIMIT = 4000;
 export const SUMMARY_CACHE_TTL_MS = 60 * 60 * 1000;
 
 type CacheValue = {

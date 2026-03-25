@@ -51,7 +51,7 @@ import {
   saveInscriptionThumbnailToCache,
   saveInscriptionPreviewToCache,
   saveInscriptionToTempCache,
-  TEMP_CACHE_MAX_BYTES,
+  STREAM_TEMP_CACHE_MAX_BYTES,
   TEMP_CACHE_TTL_MS
 } from '../lib/viewer/cache';
 import { createImageThumbnail, THUMBNAIL_SIZE } from '../lib/viewer/thumbnail';
@@ -470,7 +470,8 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
       candidateMimeTypes: streamMimeCandidates,
       autoStream,
       totalSize: totalSize !== null ? totalSize.toString() : null,
-      maxAutoPreviewBytes: MAX_AUTO_PREVIEW_BYTES.toString()
+      maxAutoPreviewBytes: MAX_AUTO_PREVIEW_BYTES.toString(),
+      streamTempCacheMaxBytes: STREAM_TEMP_CACHE_MAX_BYTES
     });
   }, [
     props.token.id,
@@ -531,7 +532,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     const enableTempFullCache =
       canCachePreview &&
       totalSizeNumber > Number(MAX_AUTO_PREVIEW_BYTES) &&
-      totalSizeNumber <= TEMP_CACHE_MAX_BYTES;
+      totalSizeNumber <= STREAM_TEMP_CACHE_MAX_BYTES;
 
     if (!streamConfigLoggedRef.current) {
       streamConfigLoggedRef.current = true;
