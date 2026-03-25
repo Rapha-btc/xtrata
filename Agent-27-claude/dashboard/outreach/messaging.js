@@ -7,12 +7,18 @@ let _addLog = () => {};
 let _broadcast = () => {};
 let _runningOutreach = false;
 
+// --- Send serialization: one send at a time ---
+const _sendQueue = [];
+let _sendProcessing = false;
+const SEND_COOLDOWN_MS = 5_000;
+
 function initMessaging({ addLog, broadcast }) {
   _addLog = addLog;
   _broadcast = broadcast;
 }
 
 function isRunning() { return _runningOutreach; }
+function getSendQueueLength() { return _sendQueue.length; }
 
 // --- Helpers ---
 
@@ -83,22 +89,68 @@ function buildOutreachContext(agentId, incomingMessage = '') {
   };
 }
 
-// --- Unified send with retry ---
+// --- Unified send with retry + serialization ---
 
 /**
- * Send a message via aibtc-inbox-client with 3-retry logic.
- * On success: appendOutreachHistory + updateOutreachAgentMemory + deleteDraft + broadcast
- * On failure: queue as draft with recovery txid + broadcast error
- * Returns { success, paymentTxid, error }
+ * Queued send — ensures only one send executes at a time to avoid nonce conflicts.
+ * Returns a promise that resolves with { success, paymentTxid, error }.
  */
-async function sendMessage({ displayName, stxAddress, btcAddress, agentId, message, mode, paymentTxid, logPrefix = 'Send' }) {
+function sendMessage(params) {
+  return new Promise((resolve) => {
+    _sendQueue.push({ params, resolve });
+    _processSendQueue();
+  });
+}
+
+async function _processSendQueue() {
+  if (_sendProcessing || _sendQueue.length === 0) return;
+  _sendProcessing = true;
+
+  while (_sendQueue.length > 0) {
+    const { params, resolve } = _sendQueue.shift();
+    const result = await _executeSend(params);
+    resolve(result);
+    // Cooldown between sends to let nonces settle
+    if (_sendQueue.length > 0) {
+      _addLog('stdout', `[Outreach] ${_sendQueue.length} send(s) queued, cooling down ${SEND_COOLDOWN_MS / 1000}s...`);
+      await new Promise(r => setTimeout(r, SEND_COOLDOWN_MS));
+    }
+  }
+
+  _sendProcessing = false;
+}
+
+/**
+ * Execute a single send with 3-retry logic + status tracking.
+ * History entries start as 'pending' and transition to 'confirmed' or 'failed'.
+ */
+async function _executeSend({ displayName, stxAddress, btcAddress, agentId, message, mode, incomingMessage, paymentTxid, logPrefix = 'Send' }) {
   const walletPassword = process.env.WALLET_PASSWORD || '';
   const MAX_RETRIES = 3;
   const BACKOFF_MS = 30_000;
   let currentPaymentTxid = paymentTxid || '';
 
+  // Guard: check for duplicate send
+  if (store.hasPendingSendTo(agentId)) {
+    const msg = `${logPrefix} blocked: a send to ${displayName} is already pending`;
+    _addLog('stdout', `[Outreach] ${msg}`);
+    return { success: false, error: msg, blocked: true };
+  }
+
+  // Record pending history entry immediately
+  store.appendOutreachHistory({
+    type: 'sent', direction: 'outbound', mode: mode || 'intro',
+    status: 'pending',
+    agent: displayName, agentId, stxAddress: stxAddress || '',
+    message,
+    incomingMessage: incomingMessage || '',
+    paymentTxid: null,
+    toBtcAddress: btcAddress || ''
+  });
+
   _runningOutreach = true;
   _addLog('start', `${logPrefix} [mcp-direct] send to ${displayName}...`);
+  _broadcast({ event: 'outreach-sending', data: { agent: displayName, agentId, source: logPrefix } });
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
@@ -113,18 +165,20 @@ async function sendMessage({ displayName, stxAddress, btcAddress, agentId, messa
         }
       });
 
-      // Success — bookkeeping
+      // Success — update pending entry to confirmed
       _runningOutreach = false;
       const payment = data?.payment || {};
 
-      store.appendOutreachHistory({
-        type: 'sent', direction: 'outbound', mode: mode || 'intro',
-        agent: displayName, agentId, stxAddress: stxAddress || '',
-        message,
-        paymentTxid: payment.txid || null,
-        paymentSats: parsePaymentSats(payment),
-        toBtcAddress: btcAddress || ''
-      });
+      store.updateHistoryEntry(
+        { agentId, message, type: 'sent', status: 'pending' },
+        {
+          status: 'confirmed',
+          paymentTxid: payment.txid || null,
+          paymentSats: parsePaymentSats(payment),
+          toBtcAddress: btcAddress || '',
+          confirmedAt: new Date().toISOString()
+        }
+      );
       store.updateOutreachAgentMemory(agentId, {
         agentName: displayName,
         relationshipStatus: 'outbound-sent',
@@ -151,9 +205,19 @@ async function sendMessage({ displayName, stxAddress, btcAddress, agentId, messa
         continue;
       }
 
-      // Non-retryable or retries exhausted — failure bookkeeping
+      // Non-retryable or retries exhausted — mark as failed
       _runningOutreach = false;
       const failureText = errMsg || 'Unknown inbox send error';
+
+      store.updateHistoryEntry(
+        { agentId, message, type: 'sent', status: 'pending' },
+        {
+          status: 'failed',
+          error: failureText.substring(0, 200),
+          paymentTxid: currentPaymentTxid || null,
+          failedAt: new Date().toISOString()
+        }
+      );
 
       // Re-queue so the user can retry from the dashboard UI
       store.appendReplyQueue({
@@ -167,7 +231,6 @@ async function sendMessage({ displayName, stxAddress, btcAddress, agentId, messa
         paymentTxid: currentPaymentTxid || ''
       });
 
-      // Also persist recovery txid in draft
       if (currentPaymentTxid) {
         store.saveDraft(agentId, { paymentTxid: currentPaymentTxid });
       }
@@ -276,6 +339,7 @@ Do not include any other text or markers in your response.`;
 module.exports = {
   initMessaging,
   isRunning,
+  getSendQueueLength,
   sendMessage,
   generateDraft,
   buildOutreachContext,

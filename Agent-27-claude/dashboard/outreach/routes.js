@@ -53,10 +53,37 @@ async function syncInbox() {
         ? String(memoryMatch.agentId)
         : peerStx;
 
+    // For outbound API messages, check if we already have a local pending/confirmed entry
+    // (our send created a history entry before the API knew about it)
+    if (!isInbound) {
+      const contentSnip = String(msg.content || '').trim().substring(0, 100);
+      const localMatch = existingHistory.find(h =>
+        h.type === 'sent' && h.direction === 'outbound' &&
+        String(h.agentId) === String(agentId) &&
+        String(h.message || '').trim().substring(0, 100) === contentSnip
+      );
+      if (localMatch) {
+        // Confirm the local entry and backfill API fields — don't create a duplicate
+        store.updateHistoryEntry(
+          { agentId: String(agentId), message: localMatch.message, type: 'sent' },
+          {
+            status: 'confirmed',
+            messageId: msg.messageId,
+            paymentTxid: msg.paymentTxid || localMatch.paymentTxid || null,
+            paymentSats: msg.paymentSatoshis || localMatch.paymentSats,
+            sentAt: msg.sentAt || localMatch.sentAt,
+            confirmedAt: new Date().toISOString()
+          }
+        );
+        continue;
+      }
+    }
+
     const historyEntry = {
       type: isInbound ? 'received' : 'sent',
       direction: isInbound ? 'inbound' : 'outbound',
       mode: isInbound ? 'reply' : 'intro',
+      status: isInbound ? undefined : 'confirmed',  // API-sourced outbound = confirmed
       agent: peerName,
       agentId,
       stxAddress: peerStx || '',
@@ -109,11 +136,20 @@ async function syncInbox() {
   // Backfill locally-sent messages not in API response
   const apiTxids = new Set(messages.map(m => m.paymentTxid).filter(Boolean));
   const apiMsgIds = new Set(messages.map(m => m.messageId).filter(Boolean));
+  // Also index API outbound content to catch content-matched duplicates
+  const apiOutboundSnips = new Set(
+    messages.filter(m => m.direction === 'sent')
+      .map(m => String(m.content || '').trim().substring(0, 100))
+      .filter(Boolean)
+  );
   const allHistory = store.parseOutreachHistory();
   for (const h of allHistory) {
     if (h.direction !== 'outbound' || h.type !== 'sent') continue;
     if (h.paymentTxid && apiTxids.has(h.paymentTxid)) continue;
     if (h.messageId && apiMsgIds.has(h.messageId)) continue;
+    // Skip if API already returned this message (content match)
+    const hSnip = String(h.message || '').trim().substring(0, 100);
+    if (hSnip && apiOutboundSnips.has(hSnip)) continue;
     if (!h.message) continue;
     messages.push({
       direction: 'sent',
@@ -123,10 +159,79 @@ async function syncInbox() {
       peerDisplayName: h.agent || 'Unknown',
       paymentTxid: h.paymentTxid || null,
       messageId: h.messageId || `local_${h.timestamp}`,
-      paymentSatoshis: h.paymentSats || 100
+      paymentSatoshis: h.paymentSats || 100,
+      localStatus: h.status || 'confirmed'  // pass status through for display
     });
   }
   messages.sort((a, b) => new Date(a.sentAt) - new Date(b.sentAt));
+
+  // Enrich inbound messages with reply status
+  const history = store.parseOutreachHistory();
+  const replyQueue = store.parseReplyQueue();
+  const drafts = store.listDrafts();
+  for (const msg of messages) {
+    if (msg.direction !== 'received') continue;
+    const contentSnip = String(msg.content || '').trim().substring(0, 100);
+    if (!contentSnip) continue;
+
+    // Check for confirmed reply
+    const confirmedReply = history.find(h =>
+      h.type === 'sent' && h.status === 'confirmed' &&
+      h.incomingMessage && String(h.incomingMessage).trim().substring(0, 100) === contentSnip
+    );
+    if (confirmedReply) {
+      msg.replyStatus = 'confirmed';
+      msg.replyStatusDetail = `Reply sent ${new Date(confirmedReply.confirmedAt || confirmedReply.timestamp).toLocaleString()}`;
+      continue;
+    }
+
+    // Check for pending send
+    const pendingReply = history.find(h =>
+      h.type === 'sent' && h.status === 'pending' &&
+      h.incomingMessage && String(h.incomingMessage).trim().substring(0, 100) === contentSnip
+    );
+    if (pendingReply) {
+      msg.replyStatus = 'pending';
+      msg.replyStatusDetail = 'Reply is being sent — waiting for on-chain confirmation';
+      continue;
+    }
+
+    // Check for failed send (re-queued)
+    const failedReply = history.find(h =>
+      h.type === 'sent' && h.status === 'failed' &&
+      h.incomingMessage && String(h.incomingMessage).trim().substring(0, 100) === contentSnip
+    );
+    if (failedReply) {
+      msg.replyStatus = 'failed';
+      msg.replyStatusDetail = `Previous reply failed: ${failedReply.error || 'unknown error'}`;
+      continue;
+    }
+
+    // Check reply queue (draft awaiting approval)
+    const peerStx = msg.fromAddress || '';
+    const queued = replyQueue.find(q =>
+      q.incomingMessage && String(q.incomingMessage).trim().substring(0, 100) === contentSnip
+    );
+    if (queued) {
+      msg.replyStatus = 'queued';
+      msg.replyStatusDetail = 'Draft reply awaiting approval in the campaign queue';
+      continue;
+    }
+
+    // Check if there's an active draft for this agent
+    const agentMatch = agents.loadAgentsRegistry().find(a => a.stxAddress === peerStx);
+    if (agentMatch) {
+      const draft = drafts.find(d => String(d.agentId) === String(agentMatch.id));
+      if (draft && draft.message) {
+        msg.replyStatus = 'draft';
+        msg.replyStatusDetail = 'Draft reply exists — edit or send from the outreach form';
+        continue;
+      }
+    }
+
+    msg.replyStatus = 'none';
+    msg.replyStatusDetail = '';
+  }
 
   return {
     newMessages,
@@ -275,10 +380,6 @@ function mount({ addLog, broadcast }) {
 
   // POST /drafts/:agentId/send — send a draft
   router.post('/drafts/:agentId/send', async (req, res) => {
-    if (messaging.isRunning()) {
-      return res.status(409).json({ error: 'Outreach already in progress' });
-    }
-
     const agentId = req.params.agentId;
     const resolved = agents.resolveAgent(agentId);
     if (!resolved) return res.status(404).json({ error: 'Agent not found' });
@@ -289,6 +390,7 @@ function mount({ addLog, broadcast }) {
     const replyQueueEntry = store.parseReplyQueue().find(rq => String(rq.agentId) === String(agentId));
     const messageText = (req.body && req.body.message) || draft?.message || replyQueueEntry?.message;
     const mode = (req.body && req.body.mode) || draft?.mode || replyQueueEntry?.mode || 'intro';
+    const incomingMessage = (req.body && req.body.incomingMessage) || draft?.incomingMessage || replyQueueEntry?.incomingMessage || '';
     const paymentTxid = (req.body && req.body.paymentTxid) || draft?.paymentTxid || replyQueueEntry?.paymentTxid || '';
 
     if (!messageText) {
@@ -298,6 +400,22 @@ function mount({ addLog, broadcast }) {
       return res.status(400).json({ error: `Message exceeds 500 characters (got ${messageText.length})` });
     }
 
+    // Guard: pending send already in flight for this agent
+    if (store.hasPendingSendTo(agentId)) {
+      return res.status(409).json({ error: `A send to ${agent.displayName || agent.name} is already pending. Wait for it to confirm or fail.` });
+    }
+
+    // Guard: exact duplicate already confirmed
+    const history = store.parseOutreachHistory();
+    const exactDupe = history.some(h =>
+      h.direction === 'outbound' && h.type === 'sent' && h.status !== 'failed' &&
+      h.message === messageText &&
+      (h.stxAddress === agent.stxAddress || String(h.agentId) === String(agent.id))
+    );
+    if (exactDupe) {
+      return res.status(409).json({ error: `This exact message was already sent to ${agent.displayName || agent.name}.` });
+    }
+
     // Resolve BTC address
     let btcAddress = agent.btcAddress;
     if (!btcAddress) {
@@ -305,7 +423,6 @@ function mount({ addLog, broadcast }) {
       btcAddress = mem?.btcAddress || replyQueueEntry?.btcAddress || '';
     }
     if (!btcAddress) {
-      const history = store.parseOutreachHistory();
       const peerHist = history.find(h =>
         (h.peerBtcAddress || h.toBtcAddress) &&
         (h.stxAddress === agent.stxAddress || String(h.agentId) === String(agent.id))
@@ -316,20 +433,11 @@ function mount({ addLog, broadcast }) {
       return res.status(400).json({ error: `No BTC address found for ${agent.displayName || agent.name}. Sync inbox first.` });
     }
 
-    // Duplicate check
-    const history = store.parseOutreachHistory();
-    const exactDupe = history.some(h =>
-      h.direction === 'outbound' && h.type === 'sent' &&
-      h.message === messageText &&
-      (h.stxAddress === agent.stxAddress || String(h.agentId) === String(agent.id))
-    );
-    if (exactDupe) {
-      return res.status(409).json({ error: `This exact message was already sent to ${agent.displayName || agent.name}.` });
-    }
+    const queueLen = messaging.getSendQueueLength();
+    const queueMsg = queueLen > 0 ? ` (${queueLen} send(s) ahead in queue)` : '';
+    res.json({ ok: true, message: `Send queued${queueMsg}` });
 
-    res.json({ ok: true, message: 'Send initiated' });
-
-    // Fire and forget — sendMessage handles all bookkeeping
+    // Queued send — sendMessage serializes all sends
     messaging.sendMessage({
       displayName: agent.displayName || agent.name,
       stxAddress: agent.stxAddress,
@@ -337,6 +445,7 @@ function mount({ addLog, broadcast }) {
       agentId: agent.id,
       message: messageText,
       mode,
+      incomingMessage,
       paymentTxid,
       logPrefix: 'Outreach'
     });
@@ -350,6 +459,16 @@ function mount({ addLog, broadcast }) {
     const { agent } = resolved;
 
     const { mode, incomingMessage, model } = req.body || {};
+
+    // Guard: don't generate if we already replied to this inbound message
+    if (mode === 'reply' && incomingMessage && store.hasSuccessfulReplyTo(agentId, incomingMessage)) {
+      return res.status(409).json({ error: `Already replied to this message from ${agent.displayName || agent.name}.` });
+    }
+
+    // Guard: don't generate if a send is pending
+    if (store.hasPendingSendTo(agentId)) {
+      return res.status(409).json({ error: `A send to ${agent.displayName || agent.name} is already pending. Wait for it to complete.` });
+    }
 
     addLog('start', `Generating research for ${agent.name}...`);
     broadcast({

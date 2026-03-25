@@ -171,8 +171,58 @@ function appendOutreachHistory(entry) {
   const history = parseOutreachHistory();
   history.unshift({ ...entry, timestamp: new Date().toISOString() });
   fs.mkdirSync(path.dirname(OUTREACH_HISTORY_FILE), { recursive: true });
-  fs.writeFileSync(OUTREACH_HISTORY_FILE, JSON.stringify(history.slice(0, 100), null, 2), 'utf8');
+  fs.writeFileSync(OUTREACH_HISTORY_FILE, JSON.stringify(history.slice(0, 200), null, 2), 'utf8');
   return { ok: true };
+}
+
+/**
+ * Update the status of a history entry matching the given filter.
+ * filter: { agentId, message, type } — all optional, matched with AND
+ * patch: fields to merge (e.g. { status: 'confirmed', paymentTxid: '...' })
+ * Updates the FIRST matching entry (newest first).
+ */
+function updateHistoryEntry(filter, patch) {
+  const history = parseOutreachHistory();
+  const idx = history.findIndex(h => {
+    if (filter.agentId && String(h.agentId) !== String(filter.agentId)) return false;
+    if (filter.message && h.message !== filter.message) return false;
+    if (filter.type && h.type !== filter.type) return false;
+    if (filter.status && h.status !== filter.status) return false;
+    return true;
+  });
+  if (idx === -1) return { ok: false, error: 'No matching history entry' };
+  history[idx] = { ...history[idx], ...patch };
+  fs.writeFileSync(OUTREACH_HISTORY_FILE, JSON.stringify(history, null, 2), 'utf8');
+  return { ok: true };
+}
+
+/**
+ * Check if we've already successfully replied to a specific inbound message.
+ * Prevents duplicate replies to the same incoming message.
+ */
+function hasSuccessfulReplyTo(agentId, incomingMessage) {
+  if (!incomingMessage) return false;
+  const history = parseOutreachHistory();
+  const incomingTrimmed = String(incomingMessage).trim().substring(0, 100);
+  return history.some(h =>
+    h.type === 'sent' &&
+    h.status !== 'failed' &&
+    String(h.agentId) === String(agentId) &&
+    h.incomingMessage &&
+    String(h.incomingMessage).trim().substring(0, 100) === incomingTrimmed
+  );
+}
+
+/**
+ * Check if a send is currently pending (not yet confirmed or failed) for this agent.
+ */
+function hasPendingSendTo(agentId) {
+  const history = parseOutreachHistory();
+  return history.some(h =>
+    h.type === 'sent' &&
+    h.status === 'pending' &&
+    String(h.agentId) === String(agentId)
+  );
 }
 
 // --- Agent memory ---
@@ -370,6 +420,9 @@ module.exports = {
   // History
   parseOutreachHistory,
   appendOutreachHistory,
+  updateHistoryEntry,
+  hasSuccessfulReplyTo,
+  hasPendingSendTo,
   // Agent memory
   parseOutreachAgentMemory,
   saveOutreachAgentMemory,

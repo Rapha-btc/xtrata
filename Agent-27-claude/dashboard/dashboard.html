@@ -492,7 +492,7 @@
             margin-top: 1rem;
             border-top: 1px solid var(--border);
             padding-top: 0.75rem;
-            max-height: 200px;
+            max-height: 400px;
             overflow-y: auto;
         }
         .outreach-history-item {
@@ -500,10 +500,31 @@
             margin-bottom: 0.5rem;
             border-bottom: 1px solid #111;
             padding-bottom: 0.25rem;
+            border-left: 3px solid transparent;
+            padding-left: 6px;
         }
+        .outreach-history-item.status-confirmed { border-left-color: var(--green); }
+        .outreach-history-item.status-pending { border-left-color: #c8a624; }
+        .outreach-history-item.status-failed { border-left-color: var(--red); }
+        .outreach-history-item.type-received { border-left-color: #4a9eff; }
+        .outreach-history-item.type-research { border-left-color: #555; }
         .outreach-history-ts { color: #555; }
         .outreach-history-agent { color: var(--accent); font-weight: bold; }
         .outreach-history-msg { color: var(--text); }
+        .outreach-history-badge {
+            display: inline-block;
+            font-size: 9px;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-left: 4px;
+        }
+        .badge-confirmed { background: #0a2a0a; color: #4caf50; border: 1px solid #1a3a1a; }
+        .badge-pending { background: #2a2200; color: #c8a624; border: 1px solid #3a3200; }
+        .badge-failed { background: #2a0a0a; color: #ef5350; border: 1px solid #3a1a1a; }
+        .badge-inbound { background: #0a1a2a; color: #4a9eff; border: 1px solid #1a2a3a; }
+        .badge-draft { background: #1a1a1a; color: #666; border: 1px solid #2a2a2a; }
 
         .outreach-info {
             background: #001a1a;
@@ -605,6 +626,21 @@
         .inbox-msg.selected { border-color: var(--green); background: #0a1a0a; }
         .inbox-msg.inbound { border-left: 3px solid var(--green); }
         .inbox-msg.outbound { border-left: 3px solid var(--accent); }
+        .inbox-reply-status {
+            display: inline-block;
+            font-size: 9px;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-left: 6px;
+            cursor: default;
+        }
+        .inbox-reply-status.rs-confirmed { background: #0a2a0a; color: #4caf50; border: 1px solid #1a3a1a; }
+        .inbox-reply-status.rs-pending { background: #2a2200; color: #c8a624; border: 1px solid #3a3200; }
+        .inbox-reply-status.rs-failed { background: #2a0a0a; color: #ef5350; border: 1px solid #3a1a1a; }
+        .inbox-reply-status.rs-queued { background: #1a1a2a; color: #7a7aff; border: 1px solid #2a2a3a; }
+        .inbox-reply-status.rs-draft { background: #1a1a1a; color: #888; border: 1px solid #2a2a2a; }
         .inbox-msg-header {
             display: flex;
             justify-content: space-between;
@@ -620,6 +656,8 @@
         }
         .inbox-msg-direction.in { background: #0a1a0a; color: var(--green); }
         .inbox-msg-direction.out { background: #1a0f00; color: var(--accent); }
+        .inbox-msg-direction.pending { background: #2a2200; color: #c8a624; }
+        .inbox-msg-direction.failed { background: #2a0a0a; color: #ef5350; }
         .inbox-msg-body { color: #bbb; line-height: 1.35; }
         .inbox-msg-tx { color: #444; font-size: 9px; margin-top: 0.2rem; }
         .inbox-actions {
@@ -1782,14 +1820,37 @@ document.addEventListener('DOMContentLoaded', () => {
             : '';
         history.forEach(h => {
             const item = document.createElement('div');
-            item.className = 'outreach-history-item';
+            const status = h.status || (h.type === 'sent' ? 'confirmed' : '');
+            let statusClass = '';
+            if (h.type === 'sent') statusClass = `status-${status || 'confirmed'}`;
+            else if (h.type === 'received') statusClass = 'type-received';
+            else statusClass = 'type-research';
+            item.className = `outreach-history-item ${statusClass}`;
+
             const ts = new Date(h.timestamp).toLocaleString();
-            const icon = h.type === 'sent' ? '\u2709' : h.type === 'received' ? '\u21a9' : '\u2616';
-            const label = h.type === 'sent' ? 'SENT' : h.type === 'received' ? 'INBOUND' : 'RESEARCH';
+            let icon, label, badge;
+            if (h.type === 'sent') {
+                icon = '\u2709';
+                if (status === 'pending') {
+                    label = 'SENDING'; badge = '<span class="outreach-history-badge badge-pending">PENDING</span>';
+                } else if (status === 'failed') {
+                    label = 'FAILED'; badge = '<span class="outreach-history-badge badge-failed">FAILED</span>';
+                } else {
+                    label = 'SENT'; badge = '<span class="outreach-history-badge badge-confirmed">CONFIRMED</span>';
+                }
+            } else if (h.type === 'received') {
+                icon = '\u21a9'; label = 'INBOUND'; badge = '<span class="outreach-history-badge badge-inbound">INBOUND</span>';
+            } else {
+                icon = '\u2616'; label = 'RESEARCH'; badge = '<span class="outreach-history-badge badge-draft">DRAFT</span>';
+            }
+
+            const errorLine = h.error ? `<div style="color: var(--red); font-size: 10px; margin-top: 2px;">${escapeHtml(h.error)}</div>` : '';
+
             item.innerHTML = `
-                <div class="outreach-history-ts">${ts} | ${icon} ${label} | ${escapeHtml(h.mode || 'n/a')}</div>
+                <div class="outreach-history-ts">${ts} | ${icon} ${label} | ${escapeHtml(h.mode || 'n/a')} ${badge}</div>
                 <div class="outreach-history-agent">${escapeHtml(h.agent || 'Unknown')}${h.agentId ? ' (#' + h.agentId + ')' : ''}</div>
                 <div class="outreach-history-msg">${escapeHtml(h.message || h.thought)}</div>
+                ${errorLine}
             `;
             outreachHistoryList.appendChild(item);
         });
@@ -2313,8 +2374,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const date = new Date(msg.sentAt);
             const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const dirLabel = isInbound ? 'IN' : 'OUT';
-            const dirClass = isInbound ? 'in' : 'out';
+            const outStatus = !isInbound ? (msg.localStatus || 'confirmed') : '';
+            const dirLabel = isInbound ? 'IN' : (outStatus === 'pending' ? 'SENDING' : outStatus === 'failed' ? 'FAILED' : 'OUT');
+            const dirClass = isInbound ? 'in' : (outStatus === 'pending' ? 'pending' : outStatus === 'failed' ? 'failed' : 'out');
             const peerStx = isInbound ? msg.fromAddress : msg.toStxAddress;
             // Resolve display name: API name → registered agent lookup → raw address
             let peerName = msg.peerDisplayName || '';
@@ -2325,9 +2387,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const txShort = msg.paymentTxid ? msg.paymentTxid.slice(0, 12) + '...' : '';
 
+            // Reply status badge for inbound messages
+            let replyBadge = '';
+            if (isInbound && msg.replyStatus && msg.replyStatus !== 'none') {
+                const rsLabels = { confirmed: 'REPLIED', pending: 'SENDING', failed: 'SEND FAILED', queued: 'QUEUED', draft: 'DRAFT' };
+                replyBadge = `<span class="inbox-reply-status rs-${msg.replyStatus}" title="${escapeHtml(msg.replyStatusDetail || '')}">${rsLabels[msg.replyStatus] || msg.replyStatus}</span>`;
+            }
+
             div.innerHTML = `
                 <div class="inbox-msg-header">
-                    <span class="inbox-msg-from">${escapeHtml(peerName)}</span>
+                    <span class="inbox-msg-from">${escapeHtml(peerName)}${replyBadge}</span>
                     <span>
                         <span class="inbox-msg-direction ${dirClass}">${dirLabel}</span>
                         <span class="inbox-msg-date">${dateStr}</span>
@@ -2347,9 +2416,31 @@ document.addEventListener('DOMContentLoaded', () => {
                     selectedInboxMsg = msg;
                     div.classList.add('selected');
                     inboxActions.style.display = 'flex';
+
+                    // Disable reply button with reason if reply already exists
+                    const rs = msg.replyStatus || 'none';
+                    if (!isInbound) {
+                        btnInboxReply.disabled = true;
+                        btnInboxReply.textContent = 'OUTBOUND — SELECT AN INBOUND MSG';
+                        btnInboxReply.title = '';
+                    } else if (rs === 'confirmed') {
+                        btnInboxReply.disabled = true;
+                        btnInboxReply.textContent = 'ALREADY REPLIED';
+                        btnInboxReply.title = msg.replyStatusDetail || 'A confirmed reply was already sent for this message';
+                    } else if (rs === 'pending') {
+                        btnInboxReply.disabled = true;
+                        btnInboxReply.textContent = 'SEND IN PROGRESS';
+                        btnInboxReply.title = msg.replyStatusDetail || 'A reply is currently being sent';
+                    } else if (rs === 'queued') {
+                        btnInboxReply.disabled = true;
+                        btnInboxReply.textContent = 'REPLY QUEUED';
+                        btnInboxReply.title = msg.replyStatusDetail || 'A draft reply is already queued for approval';
+                    } else {
+                        btnInboxReply.disabled = false;
+                        btnInboxReply.textContent = rs === 'failed' ? 'RETRY REPLY' : rs === 'draft' ? 'EDIT DRAFT' : 'GENERATE REPLY';
+                        btnInboxReply.title = msg.replyStatusDetail || '';
+                    }
                     inboxSelectedLabel.textContent = `Replying to ${peerName}`;
-                    btnInboxReply.disabled = !isInbound;
-                    btnInboxReply.textContent = isInbound ? 'GENERATE REPLY' : 'OUTBOUND — SELECT AN INBOUND MSG';
                 }
             });
 

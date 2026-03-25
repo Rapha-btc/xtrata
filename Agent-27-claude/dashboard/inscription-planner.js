@@ -12,8 +12,8 @@
         heroPaths: document.getElementById('hero-paths'),
         viewBvst: document.getElementById('view-bvst'),
         viewCanary: document.getElementById('view-canary'),
-        runCanaryGate: document.getElementById('run-canary-gate'),
-        startCanaryInscription: document.getElementById('start-canary-inscription'),
+        runReleaseGate: document.getElementById('run-canary-gate'),
+        startReleaseInscription: document.getElementById('start-canary-inscription'),
         snapshotCards: document.getElementById('snapshot-cards'),
         costCards: document.getElementById('cost-cards'),
         costPriorityNote: document.getElementById('cost-priority-note'),
@@ -333,13 +333,17 @@
         els.heroPaths.innerHTML = chips.map(path => renderPathChip(path, { segments: 2 })).join('');
         els.viewBvst.classList.toggle('active', data.selectedRelease === 'bvst-first-wave');
         els.viewCanary.classList.toggle('active', data.selectedRelease === 'xtrata-canary');
-        els.runCanaryGate.hidden = !data.plannerActions?.canaryRunnable;
-        els.startCanaryInscription.hidden = !data.plannerActions?.canaryInscribeAvailable || data.selectedRelease !== 'xtrata-canary';
-        els.startCanaryInscription.disabled = !data.plannerActions?.canaryInscribeEnabled;
+        els.runReleaseGate.hidden = !data.plannerActions?.releaseRunnable;
+        els.runReleaseGate.disabled = !data.plannerActions?.releaseRunEnabled;
+        els.runReleaseGate.textContent = data.plannerActions?.releaseRunLabel || 'Run Release Gate';
+        els.runReleaseGate.title = data.plannerActions?.releaseRunDisabledReason || '';
+        els.startReleaseInscription.hidden = !data.plannerActions?.releaseInscribeAvailable;
+        els.startReleaseInscription.disabled = !data.plannerActions?.releaseInscribeEnabled;
+        els.startReleaseInscription.title = data.plannerActions?.releaseInscribeDisabledReason || '';
         if (data.automation?.activeRun) {
-            els.startCanaryInscription.textContent = 'Canary Inscription Running';
+            els.startReleaseInscription.textContent = data.plannerActions?.releaseInscribeRunningLabel || 'Inscription Running';
         } else {
-            els.startCanaryInscription.textContent = 'Inscribe Canary';
+            els.startReleaseInscription.textContent = data.plannerActions?.releaseInscribeLabel || 'Inscribe Release';
         }
     }
 
@@ -664,12 +668,15 @@
 
     function renderAutomation(data) {
         const automation = data.automation || {};
+        const guardrails = automation.guardrails || {};
         const runLog = automation.runLog || {};
         const activeRun = automation.activeRun;
         const signerConfigured = Boolean(automation.signerConfigured);
         const eventTail = Array.isArray(automation.eventTail) ? automation.eventTail : [];
         const chainTail = Array.isArray(automation.chainTail) ? automation.chainTail : [];
         const failureSnapshot = automation.failureSnapshot || null;
+        const releaseName = data.currentRelease?.name || 'Selected release';
+        const releaseInscribeLabel = data.plannerActions?.releaseInscribeLabel || 'Inscribe Release';
         const recentLogs = activeRun?.recentLogs?.length
             ? activeRun.recentLogs
             : (automation.lastRun?.recentLogs?.length ? automation.lastRun.recentLogs : []);
@@ -717,6 +724,22 @@
                 className: failureSnapshot ? 'warn' : 'accent'
             }
         ];
+        if (data.selectedRelease === 'bvst-first-wave') {
+            cards.push({
+                label: 'Gate',
+                value: guardrails.gatePassed ? (guardrails.gateFresh === false ? 'Stale' : 'Passed') : 'Refresh On Start',
+                subvalue: guardrails.gateGeneratedAt
+                    ? `last rehearsal ${formatDate(guardrails.gateGeneratedAt)}`
+                    : 'BVST start reruns the release gate with a live quote',
+                className: guardrails.gatePassed ? (guardrails.gateFresh === false ? 'warn' : 'good') : 'accent'
+            });
+            cards.push({
+                label: 'Balance Guard',
+                value: guardrails.balanceSufficient === false ? 'Blocked' : (guardrails.balanceSufficient === true ? 'Pass' : 'Pending'),
+                subvalue: `observed ${formatStx(guardrails.observedBalanceStx)} / need ${formatStx(guardrails.requiredBalanceStx)}`,
+                className: guardrails.balanceSufficient === false ? 'bad' : (guardrails.balanceSufficient === true ? 'good' : 'accent')
+            });
+        }
 
         els.automationSummary.innerHTML = cards.map(card => `
             <div class="mini-stat ${card.className || 'accent'}">
@@ -726,24 +749,30 @@
             </div>
         `).join('');
 
-        if (data.selectedRelease !== 'xtrata-canary') {
-            els.automationNote.className = 'notice';
-            els.automationNote.textContent = 'One-click inscription is currently wired only for the canary release. The production BVST release stays manual until the canary proves the full mint/update/verify loop on-chain.';
+        if (!data.plannerActions?.releaseInscribeAvailable) {
+            els.automationNote.className = 'notice warn';
+            els.automationNote.textContent = `${releaseName} is not auto-inscribeable with the current runner. Only helper-only release plans are supported.`;
         } else if (!signerConfigured) {
             els.automationNote.className = 'notice warn';
-            els.automationNote.textContent = 'The runner cannot find Agent 27\'s signer path. Restore the autonomous signer configuration before using the one-click canary inscription button.';
+            els.automationNote.textContent = 'The runner cannot find Agent 27\'s signer path. Restore the autonomous signer configuration before starting auto-inscription.';
+        } else if (data.selectedRelease === 'bvst-first-wave' && guardrails.balanceSufficient === false) {
+            els.automationNote.className = 'notice warn';
+            els.automationNote.textContent = `${releaseInscribeLabel} is blocked by the current STX balance. Observed ${formatStx(guardrails.observedBalanceStx)} versus guarded minimum ${formatStx(guardrails.requiredBalanceStx)} for the current BVST quote.`;
         } else if (activeRun) {
             els.automationNote.className = 'notice good';
-            els.automationNote.textContent = 'The canary runner is active. It mints one artifact at a time, verifies the result on-chain, records the token ID/tx/block, re-renders dependent catalogs, rebuilds status, then proceeds to the next ready item.';
+            els.automationNote.textContent = `${releaseName} runner is active. It mints one artifact at a time, verifies the result on-chain, records the token ID/tx/block, re-renders dependent catalogs, rebuilds status, then proceeds to the next ready item.`;
         } else if (runLog.status === 'failed') {
             els.automationNote.className = 'notice warn';
             els.automationNote.textContent = 'The last automation run failed. Review the structured event log, chain-observation log, and failure snapshot before retrying.';
         } else if (runLog.status === 'completed') {
             els.automationNote.className = 'notice good';
             els.automationNote.textContent = 'The last automation run completed successfully. The runner left both lifecycle events and chain-verification traces behind for audit and debugging.';
+        } else if (data.selectedRelease === 'bvst-first-wave') {
+            els.automationNote.className = 'notice';
+            els.automationNote.textContent = 'The BVST path now uses a guarded start. Pressing the button reruns the BVST release gate with a live quote, checks the observed wallet balance against the projected spend with margin, then starts the dependency-aware mint loop if the release is clear to spend.';
         } else {
             els.automationNote.className = 'notice';
-            els.automationNote.textContent = 'The one-click canary path is ready. It now records append-only lifecycle events, chain observations, and a failure snapshot in addition to the run summary JSON.';
+            els.automationNote.textContent = 'The one-click canary path is ready. It records append-only lifecycle events, chain observations, and a failure snapshot in addition to the run summary JSON.';
         }
 
         const debugFiles = [
@@ -1171,36 +1200,38 @@
                 els.refreshStamp.textContent = `Refresh failed: ${err.message}`;
             });
         });
-        els.runCanaryGate.addEventListener('click', async () => {
-            const originalLabel = els.runCanaryGate.textContent;
-            els.runCanaryGate.textContent = 'Running Canary Gate...';
-            els.runCanaryGate.disabled = true;
+        els.runReleaseGate.addEventListener('click', async () => {
+            const originalLabel = els.runReleaseGate.textContent;
+            const pendingLabel = state.release?.plannerActions?.releaseRunPendingLabel || 'Running Release Gate...';
+            els.runReleaseGate.textContent = pendingLabel;
+            els.runReleaseGate.disabled = true;
             try {
-                const result = await postJson('/api/inscription-planner/canary/run');
-                setSelectedRelease(result.releaseId || 'xtrata-canary');
+                const result = await postJson(`/api/inscription-planner/${encodeURIComponent(state.selectedRelease)}/run`);
+                setSelectedRelease(result.releaseId || state.selectedRelease);
                 state.release = result.data || null;
                 renderRelease();
             } catch (err) {
-                els.refreshStamp.textContent = `Canary gate failed: ${err.message}`;
+                els.refreshStamp.textContent = `Release gate failed: ${err.message}`;
             } finally {
-                els.runCanaryGate.textContent = originalLabel;
-                els.runCanaryGate.disabled = false;
+                els.runReleaseGate.textContent = originalLabel;
+                els.runReleaseGate.disabled = false;
             }
         });
-        els.startCanaryInscription.addEventListener('click', async () => {
-            const originalLabel = els.startCanaryInscription.textContent;
-            els.startCanaryInscription.textContent = 'Starting Canary Inscription...';
-            els.startCanaryInscription.disabled = true;
+        els.startReleaseInscription.addEventListener('click', async () => {
+            const originalLabel = els.startReleaseInscription.textContent;
+            const pendingLabel = state.release?.plannerActions?.releaseInscribePendingLabel || 'Starting Inscription...';
+            els.startReleaseInscription.textContent = pendingLabel;
+            els.startReleaseInscription.disabled = true;
             try {
-                const result = await postJson('/api/inscription-planner/canary/inscribe');
-                setSelectedRelease(result.releaseId || 'xtrata-canary');
+                const result = await postJson(`/api/inscription-planner/${encodeURIComponent(state.selectedRelease)}/inscribe`);
+                setSelectedRelease(result.releaseId || state.selectedRelease);
                 state.release = result.data || null;
                 renderRelease();
             } catch (err) {
-                els.refreshStamp.textContent = `Canary inscription failed to start: ${err.message}`;
+                els.refreshStamp.textContent = `Inscription failed to start: ${err.message}`;
             } finally {
                 if (!state.release?.automation?.activeRun) {
-                    els.startCanaryInscription.textContent = originalLabel;
+                    els.startReleaseInscription.textContent = originalLabel;
                 }
             }
         });

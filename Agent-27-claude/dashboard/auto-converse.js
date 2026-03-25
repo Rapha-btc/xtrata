@@ -109,6 +109,7 @@ function approveReply(agentId, message) {
     agentId,
     message: entry.message,
     mode: entry.mode || 'reply',
+    incomingMessage: entry.incomingMessage || '',
     paymentTxid: entry.paymentTxid || '',
     logPrefix: 'AutoConverse-Approved'
   });
@@ -150,6 +151,18 @@ async function processNewMessages(syncResult) {
     const agent = agents.find(a => a.stxAddress === peerStx);
     if (!agent) continue;
 
+    // Guard: don't reply if we already successfully replied to this message
+    if (store.hasSuccessfulReplyTo(agent.id, msg.message)) {
+      _addLog('stdout', `[auto-converse] Skipping ${agent.name} — already replied to this message`);
+      continue;
+    }
+
+    // Guard: don't generate if a send is already pending for this agent
+    if (store.hasPendingSendTo(agent.id)) {
+      _addLog('stdout', `[auto-converse] Skipping ${agent.name} — send already pending`);
+      continue;
+    }
+
     try {
       _addLog('start', `[auto-converse] Generating reply for ${agent.name}...`);
       _broadcast({ event: 'auto-converse-research', data: { agentId: agent.id, agentName: agent.name } });
@@ -177,6 +190,7 @@ async function processNewMessages(syncResult) {
           agentId: agent.id,
           message: draft.message,
           mode: 'reply',
+          incomingMessage: msg.message,
           logPrefix: 'AutoConverse'
         });
       } else {

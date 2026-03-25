@@ -32,7 +32,7 @@ const {
   listSkillTests
 } = require('./skill-test-runner');
 const { initWatcher, stopWatcher } = require('./watcher');
-const { startChainPoller, stopChainPoller, getChainData, onAfterPoll } = require('./chain');
+const { startChainPoller, stopChainPoller, getChainData, fetchStxBalance, onAfterPoll } = require('./chain');
 const { mount: mountOutreach, syncInbox } = require('./outreach/routes');
 const { startHeartbeatPoller, stopHeartbeatPoller, getHeartbeatStatus, triggerHeartbeat } = require('./heartbeat');
 const {
@@ -71,11 +71,21 @@ const plannerAutomationState = {
   active: null,
   lastByRelease: {}
 };
+const PLANNER_BVST_GATE_MAX_AGE_MS = 12 * 60 * 60 * 1000;
+const PLANNER_BVST_COST_MARGIN_RATIO = 0.15;
+const PLANNER_BVST_RESERVE_STX = 0.25;
 const PLANNER_RELEASES = {
   'bvst-first-wave': {
     id: 'bvst-first-wave',
     name: 'BVST First-Wave Bundle',
     bundleDir: BVST_BUNDLE_DIR,
+    gateScript: path.join(BVST_BUNDLE_DIR, 'scripts', 'run-release-gate.mjs'),
+    gateReportPath: path.join(BVST_BUNDLE_DIR, 'verification', 'release-gate.report.json'),
+    gateLabel: 'Run BVST Gate',
+    gatePendingLabel: 'Running BVST Gate...',
+    inscribeLabel: 'Inscribe BVST',
+    inscribePendingLabel: 'Starting BVST Inscription...',
+    inscribeRunningLabel: 'BVST Inscription Running',
     docs: [
       path.join(BVST_BUNDLE_DIR, 'README.md'),
       path.join(BVST_BUNDLE_DIR, 'INSCRIPTION_AUTOMATION.md'),
@@ -87,6 +97,13 @@ const PLANNER_RELEASES = {
     id: 'xtrata-canary',
     name: 'Xtrata Canary Release',
     bundleDir: XTRATA_CANARY_BUNDLE_DIR,
+    gateScript: path.join(XTRATA_CANARY_BUNDLE_DIR, 'scripts', 'run-canary-gate.mjs'),
+    gateReportPath: null,
+    gateLabel: 'Run Canary Gate',
+    gatePendingLabel: 'Running Canary Gate...',
+    inscribeLabel: 'Inscribe Canary',
+    inscribePendingLabel: 'Starting Canary Inscription...',
+    inscribeRunningLabel: 'Canary Inscription Running',
     docs: [
       path.join(XTRATA_CANARY_BUNDLE_DIR, 'README.md'),
       path.join(XTRATA_CANARY_BUNDLE_DIR, 'INSCRIPTION_AUTOMATION.md')
@@ -103,8 +120,25 @@ function plannerAutoInscribeScriptPath() {
   return path.join(WORKDIR, 'skills', 'xtrata-release-plan', 'scripts', 'xtrata-auto-inscribe.cjs');
 }
 
+function getExactPlannerReleaseConfig(releaseId) {
+  if (releaseId === 'canary') return PLANNER_RELEASES['xtrata-canary'];
+  if (releaseId === 'bvst') return PLANNER_RELEASES['bvst-first-wave'];
+  return PLANNER_RELEASES[releaseId] || null;
+}
+
 function canAutoInscribeRelease(releaseId) {
-  return releaseId === 'xtrata-canary' && fs.existsSync(plannerAutoInscribeScriptPath());
+  const releaseConfig = getExactPlannerReleaseConfig(releaseId);
+  if (!releaseConfig || !fs.existsSync(plannerAutoInscribeScriptPath())) {
+    return false;
+  }
+  const quote = safeReadJson(path.join(releaseConfig.bundleDir, 'verification', 'preflight.quote.json'));
+  const steps = Array.isArray(quote?.execution?.steps) ? quote.execution.steps : [];
+  return steps.length > 0 && steps.every((step) => step.route === 'helper');
+}
+
+function canRunPlannerGate(releaseId) {
+  const releaseConfig = getExactPlannerReleaseConfig(releaseId);
+  return Boolean(releaseConfig?.gateScript && fs.existsSync(releaseConfig.gateScript));
 }
 
 function readPlannerRunLog(bundleDir) {
@@ -304,6 +338,116 @@ function getMtimeMs(absPath) {
 
 function getPlannerReleaseConfig(releaseId) {
   return PLANNER_RELEASES[releaseId] || PLANNER_RELEASES['bvst-first-wave'];
+}
+
+function summarizePlannerPricing(pricing) {
+  const batches = Object.values(pricing?.batchesByName || {});
+  return batches.reduce((summary, batch) => {
+    summary.protocolFeeStx += Number(batch.protocolFeeStx || 0);
+    summary.liveMiningStx += Number(batch.liveMiningStx || 0);
+    summary.totalProjectedStx += Number(batch.totalProjectedStx || 0);
+    summary.artifactCount += Number(batch.artifactCount || 0);
+    summary.liveEstimatedCount += Number(batch.liveEstimatedCount || 0);
+    return summary;
+  }, {
+    protocolFeeStx: 0,
+    liveMiningStx: 0,
+    totalProjectedStx: 0,
+    artifactCount: 0,
+    liveEstimatedCount: 0
+  });
+}
+
+function readPlannerGateReport(releaseConfig) {
+  if (!releaseConfig?.gateReportPath) {
+    return { path: null, data: null };
+  }
+  return {
+    path: releaseConfig.gateReportPath,
+    data: safeReadJson(releaseConfig.gateReportPath)
+  };
+}
+
+function plannerGateArgsForRelease(releaseConfig) {
+  if (releaseConfig?.id === 'bvst-first-wave') {
+    return ['--with-live-quote'];
+  }
+  return [];
+}
+
+async function runPlannerGate(releaseConfig) {
+  if (!releaseConfig?.gateScript || !fs.existsSync(releaseConfig.gateScript)) {
+    throw new Error(`No gate script is installed for ${releaseConfig?.id || 'unknown release'}.`);
+  }
+  await execFileAsync(process.execPath, [releaseConfig.gateScript, ...plannerGateArgsForRelease(releaseConfig)], {
+    cwd: WORKDIR
+  });
+}
+
+async function readObservedPlannerBalanceStx() {
+  const chain = getChainData();
+  if (chain.stxBalance !== null && chain.stxBalance !== undefined) {
+    return chain.stxBalance;
+  }
+  try {
+    return await fetchStxBalance();
+  } catch {
+    return null;
+  }
+}
+
+function buildPlannerGuardrails({ releaseConfig, pricing, status, gateReport, signerReady, activeRun, observedBalanceStx }) {
+  const pricingSummary = summarizePlannerPricing(pricing);
+  const estimatedTotalStx = pricingSummary.totalProjectedStx > 0 ? pricingSummary.totalProjectedStx : null;
+  const requiredBalanceStx = estimatedTotalStx === null
+    ? null
+    : Number((estimatedTotalStx * (1 + PLANNER_BVST_COST_MARGIN_RATIO) + PLANNER_BVST_RESERVE_STX).toFixed(6));
+  const hardStopCount = Number(status?.summary?.hard_stop || 0);
+  const gateGeneratedAt = gateReport?.generated_at || gateReport?.generatedAt || null;
+  const gateGeneratedMs = gateGeneratedAt ? Date.parse(gateGeneratedAt) : Number.NaN;
+  const gateAgeMs = Number.isFinite(gateGeneratedMs) ? Math.max(0, Date.now() - gateGeneratedMs) : null;
+  const gatePassed = gateReport?.summary?.status === 'passed';
+  const gateFresh = gateAgeMs === null ? null : gateAgeMs <= PLANNER_BVST_GATE_MAX_AGE_MS;
+  const balanceSufficient = requiredBalanceStx === null || observedBalanceStx === null
+    ? null
+    : observedBalanceStx >= requiredBalanceStx;
+  const routeSupported = canAutoInscribeRelease(releaseConfig.id);
+  const blockingReasons = [];
+
+  if (!routeSupported) {
+    blockingReasons.push('Auto-inscribe currently supports helper-only release plans.');
+  }
+  if (!signerReady) {
+    blockingReasons.push('Agent 27 signer path is unavailable.');
+  }
+  if (activeRun) {
+    blockingReasons.push(`Automation run already active for ${activeRun.releaseId}.`);
+  }
+  if (hardStopCount > 0) {
+    blockingReasons.push(`Release has ${hardStopCount} hard-stop items.`);
+  }
+  if (releaseConfig.kind === 'production' && balanceSufficient === false) {
+    blockingReasons.push(
+      `Observed balance ${observedBalanceStx.toFixed(6)} STX is below the guarded BVST minimum ${requiredBalanceStx.toFixed(6)} STX.`
+    );
+  }
+
+  return {
+    routeSupported,
+    hardStopCount,
+    startWillRefreshGate: releaseConfig.kind === 'production',
+    gatePassed,
+    gateFresh,
+    gateGeneratedAt,
+    gateAgeMs,
+    estimatedTotalStx,
+    requiredBalanceStx,
+    observedBalanceStx,
+    balanceSufficient,
+    costMarginRatio: PLANNER_BVST_COST_MARGIN_RATIO,
+    reserveStx: PLANNER_BVST_RESERVE_STX,
+    blockingReasons
+  };
 }
 
 function execFileAsync(file, args, options = {}) {
@@ -539,12 +683,14 @@ async function loadInscriptionPlannerData(releaseId = 'bvst-first-wave') {
   const inscriptionLog = safeReadJson(logPath);
   const dependencyGraph = safeReadJson(path.join(bundleDir, 'verification', 'dependency-graph.json'));
   const canaryAchievement = safeReadJson(path.join(bundleDir, 'verification', 'canary-achievement.json'));
+  const gateReport = readPlannerGateReport(releaseConfig);
   const runLog = readPlannerRunLog(bundleDir);
   const traceArtifacts = readPlannerTraceArtifacts(bundleDir);
   const activeRun = plannerAutomationState.active?.releaseId === releaseConfig.id
     ? sanitizePlannerRun(plannerAutomationState.active)
     : null;
   const lastRun = plannerAutomationState.lastByRelease[releaseConfig.id] || null;
+  const signerReady = signerConfigured();
   const pricingCacheKey = [
     bundleDir,
     getMtimeMs(quotePath),
@@ -580,6 +726,19 @@ async function loadInscriptionPlannerData(releaseId = 'bvst-first-wave') {
   const catalogCount = steps.filter(step => step.kind === 'catalog').length;
   const helperCount = steps.filter(step => step.route === 'helper').length;
   const stagedCount = steps.filter(step => step.route === 'staged').length;
+  const observedBalanceStx = await readObservedPlannerBalanceStx();
+  const guardrails = buildPlannerGuardrails({
+    releaseConfig,
+    pricing,
+    status,
+    gateReport: gateReport.data,
+    signerReady,
+    activeRun: plannerAutomationState.active,
+    observedBalanceStx
+  });
+  const releaseRunEnabled = canRunPlannerGate(releaseConfig.id) && !plannerAutomationState.active;
+  const releaseInscribeAvailable = canAutoInscribeRelease(releaseConfig.id);
+  const releaseInscribeEnabled = releaseInscribeAvailable && guardrails.blockingReasons.length === 0;
 
   return {
     generatedAt: new Date().toISOString(),
@@ -611,9 +770,12 @@ async function loadInscriptionPlannerData(releaseId = 'bvst-first-wave') {
     inscriptionLog,
     canaryAchievement,
     automation: {
-      signerConfigured: signerConfigured(),
+      signerConfigured: signerReady,
       activeRun,
       lastRun,
+      gateReportPath: gateReport.path ? toRelative(gateReport.path) : null,
+      gateReport: gateReport.data,
+      guardrails,
       runLogPath: toRelative(runLog.path),
       runLog: runLog.data,
       eventLogPath: toRelative(traceArtifacts.eventLogPath),
@@ -631,6 +793,7 @@ async function loadInscriptionPlannerData(releaseId = 'bvst-first-wave') {
       renderedIndex: toRelative(renderedIndexPath),
       tokenMap: toRelative(tokenMapPath),
       inscriptionLog: toRelative(logPath),
+      gateReport: gateReport.path ? toRelative(gateReport.path) : null,
       autoRunLog: toRelative(runLog.path),
       autoEventLog: toRelative(traceArtifacts.eventLogPath),
       autoChainLog: toRelative(traceArtifacts.chainLogPath),
@@ -650,9 +813,17 @@ async function loadInscriptionPlannerData(releaseId = 'bvst-first-wave') {
       'Target network and contract deployment'
     ],
     plannerActions: {
-      canaryRunnable: fs.existsSync(path.join(XTRATA_CANARY_BUNDLE_DIR, 'scripts', 'run-canary-gate.mjs')),
-      canaryInscribeAvailable: canAutoInscribeRelease(releaseConfig.id),
-      canaryInscribeEnabled: canAutoInscribeRelease(releaseConfig.id) && signerConfigured() && !plannerAutomationState.active
+      releaseRunnable: canRunPlannerGate(releaseConfig.id),
+      releaseRunEnabled,
+      releaseRunLabel: releaseConfig.gateLabel,
+      releaseRunPendingLabel: releaseConfig.gatePendingLabel,
+      releaseRunDisabledReason: releaseRunEnabled ? null : (plannerAutomationState.active ? `Automation run already active for ${plannerAutomationState.active.releaseId}.` : null),
+      releaseInscribeAvailable,
+      releaseInscribeEnabled,
+      releaseInscribeLabel: releaseConfig.inscribeLabel,
+      releaseInscribePendingLabel: releaseConfig.inscribePendingLabel,
+      releaseInscribeRunningLabel: releaseConfig.inscribeRunningLabel,
+      releaseInscribeDisabledReason: guardrails.blockingReasons[0] || null
     }
   };
 }
@@ -917,22 +1088,42 @@ app.get('/api/inscription-planner/current-release', (req, res) => {
   }
 });
 
-app.post('/api/inscription-planner/canary/run', async (req, res) => {
+async function handlePlannerGate(req, res, releaseOverride = null) {
   try {
-    await execFileAsync(process.execPath, ['TASKS/xtrata-canary-release/scripts/run-canary-gate.mjs'], {
-      cwd: WORKDIR
-    });
-    const data = await loadInscriptionPlannerData('xtrata-canary');
-    res.json({ ok: true, releaseId: 'xtrata-canary', data });
+    const requestedReleaseId = releaseOverride || req.params.releaseId;
+    const releaseConfig = getExactPlannerReleaseConfig(requestedReleaseId);
+    if (!releaseConfig) {
+      return res.status(404).json({ ok: false, error: `Unknown release: ${requestedReleaseId}` });
+    }
+    const releaseId = releaseConfig.id;
+    if (!canRunPlannerGate(releaseId)) {
+      return res.status(404).json({ ok: false, error: `No gate runner is installed for ${releaseId}.` });
+    }
+    if (plannerAutomationState.active) {
+      return res.status(409).json({
+        ok: false,
+        error: `Automation run already active for ${plannerAutomationState.active.releaseId}.`
+      });
+    }
+
+    await runPlannerGate(releaseConfig);
+    const data = await loadInscriptionPlannerData(releaseId);
+    res.json({ ok: true, releaseId, data });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }
-});
+}
 
-app.post('/api/inscription-planner/canary/inscribe', async (req, res) => {
+async function handlePlannerInscribe(req, res, releaseOverride = null) {
   try {
-    if (!canAutoInscribeRelease('xtrata-canary')) {
-      return res.status(404).json({ ok: false, error: 'Canary auto-inscribe runner is not installed.' });
+    const requestedReleaseId = releaseOverride || req.params.releaseId;
+    const releaseConfig = getExactPlannerReleaseConfig(requestedReleaseId);
+    if (!releaseConfig) {
+      return res.status(404).json({ ok: false, error: `Unknown release: ${requestedReleaseId}` });
+    }
+    const releaseId = releaseConfig.id;
+    if (!canAutoInscribeRelease(releaseId)) {
+      return res.status(404).json({ ok: false, error: `${releaseConfig.name} does not currently support auto-inscribe.` });
     }
     if (!signerConfigured()) {
       return res.status(400).json({ ok: false, error: 'Agent 27 signer path is unavailable. Restore the configured signer before starting auto-inscription.' });
@@ -944,13 +1135,41 @@ app.post('/api/inscription-planner/canary/inscribe', async (req, res) => {
       });
     }
 
-    const run = startPlannerAutoRun(getPlannerReleaseConfig('xtrata-canary'));
-    const data = await loadInscriptionPlannerData('xtrata-canary');
-    res.json({ ok: true, releaseId: 'xtrata-canary', run, data });
+    // For BVST, refresh the release gate and live quote immediately before any spend.
+    if (releaseConfig.kind === 'production') {
+      await runPlannerGate(releaseConfig);
+    }
+
+    const data = await loadInscriptionPlannerData(releaseId);
+    const guardrails = data.automation?.guardrails || {};
+    if (guardrails.hardStopCount > 0) {
+      return res.status(400).json({ ok: false, error: `Release has ${guardrails.hardStopCount} hard-stop items.` });
+    }
+    if (releaseConfig.kind === 'production') {
+      if (guardrails.gatePassed !== true) {
+        return res.status(400).json({ ok: false, error: 'BVST release gate did not pass. Resolve the gate failures before minting.' });
+      }
+      if (guardrails.estimatedTotalStx === null || guardrails.requiredBalanceStx === null) {
+        return res.status(400).json({ ok: false, error: 'BVST projected mint cost is unavailable after the fresh gate run.' });
+      }
+      if (guardrails.balanceSufficient === false) {
+        return res.status(400).json({
+          ok: false,
+          error: `Observed balance ${guardrails.observedBalanceStx.toFixed(6)} STX is below the guarded BVST minimum ${guardrails.requiredBalanceStx.toFixed(6)} STX.`
+        });
+      }
+    }
+
+    const run = startPlannerAutoRun(releaseConfig);
+    const refreshed = await loadInscriptionPlannerData(releaseId);
+    res.json({ ok: true, releaseId, run, data: refreshed });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }
-});
+}
+
+app.post('/api/inscription-planner/:releaseId/run', handlePlannerGate);
+app.post('/api/inscription-planner/:releaseId/inscribe', handlePlannerInscribe);
 
 // --- Main Route ---
 app.get('/inscription-planner', (req, res) => {

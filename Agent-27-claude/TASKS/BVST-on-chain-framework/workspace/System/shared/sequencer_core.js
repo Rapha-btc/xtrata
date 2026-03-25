@@ -46,6 +46,10 @@ export class SequencerManager {
         this.ui = null;
     }
 
+    _getNowSeconds() {
+        return this.audioContext ? this.audioContext.currentTime : performance.now() / 1000;
+    }
+
     setSwing(amount) {
         this.swing = Math.max(0, Math.min(0.75, parseFloat(amount)));
     }
@@ -72,7 +76,7 @@ export class SequencerManager {
         if (this.isPlaying) return;
         this.isPlaying = true;
         this.currentStep = 0;
-        this.nextNoteTime = performance.now() / 1000;
+        this.nextNoteTime = this._getNowSeconds();
         
         if (this.controls && this.type !== 'arp') { // Arp doesn't use Transport buttons usually
             this.controls.setValue('btn-play', 1);
@@ -170,7 +174,7 @@ export class SequencerManager {
             stepTime = secondsPerBeat / 4; 
         }
 
-        const now = this.audioContext ? this.audioContext.currentTime : performance.now() / 1000;
+        const now = this._getNowSeconds();
         
         // Lookahead 100ms
         while (this.nextNoteTime < now + 0.1) {
@@ -192,7 +196,7 @@ export class SequencerManager {
     }
 
     runStep(idx, time) {
-        const now = this.audioContext ? this.audioContext.currentTime : performance.now() / 1000;
+        const now = this._getNowSeconds();
         const delayMs = Math.max(0, (time - now) * 1000);
 
         // Schedule UI update (approximate)
