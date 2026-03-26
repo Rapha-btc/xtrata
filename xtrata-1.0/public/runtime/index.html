@@ -259,11 +259,25 @@
           );
         }
 
+        function buildRuntimeModuleBootstrapScriptTag() {
+          var url = new URL('/runtime/module-bootstrap.js', window.location.origin);
+          return (
+            '<script data-xtrata-runtime-module-bootstrap="true" src="' +
+            escapeAttribute(url.toString()) +
+            '"></' +
+            'script>'
+          );
+        }
+
         function injectRuntimeSupport(html, params) {
           html = injectHeadPrefix(html, buildRuntimeBaseTag(params));
           var diagnosticsScript = buildRuntimeDiagnosticsScriptTag();
           if (diagnosticsScript) {
             html = injectHeadPrefix(html, '\n' + diagnosticsScript);
+          }
+          var moduleBootstrapScript = buildRuntimeModuleBootstrapScriptTag();
+          if (moduleBootstrapScript) {
+            html = injectHeadPrefix(html, '\n' + moduleBootstrapScript);
           }
           var supportScript = buildRuntimeWalletSupportScriptTag(params);
           if (!supportScript) {

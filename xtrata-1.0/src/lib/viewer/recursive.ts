@@ -348,6 +348,10 @@ const buildDiagnosticsScriptTag = () =>
   '<script data-xtrata-runtime-diagnostics="true" src="/runtime/diagnostics.js"></' +
   'script>';
 
+const buildModuleBootstrapScriptTag = () =>
+  '<script data-xtrata-runtime-module-bootstrap="true" src="/runtime/module-bootstrap.js"></' +
+  'script>';
+
 const insertAfterTag = (html: string, tagName: string, content: string) => {
   const regex = new RegExp(`<${tagName}[^>]*>`, 'i');
   const match = html.match(regex);
@@ -368,7 +372,10 @@ export const injectRecursiveBridgeHtml = (html: string, bridgeId: string) => {
   const diagnosticsScript = html.includes('data-xtrata-runtime-diagnostics')
     ? ''
     : buildDiagnosticsScriptTag();
-  const script = `${diagnosticsScript}${buildBridgeScript(bridgeId)}`;
+  const moduleBootstrapScript = html.includes('data-xtrata-runtime-module-bootstrap')
+    ? ''
+    : buildModuleBootstrapScriptTag();
+  const script = `${diagnosticsScript}${moduleBootstrapScript}${buildBridgeScript(bridgeId)}`;
   if (html.includes('</head>')) {
     return html.replace('</head>', `${script}</head>`);
   }
