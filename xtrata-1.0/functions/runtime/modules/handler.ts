@@ -208,6 +208,27 @@ const resolveModuleContentType = (
   return mimeType || 'application/octet-stream';
 };
 
+const buildCanonicalModuleUrl = (params: {
+  requestUrl: string;
+  network: string;
+  contract: RuntimeContractRef;
+  tokenId: bigint;
+  requestedPath: string;
+}) => {
+  const url = new URL(params.requestUrl);
+  url.pathname =
+    `/runtime/modules/${encodeURIComponent(params.network)}` +
+    `/${encodeURIComponent(params.contract.address)}` +
+    `/${encodeURIComponent(params.contract.contractName)}` +
+    `/${encodeURIComponent(params.tokenId.toString())}` +
+    `/${params.requestedPath
+      .split('/')
+      .filter(Boolean)
+      .map((segment) => encodeURIComponent(segment))
+      .join('/')}`;
+  return url.toString();
+};
+
 const resolveModuleTokenId = async (params: {
   env: RuntimeEnv;
   apiBases: string[];
@@ -351,6 +372,23 @@ export const onRuntimeModulesRequest = async (context: {
     });
     if (tokenId === null) {
       return badResponse(404, 'Module path not found');
+    }
+    if (entryTokenId !== null && entryTokenId !== tokenId) {
+      const redirectUrl = buildCanonicalModuleUrl({
+        requestUrl: request.url,
+        network,
+        contract,
+        tokenId,
+        requestedPath
+      });
+      return new Response(null, {
+        status: 307,
+        headers: {
+          ...CORS_HEADERS,
+          Location: redirectUrl,
+          'Cache-Control': 'public, max-age=300'
+        }
+      });
     }
 
     const resolved = await resolveRuntimeContent({

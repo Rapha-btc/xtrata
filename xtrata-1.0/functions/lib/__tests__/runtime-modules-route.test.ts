@@ -141,4 +141,59 @@ describe('runtime modules route', () => {
     expect(tokenUriReads.length).toBeLessThanOrEqual(2);
     expect(await response.text()).toBe('console.log("ok")');
   });
+
+  it('redirects to the resolved token id so nested imports inherit the right base', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+      const body =
+        init?.body && typeof init.body === 'string'
+          ? (JSON.parse(init.body) as { arguments?: unknown[] })
+          : { arguments: [] as unknown[] };
+
+      if (url.endsWith('/get-last-token-id')) {
+        return clarityResponse(responseOkCV(uintCV(3)));
+      }
+
+      if (url.endsWith('/get-token-uri')) {
+        const tokenId = readUintArgument(body.arguments?.[0]);
+        if (tokenId === 1n) {
+          return clarityResponse(
+            responseOkCV(
+              someCV(stringAsciiCV('System/shared/patch_runtime.js'))
+            )
+          );
+        }
+        return clarityResponse(responseOkCV(someCV(stringAsciiCV(`token-${tokenId}.txt`))));
+      }
+
+      return new Response('not found', { status: 404 });
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    const response = await onRequest({
+      request: new Request(
+        'https://xtrata.xyz/runtime/modules/mainnet/SP123/contract-name/3/on-chain-modules/workspace/System/shared/patch_runtime.js?t=123'
+      ),
+      env: {},
+      params: {
+        network: 'mainnet',
+        contractAddress: 'SP123',
+        contractName: 'contract-name',
+        entryTokenId: '3',
+        path: [
+          'on-chain-modules',
+          'workspace',
+          'System',
+          'shared',
+          'patch_runtime.js'
+        ]
+      }
+    } as any);
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('Location')).toBe(
+      'https://xtrata.xyz/runtime/modules/mainnet/SP123/contract-name/1/on-chain-modules/workspace/System/shared/patch_runtime.js?t=123'
+    );
+  });
 });
