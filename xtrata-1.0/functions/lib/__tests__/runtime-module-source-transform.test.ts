@@ -37,6 +37,8 @@ describe('runtime module source transform', () => {
     const output = transformRuntimeModuleSource(input);
 
     expect(output.changed).toBe(true);
+    expect(output.source).toContain("const currentUrl = new URL(import.meta.url);");
+    expect(output.source).toContain("const workspacePrefix = '/on-chain-modules/workspace/';");
     expect(output.source).toContain('window.__xtrataResolveRuntimeAssetUrl');
     expect(output.source).toContain(
       "audioContext.audioWorklet.addModule(__xtrataResolveRuntimeModuleUrl('/System/shared/processor_unified.js'))"

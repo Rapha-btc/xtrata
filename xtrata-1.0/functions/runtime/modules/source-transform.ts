@@ -5,6 +5,38 @@ const RUNTIME_URL_HELPER = `const __xtrataResolveRuntimeModuleUrl = (value) => {
     return value;
   }
   try {
+    const currentUrl = new URL(import.meta.url);
+    const resolvedUrl = new URL(value, currentUrl);
+    const runtimePrefix = '/runtime/modules/';
+    const workspacePrefix = '/on-chain-modules/workspace/';
+    const workspaceRoots = ['/System/', '/Plugins/', '/Samples/', '/Presets/', '/Assets/', '/Themes/', '/Skins/', '/Modules/', '/Instruments/', '/Effects/'];
+    if (resolvedUrl.pathname.startsWith(runtimePrefix)) {
+      return resolvedUrl.toString();
+    }
+    const workspaceIndex = currentUrl.pathname.indexOf(workspacePrefix);
+    const isWorkspaceAbsolute =
+      resolvedUrl.pathname.startsWith(workspacePrefix) ||
+      workspaceRoots.some((prefix) => resolvedUrl.pathname.startsWith(prefix));
+    if (
+      workspaceIndex !== -1 &&
+      resolvedUrl.origin === currentUrl.origin &&
+      isWorkspaceAbsolute
+    ) {
+      const target = new URL(currentUrl.origin + currentUrl.pathname.slice(0, workspaceIndex + workspacePrefix.length));
+      if (resolvedUrl.pathname.startsWith(workspacePrefix)) {
+        target.pathname = target.pathname + resolvedUrl.pathname.slice(workspacePrefix.length);
+      } else {
+        target.pathname = target.pathname + resolvedUrl.pathname.slice(1);
+      }
+      target.search = resolvedUrl.search;
+      target.hash = resolvedUrl.hash;
+      return target.toString();
+    }
+    if (/^(?:\\.\\.?\\/)/.test(value)) {
+      return resolvedUrl.toString();
+    }
+  } catch (error) {}
+  try {
     if (
       typeof window !== 'undefined' &&
       window &&
@@ -16,14 +48,7 @@ const RUNTIME_URL_HELPER = `const __xtrataResolveRuntimeModuleUrl = (value) => {
       }
     }
   } catch (error) {}
-  if (!/^(?:\\.\\.?\\/)/.test(value)) {
-    return value;
-  }
-  try {
-    return new URL(value, import.meta.url).toString();
-  } catch (error) {
-    return value;
-  }
+  return value;
 };`;
 
 const replaceRelativeRuntimeApi = (
