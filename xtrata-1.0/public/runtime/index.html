@@ -176,6 +176,54 @@
             .replace(/>/g, '&gt;');
         }
 
+        function injectHeadPrefix(html, content) {
+          if (!content) {
+            return html;
+          }
+          var headMatch = html.match(/<head[^>]*>/i);
+          if (headMatch && headMatch.index !== undefined) {
+            var headInsertion = headMatch.index + headMatch[0].length;
+            return (
+              html.slice(0, headInsertion) +
+              content +
+              html.slice(headInsertion)
+            );
+          }
+          var htmlMatch = html.match(/<html[^>]*>/i);
+          if (htmlMatch && htmlMatch.index !== undefined) {
+            var htmlInsertion = htmlMatch.index + htmlMatch[0].length;
+            return (
+              html.slice(0, htmlInsertion) +
+              '<head>' +
+              content +
+              '</head>' +
+              html.slice(htmlInsertion)
+            );
+          }
+          var bodyMatch = html.match(/<body[^>]*>/i);
+          if (bodyMatch && bodyMatch.index !== undefined) {
+            return (
+              html.slice(0, bodyMatch.index) +
+              '<head>' +
+              content +
+              '</head>' +
+              html.slice(bodyMatch.index)
+            );
+          }
+          return '<head>' + content + '</head>' + html;
+        }
+
+        function buildRuntimeBaseTag(params) {
+          if (!params || !params.moduleBase) {
+            return '';
+          }
+          return (
+            '<base href="' +
+            escapeAttribute(params.moduleBase) +
+            '">'
+          );
+        }
+
         function buildRuntimeWalletSupportScriptTag(params) {
           var url = new URL('/runtime/wallet-shim.js', window.location.origin);
           if (params && params.network) {
@@ -196,21 +244,12 @@
         }
 
         function injectRuntimeSupport(html, params) {
+          html = injectHeadPrefix(html, buildRuntimeBaseTag(params));
           var supportScript = buildRuntimeWalletSupportScriptTag(params);
           if (!supportScript) {
             return html;
           }
-          if (/<head[^>]*>/i.test(html)) {
-            return html.replace(/<head[^>]*>/i, function (match) {
-              return match + '\n' + supportScript;
-            });
-          }
-          if (/<body[^>]*>/i.test(html)) {
-            return html.replace(/<body[^>]*>/i, function (match) {
-              return match + '\n' + supportScript;
-            });
-          }
-          return supportScript + '\n' + html;
+          return injectHeadPrefix(html, '\n' + supportScript);
         }
 
         function launchHtml(html, contextLabel) {
@@ -229,6 +268,7 @@
           tokenId: query.get('tokenId') || '',
           network: query.get('network') || 'mainnet',
           fallbackContractId: query.get('fallbackContractId') || '',
+          moduleBase: query.get('moduleBase') || '',
           source: query.get('source') || ''
         };
 

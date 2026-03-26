@@ -37,6 +37,10 @@ import {
   injectRecursiveBridgeHtml,
   registerRecursiveBridge
 } from '../lib/viewer/recursive';
+import {
+  buildRuntimeModuleBaseHref,
+  injectHtmlBaseHref
+} from '../lib/viewer/module-paths';
 import { createObjectUrl } from '../lib/utils/blob';
 
 const MAX_GRID_EAGER_FULL_LOAD_BYTES = 4n * 1024n * 1024n;
@@ -386,6 +390,16 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     }
     return new TextDecoder().decode(contentQuery.data);
   }, [contentQuery.data, isHtmlDocument]);
+  const tokenContractId = props.token.sourceContractId ?? props.contractId;
+  const moduleBaseHref = useMemo(
+    () =>
+      buildRuntimeModuleBaseHref({
+        network: props.client.network,
+        contractId: tokenContractId,
+        tokenUriPath: props.token.tokenUri
+      }),
+    [props.client.network, tokenContractId, props.token.tokenUri]
+  );
 
   const bridgeId = useMemo(() => {
     if (!isHtmlDocument || !htmlPreview) {
@@ -414,9 +428,13 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     bridgeSource
   ]);
 
-  const htmlDoc = htmlPreview && bridgeId
-    ? injectRecursiveBridgeHtml(htmlPreview, bridgeId)
-    : htmlPreview;
+  const htmlWithBase =
+    htmlPreview && moduleBaseHref
+      ? injectHtmlBaseHref(htmlPreview, moduleBaseHref)
+      : htmlPreview;
+  const htmlDoc = htmlWithBase && bridgeId
+    ? injectRecursiveBridgeHtml(htmlWithBase, bridgeId)
+    : htmlWithBase;
   const allowTokenUriFallback =
     !hasThumbnail &&
     ((mediaKind === 'video' || mediaKind === 'audio')

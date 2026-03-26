@@ -40,6 +40,10 @@ import {
   shouldShowRuntimeOpenWarning
 } from '../lib/viewer/runtime-open';
 import {
+  buildRuntimeModuleBaseHref,
+  injectHtmlBaseHref
+} from '../lib/viewer/module-paths';
+import {
   type StreamPhase,
   shouldAllowTokenUriPreview
 } from '../lib/viewer/streaming';
@@ -192,6 +196,16 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
         ? getContractId(props.fallbackClient.contract)
         : 'none',
     [props.fallbackClient]
+  );
+  const tokenContractId = props.token.sourceContractId ?? props.contractId;
+  const moduleBaseHref = useMemo(
+    () =>
+      buildRuntimeModuleBaseHref({
+        network: props.client.network,
+        contractId: tokenContractId,
+        tokenUriPath: props.token.tokenUri
+      }),
+    [props.client.network, tokenContractId, props.token.tokenUri]
   );
   const contentQueryKey = useMemo(
     () => [
@@ -1165,9 +1179,13 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     bridgeSource
   ]);
 
-  const htmlDoc = htmlPreview && bridgeId
-    ? injectRecursiveBridgeHtml(htmlPreview, bridgeId)
-    : htmlPreview;
+  const htmlWithBase =
+    htmlPreview && moduleBaseHref
+      ? injectHtmlBaseHref(htmlPreview, moduleBaseHref)
+      : htmlPreview;
+  const htmlDoc = htmlWithBase && bridgeId
+    ? injectRecursiveBridgeHtml(htmlWithBase, bridgeId)
+    : htmlWithBase;
   const loadingOnChainImage =
     (mediaKind === 'image' ||
       mediaKind === 'svg' ||
@@ -1493,23 +1511,25 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     const fallbackSource =
       contentUrl || svgPreview || tokenUriPreview || directTokenUri;
     return buildRuntimeOpenUrl({
-      contractId: props.contractId,
+      contractId: tokenContractId,
       tokenId: props.token.id,
       network: props.client.network,
       fallbackContractId,
-      sourceUrl: fallbackSource
+      sourceUrl: fallbackSource,
+      moduleBaseHref
     });
   }, [
     resolvedMimeType,
     mimeType,
     props.fallbackClient,
-    props.contractId,
     props.token.id,
     props.client.network,
     contentUrl,
     svgPreview,
     tokenUriPreview,
-    directTokenUri
+    directTokenUri,
+    tokenContractId,
+    moduleBaseHref
   ]);
   const fullscreenSource =
     runtimeOpenUrl || contentUrl || svgPreview || tokenUriPreview || directTokenUri;

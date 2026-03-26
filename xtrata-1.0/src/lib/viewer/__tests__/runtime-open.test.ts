@@ -24,7 +24,8 @@ describe('viewer runtime open helpers', () => {
       tokenId: 42n,
       network: 'mainnet',
       fallbackContractId: 'SP999.legacy',
-      sourceUrl: 'blob:https://xtrata.xyz/example'
+      sourceUrl: 'blob:https://xtrata.xyz/example',
+      moduleBaseHref: '/runtime/modules/mainnet/SP123/contract/on-chain-modules/workspace/'
     });
     const fullUrl = new URL(full, 'https://xtrata.xyz');
     expect(fullUrl.pathname).toBe('/runtime/');
@@ -34,6 +35,9 @@ describe('viewer runtime open helpers', () => {
     expect(fullUrl.searchParams.get('fallbackContractId')).toBe('SP999.legacy');
     expect(fullUrl.searchParams.get('source')).toBe(
       'blob:https://xtrata.xyz/example'
+    );
+    expect(fullUrl.searchParams.get('moduleBase')).toBe(
+      '/runtime/modules/mainnet/SP123/contract/on-chain-modules/workspace/'
     );
 
     const minimal = buildRuntimeOpenUrl({
