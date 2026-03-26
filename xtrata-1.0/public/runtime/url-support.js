@@ -24,6 +24,8 @@
   ];
   var trackedAudioContexts = [];
   var audioResumeListenersAttached = false;
+  var trackedAudioWorkletNodes = [];
+  var MAX_PORT_LOGS_PER_NODE = 12;
 
   function log(level, message, detail) {
     try {
@@ -219,6 +221,100 @@
     });
   }
 
+  function summarizePayload(value) {
+    if (value == null) {
+      return value;
+    }
+    if (typeof value === 'string') {
+      return value.length > 180 ? value.slice(0, 180) + '...' : value;
+    }
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      return value;
+    }
+    if (Array.isArray(value)) {
+      return {
+        type: 'array',
+        length: value.length
+      };
+    }
+    if (typeof value === 'object') {
+      var keys = [];
+      try {
+        keys = Object.keys(value).slice(0, 8);
+      } catch (error) {}
+      return {
+        type:
+          value && value.constructor && value.constructor.name
+            ? value.constructor.name
+            : 'object',
+        keys: keys
+      };
+    }
+    return String(value);
+  }
+
+  function attachAudioWorkletNodeDiagnostics(node, name) {
+    if (!node || trackedAudioWorkletNodes.indexOf(node) !== -1) {
+      return node;
+    }
+    trackedAudioWorkletNodes.push(node);
+    var postCount = 0;
+    var messageCount = 0;
+    log('debug', 'AudioWorkletNode created', {
+      name: name || '',
+      contextState:
+        node.context && typeof node.context.state === 'string'
+          ? node.context.state
+          : '',
+      inputs:
+        typeof node.numberOfInputs === 'number' ? node.numberOfInputs : null,
+      outputs:
+        typeof node.numberOfOutputs === 'number' ? node.numberOfOutputs : null
+    });
+    try {
+      if (typeof node.addEventListener === 'function') {
+        node.addEventListener('processorerror', function () {
+          log('warn', 'AudioWorkletNode processorerror', {
+            name: name || ''
+          });
+        });
+      }
+    } catch (error) {}
+    try {
+      if (node.port && typeof node.port.addEventListener === 'function') {
+        node.port.addEventListener('message', function (event) {
+          if (messageCount >= MAX_PORT_LOGS_PER_NODE) {
+            return;
+          }
+          messageCount += 1;
+          log('debug', 'AudioWorkletNode port message', {
+            name: name || '',
+            index: messageCount,
+            payload: summarizePayload(event ? event.data : null)
+          });
+        });
+        if (typeof node.port.start === 'function') {
+          node.port.start();
+        }
+      }
+      if (node.port && typeof node.port.postMessage === 'function') {
+        var originalPostMessage = node.port.postMessage.bind(node.port);
+        node.port.postMessage = function (value, transfer) {
+          if (postCount < MAX_PORT_LOGS_PER_NODE) {
+            postCount += 1;
+            log('debug', 'AudioWorkletNode port postMessage', {
+              name: name || '',
+              index: postCount,
+              payload: summarizePayload(value)
+            });
+          }
+          return originalPostMessage(value, transfer);
+        };
+      }
+    } catch (error) {}
+    return node;
+  }
+
   function patchAudioWorklet() {
     var ctor = typeof window.AudioWorklet === 'function' ? window.AudioWorklet : null;
     if (!ctor || !ctor.prototype || typeof ctor.prototype.addModule !== 'function') {
@@ -234,6 +330,58 @@
     };
     wrappedAddModule.__xtrataRuntimeUrlWrapped = true;
     ctor.prototype.addModule = wrappedAddModule;
+  }
+
+  function patchAudioWorkletNodeConstructor() {
+    var Original = window.AudioWorkletNode;
+    if (typeof Original !== 'function' || Original.__xtrataRuntimeNodeWrapped) {
+      return;
+    }
+    var Wrapped = function (context, name, options) {
+      var node = new Original(context, name, options);
+      return attachAudioWorkletNodeDiagnostics(node, name);
+    };
+    Wrapped.prototype = Original.prototype;
+    try {
+      Object.setPrototypeOf(Wrapped, Original);
+    } catch (error) {}
+    Wrapped.__xtrataRuntimeNodeWrapped = true;
+    window.AudioWorkletNode = Wrapped;
+  }
+
+  function patchAudioNodeConnect() {
+    var ctor = window.AudioNode;
+    if (!ctor || !ctor.prototype || typeof ctor.prototype.connect !== 'function') {
+      return;
+    }
+    var originalConnect = ctor.prototype.connect;
+    if (originalConnect.__xtrataRuntimeConnectWrapped) {
+      return;
+    }
+    var wrappedConnect = function (destination) {
+      var sourceName =
+        this && this.constructor && this.constructor.name ? this.constructor.name : 'AudioNode';
+      var destinationName =
+        destination && destination.constructor && destination.constructor.name
+          ? destination.constructor.name
+          : destination && destination.name
+            ? destination.name
+            : typeof destination;
+      if (
+        sourceName === 'AudioWorkletNode' ||
+        destinationName === 'AudioWorkletNode' ||
+        destinationName === 'AudioDestinationNode' ||
+        destinationName === 'GainNode'
+      ) {
+        log('debug', 'AudioNode connect', {
+          source: sourceName,
+          destination: destinationName
+        });
+      }
+      return originalConnect.apply(this, arguments);
+    };
+    wrappedConnect.__xtrataRuntimeConnectWrapped = true;
+    ctor.prototype.connect = wrappedConnect;
   }
 
   function patchWorkerConstructor(name) {
@@ -253,6 +401,8 @@
   }
 
   patchAudioWorklet();
+  patchAudioWorkletNodeConstructor();
+  patchAudioNodeConnect();
   patchAudioContextConstructor('AudioContext');
   patchAudioContextConstructor('webkitAudioContext');
   attachAudioResumeListeners();
