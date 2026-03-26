@@ -198,14 +198,33 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     [props.fallbackClient]
   );
   const tokenContractId = props.token.sourceContractId ?? props.contractId;
+  const runtimeTokenUriQuery = useQuery({
+    queryKey: [
+      'viewer',
+      tokenContractId,
+      'runtime-token-uri',
+      props.token.id.toString()
+    ],
+    queryFn: () => props.client.getTokenUri(props.token.id, props.senderAddress),
+    enabled:
+      isExecutableRuntimeMimeType(mimeType) &&
+      !props.token.tokenUri &&
+      isActiveTab,
+    staleTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false
+  });
+  const resolvedRuntimeTokenUri =
+    props.token.tokenUri ?? runtimeTokenUriQuery.data ?? null;
   const moduleBaseHref = useMemo(
     () =>
       buildRuntimeModuleBaseHref({
         network: props.client.network,
         contractId: tokenContractId,
-        tokenUriPath: props.token.tokenUri
+        tokenUriPath: resolvedRuntimeTokenUri
       }),
-    [props.client.network, tokenContractId, props.token.tokenUri]
+    [props.client.network, tokenContractId, resolvedRuntimeTokenUri]
   );
   const contentQueryKey = useMemo(
     () => [
@@ -1179,8 +1198,11 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     bridgeSource
   ]);
 
-  const htmlWithBase =
-    htmlPreview && moduleBaseHref
+  const waitForRuntimeTokenUri =
+    !!htmlPreview && !props.token.tokenUri && runtimeTokenUriQuery.isLoading;
+  const htmlWithBase = waitForRuntimeTokenUri
+    ? null
+    : htmlPreview && moduleBaseHref
       ? injectHtmlBaseHref(htmlPreview, moduleBaseHref)
       : htmlPreview;
   const htmlDoc = htmlWithBase && bridgeId

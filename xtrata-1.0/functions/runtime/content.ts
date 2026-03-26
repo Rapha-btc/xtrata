@@ -1,4 +1,5 @@
 import {
+  fetchRuntimeTokenUri,
   getRuntimeApiBases,
   parseRuntimeContractRef,
   parseRuntimeNetwork,
@@ -6,6 +7,7 @@ import {
   resolveRuntimeContent,
   type RuntimeEnv
 } from './lib';
+import { buildRuntimeModuleBaseHref } from '../../src/lib/viewer/module-paths';
 
 const asJsonError = (status: number, message: string, detail?: string) =>
   new Response(
@@ -60,6 +62,23 @@ export const onRequest = async (context: {
       primaryContract: contractId,
       fallbackContract: fallbackContractId
     });
+    let tokenUri: string | null = null;
+    try {
+      tokenUri = await fetchRuntimeTokenUri({
+        env,
+        apiBases,
+        contract: resolved.contract,
+        tokenId
+      });
+    } catch (error) {
+      tokenUri = null;
+    }
+    const resolvedContractId = `${resolved.contract.address}.${resolved.contract.contractName}`;
+    const moduleBaseHref = buildRuntimeModuleBaseHref({
+      network,
+      contractId: resolvedContractId,
+      tokenUriPath: tokenUri
+    });
 
     return new Response(resolved.bytes, {
       status: 200,
@@ -67,8 +86,10 @@ export const onRequest = async (context: {
         'Content-Type': resolved.meta.mimeType || 'application/octet-stream',
         'Cache-Control': 'public, max-age=60',
         'X-Content-Type-Options': 'nosniff',
-        'X-Xtrata-Runtime-Contract': `${resolved.contract.address}.${resolved.contract.contractName}`,
-        'X-Xtrata-Runtime-Network': network
+        'X-Xtrata-Runtime-Contract': resolvedContractId,
+        'X-Xtrata-Runtime-Network': network,
+        'X-Xtrata-Runtime-Token-Uri': tokenUri ?? '',
+        'X-Xtrata-Runtime-Module-Base': moduleBaseHref ?? ''
       }
     });
   } catch (error) {

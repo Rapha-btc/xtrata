@@ -140,7 +140,13 @@
               error.runtimeEndpoint = endpoint;
               throw error;
             }
-            return response.text();
+            return response.text().then(function (html) {
+              return {
+                html: html,
+                moduleBase:
+                  response.headers.get('X-Xtrata-Runtime-Module-Base') || ''
+              };
+            });
           }).catch(function (error) {
             if (error && !error.runtimeEndpoint) {
               error.runtimeEndpoint = endpoint;
@@ -252,11 +258,15 @@
           return injectHeadPrefix(html, '\n' + supportScript);
         }
 
-        function launchHtml(html, contextLabel) {
+        function launchHtml(html, contextLabel, runtimeModuleBase) {
           if (!html || !html.trim()) {
             throw new Error('Runtime content was empty (' + contextLabel + ').');
           }
-          var htmlWithSupport = injectRuntimeSupport(html, params);
+          var launchParams =
+            runtimeModuleBase && !params.moduleBase
+              ? Object.assign({}, params, { moduleBase: runtimeModuleBase })
+              : params;
+          var htmlWithSupport = injectRuntimeSupport(html, launchParams);
           document.open();
           document.write(htmlWithSupport);
           document.close();
@@ -283,8 +293,8 @@
         logRuntime('debug', 'Runtime launcher params resolved', params);
 
         loadFromRuntimeEndpoint(params)
-          .then(function (html) {
-            launchHtml(html, 'runtime-endpoint');
+          .then(function (result) {
+            launchHtml(result.html, 'runtime-endpoint', result.moduleBase);
           })
           .catch(function (runtimeError) {
             var runtimeMessage =
