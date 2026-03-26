@@ -344,6 +344,10 @@ const buildBridgeScript = (bridgeId: string) => {
 </script>`;
 };
 
+const buildUrlSupportScriptTag = () =>
+  '<script data-xtrata-runtime-url-support="true" src="/runtime/url-support.js"></' +
+  'script>';
+
 const buildDiagnosticsScriptTag = () =>
   '<script data-xtrata-runtime-diagnostics="true" src="/runtime/diagnostics.js"></' +
   'script>';
@@ -369,13 +373,16 @@ export const injectRecursiveBridgeHtml = (html: string, bridgeId: string) => {
   if (html.includes('data-xtrata-bridge')) {
     return html;
   }
+  const urlSupportScript = html.includes('data-xtrata-runtime-url-support')
+    ? ''
+    : buildUrlSupportScriptTag();
   const diagnosticsScript = html.includes('data-xtrata-runtime-diagnostics')
     ? ''
     : buildDiagnosticsScriptTag();
   const moduleBootstrapScript = html.includes('data-xtrata-runtime-module-bootstrap')
     ? ''
     : buildModuleBootstrapScriptTag();
-  const script = `${diagnosticsScript}${moduleBootstrapScript}${buildBridgeScript(bridgeId)}`;
+  const script = `${urlSupportScript}${diagnosticsScript}${moduleBootstrapScript}${buildBridgeScript(bridgeId)}`;
   if (html.includes('</head>')) {
     return html.replace('</head>', `${script}</head>`);
   }

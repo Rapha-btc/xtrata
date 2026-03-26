@@ -30,6 +30,19 @@ describe('runtime module source transform', () => {
     );
   });
 
+  it('rewrites root-relative worklet URLs through the runtime asset resolver helper', () => {
+    const input =
+      "await audioContext.audioWorklet.addModule('/System/shared/processor_unified.js');";
+
+    const output = transformRuntimeModuleSource(input);
+
+    expect(output.changed).toBe(true);
+    expect(output.source).toContain('window.__xtrataResolveRuntimeAssetUrl');
+    expect(output.source).toContain(
+      "audioContext.audioWorklet.addModule(__xtrataResolveRuntimeModuleUrl('/System/shared/processor_unified.js'))"
+    );
+  });
+
   it('leaves untouched source without relative runtime loaders', () => {
     const input = "console.log('ok');";
 

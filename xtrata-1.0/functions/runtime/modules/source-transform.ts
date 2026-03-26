@@ -1,9 +1,21 @@
-const RELATIVE_URL_PATTERN = /^(?:\.\.?\/)/;
+const REMAPPABLE_URL_PATTERN = /^(?:\.\.?\/|\/|https?:\/\/)/i;
 
 const RUNTIME_URL_HELPER = `const __xtrataResolveRuntimeModuleUrl = (value) => {
   if (typeof value !== 'string') {
     return value;
   }
+  try {
+    if (
+      typeof window !== 'undefined' &&
+      window &&
+      typeof window.__xtrataResolveRuntimeAssetUrl === 'function'
+    ) {
+      const remapped = window.__xtrataResolveRuntimeAssetUrl(value);
+      if (typeof remapped === 'string' && remapped) {
+        return remapped;
+      }
+    }
+  } catch (error) {}
   if (!/^(?:\\.\\.?\\/)/.test(value)) {
     return value;
   }
@@ -22,7 +34,7 @@ const replaceRelativeRuntimeApi = (
   const output = source.replace(
     pattern,
     (_match, prefix: string, quote: string, value: string, suffix = '') => {
-      if (!RELATIVE_URL_PATTERN.test(value)) {
+      if (!REMAPPABLE_URL_PATTERN.test(value)) {
         return _match;
       }
       changed = true;
@@ -41,14 +53,14 @@ export const transformRuntimeModuleSource = (source: string) => {
 
   const addModuleRewrite = replaceRelativeRuntimeApi(
     transformed,
-    /(\.addModule\s*\(\s*)(['"`])((?:\.\.?\/)[^'"`\r\n]+)\2(\s*(?:,\s*[^)]*)?\))/g
+    /(\.addModule\s*\(\s*)(['"`])((?:\.\.?\/|\/|https?:\/\/)[^'"`\r\n]+)\2(\s*(?:,\s*[^)]*)?\))/g
   );
   transformed = addModuleRewrite.source;
   changed ||= addModuleRewrite.changed;
 
   const workerRewrite = replaceRelativeRuntimeApi(
     transformed,
-    /(\bnew\s+(?:Worker|SharedWorker)\s*\(\s*)(['"`])((?:\.\.?\/)[^'"`\r\n]+)\2(\s*(?:,\s*[^)]*)?\))/g
+    /(\bnew\s+(?:Worker|SharedWorker)\s*\(\s*)(['"`])((?:\.\.?\/|\/|https?:\/\/)[^'"`\r\n]+)\2(\s*(?:,\s*[^)]*)?\))/g
   );
   transformed = workerRewrite.source;
   changed ||= workerRewrite.changed;
