@@ -1,0 +1,83 @@
+{
+  "name": "bvst.plugin.retrokeys.release.v1.0.0",
+  "type": "plugin-release-catalog",
+  "plugin_name": "RetroKeys",
+  "plugin_family": "standalone-synths",
+  "category": "Instruments",
+  "runtime_major": 1,
+  "engine_major": 1,
+  "schema_major": 1,
+  "dependencies": {
+    "foundation_catalog": "bvst.catalog.foundation.v1",
+    "foundation_catalog_token_id": 234,
+    "foundation_catalog_txid": "8c0837ec700f270f3c4f6b0feccb28618972dc7492bb45da076563f7178e97b1",
+    "foundation_catalog_block_height": 7342972,
+    "runtime_major_catalog": "bvst.catalog.runtime.v1",
+    "runtime_major_catalog_token_id": 231,
+    "runtime_major_catalog_txid": "904911fbfa58b4f947081cb2a490a8705bb9638180d6cb40ba28b8dd4f295647",
+    "runtime_major_catalog_block_height": 7342963,
+    "engine_major_catalog": "bvst.catalog.engine.v1",
+    "engine_major_catalog_token_id": 232,
+    "engine_major_catalog_txid": "bc4e5e9a4e1702a49b5aced53ece8ad9081541b9061a3443a89bc426c5817610",
+    "engine_major_catalog_block_height": 7342968,
+    "schema_major_catalog": "bvst.catalog.schema.v1",
+    "schema_major_catalog_token_id": 233,
+    "schema_major_catalog_txid": "4170af1d2ae3a0c5c3c45fb28d3c68c27b8574b656bfd02195a0a3e31ba3b028",
+    "schema_major_catalog_block_height": 7342970,
+    "manifest": {
+      "name": "bvst.plugin.retrokeys.manifest.v1.0.0",
+      "token_id": 257,
+      "txid": "8de8773e248e3f514579983738c5a196f97ca7588edfb8ff4191d18f196499e2",
+      "block_height": 7344030,
+      "path": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/manifest.json",
+      "mime_type": "application/json",
+      "sha256": "c17d1d6983ce58a56ca8bf3d3aed9426e044937e88b5c159c85306fbd81cabc7",
+      "bytes": 336,
+      "chunks": 1,
+      "route": "helper"
+    },
+    "patch": {
+      "name": "bvst.plugin.retrokeys.patch.v1.0.0",
+      "token_id": 258,
+      "txid": "a113058eb2f56c9b5e658e994ce31be4ece292498641ef96672be20dee873592",
+      "block_height": 7344034,
+      "path": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/patch.json",
+      "mime_type": "application/json",
+      "sha256": "0d880724099a2270c69e4c0f979e2c8848c58959d3b02ffaaf9faaec71cf5b72",
+      "bytes": 2163,
+      "chunks": 1,
+      "route": "helper"
+    },
+    "shell": {
+      "name": "bvst.plugin.retrokeys.shell.v1.0.0",
+      "token_id": 259,
+      "txid": "65602cac8d5df84ffde517c80a4ec439326c81cf77df893ef3dd24c3d24a71bc",
+      "block_height": 7344037,
+      "path": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/gui.html",
+      "mime_type": "text/html",
+      "sha256": "cb3a3d3c19338229b87954703bdb13b9b84c71845b3cbcc604c45ea6fc1c3cb7",
+      "bytes": 819,
+      "chunks": 1,
+      "route": "helper"
+    }
+  },
+  "dependency_token_ids": [
+    257,
+    258,
+    259,
+    231,
+    232,
+    233
+  ],
+  "resolved_dependency_names": [
+    "bvst.catalog.foundation.v1",
+    "bvst.catalog.runtime.v1",
+    "bvst.catalog.engine.v1",
+    "bvst.catalog.schema.v1",
+    "bvst.plugin.retrokeys.manifest.v1.0.0",
+    "bvst.plugin.retrokeys.patch.v1.0.0",
+    "bvst.plugin.retrokeys.shell.v1.0.0"
+  ],
+  "resolved_at": "2026-03-26T01:46:10.908Z",
+  "resolved_from": "configs/token-map.runtime.json"
+}

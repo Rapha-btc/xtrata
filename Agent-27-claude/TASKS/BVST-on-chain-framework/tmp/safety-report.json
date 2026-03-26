@@ -1,21 +1,21 @@
 {
-  "generated_at": "2026-03-26T01:42:28.076Z",
+  "generated_at": "2026-03-26T01:35:54.978Z",
   "bundle_root": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework",
   "summary": {
-    "failed": 0,
+    "failed": 1,
     "passed_with_warnings": 0,
-    "passed": 6,
+    "passed": 5,
     "skipped": 1
   },
   "sections": [
     {
       "name": "bundle_integrity",
-      "status": "passed",
-      "errors": [],
+      "status": "failed",
+      "errors": [
+        "Hash mismatch: bvst.schema.patch.v1"
+      ],
       "warnings": [],
-      "details": {
-        "module_count": 53
-      }
+      "details": {}
     },
     {
       "name": "plugin_semantics",
@@ -133,7 +133,7 @@
       "errors": [],
       "warnings": [],
       "details": {
-        "baseUrl": "http://127.0.0.1:50182",
+        "baseUrl": "http://127.0.0.1:49917",
         "workspaceLeafCount": 38,
         "pluginCount": 7,
         "pluginChecks": [
@@ -211,7 +211,7 @@
       "errors": [],
       "warnings": [],
       "details": {
-        "tempRoot": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/bvst-inscription-sim-UdePKk",
+        "tempRoot": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/bvst-inscription-sim-6j7CSQ",
         "startTokenId": 202,
         "endTokenId": 254,
         "moduleCount": 53,

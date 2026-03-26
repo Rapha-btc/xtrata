@@ -1,0 +1,83 @@
+{
+  "name": "bvst.plugin.chainpoly.release.v1.0.0",
+  "type": "plugin-release-catalog",
+  "plugin_name": "ChainPoly",
+  "plugin_family": "standalone-synths",
+  "category": "Instruments",
+  "runtime_major": 1,
+  "engine_major": 1,
+  "schema_major": 1,
+  "dependencies": {
+    "foundation_catalog": "bvst.catalog.foundation.v1",
+    "foundation_catalog_token_id": 234,
+    "foundation_catalog_txid": "8c0837ec700f270f3c4f6b0feccb28618972dc7492bb45da076563f7178e97b1",
+    "foundation_catalog_block_height": 7342972,
+    "runtime_major_catalog": "bvst.catalog.runtime.v1",
+    "runtime_major_catalog_token_id": 231,
+    "runtime_major_catalog_txid": "904911fbfa58b4f947081cb2a490a8705bb9638180d6cb40ba28b8dd4f295647",
+    "runtime_major_catalog_block_height": 7342963,
+    "engine_major_catalog": "bvst.catalog.engine.v1",
+    "engine_major_catalog_token_id": 232,
+    "engine_major_catalog_txid": "bc4e5e9a4e1702a49b5aced53ece8ad9081541b9061a3443a89bc426c5817610",
+    "engine_major_catalog_block_height": 7342968,
+    "schema_major_catalog": "bvst.catalog.schema.v1",
+    "schema_major_catalog_token_id": 233,
+    "schema_major_catalog_txid": "4170af1d2ae3a0c5c3c45fb28d3c68c27b8574b656bfd02195a0a3e31ba3b028",
+    "schema_major_catalog_block_height": 7342970,
+    "manifest": {
+      "name": "bvst.plugin.chainpoly.manifest.v1.0.0",
+      "token_id": 254,
+      "txid": "9e2bbb6ead2d38908102376fdd082cf43b02fefcd03ca788f2e78b695d1d7550",
+      "block_height": 7344018,
+      "path": "workspace/Plugins/Instruments/ChainPoly/manifest.json",
+      "mime_type": "application/json",
+      "sha256": "622f89832e8342f62d0fdb08282ce7f45ed8f0d09ed87e518a0472a295b6ed11",
+      "bytes": 357,
+      "chunks": 1,
+      "route": "helper"
+    },
+    "patch": {
+      "name": "bvst.plugin.chainpoly.patch.v1.0.0",
+      "token_id": 255,
+      "txid": "73c2c978f1b38388934c8412423df79e7ac40530cb0aded290b727ff75e331cd",
+      "block_height": 7344021,
+      "path": "workspace/Plugins/Instruments/ChainPoly/patch.json",
+      "mime_type": "application/json",
+      "sha256": "c5edaf6245668c9647da6331409cd46a0cc943b667cad30a8c78127535641c11",
+      "bytes": 4622,
+      "chunks": 1,
+      "route": "helper"
+    },
+    "shell": {
+      "name": "bvst.plugin.chainpoly.shell.v1.0.0",
+      "token_id": 256,
+      "txid": "e15921dc9733b071bc5458d89f9179c229f5fa2ee8873574a5372bb33454a189",
+      "block_height": 7344027,
+      "path": "workspace/Plugins/Instruments/ChainPoly/gui.html",
+      "mime_type": "text/html",
+      "sha256": "2bb2cbffca17d90e6e1f37961c2c952064c995606333f1dd6cc1dcb36e7597b6",
+      "bytes": 835,
+      "chunks": 1,
+      "route": "helper"
+    }
+  },
+  "dependency_token_ids": [
+    254,
+    255,
+    256,
+    231,
+    232,
+    233
+  ],
+  "resolved_dependency_names": [
+    "bvst.catalog.foundation.v1",
+    "bvst.catalog.runtime.v1",
+    "bvst.catalog.engine.v1",
+    "bvst.catalog.schema.v1",
+    "bvst.plugin.chainpoly.manifest.v1.0.0",
+    "bvst.plugin.chainpoly.patch.v1.0.0",
+    "bvst.plugin.chainpoly.shell.v1.0.0"
+  ],
+  "resolved_at": "2026-03-26T01:45:13.977Z",
+  "resolved_from": "configs/token-map.runtime.json"
+}

@@ -351,9 +351,9 @@
         els.runReleaseGate.disabled = !data.plannerActions?.releaseRunEnabled;
         els.runReleaseGate.textContent = data.plannerActions?.releaseRunLabel || 'Run Release Gate';
         els.runReleaseGate.title = data.plannerActions?.releaseRunDisabledReason || '';
-        els.startReleaseInscription.hidden = !data.plannerActions?.releaseInscribeAvailable;
-        els.startReleaseInscription.disabled = !data.plannerActions?.releaseInscribeEnabled;
-        els.startReleaseInscription.title = data.plannerActions?.releaseInscribeDisabledReason || '';
+        els.startReleaseInscription.hidden = false;
+        els.startReleaseInscription.disabled = !data.plannerActions?.releaseInscribeAvailable || !data.plannerActions?.releaseInscribeEnabled;
+        els.startReleaseInscription.title = data.plannerActions?.releaseInscribeDisabledReason || (data.plannerActions?.releaseInscribeAvailable ? '' : 'Release is not auto-inscribeable — check that all modules use the helper route');
         if (data.automation?.activeRun) {
             els.startReleaseInscription.textContent = data.plannerActions?.releaseInscribeRunningLabel || 'Inscription Running';
         } else {

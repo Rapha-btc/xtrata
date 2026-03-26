@@ -80,7 +80,9 @@ const HTML_FILE = resolveHtmlFile();
 const signerSource = getAgent27SignerSource();
 const senderKey = deriveAgent27SenderKey();
 const senderAddress = getAddressFromPrivateKey(senderKey, TransactionVersion.Mainnet);
-const network = new StacksMainnet();
+const network = process.env.HIRO_API_KEY
+  ? new StacksMainnet({ fetchFn: (url, init = {}) => fetch(url, { ...init, headers: { ...(init.headers || {}), 'x-api-key': process.env.HIRO_API_KEY } }) })
+  : new StacksMainnet();
 
 console.log('Sender:', senderAddress);
 console.log('Signer source:', signerSource.type);

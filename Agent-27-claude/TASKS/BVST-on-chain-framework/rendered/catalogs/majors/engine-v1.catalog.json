@@ -1,0 +1,56 @@
+{
+  "name": "bvst.catalog.engine.v1",
+  "type": "major-catalog",
+  "family": "engine",
+  "major": 1,
+  "modules": [
+    {
+      "name": "bvst.engine.unified-wasm.v1.0.0",
+      "token_id": 225,
+      "txid": "f3908a7b77baa0cf3c7a3cf12f91ce62d16a429497a5de1bee89c4965a5e95be",
+      "block_height": 7342947,
+      "path": "on-chain-modules/workspace/System/shared/bvst_unified_bg.wasm",
+      "mime_type": "application/wasm",
+      "sha256": "4246b1b3431abb565e7ee4b9cc2c3f9da64478b9a2ff7e8c3bc22713868a6fd3",
+      "bytes": 100109,
+      "chunks": 7,
+      "route": "helper"
+    },
+    {
+      "name": "bvst.engine.unified-loader.v1.0.0",
+      "token_id": 226,
+      "txid": "bb4533b7f2a1ac805ebe352f8ea4d07125e6512bc6398c25af42504a6e4cfe41",
+      "block_height": 7342949,
+      "path": "on-chain-modules/workspace/System/shared/wasm_loader_unified.js",
+      "mime_type": "application/javascript",
+      "sha256": "a099d8f7b8eac71db02a00925019481b42af3dc87a2a14a829ac1dbc90ad30a3",
+      "bytes": 16567,
+      "chunks": 2,
+      "route": "helper"
+    },
+    {
+      "name": "bvst.engine.unified-worklet.v1.0.0",
+      "token_id": 227,
+      "txid": "b62406649619a97b61ada63bcc79191f246f90428f32f8d1f81ed6366e56ef9c",
+      "block_height": 7342951,
+      "path": "on-chain-modules/workspace/System/shared/processor_unified.js",
+      "mime_type": "application/javascript",
+      "sha256": "3ad68b432cafffac6be69d1c67ea282aa259d0705456163a4dd9f7a66e88c78d",
+      "bytes": 12730,
+      "chunks": 1,
+      "route": "helper"
+    }
+  ],
+  "dependency_token_ids": [
+    225,
+    226,
+    227
+  ],
+  "resolved_dependency_names": [
+    "bvst.engine.unified-wasm.v1.0.0",
+    "bvst.engine.unified-loader.v1.0.0",
+    "bvst.engine.unified-worklet.v1.0.0"
+  ],
+  "resolved_at": "2026-03-26T01:24:24.413Z",
+  "resolved_from": "configs/token-map.runtime.json"
+}

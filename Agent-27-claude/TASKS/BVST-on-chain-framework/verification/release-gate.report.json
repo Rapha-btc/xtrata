@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-25T12:44:42.964Z",
+  "generated_at": "2026-03-26T01:43:21.837Z",
   "bundle_root": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework",
   "summary": {
     "status": "passed",
@@ -11,30 +11,30 @@
     {
       "name": "pre_inscription_safety",
       "status": "passed",
-      "startedAt": "2026-03-25T12:43:47.136Z",
-      "finishedAt": "2026-03-25T12:43:47.580Z",
+      "startedAt": "2026-03-26T01:42:27.697Z",
+      "finishedAt": "2026-03-26T01:42:28.083Z",
       "withBrowserSmoke": false,
       "report": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/verification/pre-inscription.report.json"
     },
     {
       "name": "live_quote_refresh",
       "status": "passed",
-      "startedAt": "2026-03-25T12:43:47.580Z",
-      "finishedAt": "2026-03-25T12:44:38.945Z",
+      "startedAt": "2026-03-26T01:42:28.083Z",
+      "finishedAt": "2026-03-26T01:43:20.216Z",
       "report": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/verification/preflight.quote.json"
     },
     {
       "name": "status_refresh",
       "status": "passed",
-      "startedAt": "2026-03-25T12:44:38.945Z",
-      "finishedAt": "2026-03-25T12:44:39.046Z",
+      "startedAt": "2026-03-26T01:43:20.216Z",
+      "finishedAt": "2026-03-26T01:43:20.305Z",
       "report": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/verification/inscription-status.json"
     },
     {
       "name": "auto_runner_simulation",
       "status": "passed",
-      "startedAt": "2026-03-25T12:44:39.046Z",
-      "finishedAt": "2026-03-25T12:44:42.962Z",
+      "startedAt": "2026-03-26T01:43:20.305Z",
+      "finishedAt": "2026-03-26T01:43:21.835Z",
       "report": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/verification/auto-inscribe-sim-run.json"
     }
   ],
@@ -47,17 +47,18 @@
     },
     "live_status": {
       "total": 53,
-      "minted": 0,
-      "ready": 5,
-      "blocked": 48,
+      "minted": 37,
+      "ready": 7,
+      "blocked": 9,
       "hard_stop": 0
     },
     "simulated_run": {
-      "attempted": 53,
-      "minted": 53,
+      "attempted": 76,
+      "minted": 76,
       "failed": 0,
       "skipped": 0,
-      "remaining": 0
+      "remaining": 0,
+      "carryover": 60
     },
     "simulated_status": {
       "total": 53,

@@ -169,9 +169,9 @@
       "name": "bvst.plugin.minerone.release.v1.0.0",
       "path": "on-chain-modules/catalogs/plugins/standalone-synths/minerone.release.catalog.json",
       "mime": "application/json",
-      "bytes": 1689,
+      "bytes": 1740,
       "chunks": 1,
-      "sha256": "e3baf1edbc14c58a33efbdde2b0b08ff9e6d2934c98a3f6ce367122061ceb02d",
+      "sha256": "df17a3e41febbed59d66605b61c24a3e2ad93c4f3b85d94ca12df311d8fadb88",
       "route": "helper",
       "depends_on": [
         "bvst.plugin.minerone.manifest.v1.0.0",

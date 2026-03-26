@@ -64,7 +64,9 @@ const master = HDKey.fromMasterSeed(seed);
 const child = master.derive("m/44'/5757'/0'/0/0");
 const senderKey = Buffer.from(child.privateKey).toString('hex') + '01';
 const senderAddress = getAddressFromPrivateKey(senderKey, TransactionVersion.Mainnet);
-const network = new StacksMainnet();
+const network = process.env.HIRO_API_KEY
+  ? new StacksMainnet({ fetchFn: (url, init = {}) => fetch(url, { ...init, headers: { ...(init.headers || {}), 'x-api-key': process.env.HIRO_API_KEY } }) })
+  : new StacksMainnet();
 
 console.log('Sender:', senderAddress);
 console.log('Signal file:', path.relative(REPO_ROOT, SIGNAL_FILE));

@@ -1,0 +1,62 @@
+{
+  "name": "bvst.catalog.release.firstwaveinstruments.v1",
+  "type": "release-catalog",
+  "scope": "first-wave-instruments",
+  "families": [
+    {
+      "name": "bvst.catalog.family.bvstsynthfamily.v1",
+      "token_id": 247
+    },
+    {
+      "name": "bvst.catalog.family.standalonesynths.v1",
+      "token_id": 264
+    }
+  ],
+  "plugin_releases": [
+    {
+      "name": "bvst.plugin.bvstsynth.release.v1.0.13",
+      "token_id": 246
+    },
+    {
+      "name": "bvst.plugin.bvstengine.release.v1.0.0",
+      "token_id": 245
+    },
+    {
+      "name": "bvst.plugin.jms10.release.v1.0.0",
+      "token_id": 244
+    },
+    {
+      "name": "bvst.plugin.retrokeys.release.v1.0.0",
+      "token_id": 263
+    },
+    {
+      "name": "bvst.plugin.minerone.release.v1.0.0",
+      "token_id": 260
+    },
+    {
+      "name": "bvst.plugin.minertwo.release.v1.0.0",
+      "token_id": 261
+    },
+    {
+      "name": "bvst.plugin.chainpoly.release.v1.0.0",
+      "token_id": 262
+    }
+  ],
+  "dependency_token_ids": [
+    247,
+    264
+  ],
+  "resolved_dependency_names": [
+    "bvst.catalog.family.bvstsynthfamily.v1",
+    "bvst.catalog.family.standalonesynths.v1",
+    "bvst.plugin.bvstsynth.release.v1.0.13",
+    "bvst.plugin.bvstengine.release.v1.0.0",
+    "bvst.plugin.jms10.release.v1.0.0",
+    "bvst.plugin.retrokeys.release.v1.0.0",
+    "bvst.plugin.minerone.release.v1.0.0",
+    "bvst.plugin.minertwo.release.v1.0.0",
+    "bvst.plugin.chainpoly.release.v1.0.0"
+  ],
+  "resolved_at": "2026-03-26T01:48:10.523Z",
+  "resolved_from": "configs/token-map.runtime.json"
+}

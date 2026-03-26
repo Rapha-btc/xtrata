@@ -1,0 +1,39 @@
+{
+  "name": "bvst.catalog.family.standalonesynths.v1",
+  "type": "plugin-family-catalog",
+  "family_key": "standalone-synths",
+  "title": "Standalone Synth Engines",
+  "description": "Dedicated synth engines already behaving well in standalone mode.",
+  "plugin_releases": [
+    {
+      "name": "bvst.plugin.retrokeys.release.v1.0.0",
+      "token_id": 263
+    },
+    {
+      "name": "bvst.plugin.minerone.release.v1.0.0",
+      "token_id": 260
+    },
+    {
+      "name": "bvst.plugin.minertwo.release.v1.0.0",
+      "token_id": 261
+    },
+    {
+      "name": "bvst.plugin.chainpoly.release.v1.0.0",
+      "token_id": 262
+    }
+  ],
+  "dependency_token_ids": [
+    263,
+    260,
+    261,
+    262
+  ],
+  "resolved_dependency_names": [
+    "bvst.plugin.retrokeys.release.v1.0.0",
+    "bvst.plugin.minerone.release.v1.0.0",
+    "bvst.plugin.minertwo.release.v1.0.0",
+    "bvst.plugin.chainpoly.release.v1.0.0"
+  ],
+  "resolved_at": "2026-03-26T01:47:27.082Z",
+  "resolved_from": "configs/token-map.runtime.json"
+}

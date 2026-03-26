@@ -1,0 +1,83 @@
+{
+  "name": "bvst.plugin.bvstengine.release.v1.0.0",
+  "type": "plugin-release-catalog",
+  "plugin_name": "BVSTEngine",
+  "plugin_family": "bvstsynth-family",
+  "category": "Instruments",
+  "runtime_major": 1,
+  "engine_major": 1,
+  "schema_major": 1,
+  "dependencies": {
+    "foundation_catalog": "bvst.catalog.foundation.v1",
+    "foundation_catalog_token_id": 234,
+    "foundation_catalog_txid": "8c0837ec700f270f3c4f6b0feccb28618972dc7492bb45da076563f7178e97b1",
+    "foundation_catalog_block_height": 7342972,
+    "runtime_major_catalog": "bvst.catalog.runtime.v1",
+    "runtime_major_catalog_token_id": 231,
+    "runtime_major_catalog_txid": "904911fbfa58b4f947081cb2a490a8705bb9638180d6cb40ba28b8dd4f295647",
+    "runtime_major_catalog_block_height": 7342963,
+    "engine_major_catalog": "bvst.catalog.engine.v1",
+    "engine_major_catalog_token_id": 232,
+    "engine_major_catalog_txid": "bc4e5e9a4e1702a49b5aced53ece8ad9081541b9061a3443a89bc426c5817610",
+    "engine_major_catalog_block_height": 7342968,
+    "schema_major_catalog": "bvst.catalog.schema.v1",
+    "schema_major_catalog_token_id": 233,
+    "schema_major_catalog_txid": "4170af1d2ae3a0c5c3c45fb28d3c68c27b8574b656bfd02195a0a3e31ba3b028",
+    "schema_major_catalog_block_height": 7342970,
+    "manifest": {
+      "name": "bvst.plugin.bvstengine.manifest.v1.0.0",
+      "token_id": 238,
+      "txid": "d98627d980d8652a972ea5c8dfa53df3f666dd0e4d5c5cc63dfa4054926d2366",
+      "block_height": 7342983,
+      "path": "on-chain-modules/workspace/Plugins/Instruments/BVSTEngine/manifest.json",
+      "mime_type": "application/json",
+      "sha256": "179a57b97315b44ee2f13b60e0973a40e5724269aa3fd716f182b772e2b87c9e",
+      "bytes": 323,
+      "chunks": 1,
+      "route": "helper"
+    },
+    "patch": {
+      "name": "bvst.plugin.bvstengine.patch.v1.0.0",
+      "token_id": 239,
+      "txid": "27352472b47a0baf1aa1dd996256fcfd30ec775ac76c32e3e9282fb89b014965",
+      "block_height": 7342988,
+      "path": "on-chain-modules/workspace/Plugins/Instruments/BVSTEngine/patch.json",
+      "mime_type": "application/json",
+      "sha256": "05f9abfc96faa0559df8b1178a4ca6a088f86e8b38ec41d30416b4317402e5b2",
+      "bytes": 2957,
+      "chunks": 1,
+      "route": "helper"
+    },
+    "shell": {
+      "name": "bvst.plugin.bvstengine.shell.v1.0.0",
+      "token_id": 240,
+      "txid": "c15daaf121fb6a893a11829b2b02d67fca06ec7ff9896e030c7f7619defb746d",
+      "block_height": 7342990,
+      "path": "on-chain-modules/workspace/Plugins/Instruments/BVSTEngine/gui.html",
+      "mime_type": "text/html",
+      "sha256": "273dfebc41e8013d21f0dadfef55f10805aee117b8ab53b62ad68e56a4004268",
+      "bytes": 831,
+      "chunks": 1,
+      "route": "helper"
+    }
+  },
+  "dependency_token_ids": [
+    238,
+    239,
+    240,
+    231,
+    232,
+    233
+  ],
+  "resolved_dependency_names": [
+    "bvst.catalog.foundation.v1",
+    "bvst.catalog.runtime.v1",
+    "bvst.catalog.engine.v1",
+    "bvst.catalog.schema.v1",
+    "bvst.plugin.bvstengine.manifest.v1.0.0",
+    "bvst.plugin.bvstengine.patch.v1.0.0",
+    "bvst.plugin.bvstengine.shell.v1.0.0"
+  ],
+  "resolved_at": "2026-03-26T01:24:24.413Z",
+  "resolved_from": "configs/token-map.runtime.json"
+}

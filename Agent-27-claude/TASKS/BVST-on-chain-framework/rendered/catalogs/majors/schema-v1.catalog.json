@@ -1,0 +1,28 @@
+{
+  "name": "bvst.catalog.schema.v1",
+  "type": "major-catalog",
+  "family": "schema",
+  "major": 1,
+  "modules": [
+    {
+      "name": "bvst.schema.patch.v1",
+      "token_id": 214,
+      "txid": "f670da0149264037d73bccf882de9e1f5853b67c0c4756c028b3e5a976e37696",
+      "block_height": 7342724,
+      "path": "on-chain-modules/workspace/System/shared/bvst_patch_v1.schema.json",
+      "mime_type": "application/json",
+      "sha256": "7ecb61e9215435e994a602c2c4cdf3437ccaff2a70b04c7ea44658e8aa4c02d9",
+      "bytes": 7887,
+      "chunks": 1,
+      "route": "helper"
+    }
+  ],
+  "dependency_token_ids": [
+    214
+  ],
+  "resolved_dependency_names": [
+    "bvst.schema.patch.v1"
+  ],
+  "resolved_at": "2026-03-26T01:24:24.413Z",
+  "resolved_from": "configs/token-map.runtime.json"
+}

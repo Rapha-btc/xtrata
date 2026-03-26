@@ -1,18 +1,329 @@
 {
-  "generated_at": "2026-03-26T01:43:21.824Z",
-  "bundle_root": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework",
+  "generated_at": "2026-03-26T00:05:38.566Z",
+  "bundle_root": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework",
   "token_map": "configs/token-map.runtime.json",
   "inscription_log": "verification/inscription-log.json",
   "rendered_index": "verification/rendered-index.json",
   "summary": {
     "total": 53,
-    "minted": 53,
-    "ready": 0,
-    "blocked": 0,
+    "minted": 37,
+    "ready": 7,
+    "blocked": 9,
     "hard_stop": 0
   },
-  "next_ready": null,
-  "ready_now": [],
+  "next_ready": {
+    "batch": "30-standalone-synths.batch.json",
+    "order": 40,
+    "name": "bvst.plugin.minertwo.manifest.v1.0.0",
+    "kind": "leaf",
+    "route": "helper",
+    "mime": "application/json",
+    "dependency_names": [],
+    "dependency_token_ids": [],
+    "missing_dependencies": [],
+    "token_id": null,
+    "txid": null,
+    "block_height": null,
+    "rendered_status": null,
+    "rendered_path": null,
+    "resolution_signature": null,
+    "log_recorded": false,
+    "source": {
+      "logical_path": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/manifest.json",
+      "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/Plugins/Instruments/MinerTwo/manifest.json",
+      "bytes": 339,
+      "chunks": 1,
+      "sha256": "b19c55756c543cb7a117c60e4fc740600135f7ed94504bc55630b93f4378e37c",
+      "route": "helper"
+    },
+    "execution": {
+      "route": "helper",
+      "function": "mint-small-single-tx",
+      "recursive_dependencies": [],
+      "apply_result_command": "node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name bvst.plugin.minertwo.manifest.v1.0.0 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+    },
+    "notes": [],
+    "status": "ready"
+  },
+  "ready_now": [
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 40,
+      "name": "bvst.plugin.minertwo.manifest.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/manifest.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/Plugins/Instruments/MinerTwo/manifest.json",
+        "bytes": 339,
+        "chunks": 1,
+        "sha256": "b19c55756c543cb7a117c60e4fc740600135f7ed94504bc55630b93f4378e37c",
+        "route": "helper"
+      },
+      "execution": {
+        "route": "helper",
+        "function": "mint-small-single-tx",
+        "recursive_dependencies": [],
+        "apply_result_command": "node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name bvst.plugin.minertwo.manifest.v1.0.0 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+      },
+      "notes": [],
+      "status": "ready"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 50,
+      "name": "bvst.plugin.minertwo.patch.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.schema.patch.v1"
+      ],
+      "dependency_token_ids": [
+        214
+      ],
+      "missing_dependencies": [],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/patch.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/Plugins/Instruments/MinerTwo/patch.json",
+        "bytes": 7057,
+        "chunks": 1,
+        "sha256": "b2260cd0586b4f5369f59b047b75aeccdc10573339deb54b07155bb1be200090",
+        "route": "helper"
+      },
+      "execution": {
+        "route": "helper",
+        "function": "mint-small-single-tx-recursive",
+        "recursive_dependencies": [
+          214
+        ],
+        "apply_result_command": "node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name bvst.plugin.minertwo.patch.v1.0.0 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+      },
+      "notes": [],
+      "status": "ready"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 70,
+      "name": "bvst.plugin.chainpoly.manifest.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/manifest.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/Plugins/Instruments/ChainPoly/manifest.json",
+        "bytes": 357,
+        "chunks": 1,
+        "sha256": "622f89832e8342f62d0fdb08282ce7f45ed8f0d09ed87e518a0472a295b6ed11",
+        "route": "helper"
+      },
+      "execution": {
+        "route": "helper",
+        "function": "mint-small-single-tx",
+        "recursive_dependencies": [],
+        "apply_result_command": "node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name bvst.plugin.chainpoly.manifest.v1.0.0 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+      },
+      "notes": [],
+      "status": "ready"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 80,
+      "name": "bvst.plugin.chainpoly.patch.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.schema.patch.v1"
+      ],
+      "dependency_token_ids": [
+        214
+      ],
+      "missing_dependencies": [],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/patch.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/Plugins/Instruments/ChainPoly/patch.json",
+        "bytes": 4622,
+        "chunks": 1,
+        "sha256": "c5edaf6245668c9647da6331409cd46a0cc943b667cad30a8c78127535641c11",
+        "route": "helper"
+      },
+      "execution": {
+        "route": "helper",
+        "function": "mint-small-single-tx-recursive",
+        "recursive_dependencies": [
+          214
+        ],
+        "apply_result_command": "node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name bvst.plugin.chainpoly.patch.v1.0.0 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+      },
+      "notes": [],
+      "status": "ready"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 100,
+      "name": "bvst.plugin.retrokeys.manifest.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [],
+      "dependency_token_ids": [],
+      "missing_dependencies": [],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/manifest.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/Plugins/Instruments/RetroKeys/manifest.json",
+        "bytes": 336,
+        "chunks": 1,
+        "sha256": "c17d1d6983ce58a56ca8bf3d3aed9426e044937e88b5c159c85306fbd81cabc7",
+        "route": "helper"
+      },
+      "execution": {
+        "route": "helper",
+        "function": "mint-small-single-tx",
+        "recursive_dependencies": [],
+        "apply_result_command": "node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name bvst.plugin.retrokeys.manifest.v1.0.0 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+      },
+      "notes": [],
+      "status": "ready"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 110,
+      "name": "bvst.plugin.retrokeys.patch.v1.0.0",
+      "kind": "leaf",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.schema.patch.v1"
+      ],
+      "dependency_token_ids": [
+        214
+      ],
+      "missing_dependencies": [],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": null,
+      "rendered_path": null,
+      "resolution_signature": null,
+      "log_recorded": false,
+      "source": {
+        "logical_path": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/patch.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/Plugins/Instruments/RetroKeys/patch.json",
+        "bytes": 2163,
+        "chunks": 1,
+        "sha256": "0d880724099a2270c69e4c0f979e2c8848c58959d3b02ffaaf9faaec71cf5b72",
+        "route": "helper"
+      },
+      "execution": {
+        "route": "helper",
+        "function": "mint-small-single-tx-recursive",
+        "recursive_dependencies": [
+          214
+        ],
+        "apply_result_command": "node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name bvst.plugin.retrokeys.patch.v1.0.0 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+      },
+      "notes": [],
+      "status": "ready"
+    },
+    {
+      "batch": "30-standalone-synths.batch.json",
+      "order": 130,
+      "name": "bvst.plugin.minerone.release.v1.0.0",
+      "kind": "catalog",
+      "route": "helper",
+      "mime": "application/json",
+      "dependency_names": [
+        "bvst.plugin.minerone.manifest.v1.0.0",
+        "bvst.plugin.minerone.patch.v1.0.0",
+        "bvst.plugin.minerone.shell.v1.0.0",
+        "bvst.catalog.runtime.v1",
+        "bvst.catalog.engine.v1",
+        "bvst.catalog.schema.v1"
+      ],
+      "dependency_token_ids": [
+        248,
+        249,
+        250,
+        231,
+        232,
+        233
+      ],
+      "missing_dependencies": [],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": "ready",
+      "rendered_path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/minerone.release.catalog.json",
+      "resolution_signature": "b7fa1fe18008d7170a29b1b89912eecf3c9ea366180034e7f459e0354bcc71fb",
+      "log_recorded": false,
+      "source": {
+        "logical_path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/minerone.release.catalog.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/rendered/catalogs/plugins/standalone-synths/minerone.release.catalog.json",
+        "bytes": 3122,
+        "chunks": 1,
+        "sha256": "8909545cbf0ad92c6465682d06faed74a9bd3787c4d6c7b97a8f210b54e52cb2",
+        "route": "helper"
+      },
+      "execution": {
+        "route": "helper",
+        "function": "mint-small-single-tx-recursive",
+        "recursive_dependencies": [
+          248,
+          249,
+          250,
+          231,
+          232,
+          233
+        ],
+        "apply_result_command": "node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name bvst.plugin.minerone.release.v1.0.0 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+      },
+      "notes": [],
+      "status": "ready"
+    }
+  ],
   "hard_stops": [],
   "items": [
     {
@@ -34,7 +345,7 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/workspace/System/shared/bvst_patch_v1.schema.json",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/System/shared/bvst_patch_v1.schema.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/System/shared/bvst_patch_v1.schema.json",
         "bytes": 5689,
         "chunks": 1,
         "sha256": "ff2506820eaf82235bf90338f9e6170aaeabb1040b1cfc8e7dad99d7ffbabb38",
@@ -63,7 +374,7 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/workspace/System/shared/bvst.css",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/System/shared/bvst.css",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/System/shared/bvst.css",
         "bytes": 9233,
         "chunks": 1,
         "sha256": "a642eb5ce475e76e407439751442374111bc63b1fd0389d48fd64bc3ef830e8a",
@@ -96,7 +407,7 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/workspace/System/shared/ui_styles.js",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/System/shared/ui_styles.js",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/System/shared/ui_styles.js",
         "bytes": 930,
         "chunks": 1,
         "sha256": "caf8264dbc429fefb0641f8e26a13924a3507fe5acbab7123a9ea71136075e29",
@@ -125,7 +436,7 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/workspace/System/shared/audional_decoder.js",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/System/shared/audional_decoder.js",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/System/shared/audional_decoder.js",
         "bytes": 9543,
         "chunks": 1,
         "sha256": "5755e7c345e8db646933916ebc8391795d9315dfd71d2d84c676259ef1defeb3",
@@ -158,7 +469,7 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/workspace/System/shared/controls.js",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/System/shared/controls.js",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/System/shared/controls.js",
         "bytes": 20723,
         "chunks": 2,
         "sha256": "ee52bc817032489f4bfa09cc972cc7c82a5bdf4ce7bc0dbe96f9f6a567a871cc",
@@ -191,7 +502,7 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/workspace/System/shared/keyboard.js",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/System/shared/keyboard.js",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/System/shared/keyboard.js",
         "bytes": 9051,
         "chunks": 1,
         "sha256": "cde14fe643151fd4624bee175a1ea3027c66a9d8611e402c785fe6f8d788572e",
@@ -224,7 +535,7 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/workspace/System/shared/midi.js",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/System/shared/midi.js",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/System/shared/midi.js",
         "bytes": 4938,
         "chunks": 1,
         "sha256": "deb7301dc06443126b2c4ca904d61ba2f29f7aaffb174910a2581c67546a4f38",
@@ -253,7 +564,7 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/workspace/System/shared/midi_parser.js",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/System/shared/midi_parser.js",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/System/shared/midi_parser.js",
         "bytes": 4389,
         "chunks": 1,
         "sha256": "71c5ab0c9d9e2a5f13c6aa14e2194247bd72a5ea69adfe377309ebcdc7692fd2",
@@ -286,7 +597,7 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/workspace/System/shared/visualizer.js",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/System/shared/visualizer.js",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/System/shared/visualizer.js",
         "bytes": 5303,
         "chunks": 1,
         "sha256": "8bfeb3312b734384ddccecc183f56dd4eaeb7a6911dadde87fd8ad7294c586e7",
@@ -321,7 +632,7 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/workspace/System/shared/sampler.js",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/System/shared/sampler.js",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/System/shared/sampler.js",
         "bytes": 30490,
         "chunks": 2,
         "sha256": "55b04c8cb098ac2943b3627173ce12e5f320a1fc04136813f25d04e7cf5e1d39",
@@ -354,7 +665,7 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/workspace/System/shared/sequencer_core.js",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/System/shared/sequencer_core.js",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/System/shared/sequencer_core.js",
         "bytes": 19549,
         "chunks": 2,
         "sha256": "12746ea67444b361eb84ab46fb4b812a0e81935f6fa62a739c76e541c29a7cbb",
@@ -383,7 +694,7 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/workspace/System/shared/bvst_unified_bg.wasm",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/System/shared/bvst_unified_bg.wasm",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/System/shared/bvst_unified_bg.wasm",
         "bytes": 100109,
         "chunks": 7,
         "sha256": "4246b1b3431abb565e7ee4b9cc2c3f9da64478b9a2ff7e8c3bc22713868a6fd3",
@@ -416,7 +727,7 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/workspace/System/shared/wasm_loader_unified.js",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/System/shared/wasm_loader_unified.js",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/System/shared/wasm_loader_unified.js",
         "bytes": 16567,
         "chunks": 2,
         "sha256": "a099d8f7b8eac71db02a00925019481b42af3dc87a2a14a829ac1dbc90ad30a3",
@@ -449,7 +760,7 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/workspace/System/shared/processor_unified.js",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/System/shared/processor_unified.js",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/System/shared/processor_unified.js",
         "bytes": 12730,
         "chunks": 1,
         "sha256": "3ad68b432cafffac6be69d1c67ea282aa259d0705456163a4dd9f7a66e88c78d",
@@ -484,7 +795,7 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/workspace/System/shared/standalone_bridge.js",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/System/shared/standalone_bridge.js",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/System/shared/standalone_bridge.js",
         "bytes": 10230,
         "chunks": 1,
         "sha256": "e5d9c4542a65ba73a2b6bfba7b9fc996594453264b3942d1a978aa56edb2069e",
@@ -529,7 +840,7 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/workspace/System/shared/plugin_core.js",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/System/shared/plugin_core.js",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/System/shared/plugin_core.js",
         "bytes": 26459,
         "chunks": 2,
         "sha256": "79280a30719a574de78a7fc99f0fcafe5092fd8c75554b3269b12380f6d4683d",
@@ -562,7 +873,7 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/workspace/System/shared/patch_runtime.js",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/System/shared/patch_runtime.js",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/System/shared/patch_runtime.js",
         "bytes": 4314,
         "chunks": 1,
         "sha256": "6fc6798fc69e8700a7e185ae6876b5330e8e5cd8008d13d07983b0fde8bc9fa3",
@@ -619,10 +930,10 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/rendered/catalogs/majors/runtime-v1.catalog.json",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/rendered/catalogs/majors/runtime-v1.catalog.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/rendered/catalogs/majors/runtime-v1.catalog.json",
         "bytes": 6912,
         "chunks": 1,
-        "sha256": "8ab79636e7946c3a9d2706496586d26a287c38c2ba6ed1b569cfb82a8fb44623",
+        "sha256": "dbd1a2192de417a092913eed045a9b37d070c4e41721d00dfbe58104ce7135de",
         "route": "helper"
       },
       "execution": null,
@@ -656,10 +967,10 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/rendered/catalogs/majors/engine-v1.catalog.json",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/rendered/catalogs/majors/engine-v1.catalog.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/rendered/catalogs/majors/engine-v1.catalog.json",
         "bytes": 1852,
         "chunks": 1,
-        "sha256": "f1c37ec3f56cf903ef01c9c9730461c6179aadb88760b76d574acc84a4da9568",
+        "sha256": "709427115f352bca3aaece75e137292f2cd4471d39e15cbcb3cbb14f38a5aff5",
         "route": "helper"
       },
       "execution": null,
@@ -689,10 +1000,10 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/rendered/catalogs/majors/schema-v1.catalog.json",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/rendered/catalogs/majors/schema-v1.catalog.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/rendered/catalogs/majors/schema-v1.catalog.json",
         "bytes": 783,
         "chunks": 1,
-        "sha256": "a63800b188dfc0d9bd3d9ea53052e63f51cf8b52940493b45f5d41cdc56adcfb",
+        "sha256": "cd1199c2127f61e0b37f970105749485329bd729a5a9ebb99f34c5fe494d0dca",
         "route": "helper"
       },
       "execution": null,
@@ -726,10 +1037,10 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/rendered/catalogs/releases/foundation-v1.catalog.json",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/rendered/catalogs/releases/foundation-v1.catalog.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/rendered/catalogs/releases/foundation-v1.catalog.json",
         "bytes": 10104,
         "chunks": 1,
-        "sha256": "cfc3fd7b4b5bd387e2d7e462b97257d76c9df9cd6f80a64e76bbc68f71e412bf",
+        "sha256": "362eb9162e1f255ae979cf9f0094d73abcce555dd05f867e062bcb60b2666275",
         "route": "helper"
       },
       "execution": null,
@@ -755,7 +1066,7 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/workspace/Plugins/Instruments/JMS10/manifest.json",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/Plugins/Instruments/JMS10/manifest.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/Plugins/Instruments/JMS10/manifest.json",
         "bytes": 322,
         "chunks": 1,
         "sha256": "c6633e5339c7b5592237c26bf0e3a798acca5b388d0c976129313ab9e2340990",
@@ -788,7 +1099,7 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/workspace/Plugins/Instruments/JMS10/patch.json",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/Plugins/Instruments/JMS10/patch.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/Plugins/Instruments/JMS10/patch.json",
         "bytes": 5613,
         "chunks": 1,
         "sha256": "15bb93588509c0b264e2350e2cd1a90505de14ff9da2f8b741e9684be185fd79",
@@ -825,7 +1136,7 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/workspace/Plugins/Instruments/JMS10/gui.html",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/Plugins/Instruments/JMS10/gui.html",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/Plugins/Instruments/JMS10/gui.html",
         "bytes": 826,
         "chunks": 1,
         "sha256": "e6ea7b790e1c3225fd84116064de6c983248cab9a9daa9ac664c0a628f6a19eb",
@@ -854,7 +1165,7 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/workspace/Plugins/Instruments/BVSTEngine/manifest.json",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/Plugins/Instruments/BVSTEngine/manifest.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/Plugins/Instruments/BVSTEngine/manifest.json",
         "bytes": 324,
         "chunks": 1,
         "sha256": "01beefdc0b97ab86353a581eeda12bd10dcf259afca3b1e3b1f4903c883efee2",
@@ -887,7 +1198,7 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/workspace/Plugins/Instruments/BVSTEngine/patch.json",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/Plugins/Instruments/BVSTEngine/patch.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/Plugins/Instruments/BVSTEngine/patch.json",
         "bytes": 1955,
         "chunks": 1,
         "sha256": "b28a916152cc277a8f4e45bd208c1c3cfb313e11d9baa56d49345aa598432511",
@@ -924,7 +1235,7 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/workspace/Plugins/Instruments/BVSTEngine/gui.html",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/Plugins/Instruments/BVSTEngine/gui.html",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/Plugins/Instruments/BVSTEngine/gui.html",
         "bytes": 831,
         "chunks": 1,
         "sha256": "273dfebc41e8013d21f0dadfef55f10805aee117b8ab53b62ad68e56a4004268",
@@ -953,7 +1264,7 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/workspace/Plugins/Instruments/BVSTSynth/manifest.json",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/Plugins/Instruments/BVSTSynth/manifest.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/Plugins/Instruments/BVSTSynth/manifest.json",
         "bytes": 397,
         "chunks": 1,
         "sha256": "0fa1872669743a0284f20b73a464a83c94418d65845ecdf861669fb97506f2d7",
@@ -986,7 +1297,7 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/workspace/Plugins/Instruments/BVSTSynth/patch.json",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/Plugins/Instruments/BVSTSynth/patch.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/Plugins/Instruments/BVSTSynth/patch.json",
         "bytes": 9259,
         "chunks": 1,
         "sha256": "e73a992780a6e3dc3c5ced06e1f72e00bfa2d9a8db60d20ebb99455b13fe25c8",
@@ -1023,7 +1334,7 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/workspace/Plugins/Instruments/BVSTSynth/gui.html",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/Plugins/Instruments/BVSTSynth/gui.html",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/Plugins/Instruments/BVSTSynth/gui.html",
         "bytes": 14086,
         "chunks": 1,
         "sha256": "219b193434f6642c35a2186f3777a90db1297151f9f5d487aab3569e79eef670",
@@ -1066,10 +1377,10 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/rendered/catalogs/plugins/bvstsynth-family/jms10.release.catalog.json",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/rendered/catalogs/plugins/bvstsynth-family/jms10.release.catalog.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/rendered/catalogs/plugins/bvstsynth-family/jms10.release.catalog.json",
         "bytes": 3139,
         "chunks": 1,
-        "sha256": "d3361a15f5df5e54257cdf25a4936d4f5dcfe1e2ba17567246f6a1c3f2ba99e1",
+        "sha256": "da0e57d1fadc3f7bfa973965a92288333cb9581b94d9456ac7ec1c635521d7a7",
         "route": "helper"
       },
       "execution": null,
@@ -1109,10 +1420,10 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/rendered/catalogs/plugins/bvstsynth-family/bvstengine.release.catalog.json",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/rendered/catalogs/plugins/bvstsynth-family/bvstengine.release.catalog.json",
-        "bytes": 3194,
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/rendered/catalogs/plugins/bvstsynth-family/bvstengine.release.catalog.json",
+        "bytes": 3143,
         "chunks": 1,
-        "sha256": "4f722147f44ecd5f83122fb764e7802b426f0eb1cf67b5bcdb6de84aeec26509",
+        "sha256": "efb45b7ba1f0fbbd73dee10dba4fb82bceecee0342647d324302775bfcc2c701",
         "route": "helper"
       },
       "execution": null,
@@ -1152,10 +1463,10 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/rendered/catalogs/plugins/bvstsynth-family/bvstsynth.release.catalog.json",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/rendered/catalogs/plugins/bvstsynth-family/bvstsynth.release.catalog.json",
-        "bytes": 3192,
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/rendered/catalogs/plugins/bvstsynth-family/bvstsynth.release.catalog.json",
+        "bytes": 3158,
         "chunks": 1,
-        "sha256": "8ddc50d6adb3ed5f2372db2a1107b3b218db03dc4a978b03a6b249abe2782046",
+        "sha256": "58b1ffb00e0a9b82fab5a13fc8df36bb40c33c7b4aa71c328ea6b26a99188f60",
         "route": "helper"
       },
       "execution": null,
@@ -1189,10 +1500,10 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/rendered/catalogs/families/bvstsynth-family.catalog.json",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/rendered/catalogs/families/bvstsynth-family.catalog.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/rendered/catalogs/families/bvstsynth-family.catalog.json",
         "bytes": 854,
         "chunks": 1,
-        "sha256": "cf6b00f66702cf0a3f8a896ff25195e97b92b6ff053d692dd68cbdb5ba5a2c7c",
+        "sha256": "84f46ca9df15f623c3667d5cb51d72a1f6777a0237a2fb9d9cbfae53d7c6adce",
         "route": "helper"
       },
       "execution": null,
@@ -1218,7 +1529,7 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/workspace/Plugins/Instruments/MinerOne/manifest.json",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/Plugins/Instruments/MinerOne/manifest.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/Plugins/Instruments/MinerOne/manifest.json",
         "bytes": 337,
         "chunks": 1,
         "sha256": "4a163c47e941212833a531656dd64f17158817cd25ea0eb4da5a67a231b16200",
@@ -1251,7 +1562,7 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/workspace/Plugins/Instruments/MinerOne/patch.json",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/Plugins/Instruments/MinerOne/patch.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/Plugins/Instruments/MinerOne/patch.json",
         "bytes": 4258,
         "chunks": 1,
         "sha256": "f63bde03b84a610d4de684624bf937713019ee00f26fcc16b3a6281d09e4f696",
@@ -1288,7 +1599,7 @@
       "log_recorded": true,
       "source": {
         "logical_path": "on-chain-modules/workspace/Plugins/Instruments/MinerOne/gui.html",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/Plugins/Instruments/MinerOne/gui.html",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/Plugins/Instruments/MinerOne/gui.html",
         "bytes": 828,
         "chunks": 1,
         "sha256": "254451e13c4f0d5b4c509c5ab76eec2b04402bbade3784be2531aa15bd088dd4",
@@ -1308,24 +1619,29 @@
       "dependency_names": [],
       "dependency_token_ids": [],
       "missing_dependencies": [],
-      "token_id": 202,
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000202",
-      "block_height": 500202,
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
       "rendered_status": null,
       "rendered_path": null,
       "resolution_signature": null,
-      "log_recorded": true,
+      "log_recorded": false,
       "source": {
         "logical_path": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/manifest.json",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/Plugins/Instruments/MinerTwo/manifest.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/Plugins/Instruments/MinerTwo/manifest.json",
         "bytes": 339,
         "chunks": 1,
         "sha256": "b19c55756c543cb7a117c60e4fc740600135f7ed94504bc55630b93f4378e37c",
         "route": "helper"
       },
-      "execution": null,
+      "execution": {
+        "route": "helper",
+        "function": "mint-small-single-tx",
+        "recursive_dependencies": [],
+        "apply_result_command": "node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name bvst.plugin.minertwo.manifest.v1.0.0 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+      },
       "notes": [],
-      "status": "minted"
+      "status": "ready"
     },
     {
       "batch": "30-standalone-synths.batch.json",
@@ -1341,24 +1657,31 @@
         214
       ],
       "missing_dependencies": [],
-      "token_id": 203,
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000203",
-      "block_height": 500203,
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
       "rendered_status": null,
       "rendered_path": null,
       "resolution_signature": null,
-      "log_recorded": true,
+      "log_recorded": false,
       "source": {
         "logical_path": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/patch.json",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/Plugins/Instruments/MinerTwo/patch.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/Plugins/Instruments/MinerTwo/patch.json",
         "bytes": 7057,
         "chunks": 1,
         "sha256": "b2260cd0586b4f5369f59b047b75aeccdc10573339deb54b07155bb1be200090",
         "route": "helper"
       },
-      "execution": null,
+      "execution": {
+        "route": "helper",
+        "function": "mint-small-single-tx-recursive",
+        "recursive_dependencies": [
+          214
+        ],
+        "apply_result_command": "node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name bvst.plugin.minertwo.patch.v1.0.0 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+      },
       "notes": [],
-      "status": "minted"
+      "status": "ready"
     },
     {
       "batch": "30-standalone-synths.batch.json",
@@ -1373,29 +1696,25 @@
         "bvst.plugin.minertwo.patch.v1.0.0"
       ],
       "dependency_token_ids": [
-        230,
-        202,
-        203
+        230
       ],
-      "missing_dependencies": [],
-      "token_id": 204,
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000204",
-      "block_height": 500204,
+      "missing_dependencies": [
+        "bvst.plugin.minertwo.manifest.v1.0.0",
+        "bvst.plugin.minertwo.patch.v1.0.0"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
       "rendered_status": null,
       "rendered_path": null,
       "resolution_signature": null,
-      "log_recorded": true,
-      "source": {
-        "logical_path": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/gui.html",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/Plugins/Instruments/MinerTwo/gui.html",
-        "bytes": 829,
-        "chunks": 1,
-        "sha256": "49786f9e19c8b379a71a4f7cfe90445945189a1874c51330abe7063fa43b016a",
-        "route": "helper"
-      },
+      "log_recorded": false,
+      "source": null,
       "execution": null,
-      "notes": [],
-      "status": "minted"
+      "notes": [
+        "Direct dependencies are not fully resolved yet."
+      ],
+      "status": "blocked"
     },
     {
       "batch": "30-standalone-synths.batch.json",
@@ -1407,24 +1726,29 @@
       "dependency_names": [],
       "dependency_token_ids": [],
       "missing_dependencies": [],
-      "token_id": 205,
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000205",
-      "block_height": 500205,
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
       "rendered_status": null,
       "rendered_path": null,
       "resolution_signature": null,
-      "log_recorded": true,
+      "log_recorded": false,
       "source": {
         "logical_path": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/manifest.json",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/Plugins/Instruments/ChainPoly/manifest.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/Plugins/Instruments/ChainPoly/manifest.json",
         "bytes": 357,
         "chunks": 1,
         "sha256": "622f89832e8342f62d0fdb08282ce7f45ed8f0d09ed87e518a0472a295b6ed11",
         "route": "helper"
       },
-      "execution": null,
+      "execution": {
+        "route": "helper",
+        "function": "mint-small-single-tx",
+        "recursive_dependencies": [],
+        "apply_result_command": "node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name bvst.plugin.chainpoly.manifest.v1.0.0 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+      },
       "notes": [],
-      "status": "minted"
+      "status": "ready"
     },
     {
       "batch": "30-standalone-synths.batch.json",
@@ -1440,24 +1764,31 @@
         214
       ],
       "missing_dependencies": [],
-      "token_id": 206,
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000206",
-      "block_height": 500206,
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
       "rendered_status": null,
       "rendered_path": null,
       "resolution_signature": null,
-      "log_recorded": true,
+      "log_recorded": false,
       "source": {
         "logical_path": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/patch.json",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/Plugins/Instruments/ChainPoly/patch.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/Plugins/Instruments/ChainPoly/patch.json",
         "bytes": 4622,
         "chunks": 1,
         "sha256": "c5edaf6245668c9647da6331409cd46a0cc943b667cad30a8c78127535641c11",
         "route": "helper"
       },
-      "execution": null,
+      "execution": {
+        "route": "helper",
+        "function": "mint-small-single-tx-recursive",
+        "recursive_dependencies": [
+          214
+        ],
+        "apply_result_command": "node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name bvst.plugin.chainpoly.patch.v1.0.0 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+      },
       "notes": [],
-      "status": "minted"
+      "status": "ready"
     },
     {
       "batch": "30-standalone-synths.batch.json",
@@ -1472,29 +1803,25 @@
         "bvst.plugin.chainpoly.patch.v1.0.0"
       ],
       "dependency_token_ids": [
-        230,
-        205,
-        206
+        230
       ],
-      "missing_dependencies": [],
-      "token_id": 207,
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000207",
-      "block_height": 500207,
+      "missing_dependencies": [
+        "bvst.plugin.chainpoly.manifest.v1.0.0",
+        "bvst.plugin.chainpoly.patch.v1.0.0"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
       "rendered_status": null,
       "rendered_path": null,
       "resolution_signature": null,
-      "log_recorded": true,
-      "source": {
-        "logical_path": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/gui.html",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/Plugins/Instruments/ChainPoly/gui.html",
-        "bytes": 835,
-        "chunks": 1,
-        "sha256": "2bb2cbffca17d90e6e1f37961c2c952064c995606333f1dd6cc1dcb36e7597b6",
-        "route": "helper"
-      },
+      "log_recorded": false,
+      "source": null,
       "execution": null,
-      "notes": [],
-      "status": "minted"
+      "notes": [
+        "Direct dependencies are not fully resolved yet."
+      ],
+      "status": "blocked"
     },
     {
       "batch": "30-standalone-synths.batch.json",
@@ -1506,24 +1833,29 @@
       "dependency_names": [],
       "dependency_token_ids": [],
       "missing_dependencies": [],
-      "token_id": 208,
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000208",
-      "block_height": 500208,
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
       "rendered_status": null,
       "rendered_path": null,
       "resolution_signature": null,
-      "log_recorded": true,
+      "log_recorded": false,
       "source": {
         "logical_path": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/manifest.json",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/Plugins/Instruments/RetroKeys/manifest.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/Plugins/Instruments/RetroKeys/manifest.json",
         "bytes": 336,
         "chunks": 1,
         "sha256": "c17d1d6983ce58a56ca8bf3d3aed9426e044937e88b5c159c85306fbd81cabc7",
         "route": "helper"
       },
-      "execution": null,
+      "execution": {
+        "route": "helper",
+        "function": "mint-small-single-tx",
+        "recursive_dependencies": [],
+        "apply_result_command": "node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name bvst.plugin.retrokeys.manifest.v1.0.0 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+      },
       "notes": [],
-      "status": "minted"
+      "status": "ready"
     },
     {
       "batch": "30-standalone-synths.batch.json",
@@ -1539,24 +1871,31 @@
         214
       ],
       "missing_dependencies": [],
-      "token_id": 209,
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000209",
-      "block_height": 500209,
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
       "rendered_status": null,
       "rendered_path": null,
       "resolution_signature": null,
-      "log_recorded": true,
+      "log_recorded": false,
       "source": {
         "logical_path": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/patch.json",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/Plugins/Instruments/RetroKeys/patch.json",
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/workspace/Plugins/Instruments/RetroKeys/patch.json",
         "bytes": 2163,
         "chunks": 1,
         "sha256": "0d880724099a2270c69e4c0f979e2c8848c58959d3b02ffaaf9faaec71cf5b72",
         "route": "helper"
       },
-      "execution": null,
+      "execution": {
+        "route": "helper",
+        "function": "mint-small-single-tx-recursive",
+        "recursive_dependencies": [
+          214
+        ],
+        "apply_result_command": "node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name bvst.plugin.retrokeys.patch.v1.0.0 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+      },
       "notes": [],
-      "status": "minted"
+      "status": "ready"
     },
     {
       "batch": "30-standalone-synths.batch.json",
@@ -1571,29 +1910,25 @@
         "bvst.plugin.retrokeys.patch.v1.0.0"
       ],
       "dependency_token_ids": [
-        230,
-        208,
-        209
+        230
       ],
-      "missing_dependencies": [],
-      "token_id": 210,
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000210",
-      "block_height": 500210,
+      "missing_dependencies": [
+        "bvst.plugin.retrokeys.manifest.v1.0.0",
+        "bvst.plugin.retrokeys.patch.v1.0.0"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
       "rendered_status": null,
       "rendered_path": null,
       "resolution_signature": null,
-      "log_recorded": true,
-      "source": {
-        "logical_path": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/gui.html",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/workspace/Plugins/Instruments/RetroKeys/gui.html",
-        "bytes": 819,
-        "chunks": 1,
-        "sha256": "cb3a3d3c19338229b87954703bdb13b9b84c71845b3cbcc604c45ea6fc1c3cb7",
-        "route": "helper"
-      },
+      "log_recorded": false,
+      "source": null,
       "execution": null,
-      "notes": [],
-      "status": "minted"
+      "notes": [
+        "Direct dependencies are not fully resolved yet."
+      ],
+      "status": "blocked"
     },
     {
       "batch": "30-standalone-synths.batch.json",
@@ -1619,24 +1954,36 @@
         233
       ],
       "missing_dependencies": [],
-      "token_id": 211,
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000211",
-      "block_height": 500211,
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
       "rendered_status": "ready",
       "rendered_path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/minerone.release.catalog.json",
       "resolution_signature": "b7fa1fe18008d7170a29b1b89912eecf3c9ea366180034e7f459e0354bcc71fb",
-      "log_recorded": true,
+      "log_recorded": false,
       "source": {
         "logical_path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/minerone.release.catalog.json",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/rendered/catalogs/plugins/standalone-synths/minerone.release.catalog.json",
-        "bytes": 3173,
+        "absolute_path": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/rendered/catalogs/plugins/standalone-synths/minerone.release.catalog.json",
+        "bytes": 3122,
         "chunks": 1,
-        "sha256": "254a6769655b7d4aacaba9dec9818e7a82d6e74545a00e06cdb8b7e7c743ed6e",
+        "sha256": "8909545cbf0ad92c6465682d06faed74a9bd3787c4d6c7b97a8f210b54e52cb2",
         "route": "helper"
       },
-      "execution": null,
+      "execution": {
+        "route": "helper",
+        "function": "mint-small-single-tx-recursive",
+        "recursive_dependencies": [
+          248,
+          249,
+          250,
+          231,
+          232,
+          233
+        ],
+        "apply_result_command": "node TASKS/BVST-on-chain-framework/scripts/apply-inscription-result.mjs \\\n  --name bvst.plugin.minerone.release.v1.0.0 \\\n  --token-id <token-id> \\\n  --txid <txid> \\\n  --block-height <block-height>"
+      },
       "notes": [],
-      "status": "minted"
+      "status": "ready"
     },
     {
       "batch": "30-standalone-synths.batch.json",
@@ -1654,32 +2001,28 @@
         "bvst.catalog.schema.v1"
       ],
       "dependency_token_ids": [
-        202,
-        203,
-        204,
         231,
         232,
         233
       ],
-      "missing_dependencies": [],
-      "token_id": 212,
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000212",
-      "block_height": 500212,
-      "rendered_status": "ready",
-      "rendered_path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/minertwo.release.catalog.json",
-      "resolution_signature": "223d5aa8c542f7cbe7173e2433e25bb92a4b736587e088cb4d17a39aeecd139c",
-      "log_recorded": true,
-      "source": {
-        "logical_path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/minertwo.release.catalog.json",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/rendered/catalogs/plugins/standalone-synths/minertwo.release.catalog.json",
-        "bytes": 3125,
-        "chunks": 1,
-        "sha256": "e0f780ab38d44c3f33dbf1881a832bee05ec4e05e7ea029b80e24949f49c910c",
-        "route": "helper"
-      },
+      "missing_dependencies": [
+        "bvst.plugin.minertwo.manifest.v1.0.0",
+        "bvst.plugin.minertwo.patch.v1.0.0",
+        "bvst.plugin.minertwo.shell.v1.0.0"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": "pending",
+      "rendered_path": null,
+      "resolution_signature": "657453c04fce16100f8e2cfe91d276e1a25f9fb826f93a269882d3c241ad9894",
+      "log_recorded": false,
+      "source": null,
       "execution": null,
-      "notes": [],
-      "status": "minted"
+      "notes": [
+        "Rendered catalog is not ready yet (pending)."
+      ],
+      "status": "blocked"
     },
     {
       "batch": "30-standalone-synths.batch.json",
@@ -1697,32 +2040,28 @@
         "bvst.catalog.schema.v1"
       ],
       "dependency_token_ids": [
-        205,
-        206,
-        207,
         231,
         232,
         233
       ],
-      "missing_dependencies": [],
-      "token_id": 213,
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000213",
-      "block_height": 500213,
-      "rendered_status": "ready",
-      "rendered_path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/chainpoly.release.catalog.json",
-      "resolution_signature": "05d95157829707398b6db6ff8a55b1371a53c0541a05835d8fed18e892241622",
-      "log_recorded": true,
-      "source": {
-        "logical_path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/chainpoly.release.catalog.json",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/rendered/catalogs/plugins/standalone-synths/chainpoly.release.catalog.json",
-        "bytes": 3136,
-        "chunks": 1,
-        "sha256": "9d8b44b92d896f52b57f105b79e4502dd0a73a4854e8707995d8d6f1111c8d75",
-        "route": "helper"
-      },
+      "missing_dependencies": [
+        "bvst.plugin.chainpoly.manifest.v1.0.0",
+        "bvst.plugin.chainpoly.patch.v1.0.0",
+        "bvst.plugin.chainpoly.shell.v1.0.0"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": "pending",
+      "rendered_path": null,
+      "resolution_signature": "b6612ccdd5b896338faad4abf6528d0c66b35de0462f95c9698bdca214df4885",
+      "log_recorded": false,
+      "source": null,
       "execution": null,
-      "notes": [],
-      "status": "minted"
+      "notes": [
+        "Rendered catalog is not ready yet (pending)."
+      ],
+      "status": "blocked"
     },
     {
       "batch": "30-standalone-synths.batch.json",
@@ -1740,32 +2079,28 @@
         "bvst.catalog.schema.v1"
       ],
       "dependency_token_ids": [
-        208,
-        209,
-        210,
         231,
         232,
         233
       ],
-      "missing_dependencies": [],
-      "token_id": 214,
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000214",
-      "block_height": 500214,
-      "rendered_status": "ready",
-      "rendered_path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/retrokeys.release.catalog.json",
-      "resolution_signature": "128fc9a4c460727ca65b3372855d55035d43a3d5e3faa1e70ab231f3176c1268",
-      "log_recorded": true,
-      "source": {
-        "logical_path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/retrokeys.release.catalog.json",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/rendered/catalogs/plugins/standalone-synths/retrokeys.release.catalog.json",
-        "bytes": 3187,
-        "chunks": 1,
-        "sha256": "d9882f4b66e05dff26f658c453d640aeb0a6d58290d3f3401319ad0ae7589f18",
-        "route": "helper"
-      },
+      "missing_dependencies": [
+        "bvst.plugin.retrokeys.manifest.v1.0.0",
+        "bvst.plugin.retrokeys.patch.v1.0.0",
+        "bvst.plugin.retrokeys.shell.v1.0.0"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": "pending",
+      "rendered_path": null,
+      "resolution_signature": "e74423ed0320867d64c6781e2b8cc110750e69135d72c7f71c1294871819bf94",
+      "log_recorded": false,
+      "source": null,
       "execution": null,
-      "notes": [],
-      "status": "minted"
+      "notes": [
+        "Rendered catalog is not ready yet (pending)."
+      ],
+      "status": "blocked"
     },
     {
       "batch": "30-standalone-synths.batch.json",
@@ -1780,31 +2115,26 @@
         "bvst.plugin.minertwo.release.v1.0.0",
         "bvst.plugin.chainpoly.release.v1.0.0"
       ],
-      "dependency_token_ids": [
-        214,
-        211,
-        212,
-        213
+      "dependency_token_ids": [],
+      "missing_dependencies": [
+        "bvst.plugin.retrokeys.release.v1.0.0",
+        "bvst.plugin.minerone.release.v1.0.0",
+        "bvst.plugin.minertwo.release.v1.0.0",
+        "bvst.plugin.chainpoly.release.v1.0.0"
       ],
-      "missing_dependencies": [],
-      "token_id": 215,
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000215",
-      "block_height": 500215,
-      "rendered_status": "ready",
-      "rendered_path": "on-chain-modules/rendered/catalogs/families/standalone-synths.catalog.json",
-      "resolution_signature": "d78acef033f86fe3142254073530d28bb03e5068a544f9525d68fda1379b8037",
-      "log_recorded": true,
-      "source": {
-        "logical_path": "on-chain-modules/rendered/catalogs/families/standalone-synths.catalog.json",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/rendered/catalogs/families/standalone-synths.catalog.json",
-        "bytes": 1011,
-        "chunks": 1,
-        "sha256": "17fcba9977cff2b10ba1a8f76d67cd111ad83a861628300883a7ddf002e7f922",
-        "route": "helper"
-      },
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": "pending",
+      "rendered_path": null,
+      "resolution_signature": "b632088454b03e385f0d8507812be41a73b86eff4321d925a3f12c834b9ca038",
+      "log_recorded": false,
+      "source": null,
       "execution": null,
-      "notes": [],
-      "status": "minted"
+      "notes": [
+        "Rendered catalog is not ready yet (pending)."
+      ],
+      "status": "blocked"
     },
     {
       "batch": "40-root-catalogs.batch.json",
@@ -1818,28 +2148,24 @@
         "bvst.catalog.family.standalonesynths.v1"
       ],
       "dependency_token_ids": [
-        247,
-        215
+        247
       ],
-      "missing_dependencies": [],
-      "token_id": 216,
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000216",
-      "block_height": 500216,
-      "rendered_status": "ready",
-      "rendered_path": "on-chain-modules/rendered/catalogs/releases/first-wave-instruments.catalog.json",
-      "resolution_signature": "eabd270dd7f6a0848266ff924ed10a63ab02ca44bcc48fb10766b57420a6e0b4",
-      "log_recorded": true,
-      "source": {
-        "logical_path": "on-chain-modules/rendered/catalogs/releases/first-wave-instruments.catalog.json",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/rendered/catalogs/releases/first-wave-instruments.catalog.json",
-        "bytes": 1558,
-        "chunks": 1,
-        "sha256": "17059d1479e74dc815e83f3e67b722b45b479cbf96b441a847715c5573593061",
-        "route": "helper"
-      },
+      "missing_dependencies": [
+        "bvst.catalog.family.standalonesynths.v1"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": "pending",
+      "rendered_path": null,
+      "resolution_signature": "948559aefcbeae3ab6183767aae1b8a6818a380a5165c3db364078c7d4f7d124",
+      "log_recorded": false,
+      "source": null,
       "execution": null,
-      "notes": [],
-      "status": "minted"
+      "notes": [
+        "Prerequisite batches are not complete: 30-standalone-synths.batch.json."
+      ],
+      "status": "blocked"
     },
     {
       "batch": "40-root-catalogs.batch.json",
@@ -1853,28 +2179,24 @@
         "bvst.catalog.release.firstwaveinstruments.v1"
       ],
       "dependency_token_ids": [
-        234,
-        216
+        234
       ],
-      "missing_dependencies": [],
-      "token_id": 217,
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000217",
-      "block_height": 500217,
-      "rendered_status": "ready",
-      "rendered_path": "on-chain-modules/rendered/catalogs/root/root.catalog.json",
-      "resolution_signature": "2031719b6e15eb2c8f5997e72115ea92d7f3349e5f06c8d4bb320fa932f004bf",
-      "log_recorded": true,
-      "source": {
-        "logical_path": "on-chain-modules/rendered/catalogs/root/root.catalog.json",
-        "absolute_path": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework/rendered/catalogs/root/root.catalog.json",
-        "bytes": 1084,
-        "chunks": 1,
-        "sha256": "df68fcc1d7d10b890bf4818f410af736cd6bcfbe8524664e612af8b604ae6b0a",
-        "route": "helper"
-      },
+      "missing_dependencies": [
+        "bvst.catalog.release.firstwaveinstruments.v1"
+      ],
+      "token_id": null,
+      "txid": null,
+      "block_height": null,
+      "rendered_status": "pending",
+      "rendered_path": null,
+      "resolution_signature": "db0bc893b0692b63e5b757ac1bc62bb87b948f80cb163fbaf051d45fb293b61a",
+      "log_recorded": false,
+      "source": null,
       "execution": null,
-      "notes": [],
-      "status": "minted"
+      "notes": [
+        "Prerequisite batches are not complete: 30-standalone-synths.batch.json."
+      ],
+      "status": "blocked"
     }
   ]
 }

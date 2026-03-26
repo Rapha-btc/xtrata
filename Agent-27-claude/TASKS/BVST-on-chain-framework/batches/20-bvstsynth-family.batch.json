@@ -148,9 +148,9 @@
       "name": "bvst.plugin.bvstengine.release.v1.0.0",
       "path": "on-chain-modules/catalogs/plugins/bvstsynth-family/bvstengine.release.catalog.json",
       "mime": "application/json",
-      "bytes": 1704,
+      "bytes": 1755,
       "chunks": 1,
-      "sha256": "193fb4ccda5dc0f32640d256ada8f6e7bb944f9ac755002fa70b29a5729160d5",
+      "sha256": "3b1839e1ab931de96ed964875ce7dfa03dda24962955acb9d91017d7ffd0a15c",
       "route": "helper",
       "depends_on": [
         "bvst.plugin.bvstengine.manifest.v1.0.0",
@@ -166,9 +166,9 @@
       "name": "bvst.plugin.bvstsynth.release.v1.0.13",
       "path": "on-chain-modules/catalogs/plugins/bvstsynth-family/bvstsynth.release.catalog.json",
       "mime": "application/json",
-      "bytes": 1719,
+      "bytes": 1753,
       "chunks": 1,
-      "sha256": "a055b7b4e50ad1d82473ee5be7fb46c1c4d545a5822e856b3bd6faf7ff1e339a",
+      "sha256": "94612523c484cb4b962923099633262f54257774b75b799f1fca3df2ba75d9b3",
       "route": "helper",
       "depends_on": [
         "bvst.plugin.bvstsynth.manifest.v1.0.13",

@@ -2,271 +2,272 @@
   "generated_for": "on-chain-modules",
   "entries": {
     "bvst.catalog.engine.v1": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 232,
+      "txid": "bc4e5e9a4e1702a49b5aced53ece8ad9081541b9061a3443a89bc426c5817610",
+      "block_height": 7342968
     },
     "bvst.catalog.family.standalonesynths.v1": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 264,
+      "txid": "9984d2d6de8702dc5cbfd6fd6dacae5e7bf34ca5c739b970b573f6dbbb1dacd0",
+      "block_height": 7344055
     },
     "bvst.catalog.family.bvstsynthfamily.v1": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 247,
+      "txid": "ed47f7bc12cc6e2e968198da82cc8952464215b145ae7cf47c62d9f1faab94da",
+      "block_height": 7343011
     },
     "bvst.catalog.foundation.v1": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 234,
+      "txid": "8c0837ec700f270f3c4f6b0feccb28618972dc7492bb45da076563f7178e97b1",
+      "block_height": 7342972
     },
     "bvst.catalog.release.firstwaveinstruments.v1": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 265,
+      "txid": "5b2a22e2ad976853c2392b933f06b11725a4c4bdffd26de1ff9dbc924f42d4c6",
+      "block_height": 7344063
     },
     "bvst.catalog.root.v1": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 266,
+      "txid": "733c3cb655051b7e0fe3c79ee0f6d7fd0f610a66042bac306c8f07f043ef07b3",
+      "block_height": 7344066
     },
     "bvst.catalog.runtime.v1": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 231,
+      "txid": "904911fbfa58b4f947081cb2a490a8705bb9638180d6cb40ba28b8dd4f295647",
+      "block_height": 7342963
     },
     "bvst.catalog.schema.v1": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 233,
+      "txid": "4170af1d2ae3a0c5c3c45fb28d3c68c27b8574b656bfd02195a0a3e31ba3b028",
+      "block_height": 7342970
     },
     "bvst.engine.unified-loader.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 226,
+      "txid": "bb4533b7f2a1ac805ebe352f8ea4d07125e6512bc6398c25af42504a6e4cfe41",
+      "block_height": 7342949
     },
     "bvst.engine.unified-wasm.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 225,
+      "txid": "f3908a7b77baa0cf3c7a3cf12f91ce62d16a429497a5de1bee89c4965a5e95be",
+      "block_height": 7342947
     },
     "bvst.engine.unified-worklet.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 227,
+      "txid": "b62406649619a97b61ada63bcc79191f246f90428f32f8d1f81ed6366e56ef9c",
+      "block_height": 7342951
     },
     "bvst.plugin.minerone.manifest.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 248,
+      "txid": "5704a0349c61b071ed70c269a79204a4bea6042538bccc847dd5907c8c2cf304",
+      "block_height": 7343014
     },
     "bvst.plugin.minerone.patch.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 249,
+      "txid": "02079af4e00fb3c04d2743ad6e9327da27af59146a72704d761e4bbcc6628bde",
+      "block_height": 7343016
     },
     "bvst.plugin.minerone.release.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 260,
+      "txid": "b72650f1af1fa4e450237de7b92fe99a5722e6e230cb7e12687b76db6d4f55ed",
+      "block_height": 7344041
     },
     "bvst.plugin.minerone.shell.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 250,
+      "txid": "ec0c375f80a92ee1f445fe3285eea5fb30fba61d12ef8d6750300c966ac6f18b",
+      "block_height": 7343018
     },
     "bvst.plugin.minertwo.manifest.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 251,
+      "txid": "0296349c0ae90dc592ed2ed0f73bb1c6d07b4505df879689e6146a41780c2cd3",
+      "block_height": 7344008
     },
     "bvst.plugin.minertwo.patch.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 252,
+      "txid": "b5006b11a36e479dc909dfba95e0621374cda35d42f26b6aa10b226762176ab0",
+      "block_height": 7344011
     },
     "bvst.plugin.minertwo.release.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 261,
+      "txid": "db207832bf764287662d7c96e992fd5a323685d282c970e70940ff2bc711ff00",
+      "block_height": 7344044
     },
     "bvst.plugin.minertwo.shell.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 253,
+      "txid": "0cb0dd7e2e12554aa7c7985a8e8771da60e9e6eb81bd064f8a37453be146f86f",
+      "block_height": 7344015
     },
     "bvst.plugin.jms10.manifest.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 235,
+      "txid": "b170d493cae0564debe8c9ad3f655065ac25e5c10b8a816a0d613d4378254c2d",
+      "block_height": 7342977
     },
     "bvst.plugin.jms10.patch.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 236,
+      "txid": "000b8a1c0e9b83a6e442aa8c168779eec34a3b7991f09a46cd5a55345be01a0e",
+      "block_height": 7342979
     },
     "bvst.plugin.jms10.release.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 244,
+      "txid": "253e19afc637f66aa0fb58502dc653eb54e583bc6dfad97444b31872ef9ad6a0",
+      "block_height": 7343000
     },
     "bvst.plugin.jms10.shell.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 237,
+      "txid": "692561f561d4e5eacc1b80838ae635e28b68d59e9b8796dc806a4f20da11544f",
+      "block_height": 7342981
     },
     "bvst.plugin.chainpoly.manifest.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 254,
+      "txid": "9e2bbb6ead2d38908102376fdd082cf43b02fefcd03ca788f2e78b695d1d7550",
+      "block_height": 7344018
     },
     "bvst.plugin.chainpoly.patch.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 255,
+      "txid": "73c2c978f1b38388934c8412423df79e7ac40530cb0aded290b727ff75e331cd",
+      "block_height": 7344021
     },
     "bvst.plugin.chainpoly.release.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 262,
+      "txid": "b8226793055681b0ebf67a5702eb22c8902382d082dc3ad4b06ba76deacfa849",
+      "block_height": 7344050
     },
     "bvst.plugin.chainpoly.shell.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 256,
+      "txid": "e15921dc9733b071bc5458d89f9179c229f5fa2ee8873574a5372bb33454a189",
+      "block_height": 7344027
     },
     "bvst.plugin.retrokeys.manifest.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 257,
+      "txid": "8de8773e248e3f514579983738c5a196f97ca7588edfb8ff4191d18f196499e2",
+      "block_height": 7344030
     },
     "bvst.plugin.retrokeys.patch.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 258,
+      "txid": "a113058eb2f56c9b5e658e994ce31be4ece292498641ef96672be20dee873592",
+      "block_height": 7344034
     },
     "bvst.plugin.retrokeys.release.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 263,
+      "txid": "0ce214348bfaab5334cb4de25cd549d4d205459878a20f54d34602732c5e5c69",
+      "block_height": 7344053
     },
     "bvst.plugin.retrokeys.shell.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 259,
+      "txid": "65602cac8d5df84ffde517c80a4ec439326c81cf77df893ef3dd24c3d24a71bc",
+      "block_height": 7344037
     },
     "bvst.plugin.bvstengine.manifest.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 238,
+      "txid": "d98627d980d8652a972ea5c8dfa53df3f666dd0e4d5c5cc63dfa4054926d2366",
+      "block_height": 7342983
     },
     "bvst.plugin.bvstengine.patch.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 239,
+      "txid": "27352472b47a0baf1aa1dd996256fcfd30ec775ac76c32e3e9282fb89b014965",
+      "block_height": 7342988
     },
     "bvst.plugin.bvstengine.release.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 245,
+      "txid": "aa09a522336e6d74d43f75070a9c8ef2a25b152030e95de1ac5a2bdae5939588",
+      "block_height": 7343006
     },
     "bvst.plugin.bvstengine.shell.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 240,
+      "txid": "c15daaf121fb6a893a11829b2b02d67fca06ec7ff9896e030c7f7619defb746d",
+      "block_height": 7342990
     },
     "bvst.plugin.bvstsynth.manifest.v1.0.13": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 241,
+      "txid": "1832ef1da38ffdbb32dbb2a8c5dd40e557594e89692c1da8ca4dd2737855221f",
+      "block_height": 7342992
     },
     "bvst.plugin.bvstsynth.patch.v1.0.13": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 242,
+      "txid": "8c0c5f04c9436c216078bf31b39fde34e01918025cdd0cf52123906a4b42be46",
+      "block_height": 7342996
     },
     "bvst.plugin.bvstsynth.release.v1.0.13": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 246,
+      "txid": "10b0884ab18180812e1603cd011b5d9620a814a3bfa12b201d8bf449f7d4354a",
+      "block_height": 7343008
     },
     "bvst.plugin.bvstsynth.shell.v1.0.13": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 243,
+      "txid": "9b519c9cec8df8611bd6ca7e81751fccda66c73fa42edcea568b21701880606b",
+      "block_height": 7342998
     },
     "bvst.runtime.audional-decoder.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 217,
+      "txid": "a56ff6505e493f9f70f46f799b926d45299216331a202037680bfba6d5bd7d5a",
+      "block_height": 7342732
     },
     "bvst.runtime.bvst-css.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 215,
+      "txid": "30e7c69f581b6693bb2b4bd702637040f9eb68ebe50488ecdf273e3312794412",
+      "block_height": 7342727
     },
     "bvst.runtime.controls.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 218,
+      "txid": "81eaf9a275bfe35b222431c451ea0f1406191380c28b30881d50a7813e3caa36",
+      "block_height": 7342735
     },
     "bvst.runtime.keyboard.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 219,
+      "txid": "87bac8a1a6d97308a8c41501def00b6afffeabd6ce76980a661ac676fbc268f3",
+      "block_height": 7342739
     },
     "bvst.runtime.midi-parser.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 221,
+      "txid": "14579cf8220cb4a59d2aaa1f152cd2d36c4af7b304352e52bfae20ce1be31b7f",
+      "block_height": 7342745
     },
     "bvst.runtime.midi.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 220,
+      "txid": "85edb325b96707327497fecd7468f7a18f30d71132bd397461ef19325e17a919",
+      "block_height": 7342742
     },
     "bvst.runtime.patch-runtime.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 230,
+      "txid": "ab8da4a65168020de42afe7f44de7ece76d06c9095964fe4e99e6d89432c0778",
+      "block_height": 7342960
     },
     "bvst.runtime.plugin-core.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 229,
+      "txid": "dfce80bfa4fe30b8ff6f12a0bca5bef5d8882f0d280ae461db4e61bb5d4c074d",
+      "block_height": 7342958
     },
     "bvst.runtime.sampler.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 223,
+      "txid": "723c127fd3f13847d18f02ea55ea860e4688dac190c0d2ae7619d1ae2fdce432",
+      "block_height": 7342943
     },
     "bvst.runtime.sequencer-core.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 224,
+      "txid": "d155718fa53320386ba9491f23e6606f1dc802ee1014d2205c1bcb9f8eb758cc",
+      "block_height": 7342945
     },
     "bvst.runtime.standalone-bridge.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 228,
+      "txid": "5646a73913beca76ccfc5fffae034e814ae5d38896f7c923cbb7ab1069f365f2",
+      "block_height": 7342953
     },
     "bvst.runtime.ui-styles.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 216,
+      "txid": "196407f1d42773eeae073b33e5647aee5b4f47a8a8eb1cf23e629e4d7ba0c28d",
+      "block_height": 7342730
     },
     "bvst.runtime.visualizer.v1.0.0": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 222,
+      "txid": "8d1b65eccbbf6d5494ec5f44b3d53637ce793f4b57102a0df7b988f5f46605c8",
+      "block_height": 7342747
     },
     "bvst.schema.patch.v1": {
-      "token_id": null,
-      "txid": null,
-      "block_height": null
+      "token_id": 214,
+      "txid": "f670da0149264037d73bccf882de9e1f5853b67c0c4756c028b3e5a976e37696",
+      "block_height": 7342724
     }
   },
-  "initialized_at": "2026-03-21T17:36:22.185Z",
-  "source_template": "configs/token-map.template.json"
+  "initialized_at": null,
+  "source_template": "configs/token-map.template.json",
+  "updated_at": "2026-03-26T01:48:35.364Z"
 }

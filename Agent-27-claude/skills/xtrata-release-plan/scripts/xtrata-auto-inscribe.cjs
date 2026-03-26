@@ -5,6 +5,15 @@ try {
 } catch {
   // dotenv is optional; use process env directly when unavailable.
 }
+// Also load .env from bundle root if passed as first arg (before full arg parse)
+try {
+  const bundleRootArg = process.argv[2];
+  if (bundleRootArg && !bundleRootArg.startsWith('--')) {
+    require('dotenv').config({ path: require('path').join(bundleRootArg, '.env'), override: false });
+  }
+} catch {
+  // ignore
+}
 
 const fs = require('fs');
 const os = require('os');
@@ -297,17 +306,27 @@ function maybeFailAtStage(context, stage, payload = {}) {
   throw new Error(`Intentional test failure at ${stage}.`);
 }
 
+function makeHiroFetchFn() {
+  const apiKey = process.env.HIRO_API_KEY;
+  if (!apiKey) return undefined;
+  return (url, init = {}) => {
+    const headers = { ...(init.headers || {}), 'x-api-key': apiKey };
+    return fetch(url, { ...init, headers });
+  };
+}
+
 function resolveNetwork(networkName) {
+  const fetchFn = makeHiroFetchFn();
   if (networkName === 'mainnet') {
     return {
       txVersion: TransactionVersion.Mainnet,
-      network: new StacksMainnet()
+      network: fetchFn ? new StacksMainnet({ fetchFn }) : new StacksMainnet()
     };
   }
   if (networkName === 'testnet') {
     return {
       txVersion: TransactionVersion.Testnet,
-      network: new StacksTestnet()
+      network: fetchFn ? new StacksTestnet({ fetchFn }) : new StacksTestnet()
     };
   }
   throw new Error(`Unsupported network in bundle config: ${networkName}`);
@@ -771,7 +790,24 @@ async function pollTx(context, txid) {
 }
 
 async function broadcastAndConfirm(context, tx, name) {
-  const result = await broadcastTransaction(tx, context.network);
+  const BROADCAST_MAX_RETRIES = 5;
+  let result;
+  for (let attempt = 1; attempt <= BROADCAST_MAX_RETRIES; attempt++) {
+    try {
+      result = await broadcastTransaction(tx, context.network);
+      break;
+    } catch (err) {
+      const msg = err?.message || String(err);
+      const isRateLimit = msg.includes('Per-minute') || msg.includes('rate limit') || msg.includes('429') || msg.includes('is not valid JSON');
+      if (isRateLimit && attempt < BROADCAST_MAX_RETRIES) {
+        const delayMs = 65_000; // wait for rate limit window to reset
+        log(`[rate-limit] Broadcast attempt ${attempt} hit rate limit for ${name}, retrying in ${delayMs / 1000}s...`);
+        await sleep(delayMs);
+        continue;
+      }
+      throw err;
+    }
+  }
   if (result?.error) {
     throw new Error(`${name} broadcast failed: ${result.error} — ${result.reason || 'unknown reason'}`);
   }
@@ -931,8 +967,25 @@ async function verifyMintedArtifact(context, tokenId, expected) {
   };
 }
 
+function loadPreviousRunEntries(runLogPath) {
+  // Carry over minted entries from any prior run so the log is always complete.
+  try {
+    if (!fs.existsSync(runLogPath)) return [];
+    const prev = JSON.parse(fs.readFileSync(runLogPath, 'utf8'));
+    const minted = (prev.entries || []).filter((e) => e.status === 'minted');
+    if (minted.length > 0) {
+      log(`[resume] Carrying over ${minted.length} previously-minted entries from prior run log.`);
+    }
+    return minted;
+  } catch {
+    return [];
+  }
+}
+
 function createRunState(args, context) {
   const now = new Date().toISOString();
+  const priorMinted = loadPreviousRunEntries(args.runLogPath);
+  const carryoverCount = priorMinted.length;
   return {
     version: 1,
     bundle_root: args.bundleRoot,
@@ -960,13 +1013,14 @@ function createRunState(args, context) {
       chain_observations_logged: 0
     },
     summary: {
-      attempted: 0,
-      minted: 0,
+      attempted: carryoverCount,
+      minted: carryoverCount,
       failed: 0,
       skipped: 0,
-      remaining: null
+      remaining: null,
+      carryover: carryoverCount > 0 ? carryoverCount : undefined
     },
-    entries: [],
+    entries: priorMinted,
     errors: []
   };
 }
@@ -1238,6 +1292,47 @@ async function main() {
 
   await initializeRuntimeState(args.executionBundleRoot);
   emitTraceEvent(context, 'runtime-init', 'Initialized runtime inscription state');
+
+  // --- Resume safety check ---
+  // Verify token-map and inscription-log agree on what is already minted.
+  // Mismatches indicate a corrupted or out-of-sync state and must be resolved before proceeding.
+  const tokenMapPath = path.join(args.executionBundleRoot, 'configs', 'token-map.runtime.json');
+  const inscriptionLogPath = path.join(args.executionBundleRoot, 'verification', 'inscription-log.json');
+  try {
+    if (fs.existsSync(tokenMapPath) && fs.existsSync(inscriptionLogPath)) {
+      const tokenMap = JSON.parse(fs.readFileSync(tokenMapPath, 'utf8'));
+      const inscriptionLog = JSON.parse(fs.readFileSync(inscriptionLogPath, 'utf8'));
+      const tmEntries = tokenMap.entries || {};
+      const logEntries = (inscriptionLog.entries || []);
+      const mismatches = [];
+      for (const logEntry of logEntries) {
+        const tmEntry = tmEntries[logEntry.name];
+        if (!tmEntry || Number(tmEntry.token_id) !== Number(logEntry.token_id)) {
+          mismatches.push(`${logEntry.name}: log=${logEntry.token_id}, tokenMap=${tmEntry?.token_id ?? 'missing'}`);
+        }
+      }
+      if (mismatches.length > 0) {
+        emitTraceEvent(context, 'resume-mismatch', 'Token-map / inscription-log mismatch detected', { mismatches });
+        throw new Error(
+          `Resume safety check failed — token-map and inscription-log disagree on ${mismatches.length} module(s):\n` +
+          mismatches.map((m) => `  ${m}`).join('\n') +
+          '\nResolve manually or reset inscription state before re-running.'
+        );
+      }
+      const mintedCount = logEntries.length;
+      if (mintedCount > 0) {
+        log(`[resume] ${mintedCount} module(s) already inscribed per inscription-log — will skip these.`);
+        emitTraceEvent(context, 'resume-check-passed', `${mintedCount} previously-minted modules detected`, {
+          minted_names: logEntries.map((e) => `${e.name} -> token ${e.token_id}`)
+        });
+      }
+    }
+  } catch (err) {
+    if (err.message.includes('Resume safety check failed')) throw err;
+    log(`[resume] State consistency check skipped: ${err.message}`);
+  }
+  // --- End resume safety check ---
+
   let status = await rebuildStatus(args.executionBundleRoot, args.statusOutPath);
   emitTraceEvent(context, 'status-rebuilt', 'Rebuilt inscription status', {
     summary: status.summary,

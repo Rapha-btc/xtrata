@@ -1,0 +1,83 @@
+{
+  "name": "bvst.plugin.minertwo.release.v1.0.0",
+  "type": "plugin-release-catalog",
+  "plugin_name": "MinerTwo",
+  "plugin_family": "standalone-synths",
+  "category": "Instruments",
+  "runtime_major": 1,
+  "engine_major": 1,
+  "schema_major": 1,
+  "dependencies": {
+    "foundation_catalog": "bvst.catalog.foundation.v1",
+    "foundation_catalog_token_id": 234,
+    "foundation_catalog_txid": "8c0837ec700f270f3c4f6b0feccb28618972dc7492bb45da076563f7178e97b1",
+    "foundation_catalog_block_height": 7342972,
+    "runtime_major_catalog": "bvst.catalog.runtime.v1",
+    "runtime_major_catalog_token_id": 231,
+    "runtime_major_catalog_txid": "904911fbfa58b4f947081cb2a490a8705bb9638180d6cb40ba28b8dd4f295647",
+    "runtime_major_catalog_block_height": 7342963,
+    "engine_major_catalog": "bvst.catalog.engine.v1",
+    "engine_major_catalog_token_id": 232,
+    "engine_major_catalog_txid": "bc4e5e9a4e1702a49b5aced53ece8ad9081541b9061a3443a89bc426c5817610",
+    "engine_major_catalog_block_height": 7342968,
+    "schema_major_catalog": "bvst.catalog.schema.v1",
+    "schema_major_catalog_token_id": 233,
+    "schema_major_catalog_txid": "4170af1d2ae3a0c5c3c45fb28d3c68c27b8574b656bfd02195a0a3e31ba3b028",
+    "schema_major_catalog_block_height": 7342970,
+    "manifest": {
+      "name": "bvst.plugin.minertwo.manifest.v1.0.0",
+      "token_id": 251,
+      "txid": "0296349c0ae90dc592ed2ed0f73bb1c6d07b4505df879689e6146a41780c2cd3",
+      "block_height": 7344008,
+      "path": "workspace/Plugins/Instruments/MinerTwo/manifest.json",
+      "mime_type": "application/json",
+      "sha256": "b19c55756c543cb7a117c60e4fc740600135f7ed94504bc55630b93f4378e37c",
+      "bytes": 339,
+      "chunks": 1,
+      "route": "helper"
+    },
+    "patch": {
+      "name": "bvst.plugin.minertwo.patch.v1.0.0",
+      "token_id": 252,
+      "txid": "b5006b11a36e479dc909dfba95e0621374cda35d42f26b6aa10b226762176ab0",
+      "block_height": 7344011,
+      "path": "workspace/Plugins/Instruments/MinerTwo/patch.json",
+      "mime_type": "application/json",
+      "sha256": "b2260cd0586b4f5369f59b047b75aeccdc10573339deb54b07155bb1be200090",
+      "bytes": 7057,
+      "chunks": 1,
+      "route": "helper"
+    },
+    "shell": {
+      "name": "bvst.plugin.minertwo.shell.v1.0.0",
+      "token_id": 253,
+      "txid": "0cb0dd7e2e12554aa7c7985a8e8771da60e9e6eb81bd064f8a37453be146f86f",
+      "block_height": 7344015,
+      "path": "workspace/Plugins/Instruments/MinerTwo/gui.html",
+      "mime_type": "text/html",
+      "sha256": "49786f9e19c8b379a71a4f7cfe90445945189a1874c51330abe7063fa43b016a",
+      "bytes": 829,
+      "chunks": 1,
+      "route": "helper"
+    }
+  },
+  "dependency_token_ids": [
+    251,
+    252,
+    253,
+    231,
+    232,
+    233
+  ],
+  "resolved_dependency_names": [
+    "bvst.catalog.foundation.v1",
+    "bvst.catalog.runtime.v1",
+    "bvst.catalog.engine.v1",
+    "bvst.catalog.schema.v1",
+    "bvst.plugin.minertwo.manifest.v1.0.0",
+    "bvst.plugin.minertwo.patch.v1.0.0",
+    "bvst.plugin.minertwo.shell.v1.0.0"
+  ],
+  "resolved_at": "2026-03-26T01:44:20.513Z",
+  "resolved_from": "configs/token-map.runtime.json"
+}

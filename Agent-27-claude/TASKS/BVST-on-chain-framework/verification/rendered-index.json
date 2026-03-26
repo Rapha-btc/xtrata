@@ -1,21 +1,21 @@
 {
-  "generated_at": "2026-03-22T13:41:47.107Z",
+  "generated_at": "2026-03-26T01:48:35.370Z",
   "token_map": "configs/token-map.runtime.json",
   "render_root": "rendered",
   "catalog_count": 15,
-  "ready_count": 0,
-  "pending_count": 15,
+  "ready_count": 15,
+  "pending_count": 0,
   "route_mismatch_count": 0,
   "unresolved_count": 0,
-  "inscribed_count": 0,
+  "inscribed_count": 7,
   "catalogs": [
     {
       "name": "bvst.catalog.runtime.v1",
       "batch_file": "10-foundation.batch.json",
       "order": 180,
-      "status": "pending",
+      "status": "ready",
       "template_path": "on-chain-modules/catalogs/majors/runtime-v1.catalog.json",
-      "template_sha256": "427bc895ab9f9e29ae3cdb31af5ad4a7c866c489e4f71b2efd3a82f674788285",
+      "template_sha256": "5b03d5acd4606b62ea0002a1a7b1b10ff066f0f743d57dbcb7bbee82b1b4dc3f",
       "direct_dependency_names": [
         "bvst.runtime.bvst-css.v1.0.0",
         "bvst.runtime.ui-styles.v1.0.0",
@@ -32,19 +32,19 @@
         "bvst.runtime.patch-runtime.v1.0.0"
       ],
       "direct_dependency_token_ids": [
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
+        215,
+        216,
+        217,
+        218,
+        219,
+        220,
+        221,
+        222,
+        223,
+        224,
+        228,
+        229,
+        230
       ],
       "resolved_dependency_names": [
         "bvst.runtime.bvst-css.v1.0.0",
@@ -61,35 +61,25 @@
         "bvst.runtime.plugin-core.v1.0.0",
         "bvst.runtime.patch-runtime.v1.0.0"
       ],
-      "missing_dependencies": [
-        "bvst.runtime.bvst-css.v1.0.0",
-        "bvst.runtime.ui-styles.v1.0.0",
-        "bvst.runtime.audional-decoder.v1.0.0",
-        "bvst.runtime.controls.v1.0.0",
-        "bvst.runtime.keyboard.v1.0.0",
-        "bvst.runtime.midi.v1.0.0",
-        "bvst.runtime.midi-parser.v1.0.0",
-        "bvst.runtime.visualizer.v1.0.0",
-        "bvst.runtime.sampler.v1.0.0",
-        "bvst.runtime.sequencer-core.v1.0.0",
-        "bvst.runtime.standalone-bridge.v1.0.0",
-        "bvst.runtime.plugin-core.v1.0.0",
-        "bvst.runtime.patch-runtime.v1.0.0"
-      ],
-      "resolution_signature": "1113d78d2aec5c1fe9872b6ded3393e92230550f486bfa79ed92ddd17138143b",
-      "resolved_at": null,
-      "rendered_path": null,
-      "rendered_sha256": null,
-      "rendered_bytes": null,
-      "rendered_chunks": null,
-      "rendered_route": null,
+      "missing_dependencies": [],
+      "resolution_signature": "af1552882c08f5abf9b5d9169c2c387d8b132833ea502467573a14c84053b96c",
+      "resolved_at": "2026-03-26T01:24:24.413Z",
+      "resolved_from": "configs/token-map.runtime.json",
+      "rendered_path": "on-chain-modules/rendered/catalogs/majors/runtime-v1.catalog.json",
+      "rendered_sha256": "8ab79636e7946c3a9d2706496586d26a287c38c2ba6ed1b569cfb82a8fb44623",
+      "rendered_bytes": 6912,
+      "rendered_chunks": 1,
+      "rendered_route": "helper",
+      "route_expected": "helper",
+      "route_matches_expected": true,
+      "unresolved_paths": [],
       "inscribed": null
     },
     {
       "name": "bvst.catalog.engine.v1",
       "batch_file": "10-foundation.batch.json",
       "order": 190,
-      "status": "pending",
+      "status": "ready",
       "template_path": "on-chain-modules/catalogs/majors/engine-v1.catalog.json",
       "template_sha256": "32922b2ac26ae69ee08ebdd3f13aca3dab4a31c167857f67802025d14f791438",
       "direct_dependency_names": [
@@ -98,73 +88,75 @@
         "bvst.engine.unified-worklet.v1.0.0"
       ],
       "direct_dependency_token_ids": [
-        null,
-        null,
-        null
+        225,
+        226,
+        227
       ],
       "resolved_dependency_names": [
         "bvst.engine.unified-wasm.v1.0.0",
         "bvst.engine.unified-loader.v1.0.0",
         "bvst.engine.unified-worklet.v1.0.0"
       ],
-      "missing_dependencies": [
-        "bvst.engine.unified-wasm.v1.0.0",
-        "bvst.engine.unified-loader.v1.0.0",
-        "bvst.engine.unified-worklet.v1.0.0"
-      ],
-      "resolution_signature": "8e2e0cba20994a0da1b2b9103249cbf14edfed0b42129f09a49d21adad7430d6",
-      "resolved_at": null,
-      "rendered_path": null,
-      "rendered_sha256": null,
-      "rendered_bytes": null,
-      "rendered_chunks": null,
-      "rendered_route": null,
+      "missing_dependencies": [],
+      "resolution_signature": "326cef4247656819d008e02d4f1a5a6a7450ef3bfc444852e9f3dd9a3230a267",
+      "resolved_at": "2026-03-26T01:24:24.413Z",
+      "resolved_from": "configs/token-map.runtime.json",
+      "rendered_path": "on-chain-modules/rendered/catalogs/majors/engine-v1.catalog.json",
+      "rendered_sha256": "f1c37ec3f56cf903ef01c9c9730461c6179aadb88760b76d574acc84a4da9568",
+      "rendered_bytes": 1852,
+      "rendered_chunks": 1,
+      "rendered_route": "helper",
+      "route_expected": "helper",
+      "route_matches_expected": true,
+      "unresolved_paths": [],
       "inscribed": null
     },
     {
       "name": "bvst.catalog.schema.v1",
       "batch_file": "10-foundation.batch.json",
       "order": 200,
-      "status": "pending",
+      "status": "ready",
       "template_path": "on-chain-modules/catalogs/majors/schema-v1.catalog.json",
       "template_sha256": "c3ad8205f79cb6a2e54be0149c87f8687f1b62848471e55cd3fb20078d689263",
       "direct_dependency_names": [
         "bvst.schema.patch.v1"
       ],
       "direct_dependency_token_ids": [
-        null
+        214
       ],
       "resolved_dependency_names": [
         "bvst.schema.patch.v1"
       ],
-      "missing_dependencies": [
-        "bvst.schema.patch.v1"
-      ],
-      "resolution_signature": "a2ed20cc5a9fb0548daa76d19f27660447349c59ef242effe6c866d185342e44",
-      "resolved_at": null,
-      "rendered_path": null,
-      "rendered_sha256": null,
-      "rendered_bytes": null,
-      "rendered_chunks": null,
-      "rendered_route": null,
+      "missing_dependencies": [],
+      "resolution_signature": "f5abf0832a75bc3a64cbe12deffa4b516585213da42a715d3fbef5e772af3b6b",
+      "resolved_at": "2026-03-26T01:24:24.413Z",
+      "resolved_from": "configs/token-map.runtime.json",
+      "rendered_path": "on-chain-modules/rendered/catalogs/majors/schema-v1.catalog.json",
+      "rendered_sha256": "a63800b188dfc0d9bd3d9ea53052e63f51cf8b52940493b45f5d41cdc56adcfb",
+      "rendered_bytes": 783,
+      "rendered_chunks": 1,
+      "rendered_route": "helper",
+      "route_expected": "helper",
+      "route_matches_expected": true,
+      "unresolved_paths": [],
       "inscribed": null
     },
     {
       "name": "bvst.catalog.foundation.v1",
       "batch_file": "10-foundation.batch.json",
       "order": 210,
-      "status": "pending",
+      "status": "ready",
       "template_path": "on-chain-modules/catalogs/releases/foundation-v1.catalog.json",
-      "template_sha256": "5e646213648c7d533efa17c09896f72279d35e910d3225423eea60215460f60a",
+      "template_sha256": "d86b54e2f8735d19ab73ee37ad7f9c057784625f0970d04ffb961876f204bf65",
       "direct_dependency_names": [
         "bvst.catalog.runtime.v1",
         "bvst.catalog.engine.v1",
         "bvst.catalog.schema.v1"
       ],
       "direct_dependency_token_ids": [
-        null,
-        null,
-        null
+        231,
+        232,
+        233
       ],
       "resolved_dependency_names": [
         "bvst.catalog.runtime.v1",
@@ -188,44 +180,27 @@
         "bvst.engine.unified-worklet.v1.0.0",
         "bvst.schema.patch.v1"
       ],
-      "missing_dependencies": [
-        "bvst.catalog.runtime.v1",
-        "bvst.catalog.engine.v1",
-        "bvst.catalog.schema.v1",
-        "bvst.runtime.bvst-css.v1.0.0",
-        "bvst.runtime.ui-styles.v1.0.0",
-        "bvst.runtime.audional-decoder.v1.0.0",
-        "bvst.runtime.controls.v1.0.0",
-        "bvst.runtime.keyboard.v1.0.0",
-        "bvst.runtime.midi.v1.0.0",
-        "bvst.runtime.midi-parser.v1.0.0",
-        "bvst.runtime.visualizer.v1.0.0",
-        "bvst.runtime.sampler.v1.0.0",
-        "bvst.runtime.sequencer-core.v1.0.0",
-        "bvst.runtime.standalone-bridge.v1.0.0",
-        "bvst.runtime.plugin-core.v1.0.0",
-        "bvst.runtime.patch-runtime.v1.0.0",
-        "bvst.engine.unified-wasm.v1.0.0",
-        "bvst.engine.unified-loader.v1.0.0",
-        "bvst.engine.unified-worklet.v1.0.0",
-        "bvst.schema.patch.v1"
-      ],
-      "resolution_signature": "47f1a4289e19efc11f9fc2114b97f3bfd38ceac4e47419556af21abce0515158",
-      "resolved_at": null,
-      "rendered_path": null,
-      "rendered_sha256": null,
-      "rendered_bytes": null,
-      "rendered_chunks": null,
-      "rendered_route": null,
+      "missing_dependencies": [],
+      "resolution_signature": "be38115263821d6174cb53780f6c8d5a3a94bafe972e3d76e4cd58f211cf5887",
+      "resolved_at": "2026-03-26T01:24:24.413Z",
+      "resolved_from": "configs/token-map.runtime.json",
+      "rendered_path": "on-chain-modules/rendered/catalogs/releases/foundation-v1.catalog.json",
+      "rendered_sha256": "cfc3fd7b4b5bd387e2d7e462b97257d76c9df9cd6f80a64e76bbc68f71e412bf",
+      "rendered_bytes": 10104,
+      "rendered_chunks": 1,
+      "rendered_route": "helper",
+      "route_expected": "helper",
+      "route_matches_expected": true,
+      "unresolved_paths": [],
       "inscribed": null
     },
     {
       "name": "bvst.plugin.jms10.release.v1.0.0",
       "batch_file": "20-bvstsynth-family.batch.json",
       "order": 100,
-      "status": "pending",
+      "status": "ready",
       "template_path": "on-chain-modules/catalogs/plugins/bvstsynth-family/jms10.release.catalog.json",
-      "template_sha256": "6051af3cd8d79c46e4a62fff8be80e9dbd63d7ccf91c60dafcabdd47b7a5e72f",
+      "template_sha256": "e79dd436addd4d5e6f17c633a03a2cac261df34902fa0abe8064b6e015e4975f",
       "direct_dependency_names": [
         "bvst.plugin.jms10.manifest.v1.0.0",
         "bvst.plugin.jms10.patch.v1.0.0",
@@ -235,12 +210,12 @@
         "bvst.catalog.schema.v1"
       ],
       "direct_dependency_token_ids": [
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
+        235,
+        236,
+        237,
+        231,
+        232,
+        233
       ],
       "resolved_dependency_names": [
         "bvst.catalog.foundation.v1",
@@ -251,31 +226,27 @@
         "bvst.plugin.jms10.patch.v1.0.0",
         "bvst.plugin.jms10.shell.v1.0.0"
       ],
-      "missing_dependencies": [
-        "bvst.catalog.foundation.v1",
-        "bvst.catalog.runtime.v1",
-        "bvst.catalog.engine.v1",
-        "bvst.catalog.schema.v1",
-        "bvst.plugin.jms10.manifest.v1.0.0",
-        "bvst.plugin.jms10.patch.v1.0.0",
-        "bvst.plugin.jms10.shell.v1.0.0"
-      ],
-      "resolution_signature": "3a7af0fb0a0bdd35b42888f766ccd453bdc2110705587a22cece7d487321daa3",
-      "resolved_at": null,
-      "rendered_path": null,
-      "rendered_sha256": null,
-      "rendered_bytes": null,
-      "rendered_chunks": null,
-      "rendered_route": null,
+      "missing_dependencies": [],
+      "resolution_signature": "8d3fc2461786b8f5fe46e91fa72eba2dfa3d195628508857dba7f3ab36ff4b7f",
+      "resolved_at": "2026-03-26T01:24:24.413Z",
+      "resolved_from": "configs/token-map.runtime.json",
+      "rendered_path": "on-chain-modules/rendered/catalogs/plugins/bvstsynth-family/jms10.release.catalog.json",
+      "rendered_sha256": "d3361a15f5df5e54257cdf25a4936d4f5dcfe1e2ba17567246f6a1c3f2ba99e1",
+      "rendered_bytes": 3139,
+      "rendered_chunks": 1,
+      "rendered_route": "helper",
+      "route_expected": "helper",
+      "route_matches_expected": true,
+      "unresolved_paths": [],
       "inscribed": null
     },
     {
       "name": "bvst.plugin.bvstengine.release.v1.0.0",
       "batch_file": "20-bvstsynth-family.batch.json",
       "order": 110,
-      "status": "pending",
+      "status": "ready",
       "template_path": "on-chain-modules/catalogs/plugins/bvstsynth-family/bvstengine.release.catalog.json",
-      "template_sha256": "c0043dd656b5495592a14f8f7447c6941102685e7d66fa3b89c8fdf580d091f2",
+      "template_sha256": "3b1839e1ab931de96ed964875ce7dfa03dda24962955acb9d91017d7ffd0a15c",
       "direct_dependency_names": [
         "bvst.plugin.bvstengine.manifest.v1.0.0",
         "bvst.plugin.bvstengine.patch.v1.0.0",
@@ -285,12 +256,12 @@
         "bvst.catalog.schema.v1"
       ],
       "direct_dependency_token_ids": [
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
+        238,
+        239,
+        240,
+        231,
+        232,
+        233
       ],
       "resolved_dependency_names": [
         "bvst.catalog.foundation.v1",
@@ -301,31 +272,27 @@
         "bvst.plugin.bvstengine.patch.v1.0.0",
         "bvst.plugin.bvstengine.shell.v1.0.0"
       ],
-      "missing_dependencies": [
-        "bvst.catalog.foundation.v1",
-        "bvst.catalog.runtime.v1",
-        "bvst.catalog.engine.v1",
-        "bvst.catalog.schema.v1",
-        "bvst.plugin.bvstengine.manifest.v1.0.0",
-        "bvst.plugin.bvstengine.patch.v1.0.0",
-        "bvst.plugin.bvstengine.shell.v1.0.0"
-      ],
-      "resolution_signature": "cde87285f873fa58bd444d483bf8df538d6578e87300c399b63d3ff23e303e04",
-      "resolved_at": null,
-      "rendered_path": null,
-      "rendered_sha256": null,
-      "rendered_bytes": null,
-      "rendered_chunks": null,
-      "rendered_route": null,
+      "missing_dependencies": [],
+      "resolution_signature": "f6a5089eabe11650009238b216277ceb51dbb1e8007be94672603e8dec94a45c",
+      "resolved_at": "2026-03-26T01:24:24.413Z",
+      "resolved_from": "configs/token-map.runtime.json",
+      "rendered_path": "on-chain-modules/rendered/catalogs/plugins/bvstsynth-family/bvstengine.release.catalog.json",
+      "rendered_sha256": "4f722147f44ecd5f83122fb764e7802b426f0eb1cf67b5bcdb6de84aeec26509",
+      "rendered_bytes": 3194,
+      "rendered_chunks": 1,
+      "rendered_route": "helper",
+      "route_expected": "helper",
+      "route_matches_expected": true,
+      "unresolved_paths": [],
       "inscribed": null
     },
     {
       "name": "bvst.plugin.bvstsynth.release.v1.0.13",
       "batch_file": "20-bvstsynth-family.batch.json",
       "order": 120,
-      "status": "pending",
+      "status": "ready",
       "template_path": "on-chain-modules/catalogs/plugins/bvstsynth-family/bvstsynth.release.catalog.json",
-      "template_sha256": "fcb24c743503724582428092fbaa4e99c3da7882f00ef8e97d8206ec931e96e5",
+      "template_sha256": "94612523c484cb4b962923099633262f54257774b75b799f1fca3df2ba75d9b3",
       "direct_dependency_names": [
         "bvst.plugin.bvstsynth.manifest.v1.0.13",
         "bvst.plugin.bvstsynth.patch.v1.0.13",
@@ -335,12 +302,12 @@
         "bvst.catalog.schema.v1"
       ],
       "direct_dependency_token_ids": [
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
+        241,
+        242,
+        243,
+        231,
+        232,
+        233
       ],
       "resolved_dependency_names": [
         "bvst.catalog.foundation.v1",
@@ -351,67 +318,63 @@
         "bvst.plugin.bvstsynth.patch.v1.0.13",
         "bvst.plugin.bvstsynth.shell.v1.0.13"
       ],
-      "missing_dependencies": [
-        "bvst.catalog.foundation.v1",
-        "bvst.catalog.runtime.v1",
-        "bvst.catalog.engine.v1",
-        "bvst.catalog.schema.v1",
-        "bvst.plugin.bvstsynth.manifest.v1.0.13",
-        "bvst.plugin.bvstsynth.patch.v1.0.13",
-        "bvst.plugin.bvstsynth.shell.v1.0.13"
-      ],
-      "resolution_signature": "039b415c12fb3b91801028e7a737cedcfaa90064178b3be18c3dbe49ffe5f3cb",
-      "resolved_at": null,
-      "rendered_path": null,
-      "rendered_sha256": null,
-      "rendered_bytes": null,
-      "rendered_chunks": null,
-      "rendered_route": null,
+      "missing_dependencies": [],
+      "resolution_signature": "6d406e9f4c4a2e2820b81d9207762ca5139f9c044a037c29185f003f11e4e123",
+      "resolved_at": "2026-03-26T01:24:24.413Z",
+      "resolved_from": "configs/token-map.runtime.json",
+      "rendered_path": "on-chain-modules/rendered/catalogs/plugins/bvstsynth-family/bvstsynth.release.catalog.json",
+      "rendered_sha256": "8ddc50d6adb3ed5f2372db2a1107b3b218db03dc4a978b03a6b249abe2782046",
+      "rendered_bytes": 3192,
+      "rendered_chunks": 1,
+      "rendered_route": "helper",
+      "route_expected": "helper",
+      "route_matches_expected": true,
+      "unresolved_paths": [],
       "inscribed": null
     },
     {
       "name": "bvst.catalog.family.bvstsynthfamily.v1",
       "batch_file": "20-bvstsynth-family.batch.json",
       "order": 130,
-      "status": "pending",
+      "status": "ready",
       "template_path": "on-chain-modules/catalogs/families/bvstsynth-family.catalog.json",
-      "template_sha256": "53db3fc0dcbfefcbed06f10251ff935bb43b1f37d223708389b7ca1a7dd67fc8",
+      "template_sha256": "bdad33041d7ccd5c65709a1df5883a161c061faff304419dd72479d80d649df5",
       "direct_dependency_names": [
         "bvst.plugin.bvstsynth.release.v1.0.13",
         "bvst.plugin.bvstengine.release.v1.0.0",
         "bvst.plugin.jms10.release.v1.0.0"
       ],
       "direct_dependency_token_ids": [
-        null,
-        null,
-        null
+        246,
+        245,
+        244
       ],
       "resolved_dependency_names": [
         "bvst.plugin.bvstsynth.release.v1.0.13",
         "bvst.plugin.bvstengine.release.v1.0.0",
         "bvst.plugin.jms10.release.v1.0.0"
       ],
-      "missing_dependencies": [
-        "bvst.plugin.bvstsynth.release.v1.0.13",
-        "bvst.plugin.bvstengine.release.v1.0.0",
-        "bvst.plugin.jms10.release.v1.0.0"
-      ],
-      "resolution_signature": "7c0c1898c481481b5eca1c9c419faae420ad85eb7d9b47ef5cc25ffe602ecf47",
-      "resolved_at": null,
-      "rendered_path": null,
-      "rendered_sha256": null,
-      "rendered_bytes": null,
-      "rendered_chunks": null,
-      "rendered_route": null,
+      "missing_dependencies": [],
+      "resolution_signature": "a8876482f78d90311466c53f81fffc2f0d433237bcc904d9d9d22d57172f5bec",
+      "resolved_at": "2026-03-26T01:24:24.413Z",
+      "resolved_from": "configs/token-map.runtime.json",
+      "rendered_path": "on-chain-modules/rendered/catalogs/families/bvstsynth-family.catalog.json",
+      "rendered_sha256": "cf6b00f66702cf0a3f8a896ff25195e97b92b6ff053d692dd68cbdb5ba5a2c7c",
+      "rendered_bytes": 854,
+      "rendered_chunks": 1,
+      "rendered_route": "helper",
+      "route_expected": "helper",
+      "route_matches_expected": true,
+      "unresolved_paths": [],
       "inscribed": null
     },
     {
       "name": "bvst.plugin.minerone.release.v1.0.0",
       "batch_file": "30-standalone-synths.batch.json",
       "order": 130,
-      "status": "pending",
+      "status": "ready",
       "template_path": "on-chain-modules/catalogs/plugins/standalone-synths/minerone.release.catalog.json",
-      "template_sha256": "594b052dff3099f175da2cb5476b8c91d09854b21c73a053e5a67a708d95bffc",
+      "template_sha256": "df17a3e41febbed59d66605b61c24a3e2ad93c4f3b85d94ca12df311d8fadb88",
       "direct_dependency_names": [
         "bvst.plugin.minerone.manifest.v1.0.0",
         "bvst.plugin.minerone.patch.v1.0.0",
@@ -421,12 +384,12 @@
         "bvst.catalog.schema.v1"
       ],
       "direct_dependency_token_ids": [
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
+        248,
+        249,
+        250,
+        231,
+        232,
+        233
       ],
       "resolved_dependency_names": [
         "bvst.catalog.foundation.v1",
@@ -437,31 +400,32 @@
         "bvst.plugin.minerone.patch.v1.0.0",
         "bvst.plugin.minerone.shell.v1.0.0"
       ],
-      "missing_dependencies": [
-        "bvst.catalog.foundation.v1",
-        "bvst.catalog.runtime.v1",
-        "bvst.catalog.engine.v1",
-        "bvst.catalog.schema.v1",
-        "bvst.plugin.minerone.manifest.v1.0.0",
-        "bvst.plugin.minerone.patch.v1.0.0",
-        "bvst.plugin.minerone.shell.v1.0.0"
-      ],
-      "resolution_signature": "81ac6e14ea5c3a8af2fa3b74c81c7e79241e7895e5d0a9b71713b3a7369bd77a",
-      "resolved_at": null,
-      "rendered_path": null,
-      "rendered_sha256": null,
-      "rendered_bytes": null,
-      "rendered_chunks": null,
-      "rendered_route": null,
-      "inscribed": null
+      "missing_dependencies": [],
+      "resolution_signature": "b7fa1fe18008d7170a29b1b89912eecf3c9ea366180034e7f459e0354bcc71fb",
+      "resolved_at": "2026-03-26T01:24:24.413Z",
+      "resolved_from": "configs/token-map.runtime.json",
+      "rendered_path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/minerone.release.catalog.json",
+      "rendered_sha256": "254a6769655b7d4aacaba9dec9818e7a82d6e74545a00e06cdb8b7e7c743ed6e",
+      "rendered_bytes": 3173,
+      "rendered_chunks": 1,
+      "rendered_route": "helper",
+      "route_expected": "helper",
+      "route_matches_expected": true,
+      "unresolved_paths": [],
+      "inscribed": {
+        "token_id": 260,
+        "txid": "b72650f1af1fa4e450237de7b92fe99a5722e6e230cb7e12687b76db6d4f55ed",
+        "block_height": 7344041,
+        "recorded_at": "2026-03-26T01:46:24.042Z"
+      }
     },
     {
       "name": "bvst.plugin.minertwo.release.v1.0.0",
       "batch_file": "30-standalone-synths.batch.json",
       "order": 140,
-      "status": "pending",
+      "status": "ready",
       "template_path": "on-chain-modules/catalogs/plugins/standalone-synths/minertwo.release.catalog.json",
-      "template_sha256": "a92296284c1d803d2584aaa4e77780598b5600b79f784edae0f99b643d990a38",
+      "template_sha256": "eba34e8d082f09fde69f69e8fc0a9a98401256d06ced8ce3380e20cdeb0cad88",
       "direct_dependency_names": [
         "bvst.plugin.minertwo.manifest.v1.0.0",
         "bvst.plugin.minertwo.patch.v1.0.0",
@@ -471,12 +435,12 @@
         "bvst.catalog.schema.v1"
       ],
       "direct_dependency_token_ids": [
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
+        251,
+        252,
+        253,
+        231,
+        232,
+        233
       ],
       "resolved_dependency_names": [
         "bvst.catalog.foundation.v1",
@@ -487,31 +451,32 @@
         "bvst.plugin.minertwo.patch.v1.0.0",
         "bvst.plugin.minertwo.shell.v1.0.0"
       ],
-      "missing_dependencies": [
-        "bvst.catalog.foundation.v1",
-        "bvst.catalog.runtime.v1",
-        "bvst.catalog.engine.v1",
-        "bvst.catalog.schema.v1",
-        "bvst.plugin.minertwo.manifest.v1.0.0",
-        "bvst.plugin.minertwo.patch.v1.0.0",
-        "bvst.plugin.minertwo.shell.v1.0.0"
-      ],
-      "resolution_signature": "e95a2821396e7c21608c073ccf5f518ce11f277e513bae41061e03c9a6878271",
-      "resolved_at": null,
-      "rendered_path": null,
-      "rendered_sha256": null,
-      "rendered_bytes": null,
-      "rendered_chunks": null,
-      "rendered_route": null,
-      "inscribed": null
+      "missing_dependencies": [],
+      "resolution_signature": "d70906782e564454ff395491118116547481f3cfabd50d2334486202089b09e0",
+      "resolved_at": "2026-03-26T01:44:20.513Z",
+      "resolved_from": "configs/token-map.runtime.json",
+      "rendered_path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/minertwo.release.catalog.json",
+      "rendered_sha256": "59f4bb73fd1007647707a77f7f77a4a8434d6c434b1039459c6c96bd1d8a8987",
+      "rendered_bytes": 3122,
+      "rendered_chunks": 1,
+      "rendered_route": "helper",
+      "route_expected": "helper",
+      "route_matches_expected": true,
+      "unresolved_paths": [],
+      "inscribed": {
+        "token_id": 261,
+        "txid": "db207832bf764287662d7c96e992fd5a323685d282c970e70940ff2bc711ff00",
+        "block_height": 7344044,
+        "recorded_at": "2026-03-26T01:46:47.651Z"
+      }
     },
     {
       "name": "bvst.plugin.chainpoly.release.v1.0.0",
       "batch_file": "30-standalone-synths.batch.json",
       "order": 150,
-      "status": "pending",
+      "status": "ready",
       "template_path": "on-chain-modules/catalogs/plugins/standalone-synths/chainpoly.release.catalog.json",
-      "template_sha256": "8c96baf3023b57e0039e72bf9b831c29ab9184be70468608472ad92a817b178e",
+      "template_sha256": "083c9e45f7b7f2d204f5d52d900021076d0fca7500884da31729db247496e0ec",
       "direct_dependency_names": [
         "bvst.plugin.chainpoly.manifest.v1.0.0",
         "bvst.plugin.chainpoly.patch.v1.0.0",
@@ -521,12 +486,12 @@
         "bvst.catalog.schema.v1"
       ],
       "direct_dependency_token_ids": [
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
+        254,
+        255,
+        256,
+        231,
+        232,
+        233
       ],
       "resolved_dependency_names": [
         "bvst.catalog.foundation.v1",
@@ -537,29 +502,30 @@
         "bvst.plugin.chainpoly.patch.v1.0.0",
         "bvst.plugin.chainpoly.shell.v1.0.0"
       ],
-      "missing_dependencies": [
-        "bvst.catalog.foundation.v1",
-        "bvst.catalog.runtime.v1",
-        "bvst.catalog.engine.v1",
-        "bvst.catalog.schema.v1",
-        "bvst.plugin.chainpoly.manifest.v1.0.0",
-        "bvst.plugin.chainpoly.patch.v1.0.0",
-        "bvst.plugin.chainpoly.shell.v1.0.0"
-      ],
-      "resolution_signature": "b6a5e01e5c1117eacb25acba44252480e231bf57695a486dd6ad9688b05a4efa",
-      "resolved_at": null,
-      "rendered_path": null,
-      "rendered_sha256": null,
-      "rendered_bytes": null,
-      "rendered_chunks": null,
-      "rendered_route": null,
-      "inscribed": null
+      "missing_dependencies": [],
+      "resolution_signature": "03d9b6ea8bdac8e90c7ff168204dc03f1464f74d9b0116faf26ebea352efe5c7",
+      "resolved_at": "2026-03-26T01:45:13.977Z",
+      "resolved_from": "configs/token-map.runtime.json",
+      "rendered_path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/chainpoly.release.catalog.json",
+      "rendered_sha256": "bb6d0d94be5d7140bae5829c512fa2e6b8e381621ab89aa24b283b79179ee702",
+      "rendered_bytes": 3133,
+      "rendered_chunks": 1,
+      "rendered_route": "helper",
+      "route_expected": "helper",
+      "route_matches_expected": true,
+      "unresolved_paths": [],
+      "inscribed": {
+        "token_id": 262,
+        "txid": "b8226793055681b0ebf67a5702eb22c8902382d082dc3ad4b06ba76deacfa849",
+        "block_height": 7344050,
+        "recorded_at": "2026-03-26T01:47:14.116Z"
+      }
     },
     {
       "name": "bvst.plugin.retrokeys.release.v1.0.0",
       "batch_file": "30-standalone-synths.batch.json",
       "order": 160,
-      "status": "pending",
+      "status": "ready",
       "template_path": "on-chain-modules/catalogs/plugins/standalone-synths/retrokeys.release.catalog.json",
       "template_sha256": "c2267ebdb7b56e28e03edc99391df8277bd2e7ba6fb0074cca585d27c1cc8bf5",
       "direct_dependency_names": [
@@ -571,12 +537,12 @@
         "bvst.catalog.schema.v1"
       ],
       "direct_dependency_token_ids": [
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
+        257,
+        258,
+        259,
+        231,
+        232,
+        233
       ],
       "resolved_dependency_names": [
         "bvst.catalog.foundation.v1",
@@ -587,31 +553,32 @@
         "bvst.plugin.retrokeys.patch.v1.0.0",
         "bvst.plugin.retrokeys.shell.v1.0.0"
       ],
-      "missing_dependencies": [
-        "bvst.catalog.foundation.v1",
-        "bvst.catalog.runtime.v1",
-        "bvst.catalog.engine.v1",
-        "bvst.catalog.schema.v1",
-        "bvst.plugin.retrokeys.manifest.v1.0.0",
-        "bvst.plugin.retrokeys.patch.v1.0.0",
-        "bvst.plugin.retrokeys.shell.v1.0.0"
-      ],
-      "resolution_signature": "05df6f429e48c67fde7dd6ddc5a9453093372487de5a5e1930fcefb16afb68b8",
-      "resolved_at": null,
-      "rendered_path": null,
-      "rendered_sha256": null,
-      "rendered_bytes": null,
-      "rendered_chunks": null,
-      "rendered_route": null,
-      "inscribed": null
+      "missing_dependencies": [],
+      "resolution_signature": "904c46e2d907d7f2a928a346cdb6b8d9e616fdf1af678567d7a2892436541406",
+      "resolved_at": "2026-03-26T01:46:10.908Z",
+      "resolved_from": "configs/token-map.runtime.json",
+      "rendered_path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/retrokeys.release.catalog.json",
+      "rendered_sha256": "8e57300d2e9e91faa4385d8c28a5a091fd4d5013c91d63817acc0a6de5b81d32",
+      "rendered_bytes": 3184,
+      "rendered_chunks": 1,
+      "rendered_route": "helper",
+      "route_expected": "helper",
+      "route_matches_expected": true,
+      "unresolved_paths": [],
+      "inscribed": {
+        "token_id": 263,
+        "txid": "0ce214348bfaab5334cb4de25cd549d4d205459878a20f54d34602732c5e5c69",
+        "block_height": 7344053,
+        "recorded_at": "2026-03-26T01:47:27.079Z"
+      }
     },
     {
       "name": "bvst.catalog.family.standalonesynths.v1",
       "batch_file": "30-standalone-synths.batch.json",
       "order": 170,
-      "status": "pending",
+      "status": "ready",
       "template_path": "on-chain-modules/catalogs/families/standalone-synths.catalog.json",
-      "template_sha256": "88aba20c6867b911e83cc1eb06fb9629679f7f441d0e1a686ac8c3ffa7595690",
+      "template_sha256": "71cab45b03e0ddaa465a3178357748487cb482fff7cf6d96b8f582bbdc8d3070",
       "direct_dependency_names": [
         "bvst.plugin.retrokeys.release.v1.0.0",
         "bvst.plugin.minerone.release.v1.0.0",
@@ -619,10 +586,10 @@
         "bvst.plugin.chainpoly.release.v1.0.0"
       ],
       "direct_dependency_token_ids": [
-        null,
-        null,
-        null,
-        null
+        263,
+        260,
+        261,
+        262
       ],
       "resolved_dependency_names": [
         "bvst.plugin.retrokeys.release.v1.0.0",
@@ -630,35 +597,39 @@
         "bvst.plugin.minertwo.release.v1.0.0",
         "bvst.plugin.chainpoly.release.v1.0.0"
       ],
-      "missing_dependencies": [
-        "bvst.plugin.retrokeys.release.v1.0.0",
-        "bvst.plugin.minerone.release.v1.0.0",
-        "bvst.plugin.minertwo.release.v1.0.0",
-        "bvst.plugin.chainpoly.release.v1.0.0"
-      ],
-      "resolution_signature": "22907776336c89f9a947291b3e79c1736d9b7faa2d4e0a5dfdde1229e027fff4",
-      "resolved_at": null,
-      "rendered_path": null,
-      "rendered_sha256": null,
-      "rendered_bytes": null,
-      "rendered_chunks": null,
-      "rendered_route": null,
-      "inscribed": null
+      "missing_dependencies": [],
+      "resolution_signature": "5c46270fc11c1463d6fd19a70421fce9ab996540c4a53139a3e552e3d4235dcb",
+      "resolved_at": "2026-03-26T01:47:27.082Z",
+      "resolved_from": "configs/token-map.runtime.json",
+      "rendered_path": "on-chain-modules/rendered/catalogs/families/standalone-synths.catalog.json",
+      "rendered_sha256": "bc909bc34f242af1b972a828a874f3097b8e38489a7161420411d112f92aa050",
+      "rendered_bytes": 1011,
+      "rendered_chunks": 1,
+      "rendered_route": "helper",
+      "route_expected": "helper",
+      "route_matches_expected": true,
+      "unresolved_paths": [],
+      "inscribed": {
+        "token_id": 264,
+        "txid": "9984d2d6de8702dc5cbfd6fd6dacae5e7bf34ca5c739b970b573f6dbbb1dacd0",
+        "block_height": 7344055,
+        "recorded_at": "2026-03-26T01:48:10.518Z"
+      }
     },
     {
       "name": "bvst.catalog.release.firstwaveinstruments.v1",
       "batch_file": "40-root-catalogs.batch.json",
       "order": 10,
-      "status": "pending",
+      "status": "ready",
       "template_path": "on-chain-modules/catalogs/releases/first-wave-instruments.catalog.json",
-      "template_sha256": "6bbdbce961136844816ef35e4c8d2779c65cfd246ef9778fd60efcad132b6b9f",
+      "template_sha256": "c3f1d3f7008f2ac3b530f7dd3c607ada93f9be2cc8dba19b9b4deee8caee7742",
       "direct_dependency_names": [
         "bvst.catalog.family.bvstsynthfamily.v1",
         "bvst.catalog.family.standalonesynths.v1"
       ],
       "direct_dependency_token_ids": [
-        null,
-        null
+        247,
+        264
       ],
       "resolved_dependency_names": [
         "bvst.catalog.family.bvstsynthfamily.v1",
@@ -671,31 +642,30 @@
         "bvst.plugin.minertwo.release.v1.0.0",
         "bvst.plugin.chainpoly.release.v1.0.0"
       ],
-      "missing_dependencies": [
-        "bvst.catalog.family.bvstsynthfamily.v1",
-        "bvst.catalog.family.standalonesynths.v1",
-        "bvst.plugin.bvstsynth.release.v1.0.13",
-        "bvst.plugin.bvstengine.release.v1.0.0",
-        "bvst.plugin.jms10.release.v1.0.0",
-        "bvst.plugin.retrokeys.release.v1.0.0",
-        "bvst.plugin.minerone.release.v1.0.0",
-        "bvst.plugin.minertwo.release.v1.0.0",
-        "bvst.plugin.chainpoly.release.v1.0.0"
-      ],
-      "resolution_signature": "92c488df3a39709c79bff830a930cc63c6c38a98630db9d400b85d18113b98b7",
-      "resolved_at": null,
-      "rendered_path": null,
-      "rendered_sha256": null,
-      "rendered_bytes": null,
-      "rendered_chunks": null,
-      "rendered_route": null,
-      "inscribed": null
+      "missing_dependencies": [],
+      "resolution_signature": "e7b86f5384e032a3991fd2b962bd5bc9ee1915a3502471d0021bb0113c3746f0",
+      "resolved_at": "2026-03-26T01:48:10.523Z",
+      "resolved_from": "configs/token-map.runtime.json",
+      "rendered_path": "on-chain-modules/rendered/catalogs/releases/first-wave-instruments.catalog.json",
+      "rendered_sha256": "35b5e0a63f859e7488bed06e1042a5e8db541a7f882f7262df9ae94dbaf5e75c",
+      "rendered_bytes": 1558,
+      "rendered_chunks": 1,
+      "rendered_route": "helper",
+      "route_expected": "helper",
+      "route_matches_expected": true,
+      "unresolved_paths": [],
+      "inscribed": {
+        "token_id": 265,
+        "txid": "5b2a22e2ad976853c2392b933f06b11725a4c4bdffd26de1ff9dbc924f42d4c6",
+        "block_height": 7344063,
+        "recorded_at": "2026-03-26T01:48:22.816Z"
+      }
     },
     {
       "name": "bvst.catalog.root.v1",
       "batch_file": "40-root-catalogs.batch.json",
       "order": 20,
-      "status": "pending",
+      "status": "ready",
       "template_path": "on-chain-modules/catalogs/root/root.catalog.json",
       "template_sha256": "c20c53711b5ac1a3c58560cd43aa93df026944a46ddba6b7704303970101ea81",
       "direct_dependency_names": [
@@ -703,25 +673,31 @@
         "bvst.catalog.release.firstwaveinstruments.v1"
       ],
       "direct_dependency_token_ids": [
-        null,
-        null
+        234,
+        265
       ],
       "resolved_dependency_names": [
         "bvst.catalog.foundation.v1",
         "bvst.catalog.release.firstwaveinstruments.v1"
       ],
-      "missing_dependencies": [
-        "bvst.catalog.foundation.v1",
-        "bvst.catalog.release.firstwaveinstruments.v1"
-      ],
-      "resolution_signature": "031cae6ed4012b9f83babca8356606e5209d0183208c5335ee527bf91f497948",
-      "resolved_at": null,
-      "rendered_path": null,
-      "rendered_sha256": null,
-      "rendered_bytes": null,
-      "rendered_chunks": null,
-      "rendered_route": null,
-      "inscribed": null
+      "missing_dependencies": [],
+      "resolution_signature": "1f8b9c3fe5bbebabb537792dc849bc992dd71ea9791e8ab99e46ed9b57bbe80a",
+      "resolved_at": "2026-03-26T01:48:22.820Z",
+      "resolved_from": "configs/token-map.runtime.json",
+      "rendered_path": "on-chain-modules/rendered/catalogs/root/root.catalog.json",
+      "rendered_sha256": "513e940c4cb77c5a5ecddfeb1e1c5dd75edc0443972baa749cf2a1bf62896f86",
+      "rendered_bytes": 1083,
+      "rendered_chunks": 1,
+      "rendered_route": "helper",
+      "route_expected": "helper",
+      "route_matches_expected": true,
+      "unresolved_paths": [],
+      "inscribed": {
+        "token_id": 266,
+        "txid": "733c3cb655051b7e0fe3c79ee0f6d7fd0f610a66042bac306c8f07f043ef07b3",
+        "block_height": 7344066,
+        "recorded_at": "2026-03-26T01:48:35.367Z"
+      }
     }
   ]
 }

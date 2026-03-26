@@ -1,11 +1,11 @@
 {
   "version": 1,
   "bundle_root": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework",
-  "execution_bundle_root": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-WV2F5j/BVST-on-chain-framework",
+  "execution_bundle_root": "/var/folders/g5/_7z5f_cn4fnf5qld_27jjws00000gn/T/xtrata-auto-inscribe-85kRMQ/BVST-on-chain-framework",
   "status": "completed",
-  "started_at": "2026-03-25T12:44:39.203Z",
-  "updated_at": "2026-03-25T12:44:42.959Z",
-  "finished_at": "2026-03-25T12:44:42.959Z",
+  "started_at": "2026-03-26T01:43:20.461Z",
+  "updated_at": "2026-03-26T01:43:21.831Z",
+  "finished_at": "2026-03-26T01:43:21.831Z",
   "network": "mainnet",
   "sender_address": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
   "signer_source": "simulate-release",
@@ -17,376 +17,42 @@
   "fee_rate_microstx_per_byte": "31",
   "tx_fee_strategy": "live-transfer-fee-rate-plus-15pct",
   "debug": {
-    "run_id": "run-20260325-124439200Z",
+    "run_id": "run-20260326-014320458Z",
     "event_log": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/verification/auto-inscribe-sim-events.jsonl",
     "chain_log": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/verification/auto-inscribe-sim-chain.jsonl",
     "failure_snapshot": "/Users/melophonic/Documents/GitHub/xtrata/Agent-27-claude/TASKS/BVST-on-chain-framework/verification/auto-inscribe-sim-failure.json",
-    "events_logged": 590,
-    "chain_observations_logged": 214
+    "events_logged": 184,
+    "chain_observations_logged": 66
   },
   "summary": {
-    "attempted": 53,
-    "minted": 53,
+    "attempted": 76,
+    "minted": 76,
     "failed": 0,
     "skipped": 0,
-    "remaining": 0
+    "remaining": 0,
+    "carryover": 60
   },
   "entries": [
-    {
-      "name": "bvst.schema.patch.v1",
-      "batch": "10-foundation.batch.json",
-      "route": "helper",
-      "function": "mint-small-single-tx",
-      "started_at": "2026-03-25T12:44:39.277Z",
-      "status": "minted",
-      "dependencies": [],
-      "source": {
-        "path": "on-chain-modules/workspace/System/shared/bvst_patch_v1.schema.json",
-        "bytes": 5689,
-        "chunks": 1
-      },
-      "finished_at": "2026-03-25T12:44:39.353Z",
-      "token_id": "202",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000202",
-      "block_height": 500202,
-      "direct_sha256": "ff2506820eaf82235bf90338f9e6170aaeabb1040b1cfc8e7dad99d7ffbabb38",
-      "content_hash": "c6388bc595f08f85088df801bdf03d7e72577e145f1b0418c199869a3028d18b",
-      "token_uri": "on-chain-modules/workspace/System/shared/bvst_patch_v1.schema.json",
-      "fee_unit_microstx": "1000",
-      "protocol_fee_microstx": "3000",
-      "tx_fee_microstx": "217394",
-      "serialized_bytes": 6098,
-      "used_fallback_tx_fee": false,
-      "on_chain_verification": {
-        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
-        "mimeType": "application/json",
-        "totalSize": "5689",
-        "totalChunks": "1",
-        "tokenUri": "on-chain-modules/workspace/System/shared/bvst_patch_v1.schema.json",
-        "dependencyIds": [],
-        "simulated": true
-      }
-    },
-    {
-      "name": "bvst.runtime.bvst-css.v1.0.0",
-      "batch": "10-foundation.batch.json",
-      "route": "helper",
-      "function": "mint-small-single-tx",
-      "started_at": "2026-03-25T12:44:39.353Z",
-      "status": "minted",
-      "dependencies": [],
-      "source": {
-        "path": "on-chain-modules/workspace/System/shared/bvst.css",
-        "bytes": 9233,
-        "chunks": 1
-      },
-      "finished_at": "2026-03-25T12:44:39.425Z",
-      "token_id": "203",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000203",
-      "block_height": 500203,
-      "direct_sha256": "a642eb5ce475e76e407439751442374111bc63b1fd0389d48fd64bc3ef830e8a",
-      "content_hash": "b125fc4a5e7ab6ddfe1ef83f280d454eb9ec9744856c7e7986fc02ff025508d5",
-      "token_uri": "on-chain-modules/workspace/System/shared/bvst.css",
-      "fee_unit_microstx": "1000",
-      "protocol_fee_microstx": "3000",
-      "tx_fee_microstx": "342847",
-      "serialized_bytes": 9617,
-      "used_fallback_tx_fee": false,
-      "on_chain_verification": {
-        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
-        "mimeType": "text/css",
-        "totalSize": "9233",
-        "totalChunks": "1",
-        "tokenUri": "on-chain-modules/workspace/System/shared/bvst.css",
-        "dependencyIds": [],
-        "simulated": true
-      }
-    },
-    {
-      "name": "bvst.runtime.ui-styles.v1.0.0",
-      "batch": "10-foundation.batch.json",
-      "route": "helper",
-      "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:39.425Z",
-      "status": "minted",
-      "dependencies": [
-        203
-      ],
-      "source": {
-        "path": "on-chain-modules/workspace/System/shared/ui_styles.js",
-        "bytes": 930,
-        "chunks": 1
-      },
-      "finished_at": "2026-03-25T12:44:39.495Z",
-      "token_id": "204",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000204",
-      "block_height": 500204,
-      "direct_sha256": "caf8264dbc429fefb0641f8e26a13924a3507fe5acbab7123a9ea71136075e29",
-      "content_hash": "be069d60dd4196001aef02b0101dafa265fdc46dba942188e993dadc7c43d8fb",
-      "token_uri": "on-chain-modules/workspace/System/shared/ui_styles.js",
-      "fee_unit_microstx": "1000",
-      "protocol_fee_microstx": "3000",
-      "tx_fee_microstx": "48627",
-      "serialized_bytes": 1364,
-      "used_fallback_tx_fee": false,
-      "on_chain_verification": {
-        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
-        "mimeType": "application/javascript",
-        "totalSize": "930",
-        "totalChunks": "1",
-        "tokenUri": "on-chain-modules/workspace/System/shared/ui_styles.js",
-        "dependencyIds": [
-          "203"
-        ],
-        "simulated": true
-      }
-    },
-    {
-      "name": "bvst.runtime.audional-decoder.v1.0.0",
-      "batch": "10-foundation.batch.json",
-      "route": "helper",
-      "function": "mint-small-single-tx",
-      "started_at": "2026-03-25T12:44:39.495Z",
-      "status": "minted",
-      "dependencies": [],
-      "source": {
-        "path": "on-chain-modules/workspace/System/shared/audional_decoder.js",
-        "bytes": 9543,
-        "chunks": 1
-      },
-      "finished_at": "2026-03-25T12:44:39.570Z",
-      "token_id": "205",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000205",
-      "block_height": 500205,
-      "direct_sha256": "5755e7c345e8db646933916ebc8391795d9315dfd71d2d84c676259ef1defeb3",
-      "content_hash": "0690f43ced8315066bec5607906945f114594f11a04ac7352f344974802b5e71",
-      "token_uri": "on-chain-modules/workspace/System/shared/audional_decoder.js",
-      "fee_unit_microstx": "1000",
-      "protocol_fee_microstx": "3000",
-      "tx_fee_microstx": "354789",
-      "serialized_bytes": 9952,
-      "used_fallback_tx_fee": false,
-      "on_chain_verification": {
-        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
-        "mimeType": "application/javascript",
-        "totalSize": "9543",
-        "totalChunks": "1",
-        "tokenUri": "on-chain-modules/workspace/System/shared/audional_decoder.js",
-        "dependencyIds": [],
-        "simulated": true
-      }
-    },
-    {
-      "name": "bvst.runtime.controls.v1.0.0",
-      "batch": "10-foundation.batch.json",
-      "route": "helper",
-      "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:39.571Z",
-      "status": "minted",
-      "dependencies": [
-        204
-      ],
-      "source": {
-        "path": "on-chain-modules/workspace/System/shared/controls.js",
-        "bytes": 20723,
-        "chunks": 2
-      },
-      "finished_at": "2026-03-25T12:44:39.645Z",
-      "token_id": "206",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000206",
-      "block_height": 500206,
-      "direct_sha256": "ee52bc817032489f4bfa09cc972cc7c82a5bdf4ce7bc0dbe96f9f6a567a871cc",
-      "content_hash": "932e80fe739e74ef8bdb5b978989615a7284d0589cc0ba5b0e8c442556bfee1f",
-      "token_uri": "on-chain-modules/workspace/System/shared/controls.js",
-      "fee_unit_microstx": "1000",
-      "protocol_fee_microstx": "3000",
-      "tx_fee_microstx": "754390",
-      "serialized_bytes": 21161,
-      "used_fallback_tx_fee": false,
-      "on_chain_verification": {
-        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
-        "mimeType": "application/javascript",
-        "totalSize": "20723",
-        "totalChunks": "2",
-        "tokenUri": "on-chain-modules/workspace/System/shared/controls.js",
-        "dependencyIds": [
-          "204"
-        ],
-        "simulated": true
-      }
-    },
-    {
-      "name": "bvst.runtime.keyboard.v1.0.0",
-      "batch": "10-foundation.batch.json",
-      "route": "helper",
-      "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:39.646Z",
-      "status": "minted",
-      "dependencies": [
-        204
-      ],
-      "source": {
-        "path": "on-chain-modules/workspace/System/shared/keyboard.js",
-        "bytes": 9051,
-        "chunks": 1
-      },
-      "finished_at": "2026-03-25T12:44:39.715Z",
-      "token_id": "207",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000207",
-      "block_height": 500207,
-      "direct_sha256": "cde14fe643151fd4624bee175a1ea3027c66a9d8611e402c785fe6f8d788572e",
-      "content_hash": "24575284d5210a4b42ecaa23727630d22a98118833d403949fa22502630ec34c",
-      "token_uri": "on-chain-modules/workspace/System/shared/keyboard.js",
-      "fee_unit_microstx": "1000",
-      "protocol_fee_microstx": "3000",
-      "tx_fee_microstx": "338105",
-      "serialized_bytes": 9484,
-      "used_fallback_tx_fee": false,
-      "on_chain_verification": {
-        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
-        "mimeType": "application/javascript",
-        "totalSize": "9051",
-        "totalChunks": "1",
-        "tokenUri": "on-chain-modules/workspace/System/shared/keyboard.js",
-        "dependencyIds": [
-          "204"
-        ],
-        "simulated": true
-      }
-    },
-    {
-      "name": "bvst.runtime.midi.v1.0.0",
-      "batch": "10-foundation.batch.json",
-      "route": "helper",
-      "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:39.715Z",
-      "status": "minted",
-      "dependencies": [
-        204
-      ],
-      "source": {
-        "path": "on-chain-modules/workspace/System/shared/midi.js",
-        "bytes": 4938,
-        "chunks": 1
-      },
-      "finished_at": "2026-03-25T12:44:39.784Z",
-      "token_id": "208",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000208",
-      "block_height": 500208,
-      "direct_sha256": "deb7301dc06443126b2c4ca904d61ba2f29f7aaffb174910a2581c67546a4f38",
-      "content_hash": "3ff4b8509a33818500c334e83aebd1b8d8c6c6a87b4634200e4a6bd4b9ec6b37",
-      "token_uri": "on-chain-modules/workspace/System/shared/midi.js",
-      "fee_unit_microstx": "1000",
-      "protocol_fee_microstx": "3000",
-      "tx_fee_microstx": "191334",
-      "serialized_bytes": 5367,
-      "used_fallback_tx_fee": false,
-      "on_chain_verification": {
-        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
-        "mimeType": "application/javascript",
-        "totalSize": "4938",
-        "totalChunks": "1",
-        "tokenUri": "on-chain-modules/workspace/System/shared/midi.js",
-        "dependencyIds": [
-          "204"
-        ],
-        "simulated": true
-      }
-    },
-    {
-      "name": "bvst.runtime.midi-parser.v1.0.0",
-      "batch": "10-foundation.batch.json",
-      "route": "helper",
-      "function": "mint-small-single-tx",
-      "started_at": "2026-03-25T12:44:39.785Z",
-      "status": "minted",
-      "dependencies": [],
-      "source": {
-        "path": "on-chain-modules/workspace/System/shared/midi_parser.js",
-        "bytes": 4389,
-        "chunks": 1
-      },
-      "finished_at": "2026-03-25T12:44:39.852Z",
-      "token_id": "209",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000209",
-      "block_height": 500209,
-      "direct_sha256": "71c5ab0c9d9e2a5f13c6aa14e2194247bd72a5ea69adfe377309ebcdc7692fd2",
-      "content_hash": "fdc83565b02c3f5423785753fbb4ce9003e7a9ae9d9c063117302bff43db99d4",
-      "token_uri": "on-chain-modules/workspace/System/shared/midi_parser.js",
-      "fee_unit_microstx": "1000",
-      "protocol_fee_microstx": "3000",
-      "tx_fee_microstx": "170871",
-      "serialized_bytes": 4793,
-      "used_fallback_tx_fee": false,
-      "on_chain_verification": {
-        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
-        "mimeType": "application/javascript",
-        "totalSize": "4389",
-        "totalChunks": "1",
-        "tokenUri": "on-chain-modules/workspace/System/shared/midi_parser.js",
-        "dependencyIds": [],
-        "simulated": true
-      }
-    },
-    {
-      "name": "bvst.runtime.visualizer.v1.0.0",
-      "batch": "10-foundation.batch.json",
-      "route": "helper",
-      "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:39.852Z",
-      "status": "minted",
-      "dependencies": [
-        204
-      ],
-      "source": {
-        "path": "on-chain-modules/workspace/System/shared/visualizer.js",
-        "bytes": 5303,
-        "chunks": 1
-      },
-      "finished_at": "2026-03-25T12:44:39.922Z",
-      "token_id": "210",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000210",
-      "block_height": 500210,
-      "direct_sha256": "8bfeb3312b734384ddccecc183f56dd4eaeb7a6911dadde87fd8ad7294c586e7",
-      "content_hash": "f845af6a009acf6689c6e307b7a299fb7345388633b9808a55cd2910a6f2ddce",
-      "token_uri": "on-chain-modules/workspace/System/shared/visualizer.js",
-      "fee_unit_microstx": "1000",
-      "protocol_fee_microstx": "3000",
-      "tx_fee_microstx": "204560",
-      "serialized_bytes": 5738,
-      "used_fallback_tx_fee": false,
-      "on_chain_verification": {
-        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
-        "mimeType": "application/javascript",
-        "totalSize": "5303",
-        "totalChunks": "1",
-        "tokenUri": "on-chain-modules/workspace/System/shared/visualizer.js",
-        "dependencyIds": [
-          "204"
-        ],
-        "simulated": true
-      }
-    },
     {
       "name": "bvst.runtime.sampler.v1.0.0",
       "batch": "10-foundation.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:39.923Z",
+      "started_at": "2026-03-25T23:57:19.387Z",
       "status": "minted",
       "dependencies": [
-        204,
-        205
+        216,
+        217
       ],
       "source": {
         "path": "on-chain-modules/workspace/System/shared/sampler.js",
         "bytes": 30490,
         "chunks": 2
       },
-      "finished_at": "2026-03-25T12:44:39.997Z",
-      "token_id": "211",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000211",
-      "block_height": 500211,
+      "finished_at": "2026-03-25T23:57:19.472Z",
+      "token_id": "202",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000202",
+      "block_height": 500202,
       "direct_sha256": "55b04c8cb098ac2943b3627173ce12e5f320a1fc04136813f25d04e7cf5e1d39",
       "content_hash": "bbd563f402cbdb5919c63515f7ed29808588a48f3d94fcd2c5b0c1202dc158eb",
       "token_uri": "on-chain-modules/workspace/System/shared/sampler.js",
@@ -402,8 +68,8 @@
         "totalChunks": "2",
         "tokenUri": "on-chain-modules/workspace/System/shared/sampler.js",
         "dependencyIds": [
-          "204",
-          "205"
+          "216",
+          "217"
         ],
         "simulated": true
       }
@@ -413,20 +79,20 @@
       "batch": "10-foundation.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:39.998Z",
+      "started_at": "2026-03-25T23:57:19.473Z",
       "status": "minted",
       "dependencies": [
-        204
+        216
       ],
       "source": {
         "path": "on-chain-modules/workspace/System/shared/sequencer_core.js",
         "bytes": 19549,
         "chunks": 2
       },
-      "finished_at": "2026-03-25T12:44:40.089Z",
-      "token_id": "212",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000212",
-      "block_height": 500212,
+      "finished_at": "2026-03-25T23:57:19.543Z",
+      "token_id": "203",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000203",
+      "block_height": 500203,
       "direct_sha256": "12746ea67444b361eb84ab46fb4b812a0e81935f6fa62a739c76e541c29a7cbb",
       "content_hash": "681ae3049cc6f69fbf648a8902c4308c04f5d6cbc3169aeaee92192fe49ee97a",
       "token_uri": "on-chain-modules/workspace/System/shared/sequencer_core.js",
@@ -442,7 +108,7 @@
         "totalChunks": "2",
         "tokenUri": "on-chain-modules/workspace/System/shared/sequencer_core.js",
         "dependencyIds": [
-          "204"
+          "216"
         ],
         "simulated": true
       }
@@ -452,7 +118,7 @@
       "batch": "10-foundation.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx",
-      "started_at": "2026-03-25T12:44:40.089Z",
+      "started_at": "2026-03-25T23:57:19.544Z",
       "status": "minted",
       "dependencies": [],
       "source": {
@@ -460,10 +126,10 @@
         "bytes": 100109,
         "chunks": 7
       },
-      "finished_at": "2026-03-25T12:44:40.160Z",
-      "token_id": "213",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000213",
-      "block_height": 500213,
+      "finished_at": "2026-03-25T23:57:19.617Z",
+      "token_id": "204",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000204",
+      "block_height": 500204,
       "direct_sha256": "4246b1b3431abb565e7ee4b9cc2c3f9da64478b9a2ff7e8c3bc22713868a6fd3",
       "content_hash": "a30ea5336b726cf5ab64699004a91d66a4be4bf7b9814be6bbb4c48ea3c9609f",
       "token_uri": "on-chain-modules/workspace/System/shared/bvst_unified_bg.wasm",
@@ -487,20 +153,20 @@
       "batch": "10-foundation.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:40.160Z",
+      "started_at": "2026-03-25T23:57:19.617Z",
       "status": "minted",
       "dependencies": [
-        213
+        204
       ],
       "source": {
         "path": "on-chain-modules/workspace/System/shared/wasm_loader_unified.js",
         "bytes": 16567,
         "chunks": 2
       },
-      "finished_at": "2026-03-25T12:44:40.229Z",
-      "token_id": "214",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000214",
-      "block_height": 500214,
+      "finished_at": "2026-03-25T23:57:19.686Z",
+      "token_id": "205",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000205",
+      "block_height": 500205,
       "direct_sha256": "a099d8f7b8eac71db02a00925019481b42af3dc87a2a14a829ac1dbc90ad30a3",
       "content_hash": "97510b3dc208699dab95dd6f28fe6b0ec85c7e351c20419500f2fd91a30e7e25",
       "token_uri": "on-chain-modules/workspace/System/shared/wasm_loader_unified.js",
@@ -516,7 +182,7 @@
         "totalChunks": "2",
         "tokenUri": "on-chain-modules/workspace/System/shared/wasm_loader_unified.js",
         "dependencyIds": [
-          "213"
+          "204"
         ],
         "simulated": true
       }
@@ -526,20 +192,20 @@
       "batch": "10-foundation.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:40.229Z",
+      "started_at": "2026-03-25T23:57:19.687Z",
       "status": "minted",
       "dependencies": [
-        214
+        205
       ],
       "source": {
         "path": "on-chain-modules/workspace/System/shared/processor_unified.js",
         "bytes": 12730,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:40.297Z",
-      "token_id": "215",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000215",
-      "block_height": 500215,
+      "finished_at": "2026-03-25T23:57:19.756Z",
+      "token_id": "206",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000206",
+      "block_height": 500206,
       "direct_sha256": "3ad68b432cafffac6be69d1c67ea282aa259d0705456163a4dd9f7a66e88c78d",
       "content_hash": "3fa2549ef08ed93dad4716f90254e844ecb62e9680336612f973980e9a2b770f",
       "token_uri": "on-chain-modules/workspace/System/shared/processor_unified.js",
@@ -555,7 +221,7 @@
         "totalChunks": "1",
         "tokenUri": "on-chain-modules/workspace/System/shared/processor_unified.js",
         "dependencyIds": [
-          "214"
+          "205"
         ],
         "simulated": true
       }
@@ -565,21 +231,21 @@
       "batch": "10-foundation.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:40.298Z",
+      "started_at": "2026-03-25T23:57:19.756Z",
       "status": "minted",
       "dependencies": [
-        215,
-        213
+        206,
+        204
       ],
       "source": {
         "path": "on-chain-modules/workspace/System/shared/standalone_bridge.js",
         "bytes": 10230,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:40.363Z",
-      "token_id": "216",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000216",
-      "block_height": 500216,
+      "finished_at": "2026-03-25T23:57:19.826Z",
+      "token_id": "207",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000207",
+      "block_height": 500207,
       "direct_sha256": "e5d9c4542a65ba73a2b6bfba7b9fc996594453264b3942d1a978aa56edb2069e",
       "content_hash": "ffe775d33354357efdbc5ef1729d0fecaa3c756b7ff91e455adbc7ed34ab0b3f",
       "token_uri": "on-chain-modules/workspace/System/shared/standalone_bridge.js",
@@ -595,8 +261,8 @@
         "totalChunks": "1",
         "tokenUri": "on-chain-modules/workspace/System/shared/standalone_bridge.js",
         "dependencyIds": [
-          "215",
-          "213"
+          "206",
+          "204"
         ],
         "simulated": true
       }
@@ -606,26 +272,26 @@
       "batch": "10-foundation.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:40.363Z",
+      "started_at": "2026-03-25T23:57:19.827Z",
       "status": "minted",
       "dependencies": [
-        206,
-        207,
-        208,
-        211,
-        210,
-        212,
-        216
+        218,
+        219,
+        220,
+        202,
+        222,
+        203,
+        207
       ],
       "source": {
         "path": "on-chain-modules/workspace/System/shared/plugin_core.js",
         "bytes": 26459,
         "chunks": 2
       },
-      "finished_at": "2026-03-25T12:44:40.430Z",
-      "token_id": "217",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000217",
-      "block_height": 500217,
+      "finished_at": "2026-03-25T23:57:19.897Z",
+      "token_id": "208",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000208",
+      "block_height": 500208,
       "direct_sha256": "79280a30719a574de78a7fc99f0fcafe5092fd8c75554b3269b12380f6d4683d",
       "content_hash": "7157a65775ff125556ac89e5f880bd4255f4b2123d33e6918056c25f2c1ff31b",
       "token_uri": "on-chain-modules/workspace/System/shared/plugin_core.js",
@@ -641,13 +307,13 @@
         "totalChunks": "2",
         "tokenUri": "on-chain-modules/workspace/System/shared/plugin_core.js",
         "dependencyIds": [
-          "206",
-          "207",
-          "208",
-          "211",
-          "210",
-          "212",
-          "216"
+          "218",
+          "219",
+          "220",
+          "202",
+          "222",
+          "203",
+          "207"
         ],
         "simulated": true
       }
@@ -657,20 +323,20 @@
       "batch": "10-foundation.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:40.430Z",
+      "started_at": "2026-03-25T23:57:19.897Z",
       "status": "minted",
       "dependencies": [
-        217
+        208
       ],
       "source": {
         "path": "on-chain-modules/workspace/System/shared/patch_runtime.js",
         "bytes": 4314,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:40.495Z",
-      "token_id": "218",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000218",
-      "block_height": 500218,
+      "finished_at": "2026-03-25T23:57:19.968Z",
+      "token_id": "209",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000209",
+      "block_height": 500209,
       "direct_sha256": "6fc6798fc69e8700a7e185ae6876b5330e8e5cd8008d13d07983b0fde8bc9fa3",
       "content_hash": "41d6dc7d48ed6621f8a297f66e9ff744f5e14a2afb2d16eb58b8ab1e6502952f",
       "token_uri": "on-chain-modules/workspace/System/shared/patch_runtime.js",
@@ -686,7 +352,7 @@
         "totalChunks": "1",
         "tokenUri": "on-chain-modules/workspace/System/shared/patch_runtime.js",
         "dependencyIds": [
-          "217"
+          "208"
         ],
         "simulated": true
       }
@@ -696,60 +362,60 @@
       "batch": "10-foundation.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:40.495Z",
+      "started_at": "2026-03-25T23:57:19.968Z",
       "status": "minted",
       "dependencies": [
-        203,
-        204,
-        205,
-        206,
-        207,
-        208,
-        209,
-        210,
-        211,
-        212,
+        215,
         216,
         217,
-        218
+        218,
+        219,
+        220,
+        221,
+        222,
+        202,
+        203,
+        207,
+        208,
+        209
       ],
       "source": {
         "path": "on-chain-modules/rendered/catalogs/majors/runtime-v1.catalog.json",
-        "bytes": 6925,
+        "bytes": 6917,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:40.560Z",
-      "token_id": "219",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000219",
-      "block_height": 500219,
-      "direct_sha256": "24588dc06ecbef436619e885f0415a0b914aa6c44eddcffe33627855a8b4e3a7",
-      "content_hash": "8f99f0fd8974ff08a468863976bce8ca27e4d0eb0e20c1d8233d1db3b1240c51",
+      "finished_at": "2026-03-25T23:57:20.038Z",
+      "token_id": "210",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000210",
+      "block_height": 500210,
+      "direct_sha256": "0a2e447b56022d2caba89bc04819b59ac2ebb0ff604f7b9468e3eab81ea4f7d1",
+      "content_hash": "62daaf4ac0bb18f968ad874be6cdf99a5f7412a39fff42c5170ed40223e53427",
       "token_uri": "on-chain-modules/catalogs/majors/runtime-v1.catalog.json",
       "fee_unit_microstx": "1000",
       "protocol_fee_microstx": "3000",
-      "tx_fee_microstx": "269514",
-      "serialized_bytes": 7560,
+      "tx_fee_microstx": "269229",
+      "serialized_bytes": 7552,
       "used_fallback_tx_fee": false,
       "on_chain_verification": {
         "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
         "mimeType": "application/json",
-        "totalSize": "6925",
+        "totalSize": "6917",
         "totalChunks": "1",
         "tokenUri": "on-chain-modules/catalogs/majors/runtime-v1.catalog.json",
         "dependencyIds": [
-          "203",
-          "204",
-          "205",
-          "206",
-          "207",
-          "208",
-          "209",
-          "210",
-          "211",
-          "212",
+          "215",
           "216",
           "217",
-          "218"
+          "218",
+          "219",
+          "220",
+          "221",
+          "222",
+          "202",
+          "203",
+          "207",
+          "208",
+          "209"
         ],
         "simulated": true
       }
@@ -759,24 +425,24 @@
       "batch": "10-foundation.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:40.560Z",
+      "started_at": "2026-03-25T23:57:20.038Z",
       "status": "minted",
       "dependencies": [
-        213,
-        214,
-        215
+        204,
+        205,
+        206
       ],
       "source": {
         "path": "on-chain-modules/rendered/catalogs/majors/engine-v1.catalog.json",
         "bytes": 1855,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:40.626Z",
-      "token_id": "220",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000220",
-      "block_height": 500220,
-      "direct_sha256": "24c2a841a6a24328a8c6db756c7bd4c64b8f91f11f2603d075496f475d3a48bb",
-      "content_hash": "2db9cf5bcb6be2fda6166ac6a17eb255262baca32f4721f0256c39f62b5f1c18",
+      "finished_at": "2026-03-25T23:57:20.107Z",
+      "token_id": "211",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000211",
+      "block_height": 500211,
+      "direct_sha256": "2e9fa89ef9be4607c31afde47f0f6afc184a8ec9322c6eaf836c63085242ecef",
+      "content_hash": "86cdd8fa4f5cba112cdbf123d3152cfc0230f1296f5ec0a2254bb506a443e948",
       "token_uri": "on-chain-modules/catalogs/majors/engine-v1.catalog.json",
       "fee_unit_microstx": "1000",
       "protocol_fee_microstx": "3000",
@@ -790,9 +456,9 @@
         "totalChunks": "1",
         "tokenUri": "on-chain-modules/catalogs/majors/engine-v1.catalog.json",
         "dependencyIds": [
-          "213",
-          "214",
-          "215"
+          "204",
+          "205",
+          "206"
         ],
         "simulated": true
       }
@@ -802,36 +468,36 @@
       "batch": "10-foundation.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:40.626Z",
+      "started_at": "2026-03-25T23:57:20.108Z",
       "status": "minted",
       "dependencies": [
-        202
+        214
       ],
       "source": {
         "path": "on-chain-modules/rendered/catalogs/majors/schema-v1.catalog.json",
-        "bytes": 784,
+        "bytes": 783,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:40.693Z",
-      "token_id": "221",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000221",
-      "block_height": 500221,
-      "direct_sha256": "17e70d3b9a0a13ca591bc3ddf4b7ca67a1926b955d07a60953db0e50869f6d79",
-      "content_hash": "fa1de25814220a63696335af052b3ee54e6200201a2f4d71d2203a6ef2311dd9",
+      "finished_at": "2026-03-25T23:57:20.178Z",
+      "token_id": "212",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000212",
+      "block_height": 500212,
+      "direct_sha256": "cd1199c2127f61e0b37f970105749485329bd729a5a9ebb99f34c5fe494d0dca",
+      "content_hash": "1100e0aaa0093ddfd328da9e1014cae86b4c3e049c9fec6d581187b676e80b9d",
       "token_uri": "on-chain-modules/catalogs/majors/schema-v1.catalog.json",
       "fee_unit_microstx": "1000",
       "protocol_fee_microstx": "3000",
-      "tx_fee_microstx": "43280",
-      "serialized_bytes": 1214,
+      "tx_fee_microstx": "43244",
+      "serialized_bytes": 1213,
       "used_fallback_tx_fee": false,
       "on_chain_verification": {
         "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
         "mimeType": "application/json",
-        "totalSize": "784",
+        "totalSize": "783",
         "totalChunks": "1",
         "tokenUri": "on-chain-modules/catalogs/majors/schema-v1.catalog.json",
         "dependencyIds": [
-          "202"
+          "214"
         ],
         "simulated": true
       }
@@ -841,40 +507,40 @@
       "batch": "10-foundation.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:40.693Z",
+      "started_at": "2026-03-25T23:57:20.178Z",
       "status": "minted",
       "dependencies": [
-        219,
-        220,
-        221
+        210,
+        211,
+        212
       ],
       "source": {
         "path": "on-chain-modules/rendered/catalogs/releases/foundation-v1.catalog.json",
-        "bytes": 10124,
+        "bytes": 10115,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:40.763Z",
-      "token_id": "222",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000222",
-      "block_height": 500222,
-      "direct_sha256": "7d87c88b66e1c276d672d67914021dd9d5765d26e639db90a76879ef011edeb0",
-      "content_hash": "e42a8dcdc498f625d384d4f397f57ddff21dc4c9763484d138b76ca18ff5e851",
+      "finished_at": "2026-03-25T23:57:20.249Z",
+      "token_id": "213",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000213",
+      "block_height": 500213,
+      "direct_sha256": "4331ef01a7c1b1fb61c35fd4fecaafabd4cd73bddcb33d7b164188c5ccc98837",
+      "content_hash": "3cb1f6baee15ae667d21e7d070e86a0c6c1297a6d03a88b3eca00eecf71d0cf4",
       "token_uri": "on-chain-modules/catalogs/releases/foundation-v1.catalog.json",
       "fee_unit_microstx": "1000",
       "protocol_fee_microstx": "3000",
-      "tx_fee_microstx": "377677",
-      "serialized_bytes": 10594,
+      "tx_fee_microstx": "377356",
+      "serialized_bytes": 10585,
       "used_fallback_tx_fee": false,
       "on_chain_verification": {
         "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
         "mimeType": "application/json",
-        "totalSize": "10124",
+        "totalSize": "10115",
         "totalChunks": "1",
         "tokenUri": "on-chain-modules/catalogs/releases/foundation-v1.catalog.json",
         "dependencyIds": [
-          "219",
-          "220",
-          "221"
+          "210",
+          "211",
+          "212"
         ],
         "simulated": true
       }
@@ -884,7 +550,7 @@
       "batch": "20-bvstsynth-family.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx",
-      "started_at": "2026-03-25T12:44:40.764Z",
+      "started_at": "2026-03-25T23:57:20.249Z",
       "status": "minted",
       "dependencies": [],
       "source": {
@@ -892,10 +558,10 @@
         "bytes": 322,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:40.833Z",
-      "token_id": "223",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000223",
-      "block_height": 500223,
+      "finished_at": "2026-03-25T23:57:20.318Z",
+      "token_id": "214",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000214",
+      "block_height": 500214,
       "direct_sha256": "c6633e5339c7b5592237c26bf0e3a798acca5b388d0c976129313ab9e2340990",
       "content_hash": "8a26bd225dc8f4bfe15569859fa2ba873ef971bf3921feabe57c4d82440c1a5f",
       "token_uri": "on-chain-modules/workspace/Plugins/Instruments/JMS10/manifest.json",
@@ -919,20 +585,20 @@
       "batch": "20-bvstsynth-family.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:40.834Z",
+      "started_at": "2026-03-25T23:57:20.318Z",
       "status": "minted",
       "dependencies": [
-        202
+        214
       ],
       "source": {
         "path": "on-chain-modules/workspace/Plugins/Instruments/JMS10/patch.json",
         "bytes": 5613,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:40.903Z",
-      "token_id": "224",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000224",
-      "block_height": 500224,
+      "finished_at": "2026-03-25T23:57:20.388Z",
+      "token_id": "215",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000215",
+      "block_height": 500215,
       "direct_sha256": "15bb93588509c0b264e2350e2cd1a90505de14ff9da2f8b741e9684be185fd79",
       "content_hash": "c4be40d3f33d5de97a52ef341f0574713c5e3b7184c6f04bc1cb03542c6d1886",
       "token_uri": "on-chain-modules/workspace/Plugins/Instruments/JMS10/patch.json",
@@ -948,7 +614,7 @@
         "totalChunks": "1",
         "tokenUri": "on-chain-modules/workspace/Plugins/Instruments/JMS10/patch.json",
         "dependencyIds": [
-          "202"
+          "214"
         ],
         "simulated": true
       }
@@ -958,22 +624,22 @@
       "batch": "20-bvstsynth-family.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:40.903Z",
+      "started_at": "2026-03-25T23:57:20.389Z",
       "status": "minted",
       "dependencies": [
-        218,
-        223,
-        224
+        209,
+        214,
+        215
       ],
       "source": {
         "path": "on-chain-modules/workspace/Plugins/Instruments/JMS10/gui.html",
         "bytes": 826,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:40.971Z",
-      "token_id": "225",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000225",
-      "block_height": 500225,
+      "finished_at": "2026-03-25T23:57:20.458Z",
+      "token_id": "216",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000216",
+      "block_height": 500216,
       "direct_sha256": "e6ea7b790e1c3225fd84116064de6c983248cab9a9daa9ac664c0a628f6a19eb",
       "content_hash": "20ef60e32f59b861ae8943c545ab9269ed1c755abeb884ccf8b43ad9ed9695bb",
       "token_uri": "on-chain-modules/workspace/Plugins/Instruments/JMS10/gui.html",
@@ -989,9 +655,9 @@
         "totalChunks": "1",
         "tokenUri": "on-chain-modules/workspace/Plugins/Instruments/JMS10/gui.html",
         "dependencyIds": [
-          "218",
-          "223",
-          "224"
+          "209",
+          "214",
+          "215"
         ],
         "simulated": true
       }
@@ -1001,7 +667,7 @@
       "batch": "20-bvstsynth-family.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx",
-      "started_at": "2026-03-25T12:44:40.972Z",
+      "started_at": "2026-03-25T23:57:20.459Z",
       "status": "minted",
       "dependencies": [],
       "source": {
@@ -1009,10 +675,10 @@
         "bytes": 324,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:41.038Z",
-      "token_id": "226",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000226",
-      "block_height": 500226,
+      "finished_at": "2026-03-25T23:57:20.529Z",
+      "token_id": "217",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000217",
+      "block_height": 500217,
       "direct_sha256": "01beefdc0b97ab86353a581eeda12bd10dcf259afca3b1e3b1f4903c883efee2",
       "content_hash": "2df218321d2256b9c8c881c23aadbb85db5515ca6c3ac160f969fe617a050b55",
       "token_uri": "on-chain-modules/workspace/Plugins/Instruments/BVSTEngine/manifest.json",
@@ -1036,20 +702,20 @@
       "batch": "20-bvstsynth-family.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:41.038Z",
+      "started_at": "2026-03-25T23:57:20.529Z",
       "status": "minted",
       "dependencies": [
-        202
+        214
       ],
       "source": {
         "path": "on-chain-modules/workspace/Plugins/Instruments/BVSTEngine/patch.json",
         "bytes": 1955,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:41.103Z",
-      "token_id": "227",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000227",
-      "block_height": 500227,
+      "finished_at": "2026-03-25T23:57:20.599Z",
+      "token_id": "218",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000218",
+      "block_height": 500218,
       "direct_sha256": "b28a916152cc277a8f4e45bd208c1c3cfb313e11d9baa56d49345aa598432511",
       "content_hash": "d35c46f3f2fe62a6bef389d325136708a44918f7747f63f4bdc6b174a647b5ae",
       "token_uri": "on-chain-modules/workspace/Plugins/Instruments/BVSTEngine/patch.json",
@@ -1065,7 +731,7 @@
         "totalChunks": "1",
         "tokenUri": "on-chain-modules/workspace/Plugins/Instruments/BVSTEngine/patch.json",
         "dependencyIds": [
-          "202"
+          "214"
         ],
         "simulated": true
       }
@@ -1075,22 +741,22 @@
       "batch": "20-bvstsynth-family.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:41.104Z",
+      "started_at": "2026-03-25T23:57:20.599Z",
       "status": "minted",
       "dependencies": [
-        218,
-        226,
-        227
+        209,
+        217,
+        218
       ],
       "source": {
         "path": "on-chain-modules/workspace/Plugins/Instruments/BVSTEngine/gui.html",
         "bytes": 831,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:41.170Z",
-      "token_id": "228",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000228",
-      "block_height": 500228,
+      "finished_at": "2026-03-25T23:57:20.669Z",
+      "token_id": "219",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000219",
+      "block_height": 500219,
       "direct_sha256": "273dfebc41e8013d21f0dadfef55f10805aee117b8ab53b62ad68e56a4004268",
       "content_hash": "76848c768a93be6e7917f3ffbe02c22bc0e985524fdc6b49547952d12bead2ba",
       "token_uri": "on-chain-modules/workspace/Plugins/Instruments/BVSTEngine/gui.html",
@@ -1106,9 +772,9 @@
         "totalChunks": "1",
         "tokenUri": "on-chain-modules/workspace/Plugins/Instruments/BVSTEngine/gui.html",
         "dependencyIds": [
-          "218",
-          "226",
-          "227"
+          "209",
+          "217",
+          "218"
         ],
         "simulated": true
       }
@@ -1118,7 +784,7 @@
       "batch": "20-bvstsynth-family.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx",
-      "started_at": "2026-03-25T12:44:41.170Z",
+      "started_at": "2026-03-25T23:57:20.670Z",
       "status": "minted",
       "dependencies": [],
       "source": {
@@ -1126,10 +792,10 @@
         "bytes": 397,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:41.238Z",
-      "token_id": "229",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000229",
-      "block_height": 500229,
+      "finished_at": "2026-03-25T23:57:20.738Z",
+      "token_id": "220",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000220",
+      "block_height": 500220,
       "direct_sha256": "0fa1872669743a0284f20b73a464a83c94418d65845ecdf861669fb97506f2d7",
       "content_hash": "f381e32b6be44a18bbd26051b4aa9fb275a0a9ffa36ae72ce946c04f416a1503",
       "token_uri": "on-chain-modules/workspace/Plugins/Instruments/BVSTSynth/manifest.json",
@@ -1153,20 +819,20 @@
       "batch": "20-bvstsynth-family.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:41.238Z",
+      "started_at": "2026-03-25T23:57:20.738Z",
       "status": "minted",
       "dependencies": [
-        202
+        214
       ],
       "source": {
         "path": "on-chain-modules/workspace/Plugins/Instruments/BVSTSynth/patch.json",
         "bytes": 9259,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:41.306Z",
-      "token_id": "230",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000230",
-      "block_height": 500230,
+      "finished_at": "2026-03-25T23:57:20.809Z",
+      "token_id": "221",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000221",
+      "block_height": 500221,
       "direct_sha256": "e73a992780a6e3dc3c5ced06e1f72e00bfa2d9a8db60d20ebb99455b13fe25c8",
       "content_hash": "64b4f10b40f0f5a98c8a9f6c0a29eb8d0e43a6a072b522dc6377df6cbb52d577",
       "token_uri": "on-chain-modules/workspace/Plugins/Instruments/BVSTSynth/patch.json",
@@ -1182,7 +848,7 @@
         "totalChunks": "1",
         "tokenUri": "on-chain-modules/workspace/Plugins/Instruments/BVSTSynth/patch.json",
         "dependencyIds": [
-          "202"
+          "214"
         ],
         "simulated": true
       }
@@ -1192,22 +858,22 @@
       "batch": "20-bvstsynth-family.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:41.306Z",
+      "started_at": "2026-03-25T23:57:20.809Z",
       "status": "minted",
       "dependencies": [
-        218,
-        229,
-        230
+        209,
+        220,
+        221
       ],
       "source": {
         "path": "on-chain-modules/workspace/Plugins/Instruments/BVSTSynth/gui.html",
         "bytes": 14086,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:41.375Z",
-      "token_id": "231",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000231",
-      "block_height": 500231,
+      "finished_at": "2026-03-25T23:57:20.879Z",
+      "token_id": "222",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000222",
+      "block_height": 500222,
       "direct_sha256": "219b193434f6642c35a2186f3777a90db1297151f9f5d487aab3569e79eef670",
       "content_hash": "5bcc5712283e51fb9f82efaf463febd7b65deebf2bdf18158b755c52cf6d9d16",
       "token_uri": "on-chain-modules/workspace/Plugins/Instruments/BVSTSynth/gui.html",
@@ -1223,9 +889,9 @@
         "totalChunks": "1",
         "tokenUri": "on-chain-modules/workspace/Plugins/Instruments/BVSTSynth/gui.html",
         "dependencyIds": [
-          "218",
-          "229",
-          "230"
+          "209",
+          "220",
+          "221"
         ],
         "simulated": true
       }
@@ -1235,27 +901,27 @@
       "batch": "20-bvstsynth-family.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:41.376Z",
+      "started_at": "2026-03-25T23:57:20.880Z",
       "status": "minted",
       "dependencies": [
-        223,
-        224,
-        225,
-        219,
-        220,
-        221
+        214,
+        215,
+        216,
+        210,
+        211,
+        212
       ],
       "source": {
         "path": "on-chain-modules/rendered/catalogs/plugins/bvstsynth-family/jms10.release.catalog.json",
         "bytes": 3146,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:41.446Z",
-      "token_id": "232",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000232",
-      "block_height": 500232,
-      "direct_sha256": "48865f9b717b40984c4469e23970c636a652e3f2c790cd69c281998c5c5c4146",
-      "content_hash": "1a7abe3c3372609059a7398ac9ffa4b114b56da9b39db67eaf7cbce4f11fdd92",
+      "finished_at": "2026-03-25T23:57:20.950Z",
+      "token_id": "223",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000223",
+      "block_height": 500223,
+      "direct_sha256": "fa1a2e4fa44d6322789f5b6a0b23f958ca234d187c2645d6fe026f295601f0ae",
+      "content_hash": "5b98369953b070bf584cf47fcd73952fecaf9fc0274120fe2c698797ace26446",
       "token_uri": "on-chain-modules/catalogs/plugins/bvstsynth-family/jms10.release.catalog.json",
       "fee_unit_microstx": "1000",
       "protocol_fee_microstx": "3000",
@@ -1269,12 +935,12 @@
         "totalChunks": "1",
         "tokenUri": "on-chain-modules/catalogs/plugins/bvstsynth-family/jms10.release.catalog.json",
         "dependencyIds": [
-          "223",
-          "224",
-          "225",
-          "219",
-          "220",
-          "221"
+          "214",
+          "215",
+          "216",
+          "210",
+          "211",
+          "212"
         ],
         "simulated": true
       }
@@ -1284,27 +950,27 @@
       "batch": "20-bvstsynth-family.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:41.447Z",
+      "started_at": "2026-03-25T23:57:20.950Z",
       "status": "minted",
       "dependencies": [
-        226,
-        227,
-        228,
+        217,
+        218,
         219,
-        220,
-        221
+        210,
+        211,
+        212
       ],
       "source": {
         "path": "on-chain-modules/rendered/catalogs/plugins/bvstsynth-family/bvstengine.release.catalog.json",
         "bytes": 3150,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:41.513Z",
-      "token_id": "233",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000233",
-      "block_height": 500233,
-      "direct_sha256": "81735579f61e47e8830cae41aa0e64a7202b062af8d65115460a3bca5651616e",
-      "content_hash": "a7d0af58a4ac99eb78f884167547a655180eb06cd03cd803b07fb1eb0b7e078b",
+      "finished_at": "2026-03-25T23:57:21.020Z",
+      "token_id": "224",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000224",
+      "block_height": 500224,
+      "direct_sha256": "95800f068c7cff34bae63f33403876ba4e3fbc71a611309addf2b53d2042d9e1",
+      "content_hash": "aa3c15c22d8203cdc74c37127fb12ecba4757f6148615f3a02892f3ef4438bb1",
       "token_uri": "on-chain-modules/catalogs/plugins/bvstsynth-family/bvstengine.release.catalog.json",
       "fee_unit_microstx": "1000",
       "protocol_fee_microstx": "3000",
@@ -1318,12 +984,12 @@
         "totalChunks": "1",
         "tokenUri": "on-chain-modules/catalogs/plugins/bvstsynth-family/bvstengine.release.catalog.json",
         "dependencyIds": [
-          "226",
-          "227",
-          "228",
+          "217",
+          "218",
           "219",
-          "220",
-          "221"
+          "210",
+          "211",
+          "212"
         ],
         "simulated": true
       }
@@ -1333,27 +999,27 @@
       "batch": "20-bvstsynth-family.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:41.514Z",
+      "started_at": "2026-03-25T23:57:21.020Z",
       "status": "minted",
       "dependencies": [
-        229,
-        230,
-        231,
-        219,
         220,
-        221
+        221,
+        222,
+        210,
+        211,
+        212
       ],
       "source": {
         "path": "on-chain-modules/rendered/catalogs/plugins/bvstsynth-family/bvstsynth.release.catalog.json",
         "bytes": 3165,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:41.580Z",
-      "token_id": "234",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000234",
-      "block_height": 500234,
-      "direct_sha256": "3513e0eb7ef4dd7f5701ee46c68e73a2bf79aa2a8af6d58e2e2b714919d45e95",
-      "content_hash": "4d69fbac56a1dfd5ed468f09f255a9d90a4a429fb8ff4b7c03bbd6f704bf746a",
+      "finished_at": "2026-03-25T23:57:21.092Z",
+      "token_id": "225",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000225",
+      "block_height": 500225,
+      "direct_sha256": "92b752e288b12a670f868a82efad10edbfcf2c1d50c7749b5280b640eddbd2b5",
+      "content_hash": "23da6d4d3119fc7a5e8d18c0512f74cc129f35eaca6a6f2de59632e3df0034eb",
       "token_uri": "on-chain-modules/catalogs/plugins/bvstsynth-family/bvstsynth.release.catalog.json",
       "fee_unit_microstx": "1000",
       "protocol_fee_microstx": "3000",
@@ -1367,12 +1033,12 @@
         "totalChunks": "1",
         "tokenUri": "on-chain-modules/catalogs/plugins/bvstsynth-family/bvstsynth.release.catalog.json",
         "dependencyIds": [
-          "229",
-          "230",
-          "231",
-          "219",
           "220",
-          "221"
+          "221",
+          "222",
+          "210",
+          "211",
+          "212"
         ],
         "simulated": true
       }
@@ -1382,24 +1048,24 @@
       "batch": "20-bvstsynth-family.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:41.580Z",
+      "started_at": "2026-03-25T23:57:21.092Z",
       "status": "minted",
       "dependencies": [
-        234,
-        233,
-        232
+        225,
+        224,
+        223
       ],
       "source": {
         "path": "on-chain-modules/rendered/catalogs/families/bvstsynth-family.catalog.json",
         "bytes": 854,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:41.646Z",
-      "token_id": "235",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000235",
-      "block_height": 500235,
-      "direct_sha256": "a8d6cff3f1c06721ac34255a93424f948aa6a2cb62cc52f960f3ed3fcb54e05f",
-      "content_hash": "0cae6fbabc38f75eb2406fbd0c6cb65b797aa7e1bbd108d818e046a55451ae38",
+      "finished_at": "2026-03-25T23:57:21.162Z",
+      "token_id": "226",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000226",
+      "block_height": 500226,
+      "direct_sha256": "4dc48ed2b710ab03ea25058c583452ca89232f27b5108cc631c6dcbfb745d030",
+      "content_hash": "b2ad3b43d3d1a889594531987c3b28e1245e948a4bcc933c3b92197e02994196",
       "token_uri": "on-chain-modules/catalogs/families/bvstsynth-family.catalog.json",
       "fee_unit_microstx": "1000",
       "protocol_fee_microstx": "3000",
@@ -1413,9 +1079,9 @@
         "totalChunks": "1",
         "tokenUri": "on-chain-modules/catalogs/families/bvstsynth-family.catalog.json",
         "dependencyIds": [
-          "234",
-          "233",
-          "232"
+          "225",
+          "224",
+          "223"
         ],
         "simulated": true
       }
@@ -1425,7 +1091,7 @@
       "batch": "30-standalone-synths.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx",
-      "started_at": "2026-03-25T12:44:41.647Z",
+      "started_at": "2026-03-25T23:57:21.162Z",
       "status": "minted",
       "dependencies": [],
       "source": {
@@ -1433,10 +1099,10 @@
         "bytes": 337,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:41.713Z",
-      "token_id": "236",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000236",
-      "block_height": 500236,
+      "finished_at": "2026-03-25T23:57:21.233Z",
+      "token_id": "227",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000227",
+      "block_height": 500227,
       "direct_sha256": "4a163c47e941212833a531656dd64f17158817cd25ea0eb4da5a67a231b16200",
       "content_hash": "47d84b9df0e06d49f597135e773402c2561f2c2ca626921dfa7d59226e4f7fcb",
       "token_uri": "on-chain-modules/workspace/Plugins/Instruments/MinerOne/manifest.json",
@@ -1460,20 +1126,20 @@
       "batch": "30-standalone-synths.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:41.714Z",
+      "started_at": "2026-03-25T23:57:21.233Z",
       "status": "minted",
       "dependencies": [
-        202
+        214
       ],
       "source": {
         "path": "on-chain-modules/workspace/Plugins/Instruments/MinerOne/patch.json",
         "bytes": 4258,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:41.780Z",
-      "token_id": "237",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000237",
-      "block_height": 500237,
+      "finished_at": "2026-03-25T23:57:21.302Z",
+      "token_id": "228",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000228",
+      "block_height": 500228,
       "direct_sha256": "f63bde03b84a610d4de684624bf937713019ee00f26fcc16b3a6281d09e4f696",
       "content_hash": "dada715c5dd8d0dbd6608a3c101ded8810d57ce855263213e1f2ba31046c2426",
       "token_uri": "on-chain-modules/workspace/Plugins/Instruments/MinerOne/patch.json",
@@ -1489,7 +1155,7 @@
         "totalChunks": "1",
         "tokenUri": "on-chain-modules/workspace/Plugins/Instruments/MinerOne/patch.json",
         "dependencyIds": [
-          "202"
+          "214"
         ],
         "simulated": true
       }
@@ -1499,22 +1165,22 @@
       "batch": "30-standalone-synths.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:41.780Z",
+      "started_at": "2026-03-25T23:57:21.303Z",
       "status": "minted",
       "dependencies": [
-        218,
-        236,
-        237
+        209,
+        227,
+        228
       ],
       "source": {
         "path": "on-chain-modules/workspace/Plugins/Instruments/MinerOne/gui.html",
         "bytes": 828,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:41.846Z",
-      "token_id": "238",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000238",
-      "block_height": 500238,
+      "finished_at": "2026-03-25T23:57:21.373Z",
+      "token_id": "229",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000229",
+      "block_height": 500229,
       "direct_sha256": "254451e13c4f0d5b4c509c5ab76eec2b04402bbade3784be2531aa15bd088dd4",
       "content_hash": "0dcdbab207119cc09c1e246b67c16a852560e78fd49bb4d2582de0fc48996551",
       "token_uri": "on-chain-modules/workspace/Plugins/Instruments/MinerOne/gui.html",
@@ -1530,9 +1196,9 @@
         "totalChunks": "1",
         "tokenUri": "on-chain-modules/workspace/Plugins/Instruments/MinerOne/gui.html",
         "dependencyIds": [
-          "218",
-          "236",
-          "237"
+          "209",
+          "227",
+          "228"
         ],
         "simulated": true
       }
@@ -1542,7 +1208,7 @@
       "batch": "30-standalone-synths.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx",
-      "started_at": "2026-03-25T12:44:41.846Z",
+      "started_at": "2026-03-25T23:57:21.373Z",
       "status": "minted",
       "dependencies": [],
       "source": {
@@ -1550,10 +1216,10 @@
         "bytes": 339,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:41.913Z",
-      "token_id": "239",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000239",
-      "block_height": 500239,
+      "finished_at": "2026-03-25T23:57:21.446Z",
+      "token_id": "230",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000230",
+      "block_height": 500230,
       "direct_sha256": "b19c55756c543cb7a117c60e4fc740600135f7ed94504bc55630b93f4378e37c",
       "content_hash": "acefc5f63f9367523c2b4a963305e173463c7f1223da3d7c56f7e7bf0d0b2729",
       "token_uri": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/manifest.json",
@@ -1577,20 +1243,20 @@
       "batch": "30-standalone-synths.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:41.913Z",
+      "started_at": "2026-03-25T23:57:21.447Z",
       "status": "minted",
       "dependencies": [
-        202
+        214
       ],
       "source": {
         "path": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/patch.json",
         "bytes": 7057,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:41.980Z",
-      "token_id": "240",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000240",
-      "block_height": 500240,
+      "finished_at": "2026-03-25T23:57:21.518Z",
+      "token_id": "231",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000231",
+      "block_height": 500231,
       "direct_sha256": "b2260cd0586b4f5369f59b047b75aeccdc10573339deb54b07155bb1be200090",
       "content_hash": "aa1717dff4f9b7c018583cc88f56a1de5db3aaac08fee82f60319261b374595a",
       "token_uri": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/patch.json",
@@ -1606,7 +1272,7 @@
         "totalChunks": "1",
         "tokenUri": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/patch.json",
         "dependencyIds": [
-          "202"
+          "214"
         ],
         "simulated": true
       }
@@ -1616,22 +1282,22 @@
       "batch": "30-standalone-synths.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:41.980Z",
+      "started_at": "2026-03-25T23:57:21.518Z",
       "status": "minted",
       "dependencies": [
-        218,
-        239,
-        240
+        209,
+        230,
+        231
       ],
       "source": {
         "path": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/gui.html",
         "bytes": 829,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:42.049Z",
-      "token_id": "241",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000241",
-      "block_height": 500241,
+      "finished_at": "2026-03-25T23:57:21.588Z",
+      "token_id": "232",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000232",
+      "block_height": 500232,
       "direct_sha256": "49786f9e19c8b379a71a4f7cfe90445945189a1874c51330abe7063fa43b016a",
       "content_hash": "0dc40a73d8162e7658dff4a01986d63310e8aa153e4ccd82cc87e078d99208e6",
       "token_uri": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/gui.html",
@@ -1647,9 +1313,9 @@
         "totalChunks": "1",
         "tokenUri": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/gui.html",
         "dependencyIds": [
-          "218",
-          "239",
-          "240"
+          "209",
+          "230",
+          "231"
         ],
         "simulated": true
       }
@@ -1659,7 +1325,7 @@
       "batch": "30-standalone-synths.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx",
-      "started_at": "2026-03-25T12:44:42.050Z",
+      "started_at": "2026-03-25T23:57:21.589Z",
       "status": "minted",
       "dependencies": [],
       "source": {
@@ -1667,10 +1333,10 @@
         "bytes": 357,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:42.132Z",
-      "token_id": "242",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000242",
-      "block_height": 500242,
+      "finished_at": "2026-03-25T23:57:21.659Z",
+      "token_id": "233",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000233",
+      "block_height": 500233,
       "direct_sha256": "622f89832e8342f62d0fdb08282ce7f45ed8f0d09ed87e518a0472a295b6ed11",
       "content_hash": "8daa05257216877752f49cb31ccb2844cf9d40e7be6be4906b0f604f1dcdd13b",
       "token_uri": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/manifest.json",
@@ -1694,20 +1360,20 @@
       "batch": "30-standalone-synths.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:42.132Z",
+      "started_at": "2026-03-25T23:57:21.659Z",
       "status": "minted",
       "dependencies": [
-        202
+        214
       ],
       "source": {
         "path": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/patch.json",
         "bytes": 4622,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:42.203Z",
-      "token_id": "243",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000243",
-      "block_height": 500243,
+      "finished_at": "2026-03-25T23:57:21.729Z",
+      "token_id": "234",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000234",
+      "block_height": 500234,
       "direct_sha256": "c5edaf6245668c9647da6331409cd46a0cc943b667cad30a8c78127535641c11",
       "content_hash": "5abbbf04bbb3c6a028344e3167d1ad738fff526c2ad83b69f4d3f98ce981dc7e",
       "token_uri": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/patch.json",
@@ -1723,7 +1389,7 @@
         "totalChunks": "1",
         "tokenUri": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/patch.json",
         "dependencyIds": [
-          "202"
+          "214"
         ],
         "simulated": true
       }
@@ -1733,22 +1399,22 @@
       "batch": "30-standalone-synths.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:42.203Z",
+      "started_at": "2026-03-25T23:57:21.729Z",
       "status": "minted",
       "dependencies": [
-        218,
-        242,
-        243
+        209,
+        233,
+        234
       ],
       "source": {
         "path": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/gui.html",
         "bytes": 835,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:42.273Z",
-      "token_id": "244",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000244",
-      "block_height": 500244,
+      "finished_at": "2026-03-25T23:57:21.801Z",
+      "token_id": "235",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000235",
+      "block_height": 500235,
       "direct_sha256": "2bb2cbffca17d90e6e1f37961c2c952064c995606333f1dd6cc1dcb36e7597b6",
       "content_hash": "2733c97a5f8f75618cb77ffb0c738c51c605e30e428e443bcb9b081079d628a1",
       "token_uri": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/gui.html",
@@ -1764,9 +1430,9 @@
         "totalChunks": "1",
         "tokenUri": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/gui.html",
         "dependencyIds": [
-          "218",
-          "242",
-          "243"
+          "209",
+          "233",
+          "234"
         ],
         "simulated": true
       }
@@ -1776,7 +1442,7 @@
       "batch": "30-standalone-synths.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx",
-      "started_at": "2026-03-25T12:44:42.274Z",
+      "started_at": "2026-03-25T23:57:21.801Z",
       "status": "minted",
       "dependencies": [],
       "source": {
@@ -1784,10 +1450,10 @@
         "bytes": 336,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:42.342Z",
-      "token_id": "245",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000245",
-      "block_height": 500245,
+      "finished_at": "2026-03-25T23:57:21.871Z",
+      "token_id": "236",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000236",
+      "block_height": 500236,
       "direct_sha256": "c17d1d6983ce58a56ca8bf3d3aed9426e044937e88b5c159c85306fbd81cabc7",
       "content_hash": "fd2a030e31f0eaee183fb1054c92265f729e48fa3395af7d81d56fdbe026efa2",
       "token_uri": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/manifest.json",
@@ -1811,20 +1477,20 @@
       "batch": "30-standalone-synths.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:42.343Z",
+      "started_at": "2026-03-25T23:57:21.871Z",
       "status": "minted",
       "dependencies": [
-        202
+        214
       ],
       "source": {
         "path": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/patch.json",
         "bytes": 2163,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:42.409Z",
-      "token_id": "246",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000246",
-      "block_height": 500246,
+      "finished_at": "2026-03-25T23:57:21.942Z",
+      "token_id": "237",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000237",
+      "block_height": 500237,
       "direct_sha256": "0d880724099a2270c69e4c0f979e2c8848c58959d3b02ffaaf9faaec71cf5b72",
       "content_hash": "14f27bdbd64a3d2b9c688d6f027c0b9d8a3da5cce933b17a81a21c378b2d0695",
       "token_uri": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/patch.json",
@@ -1840,7 +1506,7 @@
         "totalChunks": "1",
         "tokenUri": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/patch.json",
         "dependencyIds": [
-          "202"
+          "214"
         ],
         "simulated": true
       }
@@ -1850,22 +1516,22 @@
       "batch": "30-standalone-synths.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:42.409Z",
+      "started_at": "2026-03-25T23:57:21.942Z",
       "status": "minted",
       "dependencies": [
-        218,
-        245,
-        246
+        209,
+        236,
+        237
       ],
       "source": {
         "path": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/gui.html",
         "bytes": 819,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:42.476Z",
-      "token_id": "247",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000247",
-      "block_height": 500247,
+      "finished_at": "2026-03-25T23:57:22.013Z",
+      "token_id": "238",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000238",
+      "block_height": 500238,
       "direct_sha256": "cb3a3d3c19338229b87954703bdb13b9b84c71845b3cbcc604c45ea6fc1c3cb7",
       "content_hash": "a62712778e5e73822e4201a657fb727aaba031a8d956e14fb34ae740577aeab4",
       "token_uri": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/gui.html",
@@ -1881,9 +1547,9 @@
         "totalChunks": "1",
         "tokenUri": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/gui.html",
         "dependencyIds": [
-          "218",
-          "245",
-          "246"
+          "209",
+          "236",
+          "237"
         ],
         "simulated": true
       }
@@ -1893,27 +1559,27 @@
       "batch": "30-standalone-synths.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:42.476Z",
+      "started_at": "2026-03-25T23:57:22.013Z",
       "status": "minted",
       "dependencies": [
-        236,
-        237,
-        238,
-        219,
-        220,
-        221
+        227,
+        228,
+        229,
+        210,
+        211,
+        212
       ],
       "source": {
         "path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/minerone.release.catalog.json",
         "bytes": 3129,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:42.543Z",
-      "token_id": "248",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000248",
-      "block_height": 500248,
-      "direct_sha256": "b65f3f9f3c208bab9b572c0c6f1199c364bfa9ecbf0f81455f2a550b3193d469",
-      "content_hash": "92918aae675b71daf926cffcdae6b63acfd2ff7f0b084fba21d08228a04dc4f0",
+      "finished_at": "2026-03-25T23:57:22.084Z",
+      "token_id": "239",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000239",
+      "block_height": 500239,
+      "direct_sha256": "d4e39e4f0f30ff84bb36b4ba31db13101b2cb9f025b6d1a6a1311d1b8d424219",
+      "content_hash": "23f52631af451be5245ade16e16cea2baf7481837918cd0304e82a00ded24916",
       "token_uri": "on-chain-modules/catalogs/plugins/standalone-synths/minerone.release.catalog.json",
       "fee_unit_microstx": "1000",
       "protocol_fee_microstx": "3000",
@@ -1927,12 +1593,12 @@
         "totalChunks": "1",
         "tokenUri": "on-chain-modules/catalogs/plugins/standalone-synths/minerone.release.catalog.json",
         "dependencyIds": [
-          "236",
-          "237",
-          "238",
-          "219",
-          "220",
-          "221"
+          "227",
+          "228",
+          "229",
+          "210",
+          "211",
+          "212"
         ],
         "simulated": true
       }
@@ -1942,27 +1608,27 @@
       "batch": "30-standalone-synths.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:42.543Z",
+      "started_at": "2026-03-25T23:57:22.085Z",
       "status": "minted",
       "dependencies": [
-        239,
-        240,
-        241,
-        219,
-        220,
-        221
+        230,
+        231,
+        232,
+        210,
+        211,
+        212
       ],
       "source": {
         "path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/minertwo.release.catalog.json",
         "bytes": 3129,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:42.611Z",
-      "token_id": "249",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000249",
-      "block_height": 500249,
-      "direct_sha256": "f8026a013e2b92b5e9cebe4a8253743c33b5ba370b2a7e25489564f1b30c8f07",
-      "content_hash": "9dca0f901ee4326eb8184ea9a6cb950effd8f7ccc5683358321b0724373f5844",
+      "finished_at": "2026-03-25T23:57:22.155Z",
+      "token_id": "240",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000240",
+      "block_height": 500240,
+      "direct_sha256": "8e06edd1d311b098872142f347e2faa44345af572ecb42c7caa441b7db7a90e1",
+      "content_hash": "d63cd9b0edc907a10a2d8abc3bbb47c7c79336fdff9946dddc8091da482ccea7",
       "token_uri": "on-chain-modules/catalogs/plugins/standalone-synths/minertwo.release.catalog.json",
       "fee_unit_microstx": "1000",
       "protocol_fee_microstx": "3000",
@@ -1976,12 +1642,12 @@
         "totalChunks": "1",
         "tokenUri": "on-chain-modules/catalogs/plugins/standalone-synths/minertwo.release.catalog.json",
         "dependencyIds": [
-          "239",
-          "240",
-          "241",
-          "219",
-          "220",
-          "221"
+          "230",
+          "231",
+          "232",
+          "210",
+          "211",
+          "212"
         ],
         "simulated": true
       }
@@ -1991,27 +1657,27 @@
       "batch": "30-standalone-synths.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:42.611Z",
+      "started_at": "2026-03-25T23:57:22.155Z",
       "status": "minted",
       "dependencies": [
-        242,
-        243,
-        244,
-        219,
-        220,
-        221
+        233,
+        234,
+        235,
+        210,
+        211,
+        212
       ],
       "source": {
         "path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/chainpoly.release.catalog.json",
         "bytes": 3140,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:42.677Z",
-      "token_id": "250",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000250",
-      "block_height": 500250,
-      "direct_sha256": "8d6af84710fca774f1fbcabafeee4a8c969556b81ae75c9db2a4496d88fc75f7",
-      "content_hash": "482cda62c2ffeb4f1ba409ce404195569ff211919b40cb746a7ee7cca641a71a",
+      "finished_at": "2026-03-25T23:57:22.225Z",
+      "token_id": "241",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000241",
+      "block_height": 500241,
+      "direct_sha256": "8e130dd881d3959dd87ff54cded47d12b03391b119196549f2ab60d9cc0dd949",
+      "content_hash": "fbf830bb1a6482cf4e3b0e18dc137122ff72baabd82faa52a36f3365729e192b",
       "token_uri": "on-chain-modules/catalogs/plugins/standalone-synths/chainpoly.release.catalog.json",
       "fee_unit_microstx": "1000",
       "protocol_fee_microstx": "3000",
@@ -2025,12 +1691,12 @@
         "totalChunks": "1",
         "tokenUri": "on-chain-modules/catalogs/plugins/standalone-synths/chainpoly.release.catalog.json",
         "dependencyIds": [
-          "242",
-          "243",
-          "244",
-          "219",
-          "220",
-          "221"
+          "233",
+          "234",
+          "235",
+          "210",
+          "211",
+          "212"
         ],
         "simulated": true
       }
@@ -2040,27 +1706,27 @@
       "batch": "30-standalone-synths.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:42.677Z",
+      "started_at": "2026-03-25T23:57:22.226Z",
       "status": "minted",
       "dependencies": [
-        245,
-        246,
-        247,
-        219,
-        220,
-        221
+        236,
+        237,
+        238,
+        210,
+        211,
+        212
       ],
       "source": {
         "path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/retrokeys.release.catalog.json",
         "bytes": 3191,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:42.745Z",
-      "token_id": "251",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000251",
-      "block_height": 500251,
-      "direct_sha256": "06304fa867937c9fa14d86396998d43f6cb0293f835649c1422b16e5b3bc8b65",
-      "content_hash": "fbdbd8e05460c7a3bde46576ccc18b1690268b106a062b98aa5d7182daaa60ff",
+      "finished_at": "2026-03-25T23:57:22.296Z",
+      "token_id": "242",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000242",
+      "block_height": 500242,
+      "direct_sha256": "ba645ef9e9fcb2a79d757983c6684b5aae6e2f7827e7c2bcf5f6388cc9941ea8",
+      "content_hash": "37113c58e15966130e75549f8b53bd5ecf284f4e9a8b48a9d34bafd73a7d5369",
       "token_uri": "on-chain-modules/catalogs/plugins/standalone-synths/retrokeys.release.catalog.json",
       "fee_unit_microstx": "1000",
       "protocol_fee_microstx": "3000",
@@ -2074,12 +1740,12 @@
         "totalChunks": "1",
         "tokenUri": "on-chain-modules/catalogs/plugins/standalone-synths/retrokeys.release.catalog.json",
         "dependencyIds": [
-          "245",
-          "246",
-          "247",
-          "219",
-          "220",
-          "221"
+          "236",
+          "237",
+          "238",
+          "210",
+          "211",
+          "212"
         ],
         "simulated": true
       }
@@ -2089,25 +1755,25 @@
       "batch": "30-standalone-synths.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:42.745Z",
+      "started_at": "2026-03-25T23:57:22.296Z",
       "status": "minted",
       "dependencies": [
-        251,
-        248,
-        249,
-        250
+        242,
+        239,
+        240,
+        241
       ],
       "source": {
         "path": "on-chain-modules/rendered/catalogs/families/standalone-synths.catalog.json",
         "bytes": 1011,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:42.813Z",
-      "token_id": "252",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000252",
-      "block_height": 500252,
-      "direct_sha256": "14825df5111f3128f8f67621c3eb3c86bf009001d1d61b4160752022625ebcfa",
-      "content_hash": "f2c275d31f6778d620ea27350174d09d523c8be71d1b129dc8eaf10f4d5845fc",
+      "finished_at": "2026-03-25T23:57:22.368Z",
+      "token_id": "243",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000243",
+      "block_height": 500243,
+      "direct_sha256": "71b4e70af009969df72d3cdc63e5b7336f67f5e9bb2791367bd9f7b3a4496208",
+      "content_hash": "56863d04fadaf19ddf9ab89963617026b0549221f89561612b0f1abdded1e90f",
       "token_uri": "on-chain-modules/catalogs/families/standalone-synths.catalog.json",
       "fee_unit_microstx": "1000",
       "protocol_fee_microstx": "3000",
@@ -2121,10 +1787,10 @@
         "totalChunks": "1",
         "tokenUri": "on-chain-modules/catalogs/families/standalone-synths.catalog.json",
         "dependencyIds": [
-          "251",
-          "248",
-          "249",
-          "250"
+          "242",
+          "239",
+          "240",
+          "241"
         ],
         "simulated": true
       }
@@ -2134,23 +1800,23 @@
       "batch": "40-root-catalogs.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:42.814Z",
+      "started_at": "2026-03-25T23:57:22.368Z",
       "status": "minted",
       "dependencies": [
-        235,
-        252
+        226,
+        243
       ],
       "source": {
         "path": "on-chain-modules/rendered/catalogs/releases/first-wave-instruments.catalog.json",
         "bytes": 1558,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:42.884Z",
-      "token_id": "253",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000253",
-      "block_height": 500253,
-      "direct_sha256": "440b08977e74a350a3c29659c09a98bc2a6421f14954f8dfb9b157c718d68324",
-      "content_hash": "5b5ec109690565adc27a4bbb51bdbe47ca539611fe2f31b4bfa1875e2ecdc0b9",
+      "finished_at": "2026-03-25T23:57:22.445Z",
+      "token_id": "244",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000244",
+      "block_height": 500244,
+      "direct_sha256": "97ffe1a7e956ba9c407ab84fe761dd49cdfaf25d260f4370098836547a22058b",
+      "content_hash": "85f680c08fa8414d90594860312bb675509ce86e2537789ff8ec6516abca53fa",
       "token_uri": "on-chain-modules/catalogs/releases/first-wave-instruments.catalog.json",
       "fee_unit_microstx": "1000",
       "protocol_fee_microstx": "3000",
@@ -2164,8 +1830,8 @@
         "totalChunks": "1",
         "tokenUri": "on-chain-modules/catalogs/releases/first-wave-instruments.catalog.json",
         "dependencyIds": [
-          "235",
-          "252"
+          "226",
+          "243"
         ],
         "simulated": true
       }
@@ -2175,23 +1841,23 @@
       "batch": "40-root-catalogs.batch.json",
       "route": "helper",
       "function": "mint-small-single-tx-recursive",
-      "started_at": "2026-03-25T12:44:42.885Z",
+      "started_at": "2026-03-25T23:57:22.445Z",
       "status": "minted",
       "dependencies": [
-        222,
-        253
+        213,
+        244
       ],
       "source": {
         "path": "on-chain-modules/rendered/catalogs/root/root.catalog.json",
         "bytes": 1085,
         "chunks": 1
       },
-      "finished_at": "2026-03-25T12:44:42.958Z",
-      "token_id": "254",
-      "txid": "0x0000000000000000000000000000000000000000000000000000000000000254",
-      "block_height": 500254,
-      "direct_sha256": "5f53d2d6abe2744ae2561710d360884dc7a22a569a4687d427baf85cd24f5443",
-      "content_hash": "a48bfb49187f079efc7be3bcbf5d9ccde910eddfff1cfe1c5434d004decf4bd3",
+      "finished_at": "2026-03-25T23:57:22.517Z",
+      "token_id": "245",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000245",
+      "block_height": 500245,
+      "direct_sha256": "438ac14794d1c0562f293964699f2ea45661ab079555fedba0486f99b10de91c",
+      "content_hash": "89418eed358cf33330ca1102ba308d6e862e8cb6880400dd9073703ebc2f7ed3",
       "token_uri": "on-chain-modules/catalogs/root/root.catalog.json",
       "fee_unit_microstx": "1000",
       "protocol_fee_microstx": "3000",
@@ -2205,8 +1871,1356 @@
         "totalChunks": "1",
         "tokenUri": "on-chain-modules/catalogs/root/root.catalog.json",
         "dependencyIds": [
-          "222",
-          "253"
+          "213",
+          "244"
+        ],
+        "simulated": true
+      }
+    },
+    {
+      "name": "bvst.plugin.minertwo.manifest.v1.0.0",
+      "batch": "30-standalone-synths.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx",
+      "started_at": "2026-03-26T01:39:26.163Z",
+      "status": "minted",
+      "dependencies": [],
+      "source": {
+        "path": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/manifest.json",
+        "bytes": 339,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-26T01:39:26.272Z",
+      "token_id": "202",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000202",
+      "block_height": 500202,
+      "direct_sha256": "b19c55756c543cb7a117c60e4fc740600135f7ed94504bc55630b93f4378e37c",
+      "content_hash": "acefc5f63f9367523c2b4a963305e173463c7f1223da3d7c56f7e7bf0d0b2729",
+      "token_uri": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/manifest.json",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "26774",
+      "serialized_bytes": 751,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+        "mimeType": "application/json",
+        "totalSize": "339",
+        "totalChunks": "1",
+        "tokenUri": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/manifest.json",
+        "dependencyIds": [],
+        "simulated": true
+      }
+    },
+    {
+      "name": "bvst.plugin.minertwo.patch.v1.0.0",
+      "batch": "30-standalone-synths.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx-recursive",
+      "started_at": "2026-03-26T01:39:26.272Z",
+      "status": "minted",
+      "dependencies": [
+        214
+      ],
+      "source": {
+        "path": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/patch.json",
+        "bytes": 7057,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-26T01:39:26.350Z",
+      "token_id": "203",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000203",
+      "block_height": 500203,
+      "direct_sha256": "b2260cd0586b4f5369f59b047b75aeccdc10573339deb54b07155bb1be200090",
+      "content_hash": "aa1717dff4f9b7c018583cc88f56a1de5db3aaac08fee82f60319261b374595a",
+      "token_uri": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/patch.json",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "267304",
+      "serialized_bytes": 7498,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+        "mimeType": "application/json",
+        "totalSize": "7057",
+        "totalChunks": "1",
+        "tokenUri": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/patch.json",
+        "dependencyIds": [
+          "214"
+        ],
+        "simulated": true
+      }
+    },
+    {
+      "name": "bvst.plugin.minertwo.shell.v1.0.0",
+      "batch": "30-standalone-synths.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx-recursive",
+      "started_at": "2026-03-26T01:39:26.350Z",
+      "status": "minted",
+      "dependencies": [
+        230,
+        202,
+        203
+      ],
+      "source": {
+        "path": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/gui.html",
+        "bytes": 829,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-26T01:39:26.425Z",
+      "token_id": "204",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000204",
+      "block_height": 500204,
+      "direct_sha256": "49786f9e19c8b379a71a4f7cfe90445945189a1874c51330abe7063fa43b016a",
+      "content_hash": "0dc40a73d8162e7658dff4a01986d63310e8aa153e4ccd82cc87e078d99208e6",
+      "token_uri": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/gui.html",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "46167",
+      "serialized_bytes": 1295,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+        "mimeType": "text/html",
+        "totalSize": "829",
+        "totalChunks": "1",
+        "tokenUri": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/gui.html",
+        "dependencyIds": [
+          "230",
+          "202",
+          "203"
+        ],
+        "simulated": true
+      }
+    },
+    {
+      "name": "bvst.plugin.chainpoly.manifest.v1.0.0",
+      "batch": "30-standalone-synths.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx",
+      "started_at": "2026-03-26T01:39:26.426Z",
+      "status": "minted",
+      "dependencies": [],
+      "source": {
+        "path": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/manifest.json",
+        "bytes": 357,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-26T01:39:26.497Z",
+      "token_id": "205",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000205",
+      "block_height": 500205,
+      "direct_sha256": "622f89832e8342f62d0fdb08282ce7f45ed8f0d09ed87e518a0472a295b6ed11",
+      "content_hash": "8daa05257216877752f49cb31ccb2844cf9d40e7be6be4906b0f604f1dcdd13b",
+      "token_uri": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/manifest.json",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "27451",
+      "serialized_bytes": 770,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+        "mimeType": "application/json",
+        "totalSize": "357",
+        "totalChunks": "1",
+        "tokenUri": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/manifest.json",
+        "dependencyIds": [],
+        "simulated": true
+      }
+    },
+    {
+      "name": "bvst.plugin.chainpoly.patch.v1.0.0",
+      "batch": "30-standalone-synths.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx-recursive",
+      "started_at": "2026-03-26T01:39:26.497Z",
+      "status": "minted",
+      "dependencies": [
+        214
+      ],
+      "source": {
+        "path": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/patch.json",
+        "bytes": 4622,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-26T01:39:26.569Z",
+      "token_id": "206",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000206",
+      "block_height": 500206,
+      "direct_sha256": "c5edaf6245668c9647da6331409cd46a0cc943b667cad30a8c78127535641c11",
+      "content_hash": "5abbbf04bbb3c6a028344e3167d1ad738fff526c2ad83b69f4d3f98ce981dc7e",
+      "token_uri": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/patch.json",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "180532",
+      "serialized_bytes": 5064,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+        "mimeType": "application/json",
+        "totalSize": "4622",
+        "totalChunks": "1",
+        "tokenUri": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/patch.json",
+        "dependencyIds": [
+          "214"
+        ],
+        "simulated": true
+      }
+    },
+    {
+      "name": "bvst.plugin.chainpoly.shell.v1.0.0",
+      "batch": "30-standalone-synths.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx-recursive",
+      "started_at": "2026-03-26T01:39:26.569Z",
+      "status": "minted",
+      "dependencies": [
+        230,
+        205,
+        206
+      ],
+      "source": {
+        "path": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/gui.html",
+        "bytes": 835,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-26T01:39:26.638Z",
+      "token_id": "207",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000207",
+      "block_height": 500207,
+      "direct_sha256": "2bb2cbffca17d90e6e1f37961c2c952064c995606333f1dd6cc1dcb36e7597b6",
+      "content_hash": "2733c97a5f8f75618cb77ffb0c738c51c605e30e428e443bcb9b081079d628a1",
+      "token_uri": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/gui.html",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "46417",
+      "serialized_bytes": 1302,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+        "mimeType": "text/html",
+        "totalSize": "835",
+        "totalChunks": "1",
+        "tokenUri": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/gui.html",
+        "dependencyIds": [
+          "230",
+          "205",
+          "206"
+        ],
+        "simulated": true
+      }
+    },
+    {
+      "name": "bvst.plugin.retrokeys.manifest.v1.0.0",
+      "batch": "30-standalone-synths.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx",
+      "started_at": "2026-03-26T01:39:26.638Z",
+      "status": "minted",
+      "dependencies": [],
+      "source": {
+        "path": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/manifest.json",
+        "bytes": 336,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-26T01:39:26.707Z",
+      "token_id": "208",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000208",
+      "block_height": 500208,
+      "direct_sha256": "c17d1d6983ce58a56ca8bf3d3aed9426e044937e88b5c159c85306fbd81cabc7",
+      "content_hash": "fd2a030e31f0eaee183fb1054c92265f729e48fa3395af7d81d56fdbe026efa2",
+      "token_uri": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/manifest.json",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "26702",
+      "serialized_bytes": 749,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+        "mimeType": "application/json",
+        "totalSize": "336",
+        "totalChunks": "1",
+        "tokenUri": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/manifest.json",
+        "dependencyIds": [],
+        "simulated": true
+      }
+    },
+    {
+      "name": "bvst.plugin.retrokeys.patch.v1.0.0",
+      "batch": "30-standalone-synths.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx-recursive",
+      "started_at": "2026-03-26T01:39:26.707Z",
+      "status": "minted",
+      "dependencies": [
+        214
+      ],
+      "source": {
+        "path": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/patch.json",
+        "bytes": 2163,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-26T01:39:26.779Z",
+      "token_id": "209",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000209",
+      "block_height": 500209,
+      "direct_sha256": "0d880724099a2270c69e4c0f979e2c8848c58959d3b02ffaaf9faaec71cf5b72",
+      "content_hash": "14f27bdbd64a3d2b9c688d6f027c0b9d8a3da5cce933b17a81a21c378b2d0695",
+      "token_uri": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/patch.json",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "92869",
+      "serialized_bytes": 2605,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+        "mimeType": "application/json",
+        "totalSize": "2163",
+        "totalChunks": "1",
+        "tokenUri": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/patch.json",
+        "dependencyIds": [
+          "214"
+        ],
+        "simulated": true
+      }
+    },
+    {
+      "name": "bvst.plugin.retrokeys.shell.v1.0.0",
+      "batch": "30-standalone-synths.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx-recursive",
+      "started_at": "2026-03-26T01:39:26.780Z",
+      "status": "minted",
+      "dependencies": [
+        230,
+        208,
+        209
+      ],
+      "source": {
+        "path": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/gui.html",
+        "bytes": 819,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-26T01:39:26.850Z",
+      "token_id": "210",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000210",
+      "block_height": 500210,
+      "direct_sha256": "cb3a3d3c19338229b87954703bdb13b9b84c71845b3cbcc604c45ea6fc1c3cb7",
+      "content_hash": "a62712778e5e73822e4201a657fb727aaba031a8d956e14fb34ae740577aeab4",
+      "token_uri": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/gui.html",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "45846",
+      "serialized_bytes": 1286,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+        "mimeType": "text/html",
+        "totalSize": "819",
+        "totalChunks": "1",
+        "tokenUri": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/gui.html",
+        "dependencyIds": [
+          "230",
+          "208",
+          "209"
+        ],
+        "simulated": true
+      }
+    },
+    {
+      "name": "bvst.plugin.minerone.release.v1.0.0",
+      "batch": "30-standalone-synths.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx-recursive",
+      "started_at": "2026-03-26T01:39:26.850Z",
+      "status": "minted",
+      "dependencies": [
+        248,
+        249,
+        250,
+        231,
+        232,
+        233
+      ],
+      "source": {
+        "path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/minerone.release.catalog.json",
+        "bytes": 3173,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-26T01:39:26.919Z",
+      "token_id": "211",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000211",
+      "block_height": 500211,
+      "direct_sha256": "254a6769655b7d4aacaba9dec9818e7a82d6e74545a00e06cdb8b7e7c743ed6e",
+      "content_hash": "7019951ae4f9b33726f307c175a4f0f03f6bb84f32878a870c26aa31230f4a1f",
+      "token_uri": "on-chain-modules/catalogs/plugins/standalone-synths/minerone.release.catalog.json",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "132405",
+      "serialized_bytes": 3714,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+        "mimeType": "application/json",
+        "totalSize": "3173",
+        "totalChunks": "1",
+        "tokenUri": "on-chain-modules/catalogs/plugins/standalone-synths/minerone.release.catalog.json",
+        "dependencyIds": [
+          "248",
+          "249",
+          "250",
+          "231",
+          "232",
+          "233"
+        ],
+        "simulated": true
+      }
+    },
+    {
+      "name": "bvst.plugin.minertwo.release.v1.0.0",
+      "batch": "30-standalone-synths.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx-recursive",
+      "started_at": "2026-03-26T01:39:26.919Z",
+      "status": "minted",
+      "dependencies": [
+        202,
+        203,
+        204,
+        231,
+        232,
+        233
+      ],
+      "source": {
+        "path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/minertwo.release.catalog.json",
+        "bytes": 3125,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-26T01:39:26.987Z",
+      "token_id": "212",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000212",
+      "block_height": 500212,
+      "direct_sha256": "8830a9d4a648c223e9ba0b5175634d350f4511ebc35d25a053dcda802df24e38",
+      "content_hash": "182a4261956abdc43c26fb2de55df85d016c36e73c7a2b41d03ecb685738203e",
+      "token_uri": "on-chain-modules/catalogs/plugins/standalone-synths/minertwo.release.catalog.json",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "130693",
+      "serialized_bytes": 3666,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+        "mimeType": "application/json",
+        "totalSize": "3125",
+        "totalChunks": "1",
+        "tokenUri": "on-chain-modules/catalogs/plugins/standalone-synths/minertwo.release.catalog.json",
+        "dependencyIds": [
+          "202",
+          "203",
+          "204",
+          "231",
+          "232",
+          "233"
+        ],
+        "simulated": true
+      }
+    },
+    {
+      "name": "bvst.plugin.chainpoly.release.v1.0.0",
+      "batch": "30-standalone-synths.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx-recursive",
+      "started_at": "2026-03-26T01:39:26.987Z",
+      "status": "minted",
+      "dependencies": [
+        205,
+        206,
+        207,
+        231,
+        232,
+        233
+      ],
+      "source": {
+        "path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/chainpoly.release.catalog.json",
+        "bytes": 3136,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-26T01:39:27.062Z",
+      "token_id": "213",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000213",
+      "block_height": 500213,
+      "direct_sha256": "5a48150001e4d0693a082997bfe6385cc0bba9a50277944765230052eee173e8",
+      "content_hash": "e13e603c65c550ec259bcbea587e9e1e05cc7ddeffbb7136bc0a11c3d8341dc9",
+      "token_uri": "on-chain-modules/catalogs/plugins/standalone-synths/chainpoly.release.catalog.json",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "131121",
+      "serialized_bytes": 3678,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+        "mimeType": "application/json",
+        "totalSize": "3136",
+        "totalChunks": "1",
+        "tokenUri": "on-chain-modules/catalogs/plugins/standalone-synths/chainpoly.release.catalog.json",
+        "dependencyIds": [
+          "205",
+          "206",
+          "207",
+          "231",
+          "232",
+          "233"
+        ],
+        "simulated": true
+      }
+    },
+    {
+      "name": "bvst.plugin.retrokeys.release.v1.0.0",
+      "batch": "30-standalone-synths.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx-recursive",
+      "started_at": "2026-03-26T01:39:27.063Z",
+      "status": "minted",
+      "dependencies": [
+        208,
+        209,
+        210,
+        231,
+        232,
+        233
+      ],
+      "source": {
+        "path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/retrokeys.release.catalog.json",
+        "bytes": 3187,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-26T01:39:27.133Z",
+      "token_id": "214",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000214",
+      "block_height": 500214,
+      "direct_sha256": "79b0e1ea87b9d1a55d6d6868a1727dfa93d095086832f7237758319346ec3cee",
+      "content_hash": "98135b345b434f89c951e1791d42cdfcdd7ab7e1619783e3566fbdfdd5a98bfc",
+      "token_uri": "on-chain-modules/catalogs/plugins/standalone-synths/retrokeys.release.catalog.json",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "132939",
+      "serialized_bytes": 3729,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+        "mimeType": "application/json",
+        "totalSize": "3187",
+        "totalChunks": "1",
+        "tokenUri": "on-chain-modules/catalogs/plugins/standalone-synths/retrokeys.release.catalog.json",
+        "dependencyIds": [
+          "208",
+          "209",
+          "210",
+          "231",
+          "232",
+          "233"
+        ],
+        "simulated": true
+      }
+    },
+    {
+      "name": "bvst.catalog.family.standalonesynths.v1",
+      "batch": "30-standalone-synths.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx-recursive",
+      "started_at": "2026-03-26T01:39:27.133Z",
+      "status": "minted",
+      "dependencies": [
+        214,
+        211,
+        212,
+        213
+      ],
+      "source": {
+        "path": "on-chain-modules/rendered/catalogs/families/standalone-synths.catalog.json",
+        "bytes": 1011,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-26T01:39:27.204Z",
+      "token_id": "215",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000215",
+      "block_height": 500215,
+      "direct_sha256": "66313156d7f3c41f8b973d6bf93d846140d683be748364ef086ae9921ae07358",
+      "content_hash": "27a04521fa8838bdac22a34fa90ee57ef1bf3c6c319c8c5f53c93521bfc88e1b",
+      "token_uri": "on-chain-modules/catalogs/families/standalone-synths.catalog.json",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "53547",
+      "serialized_bytes": 1502,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+        "mimeType": "application/json",
+        "totalSize": "1011",
+        "totalChunks": "1",
+        "tokenUri": "on-chain-modules/catalogs/families/standalone-synths.catalog.json",
+        "dependencyIds": [
+          "214",
+          "211",
+          "212",
+          "213"
+        ],
+        "simulated": true
+      }
+    },
+    {
+      "name": "bvst.catalog.release.firstwaveinstruments.v1",
+      "batch": "40-root-catalogs.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx-recursive",
+      "started_at": "2026-03-26T01:39:27.204Z",
+      "status": "minted",
+      "dependencies": [
+        247,
+        215
+      ],
+      "source": {
+        "path": "on-chain-modules/rendered/catalogs/releases/first-wave-instruments.catalog.json",
+        "bytes": 1558,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-26T01:39:27.281Z",
+      "token_id": "216",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000216",
+      "block_height": 500216,
+      "direct_sha256": "c5c310cc6698c9bc3233b4e95bb56dabab077e19b623ef4d6d20e4496090ab74",
+      "content_hash": "0593a83f8e658155cb27117a730f4bd689edc3df97d05b35c4f9f2b5b39e3111",
+      "token_uri": "on-chain-modules/catalogs/releases/first-wave-instruments.catalog.json",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "72013",
+      "serialized_bytes": 2020,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+        "mimeType": "application/json",
+        "totalSize": "1558",
+        "totalChunks": "1",
+        "tokenUri": "on-chain-modules/catalogs/releases/first-wave-instruments.catalog.json",
+        "dependencyIds": [
+          "247",
+          "215"
+        ],
+        "simulated": true
+      }
+    },
+    {
+      "name": "bvst.catalog.root.v1",
+      "batch": "40-root-catalogs.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx-recursive",
+      "started_at": "2026-03-26T01:39:27.281Z",
+      "status": "minted",
+      "dependencies": [
+        234,
+        216
+      ],
+      "source": {
+        "path": "on-chain-modules/rendered/catalogs/root/root.catalog.json",
+        "bytes": 1084,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-26T01:39:27.389Z",
+      "token_id": "217",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000217",
+      "block_height": 500217,
+      "direct_sha256": "6d6dcecd473a4688685ea8e581e5a9285543ace06aece271221b0cfed393c166",
+      "content_hash": "c6248bd4f26f08cba258ebe5172a7481ee13cea780c077a57613ae70d85b8451",
+      "token_uri": "on-chain-modules/catalogs/root/root.catalog.json",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "54331",
+      "serialized_bytes": 1524,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+        "mimeType": "application/json",
+        "totalSize": "1084",
+        "totalChunks": "1",
+        "tokenUri": "on-chain-modules/catalogs/root/root.catalog.json",
+        "dependencyIds": [
+          "234",
+          "216"
+        ],
+        "simulated": true
+      }
+    },
+    {
+      "name": "bvst.plugin.minertwo.manifest.v1.0.0",
+      "batch": "30-standalone-synths.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx",
+      "started_at": "2026-03-26T01:43:20.549Z",
+      "status": "minted",
+      "dependencies": [],
+      "source": {
+        "path": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/manifest.json",
+        "bytes": 339,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-26T01:43:20.636Z",
+      "token_id": "202",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000202",
+      "block_height": 500202,
+      "direct_sha256": "b19c55756c543cb7a117c60e4fc740600135f7ed94504bc55630b93f4378e37c",
+      "content_hash": "acefc5f63f9367523c2b4a963305e173463c7f1223da3d7c56f7e7bf0d0b2729",
+      "token_uri": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/manifest.json",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "26774",
+      "serialized_bytes": 751,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+        "mimeType": "application/json",
+        "totalSize": "339",
+        "totalChunks": "1",
+        "tokenUri": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/manifest.json",
+        "dependencyIds": [],
+        "simulated": true
+      }
+    },
+    {
+      "name": "bvst.plugin.minertwo.patch.v1.0.0",
+      "batch": "30-standalone-synths.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx-recursive",
+      "started_at": "2026-03-26T01:43:20.636Z",
+      "status": "minted",
+      "dependencies": [
+        214
+      ],
+      "source": {
+        "path": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/patch.json",
+        "bytes": 7057,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-26T01:43:20.731Z",
+      "token_id": "203",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000203",
+      "block_height": 500203,
+      "direct_sha256": "b2260cd0586b4f5369f59b047b75aeccdc10573339deb54b07155bb1be200090",
+      "content_hash": "aa1717dff4f9b7c018583cc88f56a1de5db3aaac08fee82f60319261b374595a",
+      "token_uri": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/patch.json",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "267304",
+      "serialized_bytes": 7498,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+        "mimeType": "application/json",
+        "totalSize": "7057",
+        "totalChunks": "1",
+        "tokenUri": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/patch.json",
+        "dependencyIds": [
+          "214"
+        ],
+        "simulated": true
+      }
+    },
+    {
+      "name": "bvst.plugin.minertwo.shell.v1.0.0",
+      "batch": "30-standalone-synths.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx-recursive",
+      "started_at": "2026-03-26T01:43:20.731Z",
+      "status": "minted",
+      "dependencies": [
+        230,
+        202,
+        203
+      ],
+      "source": {
+        "path": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/gui.html",
+        "bytes": 829,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-26T01:43:20.818Z",
+      "token_id": "204",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000204",
+      "block_height": 500204,
+      "direct_sha256": "49786f9e19c8b379a71a4f7cfe90445945189a1874c51330abe7063fa43b016a",
+      "content_hash": "0dc40a73d8162e7658dff4a01986d63310e8aa153e4ccd82cc87e078d99208e6",
+      "token_uri": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/gui.html",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "46167",
+      "serialized_bytes": 1295,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+        "mimeType": "text/html",
+        "totalSize": "829",
+        "totalChunks": "1",
+        "tokenUri": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/gui.html",
+        "dependencyIds": [
+          "230",
+          "202",
+          "203"
+        ],
+        "simulated": true
+      }
+    },
+    {
+      "name": "bvst.plugin.chainpoly.manifest.v1.0.0",
+      "batch": "30-standalone-synths.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx",
+      "started_at": "2026-03-26T01:43:20.819Z",
+      "status": "minted",
+      "dependencies": [],
+      "source": {
+        "path": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/manifest.json",
+        "bytes": 357,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-26T01:43:20.902Z",
+      "token_id": "205",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000205",
+      "block_height": 500205,
+      "direct_sha256": "622f89832e8342f62d0fdb08282ce7f45ed8f0d09ed87e518a0472a295b6ed11",
+      "content_hash": "8daa05257216877752f49cb31ccb2844cf9d40e7be6be4906b0f604f1dcdd13b",
+      "token_uri": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/manifest.json",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "27451",
+      "serialized_bytes": 770,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+        "mimeType": "application/json",
+        "totalSize": "357",
+        "totalChunks": "1",
+        "tokenUri": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/manifest.json",
+        "dependencyIds": [],
+        "simulated": true
+      }
+    },
+    {
+      "name": "bvst.plugin.chainpoly.patch.v1.0.0",
+      "batch": "30-standalone-synths.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx-recursive",
+      "started_at": "2026-03-26T01:43:20.902Z",
+      "status": "minted",
+      "dependencies": [
+        214
+      ],
+      "source": {
+        "path": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/patch.json",
+        "bytes": 4622,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-26T01:43:20.980Z",
+      "token_id": "206",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000206",
+      "block_height": 500206,
+      "direct_sha256": "c5edaf6245668c9647da6331409cd46a0cc943b667cad30a8c78127535641c11",
+      "content_hash": "5abbbf04bbb3c6a028344e3167d1ad738fff526c2ad83b69f4d3f98ce981dc7e",
+      "token_uri": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/patch.json",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "180532",
+      "serialized_bytes": 5064,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+        "mimeType": "application/json",
+        "totalSize": "4622",
+        "totalChunks": "1",
+        "tokenUri": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/patch.json",
+        "dependencyIds": [
+          "214"
+        ],
+        "simulated": true
+      }
+    },
+    {
+      "name": "bvst.plugin.chainpoly.shell.v1.0.0",
+      "batch": "30-standalone-synths.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx-recursive",
+      "started_at": "2026-03-26T01:43:20.981Z",
+      "status": "minted",
+      "dependencies": [
+        230,
+        205,
+        206
+      ],
+      "source": {
+        "path": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/gui.html",
+        "bytes": 835,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-26T01:43:21.060Z",
+      "token_id": "207",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000207",
+      "block_height": 500207,
+      "direct_sha256": "2bb2cbffca17d90e6e1f37961c2c952064c995606333f1dd6cc1dcb36e7597b6",
+      "content_hash": "2733c97a5f8f75618cb77ffb0c738c51c605e30e428e443bcb9b081079d628a1",
+      "token_uri": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/gui.html",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "46417",
+      "serialized_bytes": 1302,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+        "mimeType": "text/html",
+        "totalSize": "835",
+        "totalChunks": "1",
+        "tokenUri": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/gui.html",
+        "dependencyIds": [
+          "230",
+          "205",
+          "206"
+        ],
+        "simulated": true
+      }
+    },
+    {
+      "name": "bvst.plugin.retrokeys.manifest.v1.0.0",
+      "batch": "30-standalone-synths.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx",
+      "started_at": "2026-03-26T01:43:21.061Z",
+      "status": "minted",
+      "dependencies": [],
+      "source": {
+        "path": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/manifest.json",
+        "bytes": 336,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-26T01:43:21.134Z",
+      "token_id": "208",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000208",
+      "block_height": 500208,
+      "direct_sha256": "c17d1d6983ce58a56ca8bf3d3aed9426e044937e88b5c159c85306fbd81cabc7",
+      "content_hash": "fd2a030e31f0eaee183fb1054c92265f729e48fa3395af7d81d56fdbe026efa2",
+      "token_uri": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/manifest.json",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "26702",
+      "serialized_bytes": 749,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+        "mimeType": "application/json",
+        "totalSize": "336",
+        "totalChunks": "1",
+        "tokenUri": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/manifest.json",
+        "dependencyIds": [],
+        "simulated": true
+      }
+    },
+    {
+      "name": "bvst.plugin.retrokeys.patch.v1.0.0",
+      "batch": "30-standalone-synths.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx-recursive",
+      "started_at": "2026-03-26T01:43:21.134Z",
+      "status": "minted",
+      "dependencies": [
+        214
+      ],
+      "source": {
+        "path": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/patch.json",
+        "bytes": 2163,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-26T01:43:21.206Z",
+      "token_id": "209",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000209",
+      "block_height": 500209,
+      "direct_sha256": "0d880724099a2270c69e4c0f979e2c8848c58959d3b02ffaaf9faaec71cf5b72",
+      "content_hash": "14f27bdbd64a3d2b9c688d6f027c0b9d8a3da5cce933b17a81a21c378b2d0695",
+      "token_uri": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/patch.json",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "92869",
+      "serialized_bytes": 2605,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+        "mimeType": "application/json",
+        "totalSize": "2163",
+        "totalChunks": "1",
+        "tokenUri": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/patch.json",
+        "dependencyIds": [
+          "214"
+        ],
+        "simulated": true
+      }
+    },
+    {
+      "name": "bvst.plugin.retrokeys.shell.v1.0.0",
+      "batch": "30-standalone-synths.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx-recursive",
+      "started_at": "2026-03-26T01:43:21.207Z",
+      "status": "minted",
+      "dependencies": [
+        230,
+        208,
+        209
+      ],
+      "source": {
+        "path": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/gui.html",
+        "bytes": 819,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-26T01:43:21.278Z",
+      "token_id": "210",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000210",
+      "block_height": 500210,
+      "direct_sha256": "cb3a3d3c19338229b87954703bdb13b9b84c71845b3cbcc604c45ea6fc1c3cb7",
+      "content_hash": "a62712778e5e73822e4201a657fb727aaba031a8d956e14fb34ae740577aeab4",
+      "token_uri": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/gui.html",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "45846",
+      "serialized_bytes": 1286,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+        "mimeType": "text/html",
+        "totalSize": "819",
+        "totalChunks": "1",
+        "tokenUri": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/gui.html",
+        "dependencyIds": [
+          "230",
+          "208",
+          "209"
+        ],
+        "simulated": true
+      }
+    },
+    {
+      "name": "bvst.plugin.minerone.release.v1.0.0",
+      "batch": "30-standalone-synths.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx-recursive",
+      "started_at": "2026-03-26T01:43:21.279Z",
+      "status": "minted",
+      "dependencies": [
+        248,
+        249,
+        250,
+        231,
+        232,
+        233
+      ],
+      "source": {
+        "path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/minerone.release.catalog.json",
+        "bytes": 3173,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-26T01:43:21.349Z",
+      "token_id": "211",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000211",
+      "block_height": 500211,
+      "direct_sha256": "254a6769655b7d4aacaba9dec9818e7a82d6e74545a00e06cdb8b7e7c743ed6e",
+      "content_hash": "7019951ae4f9b33726f307c175a4f0f03f6bb84f32878a870c26aa31230f4a1f",
+      "token_uri": "on-chain-modules/catalogs/plugins/standalone-synths/minerone.release.catalog.json",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "132405",
+      "serialized_bytes": 3714,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+        "mimeType": "application/json",
+        "totalSize": "3173",
+        "totalChunks": "1",
+        "tokenUri": "on-chain-modules/catalogs/plugins/standalone-synths/minerone.release.catalog.json",
+        "dependencyIds": [
+          "248",
+          "249",
+          "250",
+          "231",
+          "232",
+          "233"
+        ],
+        "simulated": true
+      }
+    },
+    {
+      "name": "bvst.plugin.minertwo.release.v1.0.0",
+      "batch": "30-standalone-synths.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx-recursive",
+      "started_at": "2026-03-26T01:43:21.349Z",
+      "status": "minted",
+      "dependencies": [
+        202,
+        203,
+        204,
+        231,
+        232,
+        233
+      ],
+      "source": {
+        "path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/minertwo.release.catalog.json",
+        "bytes": 3125,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-26T01:43:21.421Z",
+      "token_id": "212",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000212",
+      "block_height": 500212,
+      "direct_sha256": "e0f780ab38d44c3f33dbf1881a832bee05ec4e05e7ea029b80e24949f49c910c",
+      "content_hash": "b287a80c6dae7628b0e968b37fe7829fa8b8bd8c55bb93fcecda4a9f32838c32",
+      "token_uri": "on-chain-modules/catalogs/plugins/standalone-synths/minertwo.release.catalog.json",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "130693",
+      "serialized_bytes": 3666,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+        "mimeType": "application/json",
+        "totalSize": "3125",
+        "totalChunks": "1",
+        "tokenUri": "on-chain-modules/catalogs/plugins/standalone-synths/minertwo.release.catalog.json",
+        "dependencyIds": [
+          "202",
+          "203",
+          "204",
+          "231",
+          "232",
+          "233"
+        ],
+        "simulated": true
+      }
+    },
+    {
+      "name": "bvst.plugin.chainpoly.release.v1.0.0",
+      "batch": "30-standalone-synths.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx-recursive",
+      "started_at": "2026-03-26T01:43:21.421Z",
+      "status": "minted",
+      "dependencies": [
+        205,
+        206,
+        207,
+        231,
+        232,
+        233
+      ],
+      "source": {
+        "path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/chainpoly.release.catalog.json",
+        "bytes": 3136,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-26T01:43:21.518Z",
+      "token_id": "213",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000213",
+      "block_height": 500213,
+      "direct_sha256": "9d8b44b92d896f52b57f105b79e4502dd0a73a4854e8707995d8d6f1111c8d75",
+      "content_hash": "035aa495c973f27e08cf4d2d0c5d135f587331cf7d47cbfc8b98e283e5c1028c",
+      "token_uri": "on-chain-modules/catalogs/plugins/standalone-synths/chainpoly.release.catalog.json",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "131121",
+      "serialized_bytes": 3678,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+        "mimeType": "application/json",
+        "totalSize": "3136",
+        "totalChunks": "1",
+        "tokenUri": "on-chain-modules/catalogs/plugins/standalone-synths/chainpoly.release.catalog.json",
+        "dependencyIds": [
+          "205",
+          "206",
+          "207",
+          "231",
+          "232",
+          "233"
+        ],
+        "simulated": true
+      }
+    },
+    {
+      "name": "bvst.plugin.retrokeys.release.v1.0.0",
+      "batch": "30-standalone-synths.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx-recursive",
+      "started_at": "2026-03-26T01:43:21.518Z",
+      "status": "minted",
+      "dependencies": [
+        208,
+        209,
+        210,
+        231,
+        232,
+        233
+      ],
+      "source": {
+        "path": "on-chain-modules/rendered/catalogs/plugins/standalone-synths/retrokeys.release.catalog.json",
+        "bytes": 3187,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-26T01:43:21.600Z",
+      "token_id": "214",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000214",
+      "block_height": 500214,
+      "direct_sha256": "d9882f4b66e05dff26f658c453d640aeb0a6d58290d3f3401319ad0ae7589f18",
+      "content_hash": "b02c46d7a0fb4ec0158a420eeb281e63dd8508b15a4fc99d183cd124fb8af0c9",
+      "token_uri": "on-chain-modules/catalogs/plugins/standalone-synths/retrokeys.release.catalog.json",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "132939",
+      "serialized_bytes": 3729,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+        "mimeType": "application/json",
+        "totalSize": "3187",
+        "totalChunks": "1",
+        "tokenUri": "on-chain-modules/catalogs/plugins/standalone-synths/retrokeys.release.catalog.json",
+        "dependencyIds": [
+          "208",
+          "209",
+          "210",
+          "231",
+          "232",
+          "233"
+        ],
+        "simulated": true
+      }
+    },
+    {
+      "name": "bvst.catalog.family.standalonesynths.v1",
+      "batch": "30-standalone-synths.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx-recursive",
+      "started_at": "2026-03-26T01:43:21.600Z",
+      "status": "minted",
+      "dependencies": [
+        214,
+        211,
+        212,
+        213
+      ],
+      "source": {
+        "path": "on-chain-modules/rendered/catalogs/families/standalone-synths.catalog.json",
+        "bytes": 1011,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-26T01:43:21.677Z",
+      "token_id": "215",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000215",
+      "block_height": 500215,
+      "direct_sha256": "17fcba9977cff2b10ba1a8f76d67cd111ad83a861628300883a7ddf002e7f922",
+      "content_hash": "f9f97b216bc3bf0898b72892bd06956dc6a0ef96a27ea4eff8c32fdc31147e5e",
+      "token_uri": "on-chain-modules/catalogs/families/standalone-synths.catalog.json",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "53547",
+      "serialized_bytes": 1502,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+        "mimeType": "application/json",
+        "totalSize": "1011",
+        "totalChunks": "1",
+        "tokenUri": "on-chain-modules/catalogs/families/standalone-synths.catalog.json",
+        "dependencyIds": [
+          "214",
+          "211",
+          "212",
+          "213"
+        ],
+        "simulated": true
+      }
+    },
+    {
+      "name": "bvst.catalog.release.firstwaveinstruments.v1",
+      "batch": "40-root-catalogs.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx-recursive",
+      "started_at": "2026-03-26T01:43:21.678Z",
+      "status": "minted",
+      "dependencies": [
+        247,
+        215
+      ],
+      "source": {
+        "path": "on-chain-modules/rendered/catalogs/releases/first-wave-instruments.catalog.json",
+        "bytes": 1558,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-26T01:43:21.757Z",
+      "token_id": "216",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000216",
+      "block_height": 500216,
+      "direct_sha256": "17059d1479e74dc815e83f3e67b722b45b479cbf96b441a847715c5573593061",
+      "content_hash": "b5b43d703c1886ce9a23c6df2da0858b368145798d7b2f5f65942f4d87a5feee",
+      "token_uri": "on-chain-modules/catalogs/releases/first-wave-instruments.catalog.json",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "72013",
+      "serialized_bytes": 2020,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+        "mimeType": "application/json",
+        "totalSize": "1558",
+        "totalChunks": "1",
+        "tokenUri": "on-chain-modules/catalogs/releases/first-wave-instruments.catalog.json",
+        "dependencyIds": [
+          "247",
+          "215"
+        ],
+        "simulated": true
+      }
+    },
+    {
+      "name": "bvst.catalog.root.v1",
+      "batch": "40-root-catalogs.batch.json",
+      "route": "helper",
+      "function": "mint-small-single-tx-recursive",
+      "started_at": "2026-03-26T01:43:21.758Z",
+      "status": "minted",
+      "dependencies": [
+        234,
+        216
+      ],
+      "source": {
+        "path": "on-chain-modules/rendered/catalogs/root/root.catalog.json",
+        "bytes": 1084,
+        "chunks": 1
+      },
+      "finished_at": "2026-03-26T01:43:21.830Z",
+      "token_id": "217",
+      "txid": "0x0000000000000000000000000000000000000000000000000000000000000217",
+      "block_height": 500217,
+      "direct_sha256": "df68fcc1d7d10b890bf4818f410af736cd6bcfbe8524664e612af8b604ae6b0a",
+      "content_hash": "a2be6ea0c18451fb9ce781ca694a616a672150fdb664b6cdd1d6213516c58949",
+      "token_uri": "on-chain-modules/catalogs/root/root.catalog.json",
+      "fee_unit_microstx": "1000",
+      "protocol_fee_microstx": "3000",
+      "tx_fee_microstx": "54331",
+      "serialized_bytes": 1524,
+      "used_fallback_tx_fee": false,
+      "on_chain_verification": {
+        "creator": "SP3Y74M5227FDVHREWPH773F5Y1W1ED8WXY3RAVG4",
+        "mimeType": "application/json",
+        "totalSize": "1084",
+        "totalChunks": "1",
+        "tokenUri": "on-chain-modules/catalogs/root/root.catalog.json",
+        "dependencyIds": [
+          "234",
+          "216"
         ],
         "simulated": true
       }

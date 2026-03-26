@@ -1,0 +1,83 @@
+{
+  "name": "bvst.plugin.minerone.release.v1.0.0",
+  "type": "plugin-release-catalog",
+  "plugin_name": "MinerOne",
+  "plugin_family": "standalone-synths",
+  "category": "Instruments",
+  "runtime_major": 1,
+  "engine_major": 1,
+  "schema_major": 1,
+  "dependencies": {
+    "foundation_catalog": "bvst.catalog.foundation.v1",
+    "foundation_catalog_token_id": 234,
+    "foundation_catalog_txid": "8c0837ec700f270f3c4f6b0feccb28618972dc7492bb45da076563f7178e97b1",
+    "foundation_catalog_block_height": 7342972,
+    "runtime_major_catalog": "bvst.catalog.runtime.v1",
+    "runtime_major_catalog_token_id": 231,
+    "runtime_major_catalog_txid": "904911fbfa58b4f947081cb2a490a8705bb9638180d6cb40ba28b8dd4f295647",
+    "runtime_major_catalog_block_height": 7342963,
+    "engine_major_catalog": "bvst.catalog.engine.v1",
+    "engine_major_catalog_token_id": 232,
+    "engine_major_catalog_txid": "bc4e5e9a4e1702a49b5aced53ece8ad9081541b9061a3443a89bc426c5817610",
+    "engine_major_catalog_block_height": 7342968,
+    "schema_major_catalog": "bvst.catalog.schema.v1",
+    "schema_major_catalog_token_id": 233,
+    "schema_major_catalog_txid": "4170af1d2ae3a0c5c3c45fb28d3c68c27b8574b656bfd02195a0a3e31ba3b028",
+    "schema_major_catalog_block_height": 7342970,
+    "manifest": {
+      "name": "bvst.plugin.minerone.manifest.v1.0.0",
+      "token_id": 248,
+      "txid": "5704a0349c61b071ed70c269a79204a4bea6042538bccc847dd5907c8c2cf304",
+      "block_height": 7343014,
+      "path": "on-chain-modules/workspace/Plugins/Instruments/MinerOne/manifest.json",
+      "mime_type": "application/json",
+      "sha256": "5bf9e8a231ab1a15fa971bc12e466e45126bbb7277eebd1550c6d2ede3c6c8aa",
+      "bytes": 336,
+      "chunks": 1,
+      "route": "helper"
+    },
+    "patch": {
+      "name": "bvst.plugin.minerone.patch.v1.0.0",
+      "token_id": 249,
+      "txid": "02079af4e00fb3c04d2743ad6e9327da27af59146a72704d761e4bbcc6628bde",
+      "block_height": 7343016,
+      "path": "on-chain-modules/workspace/Plugins/Instruments/MinerOne/patch.json",
+      "mime_type": "application/json",
+      "sha256": "10b7454743a47810ee47a29a99c36ff71ea5ad93bdd8b338c8ee444a1f32dcc7",
+      "bytes": 5548,
+      "chunks": 1,
+      "route": "helper"
+    },
+    "shell": {
+      "name": "bvst.plugin.minerone.shell.v1.0.0",
+      "token_id": 250,
+      "txid": "ec0c375f80a92ee1f445fe3285eea5fb30fba61d12ef8d6750300c966ac6f18b",
+      "block_height": 7343018,
+      "path": "on-chain-modules/workspace/Plugins/Instruments/MinerOne/gui.html",
+      "mime_type": "text/html",
+      "sha256": "254451e13c4f0d5b4c509c5ab76eec2b04402bbade3784be2531aa15bd088dd4",
+      "bytes": 828,
+      "chunks": 1,
+      "route": "helper"
+    }
+  },
+  "dependency_token_ids": [
+    248,
+    249,
+    250,
+    231,
+    232,
+    233
+  ],
+  "resolved_dependency_names": [
+    "bvst.catalog.foundation.v1",
+    "bvst.catalog.runtime.v1",
+    "bvst.catalog.engine.v1",
+    "bvst.catalog.schema.v1",
+    "bvst.plugin.minerone.manifest.v1.0.0",
+    "bvst.plugin.minerone.patch.v1.0.0",
+    "bvst.plugin.minerone.shell.v1.0.0"
+  ],
+  "resolved_at": "2026-03-26T01:24:24.413Z",
+  "resolved_from": "configs/token-map.runtime.json"
+}
