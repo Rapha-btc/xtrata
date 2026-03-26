@@ -5,8 +5,11 @@
 
   var runtimeUrlInput = document.getElementById('runtime-url');
   var loadButton = document.getElementById('load-button');
+  var inspectButton = document.getElementById('inspect-button');
+  var initButton = document.getElementById('init-button');
   var copyButton = document.getElementById('copy-button');
   var resetButton = document.getElementById('reset-button');
+  var actionStatusEl = document.getElementById('action-status');
   var runtimeFrame = document.getElementById('runtime-frame');
   var statusEl = document.getElementById('status');
   var countsEl = document.getElementById('counts');
@@ -16,9 +19,69 @@
 
   var MAX_EVENTS = 30;
   var events = [];
+  var seenEventKeys = Object.create(null);
 
   function getString(value) {
     return typeof value === 'string' ? value : '';
+  }
+
+  function toArray(value) {
+    return Array.prototype.slice.call(value || []);
+  }
+
+  function normalizeText(value) {
+    return getString(value)
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function setActionStatus(message, tone) {
+    if (!actionStatusEl) {
+      return;
+    }
+    actionStatusEl.textContent = message || '';
+    actionStatusEl.className =
+      'action-status' + (tone ? ' action-status-' + tone : '');
+  }
+
+  function summarizePayload(value) {
+    try {
+      return JSON.stringify(value, null, 2);
+    } catch (error) {
+      return String(value || '');
+    }
+  }
+
+  function buildEventKey(entry) {
+    return [
+      String(entry && entry.at ? entry.at : ''),
+      getString(entry && entry.level),
+      getString(entry && entry.message),
+      summarizePayload(entry && entry.detail)
+    ].join('|');
+  }
+
+  function appendEvent(entry) {
+    if (!entry || typeof entry !== 'object') {
+      return false;
+    }
+    var key = buildEventKey(entry);
+    if (seenEventKeys[key]) {
+      return false;
+    }
+    seenEventKeys[key] = true;
+    events.push(entry);
+    return true;
+  }
+
+  function recordHarnessEvent(message, detail, level) {
+    appendEvent({
+      at: Date.now(),
+      level: level || 'info',
+      message: message,
+      detail: detail || null
+    });
+    syncUi();
   }
 
   function getDetailUrl(detail) {
@@ -130,14 +193,6 @@
     };
   }
 
-  function summarizePayload(value) {
-    try {
-      return JSON.stringify(value, null, 2);
-    } catch (error) {
-      return String(value || '');
-    }
-  }
-
   function renderSummary() {
     var summary = summarize();
     statusEl.textContent =
@@ -200,7 +255,232 @@
 
   function resetEvents() {
     events = [];
+    seenEventKeys = Object.create(null);
     syncUi();
+  }
+
+  function getRuntimeWindow() {
+    return runtimeFrame && runtimeFrame.contentWindow
+      ? runtimeFrame.contentWindow
+      : null;
+  }
+
+  function getRuntimeDocument() {
+    var runtimeWindow = getRuntimeWindow();
+    return runtimeWindow && runtimeWindow.document ? runtimeWindow.document : null;
+  }
+
+  function pullRuntimeTelemetrySnapshot(reason) {
+    try {
+      var runtimeWindow = getRuntimeWindow();
+      var telemetry =
+        runtimeWindow &&
+        runtimeWindow.__xtrataRuntimeTelemetry &&
+        runtimeWindow.__xtrataRuntimeTelemetry.events;
+      if (!telemetry || typeof telemetry.length !== 'number') {
+        return 0;
+      }
+      var added = 0;
+      for (var index = 0; index < telemetry.length; index += 1) {
+        if (appendEvent(telemetry[index])) {
+          added += 1;
+        }
+      }
+      if (added > 0) {
+        recordHarnessEvent('Smoke harness pulled runtime telemetry', {
+          reason: reason,
+          count: added
+        }, 'debug');
+      } else {
+        syncUi();
+      }
+      return added;
+    } catch (error) {
+      setActionStatus(
+        'Unable to read runtime telemetry snapshot: ' + getString(error && error.message),
+        'fail'
+      );
+      return 0;
+    }
+  }
+
+  function readSelectControls(doc) {
+    return toArray(doc.querySelectorAll('select')).map(function (node, index) {
+      var options = toArray(node.options || []).map(function (option, optionIndex) {
+        return {
+          optionIndex: optionIndex,
+          text: normalizeText(option.textContent || option.label || ''),
+          value: getString(option.value),
+          disabled: !!option.disabled,
+          selected: !!option.selected
+        };
+      });
+      return {
+        kind: 'select',
+        index: index,
+        selectedIndex:
+          typeof node.selectedIndex === 'number' ? node.selectedIndex : -1,
+        selectedText:
+          normalizeText(
+            node.options &&
+              node.selectedIndex >= 0 &&
+              node.options[node.selectedIndex]
+              ? node.options[node.selectedIndex].textContent
+              : ''
+          ),
+        optionCount: options.length,
+        options: options.slice(0, 12)
+      };
+    });
+  }
+
+  function readClickableControls(doc) {
+    var selector = [
+      'button',
+      '[role="button"]',
+      '[role="option"]',
+      '[role="tab"]',
+      '[data-value]',
+      '[data-preset]'
+    ].join(',');
+    return toArray(doc.querySelectorAll(selector))
+      .map(function (node, index) {
+        var text = normalizeText(
+          node.textContent || node.getAttribute('aria-label') || ''
+        );
+        if (!text) {
+          return null;
+        }
+        return {
+          kind: 'clickable',
+          index: index,
+          text: text,
+          disabled:
+            !!node.disabled ||
+            node.getAttribute('aria-disabled') === 'true'
+        };
+      })
+      .filter(Boolean)
+      .slice(0, 20);
+  }
+
+  function inspectControls() {
+    var doc = getRuntimeDocument();
+    if (!doc) {
+      var missing = {
+        status: 'runtime document unavailable'
+      };
+      recordHarnessEvent('Smoke harness inspected controls', missing, 'warn');
+      setActionStatus('Runtime document unavailable.', 'fail');
+      return missing;
+    }
+    var payload = {
+      selects: readSelectControls(doc),
+      clickables: readClickableControls(doc)
+    };
+    recordHarnessEvent('Smoke harness inspected controls', payload, 'debug');
+    setActionStatus(
+      'Inspected ' +
+        String(payload.selects.length) +
+        ' select(s) and ' +
+        String(payload.clickables.length) +
+        ' clickable control(s).',
+      'okay'
+    );
+    return payload;
+  }
+
+  function dispatchSelectEvents(node) {
+    try {
+      node.dispatchEvent(new Event('input', { bubbles: true }));
+      node.dispatchEvent(new Event('change', { bubbles: true }));
+    } catch (error) {}
+  }
+
+  function triggerInit() {
+    var doc = getRuntimeDocument();
+    if (!doc) {
+      setActionStatus('Runtime document unavailable.', 'fail');
+      recordHarnessEvent('Smoke harness trigger init failed', {
+        reason: 'runtime document unavailable'
+      }, 'warn');
+      return {
+        ok: false,
+        reason: 'runtime document unavailable'
+      };
+    }
+
+    var selects = toArray(doc.querySelectorAll('select'));
+    for (var selectIndex = 0; selectIndex < selects.length; selectIndex += 1) {
+      var selectNode = selects[selectIndex];
+      var options = toArray(selectNode.options || []);
+      for (var optionIndex = 0; optionIndex < options.length; optionIndex += 1) {
+        var optionNode = options[optionIndex];
+        var optionText = normalizeText(
+          optionNode.textContent || optionNode.label || ''
+        );
+        if (!optionText || optionNode.disabled) {
+          continue;
+        }
+        if (/(\binit\b|^init$)/i.test(optionText)) {
+          selectNode.selectedIndex = optionIndex;
+          selectNode.value = optionNode.value;
+          dispatchSelectEvents(selectNode);
+          var selectResult = {
+            ok: true,
+            action: 'select-option',
+            optionText: optionText,
+            selectIndex: selectIndex,
+            optionIndex: optionIndex
+          };
+          recordHarnessEvent('Smoke harness triggered init', selectResult, 'info');
+          setActionStatus('Triggered init via preset select: ' + optionText, 'okay');
+          pullRuntimeTelemetrySnapshot('trigger-init-select');
+          return selectResult;
+        }
+      }
+    }
+
+    var clickableSelector = [
+      'button',
+      '[role="button"]',
+      '[role="option"]',
+      '[role="tab"]',
+      '[data-value]',
+      '[data-preset]'
+    ].join(',');
+    var clickables = toArray(doc.querySelectorAll(clickableSelector));
+    for (var clickableIndex = 0; clickableIndex < clickables.length; clickableIndex += 1) {
+      var clickable = clickables[clickableIndex];
+      var clickableText = normalizeText(
+        clickable.textContent || clickable.getAttribute('aria-label') || ''
+      );
+      if (!clickableText) {
+        continue;
+      }
+      if (/(\binit\b|^init$)/i.test(clickableText)) {
+        clickable.click();
+        var clickResult = {
+          ok: true,
+          action: 'click-control',
+          text: clickableText,
+          controlIndex: clickableIndex
+        };
+        recordHarnessEvent('Smoke harness triggered init', clickResult, 'info');
+        setActionStatus('Triggered init via clickable control: ' + clickableText, 'okay');
+        pullRuntimeTelemetrySnapshot('trigger-init-click');
+        return clickResult;
+      }
+    }
+
+    var miss = {
+      ok: false,
+      reason: 'init control not found',
+      controls: inspectControls()
+    };
+    recordHarnessEvent('Smoke harness trigger init failed', miss, 'warn');
+    setActionStatus('No init control found. Use Inspect Controls.', 'warn');
+    return miss;
   }
 
   function loadRuntime(url) {
@@ -208,6 +488,7 @@
       return;
     }
     resetEvents();
+    setActionStatus('Loading runtime...', '');
     runtimeFrame.src = url;
     var search = new URLSearchParams(window.location.search);
     search.set('runtimeUrl', url);
@@ -236,12 +517,29 @@
     if (event.origin !== window.location.origin) {
       return;
     }
-    events.push(event.data.entry || {});
+    appendEvent(event.data.entry || {});
     syncUi();
+  });
+
+  runtimeFrame.addEventListener('load', function () {
+    setActionStatus('Runtime loaded. Inspect controls or trigger init.', '');
+    pullRuntimeTelemetrySnapshot('iframe-load');
+    window.setTimeout(function () {
+      pullRuntimeTelemetrySnapshot('iframe-load+750ms');
+    }, 750);
+    window.setTimeout(function () {
+      pullRuntimeTelemetrySnapshot('iframe-load+2000ms');
+    }, 2000);
   });
 
   loadButton.addEventListener('click', function () {
     loadRuntime(runtimeUrlInput.value.trim());
+  });
+  inspectButton.addEventListener('click', function () {
+    inspectControls();
+  });
+  initButton.addEventListener('click', function () {
+    triggerInit();
   });
   copyButton.addEventListener('click', function () {
     copySummary();
@@ -255,7 +553,10 @@
     getEvents: function () {
       return events.slice();
     },
-    getSummary: summarize
+    getSummary: summarize,
+    inspectControls: inspectControls,
+    triggerInit: triggerInit,
+    pullRuntimeTelemetrySnapshot: pullRuntimeTelemetrySnapshot
   };
 
   var query = new URLSearchParams(window.location.search || '');

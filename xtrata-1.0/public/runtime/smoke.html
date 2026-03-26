@@ -54,7 +54,7 @@
       }
       .controls {
         display: grid;
-        grid-template-columns: 1fr auto auto auto;
+        grid-template-columns: 1fr repeat(5, auto);
         gap: 10px;
       }
       .controls input {
@@ -76,6 +76,20 @@
       }
       .controls button:hover {
         border-color: #46608d;
+      }
+      .action-status {
+        margin-top: 10px;
+        min-height: 20px;
+        color: var(--muted);
+      }
+      .action-status-okay {
+        color: var(--ok);
+      }
+      .action-status-warn {
+        color: var(--warn);
+      }
+      .action-status-fail {
+        color: var(--fail);
       }
       .grid {
         display: grid;
@@ -201,9 +215,12 @@
         <div class="controls">
           <input id="runtime-url" type="text" placeholder="Paste a /runtime/?contractId=... URL" />
           <button id="load-button" type="button">Load Runtime</button>
+          <button id="inspect-button" type="button">Inspect Controls</button>
+          <button id="init-button" type="button">Trigger Init</button>
           <button id="copy-button" type="button">Copy Summary</button>
           <button id="reset-button" type="button">Reset</button>
         </div>
+        <div id="action-status" class="action-status">Ready.</div>
         <div class="grid">
           <div class="summary-grid">
             <div class="summary-card">
