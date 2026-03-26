@@ -196,4 +196,87 @@ describe('runtime modules route', () => {
       'https://xtrata.xyz/runtime/modules/mainnet/SP123/contract-name/1/on-chain-modules/workspace/System/shared/patch_runtime.js?t=123'
     );
   });
+
+  it('rewrites relative worklet loader source in served JavaScript modules', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+      const body =
+        init?.body && typeof init.body === 'string'
+          ? (JSON.parse(init.body) as { arguments?: unknown[] })
+          : { arguments: [] as unknown[] };
+
+      if (url.endsWith('/get-last-token-id')) {
+        return clarityResponse(responseOkCV(uintCV(0)));
+      }
+
+      if (url.endsWith('/get-token-uri')) {
+        return clarityResponse(
+          responseOkCV(someCV(stringAsciiCV('System/shared/plugin_core.js')))
+        );
+      }
+
+      if (url.endsWith('/get-inscription-meta')) {
+        return clarityResponse(
+          someCV(
+            tupleCV({
+              owner: standardPrincipalCV('SP2JXKMSH007NPYAQHKJPQMAQYAD90NQGTVJVQ02B'),
+              'mime-type': stringAsciiCV('text/plain'),
+              'total-size': uintCV(58),
+              'total-chunks': uintCV(1),
+              sealed: trueCV(),
+              'final-hash': bufferCV(new Uint8Array([9, 8, 7, 6]))
+            })
+          )
+        );
+      }
+
+      if (url.endsWith('/get-chunk')) {
+        const tokenId = readUintArgument(body.arguments?.[0]);
+        const index = readUintArgument(body.arguments?.[1]);
+        if (tokenId === 0n && index === 0n) {
+          return clarityResponse(
+            someCV(
+              bufferCV(
+                new TextEncoder().encode(
+                  "await audioContext.audioWorklet.addModule('./processor_unified.js');"
+                )
+              )
+            )
+          );
+        }
+      }
+
+      return new Response('not found', { status: 404 });
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    const response = await onRequest({
+      request: new Request(
+        'https://xtrata.xyz/runtime/modules/mainnet/SP123/contract-name/0/on-chain-modules/workspace/System/shared/plugin_core.js'
+      ),
+      env: {},
+      params: {
+        network: 'mainnet',
+        contractAddress: 'SP123',
+        contractName: 'contract-name',
+        entryTokenId: '0',
+        path: [
+          'on-chain-modules',
+          'workspace',
+          'System',
+          'shared',
+          'plugin_core.js'
+        ]
+      }
+    } as any);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('X-Xtrata-Runtime-Source-Transform')).toBe(
+      'relative-runtime-urls'
+    );
+    expect(await response.text()).toContain(
+      "audioContext.audioWorklet.addModule(__xtrataResolveRuntimeModuleUrl('./processor_unified.js'))"
+    );
+  });
 });

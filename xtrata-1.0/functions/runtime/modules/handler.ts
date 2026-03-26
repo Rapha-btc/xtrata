@@ -9,6 +9,10 @@ import {
   type RuntimeContractRef,
   type RuntimeEnv
 } from '../lib';
+import {
+  isTransformableRuntimeModulePath,
+  transformRuntimeModuleSource
+} from './source-transform';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -29,6 +33,8 @@ const GENERIC_SCRIPT_MIME_TYPES = new Set([
   'binary/octet-stream',
   'text/plain'
 ]);
+const textDecoder = new TextDecoder();
+const textEncoder = new TextEncoder();
 
 type ModulePathIndex = Map<string, bigint>;
 
@@ -398,13 +404,23 @@ export const onRuntimeModulesRequest = async (context: {
       primaryContract: contract,
       fallbackContract: null
     });
+    const contentType = resolveModuleContentType(
+      requestedPath,
+      resolved.meta.mimeType || 'application/octet-stream'
+    );
+    let body = resolved.bytes;
+    let transformedSource = false;
+    if (isTransformableRuntimeModulePath(requestedPath)) {
+      const rewritten = transformRuntimeModuleSource(textDecoder.decode(resolved.bytes));
+      if (rewritten.changed) {
+        body = textEncoder.encode(rewritten.source);
+        transformedSource = true;
+      }
+    }
 
     const headers = new Headers({
       ...CORS_HEADERS,
-      'Content-Type': resolveModuleContentType(
-        requestedPath,
-        resolved.meta.mimeType || 'application/octet-stream'
-      ),
+      'Content-Type': contentType,
       'Cache-Control': 'public, max-age=31536000, immutable',
       'X-Content-Type-Options': 'nosniff',
       'X-Xtrata-Runtime-Contract': `${resolved.contract.address}.${resolved.contract.contractName}`,
@@ -412,8 +428,11 @@ export const onRuntimeModulesRequest = async (context: {
       'X-Xtrata-Runtime-Token-Id': tokenId.toString(),
       'X-Xtrata-Runtime-Token-Uri-Path': requestedPath
     });
+    if (transformedSource) {
+      headers.set('X-Xtrata-Runtime-Source-Transform', 'relative-runtime-urls');
+    }
 
-    return new Response(request.method === 'HEAD' ? null : resolved.bytes, {
+    return new Response(request.method === 'HEAD' ? null : body, {
       status: 200,
       headers
     });

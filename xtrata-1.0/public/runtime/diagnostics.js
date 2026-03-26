@@ -8,10 +8,13 @@
 
   var MAX_EVENTS = 200;
   var state = {
-    version: 'v1',
+    version: 'v2',
     events: []
   };
   window.__xtrataRuntimeDiagnostics = state;
+  var seenResourceKeys = Object.create(null);
+  var containerObserver = null;
+  var bodyObserver = null;
 
   function trimEvents() {
     while (state.events.length > MAX_EVENTS) {
@@ -73,6 +76,72 @@
     );
   }
 
+  function compactUrl(url) {
+    var value = String(url || '');
+    if (value.length <= 180) {
+      return value;
+    }
+    return value.slice(0, 120) + '...' + value.slice(-40);
+  }
+
+  function summarizeResourceEntry(entry) {
+    if (!entry || !entry.name || !shouldTrace(entry.name)) {
+      return null;
+    }
+    return {
+      name: compactUrl(entry.name),
+      initiatorType: entry.initiatorType || '',
+      durationMs:
+        typeof entry.duration === 'number' ? Math.round(entry.duration) : 0,
+      transferSize:
+        typeof entry.transferSize === 'number' ? entry.transferSize : 0,
+      encodedBodySize:
+        typeof entry.encodedBodySize === 'number' ? entry.encodedBodySize : 0,
+      decodedBodySize:
+        typeof entry.decodedBodySize === 'number' ? entry.decodedBodySize : 0,
+      responseStatus:
+        typeof entry.responseStatus === 'number' ? entry.responseStatus : 0
+    };
+  }
+
+  function logResourceEntries(entries, reason) {
+    for (var index = 0; index < entries.length; index += 1) {
+      var summary = summarizeResourceEntry(entries[index]);
+      if (!summary) {
+        continue;
+      }
+      var key =
+        summary.name +
+        '|' +
+        summary.initiatorType +
+        '|' +
+        String(summary.transferSize) +
+        '|' +
+        String(summary.durationMs);
+      if (seenResourceKeys[key]) {
+        continue;
+      }
+      seenResourceKeys[key] = true;
+      log('debug', 'Resource timing observed', {
+        reason: reason,
+        resource: summary
+      });
+    }
+  }
+
+  function scanExistingResources(reason) {
+    if (
+      typeof performance === 'undefined' ||
+      !performance ||
+      typeof performance.getEntriesByType !== 'function'
+    ) {
+      return;
+    }
+    try {
+      logResourceEntries(performance.getEntriesByType('resource') || [], reason);
+    } catch (error) {}
+  }
+
   function extractTargetSource(target) {
     if (!target || typeof target !== 'object') {
       return '';
@@ -84,6 +153,95 @@
       target.data ||
       ''
     );
+  }
+
+  function readContainerSnapshot() {
+    var container =
+      document.getElementById('app-container') ||
+      document.querySelector('[data-app-container]') ||
+      null;
+    if (!container) {
+      return {
+        found: false,
+        readyState: document.readyState || '',
+        bodyChildren:
+          document.body && typeof document.body.childElementCount === 'number'
+            ? document.body.childElementCount
+            : 0
+      };
+    }
+    var childTags = [];
+    if (container.children && container.children.length) {
+      for (var index = 0; index < container.children.length && index < 8; index += 1) {
+        var child = container.children[index];
+        childTags.push(String(child.tagName || child.localName || '').toLowerCase());
+      }
+    }
+    var text = '';
+    try {
+      text = (container.textContent || '').trim().slice(0, 180);
+    } catch (error) {}
+    return {
+      found: true,
+      readyState: document.readyState || '',
+      childCount:
+        typeof container.childElementCount === 'number'
+          ? container.childElementCount
+          : 0,
+      childTags: childTags,
+      htmlLength:
+        typeof container.innerHTML === 'string' ? container.innerHTML.length : 0,
+      textPreview: text
+    };
+  }
+
+  function logContainerSnapshot(reason) {
+    log('debug', 'Container snapshot', {
+      reason: reason,
+      snapshot: readContainerSnapshot()
+    });
+  }
+
+  function observeContainer() {
+    if (containerObserver || typeof MutationObserver !== 'function') {
+      return;
+    }
+    var container = document.getElementById('app-container');
+    if (!container) {
+      return;
+    }
+    containerObserver = new MutationObserver(function () {
+      logContainerSnapshot('container-mutation');
+    });
+    containerObserver.observe(container, {
+      childList: true,
+      subtree: true,
+      attributes: false
+    });
+    logContainerSnapshot('container-observer-attached');
+  }
+
+  function observeBodyForContainer() {
+    if (bodyObserver || typeof MutationObserver !== 'function') {
+      return;
+    }
+    var root = document.documentElement || document.body;
+    if (!root) {
+      return;
+    }
+    bodyObserver = new MutationObserver(function () {
+      if (document.getElementById('app-container')) {
+        observeContainer();
+        if (bodyObserver) {
+          bodyObserver.disconnect();
+          bodyObserver = null;
+        }
+      }
+    });
+    bodyObserver.observe(root, {
+      childList: true,
+      subtree: true
+    });
   }
 
   window.addEventListener(
@@ -117,6 +275,18 @@
       stack: reason && reason.stack ? String(reason.stack) : ''
     });
   });
+
+  if (typeof PerformanceObserver === 'function') {
+    try {
+      var observer = new PerformanceObserver(function (list) {
+        if (!list || typeof list.getEntries !== 'function') {
+          return;
+        }
+        logResourceEntries(list.getEntries(), 'observer');
+      });
+      observer.observe({ type: 'resource', buffered: true });
+    } catch (error) {}
+  }
 
   var originalFetch =
     typeof window.fetch === 'function' ? window.fetch.bind(window) : null;
@@ -175,6 +345,111 @@
     };
   }
 
+  var patchAudioWorkletDiagnostics = function () {
+    var ctor = typeof window.AudioWorklet === 'function' ? window.AudioWorklet : null;
+    if (!ctor || !ctor.prototype || typeof ctor.prototype.addModule !== 'function') {
+      return;
+    }
+    var originalAddModule = ctor.prototype.addModule;
+    if (originalAddModule.__xtrataWrapped) {
+      return;
+    }
+    var wrappedAddModule = function (moduleUrl, options) {
+      var startedAt = Date.now();
+      log('debug', 'AudioWorklet.addModule called', {
+        url:
+          typeof moduleUrl === 'string'
+            ? moduleUrl
+            : moduleUrl && typeof moduleUrl.toString === 'function'
+              ? moduleUrl.toString()
+              : String(moduleUrl || ''),
+        relative:
+          typeof moduleUrl === 'string' &&
+          /^(?:\.{1,2}\/)/.test(moduleUrl),
+        baseHref:
+          document && document.baseURI ? document.baseURI : window.location.href
+      });
+      return originalAddModule.call(this, moduleUrl, options)
+        .then(function (result) {
+          log('debug', 'AudioWorklet.addModule resolved', {
+            url:
+              typeof moduleUrl === 'string'
+                ? moduleUrl
+                : moduleUrl && typeof moduleUrl.toString === 'function'
+                  ? moduleUrl.toString()
+                  : String(moduleUrl || ''),
+            durationMs: Date.now() - startedAt
+          });
+          return result;
+        })
+        .catch(function (error) {
+          log('warn', 'AudioWorklet.addModule failed', {
+            url:
+              typeof moduleUrl === 'string'
+                ? moduleUrl
+                : moduleUrl && typeof moduleUrl.toString === 'function'
+                  ? moduleUrl.toString()
+                  : String(moduleUrl || ''),
+            durationMs: Date.now() - startedAt,
+            error: formatError(error)
+          });
+          throw error;
+        });
+    };
+    wrappedAddModule.__xtrataWrapped = true;
+    ctor.prototype.addModule = wrappedAddModule;
+  };
+
+  var patchWorkerDiagnostics = function () {
+    var patchConstructor = function (name) {
+      var Original = window[name];
+      if (typeof Original !== 'function') {
+        return;
+      }
+      if (Original.__xtrataWrapped) {
+        return;
+      }
+      var Wrapped = function (url, options) {
+        var resolvedUrl =
+          typeof url === 'string'
+            ? url
+            : url && typeof url.toString === 'function'
+              ? url.toString()
+              : String(url || '');
+        log('debug', name + ' constructed', {
+          url: resolvedUrl,
+          relative: typeof url === 'string' && /^(?:\.{1,2}\/)/.test(url),
+          baseHref:
+            document && document.baseURI ? document.baseURI : window.location.href
+        });
+        var worker = new Original(url, options);
+        if (worker && typeof worker.addEventListener === 'function') {
+          worker.addEventListener('error', function (event) {
+            log('warn', name + ' error event', {
+              url: resolvedUrl,
+              message: event && event.message ? event.message : ''
+            });
+          });
+          worker.addEventListener('messageerror', function () {
+            log('warn', name + ' messageerror event', {
+              url: resolvedUrl
+            });
+          });
+        }
+        return worker;
+      };
+      Wrapped.prototype = Original.prototype;
+      try {
+        Object.setPrototypeOf(Wrapped, Original);
+      } catch (error) {}
+      Wrapped.__xtrataWrapped = true;
+      window[name] = Wrapped;
+    };
+
+    patchConstructor('Worker');
+    patchConstructor('SharedWorker');
+  };
+
   if (typeof WebAssembly === 'object' && WebAssembly) {
     if (typeof WebAssembly.instantiateStreaming === 'function') {
       var originalInstantiateStreaming =
@@ -216,4 +491,25 @@
     href: window.location.href,
     referrer: document.referrer || ''
   });
+  patchAudioWorkletDiagnostics();
+  patchWorkerDiagnostics();
+  scanExistingResources('install');
+  logContainerSnapshot('install');
+  observeContainer();
+  observeBodyForContainer();
+  window.addEventListener('load', function () {
+    scanExistingResources('window-load');
+    logContainerSnapshot('window-load');
+    observeContainer();
+  });
+  setTimeout(function () {
+    scanExistingResources('t+1500ms');
+    logContainerSnapshot('t+1500ms');
+    observeContainer();
+  }, 1500);
+  setTimeout(function () {
+    scanExistingResources('t+4000ms');
+    logContainerSnapshot('t+4000ms');
+    observeContainer();
+  }, 4000);
 })();
