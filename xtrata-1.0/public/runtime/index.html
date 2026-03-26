@@ -249,8 +249,22 @@
           );
         }
 
+        function buildRuntimeDiagnosticsScriptTag() {
+          var url = new URL('/runtime/diagnostics.js', window.location.origin);
+          return (
+            '<script data-xtrata-runtime-diagnostics="true" src="' +
+            escapeAttribute(url.toString()) +
+            '"></' +
+            'script>'
+          );
+        }
+
         function injectRuntimeSupport(html, params) {
           html = injectHeadPrefix(html, buildRuntimeBaseTag(params));
+          var diagnosticsScript = buildRuntimeDiagnosticsScriptTag();
+          if (diagnosticsScript) {
+            html = injectHeadPrefix(html, '\n' + diagnosticsScript);
+          }
           var supportScript = buildRuntimeWalletSupportScriptTag(params);
           if (!supportScript) {
             return html;
