@@ -269,6 +269,16 @@
           );
         }
 
+        function buildRuntimeTelemetryScriptTag() {
+          var url = new URL('/runtime/telemetry.js', window.location.origin);
+          return (
+            '<script data-xtrata-runtime-telemetry="true" src="' +
+            escapeAttribute(url.toString()) +
+            '"></' +
+            'script>'
+          );
+        }
+
         function buildRuntimeModuleBootstrapScriptTag() {
           var url = new URL('/runtime/module-bootstrap.js', window.location.origin);
           return (
@@ -281,6 +291,10 @@
 
         function injectRuntimeSupport(html, params) {
           html = injectHeadPrefix(html, buildRuntimeBaseTag(params));
+          var telemetryScript = buildRuntimeTelemetryScriptTag();
+          if (telemetryScript) {
+            html = injectHeadPrefix(html, '\n' + telemetryScript);
+          }
           var urlSupportScript = buildRuntimeUrlSupportScriptTag();
           if (urlSupportScript) {
             html = injectHeadPrefix(html, '\n' + urlSupportScript);

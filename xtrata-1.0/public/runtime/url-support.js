@@ -29,6 +29,16 @@
 
   function log(level, message, detail) {
     try {
+      if (typeof window.__xtrataRuntimeReportDiagnostic === 'function') {
+        window.__xtrataRuntimeReportDiagnostic({
+          at: Date.now(),
+          level: level,
+          message: message,
+          detail: detail || null
+        });
+      }
+    } catch (error) {}
+    try {
       var logger =
         console && typeof console[level] === 'function'
           ? console[level].bind(console)

@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Xtrata Runtime Smoke</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0c111d;
+        --panel: #121a2a;
+        --panel-2: #182236;
+        --line: #2a3752;
+        --text: #e8eefc;
+        --muted: #9fb0d2;
+        --ok: #5fd18b;
+        --warn: #f3c969;
+        --fail: #ff7e7e;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: radial-gradient(circle at top, #18233b, var(--bg) 62%);
+        color: var(--text);
+        font: 14px/1.45 ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+      }
+      .shell {
+        width: min(1180px, calc(100vw - 32px));
+        margin: 20px auto 28px;
+      }
+      .panel {
+        background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent), var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 16px;
+        box-shadow: 0 14px 40px rgba(0, 0, 0, 0.22);
+      }
+      .title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+      .title h1 {
+        margin: 0;
+        font-size: 1.05rem;
+      }
+      .title p {
+        margin: 4px 0 0;
+        color: var(--muted);
+      }
+      .controls {
+        display: grid;
+        grid-template-columns: 1fr auto auto auto;
+        gap: 10px;
+      }
+      .controls input {
+        width: 100%;
+        min-width: 0;
+        padding: 11px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: #0f1727;
+        color: var(--text);
+      }
+      .controls button {
+        padding: 11px 13px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: var(--panel-2);
+        color: var(--text);
+        cursor: pointer;
+      }
+      .controls button:hover {
+        border-color: #46608d;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 340px 1fr;
+        gap: 16px;
+        margin-top: 16px;
+      }
+      .summary-grid {
+        display: grid;
+        gap: 10px;
+      }
+      .summary-card {
+        padding: 12px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: #0f1727;
+      }
+      .summary-card h2 {
+        margin: 0 0 6px;
+        font-size: 0.86rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--muted);
+      }
+      .status {
+        font-size: 1.35rem;
+        font-weight: 700;
+      }
+      .status-pass { color: var(--ok); }
+      .status-fail { color: var(--fail); }
+      .status-pending { color: var(--warn); }
+      .milestones {
+        display: grid;
+        gap: 8px;
+      }
+      .milestone {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        color: var(--muted);
+      }
+      .milestone strong {
+        color: var(--text);
+        font-weight: 600;
+      }
+      .badge {
+        min-width: 58px;
+        text-align: center;
+        padding: 3px 8px;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        font-weight: 700;
+      }
+      .badge-pass {
+        background: rgba(95, 209, 139, 0.16);
+        color: var(--ok);
+      }
+      .badge-fail {
+        background: rgba(255, 126, 126, 0.14);
+        color: var(--fail);
+      }
+      .badge-pending {
+        background: rgba(243, 201, 105, 0.14);
+        color: var(--warn);
+      }
+      .runtime-frame {
+        width: 100%;
+        min-height: 720px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #0b1220;
+      }
+      .events {
+        margin-top: 16px;
+        display: grid;
+        gap: 8px;
+      }
+      .event {
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: #0f1727;
+      }
+      .event-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .event-header strong {
+        font-size: 0.93rem;
+      }
+      .event small {
+        color: var(--muted);
+      }
+      .event pre {
+        margin: 8px 0 0;
+        white-space: pre-wrap;
+        word-break: break-word;
+        color: #cbd7f3;
+        font-size: 12px;
+      }
+      @media (max-width: 980px) {
+        .controls {
+          grid-template-columns: 1fr 1fr;
+        }
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <div class="panel">
+        <div class="title">
+          <div>
+            <h1>Runtime Smoke Harness</h1>
+            <p>Loads a runtime URL in an iframe, collects runtime telemetry, and scores milestone progress.</p>
+          </div>
+        </div>
+        <div class="controls">
+          <input id="runtime-url" type="text" placeholder="Paste a /runtime/?contractId=... URL" />
+          <button id="load-button" type="button">Load Runtime</button>
+          <button id="copy-button" type="button">Copy Summary</button>
+          <button id="reset-button" type="button">Reset</button>
+        </div>
+        <div class="grid">
+          <div class="summary-grid">
+            <div class="summary-card">
+              <h2>Status</h2>
+              <div id="status" class="status status-pending">Pending</div>
+              <p id="counts">0 / 9 milestones</p>
+            </div>
+            <div class="summary-card">
+              <h2>Primary Failure</h2>
+              <div id="failure">None</div>
+            </div>
+            <div class="summary-card">
+              <h2>Milestones</h2>
+              <div id="milestones" class="milestones"></div>
+            </div>
+          </div>
+          <iframe id="runtime-frame" class="runtime-frame" title="Runtime Smoke Frame"></iframe>
+        </div>
+        <div class="events" id="events"></div>
+      </div>
+    </div>
+    <script src="/runtime/smoke.js"></script>
+  </body>
+</html>

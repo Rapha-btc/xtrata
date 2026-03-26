@@ -23,13 +23,19 @@
   }
 
   function record(level, message, detail) {
-    state.events.push({
+    var entry = {
       at: Date.now(),
       level: level,
       message: message,
       detail: detail || null
-    });
+    };
+    state.events.push(entry);
     trimEvents();
+    try {
+      if (typeof window.__xtrataRuntimeReportDiagnostic === 'function') {
+        window.__xtrataRuntimeReportDiagnostic(entry);
+      }
+    } catch (error) {}
   }
 
   function log(level, message, detail) {
