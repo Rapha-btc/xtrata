@@ -6,6 +6,7 @@
   "scripts": {
     "predev": "npm run arcade:games:manifest",
     "dev": "vite",
+    "dev:pages:test": "npm run build && wrangler pages dev dist --ip 127.0.0.1 --local-protocol http --show-interactive-dev-session=false --log-level warn",
     "prebuild": "npm run arcade:games:manifest",
     "build": "vite build",
     "preview": "vite preview",
@@ -31,6 +32,10 @@
     "contracts:verify": "node scripts/contract-variants.mjs verify",
     "test:contracts": "npm run contracts:sync && npm run contracts:verify",
     "test:app": "vitest run",
+    "test:browser": "playwright test",
+    "test:browser:headed": "playwright test --headed",
+    "test:browser:install": "playwright install chromium",
+    "test:browser:remote": "PLAYWRIGHT_SKIP_WEBSERVER=1 playwright test",
     "test:clarinet": "npm --prefix contracts/clarinet test",
     "test:report": "npm --prefix contracts/clarinet run test:report",
     "test:watch": "vitest",
@@ -48,6 +53,7 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@types/node": "^20.12.12",
     "@types/react": "^18.3.2",
     "@types/react-dom": "^18.3.0",

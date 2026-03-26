@@ -5,6 +5,8 @@ coverage
 .env
 .env.local
 .artifacts
+playwright-report
+test-results
 
 
 # FOLDERS
