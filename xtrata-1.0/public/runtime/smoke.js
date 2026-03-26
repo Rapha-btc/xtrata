@@ -7,6 +7,9 @@
   var loadButton = document.getElementById('load-button');
   var inspectButton = document.getElementById('inspect-button');
   var initButton = document.getElementById('init-button');
+  var presetButton = document.getElementById('preset-button');
+  var keyButton = document.getElementById('key-button');
+  var warmButton = document.getElementById('warm-button');
   var copyButton = document.getElementById('copy-button');
   var resetButton = document.getElementById('reset-button');
   var actionStatusEl = document.getElementById('action-status');
@@ -364,6 +367,74 @@
       .slice(0, 20);
   }
 
+  function isVisibleNode(node) {
+    if (!node || typeof node.getBoundingClientRect !== 'function') {
+      return false;
+    }
+    try {
+      var rect = node.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function describeNode(node, index) {
+    if (!node) {
+      return null;
+    }
+    return {
+      index: index,
+      tag: getString(node.tagName).toLowerCase(),
+      text: normalizeText(
+        node.textContent ||
+          node.getAttribute('aria-label') ||
+          node.getAttribute('title') ||
+          ''
+      ).slice(0, 80),
+      className: normalizeText(getString(node.className)).slice(0, 120),
+      dataNote: getString(node.getAttribute('data-note')),
+      dataKey: getString(node.getAttribute('data-key')),
+      dataMidi: getString(node.getAttribute('data-midi')),
+      role: getString(node.getAttribute('role'))
+    };
+  }
+
+  function readPlayableControls(doc) {
+    var selector = [
+      '[data-note]',
+      '[data-key]',
+      '[data-midi]',
+      '[data-midi-note]',
+      '[data-piano-key]',
+      '[class*="key"]',
+      '[class*="Key"]',
+      '[class*="note"]',
+      '[class*="Note"]',
+      '[class*="piano"] [class*="key"]',
+      '[class*="keyboard"] [class*="key"]'
+    ].join(',');
+    return toArray(doc.querySelectorAll(selector))
+      .filter(function (node) {
+        if (!node) {
+          return false;
+        }
+        if (/^(html|body|div|section)$/i.test(getString(node.tagName)) === false) {
+          return isVisibleNode(node);
+        }
+        var text = normalizeText(node.textContent || '');
+        var hasData =
+          !!node.getAttribute('data-note') ||
+          !!node.getAttribute('data-key') ||
+          !!node.getAttribute('data-midi') ||
+          !!node.getAttribute('data-midi-note');
+        return isVisibleNode(node) && (hasData || text.length <= 6);
+      })
+      .map(describeNode)
+      .filter(Boolean)
+      .slice(0, 24);
+  }
+
   function inspectControls() {
     var doc = getRuntimeDocument();
     if (!doc) {
@@ -376,7 +447,8 @@
     }
     var payload = {
       selects: readSelectControls(doc),
-      clickables: readClickableControls(doc)
+      clickables: readClickableControls(doc),
+      playables: readPlayableControls(doc)
     };
     recordHarnessEvent('Smoke harness inspected controls', payload, 'debug');
     setActionStatus(
@@ -384,7 +456,9 @@
         String(payload.selects.length) +
         ' select(s) and ' +
         String(payload.clickables.length) +
-        ' clickable control(s).',
+        ' clickable control(s), ' +
+        String(payload.playables.length) +
+        ' playable control(s).',
       'okay'
     );
     return payload;
@@ -430,6 +504,176 @@
         optionNode.textContent || optionNode.label || optionNode.value || ''
       ),
       value: getString(optionNode.value)
+    };
+  }
+
+  function selectFirstPreset() {
+    var doc = getRuntimeDocument();
+    if (!doc) {
+      setActionStatus('Runtime document unavailable.', 'fail');
+      return {
+        ok: false,
+        reason: 'runtime document unavailable'
+      };
+    }
+
+    var selects = toArray(doc.querySelectorAll('select'));
+    for (var selectIndex = 0; selectIndex < selects.length; selectIndex += 1) {
+      var selectNode = selects[selectIndex];
+      var options = toArray(selectNode.options || []);
+      for (var optionIndex = 0; optionIndex < options.length; optionIndex += 1) {
+        var optionNode = options[optionIndex];
+        var optionText = normalizeText(
+          optionNode && (optionNode.textContent || optionNode.label || optionNode.value || '')
+        );
+        if (
+          !optionNode ||
+          optionNode.disabled ||
+          !optionText ||
+          /(\binit\b|^init$)/i.test(optionText)
+        ) {
+          continue;
+        }
+        var applied = applySelectOption(selectNode, optionIndex);
+        var result = {
+          ok: true,
+          action: 'select-first-preset',
+          selectIndex: selectIndex,
+          optionIndex: optionIndex,
+          optionText: applied ? applied.optionText : optionText
+        };
+        recordHarnessEvent('Smoke harness selected first preset', result, 'info');
+        setActionStatus('Selected preset: ' + result.optionText, 'okay');
+        scheduleTelemetryPulls('select-first-preset');
+        return result;
+      }
+    }
+
+    var miss = {
+      ok: false,
+      reason: 'no non-init preset found'
+    };
+    recordHarnessEvent('Smoke harness failed to select first preset', miss, 'warn');
+    setActionStatus('No non-init preset found.', 'warn');
+    return miss;
+  }
+
+  function dispatchPointerSequence(node) {
+    if (!node) {
+      return;
+    }
+    var eventNames = ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click'];
+    for (var index = 0; index < eventNames.length; index += 1) {
+      var type = eventNames[index];
+      try {
+        node.dispatchEvent(
+          new MouseEvent(type, {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            view: window
+          })
+        );
+      } catch (error) {}
+    }
+    try {
+      if (typeof node.click === 'function') {
+        node.click();
+      }
+    } catch (error) {}
+  }
+
+  function findFirstPlayableNode(doc) {
+    var selector = [
+      '[data-note]',
+      '[data-key]',
+      '[data-midi]',
+      '[data-midi-note]',
+      '[data-piano-key]',
+      '[class*="key"]',
+      '[class*="Key"]',
+      '[class*="note"]',
+      '[class*="Note"]',
+      '[class*="piano"] [class*="key"]',
+      '[class*="keyboard"] [class*="key"]'
+    ].join(',');
+    var nodes = toArray(doc.querySelectorAll(selector));
+    for (var index = 0; index < nodes.length; index += 1) {
+      var node = nodes[index];
+      if (!isVisibleNode(node)) {
+        continue;
+      }
+      if (
+        /select|option/i.test(getString(node.tagName)) ||
+        node === doc.activeElement
+      ) {
+        continue;
+      }
+      var descriptor = describeNode(node, index);
+      if (!descriptor) {
+        continue;
+      }
+      if (
+        descriptor.dataNote ||
+        descriptor.dataKey ||
+        descriptor.dataMidi ||
+        /(^| )(key|note)/i.test(descriptor.className) ||
+        descriptor.text.length <= 6
+      ) {
+        return {
+          node: node,
+          descriptor: descriptor
+        };
+      }
+    }
+    return null;
+  }
+
+  function playFirstKey() {
+    var doc = getRuntimeDocument();
+    if (!doc) {
+      setActionStatus('Runtime document unavailable.', 'fail');
+      return {
+        ok: false,
+        reason: 'runtime document unavailable'
+      };
+    }
+    var match = findFirstPlayableNode(doc);
+    if (!match) {
+      var miss = {
+        ok: false,
+        reason: 'no playable control found',
+        controls: inspectControls()
+      };
+      recordHarnessEvent('Smoke harness failed to play first key', miss, 'warn');
+      setActionStatus('No playable key-like control found.', 'warn');
+      return miss;
+    }
+    dispatchPointerSequence(match.node);
+    var result = {
+      ok: true,
+      action: 'play-first-key',
+      control: match.descriptor
+    };
+    recordHarnessEvent('Smoke harness played first key', result, 'info');
+    setActionStatus(
+      'Played first key-like control: ' +
+        (match.descriptor.text || match.descriptor.className || match.descriptor.tag),
+      'okay'
+    );
+    scheduleTelemetryPulls('play-first-key');
+    return result;
+  }
+
+  function warmStart() {
+    var presetResult = selectFirstPreset();
+    window.setTimeout(function () {
+      playFirstKey();
+    }, presetResult && presetResult.ok ? 150 : 0);
+    return {
+      ok: !!(presetResult && presetResult.ok),
+      action: 'warm-start',
+      preset: presetResult || null
     };
   }
 
@@ -613,6 +857,15 @@
   initButton.addEventListener('click', function () {
     triggerInit();
   });
+  presetButton.addEventListener('click', function () {
+    selectFirstPreset();
+  });
+  keyButton.addEventListener('click', function () {
+    playFirstKey();
+  });
+  warmButton.addEventListener('click', function () {
+    warmStart();
+  });
   copyButton.addEventListener('click', function () {
     copySummary();
   });
@@ -628,6 +881,9 @@
     getSummary: summarize,
     inspectControls: inspectControls,
     triggerInit: triggerInit,
+    selectFirstPreset: selectFirstPreset,
+    playFirstKey: playFirstKey,
+    warmStart: warmStart,
     pullRuntimeTelemetrySnapshot: pullRuntimeTelemetrySnapshot
   };
 
