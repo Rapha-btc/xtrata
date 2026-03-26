@@ -17,8 +17,11 @@ const CORS_HEADERS = {
   'Cross-Origin-Resource-Policy': 'cross-origin'
 };
 
-const INDEX_CONCURRENCY = 6;
+const INDEX_CONCURRENCY = 1;
 const MAX_INDEX_CACHE_ENTRIES = 8;
+const PRIMARY_DESCENT_WINDOW = 128n;
+const PRIMARY_ASCENT_WINDOW = 24n;
+const TOKEN_URI_READ_RETRIES = 3;
 
 const GENERIC_SCRIPT_MIME_TYPES = new Set([
   '',
@@ -62,6 +65,11 @@ const getOrCreateModulePathIndex = (cacheKey: string) => {
   return index;
 };
 
+const wait = (ms: number) =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+
 const normalizeComparableModulePath = (value: string) => {
   const normalized = normalizeModuleTokenUriPath(value);
   if (!normalized) {
@@ -78,23 +86,94 @@ const buildTokenSearchOrder = (
   lastTokenId: bigint,
   entryTokenId: bigint | null
 ) => {
-  const tokenIds: bigint[] = [];
-  if (entryTokenId !== null && entryTokenId >= 0n && entryTokenId <= lastTokenId) {
-    for (let tokenId = entryTokenId; tokenId >= 0n; tokenId -= 1n) {
-      tokenIds.push(tokenId);
-      if (tokenId === 0n) {
+  const appendRange = (
+    output: bigint[],
+    start: bigint,
+    end: bigint,
+    step: bigint
+  ) => {
+    if (step === 0n) {
+      return;
+    }
+    if (step > 0n) {
+      for (let tokenId = start; tokenId <= end; tokenId += step) {
+        output.push(tokenId);
+      }
+      return;
+    }
+    for (let tokenId = start; tokenId >= end; tokenId += step) {
+      output.push(tokenId);
+      if (tokenId === end) {
         break;
       }
     }
-    for (let tokenId = entryTokenId + 1n; tokenId <= lastTokenId; tokenId += 1n) {
-      tokenIds.push(tokenId);
+  };
+
+  const dedupe = (values: bigint[]) => {
+    const seen = new Set<string>();
+    const output: bigint[] = [];
+    for (const value of values) {
+      const key = value.toString();
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      output.push(value);
     }
-    return tokenIds;
+    return output;
+  };
+
+  if (entryTokenId !== null && entryTokenId >= 0n && entryTokenId <= lastTokenId) {
+    const tokenIds: bigint[] = [];
+    const descentFloor =
+      entryTokenId > PRIMARY_DESCENT_WINDOW ? entryTokenId - PRIMARY_DESCENT_WINDOW : 0n;
+    appendRange(tokenIds, entryTokenId, descentFloor, -1n);
+
+    const ascentCeiling =
+      entryTokenId + PRIMARY_ASCENT_WINDOW < lastTokenId
+        ? entryTokenId + PRIMARY_ASCENT_WINDOW
+        : lastTokenId;
+    if (entryTokenId + 1n <= ascentCeiling) {
+      appendRange(tokenIds, entryTokenId + 1n, ascentCeiling, 1n);
+    }
+
+    if (descentFloor > 0n) {
+      appendRange(tokenIds, descentFloor - 1n, 0n, -1n);
+    }
+    if (ascentCeiling < lastTokenId) {
+      appendRange(tokenIds, ascentCeiling + 1n, lastTokenId, 1n);
+    }
+    return dedupe(tokenIds);
   }
-  for (let tokenId = 0n; tokenId <= lastTokenId; tokenId += 1n) {
-    tokenIds.push(tokenId);
-  }
+
+  const tokenIds: bigint[] = [];
+  appendRange(tokenIds, 0n, lastTokenId, 1n);
   return tokenIds;
+};
+
+const fetchIndexedTokenUri = async (params: {
+  env: RuntimeEnv;
+  apiBases: string[];
+  contract: RuntimeContractRef;
+  tokenId: bigint;
+}) => {
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt < TOKEN_URI_READ_RETRIES; attempt += 1) {
+    try {
+      return await fetchRuntimeTokenUri({
+        env: params.env,
+        apiBases: params.apiBases,
+        contract: params.contract,
+        tokenId: params.tokenId
+      });
+    } catch (error) {
+      lastError = error;
+      if (attempt < TOKEN_URI_READ_RETRIES - 1) {
+        await wait(80 * (attempt + 1));
+      }
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
 };
 
 const resolveModuleContentType = (
@@ -159,6 +238,7 @@ const resolveModuleTokenId = async (params: {
   const tokenIds = buildTokenSearchOrder(lastTokenId, params.entryTokenId);
   let cursor = 0;
   let resolvedTokenId: bigint | null = null;
+  let failures = 0;
   const workerCount = Math.min(INDEX_CONCURRENCY, tokenIds.length || 1);
   const workers = Array.from({ length: workerCount }, () =>
     (async () => {
@@ -167,7 +247,7 @@ const resolveModuleTokenId = async (params: {
         cursor += 1;
         const tokenId = tokenIds[currentIndex];
         try {
-          const tokenUri = await fetchRuntimeTokenUri({
+          const tokenUri = await fetchIndexedTokenUri({
             env: params.env,
             apiBases: params.apiBases,
             contract: params.contract,
@@ -192,6 +272,7 @@ const resolveModuleTokenId = async (params: {
             resolvedTokenId = tokenId;
           }
         } catch (error) {
+          failures += 1;
           continue;
         }
       }
@@ -199,6 +280,9 @@ const resolveModuleTokenId = async (params: {
   );
 
   await Promise.all(workers);
+  if (resolvedTokenId === null && failures > 0) {
+    throw new Error('Module path lookup failed during token-uri reads.');
+  }
   return resolvedTokenId;
 };
 
