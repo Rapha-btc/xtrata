@@ -75,7 +75,7 @@ describe('runtime modules route', () => {
             responseOkCV(
               someCV(
                 stringAsciiCV(
-                  'on-chain-modules/workspace/System/shared/patch_runtime.js'
+                  'System/shared/patch_runtime.js'
                 )
               )
             )

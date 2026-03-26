@@ -62,6 +62,18 @@ const getOrCreateModulePathIndex = (cacheKey: string) => {
   return index;
 };
 
+const normalizeComparableModulePath = (value: string) => {
+  const normalized = normalizeModuleTokenUriPath(value);
+  if (!normalized) {
+    return null;
+  }
+  const segments = normalized.split('/');
+  while (segments[0] === 'on-chain-modules' || segments[0] === 'workspace') {
+    segments.shift();
+  }
+  return segments.join('/');
+};
+
 const buildTokenSearchOrder = (
   lastTokenId: bigint,
   entryTokenId: bigint | null
@@ -136,7 +148,10 @@ const resolveModuleTokenId = async (params: {
     lastTokenId
   });
   const index = getOrCreateModulePathIndex(cacheKey);
-  const cachedTokenId = index.get(params.requestedPath);
+  const comparableRequestedPath =
+    normalizeComparableModulePath(params.requestedPath) ?? params.requestedPath;
+  const cachedTokenId =
+    index.get(params.requestedPath) ?? index.get(comparableRequestedPath);
   if (cachedTokenId !== undefined) {
     return cachedTokenId;
   }
@@ -162,8 +177,18 @@ const resolveModuleTokenId = async (params: {
           if (!normalizedPath) {
             continue;
           }
-          index.set(normalizedPath, tokenId);
-          if (normalizedPath === params.requestedPath) {
+          if (!index.has(normalizedPath)) {
+            index.set(normalizedPath, tokenId);
+          }
+          const comparablePath =
+            normalizeComparableModulePath(normalizedPath) ?? normalizedPath;
+          if (!index.has(comparablePath)) {
+            index.set(comparablePath, tokenId);
+          }
+          if (
+            normalizedPath === params.requestedPath ||
+            comparablePath === comparableRequestedPath
+          ) {
             resolvedTokenId = tokenId;
           }
         } catch (error) {
