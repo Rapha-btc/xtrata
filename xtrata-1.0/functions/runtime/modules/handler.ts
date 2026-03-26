@@ -1,5 +1,6 @@
 import { normalizeModuleTokenUriPath } from '../../../src/lib/viewer/module-paths';
 import {
+  fetchRuntimeDependencies,
   fetchRuntimeLastTokenId,
   fetchRuntimeTokenUri,
   getRuntimeApiBases,
@@ -235,6 +236,82 @@ const buildCanonicalModuleUrl = (params: {
   return url.toString();
 };
 
+const indexResolvedModulePath = (params: {
+  index: ModulePathIndex;
+  tokenId: bigint;
+  tokenUri: string | null | undefined;
+}) => {
+  const normalizedPath = normalizeModuleTokenUriPath(params.tokenUri);
+  if (!normalizedPath) {
+    return null;
+  }
+  if (!params.index.has(normalizedPath)) {
+    params.index.set(normalizedPath, params.tokenId);
+  }
+  const comparablePath =
+    normalizeComparableModulePath(normalizedPath) ?? normalizedPath;
+  if (!params.index.has(comparablePath)) {
+    params.index.set(comparablePath, params.tokenId);
+  }
+  return {
+    normalizedPath,
+    comparablePath
+  };
+};
+
+const resolveModuleTokenIdFromDependencies = async (params: {
+  env: RuntimeEnv;
+  apiBases: string[];
+  contract: RuntimeContractRef;
+  requestedPath: string;
+  entryTokenId: bigint;
+  index: ModulePathIndex;
+}) => {
+  const comparableRequestedPath =
+    normalizeComparableModulePath(params.requestedPath) ?? params.requestedPath;
+  const dependencyIds = await fetchRuntimeDependencies({
+    env: params.env,
+    apiBases: params.apiBases,
+    contract: params.contract,
+    tokenId: params.entryTokenId
+  });
+  const candidateIds: bigint[] = [];
+  const seen = new Set<string>();
+  for (const tokenId of [params.entryTokenId, ...dependencyIds]) {
+    const key = tokenId.toString();
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    candidateIds.push(tokenId);
+  }
+
+  for (const tokenId of candidateIds) {
+    const tokenUri = await fetchIndexedTokenUri({
+      env: params.env,
+      apiBases: params.apiBases,
+      contract: params.contract,
+      tokenId
+    });
+    const indexed = indexResolvedModulePath({
+      index: params.index,
+      tokenId,
+      tokenUri
+    });
+    if (!indexed) {
+      continue;
+    }
+    if (
+      indexed.normalizedPath === params.requestedPath ||
+      indexed.comparablePath === comparableRequestedPath
+    ) {
+      return tokenId;
+    }
+  }
+
+  return null;
+};
+
 const resolveModuleTokenId = async (params: {
   env: RuntimeEnv;
   apiBases: string[];
@@ -261,6 +338,23 @@ const resolveModuleTokenId = async (params: {
   if (cachedTokenId !== undefined) {
     return cachedTokenId;
   }
+  if (params.entryTokenId !== null) {
+    try {
+      const dependencyResolved = await resolveModuleTokenIdFromDependencies({
+        env: params.env,
+        apiBases: params.apiBases,
+        contract: params.contract,
+        requestedPath: params.requestedPath,
+        entryTokenId: params.entryTokenId,
+        index
+      });
+      if (dependencyResolved !== null) {
+        return dependencyResolved;
+      }
+    } catch (error) {
+      // Fall through to the broader token-uri scan when dependency reads fail.
+    }
+  }
 
   const tokenIds = buildTokenSearchOrder(lastTokenId, params.entryTokenId);
   let cursor = 0;
@@ -280,21 +374,17 @@ const resolveModuleTokenId = async (params: {
             contract: params.contract,
             tokenId
           });
-          const normalizedPath = normalizeModuleTokenUriPath(tokenUri);
-          if (!normalizedPath) {
+          const indexed = indexResolvedModulePath({
+            index,
+            tokenId,
+            tokenUri
+          });
+          if (!indexed) {
             continue;
           }
-          if (!index.has(normalizedPath)) {
-            index.set(normalizedPath, tokenId);
-          }
-          const comparablePath =
-            normalizeComparableModulePath(normalizedPath) ?? normalizedPath;
-          if (!index.has(comparablePath)) {
-            index.set(comparablePath, tokenId);
-          }
           if (
-            normalizedPath === params.requestedPath ||
-            comparablePath === comparableRequestedPath
+            indexed.normalizedPath === params.requestedPath ||
+            indexed.comparablePath === comparableRequestedPath
           ) {
             resolvedTokenId = tokenId;
           }

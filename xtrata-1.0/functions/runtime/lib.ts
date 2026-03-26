@@ -1,5 +1,6 @@
 import { deserializeCV, serializeCV, uintCV } from '@stacks/transactions';
 import {
+  parseGetDependencies,
   parseGetChunk,
   parseGetInscriptionMeta,
   parseGetLastTokenId,
@@ -239,6 +240,23 @@ export const fetchRuntimeTokenUri = async (params: {
     senderAddress: params.contract.address
   });
   return parseGetTokenUri(value);
+};
+
+export const fetchRuntimeDependencies = async (params: {
+  env: RuntimeEnv;
+  apiBases: string[];
+  contract: RuntimeContractRef;
+  tokenId: bigint;
+}) => {
+  const value = await callRuntimeReadOnly({
+    env: params.env,
+    apiBases: params.apiBases,
+    contract: params.contract,
+    functionName: 'get-dependencies',
+    functionArgs: [encodeUintArg(params.tokenId)],
+    senderAddress: params.contract.address
+  });
+  return parseGetDependencies(value);
 };
 
 const getExpectedChunkCount = (params: {

@@ -1,6 +1,7 @@
 import {
   bufferCV,
   deserializeCV,
+  listCV,
   responseOkCV,
   serializeCV,
   someCV,
@@ -278,5 +279,103 @@ describe('runtime modules route', () => {
     expect(await response.text()).toContain(
       "audioContext.audioWorklet.addModule(__xtrataResolveRuntimeModuleUrl('./processor_unified.js'))"
     );
+  });
+
+  it('resolves shared modules from entry token dependencies before broad token-uri scanning', async () => {
+    const tokenUriReads: bigint[] = [];
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+      const body =
+        init?.body && typeof init.body === 'string'
+          ? (JSON.parse(init.body) as { arguments?: unknown[] })
+          : { arguments: [] as unknown[] };
+
+      if (url.endsWith('/get-last-token-id')) {
+        return clarityResponse(responseOkCV(uintCV(400)));
+      }
+
+      if (url.endsWith('/get-dependencies')) {
+        return clarityResponse(listCV([uintCV(230)]));
+      }
+
+      if (url.endsWith('/get-token-uri')) {
+        const tokenId = readUintArgument(body.arguments?.[0]);
+        tokenUriReads.push(tokenId);
+        if (tokenId === 259n) {
+          return clarityResponse(
+            responseOkCV(
+              someCV(
+                stringAsciiCV(
+                  'on-chain-modules/workspace/Plugins/Instruments/RetroKeys/gui.html'
+                )
+              )
+            )
+          );
+        }
+        if (tokenId === 230n) {
+          return clarityResponse(
+            responseOkCV(
+              someCV(stringAsciiCV('System/shared/patch_runtime.js'))
+            )
+          );
+        }
+        throw new Error(`unexpected token-uri scan for ${tokenId.toString()}`);
+      }
+
+      if (url.endsWith('/get-inscription-meta')) {
+        return clarityResponse(
+          someCV(
+            tupleCV({
+              owner: standardPrincipalCV('SP2JXKMSH007NPYAQHKJPQMAQYAD90NQGTVJVQ02B'),
+              'mime-type': stringAsciiCV('text/plain'),
+              'total-size': uintCV(17),
+              'total-chunks': uintCV(1),
+              sealed: trueCV(),
+              'final-hash': bufferCV(new Uint8Array([1, 2, 3, 4]))
+            })
+          )
+        );
+      }
+
+      if (url.endsWith('/get-chunk')) {
+        const tokenId = readUintArgument(body.arguments?.[0]);
+        const index = readUintArgument(body.arguments?.[1]);
+        if (tokenId === 230n && index === 0n) {
+          return clarityResponse(
+            someCV(bufferCV(new TextEncoder().encode('console.log("dep-ok")')))
+          );
+        }
+      }
+
+      return new Response('not found', { status: 404 });
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    const response = await onRequest({
+      request: new Request(
+        'https://xtrata.xyz/runtime/modules/mainnet/SP123/contract-name/259/on-chain-modules/workspace/System/shared/patch_runtime.js'
+      ),
+      env: {},
+      params: {
+        network: 'mainnet',
+        contractAddress: 'SP123',
+        contractName: 'contract-name',
+        entryTokenId: '259',
+        path: [
+          'on-chain-modules',
+          'workspace',
+          'System',
+          'shared',
+          'patch_runtime.js'
+        ]
+      }
+    } as any);
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('Location')).toBe(
+      'https://xtrata.xyz/runtime/modules/mainnet/SP123/contract-name/230/on-chain-modules/workspace/System/shared/patch_runtime.js'
+    );
+    expect(tokenUriReads).toEqual([259n, 230n]);
   });
 });
