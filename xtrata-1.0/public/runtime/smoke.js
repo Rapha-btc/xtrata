@@ -397,6 +397,42 @@
     } catch (error) {}
   }
 
+  function scheduleTelemetryPulls(reason) {
+    pullRuntimeTelemetrySnapshot(reason + '-immediate');
+    window.setTimeout(function () {
+      pullRuntimeTelemetrySnapshot(reason + '+100ms');
+    }, 100);
+    window.setTimeout(function () {
+      pullRuntimeTelemetrySnapshot(reason + '+750ms');
+    }, 750);
+    window.setTimeout(function () {
+      pullRuntimeTelemetrySnapshot(reason + '+2000ms');
+    }, 2000);
+  }
+
+  function applySelectOption(selectNode, optionIndex) {
+    if (!selectNode || typeof optionIndex !== 'number' || optionIndex < 0) {
+      return null;
+    }
+    var optionNode =
+      selectNode.options && selectNode.options[optionIndex]
+        ? selectNode.options[optionIndex]
+        : null;
+    if (!optionNode) {
+      return null;
+    }
+    selectNode.selectedIndex = optionIndex;
+    selectNode.value = optionNode.value;
+    dispatchSelectEvents(selectNode);
+    return {
+      optionIndex: optionIndex,
+      optionText: normalizeText(
+        optionNode.textContent || optionNode.label || optionNode.value || ''
+      ),
+      value: getString(optionNode.value)
+    };
+  }
+
   function triggerInit() {
     var doc = getRuntimeDocument();
     if (!doc) {
@@ -423,19 +459,55 @@
           continue;
         }
         if (/(\binit\b|^init$)/i.test(optionText)) {
-          selectNode.selectedIndex = optionIndex;
-          selectNode.value = optionNode.value;
-          dispatchSelectEvents(selectNode);
+          var wasAlreadySelected =
+            typeof selectNode.selectedIndex === 'number' &&
+            selectNode.selectedIndex === optionIndex;
+          var toggledFrom = null;
+          if (wasAlreadySelected) {
+            for (
+              var fallbackIndex = 0;
+              fallbackIndex < options.length;
+              fallbackIndex += 1
+            ) {
+              var fallbackOption = options[fallbackIndex];
+              var fallbackText = normalizeText(
+                fallbackOption &&
+                  (fallbackOption.textContent ||
+                    fallbackOption.label ||
+                    fallbackOption.value ||
+                    '')
+              );
+              if (
+                fallbackIndex !== optionIndex &&
+                fallbackOption &&
+                !fallbackOption.disabled &&
+                fallbackText
+              ) {
+                toggledFrom = applySelectOption(selectNode, fallbackIndex);
+                break;
+              }
+            }
+          }
+          var applied = applySelectOption(selectNode, optionIndex);
           var selectResult = {
             ok: true,
-            action: 'select-option',
-            optionText: optionText,
+            action: wasAlreadySelected
+              ? 'toggle-then-select-option'
+              : 'select-option',
+            optionText: applied ? applied.optionText : optionText,
             selectIndex: selectIndex,
-            optionIndex: optionIndex
+            optionIndex: optionIndex,
+            reselected: wasAlreadySelected,
+            toggledFrom: toggledFrom
           };
           recordHarnessEvent('Smoke harness triggered init', selectResult, 'info');
-          setActionStatus('Triggered init via preset select: ' + optionText, 'okay');
-          pullRuntimeTelemetrySnapshot('trigger-init-select');
+          setActionStatus(
+            wasAlreadySelected
+              ? 'Retoggled preset select and returned to Init.'
+              : 'Triggered init via preset select: ' + optionText,
+            'okay'
+          );
+          scheduleTelemetryPulls('trigger-init-select');
           return selectResult;
         }
       }
@@ -468,7 +540,7 @@
         };
         recordHarnessEvent('Smoke harness triggered init', clickResult, 'info');
         setActionStatus('Triggered init via clickable control: ' + clickableText, 'okay');
-        pullRuntimeTelemetrySnapshot('trigger-init-click');
+        scheduleTelemetryPulls('trigger-init-click');
         return clickResult;
       }
     }
