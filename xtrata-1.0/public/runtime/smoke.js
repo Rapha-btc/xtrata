@@ -558,7 +558,33 @@
     return miss;
   }
 
-  function dispatchPointerSequence(node) {
+  function createPointerEvent(type, point) {
+    var init = {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      view: window,
+      button: 0,
+      buttons: type === 'pointerup' || type === 'mouseup' ? 0 : 1
+    };
+    if (point) {
+      init.clientX = point.clientX;
+      init.clientY = point.clientY;
+      init.screenX = point.clientX;
+      init.screenY = point.clientY;
+    }
+    try {
+      if (type.indexOf('pointer') === 0 && typeof PointerEvent === 'function') {
+        init.pointerId = 1;
+        init.pointerType = 'mouse';
+        init.isPrimary = true;
+        return new PointerEvent(type, init);
+      }
+    } catch (error) {}
+    return new MouseEvent(type, init);
+  }
+
+  function dispatchPointerSequence(node, point) {
     if (!node) {
       return;
     }
@@ -566,14 +592,7 @@
     for (var index = 0; index < eventNames.length; index += 1) {
       var type = eventNames[index];
       try {
-        node.dispatchEvent(
-          new MouseEvent(type, {
-            bubbles: true,
-            cancelable: true,
-            composed: true,
-            view: window
-          })
-        );
+        node.dispatchEvent(createPointerEvent(type, point));
       } catch (error) {}
     }
     try {
@@ -629,6 +648,50 @@
     return null;
   }
 
+  function readNodePoint(node, xFactor, yFactor) {
+    if (!node || typeof node.getBoundingClientRect !== 'function') {
+      return null;
+    }
+    try {
+      var rect = node.getBoundingClientRect();
+      if (!rect || rect.width <= 0 || rect.height <= 0) {
+        return null;
+      }
+      var resolvedXFactor =
+        typeof xFactor === 'number' && Number.isFinite(xFactor) ? xFactor : 0.5;
+      var resolvedYFactor =
+        typeof yFactor === 'number' && Number.isFinite(yFactor) ? yFactor : 0.5;
+      return {
+        clientX: rect.left + rect.width * resolvedXFactor,
+        clientY: rect.top + rect.height * resolvedYFactor
+      };
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function playKeyboardSurface(node, descriptor) {
+    var xFactors = [0.18, 0.34, 0.5, 0.66, 0.82];
+    var played = [];
+    for (var index = 0; index < xFactors.length; index += 1) {
+      var point = readNodePoint(node, xFactors[index], 0.58);
+      if (!point) {
+        continue;
+      }
+      dispatchPointerSequence(node, point);
+      played.push({
+        xFactor: xFactors[index],
+        point: point
+      });
+    }
+    return {
+      ok: played.length > 0,
+      action: 'play-keyboard-surface',
+      control: descriptor,
+      hits: played
+    };
+  }
+
   function playFirstKey() {
     var doc = getRuntimeDocument();
     if (!doc) {
@@ -649,16 +712,23 @@
       setActionStatus('No playable key-like control found.', 'warn');
       return miss;
     }
-    dispatchPointerSequence(match.node);
-    var result = {
-      ok: true,
-      action: 'play-first-key',
-      control: match.descriptor
-    };
+    var result =
+      /(^| )bvst-keyboard( |$)/i.test(match.descriptor.className)
+        ? playKeyboardSurface(match.node, match.descriptor)
+        : {
+            ok: true,
+            action: 'play-first-key',
+            control: match.descriptor
+          };
+    if (result.action === 'play-first-key') {
+      dispatchPointerSequence(match.node, readNodePoint(match.node, 0.5, 0.5));
+    }
     recordHarnessEvent('Smoke harness played first key', result, 'info');
     setActionStatus(
-      'Played first key-like control: ' +
-        (match.descriptor.text || match.descriptor.className || match.descriptor.tag),
+      result.action === 'play-keyboard-surface'
+        ? 'Played keyboard surface sweep.'
+        : 'Played first key-like control: ' +
+          (match.descriptor.text || match.descriptor.className || match.descriptor.tag),
       'okay'
     );
     scheduleTelemetryPulls('play-first-key');
