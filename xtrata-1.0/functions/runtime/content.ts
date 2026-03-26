@@ -77,7 +77,8 @@ export const onRequest = async (context: {
     const moduleBaseHref = buildRuntimeModuleBaseHref({
       network,
       contractId: resolvedContractId,
-      tokenUriPath: tokenUri
+      tokenUriPath: tokenUri,
+      entryTokenId: tokenId
     });
 
     return new Response(resolved.bytes, {

@@ -222,9 +222,10 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
       buildRuntimeModuleBaseHref({
         network: props.client.network,
         contractId: tokenContractId,
-        tokenUriPath: resolvedRuntimeTokenUri
+        tokenUriPath: resolvedRuntimeTokenUri,
+        entryTokenId: props.token.id
       }),
-    [props.client.network, tokenContractId, resolvedRuntimeTokenUri]
+    [props.client.network, tokenContractId, resolvedRuntimeTokenUri, props.token.id]
   );
   const contentQueryKey = useMemo(
     () => [

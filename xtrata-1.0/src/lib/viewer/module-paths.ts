@@ -81,21 +81,44 @@ const encodePathSegments = (path: string) =>
     .map((segment) => encodeURIComponent(segment))
     .join('/');
 
+const normalizeRuntimeEntryTokenId = (
+  value: bigint | number | string | null | undefined
+) => {
+  if (typeof value === 'bigint') {
+    return value >= 0n ? value.toString() : null;
+  }
+  if (typeof value === 'number') {
+    if (!Number.isInteger(value) || value < 0) {
+      return null;
+    }
+    return value.toString();
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return /^\d+$/.test(trimmed) ? trimmed : null;
+  }
+  return null;
+};
+
 const buildRuntimeModulesPrefix = (params: {
   network: NetworkType;
   contractId: string;
+  entryTokenId?: bigint | number | string | null;
 }) => {
   const contract = parseRuntimeModuleContractId(params.contractId);
+  const entryTokenId = normalizeRuntimeEntryTokenId(params.entryTokenId);
   if (!contract) {
     return null;
   }
-  return `/runtime/modules/${encodeURIComponent(params.network)}/${encodeURIComponent(contract.address)}/${encodeURIComponent(contract.contractName)}`;
+  const entrySegment = entryTokenId ? `/${entryTokenId}` : '';
+  return `/runtime/modules/${encodeURIComponent(params.network)}/${encodeURIComponent(contract.address)}/${encodeURIComponent(contract.contractName)}${entrySegment}`;
 };
 
 export const buildRuntimeModuleAssetUrl = (params: {
   network: NetworkType;
   contractId: string;
   tokenUriPath: string | null | undefined;
+  entryTokenId?: bigint | number | string | null;
 }) => {
   const prefix = buildRuntimeModulesPrefix(params);
   const normalizedPath = normalizeModuleTokenUriPath(params.tokenUriPath);
@@ -109,6 +132,7 @@ export const buildRuntimeModuleBaseHref = (params: {
   network: NetworkType;
   contractId: string;
   tokenUriPath: string | null | undefined;
+  entryTokenId?: bigint | number | string | null;
 }) => {
   const prefix = buildRuntimeModulesPrefix(params);
   const normalizedPath = normalizeModuleTokenUriPath(params.tokenUriPath);

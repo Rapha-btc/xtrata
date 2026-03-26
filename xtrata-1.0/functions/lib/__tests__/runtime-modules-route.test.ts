@@ -11,7 +11,7 @@ import {
   uintCV
 } from '@stacks/transactions';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { onRequest } from '../../runtime/modules/[network]/[contractAddress]/[contractName]/[[path]]';
+import { onRequest } from '../../runtime/modules/[network]/[contractAddress]/[contractName]/[entryTokenId]/[[path]]';
 
 const bytesToHex = (bytes: Uint8Array) =>
   Array.from(bytes)
@@ -43,7 +43,8 @@ describe('runtime modules route', () => {
     vi.unstubAllGlobals();
   });
 
-  it('maps a module path back to on-chain content bytes', async () => {
+  it('maps a module path back to on-chain content bytes near the entry token id', async () => {
+    const tokenUriReads: bigint[] = [];
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
       const body =
@@ -57,6 +58,7 @@ describe('runtime modules route', () => {
 
       if (url.endsWith('/get-token-uri')) {
         const tokenId = readUintArgument(body.arguments?.[0]);
+        tokenUriReads.push(tokenId);
         if (tokenId === 0n) {
           return clarityResponse(
             responseOkCV(
@@ -86,7 +88,7 @@ describe('runtime modules route', () => {
           someCV(
             tupleCV({
               owner: standardPrincipalCV('SP2JXKMSH007NPYAQHKJPQMAQYAD90NQGTVJVQ02B'),
-              'mime-type': stringAsciiCV('application/javascript'),
+              'mime-type': stringAsciiCV('text/plain'),
               'total-size': uintCV(17),
               'total-chunks': uintCV(1),
               sealed: trueCV(),
@@ -113,13 +115,14 @@ describe('runtime modules route', () => {
 
     const response = await onRequest({
       request: new Request(
-        'https://xtrata.xyz/runtime/modules/mainnet/SP123/contract-name/on-chain-modules/workspace/System/shared/patch_runtime.js'
+        'https://xtrata.xyz/runtime/modules/mainnet/SP123/contract-name/1/on-chain-modules/workspace/System/shared/patch_runtime.js'
       ),
       env: {},
       params: {
         network: 'mainnet',
         contractAddress: 'SP123',
         contractName: 'contract-name',
+        entryTokenId: '1',
         path: [
           'on-chain-modules',
           'workspace',
@@ -131,9 +134,11 @@ describe('runtime modules route', () => {
     } as any);
 
     expect(response.status).toBe(200);
-    expect(response.headers.get('Content-Type')).toBe('application/javascript');
+    expect(response.headers.get('Content-Type')).toBe('text/javascript; charset=utf-8');
     expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
     expect(response.headers.get('X-Xtrata-Runtime-Token-Id')).toBe('1');
+    expect(tokenUriReads[0]).toBe(1n);
+    expect(tokenUriReads.length).toBeLessThanOrEqual(2);
     expect(await response.text()).toBe('console.log("ok")');
   });
 });

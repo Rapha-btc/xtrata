@@ -24,19 +24,21 @@ describe('viewer module path helpers', () => {
       buildRuntimeModuleAssetUrl({
         network: 'mainnet',
         contractId: 'SP123.contract-name',
-        tokenUriPath: 'on-chain-modules/workspace/System/shared/patch_runtime.js'
+        tokenUriPath: 'on-chain-modules/workspace/System/shared/patch_runtime.js',
+        entryTokenId: 259n
       })
     ).toBe(
-      '/runtime/modules/mainnet/SP123/contract-name/on-chain-modules/workspace/System/shared/patch_runtime.js'
+      '/runtime/modules/mainnet/SP123/contract-name/259/on-chain-modules/workspace/System/shared/patch_runtime.js'
     );
     expect(
       buildRuntimeModuleBaseHref({
         network: 'mainnet',
         contractId: 'SP123.contract-name',
-        tokenUriPath: 'on-chain-modules/workspace/Plugins/Instruments/JMS10/gui.html'
+        tokenUriPath: 'on-chain-modules/workspace/Plugins/Instruments/JMS10/gui.html',
+        entryTokenId: 259n
       })
     ).toBe(
-      '/runtime/modules/mainnet/SP123/contract-name/on-chain-modules/workspace/Plugins/Instruments/JMS10/'
+      '/runtime/modules/mainnet/SP123/contract-name/259/on-chain-modules/workspace/Plugins/Instruments/JMS10/'
     );
   });
 

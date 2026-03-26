@@ -87,7 +87,7 @@ describe('runtime content route', () => {
       'on-chain-modules/workspace/Plugins/Instruments/JMS10/gui.html'
     );
     expect(response.headers.get('X-Xtrata-Runtime-Module-Base')).toBe(
-      '/runtime/modules/mainnet/SP123/contract-name/on-chain-modules/workspace/Plugins/Instruments/JMS10/'
+      '/runtime/modules/mainnet/SP123/contract-name/259/on-chain-modules/workspace/Plugins/Instruments/JMS10/'
     );
   });
 });
