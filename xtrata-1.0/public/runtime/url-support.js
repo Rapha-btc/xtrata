@@ -22,6 +22,8 @@
     '/Instruments/',
     '/Effects/'
   ];
+  var trackedAudioContexts = [];
+  var audioResumeListenersAttached = false;
 
   function log(level, message, detail) {
     try {
@@ -117,6 +119,106 @@
 
   window.__xtrataResolveRuntimeAssetUrl = rewriteRuntimeAssetUrl;
 
+  function trackAudioContext(instance, label) {
+    if (!instance || trackedAudioContexts.indexOf(instance) !== -1) {
+      return instance;
+    }
+    trackedAudioContexts.push(instance);
+    try {
+      if (typeof instance.addEventListener === 'function') {
+        instance.addEventListener('statechange', function () {
+          log('debug', 'AudioContext state changed', {
+            label: label,
+            state: instance.state || ''
+          });
+        });
+      }
+    } catch (error) {}
+    log('debug', 'AudioContext created', {
+      label: label,
+      state: instance.state || ''
+    });
+    return instance;
+  }
+
+  function patchAudioContextConstructor(name) {
+    var Original = window[name];
+    if (typeof Original !== 'function' || Original.__xtrataRuntimeAudioWrapped) {
+      return;
+    }
+    var Wrapped = function () {
+      var args = Array.prototype.slice.call(arguments);
+      var instance = new (Function.prototype.bind.apply(Original, [null].concat(args)))();
+      return trackAudioContext(instance, name);
+    };
+    Wrapped.prototype = Original.prototype;
+    try {
+      Object.setPrototypeOf(Wrapped, Original);
+    } catch (error) {}
+    Wrapped.__xtrataRuntimeAudioWrapped = true;
+    window[name] = Wrapped;
+  }
+
+  function resumeTrackedAudioContexts(reason) {
+    trackedAudioContexts.forEach(function (context) {
+      if (!context || typeof context.resume !== 'function') {
+        return;
+      }
+      if (context.state !== 'suspended') {
+        return;
+      }
+      log('debug', 'Attempting AudioContext resume', {
+        reason: reason,
+        state: context.state || ''
+      });
+      try {
+        var result = context.resume();
+        if (result && typeof result.then === 'function') {
+          result
+            .then(function () {
+              log('debug', 'AudioContext resume resolved', {
+                reason: reason,
+                state: context.state || ''
+              });
+            })
+            .catch(function (error) {
+              log('warn', 'AudioContext resume failed', {
+                reason: reason,
+                error:
+                  error && typeof error.message === 'string'
+                    ? error.message
+                    : String(error || '')
+              });
+            });
+        }
+      } catch (error) {
+        log('warn', 'AudioContext resume threw', {
+          reason: reason,
+          error:
+            error && typeof error.message === 'string'
+              ? error.message
+              : String(error || '')
+        });
+      }
+    });
+  }
+
+  function attachAudioResumeListeners() {
+    if (audioResumeListenersAttached) {
+      return;
+    }
+    audioResumeListenersAttached = true;
+    ['pointerdown', 'mousedown', 'touchstart', 'keydown'].forEach(function (eventName) {
+      window.addEventListener(
+        eventName,
+        function () {
+          resumeTrackedAudioContexts(eventName);
+        },
+        { passive: true }
+      );
+    });
+  }
+
   function patchAudioWorklet() {
     var ctor = typeof window.AudioWorklet === 'function' ? window.AudioWorklet : null;
     if (!ctor || !ctor.prototype || typeof ctor.prototype.addModule !== 'function') {
@@ -151,6 +253,9 @@
   }
 
   patchAudioWorklet();
+  patchAudioContextConstructor('AudioContext');
+  patchAudioContextConstructor('webkitAudioContext');
+  attachAudioResumeListeners();
   patchWorkerConstructor('Worker');
   patchWorkerConstructor('SharedWorker');
   log('debug', 'Runtime URL support installed');
