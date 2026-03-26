@@ -49,6 +49,19 @@
     }
   }
 
+  function extractCallerModuleBaseUrl() {
+    try {
+      var stack = new Error().stack || '';
+      var match = stack.match(/https?:\/\/[^\s)]+\/runtime\/modules\/[^\s):]+(?:\?[^\s):]+)?/);
+      if (!match || !match[0]) {
+        return null;
+      }
+      return match[0];
+    } catch (error) {
+      return null;
+    }
+  }
+
   function deriveWorkspaceBase(value) {
     var url = safeUrl(value, window.location.origin || 'https://xtrata.local');
     if (!url) {
@@ -76,11 +89,11 @@
     return false;
   }
 
-  function rewriteRuntimeAssetUrl(value) {
+  function rewriteRuntimeAssetUrl(value, baseOverride) {
     if (typeof value !== 'string' || !value.trim()) {
       return value;
     }
-    var baseUrl = document.baseURI || window.location.href;
+    var baseUrl = baseOverride || document.baseURI || window.location.href;
     var resolved = safeUrl(value, baseUrl);
     if (!resolved) {
       return value;
@@ -113,7 +126,8 @@
     if (rewritten !== value) {
       log('debug', 'Remapped runtime asset URL', {
         from: value,
-        to: rewritten
+        to: rewritten,
+        baseUrl: baseUrl
       });
     }
     return rewritten;
@@ -325,7 +339,8 @@
       return;
     }
     var wrappedAddModule = function (moduleUrl, options) {
-      var rewrittenUrl = rewriteRuntimeAssetUrl(moduleUrl);
+      var callerBaseUrl = extractCallerModuleBaseUrl();
+      var rewrittenUrl = rewriteRuntimeAssetUrl(moduleUrl, callerBaseUrl);
       return originalAddModule.call(this, rewrittenUrl, options);
     };
     wrappedAddModule.__xtrataRuntimeUrlWrapped = true;
@@ -390,7 +405,8 @@
       return;
     }
     var Wrapped = function (url, options) {
-      return new Original(rewriteRuntimeAssetUrl(url), options);
+      var callerBaseUrl = extractCallerModuleBaseUrl();
+      return new Original(rewriteRuntimeAssetUrl(url, callerBaseUrl), options);
     };
     Wrapped.prototype = Original.prototype;
     try {
