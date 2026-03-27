@@ -360,6 +360,24 @@ const buildModuleBootstrapScriptTag = () =>
   '<script data-xtrata-runtime-module-bootstrap="true" src="/runtime/module-bootstrap.js"></' +
   'script>';
 
+const INLINE_MODULE_START_MARKER =
+  'window.__xtrataRuntimeInlineModuleStarted=(window.__xtrataRuntimeInlineModuleStarted||0)+1;';
+
+const instrumentInlineModuleScripts = (html: string) => {
+  if (!html.includes('type="module"') && !html.includes("type='module'")) {
+    return html;
+  }
+  return html.replace(
+    /<script\b([^>]*\btype\s*=\s*(['"])module\2[^>]*)>([\s\S]*?)<\/script>/gi,
+    (match, attrs: string, _quote: string, body: string) => {
+      if (/\bsrc\s*=/.test(attrs) || body.includes('__xtrataRuntimeInlineModuleStarted')) {
+        return match;
+      }
+      return `<script${attrs}>${INLINE_MODULE_START_MARKER}${body}</script>`;
+    }
+  );
+};
+
 const insertAfterTag = (html: string, tagName: string, content: string) => {
   const regex = new RegExp(`<${tagName}[^>]*>`, 'i');
   const match = html.match(regex);
@@ -374,32 +392,33 @@ export const injectRecursiveBridgeHtml = (html: string, bridgeId: string) => {
   if (!bridgeId || !html) {
     return html;
   }
-  if (html.includes('data-xtrata-bridge')) {
-    return html;
+  const instrumentedHtml = instrumentInlineModuleScripts(html);
+  if (instrumentedHtml.includes('data-xtrata-bridge')) {
+    return instrumentedHtml;
   }
-  const telemetryScript = html.includes('data-xtrata-runtime-telemetry')
+  const telemetryScript = instrumentedHtml.includes('data-xtrata-runtime-telemetry')
     ? ''
     : buildTelemetryScriptTag();
-  const urlSupportScript = html.includes('data-xtrata-runtime-url-support')
+  const urlSupportScript = instrumentedHtml.includes('data-xtrata-runtime-url-support')
     ? ''
     : buildUrlSupportScriptTag();
-  const diagnosticsScript = html.includes('data-xtrata-runtime-diagnostics')
+  const diagnosticsScript = instrumentedHtml.includes('data-xtrata-runtime-diagnostics')
     ? ''
     : buildDiagnosticsScriptTag();
-  const moduleBootstrapScript = html.includes('data-xtrata-runtime-module-bootstrap')
+  const moduleBootstrapScript = instrumentedHtml.includes('data-xtrata-runtime-module-bootstrap')
     ? ''
     : buildModuleBootstrapScriptTag();
   const script = `${telemetryScript}${urlSupportScript}${diagnosticsScript}${moduleBootstrapScript}${buildBridgeScript(bridgeId)}`;
-  if (html.includes('</head>')) {
-    return html.replace('</head>', `${script}</head>`);
+  if (instrumentedHtml.includes('</head>')) {
+    return instrumentedHtml.replace('</head>', `${script}</head>`);
   }
-  const afterHead = insertAfterTag(html, 'head', script);
+  const afterHead = insertAfterTag(instrumentedHtml, 'head', script);
   if (afterHead) {
     return afterHead;
   }
-  const afterBody = insertAfterTag(html, 'body', script);
+  const afterBody = insertAfterTag(instrumentedHtml, 'body', script);
   if (afterBody) {
     return afterBody;
   }
-  return `${script}${html}`;
+  return `${script}${instrumentedHtml}`;
 };

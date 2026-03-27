@@ -62,6 +62,14 @@
     });
   }
 
+  function hasInlineModuleStarted() {
+    return !!(
+      window &&
+      typeof window.__xtrataRuntimeInlineModuleStarted === 'number' &&
+      window.__xtrataRuntimeInlineModuleStarted > 0
+    );
+  }
+
   function hasModuleResourceActivity() {
     if (
       typeof performance === 'undefined' ||
@@ -110,6 +118,9 @@
     if (state.replayed) {
       return false;
     }
+    if (hasInlineModuleStarted()) {
+      return false;
+    }
     if (hasModuleResourceActivity()) {
       return false;
     }
@@ -151,7 +162,8 @@
       reason: reason,
       scripts: readScriptInventory(),
       container: readContainerState(),
-      hasModuleResourceActivity: hasModuleResourceActivity()
+      hasModuleResourceActivity: hasModuleResourceActivity(),
+      inlineModuleStarted: hasInlineModuleStarted()
     });
   }
 
@@ -159,12 +171,12 @@
   inspect('install');
   window.addEventListener('load', function () {
     inspect('window-load');
-    window.setTimeout(function () {
-      replayInlineModules('window-load');
-    }, 250);
   });
   window.setTimeout(function () {
     inspect('t+1500ms');
-    replayInlineModules('t+1500ms');
   }, 1500);
+  window.setTimeout(function () {
+    inspect('t+4000ms');
+    replayInlineModules('t+4000ms');
+  }, 4000);
 })();

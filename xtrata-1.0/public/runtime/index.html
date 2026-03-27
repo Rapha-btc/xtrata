@@ -219,6 +219,34 @@
           return '<head>' + content + '</head>' + html;
         }
 
+        function instrumentInlineModuleScripts(html) {
+          if (
+            html.indexOf('type="module"') === -1 &&
+            html.indexOf("type='module'") === -1
+          ) {
+            return html;
+          }
+          return html.replace(
+            /<script\b([^>]*\btype\s*=\s*(['"])module\2[^>]*)>([\s\S]*?)<\/script>/gi,
+            function (match, attrs, _quote, body) {
+              if (
+                /\bsrc\s*=/.test(attrs) ||
+                String(body || '').indexOf('__xtrataRuntimeInlineModuleStarted') !== -1
+              ) {
+                return match;
+              }
+              return (
+                '<script' +
+                attrs +
+                '>' +
+                'window.__xtrataRuntimeInlineModuleStarted=(window.__xtrataRuntimeInlineModuleStarted||0)+1;' +
+                body +
+                '</script>'
+              );
+            }
+          );
+        }
+
         function buildRuntimeBaseTag(params) {
           if (!params || !params.moduleBase) {
             return '';
@@ -290,6 +318,7 @@
         }
 
         function injectRuntimeSupport(html, params) {
+          html = instrumentInlineModuleScripts(html);
           html = injectHeadPrefix(html, buildRuntimeBaseTag(params));
           var telemetryScript = buildRuntimeTelemetryScriptTag();
           if (telemetryScript) {

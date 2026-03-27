@@ -59,6 +59,19 @@ describe('recursive bridge html injection', () => {
     expect(bootstrapMatches).toHaveLength(1);
   });
 
+  it('marks inline module shells so bootstrap replay can detect a live start', () => {
+    const html =
+      '<html><head></head><body><script type="module">console.log("boot");</script></body></html>';
+    const result = injectRecursiveBridgeHtml(html, 'bridge-5');
+    const marker =
+      'window.__xtrataRuntimeInlineModuleStarted=(window.__xtrataRuntimeInlineModuleStarted||0)+1;';
+    const markerMatches = result.match(
+      /window\.__xtrataRuntimeInlineModuleStarted=\(window\.__xtrataRuntimeInlineModuleStarted\|\|0\)\+1;/g
+    ) ?? [];
+    expect(markerMatches).toHaveLength(1);
+    expect(result).toContain(`${marker}console.log("boot");`);
+  });
+
   it('falls back to native fetch on bridge contract mismatch', () => {
     const html = '<html><head><title>Fallback</title></head><body></body></html>';
     const result = injectRecursiveBridgeHtml(html, 'bridge-4');
