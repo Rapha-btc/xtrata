@@ -124,6 +124,87 @@
           return url.toString();
         }
 
+        function trimText(value) {
+          return typeof value === 'string' ? value.trim() : '';
+        }
+
+        function parseRuntimeContractId(value) {
+          var trimmed = trimText(value);
+          if (!trimmed) {
+            return null;
+          }
+          var separator = trimmed.indexOf('.');
+          if (separator <= 0 || separator >= trimmed.length - 1) {
+            return null;
+          }
+          return {
+            address: trimmed.slice(0, separator),
+            contractName: trimmed.slice(separator + 1)
+          };
+        }
+
+        function normalizeRuntimeTokenUriPath(value) {
+          var trimmed = trimText(value);
+          if (!trimmed || /^\/\//.test(trimmed) || /^[a-z][a-z0-9+.-]*:/i.test(trimmed)) {
+            return '';
+          }
+          var withoutHash = trimmed.split('#')[0] || trimmed;
+          var withoutQuery = withoutHash.split('?')[0] || withoutHash;
+          var rawSegments = withoutQuery.split('/');
+          var segments = [];
+          for (var index = 0; index < rawSegments.length; index += 1) {
+            var segment = rawSegments[index];
+            if (!segment || segment === '.') {
+              continue;
+            }
+            if (segment === '..') {
+              return '';
+            }
+            segments.push(segment);
+          }
+          return segments.join('/');
+        }
+
+        function buildRuntimeModuleBaseFromTokenUri(params, tokenUri) {
+          var contract = parseRuntimeContractId(params && params.contractId);
+          var normalizedTokenUri = normalizeRuntimeTokenUriPath(tokenUri);
+          var tokenId = trimText(params && params.tokenId);
+          var network = trimText(params && params.network) || 'mainnet';
+          if (!contract || !normalizedTokenUri || !tokenId) {
+            return '';
+          }
+          var segments = normalizedTokenUri.split('/');
+          segments.pop();
+          var encodedPath = segments
+            .filter(Boolean)
+            .map(function (segment) {
+              return encodeURIComponent(segment);
+            })
+            .join('/');
+          var prefix =
+            '/runtime/modules/' +
+            encodeURIComponent(network) +
+            '/' +
+            encodeURIComponent(contract.address) +
+            '/' +
+            encodeURIComponent(contract.contractName) +
+            '/' +
+            encodeURIComponent(tokenId);
+          return encodedPath ? prefix + '/' + encodedPath + '/' : prefix + '/';
+        }
+
+        function resolveRuntimeModuleBase(params, responseModuleBase, responseTokenUri) {
+          var liveModuleBase = trimText(responseModuleBase);
+          if (liveModuleBase) {
+            return liveModuleBase;
+          }
+          var derivedModuleBase = buildRuntimeModuleBaseFromTokenUri(params, responseTokenUri);
+          if (derivedModuleBase) {
+            return derivedModuleBase;
+          }
+          return trimText(params && params.moduleBase);
+        }
+
         function loadFromRuntimeEndpoint(params) {
           var endpoint = toRuntimeEndpoint(params);
           logRuntime('debug', 'Fetching runtime endpoint', {
@@ -141,10 +222,17 @@
               throw error;
             }
             return response.text().then(function (html) {
+              var responseModuleBase =
+                response.headers.get('X-Xtrata-Runtime-Module-Base') || '';
+              var responseTokenUri =
+                response.headers.get('X-Xtrata-Runtime-Token-Uri') || '';
               return {
                 html: html,
-                moduleBase:
-                  response.headers.get('X-Xtrata-Runtime-Module-Base') || ''
+                moduleBase: resolveRuntimeModuleBase(
+                  params,
+                  responseModuleBase,
+                  responseTokenUri
+                )
               };
             });
           }).catch(function (error) {
@@ -319,7 +407,7 @@
             throw new Error('Runtime content was empty (' + contextLabel + ').');
           }
           var launchParams =
-            runtimeModuleBase && !params.moduleBase
+            runtimeModuleBase
               ? Object.assign({}, params, { moduleBase: runtimeModuleBase })
               : params;
           var htmlWithSupport = injectRuntimeSupport(html, launchParams);

@@ -50,7 +50,7 @@ describe('viewer runtime open helpers', () => {
     expect(minimalUrl.searchParams.get('source')).toBeNull();
   });
 
-  it('omits blob runtime fallback sources', () => {
+  it('preserves blob runtime fallback sources', () => {
     const runtimeUrl = buildRuntimeOpenUrl({
       contractId: 'SP123.contract-name',
       tokenId: 42n,
@@ -58,7 +58,7 @@ describe('viewer runtime open helpers', () => {
       sourceUrl: 'blob:https://xtrata.xyz/example'
     });
     const parsed = new URL(runtimeUrl, 'https://xtrata.xyz');
-    expect(parsed.searchParams.get('source')).toBeNull();
+    expect(parsed.searchParams.get('source')).toBe('blob:https://xtrata.xyz/example');
   });
 
   it('appends runtime wallet bridge token to runtime urls', () => {

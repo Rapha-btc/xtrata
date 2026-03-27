@@ -34,11 +34,8 @@ export const buildRuntimeOpenUrl = (params: {
   if (params.fallbackContractId) {
     search.set('fallbackContractId', params.fallbackContractId);
   }
-  const sourceUrl =
-    typeof params.sourceUrl === 'string' ? params.sourceUrl.trim() : '';
-  // Prefer runtime/content over blob fallbacks so stale preview blobs do not
-  // get carried across runtime launches for unrelated modules.
-  if (sourceUrl && !sourceUrl.startsWith('blob:')) {
+  const sourceUrl = typeof params.sourceUrl === 'string' ? params.sourceUrl.trim() : '';
+  if (sourceUrl) {
     search.set('source', sourceUrl);
   }
   if (params.moduleBaseHref) {
