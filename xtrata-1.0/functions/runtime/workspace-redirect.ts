@@ -1,5 +1,13 @@
-import { normalizeModuleTokenUriPath } from '../../src/lib/viewer/module-paths';
+import {
+  buildRuntimeModuleAssetUrl,
+  normalizeModuleTokenUriPath
+} from '../../src/lib/viewer/module-paths';
 import { rewriteRuntimeWorkspaceAssetUrl } from '../../src/lib/viewer/runtime-asset-urls';
+import {
+  parseRuntimeContractRef,
+  parseRuntimeNetwork,
+  parseRuntimeTokenId
+} from './lib';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -73,6 +81,45 @@ const resolveWorkspaceRedirectTarget = (request: Request, requestedPath: string)
   return null;
 };
 
+const resolveRuntimeRefererRedirectTarget = (
+  request: Request,
+  requestedPath: string
+) => {
+  const referer = request.headers.get('referer');
+  if (!referer) {
+    return null;
+  }
+
+  let refererUrl: URL;
+  try {
+    refererUrl = new URL(referer);
+  } catch (error) {
+    return null;
+  }
+
+  const contract = parseRuntimeContractRef(refererUrl.searchParams.get('contractId'));
+  const entryTokenId = parseRuntimeTokenId(refererUrl.searchParams.get('tokenId'));
+  if (!contract || entryTokenId === null) {
+    return null;
+  }
+
+  const runtimeAssetPath = buildRuntimeModuleAssetUrl({
+    network: parseRuntimeNetwork(refererUrl.searchParams.get('network')),
+    contractId: `${contract.address}.${contract.contractName}`,
+    tokenUriPath: `on-chain-modules/workspace/${requestedPath}`,
+    entryTokenId
+  });
+  if (!runtimeAssetPath) {
+    return null;
+  }
+
+  const target = new URL(runtimeAssetPath, request.url);
+  const requestUrl = new URL(request.url);
+  target.search = requestUrl.search;
+  target.hash = requestUrl.hash;
+  return target.toString();
+};
+
 export const createRuntimeWorkspaceRootHandler =
   (root: string) =>
   async (context: {
@@ -106,7 +153,9 @@ export const createRuntimeWorkspaceRootHandler =
       return badResponse(400, 'Invalid workspace path');
     }
 
-    const redirectTarget = resolveWorkspaceRedirectTarget(request, requestedPath);
+    const redirectTarget =
+      resolveWorkspaceRedirectTarget(request, requestedPath) ??
+      resolveRuntimeRefererRedirectTarget(request, requestedPath);
     if (!redirectTarget) {
       return badResponse(404, 'Runtime workspace path not found');
     }

@@ -25,6 +25,25 @@ describe('runtime workspace root redirect route', () => {
     );
   });
 
+  it('redirects bare shared module requests using runtime launcher params when moduleBase is absent', async () => {
+    const response = await onRequest({
+      request: new Request('https://xtrata.xyz/System/shared/patch_runtime.js?t=123', {
+        headers: {
+          Referer:
+            'https://xtrata.xyz/runtime/?contractId=SP123.contract-name&tokenId=259&network=mainnet&source=blob%3Ahttps%3A%2F%2Fxtrata.xyz%2Fexample'
+        }
+      }),
+      params: {
+        path: ['shared', 'patch_runtime.js']
+      }
+    } as any);
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('Location')).toBe(
+      'https://xtrata.xyz/runtime/modules/mainnet/SP123/contract-name/259/on-chain-modules/workspace/System/shared/patch_runtime.js?t=123'
+    );
+  });
+
   it('redirects bare wasm requests using a remapped module referer', async () => {
     const response = await onRequest({
       request: new Request('https://xtrata.xyz/System/shared/bvst_unified_bg.wasm', {
