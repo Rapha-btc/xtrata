@@ -378,4 +378,112 @@ describe('runtime modules route', () => {
     );
     expect(tokenUriReads).toEqual([259n, 230n]);
   });
+
+  it('walks transitive dependency chains for JMS10 shared wasm resolution', async () => {
+    const tokenUriReads: bigint[] = [];
+    const dependencyReads: bigint[] = [];
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url =
+        typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+      const body =
+        init?.body && typeof init.body === 'string'
+          ? (JSON.parse(init.body) as { arguments?: unknown[] })
+          : { arguments: [] as unknown[] };
+
+      if (url.endsWith('/get-last-token-id')) {
+        return clarityResponse(responseOkCV(uintCV(400)));
+      }
+
+      if (url.endsWith('/get-dependencies')) {
+        const tokenId = readUintArgument(body.arguments?.[0]);
+        dependencyReads.push(tokenId);
+        if (tokenId === 237n) {
+          return clarityResponse(listCV([uintCV(230)]));
+        }
+        if (tokenId === 230n) {
+          return clarityResponse(listCV([uintCV(229)]));
+        }
+        if (tokenId === 229n) {
+          return clarityResponse(listCV([uintCV(228)]));
+        }
+        if (tokenId === 228n) {
+          return clarityResponse(listCV([uintCV(225), uintCV(227)]));
+        }
+        return clarityResponse(listCV([]));
+      }
+
+      if (url.endsWith('/get-token-uri')) {
+        const tokenId = readUintArgument(body.arguments?.[0]);
+        tokenUriReads.push(tokenId);
+        if (tokenId === 237n) {
+          return clarityResponse(
+            responseOkCV(
+              someCV(
+                stringAsciiCV(
+                  'on-chain-modules/workspace/Plugins/Instruments/JMS10/gui.html'
+                )
+              )
+            )
+          );
+        }
+        if (tokenId === 230n) {
+          return clarityResponse(
+            responseOkCV(someCV(stringAsciiCV('System/shared/patch_runtime.js')))
+          );
+        }
+        if (tokenId === 229n) {
+          return clarityResponse(
+            responseOkCV(someCV(stringAsciiCV('System/shared/plugin_core.js')))
+          );
+        }
+        if (tokenId === 228n) {
+          return clarityResponse(
+            responseOkCV(someCV(stringAsciiCV('System/shared/standalone_bridge.js')))
+          );
+        }
+        if (tokenId === 227n) {
+          return clarityResponse(
+            responseOkCV(someCV(stringAsciiCV('System/shared/processor_unified.js')))
+          );
+        }
+        if (tokenId === 225n) {
+          return clarityResponse(
+            responseOkCV(someCV(stringAsciiCV('System/shared/bvst_unified_bg.wasm')))
+          );
+        }
+        throw new Error(`unexpected token-uri scan for ${tokenId.toString()}`);
+      }
+
+      return new Response('not found', { status: 404 });
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    const response = await onRequest({
+      request: new Request(
+        'https://xtrata.xyz/runtime/modules/mainnet/SP123/contract-name/237/on-chain-modules/workspace/System/shared/bvst_unified_bg.wasm'
+      ),
+      env: {},
+      params: {
+        network: 'mainnet',
+        contractAddress: 'SP123',
+        contractName: 'contract-name',
+        entryTokenId: '237',
+        path: [
+          'on-chain-modules',
+          'workspace',
+          'System',
+          'shared',
+          'bvst_unified_bg.wasm'
+        ]
+      }
+    } as any);
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('Location')).toBe(
+      'https://xtrata.xyz/runtime/modules/mainnet/SP123/contract-name/225/on-chain-modules/workspace/System/shared/bvst_unified_bg.wasm'
+    );
+    expect(tokenUriReads).toEqual([237n, 230n, 229n, 228n, 225n]);
+    expect(dependencyReads).toEqual([237n, 230n, 229n, 228n]);
+  });
 });

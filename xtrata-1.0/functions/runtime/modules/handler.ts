@@ -27,6 +27,7 @@ const MAX_INDEX_CACHE_ENTRIES = 8;
 const PRIMARY_DESCENT_WINDOW = 128n;
 const PRIMARY_ASCENT_WINDOW = 24n;
 const TOKEN_URI_READ_RETRIES = 3;
+const MAX_DEPENDENCY_WALK_VISITS = 128;
 
 const GENERIC_SCRIPT_MIME_TYPES = new Set([
   '',
@@ -269,43 +270,58 @@ const resolveModuleTokenIdFromDependencies = async (params: {
 }) => {
   const comparableRequestedPath =
     normalizeComparableModulePath(params.requestedPath) ?? params.requestedPath;
-  const dependencyIds = await fetchRuntimeDependencies({
-    env: params.env,
-    apiBases: params.apiBases,
-    contract: params.contract,
-    tokenId: params.entryTokenId
-  });
-  const candidateIds: bigint[] = [];
+  const candidateIds: bigint[] = [params.entryTokenId];
   const seen = new Set<string>();
-  for (const tokenId of [params.entryTokenId, ...dependencyIds]) {
+  let cursor = 0;
+
+  const enqueue = (tokenId: bigint) => {
     const key = tokenId.toString();
     if (seen.has(key)) {
-      continue;
+      return;
     }
     seen.add(key);
     candidateIds.push(tokenId);
-  }
+  };
 
-  for (const tokenId of candidateIds) {
-    const tokenUri = await fetchIndexedTokenUri({
-      env: params.env,
-      apiBases: params.apiBases,
-      contract: params.contract,
-      tokenId
-    });
-    const indexed = indexResolvedModulePath({
-      index: params.index,
-      tokenId,
-      tokenUri
-    });
-    if (!indexed) {
-      continue;
+  seen.add(params.entryTokenId.toString());
+
+  while (cursor < candidateIds.length && cursor < MAX_DEPENDENCY_WALK_VISITS) {
+    const tokenId = candidateIds[cursor];
+    cursor += 1;
+
+    try {
+      const tokenUri = await fetchIndexedTokenUri({
+        env: params.env,
+        apiBases: params.apiBases,
+        contract: params.contract,
+        tokenId
+      });
+      const indexed = indexResolvedModulePath({
+        index: params.index,
+        tokenId,
+        tokenUri
+      });
+      if (
+        indexed &&
+        (indexed.normalizedPath === params.requestedPath ||
+          indexed.comparablePath === comparableRequestedPath)
+      ) {
+        return tokenId;
+      }
+    } catch (error) {
+      // Keep walking the declared dependency graph even when a token-uri read fails.
     }
-    if (
-      indexed.normalizedPath === params.requestedPath ||
-      indexed.comparablePath === comparableRequestedPath
-    ) {
-      return tokenId;
+
+    try {
+      const dependencyIds = await fetchRuntimeDependencies({
+        env: params.env,
+        apiBases: params.apiBases,
+        contract: params.contract,
+        tokenId
+      });
+      dependencyIds.forEach(enqueue);
+    } catch (error) {
+      // Dependency reads are best-effort here; a miss falls back to the broader scan.
     }
   }
 
