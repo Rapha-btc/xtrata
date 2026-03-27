@@ -1,0 +1,123 @@
+{
+  "generated_at": "2026-03-27T13:57:05Z",
+  "source": "live runtime/content catalog inspection",
+  "network": "mainnet",
+  "contract_id": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0",
+  "root_catalog_token_id": 266,
+  "release_catalog_token_id": 265,
+  "family_catalogs": {
+    "bvstsynth-family": 247,
+    "standalone-synths": 264
+  },
+  "diagnosis": {
+    "summary": "The live on-chain runtime namespace differs from the local frozen bundle for several synths. Runtime URLs must use the live shell token and the live on-chain plugin folder name.",
+    "not_duplicate_ids": true,
+    "notes": [
+      "Each plugin is split into separate manifest, patch, shell, and release-catalog token IDs. That is expected.",
+      "JMS10 works because its local name and live on-chain folder match.",
+      "UniversalEngine and UniversalSynth were inscribed as BVSTEngine and BVSTSynth.",
+      "BlueMarvinOne, BlueMarvinTwo, and NeonPoly were inscribed as MinerOne, MinerTwo, and ChainPoly.",
+      "RetroKeys kept the same live folder name and should be launched from its own shell token."
+    ]
+  },
+  "plugins": [
+    {
+      "local_bundle_name": "JMS10",
+      "live_on_chain_name": "JMS10",
+      "release_catalog_token_id": 244,
+      "manifest_token_id": 235,
+      "patch_token_id": 236,
+      "shell_token_id": 237,
+      "module_base_path": "/runtime/modules/mainnet/SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X/xtrata-v2-1-0/237/on-chain-modules/workspace/Plugins/Instruments/JMS10/",
+      "paths": {
+        "manifest": "on-chain-modules/workspace/Plugins/Instruments/JMS10/manifest.json",
+        "patch": "on-chain-modules/workspace/Plugins/Instruments/JMS10/patch.json",
+        "shell": "on-chain-modules/workspace/Plugins/Instruments/JMS10/gui.html"
+      }
+    },
+    {
+      "local_bundle_name": "UniversalEngine",
+      "live_on_chain_name": "BVSTEngine",
+      "release_catalog_token_id": 245,
+      "manifest_token_id": 238,
+      "patch_token_id": 239,
+      "shell_token_id": 240,
+      "module_base_path": "/runtime/modules/mainnet/SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X/xtrata-v2-1-0/240/on-chain-modules/workspace/Plugins/Instruments/BVSTEngine/",
+      "paths": {
+        "manifest": "workspace/Plugins/Instruments/BVSTEngine/manifest.json",
+        "patch": "workspace/Plugins/Instruments/BVSTEngine/patch.json",
+        "shell": "workspace/Plugins/Instruments/BVSTEngine/gui.html"
+      }
+    },
+    {
+      "local_bundle_name": "UniversalSynth",
+      "live_on_chain_name": "BVSTSynth",
+      "release_catalog_token_id": 246,
+      "manifest_token_id": 241,
+      "patch_token_id": 242,
+      "shell_token_id": 243,
+      "module_base_path": "/runtime/modules/mainnet/SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X/xtrata-v2-1-0/243/on-chain-modules/workspace/Plugins/Instruments/BVSTSynth/",
+      "paths": {
+        "manifest": "workspace/Plugins/Instruments/BVSTSynth/manifest.json",
+        "patch": "on-chain-modules/workspace/Plugins/Instruments/BVSTSynth/patch.json",
+        "shell": "workspace/Plugins/Instruments/BVSTSynth/gui.html"
+      }
+    },
+    {
+      "local_bundle_name": "BlueMarvinOne",
+      "live_on_chain_name": "MinerOne",
+      "release_catalog_token_id": 260,
+      "manifest_token_id": 248,
+      "patch_token_id": 249,
+      "shell_token_id": 250,
+      "module_base_path": "/runtime/modules/mainnet/SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X/xtrata-v2-1-0/250/on-chain-modules/workspace/Plugins/Instruments/MinerOne/",
+      "paths": {
+        "manifest": "on-chain-modules/workspace/Plugins/Instruments/MinerOne/manifest.json",
+        "patch": "on-chain-modules/workspace/Plugins/Instruments/MinerOne/patch.json",
+        "shell": "on-chain-modules/workspace/Plugins/Instruments/MinerOne/gui.html"
+      }
+    },
+    {
+      "local_bundle_name": "BlueMarvinTwo",
+      "live_on_chain_name": "MinerTwo",
+      "release_catalog_token_id": 261,
+      "manifest_token_id": 251,
+      "patch_token_id": 252,
+      "shell_token_id": 253,
+      "module_base_path": "/runtime/modules/mainnet/SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X/xtrata-v2-1-0/253/on-chain-modules/workspace/Plugins/Instruments/MinerTwo/",
+      "paths": {
+        "manifest": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/manifest.json",
+        "patch": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/patch.json",
+        "shell": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/gui.html"
+      }
+    },
+    {
+      "local_bundle_name": "NeonPoly",
+      "live_on_chain_name": "ChainPoly",
+      "release_catalog_token_id": 262,
+      "manifest_token_id": 254,
+      "patch_token_id": 255,
+      "shell_token_id": 256,
+      "module_base_path": "/runtime/modules/mainnet/SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X/xtrata-v2-1-0/256/on-chain-modules/workspace/Plugins/Instruments/ChainPoly/",
+      "paths": {
+        "manifest": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/manifest.json",
+        "patch": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/patch.json",
+        "shell": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/gui.html"
+      }
+    },
+    {
+      "local_bundle_name": "RetroKeys",
+      "live_on_chain_name": "RetroKeys",
+      "release_catalog_token_id": 263,
+      "manifest_token_id": 257,
+      "patch_token_id": 258,
+      "shell_token_id": 259,
+      "module_base_path": "/runtime/modules/mainnet/SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X/xtrata-v2-1-0/259/on-chain-modules/workspace/Plugins/Instruments/RetroKeys/",
+      "paths": {
+        "manifest": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/manifest.json",
+        "patch": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/patch.json",
+        "shell": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/gui.html"
+      }
+    }
+  ]
+}

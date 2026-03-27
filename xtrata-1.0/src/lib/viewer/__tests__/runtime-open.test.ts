@@ -24,7 +24,7 @@ describe('viewer runtime open helpers', () => {
       tokenId: 42n,
       network: 'mainnet',
       fallbackContractId: 'SP999.legacy',
-      sourceUrl: 'blob:https://xtrata.xyz/example',
+      sourceUrl: 'https://xtrata.xyz/runtime/content?contractId=SP123.contract-name&tokenId=42&network=mainnet',
       moduleBaseHref: '/runtime/modules/mainnet/SP123/contract/42/on-chain-modules/workspace/'
     });
     const fullUrl = new URL(full, 'https://xtrata.xyz');
@@ -34,7 +34,7 @@ describe('viewer runtime open helpers', () => {
     expect(fullUrl.searchParams.get('network')).toBe('mainnet');
     expect(fullUrl.searchParams.get('fallbackContractId')).toBe('SP999.legacy');
     expect(fullUrl.searchParams.get('source')).toBe(
-      'blob:https://xtrata.xyz/example'
+      'https://xtrata.xyz/runtime/content?contractId=SP123.contract-name&tokenId=42&network=mainnet'
     );
     expect(fullUrl.searchParams.get('moduleBase')).toBe(
       '/runtime/modules/mainnet/SP123/contract/42/on-chain-modules/workspace/'
@@ -48,6 +48,17 @@ describe('viewer runtime open helpers', () => {
     const minimalUrl = new URL(minimal, 'https://xtrata.xyz');
     expect(minimalUrl.searchParams.get('fallbackContractId')).toBeNull();
     expect(minimalUrl.searchParams.get('source')).toBeNull();
+  });
+
+  it('omits blob runtime fallback sources', () => {
+    const runtimeUrl = buildRuntimeOpenUrl({
+      contractId: 'SP123.contract-name',
+      tokenId: 42n,
+      network: 'mainnet',
+      sourceUrl: 'blob:https://xtrata.xyz/example'
+    });
+    const parsed = new URL(runtimeUrl, 'https://xtrata.xyz');
+    expect(parsed.searchParams.get('source')).toBeNull();
   });
 
   it('appends runtime wallet bridge token to runtime urls', () => {

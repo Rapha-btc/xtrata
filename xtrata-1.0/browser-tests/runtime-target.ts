@@ -1,3 +1,5 @@
+import { resolveBvstFirstWaveLaunchTarget } from '../src/lib/viewer/bvst-first-wave-launch';
+
 export type RuntimeSmokeTarget = {
   name: string;
   contractId: string;
@@ -8,15 +10,7 @@ export type RuntimeSmokeTarget = {
   expectedText?: string;
 };
 
-const DEFAULT_TARGET: RuntimeSmokeTarget = {
-  name: 'retrokeys',
-  contractId: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0',
-  tokenId: '259',
-  network: 'mainnet',
-  moduleBasePath:
-    'on-chain-modules/workspace/Plugins/Instruments/RetroKeys/',
-  expectedText: 'RetroKeys'
-};
+const DEFAULT_TARGET_NAME = 'RetroKeys';
 
 const normalizeModuleBasePath = (value: string) => {
   const trimmed = value.trim().replace(/^\/+/, '');
@@ -38,34 +32,37 @@ const splitContractId = (contractId: string) => {
 };
 
 export const resolveRuntimeSmokeTarget = (): RuntimeSmokeTarget => {
+  const requestedName =
+    process.env.PLAYWRIGHT_RUNTIME_NAME || DEFAULT_TARGET_NAME;
+  const liveTarget = resolveBvstFirstWaveLaunchTarget(requestedName);
   const contractId =
-    process.env.PLAYWRIGHT_RUNTIME_CONTRACT_ID || DEFAULT_TARGET.contractId;
+    process.env.PLAYWRIGHT_RUNTIME_CONTRACT_ID || liveTarget.contractId;
   const tokenId =
-    process.env.PLAYWRIGHT_RUNTIME_TOKEN_ID || DEFAULT_TARGET.tokenId;
+    process.env.PLAYWRIGHT_RUNTIME_TOKEN_ID ||
+    liveTarget.shellTokenId.toString();
   const network =
     (process.env.PLAYWRIGHT_RUNTIME_NETWORK as
       | 'mainnet'
       | 'testnet'
-      | undefined) || DEFAULT_TARGET.network;
+      | undefined) || liveTarget.network;
   const moduleBasePath = normalizeModuleBasePath(
     process.env.PLAYWRIGHT_RUNTIME_MODULE_BASE_PATH ||
-      DEFAULT_TARGET.moduleBasePath
+      liveTarget.moduleBasePath
   );
   if (!moduleBasePath) {
     throw new Error('Missing PLAYWRIGHT_RUNTIME_MODULE_BASE_PATH value.');
   }
   return {
-    name: process.env.PLAYWRIGHT_RUNTIME_NAME || DEFAULT_TARGET.name,
+    name: requestedName,
     contractId,
     tokenId,
     network,
     moduleBasePath,
     fallbackContractId:
-      process.env.PLAYWRIGHT_RUNTIME_FALLBACK_CONTRACT_ID ||
-      DEFAULT_TARGET.fallbackContractId,
+      process.env.PLAYWRIGHT_RUNTIME_FALLBACK_CONTRACT_ID || undefined,
     expectedText:
       process.env.PLAYWRIGHT_RUNTIME_EXPECTED_TEXT ||
-      DEFAULT_TARGET.expectedText
+      liveTarget.liveOnChainName
   };
 };
 
