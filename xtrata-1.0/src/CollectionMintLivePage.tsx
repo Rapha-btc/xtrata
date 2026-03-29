@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type SyntheticEvent
+} from 'react';
 import { showContractCall } from './lib/wallet/connect';
 import { sha256 } from '@noble/hashes/sha256';
 import {
@@ -75,6 +82,7 @@ import {
   writeThemePreference
 } from './lib/theme/preferences';
 import { getMediaKind } from './lib/viewer/content';
+import { shouldUsePixelatedImageRendering } from './lib/viewer/image-rendering';
 import { bytesToHex } from './lib/utils/encoding';
 import { formatBytes } from './lib/utils/format';
 import { createStacksWalletAdapter } from './lib/wallet/adapter';
@@ -252,6 +260,58 @@ const toRecord = (value: unknown): Record<string, unknown> | null => {
     return null;
   }
   return value as Record<string, unknown>;
+};
+
+type CollectionLivePreviewImageProps = {
+  src: string;
+  alt: string;
+  loading?: 'lazy' | 'eager';
+  mimeType?: string | null;
+  isSvgSource?: boolean;
+};
+
+const CollectionLivePreviewImage = ({
+  src,
+  alt,
+  loading,
+  mimeType,
+  isSvgSource
+}: CollectionLivePreviewImageProps) => {
+  const [pixelatePreview, setPixelatePreview] = useState(false);
+
+  useEffect(() => {
+    setPixelatePreview(false);
+  }, [src, mimeType, isSvgSource]);
+
+  const handleLoad = useCallback(
+    (event: SyntheticEvent<HTMLImageElement>) => {
+      const target = event.currentTarget;
+      const rect = target.getBoundingClientRect();
+      const nextPixelate = shouldUsePixelatedImageRendering({
+        naturalWidth: target.naturalWidth || 0,
+        naturalHeight: target.naturalHeight || 0,
+        renderedWidth: rect.width,
+        renderedHeight: rect.height,
+        mimeType,
+        isSvgSource
+      });
+      setPixelatePreview((previous) =>
+        previous === nextPixelate ? previous : nextPixelate
+      );
+    },
+    [mimeType, isSvgSource]
+  );
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      loading={loading ?? 'lazy'}
+      decoding="async"
+      onLoad={handleLoad}
+      className={pixelatePreview ? 'preview-media--pixelated' : undefined}
+    />
+  );
 };
 
 const parseJsonResponse = async <T,>(response: Response, label: string) => {
@@ -2818,6 +2878,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                 errorMessage="Cover image unavailable"
                 loading="eager"
                 debugLabel={`live-hero:${resolvedCollectionId || collectionTitle}`}
+                pixelateOnUpscale
               />
             </div>
             <div className="collection-live-page__hero-media-summary">
@@ -3175,10 +3236,12 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                     >
                       <div className="collection-live-page__gallery-frame">
                         {mediaKind === 'image' || mediaKind === 'svg' ? (
-                          <img
+                          <CollectionLivePreviewImage
                             src={previewUrl}
                             alt={`${collectionTitle} artwork`}
                             loading="lazy"
+                            mimeType={asset.mime_type}
+                            isSvgSource={mediaKind === 'svg'}
                           />
                         ) : mediaKind === 'video' ? (
                           <video src={previewUrl} controls preload="metadata" />

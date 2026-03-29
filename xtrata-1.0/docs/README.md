@@ -95,6 +95,7 @@ Release notes
 
 Product oversight
 	•	docs/product-contract-ui-reference.md
+	•	docs/contract-todos/README.md
 
 Artist guides
 	•	docs/artist-guides/README.md

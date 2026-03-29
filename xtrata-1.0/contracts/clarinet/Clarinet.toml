@@ -46,6 +46,11 @@ path = 'contracts/xtrata-v2.1.1.clar'
 clarity_version = 3
 epoch = 'latest'
 
+[contracts.xtrata-v3-0-0]
+path = 'contracts/xtrata-v3.0.0.clar'
+clarity_version = 3
+epoch = 'latest'
+
 [contracts.xtrata-small-mint-v1-0]
 path = 'contracts/xtrata-small-mint-v1.0.clar'
 clarity_version = 3

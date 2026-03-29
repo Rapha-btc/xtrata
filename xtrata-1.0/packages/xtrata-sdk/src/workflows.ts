@@ -137,14 +137,17 @@ const assertKnownMintPrice = (params: {
   }
 };
 
-const assertPositiveBigint = (value: bigint | null, field: string) => {
+function assertPositiveBigint(
+  value: bigint | null,
+  field: string
+): asserts value is bigint {
   if (value === null || value <= 0n) {
     throw new SdkValidationError(
       'invalid-input',
       `${field} must be greater than zero for deterministic safety planning.`
     );
   }
-};
+}
 
 const assertNonNegativeBigint = (value: bigint, field: string) => {
   if (value < 0n) {

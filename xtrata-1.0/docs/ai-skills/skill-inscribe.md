@@ -146,6 +146,7 @@ Execution rules:
 - fetch upload state first
 - do not use helper if a staged upload already exists
 - set one deny-mode STX post-condition with `begin fee + seal fee`
+- build principal arguments explicitly when a flow needs the caller identity, for example `principalCV(senderAddress)`
 - wait for confirmation before reporting success
 
 Recursive variant:

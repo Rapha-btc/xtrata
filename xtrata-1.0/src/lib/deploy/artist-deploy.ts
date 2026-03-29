@@ -106,11 +106,13 @@ const ASCII_DESCRIPTION_NORMALIZATION_REPLACEMENTS: ReadonlyArray<
   [/[Łł]/g, 'l']
 ];
 
-const isV2Entry = (entry: ContractRegistryEntry) =>
+const isCoreEntry = (entry: ContractRegistryEntry) =>
   entry.protocolVersion === '2.1.0' ||
   entry.protocolVersion === '2.1.1' ||
+  entry.protocolVersion === '3.0.0' ||
   entry.contractName.toLowerCase().includes('v2-1-0') ||
-  entry.contractName.toLowerCase().includes('v2-1-1');
+  entry.contractName.toLowerCase().includes('v2-1-1') ||
+  entry.contractName.toLowerCase().includes('v3-0-0');
 
 const escapeClarityAscii = (value: string) =>
   value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
@@ -217,7 +219,7 @@ export const resolveArtistDeployCoreTarget = (
   registry: readonly ContractRegistryEntry[] = CONTRACT_REGISTRY
 ): ArtistDeployCoreTarget | null => {
   const candidate = registry.find(
-    (entry) => entry.network === network && isV2Entry(entry)
+    (entry) => entry.network === network && isCoreEntry(entry)
   );
   if (!candidate) {
     return null;

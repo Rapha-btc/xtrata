@@ -36,6 +36,14 @@ describe('contract capabilities', () => {
     expect(capabilities.supportsMintedIndex).toBe(true);
   });
 
+  it('infers v3.0.0 from contract name', () => {
+    const capabilities = resolveContractCapabilities({
+      contractName: 'xtrata-v3-0-0'
+    });
+    expect(capabilities.version).toBe('3.0.0');
+    expect(capabilities.supportsMintedIndex).toBe(true);
+  });
+
   it('defaults to v1.1.1 when version is missing', () => {
     const capabilities = resolveContractCapabilities({});
     expect(capabilities.version).toBe('1.1.1');

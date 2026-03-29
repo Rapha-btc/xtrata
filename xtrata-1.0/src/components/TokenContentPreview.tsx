@@ -30,6 +30,7 @@ import {
   injectRecursiveBridgeHtml,
   registerRecursiveBridge
 } from '../lib/viewer/recursive';
+import { shouldUsePixelatedImageRendering } from '../lib/viewer/image-rendering';
 import {
   appendRuntimeWalletBridgeToken,
   buildRuntimeOpenUrl,
@@ -1588,8 +1589,6 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
         }
         const target = event.currentTarget;
         const rect = target.getBoundingClientRect();
-        const naturalWidth = target.naturalWidth || 0;
-        const naturalHeight = target.naturalHeight || 0;
         const normalizedMime = (resolvedMimeType ?? mimeType ?? '').toLowerCase();
         const urlLower = url.toLowerCase();
         const isSvgSource =
@@ -1597,20 +1596,16 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
           normalizedMime.includes('svg') ||
           urlLower.startsWith('data:image/svg') ||
           urlLower.includes('.svg');
-        let nextPixelate = false;
-        if (
-          !isSvgSource &&
-          naturalWidth > 0 &&
-          naturalHeight > 0 &&
-          rect.width > 0 &&
-          rect.height > 0
-        ) {
-          const scaleX = rect.width / naturalWidth;
-          const scaleY = rect.height / naturalHeight;
-          const scale = Math.max(scaleX, scaleY);
-          const maxNatural = Math.max(naturalWidth, naturalHeight);
-          nextPixelate = scale >= 1.2 && maxNatural <= 512;
-        }
+        const naturalWidth = target.naturalWidth || 0;
+        const naturalHeight = target.naturalHeight || 0;
+        const nextPixelate = shouldUsePixelatedImageRendering({
+          naturalWidth,
+          naturalHeight,
+          renderedWidth: rect.width,
+          renderedHeight: rect.height,
+          mimeType: resolvedMimeType ?? mimeType ?? null,
+          isSvgSource
+        });
         setPixelatePreview((previous) =>
           previous === nextPixelate ? previous : nextPixelate
         );
