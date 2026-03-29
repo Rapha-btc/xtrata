@@ -1,3 +1,5 @@
+import { shouldUsePixelatedThumbnailRendering } from './image-rendering';
+
 export const THUMBNAIL_SIZE = 256;
 const THUMBNAIL_FORMAT = 'image/webp';
 const FALLBACK_FORMAT = 'image/png';
@@ -77,18 +79,36 @@ export const createImageThumbnail = async (params: {
     if (!ctx) {
       return null;
     }
+    const usePixelatedRendering = shouldUsePixelatedThumbnailRendering({
+      sourceWidth: source.width,
+      sourceHeight: source.height,
+      targetWidth,
+      targetHeight,
+      mimeType: params.mimeType
+    });
+    ctx.imageSmoothingEnabled = !usePixelatedRendering;
+    if (!usePixelatedRendering) {
+      ctx.imageSmoothingQuality = 'high';
+    }
     ctx.clearRect(0, 0, size, size);
     const dx = Math.round((size - targetWidth) / 2);
     const dy = Math.round((size - targetHeight) / 2);
     ctx.drawImage(source.source, dx, dy, targetWidth, targetHeight);
 
-    const thumbnailBlob =
-      (await new Promise<Blob | null>((resolve) => {
-        canvas.toBlob(resolve, THUMBNAIL_FORMAT, params.quality ?? THUMBNAIL_QUALITY);
-      })) ||
-      (await new Promise<Blob | null>((resolve) => {
-        canvas.toBlob(resolve, FALLBACK_FORMAT);
-      }));
+    const thumbnailBlob = usePixelatedRendering
+      ? await new Promise<Blob | null>((resolve) => {
+          canvas.toBlob(resolve, FALLBACK_FORMAT);
+        })
+      : (await new Promise<Blob | null>((resolve) => {
+          canvas.toBlob(
+            resolve,
+            THUMBNAIL_FORMAT,
+            params.quality ?? THUMBNAIL_QUALITY
+          );
+        })) ||
+        (await new Promise<Blob | null>((resolve) => {
+          canvas.toBlob(resolve, FALLBACK_FORMAT);
+        }));
     if (!thumbnailBlob) {
       return null;
     }

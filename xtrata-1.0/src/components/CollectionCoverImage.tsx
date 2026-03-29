@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   isSvgCoverImageMimeType,
@@ -10,6 +10,7 @@ import { parseContractPrincipal } from '../lib/collections/contract-link';
 import { createXtrataClient } from '../lib/contract/client';
 import { getNetworkFromAddress } from '../lib/network/guard';
 import { fetchOnChainContent } from '../lib/viewer/content';
+import { shouldUsePixelatedImageRendering } from '../lib/viewer/image-rendering';
 import { isExecutableRuntimeMimeType } from '../lib/viewer/runtime-open';
 import { createObjectUrl } from '../lib/utils/blob';
 import { logDebug, logWarn, shouldLog } from '../lib/utils/logger';
@@ -26,6 +27,7 @@ type CollectionCoverImageProps = {
   errorMessage?: string;
   loading?: 'lazy' | 'eager';
   debugLabel?: string;
+  pixelateOnUpscale?: boolean;
 };
 
 const toNullableText = (value: string | null | undefined) => {
@@ -79,6 +81,7 @@ const toRuntimeLauncherUrl = (value: string | null, sourceUrl?: string | null) =
 
 export default function CollectionCoverImage(props: CollectionCoverImageProps) {
   const [loadFailed, setLoadFailed] = useState(false);
+  const [pixelatePreview, setPixelatePreview] = useState(false);
   const [runtimeSourceUrl, setRuntimeSourceUrl] = useState<string | null>(null);
   const [runtimeSourceState, setRuntimeSourceState] = useState<
     'idle' | 'pending' | 'ready' | 'error'
@@ -514,6 +517,10 @@ export default function CollectionCoverImage(props: CollectionCoverImageProps) {
   }, [resolvedUrl]);
 
   useEffect(() => {
+    setPixelatePreview(false);
+  }, [resolvedUrl, inscriptionBlobUrl, coverMimeType, props.pixelateOnUpscale]);
+
+  useEffect(() => {
     const hasConfiguredCover = !!coverImageRecord || !!toNullableText(props.fallbackUrl);
     if (!hasConfiguredCover) {
       return;
@@ -621,7 +628,23 @@ export default function CollectionCoverImage(props: CollectionCoverImageProps) {
       alt={props.alt}
       loading={props.loading ?? 'lazy'}
       decoding="async"
-      onLoad={() => {
+      className={pixelatePreview ? 'preview-media--pixelated' : undefined}
+      onLoad={(event: SyntheticEvent<HTMLImageElement>) => {
+        if (props.pixelateOnUpscale) {
+          const target = event.currentTarget;
+          const rect = target.getBoundingClientRect();
+          const nextPixelate = shouldUsePixelatedImageRendering({
+            naturalWidth: target.naturalWidth || 0,
+            naturalHeight: target.naturalHeight || 0,
+            renderedWidth: rect.width,
+            renderedHeight: rect.height,
+            mimeType: coverMimeType,
+            isSvgSource: shouldResolveSvg || isSvgCoverImageMimeType(coverMimeType)
+          });
+          setPixelatePreview((previous) =>
+            previous === nextPixelate ? previous : nextPixelate
+          );
+        }
         if (!shouldLog('cover', 'debug')) {
           return;
         }

@@ -37,6 +37,7 @@ import {
   injectRecursiveBridgeHtml,
   registerRecursiveBridge
 } from '../lib/viewer/recursive';
+import { shouldUsePixelatedImageRendering } from '../lib/viewer/image-rendering';
 import { createObjectUrl } from '../lib/utils/blob';
 
 const MAX_GRID_EAGER_FULL_LOAD_BYTES = 4n * 1024n * 1024n;
@@ -586,8 +587,6 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
       if (props.pixelateOnUpscale) {
         const target = event.currentTarget;
         const rect = target.getBoundingClientRect();
-        const naturalWidth = target.naturalWidth || 0;
-        const naturalHeight = target.naturalHeight || 0;
         const normalizedMime = (resolvedMimeType ?? mimeType ?? '').toLowerCase();
         const urlLower = imagePreviewSource.toLowerCase();
         const isSvgSource =
@@ -595,20 +594,14 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
           normalizedMime.includes('svg') ||
           urlLower.startsWith('data:image/svg') ||
           urlLower.includes('.svg');
-        let nextPixelate = false;
-        if (
-          !isSvgSource &&
-          naturalWidth > 0 &&
-          naturalHeight > 0 &&
-          rect.width > 0 &&
-          rect.height > 0
-        ) {
-          const scaleX = rect.width / naturalWidth;
-          const scaleY = rect.height / naturalHeight;
-          const scale = Math.max(scaleX, scaleY);
-          const maxNatural = Math.max(naturalWidth, naturalHeight);
-          nextPixelate = scale >= 1.2 && maxNatural <= 512;
-        }
+        const nextPixelate = shouldUsePixelatedImageRendering({
+          naturalWidth: target.naturalWidth || 0,
+          naturalHeight: target.naturalHeight || 0,
+          renderedWidth: rect.width,
+          renderedHeight: rect.height,
+          mimeType: resolvedMimeType ?? mimeType ?? null,
+          isSvgSource
+        });
         setPixelatePreview((previous) =>
           previous === nextPixelate ? previous : nextPixelate
         );

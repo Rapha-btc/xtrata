@@ -450,8 +450,10 @@ export default function CollectionMintAdminScreen(
   const coreSupportsAllowlist =
     props.contract.protocolVersion === '2.1.0' ||
     props.contract.protocolVersion === '2.1.1' ||
+    props.contract.protocolVersion === '3.0.0' ||
     props.contract.contractName.includes('v2-1-0') ||
-    props.contract.contractName.includes('v2-1-1');
+    props.contract.contractName.includes('v2-1-1') ||
+    props.contract.contractName.includes('v3-0-0');
 
   const isCollectionOwner =
     !!props.walletSession.address &&

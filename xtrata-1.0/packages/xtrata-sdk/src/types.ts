@@ -1,6 +1,6 @@
 export type NetworkType = 'mainnet' | 'testnet';
 
-export type ProtocolVersion = '1.1.1' | '2.1.0' | '2.1.1';
+export type ProtocolVersion = '1.1.1' | '2.1.0' | '2.1.1' | '3.0.0';
 
 export type ContractConfig = {
   address: string;

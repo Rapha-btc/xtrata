@@ -1,3 +1,6 @@
+Fix parent child with new contract - Possibly create new contract starting from 0? If so what other updates?
+If keeping same collection how easy to allow v1 and v2 versions to migrate to v3 so they can now become part of regular parent child relationships (obviously only as parents) but please look into this.
+
 Update admin / manage panel for admin to show the current order of artist collections displayed on the public pages and allow admin to change the order of display.
 
 

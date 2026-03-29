@@ -657,7 +657,10 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       contractName,
       network: coreTarget.network,
       label: coreTarget.contractId,
-      protocolVersion: '2.1.0'
+      protocolVersion:
+        contractName.includes('v3-0-0') || contractName.includes('v3.0.0')
+          ? '3.0.0'
+          : '2.1.0'
     };
   }, [coreContractEntry, coreTarget]);
   const previewClient = useMemo(
