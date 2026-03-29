@@ -95,6 +95,7 @@ Release notes
 
 Product oversight
 	•	docs/product-contract-ui-reference.md
+	•	docs/xtrata-v3-migration-reference.md
 
 Artist guides
 	•	docs/artist-guides/README.md
