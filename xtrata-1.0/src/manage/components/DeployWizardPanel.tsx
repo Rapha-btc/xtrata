@@ -30,6 +30,7 @@ import {
   resolveArtistDeployPayoutSplits,
   type ArtistMintType
 } from '../../lib/deploy/artist-deploy';
+import { resolveDeployClarityVersion } from '../../lib/deploy/clarity-version';
 import {
   parseManageJsonResponse,
   toManageApiErrorMessage
@@ -60,7 +61,6 @@ const buildCollectionSlug = (collectionName: string) =>
 const PARENT_THUMBNAIL_LIMIT = 12;
 const DEPLOY_WIZARD_DRAFT_STORAGE_KEY = 'xtrata-manage-deploy-wizard-v1';
 const DEPLOY_DEBUG_LOG_LIMIT = 60;
-const DEPLOY_CLARITY_VERSION = 2;
 const DEPLOY_DEBUG_TEXT_MAX = 1200;
 const DEPLOY_DEBUG_VERSION = 'deploy-debug-v5-2026-02-23';
 const DEPLOY_DEBUG_TAG = 'debug-1.4';
@@ -930,6 +930,14 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     }
     return 'xtrata-collection-mint-v1.4';
   }, [mintType]);
+  const preflightClarityVersion = useMemo(
+    () =>
+      resolveDeployClarityVersion({
+        templateVersion: preflightTemplateVersion,
+        source: deployBuild.source
+      }),
+    [preflightTemplateVersion, deployBuild.source]
+  );
   const deploySourceByteLength = useMemo(
     () => new TextEncoder().encode(deployBuild.source).byteLength,
     [deployBuild.source]
@@ -944,7 +952,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       mintType,
       deployTemplateMode,
       templateVersion: preflightTemplateVersion,
-      clarityVersion: DEPLOY_CLARITY_VERSION,
+      clarityVersion: preflightClarityVersion,
       sourceLengthChars: deployBuild.source.length,
       sourceLengthBytes: deploySourceByteLength,
       pricingLockPresent: collectionDeployPricingLock !== null,
@@ -965,6 +973,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
       mintType,
       deployTemplateMode,
       preflightTemplateVersion,
+      preflightClarityVersion,
       deployBuild.source.length,
       deploySourceByteLength,
       collectionDeployPricingLock,
@@ -1069,7 +1078,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
   useEffect(() => {
     const details = {
       debugVersion: DEPLOY_DEBUG_VERSION,
-      clarityVersion: DEPLOY_CLARITY_VERSION,
+      clarityVersion: preflightClarityVersion,
       defaultDeployTemplateMode: 'standard-v1.4',
       sourceCompactionMode: DEPLOY_SOURCE_COMPACTION_MODE,
       debug14Enabled
@@ -1083,7 +1092,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     // eslint-disable-next-line no-console
     console.debug('[xtrata:deploy] Runtime ready', details);
     appendDeployDebug14('runtime-ready', details);
-  }, [appendDeployDebug14, debug14Enabled]);
+  }, [appendDeployDebug14, debug14Enabled, preflightClarityVersion]);
 
   const handleOpenReview = async () => {
     setStatus(null);
@@ -1355,6 +1364,10 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         : 'xtrata-collection-mint-v1.4';
     const sourceTemplateLabel = templateVersion;
     let sourceBeforeCompaction = refreshBuild.source;
+    const deployClarityVersion = resolveDeployClarityVersion({
+      templateVersion: sourceTemplateLabel,
+      source: sourceBeforeCompaction
+    });
 
     const draftMetadata = {
       mintType,
@@ -1667,7 +1680,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         contractName,
         templateVersion: sourceTemplateLabel,
         network: session.network,
-        clarityVersion: DEPLOY_CLARITY_VERSION,
+        clarityVersion: deployClarityVersion,
         sourceLengthChars: sourceBeforeCompaction.length,
         sourceLengthBytes: sourceOriginalBytes,
         deploySourceLengthChars: sourceForDeploy.length,
@@ -1685,7 +1698,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         contractNameLength: contractName.length,
         templateVersion: sourceTemplateLabel,
         network: session.network,
-        clarityVersion: DEPLOY_CLARITY_VERSION,
+        clarityVersion: deployClarityVersion,
         sourceLengthChars: sourceBeforeCompaction.length,
         sourceLengthBytes: sourceOriginalBytes,
         deploySourceLengthChars: sourceForDeploy.length,
@@ -1700,7 +1713,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
         contractName,
         codeBody: sourceForDeploy,
         network: session.network,
-        clarityVersion: DEPLOY_CLARITY_VERSION,
+        clarityVersion: deployClarityVersion,
         appDetails: {
           name: 'Xtrata Collection Manager',
           icon: MANAGE_APP_ICON
@@ -2176,7 +2189,10 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
           <li>Debug version: {DEPLOY_DEBUG_VERSION}</li>
           <li>Template mode: {deployTemplateMode}</li>
           <li>Template version: {preflightSummary.templateVersion}</li>
-          <li>Clarity version: v{DEPLOY_CLARITY_VERSION} (forced for wallet deploy requests).</li>
+          <li>
+            Clarity version: v{preflightSummary.clarityVersion} (resolved from template
+            source).
+          </li>
           <li>Current wallet network: {preflightSummary.walletNetwork ?? 'not connected'}</li>
           <li>Current wallet address: {preflightSummary.walletAddress ?? 'not connected'}</li>
           <li>Core target: {preflightSummary.coreContractId ?? 'not available'}</li>
@@ -2320,7 +2336,8 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
                     <strong>Core contract:</strong> {coreTarget?.contractId ?? 'Not available'}
                   </p>
                   <p>
-                    <strong>Clarity version:</strong> v{DEPLOY_CLARITY_VERSION} (forced)
+                    <strong>Clarity version:</strong> v{preflightSummary.clarityVersion}{' '}
+                    (resolved)
                   </p>
                   <p>
                     <strong>Template version:</strong> {preflightSummary.templateVersion}

@@ -68,6 +68,7 @@ import {
   type CollectionTemplateFieldKey,
   type CollectionTemplatePolicy
 } from './lib/deploy/collection-template';
+import { resolveDeployClarityVersion } from './lib/deploy/clarity-version';
 
 const isV2Entry = (entry: { protocolVersion?: string; contractName?: string }) =>
   entry.protocolVersion === '2.1.0' ||
@@ -1150,10 +1151,12 @@ export default function App() {
     if (parsed.normalizedName && !parsed.address) {
       setDeployName(parsed.normalizedName);
     }
+    const clarityVersion = resolveDeployClarityVersion({ source });
 
     setDeployPending(true);
     setDeployStatus('Waiting for wallet confirmation...');
     appendDeployLog(`Deploying ${parsed.name} (${parsed.reason}) on ${deployNetwork}.`);
+    appendDeployLog(`Clarity version: v${clarityVersion}.`);
     appendDeployLog(`Source length: ${source.length} chars.`);
 
     try {
@@ -1161,6 +1164,7 @@ export default function App() {
         contractName: parsed.name,
         codeBody: source,
         network: deployNetwork,
+        clarityVersion,
         onFinish: (payload) => {
           setDeployPending(false);
           setDeployStatus(`Deployment submitted: ${payload.txId}`);
