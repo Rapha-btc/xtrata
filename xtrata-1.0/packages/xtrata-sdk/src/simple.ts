@@ -61,6 +61,7 @@ export type BoundXtrataReadClient = {
   getLastTokenId: () => Promise<bigint>;
   getNextTokenId: () => Promise<bigint>;
   getAdmin: () => Promise<string>;
+  getFeeRecipient: () => Promise<string>;
   getRoyaltyRecipient: () => Promise<string>;
   getFeeUnit: () => Promise<bigint>;
   isPaused: () => Promise<boolean>;
@@ -74,6 +75,7 @@ export type BoundXtrataReadClient = {
   getChunkBatch: (id: bigint, indexes: bigint[]) => Promise<(Uint8Array | null)[]>;
   getUploadState: (expectedHash: Uint8Array, owner?: string) => Promise<ReturnType<XtrataClient['getUploadState']> extends Promise<infer T> ? T : never>;
   getIdByHash: (expectedHash: Uint8Array) => Promise<bigint | null>;
+  getMintOrigin: (id: bigint) => Promise<string | null>;
   getPendingChunk: (expectedHash: Uint8Array, index: bigint, creator?: string) => Promise<Uint8Array | null>;
   getTokenSnapshot: (id: bigint) => Promise<{
     id: bigint;
@@ -104,6 +106,7 @@ export const createXtrataReadClient = (
     getLastTokenId: () => raw.getLastTokenId(senderAddress),
     getNextTokenId: () => raw.getNextTokenId(senderAddress),
     getAdmin: () => raw.getAdmin(senderAddress),
+    getFeeRecipient: () => raw.getFeeRecipient(senderAddress),
     getRoyaltyRecipient: () => raw.getRoyaltyRecipient(senderAddress),
     getFeeUnit: () => raw.getFeeUnit(senderAddress),
     isPaused: () => raw.isPaused(senderAddress),
@@ -118,6 +121,7 @@ export const createXtrataReadClient = (
     getUploadState: (expectedHash, owner) =>
       raw.getUploadState(expectedHash, owner ?? senderAddress, senderAddress),
     getIdByHash: (expectedHash) => raw.getIdByHash(expectedHash, senderAddress),
+    getMintOrigin: (id) => raw.getMintOrigin(id, senderAddress),
     getPendingChunk: (expectedHash, index, creator) =>
       raw.getPendingChunk(expectedHash, index, senderAddress, creator),
     getTokenSnapshot: async (id) => {
@@ -148,6 +152,7 @@ export type BoundCollectionReadClient = {
     effectiveMintPrice: bigint;
   }>;
   getMetadata: () => ReturnType<CollectionMintClient['getMetadata']>;
+  getSummary: () => ReturnType<CollectionMintClient['getSummary']>;
   getRecipients: () => ReturnType<CollectionMintClient['getRecipients']>;
   getSplits: () => ReturnType<CollectionMintClient['getSplits']>;
   getMintedId: (index: bigint) => Promise<bigint | null>;
@@ -183,6 +188,7 @@ export const createCollectionReadClient = (
       };
     },
     getMetadata: () => raw.getMetadata(senderAddress),
+    getSummary: () => raw.getSummary(senderAddress),
     getRecipients: () => raw.getRecipients(senderAddress),
     getSplits: () => raw.getSplits(senderAddress),
     getMintedId: (index) => raw.getMintedId(index, senderAddress),

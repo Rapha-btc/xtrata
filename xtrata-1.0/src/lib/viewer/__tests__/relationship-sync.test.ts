@@ -35,6 +35,7 @@ const makeClient = (overrides: Partial<XtrataClient>): XtrataClient =>
     getMintedCount: vi.fn(),
     getMintedId: vi.fn(),
     getAdmin: vi.fn(),
+    getFeeRecipient: vi.fn(),
     getRoyaltyRecipient: vi.fn(),
     getFeeUnit: vi.fn(),
     isPaused: vi.fn(),
@@ -48,6 +49,7 @@ const makeClient = (overrides: Partial<XtrataClient>): XtrataClient =>
     getChunkBatch: vi.fn(),
     getUploadState: vi.fn(),
     getIdByHash: vi.fn(),
+    getMintOrigin: vi.fn(),
     getPendingChunk: vi.fn(),
     ...overrides
   }) as XtrataClient;

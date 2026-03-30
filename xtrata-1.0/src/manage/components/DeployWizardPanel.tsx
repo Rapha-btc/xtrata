@@ -37,7 +37,8 @@ import {
 import { useManageWallet } from '../ManageWalletContext';
 import { parseDeployPricingLockSnapshot } from '../../lib/deploy/pricing-lock';
 import InfoTooltip from './InfoTooltip';
-import standardTemplateSource from '../../../contracts/clarinet/contracts/xtrata-collection-mint-v1.4.clar?raw';
+import standardTemplateV14Source from '../../../contracts/clarinet/contracts/xtrata-collection-mint-v1.4.clar?raw';
+import standardTemplateV15Source from '../../../contracts/clarinet/contracts/xtrata-collection-mint-v1.5.clar?raw';
 import preinscribedTemplateSource from '../../../contracts/clarinet/contracts/xtrata-preinscribed-collection-sale-v1.0.clar?raw';
 
 type CollectionDraft = {
@@ -172,7 +173,7 @@ const compactClaritySourceForDeploy = (source: string) => {
   return result.length > 0 ? result : source;
 };
 
-type DeployTemplateMode = 'standard-v1.4';
+type DeployTemplateMode = 'standard-v1.4' | 'standard-v1.5';
 
 type ContractNameAvailability = {
   exists: boolean;
@@ -259,6 +260,13 @@ const toParentIdsText = (value: unknown) => {
 
 const toMintType = (value: unknown): ArtistMintType =>
   value === 'pre-inscribed' ? 'pre-inscribed' : 'standard';
+
+const usesV3CollectionMintTemplate = (target: {
+  contractId?: string | null;
+} | null) => {
+  const contractId = target?.contractId?.trim().toLowerCase() ?? '';
+  return contractId.endsWith('.xtrata-v3-0-0');
+};
 
 const buildDraftFormFromCollection = (
   collection: CollectionDraft
@@ -377,7 +385,6 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
   const [deployPending, setDeployPending] = useState(false);
   const [draftPending, setDraftPending] = useState(false);
   const [selectedDraftLoading, setSelectedDraftLoading] = useState(false);
-  const deployTemplateMode: DeployTemplateMode = 'standard-v1.4';
   const [deployAttemptId, setDeployAttemptId] = useState<string | null>(null);
   const [deployDebugLog, setDeployDebugLog] = useState<string[]>([]);
   const reviewCloseButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -396,7 +403,6 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     }
     return new URLSearchParams(window.location.search).get('debug') === '1.4';
   }, []);
-  const selectedStandardTemplateSource = standardTemplateSource;
   const fallbackCoreTarget = useMemo(
     () => resolveArtistDeployCoreTarget('mainnet'),
     []
@@ -405,6 +411,17 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
   const coreTarget = useMemo(
     () => resolveArtistDeployCoreTarget(activeNetwork) ?? fallbackCoreTarget,
     [activeNetwork, fallbackCoreTarget]
+  );
+  const deployTemplateMode: DeployTemplateMode = useMemo(
+    () => (usesV3CollectionMintTemplate(coreTarget) ? 'standard-v1.5' : 'standard-v1.4'),
+    [coreTarget]
+  );
+  const selectedStandardTemplateSource = useMemo(
+    () =>
+      usesV3CollectionMintTemplate(coreTarget)
+        ? standardTemplateV15Source
+        : standardTemplateV14Source,
+    [coreTarget]
   );
   const lockedMarketplaceAddress = coreTarget?.address ?? '';
   const effectiveMarketplaceAddress = canEditMarketplaceRecipient
@@ -931,8 +948,10 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     if (mintType === 'pre-inscribed') {
       return 'xtrata-preinscribed-collection-sale-v1.0';
     }
-    return 'xtrata-collection-mint-v1.4';
-  }, [mintType]);
+    return deployTemplateMode === 'standard-v1.5'
+      ? 'xtrata-collection-mint-v1.5'
+      : 'xtrata-collection-mint-v1.4';
+  }, [deployTemplateMode, mintType]);
   const deploySourceByteLength = useMemo(
     () => new TextEncoder().encode(deployBuild.source).byteLength,
     [deployBuild.source]
@@ -1073,7 +1092,7 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     const details = {
       debugVersion: DEPLOY_DEBUG_VERSION,
       clarityVersion: DEPLOY_CLARITY_VERSION,
-      defaultDeployTemplateMode: 'standard-v1.4',
+      defaultDeployTemplateMode: deployTemplateMode,
       sourceCompactionMode: DEPLOY_SOURCE_COMPACTION_MODE,
       debug14Enabled
     };
@@ -1166,7 +1185,9 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     const templateVersion =
       mintType === 'pre-inscribed'
         ? 'xtrata-preinscribed-collection-sale-v1.0'
-        : 'xtrata-collection-mint-v1.4';
+        : deployTemplateMode === 'standard-v1.5'
+          ? 'xtrata-collection-mint-v1.5'
+          : 'xtrata-collection-mint-v1.4';
 
     const draftMetadata = {
       mintType,
@@ -1355,7 +1376,9 @@ export default function DeployWizardPanel(props: DeployWizardPanelProps) {
     const templateVersion =
       mintType === 'pre-inscribed'
         ? 'xtrata-preinscribed-collection-sale-v1.0'
-        : 'xtrata-collection-mint-v1.4';
+        : deployTemplateMode === 'standard-v1.5'
+          ? 'xtrata-collection-mint-v1.5'
+          : 'xtrata-collection-mint-v1.4';
     const sourceTemplateLabel = templateVersion;
     let sourceBeforeCompaction = refreshBuild.source;
 

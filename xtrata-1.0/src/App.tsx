@@ -57,7 +57,8 @@ import PreinscribedCollectionSaleScreen from './screens/PreinscribedCollectionSa
 import MarketScreen from './screens/MarketScreen';
 import CommerceScreen from './screens/CommerceScreen';
 import VaultScreen from './screens/VaultScreen';
-import collectionMintTemplateSource from '../contracts/clarinet/contracts/xtrata-collection-mint-v1.4.clar?raw';
+import collectionMintTemplateV14Source from '../contracts/clarinet/contracts/xtrata-collection-mint-v1.4.clar?raw';
+import collectionMintTemplateV15Source from '../contracts/clarinet/contracts/xtrata-collection-mint-v1.5.clar?raw';
 import {
   buildCollectionMintContractSource,
   COLLECTION_TEMPLATE_FIELD_KEYS,
@@ -75,6 +76,13 @@ const isCoreEntry = (entry: { protocolVersion?: string; contractName?: string })
   entry.protocolVersion === '3.0.0' ||
   entry.contractName?.toLowerCase().includes('v2-1-0') === true ||
   entry.contractName?.toLowerCase().includes('v2-1-1') === true ||
+  entry.contractName?.toLowerCase().includes('v3-0-0') === true;
+
+const usesV3CollectionMintTemplate = (entry: {
+  protocolVersion?: string;
+  contractName?: string;
+}) =>
+  entry.protocolVersion === '3.0.0' ||
   entry.contractName?.toLowerCase().includes('v3-0-0') === true;
 
 const SELECTABLE_CONTRACTS = CONTRACT_REGISTRY.filter(isCoreEntry);
@@ -638,6 +646,13 @@ export default function App() {
     () => createCollectionTemplatePolicyStore(contractId),
     [contractId]
   );
+  const collectionMintTemplateSource = useMemo(
+    () =>
+      usesV3CollectionMintTemplate(selectedContract)
+        ? collectionMintTemplateV15Source
+        : collectionMintTemplateV14Source,
+    [selectedContract]
+  );
   const coreAdminClient = useMemo(
     () => createXtrataClient({ contract: selectedContract }),
     [selectedContract]
@@ -659,7 +674,7 @@ export default function App() {
         policy: templatePolicy,
         fallbackCoreContractId: contractId
       }),
-    [contractId, templateDraft, templatePolicy]
+    [collectionMintTemplateSource, contractId, templateDraft, templatePolicy]
   );
   const baseLookupState = useMemo(
     () => getWalletLookupState(walletLookupInput, walletSession.address ?? null),

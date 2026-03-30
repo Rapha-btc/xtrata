@@ -3,6 +3,7 @@ import { StacksMainnet } from '@stacks/network';
 import {
   ClarityType,
   boolCV,
+  contractPrincipalCV,
   noneCV,
   responseOkCV,
   someCV,
@@ -13,6 +14,7 @@ import {
 import {
   buildCollectionMintBeginCall,
   buildMarketListCall,
+  createXtrataClient,
   buildSmallMintSingleTxCall,
   createCollectionMintClient,
   type ReadOnlyCallOptions,
@@ -123,7 +125,42 @@ describe('sdk client', () => {
                 symbol: stringAsciiCV('AHV0'),
                 'base-uri': stringAsciiCV(''),
                 description: stringAsciiCV('demo'),
+                'project-uri': stringAsciiCV('https://example.com/project'),
+                'collection-page-uri': stringAsciiCV('https://example.com/collection'),
+                'cover-inscription-id': someCV(uintCV(7)),
                 'reveal-block': uintCV(0)
+              })
+            );
+          case 'get-collection-summary':
+            return responseOkCV(
+              tupleCV({
+                name: stringAsciiCV('AHV0'),
+                symbol: stringAsciiCV('AHV0'),
+                'base-uri': stringAsciiCV(''),
+                description: stringAsciiCV('demo'),
+                'project-uri': stringAsciiCV('https://example.com/project'),
+                'collection-page-uri': stringAsciiCV('https://example.com/collection'),
+                'cover-inscription-id': someCV(uintCV(7)),
+                'reveal-block': uintCV(0),
+                paused: boolCV(false),
+                finalized: boolCV(false),
+                'mint-price': uintCV(2_000_000),
+                'max-supply': uintCV(10),
+                'minted-count': uintCV(3),
+                'reserved-count': uintCV(1),
+                'active-phase-id': uintCV(1),
+                'locked-core-contract': contractPrincipalCV(
+                  contract.address,
+                  'xtrata-v3-0-0'
+                ),
+                'max-small-mint-chunks': uintCV(30)
+              })
+            );
+          case 'get-cover-inscription':
+            return responseOkCV(
+              tupleCV({
+                'core-contract': contractPrincipalCV(contract.address, 'xtrata-v3-0-0'),
+                'token-id': someCV(uintCV(7))
               })
             );
           default:
@@ -139,8 +176,55 @@ describe('sdk client', () => {
     });
 
     const status = await client.getStatus(contract.address);
+    const metadata = await client.getMetadata(contract.address);
+    const summary = await client.getSummary(contract.address);
+    const cover = await client.getCoverInscription(contract.address);
     expect(status.paused).toBe(false);
     expect(status.activePhaseId).toBe(1n);
     expect(status.activePhase?.mintPrice).toBe(1_111_111n);
+    expect(metadata.projectUri).toBe('https://example.com/project');
+    expect(metadata.collectionPageUri).toBe('https://example.com/collection');
+    expect(metadata.coverInscriptionId).toBe(7n);
+    expect(summary.lockedCoreContract).toBe(
+      `${contract.address}.xtrata-v3-0-0`
+    );
+    expect(summary.maxSmallMintChunks).toBe(30n);
+    expect(cover.coreContract).toBe(`${contract.address}.xtrata-v3-0-0`);
+    expect(cover.tokenId).toBe(7n);
+  });
+
+  it('uses v3 fee-recipient and mint-origin readers when supported', async () => {
+    const caller: ReadOnlyCaller = {
+      callReadOnly: async (options: ReadOnlyCallOptions) => {
+        switch (options.functionName) {
+          case 'get-fee-recipient':
+            return responseOkCV(
+              contractPrincipalCV(contract.address, 'xtrata-market-stx-v1-0')
+            );
+          case 'get-mint-origin':
+            return someCV(contractPrincipalCV(contract.address, 'xtrata-collection-mint-v1-5'));
+          default:
+            return responseOkCV(uintCV(0));
+        }
+      }
+    };
+
+    const client = createXtrataClient({
+      contract: {
+        address: contract.address,
+        contractName: 'xtrata-v3-0-0',
+        network: 'mainnet',
+        protocolVersion: '3.0.0'
+      },
+      caller,
+      apiBaseUrls: ['https://example.com']
+    });
+
+    await expect(client.getFeeRecipient(contract.address)).resolves.toBe(
+      `${contract.address}.xtrata-market-stx-v1-0`
+    );
+    await expect(client.getMintOrigin(4n, contract.address)).resolves.toBe(
+      `${contract.address}.xtrata-collection-mint-v1-5`
+    );
   });
 });

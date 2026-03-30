@@ -16,6 +16,7 @@ export type ContractCapabilities = {
   supportsPause: boolean;
   supportsAdminReadOnly: boolean;
   supportsRoyaltyRecipientRead: boolean;
+  supportsMintOriginRead: boolean;
   supportsOwnershipTransfer: boolean;
   supportsAbandonUpload: boolean;
   supportsChunkBatchRead: boolean;
@@ -57,7 +58,27 @@ export type CollectionMetadata = {
   symbol: string;
   baseUri: string;
   description: string;
+  projectUri: string;
+  collectionPageUri: string;
+  coverInscriptionId: bigint | null;
   revealBlock: bigint;
+};
+
+export type CollectionCoverInscription = {
+  coreContract: string;
+  tokenId: bigint | null;
+};
+
+export type CollectionSummary = CollectionMetadata & {
+  paused: boolean;
+  finalized: boolean;
+  mintPrice: bigint;
+  maxSupply: bigint;
+  mintedCount: bigint;
+  reservedCount: bigint;
+  activePhaseId: bigint;
+  lockedCoreContract: string;
+  maxSmallMintChunks: bigint;
 };
 
 export type CollectionRecipients = {

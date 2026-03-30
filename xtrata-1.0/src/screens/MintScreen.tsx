@@ -842,9 +842,9 @@ export default function MintScreen(props: MintScreenProps) {
       return undefined;
     }
     const amount = BigInt(Math.round(amountMicroStx));
-    const royaltyRecipient = adminStatusQuery.data?.royaltyRecipient ?? null;
+    const feeRecipient = adminStatusQuery.data?.royaltyRecipient ?? null;
     const conditionCode =
-      !royaltyRecipient || royaltyRecipient === sender
+      !feeRecipient || feeRecipient === sender
         ? FungibleConditionCode.LessEqual
         : FungibleConditionCode.Equal;
     return [

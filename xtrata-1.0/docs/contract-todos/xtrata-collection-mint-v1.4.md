@@ -23,4 +23,4 @@
   - old deployments stay on their original core
   - new deployments can target the new core
   - no silent "repoint" expectation
-
+- Use `xtrata-collection-mint-v3-upgrade-spec.md` as the active planning note for the next collection-mint line that targets `xtrata-v3.0.0`.

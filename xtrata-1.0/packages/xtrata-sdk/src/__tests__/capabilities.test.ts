@@ -36,6 +36,7 @@ describe('sdk capabilities compatibility', () => {
       contractName: 'xtrata-v3-0-0'
     });
     expect(resolved.version).toBe('3.0.0');
+    expect(resolved.supportsMintOriginRead).toBe(true);
   });
 
   it('falls back safely for unknown contracts', () => {

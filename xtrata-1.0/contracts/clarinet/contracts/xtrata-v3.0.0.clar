@@ -105,7 +105,7 @@
 (define-data-var offset-set bool false)
 (define-data-var minted-count uint u0)
 (define-data-var max-minted-id uint u0)
-(define-data-var royalty-recipient principal tx-sender)
+(define-data-var fee-recipient principal tx-sender)
 
 (define-data-var staged-begin-fee-unit uint u100000)
 (define-data-var staged-seal-fee-unit uint u100000)
@@ -123,6 +123,7 @@
 (define-map HashToId (buff 32) uint)
 (define-map AllowedCallers principal bool)
 (define-map MintedIndex uint uint)
+(define-map MintOrigin uint principal)
 
 (define-map InscriptionMeta uint
   {
@@ -341,7 +342,7 @@
 
 (define-private (maybe-pay (amount uint))
   (if (> amount u0)
-    (stx-transfer? amount tx-sender (var-get royalty-recipient))
+    (stx-transfer? amount tx-sender (var-get fee-recipient))
     (ok true)
   )
 )
@@ -543,6 +544,13 @@
   )
 )
 
+(define-private (record-mint-origin (id uint))
+  (if (is-eq contract-caller tx-sender)
+    true
+    (map-set MintOrigin id contract-caller)
+  )
+)
+
 (define-private (store-relationships (id uint) (dependencies (list 50 uint)) (parents (list 50 uint)))
   (begin
     (if (> (len dependencies) u0)
@@ -589,6 +597,7 @@
 
     (map-set TokenURIs new-id token-uri-string)
     (store-relationships new-id dependencies parents)
+    (record-mint-origin new-id)
     (record-advisory-hash expected-hash new-id)
     (var-set next-id (+ (var-get next-id) u1))
     (record-mint new-id)
@@ -699,12 +708,16 @@
 ;; --- ADMIN ---
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-public (set-royalty-recipient (recipient principal))
+(define-public (set-fee-recipient (recipient principal))
   (begin
     (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-AUTHORIZED)
-    (var-set royalty-recipient recipient)
+    (var-set fee-recipient recipient)
     (ok true)
   )
+)
+
+(define-public (set-royalty-recipient (recipient principal))
+  (set-fee-recipient recipient)
 )
 
 (define-public (set-staged-begin-fee-unit (new-fee uint))
@@ -1488,6 +1501,10 @@
   (map-get? MigrationSource id)
 )
 
+(define-read-only (get-mint-origin (id uint))
+  (map-get? MintOrigin id)
+)
+
 (define-read-only (get-upload-state (expected-hash (buff 32)) (owner principal))
   (map-get? UploadState { owner: owner, hash: expected-hash })
 )
@@ -1546,8 +1563,12 @@
   (ok (is-some (map-get? AllowedCallers caller)))
 )
 
+(define-read-only (get-fee-recipient)
+  (ok (var-get fee-recipient))
+)
+
 (define-read-only (get-royalty-recipient)
-  (ok (var-get royalty-recipient))
+  (get-fee-recipient)
 )
 
 (define-read-only (get-fee-unit)

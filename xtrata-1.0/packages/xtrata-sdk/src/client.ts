@@ -13,10 +13,12 @@ import {
 } from '@stacks/transactions';
 import { resolveContractCapabilities } from './capabilities.js';
 import type {
+  CollectionCoverInscription,
   CollectionMetadata,
   CollectionMintStatus,
   CollectionPhase,
   CollectionRecipients,
+  CollectionSummary,
   CollectionSplits,
   ContractConfig,
   InscriptionMeta,
@@ -41,13 +43,16 @@ import {
   parseGetChunk,
   parseGetChunkBatch,
   parseGetCollectionActivePhase,
+  parseGetCollectionCoverInscription,
   parseGetCollectionLockedCoreContract,
   parseGetCollectionMetadata,
+  parseGetCollectionSummary,
   parseGetCollectionMintedId,
   parseGetCollectionPhase,
   parseGetCollectionRecipients,
   parseGetCollectionSplits,
   parseGetDependencies,
+  parseGetFeeRecipient,
   parseGetFeeUnit,
   parseGetIdByHash,
   parseGetInscriptionMeta,
@@ -59,6 +64,7 @@ import {
   parseGetMarketListingIdByToken,
   parseGetMarketNftContract,
   parseGetMarketOwner,
+  parseGetMintOrigin,
   parseGetNextTokenId,
   parseGetOwner,
   parseGetPendingChunk,
@@ -70,6 +76,19 @@ import {
   parseIsPaused
 } from './parsers.js';
 import { ReadOnlyBackoffError } from './errors.js';
+
+const usesFeeRecipientFunctions = (contract: ContractConfig) =>
+  resolveContractCapabilities(contract).version === '3.0.0';
+
+const getFeeRecipientReadOnlyName = (contract: ContractConfig) =>
+  usesFeeRecipientFunctions(contract)
+    ? 'get-fee-recipient'
+    : 'get-royalty-recipient';
+
+const getFeeRecipientWriteName = (contract: ContractConfig) =>
+  usesFeeRecipientFunctions(contract)
+    ? 'set-fee-recipient'
+    : 'set-royalty-recipient';
 
 export type ReadOnlyCallOptions = {
   contract: ContractConfig;
@@ -237,10 +256,17 @@ export const buildSetRoyaltyRecipientCall = (params: {
   buildContractCallOptions({
     contract: params.contract,
     network: params.network,
-    functionName: 'set-royalty-recipient',
+    functionName: getFeeRecipientWriteName(params.contract),
     functionArgs: [principalCV(params.recipient)],
     overrides: params.overrides
   });
+
+export const buildSetFeeRecipientCall = (params: {
+  contract: ContractConfig;
+  network: StacksNetwork;
+  recipient: string;
+  overrides?: ContractCallOverrides;
+}) => buildSetRoyaltyRecipientCall(params);
 
 export const buildCollectionMintBeginCall = (params: {
   contract: ContractConfig;
@@ -537,6 +563,7 @@ export type XtrataClient = {
   getLastTokenId: (senderAddress: string) => Promise<bigint>;
   getNextTokenId: (senderAddress: string) => Promise<bigint>;
   getAdmin: (senderAddress: string) => Promise<string>;
+  getFeeRecipient: (senderAddress: string) => Promise<string>;
   getRoyaltyRecipient: (senderAddress: string) => Promise<string>;
   getFeeUnit: (senderAddress: string) => Promise<bigint>;
   isPaused: (senderAddress: string) => Promise<boolean>;
@@ -558,6 +585,7 @@ export type XtrataClient = {
     senderAddress: string
   ) => Promise<UploadState | null>;
   getIdByHash: (expectedHash: Uint8Array, senderAddress: string) => Promise<bigint | null>;
+  getMintOrigin: (id: bigint, senderAddress: string) => Promise<string | null>;
   getPendingChunk: (
     expectedHash: Uint8Array,
     index: bigint,
@@ -589,6 +617,23 @@ export const createXtrataClient = (params: {
   const caller = params.caller ?? createStacksReadOnlyCaller();
   const stacksNetwork = resolveNetworks(params);
   const capabilities = resolveContractCapabilities(params.contract);
+  const feeRecipientReadOnlyName = getFeeRecipientReadOnlyName(params.contract);
+  const parseFeeRecipientValue =
+    capabilities.version === '3.0.0'
+      ? parseGetFeeRecipient
+      : parseGetRoyaltyRecipient;
+
+  const getFeeRecipient = async (senderAddress: string) => {
+    const value = await callReadOnly({
+      caller,
+      contract: params.contract,
+      network: stacksNetwork,
+      functionName: feeRecipientReadOnlyName,
+      functionArgs: [],
+      senderAddress
+    });
+    return parseFeeRecipientValue(value);
+  };
 
   return {
     contract: params.contract,
@@ -627,17 +672,8 @@ export const createXtrataClient = (params: {
       });
       return parseGetAdmin(value);
     },
-    getRoyaltyRecipient: async (senderAddress) => {
-      const value = await callReadOnly({
-        caller,
-        contract: params.contract,
-        network: stacksNetwork,
-        functionName: 'get-royalty-recipient',
-        functionArgs: [],
-        senderAddress
-      });
-      return parseGetRoyaltyRecipient(value);
-    },
+    getFeeRecipient,
+    getRoyaltyRecipient: getFeeRecipient,
     getFeeUnit: async (senderAddress) => {
       const value = await callReadOnly({
         caller,
@@ -784,6 +820,20 @@ export const createXtrataClient = (params: {
       });
       return parseGetIdByHash(value);
     },
+    getMintOrigin: async (id, senderAddress) => {
+      if (!capabilities.supportsMintOriginRead) {
+        return null;
+      }
+      const value = await callReadOnly({
+        caller,
+        contract: params.contract,
+        network: stacksNetwork,
+        functionName: 'get-mint-origin',
+        functionArgs: [uintCV(id)],
+        senderAddress
+      });
+      return parseGetMintOrigin(value);
+    },
     getPendingChunk: async (expectedHash, index, senderAddress, creator) => {
       const functionArgs = capabilities.pendingChunkRequiresCreator
         ? [bufferCV(expectedHash), principalCV(creator ?? senderAddress), uintCV(index)]
@@ -817,6 +867,8 @@ export type CollectionMintClient = {
   getActivePhase: (senderAddress: string) => Promise<bigint>;
   getPhase: (phaseId: bigint, senderAddress: string) => Promise<CollectionPhase | null>;
   getMetadata: (senderAddress: string) => Promise<CollectionMetadata>;
+  getSummary: (senderAddress: string) => Promise<CollectionSummary>;
+  getCoverInscription: (senderAddress: string) => Promise<CollectionCoverInscription>;
   getRecipients: (senderAddress: string) => Promise<CollectionRecipients>;
   getSplits: (senderAddress: string) => Promise<CollectionSplits>;
   getMintedId: (index: bigint, senderAddress: string) => Promise<bigint | null>;
@@ -863,6 +915,12 @@ export const createCollectionMintClient = (params: {
       parseGetCollectionPhase(await read('get-phase', [uintCV(phaseId)], senderAddress)),
     getMetadata: async (senderAddress) =>
       parseGetCollectionMetadata(await read('get-collection-metadata', [], senderAddress)),
+    getSummary: async (senderAddress) =>
+      parseGetCollectionSummary(await read('get-collection-summary', [], senderAddress)),
+    getCoverInscription: async (senderAddress) =>
+      parseGetCollectionCoverInscription(
+        await read('get-cover-inscription', [], senderAddress)
+      ),
     getRecipients: async (senderAddress) =>
       parseGetCollectionRecipients(await read('get-recipients', [], senderAddress)),
     getSplits: async (senderAddress) =>

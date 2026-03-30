@@ -28,9 +28,11 @@ import {
   parseGetChunk,
   parseGetDependencies,
   parseGetAdmin,
+  parseGetFeeRecipient,
   parseGetFeeUnit,
   parseGetInscriptionMeta,
   parseGetLastTokenId,
+  parseGetMintOrigin,
   parseGetNextTokenId,
   parseGetMintedCount,
   parseGetMintedId,
@@ -47,6 +49,19 @@ import {
 } from '../protocol/parsers';
 import type { InscriptionMeta, UploadState } from '../protocol/types';
 import { logWarn } from '../utils/logger';
+
+const usesFeeRecipientFunctions = (contract: ContractConfig) =>
+  resolveContractCapabilities(contract).version === '3.0.0';
+
+const getFeeRecipientReadOnlyName = (contract: ContractConfig) =>
+  usesFeeRecipientFunctions(contract)
+    ? 'get-fee-recipient'
+    : 'get-royalty-recipient';
+
+const getFeeRecipientWriteName = (contract: ContractConfig) =>
+  usesFeeRecipientFunctions(contract)
+    ? 'set-fee-recipient'
+    : 'set-royalty-recipient';
 
 export type ReadOnlyCallOptions = {
   contract: ContractConfig;
@@ -223,11 +238,18 @@ export const buildSetRoyaltyRecipientCall = (params: {
   return buildContractCallOptions({
     contract: params.contract,
     network: params.network,
-    functionName: 'set-royalty-recipient',
+    functionName: getFeeRecipientWriteName(params.contract),
     functionArgs: [principalCV(params.recipient)],
     overrides: params.overrides
   });
 };
+
+export const buildSetFeeRecipientCall = (params: {
+  contract: ContractConfig;
+  network: StacksNetwork;
+  recipient: string;
+  overrides?: ContractCallOverrides;
+}) => buildSetRoyaltyRecipientCall(params);
 
 const shouldTryFallback = (error: unknown) => {
   if (isRateLimitError(error)) {
@@ -319,6 +341,7 @@ export type XtrataClient = {
   getMintedCount: (senderAddress: string) => Promise<bigint>;
   getMintedId: (index: bigint, senderAddress: string) => Promise<bigint | null>;
   getAdmin: (senderAddress: string) => Promise<string>;
+  getFeeRecipient: (senderAddress: string) => Promise<string>;
   getRoyaltyRecipient: (senderAddress: string) => Promise<string>;
   getFeeUnit: (senderAddress: string) => Promise<bigint>;
   isPaused: (senderAddress: string) => Promise<boolean>;
@@ -343,6 +366,7 @@ export type XtrataClient = {
     expectedHash: Uint8Array,
     senderAddress: string
   ) => Promise<bigint | null>;
+  getMintOrigin: (id: bigint, senderAddress: string) => Promise<string | null>;
   getPendingChunk: (
     expectedHash: Uint8Array,
     index: bigint,
@@ -364,6 +388,23 @@ export const createXtrataClient = (params: {
     toStacksNetwork(params.contract.network, url)
   );
   const capabilities = resolveContractCapabilities(params.contract);
+  const feeRecipientReadOnlyName = getFeeRecipientReadOnlyName(params.contract);
+  const parseFeeRecipientValue =
+    capabilities.version === '3.0.0'
+      ? parseGetFeeRecipient
+      : parseGetRoyaltyRecipient;
+
+  const getFeeRecipient = async (senderAddress: string) => {
+    const value = await callReadOnly({
+      caller,
+      contract: params.contract,
+      network: stacksNetwork,
+      functionName: feeRecipientReadOnlyName,
+      functionArgs: [],
+      senderAddress
+    });
+    return parseFeeRecipientValue(value);
+  };
 
   return {
     contract: params.contract,
@@ -431,17 +472,8 @@ export const createXtrataClient = (params: {
       });
       return parseGetAdmin(value);
     },
-    getRoyaltyRecipient: async (senderAddress) => {
-      const value = await callReadOnly({
-        caller,
-        contract: params.contract,
-        network: stacksNetwork,
-        functionName: 'get-royalty-recipient',
-        functionArgs: [],
-        senderAddress
-      });
-      return parseGetRoyaltyRecipient(value);
-    },
+    getFeeRecipient,
+    getRoyaltyRecipient: getFeeRecipient,
     getFeeUnit: async (senderAddress) => {
       const value = await callReadOnly({
         caller,
@@ -587,6 +619,20 @@ export const createXtrataClient = (params: {
         senderAddress
       });
       return parseGetIdByHash(value);
+    },
+    getMintOrigin: async (id, senderAddress) => {
+      if (!capabilities.supportsMintOriginRead) {
+        return null;
+      }
+      const value = await callReadOnly({
+        caller,
+        contract: params.contract,
+        network: stacksNetwork,
+        functionName: 'get-mint-origin',
+        functionArgs: [uintCV(id)],
+        senderAddress
+      });
+      return parseGetMintOrigin(value);
     },
     getPendingChunk: async (expectedHash, index, senderAddress, creator) => {
       const functionArgs = capabilities.pendingChunkRequiresCreator

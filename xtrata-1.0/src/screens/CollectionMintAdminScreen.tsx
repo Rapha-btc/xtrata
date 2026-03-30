@@ -1380,11 +1380,11 @@ export default function CollectionMintAdminScreen(
             <LabelWithInfo
               tone="field"
               label="Collection contract name"
-              info="The exact deployed contract name, for example xtrata-collection-mint-v1-4."
+              info="The exact deployed contract name, for example xtrata-collection-mint-v1-5."
             />
             <input
               className="input"
-              placeholder="xtrata-collection-mint-v1-4"
+              placeholder="xtrata-collection-mint-v1-5"
               value={collectionName}
               onChange={(event) => setCollectionName(event.target.value)}
             />

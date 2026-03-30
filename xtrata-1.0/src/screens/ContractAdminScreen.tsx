@@ -119,6 +119,14 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
   const canTransact = !!props.walletSession.address && !mismatch;
   const isAdminWallet = addressesEqual(status.admin, props.walletSession.address);
   const canRunAdminActions = canTransact && isAdminWallet;
+  const feeRecipientLabelText =
+    capabilities.version === '3.0.0' ? 'Fee recipient' : 'Royalty recipient';
+  const feeRecipientActionText =
+    capabilities.version === '3.0.0' ? 'fee recipient' : 'royalty recipient';
+  const feeRecipientSetter =
+    capabilities.version === '3.0.0'
+      ? 'set-fee-recipient'
+      : 'set-royalty-recipient';
 
   const [feeUnitInput, setFeeUnitInput] = useState('');
   const [feeUnitMessage, setFeeUnitMessage] = useState<string | null>(null);
@@ -295,7 +303,12 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
   };
 
   const handleSetRoyaltyRecipient = async () => {
-    if (!requireAdminActionAccess(setRoyaltyMessage, 'update royalty recipient')) {
+    if (
+      !requireAdminActionAccess(
+        setRoyaltyMessage,
+        `update ${feeRecipientActionText}`
+      )
+    ) {
       return;
     }
     const value = royaltyInput.trim();
@@ -304,17 +317,19 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
       return;
     }
     setRoyaltyPending(true);
-    setRoyaltyMessage('Sending royalty recipient update...');
+    setRoyaltyMessage(`Sending ${feeRecipientActionText} update...`);
     try {
       const tx = await requestContractCall({
-        functionName: 'set-royalty-recipient',
+        functionName: feeRecipientSetter,
         functionArgs: [principalCV(value)]
       });
-      setRoyaltyMessage(`Royalty tx sent: ${tx.txId}`);
+      setRoyaltyMessage(`${feeRecipientLabelText} tx sent: ${tx.txId}`);
       await adminStatusQuery.refetch();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      setRoyaltyMessage(`Royalty update failed: ${message}`);
+      setRoyaltyMessage(
+        `${feeRecipientLabelText} update failed: ${message}`
+      );
     } finally {
       setRoyaltyPending(false);
     }
@@ -351,7 +366,7 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
   };
 
   const adminLabel = status.admin ?? 'Unknown';
-  const royaltyLabel = status.royaltyRecipient ?? 'Unknown';
+  const feeRecipientLabel = status.royaltyRecipient ?? 'Unknown';
   const feeUnitLabel =
     currentFeeUnit !== null ? formatMicroStx(currentFeeUnit) : 'Unknown';
   const pausedLabel =
@@ -515,8 +530,8 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
             <span className="meta-value">{adminLabel}</span>
           </div>
           <div>
-            <span className="meta-label">Royalty recipient</span>
-            <span className="meta-value">{royaltyLabel}</span>
+            <span className="meta-label">{feeRecipientLabelText}</span>
+            <span className="meta-value">{feeRecipientLabel}</span>
           </div>
           <div>
             <span className="meta-label">Fee unit</span>
@@ -622,7 +637,9 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
                 onClick={() => void handleSetRoyaltyRecipient()}
                 disabled={!canRunAdminActions || royaltyPending}
               >
-                {royaltyPending ? 'Updating...' : 'Set royalty recipient'}
+                {royaltyPending
+                  ? 'Updating...'
+                  : `Set ${feeRecipientActionText}`}
               </button>
             </div>
             {royaltyMessage && (

@@ -13,9 +13,11 @@ import {
 } from './clarity.js';
 import { CONTRACT_ERROR_CODES, ContractCallError } from './errors.js';
 import type {
+  CollectionCoverInscription,
   CollectionMetadata,
   CollectionPhase,
   CollectionRecipients,
+  CollectionSummary,
   CollectionSplits,
   InscriptionMeta,
   MarketListing,
@@ -58,6 +60,14 @@ const parseOptionalPrincipal = (value: ClarityValue, context: string) => {
     return null;
   }
   return expectPrincipal(optional, context);
+};
+
+const parseOptionalUInt = (value: ClarityValue, context: string) => {
+  const optional = expectOptional(value, context);
+  if (!optional) {
+    return null;
+  }
+  return expectUInt(optional, context);
 };
 
 const parseOptionalBuffer = (value: ClarityValue, context: string) => {
@@ -170,10 +180,101 @@ const parseCollectionMetadataTuple = (
       getTupleValue(tuple, 'description', context),
       `${context}.description`
     ),
+    projectUri:
+      tuple['project-uri'] === undefined
+        ? ''
+        : expectStringAscii(tuple['project-uri'], `${context}.project-uri`),
+    collectionPageUri:
+      tuple['collection-page-uri'] === undefined
+        ? ''
+        : expectStringAscii(
+            tuple['collection-page-uri'],
+            `${context}.collection-page-uri`
+          ),
+    coverInscriptionId:
+      tuple['cover-inscription-id'] === undefined
+        ? null
+        : parseOptionalUInt(tuple['cover-inscription-id'], `${context}.cover-inscription-id`),
     revealBlock: expectUInt(
       getTupleValue(tuple, 'reveal-block', context),
       `${context}.reveal-block`
     )
+  };
+};
+
+const parseCollectionSummaryTuple = (
+  value: ClarityValue,
+  context: string
+): CollectionSummary => {
+  const tuple = expectTuple(value, context);
+  return {
+    name: expectStringAscii(getTupleValue(tuple, 'name', context), `${context}.name`),
+    symbol: expectStringAscii(getTupleValue(tuple, 'symbol', context), `${context}.symbol`),
+    baseUri: expectStringAscii(getTupleValue(tuple, 'base-uri', context), `${context}.base-uri`),
+    description: expectStringAscii(
+      getTupleValue(tuple, 'description', context),
+      `${context}.description`
+    ),
+    projectUri:
+      tuple['project-uri'] === undefined
+        ? ''
+        : expectStringAscii(tuple['project-uri'], `${context}.project-uri`),
+    collectionPageUri:
+      tuple['collection-page-uri'] === undefined
+        ? ''
+        : expectStringAscii(
+            tuple['collection-page-uri'],
+            `${context}.collection-page-uri`
+          ),
+    coverInscriptionId:
+      tuple['cover-inscription-id'] === undefined
+        ? null
+        : parseOptionalUInt(tuple['cover-inscription-id'], `${context}.cover-inscription-id`),
+    revealBlock: expectUInt(
+      getTupleValue(tuple, 'reveal-block', context),
+      `${context}.reveal-block`
+    ),
+    paused: expectBool(getTupleValue(tuple, 'paused', context), `${context}.paused`),
+    finalized: expectBool(
+      getTupleValue(tuple, 'finalized', context),
+      `${context}.finalized`
+    ),
+    mintPrice: expectUInt(getTupleValue(tuple, 'mint-price', context), `${context}.mint-price`),
+    maxSupply: expectUInt(getTupleValue(tuple, 'max-supply', context), `${context}.max-supply`),
+    mintedCount: expectUInt(
+      getTupleValue(tuple, 'minted-count', context),
+      `${context}.minted-count`
+    ),
+    reservedCount: expectUInt(
+      getTupleValue(tuple, 'reserved-count', context),
+      `${context}.reserved-count`
+    ),
+    activePhaseId: expectUInt(
+      getTupleValue(tuple, 'active-phase-id', context),
+      `${context}.active-phase-id`
+    ),
+    lockedCoreContract: expectPrincipal(
+      getTupleValue(tuple, 'locked-core-contract', context),
+      `${context}.locked-core-contract`
+    ),
+    maxSmallMintChunks: expectUInt(
+      getTupleValue(tuple, 'max-small-mint-chunks', context),
+      `${context}.max-small-mint-chunks`
+    )
+  };
+};
+
+const parseCollectionCoverInscriptionTuple = (
+  value: ClarityValue,
+  context: string
+): CollectionCoverInscription => {
+  const tuple = expectTuple(value, context);
+  return {
+    coreContract: expectPrincipal(
+      getTupleValue(tuple, 'core-contract', context),
+      `${context}.core-contract`
+    ),
+    tokenId: parseOptionalUInt(getTupleValue(tuple, 'token-id', context), `${context}.token-id`)
   };
 };
 
@@ -233,6 +334,9 @@ export const parseGetNextTokenId = (value: ClarityValue) =>
 export const parseGetAdmin = (value: ClarityValue) =>
   expectPrincipal(expectContractOk(value, 'get-admin'), 'get-admin');
 
+export const parseGetFeeRecipient = (value: ClarityValue) =>
+  expectPrincipal(expectContractOk(value, 'get-fee-recipient'), 'get-fee-recipient');
+
 export const parseGetRoyaltyRecipient = (value: ClarityValue) =>
   expectPrincipal(expectContractOk(value, 'get-royalty-recipient'), 'get-royalty-recipient');
 
@@ -287,6 +391,9 @@ export const parseGetIdByHash = (value: ClarityValue) => {
   return expectUInt(optional, 'get-id-by-hash');
 };
 
+export const parseGetMintOrigin = (value: ClarityValue) =>
+  parseOptionalPrincipal(value, 'get-mint-origin');
+
 export const parseGetPendingChunk = (value: ClarityValue) =>
   parseOptionalBuffer(value, 'get-pending-chunk');
 
@@ -309,6 +416,18 @@ export const parseGetCollectionPhase = (value: ClarityValue): CollectionPhase | 
 
 export const parseGetCollectionMetadata = (value: ClarityValue) =>
   parseCollectionMetadataTuple(expectContractOk(value, 'get-collection-metadata'), 'get-collection-metadata');
+
+export const parseGetCollectionSummary = (value: ClarityValue) =>
+  parseCollectionSummaryTuple(
+    expectContractOk(value, 'get-collection-summary'),
+    'get-collection-summary'
+  );
+
+export const parseGetCollectionCoverInscription = (value: ClarityValue) =>
+  parseCollectionCoverInscriptionTuple(
+    expectContractOk(value, 'get-cover-inscription'),
+    'get-cover-inscription'
+  );
 
 export const parseGetCollectionRecipients = (value: ClarityValue) =>
   parseCollectionRecipientsTuple(expectContractOk(value, 'get-recipients'), 'get-recipients');

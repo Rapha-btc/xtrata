@@ -11,6 +11,7 @@ const makeClient = (overrides: Partial<XtrataClient> = {}): XtrataClient => {
     },
     supportsChunkBatchRead: true,
     supportsMintedIndex: false,
+    getFeeRecipient: vi.fn().mockResolvedValue('SPROYALTY'),
     getAdmin: vi.fn().mockResolvedValue('SPADMIN'),
     getRoyaltyRecipient: vi.fn().mockResolvedValue('SPROYALTY'),
     getFeeUnit: vi.fn().mockResolvedValue(100000n),
@@ -29,6 +30,7 @@ const makeClient = (overrides: Partial<XtrataClient> = {}): XtrataClient => {
     getChunkBatch: vi.fn(),
     getUploadState: vi.fn(),
     getIdByHash: vi.fn(),
+    getMintOrigin: vi.fn().mockResolvedValue(null),
     getPendingChunk: vi.fn()
   };
   return { ...base, ...overrides } as XtrataClient;
@@ -48,7 +50,7 @@ describe('contract admin status', () => {
     expect(status.paused).toBe(false);
     expect(status.nextTokenId).toBe(12n);
     expect(client.getAdmin).toHaveBeenCalledTimes(1);
-    expect(client.getRoyaltyRecipient).toHaveBeenCalledTimes(1);
+    expect(client.getFeeRecipient).toHaveBeenCalledTimes(1);
     expect(client.getFeeUnit).toHaveBeenCalledTimes(1);
     expect(client.isPaused).toHaveBeenCalledTimes(1);
     expect(client.getNextTokenId).toHaveBeenCalledTimes(1);

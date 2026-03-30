@@ -21,7 +21,7 @@ Status legend:
 | --- | --- | --- | --- |
 | Collection mint | `xtrata-collection-mint-v1.0` | archived | Legacy only. New SDK development does not target this version. |
 | Collection mint | `xtrata-collection-mint-v1.1` | archived | Legacy only. New SDK development does not target this version. |
-| Collection mint | `xtrata-collection-mint-v1.4` | supported | **Only active collection-mint SDK target moving forward.** |
+| Collection mint | `xtrata-collection-mint-v1.5` | supported | Active v3-aligned collection-mint target with optional project/page metadata and core-native single-tx mint support. |
 | Preinscribed sale | `xtrata-preinscribed-collection-sale-v1.0` | baseline | Market/sale support available through market + workflow helpers. |
 
 ## SDK module-level support
@@ -49,7 +49,7 @@ Validation source:
 
 ## Collection-mint policy (active)
 
-- SDK roadmap scope is now v1.4-first for collection mint support.
+- SDK roadmap scope is now v1.5-first for collection mint support.
 - `v1.0` and `v1.1` are archived for SDK development efficiency.
 - No new SDK features/tests should be added specifically for `v1.0` or `v1.1` unless policy is explicitly changed.
 

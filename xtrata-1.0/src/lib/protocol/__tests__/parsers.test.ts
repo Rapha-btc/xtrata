@@ -21,9 +21,11 @@ import {
   parseGetInscriptionMeta,
   parseGetIdByHash,
   parseGetLastTokenId,
+  parseGetMintOrigin,
   parseGetMintedCount,
   parseGetMintedId,
   parseGetNextTokenId,
+  parseGetFeeRecipient,
   parseGetOwner,
   parseGetPendingChunk,
   parseGetRoyaltyRecipient,
@@ -59,6 +61,9 @@ describe('contract parsers', () => {
   it('parses admin and royalty recipients', () => {
     const principal = standardPrincipalCV('SP2JXKMSH007NPYAQHKJPQMAQYAD90NQGTVJVQ02B');
     expect(parseGetAdmin(responseOkCV(principal))).toBe(
+      'SP2JXKMSH007NPYAQHKJPQMAQYAD90NQGTVJVQ02B'
+    );
+    expect(parseGetFeeRecipient(responseOkCV(principal))).toBe(
       'SP2JXKMSH007NPYAQHKJPQMAQYAD90NQGTVJVQ02B'
     );
     expect(parseGetRoyaltyRecipient(responseOkCV(principal))).toBe(
@@ -176,6 +181,14 @@ describe('contract parsers', () => {
   it('parses get-id-by-hash option', () => {
     expect(parseGetIdByHash(someCV(uintCV(42)))).toBe(42n);
     expect(parseGetIdByHash(noneCV())).toBeNull();
+  });
+
+  it('parses get-mint-origin option', () => {
+    const principal = standardPrincipalCV('SP2JXKMSH007NPYAQHKJPQMAQYAD90NQGTVJVQ02B');
+    expect(parseGetMintOrigin(someCV(principal))).toBe(
+      'SP2JXKMSH007NPYAQHKJPQMAQYAD90NQGTVJVQ02B'
+    );
+    expect(parseGetMintOrigin(noneCV())).toBeNull();
   });
 
   it('parses optional chunks', () => {

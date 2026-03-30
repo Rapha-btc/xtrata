@@ -158,8 +158,14 @@ export const parseGetMintedId = (value: ClarityValue) => {
 export const parseGetAdmin = (value: ClarityValue) =>
   expectPrincipal(expectContractOk(value, 'get-admin'), 'get-admin');
 
+export const parseGetFeeRecipient = (value: ClarityValue) =>
+  expectPrincipal(expectContractOk(value, 'get-fee-recipient'), 'get-fee-recipient');
+
 export const parseGetRoyaltyRecipient = (value: ClarityValue) =>
-  expectPrincipal(expectContractOk(value, 'get-royalty-recipient'), 'get-royalty-recipient');
+  expectPrincipal(
+    expectContractOk(value, 'get-royalty-recipient'),
+    'get-royalty-recipient'
+  );
 
 export const parseIsPaused = (value: ClarityValue) =>
   expectBool(expectContractOk(value, 'is-paused'), 'is-paused');
@@ -216,6 +222,9 @@ export const parseGetIdByHash = (value: ClarityValue) => {
   }
   return expectUInt(optional, 'get-id-by-hash');
 };
+
+export const parseGetMintOrigin = (value: ClarityValue) =>
+  parseOptionalPrincipal(value, 'get-mint-origin');
 
 export const parseGetPendingChunk = (value: ClarityValue) =>
   parseOptionalBuffer(value, 'get-pending-chunk');

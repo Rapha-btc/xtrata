@@ -35,6 +35,14 @@ function unwrapUInt(result: any) {
   return result.value as bigint;
 }
 
+function unwrapTupleUint(result: any, field: string) {
+  const value = unwrapOk(result);
+  expect(value.type).toBe(ClarityType.Tuple);
+  const entry = value.value[field];
+  expect(entry?.type).toBe(ClarityType.UInt);
+  return entry.value as bigint;
+}
+
 function stxBalance(address: string) {
   return simnet.getAssetsMap().get('STX')?.get(address) || 0n;
 }
@@ -60,10 +68,10 @@ function setHelperCoreToV3() {
   ).result;
 }
 
-function setRoyaltyRecipient(recipient: string) {
+function setFeeRecipient(recipient: string) {
   return simnet.callPublicFn(
     v3Contract,
-    'set-royalty-recipient',
+    'set-fee-recipient',
     [Cl.standardPrincipal(recipient)],
     deployer
   ).result;
@@ -101,6 +109,10 @@ function setWalletFeeBps(wallet: string, bps: bigint) {
 function getNextV3Id(sender: string) {
   const result = simnet.callReadOnlyFn(v3Contract, 'get-next-token-id', [], sender).result;
   return unwrapUInt(unwrapOk(result));
+}
+
+function getMintOrigin(tokenId: bigint, sender: string) {
+  return simnet.callReadOnlyFn(v3Contract, 'get-mint-origin', [Cl.uint(tokenId)], sender).result;
 }
 
 function beginV3(sender: string, hash: string, totalSize: number, totalChunks: number) {
@@ -254,6 +266,23 @@ describe('xtrata-v3.0.0', () => {
     ).toBeSome(Cl.uint(firstId));
   });
 
+  it('tracks mint origin for contract callers without tagging direct wallet mints', () => {
+    unwrapOk(setV3Paused(false));
+    unwrapOk(setHelperPaused(false));
+    unwrapOk(setHelperCoreToV3());
+
+    const directId = unwrapUInt(
+      unwrapOk(mintSingleTxV3(wallet1, ['01'], 'data:text/plain,direct').result)
+    );
+    expect(getMintOrigin(directId, wallet1)).toBeNone();
+
+    const helperId = unwrapTupleUint(
+      mintSmallSingleTxViaHelper(wallet1, ['02']),
+      'token-id'
+    );
+    expect(getMintOrigin(helperId, wallet1)).toBeSome(helperPrincipal);
+  });
+
   it('treats dependencies as open references but enforces ownership for parents', () => {
     unwrapOk(setV3Paused(false));
 
@@ -367,7 +396,7 @@ describe('xtrata-v3.0.0', () => {
 
   it('applies wallet fee bps to staged writes', () => {
     unwrapOk(setV3Paused(false));
-    unwrapOk(setRoyaltyRecipient(wallet2));
+    unwrapOk(setFeeRecipient(wallet2));
     unwrapOk(setWalletFeeBps(wallet1, 0n));
 
     const hash = computeFinalHash(['11']);
@@ -385,7 +414,7 @@ describe('xtrata-v3.0.0', () => {
     unwrapOk(setV3Paused(false));
     unwrapOk(setHelperPaused(false));
     unwrapOk(setHelperCoreToV3());
-    unwrapOk(setRoyaltyRecipient(wallet2));
+    unwrapOk(setFeeRecipient(wallet2));
     unwrapOk(setCallerFeeBps(helperPrincipal, 0n));
 
     const before = stxBalance(wallet2);
@@ -394,6 +423,29 @@ describe('xtrata-v3.0.0', () => {
     const after = stxBalance(wallet2);
 
     expect(after - before).toBe(0n);
+  });
+
+  it('exposes fee-recipient getters and keeps royalty-recipient alias for compatibility', () => {
+    unwrapOk(setFeeRecipient(wallet2));
+
+    expect(simnet.callReadOnlyFn(v3Contract, 'get-fee-recipient', [], wallet1).result).toBeOk(
+      Cl.standardPrincipal(wallet2)
+    );
+    expect(
+      simnet.callReadOnlyFn(v3Contract, 'get-royalty-recipient', [], wallet1).result
+    ).toBeOk(Cl.standardPrincipal(wallet2));
+
+    unwrapOk(
+      simnet.callPublicFn(
+        v3Contract,
+        'set-royalty-recipient',
+        [Cl.standardPrincipal(wallet1)],
+        deployer
+      ).result
+    );
+    expect(simnet.callReadOnlyFn(v3Contract, 'get-fee-recipient', [], wallet1).result).toBeOk(
+      Cl.standardPrincipal(wallet1)
+    );
   });
 
   it('migrates from v2 and advances next-id to avoid collision with fresh v3 mints', () => {

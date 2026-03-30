@@ -52,3 +52,5 @@ Parent/child focus:
 Cross-contract design notes:
 - `xtrata-v3-fee-spec.md`
   - proposed next-core fee model for byte-proportional pricing, wallet and caller fee overrides, and quote-based client integration
+- `xtrata-collection-mint-v3-upgrade-spec.md`
+  - recommended architecture and required changes for the next collection-mint template that targets `xtrata-v3.0.0`

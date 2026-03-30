@@ -41,7 +41,7 @@ export const fetchContractAdminStatus = async (params: {
       ? params.client.getAdmin(params.senderAddress)
       : Promise.resolve(null),
     capabilities.supportsRoyaltyRecipientRead
-      ? params.client.getRoyaltyRecipient(params.senderAddress)
+      ? params.client.getFeeRecipient(params.senderAddress)
       : Promise.resolve(null),
     capabilities.supportsFeeUnit
       ? params.client.getFeeUnit(params.senderAddress)

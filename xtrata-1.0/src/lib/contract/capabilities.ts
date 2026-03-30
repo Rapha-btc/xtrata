@@ -12,6 +12,7 @@ export type ContractCapabilities = {
   supportsPause: boolean;
   supportsAdminReadOnly: boolean;
   supportsRoyaltyRecipientRead: boolean;
+  supportsMintOriginRead: boolean;
   supportsOwnershipTransfer: boolean;
   supportsAbandonUpload: boolean;
   supportsChunkBatchRead: boolean;
@@ -29,6 +30,7 @@ const CAPABILITIES_BY_VERSION: Record<ProtocolVersion, ContractCapabilities> = {
     supportsPause: true,
     supportsAdminReadOnly: true,
     supportsRoyaltyRecipientRead: true,
+    supportsMintOriginRead: false,
     supportsOwnershipTransfer: true,
     supportsAbandonUpload: true,
     supportsChunkBatchRead: true,
@@ -44,6 +46,7 @@ const CAPABILITIES_BY_VERSION: Record<ProtocolVersion, ContractCapabilities> = {
     supportsPause: true,
     supportsAdminReadOnly: true,
     supportsRoyaltyRecipientRead: true,
+    supportsMintOriginRead: false,
     supportsOwnershipTransfer: true,
     supportsAbandonUpload: true,
     supportsChunkBatchRead: true,
@@ -59,6 +62,7 @@ const CAPABILITIES_BY_VERSION: Record<ProtocolVersion, ContractCapabilities> = {
     supportsPause: true,
     supportsAdminReadOnly: true,
     supportsRoyaltyRecipientRead: true,
+    supportsMintOriginRead: false,
     supportsOwnershipTransfer: true,
     supportsAbandonUpload: true,
     supportsChunkBatchRead: true,
@@ -74,6 +78,7 @@ const CAPABILITIES_BY_VERSION: Record<ProtocolVersion, ContractCapabilities> = {
     supportsPause: true,
     supportsAdminReadOnly: true,
     supportsRoyaltyRecipientRead: true,
+    supportsMintOriginRead: true,
     supportsOwnershipTransfer: true,
     supportsAbandonUpload: true,
     supportsChunkBatchRead: true,
