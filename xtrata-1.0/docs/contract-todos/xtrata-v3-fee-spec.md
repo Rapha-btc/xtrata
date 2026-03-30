@@ -153,7 +153,8 @@ This avoids per-component rounding drift and makes policy behavior easy to expla
 - Reject `total-chunks == u0`.
 - Reject `total-size > total-chunks * CHUNK-SIZE`.
 - Reject unsupported `mode`.
-- Single-tx quotes should still validate against the single-tx eligibility cap used by the new core path.
+- Reject `mode == u2` when `total-chunks > 50`.
+- Allow staged quotes up to the full staged upload ceiling (`8,192` chunks / `128 MiB`).
 
 ## Why single-tx needs its own fixed fee
 - If tiny files still pay the full staged `begin + seal` base, byte-proportional upload pricing will not matter much for `1KB` and sub-`1KB` inscriptions.

@@ -45,7 +45,7 @@ those items individually.
    - upload batch size `50`
    - final batch item size `50`
    - single-tx chunk ceiling `50`
-   - max chunks `2,048`
+   - max chunks `8,192`
 4. Train hash derivation:
    - incremental SHA-256 chain hash: `sha256(running-hash || chunk)`
    - running hash starts as 32 zero bytes

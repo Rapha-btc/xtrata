@@ -69,7 +69,7 @@
 (define-constant MAX-SEAL-BATCH-SIZE u50)
 (define-constant MAX-RELATIONSHIP-SIZE u50)
 (define-constant CHUNK-SIZE u16384)
-(define-constant MAX-TOTAL-CHUNKS u2048)
+(define-constant MAX-TOTAL-CHUNKS u8192)
 (define-constant MAX-TOTAL-SIZE (* MAX-TOTAL-CHUNKS CHUNK-SIZE))
 (define-constant UPLOAD-EXPIRY-BLOCKS u4320)
 (define-constant FEE-MIN u1)
@@ -1523,7 +1523,10 @@
   (begin
     (try! (assert-valid-mode mode))
     (asserts! (> total-chunks u0) ERR-INVALID-BATCH)
-    (asserts! (<= total-chunks MAX-TOTAL-CHUNKS) ERR-INVALID-BATCH)
+    (asserts! (if (is-eq mode MODE-SINGLE-TX)
+      (<= total-chunks MAX-BATCH-SIZE)
+      (<= total-chunks MAX-TOTAL-CHUNKS)
+    ) ERR-INVALID-BATCH)
     (asserts! (<= total-size MAX-TOTAL-SIZE) ERR-INVALID-BATCH)
     (asserts! (<= total-size (* total-chunks CHUNK-SIZE)) ERR-INVALID-BATCH)
     (let (

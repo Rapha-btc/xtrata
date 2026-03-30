@@ -13,6 +13,10 @@ const helperContract = `${deployer}.xtrata-small-mint-v1-0`;
 const v3Principal = Cl.contractPrincipal(deployer, 'xtrata-v3-0-0');
 const helperPrincipal = Cl.contractPrincipal(deployer, 'xtrata-small-mint-v1-0');
 const mime = 'text/plain';
+const chunkSize = 16_384;
+const maxSingleTxChunks = 50;
+const maxTotalChunks = 8_192;
+const maxTotalSize = chunkSize * maxTotalChunks;
 
 function computeFinalHash(chunksHex: string[]) {
   let running = Buffer.alloc(32, 0);
@@ -398,6 +402,49 @@ describe('xtrata-v3.0.0', () => {
         'total-fee': Cl.uint(27_000)
       })
     );
+  });
+
+  it('accepts staged uploads up to the new 128 MiB ceiling', () => {
+    unwrapOk(setV3Paused(false));
+
+    const atMax = beginV3(wallet1, '55'.repeat(32), maxTotalSize, maxTotalChunks);
+    expect(atMax).toBeOk(Cl.bool(true));
+
+    const aboveMaxChunks = beginV3(wallet1, '66'.repeat(32), maxTotalSize + chunkSize, maxTotalChunks + 1);
+    expect(aboveMaxChunks).toBeErr(Cl.uint(102));
+
+    const aboveMaxBytes = beginV3(wallet1, '77'.repeat(32), maxTotalSize + 1, maxTotalChunks);
+    expect(aboveMaxBytes).toBeErr(Cl.uint(102));
+  });
+
+  it('rejects single-tx quotes above 50 chunks while preserving the larger staged ceiling', () => {
+    const stagedAtMax = simnet.callReadOnlyFn(
+      v3Contract,
+      'quote-inscription-fee',
+      [
+        Cl.standardPrincipal(wallet1),
+        Cl.none(),
+        Cl.uint(maxTotalSize),
+        Cl.uint(maxTotalChunks),
+        Cl.uint(1)
+      ],
+      wallet1
+    ).result;
+    unwrapOk(stagedAtMax);
+
+    const oversizedSingleTx = simnet.callReadOnlyFn(
+      v3Contract,
+      'quote-inscription-fee',
+      [
+        Cl.standardPrincipal(wallet1),
+        Cl.none(),
+        Cl.uint(chunkSize * (maxSingleTxChunks + 1)),
+        Cl.uint(maxSingleTxChunks + 1),
+        Cl.uint(2)
+      ],
+      wallet1
+    ).result;
+    expect(oversizedSingleTx).toBeErr(Cl.uint(102));
   });
 
   it('allows v3 fee units to reach one microstx', () => {

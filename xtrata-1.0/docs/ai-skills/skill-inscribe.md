@@ -35,8 +35,8 @@ global deduplication.
 | CHUNK-SIZE | 16,384 bytes |
 | MAX-BATCH-SIZE | 50 chunks per `add-chunk-batch` |
 | MAX-SINGLE-TX-CHUNKS | 50 chunks per core-native single-tx call |
-| MAX-TOTAL-CHUNKS | 2,048 |
-| MAX-TOTAL-SIZE | 32 MiB |
+| MAX-TOTAL-CHUNKS | 8,192 |
+| MAX-TOTAL-SIZE | 128 MiB |
 | FEE-MIN | 0.000001 STX |
 | FEE-MAX | 1.0 STX |
 | UPLOAD-EXPIRY | 4,320 blocks (~30 days) |

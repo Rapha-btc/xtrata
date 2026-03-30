@@ -88,7 +88,7 @@ It is written for the core contract at `contracts/live/xtrata-v3.0.0.clar`.
    - staged quote:
      `quote-inscription-fee(payer, none, total-size, total-chunks, u1)`
    - single-tx quote:
-     `quote-inscription-fee(payer, none, total-size, total-chunks, u2)`
+     `quote-inscription-fee(payer, none, total-size, total-chunks, u2)` for `<=50` chunks only
    - collection/helper quote:
      `quote-inscription-fee(payer, (some caller), total-size, total-chunks, mode)`
 10. Smoke-test one staged mint while still paused.
