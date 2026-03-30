@@ -8,6 +8,9 @@ the v3 line.
 
 It is written as an operational and implementation reference.
 
+For the ordered launch and deployment sequence, see
+`docs/xtrata-v3-admin-runbook.md`.
+
 What migration is for
 
 Migration is needed when a legacy inscription should:
@@ -153,11 +156,23 @@ Operational checklist before v3 launch
 Before announcing migration:
 - confirm which legacy contracts are actually live
 - decide whether `v1.1.0` needs support
-- set the initial v3 mint cursor / offset before any fresh mint
+- set the initial v3 mint cursor / offset before any mint or migration if you
+  need an explicit starting cursor
 - verify every supported source has a dedicated migrator
 - test same-ID migration for each source line
 - test post-migration minting to confirm no ID collision
 - test that migrated items can be used as parents in v3
+
+Pause note
+
+- Migration uses the same write gate as minting.
+- While paused, direct user migration calls are blocked unless the caller is the
+  contract owner.
+- An `AllowedCallers` entry only helps when the migration is routed through an
+  allowlisted helper contract.
+- If your migration smoke test uses a normal holder wallet, plan either:
+  - a holder-owned legacy test token under the admin principal, or
+  - a short controlled unpause window after fee and policy setup.
 
 Test checklist
 

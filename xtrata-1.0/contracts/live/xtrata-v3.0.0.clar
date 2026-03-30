@@ -72,7 +72,7 @@
 (define-constant MAX-TOTAL-CHUNKS u2048)
 (define-constant MAX-TOTAL-SIZE (* MAX-TOTAL-CHUNKS CHUNK-SIZE))
 (define-constant UPLOAD-EXPIRY-BLOCKS u4320)
-(define-constant FEE-MIN u1000)
+(define-constant FEE-MIN u1)
 (define-constant FEE-MAX u1000000)
 (define-constant BPS-MAX u10000)
 (define-constant MODE-STAGED u1)

@@ -12,7 +12,12 @@ export const CONTRACT_ERROR_CODES = {
   '111': 'ERR_DEPENDENCY_MISSING',
   '112': 'ERR_EXPIRED',
   '113': 'ERR_NOT_EXPIRED',
-  '114': 'ERR_DUPLICATE'
+  '114': 'ERR_DUPLICATE',
+  '115': 'ERR_ALREADY_SET',
+  '116': 'ERR_PARENT_MISSING',
+  '117': 'ERR_PARENT_NOT_OWNED',
+  '118': 'ERR_INVALID_MODE',
+  '119': 'ERR_INVALID_BPS'
 } as const;
 
 export type ContractErrorName =

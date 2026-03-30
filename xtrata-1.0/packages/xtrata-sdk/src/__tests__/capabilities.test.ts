@@ -13,6 +13,7 @@ describe('sdk capabilities compatibility', () => {
     const resolved = resolveContractCapabilities({ protocolVersion: '2.1.0' });
     expect(resolved.version).toBe('2.1.0');
     expect(resolved.supportsFeeUnit).toBe(true);
+    expect(resolved.supportsFeeQuote).toBe(false);
     expect(resolved.supportsChunkBatchRead).toBe(true);
     expect(resolved.supportsNextTokenId).toBe(true);
   });
@@ -36,6 +37,8 @@ describe('sdk capabilities compatibility', () => {
       contractName: 'xtrata-v3-0-0'
     });
     expect(resolved.version).toBe('3.0.0');
+    expect(resolved.feeModel).toBe('quote');
+    expect(resolved.supportsFeeQuote).toBe(true);
     expect(resolved.supportsMintOriginRead).toBe(true);
   });
 

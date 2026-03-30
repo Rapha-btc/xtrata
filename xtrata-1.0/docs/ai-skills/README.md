@@ -8,7 +8,7 @@ enough to inscribe on-chain where practical.
 
 | File | Description |
 |------|-------------|
-| [`skill-inscribe.md`](skill-inscribe.md) | Single-item inscription skill. Covers helper-route single-tx minting for `<=30` chunks plus the standard staged flow, with cost estimation and user confirmation gate. |
+| [`skill-inscribe.md`](skill-inscribe.md) | Single-item inscription skill. Covers core-native single-tx minting for `1..50` chunks plus the standard staged flow, with live fee quoting and a user confirmation gate. |
 | [`skill-batch-mint.md`](skill-batch-mint.md) | Batch mint skill for coordinated drops of `1..50` non-recursive items. Covers core `seal-inscription-batch` and collection `mint-seal-batch`, with deterministic ordering, dedupe, staged uploads, and final batch seal. |
 | `skill-transfer.md` | Transfer inscriptions between wallets. *(planned)* |
 | `skill-query.md` | Query inscription state, metadata, and content. *(planned)* |
@@ -37,7 +37,7 @@ agent training and on-chain inscription.
    - [`skill-batch-mint.md`](skill-batch-mint.md) for coordinated drops of `2..50` items.
 2. Choose a training track (`aibtc` or `generic`) for environment-specific setup.
 3. Rehearse all supported routes separately before production use:
-   - helper-route single-item
+   - core-native single-tx single-item
    - staged single-item
    - staged batch seal
 4. Promote to mainnet only after successful dry runs, confirmation gating, and post-condition checks.
@@ -45,13 +45,13 @@ agent training and on-chain inscription.
 ## Safety Baseline
 
 - Always use `PostConditionMode.Deny` on fee-paying writes.
-- Check `get-fee-unit` before building spend caps.
+- Check `quote-inscription-fee` before building spend caps.
 - Present costs to the user and get confirmation before any transaction.
 - Keep retry logic bounded and back off on `429` / `5xx` responses.
 - Log tx IDs and hash/token mappings for auditability.
 - Treat ordered manifests as authoritative for batch jobs so token-to-file mapping remains deterministic.
 - Batch seal is currently non-recursive only. If dependencies are required, mint items individually.
-- There is no current multi-file helper path. `mint-small-single-tx` remains single-item only.
+- There is no current multi-file single-tx path. `mint-single-tx` remains single-item only.
 
 ## Canonical GitHub References
 

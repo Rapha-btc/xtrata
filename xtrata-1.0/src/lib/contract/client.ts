@@ -3,7 +3,9 @@ import {
   bufferCV,
   callReadOnlyFunction,
   listCV,
+  noneCV,
   principalCV,
+  someCV,
   stringAsciiCV,
   tupleCV,
   uintCV
@@ -38,6 +40,7 @@ import {
   parseGetMintedId,
   parseGetOwner,
   parseGetPendingChunk,
+  parseQuoteInscriptionFee,
   parseGetRoyaltyRecipient,
   parseGetIdByHash,
   parseIsPaused,
@@ -47,7 +50,7 @@ import {
   parseGetUploadState,
   parseGetChunkBatch
 } from '../protocol/parsers';
-import type { InscriptionMeta, UploadState } from '../protocol/types';
+import type { InscriptionFeeQuote, InscriptionMeta, UploadState } from '../protocol/types';
 import { logWarn } from '../utils/logger';
 
 const usesFeeRecipientFunctions = (contract: ContractConfig) =>
@@ -336,6 +339,7 @@ export type XtrataClient = {
   network: NetworkType;
   supportsChunkBatchRead: boolean;
   supportsMintedIndex: boolean;
+  supportsFeeQuote: boolean;
   getLastTokenId: (senderAddress: string) => Promise<bigint>;
   getNextTokenId: (senderAddress: string) => Promise<bigint>;
   getMintedCount: (senderAddress: string) => Promise<bigint>;
@@ -366,6 +370,16 @@ export type XtrataClient = {
     expectedHash: Uint8Array,
     senderAddress: string
   ) => Promise<bigint | null>;
+  quoteInscriptionFee: (
+    params: {
+      payer: string;
+      caller?: string | null;
+      totalSize: bigint;
+      totalChunks: bigint;
+      mode: 'staged' | 'single-tx';
+    },
+    senderAddress: string
+  ) => Promise<InscriptionFeeQuote>;
   getMintOrigin: (id: bigint, senderAddress: string) => Promise<string | null>;
   getPendingChunk: (
     expectedHash: Uint8Array,
@@ -411,6 +425,7 @@ export const createXtrataClient = (params: {
     network: params.contract.network,
     supportsChunkBatchRead: capabilities.supportsChunkBatchRead,
     supportsMintedIndex: capabilities.supportsMintedIndex,
+    supportsFeeQuote: capabilities.supportsFeeQuote,
     getLastTokenId: async (senderAddress) => {
       const value = await callReadOnly({
         caller,
@@ -619,6 +634,27 @@ export const createXtrataClient = (params: {
         senderAddress
       });
       return parseGetIdByHash(value);
+    },
+    quoteInscriptionFee: async (quote, senderAddress) => {
+      if (!capabilities.supportsFeeQuote) {
+        throw new Error('Fee quote read-only not supported by this contract');
+      }
+      const mode = quote.mode === 'single-tx' ? 2n : 1n;
+      const value = await callReadOnly({
+        caller,
+        contract: params.contract,
+        network: stacksNetwork,
+        functionName: 'quote-inscription-fee',
+        functionArgs: [
+          principalCV(quote.payer),
+          quote.caller ? someCV(principalCV(quote.caller)) : noneCV(),
+          uintCV(quote.totalSize),
+          uintCV(quote.totalChunks),
+          uintCV(mode)
+        ],
+        senderAddress
+      });
+      return parseQuoteInscriptionFee(value);
     },
     getMintOrigin: async (id, senderAddress) => {
       if (!capabilities.supportsMintOriginRead) {

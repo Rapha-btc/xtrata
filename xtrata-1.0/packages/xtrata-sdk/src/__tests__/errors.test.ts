@@ -22,6 +22,11 @@ describe('sdk error contracts', () => {
     expect(CONTRACT_ERROR_CODES['112']).toBe('ERR_EXPIRED');
     expect(CONTRACT_ERROR_CODES['113']).toBe('ERR_NOT_EXPIRED');
     expect(CONTRACT_ERROR_CODES['114']).toBe('ERR_DUPLICATE');
+    expect(CONTRACT_ERROR_CODES['115']).toBe('ERR_ALREADY_SET');
+    expect(CONTRACT_ERROR_CODES['116']).toBe('ERR_PARENT_MISSING');
+    expect(CONTRACT_ERROR_CODES['117']).toBe('ERR_PARENT_NOT_OWNED');
+    expect(CONTRACT_ERROR_CODES['118']).toBe('ERR_INVALID_MODE');
+    expect(CONTRACT_ERROR_CODES['119']).toBe('ERR_INVALID_BPS');
   });
 
   it('formats contract call errors with known and unknown codes', () => {

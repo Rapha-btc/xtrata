@@ -20,6 +20,8 @@
 import { writeFileSync } from 'fs';
 import {
   callReadOnlyFunction,
+  noneCV,
+  principalCV,
   uintCV,
   listCV,
   cvToJSON
@@ -27,7 +29,7 @@ import {
 import { StacksMainnet, StacksTestnet } from '@stacks/network';
 
 const CONTRACT_ADDRESS = 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X';
-const CONTRACT_NAME = 'xtrata-v2-1-0';
+const CONTRACT_NAME = 'xtrata-v3-0-0';
 const SENDER = process.env.XTRATA_SENDER || CONTRACT_ADDRESS; // Any valid principal works for read-only calls
 
 function resolveNetwork() {
@@ -166,7 +168,7 @@ async function showCount() {
 async function showFee() {
   const feeJson = await readOnly('get-fee-unit', []);
   const feeUnit = BigInt(feeJson.value.value);
-  console.log(`Fee unit: ${feeUnit} microSTX (${Number(feeUnit) / 1_000_000} STX)`);
+  console.log(`Compatibility fee unit: ${feeUnit} microSTX (${Number(feeUnit) / 1_000_000} STX)`);
 
   const pausedJson = await readOnly('is-paused', []);
   console.log(`Paused: ${pausedJson.value.value}`);
@@ -174,8 +176,28 @@ async function showFee() {
   const adminJson = await readOnly('get-admin', []);
   console.log(`Admin: ${adminJson.value.value}`);
 
-  const recipientJson = await readOnly('get-royalty-recipient', []);
-  console.log(`Royalty recipient: ${recipientJson.value.value}`);
+  const recipientJson = await readOnly('get-fee-recipient', []);
+  console.log(`Fee recipient: ${recipientJson.value.value}`);
+
+  console.log('\nExample v3 quotes (16,384 bytes / 1 chunk):');
+  await showQuote(16_384, 1, 'staged');
+  await showQuote(16_384, 1, 'single-tx');
+}
+
+async function showQuote(sizeBytes, totalChunks, mode = 'single-tx') {
+  const normalizedMode = mode === 'staged' ? 'staged' : 'single-tx';
+  const json = await readOnly('quote-inscription-fee', [
+    principalCV(SENDER),
+    noneCV(),
+    uintCV(BigInt(sizeBytes)),
+    uintCV(BigInt(totalChunks)),
+    uintCV(normalizedMode === 'single-tx' ? 2n : 1n)
+  ]);
+
+  const quote = json.value.value;
+  console.log(
+    `${normalizedMode} quote: begin=${quote['begin-fee'].value} seal=${quote['seal-fee'].value} single-tx=${quote['single-tx-fee'].value} size=${quote['size-fee'].value} extra-batches=${quote['extra-batches'].value} extra-batch-fee=${quote['extra-batch-fee'].value} total=${quote['total-fee'].value} microSTX`
+  );
 }
 
 // ─── CLI ────────────────────────────────────────────────────────────────────
@@ -187,7 +209,8 @@ const commands = {
   owner: () => showOwner(args[0]),
   content: () => readContent(args[0], args[1]),
   count: () => showCount(),
-  fee: () => showFee()
+  fee: () => showFee(),
+  quote: () => showQuote(args[0], args[1], args[2])
 };
 
 if (!command || !commands[command]) {
@@ -198,7 +221,8 @@ if (!command || !commands[command]) {
   console.log('  owner <token-id>                 Show token owner');
   console.log('  content <token-id> [output-file] Read inscription content');
   console.log('  count                            Show minted count and last ID');
-  console.log('  fee                              Show current fee and contract state');
+  console.log('  fee                              Show fee policy plus sample v3 quotes');
+  console.log('  quote <size-bytes> <chunks> [mode]  Quote v3 fees for staged or single-tx');
   process.exit(1);
 }
 

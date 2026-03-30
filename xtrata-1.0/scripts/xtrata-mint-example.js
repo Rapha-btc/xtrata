@@ -10,9 +10,6 @@
  * Environment:
  *   XTRATA_NETWORK=mainnet|testnet  (default: mainnet)
  *   XTRATA_API_URL=<custom-api-url> (optional, overrides network default endpoint)
- *   XTRATA_USE_SMALL_MINT_HELPER=true|false (default: true)
- *   XTRATA_HELPER_CONTRACT_ADDRESS=<address> (optional; defaults to mainnet helper)
- *   XTRATA_HELPER_CONTRACT_NAME=<name> (optional; defaults to xtrata-small-mint-v1-0 on mainnet)
  *   XTRATA_DEPENDENCY_IDS=1,2,3 (optional recursive dependency ids)
  *
  * Requirements:
@@ -26,7 +23,7 @@ import {
   broadcastTransaction,
   callReadOnlyFunction,
   bufferCV,
-  contractPrincipalCV,
+  noneCV,
   principalCV,
   uintCV,
   stringAsciiCV,
@@ -44,11 +41,10 @@ import { StacksMainnet, StacksTestnet } from '@stacks/network';
 // ─── Configuration ──────────────────────────────────────────────────────────
 
 const CONTRACT_ADDRESS = 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X';
-const CONTRACT_NAME = 'xtrata-v2-1-0';
-const HELPER_CONTRACT_NAME = 'xtrata-small-mint-v1-0';
+const CONTRACT_NAME = 'xtrata-v3-0-0';
 const CHUNK_SIZE = 16_384;
 const MAX_BATCH_SIZE = 50;
-const MAX_SMALL_MINT_CHUNKS = 30;
+const MAX_SINGLE_TX_CHUNKS = 50;
 const TX_DELAY_MS = 5_000;
 const POLL_INTERVAL_MS = 10_000;
 const MAX_POLL_ATTEMPTS = 60;
@@ -77,37 +73,6 @@ function resolveTransactionVersion(networkName) {
 
 const networkName = (process.env.XTRATA_NETWORK || 'mainnet').toLowerCase();
 const network = resolveNetwork();
-
-function envFlag(name, defaultValue) {
-  const raw = process.env[name];
-  if (!raw) return defaultValue;
-  return !['0', 'false', 'no', 'off'].includes(raw.trim().toLowerCase());
-}
-
-function resolveHelperContract() {
-  if (!envFlag('XTRATA_USE_SMALL_MINT_HELPER', true)) {
-    return null;
-  }
-
-  const configuredAddress = process.env.XTRATA_HELPER_CONTRACT_ADDRESS?.trim() || null;
-  const configuredName = process.env.XTRATA_HELPER_CONTRACT_NAME?.trim() || null;
-
-  if ((configuredAddress && !configuredName) || (!configuredAddress && configuredName)) {
-    throw new Error(
-      'Set both XTRATA_HELPER_CONTRACT_ADDRESS and XTRATA_HELPER_CONTRACT_NAME, or neither.'
-    );
-  }
-
-  if (configuredAddress && configuredName) {
-    return { address: configuredAddress, contractName: configuredName };
-  }
-
-  if (networkName === 'mainnet') {
-    return { address: CONTRACT_ADDRESS, contractName: HELPER_CONTRACT_NAME };
-  }
-
-  return null;
-}
 
 function parseDependencyIds() {
   const raw = process.env.XTRATA_DEPENDENCY_IDS?.trim();
@@ -170,9 +135,34 @@ async function readOnly(functionName, functionArgs, senderAddress) {
   return cvToJSON(result);
 }
 
-async function getFeeUnit(senderAddress) {
-  const json = await readOnly('get-fee-unit', [], senderAddress);
-  return BigInt(json.value.value);
+async function quoteInscriptionFee({
+  payer,
+  totalSize,
+  totalChunks,
+  mode,
+  senderAddress
+}) {
+  const json = await readOnly(
+    'quote-inscription-fee',
+    [
+      principalCV(payer),
+      noneCV(),
+      uintCV(totalSize),
+      uintCV(totalChunks),
+      uintCV(mode === 'single-tx' ? 2n : 1n)
+    ],
+    senderAddress
+  );
+  const value = json.value.value;
+  return {
+    beginFee: BigInt(value['begin-fee'].value),
+    sealFee: BigInt(value['seal-fee'].value),
+    singleTxFee: BigInt(value['single-tx-fee'].value),
+    sizeFee: BigInt(value['size-fee'].value),
+    extraBatches: BigInt(value['extra-batches'].value),
+    extraBatchFee: BigInt(value['extra-batch-fee'].value),
+    totalFee: BigInt(value['total-fee'].value)
+  };
 }
 
 async function getIdByHash(hash, senderAddress) {
@@ -217,39 +207,32 @@ async function waitForConfirmation(txid) {
   throw new Error(`TX ${txid} did not confirm in time`);
 }
 
-async function mintWithHelper({
-  helperContract,
+async function mintSingleTx({
   chunks,
   expectedHash,
   mimeType,
   totalSize,
-  totalChunks,
   tokenUri,
   dependencies,
   senderAddress,
   senderKey,
-  feeUnit
+  feeQuote
 }) {
-  const sealFee = feeUnit * (1n + ((totalChunks + 49n) / 50n));
-  const spendCap = feeUnit + sealFee;
   const functionName =
     dependencies.length > 0
-      ? 'mint-small-single-tx-recursive'
-      : 'mint-small-single-tx';
+      ? 'mint-single-tx-recursive'
+      : 'mint-single-tx';
 
-  console.log('\n--- Small helper route ---');
-  console.log(
-    `Helper: ${helperContract.address}.${helperContract.contractName} (${chunks.length} chunks)`
-  );
+  console.log('\n--- Core single-tx route ---');
+  console.log(`Core: ${CONTRACT_ADDRESS}.${CONTRACT_NAME} (${chunks.length} chunks)`);
 
-  const helperTx = await makeContractCall({
-    contractAddress: helperContract.address,
-    contractName: helperContract.contractName,
+  const mintTx = await makeContractCall({
+    contractAddress: CONTRACT_ADDRESS,
+    contractName: CONTRACT_NAME,
     functionName,
     functionArgs:
       dependencies.length > 0
         ? [
-            contractPrincipalCV(CONTRACT_ADDRESS, CONTRACT_NAME),
             bufferCV(expectedHash),
             stringAsciiCV(mimeType),
             uintCV(totalSize),
@@ -258,7 +241,6 @@ async function mintWithHelper({
             listCV(dependencies.map((id) => uintCV(id)))
           ]
         : [
-            contractPrincipalCV(CONTRACT_ADDRESS, CONTRACT_NAME),
             bufferCV(expectedHash),
             stringAsciiCV(mimeType),
             uintCV(totalSize),
@@ -271,20 +253,20 @@ async function mintWithHelper({
       makeStandardSTXPostCondition(
         senderAddress,
         FungibleConditionCode.LessEqual,
-        spendCap
+        feeQuote.totalFee
       )
     ],
     postConditionMode: PostConditionMode.Deny,
     anchorMode: AnchorMode.Any
   });
 
-  const helperTxid = await broadcast(helperTx);
-  console.log(`Helper TX: ${helperTxid}`);
-  await waitForConfirmation(helperTxid);
-  console.log('Helper mint confirmed.');
+  const mintTxid = await broadcast(mintTx);
+  console.log(`Mint TX: ${mintTxid}`);
+  await waitForConfirmation(mintTxid);
+  console.log('Single-tx mint confirmed.');
 
   const tokenId = await getIdByHash(expectedHash, senderAddress);
-  return { tokenId, txids: [helperTxid], route: 'helper' };
+  return { tokenId, txids: [mintTxid], route: 'single-tx' };
 }
 
 async function mintStaged({
@@ -298,7 +280,7 @@ async function mintStaged({
   resumeFromIndex = 0,
   senderAddress,
   senderKey,
-  feeUnit
+  feeQuote
 }) {
   const txids = [];
   if (resumeFromIndex <= 0) {
@@ -316,7 +298,11 @@ async function mintStaged({
       senderKey,
       network,
       postConditions: [
-        makeStandardSTXPostCondition(senderAddress, FungibleConditionCode.LessEqual, feeUnit)
+        makeStandardSTXPostCondition(
+          senderAddress,
+          FungibleConditionCode.LessEqual,
+          feeQuote.beginFee
+        )
       ],
       postConditionMode: PostConditionMode.Deny,
       anchorMode: AnchorMode.Any
@@ -361,7 +347,6 @@ async function mintStaged({
   }
 
   console.log('\n--- Staged route: seal inscription ---');
-  const sealFee = feeUnit * (1n + ((totalChunks + 49n) / 50n));
   const sealTx = await makeContractCall({
     contractAddress: CONTRACT_ADDRESS,
     contractName: CONTRACT_NAME,
@@ -377,7 +362,11 @@ async function mintStaged({
     senderKey,
     network,
     postConditions: [
-      makeStandardSTXPostCondition(senderAddress, FungibleConditionCode.LessEqual, sealFee)
+      makeStandardSTXPostCondition(
+        senderAddress,
+        FungibleConditionCode.LessEqual,
+        feeQuote.sealFee
+      )
     ],
     postConditionMode: PostConditionMode.Deny,
     anchorMode: AnchorMode.Any
@@ -403,7 +392,6 @@ async function mint(filePath, mimeType, tokenUri) {
     resolveTransactionVersion(networkName)
   );
   const resolvedTokenUri = tokenUri || DEFAULT_TOKEN_URI;
-  const helperContract = resolveHelperContract();
   const dependencies = parseDependencyIds();
   console.log(`Sender: ${senderAddress}`);
   console.log(`Network: ${networkName}`);
@@ -433,12 +421,7 @@ async function mint(filePath, mimeType, tokenUri) {
     return;
   }
 
-  // 3. Get fee unit
-  const feeUnit = await getFeeUnit(senderAddress);
-  const sealBatches = (totalChunks + 49n) / 50n;
-  const sealFee = feeUnit * (1n + sealBatches);
-  const totalFee = feeUnit + sealFee;
-  console.log(`Fees: begin=${Number(feeUnit) / 1e6} STX, seal=${Number(sealFee) / 1e6} STX, total=${Number(totalFee) / 1e6} STX`);
+  // 3. Inspect upload state before route selection
   const uploadState = await getUploadState(expectedHash, senderAddress, senderAddress);
   let resumeFromIndex = 0;
   if (uploadState !== null) {
@@ -463,40 +446,54 @@ async function mint(filePath, mimeType, tokenUri) {
         `Existing upload chunk count ${uploadTotalChunks.toString()} does not match local chunk count ${totalChunks.toString()}.`
       );
     }
-    if (!Number.isSafeInteger(resumeFromIndex) || resumeFromIndex < 0 || resumeFromIndex > chunks.length) {
+    if (
+      !Number.isSafeInteger(resumeFromIndex) ||
+      resumeFromIndex < 0 ||
+      resumeFromIndex > chunks.length
+    ) {
       throw new Error(`Existing upload current-index is invalid: ${state['current-index'].value}`);
     }
   }
-  const canUseHelper =
-    helperContract !== null &&
+
+  const canUseSingleTx =
     chunks.length > 0 &&
-    chunks.length <= MAX_SMALL_MINT_CHUNKS &&
+    chunks.length <= MAX_SINGLE_TX_CHUNKS &&
     uploadState === null;
+
+  const feeQuote = await quoteInscriptionFee({
+    payer: senderAddress,
+    totalSize,
+    totalChunks,
+    mode: canUseSingleTx ? 'single-tx' : 'staged',
+    senderAddress
+  });
+
+  console.log(
+    `Fees: begin=${Number(feeQuote.beginFee) / 1e6} STX, seal=${Number(feeQuote.sealFee) / 1e6} STX, single-tx=${Number(feeQuote.singleTxFee) / 1e6} STX, quoted total=${Number(feeQuote.totalFee) / 1e6} STX`
+  );
 
   console.log(
     `Route: ${
-      canUseHelper ? 'helper single-tx' : 'staged begin/upload/seal'
+      canUseSingleTx ? 'core single-tx' : 'staged begin/upload/seal'
     }`
   );
   if (uploadState !== null) {
     console.log(
-      `Active upload session detected at chunk ${resumeFromIndex}/${chunks.length}; helper route disabled for this attempt.`
+      `Active upload session detected at chunk ${resumeFromIndex}/${chunks.length}; single-tx route disabled for this attempt.`
     );
   }
 
-  const result = canUseHelper
-    ? await mintWithHelper({
-        helperContract,
+  const result = canUseSingleTx
+    ? await mintSingleTx({
         chunks,
         expectedHash,
         mimeType,
         totalSize,
-        totalChunks,
         tokenUri: resolvedTokenUri,
         dependencies,
         senderAddress,
         senderKey,
-        feeUnit
+        feeQuote
       })
     : await mintStaged({
         chunks,
@@ -509,7 +506,7 @@ async function mint(filePath, mimeType, tokenUri) {
         resumeFromIndex,
         senderAddress,
         senderKey,
-        feeUnit
+        feeQuote
       });
 
   console.log(`\nInscription complete! Token ID: ${result.tokenId}`);

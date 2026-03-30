@@ -93,6 +93,12 @@ function setUploadByteFee(value: bigint) {
   return simnet.callPublicFn(v3Contract, 'set-upload-byte-fee-unit', [Cl.uint(value)], deployer).result;
 }
 
+function applyFeeSteps(setter: (value: bigint) => any, steps: bigint[]) {
+  for (const value of steps) {
+    unwrapOk(setter(value));
+  }
+}
+
 function setCallerFeeBps(caller: any, bps: bigint) {
   return simnet.callPublicFn(v3Contract, 'set-caller-fee-bps', [caller, Cl.uint(bps)], deployer).result;
 }
@@ -390,6 +396,38 @@ describe('xtrata-v3.0.0', () => {
         'extra-batches': Cl.uint(0),
         'extra-batch-fee': Cl.uint(0),
         'total-fee': Cl.uint(27_000)
+      })
+    );
+  });
+
+  it('allows v3 fee units to reach one microstx', () => {
+    applyFeeSteps(setSingleTxFee, [10_000n, 1_000n, 100n, 10n, 1n]);
+    applyFeeSteps(setUploadByteFee, [200n, 20n, 2n, 1n]);
+
+    const tiny = simnet.callReadOnlyFn(
+      v3Contract,
+      'quote-inscription-fee',
+      [
+        Cl.standardPrincipal(wallet1),
+        Cl.none(),
+        Cl.uint(1),
+        Cl.uint(1),
+        Cl.uint(2)
+      ],
+      wallet1
+    ).result;
+
+    expect(tiny).toBeOk(
+      Cl.tuple({
+        'resolved-bps': Cl.uint(10_000),
+        'policy-source': Cl.uint(0),
+        'begin-fee': Cl.uint(100_000),
+        'seal-fee': Cl.uint(100_001),
+        'single-tx-fee': Cl.uint(2),
+        'size-fee': Cl.uint(1),
+        'extra-batches': Cl.uint(0),
+        'extra-batch-fee': Cl.uint(0),
+        'total-fee': Cl.uint(2)
       })
     );
   });

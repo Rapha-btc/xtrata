@@ -16,6 +16,20 @@ export type UploadState = {
   runningHash: Uint8Array;
 };
 
+export type InscriptionFeeQuotePolicySource = 'default' | 'caller' | 'wallet';
+
+export type InscriptionFeeQuote = {
+  resolvedBps: bigint;
+  policySource: InscriptionFeeQuotePolicySource;
+  beginFee: bigint;
+  sealFee: bigint;
+  singleTxFee: bigint;
+  sizeFee: bigint;
+  extraBatches: bigint;
+  extraBatchFee: bigint;
+  totalFee: bigint;
+};
+
 export const CONTRACT_ERROR_CODES = {
   '100': 'ERR_NOT_AUTHORIZED',
   '101': 'ERR_NOT_FOUND',
@@ -27,7 +41,15 @@ export const CONTRACT_ERROR_CODES = {
   '107': 'ERR_INVALID_URI',
   '109': 'ERR_PAUSED',
   '110': 'ERR_INVALID_FEE',
-  '111': 'ERR_DEPENDENCY_MISSING'
+  '111': 'ERR_DEPENDENCY_MISSING',
+  '112': 'ERR_EXPIRED',
+  '113': 'ERR_NOT_EXPIRED',
+  '114': 'ERR_DUPLICATE',
+  '115': 'ERR_ALREADY_SET',
+  '116': 'ERR_PARENT_MISSING',
+  '117': 'ERR_PARENT_NOT_OWNED',
+  '118': 'ERR_INVALID_MODE',
+  '119': 'ERR_INVALID_BPS'
 } as const;
 
 export type ContractErrorName =

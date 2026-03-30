@@ -17,7 +17,8 @@ import {
 import type {
   CollectionMintSnapshot,
   CollectionMintStatus,
-  ContractConfig
+  ContractConfig,
+  InscriptionFeeQuote
 } from './types.js';
 
 export class SdkSetupError extends Error {
@@ -75,6 +76,13 @@ export type BoundXtrataReadClient = {
   getChunkBatch: (id: bigint, indexes: bigint[]) => Promise<(Uint8Array | null)[]>;
   getUploadState: (expectedHash: Uint8Array, owner?: string) => Promise<ReturnType<XtrataClient['getUploadState']> extends Promise<infer T> ? T : never>;
   getIdByHash: (expectedHash: Uint8Array) => Promise<bigint | null>;
+  quoteInscriptionFee: (params: {
+    payer?: string;
+    caller?: string | null;
+    totalSize: bigint;
+    totalChunks: bigint;
+    mode: 'staged' | 'single-tx';
+  }) => Promise<InscriptionFeeQuote>;
   getMintOrigin: (id: bigint) => Promise<string | null>;
   getPendingChunk: (expectedHash: Uint8Array, index: bigint, creator?: string) => Promise<Uint8Array | null>;
   getTokenSnapshot: (id: bigint) => Promise<{
@@ -121,6 +129,17 @@ export const createXtrataReadClient = (
     getUploadState: (expectedHash, owner) =>
       raw.getUploadState(expectedHash, owner ?? senderAddress, senderAddress),
     getIdByHash: (expectedHash) => raw.getIdByHash(expectedHash, senderAddress),
+    quoteInscriptionFee: (quote) =>
+      raw.quoteInscriptionFee(
+        {
+          payer: quote.payer ?? senderAddress,
+          caller: quote.caller ?? null,
+          totalSize: quote.totalSize,
+          totalChunks: quote.totalChunks,
+          mode: quote.mode
+        },
+        senderAddress
+      ),
     getMintOrigin: (id) => raw.getMintOrigin(id, senderAddress),
     getPendingChunk: (expectedHash, index, creator) =>
       raw.getPendingChunk(expectedHash, index, senderAddress, creator),

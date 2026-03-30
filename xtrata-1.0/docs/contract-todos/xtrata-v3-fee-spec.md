@@ -1,8 +1,8 @@
 # xtrata v3 Fee Spec
 
 ## Scope
-- Working spec for the next core fee model.
-- Assumes the next core also drops on-chain dedupe and adds a core-native single-tx mint path.
+- Working spec for the `xtrata-v3.0.0` fee model.
+- Assumes the v3 core drops on-chain dedupe and adds a core-native single-tx mint path.
 - Focus here is protocol fee calculation and fee policy resolution, not mining fees.
 
 ## Goals
@@ -37,6 +37,13 @@
 - `upload-byte-fee-unit: uint`
 - `extra-batch-fee-unit: uint`
 
+### Current contract bounds
+- `FEE-MIN = u1` (`0.000001 STX`)
+- `FEE-MAX = u1000000` (`1.0 STX`)
+- Fee updates remain bounded per transaction:
+  - increase: at most `2x`
+  - decrease: at most `10x`
+
 ### Fee interpretation
 - `upload-byte-fee-unit` means "protocol fee charged per full 16,384 bytes of payload".
 - Actual upload size fee is:
@@ -51,6 +58,10 @@
 - `single-tx-base-fee = single-tx-fee-unit`
 - `default-total(staged) = staged-base-fee + size-fee + extra-batch-fee`
 - `default-total(single-tx) = single-tx-base-fee + size-fee + extra-batch-fee`
+
+Implementation note:
+- In the live v3 contract, the single-tx path is capped at `<= 50` chunks, so
+  `extra-batch-fee` is normally `0` for valid direct single-tx mints.
 
 ## Fee policy overrides
 - Use basis points so the same mechanism covers full price, fractional discounts, and free minting.
@@ -110,7 +121,7 @@ This avoids per-component rounding drift and makes policy behavior easy to expla
 - `get-caller-fee-bps(caller)`
 
 ## Quote API
-- Add an explicit quote read-only. Do not keep the app on `get-fee-unit()` heuristics.
+- Use an explicit quote read-only. Do not keep the app on `get-fee-unit()` heuristics.
 
 ### Recommended signature
 - `quote-inscription-fee(payer, caller, total-size, total-chunks, mode)`
@@ -124,18 +135,19 @@ This avoids per-component rounding drift and makes policy behavior easy to expla
   - `u1 = staged`
   - `u2 = single-tx`
 
-### Recommended return shape
+### Implemented return shape
 - `resolved-bps: uint`
 - `policy-source: uint`
   - `u0 = default`
   - `u1 = caller`
   - `u2 = wallet`
-- `base-fee: uint`
+- `begin-fee: uint`
+- `seal-fee: uint`
+- `single-tx-fee: uint`
 - `size-fee: uint`
 - `extra-batches: uint`
 - `extra-batch-fee: uint`
-- `default-total: uint`
-- `final-total: uint`
+- `total-fee: uint`
 
 ### Validation rules
 - Reject `total-chunks == u0`.
@@ -174,7 +186,7 @@ This avoids per-component rounding drift and makes policy behavior easy to expla
 - Update docs and AI training material to stop describing fees as chunk-bucket pricing only.
 
 ## Recommendation
-- Base the next core fee model on:
+- Base the v3 core fee model on:
   - fixed 16KB chunking
   - byte-proportional upload fees
   - separate staged and single-tx fixed fees

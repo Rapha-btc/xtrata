@@ -6,6 +6,7 @@ describe('contract capabilities', () => {
     const capabilities = resolveContractCapabilities({ protocolVersion: '1.1.1' });
     expect(capabilities.version).toBe('1.1.1');
     expect(capabilities.feeModel).toBe('fee-unit');
+    expect(capabilities.supportsFeeQuote).toBe(false);
     expect(capabilities.supportsPause).toBe(true);
     expect(capabilities.supportsAdminReadOnly).toBe(true);
     expect(capabilities.supportsNextTokenId).toBe(true);
@@ -41,6 +42,8 @@ describe('contract capabilities', () => {
       contractName: 'xtrata-v3-0-0'
     });
     expect(capabilities.version).toBe('3.0.0');
+    expect(capabilities.feeModel).toBe('quote');
+    expect(capabilities.supportsFeeQuote).toBe(true);
     expect(capabilities.supportsMintedIndex).toBe(true);
   });
 

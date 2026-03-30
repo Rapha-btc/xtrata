@@ -8,9 +8,9 @@ transactions (direct key management or wallet adapter flow).
 Train an agent to execute Xtrata contract calls with correct typing, fees,
 ordering, confirmation gating, and verification across all supported mint paths:
 
-- single-item helper route:
-  - `mint-small-single-tx`
-  - `mint-small-single-tx-recursive`
+- single-item core-native single-tx route:
+  - `mint-single-tx`
+  - `mint-single-tx-recursive`
 - single-item staged route:
   - `begin-or-get`
   - `add-chunk-batch`
@@ -49,7 +49,7 @@ is not supported by the current contracts.
 3. Train chunking and incremental hash routines exactly.
 4. Train fee estimation and spend-cap post-conditions.
 5. Train route selection:
-   - helper only when there is one item, chunk count is `1..30`, helper deployment exists, and no staged upload state is active
+   - single-tx only when there is one item, chunk count is `1..50`, and no staged upload state is active
    - staged single-item flow otherwise
    - batch route for `2..50` non-recursive items
    - reject recursive batch plans and split them into individual recursive mints
@@ -64,12 +64,12 @@ is not supported by the current contracts.
 
 1. Preflight:
    - network/contract check
-   - `get-fee-unit`
+   - `quote-inscription-fee`
    - optional dedupe lookup
-   - helper availability check
+   - single-tx eligibility check
    - upload-state check
 2. Mint execution:
-   - helper single-tx path when eligible
+   - core-native single-tx path when eligible
    - otherwise begin -> staged uploads -> seal
 3. Verification:
    - tx success checks
@@ -108,7 +108,7 @@ is not supported by the current contracts.
 - Contract errors (`u100`..`u115` and collection-specific errors): deterministic remediation per code.
 - API/network errors: bounded retry with backoff and jitter.
 - Nonce conflicts: refresh nonce and continue sequence.
-- Post-condition abort: refresh `fee-unit`, rebuild tx caps.
+- Post-condition abort: refresh `quote-inscription-fee`, rebuild tx caps.
 - Invalid batch plan: fail fast on `>50` items, recursive dependencies, duplicate manifest entries, or collection default dependencies.
 
 ## Safety and production posture
@@ -117,7 +117,7 @@ is not supported by the current contracts.
 - Maintain conservative STX balance buffers before writes.
 - Keep immutable logs: tx IDs, expected hash, resolved token ID, and route used.
 - Promote from testnet to mainnet only after deterministic replay success.
-- Do not infer unsupported helper behavior. Multi-file helper minting does not exist today.
+- Do not infer unsupported single-tx behavior. Multi-file single-tx minting does not exist today.
 
 ## Companion references
 

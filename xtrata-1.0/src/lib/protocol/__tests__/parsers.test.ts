@@ -28,6 +28,7 @@ import {
   parseGetFeeRecipient,
   parseGetOwner,
   parseGetPendingChunk,
+  parseQuoteInscriptionFee,
   parseGetRoyaltyRecipient,
   parseIsPaused,
   parseGetSvgDataUri,
@@ -189,6 +190,34 @@ describe('contract parsers', () => {
       'SP2JXKMSH007NPYAQHKJPQMAQYAD90NQGTVJVQ02B'
     );
     expect(parseGetMintOrigin(noneCV())).toBeNull();
+  });
+
+  it('parses inscription fee quotes', () => {
+    const value = responseOkCV(
+      tupleCV({
+        'resolved-bps': uintCV(2_500),
+        'policy-source': uintCV(1),
+        'begin-fee': uintCV(10),
+        'seal-fee': uintCV(20),
+        'single-tx-fee': uintCV(30),
+        'size-fee': uintCV(4),
+        'extra-batches': uintCV(2),
+        'extra-batch-fee': uintCV(6),
+        'total-fee': uintCV(30)
+      })
+    );
+
+    expect(parseQuoteInscriptionFee(value)).toEqual({
+      resolvedBps: 2_500n,
+      policySource: 'caller',
+      beginFee: 10n,
+      sealFee: 20n,
+      singleTxFee: 30n,
+      sizeFee: 4n,
+      extraBatches: 2n,
+      extraBatchFee: 6n,
+      totalFee: 30n
+    });
   });
 
   it('parses optional chunks', () => {

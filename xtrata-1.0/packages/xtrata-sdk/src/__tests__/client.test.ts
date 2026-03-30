@@ -227,4 +227,60 @@ describe('sdk client', () => {
       `${contract.address}.xtrata-collection-mint-v1-5`
     );
   });
+
+  it('uses v3 fee quote reader when supported', async () => {
+    const caller: ReadOnlyCaller = {
+      callReadOnly: async (options: ReadOnlyCallOptions) => {
+        if (options.functionName === 'quote-inscription-fee') {
+          return responseOkCV(
+            tupleCV({
+              'resolved-bps': uintCV(10_000),
+              'policy-source': uintCV(2),
+              'begin-fee': uintCV(100),
+              'seal-fee': uintCV(140),
+              'single-tx-fee': uintCV(120),
+              'size-fee': uintCV(40),
+              'extra-batches': uintCV(1),
+              'extra-batch-fee': uintCV(20),
+              'total-fee': uintCV(120)
+            })
+          );
+        }
+        return responseOkCV(uintCV(0));
+      }
+    };
+
+    const client = createXtrataClient({
+      contract: {
+        address: contract.address,
+        contractName: 'xtrata-v3-0-0',
+        network: 'mainnet',
+        protocolVersion: '3.0.0'
+      },
+      caller,
+      apiBaseUrls: ['https://example.com']
+    });
+
+    await expect(
+      client.quoteInscriptionFee(
+        {
+          payer: contract.address,
+          totalSize: 16_384n,
+          totalChunks: 1n,
+          mode: 'single-tx'
+        },
+        contract.address
+      )
+    ).resolves.toEqual({
+      resolvedBps: 10_000n,
+      policySource: 'wallet',
+      beginFee: 100n,
+      sealFee: 140n,
+      singleTxFee: 120n,
+      sizeFee: 40n,
+      extraBatches: 1n,
+      extraBatchFee: 20n,
+      totalFee: 120n
+    });
+  });
 });

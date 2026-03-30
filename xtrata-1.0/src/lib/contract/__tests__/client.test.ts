@@ -3,6 +3,7 @@ import { StacksMainnet } from '@stacks/network';
 import {
   ClarityType,
   bufferCV,
+  noneCV,
   responseOkCV,
   someCV,
   standardPrincipalCV,
@@ -151,5 +152,55 @@ describe('xtrata contract client', () => {
       'get-minted-count',
       'get-minted-id'
     ]);
+  });
+
+  it('calls quote-inscription-fee for v3 contracts', async () => {
+    const calls: ReadOnlyCallOptions[] = [];
+    const caller: ReadOnlyCaller = {
+      callReadOnly: async (options) => {
+        calls.push(options);
+        return responseOkCV(
+          tupleCV({
+            'resolved-bps': uintCV(10_000),
+            'policy-source': uintCV(0),
+            'begin-fee': uintCV(100),
+            'seal-fee': uintCV(120),
+            'single-tx-fee': uintCV(80),
+            'size-fee': uintCV(20),
+            'extra-batches': uintCV(0),
+            'extra-batch-fee': uintCV(0),
+            'total-fee': uintCV(80)
+          })
+        );
+      }
+    };
+
+    const client = createXtrataClient({
+      contract: {
+        ...DEFAULT_CONTRACT,
+        contractName: 'xtrata-v3-0-0',
+        protocolVersion: '3.0.0'
+      },
+      caller
+    });
+
+    const quote = await client.quoteInscriptionFee(
+      {
+        payer: 'SP2JXKMSH007NPYAQHKJPQMAQYAD90NQGTVJVQ02B',
+        caller: null,
+        totalSize: 1024n,
+        totalChunks: 1n,
+        mode: 'single-tx'
+      },
+      'SP2JXKMSH007NPYAQHKJPQMAQYAD90NQGTVJVQ02B'
+    );
+
+    expect(client.supportsFeeQuote).toBe(true);
+    expect(quote.totalFee).toBe(80n);
+    expect(quote.policySource).toBe('default');
+    expect(calls).toHaveLength(1);
+    expect(calls[0].functionName).toBe('quote-inscription-fee');
+    expect(calls[0].functionArgs[1]).toEqual(noneCV());
+    expect(calls[0].functionArgs[4].type).toBe(ClarityType.UInt);
   });
 });

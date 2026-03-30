@@ -14,6 +14,7 @@ import {
 import {
   ContractCallError,
   CONTRACT_ERROR_CODES,
+  InscriptionFeeQuote,
   InscriptionMeta,
   UploadState
 } from './types';
@@ -135,6 +136,49 @@ const parseUploadStateTuple = (tupleValue: ClarityValue, context: string) => {
   } satisfies UploadState;
 };
 
+const parseQuotePolicySource = (value: bigint, context: string) => {
+  if (value === 0n) {
+    return 'default';
+  }
+  if (value === 1n) {
+    return 'caller';
+  }
+  if (value === 2n) {
+    return 'wallet';
+  }
+  throw new Error(`Unsupported ${context}: ${value.toString()}`);
+};
+
+const parseInscriptionFeeQuoteTuple = (tupleValue: ClarityValue, context: string) => {
+  const tuple = expectTuple(tupleValue, context);
+  return {
+    resolvedBps: expectUInt(
+      getTupleValue(tuple, 'resolved-bps', context),
+      `${context}.resolved-bps`
+    ),
+    policySource: parseQuotePolicySource(
+      expectUInt(getTupleValue(tuple, 'policy-source', context), `${context}.policy-source`),
+      `${context}.policy-source`
+    ),
+    beginFee: expectUInt(getTupleValue(tuple, 'begin-fee', context), `${context}.begin-fee`),
+    sealFee: expectUInt(getTupleValue(tuple, 'seal-fee', context), `${context}.seal-fee`),
+    singleTxFee: expectUInt(
+      getTupleValue(tuple, 'single-tx-fee', context),
+      `${context}.single-tx-fee`
+    ),
+    sizeFee: expectUInt(getTupleValue(tuple, 'size-fee', context), `${context}.size-fee`),
+    extraBatches: expectUInt(
+      getTupleValue(tuple, 'extra-batches', context),
+      `${context}.extra-batches`
+    ),
+    extraBatchFee: expectUInt(
+      getTupleValue(tuple, 'extra-batch-fee', context),
+      `${context}.extra-batch-fee`
+    ),
+    totalFee: expectUInt(getTupleValue(tuple, 'total-fee', context), `${context}.total-fee`)
+  } satisfies InscriptionFeeQuote;
+};
+
 export const parseGetLastTokenId = (value: ClarityValue) =>
   expectUInt(expectContractOk(value, 'get-last-token-id'), 'get-last-token-id');
 
@@ -228,6 +272,12 @@ export const parseGetMintOrigin = (value: ClarityValue) =>
 
 export const parseGetPendingChunk = (value: ClarityValue) =>
   parseOptionalBuffer(value, 'get-pending-chunk');
+
+export const parseQuoteInscriptionFee = (value: ClarityValue) =>
+  parseInscriptionFeeQuoteTuple(
+    expectContractOk(value, 'quote-inscription-fee'),
+    'quote-inscription-fee'
+  );
 
 export const parseContractError = (value: ClarityValue) => {
   return decodeContractError(value, 'contract-error');

@@ -17,13 +17,27 @@ const AI_SKILLS_GENERIC_DOC = path.join(REPO_ROOT, 'docs', 'ai-skills', 'generic
 
 const PUBLIC_FUNCTIONS = [
   'transfer',
+  'set-fee-recipient',
   'set-royalty-recipient',
+  'set-staged-begin-fee-unit',
+  'set-staged-seal-fee-unit',
+  'set-single-tx-fee-unit',
+  'set-upload-byte-fee-unit',
+  'set-extra-batch-fee-unit',
   'set-fee-unit',
+  'set-wallet-fee-bps',
+  'clear-wallet-fee-bps',
+  'set-wallet-fee-bps-batch',
+  'set-caller-fee-bps',
+  'clear-caller-fee-bps',
+  'set-caller-fee-bps-batch',
   'set-next-id',
   'set-allowed-caller',
   'set-paused',
   'transfer-contract-ownership',
   'migrate-from-v1',
+  'migrate-from-v2-1-0',
+  'migrate-from-v2-1-1',
   'begin-or-get',
   'begin-inscription',
   'abandon-upload',
@@ -31,7 +45,11 @@ const PUBLIC_FUNCTIONS = [
   'add-chunk-batch',
   'seal-inscription',
   'seal-inscription-batch',
-  'seal-recursive'
+  'seal-recursive',
+  'seal-with-relationships',
+  'mint-single-tx',
+  'mint-single-tx-recursive',
+  'mint-single-tx-with-relationships'
 ] as const;
 
 const READ_ONLY_FUNCTIONS = [
@@ -57,14 +75,27 @@ const READ_ONLY_FUNCTIONS = [
   'get-dependencies',
   'get-upload-state',
   'get-pending-chunk',
+  'get-migration-source',
+  'get-mint-origin',
+  'quote-inscription-fee',
   'get-admin',
   'is-allowed-caller',
+  'get-fee-recipient',
   'get-royalty-recipient',
   'get-fee-unit',
+  'get-begin-fee-unit',
+  'get-upload-chunk-fee-unit',
+  'get-upload-batch-fee-unit',
+  'get-seal-fee-unit',
+  'get-single-tx-fee-unit',
+  'get-upload-byte-fee-unit',
+  'get-extra-batch-fee-unit',
+  'get-wallet-fee-bps',
+  'get-caller-fee-bps',
   'is-paused'
 ] as const;
 
-const ERROR_CODES = ['u100', 'u101', 'u102', 'u103', 'u107', 'u109', 'u110', 'u111', 'u112', 'u113', 'u114', 'u115'] as const;
+const ERROR_CODES = ['u100', 'u101', 'u102', 'u103', 'u107', 'u109', 'u110', 'u111', 'u112', 'u113', 'u114', 'u115', 'u116', 'u117', 'u118', 'u119'] as const;
 
 describe('XTRATA_AGENT_SKILL package', () => {
   it('ships the skill file and companion scripts', () => {
@@ -86,23 +117,24 @@ describe('XTRATA_AGENT_SKILL package', () => {
     expect(docsIndex).toContain('XTRATA_AGENT_SKILL.md');
     expect(docsIndex).toContain('https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/XTRATA_AGENT_SKILL.md');
     expect(docsIndex).toContain('https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/scripts/xtrata-mint-example.js');
-    expect(docsIndex).toContain('helper-route single-tx minting');
+    expect(docsIndex).toContain('core-native single-tx minting');
 
     const inscribeDoc = readFileSync(AI_SKILLS_INSCRIBE_DOC, 'utf8');
-    expect(inscribeDoc).toContain('mint-small-single-tx');
-    expect(inscribeDoc).toContain('mint-small-single-tx-recursive');
+    expect(inscribeDoc).toContain('mint-single-tx');
+    expect(inscribeDoc).toContain('mint-single-tx-recursive');
     expect(inscribeDoc).toContain('get-upload-state');
     expect(inscribeDoc).toContain('principalCV(senderAddress)');
+    expect(inscribeDoc).toContain('quote-inscription-fee');
 
     const aibtcDoc = readFileSync(AI_SKILLS_AIBTC_DOC, 'utf8');
-    expect(aibtcDoc).toContain('mint-small-single-tx');
-    expect(aibtcDoc).toContain('mint-small-single-tx-recursive');
+    expect(aibtcDoc).toContain('mint-single-tx');
+    expect(aibtcDoc).toContain('mint-single-tx-recursive');
     expect(aibtcDoc).toContain('get-upload-state(expected-hash, owner)');
     expect(aibtcDoc).toContain('https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/XTRATA_AGENT_SKILL.md');
     expect(aibtcDoc).toContain('https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/scripts/xtrata-transfer-example.js');
 
     const genericDoc = readFileSync(AI_SKILLS_GENERIC_DOC, 'utf8');
-    expect(genericDoc).toContain('mint-small-single-tx');
+    expect(genericDoc).toContain('mint-single-tx');
     expect(genericDoc).toContain('upload-state check');
     expect(genericDoc).toContain('https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/ai-skills/README.md');
     expect(genericDoc).toContain('https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/scripts/xtrata-query-example.js');
@@ -112,12 +144,11 @@ describe('XTRATA_AGENT_SKILL package', () => {
     const content = readFileSync(SKILL_FILE, 'utf8');
 
     expect(content).toContain('SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X');
-    expect(content).toContain('xtrata-v2-1-0');
-    expect(content).toContain('xtrata-small-mint-v1-0');
-    expect(content).toContain('SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0');
-    expect(content).toContain('fee-unit * (1 + ceil(total_chunks / 50))');
-    expect(content).toContain('mint-small-single-tx');
-    expect(content).toContain('mint-small-single-tx-recursive');
+    expect(content).toContain('xtrata-v3-0-0');
+    expect(content).toContain('SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-0-0');
+    expect(content).toContain('quote-inscription-fee');
+    expect(content).toContain('mint-single-tx');
+    expect(content).toContain('mint-single-tx-recursive');
     expect(content).toContain('PostConditionMode.Deny');
     expect(content).toContain('TX_DELAY_MS = 5000');
   });
@@ -156,8 +187,8 @@ describe('XTRATA_AGENT_SKILL package', () => {
   it('companion scripts include required call flow and network controls', () => {
     const mint = readFileSync(MINT_SCRIPT, 'utf8');
     expect(mint).toContain('XTRATA_NETWORK');
-    expect(mint).toContain('XTRATA_USE_SMALL_MINT_HELPER');
-    expect(mint).toContain('mint-small-single-tx');
+    expect(mint).toContain('quote-inscription-fee');
+    expect(mint).toContain('mint-single-tx');
     expect(mint).toContain('begin-or-get');
     expect(mint).toContain('add-chunk-batch');
     expect(mint).toContain('seal-recursive');
@@ -172,7 +203,7 @@ describe('XTRATA_AGENT_SKILL package', () => {
     expect(query).toContain('XTRATA_NETWORK');
     expect(query).toContain('get-inscription-meta');
     expect(query).toContain('get-chunk-batch');
-    expect(query).toContain('get-fee-unit');
+    expect(query).toContain('quote-inscription-fee');
   });
 
   it('companion scripts parse in Node without syntax errors', () => {

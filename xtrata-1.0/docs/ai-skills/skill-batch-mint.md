@@ -6,7 +6,7 @@ description: >
   the collection staged upload plus `mint-seal-batch` flow. Excludes recursive
   batch minting because the current contracts do not support it.
 version: "1.0"
-contract: SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0
+contract: SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-0-0
 ---
 
 # Xtrata Batch Mint Skill
@@ -22,18 +22,18 @@ Supported:
 
 Not supported:
 - Recursive batch minting. `seal-inscription-batch` does not accept dependencies.
-- Multi-file helper minting. `mint-small-single-tx` is still single-item only.
+- Multi-file single-tx minting. `mint-single-tx` is still single-item only.
 
 ## 2. Contract Facts
 
 | Key | Value |
 |-----|-------|
-| Core contract | `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0` |
+| Core contract | `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-0-0` |
 | Batch seal function | `seal-inscription-batch` |
 | Collection batch function | `mint-seal-batch` |
 | Upload batch size | max `50` chunks per `add-chunk-batch` / `mint-add-chunk-batch` |
 | Final batch size | max `50` items per `seal-inscription-batch` / `mint-seal-batch` |
-| Small helper | `mint-small-single-tx` / `mint-small-single-tx-recursive` are single-item only |
+| Single-tx path | `mint-single-tx` / `mint-single-tx-recursive` are single-item only |
 | Recursive limit | batch flow is non-recursive only |
 
 A batch job may contain small files, large files, or a mix. The critical rule is
@@ -70,8 +70,8 @@ Before any write:
 1. Read every file.
 2. Chunk each file into `16,384` byte slices.
 3. Compute the incremental Xtrata hash for each file.
-4. Run `get-id-by-hash` for each file and remove already-minted duplicates.
-5. Fetch `get-fee-unit` from the core contract.
+4. Run `get-id-by-hash` for each file and flag possible duplicate content.
+5. Quote fees from the core contract with `quote-inscription-fee`.
 6. Build a deterministic execution plan.
 7. Present the cost and route summary to the user.
 8. Proceed only after explicit confirmation.
@@ -84,14 +84,13 @@ Batch Mint Plan
 Route: core batch seal
 Requested items: 12
 New unique items: 10
-Skipped duplicates: 2
+Skipped advisory duplicates: 2
 Final seal tx count: 1
 Upload tx count: 18
 
 Protocol fees
 -------------
-Begin: per item, fee-unit each
-Seal: per item, fee-unit * (1 + ceil(chunks/50))
+Begin/seal: quote per item from `quote-inscription-fee`
 Collection mint price: n/a
 Network fees: estimated per staged tx plus one final batch seal tx
 ```
@@ -106,8 +105,8 @@ that exposes:
 - `mint-add-chunk-batch`
 - `mint-seal-batch`
 
-Do not use a helper route for multi-file jobs. Even if every file is tiny, the
-current helper contracts only compress one item into one transaction.
+Do not use the single-tx route for multi-file jobs. Even if every file is tiny, the
+current single-tx path only compresses one item into one transaction.
 
 ## 6. Core Batch Flow
 
@@ -155,9 +154,9 @@ Operational warning:
 
 ## 8. Fee Model
 
-Each item still pays the same core protocol economics as an individual mint:
-- begin fee = `fee-unit`
-- seal fee = `fee-unit * (1 + ceil(totalChunks / 50))`
+Each item still pays the same core protocol economics as an individual mint, but
+in `v3` the correct source of truth is `quote-inscription-fee`, not
+`get-fee-unit` heuristics.
 
 Batching reduces the number of final seal transactions, but it does not erase the
 per-item protocol fee math.

@@ -17,15 +17,11 @@ Xtrata is a contract-native inscription protocol on Stacks (Bitcoin L2). Data is
 
 Current production contract:
 - Address: `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X`
-- Contract name: `xtrata-v2-1-0`
-- Full ID: `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0`
+- Contract name: `xtrata-v3-0-0`
+- Full ID: `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-0-0`
 
-Small-file helper (mainnet default):
-- Address: `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X`
-- Contract name: `xtrata-small-mint-v1-0`
-- Full ID: `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-small-mint-v1-0`
-
-Legacy (read compatibility for migrated chunk data):
+Legacy compatibility line:
+- `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0`
 - `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1`
 
 ## Prerequisites
@@ -48,16 +44,16 @@ npm install @stacks/transactions @stacks/network @noble/hashes
 
 ## Core Concepts
 1. There are two valid mint routes:
-   - Small helper route: `mint-small-single-tx` or `mint-small-single-tx-recursive`
+   - Core-native single-tx route: `mint-single-tx`, `mint-single-tx-recursive`, or `mint-single-tx-with-relationships`
    - Standard staged route: `begin-or-get` (or `begin-inscription`) -> one or more `add-chunk-batch` -> `seal-inscription` (or `seal-recursive` / `seal-inscription-batch`)
 2. Chunking is fixed at 16,384 bytes. Maximum file size is 32 MiB (2,048 chunks).
 3. Hashing is incremental SHA-256 chain hashing, not a single hash of full bytes.
-4. Dedupe is native: `HashToId` guarantees one canonical token per final hash.
+4. On-chain dedupe is no longer enforced in `v3`. `get-id-by-hash` is advisory first-seen lookup only, so agents should preflight it to avoid accidental duplicates rather than assume the contract will reject them.
 5. Default route selection for first-party-compatible agents:
-   - Use helper route only when helper deployment is available, chunk count is `1..30`, and there is no active upload session to resume.
-   - Use staged route for `>30` chunks, legacy core contracts, or whenever a partial upload already exists.
+   - Use core-native single-tx only when chunk count is `1..50` and there is no active staged upload to resume.
+   - Use staged route for `>50` chunks or whenever a partial upload already exists.
 6. Uploads on the staged route are resumable via `UploadState`; sessions expire after 4,320 blocks.
-7. Helper-route retries restart the entire single call; staged-route retries can resume from the next missing chunk.
+7. Single-tx retries restart the entire single call; staged-route retries can resume from the next missing chunk.
 8. Always use `PostConditionMode.Deny` for fee-paying calls.
 9. Transfers and reads still work while writes are paused.
 
@@ -70,10 +66,10 @@ npm install @stacks/transactions @stacks/network @noble/hashes
 - Testnet fallback: `https://api.testnet.hiro.so`
 
 ### Contract IDs
-- Mainnet (active): `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0`
-- Mainnet (small helper): `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-small-mint-v1-0`
-- Mainnet (legacy): `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1`
-- Testnet: deploy from `contracts/live/xtrata-v2.1.0.clar` (no canonical shared testnet deployment is pinned in this repository).
+- Mainnet (active): `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v3-0-0`
+- Mainnet (legacy migration source): `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0`
+- Mainnet (legacy migration source): `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1`
+- Testnet: deploy from `contracts/live/xtrata-v3.0.0.clar` (no canonical shared testnet deployment is pinned in this repository).
 
 ### Constants
 | Name | Value | Meaning |
@@ -83,8 +79,10 @@ npm install @stacks/transactions @stacks/network @noble/hashes
 | `CHUNK-SIZE` | `u16384` | Fixed chunk size |
 | `MAX-TOTAL-CHUNKS` | `u2048` | Max chunks per inscription |
 | `MAX-TOTAL-SIZE` | `u33554432` | Max bytes (32 MiB) |
-| `FEE-MIN` | `u1000` | 0.001 STX |
+| `FEE-MIN` | `u1` | 0.000001 STX |
 | `FEE-MAX` | `u1000000` | 1.0 STX |
+| `MODE-STAGED` | `u1` | Quote mode for staged uploads |
+| `MODE-SINGLE-TX` | `u2` | Quote mode for core-native single-tx mints |
 | `UPLOAD-EXPIRY-BLOCKS` | `u4320` | ~30 days |
 
 ### Error Codes
@@ -100,8 +98,12 @@ npm install @stacks/transactions @stacks/network @noble/hashes
 | `u111` | `ERR-DEPENDENCY-MISSING` | Recursive dependency missing |
 | `u112` | `ERR-EXPIRED` | Upload session expired |
 | `u113` | `ERR-NOT-EXPIRED` | Purge attempted before expiry |
-| `u114` | `ERR-DUPLICATE` | Hash already sealed |
+| `u114` | `ERR-DUPLICATE` | Duplicate batch item or occupied destination id |
 | `u115` | `ERR-ALREADY-SET` | One-time setter already used |
+| `u116` | `ERR-PARENT-MISSING` | Parent relationship target missing |
+| `u117` | `ERR-PARENT-NOT-OWNED` | Parent relationship target not owned by caller |
+| `u118` | `ERR-INVALID-MODE` | Unsupported quote mode |
+| `u119` | `ERR-INVALID-BPS` | Invalid fee basis points |
 
 ## Data Model
 
@@ -170,14 +172,14 @@ function computeExpectedHash(chunks) {
 }
 ```
 
-### Deduplication
+### Advisory Hash Lookup
 - Read-only lookup: `get-id-by-hash(hash)` -> `(optional uint)`
 - Atomic begin+dedupe path: `begin-or-get(...)`
-  - `(ok (some id))` -> content already sealed
+  - `(ok (some id))` -> advisory first-seen id already exists
   - `(ok none)` -> new/resumed upload session
-- Helper dedupe path: `mint-small-single-tx(...)` and `mint-small-single-tx-recursive(...)`
-  - `(ok { token-id: id, existed: true })` -> canonical token already existed
-  - `(ok { token-id: id, existed: false })` -> helper minted a new token through core
+
+Agents should still do a hash preflight check and require explicit user intent
+before minting content that matches an existing advisory id.
 
 ### UploadState Lifecycle
 1. Create/resume: `begin-or-get` or `begin-inscription`
@@ -197,19 +199,33 @@ function computeExpectedHash(chunks) {
 - Only use `abandon-upload` when the upload is truly irrecoverable (e.g., wrong
   data was uploaded and the running hash cannot be corrected).
 
-## Complete Contract API (xtrata-v2-1-0)
+## Complete Contract API (xtrata-v3-0-0)
 
 ### Public Functions
 | Function | Parameters (exact types) | Returns | Notes |
 |---|---|---|---|
 | `transfer` | `id: uint, sender: principal, recipient: principal` | `(response bool uint)` | SIP-009 transfer; works while paused |
-| `set-royalty-recipient` | `recipient: principal` | `(response bool uint)` | Admin only |
-| `set-fee-unit` | `new-fee: uint` | `(response bool uint)` | Admin only; bounded by min/max and relative change |
+| `set-fee-recipient` | `recipient: principal` | `(response bool uint)` | Admin only |
+| `set-royalty-recipient` | `recipient: principal` | `(response bool uint)` | Compatibility alias for `set-fee-recipient` |
+| `set-staged-begin-fee-unit` | `new-fee: uint` | `(response bool uint)` | Admin only |
+| `set-staged-seal-fee-unit` | `new-fee: uint` | `(response bool uint)` | Admin only |
+| `set-single-tx-fee-unit` | `new-fee: uint` | `(response bool uint)` | Admin only |
+| `set-upload-byte-fee-unit` | `new-fee: uint` | `(response bool uint)` | Admin only |
+| `set-extra-batch-fee-unit` | `new-fee: uint` | `(response bool uint)` | Admin only |
+| `set-fee-unit` | `new-fee: uint` | `(response bool uint)` | Compatibility setter that updates the v3 fee profile |
+| `set-wallet-fee-bps` | `wallet: principal, bps: uint` | `(response bool uint)` | Admin only |
+| `clear-wallet-fee-bps` | `wallet: principal` | `(response bool uint)` | Admin only |
+| `set-wallet-fee-bps-batch` | `entries: (list 200 { wallet: principal, bps: uint })` | `(response bool uint)` | Admin only |
+| `set-caller-fee-bps` | `caller: principal, bps: uint` | `(response bool uint)` | Admin only |
+| `clear-caller-fee-bps` | `caller: principal` | `(response bool uint)` | Admin only |
+| `set-caller-fee-bps-batch` | `entries: (list 200 { caller: principal, bps: uint })` | `(response bool uint)` | Admin only |
 | `set-next-id` | `value: uint` | `(response bool uint)` | Admin only; one-time |
 | `set-allowed-caller` | `caller: principal, allowed: bool` | `(response bool uint)` | Admin only |
 | `set-paused` | `value: bool` | `(response bool uint)` | Admin only |
 | `transfer-contract-ownership` | `new-owner: principal` | `(response bool uint)` | Admin only |
 | `migrate-from-v1` | `token-id: uint` | `(response uint uint)` | Migrates v1 token into v2 |
+| `migrate-from-v2-1-0` | `token-id: uint` | `(response uint uint)` | Migrates v2.1.0 token into v3 |
+| `migrate-from-v2-1-1` | `token-id: uint` | `(response uint uint)` | Migrates v2.1.1 token into v3 |
 | `begin-or-get` | `expected-hash: (buff 32), mime: (string-ascii 64), total-size: uint, total-chunks: uint` | `(response (optional uint) uint)` | Recommended begin path |
 | `begin-inscription` | `expected-hash: (buff 32), mime: (string-ascii 64), total-size: uint, total-chunks: uint` | `(response bool uint)` | Resume-safe; rejects duplicates |
 | `abandon-upload` | `expected-hash: (buff 32)` | `(response bool uint)` | Marks session expired for purge |
@@ -218,6 +234,10 @@ function computeExpectedHash(chunks) {
 | `seal-inscription` | `expected-hash: (buff 32), token-uri-string: (string-ascii 256)` | `(response uint uint)` | Mints token |
 | `seal-inscription-batch` | `items: (list 50 { hash: (buff 32), token-uri: (string-ascii 256) })` | `(response { start: uint, count: uint } uint)` | Batch seal |
 | `seal-recursive` | `expected-hash: (buff 32), token-uri-string: (string-ascii 256), dependencies: (list 50 uint)` | `(response uint uint)` | Seal with dependencies |
+| `seal-with-relationships` | `expected-hash: (buff 32), token-uri-string: (string-ascii 256), dependencies: (list 50 uint), parents: (list 50 uint)` | `(response uint uint)` | Seal with dependencies and parent links |
+| `mint-single-tx` | `expected-hash: (buff 32), mime: (string-ascii 64), total-size: uint, chunks: (list 50 (buff 16384)), token-uri-string: (string-ascii 256)` | `(response uint uint)` | Core-native single-call mint |
+| `mint-single-tx-recursive` | `expected-hash: (buff 32), mime: (string-ascii 64), total-size: uint, chunks: (list 50 (buff 16384)), token-uri-string: (string-ascii 256), dependencies: (list 50 uint)` | `(response uint uint)` | Single-call recursive mint |
+| `mint-single-tx-with-relationships` | `expected-hash: (buff 32), mime: (string-ascii 64), total-size: uint, chunks: (list 50 (buff 16384)), token-uri-string: (string-ascii 256), dependencies: (list 50 uint), parents: (list 50 uint)` | `(response uint uint)` | Single-call mint with dependencies and parent links |
 
 ### Read-Only Functions
 | Function | Parameters (exact types) | Returns |
@@ -244,33 +264,24 @@ function computeExpectedHash(chunks) {
 | `get-dependencies` | `id: uint` | `(list 50 uint)` |
 | `get-upload-state` | `expected-hash: (buff 32), owner: principal` | `(optional { mime-type: (string-ascii 64), total-size: uint, total-chunks: uint, current-index: uint, running-hash: (buff 32), last-touched: uint, purge-index: uint })` |
 | `get-pending-chunk` | `hash: (buff 32), creator: principal, index: uint` | `(optional (buff 16384))` |
+| `get-migration-source` | `id: uint` | `(optional { source-contract: principal, source-id: uint })` |
+| `get-mint-origin` | `id: uint` | `(optional principal)` |
+| `quote-inscription-fee` | `payer: principal, caller: (optional principal), total-size: uint, total-chunks: uint, mode: uint` | `(response { resolved-bps: uint, policy-source: uint, begin-fee: uint, seal-fee: uint, single-tx-fee: uint, size-fee: uint, extra-batches: uint, extra-batch-fee: uint, total-fee: uint } uint)` |
 | `get-admin` | none | `(response principal uint)` |
 | `is-allowed-caller` | `caller: principal` | `(response bool uint)` |
+| `get-fee-recipient` | none | `(response principal uint)` |
 | `get-royalty-recipient` | none | `(response principal uint)` |
 | `get-fee-unit` | none | `(response uint uint)` |
+| `get-begin-fee-unit` | none | `(response uint uint)` |
+| `get-upload-chunk-fee-unit` | none | `(response uint uint)` |
+| `get-upload-batch-fee-unit` | none | `(response uint uint)` |
+| `get-seal-fee-unit` | none | `(response uint uint)` |
+| `get-single-tx-fee-unit` | none | `(response uint uint)` |
+| `get-upload-byte-fee-unit` | none | `(response uint uint)` |
+| `get-extra-batch-fee-unit` | none | `(response uint uint)` |
+| `get-wallet-fee-bps` | `wallet: principal` | `(optional uint)` |
+| `get-caller-fee-bps` | `caller: principal` | `(optional uint)` |
 | `is-paused` | none | `(response bool uint)` |
-
-## Small Helper Contract API (`xtrata-small-mint-v1-0`)
-
-Use this helper only for small uploads that fit within `30` chunks and do not
-need staged resume behavior.
-
-### Public Functions
-| Function | Parameters (exact types) | Returns | Notes |
-|---|---|---|---|
-| `mint-small-single-tx` | `xtrata-contract: <xtrata-trait>, expected-hash: (buff 32), mime: (string-ascii 64), total-size: uint, chunks: (list 50 (buff 16384)), token-uri-string: (string-ascii 256)` | `(response { token-id: uint, existed: bool } uint)` | Single-call begin + upload + seal |
-| `mint-small-single-tx-recursive` | `xtrata-contract: <xtrata-trait>, expected-hash: (buff 32), mime: (string-ascii 64), total-size: uint, chunks: (list 50 (buff 16384)), token-uri-string: (string-ascii 256), dependencies: (list 50 uint)` | `(response { token-id: uint, existed: bool } uint)` | Single-call recursive seal |
-| `set-paused` | `value: bool` | `(response bool uint)` | Admin only |
-| `set-core-contract` | `new-core: principal` | `(response bool uint)` | Admin only |
-| `transfer-contract-ownership` | `new-owner: principal` | `(response bool uint)` | Admin only |
-
-### Read-Only Functions
-| Function | Parameters (exact types) | Returns |
-|---|---|---|
-| `get-owner` | none | `(response principal uint)` |
-| `is-paused` | none | `(response bool uint)` |
-| `get-core-contract` | none | `(response principal uint)` |
-| `get-max-small-chunks` | none | `(response uint uint)` |
 
 ## Transaction Construction
 
@@ -304,21 +315,34 @@ const network = new StacksMainnet();
 // const network = new StacksMainnet({ url: 'https://stacks-node-api.mainnet.stacks.co' });
 
 const CONTRACT_ADDRESS = 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X';
-const CONTRACT_NAME = 'xtrata-v2-1-0';
+const CONTRACT_NAME = 'xtrata-v3-0-0';
 const TX_DELAY_MS = 5000;
 ```
 
 ### Fee Model
-- `begin_fee = fee-unit`
-- `seal_fee = fee-unit * (1 + ceil(total_chunks / 50))`
-- Default `fee-unit`: `100_000` microSTX (0.1 STX)
+- `v3` should be quoted with `quote-inscription-fee`, not derived from `get-fee-unit()` heuristics.
+- staged route total = `begin-fee + seal-fee`
+- single-tx route total = `single-tx-fee`
+- returned quote already includes size fee, extra batch fee, and fee-policy overrides
 
 ```javascript
-export function estimateFees(totalChunks, feeUnitMicroStx = 100_000n) {
-  const batches = (totalChunks + 49n) / 50n;
-  const beginFee = feeUnitMicroStx;
-  const sealFee = feeUnitMicroStx * (1n + batches);
-  return { beginFee, sealFee, totalFee: beginFee + sealFee };
+export async function quoteFees({ payer, caller = null, totalSize, totalChunks, mode, senderAddress, network }) {
+  const result = await callReadOnlyFunction({
+    contractAddress: CONTRACT_ADDRESS,
+    contractName: CONTRACT_NAME,
+    functionName: 'quote-inscription-fee',
+    functionArgs: [
+      principalCV(payer),
+      caller ? someCV(principalCV(caller)) : noneCV(),
+      uintCV(totalSize),
+      uintCV(totalChunks),
+      uintCV(mode === 'single-tx' ? 2n : 1n)
+    ],
+    senderAddress,
+    network
+  });
+
+  return cvToJSON(result);
 }
 ```
 
@@ -528,17 +552,22 @@ export async function broadcastTx(transaction, network) {
 
 ## Workflows
 
+Legacy note:
+- Some helper-contract examples below are retained for older `v2` compatibility
+  and MCP troubleshooting history.
+- For active `v3` automation, prefer `quote-inscription-fee` plus the core-native
+  `mint-single-tx*` functions over `xtrata-small-mint-v1-0`.
+
 ### Workflow 1: Route Selection
-- Use the helper route when all of the following are true:
-  - helper deployment is available
-  - `chunks.length` is between `1` and `30`
+- Use the core-native single-tx route when all of the following are true:
+  - `chunks.length` is between `1` and `50`
   - there is no existing staged upload to resume for `{ expected-hash, owner }`
 - Use the staged route for everything else.
 - If an agent is driving the first-party app or wallet flow instead of raw
-  contract calls, expect one wallet approval on the helper route and multiple
+  contract calls, expect one wallet approval on the single-tx route and multiple
   approvals (`begin`, upload batch txs, `seal`) on the staged route.
 
-### Workflow 1A: Small Mint via Helper (single transaction)
+### Workflow 1A: Core-Native Single-Tx Mint
 ```javascript
 import { sha256 } from '@noble/hashes/sha256';
 import {
@@ -546,7 +575,7 @@ import {
   broadcastTransaction,
   callReadOnlyFunction,
   bufferCV,
-  contractPrincipalCV,
+  noneCV,
   principalCV,
   uintCV,
   stringAsciiCV,
@@ -561,10 +590,8 @@ import { StacksMainnet } from '@stacks/network';
 
 const network = new StacksMainnet();
 const CONTRACT_ADDRESS = 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X';
-const CONTRACT_NAME = 'xtrata-v2-1-0';
-const HELPER_CONTRACT_ADDRESS = 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X';
-const HELPER_CONTRACT_NAME = 'xtrata-small-mint-v1-0';
-const MAX_SMALL_MINT_CHUNKS = 30;
+const CONTRACT_NAME = 'xtrata-v3-0-0';
+const MAX_SINGLE_TX_CHUNKS = 50;
 const TX_DELAY_MS = 5000;
 
 function chunkBytes(data) {
@@ -601,9 +628,25 @@ async function callReadOnly(functionName, functionArgs, senderAddress) {
   });
 }
 
-async function getFeeUnit(senderAddress) {
-  const r = await callReadOnly('get-fee-unit', [], senderAddress);
-  return BigInt(cvToJSON(r).value.value);
+async function quoteInscriptionFee(senderAddress, totalSize, totalChunks, mode) {
+  const r = await callReadOnly(
+    'quote-inscription-fee',
+    [
+      principalCV(senderAddress),
+      noneCV(),
+      uintCV(totalSize),
+      uintCV(totalChunks),
+      uintCV(mode === 'single-tx' ? 2n : 1n)
+    ],
+    senderAddress
+  );
+  const quote = cvToJSON(r).value.value;
+  return {
+    beginFee: BigInt(quote['begin-fee'].value),
+    sealFee: BigInt(quote['seal-fee'].value),
+    singleTxFee: BigInt(quote['single-tx-fee'].value),
+    totalFee: BigInt(quote['total-fee'].value)
+  };
 }
 
 async function getIdByHash(expectedHash, senderAddress) {
@@ -644,14 +687,19 @@ export async function inscribeFile({ fileData, mimeType, tokenUri, dependencies 
   const existing = await getIdByHash(expectedHash, senderAddress);
   if (existing !== null) return { tokenId: existing, alreadyExisted: true };
 
-  const feeUnit = await getFeeUnit(senderAddress);
   const uploadState = await getUploadState(expectedHash, senderAddress, senderAddress);
-  const canUseHelper =
+  const canUseSingleTx =
     chunks.length > 0 &&
-    chunks.length <= MAX_SMALL_MINT_CHUNKS &&
+    chunks.length <= MAX_SINGLE_TX_CHUNKS &&
     !uploadState.value;
+  const feeQuote = await quoteInscriptionFee(
+    senderAddress,
+    totalSize,
+    totalChunks,
+    canUseSingleTx ? 'single-tx' : 'staged'
+  );
 
-  if (!canUseHelper) {
+  if (!canUseSingleTx) {
     return inscribeFileStaged({
       chunks,
       expectedHash,
@@ -661,23 +709,20 @@ export async function inscribeFile({ fileData, mimeType, tokenUri, dependencies 
       dependencies,
       senderAddress,
       senderKey,
-      feeUnit
+      feeQuote
     });
   }
 
-  const sealFee = feeUnit * (1n + ((totalChunks + 49n) / 50n));
-  const spendCap = feeUnit + sealFee;
-  const helperTx = await makeContractCall({
-    contractAddress: HELPER_CONTRACT_ADDRESS,
-    contractName: HELPER_CONTRACT_NAME,
+  const mintTx = await makeContractCall({
+    contractAddress: CONTRACT_ADDRESS,
+    contractName: CONTRACT_NAME,
     functionName:
       dependencies.length > 0
-        ? 'mint-small-single-tx-recursive'
-        : 'mint-small-single-tx',
+        ? 'mint-single-tx-recursive'
+        : 'mint-single-tx',
     functionArgs:
       dependencies.length > 0
         ? [
-            contractPrincipalCV(CONTRACT_ADDRESS, CONTRACT_NAME),
             bufferCV(expectedHash),
             stringAsciiCV(mimeType),
             uintCV(totalSize),
@@ -686,7 +731,6 @@ export async function inscribeFile({ fileData, mimeType, tokenUri, dependencies 
             listCV(dependencies.map((id) => uintCV(id)))
           ]
         : [
-            contractPrincipalCV(CONTRACT_ADDRESS, CONTRACT_NAME),
             bufferCV(expectedHash),
             stringAsciiCV(mimeType),
             uintCV(totalSize),
@@ -699,19 +743,19 @@ export async function inscribeFile({ fileData, mimeType, tokenUri, dependencies 
       makeStandardSTXPostCondition(
         senderAddress,
         FungibleConditionCode.LessEqual,
-        spendCap
+        feeQuote.totalFee
       )
     ],
     postConditionMode: PostConditionMode.Deny,
     anchorMode: AnchorMode.Any
   });
 
-  const helperResult = await broadcastTransaction(helperTx, network);
-  if (helperResult.error) throw new Error(`${helperResult.error}: ${helperResult.reason}`);
-  await waitForConfirmation(helperResult.txid || helperResult);
+  const mintResult = await broadcastTransaction(mintTx, network);
+  if (mintResult.error) throw new Error(`${mintResult.error}: ${mintResult.reason}`);
+  await waitForConfirmation(mintResult.txid || mintResult);
 
   const tokenId = await getIdByHash(expectedHash, senderAddress);
-  return { tokenId, alreadyExisted: false, helperTxid: helperResult.txid, route: 'helper' };
+  return { tokenId, alreadyExisted: false, txid: mintResult.txid, route: 'single-tx' };
 }
 ```
 
@@ -726,7 +770,7 @@ export async function inscribeFileStaged({
   dependencies = [],
   senderAddress,
   senderKey,
-  feeUnit
+  feeQuote
 }) {
   const batches = batchChunks(chunks);
   const totalChunks = BigInt(chunks.length);
@@ -745,7 +789,7 @@ export async function inscribeFileStaged({
     senderKey,
     network,
     postConditions: [
-      makeStandardSTXPostCondition(senderAddress, FungibleConditionCode.LessEqual, feeUnit)
+      makeStandardSTXPostCondition(senderAddress, FungibleConditionCode.LessEqual, feeQuote.beginFee)
     ],
     postConditionMode: PostConditionMode.Deny,
     anchorMode: AnchorMode.Any
@@ -779,7 +823,6 @@ export async function inscribeFileStaged({
     }
   }
 
-  const sealFee = feeUnit * (1n + ((totalChunks + 49n) / 50n));
   const sealTx = await makeContractCall({
     contractAddress: CONTRACT_ADDRESS,
     contractName: CONTRACT_NAME,
@@ -795,7 +838,7 @@ export async function inscribeFileStaged({
     senderKey,
     network,
     postConditions: [
-      makeStandardSTXPostCondition(senderAddress, FungibleConditionCode.LessEqual, sealFee)
+      makeStandardSTXPostCondition(senderAddress, FungibleConditionCode.LessEqual, feeQuote.sealFee)
     ],
     postConditionMode: PostConditionMode.Deny,
     anchorMode: AnchorMode.Any
@@ -889,7 +932,7 @@ export async function readInscriptionContent(tokenId, senderAddress, network) {
 ```
 
 ### Workflow 4: Recursive Seal
-- Helper route: `mint-small-single-tx-recursive(...)` when `chunks <= 30` and
+- Single-tx route: `mint-single-tx-recursive(...)` when `chunks <= 50` and
   no staged upload exists yet.
 - Staged route: execute the same begin + upload steps as standard mint, then
   call `seal-recursive(expected-hash, token-uri, dependencies)`.
@@ -928,7 +971,7 @@ export async function resumeUpload({ expectedHash, allChunks, senderAddress, sen
 ```
 
 Resume applies to the staged route only. If `get-upload-state` returns an active
-session, do not switch that mint attempt onto the helper contract.
+session, do not switch that mint attempt onto the single-tx route.
 
 ## aibtc Integration
 
@@ -943,15 +986,16 @@ session, do not switch that mint attempt onto the helper contract.
 | Poll tx status | `get_transaction_status` |
 
 ### aibtc Routing Notes
-- If the first-party app auto-selects the helper route, expect a single wallet
+- If the first-party app auto-selects the single-tx route, expect a single wallet
   approval and a single submitted tx, not separate begin/upload/seal prompts.
-- If the first-party app does not select the helper route, expect the staged
+- If the first-party app does not select the single-tx route, expect the staged
   sequence and wait for each tx to confirm before watching for the next prompt.
 - Direct MCP `call_contract` remains unsafe for any call that carries chunk data
   in `list(buff)` arguments. That includes:
   - `add-chunk-batch`
-  - `mint-small-single-tx`
-  - `mint-small-single-tx-recursive`
+  - `mint-single-tx`
+  - `mint-single-tx-recursive`
+  - `mint-single-tx-with-relationships`
 - For aibtc agents, use MCP for read-only checks and balance/status polling, but
   use a direct `@stacks/transactions` signing path for chunk-bearing writes.
 
@@ -961,7 +1005,7 @@ session, do not switch that mint attempt onto the helper contract.
 3. Convert content to bytes, detect MIME, chunk to 16,384-byte pieces.
 4. Compute incremental expected hash.
 5. Dedupe check with `get-id-by-hash`, then query `get-upload-state(expected-hash, owner)`.
-6. If helper deployment is available, chunk count is `1..30`, and no upload state exists, send one helper tx with a combined begin+seal spend cap.
+6. If chunk count is `1..50` and no upload state exists, send one core-native single-tx mint with the quoted spend cap.
 7. Otherwise send staged begin tx and wait for confirmation.
 8. On staged flow, upload chunk batches (<=50 per tx), wait for each batch to confirm before proceeding, then seal with the strict spend cap.
 9. Verify `get-inscription-meta` and final canonical ID.
@@ -982,8 +1026,12 @@ session, do not switch that mint attempt onto the helper contract.
 | `u111 ERR-DEPENDENCY-MISSING` | Recursive dependency absent | Validate dependency IDs before sealing |
 | `u112 ERR-EXPIRED` | Session expired | Restart begin and reupload |
 | `u113 ERR-NOT-EXPIRED` | Purge too early | Wait until expiry or use abandon flow |
-| `u114 ERR-DUPLICATE` | Content already sealed | Query `get-id-by-hash` and reuse canonical token |
+| `u114 ERR-DUPLICATE` | Duplicate batch item or occupied migration target | Rebuild the batch or re-check destination id assumptions |
 | `u115 ERR-ALREADY-SET` | One-time admin setter used | Admin-only path |
+| `u116 ERR-PARENT-MISSING` | Parent relationship target absent | Validate parent IDs before sealing |
+| `u117 ERR-PARENT-NOT-OWNED` | Parent relationship target not owned by caller | Restrict parent links to caller-owned tokens |
+| `u118 ERR-INVALID-MODE` | Unsupported quote mode | Use `u1` for staged or `u2` for single-tx |
+| `u119 ERR-INVALID-BPS` | Invalid fee basis points | Admin-only path |
 
 ### Transaction-Level Failures
 - `abort_by_post_condition`: refresh fee-unit and rebuild post-condition caps.

@@ -6,7 +6,9 @@ import {
   callReadOnlyFunction,
   contractPrincipalCV,
   listCV,
+  noneCV,
   principalCV,
+  someCV,
   stringAsciiCV,
   tupleCV,
   uintCV
@@ -21,6 +23,7 @@ import type {
   CollectionSummary,
   CollectionSplits,
   ContractConfig,
+  InscriptionFeeQuote,
   InscriptionMeta,
   MarketListing,
   NetworkType,
@@ -68,6 +71,7 @@ import {
   parseGetNextTokenId,
   parseGetOwner,
   parseGetPendingChunk,
+  parseQuoteInscriptionFee,
   parseGetRoyaltyRecipient,
   parseGetSvg,
   parseGetSvgDataUri,
@@ -560,6 +564,7 @@ export type XtrataClient = {
   contract: ContractConfig;
   network: NetworkType;
   supportsChunkBatchRead: boolean;
+  supportsFeeQuote: boolean;
   getLastTokenId: (senderAddress: string) => Promise<bigint>;
   getNextTokenId: (senderAddress: string) => Promise<bigint>;
   getAdmin: (senderAddress: string) => Promise<string>;
@@ -585,6 +590,16 @@ export type XtrataClient = {
     senderAddress: string
   ) => Promise<UploadState | null>;
   getIdByHash: (expectedHash: Uint8Array, senderAddress: string) => Promise<bigint | null>;
+  quoteInscriptionFee: (
+    params: {
+      payer: string;
+      caller?: string | null;
+      totalSize: bigint;
+      totalChunks: bigint;
+      mode: 'staged' | 'single-tx';
+    },
+    senderAddress: string
+  ) => Promise<InscriptionFeeQuote>;
   getMintOrigin: (id: bigint, senderAddress: string) => Promise<string | null>;
   getPendingChunk: (
     expectedHash: Uint8Array,
@@ -639,6 +654,7 @@ export const createXtrataClient = (params: {
     contract: params.contract,
     network: params.contract.network,
     supportsChunkBatchRead: capabilities.supportsChunkBatchRead,
+    supportsFeeQuote: capabilities.supportsFeeQuote,
     getLastTokenId: async (senderAddress) => {
       const value = await callReadOnly({
         caller,
@@ -819,6 +835,27 @@ export const createXtrataClient = (params: {
         senderAddress
       });
       return parseGetIdByHash(value);
+    },
+    quoteInscriptionFee: async (quote, senderAddress) => {
+      if (!capabilities.supportsFeeQuote) {
+        throw new Error('Fee quote read-only not supported by this contract');
+      }
+      const mode = quote.mode === 'single-tx' ? 2n : 1n;
+      const value = await callReadOnly({
+        caller,
+        contract: params.contract,
+        network: stacksNetwork,
+        functionName: 'quote-inscription-fee',
+        functionArgs: [
+          principalCV(quote.payer),
+          quote.caller ? someCV(principalCV(quote.caller)) : noneCV(),
+          uintCV(quote.totalSize),
+          uintCV(quote.totalChunks),
+          uintCV(mode)
+        ],
+        senderAddress
+      });
+      return parseQuoteInscriptionFee(value);
     },
     getMintOrigin: async (id, senderAddress) => {
       if (!capabilities.supportsMintOriginRead) {

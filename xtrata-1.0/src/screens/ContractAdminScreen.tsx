@@ -30,7 +30,7 @@ type TxPayload = {
   txId: string;
 };
 
-const FEE_UNIT_MIN_MICROSTX = 1_000;
+const FEE_UNIT_MIN_MICROSTX = 1;
 const FEE_UNIT_MAX_MICROSTX = 1_000_000;
 
 const parseStxInput = (value: string) => {
@@ -205,7 +205,7 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
     }
     const microStx = Math.round(parsed * MICROSTX_PER_STX);
     if (microStx < FEE_UNIT_MIN_MICROSTX || microStx > FEE_UNIT_MAX_MICROSTX) {
-      setFeeUnitMessage('Fee unit must be between 0.001 and 1.0 STX.');
+      setFeeUnitMessage('Fee unit must be between 0.000001 and 1.0 STX.');
       return;
     }
     if (currentFeeUnit !== null) {
@@ -409,7 +409,7 @@ export default function ContractAdminScreen(props: ContractAdminScreenProps) {
                   }}
                 />
                 <span className="meta-value">
-                  Bounds: 0.001–1.0 STX. {currentFeeUnit !== null
+                  Bounds: 0.000001–1.0 STX. {currentFeeUnit !== null
                     ? `Current: ${formatStxFromMicro(currentFeeUnit)}.`
                     : 'Current: unknown.'}
                 </span>

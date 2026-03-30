@@ -7,9 +7,9 @@ Audience: aibtc agents that execute on Stacks via MCP wallet tooling.
 Train an aibtc agent to autonomously run the Xtrata inscription lifecycle across
 all currently supported mint routes:
 
-1. single-item helper route:
-   - `mint-small-single-tx`
-   - `mint-small-single-tx-recursive`
+1. single-item core-native single-tx route:
+   - `mint-single-tx`
+   - `mint-single-tx-recursive`
 2. single-item staged route:
    - `begin-or-get`
    - `add-chunk-batch` (one or more calls)
@@ -44,19 +44,19 @@ those items individually.
    - chunk size `16,384`
    - upload batch size `50`
    - final batch item size `50`
-   - helper chunk ceiling `30`
+   - single-tx chunk ceiling `50`
    - max chunks `2,048`
 4. Train hash derivation:
    - incremental SHA-256 chain hash: `sha256(running-hash || chunk)`
    - running hash starts as 32 zero bytes
    - final running hash is the `expected-hash`
 5. Train fee model:
-   - begin fee = `fee-unit`
-   - seal fee = `fee-unit * (1 + ceil(totalChunks / 50))`
-   - helper spend cap = `begin fee + seal fee` in one deny-mode post-condition
+   - fetch route-specific totals from `quote-inscription-fee`
+   - staged total = `begin-fee + seal-fee`
+   - single-tx total = `single-tx-fee`
    - collection batch cost adds the sum of reservation `mint-price` values
 6. Train route selection:
-   - one item, `1..30` chunks, helper deployed, no resumable staged upload -> helper route
+   - one item, `1..50` chunks, no resumable staged upload -> single-tx route
    - one item otherwise -> staged route
    - `2..50` non-recursive items -> batch route
    - recursive dependency requirements -> individual mints only
@@ -90,7 +90,7 @@ those items individually.
 1. Get address and STX balance.
 2. Chunk data and compute expected hash.
 3. Dedup with `get-id-by-hash`, then query `get-upload-state(expected-hash, owner)`.
-4. If helper is available, chunk count is `1..30`, and no upload state exists, execute one helper tx with the combined begin+seal spend cap.
+4. If chunk count is `1..50` and no upload state exists, execute one core-native single-tx mint with the quoted spend cap.
 5. Otherwise execute staged begin tx with spend cap.
 6. Upload chunk batches and wait for each tx to confirm.
 7. Seal with computed cap after all chunks are confirmed on-chain.
@@ -129,8 +129,8 @@ Use the `@stacks/transactions` SDK directly for write calls that include chunk
 buffers in `list(buff)` arguments:
 - `add-chunk-batch`
 - `mint-add-chunk-batch`
-- `mint-small-single-tx`
-- `mint-small-single-tx-recursive`
+- `mint-single-tx`
+- `mint-single-tx-recursive`
 
 The smaller control-plane writes typically remain safe through MCP when typed
 correctly:
@@ -142,7 +142,7 @@ correctly:
 - `mint-seal-batch`
 
 If the agent is driving a first-party UI rather than building raw transactions,
-expect the helper route to collapse a qualifying one-item mint into one wallet
+expect the single-tx route to collapse a qualifying one-item mint into one wallet
 approval. Do not project that behavior onto multi-file drops.
 
 ## Resume path
@@ -160,7 +160,7 @@ Batch resume:
 1. Treat each item as its own staged upload state.
 2. Resume incomplete items individually.
 3. Do not send the final batch seal until every item in the batch is complete.
-4. Do not switch an active staged upload onto the helper route mid-attempt.
+4. Do not switch an active staged upload onto the single-tx route mid-attempt.
 
 Collection-specific constraint:
 - `mint-seal-batch` requires empty `default-dependencies`. If defaults are set,

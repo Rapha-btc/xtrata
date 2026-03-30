@@ -11,8 +11,9 @@ export type ContractConfig = {
 
 export type ContractCapabilities = {
   version: ProtocolVersion;
-  feeModel: 'fee-unit';
+  feeModel: 'fee-unit' | 'quote';
   supportsFeeUnit: boolean;
+  supportsFeeQuote: boolean;
   supportsPause: boolean;
   supportsAdminReadOnly: boolean;
   supportsRoyaltyRecipientRead: boolean;
@@ -41,6 +42,20 @@ export type UploadState = {
   totalChunks: bigint;
   currentIndex: bigint;
   runningHash: Uint8Array;
+};
+
+export type InscriptionFeeQuotePolicySource = 'default' | 'caller' | 'wallet';
+
+export type InscriptionFeeQuote = {
+  resolvedBps: bigint;
+  policySource: InscriptionFeeQuotePolicySource;
+  beginFee: bigint;
+  sealFee: bigint;
+  singleTxFee: bigint;
+  sizeFee: bigint;
+  extraBatches: bigint;
+  extraBatchFee: bigint;
+  totalFee: bigint;
 };
 
 export type CollectionPhase = {

@@ -30,6 +30,7 @@ const makeClient = (overrides: Partial<XtrataClient>): XtrataClient =>
     network: 'mainnet',
     supportsChunkBatchRead: true,
     supportsMintedIndex: true,
+    supportsFeeQuote: false,
     getLastTokenId: vi.fn(),
     getNextTokenId: vi.fn(),
     getMintedCount: vi.fn(),
@@ -49,6 +50,7 @@ const makeClient = (overrides: Partial<XtrataClient>): XtrataClient =>
     getChunkBatch: vi.fn(),
     getUploadState: vi.fn(),
     getIdByHash: vi.fn(),
+    quoteInscriptionFee: vi.fn(),
     getMintOrigin: vi.fn(),
     getPendingChunk: vi.fn(),
     ...overrides

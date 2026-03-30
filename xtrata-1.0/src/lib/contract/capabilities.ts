@@ -7,8 +7,9 @@ export const isProtocolVersion = (value: string): value is ProtocolVersion =>
 
 export type ContractCapabilities = {
   version: ProtocolVersion;
-  feeModel: 'fee-unit';
+  feeModel: 'fee-unit' | 'quote';
   supportsFeeUnit: boolean;
+  supportsFeeQuote: boolean;
   supportsPause: boolean;
   supportsAdminReadOnly: boolean;
   supportsRoyaltyRecipientRead: boolean;
@@ -27,6 +28,7 @@ const CAPABILITIES_BY_VERSION: Record<ProtocolVersion, ContractCapabilities> = {
     version: '1.1.1',
     feeModel: 'fee-unit',
     supportsFeeUnit: true,
+    supportsFeeQuote: false,
     supportsPause: true,
     supportsAdminReadOnly: true,
     supportsRoyaltyRecipientRead: true,
@@ -43,6 +45,7 @@ const CAPABILITIES_BY_VERSION: Record<ProtocolVersion, ContractCapabilities> = {
     version: '2.1.0',
     feeModel: 'fee-unit',
     supportsFeeUnit: true,
+    supportsFeeQuote: false,
     supportsPause: true,
     supportsAdminReadOnly: true,
     supportsRoyaltyRecipientRead: true,
@@ -59,6 +62,7 @@ const CAPABILITIES_BY_VERSION: Record<ProtocolVersion, ContractCapabilities> = {
     version: '2.1.1',
     feeModel: 'fee-unit',
     supportsFeeUnit: true,
+    supportsFeeQuote: false,
     supportsPause: true,
     supportsAdminReadOnly: true,
     supportsRoyaltyRecipientRead: true,
@@ -73,8 +77,9 @@ const CAPABILITIES_BY_VERSION: Record<ProtocolVersion, ContractCapabilities> = {
   },
   '3.0.0': {
     version: '3.0.0',
-    feeModel: 'fee-unit',
+    feeModel: 'quote',
     supportsFeeUnit: true,
+    supportsFeeQuote: true,
     supportsPause: true,
     supportsAdminReadOnly: true,
     supportsRoyaltyRecipientRead: true,
