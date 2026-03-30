@@ -3,11 +3,13 @@ import {
   buildInscriptionCacheKey,
   buildInscriptionTempCacheKey,
   buildInscriptionPreviewCacheKey,
+  buildInscriptionThumbnailCacheKey,
   buildTokenSummaryCacheKey,
   clearInscriptionCache,
   STREAM_TEMP_CACHE_MAX_BYTES,
   TEMP_CACHE_MAX_BYTES,
   TEMP_CACHE_TTL_MS,
+  THUMBNAIL_CACHE_KEY_VERSION,
   THUMBNAIL_CACHE_LIMIT
 } from '../cache';
 
@@ -33,6 +35,13 @@ describe('viewer cache', () => {
   it('builds temp cache keys with contract id and token id', () => {
     const key = buildInscriptionTempCacheKey('SP123.fake-contract', 42n);
     expect(key).toBe('inscription-temp:SP123.fake-contract:42');
+  });
+
+  it('versions thumbnail cache keys so stale resized blobs are regenerated', () => {
+    const key = buildInscriptionThumbnailCacheKey('SP123.fake-contract', 42n);
+    expect(key).toBe(
+      `inscription-thumb:${THUMBNAIL_CACHE_KEY_VERSION}:SP123.fake-contract:42`
+    );
   });
 
   it('builds token summary cache keys with contract id and token id', () => {

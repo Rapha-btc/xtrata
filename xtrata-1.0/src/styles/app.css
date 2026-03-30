@@ -6824,6 +6824,7 @@ p {
 }
 
 .preview-media--pixelated {
+  image-rendering: -webkit-optimize-contrast;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }

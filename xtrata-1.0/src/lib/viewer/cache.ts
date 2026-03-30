@@ -17,6 +17,7 @@ export const TEMP_CACHE_MAX_BYTES = 25 * 1024 * 1024;
 // changing the more conservative reconstruction cache threshold above.
 export const STREAM_TEMP_CACHE_MAX_BYTES = 100 * 1024 * 1024;
 export const THUMBNAIL_CACHE_LIMIT = 4000;
+export const THUMBNAIL_CACHE_KEY_VERSION = 'v2';
 export const SUMMARY_CACHE_TTL_MS = 60 * 60 * 1000;
 
 type CacheValue = {
@@ -141,7 +142,7 @@ export const buildInscriptionPreviewCacheKey = (contractId: string, id: bigint) 
   `inscription-preview:${contractId}:${id.toString()}`;
 
 export const buildInscriptionThumbnailCacheKey = (contractId: string, id: bigint) =>
-  `inscription-thumb:${contractId}:${id.toString()}`;
+  `inscription-thumb:${THUMBNAIL_CACHE_KEY_VERSION}:${contractId}:${id.toString()}`;
 
 export const buildTokenSummaryCacheKey = (contractId: string, id: bigint) =>
   `token-summary:${contractId}:${id.toString()}`;

@@ -5,6 +5,7 @@ import type { XtrataClient } from '../contract/client';
 import type { TokenSummary } from './types';
 import { buildTokenRange } from './model';
 import {
+  THUMBNAIL_CACHE_KEY_VERSION,
   loadTokenSummaryFromCache,
   saveTokenSummaryToCache
 } from './cache';
@@ -37,6 +38,7 @@ export const getTokenContentKey = (contractId: string, id: bigint) => [
 export const getTokenThumbnailKey = (contractId: string, id: bigint) => [
   ...getViewerKey(contractId),
   'thumbnail',
+  THUMBNAIL_CACHE_KEY_VERSION,
   id.toString()
 ];
 

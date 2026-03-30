@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { InscriptionMeta } from '../../protocol/types';
 import type { XtrataClient } from '../../contract/client';
 vi.mock('../cache', () => ({
+  THUMBNAIL_CACHE_KEY_VERSION: 'v2',
   loadTokenSummaryFromCache: vi.fn().mockResolvedValue(null),
   saveTokenSummaryToCache: vi.fn().mockResolvedValue(undefined)
 }));
@@ -11,6 +12,7 @@ import {
   saveTokenSummaryToCache
 } from '../cache';
 import {
+  getTokenThumbnailKey,
   DEGRADED_SUMMARY_CACHE_TTL_MS,
   fetchTokenSummary,
   fetchTokenSummaryWithFallback
@@ -35,6 +37,16 @@ describe('viewer queries', () => {
     saveTokenSummaryToCacheMock.mockReset();
     loadTokenSummaryFromCacheMock.mockResolvedValue(null);
     saveTokenSummaryToCacheMock.mockResolvedValue(undefined);
+  });
+
+  it('versions thumbnail query keys to avoid stale mobile blobs', () => {
+    expect(getTokenThumbnailKey('SP123.fake-contract', 42n)).toEqual([
+      'viewer',
+      'SP123.fake-contract',
+      'thumbnail',
+      'v2',
+      '42'
+    ]);
   });
 
   it('skips svg fetch for non-svg mime types', async () => {
