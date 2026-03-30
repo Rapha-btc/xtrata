@@ -9,6 +9,7 @@ export type ContractRegistryEntry = ContractConfig & {
   label: string;
   protocolVersion: ProtocolVersion;
   legacyContractId?: string;
+  migrationSourceContractIds?: string[];
 };
 
 const isValidEntry = (entry: ContractRegistryEntry) => {

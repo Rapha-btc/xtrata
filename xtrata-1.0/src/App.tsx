@@ -47,6 +47,7 @@ import WalletTopBar from './components/WalletTopBar';
 import MintScreen from './screens/MintScreen';
 import ViewerScreen, { type ViewerMode } from './screens/ViewerScreen';
 import ContractAdminScreen from './screens/ContractAdminScreen';
+import MigrationScreen from './screens/MigrationScreen';
 import WalletLookupScreen from './screens/WalletLookupScreen';
 import AdminDiagnosticsScreen from './screens/AdminDiagnosticsScreen';
 import CampaignConsoleScreen from './screens/CampaignConsoleScreen';
@@ -133,6 +134,7 @@ const SECTION_KEYS = [
   'wallet-lookup',
   'wallet-session',
   'active-contract',
+  'migration',
   'deploy-contract',
   'contract-admin',
   'collection-mint-admin',
@@ -1244,6 +1246,13 @@ export default function App() {
                   </a>
                   <a
                     className="button button--ghost app__nav-link"
+                    href="#migration"
+                    onClick={(event) => handleNavJump(event, 'migration')}
+                  >
+                    Migration
+                  </a>
+                  <a
+                    className="button button--ghost app__nav-link"
                     href="#collection-viewer"
                     onClick={(event) => handleNavJump(event, 'collection-viewer')}
                   >
@@ -1601,6 +1610,13 @@ export default function App() {
             </div>
           </section>
         </div>
+
+        <MigrationScreen
+          contract={selectedContract}
+          walletSession={walletSession}
+          collapsed={collapsedSections['migration']}
+          onToggleCollapse={() => toggleSection('migration')}
+        />
 
         <ViewerScreen
           contract={selectedContract}
