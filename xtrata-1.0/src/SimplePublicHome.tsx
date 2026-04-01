@@ -10,6 +10,7 @@ import {
   ClarityType,
   cvToValue,
   uintCV,
+  validateStacksAddress,
   type ClarityValue
 } from '@stacks/transactions';
 import { useQueryClient } from '@tanstack/react-query';
@@ -529,6 +530,17 @@ export default function SimplePublicHome() {
       return null;
     }
   }, []);
+  const preferredViewerWalletAddress = useMemo(() => {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+    const raw = new URLSearchParams(window.location.search).get('viewer-wallet');
+    const trimmed = raw?.trim() ?? '';
+    if (!trimmed) {
+      return null;
+    }
+    return validateStacksAddress(trimmed) ? trimmed : null;
+  }, []);
   const [viewerMode, setViewerMode] = useState<ViewerMode>('collection');
   const [viewerCollapsed, setViewerCollapsed] = useState(false);
   const [marketCollapsed, setMarketCollapsed] = useState(true);
@@ -550,8 +562,12 @@ export default function SimplePublicHome() {
   const contractId = getContractId(contract);
 
   const walletLookupState = useMemo(
-    () => getWalletLookupState('', walletSession.address ?? null),
-    [walletSession.address]
+    () =>
+      getWalletLookupState(
+        preferredViewerWalletAddress ?? '',
+        walletSession.address ?? null
+      ),
+    [preferredViewerWalletAddress, walletSession.address]
   );
   const readOnlySender = walletSession.address ?? contract.address;
   const mismatch = getNetworkMismatch(contract.network, walletSession.network);
@@ -882,12 +898,18 @@ export default function SimplePublicHome() {
     const openHashSection = () => {
       const section =
         toSectionKeyFromHash(window.location.hash) ??
-        (preferredViewerTokenId !== null ? 'home-viewer' : null);
+        (preferredViewerTokenId !== null || preferredViewerWalletAddress !== null
+          ? 'home-viewer'
+          : null);
       if (!section) {
         return;
       }
       if (section === 'home-viewer') {
-        setViewerMode('collection');
+        setViewerMode(
+          preferredViewerTokenId === null && preferredViewerWalletAddress !== null
+            ? 'wallet'
+            : 'collection'
+        );
         setViewerCollapsed(false);
       }
       if (section === 'market') {
@@ -917,7 +939,7 @@ export default function SimplePublicHome() {
     return () => {
       window.removeEventListener('hashchange', openHashSection);
     };
-  }, [preferredViewerTokenId]);
+  }, [preferredViewerTokenId, preferredViewerWalletAddress]);
 
   const handleNavJump = (
     event: MouseEvent<HTMLAnchorElement>,
