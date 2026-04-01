@@ -1393,6 +1393,12 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     }
     return `/?viewer-token=${encodeURIComponent(selectedGalleryTokenIdLabel)}`;
   }, [selectedGalleryTokenIdLabel]);
+  const selectedGalleryCreatorViewerHref = useMemo(() => {
+    if (!selectedGalleryCreatorAddress) {
+      return null;
+    }
+    return `/?viewer-wallet=${encodeURIComponent(selectedGalleryCreatorAddress)}`;
+  }, [selectedGalleryCreatorAddress]);
 
   useEffect(() => {
     const currentAssetId = selectedGalleryAsset?.asset_id ?? null;
@@ -4006,12 +4012,28 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                           </div>
                           <div>
                             <span className="meta-label">Creator</span>
-                            <AddressLabel
-                              address={selectedGalleryCreatorAddress}
-                              network={coreContract.network}
-                              className="meta-value"
-                              fallback="Unknown"
-                            />
+                            {selectedGalleryCreatorViewerHref ? (
+                              <a
+                                href={selectedGalleryCreatorViewerHref}
+                                className="address-label__link"
+                                title="Open creator holdings in the public wallet viewer"
+                              >
+                                <AddressLabel
+                                  address={selectedGalleryCreatorAddress}
+                                  network={coreContract.network}
+                                  className="meta-value"
+                                  fallback="Unknown"
+                                  linkToExplorer={false}
+                                />
+                              </a>
+                            ) : (
+                              <AddressLabel
+                                address={selectedGalleryCreatorAddress}
+                                network={coreContract.network}
+                                className="meta-value"
+                                fallback="Unknown"
+                              />
+                            )}
                           </div>
                           <div>
                             <span className="meta-label">Collection token</span>
