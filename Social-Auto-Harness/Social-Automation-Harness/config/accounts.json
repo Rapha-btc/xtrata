@@ -1,0 +1,19 @@
+{
+  "priority_accounts": [
+    "ZestProtocol",
+    "ArkadikoFinance",
+    "LiquidiumWTF",
+    "MegapontNFT",
+    "hirosystems",
+    "aibtcdev",
+    "ALEXLabBTC",
+    "StacksOrg"
+  ],
+  "disabled_accounts": [
+    "BitflowFinance",
+    "Xverse_App",
+    "HermeticaFi",
+    "VelarBTC",
+    "Stacks (main)"
+  ]
+}

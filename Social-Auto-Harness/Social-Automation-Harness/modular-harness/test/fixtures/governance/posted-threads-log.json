@@ -1,0 +1,11 @@
+{
+  "description": "Threads already replied to.",
+  "threads": [
+    {
+      "url": "https://x.com/example/status/1234567890",
+      "author": "@cooldownuser",
+      "topic": "sBTC launch",
+      "replied_at": "2026-03-28"
+    }
+  ]
+}

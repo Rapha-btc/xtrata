@@ -1,0 +1,83 @@
+{
+  "current_mode": "promotional-specific",
+  "manual_approval_required": true,
+  "schedule": {
+    "runs_per_day": 2,
+    "windows": [
+      "morning",
+      "evening"
+    ]
+  },
+  "runtime": {
+    "standalone_tweets_default": false,
+    "auto_post_replies": false,
+    "auto_follow": false,
+    "auto_like": false
+  },
+  "active_campaign": {
+    "promo_subject": "DYLE0415 — exclusive generative art inscription collection, 173 pieces, 4 STX (~$0.87) each, live now on xtrata.xyz. Artist: dyle.btc. Sequel to the sold-out DYLE0414. URL: https://xtrata.xyz/collection/dyle0415. Also listed on the Xtrata homepage live drops: https://xtrata.xyz/#live-drops",
+    "promo_angle": "\"DYLE0414 sold out — DYLE0415 is your second chance.\" Exclusive generative art permanently inscribed on Bitcoin via Stacks. Only 173 pieces total. Price: 4 STX (~$0.87). Description: \"In the twist of the hair, in the swirl of water and the drift of smoke.\" Ultra-early — mint is just getting started (2/173 minted at time of config). Lead with scarcity + low price + permanence. Target: NFT/art collectors, Stacks community, generative art fans.",
+    "promo_hashtags": [
+      "#Stacks",
+      "#BitcoinNFT",
+      "#GenerativeArt",
+      "#Ordinals",
+      "#OnChainArt"
+    ],
+    "promo_end_date": "2026-04-06"
+  },
+  "mode_profiles": {
+    "general-promotional": {
+      "reply_target": 3,
+      "follow_target": 15,
+      "like_target": 35,
+      "retweet_target": 1,
+      "standalone_tweet_policy": "manual-or-template"
+    },
+    "promotional-specific": {
+      "reply_target": 3,
+      "follow_target": 15,
+      "like_target": 35,
+      "retweet_target": 0,
+      "standalone_tweet_policy": "manual-or-template"
+    },
+    "engagement-general": {
+      "reply_target": 5,
+      "follow_target": 10,
+      "like_target": 25,
+      "retweet_target": 1,
+      "standalone_tweet_policy": "manual-only"
+    },
+    "engagement-specific": {
+      "reply_target": 5,
+      "follow_target": 10,
+      "like_target": 25,
+      "retweet_target": 1,
+      "standalone_tweet_policy": "manual-only",
+      "topic_template": "[e.g. \"sBTC launch — people talking about sBTC for the first time\"]",
+      "goal_template": "[e.g. \"Introduce Xtrata as the on-chain data layer for sBTC-era builders\"]",
+      "community_template": "[e.g. \"r/stacks Discord migrants, new Twitter accounts posting about sBTC\"]"
+    },
+    "discovery": {
+      "reply_target": 0,
+      "follow_target": 30,
+      "like_target": 60,
+      "retweet_target": 2,
+      "standalone_tweet_policy": "disabled"
+    },
+    "collection-launch": {
+      "reply_target": 3,
+      "follow_target": 15,
+      "like_target": 35,
+      "retweet_target": 0,
+      "standalone_tweet_policy": "manual-or-template",
+      "collection_template": {
+        "name": "[e.g. \"RussianRampage\"]",
+        "price": "[e.g. \"0.003 STX\"]",
+        "supply": "[e.g. \"111 pieces\"]",
+        "url": "[e.g. \"https://xtrata.xyz/market/[collection-id]\"]",
+        "angle": "[e.g. \"Ultra-affordable first inscription — lowest price mint currently live\"]"
+      }
+    }
+  }
+}

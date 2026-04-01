@@ -1,0 +1,8 @@
+{
+  "xtrata": {
+    "browserName": "Google Chrome",
+    "profileName": "xtrata",
+    "xHandle": "@xtratalayers",
+    "bootstrapUrl": "https://x.com/home"
+  }
+}

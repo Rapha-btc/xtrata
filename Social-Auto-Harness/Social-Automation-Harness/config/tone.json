@@ -1,0 +1,20 @@
+{
+  "voice": [
+    "smart",
+    "friendly",
+    "credible",
+    "natural"
+  ],
+  "avoid": [
+    "fake excitement",
+    "cliches",
+    "generic praise",
+    "forced xtrata mention",
+    "hashtag spam",
+    "over-promising"
+  ],
+  "reply_max_chars": 220,
+  "hashtags": "avoid-unless-essential",
+  "emojis": "avoid-unless-natural",
+  "xtrata_mention_policy": "only when natural"
+}
