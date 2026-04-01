@@ -4014,6 +4014,22 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                             />
                           </div>
                           <div>
+                            <span className="meta-label">Collection token</span>
+                            <span className="meta-value">
+                              {selectedGalleryLocalTokenNumber !== null
+                                ? `#${selectedGalleryLocalTokenNumber}`
+                                : 'Pending sync'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="meta-label">Global token</span>
+                            <span className="meta-value">
+                              {selectedGalleryTokenIdLabel
+                                ? `#${selectedGalleryTokenIdLabel}`
+                                : 'Unknown'}
+                            </span>
+                          </div>
+                          <div>
                             <span className="meta-label">Token URI</span>
                             <span
                               className="meta-value meta-value--truncate"
@@ -4059,22 +4075,6 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                               title={selectedGalleryFinalHash ?? ''}
                             >
                               {selectedGalleryFinalHash ?? 'Pending'}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="meta-label">Collection token</span>
-                            <span className="meta-value">
-                              {selectedGalleryLocalTokenNumber !== null
-                                ? `#${selectedGalleryLocalTokenNumber}`
-                                : 'Pending sync'}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="meta-label">Global token</span>
-                            <span className="meta-value">
-                              {selectedGalleryTokenIdLabel
-                                ? `#${selectedGalleryTokenIdLabel}`
-                                : 'Unknown'}
                             </span>
                           </div>
                           <div>
