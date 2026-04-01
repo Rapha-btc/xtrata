@@ -9,7 +9,6 @@ import { showContractCall } from './lib/wallet/connect';
 import { sha256 } from '@noble/hashes/sha256';
 import {
   bufferCV,
-  callReadOnlyFunction,
   ClarityType,
   cvToValue,
   listCV,
@@ -22,7 +21,10 @@ import {
   type ClarityValue
 } from '@stacks/transactions';
 import { useQuery } from '@tanstack/react-query';
-import { createXtrataClient } from './lib/contract/client';
+import {
+  callContractReadOnly,
+  createXtrataClient
+} from './lib/contract/client';
 import { getContractId } from './lib/contract/config';
 import {
   batchChunks,
@@ -71,7 +73,6 @@ import {
   TX_DELAY_SECONDS
 } from './lib/mint/constants';
 import { getNetworkFromAddress, getNetworkMismatch } from './lib/network/guard';
-import { toStacksNetwork } from './lib/network/stacks';
 import type { NetworkType } from './lib/network/types';
 import type { UploadState } from './lib/protocol/types';
 import {
@@ -1590,16 +1591,17 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       setStatusMessage(null);
     }
     try {
-      const network = toStacksNetwork(collectionContract.network);
       const senderAddress = walletSession.address ?? collectionContract.address;
       const readOnly = async (functionName: string) => {
-        const value = await callReadOnlyFunction({
-          contractAddress: collectionContract.address,
-          contractName: collectionContract.contractName,
+        const value = await callContractReadOnly({
+          contract: {
+            address: collectionContract.address,
+            contractName: collectionContract.contractName,
+            network: collectionContract.network
+          },
           functionName,
-          functionArgs: [],
           senderAddress,
-          network
+          functionArgs: []
         });
         return unwrapReadOnly(value);
       };
@@ -1618,13 +1620,15 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       const activePhaseId = parseUintCv(activePhaseCv);
       let activePhaseMintPrice: bigint | null = null;
       if (activePhaseId !== null && activePhaseId > 0n) {
-        const phaseCv = await callReadOnlyFunction({
-          contractAddress: collectionContract.address,
-          contractName: collectionContract.contractName,
+        const phaseCv = await callContractReadOnly({
+          contract: {
+            address: collectionContract.address,
+            contractName: collectionContract.contractName,
+            network: collectionContract.network
+          },
           functionName: 'get-phase',
           functionArgs: [uintCV(activePhaseId)],
-          senderAddress,
-          network
+          senderAddress
         });
         const phaseValue = unwrapReadOnly(phaseCv);
         if (phaseValue.type === ClarityType.OptionalSome) {
@@ -1701,16 +1705,17 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       setCollectionIndexSyncMessage(null);
       try {
         const senderAddress = walletSession.address ?? collectionContract.address;
-        const network = toStacksNetwork(collectionContract.network);
         const nextEntries: Record<string, number> = {};
         for (let index = startIndex; index < targetCount; index += 1) {
-          const entryCv = await callReadOnlyFunction({
-            contractAddress: collectionContract.address,
-            contractName: collectionContract.contractName,
+          const entryCv = await callContractReadOnly({
+            contract: {
+              address: collectionContract.address,
+              contractName: collectionContract.contractName,
+              network: collectionContract.network
+            },
             functionName: 'get-minted-id',
             functionArgs: [uintCV(BigInt(index))],
-            senderAddress,
-            network
+            senderAddress
           });
           const tokenId = parseMintedIndexTokenId(entryCv);
           if (tokenId !== null) {
@@ -1914,7 +1919,6 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
         throw new Error('Connect a wallet before minting.');
       }
       const senderAddress = session.address;
-      const network = toStacksNetwork(collectionContract.network);
       const [tokenId, uploadStateResult, reservationCv] = await Promise.all([
         coreClient
           .getIdByHash(expectedHashBytes, senderAddress)
@@ -1922,13 +1926,15 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
         coreClient
           .getUploadState(expectedHashBytes, senderAddress, senderAddress)
           .catch(() => null),
-        callReadOnlyFunction({
-          contractAddress: collectionContract.address,
-          contractName: collectionContract.contractName,
+        callContractReadOnly({
+          contract: {
+            address: collectionContract.address,
+            contractName: collectionContract.contractName,
+            network: collectionContract.network
+          },
           functionName: 'get-reservation',
           functionArgs: [principalCV(senderAddress), bufferCV(expectedHashBytes)],
-          senderAddress,
-          network
+          senderAddress
         }).catch(() => null)
       ]);
       const reservationValue = reservationCv ? unwrapReadOnly(reservationCv) : null;
@@ -1947,14 +1953,15 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       if (!collectionContract) {
         return false;
       }
-      const network = toStacksNetwork(collectionContract.network);
-      const reservationCv = await callReadOnlyFunction({
-        contractAddress: collectionContract.address,
-        contractName: collectionContract.contractName,
+      const reservationCv = await callContractReadOnly({
+        contract: {
+          address: collectionContract.address,
+          contractName: collectionContract.contractName,
+          network: collectionContract.network
+        },
         functionName: 'get-reservation',
         functionArgs: [principalCV(owner), bufferCV(hashBytes)],
-        senderAddress: owner,
-        network
+        senderAddress: owner
       }).catch(() => null);
       return isOptionalSome(reservationCv);
     },
@@ -3505,233 +3512,235 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
               </p>
             </div>
           </div>
-          <div className="panel__body">
+          <div className="panel__body collection-live-page__gallery-body">
             {mintedGalleryEntries.length === 0 ? (
               <p className="meta-value">
                 No minted assets yet. This gallery updates as new mints are confirmed.
               </p>
             ) : (
-              <div className="collection-live-page__gallery-viewer viewer">
-                <div className="collection-live-page__gallery-browser">
-                  <div className="collection-live-page__gallery-toolbar">
-                    <p className="collection-live-page__gallery-note">
-                      Select a tile to open the larger preview and on-chain metadata. Each tile
-                      shows the current owner, with BNS names when available.
-                    </p>
-                    <div className="viewer-controls viewer-controls--compact">
-                      <div className="viewer-controls__pagination">
-                        <button
-                          className="button button--ghost button--mini"
-                          type="button"
-                          onClick={() => selectGalleryPage(galleryPageIndex - 1)}
-                          disabled={galleryPageIndex <= 0}
-                        >
-                          Prev
-                        </button>
-                        <span className="viewer-controls__label">
-                          Page {galleryPageIndex + 1} of {galleryMaxPage + 1}
-                        </span>
-                        <button
-                          className="button button--ghost button--mini"
-                          type="button"
-                          onClick={() => selectGalleryPage(galleryPageIndex + 1)}
-                          disabled={galleryPageIndex >= galleryMaxPage}
-                        >
-                          Next
-                        </button>
-                      </div>
-                      <span className="viewer-controls__range">{galleryPageRangeLabel}</span>
+              <div className="collection-live-page__gallery-viewer">
+                <div className="collection-live-page__gallery-topbar">
+                  <p className="collection-live-page__gallery-note">
+                    Select a tile to open the larger preview and on-chain metadata. Each tile
+                    shows the current owner, with BNS names when available.
+                  </p>
+                  <div className="viewer-controls viewer-controls--compact collection-live-page__gallery-controls">
+                    <div className="viewer-controls__pagination">
+                      <button
+                        className="button button--ghost button--mini"
+                        type="button"
+                        onClick={() => selectGalleryPage(galleryPageIndex - 1)}
+                        disabled={galleryPageIndex <= 0}
+                      >
+                        Prev
+                      </button>
+                      <span className="viewer-controls__label">
+                        Page {galleryPageIndex + 1} of {galleryMaxPage + 1}
+                      </span>
+                      <button
+                        className="button button--ghost button--mini"
+                        type="button"
+                        onClick={() => selectGalleryPage(galleryPageIndex + 1)}
+                        disabled={galleryPageIndex >= galleryMaxPage}
+                      >
+                        Next
+                      </button>
                     </div>
-                  </div>
-                  <div className="square-frame collection-live-page__gallery-frame-shell">
-                    <div className="token-grid square-frame__content">
-                      {galleryPageEntries.map((entry, index) => {
-                        const summary =
-                          galleryPageSummaryById.get(entry.tokenId.toString()) ?? null;
-                        const query = galleryPageTokenQueries[index];
-                        return (
-                          <MintedGalleryCard
-                            key={entry.asset.asset_id}
-                            asset={entry.asset}
-                            token={summary}
-                            tokenIdLabel={entry.tokenIdLabel}
-                            localTokenNumber={entry.localTokenNumber}
-                            contractId={coreContractId}
-                            senderAddress={galleryReadSenderAddress}
-                            client={coreClient}
-                            isSelected={entry.asset.asset_id === selectedGalleryAssetId}
-                            isLoading={query?.isLoading ?? false}
-                            onSelect={selectGalleryAsset}
-                          />
-                        );
-                      })}
-                    </div>
+                    <span className="viewer-controls__range">{galleryPageRangeLabel}</span>
                   </div>
                 </div>
-                <div className="detail-panel detail-panel--mobile-split collection-live-page__gallery-detail">
-                  <div className="detail-panel__preview collection-live-page__gallery-preview">
-                    {(galleryCanSelectPrev || galleryCanSelectNext) && (
-                      <>
-                        <button
-                          type="button"
-                          className="preview-nav-button preview-nav-button--prev"
-                          onClick={handleSelectPrevGallery}
-                          disabled={!galleryCanSelectPrev}
-                          aria-label="Previous inscription"
-                          title="Previous inscription"
-                        >
-                          &#8249;
-                        </button>
-                        <button
-                          type="button"
-                          className="preview-nav-button preview-nav-button--next"
-                          onClick={handleSelectNextGallery}
-                          disabled={!galleryCanSelectNext}
-                          aria-label="Next inscription"
-                          title="Next inscription"
-                        >
-                          &#8250;
-                        </button>
-                      </>
-                    )}
-                    {selectedGalleryEntry && selectedGalleryToken ? (
-                      <TokenContentPreview
-                        token={selectedGalleryToken}
-                        contractId={coreContractId}
-                        senderAddress={galleryReadSenderAddress}
-                        client={coreClient}
-                        showDetailsDrawer={false}
-                      />
-                    ) : (
-                      <div className="transfer-panel collection-live-page__gallery-placeholder">
-                        <div>
-                          <h3>
-                            {selectedGalleryLoading
-                              ? 'Loading inscription'
-                              : 'Select an inscription'}
-                          </h3>
-                          <p>
-                            {selectedGalleryLoading
-                              ? 'Preparing the larger preview and metadata.'
-                              : 'Choose a minted inscription from the grid to inspect it.'}
-                          </p>
-                        </div>
+                <div className="collection-live-page__gallery-stage viewer">
+                  <div className="collection-live-page__gallery-browser">
+                    <div className="square-frame collection-live-page__gallery-frame-shell">
+                      <div className="token-grid square-frame__content">
+                        {galleryPageEntries.map((entry, index) => {
+                          const summary =
+                            galleryPageSummaryById.get(entry.tokenId.toString()) ?? null;
+                          const query = galleryPageTokenQueries[index];
+                          return (
+                            <MintedGalleryCard
+                              key={entry.asset.asset_id}
+                              asset={entry.asset}
+                              token={summary}
+                              tokenIdLabel={entry.tokenIdLabel}
+                              localTokenNumber={entry.localTokenNumber}
+                              contractId={coreContractId}
+                              senderAddress={galleryReadSenderAddress}
+                              client={coreClient}
+                              isSelected={entry.asset.asset_id === selectedGalleryAssetId}
+                              isLoading={query?.isLoading ?? false}
+                              onSelect={selectGalleryAsset}
+                            />
+                          );
+                        })}
                       </div>
-                    )}
+                    </div>
                   </div>
-                  <div className="detail-panel__meta collection-live-page__gallery-metadata">
-                    {selectedGalleryEntry ? (
-                      <div className="transfer-panel">
-                        <div>
-                          <h3>Selected inscription</h3>
-                          <p>
-                            Preview and metadata for the currently selected minted item from this
-                            collection.
-                          </p>
-                        </div>
-                        <div className="meta-grid meta-grid--dense">
+                  <div className="detail-panel detail-panel--mobile-split collection-live-page__gallery-detail">
+                    <div className="detail-panel__preview collection-live-page__gallery-preview">
+                      {(galleryCanSelectPrev || galleryCanSelectNext) && (
+                        <>
+                          <button
+                            type="button"
+                            className="preview-nav-button preview-nav-button--prev"
+                            onClick={handleSelectPrevGallery}
+                            disabled={!galleryCanSelectPrev}
+                            aria-label="Previous inscription"
+                            title="Previous inscription"
+                          >
+                            &#8249;
+                          </button>
+                          <button
+                            type="button"
+                            className="preview-nav-button preview-nav-button--next"
+                            onClick={handleSelectNextGallery}
+                            disabled={!galleryCanSelectNext}
+                            aria-label="Next inscription"
+                            title="Next inscription"
+                          >
+                            &#8250;
+                          </button>
+                        </>
+                      )}
+                      {selectedGalleryEntry && selectedGalleryToken ? (
+                        <TokenContentPreview
+                          token={selectedGalleryToken}
+                          contractId={coreContractId}
+                          senderAddress={galleryReadSenderAddress}
+                          client={coreClient}
+                          showDetailsDrawer={false}
+                        />
+                      ) : (
+                        <div className="transfer-panel collection-live-page__gallery-placeholder">
                           <div>
-                            <span className="meta-label">Collection token</span>
-                            <span className="meta-value">
-                              {selectedGalleryDisplayLabel ?? 'Unknown'}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="meta-label">Global token</span>
-                            <span className="meta-value">
-                              #{selectedGalleryEntry.tokenIdLabel}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="meta-label">Owner</span>
-                            <AddressLabel
-                              address={selectedGalleryOwnerAddress}
-                              network={coreContract.network}
-                              className="meta-value"
-                              fallback={selectedGalleryLoading ? 'Loading owner...' : 'Unknown'}
-                            />
-                          </div>
-                          <div>
-                            <span className="meta-label">Creator</span>
-                            <AddressLabel
-                              address={selectedGalleryCreatorAddress}
-                              network={coreContract.network}
-                              className="meta-value"
-                              fallback="Unknown"
-                            />
-                          </div>
-                          <div>
-                            <span className="meta-label">Mime type</span>
-                            <span className="meta-value">{selectedGalleryMimeType}</span>
-                          </div>
-                          <div>
-                            <span className="meta-label">Media kind</span>
-                            <span className="meta-value">
-                              {getMediaLabel(selectedGalleryMimeType)}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="meta-label">Size</span>
-                            <span className="meta-value">
-                              {selectedGallerySize !== null
-                                ? formatBytes(selectedGallerySize)
-                                : 'Unknown'}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="meta-label">Chunks</span>
-                            <span className="meta-value">
-                              {selectedGalleryChunks !== null
-                                ? selectedGalleryChunks.toString()
-                                : 'Unknown'}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="meta-label">Asset file</span>
-                            <span
-                              className="meta-value meta-value--truncate"
-                              title={selectedGalleryAssetLabel ?? ''}
-                            >
-                              {selectedGalleryAssetLabel ?? 'Unknown'}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="meta-label">Asset ID</span>
-                            <span
-                              className="meta-value meta-value--truncate"
-                              title={selectedGalleryEntry.asset.asset_id}
-                            >
-                              {selectedGalleryEntry.asset.asset_id}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="meta-label">Token URI</span>
-                            <span
-                              className="meta-value meta-value--truncate"
-                              title={selectedGalleryTokenUri ?? ''}
-                            >
-                              {selectedGalleryTokenUri ?? 'Unavailable'}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="meta-label">Final hash</span>
-                            <span
-                              className="meta-value meta-value--truncate"
-                              title={selectedGalleryFinalHash ?? ''}
-                            >
-                              {selectedGalleryFinalHash ?? 'Pending'}
-                            </span>
+                            <h3>
+                              {selectedGalleryLoading
+                                ? 'Loading inscription'
+                                : 'Select an inscription'}
+                            </h3>
+                            <p>
+                              {selectedGalleryLoading
+                                ? 'Preparing the larger preview and metadata.'
+                                : 'Choose a minted inscription from the grid to inspect it.'}
+                            </p>
                           </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="transfer-panel">
-                        <div>
-                          <h3>No inscription selected</h3>
-                          <p>Select an item in the grid to view its owner and inscription data.</p>
+                      )}
+                    </div>
+                    <div className="detail-panel__meta collection-live-page__gallery-metadata">
+                      {selectedGalleryEntry ? (
+                        <div className="transfer-panel">
+                          <div>
+                            <h3>Selected inscription</h3>
+                            <p>
+                              Preview and metadata for the currently selected minted item from this
+                              collection.
+                            </p>
+                          </div>
+                          <div className="meta-grid meta-grid--dense">
+                            <div>
+                              <span className="meta-label">Collection token</span>
+                              <span className="meta-value">
+                                {selectedGalleryDisplayLabel ?? 'Unknown'}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="meta-label">Global token</span>
+                              <span className="meta-value">
+                                #{selectedGalleryEntry.tokenIdLabel}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="meta-label">Owner</span>
+                              <AddressLabel
+                                address={selectedGalleryOwnerAddress}
+                                network={coreContract.network}
+                                className="meta-value"
+                                fallback={selectedGalleryLoading ? 'Loading owner...' : 'Unknown'}
+                              />
+                            </div>
+                            <div>
+                              <span className="meta-label">Creator</span>
+                              <AddressLabel
+                                address={selectedGalleryCreatorAddress}
+                                network={coreContract.network}
+                                className="meta-value"
+                                fallback="Unknown"
+                              />
+                            </div>
+                            <div>
+                              <span className="meta-label">Mime type</span>
+                              <span className="meta-value">{selectedGalleryMimeType}</span>
+                            </div>
+                            <div>
+                              <span className="meta-label">Media kind</span>
+                              <span className="meta-value">
+                                {getMediaLabel(selectedGalleryMimeType)}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="meta-label">Size</span>
+                              <span className="meta-value">
+                                {selectedGallerySize !== null
+                                  ? formatBytes(selectedGallerySize)
+                                  : 'Unknown'}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="meta-label">Chunks</span>
+                              <span className="meta-value">
+                                {selectedGalleryChunks !== null
+                                  ? selectedGalleryChunks.toString()
+                                  : 'Unknown'}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="meta-label">Asset file</span>
+                              <span
+                                className="meta-value meta-value--truncate"
+                                title={selectedGalleryAssetLabel ?? ''}
+                              >
+                                {selectedGalleryAssetLabel ?? 'Unknown'}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="meta-label">Asset ID</span>
+                              <span
+                                className="meta-value meta-value--truncate"
+                                title={selectedGalleryEntry.asset.asset_id}
+                              >
+                                {selectedGalleryEntry.asset.asset_id}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="meta-label">Token URI</span>
+                              <span
+                                className="meta-value meta-value--truncate"
+                                title={selectedGalleryTokenUri ?? ''}
+                              >
+                                {selectedGalleryTokenUri ?? 'Unavailable'}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="meta-label">Final hash</span>
+                              <span
+                                className="meta-value meta-value--truncate"
+                                title={selectedGalleryFinalHash ?? ''}
+                              >
+                                {selectedGalleryFinalHash ?? 'Pending'}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      ) : (
+                        <div className="transfer-panel">
+                          <div>
+                            <h3>No inscription selected</h3>
+                            <p>Select an item in the grid to view its owner and inscription data.</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

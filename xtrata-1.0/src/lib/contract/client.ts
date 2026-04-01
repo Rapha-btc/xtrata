@@ -309,6 +309,36 @@ const callReadOnly = async (params: {
   throw new Error(String(lastError ?? 'Read-only call failed'));
 };
 
+export const callContractReadOnly = async (params: {
+  contract: ContractConfig;
+  functionName: string;
+  functionArgs?: ClarityValue[];
+  senderAddress: string;
+  caller?: ReadOnlyCaller;
+  apiBaseUrl?: string;
+  retry?: {
+    retries?: number;
+    baseDelayMs?: number;
+  };
+}) => {
+  const caller = params.caller ?? createStacksReadOnlyCaller();
+  const apiBaseUrls = params.apiBaseUrl
+    ? [params.apiBaseUrl]
+    : getApiBaseUrls(params.contract.network);
+  const stacksNetwork = apiBaseUrls.map((url) =>
+    toStacksNetwork(params.contract.network, url)
+  );
+  return callReadOnly({
+    caller,
+    contract: params.contract,
+    network: stacksNetwork,
+    functionName: params.functionName,
+    functionArgs: params.functionArgs ?? [],
+    senderAddress: params.senderAddress,
+    retry: params.retry
+  });
+};
+
 export type XtrataClient = {
   contract: ContractConfig;
   network: NetworkType;

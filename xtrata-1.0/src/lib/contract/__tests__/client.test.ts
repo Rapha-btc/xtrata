@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { StacksMainnet } from '@stacks/network';
 import {
   ClarityType,
@@ -15,6 +15,7 @@ import { DEFAULT_CONTRACT } from '../config';
 import {
   buildSealInscriptionBatchCall,
   buildTransferCall,
+  callContractReadOnly,
   createXtrataClient
 } from '../client';
 import type { ReadOnlyCaller, ReadOnlyCallOptions } from '../client';
@@ -151,5 +152,29 @@ describe('xtrata contract client', () => {
       'get-minted-count',
       'get-minted-id'
     ]);
+  });
+
+  it('falls back to the next API base for direct read-only calls', async () => {
+    const calls: ReadOnlyCallOptions[] = [];
+    const caller: ReadOnlyCaller = {
+      callReadOnly: vi.fn(async (options) => {
+        calls.push(options);
+        if (calls.length === 1) {
+          throw new Error('Failed to fetch');
+        }
+        return responseOkCV(uintCV(9));
+      })
+    };
+
+    const value = await callContractReadOnly({
+      contract: DEFAULT_CONTRACT,
+      functionName: 'get-last-token-id',
+      senderAddress: 'SP2JXKMSH007NPYAQHKJPQMAQYAD90NQGTVJVQ02B',
+      caller
+    });
+
+    expect(calls).toHaveLength(2);
+    expect(calls[0].network.coreApiUrl).not.toBe(calls[1].network.coreApiUrl);
+    expect(value.type).toBe(ClarityType.ResponseOk);
   });
 });
