@@ -119,6 +119,27 @@ type LiveCollectionCard = {
 
 type SimpleHomeSectionKey = 'live-drops' | 'home-viewer' | 'market' | 'mint' | 'starter-docs';
 
+const toSectionKeyFromHash = (hash: string): SimpleHomeSectionKey | null => {
+  const normalized = hash.replace(/^#/, '').trim().toLowerCase();
+  if (
+    normalized === 'live-drops' ||
+    normalized === 'home-viewer' ||
+    normalized === 'market' ||
+    normalized === 'mint' ||
+    normalized === 'starter-docs'
+  ) {
+    return normalized;
+  }
+  return null;
+};
+
+const resolveSectionAnchorId = (section: SimpleHomeSectionKey) =>
+  section === 'home-viewer' ? 'collection-viewer' : section;
+
+const resolveSectionScrollBlock = (
+  section: SimpleHomeSectionKey
+): ScrollLogicalPosition => (section === 'home-viewer' ? 'center' : 'start');
+
 const STARTER_DOCS: StarterDoc[] = [
   {
     title: 'How to inscribe on Xtrata',
@@ -493,6 +514,21 @@ export default function SimplePublicHome() {
   const [walletPending, setWalletPending] = useState(false);
   const [rateLimitWarning, setRateLimitWarning] = useState(false);
   const [viewerFocusKey, setViewerFocusKey] = useState<number | null>(null);
+  const preferredViewerTokenId = useMemo(() => {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+    const raw = new URLSearchParams(window.location.search).get('viewer-token');
+    if (!raw) {
+      return null;
+    }
+    try {
+      const parsed = BigInt(raw);
+      return parsed >= 0n ? parsed : null;
+    } catch {
+      return null;
+    }
+  }, []);
   const [viewerMode, setViewerMode] = useState<ViewerMode>('collection');
   const [viewerCollapsed, setViewerCollapsed] = useState(false);
   const [marketCollapsed, setMarketCollapsed] = useState(true);
@@ -808,6 +844,7 @@ export default function SimplePublicHome() {
 
   const focusSection = (key: SimpleHomeSectionKey) => {
     if (key === 'home-viewer') {
+      setViewerMode('collection');
       setViewerCollapsed(false);
     }
     if (key === 'market') {
@@ -821,14 +858,66 @@ export default function SimplePublicHome() {
     }
     if (typeof window !== 'undefined') {
       window.requestAnimationFrame(() => {
-        const anchor = document.getElementById(key);
+        const anchor = document.getElementById(resolveSectionAnchorId(key));
         if (anchor) {
-          anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          anchor.scrollIntoView({
+            behavior: 'smooth',
+            block: resolveSectionScrollBlock(key)
+          });
         }
-        window.history.replaceState(null, '', `#${key}`);
+        window.history.replaceState(
+          null,
+          '',
+          `${window.location.pathname}${window.location.search}#${key}`
+        );
       });
     }
   };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const openHashSection = () => {
+      const section =
+        toSectionKeyFromHash(window.location.hash) ??
+        (preferredViewerTokenId !== null ? 'home-viewer' : null);
+      if (!section) {
+        return;
+      }
+      if (section === 'home-viewer') {
+        setViewerMode('collection');
+        setViewerCollapsed(false);
+      }
+      if (section === 'market') {
+        setMarketCollapsed(false);
+      }
+      if (section === 'mint') {
+        setMintCollapsed(false);
+      }
+      if (section === 'starter-docs') {
+        setDocsCollapsed(false);
+      }
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          const anchor = document.getElementById(resolveSectionAnchorId(section));
+          if (anchor) {
+            anchor.scrollIntoView({
+              behavior: 'smooth',
+              block: resolveSectionScrollBlock(section)
+            });
+          }
+        });
+      });
+    };
+
+    openHashSection();
+    window.addEventListener('hashchange', openHashSection);
+    return () => {
+      window.removeEventListener('hashchange', openHashSection);
+    };
+  }, [preferredViewerTokenId]);
 
   const handleNavJump = (
     event: MouseEvent<HTMLAnchorElement>,
@@ -1164,6 +1253,7 @@ export default function SimplePublicHome() {
             walletSession={walletSession}
             walletLookupState={walletLookupState}
             focusKey={viewerFocusKey ?? undefined}
+            preferredTokenId={preferredViewerTokenId}
             collapsed={viewerCollapsed}
             onToggleCollapse={() => setViewerCollapsed((prev) => !prev)}
             isActiveTab={tabGuard.isActive}

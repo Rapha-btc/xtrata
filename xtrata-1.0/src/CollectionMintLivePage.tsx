@@ -22,7 +22,9 @@ import {
   validateStacksAddress,
   type ClarityValue
 } from '@stacks/transactions';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createXtrataClient } from './lib/contract/client';
+import { getContractId } from './lib/contract/config';
 import {
   batchChunks,
   CHUNK_SIZE,
@@ -82,7 +84,16 @@ import {
   writeThemePreference
 } from './lib/theme/preferences';
 import { getMediaKind } from './lib/viewer/content';
+import {
+  loadInscriptionFromCache,
+  loadInscriptionThumbnailFromCache,
+  saveInscriptionThumbnailToCache,
+  saveInscriptionToCache
+} from './lib/viewer/cache';
 import { shouldUsePixelatedImageRendering } from './lib/viewer/image-rendering';
+import { createImageThumbnail, THUMBNAIL_SIZE } from './lib/viewer/thumbnail';
+import { getTokenThumbnailKey, useTokenSummaries } from './lib/viewer/queries';
+import { createObjectUrl } from './lib/utils/blob';
 import { bytesToHex } from './lib/utils/encoding';
 import { formatBytes } from './lib/utils/format';
 import { createStacksWalletAdapter } from './lib/wallet/adapter';
@@ -90,6 +101,7 @@ import { createWalletSessionStore } from './lib/wallet/session';
 import type { WalletSession } from './lib/wallet/types';
 import AddressLabel from './components/AddressLabel';
 import CollectionCoverImage from './components/CollectionCoverImage';
+import TokenCardMedia from './components/TokenCardMedia';
 import WalletTopBar from './components/WalletTopBar';
 
 const walletSessionStore = createWalletSessionStore();
@@ -314,6 +326,478 @@ const CollectionLivePreviewImage = ({
   );
 };
 
+type CollectionLiveGalleryMediaProps = {
+  asset: CollectionAsset;
+  previewUrl: string;
+  collectionTitle: string;
+  loading?: 'lazy' | 'eager';
+};
+
+const CollectionLiveGalleryMedia = ({
+  asset,
+  previewUrl,
+  collectionTitle,
+  loading
+}: CollectionLiveGalleryMediaProps) => {
+  const mediaKind = getMediaKind(asset.mime_type);
+  if (mediaKind === 'image' || mediaKind === 'svg') {
+    return (
+      <CollectionLivePreviewImage
+        src={previewUrl}
+        alt={`${collectionTitle} artwork`}
+        loading={loading}
+        mimeType={asset.mime_type}
+        isSvgSource={mediaKind === 'svg'}
+      />
+    );
+  }
+  if (mediaKind === 'video') {
+    return <video src={previewUrl} controls preload="metadata" />;
+  }
+  if (mediaKind === 'audio') {
+    return <audio src={previewUrl} controls preload="metadata" />;
+  }
+  if (mediaKind === 'html' || mediaKind === 'text') {
+    return (
+      <iframe
+        src={previewUrl}
+        title={asset.filename ?? asset.path}
+        sandbox="allow-scripts allow-same-origin"
+      />
+    );
+  }
+  return (
+    <span className="collection-live-page__gallery-fallback">
+      {asset.mime_type || 'binary'}
+    </span>
+  );
+};
+
+type CollectionLiveCachedImageMediaProps = {
+  asset: CollectionAsset;
+  tokenId: bigint | null;
+  previewUrl: string;
+  collectionTitle: string;
+  contractId: string;
+};
+
+const CollectionLiveCachedImageMedia = ({
+  asset,
+  tokenId,
+  previewUrl,
+  collectionTitle,
+  contractId
+}: CollectionLiveCachedImageMediaProps) => {
+  const queryClient = useQueryClient();
+  const thumbnailSeededRef = useRef(false);
+  const thumbnailQuery = useQuery({
+    queryKey:
+      tokenId === null
+        ? ['collection-live', 'gallery-thumbnail', previewUrl]
+        : getTokenThumbnailKey(contractId, tokenId),
+    enabled: tokenId !== null,
+    staleTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    queryFn: async () => {
+      if (tokenId === null) {
+        return null;
+      }
+      return loadInscriptionThumbnailFromCache(contractId, tokenId);
+    }
+  });
+  const thumbnailUrl = useMemo(() => {
+    const thumbnail = thumbnailQuery.data;
+    if (!thumbnail?.data || thumbnail.data.length === 0) {
+      return null;
+    }
+    return createObjectUrl(
+      thumbnail.data,
+      thumbnail.mimeType ?? 'image/webp'
+    );
+  }, [thumbnailQuery.data]);
+
+  useEffect(() => {
+    if (!thumbnailUrl) {
+      return;
+    }
+    return () => {
+      URL.revokeObjectURL(thumbnailUrl);
+    };
+  }, [thumbnailUrl]);
+
+  useEffect(() => {
+    thumbnailSeededRef.current = false;
+  }, [previewUrl, tokenId]);
+
+  useEffect(() => {
+    if (tokenId === null) {
+      return;
+    }
+    if (thumbnailQuery.data?.data && thumbnailQuery.data.data.length > 0) {
+      return;
+    }
+    if (thumbnailSeededRef.current) {
+      return;
+    }
+    thumbnailSeededRef.current = true;
+    let cancelled = false;
+    const run = async () => {
+      try {
+        const response = await fetch(previewUrl, {
+          cache: 'force-cache'
+        });
+        if (!response.ok) {
+          return;
+        }
+        const bytes = new Uint8Array(await response.arrayBuffer());
+        if (bytes.length === 0) {
+          return;
+        }
+        await saveInscriptionToCache(contractId, tokenId, bytes, asset.mime_type);
+        const thumbnail = await createImageThumbnail({
+          bytes,
+          mimeType: asset.mime_type,
+          size: THUMBNAIL_SIZE
+        });
+        if (!thumbnail || thumbnail.data.length === 0 || cancelled) {
+          return;
+        }
+        await saveInscriptionThumbnailToCache(
+          contractId,
+          tokenId,
+          thumbnail.data,
+          {
+            mimeType: thumbnail.mimeType,
+            width: thumbnail.width,
+            height: thumbnail.height
+          }
+        );
+        if (cancelled) {
+          return;
+        }
+        queryClient.setQueryData(getTokenThumbnailKey(contractId, tokenId), {
+          data: thumbnail.data,
+          mimeType: thumbnail.mimeType,
+          width: thumbnail.width,
+          height: thumbnail.height
+        });
+      } catch {
+        // Fall back to the collection preview route when cache seeding fails.
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    asset.mime_type,
+    contractId,
+    previewUrl,
+    queryClient,
+    thumbnailQuery.data,
+    tokenId
+  ]);
+
+  if (thumbnailUrl) {
+    return (
+      <CollectionLivePreviewImage
+        src={thumbnailUrl}
+        alt={`${collectionTitle} artwork`}
+        loading="lazy"
+        mimeType={asset.mime_type}
+        isSvgSource={asset.mime_type.trim().toLowerCase() === 'image/svg+xml'}
+      />
+    );
+  }
+
+  return (
+    <CollectionLiveGalleryMedia
+      asset={asset}
+      previewUrl={previewUrl}
+      collectionTitle={collectionTitle}
+      loading="lazy"
+    />
+  );
+};
+
+type CollectionLiveCachedDetailMediaProps = {
+  asset: CollectionAsset;
+  tokenId: bigint | null;
+  previewUrl: string;
+  collectionTitle: string;
+  contractId: string;
+};
+
+const CollectionLiveCachedDetailMedia = ({
+  asset,
+  tokenId,
+  previewUrl,
+  collectionTitle,
+  contractId
+}: CollectionLiveCachedDetailMediaProps) => {
+  const queryClient = useQueryClient();
+  const contentSeededRef = useRef(false);
+  const cachedContentKey = useMemo(
+    () => [
+      'collection-live',
+      'detail-content',
+      contractId,
+      tokenId?.toString() ?? 'none'
+    ],
+    [contractId, tokenId]
+  );
+  const cachedContentQuery = useQuery({
+    queryKey: cachedContentKey,
+    enabled: tokenId !== null,
+    staleTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    queryFn: async () => {
+      if (tokenId === null) {
+        return null;
+      }
+      return loadInscriptionFromCache(contractId, tokenId);
+    }
+  });
+  const cachedContentUrl = useMemo(() => {
+    const cached = cachedContentQuery.data;
+    if (!cached?.data || cached.data.length === 0) {
+      return null;
+    }
+    return createObjectUrl(cached.data, cached.mimeType ?? asset.mime_type);
+  }, [asset.mime_type, cachedContentQuery.data]);
+
+  useEffect(() => {
+    if (!cachedContentUrl) {
+      return;
+    }
+    return () => {
+      URL.revokeObjectURL(cachedContentUrl);
+    };
+  }, [cachedContentUrl]);
+
+  useEffect(() => {
+    contentSeededRef.current = false;
+  }, [previewUrl, tokenId]);
+
+  useEffect(() => {
+    if (tokenId === null) {
+      return;
+    }
+    if (cachedContentQuery.data?.data && cachedContentQuery.data.data.length > 0) {
+      return;
+    }
+    if (contentSeededRef.current) {
+      return;
+    }
+    contentSeededRef.current = true;
+    let cancelled = false;
+    const run = async () => {
+      try {
+        const response = await fetch(previewUrl, {
+          cache: 'force-cache'
+        });
+        if (!response.ok) {
+          return;
+        }
+        const bytes = new Uint8Array(await response.arrayBuffer());
+        if (bytes.length === 0) {
+          return;
+        }
+        const resolvedMimeType =
+          response.headers.get('content-type')?.trim() || asset.mime_type;
+        await saveInscriptionToCache(contractId, tokenId, bytes, resolvedMimeType);
+        if (
+          getMediaKind(resolvedMimeType) === 'image' ||
+          getMediaKind(resolvedMimeType) === 'svg'
+        ) {
+          const thumbnail = await createImageThumbnail({
+            bytes,
+            mimeType: resolvedMimeType,
+            size: THUMBNAIL_SIZE
+          });
+          if (thumbnail && thumbnail.data.length > 0) {
+            await saveInscriptionThumbnailToCache(
+              contractId,
+              tokenId,
+              thumbnail.data,
+              {
+                mimeType: thumbnail.mimeType,
+                width: thumbnail.width,
+                height: thumbnail.height
+              }
+            );
+            if (!cancelled) {
+              queryClient.setQueryData(getTokenThumbnailKey(contractId, tokenId), {
+                data: thumbnail.data,
+                mimeType: thumbnail.mimeType,
+                width: thumbnail.width,
+                height: thumbnail.height
+              });
+            }
+          }
+        }
+        if (cancelled) {
+          return;
+        }
+        queryClient.setQueryData(cachedContentKey, {
+          data: bytes,
+          mimeType: resolvedMimeType
+        });
+      } catch {
+        // Fall back to the collection preview route when cache seeding fails.
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    asset.mime_type,
+    cachedContentKey,
+    cachedContentQuery.data,
+    contractId,
+    previewUrl,
+    queryClient,
+    tokenId
+  ]);
+
+  return (
+    <CollectionLiveGalleryMedia
+      asset={asset}
+      previewUrl={cachedContentUrl ?? previewUrl}
+      collectionTitle={collectionTitle}
+      loading="eager"
+    />
+  );
+};
+
+const getCollectionLivePosterLabel = (mimeType: string) => {
+  const mediaKind = getMediaKind(mimeType);
+  switch (mediaKind) {
+    case 'audio':
+      return 'AUDIO';
+    case 'video':
+      return 'VIDEO';
+    case 'html':
+      return 'HTML';
+    case 'text':
+      return 'TEXT';
+    case 'svg':
+      return 'SVG';
+    case 'image':
+      return 'IMAGE';
+    default:
+      return 'MEDIA';
+  }
+};
+
+type CollectionLiveGalleryCardMediaProps = {
+  asset: CollectionAsset;
+  tokenId: bigint | null;
+  previewUrl: string;
+  collectionTitle: string;
+  senderAddress: string;
+  client: ReturnType<typeof createXtrataClient>;
+  contractId: string;
+};
+
+const CollectionLiveGalleryCardMedia = ({
+  asset,
+  tokenId,
+  previewUrl,
+  collectionTitle,
+  senderAddress,
+  client,
+  contractId
+}: CollectionLiveGalleryCardMediaProps) => {
+  const mediaKind = getMediaKind(asset.mime_type);
+  const dependencyIdsQuery = useQuery({
+    queryKey: [
+      'collection-live',
+      'gallery-dependencies',
+      contractId,
+      tokenId?.toString() ?? 'none'
+    ],
+    enabled:
+      tokenId !== null &&
+      mediaKind !== 'image' &&
+      mediaKind !== 'svg',
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    queryFn: async () => {
+      if (tokenId === null) {
+        return [] as bigint[];
+      }
+      return client.getDependencies(tokenId, senderAddress).catch(() => [] as bigint[]);
+    }
+  });
+  const dependencyPreviewIds = useMemo(
+    () => (dependencyIdsQuery.data ?? []).slice(0, 8),
+    [dependencyIdsQuery.data]
+  );
+  const { tokenQueries: dependencyQueries } = useTokenSummaries({
+    client,
+    senderAddress,
+    tokenIds: dependencyPreviewIds,
+    enabled: dependencyPreviewIds.length > 0,
+    contractIdOverride: contractId
+  });
+  const representativeDependencyToken = useMemo(
+    () =>
+      dependencyQueries
+        .map((query) => query.data ?? null)
+        .find((token) => {
+          const mimeType = token?.meta?.mimeType ?? null;
+          const dependencyKind = getMediaKind(mimeType);
+          return dependencyKind === 'image' || dependencyKind === 'svg';
+        }) ?? null,
+    [dependencyQueries]
+  );
+
+  if (mediaKind === 'image' || mediaKind === 'svg') {
+    return (
+      <CollectionLiveCachedImageMedia
+        asset={asset}
+        tokenId={tokenId}
+        previewUrl={previewUrl}
+        collectionTitle={collectionTitle}
+        contractId={contractId}
+      />
+    );
+  }
+
+  if (representativeDependencyToken) {
+    return (
+      <TokenCardMedia
+        token={representativeDependencyToken}
+        contractId={representativeDependencyToken.sourceContractId ?? contractId}
+        senderAddress={senderAddress}
+        client={client}
+        pixelateOnUpscale
+        letterboxNonSquare
+      />
+    );
+  }
+
+  return (
+    <div className="collection-live-page__gallery-poster">
+      <span className="collection-live-page__gallery-poster-badge">
+        {getCollectionLivePosterLabel(asset.mime_type)}
+      </span>
+      <span className="collection-live-page__gallery-poster-title">
+        {asset.filename ?? asset.path}
+      </span>
+      <span className="collection-live-page__gallery-poster-note">
+        Preview on selection
+      </span>
+    </div>
+  );
+};
+
 const parseJsonResponse = async <T,>(response: Response, label: string) => {
   const text = await response.text();
   let payload: unknown = null;
@@ -470,6 +954,8 @@ const formatCount = (value: bigint | null) => {
   return value.toString();
 };
 
+const formatItemLabel = (value: bigint) => (value === 1n ? 'item' : 'items');
+
 const formatStepStatus = (state: StepState) => {
   if (state === 'pending') {
     return 'In progress';
@@ -586,6 +1072,8 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   const [collectionIndexSyncMessage, setCollectionIndexSyncMessage] = useState<string | null>(
     null
   );
+  const galleryDetailRef = useRef<HTMLDivElement | null>(null);
+  const previousSelectedGalleryAssetIdRef = useRef<string | null>(null);
   const resumableLookupCacheRef = useRef<ResumableLookupCacheEntry | null>(null);
   const canonicalHashStorageLoadedRef = useRef(false);
   const [canonicalHashHexByAssetId, setCanonicalHashHexByAssetId] = useState<
@@ -593,6 +1081,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   >({});
   const [mintedScanPending, setMintedScanPending] = useState(false);
   const [pendingMintAssetIds, setPendingMintAssetIds] = useState<string[]>([]);
+  const [selectedGalleryAssetId, setSelectedGalleryAssetId] = useState<string | null>(null);
   const [resumeAssetId, setResumeAssetId] = useState<string | null>(null);
   const [showMintGuide, setShowMintGuide] = useState(false);
   const [beginState, setBeginState] = useState<StepState>('idle');
@@ -709,6 +1198,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       }),
     [coreContract]
   );
+  const coreContractId = useMemo(() => getContractId(coreContract), [coreContract]);
 
   const networkMismatch = useMemo(
     () =>
@@ -782,6 +1272,143 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     });
     return minted;
   }, [collectionTokenNumberByGlobalId, mintableAssets, mintedTokenIds]);
+
+  useEffect(() => {
+    if (mintedGallery.length === 0) {
+      if (selectedGalleryAssetId !== null) {
+        setSelectedGalleryAssetId(null);
+      }
+      return;
+    }
+    if (
+      selectedGalleryAssetId &&
+      mintedGallery.some((asset) => asset.asset_id === selectedGalleryAssetId)
+    ) {
+      return;
+    }
+    setSelectedGalleryAssetId(mintedGallery[0]?.asset_id ?? null);
+  }, [mintedGallery, selectedGalleryAssetId]);
+
+  const galleryReadSenderAddress = useMemo(
+    () => walletSession.address ?? coreContract.address,
+    [walletSession.address, coreContract.address]
+  );
+
+  const selectedGalleryAsset = useMemo(() => {
+    if (mintedGallery.length === 0) {
+      return null;
+    }
+    if (selectedGalleryAssetId) {
+      const matched = mintedGallery.find((asset) => asset.asset_id === selectedGalleryAssetId);
+      if (matched) {
+        return matched;
+      }
+    }
+    return mintedGallery[0] ?? null;
+  }, [mintedGallery, selectedGalleryAssetId]);
+
+  const selectedGalleryTokenId = useMemo(() => {
+    if (!selectedGalleryAsset) {
+      return null;
+    }
+    const raw = mintedTokenIds[selectedGalleryAsset.asset_id];
+    if (!raw) {
+      return null;
+    }
+    try {
+      return BigInt(raw);
+    } catch {
+      return null;
+    }
+  }, [mintedTokenIds, selectedGalleryAsset]);
+
+  const selectedGalleryTokenIdLabel = useMemo(
+    () => selectedGalleryTokenId?.toString() ?? null,
+    [selectedGalleryTokenId]
+  );
+
+  const selectedGalleryLocalTokenNumber = useMemo(() => {
+    if (!selectedGalleryTokenIdLabel) {
+      return null;
+    }
+    const localTokenNumber = collectionTokenNumberByGlobalId[selectedGalleryTokenIdLabel];
+    return typeof localTokenNumber === 'number' ? localTokenNumber : null;
+  }, [collectionTokenNumberByGlobalId, selectedGalleryTokenIdLabel]);
+
+  const selectedGalleryPreviewUrl = useMemo(() => {
+    if (!selectedGalleryAsset || !resolvedCollectionId) {
+      return null;
+    }
+    return `/collections/${encodeURIComponent(
+      resolvedCollectionId
+    )}/asset-preview?assetId=${encodeURIComponent(selectedGalleryAsset.asset_id)}`;
+  }, [resolvedCollectionId, selectedGalleryAsset]);
+
+  const selectedGalleryDetailsQuery = useQuery({
+    queryKey: [
+      'collection-live',
+      resolvedCollectionId || normalizedCollectionKey || 'unknown',
+      'selected-gallery-token',
+      selectedGalleryTokenIdLabel ?? 'none'
+    ],
+    enabled: selectedGalleryTokenId !== null && galleryReadSenderAddress.length > 0,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    queryFn: async () => {
+      if (selectedGalleryTokenId === null) {
+        return null;
+      }
+      const [meta, tokenUri] = await Promise.all([
+        coreClient
+          .getInscriptionMeta(selectedGalleryTokenId, galleryReadSenderAddress)
+          .catch(() => null),
+        coreClient.getTokenUri(selectedGalleryTokenId, galleryReadSenderAddress).catch(() => null)
+      ]);
+      return {
+        meta,
+        tokenUri
+      };
+    }
+  });
+
+  const selectedGalleryMeta = selectedGalleryDetailsQuery.data?.meta ?? null;
+  const selectedGalleryTokenUri = selectedGalleryDetailsQuery.data?.tokenUri ?? null;
+  const selectedGalleryOwnerAddress = selectedGalleryMeta?.owner ?? null;
+  const selectedGalleryCreatorAddress = selectedGalleryMeta?.creator ?? null;
+  const selectedGalleryMimeType =
+    selectedGalleryMeta?.mimeType ?? selectedGalleryAsset?.mime_type ?? 'Unknown';
+  const selectedGalleryTotalSize = selectedGalleryMeta?.totalSize ?? (
+    selectedGalleryAsset ? BigInt(toPositiveInteger(selectedGalleryAsset.total_bytes)) : null
+  );
+  const selectedGalleryTotalChunks = selectedGalleryMeta?.totalChunks ?? (
+    selectedGalleryAsset ? BigInt(resolveAssetChunkCount(selectedGalleryAsset)) : null
+  );
+  const selectedGallerySealed = selectedGalleryMeta?.sealed ?? null;
+  const selectedGalleryFinalHash = selectedGalleryMeta?.finalHash
+    ? bytesToHex(selectedGalleryMeta.finalHash)
+    : null;
+  const selectedGalleryMainViewerHref = useMemo(() => {
+    if (!selectedGalleryTokenIdLabel) {
+      return '/';
+    }
+    return `/?viewer-token=${encodeURIComponent(selectedGalleryTokenIdLabel)}`;
+  }, [selectedGalleryTokenIdLabel]);
+
+  useEffect(() => {
+    const currentAssetId = selectedGalleryAsset?.asset_id ?? null;
+    const previousAssetId = previousSelectedGalleryAssetIdRef.current;
+    previousSelectedGalleryAssetIdRef.current = currentAssetId;
+    if (!currentAssetId || !galleryDetailRef.current) {
+      return;
+    }
+    if (!previousAssetId || previousAssetId === currentAssetId) {
+      return;
+    }
+    galleryDetailRef.current.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
+  }, [selectedGalleryAsset]);
 
   const fallbackCoverUrl = useMemo(() => {
     const fallback = imageAssets[0];
@@ -2680,6 +3307,56 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   const maxSupplyLabel = formatCount(contractStatus?.maxSupply ?? null);
   const reservedCountLabel = formatCount(contractStatus?.reservedCount ?? null);
   const remainingLabel = remaining === null ? 'Unknown' : remaining.toString();
+  const knownMintedGalleryCount = useMemo(() => {
+    let next = 0n;
+    const contractMinted = contractStatus?.mintedCount ?? null;
+    if (contractMinted !== null && contractMinted > next) {
+      next = contractMinted;
+    }
+    const indexedMinted = BigInt(Math.max(0, collectionIndexCount));
+    if (indexedMinted > next) {
+      next = indexedMinted;
+    }
+    const resolvedMinted = BigInt(Object.keys(mintedTokenIds).length);
+    if (resolvedMinted > next) {
+      next = resolvedMinted;
+    }
+    return next;
+  }, [collectionIndexCount, contractStatus?.mintedCount, mintedTokenIds]);
+  const mintedGalleryEmptyMessage = useMemo(() => {
+    if (knownMintedGalleryCount > 0n) {
+      const countLabel = knownMintedGalleryCount.toString();
+      const itemLabel = formatItemLabel(knownMintedGalleryCount);
+      if (collectionLoading) {
+        return `This collection has ${countLabel} minted ${itemLabel}. Collection assets are still loading before the gallery can be built.`;
+      }
+      if (mintedScanPending) {
+        return `This collection has ${countLabel} minted ${itemLabel}. Gallery images and previews are loading now.`;
+      }
+      if (collectionIndexSyncPending) {
+        return `This collection has ${countLabel} minted ${itemLabel}. Collection numbering is still syncing while the gallery resolves.`;
+      }
+      if (mintableAssets.length === 0) {
+        return `This collection has ${countLabel} minted ${itemLabel} on-chain, but there are no active collection assets available to render in this gallery.`;
+      }
+      if (assets.length > mintableAssets.length) {
+        return `This collection has ${countLabel} minted ${itemLabel}, but none of the currently active collection assets could be matched for display yet. Some staged assets may be inactive or still syncing.`;
+      }
+      return `This collection has ${countLabel} minted ${itemLabel}, but the page could not finish matching them to previewable collection assets yet. If this persists after refresh, some asset previews or hash mappings may be unavailable.`;
+    }
+    if (collectionLoading || statusLoading || mintedScanPending || collectionIndexSyncPending) {
+      return 'Checking for previously inscribed items...';
+    }
+    return 'No minted assets yet. This gallery updates as new mints are confirmed.';
+  }, [
+    assets.length,
+    collectionIndexSyncPending,
+    collectionLoading,
+    knownMintedGalleryCount,
+    mintableAssets.length,
+    mintedScanPending,
+    statusLoading
+  ]);
   const statusRefreshNote = statusLastUpdatedAt
     ? `Auto-refreshing every ~6s while active (${STATUS_REFRESH_BACKGROUND_MS / 1000}s in background). Last sync ${new Date(
         statusLastUpdatedAt
@@ -3215,62 +3892,225 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
           <div className="panel__body">
             {mintedGallery.length === 0 ? (
               <p className="meta-value">
-                No minted assets yet. This gallery updates as new mints are confirmed.
+                {mintedGalleryEmptyMessage}
               </p>
             ) : (
-              <div className="collection-live-page__gallery-grid">
-                {mintedGallery.map((asset) => {
-                  const tokenId = mintedTokenIds[asset.asset_id] ?? null;
-                  const mediaKind = getMediaKind(asset.mime_type);
-                  const localTokenNumber =
-                    tokenId && tokenId.length > 0
-                      ? collectionTokenNumberByGlobalId[tokenId]
-                      : undefined;
-                  const previewUrl = `/collections/${encodeURIComponent(
-                    resolvedCollectionId
-                  )}/asset-preview?assetId=${encodeURIComponent(asset.asset_id)}`;
-                  return (
-                    <article
-                      key={asset.asset_id}
-                      className="collection-live-page__gallery-item"
-                    >
-                      <div className="collection-live-page__gallery-frame">
-                        {mediaKind === 'image' || mediaKind === 'svg' ? (
-                          <CollectionLivePreviewImage
-                            src={previewUrl}
-                            alt={`${collectionTitle} artwork`}
-                            loading="lazy"
-                            mimeType={asset.mime_type}
-                            isSvgSource={mediaKind === 'svg'}
+              <div className="collection-live-page__gallery-stack">
+                <div className="collection-live-page__gallery-grid">
+                  {mintedGallery.map((asset) => {
+                    const tokenId = mintedTokenIds[asset.asset_id] ?? null;
+                    const tileTokenId = (() => {
+                      if (!tokenId || tokenId.length === 0) {
+                        return null;
+                      }
+                      try {
+                        return BigInt(tokenId);
+                      } catch {
+                        return null;
+                      }
+                    })();
+                    const localTokenNumber =
+                      tokenId && tokenId.length > 0
+                        ? collectionTokenNumberByGlobalId[tokenId]
+                        : undefined;
+                    const previewUrl = `/collections/${encodeURIComponent(
+                      resolvedCollectionId
+                    )}/asset-preview?assetId=${encodeURIComponent(asset.asset_id)}`;
+                    const isSelected = asset.asset_id === selectedGalleryAsset?.asset_id;
+                    return (
+                      <article
+                        key={asset.asset_id}
+                        className={`collection-live-page__gallery-item${isSelected ? ' collection-live-page__gallery-item--selected' : ''}`}
+                        onClick={() => setSelectedGalleryAssetId(asset.asset_id)}
+                      >
+                        <div className="collection-live-page__gallery-frame">
+                          <CollectionLiveGalleryCardMedia
+                            asset={asset}
+                            tokenId={tileTokenId}
+                            previewUrl={previewUrl}
+                            collectionTitle={collectionTitle}
+                            senderAddress={galleryReadSenderAddress}
+                            client={coreClient}
+                            contractId={coreContractId}
                           />
-                        ) : mediaKind === 'video' ? (
-                          <video src={previewUrl} controls preload="metadata" />
-                        ) : mediaKind === 'audio' ? (
-                          <audio src={previewUrl} controls preload="metadata" />
-                        ) : mediaKind === 'html' || mediaKind === 'text' ? (
-                          <iframe
-                            src={previewUrl}
-                            title={asset.filename ?? asset.path}
-                            sandbox="allow-scripts allow-same-origin"
-                          />
-                        ) : (
-                          <span className="collection-live-page__gallery-fallback">
-                            {asset.mime_type || 'binary'}
+                        </div>
+                        <div className="collection-live-page__gallery-meta">
+                          <span className="meta-value">{collectionTitle}</span>
+                          <span className="meta-label">
+                            {typeof localTokenNumber === 'number'
+                              ? `${collectionTitle} #${localTokenNumber}`
+                              : `${collectionTitle} #...`}
                           </span>
+                          <span className="meta-label">{asset.mime_type}</span>
+                          <button
+                            type="button"
+                            className="button button--ghost button--mini collection-live-page__gallery-select"
+                            onClick={() => setSelectedGalleryAssetId(asset.asset_id)}
+                            aria-pressed={isSelected}
+                          >
+                            {isSelected ? 'Selected' : 'Preview'}
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+                {selectedGalleryAsset && selectedGalleryPreviewUrl && (
+                  <div
+                    ref={galleryDetailRef}
+                    className="collection-live-page__gallery-detail"
+                  >
+                    <div className="collection-live-page__gallery-detail-header">
+                      <div>
+                        <h3>Selected inscription</h3>
+                        <p>
+                          Larger preview and minted inscription metadata for the currently selected
+                          collection item.
+                        </p>
+                      </div>
+                      <div className="collection-live-page__gallery-detail-actions">
+                        <a
+                          className="button button--ghost button--mini"
+                          href={selectedGalleryMainViewerHref}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Open in main viewer
+                        </a>
+                      </div>
+                    </div>
+                    <div className="collection-live-page__gallery-detail-body">
+                      <div className="collection-live-page__gallery-preview-frame">
+                        <CollectionLiveCachedDetailMedia
+                          asset={selectedGalleryAsset}
+                          tokenId={selectedGalleryTokenId}
+                          previewUrl={selectedGalleryPreviewUrl}
+                          collectionTitle={collectionTitle}
+                          contractId={coreContractId}
+                        />
+                      </div>
+                      <div className="collection-live-page__gallery-detail-meta">
+                        <div className="meta-grid meta-grid--dense">
+                          <div>
+                            <span className="meta-label">Owner</span>
+                            <AddressLabel
+                              address={selectedGalleryOwnerAddress}
+                              network={coreContract.network}
+                              className="meta-value collection-live-page__gallery-owner"
+                              fallback={
+                                selectedGalleryDetailsQuery.isLoading
+                                  ? 'Loading owner...'
+                                  : 'Unknown'
+                              }
+                            />
+                          </div>
+                          <div>
+                            <span className="meta-label">Creator</span>
+                            <AddressLabel
+                              address={selectedGalleryCreatorAddress}
+                              network={coreContract.network}
+                              className="meta-value"
+                              fallback="Unknown"
+                            />
+                          </div>
+                          <div>
+                            <span className="meta-label">Token URI</span>
+                            <span
+                              className="meta-value meta-value--truncate"
+                              title={selectedGalleryTokenUri ?? ''}
+                            >
+                              {selectedGalleryTokenUri ?? 'Unavailable'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="meta-label">Mime type</span>
+                            <span className="meta-value">{selectedGalleryMimeType}</span>
+                          </div>
+                          <div>
+                            <span className="meta-label">Total size</span>
+                            <span className="meta-value">
+                              {selectedGalleryTotalSize !== null
+                                ? formatBytes(selectedGalleryTotalSize)
+                                : 'Unknown'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="meta-label">Chunks</span>
+                            <span className="meta-value">
+                              {selectedGalleryTotalChunks !== null
+                                ? selectedGalleryTotalChunks.toString()
+                                : 'Unknown'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="meta-label">Sealed</span>
+                            <span className="meta-value">
+                              {selectedGallerySealed === null
+                                ? 'Unknown'
+                                : selectedGallerySealed
+                                  ? 'Yes'
+                                  : 'No'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="meta-label">Final hash</span>
+                            <span
+                              className="meta-value meta-value--truncate"
+                              title={selectedGalleryFinalHash ?? ''}
+                            >
+                              {selectedGalleryFinalHash ?? 'Pending'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="meta-label">Collection token</span>
+                            <span className="meta-value">
+                              {selectedGalleryLocalTokenNumber !== null
+                                ? `#${selectedGalleryLocalTokenNumber}`
+                                : 'Pending sync'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="meta-label">Global token</span>
+                            <span className="meta-value">
+                              {selectedGalleryTokenIdLabel
+                                ? `#${selectedGalleryTokenIdLabel}`
+                                : 'Unknown'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="meta-label">Asset file</span>
+                            <span
+                              className="meta-value meta-value--truncate"
+                              title={selectedGalleryAsset.filename ?? selectedGalleryAsset.path}
+                            >
+                              {selectedGalleryAsset.filename ?? selectedGalleryAsset.path}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="meta-label">Asset ID</span>
+                            <span
+                              className="meta-value meta-value--truncate"
+                              title={selectedGalleryAsset.asset_id}
+                            >
+                              {selectedGalleryAsset.asset_id}
+                            </span>
+                          </div>
+                        </div>
+                        {selectedGalleryDetailsQuery.isLoading && (
+                          <p className="collection-live-page__gallery-detail-note">
+                            Loading on-chain metadata...
+                          </p>
+                        )}
+                        {selectedGalleryDetailsQuery.isError && (
+                          <p className="collection-live-page__gallery-detail-note">
+                            On-chain metadata is temporarily unavailable. The asset preview is still
+                            available above.
+                          </p>
                         )}
                       </div>
-                      <div className="collection-live-page__gallery-meta">
-                        <span className="meta-value">{collectionTitle}</span>
-                        <span className="meta-label">
-                          {typeof localTokenNumber === 'number'
-                            ? `${collectionTitle} #${localTokenNumber}`
-                            : `${collectionTitle} #...`}
-                        </span>
-                        <span className="meta-label">{asset.mime_type}</span>
-                      </div>
-                    </article>
-                  );
-                })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -133,6 +133,7 @@ type ViewerScreenProps = {
   walletSession: WalletSession;
   walletLookupState: WalletLookupState;
   focusKey?: number;
+  preferredTokenId?: bigint | null;
   collapsed: boolean;
   onToggleCollapse: () => void;
   isActiveTab: boolean;
@@ -2021,6 +2022,8 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     key: number;
     baseline: bigint | null;
   } | null>(null);
+  const appliedPreferredTokenRef = useRef<string | null>(null);
+  const pendingPreferredTokenRef = useRef<string | null>(null);
   const prefetchScopeRef = useRef<string>('');
   const loadOrderLogRef = useRef<string>('');
   const [settledWalletTokens, setSettledWalletTokens] = useState<TokenSummary[]>(
@@ -2048,6 +2051,20 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     }
     return pageIndex;
   })();
+  const collectionStartupTokenId = useMemo(() => {
+    if (isWalletView || lastTokenId === undefined) {
+      return null;
+    }
+    const preferredTokenId = props.preferredTokenId ?? null;
+    if (
+      preferredTokenId !== null &&
+      preferredTokenId >= 0n &&
+      preferredTokenId <= lastTokenId
+    ) {
+      return preferredTokenId;
+    }
+    return lastTokenId;
+  }, [isWalletView, lastTokenId, props.preferredTokenId]);
   const walletScanLimitActive = useMemo(() => {
     if (!isWalletView || lastTokenId === undefined) {
       return false;
@@ -2174,6 +2191,8 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       setWalletAutoFollowLatest(true);
       setMobilePanel('grid');
       setCollectionGridReady(false);
+      appliedPreferredTokenRef.current = null;
+      pendingPreferredTokenRef.current = null;
       if (viewScopeKey.startsWith(`${contractId}:wallet:`)) {
         const cached = settledWalletTokensByScopeRef.current[viewScopeKey];
         setSettledWalletTokens(cached ?? []);
@@ -2690,6 +2709,59 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       setMobilePanel('preview');
     }
   }, [isMobile, isWalletView, stableWalletTokens, lastTokenId]);
+
+  useEffect(() => {
+    const preferredTokenId = props.preferredTokenId ?? null;
+    if (isWalletView) {
+      return;
+    }
+    if (preferredTokenId === null || lastTokenId === undefined) {
+      return;
+    }
+    if (preferredTokenId < 0n || preferredTokenId > lastTokenId) {
+      return;
+    }
+    const preferredKey = preferredTokenId.toString();
+    if (appliedPreferredTokenRef.current === preferredKey) {
+      return;
+    }
+    appliedPreferredTokenRef.current = preferredKey;
+    pendingPreferredTokenRef.current = preferredKey;
+    void queryClient.prefetchQuery({
+      queryKey: getTokenSummaryKey(contractId, preferredTokenId),
+      queryFn: () => fetchTokenSummaryForView(preferredTokenId),
+      staleTime: 300_000
+    });
+    handleSelectToken(preferredTokenId);
+  }, [
+    props.preferredTokenId,
+    isWalletView,
+    lastTokenId,
+    handleSelectToken,
+    queryClient,
+    contractId,
+    fetchTokenSummaryForView
+  ]);
+
+  useEffect(() => {
+    if (isWalletView) {
+      return;
+    }
+    const preferredTokenId = props.preferredTokenId ?? null;
+    const pendingKey = pendingPreferredTokenRef.current;
+    if (preferredTokenId === null || pendingKey !== preferredTokenId.toString()) {
+      return;
+    }
+    if (!pageTokenIds.includes(preferredTokenId)) {
+      return;
+    }
+    if (selectedTokenId !== preferredTokenId) {
+      setSelectedTokenId(preferredTokenId);
+      return;
+    }
+    pendingPreferredTokenRef.current = null;
+  }, [isWalletView, pageTokenIds, props.preferredTokenId, selectedTokenId]);
+
   const walletSelectedTokenIndex = useMemo(() => {
     if (!isWalletView || selectedTokenId === null) {
       return -1;
@@ -3570,10 +3642,10 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     if (collectionGridReady) {
       return;
     }
-    if (lastTokenId === undefined) {
+    if (collectionStartupTokenId === null) {
       return;
     }
-    if (selectedTokenId !== lastTokenId) {
+    if (selectedTokenId !== collectionStartupTokenId) {
       return;
     }
     if (selectedTokenQuery.data || selectedTokenQuery.isError) {
@@ -3582,7 +3654,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
   }, [
     collectionGridReady,
     isWalletView,
-    lastTokenId,
+    collectionStartupTokenId,
     props.isActiveTab,
     selectedTokenId,
     selectedTokenQuery.data,
