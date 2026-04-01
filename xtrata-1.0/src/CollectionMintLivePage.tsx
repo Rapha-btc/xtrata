@@ -24,6 +24,7 @@ import {
 } from '@stacks/transactions';
 import { useQuery } from '@tanstack/react-query';
 import { createXtrataClient } from './lib/contract/client';
+import { getContractId } from './lib/contract/config';
 import {
   batchChunks,
   CHUNK_SIZE,
@@ -84,6 +85,7 @@ import {
 } from './lib/theme/preferences';
 import { getMediaKind } from './lib/viewer/content';
 import { shouldUsePixelatedImageRendering } from './lib/viewer/image-rendering';
+import { useTokenSummaries } from './lib/viewer/queries';
 import { bytesToHex } from './lib/utils/encoding';
 import { formatBytes } from './lib/utils/format';
 import { createStacksWalletAdapter } from './lib/wallet/adapter';
@@ -91,6 +93,7 @@ import { createWalletSessionStore } from './lib/wallet/session';
 import type { WalletSession } from './lib/wallet/types';
 import AddressLabel from './components/AddressLabel';
 import CollectionCoverImage from './components/CollectionCoverImage';
+import TokenCardMedia from './components/TokenCardMedia';
 import WalletTopBar from './components/WalletTopBar';
 
 const walletSessionStore = createWalletSessionStore();
@@ -359,6 +362,128 @@ const CollectionLiveGalleryMedia = ({
     <span className="collection-live-page__gallery-fallback">
       {asset.mime_type || 'binary'}
     </span>
+  );
+};
+
+const getCollectionLivePosterLabel = (mimeType: string) => {
+  const mediaKind = getMediaKind(mimeType);
+  switch (mediaKind) {
+    case 'audio':
+      return 'AUDIO';
+    case 'video':
+      return 'VIDEO';
+    case 'html':
+      return 'HTML';
+    case 'text':
+      return 'TEXT';
+    case 'svg':
+      return 'SVG';
+    case 'image':
+      return 'IMAGE';
+    default:
+      return 'MEDIA';
+  }
+};
+
+type CollectionLiveGalleryCardMediaProps = {
+  asset: CollectionAsset;
+  tokenId: bigint | null;
+  previewUrl: string;
+  collectionTitle: string;
+  senderAddress: string;
+  client: ReturnType<typeof createXtrataClient>;
+  contractId: string;
+};
+
+const CollectionLiveGalleryCardMedia = ({
+  asset,
+  tokenId,
+  previewUrl,
+  collectionTitle,
+  senderAddress,
+  client,
+  contractId
+}: CollectionLiveGalleryCardMediaProps) => {
+  const mediaKind = getMediaKind(asset.mime_type);
+  const dependencyIdsQuery = useQuery({
+    queryKey: [
+      'collection-live',
+      'gallery-dependencies',
+      contractId,
+      tokenId?.toString() ?? 'none'
+    ],
+    enabled:
+      tokenId !== null &&
+      mediaKind !== 'image' &&
+      mediaKind !== 'svg',
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    queryFn: async () => {
+      if (tokenId === null) {
+        return [] as bigint[];
+      }
+      return client.getDependencies(tokenId, senderAddress).catch(() => [] as bigint[]);
+    }
+  });
+  const dependencyPreviewIds = useMemo(
+    () => (dependencyIdsQuery.data ?? []).slice(0, 8),
+    [dependencyIdsQuery.data]
+  );
+  const { tokenQueries: dependencyQueries } = useTokenSummaries({
+    client,
+    senderAddress,
+    tokenIds: dependencyPreviewIds,
+    enabled: dependencyPreviewIds.length > 0,
+    contractIdOverride: contractId
+  });
+  const representativeDependencyToken = useMemo(
+    () =>
+      dependencyQueries
+        .map((query) => query.data ?? null)
+        .find((token) => {
+          const mimeType = token?.meta?.mimeType ?? null;
+          const dependencyKind = getMediaKind(mimeType);
+          return dependencyKind === 'image' || dependencyKind === 'svg';
+        }) ?? null,
+    [dependencyQueries]
+  );
+
+  if (mediaKind === 'image' || mediaKind === 'svg') {
+    return (
+      <CollectionLiveGalleryMedia
+        asset={asset}
+        previewUrl={previewUrl}
+        collectionTitle={collectionTitle}
+        loading="lazy"
+      />
+    );
+  }
+
+  if (representativeDependencyToken) {
+    return (
+      <TokenCardMedia
+        token={representativeDependencyToken}
+        contractId={representativeDependencyToken.sourceContractId ?? contractId}
+        senderAddress={senderAddress}
+        client={client}
+        pixelateOnUpscale
+        letterboxNonSquare
+      />
+    );
+  }
+
+  return (
+    <div className="collection-live-page__gallery-poster">
+      <span className="collection-live-page__gallery-poster-badge">
+        {getCollectionLivePosterLabel(asset.mime_type)}
+      </span>
+      <span className="collection-live-page__gallery-poster-title">
+        {asset.filename ?? asset.path}
+      </span>
+      <span className="collection-live-page__gallery-poster-note">
+        Preview on selection
+      </span>
+    </div>
   );
 };
 
@@ -760,6 +885,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
       }),
     [coreContract]
   );
+  const coreContractId = useMemo(() => getContractId(coreContract), [coreContract]);
 
   const networkMismatch = useMemo(
     () =>
@@ -3410,6 +3536,16 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                 <div className="collection-live-page__gallery-grid">
                   {mintedGallery.map((asset) => {
                     const tokenId = mintedTokenIds[asset.asset_id] ?? null;
+                    const tileTokenId = (() => {
+                      if (!tokenId || tokenId.length === 0) {
+                        return null;
+                      }
+                      try {
+                        return BigInt(tokenId);
+                      } catch {
+                        return null;
+                      }
+                    })();
                     const localTokenNumber =
                       tokenId && tokenId.length > 0
                         ? collectionTokenNumberByGlobalId[tokenId]
@@ -3425,11 +3561,14 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                         onClick={() => setSelectedGalleryAssetId(asset.asset_id)}
                       >
                         <div className="collection-live-page__gallery-frame">
-                          <CollectionLiveGalleryMedia
+                          <CollectionLiveGalleryCardMedia
                             asset={asset}
+                            tokenId={tileTokenId}
                             previewUrl={previewUrl}
                             collectionTitle={collectionTitle}
-                            loading="lazy"
+                            senderAddress={galleryReadSenderAddress}
+                            client={coreClient}
+                            contractId={coreContractId}
                           />
                         </div>
                         <div className="collection-live-page__gallery-meta">

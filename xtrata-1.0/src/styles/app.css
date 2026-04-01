@@ -5883,6 +5883,43 @@ p {
   padding: 8px;
 }
 
+.collection-live-page__gallery-poster {
+  display: grid;
+  gap: 8px;
+  width: min(86%, 240px);
+  padding: 16px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface-overlay);
+  text-align: center;
+}
+
+.collection-live-page__gallery-poster-badge {
+  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-code);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.collection-live-page__gallery-poster-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink);
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+.collection-live-page__gallery-poster-note {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
 .collection-live-page__gallery-meta {
   display: grid;
   gap: 2px;
