@@ -954,6 +954,8 @@ const formatCount = (value: bigint | null) => {
   return value.toString();
 };
 
+const formatItemLabel = (value: bigint) => (value === 1n ? 'item' : 'items');
+
 const formatStepStatus = (state: StepState) => {
   if (state === 'pending') {
     return 'In progress';
@@ -1387,9 +1389,9 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     : null;
   const selectedGalleryMainViewerHref = useMemo(() => {
     if (!selectedGalleryTokenIdLabel) {
-      return '/#home-viewer';
+      return '/';
     }
-    return `/?viewer-token=${encodeURIComponent(selectedGalleryTokenIdLabel)}#home-viewer`;
+    return `/?viewer-token=${encodeURIComponent(selectedGalleryTokenIdLabel)}`;
   }, [selectedGalleryTokenIdLabel]);
 
   useEffect(() => {
@@ -3305,6 +3307,56 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   const maxSupplyLabel = formatCount(contractStatus?.maxSupply ?? null);
   const reservedCountLabel = formatCount(contractStatus?.reservedCount ?? null);
   const remainingLabel = remaining === null ? 'Unknown' : remaining.toString();
+  const knownMintedGalleryCount = useMemo(() => {
+    let next = 0n;
+    const contractMinted = contractStatus?.mintedCount ?? null;
+    if (contractMinted !== null && contractMinted > next) {
+      next = contractMinted;
+    }
+    const indexedMinted = BigInt(Math.max(0, collectionIndexCount));
+    if (indexedMinted > next) {
+      next = indexedMinted;
+    }
+    const resolvedMinted = BigInt(Object.keys(mintedTokenIds).length);
+    if (resolvedMinted > next) {
+      next = resolvedMinted;
+    }
+    return next;
+  }, [collectionIndexCount, contractStatus?.mintedCount, mintedTokenIds]);
+  const mintedGalleryEmptyMessage = useMemo(() => {
+    if (knownMintedGalleryCount > 0n) {
+      const countLabel = knownMintedGalleryCount.toString();
+      const itemLabel = formatItemLabel(knownMintedGalleryCount);
+      if (collectionLoading) {
+        return `This collection has ${countLabel} minted ${itemLabel}. Collection assets are still loading before the gallery can be built.`;
+      }
+      if (mintedScanPending) {
+        return `This collection has ${countLabel} minted ${itemLabel}. Gallery images and previews are loading now.`;
+      }
+      if (collectionIndexSyncPending) {
+        return `This collection has ${countLabel} minted ${itemLabel}. Collection numbering is still syncing while the gallery resolves.`;
+      }
+      if (mintableAssets.length === 0) {
+        return `This collection has ${countLabel} minted ${itemLabel} on-chain, but there are no active collection assets available to render in this gallery.`;
+      }
+      if (assets.length > mintableAssets.length) {
+        return `This collection has ${countLabel} minted ${itemLabel}, but none of the currently active collection assets could be matched for display yet. Some staged assets may be inactive or still syncing.`;
+      }
+      return `This collection has ${countLabel} minted ${itemLabel}, but the page could not finish matching them to previewable collection assets yet. If this persists after refresh, some asset previews or hash mappings may be unavailable.`;
+    }
+    if (collectionLoading || statusLoading || mintedScanPending || collectionIndexSyncPending) {
+      return 'Checking for previously inscribed items...';
+    }
+    return 'No minted assets yet. This gallery updates as new mints are confirmed.';
+  }, [
+    assets.length,
+    collectionIndexSyncPending,
+    collectionLoading,
+    knownMintedGalleryCount,
+    mintableAssets.length,
+    mintedScanPending,
+    statusLoading
+  ]);
   const statusRefreshNote = statusLastUpdatedAt
     ? `Auto-refreshing every ~6s while active (${STATUS_REFRESH_BACKGROUND_MS / 1000}s in background). Last sync ${new Date(
         statusLastUpdatedAt
@@ -3840,7 +3892,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
           <div className="panel__body">
             {mintedGallery.length === 0 ? (
               <p className="meta-value">
-                No minted assets yet. This gallery updates as new mints are confirmed.
+                {mintedGalleryEmptyMessage}
               </p>
             ) : (
               <div className="collection-live-page__gallery-stack">

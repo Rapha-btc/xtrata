@@ -133,6 +133,13 @@ const toSectionKeyFromHash = (hash: string): SimpleHomeSectionKey | null => {
   return null;
 };
 
+const resolveSectionAnchorId = (section: SimpleHomeSectionKey) =>
+  section === 'home-viewer' ? 'collection-viewer' : section;
+
+const resolveSectionScrollBlock = (
+  section: SimpleHomeSectionKey
+): ScrollLogicalPosition => (section === 'home-viewer' ? 'center' : 'start');
+
 const STARTER_DOCS: StarterDoc[] = [
   {
     title: 'How to inscribe on Xtrata',
@@ -837,6 +844,7 @@ export default function SimplePublicHome() {
 
   const focusSection = (key: SimpleHomeSectionKey) => {
     if (key === 'home-viewer') {
+      setViewerMode('collection');
       setViewerCollapsed(false);
     }
     if (key === 'market') {
@@ -850,9 +858,12 @@ export default function SimplePublicHome() {
     }
     if (typeof window !== 'undefined') {
       window.requestAnimationFrame(() => {
-        const anchor = document.getElementById(key);
+        const anchor = document.getElementById(resolveSectionAnchorId(key));
         if (anchor) {
-          anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          anchor.scrollIntoView({
+            behavior: 'smooth',
+            block: resolveSectionScrollBlock(key)
+          });
         }
         window.history.replaceState(
           null,
@@ -876,6 +887,7 @@ export default function SimplePublicHome() {
         return;
       }
       if (section === 'home-viewer') {
+        setViewerMode('collection');
         setViewerCollapsed(false);
       }
       if (section === 'market') {
@@ -889,9 +901,12 @@ export default function SimplePublicHome() {
       }
       window.requestAnimationFrame(() => {
         window.requestAnimationFrame(() => {
-          const anchor = document.getElementById(section);
+          const anchor = document.getElementById(resolveSectionAnchorId(section));
           if (anchor) {
-            anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            anchor.scrollIntoView({
+              behavior: 'smooth',
+              block: resolveSectionScrollBlock(section)
+            });
           }
         });
       });
