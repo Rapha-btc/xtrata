@@ -1,3 +1,5 @@
+Also - current UI says creator (inscriber) and owner - what about the actual artist if we are creating collections that other people inscribe then we need to differentiate between remembering the artist as the creator, then the inscriber and then the owner - does this require an update to the v3 contract?
+
 Fix parent child with new contract - Possibly create new contract starting from 0? If so what other updates?
 If keeping same collection how easy to allow v1 and v2 versions to migrate to v3 so they can now become part of regular parent child relationships (obviously only as parents) but please look into this.
 
