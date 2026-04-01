@@ -5900,6 +5900,7 @@ p {
   border-radius: 16px;
   border: 1px solid var(--border);
   background: var(--surface-soft);
+  scroll-margin-top: 18px;
 }
 
 .collection-live-page__gallery-detail-header {
@@ -5964,6 +5965,12 @@ p {
   display: grid;
   gap: 10px;
   align-content: start;
+}
+
+.collection-live-page__gallery-owner .address-label__name,
+.collection-live-page__gallery-owner .address-label__address {
+  font-size: 0.95rem;
+  line-height: 1.35;
 }
 
 .collection-live-page__gallery-detail-note {

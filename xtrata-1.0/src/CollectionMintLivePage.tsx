@@ -634,6 +634,8 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   const [collectionIndexSyncMessage, setCollectionIndexSyncMessage] = useState<string | null>(
     null
   );
+  const galleryDetailRef = useRef<HTMLDivElement | null>(null);
+  const previousSelectedGalleryAssetIdRef = useRef<string | null>(null);
   const resumableLookupCacheRef = useRef<ResumableLookupCacheEntry | null>(null);
   const canonicalHashStorageLoadedRef = useRef(false);
   const [canonicalHashHexByAssetId, setCanonicalHashHexByAssetId] = useState<
@@ -942,6 +944,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
   const selectedGalleryTotalChunks = selectedGalleryMeta?.totalChunks ?? (
     selectedGalleryAsset ? BigInt(resolveAssetChunkCount(selectedGalleryAsset)) : null
   );
+  const selectedGallerySealed = selectedGalleryMeta?.sealed ?? null;
   const selectedGalleryFinalHash = selectedGalleryMeta?.finalHash
     ? bytesToHex(selectedGalleryMeta.finalHash)
     : null;
@@ -951,6 +954,22 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
     }
     return `/?viewer-token=${encodeURIComponent(selectedGalleryTokenIdLabel)}#home-viewer`;
   }, [selectedGalleryTokenIdLabel]);
+
+  useEffect(() => {
+    const currentAssetId = selectedGalleryAsset?.asset_id ?? null;
+    const previousAssetId = previousSelectedGalleryAssetIdRef.current;
+    previousSelectedGalleryAssetIdRef.current = currentAssetId;
+    if (!currentAssetId || !galleryDetailRef.current) {
+      return;
+    }
+    if (!previousAssetId || previousAssetId === currentAssetId) {
+      return;
+    }
+    galleryDetailRef.current.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
+  }, [selectedGalleryAsset]);
 
   const fallbackCoverUrl = useMemo(() => {
     const fallback = imageAssets[0];
@@ -3435,7 +3454,10 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                   })}
                 </div>
                 {selectedGalleryAsset && selectedGalleryPreviewUrl && (
-                  <div className="collection-live-page__gallery-detail">
+                  <div
+                    ref={galleryDetailRef}
+                    className="collection-live-page__gallery-detail"
+                  >
                     <div className="collection-live-page__gallery-detail-header">
                       <div>
                         <h3>Selected inscription</h3>
@@ -3467,65 +3489,11 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                       <div className="collection-live-page__gallery-detail-meta">
                         <div className="meta-grid meta-grid--dense">
                           <div>
-                            <span className="meta-label">Collection token</span>
-                            <span className="meta-value">
-                              {selectedGalleryLocalTokenNumber !== null
-                                ? `#${selectedGalleryLocalTokenNumber}`
-                                : 'Pending sync'}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="meta-label">Global token</span>
-                            <span className="meta-value">
-                              {selectedGalleryTokenIdLabel
-                                ? `#${selectedGalleryTokenIdLabel}`
-                                : 'Unknown'}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="meta-label">Mime type</span>
-                            <span className="meta-value">{selectedGalleryMimeType}</span>
-                          </div>
-                          <div>
-                            <span className="meta-label">Size</span>
-                            <span className="meta-value">
-                              {selectedGalleryTotalSize !== null
-                                ? formatBytes(selectedGalleryTotalSize)
-                                : 'Unknown'}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="meta-label">Chunks</span>
-                            <span className="meta-value">
-                              {selectedGalleryTotalChunks !== null
-                                ? selectedGalleryTotalChunks.toString()
-                                : 'Unknown'}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="meta-label">Asset file</span>
-                            <span
-                              className="meta-value meta-value--truncate"
-                              title={selectedGalleryAsset.filename ?? selectedGalleryAsset.path}
-                            >
-                              {selectedGalleryAsset.filename ?? selectedGalleryAsset.path}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="meta-label">Asset ID</span>
-                            <span
-                              className="meta-value meta-value--truncate"
-                              title={selectedGalleryAsset.asset_id}
-                            >
-                              {selectedGalleryAsset.asset_id}
-                            </span>
-                          </div>
-                          <div>
                             <span className="meta-label">Owner</span>
                             <AddressLabel
                               address={selectedGalleryOwnerAddress}
                               network={coreContract.network}
-                              className="meta-value"
+                              className="meta-value collection-live-page__gallery-owner"
                               fallback={
                                 selectedGalleryDetailsQuery.isLoading
                                   ? 'Loading owner...'
@@ -3552,12 +3520,76 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                             </span>
                           </div>
                           <div>
+                            <span className="meta-label">Mime type</span>
+                            <span className="meta-value">{selectedGalleryMimeType}</span>
+                          </div>
+                          <div>
+                            <span className="meta-label">Total size</span>
+                            <span className="meta-value">
+                              {selectedGalleryTotalSize !== null
+                                ? formatBytes(selectedGalleryTotalSize)
+                                : 'Unknown'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="meta-label">Chunks</span>
+                            <span className="meta-value">
+                              {selectedGalleryTotalChunks !== null
+                                ? selectedGalleryTotalChunks.toString()
+                                : 'Unknown'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="meta-label">Sealed</span>
+                            <span className="meta-value">
+                              {selectedGallerySealed === null
+                                ? 'Unknown'
+                                : selectedGallerySealed
+                                  ? 'Yes'
+                                  : 'No'}
+                            </span>
+                          </div>
+                          <div>
                             <span className="meta-label">Final hash</span>
                             <span
                               className="meta-value meta-value--truncate"
                               title={selectedGalleryFinalHash ?? ''}
                             >
                               {selectedGalleryFinalHash ?? 'Pending'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="meta-label">Collection token</span>
+                            <span className="meta-value">
+                              {selectedGalleryLocalTokenNumber !== null
+                                ? `#${selectedGalleryLocalTokenNumber}`
+                                : 'Pending sync'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="meta-label">Global token</span>
+                            <span className="meta-value">
+                              {selectedGalleryTokenIdLabel
+                                ? `#${selectedGalleryTokenIdLabel}`
+                                : 'Unknown'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="meta-label">Asset file</span>
+                            <span
+                              className="meta-value meta-value--truncate"
+                              title={selectedGalleryAsset.filename ?? selectedGalleryAsset.path}
+                            >
+                              {selectedGalleryAsset.filename ?? selectedGalleryAsset.path}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="meta-label">Asset ID</span>
+                            <span
+                              className="meta-value meta-value--truncate"
+                              title={selectedGalleryAsset.asset_id}
+                            >
+                              {selectedGalleryAsset.asset_id}
                             </span>
                           </div>
                         </div>
