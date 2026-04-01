@@ -119,6 +119,20 @@ type LiveCollectionCard = {
 
 type SimpleHomeSectionKey = 'live-drops' | 'home-viewer' | 'market' | 'mint' | 'starter-docs';
 
+const toSectionKeyFromHash = (hash: string): SimpleHomeSectionKey | null => {
+  const normalized = hash.replace(/^#/, '').trim().toLowerCase();
+  if (
+    normalized === 'live-drops' ||
+    normalized === 'home-viewer' ||
+    normalized === 'market' ||
+    normalized === 'mint' ||
+    normalized === 'starter-docs'
+  ) {
+    return normalized;
+  }
+  return null;
+};
+
 const STARTER_DOCS: StarterDoc[] = [
   {
     title: 'How to inscribe on Xtrata',
@@ -840,10 +854,55 @@ export default function SimplePublicHome() {
         if (anchor) {
           anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
-        window.history.replaceState(null, '', `#${key}`);
+        window.history.replaceState(
+          null,
+          '',
+          `${window.location.pathname}${window.location.search}#${key}`
+        );
       });
     }
   };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const openHashSection = () => {
+      const section =
+        toSectionKeyFromHash(window.location.hash) ??
+        (preferredViewerTokenId !== null ? 'home-viewer' : null);
+      if (!section) {
+        return;
+      }
+      if (section === 'home-viewer') {
+        setViewerCollapsed(false);
+      }
+      if (section === 'market') {
+        setMarketCollapsed(false);
+      }
+      if (section === 'mint') {
+        setMintCollapsed(false);
+      }
+      if (section === 'starter-docs') {
+        setDocsCollapsed(false);
+      }
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          const anchor = document.getElementById(section);
+          if (anchor) {
+            anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        });
+      });
+    };
+
+    openHashSection();
+    window.addEventListener('hashchange', openHashSection);
+    return () => {
+      window.removeEventListener('hashchange', openHashSection);
+    };
+  }, [preferredViewerTokenId]);
 
   const handleNavJump = (
     event: MouseEvent<HTMLAnchorElement>,
