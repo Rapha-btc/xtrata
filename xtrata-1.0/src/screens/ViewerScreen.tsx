@@ -133,6 +133,7 @@ type ViewerScreenProps = {
   walletSession: WalletSession;
   walletLookupState: WalletLookupState;
   focusKey?: number;
+  preferredTokenId?: bigint | null;
   collapsed: boolean;
   onToggleCollapse: () => void;
   isActiveTab: boolean;
@@ -2021,6 +2022,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     key: number;
     baseline: bigint | null;
   } | null>(null);
+  const appliedPreferredTokenRef = useRef<string | null>(null);
   const prefetchScopeRef = useRef<string>('');
   const loadOrderLogRef = useRef<string>('');
   const [settledWalletTokens, setSettledWalletTokens] = useState<TokenSummary[]>(
@@ -2174,6 +2176,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       setWalletAutoFollowLatest(true);
       setMobilePanel('grid');
       setCollectionGridReady(false);
+      appliedPreferredTokenRef.current = null;
       if (viewScopeKey.startsWith(`${contractId}:wallet:`)) {
         const cached = settledWalletTokensByScopeRef.current[viewScopeKey];
         setSettledWalletTokens(cached ?? []);
@@ -2690,6 +2693,26 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       setMobilePanel('preview');
     }
   }, [isMobile, isWalletView, stableWalletTokens, lastTokenId]);
+
+  useEffect(() => {
+    const preferredTokenId = props.preferredTokenId ?? null;
+    if (isWalletView) {
+      return;
+    }
+    if (preferredTokenId === null || lastTokenId === undefined) {
+      return;
+    }
+    if (preferredTokenId < 0n || preferredTokenId > lastTokenId) {
+      return;
+    }
+    const preferredKey = preferredTokenId.toString();
+    if (appliedPreferredTokenRef.current === preferredKey) {
+      return;
+    }
+    appliedPreferredTokenRef.current = preferredKey;
+    handleSelectToken(preferredTokenId);
+  }, [props.preferredTokenId, isWalletView, lastTokenId, handleSelectToken]);
+
   const walletSelectedTokenIndex = useMemo(() => {
     if (!isWalletView || selectedTokenId === null) {
       return -1;

@@ -493,6 +493,21 @@ export default function SimplePublicHome() {
   const [walletPending, setWalletPending] = useState(false);
   const [rateLimitWarning, setRateLimitWarning] = useState(false);
   const [viewerFocusKey, setViewerFocusKey] = useState<number | null>(null);
+  const preferredViewerTokenId = useMemo(() => {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+    const raw = new URLSearchParams(window.location.search).get('viewer-token');
+    if (!raw) {
+      return null;
+    }
+    try {
+      const parsed = BigInt(raw);
+      return parsed >= 0n ? parsed : null;
+    } catch {
+      return null;
+    }
+  }, []);
   const [viewerMode, setViewerMode] = useState<ViewerMode>('collection');
   const [viewerCollapsed, setViewerCollapsed] = useState(false);
   const [marketCollapsed, setMarketCollapsed] = useState(true);
@@ -1164,6 +1179,7 @@ export default function SimplePublicHome() {
             walletSession={walletSession}
             walletLookupState={walletLookupState}
             focusKey={viewerFocusKey ?? undefined}
+            preferredTokenId={preferredViewerTokenId}
             collapsed={viewerCollapsed}
             onToggleCollapse={() => setViewerCollapsed((prev) => !prev)}
             isActiveTab={tabGuard.isActive}
