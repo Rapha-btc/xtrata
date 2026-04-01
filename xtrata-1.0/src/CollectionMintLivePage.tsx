@@ -22,7 +22,7 @@ import {
   validateStacksAddress,
   type ClarityValue
 } from '@stacks/transactions';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createXtrataClient } from './lib/contract/client';
 import { getContractId } from './lib/contract/config';
 import {
@@ -84,8 +84,16 @@ import {
   writeThemePreference
 } from './lib/theme/preferences';
 import { getMediaKind } from './lib/viewer/content';
+import {
+  loadInscriptionFromCache,
+  loadInscriptionThumbnailFromCache,
+  saveInscriptionThumbnailToCache,
+  saveInscriptionToCache
+} from './lib/viewer/cache';
 import { shouldUsePixelatedImageRendering } from './lib/viewer/image-rendering';
-import { useTokenSummaries } from './lib/viewer/queries';
+import { createImageThumbnail, THUMBNAIL_SIZE } from './lib/viewer/thumbnail';
+import { getTokenThumbnailKey, useTokenSummaries } from './lib/viewer/queries';
+import { createObjectUrl } from './lib/utils/blob';
 import { bytesToHex } from './lib/utils/encoding';
 import { formatBytes } from './lib/utils/format';
 import { createStacksWalletAdapter } from './lib/wallet/adapter';
@@ -365,6 +373,308 @@ const CollectionLiveGalleryMedia = ({
   );
 };
 
+type CollectionLiveCachedImageMediaProps = {
+  asset: CollectionAsset;
+  tokenId: bigint | null;
+  previewUrl: string;
+  collectionTitle: string;
+  contractId: string;
+};
+
+const CollectionLiveCachedImageMedia = ({
+  asset,
+  tokenId,
+  previewUrl,
+  collectionTitle,
+  contractId
+}: CollectionLiveCachedImageMediaProps) => {
+  const queryClient = useQueryClient();
+  const thumbnailSeededRef = useRef(false);
+  const thumbnailQuery = useQuery({
+    queryKey:
+      tokenId === null
+        ? ['collection-live', 'gallery-thumbnail', previewUrl]
+        : getTokenThumbnailKey(contractId, tokenId),
+    enabled: tokenId !== null,
+    staleTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    queryFn: async () => {
+      if (tokenId === null) {
+        return null;
+      }
+      return loadInscriptionThumbnailFromCache(contractId, tokenId);
+    }
+  });
+  const thumbnailUrl = useMemo(() => {
+    const thumbnail = thumbnailQuery.data;
+    if (!thumbnail?.data || thumbnail.data.length === 0) {
+      return null;
+    }
+    return createObjectUrl(
+      thumbnail.data,
+      thumbnail.mimeType ?? 'image/webp'
+    );
+  }, [thumbnailQuery.data]);
+
+  useEffect(() => {
+    if (!thumbnailUrl) {
+      return;
+    }
+    return () => {
+      URL.revokeObjectURL(thumbnailUrl);
+    };
+  }, [thumbnailUrl]);
+
+  useEffect(() => {
+    thumbnailSeededRef.current = false;
+  }, [previewUrl, tokenId]);
+
+  useEffect(() => {
+    if (tokenId === null) {
+      return;
+    }
+    if (thumbnailQuery.data?.data && thumbnailQuery.data.data.length > 0) {
+      return;
+    }
+    if (thumbnailSeededRef.current) {
+      return;
+    }
+    thumbnailSeededRef.current = true;
+    let cancelled = false;
+    const run = async () => {
+      try {
+        const response = await fetch(previewUrl, {
+          cache: 'force-cache'
+        });
+        if (!response.ok) {
+          return;
+        }
+        const bytes = new Uint8Array(await response.arrayBuffer());
+        if (bytes.length === 0) {
+          return;
+        }
+        await saveInscriptionToCache(contractId, tokenId, bytes, asset.mime_type);
+        const thumbnail = await createImageThumbnail({
+          bytes,
+          mimeType: asset.mime_type,
+          size: THUMBNAIL_SIZE
+        });
+        if (!thumbnail || thumbnail.data.length === 0 || cancelled) {
+          return;
+        }
+        await saveInscriptionThumbnailToCache(
+          contractId,
+          tokenId,
+          thumbnail.data,
+          {
+            mimeType: thumbnail.mimeType,
+            width: thumbnail.width,
+            height: thumbnail.height
+          }
+        );
+        if (cancelled) {
+          return;
+        }
+        queryClient.setQueryData(getTokenThumbnailKey(contractId, tokenId), {
+          data: thumbnail.data,
+          mimeType: thumbnail.mimeType,
+          width: thumbnail.width,
+          height: thumbnail.height
+        });
+      } catch {
+        // Fall back to the collection preview route when cache seeding fails.
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    asset.mime_type,
+    contractId,
+    previewUrl,
+    queryClient,
+    thumbnailQuery.data,
+    tokenId
+  ]);
+
+  if (thumbnailUrl) {
+    return (
+      <CollectionLivePreviewImage
+        src={thumbnailUrl}
+        alt={`${collectionTitle} artwork`}
+        loading="lazy"
+        mimeType={asset.mime_type}
+        isSvgSource={asset.mime_type.trim().toLowerCase() === 'image/svg+xml'}
+      />
+    );
+  }
+
+  return (
+    <CollectionLiveGalleryMedia
+      asset={asset}
+      previewUrl={previewUrl}
+      collectionTitle={collectionTitle}
+      loading="lazy"
+    />
+  );
+};
+
+type CollectionLiveCachedDetailMediaProps = {
+  asset: CollectionAsset;
+  tokenId: bigint | null;
+  previewUrl: string;
+  collectionTitle: string;
+  contractId: string;
+};
+
+const CollectionLiveCachedDetailMedia = ({
+  asset,
+  tokenId,
+  previewUrl,
+  collectionTitle,
+  contractId
+}: CollectionLiveCachedDetailMediaProps) => {
+  const queryClient = useQueryClient();
+  const contentSeededRef = useRef(false);
+  const cachedContentKey = useMemo(
+    () => [
+      'collection-live',
+      'detail-content',
+      contractId,
+      tokenId?.toString() ?? 'none'
+    ],
+    [contractId, tokenId]
+  );
+  const cachedContentQuery = useQuery({
+    queryKey: cachedContentKey,
+    enabled: tokenId !== null,
+    staleTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    queryFn: async () => {
+      if (tokenId === null) {
+        return null;
+      }
+      return loadInscriptionFromCache(contractId, tokenId);
+    }
+  });
+  const cachedContentUrl = useMemo(() => {
+    const cached = cachedContentQuery.data;
+    if (!cached?.data || cached.data.length === 0) {
+      return null;
+    }
+    return createObjectUrl(cached.data, cached.mimeType ?? asset.mime_type);
+  }, [asset.mime_type, cachedContentQuery.data]);
+
+  useEffect(() => {
+    if (!cachedContentUrl) {
+      return;
+    }
+    return () => {
+      URL.revokeObjectURL(cachedContentUrl);
+    };
+  }, [cachedContentUrl]);
+
+  useEffect(() => {
+    contentSeededRef.current = false;
+  }, [previewUrl, tokenId]);
+
+  useEffect(() => {
+    if (tokenId === null) {
+      return;
+    }
+    if (cachedContentQuery.data?.data && cachedContentQuery.data.data.length > 0) {
+      return;
+    }
+    if (contentSeededRef.current) {
+      return;
+    }
+    contentSeededRef.current = true;
+    let cancelled = false;
+    const run = async () => {
+      try {
+        const response = await fetch(previewUrl, {
+          cache: 'force-cache'
+        });
+        if (!response.ok) {
+          return;
+        }
+        const bytes = new Uint8Array(await response.arrayBuffer());
+        if (bytes.length === 0) {
+          return;
+        }
+        const resolvedMimeType =
+          response.headers.get('content-type')?.trim() || asset.mime_type;
+        await saveInscriptionToCache(contractId, tokenId, bytes, resolvedMimeType);
+        if (
+          getMediaKind(resolvedMimeType) === 'image' ||
+          getMediaKind(resolvedMimeType) === 'svg'
+        ) {
+          const thumbnail = await createImageThumbnail({
+            bytes,
+            mimeType: resolvedMimeType,
+            size: THUMBNAIL_SIZE
+          });
+          if (thumbnail && thumbnail.data.length > 0) {
+            await saveInscriptionThumbnailToCache(
+              contractId,
+              tokenId,
+              thumbnail.data,
+              {
+                mimeType: thumbnail.mimeType,
+                width: thumbnail.width,
+                height: thumbnail.height
+              }
+            );
+            if (!cancelled) {
+              queryClient.setQueryData(getTokenThumbnailKey(contractId, tokenId), {
+                data: thumbnail.data,
+                mimeType: thumbnail.mimeType,
+                width: thumbnail.width,
+                height: thumbnail.height
+              });
+            }
+          }
+        }
+        if (cancelled) {
+          return;
+        }
+        queryClient.setQueryData(cachedContentKey, {
+          data: bytes,
+          mimeType: resolvedMimeType
+        });
+      } catch {
+        // Fall back to the collection preview route when cache seeding fails.
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    asset.mime_type,
+    cachedContentKey,
+    cachedContentQuery.data,
+    contractId,
+    previewUrl,
+    queryClient,
+    tokenId
+  ]);
+
+  return (
+    <CollectionLiveGalleryMedia
+      asset={asset}
+      previewUrl={cachedContentUrl ?? previewUrl}
+      collectionTitle={collectionTitle}
+      loading="eager"
+    />
+  );
+};
+
 const getCollectionLivePosterLabel = (mimeType: string) => {
   const mediaKind = getMediaKind(mimeType);
   switch (mediaKind) {
@@ -450,11 +760,12 @@ const CollectionLiveGalleryCardMedia = ({
 
   if (mediaKind === 'image' || mediaKind === 'svg') {
     return (
-      <CollectionLiveGalleryMedia
+      <CollectionLiveCachedImageMedia
         asset={asset}
+        tokenId={tokenId}
         previewUrl={previewUrl}
         collectionTitle={collectionTitle}
-        loading="lazy"
+        contractId={contractId}
       />
     );
   }
@@ -3618,11 +3929,12 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                     </div>
                     <div className="collection-live-page__gallery-detail-body">
                       <div className="collection-live-page__gallery-preview-frame">
-                        <CollectionLiveGalleryMedia
+                        <CollectionLiveCachedDetailMedia
                           asset={selectedGalleryAsset}
+                          tokenId={selectedGalleryTokenId}
                           previewUrl={selectedGalleryPreviewUrl}
                           collectionTitle={collectionTitle}
-                          loading="eager"
+                          contractId={coreContractId}
                         />
                       </div>
                       <div className="collection-live-page__gallery-detail-meta">
