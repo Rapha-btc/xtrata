@@ -90,6 +90,7 @@ import { getTransferValidationMessage, validateTransferRequest } from '../lib/wa
 import type { WalletSession } from '../lib/wallet/types';
 import type { WalletLookupState } from '../lib/wallet/lookup';
 import { formatBytes, truncateMiddle } from '../lib/utils/format';
+import { useBnsNames } from '../lib/bns/hooks';
 import {
   fetchParents,
   findChildrenFromKnownTokens,
@@ -1859,6 +1860,27 @@ export default function ViewerScreen(props: ViewerScreenProps) {
   const walletOverrideActive =
     !!props.walletLookupState.lookupAddress ||
     !!props.walletLookupState.lookupName;
+  const walletBnsQuery = useBnsNames({
+    address: resolvedWalletAddress,
+    network: props.contract.network,
+    enabled: isWalletView && hasWalletTarget
+  });
+  const walletBadgeLabel = useMemo(() => {
+    const preferredName =
+      props.walletLookupState.lookupName ??
+      walletBnsQuery.data?.primary ??
+      null;
+    if (preferredName) {
+      return `Wallet: ${preferredName}`;
+    }
+    return resolvedWalletAddress
+      ? `Wallet: ${truncateMiddle(resolvedWalletAddress, 6, 6)}`
+      : 'Wallet: none';
+  }, [
+    props.walletLookupState.lookupName,
+    resolvedWalletAddress,
+    walletBnsQuery.data?.primary
+  ]);
   const [mobilePanel, setMobilePanel] = useState<'grid' | 'preview'>('grid');
   const [isMobile, setIsMobile] = useState(false);
   const [isCompactPreviewViewport, setIsCompactPreviewViewport] = useState(false);
@@ -2269,14 +2291,40 @@ export default function ViewerScreen(props: ViewerScreenProps) {
   const tokenIds = collectionIds;
   const tokenQueries = collectionQueries;
 
-  const { tokenIds: walletIds, tokenQueries: walletQueries } = useTokenSummaries({
-    client,
-    senderAddress: props.senderAddress,
-    tokenIds: walletTokenIds,
-    enabled: props.isActiveTab && isWalletView,
-    contractIdOverride: contractId,
-    fetchSummary: fetchTokenSummaryForView
-  });
+  const walletPageTokenIds = useMemo(() => {
+    if (!isWalletView || !walletUsingFastIndex || walletTokenIds.length === 0) {
+      return [] as bigint[];
+    }
+    const start = activePageIndex * PAGE_SIZE;
+    return walletTokenIds.slice(start, start + PAGE_SIZE);
+  }, [activePageIndex, isWalletView, walletTokenIds, walletUsingFastIndex]);
+
+  const { tokenIds: walletDiscoveryIds, tokenQueries: walletDiscoveryQueries } =
+    useTokenSummaries({
+      client,
+      senderAddress: props.senderAddress,
+      tokenIds: walletTokenIds,
+      enabled: props.isActiveTab && isWalletView && !walletUsingFastIndex,
+      contractIdOverride: contractId,
+      fetchSummary: fetchTokenSummaryForView
+    });
+
+  const { tokenIds: walletPageIds, tokenQueries: walletPageQueries } =
+    useTokenSummaries({
+      client,
+      senderAddress: props.senderAddress,
+      tokenIds: walletPageTokenIds,
+      enabled: props.isActiveTab && isWalletView && walletUsingFastIndex,
+      contractIdOverride: contractId,
+      fetchSummary: fetchTokenSummaryForView
+    });
+
+  const walletVisibleQueries = walletUsingFastIndex
+    ? walletPageQueries
+    : walletDiscoveryQueries;
+  const walletVisibleQueryCount = walletUsingFastIndex
+    ? walletPageIds.length
+    : walletDiscoveryIds.length;
 
   type GridSlot = {
     id: bigint | null;
@@ -2296,9 +2344,19 @@ export default function ViewerScreen(props: ViewerScreenProps) {
 
   const tokenSummaries = collectionSummaries;
 
-  const walletSummaries = walletQueries
+  const walletDiscoverySummaries = walletDiscoveryQueries
     .map((query, index) => {
-      const id = walletIds[index];
+      const id = walletDiscoveryIds[index];
+      if (id === undefined || !query.data) {
+        return null;
+      }
+      return query.data;
+    })
+    .filter((token): token is TokenSummary => !!token);
+
+  const walletPageResolvedTokens = walletPageQueries
+    .map((query, index) => {
+      const id = walletPageIds[index];
       if (id === undefined || !query.data) {
         return null;
       }
@@ -2359,7 +2417,11 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     ]
   );
 
-  const knownTokens = isWalletView ? walletSummaries : tokenSummaries;
+  const knownTokens = isWalletView
+    ? walletUsingFastIndex
+      ? walletPageResolvedTokens
+      : walletDiscoverySummaries
+    : tokenSummaries;
   const dependencyCache = useMemo(() => {
     const map = new Map<string, bigint[]>();
     knownTokens.forEach((token) => {
@@ -2430,11 +2492,14 @@ export default function ViewerScreen(props: ViewerScreenProps) {
   }, [activeListingIndex, resolvedWalletAddress, walletListingsQuery.data]);
 
   const ownedTokens = useMemo(() => {
+    if (walletUsingFastIndex) {
+      return [];
+    }
     if (!resolvedWalletAddress) {
       return [];
     }
     const normalized = resolvedWalletAddress.toUpperCase();
-    return walletSummaries.filter((token) => {
+    return walletDiscoverySummaries.filter((token) => {
       const owner = token.owner?.toUpperCase();
       if (!owner) {
         return false;
@@ -2449,8 +2514,9 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       return walletListingIds.has(listingKey);
     });
   }, [
+    walletUsingFastIndex,
     walletListingIds,
-    walletSummaries,
+    walletDiscoverySummaries,
     resolvedWalletAddress,
     resolveTokenContractId
   ]);
@@ -2464,15 +2530,15 @@ export default function ViewerScreen(props: ViewerScreenProps) {
   );
 
   const walletSummaryQueriesSettled =
-    walletQueries.length === 0 ||
-    walletQueries.every((query) => !query.isLoading);
+    walletDiscoveryQueries.length === 0 ||
+    walletDiscoveryQueries.every((query) => !query.isLoading);
   const walletIndexPending =
     isWalletView &&
     hasWalletTarget &&
     walletHoldingsIndexQuery.data === undefined &&
     !walletHoldingsIndexQuery.isError;
   const walletTokenListSettled = walletUsingFastIndex
-    ? !walletIndexPending && walletSummaryQueriesSettled
+    ? !walletIndexPending
     : walletSummaryQueriesSettled;
 
   useEffect(() => {
@@ -2507,7 +2573,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
   ]);
 
   useEffect(() => {
-    if (!isWalletView || !walletTokenListSettled) {
+    if (!isWalletView || walletUsingFastIndex || !walletTokenListSettled) {
       return;
     }
     if (
@@ -2524,6 +2590,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
   }, [
     isWalletView,
     walletTokenListSettled,
+    walletUsingFastIndex,
     ownedTokens,
     ownedTokensSignature,
     viewScopeKey
@@ -2531,11 +2598,20 @@ export default function ViewerScreen(props: ViewerScreenProps) {
 
   const stableWalletTokens =
     isWalletView && !walletTokenListSettled ? settledWalletTokens : ownedTokens;
+  const walletKnownTokenIds = useMemo(() => {
+    if (!isWalletView) {
+      return [] as bigint[];
+    }
+    if (walletUsingFastIndex) {
+      return walletTokenIds;
+    }
+    return stableWalletTokens.map((token) => token.id);
+  }, [isWalletView, stableWalletTokens, walletTokenIds, walletUsingFastIndex]);
   const walletResolvedCount = useMemo(
     () =>
-      walletQueries.filter((query) => query.data !== undefined || query.isError)
+      walletVisibleQueries.filter((query) => query.data !== undefined || query.isError)
         .length,
-    [walletQueries]
+    [walletVisibleQueries]
   );
 
   const isTokenListed = useCallback(
@@ -2556,11 +2632,11 @@ export default function ViewerScreen(props: ViewerScreenProps) {
   );
 
   const walletMaxPage = useMemo(() => {
-    if (stableWalletTokens.length === 0) {
+    if (walletKnownTokenIds.length === 0) {
       return 0;
     }
-    return Math.max(0, Math.floor((stableWalletTokens.length - 1) / PAGE_SIZE));
-  }, [stableWalletTokens.length]);
+    return Math.max(0, Math.floor((walletKnownTokenIds.length - 1) / PAGE_SIZE));
+  }, [walletKnownTokenIds.length]);
 
   const maxPage = isWalletView ? walletMaxPage : collectionMaxPage;
 
@@ -2568,12 +2644,22 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     if (!isWalletView) {
       return tokenSummaries;
     }
+    if (walletUsingFastIndex) {
+      return walletPageResolvedTokens;
+    }
     if (stableWalletTokens.length === 0) {
       return [];
     }
     const start = activePageIndex * PAGE_SIZE;
     return stableWalletTokens.slice(start, start + PAGE_SIZE);
-  }, [isWalletView, stableWalletTokens, activePageIndex, tokenSummaries]);
+  }, [
+    activePageIndex,
+    isWalletView,
+    stableWalletTokens,
+    tokenSummaries,
+    walletPageResolvedTokens,
+    walletUsingFastIndex
+  ]);
   const walletPageListingTargets = useMemo(() => {
     if (!isWalletView || pageTokens.length === 0) {
       return [] as Array<{
@@ -2628,13 +2714,22 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     () => mergeListingIndexes(activeListingIndex, walletPageListingsQuery.data),
     [activeListingIndex, walletPageListingsQuery.data]
   );
+  const walletGridSlots = useMemo(() => {
+    if (!isWalletView || !walletUsingFastIndex) {
+      return [] as GridSlot[];
+    }
+    return walletPageIds.map((id, index): GridSlot => ({
+      id,
+      query: walletPageQueries[index] ?? null
+    }));
+  }, [isWalletView, walletPageIds, walletPageQueries, walletUsingFastIndex]);
 
   const currentPageIds = useMemo(() => {
     if (isWalletView) {
-      return pageTokens.map((token) => token.id);
+      return walletUsingFastIndex ? walletPageIds : pageTokens.map((token) => token.id);
     }
     return pageTokenIds;
-  }, [isWalletView, pageTokenIds, pageTokens]);
+  }, [isWalletView, pageTokenIds, pageTokens, walletPageIds, walletUsingFastIndex]);
 
   useEffect(() => {
     if (!props.isActiveTab) {
@@ -2691,9 +2786,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     autoSelectRef.current = false;
     if (isWalletView) {
       setWalletAutoFollowLatest(false);
-      const walletTokenIndex = stableWalletTokens.findIndex(
-        (token) => token.id === id
-      );
+      const walletTokenIndex = walletKnownTokenIds.findIndex((tokenId) => tokenId === id);
       if (walletTokenIndex >= 0) {
         setPageIndex(Math.floor(walletTokenIndex / PAGE_SIZE));
       }
@@ -2708,7 +2801,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     if (isMobile) {
       setMobilePanel('preview');
     }
-  }, [isMobile, isWalletView, stableWalletTokens, lastTokenId]);
+  }, [isMobile, isWalletView, walletKnownTokenIds, lastTokenId]);
 
   useEffect(() => {
     const preferredTokenId = props.preferredTokenId ?? null;
@@ -2766,8 +2859,8 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     if (!isWalletView || selectedTokenId === null) {
       return -1;
     }
-    return stableWalletTokens.findIndex((token) => token.id === selectedTokenId);
-  }, [isWalletView, selectedTokenId, stableWalletTokens]);
+    return walletKnownTokenIds.findIndex((tokenId) => tokenId === selectedTokenId);
+  }, [isWalletView, selectedTokenId, walletKnownTokenIds]);
   const canSelectPrev = useMemo(() => {
     if (selectedTokenId === null) {
       return false;
@@ -2784,7 +2877,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     if (isWalletView) {
       return (
         walletSelectedTokenIndex >= 0 &&
-        walletSelectedTokenIndex < stableWalletTokens.length - 1
+        walletSelectedTokenIndex < walletKnownTokenIds.length - 1
       );
     }
     if (lastTokenId === undefined) {
@@ -2795,7 +2888,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     isWalletView,
     selectedTokenId,
     walletSelectedTokenIndex,
-    stableWalletTokens.length,
+    walletKnownTokenIds.length,
     lastTokenId
   ]);
   const handleSelectPreviousToken = useCallback(() => {
@@ -2806,11 +2899,11 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       if (walletSelectedTokenIndex <= 0) {
         return;
       }
-      const previous = stableWalletTokens[walletSelectedTokenIndex - 1];
-      if (!previous) {
+      const previousId = walletKnownTokenIds[walletSelectedTokenIndex - 1];
+      if (previousId === undefined) {
         return;
       }
-      handleSelectToken(previous.id);
+      handleSelectToken(previousId);
       return;
     }
     if (selectedTokenId > 0n) {
@@ -2820,7 +2913,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     handleSelectToken,
     isWalletView,
     selectedTokenId,
-    stableWalletTokens,
+    walletKnownTokenIds,
     walletSelectedTokenIndex
   ]);
   const handleSelectNextToken = useCallback(() => {
@@ -2830,15 +2923,15 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     if (isWalletView) {
       if (
         walletSelectedTokenIndex < 0 ||
-        walletSelectedTokenIndex >= stableWalletTokens.length - 1
+        walletSelectedTokenIndex >= walletKnownTokenIds.length - 1
       ) {
         return;
       }
-      const next = stableWalletTokens[walletSelectedTokenIndex + 1];
-      if (!next) {
+      const nextId = walletKnownTokenIds[walletSelectedTokenIndex + 1];
+      if (nextId === undefined) {
         return;
       }
-      handleSelectToken(next.id);
+      handleSelectToken(nextId);
       return;
     }
     if (lastTokenId !== undefined && selectedTokenId < lastTokenId) {
@@ -2848,7 +2941,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     handleSelectToken,
     isWalletView,
     selectedTokenId,
-    stableWalletTokens,
+    walletKnownTokenIds,
     walletSelectedTokenIndex,
     lastTokenId
   ]);
@@ -3018,32 +3111,32 @@ export default function ViewerScreen(props: ViewerScreenProps) {
 
   useEffect(() => {
     if (isWalletView) {
-      if (pageTokens.length === 0) {
+      const pageTargetId = walletUsingFastIndex
+        ? (walletPageIds[walletPageIds.length - 1] ?? null)
+        : (pageTokens[pageTokens.length - 1]?.id ?? null);
+      if (pageTargetId === null) {
         if (
           walletTokenListSettled &&
-          stableWalletTokens.length === 0 &&
+          walletKnownTokenIds.length === 0 &&
           (walletUsingFastIndex || walletScanCountClamped >= walletScanCap)
         ) {
           setSelectedTokenId(null);
         }
         return;
       }
-      const pageTargetId = pageTokens[pageTokens.length - 1]?.id ?? null;
       if (autoSelectRef.current) {
-        if (pageTargetId !== null && selectedTokenId !== pageTargetId) {
+        if (selectedTokenId !== pageTargetId) {
           setSelectedTokenId(pageTargetId);
         }
         return;
       }
       if (
         selectedTokenId !== null &&
-        pageTokens.find((token) => token.id === selectedTokenId)
+        currentPageIds.includes(selectedTokenId)
       ) {
         return;
       }
-      if (pageTargetId !== null) {
-        setSelectedTokenId(pageTargetId);
-      }
+      setSelectedTokenId(pageTargetId);
       return;
     }
     if (focusRequestRef.current) {
@@ -3068,11 +3161,13 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     setSelectedTokenId(targetId);
   }, [
     isWalletView,
+    currentPageIds,
+    walletKnownTokenIds.length,
+    walletPageIds,
     pageTokens,
     pageTokenIds,
     selectedTokenId,
     walletTokenListSettled,
-    stableWalletTokens.length,
     walletUsingFastIndex,
     walletScanCountClamped,
     walletScanCap
@@ -3764,6 +3859,59 @@ export default function ViewerScreen(props: ViewerScreenProps) {
     prefetchTokenSummaries,
     props.isActiveTab
   ]);
+  useEffect(() => {
+    if (!isWalletView || !walletUsingFastIndex) {
+      return;
+    }
+    if (!props.isActiveTab) {
+      return;
+    }
+    if (walletIndexPending || walletPageIds.length === 0) {
+      return;
+    }
+    const nextPage = pageIndex + 1;
+    const prevPage = pageIndex - 1;
+    const adjacentIds = [
+      ...(nextPage <= walletMaxPage
+        ? walletTokenIds.slice(nextPage * PAGE_SIZE, nextPage * PAGE_SIZE + PAGE_SIZE)
+        : []),
+      ...(prevPage >= 0
+        ? walletTokenIds.slice(prevPage * PAGE_SIZE, prevPage * PAGE_SIZE + PAGE_SIZE)
+        : [])
+    ];
+    if (adjacentIds.length === 0) {
+      return;
+    }
+    const scopeKey = `${contractId}:wallet:${resolvedWalletAddress ?? 'none'}:${pageIndex}`;
+    if (prefetchScopeRef.current === scopeKey) {
+      return;
+    }
+    prefetchScopeRef.current = scopeKey;
+    let cancelled = false;
+    const isCancelled = () => cancelled;
+    const run = async () => {
+      await new Promise((resolve) =>
+        setTimeout(resolve, PREFETCH_PAGE_DELAY_MS)
+      );
+      await prefetchTokenSummaries(adjacentIds, isCancelled);
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    contractId,
+    isWalletView,
+    pageIndex,
+    prefetchTokenSummaries,
+    props.isActiveTab,
+    resolvedWalletAddress,
+    walletIndexPending,
+    walletMaxPage,
+    walletPageIds.length,
+    walletTokenIds,
+    walletUsingFastIndex
+  ]);
 
   const collectionRangeLabel =
     lastTokenId === undefined
@@ -3787,26 +3935,33 @@ export default function ViewerScreen(props: ViewerScreenProps) {
       ? 'Unable to load'
       : lastTokenQuery.isLoading
         ? 'Loading...'
-        : !walletTokenListSettled
-          ? walletQueries.length > 0
-            ? `${settledWalletTokens.length > 0 ? 'Refreshing' : 'Loading'} ${walletResolvedCount}/${walletQueries.length}`
-            : 'Loading...'
-        : stableWalletTokens.length === 0
+        : walletIndexPending
+          ? 'Loading wallet holdings...'
+          : walletKnownTokenIds.length === 0
           ? !walletUsingFastIndex && walletScanCountClamped < walletScanCap
             ? `Scanning for holdings${walletScanSuffix}`
             : `No tokens${walletScanSuffix}`
-          : `Showing ${pageIndex * PAGE_SIZE + 1}–${pageIndex * PAGE_SIZE + pageTokens.length} of ${stableWalletTokens.length}${walletScanSuffix}`;
+          : (() => {
+              const pageCount = walletUsingFastIndex ? walletPageIds.length : pageTokens.length;
+              const pageStart = pageIndex * PAGE_SIZE + 1;
+              const pageEnd = Math.min(walletKnownTokenIds.length, pageStart + Math.max(pageCount, 1) - 1);
+              const loadingSuffix =
+                walletVisibleQueryCount > 0 && walletResolvedCount < walletVisibleQueryCount
+                  ? ` · loading ${walletResolvedCount}/${walletVisibleQueryCount}`
+                  : '';
+              return `Showing ${pageStart}–${pageEnd} of ${walletKnownTokenIds.length}${walletScanSuffix}${loadingSuffix}`;
+            })();
   const rangeLabel = isWalletView ? walletRangeLabel : collectionRangeLabel;
   const displayPageIndex = isWalletView ? pageIndex : activePageIndex;
   const showWalletLoadingGrid =
     isWalletView &&
     hasWalletTarget &&
-    pageTokens.length === 0 &&
     !lastTokenQuery.isLoading &&
-    (!walletTokenListSettled ||
-      (!walletUsingFastIndex &&
-        walletTokenListSettled &&
-        walletScanCountClamped < walletScanCap));
+    (walletUsingFastIndex
+      ? !walletIndexPending && walletPageIds.length > 0 && pageTokens.length === 0
+      : pageTokens.length === 0 &&
+        (!walletTokenListSettled ||
+          (walletTokenListSettled && walletScanCountClamped < walletScanCap)));
   const useCompactPreviewLayout = isCompactPreviewViewport;
 
   return (
@@ -3843,9 +3998,7 @@ export default function ViewerScreen(props: ViewerScreenProps) {
               {isWalletView ? (
                 <>
                   <span className="badge badge--neutral badge--compact">
-                    {resolvedWalletAddress
-                      ? `Wallet: ${truncateMiddle(resolvedWalletAddress, 6, 6)}`
-                      : 'Wallet: none'}
+                    {walletBadgeLabel}
                   </span>
                   {walletOverrideActive && (
                     <span className="badge badge--neutral badge--compact">
@@ -3963,16 +4116,32 @@ export default function ViewerScreen(props: ViewerScreenProps) {
                   )}
                   {hasWalletTarget &&
                     !lastTokenQuery.isLoading &&
+                    walletIndexPending && (
+                      <p>Loading wallet holdings...</p>
+                    )}
+                  {hasWalletTarget &&
+                    !lastTokenQuery.isLoading &&
+                    !walletIndexPending &&
+                    walletUsingFastIndex &&
+                    walletVisibleQueryCount > 0 &&
+                    walletResolvedCount < walletVisibleQueryCount && (
+                      <p>
+                        Loading wallet page ({walletResolvedCount}/{walletVisibleQueryCount})...
+                      </p>
+                    )}
+                  {hasWalletTarget &&
+                    !lastTokenQuery.isLoading &&
+                    !walletUsingFastIndex &&
                     !walletTokenListSettled && (
                       <p>
-                        {walletQueries.length > 0
-                          ? `${settledWalletTokens.length > 0 ? 'Refreshing' : 'Loading'} wallet holdings (${walletResolvedCount}/${walletQueries.length})...`
+                        {walletVisibleQueryCount > 0
+                          ? `${settledWalletTokens.length > 0 ? 'Refreshing' : 'Loading'} wallet holdings (${walletResolvedCount}/${walletVisibleQueryCount})...`
                           : 'Loading wallet holdings...'}
                       </p>
                     )}
                   {hasWalletTarget &&
                     walletTokenListSettled &&
-                    stableWalletTokens.length === 0 && (
+                    walletKnownTokenIds.length === 0 && (
                       <p>
                         {!walletUsingFastIndex && walletScanCountClamped < walletScanCap
                           ? `Scanning older IDs for holdings (${walletScanCountClamped}/${walletScanCap})...`
@@ -4001,10 +4170,51 @@ export default function ViewerScreen(props: ViewerScreenProps) {
               )}
             </div>
             {isWalletView ? (
-              pageTokens.length > 0 && (
+              (walletUsingFastIndex ? walletGridSlots.length > 0 : pageTokens.length > 0) && (
                 <div className="square-frame">
                   <div className="token-grid square-frame__content">
-                    {pageTokens.map((token) => {
+                    {(walletUsingFastIndex ? walletGridSlots : pageTokens).map((slotOrToken) => {
+                      if (walletUsingFastIndex) {
+                        const slot = slotOrToken as GridSlot;
+                        if (slot.id !== null && slot.query?.data) {
+                          const token = slot.query.data;
+                          const tokenClient = resolveTokenClient(token);
+                          const fallbackClient = resolveContentFallbackClient(token);
+                          const tokenContractId = resolveTokenContractId(token);
+                          const tokenListing = getTokenListing(token);
+                          return (
+                            <TokenCard
+                              key={token.id.toString()}
+                              token={token}
+                              isSelected={token.id === selectedTokenId}
+                              isListed={isTokenListed(token)}
+                              listing={tokenListing}
+                              walletAddress={walletAddress}
+                              onSelect={handleSelectToken}
+                              onBuyListing={handleBuyListing}
+                              onCancelListing={handleCancelListing}
+                              marketActionPending={marketActionPending}
+                              marketBuySupported={isMarketSettlementSupported(marketSettlement)}
+                              listingBadgeLabel={marketSettlementLabel}
+                              listingBadgeVariant={marketSettlementBadgeVariant}
+                              client={tokenClient}
+                              fallbackClient={fallbackClient}
+                              senderAddress={props.senderAddress}
+                              contractId={tokenContractId}
+                              isActiveTab={props.isActiveTab}
+                            />
+                          );
+                        }
+                        const cardKey =
+                          slot.id !== null ? slot.id.toString() : slot.key ?? 'wallet-loading';
+                        return (
+                          <LoadingTokenCard
+                            key={cardKey}
+                            id={slot.id ?? undefined}
+                          />
+                        );
+                      }
+                      const token = slotOrToken as TokenSummary;
                       const tokenClient = resolveTokenClient(token);
                       const fallbackClient = resolveContentFallbackClient(token);
                       const tokenContractId = resolveTokenContractId(token);
