@@ -4023,7 +4023,7 @@ export default function CollectionMintLivePage(props: CollectionMintLivePageProp
                                   network={coreContract.network}
                                   className="meta-value"
                                   fallback="Unknown"
-                                  linkToExplorer={false}
+                                  linkTarget="none"
                                 />
                               </a>
                             ) : (

@@ -17,6 +17,7 @@ type AddressLabelProps = {
   tail?: number;
   fallback?: string;
   linkToExplorer?: boolean;
+  linkTarget?: 'viewer' | 'explorer' | 'none';
   showAddressWhenNamed?: boolean;
 };
 
@@ -39,10 +40,19 @@ export default function AddressLabel(props: AddressLabelProps) {
   const primaryLabel = primaryName ?? truncated;
   const showSecondary = !!primaryName && !!props.showAddressWhenNamed;
   const fallback = props.fallback ?? 'Unknown';
-  const explorerUrl =
-    props.linkToExplorer === false || !hasAddress
+  const resolvedLinkTarget =
+    props.linkTarget ??
+    (props.linkToExplorer === true
+      ? 'explorer'
+      : props.linkToExplorer === false
+        ? 'none'
+        : 'viewer');
+  const href =
+    !hasAddress || resolvedLinkTarget === 'none'
       ? null
-      : getStacksExplorerAddressUrl(trimmed, inferredNetwork);
+      : resolvedLinkTarget === 'explorer'
+        ? getStacksExplorerAddressUrl(trimmed, inferredNetwork)
+        : `/?viewer-wallet=${encodeURIComponent(trimmed)}`;
 
   if (!hasAddress) {
     return (
@@ -69,15 +79,19 @@ export default function AddressLabel(props: AddressLabelProps) {
     </>
   );
 
-  if (explorerUrl) {
+  if (href) {
     return (
       <a
         className={joinClassName('address-label address-label__link', props.className)}
         title={trimmed}
         aria-label={ariaLabel}
-        href={explorerUrl}
-        target="_blank"
-        rel="noreferrer"
+        href={href}
+        {...(resolvedLinkTarget === 'explorer'
+          ? {
+              target: '_blank',
+              rel: 'noreferrer'
+            }
+          : {})}
       >
         {labelContent}
       </a>
