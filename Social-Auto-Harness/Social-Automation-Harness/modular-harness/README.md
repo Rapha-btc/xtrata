@@ -73,6 +73,7 @@ Persona setup:
 - set `profileName` to the visible Chrome profile name for that persona, or set `profileDirectory` directly
 - the default `xtrata` entry expects X handle `@xtratalayers`
 - read `PROJECT_CONTEXT.md` for broader architecture, safety, and roadmap context
+- read `SAFETY_CONTROLS.md` for interaction-history, anti-spam, saturation, and search-widening rules
 - future assistants should also read `../AGENTS.md` before changing harness code
 
 The tests for these modules live under `modular-harness/test/`.
@@ -137,3 +138,12 @@ Current limit of the new candidate collector:
 - it normalizes and filters supplied candidate JSON
 - the new read-only scrapers return raw search/follower candidates, but they have not been live-validated yet against your current X DOM
 - browser-facing collection, reply drafting, and composer-fill support are still intentionally non-posting and should stay that way until quotas, tripwires, and approval gates are stronger
+
+Safety docs and templates:
+
+- `SAFETY_CONTROLS.md`
+  Canonical policy for interaction history, dedupe, saturation, search widening, and selective posting
+- `templates/interaction-ledger.example.jsonl`
+  Example structured history entries for future execution logging
+- `templates/account-pressure.example.json`
+  Example account saturation output for future control modules

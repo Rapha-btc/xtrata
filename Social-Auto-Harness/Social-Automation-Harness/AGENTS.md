@@ -14,8 +14,9 @@ If you are touching the browser harness, you must read these files before making
 1. `README.md`
 2. `modular-harness/README.md`
 3. `modular-harness/PROJECT_CONTEXT.md`
-4. the relevant module file(s)
-5. the corresponding test file(s)
+4. `modular-harness/SAFETY_CONTROLS.md`
+5. the relevant module file(s)
+6. the corresponding test file(s)
 
 If you are touching the legacy/API pipeline, read:
 
@@ -55,6 +56,9 @@ Required rules:
 - Run tests before finalizing.
   For shared harness changes, run `npm test`.
 
+- Keep safety docs current.
+  If interaction history, dedupe, saturation, search widening, or execution controls change, update `modular-harness/SAFETY_CONTROLS.md`.
+
 ## Safety Requirements
 
 The harness must remain conservative and operator-supervised.
@@ -67,6 +71,7 @@ Do:
 - fail safe on unexpected UI states
 - preserve persona-aware behavior so one verified persona window is reused when feasible
 - require explicit user intent and later approval gating for outward-facing platform actions
+- keep structured interaction-history and saturation controls ahead of any scaling work
 
 Do not:
 
@@ -74,6 +79,7 @@ Do not:
 - automate account creation, credential entry, MFA, or session theft
 - build aggressive scaling behavior before quotas, deduplication, auditability, and approval mechanisms exist
 - silently convert read-only/session modules into side-effecting execution modules
+- add execution logic that lacks a clear interaction-ledger and dedupe story
 
 If a requested change increases platform-visible actions, treat that as higher-risk work and keep the implementation conservative.
 
@@ -87,7 +93,9 @@ Before implementing platform-visible actions:
 2. identify the approval gate
 3. identify the quota/rate-limit impact
 4. identify the rollback/failure behavior
-5. add tests for the control logic first
+5. identify the interaction-history, same-thread, and same-account dedupe behavior
+6. identify the search-widening fallback when candidate quality is too low
+7. add tests for the control logic first
 
 Until those controls exist, default to session validation, prompt handling, JSON extraction, draft filling, and other low-risk building blocks.
 

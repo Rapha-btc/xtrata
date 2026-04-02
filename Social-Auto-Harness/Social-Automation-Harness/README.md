@@ -13,6 +13,7 @@ If you are working on the browser-session harness, read these files before chang
 
 - `modular-harness/README.md`
 - `modular-harness/PROJECT_CONTEXT.md`
+- `modular-harness/SAFETY_CONTROLS.md`
 - `AGENTS.md`
 
 ## Requirements
@@ -172,4 +173,5 @@ For architecture, roadmap, and safety constraints, use:
 
 - `modular-harness/README.md`
 - `modular-harness/PROJECT_CONTEXT.md`
+- `modular-harness/SAFETY_CONTROLS.md`
 - `AGENTS.md`

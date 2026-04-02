@@ -13,6 +13,8 @@ It exists alongside the legacy/OpenAI API pipeline in the repository, but it fol
 
 The current target persona is `xtrata`, which maps to a Chrome profile and an expected X handle.
 
+The safety and quality-control policy for future harness work is documented in `modular-harness/SAFETY_CONTROLS.md`.
+
 This harness is being built to support careful, operator-supervised workflows. It is not intended to bypass platform controls, hide automation, or maximize volume.
 
 ## Current State
@@ -91,6 +93,8 @@ The harness is still early-stage and has important limits:
 - no X composer-fill or submit modules yet
 - no X submit/post modules yet
 - no durable scheduler, queue, action-budget module, or telemetry layer yet
+- no canonical structured interaction ledger yet
+- no account-pressure or search-widening modules yet
 
 The harness should be treated as an incremental operator tool, not a fully autonomous system.
 
@@ -132,6 +136,9 @@ The next likely expansions are:
 - `loadActionBundle` to replace the old extension-instructions/orchestrator check in a structured way
 - stronger governance parsing for daily activity logs and standalone angle history
 - action-budget, deduplication, and tripwire modules that sit beside `sharedRulesEngine`
+- a canonical interaction ledger for all platform-visible actions and skips
+- account-pressure and oversubscription controls for repeated author targeting
+- search-widening controls so exhausted candidate pools expand instead of forcing low-quality actions
 - richer candidate batching and chunking once search volumes grow beyond a single prompt
 - stronger draft validation, variety checking, and duplicate-phrase detection
 - `ensureGeminiSession`
@@ -176,6 +183,12 @@ The harness should follow these rules:
 - Avoid spammy or repetitive behavior.
   Future execution modules should enforce quotas, action spacing, per-run caps, deduplication, and content variety constraints.
 
+- Record interaction history in structured form.
+  Future execution and skip decisions should be traceable through a single interaction ledger rather than only through free-form markdown logs.
+
+- Widen search rather than over-target accounts.
+  If safe candidate volume is low, the harness should broaden discovery inputs instead of repeatedly touching the same small account pool.
+
 - Structured outputs before automation.
   Use JSON-validated provider outputs when possible so downstream code consumes validated data instead of brittle free-form text.
 
@@ -218,6 +231,7 @@ Required process for new work:
 
 7. Update docs whenever behavior or architecture changes.
    The context docs must stay aligned with reality.
+   If the change affects interaction history, saturation, or execution safety, update `SAFETY_CONTROLS.md` too.
 
 ## Context Checklist For Future Assistants
 
@@ -226,11 +240,12 @@ Before editing the harness, future assistants should:
 1. Read `README.md`.
 2. Read `modular-harness/README.md`.
 3. Read this file: `modular-harness/PROJECT_CONTEXT.md`.
-4. Read `AGENTS.md`.
-5. Read the specific module to be changed and its test file(s).
-6. Confirm whether the task is read-only, session-level, provider-level, or execution-level.
-7. Identify any user-visible or platform-visible side effects before coding.
-8. Plan the smallest safe change that solves the requested problem.
+4. Read `modular-harness/SAFETY_CONTROLS.md`.
+5. Read `AGENTS.md`.
+6. Read the specific module to be changed and its test file(s).
+7. Confirm whether the task is read-only, session-level, provider-level, or execution-level.
+8. Identify any user-visible or platform-visible side effects before coding.
+9. Plan the smallest safe change that solves the requested problem.
 
 ## Immediate Guidance
 
