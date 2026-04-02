@@ -76,6 +76,8 @@ function buildTargetFromOpportunity(opportunity, draftIndex) {
     author: opportunity.candidate?.author ?? null,
     text: opportunity.candidate?.text ?? null,
     postedAt: opportunity.candidate?.postedAt ?? null,
+    source: opportunity.candidate?.source ?? null,
+    searchQuery: opportunity.candidate?.searchQuery ?? null,
     recommendation: opportunity.recommendation ?? "skip",
     relevanceScore: opportunity.relevanceScore ?? 0,
     safetyScore: opportunity.safetyScore ?? 0,

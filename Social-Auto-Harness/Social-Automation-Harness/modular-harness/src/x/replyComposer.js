@@ -201,6 +201,30 @@ export function buildFillReplyComposerScript(replyText) {
         ...extra,
       };
     };
+    const dispatchInput = (target, inputType = 'insertText') => {
+      try {
+        target.dispatchEvent(
+          new InputEvent('beforeinput', {
+            bubbles: true,
+            cancelable: true,
+            data: desiredText,
+            inputType,
+          })
+        );
+      } catch {}
+      try {
+        target.dispatchEvent(
+          new InputEvent('input', {
+            bubbles: true,
+            data: desiredText,
+            inputType,
+          })
+        );
+      } catch {
+        target.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      target.dispatchEvent(new Event('change', { bubbles: true }));
+    };
     const composer = readComposer();
     if (!composer) {
       return JSON.stringify(
@@ -211,7 +235,7 @@ export function buildFillReplyComposerScript(replyText) {
         })
       );
     }
-    const assignValue = (element, value) => {
+    const assignPlainValue = (element, value) => {
       if ('value' in element) {
         const prototype = Object.getPrototypeOf(element);
         const descriptor =
@@ -223,21 +247,139 @@ export function buildFillReplyComposerScript(replyText) {
         } else {
           element.value = value;
         }
-      } else {
-        element.textContent = value;
       }
     };
+    const fillContentEditable = (element, value) => {
+      const selection = window.getSelection?.();
+      const range = document.createRange?.();
+      if (!selection || !range) {
+        element.textContent = value;
+        return 'textContent-fallback';
+      }
+
+      range.selectNodeContents(element);
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      let inserted = false;
+      if (typeof document.execCommand === 'function') {
+        try {
+          document.execCommand('selectAll', false);
+          inserted = Boolean(document.execCommand('insertText', false, value));
+        } catch {
+          inserted = false;
+        }
+      }
+
+      if (!inserted) {
+        range.deleteContents();
+        range.insertNode(document.createTextNode(value));
+        range.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        return 'range-insert';
+      }
+
+      selection.removeAllRanges();
+      return 'execCommand-insertText';
+    };
+
     composer.focus();
-    assignValue(composer, desiredText);
-    composer.dispatchEvent(new InputEvent('input', { bubbles: true, data: desiredText, inputType: 'insertText' }));
-    composer.dispatchEvent(new Event('change', { bubbles: true }));
+    const fillMode =
+      composer.isContentEditable && !('value' in composer)
+        ? fillContentEditable(composer, desiredText)
+        : (assignPlainValue(composer, desiredText), 'value-setter');
+    dispatchInput(composer);
+    composer.focus();
     return JSON.stringify(
       readState({
         ok: true,
         reason: null,
         retryable: false,
+        fillMode,
       })
     );
+  })()`;
+}
+
+export function buildObserveReplySendScript({ replyText, expectedHandle = null } = {}) {
+  const normalizedReplyText = normalizeReplyDraftText(replyText);
+  const normalizedExpectedHandle = normalizeString(expectedHandle, "");
+
+  return `(() => {
+    const __xReplyComposerObserveSend = true;
+    const desiredText = ${JSON.stringify(normalizedReplyText)};
+    const expectedHandle = ${JSON.stringify(normalizedExpectedHandle)};
+    const normalizeText = (value) =>
+      (value || "")
+        .replace(/\\u00a0/g, " ")
+        .replace(/\\r\\n/g, "\\n")
+        .replace(/[ \\t]+\\n/g, "\\n")
+        .replace(/\\n{3,}/g, "\\n\\n")
+        .replace(/\\s+/g, " ")
+        .trim();
+    const normalizeHandle = (value) => {
+      const normalized = normalizeText(value).toLowerCase();
+      if (!normalized) return "";
+      return normalized.startsWith('@') ? normalized : '@' + normalized;
+    };
+    const readComposer = () =>
+      document.querySelector(
+        '[role="dialog"] [data-testid="tweetTextarea_0"], [role="dialog"] [role="textbox"], [data-testid="tweetTextarea_0"], [role="textbox"][contenteditable="true"]'
+      );
+    const sendButton =
+      document.querySelector('[role="dialog"] [data-testid="tweetButton"]') ||
+      document.querySelector('[data-testid="tweetButton"]') ||
+      document.querySelector('[data-testid="tweetButtonInline"]');
+    const composer = readComposer();
+    const composerText = normalizeText(
+      composer?.innerText || composer?.textContent || composer?.value || ""
+    ) || null;
+    const expectedHandleNeedle = normalizeHandle(expectedHandle);
+    let matchingReplyText = null;
+    let matchingReplyArticleHasExpectedHandle = false;
+    let matchingReplyUrl = null;
+
+    for (const article of document.querySelectorAll('article')) {
+      const articleText = normalizeText(article.innerText || article.textContent || "");
+      const tweetTextNode = [...article.querySelectorAll('[data-testid="tweetText"]')].find(
+        (node) => normalizeText(node.innerText || node.textContent || "") === desiredText
+      );
+      if (!tweetTextNode) continue;
+
+      const articleHasExpectedHandle =
+        !expectedHandleNeedle || articleText.toLowerCase().includes(expectedHandleNeedle);
+      if (!articleHasExpectedHandle) {
+        continue;
+      }
+
+      matchingReplyText = normalizeText(tweetTextNode.innerText || tweetTextNode.textContent || "");
+      matchingReplyArticleHasExpectedHandle = articleHasExpectedHandle;
+      matchingReplyUrl =
+        article.querySelector('a[href*="/status/"]')?.href ||
+        article.querySelector('time')?.closest('a[href]')?.href ||
+        null;
+      break;
+    }
+
+    return JSON.stringify({
+      url: window.location.href,
+      title: document.title,
+      composerFound: Boolean(composer),
+      dialogOpen: Boolean(document.querySelector('[role="dialog"]')),
+      composerText,
+      characterCount: composerText ? composerText.length : 0,
+      sendButtonFound: Boolean(sendButton),
+      canSubmit: Boolean(
+        sendButton &&
+          !sendButton.disabled &&
+          sendButton.getAttribute('aria-disabled') !== 'true'
+      ),
+      matchingReplyVisible: Boolean(matchingReplyText),
+      matchingReplyText,
+      matchingReplyUrl,
+      matchingReplyArticleHasExpectedHandle,
+    });
   })()`;
 }
 
@@ -272,6 +414,28 @@ export function parseXReplyComposerActionResult(raw) {
       characterCount: 0,
       sendButtonFound: false,
       canSubmit: false,
+    };
+  }
+
+  return JSON.parse(raw);
+}
+
+export function parseXReplySendObservationResult(raw) {
+  if (raw && typeof raw === "object") return raw;
+  if (typeof raw !== "string" || !raw.trim()) {
+    return {
+      url: null,
+      title: "",
+      composerFound: false,
+      dialogOpen: false,
+      composerText: null,
+      characterCount: 0,
+      sendButtonFound: false,
+      canSubmit: false,
+      matchingReplyVisible: false,
+      matchingReplyText: null,
+      matchingReplyUrl: null,
+      matchingReplyArticleHasExpectedHandle: false,
     };
   }
 
@@ -374,7 +538,7 @@ export async function fillReplyComposer({
   for (let attempt = 1; attempt <= maxChecks; attempt += 1) {
     lastState = parseXReplyComposerActionResult(await adapter.evaluateActiveTab(fillScript));
     const textMatches = textsMatch(normalizedReplyText, lastState?.composerText ?? "");
-    if (lastState.ok && textMatches) {
+    if (lastState.ok && textMatches && lastState?.canSubmit) {
       return {
         ok: true,
         replyText: normalizedReplyText,
@@ -395,7 +559,69 @@ export async function fillReplyComposer({
     }
   }
 
+  if (lastState?.ok && textsMatch(normalizedReplyText, lastState?.composerText ?? "") && !lastState?.canSubmit) {
+    lastState = {
+      ...lastState,
+      ok: false,
+      reason: "reply-submit-disabled",
+      retryable: true,
+    };
+  }
+
   throw buildFillComposerError(lastState);
+}
+
+export async function waitForManualReplySend({
+  adapter,
+  replyText,
+  expectedHandle = null,
+  maxChecks = 180,
+  waitMs = 1000,
+} = {}) {
+  if (!adapter) throw new TypeError("adapter is required.");
+
+  const normalizedReplyText = normalizeReplyDraftText(replyText);
+  if (!normalizedReplyText) {
+    throw new TypeError("replyText is required.");
+  }
+
+  const observationScript = buildObserveReplySendScript({
+    replyText: normalizedReplyText,
+    expectedHandle,
+  });
+  let lastState = null;
+
+  for (let attempt = 1; attempt <= maxChecks; attempt += 1) {
+    lastState = parseXReplySendObservationResult(await adapter.evaluateActiveTab(observationScript));
+    if (!lastState.composerFound && lastState.matchingReplyVisible) {
+      return {
+        ok: true,
+        status: "sent",
+        replyText: normalizedReplyText,
+        attempts: attempt,
+        state: lastState,
+      };
+    }
+
+    if (attempt < maxChecks) {
+      if (typeof adapter.wait === "function") {
+        await adapter.wait(waitMs);
+      } else {
+        await sleep(waitMs);
+      }
+    }
+  }
+
+  return {
+    ok: false,
+    status:
+      lastState?.composerFound || lastState?.dialogOpen
+        ? "timed-out-waiting-for-operator"
+        : "manual-action-not-confirmed",
+    replyText: normalizedReplyText,
+    attempts: maxChecks,
+    state: lastState,
+  };
 }
 
 export async function prepareReplyComposer({
@@ -429,6 +655,13 @@ export async function prepareReplyComposer({
   const normalizedExpectedText = normalizeReplyDraftText(replyText);
   const normalizedComposerText = normalizeReplyDraftText(state?.composerText ?? "");
   const textMatches = textsMatch(normalizedExpectedText, normalizedComposerText);
+  if (!textMatches || !state?.canSubmit) {
+    throw buildFillComposerError({
+      ...state,
+      reason: !textMatches ? "reply-text-mismatch" : "reply-submit-disabled",
+      retryable: true,
+    });
+  }
 
   return {
     ok: true,

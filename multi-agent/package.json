@@ -1,0 +1,14 @@
+{
+  "name": "multi-agent",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check:install": "node --env-file-if-exists=.env scripts/check-install.mjs",
+    "start": "node --env-file=.env scripts/demo.mjs",
+    "start:anthropic": "node --env-file=.env scripts/anthropic-direct.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.52.0",
+    "@jackchen_me/open-multi-agent": "^0.1.0"
+  }
+}
