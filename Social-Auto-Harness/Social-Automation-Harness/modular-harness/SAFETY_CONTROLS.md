@@ -34,6 +34,8 @@ The harness should optimize for:
 - conservative defaults over aggressive execution
 - search expansion over spam escalation
 
+Session caps should be treated as ceilings, not quotas. If only a few threads clear the current quality bar, the harness should draft only those few.
+
 ## Existing Control Files
 
 The repository already contains several useful history files:
@@ -53,9 +55,10 @@ The repository already contains several useful history files:
 
 These files are still important, but they do not provide one structured ledger for every platform-visible interaction.
 
-## Canonical Future Ledger
+## Interaction Ledger
 
-Future execution-capable harness work should treat a single structured interaction ledger as the source of truth.
+The manual reply queue now writes a structured interaction ledger for prepared and sent outcomes.
+Future execution-capable harness work should treat the same file as the source of truth.
 
 Recommended file:
 
@@ -72,7 +75,7 @@ Templates live in:
 - `modular-harness/templates/interaction-ledger.example.jsonl`
 - `modular-harness/templates/account-pressure.example.json`
 
-Until those files are implemented in code, assistants should still plan changes as if they are mandatory dependencies for any execution module.
+The current queue only writes the interaction ledger. The companion files still remain recommended dependencies for richer execution controls.
 
 ## Interaction Ledger Requirements
 
@@ -113,6 +116,16 @@ Why this matters:
 - saturation can be measured consistently
 - future assistants can understand prior behavior without reading multiple free-form logs
 - review and rollback become possible
+
+Current manual-send rule:
+
+- never record a reply as sent unless the operator clicked Reply and the harness observed the sent reply on-page
+- if the operator closes the prepared reply dialog or tab without sending, record it as an operator-declined skip and move on without marking the thread as replied
+- if the composer closes or times out without a verified on-page reply, do not mark the thread as replied
+- if the operator closes the entire tab before on-page verification, treat the outcome as unconfirmed rather than as an explicit decline
+- if an unconfirmed send needs recovery, use the read-only reconciliation flow to verify the exact sent reply on-page before backfilling local history
+- future candidate collection should still treat operator-declined thread URLs as already reviewed so the same thread does not keep resurfacing
+- the execution queue should re-check posted-thread and interaction-ledger dedupe before opening each draft so stale draft files cannot reopen already-reviewed threads
 
 ## Hard Stop Rules
 
@@ -182,6 +195,12 @@ The harness should not:
 - reuse the same reply pattern across multiple similar threads
 - keep targeting the same visible ecosystem personalities because they are easy to find
 
+Read-only search scaling is acceptable only if quality gates stay intact:
+
+- it is reasonable to load a deeper search feed, for example up to 100 raw results, before analysis
+- larger feeds should still be analyzed conservatively in chunks and re-ranked in one final synthesis step
+- more search depth should improve selectivity, not justify more posting by itself
+
 ## Quality Gates Before Posting
 
 Before a reply can move from draft to execution, it should pass all of these checks:
@@ -222,6 +241,7 @@ Once outward-facing execution exists, every actual action should update:
 - the relevant dedupe files such as `posted-threads-log.json`
 
 If an action is blocked for safety reasons, that should also be logged in structured form.
+If a manual send is not confirmed on-page, keep the ledger entry as prepared/unconfirmed and do not update `posted-threads-log.json`.
 
 Skipped actions are useful because they show:
 

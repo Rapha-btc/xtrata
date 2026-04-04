@@ -302,14 +302,16 @@ export function buildFillReplyComposerScript(replyText) {
   })()`;
 }
 
-export function buildObserveReplySendScript({ replyText, expectedHandle = null } = {}) {
+export function buildObserveReplySendScript({ replyText, tweetUrl = null, expectedHandle = null } = {}) {
   const normalizedReplyText = normalizeReplyDraftText(replyText);
   const normalizedExpectedHandle = normalizeString(expectedHandle, "");
+  const expectedStatusId = extractStatusIdFromUrl(tweetUrl);
 
   return `(() => {
     const __xReplyComposerObserveSend = true;
     const desiredText = ${JSON.stringify(normalizedReplyText)};
     const expectedHandle = ${JSON.stringify(normalizedExpectedHandle)};
+    const expectedStatusId = ${JSON.stringify(expectedStatusId)};
     const normalizeText = (value) =>
       (value || "")
         .replace(/\\u00a0/g, " ")
@@ -322,6 +324,10 @@ export function buildObserveReplySendScript({ replyText, expectedHandle = null }
       const normalized = normalizeText(value).toLowerCase();
       if (!normalized) return "";
       return normalized.startsWith('@') ? normalized : '@' + normalized;
+    };
+    const extractStatusId = (value) => {
+      const matched = (value || "").match(/^https?:\\/\\/(?:www\\.)?x\\.com\\/[^/?#]+\\/status\\/(\\d+)(?:\\/|$|\\?)/i);
+      return matched ? matched[1] : null;
     };
     const readComposer = () =>
       document.querySelector(
@@ -365,6 +371,7 @@ export function buildObserveReplySendScript({ replyText, expectedHandle = null }
     return JSON.stringify({
       url: window.location.href,
       title: document.title,
+      onTargetThreadPage: !expectedStatusId || extractStatusId(window.location.href) === expectedStatusId,
       composerFound: Boolean(composer),
       dialogOpen: Boolean(document.querySelector('[role="dialog"]')),
       composerText,
@@ -426,6 +433,7 @@ export function parseXReplySendObservationResult(raw) {
     return {
       url: null,
       title: "",
+      onTargetThreadPage: false,
       composerFound: false,
       dialogOpen: false,
       composerText: null,
@@ -574,9 +582,11 @@ export async function fillReplyComposer({
 export async function waitForManualReplySend({
   adapter,
   replyText,
+  tweetUrl = null,
   expectedHandle = null,
   maxChecks = 180,
   waitMs = 1000,
+  closeGraceChecks = 3,
 } = {}) {
   if (!adapter) throw new TypeError("adapter is required.");
 
@@ -584,16 +594,17 @@ export async function waitForManualReplySend({
   if (!normalizedReplyText) {
     throw new TypeError("replyText is required.");
   }
-
-  const observationScript = buildObserveReplySendScript({
-    replyText: normalizedReplyText,
-    expectedHandle,
-  });
   let lastState = null;
+  let closedWithoutReplyChecks = 0;
 
   for (let attempt = 1; attempt <= maxChecks; attempt += 1) {
-    lastState = parseXReplySendObservationResult(await adapter.evaluateActiveTab(observationScript));
-    if (!lastState.composerFound && lastState.matchingReplyVisible) {
+    lastState = await readReplySendObservationState({
+      adapter,
+      replyText: normalizedReplyText,
+      tweetUrl,
+      expectedHandle,
+    });
+    if (!lastState.dialogOpen && lastState.matchingReplyVisible) {
       return {
         ok: true,
         status: "sent",
@@ -602,6 +613,40 @@ export async function waitForManualReplySend({
         state: lastState,
       };
     }
+
+    if (!lastState.dialogOpen && !lastState.matchingReplyVisible) {
+      if (lastState.onTargetThreadPage === false) {
+        return {
+          ok: false,
+          status: "manual-action-not-confirmed",
+          replyText: normalizedReplyText,
+          attempts: attempt,
+          state: lastState,
+        };
+      }
+
+      closedWithoutReplyChecks += 1;
+      if (closedWithoutReplyChecks < Math.max(1, closeGraceChecks)) {
+        if (attempt < maxChecks) {
+          if (typeof adapter.wait === "function") {
+            await adapter.wait(waitMs);
+          } else {
+            await sleep(waitMs);
+          }
+          continue;
+        }
+      }
+
+      return {
+        ok: false,
+        status: "declined-by-operator",
+        replyText: normalizedReplyText,
+        attempts: attempt,
+        state: lastState,
+      };
+    }
+
+    closedWithoutReplyChecks = 0;
 
     if (attempt < maxChecks) {
       if (typeof adapter.wait === "function") {
@@ -614,14 +659,33 @@ export async function waitForManualReplySend({
 
   return {
     ok: false,
-    status:
-      lastState?.composerFound || lastState?.dialogOpen
-        ? "timed-out-waiting-for-operator"
-        : "manual-action-not-confirmed",
+    status: lastState?.composerFound || lastState?.dialogOpen ? "timed-out-waiting-for-operator" : "manual-action-not-confirmed",
     replyText: normalizedReplyText,
     attempts: maxChecks,
     state: lastState,
   };
+}
+
+export async function readReplySendObservationState({
+  adapter,
+  replyText,
+  tweetUrl = null,
+  expectedHandle = null,
+} = {}) {
+  if (!adapter) throw new TypeError("adapter is required.");
+
+  const normalizedReplyText = normalizeReplyDraftText(replyText);
+  if (!normalizedReplyText) {
+    throw new TypeError("replyText is required.");
+  }
+
+  const observationScript = buildObserveReplySendScript({
+    replyText: normalizedReplyText,
+    tweetUrl,
+    expectedHandle,
+  });
+
+  return parseXReplySendObservationResult(await adapter.evaluateActiveTab(observationScript));
 }
 
 export async function prepareReplyComposer({

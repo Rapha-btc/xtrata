@@ -70,6 +70,24 @@ const opportunityReport = {
     },
     {
       rank: 3,
+      candidateIndex: 3,
+      recommendation: "prioritize",
+      relevanceScore: 88,
+      safetyScore: 89,
+      xtrataFit: "high",
+      suggestedAction: "reply",
+      reasoning: "Also strong, but same author as the top item.",
+      draftBrief: "Similar angle but weaker than the top one.",
+      riskFlags: [],
+      candidate: {
+        url: "https://x.com/example/status/4",
+        author: "@freshbuilder",
+        text: "Another strong thread from the same author.",
+        postedAt: "2026-04-01T12:07:00.000Z",
+      },
+    },
+    {
+      rank: 4,
       candidateIndex: 2,
       recommendation: "skip",
       relevanceScore: 25,
@@ -93,12 +111,23 @@ test("selectReplyDraftTargets keeps the safest highest-value thread opportunitie
   const targets = selectReplyDraftTargets({
     opportunityReport,
     maxDrafts: 2,
-    minSafetyScore: 75,
+    minSafetyScore: 70,
   });
 
-  assert.equal(targets.length, 1);
+  assert.equal(targets.length, 2);
   assert.equal(targets[0].author, "@freshbuilder");
   assert.equal(targets[0].draftIndex, 0);
+  assert.equal(targets[1].author, "@secondbuilder");
+});
+
+test("selectReplyDraftTargets keeps only one thread per author in the same drafting batch", () => {
+  const targets = selectReplyDraftTargets({
+    opportunityReport,
+    maxDrafts: 8,
+    minSafetyScore: 70,
+  });
+
+  assert.equal(targets.filter((target) => target.author === "@freshbuilder").length, 1);
 });
 
 test("buildReplyDraftPrompt includes governance context and reply rules", () => {
@@ -114,6 +143,8 @@ test("buildReplyDraftPrompt includes governance context and reply rules", () => 
   assert.match(prompt, /promotional-specific/);
   assert.match(prompt, /No hashtags in replies/);
   assert.match(prompt, /@freshbuilder/);
+  assert.match(prompt, /high-bar review step/);
+  assert.match(prompt, /Keep variety across the batch/);
 });
 
 test("buildReplyDraftSchemaDescription locks the expected JSON shape", () => {

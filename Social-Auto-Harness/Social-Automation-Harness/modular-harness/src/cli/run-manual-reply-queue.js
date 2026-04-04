@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { ChromeAppleScriptAdapter } from "../browser/chromeAppleScriptAdapter.js";
 import { resolveBrowserPersona } from "../browser/profileRegistry.js";
 import { runManualReplyQueue } from "../execution/manualReplyQueue.js";
+import { loadGovernanceState } from "../governance/loadGovernanceState.js";
 
 function getArg(prefix) {
   const entry = process.argv.find((value) => value.startsWith(`${prefix}=`));
@@ -29,18 +30,19 @@ async function main() {
   const expectedHandle = getArg("--handle") ?? null;
   const baseDir = path.resolve(getArg("--base-dir") ?? process.cwd());
   const startIndex = Number.parseInt(getArg("--start-index") ?? "0", 10);
-  const maxReplies = Number.parseInt(getArg("--max-replies") ?? "3", 10);
+  const maxReplies = Number.parseInt(getArg("--max-replies") ?? "8", 10);
   const sendTimeoutMs = Number.parseInt(getArg("--send-timeout-ms") ?? "180000", 10);
-  const pollIntervalMs = Number.parseInt(getArg("--poll-interval-ms") ?? "1000", 10);
+  const pollIntervalMs = Number.parseInt(getArg("--poll-interval-ms") ?? "500", 10);
   const continueOnUnconfirmed = process.argv.includes("--continue-on-unconfirmed");
 
   if (!draftFile) {
     throw new Error("Missing required argument: --draft-file=/abs/path/to/reply-drafts.json");
   }
 
-  const [draftResult, personaProfile] = await Promise.all([
+  const [draftResult, personaProfile, governanceState] = await Promise.all([
     readJsonObject(draftFile),
     persona ? resolveBrowserPersona(persona) : Promise.resolve(null),
+    loadGovernanceState({ baseDir }),
   ]);
 
   const adapter = new ChromeAppleScriptAdapter({
@@ -49,6 +51,7 @@ async function main() {
   const result = await runManualReplyQueue({
     adapter,
     draftResult,
+    governanceState,
     baseDir,
     expectedHandle: expectedHandle ?? personaProfile?.xHandle ?? null,
     personaProfile,
@@ -65,6 +68,8 @@ async function main() {
       console.log(
         `Waiting for you to click Reply in Chrome. Timeout: ${sendTimeoutMs}ms`
       );
+      console.log("After clicking Reply, wait for the terminal to log sent before closing the tab.");
+      console.log("Close the reply dialog without sending to skip this draft and continue.");
     },
     async onDraftOutcome(outcome) {
       console.log(
@@ -72,18 +77,28 @@ async function main() {
       );
       if (outcome.status === "sent") {
         console.log(`Logged sent reply for ${outcome.tweetUrl}`);
+      } else if (outcome.status === "declined-by-operator") {
+        console.log(`Skipped draft at operator request for ${outcome.tweetUrl}`);
       } else {
         console.log(`Stopped after unconfirmed manual action for ${outcome.tweetUrl}`);
       }
+    },
+    async onDraftBlocked(blockedDraft) {
+      console.log(
+        `Skipped draft ${blockedDraft.draftIndex ?? blockedDraft.sourceIndex} before opening because it is already blocked: ${blockedDraft.rejectedReasons.join(", ")}`
+      );
     },
   });
 
   const output = {
     generatedAt: new Date().toISOString(),
     processedCount: result.processedCount,
+    blockedCount: result.blockedCount,
     sentCount: result.sentCount,
+    declinedCount: result.declinedCount,
     stoppedEarly: result.stoppedEarly,
     requestedDraftCount: result.requestedDraftCount,
+    blockedDrafts: result.blockedDrafts,
     outcomes: result.outcomes,
   };
 

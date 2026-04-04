@@ -142,6 +142,7 @@ export async function ensureChatGPTSession({
   expectedAccountHint = null,
   personaProfile = null,
   targetUrl = DEFAULT_CHATGPT_URL,
+  forceNewTab = false,
   maxChecks = 5,
   waitMs = 500,
 } = {}) {
@@ -170,22 +171,33 @@ export async function ensureChatGPTSession({
 
   let tab = null;
   let action = "opened-new-tab";
-  let tabs = [];
   const personaWindowId = personaWindow?.windowId ?? personaWindow?.tab?.windowId ?? null;
 
-  try {
-    tabs = await adapter.listTabs();
-    tab = personaWindowId ? pickChatGPTTabInWindow(tabs, personaWindowId) : pickChatGPTTab(tabs);
-  } catch {
-    tabs = [];
-    tab = null;
-  }
-
-  if (tab) {
+  if (!forceNewTab) {
+    let tabs = [];
     try {
-      await adapter.activateTab(tab);
-      action = "activated-existing-tab";
+      tabs = await adapter.listTabs();
+      tab = personaWindowId ? pickChatGPTTabInWindow(tabs, personaWindowId) : pickChatGPTTab(tabs);
     } catch {
+      tabs = [];
+      tab = null;
+    }
+
+    if (tab) {
+      try {
+        await adapter.activateTab(tab);
+        action = "activated-existing-tab";
+      } catch {
+        if (personaProfile && typeof adapter.openTabInFrontWindow === "function") {
+          tab = await adapter.openTabInFrontWindow(targetUrl);
+        } else if (Number.isFinite(personaWindowId) && typeof adapter.openTabInWindow === "function") {
+          tab = await adapter.openTabInWindow({ windowId: personaWindowId, url: targetUrl });
+        } else {
+          tab = await adapter.openTab(targetUrl);
+        }
+        action = "opened-new-tab";
+      }
+    } else {
       if (personaProfile && typeof adapter.openTabInFrontWindow === "function") {
         tab = await adapter.openTabInFrontWindow(targetUrl);
       } else if (Number.isFinite(personaWindowId) && typeof adapter.openTabInWindow === "function") {
@@ -193,7 +205,6 @@ export async function ensureChatGPTSession({
       } else {
         tab = await adapter.openTab(targetUrl);
       }
-      action = "opened-new-tab";
     }
   } else {
     if (personaProfile && typeof adapter.openTabInFrontWindow === "function") {

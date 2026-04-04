@@ -309,6 +309,94 @@
       "run": "06:09 BST",
       "our_reply_url": "https://x.com/XtrataLayers/status/2038489734960341047",
       "our_reply": "Nice — love seeing Stacks NFT activity. If you're exploring active mints on Stacks, DYLE0415 by dyle.btc just launched too — 173 pieces of generative art permanently inscribed on Bitcoin L2, 4 STX each. 171 remaining. xtrata.xyz/collection/dyle0415"
+    },
+    {
+      "url": "https://x.com/___Tokino/status/2039642909923016770",
+      "author": "@___tokino",
+      "topic": "Brief note that Bitcoin's ecosystem is widening beyond simple payments, with different layers serving different asset and app models.",
+      "replied_at": "2026-04-02",
+      "our_reply_url": "https://x.com/XtrataLayers/status/2039848987524505796",
+      "our_reply": "Yeah , Bitcoin’s stack is getting more layered. Payments, stable assets, creative rails and app logic are starting to live in different places, which can look odd at first, but it’s probably how the ecosystem gets more usable."
+    },
+    {
+      "url": "https://x.com/TobyChristianne/status/2039703760902013264",
+      "author": "@tobychristianne",
+      "topic": "Light infra-oriented note about useful Bitcoin layers being the ones that make new behaviors possible for builders and users.",
+      "replied_at": "2026-04-02",
+      "our_reply_url": "https://x.com/XtrataLayers/status/2039849111000662101",
+      "our_reply": "The useful Bitcoin layers will be the ones that let builders do genuinely new things, not just repackage blockspace. If agents, identity and payments actually work together cleanly, that’s where it gets interesting."
+    },
+    {
+      "url": "https://x.com/blockchainbob/status/2039785770114757039",
+      "author": "@blockchainbob",
+      "topic": "Thoughtful note on Bitcoin L2 innovation needing actual creator-facing primitives and useful on-chain infrastructure.",
+      "replied_at": "2026-04-02",
+      "our_reply_url": "https://x.com/XtrataLayers/status/2039850276941606942",
+      "our_reply": "Feels like the gap is still creator-facing primitives. A lot of L2 talk stays abstract, but the interesting stuff starts when artists and builders can actually ship things on-chain that people use."
+    },
+    {
+      "url": "https://x.com/lucaswardal3/status/2039818181661909086",
+      "author": "@lucaswardal3",
+      "topic": "Light contextual agreement around Bitcoin-native participation and useful L2 utility, without forcing promo.",
+      "replied_at": "2026-04-02",
+      "our_reply_url": "https://x.com/XtrataLayers/status/2039850419845820696",
+      "our_reply": "Agreed that real utility is what moves adoption. The next step is making that utility tangible for builders and creators, not just measurable at the wallet level."
+    },
+    {
+      "url": "https://x.com/FFVV1211/status/2039726346092601825",
+      "author": "@ffvv1211",
+      "topic": "Concise point about better Bitcoin L2 experiences winning when users do not need to learn extra complexity.",
+      "replied_at": "2026-04-02",
+      "our_reply_url": "https://x.com/XtrataLayers/status/2039850498509939077",
+      "our_reply": "Exactly . The best L2 experiences probably win when users don’t need a new vocabulary lesson first. Less explaining, more obvious usefulness."
+    },
+    {
+      "url": "https://x.com/akinmarve26/status/2039706154662584501",
+      "author": "@akinmarve26",
+      "topic": "Natural Bitcoin-native infra comment that lightly signals awareness of the broader ecosystem without overt promo.",
+      "replied_at": "2026-04-02",
+      "our_reply_url": "https://x.com/XtrataLayers/status/2039851007098683695",
+      "our_reply": "Good to see more Bitcoin-native infra becoming trackable and legible. Better discovery across L2 apps is one of the things that helps the wider ecosystem mature beyond pure speculation."
+    },
+    {
+      "url": "https://x.com/VazzyWeb3/status/2039781163104165990",
+      "author": "@vazzyweb3",
+      "topic": "Contextual angle around Bitcoin-native infrastructure momentum, not collection promo.",
+      "replied_at": "2026-04-02",
+      "our_reply_url": "https://x.com/XtrataLayers/status/2039851142289526827",
+      "our_reply": "Feels like a broader shift toward building on Bitcoin without treating BTC as something you have to move away from first. That native-first direction is getting more interesting across the stack."
+    },
+    {
+      "url": "https://x.com/DefiLlama/status/2039847792340770860",
+      "author": "@defillama",
+      "topic": "Natural data/infrastructure angle around dashboards, tokenized assets, and how better discovery layers help on-chain ecosystems mature.",
+      "replied_at": "2026-04-03",
+      "our_reply_url": "https://x.com/XtrataLayers/status/2039855781114232916",
+      "our_reply": "This is where better data presentation really matters: once tokenized assets are easy to compare, filter, and contextualize, the market becomes much more usable. Discovery infrastructure ends up doing a lot of the heavy lifting."
+    },
+    {
+      "url": "https://x.com/BjeshP/status/2040011133994889332",
+      "author": "@bjeshp",
+      "topic": "Affirm Bitcoin-native growth, then add that durable adoption comes from real creator/app primitives on Bitcoin L2s, not just financial narratives.",
+      "replied_at": "2026-04-03",
+      "our_reply_url": "https://x.com/XtrataLayers/status/2040052135149126089",
+      "our_reply": "Agree the shift is bigger than the old digital gold frame. The durable part is what gets built on top: creator tools, permanent media, and app primitives that give Bitcoin L2s real everyday use beyond pure financial flow."
+    },
+    {
+      "url": "https://x.com/leojansens/status/2039989026917163100",
+      "author": "@leojansens",
+      "topic": "Agree that Bitcoin can stay minimal at base layer while L2s handle richer app layers; note that creator and data use cases matter alongside finance.",
+      "replied_at": "2026-04-03",
+      "our_reply_url": "https://x.com/XtrataLayers/status/2040051964835156225",
+      "our_reply": "That separation makes sense. Keep Bitcoin simple at the base, let L2s handle richer logic. I’d just add that creator and data use cases matter too, not only finance, because they give the stack reasons to be used outside trading cycles."
+    },
+    {
+      "url": "https://x.com/AGratefulApe/status/2039852724951667145",
+      "author": "@agratefulape",
+      "topic": "Answer that fee security debates become stronger when L2 usage reflects real demand from applications, creators, and data-heavy use cases rather than only trading.",
+      "replied_at": "2026-04-03",
+      "our_reply_url": "https://x.com/XtrataLayers/status/2040051861256872042",
+      "our_reply": "My view is fee security arguments get stronger when L2 usage comes from real demand, not just trading bursts. If apps, media and creator tooling keep generating transactions over time, that’s a healthier signal than macro models alone."
     }
   ],
   "own_tweets": [

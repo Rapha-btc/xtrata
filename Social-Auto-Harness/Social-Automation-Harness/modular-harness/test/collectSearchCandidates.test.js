@@ -19,6 +19,8 @@ test("normalizeThreadCandidate derives ids and canonical author handles", () => 
     author_handle: "FreshBuilder",
     text: "Hello world",
     posted_at: "2026-04-01T12:00:00Z",
+    source: "x-search",
+    searchQuery: "Stacks builders",
   });
 
   assert.deepEqual(normalized, {
@@ -27,8 +29,8 @@ test("normalizeThreadCandidate derives ids and canonical author handles", () => 
     author: "@freshbuilder",
     text: "Hello world",
     postedAt: "2026-04-01T12:00:00.000Z",
-    source: null,
-    searchQuery: null,
+    source: "x-search",
+    searchQuery: "Stacks builders",
     authorBio: null,
     authorBioObserved: false,
     authorFollowers: null,
@@ -93,6 +95,7 @@ test("collectSearchCandidates dedupes, filters, and writes candidate files", asy
           url: "https://x.com/example/status/444",
           author: "@freshbuilder",
           text: "allowed",
+          searchQuery: "Stacks builders",
         },
         {
           url: "https://x.com/example/status/444",
@@ -127,6 +130,7 @@ test("collectSearchCandidates dedupes, filters, and writes candidate files", asy
     assert.equal(result.followReport.written, 1);
     assert.equal(writtenThreads.length, 1);
     assert.equal(writtenThreads[0].author, "@freshbuilder");
+    assert.equal(writtenThreads[0].searchQuery, "Stacks builders");
     assert.equal(writtenFollows.length, 1);
     assert.equal(writtenFollows[0].handle, "@freshbuilder");
   } finally {

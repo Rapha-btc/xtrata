@@ -24,12 +24,15 @@ The harness currently supports:
 - governance loading and normalization from the repo's existing markdown/json control files
 - shared rule evaluation for cooldowns, exclusions, duplicate-thread checks, followed-account dedupe, and conservative bot filtering
 - conservative candidate normalization and write-out for `thread-candidates.json` and `follow-candidates.json`
-- read-only X search scraping for raw thread candidates
+- deeper read-only X search scraping for raw thread candidates, including feed scrolling up to 100 loaded results
 - read-only X follower scraping for raw follow candidates
 - report-only ChatGPT analysis for thread and follow candidate batches
+- batched thread analysis in 25-candidate ChatGPT chunks with a final synthesis pass across the shortlist
 - deterministic opportunity-report building from governance state and analysis outputs
 - report-only ChatGPT reply drafting for the safest thread opportunities
 - read-only X reply-composer preparation that fills a draft and reads the composer state back without posting
+- operator-supervised manual reply queue that waits for a human click, verifies the send on-page, records the outcome locally, and advances without clicking Reply itself
+- read-only reconciliation for manually sent replies that were not confirmed on-page quickly enough during the live queue
 - Chrome adapter for macOS using AppleScript
 - persona registry and Chrome profile resolution
 - persona window verification using the expected X handle
@@ -47,9 +50,13 @@ These capabilities are implemented in:
 - `src/x/scrapeXSearchResults.js`
 - `src/x/scrapeXFollowers.js`
 - `src/analysis/analyzeCandidateBatch.js`
+- `src/analysis/analyzeCandidateCollection.js`
 - `src/reporting/buildOpportunityReport.js`
 - `src/drafting/draftReplyCandidates.js`
 - `src/x/replyComposer.js`
+- `src/audit/replyHistory.js`
+- `src/audit/reconcileManualReplyOutcomes.js`
+- `src/execution/manualReplyQueue.js`
 - `src/browser/chromeAppleScriptAdapter.js`
 - `src/browser/profileRegistry.js`
 - `src/browser/ensureChromePersonaWindow.js`
@@ -75,8 +82,11 @@ The harness has already proven the following end-to-end behaviors on a live mach
 The new governance and policy modules are proven by unit tests against representative fixture files, not yet by a full unattended social run.
 The new X scraping modules are also test-covered with fake adapters, but they have not yet been live-validated against the current X DOM on your machine.
 The new analysis/report modules are test-covered and intentionally read-only, but they still depend on the current ChatGPT web UI staying compatible with the existing prompt/JSON path.
+The new batched-analysis module is test-covered and still intentionally read-only; it just fans larger candidate sets out across multiple structured ChatGPT calls and then consolidates them.
 The new reply drafting module is also test-covered and intentionally non-posting; it only produces structured draft artifacts.
 The new reply-composer module is test-covered and still intentionally non-posting; it can open a composer and fill text, but it does not submit.
+The new manual reply queue is test-covered and still intentionally non-clicking; it waits for the operator to send manually, then records only sends it can observe on-page.
+The new reconciliation flow is test-covered and read-only on X; it only backfills local history after it finds an exact matching sent reply on the thread page.
 
 ## Known Limits
 
@@ -89,11 +99,10 @@ The harness is still early-stage and has important limits:
 - the current candidate collector normalizes either supplied candidate JSON or the new read-only X scraping output
 - no Gemini modules yet
 - no provider abstraction yet
-- no X outbound execution modules yet
-- no X composer-fill or submit modules yet
-- no X submit/post modules yet
+- no automated X outbound execution modules yet
+- no automated X submit/post modules yet
 - no durable scheduler, queue, action-budget module, or telemetry layer yet
-- no canonical structured interaction ledger yet
+- no canonical structured interaction ledger beyond the new manual-reply audit path yet
 - no account-pressure or search-widening modules yet
 
 The harness should be treated as an incremental operator tool, not a fully autonomous system.
@@ -124,7 +133,7 @@ The intended architecture is:
    Opens X composers, fills drafts, and reads state back without posting.
 
 8. Execution layer
-   Opens X composers, fills drafts, reads draft state, and only later performs explicit operator-approved actions.
+   Supports operator-supervised manual send observation today, and only later performs explicit operator-approved actions automatically.
 
 9. Audit layer
    Records what happened, preserves artifacts, and stops unsafe or noisy behavior.
@@ -140,13 +149,14 @@ The next likely expansions are:
 - account-pressure and oversubscription controls for repeated author targeting
 - search-widening controls so exhausted candidate pools expand instead of forcing low-quality actions
 - richer candidate batching and chunking once search volumes grow beyond a single prompt
+- multi-query search planning that can combine several 100-result searches into one conservative report-only review cycle
 - stronger draft validation, variety checking, and duplicate-phrase detection
 - `ensureGeminiSession`
 - Gemini prompt/reply and JSON modules
 - a provider interface so ChatGPT and Gemini can be called through one shared abstraction
 - stronger structured-output validation for multi-step tasks
 - X composer helpers such as:
-  - submit reply only after explicit approval
+  - submit reply automatically only after explicit approval
   - post standalone tweet only after explicit approval
   - operator approval gate
 - durable state and telemetry for browser automation runs
@@ -197,6 +207,9 @@ The harness should follow these rules:
 
 - Composer fill before submit.
   X-side modules should prove they can open and populate a composer safely before any submit/click-post behavior is added.
+
+- Manual send before automated send.
+  If execution is needed early, prefer an operator-supervised queue that waits for a human click and verifies the result before any code ever clicks Reply.
 
 ## Development Process
 

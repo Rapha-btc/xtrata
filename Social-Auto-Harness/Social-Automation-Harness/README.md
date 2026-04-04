@@ -128,11 +128,15 @@ Current harness capabilities include:
 - shared-rule enforcement for cooldowns, exclusions, duplicate-thread checks, followed-account dedupe, and conservative bot filtering
 - conservative candidate normalization and write-out for `thread-candidates.json` and `follow-candidates.json`
 - read-only X search result scraping inside the verified persona window
+- deeper X search scraping that scrolls until the feed is exhausted or 100 raw thread candidates are loaded
 - read-only X follower-list scraping inside the verified persona window
 - report-only ChatGPT analysis of thread or follow candidate batches
+- batched ChatGPT thread analysis in 25-candidate chunks with one final synthesis pass before reporting
 - deterministic opportunity-report building from governance state, candidates, and GPT analysis output
 - report-only ChatGPT reply drafting for the safest thread opportunities from the opportunity report
 - read-only X reply-composer preparation that fills draft text and reads the composer state back without posting
+- operator-supervised X manual-reply queue that waits for a human click, records verified sends, and advances without clicking Reply itself
+- read-only reconciliation of manually sent replies that were not confirmed on-page in time
 - Chrome persona/profile resolution
 - persona window verification through the expected X handle
 - X session verification
@@ -153,11 +157,22 @@ npm run harness:analyze-candidates -- --persona=xtrata --type=thread --input-fil
 npm run harness:opportunity-report -- --threads-file=/tmp/xtrata-candidates/thread-candidates.json --follows-file=/tmp/xtrata-candidates/follow-candidates.json --thread-analysis-file=/tmp/thread-analysis.json --write-file=/tmp/opportunity-report.json
 npm run harness:draft-replies -- --persona=xtrata --opportunity-report-file=/tmp/opportunity-report.json --write-file=/tmp/reply-drafts.json
 npm run harness:reply-composer -- --persona=xtrata --draft-file=/tmp/reply-drafts.json --draft-index=0 --write-file=/tmp/reply-composer-state.json
+npm run harness:manual-reply-queue -- --persona=xtrata --draft-file=/tmp/reply-drafts.json --write-file=/tmp/manual-reply-queue.json
+npm run harness:reconcile-replies -- --persona=xtrata --draft-file=/tmp/reply-drafts.json --queue-file=/tmp/manual-reply-queue.json --write-file=/tmp/reply-reconciliation.json
 npm run harness:x-session -- --persona=xtrata --handle=@xtratalayers
 npm run harness:chatgpt-session -- --persona=xtrata
 npm run harness:chatgpt-prompt -- --persona=xtrata --prompt="Reply with exactly: HARNESS_OK"
 npm run harness:chatgpt-json -- --persona=xtrata --prompt="Return JSON with ok=true and source='chatgpt'" --type=object --require-keys=ok,source
 ```
+
+Current reply-flow defaults:
+
+- `harness:x-search` now scrolls for up to 100 raw thread results before writing the search artifact
+- `harness:analyze-candidates` now reviews up to 100 thread candidates per run by default
+- `harness:analyze-candidates` analyzes those candidates in 25-candidate GPT batches, then runs one final synthesis pass before writing the analysis artifact
+- `harness:draft-replies` drafts up to 8 high-quality reply candidates by default
+- `harness:manual-reply-queue` prepares up to 8 ready drafts for operator-supervised sending by default
+- these are upper bounds, not quotas; same-thread dedupe now checks both sent-thread history and operator-declined thread history before drafting
 
 The current recommended build order for the harness is:
 
@@ -167,7 +182,8 @@ The current recommended build order for the harness is:
 4. provider/session modules
 5. report-only draft generation
 6. read-only X composer preparation
-7. approval-gated platform-visible execution
+7. operator-supervised manual send observation
+8. approval-gated automated platform-visible execution
 
 For architecture, roadmap, and safety constraints, use:
 
@@ -175,3 +191,61 @@ For architecture, roadmap, and safety constraints, use:
 - `modular-harness/PROJECT_CONTEXT.md`
 - `modular-harness/SAFETY_CONTROLS.md`
 - `AGENTS.md`
+
+## Full Harness Command
+
+From the repo root, this runs the full browser-harness thread-reply flow in sequence:
+
+```bash
+npm run harness:x-session -- --persona=xtrata --handle=@xtratalayers && \
+npm run harness:chatgpt-session -- --persona=xtrata && \
+
+npm run harness:x-search -- --persona=xtrata --query="L2 Ordinals" --write-file=/tmp/raw-threads.json && \
+npm run harness:collect-candidates -- --threads-file=/tmp/raw-threads.json --output-dir=/tmp/xtrata-candidates && \
+npm run harness:analyze-candidates -- --persona=xtrata --type=thread --input-file=/tmp/xtrata-candidates/thread-candidates.json --write-file=/tmp/thread-analysis.json && \
+npm run harness:opportunity-report -- --threads-file=/tmp/xtrata-candidates/thread-candidates.json --thread-analysis-file=/tmp/thread-analysis.json --write-file=/tmp/opportunity-report.json && \
+npm run harness:draft-replies -- --persona=xtrata --opportunity-report-file=/tmp/opportunity-report.json --write-file=/tmp/reply-drafts.json && \
+npm run harness:manual-reply-queue -- --persona=xtrata --draft-file=/tmp/reply-drafts.json --write-file=/tmp/manual-reply-queue.json
+
+
+# More Search Terms
+
+npm run harness:x-search -- --persona=xtrata --query='Ordinals OR inscriptions OR "Bitcoin NFT" -filter:retweets
+  lang:en' --write-file=/tmp/raw-threads-ordinals.json
+  npm run harness:x-search -- --persona=xtrata --query='"onchain art" OR "on-chain art" OR "generative art" Bitcoin
+  -filter:retweets lang:en' --write-file=/tmp/raw-threads-onchain-art.json
+  npm run harness:x-search -- --persona=xtrata --query='"data permanence" OR "permanent data" Bitcoin OR Stacks
+  -filter:retweets lang:en' --write-file=/tmp/raw-threads-permanence.json
+  npm run harness:x-search -- --persona=xtrata --query='"Stacks builders" OR "Stacks dev" OR Clarity -filter:retweets
+  lang:en' --write-file=/tmp/raw-threads-stacks-builders.json
+  npm run harness:x-search -- --persona=xtrata --query='sBTC OR "Stacks DeFi" OR "Bitcoin DeFi" -filter:retweets
+  lang:en' --write-file=/tmp/raw-threads-sbtc-defi.json
+  npm run harness:x-search -- --persona=xtrata --query='IPFS OR "link rot" OR "decentralized storage" Bitcoin OR Stacks
+  -filter:retweets lang:en' --write-file=/tmp/raw-threads-storage.json
+  npm run harness:x-search -- --persona=xtrata --query='"Bitcoin-native apps" OR "Bitcoin builders" OR "build on
+  Bitcoin" -filter:retweets lang:en' --write-file=/tmp/raw-threads-bitcoin-builders.json
+  npm run harness:x-search -- --persona=xtrata --query='"proof of provenance" OR provenance Bitcoin OR Stacks
+  -filter:retweets lang:en' --write-file=/tmp/raw-threads-provenance.json
+```
+
+
+
+The last step does not click `Reply` for you. It prepares each draft, waits for your manual click in Chrome, logs verified sends, and then advances to the next draft. If you close the reply dialog or tab without sending, the queue now records that as an operator-declined draft and moves on to the next one.
+
+By default, that flow now reviews up to 20 candidate threads in order to find up to 8 high-quality drafts. It still rejects threads that hit posted-thread dedupe or the existing cooldown/exclusion rules before analysis and drafting.
+
+
+
+THREADS=/tmp/xtrata-candidates/thread-candidates.json
+  ANALYSIS=/tmp/thread-analysis.json
+  REPORT=/tmp/opportunity-report.json
+  DRAFTS=/tmp/reply-drafts.json
+  QUEUE=/tmp/manual-reply-queue.json
+
+  npm run harness:cleanup-tabs -- --persona=xtrata && \
+  npm run harness:chatgpt-session -- --persona=xtrata && \
+  npm run harness:analyze-candidates -- --persona=xtrata --type=thread --input-file="$THREADS" --write-file="$ANALYSIS" && \
+  npm run harness:opportunity-report -- --threads-file="$THREADS" --thread-analysis-file="$ANALYSIS" --write-
+  file="$REPORT" && \
+  npm run harness:draft-replies -- --persona=xtrata --opportunity-report-file="$REPORT" --write-file="$DRAFTS" && \
+  npm run harness:manual-reply-queue -- --persona=xtrata --draft-file="$DRAFTS" --write-file="$QUEUE"

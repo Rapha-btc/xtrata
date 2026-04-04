@@ -28,7 +28,9 @@
     "harness:opportunity-report": "node modular-harness/src/cli/build-opportunity-report.js",
     "harness:draft-replies": "node modular-harness/src/cli/draft-reply-candidates.js",
     "harness:reply-composer": "node modular-harness/src/cli/prepare-reply-composer.js",
-    "harness:manual-reply-queue": "node modular-harness/src/cli/run-manual-reply-queue.js"
+    "harness:manual-reply-queue": "node modular-harness/src/cli/run-manual-reply-queue.js",
+    "harness:reconcile-replies": "node modular-harness/src/cli/reconcile-manual-replies.js",
+    "harness:cleanup-tabs": "node modular-harness/src/cli/cleanup-persona-tabs.js"
   },
   "engines": {
     "node": ">=22.5.0"

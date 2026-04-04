@@ -43,12 +43,18 @@ function buildGovernanceLookups(governanceState, now) {
       .map((entry) => [entry.normalizedUrl, entry])
       .filter(([normalizedUrl]) => Boolean(normalizedUrl))
   );
+  const reviewedThreads = new Map(
+    (governanceState?.interactionLedger?.reviewedThreads ?? [])
+      .map((entry) => [entry.normalizedThreadUrl, entry])
+      .filter(([normalizedUrl]) => Boolean(normalizedUrl))
+  );
   const followedAccounts = new Set(governanceState?.followedAccounts?.handles ?? []);
 
   return {
     cooldownAuthors,
     excludedAccounts,
     postedThreads,
+    reviewedThreads,
     followedAccounts,
   };
 }
@@ -133,6 +139,8 @@ export function evaluateThreadCandidate({ candidate, governanceState, now } = {}
 
   if (normalizedUrl && lookups.postedThreads.has(normalizedUrl)) {
     rejectedReasons.push("already-replied-thread");
+  } else if (normalizedUrl && lookups.reviewedThreads.has(normalizedUrl)) {
+    rejectedReasons.push("already-reviewed-thread");
   }
 
   if (normalizedAuthor && lookups.cooldownAuthors.has(normalizedAuthor)) {
@@ -149,6 +157,7 @@ export function evaluateThreadCandidate({ candidate, governanceState, now } = {}
     rejectedReasons,
     matchedCooldownEntry: normalizedAuthor ? lookups.cooldownAuthors.get(normalizedAuthor) ?? null : null,
     matchedPostedThread: normalizedUrl ? lookups.postedThreads.get(normalizedUrl) ?? null : null,
+    matchedReviewedThread: normalizedUrl ? lookups.reviewedThreads.get(normalizedUrl) ?? null : null,
     matchedNoiseEntry: normalizedAuthor ? lookups.excludedAccounts.get(normalizedAuthor) ?? null : null,
   };
 }

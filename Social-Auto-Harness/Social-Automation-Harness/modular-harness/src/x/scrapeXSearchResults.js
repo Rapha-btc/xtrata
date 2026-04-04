@@ -94,14 +94,46 @@ export function buildXSearchResultsProbeScript(maxResults = 20) {
       document.querySelector('[role="progressbar"], [aria-label*="Loading" i], [data-testid="primaryColumn"] [aria-busy="true"]')
     );
     const noResults = /no results for/i.test(normalizeText(document.body?.innerText || ""));
+    const scrollTop = window.scrollY || document.documentElement?.scrollTop || document.body?.scrollTop || 0;
+    const scrollHeight = Math.max(
+      document.documentElement?.scrollHeight || 0,
+      document.body?.scrollHeight || 0
+    );
+    const viewportHeight = window.innerHeight || document.documentElement?.clientHeight || 0;
     return JSON.stringify({
       url: window.location.href,
       title: document.title,
       query: new URL(window.location.href).searchParams.get("q"),
       searchResultCount: results.length,
+      articleCount: articles.length,
       loading,
       noResults,
+      scrollTop,
+      scrollHeight,
+      viewportHeight,
+      atBottom: scrollTop + viewportHeight >= scrollHeight - 32,
       results,
+    });
+  })()`;
+}
+
+export function buildXSearchResultsScrollScript({ stepMultiplier = 0.9 } = {}) {
+  const normalizedStepMultiplier = Number.isFinite(stepMultiplier) ? stepMultiplier : 0.9;
+
+  return `(() => {
+    const viewportHeight = window.innerHeight || document.documentElement?.clientHeight || 0;
+    const step = Math.max(400, Math.round(viewportHeight * ${normalizedStepMultiplier}));
+    window.scrollBy(0, step);
+    const scrollTop = window.scrollY || document.documentElement?.scrollTop || document.body?.scrollTop || 0;
+    const scrollHeight = Math.max(
+      document.documentElement?.scrollHeight || 0,
+      document.body?.scrollHeight || 0
+    );
+    return JSON.stringify({
+      scrollTop,
+      scrollHeight,
+      viewportHeight,
+      atBottom: scrollTop + viewportHeight >= scrollHeight - 32,
     });
   })()`;
 }
@@ -114,8 +146,13 @@ export function parseXSearchProbeResult(raw) {
       title: "",
       query: null,
       searchResultCount: 0,
+      articleCount: 0,
       loading: false,
       noResults: false,
+      scrollTop: 0,
+      scrollHeight: 0,
+      viewportHeight: 0,
+      atBottom: false,
       results: [],
     };
   }
@@ -127,15 +164,26 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function annotateSearchCandidates(results, query) {
+  const normalizedQuery = query?.trim() || null;
+
+  return (results ?? []).map((candidate) => ({
+    ...candidate,
+    source: candidate?.source?.toString().trim() || "x-search",
+    searchQuery: candidate?.searchQuery?.toString().trim() || normalizedQuery,
+  }));
+}
+
 export async function scrapeXSearchResults({
   adapter,
   query,
   expectedHandle = null,
   personaProfile = null,
   mode = DEFAULT_X_SEARCH_MODE,
-  maxResults = 20,
-  maxChecks = 5,
+  maxResults = 100,
+  maxChecks = 40,
   waitMs = 1000,
+  maxIdleChecks = 3,
 } = {}) {
   if (!adapter) throw new TypeError("adapter is required.");
   if (!query?.trim()) throw new TypeError("query is required.");
@@ -149,24 +197,64 @@ export async function scrapeXSearchResults({
     matchTab: matchesXSearchTab(query, mode),
   });
 
-  const probeScript = buildXSearchResultsProbeScript(maxResults);
+  const targetResultCount = Math.max(1, Math.min(100, Number(maxResults) || 100));
+  const probeScript = buildXSearchResultsProbeScript(targetResultCount);
+  const scrollScript = buildXSearchResultsScrollScript();
   let lastState = null;
+  let bestResultCount = 0;
+  let idleChecks = 0;
 
   for (let attempt = 1; attempt <= maxChecks; attempt += 1) {
     lastState = parseXSearchProbeResult(await adapter.evaluateActiveTab(probeScript));
-    if (lastState.searchResultCount > 0 || lastState.noResults || !lastState.loading) {
+    if (lastState.searchResultCount >= targetResultCount || lastState.noResults) {
       return {
         ok: true,
         navigation,
         query,
         mode,
         searchUrl: targetUrl,
-        candidates: lastState.results ?? [],
+        candidates: annotateSearchCandidates(lastState.results, query),
         state: lastState,
       };
     }
 
+    if (lastState.searchResultCount > 0 && !lastState.loading && lastState.atBottom) {
+      return {
+        ok: true,
+        navigation,
+        query,
+        mode,
+        searchUrl: targetUrl,
+        candidates: annotateSearchCandidates(lastState.results, query),
+        state: lastState,
+      };
+    }
+
+    if (lastState.searchResultCount > bestResultCount) {
+      bestResultCount = lastState.searchResultCount;
+      idleChecks = 0;
+    } else if (!lastState.loading && lastState.atBottom) {
+      idleChecks += 1;
+      if (idleChecks >= Math.max(1, maxIdleChecks)) {
+        return {
+          ok: true,
+          navigation,
+          query,
+          mode,
+          searchUrl: targetUrl,
+          candidates: annotateSearchCandidates(lastState.results, query),
+          state: lastState,
+        };
+      }
+    } else if (!lastState.loading) {
+      idleChecks += 1;
+    }
+
     if (attempt < maxChecks) {
+      if (!lastState.noResults && lastState.searchResultCount < targetResultCount) {
+        await adapter.evaluateActiveTab(scrollScript);
+      }
+
       if (typeof adapter.wait === "function") {
         await adapter.wait(waitMs);
       } else {
@@ -181,7 +269,7 @@ export async function scrapeXSearchResults({
     query,
     mode,
     searchUrl: targetUrl,
-    candidates: lastState?.results ?? [],
+    candidates: annotateSearchCandidates(lastState?.results, query),
     state: lastState,
   };
 }

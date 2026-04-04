@@ -180,6 +180,32 @@ test("ensureChatGPTSession opens a new ChatGPT tab when none exists", async () =
   ]);
 });
 
+test("ensureChatGPTSession can force a fresh ChatGPT tab even when one already exists", async () => {
+  const adapter = new FakeBrowserAdapter({
+    tabs: [{ windowId: 2, tabIndex: 3, url: "https://chatgpt.com/" }],
+    activeTab: { windowId: 1, tabIndex: 1, url: "https://x.com/home" },
+    probeResults: [
+      JSON.stringify({
+        loggedIn: true,
+        accountHints: ["user@example.com"],
+        url: "https://chatgpt.com/",
+      }),
+    ],
+  });
+
+  const result = await ensureChatGPTSession({
+    adapter,
+    forceNewTab: true,
+  });
+
+  assert.equal(result.action, "opened-new-tab");
+  assert.deepEqual(adapter.calls.map(([name]) => name), [
+    "ensureBrowserApp",
+    "openTab",
+    "evaluateActiveTab",
+  ]);
+});
+
 test("ensureChatGPTSession falls back to opening a new tab when tab activation fails", async () => {
   const adapter = new FakeBrowserAdapter({
     tabs: [{ windowId: 2, tabIndex: 3, url: "https://chatgpt.com/" }],

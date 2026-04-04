@@ -64,6 +64,8 @@ test("buildCandidateAnalysisPrompt includes governance context and candidate JSO
   assert.match(prompt, /promotional-specific/);
   assert.match(prompt, /@freshbuilder/);
   assert.match(prompt, /Return one analysis object for every candidateIndex provided/);
+  assert.match(prompt, /Use prioritize sparingly/);
+  assert.match(prompt, /Prefer breadth across different authors and angles/);
 });
 
 test("buildCandidateAnalysisSchemaDescription locks the expected JSON shape", () => {
@@ -191,4 +193,44 @@ test("analyzeCandidateBatch calls sendPromptForJson and returns enriched analyse
   assert.equal(result.enrichedAnalyses[0].candidate.author, "@freshbuilder");
   assert.equal(result.enrichedAnalyses[0].recommendation, "prioritize");
   assert.equal(result.enrichedAnalyses[1].riskFlags[0], "low-signal");
+});
+
+test("analyzeCandidateBatch defaults to a broader candidate limit", async () => {
+  let captured = null;
+  const candidates = Array.from({ length: 25 }, (_, index) => ({
+    author: `@builder${index}`,
+    url: `https://x.com/example/status/${index}`,
+    text: `Candidate ${index}`,
+    postedAt: "2026-04-01T12:00:00.000Z",
+  }));
+
+  await analyzeCandidateBatch({
+    adapter: {},
+    candidateType: "thread",
+    candidates,
+    governanceState,
+    async sendPromptForJsonFn(options) {
+      captured = options;
+      return {
+        value: {
+          candidateType: "thread",
+          summary: "ok",
+          searchRefinementSuggestions: [],
+          analyses: Array.from({ length: 20 }, (_, index) => ({
+            candidateIndex: index,
+            recommendation: "skip",
+            relevanceScore: 0,
+            safetyScore: 50,
+            xtrataFit: "low",
+            suggestedAction: "skip",
+            reasoning: "skip",
+            draftBrief: null,
+            riskFlags: [],
+          })),
+        },
+      };
+    },
+  });
+
+  assert.match(captured.prompt, /analyzing 20 thread candidates/);
 });

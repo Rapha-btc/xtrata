@@ -15,6 +15,10 @@ export const OPTIONAL_GOVERNANCE_FILE_NAMES = {
   followedAccounts: "followed_accounts_log.txt",
 };
 
+export const OPTIONAL_STATE_FILE_NAMES = {
+  interactionLedger: path.join("modular-harness", "state", "interaction-ledger.jsonl"),
+};
+
 export const BLANK_PENDING_IMPROVEMENTS_MARKDOWN = `# Pending Improvements Queue
 
 ## Pending Action Items
@@ -218,6 +222,62 @@ export function normalizeGovernanceUrl(value) {
   }
 }
 
+function normalizeLedgerEntry(rawEntry) {
+  if (!rawEntry || typeof rawEntry !== "object" || Array.isArray(rawEntry)) {
+    throw new TypeError("Interaction ledger entries must be JSON objects.");
+  }
+
+  return {
+    ...rawEntry,
+    normalizedThreadUrl: normalizeGovernanceUrl(rawEntry.threadUrl ?? null),
+    normalizedPostUrl: normalizeGovernanceUrl(rawEntry.postUrl ?? null),
+    normalizedTargetHandle: normalizeHandle(rawEntry.targetHandle ?? null),
+    actionType: rawEntry.actionType?.toString().trim() || null,
+    status: rawEntry.status?.toString().trim() || null,
+  };
+}
+
+function isReviewedThreadEntry(entry) {
+  return Boolean(
+    entry?.normalizedThreadUrl &&
+      (entry?.actionType === "reply-posted" ||
+        entry?.actionType === "reply-skipped" ||
+        entry?.status === "posted" ||
+        entry?.status === "skipped")
+  );
+}
+
+export function parseInteractionLedgerJsonl(jsonl) {
+  const entries = jsonl
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => normalizeLedgerEntry(JSON.parse(line)));
+  const reviewedThreadMap = new Map();
+
+  for (const entry of entries) {
+    if (isReviewedThreadEntry(entry)) {
+      reviewedThreadMap.set(entry.normalizedThreadUrl, entry);
+    }
+  }
+
+  return {
+    entries,
+    reviewedThreads: [...reviewedThreadMap.values()],
+    threadUrls: [...reviewedThreadMap.keys()],
+    postedThreadUrls: [...new Set(
+      entries
+        .filter((entry) => entry.normalizedThreadUrl && (entry.actionType === "reply-posted" || entry.status === "posted"))
+        .map((entry) => entry.normalizedThreadUrl)
+    )],
+    skippedThreadUrls: [...new Set(
+      entries
+        .filter((entry) => entry.normalizedThreadUrl && (entry.actionType === "reply-skipped" || entry.status === "skipped"))
+        .map((entry) => entry.normalizedThreadUrl)
+    )],
+  };
+}
+
 export function parseModeMarkdown(markdown) {
   const sections = extractHeadingSections(markdown, 2);
   const currentModeAssignments = extractCodeFences(findSectionContent(sections, "CURRENT MODE"))
@@ -405,6 +465,7 @@ export async function loadGovernanceState({
       ([key, fileName]) => [key, path.join(baseDir, fileName)]
     )
   );
+  files.interactionLedger = path.join(baseDir, OPTIONAL_STATE_FILE_NAMES.interactionLedger);
 
   const requiredTexts = await Promise.all(
     Object.entries(REQUIRED_GOVERNANCE_FILE_NAMES).map(async ([key, fileName]) => {
@@ -427,6 +488,7 @@ export async function loadGovernanceState({
   if (followedAccountsMarkdown === null) {
     warnings.push("Optional governance file followed_accounts_log.txt is missing.");
   }
+  const interactionLedgerJsonl = await readTextFile(files.interactionLedger, { allowMissing: true });
 
   return {
     baseDir,
@@ -443,5 +505,6 @@ export async function loadGovernanceState({
     followedAccounts: followedAccountsMarkdown
       ? parseFollowedAccountsLog(followedAccountsMarkdown)
       : { handles: [] },
+    interactionLedger: interactionLedgerJsonl ? parseInteractionLedgerJsonl(interactionLedgerJsonl) : parseInteractionLedgerJsonl(""),
   };
 }

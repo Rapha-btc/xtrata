@@ -118,6 +118,31 @@ export class ChromeAppleScriptAdapter {
     };
   }
 
+  async closeTab(tab) {
+    await runAppleScript([
+      "on run argv",
+      "set browserName to item 1 of argv",
+      "set targetWindowId to item 2 of argv as integer",
+      "set targetTabIndex to item 3 of argv as integer",
+      "using terms from application \"Google Chrome\"",
+      "tell application browserName",
+      "repeat with w in windows",
+      "set currentWindow to contents of w",
+      "if id of currentWindow is targetWindowId then",
+      "set tabCount to count of tabs of currentWindow",
+      "if targetTabIndex < 1 or targetTabIndex > tabCount then error \"Chrome tab not found\"",
+      "close (tab targetTabIndex of currentWindow)",
+      "activate",
+      "return \"ok\"",
+      "end if",
+      "end repeat",
+      "end tell",
+      "end using terms from",
+      "error \"Chrome tab not found\"",
+      "end run",
+    ], [this.browserName, String(tab.windowId), String(tab.tabIndex)]);
+  }
+
   async getActiveTab() {
     const raw = await runAppleScript([
       "on run argv",

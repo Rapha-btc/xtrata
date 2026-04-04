@@ -53,13 +53,14 @@ export function buildReplyLedgerEntry({
   const targetHandle = normalizeHandle(draft?.target?.author ?? null);
   const riskFlags = unique([...(draft?.target?.riskFlags ?? []), ...(draft?.safetyChecks ?? [])]);
   const sent = normalizedStatus === "sent";
+  const declined = normalizedStatus === "declined-by-operator";
 
   return {
     timestamp,
     persona: normalizeString(persona, "unknown"),
     platform: "x",
-    actionType: sent ? "reply-posted" : "reply-prepared",
-    status: sent ? "posted" : "prepared",
+    actionType: sent ? "reply-posted" : declined ? "reply-skipped" : "reply-prepared",
+    status: sent ? "posted" : declined ? "skipped" : "prepared",
     targetHandle: targetHandle ? `@${targetHandle}` : null,
     threadUrl,
     postUrl: normalizeGovernanceUrl(observedState?.matchingReplyUrl ?? null),
@@ -71,6 +72,8 @@ export function buildReplyLedgerEntry({
     riskFlags,
     reason: sent
       ? "Operator manually clicked Reply and the sent reply was observed in the thread."
+      : declined
+        ? "Operator closed the prepared reply without sending it."
       : "Draft prepared for manual approval, but send was not confirmed automatically.",
     operatorApproved: sent,
   };

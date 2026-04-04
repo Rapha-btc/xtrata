@@ -16,6 +16,9 @@ const explicitHandle = readOption(argv, "--handle");
 const query = readOption(argv, "--query");
 const mode = readOption(argv, "--mode") ?? "live";
 const writeFilePath = readOption(argv, "--write-file");
+const maxResults = Number.parseInt(readOption(argv, "--max-results") ?? "100", 10);
+const maxChecks = Number.parseInt(readOption(argv, "--max-checks") ?? "40", 10);
+const waitMs = Number.parseInt(readOption(argv, "--wait-ms") ?? "1000", 10);
 
 if (!query?.trim()) {
   console.error("scrape-x-search failed: --query is required.");
@@ -38,6 +41,9 @@ try {
     adapter,
     query,
     mode,
+    maxResults: Number.isFinite(maxResults) ? maxResults : 100,
+    maxChecks: Number.isFinite(maxChecks) ? maxChecks : 40,
+    waitMs: Number.isFinite(waitMs) ? waitMs : 1000,
     expectedHandle: explicitHandle ?? personaProfile?.xHandle ?? null,
     personaProfile,
   });

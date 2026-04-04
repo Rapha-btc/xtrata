@@ -70,11 +70,16 @@ test("evaluateThreadCandidates rejects replied threads, cooldown authors, and no
         author: "@freshbuilder",
         text: "fresh result",
       },
+      {
+        url: "https://x.com/example/status/666",
+        author: "@revieweduser",
+        text: "previously declined thread",
+      },
     ],
   });
 
   assert.equal(report.acceptedCandidates.length, 1);
-  assert.equal(report.rejectedCandidates.length, 3);
+  assert.equal(report.rejectedCandidates.length, 4);
   assert.equal(report.cooldownHits, 2);
   assert.equal(report.diversityGateTriggered, true);
   assert.deepEqual(report.acceptedCandidates[0], {
@@ -82,6 +87,10 @@ test("evaluateThreadCandidates rejects replied threads, cooldown authors, and no
     author: "@freshbuilder",
     text: "fresh result",
   });
+  assert.deepEqual(
+    report.rejectedCandidates.find((entry) => entry.candidate.url === "https://x.com/example/status/666")?.rejectedReasons,
+    ["already-reviewed-thread"]
+  );
 });
 
 test("evaluateThreadCandidates ignores expired cooldown entries", async () => {

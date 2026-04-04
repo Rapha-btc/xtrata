@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   buildFillReplyComposerScript,
+  buildObserveReplySendScript,
   buildOpenReplyComposerScript,
   buildXReplyComposerProbeScript,
   buildXStatusUrl,
@@ -12,13 +13,16 @@ import {
   openReplyComposer,
   parseXReplyComposerActionResult,
   parseXReplyComposerProbeResult,
+  parseXReplySendObservationResult,
   prepareReplyComposer,
+  waitForManualReplySend,
 } from "../src/x/replyComposer.js";
 
 function classifyScript(script) {
   if (script.includes("__xReplyComposerProbe")) return "composer-probe";
   if (script.includes("__xReplyComposerOpen")) return "composer-open";
   if (script.includes("__xReplyComposerFill")) return "composer-fill";
+  if (script.includes("__xReplyComposerObserveSend")) return "composer-observe-send";
   if (script.includes("SideNav_AccountSwitcher_Button")) return "session-probe";
   return "unknown";
 }
@@ -94,12 +98,14 @@ test("probe and action parsers accept JSON text and default empty states", () =>
     composerText: "hi",
   });
   assert.equal(parseXReplyComposerActionResult("").ok, false);
+  assert.equal(parseXReplySendObservationResult("").matchingReplyVisible, false);
 });
 
 test("script builders embed expected markers", () => {
   assert.match(buildXReplyComposerProbeScript(), /__xReplyComposerProbe/);
   assert.match(buildOpenReplyComposerScript(), /__xReplyComposerOpen/);
   assert.match(buildFillReplyComposerScript("hello"), /__xReplyComposerFill/);
+  assert.match(buildObserveReplySendScript({ replyText: "hello", expectedHandle: "@xtratalayers" }), /__xReplyComposerObserveSend/);
 });
 
 test("openReplyComposer reuses the matching status tab and opens the composer", async () => {
@@ -194,6 +200,227 @@ test("fillReplyComposer normalizes accidental line breaks before comparing compo
   assert.equal(result.replyText, "That builder gravity is real.");
   assert.equal(result.state.composerText, "That builder gravity is real.");
   assert.equal(result.textMatches, true);
+});
+
+test("fillReplyComposer rejects ghost text when the submit button stays disabled", async () => {
+  const adapter = new FakeBrowserAdapter({
+    evaluationResults: [
+      JSON.stringify({
+        ok: true,
+        composerFound: true,
+        composerText: "Looks visible but X did not accept it.",
+        characterCount: 35,
+        sendButtonFound: true,
+        canSubmit: false,
+      }),
+      JSON.stringify({
+        ok: true,
+        composerFound: true,
+        composerText: "Looks visible but X did not accept it.",
+        characterCount: 35,
+        sendButtonFound: true,
+        canSubmit: false,
+      }),
+      JSON.stringify({
+        ok: true,
+        composerFound: true,
+        composerText: "Looks visible but X did not accept it.",
+        characterCount: 35,
+        sendButtonFound: true,
+        canSubmit: false,
+      }),
+    ],
+  });
+
+  await assert.rejects(
+    () =>
+      fillReplyComposer({
+        adapter,
+        replyText: "Looks visible but X did not accept it.",
+      }),
+    /reply-submit-disabled/
+  );
+});
+
+test("waitForManualReplySend confirms a manual send only after the composer closes and the reply is visible", async () => {
+  const adapter = new FakeBrowserAdapter({
+    evaluationResults: [
+      JSON.stringify({
+        composerFound: true,
+        dialogOpen: true,
+        composerText: "Interesting point.",
+        canSubmit: true,
+        matchingReplyVisible: false,
+      }),
+      JSON.stringify({
+        composerFound: false,
+        dialogOpen: false,
+        composerText: null,
+        canSubmit: false,
+        matchingReplyVisible: true,
+        matchingReplyText: "Interesting point.",
+        matchingReplyUrl: "https://x.com/XtrataLayers/status/999",
+        matchingReplyArticleHasExpectedHandle: true,
+      }),
+    ],
+  });
+
+  const result = await waitForManualReplySend({
+    adapter,
+    replyText: "Interesting point.",
+    expectedHandle: "@xtratalayers",
+    maxChecks: 2,
+    waitMs: 10,
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.status, "sent");
+  assert.equal(result.state.matchingReplyUrl, "https://x.com/XtrataLayers/status/999");
+  assert.deepEqual(adapter.calls.map(([name, detail]) => [name, detail]), [
+    ["evaluateActiveTab", "composer-observe-send"],
+    ["wait", 10],
+    ["evaluateActiveTab", "composer-observe-send"],
+  ]);
+});
+
+test("waitForManualReplySend treats a closed dialog plus visible sent reply as success even if an inline composer remains", async () => {
+  const adapter = new FakeBrowserAdapter({
+    evaluationResults: [
+      JSON.stringify({
+        composerFound: true,
+        dialogOpen: false,
+        composerText: null,
+        canSubmit: false,
+        matchingReplyVisible: true,
+        matchingReplyText: "Interesting point.",
+        matchingReplyUrl: "https://x.com/XtrataLayers/status/1000",
+        matchingReplyArticleHasExpectedHandle: true,
+      }),
+    ],
+  });
+
+  const result = await waitForManualReplySend({
+    adapter,
+    replyText: "Interesting point.",
+    expectedHandle: "@xtratalayers",
+    maxChecks: 1,
+    waitMs: 10,
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.status, "sent");
+  assert.equal(result.state.matchingReplyUrl, "https://x.com/XtrataLayers/status/1000");
+});
+
+test("waitForManualReplySend allows a short post-close grace window before classifying a decline", async () => {
+  const adapter = new FakeBrowserAdapter({
+    evaluationResults: [
+      JSON.stringify({
+        url: "https://x.com/example/status/123",
+        onTargetThreadPage: true,
+        composerFound: false,
+        dialogOpen: false,
+        composerText: null,
+        canSubmit: false,
+        matchingReplyVisible: false,
+        matchingReplyText: null,
+        matchingReplyUrl: null,
+        matchingReplyArticleHasExpectedHandle: false,
+      }),
+      JSON.stringify({
+        url: "https://x.com/example/status/123",
+        onTargetThreadPage: true,
+        composerFound: false,
+        dialogOpen: false,
+        composerText: null,
+        canSubmit: false,
+        matchingReplyVisible: true,
+        matchingReplyText: "Interesting point.",
+        matchingReplyUrl: "https://x.com/XtrataLayers/status/1001",
+        matchingReplyArticleHasExpectedHandle: true,
+      }),
+    ],
+  });
+
+  const result = await waitForManualReplySend({
+    adapter,
+    replyText: "Interesting point.",
+    tweetUrl: "https://x.com/example/status/123",
+    expectedHandle: "@xtratalayers",
+    maxChecks: 2,
+    waitMs: 10,
+    closeGraceChecks: 3,
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.status, "sent");
+  assert.equal(result.state.matchingReplyUrl, "https://x.com/XtrataLayers/status/1001");
+  assert.deepEqual(adapter.calls.map(([name, detail]) => [name, detail]), [
+    ["evaluateActiveTab", "composer-observe-send"],
+    ["wait", 10],
+    ["evaluateActiveTab", "composer-observe-send"],
+  ]);
+});
+
+test("waitForManualReplySend treats a closed dialog without a visible matching reply as an operator decline", async () => {
+  const adapter = new FakeBrowserAdapter({
+    evaluationResults: [
+      JSON.stringify({
+        composerFound: false,
+        dialogOpen: false,
+        composerText: null,
+        canSubmit: false,
+        matchingReplyVisible: false,
+        matchingReplyText: null,
+        matchingReplyUrl: null,
+        matchingReplyArticleHasExpectedHandle: false,
+      }),
+    ],
+  });
+
+  const result = await waitForManualReplySend({
+    adapter,
+    replyText: "Interesting point.",
+    expectedHandle: "@xtratalayers",
+    maxChecks: 1,
+    waitMs: 10,
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.status, "declined-by-operator");
+  assert.equal(result.state.matchingReplyVisible, false);
+});
+
+test("waitForManualReplySend treats a tab close before confirmation as unconfirmed instead of declined", async () => {
+  const adapter = new FakeBrowserAdapter({
+    evaluationResults: [
+      JSON.stringify({
+        url: "https://chatgpt.com/",
+        onTargetThreadPage: false,
+        composerFound: false,
+        dialogOpen: false,
+        composerText: null,
+        canSubmit: false,
+        matchingReplyVisible: false,
+        matchingReplyText: null,
+        matchingReplyUrl: null,
+        matchingReplyArticleHasExpectedHandle: false,
+      }),
+    ],
+  });
+
+  const result = await waitForManualReplySend({
+    adapter,
+    replyText: "Interesting point.",
+    tweetUrl: "https://x.com/example/status/123",
+    expectedHandle: "@xtratalayers",
+    maxChecks: 1,
+    waitMs: 10,
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.status, "manual-action-not-confirmed");
+  assert.equal(result.state.onTargetThreadPage, false);
 });
 
 test("prepareReplyComposer opens, fills, and reads back the composer state without posting", async () => {

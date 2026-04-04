@@ -1,5 +1,6 @@
 import { summarizeGovernanceForAnalysis } from "../analysis/analyzeCandidateBatch.js";
 import { sendPromptForJson } from "../chatgpt/sendPromptForJson.js";
+import { normalizeHandle } from "../session/xSessionSignals.js";
 
 const ALLOWED_STATUSES = new Set(["draft", "skip"]);
 const RECOMMENDATION_PRIORITY = {
@@ -43,6 +44,24 @@ function compareTargets(left, right) {
   if (relevanceDelta !== 0) return relevanceDelta;
 
   return (right?.safetyScore ?? 0) - (left?.safetyScore ?? 0);
+}
+
+function preferDistinctAuthors(opportunities) {
+  const seenAuthors = new Set();
+  const distinct = [];
+
+  for (const opportunity of opportunities) {
+    const normalizedAuthor = normalizeHandle(opportunity?.candidate?.author);
+    if (normalizedAuthor) {
+      if (seenAuthors.has(normalizedAuthor)) {
+        continue;
+      }
+      seenAuthors.add(normalizedAuthor);
+    }
+    distinct.push(opportunity);
+  }
+
+  return distinct;
 }
 
 function inferDraftIssues(replyText) {
@@ -91,17 +110,19 @@ function buildTargetFromOpportunity(opportunity, draftIndex) {
 
 export function selectReplyDraftTargets({
   opportunityReport,
-  maxDrafts = 3,
+  maxDrafts = 8,
   minSafetyScore = 70,
 } = {}) {
   const limitedMaxDrafts = Math.max(1, maxDrafts);
   const minimumSafetyScore = Number.isFinite(minSafetyScore) ? minSafetyScore : 70;
 
-  return [...(opportunityReport?.threadOpportunities ?? [])]
-    .filter((opportunity) => ["prioritize", "consider"].includes(opportunity?.recommendation))
-    .filter((opportunity) => (opportunity?.safetyScore ?? 0) >= minimumSafetyScore)
-    .filter((opportunity) => opportunity?.candidate?.url && opportunity?.candidate?.text)
-    .sort(compareTargets)
+  return preferDistinctAuthors(
+    [...(opportunityReport?.threadOpportunities ?? [])]
+      .filter((opportunity) => ["prioritize", "consider"].includes(opportunity?.recommendation))
+      .filter((opportunity) => (opportunity?.safetyScore ?? 0) >= minimumSafetyScore)
+      .filter((opportunity) => opportunity?.candidate?.url && opportunity?.candidate?.text)
+      .sort(compareTargets)
+  )
     .slice(0, limitedMaxDrafts)
     .map((opportunity, draftIndex) => buildTargetFromOpportunity(opportunity, draftIndex));
 }
@@ -122,6 +143,10 @@ export function buildReplyDraftPrompt({
     "- Mention xtrata.xyz only when it is genuinely relevant and never as the opening words.",
     "- Keep the tone natural, specific, and non-spammy.",
     "- Avoid price speculation, hype-y promises, or generic engagement bait.",
+    "- Treat this as a high-bar review step: skip any target that cannot support a clearly thread-specific reply.",
+    "- Prefer additive replies that move the conversation forward with a concrete observation, not applause or restatement.",
+    "- Keep variety across the batch. If two targets would produce very similar replies, draft the stronger one and skip the weaker one.",
+    "- Do not produce generic filler just to hit the target count.",
     "- If the candidate is weak or unsafe, return status skip and replyText null.",
     "Return one draft object for every draftIndex provided.",
     `Draft targets:\n${JSON.stringify(draftTargets, null, 2)}`,
@@ -230,7 +255,7 @@ export async function draftReplyCandidates({
   governanceState = null,
   expectedAccountHint = null,
   personaProfile = null,
-  maxDrafts = 3,
+  maxDrafts = 8,
   minSafetyScore = 70,
   sendPromptForJsonFn = sendPromptForJson,
   ...jsonReplyOptions

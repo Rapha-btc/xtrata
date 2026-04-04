@@ -8,6 +8,7 @@ import {
   BLANK_PENDING_IMPROVEMENTS_MARKDOWN,
   loadGovernanceState,
   parseDiversityRulesMarkdown,
+  parseInteractionLedgerJsonl,
   parsePendingImprovementsMarkdown,
 } from "../src/governance/loadGovernanceState.js";
 
@@ -32,6 +33,16 @@ test("parseDiversityRulesMarkdown extracts cooldown and strategy metadata", asyn
   assert.equal(parsed.cooldownAuthors[0].normalizedAuthor, "cooldownuser");
 });
 
+test("parseInteractionLedgerJsonl extracts reviewed thread URLs", () => {
+  const parsed = parseInteractionLedgerJsonl(
+    '{"actionType":"reply-skipped","status":"skipped","threadUrl":"https://x.com/example/status/666","targetHandle":"@ReviewedUser"}\n'
+  );
+
+  assert.deepEqual(parsed.threadUrls, ["https://x.com/example/status/666"]);
+  assert.deepEqual(parsed.skippedThreadUrls, ["https://x.com/example/status/666"]);
+  assert.equal(parsed.reviewedThreads[0].normalizedTargetHandle, "revieweduser");
+});
+
 test("loadGovernanceState loads and normalizes the governance fixture set", async () => {
   const state = await loadGovernanceState({ baseDir: fixtureDir });
 
@@ -43,6 +54,7 @@ test("loadGovernanceState loads and normalizes the governance fixture set", asyn
   });
   assert.equal(state.diversity.lastStrategyUsed, "Strategy 4: NFT artist community");
   assert.equal(state.postedThreads.urls[0], "https://x.com/example/status/1234567890");
+  assert.deepEqual(state.interactionLedger.threadUrls, ["https://x.com/example/status/666"]);
   assert.equal(state.pendingImprovements.pendingItems.length, 2);
   assert.deepEqual(state.followedAccounts.handles, ["alreadyfollowed", "friendaccount"]);
   assert.deepEqual(state.warnings, []);

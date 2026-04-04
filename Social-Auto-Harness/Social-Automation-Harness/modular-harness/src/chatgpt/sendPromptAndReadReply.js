@@ -201,10 +201,23 @@ async function resolveChatGPTSession({
   expectedAccountHint,
   personaProfile,
   targetUrl,
+  forceNewTab = false,
   sessionMaxChecks,
   sessionWaitMs,
   existingSession = null,
 } = {}) {
+  if (forceNewTab) {
+    return ensureChatGPTSession({
+      adapter,
+      expectedAccountHint,
+      personaProfile,
+      targetUrl,
+      forceNewTab: true,
+      maxChecks: sessionMaxChecks,
+      waitMs: sessionWaitMs,
+    });
+  }
+
   const reusableTab = existingSession?.tab;
   if (reusableTab?.windowId && reusableTab?.tabIndex) {
     try {
@@ -240,6 +253,7 @@ export async function sendPromptAndReadReply({
   expectedAccountHint = null,
   personaProfile = null,
   targetUrl,
+  forceNewTab = false,
   existingSession = null,
   sessionMaxChecks = 5,
   sessionWaitMs = 500,
@@ -258,6 +272,7 @@ export async function sendPromptAndReadReply({
     expectedAccountHint,
     personaProfile,
     targetUrl,
+    forceNewTab,
     existingSession,
     sessionMaxChecks,
     sessionWaitMs,

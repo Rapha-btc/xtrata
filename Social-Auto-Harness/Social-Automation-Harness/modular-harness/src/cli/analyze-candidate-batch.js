@@ -4,7 +4,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { analyzeCandidateBatch } from "../analysis/analyzeCandidateBatch.js";
+import { analyzeCandidateCollection } from "../analysis/analyzeCandidateCollection.js";
 import { ChromeAppleScriptAdapter } from "../browser/chromeAppleScriptAdapter.js";
 import { resolveBrowserPersona } from "../browser/profileRegistry.js";
 import { loadGovernanceState } from "../governance/loadGovernanceState.js";
@@ -30,7 +30,9 @@ async function main() {
   const browserName = getArg("--browser") ?? "Google Chrome";
   const expectedAccountHint = getArg("--account") ?? null;
   const baseDir = path.resolve(getArg("--base-dir") ?? process.cwd());
-  const maxCandidates = Number.parseInt(getArg("--max-candidates") ?? "12", 10);
+  const maxCandidates = Number.parseInt(getArg("--max-candidates") ?? "100", 10);
+  const batchSize = Number.parseInt(getArg("--batch-size") ?? "25", 10);
+  const finalSynthesisLimit = Number.parseInt(getArg("--final-synthesis-limit") ?? "25", 10);
 
   if (!candidateType) {
     throw new Error('Missing required argument: --type=thread|follow');
@@ -48,14 +50,16 @@ async function main() {
   const adapter = new ChromeAppleScriptAdapter({
     browserName: personaProfile?.browserName ?? browserName,
   });
-  const result = await analyzeCandidateBatch({
+  const result = await analyzeCandidateCollection({
     adapter,
     candidateType,
     candidates,
     governanceState,
     expectedAccountHint,
     personaProfile,
-    maxCandidates: Number.isFinite(maxCandidates) ? maxCandidates : 12,
+    maxCandidates: Number.isFinite(maxCandidates) ? maxCandidates : 100,
+    batchSize: Number.isFinite(batchSize) ? batchSize : 25,
+    finalSynthesisLimit: Number.isFinite(finalSynthesisLimit) ? finalSynthesisLimit : 25,
   });
 
   const output = {
@@ -64,6 +68,8 @@ async function main() {
     inputCount: result.inputCount,
     analyzedCount: result.analyzedCount,
     governanceSummary: result.governanceSummary,
+    batchSummaries: result.batchSummaries,
+    synthesisResult: result.synthesisResult,
     value: result.value,
     enrichedAnalyses: result.enrichedAnalyses,
   };

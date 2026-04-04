@@ -97,6 +97,9 @@ export function buildCandidateAnalysisPrompt({
       ? [
           "Prefer skip for weakly relevant or generic crypto chatter.",
           "For strong fits, favor contextual, natural replies over overt promotion.",
+          "Use prioritize sparingly and reserve it for threads with a clear reply surface, strong topical fit, and low obvious downside.",
+          "Prefer breadth across different authors and angles; do not fill the top tier with repetitive threads that would lead to near-duplicate replies.",
+          "If two threads are highly similar, recommend the stronger one and downgrade the weaker one.",
           "Risk flags should call out cooldown, obvious spam, low topical fit, or likely low-engagement threads.",
         ]
       : [
@@ -111,10 +114,11 @@ export function buildCandidateAnalysisPrompt({
     `Current governance summary:\n${JSON.stringify(governanceSummary, null, 2)}`,
     `You are analyzing ${Math.min(candidates.length, maxCandidates ?? candidates.length)} ${candidateType} candidates for ${analysisTarget}.`,
     `Rules for this batch:\n- ${typeSpecificRules.join("\n- ")}`,
+    "Your goal is to surface only the highest-quality opportunities that could justify real attention in a single session.",
     "Return one analysis object for every candidateIndex provided.",
     "Use recommendation values only from: prioritize, consider, skip.",
     "Use xtrataFit values only from: high, medium, low.",
-    "Keep reasoning and draftBrief concise.",
+    "Keep reasoning and draftBrief concise but specific enough to differentiate one strong thread from another.",
     `Candidate batch:\n${JSON.stringify(candidates, null, 2)}`,
   ].join("\n\n");
 }
@@ -219,7 +223,7 @@ export async function analyzeCandidateBatch({
   governanceState = null,
   expectedAccountHint = null,
   personaProfile = null,
-  maxCandidates = 12,
+  maxCandidates = 20,
   sendPromptForJsonFn = sendPromptForJson,
   ...jsonReplyOptions
 } = {}) {

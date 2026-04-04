@@ -29,7 +29,7 @@ async function main() {
   const browserName = getArg("--browser") ?? "Google Chrome";
   const expectedAccountHint = getArg("--account") ?? null;
   const baseDir = path.resolve(getArg("--base-dir") ?? process.cwd());
-  const maxDrafts = Number.parseInt(getArg("--max-drafts") ?? "3", 10);
+  const maxDrafts = Number.parseInt(getArg("--max-drafts") ?? "8", 10);
   const minSafetyScore = Number.parseInt(getArg("--min-safety-score") ?? "70", 10);
 
   if (!opportunityReportFile) {
@@ -51,14 +51,18 @@ async function main() {
     governanceState,
     expectedAccountHint,
     personaProfile,
-    maxDrafts: Number.isFinite(maxDrafts) ? maxDrafts : 3,
+    maxDrafts: Number.isFinite(maxDrafts) ? maxDrafts : 8,
     minSafetyScore: Number.isFinite(minSafetyScore) ? minSafetyScore : 70,
   });
+  const readyDraftCount = result.enrichedDrafts.filter((draft) => draft?.ready === true).length;
+  const skippedDraftCount = result.draftedCount - readyDraftCount;
 
   const output = {
     generatedAt: new Date().toISOString(),
     inputCount: result.inputCount,
     draftedCount: result.draftedCount,
+    readyDraftCount,
+    skippedDraftCount,
     governanceSummary: result.governanceSummary,
     value: result.value,
     draftTargets: result.draftTargets,
@@ -67,7 +71,9 @@ async function main() {
 
   if (writeFilePath) {
     await writeFile(path.resolve(writeFilePath), `${JSON.stringify(output, null, 2)}\n`, "utf8");
-    console.log(`Wrote reply drafts for ${result.draftedCount} targets to ${path.resolve(writeFilePath)}`);
+    console.log(
+      `Wrote reply drafts for ${result.draftedCount} reviewed targets (${readyDraftCount} ready, ${skippedDraftCount} skipped) to ${path.resolve(writeFilePath)}`
+    );
   } else {
     console.log(JSON.stringify(output, null, 2));
   }
