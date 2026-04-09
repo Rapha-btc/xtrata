@@ -1,0 +1,24 @@
+{
+  "description": "Tracks SerpAPI call usage to avoid hitting the 100/month free tier limit. Updated by scheduled tasks each time a SerpAPI call is made. Reset at start of each calendar month.",
+  "provider": "serpapi",
+  "monthly_limit": 100,
+  "current_month": "2026-03",
+  "calls_used": 0,
+  "calls_remaining": 100,
+  "last_updated": null,
+  "budget_rules": {
+    "daily_soft_cap": 3,
+    "note": "With 100 calls/month, budget ~3/day max. Most searches should use Chrome browser automation instead.",
+    "reserve_calls_for": [
+      "Searching Google for 'xtrata.xyz' mentions outside of Twitter",
+      "Searching Google for Stacks ecosystem news (not on Twitter)",
+      "Finding content that browser automation cannot easily reach"
+    ],
+    "never_use_serpapi_for": [
+      "Twitter/X thread searches (use Chrome + x.com search instead)",
+      "Following accounts (use Chrome automation)",
+      "Checking xtrata.xyz live mints (use Chrome + WebFetch)"
+    ]
+  },
+  "log": []
+}

@@ -1,0 +1,39 @@
+{
+  "name": "xtrata-twitter-pipeline",
+  "version": "1.0.0",
+  "description": "OpenAI-powered Twitter promotion pipeline for Xtrata",
+  "type": "module",
+  "scripts": {
+    "start": "node src/cli/run-all.js",
+    "test": "node --test",
+    "dry-run": "node src/cli/run-all.js --dry-run",
+    "collect": "node src/cli/run-collect.js",
+    "prefilter": "node src/cli/run-prefilter.js",
+    "score": "node src/cli/run-score.js",
+    "draft": "node src/cli/run-draft.js",
+    "execute": "node src/cli/run-execute-approved.js",
+    "run": "node src/cli/run-all.js",
+    "db:init": "node src/cli/init-db.js",
+    "harness:persona-window": "node modular-harness/src/cli/ensure-chrome-persona-window.js",
+    "harness:x-session": "node modular-harness/src/cli/ensure-x-session.js",
+    "harness:chatgpt-session": "node modular-harness/src/cli/ensure-chatgpt-session.js",
+    "harness:chatgpt-prompt": "node modular-harness/src/cli/chatgpt-prompt.js",
+    "harness:chatgpt-json": "node modular-harness/src/cli/chatgpt-json.js",
+    "harness:governance": "node modular-harness/src/cli/load-governance-state.js",
+    "harness:rules": "node modular-harness/src/cli/evaluate-shared-rules.js",
+    "harness:collect-candidates": "node modular-harness/src/cli/collect-search-candidates.js",
+    "harness:x-search": "node modular-harness/src/cli/scrape-x-search.js",
+    "harness:x-followers": "node modular-harness/src/cli/scrape-x-followers.js",
+    "harness:analyze-candidates": "node modular-harness/src/cli/analyze-candidate-batch.js",
+    "harness:opportunity-report": "node modular-harness/src/cli/build-opportunity-report.js",
+    "harness:draft-replies": "node modular-harness/src/cli/draft-reply-candidates.js",
+    "harness:reply-composer": "node modular-harness/src/cli/prepare-reply-composer.js",
+    "harness:manual-reply-queue": "node modular-harness/src/cli/run-manual-reply-queue.js",
+    "harness:reconcile-replies": "node modular-harness/src/cli/reconcile-manual-replies.js",
+    "harness:cleanup-tabs": "node modular-harness/src/cli/cleanup-persona-tabs.js",
+    "research:topic-report": "node src/cli/run-topic-report.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}

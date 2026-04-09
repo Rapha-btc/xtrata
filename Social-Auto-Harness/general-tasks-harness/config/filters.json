@@ -1,0 +1,39 @@
+{
+  "reply_cooldown_days": 14,
+  "follow_deduplication": true,
+  "max_post_age_hours": 24,
+  "max_posts_for_scoring": 30,
+  "min_post_length": 40,
+  "max_posts_per_author_per_run": 1,
+  "max_strategy_repeats": 2,
+  "diversity_gate_percent": 30,
+  "spam_heavy_source_cutoff_percent": 40,
+  "skip_reposts": true,
+  "allow_priority_account_reposts": true,
+  "search_noise_handles": [
+    "thesbtc",
+    "econjaredb",
+    "stiockiqoo_org",
+    "stckrimqao_net",
+    "sockirnqbo_app",
+    "stockinaro_org"
+  ],
+  "bot_handle_patterns": [
+    "^[A-Z][a-z]+[A-Z][a-z]+\\.(org|net|app|io)$"
+  ],
+  "follower_source_fallback_rule": "If a follower list shows more than 40 percent no-bio or alphanumeric accounts, abandon it and switch sources.",
+  "next_standalone_tweet_angles": [
+    "Data permanence (no IPFS / no link rot — the philosophical angle)",
+    "Composability (inscriptions referencing inscriptions / building on-chain apps)",
+    "Cheap data storage (cost comparison vs Arweave/IPFS)",
+    "Music / audio content on-chain",
+    "Developer tools angle (what a dev can build with Xtrata)"
+  ],
+  "preferred_source_order": [
+    "ZestProtocol",
+    "ArkadikoFinance",
+    "LiquidiumWTF",
+    "aibtcdev",
+    "ALEXLabBTC"
+  ]
+}

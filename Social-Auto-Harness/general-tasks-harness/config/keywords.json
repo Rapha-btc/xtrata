@@ -1,0 +1,27 @@
+{
+  "themes": [
+    "onchain art",
+    "bitcoin art",
+    "stacks nft",
+    "ordinals",
+    "metadata durability",
+    "ipfs",
+    "link rot",
+    "digital permanence",
+    "fully onchain",
+    "creator royalties",
+    "minting on stacks",
+    "bitcoin l2",
+    "sbtc"
+  ],
+  "search_queries": [
+    "\"Bitcoin L2\" OR \"Stacks\" builder inscribe OR inscription -filter:retweets",
+    "Ordinals OR BRC-20 OR \"Bitcoin NFT\" on-chain storage permanent -filter:retweets",
+    "Browse @hirosystems recent followers / interactions",
+    "#NFTartist OR #NFTcommunity OR \"generative art\" \"on-chain\" -filter:retweets + browse followers of @NOXtoshi, @prrfbeauty, @RabbitCartel (validated HIGH quality sources — @Xverse_App handle is invalid, do not use)",
+    "IPFS \"link rot\" OR \"IPFS down\" OR \"decentralized storage\" -filter:retweets",
+    "sBTC OR \"Bitcoin DeFi\" OR \"Stacks DeFi\" -filter:retweets lang:en",
+    "\"AI agents\" OR \"on-chain AI\" \"Bitcoin\" OR \"Stacks\" -filter:retweets",
+    "GameFi OR \"on-chain game\" OR \"blockchain gaming\" Stacks OR Bitcoin L2 -filter:retweets"
+  ]
+}

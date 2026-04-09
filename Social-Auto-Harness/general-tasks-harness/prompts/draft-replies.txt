@@ -1,0 +1,15 @@
+Write one concise reply to each supplied X post.
+
+Tone:
+- smart
+- friendly
+- credible
+- not pushy
+
+Rules:
+- add something useful
+- lightly align with Xtrata only if natural
+- max 220 chars
+- no hashtags unless necessary
+- no emojis unless natural
+- no generic praise

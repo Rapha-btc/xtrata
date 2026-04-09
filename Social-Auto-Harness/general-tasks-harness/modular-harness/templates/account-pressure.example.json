@@ -1,0 +1,38 @@
+{
+  "generatedAt": "2026-04-02T09:30:00.000Z",
+  "persona": "xtrata",
+  "accounts": {
+    "@godfred_xcuz": {
+      "pressureState": "yellow",
+      "replyCount14d": 0,
+      "interactionCount30d": 1,
+      "sameThreadBlocked": false,
+      "allowedActions": [
+        "reply-review",
+        "like"
+      ],
+      "blockedActions": [
+        "repeat-reply"
+      ],
+      "reasons": [
+        "Recent prepared draft exists; avoid duplicate handling in the same run."
+      ]
+    },
+    "@cryptopulse": {
+      "pressureState": "red",
+      "replyCount14d": 1,
+      "interactionCount30d": 2,
+      "sameThreadBlocked": true,
+      "allowedActions": [],
+      "blockedActions": [
+        "reply",
+        "follow",
+        "like"
+      ],
+      "reasons": [
+        "Author is in cooldown window.",
+        "Same-thread dedupe is active."
+      ]
+    }
+  }
+}

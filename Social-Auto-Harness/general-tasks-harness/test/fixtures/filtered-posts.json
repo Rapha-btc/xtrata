@@ -1,0 +1,65 @@
+[
+  {
+    "post_id": "demo-1",
+    "url": "https://x.com/example/status/1",
+    "author_handle": "NOXtoshi",
+    "text": "Generative art on Bitcoin keeps getting more interesting when the media is actually durable and not hanging off IPFS.",
+    "posted_at": "2026-03-31T09:00:00Z",
+    "language": "en",
+    "is_repost": false,
+    "source_type": "search",
+    "source_value": "#NFTartist",
+    "match_reason": "matched nft artist permanence query",
+    "stats": {
+      "like_count": 18,
+      "reply_count": 4,
+      "repost_count": 2,
+      "view_count": 400,
+      "author_followers": 1800,
+      "author_following": 600,
+      "author_post_count": 1200
+    }
+  },
+  {
+    "post_id": "demo-2",
+    "url": "https://x.com/example/status/2",
+    "author_handle": "builderbtc",
+    "text": "sBTC plus permanent onchain data feels like the missing primitive for Bitcoin-native apps.",
+    "posted_at": "2026-03-31T08:30:00Z",
+    "language": "en",
+    "is_repost": false,
+    "source_type": "search",
+    "source_value": "sBTC",
+    "match_reason": "matched stacks builder search",
+    "stats": {
+      "like_count": 7,
+      "reply_count": 1,
+      "repost_count": 1,
+      "view_count": 140,
+      "author_followers": 220,
+      "author_following": 180,
+      "author_post_count": 300
+    }
+  },
+  {
+    "post_id": "demo-3",
+    "url": "https://x.com/example/status/3",
+    "author_handle": "gm_airdropz",
+    "text": "GM fam huge alpha giveaway incoming drop wallet below",
+    "posted_at": "2026-03-31T07:20:00Z",
+    "language": "en",
+    "is_repost": false,
+    "source_type": "search",
+    "source_value": "$STX",
+    "match_reason": "matched broad ecosystem search",
+    "stats": {
+      "like_count": 0,
+      "reply_count": 0,
+      "repost_count": 0,
+      "view_count": 20,
+      "author_followers": 12,
+      "author_following": 1200,
+      "author_post_count": 20
+    }
+  }
+]

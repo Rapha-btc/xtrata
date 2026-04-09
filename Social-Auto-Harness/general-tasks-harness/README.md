@@ -27,10 +27,14 @@ If you are working on the browser-session harness, read these files before chang
 
 - `src/`
   Existing API-based scoring/drafting pipeline
+- `src/research/`
+  Read-only topic research pipeline for overnight X-search collection, analysis, and report generation
 - `modular-harness/`
   Browser-session harness for persona-aware Chrome automation, X session checks, ChatGPT session checks, prompt submission, and JSON parsing
 - `output/runs/`
   Run-scoped pipeline artifacts
+- `output/research-runs/`
+  Run-scoped topic research artifacts
 - `state/`
   SQLite state used by the existing pipeline
 
@@ -192,6 +196,90 @@ For architecture, roadmap, and safety constraints, use:
 - `modular-harness/SAFETY_CONTROLS.md`
 - `AGENTS.md`
 
+## Topic Research Pipeline
+
+The repository now also contains a separate read-only topic research pipeline under `src/research/`.
+
+This path is distinct from both:
+
+- the legacy API reply pipeline under `src/`
+- the browser-session reply harness under `modular-harness/`
+
+Current topic research v1:
+
+- uses the existing verified-browser X search harness as one live source adapter
+- can also use the ChatGPT web UI as a structured web-search collection source
+- normalizes collected results into generic research items
+- analyzes those items through the existing ChatGPT JSON workflow in batches
+- runs one final synthesis pass over a shortlist
+- writes a markdown report plus JSON artifacts under `output/research-runs/<run-id>/`
+
+Run it with:
+
+```bash
+npm run research:topic-report -- --job-file=/abs/path/to/job.json
+npm run research:topic-report -- --job-file=research-jobs/stacks-inscriptions-hackathons.json
+```
+
+Topic-report runs now give each ChatGPT prompt a 5-minute reply budget by default. If a specific job needs longer, override it from the CLI:
+
+```bash
+npm run research:topic-report -- --job-file=research-jobs/stacks-inscriptions-hackathons.json --chatgpt-wait-budget-ms=420000
+```
+
+Research job JSON shape:
+
+```json
+{
+  "topic": "Bitcoin permanence",
+  "objective": "Summarize the strongest overnight themes and notable shifts.",
+  "persona": "xtrata",
+  "account": "you@example.com",
+  "reportInstructions": "End with a short operator-facing takeaway.",
+  "sources": [
+    {
+      "type": "x-search",
+      "label": "Builders",
+      "query": "\"bitcoin permanence\" OR \"durable data\"",
+      "mode": "live"
+    },
+    {
+      "type": "gpt-web-search",
+      "label": "Web search",
+      "query": "Find current hackathons, grants, and builder programs relevant to durable on-chain data."
+    }
+  ]
+}
+```
+
+Research run artifacts:
+
+- `job.json`
+- `progress.log`
+- `invalid-replies/`
+- `collection.json`
+- `normalized-items.json`
+- `analysis.json`
+- `report.json`
+- `report.md`
+- `manifest.json`
+
+Topic-report runs now create the run directory immediately, append timestamped stage logs to `progress.log`, and write intermediate artifacts as collection, normalization, and analysis complete. If a ChatGPT step stalls or fails, the partial run directory should still show how far the job progressed. Malformed ChatGPT replies are also captured under `invalid-replies/` with the raw reply text, the dispatched prompt, and metadata for debugging.
+
+Research analysis now starts with 10-item GPT batches by default and automatically splits oversized or JSON-failing batches into smaller leaves before giving up on the run.
+
+Current v1 constraints:
+
+- read-only/report-only
+- supported source types are `x-search` and `gpt-web-search`
+- live `x-search` runs require a `persona` that resolves to a verified X handle in `modular-harness/config/browser-personas.json`
+
+Starter job for the first task:
+
+```bash
+npm run research:topic-report -- --job-file=research-jobs/stacks-inscriptions-hackathons.json
+```
+
 ## Full Harness Command
 
 From the repo root, this runs the full browser-harness thread-reply flow in sequence:
@@ -262,3 +350,38 @@ npm run harness:analyze-candidates -- --persona=xtrata --type=thread --input-fil
 npm run harness:opportunity-report -- --threads-file="$THREADS" --thread-analysis-file="$ANALYSIS" --write-file="$REPORT" && \
 npm run harness:draft-replies -- --persona=xtrata --opportunity-report-file="$REPORT" --write-file="$DRAFTS" && \
 npm run harness:manual-reply-queue -- --persona=xtrata --draft-file="$DRAFTS" --write-file="$QUEUE"
+
+## Information Commands
+
+Useful read-only terminal commands for checking sessions, scraping information, and generating reports:
+
+```bash
+# Verify the persona window and logged-in X session
+npm run harness:persona-window -- --persona=xtrata
+npm run harness:x-session -- --persona=xtrata --handle=@xtratalayers
+
+# Verify the ChatGPT browser session
+npm run harness:chatgpt-session -- --persona=xtrata
+
+# Inspect the current governance and rule state
+npm run harness:governance
+npm run harness:rules -- --threads-file=/abs/path/threads.json --follows-file=/abs/path/follows.json
+
+# Scrape read-only search and follower information from X
+npm run harness:x-search -- --persona=xtrata --query="Bitcoin permanence" --write-file=/tmp/raw-threads.json
+npm run harness:x-followers -- --persona=xtrata --source=@NOXtoshi --write-file=/tmp/raw-follows.json
+
+# Build read-only candidate analysis and an opportunity report from existing artifacts
+npm run harness:collect-candidates -- --threads-file=/tmp/raw-threads.json --output-dir=/tmp/xtrata-candidates
+npm run harness:analyze-candidates -- --persona=xtrata --type=thread --input-file=/tmp/xtrata-candidates/thread-candidates.json --write-file=/tmp/thread-analysis.json
+npm run harness:opportunity-report -- --threads-file=/tmp/xtrata-candidates/thread-candidates.json --thread-analysis-file=/tmp/thread-analysis.json --write-file=/tmp/opportunity-report.json
+
+# Generate a generic overnight topic report from mixed X and ChatGPT web-search sources
+npm run research:topic-report -- --job-file=/abs/path/to/job.json
+npm run research:topic-report -- --job-file=research-jobs/stacks-inscriptions-hackathons.json
+npm run research:topic-report -- --job-file=research-jobs/stacks-inscriptions-hackathons.json --chatgpt-wait-budget-ms=420000
+
+npm run research:topic-report -- --job-file=research-jobs/stacks-inscriptions-hackathons.json --chatgpt-wait-budget-ms=3600000
+
+```
+

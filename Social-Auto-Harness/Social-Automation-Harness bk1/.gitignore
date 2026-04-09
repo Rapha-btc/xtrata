@@ -1,0 +1,9 @@
+*.DS_Store
+node_modules/
+output/runs/*
+!output/runs/.gitkeep
+state/*.db
+state/*.db-shm
+state/*.db-wal
+state/*.sqlite
+state/*.sqlite3

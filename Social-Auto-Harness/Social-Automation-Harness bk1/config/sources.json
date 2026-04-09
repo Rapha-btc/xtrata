@@ -1,0 +1,158 @@
+{
+  "search_strategies": [
+    {
+      "id": 1,
+      "name": "Bitcoin L2 builders",
+      "query": "\"Bitcoin L2\" OR \"Stacks\" builder inscribe OR inscription -filter:retweets",
+      "last_used": "2026-03-28"
+    },
+    {
+      "id": 2,
+      "name": "Ordinals / BRC-20 crossover",
+      "query": "Ordinals OR BRC-20 OR \"Bitcoin NFT\" on-chain storage permanent -filter:retweets",
+      "last_used": null
+    },
+    {
+      "id": 3,
+      "name": "@hirosystems follower graph",
+      "query": "Browse @hirosystems recent followers / interactions",
+      "last_used": "2026-03-29 (overused — rest)"
+    },
+    {
+      "id": 4,
+      "name": "NFT artist community",
+      "query": "#NFTartist OR #NFTcommunity OR \"generative art\" \"on-chain\" -filter:retweets + browse followers of @NOXtoshi, @prrfbeauty, @RabbitCartel (validated HIGH quality sources — @Xverse_App handle is invalid, do not use)",
+      "last_used": "2026-03-30"
+    },
+    {
+      "id": 5,
+      "name": "Data permanence / IPFS critique",
+      "query": "IPFS \"link rot\" OR \"IPFS down\" OR \"decentralized storage\" -filter:retweets",
+      "last_used": null
+    },
+    {
+      "id": 6,
+      "name": "sBTC / Bitcoin DeFi angle",
+      "query": "sBTC OR \"Bitcoin DeFi\" OR \"Stacks DeFi\" -filter:retweets lang:en",
+      "last_used": "2026-03-29"
+    },
+    {
+      "id": 7,
+      "name": "AI agents + on-chain data",
+      "query": "\"AI agents\" OR \"on-chain AI\" \"Bitcoin\" OR \"Stacks\" -filter:retweets",
+      "last_used": "2026-03-28"
+    },
+    {
+      "id": 8,
+      "name": "GameFi / on-chain gaming",
+      "query": "GameFi OR \"on-chain game\" OR \"blockchain gaming\" Stacks OR Bitcoin L2 -filter:retweets",
+      "last_used": null
+    }
+  ],
+  "follow_sources": [
+    {
+      "handle": "ZestProtocol",
+      "strategy_id": 6,
+      "quality": "HIGH",
+      "notes": "Stacks DeFi lending — followers genuinely interested in on-chain finance. Good mix of builders and users.",
+      "last_browsed": "2026-03-29",
+      "enabled": true
+    },
+    {
+      "handle": "ArkadikoFinance",
+      "strategy_id": 6,
+      "quality": "HIGH",
+      "notes": "Stacks stablecoin/DeFi — similar quality to ZestProtocol. Good signal, genuine builders/users.",
+      "last_browsed": "2026-03-29",
+      "enabled": true
+    },
+    {
+      "handle": "BitflowFinance",
+      "strategy_id": 6,
+      "quality": "LOW",
+      "notes": "Stacks DEX — \"Something went wrong\" error on 2 consecutive runs (Run 5 & Run 6). Do not use until source is confirmed accessible.",
+      "last_browsed": "2 failures",
+      "enabled": false
+    },
+    {
+      "handle": "LiquidiumWTF",
+      "strategy_id": 8,
+      "quality": "HIGH (est.)",
+      "notes": "Ordinals-based DeFi — great Bitcoin DeFi crossover audience",
+      "last_browsed": null,
+      "enabled": true
+    },
+    {
+      "handle": "MegapontNFT",
+      "strategy_id": 8,
+      "quality": "MEDIUM",
+      "notes": "Stacks NFT project — genuine NFT collectors, some noise but mostly real accounts. Avoid motivational/airdrop hunters.",
+      "last_browsed": "2026-03-29",
+      "enabled": true
+    },
+    {
+      "handle": "Xverse_App",
+      "strategy_id": 4,
+      "quality": "MEDIUM (est.)",
+      "notes": "Stacks wallet — broad audience, may include casual users",
+      "last_browsed": null,
+      "enabled": false
+    },
+    {
+      "handle": "hirosystems",
+      "strategy_id": 3,
+      "quality": "MEDIUM",
+      "notes": "Developer-focused — good signal for builders, but OVERUSED. Rest until other strategies cycled.",
+      "last_browsed": "2026-03-29 (⚠️ rested)",
+      "enabled": true
+    },
+    {
+      "handle": "HermeticaFi",
+      "strategy_id": null,
+      "quality": "LOW",
+      "notes": "sBTC yield protocol — followers skew toward bots/spam",
+      "last_browsed": "2026-03-29",
+      "enabled": false
+    },
+    {
+      "handle": "VelarBTC",
+      "strategy_id": null,
+      "quality": "LOW",
+      "notes": "Stacks DEX — follower list heavily polluted with spam/bots",
+      "last_browsed": "2026-03-29",
+      "enabled": false
+    },
+    {
+      "handle": "Stacks (main)",
+      "strategy_id": 2,
+      "quality": "LOW",
+      "notes": "Too broad — followers include OGs, bots, institutions. Hard to find fresh people.",
+      "last_browsed": "2026-03-29",
+      "enabled": false
+    },
+    {
+      "handle": "aibtcdev",
+      "strategy_id": 7,
+      "quality": "HIGH (est.)",
+      "notes": "AI Bitcoin agents on Stacks — followers are builders and AI-curious crypto people. Good crossover with on-chain data use case.",
+      "last_browsed": "2026-03-29",
+      "enabled": true
+    },
+    {
+      "handle": "ALEXLabBTC",
+      "strategy_id": 6,
+      "quality": "HIGH (est.)",
+      "notes": "Stacks DeFi/DEX — sidebar suggestions from their profile were quality accounts",
+      "last_browsed": "2026-03-29",
+      "enabled": true
+    },
+    {
+      "handle": "StacksOrg",
+      "strategy_id": 2,
+      "quality": "MEDIUM",
+      "notes": "Main Stacks account — very broad followers. High bot noise (~40%+ alphanumeric/no-bio accounts). Usable but needs heavy filtering.",
+      "last_browsed": "2026-03-30",
+      "enabled": true
+    }
+  ]
+}

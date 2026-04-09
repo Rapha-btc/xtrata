@@ -1,0 +1,437 @@
+{
+  "description": "Log of all X/Twitter threads @XtrataLayers has already replied to. Never post a new standalone reply to these threads again — only reply to direct responses to our posts.",
+  "threads": [
+    {
+      "url": "https://x.com/Frei_reitarded/status/2034081399763091460",
+      "author": "@Frei_reitarded",
+      "topic": "BLOC PARTY collection launch on Xtrata",
+      "replied_at": "2026-03-27",
+      "our_reply": "Love seeing artists launch on-chain like this. Everything in BLOC PARTY is sealed permanently on Bitcoin L2 — no hosting costs, no link rot, just exists forever. More collections incoming 🙏"
+    },
+    {
+      "url": "https://x.com/ddtrvlr/status/2036726237557559531",
+      "author": "@ddtrvlr",
+      "topic": "Stacks wallet portfolio / Bitcoin L2 StacksFolio",
+      "replied_at": "2026-03-27",
+      "our_reply": "If you're building on Bitcoin L2, Xtrata lets you inscribe data permanently on Stacks — art, music, code, entire apps. Only ~266 inscriptions in, very early. Worth exploring xtrata.xyz"
+    },
+    {
+      "url": "https://x.com/love_is_thy_way/status/2034190686598124015",
+      "author": "@love_is_thy_way",
+      "topic": "Recursive Ordinals collection (love_message, 430 pieces)",
+      "replied_at": "2026-03-27",
+      "our_reply": "Recursive inscriptions on Bitcoin L2 (Stacks) take this further — modules referencing modules, on-chain apps built from other inscriptions. Token #82 on Xtrata is an entire interactive game inscribed on-chain: https://xtrata.xyz/token/82"
+    },
+    {
+      "url": "https://x.com/jimdotbtc/status/2030311716555559108",
+      "author": "@jimdotbtc",
+      "topic": "Technical explanation of Xtrata — SIP-009 NFTs, deterministic reconstruction, recursive dependencies",
+      "replied_at": "2026-03-27",
+      "our_reply": "Token #82 shows what this looks like in practice — a full interactive app running entirely from on-chain data, no server, no cloud. Recursion-first inscription is something else: https://xtrata.xyz/token/82"
+    },
+    {
+      "url": "https://x.com/DeOrganizedBTC/status/[id-not-captured]",
+      "author": "@DeOrganizedBTC",
+      "topic": "Stacks ecosystem snapshot / builder activity",
+      "replied_at": "2026-03-27",
+      "run": "12:10 GMT",
+      "our_reply": "[Ecosystem snapshot reply — contextual mention of Xtrata as permanent on-chain data layer on Stacks]"
+    },
+    {
+      "url": "https://x.com/Rick_Sebastiaan/status/[id-not-captured]",
+      "author": "@Rick_Sebastiaan",
+      "topic": "Stacks ecosystem growing / builder adoption thread",
+      "replied_at": "2026-03-27",
+      "run": "12:10 GMT",
+      "our_reply": "[Stacks growing reply — contextual mention of Xtrata inscriptions and permanent data on Bitcoin L2]"
+    },
+    {
+      "url": "https://x.com/GPSC_STX/status/[id-not-captured]",
+      "author": "@GPSC_STX",
+      "topic": "Diamond hands / builder community engagement",
+      "replied_at": "2026-03-27",
+      "run": "12:10 GMT",
+      "our_reply": "[Builder community reply — contextual mention of Xtrata as on-chain permanent inscription platform]"
+    },
+    {
+      "url": "https://x.com/xcryptodigi/status/2037634021761441929",
+      "author": "@xcryptodigi",
+      "topic": "Turkish researcher asking about Stacks/STX — TVL, dapp growth, Bitcoin L2 category",
+      "replied_at": "2026-03-27",
+      "run": "22:10 GMT",
+      "our_reply": "Stacks is an underrated Bitcoin L2 — smart contracts, DeFi, and a permanent on-chain data layer. Beyond TVL, you can inscribe art, music, and code directly on Stacks with no IPFS or Arweave — xtrata.xyz is worth exploring if the permanent angle interests you."
+    },
+    {
+      "url": "https://x.com/StacksMarketApp/status/2037636966443815298",
+      "author": "@StacksMarketApp",
+      "topic": "Memecoins officially live on Stacks Market — 8,800 STX volume in one day",
+      "replied_at": "2026-03-27",
+      "run": "22:10 GMT",
+      "our_reply": "Prediction markets + memecoins on the same chain where you can also inscribe data permanently on Bitcoin L2 — Stacks is quietly stacking real use cases. xtrata.xyz is building the on-chain data layer on the same rails. Good day for the ecosystem."
+    },
+    {
+      "url": "https://x.com/vikingblood_/status/2037644493936111647",
+      "author": "@vikingblood_",
+      "topic": "BTC Agents / @aibtcdev building AI infrastructure on Stacks — getagent.btc BNS name",
+      "replied_at": "2026-03-27",
+      "run": "22:10 GMT",
+      "our_reply": "The data those agents produce deserves a permanent home — xtrata.xyz lets you inscribe code, outputs, or entire apps on Stacks with no IPFS. Building agent infrastructure on Bitcoin L2? An immutable on-chain data layer underneath is a natural fit."
+    },
+    {
+      "url": "https://x.com/herogamer21btc/status/2037593519469252647",
+      "author": "@herogamer21btc",
+      "topic": "Weekly Stacks ecosystem digest — SIP-039 97.5M STX passing, Clarity 5 approved, 240+ AI agents",
+      "replied_at": "2026-03-28",
+      "run": "02:10 GMT",
+      "our_reply": "SIP-039 passing with 97.5M STX is a big signal. Clarity 5 approved, 240+ AI agents scaling on Bitcoin L2 — the next layer is permanent on-chain storage. xtrata.xyz lets you inscribe code, data, and apps on Stacks with no IPFS. Big week for builders."
+    },
+    {
+      "url": "https://x.com/willycodexwar/status/2031028437654114807",
+      "author": "@willycodexwar",
+      "topic": "Generative NFT badges on Stacks (167 badges)",
+      "replied_at": "2026-03-28",
+      "run": "02:10 GMT",
+      "our_reply": "Cool generative badges on Stacks — if you want truly permanent storage for a future collection, xtrata.xyz lets you inscribe NFT assets on Bitcoin L2 with no IPFS dependency. The data lives on-chain, no hosting costs or link rot risk. Nice work on the 167 badges."
+    },
+    {
+      "url": "https://x.com/serayd61/status/2027829836522156211",
+      "author": "@serayd61",
+      "topic": "NeuralMint — AI-generated NFT marketplace on Stacks (DALL-E 3, Stable Diffusion)",
+      "replied_at": "2026-03-28",
+      "run": "02:10 GMT",
+      "our_reply_url": "https://x.com/XtrataLayers/status/2037716429705805825",
+      "our_reply": "Love this — AI-generated NFTs on Stacks is a great combo. For future collections, xtrata.xyz lets you inscribe actual image data permanently on Bitcoin L2 with no IPFS needed. The asset lives on-chain, no Vercel dependency. Worth exploring as NeuralMint scales."
+    },
+    {
+      "url": "https://x.com/jackbinswitch/status/[id-not-captured]",
+      "author": "@jackbinswitch",
+      "topic": "Stacks TCM builder — on-chain agents and composable data on Bitcoin L2",
+      "replied_at": "2026-03-28",
+      "run": "04:09 GMT",
+      "our_reply": "[Contextual reply about on-chain agent data permanence — xtrata.xyz as the permanent data layer underneath AI agent infrastructure on Stacks]"
+    },
+    {
+      "url": "https://x.com/Stackslaborg/status/[id-not-captured]",
+      "author": "@Stackslaborg",
+      "topic": "LabSTX — Clarinet v3.15 upgrade, developer tooling for Stacks",
+      "replied_at": "2026-03-28",
+      "run": "04:09 GMT",
+      "our_reply": "[Contextual reply to Clarinet v3.15 upgrade — xtrata.xyz as permanent on-chain storage for apps built with Stacks developer tooling]"
+    },
+    {
+      "url": "https://x.com/mrwagmibtc/status/[id-not-captured]",
+      "author": "@mrwagmibtc",
+      "topic": "Building agent registration platform on Stacks — on-chain agent identity and data",
+      "replied_at": "2026-03-28",
+      "run": "04:09 GMT",
+      "our_reply": "[Contextual reply about permanent on-chain agent registry data — xtrata.xyz as the inscription layer for agent identity and outputs on Bitcoin L2]"
+    },
+    {
+      "url": "https://x.com/CryptoPulse/status/2037681305027014832",
+      "author": "@CryptoPulse",
+      "topic": "Bitcoin L1 use cases / limitations thread",
+      "replied_at": "2026-03-28",
+      "run": "06:09 GMT",
+      "our_reply": "One use case genuinely impossible on Bitcoin L1: permanent on-chain data storage. On Stacks (Bitcoin L2), xtrata.xyz lets you inscribe art, code, or entire apps directly on-chain — no IPFS, no Arweave. The data lives on Bitcoin, composable and permanent."
+    },
+    {
+      "url": "https://x.com/STXOSHI_20/status/2037636016379429325",
+      "author": "@STXOSHI_20",
+      "topic": "Stacks ecosystem / DeFi on Bitcoin L2",
+      "replied_at": "2026-03-28",
+      "run": "06:09 GMT",
+      "our_reply": "And Stacks isn't just DeFi — it's also permanent on-chain data storage. xtrata.xyz lets builders inscribe code, apps, and assets directly on Bitcoin L2 with no IPFS needed. Smart contracts + permanent data on the same chain is a genuinely powerful stack."
+    },
+    {
+      "url": "https://x.com/trends24by7/status/2037654044970463591",
+      "author": "@trends24by7",
+      "topic": "AI agents on Stacks — 62+ agents growing on Bitcoin L2",
+      "replied_at": "2026-03-28",
+      "run": "06:09 GMT",
+      "our_reply": "The agent data and outputs those 62 agents produce deserve a permanent home too. xtrata.xyz lets you inscribe code, logs, and artifacts on Stacks with no IPFS — permanently on Bitcoin L2. DeFi yield + permanent on-chain data on the same chain is a strong combo."
+    },
+    {
+      "url": "https://x.com/joaopedronbello/status/2037579607549829534",
+      "author": "@joaopedronbello",
+      "topic": "DOG/sBTC pool live on HODLMM — first on-chain Bitcoin DeFi with bid/ask, spot, curve strategies via Stacks",
+      "replied_at": "2026-03-28",
+      "run": "08:10 GMT",
+      "our_reply_url": "https://x.com/XtrataLayers/status/2037805382282752272",
+      "our_reply": "First on-chain Bitcoin DeFi with real market-making strategies (bid/ask, curve) is a milestone. The same chain where xtrata.xyz lets builders inscribe code, data, and assets permanently with no IPFS — Stacks is quietly becoming a full-stack Bitcoin L2."
+    },
+    {
+      "url": "https://x.com/WhisprNews/status/2037736809417916523",
+      "author": "@WhisprNews",
+      "topic": "Top 10 L2s by MarketCap (28-03-2026) — STX included in list with Mantle, Arbitrum, Polygon etc",
+      "replied_at": "2026-03-28",
+      "run": "08:10 GMT",
+      "our_reply": "STX in the top 10 L2s by market cap — and it's the only one on this list where you can inscribe data, art, and code permanently on Bitcoin itself. No IPFS, no Arweave. xtrata.xyz is building that permanent on-chain data layer on Stacks."
+    },
+    {
+      "url": "https://x.com/WhisprNews/status/2037434829944328414",
+      "author": "@WhisprNews",
+      "topic": "Top 10 NFT tokens by MarketCap (27-03-2026) — STX listed alongside Render, Pengu, Tezos etc",
+      "replied_at": "2026-03-28",
+      "run": "08:10 GMT",
+      "our_reply": "STX showing up in the top NFT L2s is fitting — it's also the only chain on this list where NFT assets can be inscribed permanently on Bitcoin with no IPFS. The data lives on-chain, not on a server. xtrata.xyz is building that on Stacks right now."
+    },
+    {
+      "url": "https://x.com/ItsBitcoinWorld/status/2037768056798122294",
+      "author": "@ItsBitcoinWorld",
+      "topic": "Stacks (STX) price prediction 2026-2030 — technical reversal potential analysis",
+      "replied_at": "2026-03-28",
+      "run": "08:10 GMT",
+      "our_reply": "Beyond price targets, what gives STX fundamental utility is the builder layer — smart contracts and permanent on-chain data storage on Bitcoin L2. xtrata.xyz is inscribing art, code, and apps on Stacks with no IPFS. More use cases = more on-chain activity."
+    },
+    {
+      "url": "https://x.com/pibi199127/status/2037611886272012326",
+      "author": "@pibi199127",
+      "topic": "Stacks bridging DeFi and Bitcoin — USDCx stablecoin backed by USDC settling on Bitcoin network",
+      "replied_at": "2026-03-28",
+      "run": "12:08 GMT",
+      "our_reply": "[Contextual reply about USDCx on Stacks + xtrata.xyz as permanent on-chain data layer on same chain]"
+    },
+    {
+      "url": "https://x.com/LeoCoinSTX/status/2037862368949236209",
+      "author": "@LeoCoinSTX",
+      "topic": "GMEOW caturday — genesis LEO CAT NFT on Stacks (part of reubs_btc MegapontNFT giveaway)",
+      "replied_at": "2026-03-28",
+      "run": "12:08 GMT",
+      "our_reply": "[Contextual reply about on-chain NFTs and permanent inscription storage on Stacks via xtrata.xyz]"
+    },
+    {
+      "url": "https://x.com/Zaghmout32/status/2037654995709931848",
+      "author": "@Zaghmout32",
+      "topic": "Flying Whale AI agent live on aibtcdev — Bitcoin-native AI agent on Stacks L2, zaghmout.btc",
+      "replied_at": "2026-03-28",
+      "run": "12:08 GMT",
+      "our_reply": "[Contextual reply about AI agent data permanence — xtrata.xyz as on-chain inscription layer for agent outputs on Bitcoin L2]"
+    },
+    {
+      "url": "https://x.com/peregrineXBT/status/[sBTC-milestone-post]",
+      "author": "@peregrineXBT",
+      "topic": "sBTC milestone stats — TVL and adoption growth on Stacks",
+      "replied_at": "2026-03-28",
+      "run": "16:10 GMT",
+      "our_reply_url": "https://x.com/XtrataLayers/status/2037928123958718957",
+      "our_reply": "These sBTC numbers are exactly why builders keep choosing Stacks. The same chain where xtrata.xyz lets you inscribe data, art, and code permanently on Bitcoin L2 — no IPFS, no hosting, just permanent. DeFi + permanent data storage on one chain is a serious combo."
+    },
+    {
+      "url": "https://x.com/reubs_btc/status/[stacksinvaders-giveaway]",
+      "author": "@reubs_btc",
+      "topic": "Stacksinvaders NFT giveaway on Stacks",
+      "replied_at": "2026-03-28",
+      "run": "16:10 GMT",
+      "our_reply_url": "https://x.com/XtrataLayers/status/2037929053794025516",
+      "our_reply": "Love seeing the Stacks NFT community thriving. If those Stacksinvaders assets ever need to outlast any hosting dependency, xtrata.xyz lets NFTs on @Stacks inscribe art permanently on Bitcoin L2 — the data lives on-chain, not on a server. Good luck everyone 🙏"
+    },
+    {
+      "url": "https://x.com/tinderlyonx/status/[cinematography-stacks-post]",
+      "author": "@tinderlyonx",
+      "topic": "Cinematography content on Stacks — iPhone 11 shot by Stacks creator",
+      "replied_at": "2026-03-28",
+      "run": "16:10 GMT",
+      "our_reply_url": "https://x.com/XtrataLayers/status/2037930076625338750",
+      "our_reply": "Beautiful shot — content creators on @Stacks are doing something special. If you ever want this work sealed permanently on Bitcoin L2 with no IPFS, xtrata.xyz lets you inscribe it on-chain. Your art deserves to live forever, not on a server."
+    },
+    {
+      "url": "https://x.com/enjoywithouthey/status/2037935878253707649",
+      "author": "@enjoywithouthey",
+      "topic": "Stacks bear market builder sentiment — price napping while devs build",
+      "replied_at": "2026-03-28",
+      "run": "20:33 GMT",
+      "our_reply": "The build is the proof. While price naps, devs on Stacks are already inscribing apps, art, and code permanently on Bitcoin L2 — xtrata.xyz is one example. Fundamentals like that don't wait for bull markets to matter."
+    },
+    {
+      "url": "https://x.com/Nakamoto1/status/2037986050459508758",
+      "author": "@Nakamoto1",
+      "topic": "On-chain NFTs and art/music on Stacks — building real on-chain value",
+      "replied_at": "2026-03-28",
+      "run": "20:33 GMT",
+      "our_reply": "Biased but xtrata.xyz — we're inscribing art, music, and full apps permanently on Bitcoin L2 with no IPFS. Data that actually lives on-chain, not just a pointer to a server. Love what you're building on Stacks too — NFTs that actually mean something."
+    },
+    {
+      "url": "https://x.com/trends24by7/status/2037969518665085323",
+      "author": "@trends24by7",
+      "topic": "Nakamoto upgrade unlocking 30x DeFi capacity on Stacks",
+      "replied_at": "2026-03-28",
+      "run": "20:33 GMT",
+      "our_reply": "30x DeFi capacity is compelling — but the same upgrade unlocks richer on-chain data possibilities too. xtrata.xyz is already inscribing art, code, and full apps permanently on Bitcoin L2. DeFi + permanent data storage on the same security layer is a serious combo."
+    },
+    {
+      "url": "https://x.com/PuppaCoin/status/[id-not-captured]",
+      "author": "@PuppaCoin",
+      "topic": "STX price prediction / $10 target — Stacks Bitcoin L2 potential",
+      "replied_at": "2026-03-29",
+      "run": "04:09 BST",
+      "our_reply": "running full interactive apps on-chain with no server — genuinely new territory. xtrata.xyz has 280+ inscriptions on Stacks: art, music, recursive apps, sealed on Bitcoin L2 with no IPFS. $10 by 2030 feels conservative if builders keep shipping"
+    },
+    {
+      "url": "https://x.com/STXOSHI_20/status/[id-not-captured-2026-03-29]",
+      "author": "@STXOSHI_20",
+      "topic": "Stacks ecosystem / Bitcoin L2 activity (March 29 post)",
+      "replied_at": "2026-03-29",
+      "run": "04:09 BST",
+      "our_reply": "[Contextual reply about Stacks Bitcoin L2 — xtrata.xyz permanent on-chain inscription platform mentioned]"
+    },
+    {
+      "url": "https://x.com/WhisprNews/status/2038053911794258061",
+      "author": "@WhisprNews",
+      "topic": "Top 10 GameFi tokens by MarketCap (29-03-2026) — STX at #3",
+      "replied_at": "2026-03-29",
+      "run": "04:09 BST",
+      "our_reply_url": "https://x.com/XtrataLayers/status/2038098058903203948",
+      "our_reply": "$STX at #3 in GameFi by market cap is a signal — Stacks isn't just DeFi. On-chain game assets inscribed permanently on Bitcoin L2 via xtrata.xyz: no IPFS, no servers, no link rot. Game data that actually survives the studio."
+    },
+    {
+      "url": "https://x.com/Ole14638543/status/[on-chain-art-sentiment-thread]",
+      "author": "@Ole14638543",
+      "topic": "On-chain art feeling like early days of NFTs — genuine interest, not hype",
+      "replied_at": "2026-03-30",
+      "run": "06:09 BST",
+      "our_reply_url": "https://x.com/XtrataLayers/status/2038485530434756634",
+      "our_reply": "[DYLE0415 promo — 173 pieces of generative art permanently inscribed on Bitcoin L2 by dyle.btc, 4 STX each. xtrata.xyz/collection/dyle0415]"
+    },
+    {
+      "url": "https://x.com/NOXtoshi/status/[ordinals-defense-thread]",
+      "author": "@NOXtoshi",
+      "topic": "In defense of Ordinals artists releasing multiple collections — value must be transacted",
+      "replied_at": "2026-03-30",
+      "run": "06:09 BST",
+      "our_reply_url": "https://x.com/XtrataLayers/status/2038487150644076606",
+      "our_reply": "[DYLE0415 promo — generative art permanently on Bitcoin, DYLE0414 sold out, DYLE0415 is the sequel. xtrata.xyz/collection/dyle0415]"
+    },
+    {
+      "url": "https://x.com/ACEband2021/status/[stacks-nft-activity-thread]",
+      "author": "@ACEband2021",
+      "topic": "Stacks NFT activity — GMFL Season Pass mint on Stacks blockchain",
+      "replied_at": "2026-03-30",
+      "run": "06:09 BST",
+      "our_reply_url": "https://x.com/XtrataLayers/status/2038489734960341047",
+      "our_reply": "Nice — love seeing Stacks NFT activity. If you're exploring active mints on Stacks, DYLE0415 by dyle.btc just launched too — 173 pieces of generative art permanently inscribed on Bitcoin L2, 4 STX each. 171 remaining. xtrata.xyz/collection/dyle0415"
+    },
+    {
+      "url": "https://x.com/___Tokino/status/2039642909923016770",
+      "author": "@___tokino",
+      "topic": "Brief note that Bitcoin's ecosystem is widening beyond simple payments, with different layers serving different asset and app models.",
+      "replied_at": "2026-04-02",
+      "our_reply_url": "https://x.com/XtrataLayers/status/2039848987524505796",
+      "our_reply": "Yeah , Bitcoin’s stack is getting more layered. Payments, stable assets, creative rails and app logic are starting to live in different places, which can look odd at first, but it’s probably how the ecosystem gets more usable."
+    },
+    {
+      "url": "https://x.com/TobyChristianne/status/2039703760902013264",
+      "author": "@tobychristianne",
+      "topic": "Light infra-oriented note about useful Bitcoin layers being the ones that make new behaviors possible for builders and users.",
+      "replied_at": "2026-04-02",
+      "our_reply_url": "https://x.com/XtrataLayers/status/2039849111000662101",
+      "our_reply": "The useful Bitcoin layers will be the ones that let builders do genuinely new things, not just repackage blockspace. If agents, identity and payments actually work together cleanly, that’s where it gets interesting."
+    },
+    {
+      "url": "https://x.com/blockchainbob/status/2039785770114757039",
+      "author": "@blockchainbob",
+      "topic": "Thoughtful note on Bitcoin L2 innovation needing actual creator-facing primitives and useful on-chain infrastructure.",
+      "replied_at": "2026-04-02",
+      "our_reply_url": "https://x.com/XtrataLayers/status/2039850276941606942",
+      "our_reply": "Feels like the gap is still creator-facing primitives. A lot of L2 talk stays abstract, but the interesting stuff starts when artists and builders can actually ship things on-chain that people use."
+    },
+    {
+      "url": "https://x.com/lucaswardal3/status/2039818181661909086",
+      "author": "@lucaswardal3",
+      "topic": "Light contextual agreement around Bitcoin-native participation and useful L2 utility, without forcing promo.",
+      "replied_at": "2026-04-02",
+      "our_reply_url": "https://x.com/XtrataLayers/status/2039850419845820696",
+      "our_reply": "Agreed that real utility is what moves adoption. The next step is making that utility tangible for builders and creators, not just measurable at the wallet level."
+    },
+    {
+      "url": "https://x.com/FFVV1211/status/2039726346092601825",
+      "author": "@ffvv1211",
+      "topic": "Concise point about better Bitcoin L2 experiences winning when users do not need to learn extra complexity.",
+      "replied_at": "2026-04-02",
+      "our_reply_url": "https://x.com/XtrataLayers/status/2039850498509939077",
+      "our_reply": "Exactly . The best L2 experiences probably win when users don’t need a new vocabulary lesson first. Less explaining, more obvious usefulness."
+    },
+    {
+      "url": "https://x.com/akinmarve26/status/2039706154662584501",
+      "author": "@akinmarve26",
+      "topic": "Natural Bitcoin-native infra comment that lightly signals awareness of the broader ecosystem without overt promo.",
+      "replied_at": "2026-04-02",
+      "our_reply_url": "https://x.com/XtrataLayers/status/2039851007098683695",
+      "our_reply": "Good to see more Bitcoin-native infra becoming trackable and legible. Better discovery across L2 apps is one of the things that helps the wider ecosystem mature beyond pure speculation."
+    },
+    {
+      "url": "https://x.com/VazzyWeb3/status/2039781163104165990",
+      "author": "@vazzyweb3",
+      "topic": "Contextual angle around Bitcoin-native infrastructure momentum, not collection promo.",
+      "replied_at": "2026-04-02",
+      "our_reply_url": "https://x.com/XtrataLayers/status/2039851142289526827",
+      "our_reply": "Feels like a broader shift toward building on Bitcoin without treating BTC as something you have to move away from first. That native-first direction is getting more interesting across the stack."
+    },
+    {
+      "url": "https://x.com/DefiLlama/status/2039847792340770860",
+      "author": "@defillama",
+      "topic": "Natural data/infrastructure angle around dashboards, tokenized assets, and how better discovery layers help on-chain ecosystems mature.",
+      "replied_at": "2026-04-03",
+      "our_reply_url": "https://x.com/XtrataLayers/status/2039855781114232916",
+      "our_reply": "This is where better data presentation really matters: once tokenized assets are easy to compare, filter, and contextualize, the market becomes much more usable. Discovery infrastructure ends up doing a lot of the heavy lifting."
+    },
+    {
+      "url": "https://x.com/BjeshP/status/2040011133994889332",
+      "author": "@bjeshp",
+      "topic": "Affirm Bitcoin-native growth, then add that durable adoption comes from real creator/app primitives on Bitcoin L2s, not just financial narratives.",
+      "replied_at": "2026-04-03",
+      "our_reply_url": "https://x.com/XtrataLayers/status/2040052135149126089",
+      "our_reply": "Agree the shift is bigger than the old digital gold frame. The durable part is what gets built on top: creator tools, permanent media, and app primitives that give Bitcoin L2s real everyday use beyond pure financial flow."
+    },
+    {
+      "url": "https://x.com/leojansens/status/2039989026917163100",
+      "author": "@leojansens",
+      "topic": "Agree that Bitcoin can stay minimal at base layer while L2s handle richer app layers; note that creator and data use cases matter alongside finance.",
+      "replied_at": "2026-04-03",
+      "our_reply_url": "https://x.com/XtrataLayers/status/2040051964835156225",
+      "our_reply": "That separation makes sense. Keep Bitcoin simple at the base, let L2s handle richer logic. I’d just add that creator and data use cases matter too, not only finance, because they give the stack reasons to be used outside trading cycles."
+    },
+    {
+      "url": "https://x.com/AGratefulApe/status/2039852724951667145",
+      "author": "@agratefulape",
+      "topic": "Answer that fee security debates become stronger when L2 usage reflects real demand from applications, creators, and data-heavy use cases rather than only trading.",
+      "replied_at": "2026-04-03",
+      "our_reply_url": "https://x.com/XtrataLayers/status/2040051861256872042",
+      "our_reply": "My view is fee security arguments get stronger when L2 usage comes from real demand, not just trading bursts. If apps, media and creator tooling keep generating transactions over time, that’s a healthier signal than macro models alone."
+    }
+  ],
+  "own_tweets": [
+    {
+      "posted_at": "2026-03-27",
+      "run": "10:25 GMT",
+      "content": "The first recursive music collection on Bitcoin L2 is live — and it's basically free. Russian Rampage by @melophonic — sealed on-chain, permanent, no IPFS. 108 of 111 still available at 0.003 STX. Mint it 👉 xtrata.xyz",
+      "angle": "collection-promo-russian-rampage"
+    },
+    {
+      "posted_at": "2026-03-27",
+      "run": "12:10 GMT",
+      "url": "https://x.com/XtrataLayers/status/2037506258161266906",
+      "content": "Most NFTs are just a pointer to a server that could go down. Xtrata inscriptions on Stacks are different — the data itself lives on Bitcoin L2. Art, music, code, entire apps. No IPFS, no Arweave, no hosting bill. Permanent from $0.003 STX. xtrata.xyz #Stacks #Bitcoin",
+      "angle": "builder-data-permanence"
+    },
+    {
+      "posted_at": "2026-03-28",
+      "run": "06:09 GMT",
+      "content": "AHV1 is Xtrata history — the original V1 mint contract, beautifully inefficient and about to disappear. By Jim.BTC (founder of Audionals), 74 of 100 remain at just 0.8 STX. A living fossil, sealed permanently on Bitcoin L2. xtrata.xyz/collection/ahv1 #Stacks #Bitcoin",
+      "angle": "collection-promo-ahv1-historical"
+    },
+    {
+      "posted_at": "2026-03-28",
+      "run": "12:08 GMT",
+      "url": "https://x.com/XtrataLayers/status/2037873630630035775",
+      "content": "Token #82 on Xtrata is a full interactive app running from inscriptions on Bitcoin L2 — recursive modules referencing each other, no server, no IPFS, no CDN. This is what truly permanent on-chain data looks like. Everything else is just a pointer. xtrata.xyz #Stacks",
+      "angle": "technical-recursive-on-chain-app"
+    },
+    {
+      "posted_at": "2026-03-30",
+      "run": "06:09 BST",
+      "url": "https://x.com/XtrataLayers/status/2038490654221672788",
+      "content": "DYLE0414 sold out. DYLE0415 is your second chance.\n\n173 pieces of generative art permanently inscribed on Bitcoin L2 by dyle.btc. No IPFS. No servers. Forever on-chain.\n\n4 STX (~$0.89) each. 171 remaining.\n\nxtrata.xyz/collection/dyle0415\n\n#Stacks #BitcoinNFT #GenerativeArt",
+      "angle": "collection-promo-dyle0415-scarcity-sequel"
+    }
+  ]
+}
