@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Xtrata — Choose Your Build Path</title>
+  <style>
+    :root {
+      --bg: #070b14;
+      --bg-2: #0c1220;
+      --panel: rgba(15, 23, 42, 0.72);
+      --panel-2: rgba(9, 15, 30, 0.88);
+      --line: rgba(120, 160, 255, 0.16);
+      --text: #edf3ff;
+      --muted: #9db0d1;
+      --accent: #5ce1e6;
+      --accent-2: #8b5cf6;
+      --accent-3: #16c784;
+      --warn: #f59e0b;
+      --shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+      --radius: 22px;
+      --max: 1280px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 10% 10%, rgba(92, 225, 230, 0.18), transparent 32%),
+        radial-gradient(circle at 90% 0%, rgba(139, 92, 246, 0.18), transparent 28%),
+        radial-gradient(circle at 50% 100%, rgba(22, 199, 132, 0.12), transparent 22%),
+        linear-gradient(180deg, #05070d 0%, #08101b 35%, #070b14 100%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    .wrap { width: min(calc(100% - 32px), var(--max)); margin: 0 auto; }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(16px);
+      background: rgba(7, 11, 20, 0.65);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .topbar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 16px 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .brand-mark {
+      width: 40px;
+      height: 40px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background:
+        linear-gradient(135deg, rgba(92,225,230,0.22), rgba(139,92,246,0.22)),
+        rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: var(--shadow);
+      font-size: 0.92rem;
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .nav a,
+    .ghost-btn,
+    .primary-btn,
+    .card-link,
+    .pill {
+      transition: 180ms ease;
+    }
+
+    .nav a {
+      color: var(--muted);
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-size: 0.95rem;
+    }
+
+    .nav a:hover { background: rgba(255,255,255,0.04); color: var(--text); }
+
+    .cta-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .primary-btn,
+    .ghost-btn,
+    .card-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      border-radius: 999px;
+      padding: 13px 18px;
+      font-weight: 650;
+      border: 1px solid transparent;
+      cursor: pointer;
+    }
+
+    .primary-btn {
+      background: linear-gradient(135deg, var(--accent), #6fb7ff 55%, var(--accent-2));
+      color: #06101d;
+      box-shadow: 0 12px 30px rgba(92, 225, 230, 0.25);
+    }
+
+    .primary-btn:hover { transform: translateY(-1px); filter: brightness(1.04); }
+
+    .ghost-btn {
+      background: rgba(255,255,255,0.03);
+      border-color: rgba(255,255,255,0.08);
+      color: var(--text);
+    }
+
+    .ghost-btn:hover,
+    .card-link:hover {
+      background: rgba(255,255,255,0.06);
+      transform: translateY(-1px);
+    }
+
+    .hero {
+      padding: 70px 0 44px;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 28px;
+      align-items: stretch;
+    }
+
+    .hero-card,
+    .panel,
+    .path-card,
+    .mini-card,
+    .feature-card,
+    .footer-card {
+      background: linear-gradient(180deg, rgba(18,28,49,0.76), rgba(8,13,25,0.92));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-card {
+      padding: 34px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-card::before {
+      content: "";
+      position: absolute;
+      inset: auto -80px -80px auto;
+      width: 260px;
+      height: 260px;
+      background: radial-gradient(circle, rgba(92,225,230,0.22), transparent 65%);
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #c9d8f3;
+      font-size: 0.88rem;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      font-size: clamp(2.4rem, 5vw, 4.6rem);
+      line-height: 0.96;
+      margin: 0 0 18px;
+      letter-spacing: -0.04em;
+      max-width: 10ch;
+    }
+
+    .lead {
+      font-size: 1.08rem;
+      line-height: 1.7;
+      color: var(--muted);
+      max-width: 62ch;
+      margin: 0 0 24px;
+    }
+
+    .hero-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .pill {
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #d8e4fb;
+      font-size: 0.92rem;
+    }
+
+    .hero-side {
+      display: grid;
+      gap: 18px;
+    }
+
+    .panel {
+      padding: 22px;
+    }
+
+    .panel h3,
+    .section-head h2,
+    .mini-card h3,
+    .feature-card h3,
+    .footer-card h3 {
+      margin: 0 0 10px;
+      letter-spacing: -0.02em;
+    }
+
+    .panel p,
+    .mini-card p,
+    .feature-card p,
+    .footer-card p,
+    .section-head p,
+    .path-card p,
+    .path-card li {
+      color: var(--muted);
+      line-height: 1.65;
+      margin: 0;
+    }
+
+    .stack {
+      display: grid;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .stack-item {
+      padding: 14px 16px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.035);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    section { padding: 26px 0; }
+
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 18px;
+    }
+
+    .section-head h2 {
+      font-size: clamp(1.6rem, 3vw, 2.5rem);
+      margin-bottom: 8px;
+    }
+
+    .paths-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .path-card {
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-height: 320px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .path-card::after {
+      content: "";
+      position: absolute;
+      right: -24px;
+      top: -24px;
+      width: 120px;
+      height: 120px;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(255,255,255,0.08), transparent 70%);
+      pointer-events: none;
+    }
+
+    .path-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .path-num {
+      min-width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      color: #06101d;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--accent), #d9fef6);
+    }
+
+    .path-card h3 { margin: 0 0 8px; font-size: 1.16rem; }
+
+    .tags { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .tag {
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      font-size: 0.8rem;
+      color: #dce7fc;
+    }
+
+    .bullet-list {
+      padding-left: 18px;
+      margin: 0;
+      display: grid;
+      gap: 8px;
+    }
+
+    .card-link {
+      margin-top: auto;
+      align-self: flex-start;
+      background: rgba(255,255,255,0.035);
+      border-color: rgba(255,255,255,0.08);
+      color: var(--text);
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    .mini-card,
+    .feature-card,
+    .footer-card {
+      padding: 22px;
+    }
+
+    .three-col {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .feature-card .icon {
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      margin-bottom: 14px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      font-size: 1.05rem;
+    }
+
+    .footer {
+      padding: 22px 0 52px;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 1.25fr 0.75fr;
+      gap: 18px;
+    }
+
+    .subtle {
+      color: #b3c3df;
+      font-size: 0.92rem;
+    }
+
+    @media (max-width: 1100px) {
+      .hero-grid,
+      .footer-grid,
+      .two-col,
+      .paths-grid,
+      .three-col {
+        grid-template-columns: 1fr;
+      }
+      h1 { max-width: 13ch; }
+    }
+
+    @media (max-width: 720px) {
+      .topbar-inner { align-items: flex-start; flex-direction: column; }
+      .hero { padding-top: 42px; }
+      .hero-card,
+      .panel,
+      .path-card,
+      .mini-card,
+      .feature-card,
+      .footer-card { padding: 18px; }
+      .section-head { align-items: flex-start; flex-direction: column; }
+      .cta-row { width: 100%; }
+      .primary-btn, .ghost-btn, .card-link { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="#top">
+        <div class="brand-mark">X</div>
+        <div>
+          <div>Xtrata</div>
+          <div class="subtle">Choose your build path</div>
+        </div>
+      </a>
+      <nav class="nav" aria-label="Primary navigation">
+        <a href="#paths">Build paths</a>
+        <a href="#why">Why Xtrata</a>
+        <a href="#payments">Payments</a>
+        <a href="#start">Start here</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div class="hero-card">
+          <div class="eyebrow">Permanent data • modular apps • composable storage</div>
+          <h1>What will you build with Xtrata?</h1>
+          <p class="lead">
+            A new gateway homepage for Xtrata: instead of trying to explain everything at once,
+            this page routes builders into clear tracks such as NFTs, vaults, apps, creator tools,
+            records, marketplaces, and payment-native products.
+          </p>
+          <div class="cta-row">
+            <a class="primary-btn" href="#paths">Explore build paths</a>
+            <a class="ghost-btn" href="#start">See starter modules</a>
+          </div>
+          <div class="hero-stats">
+            <span class="pill">Powered by STX</span>
+            <span class="pill">Compatible with USDCx</span>
+            <span class="pill">Compatible with sBTC</span>
+            <span class="pill">Designed for LAB builders</span>
+          </div>
+        </div>
+
+        <div class="hero-side">
+          <div class="panel">
+            <h3>Homepage logic</h3>
+            <p>
+              Keep the first page simple. Let people self-select their route, then give each route
+              its own dedicated landing page, examples, architecture notes, and build template.
+            </p>
+            <div class="stack">
+              <div class="stack-item"><strong>Step 1:</strong> Choose a pathway</div>
+              <div class="stack-item"><strong>Step 2:</strong> Read the dedicated module page</div>
+              <div class="stack-item"><strong>Step 3:</strong> Start from a template or demo</div>
+            </div>
+          </div>
+          <div class="panel">
+            <h3>Suggested builder framing</h3>
+            <p>
+              One builder can own one flagship module. Ten builders can create ten clear examples
+              of what Xtrata enables, which then makes the whole protocol easier to understand.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="paths">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <h2>10 clear paths into the Xtrata ecosystem</h2>
+            <p>Each card below can link to its own dedicated homepage, documentation route, and starter template.</p>
+          </div>
+          <a class="ghost-btn" href="#start">View suggested site structure</a>
+        </div>
+
+        <div class="paths-grid">
+          <article class="path-card">
+            <div class="path-top">
+              <div>
+                <h3>NFTs & Collections</h3>
+                <p>Launch collectible drops, generative art, music editions, and recursive collections with deeper on-chain structure.</p>
+              </div>
+              <div class="path-num">01</div>
+            </div>
+            <div class="tags">
+              <span class="tag">Artists</span>
+              <span class="tag">Collectors</span>
+              <span class="tag">Launch tools</span>
+            </div>
+            <ul class="bullet-list">
+              <li>Generative collections</li>
+              <li>Music and media NFTs</li>
+              <li>Dynamic metadata systems</li>
+            </ul>
+            <a class="card-link" href="/modules/nfts.html">Open NFT module</a>
+          </article>
+
+          <article class="path-card">
+            <div class="path-top">
+              <div>
+                <h3>On-Chain Vaults</h3>
+                <p>Give users or organisations a permanent place to store media, records, artwork, source files, and historical data.</p>
+              </div>
+              <div class="path-num">02</div>
+            </div>
+            <div class="tags">
+              <span class="tag">Archives</span>
+              <span class="tag">Media</span>
+              <span class="tag">Permanent storage</span>
+            </div>
+            <ul class="bullet-list">
+              <li>Creator vaults</li>
+              <li>Community archives</li>
+              <li>Proof-of-history layers</li>
+            </ul>
+            <a class="card-link" href="/modules/vaults.html">Open vault module</a>
+          </article>
+
+          <article class="path-card">
+            <div class="path-top">
+              <div>
+                <h3>On-Chain Apps</h3>
+                <p>Build websites, tools, dashboards, and small applications that use Xtrata as their permanent data and asset layer.</p>
+              </div>
+              <div class="path-num">03</div>
+            </div>
+            <div class="tags">
+              <span class="tag">Developers</span>
+              <span class="tag">App templates</span>
+              <span class="tag">No backend mindset</span>
+            </div>
+            <ul class="bullet-list">
+              <li>Microsites and tools</li>
+              <li>Data-driven dashboards</li>
+              <li>Forkable app modules</li>
+            </ul>
+            <a class="card-link" href="/modules/apps.html">Open app module</a>
+          </article>
+
+          <article class="path-card">
+            <div class="path-top">
+              <div>
+                <h3>Creator Platforms</h3>
+                <p>Help musicians, artists, publishers, and filmmakers publish, track, version, and monetise creative work.</p>
+              </div>
+              <div class="path-num">04</div>
+            </div>
+            <div class="tags">
+              <span class="tag">Music</span>
+              <span class="tag">Publishing</span>
+              <span class="tag">Attribution</span>
+            </div>
+            <ul class="bullet-list">
+              <li>Remix registries</li>
+              <li>Release platforms</li>
+              <li>Rights-history records</li>
+            </ul>
+            <a class="card-link" href="/modules/creators.html">Open creator module</a>
+          </article>
+
+          <article class="path-card">
+            <div class="path-top">
+              <div>
+                <h3>Marketplaces</h3>
+                <p>Build commerce layers where listings, media, provenance, and product data live permanently and transparently.</p>
+              </div>
+              <div class="path-num">05</div>
+            </div>
+            <div class="tags">
+              <span class="tag">Commerce</span>
+              <span class="tag">Licensing</span>
+              <span class="tag">Digital goods</span>
+            </div>
+            <ul class="bullet-list">
+              <li>Asset marketplaces</li>
+              <li>Licensing directories</li>
+              <li>Digital storefronts</li>
+            </ul>
+            <a class="card-link" href="/modules/marketplaces.html">Open marketplace module</a>
+          </article>
+
+          <article class="path-card">
+            <div class="path-top">
+              <div>
+                <h3>Membership & Access</h3>
+                <p>Create token-gated communities, memberships, event passes, contributor systems, and premium resource libraries.</p>
+              </div>
+              <div class="path-num">06</div>
+            </div>
+            <div class="tags">
+              <span class="tag">Communities</span>
+              <span class="tag">Passes</span>
+              <span class="tag">Token-gating</span>
+            </div>
+            <ul class="bullet-list">
+              <li>Event access</li>
+              <li>Member vaults</li>
+              <li>Reputation layers</li>
+            </ul>
+            <a class="card-link" href="/modules/membership.html">Open membership module</a>
+          </article>
+
+          <article class="path-card">
+            <div class="path-top">
+              <div>
+                <h3>Proof & Certificates</h3>
+                <p>Use Xtrata as a permanent record layer for credentials, timestamps, provenance, milestones, and public attestations.</p>
+              </div>
+              <div class="path-num">07</div>
+            </div>
+            <div class="tags">
+              <span class="tag">Education</span>
+              <span class="tag">Records</span>
+              <span class="tag">Verification</span>
+            </div>
+            <ul class="bullet-list">
+              <li>Learning credentials</li>
+              <li>Project proofs</li>
+              <li>Artist provenance</li>
+            </ul>
+            <a class="card-link" href="/modules/proof.html">Open proof module</a>
+          </article>
+
+          <article class="path-card">
+            <div class="path-top">
+              <div>
+                <h3>Data Products</h3>
+                <p>Publish structured datasets, indexes, local knowledge systems, and graph-like references that others can reuse.</p>
+              </div>
+              <div class="path-num">08</div>
+            </div>
+            <div class="tags">
+              <span class="tag">Indexes</span>
+              <span class="tag">Open data</span>
+              <span class="tag">Research</span>
+            </div>
+            <ul class="bullet-list">
+              <li>Knowledge graphs</li>
+              <li>Regional datasets</li>
+              <li>On-chain references</li>
+            </ul>
+            <a class="card-link" href="/modules/data.html">Open data module</a>
+          </article>
+
+          <article class="path-card">
+            <div class="path-top">
+              <div>
+                <h3>Games & Worlds</h3>
+                <p>Store and compose interactive assets, game items, maps, stories, and digital objects that persist across experiences.</p>
+              </div>
+              <div class="path-num">09</div>
+            </div>
+            <div class="tags">
+              <span class="tag">Game dev</span>
+              <span class="tag">Assets</span>
+              <span class="tag">Interactive</span>
+            </div>
+            <ul class="bullet-list">
+              <li>Collectible items</li>
+              <li>Story modules</li>
+              <li>Playable art systems</li>
+            </ul>
+            <a class="card-link" href="/modules/games.html">Open games module</a>
+          </article>
+
+          <article class="path-card">
+            <div class="path-top">
+              <div>
+                <h3>Payment-Native Apps</h3>
+                <p>Combine permanent on-chain data with native monetisation using STX, USDCx, and sBTC for access, commerce, and rewards.</p>
+              </div>
+              <div class="path-num">10</div>
+            </div>
+            <div class="tags">
+              <span class="tag">Revenue</span>
+              <span class="tag">Micropayments</span>
+              <span class="tag">Stablecoins</span>
+            </div>
+            <ul class="bullet-list">
+              <li>Paid archives</li>
+              <li>Premium APIs</li>
+              <li>Pay-to-publish models</li>
+            </ul>
+            <a class="card-link" href="/modules/payments.html">Open payments module</a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="why">
+      <div class="wrap two-col">
+        <div class="mini-card">
+          <h3>Why this homepage structure works</h3>
+          <p>
+            The protocol is broad, but the entry point should be narrow. This layout turns Xtrata into a choice-driven experience instead of an everything-at-once explanation.
+          </p>
+          <div class="stack">
+            <div class="stack-item">Reduces confusion for new visitors</div>
+            <div class="stack-item">Makes each builder track legible</div>
+            <div class="stack-item">Creates clear pages LAB builders can own</div>
+          </div>
+        </div>
+        <div class="mini-card" id="payments">
+          <h3>How the payment layer fits</h3>
+          <p>
+            Xtrata can anchor the permanent data layer while STX, USDCx, and sBTC support value flow. That means builders can think in terms of storage + access + monetisation from day one.
+          </p>
+          <div class="stack">
+            <div class="stack-item"><strong>STX:</strong> native ecosystem payments and contracts</div>
+            <div class="stack-item"><strong>USDCx:</strong> stable pricing and settlement</div>
+            <div class="stack-item"><strong>sBTC:</strong> Bitcoin-native value routes</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <h2>What each dedicated module page could include</h2>
+            <p>A repeatable structure makes every pathway easier to launch and easier to understand.</p>
+          </div>
+        </div>
+        <div class="three-col">
+          <article class="feature-card">
+            <div class="icon">01</div>
+            <h3>Clear use case intro</h3>
+            <p>Explain the pathway in plain language, then show why Xtrata is a fit for this specific job.</p>
+          </article>
+          <article class="feature-card">
+            <div class="icon">02</div>
+            <h3>Examples and starter builds</h3>
+            <p>Show 3 to 6 ideas, one flagship example, and a suggested starter architecture.</p>
+          </article>
+          <article class="feature-card">
+            <div class="icon">03</div>
+            <h3>Launch-ready next step</h3>
+            <p>Link to a demo, repo template, contract flow, or builder onboarding route.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="start">
+      <div class="wrap footer-grid">
+        <div class="footer-card">
+          <h3>Suggested first rollout</h3>
+          <p>
+            Start with five dedicated routes first: NFTs, Vaults, On-Chain Apps, Creator Platforms, and Payment-Native Apps. Then expand into the other five once the structure is proven.
+          </p>
+          <div class="hero-stats" style="margin-top:16px;">
+            <span class="pill">NFTs</span>
+            <span class="pill">Vaults</span>
+            <span class="pill">Apps</span>
+            <span class="pill">Creators</span>
+            <span class="pill">Payments</span>
+          </div>
+        </div>
+        <div class="footer-card">
+          <h3>Mock-up notes</h3>
+          <p>
+            This prototype is designed as a visual and structural mock-up: dark, futuristic, modular, and easier to navigate than a single all-purpose landing page.
+          </p>
+          <div class="cta-row" style="margin-top:16px;">
+            <a class="primary-btn" href="#top">Back to top</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
