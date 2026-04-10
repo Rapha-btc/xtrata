@@ -113,6 +113,11 @@ const LAB_VALUE_CARDS: readonly LabValueCard[] = [
     title: 'Monetizable without platform lock-in',
     description:
       'Ownership, payment rails, and reusable on-chain assets create clearer routes to paid products, commercial tools, and creative economies.'
+  },
+  {
+    title: 'Append-only memory and identity',
+    description:
+      'Agent journals, project logs, and public system histories can extend over time without silently rewriting the record underneath them.'
   }
 ] as const;
 
@@ -170,6 +175,16 @@ const LAB_TRACK_CARDS: readonly LabTrackCard[] = [
     whyXtrata:
       'Xtrata is not only for content storage. It can hold the reusable modules and asset graphs behind ambitious on-chain products.',
     outcome: 'Compounds ecosystem output instead of funding one-off demos.'
+  },
+  {
+    title: 'Agent memory and autonomous journals',
+    labFit: 'Infrastructure',
+    description:
+      'Public journals, execution traces, memory entries, and linked artifacts for agents that publish state over time.',
+    whyXtrata:
+      'Each entry can be inscribed as append-only history with inspectable dependencies, making agent identity and state transitions easier to audit.',
+    outcome:
+      'Useful for autonomous creators, research agents, public accountability logs, and AI systems that need durable memory.'
   }
 ] as const;
 
@@ -221,6 +236,16 @@ const LAB_IDEA_CARDS: readonly LabIdeaCard[] = [
       'Create reusable templates for storefronts, certificate issuers, creator archives, and community directories.',
     xtrataFit: 'Shared modules are exactly where recursive composition compounds ecosystem output.',
     sprintScope: 'Sprint scope: one template, example data, and a fork-ready deployment guide.'
+  },
+  {
+    title: 'Public Agent Journal',
+    tag: 'Infrastructure',
+    summary:
+      'Publish agent entries, supporting artifacts, and linked memory references so a public viewer can inspect how a system evolves over time.',
+    xtrataFit:
+      'Append-only entries plus recursive dependencies create auditable memory chains instead of opaque state files that can be silently replaced.',
+    sprintScope:
+      'Sprint scope: journal publisher, linked entry format, and viewer flow for navigating dependencies and previous states.'
   }
 ] as const;
 
@@ -299,6 +324,13 @@ const LAB_RESOURCE_LINKS: readonly LabResourceLink[] = [
       'Use the in-app docs module for protocol concepts, workflows, and builder-facing explanations.',
     href: `${WORKSPACE_PATH}#docs`,
     cta: 'Open docs'
+  },
+  {
+    title: 'Inspect live inscriptions in Viewer',
+    description:
+      'Browse real public outputs, open token relationships, and study linked dependencies in the live viewer experience.',
+    href: `${WORKSPACE_PATH}#collection-viewer`,
+    cta: 'Open viewer'
   },
   {
     title: 'Launch artist and collection tooling',
@@ -394,6 +426,7 @@ export default function LabLandingPage() {
               <span className="lab-page__signal-pill">Recursive composition</span>
               <span className="lab-page__signal-pill">SDK-ready workflows</span>
               <span className="lab-page__signal-pill">Built for real products</span>
+              <span className="lab-page__signal-pill">Agent memory chains</span>
             </div>
             <div className="lab-page__hero-actions">
               <a className="button" href={WORKSPACE_PATH}>
