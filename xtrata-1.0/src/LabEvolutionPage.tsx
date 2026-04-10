@@ -590,7 +590,7 @@ export default function LabEvolutionPage() {
         <section className="panel lab-page__cta" aria-label="Evolution page closing call to action">
           <div className="lab-page__cta-copy">
             <span className="lab-page__section-kicker">Next step</span>
-            <h2>Use the framing, then move builders into the live Xtrata workflow.</h2>
+            <h2></h2>
             <p>
               This page explains why Xtrata exists. The workspace shows how the protocol behaves
               in practice, from inscription flow to viewer resolution to market-ready product
