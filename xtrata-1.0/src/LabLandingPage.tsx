@@ -77,19 +77,19 @@ const LAB_PILLARS: readonly LabPillar[] = [
     eyebrow: 'Learn',
     title: 'Academy',
     description:
-      'Use a real protocol primitive, not a toy demo. Xtrata gives LAB builders a concrete way to learn how permanent Bitcoin-secured apps are structured on Stacks.'
+      'Use a real protocol primitive, not a toy demo. Xtrata gives LAB builders a concrete stack they can learn, inspect, and carry into cohorts, workshops, and real delivery work.'
   },
   {
     eyebrow: 'Turn ideas into products',
     title: 'Incubator',
     description:
-      'Move from experiments to durable businesses. Xtrata is strongest when products need records, files, media, templates, or reusable app modules to stay available and verifiable.'
+      'Move from experiments to durable businesses. Xtrata is strongest when products need records, files, media, templates, or reusable app modules while shipping on a stable production rail.'
   },
   {
     eyebrow: 'Leave infrastructure behind',
     title: 'Tooling and infrastructure',
     description:
-      'Build shared datasets, component libraries, archives, creator primitives, and developer templates that other LAB teams can fork and extend.'
+      'Build shared datasets, component libraries, archives, creator primitives, and developer templates that other LAB teams can fork, localize, and deploy.'
   }
 ] as const;
 
@@ -102,12 +102,12 @@ const LAB_VALUE_CARDS: readonly LabValueCard[] = [
   {
     title: 'Verifiable and reconstructable',
     description:
-      'Xtrata inscriptions are chunked, sealed, and reconstructable, making provenance and long-term integrity part of the product itself.'
+      'Xtrata inscriptions are chunked, sealed, and reconstructable, making provenance, inspectability, and long-term integrity part of the product itself.'
   },
   {
     title: 'Composable across teams',
     description:
-      'Recursive composition makes it possible to build on previous work instead of rebuilding the same primitives for every hackathon or startup.'
+      'Recursive composition makes it possible to build on previous work, reuse proven templates, and localize delivery instead of rebuilding the same primitives for every sprint or startup.'
   },
   {
     title: 'Monetizable without platform lock-in',
@@ -117,7 +117,7 @@ const LAB_VALUE_CARDS: readonly LabValueCard[] = [
   {
     title: 'Append-only memory and identity',
     description:
-      'Agent journals, project logs, and public system histories can extend over time without silently rewriting the record underneath them.'
+      'Agent journals, project logs, pilot histories, and public system records can extend over time without silently rewriting the record underneath them.'
   }
 ] as const;
 
@@ -129,7 +129,8 @@ const LAB_TRACK_CARDS: readonly LabTrackCard[] = [
       'Certificates, learner portfolios, bootcamp records, and proof-of-skill artifacts that can be verified globally.',
     whyXtrata:
       'The value is in durable records, supporting artifacts, and a clear history of who issued what.',
-    outcome: 'Useful for academies, universities, talent pipelines, and scholarship programs.'
+    outcome:
+      'Useful for academies, universities, talent pipelines, scholarship programs, and cohort-based delivery.'
   },
   {
     title: 'Business identity and reputation',
@@ -138,13 +139,14 @@ const LAB_TRACK_CARDS: readonly LabTrackCard[] = [
       'Portable trust layers for micro-businesses, merchants, cooperatives, and service providers.',
     whyXtrata:
       'Profiles, references, delivery proofs, and supporting media can remain available beyond any single app or marketplace.',
-    outcome: 'Strong fit for local commerce, informal economies, and startup-facing financial tooling.'
+    outcome:
+      'Strong fit for local commerce, informal economies, institution-facing services, and startup-facing financial tooling.'
   },
   {
     title: 'Creator tools and cultural archives',
     labFit: 'Infrastructure',
     description:
-      'Reusable music primitives, visual packs, design systems, archives, and remixable media products.',
+      'Reusable music primitives, instruments, plug-ins, BVSTs, visual packs, design systems, archives, and remixable media products.',
     whyXtrata:
       'Recursive assets and permanent storage let builders create creative primitives that can be reused, cited, and monetized.',
     outcome: 'High relevance for African music, art, fashion, film, and digital culture ecosystems.'
@@ -165,16 +167,18 @@ const LAB_TRACK_CARDS: readonly LabTrackCard[] = [
       'Community directories, grant maps, service registries, local data archives, and lightweight civic record systems.',
     whyXtrata:
       'These products gain value when records are forkable, attributable, and difficult to erase or silently alter.',
-    outcome: 'Best for builder communities, social impact tooling, and shared regional infrastructure.'
+    outcome:
+      'Best for builder communities, social impact tooling, local service programs, and shared regional infrastructure.'
   },
   {
     title: 'Fully on-chain apps and templates',
     labFit: 'Infrastructure',
     description:
-      'Recursive frontends, SDK wrappers, component libraries, and protocol-native starter kits for the next LAB team.',
+      'Recursive frontends, SDK wrappers, component libraries, and protocol-native starter kits for the next LAB team, workshop, or rollout.',
     whyXtrata:
       'Xtrata is not only for content storage. It can hold the reusable modules and asset graphs behind ambitious on-chain products.',
-    outcome: 'Compounds ecosystem output instead of funding one-off demos.'
+    outcome:
+      'Compounds ecosystem output by giving new teams something they can adapt instead of rebuilding from scratch.'
   },
   {
     title: 'Agent memory and autonomous journals',
@@ -184,7 +188,7 @@ const LAB_TRACK_CARDS: readonly LabTrackCard[] = [
     whyXtrata:
       'Each entry can be inscribed as append-only history with inspectable dependencies, making agent identity and state transitions easier to audit.',
     outcome:
-      'Useful for autonomous creators, research agents, public accountability logs, and AI systems that need durable memory.'
+      'Useful for autonomous creators, research agents, public accountability logs, and AI systems that need durable memory across real deployments.'
   }
 ] as const;
 
@@ -195,7 +199,7 @@ const LAB_IDEA_CARDS: readonly LabIdeaCard[] = [
     summary:
       'Issue bootcamp certificates with supporting work samples, cohort metadata, and verifiable proof of completion.',
     xtrataFit: 'Permanent records plus recursive links between coursework, student output, and final credential.',
-    sprintScope: 'Weekend sprint: issuer dashboard, learner page, certificate viewer.'
+    sprintScope: 'Weekend sprint: issuer dashboard, learner page, certificate viewer, and cohort handoff.'
   },
   {
     title: 'Merchant Reputation Ledger',
@@ -217,9 +221,11 @@ const LAB_IDEA_CARDS: readonly LabIdeaCard[] = [
     title: 'Music Primitive Packs',
     tag: 'Infrastructure',
     summary:
-      'Publish stems, loops, presets, and visual packs that other creators can build from and credit upstream.',
-    xtrataFit: 'Recursive media makes re-use and provenance a first-class part of the product.',
-    sprintScope: 'Sprint scope: primitive pack viewer, remix links, creator payout hooks.'
+      'Publish stems, loops, presets, instruments, plug-ins, BVSTs, and visual packs that other creators can build from and credit upstream.',
+    xtrataFit:
+      'Recursive media and reusable tool assets make re-use, provenance, and distribution a first-class part of the product.',
+    sprintScope:
+      'Sprint scope: primitive pack viewer, instrument or plug-in pages, remix links, and creator payout hooks.'
   },
   {
     title: 'Paid Knowledge Posts',
@@ -233,15 +239,16 @@ const LAB_IDEA_CARDS: readonly LabIdeaCard[] = [
     title: 'LAB Starter Kit Library',
     tag: 'Infrastructure',
     summary:
-      'Create reusable templates for storefronts, certificate issuers, creator archives, and community directories.',
+      'Create reusable templates for storefronts, certificate issuers, creator archives, and community directories that new teams can adapt quickly.',
     xtrataFit: 'Shared modules are exactly where recursive composition compounds ecosystem output.',
-    sprintScope: 'Sprint scope: one template, example data, and a fork-ready deployment guide.'
+    sprintScope:
+      'Sprint scope: one template, example data, and a fork-ready guide for onboarding, implementation, or rollout.'
   },
   {
     title: 'Public Agent Journal',
     tag: 'Infrastructure',
     summary:
-      'Publish agent entries, supporting artifacts, and linked memory references so a public viewer can inspect how a system evolves over time.',
+      'Publish agent entries, supporting artifacts, and linked memory references so a public viewer can inspect how a system evolves over time and across releases.',
     xtrataFit:
       'Append-only entries plus recursive dependencies create auditable memory chains instead of opaque state files that can be silently replaced.',
     sprintScope:
@@ -255,7 +262,7 @@ const LAB_PATH_CARDS: readonly LabPathCard[] = [
     title: 'Ship one permanent record',
     timeline: '1 to 2 days',
     description:
-      'Start with a project where permanence is the product advantage: a knowledge post, a builder profile, or a certificate issuer.',
+      'Start with a project where permanence is the product advantage: a knowledge post, a builder profile, a certificate issuer, or a simple pilot record.',
     modules: ['Wallet + contract setup', 'Basic inscription flow', 'Simple public page']
   },
   {
@@ -263,7 +270,7 @@ const LAB_PATH_CARDS: readonly LabPathCard[] = [
     title: 'Launch a product surface',
     timeline: '3 to 7 days',
     description:
-      'Build a merchant page, a paid content flow, or a community directory that combines app logic with Xtrata-backed records and assets.',
+      'Build a merchant page, a paid content flow, or a community directory that combines app logic with Xtrata-backed records and assets in a pilot-ready surface.',
     modules: ['App state + records', 'Payments or access control', 'Reusable content model']
   },
   {
@@ -271,7 +278,7 @@ const LAB_PATH_CARDS: readonly LabPathCard[] = [
     title: 'Publish infrastructure others can fork',
     timeline: '1 to 3 weeks',
     description:
-      'Create a component library, recursive media system, or fully on-chain product template that other LAB teams can extend.',
+      'Create a component library, recursive media system, or fully on-chain product template that other LAB teams, operators, or institutions can extend.',
     modules: ['Recursive assets', 'SDK-based workflows', 'Template or ecosystem-facing packaging']
   }
 ] as const;
@@ -281,7 +288,7 @@ const LAB_FLOW_STEPS: readonly LabFlowStep[] = [
     step: '01',
     title: 'Choose a locally relevant product',
     description:
-      'Start with a real use case: credentials, commerce, archives, directories, creator tools, or community infrastructure.'
+      'Start with a real use case: credentials, commerce, archives, directories, creator tools, community infrastructure, or a concrete pilot.'
   },
   {
     step: '02',
@@ -299,7 +306,7 @@ const LAB_FLOW_STEPS: readonly LabFlowStep[] = [
     step: '04',
     title: 'Ship something forkable',
     description:
-      'Aim for outputs other LAB teams can learn from, adapt, or build on instead of one isolated demo.'
+      'Aim for outputs other LAB teams can learn from, adapt, deploy, or build on instead of one isolated demo.'
   }
 ] as const;
 
@@ -307,7 +314,7 @@ const LAB_RESOURCE_LINKS: readonly LabResourceLink[] = [
   {
     title: 'Open the Xtrata workspace',
     description:
-      'Use the live app to inspect existing inscriptions, try the mint flow, and understand the protocol surface.',
+      'Use the live app to inspect existing inscriptions, try the mint flow, and understand the protocol surface teams can learn from and build on.',
     href: WORKSPACE_PATH,
     cta: 'Open workspace'
   },
@@ -321,21 +328,21 @@ const LAB_RESOURCE_LINKS: readonly LabResourceLink[] = [
   {
     title: 'Read the public docs module',
     description:
-      'Use the in-app docs module for protocol concepts, workflows, and builder-facing explanations.',
+      'Use the in-app docs module for protocol concepts, workflows, and builder-facing explanations that support onboarding and implementation.',
     href: `${WORKSPACE_PATH}#docs`,
     cta: 'Open docs'
   },
   {
     title: 'Inspect live inscriptions in Viewer',
     description:
-      'Browse real public outputs, open token relationships, and study linked dependencies in the live viewer experience.',
+      'Browse real public outputs, open token relationships, and study linked dependencies in the live viewer experience builders can reference in real deployments.',
     href: `${WORKSPACE_PATH}#collection-viewer`,
     cta: 'Open viewer'
   },
   {
     title: 'Launch artist and collection tooling',
     description:
-      'For curated launches and collection operations, the allowlisted manage portal handles deploy and publish workflows.',
+      'For curated launches, collection operations, and more structured rollouts, the allowlisted manage portal handles deploy and publish workflows.',
     href: MANAGE_PATH,
     cta: 'Open manage'
   }
@@ -418,8 +425,8 @@ export default function LabLandingPage() {
             <h1 className="lab-page__headline">Build permanent apps on Bitcoin-secured rails.</h1>
             <p className="lab-page__subline">
               Let Africa Build is creating the builder pipeline. Xtrata gives that pipeline a
-              permanent, composable data layer on Stacks for records, media, modules, datasets,
-              and products that should stay verifiable and reusable.
+              reusable builder stack and stable protocol rail on Stacks for records, media,
+              modules, datasets, and products that should stay verifiable and reusable.
             </p>
             <div className="lab-page__signal-row">
               <span className="lab-page__signal-pill">Permanent storage</span>
@@ -444,7 +451,7 @@ export default function LabLandingPage() {
               <strong>Stacks for execution. Xtrata for memory.</strong>
               <p>
                 Use contracts for business logic. Use Xtrata when the data itself should last,
-                travel, and be composable across products.
+                travel, stay inspectable, and be composable across products.
               </p>
             </div>
             <div className="lab-page__hero-panel-grid">
@@ -469,7 +476,8 @@ export default function LabLandingPage() {
             </div>
             <p>
               The strongest LAB projects will not look like generic crypto demos. They will look
-              like products that solve local problems and leave reusable infrastructure behind.
+              like products that solve local problems, survive beyond one cohort or pilot, and
+              leave reusable infrastructure behind.
             </p>
           </div>
           <div className="lab-page__value-grid">
@@ -500,14 +508,14 @@ export default function LabLandingPage() {
                 <span className="lab-page__stack-index">03</span>
                 <div>
                   <strong>Xtrata</strong>
-                  <p>Permanent data, media, records, component libraries, and reusable modules.</p>
+                  <p>Reusable builder stack, permanent data, component libraries, and durable modules.</p>
                 </div>
               </div>
               <div className="lab-page__stack-layer">
                 <span className="lab-page__stack-index">04</span>
                 <div>
                   <strong>LAB products</strong>
-                  <p>Credentials, commerce, creator primitives, local maps, archives, and tools.</p>
+                  <p>Credentials, commerce, creator primitives, local maps, archives, pilots, and tools.</p>
                 </div>
               </div>
             </div>
@@ -518,7 +526,7 @@ export default function LabLandingPage() {
                 <li>The records should remain accessible and verifiable.</li>
                 <li>The assets should be reusable across multiple apps or teams.</li>
                 <li>The product benefits from provenance, permanence, or remixability.</li>
-                <li>You want builders to fork the output instead of starting from zero.</li>
+                <li>You want builders to inspect and fork the output instead of starting from zero.</li>
               </ul>
             </aside>
           </div>
@@ -622,7 +630,8 @@ export default function LabLandingPage() {
             </div>
             <p>
               The page should not only inspire. It should help founders and new builders picture
-              the actual workflow from first prototype to something another team can fork.
+              the actual workflow from first prototype to something another team can fork, teach,
+              or carry into delivery.
             </p>
           </div>
           <div className="lab-page__flow-shell">
@@ -660,7 +669,8 @@ export default function LabLandingPage() {
             <p>
               LAB is building a generation of founders and protocol-native product teams. The most
               valuable thing they can leave behind is not a one-week demo, but an artifact,
-              template, dataset, tool, or app module that stays useful after the sprint ends.
+              template, dataset, tool, delivery pattern, or app module that stays useful after the
+              sprint ends.
             </p>
           </div>
           <div className="lab-page__cta-actions">
