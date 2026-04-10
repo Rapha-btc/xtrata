@@ -332,7 +332,7 @@ const LAB_RESOURCE_LINKS: readonly LabResourceLink[] = [
     description:
       'If you want to feel the protocol quickly, begin by inscribing a file and seeing how the flow works end to end.',
     href: `${WORKSPACE_PATH}#inscription`,
-    cta: 'Go to inscription tool'
+    cta: 'Go to inscription interface'
   },
   {
     title: 'Read the public docs module',
