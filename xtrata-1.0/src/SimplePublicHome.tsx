@@ -118,7 +118,12 @@ type LiveCollectionCard = {
   pricing: CollectionMintPricingMetadata;
 };
 
-type SimpleHomeSectionKey = 'live-drops' | 'home-viewer' | 'market' | 'mint' | 'starter-docs';
+type SimpleHomeSectionKey =
+  | 'live-drops'
+  | 'home-viewer'
+  | 'market'
+  | 'inscribe'
+  | 'starter-docs';
 
 const toSectionKeyFromHash = (hash: string): SimpleHomeSectionKey | null => {
   const normalized = hash.replace(/^#/, '').trim().toLowerCase();
@@ -126,10 +131,12 @@ const toSectionKeyFromHash = (hash: string): SimpleHomeSectionKey | null => {
     normalized === 'live-drops' ||
     normalized === 'home-viewer' ||
     normalized === 'market' ||
-    normalized === 'mint' ||
     normalized === 'starter-docs'
   ) {
     return normalized;
+  }
+  if (normalized === 'mint' || normalized === 'inscribe') {
+    return 'inscribe';
   }
   return null;
 };
@@ -866,7 +873,7 @@ export default function SimplePublicHome() {
     if (key === 'market') {
       setMarketCollapsed(false);
     }
-    if (key === 'mint') {
+    if (key === 'inscribe') {
       setMintCollapsed(false);
     }
     if (key === 'starter-docs') {
@@ -915,7 +922,7 @@ export default function SimplePublicHome() {
       if (section === 'market') {
         setMarketCollapsed(false);
       }
-      if (section === 'mint') {
+      if (section === 'inscribe') {
         setMintCollapsed(false);
       }
       if (section === 'starter-docs') {
@@ -1036,7 +1043,11 @@ export default function SimplePublicHome() {
 
           <div className="simple-home__tools">
             <div className="simple-home__actions">
-              <a className="button" href="#mint" onClick={(event) => handleNavJump(event, 'mint')}>
+              <a
+                className="button"
+                href="#inscribe"
+                onClick={(event) => handleNavJump(event, 'inscribe')}
+              >
                 Inscribe
               </a>
               <a

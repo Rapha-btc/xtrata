@@ -133,7 +133,7 @@ const SECTION_KEYS = [
   'admin-diagnostics',
   'campaign-console',
   'collection-mint',
-  'mint',
+  'inscribe',
   'collection-viewer',
   'market',
   'commerce',
@@ -1270,10 +1270,10 @@ export default function App() {
                   </a>
                   <a
                     className="button button--ghost app__nav-link"
-                    href="#mint"
-                    onClick={(event) => handleNavJump(event, 'mint')}
+                    href="#inscribe"
+                    onClick={(event) => handleNavJump(event, 'inscribe')}
                   >
-                    Mint
+                    Inscribe
                   </a>
                 </div>
               </section>
@@ -1756,8 +1756,8 @@ export default function App() {
           contract={selectedContract}
           walletSession={walletSession}
           onInscriptionSealed={handleInscriptionSealed}
-          collapsed={collapsedSections.mint}
-          onToggleCollapse={() => toggleSection('mint')}
+          collapsed={collapsedSections.inscribe}
+          onToggleCollapse={() => toggleSection('inscribe')}
           parentDraftIds={parentDraftIds}
           onClearParentDrafts={handleClearParentDrafts}
         />

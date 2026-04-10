@@ -2508,8 +2508,9 @@ export default function MintScreen(props: MintScreenProps) {
   return (
     <section
       className={`panel mint app-section app-section--fit${props.collapsed ? ' panel--collapsed' : ''}`}
-      id="mint"
+      id="inscribe"
     >
+      <span id="mint" aria-hidden="true" />
       <div className="panel__header">
         <div>
           <div className="info-heading">

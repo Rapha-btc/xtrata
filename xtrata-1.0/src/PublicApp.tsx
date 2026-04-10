@@ -61,7 +61,7 @@ const SECTION_KEYS = [
   'wallet-session',
   'active-contract',
   'docs',
-  'mint',
+  'inscribe',
   'market',
   'commerce',
   'collection-viewer',
@@ -74,9 +74,12 @@ const LIVE_MINT_ERROR_BACKOFF_MS = 5 * 60_000;
 const LIVE_MINT_RATE_LIMIT_BACKOFF_MS = 15 * 60_000;
 
 const toSectionKeyFromHash = (hash: string): SectionKey | null => {
-  const normalized = hash.replace(/^#/, '').trim();
+  const normalized = hash.replace(/^#/, '').trim().toLowerCase();
   if (!normalized) {
     return null;
+  }
+  if (normalized === 'mint') {
+    return 'inscribe';
   }
   return SECTION_KEYS.includes(normalized as SectionKey)
     ? (normalized as SectionKey)
@@ -1224,16 +1227,16 @@ const getDocDetailToggleCopy = (doc: DocSection | null): DocDetailToggleCopy => 
 };
 
 const DOC_MODULE_JUMPS: Record<string, DocModuleJump> = {
-  overview: { section: 'mint', label: 'Start in Mint' },
-  inscriptions: { section: 'mint', label: 'Open Mint flow' },
+  overview: { section: 'inscribe', label: 'Start in Inscribe' },
+  inscriptions: { section: 'inscribe', label: 'Open inscribe flow' },
   ids: { section: 'collection-viewer', label: 'Look at Viewer' },
-  'minting-modes': { section: 'mint', label: 'Go to Mint' },
-  'artist-collection-launch': { section: 'mint', label: 'Open mint tools' },
+  'minting-modes': { section: 'inscribe', label: 'Go to Inscribe' },
+  'artist-collection-launch': { section: 'inscribe', label: 'Open inscribe tools' },
   'sdk-tooling': { section: 'wallet-session', label: 'Open wallet setup' },
   'ai-agent-training': { section: 'wallet-session', label: 'Open wallet setup' },
   market: { section: 'market', label: 'Open Market' },
   standards: { section: 'collection-viewer', label: 'Open Viewer' },
-  fees: { section: 'mint', label: 'See fees in Mint' },
+  fees: { section: 'inscribe', label: 'See fees in Inscribe' },
   admin: { section: 'active-contract', label: 'Open contract panel' },
   viewer: { section: 'collection-viewer', label: 'Look at Viewer' },
   'wallet-network': { section: 'wallet-session', label: 'Open Wallet panel' },
@@ -1481,7 +1484,7 @@ export default function PublicApp() {
     initial['collection-viewer'] = true;
     initial.market = true;
     initial['live-collections'] = true;
-    initial.mint = false;
+    initial.inscribe = false;
     return initial;
   });
   const tabGuard = useActiveTabGuard();
@@ -2026,8 +2029,8 @@ export default function PublicApp() {
               </a>
               <a
                 className="button button--ghost app__nav-link"
-                href="#mint"
-                onClick={(event) => handleNavJump(event, 'mint')}
+                href="#inscribe"
+                onClick={(event) => handleNavJump(event, 'inscribe')}
               >
                 Inscribe
               </a>
@@ -2289,8 +2292,8 @@ export default function PublicApp() {
           contract={contract}
           walletSession={walletSession}
           onInscriptionSealed={handleInscriptionSealed}
-          collapsed={collapsedSections.mint}
-          onToggleCollapse={() => toggleSection('mint')}
+          collapsed={collapsedSections.inscribe}
+          onToggleCollapse={() => toggleSection('inscribe')}
           restrictions={PUBLIC_MINT_RESTRICTIONS}
         />
 
