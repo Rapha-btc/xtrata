@@ -331,8 +331,8 @@ const LAB_RESOURCE_LINKS: readonly LabResourceLink[] = [
     title: 'Start with the inscription flow',
     description:
       'If you want to feel the protocol quickly, begin by inscribing a file and seeing how the flow works end to end.',
-    href: `${WORKSPACE_PATH}#mint`,
-    cta: 'Go to inscribe'
+    href: `${WORKSPACE_PATH}#inscription`,
+    cta: 'Go to inscription tool'
   },
   {
     title: 'Read the public docs module',
