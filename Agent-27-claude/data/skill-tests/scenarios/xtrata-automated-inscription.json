@@ -156,7 +156,7 @@
       "instructions": [
         "Treat dependency token 107 as an intended recursive parent, but explain how the agent verifies it exists.",
         "This is still a single chunk helper mint.",
-        "Do not apply Agent 27-specific rules beyond the dependency provided in the input."
+        "Do not apply caller-specific recursive rules beyond the dependency provided in the input."
       ],
       "deliverables": [
         "Step-by-step execution plan",

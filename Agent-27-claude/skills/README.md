@@ -21,7 +21,6 @@ alone and includes complete transaction construction code.
 | Batch Mint | `skill-batch-mint.md` | Coordinated drops of 2-50 non-recursive items. Core and collection paths. |
 | Query | `skill-query.md` | V2-only read/view. Rebuild files from on-chain chunks. |
 | Transfer | `skill-transfer.md` | Move inscriptions between wallets. Ownership verification and post-transfer validation. |
-| Ambassador | `xtrata-agent-ambassador/SKILL.md` | Agent 27 / Xtrata outreach, reply, and follow-up communication for AIBTC inbox workflows. |
 
 ## Training Guides
 
@@ -70,7 +69,8 @@ No external files are required for a fresh agent to execute the skill.
 The `xtrata-automated-inscription/` and `xtrata-batch-mint/` subdirectories
 contain earlier custom skill versions with supporting scripts and assets.
 The new top-level `skill-*.md` files supersede these for inscription purposes,
-but the scripts and reference materials remain useful for local execution.
+but the batch-mint scripts and reference materials remain useful for local
+execution.
 
 ## Safety Baseline
 

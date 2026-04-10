@@ -217,7 +217,7 @@ Same helper route, but seals recursively.
 
 - **Parameters:** Same as `mint-small-single-tx`, plus `dependencies` `(list 50 uint)`
 - **Returns:** `(response { token-id: uint, existed: bool } uint)`
-- **Notes:** Agent 27 should use this variant with dependencies exactly `[107]`
+- **Notes:** Use this variant whenever the workflow requires explicit recursive dependencies
 
 ### Upload Lifecycle
 

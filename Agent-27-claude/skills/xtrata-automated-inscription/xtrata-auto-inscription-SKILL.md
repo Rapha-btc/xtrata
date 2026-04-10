@@ -64,8 +64,8 @@ storage and is what the content hash commits to.
 9. If dependencies are present:
 - helper route -> `mint-small-single-tx-recursive`
 - staged route -> `seal-recursive`
-10. Do not hardcode Agent 27 rules such as `[107]` unless the caller explicitly
-asked for that exact recursive lineage.
+10. Do not hardcode caller-specific dependency rules unless the task explicitly
+asks for that exact recursive lineage.
 
 ## Rolling Hash Rule
 
@@ -212,5 +212,5 @@ Return something shaped like:
 This skill is for a single inscription flow. If the user wants:
 
 - a 2-50 item drop -> use `xtrata-batch-mint`
-- Agent 27-specific recursive minting -> add the exact dependency rule the task specifies
+- caller-specific recursive minting -> add the exact dependency rule the task specifies
 - transfers, batch seals, or collection-contract drops -> use a more specific Xtrata skill

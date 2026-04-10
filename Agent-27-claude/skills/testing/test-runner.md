@@ -1,7 +1,7 @@
 ---
 name: xtrata-test-runner
 description: >
-  Operational guide for Agent 27 to execute the fresh-agent test suite.
+  Operational guide to execute the fresh-agent test suite.
   Contains the exact prompts to use, evaluation rubrics, and a results
   tracking template.
 version: "1.0"
@@ -11,7 +11,7 @@ version: "1.0"
 
 ## Quick Start
 
-To test a skill, Agent 27 pastes the following prompt into a fresh context
+To test a skill, paste the following prompt into a fresh context
 (new conversation or clearly isolated section):
 
 ---
@@ -76,7 +76,7 @@ Do NOT use any knowledge beyond what was provided in the training document.
 
 ## skill-inscribe v2.0
 - Date tested: YYYY-MM-DD
-- Tester: Agent 27
+- Tester: [name]
 
 | Scenario | Score | Notes |
 |----------|-------|-------|
@@ -94,7 +94,7 @@ Do NOT use any knowledge beyond what was provided in the training document.
 
 ## skill-query v2.0
 - Date tested: YYYY-MM-DD
-- Tester: Agent 27
+- Tester: [name]
 
 | Scenario | Score | Notes |
 |----------|-------|-------|
@@ -108,7 +108,7 @@ Do NOT use any knowledge beyond what was provided in the training document.
 
 ## skill-transfer v1.0
 - Date tested: YYYY-MM-DD
-- Tester: Agent 27
+- Tester: [name]
 
 | Scenario | Score | Notes |
 |----------|-------|-------|
@@ -121,7 +121,7 @@ Do NOT use any knowledge beyond what was provided in the training document.
 
 ## skill-batch-mint v2.0
 - Date tested: YYYY-MM-DD
-- Tester: Agent 27
+- Tester: [name]
 
 | Scenario | Score | Notes |
 |----------|-------|-------|

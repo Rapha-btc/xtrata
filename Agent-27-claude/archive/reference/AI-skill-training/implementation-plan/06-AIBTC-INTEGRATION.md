@@ -121,9 +121,10 @@ MCP remains safe for:
 - post-condition failure -> refetch `get-fee-unit` and rebuild the tx
 - hash mismatch -> restart with clean local chunk state
 
-## Agent 27 Specific Rule
+## Caller-Specific Recursive Rule
 
-Agent 27 always mints recursively with dependencies exactly `[107]`.
+If a caller requires a fixed recursive parent, pass that dependency set
+explicitly.
 
-- helper route -> `mint-small-single-tx-recursive(..., [107])`
-- staged route -> `seal-recursive(..., [107])`
+- helper route -> `mint-small-single-tx-recursive(..., dependencies)`
+- staged route -> `seal-recursive(..., dependencies)`

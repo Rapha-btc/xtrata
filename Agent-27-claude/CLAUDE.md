@@ -1,36 +1,24 @@
 # CLAUDE.md
 
-Start small in this repo.
-
-Default working set:
+Start with:
 - `README.md`
-- `AGENTs.md`
-- `dashboard/ai-runner.js`
-- `dashboard/context-builder.js`
-- `dashboard/phases.js`
-- `dashboard/server.js`
-- `dashboard/config.js`
+- `skills/README.md`
+- the specific skill, task, or agent-lab file relevant to the job
 
-Avoid loading these unless the task explicitly needs them:
-- `archive/logs/`
-- `archive/legacy/`
+Avoid broad scans unless needed:
+- `node_modules/`
 - `data/runtime/`
 - `data/outreach/`
-- `node_modules/`
-- `dashboard/node_modules/`
 - lockfiles
 
 Operational rules:
-- Agent identity and inscription protocol live in `AGENTs.md`. If anything conflicts, `AGENTs.md` wins.
-- Dashboard runtime is Claude-only. The single runtime entrypoint is `dashboard/ai-runner.js`, which wraps `dashboard/claude-runner.js`.
-- AI tasks should use `dashboard/context-builder.js` so prompts start from a narrow file pack instead of scanning the repo.
-- Active drafts and canonical HTML live in `inscriptions/`. Historical mirror material lives in `archive/inscriptions/`.
-- Runtime JSON lives in `data/` and should usually be treated as mutable local state, not source material.
+- keep the repo generic; do not reintroduce agent-specific runtime or identity files
+- do not store secrets in tracked files
+- prefer targeted validation such as `node --check` for changed scripts
 
 Useful commands:
 ```bash
-cd dashboard && npm install && npm start
-npm run inscribe:entry
+npm run batch-mint
+npm run batch-mint:template:core
+npm run batch-mint:template:collection
 ```
-
-There is no test suite. Prefer targeted `node --check` validation when changing dashboard runtime files.

@@ -1,7 +1,7 @@
 ---
 name: xtrata-fresh-agent-test-harness
 description: >
-  Testing harness for Agent 27 to simulate a fresh agent with zero Xtrata
+  Testing harness to simulate a fresh agent with zero Xtrata
   knowledge. Loads one skill document at a time and evaluates whether a naive
   agent can execute each operation correctly from the skill alone.
 version: "1.0"
@@ -11,7 +11,8 @@ version: "1.0"
 
 ## Purpose
 
-Before inscribing any skill document on-chain, Agent 27 acts as a guinea pig by
+Before inscribing any skill document on-chain, use this harness to simulate a
+fresh operator by
 simulating a fresh agent that has never seen Xtrata before. Each skill is tested
 in isolation to verify that a naive agent can:
 
@@ -22,7 +23,7 @@ in isolation to verify that a naive agent can:
 
 ## How to Run a Test
 
-Agent 27 enters "fresh agent mode" by following this protocol:
+The tester enters "fresh agent mode" by following this protocol:
 
 ### Step 1: Context Isolation
 
@@ -301,7 +302,7 @@ A skill needs **revision** if any scenario scores FAIL.
 
 ## Running the Test
 
-To test `skill-inscribe`, Agent 27 should:
+To test `skill-inscribe`, the tester should:
 
 1. Open a fresh conversation or clearly delineate the test
 2. State: "I am now a fresh agent with no Xtrata knowledge."
