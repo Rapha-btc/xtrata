@@ -332,7 +332,7 @@ const LAB_RESOURCE_LINKS: readonly LabResourceLink[] = [
     description:
       'If you want to feel the protocol quickly, begin by inscribing a file and seeing how the flow works end to end.',
     href: `${WORKSPACE_PATH}#mint`,
-    cta: 'Go to mint'
+    cta: 'Go to inscribe'
   },
   {
     title: 'Read the public docs module',
