@@ -11,6 +11,7 @@ import {
 const HOME_PATH = '/';
 const WORKSPACE_PATH = '/workspace';
 const MANAGE_PATH = '/manage';
+const LAB_EVOLUTION_PATH = '/lab/evolution';
 
 type LabNavItem = {
   label: string;
@@ -69,7 +70,8 @@ const LAB_NAV_ITEMS: readonly LabNavItem[] = [
   { label: 'Why Xtrata', href: '#why-xtrata' },
   { label: 'Build Tracks', href: '#build-tracks' },
   { label: 'Project Ideas', href: '#project-ideas' },
-  { label: 'Starter Paths', href: '#starter-paths' }
+  { label: 'Starter Paths', href: '#starter-paths' },
+  { label: 'Data Evolution', href: LAB_EVOLUTION_PATH }
 ] as const;
 
 const LAB_PILLARS: readonly LabPillar[] = [
@@ -312,6 +314,13 @@ const LAB_FLOW_STEPS: readonly LabFlowStep[] = [
 
 const LAB_RESOURCE_LINKS: readonly LabResourceLink[] = [
   {
+    title: 'See the evolution of on-chain data',
+    description:
+      'Use a standalone LAB page that explains the progression from IPFS to Arweave to Ordinals to Xtrata for builder-facing context.',
+    href: LAB_EVOLUTION_PATH,
+    cta: 'Open evolution page'
+  },
+  {
     title: 'Open the Xtrata workspace',
     description:
       'Use the live app to inspect existing inscriptions, try the mint flow, and understand the protocol surface teams can learn from and build on.',
@@ -319,7 +328,7 @@ const LAB_RESOURCE_LINKS: readonly LabResourceLink[] = [
     cta: 'Open workspace'
   },
   {
-    title: 'Start with the mint flow',
+    title: 'Start with the inscription flow',
     description:
       'If you want to feel the protocol quickly, begin by inscribing a file and seeing how the flow works end to end.',
     href: `${WORKSPACE_PATH}#mint`,
@@ -439,8 +448,8 @@ export default function LabLandingPage() {
               <a className="button" href={WORKSPACE_PATH}>
                 Start building
               </a>
-              <a className="button button--ghost" href="#project-ideas">
-                Explore ideas
+              <a className="button button--ghost" href={LAB_EVOLUTION_PATH}>
+                See the evolution
               </a>
             </div>
           </div>
@@ -629,9 +638,7 @@ export default function LabLandingPage() {
               <h2>How to turn LAB energy into durable output</h2>
             </div>
             <p>
-              The page should not only inspire. It should help founders and new builders picture
-              the actual workflow from first prototype to something another team can fork, teach,
-              or carry into delivery.
+  
             </p>
           </div>
           <div className="lab-page__flow-shell">
