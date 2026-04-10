@@ -409,6 +409,9 @@ export default function LabLandingPage() {
             <a className="button button--mini" href={WORKSPACE_PATH}>
               Workspace
             </a>
+            <a className="button button--ghost button--mini" href={LAB_EVOLUTION_PATH}>
+              Data evolution
+            </a>
             <label className="theme-select" htmlFor="lab-theme-select">
               <span className="theme-select__label">Theme</span>
               <select
@@ -683,6 +686,9 @@ export default function LabLandingPage() {
           <div className="lab-page__cta-actions">
             <a className="button" href={WORKSPACE_PATH}>
               Open Xtrata
+            </a>
+            <a className="button button--ghost" href={LAB_EVOLUTION_PATH}>
+              Data evolution
             </a>
             <a className="button button--ghost" href={`${WORKSPACE_PATH}#docs`}>
               Read docs
