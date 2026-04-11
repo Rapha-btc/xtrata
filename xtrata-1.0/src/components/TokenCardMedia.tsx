@@ -37,6 +37,10 @@ import {
   injectRecursiveBridgeHtml,
   registerRecursiveBridge
 } from '../lib/viewer/recursive';
+import {
+  hasRuntimeContentUrls,
+  inlineRuntimeContentUrls
+} from '../lib/viewer/runtime-inline';
 import { shouldUsePixelatedImageRendering } from '../lib/viewer/image-rendering';
 import { createObjectUrl } from '../lib/utils/blob';
 
@@ -387,16 +391,37 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     }
     return new TextDecoder().decode(contentQuery.data);
   }, [contentQuery.data, isHtmlDocument]);
+  const htmlNeedsInlining = useMemo(
+    () => (htmlPreview ? hasRuntimeContentUrls(htmlPreview) : false),
+    [htmlPreview]
+  );
+  const htmlInlineQuery = useQuery({
+    queryKey: [...contentQueryKey, 'runtime-inline-html'],
+    queryFn: () =>
+      inlineRuntimeContentUrls({
+        html: htmlPreview ?? '',
+        client: props.client,
+        fallbackClient: props.fallbackClient ?? null
+      }),
+    enabled: isActiveTab && !!htmlPreview && htmlNeedsInlining,
+    staleTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false
+  });
+  const preparedHtmlPreview = htmlNeedsInlining
+    ? htmlInlineQuery.data ?? (htmlInlineQuery.isError ? htmlPreview : null)
+    : htmlPreview;
 
   const bridgeId = useMemo(() => {
-    if (!isHtmlDocument || !htmlPreview) {
+    if (!isHtmlDocument || !preparedHtmlPreview) {
       return null;
     }
     return createBridgeId();
-  }, [isHtmlDocument, htmlPreview, props.token.id, props.contractId]);
+  }, [isHtmlDocument, preparedHtmlPreview, props.token.id, props.contractId]);
 
   useEffect(() => {
-    if (!bridgeId || !isHtmlDocument || !htmlPreview) {
+    if (!bridgeId || !isHtmlDocument || !preparedHtmlPreview) {
       return;
     }
     const dispose = registerRecursiveBridge({
@@ -409,15 +434,15 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
   }, [
     bridgeId,
     isHtmlDocument,
-    htmlPreview,
+    preparedHtmlPreview,
     props.client.contract,
     props.senderAddress,
     bridgeSource
   ]);
 
-  const htmlDoc = htmlPreview && bridgeId
-    ? injectRecursiveBridgeHtml(htmlPreview, bridgeId)
-    : htmlPreview;
+  const htmlDoc = preparedHtmlPreview && bridgeId
+    ? injectRecursiveBridgeHtml(preparedHtmlPreview, bridgeId)
+    : preparedHtmlPreview;
   const allowTokenUriFallback =
     !hasThumbnail &&
     ((mediaKind === 'video' || mediaKind === 'audio')
