@@ -37,6 +37,7 @@ import {
   injectRecursiveBridgeHtml,
   registerRecursiveBridge
 } from '../lib/viewer/recursive';
+import { injectGridThumbnailHtml } from '../lib/viewer/html-preview';
 import {
   hasRuntimeContentUrls,
   inlineRuntimeContentUrls
@@ -440,9 +441,12 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     bridgeSource
   ]);
 
-  const htmlDoc = preparedHtmlPreview && bridgeId
-    ? injectRecursiveBridgeHtml(preparedHtmlPreview, bridgeId)
+  const gridHtmlPreview = preparedHtmlPreview
+    ? injectGridThumbnailHtml(preparedHtmlPreview)
     : preparedHtmlPreview;
+  const htmlDoc = gridHtmlPreview && bridgeId
+    ? injectRecursiveBridgeHtml(gridHtmlPreview, bridgeId)
+    : gridHtmlPreview;
   const allowTokenUriFallback =
     !hasThumbnail &&
     ((mediaKind === 'video' || mediaKind === 'audio')
