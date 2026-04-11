@@ -23,6 +23,9 @@ const parseTokenId = (value: string | null) => {
   }
 };
 
+const escapeRegExp = (value: string) =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 const bytesToBase64 = (bytes: Uint8Array) => {
   let binary = '';
   const chunkSize = 0x8000;
@@ -38,6 +41,8 @@ const bytesToBase64 = (bytes: Uint8Array) => {
   }
   throw new Error('Base64 encoding is unavailable in this environment');
 };
+
+const decodeText = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
 
 export const extractRuntimeContentUrls = (html: string) => {
   if (!html) {
@@ -93,6 +98,100 @@ export const replaceRuntimeContentUrls = (
   return output;
 };
 
+const escapeInlineStyleText = (value: string) =>
+  value.replace(/<\/style/gi, '<\\/style');
+
+const toNamedImportDestructure = (value: string) =>
+  value
+    .trim()
+    .replace(/^\{\s*/, '')
+    .replace(/\s*\}$/, '')
+    .replace(/\s+as\s+/g, ': ');
+
+const buildDynamicImportStatement = (bindings: string, dataUri: string) => {
+  const trimmed = bindings.trim();
+  const importCall = `await import('${dataUri}')`;
+
+  if (!trimmed) {
+    return importCall;
+  }
+
+  if (trimmed.startsWith('* as ')) {
+    return `const ${trimmed.slice(5).trim()} = ${importCall}`;
+  }
+
+  if (trimmed.startsWith('{')) {
+    return `const { ${toNamedImportDestructure(trimmed)} } = ${importCall}`;
+  }
+
+  if (trimmed.includes(',')) {
+    const [defaultBinding, namedBinding] = trimmed.split(/,(.+)/).map((part) =>
+      part.trim()
+    );
+    if (namedBinding.startsWith('{')) {
+      return `const { default: ${defaultBinding}, ${toNamedImportDestructure(
+        namedBinding
+      )} } = ${importCall}`;
+    }
+    if (namedBinding.startsWith('* as ')) {
+      const namespaceBinding = namedBinding.slice(5).trim();
+      const tempName = `__xtrataInlineImport_${defaultBinding.replace(/\W+/g, '_')}`;
+      return `const ${tempName} = ${importCall}; const ${defaultBinding} = ${tempName}.default; const ${namespaceBinding} = ${tempName}`;
+    }
+  }
+
+  return `const { default: ${trimmed} } = ${importCall}`;
+};
+
+const replaceRuntimeStylesheetLinks = (
+  html: string,
+  rawUrl: string,
+  styleText: string
+) => {
+  const escapedUrl = escapeRegExp(rawUrl);
+  const pattern = new RegExp(
+    `<link\\b([^>]*?)href=(["'])${escapedUrl}\\2([^>]*?)>`,
+    'gi'
+  );
+  const inlineStyle = `<style data-xtrata-inline-runtime="true">\n${escapeInlineStyleText(
+    styleText
+  )}\n</style>`;
+  return html.replace(pattern, () => inlineStyle);
+};
+
+const replaceStaticRuntimeImports = (
+  html: string,
+  rawUrl: string,
+  dataUri: string
+) => {
+  const escapedUrl = escapeRegExp(rawUrl);
+  const fromPattern = new RegExp(
+    `(^|[\\r\\n])([ \\t]*)import\\s+([^;\\r\\n]+?)\\s+from\\s+(["'])${escapedUrl}\\4\\s*;?`,
+    'g'
+  );
+  let output = html.replace(
+    fromPattern,
+    (_match, lineStart: string, indent: string, bindings: string) =>
+      `${lineStart}${indent}${buildDynamicImportStatement(bindings, dataUri)};`
+  );
+
+  const sideEffectPattern = new RegExp(
+    `(^|[\\r\\n])([ \\t]*)import\\s+(["'])${escapedUrl}\\3\\s*;?`,
+    'g'
+  );
+  output = output.replace(
+    sideEffectPattern,
+    (match, lineStart: string, indent: string) => {
+      if (match.includes(' from ')) {
+        return match;
+      }
+      return `${lineStart}${indent}await import('${dataUri}');`;
+    }
+  );
+
+  return output;
+};
+
 const toDataUri = (bytes: Uint8Array, mimeType?: string | null) =>
   `data:${mimeType ?? 'application/octet-stream'};base64,${bytesToBase64(bytes)}`;
 
@@ -127,6 +226,7 @@ export const inlineRuntimeContentUrls = async (params: {
   };
 
   const replacements = new Map<string, string>();
+  const textAssets = new Map<string, { mimeType: string | null; text: string; dataUri: string }>();
 
   await Promise.all(
     urls.map(async (rawUrl) => {
@@ -157,7 +257,13 @@ export const inlineRuntimeContentUrls = async (params: {
         totalSize: meta.totalSize,
         mimeType: meta.mimeType ?? null
       });
-      replacements.set(rawUrl, toDataUri(bytes, meta.mimeType));
+      const dataUri = toDataUri(bytes, meta.mimeType);
+      replacements.set(rawUrl, dataUri);
+      textAssets.set(rawUrl, {
+        mimeType: meta.mimeType ?? null,
+        text: decodeText(bytes),
+        dataUri
+      });
     })
   );
 
@@ -165,5 +271,22 @@ export const inlineRuntimeContentUrls = async (params: {
     return params.html;
   }
 
-  return replaceRuntimeContentUrls(params.html, replacements);
+  let output = params.html;
+
+  for (const [rawUrl, asset] of textAssets.entries()) {
+    const normalizedMime = asset.mimeType?.trim().toLowerCase() ?? null;
+    if (normalizedMime === 'text/css') {
+      output = replaceRuntimeStylesheetLinks(output, rawUrl, asset.text);
+      continue;
+    }
+    if (
+      normalizedMime === 'text/javascript' ||
+      normalizedMime === 'application/javascript' ||
+      normalizedMime === 'application/x-javascript'
+    ) {
+      output = replaceStaticRuntimeImports(output, rawUrl, asset.dataUri);
+    }
+  }
+
+  return replaceRuntimeContentUrls(output, replacements);
 };

@@ -93,7 +93,7 @@ describe('viewer runtime inline', () => {
           owner: 'SPTEST',
           creator: null,
           mimeType: 'text/javascript',
-          totalSize: 18n,
+          totalSize: 29n,
           totalChunks: 1n,
           sealed: true,
           finalHash: new Uint8Array([0])
@@ -104,14 +104,14 @@ describe('viewer runtime inline', () => {
       if (id === 283n) {
         return new TextEncoder().encode('body{color:red}');
       }
-      return new TextEncoder().encode('export const x = 1;');
+      return new TextEncoder().encode('export const createCicada = 1;');
     });
 
     const html = `
       <link rel="stylesheet" href="${styleUrl}">
       <script type="module">
-        const mod = await import('${moduleUrl}');
-        console.log(mod.x);
+        import { createCicada } from '${moduleUrl}';
+        console.log(createCicada);
       </script>
     `;
 
@@ -121,11 +121,10 @@ describe('viewer runtime inline', () => {
     });
 
     expect(result).not.toContain('/runtime/content?');
+    expect(result).toContain('<style data-xtrata-inline-runtime="true">');
+    expect(result).toContain('body{color:red}');
     expect(result).toContain(
-      'data:text/css;base64,Ym9keXtjb2xvcjpyZWR9'
-    );
-    expect(result).toContain(
-      'data:text/javascript;base64,ZXhwb3J0IGNvbnN0IHggPSAxOw=='
+      "const { createCicada } = await import('data:text/javascript;base64,ZXhwb3J0IGNvbnN0IGNyZWF0ZUNpY2FkYSA9IDE7')"
     );
     expect(client.getInscriptionMeta).toHaveBeenCalledTimes(2);
     expect(fetchOnChainContentMock).toHaveBeenCalledTimes(2);
