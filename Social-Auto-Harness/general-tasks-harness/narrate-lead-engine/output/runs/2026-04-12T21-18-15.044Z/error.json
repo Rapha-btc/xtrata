@@ -1,0 +1,24 @@
+{
+  "runId": "2026-04-12T21-18-15.044Z",
+  "failedAt": "2026-04-12T21:19:31.794Z",
+  "error": {
+    "name": "Error",
+    "message": "ChatGPT was still generating when the wait budget expired after waiting 60000 ms.",
+    "details": null,
+    "helpfulHint": null
+  },
+  "memory": {
+    "rssMb": 20,
+    "heapUsedMb": 6.6,
+    "heapTotalMb": 8.3,
+    "externalMb": 2.2,
+    "arrayBuffersMb": 0
+  },
+  "counts": {
+    "queriesPlanned": 1,
+    "collected": 0,
+    "normalized": 0,
+    "leads": 0,
+    "drafted": 0
+  }
+}

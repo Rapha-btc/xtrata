@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { truncateText } from "./safety.js";
 
 function normalizeText(value) {
   if (value === null || value === undefined) return null;
@@ -76,9 +77,9 @@ export function normalizeDiscoveryCollections({
         siteFilter: collection.queryPlan.siteFilter ?? null,
         platform: inferPlatform(url, item.platform ?? "open-web"),
         url,
-        title: normalizeText(item.title),
-        excerpt: normalizeText(item.excerpt),
-        rawText: normalizeText(item.rawText) ?? normalizeText(item.excerpt),
+        title: truncateText(normalizeText(item.title), 240),
+        excerpt: truncateText(normalizeText(item.excerpt), 600),
+        rawText: truncateText(normalizeText(item.rawText) ?? normalizeText(item.excerpt), 2000),
         sourceName: normalizeText(item.sourceName),
         authorName: normalizeText(item.authorName),
         publishedAt: normalizeTimestamp(item.publishedAt),

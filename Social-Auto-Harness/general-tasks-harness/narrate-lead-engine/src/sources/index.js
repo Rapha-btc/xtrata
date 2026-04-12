@@ -1,6 +1,11 @@
 import { collectGoogleSearchSource } from "./googleSearch.js";
 import { collectGptWebSearchSource } from "./gptWebSearch.js";
 import { collectXSearchSource } from "./xSearch.js";
+import {
+  assertCollectedItemBudget,
+  assertMemoryWithinLimit,
+  pauseIfNeeded,
+} from "../safety.js";
 
 const DEFAULT_SOURCE_HANDLERS = {
   "google-search": collectGoogleSearchSource,
@@ -50,6 +55,25 @@ export async function collectLeadSources({
       },
     });
 
+    const memoryBefore = assertMemoryWithinLimit({
+      job,
+      stage: "discovery:start-query",
+      extra: {
+        queryIndex: index + 1,
+        totalQueries: queryPlans.length,
+      },
+    });
+
+    await emitProgress(onProgress, {
+      stage: "safety",
+      action: "memory-snapshot",
+      details: {
+        stage: "discovery:start-query",
+        queryIndex: index + 1,
+        ...memoryBefore,
+      },
+    });
+
     const result = await handler({
       source,
       queryPlan,
@@ -63,6 +87,21 @@ export async function collectLeadSources({
 
     results.push(result);
 
+    const totalCollected = results.reduce((sum, entry) => sum + (entry.collectedCount ?? 0), 0);
+    assertCollectedItemBudget({
+      job,
+      collectedCount: totalCollected,
+      stage: "discovery:after-query",
+    });
+    const memoryAfter = assertMemoryWithinLimit({
+      job,
+      stage: "discovery:after-query",
+      extra: {
+        totalCollected,
+        queryIndex: index + 1,
+      },
+    });
+
     await emitProgress(onProgress, {
       stage: "discovery",
       action: "complete-query",
@@ -73,8 +112,14 @@ export async function collectLeadSources({
         label: queryPlan.sourceLabel,
         family: queryPlan.family,
         collectedCount: result.collectedCount,
+        totalCollected,
+        ...memoryAfter,
       },
     });
+
+    if (index < queryPlans.length - 1) {
+      await pauseIfNeeded(adapter, job.queryPauseMs);
+    }
   }
 
   return {

@@ -134,7 +134,7 @@ test("sendPromptForJson retries with a repair prompt after invalid JSON", async 
       calls.push(options);
       if (calls.length === 1) {
         return {
-          session: { action: "opened-new-tab" },
+          session: { action: "opened-new-tab", tab: { windowId: 1, tabIndex: 1, url: "https://chatgpt.com/c/retry-1" } },
           submit: { ok: true },
           replyState: { url: "https://chatgpt.com/c/retry-1" },
           replyText: "Sure, I can help with that.",
@@ -142,7 +142,7 @@ test("sendPromptForJson retries with a repair prompt after invalid JSON", async 
       }
 
       return {
-        session: { action: "opened-new-tab" },
+        session: { action: "continued-existing-session-tab" },
         submit: { ok: true },
         replyState: { url: "https://chatgpt.com/c/retry-2" },
         replyText: "{\"ok\":true,\"count\":2}",
@@ -152,9 +152,12 @@ test("sendPromptForJson retries with a repair prompt after invalid JSON", async 
 
   assert.equal(calls.length, 2);
   assert.match(calls[1].prompt, /previous reply was not valid json/i);
-  assert.equal(calls[1].forceNewTab, true);
-  assert.equal(calls[1].existingSession, null);
-  assert.equal(calls[1].targetUrl, undefined);
+  assert.equal(calls[1].forceNewTab, false);
+  assert.deepEqual(calls[1].existingSession, {
+    action: "opened-new-tab",
+    tab: { windowId: 1, tabIndex: 1, url: "https://chatgpt.com/c/retry-1" },
+  });
+  assert.equal(calls[1].targetUrl, "https://chatgpt.com/c/retry-1");
   assert.deepEqual(result.value, { ok: true, count: 2 });
 });
 

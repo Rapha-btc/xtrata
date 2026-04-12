@@ -12,10 +12,19 @@ export const DEFAULT_NARRATE_JOB = Object.freeze({
   persona: null,
   account: null,
   timeWindowDays: 30,
-  maxResultsPerQuery: 8,
-  enrichAboveScore: 65,
-  draftAboveScore: 75,
-  finalLeadLimit: 30,
+  maxResultsPerQuery: 5,
+  maxTotalQueries: 8,
+  maxCollectedItems: 40,
+  maxEnrichmentTasks: 4,
+  maxDraftTasks: 4,
+  queryPauseMs: 1500,
+  stagePauseMs: 1200,
+  maxHeapUsedMb: 512,
+  chatgptWaitBudgetMs: 240000,
+  chatgptPollMs: 1000,
+  enrichAboveScore: 70,
+  draftAboveScore: 80,
+  finalLeadLimit: 12,
   queryFamilies: [
     "cost-pain",
     "workflow-pain",
@@ -71,7 +80,7 @@ function normalizeSource(rawSource, sourceIndex, defaultFamilies) {
     type,
     label: normalizeString(rawSource.label, `sources[${sourceIndex}].label`),
     families: normalizeFamilies(rawSource.families, defaultFamilies, `sources[${sourceIndex}].families`),
-    maxQueries: normalizePositiveInteger(rawSource.maxQueries, 6, `sources[${sourceIndex}].maxQueries`),
+    maxQueries: normalizePositiveInteger(rawSource.maxQueries, 4, `sources[${sourceIndex}].maxQueries`),
     enabled: normalizeBoolean(rawSource.enabled, true),
   };
 
@@ -133,6 +142,51 @@ export function normalizeNarrateJob(rawJob, { jobFilePath = null } = {}) {
       rawJob.maxResultsPerQuery,
       DEFAULT_NARRATE_JOB.maxResultsPerQuery,
       "maxResultsPerQuery"
+    ),
+    maxTotalQueries: normalizePositiveInteger(
+      rawJob.maxTotalQueries,
+      DEFAULT_NARRATE_JOB.maxTotalQueries,
+      "maxTotalQueries"
+    ),
+    maxCollectedItems: normalizePositiveInteger(
+      rawJob.maxCollectedItems,
+      DEFAULT_NARRATE_JOB.maxCollectedItems,
+      "maxCollectedItems"
+    ),
+    maxEnrichmentTasks: normalizePositiveInteger(
+      rawJob.maxEnrichmentTasks,
+      DEFAULT_NARRATE_JOB.maxEnrichmentTasks,
+      "maxEnrichmentTasks"
+    ),
+    maxDraftTasks: normalizePositiveInteger(
+      rawJob.maxDraftTasks,
+      DEFAULT_NARRATE_JOB.maxDraftTasks,
+      "maxDraftTasks"
+    ),
+    queryPauseMs: normalizePositiveInteger(
+      rawJob.queryPauseMs,
+      DEFAULT_NARRATE_JOB.queryPauseMs,
+      "queryPauseMs"
+    ),
+    stagePauseMs: normalizePositiveInteger(
+      rawJob.stagePauseMs,
+      DEFAULT_NARRATE_JOB.stagePauseMs,
+      "stagePauseMs"
+    ),
+    maxHeapUsedMb: normalizePositiveInteger(
+      rawJob.maxHeapUsedMb,
+      DEFAULT_NARRATE_JOB.maxHeapUsedMb,
+      "maxHeapUsedMb"
+    ),
+    chatgptWaitBudgetMs: normalizePositiveInteger(
+      rawJob.chatgptWaitBudgetMs,
+      DEFAULT_NARRATE_JOB.chatgptWaitBudgetMs,
+      "chatgptWaitBudgetMs"
+    ),
+    chatgptPollMs: normalizePositiveInteger(
+      rawJob.chatgptPollMs,
+      DEFAULT_NARRATE_JOB.chatgptPollMs,
+      "chatgptPollMs"
     ),
     enrichAboveScore: normalizePositiveInteger(
       rawJob.enrichAboveScore,

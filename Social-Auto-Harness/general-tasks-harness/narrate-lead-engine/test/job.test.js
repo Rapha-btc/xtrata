@@ -22,8 +22,12 @@ test("normalizeNarrateJob applies defaults and supports mixed source types", () 
   });
 
   assert.equal(job.timeWindowDays, 30);
-  assert.equal(job.maxResultsPerQuery, 8);
-  assert.equal(job.sources[0].maxQueries, 6);
+  assert.equal(job.maxResultsPerQuery, 5);
+  assert.equal(job.maxTotalQueries, 8);
+  assert.equal(job.maxCollectedItems, 40);
+  assert.equal(job.chatgptWaitBudgetMs, 240000);
+  assert.equal(job.chatgptPollMs, 1000);
+  assert.equal(job.sources[0].maxQueries, 4);
   assert.deepEqual(job.sources[0].siteFilters, []);
   assert.equal(job.sources[1].type, "gpt-web-search");
 });

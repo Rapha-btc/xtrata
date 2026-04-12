@@ -168,6 +168,52 @@ test("sendPromptAndReadReply retries prompt submission while the send button is 
   ]);
 });
 
+test("sendPromptAndReadReply does not repaste the prompt when a retry sees generation already in progress", async () => {
+  const adapter = new FakeBrowserAdapter({
+    tabs: [{ windowId: 1, tabIndex: 1, url: "https://chatgpt.com/" }],
+    evaluationResults: [
+      JSON.stringify({ loggedIn: true, accountHints: [], composerFound: true, url: "https://chatgpt.com/" }),
+      JSON.stringify({ replyCount: 0, replyText: null, generating: false, url: "https://chatgpt.com/" }),
+      JSON.stringify({ ok: false, reason: "send-button-not-ready", retryable: true, url: "https://chatgpt.com/" }),
+      JSON.stringify({
+        ok: true,
+        retryable: false,
+        submitStrategy: "already-generating",
+        submitReason: "generation-in-progress",
+        resubmissionSkipped: true,
+        submittedPromptLength: 0,
+        url: "https://chatgpt.com/c/5",
+      }),
+      JSON.stringify({ replyCount: 1, replyText: "Fresh answer", generating: true, url: "https://chatgpt.com/c/5" }),
+      JSON.stringify({ replyCount: 1, replyText: "Fresh answer", generating: false, url: "https://chatgpt.com/c/5" }),
+    ],
+  });
+
+  const result = await sendPromptAndReadReply({
+    adapter,
+    prompt: "Hello",
+    submitWaitMs: 10,
+    replyWaitMs: 10,
+    replyMaxChecks: 2,
+    stableChecks: 1,
+  });
+
+  assert.equal(result.replyText, "Fresh answer");
+  assert.deepEqual(adapter.calls.map(([name, detail]) => [name, detail]), [
+    ["ensureBrowserApp", undefined],
+    ["listTabs", undefined],
+    ["activateTab", { windowId: 1, tabIndex: 1, url: "https://chatgpt.com/" }],
+    ["evaluateActiveTab", "session-probe"],
+    ["evaluateActiveTab", "reply-probe"],
+    ["evaluateActiveTab", "submit-prompt"],
+    ["wait", 10],
+    ["evaluateActiveTab", "submit-prompt"],
+    ["evaluateActiveTab", "reply-probe"],
+    ["wait", 10],
+    ["evaluateActiveTab", "reply-probe"],
+  ]);
+});
+
 test("sendPromptAndReadReply can continue in the same existing ChatGPT tab", async () => {
   const adapter = new FakeBrowserAdapter({
     evaluationResults: [

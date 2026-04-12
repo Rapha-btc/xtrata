@@ -22,6 +22,7 @@ What this app does:
 - drafts outreach that leads with pain relief rather than generic AI hype
 - writes every run to local JSON artifacts and a local SQLite database
 - serves a lightweight dashboard for reviewing leads
+- enforces safety budgets so the process fails before it overwhelms the machine
 
 ## Requirements
 
@@ -39,6 +40,13 @@ Run the example job:
 ```bash
 cd narrate-lead-engine
 /opt/homebrew/bin/node src/cli/run-job.js --job-file=jobs/example-indie-authors.json
+```
+
+Run the low-risk smoke job first if you want to validate the guardrails before doing a fuller run:
+
+```bash
+cd narrate-lead-engine
+/opt/homebrew/bin/node src/cli/run-job.js --job-file=jobs/safe-smoke-test.json
 ```
 
 Start the dashboard:
@@ -60,6 +68,13 @@ Key knobs:
 - `account`: optional ChatGPT account hint
 - `queryFamilies`: which pain/intent clusters to rotate
 - `sources`: which non-API collectors to use
+- `maxTotalQueries`: hard cap on discovery breadth for a single run
+- `maxCollectedItems`: hard cap on total collected raw items
+- `maxEnrichmentTasks`: hard cap on ChatGPT enrichment calls
+- `maxDraftTasks`: hard cap on ChatGPT drafting calls
+- `queryPauseMs` / `stagePauseMs`: throttles between browser actions
+- `maxHeapUsedMb`: process memory tripwire
+- `chatgptWaitBudgetMs` / `chatgptPollMs`: how long the runner will wait for slow ChatGPT web-search replies
 - `enrichAboveScore`: score threshold for enrichment
 - `draftAboveScore`: score threshold for outreach drafting
 
@@ -78,6 +93,7 @@ Artifacts per run:
 - `leads.json`
 - `outreach.json`
 - `manifest.json`
+- `error.json` on failed runs
 - `progress.log`
 
 SQLite state lives at:
@@ -86,6 +102,9 @@ SQLite state lives at:
 
 ## Notes
 
-- Google scraping is intentionally read-only and conservative. It scrapes visible search result pages in Chrome.
+- Direct Google scraping is no longer the default in the sample jobs. Google may present unusual-traffic challenge pages, and this app now stops immediately when that happens rather than trying to work around it.
+- Use `gpt-web-search` as the default browser-first discovery path when you want a safer no-API workflow.
+- Google scraping is still available as an opt-in source type, but it is read-only and challenge-sensitive.
 - Enrichment and outreach use the existing ChatGPT web UI JSON flow from the repo’s modular harness. No OpenAI API key is required.
 - This app is designed for high-signal low-volume prospecting first. It does not auto-send anything.
+- If a run hits a safety budget, the app now writes a failure manifest and error artifact, then exits.

@@ -5,6 +5,7 @@ import { buildDiscoveryPlan } from "../src/queryTemplates.js";
 
 test("buildDiscoveryPlan expands site-filtered google queries and respects maxQueries", () => {
   const plan = buildDiscoveryPlan({
+    maxTotalQueries: 2,
     sources: [
       {
         type: "google-search",
@@ -17,7 +18,7 @@ test("buildDiscoveryPlan expands site-filtered google queries and respects maxQu
     ],
   });
 
-  assert.equal(plan.length, 3);
+  assert.equal(plan.length, 2);
   assert.ok(plan.every((entry) => entry.query.includes("site:")));
   assert.equal(plan[0].sourceType, "google-search");
 });

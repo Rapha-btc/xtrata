@@ -1,4 +1,5 @@
 import { scrapeXSearchResults } from "../../../modular-harness/src/x/scrapeXSearchResults.js";
+import { closeManagedTab } from "../safety.js";
 
 function normalizeText(value) {
   return value?.toString().replace(/\s+/g, " ").trim() ?? "";
@@ -29,6 +30,8 @@ export async function collectXSearchSource({
     expectedHandle: personaProfile.xHandle,
     personaProfile,
   });
+
+  await closeManagedTab(adapter, rawResult?.navigation);
 
   return {
     sourceType: source.type,

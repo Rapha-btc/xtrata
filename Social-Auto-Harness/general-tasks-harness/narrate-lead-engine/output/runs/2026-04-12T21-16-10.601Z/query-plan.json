@@ -1,0 +1,20 @@
+[
+  {
+    "sourceLabel": "Smoke Test Search",
+    "sourceType": "google-search",
+    "family": "cost-pain",
+    "query": "\"audiobook\" expensive site:reddit.com",
+    "siteFilter": "reddit.com",
+    "mode": null,
+    "order": 1
+  },
+  {
+    "sourceLabel": "Smoke Test Search",
+    "sourceType": "google-search",
+    "family": "cost-pain",
+    "query": "\"cost of producing an audiobook\" site:reddit.com",
+    "siteFilter": "reddit.com",
+    "mode": null,
+    "order": 2
+  }
+]

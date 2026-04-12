@@ -115,7 +115,7 @@ export async function draftOutreach({
       expectedType: "object",
       requiredKeys: ["channel", "subject", "body", "dmVariant", "personalizationReason"],
       validate: validateOutreachShape,
-      forceNewTab: true,
+      forceNewTab: false,
       progressLabel: `narrate-outreach:${lead.personOrCompany}`,
       ...jsonReplyOptions,
     });

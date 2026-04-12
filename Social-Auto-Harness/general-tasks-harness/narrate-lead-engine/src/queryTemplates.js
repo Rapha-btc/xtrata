@@ -93,5 +93,6 @@ export function buildDiscoveryPlan(job) {
         mode: queryPlan.mode,
         order: index + 1,
       }))
-    );
+    )
+    .slice(0, job.maxTotalQueries ?? Number.MAX_SAFE_INTEGER);
 }

@@ -4,10 +4,19 @@
   "persona": "xtrata",
   "account": null,
   "timeWindowDays": 30,
-  "maxResultsPerQuery": 8,
-  "enrichAboveScore": 65,
-  "draftAboveScore": 75,
-  "finalLeadLimit": 30,
+  "maxResultsPerQuery": 5,
+  "maxTotalQueries": 8,
+  "maxCollectedItems": 40,
+  "maxEnrichmentTasks": 3,
+  "maxDraftTasks": 3,
+  "queryPauseMs": 1500,
+  "stagePauseMs": 1200,
+  "maxHeapUsedMb": 512,
+  "chatgptWaitBudgetMs": 240000,
+  "chatgptPollMs": 1000,
+  "enrichAboveScore": 70,
+  "draftAboveScore": 80,
+  "finalLeadLimit": 12,
   "queryFamilies": [
     "cost-pain",
     "workflow-pain",
@@ -30,7 +39,8 @@
         "kboards.com",
         "selfpublishingadvice.org"
       ],
-      "maxQueries": 12
+      "maxQueries": 4,
+      "enabled": false
     },
     {
       "type": "google-search",
@@ -41,7 +51,8 @@
         "ai-openness"
       ],
       "siteFilters": [],
-      "maxQueries": 10
+      "maxQueries": 3,
+      "enabled": false
     },
     {
       "type": "gpt-web-search",
@@ -51,7 +62,7 @@
         "publisher-backlist",
         "multi-voice"
       ],
-      "maxQueries": 6
+      "maxQueries": 1
     },
     {
       "type": "x-search",

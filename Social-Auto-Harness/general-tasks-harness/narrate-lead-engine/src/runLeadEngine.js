@@ -12,6 +12,7 @@ import { normalizeDiscoveryCollections } from "./normalize.js";
 import { draftOutreach } from "./outreach.js";
 import { buildDiscoveryPlan } from "./queryTemplates.js";
 import { scoreSourceItems } from "./score.js";
+import { assertMemoryWithinLimit, buildMemorySnapshot, pauseIfNeeded } from "./safety.js";
 import { collectLeadSources } from "./sources/index.js";
 
 function buildArtifactPaths(runDir) {
@@ -23,7 +24,48 @@ function buildArtifactPaths(runDir) {
     leads: path.join(runDir, "leads.json"),
     outreach: path.join(runDir, "outreach.json"),
     manifest: path.join(runDir, "manifest.json"),
+    error: path.join(runDir, "error.json"),
     progressLog: path.join(runDir, "progress.log"),
+  };
+}
+
+function buildHelpfulFailureHint(error) {
+  const message = error?.message ?? "";
+
+  if (/chrome did not have an open window/i.test(message) || /chrome window not found/i.test(message)) {
+    return "Open Google Chrome manually, keep one window open, and rerun the smoke test. The collector now tries to fall back to a fresh browser window, but macOS browser automation can still fail if Chrome is not ready yet.";
+  }
+
+  if (/google presented an unusual-traffic/i.test(message) || /google-unusual-traffic/i.test(message)) {
+    return "Do not keep retrying Google. Leave direct Google scraping disabled for this job and use gpt-web-search or other non-Google sources instead.";
+  }
+
+  if (/still generating when the wait budget expired/i.test(message)) {
+    return "ChatGPT produced a slower-than-expected web-search reply. Increase chatgptWaitBudgetMs in the job file or reduce the scope of the run.";
+  }
+
+  if (/heap usage reached/i.test(message)) {
+    return "Lower maxTotalQueries, maxCollectedItems, maxEnrichmentTasks, or maxDraftTasks in the job file before retrying.";
+  }
+
+  if (/collected items exceeded/i.test(message)) {
+    return "Reduce maxResultsPerQuery or maxTotalQueries in the job file, or tighten your source families and site filters.";
+  }
+
+  return null;
+}
+
+function resolveChatGPTReplyOptions(job) {
+  const replyWaitMs = Math.max(250, Number.parseInt(job?.chatgptPollMs ?? "1000", 10) || 1000);
+  const waitBudgetMs = Math.max(
+    replyWaitMs,
+    Number.parseInt(job?.chatgptWaitBudgetMs ?? "240000", 10) || 240000
+  );
+
+  return {
+    replyWaitMs,
+    replyMaxChecks: Math.max(1, Math.ceil(waitBudgetMs / replyWaitMs)),
+    waitBudgetMs,
   };
 }
 
@@ -65,11 +107,11 @@ async function emitProgressFactory({ writeFiles, progressLogPath, progressToCons
 }
 
 function selectLeadsForEnrichment(leads, threshold) {
-  return leads.filter((lead) => lead.totalScore >= threshold).slice(0, 12);
+  return leads.filter((lead) => lead.totalScore >= threshold);
 }
 
 function selectLeadsForDrafting(leads, threshold) {
-  return leads.filter((lead) => lead.totalScore >= threshold).slice(0, 10);
+  return leads.filter((lead) => lead.totalScore >= threshold);
 }
 
 export function buildLearningRows({ collections = [], leads = [], outreach = [] } = {}) {
@@ -145,6 +187,13 @@ export async function runLeadEngine({
   const resolvedRunId = runId ?? getRunId(resolvedNow);
   const runDir = getRunDir(resolvedRunId);
   const files = buildArtifactPaths(runDir);
+  let job = null;
+  let queryPlan = [];
+  let collectionResult = { collections: [], collectedCount: 0 };
+  let normalized = { items: [], dedupedCount: 0 };
+  let enrichedLeads = [];
+  let outreachResults = [];
+  let learningRows = [];
 
   if (writeFiles) {
     await ensureAppDirs();
@@ -169,160 +218,285 @@ export async function runLeadEngine({
       jobFilePath: path.resolve(jobFilePath),
     },
   });
+  try {
+    job = await readNarrateJob(jobFilePath);
+    queryPlan = buildDiscoveryPlan(job);
+    const chatgptReplyOptions = resolveChatGPTReplyOptions(job);
+    const personaProfile = job.persona ? await resolveBrowserPersonaFn(job.persona) : null;
+    const resolvedAdapter =
+      adapter ?? new ChromeAppleScriptAdapter({ browserName: personaProfile?.browserName ?? browserName });
 
-  const job = await readNarrateJob(jobFilePath);
-  const queryPlan = buildDiscoveryPlan(job);
-  const personaProfile = job.persona ? await resolveBrowserPersonaFn(job.persona) : null;
-  const resolvedAdapter = adapter ?? new ChromeAppleScriptAdapter({ browserName: personaProfile?.browserName ?? browserName });
+    if (writeFiles) {
+      await writeJson(files.job, job);
+      await writeJson(files.queryPlan, queryPlan);
+    }
 
-  if (writeFiles) {
-    await writeJson(files.job, job);
-    await writeJson(files.queryPlan, queryPlan);
-  }
-
-  await emitProgress({
-    stage: "lead-engine",
-    action: "job-loaded",
-    details: {
-      sourceCount: job.sources.filter((source) => source.enabled !== false).length,
-      queryCount: queryPlan.length,
-      persona: job.persona ?? null,
-    },
-  });
-
-  const collectionResult = await collectLeadSourcesFn({
-    job,
-    adapter: resolvedAdapter,
-    personaProfile,
-    queryPlans: queryPlan,
-    onProgress: emitProgress,
-  });
-
-  const normalized = normalizeDiscoveryCollections({
-    collections: collectionResult.collections,
-    collectedAt: resolvedNow.toISOString(),
-  });
-
-  const scoredLeads = scoreSourceItems(normalized.items, { now: resolvedNow }).slice(0, job.finalLeadLimit);
-  const enrichmentTargets = selectLeadsForEnrichment(scoredLeads, job.enrichAboveScore);
-  const enrichmentResults = [];
-
-  await emitProgress({
-    stage: "qualification",
-    action: "complete",
-    details: {
-      normalizedItems: normalized.dedupedCount,
-      scoredLeads: scoredLeads.length,
-      enrichmentTargets: enrichmentTargets.length,
-    },
-  });
-
-  for (const lead of enrichmentTargets) {
-    const enrichmentResult = await enrichLeadFn({
-      adapter: resolvedAdapter,
-      job,
-      lead,
-      personaProfile,
-      expectedAccountHint: job.account,
-    });
-    enrichmentResults.push(enrichmentResult);
-  }
-
-  const enrichmentByLeadId = new Map(enrichmentResults.map((entry) => [entry.leadId, entry.value]));
-  const enrichedLeads = scoredLeads
-    .map((lead) => mergeLeadEnrichment(lead, enrichmentByLeadId.get(lead.leadId) ?? null))
-    .sort((left, right) => right.totalScore - left.totalScore);
-
-  const draftTargets = selectLeadsForDrafting(enrichedLeads, job.draftAboveScore);
-  const outreachResults = [];
-
-  await emitProgress({
-    stage: "enrichment",
-    action: "complete",
-    details: {
-      enriched: enrichmentResults.length,
-      draftTargets: draftTargets.length,
-    },
-  });
-
-  for (const lead of draftTargets) {
-    outreachResults.push(
-      await draftOutreachFn({
-        adapter: resolvedAdapter,
-        job,
-        lead,
-        personaProfile,
-        expectedAccountHint: job.account,
-      })
-    );
-  }
-
-  const learningRows = buildLearningRows({
-    collections: collectionResult.collections,
-    leads: enrichedLeads,
-    outreach: outreachResults,
-  });
-
-  const manifest = {
-    runId: resolvedRunId,
-    generatedAt: resolvedNow.toISOString(),
-    jobFilePath: path.resolve(jobFilePath),
-    counts: {
-      queries: queryPlan.length,
-      collected: collectionResult.collectedCount,
-      normalized: normalized.dedupedCount,
-      leads: enrichedLeads.length,
-      hot: enrichedLeads.filter((lead) => lead.status === "hot").length,
-      drafted: outreachResults.length,
-    },
-    artifacts: files,
-  };
-
-  if (writeFiles) {
-    await writeJson(files.collection, collectionResult);
-    await writeJson(files.sourceItems, normalized);
-    await writeJson(files.leads, enrichedLeads);
-    await writeJson(files.outreach, outreachResults);
-    await writeJson(files.manifest, manifest);
-  }
-
-  withDb((db) => {
-    replaceRunState(db, {
-      run: {
-        id: resolvedRunId,
-        name: job.name,
-        objective: job.objective,
-        startedAt: resolvedNow.toISOString(),
-        finishedAt: new Date().toISOString(),
-        status: "completed",
-        counts: manifest.counts,
+    await emitProgress({
+      stage: "lead-engine",
+      action: "job-loaded",
+      details: {
+        sourceCount: job.sources.filter((source) => source.enabled !== false).length,
+        queryCount: queryPlan.length,
+        persona: job.persona ?? null,
+        chatgptReplyMaxChecks: chatgptReplyOptions.replyMaxChecks,
+        chatgptReplyWaitMs: chatgptReplyOptions.replyWaitMs,
+        ...assertMemoryWithinLimit({ job, stage: "job-loaded" }),
       },
-      sourceItems: normalized.items.map((item) => ({
-        ...item,
-        detectedSignals: enrichedLeads.find((lead) => lead.sourceItemId === item.itemId)?.detectedSignals ?? [],
-      })),
+    });
+
+    collectionResult = await collectLeadSourcesFn({
+      job,
+      adapter: resolvedAdapter,
+      personaProfile,
+      queryPlans: queryPlan,
+      onProgress: emitProgress,
+      ...chatgptReplyOptions,
+    });
+
+    normalized = normalizeDiscoveryCollections({
+      collections: collectionResult.collections,
+      collectedAt: resolvedNow.toISOString(),
+    });
+
+    assertMemoryWithinLimit({
+      job,
+      stage: "post-normalization",
+      extra: {
+        dedupedCount: normalized.dedupedCount,
+      },
+    });
+    await pauseIfNeeded(resolvedAdapter, job.stagePauseMs);
+
+    const scoredLeads = scoreSourceItems(normalized.items, { now: resolvedNow }).slice(0, job.finalLeadLimit);
+    const enrichmentTargets = selectLeadsForEnrichment(scoredLeads, job.enrichAboveScore).slice(0, job.maxEnrichmentTasks);
+    const enrichmentResults = [];
+
+    await emitProgress({
+      stage: "qualification",
+      action: "complete",
+      details: {
+        normalizedItems: normalized.dedupedCount,
+        scoredLeads: scoredLeads.length,
+        enrichmentTargets: enrichmentTargets.length,
+        ...assertMemoryWithinLimit({ job, stage: "qualification:complete" }),
+      },
+    });
+
+    for (const lead of enrichmentTargets) {
+      enrichmentResults.push(
+        await enrichLeadFn({
+          adapter: resolvedAdapter,
+          job,
+          lead,
+          personaProfile,
+          expectedAccountHint: job.account,
+          ...chatgptReplyOptions,
+        })
+      );
+      assertMemoryWithinLimit({
+        job,
+        stage: "enrichment:loop",
+        extra: {
+          enrichedCount: enrichmentResults.length,
+        },
+      });
+      await pauseIfNeeded(resolvedAdapter, job.queryPauseMs);
+    }
+
+    const enrichmentByLeadId = new Map(enrichmentResults.map((entry) => [entry.leadId, entry.value]));
+    enrichedLeads = scoredLeads
+      .map((lead) => mergeLeadEnrichment(lead, enrichmentByLeadId.get(lead.leadId) ?? null))
+      .sort((left, right) => right.totalScore - left.totalScore);
+
+    const draftTargets = selectLeadsForDrafting(enrichedLeads, job.draftAboveScore).slice(0, job.maxDraftTasks);
+
+    await emitProgress({
+      stage: "enrichment",
+      action: "complete",
+      details: {
+        enriched: enrichmentResults.length,
+        draftTargets: draftTargets.length,
+        ...assertMemoryWithinLimit({ job, stage: "enrichment:complete" }),
+      },
+    });
+
+    await pauseIfNeeded(resolvedAdapter, job.stagePauseMs);
+
+    for (const lead of draftTargets) {
+      outreachResults.push(
+        await draftOutreachFn({
+          adapter: resolvedAdapter,
+          job,
+          lead,
+          personaProfile,
+          expectedAccountHint: job.account,
+          ...chatgptReplyOptions,
+        })
+      );
+      assertMemoryWithinLimit({
+        job,
+        stage: "outreach:loop",
+        extra: {
+          draftedCount: outreachResults.length,
+        },
+      });
+      await pauseIfNeeded(resolvedAdapter, job.queryPauseMs);
+    }
+
+    learningRows = buildLearningRows({
+      collections: collectionResult.collections,
+      leads: enrichedLeads,
+      outreach: outreachResults,
+    });
+
+    const manifest = {
+      runId: resolvedRunId,
+      generatedAt: resolvedNow.toISOString(),
+      jobFilePath: path.resolve(jobFilePath),
+      status: "completed",
+      counts: {
+        queries: queryPlan.length,
+        collected: collectionResult.collectedCount,
+        normalized: normalized.dedupedCount,
+        leads: enrichedLeads.length,
+        hot: enrichedLeads.filter((lead) => lead.status === "hot").length,
+        drafted: outreachResults.length,
+      },
+      safety: {
+        maxTotalQueries: job.maxTotalQueries,
+        maxCollectedItems: job.maxCollectedItems,
+        maxEnrichmentTasks: job.maxEnrichmentTasks,
+        maxDraftTasks: job.maxDraftTasks,
+        maxHeapUsedMb: job.maxHeapUsedMb,
+        chatgptWaitBudgetMs: job.chatgptWaitBudgetMs,
+        chatgptPollMs: job.chatgptPollMs,
+        finalMemorySnapshot: buildMemorySnapshot(),
+      },
+      artifacts: files,
+    };
+
+    if (writeFiles) {
+      await writeJson(files.collection, collectionResult);
+      await writeJson(files.sourceItems, normalized);
+      await writeJson(files.leads, enrichedLeads);
+      await writeJson(files.outreach, outreachResults);
+      await writeJson(files.manifest, manifest);
+    }
+
+    withDb((db) => {
+      replaceRunState(db, {
+        run: {
+          id: resolvedRunId,
+          name: job.name,
+          objective: job.objective,
+          startedAt: resolvedNow.toISOString(),
+          finishedAt: new Date().toISOString(),
+          status: "completed",
+          counts: manifest.counts,
+        },
+        sourceItems: normalized.items.map((item) => ({
+          ...item,
+          detectedSignals: enrichedLeads.find((lead) => lead.sourceItemId === item.itemId)?.detectedSignals ?? [],
+        })),
+        leads: enrichedLeads,
+        outreach: outreachResults,
+        learning: learningRows,
+      });
+    });
+
+    await emitProgress({
+      stage: "lead-engine",
+      action: "complete",
+      details: manifest.counts,
+    });
+
+    return {
+      runId: resolvedRunId,
+      runDir,
+      job,
+      queryPlan,
+      collectionResult,
+      normalized,
       leads: enrichedLeads,
       outreach: outreachResults,
       learning: learningRows,
+      manifest,
+    };
+  } catch (error) {
+    const errorPayload = {
+      runId: resolvedRunId,
+      failedAt: new Date().toISOString(),
+      error: {
+        name: error?.name ?? "Error",
+        message: error?.message ?? String(error),
+        details: error?.details ?? null,
+        helpfulHint: buildHelpfulFailureHint(error),
+      },
+      memory: buildMemorySnapshot(),
+      counts: {
+        queriesPlanned: queryPlan.length,
+        collected: collectionResult.collectedCount ?? 0,
+        normalized: normalized.dedupedCount ?? 0,
+        leads: enrichedLeads.length,
+        drafted: outreachResults.length,
+      },
+    };
+
+    await emitProgress({
+      stage: "lead-engine",
+      action: "failed",
+      details: {
+        message: errorPayload.error.message,
+        ...errorPayload.memory,
+      },
     });
-  });
 
-  await emitProgress({
-    stage: "lead-engine",
-    action: "complete",
-    details: manifest.counts,
-  });
+    const failureManifest = {
+      runId: resolvedRunId,
+      generatedAt: resolvedNow.toISOString(),
+      jobFilePath: path.resolve(jobFilePath),
+      status: "failed",
+      counts: errorPayload.counts,
+      safety: job
+        ? {
+            maxTotalQueries: job.maxTotalQueries,
+            maxCollectedItems: job.maxCollectedItems,
+            maxEnrichmentTasks: job.maxEnrichmentTasks,
+            maxDraftTasks: job.maxDraftTasks,
+            maxHeapUsedMb: job.maxHeapUsedMb,
+            chatgptWaitBudgetMs: job.chatgptWaitBudgetMs,
+            chatgptPollMs: job.chatgptPollMs,
+          }
+        : null,
+      artifacts: files,
+      errorFile: files.error,
+    };
 
-  return {
-    runId: resolvedRunId,
-    runDir,
-    job,
-    queryPlan,
-    collectionResult,
-    normalized,
-    leads: enrichedLeads,
-    outreach: outreachResults,
-    learning: learningRows,
-    manifest,
-  };
+    if (writeFiles) {
+      await writeJson(files.error, errorPayload);
+      await writeJson(files.manifest, failureManifest);
+    }
+
+    if (job) {
+      withDb((db) => {
+        replaceRunState(db, {
+          run: {
+            id: resolvedRunId,
+            name: job.name,
+            objective: job.objective,
+            startedAt: resolvedNow.toISOString(),
+            finishedAt: new Date().toISOString(),
+            status: "failed",
+            counts: errorPayload.counts,
+          },
+          sourceItems: [],
+          leads: [],
+          outreach: [],
+          learning: [],
+        });
+      });
+    }
+
+    throw error;
+  }
 }

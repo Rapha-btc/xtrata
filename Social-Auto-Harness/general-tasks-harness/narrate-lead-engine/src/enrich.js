@@ -185,7 +185,7 @@ export async function enrichLead({
     expectedType: "object",
     requiredKeys: ["personOrCompany", "leadType", "notes"],
     validate: validateLeadEnrichmentShape,
-    forceNewTab: true,
+    forceNewTab: false,
     progressLabel: `narrate-enrichment:${lead.personOrCompany}`,
     ...jsonReplyOptions,
   });

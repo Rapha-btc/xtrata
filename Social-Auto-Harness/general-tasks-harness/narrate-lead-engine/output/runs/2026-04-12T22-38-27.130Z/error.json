@@ -1,0 +1,24 @@
+{
+  "runId": "2026-04-12T22-38-27.130Z",
+  "failedAt": "2026-04-12T22:39:00.596Z",
+  "error": {
+    "name": "Error",
+    "message": "ChatGPT reply did not contain valid JSON. after 2 attempts.",
+    "details": null,
+    "helpfulHint": null
+  },
+  "memory": {
+    "rssMb": 22.7,
+    "heapUsedMb": 6.9,
+    "heapTotalMb": 8.8,
+    "externalMb": 2.2,
+    "arrayBuffersMb": 0
+  },
+  "counts": {
+    "queriesPlanned": 1,
+    "collected": 0,
+    "normalized": 0,
+    "leads": 0,
+    "drafted": 0
+  }
+}

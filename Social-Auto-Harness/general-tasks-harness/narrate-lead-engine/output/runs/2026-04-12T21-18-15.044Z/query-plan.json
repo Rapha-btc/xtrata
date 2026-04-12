@@ -1,0 +1,11 @@
+[
+  {
+    "sourceLabel": "Smoke Test Web Search",
+    "sourceType": "gpt-web-search",
+    "family": "cost-pain",
+    "query": "\"audiobook\" expensive",
+    "siteFilter": null,
+    "mode": null,
+    "order": 1
+  }
+]

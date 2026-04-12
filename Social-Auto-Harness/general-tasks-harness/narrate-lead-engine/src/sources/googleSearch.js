@@ -1,3 +1,5 @@
+import { closeManagedTab, LeadEngineSafetyError } from "../safety.js";
+
 function normalizeText(value) {
   return value?.toString().replace(/\s+/g, " ").trim() ?? "";
 }
@@ -42,7 +44,23 @@ function pickMatchingTab(tabs, matcher) {
   return tabs.find((tab) => matcher(tab)) ?? null;
 }
 
-async function openOrReuseTab({ adapter, targetUrl, matchTab }) {
+function isNoChromeWindowError(error) {
+  return /chrome window not found/i.test(error?.message ?? "");
+}
+
+function buildBrowserOpenError(error, targetUrl) {
+  if (isNoChromeWindowError(error)) {
+    const wrapped = new Error(
+      `Google Chrome did not have an open window for ${targetUrl}. The collector attempted a safe fallback but browser bootstrapping still failed. Open Google Chrome manually, leave one window open, then rerun the job.`
+    );
+    wrapped.cause = error;
+    return wrapped;
+  }
+
+  return error;
+}
+
+export async function openOrReuseTab({ adapter, targetUrl, matchTab, waitAfterOpenMs = 1200 }) {
   try {
     const tabs = await adapter.listTabs();
     const existing = pickMatchingTab(tabs, matchTab);
@@ -57,15 +75,40 @@ async function openOrReuseTab({ adapter, targetUrl, matchTab }) {
     // Best-effort tab reuse only.
   }
 
-  const tab =
-    typeof adapter.openTabInFrontWindow === "function"
-      ? await adapter.openTabInFrontWindow(targetUrl)
-      : await adapter.openTab(targetUrl);
+  if (typeof adapter.openTabInFrontWindow === "function") {
+    try {
+      const tab = await adapter.openTabInFrontWindow(targetUrl);
+      if (typeof adapter.wait === "function" && waitAfterOpenMs > 0) {
+        await adapter.wait(waitAfterOpenMs);
+      }
+      return {
+        action: "opened-new-tab",
+        tab,
+      };
+    } catch (error) {
+      if (!isNoChromeWindowError(error)) {
+        throw buildBrowserOpenError(error, targetUrl);
+      }
+    }
+  }
 
-  return {
-    action: "opened-new-tab",
-    tab,
-  };
+  if (typeof adapter.openTab !== "function") {
+    throw new TypeError("adapter.openTab is required when no Chrome window is available.");
+  }
+
+  try {
+    const tab = await adapter.openTab(targetUrl);
+    if (typeof adapter.wait === "function" && waitAfterOpenMs > 0) {
+      await adapter.wait(waitAfterOpenMs);
+    }
+
+    return {
+      action: "opened-new-tab",
+      tab,
+    };
+  } catch (error) {
+    throw buildBrowserOpenError(error, targetUrl);
+  }
 }
 
 export function buildGoogleSearchUrl(query, { maxResults = 10 } = {}) {
@@ -95,6 +138,12 @@ export function buildGoogleSearchProbeScript(maxResults = 10) {
   return `(() => {
     const maxResults = ${Math.max(1, Math.min(10, Number(maxResults) || 10))};
     const normalizeText = (value) => (value || "").replace(/\\s+/g, " ").trim();
+    const bodyText = normalizeText(document.body?.innerText || "");
+    const titleText = normalizeText(document.title || "");
+    const securityCheck =
+      /our systems have detected unusual traffic/i.test(bodyText) ||
+      /about this page/i.test(titleText) ||
+      /this page checks to see if it's really you/i.test(bodyText);
     const canonicalize = (href) => {
       if (!href) return null;
       try {
@@ -168,7 +217,7 @@ export function buildGoogleSearchProbeScript(maxResults = 10) {
         url,
         title,
         excerpt: snippet,
-        rawText: normalizeText(container?.innerText || ""),
+        rawText: normalizeText(container?.innerText || "").slice(0, 1600),
         sourceName,
         publishedAt: extractPublishedText(container),
       });
@@ -180,6 +229,10 @@ export function buildGoogleSearchProbeScript(maxResults = 10) {
       url: window.location.href,
       title: document.title,
       query: new URL(window.location.href).searchParams.get("q"),
+      securityCheck,
+      securityCheckReason: securityCheck
+        ? "google-unusual-traffic"
+        : null,
       noResults: /did not match any documents|no results found/i.test(normalizeText(document.body?.innerText || "")),
       resultCount: results.length,
       results,
@@ -194,6 +247,8 @@ export function parseGoogleSearchProbeResult(raw) {
       url: null,
       title: "",
       query: null,
+      securityCheck: false,
+      securityCheckReason: null,
       noResults: false,
       resultCount: 0,
       results: [],
@@ -235,16 +290,32 @@ export async function scrapeGoogleSearchResults({
   });
 
   let lastState = null;
-  for (let attempt = 1; attempt <= maxChecks; attempt += 1) {
-    lastState = parseGoogleSearchProbeResult(
-      await adapter.evaluateActiveTab(buildGoogleSearchProbeScript(maxResults))
-    );
+  try {
+    for (let attempt = 1; attempt <= maxChecks; attempt += 1) {
+      lastState = parseGoogleSearchProbeResult(
+        await adapter.evaluateActiveTab(buildGoogleSearchProbeScript(maxResults))
+      );
 
-    if (lastState.resultCount > 0 || lastState.noResults) {
-      break;
+      if (lastState.securityCheck) {
+        throw new LeadEngineSafetyError(
+          "Google presented an unusual-traffic / security-check page. The app will stop here instead of pushing through a bot check. Disable direct Google scraping for this job or switch to gpt-web-search/manual sources.",
+          {
+            provider: "google",
+            query,
+            url: lastState.url ?? targetUrl,
+            reason: lastState.securityCheckReason ?? "google-unusual-traffic",
+          }
+        );
+      }
+
+      if (lastState.resultCount > 0 || lastState.noResults) {
+        break;
+      }
+
+      await adapter.wait(waitMs);
     }
-
-    await adapter.wait(waitMs);
+  } finally {
+    await closeManagedTab(adapter, navigation);
   }
 
   return {

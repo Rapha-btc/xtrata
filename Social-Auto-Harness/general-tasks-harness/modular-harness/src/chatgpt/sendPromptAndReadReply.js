@@ -78,9 +78,15 @@ export const CHATGPT_REPLY_PROBE_SCRIPT = `(() => {
   });
 })()`;
 
-export function buildChatGPTSubmitPromptScript(prompt) {
+export function buildChatGPTSubmitPromptScript(
+  prompt,
+  {
+    submitStrategy = "button-click",
+  } = {}
+) {
   return `(() => {
     const promptText = ${JSON.stringify(prompt)};
+    const submitStrategy = ${JSON.stringify(submitStrategy)};
     const normalizeText = (value) => (value || "").replace(/\\s+/g, " ").trim();
     const isVisible = (element) => Boolean(element && element.getClientRects().length > 0);
     const readButtonLabel = (button) =>
@@ -103,6 +109,33 @@ export function buildChatGPTSubmitPromptScript(prompt) {
       document.querySelector("#prompt-textarea") ||
       document.querySelector("textarea") ||
       document.querySelector('[contenteditable="true"]');
+    const buttonLabels = [...document.querySelectorAll("button")]
+      .map((button) => readButtonLabel(button))
+      .filter(Boolean);
+    const generating =
+      buttonLabels.some((value) => /^(stop generating|stop streaming|stop response)$/i.test(value)) ||
+      Boolean(
+        document.querySelector(
+          'button[aria-label*="Stop" i], button[title*="Stop" i], button[data-testid*="stop"]'
+        )
+      );
+
+    if (generating) {
+      return JSON.stringify({
+        ok: true,
+        retryable: false,
+        composerTag: composer?.tagName ?? null,
+        composerTextLength: readComposerText(composer).length,
+        sendButtonLabel: null,
+        sendButtonReady: false,
+        submitStrategy: "already-generating",
+        submitReason: "generation-in-progress",
+        submittedPromptLength: 0,
+        resubmissionSkipped: true,
+        url: window.location.href,
+        title: document.title,
+      });
+    }
 
     if (!composer) {
       return JSON.stringify({
@@ -131,8 +164,77 @@ export function buildChatGPTSubmitPromptScript(prompt) {
       }
     };
 
+    const dispatchMouseClick = (element) => {
+      if (!element) return false;
+      try {
+        element.focus?.();
+      } catch {}
+
+      const mouseOptions = { bubbles: true, cancelable: true, view: window };
+      try {
+        element.dispatchEvent(new PointerEvent("pointerdown", mouseOptions));
+        element.dispatchEvent(new MouseEvent("mousedown", mouseOptions));
+        element.dispatchEvent(new PointerEvent("pointerup", mouseOptions));
+        element.dispatchEvent(new MouseEvent("mouseup", mouseOptions));
+        element.dispatchEvent(new MouseEvent("click", mouseOptions));
+      } catch {
+        // Ignore and still try click().
+      }
+
+      try {
+        element.click?.();
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    const dispatchKeyboardSubmit = (element) => {
+      if (!element) return false;
+      try {
+        element.focus?.();
+      } catch {}
+
+      const keyboardOptions = {
+        key: "Enter",
+        code: "Enter",
+        keyCode: 13,
+        which: 13,
+        bubbles: true,
+        cancelable: true,
+      };
+
+      try {
+        element.dispatchEvent(new KeyboardEvent("keydown", keyboardOptions));
+        element.dispatchEvent(new KeyboardEvent("keypress", keyboardOptions));
+        element.dispatchEvent(new KeyboardEvent("keyup", keyboardOptions));
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    const dispatchFormSubmit = (form) => {
+      if (!form) return false;
+      try {
+        if (typeof form.requestSubmit === "function") {
+          form.requestSubmit();
+          return true;
+        }
+      } catch {
+        // Fall through to submit event dispatch.
+      }
+
+      try {
+        return form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+      } catch {
+        return false;
+      }
+    };
+
     composer.focus();
     assignValue(composer, promptText);
+    composer.dispatchEvent(new InputEvent("beforeinput", { bubbles: true, cancelable: true, inputType: "insertText", data: promptText }));
     composer.dispatchEvent(new Event("input", { bubbles: true }));
     composer.dispatchEvent(new Event("change", { bubbles: true }));
     const composerText = readComposerText(composer);
@@ -158,33 +260,52 @@ export function buildChatGPTSubmitPromptScript(prompt) {
         return isVisible(button) && /send/i.test(label) && !/(voice|microphone|search)/i.test(label);
       }) || null;
     const sendButtonLabel = readButtonLabel(sendButton);
+    const sendButtonReady = Boolean(
+      sendButton &&
+        !sendButton.disabled &&
+        sendButton.getAttribute("aria-disabled") !== "true"
+    );
 
-    if (!sendButton) {
-      return JSON.stringify({
-        ok: false,
-        reason: "send-button-not-found",
-        retryable: true,
-        composerTag: composer.tagName,
-        composerTextLength: composerText.length,
-        url: window.location.href,
-        title: document.title,
-      });
+    let submitAttempted = false;
+    let submitReason = null;
+
+    if (submitStrategy === "button-click") {
+      if (!sendButton) {
+        submitReason = "send-button-not-found";
+      } else if (!sendButtonReady) {
+        submitReason = "send-button-not-ready";
+      } else {
+        submitAttempted = dispatchMouseClick(sendButton);
+        submitReason = submitAttempted ? "button-click-dispatched" : "button-click-failed";
+      }
+    } else if (submitStrategy === "form-submit") {
+      if (!composerForm) {
+        submitReason = "form-not-found";
+      } else {
+        submitAttempted = dispatchFormSubmit(composerForm);
+        submitReason = submitAttempted ? "form-submit-dispatched" : "form-submit-failed";
+      }
+    } else if (submitStrategy === "keyboard-enter") {
+      submitAttempted = dispatchKeyboardSubmit(composer);
+      submitReason = submitAttempted ? "keyboard-enter-dispatched" : "keyboard-enter-failed";
+    } else {
+      submitReason = "unknown-submit-strategy";
     }
 
-    if (sendButton.disabled || sendButton.getAttribute("aria-disabled") === "true") {
+    if (!submitAttempted) {
       return JSON.stringify({
         ok: false,
-        reason: "send-button-not-ready",
+        reason: submitReason,
         retryable: true,
         composerTag: composer.tagName,
         composerTextLength: composerText.length,
         sendButtonLabel,
+        sendButtonReady,
+        submitStrategy,
         url: window.location.href,
         title: document.title,
       });
     }
-
-    sendButton.click();
 
     return JSON.stringify({
       ok: true,
@@ -192,6 +313,9 @@ export function buildChatGPTSubmitPromptScript(prompt) {
       composerTag: composer.tagName,
       composerTextLength: composerText.length,
       sendButtonLabel,
+      sendButtonReady,
+      submitStrategy,
+      submitReason,
       submittedPromptLength: promptText.length,
       url: window.location.href,
       title: document.title,
@@ -201,6 +325,12 @@ export function buildChatGPTSubmitPromptScript(prompt) {
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function pickSubmitStrategy(attempt) {
+  if (attempt <= 1) return "button-click";
+  if (attempt === 2) return "form-submit";
+  return "keyboard-enter";
 }
 
 export function normalizeReplyText(value) {
@@ -456,8 +586,9 @@ export async function sendPromptAndReadReply({
 
   let submitState = null;
   let confirmedReplyState = null;
-  const submitScript = buildChatGPTSubmitPromptScript(prompt);
   for (let attempt = 1; attempt <= submitMaxChecks; attempt += 1) {
+    const submitStrategy = pickSubmitStrategy(attempt);
+    const submitScript = buildChatGPTSubmitPromptScript(prompt, { submitStrategy });
     await emitProgress(onProgress, {
       stage: "chatgpt-submit",
       action: "attempt",
@@ -465,6 +596,7 @@ export async function sendPromptAndReadReply({
       details: {
         attempt,
         maxAttempts: submitMaxChecks,
+        submitStrategy,
         promptLength: prompt.length,
       },
     });
@@ -486,11 +618,13 @@ export async function sendPromptAndReadReply({
           label: progressLabel,
           details: {
             attempt,
-            confirmationReason: confirmation.reason,
-            confirmationChecks: confirmation.checks,
-            sendButtonLabel: submitState?.sendButtonLabel ?? null,
-            url: confirmation.state?.url ?? submitState?.url ?? null,
-          },
+        confirmationReason: confirmation.reason,
+        confirmationChecks: confirmation.checks,
+        submitStrategy: submitState?.submitStrategy ?? submitStrategy,
+        resubmissionSkipped: submitState?.resubmissionSkipped ?? false,
+        sendButtonLabel: submitState?.sendButtonLabel ?? null,
+        url: confirmation.state?.url ?? submitState?.url ?? null,
+      },
         });
         break;
       }
@@ -511,6 +645,7 @@ export async function sendPromptAndReadReply({
         attempt,
         maxAttempts: submitMaxChecks,
         reason: submitState?.reason ?? "unknown-submit-error",
+        submitStrategy: submitState?.submitStrategy ?? submitStrategy,
         sendButtonLabel: submitState?.sendButtonLabel ?? null,
         url: submitState?.replyState?.url ?? submitState?.url ?? null,
       },

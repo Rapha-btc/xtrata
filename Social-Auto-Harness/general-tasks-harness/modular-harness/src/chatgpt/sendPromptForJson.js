@@ -304,7 +304,7 @@ export async function sendPromptForJson({
   validate = null,
   sendPromptAndReadReplyFn = sendPromptAndReadReply,
   maxJsonAttempts = 2,
-  reuseReplyThreadForRepairs = false,
+  reuseReplyThreadForRepairs = true,
   onProgress = null,
   onInvalidReply = null,
   progressLabel = null,
@@ -340,22 +340,23 @@ export async function sendPromptForJson({
     });
 
     const previousReply = lastReply;
+    const reuseExistingReplyThread =
+      attempt > 1 &&
+      reuseReplyThreadForRepairs &&
+      previousReply?.session &&
+      previousReply?.replyState?.url;
     const reply = await sendPromptAndReadReplyFn({
       adapter,
       prompt: dispatchedPrompt,
       expectedAccountHint,
       personaProfile,
       ...replyOptions,
-      targetUrl:
-        attempt > 1 && reuseReplyThreadForRepairs
-          ? previousReply?.replyState?.url ?? targetUrl
-          : targetUrl,
-      existingSession:
-        attempt > 1 && reuseReplyThreadForRepairs
-          ? previousReply?.session ?? null
-          : null,
+      targetUrl: reuseExistingReplyThread ? previousReply.replyState.url : targetUrl,
+      existingSession: reuseExistingReplyThread ? previousReply.session : null,
       forceNewTab:
-        attempt > 1
+        reuseExistingReplyThread
+          ? false
+          : attempt > 1
           ? true
           : replyOptions.forceNewTab,
       onProgress,

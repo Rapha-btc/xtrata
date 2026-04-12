@@ -1,0 +1,15 @@
+[2026-04-12T21:18:15.050Z] lead-engine:start runId="2026-04-12T21-18-15.044Z" runDir="/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-12T21-18-15.044Z" jobFilePath="/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/jobs/safe-smoke-test.json"
+[2026-04-12T21:18:15.052Z] lead-engine:job-loaded sourceCount=1 queryCount=1 rssMb=45.8 heapUsedMb=5.7 heapTotalMb=10.6 externalMb=2.2 arrayBuffersMb=0.1
+[2026-04-12T21:18:15.052Z] discovery:start-query queryIndex=1 totalQueries=1 sourceType="gpt-web-search" label="Smoke Test Web Search" family="cost-pain" query="\"audiobook\" expensive"
+[2026-04-12T21:18:15.052Z] safety:memory-snapshot stage="discovery:start-query" queryIndex=1 rssMb=45.8 heapUsedMb=6.5 heapTotalMb=10.6 externalMb=2.2 arrayBuffersMb=0.1
+[2026-04-12T21:18:15.053Z] chatgpt-json:attempt attempt=1 maxAttempts=2 repairPrompt=false
+[2026-04-12T21:18:17.528Z] chatgpt-session:ready sessionAction="opened-new-tab" url="https://chatgpt.com/"
+[2026-04-12T21:18:18.011Z] chatgpt-submit:attempt attempt=1 maxAttempts=3 promptLength=1142
+[2026-04-12T21:18:18.456Z] chatgpt-submit:retry attempt=1 maxAttempts=3 reason="composer-fill-failed" url="https://chatgpt.com/"
+[2026-04-12T21:18:18.959Z] chatgpt-submit:attempt attempt=2 maxAttempts=3 promptLength=1142
+[2026-04-12T21:18:19.480Z] chatgpt-submit:confirmed attempt=2 confirmationReason="generating" confirmationChecks=1 sendButtonLabel="Send prompt" url="https://chatgpt.com/"
+[2026-04-12T21:18:19.481Z] chatgpt-reply:waiting attempt=1 maxChecks=60 elapsedMs=0 generating=true replyCount=0 url="https://chatgpt.com/"
+[2026-04-12T21:18:55.168Z] chatgpt-reply:waiting attempt=30 maxChecks=60 elapsedMs=29000 generating=false replyCount=0 url="https://chatgpt.com/"
+[2026-04-12T21:19:31.782Z] chatgpt-reply:waiting attempt=60 maxChecks=60 elapsedMs=59000 generating=true replyCount=1 url="https://chatgpt.com/c/69dc0c43-dd28-838d-a084-5932d28b0ba9"
+[2026-04-12T21:19:31.789Z] chatgpt-reply:timeout maxChecks=60 budgetMs=60000 generating=true replyCount=1 url="https://chatgpt.com/c/69dc0c43-dd28-838d-a084-5932d28b0ba9"
+[2026-04-12T21:19:31.795Z] lead-engine:failed message="ChatGPT was still generating when the wait budget expired after waiting 60000 ms." rssMb=20 heapUsedMb=6.6 heapTotalMb=8.3 externalMb=2.2 arrayBuffersMb=0

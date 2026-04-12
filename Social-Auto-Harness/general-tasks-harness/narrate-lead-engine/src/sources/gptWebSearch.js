@@ -145,7 +145,7 @@ export async function collectGptWebSearchSource({
     validate(value) {
       return validateGptLeadSearchShape(value, job.maxResultsPerQuery);
     },
-    forceNewTab: true,
+    forceNewTab: false,
     progressLabel: `narrate-gpt-search:${source.label}`,
     ...jsonReplyOptions,
   });
