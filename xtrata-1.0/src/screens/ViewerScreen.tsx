@@ -426,7 +426,9 @@ const TokenDetails = (props: {
   const [detailPanelView, setDetailPanelView] = useState<'media' | 'metadata'>(
     'media'
   );
-  const [metadataColumnCollapsed, setMetadataColumnCollapsed] = useState(false);
+  const [metadataColumnCollapsed, setMetadataColumnCollapsed] = useState(
+    props.mode !== 'wallet'
+  );
   const isWalletView = props.mode === 'wallet';
   const useSplitDetailTabs = props.useCompactPreviewLayout;
   const canToggleMetadataColumn = !useSplitDetailTabs;
@@ -507,6 +509,10 @@ const TokenDetails = (props: {
     props.mode,
     props.useCompactPreviewLayout
   ]);
+
+  useEffect(() => {
+    setMetadataColumnCollapsed(props.mode !== 'wallet');
+  }, [props.mode, props.selectedTokenId, props.useCompactPreviewLayout]);
 
   useEffect(() => {
     if (!showMetadataPane) {
