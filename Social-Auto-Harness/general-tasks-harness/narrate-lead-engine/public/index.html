@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Narrate Signal Console</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Narrate AI Prospecting</p>
+          <h1>Narrate Signal Console</h1>
+          <p class="hero-copy">
+            Browser-first lead discovery for audiobook pain signals, publisher scale pressure, and multi-voice fiction demand.
+          </p>
+        </div>
+        <form id="run-form" class="run-panel">
+          <label for="job-file">Job file</label>
+          <input id="job-file" name="jobFilePath" type="text" placeholder="Loading example job path..." />
+          <button id="run-button" type="submit">Run Discovery</button>
+          <p id="run-status" class="run-status">No run started yet.</p>
+        </form>
+      </header>
+
+      <section class="metrics" id="metrics"></section>
+
+      <main class="dashboard-grid">
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Recent Runs</h2>
+          </div>
+          <div id="runs" class="run-list empty-state">No runs yet.</div>
+        </section>
+
+        <section class="panel wide">
+          <div class="panel-header">
+            <h2>Top Leads</h2>
+          </div>
+          <div id="leads" class="lead-table empty-state">Run the example job to populate leads.</div>
+        </section>
+
+        <section class="panel wide detail-panel">
+          <div class="panel-header">
+            <h2>Lead Detail</h2>
+          </div>
+          <div id="detail" class="empty-state">Select a run to inspect sources, enrichment, and outreach drafts.</div>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

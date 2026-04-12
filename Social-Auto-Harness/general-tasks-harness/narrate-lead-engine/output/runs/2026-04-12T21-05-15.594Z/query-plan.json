@@ -1,0 +1,254 @@
+[
+  {
+    "sourceLabel": "Open Web Pain",
+    "sourceType": "google-search",
+    "family": "cost-pain",
+    "query": "\"audiobook\" expensive site:reddit.com",
+    "siteFilter": "reddit.com",
+    "mode": null,
+    "order": 1
+  },
+  {
+    "sourceLabel": "Open Web Pain",
+    "sourceType": "google-search",
+    "family": "cost-pain",
+    "query": "\"audiobook\" expensive site:kboards.com",
+    "siteFilter": "kboards.com",
+    "mode": null,
+    "order": 2
+  },
+  {
+    "sourceLabel": "Open Web Pain",
+    "sourceType": "google-search",
+    "family": "cost-pain",
+    "query": "\"audiobook\" expensive site:selfpublishingadvice.org",
+    "siteFilter": "selfpublishingadvice.org",
+    "mode": null,
+    "order": 3
+  },
+  {
+    "sourceLabel": "Open Web Pain",
+    "sourceType": "google-search",
+    "family": "cost-pain",
+    "query": "\"cost of producing an audiobook\" site:reddit.com",
+    "siteFilter": "reddit.com",
+    "mode": null,
+    "order": 4
+  },
+  {
+    "sourceLabel": "Open Web Pain",
+    "sourceType": "google-search",
+    "family": "cost-pain",
+    "query": "\"cost of producing an audiobook\" site:kboards.com",
+    "siteFilter": "kboards.com",
+    "mode": null,
+    "order": 5
+  },
+  {
+    "sourceLabel": "Open Web Pain",
+    "sourceType": "google-search",
+    "family": "cost-pain",
+    "query": "\"cost of producing an audiobook\" site:selfpublishingadvice.org",
+    "siteFilter": "selfpublishingadvice.org",
+    "mode": null,
+    "order": 6
+  },
+  {
+    "sourceLabel": "Open Web Pain",
+    "sourceType": "google-search",
+    "family": "cost-pain",
+    "query": "\"cheaper audiobook production\" site:reddit.com",
+    "siteFilter": "reddit.com",
+    "mode": null,
+    "order": 7
+  },
+  {
+    "sourceLabel": "Open Web Pain",
+    "sourceType": "google-search",
+    "family": "cost-pain",
+    "query": "\"cheaper audiobook production\" site:kboards.com",
+    "siteFilter": "kboards.com",
+    "mode": null,
+    "order": 8
+  },
+  {
+    "sourceLabel": "Open Web Pain",
+    "sourceType": "google-search",
+    "family": "cost-pain",
+    "query": "\"cheaper audiobook production\" site:selfpublishingadvice.org",
+    "siteFilter": "selfpublishingadvice.org",
+    "mode": null,
+    "order": 9
+  },
+  {
+    "sourceLabel": "Open Web Pain",
+    "sourceType": "google-search",
+    "family": "cost-pain",
+    "query": "\"looking for affordable audiobook narration\" site:reddit.com",
+    "siteFilter": "reddit.com",
+    "mode": null,
+    "order": 10
+  },
+  {
+    "sourceLabel": "Open Web Pain",
+    "sourceType": "google-search",
+    "family": "cost-pain",
+    "query": "\"looking for affordable audiobook narration\" site:kboards.com",
+    "siteFilter": "kboards.com",
+    "mode": null,
+    "order": 11
+  },
+  {
+    "sourceLabel": "Open Web Pain",
+    "sourceType": "google-search",
+    "family": "cost-pain",
+    "query": "\"looking for affordable audiobook narration\" site:selfpublishingadvice.org",
+    "siteFilter": "selfpublishingadvice.org",
+    "mode": null,
+    "order": 12
+  },
+  {
+    "sourceLabel": "Publisher And Rights",
+    "sourceType": "google-search",
+    "family": "publisher-backlist",
+    "query": "publisher backlist audiobook",
+    "siteFilter": null,
+    "mode": null,
+    "order": 1
+  },
+  {
+    "sourceLabel": "Publisher And Rights",
+    "sourceType": "google-search",
+    "family": "publisher-backlist",
+    "query": "\"small press\" audiobook",
+    "siteFilter": null,
+    "mode": null,
+    "order": 2
+  },
+  {
+    "sourceLabel": "Publisher And Rights",
+    "sourceType": "google-search",
+    "family": "publisher-backlist",
+    "query": "imprint backlist audio edition",
+    "siteFilter": null,
+    "mode": null,
+    "order": 3
+  },
+  {
+    "sourceLabel": "Publisher And Rights",
+    "sourceType": "google-search",
+    "family": "publisher-backlist",
+    "query": "rights catalog audiobook expansion",
+    "siteFilter": null,
+    "mode": null,
+    "order": 4
+  },
+  {
+    "sourceLabel": "Publisher And Rights",
+    "sourceType": "google-search",
+    "family": "publisher-backlist",
+    "query": "publisher \"audio edition\" backlist",
+    "siteFilter": null,
+    "mode": null,
+    "order": 5
+  },
+  {
+    "sourceLabel": "Publisher And Rights",
+    "sourceType": "google-search",
+    "family": "multi-voice",
+    "query": "\"different character voices\" audiobook",
+    "siteFilter": null,
+    "mode": null,
+    "order": 6
+  },
+  {
+    "sourceLabel": "Publisher And Rights",
+    "sourceType": "google-search",
+    "family": "multi-voice",
+    "query": "\"multiple voices\" novel",
+    "siteFilter": null,
+    "mode": null,
+    "order": 7
+  },
+  {
+    "sourceLabel": "Publisher And Rights",
+    "sourceType": "google-search",
+    "family": "multi-voice",
+    "query": "\"dialogue-heavy\" novel audiobook",
+    "siteFilter": null,
+    "mode": null,
+    "order": 8
+  },
+  {
+    "sourceLabel": "Publisher And Rights",
+    "sourceType": "google-search",
+    "family": "multi-voice",
+    "query": "\"dramatized audio\" fiction",
+    "siteFilter": null,
+    "mode": null,
+    "order": 9
+  },
+  {
+    "sourceLabel": "Publisher And Rights",
+    "sourceType": "google-search",
+    "family": "multi-voice",
+    "query": "\"character voices\" audiobook production",
+    "siteFilter": null,
+    "mode": null,
+    "order": 10
+  },
+  {
+    "sourceLabel": "Web Search Synthesis",
+    "sourceType": "gpt-web-search",
+    "family": "commercial-intent",
+    "query": "\"seeking audiobook narrator\"",
+    "siteFilter": null,
+    "mode": null,
+    "order": 1
+  },
+  {
+    "sourceLabel": "Web Search Synthesis",
+    "sourceType": "gpt-web-search",
+    "family": "commercial-intent",
+    "query": "\"need audiobook production\"",
+    "siteFilter": null,
+    "mode": null,
+    "order": 2
+  },
+  {
+    "sourceLabel": "Web Search Synthesis",
+    "sourceType": "gpt-web-search",
+    "family": "commercial-intent",
+    "query": "\"publisher\" audiobook production",
+    "siteFilter": null,
+    "mode": null,
+    "order": 3
+  },
+  {
+    "sourceLabel": "Web Search Synthesis",
+    "sourceType": "gpt-web-search",
+    "family": "commercial-intent",
+    "query": "\"audio rights\" \"no audiobook\"",
+    "siteFilter": null,
+    "mode": null,
+    "order": 4
+  },
+  {
+    "sourceLabel": "Web Search Synthesis",
+    "sourceType": "gpt-web-search",
+    "family": "commercial-intent",
+    "query": "\"backlist audiobook rollout\"",
+    "siteFilter": null,
+    "mode": null,
+    "order": 5
+  },
+  {
+    "sourceLabel": "Web Search Synthesis",
+    "sourceType": "gpt-web-search",
+    "family": "publisher-backlist",
+    "query": "publisher backlist audiobook",
+    "siteFilter": null,
+    "mode": null,
+    "order": 6
+  }
+]

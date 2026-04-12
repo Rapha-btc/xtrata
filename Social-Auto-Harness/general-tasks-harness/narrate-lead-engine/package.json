@@ -1,0 +1,13 @@
+{
+  "name": "narrate-lead-engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Standalone browser-first lead engine for Narrate AI using public search, scraping, and ChatGPT web UI instead of platform APIs.",
+  "scripts": {
+    "run-job": "node src/cli/run-job.js",
+    "server": "node src/server.js",
+    "example-job": "node src/cli/run-job.js --job-file=jobs/example-indie-authors.json",
+    "test": "node --test"
+  }
+}

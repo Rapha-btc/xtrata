@@ -1,0 +1,29 @@
+[2026-04-12T21:05:15.603Z] lead-engine:start runId="2026-04-12T21-05-15.594Z" runDir="/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-12T21-05-15.594Z" jobFilePath="/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/jobs/example-indie-authors.json"
+[2026-04-12T21:05:15.608Z] lead-engine:job-loaded sourceCount=3 queryCount=28 persona="xtrata"
+[2026-04-12T21:05:15.608Z] discovery:start-query queryIndex=1 totalQueries=28 sourceType="google-search" label="Open Web Pain" family="cost-pain" query="\"audiobook\" expensive site:reddit.com"
+[2026-04-12T21:05:18.072Z] discovery:complete-query queryIndex=1 totalQueries=28 sourceType="google-search" label="Open Web Pain" family="cost-pain" collectedCount=8
+[2026-04-12T21:05:18.072Z] discovery:start-query queryIndex=2 totalQueries=28 sourceType="google-search" label="Open Web Pain" family="cost-pain" query="\"audiobook\" expensive site:kboards.com"
+[2026-04-12T21:05:19.902Z] discovery:complete-query queryIndex=2 totalQueries=28 sourceType="google-search" label="Open Web Pain" family="cost-pain" collectedCount=8
+[2026-04-12T21:05:19.902Z] discovery:start-query queryIndex=3 totalQueries=28 sourceType="google-search" label="Open Web Pain" family="cost-pain" query="\"audiobook\" expensive site:selfpublishingadvice.org"
+[2026-04-12T21:05:21.789Z] discovery:complete-query queryIndex=3 totalQueries=28 sourceType="google-search" label="Open Web Pain" family="cost-pain" collectedCount=8
+[2026-04-12T21:05:21.790Z] discovery:start-query queryIndex=4 totalQueries=28 sourceType="google-search" label="Open Web Pain" family="cost-pain" query="\"cost of producing an audiobook\" site:reddit.com"
+[2026-04-12T21:05:23.669Z] discovery:complete-query queryIndex=4 totalQueries=28 sourceType="google-search" label="Open Web Pain" family="cost-pain" collectedCount=8
+[2026-04-12T21:05:24.384Z] discovery:start-query queryIndex=5 totalQueries=28 sourceType="google-search" label="Open Web Pain" family="cost-pain" query="\"cost of producing an audiobook\" site:kboards.com"
+[2026-04-12T21:05:25.162Z] discovery:complete-query queryIndex=5 totalQueries=28 sourceType="google-search" label="Open Web Pain" family="cost-pain" collectedCount=1
+[2026-04-12T21:05:25.163Z] discovery:start-query queryIndex=6 totalQueries=28 sourceType="google-search" label="Open Web Pain" family="cost-pain" query="\"cost of producing an audiobook\" site:selfpublishingadvice.org"
+[2026-04-12T21:05:26.395Z] discovery:complete-query queryIndex=6 totalQueries=28 sourceType="google-search" label="Open Web Pain" family="cost-pain" collectedCount=1
+[2026-04-12T21:05:26.456Z] discovery:start-query queryIndex=7 totalQueries=28 sourceType="google-search" label="Open Web Pain" family="cost-pain" query="\"cheaper audiobook production\" site:reddit.com"
+[2026-04-12T21:05:28.596Z] discovery:complete-query queryIndex=7 totalQueries=28 sourceType="google-search" label="Open Web Pain" family="cost-pain" collectedCount=8
+[2026-04-12T21:05:28.872Z] discovery:start-query queryIndex=8 totalQueries=28 sourceType="google-search" label="Open Web Pain" family="cost-pain" query="\"cheaper audiobook production\" site:kboards.com"
+[2026-04-12T21:05:30.872Z] discovery:complete-query queryIndex=8 totalQueries=28 sourceType="google-search" label="Open Web Pain" family="cost-pain" collectedCount=8
+[2026-04-12T21:05:30.872Z] discovery:start-query queryIndex=9 totalQueries=28 sourceType="google-search" label="Open Web Pain" family="cost-pain" query="\"cheaper audiobook production\" site:selfpublishingadvice.org"
+[2026-04-12T21:05:33.047Z] discovery:complete-query queryIndex=9 totalQueries=28 sourceType="google-search" label="Open Web Pain" family="cost-pain" collectedCount=8
+[2026-04-12T21:05:33.047Z] discovery:start-query queryIndex=10 totalQueries=28 sourceType="google-search" label="Open Web Pain" family="cost-pain" query="\"looking for affordable audiobook narration\" site:reddit.com"
+[2026-04-12T21:05:36.209Z] discovery:complete-query queryIndex=10 totalQueries=28 sourceType="google-search" label="Open Web Pain" family="cost-pain" collectedCount=8
+[2026-04-12T21:05:36.210Z] discovery:start-query queryIndex=11 totalQueries=28 sourceType="google-search" label="Open Web Pain" family="cost-pain" query="\"looking for affordable audiobook narration\" site:kboards.com"
+[2026-04-12T21:05:38.208Z] discovery:complete-query queryIndex=11 totalQueries=28 sourceType="google-search" label="Open Web Pain" family="cost-pain" collectedCount=8
+[2026-04-12T21:05:39.474Z] discovery:start-query queryIndex=12 totalQueries=28 sourceType="google-search" label="Open Web Pain" family="cost-pain" query="\"looking for affordable audiobook narration\" site:selfpublishingadvice.org"
+[2026-04-12T21:05:41.568Z] discovery:complete-query queryIndex=12 totalQueries=28 sourceType="google-search" label="Open Web Pain" family="cost-pain" collectedCount=8
+[2026-04-12T21:05:41.569Z] discovery:start-query queryIndex=13 totalQueries=28 sourceType="google-search" label="Publisher And Rights" family="publisher-backlist" query="publisher backlist audiobook"
+[2026-04-12T21:05:42.757Z] discovery:complete-query queryIndex=13 totalQueries=28 sourceType="google-search" label="Publisher And Rights" family="publisher-backlist" collectedCount=8
+[2026-04-12T21:05:42.762Z] discovery:start-query queryIndex=14 totalQueries=28 sourceType="google-search" label="Publisher And Rights" family="publisher-backlist" query="\"small press\" audiobook"
