@@ -1,110 +1,23 @@
-# AGENTS.md
+# Repository Guidelines
 
-This repository contains two related but distinct systems:
+## Project Structure & Module Organization
+This repo has two active Node.js systems. The API pipeline lives in `src/`: CLI stage runners are in `src/cli/`, shared logic is in `src/lib/`, config JSON lives in `config/`, and prompt templates are in `prompts/`. The browser-session harness lives in `modular-harness/src/` with domain folders such as `browser/`, `session/`, `x/`, `analysis/`, and `audit/`. Root pipeline tests live in `test/`; harness tests live in `modular-harness/test/`. Generated artifacts belong in `output/runs/`, while local SQLite and ledger state stay under `state/` and `modular-harness/state/`.
 
-- the existing OpenAI/API-driven pipeline under `src/`
-- the newer browser-session harness under `modular-harness/`
+## Build, Test, and Development Commands
+Use Node 22.5+.
 
-Future assistants must not assume these two systems are interchangeable. Read context first, then work within the correct layer.
+- `npm test`: run the full `node --test` suite for both systems.
+- `npm start` or `npm run`: execute the end-to-end API pipeline.
+- `npm run dry-run`: exercise the API pipeline without writing run artifacts or DB state.
+- `npm run collect|prefilter|score|draft|execute`: run individual API stages.
+- `npm run harness:x-session -- --persona=xtrata`: verify the X browser session.
+- `npm run harness:governance` or `npm run harness:analyze-candidates -- ...`: run targeted harness modules; use `README.md` and `modular-harness/README.md` for full flows.
 
-## Required Context Before Editing
+## Coding Style & Naming Conventions
+The codebase uses ESM `.js` files, 2-space indentation, semicolons, and double quotes. Keep modules small and single-purpose. Follow the existing naming pattern: kebab-case for CLI entrypoints such as `run-score.js`, descriptive module names for library files such as `sharedRulesEngine.js`, and `camelCase` for functions. Preserve the current JSON formatting style: pretty-printed with trailing newlines.
 
-If you are touching the browser harness, you must read these files before making code changes:
+## Testing Guidelines
+Tests use the built-in `node:test` runner with `assert/strict`. Name tests `*.test.js` and place them beside the subsystem they cover. Reuse fixtures from `test/fixtures/` when possible. Any behavior change should include a regression test; harness changes should also cover safety, dedupe, or audit-path behavior when applicable.
 
-1. `README.md`
-2. `modular-harness/README.md`
-3. `modular-harness/PROJECT_CONTEXT.md`
-4. `modular-harness/SAFETY_CONTROLS.md`
-5. the relevant module file(s)
-6. the corresponding test file(s)
-
-If you are touching the legacy/API pipeline, read:
-
-1. `README.md`
-2. the relevant module file(s)
-3. the corresponding test file(s)
-
-Do not begin coding until you understand which system the request belongs to.
-
-## Harness Development Rules
-
-The browser harness must be developed in an organized, safe, and scalable way.
-
-Required rules:
-
-- Keep changes modular.
-  Add or modify one narrow capability at a time.
-
-- Preserve layer boundaries.
-  Changes should clearly belong to one of:
-  - browser adapter
-  - persona/profile guard
-  - session guard
-  - provider interaction
-  - execution
-  - policy/audit
-
-- Add tests for every new function or module.
-  If behavior changes, add or update regression coverage.
-
-- Prefer deterministic fake-adapter tests before live/browser validation.
-
-- Add a focused CLI smoke command when a new module benefits from manual verification.
-
-- Update docs when behavior, architecture, or safety expectations change.
-
-- Run tests before finalizing.
-  For shared harness changes, run `npm test`.
-
-- Keep safety docs current.
-  If interaction history, dedupe, saturation, search widening, or execution controls change, update `modular-harness/SAFETY_CONTROLS.md`.
-
-## Safety Requirements
-
-The harness must remain conservative and operator-supervised.
-
-Do:
-
-- use the operator's existing logged-in browser sessions
-- prefer verification-first and read-only flows
-- keep retries bounded
-- fail safe on unexpected UI states
-- preserve persona-aware behavior so one verified persona window is reused when feasible
-- require explicit user intent and later approval gating for outward-facing platform actions
-- keep structured interaction-history and saturation controls ahead of any scaling work
-
-Do not:
-
-- add CAPTCHA bypasses, stealth logic, anti-detection measures, or other evasion features
-- automate account creation, credential entry, MFA, or session theft
-- build aggressive scaling behavior before quotas, deduplication, auditability, and approval mechanisms exist
-- silently convert read-only/session modules into side-effecting execution modules
-- add execution logic that lacks a clear interaction-ledger and dedupe story
-
-If a requested change increases platform-visible actions, treat that as higher-risk work and keep the implementation conservative.
-
-## Platform-Side Effects
-
-Outward-facing actions on X or other platforms are materially different from session checks or prompt reads.
-
-Before implementing platform-visible actions:
-
-1. confirm the user explicitly wants that action
-2. identify the approval gate
-3. identify the quota/rate-limit impact
-4. identify the rollback/failure behavior
-5. identify the interaction-history, same-thread, and same-account dedupe behavior
-6. identify the search-widening fallback when candidate quality is too low
-7. add tests for the control logic first
-
-Until those controls exist, default to session validation, prompt handling, JSON extraction, draft filling, and other low-risk building blocks.
-
-## Working Style For This Repo
-
-- Prefer the persona-aware flow for browser work.
-- Reuse existing verified windows and tabs where possible.
-- Do not introduce broad refactors unless needed for the requested task.
-- Keep the code readable and direct.
-- Keep docs aligned with actual behavior.
-
-When in doubt, choose the smaller, safer, more testable change.
+## Commit & Pull Request Guidelines
+Recent commits use short, lower-case subjects such as `social auto` and `added multiagent`. Keep commit titles concise and imperative. PRs should state which subsystem changed (`src/` or `modular-harness/`), list the commands you ran, and include artifact paths or terminal evidence for behavior changes. If you touch harness execution or browser flows, review `modular-harness/PROJECT_CONTEXT.md` and `modular-harness/SAFETY_CONTROLS.md` first, and summarize any policy impact in the PR.
