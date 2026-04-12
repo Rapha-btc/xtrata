@@ -512,7 +512,7 @@ const TokenDetails = (props: {
 
   useEffect(() => {
     setMetadataColumnCollapsed(props.mode !== 'wallet');
-  }, [props.mode]);
+  }, [props.mode, props.selectedTokenId, props.useCompactPreviewLayout]);
 
   useEffect(() => {
     if (!showMetadataPane) {
