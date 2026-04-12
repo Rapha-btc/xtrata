@@ -9,6 +9,8 @@ export type RuntimeContentReference = {
   fallbackContractId: string | null;
 };
 
+export const RUNTIME_INLINE_HTML_VERSION = 'v2';
+
 const RUNTIME_CONTENT_URL_PATTERN =
   /\/runtime\/content\?[^"'`\s<>)]+/g;
 
@@ -44,6 +46,40 @@ const bytesToBase64 = (bytes: Uint8Array) => {
 
 const decodeText = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
 
+const extractRuntimeTemplateConstants = (html: string) => {
+  const constants = new Map<string, string>();
+  if (!html) {
+    return constants;
+  }
+
+  const patterns = [
+    /const\s+([A-Za-z_$][\w$]*)\s*=\s*Number\(\s*(["'])([^"'`]+)\2\s*\)/g,
+    /const\s+([A-Za-z_$][\w$]*)\s*=\s*BigInt\(\s*(["'])([^"'`]+)\2\s*\)/g,
+    /const\s+([A-Za-z_$][\w$]*)\s*=\s*(["'])([^"'`]+)\2/g,
+    /const\s+([A-Za-z_$][\w$]*)\s*=\s*(\d+)/g
+  ] as const;
+
+  patterns.forEach((pattern) => {
+    for (const match of html.matchAll(pattern)) {
+      const name = match[1];
+      const value = match[3] ?? match[2];
+      if (name && value) {
+        constants.set(name, value);
+      }
+    }
+  });
+
+  return constants;
+};
+
+const resolveRuntimeTemplateUrl = (
+  rawUrl: string,
+  constants: Map<string, string>
+) =>
+  rawUrl.replace(/\$\{([A-Za-z_$][\w$]*)\}/g, (_match, name: string) =>
+    constants.get(name) ?? _match
+  );
+
 export const extractRuntimeContentUrls = (html: string) => {
   if (!html) {
     return [] as string[];
@@ -56,13 +92,18 @@ export const hasRuntimeContentUrls = (html: string) =>
   extractRuntimeContentUrls(html).length > 0;
 
 export const parseRuntimeContentReference = (
-  rawUrl: string
+  rawUrl: string,
+  constants?: Map<string, string>
 ): RuntimeContentReference | null => {
   if (!rawUrl) {
     return null;
   }
   try {
-    const parsed = new URL(rawUrl.replace(/&amp;/g, '&'), 'https://xtrata.local');
+    const resolvedUrl = resolveRuntimeTemplateUrl(
+      rawUrl.replace(/&amp;/g, '&'),
+      constants ?? new Map<string, string>()
+    );
+    const parsed = new URL(resolvedUrl, 'https://xtrata.local');
     if (parsed.pathname !== '/runtime/content') {
       return null;
     }
@@ -200,6 +241,7 @@ export const inlineRuntimeContentUrls = async (params: {
   client: XtrataClient;
   fallbackClient?: XtrataClient | null;
 }) => {
+  const templateConstants = extractRuntimeTemplateConstants(params.html);
   const urls = extractRuntimeContentUrls(params.html);
   if (urls.length === 0) {
     return params.html;
@@ -230,7 +272,7 @@ export const inlineRuntimeContentUrls = async (params: {
 
   await Promise.all(
     urls.map(async (rawUrl) => {
-      const reference = parseRuntimeContentReference(rawUrl);
+      const reference = parseRuntimeContentReference(rawUrl, templateConstants);
       if (!reference) {
         return;
       }
