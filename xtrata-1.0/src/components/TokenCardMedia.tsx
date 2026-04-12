@@ -40,7 +40,8 @@ import {
 import { injectGridThumbnailHtml } from '../lib/viewer/html-preview';
 import {
   hasRuntimeContentUrls,
-  inlineRuntimeContentUrls
+  inlineRuntimeContentUrls,
+  RUNTIME_INLINE_HTML_VERSION
 } from '../lib/viewer/runtime-inline';
 import { shouldUsePixelatedImageRendering } from '../lib/viewer/image-rendering';
 import { createObjectUrl } from '../lib/utils/blob';
@@ -397,7 +398,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     [htmlPreview]
   );
   const htmlInlineQuery = useQuery({
-    queryKey: [...contentQueryKey, 'runtime-inline-html'],
+    queryKey: [...contentQueryKey, 'runtime-inline-html', RUNTIME_INLINE_HTML_VERSION],
     queryFn: () =>
       inlineRuntimeContentUrls({
         html: htmlPreview ?? '',

@@ -129,4 +129,51 @@ describe('viewer runtime inline', () => {
     expect(client.getInscriptionMeta).toHaveBeenCalledTimes(2);
     expect(fetchOnChainContentMock).toHaveBeenCalledTimes(2);
   });
+
+  it('resolves template-literal token ids before inlining runtime imports', async () => {
+    const loaderUrl =
+      `/runtime/content?contractId=${CONTRACT_ID}&tokenId=\${LOADER_ID}&network=mainnet`;
+    const client = {
+      contract: {
+        address: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
+        contractName: 'xtrata-v2-1-0',
+        network: 'mainnet'
+      },
+      getInscriptionMeta: vi.fn(async (id: bigint) => ({
+        owner: 'SPTEST',
+        creator: null,
+        mimeType: 'text/javascript',
+        totalSize: 17n,
+        totalChunks: 1n,
+        sealed: true,
+        finalHash: new Uint8Array([0])
+      }))
+    } as any;
+    fetchOnChainContentMock.mockResolvedValue(
+      new TextEncoder().encode('export const k = 1;')
+    );
+
+    const html = `
+      <script type="module">
+        const LOADER_ID = Number('285');
+        const mod = await import(\`${loaderUrl}\`);
+        console.log(mod);
+      </script>
+    `;
+
+    const result = await inlineRuntimeContentUrls({
+      html,
+      client
+    });
+
+    expect(result).not.toContain('/runtime/content?');
+    expect(result).toContain('const LOADER_ID = Number(\'285\')');
+    expect(result).toContain(
+      'await import(`data:text/javascript;base64,ZXhwb3J0IGNvbnN0IGsgPSAxOw==`)'
+    );
+    expect(client.getInscriptionMeta).toHaveBeenCalledWith(
+      285n,
+      'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X'
+    );
+  });
 });
