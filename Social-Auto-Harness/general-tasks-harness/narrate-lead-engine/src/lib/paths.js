@@ -21,8 +21,8 @@ export function getRunId(now = new Date()) {
   return now.toISOString().replace(/:/g, "-");
 }
 
-export function getRunDir(runId) {
-  return path.join(RUNS_DIR, runId);
+export function getRunDir(runId, runsDir = RUNS_DIR) {
+  return path.join(runsDir, runId);
 }
 
 export async function ensureDir(dirPath) {

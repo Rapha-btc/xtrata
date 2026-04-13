@@ -1,0 +1,35 @@
+{
+  "name": "Narrate Safe Smoke Test",
+  "objective": "Prove the browser collection path without stressing the machine.",
+  "persona": null,
+  "account": null,
+  "timeWindowDays": 30,
+  "maxResultsPerQuery": 3,
+  "maxTotalQueries": 2,
+  "maxCollectedItems": 6,
+  "maxEnrichmentTasks": 1,
+  "maxDraftTasks": 1,
+  "queryPauseMs": 2000,
+  "stagePauseMs": 1500,
+  "maxHeapUsedMb": 384,
+  "chatgptWaitBudgetMs": 240000,
+  "chatgptPollMs": 1000,
+  "enrichAboveScore": 101,
+  "draftAboveScore": 101,
+  "finalLeadLimit": 5,
+  "queryFamilies": [
+    "cost-pain"
+  ],
+  "sources": [
+    {
+      "type": "gpt-web-search",
+      "label": "Smoke Test Web Search",
+      "families": [
+        "cost-pain"
+      ],
+      "maxQueries": 1,
+      "enabled": true
+    }
+  ],
+  "jobFilePath": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/jobs/safe-smoke-test.json"
+}

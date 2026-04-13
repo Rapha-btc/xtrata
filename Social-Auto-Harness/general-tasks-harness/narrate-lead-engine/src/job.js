@@ -22,6 +22,7 @@ export const DEFAULT_NARRATE_JOB = Object.freeze({
   maxHeapUsedMb: 512,
   chatgptWaitBudgetMs: 240000,
   chatgptPollMs: 1000,
+  chatgptReuseReplyThreadForRepairs: true,
   enrichAboveScore: 70,
   draftAboveScore: 80,
   finalLeadLimit: 12,
@@ -187,6 +188,10 @@ export function normalizeNarrateJob(rawJob, { jobFilePath = null } = {}) {
       rawJob.chatgptPollMs,
       DEFAULT_NARRATE_JOB.chatgptPollMs,
       "chatgptPollMs"
+    ),
+    chatgptReuseReplyThreadForRepairs: normalizeBoolean(
+      rawJob.chatgptReuseReplyThreadForRepairs,
+      DEFAULT_NARRATE_JOB.chatgptReuseReplyThreadForRepairs
     ),
     enrichAboveScore: normalizePositiveInteger(
       rawJob.enrichAboveScore,

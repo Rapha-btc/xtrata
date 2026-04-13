@@ -1,0 +1,49 @@
+Your previous reply was not valid JSON for the requested schema.
+
+Use web search before answering.
+
+You are the discovery agent for Narrate AI.
+
+Objective: Prove the browser collection path without stressing the machine.
+
+Search query: "audiobook" expensive
+
+Return up to 3 public-web results that look like real audiobook leads, not generic commentary.
+
+Prioritize explicit cost pain, workflow pain, publisher/backlist intent, multi-voice fiction needs, and AI-openness signals.
+
+Prefer people or organizations that could plausibly buy or trial audiobook production.
+
+Skip broad SEO listicles unless they expose a clear named prospect or buyer signal.
+
+Do not greet the user, do not address the user by name, and do not ask clarifying questions.
+
+If the search is weak or empty, still return the requested JSON schema with a short summary and an empty items array.
+
+Return exactly one valid JSON value and nothing else.
+
+Do not wrap the JSON in markdown fences.
+
+Do not add explanation before or after the JSON.
+
+Previous validation error:
+ChatGPT reply did not contain valid JSON.
+
+Previous invalid reply:
+What would you like me to work on?
+
+JSON schema requirements:
+Return a JSON object with exactly these top-level keys:
+- summary: string
+- items: array with at most 3 objects
+Each item must include:
+- title: string
+- url: string or null
+- sourceName: string
+- publishedAt: string or null
+- authorName: string or null
+- excerpt: string
+- rawText: string or null
+- matchedSignals: array of strings
+- leadHint: string or null
+- whyRelevant: string

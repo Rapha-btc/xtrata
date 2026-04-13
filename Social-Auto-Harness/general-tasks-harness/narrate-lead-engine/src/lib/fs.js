@@ -4,6 +4,15 @@ export async function readText(filePath) {
   return fs.readFile(filePath, "utf8");
 }
 
+export async function readTextIfExists(filePath, fallback = null) {
+  try {
+    return await readText(filePath);
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+    return fallback;
+  }
+}
+
 export async function writeText(filePath, value) {
   await fs.writeFile(filePath, value, "utf8");
 }
@@ -24,4 +33,8 @@ export async function readJsonIfExists(filePath, fallback = null) {
 
 export async function writeJson(filePath, value) {
   await writeText(filePath, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+export async function appendText(filePath, value) {
+  await fs.appendFile(filePath, value, "utf8");
 }

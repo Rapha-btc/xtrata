@@ -6,6 +6,8 @@
   "description": "Standalone browser-first lead engine for Narrate AI using public search, scraping, and ChatGPT web UI instead of platform APIs.",
   "scripts": {
     "run-job": "node src/cli/run-job.js",
+    "prepare-rerun": "node src/cli/prepare-rerun.js",
+    "review-run": "node src/cli/review-run.js",
     "server": "node src/server.js",
     "example-job": "node src/cli/run-job.js --job-file=jobs/example-indie-authors.json",
     "test": "node --test"

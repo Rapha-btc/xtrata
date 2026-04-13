@@ -1,0 +1,24 @@
+{
+  "runId": "review-stub-fail",
+  "failedAt": "2026-04-12T23:12:23.363Z",
+  "error": {
+    "name": "Error",
+    "message": "ChatGPT reply did not contain valid JSON. after 2 attempts.",
+    "details": null,
+    "helpfulHint": null
+  },
+  "memory": {
+    "rssMb": 48,
+    "heapUsedMb": 5.7,
+    "heapTotalMb": 7.4,
+    "externalMb": 2.1,
+    "arrayBuffersMb": 0.1
+  },
+  "counts": {
+    "queriesPlanned": 1,
+    "collected": 0,
+    "normalized": 0,
+    "leads": 0,
+    "drafted": 0
+  }
+}

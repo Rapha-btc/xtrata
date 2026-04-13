@@ -1,0 +1,11 @@
+{
+  "capturedAt": "2026-04-12T23:12:04.932Z",
+  "kind": "invalid-json",
+  "label": "stub-discovery",
+  "attempt": 1,
+  "rawReplyText": "not json",
+  "dispatchedPrompt": "prompt",
+  "rawReplyFile": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/review-stub-run/invalid-replies/001-invalid-json.raw.txt",
+  "promptFile": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/review-stub-run/invalid-replies/001-invalid-json.prompt.txt",
+  "metaFile": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/review-stub-run/invalid-replies/001-invalid-json.meta.json"
+}

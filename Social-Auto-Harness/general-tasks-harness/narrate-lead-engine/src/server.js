@@ -3,8 +3,9 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import { getOverview, listLeads, listRuns, withDb } from "./db.js";
-import { readJsonIfExists } from "./lib/fs.js";
 import { JOBS_DIR, PUBLIC_DIR } from "./lib/paths.js";
+import { prepareRerun } from "./rerunPlanner.js";
+import { loadRunArtifacts } from "./runReview.js";
 import { runLeadEngine } from "./runLeadEngine.js";
 
 const DEFAULT_PORT = 4318;
@@ -59,26 +60,11 @@ async function serveStatic(requestPath, response) {
   }
 }
 
-async function loadRunArtifacts(runId) {
-  const runDir = path.join(path.resolve(PUBLIC_DIR, "..", "output", "runs"), runId);
-  const [manifest, leads, outreach] = await Promise.all([
-    readJsonIfExists(path.join(runDir, "manifest.json"), null),
-    readJsonIfExists(path.join(runDir, "leads.json"), []),
-    readJsonIfExists(path.join(runDir, "outreach.json"), []),
-  ]);
-
-  return {
-    runId,
-    manifest,
-    leads,
-    outreach,
-  };
-}
-
 export function createServer() {
   return http.createServer(async (request, response) => {
     try {
       const url = new URL(request.url ?? "/", "http://localhost");
+      const pathParts = url.pathname.split("/").filter(Boolean);
 
       if (request.method === "GET" && url.pathname === "/api/overview") {
         const overview = withDb((db) => ({
@@ -93,9 +79,43 @@ export function createServer() {
         });
       }
 
-      if (request.method === "GET" && url.pathname.startsWith("/api/runs/")) {
-        const runId = url.pathname.split("/").at(-1);
-        return json(response, 200, await loadRunArtifacts(runId));
+      if (
+        request.method === "GET" &&
+        pathParts[0] === "api" &&
+        pathParts[1] === "runs" &&
+        pathParts[3] === "review"
+      ) {
+        const runId = pathParts[2];
+        const artifacts = await loadRunArtifacts({ runId });
+        return json(response, 200, {
+          runId: artifacts.runId,
+          runDir: artifacts.runDir,
+          manifest: artifacts.manifest,
+          error: artifacts.error,
+          review: artifacts.review,
+          invalidReplies: artifacts.invalidReplies,
+          debugLog: artifacts.debugLog,
+        });
+      }
+
+      if (
+        request.method === "POST" &&
+        pathParts[0] === "api" &&
+        pathParts[1] === "runs" &&
+        pathParts[3] === "prepare-rerun"
+      ) {
+        const runId = pathParts[2];
+        const body = await readRequestJson(request);
+        return json(response, 200, await prepareRerun({
+          runId,
+          outputJobPath: body.outputJobPath ?? null,
+          outputPlanPath: body.outputPlanPath ?? null,
+          overwrite: Boolean(body.overwrite),
+        }));
+      }
+
+      if (request.method === "GET" && pathParts[0] === "api" && pathParts[1] === "runs" && pathParts[2]) {
+        return json(response, 200, await loadRunArtifacts({ runId: pathParts[2] }));
       }
 
       if (request.method === "POST" && url.pathname === "/api/run") {

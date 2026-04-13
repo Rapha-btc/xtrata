@@ -1,0 +1,19 @@
+[2026-04-12T23:38:37.000Z] lead-engine:start runId="2026-04-12T23-38-36.995Z" runDir="/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-12T23-38-36.995Z" jobFilePath="/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-12T23-35-33.611Z/prepared-rerun-job.json"
+[2026-04-12T23:38:37.001Z] lead-engine:job-loaded sourceCount=1 queryCount=1 chatgptReplyMaxChecks=240 chatgptReplyWaitMs=1000 rssMb=48.1 heapUsedMb=5.6 heapTotalMb=7.4 externalMb=2.1 arrayBuffersMb=0
+[2026-04-12T23:38:37.002Z] discovery:start-query queryIndex=1 totalQueries=1 sourceType="gpt-web-search" label="Smoke Test Web Search" family="cost-pain" query="\"audiobook\" expensive"
+[2026-04-12T23:38:37.003Z] safety:memory-snapshot stage="discovery:start-query" queryIndex=1 rssMb=48.2 heapUsedMb=5.7 heapTotalMb=7.4 externalMb=2.1 arrayBuffersMb=0
+[2026-04-12T23:38:37.003Z] chatgpt-json:attempt attempt=1 maxAttempts=2 repairPrompt=false
+[2026-04-12T23:38:38.763Z] chatgpt-session:ready sessionAction="opened-new-tab" url="https://chatgpt.com/"
+[2026-04-12T23:38:39.158Z] chatgpt-submit:attempt attempt=1 maxAttempts=3 submitStrategy="button-click" promptLength=1142
+[2026-04-12T23:38:39.840Z] chatgpt-submit:confirmed attempt=1 confirmationReason="generating" confirmationChecks=1 submitStrategy="button-click" resubmissionSkipped=false sendButtonLabel="Send prompt" url="https://chatgpt.com/"
+[2026-04-12T23:38:39.841Z] chatgpt-reply:waiting attempt=1 maxChecks=240 elapsedMs=0 generating=true replyCount=0 url="https://chatgpt.com/"
+[2026-04-12T23:38:51.781Z] chatgpt-reply:complete checks=11 replyLength=34 url="https://chatgpt.com/c/69dc2d01-8188-8390-aa90-b5eae1b8f170"
+[2026-04-12T23:38:51.784Z] chatgpt-json:retry attempt=1 maxAttempts=2 error="ChatGPT reply did not contain valid JSON." replyUrl="https://chatgpt.com/c/69dc2d01-8188-8390-aa90-b5eae1b8f170"
+[2026-04-12T23:38:51.784Z] chatgpt-json:attempt attempt=2 maxAttempts=2 repairPrompt=true
+[2026-04-12T23:38:52.877Z] chatgpt-session:ready sessionAction="opened-new-tab" url="https://chatgpt.com/"
+[2026-04-12T23:38:53.227Z] chatgpt-submit:attempt attempt=1 maxAttempts=3 submitStrategy="button-click" promptLength=1338
+[2026-04-12T23:38:53.922Z] chatgpt-submit:confirmed attempt=1 confirmationReason="generating" confirmationChecks=1 submitStrategy="button-click" resubmissionSkipped=false sendButtonLabel="Send prompt" url="https://chatgpt.com/"
+[2026-04-12T23:38:53.922Z] chatgpt-reply:waiting attempt=1 maxChecks=240 elapsedMs=0 generating=true replyCount=0 url="https://chatgpt.com/"
+[2026-04-12T23:39:05.967Z] chatgpt-reply:complete checks=11 replyLength=36 url="https://chatgpt.com/c/69dc2d0e-65a0-838e-a96e-0faa81a06162"
+[2026-04-12T23:39:05.971Z] chatgpt-json:failed attempt=2 maxAttempts=2 error="ChatGPT reply did not contain valid JSON." replyUrl="https://chatgpt.com/c/69dc2d0e-65a0-838e-a96e-0faa81a06162"
+[2026-04-12T23:39:05.972Z] lead-engine:failed message="ChatGPT reply did not contain valid JSON. after 2 attempts." rssMb=43.1 heapUsedMb=5.8 heapTotalMb=7.4 externalMb=2.1 arrayBuffersMb=0

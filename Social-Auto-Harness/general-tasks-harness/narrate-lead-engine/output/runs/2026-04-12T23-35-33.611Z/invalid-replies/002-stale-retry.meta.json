@@ -1,0 +1,17 @@
+{
+  "capturedAt": "2026-04-12T23:36:00.667Z",
+  "stage": "chatgpt-json",
+  "kind": "stale-retry",
+  "label": "narrate-gpt-search:Smoke Test Web Search",
+  "attempt": 2,
+  "maxAttempts": 2,
+  "isFinalAttempt": true,
+  "errorMessage": "ChatGPT repair attempt returned the previous reply again.",
+  "rawReplyText": "What would you like me to work on?",
+  "dispatchedPrompt": "Your previous reply was not valid JSON for the requested schema.\n\nUse web search before answering.\n\nYou are the discovery agent for Narrate AI.\n\nObjective: Prove the browser collection path without stressing the machine.\n\nSearch query: \"audiobook\" expensive\n\nReturn up to 3 public-web results that look like real audiobook leads, not generic commentary.\n\nPrioritize explicit cost pain, workflow pain, publisher/backlist intent, multi-voice fiction needs, and AI-openness signals.\n\nPrefer people or organizations that could plausibly buy or trial audiobook production.\n\nSkip broad SEO listicles unless they expose a clear named prospect or buyer signal.\n\nReturn exactly one valid JSON value and nothing else.\n\nDo not wrap the JSON in markdown fences.\n\nDo not add explanation before or after the JSON.\n\nPrevious validation error:\nChatGPT reply did not contain valid JSON.\n\nPrevious invalid reply:\nWhat would you like me to work on?\n\nJSON schema requirements:\nReturn a JSON object with exactly these top-level keys:\n- summary: string\n- items: array with at most 3 objects\nEach item must include:\n- title: string\n- url: string or null\n- sourceName: string\n- publishedAt: string or null\n- authorName: string or null\n- excerpt: string\n- rawText: string or null\n- matchedSignals: array of strings\n- leadHint: string or null\n- whyRelevant: string",
+  "replyUrl": "https://chatgpt.com/c/69dc2c48-75a0-838b-9aa5-56a1baff30cd",
+  "sessionAction": "opened-new-tab",
+  "rawReplyFile": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-12T23-35-33.611Z/invalid-replies/002-stale-retry.raw.txt",
+  "promptFile": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-12T23-35-33.611Z/invalid-replies/002-stale-retry.prompt.txt",
+  "metaFile": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-12T23-35-33.611Z/invalid-replies/002-stale-retry.meta.json"
+}

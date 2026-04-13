@@ -1,0 +1,12 @@
+{
+  "capturedAt": "2026-04-12T23:12:23.362Z",
+  "kind": "invalid-json",
+  "label": "stub-failure",
+  "attempt": 2,
+  "rawReplyText": "bad-json-reply",
+  "dispatchedPrompt": "repair-prompt",
+  "replyUrl": "https://chatgpt.com/c/test",
+  "rawReplyFile": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/review-stub-fail/invalid-replies/001-invalid-json.raw.txt",
+  "promptFile": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/review-stub-fail/invalid-replies/001-invalid-json.prompt.txt",
+  "metaFile": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/review-stub-fail/invalid-replies/001-invalid-json.meta.json"
+}

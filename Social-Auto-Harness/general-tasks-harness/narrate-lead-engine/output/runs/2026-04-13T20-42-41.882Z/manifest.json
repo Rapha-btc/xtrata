@@ -1,0 +1,37 @@
+{
+  "runId": "2026-04-13T20-42-41.882Z",
+  "generatedAt": "2026-04-13T20:42:41.882Z",
+  "jobFilePath": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/jobs/safe-smoke-test.json",
+  "status": "failed",
+  "counts": {
+    "queriesPlanned": 1,
+    "collected": 0,
+    "normalized": 0,
+    "leads": 0,
+    "drafted": 0
+  },
+  "safety": {
+    "maxTotalQueries": 2,
+    "maxCollectedItems": 6,
+    "maxEnrichmentTasks": 1,
+    "maxDraftTasks": 1,
+    "maxHeapUsedMb": 384,
+    "chatgptWaitBudgetMs": 240000,
+    "chatgptPollMs": 1000
+  },
+  "artifacts": {
+    "job": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-13T20-42-41.882Z/job.json",
+    "queryPlan": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-13T20-42-41.882Z/query-plan.json",
+    "collection": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-13T20-42-41.882Z/collection.json",
+    "sourceItems": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-13T20-42-41.882Z/source-items.json",
+    "leads": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-13T20-42-41.882Z/leads.json",
+    "outreach": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-13T20-42-41.882Z/outreach.json",
+    "manifest": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-13T20-42-41.882Z/manifest.json",
+    "error": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-13T20-42-41.882Z/error.json",
+    "progressLog": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-13T20-42-41.882Z/progress.log",
+    "debugEvents": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-13T20-42-41.882Z/debug-events.jsonl",
+    "debugLog": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-13T20-42-41.882Z/debug-log.md",
+    "invalidRepliesDir": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-13T20-42-41.882Z/invalid-replies"
+  },
+  "errorFile": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-13T20-42-41.882Z/error.json"
+}

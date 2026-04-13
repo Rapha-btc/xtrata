@@ -1,0 +1,153 @@
+# Narrate Debug Log - 2026-04-12T23-40-47.130Z
+
+Generated: 2026-04-12T23:41:14.413Z
+Status: failed
+
+## Failure
+
+- Message: ChatGPT reply did not contain valid JSON. after 2 attempts.
+- Helpful hint: Review the latest invalid-reply artifacts before rerunning. Keep the next run narrow and confirm the prompt/reply pair matches the requested schema.
+
+## Counts
+
+- queriesPlanned: 1
+- collected: 0
+- normalized: 0
+- leads: 0
+- drafted: 0
+
+## Timeline
+
+- 2026-04-12T23:40:47.132Z [progress] lead-engine:start runId="2026-04-12T23-40-47.130Z" runDir="/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-12T23-40-47.130Z" jobFilePath="/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-12T23-35-33.611Z/prepared-rerun-job.json"
+- 2026-04-12T23:40:47.135Z [progress] lead-engine:job-loaded sourceCount=1 queryCount=1 persona=null chatgptReplyMaxChecks=240 chatgptReplyWaitMs=1000 rssMb=47.7 heapUsedMb=5.6 heapTotalMb=7.4 externalMb=2.1 arrayBuffersMb=0.1
+- 2026-04-12T23:40:47.136Z [progress] discovery:start-query queryIndex=1 totalQueries=1 sourceType="gpt-web-search" label="Smoke Test Web Search" family="cost-pain" query="\"audiobook\" expensive"
+- 2026-04-12T23:40:47.136Z [progress] safety:memory-snapshot stage="discovery:start-query" queryIndex=1 rssMb=47.8 heapUsedMb=5.7 heapTotalMb=7.4 externalMb=2.1 arrayBuffersMb=0.1
+- 2026-04-12T23:40:47.137Z [progress] chatgpt-json:attempt attempt=1 maxAttempts=2 repairPrompt=false
+- 2026-04-12T23:40:47.138Z [adapter:start] ensureBrowserApp args=[]
+- 2026-04-12T23:40:47.278Z [adapter:finish] ensureBrowserApp durationMs=140 result=null
+- 2026-04-12T23:40:47.278Z [adapter:start] listTabs args=[]
+- 2026-04-12T23:40:47.496Z [adapter:finish] listTabs durationMs=218 result={"type":"array","length":3,"preview":[{"windowId":2004436182,"tabIndex":1,"url":"https://chatgpt.com/c/69dc0c43-dd28-838d-a084-5932d28b0ba9","title":"AI Audiobook Production Leads"},{"windowId":2004436182,"tabIndex":2,"url":"https://mail.google.com/mail/u/0/#inbox","title":"Inbox (1,829) - jimdotbtc@gmail.com - Gmail"},{"windowId":2004436182,"tabIndex":3,"url":"https://www.youtube.com/","title":"(3999) YouTube"}]}
+- 2026-04-12T23:40:47.497Z [adapter:start] activateTab args=[{"windowId":2004436182,"tabIndex":1,"url":"https://chatgpt.com/c/69dc0c43-dd28-838d-a084-5932d28b0ba9","title":"AI Audiobook Production Leads"}]
+- 2026-04-12T23:40:47.657Z [adapter:error] activateTab durationMs=160 message="Command failed: osascript -l AppleScript -e on run argv -e set browserName to item 1 of argv -e set targetWindowId to item 2 of argv as integer -e set targetTabIndex to item 3 of argv as integer -e using terms from application \"Google Chrome\" -e tell application browserName -e repeat with w in windows -e set currentWindow to contents of w -e if id of currentWindow is targetWindowId then -e set in…"
+- 2026-04-12T23:40:47.658Z [adapter:start] openTab args=["https://chatgpt.com/"]
+- 2026-04-12T23:40:47.753Z [adapter:finish] openTab durationMs=95 result={"windowId":null,"tabIndex":null,"url":"https://chatgpt.com/"}
+- 2026-04-12T23:40:47.753Z [adapter:start] evaluateActiveTab args=["(() => { const normalizeText = (value) => (value || \"\").replace(/\\s+/g, \" \").trim(); const unique = (values) => [...new Set(values.map(normalizeText).filter(Boolean))]; const read…"]
+- 2026-04-12T23:40:47.924Z [adapter:finish] evaluateActiveTab durationMs=171 result="{\"url\":\"about:blank\",\"title\":\"\",\"loggedIn\":false,\"authPath\":false,\"authTexts\":[],\"accountHints\":[],\"accountMenuFound\":false,\"composerFound\":false,\"sendButtonFound\":false,\"conversa…"
+- 2026-04-12T23:40:47.924Z [adapter:start] wait args=[500]
+- 2026-04-12T23:40:48.426Z [adapter:finish] wait durationMs=502 result=null
+- 2026-04-12T23:40:48.426Z [adapter:start] evaluateActiveTab args=["(() => { const normalizeText = (value) => (value || \"\").replace(/\\s+/g, \" \").trim(); const unique = (values) => [...new Set(values.map(normalizeText).filter(Boolean))]; const read…"]
+- 2026-04-12T23:40:48.750Z [adapter:finish] evaluateActiveTab durationMs=324 result="{\"url\":\"https://chatgpt.com/\",\"title\":\"ChatGPT\",\"loggedIn\":true,\"authPath\":false,\"authTexts\":[],\"accountHints\":[\"Extended thinking\",\"Jim CranePlus\",\"Open profile menu\",\"Jim Crane,…"
+- 2026-04-12T23:40:48.752Z [progress] chatgpt-session:ready sessionAction="opened-new-tab" url="https://chatgpt.com/"
+- 2026-04-12T23:40:48.752Z [adapter:start] evaluateActiveTab args=["(() => { const normalizeText = (value) => (value || \"\") .replace(/\\u00a0/g, \" \") .replace(/\\r\\n/g, \"\\n\") .replace(/[ \\t]+\\n/g, \"\\n\") .replace(/\\n{3,}/g, \"\\n\\n\") .trim(); const rea…"]
+- 2026-04-12T23:40:48.974Z [adapter:finish] evaluateActiveTab durationMs=222 result="{\"url\":\"https://chatgpt.com/\",\"title\":\"ChatGPT\",\"replyCount\":0,\"replyText\":null,\"generating\":false,\"composerFound\":true,\"composerTextLength\":1338,\"sendButtonFound\":true,\"sendButto…"
+- 2026-04-12T23:40:48.975Z [progress] chatgpt-submit:attempt attempt=1 maxAttempts=3 submitStrategy="button-click" promptLength=1355
+- 2026-04-12T23:40:48.975Z [adapter:start] evaluateActiveTab args=["(() => { const promptText = \"Use web search before answering.\\n\\nYou are the discovery agent for Narrate AI.\\n\\nObjective: Prove the browser collection path without stressing the…"]
+- 2026-04-12T23:40:49.214Z [adapter:finish] evaluateActiveTab durationMs=239 result="{\"ok\":true,\"retryable\":false,\"composerTag\":\"DIV\",\"composerTextLength\":1342,\"sendButtonLabel\":\"Send prompt\",\"sendButtonReady\":true,\"submitStrategy\":\"button-click\",\"submitReason\":\"b…"
+- 2026-04-12T23:40:49.215Z [adapter:start] evaluateActiveTab args=["(() => { const normalizeText = (value) => (value || \"\") .replace(/\\u00a0/g, \" \") .replace(/\\r\\n/g, \"\\n\") .replace(/[ \\t]+\\n/g, \"\\n\") .replace(/\\n{3,}/g, \"\\n\\n\") .trim(); const rea…"]
+- 2026-04-12T23:40:49.504Z [adapter:finish] evaluateActiveTab durationMs=289 result="{\"url\":\"https://chatgpt.com/\",\"title\":\"ChatGPT\",\"replyCount\":0,\"replyText\":null,\"generating\":true,\"composerFound\":true,\"composerTextLength\":1355,\"sendButtonFound\":false,\"sendButto…"
+- 2026-04-12T23:40:49.505Z [progress] chatgpt-submit:confirmed attempt=1 confirmationReason="generating" confirmationChecks=1 submitStrategy="button-click" resubmissionSkipped=false sendButtonLabel="Send prompt" url="https://chatgpt.com/"
+- 2026-04-12T23:40:49.507Z [progress] chatgpt-reply:waiting attempt=1 maxChecks=240 elapsedMs=0 generating=true replyCount=0 url="https://chatgpt.com/"
+- 2026-04-12T23:40:49.510Z [adapter:start] wait args=[1000]
+- 2026-04-12T23:40:50.512Z [adapter:finish] wait durationMs=1002 result=null
+- 2026-04-12T23:40:50.513Z [adapter:start] evaluateActiveTab args=["(() => { const normalizeText = (value) => (value || \"\") .replace(/\\u00a0/g, \" \") .replace(/\\r\\n/g, \"\\n\") .replace(/[ \\t]+\\n/g, \"\\n\") .replace(/\\n{3,}/g, \"\\n\\n\") .trim(); const rea…"]
+- 2026-04-12T23:40:50.701Z [adapter:finish] evaluateActiveTab durationMs=188 result="{\"url\":\"https://chatgpt.com/\",\"title\":\"ChatGPT\",\"replyCount\":0,\"replyText\":null,\"generating\":true,\"composerFound\":true,\"composerTextLength\":1355,\"sendButtonFound\":false,\"sendButto…"
+- 2026-04-12T23:40:50.702Z [adapter:start] wait args=[1000]
+- 2026-04-12T23:40:51.703Z [adapter:finish] wait durationMs=1001 result=null
+- 2026-04-12T23:40:51.704Z [adapter:start] evaluateActiveTab args=["(() => { const normalizeText = (value) => (value || \"\") .replace(/\\u00a0/g, \" \") .replace(/\\r\\n/g, \"\\n\") .replace(/[ \\t]+\\n/g, \"\\n\") .replace(/\\n{3,}/g, \"\\n\\n\") .trim(); const rea…"]
+- 2026-04-12T23:40:51.899Z [adapter:finish] evaluateActiveTab durationMs=195 result="{\"url\":\"https://chatgpt.com/\",\"title\":\"ChatGPT\",\"replyCount\":0,\"replyText\":null,\"generating\":true,\"composerFound\":true,\"composerTextLength\":1355,\"sendButtonFound\":false,\"sendButto…"
+- 2026-04-12T23:40:51.899Z [adapter:start] wait args=[1000]
+- 2026-04-12T23:40:52.900Z [adapter:finish] wait durationMs=1001 result=null
+- 2026-04-12T23:40:52.901Z [adapter:start] evaluateActiveTab args=["(() => { const normalizeText = (value) => (value || \"\") .replace(/\\u00a0/g, \" \") .replace(/\\r\\n/g, \"\\n\") .replace(/[ \\t]+\\n/g, \"\\n\") .replace(/\\n{3,}/g, \"\\n\\n\") .trim(); const rea…"]
+- 2026-04-12T23:40:53.096Z [adapter:finish] evaluateActiveTab durationMs=195 result="{\"url\":\"https://chatgpt.com/\",\"title\":\"ChatGPT\",\"replyCount\":0,\"replyText\":null,\"generating\":true,\"composerFound\":true,\"composerTextLength\":1355,\"sendButtonFound\":false,\"sendButto…"
+- 2026-04-12T23:40:53.096Z [adapter:start] wait args=[1000]
+- 2026-04-12T23:40:54.099Z [adapter:finish] wait durationMs=1003 result=null
+- 2026-04-12T23:40:54.100Z [adapter:start] evaluateActiveTab args=["(() => { const normalizeText = (value) => (value || \"\") .replace(/\\u00a0/g, \" \") .replace(/\\r\\n/g, \"\\n\") .replace(/[ \\t]+\\n/g, \"\\n\") .replace(/\\n{3,}/g, \"\\n\\n\") .trim(); const rea…"]
+- 2026-04-12T23:40:54.291Z [adapter:finish] evaluateActiveTab durationMs=191 result="{\"url\":\"https://chatgpt.com/\",\"title\":\"ChatGPT\",\"replyCount\":0,\"replyText\":null,\"generating\":true,\"composerFound\":true,\"composerTextLength\":1355,\"sendButtonFound\":false,\"sendButto…"
+- 2026-04-12T23:40:54.291Z [adapter:start] wait args=[1000]
+- 2026-04-12T23:40:55.293Z [adapter:finish] wait durationMs=1002 result=null
+- 2026-04-12T23:40:55.294Z [adapter:start] evaluateActiveTab args=["(() => { const normalizeText = (value) => (value || \"\") .replace(/\\u00a0/g, \" \") .replace(/\\r\\n/g, \"\\n\") .replace(/[ \\t]+\\n/g, \"\\n\") .replace(/\\n{3,}/g, \"\\n\\n\") .trim(); const rea…"]
+- 2026-04-12T23:40:55.498Z [adapter:finish] evaluateActiveTab durationMs=204 result="{\"url\":\"https://chatgpt.com/\",\"title\":\"ChatGPT\",\"replyCount\":0,\"replyText\":null,\"generating\":true,\"composerFound\":true,\"composerTextLength\":1355,\"sendButtonFound\":false,\"sendButto…"
+- 2026-04-12T23:40:55.499Z [adapter:start] wait args=[1000]
+- 2026-04-12T23:40:56.502Z [adapter:finish] wait durationMs=1003 result=null
+- 2026-04-12T23:40:56.504Z [adapter:start] evaluateActiveTab args=["(() => { const normalizeText = (value) => (value || \"\") .replace(/\\u00a0/g, \" \") .replace(/\\r\\n/g, \"\\n\") .replace(/[ \\t]+\\n/g, \"\\n\") .replace(/\\n{3,}/g, \"\\n\\n\") .trim(); const rea…"]
+- 2026-04-12T23:40:56.703Z [adapter:finish] evaluateActiveTab durationMs=200 result="{\"url\":\"https://chatgpt.com/c/69dc2d81-aa88-8390-95c2-03d5b187294c\",\"title\":\"ChatGPT\",\"replyCount\":1,\"replyText\":\"Wh\",\"generating\":true,\"composerFound\":true,\"composerTextLength\":1…"
+- 2026-04-12T23:40:56.704Z [adapter:start] wait args=[1000]
+- 2026-04-12T23:40:57.705Z [adapter:finish] wait durationMs=1001 result=null
+- 2026-04-12T23:40:57.706Z [adapter:start] evaluateActiveTab args=["(() => { const normalizeText = (value) => (value || \"\") .replace(/\\u00a0/g, \" \") .replace(/\\r\\n/g, \"\\n\") .replace(/[ \\t]+\\n/g, \"\\n\") .replace(/\\n{3,}/g, \"\\n\\n\") .trim(); const rea…"]
+- 2026-04-12T23:40:57.931Z [adapter:finish] evaluateActiveTab durationMs=225 result="{\"url\":\"https://chatgpt.com/c/69dc2d81-aa88-8390-95c2-03d5b187294c\",\"title\":\"No conversation content\",\"replyCount\":1,\"replyText\":\"What would you like me to work\",\"generating\":true…"
+- 2026-04-12T23:40:57.931Z [adapter:start] wait args=[1000]
+- 2026-04-12T23:40:58.933Z [adapter:finish] wait durationMs=1002 result=null
+- 2026-04-12T23:40:58.933Z [adapter:start] evaluateActiveTab args=["(() => { const normalizeText = (value) => (value || \"\") .replace(/\\u00a0/g, \" \") .replace(/\\r\\n/g, \"\\n\") .replace(/[ \\t]+\\n/g, \"\\n\") .replace(/\\n{3,}/g, \"\\n\\n\") .trim(); const rea…"]
+- 2026-04-12T23:40:59.131Z [adapter:finish] evaluateActiveTab durationMs=198 result="{\"url\":\"https://chatgpt.com/c/69dc2d81-aa88-8390-95c2-03d5b187294c\",\"title\":\"No conversation content\",\"replyCount\":1,\"replyText\":\"What would you like me to work on?\",\"generating\":…"
+- 2026-04-12T23:40:59.132Z [adapter:start] wait args=[1000]
+- 2026-04-12T23:41:00.135Z [adapter:finish] wait durationMs=1003 result=null
+- 2026-04-12T23:41:00.137Z [adapter:start] evaluateActiveTab args=["(() => { const normalizeText = (value) => (value || \"\") .replace(/\\u00a0/g, \" \") .replace(/\\r\\n/g, \"\\n\") .replace(/[ \\t]+\\n/g, \"\\n\") .replace(/\\n{3,}/g, \"\\n\\n\") .trim(); const rea…"]
+- 2026-04-12T23:41:00.346Z [adapter:finish] evaluateActiveTab durationMs=209 result="{\"url\":\"https://chatgpt.com/c/69dc2d81-aa88-8390-95c2-03d5b187294c\",\"title\":\"No conversation content\",\"replyCount\":1,\"replyText\":\"What would you like me to work on?\",\"generating\":…"
+- 2026-04-12T23:41:00.346Z [progress] chatgpt-reply:complete checks=10 replyLength=34 url="https://chatgpt.com/c/69dc2d81-aa88-8390-95c2-03d5b187294c"
+- 2026-04-12T23:41:00.349Z [invalid-reply] kind=invalid-json attempt=1 label="narrate-gpt-search:Smoke Test Web Search" files={"rawReplyFile":"/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-12T23-40-47.130Z/invalid-replies/001-invalid-json.raw.txt","promptFile":"/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-12T23-40-47.130Z/invalid-replies/001-invalid-json.prompt.txt","metaFile":"/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-12T23-40-47.130Z/invalid-replies/001-invalid-json.meta.json"}
+- 2026-04-12T23:41:00.349Z [progress] chatgpt-json:retry attempt=1 maxAttempts=2 error="ChatGPT reply did not contain valid JSON." replyUrl="https://chatgpt.com/c/69dc2d81-aa88-8390-95c2-03d5b187294c"
+- 2026-04-12T23:41:00.349Z [progress] chatgpt-json:attempt attempt=2 maxAttempts=2 repairPrompt=true
+- 2026-04-12T23:41:00.350Z [adapter:start] ensureBrowserApp args=[]
+- 2026-04-12T23:41:00.473Z [adapter:finish] ensureBrowserApp durationMs=123 result=null
+- 2026-04-12T23:41:00.473Z [adapter:start] openTab args=["https://chatgpt.com/"]
+- 2026-04-12T23:41:00.561Z [adapter:finish] openTab durationMs=88 result={"windowId":null,"tabIndex":null,"url":"https://chatgpt.com/"}
+- 2026-04-12T23:41:00.562Z [adapter:start] evaluateActiveTab args=["(() => { const normalizeText = (value) => (value || \"\").replace(/\\s+/g, \" \").trim(); const unique = (values) => [...new Set(values.map(normalizeText).filter(Boolean))]; const read…"]
+- 2026-04-12T23:41:00.721Z [adapter:finish] evaluateActiveTab durationMs=159 result="{\"url\":\"about:blank\",\"title\":\"\",\"loggedIn\":false,\"authPath\":false,\"authTexts\":[],\"accountHints\":[],\"accountMenuFound\":false,\"composerFound\":false,\"sendButtonFound\":false,\"conversa…"
+- 2026-04-12T23:41:00.721Z [adapter:start] wait args=[500]
+- 2026-04-12T23:41:01.223Z [adapter:finish] wait durationMs=502 result=null
+- 2026-04-12T23:41:01.223Z [adapter:start] evaluateActiveTab args=["(() => { const normalizeText = (value) => (value || \"\").replace(/\\s+/g, \" \").trim(); const unique = (values) => [...new Set(values.map(normalizeText).filter(Boolean))]; const read…"]
+- 2026-04-12T23:41:01.588Z [adapter:finish] evaluateActiveTab durationMs=365 result="{\"url\":\"https://chatgpt.com/\",\"title\":\"ChatGPT\",\"loggedIn\":true,\"authPath\":false,\"authTexts\":[],\"accountHints\":[\"Extended thinking\",\"Jim Crane (jim.btc)\",\"Open profile menu\",\"Jim…"
+- 2026-04-12T23:41:01.596Z [progress] chatgpt-session:ready sessionAction="opened-new-tab" url="https://chatgpt.com/"
+- 2026-04-12T23:41:01.599Z [adapter:start] evaluateActiveTab args=["(() => { const normalizeText = (value) => (value || \"\") .replace(/\\u00a0/g, \" \") .replace(/\\r\\n/g, \"\\n\") .replace(/[ \\t]+\\n/g, \"\\n\") .replace(/\\n{3,}/g, \"\\n\\n\") .trim(); const rea…"]
+- 2026-04-12T23:41:01.819Z [adapter:finish] evaluateActiveTab durationMs=220 result="{\"url\":\"https://chatgpt.com/\",\"title\":\"ChatGPT\",\"replyCount\":0,\"replyText\":null,\"generating\":false,\"composerFound\":true,\"composerTextLength\":1355,\"sendButtonFound\":true,\"sendButto…"
+- 2026-04-12T23:41:01.819Z [progress] chatgpt-submit:attempt attempt=1 maxAttempts=3 submitStrategy="button-click" promptLength=1551
+- 2026-04-12T23:41:01.820Z [adapter:start] evaluateActiveTab args=["(() => { const promptText = \"Your previous reply was not valid JSON for the requested schema.\\n\\nUse web search before answering.\\n\\nYou are the discovery agent for Narrate AI.\\n\\…"]
+- 2026-04-12T23:41:02.086Z [adapter:finish] evaluateActiveTab durationMs=266 result="{\"ok\":true,\"retryable\":false,\"composerTag\":\"DIV\",\"composerTextLength\":1535,\"sendButtonLabel\":\"Send prompt\",\"sendButtonReady\":true,\"submitStrategy\":\"button-click\",\"submitReason\":\"b…"
+- 2026-04-12T23:41:02.087Z [adapter:start] evaluateActiveTab args=["(() => { const normalizeText = (value) => (value || \"\") .replace(/\\u00a0/g, \" \") .replace(/\\r\\n/g, \"\\n\") .replace(/[ \\t]+\\n/g, \"\\n\") .replace(/\\n{3,}/g, \"\\n\\n\") .trim(); const rea…"]
+- 2026-04-12T23:41:02.333Z [adapter:finish] evaluateActiveTab durationMs=246 result="{\"url\":\"https://chatgpt.com/\",\"title\":\"ChatGPT\",\"replyCount\":0,\"replyText\":null,\"generating\":true,\"composerFound\":true,\"composerTextLength\":1551,\"sendButtonFound\":false,\"sendButto…"
+- 2026-04-12T23:41:02.333Z [progress] chatgpt-submit:confirmed attempt=1 confirmationReason="generating" confirmationChecks=1 submitStrategy="button-click" resubmissionSkipped=false sendButtonLabel="Send prompt" url="https://chatgpt.com/"
+- 2026-04-12T23:41:02.334Z [progress] chatgpt-reply:waiting attempt=1 maxChecks=240 elapsedMs=0 generating=true replyCount=0 url="https://chatgpt.com/"
+- 2026-04-12T23:41:02.335Z [adapter:start] wait args=[1000]
+- 2026-04-12T23:41:03.336Z [adapter:finish] wait durationMs=1001 result=null
+- 2026-04-12T23:41:03.337Z [adapter:start] evaluateActiveTab args=["(() => { const normalizeText = (value) => (value || \"\") .replace(/\\u00a0/g, \" \") .replace(/\\r\\n/g, \"\\n\") .replace(/[ \\t]+\\n/g, \"\\n\") .replace(/\\n{3,}/g, \"\\n\\n\") .trim(); const rea…"]
+- 2026-04-12T23:41:03.542Z [adapter:finish] evaluateActiveTab durationMs=205 result="{\"url\":\"https://chatgpt.com/\",\"title\":\"ChatGPT\",\"replyCount\":0,\"replyText\":null,\"generating\":true,\"composerFound\":true,\"composerTextLength\":1551,\"sendButtonFound\":false,\"sendButto…"
+- 2026-04-12T23:41:03.542Z [adapter:start] wait args=[1000]
+- 2026-04-12T23:41:04.543Z [adapter:finish] wait durationMs=1001 result=null
+- 2026-04-12T23:41:04.544Z [adapter:start] evaluateActiveTab args=["(() => { const normalizeText = (value) => (value || \"\") .replace(/\\u00a0/g, \" \") .replace(/\\r\\n/g, \"\\n\") .replace(/[ \\t]+\\n/g, \"\\n\") .replace(/\\n{3,}/g, \"\\n\\n\") .trim(); const rea…"]
+- 2026-04-12T23:41:04.771Z [adapter:finish] evaluateActiveTab durationMs=227 result="{\"url\":\"https://chatgpt.com/\",\"title\":\"ChatGPT\",\"replyCount\":0,\"replyText\":null,\"generating\":true,\"composerFound\":true,\"composerTextLength\":1551,\"sendButtonFound\":false,\"sendButto…"
+- 2026-04-12T23:41:04.771Z [adapter:start] wait args=[1000]
+- 2026-04-12T23:41:05.773Z [adapter:finish] wait durationMs=1002 result=null
+- 2026-04-12T23:41:05.774Z [adapter:start] evaluateActiveTab args=["(() => { const normalizeText = (value) => (value || \"\") .replace(/\\u00a0/g, \" \") .replace(/\\r\\n/g, \"\\n\") .replace(/[ \\t]+\\n/g, \"\\n\") .replace(/\\n{3,}/g, \"\\n\\n\") .trim(); const rea…"]
+- 2026-04-12T23:41:05.965Z [adapter:finish] evaluateActiveTab durationMs=191 result="{\"url\":\"https://chatgpt.com/\",\"title\":\"ChatGPT\",\"replyCount\":0,\"replyText\":null,\"generating\":true,\"composerFound\":true,\"composerTextLength\":1551,\"sendButtonFound\":false,\"sendButto…"
+- 2026-04-12T23:41:05.965Z [adapter:start] wait args=[1000]
+- 2026-04-12T23:41:06.966Z [adapter:finish] wait durationMs=1001 result=null
+- 2026-04-12T23:41:06.969Z [adapter:start] evaluateActiveTab args=["(() => { const normalizeText = (value) => (value || \"\") .replace(/\\u00a0/g, \" \") .replace(/\\r\\n/g, \"\\n\") .replace(/[ \\t]+\\n/g, \"\\n\") .replace(/\\n{3,}/g, \"\\n\\n\") .trim(); const rea…"]
+- 2026-04-12T23:41:07.166Z [adapter:finish] evaluateActiveTab durationMs=197 result="{\"url\":\"https://chatgpt.com/\",\"title\":\"ChatGPT\",\"replyCount\":0,\"replyText\":null,\"generating\":true,\"composerFound\":true,\"composerTextLength\":1551,\"sendButtonFound\":false,\"sendButto…"
+- 2026-04-12T23:41:07.166Z [adapter:start] wait args=[1000]
+- 2026-04-12T23:41:08.168Z [adapter:finish] wait durationMs=1002 result=null
+- 2026-04-12T23:41:08.168Z [adapter:start] evaluateActiveTab args=["(() => { const normalizeText = (value) => (value || \"\") .replace(/\\u00a0/g, \" \") .replace(/\\r\\n/g, \"\\n\") .replace(/[ \\t]+\\n/g, \"\\n\") .replace(/\\n{3,}/g, \"\\n\\n\") .trim(); const rea…"]
+- 2026-04-12T23:41:08.341Z [adapter:finish] evaluateActiveTab durationMs=173 result="{\"url\":\"https://chatgpt.com/\",\"title\":\"ChatGPT\",\"replyCount\":0,\"replyText\":null,\"generating\":true,\"composerFound\":true,\"composerTextLength\":1551,\"sendButtonFound\":false,\"sendButto…"
+- 2026-04-12T23:41:08.341Z [adapter:start] wait args=[1000]
+- 2026-04-12T23:41:09.342Z [adapter:finish] wait durationMs=1001 result=null
+- 2026-04-12T23:41:09.343Z [adapter:start] evaluateActiveTab args=["(() => { const normalizeText = (value) => (value || \"\") .replace(/\\u00a0/g, \" \") .replace(/\\r\\n/g, \"\\n\") .replace(/[ \\t]+\\n/g, \"\\n\") .replace(/\\n{3,}/g, \"\\n\\n\") .trim(); const rea…"]
+- 2026-04-12T23:41:09.577Z [adapter:finish] evaluateActiveTab durationMs=234 result="{\"url\":\"https://chatgpt.com/\",\"title\":\"ChatGPT\",\"replyCount\":0,\"replyText\":null,\"generating\":true,\"composerFound\":true,\"composerTextLength\":1551,\"sendButtonFound\":false,\"sendButto…"
+- 2026-04-12T23:41:09.577Z [adapter:start] wait args=[1000]
+- 2026-04-12T23:41:10.581Z [adapter:finish] wait durationMs=1003 result=null
+- 2026-04-12T23:41:10.582Z [adapter:start] evaluateActiveTab args=["(() => { const normalizeText = (value) => (value || \"\") .replace(/\\u00a0/g, \" \") .replace(/\\r\\n/g, \"\\n\") .replace(/[ \\t]+\\n/g, \"\\n\") .replace(/\\n{3,}/g, \"\\n\\n\") .trim(); const rea…"]
+- 2026-04-12T23:41:10.784Z [adapter:finish] evaluateActiveTab durationMs=202 result="{\"url\":\"https://chatgpt.com/c/69dc2d8e-865c-8396-8b77-f561c2045562\",\"title\":\"ChatGPT\",\"replyCount\":1,\"replyText\":\"What can I he\",\"generating\":true,\"composerFound\":true,\"composerTe…"
+- 2026-04-12T23:41:10.785Z [adapter:start] wait args=[1000]
+- 2026-04-12T23:41:11.786Z [adapter:finish] wait durationMs=1001 result=null
+- 2026-04-12T23:41:11.788Z [adapter:start] evaluateActiveTab args=["(() => { const normalizeText = (value) => (value || \"\") .replace(/\\u00a0/g, \" \") .replace(/\\r\\n/g, \"\\n\") .replace(/[ \\t]+\\n/g, \"\\n\") .replace(/\\n{3,}/g, \"\\n\\n\") .trim(); const rea…"]
+- 2026-04-12T23:41:11.986Z [adapter:finish] evaluateActiveTab durationMs=198 result="{\"url\":\"https://chatgpt.com/c/69dc2d8e-865c-8396-8b77-f561c2045562\",\"title\":\"Assistance Inquiry\",\"replyCount\":1,\"replyText\":\"What can I help you with\",\"generating\":true,\"composerF…"
+- 2026-04-12T23:41:11.987Z [adapter:start] wait args=[1000]
+- 2026-04-12T23:41:12.988Z [adapter:finish] wait durationMs=1001 result=null
+- 2026-04-12T23:41:12.989Z [adapter:start] evaluateActiveTab args=["(() => { const normalizeText = (value) => (value || \"\") .replace(/\\u00a0/g, \" \") .replace(/\\r\\n/g, \"\\n\") .replace(/[ \\t]+\\n/g, \"\\n\") .replace(/\\n{3,}/g, \"\\n\\n\") .trim(); const rea…"]
+- 2026-04-12T23:41:13.203Z [adapter:finish] evaluateActiveTab durationMs=213 result="{\"url\":\"https://chatgpt.com/c/69dc2d8e-865c-8396-8b77-f561c2045562\",\"title\":\"Assistance Inquiry\",\"replyCount\":1,\"replyText\":\"What can I help you with?\",\"generating\":false,\"compose…"
+- 2026-04-12T23:41:13.204Z [adapter:start] wait args=[1000]
+- 2026-04-12T23:41:14.205Z [adapter:finish] wait durationMs=1001 result=null
+- 2026-04-12T23:41:14.206Z [adapter:start] evaluateActiveTab args=["(() => { const normalizeText = (value) => (value || \"\") .replace(/\\u00a0/g, \" \") .replace(/\\r\\n/g, \"\\n\") .replace(/[ \\t]+\\n/g, \"\\n\") .replace(/\\n{3,}/g, \"\\n\\n\") .trim(); const rea…"]
+- 2026-04-12T23:41:14.408Z [adapter:finish] evaluateActiveTab durationMs=202 result="{\"url\":\"https://chatgpt.com/c/69dc2d8e-865c-8396-8b77-f561c2045562\",\"title\":\"Assistance Inquiry\",\"replyCount\":1,\"replyText\":\"What can I help you with?\",\"generating\":false,\"compose…"
+- 2026-04-12T23:41:14.409Z [progress] chatgpt-reply:complete checks=11 replyLength=25 url="https://chatgpt.com/c/69dc2d8e-865c-8396-8b77-f561c2045562"
+- 2026-04-12T23:41:14.411Z [invalid-reply] kind=invalid-json attempt=2 label="narrate-gpt-search:Smoke Test Web Search" files={"rawReplyFile":"/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-12T23-40-47.130Z/invalid-replies/002-invalid-json.raw.txt","promptFile":"/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-12T23-40-47.130Z/invalid-replies/002-invalid-json.prompt.txt","metaFile":"/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-12T23-40-47.130Z/invalid-replies/002-invalid-json.meta.json"}
+- 2026-04-12T23:41:14.411Z [progress] chatgpt-json:failed attempt=2 maxAttempts=2 error="ChatGPT reply did not contain valid JSON." replyUrl="https://chatgpt.com/c/69dc2d8e-865c-8396-8b77-f561c2045562"
+- 2026-04-12T23:41:14.412Z [progress] lead-engine:failed message="ChatGPT reply did not contain valid JSON. after 2 attempts." rssMb=40.5 heapUsedMb=6 heapTotalMb=7.7 externalMb=2.1 arrayBuffersMb=0.1

@@ -49,6 +49,20 @@ cd narrate-lead-engine
 /opt/homebrew/bin/node src/cli/run-job.js --job-file=jobs/safe-smoke-test.json
 ```
 
+Review a previous run and get conservative rerun guidance:
+
+```bash
+cd narrate-lead-engine
+/opt/homebrew/bin/node src/cli/review-run.js --run-id=2026-04-12T22-38-27.130Z
+```
+
+Prepare an approval-gated rerun job without executing it:
+
+```bash
+cd narrate-lead-engine
+/opt/homebrew/bin/node src/cli/prepare-rerun.js --run-id=2026-04-12T22-38-27.130Z
+```
+
 Start the dashboard:
 
 ```bash
@@ -75,6 +89,7 @@ Key knobs:
 - `queryPauseMs` / `stagePauseMs`: throttles between browser actions
 - `maxHeapUsedMb`: process memory tripwire
 - `chatgptWaitBudgetMs` / `chatgptPollMs`: how long the runner will wait for slow ChatGPT web-search replies
+- `chatgptReuseReplyThreadForRepairs`: whether repair attempts should continue inside the same ChatGPT thread or open a fresh tab
 - `enrichAboveScore`: score threshold for enrichment
 - `draftAboveScore`: score threshold for outreach drafting
 
@@ -95,6 +110,10 @@ Artifacts per run:
 - `manifest.json`
 - `error.json` on failed runs
 - `progress.log`
+- `debug-events.jsonl`
+- `debug-log.md`
+- `invalid-replies/` with captured raw reply/prompt artifacts when ChatGPT returns malformed output
+- `prepared-rerun-job.json` and `prepared-rerun-plan.json` when you explicitly prepare a follow-up run
 
 SQLite state lives at:
 
@@ -106,5 +125,10 @@ SQLite state lives at:
 - Use `gpt-web-search` as the default browser-first discovery path when you want a safer no-API workflow.
 - Google scraping is still available as an opt-in source type, but it is read-only and challenge-sensitive.
 - Enrichment and outreach use the existing ChatGPT web UI JSON flow from the repo’s modular harness. No OpenAI API key is required.
+- If a repair attempt keeps reading the same old ChatGPT reply, set `chatgptReuseReplyThreadForRepairs` to `false` so the retry opens a fresh ChatGPT tab instead of reusing the previous reply thread.
 - This app is designed for high-signal low-volume prospecting first. It does not auto-send anything.
 - If a run hits a safety budget, the app now writes a failure manifest and error artifact, then exits.
+- Every run now also writes a structured execution trace plus a readable markdown debug log so failed runs are still useful for the next iteration.
+- `error.json` now also includes the latest reply/prompt context plus pointers to the most recent invalid-reply artifact when ChatGPT JSON handling fails.
+- Use `npm run review-run -- --run-id=<run-id>` or `GET /api/runs/<run-id>/review` to inspect a failed run and generate a conservative rerun patch before more testing.
+- Use `npm run prepare-rerun -- --run-id=<run-id>` or `POST /api/runs/<run-id>/prepare-rerun` to write a candidate follow-up job. This only prepares artifacts; the operator still decides whether to run it.

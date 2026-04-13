@@ -1,0 +1,48 @@
+{
+  "sourceRunId": "2026-04-12T23-35-33.611Z",
+  "sourceRunDir": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-12T23-35-33.611Z",
+  "sourceStatus": "failed",
+  "generatedAt": "2026-04-12T23:38:25.520Z",
+  "approvalRequired": true,
+  "executionStatus": "prepared-not-run",
+  "rerunDecision": "manual-review-required",
+  "canRunAfterApproval": true,
+  "requiresArtifactReview": true,
+  "failureKind": "chatgpt-stale-retry",
+  "recommendedAction": "Review the latest invalid reply artifact before rerunning. Then retry from a fresh ChatGPT tab instead of reusing the previous reply thread.",
+  "nextTestingStep": "Open the latest reply URL manually, inspect the thread state, and rerun the smoke job with reply-thread reuse disabled for repairs.",
+  "requiredChecks": [
+    "Review error.json and debug-log.md before running the prepared job.",
+    "Confirm the proposed job file still matches your intended source scope and budgets.",
+    "Inspect the latest invalid-reply metadata, prompt, and raw reply artifacts.",
+    "Confirm the latest ChatGPT reply thread is understood before rerunning."
+  ],
+  "scopeChangesApplied": true,
+  "suggestedJobPatch": {
+    "chatgptReuseReplyThreadForRepairs": false
+  },
+  "suggestedSourceUpdates": [],
+  "latestReplyUrl": "https://chatgpt.com/c/69dc2c48-75a0-838b-9aa5-56a1baff30cd",
+  "latestInvalidReply": {
+    "kind": "stale-retry",
+    "label": "narrate-gpt-search:Smoke Test Web Search",
+    "attempt": 2,
+    "replyUrl": "https://chatgpt.com/c/69dc2c48-75a0-838b-9aa5-56a1baff30cd",
+    "rawReplyFile": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-12T23-35-33.611Z/invalid-replies/002-stale-retry.raw.txt",
+    "promptFile": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-12T23-35-33.611Z/invalid-replies/002-stale-retry.prompt.txt",
+    "metaFile": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-12T23-35-33.611Z/invalid-replies/002-stale-retry.meta.json"
+  },
+  "inputArtifacts": {
+    "manifest": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-12T23-35-33.611Z/manifest.json",
+    "error": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-12T23-35-33.611Z/error.json",
+    "debugLog": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-12T23-35-33.611Z/debug-log.md",
+    "debugEvents": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-12T23-35-33.611Z/debug-events.jsonl",
+    "invalidRepliesDir": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-12T23-35-33.611Z/invalid-replies",
+    "job": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-12T23-35-33.611Z/job.json"
+  },
+  "outputs": {
+    "preparedJobPath": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-12T23-35-33.611Z/prepared-rerun-job.json",
+    "preparedPlanPath": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-12T23-35-33.611Z/prepared-rerun-plan.json"
+  },
+  "recommendedCommand": "npm run run-job -- --job-file=\"/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-12T23-35-33.611Z/prepared-rerun-job.json\""
+}

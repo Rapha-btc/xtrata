@@ -1,0 +1,35 @@
+{
+  "runId": "2026-04-13T20-42-41.882Z",
+  "failedAt": "2026-04-13T20:43:14.073Z",
+  "error": {
+    "name": "Error",
+    "message": "ChatGPT repair attempt returned the previous reply again. after 2 attempts.",
+    "details": null,
+    "helpfulHint": "Review the latest invalid-reply artifacts before rerunning. Keep the next run narrow and confirm the prompt/reply pair matches the requested schema.",
+    "context": {
+      "replyUrl": "https://chatgpt.com/c/69dd5547-10f0-8393-809f-b140c5020629",
+      "sessionAction": "opened-new-tab",
+      "rawReplyText": "I’m checking for named prospects with clear audiobook cost or workflow pain, then filtering out generic commentary.",
+      "dispatchedPrompt": "Your previous reply was not valid JSON for the requested schema.\n\nUse web search before answering.\n\nYou are the discovery agent for Narrate AI.\n\nObjective: Prove the browser collection path without stressing the machine.\n\nSearch query: \"audiobook\" expensive\n\nReturn up to 3 public-web results that look like real audiobook leads, not generic commentary.\n\nPrioritize explicit cost pain, workflow pain, publisher/backlist intent, multi-voice fiction needs, and AI-openness signals.\n\nPrefer people or organizations that could plausibly buy or trial audiobook production.\n\nSkip broad SEO listicles unless they expose a clear named prospect or buyer signal.\n\nDo not greet the user, do not address the user by name, and do not ask clarifying questions.\n\nIf the search is weak or empty, still return the requested JSON schema with a short summary and an empty items array.\n\nReturn exactly one valid JSON value and nothing else.\n\nDo not wrap the JSON in markdown fences.\n\nDo not add explanation before or after the JSON.\n\nPrevious validation error:\nChatGPT reply did not contain valid JSON.\n\nPrevious invalid reply:\nI’m checking for named prospects with clear audiobook cost or workflow pain, then filtering out generic commentary.\n\nJSON schema requirements:\nReturn a JSON object with exactly these top-level keys:\n- summary: string\n- items: array with at most 3 objects\nEach item must include:\n- title: string\n- url: string or null\n- sourceName: string\n- publishedAt: string or null\n- authorName: string or null\n- excerpt: string\n- rawText: string or null\n- matchedSignals: array of strings\n- leadHint: string or null\n- whyRelevant: string",
+      "invalidReplyArtifact": {
+        "rawReplyFile": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-13T20-42-41.882Z/invalid-replies/002-stale-retry.raw.txt",
+        "promptFile": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-13T20-42-41.882Z/invalid-replies/002-stale-retry.prompt.txt",
+        "metaFile": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-13T20-42-41.882Z/invalid-replies/002-stale-retry.meta.json"
+      }
+    }
+  },
+  "memory": {
+    "rssMb": 25.4,
+    "heapUsedMb": 6.7,
+    "heapTotalMb": 8.6,
+    "externalMb": 2.2,
+    "arrayBuffersMb": 0
+  },
+  "counts": {
+    "queriesPlanned": 1,
+    "collected": 0,
+    "normalized": 0,
+    "leads": 0,
+    "drafted": 0
+  }
+}

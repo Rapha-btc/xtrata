@@ -29,6 +29,8 @@ export function buildGptLeadSearchPrompt({ job, queryPlan } = {}) {
     "Prioritize explicit cost pain, workflow pain, publisher/backlist intent, multi-voice fiction needs, and AI-openness signals.",
     "Prefer people or organizations that could plausibly buy or trial audiobook production.",
     "Skip broad SEO listicles unless they expose a clear named prospect or buyer signal.",
+    "Do not greet the user, do not address the user by name, and do not ask clarifying questions.",
+    "If the search is weak or empty, still return the requested JSON schema with a short summary and an empty items array.",
   ].join("\n\n");
 }
 

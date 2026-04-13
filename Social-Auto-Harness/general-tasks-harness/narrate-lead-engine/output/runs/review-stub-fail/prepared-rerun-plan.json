@@ -1,0 +1,46 @@
+{
+  "sourceRunId": "review-stub-fail",
+  "sourceRunDir": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/review-stub-fail",
+  "sourceStatus": "failed",
+  "generatedAt": "2026-04-12T23:27:59.460Z",
+  "approvalRequired": true,
+  "executionStatus": "prepared-not-run",
+  "rerunDecision": "manual-review-required",
+  "canRunAfterApproval": true,
+  "requiresArtifactReview": true,
+  "failureKind": "chatgpt-invalid-json",
+  "recommendedAction": "Review the latest invalid reply artifact, confirm the prompt/reply mismatch, then rerun with a tighter scope.",
+  "nextTestingStep": "Rerun the safe smoke job with the same single source after reviewing the invalid-reply files.",
+  "requiredChecks": [
+    "Review error.json and debug-log.md before running the prepared job.",
+    "Confirm the proposed job file still matches your intended source scope and budgets.",
+    "Inspect the latest invalid-reply metadata, prompt, and raw reply artifacts.",
+    "Confirm the latest ChatGPT reply thread is understood before rerunning."
+  ],
+  "scopeChangesApplied": false,
+  "suggestedJobPatch": null,
+  "suggestedSourceUpdates": [],
+  "latestReplyUrl": "https://chatgpt.com/c/test",
+  "latestInvalidReply": {
+    "kind": "invalid-json",
+    "label": "stub-failure",
+    "attempt": 2,
+    "replyUrl": "https://chatgpt.com/c/test",
+    "rawReplyFile": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/review-stub-fail/invalid-replies/001-invalid-json.raw.txt",
+    "promptFile": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/review-stub-fail/invalid-replies/001-invalid-json.prompt.txt",
+    "metaFile": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/review-stub-fail/invalid-replies/001-invalid-json.meta.json"
+  },
+  "inputArtifacts": {
+    "manifest": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/review-stub-fail/manifest.json",
+    "error": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/review-stub-fail/error.json",
+    "debugLog": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/review-stub-fail/debug-log.md",
+    "debugEvents": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/review-stub-fail/debug-events.jsonl",
+    "invalidRepliesDir": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/review-stub-fail/invalid-replies",
+    "job": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/review-stub-fail/job.json"
+  },
+  "outputs": {
+    "preparedJobPath": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/review-stub-fail/prepared-rerun-job.json",
+    "preparedPlanPath": "/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/review-stub-fail/prepared-rerun-plan.json"
+  },
+  "recommendedCommand": "npm run run-job -- --job-file=\"/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/review-stub-fail/prepared-rerun-job.json\""
+}

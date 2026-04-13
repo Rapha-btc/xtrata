@@ -4,9 +4,10 @@ import path from "node:path";
 import { ChromeAppleScriptAdapter } from "../../modular-harness/src/browser/chromeAppleScriptAdapter.js";
 import { resolveBrowserPersona } from "../../modular-harness/src/browser/profileRegistry.js";
 import { replaceRunState, withDb } from "./db.js";
+import { createTracedAdapter, renderDebugLogMarkdown } from "./debug.js";
 import { enrichLead, mergeLeadEnrichment } from "./enrich.js";
 import { readNarrateJob } from "./job.js";
-import { writeJson, writeText } from "./lib/fs.js";
+import { appendText, writeJson, writeText } from "./lib/fs.js";
 import { ensureAppDirs, ensureDir, getRunDir, getRunId, RUNS_DIR } from "./lib/paths.js";
 import { normalizeDiscoveryCollections } from "./normalize.js";
 import { draftOutreach } from "./outreach.js";
@@ -26,6 +27,9 @@ function buildArtifactPaths(runDir) {
     manifest: path.join(runDir, "manifest.json"),
     error: path.join(runDir, "error.json"),
     progressLog: path.join(runDir, "progress.log"),
+    debugEvents: path.join(runDir, "debug-events.jsonl"),
+    debugLog: path.join(runDir, "debug-log.md"),
+    invalidRepliesDir: path.join(runDir, "invalid-replies"),
   };
 }
 
@@ -42,6 +46,10 @@ function buildHelpfulFailureHint(error) {
 
   if (/still generating when the wait budget expired/i.test(message)) {
     return "ChatGPT produced a slower-than-expected web-search reply. Increase chatgptWaitBudgetMs in the job file or reduce the scope of the run.";
+  }
+
+  if (/did not contain valid JSON/i.test(message) || /repair attempt returned the previous reply again/i.test(message)) {
+    return "Review the latest invalid-reply artifacts before rerunning. Keep the next run narrow and confirm the prompt/reply pair matches the requested schema.";
   }
 
   if (/heap usage reached/i.test(message)) {
@@ -66,6 +74,7 @@ function resolveChatGPTReplyOptions(job) {
     replyWaitMs,
     replyMaxChecks: Math.max(1, Math.ceil(waitBudgetMs / replyWaitMs)),
     waitBudgetMs,
+    reuseReplyThreadForRepairs: job?.chatgptReuseReplyThreadForRepairs !== false,
   };
 }
 
@@ -78,7 +87,14 @@ function formatProgressEntry(entry) {
   return parts.join(" ");
 }
 
-async function emitProgressFactory({ writeFiles, progressLogPath, progressToConsole, progressConsole, onProgress }) {
+async function emitProgressFactory({
+  writeFiles,
+  progressLogPath,
+  progressToConsole,
+  progressConsole,
+  onProgress,
+  recordDebugEvent,
+}) {
   return async function emitProgress({ stage, action, details = {} } = {}) {
     const entry = {
       timestamp: new Date().toISOString(),
@@ -94,6 +110,16 @@ async function emitProgressFactory({ writeFiles, progressLogPath, progressToCons
 
     if (writeFiles) {
       await fs.appendFile(progressLogPath, `${line}\n`, "utf8");
+    }
+
+    if (typeof recordDebugEvent === "function") {
+      await recordDebugEvent({
+        kind: "progress",
+        timestamp: entry.timestamp,
+        stage: entry.stage,
+        action: entry.action,
+        details: entry.details,
+      });
     }
 
     if (typeof onProgress === "function") {
@@ -170,6 +196,7 @@ export async function runLeadEngine({
   browserName = "Google Chrome",
   adapter = null,
   writeFiles = true,
+  persistToDb = true,
   resolveBrowserPersonaFn = resolveBrowserPersona,
   collectLeadSourcesFn = collectLeadSources,
   enrichLeadFn = enrichLead,
@@ -185,7 +212,7 @@ export async function runLeadEngine({
 
   const resolvedNow = now instanceof Date ? now : new Date(now);
   const resolvedRunId = runId ?? getRunId(resolvedNow);
-  const runDir = getRunDir(resolvedRunId);
+  const runDir = getRunDir(resolvedRunId, runsDir);
   const files = buildArtifactPaths(runDir);
   let job = null;
   let queryPlan = [];
@@ -194,11 +221,63 @@ export async function runLeadEngine({
   let enrichedLeads = [];
   let outreachResults = [];
   let learningRows = [];
+  let debugEvents = [];
+  let debugSequence = 0;
+  let lastInvalidReplyArtifact = null;
 
   if (writeFiles) {
     await ensureAppDirs();
+    await ensureDir(runsDir);
     await ensureDir(runDir);
     await writeText(files.progressLog, "");
+    await writeText(files.debugEvents, "");
+    await ensureDir(files.invalidRepliesDir);
+  }
+
+  async function recordDebugEvent(event) {
+    const normalizedEvent = {
+      sequence: ++debugSequence,
+      timestamp: event.timestamp ?? new Date().toISOString(),
+      ...event,
+    };
+    debugEvents.push(normalizedEvent);
+
+    if (writeFiles) {
+      await appendText(files.debugEvents, `${JSON.stringify(normalizedEvent)}\n`);
+    }
+  }
+
+  let invalidReplyCounter = 0;
+  async function captureInvalidReply(event) {
+    invalidReplyCounter += 1;
+    const artifactBase = path.join(
+      files.invalidRepliesDir,
+      `${String(invalidReplyCounter).padStart(3, "0")}-${event.kind ?? "invalid"}`
+    );
+    const artifactFiles = {
+      rawReplyFile: `${artifactBase}.raw.txt`,
+      promptFile: `${artifactBase}.prompt.txt`,
+      metaFile: `${artifactBase}.meta.json`,
+    };
+    lastInvalidReplyArtifact = artifactFiles;
+
+    if (writeFiles) {
+      await writeText(artifactFiles.rawReplyFile, `${event.rawReplyText ?? ""}`);
+      await writeText(artifactFiles.promptFile, `${event.dispatchedPrompt ?? ""}`);
+      await writeJson(artifactFiles.metaFile, {
+        capturedAt: new Date().toISOString(),
+        ...event,
+        ...artifactFiles,
+      });
+    }
+
+    await recordDebugEvent({
+      kind: "invalid-reply-artifact",
+      kindName: event.kind ?? "invalid-json",
+      label: event.label ?? null,
+      attempt: event.attempt ?? null,
+      files: artifactFiles,
+    });
   }
 
   const emitProgress = await emitProgressFactory({
@@ -207,6 +286,7 @@ export async function runLeadEngine({
     progressToConsole,
     progressConsole,
     onProgress,
+    recordDebugEvent,
   });
 
   await emitProgress({
@@ -223,8 +303,9 @@ export async function runLeadEngine({
     queryPlan = buildDiscoveryPlan(job);
     const chatgptReplyOptions = resolveChatGPTReplyOptions(job);
     const personaProfile = job.persona ? await resolveBrowserPersonaFn(job.persona) : null;
-    const resolvedAdapter =
+    const baseAdapter =
       adapter ?? new ChromeAppleScriptAdapter({ browserName: personaProfile?.browserName ?? browserName });
+    const resolvedAdapter = createTracedAdapter(baseAdapter, { recordEvent: recordDebugEvent });
 
     if (writeFiles) {
       await writeJson(files.job, job);
@@ -250,6 +331,7 @@ export async function runLeadEngine({
       personaProfile,
       queryPlans: queryPlan,
       onProgress: emitProgress,
+      onInvalidReply: captureInvalidReply,
       ...chatgptReplyOptions,
     });
 
@@ -290,6 +372,7 @@ export async function runLeadEngine({
           lead,
           personaProfile,
           expectedAccountHint: job.account,
+          onInvalidReply: captureInvalidReply,
           ...chatgptReplyOptions,
         })
       );
@@ -330,6 +413,7 @@ export async function runLeadEngine({
           lead,
           personaProfile,
           expectedAccountHint: job.account,
+          onInvalidReply: captureInvalidReply,
           ...chatgptReplyOptions,
         })
       );
@@ -383,32 +467,46 @@ export async function runLeadEngine({
       await writeJson(files.manifest, manifest);
     }
 
-    withDb((db) => {
-      replaceRunState(db, {
-        run: {
-          id: resolvedRunId,
-          name: job.name,
-          objective: job.objective,
-          startedAt: resolvedNow.toISOString(),
-          finishedAt: new Date().toISOString(),
-          status: "completed",
-          counts: manifest.counts,
-        },
-        sourceItems: normalized.items.map((item) => ({
-          ...item,
-          detectedSignals: enrichedLeads.find((lead) => lead.sourceItemId === item.itemId)?.detectedSignals ?? [],
-        })),
-        leads: enrichedLeads,
-        outreach: outreachResults,
-        learning: learningRows,
+    if (persistToDb) {
+      withDb((db) => {
+        replaceRunState(db, {
+          run: {
+            id: resolvedRunId,
+            name: job.name,
+            objective: job.objective,
+            startedAt: resolvedNow.toISOString(),
+            finishedAt: new Date().toISOString(),
+            status: "completed",
+            counts: manifest.counts,
+          },
+          sourceItems: normalized.items.map((item) => ({
+            ...item,
+            detectedSignals: enrichedLeads.find((lead) => lead.sourceItemId === item.itemId)?.detectedSignals ?? [],
+          })),
+          leads: enrichedLeads,
+          outreach: outreachResults,
+          learning: learningRows,
+        });
       });
-    });
+    }
 
     await emitProgress({
       stage: "lead-engine",
       action: "complete",
       details: manifest.counts,
     });
+
+    if (writeFiles) {
+      await writeText(
+        files.debugLog,
+        renderDebugLogMarkdown({
+          runId: resolvedRunId,
+          events: debugEvents,
+          manifest,
+          error: null,
+        })
+      );
+    }
 
     return {
       runId: resolvedRunId,
@@ -431,6 +529,13 @@ export async function runLeadEngine({
         message: error?.message ?? String(error),
         details: error?.details ?? null,
         helpfulHint: buildHelpfulFailureHint(error),
+        context: {
+          replyUrl: error?.replyState?.url ?? null,
+          sessionAction: error?.session?.action ?? null,
+          rawReplyText: error?.rawReplyText ?? null,
+          dispatchedPrompt: error?.dispatchedPrompt ?? null,
+          invalidReplyArtifact: lastInvalidReplyArtifact,
+        },
       },
       memory: buildMemorySnapshot(),
       counts: {
@@ -475,9 +580,18 @@ export async function runLeadEngine({
     if (writeFiles) {
       await writeJson(files.error, errorPayload);
       await writeJson(files.manifest, failureManifest);
+      await writeText(
+        files.debugLog,
+        renderDebugLogMarkdown({
+          runId: resolvedRunId,
+          events: debugEvents,
+          manifest: failureManifest,
+          error: errorPayload,
+        })
+      );
     }
 
-    if (job) {
+    if (job && persistToDb) {
       withDb((db) => {
         replaceRunState(db, {
           run: {

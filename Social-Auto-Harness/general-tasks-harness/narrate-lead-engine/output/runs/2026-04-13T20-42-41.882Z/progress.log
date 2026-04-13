@@ -1,0 +1,25 @@
+[2026-04-13T20:42:41.889Z] lead-engine:start runId="2026-04-13T20-42-41.882Z" runDir="/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/output/runs/2026-04-13T20-42-41.882Z" jobFilePath="/Users/melophonic/Documents/GitHub/xtrata/Social-Auto-Harness/general-tasks-harness/narrate-lead-engine/jobs/safe-smoke-test.json"
+[2026-04-13T20:42:41.891Z] lead-engine:job-loaded sourceCount=1 queryCount=1 chatgptReplyMaxChecks=240 chatgptReplyWaitMs=1000 rssMb=46 heapUsedMb=5.8 heapTotalMb=10.3 externalMb=2.2 arrayBuffersMb=0.1
+[2026-04-13T20:42:41.892Z] discovery:start-query queryIndex=1 totalQueries=1 sourceType="gpt-web-search" label="Smoke Test Web Search" family="cost-pain" query="\"audiobook\" expensive"
+[2026-04-13T20:42:41.892Z] safety:memory-snapshot stage="discovery:start-query" queryIndex=1 rssMb=46.1 heapUsedMb=5.9 heapTotalMb=10.3 externalMb=2.2 arrayBuffersMb=0.1
+[2026-04-13T20:42:41.892Z] chatgpt-json:attempt attempt=1 maxAttempts=2 repairPrompt=false
+[2026-04-13T20:42:43.711Z] chatgpt-session:ready sessionAction="opened-new-tab" url="https://chatgpt.com/"
+[2026-04-13T20:42:43.900Z] chatgpt-submit:attempt attempt=1 maxAttempts=3 submitStrategy="button-click" promptLength=1355
+[2026-04-13T20:42:44.092Z] chatgpt-submit:retry attempt=1 maxAttempts=3 reason="send-button-not-ready" submitStrategy="button-click" sendButtonLabel="Send prompt" url="https://chatgpt.com/"
+[2026-04-13T20:42:44.598Z] chatgpt-submit:attempt attempt=2 maxAttempts=3 submitStrategy="form-submit" promptLength=1355
+[2026-04-13T20:42:45.087Z] chatgpt-submit:retry attempt=2 maxAttempts=3 reason="composer-fill-failed" submitStrategy="form-submit" url="https://chatgpt.com/"
+[2026-04-13T20:42:45.590Z] chatgpt-submit:attempt attempt=3 maxAttempts=3 submitStrategy="keyboard-enter" promptLength=1355
+[2026-04-13T20:42:46.030Z] chatgpt-submit:confirmed attempt=3 confirmationReason="generating" confirmationChecks=1 submitStrategy="keyboard-enter" resubmissionSkipped=false sendButtonLabel="Send prompt" url="https://chatgpt.com/"
+[2026-04-13T20:42:46.031Z] chatgpt-reply:waiting attempt=1 maxChecks=240 elapsedMs=0 generating=true replyCount=0 url="https://chatgpt.com/"
+[2026-04-13T20:43:09.169Z] chatgpt-reply:complete checks=20 replyLength=115 url="https://chatgpt.com/c/69dd5547-10f0-8393-809f-b140c5020629"
+[2026-04-13T20:43:09.174Z] chatgpt-json:retry attempt=1 maxAttempts=2 error="ChatGPT reply did not contain valid JSON." replyUrl="https://chatgpt.com/c/69dd5547-10f0-8393-809f-b140c5020629"
+[2026-04-13T20:43:09.174Z] chatgpt-json:attempt attempt=2 maxAttempts=2 repairPrompt=true
+[2026-04-13T20:43:10.711Z] chatgpt-session:ready sessionAction="opened-new-tab" url="https://chatgpt.com/c/69dd5547-10f0-8393-809f-b140c5020629"
+[2026-04-13T20:43:11.031Z] chatgpt-submit:attempt attempt=1 maxAttempts=3 submitStrategy="button-click" promptLength=1632
+[2026-04-13T20:43:11.249Z] chatgpt-submit:retry attempt=1 maxAttempts=3 reason="send-button-not-found" submitStrategy="button-click" url="https://chatgpt.com/c/69dd5547-10f0-8393-809f-b140c5020629"
+[2026-04-13T20:43:11.751Z] chatgpt-submit:attempt attempt=2 maxAttempts=3 submitStrategy="form-submit" promptLength=1632
+[2026-04-13T20:43:12.851Z] chatgpt-submit:confirmed attempt=2 confirmationReason="new-reply" confirmationChecks=2 submitStrategy="already-generating" resubmissionSkipped=true url="https://chatgpt.com/c/69dd5547-10f0-8393-809f-b140c5020629"
+[2026-04-13T20:43:12.851Z] chatgpt-reply:waiting attempt=1 maxChecks=240 elapsedMs=0 generating=false replyCount=1 url="https://chatgpt.com/c/69dd5547-10f0-8393-809f-b140c5020629"
+[2026-04-13T20:43:14.071Z] chatgpt-reply:complete checks=2 replyLength=115 url="https://chatgpt.com/c/69dd5547-10f0-8393-809f-b140c5020629"
+[2026-04-13T20:43:14.073Z] chatgpt-json:failed attempt=2 maxAttempts=2 error="ChatGPT repair attempt returned the previous reply again." replyUrl="https://chatgpt.com/c/69dd5547-10f0-8393-809f-b140c5020629"
+[2026-04-13T20:43:14.074Z] lead-engine:failed message="ChatGPT repair attempt returned the previous reply again. after 2 attempts." rssMb=25.4 heapUsedMb=6.7 heapTotalMb=8.6 externalMb=2.2 arrayBuffersMb=0
