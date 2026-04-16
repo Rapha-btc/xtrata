@@ -25,6 +25,7 @@ export const buildRuntimeOpenUrl = (params: {
   network: NetworkType;
   fallbackContractId?: string | null;
   sourceUrl?: string | null;
+  moduleBaseHref?: string | null;
 }) => {
   const search = new URLSearchParams();
   search.set('contractId', params.contractId);
@@ -35,6 +36,9 @@ export const buildRuntimeOpenUrl = (params: {
   }
   if (params.sourceUrl) {
     search.set('source', params.sourceUrl);
+  }
+  if (params.moduleBaseHref) {
+    search.set('moduleBase', params.moduleBaseHref);
   }
   return `/runtime/?${search.toString()}`;
 };

@@ -24,7 +24,9 @@ describe('viewer runtime open helpers', () => {
       tokenId: 42n,
       network: 'mainnet',
       fallbackContractId: 'SP999.legacy',
-      sourceUrl: 'blob:https://xtrata.xyz/example'
+      sourceUrl: 'blob:https://xtrata.xyz/example',
+      moduleBaseHref:
+        '/runtime/modules/mainnet/SP123/contract-name/42/on-chain-modules/workspace/Plugins/Instruments/RetroKeys/'
     });
     const fullUrl = new URL(full, 'https://xtrata.xyz');
     expect(fullUrl.pathname).toBe('/runtime/');
@@ -35,6 +37,9 @@ describe('viewer runtime open helpers', () => {
     expect(fullUrl.searchParams.get('source')).toBe(
       'blob:https://xtrata.xyz/example'
     );
+    expect(fullUrl.searchParams.get('moduleBase')).toBe(
+      '/runtime/modules/mainnet/SP123/contract-name/42/on-chain-modules/workspace/Plugins/Instruments/RetroKeys/'
+    );
 
     const minimal = buildRuntimeOpenUrl({
       contractId: 'SP123.contract-name',
@@ -44,6 +49,7 @@ describe('viewer runtime open helpers', () => {
     const minimalUrl = new URL(minimal, 'https://xtrata.xyz');
     expect(minimalUrl.searchParams.get('fallbackContractId')).toBeNull();
     expect(minimalUrl.searchParams.get('source')).toBeNull();
+    expect(minimalUrl.searchParams.get('moduleBase')).toBeNull();
   });
 
   it('appends runtime wallet bridge token to runtime urls', () => {

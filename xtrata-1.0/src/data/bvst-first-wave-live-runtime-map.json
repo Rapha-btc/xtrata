@@ -1,0 +1,103 @@
+{
+  "network": "mainnet",
+  "contractId": "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0",
+  "rootCatalogTokenId": 266,
+  "releaseCatalogTokenId": 265,
+  "familyCatalogs": {
+    "bvstsynth-family": 247,
+    "standalone-synths": 264
+  },
+  "plugins": [
+    {
+      "localBundleName": "JMS10",
+      "liveOnChainName": "JMS10",
+      "releaseCatalogTokenId": 244,
+      "manifestTokenId": 235,
+      "patchTokenId": 236,
+      "shellTokenId": 237,
+      "paths": {
+        "manifest": "on-chain-modules/workspace/Plugins/Instruments/JMS10/manifest.json",
+        "patch": "on-chain-modules/workspace/Plugins/Instruments/JMS10/patch.json",
+        "shell": "on-chain-modules/workspace/Plugins/Instruments/JMS10/gui.html"
+      }
+    },
+    {
+      "localBundleName": "UniversalEngine",
+      "liveOnChainName": "BVSTEngine",
+      "releaseCatalogTokenId": 245,
+      "manifestTokenId": 238,
+      "patchTokenId": 239,
+      "shellTokenId": 240,
+      "paths": {
+        "manifest": "workspace/Plugins/Instruments/BVSTEngine/manifest.json",
+        "patch": "workspace/Plugins/Instruments/BVSTEngine/patch.json",
+        "shell": "workspace/Plugins/Instruments/BVSTEngine/gui.html"
+      }
+    },
+    {
+      "localBundleName": "UniversalSynth",
+      "liveOnChainName": "BVSTSynth",
+      "releaseCatalogTokenId": 246,
+      "manifestTokenId": 241,
+      "patchTokenId": 242,
+      "shellTokenId": 243,
+      "paths": {
+        "manifest": "workspace/Plugins/Instruments/BVSTSynth/manifest.json",
+        "patch": "on-chain-modules/workspace/Plugins/Instruments/BVSTSynth/patch.json",
+        "shell": "workspace/Plugins/Instruments/BVSTSynth/gui.html"
+      }
+    },
+    {
+      "localBundleName": "BlueMarvinOne",
+      "liveOnChainName": "MinerOne",
+      "releaseCatalogTokenId": 260,
+      "manifestTokenId": 248,
+      "patchTokenId": 249,
+      "shellTokenId": 250,
+      "paths": {
+        "manifest": "on-chain-modules/workspace/Plugins/Instruments/MinerOne/manifest.json",
+        "patch": "on-chain-modules/workspace/Plugins/Instruments/MinerOne/patch.json",
+        "shell": "on-chain-modules/workspace/Plugins/Instruments/MinerOne/gui.html"
+      }
+    },
+    {
+      "localBundleName": "BlueMarvinTwo",
+      "liveOnChainName": "MinerTwo",
+      "releaseCatalogTokenId": 261,
+      "manifestTokenId": 251,
+      "patchTokenId": 252,
+      "shellTokenId": 253,
+      "paths": {
+        "manifest": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/manifest.json",
+        "patch": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/patch.json",
+        "shell": "on-chain-modules/workspace/Plugins/Instruments/MinerTwo/gui.html"
+      }
+    },
+    {
+      "localBundleName": "NeonPoly",
+      "liveOnChainName": "ChainPoly",
+      "releaseCatalogTokenId": 262,
+      "manifestTokenId": 254,
+      "patchTokenId": 255,
+      "shellTokenId": 256,
+      "paths": {
+        "manifest": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/manifest.json",
+        "patch": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/patch.json",
+        "shell": "on-chain-modules/workspace/Plugins/Instruments/ChainPoly/gui.html"
+      }
+    },
+    {
+      "localBundleName": "RetroKeys",
+      "liveOnChainName": "RetroKeys",
+      "releaseCatalogTokenId": 263,
+      "manifestTokenId": 257,
+      "patchTokenId": 258,
+      "shellTokenId": 259,
+      "paths": {
+        "manifest": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/manifest.json",
+        "patch": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/patch.json",
+        "shell": "on-chain-modules/workspace/Plugins/Instruments/RetroKeys/gui.html"
+      }
+    }
+  ]
+}
