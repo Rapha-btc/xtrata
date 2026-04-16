@@ -140,7 +140,13 @@
               error.runtimeEndpoint = endpoint;
               throw error;
             }
-            return response.text();
+            return response.text().then(function (html) {
+              return {
+                html: html,
+                moduleBase:
+                  response.headers.get('X-Xtrata-Runtime-Module-Base') || ''
+              };
+            });
           }).catch(function (error) {
             if (error && !error.runtimeEndpoint) {
               error.runtimeEndpoint = endpoint;
@@ -176,6 +182,83 @@
             .replace(/>/g, '&gt;');
         }
 
+        function injectHeadPrefix(html, content) {
+          if (!content) {
+            return html;
+          }
+          var headMatch = html.match(/<head[^>]*>/i);
+          if (headMatch && headMatch.index !== undefined) {
+            var headInsertion = headMatch.index + headMatch[0].length;
+            return (
+              html.slice(0, headInsertion) +
+              content +
+              html.slice(headInsertion)
+            );
+          }
+          var htmlMatch = html.match(/<html[^>]*>/i);
+          if (htmlMatch && htmlMatch.index !== undefined) {
+            var htmlInsertion = htmlMatch.index + htmlMatch[0].length;
+            return (
+              html.slice(0, htmlInsertion) +
+              '<head>' +
+              content +
+              '</head>' +
+              html.slice(htmlInsertion)
+            );
+          }
+          var bodyMatch = html.match(/<body[^>]*>/i);
+          if (bodyMatch && bodyMatch.index !== undefined) {
+            return (
+              html.slice(0, bodyMatch.index) +
+              '<head>' +
+              content +
+              '</head>' +
+              html.slice(bodyMatch.index)
+            );
+          }
+          return '<head>' + content + '</head>' + html;
+        }
+
+        function instrumentInlineModuleScripts(html) {
+          if (
+            html.indexOf('type="module"') === -1 &&
+            html.indexOf("type='module'") === -1
+          ) {
+            return html;
+          }
+          return html.replace(
+            /<script\b([^>]*\btype\s*=\s*(['"])module\2[^>]*)>([\s\S]*?)<\/script>/gi,
+            function (match, attrs, _quote, body) {
+              if (
+                /\bsrc\s*=/.test(attrs) ||
+                String(body || '').indexOf('__xtrataRuntimeInlineModuleStarted') !== -1
+              ) {
+                return match;
+              }
+              return (
+                '<script' +
+                attrs +
+                '>' +
+                'window.__xtrataRuntimeInlineModuleStarted=(window.__xtrataRuntimeInlineModuleStarted||0)+1;' +
+                body +
+                '</' +
+                'script>'
+              );
+            }
+          );
+        }
+
+        function buildRuntimeBaseTag(params) {
+          if (!params || !params.moduleBase) {
+            return '';
+          }
+          return (
+            '<base href="' +
+            escapeAttribute(params.moduleBase) +
+            '">'
+          );
+        }
+
         function buildRuntimeWalletSupportScriptTag(params) {
           var url = new URL('/runtime/wallet-shim.js', window.location.origin);
           if (params && params.network) {
@@ -195,29 +278,53 @@
           );
         }
 
+        function buildRuntimeUrlSupportScriptTag() {
+          var url = new URL('/runtime/url-support.js', window.location.origin);
+          return (
+            '<script data-xtrata-runtime-url-support="true" src="' +
+            escapeAttribute(url.toString()) +
+            '"></' +
+            'script>'
+          );
+        }
+
+        function buildRuntimeModuleBootstrapScriptTag() {
+          var url = new URL('/runtime/module-bootstrap.js', window.location.origin);
+          return (
+            '<script data-xtrata-runtime-module-bootstrap="true" src="' +
+            escapeAttribute(url.toString()) +
+            '"></' +
+            'script>'
+          );
+        }
+
         function injectRuntimeSupport(html, params) {
+          html = instrumentInlineModuleScripts(html);
+          html = injectHeadPrefix(html, buildRuntimeBaseTag(params));
+          var urlSupportScript = buildRuntimeUrlSupportScriptTag();
+          if (urlSupportScript) {
+            html = injectHeadPrefix(html, '\n' + urlSupportScript);
+          }
+          var moduleBootstrapScript = buildRuntimeModuleBootstrapScriptTag();
+          if (moduleBootstrapScript) {
+            html = injectHeadPrefix(html, '\n' + moduleBootstrapScript);
+          }
           var supportScript = buildRuntimeWalletSupportScriptTag(params);
           if (!supportScript) {
             return html;
           }
-          if (/<head[^>]*>/i.test(html)) {
-            return html.replace(/<head[^>]*>/i, function (match) {
-              return match + '\n' + supportScript;
-            });
-          }
-          if (/<body[^>]*>/i.test(html)) {
-            return html.replace(/<body[^>]*>/i, function (match) {
-              return match + '\n' + supportScript;
-            });
-          }
-          return supportScript + '\n' + html;
+          return injectHeadPrefix(html, '\n' + supportScript);
         }
 
-        function launchHtml(html, contextLabel) {
+        function launchHtml(html, contextLabel, runtimeModuleBase) {
           if (!html || !html.trim()) {
             throw new Error('Runtime content was empty (' + contextLabel + ').');
           }
-          var htmlWithSupport = injectRuntimeSupport(html, params);
+          var launchParams =
+            runtimeModuleBase && !params.moduleBase
+              ? Object.assign({}, params, { moduleBase: runtimeModuleBase })
+              : params;
+          var htmlWithSupport = injectRuntimeSupport(html, launchParams);
           document.open();
           document.write(htmlWithSupport);
           document.close();
@@ -229,6 +336,7 @@
           tokenId: query.get('tokenId') || '',
           network: query.get('network') || 'mainnet',
           fallbackContractId: query.get('fallbackContractId') || '',
+          moduleBase: query.get('moduleBase') || '',
           source: query.get('source') || ''
         };
 
@@ -243,8 +351,8 @@
         logRuntime('debug', 'Runtime launcher params resolved', params);
 
         loadFromRuntimeEndpoint(params)
-          .then(function (html) {
-            launchHtml(html, 'runtime-endpoint');
+          .then(function (result) {
+            launchHtml(result.html, 'runtime-endpoint', result.moduleBase);
           })
           .catch(function (runtimeError) {
             var runtimeMessage =
