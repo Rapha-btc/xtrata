@@ -1,0 +1,95 @@
+# Dependencies
+node_modules/
+package-lock.json
+npm-debug.log
+yarn-error.log
+
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+.env.aibtc
+.env.production.local
+
+# Wallet & Private Keys
+.aibtc/
+~/.aibtc/
+.wallet
+*.keystore
+*.jks
+*.p12
+*.pfx
+*.pem
+*.key
+private_key*
+secret_key*
+seed_phrase*
+mnemonic*
+
+# Credentials
+credentials.json
+.credentials
+.secrets
+.aws/
+.ssh/
+
+# AIBTC Agent Files
+.aibtc/
+aibtc-credentials.json
+aibtc-wallet.json
+agent-keys.json
+wallet-backup*
+
+# Build & Runtime
+dist/
+build/
+.next/
+.nuxt/
+.cache/
+.turbo/
+.vite/
+.eslintcache
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.sublime-project
+.sublime-workspace
+
+# Test Coverage
+coverage/
+.nyc_output/
+
+# Misc
+.env.example.bak
+temp/
+tmp/
+*.bak
+*.backup
+*.old
+~*
+
+# Bitcoin/Stacks specific
+*.xprv
+*.xpub
+derivation-paths.txt
+address-book.json

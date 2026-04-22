@@ -1,0 +1,395 @@
+{
+  "version": 1,
+  "skills": {
+    "agent-lookup": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "743e2cd71f16c44970e2527fa93b66b3571b735df64236fd24591cf8333f9572"
+    },
+    "aibtc-agents": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "18c726b4a8735e8fe1418a1b9fa2fe41c7f794e76136ea1174519d55e66aee1d"
+    },
+    "aibtc-news": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "fc88b34ab53a03de56c983d7edc083af7e2f94eaf43e56d4b928f38108bf3b64"
+    },
+    "aibtc-news-classifieds": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "51607a5a1799c0a2aeb9bc0aacc3e6a64617025603517c54582f8e08f564d4bb"
+    },
+    "aibtc-news-correspondent": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "83faec6fbe815a15e8373e240e0ed021633b75daf4a259c1b2dc39c32184d04b"
+    },
+    "aibtc-news-deal-flow": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "441e95f3f11815d679ed24a0e05947d8af5640773bc268e9699217026d3ebac7"
+    },
+    "aibtc-news-editor": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "9d0da097aa137bf330ea4b58d4cbb486098810dd7c047b05d79d355dbb3cd722"
+    },
+    "aibtc-news-fact-checker": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "69373de94feffcc950bab3b03595e49e876f10d5439bd2e57da1bf3e273c0277"
+    },
+    "aibtc-news-protocol": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "6bb6fc25bbffcbf4d304690ec149e994dafe46b5b16adcf806e19000a11823f8"
+    },
+    "aibtc-news-publisher": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "2003f7c2b0f6412a4fc0c2870ea86b6e0f6db1a80458ffab2cba23240ff89389"
+    },
+    "aibtc-news-sales": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "881265f72c75b82c10251293763140aea747d9655f57c35b78b213e919e7f070"
+    },
+    "aibtc-news-scout": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "e1478bea5350a3531129f10dd9a9d99843347a7da0c47d89ba26012057025b3e"
+    },
+    "arxiv-research": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "200285582a760de5b2f63bbba905f1975bb8adb00bad412baeb2ad1428835c6e"
+    },
+    "bitflow": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "5e36cbd7ec774a19d4b67627c117078d69c1267da30b86edcf1b0ab2a94cd790"
+    },
+    "bns": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "f41410e584836a3af54166a43f4cfcf25fe1de01c61295b798e2fab6aacdaa19"
+    },
+    "bounty-scanner": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "ab190ba80c2978a726f6d9c8a270a36cad34dcbb827499058d89edcf2919fa94"
+    },
+    "btc": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "d5db0ed7171618e2cccc60684cb2bfc1cd1e2cc81756d0905daa381067ce49a0"
+    },
+    "business-dev": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "0490cabb401350158f04819e7820ae350d154dd4b1ec7e5448eb710cbb05217f"
+    },
+    "ceo": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "69b6470cf327f121026e242221a97968121f5801340168d057528e0da8383587"
+    },
+    "child-inscription": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "833c35984c9b3af71a14973601252ffb8ee607aa8b2d16d3a2d6de5d6c7d0990"
+    },
+    "clarity-audit": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "46fe07c6271ee6426e15473bdb31638e048fbc4665c7484b5574d505d1d5c095"
+    },
+    "clarity-check": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "6a7f0b05fb99b7aeb9e74ea0693560778115a4313c878e9777d1fd03721f8ec4"
+    },
+    "clarity-patterns": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "1497122f5dac571045cf5ea88ccfdc0ea75f2ab5d9ddc95edc181a0fb279edf5"
+    },
+    "clarity-test-scaffold": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "3a94255846acb0ef529285a6d2dd8a31028a9f82251bc788d079eb31b430d75e"
+    },
+    "contract": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "19b6c5c0c5bfcee815a6aab2150095da6317ddf8c3224a2129c3647659f6c209"
+    },
+    "credentials": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "ce7746722e2430e02acd6aff62bd65a56171d10242072638d5e705dff90624b3"
+    },
+    "dca": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "2d11506faf69b481ec8df6366459e262409be90334cb4256051b9b6288794c93"
+    },
+    "defi": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "c1e2e7517bc587c0c02dfe4685894e9a9911b38e2d25a2c68616f747ff63e602"
+    },
+    "dual-stacking": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "706a36622a288fe8badd6b274896e062babbbf2e6d4859719e180831d145c3de"
+    },
+    "erc8004": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "87a7213054a030c725693cab49109f501bbea6cf7254730a1ec2c30d7b76fcc0"
+    },
+    "hermetica-yield-rotator": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "bab7ef05c3b88a2e3c51fc7b8e847d3da6f101fc2024d086e0240b40e57dc526"
+    },
+    "hodlmm-bin-guardian": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "0bb202f6b6bdfccfd74a74967cfa3c71261bbfc2eab8b855f5c4db13c0744c63"
+    },
+    "hodlmm-pulse": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "4039b29d72f1c34c47098f83d85cfacca3a89360ec38dff913364e5a11495bbc"
+    },
+    "hodlmm-range-keeper": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "81a8c5883bb624222f4f27d41c7cad62fb720f605ff1c3807188b35f064bff62"
+    },
+    "hodlmm-risk": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "c9806f449ae4c064ed00b526337b978f264f7508a4e69f5b4ef826d29072a264"
+    },
+    "hodlmm-signal-allocator": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "5a8b604691502a72b9736ecab75b51d2bd0369327785a95be64f85b9cdbb4d11"
+    },
+    "identity": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "61c40b0fb16d3aad7a149ab229d38a7a0a4c397a891118e8aa484005f8d14700"
+    },
+    "inbox": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "ceed02ccbb1bfa80beec9c82650c980f4e34c952b0179906485dcc809d28a90d"
+    },
+    "jingswap": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "4ed69c7477c3ecb258ad575206aabe57fe4ddc985719ceb5254a9fb9df4e8638"
+    },
+    "jingswap-cycle-agent": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "57a51a3757ef7662e75ad396b1472f5c3d0d22c7ac1005c78a843c115e6bc8b2"
+    },
+    "maximumsats-wot": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "9c98389256a59c3bea07b99557508f98985f60cd5b0556784db90d2ef6bb743b"
+    },
+    "mempool-watch": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "80ae8d241935bd517ecf9091ee7317b873e1fd15bc6fb584d3ba7535f766d8ab"
+    },
+    "nft": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "69aa8d4283d0bc584ccc624972dcf629b66db9ff88526cb0ddf57b2ea34e3bd7"
+    },
+    "nonce-manager": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "354add4c3697ec0fdd98ae63596e9913e0823eeeab495fc7fafcd652e278748f"
+    },
+    "nostr": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "96ca20fffb12532410ad7f0cbc7ed7bb83f4f98f0c3451c518b497e91cd2208e"
+    },
+    "nostr-wot": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "32d2167a6eabad8be9819842816be7fa423457d4d0e21ba0e2bb175222adcbc8"
+    },
+    "onboarding": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "eebe25b0855700c5f7b2a50639c5316f65f67a3f763a97faf45d4bedce5f221e"
+    },
+    "openrouter": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "c088c85926cd0578132220782373e8078901eb3d13489596f448c5ab22fe1ce0"
+    },
+    "ordinals": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "4baff91e46a8a66a16cf62b9bdb09ac01342d0b7d1fb4799a5fd11497d09da8c"
+    },
+    "ordinals-p2p": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "2bedd2f38f50ac4fb0e7e9aa22319e009e0fe8f0a4a1b24cbfc7ab1f0160f7ee"
+    },
+    "paperboy": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "8fdd3861e68d1e391bf9961739f5cf61ba973b09f88e0687ec2a2a42694fe8b0"
+    },
+    "pillar": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "589038d83ef12151d926b6ffa98097877f88467d959238f7d2706a3d1486c934"
+    },
+    "psbt": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "c2709fe320365a1856f095ac43e191b0eeb92f80fdcb588405d89e7035801fcf"
+    },
+    "query": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "a79c269cd20c99c658952d1af5cd55311a819fd210b6f1719412e826b53248a3"
+    },
+    "relay-diagnostic": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "511ce71f63af43e53237a02fe7afe2f1bb25e02896e9c9125ccc1a508f481759"
+    },
+    "reputation": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "228209fbe10a0c2f2f54d55c23ef39c0bf6942c413cf38d2a33eb3970024aa0e"
+    },
+    "runes": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "c33fabd1dfa7439ae1f6873f56485e6d402d7c95d789ea6ce0ab5df2b56c3e7c"
+    },
+    "sbtc": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "bd733dd0d1bba3f6872f36fc79111406a4d16e28ec272923c5f1cdf991d47ab8"
+    },
+    "sbtc-auto-funnel": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "e10eb8db5fd8ea73236aad4acfa9dc6a16edd30251b68434fe655a5cedd7f354"
+    },
+    "settings": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "1ba4d31b423b9c5e9b64ee6f9d5735f03c5cf5a1c578216295f9b352999a7aae"
+    },
+    "signing": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "43cc45c94f57fe4d085886615a3f0563a41fb086e6aa0bd310e76aa0101f8db5"
+    },
+    "souldinals": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "bf4037e47c9d4503dda4b517c51fabace580d9d32e905baa33e74db420407914"
+    },
+    "stacking": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "48ced9f0cf0a7aa01ab167c691e2b47b9440b8f1ad51475d2e820a32bcb9106d"
+    },
+    "stacking-lottery": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "6b0207bc9c3484534f68ef8e1ffcd3c3282b6f405d4ca36351f340cb57100941"
+    },
+    "stacks-market": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "a4dd923ccaf3950c7039b64b15b6ead392db2d540916207e723ddc7321f4dc5f"
+    },
+    "stackspot": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "6016615a23a04b45d0d9d9b4e40d672dc4e5b82a423791979e9adff85bde5a66"
+    },
+    "stx": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "b783d8ba663e4fecded4b9d9dac31754ce30a97e3d24bc07993651186b218083"
+    },
+    "styx": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "4e8bc6eedb8734245347d685e2cf3ebd73473cdd38e2d2830be87b614580e8fd"
+    },
+    "taproot-multisig": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "71a02365d4b6037b7f0dec0c9a2bc61067798abaac482b645de0123e910e6746"
+    },
+    "tenero": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "b2ddf5a086288a6569cf252c9711ff8d4c7b5dd0710e4071014ef69c4c05e02a"
+    },
+    "tokens": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "e2fd0f1106d3edbafed5d90bd5a2c8515f2dae7c4fc2938f74a6e764d3c66ac1"
+    },
+    "transfer": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "a214b03860f85146cf7fb00fbf9c95450adb0a3ef4219a82522b1b60c0508fe1"
+    },
+    "validation": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "516849560ae33ef9e9ccb57bcf7164f039f643c3cb074876fe67800507b1f3fd"
+    },
+    "wallet": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "f774b3faa8bf1e743455f2dff4b1210f9197e93f224c19832594f79edf3e3c16"
+    },
+    "x402": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "54cff03710464a2cf8451b7c2571814f34e27eda0a53112563de835d4cdd64f9"
+    },
+    "yield-dashboard": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "0def4532addaaeacc506d4921e1632dd9886ad2ccd9c322312d67dcb6ea4df0f"
+    },
+    "yield-hunter": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "89ff0371e6e99c69ca0c6816a4f8f43e433407998815e6defda07853cdbc5197"
+    },
+    "zest-yield-manager": {
+      "source": "aibtcdev/skills",
+      "sourceType": "github",
+      "computedHash": "898832adff813c5c12b7ed80231c9c86922663883572334e39a9e1ebb1462504"
+    }
+  }
+}
