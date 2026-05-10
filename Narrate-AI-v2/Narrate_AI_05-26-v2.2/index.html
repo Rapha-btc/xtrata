@@ -1136,24 +1136,8 @@
       Voice cards will play their preview on click once generated. All clips can be downloaded as a ZIP file
       (one WAV per voice, named by voice ID) — place the folder locally and the app will use those files for instant playback.
     </div>
-    <div class="preview-cost-note">
-      <strong>Cost estimate:</strong> ~20 chars per clip × 47 voices = ~940 chars total ≈ <strong>$0.0094</strong> gross.
-      Fully covered by your free 10,000-char quota. &nbsp;·&nbsp;
-      Each voice says only its own name introduction, so quota usage is minimal.
-    </div>
     <div class="preview-btn-row">
-      <button class="preview-gen-btn" id="previewGenBtn" onclick="generatePreviews()">🔊 Generate All Voice Previews</button>
       <button class="preview-zip-btn" id="previewZipBtn" onclick="downloadPreviewZip()">📦 Download ZIP</button>
-      <button class="preview-cancel-btn" id="previewCancelBtn" onclick="cancelPreviews()">✕ Cancel</button>
-    </div>
-    <div class="preview-progress-wrap" id="previewProgressWrap">
-      <div class="preview-progress-label">
-        <span id="previewProgressText">Generating…</span>
-        <span id="previewProgressPct">0%</span>
-      </div>
-      <div class="preview-progress-track">
-        <div class="preview-progress-fill" id="previewProgressFill" style="width:0%"></div>
-      </div>
     </div>
     <div class="load-preview-row">
       <button class="load-preview-btn" onclick="document.getElementById('loadPreviewZipInput').click()">📂 Load Previews from ZIP</button>
@@ -2446,7 +2430,6 @@
   // ──────────────────────────────────────────────────────────────────────────────
 
   let previewBlobs     = {};   // { voiceId: { blob, url, filename } }
-  let previewCancelled = false;
   let jszipLoaded      = false;
 
   async function ensureJSZip() {
@@ -2477,120 +2460,6 @@
       `;
       grid.appendChild(card);
     });
-  }
-
-  async function generatePreviews() {
-    const apiKey = document.getElementById('apiKey').value.trim();
-    if (!apiKey) { alert('Please enter your DashScope API key first.'); return; }
-
-    previewCancelled = false;
-    const genBtn    = document.getElementById('previewGenBtn');
-    const cancelBtn = document.getElementById('previewCancelBtn');
-    const zipBtn    = document.getElementById('previewZipBtn');
-    const progWrap  = document.getElementById('previewProgressWrap');
-    const progFill  = document.getElementById('previewProgressFill');
-    const progText  = document.getElementById('previewProgressText');
-    const progPct   = document.getElementById('previewProgressPct');
-
-    genBtn.disabled = true;
-    cancelBtn.classList.add('show');
-    zipBtn.classList.remove('show');
-    progWrap.classList.add('show');
-
-    const total = VOICES.length;
-    let done = 0;
-
-    for (const v of VOICES) {
-      if (previewCancelled) break;
-
-      const safeId = v.id.replace(/\s+/g, '_');
-      const card   = document.getElementById('pvc-' + safeId);
-      const stEl   = document.getElementById('pvst-' + safeId);
-      const playEl = document.getElementById('pvplay-' + safeId);
-      const dlEl   = document.getElementById('pvdl-' + safeId);
-
-      card.className = 'pv-card';
-      stEl.className = 'pv-status';
-      stEl.textContent = 'Generating…';
-      playEl.classList.remove('show');
-      dlEl.classList.remove('show');
-
-      const previewText = `Hi, my name is ${v.id}.`;
-
-      try {
-        const resp = await fetch('/synthesize', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            api_key: apiKey,
-            text: previewText,
-            voice: v.id,
-            language: 'English',
-            model: 'qwen3-tts-flash',
-            instructions: '',
-          }),
-        });
-
-        const ct = resp.headers.get('Content-Type') || '';
-        if (!resp.ok || !ct.includes('audio/')) {
-          let msg = `HTTP ${resp.status}`;
-          try { const j = await resp.json(); msg = j.error || msg; } catch(_) {}
-          throw new Error(msg);
-        }
-
-        const blob = await resp.blob();
-        const url  = URL.createObjectURL(blob);
-        const filename = `${safeId}_preview.wav`;
-        previewBlobs[v.id] = { blob, url, filename };
-
-        // Update usage tracking
-        const charsStr = resp.headers.get('X-Usage-Chars');
-        const costStr  = resp.headers.get('X-Usage-Cost');
-        const chars = charsStr ? parseInt(charsStr, 10) : previewText.length;
-        const cost  = costStr  ? parseFloat(costStr)    : chars * PRICING['qwen3-tts-flash'];
-        recordUsage({ voice: v.id, model: 'qwen3-tts-flash', text: previewText, chars, cost, language: 'English' });
-        if (freeUsed['qwen3-tts-flash'] !== undefined) {
-          const rem = Math.max(0, FREE_QUOTA - freeUsed['qwen3-tts-flash']);
-          freeUsed['qwen3-tts-flash'] += Math.min(chars, rem);
-        }
-
-        card.className = 'pv-card done';
-        stEl.className = 'pv-status done';
-        stEl.textContent = '✓ Ready';
-        playEl.classList.add('show');
-        dlEl.classList.add('show');
-
-        // Update main voice grid card to show preview indicator
-        refreshVoiceCardPreviewState();
-
-      } catch (err) {
-        card.className = 'pv-card error';
-        stEl.className = 'pv-status error';
-        stEl.textContent = err.message.slice(0, 60);
-      }
-
-      done++;
-      const pct = Math.round((done / total) * 100);
-      progFill.style.width = pct + '%';
-      progText.textContent = `Voice ${done} of ${total} done`;
-      progPct.textContent  = pct + '%';
-    }
-
-    genBtn.disabled = false;
-    cancelBtn.classList.remove('show');
-    const successCount = Object.keys(previewBlobs).length;
-    if (successCount > 0) {
-      zipBtn.classList.add('show');
-      zipBtn.textContent = `📦 Download ZIP (${successCount} voices)`;
-    }
-    progText.textContent = previewCancelled ? 'Cancelled.' : `Done! ${successCount} of ${total} previews generated.`;
-    updateCostEstimate(0, document.getElementById('modelSelect').value);
-  }
-
-  function cancelPreviews() {
-    previewCancelled = true;
-    document.getElementById('previewCancelBtn').classList.remove('show');
-    document.getElementById('previewProgressText').textContent = 'Cancelling…';
   }
 
   function playPreview(voiceId) {
