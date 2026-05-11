@@ -125,10 +125,10 @@
     .voice-card .v-gender { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
     .voice-card .v-icon { font-size: 1.3rem; margin-bottom: 3px; }
     .voice-card .v-desc { font-size: 0.65rem; color: var(--muted); margin-top: 4px; line-height: 1.3; opacity: 0.8; }
-    .voice-card.has-preview { border-color: rgba(52,211,153,0.35); }
+    .voice-card.has-preview { box-shadow: inset 0 0 0 1px rgba(52,211,153,0.18); }
     .voice-card.has-preview::after { content: '▶'; position: absolute; top: 4px; right: 5px; font-size: 0.6rem; color: rgba(52,211,153,0.9); }
     .voice-card { position: relative; }
-    .voice-card.playing-preview { border-color: rgba(52,211,153,0.9) !important; background: rgba(52,211,153,0.1) !important; }
+    .voice-card.playing-preview { background: rgba(52,211,153,0.1) !important; }
     @keyframes previewPulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
     .voice-card.playing-preview .v-icon { animation: previewPulse 0.6s ease-in-out infinite; }
     /* Load previews row */
@@ -2595,12 +2595,54 @@
     }
   }
 
+  function updatePreviewStatus(message) {
+    const statusEl = document.getElementById('loadPreviewStatus');
+    if (statusEl) statusEl.textContent = message || '';
+  }
+
+  function updatePreviewZipLabel() {
+    const zipBtn = document.getElementById('previewZipBtn');
+    if (!zipBtn) return;
+    const count = Object.keys(previewBlobs).length;
+    zipBtn.textContent = count ? `📦 Download ZIP (${count} voices)` : '📦 Download ZIP';
+  }
+
+  async function autoloadBundledPreviews() {
+    if (Object.keys(previewBlobs).length > 0) {
+      updatePreviewZipLabel();
+      return;
+    }
+
+    updatePreviewStatus('Loading bundled previews…');
+
+    const results = await Promise.allSettled(VOICES.map(async (voice) => {
+      const filename = voice.id.replace(/\s+/g, '_') + '_preview.wav';
+      const response = await fetch('/qwen3_voice_previews/' + encodeURIComponent(filename), { cache: 'no-cache' });
+      if (!response.ok) throw new Error('Missing preview: ' + filename);
+      const blob = await response.blob();
+      registerPreviewBlob(voice.id, blob, filename);
+      return voice.id;
+    }));
+
+    const loaded = results.filter((result) => result.status === 'fulfilled').length;
+    const skipped = results.length - loaded;
+    refreshVoiceCardPreviewState();
+    updatePreviewZipLabel();
+
+    if (loaded > 0) {
+      updatePreviewStatus(`✓ Auto-loaded ${loaded} bundled preview${loaded !== 1 ? 's' : ''}${skipped ? ` (${skipped} missing)` : ''}.`);
+      dismissAutoloadBanner();
+      return;
+    }
+
+    updatePreviewStatus('');
+  }
+
   // Load from a ZIP file (previously downloaded from this app)
   async function loadPreviewsFromZip(input) {
     const file = input.files[0];
     if (!file) return;
-    const statusEl = document.getElementById('loadPreviewStatus');
-    statusEl.textContent = 'Reading ZIP…';
+    updatePreviewStatus('Reading ZIP…');
     input.value = ''; // reset so same file can be re-selected
     try {
       await ensureJSZip();
@@ -2623,9 +2665,10 @@
         loaded++;
       }
       refreshVoiceCardPreviewState();
-      statusEl.textContent = `\u2713 Loaded ${loaded} preview${loaded !== 1 ? 's' : ''} from ZIP${skipped ? ` (${skipped} skipped)` : ''}.`;
+      updatePreviewZipLabel();
+      updatePreviewStatus(`\u2713 Loaded ${loaded} preview${loaded !== 1 ? 's' : ''} from ZIP${skipped ? ` (${skipped} skipped)` : ''}.`);
     } catch (err) {
-      document.getElementById('loadPreviewStatus').textContent = 'Error: ' + err.message;
+      updatePreviewStatus('Error: ' + err.message);
     }
   }
 
@@ -2633,8 +2676,7 @@
   async function loadPreviewsFromFiles(input) {
     const files = Array.from(input.files);
     if (!files.length) return;
-    const statusEl = document.getElementById('loadPreviewStatus');
-    statusEl.textContent = 'Reading files…';
+    updatePreviewStatus('Reading files…');
     input.value = '';
     const knownIds = new Set(VOICES.map(v => v.id));
     let loaded = 0, skipped = 0;
@@ -2649,7 +2691,8 @@
       loaded++;
     }
     refreshVoiceCardPreviewState();
-    statusEl.textContent = `\u2713 Loaded ${loaded} preview${loaded !== 1 ? 's' : ''} from files${skipped ? ` (${skipped} skipped)` : ''}.`;
+    updatePreviewZipLabel();
+    updatePreviewStatus(`\u2713 Loaded ${loaded} preview${loaded !== 1 ? 's' : ''} from files${skipped ? ` (${skipped} skipped)` : ''}.`);
   }
 
   // ──────────────────────────────────────────────────────────────────────────────
@@ -2687,8 +2730,9 @@
   updateDemoInfo();
   updateControlsState();
   buildDemoChecklist();
-  // Show auto-load banner after a short delay (so page renders first)
-  setTimeout(maybeShowAutoloadBanner, 600);
+  autoloadBundledPreviews().finally(() => {
+    setTimeout(maybeShowAutoloadBanner, 600);
+  });
 
   // Also update estimator + demo info when model dropdown changes
   document.getElementById("modelSelect").addEventListener("change", () => {
@@ -2869,7 +2913,7 @@
       await loadSavedVoices();
 
       // Auto-select the new voice for synthesis
-      activateCloneVoice(data.voice_id, data.name);
+      activateCloneVoice(data.voice_id, data.name, data.target_model);
 
     } catch (err) {
       setCloneStatus("error", err.message);
@@ -2882,20 +2926,16 @@
   async function loadSavedVoices() {
     const apiKey = document.getElementById("apiKey").value.trim();
     const listEl = document.getElementById("savedVoicesList");
-
-    if (!apiKey) {
-      listEl.innerHTML = `<div class="no-saved-voices">Enter your API key above and click Refresh.</div>`;
-      return;
-    }
-
     listEl.innerHTML = `<div class="no-saved-voices">\u23F3 Loading\u2026</div>`;
 
     try {
-      const resp = await fetch("/list-voices", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ api_key: apiKey, page_size: 100 }),
-      });
+      const resp = apiKey
+        ? await fetch("/list-voices", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ api_key: apiKey, page_size: 100 }),
+          })
+        : await fetch("/api/local-clones");
       const data = await resp.json();
       if (!resp.ok || data.error) throw new Error(data.error || `HTTP ${resp.status}`);
 
@@ -2913,16 +2953,23 @@
     }
     listEl.innerHTML = voices.map(v => {
       const isActive = v.voice === activeCloneVoiceId;
+      const targetModel = String(v.target_model || "");
+      const compatible = !targetModel || targetModel === "qwen3-tts-vc-2026-01-22";
+      const storageParts = [];
+      if (v.source === 'local' || v.source === 'local+remote' || v.local_audio_url) storageParts.push('Saved locally');
+      if (v.source === 'remote' || v.source === 'local+remote') storageParts.push('Available on account');
+      const storageMeta = storageParts.length ? ` &nbsp;&middot;&nbsp; ${storageParts.join(' · ')}` : '';
+      const useLabel = isActive ? '\u2713 Using' : compatible ? 'Use Voice' : 'Wrong Model';
       return `
         <div class="saved-voice-item ${isActive ? 'active-clone' : ''}" id="svi-${v.voice}">
           <div class="svi-info">
             <div class="svi-name">${escHtml(v.preferred_name || v.voice)}</div>
             <div class="svi-id">${escHtml(v.voice)}</div>
-            <div class="svi-meta">Model: ${escHtml(v.target_model)} &nbsp;\u00b7&nbsp; Created: ${escHtml(v.gmt_create || '—')}</div>
+            <div class="svi-meta">Model: ${escHtml(v.target_model || '—')} &nbsp;\u00b7&nbsp; Created: ${escHtml(v.gmt_create || '—')}${storageMeta}</div>
           </div>
           <div class="svi-actions">
-            <button class="svi-use-btn ${isActive ? 'using' : ''}" onclick="activateCloneVoice('${escHtml(v.voice)}', '${escHtml(v.preferred_name || v.voice)}')">
-              ${isActive ? '\u2713 Using' : 'Use Voice'}
+            <button class="svi-use-btn ${isActive ? 'using' : ''}" ${compatible ? '' : 'disabled'} onclick="activateCloneVoice('${escHtml(v.voice)}', '${escHtml(v.preferred_name || v.voice)}', '${escHtml(v.target_model || '')}')">
+              ${useLabel}
             </button>
             <button class="svi-del-btn" onclick="deleteCloneVoice('${escHtml(v.voice)}')">🗑</button>
           </div>
@@ -2935,7 +2982,11 @@
   }
 
   // ── Activate a cloned voice for synthesis ──
-  function activateCloneVoice(voiceId, displayName) {
+  function activateCloneVoice(voiceId, displayName, targetModel) {
+    if (targetModel && targetModel !== "qwen3-tts-vc-2026-01-22") {
+      setCloneStatus("error", `Voice “${displayName}” targets ${targetModel}, not qwen3-tts-vc-2026-01-22. Re-clone it in this app before using it for synthesis.`);
+      return;
+    }
     activeCloneVoiceId = voiceId;
 
     // Deselect any system voice card

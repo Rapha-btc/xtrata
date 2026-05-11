@@ -16,6 +16,7 @@ const BOOK_DIR = path.join(OUTPUT_DIR, 'book');
 const PROJECTS_DIR = path.join(OUTPUT_DIR, 'projects');
 const PACKAGES_DIR = path.join(OUTPUT_DIR, 'packages');
 const TEMP_DIR = path.join(OUTPUT_DIR, 'temp');
+const LOCAL_CLONES_DIR = path.join(ROOT_DIR, 'qwen3_cloned_voices');
 
 const DASHSCOPE_BASE = 'https://dashscope-intl.aliyuncs.com/api/v1';
 const GENERATION_URL = DASHSCOPE_BASE + '/services/aigc/multimodal-generation/generation';
@@ -27,7 +28,7 @@ const PRICING = {
   'qwen3-tts-vc-2026-01-22': 0.115 / 10000
 };
 
-[OUTPUT_DIR, CHUNKS_DIR, CHAPTERS_DIR, TITLES_DIR, BOOK_DIR, PROJECTS_DIR, PACKAGES_DIR, TEMP_DIR].forEach((dir) => {
+[OUTPUT_DIR, CHUNKS_DIR, CHAPTERS_DIR, TITLES_DIR, BOOK_DIR, PROJECTS_DIR, PACKAGES_DIR, TEMP_DIR, LOCAL_CLONES_DIR].forEach((dir) => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
@@ -216,6 +217,75 @@ function generateHash(input) {
   return crypto.createHash('md5').update(String(input)).digest('hex').slice(0, 12);
 }
 
+function slugifyFileStem(value) {
+  return String(value || 'clone')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 80) || 'clone';
+}
+
+function readLocalCloneRecords() {
+  if (!fs.existsSync(LOCAL_CLONES_DIR)) return [];
+  return fs.readdirSync(LOCAL_CLONES_DIR)
+    .filter((file) => file.endsWith('.json'))
+    .map((file) => {
+      const fullPath = path.join(LOCAL_CLONES_DIR, file);
+      try {
+        return JSON.parse(fs.readFileSync(fullPath, 'utf8'));
+      } catch (_) {
+        return null;
+      }
+    })
+    .filter(Boolean);
+}
+
+function saveLocalCloneRecord(voiceId, preferredName, targetModel, audioFile) {
+  const ext = path.extname(audioFile.filename || '').toLowerCase() || '.wav';
+  const stem = slugifyFileStem(preferredName || voiceId);
+  const hash = generateHash(voiceId);
+  const audioFileName = stem + '_' + hash + ext;
+  const jsonFileName = stem + '_' + hash + '.json';
+  const audioPath = path.join(LOCAL_CLONES_DIR, audioFileName);
+  const jsonPath = path.join(LOCAL_CLONES_DIR, jsonFileName);
+  fs.writeFileSync(audioPath, audioFile.buffer);
+  const record = {
+    voice: voiceId,
+    preferred_name: preferredName,
+    target_model: targetModel,
+    gmt_create: new Date().toISOString(),
+    local_audio_file: audioFileName,
+    local_audio_url: '/qwen3_cloned_voices/' + audioFileName,
+    original_filename: audioFile.filename || '',
+    source: 'local'
+  };
+  fs.writeFileSync(jsonPath, JSON.stringify(record, null, 2));
+  return record;
+}
+
+function mergeCloneVoices(remoteVoices, localVoices) {
+  const merged = new Map();
+  (localVoices || []).forEach((voice) => {
+    if (!voice || !voice.voice) return;
+    merged.set(voice.voice, Object.assign({}, voice));
+  });
+  (remoteVoices || []).forEach((voice) => {
+    if (!voice || !voice.voice) return;
+    const existing = merged.get(voice.voice) || {};
+    merged.set(voice.voice, Object.assign({}, existing, voice, {
+      local_audio_file: existing.local_audio_file || voice.local_audio_file || '',
+      local_audio_url: existing.local_audio_url || voice.local_audio_url || '',
+      original_filename: existing.original_filename || voice.original_filename || '',
+      source: existing.source ? 'local+remote' : 'remote'
+    }));
+  });
+  return Array.from(merged.values()).sort((a, b) => {
+    const aTime = Date.parse(a.gmt_create || '') || 0;
+    const bTime = Date.parse(b.gmt_create || '') || 0;
+    return bTime - aTime;
+  });
+}
+
 function modelRate(modelId) {
   return PRICING[modelId] || PRICING['qwen3-tts-flash'];
 }
@@ -319,6 +389,16 @@ async function deleteClonedVoice(apiKey, voiceId) {
       'Content-Type': 'application/json'
     }
   }, payload);
+}
+
+function deleteLocalCloneRecord(voiceId) {
+  readLocalCloneRecords().forEach((record) => {
+    if (record.voice !== voiceId) return;
+    const metadataPath = path.join(LOCAL_CLONES_DIR, slugifyFileStem(record.preferred_name || record.voice) + '_' + generateHash(record.voice) + '.json');
+    const audioPath = record.local_audio_file ? path.join(LOCAL_CLONES_DIR, record.local_audio_file) : '';
+    if (metadataPath && fs.existsSync(metadataPath)) fs.unlinkSync(metadataPath);
+    if (audioPath && fs.existsSync(audioPath)) fs.unlinkSync(audioPath);
+  });
 }
 
 const execute = (command, args) => new Promise((resolve, reject) => {
@@ -491,20 +571,29 @@ const server = http.createServer(async (req, res) => {
       const audio = parsed.files.audio;
       if (!apiKey || !audio) throw new Error('Missing required clone payload.');
       const voiceId = await createClonedVoice(apiKey, preferredName, audio);
+      const localRecord = saveLocalCloneRecord(voiceId, preferredName, DEFAULT_CLONE_MODEL, audio);
       writeJson(res, 200, {
         ok: true,
         name: preferredName,
         voice_id: voiceId,
         target_model: DEFAULT_CLONE_MODEL,
-        cost_usd: 0
+        cost_usd: 0,
+        local_audio_url: localRecord.local_audio_url
       });
       return;
     }
 
     if (pathname === '/list-voices' && req.method === 'POST') {
       const body = await readJsonBody(req);
-      const voices = await listClonedVoices(body.api_key, body.page_size || 100);
+      const remoteVoices = await listClonedVoices(body.api_key, body.page_size || 100);
+      const localVoices = readLocalCloneRecords();
+      const voices = mergeCloneVoices(remoteVoices, localVoices);
       writeJson(res, 200, { voices });
+      return;
+    }
+
+    if (pathname === '/api/local-clones' && req.method === 'GET') {
+      writeJson(res, 200, { voices: readLocalCloneRecords() });
       return;
     }
 
@@ -512,6 +601,7 @@ const server = http.createServer(async (req, res) => {
       const body = await readJsonBody(req);
       if (!body.api_key || !body.voice_id) throw new Error('Missing required fields: api_key, voice_id.');
       await deleteClonedVoice(body.api_key, body.voice_id);
+      deleteLocalCloneRecord(body.voice_id);
       writeJson(res, 200, { ok: true });
       return;
     }

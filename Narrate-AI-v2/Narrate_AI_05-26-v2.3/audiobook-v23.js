@@ -73,7 +73,12 @@
     const originalRenderSavedVoices = renderSavedVoices;
     renderSavedVoices = function patchedRenderSavedVoices(voices) {
       savedVoicesCache = Array.isArray(voices) ? voices.slice() : [];
-      return originalRenderSavedVoices(voices);
+      const result = originalRenderSavedVoices(voices);
+      if (bookState.roles.length) {
+        renderBookAssignments();
+        updateBookEstimate();
+      }
+      return result;
     };
   }
 
@@ -830,6 +835,61 @@
     return fallback ? fallback.id : 'Cherry';
   }
 
+  function getBookModelId() {
+    const select = document.getElementById('bookModelSelect');
+    return select ? select.value : 'qwen3-tts-flash';
+  }
+
+  function getCloneRecordByVoiceId(voiceId) {
+    return savedVoicesCache.find((voice) => voice.voice === voiceId) || null;
+  }
+
+  function getCompatibleCloneVoices(modelId) {
+    return savedVoicesCache.filter((voice) => (voice.target_model || '') === modelId);
+  }
+
+  function getCompatibleBookVoices(modelId) {
+    if (modelId === CLONED_MODEL_ID) {
+      return getCompatibleCloneVoices(modelId).map((voice) => ({
+        id: voice.voice,
+        label: (voice.preferred_name || voice.voice) + ' — Cloned',
+        type: 'clone'
+      }));
+    }
+    return VOICES.map((voice) => ({
+      id: voice.id,
+      label: voice.id + ' — Built-in',
+      type: 'builtin'
+    }));
+  }
+
+  function getDefaultCompatibleVoice(roleLabel, roleIndex, modelId) {
+    const options = getCompatibleBookVoices(modelId);
+    if (!options.length) return '';
+    if (modelId === CLONED_MODEL_ID) {
+      const normalizedRole = normalizeLoose(roleLabel);
+      const cloneMatch = getCompatibleCloneVoices(modelId).find((voice) => normalizeLoose(voice.preferred_name || voice.voice) === normalizedRole);
+      return cloneMatch ? cloneMatch.voice : options[0].id;
+    }
+    const preferred = defaultVoiceForRole(roleLabel, roleIndex);
+    return options.some((voice) => voice.id === preferred) ? preferred : options[0].id;
+  }
+
+  function normalizeRoleAssignmentsForModel(modelId) {
+    const validVoiceIds = new Set(getCompatibleBookVoices(modelId).map((voice) => voice.id));
+    bookState.roles.forEach((role, index) => {
+      if (!validVoiceIds.has(role.voiceId)) {
+        role.voiceId = getDefaultCompatibleVoice(role.label, index, modelId);
+      }
+    });
+    bookState.chapters.forEach((chapter) => {
+      chapter.chunks.forEach((chunk) => {
+        const role = bookState.roles.find((entry) => entry.id === chunk.roleId);
+        if (role) chunk.voiceId = role.voiceId;
+      });
+    });
+  }
+
   function buildRoleInventory(chapters) {
     const roleMap = new Map();
     chapters.forEach((chapter) => {
@@ -944,33 +1004,12 @@
     return { chapters, anomalies, preamble };
   }
 
-  function getAvailableBookVoices() {
-    const voices = [];
-    const seen = new Set();
-    VOICES.forEach((voice) => {
-      voices.push({
-        id: voice.id,
-        label: voice.id + ' — Built-in',
-        type: 'builtin'
-      });
-      seen.add(voice.id);
-    });
-    savedVoicesCache.forEach((voice) => {
-      if (seen.has(voice.voice)) return;
-      voices.push({
-        id: voice.voice,
-        label: (voice.preferred_name || voice.voice) + ' — Cloned',
-        type: 'clone'
-      });
-      seen.add(voice.voice);
-    });
-    return voices;
-  }
-
   function renderBookAssignments() {
     const container = document.getElementById('bookAssignRows');
     if (!container) return;
-    const options = getAvailableBookVoices();
+    const modelId = getBookModelId();
+    const options = getCompatibleBookVoices(modelId);
+    normalizeRoleAssignmentsForModel(modelId);
     container.innerHTML = bookState.roles.map((role) => {
       const selectOptions = options.map((voice) => {
         const selected = voice.id === role.voiceId ? ' selected' : '';
@@ -1295,8 +1334,16 @@
     const cloneIds = new Set(savedVoicesCache.map((voice) => voice.voice));
     for (const role of bookState.roles) {
       if (!role.voiceId) throw new Error('Role "' + role.label + '" is missing a voice assignment.');
-      if (modelId === CLONED_MODEL_ID && !cloneIds.has(role.voiceId)) {
-        throw new Error('Role "' + role.label + '" must use a cloned voice when the cloned-voice model is selected.');
+      const cloneRecord = getCloneRecordByVoiceId(role.voiceId);
+      if (modelId === CLONED_MODEL_ID) {
+        if (!cloneIds.has(role.voiceId)) {
+          throw new Error('Role "' + role.label + '" must use a cloned voice when the cloned-voice model is selected.');
+        }
+        if (cloneRecord && cloneRecord.target_model !== CLONED_MODEL_ID) {
+          throw new Error('Role "' + role.label + '" uses cloned voice "' + (cloneRecord.preferred_name || cloneRecord.voice) + '" with target model ' + cloneRecord.target_model + '. Re-clone it for ' + CLONED_MODEL_ID + ' before generating.');
+        }
+      } else if (cloneRecord) {
+        throw new Error('Role "' + role.label + '" is assigned to cloned voice "' + (cloneRecord.preferred_name || cloneRecord.voice) + '" but the selected model is ' + modelId + '. Switch the book model to ' + CLONED_MODEL_ID + ' or assign a built-in voice.');
       }
     }
   }
@@ -1826,11 +1873,17 @@
       if (!el) return;
       el.addEventListener('input', () => {
         if (!bookState.chapters.length) return;
-        if (id === 'bookModelSelect') updateBookEstimate();
+        if (id === 'bookModelSelect') {
+          renderBookAssignments();
+          updateBookEstimate();
+        }
       });
       el.addEventListener('change', () => {
         if (!bookState.chapters.length) return;
-        if (id === 'bookModelSelect') updateBookEstimate();
+        if (id === 'bookModelSelect') {
+          renderBookAssignments();
+          updateBookEstimate();
+        }
       });
     });
   }
