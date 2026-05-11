@@ -19,6 +19,7 @@ This repository currently contains a single-file frontend prototype for a Qwen3 
 - [Backend Contract](./backend-contract.md): inferred API contract from the frontend code and implementation guidance for the missing server layer.
 - [Code Review](./code-review.md): review findings with severity, impact, and references into `index.html`.
 - [Upgrades and Enhancements](./upgrades-and-enhancements.md): a prioritized stabilization and modernization roadmap.
+- [V12 Audiobook Review And Module Plan](./v12-audiobook-review-and-module-plan.md): review of the reference ElevenLabs audiobook app and a concrete module design for bringing full-manuscript automation into Narrate-AI.
 
 ## Repository inventory
 
@@ -29,7 +30,8 @@ Narrate-AI-v2/
 │   ├── current-implementation.md
 │   ├── backend-contract.md
 │   ├── code-review.md
-│   └── upgrades-and-enhancements.md
+│   ├── upgrades-and-enhancements.md
+│   └── v12-audiobook-review-and-module-plan.md
 └── Narrate_AI_05-26-v2.2/
     ├── index.html
     ├── www.alibabacloud.com_help_en_model-studio_qwen-tts_1778413805261.md
