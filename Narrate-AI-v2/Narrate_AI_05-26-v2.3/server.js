@@ -574,7 +574,8 @@ const server = http.createServer(async (req, res) => {
       const filename = body.projectId + '_ch' + body.chapterIndex + '_chk' + body.chunkIndex + '_' + hash + '.wav';
       const filePath = path.join(CHUNKS_DIR, filename);
       const alreadyCached = fs.existsSync(filePath);
-      if (!alreadyCached) {
+      const shouldGenerate = !alreadyCached || !!body.force;
+      if (shouldGenerate) {
         const result = await qwenSynthesizeToBuffer({
           apiKey: body.apiKey,
           text: body.text,
@@ -589,7 +590,7 @@ const server = http.createServer(async (req, res) => {
         ok: true,
         filename,
         url: '/output/chunks/' + filename,
-        cached: alreadyCached
+        cached: alreadyCached && !body.force
       });
       return;
     }

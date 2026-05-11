@@ -35,12 +35,15 @@
   const bookState = {
     projectId: '',
     title: 'Untitled Book',
+    series: '',
+    seriesVolume: '',
     author: 'Unknown Author',
     language: 'English',
     settings: null,
     manuscript: '',
     chapters: [],
     roles: [],
+    characters: [],
     anomalies: [],
     outputs: { wav: '', mp3: '', zip: '' },
     generating: false,
@@ -48,6 +51,12 @@
   };
 
   let savedVoicesCache = [];
+  const bookPlayback = {
+    audio: null,
+    activeType: '',
+    activeId: '',
+    chapterIndex: -1
+  };
 
   if (typeof PRICING !== 'undefined' && !PRICING[CLONED_MODEL_ID]) {
     PRICING[CLONED_MODEL_ID] = { rate: 0.115 / 10000, label: '$0.115/10K chars' };
@@ -157,6 +166,37 @@
       .toLowerCase();
   }
 
+  const CHARACTER_DIALOGUE_VERBS = [
+    'said', 'asked', 'replied', 'whispered', 'shouted', 'cried', 'called', 'answered',
+    'murmured', 'snapped', 'laughed', 'sighed', 'added', 'continued', 'ordered',
+    'insisted', 'warned', 'told', 'thought', 'wondered', 'screamed', 'hissed',
+    'breathed', 'groaned', 'muttered', 'yelled', 'observed', 'remarked', 'announced',
+    'promised', 'pleaded', 'admitted', 'grinned', 'smiled', 'snarled', 'sobbed',
+    'began', 'agreed', 'nodded', 'called out'
+  ];
+  const CHARACTER_HONORIFICS = [
+    'Mr', 'Mrs', 'Ms', 'Miss', 'Dr', 'Professor', 'Sir', 'Lady', 'Lord', 'Captain',
+    'Detective', 'Agent', 'King', 'Queen', 'Prince', 'Princess', 'Father', 'Mother',
+    'Aunt', 'Uncle', 'Saint', 'St'
+  ];
+  const CHARACTER_STOP_WORDS = new Set([
+    'book', 'books', 'chapter', 'chapters', 'part', 'parts', 'prologue', 'epilogue',
+    'narrator', 'narration', 'voice', 'voices', 'title', 'titles', 'scene', 'act',
+    'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
+    'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august',
+    'september', 'october', 'november', 'december', 'yes', 'no', 'hello', 'goodbye',
+    'then', 'there', 'later', 'after', 'before', 'suddenly', 'finally', 'perhaps',
+    'meanwhile', 'morning', 'evening', 'night', 'today', 'tomorrow', 'yesterday',
+    'what', 'when', 'where', 'why', 'how', 'this', 'that', 'these', 'those',
+    'his', 'her', 'their', 'our', 'your', 'my',
+    'je', 'tu', 'il', 'elle', 'on', 'nous', 'vous', 'ils', 'elles',
+    'le', 'la', 'les', 'un', 'une', 'des', 'du', 'de', 'ce', 'cet', 'cette', 'ces',
+    'mon', 'ma', 'mes', 'ton', 'ta', 'tes', 'son', 'sa', 'ses', 'notre', 'nos',
+    'votre', 'vos', 'leur', 'leurs', 'et', 'mais', 'ou', 'donc', 'or', 'ni', 'car',
+    'oui', 'non', 'merci', 'tout', 'tous', 'toute', 'toutes', 'si', 'ah', 'oh',
+    'alors', 'cest', 'cetait', 'jetais', 'javais', 'jai', 'questce', 'tes', 'tas'
+  ].map(normalizeLoose));
+
   function sentenceSplit(text) {
     const matches = String(text || '').match(/[^.!?\n]+(?:[.!?]+["”'’)]*)?|[^.!?\n]+$/g);
     return (matches || [text]).map((part) => part.trim()).filter(Boolean);
@@ -259,6 +299,11 @@
     return new RegExp('(^\\s*(?:' + patterns.join('|') + ')\\s*$)', 'gmi');
   }
 
+  function getChapterHeadingTestRegex() {
+    const regex = getChapterHeadingRegex();
+    return new RegExp(regex.source, regex.flags.replace(/g/g, ''));
+  }
+
   function cleanChapterTitle(title, index) {
     const trimmed = normalizeRoleLabel(title.replace(/^[#\s]+/, '').replace(/[.:]+$/, ''));
     if (!trimmed) return index === 0 ? 'Titles' : 'Chapter ' + index;
@@ -267,20 +312,83 @@
     return trimmed;
   }
 
+  const AUTHOR_PREFIXES = [
+    'by', 'author', 'written by',
+    'de', 'par', 'écrit par', 'écrite par', 'auteur',
+    'por', 'escrito por', 'autora', 'autor',
+    'von', 'geschrieben von',
+    'di', 'scritto da',
+    'door', 'geschreven door',
+    'przez', 'napisal', 'napisał'
+  ].sort((a, b) => b.length - a.length);
+
+  const VOLUME_PREFIXES = [
+    'book', 'livre', 'volume', 'vol', 'tome', 'part', 'partie', 'libro', 'livro', 'buch', 'band'
+  ].sort((a, b) => b.length - a.length);
+
+  function cleanMetadataLine(value) {
+    return normalizeRoleLabel(String(value || '').replace(/^[\s"'“”‘’]+/, '').replace(/[\s"'“”‘’]+$/, '').replace(/[.。:;]+$/, ''));
+  }
+
+  function stripAuthorPrefix(line) {
+    const clean = normalizeRoleLabel(line);
+    for (const prefix of AUTHOR_PREFIXES) {
+      const match = clean.match(new RegExp('^' + escapeRegex(prefix) + '[\\s:.-]+(.+)$', 'i'));
+      if (match) return cleanMetadataLine(match[1]);
+    }
+    return '';
+  }
+
+  function isVolumeLine(line) {
+    const clean = cleanMetadataLine(line);
+    if (!clean) return false;
+    const prefixGroup = VOLUME_PREFIXES.map(escapeRegex).join('|');
+    return new RegExp('^(?:' + prefixGroup + ')(?:\\s+|\\s*[#:.-]\\s*)(?:\\d+|[IVXLCDMivxlcdm]+)\\b', 'i').test(clean);
+  }
+
+  function looksLikeSeriesLine(line) {
+    const clean = cleanMetadataLine(line);
+    if (!clean) return false;
+    if (isVolumeLine(clean)) return false;
+    if (stripAuthorPrefix(clean)) return false;
+    if (clean.length > 90) return false;
+    const words = clean.split(/\s+/).filter(Boolean);
+    if (!words.length || words.length > 8) return false;
+    return /[\p{L}]/u.test(clean);
+  }
+
   function detectMetadata(manuscript, preamble) {
     const lines = normalizeNewlines(preamble || manuscript).split('\n').map((line) => line.trim()).filter(Boolean);
-    let title = lines[0] || 'Untitled Book';
-    let author = 'Unknown Author';
-    if (lines.length > 1) {
-      const authorLine = lines.find((line) => /^(by|author|written by)\b/i.test(line));
-      if (authorLine) author = authorLine.replace(/^(by|author|written by)[:\s]+/i, '').trim() || author;
-      else if (lines[1].length < 80) author = lines[1];
-    }
     let language = 'English';
     if (typeof guessLanguage === 'function') {
       language = guessLanguage(manuscript) || language;
     }
-    return { title, author, language };
+
+    const cleanedLines = lines.map(cleanMetadataLine).filter(Boolean);
+    let title = cleanedLines[0] || 'Untitled Book';
+    let series = '';
+    let seriesVolume = '';
+    let author = 'Unknown Author';
+
+    const authorCandidate = cleanedLines.map((line) => stripAuthorPrefix(line)).find(Boolean);
+    if (authorCandidate) author = authorCandidate;
+
+    const nonAuthorLines = cleanedLines.filter((line) => !stripAuthorPrefix(line));
+    if (nonAuthorLines.length) title = nonAuthorLines[0];
+
+    const remaining = nonAuthorLines.slice(1);
+    const volumeLine = remaining.find((line) => isVolumeLine(line));
+    if (volumeLine) seriesVolume = volumeLine;
+
+    const seriesCandidate = remaining.find((line) => line !== seriesVolume && looksLikeSeriesLine(line));
+    if (seriesCandidate) series = seriesCandidate;
+
+    if (author === 'Unknown Author') {
+      const fallbackAuthorLine = cleanedLines.slice().reverse().find((line) => line !== title && line !== series && line !== seriesVolume && line.split(/\s+/).length <= 5);
+      if (fallbackAuthorLine) author = fallbackAuthorLine;
+    }
+
+    return { title, series, seriesVolume, author, language };
   }
 
   function buildRoleId(label) {
@@ -416,6 +524,300 @@
     return parseMarkedParagraphSegments(text);
   }
 
+  function isGenericRoleLabel(label) {
+    const normalized = normalizeLoose(label);
+    return normalized === 'narrator' || normalized === 'voice 1' || normalized === 'voice 2' || normalized === 'voice1' || normalized === 'voice2';
+  }
+
+  function formatDisplayName(label) {
+    const trimmed = normalizeRoleLabel(label);
+    if (!trimmed) return '';
+    if (trimmed === trimmed.toUpperCase()) {
+      return trimmed.split(/\s+/).map((word) => word.charAt(0) + word.slice(1).toLowerCase()).join(' ');
+    }
+    return trimmed;
+  }
+
+  function normalizeCharacterCandidate(label) {
+    return formatDisplayName(
+      String(label || '')
+        .replace(/^[^\p{L}\p{N}]+/gu, '')
+        .replace(/[^\p{L}\p{N}.'’ -]+$/gu, '')
+    );
+  }
+
+  function stripHonorific(label) {
+    return normalizeRoleLabel(String(label || '').replace(new RegExp('^(?:' + CHARACTER_HONORIFICS.map(escapeRegex).join('|') + ')\\.?\\s+', 'i'), ''));
+  }
+
+  function isValidCharacterCandidate(label) {
+    const clean = normalizeCharacterCandidate(label);
+    if (!clean) return false;
+    if (clean.length > 48) return false;
+    if (isGenericRoleLabel(clean)) return false;
+    if (/^(chapter|part|prologue|epilogue|scene|act|book|titles?)\b/i.test(clean)) return false;
+    const words = clean.split(/\s+/).filter(Boolean);
+    if (!words.length || words.length > 3) return false;
+    if (CHARACTER_STOP_WORDS.has(normalizeLoose(clean))) return false;
+    if (words.every((word) => /^[IVXLCDM]+$/i.test(word))) return false;
+    return words.every((word) => {
+      const bare = word.replace(/[.'’-]+$/g, '');
+      if (!bare) return false;
+      if (CHARACTER_HONORIFICS.some((title) => normalizeLoose(title) === normalizeLoose(bare))) return true;
+      return /^[\p{Lu}\d][\p{L}\p{N}'’.-]*$/u.test(bare);
+    });
+  }
+
+  function getCharacterMatchPhrases(label) {
+    const phrases = [];
+    const push = (value) => {
+      const normalized = normalizeLoose(value);
+      if (normalized && !phrases.includes(normalized)) phrases.push(normalized);
+    };
+    push(label);
+    push(stripHonorific(label));
+    return phrases.sort((a, b) => b.length - a.length);
+  }
+
+  function bumpCharacterCandidate(map, rawLabel, weight, chapterIndex, source) {
+    const label = normalizeCharacterCandidate(rawLabel);
+    if (!isValidCharacterCandidate(label)) return;
+    const phrases = getCharacterMatchPhrases(label);
+    let entry = null;
+    phrases.some((phrase) => {
+      if (map.has(phrase)) {
+        entry = map.get(phrase);
+        return true;
+      }
+      return false;
+    });
+    if (!entry) {
+      entry = {
+        id: 'char_' + slugify(label),
+        label,
+        score: 0,
+        hits: 0,
+        chapters: new Set(),
+        sources: new Set(),
+        matchPhrases: phrases.slice()
+      };
+      entry.matchPhrases.forEach((phrase) => map.set(phrase, entry));
+    }
+    if (label.length > entry.label.length) entry.label = label;
+    entry.score += weight;
+    entry.hits += 1;
+    entry.chapters.add(chapterIndex);
+    entry.sources.add(source);
+  }
+
+  function extractDetectedCharacters(chapters) {
+    const candidateMap = new Map();
+    const honorificPattern = '(?:' + CHARACTER_HONORIFICS.map(escapeRegex).join('|') + ')\\.?' ;
+    const baseNamePattern = '(?:' + honorificPattern + '\\s+)?[\\p{Lu}][\\p{L}\'’.-]+(?:\\s+[\\p{Lu}][\\p{L}\'’.-]+){0,2}';
+    const escapedVerbs = CHARACTER_DIALOGUE_VERBS.map((verb) => verb.trim().split(/\s+/).map(escapeRegex).join('\\s+'));
+    const verbPattern = '(?:' + escapedVerbs.join('|') + ')';
+    const forwardPattern = new RegExp('\\b(' + baseNamePattern + ')\\s+' + verbPattern + '\\b', 'gu');
+    const backwardPattern = new RegExp('\\b' + verbPattern + '\\s+(' + baseNamePattern + ')\\b', 'gu');
+    const properNamePattern = new RegExp('\\b(' + baseNamePattern + ')\\b', 'gu');
+
+    chapters.forEach((chapter, chapterIndex) => {
+      const chapterText = chapter.chunks.map((chunk) => chunk.text).join('\n\n');
+
+      chapter.chunks.forEach((chunk) => {
+        if (!isGenericRoleLabel(chunk.roleLabel)) {
+          bumpCharacterCandidate(candidateMap, chunk.roleLabel, 4, chapterIndex, 'role');
+        }
+      });
+
+      Array.from(chapterText.matchAll(forwardPattern)).forEach((match) => {
+        bumpCharacterCandidate(candidateMap, match[1], 2.5, chapterIndex, 'attribution');
+      });
+      Array.from(chapterText.matchAll(backwardPattern)).forEach((match) => {
+        bumpCharacterCandidate(candidateMap, match[1], 2.5, chapterIndex, 'attribution');
+      });
+      Array.from(chapterText.matchAll(properNamePattern)).forEach((match) => {
+        bumpCharacterCandidate(candidateMap, match[1], 0.35, chapterIndex, 'mention');
+      });
+    });
+
+    return Array.from(new Set(candidateMap.values()))
+      .filter((entry) => {
+        if (entry.sources.has('role')) return true;
+        const label = entry.label;
+        const wordCount = label.split(/\s+/).filter(Boolean).length;
+        const hasHonorific = normalizeLoose(stripHonorific(label)) !== normalizeLoose(label);
+        const hasAttribution = entry.sources.has('attribution');
+        if (hasHonorific || wordCount > 1) return hasAttribution || entry.score >= 2 || entry.hits >= 2;
+        return hasAttribution;
+      })
+      .sort((a, b) => (b.score - a.score) || (b.hits - a.hits) || a.label.localeCompare(b.label))
+      .slice(0, 40)
+      .map((entry) => ({
+        id: entry.id,
+        label: entry.label,
+        score: Number(entry.score.toFixed(2)),
+        mentions: entry.hits,
+        chapterCount: entry.chapters.size,
+        matchPhrases: entry.matchPhrases.slice()
+      }));
+  }
+
+  function countPhraseMentions(text, phrase) {
+    if (!phrase) return 0;
+    const regex = new RegExp('(?:^| )' + escapeRegex(phrase) + '(?=$| )', 'g');
+    return (text.match(regex) || []).length;
+  }
+
+  function annotateCharacterMentions(chapters, characters) {
+    const activeCharacters = Array.isArray(characters) ? characters.slice(0, 40) : [];
+    chapters.forEach((chapter) => {
+      const chapterCounts = new Map();
+      chapter.chunks.forEach((chunk) => {
+        const mentions = [];
+        const normalizedText = normalizeLoose(chunk.text);
+
+        activeCharacters.forEach((character) => {
+          const count = Math.max.apply(null, character.matchPhrases.map((phrase) => countPhraseMentions(normalizedText, phrase)).concat(0));
+          if (count > 0) {
+            mentions.push({ label: character.label, count });
+            chapterCounts.set(character.label, (chapterCounts.get(character.label) || 0) + count);
+          }
+        });
+
+        if (!isGenericRoleLabel(chunk.roleLabel)) {
+          const explicit = mentions.find((entry) => normalizeLoose(entry.label) === normalizeLoose(chunk.roleLabel));
+          if (explicit) explicit.count += 1000;
+          else mentions.push({ label: chunk.roleLabel, count: 1000 });
+          chapterCounts.set(chunk.roleLabel, (chapterCounts.get(chunk.roleLabel) || 0) + 1000);
+        }
+
+        mentions.sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+        chunk.detectedCharacters = mentions.slice(0, 3).map((entry) => entry.label);
+        chunk.primaryCharacter = chunk.detectedCharacters[0] || '';
+      });
+
+      chapter.characters = Array.from(chapterCounts.entries())
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .slice(0, 5)
+        .map((entry) => entry[0]);
+    });
+  }
+
+  function getAllChapterKeywords() {
+    return LANG_CONFIG.flatMap((entry) => entry[2] || []).filter(Boolean).sort((a, b) => b.length - a.length);
+  }
+
+  function extractDualPovNameFromChapterTitle(title) {
+    const clean = normalizeRoleLabel(String(title || '').replace(/^[#\s]+/, '').replace(/[.:]+$/, ''));
+    if (!clean) return '';
+    const fragments = clean.split(/[:|–—-]+/).map((part) => normalizeRoleLabel(part)).filter(Boolean);
+    const candidates = [];
+    if (fragments.length > 1) candidates.push(fragments[fragments.length - 1]);
+
+    const chapterKeywords = getAllChapterKeywords().map(escapeRegex).join('|');
+    if (chapterKeywords) {
+      const stripped = clean.replace(new RegExp('^(?:' + chapterKeywords + ')\\s+[^:|–—-]+(?:\\s*[:|–—-]\\s*)?', 'i'), '').trim();
+      if (stripped) candidates.push(stripped);
+    }
+
+    candidates.push(clean);
+
+    for (const candidate of candidates) {
+      const normalized = normalizeCharacterCandidate(candidate);
+      if (isValidCharacterCandidate(normalized)) return normalized;
+    }
+    return '';
+  }
+
+  function extractDualPovNameFromCue(text) {
+    const lines = normalizeNewlines(text).split('\n').map((line) => line.trim()).filter(Boolean).slice(0, 3);
+    for (const line of lines) {
+      const directMatch = line.match(/^([A-ZÀ-ÖØ-Ý][\p{L}'’.-]{1,24}(?:\s+[A-ZÀ-ÖØ-Ý][\p{L}'’.-]{1,24}){0,1})(?:\s*[:.\-–—]\s*|\s*$)/u);
+      if (directMatch) {
+        const candidate = normalizeCharacterCandidate(directMatch[1]);
+        if (isValidCharacterCandidate(candidate)) return candidate;
+      }
+    }
+    return '';
+  }
+
+  function collectDualPovRoleNames(chapters) {
+    const names = [];
+    const seen = new Set();
+    const narrativeChapters = (chapters || []).filter((chapter) => chapter.kind !== 'titles');
+
+    function push(rawName) {
+      const name = normalizeCharacterCandidate(rawName);
+      if (!name || !isValidCharacterCandidate(name)) return;
+      const key = normalizeLoose(name);
+      if (seen.has(key)) return;
+      seen.add(key);
+      names.push(name);
+    }
+
+    narrativeChapters.forEach((chapter) => {
+      push(extractDualPovNameFromChapterTitle(chapter.title));
+      if (names.length >= 2) return;
+      const firstBySegment = new Map();
+      chapter.chunks.forEach((chunk) => {
+        if (!firstBySegment.has(chunk.segmentIndex)) firstBySegment.set(chunk.segmentIndex, chunk);
+      });
+      Array.from(firstBySegment.values()).forEach((chunk) => {
+        if (names.length < 2) push(extractDualPovNameFromCue(chunk.text));
+      });
+    });
+
+    return names.slice(0, 2);
+  }
+
+  function detectDualPovStartIndex(chapter, roleNames, lastStartIndex) {
+    const titleName = extractDualPovNameFromChapterTitle(chapter.title);
+    if (titleName) {
+      const titleIndex = roleNames.findIndex((name) => normalizeLoose(name) === normalizeLoose(titleName));
+      if (titleIndex !== -1) return titleIndex;
+    }
+
+    const firstSegment = chapter.chunks.find((chunk) => chunk.segmentIndex === 0);
+    if (firstSegment) {
+      const cueName = extractDualPovNameFromCue(firstSegment.text);
+      if (cueName) {
+        const cueIndex = roleNames.findIndex((name) => normalizeLoose(name) === normalizeLoose(cueName));
+        if (cueIndex !== -1) return cueIndex;
+      }
+    }
+
+    return lastStartIndex || 0;
+  }
+
+  function applyDualPovRoleNames(chapters, roleNames) {
+    if (!Array.isArray(roleNames) || !roleNames.length) return;
+    let lastStartIndex = 0;
+    chapters.forEach((chapter) => {
+      const startIndex = detectDualPovStartIndex(chapter, roleNames, lastStartIndex);
+      lastStartIndex = startIndex;
+      chapter.chunks.forEach((chunk) => {
+        const resolvedName = roleNames[(startIndex + chunk.segmentIndex) % roleNames.length] || roleNames[0];
+        chunk.roleLabel = resolvedName;
+        chunk.roleId = buildRoleId(resolvedName);
+      });
+      chapter.characters = roleNames.filter((name) => chapter.chunks.some((chunk) => normalizeLoose(chunk.roleLabel) === normalizeLoose(name)));
+    });
+  }
+
+  function buildDualPovCharacterList(chapters, roleNames) {
+    return roleNames.map((name) => {
+      const matchingChapters = chapters.filter((chapter) => chapter.chunks.some((chunk) => normalizeLoose(chunk.roleLabel) === normalizeLoose(name)));
+      return {
+        id: 'char_' + slugify(name),
+        label: name,
+        score: matchingChapters.length,
+        mentions: matchingChapters.reduce((sum, chapter) => sum + chapter.chunks.filter((chunk) => normalizeLoose(chunk.roleLabel) === normalizeLoose(name)).length, 0),
+        chapterCount: matchingChapters.length,
+        matchPhrases: getCharacterMatchPhrases(name)
+      };
+    });
+  }
+
   function defaultVoiceForRole(roleLabel, roleIndex) {
     const normalizedRole = normalizeLoose(roleLabel);
     if (typeof selectedVoice !== 'undefined' && selectedVoice && normalizedRole === 'narrator') return selectedVoice;
@@ -453,12 +855,17 @@
     });
   }
 
+  function getNarrativeChapterCount(chapters) {
+    return (chapters || []).filter((chapter) => chapter.kind !== 'titles').length;
+  }
+
   function buildChapters(manuscript, settings) {
     const text = normalizeNewlines(manuscript).trim();
     if (!text) return { chapters: [], anomalies: [], preamble: '' };
 
-    const chapterRegex = getChapterHeadingRegex();
-    const parts = text.split(chapterRegex).filter((part) => part.trim().length > 0);
+    const chapterSplitRegex = getChapterHeadingRegex();
+    const chapterTestRegex = getChapterHeadingTestRegex();
+    const parts = text.split(chapterSplitRegex).filter((part) => part.trim().length > 0);
     const chapters = [];
     const anomalies = [];
     let preamble = '';
@@ -487,7 +894,10 @@
             filename: '',
             audioUrl: '',
             voiceId: '',
-            charCount: chunkText.length
+            charCount: chunkText.length,
+            detectedCharacters: [],
+            primaryCharacter: '',
+            audioVersion: 0
           });
           chunkIndex += 1;
         });
@@ -497,27 +907,31 @@
         title,
         kind: isTitle ? 'titles' : 'chapter',
         audioUrls: { wav: '', mp3: '' },
-        chunks
+        chunks,
+        collapsed: true,
+        characters: []
       });
     }
 
-    if (parts.length && !chapterRegex.test(parts[0].trim())) {
+    let contentStartIndex = 0;
+    if (parts.length && !chapterTestRegex.test(parts[0].trim())) {
       preamble = parts[0];
       if (preamble.trim()) {
         createChapter('Titles', preamble, true);
       }
+      contentStartIndex = 1;
     }
 
-    if (!parts.some((part) => chapterRegex.test(part.trim()))) {
+    if (!parts.some((part) => chapterTestRegex.test(part.trim()))) {
       chapters.length = 0;
       createChapter('Book', text, false);
       return { chapters, anomalies, preamble };
     }
 
-    parts.forEach((part) => {
+    parts.slice(contentStartIndex).forEach((part) => {
       const trimmed = part.trim();
       if (!trimmed) return;
-      if (chapterRegex.test(trimmed)) {
+      if (chapterTestRegex.test(trimmed)) {
         chapterCounter += 1;
         currentHeading = cleanChapterTitle(trimmed, chapterCounter);
       } else {
@@ -594,16 +1008,22 @@
     if (!summaryBox || !anomalyBox) return;
     const totalChunks = bookState.chapters.reduce((sum, chapter) => sum + chapter.chunks.length, 0);
     const totalChars = bookState.chapters.reduce((sum, chapter) => sum + chapter.chunks.reduce((inner, chunk) => inner + chunk.charCount, 0), 0);
+    const chapterCount = getNarrativeChapterCount(bookState.chapters);
     summaryBox.innerHTML = '' +
-      '<strong>' + escapeHtml(bookState.title) + '</strong>' +
-      ' by ' + escapeHtml(bookState.author) +
-      '<br><span style="font-size:0.8rem;color:var(--muted)">' +
-      bookState.chapters.length + ' chapters · ' +
-      bookState.roles.length + ' roles · ' +
-      totalChunks + ' chunks · ' +
-      totalChars.toLocaleString() + ' chars · ' +
-      escapeHtml(bookState.language) +
-      '</span>';
+      '<div class="sum-row">' +
+        '<div class="sum-item"><span class="sum-label">Title</span><span class="sum-val">' + escapeHtml(bookState.title) + '</span></div>' +
+        '<div class="sum-item"><span class="sum-label">Series</span><span class="sum-val">' + escapeHtml(bookState.series || '—') + '</span></div>' +
+        '<div class="sum-item"><span class="sum-label">Volume</span><span class="sum-val">' + escapeHtml(bookState.seriesVolume || '—') + '</span></div>' +
+        '<div class="sum-item"><span class="sum-label">Author</span><span class="sum-val">' + escapeHtml(bookState.author) + '</span></div>' +
+        '<div class="sum-item"><span class="sum-label">Language</span><span class="sum-val">' + escapeHtml(bookState.language) + '</span></div>' +
+      '</div>' +
+      '<div class="sum-row">' +
+        '<div class="sum-item"><span class="sum-label">Chapters</span><span class="sum-val">' + chapterCount + '</span></div>' +
+        '<div class="sum-item"><span class="sum-label">Speaking Roles</span><span class="sum-val">' + bookState.roles.length + '</span></div>' +
+        '<div class="sum-item"><span class="sum-label">Detected Characters</span><span class="sum-val">' + bookState.characters.length + '</span></div>' +
+        '<div class="sum-item"><span class="sum-label">Chunks</span><span class="sum-val">' + totalChunks + '</span></div>' +
+        '<div class="sum-item"><span class="sum-label">Characters</span><span class="sum-val">' + totalChars.toLocaleString() + '</span></div>' +
+      '</div>';
 
     if (bookState.anomalies.length) {
       anomalyBox.style.display = 'block';
@@ -614,33 +1034,163 @@
     }
   }
 
+  function renderBookCharacters() {
+    const panel = document.getElementById('bookCharacterPanel');
+    if (!panel) return;
+    const mode = bookState.settings && bookState.settings.mode ? bookState.settings.mode : 'single';
+    if (!bookState.characters.length) {
+      panel.innerHTML = '' +
+        '<div class="book-character-note">' + (mode === 'dual_pov'
+          ? 'Dual POV mode could not resolve two clean names from chapter titles or separator cues. Use chapter headings like <code>Chapter 1: Piper</code> and optional cue lines like <code>Vincent.</code> after <code>* * *</code>.'
+          : 'No confident character names were extracted. For named character automation, use <code>[[Role]]</code>, <code>Role:</code>, or script-style speaker labels.') + '</div>' +
+        '<div class="book-character-empty">Detected names are heuristic in ordinary prose and are shown separately from speaking-role assignment.</div>';
+      return;
+    }
+    const chips = bookState.characters.map((character) => {
+      return '<span class="book-character-chip">' +
+        '<span>' + escapeHtml(character.label) + '</span>' +
+        '<span class="count">' + character.chapterCount + ' ch</span>' +
+      '</span>';
+    }).join('');
+    panel.innerHTML = '' +
+      '<div class="book-character-note">' + (mode === 'dual_pov'
+        ? 'Dual POV mode uses chapter-title names and separator-start cues only, so the list stays constrained to the two structural POV names.'
+        : 'These names were detected from the manuscript text. They are informational unless the manuscript explicitly marks speakers or uses script formatting.') + '</div>' +
+      '<div class="book-character-grid">' + chips + '</div>';
+  }
+
+  function getChapterDoneCount(chapter) {
+    return chapter.chunks.filter((chunk) => chunk.status === 'done').length;
+  }
+
+  function getChapterStatus(chapter) {
+    if (chapter.chunks.some((chunk) => chunk.status === 'processing')) return 'generating';
+    if (chapter.chunks.some((chunk) => chunk.status === 'error')) return 'error';
+    if (chapter.chunks.length && chapter.chunks.every((chunk) => chunk.status === 'done')) return 'done';
+    return 'pending';
+  }
+
+  function getRoleColorClass(label) {
+    const normalized = normalizeLoose(label);
+    if (normalized === 'narrator') return 'v0';
+    if (normalized === 'voice 1' || normalized === 'voice1') return 'v1';
+    if (normalized === 'voice 2' || normalized === 'voice2') return 'v2';
+    const paletteIndex = slugify(label).length % 5;
+    return ['v0', 'v1', 'v2', 'v3', 'v4'][paletteIndex];
+  }
+
+  function truncatePreview(text, maxChars) {
+    const compact = normalizeNewlines(text).replace(/\s+/g, ' ').trim();
+    if (compact.length <= maxChars) return compact;
+    return compact.slice(0, Math.max(0, maxChars - 1)).trim() + '…';
+  }
+
+  function getChunkMetaText(chunk) {
+    const parts = [];
+    parts.push(chunk.sourceType === 'dialogue' ? 'Dialogue' : 'Narration');
+    if (chunk.detectedCharacters.length) parts.push('Names: ' + chunk.detectedCharacters.join(', '));
+    parts.push(chunk.charCount.toLocaleString() + ' chars');
+    return parts.join(' · ');
+  }
+
+  function updateBookTreeStatus() {
+    const target = document.getElementById('bookTreeStatus');
+    if (!target) return;
+    if (!bookState.chapters.length) {
+      target.textContent = 'Analyse a manuscript to build the chapter browser.';
+      return;
+    }
+    const chapterCount = getNarrativeChapterCount(bookState.chapters);
+    const totalChunks = bookState.chapters.reduce((sum, chapter) => sum + chapter.chunks.length, 0);
+    const doneChunks = bookState.chapters.reduce((sum, chapter) => sum + getChapterDoneCount(chapter), 0);
+    target.textContent = chapterCount + ' chapters · ' + totalChunks + ' chunks · ' + doneChunks + ' generated';
+  }
+
   function renderBookChapterList() {
     const list = document.getElementById('bookChapterList');
     if (!list) return;
     if (!bookState.chapters.length) {
-      list.innerHTML = '<div style="font-size:0.82rem;color:var(--muted)">No chapters analysed yet.</div>';
+      list.innerHTML = '<div class="book-empty-state">No chapters analysed yet.</div>';
+      updateBookTreeStatus();
       return;
     }
-    list.innerHTML = bookState.chapters.map((chapter) => {
-      const doneCount = chapter.chunks.filter((chunk) => chunk.status === 'done').length;
+    list.innerHTML = bookState.chapters.map((chapter, chapterIndex) => {
+      const doneCount = getChapterDoneCount(chapter);
       const roleCount = new Set(chapter.chunks.map((chunk) => chunk.roleLabel)).size;
       const percent = chapter.chunks.length ? Math.round((doneCount / chapter.chunks.length) * 100) : 0;
+      const status = getChapterStatus(chapter);
+      const playingChapter = isChapterPlaying(chapterIndex);
+      const chapterCharacters = chapter.characters && chapter.characters.length ? chapter.characters.slice(0, 4).map((character) => {
+        return '<span class="book-mini-chip"><strong>' + escapeHtml(character) + '</strong></span>';
+      }).join('') : '<span class="book-mini-chip">No strong names in this chapter</span>';
+      const chunkHtml = chapter.collapsed ? '' : '<div class="book-segments">' + chapter.chunks.map((chunk, chunkIndex) => {
+        const isChunkPlayingNow = isChunkPlaying(chunk);
+        const rowClasses = ['book-seg-row', chunk.status];
+        if (isChunkPlayingNow) rowClasses.push('active');
+        const roleClass = getRoleColorClass(chunk.roleLabel);
+        return '' +
+          '<div class="' + rowClasses.join(' ') + '">' +
+            '<div class="book-seg-num">' + (chunkIndex + 1) + '</div>' +
+            '<div class="book-seg-voice ' + roleClass + '">' + escapeHtml(chunk.roleLabel) + '</div>' +
+            '<div class="book-seg-body">' +
+              '<div class="book-seg-text">' + escapeHtml(truncatePreview(chunk.text, 130)) + '</div>' +
+              '<div class="book-seg-meta">' + escapeHtml(getChunkMetaText(chunk)) + '</div>' +
+            '</div>' +
+            '<div class="book-seg-status ' + chunk.status + '">' + escapeHtml(chunk.status) + '</div>' +
+            '<div class="book-seg-actions">' +
+              '<button class="book-seg-action-btn' + (isChunkPlayingNow ? ' playing' : '') + '"' +
+                (chunk.audioUrl ? '' : ' disabled') +
+                ' onclick="bookPlayChunk(' + chapterIndex + ',' + chunkIndex + ', event)">' + (isChunkPlayingNow ? '⏹' : '▶') + '</button>' +
+              '<button class="book-seg-action-btn" onclick="bookRegenerateChunk(' + chapterIndex + ',' + chunkIndex + ', event)">↺</button>' +
+            '</div>' +
+          '</div>';
+      }).join('') + '</div>';
       return '' +
-        '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px">' +
-          '<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap">' +
-            '<div>' +
-              '<div style="font-weight:700;color:var(--text)">' + escapeHtml(chapter.title) + '</div>' +
-              '<div style="font-size:0.75rem;color:var(--muted)">' +
-                chapter.chunks.length + ' chunks · ' + roleCount + ' roles · ' + percent + '% done' +
+        '<div class="book-chapter-card' + (playingChapter ? ' playing' : '') + '">' +
+          '<div class="book-chapter-header" onclick="bookToggleChapter(' + chapterIndex + ', event)">' +
+            '<div class="book-chapter-main">' +
+              '<div class="book-chapter-toggle">' + (chapter.collapsed ? '+' : '−') + '</div>' +
+              '<div class="book-chapter-main-text">' +
+                '<div class="book-chapter-title">' + escapeHtml(chapter.title) + '</div>' +
+                '<div class="book-chapter-meta">' +
+                  '<span>' + chapter.chunks.length + ' chunks</span>' +
+                  '<span>' + roleCount + ' roles</span>' +
+                  '<span>' + percent + '% done</span>' +
+                '</div>' +
+                '<div class="book-chip-row">' + chapterCharacters + '</div>' +
               '</div>' +
             '</div>' +
-            '<div style="font-size:0.75rem;color:' + (doneCount === chapter.chunks.length ? 'var(--success)' : 'var(--muted)') + '">' +
-              doneCount + '/' + chapter.chunks.length +
+            '<div class="book-chapter-actions">' +
+              '<span class="book-chapter-status ' + status + '">' + escapeHtml(status) + '</span>' +
+              '<button class="book-inline-btn' + (playingChapter ? ' playing' : '') + '"' +
+                (chapter.audioUrls.wav ? '' : ' disabled') +
+                ' onclick="bookPlayChapter(' + chapterIndex + ', event)">' + (playingChapter ? '⏹ Stop' : '▶ Play') + '</button>' +
+              '<button class="book-inline-btn" onclick="bookGenerateChapter(' + chapterIndex + ', event)">' + (doneCount ? '⚡ Refresh' : '⚡ Generate') + '</button>' +
             '</div>' +
           '</div>' +
+          chunkHtml +
         '</div>';
     }).join('');
+    updateBookTreeStatus();
   }
+
+  window.bookToggleChapter = function bookToggleChapter(chapterIndex, event) {
+    if (event) event.stopPropagation();
+    const chapter = bookState.chapters[chapterIndex];
+    if (!chapter) return;
+    chapter.collapsed = !chapter.collapsed;
+    renderBookChapterList();
+  };
+
+  window.bookExpandAll = function bookExpandAll() {
+    bookState.chapters.forEach((chapter) => { chapter.collapsed = false; });
+    renderBookChapterList();
+  };
+
+  window.bookCollapseAll = function bookCollapseAll() {
+    bookState.chapters.forEach((chapter) => { chapter.collapsed = true; });
+    renderBookChapterList();
+  };
 
   function getModelPricing(modelId) {
     if (typeof PRICING !== 'undefined' && PRICING[modelId]) return PRICING[modelId];
@@ -693,12 +1243,15 @@
     return {
       id: bookState.projectId,
       title: bookState.title,
+      series: bookState.series,
+      seriesVolume: bookState.seriesVolume,
       author: bookState.author,
       language: bookState.language,
       manuscript: bookState.manuscript,
       updatedAt: new Date().toISOString(),
       projectSettings: bookState.settings,
       roles: bookState.roles,
+      characters: bookState.characters,
       chapters: bookState.chapters,
       outputs: bookState.outputs
     };
@@ -770,6 +1323,182 @@
     document.getElementById('bookGenFill').style.width = pct + '%';
   }
 
+  function cacheBustUrl(url, seed) {
+    if (!url) return '';
+    return url + (url.includes('?') ? '&' : '?') + 'v=' + encodeURIComponent(String(seed || Date.now()));
+  }
+
+  function invalidateBookOutputs() {
+    bookState.outputs = { wav: '', mp3: '', zip: '' };
+    const panel = document.getElementById('bookDlPanel');
+    if (panel) panel.classList.remove('show');
+  }
+
+  function setBookOperationUi(active) {
+    if (active) document.getElementById('bookGenPanel').classList.add('show');
+    document.getElementById('bookCancelBtn').classList.toggle('show', !!active);
+    document.getElementById('bookGenerateBtn').disabled = !!active || bookState.chapters.length === 0;
+  }
+
+  function clearPlaybackState() {
+    bookPlayback.activeType = '';
+    bookPlayback.activeId = '';
+    bookPlayback.chapterIndex = -1;
+  }
+
+  function stopBookPlayback() {
+    if (bookPlayback.audio) {
+      bookPlayback.audio.pause();
+      bookPlayback.audio.currentTime = 0;
+      bookPlayback.audio = null;
+    }
+    clearPlaybackState();
+    renderBookChapterList();
+  }
+
+  function isChunkPlaying(chunk) {
+    return bookPlayback.activeType === 'chunk' && bookPlayback.activeId === chunk.id;
+  }
+
+  function isChapterPlaying(chapterIndex) {
+    return bookPlayback.activeType === 'chapter' && bookPlayback.chapterIndex === chapterIndex;
+  }
+
+  function playBookUrl(url, meta) {
+    return new Promise((resolve, reject) => {
+      if (!url) {
+        reject(new Error('Audio file is not available yet.'));
+        return;
+      }
+      if (bookPlayback.audio) {
+        bookPlayback.audio.pause();
+        bookPlayback.audio.currentTime = 0;
+      }
+      const audio = new Audio(url);
+      bookPlayback.audio = audio;
+      bookPlayback.activeType = meta.type;
+      bookPlayback.activeId = meta.id;
+      bookPlayback.chapterIndex = meta.chapterIndex;
+      renderBookChapterList();
+      audio.onended = function onEnded() {
+        if (bookPlayback.audio === audio) {
+          bookPlayback.audio = null;
+          clearPlaybackState();
+          renderBookChapterList();
+        }
+        resolve();
+      };
+      audio.onerror = function onError() {
+        if (bookPlayback.audio === audio) {
+          bookPlayback.audio = null;
+          clearPlaybackState();
+          renderBookChapterList();
+        }
+        reject(new Error('Playback failed for ' + meta.label + '.'));
+      };
+      audio.play().catch((error) => {
+        if (bookPlayback.audio === audio) {
+          bookPlayback.audio = null;
+          clearPlaybackState();
+          renderBookChapterList();
+        }
+        reject(error);
+      });
+    });
+  }
+
+  function getGenerationContext() {
+    const apiKey = document.getElementById('apiKey').value.trim();
+    if (!apiKey) throw new Error('DashScope API key is missing.');
+    if (!bookState.chapters.length) throw new Error('Analyse the manuscript first.');
+    const modelId = document.getElementById('bookModelSelect').value;
+    syncRoleVoiceAssignments();
+    ensureRoleAssignmentsValid(modelId);
+    return { apiKey, modelId };
+  }
+
+  function markChunkGenerated(chunk, result, forceRegenerated) {
+    chunk.status = 'done';
+    chunk.filename = result.filename;
+    chunk.audioVersion = (chunk.audioVersion || 0) + 1;
+    chunk.audioUrl = cacheBustUrl(result.url, (forceRegenerated ? 'regen_' : 'gen_') + chunk.audioVersion + '_' + Date.now());
+  }
+
+  async function generateBookChunk(chunk, modelId, apiKey, force) {
+    const payload = {
+      text: chunk.text,
+      voiceId: chunk.voiceId,
+      apiKey,
+      modelId,
+      projectId: bookState.projectId,
+      chapterIndex: chunk.chapterIndex,
+      chunkIndex: chunk.chunkIndex,
+      language: bookState.language,
+      instructions: '',
+      force: !!force
+    };
+    return postJson(BOOK_API.generateChunk, payload);
+  }
+
+  async function mergeGeneratedChapter(chapterIndex) {
+    const chapter = bookState.chapters[chapterIndex];
+    if (!chapter) return null;
+    const filenames = chapter.chunks.map((chunk) => chunk.filename).filter(Boolean);
+    if (filenames.length !== chapter.chunks.length) {
+      chapter.audioUrls.wav = '';
+      chapter.audioUrls.mp3 = '';
+      return null;
+    }
+    const merged = await postJson(BOOK_API.mergeChapter, {
+      projectId: bookState.projectId,
+      chapterIndex,
+      filenames,
+      isTitle: chapter.kind === 'titles',
+      silence: sanitizeSilence(document.getElementById('bookChunkSilence').value, 5),
+      format: 'wav'
+    });
+    chapter.audioUrls.wav = cacheBustUrl(merged.url, 'chapter_' + chapterIndex + '_' + Date.now());
+    chapter.audioUrls.mp3 = '';
+    return merged;
+  }
+
+  async function generateChapterChunks(chapterIndex, context, options) {
+    const chapter = bookState.chapters[chapterIndex];
+    if (!chapter) throw new Error('Chapter not found.');
+    const onlyChunkIndex = options && Number.isInteger(options.onlyChunkIndex) ? options.onlyChunkIndex : null;
+    const force = !!(options && options.force);
+    const progress = options && options.progress ? options.progress : null;
+    const indices = onlyChunkIndex === null ? chapter.chunks.map((_, index) => index) : [onlyChunkIndex];
+
+    for (let i = 0; i < indices.length; i += 1) {
+      if (bookState.cancelRequested) break;
+      const chunkIndex = indices[i];
+      const chunk = chapter.chunks[chunkIndex];
+      const currentDone = progress ? progress.done : i;
+      const total = progress ? progress.total : indices.length;
+      updateBookProgress(currentDone, total, 'Generating ' + chapter.title + ' · chunk ' + (chunkIndex + 1) + ' of ' + chapter.chunks.length + '...');
+      chunk.status = 'processing';
+      renderBookChapterList();
+      try {
+        const result = await generateBookChunk(chunk, context.modelId, context.apiKey, force && (onlyChunkIndex === null || onlyChunkIndex === chunkIndex));
+        markChunkGenerated(chunk, result, force);
+        if (progress) progress.done += 1;
+        renderBookChapterList();
+      } catch (error) {
+        chunk.status = 'error';
+        renderBookChapterList();
+        throw new Error('Chunk ' + (chunkIndex + 1) + ' failed in ' + chapter.title + ': ' + error.message);
+      }
+    }
+
+    if (bookState.cancelRequested) return false;
+    if (onlyChunkIndex === null || chapter.chunks.every((chunk) => chunk.status === 'done' && chunk.filename)) {
+      await mergeGeneratedChapter(chapterIndex);
+    }
+    renderBookChapterList();
+    return true;
+  }
+
   window.bookAnalyse = async function bookAnalyse() {
     const raw = document.getElementById('bookText').value.trim();
     const statusEl = document.getElementById('bookAnalyseStatus');
@@ -782,6 +1511,7 @@
     }
 
     const settings = collectBookSettings();
+    stopBookPlayback();
     bookState.projectId = 'book_' + slugify(raw.split('\n')[0].slice(0, 48)) + '_' + Date.now().toString(36);
     bookState.manuscript = normalizeNewlines(raw);
     bookState.settings = settings;
@@ -794,14 +1524,35 @@
     const parsed = buildChapters(raw, settings);
     const meta = detectMetadata(raw, parsed.preamble);
     bookState.title = meta.title;
+    bookState.series = meta.series || '';
+    bookState.seriesVolume = meta.seriesVolume || '';
     bookState.author = meta.author;
     bookState.language = meta.language;
     bookState.chapters = parsed.chapters;
     bookState.anomalies = parsed.anomalies;
+
+    if (settings.mode === 'dual_pov') {
+      const dualRoleNames = collectDualPovRoleNames(parsed.chapters);
+      if (dualRoleNames.length === 2) {
+        applyDualPovRoleNames(parsed.chapters, dualRoleNames);
+        bookState.characters = buildDualPovCharacterList(parsed.chapters, dualRoleNames);
+      } else {
+        bookState.characters = [];
+        bookState.anomalies.push('Dual POV mode could not confidently resolve exactly two character names from chapter headings or separator cues.');
+      }
+    } else {
+      bookState.characters = extractDetectedCharacters(parsed.chapters);
+    }
+
+    annotateCharacterMentions(bookState.chapters, bookState.characters);
     bookState.roles = buildRoleInventory(parsed.chapters);
+    bookState.chapters.forEach((chapter, index) => {
+      chapter.collapsed = index !== 0;
+    });
     syncRoleVoiceAssignments();
 
     renderBookAssignments();
+    renderBookCharacters();
     renderBookSummary();
     renderBookChapterList();
     updateBookEstimate();
@@ -811,139 +1562,213 @@
     dlPanel.classList.remove('show');
     document.getElementById('bookGenerateBtn').disabled = bookState.chapters.length === 0;
 
-    statusEl.textContent = 'Detected ' + bookState.chapters.length + ' chapters and ' + bookState.roles.length + ' roles.';
-    addLog('Analysis complete: ' + bookState.chapters.length + ' chapters, ' + bookState.roles.length + ' roles.', 'success');
+    statusEl.textContent = 'Detected ' + getNarrativeChapterCount(bookState.chapters) + ' chapters, ' + bookState.roles.length + ' speaking roles, and ' + bookState.characters.length + ' character names.';
+    addLog('Analysis complete: ' + getNarrativeChapterCount(bookState.chapters) + ' chapters, ' + bookState.roles.length + ' roles, ' + bookState.characters.length + ' detected names.', 'success');
     await saveBookProject('analysis');
   };
 
-  async function generateBookChunk(chunk, modelId, apiKey) {
-    const payload = {
-      text: chunk.text,
-      voiceId: chunk.voiceId,
-      apiKey,
-      modelId,
-      projectId: bookState.projectId,
-      chapterIndex: chunk.chapterIndex,
-      chunkIndex: chunk.chunkIndex,
-      language: bookState.language,
-      instructions: ''
-    };
-    return postJson(BOOK_API.generateChunk, payload);
-  }
-
-  window.bookGenerate = async function bookGenerate() {
-    const apiKey = document.getElementById('apiKey').value.trim();
-    if (!apiKey) {
-      addLog('Book generation aborted: DashScope API key is missing.', 'error');
+  window.bookPlayChunk = async function bookPlayChunk(chapterIndex, chunkIndex, event) {
+    if (event) event.stopPropagation();
+    const chapter = bookState.chapters[chapterIndex];
+    const chunk = chapter && chapter.chunks[chunkIndex];
+    if (!chunk) return;
+    if (!chunk.audioUrl) {
+      addLog('Generate this chunk before playback.', 'warn');
       return;
     }
-    if (!bookState.chapters.length) {
-      addLog('Book generation aborted: analyse the manuscript first.', 'warn');
+    if (isChunkPlaying(chunk)) {
+      stopBookPlayback();
       return;
     }
-
-    const modelId = document.getElementById('bookModelSelect').value;
-    syncRoleVoiceAssignments();
-
     try {
-      ensureRoleAssignmentsValid(modelId);
+      await playBookUrl(chunk.audioUrl, {
+        type: 'chunk',
+        id: chunk.id,
+        chapterIndex,
+        label: chapter.title + ' chunk ' + (chunkIndex + 1)
+      });
     } catch (error) {
       addLog(error.message, 'error');
+    }
+  };
+
+  window.bookPlayChapter = async function bookPlayChapter(chapterIndex, event) {
+    if (event) event.stopPropagation();
+    const chapter = bookState.chapters[chapterIndex];
+    if (!chapter) return;
+    if (isChapterPlaying(chapterIndex)) {
+      stopBookPlayback();
+      return;
+    }
+    if (!chapter.audioUrls.wav) {
+      addLog('Generate or rebuild this chapter before playing it.', 'warn');
+      return;
+    }
+    try {
+      await playBookUrl(chapter.audioUrls.wav, {
+        type: 'chapter',
+        id: 'chapter_' + chapterIndex,
+        chapterIndex,
+        label: chapter.title
+      });
+    } catch (error) {
+      addLog(error.message, 'error');
+    }
+  };
+
+  window.bookGenerateChapter = async function bookGenerateChapter(chapterIndex, event) {
+    if (event) event.stopPropagation();
+    if (bookState.generating) {
+      addLog('Another generation task is already running.', 'warn');
+      return;
+    }
+    let context;
+    try {
+      context = getGenerationContext();
+    } catch (error) {
+      addLog('Chapter generation aborted: ' + error.message, 'error');
+      return;
+    }
+
+    const chapter = bookState.chapters[chapterIndex];
+    if (!chapter) return;
+
+    bookState.generating = true;
+    bookState.cancelRequested = false;
+    setBookOperationUi(true);
+    invalidateBookOutputs();
+    chapter.audioUrls.wav = '';
+    chapter.audioUrls.mp3 = '';
+
+    const progress = { done: 0, total: chapter.chunks.length };
+    addLog('Generating chapter audio for "' + chapter.title + '".', 'info');
+    updateBookProgress(0, progress.total, 'Preparing ' + chapter.title + '...');
+
+    try {
+      const completed = await generateChapterChunks(chapterIndex, context, { progress });
+      if (bookState.cancelRequested || !completed) {
+        addLog('Chapter generation cancelled for "' + chapter.title + '".', 'warn');
+        updateBookProgress(progress.done, progress.total, 'Cancelled');
+      } else {
+        addLog('Chapter ready: ' + chapter.title + '.', 'success');
+      }
+      await saveBookProject('chapter-' + (chapterIndex + 1));
+    } catch (error) {
+      addLog(error.message, 'error');
+      await saveBookProject('chapter-error-' + (chapterIndex + 1));
+    } finally {
+      bookState.generating = false;
+      setBookOperationUi(false);
+      renderBookChapterList();
+    }
+  };
+
+  window.bookRegenerateChunk = async function bookRegenerateChunk(chapterIndex, chunkIndex, event) {
+    if (event) event.stopPropagation();
+    if (bookState.generating) {
+      addLog('Another generation task is already running.', 'warn');
+      return;
+    }
+    let context;
+    try {
+      context = getGenerationContext();
+    } catch (error) {
+      addLog('Chunk regeneration aborted: ' + error.message, 'error');
+      return;
+    }
+
+    const chapter = bookState.chapters[chapterIndex];
+    const chunk = chapter && chapter.chunks[chunkIndex];
+    if (!chapter || !chunk) return;
+
+    if (isChunkPlaying(chunk) || isChapterPlaying(chapterIndex)) stopBookPlayback();
+
+    bookState.generating = true;
+    bookState.cancelRequested = false;
+    setBookOperationUi(true);
+    invalidateBookOutputs();
+    chapter.audioUrls.wav = '';
+    chapter.audioUrls.mp3 = '';
+
+    const progress = { done: 0, total: 1 };
+    addLog('Regenerating chunk ' + (chunkIndex + 1) + ' in "' + chapter.title + '".', 'info');
+    updateBookProgress(0, 1, 'Regenerating ' + chapter.title + ' · chunk ' + (chunkIndex + 1) + '...');
+
+    try {
+      await generateChapterChunks(chapterIndex, context, {
+        progress,
+        onlyChunkIndex: chunkIndex,
+        force: true
+      });
+      if (chapter.audioUrls.wav) addLog('Chunk replaced and chapter audio rebuilt for ' + chapter.title + '.', 'success');
+      else addLog('Chunk replaced. Chapter audio will rebuild once all chunks are available.', 'success');
+      await saveBookProject('chunk-regen-' + (chapterIndex + 1) + '-' + (chunkIndex + 1));
+    } catch (error) {
+      addLog(error.message, 'error');
+      await saveBookProject('chunk-regen-error-' + (chapterIndex + 1) + '-' + (chunkIndex + 1));
+    } finally {
+      bookState.generating = false;
+      setBookOperationUi(false);
+      renderBookChapterList();
+    }
+  };
+
+  window.bookGenerate = async function bookGenerate() {
+    if (bookState.generating) {
+      addLog('Another generation task is already running.', 'warn');
+      return;
+    }
+    let context;
+    try {
+      context = getGenerationContext();
+    } catch (error) {
+      addLog('Book generation aborted: ' + error.message, 'error');
       return;
     }
 
     bookState.generating = true;
     bookState.cancelRequested = false;
-    document.getElementById('bookGenPanel').classList.add('show');
-    document.getElementById('bookDlPanel').classList.remove('show');
-    document.getElementById('bookCancelBtn').classList.add('show');
-    document.getElementById('bookGenerateBtn').disabled = true;
+    setBookOperationUi(true);
+    invalidateBookOutputs();
 
     const totalChunks = bookState.chapters.reduce((sum, chapter) => sum + chapter.chunks.length, 0);
-    let completedChunks = 0;
+    const progress = { done: 0, total: totalChunks };
 
     addLog('Starting audiobook generation for ' + totalChunks + ' chunks.', 'info');
     updateBookProgress(0, totalChunks, 'Preparing generation...');
 
-    for (let chapterIndex = 0; chapterIndex < bookState.chapters.length; chapterIndex += 1) {
-      const chapter = bookState.chapters[chapterIndex];
-      const filenames = [];
-      for (let i = 0; i < chapter.chunks.length; i += 1) {
-        if (bookState.cancelRequested) break;
-        const chunk = chapter.chunks[i];
-        updateBookProgress(completedChunks, totalChunks, 'Generating ' + chapter.title + ' · chunk ' + (i + 1) + ' of ' + chapter.chunks.length + '...');
-        chunk.status = 'processing';
-        renderBookChapterList();
-        try {
-          const result = await generateBookChunk(chunk, modelId, apiKey);
-          chunk.status = 'done';
-          chunk.filename = result.filename;
-          chunk.audioUrl = result.url;
-          filenames.push(result.filename);
-          completedChunks += 1;
-          renderBookChapterList();
-        } catch (error) {
-          chunk.status = 'error';
-          renderBookChapterList();
-          addLog('Chunk generation failed in ' + chapter.title + ': ' + error.message, 'error');
-          document.getElementById('bookGenerateBtn').disabled = false;
-          document.getElementById('bookCancelBtn').classList.remove('show');
-          bookState.generating = false;
-          await saveBookProject('generation-error');
-          return;
-        }
-      }
-
-      if (bookState.cancelRequested) break;
-
-      try {
-        const merged = await postJson(BOOK_API.mergeChapter, {
-          projectId: bookState.projectId,
-          chapterIndex,
-          filenames,
-          isTitle: chapter.kind === 'titles',
-          silence: sanitizeSilence(document.getElementById('bookChunkSilence').value, 5),
-          format: 'wav'
-        });
-        chapter.audioUrls.wav = merged.url;
+    try {
+      for (let chapterIndex = 0; chapterIndex < bookState.chapters.length; chapterIndex += 1) {
+        const chapter = bookState.chapters[chapterIndex];
+        const completed = await generateChapterChunks(chapterIndex, context, { progress });
+        if (!completed || bookState.cancelRequested) break;
         addLog('Merged chapter audio for ' + chapter.title + '.', 'debug');
-      } catch (error) {
-        addLog('Chapter merge failed for ' + chapter.title + ': ' + error.message, 'error');
-        document.getElementById('bookGenerateBtn').disabled = false;
-        document.getElementById('bookCancelBtn').classList.remove('show');
-        bookState.generating = false;
-        await saveBookProject('merge-error');
-        return;
+        await saveBookProject('chapter-' + (chapterIndex + 1));
       }
 
-      await saveBookProject('chapter-' + (chapterIndex + 1));
-      renderBookChapterList();
-    }
-
-    if (bookState.cancelRequested) {
-      addLog('Audiobook generation cancelled by user.', 'warn');
-      updateBookProgress(completedChunks, totalChunks, 'Cancelled');
-    } else {
-      updateBookProgress(totalChunks, totalChunks, 'Generation complete. Building full-book WAV...');
-      try {
+      if (bookState.cancelRequested) {
+        addLog('Audiobook generation cancelled by user.', 'warn');
+        updateBookProgress(progress.done, progress.total, 'Cancelled');
+      } else {
+        updateBookProgress(totalChunks, totalChunks, 'Generation complete. Building full-book WAV...');
         const result = await postJson(BOOK_API.mergeBook, {
           projectId: bookState.projectId,
           silence: sanitizeSilence(document.getElementById('bookChapterSilence').value, 10),
           format: 'wav'
         });
         bookState.outputs.wav = result.url;
+        document.getElementById('bookDlPanel').classList.add('show');
         addLog('Full-book WAV ready.', 'success');
-      } catch (error) {
-        addLog('Full-book merge failed: ' + error.message, 'error');
+        await saveBookProject('book-complete');
       }
-      document.getElementById('bookDlPanel').classList.add('show');
-      await saveBookProject('book-complete');
+    } catch (error) {
+      addLog(error.message, 'error');
+      await saveBookProject('generation-error');
+    } finally {
+      bookState.generating = false;
+      setBookOperationUi(false);
+      renderBookChapterList();
     }
-
-    document.getElementById('bookGenerateBtn').disabled = false;
-    document.getElementById('bookCancelBtn').classList.remove('show');
-    bookState.generating = false;
-    renderBookChapterList();
   };
 
   window.bookCancel = function bookCancel() {

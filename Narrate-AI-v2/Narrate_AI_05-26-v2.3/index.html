@@ -112,8 +112,15 @@
       transition: border-color 0.2s, background 0.2s, transform 0.1s;
       user-select: none;
     }
-    .voice-card:hover { border-color: var(--accent); background: #2a2d45; transform: translateY(-1px); }
-    .voice-card.selected { border-color: var(--accent); background: rgba(108,99,255,0.15); }
+    .voice-card.female { border-color: rgba(236,72,153,0.42); }
+    .voice-card.male { border-color: rgba(59,130,246,0.42); }
+    .voice-card:hover { background: #2a2d45; transform: translateY(-1px); }
+    .voice-card.female:hover { border-color: #ec4899; }
+    .voice-card.male:hover { border-color: #3b82f6; }
+    .voice-card.selected { background: rgba(108,99,255,0.15); }
+    .voice-card.selected.female { border-color: #ec4899; box-shadow: 0 0 0 3px rgba(236,72,153,0.16); }
+    .voice-card.selected.male { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.16); }
+    .voice-card.selected:not(.female):not(.male) { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(109,96,255,0.14); }
     .voice-card .v-name { font-weight: 600; font-size: 0.88rem; color: var(--text); }
     .voice-card .v-gender { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
     .voice-card .v-icon { font-size: 1.3rem; margin-bottom: 3px; }
@@ -861,6 +868,12 @@
     .book-analysis-summary .sum-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
     .book-analysis-summary .sum-val { font-size: 1rem; font-weight: 700; color: var(--text); }
     .book-anomaly { background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.3); border-radius: 8px; padding: 10px 14px; font-size: 0.8rem; color: var(--warn); margin-bottom: 12px; }
+    .book-character-panel { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; }
+    .book-character-note { font-size: 0.78rem; color: var(--muted); line-height: 1.5; margin-bottom: 10px; }
+    .book-character-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+    .book-character-chip { display: inline-flex; align-items: center; gap: 7px; border-radius: 999px; border: 1px solid rgba(108,99,255,0.28); background: rgba(108,99,255,0.08); color: var(--text); padding: 6px 10px; font-size: 0.78rem; }
+    .book-character-chip .count { color: var(--accent2); font-weight: 700; }
+    .book-character-empty { font-size: 0.8rem; color: var(--muted); font-style: italic; }
     /* Voice assignment */
     .book-assign-title { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
     .book-assign-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
@@ -885,6 +898,8 @@
       transition: opacity 0.2s; margin-top: 6px;
     }
     .book-generate-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .book-tree-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 14px 0 10px; }
+    .book-tree-toolbar .hint { font-size: 0.78rem; color: var(--muted); }
     /* Generation progress */
     .book-gen-panel { display: none; margin-top: 16px; }
     .book-gen-panel.show { display: block; }
@@ -894,16 +909,28 @@
     .book-gen-progress-fill { height: 100%; background: linear-gradient(90deg, #6c63ff, #a78bfa); border-radius: 4px; transition: width 0.4s; }
     /* Chapter cards */
     .book-chapter-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
+    .book-chapter-card.playing { border-color: rgba(108,99,255,0.55); box-shadow: 0 0 0 1px rgba(108,99,255,0.18) inset; }
     .book-chapter-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; cursor: pointer; user-select: none; }
     .book-chapter-header:hover { background: rgba(255,255,255,0.03); }
+    .book-chapter-main { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
+    .book-chapter-main-text { min-width: 0; }
     .book-chapter-title { font-size: 0.88rem; font-weight: 700; color: var(--text); }
-    .book-chapter-meta { font-size: 0.75rem; color: var(--muted); display: flex; gap: 10px; align-items: center; }
+    .book-chapter-meta { font-size: 0.75rem; color: var(--muted); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
     .book-chapter-toggle { font-size: 0.8rem; color: var(--muted); margin-right: 8px; }
     .book-chapter-status { font-size: 0.75rem; padding: 2px 8px; border-radius: 20px; }
     .book-chapter-status.pending { background: rgba(139,146,184,0.15); color: var(--muted); }
     .book-chapter-status.generating { background: rgba(108,99,255,0.2); color: var(--accent2); }
     .book-chapter-status.done { background: rgba(52,211,153,0.15); color: var(--success); }
     .book-chapter-status.error { background: rgba(248,113,113,0.15); color: var(--error); }
+    .book-chapter-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .book-chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .book-mini-chip { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; background: rgba(255,255,255,0.05); color: var(--muted); padding: 4px 8px; font-size: 0.72rem; }
+    .book-mini-chip strong { color: var(--text); font-weight: 700; }
+    .book-empty-state { padding: 20px; text-align: center; color: var(--muted); font-style: italic; border: 1px dashed rgba(139,146,184,0.25); border-radius: 10px; }
+    .book-inline-btn { padding: 7px 11px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--text); font-size: 0.76rem; cursor: pointer; }
+    .book-inline-btn:hover { border-color: var(--accent); color: var(--accent2); }
+    .book-inline-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .book-inline-btn.playing { border-color: rgba(108,99,255,0.55); color: var(--accent2); }
     /* Segment rows */
     .book-segments { border-top: 1px solid var(--border); }
     .book-seg-row { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-bottom: 1px solid rgba(46,51,80,0.5); font-size: 0.8rem; }
@@ -911,6 +938,7 @@
     .book-seg-row.generating { background: rgba(108,99,255,0.06); }
     .book-seg-row.done { background: rgba(52,211,153,0.04); }
     .book-seg-row.error { background: rgba(248,113,113,0.06); }
+    .book-seg-row.active { box-shadow: inset 3px 0 0 0 rgba(108,99,255,0.65); }
     .book-seg-num { color: var(--muted); min-width: 24px; font-size: 0.72rem; }
     .book-seg-voice { font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
     .book-seg-voice.v0 { background: rgba(108,99,255,0.2); color: var(--accent2); }
@@ -918,14 +946,19 @@
     .book-seg-voice.v2 { background: rgba(251,191,36,0.2); color: var(--warn); }
     .book-seg-voice.v3 { background: rgba(248,113,113,0.2); color: var(--error); }
     .book-seg-voice.v4 { background: rgba(167,139,250,0.2); color: #c4b5fd; }
-    .book-seg-text { flex: 1; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .book-seg-body { flex: 1; min-width: 0; }
+    .book-seg-text { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .book-seg-meta { font-size: 0.72rem; color: var(--muted); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .book-seg-status { font-size: 0.7rem; min-width: 60px; text-align: right; }
     .book-seg-status.pending { color: var(--muted); }
     .book-seg-status.generating { color: var(--accent2); }
     .book-seg-status.done { color: var(--success); }
     .book-seg-status.error { color: var(--error); }
-    .book-seg-play { width: 22px; height: 22px; border-radius: 50%; border: none; background: var(--accent); color: #fff; font-size: 0.6rem; cursor: pointer; display: none; }
-    .book-seg-play.show { display: inline-flex; align-items: center; justify-content: center; }
+    .book-seg-actions { display: flex; align-items: center; gap: 6px; }
+    .book-seg-action-btn { padding: 6px 9px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--text); font-size: 0.74rem; cursor: pointer; }
+    .book-seg-action-btn:hover { border-color: var(--accent); color: var(--accent2); }
+    .book-seg-action-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .book-seg-action-btn.playing { border-color: rgba(108,99,255,0.55); color: var(--accent2); }
     /* Download panel */
     .book-dl-panel { display: none; background: rgba(52,211,153,0.06); border: 1px solid rgba(52,211,153,0.25); border-radius: 10px; padding: 14px 16px; margin-top: 14px; }
     .book-dl-panel.show { display: block; }
@@ -1422,8 +1455,11 @@
       <!-- Anomalies -->
       <div class="book-anomaly" id="bookAnomalyBox" style="display:none"></div>
 
+      <div class="book-assign-title">Detected character names in the manuscript</div>
+      <div class="book-character-panel" id="bookCharacterPanel"></div>
+
       <!-- Step 2: Voice assignment -->
-      <div class="book-assign-title">Step 2 — Assign a voice to each detected character</div>
+      <div class="book-assign-title">Step 2 — Assign a voice to each detected speaking role</div>
       <div id="bookAssignRows"></div>
 
       <!-- Cost estimate -->
@@ -1438,6 +1474,14 @@
       <div id="bookLargeWarn" style="display:none;background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.3);border-radius:8px;padding:10px 14px;font-size:0.8rem;color:var(--warn);margin-bottom:10px"></div>
 
       <button class="book-generate-btn" id="bookGenerateBtn" disabled onclick="bookGenerate()">⚡ Generate Book Audio</button>
+
+      <div class="book-assign-title" style="margin-top:16px">Step 3 — Review chapters and chunks</div>
+      <div class="book-tree-toolbar">
+        <button class="log-clear-btn" type="button" onclick="bookExpandAll()">Expand all</button>
+        <button class="log-clear-btn" type="button" onclick="bookCollapseAll()">Collapse all</button>
+        <span class="hint" id="bookTreeStatus">Analyse a manuscript to build the chapter browser.</span>
+      </div>
+      <div id="bookChapterList"></div>
     </div>
 
     <!-- Generation panel -->
@@ -1452,7 +1496,6 @@
       <div style="display:flex;gap:10px;margin-bottom:14px">
         <button class="book-cancel-btn" id="bookCancelBtn" onclick="bookCancel()">✕ Cancel</button>
       </div>
-      <div id="bookChapterList"></div>
       <!-- Download panel -->
       <div class="book-dl-panel" id="bookDlPanel">
         <div class="book-dl-title">✓ Generation complete! Download your audio:</div>
@@ -1560,7 +1603,12 @@
     grid.innerHTML = "";
     VOICES.forEach(v => {
       const card = document.createElement("div");
-      card.className = "voice-card" + (v.id === selectedVoice ? " selected" : "");
+      const genderClass = String(v.gender || "").toLowerCase() === "female"
+        ? " female"
+        : String(v.gender || "").toLowerCase() === "male"
+          ? " male"
+          : "";
+      card.className = "voice-card" + genderClass + (v.id === selectedVoice ? " selected" : "");
       card.dataset.id = v.id;
       card.title = v.desc;  // tooltip on hover
       card.innerHTML = `<div class="v-icon">${v.icon}</div>
