@@ -128,6 +128,7 @@ async function mergeAudioFiles(inputPaths, outputPath, silenceDuration = 0) {
 // ElevenLabs API Helper
 async function generateAudio(text, voiceId, apiKey, modelId) {
     return elevenLabsQueue.add(() => new Promise((resolve, reject) => {
+        let settled = false;
         const req = https.request('https://api.elevenlabs.io/v1/text-to-speech/' + voiceId, {
             method: 'POST',
             headers: {
@@ -139,6 +140,7 @@ async function generateAudio(text, voiceId, apiKey, modelId) {
             const chunks = [];
             res.on('data', chunk => chunks.push(chunk));
             res.on('end', () => {
+                settled = true;
                 if (res.statusCode !== 200) {
                     reject(new Error(`ElevenLabs API Error: ${res.statusCode}`));
                 } else {
@@ -148,6 +150,11 @@ async function generateAudio(text, voiceId, apiKey, modelId) {
         });
 
         req.on('error', reject);
+        req.setTimeout(120000, () => {
+            if (settled) return;
+            settled = true;
+            req.destroy(new Error('ElevenLabs request timed out after 120s'));
+        });
         req.write(JSON.stringify({
             text,
             model_id: modelId,
@@ -260,7 +267,7 @@ const server = http.createServer(async (req, res) => {
                     const id = data.id || f.replace('.json', '');
                     return { 
                         id: id, 
-                        title: data.title || 'Untitled', 
+                        title: data.displayTitle || data.title || 'Untitled', 
                         author: data.author || 'Unknown',
                         updatedAt: data.updatedAt || fs.statSync(path.join(PROJECTS_DIR, f)).mtime.toISOString(),
                         filename: f,
@@ -458,6 +465,8 @@ const server = http.createServer(async (req, res) => {
                     const data = JSON.parse(content);
                     
                     data.title = title;
+                    data.displayTitle = title;
+                    data.baseTitle = title;
                     data.updatedAt = new Date().toISOString();
 
                     fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
@@ -519,6 +528,7 @@ const server = http.createServer(async (req, res) => {
                     id, 
                     updatedAt: new Date().toISOString() 
                 };
+                if (!projectData.displayTitle) projectData.displayTitle = projectData.title || 'Untitled';
                 
                 // Save to individual file
                 const filePath = path.join(PROJECTS_DIR, `${id}.json`);

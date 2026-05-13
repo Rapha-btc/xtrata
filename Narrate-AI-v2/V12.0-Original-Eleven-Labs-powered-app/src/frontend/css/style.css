@@ -295,15 +295,22 @@ button.sm-btn.playing {
     min-width: 60px; /* Consistent width */
     text-align: center;
 }
-.voice-tag.v1 {
+.voice-tag.v1,
+.voice-tag.voice-male {
     color: #61dafb; /* Cyan */
     border-color: rgba(97, 218, 251, 0.3);
     background: rgba(97, 218, 251, 0.05);
 }
-.voice-tag.v2 {
+.voice-tag.v2,
+.voice-tag.voice-female {
     color: #fd79a8; /* Pink */
     border-color: rgba(253, 121, 168, 0.3);
     background: rgba(253, 121, 168, 0.05);
+}
+.voice-tag.voice-other {
+    color: var(--text-dim);
+    border-color: var(--border);
+    background: rgba(255,255,255,0.05);
 }
 .voice-tag.playing {
     background: var(--accent);
@@ -322,6 +329,14 @@ button.sm-btn.playing {
     text-align: left; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
 }
 .voice-select-btn:hover { border-color: var(--accent); }
+.voice-select-btn.voice-male {
+    border-color: rgba(97, 218, 251, 0.55);
+    box-shadow: inset 0 0 0 1px rgba(97, 218, 251, 0.12);
+}
+.voice-select-btn.voice-female {
+    border-color: rgba(253, 121, 168, 0.55);
+    box-shadow: inset 0 0 0 1px rgba(253, 121, 168, 0.12);
+}
 .voice-dropdown {
     display: none; 
     position: fixed;
@@ -358,9 +373,36 @@ button.sm-btn.playing {
 .voice-option {
     padding: 8px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85rem;
     color: var(--text-dim); transition: 0.2s; display: flex; align-items: center; gap: 8px;
+    border: 1px solid transparent;
 }
 .voice-option:hover { background: rgba(255,255,255,0.05); color: var(--text-main); }
-.voice-option.selected { background: var(--accent); color: white; }
+.voice-option.voice-male {
+    border-color: rgba(97, 218, 251, 0.45);
+    background: rgba(97, 218, 251, 0.06);
+}
+.voice-option.voice-female {
+    border-color: rgba(253, 121, 168, 0.45);
+    background: rgba(253, 121, 168, 0.06);
+}
+.voice-option.voice-other {
+    border-color: rgba(255,255,255,0.12);
+}
+.voice-option.selected {
+    color: white;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15);
+}
+.voice-option.voice-male.selected {
+    background: rgba(97, 218, 251, 0.22);
+    border-color: #61dafb;
+}
+.voice-option.voice-female.selected {
+    background: rgba(253, 121, 168, 0.22);
+    border-color: #fd79a8;
+}
+.voice-option.voice-other.selected {
+    background: var(--accent);
+    border-color: var(--accent);
+}
 .voice-flag { font-size: 0.7rem; padding: 1px 4px; background: #333; border-radius: 3px; opacity: 0.7; }
 
 /* Modal Styles */

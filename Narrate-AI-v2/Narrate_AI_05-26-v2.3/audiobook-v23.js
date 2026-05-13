@@ -120,6 +120,13 @@
     renderLog();
   };
 
+  window.addLog = addLog;
+  if (Array.isArray(window.__narratePendingLogs) && window.__narratePendingLogs.length) {
+    window.__narratePendingLogs.splice(0).forEach((entry) => {
+      addLog(entry.message, entry.level);
+    });
+  }
+
   function escapeHtml(value) {
     return String(value || '')
       .replace(/&/g, '&amp;')
@@ -856,7 +863,10 @@
         type: 'clone'
       }));
     }
-    return VOICES.map((voice) => ({
+    const builtinVoices = typeof getCompatibleSystemVoices === 'function'
+      ? getCompatibleSystemVoices(modelId)
+      : VOICES;
+    return builtinVoices.map((voice) => ({
       id: voice.id,
       label: voice.id + ' — Built-in',
       type: 'builtin'
@@ -1297,12 +1307,21 @@
   }
 
   async function postJson(url, payload) {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
+    const response = await (window.NarrateAPI && typeof window.NarrateAPI.fetch === 'function'
+      ? window.NarrateAPI.fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+      : fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }));
     const data = await response.json().catch(() => ({}));
+    if (window.NarrateAPI && typeof window.NarrateAPI.resolveUrl === 'function' && data && typeof data.url === 'string') {
+      data.url = window.NarrateAPI.resolveUrl(data.url);
+    }
     if (!response.ok) throw new Error(data.error || ('Request failed: ' + response.status));
     return data;
   }
@@ -1322,7 +1341,9 @@
 
   function triggerBrowserDownload(url) {
     const link = document.createElement('a');
-    link.href = url;
+    link.href = window.NarrateAPI && typeof window.NarrateAPI.resolveUrl === 'function'
+      ? window.NarrateAPI.resolveUrl(url)
+      : url;
     link.target = '_blank';
     link.rel = 'noopener';
     document.body.appendChild(link);

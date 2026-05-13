@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Qwen3 TTS Studio v2.3</title>
+  <title>Narrate:AI Studio v2.3</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -34,7 +34,169 @@
       padding: 40px 16px 80px;
     }
 
-    .container { width: 100%; max-width: 760px; }
+    .container { width: 100%; max-width: 1380px; }
+
+    .workspace-nav {
+      position: sticky;
+      top: 12px;
+      z-index: 40;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 0 0 22px;
+      padding: 12px;
+      border: 1px solid rgba(108,99,255,0.18);
+      border-radius: 14px;
+      background: rgba(14,16,26,0.82);
+      backdrop-filter: blur(16px);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.26);
+    }
+    .workspace-nav-btn {
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.03);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 9px 14px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s, background 0.2s, transform 0.1s;
+    }
+    .workspace-nav-btn:hover {
+      color: var(--text);
+      border-color: rgba(108,99,255,0.45);
+      background: rgba(108,99,255,0.12);
+      transform: translateY(-1px);
+    }
+    .section-block { margin-bottom: 22px; scroll-margin-top: 88px; }
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 14px;
+      padding: 0 2px;
+      flex-wrap: wrap;
+    }
+    .section-kicker {
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent2);
+      margin-bottom: 4px;
+      font-weight: 700;
+    }
+    .section-title {
+      font-size: 1.08rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .section-copy {
+      font-size: 0.84rem;
+      color: var(--muted);
+      max-width: 680px;
+      line-height: 1.5;
+    }
+    .workspace-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.92fr);
+      gap: 18px;
+      align-items: start;
+    }
+    .workspace-main, .workspace-side, .collapsible-grid {
+      display: grid;
+      gap: 18px;
+      align-items: start;
+    }
+    .collapsible-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .stack-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 18px;
+    }
+    .section-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .section-card.preview-card,
+    .section-card.clone-card,
+    .section-card.demo-card,
+    .section-card.usage-card,
+    .section-card.book-card,
+    .section-card.log-card {
+      padding: 0;
+      margin-bottom: 0;
+    }
+    .section-card[open] { border-color: rgba(108,99,255,0.28); }
+    .section-card summary {
+      list-style: none;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 18px 22px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0));
+    }
+    .section-card summary::-webkit-details-marker { display: none; }
+    .section-card summary:hover { background: rgba(255,255,255,0.02); }
+    .section-summary-main { min-width: 0; }
+    .section-summary-title {
+      font-size: 0.86rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text);
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .section-summary-sub {
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+    .section-summary-meta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.76rem;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+    .section-summary-badge {
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: rgba(108,99,255,0.15);
+      color: var(--accent2);
+      border: 1px solid rgba(108,99,255,0.22);
+      white-space: nowrap;
+    }
+    .section-summary-caret {
+      font-size: 1rem;
+      color: var(--accent2);
+      transition: transform 0.2s ease;
+    }
+    .section-card[open] .section-summary-caret { transform: rotate(90deg); }
+    .section-body { padding: 0 22px 22px; }
+    @media (max-width: 1080px) {
+      .workspace-grid, .collapsible-grid { grid-template-columns: minmax(0, 1fr); }
+    }
+    @media (max-width: 720px) {
+      body { padding: 24px 12px 64px; }
+      header { margin-bottom: 24px; }
+      .workspace-nav { top: 8px; padding: 10px; gap: 8px; }
+      .workspace-nav-btn { padding: 8px 12px; font-size: 0.78rem; }
+      .card, .section-body { padding-left: 16px; padding-right: 16px; }
+      .section-card summary { padding: 16px; }
+      .section-head { margin-bottom: 12px; }
+      .section-title { font-size: 1rem; }
+      .section-copy { font-size: 0.8rem; }
+    }
 
     /* ── Header ── */
     header { text-align: center; margin-bottom: 36px; }
@@ -529,6 +691,75 @@
     .demo-info-row .di-stat { text-align: right; }
     .demo-info-row .di-stat .dv { font-weight: 700; font-size: 0.95rem; color: var(--text); }
     .demo-info-row .di-stat .dl { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+    .style-demo-note {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin: -2px 0 12px;
+      line-height: 1.45;
+    }
+    .style-demo-note.warn { color: var(--warn); }
+    .style-demo-source-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .style-demo-source-label {
+      font-size: 0.76rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+    }
+    .style-demo-source-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .style-demo-source-btn {
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.1s;
+    }
+    .style-demo-source-btn:hover {
+      border-color: rgba(108,99,255,0.45);
+      color: var(--text);
+    }
+    .style-demo-source-btn.active {
+      border-color: rgba(108,99,255,0.45);
+      background: rgba(108,99,255,0.14);
+      color: #d7d3ff;
+      box-shadow: 0 0 0 1px rgba(108,99,255,0.18) inset;
+    }
+    .style-demo-chip-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .style-demo-chip {
+      border-radius: 999px;
+      border: 1px solid rgba(108,99,255,0.28);
+      background: rgba(108,99,255,0.08);
+      color: var(--text);
+      padding: 7px 11px;
+      font-size: 0.75rem;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+    .style-demo-chip.custom {
+      border-color: rgba(245,158,11,0.3);
+      background: rgba(245,158,11,0.08);
+    }
     .demo-warn {
       background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.3);
       color: var(--warn); border-radius: 10px; padding: 12px 14px;
@@ -1003,41 +1234,30 @@
   <header>
     <div class="logo">
       <div class="logo-icon">🎙️</div>
-      <h1>Qwen3 TTS Studio v2.3</h1>
+      <h1>Narrate:AI Studio v2.3</h1>
     </div>
-    <p class="subtitle">Text-to-Speech powered by Alibaba Qwen3 — pick a voice, type your text, generate audio.</p>
+    <p class="subtitle">Narrate:AI voice studio powered by Alibaba Model Studio — pick a voice, type your text, generate audio.</p>
   </header>
 
-  <!-- API Key -->
-  <div class="card">
-    <div class="card-title">🔑 DashScope API Key</div>
-    <div class="api-key-row">
-      <input type="password" id="apiKey" placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxx" autocomplete="off" />
-      <button class="toggle-btn" id="toggleBtn" onclick="toggleKey()">Show</button>
-    </div>
-    <p class="api-hint">
-      Get a free key at
-      <a href="https://modelstudio.console.alibabacloud.com/?tab=dashboard#/api-key" target="_blank">
-        Alibaba Cloud Model Studio
-      </a>
-      (Singapore region). Your key is never stored — it stays in your browser only.
-    </p>
-  </div>
+  <nav class="workspace-nav" aria-label="Workspace navigation">
+    <button class="workspace-nav-btn" type="button" onclick="jumpToSection('studioSection')">Studio</button>
+    <button class="workspace-nav-btn" type="button" onclick="jumpToSection('voiceToolsSection')">Voice Tools</button>
+    <button class="workspace-nav-btn" type="button" onclick="jumpToSection('bookSection')">Audiobooks</button>
+    <button class="workspace-nav-btn" type="button" onclick="jumpToSection('demoSection')">Demo</button>
+    <button class="workspace-nav-btn" type="button" onclick="jumpToSection('usageSection')">Usage</button>
+    <button class="workspace-nav-btn" type="button" onclick="jumpToSection('logSection')">Log</button>
+  </nav>
 
-  <!-- Auto-load Voice Previews Banner -->
-  <div class="autoload-banner" id="autoloadBanner" style="display:none">
-    <div class="ab-icon">🎵</div>
-    <div class="ab-text">
-      <div class="ab-title">Load Voice Preview Samples</div>
-      <div class="ab-sub">Select your local voice preview folder (e.g. Narrate-AI) to enable instant playback on voice card click.</div>
+  <section class="section-block" id="studioSection">
+    <div class="section-head">
+      <div>
+        <div class="section-kicker">Primary Workspace</div>
+        <div class="section-title">Single-voice generation stays front and center</div>
+      </div>
+      <div class="section-copy">The core studio is grouped into a two-column workspace: compose on the left, select credentials and voices on the right. Advanced utilities live below in collapsible modules.</div>
     </div>
-    <button class="ab-btn" onclick="document.getElementById('loadPreviewFolderInput').click();dismissAutoloadBanner()">📁 Select Folder</button>
-    <button class="ab-btn" onclick="document.getElementById('loadPreviewZipInput').click();dismissAutoloadBanner()" style="background:rgba(108,99,255,0.2);border-color:rgba(108,99,255,0.5);color:rgba(168,139,250,0.95)">📦 Load from ZIP</button>
-    <label class="ab-check">
-      <input type="checkbox" id="autoloadSkipCheck"> Don't show again
-    </label>
-    <button class="ab-skip" onclick="dismissAutoloadBanner()">✕ Skip</button>
-  </div>
+    <div class="workspace-grid">
+      <div class="workspace-main">
 
   <!-- Text Input -->
   <div class="card">
@@ -1051,7 +1271,7 @@
       <!-- Row 1: Gross cost (always shown) -->
       <div class="est-gross-row">
         <div class="est-gross-label">
-          💰 Gross cost &nbsp;<strong id="estModelLabel">qwen3-tts-flash</strong>
+          💰 Gross cost &nbsp;<strong id="estModelLabel">Narrate:AI Flash</strong>
           &nbsp;<span style="font-size:0.72rem;opacity:0.6" id="estRateLabel">@ $0.10/10K chars</span>
         </div>
         <div class="est-gross-values">
@@ -1091,12 +1311,6 @@
     </div>
   </div>
 
-  <!-- Voice Selection -->
-  <div class="card">
-    <div class="card-title">🎤 Choose a Voice</div>
-    <div class="voice-grid" id="voiceGrid"></div>
-  </div>
-
   <!-- Options -->
   <div class="card">
     <div class="card-title">⚙️ Options</div>
@@ -1121,16 +1335,16 @@
       </div>
       <div>
         <label for="modelSelect">Model</label>
-        <select id="modelSelect" onchange="onModelChange()">
-          <option value="qwen3-tts-flash" selected>qwen3-tts-flash — Fast ($0.10/10K chars)</option>
-          <option value="qwen3-tts-instruct-flash">qwen3-tts-instruct-flash — Expressive ($0.115/10K chars)</option>
+        <select id="modelSelect">
+          <option value="qwen3-tts-flash" selected>Narrate:AI Flash — Fast ($0.10/10K chars)</option>
+          <option value="qwen3-tts-instruct-flash">Narrate:AI Director — Expressive ($0.115/10K chars)</option>
         </select>
       </div>
     </div>
 
     <!-- Voice Controls (speed/tone presets + custom instructions) -->
     <div class="controls-panel" id="controlsPanel">
-      <div class="controls-panel-title">🎶 Voice Style Controls <span style="font-size:0.7rem;font-weight:400;color:var(--warn)" id="controlsNote">— Switch to qwen3-tts-instruct-flash to enable</span></div>
+      <div class="controls-panel-title">🎶 Voice Style Controls <span style="font-size:0.7rem;font-weight:400;color:var(--warn)" id="controlsNote">— Switch to Narrate:AI Director to enable</span></div>
       <div class="controls-row">
         <div class="preset-group">
           <label>Speed</label>
@@ -1153,33 +1367,10 @@
         <div class="instructions-wrap">
           <label for="instructionsInput">Custom Instructions <span style="font-weight:400;opacity:0.7">(overrides presets)</span></label>
           <textarea id="instructionsInput" placeholder="e.g. Speak slowly with a warm, deep tone, like a friendly narrator…"></textarea>
-          <div class="instructions-note" id="instructionsNote">Controls only work with <strong>qwen3-tts-instruct-flash</strong>. Instructions are in English or Chinese only.</div>
+          <div class="instructions-note" id="instructionsNote">Controls only work with <strong>Narrate:AI Director</strong>. Instructions are in English or Chinese only.</div>
         </div>
       </div>
     </div>
-  </div>
-
-  <!-- Voice Preview Generator -->
-  <div class="preview-card" id="previewCard">
-    <div class="preview-header">
-      <div class="card-title">🔊 Voice Preview Generator</div>
-    </div>
-    <div class="preview-desc">
-      Generates a short <em>“Hi, my name is [Voice]”</em> clip for every system voice using <strong>qwen3-tts-flash</strong>.
-      Voice cards will play their preview on click once generated. All clips can be downloaded as a ZIP file
-      (one WAV per voice, named by voice ID) — place the folder locally and the app will use those files for instant playback.
-    </div>
-    <div class="preview-btn-row">
-      <button class="preview-zip-btn" id="previewZipBtn" onclick="downloadPreviewZip()">📦 Download ZIP</button>
-    </div>
-    <div class="load-preview-row">
-      <button class="load-preview-btn" onclick="document.getElementById('loadPreviewZipInput').click()">📂 Load Previews from ZIP</button>
-      <button class="load-preview-btn" onclick="document.getElementById('loadPreviewFolderInput').click()">📁 Load Previews from Folder</button>
-      <span class="load-preview-status" id="loadPreviewStatus"></span>
-      <input type="file" id="loadPreviewZipInput" accept=".zip" style="display:none" onchange="loadPreviewsFromZip(this)">
-      <input type="file" id="loadPreviewFolderInput" accept="audio/wav,audio/mpeg,audio/mp4,.wav,.mp3,.m4a" multiple style="display:none" onchange="loadPreviewsFromFiles(this)">
-    </div>
-    <div class="preview-grid" id="previewGrid"></div>
   </div>
 
   <!-- Status -->
@@ -1195,23 +1386,117 @@
   </button>
 
   <!-- Audio Output -->
-  <div class="audio-section" id="audioSection" style="margin-top:22px">
+  <div class="audio-section" id="audioSection">
     <div class="card">
       <div class="card-title">🔊 Generated Audio</div>
       <div class="audio-player-wrap">
         <div class="audio-meta" id="audioMeta"></div>
         <audio id="audioPlayer" controls></audio>
         <br/>
-        <a class="download-btn" id="downloadLink" href="#" download="qwen3_tts_output.wav">
+        <a class="download-btn" id="downloadLink" href="#" download="narrate_ai_output.wav">
           ⬇ Download WAV
         </a>
       </div>
     </div>
   </div>
+      </div>
+
+      <aside class="workspace-side">
+  <!-- API Key -->
+  <div class="card">
+    <div class="card-title">🔑 DashScope API Key</div>
+    <div class="api-key-row">
+      <input type="password" id="apiKey" placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxx" autocomplete="off" />
+      <button class="toggle-btn" id="toggleBtn" onclick="toggleKey()">Show</button>
+    </div>
+    <p class="api-hint">
+      Get a free key at
+      <a href="https://modelstudio.console.alibabacloud.com/?tab=dashboard#/api-key" target="_blank">
+        Alibaba Cloud Model Studio
+      </a>
+      (Singapore region). Your key is never stored — it stays in your browser only.
+    </p>
+  </div>
+
+  <!-- Voice Selection -->
+  <div class="card">
+    <div class="card-title">🎤 Choose a Voice</div>
+    <div class="voice-grid" id="voiceGrid"></div>
+  </div>
+
+      </aside>
+    </div>
+  </section>
+
+  <section class="section-block" id="voiceToolsSection">
+    <div class="section-head">
+      <div>
+        <div class="section-kicker">Voice Library</div>
+        <div class="section-title">Keep previews and cloning close, but collapsed until needed</div>
+      </div>
+      <div class="section-copy">Preview assets, local clone storage, and account cloning tools are grouped together so the main generation surface stays clean.</div>
+    </div>
+    <div class="collapsible-grid">
+
+  <details class="preview-card section-card" id="previewSection">
+    <summary>
+      <div class="section-summary-main">
+        <div class="section-summary-title">🔊 Voice Preview Library</div>
+        <div class="section-summary-sub">Bundled previews load on startup. Expand to download the ZIP or replace them from a local folder.</div>
+      </div>
+      <div class="section-summary-meta">
+        <span class="section-summary-badge">Voice cards play instantly</span>
+        <span class="section-summary-caret">›</span>
+      </div>
+    </summary>
+    <div class="section-body">
+      <div class="preview-desc">
+        Generates a short <em>“Hi, my name is [Voice]”</em> clip for every system voice using <strong>Narrate:AI Flash</strong>.
+        Voice cards will play their preview on click once generated. All clips can be downloaded as a ZIP file
+        (one WAV per voice, named by voice ID) — place the folder locally and the app will use those files for instant playback.
+      </div>
+      <div class="load-preview-row" style="margin-top:0;margin-bottom:12px">
+        <div class="autoload-banner" id="autoloadBanner" style="display:none;margin-right:0;width:100%">
+          <div class="ab-icon">🎵</div>
+          <div class="ab-text">
+            <div class="ab-title">Load Voice Preview Samples</div>
+            <div class="ab-sub">Select your local voice preview folder (e.g. Narrate-AI) to enable instant playback on voice card click.</div>
+          </div>
+          <button class="ab-btn" onclick="document.getElementById('loadPreviewFolderInput').click();dismissAutoloadBanner()">📁 Select Folder</button>
+          <button class="ab-btn" onclick="document.getElementById('loadPreviewZipInput').click();dismissAutoloadBanner()" style="background:rgba(108,99,255,0.2);border-color:rgba(108,99,255,0.5);color:rgba(168,139,250,0.95)">📦 Load from ZIP</button>
+          <label class="ab-check">
+            <input type="checkbox" id="autoloadSkipCheck"> Don't show again
+          </label>
+          <button class="ab-skip" onclick="dismissAutoloadBanner()">✕ Skip</button>
+        </div>
+      </div>
+      <div class="preview-btn-row">
+        <button class="preview-zip-btn" id="previewZipBtn" onclick="downloadPreviewZip()">📦 Download ZIP</button>
+      </div>
+      <div class="load-preview-row">
+        <button class="load-preview-btn" onclick="document.getElementById('loadPreviewZipInput').click()">📂 Load Previews from ZIP</button>
+        <button class="load-preview-btn" onclick="document.getElementById('loadPreviewFolderInput').click()">📁 Load Previews from Folder</button>
+        <span class="load-preview-status" id="loadPreviewStatus"></span>
+        <input type="file" id="loadPreviewZipInput" accept=".zip" style="display:none" onchange="loadPreviewsFromZip(this)">
+        <input type="file" id="loadPreviewFolderInput" accept="audio/wav,audio/mpeg,audio/mp4,.wav,.mp3,.m4a" multiple style="display:none" onchange="loadPreviewsFromFiles(this)">
+      </div>
+      <div class="preview-grid" id="previewGrid"></div>
+    </div>
+  </details>
 
   <!-- Voice Cloning Panel -->
-  <div class="clone-card" style="margin-top:22px">
-    <div class="card-title">🧬 Voice Cloning — Clone &amp; Save Your Own Voices</div>
+  <details class="clone-card section-card" id="cloneSection" open>
+    <summary>
+      <div class="section-summary-main">
+        <div class="section-summary-title">🧬 Voice Cloning</div>
+        <div class="section-summary-sub">Create custom voices, keep them stored locally, and sync them against your DashScope account.</div>
+      </div>
+      <div class="section-summary-meta">
+        <span class="section-summary-badge">Local clone archive enabled</span>
+        <span class="section-summary-caret">›</span>
+      </div>
+    </summary>
+    <div class="section-body">
 
     <!-- Drop zone -->
     <div class="drop-zone" id="dropZone">
@@ -1239,7 +1524,7 @@
     <!-- Cost note -->
     <div class="clone-cost-note">
       <strong>$0.01 per voice clone</strong> (billed by Alibaba Cloud). You receive <strong>1,000 free clones</strong> within 90 days of activating Model Studio.
-      Cloned voices use the dedicated <code>qwen3-tts-vc-2026-01-22</code> synthesis model.
+      Cloned voices use the dedicated <strong>Narrate:AI Clone</strong> synthesis model.
       Up to <strong>1,000 voices</strong> can be stored on your account; unused voices are auto-deleted after 1 year.
     </div>
 
@@ -1251,13 +1536,26 @@
     <div class="saved-voices-list" id="savedVoicesList">
       <div class="no-saved-voices">Enter your API key and click Refresh to load your saved voices.</div>
     </div>
-  </div>
+    </div>
+  </details>
+    </div>
+  </section>
 
   <!-- Voice Demo Mode -->
-  <div class="demo-card" id="demoCard" style="margin-top:22px">
-    <div class="demo-header">
-      <div class="card-title">🎭 Voice Demo Mode</div>
-    </div>
+  <section class="section-block" id="demoSection">
+    <div class="stack-grid">
+      <details class="demo-card section-card">
+        <summary>
+          <div class="section-summary-main">
+            <div class="section-summary-title">🎭 Voice Demo Mode</div>
+            <div class="section-summary-sub">Run one phrase across many voices when you want a quick comparison round without using the audiobook flow.</div>
+          </div>
+          <div class="section-summary-meta">
+            <span class="section-summary-badge">Compare all voices</span>
+            <span class="section-summary-caret">›</span>
+          </div>
+        </summary>
+        <div class="section-body">
 
     <!-- Toolbar: quick-select shortcuts -->
     <div class="demo-toolbar" style="margin-bottom:12px">
@@ -1267,7 +1565,7 @@
       <button class="demo-toolbar-btn female" onclick="demoSelectGender('Female')">👩 All Female</button>
       <button class="demo-toolbar-btn male"   onclick="demoSelectGender('Male')">👨 All Male</button>
       <div class="demo-toolbar-sep"></div>
-      <span style="font-size:0.8rem;color:var(--muted)"><strong id="demoCheckedCount">47</strong> of 47 voices selected</span>
+      <span style="font-size:0.8rem;color:var(--muted)"><strong id="demoCheckedCount">47</strong> of <span id="demoAvailableCount">47</span> voices selected</span>
     </div>
 
     <!-- Voice checklist -->
@@ -1340,10 +1638,116 @@
         WAV = lossless original &nbsp;·&nbsp; MP3 = ~128kbps, smaller file size. MP3 encoding runs in your browser.
       </div>
     </div>
-  </div>
+        </div>
+      </details>
+
+      <details class="demo-card section-card" id="styleDemoSection">
+        <summary>
+          <div class="section-summary-main">
+            <div class="section-summary-title">🎛 Style Demo Mode</div>
+            <div class="section-summary-sub">Use one voice across a curated Narrate:AI Director matrix with either your own script or short auto-written demo copy tailored to each style.</div>
+          </div>
+          <div class="section-summary-meta">
+            <span class="section-summary-badge">One voice · many styles</span>
+            <span class="section-summary-caret">›</span>
+          </div>
+        </summary>
+        <div class="section-body">
+
+    <div class="demo-info-row" id="styleDemoInfoRow">
+      <span>Will generate <strong id="styleDemoSampleCount">10</strong> guided samples using <strong>Narrate:AI Director</strong> for voice <strong id="styleDemoVoiceLabel">Cherry</strong>, <strong id="styleDemoSourceLabel">using the main text box</strong>.</span>
+      <div style="display:flex;gap:16px;flex-shrink:0">
+        <div class="di-stat">
+          <div class="dv" id="styleDemoTotalChars">—</div>
+          <div class="dl">Total Chars</div>
+        </div>
+        <div class="di-stat">
+          <div class="dv" id="styleDemoGrossCost">—</div>
+          <div class="dl">Gross Cost</div>
+        </div>
+        <div class="di-stat">
+          <div class="dv" id="styleDemoNetCost">—</div>
+          <div class="dl">You Pay</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="style-demo-source-row">
+      <div class="style-demo-source-label">Text Source</div>
+      <div class="style-demo-source-toggle">
+        <button type="button" class="style-demo-source-btn active" id="styleDemoSourceInputBtn" onclick="setStyleDemoTextSource('input')">Use Text Box</button>
+        <button type="button" class="style-demo-source-btn" id="styleDemoSourceAutoBtn" onclick="setStyleDemoTextSource('auto')">Auto-tailored Scripts</button>
+      </div>
+    </div>
+
+    <div class="style-demo-note" id="styleDemoVoiceHint">Uses the current built-in voice selected in the main voice grid.</div>
+    <div class="style-demo-note" id="styleDemoSourceHint">Text Box mode reuses the text from the main Text to Speak field.</div>
+
+    <div class="style-demo-chip-list" id="styleDemoScenarioList"></div>
+
+    <div class="demo-warn" id="styleDemoWarn">
+      ⚠️ <strong>Text too long for Style Demo Mode.</strong><br>
+      Style Demo Mode is designed for short sample phrases (up to 500 characters) because it generates the same text across multiple instruct-style variations. Your current text is <strong id="styleDemoWarnChars">0</strong> characters.<br>
+      Please shorten the text, or use the main single-voice generation panel above for longer content.
+    </div>
+
+    <div class="demo-btn-row">
+      <button class="demo-start-btn" id="styleDemoStartBtn" onclick="startStyleDemo()">
+        <span id="styleDemoBtnIcon">🎛</span>
+        <span id="styleDemoBtnLabel">Run Style Demo</span>
+      </button>
+      <button class="demo-cancel-btn" id="styleDemoCancelBtn" onclick="cancelStyleDemo()">✕ Cancel</button>
+    </div>
+
+    <div class="demo-progress-wrap" id="styleDemoProgressWrap">
+      <div class="demo-progress-label">
+        <span id="styleDemoProgressText">Generating…</span>
+        <span id="styleDemoProgressPct">0%</span>
+      </div>
+      <div class="demo-progress-track">
+        <div class="demo-progress-fill" id="styleDemoProgressFill" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div class="demo-results" id="styleDemoResults"></div>
+
+    <div id="styleDemoCombinedWrap" style="display:none;margin-top:18px;background:var(--surface2);border:1px solid rgba(52,211,153,0.35);border-radius:12px;padding:16px 18px">
+      <div style="font-size:0.8rem;color:var(--muted);margin-bottom:12px;">
+        🎚 <strong style="color:var(--success)">Style demo complete!</strong>
+        &nbsp;Download all <span id="styleDemoCombinedCount">0</span> samples as a single file:
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="demo-start-btn" id="styleDlCombinedWav" onclick="downloadStyleCombined('wav')" style="flex:1;min-width:140px;background:linear-gradient(135deg,#6c63ff,#8b5cf6);box-shadow:0 4px 18px rgba(108,99,255,0.35)">
+          ⬇ Download WAV
+        </button>
+        <button class="demo-start-btn" id="styleDlCombinedMp3" onclick="downloadStyleCombined('mp3')" style="flex:1;min-width:140px;background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 4px 18px rgba(245,158,11,0.35)">
+          ⬇ Download MP3
+        </button>
+      </div>
+      <div style="font-size:0.72rem;color:var(--muted);margin-top:8px">
+        WAV = lossless original &nbsp;·&nbsp; MP3 = ~128kbps, smaller file size. MP3 encoding runs in your browser.
+      </div>
+    </div>
+        </div>
+      </details>
+    </div>
+  </section>
 
   <!-- Usage & Cost Tracker -->
-  <div class="usage-card" style="margin-top:22px">
+  <section class="section-block" id="usageSection">
+    <div class="stack-grid">
+      <details class="usage-card section-card">
+        <summary>
+          <div class="section-summary-main">
+            <div class="section-summary-title">📊 Usage &amp; Cost Tracker</div>
+            <div class="section-summary-sub">Inspect generation history, quota impact, and pricing without leaving the page.</div>
+          </div>
+          <div class="section-summary-meta">
+            <span class="section-summary-badge">History and totals</span>
+            <span class="section-summary-caret">›</span>
+          </div>
+        </summary>
+        <div class="section-body">
     <div class="usage-header">
       <div class="card-title">📊 Usage &amp; Cost Tracker</div>
       <button class="reset-btn" onclick="resetUsage()">Reset</button>
@@ -1390,17 +1794,31 @@
 
     <div class="pricing-note">
       <strong>Pricing (official Alibaba Cloud Model Studio — International/Singapore):</strong>
-      <code>qwen3-tts-flash</code> = <strong>$0.10 per 10,000 characters</strong> &nbsp;·&nbsp;
-      <code>qwen3-tts-instruct-flash</code> = <strong>$0.115 per 10,000 characters</strong>.
+      <strong>Narrate:AI Flash</strong> = <strong>$0.10 per 10,000 characters</strong> &nbsp;·&nbsp;
+      <strong>Narrate:AI Director</strong> = <strong>$0.115 per 10,000 characters</strong>.
       Free quota: <strong>10,000 characters</strong> per model upon activation.
       Costs shown are estimates based on character count.
       <a href="https://www.alibabacloud.com/help/en/model-studio/model-pricing" target="_blank">Full pricing →</a>
     </div>
-  </div>
+        </div>
+      </details>
+    </div>
+  </section>
 
   <!-- Book / Script Analyser -->
-  <div class="book-card" id="bookCard">
-    <div class="card-title">📖 Book / Script Analyser</div>
+  <section class="section-block" id="bookSection">
+  <details class="book-card section-card" id="bookCard" open>
+    <summary>
+      <div class="section-summary-main">
+        <div class="section-summary-title">📖 Audiobook Workflow</div>
+        <div class="section-summary-sub">Analyse manuscripts, assign voices, generate by chapter, and review chunk-level output from one place.</div>
+      </div>
+      <div class="section-summary-meta">
+        <span class="section-summary-badge">Long-form mode</span>
+        <span class="section-summary-caret">›</span>
+      </div>
+    </summary>
+    <div class="section-body">
     <p style="font-size:0.82rem;color:var(--muted);margin-bottom:12px;line-height:1.5">
       Paste a full manuscript or script. The analyser detects chapter headings, preserves paragraph structure, assigns narrator or character roles, then generates chunk-by-chunk chapter audio and a full audiobook workflow with cache-friendly output files.
     </p>
@@ -1434,9 +1852,9 @@
       <div style="flex:1;min-width:120px">
         <label style="font-size:0.8rem;color:var(--muted);display:block;margin-bottom:4px">Model for generation:</label>
         <select id="bookModelSelect" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:0.82rem;padding:7px 10px;width:100%">
-          <option value="qwen3-tts-flash">qwen3-tts-flash (fast, $0.10/10K)</option>
-          <option value="qwen3-tts-instruct-flash">qwen3-tts-instruct-flash (expressive, $0.115/10K)</option>
-          <option value="qwen3-tts-vc-2026-01-22">qwen3-tts-vc-2026-01-22 (cloned voice, $0.115/10K)</option>
+          <option value="qwen3-tts-flash">Narrate:AI Flash (fast, $0.10/10K)</option>
+          <option value="qwen3-tts-instruct-flash">Narrate:AI Director (expressive, $0.115/10K)</option>
+          <option value="qwen3-tts-vc-2026-01-22">Narrate:AI Clone (custom voice, $0.115/10K)</option>
         </select>
       </div>
     </div>
@@ -1506,30 +1924,48 @@
         </div>
       </div>
     </div>
-  </div>
+    </div>
+  </details>
+  </section>
 
   <!-- Event Logger -->
-  <div class="log-card" id="logCard">
-    <div class="log-header">
-      <div class="card-title" style="margin-bottom:0">🖥 Event Log</div>
-      <div class="log-controls">
-        <select class="log-filter" id="logFilter" onchange="renderLog()">
-          <option value="all">All levels</option>
-          <option value="info">Info</option>
-          <option value="success">Success</option>
-          <option value="warn">Warn</option>
-          <option value="error">Error</option>
-          <option value="debug">Debug</option>
-        </select>
-        <button class="log-clear-btn" onclick="clearLog()">Clear</button>
-      </div>
+  <section class="section-block" id="logSection">
+    <div class="stack-grid">
+      <details class="log-card section-card">
+        <summary>
+          <div class="section-summary-main">
+            <div class="section-summary-title">🖥 Event Log</div>
+            <div class="section-summary-sub">Keep diagnostics available without letting the console dominate the rest of the interface.</div>
+          </div>
+          <div class="section-summary-meta">
+            <span class="section-summary-badge">Debug and errors</span>
+            <span class="section-summary-caret">›</span>
+          </div>
+        </summary>
+        <div class="section-body">
+          <div class="log-header">
+            <div class="card-title" style="margin-bottom:0">🖥 Event Log</div>
+            <div class="log-controls">
+              <select class="log-filter" id="logFilter" onchange="renderLog()">
+                <option value="all">All levels</option>
+                <option value="info">Info</option>
+                <option value="success">Success</option>
+                <option value="warn">Warn</option>
+                <option value="error">Error</option>
+                <option value="debug">Debug</option>
+              </select>
+              <button class="log-clear-btn" onclick="clearLog()">Clear</button>
+            </div>
+          </div>
+          <div class="log-panel" id="logPanel"><div class="log-empty">No events yet.</div></div>
+        </div>
+      </details>
     </div>
-    <div class="log-panel" id="logPanel"><div class="log-empty">No events yet.</div></div>
-  </div>
+  </section>
 
   <footer>
-    Powered by <a href="https://github.com/QwenLM/Qwen3-TTS" target="_blank">Qwen3-TTS</a> ·
-    <a href="https://www.alibabacloud.com/help/en/model-studio/qwen-tts" target="_blank">API Docs</a> ·
+    Powered by <a href="https://github.com/QwenLM/Qwen3-TTS" target="_blank">Narrate:AI</a> ·
+    <a href="https://www.alibabacloud.com/help/en/model-studio/qwen-tts" target="_blank">Narrate:AI Docs</a> ·
     <a href="https://www.alibabacloud.com/help/en/model-studio/model-pricing" target="_blank">Pricing</a>
   </footer>
 
@@ -1593,15 +2029,218 @@
     { id: "Kiki",        gender: "Female", icon: "👩", desc: "Sweet Hong Kong girl" },
   ];
 
+  const INSTRUCT_SUPPORTED_VOICE_IDS = new Set([
+    "Cherry", "Serena", "Ethan", "Chelsie", "Momo", "Vivian", "Moon", "Maia",
+    "Kai", "Nofish", "Bella", "Eldric Sage", "Mia", "Mochi", "Bellona", "Vincent",
+    "Bunny", "Neil", "Elias", "Arthur", "Nini", "Seren", "Pip", "Stella",
+  ]);
+  const MODEL_DISPLAY_NAMES = {
+    "qwen3-tts-flash": "Narrate:AI Flash",
+    "qwen3-tts-instruct-flash": "Narrate:AI Director",
+    "qwen3-tts-vc-2026-01-22": "Narrate:AI Clone",
+  };
+
+  function displayModelName(modelId) {
+    return MODEL_DISPLAY_NAMES[modelId] || "Narrate:AI";
+  }
+
   // ── State ──
   let selectedVoice = "Cherry";
   let usageHistory  = JSON.parse(localStorage.getItem("qwen3tts_history") || "[]");
+  const DEFAULT_API_BASE = "http://localhost:3000";
+
+  function normalizeApiBase(value) {
+    return String(value || "").trim().replace(/\/+$/, "");
+  }
+
+  function isAbsoluteUrl(value) {
+    return /^[a-z]+:\/\//i.test(String(value || ""));
+  }
+
+  function getBackendTargets(pathOrUrl) {
+    if (isAbsoluteUrl(pathOrUrl)) return [String(pathOrUrl)];
+
+    const path = String(pathOrUrl || "/");
+    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+    const override = normalizeApiBase(window.NARRATE_API_BASE || localStorage.getItem("narrate_api_base") || "");
+    if (override) return [override + normalizedPath];
+
+    const targets = [];
+    if (/^https?:$/.test(window.location.protocol) && window.location.origin && window.location.origin !== "null") {
+      targets.push(window.location.origin + normalizedPath);
+    }
+
+    const fallback = DEFAULT_API_BASE + normalizedPath;
+    if (!targets.includes(fallback)) targets.push(fallback);
+    return targets;
+  }
+
+  function apiUrl(pathOrUrl) {
+    return getBackendTargets(pathOrUrl)[0];
+  }
+
+  function resolveAppUrl(pathOrUrl) {
+    if (isAbsoluteUrl(pathOrUrl)) return String(pathOrUrl);
+    return apiUrl(pathOrUrl);
+  }
+
+  window.NarrateAPI = {
+    defaultBase: DEFAULT_API_BASE,
+    url: apiUrl,
+    resolveUrl: resolveAppUrl,
+    targets: getBackendTargets,
+  };
+
+  window.__narratePendingLogs = window.__narratePendingLogs || [];
+
+  function logClientEvent(message, level) {
+    const entry = { message: String(message || ""), level: level || "info" };
+    if (typeof window.addLog === "function") {
+      window.addLog(entry.message, entry.level);
+      return;
+    }
+    window.__narratePendingLogs.push(entry);
+    if (entry.level === "error") console.error(entry.message);
+    else if (entry.level === "warn") console.warn(entry.message);
+    else console.log(entry.message);
+  }
+
+  function explainFetchFailure(url, error) {
+    const hints = [`Could not reach the Narrate AI backend at ${url}.`];
+    if (window.location.protocol === "file:") {
+      hints.push("The page is open from the filesystem, so backend routes will fail unless the local server is running.");
+      hints.push("Start `node server.js` in `Narrate_AI_05-26-v2.3` and open `http://localhost:3000`.");
+    } else {
+      hints.push("Make sure the local Node server is still running.");
+    }
+    if (error && error.message) hints.push(`Browser error: ${error.message}.`);
+    return hints.join(" ");
+  }
+
+  async function fetchBackend(pathOrUrl, init) {
+    const targets = getBackendTargets(pathOrUrl);
+    let lastResponse = null;
+    let lastError = null;
+
+    for (let index = 0; index < targets.length; index++) {
+      const url = targets[index];
+      try {
+        const response = await fetch(url, init);
+        response._narrateUrl = url;
+        if (response.status === 404 && index < targets.length - 1) {
+          lastResponse = response;
+          logClientEvent(`Backend candidate returned 404: ${url}. Trying ${targets[index + 1]}.`, "debug");
+          continue;
+        }
+        return response;
+      } catch (error) {
+        lastError = { url, error };
+        if (index < targets.length - 1) {
+          logClientEvent(`Backend candidate unreachable: ${url}. Trying ${targets[index + 1]}.`, "warn");
+        }
+      }
+    }
+
+    if (lastResponse) return lastResponse;
+    if (lastError) throw new Error(explainFetchFailure(lastError.url, lastError.error));
+    throw new Error(`No backend target available for ${String(pathOrUrl || "/")}.`);
+  }
+
+  window.NarrateAPI.fetch = fetchBackend;
+
+  async function checkBackendHealth() {
+    const targets = getBackendTargets("/api/health");
+    logClientEvent(`Frontend ready. Backend targets: ${targets.join(" → ")}.`, "debug");
+    try {
+      const response = await fetchBackend("/api/health", { cache: "no-store" });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || `Health check failed: HTTP ${response.status}`);
+      const resolvedUrl = response._narrateUrl || targets[0];
+      logClientEvent(`Backend reachable: ${resolvedUrl}.`, "success");
+      if (window.location.protocol === "file:") {
+        logClientEvent("The file-open fallback is working, but opening `http://localhost:3000` directly is still recommended.", "warn");
+      }
+    } catch (error) {
+      logClientEvent(error.message, "error");
+      setStatus("error", "Backend not reachable. Start `node server.js` in `Narrate_AI_05-26-v2.3`, then open `http://localhost:3000`.");
+    }
+  }
+
+  function getCurrentModelId() {
+    const select = document.getElementById("modelSelect");
+    return select ? select.value : "qwen3-tts-flash";
+  }
+
+  function getCompatibleSystemVoices(modelId) {
+    if (modelId === "qwen3-tts-instruct-flash") {
+      return VOICES.filter((voice) => INSTRUCT_SUPPORTED_VOICE_IDS.has(voice.id));
+    }
+    return VOICES.slice();
+  }
+
+  function getCompatibleSystemVoiceIds(modelId) {
+    return new Set(getCompatibleSystemVoices(modelId).map((voice) => voice.id));
+  }
+
+  function syncSelectedVoiceForModel(modelId) {
+    if (modelId === "qwen3-tts-vc-2026-01-22") return { changed: false, previous: selectedVoice, next: selectedVoice };
+
+    const compatibleVoices = getCompatibleSystemVoices(modelId);
+    const compatibleIds = new Set(compatibleVoices.map((voice) => voice.id));
+    if (compatibleIds.has(selectedVoice)) {
+      return { changed: false, previous: selectedVoice, next: selectedVoice };
+    }
+
+    const previous = selectedVoice;
+    selectedVoice = compatibleVoices.length ? compatibleVoices[0].id : "";
+    return { changed: previous !== selectedVoice, previous, next: selectedVoice };
+  }
+
+  function syncDemoSelectionsForModel(modelId) {
+    const compatibleIds = getCompatibleSystemVoiceIds(modelId);
+    const before = demoCheckedVoices.size;
+    demoCheckedVoices = new Set([...demoCheckedVoices].filter((id) => compatibleIds.has(id)));
+    return before - demoCheckedVoices.size;
+  }
+
+  function refreshCompatibleVoiceUIs(options) {
+    const opts = options || {};
+    const modelId = opts.modelId || getCurrentModelId();
+    const compatibleVoices = getCompatibleSystemVoices(modelId);
+    const hiddenCount = Math.max(0, VOICES.length - compatibleVoices.length);
+    const voiceSync = syncSelectedVoiceForModel(modelId);
+    const removedDemoCount = syncDemoSelectionsForModel(modelId);
+
+    buildVoiceGrid();
+    buildDemoChecklist();
+    updateDemoInfo();
+    updateStyleDemoInfo();
+
+    if (opts.log === false) return;
+
+    if (voiceSync.changed && voiceSync.previous && voiceSync.next) {
+      logClientEvent(`Voice "${voiceSync.previous}" is not available on ${displayModelName(modelId)}; switched to ${voiceSync.next}.`, "warn");
+    }
+    if (hiddenCount > 0) {
+      const note = removedDemoCount > 0
+        ? ` ${removedDemoCount} demo selection${removedDemoCount === 1 ? "" : "s"} removed automatically.`
+        : "";
+      logClientEvent(`${displayModelName(modelId)} supports ${compatibleVoices.length} built-in voices here; ${hiddenCount} incompatible voice${hiddenCount === 1 ? "" : "s"} hidden.${note}`, "info");
+    } else {
+      logClientEvent(`${displayModelName(modelId)} exposes all ${compatibleVoices.length} built-in voices.`, "debug");
+    }
+  }
 
   // ── Build voice grid ──
   function buildVoiceGrid() {
     const grid = document.getElementById("voiceGrid");
     grid.innerHTML = "";
-    VOICES.forEach(v => {
+    const voices = getCompatibleSystemVoices(getCurrentModelId());
+    if (!voices.length) {
+      grid.innerHTML = `<div class="no-saved-voices">No built-in voices are available for the current model.</div>`;
+      return;
+    }
+    voices.forEach(v => {
       const card = document.createElement("div");
       const genderClass = String(v.gender || "").toLowerCase() === "female"
         ? " female"
@@ -1625,6 +2264,7 @@
     document.querySelectorAll('.voice-card').forEach(c => {
       c.classList.toggle('selected', c.dataset.id === id);
     });
+    updateStyleDemoInfo();
     // Play preview if one is cached for this voice
     if (previewBlobs[id]) {
       playVoiceCardPreview(id);
@@ -1660,6 +2300,15 @@
     const btn = document.getElementById("toggleBtn");
     if (inp.type === "password") { inp.type = "text";     btn.textContent = "Hide"; }
     else                         { inp.type = "password"; btn.textContent = "Show"; }
+  }
+
+  function jumpToSection(id) {
+    const target = document.getElementById(id);
+    if (!target) return;
+    if (target.tagName === 'DETAILS') target.open = true;
+    const nestedDetails = target.querySelector && target.querySelector('details');
+    if (nestedDetails) nestedDetails.open = true;
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function updateCounter() {
@@ -1715,7 +2364,7 @@
 
     // ── Update DOM ──
     // Gross row
-    document.getElementById("estModelLabel").textContent = model.replace("qwen3-tts-", "");
+    document.getElementById("estModelLabel").textContent = displayModelName(model);
     document.getElementById("estRateLabel").textContent  = `@ ${rateLabel}`;
 
     const charsEl = document.getElementById("estChars");
@@ -1840,8 +2489,8 @@
 
   function onModelChange() {
     updatePricingNote();
-    updateDemoInfo();
     updateControlsState();
+    refreshCompatibleVoiceUIs({ log: true });
   }
 
   function updateControlsState() {
@@ -1852,16 +2501,16 @@
     document.querySelectorAll('.preset-btn').forEach(b => b.disabled = !isInstruct);
     instrTA.disabled = !isInstruct;
     if (isInstruct) {
-      note.textContent = '— Active on instruct-flash ✓';
+      note.textContent = '— Narrate:AI Director active ✓';
       note.style.color = 'var(--success)';
     } else {
-      note.textContent = '— Switch to qwen3-tts-instruct-flash to enable';
+      note.textContent = '— Switch to Narrate:AI Director to enable';
       note.style.color = 'var(--warn)';
     }
   }
 
   function buildFilename(voice, model, language, ext) {
-    const m = model.replace('qwen3-tts-', '').replace('-2026-01-22', '-vc');
+    const m = displayModelName(model).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
     const s = speedPreset !== 'normal' ? '_' + speedPreset : '';
     const t = tonePreset  ? '_' + tonePreset : '';
     const l = language !== 'English' ? '_' + language.toLowerCase() : '';
@@ -1885,10 +2534,11 @@
     document.getElementById("btnIcon").textContent  = "⏳";
     document.getElementById("btnLabel").textContent = "Generating…";
     document.getElementById("audioSection").classList.remove("show");
-    setStatus("loading", "Sending request to Qwen3 TTS API…");
+    setStatus("loading", "Sending request to Narrate:AI…");
+    logClientEvent(`Single generation started: voice=${selectedVoice}, model=${displayModelName(model)}, language=${language}, chars=${text.length}.`, "info");
 
     try {
-      const resp = await fetch("/synthesize", {
+      const resp = await fetchBackend("/synthesize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ api_key: apiKey, text, voice: selectedVoice, language, model, instructions }),
@@ -1929,6 +2579,7 @@
       // Read usage from response headers
       const charsStr = resp.headers.get("X-Usage-Chars");
       const costStr  = resp.headers.get("X-Usage-Cost");
+      const requestId = resp.headers.get("X-Request-Id") || "n/a";
       const chars    = charsStr ? parseInt(charsStr, 10) : text.length;
       const cost     = costStr  ? parseFloat(costStr)    : chars * (PRICING[model] || PRICING["qwen3-tts-flash"]);
 
@@ -1949,7 +2600,7 @@
       document.getElementById("audioMeta").innerHTML =
         `Voice: <span>${selectedVoice}</span> &nbsp;·&nbsp; ` +
         `Language: <span>${language}</span> &nbsp;·&nbsp; ` +
-        `Model: <span>${model}</span> &nbsp;·&nbsp; ` +
+        `Model: <span>${displayModelName(model)}</span> &nbsp;·&nbsp; ` +
         `Chars: <span>${chars.toLocaleString()}</span> &nbsp;·&nbsp; ` +
         `Gross: <span>$${grossCostNow.toFixed(6)}</span> &nbsp;·&nbsp; ` +
         `You pay: <span>$${netCostNow.toFixed(6)}</span>`;
@@ -1969,8 +2620,10 @@
 
       // Refresh estimator after generation
       updateCostEstimate(text.length, model);
+      logClientEvent(`Single generation complete: voice=${selectedVoice}, model=${displayModelName(model)}, chars=${chars}, request=${requestId}.`, "success");
 
     } catch (err) {
+      logClientEvent(`Single generation failed: ${err.message}`, "error");
       setStatus("error", err.message);
     } finally {
       btn.disabled = false;
@@ -2017,7 +2670,7 @@
         <td>${e.n}</td>
         <td class="td-time">${e.time}</td>
         <td class="td-voice">${e.voice}</td>
-        <td class="td-model">${e.model.replace("qwen3-tts-", "")}</td>
+        <td class="td-model">${displayModelName(e.model)}</td>
         <td class="td-text" title="${e.text.replace(/"/g,'&quot;')}">${e.text}</td>
         <td class="td-chars">${e.chars.toLocaleString()}</td>
         <td class="td-cost">$${e.cost.toFixed(6)}</td>
@@ -2054,12 +2707,120 @@
 
   // Set of checked voice IDs (all checked by default)
   let demoCheckedVoices = new Set(VOICES.map(v => v.id));
+  const STYLE_DEMO_MODEL = "qwen3-tts-instruct-flash";
+  const STYLE_DEMO_MAX_CHARS = 500;
+  const STYLE_DEMO_SCENARIOS = [
+    {
+      id: "preset-normal-none",
+      label: "Normal · Neutral",
+      badge: "Preset",
+      speed: "normal",
+      tone: "",
+      instructions: "",
+      spokenLabel: "normal speed with no tone preset",
+      demoText: "Narrate:AI turns a simple script into a clear, polished voice performance, making it easy to compare delivery styles before choosing a final take."
+    },
+    {
+      id: "preset-normal-calm",
+      label: "Normal · Calm",
+      badge: "Preset",
+      speed: "normal",
+      tone: "calm",
+      instructions: "",
+      spokenLabel: "normal speed with a calm tone",
+      demoText: "Narrate:AI can guide a listener through information without rushing, keeping the message steady, easy to follow, and comfortable to hear from beginning to end."
+    },
+    {
+      id: "preset-normal-warm",
+      label: "Normal · Warm",
+      badge: "Preset",
+      speed: "normal",
+      tone: "warm",
+      instructions: "",
+      spokenLabel: "normal speed with a warm tone",
+      demoText: "Narrate:AI can make a product introduction feel welcoming and human, as if a thoughtful guide is speaking directly to one person at a time."
+    },
+    {
+      id: "preset-normal-energetic",
+      label: "Normal · Energetic",
+      badge: "Preset",
+      speed: "normal",
+      tone: "energetic",
+      instructions: "",
+      spokenLabel: "normal speed with an energetic tone",
+      demoText: "Narrate:AI is ready to launch your next trailer, teaser, or promo with momentum, sparkle, and the sense that something exciting is about to happen."
+    },
+    {
+      id: "preset-normal-authoritative",
+      label: "Normal · Authoritative",
+      badge: "Preset",
+      speed: "normal",
+      tone: "authoritative",
+      instructions: "",
+      spokenLabel: "normal speed with an authoritative tone",
+      demoText: "Narrate:AI can deliver an important update with confidence, giving clear direction the kind of weight and certainty that people instantly trust."
+    },
+    {
+      id: "preset-slow-calm",
+      label: "Slow · Calm",
+      badge: "Preset",
+      speed: "slow",
+      tone: "calm",
+      instructions: "",
+      spokenLabel: "slow speed with a calm tone",
+      demoText: "Take a breath, settle in, and let Narrate:AI unfold the message gently, with deliberate pacing that feels reassuring, careful, and composed."
+    },
+    {
+      id: "preset-fast-energetic",
+      label: "Fast · Energetic",
+      badge: "Preset",
+      speed: "fast",
+      tone: "energetic",
+      instructions: "",
+      spokenLabel: "fast speed with an energetic tone",
+      demoText: "This is Narrate:AI in motion, pushing the pace forward, lifting the energy, and making the whole read feel bright, fast, and alive."
+    },
+    {
+      id: "custom-friendly",
+      label: "Custom · Friendly Narrator",
+      badge: "Custom",
+      speed: "normal",
+      tone: "",
+      instructions: "Speak like a warm, friendly audiobook narrator with gentle confidence, clear diction, and natural pacing.",
+      spokenLabel: "custom instructions for a friendly narrator",
+      demoText: "Welcome to Narrate:AI, where even a short sample can feel personal, conversational, and relaxed, like a friendly narrator guiding you through a story."
+    },
+    {
+      id: "custom-cinematic",
+      label: "Custom · Cinematic Trailer",
+      badge: "Custom",
+      speed: "normal",
+      tone: "",
+      instructions: "Speak with dramatic cinematic intensity, polished trailer voice-over rhythm, and strong emphasis on key phrases.",
+      spokenLabel: "custom instructions for a cinematic trailer voice",
+      demoText: "In a world full of flat voices, Narrate:AI rises with scale, drama, and impact, turning a simple line into the opening beat of something epic."
+    },
+    {
+      id: "custom-bedtime",
+      label: "Custom · Bedtime Story",
+      badge: "Custom",
+      speed: "normal",
+      tone: "",
+      instructions: "Speak softly and slowly like a bedtime storyteller, soothing and comforting, with relaxed phrasing and gentle pauses.",
+      spokenLabel: "custom instructions for a bedtime storyteller",
+      demoText: "Tonight, Narrate:AI softens every phrase, letting the words drift gently onward, calm enough for a quiet room and a listener ready to rest."
+    }
+  ];
+  let styleDemoCancelled = false;
+  let styleDemoAudioBlobs = [];
+  let styleDemoTextSource = "input";
 
   // Build the checklist grid
   function buildDemoChecklist() {
     const grid = document.getElementById("demoChecklist");
     grid.innerHTML = "";
-    VOICES.forEach(v => {
+    const voices = getCompatibleSystemVoices(getCurrentModelId());
+    voices.forEach(v => {
       const isFemale = v.gender === "Female";
       const item = document.createElement("div");
       item.className = `demo-check-item ${isFemale ? 'female-voice' : 'male-voice'} checked`;
@@ -2091,7 +2852,7 @@
   }
 
   function demoSelectAll() {
-    demoCheckedVoices = new Set(VOICES.map(v => v.id));
+    demoCheckedVoices = new Set(getCompatibleSystemVoices(getCurrentModelId()).map(v => v.id));
     document.querySelectorAll(".demo-check-item").forEach(el => {
       el.classList.add("checked");
       el.querySelector(".demo-check-box").textContent = "\u2713";
@@ -2117,7 +2878,7 @@
       el.classList.remove("checked");
       el.querySelector(".demo-check-box").textContent = "";
     });
-    VOICES.filter(v => v.gender === gender).forEach(v => {
+    getCompatibleSystemVoices(getCurrentModelId()).filter(v => v.gender === gender).forEach(v => {
       demoCheckedVoices.add(v.id);
       const el = document.querySelector(`.demo-check-item[data-id="${CSS.escape(v.id)}"]`);
       if (el) { el.classList.add("checked"); el.querySelector(".demo-check-box").textContent = "\u2713"; }
@@ -2128,6 +2889,9 @@
 
   function updateDemoCheckedCount() {
     document.getElementById("demoCheckedCount").textContent = demoCheckedVoices.size;
+    const available = getCompatibleSystemVoices(getCurrentModelId()).length;
+    const availableEl = document.getElementById("demoAvailableCount");
+    if (availableEl) availableEl.textContent = available;
   }
 
   // Update demo info row whenever text or model changes
@@ -2177,6 +2941,148 @@
     document.getElementById("demoNetCost").textContent    = `$${netCost.toFixed(5)}`;
   }
 
+  function getStyleDemoInstructions(scenario) {
+    if (scenario.instructions) return scenario.instructions;
+    const parts = [];
+    if (SPEED_INSTRUCTIONS[scenario.speed]) parts.push(SPEED_INSTRUCTIONS[scenario.speed]);
+    if (TONE_INSTRUCTIONS[scenario.tone || ""]) parts.push(TONE_INSTRUCTIONS[scenario.tone || ""]);
+    return parts.join(" ");
+  }
+
+  function getStyleDemoInputText() {
+    return document.getElementById("textInput").value.trim();
+  }
+
+  function getStyleDemoLanguageChoice() {
+    const select = document.getElementById("languageSelect");
+    return select ? select.value : "English";
+  }
+
+  function getStyleDemoEffectiveLanguage() {
+    return styleDemoTextSource === "auto" ? "English" : getStyleDemoLanguageChoice();
+  }
+
+  function getStyleDemoScenarioText(scenario) {
+    return styleDemoTextSource === "auto" ? scenario.demoText : getStyleDemoInputText();
+  }
+
+  function getStyleDemoScenarioTooltip(scenario) {
+    const detail = styleDemoTextSource === "auto"
+      ? scenario.demoText
+      : "Uses the current Text to Speak box content.";
+    const guide = scenario.instructions
+      ? `Instructions: ${scenario.instructions}`
+      : `Preset: ${scenario.spokenLabel}`;
+    return `${scenario.label} - ${detail} - ${guide}`;
+  }
+
+  function buildStyleDemoFullText(voiceId, scenario, text) {
+    return `Hi, my name is ${voiceId}. This sample uses ${scenario.spokenLabel}. ${text}`;
+  }
+
+  function setStyleDemoTextSource(mode) {
+    if (mode !== "input" && mode !== "auto") return;
+    styleDemoTextSource = mode;
+    const inputBtn = document.getElementById("styleDemoSourceInputBtn");
+    const autoBtn = document.getElementById("styleDemoSourceAutoBtn");
+    if (inputBtn) inputBtn.classList.toggle("active", mode === "input");
+    if (autoBtn) autoBtn.classList.toggle("active", mode === "auto");
+    buildStyleDemoScenarioList();
+    updateStyleDemoInfo();
+  }
+
+  function getStyleDemoVoiceChoice() {
+    const compatibleVoices = getCompatibleSystemVoices(STYLE_DEMO_MODEL);
+    const compatibleIds = new Set(compatibleVoices.map((voice) => voice.id));
+    const fallbackVoiceId = compatibleVoices[0] ? compatibleVoices[0].id : "";
+    const usesSelectedVoice = compatibleIds.has(selectedVoice);
+    return {
+      voiceId: usesSelectedVoice ? selectedVoice : fallbackVoiceId,
+      usesSelectedVoice,
+      selectedVoice,
+      fallbackVoiceId
+    };
+  }
+
+  function buildStyleDemoScenarioList() {
+    const list = document.getElementById("styleDemoScenarioList");
+    if (!list) return;
+    list.innerHTML = STYLE_DEMO_SCENARIOS.map((scenario) => {
+      const klass = scenario.badge === "Custom" ? "style-demo-chip custom" : "style-demo-chip";
+      const title = getStyleDemoScenarioTooltip(scenario);
+      return `<div class="${klass}" title="${title.replace(/"/g, '&quot;')}">${scenario.label}</div>`;
+    }).join("");
+  }
+
+  function updateStyleDemoInfo() {
+    const text = getStyleDemoInputText();
+    const selectedLanguage = getStyleDemoLanguageChoice();
+    const effectiveLanguage = getStyleDemoEffectiveLanguage();
+    const usingAutoText = styleDemoTextSource === "auto";
+    const warn = document.getElementById("styleDemoWarn");
+    const btn = document.getElementById("styleDemoStartBtn");
+    const hint = document.getElementById("styleDemoVoiceHint");
+    const sourceHint = document.getElementById("styleDemoSourceHint");
+    const sourceLabel = document.getElementById("styleDemoSourceLabel");
+    const choice = getStyleDemoVoiceChoice();
+
+    document.getElementById("styleDemoSampleCount").textContent = STYLE_DEMO_SCENARIOS.length;
+    document.getElementById("styleDemoVoiceLabel").textContent = choice.voiceId || "—";
+    sourceLabel.textContent = usingAutoText ? "using auto-tailored English scripts" : "using the main text box";
+
+    if (choice.usesSelectedVoice) {
+      hint.textContent = `Using the current main voice selection: ${choice.voiceId}. Narrate:AI Director built-in voices only.`;
+      hint.className = "style-demo-note";
+    } else {
+      const selectedLabel = choice.selectedVoice || "the current selection";
+      hint.textContent = `Current main voice "${selectedLabel}" is not available for Narrate:AI Director. This demo will use ${choice.voiceId}.`;
+      hint.className = "style-demo-note warn";
+    }
+
+    if (usingAutoText) {
+      const languageNote = selectedLanguage !== effectiveLanguage
+        ? ` The current language dropdown is ${selectedLanguage}, but auto mode stays on ${effectiveLanguage} so the scripts and instructions stay aligned.`
+        : "";
+      sourceHint.textContent = `Auto-tailored mode writes a different short English demo line for each chip so the emotion and pacing match the style being tested.${languageNote} Hover a chip to preview its script.`;
+    } else {
+      sourceHint.textContent = `Text Box mode reuses the main Text to Speak field and keeps the current language selection: ${selectedLanguage}.`;
+    }
+
+    if (!usingAutoText && text.length > STYLE_DEMO_MAX_CHARS) {
+      warn.classList.add("show");
+      document.getElementById("styleDemoWarnChars").textContent = text.length.toLocaleString();
+      btn.disabled = true;
+      document.getElementById("styleDemoTotalChars").textContent = "—";
+      document.getElementById("styleDemoGrossCost").textContent = "—";
+      document.getElementById("styleDemoNetCost").textContent = "—";
+      return;
+    }
+
+    warn.classList.remove("show");
+    btn.disabled = (!usingAutoText && text.length === 0) || !choice.voiceId;
+
+    if ((!usingAutoText && text.length === 0) || !choice.voiceId) {
+      document.getElementById("styleDemoTotalChars").textContent = "—";
+      document.getElementById("styleDemoGrossCost").textContent = "—";
+      document.getElementById("styleDemoNetCost").textContent = "—";
+      return;
+    }
+
+    const totalChars = STYLE_DEMO_SCENARIOS.reduce((sum, scenario) => (
+      sum + buildStyleDemoFullText(choice.voiceId, scenario, getStyleDemoScenarioText(scenario)).length
+    ), 0);
+    const info = PRICING[STYLE_DEMO_MODEL] || PRICING["qwen3-tts-instruct-flash"];
+    const grossCost = totalChars * info.rate;
+    const used = freeUsed[STYLE_DEMO_MODEL] || 0;
+    const freeLeft = Math.max(0, FREE_QUOTA - used);
+    const billable = Math.max(0, totalChars - freeLeft);
+    const netCost = billable * info.rate;
+
+    document.getElementById("styleDemoTotalChars").textContent = totalChars.toLocaleString();
+    document.getElementById("styleDemoGrossCost").textContent = `$${grossCost.toFixed(5)}`;
+    document.getElementById("styleDemoNetCost").textContent = `$${netCost.toFixed(5)}`;
+  }
+
   async function startDemo() {
     const apiKey   = document.getElementById("apiKey").value.trim();
     const text     = document.getElementById("textInput").value.trim();
@@ -2189,7 +3095,8 @@
     if (demoCheckedVoices.size === 0) { alert("Please select at least one voice in the checklist."); return; }
 
     // Only run the checked voices, in original VOICES order
-    const voices = VOICES.filter(v => demoCheckedVoices.has(v.id));
+    const voices = getCompatibleSystemVoices(model).filter(v => demoCheckedVoices.has(v.id));
+    logClientEvent(`Voice demo starting: voices=${voices.length}, model=${displayModelName(model)}, language=${language}, chars=${text.length}.`, "info");
 
     // Reset state
     demoCancelled  = false;
@@ -2211,7 +3118,7 @@
         <div class="dvc-meta" id="dvc-meta-${v.id}">Queued…</div>
         <audio class="dvc-audio" id="dvc-audio-${v.id}" controls></audio>
         <div class="dvc-error-msg" id="dvc-err-${v.id}"></div>
-        <a class="dvc-dl" id="dvc-dl-${v.id}" href="#" download="qwen3_${v.id.toLowerCase()}.wav">⬇ Download WAV</a>
+        <a class="dvc-dl" id="dvc-dl-${v.id}" href="#" download="narrate_ai_${v.id.toLowerCase()}.wav">⬇ Download WAV</a>
       `;
       resultsEl.appendChild(card);
     });
@@ -2225,6 +3132,8 @@
 
     let done = 0;
     const total = voices.length;
+    let successCount = 0;
+    let errorCount = 0;
 
     for (const v of voices) {
       if (demoCancelled) break;
@@ -2245,9 +3154,10 @@
 
       // Build text: voice says its own name first, then the user text
       const fullText = `Hi, my name is ${v.id}. ${text}`;
+      logClientEvent(`Demo request started: voice=${v.id}, model=${displayModelName(model)}, chars=${fullText.length}.`, "debug");
 
       try {
-        const resp = await fetch("/synthesize", {
+        const resp = await fetchBackend("/synthesize", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ api_key: apiKey, text: fullText, voice: v.id, language, model }),
@@ -2256,6 +3166,7 @@
         const contentType = resp.headers.get("Content-Type") || "";
         const charsStr    = resp.headers.get("X-Usage-Chars");
         const costStr     = resp.headers.get("X-Usage-Cost");
+        const requestId   = resp.headers.get("X-Request-Id") || "n/a";
         const chars       = charsStr ? parseInt(charsStr, 10) : fullText.length;
         const cost        = costStr  ? parseFloat(costStr)    : chars * (PRICING[model]?.rate || PRICING["qwen3-tts-flash"].rate);
 
@@ -2291,6 +3202,8 @@
         }
         recordUsage({ voice: v.id, model, text: fullText, chars, cost, language });
         updateCostEstimate(text.length, model);
+        successCount++;
+        logClientEvent(`Demo voice ready: ${v.id}, chars=${chars}, request=${requestId}.`, "success");
 
       } catch (err) {
         cardEl.classList.remove("active");
@@ -2300,6 +3213,8 @@
         metaEl.textContent  = "";
         errEl.textContent   = err.message;
         errEl.classList.add("show");
+        errorCount++;
+        logClientEvent(`Demo voice failed: ${v.id} — ${err.message}`, "error");
       }
 
       done++;
@@ -2316,6 +3231,14 @@
     document.getElementById("demoBtnIcon").textContent  = "▶▶";
     document.getElementById("demoBtnLabel").textContent = "Run Voice Demo Again";
 
+    if (demoCancelled) {
+      logClientEvent(`Voice demo cancelled after ${done} of ${total} voices. Completed=${successCount}, failed=${errorCount}.`, "warn");
+    } else if (errorCount === 0) {
+      logClientEvent(`Voice demo finished successfully. Completed ${successCount} voices.`, "success");
+    } else {
+      logClientEvent(`Voice demo finished with failures. Completed=${successCount}, failed=${errorCount}, total=${total}.`, "warn");
+    }
+
     if (demoAudioBlobs.length > 0) {
       document.getElementById("demoCombinedCount").textContent = demoAudioBlobs.length;
       document.getElementById("demoCombinedWrap").style.display = "block";
@@ -2328,33 +3251,203 @@
     document.getElementById("demoProgressText").textContent = "Cancelling…";
   }
 
-  // ── Combined download: stitch all blobs into one WAV or MP3 ──
-  async function downloadCombined(format) {
-    if (demoAudioBlobs.length === 0) return;
+  async function startStyleDemo() {
+    const apiKey = document.getElementById("apiKey").value.trim();
+    const inputText = getStyleDemoInputText();
+    const language = getStyleDemoEffectiveLanguage();
+    const usingAutoText = styleDemoTextSource === "auto";
+    const choice = getStyleDemoVoiceChoice();
+    const voiceId = choice.voiceId;
+    const plannedChars = voiceId
+      ? STYLE_DEMO_SCENARIOS.reduce((sum, scenario) => (
+          sum + buildStyleDemoFullText(voiceId, scenario, getStyleDemoScenarioText(scenario)).length
+        ), 0)
+      : 0;
 
-    const dlWav = document.getElementById("dlCombinedWav");
-    const dlMp3 = document.getElementById("dlCombinedMp3");
+    if (!apiKey) { alert("Please enter your DashScope API key first."); return; }
+    if (!usingAutoText && !inputText) { alert("Please enter some text to synthesize."); return; }
+    if (!usingAutoText && inputText.length > STYLE_DEMO_MAX_CHARS) return;
+    if (!voiceId) { alert("No Narrate:AI Director-compatible built-in voice is available."); return; }
+
+    styleDemoCancelled = false;
+    styleDemoAudioBlobs = [];
+    document.getElementById("styleDemoCombinedWrap").style.display = "none";
+
+    if (!choice.usesSelectedVoice) {
+      logClientEvent(`Style demo selected fallback voice ${voiceId} because ${choice.selectedVoice || "the current main selection"} is not compatible with ${displayModelName(STYLE_DEMO_MODEL)}.`, "warn");
+    }
+    logClientEvent(`Style demo starting: voice=${voiceId}, samples=${STYLE_DEMO_SCENARIOS.length}, model=${displayModelName(STYLE_DEMO_MODEL)}, language=${language}, source=${usingAutoText ? "auto" : "textbox"}, chars=${plannedChars}.`, "info");
+
+    const resultsEl = document.getElementById("styleDemoResults");
+    resultsEl.innerHTML = "";
+    STYLE_DEMO_SCENARIOS.forEach((scenario) => {
+      const card = document.createElement("div");
+      card.className = "demo-voice-card";
+      card.id = `sdc-${scenario.id}`;
+      card.innerHTML = `
+        <div class="dvc-header">
+          <div class="dvc-name">🎛 ${scenario.label} <span style="color:var(--muted);font-weight:400;font-size:0.8rem">${voiceId}</span></div>
+          <span class="dvc-badge waiting" id="sdc-badge-${scenario.id}">Waiting</span>
+        </div>
+        <div class="dvc-meta" id="sdc-meta-${scenario.id}">${scenario.badge} sample queued…</div>
+        <audio class="dvc-audio" id="sdc-audio-${scenario.id}" controls></audio>
+        <div class="dvc-error-msg" id="sdc-err-${scenario.id}"></div>
+        <a class="dvc-dl" id="sdc-dl-${scenario.id}" href="#" download="narrate_ai_${voiceId.toLowerCase()}_${scenario.id}.wav">⬇ Download WAV</a>
+      `;
+      resultsEl.appendChild(card);
+    });
+
+    document.getElementById("styleDemoProgressWrap").classList.add("show");
+    document.getElementById("styleDemoStartBtn").disabled = true;
+    document.getElementById("styleDemoCancelBtn").classList.add("show");
+    document.getElementById("styleDemoBtnIcon").textContent = "⏳";
+    document.getElementById("styleDemoBtnLabel").textContent = "Running Style Demo…";
+
+    let done = 0;
+    let successCount = 0;
+    let errorCount = 0;
+    const total = STYLE_DEMO_SCENARIOS.length;
+
+    for (const scenario of STYLE_DEMO_SCENARIOS) {
+      if (styleDemoCancelled) break;
+
+      const cardEl = document.getElementById(`sdc-${scenario.id}`);
+      const badgeEl = document.getElementById(`sdc-badge-${scenario.id}`);
+      const metaEl = document.getElementById(`sdc-meta-${scenario.id}`);
+      const audioEl = document.getElementById(`sdc-audio-${scenario.id}`);
+      const errEl = document.getElementById(`sdc-err-${scenario.id}`);
+      const dlEl = document.getElementById(`sdc-dl-${scenario.id}`);
+      const instructions = getStyleDemoInstructions(scenario);
+      const scenarioText = getStyleDemoScenarioText(scenario);
+      const fullText = buildStyleDemoFullText(voiceId, scenario, scenarioText);
+
+      cardEl.classList.add("active");
+      badgeEl.className = "dvc-badge loading";
+      badgeEl.textContent = "Generating…";
+      metaEl.textContent = `${scenario.badge} · ${usingAutoText ? "Auto script" : "Text box"} · Synthesising ${scenario.label}…`;
+      cardEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      logClientEvent(`Style demo request started: voice=${voiceId}, sample=${scenario.label}, chars=${fullText.length}.`, "debug");
+
+      try {
+        const resp = await fetchBackend("/synthesize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            api_key: apiKey,
+            text: fullText,
+            voice: voiceId,
+            language,
+            model: STYLE_DEMO_MODEL,
+            instructions
+          }),
+        });
+
+        const contentType = resp.headers.get("Content-Type") || "";
+        const charsStr = resp.headers.get("X-Usage-Chars");
+        const costStr = resp.headers.get("X-Usage-Cost");
+        const requestId = resp.headers.get("X-Request-Id") || "n/a";
+        const chars = charsStr ? parseInt(charsStr, 10) : fullText.length;
+        const cost = costStr ? parseFloat(costStr) : chars * (PRICING[STYLE_DEMO_MODEL]?.rate || PRICING["qwen3-tts-instruct-flash"].rate);
+
+        if (!resp.ok) {
+          let errMsg = `HTTP ${resp.status}`;
+          if (contentType.includes("application/json")) {
+            try { const j = await resp.json(); errMsg = j.error || errMsg; } catch (_) {}
+          }
+          throw new Error(errMsg);
+        }
+
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+
+        styleDemoAudioBlobs.push({ label: scenario.label, blob, url });
+        cardEl.classList.remove("active");
+        cardEl.classList.add("done");
+        badgeEl.className = "dvc-badge done";
+        badgeEl.textContent = "✓ Done";
+        metaEl.textContent = `${scenario.label} · ${chars.toLocaleString()} chars · gross $${(chars * (PRICING[STYLE_DEMO_MODEL]?.rate || PRICING["qwen3-tts-instruct-flash"].rate)).toFixed(6)} · you pay $${cost.toFixed(6)}`;
+        audioEl.src = url;
+        audioEl.classList.add("show");
+        dlEl.href = url;
+        dlEl.classList.add("show");
+
+        if (freeUsed[STYLE_DEMO_MODEL] !== undefined) {
+          const remaining = Math.max(0, FREE_QUOTA - freeUsed[STYLE_DEMO_MODEL]);
+          freeUsed[STYLE_DEMO_MODEL] += Math.min(chars, remaining);
+        }
+        recordUsage({ voice: `${voiceId} · ${scenario.label}`, model: STYLE_DEMO_MODEL, text: fullText, chars, cost, language });
+        updateCostEstimate(inputText.length, getCurrentModelId());
+        updateStyleDemoInfo();
+        successCount++;
+        logClientEvent(`Style demo sample ready: ${scenario.label}, request=${requestId}.`, "success");
+      } catch (err) {
+        cardEl.classList.remove("active");
+        cardEl.classList.add("error");
+        badgeEl.className = "dvc-badge error";
+        badgeEl.textContent = "✗ Error";
+        metaEl.textContent = "";
+        errEl.textContent = err.message;
+        errEl.classList.add("show");
+        errorCount++;
+        logClientEvent(`Style demo sample failed: ${scenario.label} — ${err.message}`, "error");
+      }
+
+      done++;
+      const pct = Math.round((done / total) * 100);
+      document.getElementById("styleDemoProgressFill").style.width = pct + "%";
+      document.getElementById("styleDemoProgressPct").textContent = pct + "%";
+      document.getElementById("styleDemoProgressText").textContent =
+        styleDemoCancelled ? "Cancelled" : `Sample ${done} of ${total} done`;
+    }
+
+    document.getElementById("styleDemoStartBtn").disabled = false;
+    document.getElementById("styleDemoCancelBtn").classList.remove("show");
+    document.getElementById("styleDemoBtnIcon").textContent = "🎛";
+    document.getElementById("styleDemoBtnLabel").textContent = "Run Style Demo Again";
+
+    if (styleDemoCancelled) {
+      logClientEvent(`Style demo cancelled after ${done} of ${total} samples. Completed=${successCount}, failed=${errorCount}.`, "warn");
+    } else if (errorCount === 0) {
+      logClientEvent(`Style demo finished successfully for ${voiceId}. Completed ${successCount} samples.`, "success");
+    } else {
+      logClientEvent(`Style demo finished with failures for ${voiceId}. Completed=${successCount}, failed=${errorCount}.`, "warn");
+    }
+
+    if (styleDemoAudioBlobs.length > 0) {
+      document.getElementById("styleDemoCombinedCount").textContent = styleDemoAudioBlobs.length;
+      document.getElementById("styleDemoCombinedWrap").style.display = "block";
+    }
+  }
+
+  function cancelStyleDemo() {
+    styleDemoCancelled = true;
+    document.getElementById("styleDemoCancelBtn").classList.remove("show");
+    document.getElementById("styleDemoProgressText").textContent = "Cancelling…";
+  }
+
+  async function downloadAudioCollection(items, format, config) {
+    if (items.length === 0) return;
+
+    const dlWav = document.getElementById(config.wavButtonId);
+    const dlMp3 = document.getElementById(config.mp3ButtonId);
     dlWav.disabled = true;
     dlMp3.disabled = true;
     dlWav.textContent = "Processing…";
     dlMp3.textContent = "Processing…";
 
     try {
-      // Decode all blobs into AudioBuffers
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       const buffers  = [];
-      for (const item of demoAudioBlobs) {
+      for (const item of items) {
         const arrayBuf = await item.blob.arrayBuffer();
         const decoded  = await audioCtx.decodeAudioData(arrayBuf);
         buffers.push(decoded);
       }
 
-      // Concatenate all AudioBuffers into one
       const sampleRate  = buffers[0].sampleRate;
       const numChannels = Math.max(...buffers.map(b => b.numberOfChannels));
       const totalLength = buffers.reduce((s, b) => s + b.length, 0);
 
-      // Add 0.4s silence between voices
       const silenceSamples = Math.round(sampleRate * 0.4);
       const paddedLength   = totalLength + silenceSamples * (buffers.length - 1);
 
@@ -2372,12 +3465,11 @@
 
       if (format === "wav") {
         const wavBlob = audioBufferToWav(combined);
-        triggerDownload(wavBlob, "qwen3_voice_demo_all.wav", "audio/wav");
+        triggerDownload(wavBlob, config.wavFilename, "audio/wav");
       } else {
-        // MP3 via lamejs (loaded dynamically)
         await ensureLame();
         const mp3Blob = await audioBufferToMp3(combined);
-        triggerDownload(mp3Blob, "qwen3_voice_demo_all.mp3", "audio/mpeg");
+        triggerDownload(mp3Blob, config.mp3Filename, "audio/mpeg");
       }
     } catch (err) {
       alert("Download failed: " + err.message);
@@ -2388,6 +3480,25 @@
       dlWav.textContent = "⬇ Download WAV";
       dlMp3.textContent = "⬇ Download MP3";
     }
+  }
+
+  // ── Combined download: stitch all blobs into one WAV or MP3 ──
+  async function downloadCombined(format) {
+    return downloadAudioCollection(demoAudioBlobs, format, {
+      wavButtonId: "dlCombinedWav",
+      mp3ButtonId: "dlCombinedMp3",
+      wavFilename: "narrate_ai_voice_demo_all.wav",
+      mp3Filename: "narrate_ai_voice_demo_all.mp3"
+    });
+  }
+
+  async function downloadStyleCombined(format) {
+    return downloadAudioCollection(styleDemoAudioBlobs, format, {
+      wavButtonId: "styleDlCombinedWav",
+      mp3ButtonId: "styleDlCombinedMp3",
+      wavFilename: "narrate_ai_style_demo_all.wav",
+      mp3Filename: "narrate_ai_style_demo_all.mp3"
+    });
   }
 
   function triggerDownload(blob, filename, mime) {
@@ -2560,13 +3671,13 @@
     try {
       await ensureJSZip();
       const zip = new JSZip();
-      const folder = zip.folder('qwen3_voice_previews');
+      const folder = zip.folder('narrate_ai_voice_previews');
       for (const [voiceId, item] of Object.entries(previewBlobs)) {
         const arrayBuf = await item.blob.arrayBuffer();
         folder.file(item.filename, arrayBuf);
       }
       const zipBlob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
-      triggerDownload(zipBlob, 'qwen3_voice_previews.zip', 'application/zip');
+      triggerDownload(zipBlob, 'narrate_ai_voice_previews.zip', 'application/zip');
     } catch (err) {
       alert('ZIP download failed: ' + err.message);
     } finally {
@@ -2617,7 +3728,7 @@
 
     const results = await Promise.allSettled(VOICES.map(async (voice) => {
       const filename = voice.id.replace(/\s+/g, '_') + '_preview.wav';
-      const response = await fetch('/qwen3_voice_previews/' + encodeURIComponent(filename), { cache: 'no-cache' });
+      const response = await fetchBackend('/qwen3_voice_previews/' + encodeURIComponent(filename), { cache: 'no-cache' });
       if (!response.ok) throw new Error('Missing preview: ' + filename);
       const blob = await response.blob();
       registerPreviewBlob(voice.id, blob, filename);
@@ -2717,6 +3828,8 @@
     // Don't show if previews are already loaded
     if (Object.keys(previewBlobs).length > 0) return;
     // Show the banner
+    const previewSection = document.getElementById('previewSection');
+    if (previewSection) previewSection.open = true;
     const banner = document.getElementById('autoloadBanner');
     if (banner) banner.style.display = 'flex';
   }
@@ -2728,23 +3841,29 @@
   syncFreeUsed();
   updateCostEstimate(0, "qwen3-tts-flash");
   updateDemoInfo();
+  buildStyleDemoScenarioList();
   updateControlsState();
   buildDemoChecklist();
+  refreshCompatibleVoiceUIs({ log: false });
+  updateStyleDemoInfo();
+  checkBackendHealth();
   autoloadBundledPreviews().finally(() => {
     setTimeout(maybeShowAutoloadBanner, 600);
   });
 
   // Also update estimator + demo info when model dropdown changes
   document.getElementById("modelSelect").addEventListener("change", () => {
-    updatePricingNote();
-    updateDemoInfo();
-    updateControlsState();
+    onModelChange();
   });
 
   // Update demo info whenever text changes
   document.getElementById("textInput").addEventListener("input", () => {
     updateDemoInfo();
+    updateStyleDemoInfo();
     detectLanguage();
+  });
+  document.getElementById("languageSelect").addEventListener("change", () => {
+    updateStyleDemoInfo();
   });
 
   // ──────────────────────────────────────────────────────────────────────────────
@@ -2770,6 +3889,7 @@
       // Also refresh estimator and demo info after language change
       updatePricingNote();
       updateDemoInfo();
+      updateStyleDemoInfo();
     } else {
       badge.style.display = "none";
     }
@@ -2899,7 +4019,7 @@
       formData.append("name", name);
       formData.append("audio", cloneFile, cloneFile.name);
 
-      const resp = await fetch("/clone-voice", { method: "POST", body: formData });
+      const resp = await fetchBackend("/clone-voice", { method: "POST", body: formData });
       const data = await resp.json();
 
       if (!resp.ok || data.error) {
@@ -2930,12 +4050,12 @@
 
     try {
       const resp = apiKey
-        ? await fetch("/list-voices", {
+        ? await fetchBackend("/list-voices", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ api_key: apiKey, page_size: 100 }),
           })
-        : await fetch("/api/local-clones");
+        : await fetchBackend("/api/local-clones");
       const data = await resp.json();
       if (!resp.ok || data.error) throw new Error(data.error || `HTTP ${resp.status}`);
 
@@ -2965,7 +4085,7 @@
           <div class="svi-info">
             <div class="svi-name">${escHtml(v.preferred_name || v.voice)}</div>
             <div class="svi-id">${escHtml(v.voice)}</div>
-            <div class="svi-meta">Model: ${escHtml(v.target_model || '—')} &nbsp;\u00b7&nbsp; Created: ${escHtml(v.gmt_create || '—')}${storageMeta}</div>
+            <div class="svi-meta">Model: ${escHtml(v.target_model ? displayModelName(v.target_model) : '—')} &nbsp;\u00b7&nbsp; Created: ${escHtml(v.gmt_create || '—')}${storageMeta}</div>
           </div>
           <div class="svi-actions">
             <button class="svi-use-btn ${isActive ? 'using' : ''}" ${compatible ? '' : 'disabled'} onclick="activateCloneVoice('${escHtml(v.voice)}', '${escHtml(v.preferred_name || v.voice)}', '${escHtml(v.target_model || '')}')">
@@ -2984,7 +4104,7 @@
   // ── Activate a cloned voice for synthesis ──
   function activateCloneVoice(voiceId, displayName, targetModel) {
     if (targetModel && targetModel !== "qwen3-tts-vc-2026-01-22") {
-      setCloneStatus("error", `Voice “${displayName}” targets ${targetModel}, not qwen3-tts-vc-2026-01-22. Re-clone it in this app before using it for synthesis.`);
+      setCloneStatus("error", `Voice “${displayName}” targets ${displayModelName(targetModel)}, not ${displayModelName("qwen3-tts-vc-2026-01-22")}. Re-clone it in this app before using it for synthesis.`);
       return;
     }
     activeCloneVoiceId = voiceId;
@@ -3000,11 +4120,12 @@
     if (!vcOpt) {
       vcOpt = document.createElement("option");
       vcOpt.value = "qwen3-tts-vc-2026-01-22";
-      vcOpt.textContent = "qwen3-tts-vc-2026-01-22 — Cloned Voice ($0.115/10K chars)";
+      vcOpt.textContent = "Narrate:AI Clone — Custom Voice ($0.115/10K chars)";
       modelSel.appendChild(vcOpt);
     }
     modelSel.value = "qwen3-tts-vc-2026-01-22";
     updatePricingNote();
+    updateStyleDemoInfo();
 
     // Re-render saved voices to update active state
     const items = document.querySelectorAll(".saved-voice-item");
@@ -3018,7 +4139,7 @@
       }
     });
 
-    setCloneStatus("success", `\u2713 Now using cloned voice \u201c${displayName}\u201d for all synthesis. Model auto-switched to qwen3-tts-vc-2026-01-22.`);
+    setCloneStatus("success", `\u2713 Now using cloned voice \u201c${displayName}\u201d for all synthesis. Model auto-switched to ${displayModelName("qwen3-tts-vc-2026-01-22")}.`);
   }
 
   // ── Delete a cloned voice ──
@@ -3028,7 +4149,7 @@
     if (!apiKey) { alert("Please enter your API key first."); return; }
 
     try {
-      const resp = await fetch("/delete-voice", {
+      const resp = await fetchBackend("/delete-voice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ api_key: apiKey, voice_id: voiceId }),
@@ -3046,6 +4167,7 @@
         if (vcOpt) vcOpt.remove();
         document.getElementById("modelSelect").value = "qwen3-tts-flash";
         updatePricingNote();
+        updateStyleDemoInfo();
       }
 
       await loadSavedVoices();

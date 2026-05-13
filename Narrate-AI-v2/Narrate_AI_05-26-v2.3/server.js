@@ -62,6 +62,16 @@ class AsyncQueue {
 
 const synthQueue = new AsyncQueue(2);
 const ffmpegQueue = new AsyncQueue(1);
+let requestCounter = 0;
+
+function nextRequestId() {
+  requestCounter += 1;
+  return 'req-' + String(requestCounter).padStart(4, '0');
+}
+
+function logRequest(requestId, message) {
+  console.log('[Narrate AI v2.3][' + requestId + '] ' + message);
+}
 
 function mimeTypeFor(filePath) {
   const ext = path.extname(filePath).toLowerCase();
@@ -526,9 +536,11 @@ function serveStatic(req, res, pathname) {
 }
 
 const server = http.createServer(async (req, res) => {
+  const requestId = nextRequestId();
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('X-Request-Id', requestId);
   if (req.method === 'OPTIONS') {
     res.writeHead(200);
     res.end();
@@ -539,8 +551,21 @@ const server = http.createServer(async (req, res) => {
   const pathname = reqUrl.pathname;
 
   try {
+    if (pathname === '/api/health' && req.method === 'GET') {
+      writeJson(res, 200, {
+        ok: true,
+        app: 'Narrate AI v2.3',
+        requestId,
+        port: PORT,
+        rootDir: ROOT_DIR
+      });
+      return;
+    }
+
     if (pathname === '/synthesize' && req.method === 'POST') {
       const body = await readJsonBody(req);
+      const charCount = typeof body.text === 'string' ? body.text.length : 0;
+      logRequest(requestId, 'Synthesize start voice=' + String(body.voice || '') + ' model=' + String(body.model || '') + ' language=' + String(body.language || 'English') + ' chars=' + charCount);
       if (!body.api_key || !body.text || !body.voice || !body.model) {
         throw new Error('Missing required fields: api_key, text, voice, model.');
       }
@@ -554,6 +579,7 @@ const server = http.createServer(async (req, res) => {
       });
       const chars = body.text.length;
       const cost = chars * modelRate(body.model);
+      logRequest(requestId, 'Synthesize success voice=' + body.voice + ' bytes=' + result.buffer.length + ' contentType=' + (result.contentType || 'audio/wav'));
       res.writeHead(200, {
         'Content-Type': result.contentType || 'audio/wav',
         'X-Usage-Chars': String(chars),
@@ -564,6 +590,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (pathname === '/clone-voice' && req.method === 'POST') {
+      logRequest(requestId, 'Clone voice request received.');
       const buffer = await readRequestBuffer(req);
       const parsed = parseMultipartBody(buffer, req.headers['content-type']);
       const apiKey = (parsed.fields.api_key || '').trim();
@@ -584,6 +611,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (pathname === '/list-voices' && req.method === 'POST') {
+      logRequest(requestId, 'List cloned voices request received.');
       const body = await readJsonBody(req);
       const remoteVoices = await listClonedVoices(body.api_key, body.page_size || 100);
       const localVoices = readLocalCloneRecords();
@@ -598,6 +626,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (pathname === '/delete-voice' && req.method === 'POST') {
+      logRequest(requestId, 'Delete cloned voice request received.');
       const body = await readJsonBody(req);
       if (!body.api_key || !body.voice_id) throw new Error('Missing required fields: api_key, voice_id.');
       await deleteClonedVoice(body.api_key, body.voice_id);
@@ -760,7 +789,7 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
     res.end('Not found');
   } catch (error) {
-    console.error('[Narrate AI v2.3]', error);
+    console.error('[Narrate AI v2.3][' + requestId + '] ' + req.method + ' ' + pathname + ' failed:', error);
     writeJson(res, 500, { error: error.message });
   }
 });

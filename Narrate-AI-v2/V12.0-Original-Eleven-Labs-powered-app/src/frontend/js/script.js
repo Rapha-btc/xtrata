@@ -19,7 +19,11 @@ const STATE = {
     },
     projectMeta: {
         title: 'Untitled',
-        author: 'Unknown'
+        author: 'Unknown',
+        series: '',
+        seriesVolume: '',
+        displayTitle: 'Untitled',
+        language: 'English'
     },
     isProcessing: false,
     isPlaying: false,
@@ -164,6 +168,66 @@ const ChapterVerifier = {
 
 const TextParser = {
     escapeRegex: (v) => v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+
+    cleanMetadataLine: function(line = '') {
+        return String(line || '')
+            .replace(/^[\uFEFF#*\s]+/, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    },
+
+    stripTrailingPunctuation: function(line = '') {
+        return String(line || '').replace(/[\s.·•:;!?]+$/g, '').trim();
+    },
+
+    isVolumeLine: function(line = '') {
+        const clean = TextParser.stripTrailingPunctuation(TextParser.cleanMetadataLine(line));
+        return /^(book|livre|volume|vol\.?|tome|part|parte|teil|libro|buch)\s+([0-9ivxlcdm]+|one|two|three|four|five|six|seven|eight|nine|ten|un|deux|trois|quatre|cinq|six|sept|huit|neuf|dix)$/i.test(clean);
+    },
+
+    extractAuthorFromLine: function(line = '', lang = 'English') {
+        const clean = TextParser.stripTrailingPunctuation(TextParser.cleanMetadataLine(line));
+        if (!clean) return '';
+        const explicit = clean.match(/^(?:by|written by|author|narrated by|par|écrit par|de|von|por|di|da|door)\s+(.+)$/i);
+        if (explicit) return explicit[1].trim();
+        if (lang === 'French' && /^de\s+/i.test(clean)) return clean.replace(/^de\s+/i, '').trim();
+        return '';
+    },
+
+    looksLikeSeriesLine: function(line = '') {
+        const clean = TextParser.stripTrailingPunctuation(TextParser.cleanMetadataLine(line));
+        if (!clean || clean.length < 4) return false;
+        if (TextParser.isVolumeLine(clean)) return false;
+        if (TextParser.extractAuthorFromLine(clean)) return false;
+        if (/^(chapter|chapitre|cap[ií]tulo|kapitel|part|prologue|epilogue)\b/i.test(clean)) return false;
+        const words = clean.split(/\s+/).filter(Boolean);
+        if (words.length < 2 || words.length > 8) return false;
+        return /^[\p{L}\p{N}'’()\-.,&\s]+$/u.test(clean);
+    },
+
+    formatProjectTitle: function(meta = {}) {
+        const baseTitle = TextParser.stripTrailingPunctuation(meta.title || '') || 'Untitled';
+        const extras = [meta.series, meta.seriesVolume]
+            .map(v => TextParser.stripTrailingPunctuation(v || ''))
+            .filter(Boolean);
+        return extras.length ? `${baseTitle} — ${extras.join(' • ')}` : baseTitle;
+    },
+
+    formatSeriesLabel: function(meta = {}) {
+        const extras = [meta.series, meta.seriesVolume]
+            .map(v => TextParser.stripTrailingPunctuation(v || ''))
+            .filter(Boolean);
+        return extras.length ? extras.join(' • ') : '-';
+    },
+
+    getMetadataPreviewLines: function(manuscript = '', preamble = '') {
+        const source = String(preamble || '').trim() || String(manuscript || '').split(/\n\s*\n/)[0] || '';
+        return source
+            .split('\n')
+            .map(line => TextParser.cleanMetadataLine(line))
+            .filter(Boolean)
+            .slice(0, 8);
+    },
 
     _chReg: null,
     getChapterHeadingRegex: function() {
@@ -390,11 +454,67 @@ const TextParser = {
         return '';
     },
 
+    detectLeadingVoiceCue: function(text = '', candidates = []) {
+        const raw = String(text || '');
+        if (!raw.trim() || !candidates.length) return null;
+
+        const lines = raw.split('\n');
+        const headingStart = /^(chapter|chapitre|cap[íi]tulo|kapitel|capitolo|hoofdstuk|rozdział|глава|bölüm|luku|fejezet|kapitola|κεφάλαιο|bab|prologue|epilogue)\b/i;
+        for (let i = 0; i < Math.min(lines.length, 4); i++) {
+            const line = (lines[i] || '').trim();
+            if (!line) continue;
+            const normalized = line
+                .replace(/^[#\s]+/, '')
+                .replace(/[.:\-–—\s]+$/g, '')
+                .toLowerCase();
+            if (!normalized) continue;
+            if (headingStart.test(normalized)) continue;
+            if (line.length > 60) break;
+
+            for (const candidate of candidates) {
+                if (!this.matchesVoiceLabel(line, candidate, { allowLooseShortMatch: true })) continue;
+                const remainder = lines.slice(i + 1).join('\n').trim();
+                return {
+                    index: candidate.index,
+                    label: line,
+                    text: remainder || raw.trim()
+                };
+            }
+
+            // If the first non-heading meaningful line is not a compact cue, don't keep scanning deep into prose.
+            break;
+        }
+
+        return null;
+    },
+
+    extractStandaloneVoiceCueLabel: function(text = '') {
+        const raw = String(text || '');
+        if (!raw.trim()) return '';
+        const lines = raw.split('\n');
+        const headingStart = /^(chapter|chapitre|cap[íi]tulo|kapitel|capitolo|hoofdstuk|rozdział|глава|bölüm|luku|fejezet|kapitola|κεφάλαιο|bab|prologue|epilogue)\b/i;
+        for (let i = 0; i < Math.min(lines.length, 4); i++) {
+            const line = (lines[i] || '').trim();
+            if (!line) continue;
+            const normalized = line
+                .replace(/^[#\s]+/, '')
+                .replace(/[.:\-–—\s]+$/g, '')
+                .toLowerCase();
+            if (!normalized) continue;
+            if (headingStart.test(normalized)) continue;
+            if (line.length > 60) return '';
+            if (!TextParser.looksLikeCompactLabel(line)) return '';
+            return line.replace(/[.:\-–—\s]+$/g, '').trim();
+        }
+        return '';
+    },
+
     parseDualVoiceSegments: function(text, delim = '* * *', initVoiceIndex = 0, voiceNames = []) {
         const segs = [];
         const token = delim.trim() || '* * *';
         const escToken = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const aliasMap = TextParser.getVoiceAliases(voiceNames);
+        const candidates = TextParser.getVoiceCandidates(voiceNames).filter(c => c.name);
         
         // Split by token
         const parts = text.split(new RegExp(escToken, 'g'));
@@ -405,6 +525,11 @@ const TextParser = {
             let content = part.trim();
             if (index === 0) {
                 content = TextParser.stripStartVoiceMarker(content);
+            }
+            const cue = TextParser.detectLeadingVoiceCue(content, candidates);
+            if (cue) {
+                currentVoice = cue.index;
+                content = cue.text;
             }
             if(content) {
                 // Check if segment starts with the current voice's name (e.g. "Vincent.")
@@ -441,6 +566,8 @@ const TextParser = {
         let lang = 'English';
         let title = 'Untitled Book';
         let author = 'Unknown Author';
+        let series = '';
+        let seriesVolume = '';
 
         // Detect Language
         for (const l of LANG_CONFIG) {
@@ -454,33 +581,57 @@ const TextParser = {
             if (lang !== 'English') break;
         }
 
-        // Detect Title/Author in Preamble
-        if (preamble && preamble.trim()) {
-            const lines = preamble.split('\n').map(l => l.trim()).filter(Boolean);
-            if (lines.length) {
-                // Heuristic: First line is often title
-                title = lines[0];
-                
-                // Look for "By [Author]"
-                const lc = LANG_CONFIG.find(l => l[1] === lang) || LANG_CONFIG[0];
-                const byKw = [...(lc[3] || []), 'By', 'Author', 'Written by'];
-                
-                for (const line of lines) {
-                    for (const bk of byKw) {
-                        const m = line.match(new RegExp(`^${TextParser.escapeRegex(bk)}[:\\s]+\\s*(.+)`, 'i'));
-                        if (m) { author = m[1].trim(); break; }
-                    }
-                    if (author !== 'Unknown Author') break;
+        const lines = TextParser.getMetadataPreviewLines(manuscript, preamble);
+        if (lines.length) {
+            const used = new Set();
+
+            for (let i = 0; i < lines.length; i++) {
+                const extractedAuthor = TextParser.extractAuthorFromLine(lines[i], lang);
+                if (extractedAuthor) {
+                    author = extractedAuthor;
+                    used.add(i);
+                    break;
                 }
-                
-                // Fallback: 2nd line if short
-                if (author === 'Unknown Author' && lines.length > 1 && lines[1].length < 50) {
-                    author = lines[1];
+            }
+
+            for (let i = 0; i < lines.length; i++) {
+                if (used.has(i)) continue;
+                const line = TextParser.stripTrailingPunctuation(lines[i]);
+                if (!line || TextParser.isVolumeLine(line)) continue;
+                title = line;
+                used.add(i);
+                break;
+            }
+
+            for (let i = 0; i < lines.length; i++) {
+                if (used.has(i)) continue;
+                const line = TextParser.stripTrailingPunctuation(lines[i]);
+                if (!line) continue;
+                if (!seriesVolume && TextParser.isVolumeLine(line)) {
+                    seriesVolume = line;
+                    used.add(i);
+                    continue;
                 }
+                if (!series && TextParser.looksLikeSeriesLine(line)) {
+                    series = line;
+                    used.add(i);
+                }
+            }
+
+            if (author === 'Unknown Author') {
+                const fallbackAuthor = lines.find((line, index) => !used.has(index) && line.length <= 60 && !TextParser.isVolumeLine(line) && !TextParser.looksLikeSeriesLine(line));
+                if (fallbackAuthor) author = TextParser.stripTrailingPunctuation(fallbackAuthor);
             }
         }
         
-        return { language: lang, title, author };
+        return {
+            language: lang,
+            title,
+            author,
+            series,
+            seriesVolume,
+            displayTitle: TextParser.formatProjectTitle({ title, series, seriesVolume })
+        };
     },
 
     getModelCreditMultiplier: function(modelId) {
@@ -511,6 +662,9 @@ const TextParser = {
         const explicit = this.detectExplicitStartVoice(chapterText);
         if (explicit !== null) return explicit;
 
+        const cue = this.detectLeadingVoiceCue(chapterText, candidates);
+        if (cue) return cue.index;
+
         // 1. Prefer title/header labels because they are more reliable for POV books.
         let res = this.detectVoiceFromTitle(chapterTitle, candidates);
         if (res !== null) return res;
@@ -534,15 +688,23 @@ const TextParser = {
 class APIService {
     static async req(url,opts={}){
         const target = resolveApiUrl(url);
+        const controller = new AbortController();
+        const timeoutMs = opts.timeoutMs || 120000;
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
         let res;
         try {
-            res = await fetch(target, opts);
+            res = await fetch(target, { ...opts, signal: controller.signal });
         } catch (err) {
+            clearTimeout(timer);
+            if (err && err.name === 'AbortError') {
+                throw new Error(`Request timed out after ${Math.round(timeoutMs / 1000)}s while calling ${target}`);
+            }
             const hint = location.protocol === 'file:'
                 ? 'Open the app via http://localhost:3000 (run `node src/backend/server.js`).'
                 : `Check the server is running at ${API_BASE}.`;
             throw new Error(`Network error while calling ${target}. ${hint}`);
         }
+        clearTimeout(timer);
         if(!res.ok) throw new Error((await res.json().catch(()=>({error:res.statusText}))).error||"Request failed");
         return res.json();
     }
@@ -559,6 +721,62 @@ class APIService {
     static async mergeBook(pid,silence=0){return this.req('/api/merge-book',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({projectId:pid,silence})})}
     static async deleteProject(id){return this.req(`/api/projects/${id}`,{method:'DELETE'})}
     static async renameProject(id, title){return this.req(`/api/projects/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({title})})}
+}
+
+function syncChunkVoiceAssignments({ pendingOnly = true, persistReason = '' } = {}) {
+    if (!STATE.chapters.length) return 0;
+    const voiceLocks = getGeneratedVoiceLocks();
+    let changed = 0;
+    STATE.chapters.forEach(ch => {
+        (ch.chunks || []).forEach(chunk => {
+            if (pendingOnly && chunk.status === 'done') return;
+            const idx = typeof chunk.voiceIndex === 'number' ? chunk.voiceIndex : 0;
+            const lockedVoiceId = voiceLocks.byIndex[idx] || voiceLocks.byName[normalizeLockKey(chunk.voiceName)] || null;
+            const nextVoiceId = lockedVoiceId || STATE.project.voiceIds[idx] || STATE.project.voiceIds[0] || chunk.voiceId;
+            const nextVoiceName = STATE.project.voiceNames[idx] || chunk.voiceName || (idx === 0 ? 'Voice 1' : 'Voice 2');
+            if (chunk.voiceId !== nextVoiceId || chunk.voiceName !== nextVoiceName) {
+                chunk.voiceId = nextVoiceId;
+                chunk.voiceName = nextVoiceName;
+                changed++;
+            }
+        });
+    });
+    if (changed && persistReason) queueAutoSave(persistReason);
+    return changed;
+}
+
+function normalizeLockKey(value=''){
+    return String(value || '').trim().toLowerCase();
+}
+
+function getGeneratedVoiceLocks(){
+    const byIndex = {};
+    const byName = {};
+    STATE.chapters.forEach(ch => {
+        (ch.chunks || []).forEach(chunk => {
+            if (chunk.status !== 'done' || !chunk.voiceId) return;
+            const idx = typeof chunk.voiceIndex === 'number' ? chunk.voiceIndex : 0;
+            if (!byIndex[idx]) byIndex[idx] = chunk.voiceId;
+            const key = normalizeLockKey(chunk.voiceName);
+            if (key && !byName[key]) byName[key] = chunk.voiceId;
+        });
+    });
+    return { byIndex, byName };
+}
+
+function enforceGeneratedVoiceLocks({ persistReason = '' } = {}) {
+    const voiceLocks = getGeneratedVoiceLocks();
+    let changed = 0;
+    Object.keys(voiceLocks.byIndex).forEach(key => {
+        const idx = Number(key);
+        const lockedVoiceId = voiceLocks.byIndex[key];
+        if (STATE.project.voiceIds[idx] !== lockedVoiceId) {
+            STATE.project.voiceIds[idx] = lockedVoiceId;
+            changed++;
+        }
+    });
+    if (changed && persistReason) queueAutoSave(persistReason);
+    return { changed, voiceLocks };
 }
 
 class AudioEngine{
@@ -599,19 +817,29 @@ function resetAutoSaveTracker(savedSnapshot=false){
 }
 
 function buildProjectPayload(){
-    let title=STATE.projectMeta.title||"Untitled";
-    let author=STATE.projectMeta.author||"Unknown";
-    if((!title||title==="Untitled")&&dom.manuscript.value.trim()){
+    let meta = {
+        title: STATE.projectMeta.title || "Untitled",
+        author: STATE.projectMeta.author || "Unknown",
+        series: STATE.projectMeta.series || "",
+        seriesVolume: STATE.projectMeta.seriesVolume || "",
+        language: STATE.projectMeta.language || "English"
+    };
+    if((!meta.title||meta.title==="Untitled")&&dom.manuscript.value.trim()){
         try{
             const m=TextParser.detectProjectMetadata(dom.manuscript.value,"");
-            title=m.title||title;
-            author=m.author||author;
+            meta = {
+                title: m.title || meta.title,
+                author: m.author || meta.author,
+                series: m.series || meta.series,
+                seriesVolume: m.seriesVolume || meta.seriesVolume,
+                language: m.language || meta.language
+            };
         }catch(e){}
     }
     const titleInput=document.getElementById('project-title-input');
     const customTitle=titleInput?titleInput.value.trim():'';
-    if(customTitle)title=customTitle;
-    STATE.projectMeta={title,author};
+    const displayTitle = customTitle || TextParser.formatProjectTitle(meta);
+    STATE.projectMeta={...meta, displayTitle};
 
     STATE.project.voiceNames=[dom.voiceName1.value,dom.voiceName2.value];
     STATE.project.token=dom.voiceToken.value;
@@ -622,8 +850,13 @@ function buildProjectPayload(){
 
     return {
         id: STATE.project.id,
-        title,
-        author,
+        title: displayTitle,
+        baseTitle: meta.title,
+        displayTitle,
+        author: meta.author,
+        series: meta.series,
+        seriesVolume: meta.seriesVolume,
+        language: meta.language,
         chapters: STATE.chapters,
         manuscript: dom.manuscript.value,
         projectSettings: STATE.project
@@ -749,6 +982,12 @@ async function processChunkGeneration(chunk,chIdx,ckIdx,retry=0,force=false){
     if(STATE.halt)return false;
     const limit=parseFloat(document.getElementById('budget-limit').value)||999;
     if(STATE.sessionCost>limit){alert('Budget Exceeded');return false}
+    if (typeof chunk.voiceIndex === 'number') {
+        const voiceLocks = getGeneratedVoiceLocks();
+        const lockedVoiceId = voiceLocks.byIndex[chunk.voiceIndex] || voiceLocks.byName[normalizeLockKey(chunk.voiceName)] || null;
+        chunk.voiceId = lockedVoiceId || STATE.project.voiceIds[chunk.voiceIndex] || STATE.project.voiceIds[0] || chunk.voiceId;
+        chunk.voiceName = STATE.project.voiceNames[chunk.voiceIndex] || chunk.voiceName;
+    }
     updateChunkUI(chunk.id,'processing');
     try{
         await ensureAutoSaveSeed();
@@ -864,7 +1103,8 @@ function renderTimeline() {
             const isPlaying = STATE.activePlaybackId === `chunk_${ck.id}`;
             const st = isPlaying ? 'status-playing' : `status-${ck.status}`;
             const bg = cIdx % 2 === 0 ? 'background:rgba(255,255,255,0.02);' : '';
-            const vClass = ck.voiceIndex === 1 ? 'v2' : 'v1'; // Determine color class
+            const chunkVoice = STATE.voices.find(v => v.id === (ck.voiceId || STATE.project.voiceIds[ck.voiceIndex] || STATE.project.voiceIds[0]));
+            const vClass = getVoiceColorClassByVoice(chunkVoice);
             
             return `<div id="chunk-${ck.id}" class="chunk-item ${st}" onclick="playSingleChunk('${ck.id}')" style="${bg}" role="button">
                 <div style="display:flex;align-items:center;gap:10px;width:100%">
@@ -905,6 +1145,24 @@ function toggleChapterCollapse(i,e){if(e)e.stopPropagation();STATE.chapters[i].c
 function toggleDualMode(){const m=dom.projectMode.value;STATE.project.mode=m;dom.groupVoice2.style.display=m==='dual'?'block':'none';dom.groupToken.style.display=m==='dual'?'block':'none'}
 function openVoiceDropdown(s,e){e.stopPropagation();STATE.activeVoiceSlot=s;dom.voiceDropdown.classList.add('show');const r=(s===1?dom.voiceBtn1:dom.voiceBtn2).getBoundingClientRect();dom.voiceDropdown.style.top=`${r.bottom+5}px`;refreshVoiceList()}
 
+function getVoiceGender(voice){
+    if(!voice) return 'other';
+    if(voice.type==='premium'){
+        const premiumGender=(voice.labels&&voice.labels.gender?String(voice.labels.gender):'').toLowerCase();
+        if(premiumGender.includes('female')) return 'female';
+        if(premiumGender.includes('male')) return 'male';
+    }
+    const name=String(voice.name||'').toLowerCase();
+    if(name.includes('female')||name.includes('woman')||name.includes('girl')||name.includes('samantha')||name.includes('jessica')) return 'female';
+    if(name.includes('male')||name.includes('man')||name.includes('boy')||name.includes('daniel')||name.includes('craig')) return 'male';
+    return 'other';
+}
+
+function getVoiceColorClassByVoice(voice){
+    const gender=getVoiceGender(voice);
+    return gender==='male' ? 'voice-male' : gender==='female' ? 'voice-female' : 'voice-other';
+}
+
 async function refreshVoiceList(){
     STATE.voices=await engine.getVoices();const dd=dom.voiceDropdown;dd.innerHTML='';
     if(!STATE.voices.length){dd.innerHTML='<div style="padding:15px;color:var(--text-dim)">No voices.</div>';return}
@@ -913,17 +1171,42 @@ async function refreshVoiceList(){
     Object.keys(cols).forEach(k=>{cols[k].className='voice-col';cols[k].innerHTML=`<div class="voice-col-header">${labels[k]}</div>`;dd.appendChild(cols[k])});
     const cur=STATE.project.voiceIds[STATE.activeVoiceSlot-1];
     STATE.voices.forEach(v=>{
-        const el=document.createElement('div');el.className=`voice-option ${v.id===cur?'selected':''}`;el.innerText=v.name;
+        const gender=getVoiceGender(v);
+        const el=document.createElement('div');el.className=`voice-option ${getVoiceColorClassByVoice(v)} ${v.id===cur?'selected':''}`.trim();el.innerText=v.name;
         el.onclick=()=>selectVoice(v.id);
-        if(v.type==='premium'){const g=(v.labels.gender||'').toLowerCase();g==='female'?cols.pf.appendChild(el):cols.pm.appendChild(el)}
-        else{const n=v.name.toLowerCase();if(n.includes('female')||n.includes('samantha'))cols.sf.appendChild(el);else if(n.includes('male')||n.includes('daniel'))cols.sm.appendChild(el);else cols.so.appendChild(el)}
+        if(v.type==='premium'){gender==='female'?cols.pf.appendChild(el):gender==='male'?cols.pm.appendChild(el):cols.pm.appendChild(el)}
+        else{gender==='female'?cols.sf.appendChild(el):gender==='male'?cols.sm.appendChild(el):cols.so.appendChild(el)}
     });
     updateDropdownButtons();
 }
 
-function selectVoice(id){const s=STATE.activeVoiceSlot-1;STATE.project.voiceIds[s]=id;const v=STATE.voices.find(x=>x.id===id),ni=s===0?dom.voiceName1:dom.voiceName2;if(v&&!ni.value.trim())ni.value=v.name.split(' ')[0];updateDropdownButtons();updateModelDropdownState();updateReceipt()}
+function selectVoice(id){
+    const s=STATE.activeVoiceSlot-1;
+    const voiceLocks=getGeneratedVoiceLocks();
+    const lockedVoiceId=voiceLocks.byIndex[s]||null;
+    if(lockedVoiceId&&lockedVoiceId!==id){
+        const lockedVoice=STATE.voices.find(x=>x.id===lockedVoiceId);
+        alert(`Voice ${s+1} is locked because generation has already started for this character. Current locked voice: ${lockedVoice?lockedVoice.name:lockedVoiceId}`);
+        STATE.project.voiceIds[s]=lockedVoiceId;
+        updateDropdownButtons();
+        updateModelDropdownState();
+        updateReceipt();
+        renderTimeline();
+        return;
+    }
+    STATE.project.voiceIds[s]=id;
+    const v=STATE.voices.find(x=>x.id===id),ni=s===0?dom.voiceName1:dom.voiceName2;
+    if(v&&!ni.value.trim())ni.value=v.name.split(' ')[0];
+    STATE.project.voiceNames=[dom.voiceName1.value,dom.voiceName2.value];
+    const changed=syncChunkVoiceAssignments({pendingOnly:true,persistReason:'voice-reassign'});
+    if(changed)LOG.add(`Updated ${changed} pending chunk voice assignment${changed===1?'':'s'} to match the current selected voices.`,'info');
+    updateDropdownButtons();
+    updateModelDropdownState();
+    updateReceipt();
+    renderTimeline()
+}
 
-function updateDropdownButtons(){[0,1].forEach(s=>{const v=STATE.voices.find(x=>x.id===STATE.project.voiceIds[s]),b=s===0?dom.voiceBtn1:dom.voiceBtn2;b.querySelector('span').innerText=v?v.name:"Select Voice..."})}
+function updateDropdownButtons(){[0,1].forEach(s=>{const v=STATE.voices.find(x=>x.id===STATE.project.voiceIds[s]),b=s===0?dom.voiceBtn1:dom.voiceBtn2;b.querySelector('span').innerText=v?v.name:"Select Voice...";b.classList.remove('voice-male','voice-female','voice-other');if(v)b.classList.add(getVoiceColorClassByVoice(v))})}
 window.addEventListener('click',e=>{if(!dom.voiceDropdown.contains(e.target)&&!dom.voiceBtn1.contains(e.target)&&!dom.voiceBtn2.contains(e.target))dom.voiceDropdown.classList.remove('show')});
 function sanitizeChunkSize(v){const p=parseInt(v,10);return isNaN(p)?1000:Math.min(Math.max(p,200),4000)}
 
@@ -996,6 +1279,39 @@ document.getElementById('btn-analyze').addEventListener('click', () => {
 
     const summary = [];
     const anomalies = [];
+
+    const detectedDualCueNames = [];
+    if (isDual) {
+        parts.forEach(part => {
+            const trimmed = String(part || '').trim();
+            if (!trimmed || trimmed.match(chapterRegex)) return;
+            const cue = TextParser.extractStandaloneVoiceCueLabel(trimmed);
+            if (!cue) return;
+            const cueNorm = TextParser.normalizeVoiceText(cue);
+            if (cueNorm && !detectedDualCueNames.some(name => TextParser.normalizeVoiceText(name) === cueNorm)) {
+                detectedDualCueNames.push(cue);
+            }
+        });
+
+        if (detectedDualCueNames.length >= 2) {
+            const voice1Norm = TextParser.normalizeVoiceText(dom.voiceName1.value);
+            const voice2Norm = TextParser.normalizeVoiceText(dom.voiceName2.value);
+            const cue1Norm = TextParser.normalizeVoiceText(detectedDualCueNames[0]);
+            const cue2Norm = TextParser.normalizeVoiceText(detectedDualCueNames[1]);
+            const voiceNamesLookLikeCharacterCues =
+                (voice1Norm && voice1Norm === cue1Norm) ||
+                (voice2Norm && voice2Norm === cue2Norm) ||
+                (voice1Norm && voice1Norm === cue2Norm) ||
+                (voice2Norm && voice2Norm === cue1Norm);
+
+            if (!voiceNamesLookLikeCharacterCues) {
+                dom.voiceName1.value = detectedDualCueNames[0];
+                dom.voiceName2.value = detectedDualCueNames[1];
+                STATE.project.voiceNames = [dom.voiceName1.value, dom.voiceName2.value];
+                LOG.add(`Detected dual POV cues: Voice 1 → ${detectedDualCueNames[0]}, Voice 2 → ${detectedDualCueNames[1]}.`, 'success');
+            }
+        }
+    }
 
     // Iterate
     let chapterCounter = 0;
@@ -1095,14 +1411,28 @@ document.getElementById('btn-analyze').addEventListener('click', () => {
              }
         }
     }
-    
+
+    const lockResult = enforceGeneratedVoiceLocks({ persistReason: 'post-analyze-voice-lock' });
+    if (lockResult.changed) LOG.add(`Preserved ${lockResult.changed} locked generated voice selection${lockResult.changed===1?'':'s'} after analysis.`, 'info');
+    const reassigned = syncChunkVoiceAssignments({ pendingOnly: true, persistReason: 'post-analyze-voice-sync' });
+    if (reassigned) LOG.add(`Rebound ${reassigned} pending chunk voice assignment${reassigned===1?'':'s'} to the current project voices after analysis.`, 'info');
+
     // --- METADATA & SUMMARY ---
     const meta = TextParser.detectProjectMetadata(raw, preamble);
-    STATE.projectMeta = { title: meta.title || 'Untitled', author: meta.author || 'Unknown' };
-    LOG.add(`Metadata detected: "${meta.title}" (${meta.language})`);
+    STATE.projectMeta = {
+        title: meta.title || 'Untitled',
+        author: meta.author || 'Unknown',
+        series: meta.series || '',
+        seriesVolume: meta.seriesVolume || '',
+        displayTitle: meta.displayTitle || TextParser.formatProjectTitle(meta),
+        language: meta.language || 'English'
+    };
+    const projectTitleInput = document.getElementById('project-title-input');
+    if (projectTitleInput) projectTitleInput.placeholder = STATE.projectMeta.displayTitle || 'Project Name (optional)';
+    LOG.add(`Metadata detected: "${STATE.projectMeta.displayTitle}" (${meta.language})`);
     
     // Generate Deterministic Project ID
-    const safeTitle = (meta.title || 'untitled').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const safeTitle = (STATE.projectMeta.displayTitle || meta.title || 'untitled').toLowerCase().replace(/[^a-z0-9]/g, '');
     const safeAuthor = (meta.author || 'unknown').toLowerCase().replace(/[^a-z0-9]/g, '');
     const uniqueString = `${safeTitle}_${safeAuthor}`.substring(0, 30);
     // Simple hash to ensure shortness and uniqueness
@@ -1126,9 +1456,10 @@ document.getElementById('btn-analyze').addEventListener('click', () => {
 
     // Update UI Summary
     document.getElementById('project-summary').style.display = 'block';
-    document.getElementById('sum-title').innerText = meta.title.substring(0,20);
-    document.getElementById('sum-author').innerText = meta.author.substring(0,20);
-    document.getElementById('sum-lang').innerText = meta.language;
+    document.getElementById('sum-title').innerText = (STATE.projectMeta.title || '-').substring(0,24);
+    document.getElementById('sum-series').innerText = TextParser.formatSeriesLabel(STATE.projectMeta).substring(0,32);
+    document.getElementById('sum-author').innerText = meta.author.substring(0,24);
+    document.getElementById('sum-lang').innerText = STATE.projectMeta.language;
     
     const hasTitles = STATE.chapters.length > 0 && STATE.chapters[0].title === "Titles";
     const actualChapterCount = hasTitles ? STATE.chapters.length - 1 : STATE.chapters.length;
@@ -1349,7 +1680,7 @@ function createProjectFromSettings() {
     // 2. Generate New ID & Reset Meta
     STATE.project.id = 'proj_' + Date.now().toString(36);
     resetAutoSaveTracker(false);
-    STATE.projectMeta = { title: 'Untitled', author: 'Unknown' };
+    STATE.projectMeta = { title: 'Untitled', author: 'Unknown', series: '', seriesVolume: '', displayTitle: 'Untitled', language: 'English' };
     STATE.project.customTitle = "";
     STATE.project.notes = "";
     dom.projectNotes.value = "";
@@ -1357,7 +1688,9 @@ function createProjectFromSettings() {
     // 3. Keep Settings (Voices, Model, Tokens are already in DOM/STATE, so we leave them)
     // Just ensure UI reflects "New" state
     document.getElementById('project-title-input').value = "";
+    document.getElementById('project-title-input').placeholder = "Project Name (optional)";
     document.getElementById('sum-title').innerText = "-";
+    document.getElementById('sum-series').innerText = "-";
     document.getElementById('sum-author').innerText = "-";
     document.getElementById('sum-lang').innerText = "-";
     document.getElementById('sum-chapters').innerText = "0";
@@ -1385,13 +1718,20 @@ async function saveCurrentProject(){
         const r=await APIService.req('/api/projects',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
         if(r.id)STATE.project.id=r.id;
         AUTO_SAVE.hasSavedSnapshot=true;
-        openProjectModal();
-        LOG.add('Saved','success');
+        const titleInput=document.getElementById('project-title-input');
+        if(titleInput){
+            titleInput.value='';
+            titleInput.placeholder=payload.displayTitle||payload.title||'Project Name (optional)';
+        }
+        if(document.getElementById('project-modal').classList.contains('show')) openProjectModal();
+        LOG.add(`Saved project: ${payload.displayTitle||payload.title}`,'success');
     }catch(e){alert("Save failed: "+e.message)}
 }
 
 async function openProjectModal(){
     document.getElementById('project-modal').classList.add('show');const lst=document.getElementById('project-list');lst.innerHTML='Loading...';
+    const titleInput=document.getElementById('project-title-input');
+    if(titleInput && !titleInput.value.trim()) titleInput.placeholder=STATE.projectMeta.displayTitle||TextParser.formatProjectTitle(STATE.projectMeta)||'Project Name (optional)';
     try{
         const p=await APIService.req('/api/projects');
         lst.innerHTML=p.length?p.map(x=>`
@@ -1445,7 +1785,14 @@ async function loadProject(id){
     try{
         const d=await APIService.req(`/api/projects/${id}`);
         STATE.project=d.projectSettings||STATE.project;STATE.chapters=d.chapters||[];dom.manuscript.value=d.manuscript||"";
-        STATE.projectMeta={title:d.title||'Untitled',author:d.author||'Unknown'};
+        STATE.projectMeta={
+            title:d.baseTitle||d.title||'Untitled',
+            author:d.author||'Unknown',
+            series:d.series||'',
+            seriesVolume:d.seriesVolume||'',
+            displayTitle:d.displayTitle||d.title||'Untitled',
+            language:d.language||'English'
+        };
         resetAutoSaveTracker(Boolean(d.updatedAt));
         
         // Restore UI Elements
@@ -1457,6 +1804,19 @@ async function loadProject(id){
         dom.silenceChunk.value = STATE.project.silenceChunk !== undefined ? STATE.project.silenceChunk : 0.0;
         dom.silenceChapter.value = STATE.project.silenceChapter !== undefined ? STATE.project.silenceChapter : 1.0;
         dom.projectNotes.value = STATE.project.notes || '';
+        const projectTitleInput = document.getElementById('project-title-input');
+        if (projectTitleInput) {
+            projectTitleInput.value = '';
+            projectTitleInput.placeholder = STATE.projectMeta.displayTitle || 'Project Name (optional)';
+        }
+        const lockResult = enforceGeneratedVoiceLocks({ persistReason: 'load-project-voice-lock' });
+        if (lockResult.changed) {
+            LOG.add(`Restored ${lockResult.changed} locked voice selection${lockResult.changed===1?'':'s'} from previously generated chunks.`, 'info');
+        }
+        const syncedPendingVoices = syncChunkVoiceAssignments({ pendingOnly: true, persistReason: 'load-project-voice-sync' });
+        if (syncedPendingVoices) {
+            LOG.add(`Updated ${syncedPendingVoices} pending chunk voice assignment${syncedPendingVoices===1?'':'s'} to match the current saved voice selection.`, 'info');
+        }
 
         // Collapse all chapters by default
         STATE.chapters.forEach(ch => {
@@ -1473,6 +1833,18 @@ async function loadProject(id){
         dom.btnGenerateTimeline.disabled = !hasChunks;
         if(dom.btnRebuildBook) dom.btnRebuildBook.disabled = !hasChunks;
         updateReceipt();
+        document.getElementById('project-summary').style.display = 'block';
+        document.getElementById('sum-title').innerText = (STATE.projectMeta.title || '-').substring(0,24);
+        document.getElementById('sum-series').innerText = TextParser.formatSeriesLabel(STATE.projectMeta).substring(0,32);
+        document.getElementById('sum-author').innerText = (STATE.projectMeta.author || '-').substring(0,24);
+        document.getElementById('sum-lang').innerText = STATE.projectMeta.language || '-';
+        const totalChars = STATE.chapters.reduce((acc, ch) => acc + (ch.chunks || []).reduce((sum, ck) => sum + (ck.text || '').length, 0), 0);
+        const hasTitles = STATE.chapters.length > 0 && STATE.chapters[0].title === "Titles";
+        const actualChapterCount = hasTitles ? STATE.chapters.length - 1 : STATE.chapters.length;
+        document.getElementById('sum-chapters').innerText = hasTitles ? `${actualChapterCount} (+Titles)` : `${actualChapterCount}`;
+        document.getElementById('sum-chars').innerText = totalChars.toLocaleString();
+        document.getElementById('sum-cost').innerText = `$${(totalChars * TextParser.getModelCreditMultiplier(dom.elModel.value) * 0.000165).toFixed(2)}`;
+        document.getElementById('sum-model').innerText = dom.elModel.options[dom.elModel.selectedIndex].text;
         closeProjectModal();
         LOG.add('Loaded','success');
     }catch(e){console.error(e);alert("Load failed")}
