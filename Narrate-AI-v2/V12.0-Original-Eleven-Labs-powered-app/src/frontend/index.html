@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audiobook Studio // Gen-3 (Optimized)</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header>
+    <div class="brand">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 3V21" stroke="#6c5ce7" stroke-width="2" stroke-linecap="round"/>
+            <path d="M8 8V16" stroke="#6c5ce7" stroke-width="2" stroke-linecap="round"/>
+            <path d="M16 8V16" stroke="#6c5ce7" stroke-width="2" stroke-linecap="round"/>
+            <path d="M4 11V13" stroke="#6c5ce7" stroke-width="2" stroke-linecap="round"/>
+            <path d="M20 11V13" stroke="#6c5ce7" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <span>Narrate.AI</span> Studio
+    </div>
+    <div class="header-controls">
+        <button class="sm-btn" onclick="openHelpModal()" style="margin-right:10px;">❓ Help</button>
+        <button class="sm-btn" onclick="openProjectModal()" style="margin-right:15px;">📂 Projects</button>
+        <span id="live-receipt" class="receipt">$0.00 Est. Cost</span>
+    </div>
+</header>
+
+<div id="project-modal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Saved Projects</h3>
+            <button onclick="closeProjectModal()" class="sm-btn">✕</button>
+        </div>
+        <div id="project-list" class="project-list">
+            <div style="padding:20px; text-align:center; color:var(--text-dim);">Loading...</div>
+        </div>
+        <div class="modal-footer" style="display:flex; gap:10px; align-items:center;">
+            <button onclick="createProjectFromSettings()" class="sm-btn" style="white-space:nowrap;">📄 New from Settings</button>
+            <input type="text" id="project-title-input" placeholder="Project Name (optional)" style="flex:1; padding:8px;">
+            <button onclick="saveCurrentProject()" class="primary">Save Project</button>
+        </div>
+    </div>
+</div>
+
+<div id="help-modal" class="modal-overlay">
+    <div class="modal-content" style="width: 700px; max-width: 95%;">
+        <div class="modal-header">
+            <h3>📖 Audiobook Studio Guide</h3>
+            <button onclick="closeHelpModal()" class="sm-btn">✕</button>
+        </div>
+        <div style="flex:1; overflow-y:auto; padding:20px; line-height:1.6; color:var(--text-dim); font-size:0.9rem;">
+            <h4 style="color:var(--text-main); margin-top:0;">1. Text Preparation</h4>
+            <p><strong>Single Voice Mode:</strong> Simply paste your text. Use standard chapter headings (e.g., <em>"Chapter 1"</em> or <em>"# Chapter One"</em>) to split audio files automatically.</p>
+            
+            <p><strong>Dual Voice Mode:</strong> Used for romance or multi-POV books.</p>
+            <ul>
+                <li>Set <strong>Voice 1</strong> (e.g., Female/Narrator) and <strong>Voice 2</strong> (e.g., Male).</li>
+                <li>You can add multiple character aliases per voice name using commas (for example, <code>Layla, Charlotte</code>).</li>
+                <li>The app selects chapter opening voice from the first speaker line after each chapter heading, based on these UI names.</li>
+                <li>Use the delimiter <code>* * *</code> on its own line to switch voices.</li>
+                <li>If a section starts with a character's name (e.g., <em>"Vincent."</em>), the system will detect it and add a dramatic pause.</li>
+                <li>To force chapter opening voice, add <code>[[voice1]]</code> or <code>[[voice2]]</code> near the start of the chapter.</li>
+            </ul>
+
+            <h4 style="color:var(--text-main);">2. Chapter Formatting</h4>
+            <p>Ensure chapters start with a clear header. The system supports English, Spanish, German, and French headers automatically. Example:</p>
+            <pre style="background:#111; padding:10px; border-radius:4px; font-family:monospace;">Capítulo uno: Piper. 
+
+Con lo poco que me gustaba conducir...</pre>
+            <p><em>Note: The chapter header is included in the audio with a generated pause (approx 1.5s) before the story begins.</em></p>
+
+            <h4 style="color:var(--text-main);">3. Tips & Tricks</h4>
+            <ul>
+                <li><strong>Save Your Work:</strong> Use the "📂 Projects" button to save your progress to the server.</li>
+                <li><strong>Cost Estimator:</strong> The price at the top right updates in real-time based on your text length and selected ElevenLabs model.</li>
+                <li><strong>Visualizer:</strong> The bars in the control footer react to the audio playback.</li>
+            </ul>
+        </div>
+        <div class="modal-footer">
+            <button onclick="closeHelpModal()" class="primary">Got it</button>
+        </div>
+    </div>
+</div>
+
+<div id="safety-modal" class="modal-overlay">
+    <div class="modal-content" style="width: 450px;">
+        <div class="modal-header">
+            <h3 style="color:var(--warning)">⚠️ Confirm Generation</h3>
+            <button onclick="closeSafetyModal()" class="sm-btn">✕</button>
+        </div>
+        <div style="padding:20px; font-size:0.95rem; line-height:1.5;">
+            <p id="safety-message">Are you sure you want to generate audio for this project?</p>
+            <div id="safety-details" style="background:rgba(0,0,0,0.2); padding:15px; border-radius:8px; border:1px solid var(--border); margin:15px 0;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>Total Characters:</span><strong id="confirm-chars">0</strong></div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>New Segments:</span><strong id="confirm-new" style="color:var(--accent)">0</strong></div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>Cached Segments:</span><strong id="confirm-cached" style="color:var(--success)">0</strong></div>
+                <hr style="border:0; border-top:1px solid var(--border); margin:10px 0;">
+                <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:1.1rem;"><span>Est. Actual Cost:</span><span id="confirm-cost" style="color:var(--success)">$0.00</span></div>
+            </div>
+            <p style="font-size:0.8rem; color:var(--text-dim);">Actual cost may vary slightly based on final API billing. Cached segments are free.</p>
+            
+            <div style="margin:15px 0; display:flex; flex-direction:column; gap:10px; background:rgba(255,165,0,0.1); padding:10px; border-radius:4px; border:1px solid rgba(255,165,0,0.3);">
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <input type="checkbox" id="force-merge-check">
+                    <label for="force-merge-check" style="font-size:0.85rem; color:var(--text-main); cursor:pointer;">
+                        <strong>Force Merge:</strong> Ignore missing segments.
+                    </label>
+                </div>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <input type="checkbox" id="force-regen-check">
+                    <label for="force-regen-check" style="font-size:0.85rem; color:var(--text-main); cursor:pointer;">
+                        <strong>Force Regenerate:</strong> Overwrite existing audio (Cost applies).
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer" style="display:flex; gap:10px;">
+            <button onclick="closeSafetyModal()" style="flex:1;">Cancel</button>
+            <button id="btn-confirm-start" class="primary" style="flex:2;">Yes, Start Generation</button>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Context Menu -->
+<div id="context-menu">
+    <div class="ctx-item" id="ctx-open">📂 Open</div>
+    <div class="ctx-item" id="ctx-rename">✏️ Rename</div>
+    <div style="height:1px; background:var(--border); margin:4px 0;"></div>
+    <div class="ctx-item danger" id="ctx-delete">🗑 Delete</div>
+</div>
+
+<!-- Safer Delete Modal -->
+<div id="delete-confirm-modal" class="modal-overlay">
+    <div class="modal-content" style="width: 400px;">
+        <div class="modal-header">
+            <h3 style="color:var(--danger)">⚠️ Delete Project</h3>
+            <button onclick="closeDeleteModal()" class="sm-btn">✕</button>
+        </div>
+        <div style="padding:20px;">
+            <p style="margin-top:0; color:var(--text-main);">Are you sure you want to delete <strong id="del-project-name" style="color:white;">this project</strong>?</p>
+            <p style="font-size:0.9rem; color:var(--text-dim);">This action cannot be undone. To confirm, type <strong>delete</strong> below:</p>
+            <input type="text" id="delete-confirm-input" placeholder="Type 'delete'" style="margin-top:10px; border-color:var(--danger);">
+        </div>
+        <div class="modal-footer" style="display:flex; gap:10px;">
+            <button onclick="closeDeleteModal()" style="flex:1;">Cancel</button>
+            <button id="btn-final-delete" class="danger" style="flex:1;" disabled>Delete Forever</button>
+        </div>
+    </div>
+</div>
+
+<main>
+    <section class="panel">
+        <div class="sidebar-tabs">
+            <div class="tab active" onclick="switchTab('project')">Project</div>
+            <div class="tab" onclick="switchTab('connections')">Connections</div>
+        </div>
+
+        <div id="tab-project" class="settings-content active">
+            <div class="form-group">
+                <label>Narration Mode</label>
+                <select id="project-mode" onchange="toggleDualMode()">
+                    <option value="single">Single Voice</option>
+                    <option value="dual">Dual Voice</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Primary Voice (Voice 1)</label>
+                <div class="voice-select-container">
+                    <button id="voice-select-btn-1" class="voice-select-btn" type="button" onclick="openVoiceDropdown(1, event)">
+                        <span>Select Voice 1...</span>
+                        <span>▼</span>
+                    </button>
+                </div>
+                <input type="text" id="voice-name-1" placeholder="Chapter Start Name(s) (e.g. Charlotte, Layla)" style="margin-top:5px; font-size: 0.8rem; padding: 6px;">
+            </div>
+
+            <div class="form-group" id="group-voice-2" style="display:none; border-left: 2px solid var(--accent); padding-left: 10px;">
+                <label>Secondary Voice (Voice 2)</label>
+                <div class="voice-select-container">
+                    <button id="voice-select-btn-2" class="voice-select-btn" type="button" onclick="openVoiceDropdown(2, event)">
+                        <span>Select Voice 2...</span>
+                        <span>▼</span>
+                    </button>
+                </div>
+                <input type="text" id="voice-name-2" placeholder="Chapter Start Name(s) (e.g. Drake, Gabe)" style="margin-top:5px; font-size: 0.8rem; padding: 6px;">
+            </div>
+
+            <div class="form-group" id="group-token" style="display:none">
+                <label>Voice Switch Token</label>
+                <input type="text" id="voice-token" value="* * *" placeholder="e.g. * * *">
+                <div style="font-size:0.75rem; color:var(--text-dim); margin-top:3px;">
+                    Paste this token in your text to switch voices.
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>ElevenLabs Model</label>
+                <select id="el-model">
+                    <option value="eleven_multilingual_v2">Multilingual v2 (Best for Storytelling)</option>
+                    <option value="eleven_multilingual_v3">Multilingual v3 (Latest)</option>
+                    <option value="eleven_turbo_v2_5">Turbo v2.5 (Fastest, English)</option>
+                    <option value="eleven_turbo_v2" selected>Turbo v2 (Fast, English)</option>
+                    <option value="eleven_flash_v2_5">Flash v2.5 (Ultra Fast, Cost Effective)</option>
+                    <option value="eleven_flash_v2">Flash v2 (Previous Gen)</option>
+                    <option value="eleven_monolingual_v1">Monolingual v1 (Legacy)</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Split Strategy (Max Chars)</label>
+                <input type="text" id="chunk-size" value="1000">
+            </div>
+
+            <div class="form-group">
+                <label>Silence Settings (Seconds)</label>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div>
+                        <label style="font-size:0.75rem; color:var(--text-dim)">Between Segments</label>
+                        <input type="number" id="silence-chunk" value="0.0" step="0.1" min="0" max="5">
+                    </div>
+                    <div>
+                        <label style="font-size:0.75rem; color:var(--text-dim)">Between Chapters</label>
+                        <input type="number" id="silence-chapter" value="1.0" step="0.1" min="0" max="10">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Session Budget Warning ($)</label>
+                <input type="text" id="budget-limit" value="5.00" placeholder="e.g. 5.00">
+                <div style="font-size:0.75rem; color:var(--text-dim); margin-top:3px;">
+                    Alert if session cost exceeds this amount.
+                </div>
+            </div>
+
+            <div id="project-summary" style="display:none; background:rgba(255,255,255,0.05); padding:15px; border-radius:8px; margin-top:20px; font-size:0.85rem; border:1px solid var(--border);">
+                <div style="font-weight:700; color:var(--accent); margin-bottom:10px; border-bottom:1px solid var(--border); padding-bottom:5px;">PROJECT SUMMARY</div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div><strong>Title:</strong> <span id="sum-title">-</span></div>
+                    <div><strong>Series:</strong> <span id="sum-series">-</span></div>
+                    <div><strong>Author:</strong> <span id="sum-author">-</span></div>
+                    <div><strong>Language:</strong> <span id="sum-lang">-</span></div>
+                    <div><strong>Chapters:</strong> <span id="sum-chapters">0</span></div>
+                    <div><strong>Chars:</strong> <span id="sum-chars">0</span></div>
+                    <div><strong>Est. Cost:</strong> <span id="sum-cost" style="color:var(--success)">$0.00</span></div>
+                </div>
+                <div style="margin-top:10px; font-style:italic; color:var(--text-dim);" id="sum-model">-</div>
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid var(--border); margin: 20px 0;">
+            
+            <div class="form-group">
+                <label>Project Notes</label>
+                <textarea id="project-notes" rows="3" placeholder="Keep track of chapter issues, duplicate titles, or edit needs here..." style="width:100%; padding:8px; border-radius:4px; border:1px solid var(--border); background:rgba(0,0,0,0.2); color:var(--text-main); font-family:var(--font-sans);"></textarea>
+            </div>
+
+            <div class="form-group">
+                <button id="btn-analyze" style="width:100%">1. Analyze & Parse</button>
+            </div>
+            <div class="form-group">
+                <button id="btn-generate" class="primary" style="width:100%" disabled>2. Generate Audio</button>
+            </div>
+        </div>
+
+        <div id="tab-connections" class="settings-content">
+            <div class="connection-card">
+                <div class="status-header">
+                    <div style="font-weight:600; font-size:0.9rem;">ElevenLabs API</div>
+                    <div class="status-indicator">
+                        <span id="el-status-text">Not Connected</span>
+                        <div id="el-status-dot" class="status-dot"></div>
+                    </div>
+                </div>
+                <form onsubmit="event.preventDefault(); connectElevenLabs()">
+                    <div class="form-group">
+                        <label>Connection Name</label>
+                        <input type="text" id="el-name" placeholder="e.g. My Pro Account" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label>API Key</label>
+                        <input type="password" id="el-key" placeholder="Paste xi-api-key here..." autocomplete="new-password">
+                    </div>
+                    <button type="submit" id="btn-connect-el" style="width:100%">Connect & Fetch Voices</button>
+                    <button type="button" id="btn-disconnect-el" class="danger" style="width:100%; display:none;" onclick="disconnectElevenLabs()">Disconnect API</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <section class="panel" style="border-right: 1px solid var(--border);">
+        <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <span>Manuscript</span>
+            <div>
+                <button id="btn-save-text" class="sm-btn" style="background:var(--accent); color:white; border:none; display:none;">💾 Save Text Update</button>
+            </div>
+        </div>
+        <div class="editor-container">
+            <textarea id="manuscript" placeholder="Paste your book text here. Use # for Chapters..."></textarea>
+        </div>
+        
+        <div class="control-bar">
+            <button class="play-btn" id="btn-play-all" aria-label="Play All">▶</button>
+            <button class="play-btn danger" id="btn-halt" style="display:none; width:auto; border-radius:20px; padding:0 15px; font-size:0.8rem;" onclick="haltGeneration()">🛑 HALT</button>
+            <div style="display:flex; flex-direction:column; justify-content:center; gap:5px;">
+                <canvas id="audio-visualizer" width="200" height="30" style="background:#000; border-radius:4px;"></canvas>
+                <progress id="master-progress" value="0" max="100" style="width: 200px; height: 5px;"></progress>
+            </div>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-header">
+            Studio Timeline
+            <button id="btn-generate-all-timeline" class="sm-btn primary" style="font-size: 0.75rem; padding: 4px 8px; margin-left: auto;" title="Generate all pending audio">⚡ Generate All</button>
+            <button id="btn-rebuild-book" class="sm-btn" style="font-size: 0.75rem; padding: 4px 8px; margin-left: 8px;" title="Rebuild chapter and full book files from existing chunk audio" disabled>🔁 Rebuild Book</button>
+        </div>
+        <div class="timeline-scroll" id="timeline-container">
+            <div style="padding:20px; text-align:center; color: var(--text-dim); font-style:italic;">
+                No chapters detected. <br>
+                Paste text and click "Analyze".
+            </div>
+        </div>
+    </section>
+</main>
+
+<div id="voice-dropdown" class="voice-dropdown">
+    </div>
+<div id="console-panel">
+    <div class="log-entry">System ready.</div>
+</div>
+
+<script src="js/script.js" defer></script>
+</body>
+</html>

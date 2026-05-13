@@ -17,5 +17,7 @@ coverage
 /Twitter-Growth/
 /Agent-27/
 /Pitch-Video/
+/qwen3_voice_previews/
 
 
+*.mp3
