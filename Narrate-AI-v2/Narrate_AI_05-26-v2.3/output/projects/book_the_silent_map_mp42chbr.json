@@ -1,0 +1,218 @@
+{
+  "id": "book_the_silent_map_mp42chbr",
+  "title": "The Silent Map",
+  "series": "North Harbor Chronicles",
+  "seriesVolume": "Book 3",
+  "author": "Jane Winter",
+  "language": "English",
+  "manuscript": "The Silent Map\nNorth Harbor Chronicles\nBook 3\nby Jane Winter\n\nChapter 1\nThe rain started before dawn.\n\nChapter 2\nBy noon the harbor was empty.",
+  "updatedAt": "2026-05-13T12:56:14.794Z",
+  "projectSettings": {
+    "mode": "single",
+    "delimiter": "* * *",
+    "chunkMaxChars": 1000,
+    "model": "qwen3-tts-flash",
+    "chunkSilence": 0,
+    "chapterSilence": 1
+  },
+  "roles": [
+    {
+      "id": "role_narrator",
+      "label": "Narrator",
+      "chunkCount": 8,
+      "charCount": 130,
+      "voiceId": "Cherry"
+    }
+  ],
+  "characters": [],
+  "chapters": [
+    {
+      "index": 0,
+      "title": "Titles",
+      "kind": "titles",
+      "audioUrls": {
+        "wav": "",
+        "mp3": ""
+      },
+      "chunks": [
+        {
+          "id": "bk_title_0_3afkdx",
+          "chapterIndex": 0,
+          "chunkIndex": 0,
+          "segmentIndex": 0,
+          "roleLabel": "Narrator",
+          "roleId": "role_narrator",
+          "sourceType": "narration",
+          "text": "The Silent Map",
+          "status": "pending",
+          "filename": "",
+          "audioUrl": "",
+          "voiceId": "Cherry",
+          "charCount": 14,
+          "detectedCharacters": [],
+          "primaryCharacter": "",
+          "audioVersion": 0
+        },
+        {
+          "id": "bk_title_1_8226d1",
+          "chapterIndex": 0,
+          "chunkIndex": 1,
+          "segmentIndex": 1,
+          "roleLabel": "Narrator",
+          "roleId": "role_narrator",
+          "sourceType": "narration",
+          "text": "North Harbor Chronicles",
+          "status": "pending",
+          "filename": "",
+          "audioUrl": "",
+          "voiceId": "Cherry",
+          "charCount": 23,
+          "detectedCharacters": [],
+          "primaryCharacter": "",
+          "audioVersion": 0
+        },
+        {
+          "id": "bk_title_2_hm73yh",
+          "chapterIndex": 0,
+          "chunkIndex": 2,
+          "segmentIndex": 2,
+          "roleLabel": "Narrator",
+          "roleId": "role_narrator",
+          "sourceType": "narration",
+          "text": "Book 3",
+          "status": "pending",
+          "filename": "",
+          "audioUrl": "",
+          "voiceId": "Cherry",
+          "charCount": 6,
+          "detectedCharacters": [],
+          "primaryCharacter": "",
+          "audioVersion": 0
+        },
+        {
+          "id": "bk_title_3_lf1f6h",
+          "chapterIndex": 0,
+          "chunkIndex": 3,
+          "segmentIndex": 3,
+          "roleLabel": "Narrator",
+          "roleId": "role_narrator",
+          "sourceType": "narration",
+          "text": "Jane Winter",
+          "status": "pending",
+          "filename": "",
+          "audioUrl": "",
+          "voiceId": "Cherry",
+          "charCount": 11,
+          "detectedCharacters": [],
+          "primaryCharacter": "",
+          "audioVersion": 0
+        }
+      ],
+      "collapsed": false,
+      "characters": []
+    },
+    {
+      "index": 1,
+      "title": "Chapter 1",
+      "kind": "chapter",
+      "audioUrls": {
+        "wav": "",
+        "mp3": ""
+      },
+      "chunks": [
+        {
+          "id": "bk_1_0_5x9iee",
+          "chapterIndex": 1,
+          "chunkIndex": 0,
+          "segmentIndex": 0,
+          "roleLabel": "Narrator",
+          "roleId": "role_narrator",
+          "sourceType": "narration",
+          "text": "Chapter 1",
+          "status": "pending",
+          "filename": "",
+          "audioUrl": "",
+          "voiceId": "Cherry",
+          "charCount": 9,
+          "detectedCharacters": [],
+          "primaryCharacter": "",
+          "audioVersion": 0
+        },
+        {
+          "id": "bk_1_1_3ipk0c",
+          "chapterIndex": 1,
+          "chunkIndex": 1,
+          "segmentIndex": 1,
+          "roleLabel": "Narrator",
+          "roleId": "role_narrator",
+          "sourceType": "narration",
+          "text": "The rain started before dawn.",
+          "status": "pending",
+          "filename": "",
+          "audioUrl": "",
+          "voiceId": "Cherry",
+          "charCount": 29,
+          "detectedCharacters": [],
+          "primaryCharacter": "",
+          "audioVersion": 0
+        }
+      ],
+      "collapsed": true,
+      "characters": []
+    },
+    {
+      "index": 2,
+      "title": "Chapter 2",
+      "kind": "chapter",
+      "audioUrls": {
+        "wav": "",
+        "mp3": ""
+      },
+      "chunks": [
+        {
+          "id": "bk_2_0_qjmpnp",
+          "chapterIndex": 2,
+          "chunkIndex": 0,
+          "segmentIndex": 0,
+          "roleLabel": "Narrator",
+          "roleId": "role_narrator",
+          "sourceType": "narration",
+          "text": "Chapter 2",
+          "status": "pending",
+          "filename": "",
+          "audioUrl": "",
+          "voiceId": "Cherry",
+          "charCount": 9,
+          "detectedCharacters": [],
+          "primaryCharacter": "",
+          "audioVersion": 0
+        },
+        {
+          "id": "bk_2_1_k64b07",
+          "chapterIndex": 2,
+          "chunkIndex": 1,
+          "segmentIndex": 1,
+          "roleLabel": "Narrator",
+          "roleId": "role_narrator",
+          "sourceType": "narration",
+          "text": "By noon the harbor was empty.",
+          "status": "pending",
+          "filename": "",
+          "audioUrl": "",
+          "voiceId": "Cherry",
+          "charCount": 29,
+          "detectedCharacters": [],
+          "primaryCharacter": "",
+          "audioVersion": 0
+        }
+      ],
+      "collapsed": true,
+      "characters": []
+    }
+  ],
+  "outputs": {
+    "wav": "",
+    "mp3": "",
+    "zip": ""
+  }
+}

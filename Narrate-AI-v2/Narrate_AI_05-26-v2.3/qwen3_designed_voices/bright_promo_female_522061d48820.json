@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-PromoFem01-voice-20260514205639483-4734",
+  "preferred_name": "PromoFem01",
+  "display_name": "Bright Promo Female",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A bright, confident female commercial voice with a clear American accent, upbeat but not pushy, excellent articulation, and premium ad-read polish. Good for platform intros, product explainers, and optimistic brand copy. Avoid cheesy hard-sell energy.",
+  "preview_text": "A bright commercial female voice built for clean premium product messaging.",
+  "language": "English",
+  "preset_id": "bright_promo_female",
+  "gmt_create": "2026-05-14T12:56:44.601Z",
+  "preview_audio_file": "bright_promo_female_522061d48820_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/bright_promo_female_522061d48820_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

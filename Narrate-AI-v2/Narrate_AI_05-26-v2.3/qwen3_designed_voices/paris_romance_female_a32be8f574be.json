@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-ParisRomF1-voice-20260514213323844-e3ae",
+  "preferred_name": "ParisRomF1",
+  "display_name": "Paris Romance Female",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A woman in her thirties from Paris with a clearly French accent and elegant, intimate warmth. Native language French. Smooth mid pitch, refined cadence, emotionally intelligent, romantic without sounding theatrical. When she later speaks English, the French accent should remain clearly audible and never drift into American pronunciation.",
+  "preview_text": "Bonsoir. Je suis une voix francaise douce et elegante, concue pour une narration romantique.",
+  "language": "French",
+  "preset_id": "fr_paris_romance_f",
+  "gmt_create": "2026-05-14T13:33:33.900Z",
+  "preview_audio_file": "paris_romance_female_a32be8f574be_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/paris_romance_female_a32be8f574be_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

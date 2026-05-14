@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-BerlinDadM1-voice-20260514213044068-c9e9",
+  "preferred_name": "BerlinDadM1",
+  "display_name": "German Father Figure",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A warm German fatherly male voice with a clearly German accent, patient reassurance, and grounded kindness. Native language German. Calm, safe, and emotionally steady. In English, retain the German accent clearly.",
+  "preview_text": "Hallo. Ich bin eine deutsche Stimme mit Geduld, Waerme und verlaesslicher Ruhe.",
+  "language": "German",
+  "preset_id": "de_father_m",
+  "gmt_create": "2026-05-14T13:30:53.342Z",
+  "preview_audio_file": "german_father_figure_c9a89ff76fb0_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/german_father_figure_c9a89ff76fb0_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

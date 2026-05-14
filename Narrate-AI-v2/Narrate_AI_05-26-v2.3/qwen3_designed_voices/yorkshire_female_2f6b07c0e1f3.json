@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-YorksF01-voice-20260514221842036-c949",
+  "preferred_name": "YorksF01",
+  "display_name": "Yorkshire Female",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A woman from Yorkshire with a clearly northern English accent, practical warmth, intelligence, and recognisably British rhythm. Natural Yorkshire, not a parody, and certainly not American. Strong, steady, and emotionally believable.",
+  "preview_text": "Evening. This is a Yorkshire female voice with clear northern roots and calm British warmth.",
+  "language": "English",
+  "preset_id": "northern_yorkshire_female",
+  "gmt_create": "2026-05-14T14:18:52.558Z",
+  "preview_audio_file": "yorkshire_female_2f6b07c0e1f3_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/yorkshire_female_2f6b07c0e1f3_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-LiteraryM01-voice-20260514205518933-af66",
+  "preferred_name": "LiteraryM01",
+  "display_name": "Calm Literary Male",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A mature male literary narrator with a neutral transatlantic feel, medium-low pitch, calm thoughtful pacing, textured but clean timbre, intelligent and reflective, excellent for literary fiction and memoir. Avoid harshness, avoid radio-announcer punch, avoid theatrical villain energy.",
+  "preview_text": "A calm literary male voice with reflective pacing and a grounded, thoughtful presence.",
+  "language": "English",
+  "preset_id": "calm_literary_male",
+  "gmt_create": "2026-05-14T12:55:34.484Z",
+  "preview_audio_file": "calm_literary_male_87c1721a8925_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/calm_literary_male_87c1721a8925_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

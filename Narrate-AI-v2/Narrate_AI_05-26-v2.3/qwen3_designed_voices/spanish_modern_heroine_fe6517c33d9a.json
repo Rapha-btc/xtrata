@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-MadridHerF1-voice-20260514215501530-5465",
+  "preferred_name": "MadridHerF1",
+  "display_name": "Spanish Modern Heroine",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A young Spanish woman with a lively accent, intelligence, speed, warmth, and a modern urban presence. Native language Spanish. Sharp comic timing and believable emotional range. When speaking English, keep a noticeable Spanish accent.",
+  "preview_text": "Hola. Soy una voz espanola joven, agil, divertida y segura de si misma.",
+  "language": "Spanish",
+  "preset_id": "es_heroine_f",
+  "gmt_create": "2026-05-14T13:55:06.687Z",
+  "preview_audio_file": "spanish_modern_heroine_fe6517c33d9a_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/spanish_modern_heroine_fe6517c33d9a_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

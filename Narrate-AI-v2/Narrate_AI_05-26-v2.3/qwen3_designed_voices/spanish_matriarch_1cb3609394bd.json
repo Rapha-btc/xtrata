@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-MadridMatF1-voice-20260514235830396-5b4f",
+  "preferred_name": "MadridMatF1",
+  "display_name": "Spanish Matriarch",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A mature Spanish woman with rich resonance, maternal authority, and emotional depth. Native language Spanish. Warm, composed, and self-possessed. In English, keep the Spanish accent clear instead of neutralizing it.\n\nWhen this voice speaks English, preserve the foreign accent identity established in Spanish. Keep the accent strong and unmistakable in English. Maintain clearly foreign vowel shapes, rhythm, and consonants. Do not sound American.",
+  "preview_text": "Buenas noches. Soy una voz espanola madura, firme y afectuosa.",
+  "language": "Spanish",
+  "preset_id": "es_matriarch_f",
+  "gmt_create": "2026-05-14T15:58:35.337Z",
+  "preview_audio_file": "spanish_matriarch_1cb3609394bd_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/spanish_matriarch_1cb3609394bd_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

@@ -267,6 +267,28 @@
       grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
       gap: 9px;
     }
+    .voice-group-label {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 4px 2px;
+      margin-top: 4px;
+    }
+    .voice-group-label:first-child { margin-top: 0; }
+    .voice-group-title {
+      font-size: 0.8rem;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .voice-group-note {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-align: right;
+    }
     .voice-card {
       background: var(--surface2); border: 2px solid var(--border);
       border-radius: 10px; padding: 10px 8px;
@@ -677,6 +699,26 @@
     .demo-check-item.checked .demo-check-box {
       background: var(--accent); border-color: var(--accent); color: #fff;
     }
+    .demo-check-group-label {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 2px 2px;
+    }
+    .demo-check-group-title {
+      font-size: 0.76rem;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .demo-check-group-note {
+      font-size: 0.68rem;
+      color: var(--muted);
+      text-align: right;
+    }
     .demo-check-label { flex: 1; min-width: 0; }
     .demo-check-name { font-size: 0.83rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .demo-check-sub  { font-size: 0.68rem; color: var(--muted); margin-top: 1px; }
@@ -974,6 +1016,183 @@
       border-radius: 8px; padding: 9px 13px; line-height: 1.6;
     }
     .clone-cost-note strong { color: var(--warn); }
+
+    .design-lab-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 26px;
+      margin-bottom: 18px;
+      box-shadow: var(--shadow);
+    }
+    .design-lab-intro {
+      font-size: 0.84rem;
+      color: var(--muted);
+      line-height: 1.55;
+      margin-bottom: 14px;
+    }
+    .design-lab-note {
+      margin-top: 12px;
+      font-size: 0.78rem;
+      color: var(--muted);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 13px;
+      line-height: 1.55;
+    }
+    .design-lab-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 14px;
+      margin-top: 16px;
+    }
+    .design-preset-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .design-preset-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .design-preset-name {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .design-preset-meta {
+      margin-top: 3px;
+      font-size: 0.72rem;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+    .design-preset-pill {
+      font-size: 0.68rem;
+      color: var(--accent2);
+      border: 1px solid rgba(108,99,255,0.35);
+      border-radius: 999px;
+      padding: 4px 8px;
+      white-space: nowrap;
+      background: rgba(108,99,255,0.1);
+    }
+    .design-preset-card label {
+      display: block;
+      font-size: 0.72rem;
+      color: var(--muted);
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+    .design-preset-card input,
+    .design-preset-card select,
+    .design-preset-card textarea {
+      width: 100%;
+      background: #242840;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 10px;
+      font-size: 0.82rem;
+      font-family: inherit;
+    }
+    .design-preset-card textarea {
+      resize: vertical;
+      min-height: 72px;
+    }
+    .design-preset-card .sample-textarea {
+      min-height: 56px;
+    }
+    .design-row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    @media (max-width: 520px) {
+      .design-row-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+    .design-btn-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 2px;
+    }
+    .design-btn {
+      flex: 1;
+      min-width: 120px;
+      padding: 9px 14px;
+      border-radius: 9px;
+      border: none;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #fff;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .design-btn:hover:not(:disabled) {
+      opacity: 0.92;
+      transform: translateY(-1px);
+    }
+    .design-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .design-btn.create {
+      background: linear-gradient(135deg, #6c63ff, #8b5cf6);
+      box-shadow: 0 4px 16px rgba(108,99,255,0.28);
+    }
+    .design-btn.sample {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      box-shadow: 0 4px 16px rgba(245,158,11,0.28);
+    }
+    .design-status {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      border-radius: 9px;
+      padding: 9px 11px;
+      font-size: 0.78rem;
+      line-height: 1.45;
+    }
+    .design-status.show { display: flex; }
+    .design-status.loading { background: rgba(108,99,255,0.12); border: 1px solid rgba(108,99,255,0.28); color: var(--accent2); }
+    .design-status.success { background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.28); color: var(--success); }
+    .design-status.error { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.28); color: var(--error); }
+    .design-audio-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .design-audio-wrap audio {
+      width: 100%;
+      height: 36px;
+    }
+    .design-card-footer {
+      font-size: 0.72rem;
+      color: var(--muted);
+      min-height: 18px;
+    }
+    .design-library-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .design-library-audio {
+      width: 180px;
+      max-width: 100%;
+      height: 34px;
+    }
 
     /* ── Voice Controls ── */
     .controls-panel { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
@@ -1336,9 +1555,13 @@
       <div>
         <label for="modelSelect">Model</label>
         <select id="modelSelect">
-          <option value="qwen3-tts-flash" selected>Narrate:AI Flash — Fast ($0.10/10K chars)</option>
-          <option value="qwen3-tts-instruct-flash">Narrate:AI Director — Expressive ($0.115/10K chars)</option>
+          <option value="qwen3-tts-flash" selected>Narrate:AI Flash — Stable ($0.10/10K chars)</option>
+          <option value="qwen3-tts-flash-2025-11-27">Narrate:AI Flash — Pinned 2025-11-27 ($0.10/10K chars)</option>
+          <option value="qwen3-tts-instruct-flash">Narrate:AI Director — Stable ($0.115/10K chars)</option>
+          <option value="qwen3-tts-instruct-flash-2026-01-26">Narrate:AI Director — Pinned 2026-01-26 ($0.115/10K chars)</option>
+          <option value="qwen3-tts-vd-2026-01-26">Narrate:AI Design — Voice Designer ($0.115/10K chars)</option>
         </select>
+        <div class="instructions-note" style="margin-top:8px">Pinned snapshots are best for long-form continuity. Stable aliases track the latest Qwen3 release.</div>
       </div>
     </div>
 
@@ -1365,9 +1588,18 @@
           </div>
         </div>
         <div class="instructions-wrap">
+          <label for="narratorPresetSelect">Narration Preset <span style="font-weight:400;opacity:0.7">(stable Qwen3 voice bible)</span></label>
+          <select id="narratorPresetSelect" style="margin-bottom:10px">
+            <option value="none" selected>No preset</option>
+            <option value="warm_fiction">Warm Fiction Narrator</option>
+            <option value="calm_literary">Calm Literary Narrator</option>
+            <option value="dramatic_thriller">Dramatic Thriller Narrator</option>
+            <option value="clean_nonfiction">Clean Non-fiction Narrator</option>
+            <option value="romance_dual_pov">Romance / Dual POV Narrator</option>
+          </select>
           <label for="instructionsInput">Custom Instructions <span style="font-weight:400;opacity:0.7">(overrides presets)</span></label>
           <textarea id="instructionsInput" placeholder="e.g. Speak slowly with a warm, deep tone, like a friendly narrator…"></textarea>
-          <div class="instructions-note" id="instructionsNote">Controls only work with <strong>Narrate:AI Director</strong>. Instructions are in English or Chinese only.</div>
+          <div class="instructions-note" id="instructionsNote">Controls only work with <strong>Narrate:AI Director</strong>. Presets keep a stable narrator identity; custom instructions override them. Instructions are in English or Chinese only.</div>
         </div>
       </div>
     </div>
@@ -1481,6 +1713,39 @@
         <input type="file" id="loadPreviewFolderInput" accept="audio/wav,audio/mpeg,audio/mp4,.wav,.mp3,.m4a" multiple style="display:none" onchange="loadPreviewsFromFiles(this)">
       </div>
       <div class="preview-grid" id="previewGrid"></div>
+    </div>
+  </details>
+
+  <details class="design-lab-card section-card" id="designLabSection">
+    <summary>
+      <div class="section-summary-main">
+        <div class="section-summary-title">🎨 Voice Design Lab</div>
+        <div class="section-summary-sub">Start from 20 editable archetype prompts, create designed voices, then audition each one with a short sample.</div>
+      </div>
+      <div class="section-summary-meta">
+        <span class="section-summary-badge">20 preset archetypes</span>
+        <span class="section-summary-caret">›</span>
+      </div>
+    </summary>
+    <div class="section-body">
+      <div class="design-lab-intro">
+        Each card starts with a distinct voice-design prompt, preview line, and sample script. Tweak any wording before creating the voice. Once created, you can audition it immediately and optionally set it as the active synthesis voice.
+      </div>
+      <div class="design-lab-note">
+        Voice design creates a new reusable custom voice on your DashScope account using <strong>Narrate:AI Design</strong>. The sample button then generates fresh speech through that designed voice so you can test it on a slightly longer read.
+        The language dropdown sets the voice's language code. Accent and regional identity still come from the voice prompt itself, so prompts that need British, Australian, or other non-US English should say that explicitly.
+        The new French, Spanish, and German cards are designed to be created in their native language first, then checked with an English sample to see how much accent identity carries across.
+      </div>
+
+      <div class="design-lab-grid" id="voiceDesignGrid"></div>
+
+      <div class="saved-voices-header">
+        <div class="saved-voices-title">🎼 Your Saved Designed Voices</div>
+        <button class="refresh-btn" onclick="loadDesignedVoices()">↻ Refresh</button>
+      </div>
+      <div class="design-library-list" id="designedVoicesList">
+        <div class="no-saved-voices">Click Refresh to load locally saved designed voices.</div>
+      </div>
     </div>
   </details>
 
@@ -1846,17 +2111,26 @@
         <input class="book-chunk-input" id="bookChunkSilence" type="number" value="0" min="0" max="5" step="0.1" />
       </div>
       <div class="book-chunk-row">
+        <label for="bookTitlePauseMarker">Title pause marker:</label>
+        <input class="book-chunk-input" id="bookTitlePauseMarker" type="text" value=" .. " maxlength="16" />
+      </div>
+      <div class="book-chunk-row">
         <label for="bookChapterSilence">Chapter silence (s):</label>
         <input class="book-chunk-input" id="bookChapterSilence" type="number" value="1" min="0" max="10" step="0.1" />
       </div>
       <div style="flex:1;min-width:120px">
         <label style="font-size:0.8rem;color:var(--muted);display:block;margin-bottom:4px">Model for generation:</label>
         <select id="bookModelSelect" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:0.82rem;padding:7px 10px;width:100%">
-          <option value="qwen3-tts-flash">Narrate:AI Flash (fast, $0.10/10K)</option>
-          <option value="qwen3-tts-instruct-flash">Narrate:AI Director (expressive, $0.115/10K)</option>
+          <option value="qwen3-tts-flash">Narrate:AI Flash (stable, $0.10/10K)</option>
+          <option value="qwen3-tts-flash-2025-11-27">Narrate:AI Flash (pinned 2025-11-27, $0.10/10K)</option>
+          <option value="qwen3-tts-instruct-flash">Narrate:AI Director (stable, $0.115/10K)</option>
+          <option value="qwen3-tts-instruct-flash-2026-01-26">Narrate:AI Director (pinned 2026-01-26, $0.115/10K)</option>
           <option value="qwen3-tts-vc-2026-01-22">Narrate:AI Clone (custom voice, $0.115/10K)</option>
         </select>
       </div>
+    </div>
+    <div style="margin-top:8px;font-size:0.76rem;color:var(--muted);line-height:1.4">
+      The <strong>Titles</strong> track is generated as one continuous chunk. Pause markers are read inside the same performance, and title narration automatically asks for slower speech and longer pauses where supported.
     </div>
     <div style="margin-top:10px;font-size:0.78rem;color:var(--muted);line-height:1.5">
       Mark explicit roles with <code>[[Narrator]]</code>, <code>[[Alice]]</code>, or <code>Alice:</code>. In dual POV mode, use the separator token on its own line to alternate voices chapter-by-chapter.
@@ -1973,7 +2247,7 @@
 
 <script>
   // ── Voice data ──
-  // Official voice list from Alibaba Cloud Model Studio docs (March 2026)
+  // Official voice list from Alibaba Cloud Model Studio docs (May 12, 2026)
   // voice parameter value → used exactly as-is in API calls
   const VOICES = [
     // ── Core multilingual voices (Flash + Instruct-Flash) ──
@@ -2029,6 +2303,24 @@
     { id: "Kiki",        gender: "Female", icon: "👩", desc: "Sweet Hong Kong girl" },
   ];
 
+  const VOICE_GROUPS = [
+    {
+      id: "core",
+      label: "Core Multilingual",
+      note: "Available on Narrate:AI Flash and Narrate:AI Director",
+    },
+    {
+      id: "premium",
+      label: "Premium Flash-only",
+      note: "Extra global voices on Narrate:AI Flash only",
+    },
+    {
+      id: "regional",
+      label: "Regional and Dialect",
+      note: "Regional voices on Narrate:AI Flash only",
+    }
+  ];
+  const REGIONAL_VOICE_IDS = new Set(["Jada", "Dylan", "Li", "Marcus", "Roy", "Peter", "Sunny", "Eric", "Rocky", "Kiki"]);
   const INSTRUCT_SUPPORTED_VOICE_IDS = new Set([
     "Cherry", "Serena", "Ethan", "Chelsie", "Momo", "Vivian", "Moon", "Maia",
     "Kai", "Nofish", "Bella", "Eldric Sage", "Mia", "Mochi", "Bellona", "Vincent",
@@ -2036,12 +2328,50 @@
   ]);
   const MODEL_DISPLAY_NAMES = {
     "qwen3-tts-flash": "Narrate:AI Flash",
+    "qwen3-tts-flash-2025-11-27": "Narrate:AI Flash (Pinned 2025-11-27)",
     "qwen3-tts-instruct-flash": "Narrate:AI Director",
+    "qwen3-tts-instruct-flash-2026-01-26": "Narrate:AI Director (Pinned 2026-01-26)",
     "qwen3-tts-vc-2026-01-22": "Narrate:AI Clone",
+    "qwen3-tts-vd-2026-01-26": "Narrate:AI Design",
   };
+  const MODEL_FAMILY_MAP = {
+    "qwen3-tts-flash": "qwen3-tts-flash",
+    "qwen3-tts-flash-2025-11-27": "qwen3-tts-flash",
+    "qwen3-tts-flash-2025-09-18": "qwen3-tts-flash",
+    "qwen3-tts-instruct-flash": "qwen3-tts-instruct-flash",
+    "qwen3-tts-instruct-flash-2026-01-26": "qwen3-tts-instruct-flash",
+    "qwen3-tts-vc-2026-01-22": "qwen3-tts-vc-2026-01-22",
+    "qwen3-tts-vd-2026-01-26": "qwen3-tts-vd-2026-01-26",
+  };
+  const CUSTOM_VOICE_MODEL_IDS = new Set(["qwen3-tts-vc-2026-01-22", "qwen3-tts-vd-2026-01-26"]);
 
   function displayModelName(modelId) {
     return MODEL_DISPLAY_NAMES[modelId] || "Narrate:AI";
+  }
+
+  function getModelFamily(modelId) {
+    return MODEL_FAMILY_MAP[modelId] || modelId;
+  }
+
+  function isInstructModel(modelId) {
+    return getModelFamily(modelId) === "qwen3-tts-instruct-flash";
+  }
+
+  function isCustomVoiceModel(modelId) {
+    return CUSTOM_VOICE_MODEL_IDS.has(getModelFamily(modelId)) || CUSTOM_VOICE_MODEL_IDS.has(modelId);
+  }
+
+  function getVoiceCatalogGroupId(voiceId) {
+    if (REGIONAL_VOICE_IDS.has(voiceId)) return "regional";
+    if (INSTRUCT_SUPPORTED_VOICE_IDS.has(voiceId)) return "core";
+    return "premium";
+  }
+
+  function groupVoicesForDisplay(voices) {
+    return VOICE_GROUPS.map((group) => ({
+      group,
+      voices: voices.filter((voice) => getVoiceCatalogGroupId(voice.id) === group.id)
+    })).filter((entry) => entry.voices.length > 0);
   }
 
   // ── State ──
@@ -2172,7 +2502,8 @@
   }
 
   function getCompatibleSystemVoices(modelId) {
-    if (modelId === "qwen3-tts-instruct-flash") {
+    if (isCustomVoiceModel(modelId)) return [];
+    if (isInstructModel(modelId)) {
       return VOICES.filter((voice) => INSTRUCT_SUPPORTED_VOICE_IDS.has(voice.id));
     }
     return VOICES.slice();
@@ -2183,7 +2514,7 @@
   }
 
   function syncSelectedVoiceForModel(modelId) {
-    if (modelId === "qwen3-tts-vc-2026-01-22") return { changed: false, previous: selectedVoice, next: selectedVoice };
+    if (isCustomVoiceModel(modelId)) return { changed: false, previous: selectedVoice, next: selectedVoice };
 
     const compatibleVoices = getCompatibleSystemVoices(modelId);
     const compatibleIds = new Set(compatibleVoices.map((voice) => voice.id));
@@ -2240,27 +2571,38 @@
       grid.innerHTML = `<div class="no-saved-voices">No built-in voices are available for the current model.</div>`;
       return;
     }
-    voices.forEach(v => {
-      const card = document.createElement("div");
-      const genderClass = String(v.gender || "").toLowerCase() === "female"
-        ? " female"
-        : String(v.gender || "").toLowerCase() === "male"
-          ? " male"
-          : "";
-      card.className = "voice-card" + genderClass + (v.id === selectedVoice ? " selected" : "");
-      card.dataset.id = v.id;
-      card.title = v.desc;  // tooltip on hover
-      card.innerHTML = `<div class="v-icon">${v.icon}</div>
-                        <div class="v-name">${v.id}</div>
-                        <div class="v-gender">${v.gender}</div>
-                        <div class="v-desc">${v.desc}</div>`;
-      card.onclick = () => selectVoice(v.id);
-      grid.appendChild(card);
+    groupVoicesForDisplay(voices).forEach(({ group, voices: groupedVoices }) => {
+      const label = document.createElement("div");
+      label.className = "voice-group-label";
+      label.innerHTML = `
+        <div class="voice-group-title">${group.label}</div>
+        <div class="voice-group-note">${group.note}</div>
+      `;
+      grid.appendChild(label);
+
+      groupedVoices.forEach(v => {
+        const card = document.createElement("div");
+        const genderClass = String(v.gender || "").toLowerCase() === "female"
+          ? " female"
+          : String(v.gender || "").toLowerCase() === "male"
+            ? " male"
+            : "";
+        card.className = "voice-card" + genderClass + (v.id === selectedVoice ? " selected" : "");
+        card.dataset.id = v.id;
+        card.title = v.desc;
+        card.innerHTML = `<div class="v-icon">${v.icon}</div>
+                          <div class="v-name">${v.id}</div>
+                          <div class="v-gender">${v.gender}</div>
+                          <div class="v-desc">${v.desc}</div>`;
+        card.onclick = () => selectVoice(v.id);
+        grid.appendChild(card);
+      });
     });
   }
 
   function selectVoice(id) {
     selectedVoice = id;
+    clearActiveCustomVoiceSelection();
     document.querySelectorAll('.voice-card').forEach(c => {
       c.classList.toggle('selected', c.dataset.id === id);
     });
@@ -2322,25 +2664,40 @@
 
   // ── Live cost estimator ──
   const PRICING = {
-    "qwen3-tts-flash":          { rate: 0.10  / 10000, label: "$0.10/10K chars"  },
-    "qwen3-tts-instruct-flash": { rate: 0.115 / 10000, label: "$0.115/10K chars" },
+    "qwen3-tts-flash":                      { rate: 0.10  / 10000, label: "$0.10/10K chars"  },
+    "qwen3-tts-flash-2025-11-27":          { rate: 0.10  / 10000, label: "$0.10/10K chars"  },
+    "qwen3-tts-flash-2025-09-18":          { rate: 0.10  / 10000, label: "$0.10/10K chars"  },
+    "qwen3-tts-instruct-flash":            { rate: 0.115 / 10000, label: "$0.115/10K chars" },
+    "qwen3-tts-instruct-flash-2026-01-26": { rate: 0.115 / 10000, label: "$0.115/10K chars" },
+    "qwen3-tts-vc-2026-01-22":             { rate: 0.115 / 10000, label: "$0.115/10K chars" },
+    "qwen3-tts-vd-2026-01-26":             { rate: 0.115 / 10000, label: "$0.115/10K chars" },
   };
   const FREE_QUOTA = 10000; // chars per model (official free tier)
 
   // freeUsed tracks actual chars consumed from free quota per model.
   // Seeded from localStorage history on load, then updated after each real generation.
-  const freeUsed = { "qwen3-tts-flash": 0, "qwen3-tts-instruct-flash": 0 };
+  const freeUsed = {
+    "qwen3-tts-flash": 0,
+    "qwen3-tts-instruct-flash": 0,
+    "qwen3-tts-vc-2026-01-22": 0,
+    "qwen3-tts-vd-2026-01-26": 0
+  };
+
+  function getQuotaBucket(modelId) {
+    return getModelFamily(modelId);
+  }
 
   function syncFreeUsed() {
     // Rebuild from persisted history so quota survives page refresh
     Object.keys(freeUsed).forEach(m => freeUsed[m] = 0);
     usageHistory.forEach(e => {
-      if (freeUsed[e.model] !== undefined) {
+      const bucket = getModelFamily(e.model);
+      if (freeUsed[bucket] !== undefined) {
         // Only count chars that were actually covered by free quota
-        const alreadyUsed = freeUsed[e.model];
+        const alreadyUsed = freeUsed[bucket];
         const freeRemain  = Math.max(0, FREE_QUOTA - alreadyUsed);
         const coveredFree = Math.min(e.chars, freeRemain);
-        freeUsed[e.model] += coveredFree;
+        freeUsed[bucket] += coveredFree;
       }
     });
   }
@@ -2354,7 +2711,7 @@
     const grossCost = charCount * pricePerChar;
 
     // ── Free quota ──
-    const totalUsed  = freeUsed[model] || 0;
+    const totalUsed  = freeUsed[getModelFamily(model)] || 0;
     const freeLeft   = Math.max(0, FREE_QUOTA - totalUsed);
     const freeApplied = Math.min(charCount, freeLeft);   // chars covered by quota
     const billable    = Math.max(0, charCount - freeApplied);
@@ -2450,6 +2807,14 @@
     energetic:      'Use a high-energy, enthusiastic, and upbeat tone.',
     authoritative:  'Use a confident, authoritative, and professional tone.',
   };
+  const NARRATOR_PRESETS = {
+    none: "",
+    warm_fiction: "Maintain the same narrator identity throughout. Warm, intimate, controlled audiobook narration. Medium pace, clear articulation, natural pauses, expressive but restrained.",
+    calm_literary: "Maintain the same narrator identity throughout. Calm, literary narration with reflective pacing, precise diction, and subtle emotional shading. Never become theatrical.",
+    dramatic_thriller: "Maintain the same narrator identity throughout. Grounded dramatic narration with quiet tension, controlled urgency, and crisp phrasing. Cinematic, but never exaggerated.",
+    clean_nonfiction: "Maintain the same narrator identity throughout. Clear, trustworthy non-fiction narration with measured pacing, crisp articulation, and confident, low-emotion delivery.",
+    romance_dual_pov: "Maintain the same narrator identity throughout. Warm, emotionally intelligent commercial-fiction narration with intimate phrasing, natural pauses, and restrained feeling."
+  };
 
   function setSpeedPreset(val) {
     speedPreset = val;
@@ -2473,6 +2838,8 @@
     const custom = document.getElementById('instructionsInput').value.trim();
     if (custom) return; // custom overrides presets
     const parts = [];
+    const narratorPreset = document.getElementById('narratorPresetSelect')?.value || 'none';
+    if (NARRATOR_PRESETS[narratorPreset]) parts.push(NARRATOR_PRESETS[narratorPreset]);
     if (SPEED_INSTRUCTIONS[speedPreset]) parts.push(SPEED_INSTRUCTIONS[speedPreset]);
     if (TONE_INSTRUCTIONS[tonePreset])   parts.push(TONE_INSTRUCTIONS[tonePreset]);
     // Don't auto-fill the textarea — just keep state; instructions built at generate time
@@ -2482,6 +2849,8 @@
     const custom = document.getElementById('instructionsInput').value.trim();
     if (custom) return custom;
     const parts = [];
+    const narratorPreset = document.getElementById('narratorPresetSelect')?.value || 'none';
+    if (NARRATOR_PRESETS[narratorPreset]) parts.push(NARRATOR_PRESETS[narratorPreset]);
     if (SPEED_INSTRUCTIONS[speedPreset]) parts.push(SPEED_INSTRUCTIONS[speedPreset]);
     if (TONE_INSTRUCTIONS[tonePreset])   parts.push(TONE_INSTRUCTIONS[tonePreset]);
     return parts.join(' ');
@@ -2495,10 +2864,12 @@
 
   function updateControlsState() {
     const model = document.getElementById('modelSelect').value;
-    const isInstruct = model.includes('instruct');
+    const isInstruct = isInstructModel(model);
     const note = document.getElementById('controlsNote');
     const instrTA = document.getElementById('instructionsInput');
+    const narratorPresetSel = document.getElementById('narratorPresetSelect');
     document.querySelectorAll('.preset-btn').forEach(b => b.disabled = !isInstruct);
+    if (narratorPresetSel) narratorPresetSel.disabled = !isInstruct;
     instrTA.disabled = !isInstruct;
     if (isInstruct) {
       note.textContent = '— Narrate:AI Director active ✓';
@@ -2595,7 +2966,8 @@
       dl.download = buildFilename(selectedVoice, model, language, 'wav');
 
       const grossCostNow = chars * (PRICING[model]?.rate || PRICING["qwen3-tts-flash"].rate);
-      const freeAppliedNow  = Math.min(chars, Math.max(0, FREE_QUOTA - (freeUsed[model] || 0)));
+      const quotaBucket = getQuotaBucket(model);
+      const freeAppliedNow  = Math.min(chars, Math.max(0, FREE_QUOTA - (freeUsed[quotaBucket] || 0)));
       const netCostNow      = Math.max(0, chars - freeAppliedNow) * (PRICING[model]?.rate || PRICING["qwen3-tts-flash"].rate);
       document.getElementById("audioMeta").innerHTML =
         `Voice: <span>${selectedVoice}</span> &nbsp;·&nbsp; ` +
@@ -2610,9 +2982,9 @@
       player.play();
 
       // Update free quota tracking — only count chars actually covered by free quota
-      if (freeUsed[model] !== undefined) {
-        const remaining = Math.max(0, FREE_QUOTA - freeUsed[model]);
-        freeUsed[model] += Math.min(chars, remaining);
+      if (freeUsed[quotaBucket] !== undefined) {
+        const remaining = Math.max(0, FREE_QUOTA - freeUsed[quotaBucket]);
+        freeUsed[quotaBucket] += Math.min(chars, remaining);
       }
 
       // Record usage
@@ -2820,19 +3192,29 @@
     const grid = document.getElementById("demoChecklist");
     grid.innerHTML = "";
     const voices = getCompatibleSystemVoices(getCurrentModelId());
-    voices.forEach(v => {
-      const isFemale = v.gender === "Female";
-      const item = document.createElement("div");
-      item.className = `demo-check-item ${isFemale ? 'female-voice' : 'male-voice'} checked`;
-      item.dataset.id = v.id;
-      item.innerHTML = `
-        <div class="demo-check-box">✓</div>
-        <div class="demo-check-label">
-          <div class="demo-check-name">${v.icon} ${v.id}</div>
-          <div class="demo-check-sub">${v.gender} · ${v.desc.slice(0,28)}${v.desc.length>28?'\u2026':''}</div>
-        </div>`;
-      item.addEventListener("click", () => toggleDemoVoice(v.id, item));
-      grid.appendChild(item);
+    groupVoicesForDisplay(voices).forEach(({ group, voices: groupedVoices }) => {
+      const label = document.createElement("div");
+      label.className = "demo-check-group-label";
+      label.innerHTML = `
+        <div class="demo-check-group-title">${group.label}</div>
+        <div class="demo-check-group-note">${group.note}</div>
+      `;
+      grid.appendChild(label);
+
+      groupedVoices.forEach(v => {
+        const isFemale = v.gender === "Female";
+        const item = document.createElement("div");
+        item.className = `demo-check-item ${isFemale ? 'female-voice' : 'male-voice'} checked`;
+        item.dataset.id = v.id;
+        item.innerHTML = `
+          <div class="demo-check-box">✓</div>
+          <div class="demo-check-label">
+            <div class="demo-check-name">${v.icon} ${v.id}</div>
+            <div class="demo-check-sub">${v.gender} · ${v.desc.slice(0,28)}${v.desc.length>28?'\u2026':''}</div>
+          </div>`;
+        item.addEventListener("click", () => toggleDemoVoice(v.id, item));
+        grid.appendChild(item);
+      });
     });
     updateDemoCheckedCount();
   }
@@ -2931,7 +3313,7 @@
 
     const info      = PRICING[model] || PRICING["qwen3-tts-flash"];
     const grossCost = totalChars * info.rate;
-    const used      = freeUsed[model] || 0;
+    const used      = freeUsed[getQuotaBucket(model)] || 0;
     const freeLeft  = Math.max(0, FREE_QUOTA - used);
     const billable  = Math.max(0, totalChars - freeLeft);
     const netCost   = billable * info.rate;
@@ -3004,6 +3386,93 @@
     };
   }
 
+  const VOICE_DESIGN_PRESETS = [
+    { id: "warm_british_narrator", label: "Warm British Narrator", badge: "Narrator", language: "English", preferredName: "WarmBrit01", prompt: "A female audiobook narrator in her thirties with a clearly British English accent, specifically neutral modern southern British pronunciation rather than American. Medium-low pitch, warm intimate tone, clear articulation, steady pacing, emotionally expressive but restrained, suitable for long-form commercial fiction. Keep the vowels and rhythm recognisably British. Do not sound American. Avoid cartoon brightness, avoid exaggerated drama, avoid breathy delivery.", previewText: "Narrate AI presents a warm British narrator designed for polished long-form storytelling.", sampleText: "The rain had eased by the time the station lights came into view, and for the first time all evening, the city felt almost kind." },
+    { id: "cinematic_american_female", label: "Cinematic American Female", badge: "Romance", language: "English", preferredName: "CinemaFem01", prompt: "A female American narrator with premium cinematic quality, smooth mid pitch, warm and emotionally intelligent, intimate without sounding whispered, polished enough for romance, drama, and commercial fiction. Avoid childish tone and avoid broad promotional energy.", previewText: "This voice is built for emotionally rich narration with a clean cinematic finish.", sampleText: "He looked at her like he had crossed an ocean to get there, and every careful word suddenly felt too small for the moment." },
+    { id: "calm_literary_male", label: "Calm Literary Male", badge: "Literary", language: "English", preferredName: "LiteraryM01", prompt: "A mature male literary narrator with a neutral transatlantic feel, medium-low pitch, calm thoughtful pacing, textured but clean timbre, intelligent and reflective, excellent for literary fiction and memoir. Avoid harshness, avoid radio-announcer punch, avoid theatrical villain energy.", previewText: "A calm literary male voice with reflective pacing and a grounded, thoughtful presence.", sampleText: "By winter the house had learned all their silences, and every hallway seemed to remember what none of them would say aloud." },
+    { id: "thriller_male", label: "Thriller Male", badge: "Thriller", language: "English", preferredName: "ThrillM01", prompt: "A male thriller narrator with a modern American accent, controlled gravel, rhythmic phrasing, subtle tension, high clarity, and cinematic seriousness. Strong for suspense, procedural fiction, and tense internal monologue. Avoid shouting, avoid camp villain style, avoid comedic warmth.", previewText: "A thriller-ready male narrator with controlled tension and crisp delivery.", sampleText: "He checked the rear-view mirror again, not because he expected to see anyone, but because that was how fear worked once it had your attention." },
+    { id: "documentary_female", label: "Documentary Female", badge: "Documentary", language: "English", preferredName: "DocFem01", prompt: "A female documentary narrator with neutral international English, precise diction, calm authority, medium pace, and a bright but serious tone. Ideal for educational and factual storytelling. Avoid flirtiness, avoid overly emotional delivery, avoid hard-news aggression.", previewText: "A clean documentary voice designed for clarity, trust, and calm authority.", sampleText: "Within a decade, the harbor had transformed from a working dock into a network of laboratories, archives, and quiet industrial ambition." },
+    { id: "young_witty_heroine", label: "Young Witty Heroine", badge: "Character", language: "English", preferredName: "Heroine01", prompt: "A young adult female voice with a modern British-American neutral accent, bright intelligence, quick timing, playful warmth, and believable emotional depth. Suitable for a witty heroine or first-person contemporary fiction. Avoid cartoon valley-girl style and avoid shrill excitement.", previewText: "A lively heroine voice with quick wit, warmth, and believable first-person energy.", sampleText: "If confidence could be bought by the hour, I would have rented an extra three before walking into that meeting." },
+    { id: "mature_matriarch", label: "Mature Matriarch", badge: "Character", language: "English", preferredName: "Matriarch01", prompt: "A mature female voice with rich resonance, quiet strength, controlled warmth, and elegant pacing, suitable for a matriarch, senior executive, or emotionally layered older narrator. Avoid sounding stern by default and avoid frailty.", previewText: "A mature, resonant female voice with depth, steadiness, and authority.", sampleText: "She had learned long ago that gentleness and resolve were not opposites, and she carried both into the room without apology." },
+    { id: "gentle_father_figure", label: "Gentle Father Figure", badge: "Character", language: "English", preferredName: "FatherFig01", prompt: "A male voice in his forties or fifties with a warm low-mid register, patient pacing, kindness, and grounded emotional presence. Ideal for a protective father figure, reflective mentor, or bedtime narrator. Avoid preachiness and avoid boomy radio tone.", previewText: "A gentle fatherly voice with warmth, patience, and reassuring steadiness.", sampleText: "Take your time, he said, because some choices deserved enough quiet around them to be heard properly." },
+    { id: "bright_promo_female", label: "Bright Promo Female", badge: "Commercial", language: "English", preferredName: "PromoFem01", prompt: "A bright, confident female commercial voice with a clear American accent, upbeat but not pushy, excellent articulation, and premium ad-read polish. Good for platform intros, product explainers, and optimistic brand copy. Avoid cheesy hard-sell energy.", previewText: "A bright commercial female voice built for clean premium product messaging.", sampleText: "Narrate AI helps you move from rough draft to polished performance in minutes, with fast iteration and voice options that stay easy to manage." },
+    { id: "dry_antagonist_male", label: "Dry Antagonist Male", badge: "Character", language: "English", preferredName: "Antagonist01", prompt: "A male character voice with dry intelligence, restrained menace, low energy confidence, and articulate mid-low delivery. Suitable for an antagonist who sounds composed, amused, and dangerous without caricature. Avoid growling and avoid theatrical evil laughter energy.", previewText: "A dry, intelligent male character voice with restrained menace and composure.", sampleText: "He smiled like someone who had already calculated the ending and was only waiting to see how long it would take everyone else to catch up." },
+    { id: "soft_french_woman", label: "Soft French Woman", badge: "Regional", language: "English", preferredName: "FrenchSoft01", prompt: "A female voice with a soft French accent speaking fluent English, medium pace, refined warmth, romantic texture, and gentle confidence. Suitable for elegant storytelling, lifestyle copy, or a sophisticated supporting character. Avoid parody and avoid exaggerated accent markers.", previewText: "A soft French-accented female voice with elegance, warmth, and smooth control.", sampleText: "There was something about the courtyard at dusk that made every conversation sound a little more honest than it had any right to be." },
+    { id: "warm_spanish_male", label: "Warm Spanish Male", badge: "Regional", language: "English", preferredName: "SpanishWarm01", prompt: "A male voice with a warm Spanish accent speaking natural English, medium-low pitch, relaxed confidence, expressive rhythm, and cinematic warmth. Suitable for travel storytelling, character work, or emotionally rich narration. Avoid cliché bravado and avoid speed-reading.", previewText: "A warm Spanish-accented male voice with expressive rhythm and grounded charm.", sampleText: "When the market opened in the morning, it did not wake all at once; it gathered itself slowly, one voice and one door at a time." },
+    { id: "academic_explainer", label: "Academic Explainer", badge: "Explainer", language: "English", preferredName: "Academic01", prompt: "A gender-neutral sounding academic explainer voice with precise diction, calm pacing, and an intelligent, digestible educational tone. Suitable for courses, explainers, and documentary-style context. Avoid sounding robotic and avoid overly casual slang.", previewText: "An academic explainer voice focused on clarity, trust, and easy comprehension.", sampleText: "The key distinction is not just what changed, but which incentives shifted at the same time and how those incentives shaped every decision that followed." },
+    { id: "mystical_sage", label: "Mystical Sage", badge: "Fantasy", language: "English", preferredName: "SageMyst01", prompt: "A gender-ambiguous mystical sage voice with low calm resonance, patient pacing, and an ancient but approachable presence. Suitable for fantasy narration, prophecy, or atmospheric guidance. Avoid cartoon wizard tropes and avoid excessive echo-like theatrics.", previewText: "A mystical sage voice with calm resonance, patience, and atmospheric clarity.", sampleText: "Power was never the storm itself, only the discipline required to stand still when the storm recognized your name." },
+    { id: "noir_detective", label: "Noir Detective", badge: "Noir", language: "English", preferredName: "NoirDet01", prompt: "A male noir detective voice with dry wit, late-night intimacy, low-mid gravel, and sharp consonants. Suitable for suspense intros, detective fiction, and moody urban storytelling. Avoid exaggerated old-time radio parody and avoid constant cigarette rasp.", previewText: "A noir detective voice with dry wit, low light atmosphere, and crisp control.", sampleText: "By the time I reached the river, the case had stopped looking messy and started looking deliberate, which is always a bad sign." },
+    { id: "regal_queen", label: "Regal Queen", badge: "Fantasy", language: "English", preferredName: "RegalQ01", prompt: "A regal female voice with aristocratic poise, medium-low pitch, formal clarity, and quiet command. Suitable for a queen, commander, or ceremonial narrator. Avoid shrill sternness and avoid melodramatic fantasy affectation.", previewText: "A regal female voice with composure, elegance, and quiet command.", sampleText: "You may call it mercy if you wish, but understand that mercy offered from strength is still a choice, not an obligation." },
+    { id: "modern_assistant_female", label: "Modern Assistant Female", badge: "Assistant", language: "English", preferredName: "AssistFem01", prompt: "A modern female assistant voice with clean neutral American English, efficient friendliness, clear enunciation, and polished digital-product warmth. Suitable for app onboarding, support flows, and product guidance. Avoid exaggerated cheer and avoid robotic stiffness.", previewText: "A modern assistant voice designed for clarity, confidence, and product guidance.", sampleText: "Your draft is ready for review, and you can now compare tone, pace, and voice identity before exporting the final version." },
+    { id: "confident_business_male", label: "Confident Business Male", badge: "Business", language: "English", preferredName: "Business01", prompt: "A confident male business voice with neutral international English, smooth authority, clean pacing, and strong clarity for strategy, investor, or leadership narration. Avoid sales hype and avoid sounding cold or dismissive.", previewText: "A confident business male voice with smooth authority and clean professional focus.", sampleText: "The strongest teams are not the ones with the most options, but the ones that know exactly which decision deserves speed and which deserves patience." },
+    { id: "playful_sidekick", label: "Playful Sidekick", badge: "Character", language: "English", preferredName: "Sidekick01", prompt: "A playful sidekick voice with youthful energy, nimble timing, warmth, and good comic responsiveness while staying believable and listenable. Suitable for companion characters, light animation, and upbeat banter. Avoid extreme cartoon squeakiness.", previewText: "A playful sidekick voice with quick energy and warm comic timing.", sampleText: "I am not saying the plan is perfect, only that it is dramatically more perfect than the other plan, which involved absolutely no snacks." },
+    { id: "bedtime_storyteller", label: "Bedtime Storyteller", badge: "Bedtime", language: "English", preferredName: "Bedtime01", prompt: "A soothing bedtime storyteller voice with soft warmth, slow pace, airy calm, and clear gentle articulation. Suitable for winding down, family listening, and restful narration. Avoid whispering too much and avoid sounding sleepy or unclear.", previewText: "A soothing bedtime storyteller voice with slow warmth and gentle clarity.", sampleText: "Beyond the last lamp at the end of the lane, the night opened into fields so quiet that even the stars seemed to speak more softly." },
+    { id: "british_rp_male", label: "British RP Male", badge: "British Regional", language: "English", preferredName: "BritRPM01", prompt: "A male narrator with a clearly British Received Pronunciation accent, refined but natural, non-rhotic, polished diction, and calm authority. Modern RP rather than theatrical old-fashioned speech. Definitely not American. Keep the vowels, cadence, and consonants recognisably British.", previewText: "Good evening. This is a modern British RP voice designed for polished narration and clear authority.", sampleText: "By the time the last train rolled out, the platform had become all echoes, cold light, and half-finished thoughts." },
+    { id: "british_rp_female", label: "British RP Female", badge: "British Regional", language: "English", preferredName: "BritRPF01", prompt: "A female narrator with a clearly British Received Pronunciation accent, elegant but contemporary, non-rhotic, articulate, warm, and composed. Modern southern British rather than American. Keep the vowels and phrasing distinctly British without sounding stagey.", previewText: "Good evening. This is a contemporary British RP female voice created for clear, elegant narration.", sampleText: "The house looked almost serene from the road, but inside it still held the shape of every argument they had tried to forget." },
+    { id: "bbc_radio4_male", label: "Radio 4 Style Male", badge: "British Broadcast", language: "English", preferredName: "R4Male01", prompt: "A British male voice in the style of a serious BBC Radio 4 spoken-word presenter, non-rhotic, calm, highly articulate, intelligent, understated, and unmistakably British. Public-service broadcast diction, measured pacing, and controlled warmth. Do not sound American. Avoid commercial promo energy.", previewText: "Good evening. This is a British public-service broadcast voice designed for thoughtful spoken-word narration.", sampleText: "After the dance, Martha asked her father to pass the glass of water before the last train left the station." },
+    { id: "bbc_radio4_female", label: "Radio 4 Style Female", badge: "British Broadcast", language: "English", preferredName: "R4Fem01", prompt: "A British female voice in the style of a BBC Radio 4 spoken-word presenter, non-rhotic, precise, calm, literate, and unmistakably British. Polished public-service delivery with warmth and restraint. Definitely not American. Avoid bright ad-read energy.", previewText: "Good evening. This is a British public-service female voice built for intelligent narration and reflective clarity.", sampleText: "After the dance, Martha asked her father to pass the glass of water before the last train left the station." },
+    { id: "bbc_documentary_male", label: "BBC Documentary Male", badge: "British Broadcast", language: "English", preferredName: "BBCDocM1", prompt: "A British male documentary narrator with BBC factual-programme authority, non-rhotic southern British pronunciation, crisp consonants, and measured seriousness. Calm, precise, and recognisably British rather than American. Avoid theatrical grandeur.", previewText: "This is a British documentary voice with public-broadcast authority and calm factual precision.", sampleText: "The harbour changed slowly after the war, but the language of class, weather, and distance remained embedded in every street." },
+    { id: "bbc_documentary_female", label: "BBC Documentary Female", badge: "British Broadcast", language: "English", preferredName: "BBCDocF1", prompt: "A British female documentary narrator with the clarity and restraint of a BBC factual presenter, non-rhotic, precise, and understated. Strong public-broadcast diction and calm British rhythm. Not American. Avoid softness that weakens the authority.", previewText: "This is a British documentary female voice designed for clear factual storytelling and public-broadcast trust.", sampleText: "The harbour changed slowly after the war, but the language of class, weather, and distance remained embedded in every street." },
+    { id: "homecounties_presenter_male", label: "Home Counties Presenter", badge: "British Broadcast", language: "English", preferredName: "HomeCoM1", prompt: "A British male voice with a modern Home Counties broadcast accent, clean non-rhotic vowels, composed confidence, and recognisable UK public-radio phrasing. Educated but natural, not stiff, and definitely not American.", previewText: "This is a modern Home Counties broadcast voice with polished British diction and natural confidence.", sampleText: "The path after the party led past the garage, where the late light caught every pane of glass and every breath of laughter." },
+    { id: "homecounties_presenter_female", label: "Home Counties Female", badge: "British Broadcast", language: "English", preferredName: "HomeCoF1", prompt: "A British female voice with a modern Home Counties public-broadcast accent, non-rhotic, poised, articulate, and warmly authoritative. Very clearly British, very clearly not American, with smooth UK cadence and educated spoken-word control.", previewText: "This is a modern British female broadcast voice with clean diction, balance, and unmistakable UK rhythm.", sampleText: "The path after the party led past the garage, where the late light caught every pane of glass and every breath of laughter." },
+    { id: "northern_bbc_male", label: "Northern BBC Male", badge: "British Broadcast", language: "English", preferredName: "NorthBBCM1", prompt: "A British male public-broadcast voice with a clearly northern English identity, like a respected regional BBC presenter. Northern vowels remain audible, but the speech is polished and intelligible. Warm, grounded, and not American. Avoid flattening into RP.", previewText: "This is a northern British broadcast voice with regional character, public-service clarity, and proper spoken confidence.", sampleText: "Last night after the party, the water in the yard turned the whole path silver while the neighbours watched from behind the glass." },
+    { id: "northern_bbc_female", label: "Northern BBC Female", badge: "British Broadcast", language: "English", preferredName: "NorthBBCF1", prompt: "A British female regional broadcast voice with clear northern English identity, as if from a respected BBC local or national spoken-word programme. Warm, articulate, regionally rooted, and definitely British, not American. Keep some northern musicality without caricature.", previewText: "This is a northern British female broadcast voice with warmth, clarity, and grounded regional identity.", sampleText: "Last night after the party, the water in the yard turned the whole path silver while the neighbours watched from behind the glass." },
+    { id: "british_literary_broadcast_male", label: "British Literary Broadcast Male", badge: "British Broadcast", language: "English", preferredName: "BritLitM1", prompt: "A British male literary-broadcast voice with the atmosphere of a serious Radio 4 book reading, non-rhotic, emotionally restrained, cultured, and unmistakably British. Elegant spoken-word rhythm, but natural and contemporary. Do not sound American.", previewText: "This is a British literary broadcast voice made for reflective reading, careful cadence, and unmistakable UK speech.", sampleText: "Martha couldn't answer at first. The question hung in the air between the water glass, the dark garden path, and the last unspoken apology." },
+    { id: "british_literary_broadcast_female", label: "British Literary Broadcast Female", badge: "British Broadcast", language: "English", preferredName: "BritLitF1", prompt: "A British female literary-broadcast voice with the feel of a Radio 4 short-story reading, non-rhotic, finely articulated, emotionally intelligent, and quietly compelling. Distinctly British and never American. Clear spoken-word elegance with warmth and control.", previewText: "This is a British literary female broadcast voice designed for book readings, short stories, and spoken-word clarity.", sampleText: "Martha couldn't answer at first. The question hung in the air between the water glass, the dark garden path, and the last unspoken apology." },
+    { id: "london_modern_female", label: "Modern London Female", badge: "British Regional", language: "English", preferredName: "LondonF01", prompt: "A woman in her twenties or thirties with a modern London English accent, confident, urban, bright, and clearly British. Natural London cadence, not exaggerated slang, and definitely not American. Warm, quick, and contemporary.", previewText: "All right, this is a modern London voice with confidence, pace, and unmistakably British rhythm.", sampleText: "You could feel the city humming underneath everything, as if even the pavement had plans for the evening." },
+    { id: "london_grounded_male", label: "Grounded London Male", badge: "British Regional", language: "English", preferredName: "LondonM01", prompt: "A grounded male voice with a modern London accent, clear British identity, relaxed confidence, and natural conversational rhythm. Urban and believable, not caricatured, and never American. Suitable for thrillers, drama, and contemporary fiction.", previewText: "All right, this is a grounded London male voice with clean British pacing and urban confidence.", sampleText: "He kept walking, not because he knew where he was going, but because stopping would have meant admitting he was rattled." },
+    { id: "northern_yorkshire_male", label: "Yorkshire Male", badge: "British Regional", language: "English", preferredName: "YorksM01", prompt: "A man from Yorkshire with a clearly northern English accent, solid warmth, earthy honesty, and unmistakably British vowel shapes. Natural Yorkshire identity, not comic exaggeration, and not American. Calm, grounded, and strong for literary or rural storytelling.", previewText: "Evening. This is a Yorkshire voice with northern warmth, plain speaking, and proper British character.", sampleText: "The fields held the last of the day's light, and the whole valley looked as though it had decided to keep its own counsel." },
+    { id: "northern_yorkshire_female", label: "Yorkshire Female", badge: "British Regional", language: "English", preferredName: "YorksF01", prompt: "A woman from Yorkshire with a clearly northern English accent, practical warmth, intelligence, and recognisably British rhythm. Natural Yorkshire, not a parody, and certainly not American. Strong, steady, and emotionally believable.", previewText: "Evening. This is a Yorkshire female voice with clear northern roots and calm British warmth.", sampleText: "She folded the letter once, then again, as if changing its shape might somehow change what it asked of her." },
+    { id: "liverpool_female", label: "Liverpool Female", badge: "British Regional", language: "English", preferredName: "LiverF01", prompt: "A woman from Liverpool with a clearly Liverpudlian accent, bright energy, humour, and unmistakably British cadence. Natural Scouse flavour without going broad or cartoonish. Keep the accent clearly regional and never American.", previewText: "Hiya. This is a Liverpool female voice with lively British rhythm and a touch of Scouse brightness.", sampleText: "By the time she reached the front steps, she'd already rehearsed three different versions of the truth and trusted none of them." },
+    { id: "liverpool_male", label: "Liverpool Male", badge: "British Regional", language: "English", preferredName: "LiverM01", prompt: "A man from Liverpool with a distinct but natural Scouse accent, wit, speed, and clear British regional identity. Avoid parody and avoid flattening into standard southern English or American speech. Lively, sharp, and characterful.", previewText: "Hiya. This is a Liverpool male voice with proper Scouse rhythm and unmistakably British phrasing.", sampleText: "He gave the room a quick once-over and knew straight away that something had shifted while he was out." },
+    { id: "manchester_male", label: "Manchester Male", badge: "British Regional", language: "English", preferredName: "MancM01", prompt: "A man from Manchester with a clear Mancunian accent, dry humour, directness, and recognisably northern English cadence. Definitely British, definitely not American, and not overplayed. Suitable for urban drama, music docs, and grounded narration.", previewText: "All right. This is a Manchester voice with northern edge, dry humour, and proper British shape.", sampleText: "The street looked ordinary enough in daylight, but after midnight it seemed to remember things it would never say aloud." },
+    { id: "manchester_female", label: "Manchester Female", badge: "British Regional", language: "English", preferredName: "MancF01", prompt: "A woman from Manchester with a modern Mancunian accent, smart, quick, and distinctly northern English. Keep the delivery natural, witty, and firmly British, not American and not caricatured. Strong for contemporary fiction and confident narration.", previewText: "All right. This is a Manchester female voice with pace, confidence, and clear northern British identity.", sampleText: "She never raised her voice when she was serious, which was how people knew they ought to start paying attention." },
+    { id: "scottish_highland_male", label: "Scottish Highland Male", badge: "British Regional", language: "English", preferredName: "ScotM01", prompt: "A Scottish male voice with a clearly Scottish accent, resonant warmth, rugged calm, and unmistakable British regional identity. Natural Scottish pronunciation, not exaggerated, and absolutely not American. Strong for fantasy, history, and reflective narration.", previewText: "Good evening. This is a Scottish male voice with depth, warmth, and distinctly Scottish cadence.", sampleText: "The loch lay dark and still beneath the hills, holding the sky so quietly that it seemed almost deliberate." },
+    { id: "scottish_female", label: "Scottish Female", badge: "British Regional", language: "English", preferredName: "ScotF01", prompt: "A Scottish female voice with a clearly Scottish accent, intelligence, warmth, and natural musicality. Keep the accent strong enough to sound truly Scottish, but not so broad that clarity suffers. Definitely not American. Suitable for literary narration and character work.", previewText: "Good evening. This is a Scottish female voice with warmth, clarity, and unmistakably Scottish rhythm.", sampleText: "She stood at the harbour wall and watched the gulls turn in the wind as if the weather itself were trying to make up its mind." },
+    { id: "welsh_female", label: "Welsh Female", badge: "British Regional", language: "English", preferredName: "WelshF01", prompt: "A Welsh woman with a clearly Welsh accent, lyrical cadence, warmth, and bright emotional expressiveness. Natural Welsh musicality, not theatrical fantasy speech, and not American. Gentle but clear, suitable for narration and storytelling.", previewText: "Good evening. This is a Welsh female voice with musical British cadence and gentle warmth.", sampleText: "The lane curved towards the chapel and the sea beyond it, and the evening seemed to arrive in layers of silver and blue." },
+    { id: "welsh_male", label: "Welsh Male", badge: "British Regional", language: "English", preferredName: "WelshM01", prompt: "A Welsh male voice with a clearly Welsh accent, lyrical resonance, warmth, and proper British regional identity. Calm, articulate, and musical without sounding exaggerated. Definitely not American.", previewText: "Good evening. This is a Welsh male voice with warmth, lyricism, and clear British identity.", sampleText: "He paused on the hill and looked back over the town, as if memory were something you could measure from a distance." },
+    { id: "northern_irish_male", label: "Northern Irish Male", badge: "British Regional", language: "English", preferredName: "NIM01", prompt: "A Northern Irish male voice with a clearly Northern Irish accent, sharp intelligence, grounded warmth, and unmistakably regional British Isles identity. Natural and believable, not comic, and certainly not American. Strong for drama and thriller narration.", previewText: "Good evening. This is a Northern Irish male voice with clarity, edge, and proper regional character.", sampleText: "He said it softly, but there was enough steel in the sentence to make everyone at the table sit a little straighter." },
+    { id: "irish_dublin_female", label: "Dublin Female", badge: "British Regional", language: "English", preferredName: "DubF01", prompt: "A Dublin female voice with a clearly Irish accent, bright wit, emotional warmth, and natural conversational musicality. Keep the accent distinct and authentic without caricature, and never allow it to drift toward American speech.", previewText: "Hello there. This is a Dublin female voice with warmth, wit, and unmistakably Irish rhythm.", sampleText: "By the time the lights came on along the river, she'd already decided that honesty would cost less than pretending." },
+    { id: "fr_paris_romance_f", label: "Paris Romance Female", badge: "French Accent", language: "French", preferredName: "ParisRomF1", prompt: "A woman in her thirties from Paris with a clearly French accent and elegant, intimate warmth. Native language French. Smooth mid pitch, refined cadence, emotionally intelligent, romantic without sounding theatrical. When she later speaks English, the French accent should remain clearly audible and never drift into American pronunciation.", previewText: "Bonsoir. Je suis une voix francaise douce et elegante, concue pour une narration romantique.", nativeSampleText: "La pluie venait de s'arreter, et la ville semblait soudain plus tendre, comme si chaque lumiere attendait encore quelque chose.", englishSampleText: "The rain had just stopped, and the city suddenly felt more tender, as if every light was still waiting for something." },
+    { id: "fr_documentary_m", label: "French Documentary Male", badge: "French Accent", language: "French", preferredName: "ParisDocM1", prompt: "A French man in his forties with a clearly French accent, calm authority, clean articulation, and documentary gravitas. Native language French. Controlled pace, thoughtful and intelligent. When he speaks English, retain a distinctly French accent instead of flattening toward American speech.", previewText: "Bonsoir. Voici une voix masculine francaise, claire, posee et documentaire.", nativeSampleText: "Au fil des annees, le port s'est transforme en un paysage de laboratoires, d'archives et d'ambition industrielle silencieuse.", englishSampleText: "Over the years, the harbor turned into a landscape of laboratories, archives, and quiet industrial ambition." },
+    { id: "fr_witty_heroine_f", label: "French Witty Heroine", badge: "French Accent", language: "French", preferredName: "ParisHeroF1", prompt: "A young French woman with a lively Parisian accent, quick wit, bright intelligence, and playful warmth. Native language French. Nimble timing and believable charm. When speaking English, keep the French accent obvious and natural.", previewText: "Salut. Je suis une heroine francaise vive, maligne et pleine de repartie.", nativeSampleText: "Si la confiance pouvait se louer a l'heure, j'en aurais pris trois de plus avant d'entrer dans cette reunion.", englishSampleText: "If confidence could be rented by the hour, I would have booked three extra hours before stepping into that meeting." },
+    { id: "fr_matriarch_f", label: "French Matriarch", badge: "French Accent", language: "French", preferredName: "ParisMatF1", prompt: "An older French woman with deep resonance, authority, warmth, and elegant self-possession. Native language French. Rich texture, calm rhythm, emotionally layered. In English, keep a mature French accent and never default to American vowels.", previewText: "Bonsoir. Je suis une voix francaise mature, grave et souveraine.", nativeSampleText: "Elle savait depuis longtemps que la douceur et la fermete pouvaient habiter une seule et meme voix.", englishSampleText: "She had known for years that gentleness and firmness could live inside the very same voice." },
+    { id: "fr_noir_m", label: "French Noir Male", badge: "French Accent", language: "French", preferredName: "ParisNoirM1", prompt: "A French male noir voice with dry wit, low-lit intimacy, and a restrained Paris accent. Native language French. Low-mid pitch, smoky but clear. When speaking English, the French accent should remain distinct and urban, not Americanized.", previewText: "Bonsoir. Voici une voix noire francaise, seche, calme et precise.", nativeSampleText: "Quand je suis arrive au bord du fleuve, l'affaire avait cesse d'etre confuse; elle etait devenue volontaire.", englishSampleText: "By the time I reached the river, the case had stopped being messy and had started looking deliberate." },
+    { id: "fr_sage_m", label: "French Sage", badge: "French Accent", language: "French", preferredName: "ParisSageM1", prompt: "A contemplative French man with a clearly French accent, low calm resonance, patience, and philosophical gravity. Native language French. Suitable for reflective fantasy or literary narration. In English, preserve the French accent clearly.", previewText: "Bonsoir. Je suis une voix francaise calme, sage et meditativement profonde.", nativeSampleText: "Le pouvoir n'etait jamais la tempete elle-meme, mais la discipline necessaire pour lui tenir tete sans trembler.", englishSampleText: "Power was never the storm itself, only the discipline required to face it without shaking." },
+    { id: "fr_bedtime_f", label: "French Bedtime Storyteller", badge: "French Accent", language: "French", preferredName: "ParisBedF1", prompt: "A gentle French female bedtime storyteller with soft warmth, airy calm, and a recognizably French accent. Native language French. Slow, soothing, clear. When reading English, keep the accent French and comforting.", previewText: "Bonsoir. Je suis une voix francaise douce, lente et rassurante pour l'heure du coucher.", nativeSampleText: "Au-dela de la derniere lampe, la nuit s'ouvrait sur des champs si calmes que meme les etoiles semblaient parler plus bas.", englishSampleText: "Beyond the last lamp, the night opened into fields so calm that even the stars seemed to speak more softly." },
+    { id: "es_romance_f", label: "Spanish Romance Female", badge: "Spanish Accent", language: "Spanish", preferredName: "MadridRomF1", prompt: "A Spanish woman in her thirties with a clearly Iberian Spanish accent, warm sensuality, and polished romantic narration. Native language Spanish. Intimate, graceful, and expressive. When she later speaks English, retain a distinct Spanish accent and do not drift toward American speech.", previewText: "Buenas noches. Soy una voz espanola calida y elegante para una narracion romantica.", nativeSampleText: "La noche olia a lluvia y a promesas, y por un momento todo parecia suspendido entre el deseo y la memoria.", englishSampleText: "The night smelled of rain and promises, and for a moment everything seemed suspended between desire and memory." },
+    { id: "es_thriller_m", label: "Spanish Thriller Male", badge: "Spanish Accent", language: "Spanish", preferredName: "MadridThrM1", prompt: "A Spanish man with a clearly Spanish accent, controlled tension, crisp consonants, and thriller pacing. Native language Spanish. Serious, rhythmic, believable under pressure. In English, keep an unmistakable Spanish accent rather than becoming neutral American.", previewText: "Buenas noches. Esta es una voz espanola tensa, precisa y cinematografica.", nativeSampleText: "Volvio a mirar el espejo retrovisor, no porque esperara ver a alguien, sino porque el miedo ya se habia instalado en el coche.", englishSampleText: "He checked the rear-view mirror again, not because he expected to see anyone, but because fear had already climbed into the car." },
+    { id: "es_heroine_f", label: "Spanish Modern Heroine", badge: "Spanish Accent", language: "Spanish", preferredName: "MadridHerF1", prompt: "A young Spanish woman with a lively accent, intelligence, speed, warmth, and a modern urban presence. Native language Spanish. Sharp comic timing and believable emotional range. When speaking English, keep a noticeable Spanish accent.", previewText: "Hola. Soy una voz espanola joven, agil, divertida y segura de si misma.", nativeSampleText: "Si la seguridad en una misma se vendiera por horas, yo habria comprado el paquete completo antes de entrar alli.", englishSampleText: "If confidence were sold by the hour, I would have bought the full package before walking in there." },
+    { id: "es_professor_m", label: "Spanish Academic Male", badge: "Spanish Accent", language: "Spanish", preferredName: "MadridAcadM1", prompt: "A Spanish male academic explainer with a clearly Spanish accent, calm authority, precise diction, and accessible intelligence. Native language Spanish. Ideal for educational narration. In English, keep a distinct Spanish accent and cadence.", previewText: "Buenas tardes. Soy una voz espanola clara, didactica y de autoridad serena.", nativeSampleText: "La diferencia clave no esta solo en lo que cambio, sino en como cambiaron los incentivos y lo que eso permitio despues.", englishSampleText: "The key difference is not only what changed, but how the incentives changed and what that made possible afterward." },
+    { id: "es_father_m", label: "Spanish Father Figure", badge: "Spanish Accent", language: "Spanish", preferredName: "MadridDadM1", prompt: "A warm Spanish man in his forties or fifties with a clearly Spanish accent, patient reassurance, and grounded emotional strength. Native language Spanish. Gentle, kind, never preachy. In English, the Spanish accent should remain audible and natural.", previewText: "Hola. Soy una voz espanola serena, protectora y llena de paciencia.", nativeSampleText: "Tienes tiempo, dijo el, porque algunas decisiones necesitan silencio alrededor para poder escucharse bien.", englishSampleText: "Take your time, he said, because some decisions need enough silence around them to be heard properly." },
+    { id: "es_matriarch_f", label: "Spanish Matriarch", badge: "Spanish Accent", language: "Spanish", preferredName: "MadridMatF1", prompt: "A mature Spanish woman with rich resonance, maternal authority, and emotional depth. Native language Spanish. Warm, composed, and self-possessed. In English, keep the Spanish accent clear instead of neutralizing it.", previewText: "Buenas noches. Soy una voz espanola madura, firme y afectuosa.", nativeSampleText: "Ella habia aprendido que la ternura y la determinacion no son enemigas, y nunca volvio a pedir permiso para llevar ambas.", englishSampleText: "She had learned that tenderness and determination are not enemies, and she never again asked permission to carry both." },
+    { id: "es_sidekick_m", label: "Spanish Playful Sidekick", badge: "Spanish Accent", language: "Spanish", preferredName: "MadridSideM1", prompt: "A playful Spanish male sidekick voice with youthful energy, comic timing, and a clearly Spanish accent. Native language Spanish. Warm, quick, and genuinely funny without sounding cartoonish. In English, retain the Spanish accent.", previewText: "Hola. Soy una voz espanola divertida, agil y con mucha complicidad.", nativeSampleText: "No digo que el plan sea perfecto, solo digo que es dramaticamente mejor que el otro, que no incluia ningun aperitivo.", englishSampleText: "I am not saying the plan is perfect, only that it is dramatically better than the other one, which included absolutely no snacks." },
+    { id: "de_documentary_f", label: "German Documentary Female", badge: "German Accent", language: "German", preferredName: "BerlinDocF1", prompt: "A German woman with a clearly German accent, calm authority, excellent diction, and documentary precision. Native language German. Bright but serious, educational and trustworthy. When speaking English, keep a clearly German accent and not an American one.", previewText: "Guten Abend. Ich bin eine deutsche Stimme mit Klarheit, Ruhe und dokumentarischer Praezision.", nativeSampleText: "Im Laufe eines Jahrzehnts verwandelte sich der Hafen in eine Landschaft aus Laboren, Archiven und stiller industrieller Absicht.", englishSampleText: "Over the course of a decade, the harbor transformed into a landscape of laboratories, archives, and quiet industrial intent." },
+    { id: "de_thriller_m", label: "German Thriller Male", badge: "German Accent", language: "German", preferredName: "BerlinThrM1", prompt: "A German man with a distinct German accent, disciplined tension, precise rhythm, and cool thriller control. Native language German. Strong consonants, serious tone, believable suspense. In English, preserve the German accent clearly.", previewText: "Guten Abend. Dies ist eine deutsche Stimme mit Spannung, Disziplin und filmischer Kontrolle.", nativeSampleText: "Er sah noch einmal in den Rueckspiegel, nicht weil er jemanden erwartete, sondern weil die Angst bereits neben ihm sass.", englishSampleText: "He checked the rear-view mirror once more, not because he expected anyone, but because fear was already sitting beside him." },
+    { id: "de_literary_m", label: "German Literary Male", badge: "German Accent", language: "German", preferredName: "BerlinLitM1", prompt: "A German literary male voice with a clearly German accent, reflective gravity, medium-low pitch, and thoughtful pacing. Native language German. Ideal for literary fiction and memoir. In English, keep the German accent audible and natural.", previewText: "Guten Abend. Ich bin eine deutsche Stimme fuer literarische Ruhe und nachdenkliche Tiefe.", nativeSampleText: "Im Winter schien das Haus jede Pause zu erinnern, und jeder Flur wusste mehr ueber ihr Schweigen als sie selbst.", englishSampleText: "In winter the house seemed to remember every pause, and each hallway knew more about their silence than they did." },
+    { id: "de_regal_f", label: "German Regal Female", badge: "German Accent", language: "German", preferredName: "BerlinRegF1", prompt: "A regal German woman with a clearly German accent, formal poise, controlled authority, and elegant command. Native language German. Suitable for fantasy royalty or leadership narration. In English, preserve a refined German accent.", previewText: "Guten Abend. Ich bin eine deutsche Stimme mit Wuerde, Klarheit und stiller Autoritaet.", nativeSampleText: "Nennen Sie es Barmherzigkeit, wenn Sie wollen, doch verstehen Sie, dass Barmherzigkeit aus Staerke immer eine Wahl bleibt.", englishSampleText: "Call it mercy if you like, but understand that mercy offered from strength always remains a choice." },
+    { id: "de_assistant_f", label: "German Modern Assistant", badge: "German Accent", language: "German", preferredName: "BerlinAstF1", prompt: "A modern German female assistant voice with a clearly German accent, crisp efficiency, polished warmth, and excellent intelligibility. Native language German. Professional and helpful, not robotic. When speaking English, keep the German accent noticeable.", previewText: "Hallo. Ich bin eine deutsche Assistenzstimme, klar, freundlich und praezise.", nativeSampleText: "Ihr Entwurf ist jetzt bereit zur Pruefung, und Sie koennen Stimme, Tempo und Ton vergleichen, bevor Sie exportieren.", englishSampleText: "Your draft is now ready for review, and you can compare voice, pace, and tone before exporting." },
+    { id: "de_father_m", label: "German Father Figure", badge: "German Accent", language: "German", preferredName: "BerlinDadM1", prompt: "A warm German fatherly male voice with a clearly German accent, patient reassurance, and grounded kindness. Native language German. Calm, safe, and emotionally steady. In English, retain the German accent clearly.", previewText: "Hallo. Ich bin eine deutsche Stimme mit Geduld, Waerme und verlaesslicher Ruhe.", nativeSampleText: "Lass dir Zeit, sagte er, denn manche Entscheidungen brauchen genug Stille, damit man sie wirklich hoeren kann.", englishSampleText: "Take your time, he said, because some decisions need enough silence around them to be truly heard." },
+    { id: "de_noir_f", label: "German Noir Female", badge: "German Accent", language: "German", preferredName: "BerlinNoirF1", prompt: "A German female noir voice with a clearly German accent, dry intelligence, late-night intimacy, and low controlled tension. Native language German. Urban, precise, and serious. In English, preserve the German accent.", previewText: "Guten Abend. Ich bin eine deutsche Noir-Stimme, trocken, klug und kontrolliert.", nativeSampleText: "Als ich den Fluss erreichte, hatte der Fall aufgehoert, chaotisch zu wirken, und begann stattdessen absichtlich auszusehen.", englishSampleText: "By the time I reached the river, the case had stopped looking chaotic and had started looking deliberate." }
+  ];
+  const voiceDesignPresetState = {};
+
+  function escAttr(str) {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/"/g, "&quot;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  function jsStringArg(str) {
+    return "'" + String(str == null ? "" : str)
+      .replace(/\\/g, "\\\\")
+      .replace(/'/g, "\\'")
+      .replace(/\r/g, "\\r")
+      .replace(/\n/g, "\\n") + "'";
+  }
+
   function buildStyleDemoScenarioList() {
     const list = document.getElementById("styleDemoScenarioList");
     if (!list) return;
@@ -3073,7 +3542,7 @@
     ), 0);
     const info = PRICING[STYLE_DEMO_MODEL] || PRICING["qwen3-tts-instruct-flash"];
     const grossCost = totalChars * info.rate;
-    const used = freeUsed[STYLE_DEMO_MODEL] || 0;
+    const used = freeUsed[getQuotaBucket(STYLE_DEMO_MODEL)] || 0;
     const freeLeft = Math.max(0, FREE_QUOTA - used);
     const billable = Math.max(0, totalChars - freeLeft);
     const netCost = billable * info.rate;
@@ -3196,9 +3665,10 @@
         dlEl.classList.add("show");
 
         // Track quota & usage
-        if (freeUsed[model] !== undefined) {
-          const remaining = Math.max(0, FREE_QUOTA - freeUsed[model]);
-          freeUsed[model] += Math.min(chars, remaining);
+        const quotaBucket = getQuotaBucket(model);
+        if (freeUsed[quotaBucket] !== undefined) {
+          const remaining = Math.max(0, FREE_QUOTA - freeUsed[quotaBucket]);
+          freeUsed[quotaBucket] += Math.min(chars, remaining);
         }
         recordUsage({ voice: v.id, model, text: fullText, chars, cost, language });
         updateCostEstimate(text.length, model);
@@ -3371,9 +3841,10 @@
         dlEl.href = url;
         dlEl.classList.add("show");
 
-        if (freeUsed[STYLE_DEMO_MODEL] !== undefined) {
-          const remaining = Math.max(0, FREE_QUOTA - freeUsed[STYLE_DEMO_MODEL]);
-          freeUsed[STYLE_DEMO_MODEL] += Math.min(chars, remaining);
+        const quotaBucket = getQuotaBucket(STYLE_DEMO_MODEL);
+        if (freeUsed[quotaBucket] !== undefined) {
+          const remaining = Math.max(0, FREE_QUOTA - freeUsed[quotaBucket]);
+          freeUsed[quotaBucket] += Math.min(chars, remaining);
         }
         recordUsage({ voice: `${voiceId} · ${scenario.label}`, model: STYLE_DEMO_MODEL, text: fullText, chars, cost, language });
         updateCostEstimate(inputText.length, getCurrentModelId());
@@ -3842,11 +4313,13 @@
   updateCostEstimate(0, "qwen3-tts-flash");
   updateDemoInfo();
   buildStyleDemoScenarioList();
+  renderVoiceDesignPresetGrid();
   updateControlsState();
   buildDemoChecklist();
   refreshCompatibleVoiceUIs({ log: false });
   updateStyleDemoInfo();
   checkBackendHealth();
+  loadDesignedVoices();
   autoloadBundledPreviews().finally(() => {
     setTimeout(maybeShowAutoloadBanner, 600);
   });
@@ -3864,6 +4337,9 @@
   });
   document.getElementById("languageSelect").addEventListener("change", () => {
     updateStyleDemoInfo();
+  });
+  document.getElementById("narratorPresetSelect").addEventListener("change", () => {
+    syncInstructionsFromPresets();
   });
 
   // ──────────────────────────────────────────────────────────────────────────────
@@ -3893,6 +4369,165 @@
     } else {
       badge.style.display = "none";
     }
+  }
+
+  const LATIN_LANGUAGE_PROFILES = {
+    English: {
+      words: {
+        the: 2.2, and: 1.5, you: 1.6, your: 1.6, with: 1.5, this: 1.5, that: 1.4,
+        have: 1.3, from: 1.5, over: 1.8, into: 1.3, about: 1.2, they: 1.2,
+        there: 1.1, would: 1.2, should: 1.2, could: 1.2, quick: 1.6, brown: 1.6,
+        fox: 1.3, dog: 1.3, shouted: 2.4, whispered: 2.4, cool: 0.8, hey: 0.8
+      },
+      patterns: [
+        { target: "folded", regex: /\b(?:don't|can't|won't|i'm|you're|we're|they're|it's|that's|there's|i've|you've)\b/g, weight: 2.4 }
+      ]
+    },
+    Spanish: {
+      words: {
+        hola: 3.0, gracias: 3.0, buenos: 2.2, dias: 2.2, adios: 3.0, senor: 2.3,
+        senora: 2.3, usted: 2.4, ustedes: 2.4, porque: 1.8, estas: 2.0, esta: 1.8,
+        hablo: 1.6, hablas: 1.6, quiero: 1.6, puedo: 1.5, manana: 2.0, ahora: 1.0,
+        yo: 0.15, el: 0.2, la: 0.2, los: 0.3, las: 0.3, de: 0.1, del: 0.2, un: 0.15,
+        una: 0.2, y: 0.15, es: 0.2, en: 0.15, que: 0.2, por: 0.2, con: 0.2, para: 0.2,
+        se: 0.15, lo: 0.2, le: 0.2, su: 0.15, al: 0.2, como: 0.2, pero: 0.2, si: 0.15,
+        no: 0.1, tu: 0.6, ella: 0.5, nosotros: 1.2, ellos: 0.8
+      },
+      patterns: [
+        { target: "raw", regex: /[\u00bf\u00a1\u00f1]/g, weight: 1.6 },
+        { target: "folded", regex: /\b(?:buenos dias|muchas gracias|por favor)\b/g, weight: 2.2 }
+      ]
+    },
+    German: {
+      words: {
+        guten: 2.4, tag: 0.8, danke: 3.0, bitte: 2.4, nicht: 1.8, ich: 1.6, wir: 1.1,
+        deutsch: 2.6, uber: 2.0, schon: 1.8, heute: 1.2, jetzt: 1.1, der: 0.2,
+        die: 0.15, das: 0.2, den: 0.15, dem: 0.15, des: 0.15, ein: 0.15, eine: 0.2,
+        und: 0.25, ist: 0.25, du: 0.15, er: 0.15, sie: 0.15, es: 0.15, mit: 0.25,
+        auf: 0.2, fur: 0.35, von: 0.15, zu: 0.15, an: 0.1, im: 0.15, am: 0.15,
+        bei: 0.15, nach: 0.15, aus: 0.15, unter: 0.15, ja: 0.3, nein: 0.3
+      },
+      patterns: [
+        { target: "raw", regex: /[\u00e4\u00f6\u00fc\u00df]/g, weight: 1.8 },
+        { target: "folded", regex: /\b(?:guten tag|danke schon)\b/g, weight: 2.2 }
+      ]
+    },
+    French: {
+      words: {
+        bonjour: 3.0, merci: 3.0, avec: 1.7, pour: 1.4, dans: 1.5, etre: 2.0,
+        tres: 1.6, francais: 2.6, ca: 1.8, "c'est": 2.2, quoi: 1.3, comment: 1.1,
+        "aujourd'hui": 2.4, le: 0.2, la: 0.2, les: 0.25, de: 0.1, du: 0.2, des: 0.2,
+        un: 0.15, une: 0.2, et: 0.15, est: 0.2, en: 0.15, je: 0.2, tu: 0.2, il: 0.15,
+        nous: 0.4, vous: 0.4, ils: 0.25, que: 0.2, qui: 0.25, sur: 0.2, par: 0.2,
+        au: 0.3, aux: 0.3, ce: 0.2, se: 0.15, ne: 0.2, pas: 0.25, plus: 0.2,
+        comme: 0.2, mais: 0.2, oui: 0.3, non: 0.2
+      },
+      patterns: [
+        { target: "raw", regex: /[\u00e7\u0153]/g, weight: 1.4 },
+        { target: "raw", regex: /[cC]'/g, weight: 0.9 },
+        { target: "folded", regex: /\b(?:bonjour|merci|aujourd'hui|c'est)\b/g, weight: 1.8 }
+      ]
+    },
+    Italian: {
+      words: {
+        ciao: 3.0, grazie: 3.0, buongiorno: 3.0, perche: 2.2, sono: 1.5, questo: 1.5,
+        questa: 1.5, italiano: 2.6, oggi: 1.1, allora: 1.0, prego: 1.8, il: 0.2,
+        lo: 0.2, la: 0.2, i: 0.1, gli: 0.3, le: 0.2, di: 0.1, del: 0.15, della: 0.2,
+        un: 0.15, una: 0.2, e: 0.15, in: 0.15, che: 0.2, per: 0.2, con: 0.2, su: 0.2,
+        non: 0.2, mi: 0.2, ti: 0.2, ci: 0.2, vi: 0.2, si: 0.15, ho: 0.2, hai: 0.25,
+        ha: 0.2, abbiamo: 0.5, avete: 0.5, hanno: 0.4
+      },
+      patterns: [
+        { target: "folded", regex: /\b(?:buongiorno|grazie|ciao|perche)\b/g, weight: 1.9 }
+      ]
+    },
+    Portuguese: {
+      words: {
+        ola: 3.0, obrigado: 3.0, obrigada: 3.0, voce: 2.8, voces: 2.8, nao: 2.4,
+        manha: 2.0, hoje: 1.2, estou: 1.8, estamos: 1.8, portugues: 2.6, entao: 1.6,
+        agora: 1.0, aqui: 0.9, o: 0.1, a: 0.1, os: 0.15, as: 0.15, de: 0.1, do: 0.2,
+        da: 0.2, um: 0.15, uma: 0.2, e: 0.15, em: 0.15, que: 0.2, por: 0.2, com: 0.2,
+        para: 0.2, se: 0.15, no: 0.2, na: 0.2, ao: 0.25, como: 0.2, mas: 0.2, ou: 0.2,
+        sim: 0.3, bom: 0.7, dia: 0.7
+      },
+      patterns: [
+        { target: "raw", regex: /[\u00e3\u00f5\u00e7]/g, weight: 1.8 },
+        { target: "folded", regex: /\b(?:bom dia|boa tarde|boa noite|obrigad[oa]|ola)\b/g, weight: 2.2 }
+      ]
+    }
+  };
+
+  function normalizeForLanguageScoring(text) {
+    return String(text || "")
+      .toLowerCase()
+      .replace(/[’]/g, "'")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+  }
+
+  function collectWordCounts(tokens) {
+    const counts = Object.create(null);
+    tokens.forEach((token) => {
+      counts[token] = (counts[token] || 0) + 1;
+    });
+    return counts;
+  }
+
+  function countRegexMatches(text, regex) {
+    const matches = text.match(regex);
+    return matches ? matches.length : 0;
+  }
+
+  function scoreLatinLanguageProfile(rawText, normalizedText, wordCounts, profile) {
+    let score = 0;
+    let strongHits = 0;
+
+    Object.entries(profile.words).forEach(([word, weight]) => {
+      const count = wordCounts[word] || 0;
+      if (!count) return;
+      score += count * weight;
+      if (weight >= 1) strongHits += count;
+    });
+
+    (profile.patterns || []).forEach((pattern) => {
+      const target = pattern.target === "raw" ? rawText : normalizedText;
+      const count = countRegexMatches(target, pattern.regex);
+      if (!count) return;
+      score += count * pattern.weight;
+      if (pattern.weight >= 1) strongHits += count;
+    });
+
+    return { score, strongHits };
+  }
+
+  function detectLatinLanguage(text) {
+    const rawLower = String(text || "").toLowerCase().replace(/[’]/g, "'");
+    const normalized = normalizeForLanguageScoring(rawLower);
+    const tokens = normalized.match(/[a-z]+(?:'[a-z]+)*/g) || [];
+    if (tokens.length === 0) return null;
+
+    const wordCounts = collectWordCounts(tokens);
+    const ranked = Object.entries(LATIN_LANGUAGE_PROFILES)
+      .map(([language, profile]) => {
+        const result = scoreLatinLanguageProfile(rawLower, normalized, wordCounts, profile);
+        return { language, score: result.score, strongHits: result.strongHits };
+      })
+      .sort((a, b) => b.score - a.score);
+
+    const top = ranked[0];
+    const runnerUp = ranked[1] || { score: 0, strongHits: 0 };
+    if (!top || top.score < 1.5) return null;
+
+    const margin = top.score - runnerUp.score;
+    if (top.language === "English") {
+      if (top.score >= 2.2 && margin >= 0.45) return "English";
+      return null;
+    }
+
+    if (top.strongHits >= 2 && margin >= 0.45) return top.language;
+    if (top.score >= 3.0 && margin >= 0.75) return top.language;
+    if (top.score >= runnerUp.score * 1.5 && top.score >= 2.4) return top.language;
+    return null;
   }
 
   function guessLanguage(text) {
@@ -3926,24 +4561,511 @@
     // Russian/Cyrillic
     if (cyrillic / total > 0.3) return "Russian";
 
-    // For Latin-script languages, use common word patterns
+    // For Latin-script languages, score all supported languages instead of
+    // returning the first regex hit. This avoids false positives such as a
+    // single "yo" flipping mostly-English text to Spanish.
     if (latin / total > 0.4) {
-      const lower = text.toLowerCase();
-      // French: common function words
-      if (/\b(le|la|les|de|du|des|un|une|et|est|en|je|tu|il|nous|vous|ils|que|qui|pour|dans|sur|avec|par|au|aux|ce|se|ne|pas|plus|comme|mais|ou|donc|or|ni|car|bonjour|merci|oui|non)\b/.test(lower)) return "French";
-      // Spanish
-      if (/\b(el|la|los|las|de|del|un|una|y|es|en|que|por|con|para|se|lo|le|su|al|como|pero|si|no|yo|t\u00fa|\u00e9l|ella|nosotros|ellos|hola|gracias|s\u00ed|buenos|d\u00eda)\b/.test(lower)) return "Spanish";
-      // German
-      if (/\b(der|die|das|den|dem|des|ein|eine|und|ist|ich|du|er|sie|es|wir|ihr|sie|nicht|mit|auf|f\u00fcr|von|zu|an|im|am|bei|nach|aus|\u00fcber|unter|guten|tag|bitte|danke|ja|nein)\b/.test(lower)) return "German";
-      // Italian
-      if (/\b(il|lo|la|i|gli|le|di|del|della|un|una|e|\u00e8|in|che|per|con|su|non|mi|ti|ci|vi|si|ho|hai|ha|abbiamo|avete|hanno|ciao|grazie|s\u00ec|buongiorno)\b/.test(lower)) return "Italian";
-      // Portuguese
-      if (/\b(o|a|os|as|de|do|da|um|uma|e|\u00e9|em|que|por|com|para|se|no|na|ao|\u00e0|como|mas|ou|n\u00e3o|sim|ol\u00e1|obrigado|bom|dia)\b/.test(lower)) return "Portuguese";
-      // Default to English for Latin
-      return "English";
+      return detectLatinLanguage(text);
     }
 
     return null; // can't determine
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────────
+  // VOICE DESIGN LAB
+  // ──────────────────────────────────────────────────────────────────────────────
+
+  let activeDesignedVoiceId = null;
+
+  function getDesignPreset(presetId) {
+    return VOICE_DESIGN_PRESETS.find((preset) => preset.id === presetId) || null;
+  }
+
+  function getVoiceDesignCardValues(presetId) {
+    return {
+      displayName: document.getElementById(`designDisplayName-${presetId}`).value.trim(),
+      preferredName: document.getElementById(`designPreferredName-${presetId}`).value.trim(),
+      language: document.getElementById(`designLanguage-${presetId}`).value,
+      accentStrength: document.getElementById(`designAccentStrength-${presetId}`)?.value || "high",
+      prompt: document.getElementById(`designPrompt-${presetId}`).value.trim(),
+      previewText: document.getElementById(`designPreview-${presetId}`).value.trim(),
+      nativeSampleText: document.getElementById(`designNativeSample-${presetId}`).value.trim(),
+      englishSampleText: document.getElementById(`designEnglishSample-${presetId}`).value.trim(),
+    };
+  }
+
+  function setVoiceDesignStatus(presetId, type, msg) {
+    const box = document.getElementById(`designStatus-${presetId}`);
+    if (!box) return;
+    if (!type) {
+      box.className = "design-status";
+      box.textContent = "";
+      return;
+    }
+    box.className = `design-status show ${type}`;
+    box.textContent = msg;
+  }
+
+  function updateVoiceDesignFooter(presetId, msg) {
+    const footer = document.getElementById(`designFooter-${presetId}`);
+    if (footer) footer.textContent = msg || "";
+  }
+
+  function setDesignCardBusy(presetId, isBusy) {
+    const createBtn = document.getElementById(`designCreateBtn-${presetId}`);
+    const nativeBtn = document.getElementById(`designNativeSampleBtn-${presetId}`);
+    const englishBtn = document.getElementById(`designEnglishSampleBtn-${presetId}`);
+    const hasVoice = !!voiceDesignPresetState[presetId]?.voiceId;
+    if (createBtn) createBtn.disabled = !!isBusy;
+    if (nativeBtn) nativeBtn.disabled = !!isBusy || !hasVoice;
+    if (englishBtn) englishBtn.disabled = !!isBusy || !hasVoice;
+  }
+
+  function setAudioElementSource(elementId, url) {
+    const audio = document.getElementById(elementId);
+    if (!audio) return;
+    audio.src = url || "";
+    audio.style.display = url ? "block" : "none";
+  }
+
+  async function persistDesignedVoiceSample(voiceId, mode, blob, language, text) {
+    const arrayBuffer = await blob.arrayBuffer();
+    let binary = "";
+    const bytes = new Uint8Array(arrayBuffer);
+    const chunkSize = 0x8000;
+    for (let index = 0; index < bytes.length; index += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+    }
+    const audioBase64 = btoa(binary);
+    const resp = await fetchBackend("/save-designed-sample", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        voice_id: voiceId,
+        mode,
+        format: "wav",
+        audio_base64: audioBase64,
+        language,
+        text
+      })
+    });
+    const raw = await resp.text();
+    let data = {};
+    try {
+      data = raw ? JSON.parse(raw) : {};
+    } catch (_) {
+      if (!resp.ok) {
+        throw new Error(raw || `HTTP ${resp.status}`);
+      }
+      throw new Error("Sample persistence returned a non-JSON response.");
+    }
+    if (!resp.ok || data.error) throw new Error(data.error || raw || `HTTP ${resp.status}`);
+    return data;
+  }
+
+  function setCustomVoiceModelOption(modelId, label) {
+    const modelSel = document.getElementById("modelSelect");
+    let option = modelSel.querySelector(`option[value="${modelId}"]`);
+    if (!option) {
+      option = document.createElement("option");
+      option.value = modelId;
+      option.textContent = label;
+      modelSel.appendChild(option);
+    } else if (label) {
+      option.textContent = label;
+    }
+    return option;
+  }
+
+  function clearActiveCustomVoiceSelection(options) {
+    const opts = options || {};
+    if (!opts.keepClone) activeCloneVoiceId = null;
+    if (!opts.keepDesigned) activeDesignedVoiceId = null;
+    if (!opts.skipRender) {
+      renderSavedVoices(window.__lastSavedCloneVoices || []);
+      renderDesignedVoices(window.__lastDesignedVoices || []);
+    }
+  }
+
+  function activateDesignedVoice(voiceId, displayName, targetModel) {
+    const modelId = targetModel || "qwen3-tts-vd-2026-01-26";
+    activeDesignedVoiceId = voiceId;
+    activeCloneVoiceId = null;
+    selectedVoice = voiceId;
+    document.querySelectorAll(".voice-card").forEach(c => c.classList.remove("selected"));
+    setCustomVoiceModelOption(modelId, `${displayModelName(modelId)} — ${displayName} ($0.115/10K chars)`);
+    document.getElementById("modelSelect").value = modelId;
+    updatePricingNote();
+    updateControlsState();
+    refreshCompatibleVoiceUIs({ log: false });
+    renderSavedVoices(window.__lastSavedCloneVoices || []);
+    renderDesignedVoices(window.__lastDesignedVoices || []);
+    logClientEvent(`Using designed voice "${displayName}" on ${displayModelName(modelId)}.`, "success");
+  }
+
+  function getPrimarySampleText(values, preset) {
+    return values.nativeSampleText || values.sampleText || (preset && (preset.nativeSampleText || preset.sampleText)) || "";
+  }
+
+  function getEnglishAccentCheckText(values, preset) {
+    return values.englishSampleText || values.sampleText || (preset && (preset.englishSampleText || preset.sampleText || preset.nativeSampleText)) || "";
+  }
+
+  function getAccentStrengthPromptAddon(values, preset) {
+    const language = String(values.language || preset?.language || "").toLowerCase();
+    if (language === "english") return "";
+    const strength = values.accentStrength || "high";
+    const label = preset?.label || values.displayName || "this voice";
+    const basePrefix = `When this voice speaks English, preserve the foreign accent identity established in ${values.language}.`;
+    const levels = {
+      subtle: `${basePrefix} Keep the accent audible but light, natural, and refined. Do not flatten fully into American speech.`,
+      medium: `${basePrefix} Keep the accent clearly noticeable in vowels, cadence, and consonants. Avoid drifting into neutral American pronunciation.`,
+      high: `${basePrefix} Keep the accent strong and unmistakable in English. Maintain clearly foreign vowel shapes, rhythm, and consonants. Do not sound American.`,
+      extreme: `${basePrefix} Push the accent as far as possible while keeping English intelligible. ${label} should sound unmistakably foreign rather than American or neutral.`
+    };
+    return levels[strength] || levels.high;
+  }
+
+  function renderVoiceDesignPresetGrid() {
+    const grid = document.getElementById("voiceDesignGrid");
+    if (!grid) return;
+    grid.innerHTML = VOICE_DESIGN_PRESETS.map((preset, index) => `
+      <div class="design-preset-card" id="designPreset-${preset.id}">
+        <div class="design-preset-top">
+          <div>
+            <div class="design-preset-name">${index + 1}. ${escHtml(preset.label)}</div>
+            <div class="design-preset-meta">${escHtml(preset.language)} design language · ${escHtml(preset.badge)} archetype</div>
+          </div>
+          <div class="design-preset-pill">${escHtml(preset.badge)}</div>
+        </div>
+        <div class="design-row-2">
+          <div>
+            <label for="designDisplayName-${preset.id}">Display Name</label>
+            <input id="designDisplayName-${preset.id}" type="text" value="${escAttr(preset.label)}" maxlength="48" />
+          </div>
+          <div>
+            <label for="designPreferredName-${preset.id}">Preferred ID</label>
+            <input id="designPreferredName-${preset.id}" type="text" value="${escAttr(preset.preferredName)}" maxlength="20" />
+          </div>
+        </div>
+        <div>
+          <label for="designLanguage-${preset.id}">Language</label>
+          <select id="designLanguage-${preset.id}">
+            <option value="English"${preset.language === "English" ? " selected" : ""}>English</option>
+            <option value="French"${preset.language === "French" ? " selected" : ""}>French</option>
+            <option value="Spanish"${preset.language === "Spanish" ? " selected" : ""}>Spanish</option>
+            <option value="German"${preset.language === "German" ? " selected" : ""}>German</option>
+            <option value="Italian"${preset.language === "Italian" ? " selected" : ""}>Italian</option>
+            <option value="Portuguese"${preset.language === "Portuguese" ? " selected" : ""}>Portuguese</option>
+            <option value="Japanese"${preset.language === "Japanese" ? " selected" : ""}>Japanese</option>
+          </select>
+        </div>
+        <div>
+          <label for="designPrompt-${preset.id}">Voice Prompt</label>
+          <textarea id="designPrompt-${preset.id}">${escHtml(preset.prompt)}</textarea>
+        </div>
+        <div>
+          <label for="designPreview-${preset.id}">Creation Preview Text</label>
+          <textarea id="designPreview-${preset.id}" class="sample-textarea">${escHtml(preset.previewText)}</textarea>
+        </div>
+        <div>
+          <label for="designNativeSample-${preset.id}">Primary Sample Script</label>
+          <textarea id="designNativeSample-${preset.id}" class="sample-textarea">${escHtml(preset.nativeSampleText || preset.sampleText || "")}</textarea>
+        </div>
+        <div>
+          <label for="designEnglishSample-${preset.id}">English Accent Check Script</label>
+          <textarea id="designEnglishSample-${preset.id}" class="sample-textarea">${escHtml(preset.englishSampleText || preset.sampleText || "")}</textarea>
+        </div>
+        <div>
+          <label for="designAccentStrength-${preset.id}">Accent Strength For English Samples</label>
+          <select id="designAccentStrength-${preset.id}">
+            <option value="subtle">Subtle</option>
+            <option value="medium">Medium</option>
+            <option value="high" selected>High</option>
+            <option value="extreme">Extreme</option>
+          </select>
+        </div>
+        <div class="design-btn-row">
+          <button class="design-btn create" id="designCreateBtn-${preset.id}" onclick="createDesignedVoiceFromPreset(${jsStringArg(preset.id)})">Create Voice</button>
+          <button class="design-btn sample" id="designNativeSampleBtn-${preset.id}" onclick="generateDesignedVoiceSample(${jsStringArg(preset.id)}, 'native')" disabled>Generate Primary Sample</button>
+          <button class="design-btn sample" id="designEnglishSampleBtn-${preset.id}" onclick="generateDesignedVoiceSample(${jsStringArg(preset.id)}, 'english')" disabled>Generate English Sample</button>
+        </div>
+        <div class="design-status" id="designStatus-${preset.id}"></div>
+        <div class="design-audio-wrap">
+          <audio id="designPreviewAudio-${preset.id}" controls style="display:none"></audio>
+          <audio id="designNativeSampleAudio-${preset.id}" controls style="display:none"></audio>
+          <audio id="designEnglishSampleAudio-${preset.id}" controls style="display:none"></audio>
+        </div>
+        <div class="design-card-footer" id="designFooter-${preset.id}">Ready to create. Accent strength affects the next voice creation pass, so recreate the voice after changing it.</div>
+      </div>
+    `).join("");
+  }
+
+  async function createDesignedVoiceFromPreset(presetId) {
+    const apiKey = document.getElementById("apiKey").value.trim();
+    if (!apiKey) {
+      setVoiceDesignStatus(presetId, "error", "Enter your DashScope API key first.");
+      return;
+    }
+    const values = getVoiceDesignCardValues(presetId);
+    const preset = getDesignPreset(presetId);
+    if (!values.prompt || !values.previewText) {
+      setVoiceDesignStatus(presetId, "error", "Voice prompt and preview text are both required.");
+      return;
+    }
+    const accentAddon = getAccentStrengthPromptAddon(values, preset);
+    const finalPrompt = accentAddon ? `${values.prompt}\n\n${accentAddon}` : values.prompt;
+    logClientEvent(`Voice design create requested for ${presetId}: language=${values.language}, accentStrength=${values.accentStrength}, previewChars=${values.previewText.length}, promptChars=${finalPrompt.length}.`, "info");
+    setDesignCardBusy(presetId, true);
+    setVoiceDesignStatus(presetId, "loading", `Creating designed voice "${values.displayName || values.preferredName || "Custom Voice"}"...`);
+    updateVoiceDesignFooter(presetId, accentAddon ? `Submitting the voice-design request with ${values.accentStrength} English accent carry-through.` : "Submitting the voice-design request...");
+    try {
+      const resp = await fetchBackend("/design-voice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          api_key: apiKey,
+          preferred_name: values.preferredName,
+          display_name: values.displayName,
+          voice_prompt: finalPrompt,
+          preview_text: values.previewText,
+          language: values.language,
+          preset_id: presetId,
+          target_model: "qwen3-tts-vd-2026-01-26"
+        })
+      });
+      const data = await resp.json();
+      if (!resp.ok || data.error) throw new Error(data.error || `HTTP ${resp.status}`);
+      voiceDesignPresetState[presetId] = {
+        voiceId: data.voice_id,
+        displayName: data.display_name || values.displayName,
+        targetModel: data.target_model || "qwen3-tts-vd-2026-01-26",
+        previewAudioUrl: data.preview_audio_url || "",
+        nativeSampleAudioUrl: voiceDesignPresetState[presetId]?.nativeSampleAudioUrl || "",
+        englishSampleAudioUrl: voiceDesignPresetState[presetId]?.englishSampleAudioUrl || ""
+      };
+      setAudioElementSource(`designPreviewAudio-${presetId}`, data.preview_audio_url ? resolveAppUrl(data.preview_audio_url) : "");
+      setVoiceDesignStatus(presetId, "success", `Created voice "${data.display_name || values.displayName}" as ${data.voice_id}.`);
+      updateVoiceDesignFooter(presetId, `Voice ID ${data.voice_id} · estimated design charge $${Number(data.cost_usd || 0).toFixed(4)}`);
+      setDesignCardBusy(presetId, false);
+      activateDesignedVoice(data.voice_id, data.display_name || values.displayName, data.target_model);
+      await loadDesignedVoices();
+      logClientEvent(`Voice design created: ${data.voice_id} for preset ${presetId}.`, "success");
+    } catch (error) {
+      let message = error.message;
+      try {
+        const parsed = JSON.parse(error.message);
+        message = parsed.error || error.message;
+      } catch (_) {}
+      setVoiceDesignStatus(presetId, "error", message);
+      updateVoiceDesignFooter(presetId, "Creation failed.");
+      setDesignCardBusy(presetId, false);
+      logClientEvent(`Voice design failed for ${presetId}: ${message}`, "error");
+    }
+  }
+
+  async function generateDesignedVoiceSample(presetId, mode) {
+    const apiKey = document.getElementById("apiKey").value.trim();
+    const state = voiceDesignPresetState[presetId];
+    if (!apiKey) {
+      setVoiceDesignStatus(presetId, "error", "Enter your DashScope API key first.");
+      return;
+    }
+    if (!state || !state.voiceId) {
+      setVoiceDesignStatus(presetId, "error", "Create the designed voice first.");
+      return;
+    }
+    const values = getVoiceDesignCardValues(presetId);
+    const preset = getDesignPreset(presetId);
+    const isEnglishMode = mode === "english";
+    const sampleText = isEnglishMode ? getEnglishAccentCheckText(values, preset) : getPrimarySampleText(values, preset);
+    const sampleLanguage = isEnglishMode ? "English" : values.language;
+    const sampleLabel = isEnglishMode ? "English accent check" : "primary language";
+    if (!sampleText) {
+      setVoiceDesignStatus(presetId, "error", `Enter a ${sampleLabel} sample script first.`);
+      return;
+    }
+    setDesignCardBusy(presetId, true);
+    setVoiceDesignStatus(presetId, "loading", `Generating ${sampleLabel} sample for "${state.displayName || values.displayName}"...`);
+    updateVoiceDesignFooter(presetId, `Synthesizing ${sampleLabel} sample...`);
+    logClientEvent(`Designed voice sample requested for ${presetId}: voice=${state.voiceId}, mode=${sampleLabel}, language=${sampleLanguage}, chars=${sampleText.length}.`, "info");
+    try {
+      const resp = await fetchBackend("/synthesize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          api_key: apiKey,
+          text: sampleText,
+          voice: state.voiceId,
+          model: state.targetModel || "qwen3-tts-vd-2026-01-26",
+          language: sampleLanguage
+        })
+      });
+      if (!resp.ok) {
+        const errorText = await resp.text().catch(() => "");
+        throw new Error(errorText || `HTTP ${resp.status}`);
+      }
+      const blob = await resp.blob();
+      const sampleUrl = URL.createObjectURL(blob);
+      const stateKey = isEnglishMode ? "englishSampleAudioUrl" : "nativeSampleAudioUrl";
+      if (state[stateKey] && state[stateKey].startsWith("blob:")) URL.revokeObjectURL(state[stateKey]);
+      state[stateKey] = sampleUrl;
+      setAudioElementSource(isEnglishMode ? `designEnglishSampleAudio-${presetId}` : `designNativeSampleAudio-${presetId}`, sampleUrl);
+      let persistenceWarning = "";
+      try {
+        const persistData = await persistDesignedVoiceSample(state.voiceId, isEnglishMode ? "english" : "native", blob, sampleLanguage, sampleText);
+        if (persistData.native_sample_audio_url) {
+          state.savedNativeSampleAudioUrl = persistData.native_sample_audio_url;
+        }
+        if (persistData.english_sample_audio_url) {
+          state.savedEnglishSampleAudioUrl = persistData.english_sample_audio_url;
+        }
+      } catch (persistError) {
+        persistenceWarning = ` Sample playback works, but saving it to the voice library failed: ${persistError.message}`;
+        logClientEvent(`Designed voice sample persistence warning for ${presetId}: ${persistError.message}`, "warn");
+      }
+      setVoiceDesignStatus(presetId, "success", `${isEnglishMode ? "English accent check" : "Primary"} sample generated for "${state.displayName || values.displayName}".${persistenceWarning}`);
+      updateVoiceDesignFooter(presetId, `${sampleLanguage} · ${sampleText.length} chars · gross cost $${(sampleText.length * (PRICING[state.targetModel || "qwen3-tts-vd-2026-01-26"].rate)).toFixed(6)}${persistenceWarning ? " · restart server to save samples" : ""}`);
+      logClientEvent(`Designed voice sample ready for ${presetId}: mode=${sampleLabel}, language=${sampleLanguage}, chars=${sampleText.length}.`, "success");
+    } catch (error) {
+      let message = error.message;
+      try {
+        const parsed = JSON.parse(error.message);
+        message = parsed.error || error.message;
+      } catch (_) {}
+      setVoiceDesignStatus(presetId, "error", message);
+      updateVoiceDesignFooter(presetId, `${sampleLabel} sample generation failed.`);
+      logClientEvent(`Designed voice sample failed for ${presetId}: mode=${sampleLabel} — ${message}`, "error");
+    } finally {
+      setDesignCardBusy(presetId, false);
+    }
+  }
+
+  async function loadDesignedVoices() {
+    const apiKey = document.getElementById("apiKey").value.trim();
+    const listEl = document.getElementById("designedVoicesList");
+    if (!listEl) return;
+    listEl.innerHTML = `<div class="no-saved-voices">⏳ Loading…</div>`;
+    try {
+      const resp = apiKey
+        ? await fetchBackend("/list-designed-voices", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ api_key: apiKey, page_size: 100 }),
+          })
+        : await fetchBackend("/api/local-designed-voices");
+      const data = await resp.json();
+      if (!resp.ok || data.error) throw new Error(data.error || `HTTP ${resp.status}`);
+      renderDesignedVoices(data.voices || []);
+      logClientEvent(`Loaded ${data.voices ? data.voices.length : 0} designed voice record${data.voices && data.voices.length === 1 ? "" : "s"}${apiKey ? " from account + local cache" : " from local cache"}.`, "debug");
+    } catch (error) {
+      listEl.innerHTML = `<div class="no-saved-voices" style="color:var(--error)">Error loading designed voices: ${escHtml(error.message)}</div>`;
+    }
+  }
+
+  function renderDesignedVoices(voices) {
+    const listEl = document.getElementById("designedVoicesList");
+    if (!listEl) return;
+    window.__lastDesignedVoices = voices.slice();
+    voices.forEach((voice) => {
+      if (!voice.preset_id) return;
+      voiceDesignPresetState[voice.preset_id] = {
+        voiceId: voice.voice,
+        displayName: voice.display_name || voice.preferred_name || voice.voice,
+        targetModel: voice.target_model || "qwen3-tts-vd-2026-01-26",
+        previewAudioUrl: voice.preview_audio_url || "",
+        nativeSampleAudioUrl: voice.native_sample_audio_url || voiceDesignPresetState[voice.preset_id]?.nativeSampleAudioUrl || "",
+        englishSampleAudioUrl: voice.english_sample_audio_url || voiceDesignPresetState[voice.preset_id]?.englishSampleAudioUrl || ""
+      };
+      const nativeBtn = document.getElementById(`designNativeSampleBtn-${voice.preset_id}`);
+      const englishBtn = document.getElementById(`designEnglishSampleBtn-${voice.preset_id}`);
+      if (nativeBtn) nativeBtn.disabled = false;
+      if (englishBtn) englishBtn.disabled = false;
+      if (voice.preview_audio_url) {
+        setAudioElementSource(`designPreviewAudio-${voice.preset_id}`, resolveAppUrl(voice.preview_audio_url));
+      }
+      if (voice.native_sample_audio_url) {
+        setAudioElementSource(`designNativeSampleAudio-${voice.preset_id}`, resolveAppUrl(voice.native_sample_audio_url));
+      }
+      if (voice.english_sample_audio_url) {
+        setAudioElementSource(`designEnglishSampleAudio-${voice.preset_id}`, resolveAppUrl(voice.english_sample_audio_url));
+      }
+      updateVoiceDesignFooter(voice.preset_id, `Saved voice ID ${voice.voice}`);
+    });
+    if (!voices.length) {
+      listEl.innerHTML = `<div class="no-saved-voices">No designed voices saved locally yet. Create one from any preset card above.</div>`;
+      return;
+    }
+    listEl.innerHTML = voices.map((voice) => {
+      const isActive = voice.voice === activeDesignedVoiceId;
+      const displayName = voice.display_name || voice.preferred_name || voice.voice;
+      const previewUrl = voice.preview_audio_url ? resolveAppUrl(voice.preview_audio_url) : "";
+      const nativeSampleUrl = voice.native_sample_audio_url ? resolveAppUrl(voice.native_sample_audio_url) : "";
+      const englishSampleUrl = voice.english_sample_audio_url ? resolveAppUrl(voice.english_sample_audio_url) : "";
+      const storageParts = [];
+      if (voice.source === 'local' || voice.source === 'local+remote' || voice.preview_audio_url) storageParts.push('Saved locally');
+      if (voice.source === 'remote' || voice.source === 'local+remote') storageParts.push('Available on account');
+      const storageMeta = storageParts.length ? ` · ${storageParts.join(' · ')}` : '';
+      return `
+        <div class="saved-voice-item ${isActive ? 'active-clone' : ''}">
+          <div class="svi-info">
+            <div class="svi-name">${escHtml(displayName)}</div>
+            <div class="svi-id">${escHtml(voice.voice)}</div>
+            <div class="svi-meta">Model: ${escHtml(displayModelName(voice.target_model || "qwen3-tts-vd-2026-01-26"))} · Language: ${escHtml(voice.language || "English")} · Created: ${escHtml(voice.gmt_create || "—")}${escHtml(storageMeta)}</div>
+          </div>
+          <div class="svi-actions" style="align-items:center">
+            ${previewUrl ? `<audio class="design-library-audio" controls src="${escAttr(previewUrl)}"></audio>` : ""}
+            ${nativeSampleUrl ? `<audio class="design-library-audio" controls src="${escAttr(nativeSampleUrl)}" title="Primary sample"></audio>` : ""}
+            ${englishSampleUrl ? `<audio class="design-library-audio" controls src="${escAttr(englishSampleUrl)}" title="English accent check sample"></audio>` : ""}
+            <button class="svi-use-btn ${isActive ? 'using' : ''}" onclick="activateDesignedVoice(${jsStringArg(voice.voice)}, ${jsStringArg(displayName)}, ${jsStringArg(voice.target_model || "qwen3-tts-vd-2026-01-26")})">${isActive ? "✓ Using" : "Use Voice"}</button>
+            <button class="svi-del-btn" onclick="deleteDesignedVoiceRecord(${jsStringArg(voice.voice)})">🗑</button>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  async function deleteDesignedVoiceRecord(voiceId) {
+    if (!confirm(`Delete designed voice "${voiceId}"?`)) return;
+    const apiKey = document.getElementById("apiKey").value.trim();
+    try {
+      const resp = await fetchBackend("/delete-designed-voice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          api_key: apiKey || "",
+          voice_id: voiceId
+        })
+      });
+      const data = await resp.json();
+      if (!resp.ok || data.error) throw new Error(data.error || `HTTP ${resp.status}`);
+      Object.keys(voiceDesignPresetState).forEach((presetId) => {
+        if (voiceDesignPresetState[presetId]?.voiceId === voiceId) {
+          voiceDesignPresetState[presetId].voiceId = "";
+          voiceDesignPresetState[presetId].nativeSampleAudioUrl = "";
+          voiceDesignPresetState[presetId].englishSampleAudioUrl = "";
+          const nativeBtn = document.getElementById(`designNativeSampleBtn-${presetId}`);
+          const englishBtn = document.getElementById(`designEnglishSampleBtn-${presetId}`);
+          if (nativeBtn) nativeBtn.disabled = true;
+          if (englishBtn) englishBtn.disabled = true;
+          setAudioElementSource(`designPreviewAudio-${presetId}`, "");
+          setAudioElementSource(`designNativeSampleAudio-${presetId}`, "");
+          setAudioElementSource(`designEnglishSampleAudio-${presetId}`, "");
+          updateVoiceDesignFooter(presetId, "Ready to create.");
+        }
+      });
+      if (activeDesignedVoiceId === voiceId) {
+        activeDesignedVoiceId = null;
+        selectedVoice = "Cherry";
+        document.getElementById("modelSelect").value = "qwen3-tts-flash";
+        updatePricingNote();
+        updateControlsState();
+        refreshCompatibleVoiceUIs({ log: false });
+      }
+      await loadDesignedVoices();
+    } catch (error) {
+      alert("Failed to delete designed voice: " + error.message);
+    }
   }
 
   // ──────────────────────────────────────────────────────────────────────────────
@@ -4067,6 +5189,7 @@
 
   function renderSavedVoices(voices) {
     const listEl = document.getElementById("savedVoicesList");
+    window.__lastSavedCloneVoices = voices.slice();
     if (voices.length === 0) {
       listEl.innerHTML = `<div class="no-saved-voices">No cloned voices found on this account. Upload an audio sample above to create one.</div>`;
       return;
@@ -4108,6 +5231,7 @@
       return;
     }
     activeCloneVoiceId = voiceId;
+    activeDesignedVoiceId = null;
 
     // Deselect any system voice card
     document.querySelectorAll(".voice-card").forEach(c => c.classList.remove("selected"));
@@ -4125,19 +5249,13 @@
     }
     modelSel.value = "qwen3-tts-vc-2026-01-22";
     updatePricingNote();
+    updateControlsState();
+    refreshCompatibleVoiceUIs({ log: false });
     updateStyleDemoInfo();
 
     // Re-render saved voices to update active state
-    const items = document.querySelectorAll(".saved-voice-item");
-    items.forEach(el => {
-      const id = el.id.replace("svi-", "");
-      el.classList.toggle("active-clone", id === voiceId);
-      const btn = el.querySelector(".svi-use-btn");
-      if (btn) {
-        btn.textContent = id === voiceId ? "\u2713 Using" : "Use Voice";
-        btn.classList.toggle("using", id === voiceId);
-      }
-    });
+    renderSavedVoices(window.__lastSavedCloneVoices || []);
+    renderDesignedVoices(window.__lastDesignedVoices || []);
 
     setCloneStatus("success", `\u2713 Now using cloned voice \u201c${displayName}\u201d for all synthesis. Model auto-switched to ${displayModelName("qwen3-tts-vc-2026-01-22")}.`);
   }
@@ -4161,12 +5279,13 @@
       if (activeCloneVoiceId === voiceId) {
         activeCloneVoiceId = null;
         selectedVoice = "Cherry";
-        buildVoiceGrid(); // restore system voice grid
         // Remove VC model option
         const vcOpt = document.getElementById("modelSelect").querySelector('option[value="qwen3-tts-vc-2026-01-22"]');
         if (vcOpt) vcOpt.remove();
         document.getElementById("modelSelect").value = "qwen3-tts-flash";
         updatePricingNote();
+        updateControlsState();
+        refreshCompatibleVoiceUIs({ log: false });
         updateStyleDemoInfo();
       }
 

@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-R4Fem01-voice-20260514222617979-d0ca",
+  "preferred_name": "R4Fem01",
+  "display_name": "Radio 4 Style Female",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A British female voice in the style of a BBC Radio 4 spoken-word presenter, non-rhotic, precise, calm, literate, and unmistakably British. Polished public-service delivery with warmth and restraint. Definitely not American. Avoid bright ad-read energy.",
+  "preview_text": "Good evening. This is a British public-service female voice built for intelligent narration and reflective clarity.",
+  "language": "English",
+  "preset_id": "bbc_radio4_female",
+  "gmt_create": "2026-05-14T14:26:24.304Z",
+  "preview_audio_file": "radio_4_style_female_a23e7e6a6047_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/radio_4_style_female_a23e7e6a6047_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

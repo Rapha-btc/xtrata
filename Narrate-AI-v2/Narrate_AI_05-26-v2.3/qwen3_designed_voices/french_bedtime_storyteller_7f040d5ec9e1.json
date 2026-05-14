@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-ParisBedF1-voice-20260514215352857-d341",
+  "preferred_name": "ParisBedF1",
+  "display_name": "French Bedtime Storyteller",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A gentle French female bedtime storyteller with soft warmth, airy calm, and a recognizably French accent. Native language French. Slow, soothing, clear. When reading English, keep the accent French and comforting.",
+  "preview_text": "Bonsoir. Je suis une voix francaise douce, lente et rassurante pour l'heure du coucher.",
+  "language": "French",
+  "preset_id": "fr_bedtime_f",
+  "gmt_create": "2026-05-14T13:54:03.465Z",
+  "preview_audio_file": "french_bedtime_storyteller_7f040d5ec9e1_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/french_bedtime_storyteller_7f040d5ec9e1_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

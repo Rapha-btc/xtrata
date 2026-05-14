@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-BritRPF01-voice-20260514221830737-9e24",
+  "preferred_name": "BritRPF01",
+  "display_name": "British RP Female",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A female narrator with a clearly British Received Pronunciation accent, elegant but contemporary, non-rhotic, articulate, warm, and composed. Modern southern British rather than American. Keep the vowels and phrasing distinctly British without sounding stagey.",
+  "preview_text": "Good evening. This is a contemporary British RP female voice created for clear, elegant narration.",
+  "language": "English",
+  "preset_id": "british_rp_female",
+  "gmt_create": "2026-05-14T14:18:38.639Z",
+  "preview_audio_file": "british_rp_female_583005a9fe8b_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/british_rp_female_583005a9fe8b_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-Matriarch01-voice-20260514205629197-c99f",
+  "preferred_name": "Matriarch01",
+  "display_name": "Mature Matriarch",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A mature female voice with rich resonance, quiet strength, controlled warmth, and elegant pacing, suitable for a matriarch, senior executive, or emotionally layered older narrator. Avoid sounding stern by default and avoid frailty.",
+  "preview_text": "A mature, resonant female voice with depth, steadiness, and authority.",
+  "language": "English",
+  "preset_id": "mature_matriarch",
+  "gmt_create": "2026-05-14T12:56:39.693Z",
+  "preview_audio_file": "mature_matriarch_c20590314e43_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/mature_matriarch_c20590314e43_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

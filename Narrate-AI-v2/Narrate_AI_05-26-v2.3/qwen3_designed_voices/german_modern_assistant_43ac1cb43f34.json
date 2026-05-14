@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-BerlinAstF1-voice-20260514215711227-1823",
+  "preferred_name": "BerlinAstF1",
+  "display_name": "German Modern Assistant",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A modern German female assistant voice with a clearly German accent, crisp efficiency, polished warmth, and excellent intelligibility. Native language German. Professional and helpful, not robotic. When speaking English, keep the German accent noticeable.",
+  "preview_text": "Hallo. Ich bin eine deutsche Assistenzstimme, klar, freundlich und praezise.",
+  "language": "German",
+  "preset_id": "de_assistant_f",
+  "gmt_create": "2026-05-14T13:57:17.251Z",
+  "preview_audio_file": "german_modern_assistant_43ac1cb43f34_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/german_modern_assistant_43ac1cb43f34_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

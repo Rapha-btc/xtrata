@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-DocFem01-voice-20260514205624519-65ff",
+  "preferred_name": "DocFem01",
+  "display_name": "Documentary Female",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A female documentary narrator with neutral international English, precise diction, calm authority, medium pace, and a bright but serious tone. Ideal for educational and factual storytelling. Avoid flirtiness, avoid overly emotional delivery, avoid hard-news aggression.",
+  "preview_text": "A clean documentary voice designed for clarity, trust, and calm authority.",
+  "language": "English",
+  "preset_id": "documentary_female",
+  "gmt_create": "2026-05-14T12:56:34.188Z",
+  "preview_audio_file": "documentary_female_1981a37a6a8e_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/documentary_female_1981a37a6a8e_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

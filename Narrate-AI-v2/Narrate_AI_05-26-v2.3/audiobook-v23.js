@@ -208,6 +208,32 @@
     'oui', 'non', 'merci', 'tout', 'tous', 'toute', 'toutes', 'si', 'ah', 'oh',
     'alors', 'cest', 'cetait', 'jetais', 'javais', 'jai', 'questce', 'tes', 'tas'
   ].map(normalizeLoose));
+  const CHARACTER_SINGLE_WORD_BLOCKLIST = new Set([
+    'he', 'she', 'they', 'them', 'their', 'theirs', 'you', 'your', 'yours', 'we', 'our',
+    'ours', 'i', 'me', 'my', 'mine', 'it', 'its', 'this', 'that', 'these', 'those',
+    'there', 'here', 'who', 'whom', 'whose', 'what', 'when', 'where', 'why', 'how',
+    'yes', 'no', 'and', 'but', 'or', 'if', 'as', 'after', 'before', 'while', 'then',
+    'now', 'later', 'finally', 'perhaps', 'meanwhile', 'today', 'tomorrow', 'yesterday',
+    'hello', 'goodbye', 'morning', 'evening', 'night',
+    'all', 'since', 'once', 'someone', 'damn', 'thank', 'thanks', 'child', 'god', 'get',
+    'like', 'take', 'come', 'just', 'sorry', 'maybe', 'can', 'not', 'was', 'are', 'is',
+    'do', 'one', 'two', 'da', 'jag', 'seal', 'cps', 'caf',
+    'id', 'ill', 'im', 'ive', 'youd', 'youll', 'youre', 'youve', 'hed', 'hell', 'hes',
+    'shed', 'shell', 'shes', 'theyd', 'theyll', 'theyre', 'theyve', 'wed', 'well',
+    'were', 'weve', 'itd', 'itll', 'its'
+  ].map(normalizeLoose));
+  const CHARACTER_CONNECTOR_WORDS = new Set([
+    'a', 'an', 'the', 'and', 'but', 'or', 'if', 'as', 'after', 'before', 'when', 'while',
+    'then', 'so', 'because', 'though', 'although', 'however', 'meanwhile', 'with', 'without',
+    'from', 'into', 'onto', 'upon', 'through', 'across', 'around', 'toward', 'towards', 'for',
+    'by', 'at', 'in', 'on', 'of', 'to'
+  ].map(normalizeLoose));
+  const CHARACTER_LOCATION_ORG_WORDS = new Set([
+    'services', 'service', 'department', 'office', 'bureau', 'agency', 'school', 'elementary',
+    'academy', 'university', 'college', 'tavern', 'inn', 'hotel', 'cafe', 'café', 'restaurant',
+    'street', 'road', 'avenue', 'lane', 'court', 'county', 'city', 'town', 'village', 'police',
+    'sheriff', 'church', 'hospital', 'clinic', 'center', 'centre', 'building', 'hall'
+  ].map(normalizeLoose));
 
   function sentenceSplit(text) {
     const matches = String(text || '').match(/[^.!?\n]+(?:[.!?]+["”'’)]*)?|[^.!?\n]+$/g);
@@ -369,34 +395,68 @@
     return /[\p{L}]/u.test(clean);
   }
 
+  function getMetadataPreviewLines(manuscript, preamble) {
+    const source = normalizeNewlines(preamble || manuscript);
+    return source
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .slice(0, 12)
+      .map(cleanMetadataLine)
+      .filter(Boolean);
+  }
+
   function detectMetadata(manuscript, preamble) {
-    const lines = normalizeNewlines(preamble || manuscript).split('\n').map((line) => line.trim()).filter(Boolean);
+    const lines = getMetadataPreviewLines(manuscript, preamble);
     let language = 'English';
     if (typeof guessLanguage === 'function') {
       language = guessLanguage(manuscript) || language;
     }
 
-    const cleanedLines = lines.map(cleanMetadataLine).filter(Boolean);
-    let title = cleanedLines[0] || 'Untitled Book';
+    let title = lines[0] || 'Untitled Book';
     let series = '';
     let seriesVolume = '';
     let author = 'Unknown Author';
+    const used = new Set();
 
-    const authorCandidate = cleanedLines.map((line) => stripAuthorPrefix(line)).find(Boolean);
-    if (authorCandidate) author = authorCandidate;
+    for (let index = 0; index < lines.length; index += 1) {
+      const authorCandidate = stripAuthorPrefix(lines[index]);
+      if (!authorCandidate) continue;
+      author = authorCandidate;
+      used.add(index);
+      break;
+    }
 
-    const nonAuthorLines = cleanedLines.filter((line) => !stripAuthorPrefix(line));
-    if (nonAuthorLines.length) title = nonAuthorLines[0];
+    for (let index = 0; index < lines.length; index += 1) {
+      if (used.has(index)) continue;
+      const line = lines[index];
+      if (!line || isVolumeLine(line)) continue;
+      title = line;
+      used.add(index);
+      break;
+    }
 
-    const remaining = nonAuthorLines.slice(1);
-    const volumeLine = remaining.find((line) => isVolumeLine(line));
-    if (volumeLine) seriesVolume = volumeLine;
-
-    const seriesCandidate = remaining.find((line) => line !== seriesVolume && looksLikeSeriesLine(line));
-    if (seriesCandidate) series = seriesCandidate;
+    for (let index = 0; index < lines.length; index += 1) {
+      if (used.has(index)) continue;
+      const line = lines[index];
+      if (!line) continue;
+      if (!seriesVolume && isVolumeLine(line)) {
+        seriesVolume = line;
+        used.add(index);
+        continue;
+      }
+      if (!series && looksLikeSeriesLine(line)) {
+        series = line;
+        used.add(index);
+      }
+    }
 
     if (author === 'Unknown Author') {
-      const fallbackAuthorLine = cleanedLines.slice().reverse().find((line) => line !== title && line !== series && line !== seriesVolume && line.split(/\s+/).length <= 5);
+      const fallbackAuthorLine = lines.find((line, index) => {
+        if (used.has(index)) return false;
+        if (!line || isVolumeLine(line) || looksLikeSeriesLine(line)) return false;
+        return line.split(/\s+/).length <= 5;
+      });
       if (fallbackAuthorLine) author = fallbackAuthorLine;
     }
 
@@ -405,6 +465,109 @@
 
   function buildRoleId(label) {
     return 'role_' + slugify(label);
+  }
+
+  function buildTitleTrackEntries(meta) {
+    const entries = [];
+    const seen = new Set();
+
+    function push(value) {
+      const clean = cleanMetadataLine(value);
+      if (!clean) return;
+      const key = normalizeLoose(clean);
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      entries.push(clean);
+    }
+
+    push(meta && meta.title);
+    push(meta && meta.series);
+    push(meta && meta.seriesVolume);
+    if (meta && meta.author && meta.author !== 'Unknown Author') push(meta.author);
+    return entries;
+  }
+
+  function formatTitleTrackEntry(entry) {
+    const clean = cleanMetadataLine(entry);
+    if (!clean) return '';
+    if (/[.!?…।。]$/.test(clean)) return clean;
+    return clean + '.';
+  }
+
+  function sanitizeTitlePauseMarker(value) {
+    const compact = String(value || '').replace(/\s+/g, ' ').trim();
+    if (!compact) return ' .. ';
+    return ' ' + compact.slice(0, 16) + ' ';
+  }
+
+  function buildTitleTrackText(meta, pauseMarker) {
+    return buildTitleTrackEntries(meta)
+      .map(formatTitleTrackEntry)
+      .filter(Boolean)
+      .join(sanitizeTitlePauseMarker(pauseMarker))
+      .trim();
+  }
+
+  function createMetadataTitleChapter(meta, existingChapter, settings) {
+    const fullText = buildTitleTrackText(meta, settings && settings.titlePauseMarker);
+    if (!fullText) return existingChapter || null;
+
+    const roleLabel = 'Narrator';
+    const roleId = buildRoleId(roleLabel);
+    const chapterIndex = existingChapter && Number.isInteger(existingChapter.index) ? existingChapter.index : 0;
+    const chunks = [{
+      id: 'bk_title_0_' + Math.random().toString(36).slice(2, 8),
+      chapterIndex,
+      chunkIndex: 0,
+      segmentIndex: 0,
+      roleLabel,
+      roleId,
+      sourceType: 'narration',
+      text: fullText,
+      status: 'pending',
+      filename: '',
+      audioUrl: '',
+      voiceId: '',
+      charCount: fullText.length,
+      detectedCharacters: [],
+      primaryCharacter: '',
+      audioVersion: 0
+    }];
+
+    return {
+      index: chapterIndex,
+      title: 'Titles',
+      kind: 'titles',
+      audioUrls: { wav: '', mp3: '' },
+      chunks,
+      collapsed: existingChapter ? !!existingChapter.collapsed : false,
+      characters: []
+    };
+  }
+
+  function reindexChapters(chapters) {
+    return (chapters || []).map((chapter, chapterIndex) => ({
+      ...chapter,
+      index: chapterIndex,
+      chunks: (chapter.chunks || []).map((chunk, chunkIndex) => ({
+        ...chunk,
+        chapterIndex,
+        chunkIndex
+      }))
+    }));
+  }
+
+  function rebuildTitleChapterFromMetadata(chapters, meta, preamble, settings) {
+    const existingChapters = Array.isArray(chapters) ? chapters.slice() : [];
+    const titleIndex = existingChapters.findIndex((chapter) => chapter.kind === 'titles');
+    if (!String(preamble || '').trim() && titleIndex === -1) return existingChapters;
+
+    const titleChapter = createMetadataTitleChapter(meta, titleIndex === -1 ? null : existingChapters[titleIndex], settings);
+    if (!titleChapter) return existingChapters;
+
+    if (titleIndex === -1) existingChapters.unshift(titleChapter);
+    else existingChapters[titleIndex] = titleChapter;
+    return reindexChapters(existingChapters);
   }
 
   function resolveMarkerRole(rawRole) {
@@ -555,6 +718,9 @@
       String(label || '')
         .replace(/^[^\p{L}\p{N}]+/gu, '')
         .replace(/[^\p{L}\p{N}.'’ -]+$/gu, '')
+        .replace(/([\p{L}\p{N}])[’']s\b/gu, '$1')
+        .replace(/\s+/g, ' ')
+        .trim()
     );
   }
 
@@ -562,15 +728,62 @@
     return normalizeRoleLabel(String(label || '').replace(new RegExp('^(?:' + CHARACTER_HONORIFICS.map(escapeRegex).join('|') + ')\\.?\\s+', 'i'), ''));
   }
 
-  function isValidCharacterCandidate(label) {
+  function getCharacterCandidateProfile(label) {
     const clean = normalizeCharacterCandidate(label);
+    const words = clean.split(/\s+/).filter(Boolean);
+    const normalizedWords = words.map((word) => normalizeLoose(word.replace(/[.'’-]+$/g, '')));
+    const bareWords = words.map((word) => word.replace(/[.'’-]+$/g, ''));
+    const lowerHonorifics = new Set(CHARACTER_HONORIFICS.map((title) => normalizeLoose(title)));
+    const hasHonorific = normalizedWords.length > 0 && lowerHonorifics.has(normalizedWords[0]);
+    const coreWords = hasHonorific ? normalizedWords.slice(1) : normalizedWords.slice();
+    const trailingBoundaryPunctuation = words.some((word, index) => {
+      if (!/[.:;!?]$/.test(word)) return false;
+      const bare = normalizeLoose(word.replace(/[.:;!?]+$/g, ''));
+      if (index === 0 && lowerHonorifics.has(bare)) return false;
+      return true;
+    });
+    const hasOrgWord = coreWords.some((word) => CHARACTER_LOCATION_ORG_WORDS.has(word));
+    const hasConnectorWord = coreWords.some((word, index) => {
+      if (!word) return false;
+      if (index === 0 || index === coreWords.length - 1) return CHARACTER_CONNECTOR_WORDS.has(word);
+      return CHARACTER_CONNECTOR_WORDS.has(word) && !lowerHonorifics.has(word);
+    });
+    const hasBlockedSingleWord = coreWords.length === 1 && CHARACTER_SINGLE_WORD_BLOCKLIST.has(coreWords[0]);
+    const hasBlockedCoreWord = coreWords.some((word) => CHARACTER_SINGLE_WORD_BLOCKLIST.has(word) || CHARACTER_STOP_WORDS.has(word));
+    const hasShortInitialTail = bareWords.some((word, index) => {
+      if (index === 0 && hasHonorific) return false;
+      return normalizeLoose(word).length <= 1;
+    });
+    return {
+      clean,
+      words,
+      coreWords,
+      hasHonorific,
+      trailingBoundaryPunctuation,
+      hasOrgWord,
+      hasConnectorWord,
+      hasBlockedSingleWord,
+      hasBlockedCoreWord,
+      hasShortInitialTail
+    };
+  }
+
+  function isValidCharacterCandidate(label) {
+    const profile = getCharacterCandidateProfile(label);
+    const clean = profile.clean;
     if (!clean) return false;
     if (clean.length > 48) return false;
     if (isGenericRoleLabel(clean)) return false;
     if (/^(chapter|part|prologue|epilogue|scene|act|book|titles?)\b/i.test(clean)) return false;
-    const words = clean.split(/\s+/).filter(Boolean);
+    const words = profile.words;
     if (!words.length || words.length > 3) return false;
     if (CHARACTER_STOP_WORDS.has(normalizeLoose(clean))) return false;
+    if (profile.trailingBoundaryPunctuation) return false;
+    if (profile.hasBlockedSingleWord) return false;
+    if (profile.hasShortInitialTail) return false;
+    if (profile.hasConnectorWord) return false;
+    if (profile.hasOrgWord) return false;
+    if (!profile.hasHonorific && profile.hasBlockedCoreWord) return false;
     if (words.every((word) => /^[IVXLCDM]+$/i.test(word))) return false;
     return words.every((word) => {
       const bare = word.replace(/[.'’-]+$/g, '');
@@ -591,6 +804,38 @@
     return phrases.sort((a, b) => b.length - a.length);
   }
 
+  function collectAllowedSingleWordNames(entries) {
+    const allowed = new Set();
+
+    function push(value, force) {
+      const candidate = normalizeCharacterCandidate(value);
+      if (!candidate) return;
+      const profile = getCharacterCandidateProfile(candidate);
+      if (profile.words.length !== 1) return;
+      const key = normalizeLoose(candidate);
+      if (!key || CHARACTER_SINGLE_WORD_BLOCKLIST.has(key) || CHARACTER_STOP_WORDS.has(key)) return;
+      if (!force) return;
+      allowed.add(key);
+    }
+
+    (entries || []).forEach((entry) => {
+      if (!entry || !entry.label) return;
+      const profile = getCharacterCandidateProfile(entry.label);
+      const fromStrongEvidence = entry.attributionHits > 0 || profile.hasHonorific;
+      push(entry.label, fromStrongEvidence);
+      push(stripHonorific(entry.label), fromStrongEvidence);
+      if (fromStrongEvidence && profile.words.length > 1) {
+        const coreWords = profile.hasHonorific ? profile.words.slice(1) : profile.words.slice();
+        if (coreWords.length) {
+          push(coreWords[0], true);
+          push(coreWords[coreWords.length - 1], true);
+        }
+      }
+    });
+
+    return allowed;
+  }
+
   function bumpCharacterCandidate(map, rawLabel, weight, chapterIndex, source) {
     const label = normalizeCharacterCandidate(rawLabel);
     if (!isValidCharacterCandidate(label)) return;
@@ -609,6 +854,9 @@
         label,
         score: 0,
         hits: 0,
+        attributionHits: 0,
+        mentionHits: 0,
+        roleHits: 0,
         chapters: new Set(),
         sources: new Set(),
         matchPhrases: phrases.slice()
@@ -618,6 +866,9 @@
     if (label.length > entry.label.length) entry.label = label;
     entry.score += weight;
     entry.hits += 1;
+    if (source === 'attribution') entry.attributionHits += 1;
+    if (source === 'mention') entry.mentionHits += 1;
+    if (source === 'role') entry.roleHits += 1;
     entry.chapters.add(chapterIndex);
     entry.sources.add(source);
   }
@@ -626,11 +877,13 @@
     const candidateMap = new Map();
     const honorificPattern = '(?:' + CHARACTER_HONORIFICS.map(escapeRegex).join('|') + ')\\.?' ;
     const baseNamePattern = '(?:' + honorificPattern + '\\s+)?[\\p{Lu}][\\p{L}\'’.-]+(?:\\s+[\\p{Lu}][\\p{L}\'’.-]+){0,2}';
+    const seededNamePattern = '(?:' + honorificPattern + '\\s+[\\p{Lu}][\\p{L}\'’.-]+(?:\\s+[\\p{Lu}][\\p{L}\'’.-]+){0,1}|[\\p{Lu}][\\p{L}\'’.-]+\\s+[\\p{Lu}][\\p{L}\'’.-]+(?:\\s+[\\p{Lu}][\\p{L}\'’.-]+){0,1})';
     const escapedVerbs = CHARACTER_DIALOGUE_VERBS.map((verb) => verb.trim().split(/\s+/).map(escapeRegex).join('\\s+'));
     const verbPattern = '(?:' + escapedVerbs.join('|') + ')';
     const forwardPattern = new RegExp('\\b(' + baseNamePattern + ')\\s+' + verbPattern + '\\b', 'gu');
     const backwardPattern = new RegExp('\\b' + verbPattern + '\\s+(' + baseNamePattern + ')\\b', 'gu');
-    const properNamePattern = new RegExp('\\b(' + baseNamePattern + ')\\b', 'gu');
+    const seededMentionPattern = new RegExp('\\b(' + seededNamePattern + ')\\b', 'gu');
+    const singleNamePattern = /\b([A-ZÀ-ÖØ-Ý][\p{L}'’.-]{1,24}(?:[’']s)?)\b/gu;
 
     chapters.forEach((chapter, chapterIndex) => {
       const chapterText = chapter.chunks.map((chunk) => chunk.text).join('\n\n');
@@ -647,19 +900,41 @@
       Array.from(chapterText.matchAll(backwardPattern)).forEach((match) => {
         bumpCharacterCandidate(candidateMap, match[1], 2.5, chapterIndex, 'attribution');
       });
-      Array.from(chapterText.matchAll(properNamePattern)).forEach((match) => {
+      Array.from(chapterText.matchAll(seededMentionPattern)).forEach((match) => {
         bumpCharacterCandidate(candidateMap, match[1], 0.35, chapterIndex, 'mention');
       });
     });
+
+    const allowedSingleWordNames = collectAllowedSingleWordNames(Array.from(new Set(candidateMap.values())));
+    if (allowedSingleWordNames.size) {
+      chapters.forEach((chapter, chapterIndex) => {
+        const chapterText = chapter.chunks.map((chunk) => chunk.text).join('\n\n');
+        Array.from(chapterText.matchAll(singleNamePattern)).forEach((match) => {
+          const candidate = normalizeCharacterCandidate(match[1]);
+          if (!candidate) return;
+          const key = normalizeLoose(candidate);
+          if (!allowedSingleWordNames.has(key)) return;
+          bumpCharacterCandidate(candidateMap, candidate, 0.15, chapterIndex, 'mention');
+        });
+      });
+    }
 
     return Array.from(new Set(candidateMap.values()))
       .filter((entry) => {
         if (entry.sources.has('role')) return true;
         const label = entry.label;
-        const wordCount = label.split(/\s+/).filter(Boolean).length;
-        const hasHonorific = normalizeLoose(stripHonorific(label)) !== normalizeLoose(label);
-        const hasAttribution = entry.sources.has('attribution');
-        if (hasHonorific || wordCount > 1) return hasAttribution || entry.score >= 2 || entry.hits >= 2;
+        const profile = getCharacterCandidateProfile(label);
+        const wordCount = profile.words.length;
+        const hasHonorific = profile.hasHonorific;
+        const hasAttribution = entry.attributionHits > 0;
+        const normalizedLabel = normalizeLoose(label);
+        if (profile.hasOrgWord || profile.hasConnectorWord || profile.hasBlockedSingleWord) return false;
+        if (wordCount === 1) {
+          return allowedSingleWordNames.has(normalizedLabel) && (hasAttribution || entry.score >= 2.5 || entry.chapters.size >= 2);
+        }
+        if (hasHonorific) {
+          return hasAttribution || entry.hits >= 2;
+        }
         return hasAttribution;
       })
       .sort((a, b) => (b.score - a.score) || (b.hits - a.hits) || a.label.localeCompare(b.label))
@@ -1284,6 +1559,7 @@
       chunkMaxChars: sanitizeChunkSize(document.getElementById('bookChunkSize').value),
       model: document.getElementById('bookModelSelect').value,
       chunkSilence: sanitizeSilence(document.getElementById('bookChunkSilence').value, 5),
+      titlePauseMarker: sanitizeTitlePauseMarker(document.getElementById('bookTitlePauseMarker').value),
       chapterSilence: sanitizeSilence(document.getElementById('bookChapterSilence').value, 10)
     };
   }
@@ -1492,6 +1768,17 @@
     chunk.audioUrl = cacheBustUrl(result.url, (forceRegenerated ? 'regen_' : 'gen_') + chunk.audioVersion + '_' + Date.now());
   }
 
+  function getChunkGenerationInstructions(chunk) {
+    const chapter = bookState.chapters[chunk.chapterIndex];
+    if (!chapter || chapter.kind !== 'titles') return '';
+    return [
+      'Maintain one continuous narrator identity for this entire title sequence.',
+      'Speak slowly, clearly, and deliberately with a calm, polished audiobook tone.',
+      'Use noticeably longer natural pauses where the pause markers appear between the title, series, volume, and author.',
+      'Keep the mood and vocal texture consistent from start to finish, without resetting between sections.'
+    ].join(' ');
+  }
+
   async function generateBookChunk(chunk, modelId, apiKey, force) {
     const payload = {
       text: chunk.text,
@@ -1502,7 +1789,7 @@
       chapterIndex: chunk.chapterIndex,
       chunkIndex: chunk.chunkIndex,
       language: bookState.language,
-      instructions: '',
+      instructions: getChunkGenerationInstructions(chunk),
       force: !!force
     };
     return postJson(BOOK_API.generateChunk, payload);
@@ -1591,6 +1878,7 @@
 
     const parsed = buildChapters(raw, settings);
     const meta = detectMetadata(raw, parsed.preamble);
+    parsed.chapters = rebuildTitleChapterFromMetadata(parsed.chapters, meta, parsed.preamble, settings);
     bookState.title = meta.title;
     bookState.series = meta.series || '';
     bookState.seriesVolume = meta.seriesVolume || '';

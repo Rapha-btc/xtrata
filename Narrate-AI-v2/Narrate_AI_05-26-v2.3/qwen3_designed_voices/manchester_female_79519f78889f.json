@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-MancF01-voice-20260514221852591-308d",
+  "preferred_name": "MancF01",
+  "display_name": "Manchester Female",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A woman from Manchester with a modern Mancunian accent, smart, quick, and distinctly northern English. Keep the delivery natural, witty, and firmly British, not American and not caricatured. Strong for contemporary fiction and confident narration.",
+  "preview_text": "All right. This is a Manchester female voice with pace, confidence, and clear northern British identity.",
+  "language": "English",
+  "preset_id": "manchester_female",
+  "gmt_create": "2026-05-14T14:18:59.750Z",
+  "preview_audio_file": "manchester_female_79519f78889f_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/manchester_female_79519f78889f_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

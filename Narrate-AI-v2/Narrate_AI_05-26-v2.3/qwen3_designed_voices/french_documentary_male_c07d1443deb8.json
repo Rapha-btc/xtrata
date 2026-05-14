@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-ParisDocM1-voice-20260514213742307-7451",
+  "preferred_name": "ParisDocM1",
+  "display_name": "French Documentary Male",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A French man in his forties with a clearly French accent, calm authority, clean articulation, and documentary gravitas. Native language French. Controlled pace, thoughtful and intelligent. When he speaks English, retain a distinctly French accent instead of flattening toward American speech.",
+  "preview_text": "Bonsoir. Voici une voix masculine francaise, claire, posee et documentaire.",
+  "language": "French",
+  "preset_id": "fr_documentary_m",
+  "gmt_create": "2026-05-14T13:37:50.464Z",
+  "preview_audio_file": "french_documentary_male_c07d1443deb8_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/french_documentary_male_c07d1443deb8_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

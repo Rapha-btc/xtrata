@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-NIM01-voice-20260514221901469-0873",
+  "preferred_name": "NIM01",
+  "display_name": "Northern Irish Male",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A Northern Irish male voice with a clearly Northern Irish accent, sharp intelligence, grounded warmth, and unmistakably regional British Isles identity. Natural and believable, not comic, and certainly not American. Strong for drama and thriller narration.",
+  "preview_text": "Good evening. This is a Northern Irish male voice with clarity, edge, and proper regional character.",
+  "language": "English",
+  "preset_id": "northern_irish_male",
+  "gmt_create": "2026-05-14T14:19:06.448Z",
+  "preview_audio_file": "northern_irish_male_5fa5e3652510_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/northern_irish_male_5fa5e3652510_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

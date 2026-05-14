@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-ParisNoirM1-voice-20260514215315190-4090",
+  "preferred_name": "ParisNoirM1",
+  "display_name": "French Noir Male",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A French male noir voice with dry wit, low-lit intimacy, and a restrained Paris accent. Native language French. Low-mid pitch, smoky but clear. When speaking English, the French accent should remain distinct and urban, not Americanized.",
+  "preview_text": "Bonsoir. Voici une voix noire francaise, seche, calme et precise.",
+  "language": "French",
+  "preset_id": "fr_noir_m",
+  "gmt_create": "2026-05-14T13:53:53.265Z",
+  "preview_audio_file": "french_noir_male_ee5150c92fa7_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/french_noir_male_ee5150c92fa7_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-WarmBrit01-voice-20260514205253656-fde6",
+  "preferred_name": "WarmBrit01",
+  "display_name": "Warm British Narrator",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A female audiobook narrator in her thirties with a neutral modern British accent, medium-low pitch, warm intimate tone, clear articulation, steady pacing, emotionally expressive but restrained, suitable for long-form commercial fiction. Avoid cartoon brightness, avoid exaggerated drama, avoid breathy delivery.",
+  "preview_text": "Narrate AI presents a warm British narrator designed for polished long-form storytelling.",
+  "language": "English",
+  "preset_id": "warm_british_narrator",
+  "gmt_create": "2026-05-14T12:53:00.052Z",
+  "preview_audio_file": "warm_british_narrator_1d142382454a_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/warm_british_narrator_1d142382454a_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

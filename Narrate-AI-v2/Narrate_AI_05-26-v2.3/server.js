@@ -17,18 +17,21 @@ const PROJECTS_DIR = path.join(OUTPUT_DIR, 'projects');
 const PACKAGES_DIR = path.join(OUTPUT_DIR, 'packages');
 const TEMP_DIR = path.join(OUTPUT_DIR, 'temp');
 const LOCAL_CLONES_DIR = path.join(ROOT_DIR, 'qwen3_cloned_voices');
+const LOCAL_DESIGNS_DIR = path.join(ROOT_DIR, 'qwen3_designed_voices');
 
 const DASHSCOPE_BASE = 'https://dashscope-intl.aliyuncs.com/api/v1';
 const GENERATION_URL = DASHSCOPE_BASE + '/services/aigc/multimodal-generation/generation';
 const CUSTOMIZATION_URL = DASHSCOPE_BASE + '/services/audio/tts/customization';
 const DEFAULT_CLONE_MODEL = 'qwen3-tts-vc-2026-01-22';
+const DEFAULT_DESIGN_MODEL = 'qwen3-tts-vd-2026-01-26';
 const PRICING = {
   'qwen3-tts-flash': 0.10 / 10000,
   'qwen3-tts-instruct-flash': 0.115 / 10000,
-  'qwen3-tts-vc-2026-01-22': 0.115 / 10000
+  'qwen3-tts-vc-2026-01-22': 0.115 / 10000,
+  'qwen3-tts-vd-2026-01-26': 0.115 / 10000
 };
 
-[OUTPUT_DIR, CHUNKS_DIR, CHAPTERS_DIR, TITLES_DIR, BOOK_DIR, PROJECTS_DIR, PACKAGES_DIR, TEMP_DIR, LOCAL_CLONES_DIR].forEach((dir) => {
+[OUTPUT_DIR, CHUNKS_DIR, CHAPTERS_DIR, TITLES_DIR, BOOK_DIR, PROJECTS_DIR, PACKAGES_DIR, TEMP_DIR, LOCAL_CLONES_DIR, LOCAL_DESIGNS_DIR].forEach((dir) => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
@@ -189,7 +192,12 @@ function httpRequestJson(targetUrl, options, payload) {
         if (res.statusCode >= 200 && res.statusCode < 300) {
           resolve(data);
         } else {
-          reject(new Error(data.message || data.error || ('Remote request failed: ' + res.statusCode)));
+          const details = data && typeof data === 'object' ? JSON.stringify(data) : String(raw || '');
+          const error = new Error(data.message || data.error || ('Remote request failed: ' + res.statusCode));
+          error.statusCode = res.statusCode;
+          error.remote = data;
+          error.remoteDetails = details.slice(0, 1500);
+          reject(error);
         }
       });
     });
@@ -250,6 +258,22 @@ function readLocalCloneRecords() {
     .filter(Boolean);
 }
 
+function readLocalDesignedVoiceRecords() {
+  if (!fs.existsSync(LOCAL_DESIGNS_DIR)) return [];
+  return fs.readdirSync(LOCAL_DESIGNS_DIR)
+    .filter((file) => file.endsWith('.json'))
+    .map((file) => {
+      const fullPath = path.join(LOCAL_DESIGNS_DIR, file);
+      try {
+        return JSON.parse(fs.readFileSync(fullPath, 'utf8'));
+      } catch (_) {
+        return null;
+      }
+    })
+    .filter(Boolean)
+    .sort((a, b) => (Date.parse(b.gmt_create || '') || 0) - (Date.parse(a.gmt_create || '') || 0));
+}
+
 function saveLocalCloneRecord(voiceId, preferredName, targetModel, audioFile) {
   const ext = path.extname(audioFile.filename || '').toLowerCase() || '.wav';
   const stem = slugifyFileStem(preferredName || voiceId);
@@ -273,6 +297,107 @@ function saveLocalCloneRecord(voiceId, preferredName, targetModel, audioFile) {
   return record;
 }
 
+function sanitizeVoiceKeyword(value, fallback) {
+  return String(value || fallback || 'voice')
+    .replace(/[^A-Za-z0-9_]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 16) || String(fallback || 'voice');
+}
+
+function normalizeDesignLanguage(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  const map = {
+    zh: 'zh',
+    chinese: 'zh',
+    en: 'en',
+    english: 'en',
+    de: 'de',
+    german: 'de',
+    it: 'it',
+    italian: 'it',
+    pt: 'pt',
+    portuguese: 'pt',
+    es: 'es',
+    spanish: 'es',
+    ja: 'ja',
+    japanese: 'ja',
+    ko: 'ko',
+    korean: 'ko',
+    fr: 'fr',
+    french: 'fr',
+    ru: 'ru',
+    russian: 'ru'
+  };
+  return map[raw] || 'en';
+}
+
+function saveLocalDesignedVoiceRecord(options) {
+  const preferredName = sanitizeVoiceKeyword(options.preferredName, 'custom_voice');
+  const stem = slugifyFileStem(options.displayName || preferredName || options.voiceId);
+  const hash = generateHash(options.voiceId);
+  const previewExt = options.previewFormat === 'mp3' ? '.mp3' : options.previewFormat === 'opus' ? '.opus' : '.wav';
+  const previewFileName = stem + '_' + hash + '_preview' + previewExt;
+  const jsonFileName = stem + '_' + hash + '.json';
+  const previewPath = path.join(LOCAL_DESIGNS_DIR, previewFileName);
+  const jsonPath = path.join(LOCAL_DESIGNS_DIR, jsonFileName);
+  fs.writeFileSync(previewPath, options.previewBuffer);
+  const record = {
+    voice: options.voiceId,
+    preferred_name: preferredName,
+    display_name: options.displayName || preferredName,
+    target_model: options.targetModel,
+    voice_prompt: options.voicePrompt,
+    preview_text: options.previewText,
+    language: options.language || 'en',
+    preset_id: options.presetId || '',
+    gmt_create: new Date().toISOString(),
+    preview_audio_file: previewFileName,
+    preview_audio_url: '/qwen3_designed_voices/' + previewFileName,
+    preview_response_format: options.previewFormat || 'wav',
+    source: 'local'
+  };
+  fs.writeFileSync(jsonPath, JSON.stringify(record, null, 2));
+  return record;
+}
+
+function findLocalDesignedVoiceRecordPaths(voiceId) {
+  const records = readLocalDesignedVoiceRecords();
+  for (const record of records) {
+    if (record.voice !== voiceId) continue;
+    const metadataPath = path.join(LOCAL_DESIGNS_DIR, slugifyFileStem(record.display_name || record.preferred_name || record.voice) + '_' + generateHash(record.voice) + '.json');
+    return { record, metadataPath };
+  }
+  return null;
+}
+
+function saveLocalDesignedVoiceSample(options) {
+  const found = findLocalDesignedVoiceRecordPaths(options.voiceId);
+  if (!found || !found.record || !found.metadataPath || !fs.existsSync(found.metadataPath)) {
+    throw new Error('Designed voice record not found locally. Create or refresh the voice first.');
+  }
+  const record = Object.assign({}, found.record);
+  const stem = slugifyFileStem(record.display_name || record.preferred_name || record.voice);
+  const hash = generateHash(record.voice);
+  const mode = options.mode === 'english' ? 'english' : 'native';
+  const sampleExt = options.format === 'mp3' ? '.mp3' : options.format === 'opus' ? '.opus' : '.wav';
+  const sampleFileName = stem + '_' + hash + '_' + mode + '_sample' + sampleExt;
+  const samplePath = path.join(LOCAL_DESIGNS_DIR, sampleFileName);
+  const priorFileKey = mode === 'english' ? 'english_sample_audio_file' : 'native_sample_audio_file';
+  const priorUrlKey = mode === 'english' ? 'english_sample_audio_url' : 'native_sample_audio_url';
+  const priorPath = record[priorFileKey] ? path.join(LOCAL_DESIGNS_DIR, record[priorFileKey]) : '';
+  if (priorPath && fs.existsSync(priorPath) && path.basename(priorPath) !== sampleFileName) {
+    fs.unlinkSync(priorPath);
+  }
+  fs.writeFileSync(samplePath, options.buffer);
+  record[priorFileKey] = sampleFileName;
+  record[priorUrlKey] = '/qwen3_designed_voices/' + sampleFileName;
+  record[(mode === 'english' ? 'english_sample_language' : 'native_sample_language')] = options.language || '';
+  record[(mode === 'english' ? 'english_sample_text' : 'native_sample_text')] = options.text || '';
+  record[(mode === 'english' ? 'english_sample_saved_at' : 'native_sample_saved_at')] = new Date().toISOString();
+  fs.writeFileSync(found.metadataPath, JSON.stringify(record, null, 2));
+  return record;
+}
+
 function mergeCloneVoices(remoteVoices, localVoices) {
   const merged = new Map();
   (localVoices || []).forEach((voice) => {
@@ -286,6 +411,28 @@ function mergeCloneVoices(remoteVoices, localVoices) {
       local_audio_file: existing.local_audio_file || voice.local_audio_file || '',
       local_audio_url: existing.local_audio_url || voice.local_audio_url || '',
       original_filename: existing.original_filename || voice.original_filename || '',
+      source: existing.source ? 'local+remote' : 'remote'
+    }));
+  });
+  return Array.from(merged.values()).sort((a, b) => {
+    const aTime = Date.parse(a.gmt_create || '') || 0;
+    const bTime = Date.parse(b.gmt_create || '') || 0;
+    return bTime - aTime;
+  });
+}
+
+function mergeDesignedVoices(remoteVoices, localVoices) {
+  const merged = new Map();
+  (localVoices || []).forEach((voice) => {
+    if (!voice || !voice.voice) return;
+    merged.set(voice.voice, Object.assign({}, voice));
+  });
+  (remoteVoices || []).forEach((voice) => {
+    if (!voice || !voice.voice) return;
+    const existing = merged.get(voice.voice) || {};
+    merged.set(voice.voice, Object.assign({}, existing, voice, {
+      preview_audio_file: existing.preview_audio_file || voice.preview_audio_file || '',
+      preview_audio_url: existing.preview_audio_url || voice.preview_audio_url || '',
       source: existing.source ? 'local+remote' : 'remote'
     }));
   });
@@ -362,9 +509,87 @@ async function createClonedVoice(apiKey, preferredName, audioFile) {
   return voiceId;
 }
 
+async function createDesignedVoice(apiKey, options) {
+  const preferredName = sanitizeVoiceKeyword(options.preferredName, 'custom_voice');
+  const languageCode = normalizeDesignLanguage(options.language);
+  const debugMeta = {
+    preferredName,
+    rawLanguage: String(options.language || ''),
+    normalizedLanguage: languageCode,
+    targetModel: options.targetModel || DEFAULT_DESIGN_MODEL,
+    previewChars: String(options.previewText || '').length,
+    promptChars: String(options.voicePrompt || '').length
+  };
+  const payload = {
+    model: 'qwen-voice-design',
+    input: {
+      action: 'create',
+      target_model: options.targetModel || DEFAULT_DESIGN_MODEL,
+      voice_prompt: options.voicePrompt,
+      preview_text: options.previewText,
+      preferred_name: preferredName,
+      language: languageCode
+    },
+    parameters: {
+      sample_rate: 24000,
+      response_format: 'wav'
+    }
+  };
+
+  let response;
+  try {
+    response = await httpRequestJson(CUSTOMIZATION_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + apiKey,
+        'Content-Type': 'application/json'
+      }
+    }, payload);
+  } catch (error) {
+    error.debugMeta = debugMeta;
+    throw error;
+  }
+
+  const output = response && response.output ? response.output : {};
+  const previewAudio = output.preview_audio || {};
+  const voiceId = output.voice;
+  const previewData = previewAudio.data;
+  if (!voiceId || !previewData) throw new Error('Voice design succeeded but no preview audio or voice ID was returned.');
+  return {
+    voiceId,
+    targetModel: output.target_model || options.targetModel || DEFAULT_DESIGN_MODEL,
+    preferredName,
+    previewBuffer: Buffer.from(previewData, 'base64'),
+    previewFormat: previewAudio.response_format || 'wav',
+    previewSampleRate: previewAudio.sample_rate || 24000,
+    count: response && response.usage && response.usage.count ? response.usage.count : 1
+  };
+}
+
 async function listClonedVoices(apiKey, pageSize) {
   const payload = {
     model: 'qwen-voice-enrollment',
+    input: {
+      action: 'list',
+      page_size: pageSize || 100,
+      page_index: 0
+    }
+  };
+
+  const response = await httpRequestJson(CUSTOMIZATION_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: 'Bearer ' + apiKey,
+      'Content-Type': 'application/json'
+    }
+  }, payload);
+
+  return (response.output && response.output.voice_list) || [];
+}
+
+async function listDesignedVoices(apiKey, pageSize) {
+  const payload = {
+    model: 'qwen-voice-design',
     input: {
       action: 'list',
       page_size: pageSize || 100,
@@ -401,6 +626,24 @@ async function deleteClonedVoice(apiKey, voiceId) {
   }, payload);
 }
 
+async function deleteDesignedVoice(apiKey, voiceId) {
+  const payload = {
+    model: 'qwen-voice-design',
+    input: {
+      action: 'delete',
+      voice: voiceId
+    }
+  };
+
+  await httpRequestJson(CUSTOMIZATION_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: 'Bearer ' + apiKey,
+      'Content-Type': 'application/json'
+    }
+  }, payload);
+}
+
 function deleteLocalCloneRecord(voiceId) {
   readLocalCloneRecords().forEach((record) => {
     if (record.voice !== voiceId) return;
@@ -408,6 +651,20 @@ function deleteLocalCloneRecord(voiceId) {
     const audioPath = record.local_audio_file ? path.join(LOCAL_CLONES_DIR, record.local_audio_file) : '';
     if (metadataPath && fs.existsSync(metadataPath)) fs.unlinkSync(metadataPath);
     if (audioPath && fs.existsSync(audioPath)) fs.unlinkSync(audioPath);
+  });
+}
+
+function deleteLocalDesignedVoiceRecord(voiceId) {
+  readLocalDesignedVoiceRecords().forEach((record) => {
+    if (record.voice !== voiceId) return;
+    const metadataPath = path.join(LOCAL_DESIGNS_DIR, slugifyFileStem(record.display_name || record.preferred_name || record.voice) + '_' + generateHash(record.voice) + '.json');
+    const previewPath = record.preview_audio_file ? path.join(LOCAL_DESIGNS_DIR, record.preview_audio_file) : '';
+    const nativeSamplePath = record.native_sample_audio_file ? path.join(LOCAL_DESIGNS_DIR, record.native_sample_audio_file) : '';
+    const englishSamplePath = record.english_sample_audio_file ? path.join(LOCAL_DESIGNS_DIR, record.english_sample_audio_file) : '';
+    if (metadataPath && fs.existsSync(metadataPath)) fs.unlinkSync(metadataPath);
+    if (previewPath && fs.existsSync(previewPath)) fs.unlinkSync(previewPath);
+    if (nativeSamplePath && fs.existsSync(nativeSamplePath)) fs.unlinkSync(nativeSamplePath);
+    if (englishSamplePath && fs.existsSync(englishSamplePath)) fs.unlinkSync(englishSamplePath);
   });
 }
 
@@ -610,6 +867,55 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (pathname === '/design-voice' && req.method === 'POST') {
+      logRequest(requestId, 'Design voice request received.');
+      const body = await readJsonBody(req);
+      if (!body.api_key || !body.voice_prompt || !body.preview_text) {
+        throw new Error('Missing required fields: api_key, voice_prompt, preview_text.');
+      }
+      logRequest(
+        requestId,
+        'Design payload name=' + String(body.display_name || body.preferred_name || 'custom_voice') +
+        ' rawLanguage=' + String(body.language || '') +
+        ' normalizedLanguage=' + normalizeDesignLanguage(body.language || '') +
+        ' targetModel=' + String(body.target_model || DEFAULT_DESIGN_MODEL) +
+        ' previewChars=' + String(String(body.preview_text || '').length) +
+        ' promptChars=' + String(String(body.voice_prompt || '').length)
+      );
+      const designed = await createDesignedVoice(body.api_key, {
+        preferredName: body.preferred_name || body.display_name || 'custom_voice',
+        displayName: body.display_name || body.preferred_name || 'Custom Voice',
+        voicePrompt: body.voice_prompt,
+        previewText: body.preview_text,
+        language: body.language || 'English',
+        targetModel: body.target_model || DEFAULT_DESIGN_MODEL
+      });
+      const localRecord = saveLocalDesignedVoiceRecord({
+        voiceId: designed.voiceId,
+        preferredName: designed.preferredName,
+        displayName: body.display_name || body.preferred_name || designed.preferredName,
+        targetModel: designed.targetModel,
+        voicePrompt: body.voice_prompt,
+        previewText: body.preview_text,
+        language: body.language || 'English',
+        presetId: body.preset_id || '',
+        previewBuffer: designed.previewBuffer,
+        previewFormat: designed.previewFormat
+      });
+      writeJson(res, 200, {
+        ok: true,
+        voice_id: designed.voiceId,
+        name: designed.preferredName,
+        display_name: localRecord.display_name,
+        target_model: designed.targetModel,
+        preview_audio_url: localRecord.preview_audio_url,
+        preview_response_format: designed.previewFormat,
+        cost_usd: Number((designed.count * 0.2).toFixed(4))
+      });
+      logRequest(requestId, 'Design voice success voice=' + designed.voiceId + ' targetModel=' + designed.targetModel);
+      return;
+    }
+
     if (pathname === '/list-voices' && req.method === 'POST') {
       logRequest(requestId, 'List cloned voices request received.');
       const body = await readJsonBody(req);
@@ -625,12 +931,66 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (pathname === '/api/local-designed-voices' && req.method === 'GET') {
+      writeJson(res, 200, { voices: readLocalDesignedVoiceRecords() });
+      return;
+    }
+
+    if (pathname === '/list-designed-voices' && req.method === 'POST') {
+      logRequest(requestId, 'List designed voices request received.');
+      const body = await readJsonBody(req);
+      const localVoices = readLocalDesignedVoiceRecords();
+      if (!body.api_key) {
+        writeJson(res, 200, { voices: localVoices });
+        return;
+      }
+      const remoteVoices = await listDesignedVoices(body.api_key, body.page_size || 100);
+      const voices = mergeDesignedVoices(remoteVoices, localVoices);
+      writeJson(res, 200, { voices });
+      return;
+    }
+
+    if (pathname === '/save-designed-sample' && req.method === 'POST') {
+      logRequest(requestId, 'Save designed sample request received.');
+      const body = await readJsonBody(req);
+      if (!body.voice_id || !body.audio_base64) throw new Error('Missing required fields: voice_id, audio_base64.');
+      const buffer = Buffer.from(String(body.audio_base64), 'base64');
+      const record = saveLocalDesignedVoiceSample({
+        voiceId: body.voice_id,
+        mode: body.mode || 'native',
+        format: body.format || 'wav',
+        buffer,
+        language: body.language || '',
+        text: body.text || ''
+      });
+      writeJson(res, 200, {
+        ok: true,
+        voice_id: body.voice_id,
+        mode: body.mode || 'native',
+        native_sample_audio_url: record.native_sample_audio_url || '',
+        english_sample_audio_url: record.english_sample_audio_url || ''
+      });
+      return;
+    }
+
     if (pathname === '/delete-voice' && req.method === 'POST') {
       logRequest(requestId, 'Delete cloned voice request received.');
       const body = await readJsonBody(req);
       if (!body.api_key || !body.voice_id) throw new Error('Missing required fields: api_key, voice_id.');
       await deleteClonedVoice(body.api_key, body.voice_id);
       deleteLocalCloneRecord(body.voice_id);
+      writeJson(res, 200, { ok: true });
+      return;
+    }
+
+    if (pathname === '/delete-designed-voice' && req.method === 'POST') {
+      logRequest(requestId, 'Delete designed voice request received.');
+      const body = await readJsonBody(req);
+      if (!body.voice_id) throw new Error('Missing required field: voice_id.');
+      if (body.api_key) {
+        await deleteDesignedVoice(body.api_key, body.voice_id);
+      }
+      deleteLocalDesignedVoiceRecord(body.voice_id);
       writeJson(res, 200, { ok: true });
       return;
     }
@@ -789,8 +1149,16 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
     res.end('Not found');
   } catch (error) {
-    console.error('[Narrate AI v2.3][' + requestId + '] ' + req.method + ' ' + pathname + ' failed:', error);
-    writeJson(res, 500, { error: error.message });
+    const details = [];
+    if (error && error.debugMeta) details.push('debug=' + JSON.stringify(error.debugMeta));
+    if (error && error.remoteDetails) details.push('remote=' + error.remoteDetails);
+    console.error('[Narrate AI v2.3][' + requestId + '] ' + req.method + ' ' + pathname + ' failed:', error, details.join(' | '));
+    writeJson(res, 500, {
+      error: error.message,
+      request_id: requestId,
+      debug: error.debugMeta || null,
+      remote: error.remote || null
+    });
   }
 });
 
