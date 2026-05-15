@@ -1,0 +1,20 @@
+{
+  "voice": "qwen-tts-vd-BritStage01-voice-20260515043558313-c054",
+  "preferred_name": "BritStage01",
+  "display_name": "Mid-Century Stage Gentleman",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A sophisticated British male stage and film voice from the mid twentieth century, elegant and articulate, lightly amused, impeccably controlled, with upper-class diction and a dry theatrical intelligence. Evoke a classic West End leading man without imitating any specific actor.",
+  "preview_text": "A polished mid-century British stage voice with elegance, wit, and perfectly tailored diction.",
+  "language": "English",
+  "preset_id": "brit_stage_gentleman",
+  "gmt_create": "2026-05-14T20:36:04.948Z",
+  "preview_audio_file": "mid_century_stage_gentleman_9106d48a7007_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/mid_century_stage_gentleman_9106d48a7007_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local",
+  "native_sample_audio_file": "mid_century_stage_gentleman_9106d48a7007_native_sample.wav",
+  "native_sample_audio_url": "/qwen3_designed_voices/mid_century_stage_gentleman_9106d48a7007_native_sample.wav",
+  "native_sample_language": "English",
+  "native_sample_text": "Good breeding, like proper tailoring, is most persuasive when it appears to have required no effort whatsoever.",
+  "native_sample_saved_at": "2026-05-14T20:36:25.148Z"
+}

@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-USDarkOp01-voice-20260515210308958-24c5",
+  "preferred_name": "USDarkOp01",
+  "display_name": "American Dark Ops Hero",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A deep American male narrator with shadowed intensity, mission-ready focus, and a strong undercurrent of romantic protectiveness. General American accent, dark low register, and tightly controlled pacing suited to covert-ops romance, Navy SEAL suspense, and dangerous heroes with soft centers. He should sound lethal, watchful, and emotionally disciplined, but still capable of intimacy and deep devotion. Avoid comic-book brooding, avoid whispered mumbling, and avoid overblown action-trailer style.",
+  "preview_text": "A dark deep American ops-hero voice with covert intensity and protective romantic gravity.",
+  "language": "English",
+  "preset_id": "american_dark_ops_hero_m",
+  "gmt_create": "2026-05-15T13:03:14.539Z",
+  "preview_audio_file": "design_lab__american_dark_ops_hero__american_dark_ops_hero_m__create_preview__english__design_model__txt_a_dark_deep_american_ops_her_e7e47da341be__4760b8b80eee.wav",
+  "preview_audio_url": "/qwen3_designed_voices/design_lab__american_dark_ops_hero__american_dark_ops_hero_m__create_preview__english__design_model__txt_a_dark_deep_american_ops_her_e7e47da341be__4760b8b80eee.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

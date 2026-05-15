@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-USThrF01-voice-20260515205633084-5eac",
+  "preferred_name": "USThrF01",
+  "display_name": "American Cinematic Thriller Female",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A female American thriller narrator with crisp diction, controlled urgency, and cinematic seriousness. General American accent, medium pace, taut phrasing, and just enough edge to sustain suspense without sounding harsh. Strong for thrillers, mysteries, crime, and dark domestic fiction. Avoid shouting, avoid camp menace, and avoid TV-promo brightness.",
+  "preview_text": "A cinematic American thriller female voice with tension, control, and clear dramatic momentum.",
+  "language": "English",
+  "preset_id": "american_thriller_cinematic_f",
+  "gmt_create": "2026-05-15T12:56:41.272Z",
+  "preview_audio_file": "design_lab__american_cinematic_thriller_female__american_thriller_cinematic_f__create_preview__english__design_model__txt_a_cinematic_american_thrille_284c38edbdeb__605dfd31db8b.wav",
+  "preview_audio_url": "/qwen3_designed_voices/design_lab__american_cinematic_thriller_female__american_thriller_cinematic_f__create_preview__english__design_model__txt_a_cinematic_american_thrille_284c38edbdeb__605dfd31db8b.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

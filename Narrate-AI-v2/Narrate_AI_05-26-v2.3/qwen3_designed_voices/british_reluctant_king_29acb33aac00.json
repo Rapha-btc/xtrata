@@ -1,0 +1,20 @@
+{
+  "voice": "qwen-tts-vd-BritKingG01-voice-20260515043544180-ea5e",
+  "preferred_name": "BritKingG01",
+  "display_name": "British Reluctant King",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A mid-century British royal male voice with careful diction, emotional restraint, dignified vulnerability, and upper-class British pronunciation. Formal but human, slightly hesitant at moments, then gathering steadiness and composure. Evoke the pressure of ceremonial leadership without imitating any real monarch.",
+  "preview_text": "A careful royal broadcast voice with dignity, restraint, and a quietly hard-won steadiness.",
+  "language": "English",
+  "preset_id": "brit_reluctant_king",
+  "gmt_create": "2026-05-14T20:35:51.032Z",
+  "preview_audio_file": "british_reluctant_king_29acb33aac00_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/british_reluctant_king_29acb33aac00_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local",
+  "native_sample_audio_file": "british_reluctant_king_29acb33aac00_native_sample.wav",
+  "native_sample_audio_url": "/qwen3_designed_voices/british_reluctant_king_29acb33aac00_native_sample.wav",
+  "native_sample_language": "English",
+  "native_sample_text": "In uncertain seasons, duty is not made lighter by ceremony, only clearer by the knowledge that others depend upon our steadiness.",
+  "native_sample_saved_at": "2026-05-14T20:36:18.928Z"
+}

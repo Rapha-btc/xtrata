@@ -11,5 +11,10 @@
   "preview_audio_file": "french_sage_9c8b263dc607_preview.wav",
   "preview_audio_url": "/qwen3_designed_voices/french_sage_9c8b263dc607_preview.wav",
   "preview_response_format": "wav",
-  "source": "local"
+  "source": "local",
+  "native_sample_audio_file": "french_sage_9c8b263dc607_native_sample.wav",
+  "native_sample_audio_url": "/qwen3_designed_voices/french_sage_9c8b263dc607_native_sample.wav",
+  "native_sample_language": "French",
+  "native_sample_text": "Le pouvoir n'etait jamais la tempete elle-meme, mais la discipline necessaire pour lui tenir tete sans trembler.",
+  "native_sample_saved_at": "2026-05-14T18:35:20.481Z"
 }

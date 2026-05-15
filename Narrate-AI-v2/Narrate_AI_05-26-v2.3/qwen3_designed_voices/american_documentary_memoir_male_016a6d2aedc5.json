@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-USDocM01-voice-20260515205637221-83d7",
+  "preferred_name": "USDocM01",
+  "display_name": "American Documentary Memoir Male",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A male American narrator with documentary authority, memoir intimacy, and calm observational intelligence. General American accent, steady rhythm, and mature presence suited to biography, narrative history, and thoughtful nonfiction. He should sound trustworthy, grounded, and emotionally available without becoming sentimental. Avoid announcer stiffness, avoid over-dramatizing facts, and avoid false grandeur.",
+  "preview_text": "An American documentary-memoir male voice built for trust, narrative clarity, and humane authority.",
+  "language": "English",
+  "preset_id": "american_documentary_memoir_m",
+  "gmt_create": "2026-05-15T12:56:44.097Z",
+  "preview_audio_file": "design_lab__american_documentary_memoir_male__american_documentary_memoir_m__create_preview__english__design_model__txt_an_american_documentary_memo_dd1372ce6d42__016a6d2aedc5.wav",
+  "preview_audio_url": "/qwen3_designed_voices/design_lab__american_documentary_memoir_male__american_documentary_memoir_m__create_preview__english__design_model__txt_an_american_documentary_memo_dd1372ce6d42__016a6d2aedc5.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

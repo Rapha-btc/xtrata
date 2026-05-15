@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-USSealCmd01-voice-20260515210244334-2072",
+  "preferred_name": "USSealCmd01",
+  "display_name": "American Navy SEAL Commander",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A deep-voiced American male narrator with the disciplined authority of a Navy SEAL team commander. General American accent, low steady resonance, controlled breath, and command presence that still feels human and emotionally available. Strong for military romance, romantic suspense, and protective-alpha narration. He should sound capable, decisive, and quietly dangerous, but also believable in intimate emotional scenes. Avoid movie-trailer excess, avoid shouting, and avoid cartoon macho posturing.",
+  "preview_text": "A deep American Navy SEAL commander voice with calm authority, control, and protective romantic weight.",
+  "language": "English",
+  "preset_id": "american_navyseal_commander_m",
+  "gmt_create": "2026-05-15T13:02:52.225Z",
+  "preview_audio_file": "design_lab__american_navy_seal_commander__american_navyseal_commander_m__create_preview__english__design_model__txt_a_deep_american_navy_seal_75ca4e039b35__1b06be01aadc.wav",
+  "preview_audio_url": "/qwen3_designed_voices/design_lab__american_navy_seal_commander__american_navyseal_commander_m__create_preview__english__design_model__txt_a_deep_american_navy_seal_75ca4e039b35__1b06be01aadc.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

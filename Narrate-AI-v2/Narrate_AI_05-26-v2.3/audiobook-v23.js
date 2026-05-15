@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const APP_BOOK_VERSION = '2.3';
+  const APP_BOOK_VERSION = '2.4';
   const CLONED_MODEL_ID = 'qwen3-tts-vc-2026-01-22';
   const BOOK_API = {
     projects: '/api/projects',
@@ -45,6 +45,7 @@
     roles: [],
     characters: [],
     anomalies: [],
+    directionPlan: null,
     outputs: { wav: '', mp3: '', zip: '' },
     generating: false,
     cancelRequested: false
@@ -75,11 +76,61 @@
       savedVoicesCache = Array.isArray(voices) ? voices.slice() : [];
       const result = originalRenderSavedVoices(voices);
       if (bookState.roles.length) {
+        renderBookDirectionPanel();
         renderBookAssignments();
         updateBookEstimate();
       }
       return result;
     };
+  }
+
+  function getBookModelFamily(modelId) {
+    if (typeof getModelFamily === 'function') return getModelFamily(modelId);
+    return modelId || 'qwen3-tts-flash';
+  }
+
+  function displayBookModelName(modelId) {
+    if (typeof displayModelName === 'function') return displayModelName(modelId);
+    return modelId || 'Narrate:AI';
+  }
+
+  function isBookFlashModel(modelId) {
+    return getBookModelFamily(modelId) === 'qwen3-tts-flash';
+  }
+
+  function isBookDirectorModel(modelId) {
+    return getBookModelFamily(modelId) === 'qwen3-tts-instruct-flash';
+  }
+
+  function isBookCustomVoiceModel(modelId) {
+    return getBookModelFamily(modelId) === CLONED_MODEL_ID;
+  }
+
+  function getDirectorCompanionModel(modelId) {
+    if (isBookDirectorModel(modelId)) return modelId;
+    const current = modelId || 'qwen3-tts-flash';
+    if (current === 'qwen3-tts-flash-2025-11-27' || current === 'qwen3-tts-flash-2025-09-18') {
+      return 'qwen3-tts-instruct-flash-2026-01-26';
+    }
+    return 'qwen3-tts-instruct-flash';
+  }
+
+  function shouldUseSelectiveDirectorPass(modelId) {
+    const toggle = document.getElementById('bookSelectiveDirector');
+    return !!(toggle && toggle.checked && isBookFlashModel(modelId || getBookModelId()));
+  }
+
+  function chunkDirectionMode(chunk) {
+    return chunk && chunk.directionMode === 'director' ? 'director' : 'auto';
+  }
+
+  function countMatches(text, regex) {
+    const matches = String(text || '').match(regex);
+    return matches ? matches.length : 0;
+  }
+
+  function uniqueStrings(values) {
+    return Array.from(new Set((values || []).filter(Boolean)));
   }
 
   function nowTime() {
@@ -531,7 +582,8 @@
       charCount: fullText.length,
       detectedCharacters: [],
       primaryCharacter: '',
-      audioVersion: 0
+      audioVersion: 0,
+      directionMode: existingChapter && existingChapter.chunks && existingChapter.chunks[0] && existingChapter.chunks[0].directionMode === 'director' ? 'director' : 'auto'
     }];
 
     return {
@@ -552,7 +604,8 @@
       chunks: (chapter.chunks || []).map((chunk, chunkIndex) => ({
         ...chunk,
         chapterIndex,
-        chunkIndex
+        chunkIndex,
+        directionMode: chunk && chunk.directionMode === 'director' ? 'director' : 'auto'
       }))
     }));
   }
@@ -1138,8 +1191,11 @@
         type: 'clone'
       }));
     }
+    const effectiveModelId = shouldUseSelectiveDirectorPass(modelId)
+      ? getDirectorCompanionModel(modelId)
+      : modelId;
     const builtinVoices = typeof getCompatibleSystemVoices === 'function'
-      ? getCompatibleSystemVoices(modelId)
+      ? getCompatibleSystemVoices(effectiveModelId)
       : VOICES;
     return builtinVoices.map((voice) => ({
       id: voice.id,
@@ -1200,6 +1256,275 @@
     });
   }
 
+  function scoreChunkForDirector(chunk, chapter) {
+    const text = String(chunk && chunk.text || '');
+    if (chapter && chapter.kind === 'titles') {
+      return { score: 999, reasons: ['title cadence'], guaranteed: true };
+    }
+
+    const reasons = [];
+    let score = 0;
+    const emphasisPunctuation = countMatches(text, /!/g) + countMatches(text, /\?/g);
+
+    if (chunk && chunk.sourceType === 'dialogue') {
+      score += 2;
+      reasons.push('dialogue scene');
+    }
+    if (countMatches(text, /["“”]/g) >= 2) {
+      score += 2;
+      reasons.push('spoken line shape');
+    }
+    if (emphasisPunctuation >= 2) {
+      score += 2;
+      reasons.push('heightened punctuation');
+    }
+    if (countMatches(text, /(?:\.\.\.|…)/g) >= 2) {
+      score += 1;
+      reasons.push('pause shaping');
+    }
+    if (chunk && Array.isArray(chunk.detectedCharacters) && chunk.detectedCharacters.length >= 2) {
+      score += 1;
+      reasons.push('multi-character beat');
+    }
+    if (chunk && chunk.charCount <= 340) {
+      score += 1;
+      reasons.push('short dramatic beat');
+    }
+    if (chapter && Array.isArray(chapter.chunks) && (chunk.chunkIndex === 0 || chunk.chunkIndex === chapter.chunks.length - 1) && chunk.charCount <= 850) {
+      score += 1;
+      reasons.push('chapter edge');
+    }
+    if (/\b(shouted|whispered|cried|snapped|sobbed|murmured|hissed|laughed|gasped|pleaded|roared|sighed|yelled|barked)\b/i.test(text)) {
+      score += 2;
+      reasons.push('emotional cue verb');
+    }
+    if (/\b(wait|stop|please|no|yes|listen|run|look)\b/i.test(text) && emphasisPunctuation > 0) {
+      score += 1;
+      reasons.push('performance emphasis');
+    }
+
+    return {
+      score,
+      reasons: uniqueStrings(reasons),
+      guaranteed: false
+    };
+  }
+
+  function buildUniformDirectionPlan(mode, modelId, label, reasonText) {
+    const allChunks = bookState.chapters.flatMap((chapter) => chapter.chunks.map((chunk) => ({ chapter, chunk })));
+    const byChunkId = {};
+    allChunks.forEach(({ chunk }) => {
+      byChunkId[chunk.id] = {
+        modelId,
+        label,
+        source: mode,
+        reasonText,
+        reasons: reasonText ? [reasonText] : []
+      };
+    });
+    return {
+      mode,
+      modelId,
+      byChunkId,
+      totalChunks: allChunks.length,
+      totalChars: allChunks.reduce((sum, entry) => sum + entry.chunk.charCount, 0),
+      directorChunkCount: mode === 'director_all' ? allChunks.length : 0,
+      directorChars: mode === 'director_all' ? allChunks.reduce((sum, entry) => sum + entry.chunk.charCount, 0) : 0,
+      directorChapterCount: mode === 'director_all' ? getNarrativeChapterCount(bookState.chapters) : 0,
+      flashChunkCount: mode === 'flash_only' ? allChunks.length : 0,
+      flashChars: mode === 'flash_only' ? allChunks.reduce((sum, entry) => sum + entry.chunk.charCount, 0) : 0,
+      topReasons: reasonText ? [reasonText] : []
+    };
+  }
+
+  function buildBookDirectionPlan(modelId) {
+    const currentModelId = modelId || getBookModelId();
+    const allChunks = bookState.chapters.flatMap((chapter) => chapter.chunks.map((chunk) => ({ chapter, chunk })));
+    if (!allChunks.length) {
+      return {
+        mode: 'empty',
+        modelId: currentModelId,
+        byChunkId: {},
+        totalChunks: 0,
+        totalChars: 0,
+        directorChunkCount: 0,
+        directorChars: 0,
+        directorChapterCount: 0,
+        flashChunkCount: 0,
+        flashChars: 0,
+        topReasons: []
+      };
+    }
+
+    if (isBookCustomVoiceModel(currentModelId)) {
+      return buildUniformDirectionPlan('clone', currentModelId, 'Clone', 'custom voice render');
+    }
+    if (isBookDirectorModel(currentModelId)) {
+      return buildUniformDirectionPlan('director_all', currentModelId, 'Director', 'full book direction');
+    }
+    if (!shouldUseSelectiveDirectorPass(currentModelId)) {
+      return buildUniformDirectionPlan('flash_only', currentModelId, 'Flash', 'one-click flash render');
+    }
+
+    const directorModelId = getDirectorCompanionModel(currentModelId);
+    const byChunkId = {};
+    const scoreByChunkId = {};
+    const narrativeCandidates = [];
+    const selectedIds = new Set();
+    const totalChars = allChunks.reduce((sum, entry) => sum + entry.chunk.charCount, 0);
+    const narrativeChunks = allChunks.filter((entry) => entry.chapter.kind !== 'titles');
+    const autoSelectionLimit = Math.max(2, Math.ceil(narrativeChunks.length * 0.18));
+    const directorCharBudget = Math.max(4500, Math.floor(totalChars * 0.28));
+    let selectedAutoChars = 0;
+    let selectedAutoCount = 0;
+
+    allChunks.forEach(({ chapter, chunk }) => {
+      const score = scoreChunkForDirector(chunk, chapter);
+      scoreByChunkId[chunk.id] = score;
+      if (chunkDirectionMode(chunk) === 'director' || score.guaranteed) {
+        selectedIds.add(chunk.id);
+        return;
+      }
+      if (score.score >= 4) {
+        narrativeCandidates.push({ chapter, chunk, score });
+      }
+    });
+
+    narrativeCandidates.sort((a, b) => {
+      if (b.score.score !== a.score.score) return b.score.score - a.score.score;
+      return a.chunk.charCount - b.chunk.charCount;
+    });
+
+    narrativeCandidates.forEach((candidate) => {
+      if (selectedIds.has(candidate.chunk.id)) return;
+      if (selectedAutoCount >= autoSelectionLimit && candidate.score.score < 6) return;
+      if ((selectedAutoChars + candidate.chunk.charCount) > directorCharBudget && candidate.score.score < 6) return;
+      selectedIds.add(candidate.chunk.id);
+      selectedAutoCount += 1;
+      selectedAutoChars += candidate.chunk.charCount;
+    });
+
+    let directorChunkCount = 0;
+    let directorChars = 0;
+    const directorChapterIds = new Set();
+    const reasonCounts = {};
+
+    allChunks.forEach(({ chapter, chunk }) => {
+      const manualSelected = chunkDirectionMode(chunk) === 'director';
+      const score = scoreByChunkId[chunk.id] || scoreChunkForDirector(chunk, chapter);
+      const useDirector = selectedIds.has(chunk.id);
+      const reasons = useDirector
+        ? uniqueStrings((manualSelected ? ['manual director polish'] : []).concat(score.reasons || []))
+        : ['one-click flash render'];
+      byChunkId[chunk.id] = {
+        modelId: useDirector ? directorModelId : currentModelId,
+        label: useDirector ? 'Director' : 'Flash',
+        source: useDirector ? (manualSelected ? 'manual' : (score.guaranteed ? 'structural' : 'adaptive')) : 'base',
+        reasonText: reasons.slice(0, 3).join(', '),
+        reasons
+      };
+      if (useDirector) {
+        directorChunkCount += 1;
+        directorChars += chunk.charCount;
+        if (chapter.kind !== 'titles') directorChapterIds.add(chapter.index);
+        reasons.filter((reason) => reason !== 'manual director polish').forEach((reason) => {
+          reasonCounts[reason] = (reasonCounts[reason] || 0) + 1;
+        });
+      }
+    });
+
+    const topReasons = Object.keys(reasonCounts)
+      .sort((a, b) => {
+        if (reasonCounts[b] !== reasonCounts[a]) return reasonCounts[b] - reasonCounts[a];
+        return a.localeCompare(b);
+      })
+      .slice(0, 3);
+
+    return {
+      mode: 'adaptive',
+      modelId: currentModelId,
+      directorModelId,
+      byChunkId,
+      totalChunks: allChunks.length,
+      totalChars,
+      directorChunkCount,
+      directorChars,
+      directorChapterCount: directorChapterIds.size,
+      flashChunkCount: allChunks.length - directorChunkCount,
+      flashChars: Math.max(0, totalChars - directorChars),
+      topReasons
+    };
+  }
+
+  function refreshBookDirectionPlan() {
+    bookState.directionPlan = buildBookDirectionPlan(getBookModelId());
+    return bookState.directionPlan;
+  }
+
+  function getBookDirectionPlan() {
+    return bookState.directionPlan || refreshBookDirectionPlan();
+  }
+
+  function getChunkDirectionPlan(chunk) {
+    const plan = getBookDirectionPlan();
+    return plan && plan.byChunkId ? plan.byChunkId[chunk.id] : null;
+  }
+
+  function renderBookDirectionPanel() {
+    const panel = document.getElementById('bookDirectionPanel');
+    const note = document.getElementById('bookSelectiveDirectorNote');
+    const btn = document.getElementById('bookGenerateBtn');
+    if (!panel || !note || !btn) return;
+    if (!bookState.chapters.length) {
+      panel.style.display = 'none';
+      note.textContent = 'Recommended for the main Narrate:AI flow. Director polish only applies when the primary engine is Narrate:AI Flash, and it uses the Director-compatible built-in voice set.';
+      btn.textContent = '⚡ Generate Book Audio';
+      return;
+    }
+
+    const modelId = getBookModelId();
+    const plan = refreshBookDirectionPlan();
+    let title = '';
+    let summary = '';
+    const chips = [];
+
+    if (plan.mode === 'clone') {
+      title = 'Custom cloned voice render';
+      summary = 'Narrate:AI Clone will render every chunk. Selective Director polish is unavailable in cloned-voice mode.';
+      note.textContent = 'Selective Director polish only applies when the primary engine is Narrate:AI Flash.';
+      btn.textContent = '⚡ Generate Clone Book Audio';
+    } else if (plan.mode === 'director_all') {
+      title = 'Premium full-book direction';
+      summary = 'Narrate:AI Director is the main engine for every chunk. Use this when you want an intentionally directed performance across the whole manuscript.';
+      note.textContent = 'Director is acting as the primary engine here, so selective Flash-first polish is not used.';
+      btn.textContent = '⚡ Generate Director Book Audio';
+    } else if (plan.mode === 'adaptive') {
+      title = 'Flash-first with selective Director polish';
+      summary = 'Narrate:AI Flash remains the main engine. Director is planned for ' + plan.directorChunkCount + ' of ' + plan.totalChunks + ' chunks (' + plan.directorChars.toLocaleString() + ' chars) across ' + plan.directorChapterCount + ' chapters where the manuscript appears to need a more intentional performance.';
+      note.textContent = 'Adaptive polish is active. Built-in voice choices are limited to the Director-compatible set so promoted chunks can be rerendered safely.';
+      btn.textContent = '⚡ Generate Flash + Director Book Audio';
+      chips.push('<span class="book-strategy-chip"><strong>Director pass</strong> ' + plan.directorChunkCount + ' chunks</span>');
+      chips.push('<span class="book-strategy-chip"><strong>Director chars</strong> ' + plan.directorChars.toLocaleString() + '</span>');
+      if (plan.topReasons.length) {
+        chips.push('<span class="book-strategy-chip"><strong>Common triggers</strong> ' + escapeHtml(plan.topReasons.join(', ')) + '</span>');
+      }
+    } else {
+      title = 'One-click Flash generation';
+      summary = 'Narrate:AI Flash is the main engine for every chunk. Turn on selective Director polish when you want the app to promote selected passages for more intentional performance.';
+      note.textContent = 'Flash is acting as the one-click audiobook engine. Turn this back on if you want Flash-first generation plus selective Director polish.';
+      btn.textContent = '⚡ Generate Flash Book Audio';
+    }
+
+    panel.style.display = 'block';
+    panel.innerHTML = '' +
+      '<div class="book-strategy-head">' +
+        '<div class="book-strategy-title">' + escapeHtml(title) + '</div>' +
+        '<span class="book-mini-chip"><strong>' + escapeHtml(displayBookModelName(modelId)) + '</strong></span>' +
+      '</div>' +
+      '<div class="book-strategy-summary">' + escapeHtml(summary) + '</div>' +
+      (chips.length ? '<div class="book-strategy-chip-row">' + chips.join('') + '</div>' : '');
+  }
+
   function getNarrativeChapterCount(chapters) {
     return (chapters || []).filter((chapter) => chapter.kind !== 'titles').length;
   }
@@ -1242,7 +1567,8 @@
             charCount: chunkText.length,
             detectedCharacters: [],
             primaryCharacter: '',
-            audioVersion: 0
+            audioVersion: 0,
+            directionMode: 'auto'
           });
           chunkIndex += 1;
         });
@@ -1411,9 +1737,12 @@
 
   function getChunkMetaText(chunk) {
     const parts = [];
+    const plan = getChunkDirectionPlan(chunk);
+    if (plan && plan.label) parts.push(plan.label);
     parts.push(chunk.sourceType === 'dialogue' ? 'Dialogue' : 'Narration');
     if (chunk.detectedCharacters.length) parts.push('Names: ' + chunk.detectedCharacters.join(', '));
     parts.push(chunk.charCount.toLocaleString() + ' chars');
+    if (plan && plan.label === 'Director' && plan.reasonText) parts.push(plan.reasonText);
     return parts.join(' · ');
   }
 
@@ -1433,6 +1762,8 @@
   function renderBookChapterList() {
     const list = document.getElementById('bookChapterList');
     if (!list) return;
+    const plan = refreshBookDirectionPlan();
+    const canPolishChunks = plan.mode === 'adaptive';
     if (!bookState.chapters.length) {
       list.innerHTML = '<div class="book-empty-state">No chapters analysed yet.</div>';
       updateBookTreeStatus();
@@ -1444,11 +1775,19 @@
       const percent = chapter.chunks.length ? Math.round((doneCount / chapter.chunks.length) * 100) : 0;
       const status = getChapterStatus(chapter);
       const playingChapter = isChapterPlaying(chapterIndex);
+      const chapterDirectorCount = chapter.chunks.reduce((sum, chunk) => {
+        const chunkPlan = plan.byChunkId ? plan.byChunkId[chunk.id] : null;
+        return sum + (chunkPlan && chunkPlan.label === 'Director' ? 1 : 0);
+      }, 0);
       const chapterCharacters = chapter.characters && chapter.characters.length ? chapter.characters.slice(0, 4).map((character) => {
         return '<span class="book-mini-chip"><strong>' + escapeHtml(character) + '</strong></span>';
       }).join('') : '<span class="book-mini-chip">No strong names in this chapter</span>';
       const chunkHtml = chapter.collapsed ? '' : '<div class="book-segments">' + chapter.chunks.map((chunk, chunkIndex) => {
         const isChunkPlayingNow = isChunkPlaying(chunk);
+        const chunkPlan = plan.byChunkId ? plan.byChunkId[chunk.id] : null;
+        const manualDirector = chunkDirectionMode(chunk) === 'director';
+        const isDirectorChunk = !!(chunkPlan && chunkPlan.label === 'Director');
+        const directorBtnLabel = manualDirector ? 'Dir ✓' : (isDirectorChunk ? 'Auto Dir' : '+ Dir');
         const rowClasses = ['book-seg-row', chunk.status];
         if (isChunkPlayingNow) rowClasses.push('active');
         const roleClass = getRoleColorClass(chunk.roleLabel);
@@ -1462,6 +1801,10 @@
             '</div>' +
             '<div class="book-seg-status ' + chunk.status + '">' + escapeHtml(chunk.status) + '</div>' +
             '<div class="book-seg-actions">' +
+              (canPolishChunks
+                ? '<button class="book-seg-action-btn' + (isDirectorChunk ? ' director' : '') + '"' +
+                  ' onclick="bookToggleChunkDirector(' + chapterIndex + ',' + chunkIndex + ', event)">' + directorBtnLabel + '</button>'
+                : '') +
               '<button class="book-seg-action-btn' + (isChunkPlayingNow ? ' playing' : '') + '"' +
                 (chunk.audioUrl ? '' : ' disabled') +
                 ' onclick="bookPlayChunk(' + chapterIndex + ',' + chunkIndex + ', event)">' + (isChunkPlayingNow ? '⏹' : '▶') + '</button>' +
@@ -1479,6 +1822,7 @@
                 '<div class="book-chapter-meta">' +
                   '<span>' + chapter.chunks.length + ' chunks</span>' +
                   '<span>' + roleCount + ' roles</span>' +
+                  (chapterDirectorCount ? '<span>' + chapterDirectorCount + ' Director</span>' : '') +
                   '<span>' + percent + '% done</span>' +
                 '</div>' +
                 '<div class="book-chip-row">' + chapterCharacters + '</div>' +
@@ -1523,18 +1867,51 @@
 
   function updateBookEstimate() {
     const modelId = document.getElementById('bookModelSelect') ? document.getElementById('bookModelSelect').value : 'qwen3-tts-flash';
-    const pricing = getModelPricing(modelId);
-    const totalChars = bookState.chapters.reduce((sum, chapter) => sum + chapter.chunks.reduce((inner, chunk) => inner + chunk.charCount, 0), 0);
-    const totalSegments = bookState.chapters.reduce((sum, chapter) => sum + chapter.chunks.length, 0);
-    const gross = totalChars * pricing.rate;
-    const used = typeof freeUsed !== 'undefined' ? (freeUsed[modelId] || 0) : 0;
-    const freeLeft = typeof FREE_QUOTA !== 'undefined' ? Math.max(0, FREE_QUOTA - used) : 0;
-    const billable = Math.max(0, totalChars - freeLeft);
-    const net = billable * pricing.rate;
+    const plan = refreshBookDirectionPlan();
+    const totalChars = plan.totalChars;
+    const totalSegments = plan.totalChunks;
+    const directionPlanEl = document.getElementById('bcDirectionPlan');
+    let gross = 0;
+    let net = 0;
+    let freeLeftLabel = '—';
+
+    if (plan.mode === 'adaptive') {
+      const flashPricing = getModelPricing(modelId);
+      const directorPricing = getModelPricing(plan.directorModelId);
+      const flashFamily = getBookModelFamily(modelId);
+      const directorFamily = getBookModelFamily(plan.directorModelId);
+      const flashUsed = typeof freeUsed !== 'undefined' ? (freeUsed[flashFamily] || 0) : 0;
+      const directorUsed = typeof freeUsed !== 'undefined' ? (freeUsed[directorFamily] || 0) : 0;
+      const flashFreeLeft = typeof FREE_QUOTA !== 'undefined' ? Math.max(0, FREE_QUOTA - flashUsed) : 0;
+      const directorFreeLeft = typeof FREE_QUOTA !== 'undefined' ? Math.max(0, FREE_QUOTA - directorUsed) : 0;
+      const flashBillable = Math.max(0, plan.flashChars - flashFreeLeft);
+      const directorBillable = Math.max(0, plan.directorChars - directorFreeLeft);
+      gross = (plan.flashChars * flashPricing.rate) + (plan.directorChars * directorPricing.rate);
+      net = (flashBillable * flashPricing.rate) + (directorBillable * directorPricing.rate);
+      freeLeftLabel = 'Flash ' + flashFreeLeft.toLocaleString() + ' / Director ' + directorFreeLeft.toLocaleString();
+      if (directionPlanEl) directionPlanEl.textContent = plan.flashChunkCount + ' F / ' + plan.directorChunkCount + ' D';
+    } else {
+      const pricing = getModelPricing(modelId);
+      const family = getBookModelFamily(modelId);
+      const used = typeof freeUsed !== 'undefined' ? (freeUsed[family] || 0) : 0;
+      const freeLeft = typeof FREE_QUOTA !== 'undefined' ? Math.max(0, FREE_QUOTA - used) : 0;
+      const billable = Math.max(0, totalChars - freeLeft);
+      gross = totalChars * pricing.rate;
+      net = billable * pricing.rate;
+      freeLeftLabel = freeLeft.toLocaleString();
+      if (directionPlanEl) {
+        directionPlanEl.textContent = plan.mode === 'director_all'
+          ? 'All Director'
+          : plan.mode === 'clone'
+            ? 'All Clone'
+            : 'All Flash';
+      }
+    }
+
     document.getElementById('bcTotalChars').textContent = totalChars.toLocaleString();
     document.getElementById('bcSegments').textContent = totalSegments.toLocaleString();
     document.getElementById('bcGross').textContent = '$' + gross.toFixed(4);
-    document.getElementById('bcFreeLeft').textContent = freeLeft.toLocaleString();
+    document.getElementById('bcFreeLeft').textContent = freeLeftLabel;
     document.getElementById('bcNetCost').textContent = '$' + net.toFixed(4);
 
     const warning = document.getElementById('bookLargeWarn');
@@ -1543,6 +1920,7 @@
     if (totalChars > 250000) notices.push('Large manuscript: generation may take a while. The workflow will process and merge chapter by chapter.');
     if (totalSegments > 500) notices.push('High segment count: consider increasing the max chunk size if you want fewer generation calls.');
     if (modelId === CLONED_MODEL_ID && !savedVoicesCache.length) notices.push('Cloned-voice model selected, but no saved cloned voices are currently loaded.');
+    if (plan.mode === 'adaptive' && plan.directorChunkCount === 0) notices.push('Selective Director polish is on, but no chunks currently qualify. Use the + Dir button on a chunk if you want to force Director on a passage.');
     if (notices.length) {
       warning.style.display = 'block';
       warning.innerHTML = notices.map(escapeHtml).join('<br>');
@@ -1558,6 +1936,7 @@
       delimiter: document.getElementById('bookSepInput').value.trim() || '* * *',
       chunkMaxChars: sanitizeChunkSize(document.getElementById('bookChunkSize').value),
       model: document.getElementById('bookModelSelect').value,
+      selectiveDirector: !!(document.getElementById('bookSelectiveDirector') && document.getElementById('bookSelectiveDirector').checked),
       chunkSilence: sanitizeSilence(document.getElementById('bookChunkSilence').value, 5),
       titlePauseMarker: sanitizeTitlePauseMarker(document.getElementById('bookTitlePauseMarker').value),
       chapterSilence: sanitizeSilence(document.getElementById('bookChapterSilence').value, 10)
@@ -1615,16 +1994,41 @@
     }
   }
 
-  function triggerBrowserDownload(url) {
+  function basenameFromUrl(url) {
+    if (!url) return '';
+    try {
+      const absolute = new URL(url, window.location.href);
+      return decodeURIComponent(absolute.pathname.split('/').pop() || '');
+    } catch (_) {
+      return String(url).split('?')[0].split('/').pop() || '';
+    }
+  }
+
+  function triggerBrowserDownload(url, filename) {
     const link = document.createElement('a');
     link.href = window.NarrateAPI && typeof window.NarrateAPI.resolveUrl === 'function'
       ? window.NarrateAPI.resolveUrl(url)
       : url;
-    link.target = '_blank';
-    link.rel = 'noopener';
+    link.download = filename || basenameFromUrl(link.href) || '';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  }
+
+  function collectBookChapterFilenames() {
+    return bookState.chapters
+      .map((chapter) => basenameFromUrl(chapter.audioUrls && chapter.audioUrls.wav))
+      .filter(Boolean);
+  }
+
+  function collectBookChunkFilenames() {
+    return bookState.chapters.flatMap((chapter) => (
+      chapter.chunks.map((chunk) => chunk.filename).filter(Boolean)
+    ));
+  }
+
+  function collectBookOutputFilenames() {
+    return [bookState.outputs.wav, bookState.outputs.mp3].map(basenameFromUrl).filter(Boolean);
   }
 
   function ensureRoleAssignmentsValid(modelId) {
@@ -1756,38 +2160,66 @@
     if (!apiKey) throw new Error('DashScope API key is missing.');
     if (!bookState.chapters.length) throw new Error('Analyse the manuscript first.');
     const modelId = document.getElementById('bookModelSelect').value;
+    refreshBookDirectionPlan();
     syncRoleVoiceAssignments();
     ensureRoleAssignmentsValid(modelId);
     return { apiKey, modelId };
   }
 
   function markChunkGenerated(chunk, result, forceRegenerated) {
+    const plan = getChunkDirectionPlan(chunk);
     chunk.status = 'done';
     chunk.filename = result.filename;
     chunk.audioVersion = (chunk.audioVersion || 0) + 1;
+    chunk.lastModelId = plan ? plan.modelId : '';
+    chunk.lastDirectionLabel = plan ? plan.label : '';
     chunk.audioUrl = cacheBustUrl(result.url, (forceRegenerated ? 'regen_' : 'gen_') + chunk.audioVersion + '_' + Date.now());
+  }
+
+  function getBookMergeModelId() {
+    const plan = getBookDirectionPlan();
+    if (plan.mode === 'adaptive') return 'narrate_ai_flash_director_mix';
+    return getBookModelId();
   }
 
   function getChunkGenerationInstructions(chunk) {
     const chapter = bookState.chapters[chunk.chapterIndex];
-    if (!chapter || chapter.kind !== 'titles') return '';
-    return [
-      'Maintain one continuous narrator identity for this entire title sequence.',
-      'Speak slowly, clearly, and deliberately with a calm, polished audiobook tone.',
-      'Use noticeably longer natural pauses where the pause markers appear between the title, series, volume, and author.',
-      'Keep the mood and vocal texture consistent from start to finish, without resetting between sections.'
-    ].join(' ');
+    const plan = getChunkDirectionPlan(chunk);
+    const instructions = [];
+    if (chapter && chapter.kind === 'titles') {
+      instructions.push(
+        'Maintain one continuous narrator identity for this entire title sequence.',
+        'Speak slowly, clearly, and deliberately with a calm, polished audiobook tone.',
+        'Use noticeably longer natural pauses where the pause markers appear between the title, series, volume, and author.',
+        'Keep the mood and vocal texture consistent from start to finish, without resetting between sections.'
+      );
+    }
+    if (plan && plan.label === 'Director' && (!chapter || chapter.kind !== 'titles')) {
+      instructions.push(
+        'Treat this passage as a premium audiobook performance beat.',
+        'Keep the same narrator identity, but shape pacing, emphasis, and emotional contour more intentionally than a neutral read.',
+        'Stay controlled and natural rather than theatrical.'
+      );
+      if (plan.reasonText) instructions.push('Focus on: ' + plan.reasonText + '.');
+    }
+    return instructions.join(' ');
   }
 
   async function generateBookChunk(chunk, modelId, apiKey, force) {
+    const chapter = bookState.chapters[chunk.chapterIndex];
+    const plan = getChunkDirectionPlan(chunk);
     const payload = {
       text: chunk.text,
       voiceId: chunk.voiceId,
       apiKey,
-      modelId,
+      modelId: plan ? plan.modelId : modelId,
       projectId: bookState.projectId,
+      projectTitle: bookState.title,
       chapterIndex: chunk.chapterIndex,
       chunkIndex: chunk.chunkIndex,
+      chapterTitle: chapter ? chapter.title : '',
+      roleLabel: chunk.roleLabel || '',
+      sourceType: chunk.sourceType || '',
       language: bookState.language,
       instructions: getChunkGenerationInstructions(chunk),
       force: !!force
@@ -1806,9 +2238,13 @@
     }
     const merged = await postJson(BOOK_API.mergeChapter, {
       projectId: bookState.projectId,
+      projectTitle: bookState.title,
       chapterIndex,
+      chapterTitle: chapter.title,
       filenames,
       isTitle: chapter.kind === 'titles',
+      modelId: getBookMergeModelId(),
+      language: bookState.language,
       silence: sanitizeSilence(document.getElementById('bookChunkSilence').value, 5),
       format: 'wav'
     });
@@ -1829,9 +2265,10 @@
       if (bookState.cancelRequested) break;
       const chunkIndex = indices[i];
       const chunk = chapter.chunks[chunkIndex];
+      const chunkPlan = getChunkDirectionPlan(chunk);
       const currentDone = progress ? progress.done : i;
       const total = progress ? progress.total : indices.length;
-      updateBookProgress(currentDone, total, 'Generating ' + chapter.title + ' · chunk ' + (chunkIndex + 1) + ' of ' + chapter.chunks.length + '...');
+      updateBookProgress(currentDone, total, 'Generating ' + chapter.title + ' · chunk ' + (chunkIndex + 1) + ' of ' + chapter.chunks.length + ' with ' + (chunkPlan ? chunkPlan.label : displayBookModelName(context.modelId)) + '...');
       chunk.status = 'processing';
       renderBookChapterList();
       try {
@@ -1910,6 +2347,7 @@
     renderBookAssignments();
     renderBookCharacters();
     renderBookSummary();
+    renderBookDirectionPanel();
     renderBookChapterList();
     updateBookEstimate();
 
@@ -1921,6 +2359,28 @@
     statusEl.textContent = 'Detected ' + getNarrativeChapterCount(bookState.chapters) + ' chapters, ' + bookState.roles.length + ' speaking roles, and ' + bookState.characters.length + ' character names.';
     addLog('Analysis complete: ' + getNarrativeChapterCount(bookState.chapters) + ' chapters, ' + bookState.roles.length + ' roles, ' + bookState.characters.length + ' detected names.', 'success');
     await saveBookProject('analysis');
+  };
+
+  window.bookToggleChunkDirector = function bookToggleChunkDirector(chapterIndex, chunkIndex, event) {
+    if (event) event.stopPropagation();
+    const plan = getBookDirectionPlan();
+    if (plan.mode !== 'adaptive') {
+      addLog('Selective Director polish is only available when Narrate:AI Flash is the primary engine and the Director polish toggle is enabled.', 'warn');
+      return;
+    }
+    const chapter = bookState.chapters[chapterIndex];
+    const chunk = chapter && chapter.chunks[chunkIndex];
+    if (!chapter || !chunk) return;
+    chunk.directionMode = chunkDirectionMode(chunk) === 'director' ? 'auto' : 'director';
+    renderBookDirectionPanel();
+    updateBookEstimate();
+    renderBookChapterList();
+    addLog(
+      (chunk.directionMode === 'director' ? 'Locked Director polish for ' : 'Returned to automatic planning for ') +
+      chapter.title + ' chunk ' + (chunkIndex + 1) + '. Regenerate the chunk to apply the updated plan.',
+      'info'
+    );
+    void saveBookProject('direction-' + (chapterIndex + 1) + '-' + (chunkIndex + 1));
   };
 
   window.bookPlayChunk = async function bookPlayChunk(chapterIndex, chunkIndex, event) {
@@ -1988,6 +2448,13 @@
 
     const chapter = bookState.chapters[chapterIndex];
     if (!chapter) return;
+    const directionPlan = getBookDirectionPlan();
+    const chapterDirectorCount = directionPlan.mode === 'adaptive'
+      ? chapter.chunks.filter((chunk) => {
+          const chunkPlan = directionPlan.byChunkId ? directionPlan.byChunkId[chunk.id] : null;
+          return chunkPlan && chunkPlan.label === 'Director';
+        }).length
+      : 0;
 
     bookState.generating = true;
     bookState.cancelRequested = false;
@@ -1997,7 +2464,11 @@
     chapter.audioUrls.mp3 = '';
 
     const progress = { done: 0, total: chapter.chunks.length };
-    addLog('Generating chapter audio for "' + chapter.title + '".', 'info');
+    addLog(
+      'Generating chapter audio for "' + chapter.title + '"' +
+      (chapterDirectorCount ? ' with Director planned on ' + chapterDirectorCount + ' chunk' + (chapterDirectorCount === 1 ? '' : 's') + '.' : '.'),
+      'info'
+    );
     updateBookProgress(0, progress.total, 'Preparing ' + chapter.title + '...');
 
     try {
@@ -2009,9 +2480,11 @@
         addLog('Chapter ready: ' + chapter.title + '.', 'success');
       }
       await saveBookProject('chapter-' + (chapterIndex + 1));
+      if (typeof refreshUsageHistory === 'function') refreshUsageHistory();
     } catch (error) {
       addLog(error.message, 'error');
       await saveBookProject('chapter-error-' + (chapterIndex + 1));
+      if (typeof refreshUsageHistory === 'function') refreshUsageHistory();
     } finally {
       bookState.generating = false;
       setBookOperationUi(false);
@@ -2059,9 +2532,11 @@
       if (chapter.audioUrls.wav) addLog('Chunk replaced and chapter audio rebuilt for ' + chapter.title + '.', 'success');
       else addLog('Chunk replaced. Chapter audio will rebuild once all chunks are available.', 'success');
       await saveBookProject('chunk-regen-' + (chapterIndex + 1) + '-' + (chunkIndex + 1));
+      if (typeof refreshUsageHistory === 'function') refreshUsageHistory();
     } catch (error) {
       addLog(error.message, 'error');
       await saveBookProject('chunk-regen-error-' + (chapterIndex + 1) + '-' + (chunkIndex + 1));
+      if (typeof refreshUsageHistory === 'function') refreshUsageHistory();
     } finally {
       bookState.generating = false;
       setBookOperationUi(false);
@@ -2089,8 +2564,19 @@
 
     const totalChunks = bookState.chapters.reduce((sum, chapter) => sum + chapter.chunks.length, 0);
     const progress = { done: 0, total: totalChunks };
+    const directionPlan = getBookDirectionPlan();
 
-    addLog('Starting audiobook generation for ' + totalChunks + ' chunks.', 'info');
+    addLog(
+      'Starting audiobook generation for ' + totalChunks + ' chunks.' +
+      (directionPlan.mode === 'adaptive'
+        ? ' Flash is the main engine; Director is planned on ' + directionPlan.directorChunkCount + ' chunk' + (directionPlan.directorChunkCount === 1 ? '' : 's') + '.'
+        : directionPlan.mode === 'director_all'
+          ? ' Director will render the full book.'
+          : directionPlan.mode === 'clone'
+            ? ' Clone rendering is active for the full book.'
+            : ' Flash will render the full book.'),
+      'info'
+    );
     updateBookProgress(0, totalChunks, 'Preparing generation...');
 
     try {
@@ -2109,6 +2595,10 @@
         updateBookProgress(totalChunks, totalChunks, 'Generation complete. Building full-book WAV...');
         const result = await postJson(BOOK_API.mergeBook, {
           projectId: bookState.projectId,
+          title: bookState.title,
+          language: bookState.language,
+          modelId: getBookMergeModelId(),
+          chapter_filenames: collectBookChapterFilenames(),
           silence: sanitizeSilence(document.getElementById('bookChapterSilence').value, 10),
           format: 'wav'
         });
@@ -2116,10 +2606,12 @@
         document.getElementById('bookDlPanel').classList.add('show');
         addLog('Full-book WAV ready.', 'success');
         await saveBookProject('book-complete');
+        if (typeof refreshUsageHistory === 'function') refreshUsageHistory();
       }
     } catch (error) {
       addLog(error.message, 'error');
       await saveBookProject('generation-error');
+      if (typeof refreshUsageHistory === 'function') refreshUsageHistory();
     } finally {
       bookState.generating = false;
       setBookOperationUi(false);
@@ -2147,11 +2639,15 @@
     try {
       const result = await postJson(BOOK_API.mergeBook, {
         projectId: bookState.projectId,
+        title: bookState.title,
+        language: bookState.language,
+        modelId: getBookMergeModelId(),
+        chapter_filenames: collectBookChapterFilenames(),
         silence: sanitizeSilence(document.getElementById('bookChapterSilence').value, 10),
         format
       });
       bookState.outputs[format] = result.url;
-      triggerBrowserDownload(result.url);
+      triggerBrowserDownload(result.url, result.filename);
       addLog('Full-book ' + format.toUpperCase() + ' ready.', 'success');
       await saveBookProject('download-' + format);
     } catch (error) {
@@ -2166,9 +2662,17 @@
     }
     addLog('Building ZIP package of generated audiobook files...', 'info');
     try {
-      const result = await postJson(BOOK_API.zipBook, { projectId: bookState.projectId });
+      const result = await postJson(BOOK_API.zipBook, {
+        projectId: bookState.projectId,
+        title: bookState.title,
+        language: bookState.language,
+        modelId: getBookMergeModelId(),
+        chunk_filenames: collectBookChunkFilenames(),
+        chapter_filenames: collectBookChapterFilenames(),
+        book_filenames: collectBookOutputFilenames()
+      });
       bookState.outputs.zip = result.url;
-      triggerBrowserDownload(result.url);
+      triggerBrowserDownload(result.url, result.filename);
       addLog('ZIP package ready.', 'success');
       await saveBookProject('download-zip');
     } catch (error) {
@@ -2177,20 +2681,26 @@
   };
 
   function wireBookInputs() {
-    ['bookText', 'bookModeSelect', 'bookSepInput', 'bookChunkSize', 'bookModelSelect', 'bookChunkSilence', 'bookChapterSilence'].forEach((id) => {
+    ['bookText', 'bookModeSelect', 'bookSepInput', 'bookChunkSize', 'bookModelSelect', 'bookSelectiveDirector', 'bookChunkSilence', 'bookChapterSilence'].forEach((id) => {
       const el = document.getElementById(id);
       if (!el) return;
       el.addEventListener('input', () => {
         if (!bookState.chapters.length) return;
-        if (id === 'bookModelSelect') {
+        if (id === 'bookModelSelect' || id === 'bookSelectiveDirector') {
+          bookState.settings = Object.assign({}, bookState.settings || {}, collectBookSettings());
+          renderBookDirectionPanel();
           renderBookAssignments();
+          renderBookChapterList();
           updateBookEstimate();
         }
       });
       el.addEventListener('change', () => {
         if (!bookState.chapters.length) return;
-        if (id === 'bookModelSelect') {
+        if (id === 'bookModelSelect' || id === 'bookSelectiveDirector') {
+          bookState.settings = Object.assign({}, bookState.settings || {}, collectBookSettings());
+          renderBookDirectionPanel();
           renderBookAssignments();
+          renderBookChapterList();
           updateBookEstimate();
         }
       });
@@ -2208,6 +2718,7 @@
     if (cancelBtn) cancelBtn.classList.remove('show');
     renderLog();
     wireBookInputs();
+    renderBookDirectionPanel();
     addLog('Narrate-AI audiobook workflow v' + APP_BOOK_VERSION + ' loaded.', 'success');
   }
 

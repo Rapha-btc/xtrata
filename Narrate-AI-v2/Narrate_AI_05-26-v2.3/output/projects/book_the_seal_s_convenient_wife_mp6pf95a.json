@@ -1,0 +1,184 @@
+{
+  "id": "book_the_seal_s_convenient_wife_mp6pf95a",
+  "title": "The SEAL’s Convenient Wife",
+  "series": "Hartsville’s SEAL Heroes",
+  "seriesVolume": "Book 1",
+  "author": "Leslie North",
+  "language": "English",
+  "manuscript": "The SEAL’s Convenient Wife.\n\nHartsville’s SEAL Heroes.\nBook 1.\n\nWritten by Leslie North.\n\n\nChapter One:\n\n\nPatrick Nelson climbed the steps of the elementary school he’d attended as a kid. The front doors of the yellow brick building stood open to the spring weather, and he frowned. Weren’t schools locked down these days? His hand automatically went for a sidearm that wasn’t there, and then he gave himself a shake. This was the civilian world, where an unexpected open door meant nothing—and he didn’t carry a gun in the civilian world. Well, not usually. And not to pick up his six-year-old daughter.\nBut he’d been on an extended deployment, and the transition back to life in his hometown was tough… especially since this mission had had more than its share of challenges. Moreover, he felt as if he’d let his responsibilities as a father slip—though not by choice. Yes, he’d been busy and out of touch, but his ex had made things ten times worse. Rachel had completely cut him off from any news of their daughter four months ago. Not one Skype session. No FaceTime. Nothing.\nPatrick had been expecting Rachel to be difficult, after the fight they’d had before he left, but this was too much. Their arrangement had to change. He’d taken extended leave from the SEALs, and he was going to fight for full custody. He had no idea what that would look like… but he’d figure it out, because Ellery deserved better.\nA man wearing a Hartsville Elementary T-shirt greeted Patrick just inside the front door. “Can I help you?”\n“I’m looking for the kindergarten classroom,” Patrick said, looking around. The building hadn’t changed much since he’d been a student there, but it seemed strangely quiet for a place that housed kids.\n“There are three. At the end of this corridor.” The man pointed down the hall. “I think Ms. Mendel is the only teacher still here.”\n“It’s only three o’clock,” Patrick said with a glance at the oversized clock that hung nearby. “I thought school got out at three.”\n“Usually, but we had a field day, so the kids went home two hours ago.”\nDamn. He’d missed Ellery. Patrick had wanted to surprise her by picking her up from school—though he’d been nervous about it, too, since they’d had no recent contact. He didn’t know Ellery as well as he should, and even when they’d been in touch, he’d often had no idea what to say to her.",
+  "updatedAt": "2026-05-15T09:17:47.753Z",
+  "projectSettings": {
+    "mode": "single",
+    "delimiter": "* * *",
+    "chunkMaxChars": 1000,
+    "model": "qwen3-tts-flash",
+    "chunkSilence": 0,
+    "titlePauseMarker": " .. ",
+    "chapterSilence": 1
+  },
+  "roles": [
+    {
+      "id": "role_narrator",
+      "label": "Narrator",
+      "chunkCount": 5,
+      "charCount": 2337,
+      "voiceId": "Cherry"
+    }
+  ],
+  "characters": [
+    {
+      "id": "char_patrick",
+      "label": "Patrick",
+      "score": 5.9,
+      "mentions": 8,
+      "chapterCount": 1,
+      "matchPhrases": [
+        "patrick"
+      ]
+    },
+    {
+      "id": "char_ms_mendel",
+      "label": "Ms. Mendel",
+      "score": 0.5,
+      "mentions": 2,
+      "chapterCount": 1,
+      "matchPhrases": [
+        "ms. mendel",
+        "mendel"
+      ]
+    }
+  ],
+  "chapters": [
+    {
+      "index": 0,
+      "title": "Titles",
+      "kind": "titles",
+      "audioUrls": {
+        "wav": "",
+        "mp3": ""
+      },
+      "chunks": [
+        {
+          "id": "bk_title_0_yeqtk3",
+          "chapterIndex": 0,
+          "chunkIndex": 0,
+          "segmentIndex": 0,
+          "roleLabel": "Narrator",
+          "roleId": "role_narrator",
+          "sourceType": "narration",
+          "text": "The SEAL’s Convenient Wife. .. Hartsville’s SEAL Heroes. .. Book 1. .. Leslie North.",
+          "status": "pending",
+          "filename": "",
+          "audioUrl": "",
+          "voiceId": "Cherry",
+          "charCount": 84,
+          "detectedCharacters": [],
+          "primaryCharacter": "",
+          "audioVersion": 0
+        }
+      ],
+      "collapsed": false,
+      "characters": []
+    },
+    {
+      "index": 1,
+      "title": "Chapter One",
+      "kind": "chapter",
+      "audioUrls": {
+        "wav": "",
+        "mp3": ""
+      },
+      "chunks": [
+        {
+          "id": "bk_1_0_v8fhga",
+          "chapterIndex": 1,
+          "chunkIndex": 0,
+          "segmentIndex": 0,
+          "roleLabel": "Narrator",
+          "roleId": "role_narrator",
+          "sourceType": "narration",
+          "text": "Chapter One",
+          "status": "pending",
+          "filename": "",
+          "audioUrl": "",
+          "voiceId": "Cherry",
+          "charCount": 11,
+          "detectedCharacters": [],
+          "primaryCharacter": "",
+          "audioVersion": 0
+        },
+        {
+          "id": "bk_1_1_btyvpm",
+          "chapterIndex": 1,
+          "chunkIndex": 1,
+          "segmentIndex": 1,
+          "roleLabel": "Narrator",
+          "roleId": "role_narrator",
+          "sourceType": "narration",
+          "text": "Patrick Nelson climbed the steps of the elementary school he’d attended as a kid. The front doors of the yellow brick building stood open to the spring weather, and he frowned. Weren’t schools locked down these days? His hand automatically went for a sidearm that wasn’t there, and then he gave himself a shake. This was the civilian world, where an unexpected open door meant nothing—and he didn’t carry a gun in the civilian world. Well, not usually. And not to pick up his six-year-old daughter. But he’d been on an extended deployment, and the transition back to life in his hometown was tough… especially since this mission had had more than its share of challenges. Moreover, he felt as if he’d let his responsibilities as a father slip—though not by choice. Yes, he’d been busy and out of touch, but his ex had made things ten times worse. Rachel had completely cut him off from any news of their daughter four months ago. Not one Skype session. No FaceTime. Nothing.",
+          "status": "pending",
+          "filename": "",
+          "audioUrl": "",
+          "voiceId": "Cherry",
+          "charCount": 974,
+          "detectedCharacters": [
+            "Patrick"
+          ],
+          "primaryCharacter": "Patrick",
+          "audioVersion": 0
+        },
+        {
+          "id": "bk_1_2_punet1",
+          "chapterIndex": 1,
+          "chunkIndex": 2,
+          "segmentIndex": 1,
+          "roleLabel": "Narrator",
+          "roleId": "role_narrator",
+          "sourceType": "narration",
+          "text": "Patrick had been expecting Rachel to be difficult, after the fight they’d had before he left, but this was too much. Their arrangement had to change. He’d taken extended leave from the SEALs, and he was going to fight for full custody. He had no idea what that would look like… but he’d figure it out, because Ellery deserved better. A man wearing a Hartsville Elementary T-shirt greeted Patrick just inside the front door. “Can I help you?” “I’m looking for the kindergarten classroom,” Patrick said, looking around. The building hadn’t changed much since he’d been a student there, but it seemed strangely quiet for a place that housed kids. “There are three. At the end of this corridor.” The man pointed down the hall. “I think Ms. Mendel is the only teacher still here.” “It’s only three o’clock,” Patrick said with a glance at the oversized clock that hung nearby. “I thought school got out at three.” “Usually, but we had a field day, so the kids went home two hours ago.” Damn.",
+          "status": "pending",
+          "filename": "",
+          "audioUrl": "",
+          "voiceId": "Cherry",
+          "charCount": 985,
+          "detectedCharacters": [
+            "Patrick",
+            "Ms. Mendel"
+          ],
+          "primaryCharacter": "Patrick",
+          "audioVersion": 0
+        },
+        {
+          "id": "bk_1_3_esv64d",
+          "chapterIndex": 1,
+          "chunkIndex": 3,
+          "segmentIndex": 1,
+          "roleLabel": "Narrator",
+          "roleId": "role_narrator",
+          "sourceType": "narration",
+          "text": "He’d missed Ellery. Patrick had wanted to surprise her by picking her up from school—though he’d been nervous about it, too, since they’d had no recent contact. He didn’t know Ellery as well as he should, and even when they’d been in touch, he’d often had no idea what to say to her.",
+          "status": "pending",
+          "filename": "",
+          "audioUrl": "",
+          "voiceId": "Cherry",
+          "charCount": 283,
+          "detectedCharacters": [
+            "Patrick"
+          ],
+          "primaryCharacter": "Patrick",
+          "audioVersion": 0
+        }
+      ],
+      "collapsed": true,
+      "characters": [
+        "Patrick",
+        "Ms. Mendel"
+      ]
+    }
+  ],
+  "outputs": {
+    "wav": "",
+    "mp3": "",
+    "zip": ""
+  }
+}

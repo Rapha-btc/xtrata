@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-USIronRes01-voice-20260515210551455-7dad",
+  "preferred_name": "USIronRes01",
+  "display_name": "American Iron Resolve",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A deep American male narrator with iron-clad restraint, a serious baritone core, and a calm sense of command. General American accent, low and steady, with the kind of presence that feels completely unshaken under pressure. Strong for Navy SEAL romances, rescue thrillers, and protector heroes who lead without needing to announce it. Avoid gravel-for-gravel's-sake and avoid swagger.",
+  "preview_text": "A deep American iron-resolve voice with calm command, steady baritone weight, and controlled strength.",
+  "language": "English",
+  "preset_id": "american_iron_resolve_m",
+  "gmt_create": "2026-05-15T13:05:59.535Z",
+  "preview_audio_file": "design_lab__american_iron_resolve__american_iron_resolve_m__create_preview__english__design_model__txt_a_deep_american_iron_resolve_34bb1fdb6a63__20eb774a76a3.wav",
+  "preview_audio_url": "/qwen3_designed_voices/design_lab__american_iron_resolve__american_iron_resolve_m__create_preview__english__design_model__txt_a_deep_american_iron_resolve_34bb1fdb6a63__20eb774a76a3.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

@@ -11,5 +11,15 @@
   "preview_audio_file": "french_noir_male_ee5150c92fa7_preview.wav",
   "preview_audio_url": "/qwen3_designed_voices/french_noir_male_ee5150c92fa7_preview.wav",
   "preview_response_format": "wav",
-  "source": "local"
+  "source": "local",
+  "native_sample_audio_file": "french_noir_male_ee5150c92fa7_native_sample.wav",
+  "native_sample_audio_url": "/qwen3_designed_voices/french_noir_male_ee5150c92fa7_native_sample.wav",
+  "native_sample_language": "French",
+  "native_sample_text": "Quand je suis arrive au bord du fleuve, l'affaire avait cesse d'etre confuse; elle etait devenue volontaire.",
+  "native_sample_saved_at": "2026-05-14T18:34:13.320Z",
+  "english_sample_audio_file": "french_noir_male_ee5150c92fa7_english_sample.wav",
+  "english_sample_audio_url": "/qwen3_designed_voices/french_noir_male_ee5150c92fa7_english_sample.wav",
+  "english_sample_language": "English",
+  "english_sample_text": "By the time I reached the river, the case had stopped being messy and had started looking deliberate.",
+  "english_sample_saved_at": "2026-05-14T18:34:18.823Z"
 }

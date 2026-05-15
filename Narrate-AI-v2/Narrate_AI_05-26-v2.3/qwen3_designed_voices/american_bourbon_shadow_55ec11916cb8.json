@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-USBourbS01-voice-20260515211033814-0e69",
+  "preferred_name": "USBourbS01",
+  "display_name": "American Bourbon Shadow",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A very deep baritone American male narrator with bourbon-dark resonance, restrained rasp, and a shadowed protective edge. General American accent, lower register, and a slow, deliberate delivery suited to dark military romance and intensely atmospheric suspense. He should feel dangerous in the best way: calm, capable, and impossible to rush. Keep the sound rich and masculine rather than growly or theatrical.",
+  "preview_text": "A bourbon-shadow American voice with dark resonance, restrained rasp, and protective depth.",
+  "language": "English",
+  "preset_id": "american_bourbon_shadow_m",
+  "gmt_create": "2026-05-15T13:10:43.793Z",
+  "preview_audio_file": "design_lab__american_bourbon_shadow__american_bourbon_shadow_m__create_preview__english__design_model__txt_a_bourbon_shadow_american_vo_7624388ad586__55ec11916cb8.wav",
+  "preview_audio_url": "/qwen3_designed_voices/design_lab__american_bourbon_shadow__american_bourbon_shadow_m__create_preview__english__design_model__txt_a_bourbon_shadow_american_vo_7624388ad586__55ec11916cb8.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

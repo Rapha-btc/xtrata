@@ -11,5 +11,15 @@
   "preview_audio_file": "warm_british_narrator_1d142382454a_preview.wav",
   "preview_audio_url": "/qwen3_designed_voices/warm_british_narrator_1d142382454a_preview.wav",
   "preview_response_format": "wav",
-  "source": "local"
+  "source": "local",
+  "native_sample_audio_file": "warm_british_narrator_1d142382454a_native_sample.wav",
+  "native_sample_audio_url": "/qwen3_designed_voices/warm_british_narrator_1d142382454a_native_sample.wav",
+  "native_sample_language": "English",
+  "native_sample_text": "The rain had eased by the time the station lights came into view, and for the first time all evening, the city felt almost kind.",
+  "native_sample_saved_at": "2026-05-14T18:32:12.684Z",
+  "english_sample_audio_file": "warm_british_narrator_1d142382454a_english_sample.wav",
+  "english_sample_audio_url": "/qwen3_designed_voices/warm_british_narrator_1d142382454a_english_sample.wav",
+  "english_sample_language": "English",
+  "english_sample_text": "The rain had eased by the time the station lights came into view, and for the first time all evening, the city felt almost kind.",
+  "english_sample_saved_at": "2026-05-14T18:32:16.980Z"
 }

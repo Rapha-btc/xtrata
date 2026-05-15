@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-USRoughRom01-voice-20260515210300318-f8c5",
+  "preferred_name": "USRoughRom01",
+  "display_name": "American Rough-Edged Protector",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A deep American male narrator with roughened edges, controlled gravel, and the believable intensity of a battle-tested protector. General American accent, strong low register, and masculine presence suited to Navy SEAL romance, rescue suspense, and high-heat protective heroes. He should sound dangerous to everyone except the woman he loves. Keep the intimacy real and grounded rather than theatrical. Avoid parody growling, avoid biker-cliche overkill, and avoid constant aggression.",
+  "preview_text": "A rough-edged American protector voice with controlled gravel, danger, and romantic intensity.",
+  "language": "English",
+  "preset_id": "american_rough_edged_protector_m",
+  "gmt_create": "2026-05-15T13:03:07.735Z",
+  "preview_audio_file": "design_lab__american_rough_edged_protector__american_rough_edged_protector_m__create_preview__english__design_model__txt_a_rough_edged_american_prote_6d7f1b3521b9__8effbf6d96a5.wav",
+  "preview_audio_url": "/qwen3_designed_voices/design_lab__american_rough_edged_protector__american_rough_edged_protector_m__create_preview__english__design_model__txt_a_rough_edged_american_prote_6d7f1b3521b9__8effbf6d96a5.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

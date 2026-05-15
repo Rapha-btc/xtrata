@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-USDocF01-voice-20260515205636709-468a",
+  "preferred_name": "USDocF01",
+  "display_name": "American Documentary Memoir Female",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A female American narrator with documentary clarity, memoir warmth, and a calm intelligent tone. General American accent, clean articulation, steady pacing, and enough humanity to move easily between factual exposition and personal recollection. Ideal for memoir, biography, and narrative nonfiction. Avoid hard-news aggression, avoid chirpy friendliness, and avoid robotic neatness.",
+  "preview_text": "An American documentary-memoir female voice balancing clarity, warmth, and thoughtful authority.",
+  "language": "English",
+  "preset_id": "american_documentary_memoir_f",
+  "gmt_create": "2026-05-15T12:56:43.181Z",
+  "preview_audio_file": "design_lab__american_documentary_memoir_female__american_documentary_memoir_f__create_preview__english__design_model__txt_an_american_documentary_memo_1947f842fc9b__fe7a197108b1.wav",
+  "preview_audio_url": "/qwen3_designed_voices/design_lab__american_documentary_memoir_female__american_documentary_memoir_f__create_preview__english__design_model__txt_an_american_documentary_memo_1947f842fc9b__fe7a197108b1.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

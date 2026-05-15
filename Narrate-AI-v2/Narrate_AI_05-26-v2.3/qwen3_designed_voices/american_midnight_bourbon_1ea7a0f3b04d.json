@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-USMidBour01-voice-20260515211037263-8c6d",
+  "preferred_name": "USMidBour01",
+  "display_name": "American Midnight Bourbon",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A deep baritone American male audiobook voice with midnight bourbon color, smooth bass support, and a faint rasp that suggests long nights and hard-earned patience. General American accent, calm command, and a romantic presence that can anchor both suspense and tenderness. He should sound like the kind of hero who says very little and means all of it. Avoid over-wrought darkness and avoid broad macho emphasis.",
+  "preview_text": "A midnight-bourbon American baritone with smooth bass, faint rasp, and quiet command.",
+  "language": "English",
+  "preset_id": "american_midnight_bourbon_m",
+  "gmt_create": "2026-05-15T13:10:45.902Z",
+  "preview_audio_file": "design_lab__american_midnight_bourbon__american_midnight_bourbon_m__create_preview__english__design_model__txt_a_midnight_bourbon_american_fff31246b418__1ea7a0f3b04d.wav",
+  "preview_audio_url": "/qwen3_designed_voices/design_lab__american_midnight_bourbon__american_midnight_bourbon_m__create_preview__english__design_model__txt_a_midnight_bourbon_american_fff31246b418__1ea7a0f3b04d.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-USLitF01-voice-20260515205627823-53f7",
+  "preferred_name": "USLitF01",
+  "display_name": "American Literary Reflective Female",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A female American literary narrator with a refined contemporary accent, thoughtful pacing, subtle gravitas, and textured emotional restraint. Ideal for literary fiction, historical novels, and reflective first-person storytelling. Intelligent, observant, and emotionally precise without becoming chilly. Avoid hard edges, avoid theatrical melodrama, and avoid bright commercial energy.",
+  "preview_text": "A reflective American literary female voice designed for elegant prose, interiority, and patient storytelling.",
+  "language": "English",
+  "preset_id": "american_literary_reflective_f",
+  "gmt_create": "2026-05-15T12:56:36.821Z",
+  "preview_audio_file": "design_lab__american_literary_reflective_female__american_literary_reflective_f__create_preview__english__design_model__txt_a_reflective_american_litera_911d4b9f5398__a3e0c193a4d7.wav",
+  "preview_audio_url": "/qwen3_designed_voices/design_lab__american_literary_reflective_female__american_literary_reflective_f__create_preview__english__design_model__txt_a_reflective_american_litera_911d4b9f5398__a3e0c193a4d7.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

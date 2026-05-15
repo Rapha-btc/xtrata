@@ -1,0 +1,10 @@
+{
+  "voice": "qwen-tts-vc-my_voice-voice-20260515182636602-f337",
+  "preferred_name": "my_voice",
+  "target_model": "qwen3-tts-vc-2026-01-22",
+  "gmt_create": "2026-05-15T10:26:39.946Z",
+  "local_audio_file": "my_voice_6e2df77a7722.mp3",
+  "local_audio_url": "/qwen3_cloned_voices/my_voice_6e2df77a7722.mp3",
+  "original_filename": "US-female-clone-1-trim.mp3",
+  "source": "local"
+}
