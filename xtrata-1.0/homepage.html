@@ -941,6 +941,7 @@
       listCV,
       makeStandardSTXPostCondition,
       PostConditionMode,
+      principalCV,
       stringAsciiCV,
       uintCV
     } from '@stacks/transactions';
@@ -976,6 +977,9 @@
       DEFAULT_BATCH_SIZE,
       DEFAULT_TOKEN_URI,
       MAX_MIME_LENGTH,
+      SMALL_MINT_HELPER_CONTRACT_NAME,
+      SMALL_MINT_HELPER_MAINNET_ADDRESS,
+      SMALL_MINT_HELPER_MAX_CHUNKS,
       MAX_TOKEN_URI_LENGTH,
       TX_DELAY_SECONDS
     } from '/src/lib/mint/constants.ts';
@@ -1039,6 +1043,8 @@
           entry.contractName?.toLowerCase().includes('v2-1-1')
       ) ?? ACTIVE_CONTRACTS[0];
     const HOMEPAGE_CONTRACT_STORAGE_KEY = 'xtrata.simple-homepage.contract.selection';
+    const SMALL_MINT_HELPER_TARGET_CORE_CONTRACT_ID =
+      `${SMALL_MINT_HELPER_MAINNET_ADDRESS}.xtrata-v2-1-0`;
     const ACTIVE_CONTRACT_BY_ID = new Map(
       ACTIVE_CONTRACTS.map((entry) => [getContractId(entry), entry])
     );
@@ -1315,6 +1321,29 @@
         totalChunks
       });
 
+    const getSmallMintHelperContract = () =>
+      state.contract.network === 'mainnet' &&
+      getContractId(state.contract) === SMALL_MINT_HELPER_TARGET_CORE_CONTRACT_ID
+        ? {
+            address: SMALL_MINT_HELPER_MAINNET_ADDRESS,
+            contractName: SMALL_MINT_HELPER_CONTRACT_NAME,
+            network: 'mainnet'
+          }
+        : null;
+
+    const shouldUseSmallMintHelper = () => {
+      const prepared = state.prepared;
+      const capabilities = resolveContractCapabilities(state.contract);
+      return (
+        !!prepared &&
+        !!getSmallMintHelperContract() &&
+        capabilities.version !== '1.1.1' &&
+        !state.uploadState &&
+        prepared.chunks.length > 0 &&
+        prepared.chunks.length <= SMALL_MINT_HELPER_MAX_CHUNKS
+      );
+    };
+
     const resolveFeePostConditions = (amountMicroStx) => {
       const sender = state.walletSession.address;
       if (!sender || !Number.isFinite(amountMicroStx) || amountMicroStx < 0) {
@@ -1579,7 +1608,9 @@
         duplicateBlocked;
       dom.inscribeButton.textContent = state.uploadState
         ? 'Continue inscription'
-        : 'Start inscription';
+        : shouldUseSmallMintHelper()
+          ? 'Start single-tx inscription'
+          : 'Start inscription';
       dom.refreshWalletButton.disabled = state.busy || !viewingAddress;
       dom.walletLookupButton.disabled = state.busy || state.walletLookupPending;
       updateWalletLookupStatus();
@@ -1715,12 +1746,14 @@
       }
 
       const feeEstimate = getFeeEstimate(state.prepared.chunks.length);
+      const usesSingleTx = shouldUseSmallMintHelper();
       renderMeta(dom.preparedMeta, [
         ['Name', state.prepared.file.name],
         ['Size', formatBytes(BigInt(state.prepared.bytes.length))],
         ['Mime', state.prepared.mimeType],
         ['Chunks', state.prepared.chunks.length.toString()],
         ['Hash', state.prepared.expectedHashHex],
+        ['Route', usesSingleTx ? 'Single tx' : 'Staged'],
         ['Fixed', formatMicroStx(feeEstimate.beginMicroStx)],
         ['Seal', formatMicroStx(feeEstimate.sealMicroStx)]
       ]);
@@ -1858,10 +1891,11 @@
     const requestContractCall = (options) => {
       const walletAddress = state.walletSession.address;
       const network = state.walletSession.network ?? state.contract.network;
+      const contract = options.contract ?? state.contract;
       return new Promise((resolve, reject) => {
         showContractCall({
-          contractAddress: state.contract.address,
-          contractName: state.contract.contractName,
+          contractAddress: contract.address,
+          contractName: contract.contractName,
           functionName: options.functionName,
           functionArgs: options.functionArgs,
           network,
@@ -1922,6 +1956,46 @@
         const feeEstimate = getFeeEstimate(prepared.chunks.length);
         const hasUploadState = !!state.uploadState;
         let didSendBeforeSeal = false;
+
+        if (shouldUseSmallMintHelper()) {
+          const smallMintHelperContract = getSmallMintHelperContract();
+          if (!smallMintHelperContract) {
+            throw new Error('Small mint helper deployment is unavailable for this network.');
+          }
+          setStep('begin', 'pending', 'Wallet prompt');
+          setStep('upload', 'pending', 'Single tx');
+          setStep('seal', 'pending', 'Single tx');
+          appendLog(
+            `Small-file helper route active (<=${SMALL_MINT_HELPER_MAX_CHUNKS} chunks).`
+          );
+          const singleTx = await requestContractCall({
+            contract: smallMintHelperContract,
+            functionName: 'mint-small-single-tx',
+            functionArgs: [
+              principalCV(getContractId(state.contract)),
+              bufferCV(prepared.expectedHash),
+              stringAsciiCV(prepared.mimeType),
+              uintCV(BigInt(prepared.bytes.length)),
+              listCV(prepared.chunks.map((chunk) => bufferCV(chunk))),
+              stringAsciiCV(prepared.tokenUriValue)
+            ],
+            postConditions: resolveFeePostConditions(feeEstimate.totalMicroStx)
+          });
+          const singleTxId = normalizeTxId(singleTx);
+          state.lastSubmittedTxId = singleTxId;
+          appendLog(`Single-tx mint sent: ${singleTxId}`);
+          setStep('begin', 'done', 'Submitted');
+          setStep('upload', 'done', 'Submitted');
+          setStep('seal', 'done', 'Submitted');
+          setStatus(
+            dom.walletStatus,
+            `<strong>Submitted</strong> ${truncateMiddle(singleTxId, 8, 8)}`,
+            'pending',
+            'blue'
+          );
+          await loadWalletInscriptions();
+          return;
+        }
 
         if (!hasUploadState) {
           setStep('begin', 'pending', 'Wallet prompt');
