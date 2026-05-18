@@ -3,7 +3,7 @@ import { MAX_BATCH_SIZE } from '../chunking/hash';
 export const DEFAULT_BATCH_SIZE = Math.min(30, MAX_BATCH_SIZE);
 export const TX_DELAY_SECONDS = 5;
 export const DEFAULT_TOKEN_URI =
-  'https://xvgh3sbdkivby4blejmripeiyjuvji3d4tycym6hgaxalescegjq.arweave.net/vUx9yCNSKhxwKyJZFDyIwmlUo2Pk8CwzxzAuBZJCIZM';
+  'https://yfa7uhk4vmrr3jjwr57fnm6ccvwi2r2ycufcjs6nsmrpjmr25azq.ardrive.net/wUH6HVyrIx2lNo9-VrPCFWyNR1gVCiTLzZMi9LI66DM';
 export const MAX_TOKEN_URI_LENGTH = 256;
 export const MAX_MIME_LENGTH = 64;
 export const SMALL_MINT_HELPER_MAX_CHUNKS = 30;

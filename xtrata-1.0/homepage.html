@@ -198,10 +198,41 @@
       border-bottom: 1px solid var(--line);
     }
 
+    .panel-title-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
     .panel-title {
       margin: 0;
       font-size: 22px;
       line-height: 1.1;
+    }
+
+    .token-uri-head-preview {
+      width: 36px;
+      height: 36px;
+      flex: 0 0 36px;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #f1f5f2;
+      visibility: hidden;
+    }
+
+    .token-uri-head-preview.on {
+      visibility: visible;
+    }
+
+    .token-uri-head-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #fff;
     }
 
     .panel-subtitle {
@@ -783,7 +814,10 @@
       <section class="panel" aria-labelledby="inscribeTitle">
         <div class="panel-head">
           <div>
-            <h1 class="panel-title" id="inscribeTitle">Inscribe</h1>
+            <div class="panel-title-row">
+              <h1 class="panel-title" id="inscribeTitle">Inscribe</h1>
+              <div class="token-uri-head-preview" id="tokenUriHeadPreview" aria-hidden="true"></div>
+            </div>
             <p class="panel-subtitle" id="mintSubtitle">Single payload, explicit chain steps.</p>
           </div>
           <span class="badge" id="networkBadge">mainnet</span>
@@ -1006,9 +1040,13 @@
       fetchTokenSummaryWithFallback
     } from '/src/lib/viewer/queries.ts';
     import {
+      decodeTokenUriToImage,
+      fetchTokenImageFromUri,
       fetchOnChainContent,
       getMediaKind,
       getTextPreview,
+      isHttpUrl,
+      isLikelyImageUrl,
       resolveMimeType
     } from '/src/lib/viewer/content.ts';
 
@@ -1084,6 +1122,7 @@
       nameInput: $('nameInput'),
       payloadType: $('payloadType'),
       tokenUriInput: $('tokenUriInput'),
+      tokenUriHeadPreview: $('tokenUriHeadPreview'),
       fileInput: $('fileInput'),
       dropzone: $('dropzone'),
       dropzoneText: $('dropzoneText'),
@@ -1137,6 +1176,8 @@
       duplicateId: null,
       uploadState: null,
       busy: false,
+      tokenUriPreviewRequestId: 0,
+      tokenUriPreviewTimer: null,
       payloadPreviewUrl: null,
       tokenPreviewUrl: null,
       tokenThumbUrls: new Map(),
@@ -1413,6 +1454,69 @@
     const clearElement = (element, text) => {
       element.innerHTML = '';
       element.textContent = text;
+    };
+
+    const clearTokenUriHeadPreview = () => {
+      dom.tokenUriHeadPreview.replaceChildren();
+      dom.tokenUriHeadPreview.classList.remove('on');
+      dom.tokenUriHeadPreview.setAttribute('aria-hidden', 'true');
+    };
+
+    const renderTokenUriHeadPreview = (imageUrl) => {
+      const img = document.createElement('img');
+      img.alt = '';
+      img.addEventListener(
+        'error',
+        () => {
+          if (dom.tokenUriHeadPreview.firstElementChild === img) {
+            clearTokenUriHeadPreview();
+          }
+        },
+        { once: true }
+      );
+      img.src = imageUrl;
+      dom.tokenUriHeadPreview.replaceChildren(img);
+      dom.tokenUriHeadPreview.classList.add('on');
+      dom.tokenUriHeadPreview.setAttribute('aria-hidden', 'false');
+    };
+
+    const resolveTokenUriHeadImage = async (tokenUri) => {
+      const inlineImage = decodeTokenUriToImage(tokenUri);
+      if (inlineImage) {
+        return inlineImage;
+      }
+      if (isHttpUrl(tokenUri) && isLikelyImageUrl(tokenUri)) {
+        return tokenUri;
+      }
+      const resolvedImage = await fetchTokenImageFromUri(tokenUri);
+      if (resolvedImage) {
+        return resolvedImage;
+      }
+      return isHttpUrl(tokenUri) ? tokenUri : null;
+    };
+
+    const updateTokenUriHeadPreview = async () => {
+      const tokenUri = dom.tokenUriInput.value.trim();
+      const requestId = ++state.tokenUriPreviewRequestId;
+      clearTokenUriHeadPreview();
+      if (!tokenUri) {
+        return;
+      }
+      const imageUrl = await resolveTokenUriHeadImage(tokenUri);
+      if (requestId !== state.tokenUriPreviewRequestId || !imageUrl) {
+        return;
+      }
+      renderTokenUriHeadPreview(imageUrl);
+    };
+
+    const queueTokenUriHeadPreviewUpdate = () => {
+      if (state.tokenUriPreviewTimer !== null) {
+        window.clearTimeout(state.tokenUriPreviewTimer);
+      }
+      state.tokenUriPreviewTimer = window.setTimeout(() => {
+        state.tokenUriPreviewTimer = null;
+        void updateTokenUriHeadPreview();
+      }, 180);
     };
 
     const GRID_MIME_LABELS = new Map([
@@ -3248,6 +3352,7 @@
 
     const initialize = async () => {
       dom.tokenUriInput.value = DEFAULT_TOKEN_URI;
+      void updateTokenUriHeadPreview();
       dom.walletLookupInput.value = '';
       initializeContractSelect();
       applyContract(state.contract);
@@ -3354,9 +3459,15 @@
     });
     dom.nameInput.addEventListener('input', markPreparedDirty);
     dom.payloadType.addEventListener('change', markPreparedDirty);
-    dom.tokenUriInput.addEventListener('input', markPreparedDirty);
+    dom.tokenUriInput.addEventListener('input', () => {
+      markPreparedDirty();
+      queueTokenUriHeadPreviewUpdate();
+    });
 
     window.addEventListener('beforeunload', () => {
+      if (state.tokenUriPreviewTimer !== null) {
+        window.clearTimeout(state.tokenUriPreviewTimer);
+      }
       revokePayloadPreview();
       revokeTokenPreview();
       revokeGridThumbUrls();
