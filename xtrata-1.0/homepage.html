@@ -283,6 +283,19 @@
       gap: 10px;
     }
 
+    .field-inline {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .field-note {
+      min-height: 18px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
     .label {
       color: var(--muted);
       font-size: 12px;
@@ -522,6 +535,12 @@
       align-items: start;
     }
 
+    .wallet-browser {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
     .wallet-tools {
       display: flex;
       flex-wrap: wrap;
@@ -670,6 +689,18 @@
       margin-top: 10px;
     }
 
+    .transfer-tools {
+      display: grid;
+      gap: 10px;
+      border-top: 1px solid var(--line);
+      margin-top: 12px;
+      padding-top: 12px;
+    }
+
+    .transfer-tools .btn {
+      min-width: 68px;
+    }
+
     .small-link {
       color: var(--blue);
       text-decoration: none;
@@ -707,6 +738,7 @@
       }
 
       .field-row,
+      .field-inline,
       .prepare-grid,
       .steps {
         grid-template-columns: 1fr;
@@ -844,8 +876,8 @@
       <section class="panel" aria-labelledby="walletTitle">
         <div class="panel-head">
           <div>
-            <h2 class="panel-title" id="walletTitle">Your Inscriptions</h2>
-            <p class="panel-subtitle" id="walletSubtitle">Connect a wallet to load the grid.</p>
+            <h2 class="panel-title" id="walletTitle">Wallet Inscriptions</h2>
+            <p class="panel-subtitle" id="walletSubtitle">Connect a wallet or enter an address.</p>
           </div>
           <div class="wallet-tools">
             <span class="badge blue" id="walletCountBadge">0 tokens</span>
@@ -857,6 +889,16 @@
         <div class="panel-body">
           <div class="wallet-layout">
             <div>
+              <form class="wallet-browser" id="walletLookupForm">
+                <label class="field">
+                  <span class="label">View wallet</span>
+                  <div class="field-inline">
+                    <input class="input" id="walletLookupInput" autocomplete="off" placeholder="SP... or alice.btc" />
+                    <button class="btn ghost" id="walletLookupButton" type="submit">View</button>
+                  </div>
+                  <span class="field-note" id="walletLookupStatus">Using connected wallet when available.</span>
+                </label>
+              </form>
               <div class="status" id="walletGridStatus">
                 <span><strong>Grid</strong> waiting for wallet</span>
                 <span class="badge amber">empty</span>
@@ -874,6 +916,16 @@
               </div>
               <div class="preview-actions">
                 <a class="small-link" id="explorerLink" href="#" target="_blank" rel="noreferrer" hidden>Explorer</a>
+              </div>
+              <div class="transfer-tools">
+                <label class="field">
+                  <span class="label">Send selected inscription</span>
+                  <div class="field-inline">
+                    <input class="input" id="transferRecipientInput" autocomplete="off" placeholder="ST..." />
+                    <button class="btn" id="transferButton" type="button" disabled>Send</button>
+                  </div>
+                </label>
+                <span class="field-note" id="transferStatus">Select one of your inscriptions to send.</span>
               </div>
             </aside>
           </div>
@@ -899,7 +951,10 @@
       getLegacyContract
     } from '/src/lib/contract/registry.ts';
     import { getContractId } from '/src/lib/contract/config.ts';
-    import { createXtrataClient } from '/src/lib/contract/client.ts';
+    import {
+      buildTransferCall,
+      createXtrataClient
+    } from '/src/lib/contract/client.ts';
     import { fetchContractAdminStatus } from '/src/lib/contract/admin-status.ts';
     import {
       estimateContractFees,
@@ -907,9 +962,10 @@
       getFeeSchedule
     } from '/src/lib/contract/fees.ts';
     import { resolveContractCapabilities } from '/src/lib/contract/capabilities.ts';
-    import { DEFAULT_NFT_ASSET_NAME } from '/src/lib/contract/post-conditions.ts';
+    import { buildTransferPostCondition } from '/src/lib/contract/post-conditions.ts';
     import { getNetworkMismatch } from '/src/lib/network/guard.ts';
     import { getApiBaseUrls } from '/src/lib/network/config.ts';
+    import { toStacksNetwork } from '/src/lib/network/stacks.ts';
     import {
       batchChunks,
       chunkBytes,
@@ -925,7 +981,15 @@
     } from '/src/lib/mint/constants.ts';
     import { bytesToHex } from '/src/lib/utils/encoding.ts';
     import { formatBytes, truncateMiddle } from '/src/lib/utils/format.ts';
-    import { loadWalletHoldingsIndex } from '/src/lib/viewer/wallet-index.ts';
+    import {
+      loadWalletHoldingsIndex,
+      loadWalletHoldingsPage
+    } from '/src/lib/viewer/wallet-index.ts';
+    import {
+      getTransferValidationMessage,
+      validateTransferRequest
+    } from '/src/lib/wallet/transfer.ts';
+    import { getWalletLookupState } from '/src/lib/wallet/lookup.ts';
     import {
       loadInscriptionThumbnailFromCache,
       saveInscriptionThumbnailToCache
@@ -1034,12 +1098,19 @@
       walletPrevButton: $('walletPrevButton'),
       walletNextButton: $('walletNextButton'),
       walletPageReadout: $('walletPageReadout'),
+      walletLookupForm: $('walletLookupForm'),
+      walletLookupInput: $('walletLookupInput'),
+      walletLookupButton: $('walletLookupButton'),
+      walletLookupStatus: $('walletLookupStatus'),
       walletGridStatus: $('walletGridStatus'),
       tokenGrid: $('tokenGrid'),
       tokenPreviewPanel: $('tokenPreviewPanel'),
       tokenPreviewMedia: $('tokenPreviewMedia'),
       tokenPreviewMeta: $('tokenPreviewMeta'),
-      explorerLink: $('explorerLink')
+      explorerLink: $('explorerLink'),
+      transferRecipientInput: $('transferRecipientInput'),
+      transferButton: $('transferButton'),
+      transferStatus: $('transferStatus')
     };
 
     const state = {
@@ -1048,6 +1119,12 @@
       legacyContract: null,
       legacyClient: null,
       walletSession: walletAdapter.getSession(),
+      walletViewAddress: null,
+      walletViewName: null,
+      walletLookupPending: false,
+      walletLookupNotice: null,
+      walletLookupAbortController: null,
+      transferPending: false,
       adminStatus: null,
       selectedFile: null,
       prepared: null,
@@ -1416,9 +1493,81 @@
     const getMismatch = () =>
       getNetworkMismatch(state.contract.network, state.walletSession.network);
 
+    const getViewingWalletAddress = () =>
+      state.walletViewAddress ?? state.walletSession.address ?? null;
+
+    const getViewingWalletLabel = () => {
+      if (state.walletViewName) {
+        return state.walletViewName;
+      }
+      const viewingAddress = getViewingWalletAddress();
+      return viewingAddress ? truncateMiddle(viewingAddress, 8, 8) : null;
+    };
+
+    const getReadOnlySenderAddress = () =>
+      state.walletSession.address ?? getViewingWalletAddress() ?? state.contract.address;
+
+    const getSelectedToken = () => {
+      if (state.selectedTokenId === null) {
+        return null;
+      }
+      return (
+        state.walletTokenCache.get(state.selectedTokenId.toString()) ??
+        state.walletTokens.find((token) => token.id === state.selectedTokenId) ??
+        null
+      );
+    };
+
+    const updateWalletLookupStatus = () => {
+      if (state.walletLookupNotice) {
+        dom.walletLookupStatus.textContent = state.walletLookupNotice;
+        return;
+      }
+      const viewingAddress = getViewingWalletAddress();
+      if (state.walletViewAddress) {
+        dom.walletLookupStatus.textContent = `Viewing ${getViewingWalletLabel()}.`;
+        return;
+      }
+      dom.walletLookupStatus.textContent = viewingAddress
+        ? 'Using connected wallet.'
+        : 'Using connected wallet when available.';
+    };
+
+    const updateTransferControls = () => {
+      const selectedToken = getSelectedToken();
+      const walletAddress = state.walletSession.address ?? null;
+      const walletOwnsToken =
+        !!selectedToken && !!walletAddress && addressesEqual(selectedToken.owner, walletAddress);
+      const transferValidation = validateTransferRequest({
+        senderAddress: walletOwnsToken ? walletAddress : null,
+        recipientAddress: dom.transferRecipientInput.value,
+        tokenId: selectedToken?.id ?? null,
+        networkMismatch: !!getMismatch()
+      });
+      let message = getTransferValidationMessage(transferValidation);
+      if (!selectedToken) {
+        message = 'Select an inscription to send.';
+      } else if (!walletAddress) {
+        message = 'Connect the owner wallet to send this inscription.';
+      } else if (!walletOwnsToken) {
+        message = 'Only the connected owner can send this inscription.';
+      }
+      dom.transferButton.disabled =
+        state.busy ||
+        state.transferPending ||
+        !walletOwnsToken ||
+        !transferValidation.ok;
+      dom.transferRecipientInput.disabled = state.transferPending;
+      if (!state.transferPending) {
+        dom.transferStatus.textContent =
+          message ?? 'Ready to send the selected inscription.';
+      }
+    };
+
     const updateControls = () => {
       const connected = state.walletSession.isConnected && !!state.walletSession.address;
       const mismatch = getMismatch();
+      const viewingAddress = getViewingWalletAddress();
       const duplicateBlocked = state.duplicateId !== null && !dom.allowDuplicateInput.checked;
       dom.connectButton.hidden = connected;
       dom.disconnectButton.hidden = !connected;
@@ -1431,7 +1580,10 @@
       dom.inscribeButton.textContent = state.uploadState
         ? 'Continue inscription'
         : 'Start inscription';
-      dom.refreshWalletButton.disabled = state.busy || !connected;
+      dom.refreshWalletButton.disabled = state.busy || !viewingAddress;
+      dom.walletLookupButton.disabled = state.busy || state.walletLookupPending;
+      updateWalletLookupStatus();
+      updateTransferControls();
       updateWalletPagerControls();
     };
 
@@ -1516,6 +1668,8 @@
     const updateWalletStatus = () => {
       const connected = state.walletSession.isConnected && !!state.walletSession.address;
       const mismatch = getMismatch();
+      const viewingAddress = getViewingWalletAddress();
+      const viewingLabel = getViewingWalletLabel();
       if (!connected) {
         setStatus(
           dom.walletStatus,
@@ -1523,7 +1677,9 @@
           'idle',
           'amber'
         );
-        dom.walletSubtitle.textContent = 'Connect a wallet to load the grid.';
+        dom.walletSubtitle.textContent = viewingAddress
+          ? `Viewing ${viewingLabel}.`
+          : 'Connect a wallet or enter an address.';
         return;
       }
       if (mismatch) {
@@ -1533,7 +1689,9 @@
           'network',
           'rose'
         );
-        dom.walletSubtitle.textContent = `Wallet is on ${mismatch.actual}; contract is ${mismatch.expected}.`;
+        dom.walletSubtitle.textContent = state.walletViewAddress
+          ? `Viewing ${viewingLabel}.`
+          : `Wallet is on ${mismatch.actual}; contract is ${mismatch.expected}.`;
         return;
       }
       setStatus(
@@ -1542,7 +1700,9 @@
         'ready',
         'blue'
       );
-      dom.walletSubtitle.textContent = truncateMiddle(state.walletSession.address, 8, 8);
+      dom.walletSubtitle.textContent = state.walletViewAddress
+        ? `Viewing ${viewingLabel}.`
+        : truncateMiddle(state.walletSession.address, 8, 8);
     };
 
     const renderPreparedState = () => {
@@ -1670,7 +1830,7 @@
       dom.allowDuplicateInput.checked = false;
       appendLog(`Prepared ${file.name} (${formatBytes(BigInt(bytes.length))}).`);
 
-      const sender = state.walletSession.address ?? state.contract.address;
+      const sender = getReadOnlySenderAddress();
       try {
         const duplicate = await state.client.getIdByHash(expectedHash, sender);
         state.duplicateId = duplicate;
@@ -1683,7 +1843,7 @@
     };
 
     const fetchAdminStatus = async () => {
-      const sender = state.walletSession.address ?? state.contract.address;
+      const sender = getReadOnlySenderAddress();
       try {
         state.adminStatus = await fetchContractAdminStatus({
           client: state.client,
@@ -1881,6 +2041,7 @@
         card.append(thumb, meta);
         dom.tokenGrid.append(card);
       }
+      updateTransferControls();
     };
 
     const getTokenClient = (token) => {
@@ -2123,7 +2284,7 @@
           fallbackClient: contentClient === state.client ? state.legacyClient : null,
           cacheContractId,
           id: token.id,
-          senderAddress: state.walletSession.address ?? state.contract.address,
+          senderAddress: getReadOnlySenderAddress(),
           totalSize: token.meta?.totalSize ?? 0n,
           mimeType: token.meta?.mimeType ?? null
         });
@@ -2353,6 +2514,7 @@
           });
         }
       }
+      updateTransferControls();
     };
 
     const selectToken = async (id) => {
@@ -2362,12 +2524,14 @@
         state.walletTokens.find((entry) => entry.id === id) ??
         null;
       renderTokenGrid();
+      updateTransferControls();
       revokeTokenPreview();
       dom.explorerLink.hidden = true;
 
       if (!token) {
         clearElement(dom.tokenPreviewMedia, 'No selection');
         renderMeta(dom.tokenPreviewMeta, [['Token', 'None']]);
+        updateTransferControls();
         return;
       }
 
@@ -2405,7 +2569,7 @@
           fallbackClient: contentClient === state.client ? state.legacyClient : null,
           cacheContractId: token.sourceContractId ?? getContractId(contentClient.contract),
           id: token.id,
-          senderAddress: state.walletSession.address ?? state.contract.address,
+          senderAddress: getReadOnlySenderAddress(),
           totalSize: token.meta.totalSize,
           mimeType: token.meta.mimeType ?? null
         });
@@ -2419,6 +2583,183 @@
         const message = error instanceof Error ? error.message : String(error);
         clearElement(dom.tokenPreviewMedia, 'Preview unavailable');
         appendLog(`Preview failed for ${formatTokenId(token.id)}: ${message}`);
+      }
+    };
+
+    const cancelWalletLookup = () => {
+      state.walletLookupAbortController?.abort();
+      state.walletLookupAbortController = null;
+      state.walletLookupPending = false;
+    };
+
+    const viewWalletFromInput = async () => {
+      const baseLookupState = getWalletLookupState(
+        dom.walletLookupInput.value,
+        state.walletSession.address ?? null
+      );
+      cancelWalletLookup();
+      state.walletLookupNotice = null;
+
+      if (!baseLookupState.entered) {
+        state.walletViewAddress = null;
+        state.walletViewName = null;
+        updateWalletStatus();
+        await loadWalletInscriptions();
+        updateControls();
+        return;
+      }
+      if (!baseLookupState.valid) {
+        state.walletLookupNotice = 'Enter a valid Stacks address or BNS name.';
+        updateControls();
+        return;
+      }
+
+      if (baseLookupState.lookupAddress) {
+        state.walletViewAddress =
+          state.walletSession.address &&
+          addressesEqual(baseLookupState.lookupAddress, state.walletSession.address)
+            ? null
+            : baseLookupState.lookupAddress;
+        state.walletViewName = null;
+        appendLog(`Viewing wallet: ${truncateMiddle(baseLookupState.lookupAddress, 8, 8)}.`);
+        updateWalletStatus();
+        await loadWalletInscriptions();
+        updateControls();
+        return;
+      }
+
+      const lookupName = baseLookupState.lookupName;
+      if (!lookupName) {
+        updateControls();
+        return;
+      }
+
+      const abortController = new AbortController();
+      state.walletLookupAbortController = abortController;
+      state.walletLookupPending = true;
+      state.walletLookupNotice = `Resolving ${lookupName}...`;
+      updateControls();
+
+      try {
+        const { resolveBnsAddress } = await import('/src/lib/bns/resolver.ts');
+        const resolved = await resolveBnsAddress({
+          name: lookupName,
+          network: state.contract.network,
+          signal: abortController.signal
+        });
+        if (state.walletLookupAbortController !== abortController) {
+          return;
+        }
+        const resolvedLookupState = getWalletLookupState(
+          dom.walletLookupInput.value,
+          state.walletSession.address ?? null,
+          {
+            resolvedNameAddress: resolved.address,
+            bnsStatus: resolved.address ? 'resolved' : 'missing'
+          }
+        );
+        if (!resolvedLookupState.resolvedAddress) {
+          state.walletLookupNotice = `No address found for ${lookupName}.`;
+          return;
+        }
+        state.walletViewAddress = resolvedLookupState.resolvedAddress;
+        state.walletViewName = lookupName;
+        state.walletLookupNotice = null;
+        appendLog(
+          `Resolved ${lookupName} to ${truncateMiddle(resolvedLookupState.resolvedAddress, 8, 8)}.`
+        );
+        updateWalletStatus();
+        await loadWalletInscriptions();
+      } catch (error) {
+        if (abortController.signal.aborted) {
+          return;
+        }
+        state.walletLookupNotice =
+          'BNS lookup is temporarily unavailable. Try again or paste a wallet address directly.';
+        appendLog(
+          `BNS lookup failed for ${lookupName}: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+      } finally {
+        if (state.walletLookupAbortController === abortController) {
+          state.walletLookupAbortController = null;
+          state.walletLookupPending = false;
+          updateControls();
+        }
+      }
+    };
+
+    const transferSelectedToken = () => {
+      const selectedToken = getSelectedToken();
+      const senderAddress = state.walletSession.address ?? null;
+      const walletOwnsToken =
+        !!selectedToken && !!senderAddress && addressesEqual(selectedToken.owner, senderAddress);
+      const validation = validateTransferRequest({
+        senderAddress: walletOwnsToken ? senderAddress : null,
+        recipientAddress: dom.transferRecipientInput.value,
+        tokenId: selectedToken?.id ?? null,
+        networkMismatch: !!getMismatch()
+      });
+      if (!walletOwnsToken || !selectedToken || !validation.ok || !senderAddress) {
+        dom.transferStatus.textContent =
+          selectedToken && senderAddress && !walletOwnsToken
+            ? 'Only the connected owner can send this inscription.'
+            : getTransferValidationMessage(validation) ?? 'Transfer is not ready yet.';
+        updateTransferControls();
+        return;
+      }
+
+      const recipient = validation.recipient ?? dom.transferRecipientInput.value.trim();
+      const network = state.walletSession.network ?? state.contract.network;
+      const callOptions = buildTransferCall({
+        contract: state.contract,
+        network: toStacksNetwork(network),
+        id: selectedToken.id,
+        sender: senderAddress,
+        recipient,
+        overrides: {
+          postConditionMode: PostConditionMode.Deny,
+          postConditions: [
+            buildTransferPostCondition({
+              contract: state.contract,
+              senderAddress,
+              tokenId: selectedToken.id
+            })
+          ]
+        }
+      });
+
+      state.transferPending = true;
+      dom.transferStatus.textContent = 'Waiting for wallet confirmation...';
+      updateControls();
+      appendLog(`Transferring ${formatTokenId(selectedToken.id)} to ${recipient}.`);
+
+      try {
+        showContractCall({
+          ...callOptions,
+          stxAddress: senderAddress,
+          onFinish: (payload) => {
+            state.transferPending = false;
+            dom.transferStatus.textContent = `Transfer submitted: ${payload.txId}`;
+            appendLog(`Transfer submitted: ${payload.txId}`);
+            updateControls();
+            void loadWalletInscriptions();
+          },
+          onCancel: () => {
+            state.transferPending = false;
+            dom.transferStatus.textContent = 'Transfer cancelled or failed in wallet.';
+            appendLog('Transfer cancelled or failed in wallet.');
+            updateControls();
+          }
+        });
+        appendLog('Transfer wallet prompt opened.');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        state.transferPending = false;
+        dom.transferStatus.textContent = `Transfer failed: ${message}`;
+        appendLog(`Transfer failed: ${message}`);
+        updateControls();
       }
     };
 
@@ -2439,130 +2780,33 @@
       return results;
     };
 
-    const isHiroCompatibleBase = (baseUrl) =>
-      baseUrl.includes('hiro.so') || baseUrl.includes('/hiro/');
-
-    const getResponseDebugHeaders = (response) => ({
-      hiroKeyPresent: response.headers.get('x-xtrata-hiro-key-present'),
-      hiroKeyCount: response.headers.get('x-xtrata-hiro-key-count'),
-      proxyCache: response.headers.get('x-xtrata-proxy-cache'),
-      rateLimitLimit: response.headers.get('x-ratelimit-limit'),
-      rateLimitRemaining: response.headers.get('x-ratelimit-remaining'),
-      rateLimitReset: response.headers.get('x-ratelimit-reset'),
-      cfCacheStatus: response.headers.get('cf-cache-status')
-    });
-
-    const parseUintFromHoldingValue = (value) => {
-      if (value === null || value === undefined) {
-        return null;
-      }
-      const text = typeof value === 'object'
-        ? String(value.repr ?? value.hex ?? '').trim()
-        : String(value).trim();
-      if (!text) {
-        return null;
-      }
-      const normalized = text.startsWith('u') ? text.slice(1) : text;
-      return /^\d+$/.test(normalized) ? BigInt(normalized) : null;
-    };
-
-    const parseHoldingTokenId = (item) => {
-      const direct = parseUintFromHoldingValue(item.token_id);
-      if (direct !== null) {
-        return direct;
-      }
-      return parseUintFromHoldingValue(item.value);
-    };
-
-    const fetchHiroWalletHoldingsPage = async (params) => {
-      const baseUrls = getApiBaseUrls(params.network).filter(isHiroCompatibleBase);
-      if (baseUrls.length === 0) {
-        throw new Error('No Hiro-compatible API base is configured.');
-      }
-      const assetIdentifiers = params.contractIds
-        .map((contractId) => `${contractId}::${DEFAULT_NFT_ASSET_NAME}`)
-        .join(',');
-      let lastError = null;
-      for (const baseUrl of baseUrls) {
-        try {
-          const url =
-            `${baseUrl}/extended/v1/tokens/nft/holdings` +
-            `?principal=${encodeURIComponent(params.walletAddress)}` +
-            `&asset_identifiers=${encodeURIComponent(assetIdentifiers)}` +
-            `&limit=${WALLET_PAGE_SIZE}` +
-            `&offset=${params.pageIndex * WALLET_PAGE_SIZE}` +
-            `&unanchored=true`;
-          debugLog('hiro', 'wallet holdings request', {
-            base: summarizeApiBase(baseUrl),
-            pageIndex: params.pageIndex,
-            limit: WALLET_PAGE_SIZE,
-            offset: params.pageIndex * WALLET_PAGE_SIZE,
-            contractCount: params.contractIds.length,
-            wallet: truncateMiddle(params.walletAddress)
-          });
-          const response = await fetch(url);
-          const responseHeaders = getResponseDebugHeaders(response);
-          if (!response.ok) {
-            const body = await response.text().catch(() => '');
-            debugLog(
-              'hiro',
-              'wallet holdings response failed',
-              {
-                base: summarizeApiBase(baseUrl),
-                status: response.status,
-                statusText: response.statusText,
-                headers: responseHeaders,
-                bodyPreview: body.slice(0, 220)
-              },
-              'warn'
-            );
-            throw new Error(`Wallet holdings fetch failed (${response.status})`);
-          }
-          const json = await response.json();
-          const items = Array.isArray(json.results) ? json.results : [];
-          const ids = [];
-          for (const item of items) {
-            const tokenId = parseHoldingTokenId(item);
-            if (tokenId !== null) {
-              ids.push(tokenId);
-            }
-          }
-          const total =
-            typeof json.total === 'number' && Number.isFinite(json.total)
-              ? Math.max(0, Math.trunc(json.total))
-              : ids.length;
-          debugLog('hiro', 'wallet holdings response ok', {
-            base: summarizeApiBase(baseUrl),
-            status: response.status,
-            headers: responseHeaders,
-            pageIndex: params.pageIndex,
-            returned: ids.length,
-            total
-          });
-          return {
-            ids,
-            total,
-            sourceBase: baseUrl
-          };
-        } catch (error) {
-          lastError = error;
-          debugLog(
-            'hiro',
-            'wallet holdings request threw',
-            {
-              base: summarizeApiBase(baseUrl),
-              pageIndex: params.pageIndex,
-              error: error instanceof Error ? error.message : String(error)
-            },
-            'warn'
-          );
-        }
-      }
-      throw lastError ?? new Error('Wallet holdings page fetch failed.');
+    const fetchWalletHoldingsPage = async (params) => {
+      debugLog('hiro', 'wallet holdings request', {
+        pageIndex: params.pageIndex,
+        limit: WALLET_PAGE_SIZE,
+        offset: params.pageIndex * WALLET_PAGE_SIZE,
+        contractCount: params.contractIds.length,
+        wallet: truncateMiddle(params.walletAddress)
+      });
+      const page = await loadWalletHoldingsPage({
+        ...params,
+        pageSize: WALLET_PAGE_SIZE
+      });
+      debugLog('hiro', 'wallet holdings response ok', {
+        base: summarizeApiBase(page.sourceBase),
+        pageIndex: params.pageIndex,
+        returned: page.tokenIds.length,
+        total: page.total
+      });
+      return {
+        ids: page.tokenIds,
+        total: page.total,
+        sourceBase: page.sourceBase
+      };
     };
 
     const fetchWalletTokenSummaries = async (ids) => {
-      const sender = state.walletSession.address ?? state.contract.address;
+      const sender = getReadOnlySenderAddress();
       let legacyMaxId = null;
       if (state.legacyClient) {
         try {
@@ -2610,6 +2854,10 @@
     };
 
     const loadWalletPage = async (options = {}) => {
+      const viewingAddress = getViewingWalletAddress();
+      if (!viewingAddress) {
+        return;
+      }
       clampWalletPageIndex();
       resetBackgroundThumbnailHydration();
       state.walletLoadingPage = true;
@@ -2620,9 +2868,9 @@
           const contractIds = state.legacyContract
             ? [contractId, getContractId(state.legacyContract)]
             : [contractId];
-          const page = await fetchHiroWalletHoldingsPage({
+          const page = await fetchWalletHoldingsPage({
             network: state.contract.network,
-            walletAddress: state.walletSession.address,
+            walletAddress: viewingAddress,
             contractIds,
             pageIndex: state.walletPageIndex
           });
@@ -2675,8 +2923,8 @@
     };
 
     const loadWalletInscriptions = async () => {
-      const connected = state.walletSession.isConnected && !!state.walletSession.address;
-      if (!connected) {
+      const viewingAddress = getViewingWalletAddress();
+      if (!viewingAddress) {
         state.walletTokenIds = [];
         state.walletPageIds = [];
         state.walletTotalCount = 0;
@@ -2688,27 +2936,15 @@
         resetBackgroundThumbnailHydration();
         revokeGridThumbUrls();
         dom.walletCountBadge.textContent = '0 tokens';
-        setStatus(dom.walletGridStatus, '<strong>Grid</strong> waiting for wallet', 'empty', 'amber');
+        setStatus(
+          dom.walletGridStatus,
+          '<strong>Grid</strong> enter a wallet address or connect',
+          'empty',
+          'amber'
+        );
         renderTokenGridPlaceholders();
         updateWalletPagerControls();
-        return;
-      }
-
-      const mismatch = getMismatch();
-      if (mismatch) {
-        state.walletTokenIds = [];
-        state.walletPageIds = [];
-        state.walletTotalCount = 0;
-        state.walletUsesPagedHoldings = false;
-        state.walletTokenCache = new Map();
-        state.walletTokens = [];
-        state.walletPageIndex = 0;
-        state.selectedTokenId = null;
-        resetBackgroundThumbnailHydration();
-        revokeGridThumbUrls();
-        setStatus(dom.walletGridStatus, `<strong>Grid</strong> blocked by ${mismatch.actual} wallet`, 'network', 'rose');
-        renderTokenGridPlaceholders();
-        updateWalletPagerControls();
+        updateTransferControls();
         return;
       }
 
@@ -2732,9 +2968,9 @@
           ? [contractId, getContractId(state.legacyContract)]
           : [contractId];
         try {
-          const firstPage = await fetchHiroWalletHoldingsPage({
+          const firstPage = await fetchWalletHoldingsPage({
             network: state.contract.network,
-            walletAddress: state.walletSession.address,
+            walletAddress: viewingAddress,
             contractIds,
             pageIndex: 0
           });
@@ -2772,14 +3008,14 @@
 
         const holdings = await loadWalletHoldingsIndex({
           network: state.contract.network,
-          walletAddress: state.walletSession.address,
+          walletAddress: viewingAddress,
           contractIds,
           maxIds: Number.MAX_SAFE_INTEGER
         });
 
         let ids = holdings?.tokenIds ?? [];
         if (ids.length === 0) {
-          const last = await state.client.getLastTokenId(state.walletSession.address);
+          const last = await state.client.getLastTokenId(getReadOnlySenderAddress());
           const scanLimit = BigInt(WALLET_FALLBACK_SCAN_LIMIT);
           const start = last > scanLimit ? last - scanLimit : 0n;
           const scanIds = [];
@@ -2791,7 +3027,7 @@
           }
           const summaries = await fetchWalletTokenSummaries(scanIds);
           const ownedSummaries = summaries.filter((token) =>
-            addressesEqual(token.owner, state.walletSession.address)
+            addressesEqual(token.owner, viewingAddress)
           );
           for (const token of ownedSummaries) {
             state.walletTokenCache.set(token.id.toString(), token);
@@ -2938,6 +3174,7 @@
 
     const initialize = async () => {
       dom.tokenUriInput.value = DEFAULT_TOKEN_URI;
+      dom.walletLookupInput.value = '';
       initializeContractSelect();
       applyContract(state.contract);
       resetSteps();
@@ -2951,6 +3188,18 @@
     dom.connectButton.addEventListener('click', connectWallet);
     dom.disconnectButton.addEventListener('click', disconnectWallet);
     dom.refreshWalletButton.addEventListener('click', loadWalletInscriptions);
+    dom.walletLookupForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      await viewWalletFromInput();
+    });
+    dom.walletLookupInput.addEventListener('input', () => {
+      if (state.walletLookupPending) {
+        cancelWalletLookup();
+      }
+      state.walletLookupNotice = null;
+      updateWalletLookupStatus();
+      updateControls();
+    });
     dom.walletPrevButton.addEventListener('click', async () => {
       if (state.walletPageIndex <= 0 || state.walletLoadingPage) {
         return;
@@ -2980,6 +3229,8 @@
     });
     dom.inscribeButton.addEventListener('click', runInscription);
     dom.allowDuplicateInput.addEventListener('change', updateControls);
+    dom.transferRecipientInput.addEventListener('input', updateTransferControls);
+    dom.transferButton.addEventListener('click', transferSelectedToken);
 
     dom.contractSelect.addEventListener('change', async () => {
       const contract = ACTIVE_CONTRACTS.find((entry) => getContractId(entry) === dom.contractSelect.value);

@@ -1075,6 +1075,70 @@ const resolveNameAddressFromApi = async (params: {
   return null;
 };
 
+const resolveNameAddressFromBnsV2 = async (params: {
+  name: string;
+  network: NetworkType;
+  signal?: AbortSignal;
+}): Promise<BnsAddressResult | null> => {
+  let lastError: unknown = null;
+
+  const bases = getBnsV2ApiBaseUrls(params.network);
+  for (const baseUrl of bases) {
+    try {
+      const response = await callBnsWithRetry({
+        task: () =>
+          fetchBnsApiJson(
+            baseUrl,
+            `/names/${encodeURIComponent(params.name)}`,
+            params.signal
+          ),
+        context: `${BNS_V2_PROVIDER_ID}:name:${params.name}`,
+        signal: params.signal
+      });
+
+      if (response.status === 'not-found') {
+        continue;
+      }
+
+      const record = toRecord(response.json);
+      const data = toRecord(record?.data);
+      const isValid =
+        data && typeof data.is_valid === 'boolean' ? data.is_valid : true;
+      const revoked =
+        data && typeof data.revoked === 'boolean' ? data.revoked : false;
+      const status =
+        record && typeof record.status === 'string'
+          ? record.status.trim().toLowerCase()
+          : '';
+      if (!isValid || revoked || (status && status !== 'active')) {
+        continue;
+      }
+
+      const resolvedAddress = extractAddressFromApiResponse(response.json);
+      if (!resolvedAddress) {
+        continue;
+      }
+
+      return {
+        name: params.name,
+        address: resolvedAddress,
+        source: BNS_V2_PROVIDER_ID
+      };
+    } catch (error) {
+      lastError = error;
+      if (error instanceof BnsBackoffError) {
+        break;
+      }
+    }
+  }
+
+  if (lastError) {
+    throw lastError;
+  }
+
+  return null;
+};
+
 const resolveNameAddressFromExplorer = async (params: {
   name: string;
   network: NetworkType;
@@ -1265,16 +1329,29 @@ export const resolveBnsAddress = async (params: {
 
   return resolveWithInFlight(cacheKey, async () => {
     let result: BnsAddressResult | null = null;
+    let bnsV2Error: unknown = null;
     let apiError: unknown = null;
 
     try {
-      result = await resolveNameAddressFromApi({
+      result = await resolveNameAddressFromBnsV2({
         name: normalizedName,
         network: params.network,
         signal: params.signal
       });
     } catch (error) {
-      apiError = error;
+      bnsV2Error = error;
+    }
+
+    if (!result) {
+      try {
+        result = await resolveNameAddressFromApi({
+          name: normalizedName,
+          network: params.network,
+          signal: params.signal
+        });
+      } catch (error) {
+        apiError = error;
+      }
     }
 
     if (!result) {
@@ -1285,6 +1362,9 @@ export const resolveBnsAddress = async (params: {
           signal: params.signal
         });
       } catch (error) {
+        if (bnsV2Error) {
+          throw bnsV2Error;
+        }
         if (apiError) {
           throw apiError;
         }
@@ -1293,9 +1373,10 @@ export const resolveBnsAddress = async (params: {
     }
 
     if (!result) {
-      throw (apiError instanceof Error
-        ? apiError
-        : new Error(getErrorMessage(apiError)));
+      const resolvedError = bnsV2Error ?? apiError;
+      throw (resolvedError instanceof Error
+        ? resolvedError
+        : new Error(getErrorMessage(resolvedError)));
     }
 
     writeCache(cacheKey, result);
