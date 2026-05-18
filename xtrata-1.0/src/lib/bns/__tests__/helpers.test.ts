@@ -27,7 +27,7 @@ describe('bns helpers', () => {
         kind: 'address',
         value: ' SP123 '
       })
-    ).toBe('xtrata.bns.v2.mainnet.address.sp123');
+    ).toBe('xtrata.bns.v4.mainnet.address.sp123');
   });
 
   it('picks primary name with btc preference', () => {

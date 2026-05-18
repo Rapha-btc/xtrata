@@ -163,6 +163,108 @@ export type WalletHoldingsIndex = {
   sourceBase: string;
 };
 
+export type WalletHoldingsPage = {
+  tokenIds: bigint[];
+  total: number;
+  sourceBase: string;
+};
+
+const normalizeContractIds = (contractIds: string[]) =>
+  Array.from(
+    new Set(
+      contractIds
+        .map((entry) => entry.trim())
+        .filter((entry) => entry.length > 0)
+    )
+  ).sort();
+
+export const loadWalletHoldingsPage = async (params: {
+  network: NetworkType;
+  walletAddress: string;
+  contractIds: string[];
+  pageIndex: number;
+  pageSize: number;
+  assetName?: string;
+  apiBaseUrls?: string[];
+  fetchImpl?: typeof fetch;
+}): Promise<WalletHoldingsPage> => {
+  const fetchImpl = params.fetchImpl ?? fetch;
+  const normalizedContracts = normalizeContractIds(params.contractIds);
+  if (normalizedContracts.length === 0) {
+    throw new Error('At least one contract id is required.');
+  }
+  const pageIndex = Math.max(0, Math.trunc(params.pageIndex));
+  const pageSize = Math.max(1, Math.trunc(params.pageSize));
+  const assetName = params.assetName ?? DEFAULT_NFT_ASSET_NAME;
+  const baseUrls = (
+    params.apiBaseUrls ?? getApiBaseUrls(params.network)
+  ).filter(isHiroCompatibleBase);
+  if (baseUrls.length === 0) {
+    throw new Error('No Hiro-compatible API base is configured.');
+  }
+  const assetIdentifiers = normalizedContracts
+    .map((contractId) => `${contractId}::${assetName}`)
+    .join(',');
+  const allowedContracts = new Set(normalizedContracts);
+  let lastError: unknown = null;
+
+  for (let index = 0; index < baseUrls.length; index += 1) {
+    const baseUrl = baseUrls[index];
+    try {
+      const url =
+        `${baseUrl}/extended/v1/tokens/nft/holdings` +
+        `?principal=${encodeURIComponent(params.walletAddress)}` +
+        `&asset_identifiers=${encodeURIComponent(assetIdentifiers)}` +
+        `&limit=${pageSize}` +
+        `&offset=${pageIndex * pageSize}` +
+        `&unanchored=true`;
+      const response = await fetchImpl(url);
+      if (!response.ok) {
+        throw new Error(`Wallet holdings fetch failed (${response.status})`);
+      }
+      const json = (await response.json()) as HiroHoldingsResponse;
+      const results = Array.isArray(json.results) ? json.results : [];
+      const tokenIds: bigint[] = [];
+      const seenIds = new Set<string>();
+      for (const item of results) {
+        const contractId = parseContractIdFromAssetIdentifier(
+          item.asset_identifier
+        );
+        if (contractId && !allowedContracts.has(contractId)) {
+          continue;
+        }
+        const tokenId = parseTokenIdFromHolding(item);
+        if (tokenId === null) {
+          continue;
+        }
+        const tokenIdKey = tokenId.toString();
+        if (seenIds.has(tokenIdKey)) {
+          continue;
+        }
+        seenIds.add(tokenIdKey);
+        tokenIds.push(tokenId);
+      }
+      return {
+        tokenIds,
+        total:
+          typeof json.total === 'number' && Number.isFinite(json.total)
+            ? Math.max(0, Math.trunc(json.total))
+            : tokenIds.length,
+        sourceBase: baseUrl
+      };
+    } catch (error) {
+      lastError = error;
+      const hasFallback = index < baseUrls.length - 1;
+      if (hasFallback && shouldTryFallback(error)) {
+        continue;
+      }
+      break;
+    }
+  }
+
+  throw lastError ?? new Error('Wallet holdings page fetch failed.');
+};
+
 export const loadWalletHoldingsIndex = async (params: {
   network: NetworkType;
   walletAddress: string;
@@ -173,13 +275,7 @@ export const loadWalletHoldingsIndex = async (params: {
   fetchImpl?: typeof fetch;
 }): Promise<WalletHoldingsIndex | null> => {
   const fetchImpl = params.fetchImpl ?? fetch;
-  const normalizedContracts = Array.from(
-    new Set(
-      params.contractIds
-        .map((entry) => entry.trim())
-        .filter((entry) => entry.length > 0)
-    )
-  ).sort();
+  const normalizedContracts = normalizeContractIds(params.contractIds);
   if (normalizedContracts.length === 0) {
     return null;
   }

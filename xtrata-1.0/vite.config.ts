@@ -21,6 +21,7 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         input: {
           main: resolve(process.cwd(), 'index.html'),
+          homepage: resolve(process.cwd(), 'homepage.html'),
           lab26: resolve(process.cwd(), 'lab26/index.html')
         },
         output: {

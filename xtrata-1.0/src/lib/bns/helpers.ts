@@ -1,7 +1,7 @@
 import type { NetworkType } from '../network/types';
 
 const BNS_NAME_PATTERN = /^[a-z0-9-]+(\.[a-z0-9-]+)+$/;
-const BNS_CACHE_VERSION = 'v2';
+const BNS_CACHE_VERSION = 'v4';
 
 export type BnsCacheKeyParams = {
   network: NetworkType;
