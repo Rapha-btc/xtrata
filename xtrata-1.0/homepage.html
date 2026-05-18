@@ -896,7 +896,11 @@
     import { bytesToHex } from '/src/lib/utils/encoding.ts';
     import { formatBytes, truncateMiddle } from '/src/lib/utils/format.ts';
     import { loadWalletHoldingsIndex } from '/src/lib/viewer/wallet-index.ts';
-    import { loadInscriptionThumbnailFromCache } from '/src/lib/viewer/cache.ts';
+    import {
+      loadInscriptionThumbnailFromCache,
+      saveInscriptionThumbnailToCache
+    } from '/src/lib/viewer/cache.ts';
+    import { createImageThumbnail } from '/src/lib/viewer/thumbnail.ts';
     import {
       fetchTokenSummary,
       fetchTokenSummaryWithFallback
@@ -1081,6 +1085,43 @@
         dom.txLog.lastElementChild?.remove();
       }
       console.log(`[homepage] ${message}`);
+    };
+
+    const debugLog = (scope, message, details = {}, level = 'info') => {
+      const method = level === 'warn' ? 'warn' : level === 'error' ? 'error' : 'info';
+      console[method](`[homepage:${scope}] ${message}`, details);
+    };
+
+    const getBuildHiroKeyFlag = () => {
+      try {
+        return typeof __XSTRATA_HAS_HIRO_KEY__ !== 'undefined'
+          ? Boolean(__XSTRATA_HAS_HIRO_KEY__)
+          : null;
+      } catch (error) {
+        return null;
+      }
+    };
+
+    const summarizeApiBase = (baseUrl) => ({
+      baseUrl,
+      usesHiroProxy:
+        baseUrl.startsWith('/hiro/') ||
+        (typeof window !== 'undefined' &&
+          baseUrl.startsWith(`${window.location.origin}/hiro/`)),
+      sameOrigin:
+        baseUrl.startsWith('/') ||
+        (typeof window !== 'undefined' &&
+          baseUrl.startsWith(window.location.origin))
+    });
+
+    const logApiConfiguration = () => {
+      const apiBases = getApiBaseUrls(state.contract.network).map(summarizeApiBase);
+      debugLog('api', 'resolved API configuration', {
+        network: state.contract.network,
+        contractId: getContractId(state.contract),
+        buildHasHiroKey: getBuildHiroKeyFlag(),
+        apiBases
+      });
     };
 
     const setStatus = (element, message, badgeLabel = 'idle', badgeTone = 'amber') => {
@@ -1293,7 +1334,7 @@
 
     const getWalletPageIds = () => {
       clampWalletPageIndex();
-      if (state.walletUsesPagedHoldings && !options.pageAlreadyLoaded) {
+      if (state.walletUsesPagedHoldings) {
         return state.walletPageIds;
       }
       const start = state.walletPageIndex * WALLET_PAGE_SIZE;
@@ -1325,6 +1366,7 @@
       state.legacyClient = state.legacyContract
         ? createXtrataClient({ contract: state.legacyContract })
         : null;
+      logApiConfiguration();
       dom.contractReadout.textContent = getContractId(contract);
       dom.networkBadge.textContent = contract.network;
       dom.mintSubtitle.textContent = `${contract.label} · ${contract.protocolVersion}`;
@@ -1731,6 +1773,10 @@
 
     const applyCachedThumbnail = async (token, thumbElement) => {
       if (token.svgDataUri) {
+        debugLog('cache', 'using inline SVG data URI thumbnail', {
+          tokenId: token.id.toString(),
+          contractId: getTokenCacheContractId(token)
+        });
         return;
       }
       const cacheKey = getThumbnailKey(token);
@@ -1743,6 +1789,10 @@
         state.thumbnailCache.set(cacheKey, thumbnail);
       }
       if (!thumbnail?.data || !thumbElement.isConnected) {
+        debugLog('cache', 'thumbnail cache miss', {
+          tokenId: token.id.toString(),
+          contractId: getTokenCacheContractId(token)
+        });
         return;
       }
       const activePageIds = new Set(getWalletPageIds().map((id) => id.toString()));
@@ -1763,6 +1813,56 @@
       img.alt = `Token ${token.id.toString()}`;
       img.src = url;
       thumbElement.append(img);
+      debugLog('cache', 'thumbnail cache hit', {
+        tokenId: token.id.toString(),
+        contractId: getTokenCacheContractId(token),
+        bytes: thumbnail.data.length,
+        mimeType: thumbnail.mimeType ?? 'image/webp'
+      });
+    };
+
+    const warmThumbnailCacheFromBytes = async (token, bytes, mimeType) => {
+      const kind = getMediaKind(mimeType);
+      if (kind !== 'image' && kind !== 'svg') {
+        return;
+      }
+      const contractId = getTokenCacheContractId(token);
+      const cacheKey = getThumbnailKey(token);
+      try {
+        const thumbnail = await createImageThumbnail({
+          bytes,
+          mimeType
+        });
+        if (!thumbnail?.data) {
+          debugLog('cache', 'thumbnail generation skipped', {
+            tokenId: token.id.toString(),
+            contractId,
+            mimeType
+          });
+          return;
+        }
+        await saveInscriptionThumbnailToCache(contractId, token.id, thumbnail);
+        state.thumbnailCache.set(cacheKey, thumbnail);
+        debugLog('cache', 'thumbnail cache warmed from preview bytes', {
+          tokenId: token.id.toString(),
+          contractId,
+          bytes: thumbnail.data.length,
+          mimeType: thumbnail.mimeType
+        });
+        renderTokenGrid();
+      } catch (error) {
+        debugLog(
+          'cache',
+          'thumbnail cache warm failed',
+          {
+            tokenId: token.id.toString(),
+            contractId,
+            mimeType,
+            error: error instanceof Error ? error.message : String(error)
+          },
+          'warn'
+        );
+      }
     };
 
     const renderTokenGrid = () => {
@@ -1873,6 +1973,7 @@
         renderBytesPreview(dom.tokenPreviewMedia, bytes, mimeType, (url) => {
           state.tokenPreviewUrl = url;
         });
+        void warmThumbnailCacheFromBytes(token, bytes, mimeType);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         clearElement(dom.tokenPreviewMedia, 'Preview unavailable');
@@ -1899,6 +2000,16 @@
 
     const isHiroCompatibleBase = (baseUrl) =>
       baseUrl.includes('hiro.so') || baseUrl.includes('/hiro/');
+
+    const getResponseDebugHeaders = (response) => ({
+      hiroKeyPresent: response.headers.get('x-xtrata-hiro-key-present'),
+      hiroKeyCount: response.headers.get('x-xtrata-hiro-key-count'),
+      proxyCache: response.headers.get('x-xtrata-proxy-cache'),
+      rateLimitLimit: response.headers.get('x-ratelimit-limit'),
+      rateLimitRemaining: response.headers.get('x-ratelimit-remaining'),
+      rateLimitReset: response.headers.get('x-ratelimit-reset'),
+      cfCacheStatus: response.headers.get('cf-cache-status')
+    });
 
     const parseUintFromHoldingValue = (value) => {
       if (value === null || value === undefined) {
@@ -1940,8 +2051,30 @@
             `&limit=${WALLET_PAGE_SIZE}` +
             `&offset=${params.pageIndex * WALLET_PAGE_SIZE}` +
             `&unanchored=true`;
+          debugLog('hiro', 'wallet holdings request', {
+            base: summarizeApiBase(baseUrl),
+            pageIndex: params.pageIndex,
+            limit: WALLET_PAGE_SIZE,
+            offset: params.pageIndex * WALLET_PAGE_SIZE,
+            contractCount: params.contractIds.length,
+            wallet: truncateMiddle(params.walletAddress)
+          });
           const response = await fetch(url);
+          const responseHeaders = getResponseDebugHeaders(response);
           if (!response.ok) {
+            const body = await response.text().catch(() => '');
+            debugLog(
+              'hiro',
+              'wallet holdings response failed',
+              {
+                base: summarizeApiBase(baseUrl),
+                status: response.status,
+                statusText: response.statusText,
+                headers: responseHeaders,
+                bodyPreview: body.slice(0, 220)
+              },
+              'warn'
+            );
             throw new Error(`Wallet holdings fetch failed (${response.status})`);
           }
           const json = await response.json();
@@ -1957,6 +2090,14 @@
             typeof json.total === 'number' && Number.isFinite(json.total)
               ? Math.max(0, Math.trunc(json.total))
               : ids.length;
+          debugLog('hiro', 'wallet holdings response ok', {
+            base: summarizeApiBase(baseUrl),
+            status: response.status,
+            headers: responseHeaders,
+            pageIndex: params.pageIndex,
+            returned: ids.length,
+            total
+          });
           return {
             ids,
             total,
@@ -1964,6 +2105,16 @@
           };
         } catch (error) {
           lastError = error;
+          debugLog(
+            'hiro',
+            'wallet holdings request threw',
+            {
+              base: summarizeApiBase(baseUrl),
+              pageIndex: params.pageIndex,
+              error: error instanceof Error ? error.message : String(error)
+            },
+            'warn'
+          );
         }
       }
       throw lastError ?? new Error('Wallet holdings page fetch failed.');
@@ -1998,6 +2149,19 @@
             senderAddress: sender
           });
         } catch (error) {
+          debugLog(
+            'readonly',
+            'token summary fetch failed',
+            {
+              tokenId: id.toString(),
+              contractId: getContractId(state.contract),
+              legacyContractId: state.legacyClient
+                ? getContractId(state.legacyClient.contract)
+                : null,
+              error: error instanceof Error ? error.message : String(error)
+            },
+            'warn'
+          );
           return null;
         }
       });
@@ -2008,7 +2172,7 @@
       clampWalletPageIndex();
       state.walletLoadingPage = true;
       updateWalletPagerControls();
-      if (state.walletUsesPagedHoldings) {
+      if (state.walletUsesPagedHoldings && !options.pageAlreadyLoaded) {
         try {
           const contractId = getContractId(state.contract);
           const contractIds = state.legacyContract
@@ -2132,6 +2296,9 @@
           state.walletUsesPagedHoldings = true;
           state.walletTotalCount = firstPage.total;
           state.walletPageIds = firstPage.ids;
+          appendLog(
+            `Hiro holdings page loaded: ${firstPage.ids.length}/${firstPage.total} visible.`
+          );
           if (state.walletTotalCount === 0) {
             setStatus(dom.walletGridStatus, '<strong>Grid</strong> no inscriptions found', 'empty', 'amber');
             clearElement(dom.tokenPreviewMedia, 'No selection');
