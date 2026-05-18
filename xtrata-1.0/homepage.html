@@ -588,11 +588,33 @@
       box-shadow: 0 0 0 3px rgba(36, 95, 69, 0.14);
     }
 
-    .token-thumb img {
+    .token-thumb img,
+    .token-thumb video,
+    .token-thumb iframe {
       width: 100%;
       height: 100%;
       object-fit: contain;
       background: #fff;
+    }
+
+    .token-thumb video {
+      display: block;
+    }
+
+    .token-thumb iframe {
+      border: 0;
+      pointer-events: none;
+    }
+
+    .token-thumb.has-thumbnail {
+      background: #fff;
+      color: transparent;
+    }
+
+    .preview-media--pixelated {
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
     }
 
     .token-meta {
@@ -900,7 +922,9 @@
       loadInscriptionThumbnailFromCache,
       saveInscriptionThumbnailToCache
     } from '/src/lib/viewer/cache.ts';
+    import { injectGridThumbnailHtml } from '/src/lib/viewer/html-preview.ts';
     import { createImageThumbnail } from '/src/lib/viewer/thumbnail.ts';
+    import { shouldUsePixelatedImageRendering } from '/src/lib/viewer/image-rendering.ts';
     import {
       fetchTokenSummary,
       fetchTokenSummaryWithFallback
@@ -1026,6 +1050,12 @@
       tokenPreviewUrl: null,
       tokenThumbUrls: new Map(),
       thumbnailCache: new Map(),
+      gridLiveMediaCache: new Map(),
+      thumbnailHydrationQueue: [],
+      thumbnailHydrationQueued: new Set(),
+      thumbnailHydrationInFlight: new Set(),
+      thumbnailHydrationAttempted: new Set(),
+      thumbnailHydrationRunId: 0,
       walletTokenIds: [],
       walletPageIds: [],
       walletTotalCount: 0,
@@ -1040,6 +1070,8 @@
 
     const WALLET_PAGE_SIZE = 16;
     const WALLET_FALLBACK_SCAN_LIMIT = 2000;
+    const MAX_GRID_EAGER_FULL_LOAD_BYTES = 4n * 1024n * 1024n;
+    const GRID_THUMBNAIL_HYDRATION_CONCURRENCY = 2;
 
     const sleep = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
 
@@ -1090,6 +1122,38 @@
     const debugLog = (scope, message, details = {}, level = 'info') => {
       const method = level === 'warn' ? 'warn' : level === 'error' ? 'error' : 'info';
       console[method](`[homepage:${scope}] ${message}`, details);
+    };
+
+    const applyPixelPerfectImageRendering = (
+      img,
+      { mimeType = null, sourceUrl = null, isSvgSource = false } = {}
+    ) => {
+      const updateRendering = () => {
+        const rect = img.getBoundingClientRect();
+        const normalizedMime = (mimeType ?? '').toLowerCase();
+        const urlLower = (sourceUrl ?? img.currentSrc ?? img.src ?? '').toLowerCase();
+        const resolvedSvgSource =
+          isSvgSource ||
+          normalizedMime.includes('svg') ||
+          urlLower.startsWith('data:image/svg') ||
+          urlLower.includes('.svg');
+        const pixelated = shouldUsePixelatedImageRendering({
+          naturalWidth: img.naturalWidth || 0,
+          naturalHeight: img.naturalHeight || 0,
+          renderedWidth: rect.width,
+          renderedHeight: rect.height,
+          mimeType,
+          isSvgSource: resolvedSvgSource
+        });
+        img.classList.toggle('preview-media--pixelated', pixelated);
+      };
+      const scheduleUpdate = () => {
+        requestAnimationFrame(updateRendering);
+      };
+      img.addEventListener('load', scheduleUpdate);
+      if (img.complete && img.naturalWidth > 0) {
+        scheduleUpdate();
+      }
     };
 
     const getBuildHiroKeyFlag = () => {
@@ -1223,6 +1287,15 @@
       state.tokenThumbUrls.clear();
     };
 
+    const resetBackgroundThumbnailHydration = () => {
+      state.thumbnailHydrationRunId += 1;
+      state.thumbnailHydrationQueue = [];
+      state.thumbnailHydrationQueued.clear();
+      state.thumbnailHydrationInFlight.clear();
+      state.thumbnailHydrationAttempted.clear();
+      state.gridLiveMediaCache.clear();
+    };
+
     const clearElement = (element, text) => {
       element.innerHTML = '';
       element.textContent = text;
@@ -1238,6 +1311,11 @@
       if (kind === 'image' || kind === 'svg') {
         const img = document.createElement('img');
         img.alt = 'Payload preview';
+        applyPixelPerfectImageRendering(img, {
+          mimeType,
+          sourceUrl: url,
+          isSvgSource: kind === 'svg'
+        });
         img.src = url;
         target.append(img);
         return;
@@ -1381,6 +1459,7 @@
       state.walletTokens = [];
       state.walletPageIndex = 0;
       state.selectedTokenId = null;
+      resetBackgroundThumbnailHydration();
       revokeGridThumbUrls();
       renderPreparedState();
       resetSteps();
@@ -1773,11 +1852,13 @@
 
     const applyCachedThumbnail = async (token, thumbElement) => {
       if (token.svgDataUri) {
+        thumbElement.classList.add('has-thumbnail');
+        thumbElement.dataset.thumbnailState = 'inline-svg';
         debugLog('cache', 'using inline SVG data URI thumbnail', {
           tokenId: token.id.toString(),
           contractId: getTokenCacheContractId(token)
         });
-        return;
+        return true;
       }
       const cacheKey = getThumbnailKey(token);
       let thumbnail = state.thumbnailCache.get(cacheKey);
@@ -1788,16 +1869,24 @@
         );
         state.thumbnailCache.set(cacheKey, thumbnail);
       }
-      if (!thumbnail?.data || !thumbElement.isConnected) {
+      if (!thumbnail?.data) {
+        thumbElement.dataset.thumbnailState = 'miss';
         debugLog('cache', 'thumbnail cache miss', {
           tokenId: token.id.toString(),
           contractId: getTokenCacheContractId(token)
         });
-        return;
+        return false;
+      }
+      if (!thumbElement.isConnected) {
+        debugLog('cache', 'thumbnail target stale', {
+          tokenId: token.id.toString(),
+          contractId: getTokenCacheContractId(token)
+        });
+        return false;
       }
       const activePageIds = new Set(getWalletPageIds().map((id) => id.toString()));
       if (!activePageIds.has(token.id.toString())) {
-        return;
+        return false;
       }
       const oldUrl = state.tokenThumbUrls.get(cacheKey);
       if (oldUrl) {
@@ -1811,20 +1900,27 @@
       thumbElement.innerHTML = '';
       const img = document.createElement('img');
       img.alt = `Token ${token.id.toString()}`;
+      applyPixelPerfectImageRendering(img, {
+        mimeType: thumbnail.mimeType ?? 'image/webp',
+        sourceUrl: url
+      });
       img.src = url;
-      thumbElement.append(img);
+      thumbElement.classList.add('has-thumbnail');
+      thumbElement.dataset.thumbnailState = 'hit';
+      thumbElement.replaceChildren(img);
       debugLog('cache', 'thumbnail cache hit', {
         tokenId: token.id.toString(),
         contractId: getTokenCacheContractId(token),
         bytes: thumbnail.data.length,
         mimeType: thumbnail.mimeType ?? 'image/webp'
       });
+      return true;
     };
 
-    const warmThumbnailCacheFromBytes = async (token, bytes, mimeType) => {
+    const warmThumbnailCacheFromBytes = async (token, bytes, mimeType, options = {}) => {
       const kind = getMediaKind(mimeType);
       if (kind !== 'image' && kind !== 'svg') {
-        return;
+        return null;
       }
       const contractId = getTokenCacheContractId(token);
       const cacheKey = getThumbnailKey(token);
@@ -1839,9 +1935,13 @@
             contractId,
             mimeType
           });
-          return;
+          return null;
         }
-        await saveInscriptionThumbnailToCache(contractId, token.id, thumbnail);
+        await saveInscriptionThumbnailToCache(contractId, token.id, thumbnail.data, {
+          mimeType: thumbnail.mimeType,
+          width: thumbnail.width,
+          height: thumbnail.height
+        });
         state.thumbnailCache.set(cacheKey, thumbnail);
         debugLog('cache', 'thumbnail cache warmed from preview bytes', {
           tokenId: token.id.toString(),
@@ -1849,7 +1949,10 @@
           bytes: thumbnail.data.length,
           mimeType: thumbnail.mimeType
         });
-        renderTokenGrid();
+        if (options.renderGrid !== false) {
+          renderTokenGrid();
+        }
+        return thumbnail;
       } catch (error) {
         debugLog(
           'cache',
@@ -1862,7 +1965,272 @@
           },
           'warn'
         );
+        return null;
       }
+    };
+
+    const isGridHtmlDocument = (mimeType) => {
+      const normalized = mimeType?.trim().toLowerCase();
+      return normalized === 'text/html' || normalized === 'application/xhtml+xml';
+    };
+
+    const isGridPdfDocument = (mimeType) =>
+      mimeType?.trim().toLowerCase() === 'application/pdf';
+
+    const renderGridLiveMedia = (token, thumbElement, media) => {
+      const cacheKey = getThumbnailKey(token);
+      const oldUrl = state.tokenThumbUrls.get(cacheKey);
+      if (oldUrl) {
+        URL.revokeObjectURL(oldUrl);
+        state.tokenThumbUrls.delete(cacheKey);
+      }
+      thumbElement.classList.add('has-thumbnail');
+      thumbElement.dataset.thumbnailState = media.kind;
+      thumbElement.replaceChildren();
+
+      if (media.kind === 'video') {
+        const blob = new Blob([media.bytes], {
+          type: media.mimeType ?? 'video/mp4'
+        });
+        const url = URL.createObjectURL(blob);
+        state.tokenThumbUrls.set(cacheKey, url);
+        const video = document.createElement('video');
+        video.src = url;
+        video.muted = true;
+        video.loop = true;
+        video.autoplay = true;
+        video.playsInline = true;
+        video.preload = 'auto';
+        video.addEventListener('loadeddata', () => {
+          const playAttempt = video.play();
+          if (playAttempt && typeof playAttempt.catch === 'function') {
+            void playAttempt.catch(() => {});
+          }
+        });
+        thumbElement.append(video);
+        return true;
+      }
+
+      if (media.kind === 'html') {
+        const frame = document.createElement('iframe');
+        frame.title = `inscription-${token.id.toString()}`;
+        frame.sandbox = 'allow-scripts';
+        frame.referrerPolicy = 'no-referrer';
+        frame.loading = 'lazy';
+        frame.srcdoc = injectGridThumbnailHtml(media.html);
+        thumbElement.append(frame);
+        return true;
+      }
+
+      if (media.kind === 'pdf') {
+        const blob = new Blob([media.bytes], {
+          type: media.mimeType ?? 'application/pdf'
+        });
+        const url = URL.createObjectURL(blob);
+        state.tokenThumbUrls.set(cacheKey, url);
+        const frame = document.createElement('iframe');
+        frame.title = `inscription-${token.id.toString()}`;
+        frame.sandbox = '';
+        frame.referrerPolicy = 'no-referrer';
+        frame.loading = 'lazy';
+        frame.src = url;
+        thumbElement.append(frame);
+        return true;
+      }
+
+      return false;
+    };
+
+    const shouldBackgroundHydrateThumbnail = (token) => {
+      if (token.svgDataUri || !token.meta || token.meta.totalSize <= 0n) {
+        return false;
+      }
+      if (token.meta.totalSize > MAX_GRID_EAGER_FULL_LOAD_BYTES) {
+        return false;
+      }
+      const kind = getMediaKind(token.meta.mimeType ?? null);
+      return (
+        kind === 'image' ||
+        kind === 'svg' ||
+        kind === 'video' ||
+        kind === 'html' ||
+        kind === 'binary'
+      );
+    };
+
+    const runBackgroundThumbnailHydration = async (job) => {
+      const { token, thumbElement, cacheKey, runId } = job;
+      if (runId !== state.thumbnailHydrationRunId) {
+        return;
+      }
+      const contentClient = getTokenClient(token);
+      const cacheContractId = getTokenCacheContractId(token);
+      try {
+        debugLog('cache', 'background thumbnail fetch started', {
+          tokenId: token.id.toString(),
+          contractId: cacheContractId,
+          size: token.meta?.totalSize?.toString() ?? null,
+          mimeType: token.meta?.mimeType ?? null
+        });
+        const bytes = await fetchOnChainContent({
+          client: contentClient,
+          fallbackClient: contentClient === state.client ? state.legacyClient : null,
+          cacheContractId,
+          id: token.id,
+          senderAddress: state.walletSession.address ?? state.contract.address,
+          totalSize: token.meta?.totalSize ?? 0n,
+          mimeType: token.meta?.mimeType ?? null
+        });
+        if (runId !== state.thumbnailHydrationRunId) {
+          return;
+        }
+        const mimeType =
+          resolveMimeType(token.meta?.mimeType ?? null, bytes) ??
+          token.meta?.mimeType ??
+          'application/octet-stream';
+        const kind = getMediaKind(mimeType);
+        if (kind === 'video') {
+          state.gridLiveMediaCache.set(cacheKey, {
+            kind: 'video',
+            bytes,
+            mimeType
+          });
+          if (
+            thumbElement.isConnected &&
+            thumbElement.dataset.thumbnailKey === cacheKey
+          ) {
+            renderGridLiveMedia(token, thumbElement, state.gridLiveMediaCache.get(cacheKey));
+          } else if (getWalletPageIds().some((id) => id === token.id)) {
+            renderTokenGrid();
+          }
+          debugLog('cache', 'background video grid display ready', {
+            tokenId: token.id.toString(),
+            contractId: cacheContractId,
+            bytes: bytes.length,
+            mimeType
+          });
+          return;
+        }
+        if (isGridHtmlDocument(mimeType)) {
+          state.gridLiveMediaCache.set(cacheKey, {
+            kind: 'html',
+            html: new TextDecoder().decode(bytes),
+            mimeType
+          });
+          if (
+            thumbElement.isConnected &&
+            thumbElement.dataset.thumbnailKey === cacheKey
+          ) {
+            renderGridLiveMedia(token, thumbElement, state.gridLiveMediaCache.get(cacheKey));
+          } else if (getWalletPageIds().some((id) => id === token.id)) {
+            renderTokenGrid();
+          }
+          debugLog('cache', 'background html grid display ready', {
+            tokenId: token.id.toString(),
+            contractId: cacheContractId,
+            bytes: bytes.length,
+            mimeType
+          });
+          return;
+        }
+        if (isGridPdfDocument(mimeType)) {
+          state.gridLiveMediaCache.set(cacheKey, {
+            kind: 'pdf',
+            bytes,
+            mimeType
+          });
+          if (
+            thumbElement.isConnected &&
+            thumbElement.dataset.thumbnailKey === cacheKey
+          ) {
+            renderGridLiveMedia(token, thumbElement, state.gridLiveMediaCache.get(cacheKey));
+          } else if (getWalletPageIds().some((id) => id === token.id)) {
+            renderTokenGrid();
+          }
+          return;
+        }
+        if (kind !== 'image' && kind !== 'svg') {
+          debugLog('cache', 'background thumbnail skipped non-image content', {
+            tokenId: token.id.toString(),
+            contractId: cacheContractId,
+            mimeType
+          });
+          return;
+        }
+        const thumbnail = await warmThumbnailCacheFromBytes(token, bytes, mimeType, {
+          renderGrid: false
+        });
+        if (!thumbnail) {
+          return;
+        }
+        if (
+          thumbElement.isConnected &&
+          thumbElement.dataset.thumbnailKey === cacheKey
+        ) {
+          await applyCachedThumbnail(token, thumbElement);
+        } else if (getWalletPageIds().some((id) => id === token.id)) {
+          renderTokenGrid();
+        }
+      } catch (error) {
+        debugLog(
+          'cache',
+          'background thumbnail fetch failed',
+          {
+            tokenId: token.id.toString(),
+            contractId: cacheContractId,
+            error: error instanceof Error ? error.message : String(error)
+          },
+          'warn'
+        );
+      }
+    };
+
+    const pumpBackgroundThumbnailHydrationQueue = () => {
+      while (
+        state.thumbnailHydrationInFlight.size < GRID_THUMBNAIL_HYDRATION_CONCURRENCY &&
+        state.thumbnailHydrationQueue.length > 0
+      ) {
+        const job = state.thumbnailHydrationQueue.shift();
+        state.thumbnailHydrationQueued.delete(job.cacheKey);
+        if (job.runId !== state.thumbnailHydrationRunId) {
+          continue;
+        }
+        state.thumbnailHydrationInFlight.add(job.cacheKey);
+        void runBackgroundThumbnailHydration(job).finally(() => {
+          state.thumbnailHydrationInFlight.delete(job.cacheKey);
+          if (job.runId === state.thumbnailHydrationRunId) {
+            pumpBackgroundThumbnailHydrationQueue();
+          }
+        });
+      }
+    };
+
+    const scheduleBackgroundThumbnailHydration = (token, thumbElement) => {
+      const cacheKey = getThumbnailKey(token);
+      if (
+        state.thumbnailHydrationAttempted.has(cacheKey) ||
+        state.thumbnailHydrationQueued.has(cacheKey) ||
+        state.thumbnailHydrationInFlight.has(cacheKey)
+      ) {
+        return;
+      }
+      if (!shouldBackgroundHydrateThumbnail(token)) {
+        return;
+      }
+      state.thumbnailHydrationAttempted.add(cacheKey);
+      state.thumbnailHydrationQueued.add(cacheKey);
+      state.thumbnailHydrationQueue.push({
+        token,
+        thumbElement,
+        cacheKey,
+        runId: state.thumbnailHydrationRunId
+      });
+      debugLog('cache', 'background thumbnail queued', {
+        tokenId: token.id.toString(),
+        contractId: getTokenCacheContractId(token),
+        queueDepth: state.thumbnailHydrationQueue.length
+      });
+      pumpBackgroundThumbnailHydrationQueue();
     };
 
     const renderTokenGrid = () => {
@@ -1888,6 +2256,7 @@
         thumb.className = 'token-thumb';
         const meta = document.createElement('div');
         meta.className = 'token-meta';
+        let shouldApplyCachedThumbnail = false;
 
         if (id === null) {
           card.disabled = true;
@@ -1900,14 +2269,28 @@
             `<strong>${formatTokenId(id)}</strong><span>loading</span>`;
         } else {
           const kind = getMediaKind(token.meta?.mimeType ?? null).toUpperCase();
+          thumb.dataset.thumbnailKey = getThumbnailKey(token);
           if (token.svgDataUri) {
             const img = document.createElement('img');
             img.alt = `Token ${token.id.toString()}`;
+            applyPixelPerfectImageRendering(img, {
+              mimeType: 'image/svg+xml',
+              sourceUrl: token.svgDataUri,
+              isSvgSource: true
+            });
             img.src = token.svgDataUri;
+            thumb.classList.add('has-thumbnail');
+            thumb.dataset.thumbnailState = 'inline-svg';
             thumb.append(img);
           } else {
-            thumb.textContent = kind;
-            void applyCachedThumbnail(token, thumb);
+            const liveMedia = state.gridLiveMediaCache.get(getThumbnailKey(token));
+            if (liveMedia && renderGridLiveMedia(token, thumb, liveMedia)) {
+              shouldApplyCachedThumbnail = false;
+            } else {
+              thumb.textContent = kind;
+              thumb.dataset.thumbnailState = 'pending-cache';
+              shouldApplyCachedThumbnail = true;
+            }
           }
           const size = token.meta?.totalSize ?? null;
           meta.innerHTML =
@@ -1916,6 +2299,13 @@
         }
         card.append(thumb, meta);
         dom.tokenGrid.append(card);
+        if (token && shouldApplyCachedThumbnail) {
+          void applyCachedThumbnail(token, thumb).then((applied) => {
+            if (!applied) {
+              scheduleBackgroundThumbnailHydration(token, thumb);
+            }
+          });
+        }
       }
     };
 
@@ -1953,6 +2343,11 @@
           if (token.svgDataUri) {
             const img = document.createElement('img');
             img.alt = `Token ${token.id.toString()}`;
+            applyPixelPerfectImageRendering(img, {
+              mimeType: 'image/svg+xml',
+              sourceUrl: token.svgDataUri,
+              isSvgSource: true
+            });
             img.src = token.svgDataUri;
             dom.tokenPreviewMedia.append(img);
           }
@@ -2170,6 +2565,7 @@
 
     const loadWalletPage = async (options = {}) => {
       clampWalletPageIndex();
+      resetBackgroundThumbnailHydration();
       state.walletLoadingPage = true;
       updateWalletPagerControls();
       if (state.walletUsesPagedHoldings && !options.pageAlreadyLoaded) {
@@ -2243,6 +2639,7 @@
         state.walletTokens = [];
         state.walletPageIndex = 0;
         state.selectedTokenId = null;
+        resetBackgroundThumbnailHydration();
         revokeGridThumbUrls();
         dom.walletCountBadge.textContent = '0 tokens';
         setStatus(dom.walletGridStatus, '<strong>Grid</strong> waiting for wallet', 'empty', 'amber');
@@ -2261,6 +2658,7 @@
         state.walletTokens = [];
         state.walletPageIndex = 0;
         state.selectedTokenId = null;
+        resetBackgroundThumbnailHydration();
         revokeGridThumbUrls();
         setStatus(dom.walletGridStatus, `<strong>Grid</strong> blocked by ${mismatch.actual} wallet`, 'network', 'rose');
         renderTokenGridPlaceholders();
@@ -2278,6 +2676,7 @@
       state.walletTokens = [];
       state.walletPageIndex = 0;
       state.selectedTokenId = null;
+      resetBackgroundThumbnailHydration();
       revokeGridThumbUrls();
       updateWalletPagerControls();
 
@@ -2388,6 +2787,7 @@
         state.walletTokens = [];
         state.walletPageIndex = 0;
         state.selectedTokenId = null;
+        resetBackgroundThumbnailHydration();
         revokeGridThumbUrls();
         setStatus(dom.walletGridStatus, `<strong>Grid</strong> ${message}`, 'error', 'rose');
         appendLog(`Wallet load failed: ${message}`);
