@@ -200,6 +200,34 @@ describe('bns resolver', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it('treats an empty BNSv2 address result as authoritative over stale Hiro names', async () => {
+    const staleOwner = 'SP162D87CY84QVVCMJKNKGHC7GGXFGA0TAR9D0XJW';
+    const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes(`/names/address/${staleOwner}/valid`)) {
+        return jsonResponse(200, { total: 0, names: [] });
+      }
+      if (url.includes(`/v1/addresses/stacks/${staleOwner}`)) {
+        return jsonResponse(200, { names: ['jim.btc'] });
+      }
+      throw new Error(`Unexpected URL: ${url}`);
+    });
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    const result = await resolveBnsNames({
+      address: staleOwner,
+      network: 'mainnet'
+    });
+
+    expect(result).toEqual({
+      address: staleOwner,
+      names: [],
+      primary: null,
+      source: 'bnsv2-api'
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('applies short cooldown after transient address fallback to avoid repeat hammering', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
@@ -315,6 +343,44 @@ describe('bns resolver', () => {
     expect(result).toEqual({
       name: 'jim.btc',
       address: currentOwner,
+      source: 'bnsv2-api'
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('treats invalid BNSv2 name records as authoritative over stale Hiro owners', async () => {
+    const staleOwner = 'SP162D87CY84QVVCMJKNKGHC7GGXFGA0TAR9D0XJW';
+    const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/bnsv2/') && url.includes('/names/jim.btc')) {
+        return jsonResponse(200, {
+          status: 'inactive',
+          data: {
+            full_name: 'jim.btc',
+            owner: staleOwner,
+            revoked: true,
+            is_valid: false
+          }
+        });
+      }
+      if (url.includes('/v1/names/jim.btc')) {
+        return jsonResponse(200, {
+          address: staleOwner,
+          blockchain: 'stacks'
+        });
+      }
+      throw new Error(`Unexpected URL: ${url}`);
+    });
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    const result = await resolveBnsAddress({
+      name: 'jim.btc',
+      network: 'mainnet'
+    });
+
+    expect(result).toEqual({
+      name: 'jim.btc',
+      address: null,
       source: 'bnsv2-api'
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);

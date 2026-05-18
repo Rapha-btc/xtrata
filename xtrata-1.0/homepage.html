@@ -910,7 +910,10 @@
       <section class="panel" aria-labelledby="walletTitle">
         <div class="panel-head">
           <div>
-            <h2 class="panel-title" id="walletTitle">Wallet Inscriptions</h2>
+            <div class="panel-title-row">
+              <h2 class="panel-title" id="walletTitle">Wallet Inscriptions</h2>
+              <div class="token-uri-head-preview" id="walletTokenUriHeadPreview" aria-hidden="true"></div>
+            </div>
             <p class="panel-subtitle" id="walletSubtitle">Connect a wallet or enter an address.</p>
           </div>
           <div class="wallet-tools">
@@ -1138,6 +1141,7 @@
       stepUpload: $('stepUpload'),
       stepSeal: $('stepSeal'),
       txLog: $('txLog'),
+      walletTokenUriHeadPreview: $('walletTokenUriHeadPreview'),
       walletSubtitle: $('walletSubtitle'),
       walletCountBadge: $('walletCountBadge'),
       walletPrevButton: $('walletPrevButton'),
@@ -1177,6 +1181,7 @@
       uploadState: null,
       busy: false,
       tokenUriPreviewRequestId: 0,
+      walletTokenUriPreviewRequestId: 0,
       tokenUriPreviewTimer: null,
       payloadPreviewUrl: null,
       tokenPreviewUrl: null,
@@ -1456,28 +1461,44 @@
       element.textContent = text;
     };
 
-    const clearTokenUriHeadPreview = () => {
-      dom.tokenUriHeadPreview.replaceChildren();
-      dom.tokenUriHeadPreview.classList.remove('on');
-      dom.tokenUriHeadPreview.setAttribute('aria-hidden', 'true');
+    const clearTokenUriHeadPreviewTarget = (target) => {
+      target.replaceChildren();
+      target.classList.remove('on');
+      target.setAttribute('aria-hidden', 'true');
     };
 
-    const renderTokenUriHeadPreview = (imageUrl) => {
+    const clearTokenUriHeadPreview = () => {
+      clearTokenUriHeadPreviewTarget(dom.tokenUriHeadPreview);
+    };
+
+    const clearWalletTokenUriHeadPreview = () => {
+      clearTokenUriHeadPreviewTarget(dom.walletTokenUriHeadPreview);
+    };
+
+    const renderTokenUriHeadPreviewTarget = (target, imageUrl) => {
       const img = document.createElement('img');
       img.alt = '';
       img.addEventListener(
         'error',
         () => {
-          if (dom.tokenUriHeadPreview.firstElementChild === img) {
-            clearTokenUriHeadPreview();
+          if (target.firstElementChild === img) {
+            clearTokenUriHeadPreviewTarget(target);
           }
         },
         { once: true }
       );
       img.src = imageUrl;
-      dom.tokenUriHeadPreview.replaceChildren(img);
-      dom.tokenUriHeadPreview.classList.add('on');
-      dom.tokenUriHeadPreview.setAttribute('aria-hidden', 'false');
+      target.replaceChildren(img);
+      target.classList.add('on');
+      target.setAttribute('aria-hidden', 'false');
+    };
+
+    const renderTokenUriHeadPreview = (imageUrl) => {
+      renderTokenUriHeadPreviewTarget(dom.tokenUriHeadPreview, imageUrl);
+    };
+
+    const renderWalletTokenUriHeadPreview = (imageUrl) => {
+      renderTokenUriHeadPreviewTarget(dom.walletTokenUriHeadPreview, imageUrl);
     };
 
     const resolveTokenUriHeadImage = async (tokenUri) => {
@@ -1507,6 +1528,19 @@
         return;
       }
       renderTokenUriHeadPreview(imageUrl);
+    };
+
+    const updateWalletTokenUriHeadPreview = async (tokenUri) => {
+      const requestId = ++state.walletTokenUriPreviewRequestId;
+      clearWalletTokenUriHeadPreview();
+      if (!tokenUri) {
+        return;
+      }
+      const imageUrl = await resolveTokenUriHeadImage(tokenUri);
+      if (requestId !== state.walletTokenUriPreviewRequestId || !imageUrl) {
+        return;
+      }
+      renderWalletTokenUriHeadPreview(imageUrl);
     };
 
     const queueTokenUriHeadPreviewUpdate = () => {
@@ -1792,6 +1826,7 @@
       state.walletTokens = [];
       state.walletPageIndex = 0;
       state.selectedTokenId = null;
+      void updateWalletTokenUriHeadPreview(null);
       resetBackgroundThumbnailHydration();
       revokeGridThumbUrls();
       renderPreparedState();
@@ -2709,9 +2744,12 @@
       if (!token) {
         clearElement(dom.tokenPreviewMedia, 'No selection');
         renderMeta(dom.tokenPreviewMeta, [['Token', 'None']]);
+        void updateWalletTokenUriHeadPreview(null);
         updateTransferControls();
         return;
       }
+
+      void updateWalletTokenUriHeadPreview(token.tokenUri);
 
       clearElement(dom.tokenPreviewMedia, 'Loading');
       renderMeta(dom.tokenPreviewMeta, [
@@ -3064,6 +3102,8 @@
       const pageIds = getWalletPageIds();
       if (pageIds.length === 0) {
         state.walletTokens = [];
+        state.selectedTokenId = null;
+        void updateWalletTokenUriHeadPreview(null);
         renderTokenGrid();
         state.walletLoadingPage = false;
         updateWalletPagerControls();
@@ -3111,6 +3151,7 @@
         state.walletTokens = [];
         state.walletPageIndex = 0;
         state.selectedTokenId = null;
+        void updateWalletTokenUriHeadPreview(null);
         resetBackgroundThumbnailHydration();
         revokeGridThumbUrls();
         dom.walletCountBadge.textContent = '0 tokens';
@@ -3136,6 +3177,7 @@
       state.walletTokens = [];
       state.walletPageIndex = 0;
       state.selectedTokenId = null;
+      void updateWalletTokenUriHeadPreview(null);
       resetBackgroundThumbnailHydration();
       revokeGridThumbUrls();
       updateWalletPagerControls();
@@ -3162,6 +3204,7 @@
             setStatus(dom.walletGridStatus, '<strong>Grid</strong> no inscriptions found', 'empty', 'amber');
             clearElement(dom.tokenPreviewMedia, 'No selection');
             renderMeta(dom.tokenPreviewMeta, [['Token', 'None']]);
+            void updateWalletTokenUriHeadPreview(null);
             renderTokenGrid();
             return;
           }
@@ -3227,6 +3270,7 @@
           setStatus(dom.walletGridStatus, '<strong>Grid</strong> no inscriptions found', 'empty', 'amber');
           clearElement(dom.tokenPreviewMedia, 'No selection');
           renderMeta(dom.tokenPreviewMeta, [['Token', 'None']]);
+          void updateWalletTokenUriHeadPreview(null);
           renderTokenGrid();
         } else {
           setStatus(
@@ -3247,6 +3291,7 @@
         state.walletTokens = [];
         state.walletPageIndex = 0;
         state.selectedTokenId = null;
+        void updateWalletTokenUriHeadPreview(null);
         resetBackgroundThumbnailHydration();
         revokeGridThumbUrls();
         setStatus(dom.walletGridStatus, `<strong>Grid</strong> ${message}`, 'error', 'rose');
@@ -3291,6 +3336,7 @@
         state.walletTokens = [];
         state.walletPageIndex = 0;
         state.selectedTokenId = null;
+        void updateWalletTokenUriHeadPreview(null);
         revokeGridThumbUrls();
         state.uploadState = null;
         appendLog('Wallet disconnected.');

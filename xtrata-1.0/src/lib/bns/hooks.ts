@@ -7,7 +7,7 @@ import { resolveBnsAddress, resolveBnsNames } from './resolver';
 
 const BNS_QUERY_STALE_MS = 60 * 60 * 1000;
 const BNS_QUERY_GC_MS = 6 * 60 * 60 * 1000;
-const BNS_QUERY_KEY_VERSION = 'v3';
+const BNS_QUERY_KEY_VERSION = 'v4';
 
 export const useBnsNames = (params: {
   address: string | null | undefined;

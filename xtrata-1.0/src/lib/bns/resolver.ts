@@ -904,9 +904,6 @@ const resolveAddressNamesFromBnsV2 = async (params: {
       }
 
       const extracted = extractNamesFromApiResponse(response.json);
-      if (extracted.names.length === 0) {
-        continue;
-      }
 
       return {
         result: {
@@ -1111,12 +1108,20 @@ const resolveNameAddressFromBnsV2 = async (params: {
           ? record.status.trim().toLowerCase()
           : '';
       if (!isValid || revoked || (status && status !== 'active')) {
-        continue;
+        return {
+          name: params.name,
+          address: null,
+          source: BNS_V2_PROVIDER_ID
+        };
       }
 
       const resolvedAddress = extractAddressFromApiResponse(response.json);
       if (!resolvedAddress) {
-        continue;
+        return {
+          name: params.name,
+          address: null,
+          source: BNS_V2_PROVIDER_ID
+        };
       }
 
       return {
