@@ -1,0 +1,2430 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Xtrata - Simple Inscription</title>
+  <link rel="icon" href="/favicon.svg" />
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f8f5;
+      --panel: #ffffff;
+      --ink: #151a17;
+      --muted: #617067;
+      --line: #d2ddd6;
+      --line-strong: #9caf9f;
+      --green: #245f45;
+      --green-soft: #e6f1ea;
+      --blue: #214f73;
+      --blue-soft: #e5eef5;
+      --rose: #a43f58;
+      --rose-soft: #f7e6eb;
+      --amber: #84601b;
+      --amber-soft: #f7edd7;
+      --shadow: 0 18px 50px rgba(19, 31, 25, 0.08);
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+      letter-spacing: 0;
+    }
+
+    html {
+      scrollbar-gutter: stable;
+    }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.45;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+    }
+
+    .shell {
+      width: min(1240px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 20px 0 40px;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) auto;
+      align-items: center;
+      gap: 16px;
+      min-height: 64px;
+      border-bottom: 1px solid var(--line-strong);
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand {
+      color: var(--ink);
+      text-decoration: none;
+      font-weight: 800;
+      font-size: 18px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .contract-readout {
+      color: var(--muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      min-width: 0;
+      flex-wrap: wrap;
+    }
+
+    .select,
+    .input,
+    .textarea {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      color: var(--ink);
+      padding: 10px 12px;
+      outline: none;
+    }
+
+    .select:focus,
+    .input:focus,
+    .textarea:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(36, 95, 69, 0.12);
+    }
+
+    .top-actions .select {
+      width: min(240px, 100%);
+    }
+
+    .btn {
+      min-height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border-radius: var(--radius);
+      border: 1px solid var(--ink);
+      background: var(--ink);
+      color: #fff;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .btn:hover:not(:disabled) {
+      background: #27302b;
+    }
+
+    .btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.52;
+    }
+
+    .btn.secondary {
+      background: transparent;
+      color: var(--ink);
+    }
+
+    .btn.secondary:hover:not(:disabled) {
+      background: rgba(21, 26, 23, 0.06);
+    }
+
+    .btn.ghost {
+      border-color: var(--line);
+      background: #fff;
+      color: var(--ink);
+    }
+
+    .btn.ghost:hover:not(:disabled) {
+      background: #f1f5f2;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(360px, 430px) minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+      padding-top: 18px;
+    }
+
+    .panel {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.1;
+    }
+
+    .panel-subtitle {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 28px;
+      border-radius: 999px;
+      padding: 4px 10px;
+      background: var(--green-soft);
+      color: var(--green);
+      border: 1px solid rgba(36, 95, 69, 0.22);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .badge.blue {
+      background: var(--blue-soft);
+      color: var(--blue);
+      border-color: rgba(33, 79, 115, 0.22);
+    }
+
+    .badge.rose {
+      background: var(--rose-soft);
+      color: var(--rose);
+      border-color: rgba(164, 63, 88, 0.22);
+    }
+
+    .badge.amber {
+      background: var(--amber-soft);
+      color: var(--amber);
+      border-color: rgba(132, 96, 27, 0.22);
+    }
+
+    .panel-body {
+      padding: 18px;
+    }
+
+    .status {
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fbfdfb;
+      padding: 10px 12px;
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+
+    .status strong {
+      color: var(--ink);
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 150px;
+      gap: 10px;
+    }
+
+    .label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .textarea {
+      min-height: 112px;
+      resize: vertical;
+    }
+
+    .dropzone {
+      display: grid;
+      place-items: center;
+      min-height: 118px;
+      border: 1px dashed var(--line-strong);
+      border-radius: var(--radius);
+      background: #f9fbf8;
+      color: var(--muted);
+      text-align: center;
+      padding: 18px;
+      cursor: pointer;
+    }
+
+    .dropzone.dragging {
+      border-color: var(--green);
+      background: var(--green-soft);
+      color: var(--green);
+    }
+
+    .file-chip {
+      display: inline-flex;
+      max-width: 100%;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      padding: 8px 10px;
+      color: var(--ink);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .prepare-grid {
+      display: grid;
+      grid-template-columns: 120px minmax(0, 1fr);
+      gap: 12px;
+      margin-top: 16px;
+      align-items: stretch;
+    }
+
+    .preview-square {
+      aspect-ratio: 1 / 1;
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #f1f5f2;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .preview-square img,
+    .preview-square video,
+    .preview-square iframe {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border: 0;
+      background: #fff;
+    }
+
+    .preview-square audio {
+      width: 90%;
+    }
+
+    .preview-square pre {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 12px;
+      overflow: hidden;
+      text-align: left;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 11px;
+      color: var(--ink);
+      background: #fff;
+    }
+
+    .prepared-meta {
+      min-width: 0;
+      display: grid;
+      gap: 7px;
+      align-content: start;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px;
+      background: #fbfdfb;
+      font-size: 13px;
+    }
+
+    .meta-line {
+      display: grid;
+      grid-template-columns: 92px minmax(0, 1fr);
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .meta-key {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      font-weight: 800;
+    }
+
+    .meta-value {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+    }
+
+    .warning {
+      display: none;
+      border: 1px solid rgba(132, 96, 27, 0.32);
+      border-radius: var(--radius);
+      background: var(--amber-soft);
+      color: #553d10;
+      padding: 10px 12px;
+      margin-top: 12px;
+      font-size: 13px;
+    }
+
+    .warning.on {
+      display: block;
+    }
+
+    .checkline {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      margin-top: 8px;
+    }
+
+    .checkline input {
+      margin-top: 3px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .step {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 10px;
+      background: #fbfdfb;
+      min-height: 74px;
+    }
+
+    .step strong {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .step span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .step.pending {
+      border-color: rgba(33, 79, 115, 0.36);
+      background: var(--blue-soft);
+    }
+
+    .step.done {
+      border-color: rgba(36, 95, 69, 0.36);
+      background: var(--green-soft);
+    }
+
+    .step.error {
+      border-color: rgba(164, 63, 88, 0.36);
+      background: var(--rose-soft);
+    }
+
+    .log {
+      margin: 16px 0 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 6px;
+      max-height: 220px;
+      overflow: auto;
+      border-top: 1px solid var(--line);
+      padding-top: 12px;
+    }
+
+    .log li {
+      display: grid;
+      grid-template-columns: 66px minmax(0, 1fr);
+      gap: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .log time {
+      color: var(--line-strong);
+    }
+
+    .wallet-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .wallet-tools {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    .wallet-tools .btn {
+      min-height: 34px;
+      padding: 7px 10px;
+      font-size: 12px;
+    }
+
+    .page-readout {
+      min-width: 86px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .token-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .token-card {
+      min-width: 0;
+      display: grid;
+      gap: 7px;
+      padding: 0;
+      border-radius: var(--radius);
+      background: transparent;
+      color: var(--ink);
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .token-card:disabled {
+      cursor: default;
+    }
+
+    .token-thumb {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #f1f5f2;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-weight: 800;
+      font-size: clamp(11px, 1.2vw, 13px);
+    }
+
+    .token-card.active .token-thumb {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(36, 95, 69, 0.14);
+    }
+
+    .token-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #fff;
+    }
+
+    .token-meta {
+      min-height: 38px;
+      display: grid;
+      gap: 2px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.25;
+    }
+
+    .token-meta strong {
+      color: var(--ink);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+    }
+
+    .token-card.empty .token-thumb {
+      border-style: dashed;
+      background: transparent;
+      color: #b6c3ba;
+    }
+
+    .token-card.empty .token-meta {
+      visibility: hidden;
+    }
+
+    .token-preview {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px;
+      background: #fbfdfb;
+    }
+
+    .token-preview .preview-square {
+      margin-bottom: 10px;
+      background: #fff;
+    }
+
+    .preview-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .small-link {
+      color: var(--blue);
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .small-link:hover {
+      text-decoration: underline;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    @media (max-width: 980px) {
+      .topbar {
+        grid-template-columns: 1fr;
+      }
+
+      .top-actions {
+        justify-content: flex-start;
+      }
+
+      .workspace,
+      .wallet-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .shell {
+        width: min(100vw - 20px, 1240px);
+        padding-top: 10px;
+      }
+
+      .field-row,
+      .prepare-grid,
+      .steps {
+        grid-template-columns: 1fr;
+      }
+
+      .panel-head {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .top-actions .select,
+      .top-actions .btn {
+        width: 100%;
+      }
+
+      .token-grid {
+        gap: 7px;
+      }
+
+      .token-meta {
+        font-size: 11px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand-wrap">
+        <a class="brand" href="/">Xtrata</a>
+        <span class="contract-readout" id="contractReadout">Loading contract...</span>
+      </div>
+      <div class="top-actions">
+        <select class="select" id="contractSelect" aria-label="Contract"></select>
+        <button class="btn ghost" id="refreshWalletButton" type="button">Refresh</button>
+        <button class="btn" id="connectButton" type="button">Connect wallet</button>
+        <button class="btn secondary" id="disconnectButton" type="button" hidden>Disconnect</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="panel" aria-labelledby="inscribeTitle">
+        <div class="panel-head">
+          <div>
+            <h1 class="panel-title" id="inscribeTitle">Inscribe</h1>
+            <p class="panel-subtitle" id="mintSubtitle">Single payload, explicit chain steps.</p>
+          </div>
+          <span class="badge" id="networkBadge">mainnet</span>
+        </div>
+        <div class="panel-body">
+          <div class="status" id="walletStatus">
+            <span><strong>Wallet</strong> not connected</span>
+            <span class="badge amber">idle</span>
+          </div>
+
+          <form class="form-grid" id="inscriptionForm">
+            <div class="field-row">
+              <label class="field">
+                <span class="label">Name</span>
+                <input class="input" id="nameInput" autocomplete="off" placeholder="inscription.txt" />
+              </label>
+              <label class="field">
+                <span class="label">Type</span>
+                <select class="select" id="payloadType">
+                  <option value="text/plain">Text</option>
+                  <option value="application/json">JSON</option>
+                  <option value="text/html">HTML</option>
+                  <option value="image/svg+xml">SVG</option>
+                  <option value="application/octet-stream">Binary</option>
+                </select>
+              </label>
+            </div>
+
+            <label class="field">
+              <span class="label">Token URI</span>
+              <input class="input" id="tokenUriInput" autocomplete="off" />
+            </label>
+
+            <div class="field">
+              <span class="label">Payload</span>
+              <input id="fileInput" type="file" hidden />
+              <div class="dropzone" id="dropzone" tabindex="0" role="button">
+                <span id="dropzoneText">Choose file or drop it here</span>
+              </div>
+            </div>
+
+            <label class="field">
+              <span class="label">Text payload</span>
+              <textarea class="textarea" id="textPayload" spellcheck="false" placeholder="Optional text, JSON, SVG, or HTML"></textarea>
+            </label>
+          </form>
+
+          <div class="prepare-grid">
+            <div class="preview-square" id="payloadPreview">No payload</div>
+            <div class="prepared-meta" id="preparedMeta">
+              <div class="meta-line">
+                <span class="meta-key">Status</span>
+                <span class="meta-value">Not prepared</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="warning" id="duplicateWarning">
+            <div id="duplicateText">Duplicate hash detected.</div>
+            <label class="checkline">
+              <input type="checkbox" id="allowDuplicateInput" />
+              <span>Continue with this duplicate payload</span>
+            </label>
+          </div>
+
+          <div class="actions">
+            <button class="btn secondary" id="prepareButton" type="button">Prepare</button>
+            <button class="btn" id="inscribeButton" type="button" disabled>Start inscription</button>
+          </div>
+
+          <div class="steps" aria-live="polite">
+            <div class="step" id="stepBegin">
+              <strong>1. Begin</strong>
+              <span>Idle</span>
+            </div>
+            <div class="step" id="stepUpload">
+              <strong>2. Upload</strong>
+              <span>Idle</span>
+            </div>
+            <div class="step" id="stepSeal">
+              <strong>3. Seal</strong>
+              <span>Idle</span>
+            </div>
+          </div>
+
+          <ol class="log" id="txLog"></ol>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="walletTitle">
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-title" id="walletTitle">Your Inscriptions</h2>
+            <p class="panel-subtitle" id="walletSubtitle">Connect a wallet to load the grid.</p>
+          </div>
+          <div class="wallet-tools">
+            <span class="badge blue" id="walletCountBadge">0 tokens</span>
+            <button class="btn ghost" id="walletPrevButton" type="button" disabled>Prev</button>
+            <span class="page-readout" id="walletPageReadout">Page 0 / 0</span>
+            <button class="btn ghost" id="walletNextButton" type="button" disabled>Next</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="wallet-layout">
+            <div>
+              <div class="status" id="walletGridStatus">
+                <span><strong>Grid</strong> waiting for wallet</span>
+                <span class="badge amber">empty</span>
+              </div>
+              <div class="token-grid" id="tokenGrid" aria-live="polite"></div>
+            </div>
+
+            <aside class="token-preview" id="tokenPreviewPanel">
+              <div class="preview-square" id="tokenPreviewMedia">No selection</div>
+              <div class="prepared-meta" id="tokenPreviewMeta">
+                <div class="meta-line">
+                  <span class="meta-key">Token</span>
+                  <span class="meta-value">None</span>
+                </div>
+              </div>
+              <div class="preview-actions">
+                <a class="small-link" id="explorerLink" href="#" target="_blank" rel="noreferrer" hidden>Explorer</a>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module">
+    import {
+      bufferCV,
+      FungibleConditionCode,
+      listCV,
+      makeStandardSTXPostCondition,
+      PostConditionMode,
+      stringAsciiCV,
+      uintCV
+    } from '@stacks/transactions';
+    import { createStacksWalletAdapter } from '/src/lib/wallet/adapter.ts';
+    import { showContractCall } from '/src/lib/wallet/connect.ts';
+    import {
+      CONTRACT_REGISTRY,
+      getLegacyContract
+    } from '/src/lib/contract/registry.ts';
+    import { getContractId } from '/src/lib/contract/config.ts';
+    import { createXtrataClient } from '/src/lib/contract/client.ts';
+    import { fetchContractAdminStatus } from '/src/lib/contract/admin-status.ts';
+    import {
+      estimateContractFees,
+      formatMicroStx,
+      getFeeSchedule
+    } from '/src/lib/contract/fees.ts';
+    import { resolveContractCapabilities } from '/src/lib/contract/capabilities.ts';
+    import { DEFAULT_NFT_ASSET_NAME } from '/src/lib/contract/post-conditions.ts';
+    import { getNetworkMismatch } from '/src/lib/network/guard.ts';
+    import { getApiBaseUrls } from '/src/lib/network/config.ts';
+    import {
+      batchChunks,
+      chunkBytes,
+      computeExpectedHash,
+      MAX_BATCH_SIZE
+    } from '/src/lib/chunking/hash.ts';
+    import {
+      DEFAULT_BATCH_SIZE,
+      DEFAULT_TOKEN_URI,
+      MAX_MIME_LENGTH,
+      MAX_TOKEN_URI_LENGTH,
+      TX_DELAY_SECONDS
+    } from '/src/lib/mint/constants.ts';
+    import { bytesToHex } from '/src/lib/utils/encoding.ts';
+    import { formatBytes, truncateMiddle } from '/src/lib/utils/format.ts';
+    import { loadWalletHoldingsIndex } from '/src/lib/viewer/wallet-index.ts';
+    import { loadInscriptionThumbnailFromCache } from '/src/lib/viewer/cache.ts';
+    import {
+      fetchTokenSummary,
+      fetchTokenSummaryWithFallback
+    } from '/src/lib/viewer/queries.ts';
+    import {
+      fetchOnChainContent,
+      getMediaKind,
+      getTextPreview,
+      resolveMimeType
+    } from '/src/lib/viewer/content.ts';
+
+    const isCoreEntry = (entry) =>
+      entry.protocolVersion === '2.1.0' ||
+      entry.protocolVersion === '2.1.1' ||
+      entry.protocolVersion === '3.0.0' ||
+      entry.contractName?.toLowerCase().includes('v2-1-0') === true ||
+      entry.contractName?.toLowerCase().includes('v2-1-1') === true ||
+      entry.contractName?.toLowerCase().includes('v3-0-0') === true;
+
+    const coreContracts = CONTRACT_REGISTRY.filter(isCoreEntry);
+    const versionWeight = (entry) => {
+      if (entry.protocolVersion === '3.0.0' || entry.contractName?.includes('v3-0-0')) {
+        return 30000;
+      }
+      if (entry.protocolVersion === '2.1.1' || entry.contractName?.includes('v2-1-1')) {
+        return 20101;
+      }
+      if (entry.protocolVersion === '2.1.0' || entry.contractName?.includes('v2-1-0')) {
+        return 20100;
+      }
+      return 0;
+    };
+    const ACTIVE_CONTRACTS = (coreContracts.length > 0 ? coreContracts : CONTRACT_REGISTRY)
+      .slice()
+      .sort((left, right) => versionWeight(right) - versionWeight(left));
+    const LATEST_CONTRACT =
+      ACTIVE_CONTRACTS.find(
+        (entry) =>
+          entry.protocolVersion === '2.1.1' ||
+          entry.contractName?.toLowerCase().includes('v2-1-1')
+      ) ?? ACTIVE_CONTRACTS[0];
+    const HOMEPAGE_CONTRACT_STORAGE_KEY = 'xtrata.simple-homepage.contract.selection';
+    const ACTIVE_CONTRACT_BY_ID = new Map(
+      ACTIVE_CONTRACTS.map((entry) => [getContractId(entry), entry])
+    );
+    const loadHomepageContractSelection = () => {
+      try {
+        const raw = window.localStorage.getItem(HOMEPAGE_CONTRACT_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : null;
+        const saved = parsed?.contractId ? ACTIVE_CONTRACT_BY_ID.get(parsed.contractId) : null;
+        return saved ?? LATEST_CONTRACT;
+      } catch (error) {
+        return LATEST_CONTRACT;
+      }
+    };
+    const saveHomepageContractSelection = (entry) => {
+      window.localStorage.setItem(
+        HOMEPAGE_CONTRACT_STORAGE_KEY,
+        JSON.stringify({ contractId: getContractId(entry) })
+      );
+    };
+    const walletAdapter = createStacksWalletAdapter({
+      appName: 'Xtrata Simple Inscription',
+      appIcon: `${window.location.origin}/favicon.svg`
+    });
+
+    const $ = (id) => document.getElementById(id);
+
+    const dom = {
+      contractReadout: $('contractReadout'),
+      contractSelect: $('contractSelect'),
+      refreshWalletButton: $('refreshWalletButton'),
+      connectButton: $('connectButton'),
+      disconnectButton: $('disconnectButton'),
+      networkBadge: $('networkBadge'),
+      mintSubtitle: $('mintSubtitle'),
+      walletStatus: $('walletStatus'),
+      inscriptionForm: $('inscriptionForm'),
+      nameInput: $('nameInput'),
+      payloadType: $('payloadType'),
+      tokenUriInput: $('tokenUriInput'),
+      fileInput: $('fileInput'),
+      dropzone: $('dropzone'),
+      dropzoneText: $('dropzoneText'),
+      textPayload: $('textPayload'),
+      payloadPreview: $('payloadPreview'),
+      preparedMeta: $('preparedMeta'),
+      duplicateWarning: $('duplicateWarning'),
+      duplicateText: $('duplicateText'),
+      allowDuplicateInput: $('allowDuplicateInput'),
+      prepareButton: $('prepareButton'),
+      inscribeButton: $('inscribeButton'),
+      stepBegin: $('stepBegin'),
+      stepUpload: $('stepUpload'),
+      stepSeal: $('stepSeal'),
+      txLog: $('txLog'),
+      walletSubtitle: $('walletSubtitle'),
+      walletCountBadge: $('walletCountBadge'),
+      walletPrevButton: $('walletPrevButton'),
+      walletNextButton: $('walletNextButton'),
+      walletPageReadout: $('walletPageReadout'),
+      walletGridStatus: $('walletGridStatus'),
+      tokenGrid: $('tokenGrid'),
+      tokenPreviewPanel: $('tokenPreviewPanel'),
+      tokenPreviewMedia: $('tokenPreviewMedia'),
+      tokenPreviewMeta: $('tokenPreviewMeta'),
+      explorerLink: $('explorerLink')
+    };
+
+    const state = {
+      contract: loadHomepageContractSelection(),
+      client: null,
+      legacyContract: null,
+      legacyClient: null,
+      walletSession: walletAdapter.getSession(),
+      adminStatus: null,
+      selectedFile: null,
+      prepared: null,
+      duplicateId: null,
+      uploadState: null,
+      busy: false,
+      payloadPreviewUrl: null,
+      tokenPreviewUrl: null,
+      tokenThumbUrls: new Map(),
+      thumbnailCache: new Map(),
+      walletTokenIds: [],
+      walletPageIds: [],
+      walletTotalCount: 0,
+      walletUsesPagedHoldings: false,
+      walletTokenCache: new Map(),
+      walletTokens: [],
+      walletPageIndex: 0,
+      walletLoadingPage: false,
+      selectedTokenId: null,
+      lastSubmittedTxId: null
+    };
+
+    const WALLET_PAGE_SIZE = 16;
+    const WALLET_FALLBACK_SCAN_LIMIT = 2000;
+
+    const sleep = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
+    const isAscii = (value) => /^[\x00-\x7F]*$/.test(value);
+
+    const nowLabel = () =>
+      new Intl.DateTimeFormat(undefined, {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      }).format(new Date());
+
+    const normalizeTxId = (payload) => {
+      const raw = payload?.txId ?? payload?.txid ?? '';
+      return typeof raw === 'string' && raw.length > 0 ? raw : 'submitted';
+    };
+
+    const formatTokenId = (id) => `#${id.toString()}`;
+
+    const normalizeAddress = (value) => value?.trim().toUpperCase() ?? '';
+
+    const addressesEqual = (left, right) => {
+      const a = normalizeAddress(left);
+      const b = normalizeAddress(right);
+      return a.length > 0 && a === b;
+    };
+
+    const contractExplorerUrl = (contract) =>
+      `https://explorer.hiro.so/address/${encodeURIComponent(getContractId(contract))}?chain=${contract.network}`;
+
+    const tokenExplorerUrl = (contract, id) =>
+      `${contractExplorerUrl(contract)}&token_id=${id.toString()}`;
+
+    const appendLog = (message) => {
+      const item = document.createElement('li');
+      const time = document.createElement('time');
+      const body = document.createElement('span');
+      time.textContent = nowLabel();
+      body.textContent = message;
+      item.append(time, body);
+      dom.txLog.prepend(item);
+      while (dom.txLog.children.length > 24) {
+        dom.txLog.lastElementChild?.remove();
+      }
+      console.log(`[homepage] ${message}`);
+    };
+
+    const setStatus = (element, message, badgeLabel = 'idle', badgeTone = 'amber') => {
+      element.innerHTML = '';
+      const text = document.createElement('span');
+      text.innerHTML = message;
+      const badge = document.createElement('span');
+      badge.className = `badge ${badgeTone}`;
+      badge.textContent = badgeLabel;
+      element.append(text, badge);
+    };
+
+    const setStep = (key, status, label) => {
+      const step =
+        key === 'begin'
+          ? dom.stepBegin
+          : key === 'upload'
+            ? dom.stepUpload
+            : dom.stepSeal;
+      step.className = `step ${status === 'idle' ? '' : status}`;
+      step.querySelector('span').textContent = label;
+    };
+
+    const resetSteps = () => {
+      setStep('begin', 'idle', 'Idle');
+      setStep('upload', 'idle', 'Idle');
+      setStep('seal', 'idle', 'Idle');
+    };
+
+    const getFeeUnitNumber = () => {
+      const value = state.adminStatus?.feeUnitMicroStx;
+      if (value === null || value === undefined) {
+        return null;
+      }
+      const asNumber = Number(value);
+      return Number.isSafeInteger(asNumber) && asNumber > 0 ? asNumber : null;
+    };
+
+    const getFeeEstimate = (totalChunks = state.prepared?.chunks.length ?? 0) =>
+      estimateContractFees({
+        schedule: getFeeSchedule(state.contract, getFeeUnitNumber()),
+        totalChunks
+      });
+
+    const resolveFeePostConditions = (amountMicroStx) => {
+      const sender = state.walletSession.address;
+      if (!sender || !Number.isFinite(amountMicroStx) || amountMicroStx < 0) {
+        return undefined;
+      }
+      const royaltyRecipient = state.adminStatus?.royaltyRecipient ?? null;
+      const conditionCode =
+        !royaltyRecipient || addressesEqual(royaltyRecipient, sender)
+          ? FungibleConditionCode.LessEqual
+          : FungibleConditionCode.Equal;
+      return [
+        makeStandardSTXPostCondition(
+          sender,
+          conditionCode,
+          BigInt(Math.round(amountMicroStx))
+        )
+      ];
+    };
+
+    const renderMeta = (target, lines) => {
+      target.innerHTML = '';
+      for (const [key, value] of lines) {
+        const row = document.createElement('div');
+        row.className = 'meta-line';
+        const label = document.createElement('span');
+        label.className = 'meta-key';
+        label.textContent = key;
+        const body = document.createElement('span');
+        body.className = 'meta-value';
+        body.title = String(value);
+        body.textContent = String(value);
+        row.append(label, body);
+        target.append(row);
+      }
+    };
+
+    const revokePayloadPreview = () => {
+      if (state.payloadPreviewUrl) {
+        URL.revokeObjectURL(state.payloadPreviewUrl);
+        state.payloadPreviewUrl = null;
+      }
+    };
+
+    const revokeTokenPreview = () => {
+      if (state.tokenPreviewUrl) {
+        URL.revokeObjectURL(state.tokenPreviewUrl);
+        state.tokenPreviewUrl = null;
+      }
+    };
+
+    const revokeGridThumbUrls = () => {
+      state.tokenThumbUrls.forEach((url) => {
+        URL.revokeObjectURL(url);
+      });
+      state.tokenThumbUrls.clear();
+    };
+
+    const clearElement = (element, text) => {
+      element.innerHTML = '';
+      element.textContent = text;
+    };
+
+    const renderBytesPreview = (target, bytes, mimeType, urlSetter) => {
+      target.innerHTML = '';
+      const kind = getMediaKind(mimeType);
+      const blob = new Blob([bytes], { type: mimeType || 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+      urlSetter(url);
+
+      if (kind === 'image' || kind === 'svg') {
+        const img = document.createElement('img');
+        img.alt = 'Payload preview';
+        img.src = url;
+        target.append(img);
+        return;
+      }
+
+      if (kind === 'video') {
+        const video = document.createElement('video');
+        video.controls = true;
+        video.src = url;
+        target.append(video);
+        return;
+      }
+
+      if (kind === 'audio') {
+        const audio = document.createElement('audio');
+        audio.controls = true;
+        audio.src = url;
+        target.append(audio);
+        return;
+      }
+
+      if (kind === 'html') {
+        const frame = document.createElement('iframe');
+        frame.sandbox = 'allow-scripts';
+        frame.src = url;
+        target.append(frame);
+        return;
+      }
+
+      if (kind === 'text') {
+        const preview = getTextPreview(bytes, 1400);
+        const pre = document.createElement('pre');
+        pre.textContent = preview.truncated
+          ? `${preview.text}\n...`
+          : preview.text;
+        target.append(pre);
+        return;
+      }
+
+      target.textContent = 'Binary payload';
+    };
+
+    const setBusy = (busy) => {
+      state.busy = busy;
+      dom.connectButton.disabled = busy;
+      dom.disconnectButton.disabled = busy;
+      dom.contractSelect.disabled = busy;
+      dom.prepareButton.disabled = busy;
+      updateControls();
+    };
+
+    const getMismatch = () =>
+      getNetworkMismatch(state.contract.network, state.walletSession.network);
+
+    const updateControls = () => {
+      const connected = state.walletSession.isConnected && !!state.walletSession.address;
+      const mismatch = getMismatch();
+      const duplicateBlocked = state.duplicateId !== null && !dom.allowDuplicateInput.checked;
+      dom.connectButton.hidden = connected;
+      dom.disconnectButton.hidden = !connected;
+      dom.inscribeButton.disabled =
+        state.busy ||
+        !connected ||
+        !!mismatch ||
+        !state.prepared ||
+        duplicateBlocked;
+      dom.inscribeButton.textContent = state.uploadState
+        ? 'Continue inscription'
+        : 'Start inscription';
+      dom.refreshWalletButton.disabled = state.busy || !connected;
+      updateWalletPagerControls();
+    };
+
+    const getWalletPageCount = () =>
+      state.walletUsesPagedHoldings
+        ? state.walletTotalCount > 0
+          ? Math.ceil(state.walletTotalCount / WALLET_PAGE_SIZE)
+          : 0
+        : state.walletTokenIds.length > 0
+          ? Math.ceil(state.walletTokenIds.length / WALLET_PAGE_SIZE)
+          : 0;
+
+    const clampWalletPageIndex = () => {
+      const pageCount = getWalletPageCount();
+      if (pageCount === 0) {
+        state.walletPageIndex = 0;
+        return;
+      }
+      state.walletPageIndex = Math.min(
+        Math.max(0, state.walletPageIndex),
+        pageCount - 1
+      );
+    };
+
+    const getWalletPageIds = () => {
+      clampWalletPageIndex();
+      if (state.walletUsesPagedHoldings && !options.pageAlreadyLoaded) {
+        return state.walletPageIds;
+      }
+      const start = state.walletPageIndex * WALLET_PAGE_SIZE;
+      return state.walletTokenIds.slice(start, start + WALLET_PAGE_SIZE);
+    };
+
+    const updateWalletPagerControls = () => {
+      if (!dom.walletPrevButton || !dom.walletNextButton || !dom.walletPageReadout) {
+        return;
+      }
+      const pageCount = getWalletPageCount();
+      const hasPages = pageCount > 0;
+      dom.walletPageReadout.textContent = hasPages
+        ? `Page ${state.walletPageIndex + 1} / ${pageCount}`
+        : 'Page 0 / 0';
+      dom.walletPrevButton.disabled =
+        state.busy || state.walletLoadingPage || !hasPages || state.walletPageIndex <= 0;
+      dom.walletNextButton.disabled =
+        state.busy ||
+        state.walletLoadingPage ||
+        !hasPages ||
+        state.walletPageIndex >= pageCount - 1;
+    };
+
+    const applyContract = (contract) => {
+      state.contract = contract;
+      state.client = createXtrataClient({ contract });
+      state.legacyContract = getLegacyContract(contract);
+      state.legacyClient = state.legacyContract
+        ? createXtrataClient({ contract: state.legacyContract })
+        : null;
+      dom.contractReadout.textContent = getContractId(contract);
+      dom.networkBadge.textContent = contract.network;
+      dom.mintSubtitle.textContent = `${contract.label} · ${contract.protocolVersion}`;
+      state.prepared = null;
+      state.duplicateId = null;
+      state.uploadState = null;
+      state.walletTokenIds = [];
+      state.walletPageIds = [];
+      state.walletTotalCount = 0;
+      state.walletUsesPagedHoldings = false;
+      state.walletTokenCache = new Map();
+      state.walletTokens = [];
+      state.walletPageIndex = 0;
+      state.selectedTokenId = null;
+      revokeGridThumbUrls();
+      renderPreparedState();
+      resetSteps();
+      updateWalletStatus();
+      updateControls();
+    };
+
+    const updateWalletStatus = () => {
+      const connected = state.walletSession.isConnected && !!state.walletSession.address;
+      const mismatch = getMismatch();
+      if (!connected) {
+        setStatus(
+          dom.walletStatus,
+          '<strong>Wallet</strong> not connected',
+          'idle',
+          'amber'
+        );
+        dom.walletSubtitle.textContent = 'Connect a wallet to load the grid.';
+        return;
+      }
+      if (mismatch) {
+        setStatus(
+          dom.walletStatus,
+          `<strong>Wallet</strong> ${truncateMiddle(state.walletSession.address)} · expected ${mismatch.expected}`,
+          'network',
+          'rose'
+        );
+        dom.walletSubtitle.textContent = `Wallet is on ${mismatch.actual}; contract is ${mismatch.expected}.`;
+        return;
+      }
+      setStatus(
+        dom.walletStatus,
+        `<strong>Wallet</strong> ${truncateMiddle(state.walletSession.address)}`,
+        'ready',
+        'blue'
+      );
+      dom.walletSubtitle.textContent = truncateMiddle(state.walletSession.address, 8, 8);
+    };
+
+    const renderPreparedState = () => {
+      if (!state.prepared) {
+        clearElement(dom.payloadPreview, 'No payload');
+        renderMeta(dom.preparedMeta, [['Status', 'Not prepared']]);
+        dom.duplicateWarning.classList.remove('on');
+        updateControls();
+        return;
+      }
+
+      const feeEstimate = getFeeEstimate(state.prepared.chunks.length);
+      renderMeta(dom.preparedMeta, [
+        ['Name', state.prepared.file.name],
+        ['Size', formatBytes(BigInt(state.prepared.bytes.length))],
+        ['Mime', state.prepared.mimeType],
+        ['Chunks', state.prepared.chunks.length.toString()],
+        ['Hash', state.prepared.expectedHashHex],
+        ['Fixed', formatMicroStx(feeEstimate.beginMicroStx)],
+        ['Seal', formatMicroStx(feeEstimate.sealMicroStx)]
+      ]);
+
+      revokePayloadPreview();
+      renderBytesPreview(dom.payloadPreview, state.prepared.bytes, state.prepared.mimeType, (url) => {
+        state.payloadPreviewUrl = url;
+      });
+
+      if (state.duplicateId !== null) {
+        dom.duplicateText.textContent =
+          `Duplicate hash detected at ${formatTokenId(state.duplicateId)}.`;
+        dom.duplicateWarning.classList.add('on');
+      } else {
+        dom.duplicateWarning.classList.remove('on');
+      }
+      updateControls();
+    };
+
+    const inferTextFileName = (mimeType) => {
+      const requested = dom.nameInput.value.trim();
+      if (requested) {
+        return requested;
+      }
+      if (mimeType === 'application/json') {
+        return 'inscription.json';
+      }
+      if (mimeType === 'text/html') {
+        return 'inscription.html';
+      }
+      if (mimeType === 'image/svg+xml') {
+        return 'inscription.svg';
+      }
+      return 'inscription.txt';
+    };
+
+    const resolvePayloadFile = () => {
+      if (state.selectedFile) {
+        return state.selectedFile;
+      }
+      const text = dom.textPayload.value;
+      if (text.length === 0) {
+        throw new Error('Select a file or enter a text payload.');
+      }
+      const mimeType = dom.payloadType.value || 'text/plain';
+      return new File([text], inferTextFileName(mimeType), { type: mimeType });
+    };
+
+    const validatePayload = (file, bytes, chunks, tokenUriValue) => {
+      if (bytes.length === 0 || chunks.length === 0) {
+        throw new Error('Payload is empty.');
+      }
+      const mimeType = file.type || dom.payloadType.value || 'application/octet-stream';
+      if (!isAscii(mimeType) || mimeType.length > MAX_MIME_LENGTH) {
+        throw new Error('Mime type must be ASCII and no more than 64 characters.');
+      }
+      if (!isAscii(tokenUriValue) || tokenUriValue.length > MAX_TOKEN_URI_LENGTH) {
+        throw new Error('Token URI must be ASCII and no more than 256 characters.');
+      }
+      return mimeType;
+    };
+
+    const refreshUploadState = async (expectedHash) => {
+      state.uploadState = null;
+      const owner = state.walletSession.address;
+      if (!owner) {
+        return;
+      }
+      try {
+        state.uploadState = await state.client.getUploadState(
+          expectedHash,
+          owner,
+          owner
+        );
+        if (state.uploadState) {
+          appendLog(
+            `Existing upload found: ${state.uploadState.currentIndex.toString()}/${state.uploadState.totalChunks.toString()} chunks.`
+          );
+        }
+      } catch (error) {
+        state.uploadState = null;
+      }
+    };
+
+    const preparePayload = async () => {
+      const file = resolvePayloadFile();
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const chunks = chunkBytes(bytes);
+      const expectedHash = computeExpectedHash(chunks);
+      const tokenUriValue = dom.tokenUriInput.value.trim() || DEFAULT_TOKEN_URI;
+      const mimeType = validatePayload(file, bytes, chunks, tokenUriValue);
+      const batches = batchChunks(chunks, Math.min(DEFAULT_BATCH_SIZE, MAX_BATCH_SIZE));
+      const expectedHashHex = bytesToHex(expectedHash);
+
+      state.prepared = {
+        file,
+        bytes,
+        chunks,
+        batches,
+        expectedHash,
+        expectedHashHex,
+        tokenUriValue,
+        mimeType
+      };
+      state.duplicateId = null;
+      state.uploadState = null;
+      dom.allowDuplicateInput.checked = false;
+      appendLog(`Prepared ${file.name} (${formatBytes(BigInt(bytes.length))}).`);
+
+      const sender = state.walletSession.address ?? state.contract.address;
+      try {
+        const duplicate = await state.client.getIdByHash(expectedHash, sender);
+        state.duplicateId = duplicate;
+      } catch (error) {
+        state.duplicateId = null;
+      }
+
+      await refreshUploadState(expectedHash);
+      renderPreparedState();
+    };
+
+    const fetchAdminStatus = async () => {
+      const sender = state.walletSession.address ?? state.contract.address;
+      try {
+        state.adminStatus = await fetchContractAdminStatus({
+          client: state.client,
+          senderAddress: sender
+        });
+      } catch (error) {
+        state.adminStatus = null;
+      }
+      renderPreparedState();
+    };
+
+    const requestContractCall = (options) => {
+      const walletAddress = state.walletSession.address;
+      const network = state.walletSession.network ?? state.contract.network;
+      return new Promise((resolve, reject) => {
+        showContractCall({
+          contractAddress: state.contract.address,
+          contractName: state.contract.contractName,
+          functionName: options.functionName,
+          functionArgs: options.functionArgs,
+          network,
+          stxAddress: walletAddress,
+          postConditionMode: options.postConditions ? PostConditionMode.Deny : undefined,
+          postConditions: options.postConditions,
+          onFinish: (payload) => resolve(payload),
+          onCancel: () => reject(new Error('Wallet cancelled or failed to broadcast.'))
+        });
+      });
+    };
+
+    const pauseBeforeNext = async (label) => {
+      for (let remaining = TX_DELAY_SECONDS; remaining > 0; remaining -= 1) {
+        setStatus(dom.walletStatus, `<strong>${label}</strong> ${remaining}s`, 'wait', 'amber');
+        await sleep(1000);
+      }
+      updateWalletStatus();
+    };
+
+    const validateMintReadiness = async () => {
+      if (!state.walletSession.isConnected || !state.walletSession.address) {
+        throw new Error('Connect a wallet before inscribing.');
+      }
+      const mismatch = getMismatch();
+      if (mismatch) {
+        throw new Error(`Network mismatch: wallet on ${mismatch.actual}, contract is ${mismatch.expected}.`);
+      }
+      if (!state.prepared) {
+        await preparePayload();
+      }
+      if (state.duplicateId !== null && !dom.allowDuplicateInput.checked) {
+        throw new Error('Duplicate payload must be acknowledged before continuing.');
+      }
+      const capabilities = resolveContractCapabilities(state.contract);
+      if (capabilities.supportsPause) {
+        try {
+          const paused = state.adminStatus?.paused ?? await state.client.isPaused(state.walletSession.address);
+          const admin = state.adminStatus?.admin ?? null;
+          if (paused && !addressesEqual(admin, state.walletSession.address)) {
+            throw new Error('Contract is paused. Only the contract owner can mint.');
+          }
+        } catch (error) {
+          if (error instanceof Error && error.message.includes('paused')) {
+            throw error;
+          }
+        }
+      }
+    };
+
+    const runInscription = async () => {
+      setBusy(true);
+      resetSteps();
+      try {
+        await validateMintReadiness();
+        const prepared = state.prepared;
+        await refreshUploadState(prepared.expectedHash);
+        const feeEstimate = getFeeEstimate(prepared.chunks.length);
+        const hasUploadState = !!state.uploadState;
+        let didSendBeforeSeal = false;
+
+        if (!hasUploadState) {
+          setStep('begin', 'pending', 'Wallet prompt');
+          appendLog('Step 1: begin-inscription');
+          const beginTx = await requestContractCall({
+            functionName: 'begin-inscription',
+            functionArgs: [
+              bufferCV(prepared.expectedHash),
+              stringAsciiCV(prepared.mimeType),
+              uintCV(BigInt(prepared.bytes.length)),
+              uintCV(BigInt(prepared.chunks.length))
+            ],
+            postConditions: resolveFeePostConditions(feeEstimate.beginMicroStx)
+          });
+          appendLog(`Begin tx sent: ${normalizeTxId(beginTx)}`);
+          setStep('begin', 'done', 'Submitted');
+          didSendBeforeSeal = true;
+          await pauseBeforeNext('Next transaction in');
+        } else {
+          setStep('begin', 'done', 'Already started');
+        }
+
+        const currentIndex = state.uploadState
+          ? Number(state.uploadState.currentIndex)
+          : 0;
+        if (!Number.isSafeInteger(currentIndex) || currentIndex < 0) {
+          throw new Error('Upload state is too large to resume safely.');
+        }
+        if (currentIndex > prepared.chunks.length) {
+          throw new Error('On-chain upload state is ahead of this payload.');
+        }
+
+        const remainingChunks = prepared.chunks.slice(currentIndex);
+        const remainingBatches = batchChunks(
+          remainingChunks,
+          Math.min(DEFAULT_BATCH_SIZE, MAX_BATCH_SIZE)
+        );
+
+        if (remainingBatches.length > 0) {
+          setStep('upload', 'pending', `${remainingBatches.length} batch${remainingBatches.length === 1 ? '' : 'es'}`);
+          for (let index = 0; index < remainingBatches.length; index += 1) {
+            const batch = remainingBatches[index];
+            appendLog(`Step 2: upload batch ${index + 1}/${remainingBatches.length}`);
+            const uploadTx = await requestContractCall({
+              functionName: 'add-chunk-batch',
+              functionArgs: [
+                bufferCV(prepared.expectedHash),
+                listCV(batch.map((chunk) => bufferCV(chunk)))
+              ]
+            });
+            appendLog(`Batch ${index + 1}/${remainingBatches.length} tx sent: ${normalizeTxId(uploadTx)}`);
+            didSendBeforeSeal = true;
+            if (index < remainingBatches.length - 1) {
+              await pauseBeforeNext('Next batch in');
+            }
+          }
+          setStep('upload', 'done', 'Submitted');
+        } else {
+          setStep('upload', 'done', 'Already uploaded');
+        }
+
+        setStep('seal', 'pending', 'Wallet prompt');
+        appendLog('Step 3: seal-inscription');
+        if (didSendBeforeSeal) {
+          await pauseBeforeNext('Sealing in');
+        }
+        const sealTx = await requestContractCall({
+          functionName: 'seal-inscription',
+          functionArgs: [
+            bufferCV(prepared.expectedHash),
+            stringAsciiCV(prepared.tokenUriValue)
+          ],
+          postConditions: resolveFeePostConditions(feeEstimate.sealMicroStx)
+        });
+        const sealTxId = normalizeTxId(sealTx);
+        state.lastSubmittedTxId = sealTxId;
+        appendLog(`Seal tx sent: ${sealTxId}`);
+        setStep('seal', 'done', 'Submitted');
+        setStatus(
+          dom.walletStatus,
+          `<strong>Submitted</strong> ${truncateMiddle(sealTxId, 8, 8)}`,
+          'pending',
+          'blue'
+        );
+        await loadWalletInscriptions();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        appendLog(`Mint failed: ${message}`);
+        setStatus(dom.walletStatus, `<strong>Mint failed</strong> ${message}`, 'error', 'rose');
+        const pendingStep = [dom.stepSeal, dom.stepUpload, dom.stepBegin].find((step) =>
+          step.classList.contains('pending')
+        );
+        if (pendingStep) {
+          pendingStep.classList.remove('pending');
+          pendingStep.classList.add('error');
+          pendingStep.querySelector('span').textContent = 'Error';
+        }
+      } finally {
+        setBusy(false);
+        updateControls();
+      }
+    };
+
+    const renderTokenGridPlaceholders = (label = '') => {
+      dom.tokenGrid.innerHTML = '';
+      for (let index = 0; index < 16; index += 1) {
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.disabled = true;
+        card.className = 'token-card empty';
+        const thumb = document.createElement('div');
+        thumb.className = 'token-thumb';
+        thumb.textContent = label;
+        const meta = document.createElement('div');
+        meta.className = 'token-meta';
+        meta.innerHTML = '<strong>#</strong><span>empty</span>';
+        card.append(thumb, meta);
+        dom.tokenGrid.append(card);
+      }
+    };
+
+    const getTokenClient = (token) => {
+      const legacyId = state.legacyClient ? getContractId(state.legacyClient.contract) : null;
+      return legacyId && token.sourceContractId === legacyId
+        ? state.legacyClient
+        : state.client;
+    };
+
+    const getTokenCacheContractId = (token) =>
+      token.sourceContractId ?? getContractId(getTokenClient(token).contract);
+
+    const getThumbnailKey = (token) =>
+      `${getTokenCacheContractId(token)}:${token.id.toString()}`;
+
+    const applyCachedThumbnail = async (token, thumbElement) => {
+      if (token.svgDataUri) {
+        return;
+      }
+      const cacheKey = getThumbnailKey(token);
+      let thumbnail = state.thumbnailCache.get(cacheKey);
+      if (thumbnail === undefined) {
+        thumbnail = await loadInscriptionThumbnailFromCache(
+          getTokenCacheContractId(token),
+          token.id
+        );
+        state.thumbnailCache.set(cacheKey, thumbnail);
+      }
+      if (!thumbnail?.data || !thumbElement.isConnected) {
+        return;
+      }
+      const activePageIds = new Set(getWalletPageIds().map((id) => id.toString()));
+      if (!activePageIds.has(token.id.toString())) {
+        return;
+      }
+      const oldUrl = state.tokenThumbUrls.get(cacheKey);
+      if (oldUrl) {
+        URL.revokeObjectURL(oldUrl);
+      }
+      const blob = new Blob([thumbnail.data], {
+        type: thumbnail.mimeType ?? 'image/webp'
+      });
+      const url = URL.createObjectURL(blob);
+      state.tokenThumbUrls.set(cacheKey, url);
+      thumbElement.innerHTML = '';
+      const img = document.createElement('img');
+      img.alt = `Token ${token.id.toString()}`;
+      img.src = url;
+      thumbElement.append(img);
+    };
+
+    const renderTokenGrid = () => {
+      revokeGridThumbUrls();
+      dom.tokenGrid.innerHTML = '';
+      clampWalletPageIndex();
+      const pageIds = getWalletPageIds();
+      const totalCount = state.walletUsesPagedHoldings
+        ? state.walletTotalCount
+        : state.walletTokenIds.length;
+      dom.walletCountBadge.textContent = `${totalCount} token${totalCount === 1 ? '' : 's'}`;
+      updateWalletPagerControls();
+
+      for (let index = 0; index < WALLET_PAGE_SIZE; index += 1) {
+        const id = pageIds[index] ?? null;
+        const token = id !== null
+          ? state.walletTokenCache.get(id.toString()) ?? null
+          : null;
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = `token-card${token ? '' : ' empty'}${token && state.selectedTokenId === token.id ? ' active' : ''}`;
+        const thumb = document.createElement('div');
+        thumb.className = 'token-thumb';
+        const meta = document.createElement('div');
+        meta.className = 'token-meta';
+
+        if (id === null) {
+          card.disabled = true;
+          thumb.textContent = '';
+          meta.innerHTML = '<strong>#</strong><span>empty</span>';
+        } else if (!token) {
+          card.disabled = true;
+          thumb.textContent = '...';
+          meta.innerHTML =
+            `<strong>${formatTokenId(id)}</strong><span>loading</span>`;
+        } else {
+          const kind = getMediaKind(token.meta?.mimeType ?? null).toUpperCase();
+          if (token.svgDataUri) {
+            const img = document.createElement('img');
+            img.alt = `Token ${token.id.toString()}`;
+            img.src = token.svgDataUri;
+            thumb.append(img);
+          } else {
+            thumb.textContent = kind;
+            void applyCachedThumbnail(token, thumb);
+          }
+          const size = token.meta?.totalSize ?? null;
+          meta.innerHTML =
+            `<strong>${formatTokenId(token.id)}</strong><span>${kind}${size !== null ? ` · ${formatBytes(size)}` : ''}</span>`;
+          card.addEventListener('click', () => selectToken(token.id));
+        }
+        card.append(thumb, meta);
+        dom.tokenGrid.append(card);
+      }
+    };
+
+    const selectToken = async (id) => {
+      state.selectedTokenId = id;
+      const token =
+        state.walletTokenCache.get(id.toString()) ??
+        state.walletTokens.find((entry) => entry.id === id) ??
+        null;
+      renderTokenGrid();
+      revokeTokenPreview();
+      dom.explorerLink.hidden = true;
+
+      if (!token) {
+        clearElement(dom.tokenPreviewMedia, 'No selection');
+        renderMeta(dom.tokenPreviewMeta, [['Token', 'None']]);
+        return;
+      }
+
+      clearElement(dom.tokenPreviewMedia, 'Loading');
+      renderMeta(dom.tokenPreviewMeta, [
+        ['Token', formatTokenId(token.id)],
+        ['Mime', token.meta?.mimeType ?? 'unknown'],
+        ['Size', token.meta?.totalSize ? formatBytes(token.meta.totalSize) : 'unknown'],
+        ['Owner', token.owner ? truncateMiddle(token.owner, 8, 8) : 'unknown']
+      ]);
+
+      const tokenContract = getTokenClient(token).contract;
+      dom.explorerLink.href = tokenExplorerUrl(tokenContract, token.id);
+      dom.explorerLink.hidden = false;
+
+      try {
+        if (!token.meta || token.meta.totalSize <= 0n) {
+          clearElement(dom.tokenPreviewMedia, token.svgDataUri ? '' : 'No on-chain content');
+          if (token.svgDataUri) {
+            const img = document.createElement('img');
+            img.alt = `Token ${token.id.toString()}`;
+            img.src = token.svgDataUri;
+            dom.tokenPreviewMedia.append(img);
+          }
+          return;
+        }
+        const contentClient = getTokenClient(token);
+        const bytes = await fetchOnChainContent({
+          client: contentClient,
+          fallbackClient: contentClient === state.client ? state.legacyClient : null,
+          cacheContractId: token.sourceContractId ?? getContractId(contentClient.contract),
+          id: token.id,
+          senderAddress: state.walletSession.address ?? state.contract.address,
+          totalSize: token.meta.totalSize,
+          mimeType: token.meta.mimeType ?? null
+        });
+        const mimeType = resolveMimeType(token.meta.mimeType ?? null, bytes) ?? token.meta.mimeType ?? 'application/octet-stream';
+        revokeTokenPreview();
+        renderBytesPreview(dom.tokenPreviewMedia, bytes, mimeType, (url) => {
+          state.tokenPreviewUrl = url;
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        clearElement(dom.tokenPreviewMedia, 'Preview unavailable');
+        appendLog(`Preview failed for ${formatTokenId(token.id)}: ${message}`);
+      }
+    };
+
+    const runLimited = async (items, limit, task) => {
+      const results = new Array(items.length);
+      let cursor = 0;
+      const workers = Array.from(
+        { length: Math.max(1, Math.min(limit, items.length)) },
+        async () => {
+          while (cursor < items.length) {
+            const index = cursor;
+            cursor += 1;
+            results[index] = await task(items[index], index);
+          }
+        }
+      );
+      await Promise.all(workers);
+      return results;
+    };
+
+    const isHiroCompatibleBase = (baseUrl) =>
+      baseUrl.includes('hiro.so') || baseUrl.includes('/hiro/');
+
+    const parseUintFromHoldingValue = (value) => {
+      if (value === null || value === undefined) {
+        return null;
+      }
+      const text = typeof value === 'object'
+        ? String(value.repr ?? value.hex ?? '').trim()
+        : String(value).trim();
+      if (!text) {
+        return null;
+      }
+      const normalized = text.startsWith('u') ? text.slice(1) : text;
+      return /^\d+$/.test(normalized) ? BigInt(normalized) : null;
+    };
+
+    const parseHoldingTokenId = (item) => {
+      const direct = parseUintFromHoldingValue(item.token_id);
+      if (direct !== null) {
+        return direct;
+      }
+      return parseUintFromHoldingValue(item.value);
+    };
+
+    const fetchHiroWalletHoldingsPage = async (params) => {
+      const baseUrls = getApiBaseUrls(params.network).filter(isHiroCompatibleBase);
+      if (baseUrls.length === 0) {
+        throw new Error('No Hiro-compatible API base is configured.');
+      }
+      const assetIdentifiers = params.contractIds
+        .map((contractId) => `${contractId}::${DEFAULT_NFT_ASSET_NAME}`)
+        .join(',');
+      let lastError = null;
+      for (const baseUrl of baseUrls) {
+        try {
+          const url =
+            `${baseUrl}/extended/v1/tokens/nft/holdings` +
+            `?principal=${encodeURIComponent(params.walletAddress)}` +
+            `&asset_identifiers=${encodeURIComponent(assetIdentifiers)}` +
+            `&limit=${WALLET_PAGE_SIZE}` +
+            `&offset=${params.pageIndex * WALLET_PAGE_SIZE}` +
+            `&unanchored=true`;
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error(`Wallet holdings fetch failed (${response.status})`);
+          }
+          const json = await response.json();
+          const items = Array.isArray(json.results) ? json.results : [];
+          const ids = [];
+          for (const item of items) {
+            const tokenId = parseHoldingTokenId(item);
+            if (tokenId !== null) {
+              ids.push(tokenId);
+            }
+          }
+          const total =
+            typeof json.total === 'number' && Number.isFinite(json.total)
+              ? Math.max(0, Math.trunc(json.total))
+              : ids.length;
+          return {
+            ids,
+            total,
+            sourceBase: baseUrl
+          };
+        } catch (error) {
+          lastError = error;
+        }
+      }
+      throw lastError ?? new Error('Wallet holdings page fetch failed.');
+    };
+
+    const fetchWalletTokenSummaries = async (ids) => {
+      const sender = state.walletSession.address ?? state.contract.address;
+      let legacyMaxId = null;
+      if (state.legacyClient) {
+        try {
+          legacyMaxId = await state.legacyClient.getLastTokenId(sender);
+        } catch (error) {
+          legacyMaxId = null;
+        }
+      }
+      const visibleIds = [...ids]
+        .sort((left, right) => (left < right ? 1 : left > right ? -1 : 0));
+      const summaries = await runLimited(visibleIds, 4, async (id) => {
+        try {
+          if (state.legacyClient) {
+            return await fetchTokenSummaryWithFallback({
+              primaryClient: state.client,
+              legacyClient: state.legacyClient,
+              id,
+              senderAddress: sender,
+              legacyMaxId
+            });
+          }
+          return await fetchTokenSummary({
+            client: state.client,
+            id,
+            senderAddress: sender
+          });
+        } catch (error) {
+          return null;
+        }
+      });
+      return summaries.filter((token) => !!token && (token.meta || token.owner || token.svgDataUri));
+    };
+
+    const loadWalletPage = async (options = {}) => {
+      clampWalletPageIndex();
+      state.walletLoadingPage = true;
+      updateWalletPagerControls();
+      if (state.walletUsesPagedHoldings) {
+        try {
+          const contractId = getContractId(state.contract);
+          const contractIds = state.legacyContract
+            ? [contractId, getContractId(state.legacyContract)]
+            : [contractId];
+          const page = await fetchHiroWalletHoldingsPage({
+            network: state.contract.network,
+            walletAddress: state.walletSession.address,
+            contractIds,
+            pageIndex: state.walletPageIndex
+          });
+          state.walletTotalCount = page.total;
+          state.walletPageIds = page.ids;
+        } catch (error) {
+          state.walletLoadingPage = false;
+          updateWalletPagerControls();
+          throw error;
+        }
+      }
+
+      const pageIds = getWalletPageIds();
+      if (pageIds.length === 0) {
+        state.walletTokens = [];
+        renderTokenGrid();
+        state.walletLoadingPage = false;
+        updateWalletPagerControls();
+        return;
+      }
+
+      const missingIds = pageIds.filter((id) => !state.walletTokenCache.has(id.toString()));
+      renderTokenGrid();
+
+      try {
+        if (missingIds.length > 0 || options.force) {
+          const idsToFetch = options.force ? pageIds : missingIds;
+          const summaries = await fetchWalletTokenSummaries(idsToFetch);
+          for (const token of summaries) {
+            state.walletTokenCache.set(token.id.toString(), token);
+          }
+        }
+        state.walletTokens = pageIds
+          .map((id) => state.walletTokenCache.get(id.toString()) ?? null)
+          .filter((token) => !!token);
+        if (
+          state.walletTokens.length > 0 &&
+          (!state.selectedTokenId ||
+            !state.walletTokens.some((token) => token.id === state.selectedTokenId))
+        ) {
+          state.selectedTokenId = state.walletTokens[0].id;
+          void selectToken(state.selectedTokenId);
+        } else {
+          renderTokenGrid();
+        }
+      } finally {
+        state.walletLoadingPage = false;
+        updateWalletPagerControls();
+      }
+    };
+
+    const loadWalletInscriptions = async () => {
+      const connected = state.walletSession.isConnected && !!state.walletSession.address;
+      if (!connected) {
+        state.walletTokenIds = [];
+        state.walletPageIds = [];
+        state.walletTotalCount = 0;
+        state.walletUsesPagedHoldings = false;
+        state.walletTokenCache = new Map();
+        state.walletTokens = [];
+        state.walletPageIndex = 0;
+        state.selectedTokenId = null;
+        revokeGridThumbUrls();
+        dom.walletCountBadge.textContent = '0 tokens';
+        setStatus(dom.walletGridStatus, '<strong>Grid</strong> waiting for wallet', 'empty', 'amber');
+        renderTokenGridPlaceholders();
+        updateWalletPagerControls();
+        return;
+      }
+
+      const mismatch = getMismatch();
+      if (mismatch) {
+        state.walletTokenIds = [];
+        state.walletPageIds = [];
+        state.walletTotalCount = 0;
+        state.walletUsesPagedHoldings = false;
+        state.walletTokenCache = new Map();
+        state.walletTokens = [];
+        state.walletPageIndex = 0;
+        state.selectedTokenId = null;
+        revokeGridThumbUrls();
+        setStatus(dom.walletGridStatus, `<strong>Grid</strong> blocked by ${mismatch.actual} wallet`, 'network', 'rose');
+        renderTokenGridPlaceholders();
+        updateWalletPagerControls();
+        return;
+      }
+
+      setStatus(dom.walletGridStatus, '<strong>Grid</strong> loading wallet holdings', 'loading', 'blue');
+      renderTokenGridPlaceholders('...');
+      state.walletTokenIds = [];
+      state.walletPageIds = [];
+      state.walletTotalCount = 0;
+      state.walletUsesPagedHoldings = false;
+      state.walletTokenCache = new Map();
+      state.walletTokens = [];
+      state.walletPageIndex = 0;
+      state.selectedTokenId = null;
+      revokeGridThumbUrls();
+      updateWalletPagerControls();
+
+      try {
+        const contractId = getContractId(state.contract);
+        const contractIds = state.legacyContract
+          ? [contractId, getContractId(state.legacyContract)]
+          : [contractId];
+        try {
+          const firstPage = await fetchHiroWalletHoldingsPage({
+            network: state.contract.network,
+            walletAddress: state.walletSession.address,
+            contractIds,
+            pageIndex: 0
+          });
+          state.walletUsesPagedHoldings = true;
+          state.walletTotalCount = firstPage.total;
+          state.walletPageIds = firstPage.ids;
+          if (state.walletTotalCount === 0) {
+            setStatus(dom.walletGridStatus, '<strong>Grid</strong> no inscriptions found', 'empty', 'amber');
+            clearElement(dom.tokenPreviewMedia, 'No selection');
+            renderMeta(dom.tokenPreviewMeta, [['Token', 'None']]);
+            renderTokenGrid();
+            return;
+          }
+          setStatus(
+            dom.walletGridStatus,
+            `<strong>Grid</strong> ${state.walletTotalCount} inscription${state.walletTotalCount === 1 ? '' : 's'} available`,
+            'ready',
+            'blue'
+          );
+          await loadWalletPage({ pageAlreadyLoaded: true });
+          return;
+        } catch (pageError) {
+          state.walletUsesPagedHoldings = false;
+          state.walletTotalCount = 0;
+          state.walletPageIds = [];
+          appendLog(
+            `Paged Hiro holdings unavailable; trying cached holdings fallback. ${
+              pageError instanceof Error ? pageError.message : String(pageError)
+            }`
+          );
+        }
+
+        const holdings = await loadWalletHoldingsIndex({
+          network: state.contract.network,
+          walletAddress: state.walletSession.address,
+          contractIds,
+          maxIds: Number.MAX_SAFE_INTEGER
+        });
+
+        let ids = holdings?.tokenIds ?? [];
+        if (ids.length === 0) {
+          const last = await state.client.getLastTokenId(state.walletSession.address);
+          const scanLimit = BigInt(WALLET_FALLBACK_SCAN_LIMIT);
+          const start = last > scanLimit ? last - scanLimit : 0n;
+          const scanIds = [];
+          for (let id = last; id >= start; id -= 1n) {
+            scanIds.push(id);
+            if (id === 0n) {
+              break;
+            }
+          }
+          const summaries = await fetchWalletTokenSummaries(scanIds);
+          const ownedSummaries = summaries.filter((token) =>
+            addressesEqual(token.owner, state.walletSession.address)
+          );
+          for (const token of ownedSummaries) {
+            state.walletTokenCache.set(token.id.toString(), token);
+          }
+          state.walletTokenIds = ownedSummaries
+            .map((token) => token.id)
+            .sort((left, right) => (left < right ? 1 : left > right ? -1 : 0));
+          if (state.walletTokenIds.length > 0) {
+            appendLog(
+              `Wallet holdings index unavailable; scanned the latest ${scanIds.length} token IDs.`
+            );
+          }
+        } else {
+          ids = ids.sort((left, right) => (left < right ? 1 : left > right ? -1 : 0));
+          state.walletTokenIds = ids;
+        }
+
+        if (state.walletTokenIds.length === 0) {
+          setStatus(dom.walletGridStatus, '<strong>Grid</strong> no inscriptions found', 'empty', 'amber');
+          clearElement(dom.tokenPreviewMedia, 'No selection');
+          renderMeta(dom.tokenPreviewMeta, [['Token', 'None']]);
+          renderTokenGrid();
+        } else {
+          setStatus(
+            dom.walletGridStatus,
+            `<strong>Grid</strong> ${state.walletTokenIds.length} inscription${state.walletTokenIds.length === 1 ? '' : 's'} available`,
+            'ready',
+            'blue'
+          );
+          await loadWalletPage();
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        state.walletTokenIds = [];
+        state.walletPageIds = [];
+        state.walletTotalCount = 0;
+        state.walletUsesPagedHoldings = false;
+        state.walletTokenCache = new Map();
+        state.walletTokens = [];
+        state.walletPageIndex = 0;
+        state.selectedTokenId = null;
+        revokeGridThumbUrls();
+        setStatus(dom.walletGridStatus, `<strong>Grid</strong> ${message}`, 'error', 'rose');
+        appendLog(`Wallet load failed: ${message}`);
+        renderTokenGridPlaceholders();
+        updateWalletPagerControls();
+      }
+    };
+
+    const connectWallet = async () => {
+      setBusy(true);
+      try {
+        state.walletSession = await walletAdapter.connect();
+        appendLog(state.walletSession.address ? `Wallet connected: ${truncateMiddle(state.walletSession.address)}` : 'Wallet connection cancelled.');
+        updateWalletStatus();
+        await fetchAdminStatus();
+        if (state.prepared) {
+          await refreshUploadState(state.prepared.expectedHash);
+          renderPreparedState();
+        }
+        await loadWalletInscriptions();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        appendLog(`Wallet connect failed: ${message}`);
+        setStatus(dom.walletStatus, `<strong>Wallet error</strong> ${message}`, 'error', 'rose');
+      } finally {
+        setBusy(false);
+        updateControls();
+      }
+    };
+
+    const disconnectWallet = async () => {
+      setBusy(true);
+      try {
+        await walletAdapter.disconnect();
+        state.walletSession = walletAdapter.getSession();
+        state.walletTokenIds = [];
+        state.walletPageIds = [];
+        state.walletTotalCount = 0;
+        state.walletUsesPagedHoldings = false;
+        state.walletTokenCache = new Map();
+        state.walletTokens = [];
+        state.walletPageIndex = 0;
+        state.selectedTokenId = null;
+        revokeGridThumbUrls();
+        state.uploadState = null;
+        appendLog('Wallet disconnected.');
+        updateWalletStatus();
+        await fetchAdminStatus();
+        await loadWalletInscriptions();
+        renderPreparedState();
+      } finally {
+        setBusy(false);
+        updateControls();
+      }
+    };
+
+    const setSelectedFile = (file) => {
+      state.selectedFile = file;
+      state.prepared = null;
+      state.duplicateId = null;
+      state.uploadState = null;
+      dom.fileInput.value = '';
+      if (file) {
+        dom.dropzoneText.innerHTML = '';
+        const chip = document.createElement('span');
+        chip.className = 'file-chip';
+        chip.textContent = `${file.name} · ${formatBytes(BigInt(file.size))}`;
+        dom.dropzoneText.append(chip);
+        if (!dom.nameInput.value.trim()) {
+          dom.nameInput.value = file.name;
+        }
+        if (file.type) {
+          dom.payloadType.value = file.type;
+        }
+      } else {
+        dom.dropzoneText.textContent = 'Choose file or drop it here';
+      }
+      renderPreparedState();
+    };
+
+    const markPreparedDirty = () => {
+      if (!state.prepared) {
+        return;
+      }
+      state.prepared = null;
+      state.duplicateId = null;
+      state.uploadState = null;
+      resetSteps();
+      renderPreparedState();
+    };
+
+    const initializeContractSelect = () => {
+      dom.contractSelect.innerHTML = '';
+      for (const entry of ACTIVE_CONTRACTS) {
+        const option = document.createElement('option');
+        option.value = getContractId(entry);
+        option.textContent = entry.label;
+        dom.contractSelect.append(option);
+      }
+      dom.contractSelect.value = getContractId(state.contract);
+    };
+
+    const initialize = async () => {
+      dom.tokenUriInput.value = DEFAULT_TOKEN_URI;
+      initializeContractSelect();
+      applyContract(state.contract);
+      resetSteps();
+      renderTokenGridPlaceholders();
+      updateWalletStatus();
+      await fetchAdminStatus();
+      await loadWalletInscriptions();
+      updateControls();
+    };
+
+    dom.connectButton.addEventListener('click', connectWallet);
+    dom.disconnectButton.addEventListener('click', disconnectWallet);
+    dom.refreshWalletButton.addEventListener('click', loadWalletInscriptions);
+    dom.walletPrevButton.addEventListener('click', async () => {
+      if (state.walletPageIndex <= 0 || state.walletLoadingPage) {
+        return;
+      }
+      state.walletPageIndex -= 1;
+      await loadWalletPage();
+    });
+    dom.walletNextButton.addEventListener('click', async () => {
+      const pageCount = getWalletPageCount();
+      if (state.walletPageIndex >= pageCount - 1 || state.walletLoadingPage) {
+        return;
+      }
+      state.walletPageIndex += 1;
+      await loadWalletPage();
+    });
+    dom.prepareButton.addEventListener('click', async () => {
+      setBusy(true);
+      try {
+        await preparePayload();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        appendLog(`Prepare failed: ${message}`);
+        setStatus(dom.walletStatus, `<strong>Prepare failed</strong> ${message}`, 'error', 'rose');
+      } finally {
+        setBusy(false);
+      }
+    });
+    dom.inscribeButton.addEventListener('click', runInscription);
+    dom.allowDuplicateInput.addEventListener('change', updateControls);
+
+    dom.contractSelect.addEventListener('change', async () => {
+      const contract = ACTIVE_CONTRACTS.find((entry) => getContractId(entry) === dom.contractSelect.value);
+      if (!contract) {
+        return;
+      }
+      saveHomepageContractSelection(contract);
+      applyContract(contract);
+      appendLog(`Contract selected: ${contract.label}`);
+      await fetchAdminStatus();
+      await loadWalletInscriptions();
+    });
+
+    dom.fileInput.addEventListener('change', () => {
+      const file = dom.fileInput.files?.[0] ?? null;
+      if (file) {
+        setSelectedFile(file);
+      }
+    });
+    dom.dropzone.addEventListener('click', () => dom.fileInput.click());
+    dom.dropzone.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        dom.fileInput.click();
+      }
+    });
+    dom.dropzone.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      dom.dropzone.classList.add('dragging');
+    });
+    dom.dropzone.addEventListener('dragleave', () => {
+      dom.dropzone.classList.remove('dragging');
+    });
+    dom.dropzone.addEventListener('drop', (event) => {
+      event.preventDefault();
+      dom.dropzone.classList.remove('dragging');
+      const file = event.dataTransfer?.files?.[0] ?? null;
+      if (file) {
+        setSelectedFile(file);
+      }
+    });
+    dom.textPayload.addEventListener('input', () => {
+      if (dom.textPayload.value.length > 0 && state.selectedFile) {
+        setSelectedFile(null);
+      }
+      markPreparedDirty();
+    });
+    dom.nameInput.addEventListener('input', markPreparedDirty);
+    dom.payloadType.addEventListener('change', markPreparedDirty);
+    dom.tokenUriInput.addEventListener('input', markPreparedDirty);
+
+    window.addEventListener('beforeunload', () => {
+      revokePayloadPreview();
+      revokeTokenPreview();
+      revokeGridThumbUrls();
+    });
+
+    void initialize();
+  </script>
+</body>
+</html>
