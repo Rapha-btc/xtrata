@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-ParisMatF1-voice-20260514215219523-f304",
+  "preferred_name": "ParisMatF1",
+  "display_name": "French Matriarch",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "An older French woman with deep resonance, authority, warmth, and elegant self-possession. Native language French. Rich texture, calm rhythm, emotionally layered. In English, keep a mature French accent and never default to American vowels.",
+  "preview_text": "Bonsoir. Je suis une voix francaise mature, grave et souveraine.",
+  "language": "French",
+  "preset_id": "fr_matriarch_f",
+  "gmt_create": "2026-05-14T13:52:36.848Z",
+  "preview_audio_file": "french_matriarch_42d2997f7d06_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/french_matriarch_42d2997f7d06_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

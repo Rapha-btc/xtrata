@@ -1,0 +1,20 @@
+{
+  "voice": "qwen-tts-vd-ParisSageM1-voice-20260514215352552-bcd6",
+  "preferred_name": "ParisSageM1",
+  "display_name": "French Sage",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A contemplative French man with a clearly French accent, low calm resonance, patience, and philosophical gravity. Native language French. Suitable for reflective fantasy or literary narration. In English, preserve the French accent clearly.",
+  "preview_text": "Bonsoir. Je suis une voix francaise calme, sage et meditativement profonde.",
+  "language": "French",
+  "preset_id": "fr_sage_m",
+  "gmt_create": "2026-05-14T13:54:02.722Z",
+  "preview_audio_file": "french_sage_9c8b263dc607_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/french_sage_9c8b263dc607_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local",
+  "native_sample_audio_file": "french_sage_9c8b263dc607_native_sample.wav",
+  "native_sample_audio_url": "/qwen3_designed_voices/french_sage_9c8b263dc607_native_sample.wav",
+  "native_sample_language": "French",
+  "native_sample_text": "Le pouvoir n'etait jamais la tempete elle-meme, mais la discipline necessaire pour lui tenir tete sans trembler.",
+  "native_sample_saved_at": "2026-05-14T18:35:20.481Z"
+}

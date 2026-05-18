@@ -1,0 +1,20 @@
+{
+  "voice": "qwen-tts-vd-BritLaw01-voice-20260515043605118-2323",
+  "preferred_name": "BritLaw01",
+  "display_name": "Parliamentary Barrister",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A polished British male advocate with educated London pronunciation, razor clarity, legal precision, and persuasive House of Commons energy. Quick-minded, articulate, and severe when needed, but never shouty. Suited to argument, debate, and elevated formal speech.",
+  "preview_text": "A parliamentary British barrister voice with precision, confidence, and exacting rhetorical control.",
+  "language": "English",
+  "preset_id": "brit_parliamentary_barrister",
+  "gmt_create": "2026-05-14T20:36:10.325Z",
+  "preview_audio_file": "parliamentary_barrister_17aca60f6469_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/parliamentary_barrister_17aca60f6469_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local",
+  "native_sample_audio_file": "parliamentary_barrister_17aca60f6469_native_sample.wav",
+  "native_sample_audio_url": "/qwen3_designed_voices/parliamentary_barrister_17aca60f6469_native_sample.wav",
+  "native_sample_language": "English",
+  "native_sample_text": "The issue before us is not whether the matter is difficult, but whether we possess the discipline to describe it honestly before attempting to solve it.",
+  "native_sample_saved_at": "2026-05-14T20:36:31.013Z"
+}

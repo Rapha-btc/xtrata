@@ -1,0 +1,20 @@
+{
+  "voice": "qwen-tts-vd-BritQueen01-voice-20260515043546751-77e0",
+  "preferred_name": "BritQueen01",
+  "display_name": "Stately British Queen",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "An older British female ceremonial voice with stately composure, immaculate diction, upper-class British pronunciation, and calm reassuring authority. Formal, restrained, and gracious, with a subtle warmth beneath the discipline. Evoke the mood of a royal holiday address without imitating any real queen.",
+  "preview_text": "A stately British ceremonial voice with calm authority, grace, and polished public reassurance.",
+  "language": "English",
+  "preset_id": "brit_stately_queen",
+  "gmt_create": "2026-05-14T20:35:54.717Z",
+  "preview_audio_file": "stately_british_queen_b084a81744d6_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/stately_british_queen_b084a81744d6_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local",
+  "native_sample_audio_file": "stately_british_queen_b084a81744d6_native_sample.wav",
+  "native_sample_audio_url": "/qwen3_designed_voices/stately_british_queen_b084a81744d6_native_sample.wav",
+  "native_sample_language": "English",
+  "native_sample_text": "However far apart we may sometimes feel, the quiet habits of kindness remain one of the surest proofs that a nation is still itself.",
+  "native_sample_saved_at": "2026-05-14T20:36:21.601Z"
+}

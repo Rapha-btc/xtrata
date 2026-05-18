@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-USSmOak01-voice-20260515211034579-3f4a",
+  "preferred_name": "USSmOak01",
+  "display_name": "American Smoked Oak Romance",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A deep American male baritone romance narrator with smoked-oak bass, a rough velvet edge, and slow-burning intimacy. General American accent, mature baritone weight, and a slightly raspy low timbre that works especially well for Navy SEAL romance, rescue romance, and emotionally guarded heroes. He should sound grounded, patient, and quietly intense, with the roughness tucked under the control. Avoid harshness, avoid vocal fry, and avoid action-trailer energy.",
+  "preview_text": "A smoked-oak American romance voice with deep bass warmth, velvet rasp, and slow intimacy.",
+  "language": "English",
+  "preset_id": "american_smoked_oak_romance_m",
+  "gmt_create": "2026-05-15T13:10:44.111Z",
+  "preview_audio_file": "design_lab__american_smoked_oak_romance__american_smoked_oak_romance_m__create_preview__english__design_model__txt_a_smoked_oak_american_romanc_a9ae8ad18f38__4e73b481766d.wav",
+  "preview_audio_url": "/qwen3_designed_voices/design_lab__american_smoked_oak_romance__american_smoked_oak_romance_m__create_preview__english__design_model__txt_a_smoked_oak_american_romanc_a9ae8ad18f38__4e73b481766d.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

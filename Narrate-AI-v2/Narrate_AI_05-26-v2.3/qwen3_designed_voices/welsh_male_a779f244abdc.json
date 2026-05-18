@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-WelshM01-voice-20260514221859710-cdc4",
+  "preferred_name": "WelshM01",
+  "display_name": "Welsh Male",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A Welsh male voice with a clearly Welsh accent, lyrical resonance, warmth, and proper British regional identity. Calm, articulate, and musical without sounding exaggerated. Definitely not American.",
+  "preview_text": "Good evening. This is a Welsh male voice with warmth, lyricism, and clear British identity.",
+  "language": "English",
+  "preset_id": "welsh_male",
+  "gmt_create": "2026-05-14T14:19:06.081Z",
+  "preview_audio_file": "welsh_male_a779f244abdc_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/welsh_male_a779f244abdc_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

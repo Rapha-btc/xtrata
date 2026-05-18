@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-USAdvM01-voice-20260515210242854-758c",
+  "preferred_name": "USAdvM01",
+  "display_name": "American Epic Adventure Male",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A male American adventure narrator with broad cinematic energy, grounded heroism, and polished long-form control. General American accent, strong forward motion, and enough vocal authority for fantasy, action, and sweeping historical storytelling without slipping into trailer-voice excess. Avoid growled bravado, avoid comic-book camp, and avoid relentless intensity.",
+  "preview_text": "An American epic-adventure male voice built for momentum, scale, and grounded cinematic storytelling.",
+  "language": "English",
+  "preset_id": "american_adventure_epic_m",
+  "gmt_create": "2026-05-15T13:02:52.791Z",
+  "preview_audio_file": "design_lab__american_epic_adventure_male__american_adventure_epic_m__create_preview__english__design_model__txt_an_american_epic_adventure_m_d91097c08118__c40e010929fb.wav",
+  "preview_audio_url": "/qwen3_designed_voices/design_lab__american_epic_adventure_male__american_adventure_epic_m__create_preview__english__design_model__txt_an_american_epic_adventure_m_d91097c08118__c40e010929fb.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

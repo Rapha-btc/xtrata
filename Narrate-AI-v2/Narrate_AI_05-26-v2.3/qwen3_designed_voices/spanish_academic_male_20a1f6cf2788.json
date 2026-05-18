@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-MadridAcadM1-voice-20260514215614001-486f",
+  "preferred_name": "MadridAcadM1",
+  "display_name": "Spanish Academic Male",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A Spanish male academic explainer with a clearly Spanish accent, calm authority, precise diction, and accessible intelligence. Native language Spanish. Ideal for educational narration. In English, keep a distinct Spanish accent and cadence.",
+  "preview_text": "Buenas tardes. Soy una voz espanola clara, didactica y de autoridad serena.",
+  "language": "Spanish",
+  "preset_id": "es_professor_m",
+  "gmt_create": "2026-05-14T13:56:20.528Z",
+  "preview_audio_file": "spanish_academic_male_20a1f6cf2788_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/spanish_academic_male_20a1f6cf2788_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

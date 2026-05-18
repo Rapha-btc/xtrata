@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-USTactProt01-voice-20260515210252762-05cb",
+  "preferred_name": "USTactProt01",
+  "display_name": "American Quiet Tactical Protector",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A deep American male voice with the calm restraint of an elite operator who speaks only when he means it. General American accent, low-mid pitch, intimate control, and protective steadiness suited to Navy SEAL romance, bodyguard romance, and emotionally guarded heroes. He should sound observant, self-contained, and deeply dependable, with warmth emerging naturally rather than performatively. Avoid stiffness, avoid monotone flatness, and avoid melodramatic gravel.",
+  "preview_text": "A quiet tactical American protector voice with low warmth, restraint, and intimate control.",
+  "language": "English",
+  "preset_id": "american_quiet_tactical_protector_m",
+  "gmt_create": "2026-05-15T13:03:01.355Z",
+  "preview_audio_file": "design_lab__american_quiet_tactical_protector__american_quiet_tactical_protector_m__create_preview__english__design_model__txt_a_quiet_tactical_american_pr_a24094f2f773__6f2f03f2385a.wav",
+  "preview_audio_url": "/qwen3_designed_voices/design_lab__american_quiet_tactical_protector__american_quiet_tactical_protector_m__create_preview__english__design_model__txt_a_quiet_tactical_american_pr_a24094f2f773__6f2f03f2385a.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

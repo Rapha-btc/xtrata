@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-HomeCoF1-voice-20260514222633303-c4fd",
+  "preferred_name": "HomeCoF1",
+  "display_name": "Home Counties Female",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A British female voice with a modern Home Counties public-broadcast accent, non-rhotic, poised, articulate, and warmly authoritative. Very clearly British, very clearly not American, with smooth UK cadence and educated spoken-word control.",
+  "preview_text": "This is a modern British female broadcast voice with clean diction, balance, and unmistakable UK rhythm.",
+  "language": "English",
+  "preset_id": "homecounties_presenter_female",
+  "gmt_create": "2026-05-14T14:26:40.614Z",
+  "preview_audio_file": "home_counties_female_dadcc88d03f1_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/home_counties_female_dadcc88d03f1_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

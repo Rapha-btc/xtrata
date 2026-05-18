@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-R4Male01-voice-20260514222614476-d0e3",
+  "preferred_name": "R4Male01",
+  "display_name": "Radio 4 Style Male",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A British male voice in the style of a serious BBC Radio 4 spoken-word presenter, non-rhotic, calm, highly articulate, intelligent, understated, and unmistakably British. Public-service broadcast diction, measured pacing, and controlled warmth. Do not sound American. Avoid commercial promo energy.",
+  "preview_text": "Good evening. This is a British public-service broadcast voice designed for thoughtful spoken-word narration.",
+  "language": "English",
+  "preset_id": "bbc_radio4_male",
+  "gmt_create": "2026-05-14T14:26:21.464Z",
+  "preview_audio_file": "radio_4_style_male_13655c4af5bb_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/radio_4_style_male_13655c4af5bb_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

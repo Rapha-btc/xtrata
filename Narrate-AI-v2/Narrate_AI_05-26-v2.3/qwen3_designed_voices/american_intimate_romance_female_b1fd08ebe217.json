@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-USRomF01-voice-20260515205631739-b697",
+  "preferred_name": "USRomF01",
+  "display_name": "American Intimate Romance Female",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A female American romance narrator with velvety warmth, emotional openness, and polished intimacy. General American accent, medium-low pitch, graceful pacing, and believable vulnerability suited to romance, women's fiction, and emotionally rich contemporary stories. Avoid breathy parody, avoid teen squeakiness, and avoid broad ad-read enthusiasm.",
+  "preview_text": "An intimate American romance female voice with warmth, polish, and emotionally immediate storytelling.",
+  "language": "English",
+  "preset_id": "american_romance_intimate_f",
+  "gmt_create": "2026-05-15T12:56:38.016Z",
+  "preview_audio_file": "design_lab__american_intimate_romance_female__american_romance_intimate_f__create_preview__english__design_model__txt_an_intimate_american_romance_f00f8e6dadec__b1fd08ebe217.wav",
+  "preview_audio_url": "/qwen3_designed_voices/design_lab__american_intimate_romance_female__american_romance_intimate_f__create_preview__english__design_model__txt_an_intimate_american_romance_f00f8e6dadec__b1fd08ebe217.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

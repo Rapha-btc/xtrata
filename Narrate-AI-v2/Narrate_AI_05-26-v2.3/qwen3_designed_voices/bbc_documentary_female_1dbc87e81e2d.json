@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-BBCDocF1-voice-20260514222623094-73fd",
+  "preferred_name": "BBCDocF1",
+  "display_name": "BBC Documentary Female",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A British female documentary narrator with the clarity and restraint of a BBC factual presenter, non-rhotic, precise, and understated. Strong public-broadcast diction and calm British rhythm. Not American. Avoid softness that weakens the authority.",
+  "preview_text": "This is a British documentary female voice designed for clear factual storytelling and public-broadcast trust.",
+  "language": "English",
+  "preset_id": "bbc_documentary_female",
+  "gmt_create": "2026-05-14T14:26:29.077Z",
+  "preview_audio_file": "bbc_documentary_female_1dbc87e81e2d_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/bbc_documentary_female_1dbc87e81e2d_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

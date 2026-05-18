@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-Sidekick01-voice-20260514205700686-67c3",
+  "preferred_name": "Sidekick01",
+  "display_name": "Playful Sidekick",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A playful sidekick voice with youthful energy, nimble timing, warmth, and good comic responsiveness while staying believable and listenable. Suitable for companion characters, light animation, and upbeat banter. Avoid extreme cartoon squeakiness.",
+  "preview_text": "A playful sidekick voice with quick energy and warm comic timing.",
+  "language": "English",
+  "preset_id": "playful_sidekick",
+  "gmt_create": "2026-05-14T12:57:05.280Z",
+  "preview_audio_file": "playful_sidekick_3b2661ef3faf_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/playful_sidekick_3b2661ef3faf_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

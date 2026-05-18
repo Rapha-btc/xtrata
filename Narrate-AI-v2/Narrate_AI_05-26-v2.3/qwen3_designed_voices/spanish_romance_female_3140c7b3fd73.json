@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-MadridRomF1-voice-20260514212045660-3ff3",
+  "preferred_name": "MadridRomF1",
+  "display_name": "Spanish Romance Female",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A Spanish woman in her thirties with a clearly Iberian Spanish accent, warm sensuality, and polished romantic narration. Native language Spanish. Intimate, graceful, and expressive. When she later speaks English, retain a distinct Spanish accent and do not drift toward American speech.",
+  "preview_text": "Buenas noches. Soy una voz espanola calida y elegante para una narracion romantica.",
+  "language": "Spanish",
+  "preset_id": "es_romance_f",
+  "gmt_create": "2026-05-14T13:21:54.156Z",
+  "preview_audio_file": "spanish_romance_female_3140c7b3fd73_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/spanish_romance_female_3140c7b3fd73_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

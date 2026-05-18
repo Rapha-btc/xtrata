@@ -247,7 +247,7 @@ Notes: ensure tests or guards in `src/lib/network/__tests__/` still pass.
   - Pages note: set variables for both **Production** and **Preview** environments
     (the `*.pages.dev` URL uses Preview) to avoid 429s on preview builds.
 - **BNS resolution proxies**
-  - Address-label BNS names resolve through the BNSv2 valid-names API first, then Hiro name APIs, then Explorer HTML fallback.
+  - BNS name/address resolution prefers BNSv2 APIs first, then Hiro name APIs, then Explorer HTML fallback.
   - `/functions/bnsv2/[network]/[[path]].ts` proxies BNSv2 API requests.
   - Optional BNSv2 overrides: `VITE_BNSV2_API_BASE`, `VITE_BNSV2_API_BASE_MAINNET`, `VITE_BNSV2_API_BASE_TESTNET`.
   - Pages Functions runtime overrides: `BNSV2_API_BASE_MAINNET`, `BNSV2_API_BASE_TESTNET`.

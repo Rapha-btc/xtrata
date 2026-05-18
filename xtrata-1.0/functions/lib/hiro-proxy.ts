@@ -20,7 +20,9 @@ const CALL_READ_FUNCTION_TTLS_MS: Record<string, number> = {
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-  'Access-Control-Allow-Headers': 'content-type,x-hiro-api-key'
+  'Access-Control-Allow-Headers': 'content-type,x-hiro-api-key',
+  'Access-Control-Expose-Headers':
+    'x-xtrata-proxy-cache,x-xtrata-hiro-key-present,x-xtrata-hiro-key-count,x-ratelimit-limit,x-ratelimit-remaining,x-ratelimit-reset,cf-cache-status'
 };
 const inFlightSafeRequests = new Map<string, Promise<Response>>();
 const hiroKeyCooldownUntil = new Map<string, number>();
@@ -289,7 +291,14 @@ const forwardToHiro = async (params: {
   if (!response) {
     return new Response('Hiro request failed.', { status: 502 });
   }
-  return response;
+  const responseHeaders = new Headers(response.headers);
+  responseHeaders.set('x-xtrata-hiro-key-present', apiKeys.length > 0 ? '1' : '0');
+  responseHeaders.set('x-xtrata-hiro-key-count', String(apiKeys.length));
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: responseHeaders
+  });
 };
 
 export const proxyHiroRequest = async (params: {

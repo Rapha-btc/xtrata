@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-FrenchSoft01-voice-20260514205641992-dffa",
+  "preferred_name": "FrenchSoft01",
+  "display_name": "Soft French Woman",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A female voice with a soft French accent speaking fluent English, medium pace, refined warmth, romantic texture, and gentle confidence. Suitable for elegant storytelling, lifestyle copy, or a sophisticated supporting character. Avoid parody and avoid exaggerated accent markers.",
+  "preview_text": "A soft French-accented female voice with elegance, warmth, and smooth control.",
+  "language": "English",
+  "preset_id": "soft_french_woman",
+  "gmt_create": "2026-05-14T12:56:46.650Z",
+  "preview_audio_file": "soft_french_woman_12d6cd1900bf_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/soft_french_woman_12d6cd1900bf_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

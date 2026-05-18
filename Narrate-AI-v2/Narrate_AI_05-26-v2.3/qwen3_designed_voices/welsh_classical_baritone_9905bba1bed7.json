@@ -1,0 +1,20 @@
+{
+  "voice": "qwen-tts-vd-WelshBari01-voice-20260515043559598-0e76",
+  "preferred_name": "WelshBari01",
+  "display_name": "Welsh Classical Baritone",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A famous-sounding Welsh male dramatic voice with a rich baritone, musical phrasing, poetic gravity, and unmistakable Welsh coloration inside refined British English. Intensely romantic, literary, and sonorous, suited to grand speeches and classical narration. Do not imitate any real actor directly.",
+  "preview_text": "A Welsh classical baritone with rolling musical phrasing, poetic weight, and grand dramatic confidence.",
+  "language": "English",
+  "preset_id": "brit_welsh_baritone",
+  "gmt_create": "2026-05-14T20:36:06.654Z",
+  "preview_audio_file": "welsh_classical_baritone_9905bba1bed7_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/welsh_classical_baritone_9905bba1bed7_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local",
+  "native_sample_audio_file": "welsh_classical_baritone_9905bba1bed7_native_sample.wav",
+  "native_sample_audio_url": "/qwen3_designed_voices/welsh_classical_baritone_9905bba1bed7_native_sample.wav",
+  "native_sample_language": "English",
+  "native_sample_text": "Some voices do not merely speak a line; they carry it as if it had crossed mountains before arriving in the room.",
+  "native_sample_saved_at": "2026-05-14T20:36:27.285Z"
+}

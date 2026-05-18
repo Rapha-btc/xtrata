@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-USVetDeep01-voice-20260515210301356-9465",
+  "preferred_name": "USVetDeep01",
+  "display_name": "American Scarred Veteran Romance",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A deep American male voice with mature resonance, emotional wear, and the guarded vulnerability of a former special-operations veteran. General American accent, slower deliberate pacing, and a low, intimate tone suited to second-chance romance, military romance, and wounded-warrior protagonists. He should sound strong, tired, self-controlled, and unexpectedly tender beneath the surface. Avoid old-man frailty, avoid melodrama, and avoid generic sad-boy softness.",
+  "preview_text": "A deep American veteran-romance voice with worn strength, restraint, and unexpected tenderness.",
+  "language": "English",
+  "preset_id": "american_scarred_veteran_romance_m",
+  "gmt_create": "2026-05-15T13:03:09.813Z",
+  "preview_audio_file": "design_lab__american_scarred_veteran_romance__american_scarred_veteran_romance_m__create_preview__english__design_model__txt_a_deep_american_veteran_roma_5060e454b81c__04c95b4ad308.wav",
+  "preview_audio_url": "/qwen3_designed_voices/design_lab__american_scarred_veteran_romance__american_scarred_veteran_romance_m__create_preview__english__design_model__txt_a_deep_american_veteran_roma_5060e454b81c__04c95b4ad308.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

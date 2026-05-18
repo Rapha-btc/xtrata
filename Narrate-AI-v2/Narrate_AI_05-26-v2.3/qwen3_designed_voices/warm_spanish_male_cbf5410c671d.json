@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-SpanishWarm01-voice-20260514205645147-1125",
+  "preferred_name": "SpanishWarm01",
+  "display_name": "Warm Spanish Male",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A male voice with a warm Spanish accent speaking natural English, medium-low pitch, relaxed confidence, expressive rhythm, and cinematic warmth. Suitable for travel storytelling, character work, or emotionally rich narration. Avoid cliché bravado and avoid speed-reading.",
+  "preview_text": "A warm Spanish-accented male voice with expressive rhythm and grounded charm.",
+  "language": "English",
+  "preset_id": "warm_spanish_male",
+  "gmt_create": "2026-05-14T12:56:55.570Z",
+  "preview_audio_file": "warm_spanish_male_cbf5410c671d_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/warm_spanish_male_cbf5410c671d_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

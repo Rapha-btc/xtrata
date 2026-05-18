@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-LondonF01-voice-20260514221833705-32c4",
+  "preferred_name": "LondonF01",
+  "display_name": "Modern London Female",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A woman in her twenties or thirties with a modern London English accent, confident, urban, bright, and clearly British. Natural London cadence, not exaggerated slang, and definitely not American. Warm, quick, and contemporary.",
+  "preview_text": "All right, this is a modern London voice with confidence, pace, and unmistakably British rhythm.",
+  "language": "English",
+  "preset_id": "london_modern_female",
+  "gmt_create": "2026-05-14T14:18:39.510Z",
+  "preview_audio_file": "modern_london_female_001dce295c8f_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/modern_london_female_001dce295c8f_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

@@ -1,0 +1,20 @@
+{
+  "voice": "qwen-tts-vd-BritDame01-voice-20260515043606683-a3c1",
+  "preferred_name": "BritDame01",
+  "display_name": "Grand British Dame",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "An older British female grande dame voice with theatrical intelligence, clipped upper-class diction, seasoned wit, and formidable poise. Elegant, dry, and socially commanding, suitable for high society, period drama, or a formidable matriarch. Avoid camp excess and avoid direct imitation of any known performer.",
+  "preview_text": "A grand British dame voice with stage-bred authority, wit, and formidable social composure.",
+  "language": "English",
+  "preset_id": "brit_grand_dame",
+  "gmt_create": "2026-05-14T20:36:13.732Z",
+  "preview_audio_file": "grand_british_dame_cc9d2e6cf001_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/grand_british_dame_cc9d2e6cf001_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local",
+  "native_sample_audio_file": "grand_british_dame_cc9d2e6cf001_native_sample.wav",
+  "native_sample_audio_url": "/qwen3_designed_voices/grand_british_dame_cc9d2e6cf001_native_sample.wav",
+  "native_sample_language": "English",
+  "native_sample_text": "If one must endure nonsense, one can at least insist that it arrive properly dressed and on time.",
+  "native_sample_saved_at": "2026-05-14T20:36:31.883Z"
+}

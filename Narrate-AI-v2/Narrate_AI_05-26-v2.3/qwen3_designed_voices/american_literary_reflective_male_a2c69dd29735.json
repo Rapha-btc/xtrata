@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-USLitM01-voice-20260515205628550-2dbe",
+  "preferred_name": "USLitM01",
+  "display_name": "American Literary Reflective Male",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A male American literary narrator with a calm contemporary accent, reflective gravity, and careful, unforced phrasing. Ideal for literary fiction, serious nonfiction, and memoir with emotional depth. He should sound intelligent, humane, and quietly compelling rather than performative. Avoid preacher cadence, avoid heavy gravel, and avoid generic motivational tone.",
+  "preview_text": "A reflective American literary male voice with quiet gravity and polished spoken-word control.",
+  "language": "English",
+  "preset_id": "american_literary_reflective_m",
+  "gmt_create": "2026-05-15T12:56:36.096Z",
+  "preview_audio_file": "design_lab__american_literary_reflective_male__american_literary_reflective_m__create_preview__english__design_model__txt_a_reflective_american_litera_2fadf4e7689c__a2c69dd29735.wav",
+  "preview_audio_url": "/qwen3_designed_voices/design_lab__american_literary_reflective_male__american_literary_reflective_m__create_preview__english__design_model__txt_a_reflective_american_litera_2fadf4e7689c__a2c69dd29735.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

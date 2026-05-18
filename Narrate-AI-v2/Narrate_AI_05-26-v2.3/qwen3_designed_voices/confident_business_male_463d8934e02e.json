@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-Business01-voice-20260514205659007-e810",
+  "preferred_name": "Business01",
+  "display_name": "Confident Business Male",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A confident male business voice with neutral international English, smooth authority, clean pacing, and strong clarity for strategy, investor, or leadership narration. Avoid sales hype and avoid sounding cold or dismissive.",
+  "preview_text": "A confident business male voice with smooth authority and clean professional focus.",
+  "language": "English",
+  "preset_id": "confident_business_male",
+  "gmt_create": "2026-05-14T12:57:03.047Z",
+  "preview_audio_file": "confident_business_male_463d8934e02e_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/confident_business_male_463d8934e02e_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

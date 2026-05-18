@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-LiverM01-voice-20260514222017773-06a0",
+  "preferred_name": "LiverM01",
+  "display_name": "Liverpool Male",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A man from Liverpool with a distinct but natural Scouse accent, wit, speed, and clear British regional identity. Avoid parody and avoid flattening into standard southern English or American speech. Lively, sharp, and characterful.",
+  "preview_text": "Hiya. This is a Liverpool male voice with proper Scouse rhythm and unmistakably British phrasing.",
+  "language": "English",
+  "preset_id": "liverpool_male",
+  "gmt_create": "2026-05-14T14:20:31.601Z",
+  "preview_audio_file": "liverpool_male_630aaab482c3_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/liverpool_male_630aaab482c3_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

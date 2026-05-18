@@ -1,0 +1,20 @@
+{
+  "voice": "qwen-tts-vd-BritKingC01-voice-20260515043545672-9d93",
+  "preferred_name": "BritKingC01",
+  "display_name": "Modern British King",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A modern older British royal male voice with cultivated upper-class pronunciation, measured warmth, environmental earnestness, and ceremonial poise. Thoughtful, urbane, and gently emphatic rather than theatrical. Evoke a contemporary royal Christmas message style without imitating any real individual.",
+  "preview_text": "A modern British royal voice with cultivated warmth, formal poise, and reflective public-address clarity.",
+  "language": "English",
+  "preset_id": "brit_modern_king",
+  "gmt_create": "2026-05-14T20:35:52.394Z",
+  "preview_audio_file": "modern_british_king_2ae743c91b49_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/modern_british_king_2ae743c91b49_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local",
+  "native_sample_audio_file": "modern_british_king_2ae743c91b49_native_sample.wav",
+  "native_sample_audio_url": "/qwen3_designed_voices/modern_british_king_2ae743c91b49_native_sample.wav",
+  "native_sample_language": "English",
+  "native_sample_text": "Tradition matters most when it gives us a language for care, continuity, and responsibility beyond our own immediate lives.",
+  "native_sample_saved_at": "2026-05-14T20:36:18.962Z"
+}

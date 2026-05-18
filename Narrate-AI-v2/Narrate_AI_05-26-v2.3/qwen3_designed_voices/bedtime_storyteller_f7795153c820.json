@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-Bedtime01-voice-20260514205702453-cb63",
+  "preferred_name": "Bedtime01",
+  "display_name": "Bedtime Storyteller",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A soothing bedtime storyteller voice with soft warmth, slow pace, airy calm, and clear gentle articulation. Suitable for winding down, family listening, and restful narration. Avoid whispering too much and avoid sounding sleepy or unclear.",
+  "preview_text": "A soothing bedtime storyteller voice with slow warmth and gentle clarity.",
+  "language": "English",
+  "preset_id": "bedtime_storyteller",
+  "gmt_create": "2026-05-14T12:57:09.528Z",
+  "preview_audio_file": "bedtime_storyteller_f7795153c820_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/bedtime_storyteller_f7795153c820_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

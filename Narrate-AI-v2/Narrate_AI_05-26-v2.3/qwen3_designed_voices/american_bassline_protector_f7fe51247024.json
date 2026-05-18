@@ -1,0 +1,20 @@
+{
+  "voice": "qwen-tts-vd-USBassProt01-voice-20260515211040167-63d3",
+  "preferred_name": "USBassProt01",
+  "display_name": "American Bassline Protector",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A very deep baritone American male voice with bassline resonance, clean baritone pressure, and a controlled rasp that gives the narration extra weight. General American accent, polished but grounded, with the kind of voice that feels protective before it feels romantic. Ideal for Navy SEAL heroes, bodyguard romances, and alpha-but-human leads. Avoid booming excess, avoid growled caricature, and avoid flattening the emotional range.",
+  "preview_text": "A bassline American protector voice with low resonance, controlled rasp, and grounded intimacy.",
+  "language": "English",
+  "preset_id": "american_bassline_protector_m",
+  "gmt_create": "2026-05-15T13:10:48.610Z",
+  "preview_audio_file": "design_lab__american_bassline_protector__american_bassline_protector_m__create_preview__english__design_model__txt_a_bassline_american_protecto_5e9ca896f516__f7fe51247024.wav",
+  "preview_audio_url": "/qwen3_designed_voices/design_lab__american_bassline_protector__american_bassline_protector_m__create_preview__english__design_model__txt_a_bassline_american_protecto_5e9ca896f516__f7fe51247024.wav",
+  "preview_response_format": "wav",
+  "source": "local",
+  "native_sample_audio_file": "design_lab__american_bassline_protector__american_bassline_protector_m__primary__english__design_model__txt_his_voice_was_the_last_54f996199327__f7fe51247024.wav",
+  "native_sample_audio_url": "/qwen3_designed_voices/design_lab__american_bassline_protector__american_bassline_protector_m__primary__english__design_model__txt_his_voice_was_the_last_54f996199327__f7fe51247024.wav",
+  "native_sample_language": "English",
+  "native_sample_text": "His voice was the last thing to move in the room, low and heavy and calm enough to make everyone else adjust around it.",
+  "native_sample_saved_at": "2026-05-15T13:11:52.570Z"
+}

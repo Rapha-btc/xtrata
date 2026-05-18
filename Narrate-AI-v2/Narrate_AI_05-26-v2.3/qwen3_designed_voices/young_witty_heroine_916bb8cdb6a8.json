@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-Heroine01-voice-20260514205625524-bdc6",
+  "preferred_name": "Heroine01",
+  "display_name": "Young Witty Heroine",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A young adult female voice with a modern British-American neutral accent, bright intelligence, quick timing, playful warmth, and believable emotional depth. Suitable for a witty heroine or first-person contemporary fiction. Avoid cartoon valley-girl style and avoid shrill excitement.",
+  "preview_text": "A lively heroine voice with quick wit, warmth, and believable first-person energy.",
+  "language": "English",
+  "preset_id": "young_witty_heroine",
+  "gmt_create": "2026-05-14T12:56:31.030Z",
+  "preview_audio_file": "young_witty_heroine_916bb8cdb6a8_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/young_witty_heroine_916bb8cdb6a8_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

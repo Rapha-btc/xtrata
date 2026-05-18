@@ -1,0 +1,15 @@
+{
+  "name": "narrate-ai-v2-4",
+  "version": "2.4.0",
+  "private": true,
+  "description": "Local Narrate:AI voice studio and audiobook generator.",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node --check audiobook-v23.js",
+    "smoke": "node scripts/smoke-test.js",
+    "test": "npm run check && npm run smoke"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

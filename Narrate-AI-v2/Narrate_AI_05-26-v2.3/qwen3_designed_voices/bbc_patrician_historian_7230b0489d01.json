@@ -1,0 +1,20 @@
+{
+  "voice": "qwen-tts-vd-BBCHist01-voice-20260515043600416-626b",
+  "preferred_name": "BBCHist01",
+  "display_name": "BBC Patrician Historian",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "An older British male documentary and history presenter with patrician authority, precise received pronunciation, reflective intelligence, and lightly weathered resonance. Measured, lucid, and compelling, ideal for documentary history and empire-era retrospectives. Avoid sounding like news radio or parody.",
+  "preview_text": "A patrician British history voice designed for documentary authority, long sentences, and reflective narrative control.",
+  "language": "English",
+  "preset_id": "brit_bbc_historian",
+  "gmt_create": "2026-05-14T20:36:07.794Z",
+  "preview_audio_file": "bbc_patrician_historian_7230b0489d01_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/bbc_patrician_historian_7230b0489d01_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local",
+  "native_sample_audio_file": "bbc_patrician_historian_7230b0489d01_native_sample.wav",
+  "native_sample_audio_url": "/qwen3_designed_voices/bbc_patrician_historian_7230b0489d01_native_sample.wav",
+  "native_sample_language": "English",
+  "native_sample_text": "What survives in the archive is not merely the event itself, but the manner in which power wished the event to be remembered.",
+  "native_sample_saved_at": "2026-05-14T20:36:28.763Z"
+}

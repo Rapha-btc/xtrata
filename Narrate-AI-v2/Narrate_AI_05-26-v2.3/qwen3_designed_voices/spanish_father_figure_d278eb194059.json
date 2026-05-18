@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-MadridDadM1-voice-20260514215634130-32f9",
+  "preferred_name": "MadridDadM1",
+  "display_name": "Spanish Father Figure",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A warm Spanish man in his forties or fifties with a clearly Spanish accent, patient reassurance, and grounded emotional strength. Native language Spanish. Gentle, kind, never preachy. In English, the Spanish accent should remain audible and natural.",
+  "preview_text": "Hola. Soy una voz espanola serena, protectora y llena de paciencia.",
+  "language": "Spanish",
+  "preset_id": "es_father_m",
+  "gmt_create": "2026-05-14T13:56:41.428Z",
+  "preview_audio_file": "spanish_father_figure_d278eb194059_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/spanish_father_figure_d278eb194059_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

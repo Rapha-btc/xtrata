@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-BritLitM1-voice-20260514222642922-efc7",
+  "preferred_name": "BritLitM1",
+  "display_name": "British Literary Broadcast Male",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A British male literary-broadcast voice with the atmosphere of a serious Radio 4 book reading, non-rhotic, emotionally restrained, cultured, and unmistakably British. Elegant spoken-word rhythm, but natural and contemporary. Do not sound American.",
+  "preview_text": "This is a British literary broadcast voice made for reflective reading, careful cadence, and unmistakable UK speech.",
+  "language": "English",
+  "preset_id": "british_literary_broadcast_male",
+  "gmt_create": "2026-05-14T14:26:52.689Z",
+  "preview_audio_file": "british_literary_broadcast_male_d545b7373d40_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/british_literary_broadcast_male_d545b7373d40_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

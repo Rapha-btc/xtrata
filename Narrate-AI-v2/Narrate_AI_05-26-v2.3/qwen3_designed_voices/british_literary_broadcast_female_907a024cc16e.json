@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-BritLitF1-voice-20260514222644900-d4a0",
+  "preferred_name": "BritLitF1",
+  "display_name": "British Literary Broadcast Female",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A British female literary-broadcast voice with the feel of a Radio 4 short-story reading, non-rhotic, finely articulated, emotionally intelligent, and quietly compelling. Distinctly British and never American. Clear spoken-word elegance with warmth and control.",
+  "preview_text": "This is a British literary female broadcast voice designed for book readings, short stories, and spoken-word clarity.",
+  "language": "English",
+  "preset_id": "british_literary_broadcast_female",
+  "gmt_create": "2026-05-14T14:26:55.321Z",
+  "preview_audio_file": "british_literary_broadcast_female_907a024cc16e_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/british_literary_broadcast_female_907a024cc16e_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-LiverF01-voice-20260514221844268-0e60",
+  "preferred_name": "LiverF01",
+  "display_name": "Liverpool Female",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A woman from Liverpool with a clearly Liverpudlian accent, bright energy, humour, and unmistakably British cadence. Natural Scouse flavour without going broad or cartoonish. Keep the accent clearly regional and never American.",
+  "preview_text": "Hiya. This is a Liverpool female voice with lively British rhythm and a touch of Scouse brightness.",
+  "language": "English",
+  "preset_id": "liverpool_female",
+  "gmt_create": "2026-05-14T14:18:50.282Z",
+  "preview_audio_file": "liverpool_female_3e48f3645dc5_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/liverpool_female_3e48f3645dc5_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}
