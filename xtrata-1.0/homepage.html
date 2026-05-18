@@ -611,6 +611,14 @@
       color: transparent;
     }
 
+    .token-thumb-label {
+      max-width: 100%;
+      padding: 8px;
+      line-height: 1.15;
+      text-align: center;
+      overflow-wrap: anywhere;
+    }
+
     .preview-media--pixelated {
       image-rendering: -webkit-optimize-contrast;
       image-rendering: pixelated;
@@ -1299,6 +1307,44 @@
     const clearElement = (element, text) => {
       element.innerHTML = '';
       element.textContent = text;
+    };
+
+    const GRID_MIME_LABELS = new Map([
+      ['text/plain', 'PLAIN TEXT'],
+      ['text/javascript', 'JAVASCRIPT'],
+      ['application/javascript', 'JAVASCRIPT'],
+      ['application/ecmascript', 'JAVASCRIPT'],
+      ['text/ecmascript', 'JAVASCRIPT'],
+      ['application/json', 'JSON'],
+      ['text/json', 'JSON'],
+      ['text/css', 'CSS'],
+      ['text/markdown', 'MARKDOWN'],
+      ['text/csv', 'CSV'],
+      ['application/xml', 'XML'],
+      ['text/xml', 'XML'],
+      ['application/yaml', 'YAML'],
+      ['text/yaml', 'YAML']
+    ]);
+
+    const getGridMimeLabel = (mimeType) => {
+      const normalized = mimeType?.trim().toLowerCase() ?? '';
+      if (GRID_MIME_LABELS.has(normalized)) {
+        return GRID_MIME_LABELS.get(normalized);
+      }
+      if (normalized.endsWith('+json')) {
+        return 'JSON';
+      }
+      if (normalized.endsWith('+xml')) {
+        return 'XML';
+      }
+      return getMediaKind(normalized || null).toUpperCase();
+    };
+
+    const setTokenThumbLabel = (thumb, label) => {
+      const text = document.createElement('span');
+      text.className = 'token-thumb-label';
+      text.textContent = label;
+      thumb.replaceChildren(text);
     };
 
     const renderBytesPreview = (target, bytes, mimeType, urlSetter) => {
@@ -2268,7 +2314,7 @@
           meta.innerHTML =
             `<strong>${formatTokenId(id)}</strong><span>loading</span>`;
         } else {
-          const kind = getMediaKind(token.meta?.mimeType ?? null).toUpperCase();
+          const kind = getGridMimeLabel(token.meta?.mimeType ?? null);
           thumb.dataset.thumbnailKey = getThumbnailKey(token);
           if (token.svgDataUri) {
             const img = document.createElement('img');
@@ -2287,7 +2333,7 @@
             if (liveMedia && renderGridLiveMedia(token, thumb, liveMedia)) {
               shouldApplyCachedThumbnail = false;
             } else {
-              thumb.textContent = kind;
+              setTokenThumbLabel(thumb, kind);
               thumb.dataset.thumbnailState = 'pending-cache';
               shouldApplyCachedThumbnail = true;
             }
