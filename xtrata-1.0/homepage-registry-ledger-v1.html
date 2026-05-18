@@ -1,0 +1,4511 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Xtrata - Registry Ledger</title>
+  <link rel="icon" href="/favicon.svg" />
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f8f5;
+      --panel: #ffffff;
+      --ink: #151a17;
+      --muted: #617067;
+      --line: #d2ddd6;
+      --line-strong: #9caf9f;
+      --green: #245f45;
+      --green-soft: #e6f1ea;
+      --blue: #214f73;
+      --blue-soft: #e5eef5;
+      --rose: #a43f58;
+      --rose-soft: #f7e6eb;
+      --amber: #84601b;
+      --amber-soft: #f7edd7;
+      --shadow: 0 18px 50px rgba(19, 31, 25, 0.08);
+      --radius: 8px;
+      --control: #ffffff;
+      --surface-soft: #fbfdfb;
+      --thumb: #f1f5f2;
+      --button-hover: #27302b;
+      --ghost-hover: rgba(21, 26, 23, 0.06);
+      --focus-ring: rgba(36, 95, 69, 0.12);
+      --topbar-accent: transparent;
+      --button-bg: var(--ink);
+      --button-ink: var(--bg);
+      --button-border: var(--ink);
+      --secondary-bg: transparent;
+      --secondary-ink: var(--ink);
+    }
+
+
+    body[data-theme="classic"] {
+      --bg: #f6f8f5;
+      --panel: #ffffff;
+      --ink: #151a17;
+      --muted: #617067;
+      --line: #d2ddd6;
+      --line-strong: #9caf9f;
+      --green: #245f45;
+      --green-soft: #e6f1ea;
+      --blue: #214f73;
+      --blue-soft: #e5eef5;
+      --rose: #a43f58;
+      --rose-soft: #f7e6eb;
+      --amber: #84601b;
+      --amber-soft: #f7edd7;
+      --shadow: 0 18px 50px rgba(19, 31, 25, 0.08);
+      --control: #ffffff;
+      --surface-soft: #fbfdfb;
+      --thumb: #f1f5f2;
+      --button-hover: #27302b;
+      --ghost-hover: rgba(21, 26, 23, 0.06);
+      --focus-ring: rgba(36, 95, 69, 0.12);
+      --topbar-accent: transparent;
+    }
+
+    body[data-theme="terminal"] {
+      color-scheme: dark;
+      --bg: #0d120f;
+      --panel: #101813;
+      --ink: #e7f5ec;
+      --muted: #8fa498;
+      --line: #26362d;
+      --line-strong: #4a715a;
+      --green: #70d18d;
+      --green-soft: #14281c;
+      --blue: #8fc7ff;
+      --blue-soft: #122235;
+      --rose: #ff8da8;
+      --rose-soft: #351823;
+      --amber: #f0be63;
+      --amber-soft: #302411;
+      --shadow: 0 20px 58px rgba(0, 0, 0, 0.42);
+      --control: #0c1510;
+      --surface-soft: #0c1510;
+      --thumb: #0a100d;
+      --button-hover: #c8ead4;
+      --ghost-hover: rgba(112, 209, 141, 0.10);
+      --focus-ring: rgba(112, 209, 141, 0.18);
+      --topbar-accent: rgba(112, 209, 141, 0.16);
+    }
+
+    body[data-theme="midnight"] {
+      color-scheme: dark;
+      --bg: #101521;
+      --panel: #161d2b;
+      --ink: #f3f7ff;
+      --muted: #9ba8bb;
+      --line: #2b3649;
+      --line-strong: #556a8c;
+      --green: #76d6c2;
+      --green-soft: #12302d;
+      --blue: #9fc3ff;
+      --blue-soft: #172945;
+      --rose: #ff9ab0;
+      --rose-soft: #3a1d2a;
+      --amber: #ffd27a;
+      --amber-soft: #332713;
+      --shadow: 0 20px 62px rgba(0, 0, 0, 0.36);
+      --control: #101827;
+      --surface-soft: #111a29;
+      --thumb: #0f1724;
+      --button-hover: #d8e6ff;
+      --ghost-hover: rgba(159, 195, 255, 0.10);
+      --focus-ring: rgba(159, 195, 255, 0.18);
+      --topbar-accent: rgba(159, 195, 255, 0.16);
+    }
+
+    body[data-theme="neon"] {
+      color-scheme: dark;
+      --bg: #05020b;
+      --panel: #0c0715;
+      --ink: #f8f4ff;
+      --muted: #b79fd2;
+      --line: #3b1859;
+      --line-strong: #ff36d7;
+      --green: #00ff9c;
+      --green-soft: #06251c;
+      --blue: #00d9ff;
+      --blue-soft: #051c2a;
+      --rose: #ff36d7;
+      --rose-soft: #2a0724;
+      --amber: #ffe66d;
+      --amber-soft: #251f05;
+      --shadow: 0 0 34px rgba(255, 54, 215, 0.20), 0 0 68px rgba(0, 217, 255, 0.12);
+      --control: #10071b;
+      --surface-soft: #0a0611;
+      --thumb: #09040f;
+      --button-hover: #d9b8ff;
+      --ghost-hover: rgba(0, 217, 255, 0.13);
+      --focus-ring: rgba(255, 54, 215, 0.28);
+      --topbar-accent: rgba(0, 255, 156, 0.28);
+    }
+
+    body[data-theme="monochrome"] {
+      color-scheme: dark;
+      --bg: #050505;
+      --panel: #111111;
+      --ink: #f7f7f7;
+      --muted: #a8a8a8;
+      --line: #303030;
+      --line-strong: #d8d8d8;
+      --green: #ffffff;
+      --green-soft: #1d1d1d;
+      --blue: #e7e7e7;
+      --blue-soft: #181818;
+      --rose: #ffffff;
+      --rose-soft: #1f1f1f;
+      --amber: #d4d4d4;
+      --amber-soft: #202020;
+      --shadow: 0 24px 70px rgba(0, 0, 0, 0.62), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      --control: #0b0b0b;
+      --surface-soft: #151515;
+      --thumb: #0d0d0d;
+      --button-hover: #d8d8d8;
+      --ghost-hover: rgba(255, 255, 255, 0.08);
+      --focus-ring: rgba(255, 255, 255, 0.18);
+      --topbar-accent: rgba(255, 255, 255, 0.20);
+      --button-bg: #f7f7f7;
+      --button-ink: #050505;
+      --button-border: #f7f7f7;
+      --secondary-bg: transparent;
+      --secondary-ink: #f7f7f7;
+    }
+
+    body[data-theme="obsidian"] {
+      color-scheme: dark;
+      --bg: #070b10;
+      --panel: #0e141b;
+      --ink: #eef6ff;
+      --muted: #8fa2b6;
+      --line: #253241;
+      --line-strong: #50677d;
+      --green: #7ee2c7;
+      --green-soft: #102a27;
+      --blue: #86b7ff;
+      --blue-soft: #111f32;
+      --rose: #ff8fb3;
+      --rose-soft: #311522;
+      --amber: #ffcc78;
+      --amber-soft: #2a2010;
+      --shadow: 0 26px 76px rgba(0, 0, 0, 0.54);
+      --control: #0a1118;
+      --surface-soft: #0b1219;
+      --thumb: #060b10;
+      --button-hover: #d6e9ff;
+      --ghost-hover: rgba(134, 183, 255, 0.10);
+      --focus-ring: rgba(126, 226, 199, 0.20);
+      --topbar-accent: rgba(126, 226, 199, 0.16);
+    }
+
+    body[data-theme="ember"] {
+      color-scheme: dark;
+      --bg: #130905;
+      --panel: #1b0f0a;
+      --ink: #fff5ee;
+      --muted: #c09b85;
+      --line: #3b2116;
+      --line-strong: #a64f26;
+      --green: #f0a35b;
+      --green-soft: #331a0d;
+      --blue: #ffc36f;
+      --blue-soft: #2b1d0e;
+      --rose: #ff6d4d;
+      --rose-soft: #35120c;
+      --amber: #ffd27f;
+      --amber-soft: #30200d;
+      --shadow: 0 24px 68px rgba(0, 0, 0, 0.50), 0 0 42px rgba(255, 109, 77, 0.10);
+      --control: #170b07;
+      --surface-soft: #160c08;
+      --thumb: #110704;
+      --button-hover: #ffd3b0;
+      --ghost-hover: rgba(255, 195, 111, 0.10);
+      --focus-ring: rgba(255, 109, 77, 0.20);
+      --topbar-accent: rgba(255, 109, 77, 0.18);
+    }
+
+    body[data-theme="ultraviolet"] {
+      color-scheme: dark;
+      --bg: #10071f;
+      --panel: #170d2a;
+      --ink: #fbf7ff;
+      --muted: #b5a2d2;
+      --line: #33204e;
+      --line-strong: #8257d6;
+      --green: #c7ff7a;
+      --green-soft: #1f2b10;
+      --blue: #b08cff;
+      --blue-soft: #211338;
+      --rose: #ff91d6;
+      --rose-soft: #35142d;
+      --amber: #f4d27c;
+      --amber-soft: #2d230d;
+      --shadow: 0 24px 72px rgba(0, 0, 0, 0.46), 0 0 46px rgba(130, 87, 214, 0.16);
+      --control: #120820;
+      --surface-soft: #130a22;
+      --thumb: #0e0619;
+      --button-hover: #dac7ff;
+      --ghost-hover: rgba(176, 140, 255, 0.12);
+      --focus-ring: rgba(176, 140, 255, 0.20);
+      --topbar-accent: rgba(199, 255, 122, 0.18);
+    }
+
+    body[data-theme="arctic"] {
+      color-scheme: dark;
+      --bg: #061018;
+      --panel: #0c1a25;
+      --ink: #f0fbff;
+      --muted: #91aec0;
+      --line: #213a4a;
+      --line-strong: #63c6e8;
+      --green: #9df7ff;
+      --green-soft: #0c2b32;
+      --blue: #72b7ff;
+      --blue-soft: #0d2438;
+      --rose: #ff9fc8;
+      --rose-soft: #321827;
+      --amber: #f4dc95;
+      --amber-soft: #2a2412;
+      --shadow: 0 24px 72px rgba(0, 0, 0, 0.48), 0 0 38px rgba(114, 183, 255, 0.12);
+      --control: #07131d;
+      --surface-soft: #081722;
+      --thumb: #05101a;
+      --button-hover: #c6f4ff;
+      --ghost-hover: rgba(157, 247, 255, 0.12);
+      --focus-ring: rgba(157, 247, 255, 0.20);
+      --topbar-accent: rgba(99, 198, 232, 0.18);
+    }
+
+    body[data-theme="ruby"] {
+      color-scheme: dark;
+      --bg: #120611;
+      --panel: #1d0b1a;
+      --ink: #fff3fb;
+      --muted: #c39ab9;
+      --line: #3e1c37;
+      --line-strong: #b84d94;
+      --green: #ffb3df;
+      --green-soft: #331429;
+      --blue: #d9a8ff;
+      --blue-soft: #271633;
+      --rose: #ff6fbd;
+      --rose-soft: #3a1130;
+      --amber: #ffd18d;
+      --amber-soft: #2d2110;
+      --shadow: 0 24px 72px rgba(0, 0, 0, 0.50), 0 0 42px rgba(255, 111, 189, 0.14);
+      --control: #150713;
+      --surface-soft: #160914;
+      --thumb: #10050f;
+      --button-hover: #ffd0ef;
+      --ghost-hover: rgba(255, 111, 189, 0.11);
+      --focus-ring: rgba(255, 111, 189, 0.22);
+      --topbar-accent: rgba(255, 179, 223, 0.18);
+    }
+
+    body[data-theme="terminal"],
+    body[data-theme="midnight"],
+    body[data-theme="neon"],
+    body[data-theme="monochrome"],
+    body[data-theme="obsidian"],
+    body[data-theme="ember"],
+    body[data-theme="ultraviolet"],
+    body[data-theme="arctic"],
+    body[data-theme="ruby"] {
+      background:
+        radial-gradient(circle at 18% 10%, var(--topbar-accent), transparent 30%),
+        radial-gradient(circle at 82% 0%, rgba(255, 255, 255, 0.035), transparent 26%),
+        var(--bg);
+    }
+
+    body[data-theme="neon"] .panel,
+    body[data-theme="neon"] .select,
+    body[data-theme="neon"] .input,
+    body[data-theme="neon"] .textarea,
+    body[data-theme="neon"] .status,
+    body[data-theme="neon"] .token-preview,
+    body[data-theme="neon"] .prepared-meta,
+    body[data-theme="neon"] .token-thumb {
+      box-shadow: 0 0 0 1px rgba(0, 217, 255, 0.08), 0 0 22px rgba(255, 54, 215, 0.08);
+    }
+
+    body[data-theme="neon"] .brand-logo,
+    body[data-theme="neon"] .token-uri-head-preview img {
+      filter: drop-shadow(0 0 8px rgba(0, 217, 255, 0.50)) drop-shadow(0 0 14px rgba(255, 54, 215, 0.35));
+    }
+
+    body[data-theme="monochrome"] .panel,
+    body[data-theme="monochrome"] .select,
+    body[data-theme="monochrome"] .input,
+    body[data-theme="monochrome"] .textarea,
+    body[data-theme="monochrome"] .status,
+    body[data-theme="monochrome"] .token-preview,
+    body[data-theme="monochrome"] .prepared-meta {
+      border-color: rgba(255, 255, 255, 0.20);
+    }
+
+    body[data-theme="monochrome"] .brand span,
+    body[data-theme="monochrome"] .panel-title {
+      letter-spacing: -0.04em;
+    }
+
+    * {
+      box-sizing: border-box;
+      letter-spacing: 0;
+    }
+
+    html {
+      scrollbar-gutter: stable;
+    }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.45;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+    }
+
+    .shell {
+      width: min(1240px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 20px 0 40px;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) auto;
+      align-items: center;
+      gap: 16px;
+      min-height: 116px;
+      border-bottom: 1px solid var(--line-strong);
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 16px;
+      color: var(--ink);
+      text-decoration: none;
+      font-weight: 800;
+      font-size: 26px;
+      line-height: 1;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .brand-logo {
+      width: clamp(88px, 8vw, 112px);
+      height: clamp(88px, 8vw, 112px);
+      object-fit: contain;
+      flex: 0 0 clamp(88px, 8vw, 112px);
+      display: block;
+    }
+
+    .contract-readout {
+      color: var(--muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      min-width: 0;
+      flex-wrap: wrap;
+    }
+
+    .select,
+    .input,
+    .textarea {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--control);
+      color: var(--ink);
+      padding: 10px 12px;
+      outline: none;
+    }
+
+    .select:focus,
+    .input:focus,
+    .textarea:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px var(--focus-ring);
+    }
+
+    .top-actions .select {
+      width: min(240px, 100%);
+    }
+
+    .top-actions .theme-select {
+      width: min(190px, 100%);
+    }
+
+    .btn {
+      min-height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border-radius: var(--radius);
+      border: 1px solid var(--button-border, var(--ink));
+      background: var(--button-bg, var(--ink));
+      color: var(--button-ink, var(--bg));
+      padding: 10px 14px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .btn:hover:not(:disabled) {
+      background: var(--button-hover);
+    }
+
+    .btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.52;
+    }
+
+    .btn.secondary {
+      border-color: var(--line-strong);
+      background: var(--secondary-bg, transparent);
+      color: var(--secondary-ink, var(--ink));
+    }
+
+    .btn.secondary:hover:not(:disabled) {
+      background: var(--ghost-hover);
+    }
+
+    .btn.ghost {
+      border-color: var(--line);
+      background: var(--control);
+      color: var(--ink);
+    }
+
+    .btn.ghost:hover:not(:disabled) {
+      background: var(--thumb);
+    }
+
+
+    .btn:hover:not(:disabled) {
+      color: var(--button-ink, var(--bg));
+      border-color: var(--button-border, var(--ink));
+    }
+
+    .btn.ghost:hover:not(:disabled),
+    .btn.secondary:hover:not(:disabled) {
+      color: var(--ink);
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(360px, 430px) minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+      padding-top: 18px;
+    }
+
+    .panel {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .panel-title-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.1;
+    }
+
+    .token-uri-head-preview {
+      width: 36px;
+      height: 36px;
+      flex: 0 0 36px;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--thumb);
+      visibility: hidden;
+    }
+
+    .token-uri-head-preview.on {
+      visibility: visible;
+    }
+
+    .token-uri-head-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: var(--control);
+    }
+
+    .panel-subtitle {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 28px;
+      border-radius: 999px;
+      padding: 4px 10px;
+      background: var(--green-soft);
+      color: var(--green);
+      border: 1px solid rgba(36, 95, 69, 0.22);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .badge.blue {
+      background: var(--blue-soft);
+      color: var(--blue);
+      border-color: rgba(33, 79, 115, 0.22);
+    }
+
+    .badge.rose {
+      background: var(--rose-soft);
+      color: var(--rose);
+      border-color: rgba(164, 63, 88, 0.22);
+    }
+
+    .badge.amber {
+      background: var(--amber-soft);
+      color: var(--amber);
+      border-color: rgba(132, 96, 27, 0.22);
+    }
+
+    .panel-body {
+      padding: 18px;
+    }
+
+    .status {
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface-soft);
+      padding: 10px 12px;
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+
+    .status strong {
+      color: var(--ink);
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 150px;
+      gap: 10px;
+    }
+
+    .field-inline {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .field-note {
+      min-height: 18px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .textarea {
+      min-height: 112px;
+      resize: vertical;
+    }
+
+    .dropzone {
+      display: grid;
+      place-items: center;
+      min-height: 118px;
+      border: 1px dashed var(--line-strong);
+      border-radius: var(--radius);
+      background: var(--surface-soft);
+      color: var(--muted);
+      text-align: center;
+      padding: 18px;
+      cursor: pointer;
+    }
+
+    .dropzone.dragging {
+      border-color: var(--green);
+      background: var(--green-soft);
+      color: var(--green);
+    }
+
+    .file-chip {
+      display: inline-flex;
+      max-width: 100%;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--control);
+      padding: 8px 10px;
+      color: var(--ink);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .prepare-grid {
+      display: grid;
+      grid-template-columns: 120px minmax(0, 1fr);
+      gap: 12px;
+      margin-top: 16px;
+      align-items: stretch;
+    }
+
+    .preview-square {
+      aspect-ratio: 1 / 1;
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--thumb);
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .preview-square img,
+    .preview-square video,
+    .preview-square iframe {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border: 0;
+      background: var(--control);
+    }
+
+    .preview-square audio {
+      width: 90%;
+    }
+
+    .preview-square pre {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 12px;
+      overflow: hidden;
+      text-align: left;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 11px;
+      color: var(--ink);
+      background: var(--control);
+    }
+
+    .prepared-meta {
+      min-width: 0;
+      display: grid;
+      gap: 7px;
+      align-content: start;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px;
+      background: var(--surface-soft);
+      font-size: 13px;
+    }
+
+    .meta-line {
+      display: grid;
+      grid-template-columns: 92px minmax(0, 1fr);
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .meta-key {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      font-weight: 800;
+    }
+
+    .meta-value {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+    }
+
+    .warning {
+      display: none;
+      border: 1px solid rgba(132, 96, 27, 0.32);
+      border-radius: var(--radius);
+      background: var(--amber-soft);
+      color: #553d10;
+      padding: 10px 12px;
+      margin-top: 12px;
+      font-size: 13px;
+    }
+
+    .warning.on {
+      display: block;
+    }
+
+    .checkline {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      margin-top: 8px;
+    }
+
+    .checkline input {
+      margin-top: 3px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .step {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 10px;
+      background: var(--surface-soft);
+      min-height: 74px;
+    }
+
+    .step strong {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .step span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .step.pending {
+      border-color: rgba(33, 79, 115, 0.36);
+      background: var(--blue-soft);
+    }
+
+    .step.done {
+      border-color: rgba(36, 95, 69, 0.36);
+      background: var(--green-soft);
+    }
+
+    .step.error {
+      border-color: rgba(164, 63, 88, 0.36);
+      background: var(--rose-soft);
+    }
+
+    .log {
+      margin: 16px 0 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 6px;
+      max-height: 220px;
+      overflow: auto;
+      border-top: 1px solid var(--line);
+      padding-top: 12px;
+    }
+
+    .log li {
+      display: grid;
+      grid-template-columns: 66px minmax(0, 1fr);
+      gap: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .log time {
+      color: var(--line-strong);
+    }
+
+    .wallet-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .wallet-browser {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .wallet-tools {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    .wallet-tools .btn {
+      min-height: 34px;
+      padding: 7px 10px;
+      font-size: 12px;
+    }
+
+    .page-readout {
+      min-width: 86px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .token-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .token-card {
+      min-width: 0;
+      display: grid;
+      gap: 7px;
+      padding: 0;
+      border-radius: var(--radius);
+      background: transparent;
+      color: var(--ink);
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .token-card:disabled {
+      cursor: default;
+    }
+
+    .token-thumb {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--thumb);
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-weight: 800;
+      font-size: clamp(11px, 1.2vw, 13px);
+    }
+
+    .token-card.active .token-thumb {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(36, 95, 69, 0.14);
+    }
+
+    .token-thumb img,
+    .token-thumb video,
+    .token-thumb iframe {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: var(--control);
+    }
+
+    .token-thumb video {
+      display: block;
+    }
+
+    .token-thumb iframe {
+      border: 0;
+      pointer-events: none;
+    }
+
+    .token-thumb.has-thumbnail {
+      background: var(--control);
+      color: transparent;
+    }
+
+    .token-thumb-label {
+      max-width: 100%;
+      padding: 8px;
+      line-height: 1.15;
+      text-align: center;
+      overflow-wrap: anywhere;
+    }
+
+    .preview-media--pixelated {
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    .token-meta {
+      min-height: 38px;
+      display: grid;
+      gap: 2px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.25;
+    }
+
+    .token-meta strong {
+      color: var(--ink);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+    }
+
+    .token-card.empty .token-thumb {
+      border-style: dashed;
+      background: transparent;
+      color: #b6c3ba;
+    }
+
+    .token-card.empty .token-meta {
+      visibility: hidden;
+    }
+
+    .token-preview {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px;
+      background: var(--surface-soft);
+    }
+
+    .token-preview .preview-square {
+      margin-bottom: 10px;
+      background: var(--control);
+    }
+
+    .preview-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .transfer-tools {
+      display: grid;
+      gap: 10px;
+      border-top: 1px solid var(--line);
+      margin-top: 12px;
+      padding-top: 12px;
+    }
+
+    .transfer-tools .btn {
+      min-width: 68px;
+    }
+
+    .small-link {
+      color: var(--blue);
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .small-link:hover {
+      text-decoration: underline;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+
+
+    /* Registry Ledger refactor: simple landing state, platform state once records exist */
+    .registry-intro {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+      gap: 28px;
+      align-items: stretch;
+      padding: 38px 0 18px;
+    }
+
+    .registry-copy {
+      min-width: 0;
+      border: 1px solid var(--line-strong);
+      border-radius: calc(var(--radius) + 8px);
+      background:
+        linear-gradient(135deg, color-mix(in srgb, var(--panel) 88%, transparent), color-mix(in srgb, var(--thumb) 78%, transparent)),
+        var(--panel);
+      box-shadow: var(--shadow);
+      padding: clamp(26px, 4vw, 48px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .registry-copy::after {
+      content: "";
+      position: absolute;
+      inset: auto -90px -120px auto;
+      width: 280px;
+      height: 280px;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      opacity: 0.45;
+      pointer-events: none;
+    }
+
+    .registry-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--green);
+      color: var(--green);
+      background: var(--green-soft);
+      border-radius: 999px;
+      padding: 8px 11px;
+      text-transform: uppercase;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      margin-bottom: 20px;
+    }
+
+    .registry-title {
+      margin: 0;
+      max-width: 820px;
+      font-size: clamp(46px, 7vw, 92px);
+      line-height: 0.94;
+      letter-spacing: -0.075em;
+      font-weight: 900;
+    }
+
+    .registry-lead {
+      max-width: 700px;
+      margin: 22px 0 0;
+      color: var(--muted);
+      font-size: clamp(17px, 1.8vw, 22px);
+      line-height: 1.55;
+    }
+
+    .registry-intro-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 26px;
+    }
+
+    .registry-proof-card {
+      min-width: 0;
+      display: grid;
+      align-content: start;
+      gap: 18px;
+      border: 1px solid var(--line);
+      border-radius: calc(var(--radius) + 8px);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      padding: 22px;
+    }
+
+    .ledger-row {
+      display: grid;
+      grid-template-columns: 110px minmax(0, 1fr);
+      gap: 14px;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 13px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+    }
+
+    .ledger-row:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .ledger-key {
+      color: var(--muted);
+      text-transform: uppercase;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+    }
+
+    .ledger-value {
+      min-width: 0;
+      color: var(--ink);
+      overflow-wrap: anywhere;
+    }
+
+    .registry-footnotes {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .registry-note {
+      border-top: 1px solid var(--line);
+      padding-top: 12px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .registry-note strong {
+      display: block;
+      color: var(--ink);
+      margin-bottom: 5px;
+    }
+
+    body.has-ledger .registry-intro {
+      display: none;
+    }
+
+    body.has-ledger .shell {
+      width: min(1360px, calc(100vw - 32px));
+    }
+
+    body.has-ledger .workspace {
+      grid-template-columns: minmax(340px, 420px) minmax(660px, 1fr);
+      gap: 20px;
+    }
+
+    body.has-ledger .panel {
+      border-color: var(--line-strong);
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.18);
+    }
+
+    body.has-ledger .panel-title {
+      letter-spacing: -0.045em;
+    }
+
+    body.has-ledger .wallet-layout {
+      grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+    }
+
+    body:not(.has-ledger):not(.has-public-ledger) .wallet-layout {
+      grid-template-columns: 1fr;
+    }
+
+    body:not(.has-ledger):not(.has-public-ledger) #tokenPreviewPanel {
+      display: none;
+    }
+
+    body:not(.has-ledger):not(.has-public-ledger) .token-grid {
+      display: none;
+    }
+
+    body:not(.has-ledger):not(.has-public-ledger) .wallet-tools {
+      display: none;
+    }
+
+    body:not(.has-ledger) .wallet-browser {
+      margin-bottom: 0;
+    }
+
+    body:not(.has-ledger) #walletGridStatus {
+      margin-bottom: 0;
+    }
+
+    body:not(.has-ledger) .panel[aria-labelledby="walletTitle"] .panel-body {
+      padding-top: 18px;
+    }
+
+    body[data-theme="neon"] .registry-title {
+      text-shadow: 0 0 20px color-mix(in srgb, var(--green) 45%, transparent), 0 0 46px color-mix(in srgb, var(--blue) 35%, transparent);
+    }
+
+    body[data-theme="monochrome"] .registry-copy {
+      background: linear-gradient(145deg, #ffffff, #eeeeee);
+    }
+    @media (max-width: 980px) {
+      .topbar {
+        grid-template-columns: 1fr;
+      }
+
+      .top-actions {
+        justify-content: flex-start;
+      }
+
+      .workspace,
+      .wallet-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .shell {
+        width: min(100vw - 20px, 1240px);
+        padding-top: 10px;
+      }
+
+      .topbar {
+        min-height: 92px;
+      }
+
+      .brand {
+        font-size: 22px;
+        gap: 12px;
+      }
+
+      .brand-logo {
+        width: 72px;
+        height: 72px;
+        flex-basis: 72px;
+      }
+
+      .field-row,
+      .field-inline,
+      .prepare-grid,
+      .steps {
+        grid-template-columns: 1fr;
+      }
+
+      .panel-head {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .top-actions .select,
+      .top-actions .btn {
+        width: 100%;
+      }
+
+      .token-grid {
+        gap: 7px;
+      }
+
+      .token-meta {
+        font-size: 11px;
+      }
+    }
+
+
+    @media (max-width: 980px) {
+      .registry-intro,
+      body.has-ledger .workspace {
+        grid-template-columns: 1fr;
+      }
+      .registry-footnotes {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .registry-intro {
+        padding-top: 18px;
+      }
+      .registry-title {
+        font-size: clamp(40px, 15vw, 58px);
+      }
+      .ledger-row {
+        grid-template-columns: 1fr;
+        gap: 4px;
+      }
+    }
+  
+
+    /* Button contrast safety pass: readable controls across every theme */
+    :root,
+    body[data-theme="classic"] {
+      --btn-primary-bg: #151a17;
+      --btn-primary-text: #ffffff;
+      --btn-primary-border: #151a17;
+      --btn-primary-hover-bg: #27302b;
+      --btn-primary-hover-text: #ffffff;
+      --btn-secondary-bg: transparent;
+      --btn-secondary-text: #151a17;
+      --btn-secondary-border: #151a17;
+      --btn-secondary-hover-bg: rgba(21, 26, 23, 0.08);
+      --btn-secondary-hover-text: #151a17;
+      --btn-ghost-bg: #ffffff;
+      --btn-ghost-text: #151a17;
+      --btn-ghost-border: #9caf9f;
+      --btn-ghost-hover-bg: #eef3ef;
+      --btn-ghost-hover-text: #151a17;
+      --btn-disabled-bg: #d8ded9;
+      --btn-disabled-text: #59645d;
+      --btn-disabled-border: #b9c4bc;
+    }
+
+    body[data-theme="terminal"] {
+      --btn-primary-bg: #70d18d;
+      --btn-primary-text: #07100b;
+      --btn-primary-border: #70d18d;
+      --btn-primary-hover-bg: #a4e8b7;
+      --btn-primary-hover-text: #07100b;
+      --btn-secondary-bg: transparent;
+      --btn-secondary-text: #e7f5ec;
+      --btn-secondary-border: #70d18d;
+      --btn-secondary-hover-bg: rgba(112, 209, 141, 0.16);
+      --btn-secondary-hover-text: #ffffff;
+      --btn-ghost-bg: #0c1510;
+      --btn-ghost-text: #e7f5ec;
+      --btn-ghost-border: #4a715a;
+      --btn-ghost-hover-bg: #14281c;
+      --btn-ghost-hover-text: #ffffff;
+      --btn-disabled-bg: #26362d;
+      --btn-disabled-text: #9fb2a7;
+      --btn-disabled-border: #3b5547;
+    }
+
+    body[data-theme="midnight"] {
+      --btn-primary-bg: #9fc3ff;
+      --btn-primary-text: #08111f;
+      --btn-primary-border: #9fc3ff;
+      --btn-primary-hover-bg: #c7dcff;
+      --btn-primary-hover-text: #08111f;
+      --btn-secondary-bg: transparent;
+      --btn-secondary-text: #f3f7ff;
+      --btn-secondary-border: #9fc3ff;
+      --btn-secondary-hover-bg: rgba(159, 195, 255, 0.16);
+      --btn-secondary-hover-text: #ffffff;
+      --btn-ghost-bg: #101827;
+      --btn-ghost-text: #f3f7ff;
+      --btn-ghost-border: #556a8c;
+      --btn-ghost-hover-bg: #172945;
+      --btn-ghost-hover-text: #ffffff;
+      --btn-disabled-bg: #263246;
+      --btn-disabled-text: #abb6c8;
+      --btn-disabled-border: #43546f;
+    }
+
+    body[data-theme="neon"] {
+      --btn-primary-bg: #00ff9c;
+      --btn-primary-text: #05020b;
+      --btn-primary-border: #00ff9c;
+      --btn-primary-hover-bg: #80ffd0;
+      --btn-primary-hover-text: #05020b;
+      --btn-secondary-bg: transparent;
+      --btn-secondary-text: #f8f4ff;
+      --btn-secondary-border: #ff36d7;
+      --btn-secondary-hover-bg: rgba(255, 54, 215, 0.18);
+      --btn-secondary-hover-text: #ffffff;
+      --btn-ghost-bg: #10071b;
+      --btn-ghost-text: #f8f4ff;
+      --btn-ghost-border: #00d9ff;
+      --btn-ghost-hover-bg: #231039;
+      --btn-ghost-hover-text: #ffffff;
+      --btn-disabled-bg: #2a1738;
+      --btn-disabled-text: #cdb7df;
+      --btn-disabled-border: #5b3972;
+    }
+
+    body[data-theme="monochrome"] {
+      --btn-primary-bg: #ffffff;
+      --btn-primary-text: #050505;
+      --btn-primary-border: #ffffff;
+      --btn-primary-hover-bg: #d8d8d8;
+      --btn-primary-hover-text: #050505;
+      --btn-secondary-bg: transparent;
+      --btn-secondary-text: #ffffff;
+      --btn-secondary-border: #ffffff;
+      --btn-secondary-hover-bg: #ffffff;
+      --btn-secondary-hover-text: #050505;
+      --btn-ghost-bg: #0b0b0b;
+      --btn-ghost-text: #ffffff;
+      --btn-ghost-border: #8a8a8a;
+      --btn-ghost-hover-bg: #ffffff;
+      --btn-ghost-hover-text: #050505;
+      --btn-disabled-bg: #2a2a2a;
+      --btn-disabled-text: #d8d8d8;
+      --btn-disabled-border: #555555;
+    }
+
+    body[data-theme="obsidian"] {
+      --btn-primary-bg: #7ee2c7;
+      --btn-primary-text: #061014;
+      --btn-primary-border: #7ee2c7;
+      --btn-primary-hover-bg: #b4f0df;
+      --btn-primary-hover-text: #061014;
+      --btn-secondary-bg: transparent;
+      --btn-secondary-text: #eef6ff;
+      --btn-secondary-border: #7ee2c7;
+      --btn-secondary-hover-bg: rgba(126, 226, 199, 0.16);
+      --btn-secondary-hover-text: #ffffff;
+      --btn-ghost-bg: #0a1118;
+      --btn-ghost-text: #eef6ff;
+      --btn-ghost-border: #50677d;
+      --btn-ghost-hover-bg: #111f32;
+      --btn-ghost-hover-text: #ffffff;
+      --btn-disabled-bg: #22303c;
+      --btn-disabled-text: #aebdca;
+      --btn-disabled-border: #42576b;
+    }
+
+    body[data-theme="ember"] {
+      --btn-primary-bg: #f0a35b;
+      --btn-primary-text: #180904;
+      --btn-primary-border: #f0a35b;
+      --btn-primary-hover-bg: #ffd0a0;
+      --btn-primary-hover-text: #180904;
+      --btn-secondary-bg: transparent;
+      --btn-secondary-text: #fff5ee;
+      --btn-secondary-border: #f0a35b;
+      --btn-secondary-hover-bg: rgba(240, 163, 91, 0.18);
+      --btn-secondary-hover-text: #ffffff;
+      --btn-ghost-bg: #170b07;
+      --btn-ghost-text: #fff5ee;
+      --btn-ghost-border: #a64f26;
+      --btn-ghost-hover-bg: #331a0d;
+      --btn-ghost-hover-text: #ffffff;
+      --btn-disabled-bg: #3b2116;
+      --btn-disabled-text: #c8a893;
+      --btn-disabled-border: #6b3921;
+    }
+
+    body[data-theme="ultraviolet"] {
+      --btn-primary-bg: #c7ff7a;
+      --btn-primary-text: #10071f;
+      --btn-primary-border: #c7ff7a;
+      --btn-primary-hover-bg: #e1ffb4;
+      --btn-primary-hover-text: #10071f;
+      --btn-secondary-bg: transparent;
+      --btn-secondary-text: #fbf7ff;
+      --btn-secondary-border: #b08cff;
+      --btn-secondary-hover-bg: rgba(176, 140, 255, 0.18);
+      --btn-secondary-hover-text: #ffffff;
+      --btn-ghost-bg: #120820;
+      --btn-ghost-text: #fbf7ff;
+      --btn-ghost-border: #8257d6;
+      --btn-ghost-hover-bg: #211338;
+      --btn-ghost-hover-text: #ffffff;
+      --btn-disabled-bg: #33204e;
+      --btn-disabled-text: #c6b7da;
+      --btn-disabled-border: #5c4384;
+    }
+
+    body[data-theme="arctic"] {
+      --btn-primary-bg: #9df7ff;
+      --btn-primary-text: #041017;
+      --btn-primary-border: #9df7ff;
+      --btn-primary-hover-bg: #cdfbff;
+      --btn-primary-hover-text: #041017;
+      --btn-secondary-bg: transparent;
+      --btn-secondary-text: #f0fbff;
+      --btn-secondary-border: #63c6e8;
+      --btn-secondary-hover-bg: rgba(157, 247, 255, 0.16);
+      --btn-secondary-hover-text: #ffffff;
+      --btn-ghost-bg: #07131d;
+      --btn-ghost-text: #f0fbff;
+      --btn-ghost-border: #63c6e8;
+      --btn-ghost-hover-bg: #0d2438;
+      --btn-ghost-hover-text: #ffffff;
+      --btn-disabled-bg: #213a4a;
+      --btn-disabled-text: #a8c0ce;
+      --btn-disabled-border: #416d84;
+    }
+
+    body[data-theme="ruby"] {
+      --btn-primary-bg: #ffb3df;
+      --btn-primary-text: #120611;
+      --btn-primary-border: #ffb3df;
+      --btn-primary-hover-bg: #ffd4ee;
+      --btn-primary-hover-text: #120611;
+      --btn-secondary-bg: transparent;
+      --btn-secondary-text: #fff3fb;
+      --btn-secondary-border: #ff6fbd;
+      --btn-secondary-hover-bg: rgba(255, 111, 189, 0.18);
+      --btn-secondary-hover-text: #ffffff;
+      --btn-ghost-bg: #150713;
+      --btn-ghost-text: #fff3fb;
+      --btn-ghost-border: #b84d94;
+      --btn-ghost-hover-bg: #331429;
+      --btn-ghost-hover-text: #ffffff;
+      --btn-disabled-bg: #3e1c37;
+      --btn-disabled-text: #c9a2bd;
+      --btn-disabled-border: #71355f;
+    }
+
+    .btn,
+    .btn:hover:not(:disabled) {
+      text-shadow: none;
+      filter: none;
+    }
+
+    .btn {
+      background: var(--btn-primary-bg) !important;
+      color: var(--btn-primary-text) !important;
+      border-color: var(--btn-primary-border) !important;
+    }
+
+    .btn:hover:not(:disabled) {
+      background: var(--btn-primary-hover-bg) !important;
+      color: var(--btn-primary-hover-text) !important;
+      border-color: var(--btn-primary-border) !important;
+    }
+
+    .btn.secondary {
+      background: var(--btn-secondary-bg) !important;
+      color: var(--btn-secondary-text) !important;
+      border-color: var(--btn-secondary-border) !important;
+    }
+
+    .btn.secondary:hover:not(:disabled) {
+      background: var(--btn-secondary-hover-bg) !important;
+      color: var(--btn-secondary-hover-text) !important;
+      border-color: var(--btn-secondary-border) !important;
+    }
+
+    .btn.ghost {
+      background: var(--btn-ghost-bg) !important;
+      color: var(--btn-ghost-text) !important;
+      border-color: var(--btn-ghost-border) !important;
+    }
+
+    .btn.ghost:hover:not(:disabled) {
+      background: var(--btn-ghost-hover-bg) !important;
+      color: var(--btn-ghost-hover-text) !important;
+      border-color: var(--btn-ghost-border) !important;
+    }
+
+    .btn:disabled,
+    .btn.secondary:disabled,
+    .btn.ghost:disabled {
+      opacity: 1 !important;
+      cursor: not-allowed;
+      background: var(--btn-disabled-bg) !important;
+      color: var(--btn-disabled-text) !important;
+      border-color: var(--btn-disabled-border) !important;
+    }
+
+    .btn:focus-visible {
+      outline: 2px solid var(--green);
+      outline-offset: 2px;
+    }
+
+  </style>
+</head>
+<body class="intro-mode">
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand-wrap">
+        <a class="brand" href="/" aria-label="Xtrata home">
+          <img class="brand-logo" src="https://nxhyvj3lifp2q34nklffzxslfje426oxeruo3lkuj56srwgctdlq.arweave.net/bc-Kp2tBX6hvjVLKXN5LKknNedckaO2tVE99KNjCmNc" alt="" />
+          <span>XTRATA</span>
+        </a>
+        <span class="contract-readout" id="contractReadout">Loading contract...</span>
+      </div>
+      <div class="top-actions">
+        <select class="select" id="contractSelect" aria-label="Contract"></select>
+        <button class="btn ghost" id="refreshWalletButton" type="button">Refresh</button>
+        <select class="select theme-select" id="themeSelect" aria-label="Theme">
+          <option value="classic">Classic infrastructure</option>
+          <option value="terminal">Terminal green</option>
+          <option value="midnight">Midnight node</option>
+          <option value="neon">Full neon</option>
+          <option value="monochrome">Monochrome luxe</option>
+          <option value="obsidian">Obsidian steel</option>
+          <option value="ember">Ember archive</option>
+          <option value="ultraviolet">Ultraviolet vault</option>
+          <option value="arctic">Arctic dark</option>
+          <option value="ruby">Ruby night</option>
+        </select>
+        <button class="btn" id="connectButton" type="button">Connect wallet</button>
+        <button class="btn secondary" id="disconnectButton" type="button" hidden>Disconnect</button>
+      </div>
+    </header>
+
+    <section class="registry-intro" id="registryIntro" aria-labelledby="registryIntroTitle">
+      <div class="registry-copy">
+        <span class="registry-eyebrow" id="registryModeBadge">Boring infrastructure</span>
+        <h1 class="registry-title" id="registryIntroTitle">Record it. Reference it. Retrieve it.</h1>
+        <p class="registry-lead" id="registryIntroLead">A stripped-back inscription registry for durable data on Stacks. Not a marketplace first. Not a metaverse. Just a reliable way to put useful objects on-chain and find them again.</p>
+        <div class="registry-intro-actions">
+          <button class="btn" id="introConnectButton" type="button">Connect wallet</button>
+          <button class="btn secondary" id="introPrepareButton" type="button">Prepare a record</button>
+        </div>
+        <div class="registry-footnotes" aria-label="Registry qualities">
+          <p class="registry-note"><strong>Plain rails</strong>No grand interface required before the first inscription.</p>
+          <p class="registry-note"><strong>Wallet first</strong>The homepage becomes useful as soon as a wallet has records.</p>
+          <p class="registry-note"><strong>Developer ready</strong>Contracts, API and object references sit behind the simple flow.</p>
+        </div>
+      </div>
+      <aside class="registry-proof-card" aria-label="Registry ledger summary">
+        <div class="ledger-row"><span class="ledger-key">Object</span><span class="ledger-value">file · text · app · manifest · media</span></div>
+        <div class="ledger-row"><span class="ledger-key">Network</span><span class="ledger-value" id="introNetworkValue">Stacks mainnet</span></div>
+        <div class="ledger-row"><span class="ledger-key">Contract</span><span class="ledger-value" id="introContractValue">Loading contract...</span></div>
+        <div class="ledger-row"><span class="ledger-key">Status</span><span class="ledger-value" id="introStateValue">Connect a wallet to inspect your ledger.</span></div>
+      </aside>
+    </section>
+
+    <main class="workspace">
+      <section class="panel" aria-labelledby="inscribeTitle">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title-row">
+              <h1 class="panel-title" id="inscribeTitle">Inscribe</h1>
+              <div class="token-uri-head-preview" id="tokenUriHeadPreview" aria-hidden="true"></div>
+            </div>
+            <p class="panel-subtitle" id="mintSubtitle">Single payload, explicit chain steps.</p>
+          </div>
+          <span class="badge" id="networkBadge">mainnet</span>
+        </div>
+        <div class="panel-body">
+          <div class="status" id="walletStatus">
+            <span><strong>Wallet</strong> not connected</span>
+            <span class="badge amber">idle</span>
+          </div>
+
+          <form class="form-grid" id="inscriptionForm">
+            <div class="field-row">
+              <label class="field">
+                <span class="label">Name</span>
+                <input class="input" id="nameInput" autocomplete="off" placeholder="inscription.txt" />
+              </label>
+              <label class="field">
+                <span class="label">Type</span>
+                <select class="select" id="payloadType">
+                  <option value="text/plain">Text</option>
+                  <option value="application/json">JSON</option>
+                  <option value="text/html">HTML</option>
+                  <option value="image/svg+xml">SVG</option>
+                  <option value="application/octet-stream">Binary</option>
+                </select>
+              </label>
+            </div>
+
+            <label class="field">
+              <span class="label">Token URI</span>
+              <input class="input" id="tokenUriInput" autocomplete="off" />
+            </label>
+
+            <div class="field">
+              <span class="label">Payload</span>
+              <input id="fileInput" type="file" hidden />
+              <div class="dropzone" id="dropzone" tabindex="0" role="button">
+                <span id="dropzoneText">Choose file or drop it here</span>
+              </div>
+            </div>
+
+            <label class="field">
+              <span class="label">Text payload</span>
+              <textarea class="textarea" id="textPayload" spellcheck="false" placeholder="Optional text, JSON, SVG, or HTML"></textarea>
+            </label>
+          </form>
+
+          <div class="prepare-grid">
+            <div class="preview-square" id="payloadPreview">No payload</div>
+            <div class="prepared-meta" id="preparedMeta">
+              <div class="meta-line">
+                <span class="meta-key">Status</span>
+                <span class="meta-value">Not prepared</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="warning" id="duplicateWarning">
+            <div id="duplicateText">Duplicate hash detected.</div>
+            <label class="checkline">
+              <input type="checkbox" id="allowDuplicateInput" />
+              <span>Continue with this duplicate payload</span>
+            </label>
+          </div>
+
+          <div class="actions">
+            <button class="btn secondary" id="prepareButton" type="button">Prepare</button>
+            <button class="btn" id="inscribeButton" type="button" disabled>Start inscription</button>
+          </div>
+
+          <div class="steps" aria-live="polite">
+            <div class="step" id="stepBegin">
+              <strong>1. Begin</strong>
+              <span>Idle</span>
+            </div>
+            <div class="step" id="stepUpload">
+              <strong>2. Upload</strong>
+              <span>Idle</span>
+            </div>
+            <div class="step" id="stepSeal">
+              <strong>3. Seal</strong>
+              <span>Idle</span>
+            </div>
+          </div>
+
+          <ol class="log" id="txLog"></ol>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="walletTitle">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title-row">
+              <h2 class="panel-title" id="walletTitle">Wallet Inscriptions</h2>
+              <div class="token-uri-head-preview" id="walletTokenUriHeadPreview" aria-hidden="true"></div>
+            </div>
+            <p class="panel-subtitle" id="walletSubtitle">Connect a wallet or enter an address.</p>
+          </div>
+          <div class="wallet-tools">
+            <span class="badge blue" id="walletCountBadge">0 tokens</span>
+            <button class="btn ghost" id="walletPrevButton" type="button" disabled>Prev</button>
+            <span class="page-readout" id="walletPageReadout">Page 0 / 0</span>
+            <button class="btn ghost" id="walletNextButton" type="button" disabled>Next</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="wallet-layout">
+            <div>
+              <form class="wallet-browser" id="walletLookupForm">
+                <label class="field">
+                  <span class="label">View wallet</span>
+                  <div class="field-inline">
+                    <input class="input" id="walletLookupInput" autocomplete="off" placeholder="SP... or alice.btc" />
+                    <button class="btn ghost" id="walletLookupButton" type="submit">View</button>
+                  </div>
+                  <span class="field-note" id="walletLookupStatus">Using connected wallet when available.</span>
+                </label>
+              </form>
+              <div class="status" id="walletGridStatus">
+                <span><strong>Grid</strong> waiting for wallet</span>
+                <span class="badge amber">empty</span>
+              </div>
+              <div class="token-grid" id="tokenGrid" aria-live="polite"></div>
+            </div>
+
+            <aside class="token-preview" id="tokenPreviewPanel">
+              <div class="preview-square" id="tokenPreviewMedia">No selection</div>
+              <div class="prepared-meta" id="tokenPreviewMeta">
+                <div class="meta-line">
+                  <span class="meta-key">Token</span>
+                  <span class="meta-value">None</span>
+                </div>
+              </div>
+              <div class="preview-actions">
+                <a class="small-link" id="explorerLink" href="#" target="_blank" rel="noreferrer" hidden>Explorer</a>
+              </div>
+              <div class="transfer-tools">
+                <label class="field">
+                  <span class="label">Send selected inscription</span>
+                  <div class="field-inline">
+                    <input class="input" id="transferRecipientInput" autocomplete="off" placeholder="ST..." />
+                    <button class="btn" id="transferButton" type="button" disabled>Send</button>
+                  </div>
+                </label>
+                <span class="field-note" id="transferStatus">Select one of your inscriptions to send.</span>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module">
+    import {
+      bufferCV,
+      FungibleConditionCode,
+      listCV,
+      makeStandardSTXPostCondition,
+      PostConditionMode,
+      principalCV,
+      stringAsciiCV,
+      uintCV
+    } from '@stacks/transactions';
+    import { createStacksWalletAdapter } from '/src/lib/wallet/adapter.ts';
+    import { showContractCall } from '/src/lib/wallet/connect.ts';
+    import {
+      CONTRACT_REGISTRY,
+      getLegacyContract
+    } from '/src/lib/contract/registry.ts';
+    import { getContractId } from '/src/lib/contract/config.ts';
+    import {
+      buildTransferCall,
+      createXtrataClient
+    } from '/src/lib/contract/client.ts';
+    import { fetchContractAdminStatus } from '/src/lib/contract/admin-status.ts';
+    import {
+      estimateContractFees,
+      formatMicroStx,
+      getFeeSchedule
+    } from '/src/lib/contract/fees.ts';
+    import { resolveContractCapabilities } from '/src/lib/contract/capabilities.ts';
+    import { buildTransferPostCondition } from '/src/lib/contract/post-conditions.ts';
+    import { getNetworkMismatch } from '/src/lib/network/guard.ts';
+    import { getApiBaseUrls } from '/src/lib/network/config.ts';
+    import { toStacksNetwork } from '/src/lib/network/stacks.ts';
+    import {
+      batchChunks,
+      chunkBytes,
+      computeExpectedHash,
+      MAX_BATCH_SIZE
+    } from '/src/lib/chunking/hash.ts';
+    import {
+      DEFAULT_BATCH_SIZE,
+      DEFAULT_TOKEN_URI,
+      MAX_MIME_LENGTH,
+      SMALL_MINT_HELPER_CONTRACT_NAME,
+      SMALL_MINT_HELPER_MAINNET_ADDRESS,
+      SMALL_MINT_HELPER_MAX_CHUNKS,
+      MAX_TOKEN_URI_LENGTH,
+      TX_DELAY_SECONDS
+    } from '/src/lib/mint/constants.ts';
+    import { bytesToHex } from '/src/lib/utils/encoding.ts';
+    import { formatBytes, truncateMiddle } from '/src/lib/utils/format.ts';
+    import {
+      loadWalletHoldingsIndex,
+      loadWalletHoldingsPage
+    } from '/src/lib/viewer/wallet-index.ts';
+    import {
+      getTransferValidationMessage,
+      validateTransferRequest
+    } from '/src/lib/wallet/transfer.ts';
+    import { getWalletLookupState } from '/src/lib/wallet/lookup.ts';
+    import {
+      loadInscriptionThumbnailFromCache,
+      saveInscriptionThumbnailToCache
+    } from '/src/lib/viewer/cache.ts';
+    import { injectGridThumbnailHtml } from '/src/lib/viewer/html-preview.ts';
+    import { createImageThumbnail } from '/src/lib/viewer/thumbnail.ts';
+    import { shouldUsePixelatedImageRendering } from '/src/lib/viewer/image-rendering.ts';
+    import {
+      fetchTokenSummary,
+      fetchTokenSummaryWithFallback
+    } from '/src/lib/viewer/queries.ts';
+    import {
+      decodeTokenUriToImage,
+      fetchTokenImageFromUri,
+      fetchOnChainContent,
+      getMediaKind,
+      getTextPreview,
+      isHttpUrl,
+      isLikelyImageUrl,
+      resolveMimeType
+    } from '/src/lib/viewer/content.ts';
+
+    const isCoreEntry = (entry) =>
+      entry.protocolVersion === '2.1.0' ||
+      entry.protocolVersion === '2.1.1' ||
+      entry.protocolVersion === '3.0.0' ||
+      entry.contractName?.toLowerCase().includes('v2-1-0') === true ||
+      entry.contractName?.toLowerCase().includes('v2-1-1') === true ||
+      entry.contractName?.toLowerCase().includes('v3-0-0') === true;
+
+    const coreContracts = CONTRACT_REGISTRY.filter(isCoreEntry);
+    const versionWeight = (entry) => {
+      if (entry.protocolVersion === '3.0.0' || entry.contractName?.includes('v3-0-0')) {
+        return 30000;
+      }
+      if (entry.protocolVersion === '2.1.1' || entry.contractName?.includes('v2-1-1')) {
+        return 20101;
+      }
+      if (entry.protocolVersion === '2.1.0' || entry.contractName?.includes('v2-1-0')) {
+        return 20100;
+      }
+      return 0;
+    };
+    const ACTIVE_CONTRACTS = (coreContracts.length > 0 ? coreContracts : CONTRACT_REGISTRY)
+      .slice()
+      .sort((left, right) => versionWeight(right) - versionWeight(left));
+    const LATEST_CONTRACT =
+      ACTIVE_CONTRACTS.find(
+        (entry) =>
+          entry.protocolVersion === '2.1.1' ||
+          entry.contractName?.toLowerCase().includes('v2-1-1')
+      ) ?? ACTIVE_CONTRACTS[0];
+    const HOMEPAGE_CONTRACT_STORAGE_KEY = 'xtrata.simple-homepage.contract.selection';
+    const SMALL_MINT_HELPER_TARGET_CORE_CONTRACT_ID =
+      `${SMALL_MINT_HELPER_MAINNET_ADDRESS}.xtrata-v2-1-0`;
+    const ACTIVE_CONTRACT_BY_ID = new Map(
+      ACTIVE_CONTRACTS.map((entry) => [getContractId(entry), entry])
+    );
+    const loadHomepageContractSelection = () => {
+      try {
+        const raw = window.localStorage.getItem(HOMEPAGE_CONTRACT_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : null;
+        const saved = parsed?.contractId ? ACTIVE_CONTRACT_BY_ID.get(parsed.contractId) : null;
+        return saved ?? LATEST_CONTRACT;
+      } catch (error) {
+        return LATEST_CONTRACT;
+      }
+    };
+    const saveHomepageContractSelection = (entry) => {
+      window.localStorage.setItem(
+        HOMEPAGE_CONTRACT_STORAGE_KEY,
+        JSON.stringify({ contractId: getContractId(entry) })
+      );
+    };
+    const walletAdapter = createStacksWalletAdapter({
+      appName: 'Xtrata Simple Inscription',
+      appIcon: `${window.location.origin}/favicon.svg`
+    });
+
+    const $ = (id) => document.getElementById(id);
+
+    const dom = {
+      contractReadout: $('contractReadout'),
+      contractSelect: $('contractSelect'),
+      themeSelect: $('themeSelect'),
+      refreshWalletButton: $('refreshWalletButton'),
+      connectButton: $('connectButton'),
+      disconnectButton: $('disconnectButton'),
+      networkBadge: $('networkBadge'),
+      mintSubtitle: $('mintSubtitle'),
+      walletStatus: $('walletStatus'),
+      inscriptionForm: $('inscriptionForm'),
+      nameInput: $('nameInput'),
+      payloadType: $('payloadType'),
+      tokenUriInput: $('tokenUriInput'),
+      tokenUriHeadPreview: $('tokenUriHeadPreview'),
+      fileInput: $('fileInput'),
+      dropzone: $('dropzone'),
+      dropzoneText: $('dropzoneText'),
+      textPayload: $('textPayload'),
+      payloadPreview: $('payloadPreview'),
+      preparedMeta: $('preparedMeta'),
+      duplicateWarning: $('duplicateWarning'),
+      duplicateText: $('duplicateText'),
+      allowDuplicateInput: $('allowDuplicateInput'),
+      prepareButton: $('prepareButton'),
+      inscribeButton: $('inscribeButton'),
+      stepBegin: $('stepBegin'),
+      stepUpload: $('stepUpload'),
+      stepSeal: $('stepSeal'),
+      txLog: $('txLog'),
+      walletTokenUriHeadPreview: $('walletTokenUriHeadPreview'),
+      walletSubtitle: $('walletSubtitle'),
+      walletCountBadge: $('walletCountBadge'),
+      walletPrevButton: $('walletPrevButton'),
+      walletNextButton: $('walletNextButton'),
+      walletPageReadout: $('walletPageReadout'),
+      walletLookupForm: $('walletLookupForm'),
+      walletLookupInput: $('walletLookupInput'),
+      walletLookupButton: $('walletLookupButton'),
+      walletLookupStatus: $('walletLookupStatus'),
+      walletGridStatus: $('walletGridStatus'),
+      tokenGrid: $('tokenGrid'),
+      tokenPreviewPanel: $('tokenPreviewPanel'),
+      tokenPreviewMedia: $('tokenPreviewMedia'),
+      tokenPreviewMeta: $('tokenPreviewMeta'),
+      explorerLink: $('explorerLink'),
+      transferRecipientInput: $('transferRecipientInput'),
+      transferButton: $('transferButton'),
+      transferStatus: $('transferStatus'),
+      introConnectButton: $('introConnectButton'),
+      introPrepareButton: $('introPrepareButton'),
+      registryModeBadge: $('registryModeBadge'),
+      registryIntroLead: $('registryIntroLead'),
+      introNetworkValue: $('introNetworkValue'),
+      introContractValue: $('introContractValue'),
+      introStateValue: $('introStateValue')
+    };
+
+
+    const THEME_STORAGE_KEY = 'xtrata.simple-homepage.theme';
+    const THEME_IDS = new Set(['classic', 'terminal', 'midnight', 'neon', 'monochrome', 'obsidian', 'ember', 'ultraviolet', 'arctic', 'ruby']);
+    const loadTheme = () => {
+      try {
+        const saved = window.localStorage.getItem(THEME_STORAGE_KEY);
+        return THEME_IDS.has(saved) ? saved : 'monochrome';
+      } catch (error) {
+        return 'monochrome';
+      }
+    };
+    const applyTheme = (theme) => {
+      const nextTheme = THEME_IDS.has(theme) ? theme : 'monochrome';
+      document.body.dataset.theme = nextTheme;
+      if (dom.themeSelect) {
+        dom.themeSelect.value = nextTheme;
+      }
+      try {
+        window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+      } catch (error) {}
+    };
+
+    const state = {
+      contract: loadHomepageContractSelection(),
+      client: null,
+      legacyContract: null,
+      legacyClient: null,
+      walletSession: walletAdapter.getSession(),
+      walletViewAddress: null,
+      walletViewName: null,
+      walletLookupPending: false,
+      walletLookupNotice: null,
+      walletLookupAbortController: null,
+      transferPending: false,
+      adminStatus: null,
+      selectedFile: null,
+      prepared: null,
+      duplicateId: null,
+      uploadState: null,
+      busy: false,
+      tokenUriPreviewRequestId: 0,
+      walletTokenUriPreviewRequestId: 0,
+      tokenUriPreviewTimer: null,
+      payloadPreviewUrl: null,
+      tokenPreviewUrl: null,
+      tokenThumbUrls: new Map(),
+      thumbnailCache: new Map(),
+      gridLiveMediaCache: new Map(),
+      thumbnailHydrationQueue: [],
+      thumbnailHydrationQueued: new Set(),
+      thumbnailHydrationInFlight: new Set(),
+      thumbnailHydrationAttempted: new Set(),
+      thumbnailHydrationRunId: 0,
+      walletTokenIds: [],
+      walletPageIds: [],
+      walletTotalCount: 0,
+      walletUsesPagedHoldings: false,
+      walletTokenCache: new Map(),
+      walletTokens: [],
+      walletPageIndex: 0,
+      walletLoadingPage: false,
+      selectedTokenId: null,
+      lastSubmittedTxId: null
+    };
+
+    const WALLET_PAGE_SIZE = 16;
+    const WALLET_FALLBACK_SCAN_LIMIT = 2000;
+    const MAX_GRID_EAGER_FULL_LOAD_BYTES = 4n * 1024n * 1024n;
+    const GRID_THUMBNAIL_HYDRATION_CONCURRENCY = 2;
+
+    const sleep = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
+    const isAscii = (value) => /^[\x00-\x7F]*$/.test(value);
+
+    const nowLabel = () =>
+      new Intl.DateTimeFormat(undefined, {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      }).format(new Date());
+
+    const normalizeTxId = (payload) => {
+      const raw = payload?.txId ?? payload?.txid ?? '';
+      return typeof raw === 'string' && raw.length > 0 ? raw : 'submitted';
+    };
+
+    const formatTokenId = (id) => `#${id.toString()}`;
+
+    const normalizeAddress = (value) => value?.trim().toUpperCase() ?? '';
+
+    const addressesEqual = (left, right) => {
+      const a = normalizeAddress(left);
+      const b = normalizeAddress(right);
+      return a.length > 0 && a === b;
+    };
+
+    const contractExplorerUrl = (contract) =>
+      `https://explorer.hiro.so/address/${encodeURIComponent(getContractId(contract))}?chain=${contract.network}`;
+
+    const tokenExplorerUrl = (contract, id) =>
+      `${contractExplorerUrl(contract)}&token_id=${id.toString()}`;
+
+    const appendLog = (message) => {
+      const item = document.createElement('li');
+      const time = document.createElement('time');
+      const body = document.createElement('span');
+      time.textContent = nowLabel();
+      body.textContent = message;
+      item.append(time, body);
+      dom.txLog.prepend(item);
+      while (dom.txLog.children.length > 24) {
+        dom.txLog.lastElementChild?.remove();
+      }
+      console.log(`[homepage] ${message}`);
+    };
+
+    const debugLog = (scope, message, details = {}, level = 'info') => {
+      const method = level === 'warn' ? 'warn' : level === 'error' ? 'error' : 'info';
+      console[method](`[homepage:${scope}] ${message}`, details);
+    };
+
+    const applyPixelPerfectImageRendering = (
+      img,
+      { mimeType = null, sourceUrl = null, isSvgSource = false } = {}
+    ) => {
+      const updateRendering = () => {
+        const rect = img.getBoundingClientRect();
+        const normalizedMime = (mimeType ?? '').toLowerCase();
+        const urlLower = (sourceUrl ?? img.currentSrc ?? img.src ?? '').toLowerCase();
+        const resolvedSvgSource =
+          isSvgSource ||
+          normalizedMime.includes('svg') ||
+          urlLower.startsWith('data:image/svg') ||
+          urlLower.includes('.svg');
+        const pixelated = shouldUsePixelatedImageRendering({
+          naturalWidth: img.naturalWidth || 0,
+          naturalHeight: img.naturalHeight || 0,
+          renderedWidth: rect.width,
+          renderedHeight: rect.height,
+          mimeType,
+          isSvgSource: resolvedSvgSource
+        });
+        img.classList.toggle('preview-media--pixelated', pixelated);
+      };
+      const scheduleUpdate = () => {
+        requestAnimationFrame(updateRendering);
+      };
+      img.addEventListener('load', scheduleUpdate);
+      if (img.complete && img.naturalWidth > 0) {
+        scheduleUpdate();
+      }
+    };
+
+    const getBuildHiroKeyFlag = () => {
+      try {
+        return typeof __XSTRATA_HAS_HIRO_KEY__ !== 'undefined'
+          ? Boolean(__XSTRATA_HAS_HIRO_KEY__)
+          : null;
+      } catch (error) {
+        return null;
+      }
+    };
+
+    const summarizeApiBase = (baseUrl) => ({
+      baseUrl,
+      usesHiroProxy:
+        baseUrl.startsWith('/hiro/') ||
+        (typeof window !== 'undefined' &&
+          baseUrl.startsWith(`${window.location.origin}/hiro/`)),
+      sameOrigin:
+        baseUrl.startsWith('/') ||
+        (typeof window !== 'undefined' &&
+          baseUrl.startsWith(window.location.origin))
+    });
+
+    const logApiConfiguration = () => {
+      const apiBases = getApiBaseUrls(state.contract.network).map(summarizeApiBase);
+      debugLog('api', 'resolved API configuration', {
+        network: state.contract.network,
+        contractId: getContractId(state.contract),
+        buildHasHiroKey: getBuildHiroKeyFlag(),
+        apiBases
+      });
+    };
+
+    const setStatus = (element, message, badgeLabel = 'idle', badgeTone = 'amber') => {
+      element.innerHTML = '';
+      const text = document.createElement('span');
+      text.innerHTML = message;
+      const badge = document.createElement('span');
+      badge.className = `badge ${badgeTone}`;
+      badge.textContent = badgeLabel;
+      element.append(text, badge);
+    };
+
+    const setStep = (key, status, label) => {
+      const step =
+        key === 'begin'
+          ? dom.stepBegin
+          : key === 'upload'
+            ? dom.stepUpload
+            : dom.stepSeal;
+      step.className = `step ${status === 'idle' ? '' : status}`;
+      step.querySelector('span').textContent = label;
+    };
+
+    const resetSteps = () => {
+      setStep('begin', 'idle', 'Idle');
+      setStep('upload', 'idle', 'Idle');
+      setStep('seal', 'idle', 'Idle');
+    };
+
+    const getFeeUnitNumber = () => {
+      const value = state.adminStatus?.feeUnitMicroStx;
+      if (value === null || value === undefined) {
+        return null;
+      }
+      const asNumber = Number(value);
+      return Number.isSafeInteger(asNumber) && asNumber > 0 ? asNumber : null;
+    };
+
+    const getFeeEstimate = (totalChunks = state.prepared?.chunks.length ?? 0) =>
+      estimateContractFees({
+        schedule: getFeeSchedule(state.contract, getFeeUnitNumber()),
+        totalChunks
+      });
+
+    const getSmallMintHelperContract = () =>
+      state.contract.network === 'mainnet' &&
+      getContractId(state.contract) === SMALL_MINT_HELPER_TARGET_CORE_CONTRACT_ID
+        ? {
+            address: SMALL_MINT_HELPER_MAINNET_ADDRESS,
+            contractName: SMALL_MINT_HELPER_CONTRACT_NAME,
+            network: 'mainnet'
+          }
+        : null;
+
+    const shouldUseSmallMintHelper = () => {
+      const prepared = state.prepared;
+      const capabilities = resolveContractCapabilities(state.contract);
+      return (
+        !!prepared &&
+        !!getSmallMintHelperContract() &&
+        capabilities.version !== '1.1.1' &&
+        !state.uploadState &&
+        prepared.chunks.length > 0 &&
+        prepared.chunks.length <= SMALL_MINT_HELPER_MAX_CHUNKS
+      );
+    };
+
+    const resolveFeePostConditions = (amountMicroStx) => {
+      const sender = state.walletSession.address;
+      if (!sender || !Number.isFinite(amountMicroStx) || amountMicroStx < 0) {
+        return undefined;
+      }
+      const royaltyRecipient = state.adminStatus?.royaltyRecipient ?? null;
+      const conditionCode =
+        !royaltyRecipient || addressesEqual(royaltyRecipient, sender)
+          ? FungibleConditionCode.LessEqual
+          : FungibleConditionCode.Equal;
+      return [
+        makeStandardSTXPostCondition(
+          sender,
+          conditionCode,
+          BigInt(Math.round(amountMicroStx))
+        )
+      ];
+    };
+
+    const renderMeta = (target, lines) => {
+      target.innerHTML = '';
+      for (const [key, value] of lines) {
+        const row = document.createElement('div');
+        row.className = 'meta-line';
+        const label = document.createElement('span');
+        label.className = 'meta-key';
+        label.textContent = key;
+        const body = document.createElement('span');
+        body.className = 'meta-value';
+        body.title = String(value);
+        body.textContent = String(value);
+        row.append(label, body);
+        target.append(row);
+      }
+    };
+
+    const revokePayloadPreview = () => {
+      if (state.payloadPreviewUrl) {
+        URL.revokeObjectURL(state.payloadPreviewUrl);
+        state.payloadPreviewUrl = null;
+      }
+    };
+
+    const revokeTokenPreview = () => {
+      if (state.tokenPreviewUrl) {
+        URL.revokeObjectURL(state.tokenPreviewUrl);
+        state.tokenPreviewUrl = null;
+      }
+    };
+
+    const revokeGridThumbUrls = () => {
+      state.tokenThumbUrls.forEach((url) => {
+        URL.revokeObjectURL(url);
+      });
+      state.tokenThumbUrls.clear();
+    };
+
+    const resetBackgroundThumbnailHydration = () => {
+      state.thumbnailHydrationRunId += 1;
+      state.thumbnailHydrationQueue = [];
+      state.thumbnailHydrationQueued.clear();
+      state.thumbnailHydrationInFlight.clear();
+      state.thumbnailHydrationAttempted.clear();
+      state.gridLiveMediaCache.clear();
+    };
+
+    const clearElement = (element, text) => {
+      element.innerHTML = '';
+      element.textContent = text;
+    };
+
+    const clearTokenUriHeadPreviewTarget = (target) => {
+      target.replaceChildren();
+      target.classList.remove('on');
+      target.setAttribute('aria-hidden', 'true');
+    };
+
+    const clearTokenUriHeadPreview = () => {
+      clearTokenUriHeadPreviewTarget(dom.tokenUriHeadPreview);
+    };
+
+    const clearWalletTokenUriHeadPreview = () => {
+      clearTokenUriHeadPreviewTarget(dom.walletTokenUriHeadPreview);
+    };
+
+    const renderTokenUriHeadPreviewTarget = (target, imageUrl) => {
+      const img = document.createElement('img');
+      img.alt = '';
+      img.addEventListener(
+        'error',
+        () => {
+          if (target.firstElementChild === img) {
+            clearTokenUriHeadPreviewTarget(target);
+          }
+        },
+        { once: true }
+      );
+      img.src = imageUrl;
+      target.replaceChildren(img);
+      target.classList.add('on');
+      target.setAttribute('aria-hidden', 'false');
+    };
+
+    const renderTokenUriHeadPreview = (imageUrl) => {
+      renderTokenUriHeadPreviewTarget(dom.tokenUriHeadPreview, imageUrl);
+    };
+
+    const renderWalletTokenUriHeadPreview = (imageUrl) => {
+      renderTokenUriHeadPreviewTarget(dom.walletTokenUriHeadPreview, imageUrl);
+    };
+
+    const resolveTokenUriHeadImage = async (tokenUri) => {
+      const inlineImage = decodeTokenUriToImage(tokenUri);
+      if (inlineImage) {
+        return inlineImage;
+      }
+      if (isHttpUrl(tokenUri) && isLikelyImageUrl(tokenUri)) {
+        return tokenUri;
+      }
+      const resolvedImage = await fetchTokenImageFromUri(tokenUri);
+      if (resolvedImage) {
+        return resolvedImage;
+      }
+      return isHttpUrl(tokenUri) ? tokenUri : null;
+    };
+
+    const updateTokenUriHeadPreview = async () => {
+      const tokenUri = dom.tokenUriInput.value.trim();
+      const requestId = ++state.tokenUriPreviewRequestId;
+      clearTokenUriHeadPreview();
+      if (!tokenUri) {
+        return;
+      }
+      const imageUrl = await resolveTokenUriHeadImage(tokenUri);
+      if (requestId !== state.tokenUriPreviewRequestId || !imageUrl) {
+        return;
+      }
+      renderTokenUriHeadPreview(imageUrl);
+    };
+
+    const updateWalletTokenUriHeadPreview = async (tokenUri) => {
+      const requestId = ++state.walletTokenUriPreviewRequestId;
+      clearWalletTokenUriHeadPreview();
+      if (!tokenUri) {
+        return;
+      }
+      const imageUrl = await resolveTokenUriHeadImage(tokenUri);
+      if (requestId !== state.walletTokenUriPreviewRequestId || !imageUrl) {
+        return;
+      }
+      renderWalletTokenUriHeadPreview(imageUrl);
+    };
+
+    const queueTokenUriHeadPreviewUpdate = () => {
+      if (state.tokenUriPreviewTimer !== null) {
+        window.clearTimeout(state.tokenUriPreviewTimer);
+      }
+      state.tokenUriPreviewTimer = window.setTimeout(() => {
+        state.tokenUriPreviewTimer = null;
+        void updateTokenUriHeadPreview();
+      }, 180);
+    };
+
+    const GRID_MIME_LABELS = new Map([
+      ['text/plain', 'PLAIN TEXT'],
+      ['text/javascript', 'JAVASCRIPT'],
+      ['application/javascript', 'JAVASCRIPT'],
+      ['application/ecmascript', 'JAVASCRIPT'],
+      ['text/ecmascript', 'JAVASCRIPT'],
+      ['application/json', 'JSON'],
+      ['text/json', 'JSON'],
+      ['text/css', 'CSS'],
+      ['text/markdown', 'MARKDOWN'],
+      ['text/csv', 'CSV'],
+      ['application/xml', 'XML'],
+      ['text/xml', 'XML'],
+      ['application/yaml', 'YAML'],
+      ['text/yaml', 'YAML']
+    ]);
+
+    const getGridMimeLabel = (mimeType) => {
+      const normalized = mimeType?.trim().toLowerCase() ?? '';
+      if (GRID_MIME_LABELS.has(normalized)) {
+        return GRID_MIME_LABELS.get(normalized);
+      }
+      if (normalized.endsWith('+json')) {
+        return 'JSON';
+      }
+      if (normalized.endsWith('+xml')) {
+        return 'XML';
+      }
+      return getMediaKind(normalized || null).toUpperCase();
+    };
+
+    const setTokenThumbLabel = (thumb, label) => {
+      const text = document.createElement('span');
+      text.className = 'token-thumb-label';
+      text.textContent = label;
+      thumb.replaceChildren(text);
+    };
+
+    const renderBytesPreview = (target, bytes, mimeType, urlSetter) => {
+      target.innerHTML = '';
+      const kind = getMediaKind(mimeType);
+      const blob = new Blob([bytes], { type: mimeType || 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+      urlSetter(url);
+
+      if (kind === 'image' || kind === 'svg') {
+        const img = document.createElement('img');
+        img.alt = 'Payload preview';
+        applyPixelPerfectImageRendering(img, {
+          mimeType,
+          sourceUrl: url,
+          isSvgSource: kind === 'svg'
+        });
+        img.src = url;
+        target.append(img);
+        return;
+      }
+
+      if (kind === 'video') {
+        const video = document.createElement('video');
+        video.controls = true;
+        video.src = url;
+        target.append(video);
+        return;
+      }
+
+      if (kind === 'audio') {
+        const audio = document.createElement('audio');
+        audio.controls = true;
+        audio.src = url;
+        target.append(audio);
+        return;
+      }
+
+      if (kind === 'html') {
+        const frame = document.createElement('iframe');
+        frame.sandbox = 'allow-scripts';
+        frame.src = url;
+        target.append(frame);
+        return;
+      }
+
+      if (kind === 'text') {
+        const preview = getTextPreview(bytes, 1400);
+        const pre = document.createElement('pre');
+        pre.textContent = preview.truncated
+          ? `${preview.text}\n...`
+          : preview.text;
+        target.append(pre);
+        return;
+      }
+
+      target.textContent = 'Binary payload';
+    };
+
+    const setBusy = (busy) => {
+      state.busy = busy;
+      dom.connectButton.disabled = busy;
+      dom.disconnectButton.disabled = busy;
+      dom.contractSelect.disabled = busy;
+      dom.themeSelect.disabled = busy;
+      dom.prepareButton.disabled = busy;
+      updateControls();
+    };
+
+    const getMismatch = () =>
+      getNetworkMismatch(state.contract.network, state.walletSession.network);
+
+    const getViewingWalletAddress = () =>
+      state.walletViewAddress ?? state.walletSession.address ?? null;
+
+    const getViewingWalletLabel = () => {
+      if (state.walletViewName) {
+        return state.walletViewName;
+      }
+      const viewingAddress = getViewingWalletAddress();
+      return viewingAddress ? truncateMiddle(viewingAddress, 8, 8) : null;
+    };
+
+    const getReadOnlySenderAddress = () =>
+      state.walletSession.address ?? getViewingWalletAddress() ?? state.contract.address;
+
+    const getSelectedToken = () => {
+      if (state.selectedTokenId === null) {
+        return null;
+      }
+      return (
+        state.walletTokenCache.get(state.selectedTokenId.toString()) ??
+        state.walletTokens.find((token) => token.id === state.selectedTokenId) ??
+        null
+      );
+    };
+
+    const updateWalletLookupStatus = () => {
+      if (state.walletLookupNotice) {
+        dom.walletLookupStatus.textContent = state.walletLookupNotice;
+        return;
+      }
+      const viewingAddress = getViewingWalletAddress();
+      if (state.walletViewAddress) {
+        dom.walletLookupStatus.textContent = `Viewing ${getViewingWalletLabel()}.`;
+        return;
+      }
+      dom.walletLookupStatus.textContent = viewingAddress
+        ? 'Using connected wallet.'
+        : 'Using connected wallet when available.';
+    };
+
+    const updateTransferControls = () => {
+      const selectedToken = getSelectedToken();
+      const walletAddress = state.walletSession.address ?? null;
+      const walletOwnsToken =
+        !!selectedToken && !!walletAddress && addressesEqual(selectedToken.owner, walletAddress);
+      const transferValidation = validateTransferRequest({
+        senderAddress: walletOwnsToken ? walletAddress : null,
+        recipientAddress: dom.transferRecipientInput.value,
+        tokenId: selectedToken?.id ?? null,
+        networkMismatch: !!getMismatch()
+      });
+      let message = getTransferValidationMessage(transferValidation);
+      if (!selectedToken) {
+        message = 'Select an inscription to send.';
+      } else if (!walletAddress) {
+        message = 'Connect the owner wallet to send this inscription.';
+      } else if (!walletOwnsToken) {
+        message = 'Only the connected owner can send this inscription.';
+      }
+      dom.transferButton.disabled =
+        state.busy ||
+        state.transferPending ||
+        !walletOwnsToken ||
+        !transferValidation.ok;
+      dom.transferRecipientInput.disabled = state.transferPending;
+      if (!state.transferPending) {
+        dom.transferStatus.textContent =
+          message ?? 'Ready to send the selected inscription.';
+      }
+    };
+
+
+    const setExperienceMode = () => {
+      const connected = state.walletSession.isConnected && !!state.walletSession.address;
+      const viewingAddress = getViewingWalletAddress();
+      const count = state.walletUsesPagedHoldings ? state.walletTotalCount : state.walletTokenIds.length;
+      const hasLedger = connected && count > 0;
+      const hasPublicLedger = !connected && !!viewingAddress && count > 0;
+      document.body.classList.toggle('has-ledger', hasLedger);
+      document.body.classList.toggle('has-public-ledger', hasPublicLedger);
+      document.body.classList.toggle('intro-mode', !hasLedger);
+      if (dom.introNetworkValue) {
+        dom.introNetworkValue.textContent = `Stacks ${state.contract.network}`;
+      }
+      if (dom.introContractValue) {
+        dom.introContractValue.textContent = getContractId(state.contract);
+      }
+      if (dom.registryModeBadge) {
+        dom.registryModeBadge.textContent = hasLedger ? 'Registry ledger' : 'Boring infrastructure';
+      }
+      if (dom.registryIntroLead) {
+        dom.registryIntroLead.textContent = !viewingAddress
+          ? 'A stripped-back inscription registry for durable data on Stacks. Connect a wallet when you are ready, or prepare a record first and keep the interface simple.'
+          : !connected && count === 0
+            ? 'Public wallet lookup is active, but this contract has no inscriptions for that address yet.'
+            : connected && count === 0
+              ? 'Your wallet is connected, but this contract has no inscriptions for it yet. Start with a simple record, then the page will open into the full registry ledger view.'
+              : connected
+                ? `Wallet connected with ${count} inscription${count === 1 ? '' : 's'}. Switching into the fuller registry view.`
+                : `Public ledger view loaded with ${count} inscription${count === 1 ? '' : 's'} available for this address.`;
+      }
+      if (dom.introStateValue) {
+        dom.introStateValue.textContent = !viewingAddress
+          ? 'Connect a wallet or enter an address to inspect a ledger.'
+          : count === 0
+            ? 'No inscriptions found for this contract yet.'
+            : `${count} inscription${count === 1 ? '' : 's'} available in this ledger.`;
+      }
+      if (dom.introConnectButton) {
+        dom.introConnectButton.hidden = connected;
+      }
+    };
+
+    const updateControls = () => {
+      setExperienceMode();
+      const connected = state.walletSession.isConnected && !!state.walletSession.address;
+      const mismatch = getMismatch();
+      const viewingAddress = getViewingWalletAddress();
+      const duplicateBlocked = state.duplicateId !== null && !dom.allowDuplicateInput.checked;
+      dom.connectButton.hidden = connected;
+      dom.disconnectButton.hidden = !connected;
+      dom.inscribeButton.disabled =
+        state.busy ||
+        !connected ||
+        !!mismatch ||
+        !state.prepared ||
+        duplicateBlocked;
+      dom.inscribeButton.textContent = state.uploadState
+        ? 'Continue inscription'
+        : shouldUseSmallMintHelper()
+          ? 'Start single-tx inscription'
+          : 'Start inscription';
+      dom.refreshWalletButton.disabled = state.busy || !viewingAddress;
+      dom.walletLookupButton.disabled = state.busy || state.walletLookupPending;
+      updateWalletLookupStatus();
+      updateTransferControls();
+      updateWalletPagerControls();
+    };
+
+    const getWalletPageCount = () =>
+      state.walletUsesPagedHoldings
+        ? state.walletTotalCount > 0
+          ? Math.ceil(state.walletTotalCount / WALLET_PAGE_SIZE)
+          : 0
+        : state.walletTokenIds.length > 0
+          ? Math.ceil(state.walletTokenIds.length / WALLET_PAGE_SIZE)
+          : 0;
+
+    const clampWalletPageIndex = () => {
+      const pageCount = getWalletPageCount();
+      if (pageCount === 0) {
+        state.walletPageIndex = 0;
+        return;
+      }
+      state.walletPageIndex = Math.min(
+        Math.max(0, state.walletPageIndex),
+        pageCount - 1
+      );
+    };
+
+    const getWalletPageIds = () => {
+      clampWalletPageIndex();
+      if (state.walletUsesPagedHoldings) {
+        return state.walletPageIds;
+      }
+      const start = state.walletPageIndex * WALLET_PAGE_SIZE;
+      return state.walletTokenIds.slice(start, start + WALLET_PAGE_SIZE);
+    };
+
+    const updateWalletPagerControls = () => {
+      if (!dom.walletPrevButton || !dom.walletNextButton || !dom.walletPageReadout) {
+        return;
+      }
+      const pageCount = getWalletPageCount();
+      const hasPages = pageCount > 0;
+      dom.walletPageReadout.textContent = hasPages
+        ? `Page ${state.walletPageIndex + 1} / ${pageCount}`
+        : 'Page 0 / 0';
+      dom.walletPrevButton.disabled =
+        state.busy || state.walletLoadingPage || !hasPages || state.walletPageIndex <= 0;
+      dom.walletNextButton.disabled =
+        state.busy ||
+        state.walletLoadingPage ||
+        !hasPages ||
+        state.walletPageIndex >= pageCount - 1;
+    };
+
+    const applyContract = (contract) => {
+      state.contract = contract;
+      state.client = createXtrataClient({ contract });
+      state.legacyContract = getLegacyContract(contract);
+      state.legacyClient = state.legacyContract
+        ? createXtrataClient({ contract: state.legacyContract })
+        : null;
+      logApiConfiguration();
+      dom.contractReadout.textContent = getContractId(contract);
+      setExperienceMode();
+      dom.networkBadge.textContent = contract.network;
+      dom.mintSubtitle.textContent = `${contract.label} · ${contract.protocolVersion}`;
+      state.prepared = null;
+      state.duplicateId = null;
+      state.uploadState = null;
+      state.walletTokenIds = [];
+      state.walletPageIds = [];
+      state.walletTotalCount = 0;
+      state.walletUsesPagedHoldings = false;
+      state.walletTokenCache = new Map();
+      state.walletTokens = [];
+      state.walletPageIndex = 0;
+      state.selectedTokenId = null;
+      void updateWalletTokenUriHeadPreview(null);
+      resetBackgroundThumbnailHydration();
+      revokeGridThumbUrls();
+      renderPreparedState();
+      resetSteps();
+      updateWalletStatus();
+      updateControls();
+    };
+
+    const updateWalletStatus = () => {
+      const connected = state.walletSession.isConnected && !!state.walletSession.address;
+      const mismatch = getMismatch();
+      const viewingAddress = getViewingWalletAddress();
+      const viewingLabel = getViewingWalletLabel();
+      if (!connected) {
+        setStatus(
+          dom.walletStatus,
+          '<strong>Wallet</strong> not connected',
+          'idle',
+          'amber'
+        );
+        dom.walletSubtitle.textContent = viewingAddress
+          ? `Viewing ${viewingLabel}.`
+          : 'Connect a wallet or enter an address.';
+        return;
+      }
+      if (mismatch) {
+        setStatus(
+          dom.walletStatus,
+          `<strong>Wallet</strong> ${truncateMiddle(state.walletSession.address)} · expected ${mismatch.expected}`,
+          'network',
+          'rose'
+        );
+        dom.walletSubtitle.textContent = state.walletViewAddress
+          ? `Viewing ${viewingLabel}.`
+          : `Wallet is on ${mismatch.actual}; contract is ${mismatch.expected}.`;
+        return;
+      }
+      setStatus(
+        dom.walletStatus,
+        `<strong>Wallet</strong> ${truncateMiddle(state.walletSession.address)}`,
+        'ready',
+        'blue'
+      );
+      dom.walletSubtitle.textContent = state.walletViewAddress
+        ? `Viewing ${viewingLabel}.`
+        : truncateMiddle(state.walletSession.address, 8, 8);
+    };
+
+    const renderPreparedState = () => {
+      if (!state.prepared) {
+        clearElement(dom.payloadPreview, 'No payload');
+        renderMeta(dom.preparedMeta, [['Status', 'Not prepared']]);
+        dom.duplicateWarning.classList.remove('on');
+        updateControls();
+        return;
+      }
+
+      const feeEstimate = getFeeEstimate(state.prepared.chunks.length);
+      const usesSingleTx = shouldUseSmallMintHelper();
+      renderMeta(dom.preparedMeta, [
+        ['Name', state.prepared.file.name],
+        ['Size', formatBytes(BigInt(state.prepared.bytes.length))],
+        ['Mime', state.prepared.mimeType],
+        ['Chunks', state.prepared.chunks.length.toString()],
+        ['Hash', state.prepared.expectedHashHex],
+        ['Route', usesSingleTx ? 'Single tx' : 'Staged'],
+        ['Fixed', formatMicroStx(feeEstimate.beginMicroStx)],
+        ['Seal', formatMicroStx(feeEstimate.sealMicroStx)]
+      ]);
+
+      revokePayloadPreview();
+      renderBytesPreview(dom.payloadPreview, state.prepared.bytes, state.prepared.mimeType, (url) => {
+        state.payloadPreviewUrl = url;
+      });
+
+      if (state.duplicateId !== null) {
+        dom.duplicateText.textContent =
+          `Duplicate hash detected at ${formatTokenId(state.duplicateId)}.`;
+        dom.duplicateWarning.classList.add('on');
+      } else {
+        dom.duplicateWarning.classList.remove('on');
+      }
+      updateControls();
+    };
+
+    const inferTextFileName = (mimeType) => {
+      const requested = dom.nameInput.value.trim();
+      if (requested) {
+        return requested;
+      }
+      if (mimeType === 'application/json') {
+        return 'inscription.json';
+      }
+      if (mimeType === 'text/html') {
+        return 'inscription.html';
+      }
+      if (mimeType === 'image/svg+xml') {
+        return 'inscription.svg';
+      }
+      return 'inscription.txt';
+    };
+
+    const resolvePayloadFile = () => {
+      if (state.selectedFile) {
+        return state.selectedFile;
+      }
+      const text = dom.textPayload.value;
+      if (text.length === 0) {
+        throw new Error('Select a file or enter a text payload.');
+      }
+      const mimeType = dom.payloadType.value || 'text/plain';
+      return new File([text], inferTextFileName(mimeType), { type: mimeType });
+    };
+
+    const validatePayload = (file, bytes, chunks, tokenUriValue) => {
+      if (bytes.length === 0 || chunks.length === 0) {
+        throw new Error('Payload is empty.');
+      }
+      const mimeType = file.type || dom.payloadType.value || 'application/octet-stream';
+      if (!isAscii(mimeType) || mimeType.length > MAX_MIME_LENGTH) {
+        throw new Error('Mime type must be ASCII and no more than 64 characters.');
+      }
+      if (!isAscii(tokenUriValue) || tokenUriValue.length > MAX_TOKEN_URI_LENGTH) {
+        throw new Error('Token URI must be ASCII and no more than 256 characters.');
+      }
+      return mimeType;
+    };
+
+    const refreshUploadState = async (expectedHash) => {
+      state.uploadState = null;
+      const owner = state.walletSession.address;
+      if (!owner) {
+        return;
+      }
+      try {
+        state.uploadState = await state.client.getUploadState(
+          expectedHash,
+          owner,
+          owner
+        );
+        if (state.uploadState) {
+          appendLog(
+            `Existing upload found: ${state.uploadState.currentIndex.toString()}/${state.uploadState.totalChunks.toString()} chunks.`
+          );
+        }
+      } catch (error) {
+        state.uploadState = null;
+      }
+    };
+
+    const preparePayload = async () => {
+      const file = resolvePayloadFile();
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const chunks = chunkBytes(bytes);
+      const expectedHash = computeExpectedHash(chunks);
+      const tokenUriValue = dom.tokenUriInput.value.trim() || DEFAULT_TOKEN_URI;
+      const mimeType = validatePayload(file, bytes, chunks, tokenUriValue);
+      const batches = batchChunks(chunks, Math.min(DEFAULT_BATCH_SIZE, MAX_BATCH_SIZE));
+      const expectedHashHex = bytesToHex(expectedHash);
+
+      state.prepared = {
+        file,
+        bytes,
+        chunks,
+        batches,
+        expectedHash,
+        expectedHashHex,
+        tokenUriValue,
+        mimeType
+      };
+      state.duplicateId = null;
+      state.uploadState = null;
+      dom.allowDuplicateInput.checked = false;
+      appendLog(`Prepared ${file.name} (${formatBytes(BigInt(bytes.length))}).`);
+
+      const sender = getReadOnlySenderAddress();
+      try {
+        const duplicate = await state.client.getIdByHash(expectedHash, sender);
+        state.duplicateId = duplicate;
+      } catch (error) {
+        state.duplicateId = null;
+      }
+
+      await refreshUploadState(expectedHash);
+      renderPreparedState();
+    };
+
+    const fetchAdminStatus = async () => {
+      const sender = getReadOnlySenderAddress();
+      try {
+        state.adminStatus = await fetchContractAdminStatus({
+          client: state.client,
+          senderAddress: sender
+        });
+      } catch (error) {
+        state.adminStatus = null;
+      }
+      renderPreparedState();
+    };
+
+    const requestContractCall = (options) => {
+      const walletAddress = state.walletSession.address;
+      const network = state.walletSession.network ?? state.contract.network;
+      const contract = options.contract ?? state.contract;
+      return new Promise((resolve, reject) => {
+        showContractCall({
+          contractAddress: contract.address,
+          contractName: contract.contractName,
+          functionName: options.functionName,
+          functionArgs: options.functionArgs,
+          network,
+          stxAddress: walletAddress,
+          postConditionMode: options.postConditions ? PostConditionMode.Deny : undefined,
+          postConditions: options.postConditions,
+          onFinish: (payload) => resolve(payload),
+          onCancel: () => reject(new Error('Wallet cancelled or failed to broadcast.'))
+        });
+      });
+    };
+
+    const pauseBeforeNext = async (label) => {
+      for (let remaining = TX_DELAY_SECONDS; remaining > 0; remaining -= 1) {
+        setStatus(dom.walletStatus, `<strong>${label}</strong> ${remaining}s`, 'wait', 'amber');
+        await sleep(1000);
+      }
+      updateWalletStatus();
+    };
+
+    const validateMintReadiness = async () => {
+      if (!state.walletSession.isConnected || !state.walletSession.address) {
+        throw new Error('Connect a wallet before inscribing.');
+      }
+      const mismatch = getMismatch();
+      if (mismatch) {
+        throw new Error(`Network mismatch: wallet on ${mismatch.actual}, contract is ${mismatch.expected}.`);
+      }
+      if (!state.prepared) {
+        await preparePayload();
+      }
+      if (state.duplicateId !== null && !dom.allowDuplicateInput.checked) {
+        throw new Error('Duplicate payload must be acknowledged before continuing.');
+      }
+      const capabilities = resolveContractCapabilities(state.contract);
+      if (capabilities.supportsPause) {
+        try {
+          const paused = state.adminStatus?.paused ?? await state.client.isPaused(state.walletSession.address);
+          const admin = state.adminStatus?.admin ?? null;
+          if (paused && !addressesEqual(admin, state.walletSession.address)) {
+            throw new Error('Contract is paused. Only the contract owner can mint.');
+          }
+        } catch (error) {
+          if (error instanceof Error && error.message.includes('paused')) {
+            throw error;
+          }
+        }
+      }
+    };
+
+    const runInscription = async () => {
+      setBusy(true);
+      resetSteps();
+      try {
+        await validateMintReadiness();
+        const prepared = state.prepared;
+        await refreshUploadState(prepared.expectedHash);
+        const feeEstimate = getFeeEstimate(prepared.chunks.length);
+        const hasUploadState = !!state.uploadState;
+        let didSendBeforeSeal = false;
+
+        if (shouldUseSmallMintHelper()) {
+          const smallMintHelperContract = getSmallMintHelperContract();
+          if (!smallMintHelperContract) {
+            throw new Error('Small mint helper deployment is unavailable for this network.');
+          }
+          setStep('begin', 'pending', 'Wallet prompt');
+          setStep('upload', 'pending', 'Single tx');
+          setStep('seal', 'pending', 'Single tx');
+          appendLog(
+            `Small-file helper route active (<=${SMALL_MINT_HELPER_MAX_CHUNKS} chunks).`
+          );
+          const singleTx = await requestContractCall({
+            contract: smallMintHelperContract,
+            functionName: 'mint-small-single-tx',
+            functionArgs: [
+              principalCV(getContractId(state.contract)),
+              bufferCV(prepared.expectedHash),
+              stringAsciiCV(prepared.mimeType),
+              uintCV(BigInt(prepared.bytes.length)),
+              listCV(prepared.chunks.map((chunk) => bufferCV(chunk))),
+              stringAsciiCV(prepared.tokenUriValue)
+            ],
+            postConditions: resolveFeePostConditions(feeEstimate.totalMicroStx)
+          });
+          const singleTxId = normalizeTxId(singleTx);
+          state.lastSubmittedTxId = singleTxId;
+          appendLog(`Single-tx mint sent: ${singleTxId}`);
+          setStep('begin', 'done', 'Submitted');
+          setStep('upload', 'done', 'Submitted');
+          setStep('seal', 'done', 'Submitted');
+          setStatus(
+            dom.walletStatus,
+            `<strong>Submitted</strong> ${truncateMiddle(singleTxId, 8, 8)}`,
+            'pending',
+            'blue'
+          );
+          await loadWalletInscriptions();
+          return;
+        }
+
+        if (!hasUploadState) {
+          setStep('begin', 'pending', 'Wallet prompt');
+          appendLog('Step 1: begin-inscription');
+          const beginTx = await requestContractCall({
+            functionName: 'begin-inscription',
+            functionArgs: [
+              bufferCV(prepared.expectedHash),
+              stringAsciiCV(prepared.mimeType),
+              uintCV(BigInt(prepared.bytes.length)),
+              uintCV(BigInt(prepared.chunks.length))
+            ],
+            postConditions: resolveFeePostConditions(feeEstimate.beginMicroStx)
+          });
+          appendLog(`Begin tx sent: ${normalizeTxId(beginTx)}`);
+          setStep('begin', 'done', 'Submitted');
+          didSendBeforeSeal = true;
+          await pauseBeforeNext('Next transaction in');
+        } else {
+          setStep('begin', 'done', 'Already started');
+        }
+
+        const currentIndex = state.uploadState
+          ? Number(state.uploadState.currentIndex)
+          : 0;
+        if (!Number.isSafeInteger(currentIndex) || currentIndex < 0) {
+          throw new Error('Upload state is too large to resume safely.');
+        }
+        if (currentIndex > prepared.chunks.length) {
+          throw new Error('On-chain upload state is ahead of this payload.');
+        }
+
+        const remainingChunks = prepared.chunks.slice(currentIndex);
+        const remainingBatches = batchChunks(
+          remainingChunks,
+          Math.min(DEFAULT_BATCH_SIZE, MAX_BATCH_SIZE)
+        );
+
+        if (remainingBatches.length > 0) {
+          setStep('upload', 'pending', `${remainingBatches.length} batch${remainingBatches.length === 1 ? '' : 'es'}`);
+          for (let index = 0; index < remainingBatches.length; index += 1) {
+            const batch = remainingBatches[index];
+            appendLog(`Step 2: upload batch ${index + 1}/${remainingBatches.length}`);
+            const uploadTx = await requestContractCall({
+              functionName: 'add-chunk-batch',
+              functionArgs: [
+                bufferCV(prepared.expectedHash),
+                listCV(batch.map((chunk) => bufferCV(chunk)))
+              ]
+            });
+            appendLog(`Batch ${index + 1}/${remainingBatches.length} tx sent: ${normalizeTxId(uploadTx)}`);
+            didSendBeforeSeal = true;
+            if (index < remainingBatches.length - 1) {
+              await pauseBeforeNext('Next batch in');
+            }
+          }
+          setStep('upload', 'done', 'Submitted');
+        } else {
+          setStep('upload', 'done', 'Already uploaded');
+        }
+
+        setStep('seal', 'pending', 'Wallet prompt');
+        appendLog('Step 3: seal-inscription');
+        if (didSendBeforeSeal) {
+          await pauseBeforeNext('Sealing in');
+        }
+        const sealTx = await requestContractCall({
+          functionName: 'seal-inscription',
+          functionArgs: [
+            bufferCV(prepared.expectedHash),
+            stringAsciiCV(prepared.tokenUriValue)
+          ],
+          postConditions: resolveFeePostConditions(feeEstimate.sealMicroStx)
+        });
+        const sealTxId = normalizeTxId(sealTx);
+        state.lastSubmittedTxId = sealTxId;
+        appendLog(`Seal tx sent: ${sealTxId}`);
+        setStep('seal', 'done', 'Submitted');
+        setStatus(
+          dom.walletStatus,
+          `<strong>Submitted</strong> ${truncateMiddle(sealTxId, 8, 8)}`,
+          'pending',
+          'blue'
+        );
+        await loadWalletInscriptions();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        appendLog(`Mint failed: ${message}`);
+        setStatus(dom.walletStatus, `<strong>Mint failed</strong> ${message}`, 'error', 'rose');
+        const pendingStep = [dom.stepSeal, dom.stepUpload, dom.stepBegin].find((step) =>
+          step.classList.contains('pending')
+        );
+        if (pendingStep) {
+          pendingStep.classList.remove('pending');
+          pendingStep.classList.add('error');
+          pendingStep.querySelector('span').textContent = 'Error';
+        }
+      } finally {
+        setBusy(false);
+        updateControls();
+      }
+    };
+
+    const renderTokenGridPlaceholders = (label = '') => {
+      dom.tokenGrid.innerHTML = '';
+      for (let index = 0; index < 16; index += 1) {
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.disabled = true;
+        card.className = 'token-card empty';
+        const thumb = document.createElement('div');
+        thumb.className = 'token-thumb';
+        thumb.textContent = label;
+        const meta = document.createElement('div');
+        meta.className = 'token-meta';
+        meta.innerHTML = '<strong>#</strong><span>empty</span>';
+        card.append(thumb, meta);
+        dom.tokenGrid.append(card);
+      }
+      updateTransferControls();
+    };
+
+    const getTokenClient = (token) => {
+      const legacyId = state.legacyClient ? getContractId(state.legacyClient.contract) : null;
+      return legacyId && token.sourceContractId === legacyId
+        ? state.legacyClient
+        : state.client;
+    };
+
+    const getTokenCacheContractId = (token) =>
+      token.sourceContractId ?? getContractId(getTokenClient(token).contract);
+
+    const getThumbnailKey = (token) =>
+      `${getTokenCacheContractId(token)}:${token.id.toString()}`;
+
+    const applyCachedThumbnail = async (token, thumbElement) => {
+      if (token.svgDataUri) {
+        thumbElement.classList.add('has-thumbnail');
+        thumbElement.dataset.thumbnailState = 'inline-svg';
+        debugLog('cache', 'using inline SVG data URI thumbnail', {
+          tokenId: token.id.toString(),
+          contractId: getTokenCacheContractId(token)
+        });
+        return true;
+      }
+      const cacheKey = getThumbnailKey(token);
+      let thumbnail = state.thumbnailCache.get(cacheKey);
+      if (thumbnail === undefined) {
+        thumbnail = await loadInscriptionThumbnailFromCache(
+          getTokenCacheContractId(token),
+          token.id
+        );
+        state.thumbnailCache.set(cacheKey, thumbnail);
+      }
+      if (!thumbnail?.data) {
+        thumbElement.dataset.thumbnailState = 'miss';
+        debugLog('cache', 'thumbnail cache miss', {
+          tokenId: token.id.toString(),
+          contractId: getTokenCacheContractId(token)
+        });
+        return false;
+      }
+      if (!thumbElement.isConnected) {
+        debugLog('cache', 'thumbnail target stale', {
+          tokenId: token.id.toString(),
+          contractId: getTokenCacheContractId(token)
+        });
+        return false;
+      }
+      const activePageIds = new Set(getWalletPageIds().map((id) => id.toString()));
+      if (!activePageIds.has(token.id.toString())) {
+        return false;
+      }
+      const oldUrl = state.tokenThumbUrls.get(cacheKey);
+      if (oldUrl) {
+        URL.revokeObjectURL(oldUrl);
+      }
+      const blob = new Blob([thumbnail.data], {
+        type: thumbnail.mimeType ?? 'image/webp'
+      });
+      const url = URL.createObjectURL(blob);
+      state.tokenThumbUrls.set(cacheKey, url);
+      thumbElement.innerHTML = '';
+      const img = document.createElement('img');
+      img.alt = `Token ${token.id.toString()}`;
+      applyPixelPerfectImageRendering(img, {
+        mimeType: thumbnail.mimeType ?? 'image/webp',
+        sourceUrl: url
+      });
+      img.src = url;
+      thumbElement.classList.add('has-thumbnail');
+      thumbElement.dataset.thumbnailState = 'hit';
+      thumbElement.replaceChildren(img);
+      debugLog('cache', 'thumbnail cache hit', {
+        tokenId: token.id.toString(),
+        contractId: getTokenCacheContractId(token),
+        bytes: thumbnail.data.length,
+        mimeType: thumbnail.mimeType ?? 'image/webp'
+      });
+      return true;
+    };
+
+    const warmThumbnailCacheFromBytes = async (token, bytes, mimeType, options = {}) => {
+      const kind = getMediaKind(mimeType);
+      if (kind !== 'image' && kind !== 'svg') {
+        return null;
+      }
+      const contractId = getTokenCacheContractId(token);
+      const cacheKey = getThumbnailKey(token);
+      try {
+        const thumbnail = await createImageThumbnail({
+          bytes,
+          mimeType
+        });
+        if (!thumbnail?.data) {
+          debugLog('cache', 'thumbnail generation skipped', {
+            tokenId: token.id.toString(),
+            contractId,
+            mimeType
+          });
+          return null;
+        }
+        await saveInscriptionThumbnailToCache(contractId, token.id, thumbnail.data, {
+          mimeType: thumbnail.mimeType,
+          width: thumbnail.width,
+          height: thumbnail.height
+        });
+        state.thumbnailCache.set(cacheKey, thumbnail);
+        debugLog('cache', 'thumbnail cache warmed from preview bytes', {
+          tokenId: token.id.toString(),
+          contractId,
+          bytes: thumbnail.data.length,
+          mimeType: thumbnail.mimeType
+        });
+        if (options.renderGrid !== false) {
+          renderTokenGrid();
+        }
+        return thumbnail;
+      } catch (error) {
+        debugLog(
+          'cache',
+          'thumbnail cache warm failed',
+          {
+            tokenId: token.id.toString(),
+            contractId,
+            mimeType,
+            error: error instanceof Error ? error.message : String(error)
+          },
+          'warn'
+        );
+        return null;
+      }
+    };
+
+    const isGridHtmlDocument = (mimeType) => {
+      const normalized = mimeType?.trim().toLowerCase();
+      return normalized === 'text/html' || normalized === 'application/xhtml+xml';
+    };
+
+    const isGridPdfDocument = (mimeType) =>
+      mimeType?.trim().toLowerCase() === 'application/pdf';
+
+    const renderGridLiveMedia = (token, thumbElement, media) => {
+      const cacheKey = getThumbnailKey(token);
+      const oldUrl = state.tokenThumbUrls.get(cacheKey);
+      if (oldUrl) {
+        URL.revokeObjectURL(oldUrl);
+        state.tokenThumbUrls.delete(cacheKey);
+      }
+      thumbElement.classList.add('has-thumbnail');
+      thumbElement.dataset.thumbnailState = media.kind;
+      thumbElement.replaceChildren();
+
+      if (media.kind === 'video') {
+        const blob = new Blob([media.bytes], {
+          type: media.mimeType ?? 'video/mp4'
+        });
+        const url = URL.createObjectURL(blob);
+        state.tokenThumbUrls.set(cacheKey, url);
+        const video = document.createElement('video');
+        video.src = url;
+        video.muted = true;
+        video.loop = true;
+        video.autoplay = true;
+        video.playsInline = true;
+        video.preload = 'auto';
+        video.addEventListener('loadeddata', () => {
+          const playAttempt = video.play();
+          if (playAttempt && typeof playAttempt.catch === 'function') {
+            void playAttempt.catch(() => {});
+          }
+        });
+        thumbElement.append(video);
+        return true;
+      }
+
+      if (media.kind === 'html') {
+        const frame = document.createElement('iframe');
+        frame.title = `inscription-${token.id.toString()}`;
+        frame.sandbox = 'allow-scripts';
+        frame.referrerPolicy = 'no-referrer';
+        frame.loading = 'lazy';
+        frame.srcdoc = injectGridThumbnailHtml(media.html);
+        thumbElement.append(frame);
+        return true;
+      }
+
+      if (media.kind === 'pdf') {
+        const blob = new Blob([media.bytes], {
+          type: media.mimeType ?? 'application/pdf'
+        });
+        const url = URL.createObjectURL(blob);
+        state.tokenThumbUrls.set(cacheKey, url);
+        const frame = document.createElement('iframe');
+        frame.title = `inscription-${token.id.toString()}`;
+        frame.sandbox = '';
+        frame.referrerPolicy = 'no-referrer';
+        frame.loading = 'lazy';
+        frame.src = url;
+        thumbElement.append(frame);
+        return true;
+      }
+
+      return false;
+    };
+
+    const shouldBackgroundHydrateThumbnail = (token) => {
+      if (token.svgDataUri || !token.meta || token.meta.totalSize <= 0n) {
+        return false;
+      }
+      if (token.meta.totalSize > MAX_GRID_EAGER_FULL_LOAD_BYTES) {
+        return false;
+      }
+      const kind = getMediaKind(token.meta.mimeType ?? null);
+      return (
+        kind === 'image' ||
+        kind === 'svg' ||
+        kind === 'video' ||
+        kind === 'html' ||
+        kind === 'binary'
+      );
+    };
+
+    const runBackgroundThumbnailHydration = async (job) => {
+      const { token, thumbElement, cacheKey, runId } = job;
+      if (runId !== state.thumbnailHydrationRunId) {
+        return;
+      }
+      const contentClient = getTokenClient(token);
+      const cacheContractId = getTokenCacheContractId(token);
+      try {
+        debugLog('cache', 'background thumbnail fetch started', {
+          tokenId: token.id.toString(),
+          contractId: cacheContractId,
+          size: token.meta?.totalSize?.toString() ?? null,
+          mimeType: token.meta?.mimeType ?? null
+        });
+        const bytes = await fetchOnChainContent({
+          client: contentClient,
+          fallbackClient: contentClient === state.client ? state.legacyClient : null,
+          cacheContractId,
+          id: token.id,
+          senderAddress: getReadOnlySenderAddress(),
+          totalSize: token.meta?.totalSize ?? 0n,
+          mimeType: token.meta?.mimeType ?? null
+        });
+        if (runId !== state.thumbnailHydrationRunId) {
+          return;
+        }
+        const mimeType =
+          resolveMimeType(token.meta?.mimeType ?? null, bytes) ??
+          token.meta?.mimeType ??
+          'application/octet-stream';
+        const kind = getMediaKind(mimeType);
+        if (kind === 'video') {
+          state.gridLiveMediaCache.set(cacheKey, {
+            kind: 'video',
+            bytes,
+            mimeType
+          });
+          if (
+            thumbElement.isConnected &&
+            thumbElement.dataset.thumbnailKey === cacheKey
+          ) {
+            renderGridLiveMedia(token, thumbElement, state.gridLiveMediaCache.get(cacheKey));
+          } else if (getWalletPageIds().some((id) => id === token.id)) {
+            renderTokenGrid();
+          }
+          debugLog('cache', 'background video grid display ready', {
+            tokenId: token.id.toString(),
+            contractId: cacheContractId,
+            bytes: bytes.length,
+            mimeType
+          });
+          return;
+        }
+        if (isGridHtmlDocument(mimeType)) {
+          state.gridLiveMediaCache.set(cacheKey, {
+            kind: 'html',
+            html: new TextDecoder().decode(bytes),
+            mimeType
+          });
+          if (
+            thumbElement.isConnected &&
+            thumbElement.dataset.thumbnailKey === cacheKey
+          ) {
+            renderGridLiveMedia(token, thumbElement, state.gridLiveMediaCache.get(cacheKey));
+          } else if (getWalletPageIds().some((id) => id === token.id)) {
+            renderTokenGrid();
+          }
+          debugLog('cache', 'background html grid display ready', {
+            tokenId: token.id.toString(),
+            contractId: cacheContractId,
+            bytes: bytes.length,
+            mimeType
+          });
+          return;
+        }
+        if (isGridPdfDocument(mimeType)) {
+          state.gridLiveMediaCache.set(cacheKey, {
+            kind: 'pdf',
+            bytes,
+            mimeType
+          });
+          if (
+            thumbElement.isConnected &&
+            thumbElement.dataset.thumbnailKey === cacheKey
+          ) {
+            renderGridLiveMedia(token, thumbElement, state.gridLiveMediaCache.get(cacheKey));
+          } else if (getWalletPageIds().some((id) => id === token.id)) {
+            renderTokenGrid();
+          }
+          return;
+        }
+        if (kind !== 'image' && kind !== 'svg') {
+          debugLog('cache', 'background thumbnail skipped non-image content', {
+            tokenId: token.id.toString(),
+            contractId: cacheContractId,
+            mimeType
+          });
+          return;
+        }
+        const thumbnail = await warmThumbnailCacheFromBytes(token, bytes, mimeType, {
+          renderGrid: false
+        });
+        if (!thumbnail) {
+          return;
+        }
+        if (
+          thumbElement.isConnected &&
+          thumbElement.dataset.thumbnailKey === cacheKey
+        ) {
+          await applyCachedThumbnail(token, thumbElement);
+        } else if (getWalletPageIds().some((id) => id === token.id)) {
+          renderTokenGrid();
+        }
+      } catch (error) {
+        debugLog(
+          'cache',
+          'background thumbnail fetch failed',
+          {
+            tokenId: token.id.toString(),
+            contractId: cacheContractId,
+            error: error instanceof Error ? error.message : String(error)
+          },
+          'warn'
+        );
+      }
+    };
+
+    const pumpBackgroundThumbnailHydrationQueue = () => {
+      while (
+        state.thumbnailHydrationInFlight.size < GRID_THUMBNAIL_HYDRATION_CONCURRENCY &&
+        state.thumbnailHydrationQueue.length > 0
+      ) {
+        const job = state.thumbnailHydrationQueue.shift();
+        state.thumbnailHydrationQueued.delete(job.cacheKey);
+        if (job.runId !== state.thumbnailHydrationRunId) {
+          continue;
+        }
+        state.thumbnailHydrationInFlight.add(job.cacheKey);
+        void runBackgroundThumbnailHydration(job).finally(() => {
+          state.thumbnailHydrationInFlight.delete(job.cacheKey);
+          if (job.runId === state.thumbnailHydrationRunId) {
+            pumpBackgroundThumbnailHydrationQueue();
+          }
+        });
+      }
+    };
+
+    const scheduleBackgroundThumbnailHydration = (token, thumbElement) => {
+      const cacheKey = getThumbnailKey(token);
+      if (
+        state.thumbnailHydrationAttempted.has(cacheKey) ||
+        state.thumbnailHydrationQueued.has(cacheKey) ||
+        state.thumbnailHydrationInFlight.has(cacheKey)
+      ) {
+        return;
+      }
+      if (!shouldBackgroundHydrateThumbnail(token)) {
+        return;
+      }
+      state.thumbnailHydrationAttempted.add(cacheKey);
+      state.thumbnailHydrationQueued.add(cacheKey);
+      state.thumbnailHydrationQueue.push({
+        token,
+        thumbElement,
+        cacheKey,
+        runId: state.thumbnailHydrationRunId
+      });
+      debugLog('cache', 'background thumbnail queued', {
+        tokenId: token.id.toString(),
+        contractId: getTokenCacheContractId(token),
+        queueDepth: state.thumbnailHydrationQueue.length
+      });
+      pumpBackgroundThumbnailHydrationQueue();
+    };
+
+    const renderTokenGrid = () => {
+      revokeGridThumbUrls();
+      dom.tokenGrid.innerHTML = '';
+      clampWalletPageIndex();
+      const pageIds = getWalletPageIds();
+      const totalCount = state.walletUsesPagedHoldings
+        ? state.walletTotalCount
+        : state.walletTokenIds.length;
+      dom.walletCountBadge.textContent = `${totalCount} token${totalCount === 1 ? '' : 's'}`;
+      updateWalletPagerControls();
+
+      for (let index = 0; index < WALLET_PAGE_SIZE; index += 1) {
+        const id = pageIds[index] ?? null;
+        const token = id !== null
+          ? state.walletTokenCache.get(id.toString()) ?? null
+          : null;
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = `token-card${token ? '' : ' empty'}${token && state.selectedTokenId === token.id ? ' active' : ''}`;
+        const thumb = document.createElement('div');
+        thumb.className = 'token-thumb';
+        const meta = document.createElement('div');
+        meta.className = 'token-meta';
+        let shouldApplyCachedThumbnail = false;
+
+        if (id === null) {
+          card.disabled = true;
+          thumb.textContent = '';
+          meta.innerHTML = '<strong>#</strong><span>empty</span>';
+        } else if (!token) {
+          card.disabled = true;
+          thumb.textContent = '...';
+          meta.innerHTML =
+            `<strong>${formatTokenId(id)}</strong><span>loading</span>`;
+        } else {
+          const kind = getGridMimeLabel(token.meta?.mimeType ?? null);
+          thumb.dataset.thumbnailKey = getThumbnailKey(token);
+          if (token.svgDataUri) {
+            const img = document.createElement('img');
+            img.alt = `Token ${token.id.toString()}`;
+            applyPixelPerfectImageRendering(img, {
+              mimeType: 'image/svg+xml',
+              sourceUrl: token.svgDataUri,
+              isSvgSource: true
+            });
+            img.src = token.svgDataUri;
+            thumb.classList.add('has-thumbnail');
+            thumb.dataset.thumbnailState = 'inline-svg';
+            thumb.append(img);
+          } else {
+            const liveMedia = state.gridLiveMediaCache.get(getThumbnailKey(token));
+            if (liveMedia && renderGridLiveMedia(token, thumb, liveMedia)) {
+              shouldApplyCachedThumbnail = false;
+            } else {
+              setTokenThumbLabel(thumb, kind);
+              thumb.dataset.thumbnailState = 'pending-cache';
+              shouldApplyCachedThumbnail = true;
+            }
+          }
+          const size = token.meta?.totalSize ?? null;
+          meta.innerHTML =
+            `<strong>${formatTokenId(token.id)}</strong><span>${kind}${size !== null ? ` · ${formatBytes(size)}` : ''}</span>`;
+          card.addEventListener('click', () => selectToken(token.id));
+        }
+        card.append(thumb, meta);
+        dom.tokenGrid.append(card);
+        if (token && shouldApplyCachedThumbnail) {
+          void applyCachedThumbnail(token, thumb).then((applied) => {
+            if (!applied) {
+              scheduleBackgroundThumbnailHydration(token, thumb);
+            }
+          });
+        }
+      }
+      updateTransferControls();
+    };
+
+    const selectToken = async (id) => {
+      state.selectedTokenId = id;
+      const token =
+        state.walletTokenCache.get(id.toString()) ??
+        state.walletTokens.find((entry) => entry.id === id) ??
+        null;
+      renderTokenGrid();
+      updateTransferControls();
+      revokeTokenPreview();
+      dom.explorerLink.hidden = true;
+
+      if (!token) {
+        clearElement(dom.tokenPreviewMedia, 'No selection');
+        renderMeta(dom.tokenPreviewMeta, [['Token', 'None']]);
+        void updateWalletTokenUriHeadPreview(null);
+        updateTransferControls();
+        return;
+      }
+
+      void updateWalletTokenUriHeadPreview(token.tokenUri);
+
+      clearElement(dom.tokenPreviewMedia, 'Loading');
+      renderMeta(dom.tokenPreviewMeta, [
+        ['Token', formatTokenId(token.id)],
+        ['Mime', token.meta?.mimeType ?? 'unknown'],
+        ['Size', token.meta?.totalSize ? formatBytes(token.meta.totalSize) : 'unknown'],
+        ['Owner', token.owner ? truncateMiddle(token.owner, 8, 8) : 'unknown']
+      ]);
+
+      const tokenContract = getTokenClient(token).contract;
+      dom.explorerLink.href = tokenExplorerUrl(tokenContract, token.id);
+      dom.explorerLink.hidden = false;
+
+      try {
+        if (!token.meta || token.meta.totalSize <= 0n) {
+          clearElement(dom.tokenPreviewMedia, token.svgDataUri ? '' : 'No on-chain content');
+          if (token.svgDataUri) {
+            const img = document.createElement('img');
+            img.alt = `Token ${token.id.toString()}`;
+            applyPixelPerfectImageRendering(img, {
+              mimeType: 'image/svg+xml',
+              sourceUrl: token.svgDataUri,
+              isSvgSource: true
+            });
+            img.src = token.svgDataUri;
+            dom.tokenPreviewMedia.append(img);
+          }
+          return;
+        }
+        const contentClient = getTokenClient(token);
+        const bytes = await fetchOnChainContent({
+          client: contentClient,
+          fallbackClient: contentClient === state.client ? state.legacyClient : null,
+          cacheContractId: token.sourceContractId ?? getContractId(contentClient.contract),
+          id: token.id,
+          senderAddress: getReadOnlySenderAddress(),
+          totalSize: token.meta.totalSize,
+          mimeType: token.meta.mimeType ?? null
+        });
+        const mimeType = resolveMimeType(token.meta.mimeType ?? null, bytes) ?? token.meta.mimeType ?? 'application/octet-stream';
+        revokeTokenPreview();
+        renderBytesPreview(dom.tokenPreviewMedia, bytes, mimeType, (url) => {
+          state.tokenPreviewUrl = url;
+        });
+        void warmThumbnailCacheFromBytes(token, bytes, mimeType);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        clearElement(dom.tokenPreviewMedia, 'Preview unavailable');
+        appendLog(`Preview failed for ${formatTokenId(token.id)}: ${message}`);
+      }
+    };
+
+    const cancelWalletLookup = () => {
+      state.walletLookupAbortController?.abort();
+      state.walletLookupAbortController = null;
+      state.walletLookupPending = false;
+    };
+
+    const viewWalletFromInput = async () => {
+      const baseLookupState = getWalletLookupState(
+        dom.walletLookupInput.value,
+        state.walletSession.address ?? null
+      );
+      cancelWalletLookup();
+      state.walletLookupNotice = null;
+
+      if (!baseLookupState.entered) {
+        state.walletViewAddress = null;
+        state.walletViewName = null;
+        updateWalletStatus();
+        await loadWalletInscriptions();
+        updateControls();
+        return;
+      }
+      if (!baseLookupState.valid) {
+        state.walletLookupNotice = 'Enter a valid Stacks address or BNS name.';
+        updateControls();
+        return;
+      }
+
+      if (baseLookupState.lookupAddress) {
+        state.walletViewAddress =
+          state.walletSession.address &&
+          addressesEqual(baseLookupState.lookupAddress, state.walletSession.address)
+            ? null
+            : baseLookupState.lookupAddress;
+        state.walletViewName = null;
+        appendLog(`Viewing wallet: ${truncateMiddle(baseLookupState.lookupAddress, 8, 8)}.`);
+        updateWalletStatus();
+        await loadWalletInscriptions();
+        updateControls();
+        return;
+      }
+
+      const lookupName = baseLookupState.lookupName;
+      if (!lookupName) {
+        updateControls();
+        return;
+      }
+
+      const abortController = new AbortController();
+      state.walletLookupAbortController = abortController;
+      state.walletLookupPending = true;
+      state.walletLookupNotice = `Resolving ${lookupName}...`;
+      updateControls();
+
+      try {
+        const { resolveBnsAddress } = await import('/src/lib/bns/resolver.ts');
+        const resolved = await resolveBnsAddress({
+          name: lookupName,
+          network: state.contract.network,
+          signal: abortController.signal
+        });
+        if (state.walletLookupAbortController !== abortController) {
+          return;
+        }
+        const resolvedLookupState = getWalletLookupState(
+          dom.walletLookupInput.value,
+          state.walletSession.address ?? null,
+          {
+            resolvedNameAddress: resolved.address,
+            bnsStatus: resolved.address ? 'resolved' : 'missing'
+          }
+        );
+        if (!resolvedLookupState.resolvedAddress) {
+          state.walletLookupNotice = `No address found for ${lookupName}.`;
+          return;
+        }
+        state.walletViewAddress = resolvedLookupState.resolvedAddress;
+        state.walletViewName = lookupName;
+        state.walletLookupNotice = null;
+        appendLog(
+          `Resolved ${lookupName} to ${truncateMiddle(resolvedLookupState.resolvedAddress, 8, 8)}.`
+        );
+        updateWalletStatus();
+        await loadWalletInscriptions();
+      } catch (error) {
+        if (abortController.signal.aborted) {
+          return;
+        }
+        state.walletLookupNotice =
+          'BNS lookup is temporarily unavailable. Try again or paste a wallet address directly.';
+        appendLog(
+          `BNS lookup failed for ${lookupName}: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+      } finally {
+        if (state.walletLookupAbortController === abortController) {
+          state.walletLookupAbortController = null;
+          state.walletLookupPending = false;
+          updateControls();
+        }
+      }
+    };
+
+    const transferSelectedToken = () => {
+      const selectedToken = getSelectedToken();
+      const senderAddress = state.walletSession.address ?? null;
+      const walletOwnsToken =
+        !!selectedToken && !!senderAddress && addressesEqual(selectedToken.owner, senderAddress);
+      const validation = validateTransferRequest({
+        senderAddress: walletOwnsToken ? senderAddress : null,
+        recipientAddress: dom.transferRecipientInput.value,
+        tokenId: selectedToken?.id ?? null,
+        networkMismatch: !!getMismatch()
+      });
+      if (!walletOwnsToken || !selectedToken || !validation.ok || !senderAddress) {
+        dom.transferStatus.textContent =
+          selectedToken && senderAddress && !walletOwnsToken
+            ? 'Only the connected owner can send this inscription.'
+            : getTransferValidationMessage(validation) ?? 'Transfer is not ready yet.';
+        updateTransferControls();
+        return;
+      }
+
+      const recipient = validation.recipient ?? dom.transferRecipientInput.value.trim();
+      const network = state.walletSession.network ?? state.contract.network;
+      const callOptions = buildTransferCall({
+        contract: state.contract,
+        network: toStacksNetwork(network),
+        id: selectedToken.id,
+        sender: senderAddress,
+        recipient,
+        overrides: {
+          postConditionMode: PostConditionMode.Deny,
+          postConditions: [
+            buildTransferPostCondition({
+              contract: state.contract,
+              senderAddress,
+              tokenId: selectedToken.id
+            })
+          ]
+        }
+      });
+
+      state.transferPending = true;
+      dom.transferStatus.textContent = 'Waiting for wallet confirmation...';
+      updateControls();
+      appendLog(`Transferring ${formatTokenId(selectedToken.id)} to ${recipient}.`);
+
+      try {
+        showContractCall({
+          ...callOptions,
+          stxAddress: senderAddress,
+          onFinish: (payload) => {
+            state.transferPending = false;
+            dom.transferStatus.textContent = `Transfer submitted: ${payload.txId}`;
+            appendLog(`Transfer submitted: ${payload.txId}`);
+            updateControls();
+            void loadWalletInscriptions();
+          },
+          onCancel: () => {
+            state.transferPending = false;
+            dom.transferStatus.textContent = 'Transfer cancelled or failed in wallet.';
+            appendLog('Transfer cancelled or failed in wallet.');
+            updateControls();
+          }
+        });
+        appendLog('Transfer wallet prompt opened.');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        state.transferPending = false;
+        dom.transferStatus.textContent = `Transfer failed: ${message}`;
+        appendLog(`Transfer failed: ${message}`);
+        updateControls();
+      }
+    };
+
+    const runLimited = async (items, limit, task) => {
+      const results = new Array(items.length);
+      let cursor = 0;
+      const workers = Array.from(
+        { length: Math.max(1, Math.min(limit, items.length)) },
+        async () => {
+          while (cursor < items.length) {
+            const index = cursor;
+            cursor += 1;
+            results[index] = await task(items[index], index);
+          }
+        }
+      );
+      await Promise.all(workers);
+      return results;
+    };
+
+    const fetchWalletHoldingsPage = async (params) => {
+      debugLog('hiro', 'wallet holdings request', {
+        pageIndex: params.pageIndex,
+        limit: WALLET_PAGE_SIZE,
+        offset: params.pageIndex * WALLET_PAGE_SIZE,
+        contractCount: params.contractIds.length,
+        wallet: truncateMiddle(params.walletAddress)
+      });
+      const page = await loadWalletHoldingsPage({
+        ...params,
+        pageSize: WALLET_PAGE_SIZE
+      });
+      debugLog('hiro', 'wallet holdings response ok', {
+        base: summarizeApiBase(page.sourceBase),
+        pageIndex: params.pageIndex,
+        returned: page.tokenIds.length,
+        total: page.total
+      });
+      return {
+        ids: page.tokenIds,
+        total: page.total,
+        sourceBase: page.sourceBase
+      };
+    };
+
+    const fetchWalletTokenSummaries = async (ids) => {
+      const sender = getReadOnlySenderAddress();
+      let legacyMaxId = null;
+      if (state.legacyClient) {
+        try {
+          legacyMaxId = await state.legacyClient.getLastTokenId(sender);
+        } catch (error) {
+          legacyMaxId = null;
+        }
+      }
+      const visibleIds = [...ids]
+        .sort((left, right) => (left < right ? 1 : left > right ? -1 : 0));
+      const summaries = await runLimited(visibleIds, 4, async (id) => {
+        try {
+          if (state.legacyClient) {
+            return await fetchTokenSummaryWithFallback({
+              primaryClient: state.client,
+              legacyClient: state.legacyClient,
+              id,
+              senderAddress: sender,
+              legacyMaxId
+            });
+          }
+          return await fetchTokenSummary({
+            client: state.client,
+            id,
+            senderAddress: sender
+          });
+        } catch (error) {
+          debugLog(
+            'readonly',
+            'token summary fetch failed',
+            {
+              tokenId: id.toString(),
+              contractId: getContractId(state.contract),
+              legacyContractId: state.legacyClient
+                ? getContractId(state.legacyClient.contract)
+                : null,
+              error: error instanceof Error ? error.message : String(error)
+            },
+            'warn'
+          );
+          return null;
+        }
+      });
+      return summaries.filter((token) => !!token && (token.meta || token.owner || token.svgDataUri));
+    };
+
+    const loadWalletPage = async (options = {}) => {
+      const viewingAddress = getViewingWalletAddress();
+      if (!viewingAddress) {
+        return;
+      }
+      clampWalletPageIndex();
+      resetBackgroundThumbnailHydration();
+      state.walletLoadingPage = true;
+      updateWalletPagerControls();
+      if (state.walletUsesPagedHoldings && !options.pageAlreadyLoaded) {
+        try {
+          const contractId = getContractId(state.contract);
+          const contractIds = state.legacyContract
+            ? [contractId, getContractId(state.legacyContract)]
+            : [contractId];
+          const page = await fetchWalletHoldingsPage({
+            network: state.contract.network,
+            walletAddress: viewingAddress,
+            contractIds,
+            pageIndex: state.walletPageIndex
+          });
+          state.walletTotalCount = page.total;
+          state.walletPageIds = page.ids;
+        } catch (error) {
+          state.walletLoadingPage = false;
+          updateWalletPagerControls();
+          throw error;
+        }
+      }
+
+      const pageIds = getWalletPageIds();
+      if (pageIds.length === 0) {
+        state.walletTokens = [];
+        state.selectedTokenId = null;
+        void updateWalletTokenUriHeadPreview(null);
+        renderTokenGrid();
+        state.walletLoadingPage = false;
+        updateWalletPagerControls();
+        return;
+      }
+
+      const missingIds = pageIds.filter((id) => !state.walletTokenCache.has(id.toString()));
+      renderTokenGrid();
+
+      try {
+        if (missingIds.length > 0 || options.force) {
+          const idsToFetch = options.force ? pageIds : missingIds;
+          const summaries = await fetchWalletTokenSummaries(idsToFetch);
+          for (const token of summaries) {
+            state.walletTokenCache.set(token.id.toString(), token);
+          }
+        }
+        state.walletTokens = pageIds
+          .map((id) => state.walletTokenCache.get(id.toString()) ?? null)
+          .filter((token) => !!token);
+        if (
+          state.walletTokens.length > 0 &&
+          (!state.selectedTokenId ||
+            !state.walletTokens.some((token) => token.id === state.selectedTokenId))
+        ) {
+          state.selectedTokenId = state.walletTokens[0].id;
+          void selectToken(state.selectedTokenId);
+        } else {
+          renderTokenGrid();
+        }
+      } finally {
+        state.walletLoadingPage = false;
+        updateWalletPagerControls();
+      }
+    };
+
+    const loadWalletInscriptions = async () => {
+      const viewingAddress = getViewingWalletAddress();
+      if (!viewingAddress) {
+        state.walletTokenIds = [];
+        state.walletPageIds = [];
+        state.walletTotalCount = 0;
+        state.walletUsesPagedHoldings = false;
+        state.walletTokenCache = new Map();
+        state.walletTokens = [];
+        state.walletPageIndex = 0;
+        state.selectedTokenId = null;
+        void updateWalletTokenUriHeadPreview(null);
+        resetBackgroundThumbnailHydration();
+        revokeGridThumbUrls();
+        dom.walletCountBadge.textContent = '0 tokens';
+        setStatus(
+          dom.walletGridStatus,
+          '<strong>Grid</strong> enter a wallet address or connect',
+          'empty',
+          'amber'
+        );
+        renderTokenGridPlaceholders();
+        updateWalletPagerControls();
+        setExperienceMode();
+        updateTransferControls();
+        return;
+      }
+
+      setStatus(dom.walletGridStatus, '<strong>Grid</strong> loading wallet holdings', 'loading', 'blue');
+      renderTokenGridPlaceholders('...');
+      state.walletTokenIds = [];
+      state.walletPageIds = [];
+      state.walletTotalCount = 0;
+      state.walletUsesPagedHoldings = false;
+      state.walletTokenCache = new Map();
+      state.walletTokens = [];
+      state.walletPageIndex = 0;
+      state.selectedTokenId = null;
+      void updateWalletTokenUriHeadPreview(null);
+      resetBackgroundThumbnailHydration();
+      revokeGridThumbUrls();
+      updateWalletPagerControls();
+
+      try {
+        const contractId = getContractId(state.contract);
+        const contractIds = state.legacyContract
+          ? [contractId, getContractId(state.legacyContract)]
+          : [contractId];
+        try {
+          const firstPage = await fetchWalletHoldingsPage({
+            network: state.contract.network,
+            walletAddress: viewingAddress,
+            contractIds,
+            pageIndex: 0
+          });
+          state.walletUsesPagedHoldings = true;
+          state.walletTotalCount = firstPage.total;
+          state.walletPageIds = firstPage.ids;
+          setExperienceMode();
+          appendLog(
+            `Hiro holdings page loaded: ${firstPage.ids.length}/${firstPage.total} visible.`
+          );
+          if (state.walletTotalCount === 0) {
+            setStatus(dom.walletGridStatus, '<strong>Grid</strong> no inscriptions found', 'empty', 'amber');
+            clearElement(dom.tokenPreviewMedia, 'No selection');
+            renderMeta(dom.tokenPreviewMeta, [['Token', 'None']]);
+            void updateWalletTokenUriHeadPreview(null);
+            renderTokenGrid();
+            setExperienceMode();
+            return;
+          }
+          setStatus(
+            dom.walletGridStatus,
+            `<strong>Grid</strong> ${state.walletTotalCount} inscription${state.walletTotalCount === 1 ? '' : 's'} available`,
+            'ready',
+            'blue'
+          );
+          await loadWalletPage({ pageAlreadyLoaded: true });
+          return;
+        } catch (pageError) {
+          state.walletUsesPagedHoldings = false;
+          state.walletTotalCount = 0;
+          state.walletPageIds = [];
+          appendLog(
+            `Paged Hiro holdings unavailable; trying cached holdings fallback. ${
+              pageError instanceof Error ? pageError.message : String(pageError)
+            }`
+          );
+        }
+
+        const holdings = await loadWalletHoldingsIndex({
+          network: state.contract.network,
+          walletAddress: viewingAddress,
+          contractIds,
+          maxIds: Number.MAX_SAFE_INTEGER
+        });
+
+        let ids = holdings?.tokenIds ?? [];
+        if (ids.length === 0) {
+          const last = await state.client.getLastTokenId(getReadOnlySenderAddress());
+          const scanLimit = BigInt(WALLET_FALLBACK_SCAN_LIMIT);
+          const start = last > scanLimit ? last - scanLimit : 0n;
+          const scanIds = [];
+          for (let id = last; id >= start; id -= 1n) {
+            scanIds.push(id);
+            if (id === 0n) {
+              break;
+            }
+          }
+          const summaries = await fetchWalletTokenSummaries(scanIds);
+          const ownedSummaries = summaries.filter((token) =>
+            addressesEqual(token.owner, viewingAddress)
+          );
+          for (const token of ownedSummaries) {
+            state.walletTokenCache.set(token.id.toString(), token);
+          }
+          state.walletTokenIds = ownedSummaries
+            .map((token) => token.id)
+            .sort((left, right) => (left < right ? 1 : left > right ? -1 : 0));
+          if (state.walletTokenIds.length > 0) {
+            appendLog(
+              `Wallet holdings index unavailable; scanned the latest ${scanIds.length} token IDs.`
+            );
+          }
+        } else {
+          ids = ids.sort((left, right) => (left < right ? 1 : left > right ? -1 : 0));
+          state.walletTokenIds = ids;
+        }
+
+        setExperienceMode();
+        if (state.walletTokenIds.length === 0) {
+          setStatus(dom.walletGridStatus, '<strong>Grid</strong> no inscriptions found', 'empty', 'amber');
+          clearElement(dom.tokenPreviewMedia, 'No selection');
+          renderMeta(dom.tokenPreviewMeta, [['Token', 'None']]);
+          void updateWalletTokenUriHeadPreview(null);
+          renderTokenGrid();
+        } else {
+          setStatus(
+            dom.walletGridStatus,
+            `<strong>Grid</strong> ${state.walletTokenIds.length} inscription${state.walletTokenIds.length === 1 ? '' : 's'} available`,
+            'ready',
+            'blue'
+          );
+          await loadWalletPage();
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        state.walletTokenIds = [];
+        state.walletPageIds = [];
+        state.walletTotalCount = 0;
+        state.walletUsesPagedHoldings = false;
+        state.walletTokenCache = new Map();
+        state.walletTokens = [];
+        state.walletPageIndex = 0;
+        state.selectedTokenId = null;
+        void updateWalletTokenUriHeadPreview(null);
+        resetBackgroundThumbnailHydration();
+        revokeGridThumbUrls();
+        setStatus(dom.walletGridStatus, `<strong>Grid</strong> ${message}`, 'error', 'rose');
+        appendLog(`Wallet load failed: ${message}`);
+        renderTokenGridPlaceholders();
+        updateWalletPagerControls();
+      }
+    };
+
+    const connectWallet = async () => {
+      setBusy(true);
+      try {
+        state.walletSession = await walletAdapter.connect();
+        appendLog(state.walletSession.address ? `Wallet connected: ${truncateMiddle(state.walletSession.address)}` : 'Wallet connection cancelled.');
+        updateWalletStatus();
+        await fetchAdminStatus();
+        if (state.prepared) {
+          await refreshUploadState(state.prepared.expectedHash);
+          renderPreparedState();
+        }
+        await loadWalletInscriptions();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        appendLog(`Wallet connect failed: ${message}`);
+        setStatus(dom.walletStatus, `<strong>Wallet error</strong> ${message}`, 'error', 'rose');
+      } finally {
+        setBusy(false);
+        updateControls();
+      }
+    };
+
+    const disconnectWallet = async () => {
+      setBusy(true);
+      try {
+        await walletAdapter.disconnect();
+        state.walletSession = walletAdapter.getSession();
+        state.walletTokenIds = [];
+        state.walletPageIds = [];
+        state.walletTotalCount = 0;
+        state.walletUsesPagedHoldings = false;
+        state.walletTokenCache = new Map();
+        state.walletTokens = [];
+        state.walletPageIndex = 0;
+        state.selectedTokenId = null;
+        void updateWalletTokenUriHeadPreview(null);
+        revokeGridThumbUrls();
+        state.uploadState = null;
+        appendLog('Wallet disconnected.');
+        updateWalletStatus();
+        await fetchAdminStatus();
+        await loadWalletInscriptions();
+        renderPreparedState();
+      } finally {
+        setBusy(false);
+        updateControls();
+      }
+    };
+
+    const setSelectedFile = (file) => {
+      state.selectedFile = file;
+      state.prepared = null;
+      state.duplicateId = null;
+      state.uploadState = null;
+      dom.fileInput.value = '';
+      if (file) {
+        dom.dropzoneText.innerHTML = '';
+        const chip = document.createElement('span');
+        chip.className = 'file-chip';
+        chip.textContent = `${file.name} · ${formatBytes(BigInt(file.size))}`;
+        dom.dropzoneText.append(chip);
+        if (!dom.nameInput.value.trim()) {
+          dom.nameInput.value = file.name;
+        }
+        if (file.type) {
+          dom.payloadType.value = file.type;
+        }
+      } else {
+        dom.dropzoneText.textContent = 'Choose file or drop it here';
+      }
+      renderPreparedState();
+    };
+
+    const markPreparedDirty = () => {
+      if (!state.prepared) {
+        return;
+      }
+      state.prepared = null;
+      state.duplicateId = null;
+      state.uploadState = null;
+      resetSteps();
+      renderPreparedState();
+    };
+
+    const initializeContractSelect = () => {
+      dom.contractSelect.innerHTML = '';
+      for (const entry of ACTIVE_CONTRACTS) {
+        const option = document.createElement('option');
+        option.value = getContractId(entry);
+        option.textContent = entry.label;
+        dom.contractSelect.append(option);
+      }
+      dom.contractSelect.value = getContractId(state.contract);
+    };
+
+    const initialize = async () => {
+      applyTheme(loadTheme());
+      dom.tokenUriInput.value = DEFAULT_TOKEN_URI;
+      void updateTokenUriHeadPreview();
+      dom.walletLookupInput.value = '';
+      initializeContractSelect();
+      applyContract(state.contract);
+      resetSteps();
+      renderTokenGridPlaceholders();
+      updateWalletStatus();
+      await fetchAdminStatus();
+      await loadWalletInscriptions();
+      updateControls();
+    };
+
+    dom.connectButton.addEventListener('click', connectWallet);
+    dom.introConnectButton?.addEventListener('click', connectWallet);
+    dom.introPrepareButton?.addEventListener('click', () => {
+      document.getElementById('inscribeTitle')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      dom.nameInput?.focus();
+    });
+    dom.disconnectButton.addEventListener('click', disconnectWallet);
+    dom.refreshWalletButton.addEventListener('click', loadWalletInscriptions);
+    dom.walletLookupForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      await viewWalletFromInput();
+    });
+    dom.walletLookupInput.addEventListener('input', () => {
+      if (state.walletLookupPending) {
+        cancelWalletLookup();
+      }
+      state.walletLookupNotice = null;
+      updateWalletLookupStatus();
+      updateControls();
+    });
+    dom.walletPrevButton.addEventListener('click', async () => {
+      if (state.walletPageIndex <= 0 || state.walletLoadingPage) {
+        return;
+      }
+      state.walletPageIndex -= 1;
+      await loadWalletPage();
+    });
+    dom.walletNextButton.addEventListener('click', async () => {
+      const pageCount = getWalletPageCount();
+      if (state.walletPageIndex >= pageCount - 1 || state.walletLoadingPage) {
+        return;
+      }
+      state.walletPageIndex += 1;
+      await loadWalletPage();
+    });
+    dom.prepareButton.addEventListener('click', async () => {
+      setBusy(true);
+      try {
+        await preparePayload();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        appendLog(`Prepare failed: ${message}`);
+        setStatus(dom.walletStatus, `<strong>Prepare failed</strong> ${message}`, 'error', 'rose');
+      } finally {
+        setBusy(false);
+      }
+    });
+    dom.inscribeButton.addEventListener('click', runInscription);
+    dom.allowDuplicateInput.addEventListener('change', updateControls);
+    dom.transferRecipientInput.addEventListener('input', updateTransferControls);
+    dom.transferButton.addEventListener('click', transferSelectedToken);
+
+    dom.themeSelect.addEventListener('change', () => {
+      applyTheme(dom.themeSelect.value);
+    });
+
+    dom.contractSelect.addEventListener('change', async () => {
+      const contract = ACTIVE_CONTRACTS.find((entry) => getContractId(entry) === dom.contractSelect.value);
+      if (!contract) {
+        return;
+      }
+      saveHomepageContractSelection(contract);
+      applyContract(contract);
+      appendLog(`Contract selected: ${contract.label}`);
+      await fetchAdminStatus();
+      await loadWalletInscriptions();
+    });
+
+    dom.fileInput.addEventListener('change', () => {
+      const file = dom.fileInput.files?.[0] ?? null;
+      if (file) {
+        setSelectedFile(file);
+      }
+    });
+    dom.dropzone.addEventListener('click', () => dom.fileInput.click());
+    dom.dropzone.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        dom.fileInput.click();
+      }
+    });
+    dom.dropzone.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      dom.dropzone.classList.add('dragging');
+    });
+    dom.dropzone.addEventListener('dragleave', () => {
+      dom.dropzone.classList.remove('dragging');
+    });
+    dom.dropzone.addEventListener('drop', (event) => {
+      event.preventDefault();
+      dom.dropzone.classList.remove('dragging');
+      const file = event.dataTransfer?.files?.[0] ?? null;
+      if (file) {
+        setSelectedFile(file);
+      }
+    });
+    dom.textPayload.addEventListener('input', () => {
+      if (dom.textPayload.value.length > 0 && state.selectedFile) {
+        setSelectedFile(null);
+      }
+      markPreparedDirty();
+    });
+    dom.nameInput.addEventListener('input', markPreparedDirty);
+    dom.payloadType.addEventListener('change', markPreparedDirty);
+    dom.tokenUriInput.addEventListener('input', () => {
+      markPreparedDirty();
+      queueTokenUriHeadPreviewUpdate();
+    });
+
+    window.addEventListener('beforeunload', () => {
+      if (state.tokenUriPreviewTimer !== null) {
+        window.clearTimeout(state.tokenUriPreviewTimer);
+      }
+      revokePayloadPreview();
+      revokeTokenPreview();
+      revokeGridThumbUrls();
+    });
+
+    void initialize();
+  </script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Xtrata - Registry Ledger Draft</title>
+  <style>
+    :root{--paper:#f6f3eb;--ink:#171512;--muted:#716b5f;--rule:#d8d0bf;--card:#fffcf4;--accent:#2f5b48;--radius:10px}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace}a{color:inherit;text-decoration:none}.page{max-width:1180px;margin:0 auto;padding:28px}.topline{border-bottom:2px solid var(--ink);border-top:2px solid var(--ink);padding:12px 0;display:flex;justify-content:space-between;gap:18px;align-items:center;text-transform:uppercase;font-size:13px;letter-spacing:.08em}.brand{font-weight:900}.nav{display:flex;gap:18px;color:var(--muted)}.btn{font:inherit;border:2px solid var(--ink);background:var(--ink);color:var(--paper);padding:10px 13px;border-radius:2px;cursor:pointer;text-transform:uppercase;font-size:12px;letter-spacing:.08em}.btn.secondary{background:transparent;color:var(--ink)}.hero{padding:70px 0 44px;display:grid;grid-template-columns:1.2fr .8fr;gap:46px;align-items:start}.stamp{display:inline-block;border:2px solid var(--accent);color:var(--accent);padding:8px 11px;transform:rotate(-2deg);text-transform:uppercase;font-size:12px;margin-bottom:24px}h1{font-size:clamp(50px,8vw,100px);line-height:.91;letter-spacing:-.09em;margin:0 0 24px;font-family:Georgia,serif}.lead{font-family:Inter,system-ui,sans-serif;color:var(--muted);font-size:20px;line-height:1.55;max-width:700px;margin-bottom:28px}.ledger-card{background:var(--card);border:2px solid var(--ink);box-shadow:8px 8px 0 var(--ink);padding:20px}.ledger-card h2{font-family:Georgia,serif;font-size:30px;margin:0 0 18px;letter-spacing:-.04em}.field{border-top:1px solid var(--rule);padding:14px 0}.field label{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;margin-bottom:8px}.field input,.field select{width:100%;font:inherit;border:1px solid var(--rule);background:#fff;padding:12px}.drop{border:1px dashed var(--muted);padding:24px;text-align:center;color:var(--muted);background:#fbf8ef}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}.section-title{border-top:2px solid var(--ink);border-bottom:1px solid var(--rule);padding:14px 0;margin-top:28px;display:flex;justify-content:space-between;align-items:center;gap:16px}.section-title h2{font-size:20px;margin:0;text-transform:uppercase;letter-spacing:.08em}.table{width:100%;border-collapse:collapse;background:var(--card);font-size:13px}.table th,.table td{border-bottom:1px solid var(--rule);padding:14px;text-align:left}.table th{color:var(--muted);text-transform:uppercase;font-size:11px;letter-spacing:.08em}.tag{border:1px solid var(--accent);color:var(--accent);padding:4px 6px}.wallet{display:none}.wallet.on{display:block}.empty{border:2px solid var(--ink);padding:24px;background:var(--card);margin-top:20px;display:flex;justify-content:space-between;gap:20px;align-items:center}.empty.off{display:none}.footgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:42px 0 20px}.note{border-top:1px solid var(--rule);padding-top:14px;color:var(--muted);font-size:13px;line-height:1.5}.note b{color:var(--ink);display:block;margin-bottom:8px}@media(max-width:880px){.hero{grid-template-columns:1fr}.nav{display:none}.footgrid{grid-template-columns:1fr}.empty{display:block}.table{display:block;overflow-x:auto}}
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="topline"><a class="brand">XTRATA DATA REGISTRY</a><nav class="nav"><a>Inscribe</a><a>Explorer</a><a>Docs</a></nav><button class="btn" id="connect">Connect Wallet</button></header>
+    <main class="hero">
+      <section><span class="stamp">Boring infrastructure</span><h1>Record it. Reference it. Retrieve it.</h1><p class="lead">A stripped-back inscription registry for durable data on Stacks. Not a marketplace first. Not a metaverse. Just a reliable way to put useful objects on-chain and find them again.</p><div class="actions"><button class="btn" id="connect2">Connect wallet</button><button class="btn secondary">Browse public records</button></div></section>
+      <aside class="ledger-card"><h2>Create a record</h2><div class="field"><label>Object type</label><select><option>File or media</option><option>Code or app</option><option>JSON manifest</option><option>Song contribution history</option><option>Agent memory</option></select></div><div class="field"><label>Name</label><input placeholder="example: credits.manifest.json"></div><div class="field"><label>Payload</label><div class="drop">Drop file, paste JSON or enter text</div></div><button class="btn" style="width:100%">Prepare inscription</button></aside>
+    </main>
+
+    <section class="empty" id="empty"><div><strong>No wallet connected.</strong><br><span style="color:var(--muted)">Connect to see your records here. Without a wallet, this page stays as a simple inscription front door.</span></div><button class="btn" id="connect3">Connect</button></section>
+
+    <section class="wallet" id="wallet">
+      <div class="section-title"><h2>Your ledger</h2><button class="btn secondary">New record</button></div>
+      <table class="table"><thead><tr><th>Record</th><th>Kind</th><th>Chain</th><th>State</th><th>Actions</th></tr></thead><tbody><tr><td>kohlhaas-review-proof.txt</td><td>text</td><td>Stacks</td><td><span class="tag">confirmed</span></td><td>View · Copy · Send</td></tr><tr><td>song-contributors.json</td><td>manifest</td><td>Stacks</td><td><span class="tag">confirmed</span></td><td>View · Copy · Send</td></tr><tr><td>simple-game.html</td><td>app</td><td>Stacks</td><td><span class="tag">pending</span></td><td>View · Copy · Cancel</td></tr></tbody></table>
+    </section>
+
+    <section class="section-title"><h2>Public examples</h2><span style="color:var(--muted);font-size:13px">recent confirmed objects</span></section>
+    <table class="table"><thead><tr><th>Object</th><th>Type</th><th>Owner</th><th>Size</th></tr></thead><tbody><tr><td>nft-metadata-142.json</td><td>JSON</td><td>STX...2QH</td><td>4.2 KB</td></tr><tr><td>audio-proof-88.txt</td><td>Text</td><td>STX...P91</td><td>1.1 KB</td></tr><tr><td>recursive-gallery.html</td><td>App</td><td>STX...X81</td><td>23 KB</td></tr></tbody></table>
+    <footer class="footgrid"><p class="note"><b>Plain rails</b>No grand interface required before the first inscription.</p><p class="note"><b>Wallet first</b>The homepage becomes useful as soon as a wallet is connected.</p><p class="note"><b>Developer ready</b>Contracts, API and object references sit behind the simple flow.</p></footer>
+  </div>
+  <script>
+    const wallet = document.getElementById('wallet'); const empty = document.getElementById('empty');
+    [connect, connect2, connect3].forEach(btn=>btn.addEventListener('click',()=>{wallet.classList.add('on');empty.classList.add('off');[connect,connect2,connect3].forEach(b=>b.textContent='STX1...CONNECTED');wallet.scrollIntoView({behavior:'smooth'});}));
+  </script>
+</body>
+</html>
