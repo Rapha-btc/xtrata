@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-NoirDet01-voice-20260514205653106-803b",
+  "preferred_name": "NoirDet01",
+  "display_name": "Noir Detective",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A male noir detective voice with dry wit, late-night intimacy, low-mid gravel, and sharp consonants. Suitable for suspense intros, detective fiction, and moody urban storytelling. Avoid exaggerated old-time radio parody and avoid constant cigarette rasp.",
+  "preview_text": "A noir detective voice with dry wit, low light atmosphere, and crisp control.",
+  "language": "English",
+  "preset_id": "noir_detective",
+  "gmt_create": "2026-05-14T12:57:00.083Z",
+  "preview_audio_file": "noir_detective_53c79f564dee_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/noir_detective_53c79f564dee_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-BerlinLitM1-voice-20260514215650432-c05e",
+  "preferred_name": "BerlinLitM1",
+  "display_name": "German Literary Male",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A German literary male voice with a clearly German accent, reflective gravity, medium-low pitch, and thoughtful pacing. Native language German. Ideal for literary fiction and memoir. In English, keep the German accent audible and natural.",
+  "preview_text": "Guten Abend. Ich bin eine deutsche Stimme fuer literarische Ruhe und nachdenkliche Tiefe.",
+  "language": "German",
+  "preset_id": "de_literary_m",
+  "gmt_create": "2026-05-14T13:56:56.559Z",
+  "preview_audio_file": "german_literary_male_de0408bbe08b_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/german_literary_male_de0408bbe08b_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

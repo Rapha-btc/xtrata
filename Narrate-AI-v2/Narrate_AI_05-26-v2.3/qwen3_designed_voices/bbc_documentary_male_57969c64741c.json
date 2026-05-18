@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-BBCDocM1-voice-20260514222619182-1e33",
+  "preferred_name": "BBCDocM1",
+  "display_name": "BBC Documentary Male",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A British male documentary narrator with BBC factual-programme authority, non-rhotic southern British pronunciation, crisp consonants, and measured seriousness. Calm, precise, and recognisably British rather than American. Avoid theatrical grandeur.",
+  "preview_text": "This is a British documentary voice with public-broadcast authority and calm factual precision.",
+  "language": "English",
+  "preset_id": "bbc_documentary_male",
+  "gmt_create": "2026-05-14T14:26:25.318Z",
+  "preview_audio_file": "bbc_documentary_male_57969c64741c_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/bbc_documentary_male_57969c64741c_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

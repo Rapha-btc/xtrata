@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-BerlinThrM1-voice-20260514215946062-4adc",
+  "preferred_name": "BerlinThrM1",
+  "display_name": "German Thriller Male",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A German man with a distinct German accent, disciplined tension, precise rhythm, and cool thriller control. Native language German. Strong consonants, serious tone, believable suspense. In English, preserve the German accent clearly.\n\nWhen this voice speaks English, preserve the foreign accent identity established in German. Push the accent as far as possible while keeping English intelligible. German Thriller Male should sound unmistakably foreign rather than American or neutral.",
+  "preview_text": "Guten Abend. Dies ist eine deutsche Stimme mit Spannung, Disziplin und filmischer Kontrolle.",
+  "language": "German",
+  "preset_id": "de_thriller_m",
+  "gmt_create": "2026-05-14T13:59:53.273Z",
+  "preview_audio_file": "german_thriller_male_b459185dca50_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/german_thriller_male_b459185dca50_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

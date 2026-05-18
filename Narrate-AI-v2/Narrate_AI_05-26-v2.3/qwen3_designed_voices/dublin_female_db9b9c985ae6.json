@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-DubF01-voice-20260514221903516-e518",
+  "preferred_name": "DubF01",
+  "display_name": "Dublin Female",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A Dublin female voice with a clearly Irish accent, bright wit, emotional warmth, and natural conversational musicality. Keep the accent distinct and authentic without caricature, and never allow it to drift toward American speech.",
+  "preview_text": "Hello there. This is a Dublin female voice with warmth, wit, and unmistakably Irish rhythm.",
+  "language": "English",
+  "preset_id": "irish_dublin_female",
+  "gmt_create": "2026-05-14T14:19:08.682Z",
+  "preview_audio_file": "dublin_female_db9b9c985ae6_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/dublin_female_db9b9c985ae6_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

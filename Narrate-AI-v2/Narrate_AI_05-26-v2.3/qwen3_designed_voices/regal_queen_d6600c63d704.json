@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-RegalQ01-voice-20260514205654904-28e7",
+  "preferred_name": "RegalQ01",
+  "display_name": "Regal Queen",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A regal female voice with aristocratic poise, medium-low pitch, formal clarity, and quiet command. Suitable for a queen, commander, or ceremonial narrator. Avoid shrill sternness and avoid melodramatic fantasy affectation.",
+  "preview_text": "A regal female voice with composure, elegance, and quiet command.",
+  "language": "English",
+  "preset_id": "regal_queen",
+  "gmt_create": "2026-05-14T12:57:00.514Z",
+  "preview_audio_file": "regal_queen_d6600c63d704_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/regal_queen_d6600c63d704_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

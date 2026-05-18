@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-BerlinNoirF1-voice-20260514213128468-69dc",
+  "preferred_name": "BerlinNoirF1",
+  "display_name": "German Noir Female",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A German female noir voice with a clearly German accent, dry intelligence, late-night intimacy, and low controlled tension. Native language German. Urban, precise, and serious. In English, preserve the German accent.",
+  "preview_text": "Guten Abend. Ich bin eine deutsche Noir-Stimme, trocken, klug und kontrolliert.",
+  "language": "German",
+  "preset_id": "de_noir_f",
+  "gmt_create": "2026-05-14T13:31:34.685Z",
+  "preview_audio_file": "german_noir_female_e37834f4c7ea_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/german_noir_female_e37834f4c7ea_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

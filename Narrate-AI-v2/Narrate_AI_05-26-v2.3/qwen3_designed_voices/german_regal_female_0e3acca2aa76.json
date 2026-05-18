@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-BerlinRegF1-voice-20260514215711038-a21f",
+  "preferred_name": "BerlinRegF1",
+  "display_name": "German Regal Female",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A regal German woman with a clearly German accent, formal poise, controlled authority, and elegant command. Native language German. Suitable for fantasy royalty or leadership narration. In English, preserve a refined German accent.",
+  "preview_text": "Guten Abend. Ich bin eine deutsche Stimme mit Wuerde, Klarheit und stiller Autoritaet.",
+  "language": "German",
+  "preset_id": "de_regal_f",
+  "gmt_create": "2026-05-14T13:57:17.864Z",
+  "preview_audio_file": "german_regal_female_0e3acca2aa76_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/german_regal_female_0e3acca2aa76_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

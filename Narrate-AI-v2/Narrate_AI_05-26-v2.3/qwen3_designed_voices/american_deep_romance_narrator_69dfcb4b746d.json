@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-USDeepRom01-voice-20260515210611015-479e",
+  "preferred_name": "USDeepRom01",
+  "display_name": "American Deep Romance Narrator",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A deep American male audiobook narrator with full baritone warmth, clean authority, and a smooth romantic presence. General American accent, polished but not glossy, with enough depth to handle military romance, suspense, and character-driven fiction. He should sound grounded, mature, and quietly magnetic. Avoid over-clipped diction, avoid overworked gravel, and avoid drifting into trailer-announcer mode.",
+  "preview_text": "A deep American romance narrator voice with mature baritone warmth, control, and steady allure.",
+  "language": "English",
+  "preset_id": "american_deep_romance_narrator_m",
+  "gmt_create": "2026-05-15T13:06:18.650Z",
+  "preview_audio_file": "design_lab__american_deep_romance_narrator__american_deep_romance_narrator_m__create_preview__english__design_model__txt_a_deep_american_romance_narr_0ea2f5690282__69dfcb4b746d.wav",
+  "preview_audio_url": "/qwen3_designed_voices/design_lab__american_deep_romance_narrator__american_deep_romance_narrator_m__create_preview__english__design_model__txt_a_deep_american_romance_narr_0ea2f5690282__69dfcb4b746d.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

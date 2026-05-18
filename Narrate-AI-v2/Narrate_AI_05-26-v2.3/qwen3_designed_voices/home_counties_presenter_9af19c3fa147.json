@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-HomeCoM1-voice-20260514222629659-097d",
+  "preferred_name": "HomeCoM1",
+  "display_name": "Home Counties Presenter",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A British male voice with a modern Home Counties broadcast accent, clean non-rhotic vowels, composed confidence, and recognisable UK public-radio phrasing. Educated but natural, not stiff, and definitely not American.",
+  "preview_text": "This is a modern Home Counties broadcast voice with polished British diction and natural confidence.",
+  "language": "English",
+  "preset_id": "homecounties_presenter_male",
+  "gmt_create": "2026-05-14T14:26:36.028Z",
+  "preview_audio_file": "home_counties_presenter_9af19c3fa147_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/home_counties_presenter_9af19c3fa147_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

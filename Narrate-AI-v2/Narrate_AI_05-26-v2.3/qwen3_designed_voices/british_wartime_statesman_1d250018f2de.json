@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-BritState01-voice-20260515043933520-60c7",
+  "preferred_name": "BritState01",
+  "display_name": "British Wartime Statesman",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "Winston Churchill - British Wartime Prime Minister",
+  "preview_text": "This British statesman voice is built for grave national address, historical narration, and formal public resolve.",
+  "language": "English",
+  "preset_id": "brit_wartime_statesman",
+  "gmt_create": "2026-05-14T20:39:39.128Z",
+  "preview_audio_file": "british_wartime_statesman_1d250018f2de_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/british_wartime_statesman_1d250018f2de_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

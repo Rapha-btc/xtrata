@@ -1,0 +1,10 @@
+{
+  "voice": "qwen-tts-vc-US_deep_male_3-voice-20260515185614553-6c70",
+  "preferred_name": "US_deep_male_3",
+  "target_model": "qwen3-tts-vc-2026-01-22",
+  "gmt_create": "2026-05-15T10:56:17.902Z",
+  "local_audio_file": "us_deep_male_3_becca7b04e0b.mp3",
+  "local_audio_url": "/qwen3_cloned_voices/us_deep_male_3_becca7b04e0b.mp3",
+  "original_filename": "US_deep_male_3.mp3",
+  "source": "local"
+}

@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-YorksM01-voice-20260514221839259-49bf",
+  "preferred_name": "YorksM01",
+  "display_name": "Yorkshire Male",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A man from Yorkshire with a clearly northern English accent, solid warmth, earthy honesty, and unmistakably British vowel shapes. Natural Yorkshire identity, not comic exaggeration, and not American. Calm, grounded, and strong for literary or rural storytelling.",
+  "preview_text": "Evening. This is a Yorkshire voice with northern warmth, plain speaking, and proper British character.",
+  "language": "English",
+  "preset_id": "northern_yorkshire_male",
+  "gmt_create": "2026-05-14T14:18:45.333Z",
+  "preview_audio_file": "yorkshire_male_ced0c302ffb5_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/yorkshire_male_ced0c302ffb5_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

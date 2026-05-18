@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-Academic01-voice-20260514205648654-f659",
+  "preferred_name": "Academic01",
+  "display_name": "Academic Explainer",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A gender-neutral sounding academic explainer voice with precise diction, calm pacing, and an intelligent, digestible educational tone. Suitable for courses, explainers, and documentary-style context. Avoid sounding robotic and avoid overly casual slang.",
+  "preview_text": "An academic explainer voice focused on clarity, trust, and easy comprehension.",
+  "language": "English",
+  "preset_id": "academic_explainer",
+  "gmt_create": "2026-05-14T12:56:54.309Z",
+  "preview_audio_file": "academic_explainer_e31356bf7597_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/academic_explainer_e31356bf7597_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

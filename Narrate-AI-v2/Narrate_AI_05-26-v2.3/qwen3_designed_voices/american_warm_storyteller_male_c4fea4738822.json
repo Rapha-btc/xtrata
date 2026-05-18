@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-USWarmM01-voice-20260515205613957-51f4",
+  "preferred_name": "USWarmM01",
+  "display_name": "American Warm Storyteller Male",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A male American audiobook narrator in his forties with a grounded general American accent, warm low-mid resonance, patient pacing, and relaxed emotional clarity. Strong for literary fiction, family drama, memoir, and reflective storytelling. Avoid boomy trailer weight, avoid radio-announcer polish, and avoid sounding too casual or sleepy.",
+  "preview_text": "This American warm storyteller voice carries steady warmth, grounded confidence, and easy long-form listenability.",
+  "language": "English",
+  "preset_id": "american_warm_storyteller_m",
+  "gmt_create": "2026-05-15T12:56:20.546Z",
+  "preview_audio_file": "design_lab__american_warm_storyteller_male__american_warm_storyteller_m__create_preview__english__design_model__txt_this_american_warm_storytell_c3ae46bed0eb__c4fea4738822.wav",
+  "preview_audio_url": "/qwen3_designed_voices/design_lab__american_warm_storyteller_male__american_warm_storyteller_m__create_preview__english__design_model__txt_this_american_warm_storytell_c3ae46bed0eb__c4fea4738822.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

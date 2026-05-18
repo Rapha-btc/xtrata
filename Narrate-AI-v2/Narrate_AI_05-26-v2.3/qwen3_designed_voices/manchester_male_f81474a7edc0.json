@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-MancM01-voice-20260514222020522-1543",
+  "preferred_name": "MancM01",
+  "display_name": "Manchester Male",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A man from Manchester with a clear Mancunian accent, dry humour, directness, and recognisably northern English cadence. Definitely British, definitely not American, and not overplayed. Suitable for urban drama, music docs, and grounded narration.",
+  "preview_text": "All right. This is a Manchester voice with northern edge, dry humour, and proper British shape.",
+  "language": "English",
+  "preset_id": "manchester_male",
+  "gmt_create": "2026-05-14T14:20:31.247Z",
+  "preview_audio_file": "manchester_male_f81474a7edc0_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/manchester_male_f81474a7edc0_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

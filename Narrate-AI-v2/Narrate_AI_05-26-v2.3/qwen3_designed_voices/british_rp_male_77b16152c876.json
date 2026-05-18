@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-BritRPM01-voice-20260514221827369-d273",
+  "preferred_name": "BritRPM01",
+  "display_name": "British RP Male",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A male narrator with a clearly British Received Pronunciation accent, refined but natural, non-rhotic, polished diction, and calm authority. Modern RP rather than theatrical old-fashioned speech. Definitely not American. Keep the vowels, cadence, and consonants recognisably British.",
+  "preview_text": "Good evening. This is a modern British RP voice designed for polished narration and clear authority.",
+  "language": "English",
+  "preset_id": "british_rp_male",
+  "gmt_create": "2026-05-14T14:18:34.475Z",
+  "preview_audio_file": "british_rp_male_77b16152c876_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/british_rp_male_77b16152c876_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

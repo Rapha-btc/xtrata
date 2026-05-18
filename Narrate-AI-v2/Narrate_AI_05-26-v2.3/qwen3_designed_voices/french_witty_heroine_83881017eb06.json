@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-ParisHeroF1-voice-20260514212553350-ad33",
+  "preferred_name": "ParisHeroF1",
+  "display_name": "French Witty Heroine",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A young French woman with a lively Parisian accent, quick wit, bright intelligence, and playful warmth. Native language French. Nimble timing and believable charm. When speaking English, keep the French accent obvious and natural.",
+  "preview_text": "Salut. Je suis une heroine francaise vive, maligne et pleine de repartie.",
+  "language": "French",
+  "preset_id": "fr_witty_heroine_f",
+  "gmt_create": "2026-05-14T13:25:59.253Z",
+  "preview_audio_file": "french_witty_heroine_83881017eb06_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/french_witty_heroine_83881017eb06_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

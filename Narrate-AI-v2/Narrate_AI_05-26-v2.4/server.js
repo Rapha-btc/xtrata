@@ -5,7 +5,10 @@ const path = require('path');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
 const { URL } = require('url');
+const AppMeta = require('./lib/app-meta');
 
+const APP_VERSION = AppMeta.APP_VERSION;
+const APP_NAME = AppMeta.APP_NAME;
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const ROOT_DIR = __dirname;
 const OUTPUT_DIR = path.join(ROOT_DIR, 'output');
@@ -25,19 +28,34 @@ const LOCAL_DESIGNS_DIR = path.join(ROOT_DIR, 'qwen3_designed_voices');
 const DASHSCOPE_BASE = 'https://dashscope-intl.aliyuncs.com/api/v1';
 const GENERATION_URL = DASHSCOPE_BASE + '/services/aigc/multimodal-generation/generation';
 const CUSTOMIZATION_URL = DASHSCOPE_BASE + '/services/audio/tts/customization';
-const DEFAULT_CLONE_MODEL = 'qwen3-tts-vc-2026-01-22';
-const DEFAULT_DESIGN_MODEL = 'qwen3-tts-vd-2026-01-26';
-const DEFAULT_LIST_PAGE_SIZE = 100;
-const MAX_LIST_PAGE_SIZE = 200;
-const CUSTOM_VOICE_NAME_MAX = 16;
-const INSTRUCT_TEXT_CHAR_LIMIT = 600;
-const INSTRUCT_INSTRUCTIONS_CHAR_LIMIT = 600;
-const PRICING = {
-  'qwen3-tts-flash': 0.10 / 10000,
-  'qwen3-tts-instruct-flash': 0.115 / 10000,
-  'qwen3-tts-vc-2026-01-22': 0.115 / 10000,
-  'qwen3-tts-vd-2026-01-26': 0.115 / 10000
-};
+const DEFAULT_CLONE_MODEL = AppMeta.DEFAULT_CLONE_MODEL;
+const DEFAULT_DESIGN_MODEL = AppMeta.DEFAULT_DESIGN_MODEL;
+const DEFAULT_LIST_PAGE_SIZE = AppMeta.DEFAULT_LIST_PAGE_SIZE;
+const MAX_LIST_PAGE_SIZE = AppMeta.MAX_LIST_PAGE_SIZE;
+const CUSTOM_VOICE_NAME_MAX = AppMeta.CUSTOM_VOICE_NAME_MAX;
+const INSTRUCT_TEXT_CHAR_LIMIT = AppMeta.INSTRUCT_TEXT_CHAR_LIMIT;
+const INSTRUCT_INSTRUCTIONS_CHAR_LIMIT = AppMeta.INSTRUCT_INSTRUCTIONS_CHAR_LIMIT;
+const JSON_BODY_LIMIT_BYTES = parseInt(process.env.JSON_BODY_LIMIT_BYTES || String(2 * 1024 * 1024), 10);
+const MULTIPART_BODY_LIMIT_BYTES = parseInt(process.env.MULTIPART_BODY_LIMIT_BYTES || String(12 * 1024 * 1024), 10);
+const STATIC_ROOT_FILES = new Set([
+  'index.html',
+  'audiobook-v23.js',
+  'README.md',
+  'API_COMMUNICATION_REFERENCE.md',
+  'AGENTS.md',
+  'www.alibabacloud.com_help_en_model-studio_qwen-tts-voice-cloning_1778414145241.md',
+  'www.alibabacloud.com_help_en_model-studio_qwen-tts_1778413805261.md',
+  'www.alibabacloud.com_help_en_model-studio_qwen-tts_section-request.md',
+  'www.alibabacloud.com_help_en_model-studio_qwen-tts_section-request_1778415324138.md',
+  'www.alibabacloud.com_help_en_model-studio_qwen-tts_section-voices.md'
+]);
+const STATIC_PUBLIC_DIRS = [
+  OUTPUT_DIR,
+  PREVIEW_LIBRARY_DIR,
+  LOCAL_CLONES_DIR,
+  LOCAL_DESIGNS_DIR
+];
+const PRICING = AppMeta.PRICING;
 
 [OUTPUT_DIR, CHUNKS_DIR, CHAPTERS_DIR, TITLES_DIR, BOOK_DIR, PROJECTS_DIR, PACKAGES_DIR, TEMP_DIR, PREVIEW_LIBRARY_DIR, LOCAL_CLONES_DIR, LOCAL_DESIGNS_DIR].forEach((dir) => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -81,7 +99,7 @@ function nextRequestId() {
 }
 
 function logRequest(requestId, message) {
-  console.log('[Narrate AI v2.3][' + requestId + '] ' + message);
+  console.log('[' + APP_NAME + '][' + requestId + '] ' + message);
 }
 
 function mimeTypeFor(filePath) {
@@ -101,7 +119,8 @@ function mimeTypeFor(filePath) {
 
 function safeJoin(baseDir, requestPath) {
   const joined = path.normalize(path.join(baseDir, requestPath));
-  if (!joined.startsWith(baseDir)) return null;
+  const relative = path.relative(baseDir, joined);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) return null;
   return joined;
 }
 
@@ -110,17 +129,34 @@ function writeJson(res, statusCode, payload) {
   res.end(JSON.stringify(payload));
 }
 
-function readRequestBuffer(req) {
+function readRequestBuffer(req, maxBytes) {
   return new Promise((resolve, reject) => {
     const chunks = [];
-    req.on('data', (chunk) => chunks.push(chunk));
+    let total = 0;
+    req.on('data', (chunk) => {
+      total += chunk.length;
+      if (maxBytes && total > maxBytes) {
+        const error = new Error('Request body exceeds ' + maxBytes + ' bytes.');
+        error.statusCode = 413;
+        req.destroy(error);
+        reject(error);
+        return;
+      }
+      chunks.push(chunk);
+    });
     req.on('end', () => resolve(Buffer.concat(chunks)));
     req.on('error', reject);
   });
 }
 
 async function readJsonBody(req) {
-  const buffer = await readRequestBuffer(req);
+  const contentType = String(req.headers['content-type'] || '');
+  if (contentType && !contentType.toLowerCase().includes('application/json')) {
+    const error = new Error('Expected application/json request body.');
+    error.statusCode = 415;
+    throw error;
+  }
+  const buffer = await readRequestBuffer(req, JSON_BODY_LIMIT_BYTES);
   if (!buffer.length) return {};
   return JSON.parse(buffer.toString('utf8'));
 }
@@ -306,7 +342,7 @@ function repairWavHeadersInDirectory(dirPath) {
 const repairedPreviewLibraryCount = repairWavHeadersInDirectory(PREVIEW_LIBRARY_DIR);
 const repairedDesignedVoiceCount = repairWavHeadersInDirectory(LOCAL_DESIGNS_DIR);
 if (repairedPreviewLibraryCount || repairedDesignedVoiceCount) {
-  console.log('[Narrate AI v2.3] Repaired WAV headers on startup. previews=' + repairedPreviewLibraryCount + ' designed=' + repairedDesignedVoiceCount);
+  console.log('[' + APP_NAME + '] Repaired WAV headers on startup. previews=' + repairedPreviewLibraryCount + ' designed=' + repairedDesignedVoiceCount);
 }
 
 function generateHash(input) {
@@ -346,12 +382,52 @@ function buildTextFileLabel(text) {
 
 function buildFileName(parts, ext) {
   const cleanExt = String(ext || '').replace(/^\./, '') || 'wav';
-  const stem = parts
+  const cleanParts = parts
     .map((part) => slugifyFileStem(part, 48))
-    .filter(Boolean)
-    .join('__')
-    .slice(0, 240) || 'audio';
+    .filter(Boolean);
+  const fullStem = cleanParts.join('__');
+  if (fullStem.length <= 240) return (fullStem || 'audio') + '.' + cleanExt;
+
+  const tailParts = cleanParts.slice(-4);
+  const headParts = cleanParts.slice(0, -4);
+  const rawTail = tailParts.join('__');
+  const tail = rawTail.length > 128 ? rawTail.slice(rawTail.length - 128).replace(/^_+/, '') : rawTail;
+  const tailBudget = Math.min(tail.length, 128);
+  const headBudget = Math.max(48, 240 - tailBudget - 2);
+  const head = headParts.join('__').slice(0, headBudget).replace(/_+$/g, '');
+  const stem = [head, tail].filter(Boolean).join('__').slice(0, 240) || 'audio';
   return stem + '.' + cleanExt;
+}
+
+function bookVoiceLabel(body) {
+  return body.voiceLabel || body.voiceName || body.voiceId || 'voice';
+}
+
+function bookVoiceSummaryLabel(body) {
+  const explicit = body.voiceSummary || body.voiceLabel || body.voiceName;
+  if (explicit) return explicit;
+  if (Array.isArray(body.voice_labels) && body.voice_labels.length) return body.voice_labels.join('_');
+  return body.voiceId || 'mixed_voices';
+}
+
+function bookSettingsLabel(body, level) {
+  const parts = [];
+  if (body.settingsTag && !['default_prompt', 'flash_default', 'designed_voice', 'clone_voice'].includes(body.settingsTag)) parts.push(body.settingsTag);
+  else if (body.instructions) parts.push(body.sourceType === 'titles' ? 'title_sequence' : 'custom_prompt');
+  if (body.chunkSilence !== undefined && body.chunkSilence !== null && body.chunkSilence !== '' && Number(body.chunkSilence) > 0) {
+    parts.push('chunk_gap_' + String(body.chunkSilence).replace('.', '_') + 's');
+  }
+  if (body.chapterSilence !== undefined && body.chapterSilence !== null && body.chapterSilence !== '' && Number(body.chapterSilence) > 0) {
+    parts.push('chapter_gap_' + String(body.chapterSilence).replace('.', '_') + 's');
+  }
+  if (level === 'chunk' && body.mode && body.mode !== 'single') parts.push(body.mode);
+  return parts.join('_');
+}
+
+function chapterFileLabel(body) {
+  if (body.isTitle) return 'titles';
+  const number = Math.max(1, (Number(body.chapterIndex) || 0) + 1);
+  return 'ch' + number;
 }
 
 function buildDesignedPreviewFileName(options) {
@@ -384,20 +460,18 @@ function buildDesignedSampleFileName(record, options) {
 
 function buildBookChunkFileName(body) {
   const hash = generateHash(body.text + body.voiceId + body.modelId + (body.instructions || ''));
-  const chapterNumber = String((Number(body.chapterIndex) || 0) + 1).padStart(2, '0');
   const chunkNumber = String((Number(body.chunkIndex) || 0) + 1).padStart(3, '0');
   return buildFileName([
     body.projectId || 'book_project',
-    'audiobook',
     body.projectTitle || body.projectId || 'book',
-    'chapter_' + chapterNumber,
+    chapterFileLabel(body),
     body.chapterTitle || 'chapter',
-    'chunk_' + chunkNumber,
+    'ck' + chunkNumber,
     body.roleLabel || body.sourceType || 'narrator',
-    body.voiceId || 'voice',
     modelFileLabel(body.modelId),
     languageFileLabel(body.language),
-    body.instructions ? (body.sourceType === 'titles' ? 'title_sequence' : 'custom_prompt') : 'default',
+    bookVoiceLabel(body),
+    bookSettingsLabel(body, 'chunk'),
     hash
   ], 'wav');
 }
@@ -413,19 +487,24 @@ function buildMergedChapterFileName(body) {
       body.language,
       body.isTitle,
       body.silence,
+      body.silence_after,
+      body.voiceSummary,
+      body.chunkSilence,
+      body.chapterSilence,
+      body.mode,
       format,
       body.filenames || []
     ])
   );
-  const chapterNumber = String((Number(body.chapterIndex) || 0) + 1).padStart(2, '0');
   return buildFileName([
     body.projectId || 'book_project',
-    'audiobook',
     body.projectTitle || body.projectId || 'book',
-    body.isTitle ? 'titles' : 'chapter_' + chapterNumber,
+    chapterFileLabel(body),
     body.chapterTitle || (body.isTitle ? 'titles' : 'chapter'),
     modelFileLabel(body.modelId),
     languageFileLabel(body.language),
+    bookVoiceSummaryLabel(body),
+    bookSettingsLabel(body, 'chapter'),
     hash
   ], format);
 }
@@ -439,29 +518,35 @@ function buildFullBookFileName(body) {
       body.language,
       body.modelId,
       body.silence,
+      body.voiceSummary,
+      body.chunkSilence,
+      body.chapterSilence,
+      body.mode,
       format,
       body.chapter_filenames || []
     ])
   );
   return buildFileName([
     body.projectId || 'book_project',
-    'audiobook',
     body.title || body.projectId || 'book',
-    'full_book',
     modelFileLabel(body.modelId),
     languageFileLabel(body.language),
+    bookVoiceSummaryLabel(body),
+    bookSettingsLabel(body, 'book'),
     hash
   ], format);
 }
 
 function buildBookZipFileName(body, filenames) {
-  const hash = generateHash(JSON.stringify([body.projectId, body.title, body.language, body.modelId, filenames]));
+  const hash = generateHash(JSON.stringify([body.projectId, body.title, body.language, body.modelId, body.voiceSummary, body.chunkSilence, body.chapterSilence, body.mode, filenames]));
   return buildFileName([
     body.projectId || 'book_project',
-    'audiobook_assets',
+    'assets',
     body.title || body.projectId || 'book',
     modelFileLabel(body.modelId),
     languageFileLabel(body.language),
+    bookVoiceSummaryLabel(body),
+    bookSettingsLabel(body, 'zip'),
     hash
   ], 'zip');
 }
@@ -564,13 +649,11 @@ function sanitizeVoiceKeyword(value, fallback) {
 }
 
 function modelFamily(modelId) {
-  const raw = String(modelId || '').trim();
-  if (raw === 'qwen3-tts-instruct-flash' || raw.startsWith('qwen3-tts-instruct-flash-')) return 'qwen3-tts-instruct-flash';
-  return raw;
+  return AppMeta.modelFamily(modelId);
 }
 
 function isInstructModel(modelId) {
-  return modelFamily(modelId) === 'qwen3-tts-instruct-flash';
+  return AppMeta.isInstructModel(modelId);
 }
 
 function clampPageSize(pageSize) {
@@ -1088,9 +1171,23 @@ async function mergeAudioFiles(inputPaths, outputPath, options) {
   return ffmpegQueue.add(async () => {
     let files = inputPaths.slice();
     const silence = options && options.silence ? options.silence : 0;
+    const silenceAfter = Array.isArray(options && options.silenceAfter) ? options.silenceAfter : null;
     const format = options && options.format ? options.format : 'wav';
 
-    if (silence > 0) {
+    if (silenceAfter && silenceAfter.length) {
+      const interleaved = [];
+      for (let index = 0; index < files.length; index += 1) {
+        const filePath = files[index];
+        interleaved.push(filePath);
+        if (index < files.length - 1) {
+          const gap = Number(silenceAfter[index]);
+          if (Number.isFinite(gap) && gap > 0) {
+            interleaved.push(await createSilenceFile(Math.min(Math.max(gap, 0), 10)));
+          }
+        }
+      }
+      files = interleaved;
+    } else if (silence > 0) {
       const silenceFile = await createSilenceFile(silence);
       const interleaved = [];
       files.forEach((filePath, index) => {
@@ -1552,19 +1649,42 @@ function buildUsageEntryBase(requestId, options) {
   };
 }
 
+function isAllowedStaticPath(targetPath) {
+  if (!targetPath) return false;
+  if (path.dirname(targetPath) === ROOT_DIR) {
+    return STATIC_ROOT_FILES.has(path.basename(targetPath));
+  }
+  return STATIC_PUBLIC_DIRS.some((dir) => {
+    const relative = path.relative(dir, targetPath);
+    return relative && !relative.startsWith('..') && !path.isAbsolute(relative);
+  });
+}
+
 function serveStatic(req, res, pathname) {
   let targetPath = pathname === '/' ? path.join(ROOT_DIR, 'index.html') : safeJoin(ROOT_DIR, pathname.replace(/^\//, ''));
-  if (!targetPath || !fs.existsSync(targetPath) || fs.statSync(targetPath).isDirectory()) return false;
+  if (!isAllowedStaticPath(targetPath) || !fs.existsSync(targetPath) || fs.statSync(targetPath).isDirectory()) return false;
   res.writeHead(200, { 'Content-Type': mimeTypeFor(targetPath) });
   fs.createReadStream(targetPath).pipe(res);
   return true;
 }
 
-const server = http.createServer(async (req, res) => {
-  const requestId = nextRequestId();
-  res.setHeader('Access-Control-Allow-Origin', '*');
+function applyCorsHeaders(req, res) {
+  const origin = String(req.headers.origin || '');
+  const isLoopbackOrigin = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/i.test(origin);
+  if (!origin) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  } else if (origin === 'null' || isLoopbackOrigin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-API-Key');
+  res.setHeader('Access-Control-Max-Age', '600');
+}
+
+const server = http.createServer(async (req, res) => {
+  const requestId = nextRequestId();
+  applyCorsHeaders(req, res);
   res.setHeader('X-Request-Id', requestId);
   if (req.method === 'OPTIONS') {
     res.writeHead(200);
@@ -1579,10 +1699,29 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/health' && req.method === 'GET') {
       writeJson(res, 200, {
         ok: true,
-        app: 'Narrate AI v2.3',
+        app: APP_NAME,
+        version: APP_VERSION,
         requestId,
         port: PORT,
         rootDir: ROOT_DIR
+      });
+      return;
+    }
+
+    if (pathname === '/api/models' && req.method === 'GET') {
+      writeJson(res, 200, {
+        ok: true,
+        version: APP_VERSION,
+        defaults: {
+          clone_model: DEFAULT_CLONE_MODEL,
+          design_model: DEFAULT_DESIGN_MODEL,
+          list_page_size: DEFAULT_LIST_PAGE_SIZE,
+          max_list_page_size: MAX_LIST_PAGE_SIZE,
+          instruct_text_char_limit: INSTRUCT_TEXT_CHAR_LIMIT,
+          instruct_instructions_char_limit: INSTRUCT_INSTRUCTIONS_CHAR_LIMIT,
+          custom_voice_name_max: CUSTOM_VOICE_NAME_MAX
+        },
+        models: AppMeta.buildModelMetadata()
       });
       return;
     }
@@ -1745,7 +1884,7 @@ const server = http.createServer(async (req, res) => {
 
     if (pathname === '/clone-voice' && req.method === 'POST') {
       logRequest(requestId, 'Clone voice request received.');
-      const buffer = await readRequestBuffer(req);
+      const buffer = await readRequestBuffer(req, MULTIPART_BODY_LIMIT_BYTES);
       const parsed = parseMultipartBody(buffer, req.headers['content-type']);
       const apiKey = (parsed.fields.api_key || '').trim();
       const preferredName = String(parsed.fields.name || '').trim();
@@ -2052,7 +2191,16 @@ const server = http.createServer(async (req, res) => {
           instructionsPresent: !!body.instructions,
           metadata: {
             source_type: body.sourceType || '',
-            forced: !!body.force
+            forced: !!body.force,
+            voice_profile: body.voiceProfile && typeof body.voiceProfile === 'object' ? {
+              voice_name: body.voiceProfile.voiceName || '',
+              voice_type: body.voiceProfile.voiceType || '',
+              provider: body.voiceProfile.provider || '',
+              model: body.voiceProfile.model || '',
+              voice_id: body.voiceProfile.voiceId || '',
+              identity_prompt_present: !!body.voiceProfile.identityPrompt,
+              scene_direction_present: !!body.voiceProfile.sceneDirection
+            } : null
           }
         }));
       }
@@ -2079,6 +2227,7 @@ const server = http.createServer(async (req, res) => {
       const outputPath = path.join(dir, outputName);
       await mergeAudioFiles(sourcePaths, outputPath, {
         silence: body.silence || 0,
+        silenceAfter: body.silence_after,
         format
       });
       writeJson(res, 200, {
@@ -2163,8 +2312,9 @@ const server = http.createServer(async (req, res) => {
     const details = [];
     if (error && error.debugMeta) details.push('debug=' + JSON.stringify(error.debugMeta));
     if (error && error.remoteDetails) details.push('remote=' + error.remoteDetails);
-    console.error('[Narrate AI v2.3][' + requestId + '] ' + req.method + ' ' + pathname + ' failed:', error, details.join(' | '));
-    writeJson(res, 500, {
+    const statusCode = error && Number.isInteger(error.statusCode) ? error.statusCode : 500;
+    console.error('[' + APP_NAME + '][' + requestId + '] ' + req.method + ' ' + pathname + ' failed:', error, details.join(' | '));
+    writeJson(res, statusCode, {
       error: error.message,
       request_id: requestId,
       debug: error.debugMeta || null,
@@ -2173,6 +2323,16 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+server.on('error', (error) => {
+  if (error && error.code === 'EADDRINUSE') {
+    console.error(APP_NAME + ' could not start because port ' + PORT + ' is already in use.');
+    console.error('Start this copy with a different port, for example: PORT=3001 node server.js');
+    process.exit(1);
+  }
+  console.error(APP_NAME + ' server failed to start:', error);
+  process.exit(1);
+});
+
 server.listen(PORT, () => {
-  console.log('Narrate AI v2.3 server running at http://localhost:' + PORT);
+  console.log(APP_NAME + ' server running at http://localhost:' + PORT);
 });

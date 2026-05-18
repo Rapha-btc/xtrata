@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-BerlinDocF1-voice-20260514212257975-3f6e",
+  "preferred_name": "BerlinDocF1",
+  "display_name": "German Documentary Female",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A German woman with a clearly German accent, calm authority, excellent diction, and documentary precision. Native language German. Bright but serious, educational and trustworthy. When speaking English, keep a clearly German accent and not an American one.",
+  "preview_text": "Guten Abend. Ich bin eine deutsche Stimme mit Klarheit, Ruhe und dokumentarischer Praezision.",
+  "language": "German",
+  "preset_id": "de_documentary_f",
+  "gmt_create": "2026-05-14T13:23:04.235Z",
+  "preview_audio_file": "german_documentary_female_89164fa33348_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/german_documentary_female_89164fa33348_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

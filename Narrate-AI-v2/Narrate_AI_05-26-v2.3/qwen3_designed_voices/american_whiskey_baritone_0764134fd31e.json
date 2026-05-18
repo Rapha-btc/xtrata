@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-USWhiskB01-voice-20260515211032785-71ae",
+  "preferred_name": "USWhiskB01",
+  "display_name": "American Whiskey Baritone",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A deep baritone American male voice with whiskey-drinker texture, a bass-forward baritone, and a lightly rasped low end that feels lived-in rather than damaged. General American accent, slow-easy control, and intimate romantic authority. Suitable for Navy SEAL romance, wounded-protector stories, and mature romantic suspense. He should sound like a man who has lived hard, loved hard, and learned how to keep his voice calm when it matters. Avoid cartoon gravel and avoid fake smoky seduction.",
+  "preview_text": "A whiskey-baritone American male voice with bass depth, lived-in rasp, and calm romantic control.",
+  "language": "English",
+  "preset_id": "american_whiskey_baritone_m",
+  "gmt_create": "2026-05-15T13:10:40.639Z",
+  "preview_audio_file": "design_lab__american_whiskey_baritone__american_whiskey_baritone_m__create_preview__english__design_model__txt_a_whiskey_baritone_american_6eb686a43aa3__0764134fd31e.wav",
+  "preview_audio_url": "/qwen3_designed_voices/design_lab__american_whiskey_baritone__american_whiskey_baritone_m__create_preview__english__design_model__txt_a_whiskey_baritone_american_6eb686a43aa3__0764134fd31e.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

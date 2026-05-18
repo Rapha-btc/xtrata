@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-NorthBBCM1-voice-20260514222635803-34e7",
+  "preferred_name": "NorthBBCM1",
+  "display_name": "Northern BBC Male",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A British male public-broadcast voice with a clearly northern English identity, like a respected regional BBC presenter. Northern vowels remain audible, but the speech is polished and intelligible. Warm, grounded, and not American. Avoid flattening into RP.",
+  "preview_text": "This is a northern British broadcast voice with regional character, public-service clarity, and proper spoken confidence.",
+  "language": "English",
+  "preset_id": "northern_bbc_male",
+  "gmt_create": "2026-05-14T14:26:43.112Z",
+  "preview_audio_file": "northern_bbc_male_0da7be5b60e8_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/northern_bbc_male_0da7be5b60e8_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

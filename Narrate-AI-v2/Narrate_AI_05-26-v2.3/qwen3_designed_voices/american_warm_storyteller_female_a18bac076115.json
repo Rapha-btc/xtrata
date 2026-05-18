@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-USWarmF01-voice-20260515205620143-8dc5",
+  "preferred_name": "USWarmF01",
+  "display_name": "American Warm Storyteller Female",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A female American audiobook narrator in her thirties or forties with a natural general American accent, warm emotional intelligence, smooth phrasing, and clear long-form stamina. Intimate without sounding whispered, inviting without sounding promotional, and ideal for contemporary fiction, family sagas, and character-driven novels. Avoid brittleness, avoid exaggerated smile, and avoid broadcast-news sharpness.",
+  "preview_text": "This American warm storyteller voice is built for inviting long-form narration with a natural, human presence.",
+  "language": "English",
+  "preset_id": "american_warm_storyteller_f",
+  "gmt_create": "2026-05-15T12:56:28.760Z",
+  "preview_audio_file": "design_lab__american_warm_storyteller_female__american_warm_storyteller_f__create_preview__english__design_model__txt_this_american_warm_storytell_6cbe3ec54e2e__a18bac076115.wav",
+  "preview_audio_url": "/qwen3_designed_voices/design_lab__american_warm_storyteller_female__american_warm_storyteller_f__create_preview__english__design_model__txt_this_american_warm_storytell_6cbe3ec54e2e__a18bac076115.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

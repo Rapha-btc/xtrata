@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-MadridThrM1-voice-20260514212045841-2a21",
+  "preferred_name": "MadridThrM1",
+  "display_name": "Spanish Thriller Male",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A Spanish man with a clearly Spanish accent, controlled tension, crisp consonants, and thriller pacing. Native language Spanish. Serious, rhythmic, believable under pressure. In English, keep an unmistakable Spanish accent rather than becoming neutral American.",
+  "preview_text": "Buenas noches. Esta es una voz espanola tensa, precisa y cinematografica.",
+  "language": "Spanish",
+  "preset_id": "es_thriller_m",
+  "gmt_create": "2026-05-14T13:21:17.503Z",
+  "preview_audio_file": "spanish_thriller_male_e6c402c7a2dd_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/spanish_thriller_male_e6c402c7a2dd_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

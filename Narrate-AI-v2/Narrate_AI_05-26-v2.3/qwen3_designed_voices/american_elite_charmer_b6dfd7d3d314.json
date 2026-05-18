@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-USSealChm01-voice-20260515210302303-44a3",
+  "preferred_name": "USSealChm01",
+  "display_name": "American Elite Charmer",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A deep American male narrator with elite-operator confidence, dry wit, and effortless charm. General American accent, low polished resonance, and enough flirtation to carry military romance and romantic suspense without losing credibility as a dangerous professional. He should sound physically capable, emotionally intelligent, and just cocky enough to be magnetic. Avoid cheesy seduction, avoid frat-boy energy, and avoid slick ad-read polish.",
+  "preview_text": "A deep American elite-charmer voice with command, dry wit, and magnetic romantic confidence.",
+  "language": "English",
+  "preset_id": "american_elite_charmer_m",
+  "gmt_create": "2026-05-15T13:03:11.544Z",
+  "preview_audio_file": "design_lab__american_elite_charmer__american_elite_charmer_m__create_preview__english__design_model__txt_a_deep_american_elite_charme_279119c6e9d9__b6dfd7d3d314.wav",
+  "preview_audio_url": "/qwen3_designed_voices/design_lab__american_elite_charmer__american_elite_charmer_m__create_preview__english__design_model__txt_a_deep_american_elite_charme_279119c6e9d9__b6dfd7d3d314.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

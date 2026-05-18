@@ -1,0 +1,10 @@
+{
+  "voice": "qwen-tts-vc-statesman-voice-20260515045626206-1966",
+  "preferred_name": "statesman",
+  "target_model": "qwen3-tts-vc-2026-01-22",
+  "gmt_create": "2026-05-14T20:56:29.077Z",
+  "local_audio_file": "statesman_a1299ab51b70.mp3",
+  "local_audio_url": "/qwen3_cloned_voices/statesman_a1299ab51b70.mp3",
+  "original_filename": "WINSTON.mp3",
+  "source": "local"
+}

@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-MadridSideM1-voice-20260514213220079-c3e5",
+  "preferred_name": "MadridSideM1",
+  "display_name": "Spanish Playful Sidekick",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A playful Spanish male sidekick voice with youthful energy, comic timing, and a clearly Spanish accent. Native language Spanish. Warm, quick, and genuinely funny without sounding cartoonish. In English, retain the Spanish accent.",
+  "preview_text": "Hola. Soy una voz espanola divertida, agil y con mucha complicidad.",
+  "language": "Spanish",
+  "preset_id": "es_sidekick_m",
+  "gmt_create": "2026-05-14T13:32:27.306Z",
+  "preview_audio_file": "spanish_playful_sidekick_587154d04312_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/spanish_playful_sidekick_587154d04312_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

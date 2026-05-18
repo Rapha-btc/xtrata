@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-USMidOp01-voice-20260515210601534-b4a6",
+  "preferred_name": "USMidOp01",
+  "display_name": "American Midnight Operator",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A deep American male narrator with midnight calm, covert-ops precision, and a low baritone that stays composed even in danger. General American accent, measured pacing, and a hard-to-rattle quality suited to black-ops romance and suspense. He should sound like a man who has already seen the worst and still knows how to protect someone gently. Avoid hollow menace and avoid theatrical darkness.",
+  "preview_text": "A midnight American operator voice with low calm, precision, and protective reserve.",
+  "language": "English",
+  "preset_id": "american_midnight_operator_m",
+  "gmt_create": "2026-05-15T13:06:08.299Z",
+  "preview_audio_file": "design_lab__american_midnight_operator__american_midnight_operator_m__create_preview__english__design_model__txt_a_midnight_american_operator_641d70198154__957d459732f2.wav",
+  "preview_audio_url": "/qwen3_designed_voices/design_lab__american_midnight_operator__american_midnight_operator_m__create_preview__english__design_model__txt_a_midnight_american_operator_641d70198154__957d459732f2.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

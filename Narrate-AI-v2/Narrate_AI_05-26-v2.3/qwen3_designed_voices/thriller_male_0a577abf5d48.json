@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-ThrillM01-voice-20260514205554082-df1d",
+  "preferred_name": "ThrillM01",
+  "display_name": "Thriller Male",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A male thriller narrator with a modern American accent, controlled gravel, rhythmic phrasing, subtle tension, high clarity, and cinematic seriousness. Strong for suspense, procedural fiction, and tense internal monologue. Avoid shouting, avoid camp villain style, avoid comedic warmth.",
+  "preview_text": "A thriller-ready male narrator with controlled tension and crisp delivery.",
+  "language": "English",
+  "preset_id": "thriller_male",
+  "gmt_create": "2026-05-14T12:56:03.990Z",
+  "preview_audio_file": "thriller_male_0a577abf5d48_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/thriller_male_0a577abf5d48_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

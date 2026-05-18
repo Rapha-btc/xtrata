@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-SageMyst01-voice-20260514205651071-196c",
+  "preferred_name": "SageMyst01",
+  "display_name": "Mystical Sage",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A gender-ambiguous mystical sage voice with low calm resonance, patient pacing, and an ancient but approachable presence. Suitable for fantasy narration, prophecy, or atmospheric guidance. Avoid cartoon wizard tropes and avoid excessive echo-like theatrics.",
+  "preview_text": "A mystical sage voice with calm resonance, patience, and atmospheric clarity.",
+  "language": "English",
+  "preset_id": "mystical_sage",
+  "gmt_create": "2026-05-14T12:57:07.934Z",
+  "preview_audio_file": "mystical_sage_056ad8df944c_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/mystical_sage_056ad8df944c_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

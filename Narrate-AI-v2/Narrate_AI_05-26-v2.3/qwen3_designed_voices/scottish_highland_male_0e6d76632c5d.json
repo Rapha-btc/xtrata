@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-ScotM01-voice-20260514221854823-5086",
+  "preferred_name": "ScotM01",
+  "display_name": "Scottish Highland Male",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A Scottish male voice with a clearly Scottish accent, resonant warmth, rugged calm, and unmistakable British regional identity. Natural Scottish pronunciation, not exaggerated, and absolutely not American. Strong for fantasy, history, and reflective narration.",
+  "preview_text": "Good evening. This is a Scottish male voice with depth, warmth, and distinctly Scottish cadence.",
+  "language": "English",
+  "preset_id": "scottish_highland_male",
+  "gmt_create": "2026-05-14T14:19:01.509Z",
+  "preview_audio_file": "scottish_highland_male_0e6d76632c5d_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/scottish_highland_male_0e6d76632c5d_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-ScotF01-voice-20260514221856376-1cae",
+  "preferred_name": "ScotF01",
+  "display_name": "Scottish Female",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A Scottish female voice with a clearly Scottish accent, intelligence, warmth, and natural musicality. Keep the accent strong enough to sound truly Scottish, but not so broad that clarity suffers. Definitely not American. Suitable for literary narration and character work.",
+  "preview_text": "Good evening. This is a Scottish female voice with warmth, clarity, and unmistakably Scottish rhythm.",
+  "language": "English",
+  "preset_id": "scottish_female",
+  "gmt_create": "2026-05-14T14:19:05.033Z",
+  "preview_audio_file": "scottish_female_4243a0c286db_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/scottish_female_4243a0c286db_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-WelshF01-voice-20260514221857932-439c",
+  "preferred_name": "WelshF01",
+  "display_name": "Welsh Female",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A Welsh woman with a clearly Welsh accent, lyrical cadence, warmth, and bright emotional expressiveness. Natural Welsh musicality, not theatrical fantasy speech, and not American. Gentle but clear, suitable for narration and storytelling.",
+  "preview_text": "Good evening. This is a Welsh female voice with musical British cadence and gentle warmth.",
+  "language": "English",
+  "preset_id": "welsh_female",
+  "gmt_create": "2026-05-14T14:19:03.730Z",
+  "preview_audio_file": "welsh_female_9febd36a7856_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/welsh_female_9febd36a7856_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

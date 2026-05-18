@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-USWoundAlp01-voice-20260515210609176-6bf3",
+  "preferred_name": "USWoundAlp01",
+  "display_name": "American Wounded Alpha",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A deep American male narrator with wounded-alpha energy, suppressed emotion, and a strong baritone that reveals more in the pauses than in the words. General American accent, low intimate delivery, and believable vulnerability beneath the hard exterior. Suitable for military romance, second-chance love stories, and protective heroes with history. Avoid soap-opera heartbreak and avoid generic growl.",
+  "preview_text": "A wounded American alpha voice with deep restraint, emotional fracture, and intimate baritone weight.",
+  "language": "English",
+  "preset_id": "american_wounded_alpha_m",
+  "gmt_create": "2026-05-15T13:06:16.500Z",
+  "preview_audio_file": "design_lab__american_wounded_alpha__american_wounded_alpha_m__create_preview__english__design_model__txt_a_wounded_american_alpha_voi_7470085bdb34__d22384cc370e.wav",
+  "preview_audio_url": "/qwen3_designed_voices/design_lab__american_wounded_alpha__american_wounded_alpha_m__create_preview__english__design_model__txt_a_wounded_american_alpha_voi_7470085bdb34__d22384cc370e.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

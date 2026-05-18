@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-USLowRiv01-voice-20260515211038918-283c",
+  "preferred_name": "USLowRiv01",
+  "display_name": "American Low River Whisky",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A deep  baritoneAmerican male narrator with river-deep bass, whisky warmth, and a dry rasp around the edges that makes the voice feel especially mature. General American accent, deliberate pacing, and intimate control suitable for romantic suspense, military romance, and stoic protector characters. He should feel steady under pressure and unexpectedly soft when he chooses to be. Avoid monotone flatness, avoid old-man creak, and avoid melodramatic gravel.",
+  "preview_text": "A river-deep American whisky voice with mature bass, dry rasp, and steady romantic control.",
+  "language": "English",
+  "preset_id": "american_low_river_whisky_m",
+  "gmt_create": "2026-05-15T13:10:46.300Z",
+  "preview_audio_file": "design_lab__american_low_river_whisky__american_low_river_whisky_m__create_preview__english__design_model__txt_a_river_deep_american_whisky_ad95dc6f898c__94d2c8ab2633.wav",
+  "preview_audio_url": "/qwen3_designed_voices/design_lab__american_low_river_whisky__american_low_river_whisky_m__create_preview__english__design_model__txt_a_river_deep_american_whisky_ad95dc6f898c__94d2c8ab2633.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

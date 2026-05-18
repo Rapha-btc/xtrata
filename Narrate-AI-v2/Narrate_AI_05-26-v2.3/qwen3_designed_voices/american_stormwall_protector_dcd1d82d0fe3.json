@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-USStormW01-voice-20260515210607068-4c71",
+  "preferred_name": "USStormW01",
+  "display_name": "American Stormwall Protector",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A deep American male narrator with a stormwall baritone, broad-shouldered authority, and protective romantic intensity. General American accent, resonant but controlled, and ideal for Navy SEAL heroes, bodyguard romance, and high-stakes emotional shelter. He should sound immovable when danger arrives and unexpectedly tender when it matters most. Avoid overacting, avoid shouting, and avoid an action-movie growl.",
+  "preview_text": "A stormwall American protector voice with big baritone presence and tender undercurrents.",
+  "language": "English",
+  "preset_id": "american_stormwall_romance_m",
+  "gmt_create": "2026-05-15T13:06:13.021Z",
+  "preview_audio_file": "design_lab__american_stormwall_protector__american_stormwall_romance_m__create_preview__english__design_model__txt_a_stormwall_american_protect_fa3f82fb1bd0__dcd1d82d0fe3.wav",
+  "preview_audio_url": "/qwen3_designed_voices/design_lab__american_stormwall_protector__american_stormwall_romance_m__create_preview__english__design_model__txt_a_stormwall_american_protect_fa3f82fb1bd0__dcd1d82d0fe3.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

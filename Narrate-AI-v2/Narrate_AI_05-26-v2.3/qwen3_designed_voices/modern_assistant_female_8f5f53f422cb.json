@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-AssistFem01-voice-20260514205657460-f4b5",
+  "preferred_name": "AssistFem01",
+  "display_name": "Modern Assistant Female",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A modern female assistant voice with clean neutral American English, efficient friendliness, clear enunciation, and polished digital-product warmth. Suitable for app onboarding, support flows, and product guidance. Avoid exaggerated cheer and avoid robotic stiffness.",
+  "preview_text": "A modern assistant voice designed for clarity, confidence, and product guidance.",
+  "language": "English",
+  "preset_id": "modern_assistant_female",
+  "gmt_create": "2026-05-14T12:57:02.662Z",
+  "preview_audio_file": "modern_assistant_female_8f5f53f422cb_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/modern_assistant_female_8f5f53f422cb_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

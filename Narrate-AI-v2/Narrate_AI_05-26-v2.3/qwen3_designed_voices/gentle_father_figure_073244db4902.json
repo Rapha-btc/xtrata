@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-FatherFig01-voice-20260514205825139-f20a",
+  "preferred_name": "FatherFig01",
+  "display_name": "Gentle Father Figure",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A male voice in his forties or fifties with a warm low-mid register, patient pacing, kindness, and grounded emotional presence. Ideal for a protective father figure, reflective mentor, or bedtime narrator. Avoid preachiness and avoid boomy radio tone.",
+  "preview_text": "A gentle fatherly voice with warmth, patience, and reassuring steadiness.",
+  "language": "English",
+  "preset_id": "gentle_father_figure",
+  "gmt_create": "2026-05-14T12:58:31.702Z",
+  "preview_audio_file": "gentle_father_figure_073244db4902_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/gentle_father_figure_073244db4902_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

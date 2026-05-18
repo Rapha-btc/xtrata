@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-NorthBBCF1-voice-20260514222638451-178b",
+  "preferred_name": "NorthBBCF1",
+  "display_name": "Northern BBC Female",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A British female regional broadcast voice with clear northern English identity, as if from a respected BBC local or national spoken-word programme. Warm, articulate, regionally rooted, and definitely British, not American. Keep some northern musicality without caricature.",
+  "preview_text": "This is a northern British female broadcast voice with warmth, clarity, and grounded regional identity.",
+  "language": "English",
+  "preset_id": "northern_bbc_female",
+  "gmt_create": "2026-05-14T14:26:47.022Z",
+  "preview_audio_file": "northern_bbc_female_fabf25ea427a_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/northern_bbc_female_fabf25ea427a_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

@@ -3,6 +3,7 @@
 
   const APP_BOOK_VERSION = '2.4';
   const CLONED_MODEL_ID = 'qwen3-tts-vc-2026-01-22';
+  const DESIGNED_MODEL_ID = 'qwen3-tts-vd-2026-01-26';
   const BOOK_API = {
     projects: '/api/projects',
     checkCache: '/api/check-cache',
@@ -11,6 +12,39 @@
     mergeBook: '/api/merge-book',
     zipBook: '/api/book-zip'
   };
+  const VOICE_PROFILE_STORAGE_KEY = 'narrate_ai_audiobook_voice_profiles_v1';
+  const DEFAULT_LAB_VOICE_PROFILES = [
+    {
+      match: ['american midnight bourbon', 'midnight bourbon', 'usmidbour01'],
+      voiceName: 'American Midnight Bourbon',
+      voiceType: 'labDesigned',
+      identityPrompt: 'Low, smoky American male audiobook narrator. Warm, intimate, slightly rough-edged, late-night confidence. Controlled emotion, not theatrical.',
+      defaultSceneDirection: 'Read with a slow-medium audiobook pace, natural pauses, intimate proximity, and restrained emotional weight. Keep the voice consistent across chapters.',
+      sceneDirectionPresets: {
+        neutral: 'Read in a natural audiobook style with a slow-medium pace and clear articulation.',
+        intimate: 'Read slightly slower, quieter, and more intimately, as if speaking close to the listener.',
+        tense: 'Read with quiet tension, controlled urgency, and slightly tighter pacing.',
+        sad: 'Read with restrained sadness and emotional weight, using natural pauses but avoiding melodrama.',
+        angry: 'Read with controlled anger under the surface, clipped but not shouted.',
+        romantic: 'Read with warmth, intimacy, and softness, while keeping the delivery masculine and grounded.'
+      }
+    },
+    {
+      match: ['american baseline protector', 'american bassline protector', 'baseline protector', 'bassline protector', 'usbassprot01'],
+      voiceName: 'American Baseline Protector',
+      voiceType: 'labDesigned',
+      identityPrompt: 'Grounded American male audiobook narrator. Protective, steady, calm under pressure, emotionally contained. Clear, reliable, sincere.',
+      defaultSceneDirection: 'Read with calm authority, even pacing, clear articulation, and restrained warmth. Maintain a consistent protective presence.',
+      sceneDirectionPresets: {
+        neutral: 'Read in a steady, clear, natural audiobook style.',
+        protective: 'Read with quiet reassurance, warmth, and firm protective calm.',
+        tense: 'Read with controlled urgency, alertness, and emotional restraint.',
+        sad: 'Read with heaviness and restraint, using pauses before difficult lines.',
+        angry: 'Read with controlled anger, firm and clipped, but not shouted.',
+        romantic: 'Read softer and warmer, more intimate, but still grounded and masculine.'
+      }
+    }
+  ];
 
   const LANG_CONFIG = [
     ['en', 'English', ['Chapter']],
@@ -47,11 +81,14 @@
     anomalies: [],
     directionPlan: null,
     outputs: { wav: '', mp3: '', zip: '' },
+    needsBookMerge: false,
+    voiceProfiles: {},
     generating: false,
     cancelRequested: false
   };
 
   let savedVoicesCache = [];
+  let designedVoicesCache = Array.isArray(window.__lastDesignedVoices) ? window.__lastDesignedVoices.slice() : [];
   const bookPlayback = {
     audio: null,
     activeType: '',
@@ -62,8 +99,14 @@
   if (typeof PRICING !== 'undefined' && !PRICING[CLONED_MODEL_ID]) {
     PRICING[CLONED_MODEL_ID] = { rate: 0.115 / 10000, label: '$0.115/10K chars' };
   }
+  if (typeof PRICING !== 'undefined' && !PRICING[DESIGNED_MODEL_ID]) {
+    PRICING[DESIGNED_MODEL_ID] = { rate: 0.115 / 10000, label: '$0.115/10K chars' };
+  }
   if (typeof freeUsed !== 'undefined' && freeUsed[CLONED_MODEL_ID] === undefined) {
     freeUsed[CLONED_MODEL_ID] = 0;
+  }
+  if (typeof freeUsed !== 'undefined' && freeUsed[DESIGNED_MODEL_ID] === undefined) {
+    freeUsed[DESIGNED_MODEL_ID] = 0;
   }
   try {
     if (typeof syncFreeUsed === 'function') syncFreeUsed();
@@ -75,6 +118,20 @@
     renderSavedVoices = function patchedRenderSavedVoices(voices) {
       savedVoicesCache = Array.isArray(voices) ? voices.slice() : [];
       const result = originalRenderSavedVoices(voices);
+      if (bookState.roles.length) {
+        renderBookDirectionPanel();
+        renderBookAssignments();
+        updateBookEstimate();
+      }
+      return result;
+    };
+  }
+
+  if (typeof renderDesignedVoices === 'function') {
+    const originalRenderDesignedVoices = renderDesignedVoices;
+    renderDesignedVoices = function patchedRenderDesignedVoices(voices) {
+      designedVoicesCache = Array.isArray(voices) ? voices.slice() : [];
+      const result = originalRenderDesignedVoices(voices);
       if (bookState.roles.length) {
         renderBookDirectionPanel();
         renderBookAssignments();
@@ -103,7 +160,8 @@
   }
 
   function isBookCustomVoiceModel(modelId) {
-    return getBookModelFamily(modelId) === CLONED_MODEL_ID;
+    const family = getBookModelFamily(modelId);
+    return family === CLONED_MODEL_ID || family === DESIGNED_MODEL_ID;
   }
 
   function getDirectorCompanionModel(modelId) {
@@ -215,6 +273,13 @@
     return Math.min(Math.max(parsed, 0), max);
   }
 
+  function sanitizeEmotionalMax(value, target) {
+    const parsed = parseInt(value, 10);
+    const safeTarget = Number.isFinite(target) ? target : 1000;
+    if (!Number.isFinite(parsed)) return Math.min(4000, Math.max(safeTarget, 1500));
+    return Math.min(Math.max(parsed, safeTarget, 500), 4000);
+  }
+
   function normalizeRoleLabel(value) {
     return String(value || '')
       .trim()
@@ -227,6 +292,105 @@
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[’'`]/g, '')
       .toLowerCase();
+  }
+
+  function readStoredVoiceProfiles() {
+    try {
+      const raw = localStorage.getItem(VOICE_PROFILE_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : {};
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function writeStoredVoiceProfiles(profiles) {
+    try {
+      localStorage.setItem(VOICE_PROFILE_STORAGE_KEY, JSON.stringify(profiles || {}));
+    } catch (_) {}
+  }
+
+  function voiceProfileKey(voiceId) {
+    return String(voiceId || '').trim();
+  }
+
+  function getDefaultVoiceProfile(record, type) {
+    const labels = [
+      record && record.display_name,
+      record && record.preferred_name,
+      record && record.voice,
+      record && record.voiceId
+    ].map(normalizeLoose).filter(Boolean);
+    const matched = DEFAULT_LAB_VOICE_PROFILES.find((profile) => (
+      profile.match.some((candidate) => labels.includes(normalizeLoose(candidate)))
+    ));
+    const voiceName = (record && (record.display_name || record.preferred_name || record.voice)) || 'Custom Voice';
+    if (matched) {
+      return {
+        voiceName: matched.voiceName || voiceName,
+        voiceType: matched.voiceType || type,
+        identityPrompt: matched.identityPrompt || '',
+        sceneDirection: matched.defaultSceneDirection || '',
+        defaultSceneDirection: matched.defaultSceneDirection || '',
+        sceneDirectionPresets: Object.assign({}, matched.sceneDirectionPresets || {})
+      };
+    }
+    return {
+      voiceName,
+      voiceType: type,
+      identityPrompt: '',
+      sceneDirection: '',
+      defaultSceneDirection: '',
+      sceneDirectionPresets: {}
+    };
+  }
+
+  function getVoiceRecordForProfile(voiceId) {
+    const clone = getCloneRecordByVoiceId(voiceId);
+    if (clone) return { record: clone, type: 'cloned' };
+    const designed = getDesignedRecordByVoiceId(voiceId);
+    if (designed) return { record: designed, type: 'labDesigned' };
+    return null;
+  }
+
+  function getVoiceProfile(voiceId) {
+    const key = voiceProfileKey(voiceId);
+    if (!key) return null;
+    const voiceRecord = getVoiceRecordForProfile(voiceId);
+    if (!voiceRecord) return null;
+    if (!bookState.voiceProfiles) bookState.voiceProfiles = {};
+    const stored = readStoredVoiceProfiles();
+    const defaults = getDefaultVoiceProfile(voiceRecord.record, voiceRecord.type);
+    const current = Object.assign({}, defaults, stored[key] || {}, bookState.voiceProfiles[key] || {});
+    current.voiceId = voiceId;
+    current.voiceName = current.voiceName || defaults.voiceName;
+    current.voiceType = current.voiceType || defaults.voiceType;
+    current.provider = 'qwen';
+    current.model = voiceRecord.record.target_model || (voiceRecord.type === 'labDesigned' ? DESIGNED_MODEL_ID : CLONED_MODEL_ID);
+    current.voiceValue = voiceRecord.record.voice || voiceId;
+    current.source = voiceRecord.record.source || '';
+    current.sceneDirectionPresets = Object.assign({}, defaults.sceneDirectionPresets || {}, current.sceneDirectionPresets || {});
+    bookState.voiceProfiles[key] = current;
+    return current;
+  }
+
+  function persistVoiceProfile(voiceId, patch) {
+    const key = voiceProfileKey(voiceId);
+    if (!key) return;
+    const current = getVoiceProfile(voiceId) || {};
+    const next = Object.assign({}, current, patch || {});
+    if (!bookState.voiceProfiles) bookState.voiceProfiles = {};
+    bookState.voiceProfiles[key] = next;
+    const stored = readStoredVoiceProfiles();
+    stored[key] = {
+      voiceName: next.voiceName,
+      voiceType: next.voiceType,
+      identityPrompt: next.identityPrompt || '',
+      sceneDirection: next.sceneDirection || '',
+      defaultSceneDirection: next.defaultSceneDirection || '',
+      sceneDirectionPresets: next.sceneDirectionPresets || {}
+    };
+    writeStoredVoiceProfiles(stored);
   }
 
   const CHARACTER_DIALOGUE_VERBS = [
@@ -289,6 +453,35 @@
   function sentenceSplit(text) {
     const matches = String(text || '').match(/[^.!?\n]+(?:[.!?]+["”'’)]*)?|[^.!?\n]+$/g);
     return (matches || [text]).map((part) => part.trim()).filter(Boolean);
+  }
+
+  function isShortImpactLine(text) {
+    const clean = String(text || '').trim();
+    return clean.length > 0 && clean.length <= 90 && /[.!?…]$/.test(clean);
+  }
+
+  function hasEmotionalCue(text) {
+    return /\b(shouted|whispered|cried|snapped|sobbed|murmured|hissed|laughed|gasped|pleaded|roared|sighed|yelled|barked|trembled|stared|froze|wait|stop|please|no|run|look)\b/i.test(text || '');
+  }
+
+  function pauseAfterForText(text, mode) {
+    const clean = String(text || '').trim();
+    if (!clean) return 0;
+    const dramatic = mode === 'dramatic';
+    if (/^(?:[*\-–—]\s*){3,}$/.test(clean)) return 1.2;
+    if (/(?:\.\.\.|…)$/.test(clean)) return dramatic ? 0.9 : 0.6;
+    if (isShortImpactLine(clean) && /[.!?]$/.test(clean)) return dramatic ? 0.8 : 0.45;
+    if (hasEmotionalCue(clean) && /[.!?]$/.test(clean)) return dramatic ? 0.65 : 0.35;
+    return 0;
+  }
+
+  function chunkPlanForText(text, reason, mode) {
+    const clean = String(text || '').trim();
+    return {
+      text: clean,
+      pauseAfterSeconds: pauseAfterForText(clean, mode),
+      splitReason: reason || 'natural boundary'
+    };
   }
 
   function splitTextIntoChunks(text, maxChars) {
@@ -366,6 +559,78 @@
     paragraphs.forEach(splitParagraph);
     pushCurrent();
     return chunks;
+  }
+
+  function splitTextIntoChunkPlans(text, settings) {
+    const normalized = normalizeNewlines(text).trim();
+    if (!normalized) return [];
+    const mode = (settings && settings.chunkingMode) || 'balanced';
+    if (mode === 'compact') {
+      return splitTextIntoChunks(normalized, settings.chunkMaxChars).map((chunk) => chunkPlanForText(chunk, 'compact size boundary', mode));
+    }
+
+    const target = sanitizeChunkSize(settings && settings.chunkMaxChars);
+    const hardMax = sanitizeEmotionalMax(settings && settings.emotionalMaxChars, target);
+    const minSize = Math.max(220, Math.floor(target * 0.45));
+    const paragraphs = normalized.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
+    const units = [];
+
+    paragraphs.forEach((paragraph) => {
+      if (paragraph.length <= hardMax) {
+        units.push({
+          text: paragraph,
+          pause: pauseAfterForText(paragraph, mode),
+          reason: isShortImpactLine(paragraph) ? 'short impact line' : (hasEmotionalCue(paragraph) ? 'emotional beat' : 'paragraph boundary')
+        });
+        return;
+      }
+      sentenceSplit(paragraph).forEach((sentence) => {
+        if (sentence.length <= hardMax) {
+          units.push({
+            text: sentence,
+            pause: pauseAfterForText(sentence, mode),
+            reason: hasEmotionalCue(sentence) ? 'emotional sentence' : 'sentence boundary'
+          });
+          return;
+        }
+        splitTextIntoChunks(sentence, target).forEach((piece) => {
+          units.push({ text: piece, pause: 0, reason: 'long sentence safe split' });
+        });
+      });
+    });
+
+    const plans = [];
+    let current = '';
+    let currentReasons = [];
+    let lastPause = 0;
+
+    function flush(reason) {
+      const clean = current.trim();
+      if (!clean) return;
+      plans.push({
+        text: clean,
+        pauseAfterSeconds: lastPause,
+        splitReason: reason || uniqueStrings(currentReasons).slice(0, 2).join(', ') || 'beat boundary'
+      });
+      current = '';
+      currentReasons = [];
+      lastPause = 0;
+    }
+
+    units.forEach((unit) => {
+      const candidate = current ? current + '\n\n' + unit.text : unit.text;
+      const highPause = unit.pause >= (mode === 'dramatic' ? 0.45 : 0.6);
+      const shouldBreakForPause = highPause && current.length >= minSize;
+      if (current && (candidate.length > hardMax || (candidate.length > target && (mode !== 'continuity' || shouldBreakForPause)) || shouldBreakForPause)) {
+        flush(shouldBreakForPause ? 'pause cut: ' + unit.reason : 'size boundary preserving beat');
+      }
+      current = current ? current + '\n\n' + unit.text : unit.text;
+      currentReasons.push(unit.reason);
+      lastPause = unit.pause;
+      if (mode === 'dramatic' && unit.pause >= 0.8) flush('dramatic pause after ' + unit.reason);
+    });
+    flush();
+    return plans.length ? plans : splitTextIntoChunks(normalized, target).map((chunk) => chunkPlanForText(chunk, 'fallback boundary', mode));
   }
 
   function getChapterHeadingRegex() {
@@ -591,6 +856,7 @@
       title: 'Titles',
       kind: 'titles',
       audioUrls: { wav: '', mp3: '' },
+      needsMerge: false,
       chunks,
       collapsed: existingChapter ? !!existingChapter.collapsed : false,
       characters: []
@@ -1166,6 +1432,9 @@
     const clones = savedVoicesCache || [];
     const cloneMatch = clones.find((voice) => normalizeLoose(voice.preferred_name || voice.voice) === normalizedRole);
     if (cloneMatch) return cloneMatch.voice;
+    const designs = Array.isArray(window.__lastDesignedVoices) ? window.__lastDesignedVoices : designedVoicesCache;
+    const designMatch = designs.find((voice) => normalizeLoose(voice.display_name || voice.preferred_name || voice.voice) === normalizedRole);
+    if (designMatch) return designMatch.voice;
     const fallback = VOICES[(roleIndex + 1) % VOICES.length];
     return fallback ? fallback.id : 'Cherry';
   }
@@ -1179,8 +1448,19 @@
     return savedVoicesCache.find((voice) => voice.voice === voiceId) || null;
   }
 
+  function getDesignedRecordByVoiceId(voiceId) {
+    const latest = Array.isArray(window.__lastDesignedVoices) ? window.__lastDesignedVoices : designedVoicesCache;
+    return latest.find((voice) => voice.voice === voiceId) || null;
+  }
+
   function getCompatibleCloneVoices(modelId) {
     return savedVoicesCache.filter((voice) => (voice.target_model || '') === modelId);
+  }
+
+  function getCompatibleDesignedVoices(modelId) {
+    const latest = Array.isArray(window.__lastDesignedVoices) ? window.__lastDesignedVoices : designedVoicesCache;
+    designedVoicesCache = latest.slice();
+    return designedVoicesCache.filter((voice) => (voice.target_model || DESIGNED_MODEL_ID) === modelId);
   }
 
   function getCompatibleBookVoices(modelId) {
@@ -1189,6 +1469,13 @@
         id: voice.voice,
         label: (voice.preferred_name || voice.voice) + ' — Cloned',
         type: 'clone'
+      }));
+    }
+    if (modelId === DESIGNED_MODEL_ID) {
+      return getCompatibleDesignedVoices(modelId).map((voice) => ({
+        id: voice.voice,
+        label: (voice.display_name || voice.preferred_name || voice.voice) + ' — Designed',
+        type: 'design'
       }));
     }
     const effectiveModelId = shouldUseSelectiveDirectorPass(modelId)
@@ -1204,6 +1491,58 @@
     }));
   }
 
+  function getBookVoiceDisplayLabel(voiceId) {
+    if (!voiceId) return 'Voice';
+    const clone = getCloneRecordByVoiceId(voiceId);
+    if (clone) return clone.display_name || clone.preferred_name || clone.voice || voiceId;
+    const designed = getDesignedRecordByVoiceId(voiceId);
+    if (designed) return designed.display_name || designed.preferred_name || designed.voice || voiceId;
+    const builtin = VOICES.find((voice) => voice.id === voiceId);
+    return builtin ? (builtin.label || builtin.name || builtin.id) : voiceId;
+  }
+
+  function getBookVoiceFileLabel(voiceId) {
+    if (!voiceId) return 'voice';
+    const clone = getCloneRecordByVoiceId(voiceId);
+    if (clone) return clone.preferred_name || clone.display_name || clone.voice || voiceId;
+    const designed = getDesignedRecordByVoiceId(voiceId);
+    if (designed) return designed.preferred_name || designed.display_name || designed.voice || voiceId;
+    return voiceId;
+  }
+
+  function getBookVoiceSummaryLabel() {
+    const labels = [];
+    bookState.roles.forEach((role) => {
+      const label = getBookVoiceFileLabel(role.voiceId);
+      if (label && !labels.includes(label)) labels.push(label);
+    });
+    if (!labels.length) return 'unassigned_voice';
+    if (labels.length === 1) return labels[0];
+    return labels.slice(0, 3).join('_and_') + (labels.length > 3 ? '_plus_' + (labels.length - 3) + '_more' : '');
+  }
+
+  function getBookFilenameSettings(extra) {
+    const modelId = getBookModelId();
+    const plan = getBookDirectionPlan();
+    const chunkSilence = sanitizeSilence(document.getElementById('bookChunkSilence').value, 5);
+    const chapterSilence = sanitizeSilence(document.getElementById('bookChapterSilence').value, 10);
+    return Object.assign({
+      mode: (bookState.settings && bookState.settings.mode) || document.getElementById('bookModeSelect').value,
+      voiceSummary: getBookVoiceSummaryLabel(),
+      chunkSilence,
+      chapterSilence,
+      settingsTag: plan.mode === 'adaptive'
+        ? 'flash_director_mix'
+        : plan.mode === 'director_all'
+          ? 'director_all'
+          : plan.mode === 'clone'
+            ? 'clone_voice'
+            : modelId === DESIGNED_MODEL_ID
+              ? 'designed_voice'
+              : 'flash_default'
+    }, extra || {});
+  }
+
   function getDefaultCompatibleVoice(roleLabel, roleIndex, modelId) {
     const options = getCompatibleBookVoices(modelId);
     if (!options.length) return '';
@@ -1211,6 +1550,11 @@
       const normalizedRole = normalizeLoose(roleLabel);
       const cloneMatch = getCompatibleCloneVoices(modelId).find((voice) => normalizeLoose(voice.preferred_name || voice.voice) === normalizedRole);
       return cloneMatch ? cloneMatch.voice : options[0].id;
+    }
+    if (modelId === DESIGNED_MODEL_ID) {
+      const normalizedRole = normalizeLoose(roleLabel);
+      const designedMatch = getCompatibleDesignedVoices(modelId).find((voice) => normalizeLoose(voice.display_name || voice.preferred_name || voice.voice) === normalizedRole);
+      return designedMatch ? designedMatch.voice : options[0].id;
     }
     const preferred = defaultVoiceForRole(roleLabel, roleIndex);
     return options.some((voice) => voice.id === preferred) ? preferred : options[0].id;
@@ -1357,7 +1701,12 @@
     }
 
     if (isBookCustomVoiceModel(currentModelId)) {
-      return buildUniformDirectionPlan('clone', currentModelId, 'Clone', 'custom voice render');
+      return buildUniformDirectionPlan(
+        currentModelId === DESIGNED_MODEL_ID ? 'design' : 'clone',
+        currentModelId,
+        currentModelId === DESIGNED_MODEL_ID ? 'Design' : 'Clone',
+        currentModelId === DESIGNED_MODEL_ID ? 'designed voice render' : 'custom voice render'
+      );
     }
     if (isBookDirectorModel(currentModelId)) {
       return buildUniformDirectionPlan('director_all', currentModelId, 'Director', 'full book direction');
@@ -1549,7 +1898,8 @@
       const chunks = [];
       let chunkIndex = 0;
       segments.forEach((segment, segmentIndex) => {
-        splitTextIntoChunks(segment.text, settings.chunkMaxChars).forEach((chunkText) => {
+        splitTextIntoChunkPlans(segment.text, settings).forEach((chunkPlan) => {
+          const chunkText = chunkPlan.text;
           const roleLabel = normalizeRoleLabel(segment.roleLabel) || 'Narrator';
           chunks.push({
             id: 'bk_' + chapters.length + '_' + chunkIndex + '_' + Math.random().toString(36).slice(2, 8),
@@ -1568,7 +1918,9 @@
             detectedCharacters: [],
             primaryCharacter: '',
             audioVersion: 0,
-            directionMode: 'auto'
+            directionMode: 'auto',
+            pauseAfterSeconds: chunkPlan.pauseAfterSeconds || 0,
+            splitReason: chunkPlan.splitReason || ''
           });
           chunkIndex += 1;
         });
@@ -1578,6 +1930,7 @@
         title,
         kind: isTitle ? 'titles' : 'chapter',
         audioUrls: { wav: '', mp3: '' },
+        needsMerge: false,
         chunks,
         collapsed: true,
         characters: []
@@ -1621,6 +1974,16 @@
     const modelId = getBookModelId();
     const options = getCompatibleBookVoices(modelId);
     normalizeRoleAssignmentsForModel(modelId);
+    if (!options.length) {
+      const emptyMessage = modelId === CLONED_MODEL_ID
+        ? 'No cloned voices are loaded for Narrate:AI Clone. Refresh the Voice Cloning library first.'
+        : modelId === DESIGNED_MODEL_ID
+          ? 'No designed voices are loaded for Narrate:AI Design. Create or refresh voices in the Voice Design Lab first.'
+          : 'No compatible voices are available for the selected audiobook engine.';
+      container.innerHTML = '<div class="book-empty-state">' + escapeHtml(emptyMessage) + '</div>';
+      renderBookVoiceProfilePanel();
+      return;
+    }
     container.innerHTML = bookState.roles.map((role) => {
       const selectOptions = options.map((voice) => {
         const selected = voice.id === role.voiceId ? ' selected' : '';
@@ -1637,7 +2000,82 @@
           '</select>' +
         '</div>';
     }).join('');
+    renderBookVoiceProfilePanel();
   }
+
+  function getSelectedCustomVoiceProfiles() {
+    const byVoice = new Map();
+    bookState.roles.forEach((role) => {
+      const profile = getVoiceProfile(role.voiceId);
+      if (!profile) return;
+      if (!byVoice.has(role.voiceId)) byVoice.set(role.voiceId, { profile, roles: [] });
+      byVoice.get(role.voiceId).roles.push(role.label);
+    });
+    return Array.from(byVoice.values());
+  }
+
+  function renderBookVoiceProfilePanel() {
+    const panel = document.getElementById('bookVoiceProfilePanel');
+    if (!panel) return;
+    const entries = getSelectedCustomVoiceProfiles();
+    if (!entries.length) {
+      panel.innerHTML = '';
+      panel.style.display = 'none';
+      return;
+    }
+    panel.style.display = 'block';
+    const directionWarning = getBookProfileDirectionWarning(bookState.chapters);
+    const warningHtml = directionWarning
+      ? '<div style="margin-top:12px;background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.3);border-radius:10px;padding:10px 12px;color:var(--warn);font-size:0.78rem;line-height:1.45">' + escapeHtml(directionWarning) + '</div>'
+      : '';
+    panel.innerHTML = warningHtml + entries.map((entry) => {
+      const profile = entry.profile;
+      const presets = Object.keys(profile.sceneDirectionPresets || {});
+      const presetButtons = presets.length
+        ? '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">' + presets.map((key) => (
+            '<button type="button" class="book-seg-action-btn" onclick="bookApplyVoiceScenePreset(\'' + escapeHtml(profile.voiceId) + '\',\'' + escapeHtml(key) + '\')">' + escapeHtml(key) + '</button>'
+          )).join('') + '</div>'
+        : '';
+      return '' +
+        '<div class="book-strategy-panel" style="display:block;margin-top:12px">' +
+          '<div class="book-strategy-head">' +
+            '<div>' +
+              '<div class="book-strategy-title">Selected ' + escapeHtml(profile.voiceType === 'labDesigned' ? 'lab-designed' : 'custom') + ' voice: ' + escapeHtml(profile.voiceName) + '</div>' +
+              '<div class="book-strategy-summary">Roles using this voice: ' + escapeHtml(entry.roles.join(', ')) + '</div>' +
+            '</div>' +
+            '<span class="book-mini-chip"><strong>' + escapeHtml(profile.provider || 'qwen') + '</strong></span>' +
+          '</div>' +
+          '<div class="book-strategy-chip-row">' +
+            '<span class="book-strategy-chip"><strong>Voice ID</strong> ' + escapeHtml(profile.voiceValue || profile.voiceId) + '</span>' +
+            '<span class="book-strategy-chip"><strong>Model</strong> ' + escapeHtml(profile.model || '') + '</span>' +
+            '<span class="book-strategy-chip"><strong>Type</strong> ' + escapeHtml(profile.voiceType || 'custom') + '</span>' +
+          '</div>' +
+          '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:12px">' +
+            '<label style="display:flex;flex-direction:column;gap:6px;font-size:0.78rem;color:var(--muted);font-weight:700">Identity Prompt' +
+              '<textarea data-voice-profile-field="identityPrompt" data-voice-id="' + escapeHtml(profile.voiceId) + '" oninput="bookUpdateVoiceProfileField(this)" style="min-height:104px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:10px;font:inherit;font-weight:500;line-height:1.45">' + escapeHtml(profile.identityPrompt || '') + '</textarea>' +
+            '</label>' +
+            '<label style="display:flex;flex-direction:column;gap:6px;font-size:0.78rem;color:var(--muted);font-weight:700">Scene Direction' +
+              '<textarea data-voice-profile-field="sceneDirection" data-voice-id="' + escapeHtml(profile.voiceId) + '" oninput="bookUpdateVoiceProfileField(this)" style="min-height:104px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:10px;font:inherit;font-weight:500;line-height:1.45">' + escapeHtml(profile.sceneDirection || '') + '</textarea>' +
+            '</label>' +
+          '</div>' +
+          presetButtons +
+          '<div style="margin-top:10px;font-size:0.74rem;color:var(--muted);line-height:1.45">The voice ID and model are read-only. These notes are saved per voice and added to audiobook chunk metadata; they are only sent as provider instructions on compatible instruct-capable model paths.</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  window.bookUpdateVoiceProfileField = function bookUpdateVoiceProfileField(input) {
+    if (!input) return;
+    persistVoiceProfile(input.dataset.voiceId, { [input.dataset.voiceProfileField]: input.value });
+  };
+
+  window.bookApplyVoiceScenePreset = function bookApplyVoiceScenePreset(voiceId, presetKey) {
+    const profile = getVoiceProfile(voiceId);
+    const value = profile && profile.sceneDirectionPresets ? profile.sceneDirectionPresets[presetKey] : '';
+    if (!value) return;
+    persistVoiceProfile(voiceId, { sceneDirection: value });
+    renderBookVoiceProfilePanel();
+  };
 
   window.bookSetRoleVoice = function bookSetRoleVoice(roleId, voiceId) {
     const role = bookState.roles.find((entry) => entry.id === roleId);
@@ -1648,6 +2086,7 @@
         if (chunk.roleId === roleId) chunk.voiceId = voiceId;
       });
     });
+    renderBookVoiceProfilePanel();
     updateBookEstimate();
     addLog('Assigned "' + role.label + '" to voice ' + voiceId + '.', 'debug');
   };
@@ -1713,9 +2152,29 @@
     return chapter.chunks.filter((chunk) => chunk.status === 'done').length;
   }
 
+  function isChapterSelected(chapter) {
+    if (!chapter) return false;
+    if (chapter.kind === 'titles') {
+      const includeTitles = document.getElementById('bookIncludeTitles');
+      if (includeTitles && !includeTitles.checked) return false;
+    }
+    return chapter.includeInBook !== false;
+  }
+
+  function isChunkSelected(chunk) {
+    return !!chunk && chunk.includeInBook !== false;
+  }
+
+  function getSelectedChapterEntries() {
+    return bookState.chapters
+      .map((chapter, index) => ({ chapter, index }))
+      .filter((entry) => isChapterSelected(entry.chapter));
+  }
+
   function getChapterStatus(chapter) {
     if (chapter.chunks.some((chunk) => chunk.status === 'processing')) return 'generating';
     if (chapter.chunks.some((chunk) => chunk.status === 'error')) return 'error';
+    if (chapter.needsMerge) return 'stale';
     if (chapter.chunks.length && chapter.chunks.every((chunk) => chunk.status === 'done')) return 'done';
     return 'pending';
   }
@@ -1742,6 +2201,8 @@
     parts.push(chunk.sourceType === 'dialogue' ? 'Dialogue' : 'Narration');
     if (chunk.detectedCharacters.length) parts.push('Names: ' + chunk.detectedCharacters.join(', '));
     parts.push(chunk.charCount.toLocaleString() + ' chars');
+    if (chunk.splitReason) parts.push('Split: ' + chunk.splitReason);
+    if (Number(chunk.pauseAfterSeconds) > 0) parts.push('Pause +' + Number(chunk.pauseAfterSeconds).toFixed(1) + 's');
     if (plan && plan.label === 'Director' && plan.reasonText) parts.push(plan.reasonText);
     return parts.join(' · ');
   }
@@ -1756,7 +2217,10 @@
     const chapterCount = getNarrativeChapterCount(bookState.chapters);
     const totalChunks = bookState.chapters.reduce((sum, chapter) => sum + chapter.chunks.length, 0);
     const doneChunks = bookState.chapters.reduce((sum, chapter) => sum + getChapterDoneCount(chapter), 0);
-    target.textContent = chapterCount + ' chapters · ' + totalChunks + ' chunks · ' + doneChunks + ' generated';
+    const staleChapters = bookState.chapters.filter((chapter) => chapter.needsMerge).length;
+    target.textContent = chapterCount + ' chapters · ' + totalChunks + ' chunks · ' + doneChunks + ' generated' +
+      (staleChapters ? ' · ' + staleChapters + ' chapter' + (staleChapters === 1 ? '' : 's') + ' need rebuild' : '') +
+      (bookState.needsBookMerge ? ' · full book needs rebuild' : '');
   }
 
   function renderBookChapterList() {
@@ -1775,6 +2239,9 @@
       const percent = chapter.chunks.length ? Math.round((doneCount / chapter.chunks.length) * 100) : 0;
       const status = getChapterStatus(chapter);
       const playingChapter = isChapterPlaying(chapterIndex);
+      const selectedChunksForChapter = chapter.chunks.filter(isChunkSelected);
+      const canRebuildChapter = selectedChunksForChapter.length && selectedChunksForChapter.every((chunk) => chunk.status === 'done' && chunk.filename);
+      const chapterSelected = isChapterSelected(chapter);
       const chapterDirectorCount = chapter.chunks.reduce((sum, chunk) => {
         const chunkPlan = plan.byChunkId ? plan.byChunkId[chunk.id] : null;
         return sum + (chunkPlan && chunkPlan.label === 'Director' ? 1 : 0);
@@ -1794,6 +2261,7 @@
         return '' +
           '<div class="' + rowClasses.join(' ') + '">' +
             '<div class="book-seg-num">' + (chunkIndex + 1) + '</div>' +
+            '<input type="checkbox" ' + (isChunkSelected(chunk) ? 'checked' : '') + ' title="Include this chunk in chapter/book rebuilds" onclick="bookSetChunkIncluded(' + chapterIndex + ',' + chunkIndex + ', this.checked, event)" />' +
             '<div class="book-seg-voice ' + roleClass + '">' + escapeHtml(chunk.roleLabel) + '</div>' +
             '<div class="book-seg-body">' +
               '<div class="book-seg-text">' + escapeHtml(truncatePreview(chunk.text, 130)) + '</div>' +
@@ -1808,6 +2276,8 @@
               '<button class="book-seg-action-btn' + (isChunkPlayingNow ? ' playing' : '') + '"' +
                 (chunk.audioUrl ? '' : ' disabled') +
                 ' onclick="bookPlayChunk(' + chapterIndex + ',' + chunkIndex + ', event)">' + (isChunkPlayingNow ? '⏹' : '▶') + '</button>' +
+              '<input class="book-chunk-input" type="number" min="0" max="5" step="0.1" value="' + escapeHtml(String(Number(chunk.pauseAfterSeconds || 0).toFixed(1))) + '"' +
+                ' title="Pause after this chunk in seconds" style="width:58px;padding:5px 6px;font-size:0.72rem" onchange="bookSetChunkPause(' + chapterIndex + ',' + chunkIndex + ', this.value, event)" />' +
               '<button class="book-seg-action-btn" onclick="bookRegenerateChunk(' + chapterIndex + ',' + chunkIndex + ', event)">↺</button>' +
             '</div>' +
           '</div>';
@@ -1816,6 +2286,7 @@
         '<div class="book-chapter-card' + (playingChapter ? ' playing' : '') + '">' +
           '<div class="book-chapter-header" onclick="bookToggleChapter(' + chapterIndex + ', event)">' +
             '<div class="book-chapter-main">' +
+              '<input type="checkbox" ' + (chapterSelected ? 'checked' : '') + ' title="Include this chapter in rebuilds/downloads" onclick="bookSetChapterIncluded(' + chapterIndex + ', this.checked, event)" />' +
               '<div class="book-chapter-toggle">' + (chapter.collapsed ? '+' : '−') + '</div>' +
               '<div class="book-chapter-main-text">' +
                 '<div class="book-chapter-title">' + escapeHtml(chapter.title) + '</div>' +
@@ -1833,6 +2304,7 @@
               '<button class="book-inline-btn' + (playingChapter ? ' playing' : '') + '"' +
                 (chapter.audioUrls.wav ? '' : ' disabled') +
                 ' onclick="bookPlayChapter(' + chapterIndex + ', event)">' + (playingChapter ? '⏹ Stop' : '▶ Play') + '</button>' +
+              '<button class="book-inline-btn" ' + (canRebuildChapter ? '' : 'disabled') + ' onclick="bookRebuildChapter(' + chapterIndex + ', event)">🔧 Rebuild</button>' +
               '<button class="book-inline-btn" onclick="bookGenerateChapter(' + chapterIndex + ', event)">' + (doneCount ? '⚡ Refresh' : '⚡ Generate') + '</button>' +
             '</div>' +
           '</div>' +
@@ -1840,6 +2312,7 @@
         '</div>';
     }).join('');
     updateBookTreeStatus();
+    syncRecoverableBookDownloads();
   }
 
   window.bookToggleChapter = function bookToggleChapter(chapterIndex, event) {
@@ -1858,6 +2331,50 @@
   window.bookCollapseAll = function bookCollapseAll() {
     bookState.chapters.forEach((chapter) => { chapter.collapsed = true; });
     renderBookChapterList();
+  };
+
+  window.bookSetChunkPause = function bookSetChunkPause(chapterIndex, chunkIndex, value, event) {
+    if (event) event.stopPropagation();
+    const chapter = bookState.chapters[chapterIndex];
+    const chunk = chapter && chapter.chunks[chunkIndex];
+    if (!chunk) return;
+    chunk.pauseAfterSeconds = sanitizeSilence(value, 5);
+    markChapterMergeStale(chapter);
+    renderBookChapterList();
+    addLog('Set pause after ' + chapter.title + ' chunk ' + (chunkIndex + 1) + ' to ' + chunk.pauseAfterSeconds.toFixed(1) + 's. Regenerate or refresh the chapter to rebuild merged audio.', 'info');
+    void saveBookProject('chunk-pause-' + (chapterIndex + 1) + '-' + (chunkIndex + 1));
+  };
+
+  window.bookSetChapterIncluded = function bookSetChapterIncluded(chapterIndex, checked, event) {
+    if (event) event.stopPropagation();
+    const chapter = bookState.chapters[chapterIndex];
+    if (!chapter) return;
+    chapter.includeInBook = !!checked;
+    bookState.needsBookMerge = true;
+    bookState.outputs = { wav: '', mp3: '', zip: '' };
+    renderBookChapterList();
+    void saveBookProject('chapter-include-' + (chapterIndex + 1));
+  };
+
+  window.bookSetChunkIncluded = function bookSetChunkIncluded(chapterIndex, chunkIndex, checked, event) {
+    if (event) event.stopPropagation();
+    const chapter = bookState.chapters[chapterIndex];
+    const chunk = chapter && chapter.chunks[chunkIndex];
+    if (!chunk) return;
+    chunk.includeInBook = !!checked;
+    markChapterMergeStale(chapter);
+    renderBookChapterList();
+    void saveBookProject('chunk-include-' + (chapterIndex + 1) + '-' + (chunkIndex + 1));
+  };
+
+  window.bookToggleTitlesSelection = function bookToggleTitlesSelection(checked) {
+    bookState.chapters.forEach((chapter) => {
+      if (chapter.kind === 'titles') chapter.includeInBook = !!checked;
+    });
+    bookState.needsBookMerge = true;
+    bookState.outputs = { wav: '', mp3: '', zip: '' };
+    renderBookChapterList();
+    void saveBookProject('titles-include');
   };
 
   function getModelPricing(modelId) {
@@ -1904,7 +2421,9 @@
           ? 'All Director'
           : plan.mode === 'clone'
             ? 'All Clone'
-            : 'All Flash';
+            : plan.mode === 'design'
+              ? 'All Design'
+              : 'All Flash';
       }
     }
 
@@ -1920,6 +2439,7 @@
     if (totalChars > 250000) notices.push('Large manuscript: generation may take a while. The workflow will process and merge chapter by chapter.');
     if (totalSegments > 500) notices.push('High segment count: consider increasing the max chunk size if you want fewer generation calls.');
     if (modelId === CLONED_MODEL_ID && !savedVoicesCache.length) notices.push('Cloned-voice model selected, but no saved cloned voices are currently loaded.');
+    if (modelId === DESIGNED_MODEL_ID && !getCompatibleDesignedVoices(modelId).length) notices.push('Designed-voice model selected, but no saved designed voices are currently loaded. Create or refresh voices in the Voice Design Lab.');
     if (plan.mode === 'adaptive' && plan.directorChunkCount === 0) notices.push('Selective Director polish is on, but no chunks currently qualify. Use the + Dir button on a chunk if you want to force Director on a passage.');
     if (notices.length) {
       warning.style.display = 'block';
@@ -1935,6 +2455,11 @@
       mode: document.getElementById('bookModeSelect').value,
       delimiter: document.getElementById('bookSepInput').value.trim() || '* * *',
       chunkMaxChars: sanitizeChunkSize(document.getElementById('bookChunkSize').value),
+      chunkingMode: document.getElementById('bookChunkingMode') ? document.getElementById('bookChunkingMode').value : 'balanced',
+      emotionalMaxChars: sanitizeEmotionalMax(
+        document.getElementById('bookEmotionalMax') ? document.getElementById('bookEmotionalMax').value : 1500,
+        sanitizeChunkSize(document.getElementById('bookChunkSize').value)
+      ),
       model: document.getElementById('bookModelSelect').value,
       selectiveDirector: !!(document.getElementById('bookSelectiveDirector') && document.getElementById('bookSelectiveDirector').checked),
       chunkSilence: sanitizeSilence(document.getElementById('bookChunkSilence').value, 5),
@@ -1954,9 +2479,11 @@
       manuscript: bookState.manuscript,
       updatedAt: new Date().toISOString(),
       projectSettings: bookState.settings,
+      needsBookMerge: !!bookState.needsBookMerge,
       roles: bookState.roles,
       characters: bookState.characters,
       chapters: bookState.chapters,
+      voiceProfiles: bookState.voiceProfiles || {},
       outputs: bookState.outputs
     };
   }
@@ -2017,13 +2544,14 @@
 
   function collectBookChapterFilenames() {
     return bookState.chapters
+      .filter(isChapterSelected)
       .map((chapter) => basenameFromUrl(chapter.audioUrls && chapter.audioUrls.wav))
       .filter(Boolean);
   }
 
   function collectBookChunkFilenames() {
-    return bookState.chapters.flatMap((chapter) => (
-      chapter.chunks.map((chunk) => chunk.filename).filter(Boolean)
+    return bookState.chapters.filter(isChapterSelected).flatMap((chapter) => (
+      chapter.chunks.filter(isChunkSelected).map((chunk) => chunk.filename).filter(Boolean)
     ));
   }
 
@@ -2031,11 +2559,23 @@
     return [bookState.outputs.wav, bookState.outputs.mp3].map(basenameFromUrl).filter(Boolean);
   }
 
+  function collectChapterSilenceAfter(chapter) {
+    if (!chapter || !Array.isArray(chapter.chunks)) return [];
+    const globalSilence = sanitizeSilence(document.getElementById('bookChunkSilence').value, 5);
+    const selectedChunks = chapter.chunks.filter(isChunkSelected);
+    return selectedChunks.slice(0, -1).map((chunk) => {
+      const recommended = sanitizeSilence(chunk.pauseAfterSeconds || 0, 5);
+      return Math.max(globalSilence, recommended);
+    });
+  }
+
   function ensureRoleAssignmentsValid(modelId) {
     const cloneIds = new Set(savedVoicesCache.map((voice) => voice.voice));
+    const designIds = new Set(getCompatibleDesignedVoices(DESIGNED_MODEL_ID).map((voice) => voice.voice));
     for (const role of bookState.roles) {
       if (!role.voiceId) throw new Error('Role "' + role.label + '" is missing a voice assignment.');
       const cloneRecord = getCloneRecordByVoiceId(role.voiceId);
+      const designedRecord = getDesignedRecordByVoiceId(role.voiceId);
       if (modelId === CLONED_MODEL_ID) {
         if (!cloneIds.has(role.voiceId)) {
           throw new Error('Role "' + role.label + '" must use a cloned voice when the cloned-voice model is selected.');
@@ -2045,6 +2585,15 @@
         }
       } else if (cloneRecord) {
         throw new Error('Role "' + role.label + '" is assigned to cloned voice "' + (cloneRecord.preferred_name || cloneRecord.voice) + '" but the selected model is ' + modelId + '. Switch the book model to ' + CLONED_MODEL_ID + ' or assign a built-in voice.');
+      } else if (modelId === DESIGNED_MODEL_ID) {
+        if (!designIds.has(role.voiceId)) {
+          throw new Error('Role "' + role.label + '" must use a designed voice when the designed-voice model is selected.');
+        }
+        if (designedRecord && (designedRecord.target_model || DESIGNED_MODEL_ID) !== DESIGNED_MODEL_ID) {
+          throw new Error('Role "' + role.label + '" uses designed voice "' + (designedRecord.display_name || designedRecord.preferred_name || designedRecord.voice) + '" with target model ' + designedRecord.target_model + '. Recreate it for ' + DESIGNED_MODEL_ID + ' before generating.');
+        }
+      } else if (designedRecord) {
+        throw new Error('Role "' + role.label + '" is assigned to designed voice "' + (designedRecord.display_name || designedRecord.preferred_name || designedRecord.voice) + '" but the selected model is ' + modelId + '. Switch the book model to ' + DESIGNED_MODEL_ID + ' or assign a built-in voice.');
       }
     }
   }
@@ -2078,14 +2627,54 @@
 
   function invalidateBookOutputs() {
     bookState.outputs = { wav: '', mp3: '', zip: '' };
+    bookState.needsBookMerge = true;
     const panel = document.getElementById('bookDlPanel');
     if (panel) panel.classList.remove('show');
+  }
+
+  function markChapterMergeStale(chapter) {
+    if (!chapter) return;
+    chapter.needsMerge = true;
+    chapter.audioUrls.wav = '';
+    chapter.audioUrls.mp3 = '';
+    invalidateBookOutputs();
+  }
+
+  function allBookChaptersHaveAudio() {
+    return !!bookState.chapters.length && bookState.chapters.every((chapter) => (
+      chapter.audioUrls && chapter.audioUrls.wav && chapter.chunks.every((chunk) => chunk.status === 'done' && chunk.filename)
+    ));
+  }
+
+  function revealBookDownloadPanel(label, title) {
+    const genPanel = document.getElementById('bookGenPanel');
+    const dlPanel = document.getElementById('bookDlPanel');
+    const dlTitle = document.getElementById('bookDlTitle');
+    if (genPanel) genPanel.classList.add('show');
+    if (dlPanel) dlPanel.classList.add('show');
+    if (dlTitle) dlTitle.textContent = title || '✓ Generation complete! Download your audio:';
+    if (label) updateBookProgress(1, 1, label);
+  }
+
+  function syncRecoverableBookDownloads() {
+    if (bookState.generating || !allBookChaptersHaveAudio()) return false;
+    if (bookState.outputs.wav || bookState.outputs.mp3) {
+      revealBookDownloadPanel('Download files are ready.', '✓ Generation complete! Download your audio:');
+      return true;
+    }
+    revealBookDownloadPanel(
+      'Chapter audio is complete. Use a download button to rebuild the combined file.',
+      '✓ Chapter audio complete. Final downloads can be rebuilt:'
+    );
+    return true;
   }
 
   function setBookOperationUi(active) {
     if (active) document.getElementById('bookGenPanel').classList.add('show');
     document.getElementById('bookCancelBtn').classList.toggle('show', !!active);
     document.getElementById('bookGenerateBtn').disabled = !!active || bookState.chapters.length === 0;
+    const rebuildBtn = document.getElementById('bookRebuildBtn');
+    if (rebuildBtn) rebuildBtn.disabled = !!active || bookState.chapters.length === 0;
   }
 
   function clearPlaybackState() {
@@ -2176,6 +2765,17 @@
     chunk.audioUrl = cacheBustUrl(result.url, (forceRegenerated ? 'regen_' : 'gen_') + chunk.audioVersion + '_' + Date.now());
   }
 
+  function confirmTtsSpend(scopeLabel, chunkCount, forceOverwrite) {
+    const lines = [
+      'This action will call TTS for ' + chunkCount + ' chunk' + (chunkCount === 1 ? '' : 's') + '.',
+      forceOverwrite ? 'It will replace this project’s references to existing generated audio for ' + scopeLabel + '.' : 'It will create new generated audio for ' + scopeLabel + '.',
+      'Provider charges may apply.',
+      '',
+      'Continue?'
+    ];
+    return window.confirm(lines.join('\n'));
+  }
+
   function getBookMergeModelId() {
     const plan = getBookDirectionPlan();
     if (plan.mode === 'adaptive') return 'narrate_ai_flash_director_mix';
@@ -2205,12 +2805,92 @@
     return instructions.join(' ');
   }
 
+  function getChunkVoiceProfile(chunk) {
+    const profile = getVoiceProfile(chunk && chunk.voiceId);
+    if (!profile) return null;
+    return {
+      voiceName: profile.voiceName,
+      voiceType: profile.voiceType,
+      voiceId: profile.voiceValue || profile.voiceId,
+      model: profile.model,
+      provider: profile.provider || 'qwen',
+      identityPrompt: profile.identityPrompt || '',
+      sceneDirection: profile.sceneDirection || ''
+    };
+  }
+
+  function buildProfileInstruction(profile) {
+    if (!profile) return '';
+    const parts = [];
+    if (profile.identityPrompt) parts.push('VOICE IDENTITY:\n' + profile.identityPrompt);
+    if (profile.sceneDirection) parts.push('SCENE DIRECTION:\n' + profile.sceneDirection);
+    return parts.join('\n\n');
+  }
+
+  function getEffectiveChunkInstructions(chunk) {
+    const plan = getChunkDirectionPlan(chunk);
+    const base = getChunkGenerationInstructions(chunk);
+    const profileInstruction = buildProfileInstruction(getChunkVoiceProfile(chunk));
+    const supportsInstructions = plan && isBookDirectorModel(plan.modelId);
+    return [base, supportsInstructions ? profileInstruction : ''].filter(Boolean).join('\n\n');
+  }
+
+  function chunkProfileDirectionHasEffect(chunk) {
+    const profile = getChunkVoiceProfile(chunk);
+    if (!profile || (!profile.identityPrompt && !profile.sceneDirection)) return true;
+    const plan = getChunkDirectionPlan(chunk);
+    return !!(plan && isBookDirectorModel(plan.modelId));
+  }
+
+  function getBookProfileDirectionWarning(chapters) {
+    const targetChapters = chapters && chapters.length ? chapters : bookState.chapters;
+    const profiledChunks = targetChapters.flatMap((chapter) => chapter.chunks).filter((chunk) => {
+      const profile = getChunkVoiceProfile(chunk);
+      return profile && (profile.identityPrompt || profile.sceneDirection);
+    });
+    if (!profiledChunks.length) return '';
+    const effectiveCount = profiledChunks.filter(chunkProfileDirectionHasEffect).length;
+    if (effectiveCount === profiledChunks.length) return '';
+    if (effectiveCount > 0) {
+      return 'Some selected chunks use custom voice profile notes, but only the Director-compatible chunks can apply those notes as provider instructions. Other clone/design/plain Flash chunks will keep the same voice ID/model and may not react to the scene direction.';
+    }
+    return 'The selected custom voice profile notes are saved as metadata, but the current engine does not support provider instructions for these chunks. Changing “angry”, “tense”, or similar scene direction text may not change the audio unless you use a Director-compatible path.';
+  }
+
+  function confirmBookOverwrite(scopeLabel, chapters) {
+    const targetChapters = chapters && chapters.length ? chapters : bookState.chapters;
+    const doneCount = targetChapters.reduce((sum, chapter) => (
+      sum + chapter.chunks.filter((chunk) => chunk.status === 'done' && chunk.filename).length
+    ), 0);
+    if (!doneCount) return true;
+    const warning = getBookProfileDirectionWarning(targetChapters);
+    const message = [
+      'Regenerate ' + scopeLabel + ' with the current settings?',
+      '',
+      'This will replace the project references for ' + doneCount + ' generated chunk' + (doneCount === 1 ? '' : 's') + ' and rebuild the chapter/book audio. Existing files may remain on disk, but this project will point to the new/overwritten output.',
+      warning ? '\nNote: ' + warning : '',
+      '',
+      'Continue?'
+    ].filter(Boolean).join('\n');
+    return window.confirm(message);
+  }
+
   async function generateBookChunk(chunk, modelId, apiKey, force) {
     const chapter = bookState.chapters[chunk.chapterIndex];
     const plan = getChunkDirectionPlan(chunk);
+    const instructions = getEffectiveChunkInstructions(chunk);
+    const voiceProfile = getChunkVoiceProfile(chunk);
+    const filenameSettings = getBookFilenameSettings({
+      voiceLabel: getBookVoiceFileLabel(chunk.voiceId),
+      voiceSummary: getBookVoiceFileLabel(chunk.voiceId),
+      settingsTag: instructions
+        ? (chunk.sourceType === 'titles' ? 'title_sequence' : (plan && plan.label === 'Director' ? 'director_prompt' : 'custom_prompt'))
+        : 'default_prompt'
+    });
     const payload = {
       text: chunk.text,
       voiceId: chunk.voiceId,
+      voiceLabel: filenameSettings.voiceLabel,
       apiKey,
       modelId: plan ? plan.modelId : modelId,
       projectId: bookState.projectId,
@@ -2221,8 +2901,14 @@
       roleLabel: chunk.roleLabel || '',
       sourceType: chunk.sourceType || '',
       language: bookState.language,
-      instructions: getChunkGenerationInstructions(chunk),
-      force: !!force
+      instructions,
+      voiceProfile,
+      force: !!force,
+      mode: filenameSettings.mode,
+      voiceSummary: filenameSettings.voiceSummary,
+      chunkSilence: filenameSettings.chunkSilence,
+      chapterSilence: filenameSettings.chapterSilence,
+      settingsTag: filenameSettings.settingsTag
     };
     return postJson(BOOK_API.generateChunk, payload);
   }
@@ -2230,8 +2916,9 @@
   async function mergeGeneratedChapter(chapterIndex) {
     const chapter = bookState.chapters[chapterIndex];
     if (!chapter) return null;
-    const filenames = chapter.chunks.map((chunk) => chunk.filename).filter(Boolean);
-    if (filenames.length !== chapter.chunks.length) {
+    const selectedChunks = chapter.chunks.filter(isChunkSelected);
+    const filenames = selectedChunks.map((chunk) => chunk.filename).filter(Boolean);
+    if (!selectedChunks.length || filenames.length !== selectedChunks.length) {
       chapter.audioUrls.wav = '';
       chapter.audioUrls.mp3 = '';
       return null;
@@ -2246,10 +2933,15 @@
       modelId: getBookMergeModelId(),
       language: bookState.language,
       silence: sanitizeSilence(document.getElementById('bookChunkSilence').value, 5),
-      format: 'wav'
+      silence_after: collectChapterSilenceAfter(chapter),
+      format: 'wav',
+      ...getBookFilenameSettings()
     });
     chapter.audioUrls.wav = cacheBustUrl(merged.url, 'chapter_' + chapterIndex + '_' + Date.now());
     chapter.audioUrls.mp3 = '';
+    chapter.needsMerge = false;
+    bookState.needsBookMerge = true;
+    bookState.outputs = { wav: '', mp3: '', zip: '' };
     return merged;
   }
 
@@ -2259,7 +2951,9 @@
     const onlyChunkIndex = options && Number.isInteger(options.onlyChunkIndex) ? options.onlyChunkIndex : null;
     const force = !!(options && options.force);
     const progress = options && options.progress ? options.progress : null;
-    const indices = onlyChunkIndex === null ? chapter.chunks.map((_, index) => index) : [onlyChunkIndex];
+    const indices = onlyChunkIndex === null
+      ? chapter.chunks.map((chunk, index) => (isChunkSelected(chunk) ? index : -1)).filter((index) => index >= 0)
+      : [onlyChunkIndex];
 
     for (let i = 0; i < indices.length; i += 1) {
       if (bookState.cancelRequested) break;
@@ -2284,12 +2978,107 @@
     }
 
     if (bookState.cancelRequested) return false;
-    if (onlyChunkIndex === null || chapter.chunks.every((chunk) => chunk.status === 'done' && chunk.filename)) {
+    if (onlyChunkIndex === null || chapter.chunks.filter(isChunkSelected).every((chunk) => chunk.status === 'done' && chunk.filename)) {
       await mergeGeneratedChapter(chapterIndex);
+    } else {
+      markChapterMergeStale(chapter);
     }
     renderBookChapterList();
     return true;
   }
+
+  async function mergeFullBookOutput(format) {
+    const result = await postJson(BOOK_API.mergeBook, {
+      projectId: bookState.projectId,
+      title: bookState.title,
+      language: bookState.language,
+      modelId: getBookMergeModelId(),
+      chapter_filenames: collectBookChapterFilenames(),
+      silence: sanitizeSilence(document.getElementById('bookChapterSilence').value, 10),
+      format,
+      ...getBookFilenameSettings()
+    });
+    bookState.outputs[format] = result.url;
+    if (format === 'wav') bookState.needsBookMerge = false;
+    revealBookDownloadPanel('Full-book ' + format.toUpperCase() + ' ready.', '✓ Generation complete! Download your audio:');
+    return result;
+  }
+
+  window.bookRebuildChapter = async function bookRebuildChapter(chapterIndex, event) {
+    if (event) event.stopPropagation();
+    if (bookState.generating) {
+      addLog('Another generation task is already running.', 'warn');
+      return;
+    }
+    const chapter = bookState.chapters[chapterIndex];
+    if (!chapter) return;
+    const selectedChunks = chapter.chunks.filter(isChunkSelected);
+    if (!selectedChunks.length || !selectedChunks.every((chunk) => chunk.status === 'done' && chunk.filename)) {
+      addLog('Cannot rebuild chapter until every chunk has generated audio.', 'warn');
+      return;
+    }
+    bookState.generating = true;
+    setBookOperationUi(true);
+    updateBookProgress(0, 1, 'Rebuilding ' + chapter.title + ' without TTS...');
+    try {
+      await mergeGeneratedChapter(chapterIndex);
+      updateBookProgress(1, 1, 'Chapter rebuilt. Full book needs rebuild.');
+      addLog('Rebuilt chapter audio for "' + chapter.title + '" without calling TTS.', 'success');
+      await saveBookProject('chapter-rebuild-' + (chapterIndex + 1));
+    } catch (error) {
+      addLog('Chapter rebuild failed: ' + error.message, 'error');
+    } finally {
+      bookState.generating = false;
+      setBookOperationUi(false);
+      renderBookChapterList();
+    }
+  };
+
+  window.bookRebuildFull = async function bookRebuildFull(format) {
+    if (bookState.generating) {
+      addLog('Another generation task is already running.', 'warn');
+      return;
+    }
+    if (!bookState.projectId) {
+      addLog('No audiobook project is loaded.', 'warn');
+      return;
+    }
+    const staleChapters = bookState.chapters
+      .map((chapter, index) => ({ chapter, index }))
+      .filter((entry) => entry.chapter.needsMerge);
+    const selectedEntries = getSelectedChapterEntries();
+    if (!selectedEntries.length) {
+      addLog('No chapters are selected for rebuild.', 'warn');
+      return;
+    }
+    const unbuilt = selectedEntries.map((entry) => entry.chapter).filter((chapter) => !chapter.audioUrls || !chapter.audioUrls.wav);
+    if (unbuilt.length && !unbuilt.every((chapter) => chapter.chunks.every((chunk) => chunk.status === 'done' && chunk.filename))) {
+      addLog('Cannot rebuild selected book until each selected chapter has generated chunk audio.', 'warn');
+      return;
+    }
+    bookState.generating = true;
+    setBookOperationUi(true);
+    updateBookProgress(0, Math.max(1, staleChapters.length + 1), 'Rebuilding full book without TTS...');
+    try {
+      const rebuildChapters = selectedEntries
+        .filter((entry) => entry.chapter.needsMerge || !entry.chapter.audioUrls || !entry.chapter.audioUrls.wav);
+      for (let i = 0; i < rebuildChapters.length; i += 1) {
+        updateBookProgress(i, rebuildChapters.length + 1, 'Rebuilding ' + rebuildChapters[i].chapter.title + '...');
+        await mergeGeneratedChapter(rebuildChapters[i].index);
+      }
+      const result = await mergeFullBookOutput(format === 'mp3' ? 'mp3' : 'wav');
+      updateBookProgress(rebuildChapters.length + 1, rebuildChapters.length + 1, 'Selected book rebuilt.');
+      triggerBrowserDownload(result.url, result.filename);
+      addLog('Rebuilt full-book ' + (format === 'mp3' ? 'MP3' : 'WAV') + ' without calling TTS.', 'success');
+      await saveBookProject('book-rebuild');
+    } catch (error) {
+      addLog('Full-book rebuild failed: ' + error.message, 'error');
+    } finally {
+      bookState.generating = false;
+      setBookOperationUi(false);
+      renderBookChapterList();
+    }
+  };
 
   window.bookAnalyse = async function bookAnalyse() {
     const raw = document.getElementById('bookText').value.trim();
@@ -2308,6 +3097,7 @@
     bookState.manuscript = normalizeNewlines(raw);
     bookState.settings = settings;
     bookState.outputs = { wav: '', mp3: '', zip: '' };
+    bookState.needsBookMerge = false;
     bookState.cancelRequested = false;
 
     statusEl.textContent = 'Analysing manuscript...';
@@ -2448,6 +3238,20 @@
 
     const chapter = bookState.chapters[chapterIndex];
     if (!chapter) return;
+    const selectedChunks = chapter.chunks.filter(isChunkSelected);
+    if (!selectedChunks.length) {
+      addLog('No chunks are selected for this chapter.', 'warn');
+      return;
+    }
+    const forceRefresh = selectedChunks.some((chunk) => chunk.status === 'done' && chunk.filename);
+    if (!confirmTtsSpend('this chapter', selectedChunks.length, forceRefresh)) {
+      addLog('Chapter generation cancelled before calling TTS.', 'warn');
+      return;
+    }
+    if (forceRefresh && !confirmBookOverwrite('this chapter', [chapter])) {
+      addLog('Chapter refresh cancelled before overwriting existing chunk references.', 'warn');
+      return;
+    }
     const directionPlan = getBookDirectionPlan();
     const chapterDirectorCount = directionPlan.mode === 'adaptive'
       ? chapter.chunks.filter((chunk) => {
@@ -2463,7 +3267,7 @@
     chapter.audioUrls.wav = '';
     chapter.audioUrls.mp3 = '';
 
-    const progress = { done: 0, total: chapter.chunks.length };
+    const progress = { done: 0, total: selectedChunks.length };
     addLog(
       'Generating chapter audio for "' + chapter.title + '"' +
       (chapterDirectorCount ? ' with Director planned on ' + chapterDirectorCount + ' chunk' + (chapterDirectorCount === 1 ? '' : 's') + '.' : '.'),
@@ -2472,7 +3276,7 @@
     updateBookProgress(0, progress.total, 'Preparing ' + chapter.title + '...');
 
     try {
-      const completed = await generateChapterChunks(chapterIndex, context, { progress });
+      const completed = await generateChapterChunks(chapterIndex, context, { progress, force: forceRefresh });
       if (bookState.cancelRequested || !completed) {
         addLog('Chapter generation cancelled for "' + chapter.title + '".', 'warn');
         updateBookProgress(progress.done, progress.total, 'Cancelled');
@@ -2509,6 +3313,16 @@
     const chapter = bookState.chapters[chapterIndex];
     const chunk = chapter && chapter.chunks[chunkIndex];
     if (!chapter || !chunk) return;
+    if (!confirmTtsSpend('this chunk', 1, !!(chunk.status === 'done' && chunk.filename))) {
+      addLog('Chunk regeneration cancelled before calling TTS.', 'warn');
+      return;
+    }
+    if (chunk.status === 'done' && chunk.filename && !confirmBookOverwrite('this chunk', [{
+      chunks: [chunk]
+    }])) {
+      addLog('Chunk regeneration cancelled before overwriting the existing chunk reference.', 'warn');
+      return;
+    }
 
     if (isChunkPlaying(chunk) || isChapterPlaying(chapterIndex)) stopBookPlayback();
 
@@ -2556,13 +3370,34 @@
       addLog('Book generation aborted: ' + error.message, 'error');
       return;
     }
+    const selectedEntriesForGeneration = getSelectedChapterEntries();
+    if (!selectedEntriesForGeneration.length) {
+      addLog('No chapters are selected for full-book generation.', 'warn');
+      return;
+    }
+    const forceRefresh = selectedEntriesForGeneration.some(({ chapter }) => (
+      chapter.chunks.some((chunk) => chunk.status === 'done' && chunk.filename)
+    ));
+    const totalChunksForTts = selectedEntriesForGeneration.reduce((sum, entry) => sum + entry.chapter.chunks.filter(isChunkSelected).length, 0);
+    if (!totalChunksForTts) {
+      addLog('No chunks are selected for full-book generation.', 'warn');
+      return;
+    }
+    if (!confirmTtsSpend('the full book', totalChunksForTts, forceRefresh)) {
+      addLog('Full-book generation cancelled before calling TTS.', 'warn');
+      return;
+    }
+    if (forceRefresh && !confirmBookOverwrite('the selected book', selectedEntriesForGeneration.map((entry) => entry.chapter))) {
+      addLog('Full-book regeneration cancelled before overwriting existing chunk references.', 'warn');
+      return;
+    }
 
     bookState.generating = true;
     bookState.cancelRequested = false;
     setBookOperationUi(true);
     invalidateBookOutputs();
 
-    const totalChunks = bookState.chapters.reduce((sum, chapter) => sum + chapter.chunks.length, 0);
+    const totalChunks = selectedEntriesForGeneration.reduce((sum, entry) => sum + entry.chapter.chunks.filter(isChunkSelected).length, 0);
     const progress = { done: 0, total: totalChunks };
     const directionPlan = getBookDirectionPlan();
 
@@ -2580,9 +3415,9 @@
     updateBookProgress(0, totalChunks, 'Preparing generation...');
 
     try {
-      for (let chapterIndex = 0; chapterIndex < bookState.chapters.length; chapterIndex += 1) {
-        const chapter = bookState.chapters[chapterIndex];
-        const completed = await generateChapterChunks(chapterIndex, context, { progress });
+      for (let selectedIndex = 0; selectedIndex < selectedEntriesForGeneration.length; selectedIndex += 1) {
+        const { chapter, index: chapterIndex } = selectedEntriesForGeneration[selectedIndex];
+        const completed = await generateChapterChunks(chapterIndex, context, { progress, force: forceRefresh });
         if (!completed || bookState.cancelRequested) break;
         addLog('Merged chapter audio for ' + chapter.title + '.', 'debug');
         await saveBookProject('chapter-' + (chapterIndex + 1));
@@ -2593,29 +3428,27 @@
         updateBookProgress(progress.done, progress.total, 'Cancelled');
       } else {
         updateBookProgress(totalChunks, totalChunks, 'Generation complete. Building full-book WAV...');
-        const result = await postJson(BOOK_API.mergeBook, {
-          projectId: bookState.projectId,
-          title: bookState.title,
-          language: bookState.language,
-          modelId: getBookMergeModelId(),
-          chapter_filenames: collectBookChapterFilenames(),
-          silence: sanitizeSilence(document.getElementById('bookChapterSilence').value, 10),
-          format: 'wav'
-        });
-        bookState.outputs.wav = result.url;
-        document.getElementById('bookDlPanel').classList.add('show');
+        await mergeFullBookOutput('wav');
         addLog('Full-book WAV ready.', 'success');
         await saveBookProject('book-complete');
         if (typeof refreshUsageHistory === 'function') refreshUsageHistory();
       }
     } catch (error) {
       addLog(error.message, 'error');
+      if (allBookChaptersHaveAudio()) {
+        revealBookDownloadPanel(
+          'Chapter audio is complete. Use a download button to rebuild the combined file.',
+          '✓ Chapter audio complete. Final downloads can be rebuilt:'
+        );
+        addLog('All chapter audio is available; combined downloads can be rebuilt without regenerating chunks.', 'warn');
+      }
       await saveBookProject('generation-error');
       if (typeof refreshUsageHistory === 'function') refreshUsageHistory();
     } finally {
       bookState.generating = false;
       setBookOperationUi(false);
       renderBookChapterList();
+      syncRecoverableBookDownloads();
     }
   };
 
@@ -2637,16 +3470,16 @@
     }
     addLog('Building full-book ' + format.toUpperCase() + ' file...', 'info');
     try {
-      const result = await postJson(BOOK_API.mergeBook, {
-        projectId: bookState.projectId,
-        title: bookState.title,
-        language: bookState.language,
-        modelId: getBookMergeModelId(),
-        chapter_filenames: collectBookChapterFilenames(),
-        silence: sanitizeSilence(document.getElementById('bookChapterSilence').value, 10),
-        format
-      });
-      bookState.outputs[format] = result.url;
+      const selectedEntries = getSelectedChapterEntries();
+      for (const entry of selectedEntries) {
+        if (entry.chapter.needsMerge || !entry.chapter.audioUrls || !entry.chapter.audioUrls.wav) {
+          if (entry.chapter.chunks.filter(isChunkSelected).every((chunk) => chunk.status === 'done' && chunk.filename)) {
+            await mergeGeneratedChapter(entry.index);
+          }
+        }
+      }
+      const result = await mergeFullBookOutput(format);
+      syncRecoverableBookDownloads();
       triggerBrowserDownload(result.url, result.filename);
       addLog('Full-book ' + format.toUpperCase() + ' ready.', 'success');
       await saveBookProject('download-' + format);
@@ -2669,9 +3502,11 @@
         modelId: getBookMergeModelId(),
         chunk_filenames: collectBookChunkFilenames(),
         chapter_filenames: collectBookChapterFilenames(),
-        book_filenames: collectBookOutputFilenames()
+        book_filenames: collectBookOutputFilenames(),
+        ...getBookFilenameSettings()
       });
       bookState.outputs.zip = result.url;
+      syncRecoverableBookDownloads();
       triggerBrowserDownload(result.url, result.filename);
       addLog('ZIP package ready.', 'success');
       await saveBookProject('download-zip');
@@ -2681,7 +3516,7 @@
   };
 
   function wireBookInputs() {
-    ['bookText', 'bookModeSelect', 'bookSepInput', 'bookChunkSize', 'bookModelSelect', 'bookSelectiveDirector', 'bookChunkSilence', 'bookChapterSilence'].forEach((id) => {
+    ['bookText', 'bookModeSelect', 'bookSepInput', 'bookChunkSize', 'bookChunkingMode', 'bookEmotionalMax', 'bookModelSelect', 'bookSelectiveDirector', 'bookChunkSilence', 'bookChapterSilence'].forEach((id) => {
       const el = document.getElementById(id);
       if (!el) return;
       el.addEventListener('input', () => {

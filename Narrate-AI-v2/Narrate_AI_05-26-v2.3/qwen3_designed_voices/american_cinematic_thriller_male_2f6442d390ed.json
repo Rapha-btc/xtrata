@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-USThrM01-voice-20260515205601529-17f1",
+  "preferred_name": "USThrM01",
+  "display_name": "American Cinematic Thriller Male",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A male American thriller narrator with modern cinematic tension, firm consonants, low controlled energy, and believable pressure under the surface. General American accent, clear pacing, and serious tone suited to crime, suspense, and procedural fiction. Avoid cartoon grit, avoid action-trailer excess, and avoid sounding detached.",
+  "preview_text": "A cinematic American thriller male voice built for suspense, pressure, and clean dramatic control.",
+  "language": "English",
+  "preset_id": "american_thriller_cinematic_m",
+  "gmt_create": "2026-05-15T12:56:09.522Z",
+  "preview_audio_file": "design_lab__american_cinematic_thriller_male__american_thriller_cinematic_m__create_preview__english__design_model__txt_a_cinematic_american_thrille_e5f6eb19fda0__2f6442d390ed.wav",
+  "preview_audio_url": "/qwen3_designed_voices/design_lab__american_cinematic_thriller_male__american_thriller_cinematic_m__create_preview__english__design_model__txt_a_cinematic_american_thrille_e5f6eb19fda0__2f6442d390ed.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

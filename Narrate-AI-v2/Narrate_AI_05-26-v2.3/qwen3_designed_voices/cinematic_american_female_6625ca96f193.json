@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-CinemaFem01-voice-20260514205443453-eee0",
+  "preferred_name": "CinemaFem01",
+  "display_name": "Cinematic American Female",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A female American narrator with premium cinematic quality, smooth mid pitch, warm and emotionally intelligent, intimate without sounding whispered, polished enough for romance, drama, and commercial fiction. Avoid childish tone and avoid broad promotional energy.",
+  "preview_text": "This voice is built for emotionally rich narration with a clean cinematic finish.",
+  "language": "English",
+  "preset_id": "cinematic_american_female",
+  "gmt_create": "2026-05-14T12:54:51.551Z",
+  "preview_audio_file": "cinematic_american_female_6625ca96f193_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/cinematic_american_female_6625ca96f193_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}

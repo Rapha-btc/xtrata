@@ -1,0 +1,15 @@
+{
+  "voice": "qwen-tts-vd-LondonM01-voice-20260514221836507-1029",
+  "preferred_name": "LondonM01",
+  "display_name": "Grounded London Male",
+  "target_model": "qwen3-tts-vd-2026-01-26",
+  "voice_prompt": "A grounded male voice with a modern London accent, clear British identity, relaxed confidence, and natural conversational rhythm. Urban and believable, not caricatured, and never American. Suitable for thrillers, drama, and contemporary fiction.",
+  "preview_text": "All right, this is a grounded London male voice with clean British pacing and urban confidence.",
+  "language": "English",
+  "preset_id": "london_grounded_male",
+  "gmt_create": "2026-05-14T14:18:42.725Z",
+  "preview_audio_file": "grounded_london_male_fd5d206d8dfe_preview.wav",
+  "preview_audio_url": "/qwen3_designed_voices/grounded_london_male_fd5d206d8dfe_preview.wav",
+  "preview_response_format": "wav",
+  "source": "local"
+}
