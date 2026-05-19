@@ -2214,13 +2214,13 @@
     const ACTIVE_CONTRACTS = (coreContracts.length > 0 ? coreContracts : CONTRACT_REGISTRY)
       .slice()
       .sort((left, right) => versionWeight(right) - versionWeight(left));
-    const LATEST_CONTRACT =
+    const DEFAULT_CONTRACT =
       ACTIVE_CONTRACTS.find(
         (entry) =>
-          entry.protocolVersion === '2.1.1' ||
-          entry.contractName?.toLowerCase().includes('v2-1-1')
+          entry.protocolVersion === '2.1.0' ||
+          entry.contractName?.toLowerCase().includes('v2-1-0')
       ) ?? ACTIVE_CONTRACTS[0];
-    const HOMEPAGE_CONTRACT_STORAGE_KEY = 'xtrata.simple-homepage.contract.selection';
+    const HOMEPAGE_CONTRACT_STORAGE_KEY = 'xtrata.simple-homepage.contract.selection.v2-1-0';
     const SMALL_MINT_HELPER_TARGET_CORE_CONTRACT_ID =
       `${SMALL_MINT_HELPER_MAINNET_ADDRESS}.xtrata-v2-1-0`;
     const ACTIVE_CONTRACT_BY_ID = new Map(
@@ -2231,9 +2231,9 @@
         const raw = window.localStorage.getItem(HOMEPAGE_CONTRACT_STORAGE_KEY);
         const parsed = raw ? JSON.parse(raw) : null;
         const saved = parsed?.contractId ? ACTIVE_CONTRACT_BY_ID.get(parsed.contractId) : null;
-        return saved ?? LATEST_CONTRACT;
+        return saved ?? DEFAULT_CONTRACT;
       } catch (error) {
-        return LATEST_CONTRACT;
+        return DEFAULT_CONTRACT;
       }
     };
     const saveHomepageContractSelection = (entry) => {
