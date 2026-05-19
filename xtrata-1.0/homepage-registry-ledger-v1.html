@@ -1064,6 +1064,22 @@
       background: var(--control);
     }
 
+    .token-preview .preview-square img.preview-image--truthful {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      object-position: center;
+      background: transparent;
+    }
+
+    .token-preview .preview-square canvas.preview-image-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+    }
+
     .preview-actions {
       display: flex;
       gap: 8px;
@@ -1933,7 +1949,7 @@
       saveInscriptionThumbnailToCache
     } from '/src/lib/viewer/cache.ts';
     import { injectGridThumbnailHtml } from '/src/lib/viewer/html-preview.ts';
-    import { createImageThumbnail } from '/src/lib/viewer/thumbnail.ts';
+    import { createImageThumbnail, THUMBNAIL_SIZE } from '/src/lib/viewer/thumbnail.ts';
     import { shouldUsePixelatedImageRendering } from '/src/lib/viewer/image-rendering.ts';
     import {
       fetchTokenSummary,
@@ -2218,6 +2234,102 @@
       if (img.complete && img.naturalWidth > 0) {
         scheduleUpdate();
       }
+    };
+
+    const getPreviewCanvasSize = (target) => {
+      const rect = target.getBoundingClientRect();
+      const cssSize = Math.max(
+        1,
+        Math.round(Math.min(
+          rect.width || target.clientWidth || 512,
+          rect.height || target.clientHeight || rect.width || target.clientWidth || 512
+        ))
+      );
+      const pixelRatio = Math.min(Math.max(window.devicePixelRatio || 1, 1), 2);
+      return {
+        cssSize,
+        pixelSize: Math.max(1, Math.round(cssSize * pixelRatio))
+      };
+    };
+
+    const drawSquareImagePreview = (canvas, image, target, { mimeType = null, isSvgSource = false } = {}) => {
+      const { pixelSize } = getPreviewCanvasSize(target);
+      const sourceWidth = image.naturalWidth || image.videoWidth || image.width || pixelSize;
+      const sourceHeight = image.naturalHeight || image.videoHeight || image.height || pixelSize;
+      if (!Number.isFinite(sourceWidth) || !Number.isFinite(sourceHeight) || sourceWidth <= 0 || sourceHeight <= 0) {
+        return false;
+      }
+      canvas.width = pixelSize;
+      canvas.height = pixelSize;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        return false;
+      }
+      const referenceSize = Math.max(sourceWidth, sourceHeight, THUMBNAIL_SIZE);
+      const scale = pixelSize / referenceSize;
+      const targetWidth = Math.max(1, Math.round(sourceWidth * scale));
+      const targetHeight = Math.max(1, Math.round(sourceHeight * scale));
+      const dx = Math.round((pixelSize - targetWidth) / 2);
+      const dy = Math.round((pixelSize - targetHeight) / 2);
+      const usePixelatedRendering = shouldUsePixelatedImageRendering({
+        naturalWidth: sourceWidth,
+        naturalHeight: sourceHeight,
+        renderedWidth: targetWidth,
+        renderedHeight: targetHeight,
+        mimeType,
+        isSvgSource
+      });
+      ctx.imageSmoothingEnabled = !usePixelatedRendering;
+      if (!usePixelatedRendering) {
+        ctx.imageSmoothingQuality = 'high';
+      }
+      ctx.clearRect(0, 0, pixelSize, pixelSize);
+      ctx.drawImage(image, dx, dy, targetWidth, targetHeight);
+      canvas.classList.toggle('preview-media--pixelated', usePixelatedRendering);
+      debugLog('preview', 'square canvas image preview drawn', {
+        sourceWidth,
+        sourceHeight,
+        canvasSize: pixelSize,
+        referenceSize,
+        targetWidth,
+        targetHeight,
+        offsetX: dx,
+        offsetY: dy,
+        mimeType,
+        pixelated: usePixelatedRendering
+      });
+      return true;
+    };
+
+    const renderSquareImagePreview = (target, sourceUrl, { mimeType = null, isSvgSource = false, alt = 'Image preview' } = {}) => {
+      const canvas = document.createElement('canvas');
+      canvas.className = 'preview-image-canvas';
+      canvas.setAttribute('role', 'img');
+      canvas.setAttribute('aria-label', alt);
+      target.replaceChildren(canvas);
+
+      const fallbackToImage = () => {
+        const img = document.createElement('img');
+        img.alt = alt;
+        img.classList.add('preview-image--truthful');
+        applyPixelPerfectImageRendering(img, {
+          mimeType,
+          sourceUrl,
+          isSvgSource
+        });
+        img.src = sourceUrl;
+        target.replaceChildren(img);
+      };
+
+      const img = document.createElement('img');
+      img.decoding = 'async';
+      img.onload = () => {
+        if (!drawSquareImagePreview(canvas, img, target, { mimeType, isSvgSource })) {
+          fallbackToImage();
+        }
+      };
+      img.onerror = fallbackToImage;
+      img.src = sourceUrl;
     };
 
     const getBuildHiroKeyFlag = () => {
@@ -2518,7 +2630,7 @@
       thumb.replaceChildren(text);
     };
 
-    const renderBytesPreview = (target, bytes, mimeType, urlSetter) => {
+    const renderBytesPreview = (target, bytes, mimeType, urlSetter, options = {}) => {
       target.innerHTML = '';
       const kind = getMediaKind(mimeType);
       const blob = new Blob([bytes], { type: mimeType || 'application/octet-stream' });
@@ -2526,6 +2638,14 @@
       urlSetter(url);
 
       if (kind === 'image' || kind === 'svg') {
+        if (options.truthfulImageSizing) {
+          renderSquareImagePreview(target, url, {
+            mimeType,
+            isSvgSource: kind === 'svg',
+            alt: 'Token preview'
+          });
+          return;
+        }
         const img = document.createElement('img');
         img.alt = 'Payload preview';
         applyPixelPerfectImageRendering(img, {
@@ -3739,15 +3859,11 @@
         if (!token.meta || token.meta.totalSize <= 0n) {
           clearElement(dom.tokenPreviewMedia, token.svgDataUri ? '' : 'No on-chain content');
           if (token.svgDataUri) {
-            const img = document.createElement('img');
-            img.alt = `Token ${token.id.toString()}`;
-            applyPixelPerfectImageRendering(img, {
+            renderSquareImagePreview(dom.tokenPreviewMedia, token.svgDataUri, {
               mimeType: 'image/svg+xml',
-              sourceUrl: token.svgDataUri,
-              isSvgSource: true
+              isSvgSource: true,
+              alt: `Token ${token.id.toString()}`
             });
-            img.src = token.svgDataUri;
-            dom.tokenPreviewMedia.append(img);
           }
           return;
         }
@@ -3765,7 +3881,7 @@
         revokeTokenPreview();
         renderBytesPreview(dom.tokenPreviewMedia, bytes, mimeType, (url) => {
           state.tokenPreviewUrl = url;
-        });
+        }, { truthfulImageSizing: true });
         void warmThumbnailCacheFromBytes(token, bytes, mimeType);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
