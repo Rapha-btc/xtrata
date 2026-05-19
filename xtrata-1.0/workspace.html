@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="shortcut icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>xtrata v15.1</title>
+    <script>
+      (() => {
+        const key = 'xtrata.theme.mode';
+        const valid = new Set([
+          'light',
+          'dark',
+          'xtrata-orange',
+          'stacks-blue',
+          'noir',
+          'sats-gold',
+          'mempool-green',
+          'hash-ice',
+          'ordinals-neon',
+          'blockspace-burn',
+          'witness-forest',
+          'mempool-storm',
+          'genesis-slate',
+          'op-return-copper'
+        ]);
+        let mode = 'dark';
+        try {
+          const raw = window.localStorage?.getItem(key) ?? '';
+          const candidate = raw.trim().toLowerCase();
+          if (valid.has(candidate)) {
+            mode = candidate;
+          }
+        } catch {
+          // Ignore localStorage access failures.
+        }
+        document.documentElement.dataset.theme = mode;
+        document.documentElement.style.colorScheme =
+          mode === 'light' ? 'light' : 'dark';
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
