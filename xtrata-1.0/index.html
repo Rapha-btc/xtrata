@@ -672,6 +672,34 @@
       align-items: center;
     }
 
+    .wallet-lookup-control {
+      position: relative;
+      min-width: 0;
+    }
+
+    .wallet-lookup-control .input {
+      padding-right: 58px;
+    }
+
+    .wallet-lookup-control.is-address .input {
+      padding-right: 12px;
+    }
+
+    .wallet-lookup-suffix {
+      position: absolute;
+      top: 50%;
+      right: 12px;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+      pointer-events: none;
+    }
+
+    .wallet-lookup-control.is-address .wallet-lookup-suffix {
+      display: none;
+    }
+
     .field-note {
       min-height: 18px;
       color: var(--muted);
@@ -2050,7 +2078,10 @@
                 <label class="field">
                   <span class="label">View wallet</span>
                   <div class="field-inline">
-                    <input class="input" id="walletLookupInput" autocomplete="off" placeholder="SP... or alice.btc" />
+                    <div class="wallet-lookup-control" id="walletLookupControl">
+                      <input class="input" id="walletLookupInput" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="name or SP..." />
+                      <span class="wallet-lookup-suffix" aria-hidden="true">.btc</span>
+                    </div>
                     <button class="btn ghost" id="walletLookupButton" type="submit">View</button>
                   </div>
                   <span class="field-note" id="walletLookupStatus">Using connected wallet when available.</span>
@@ -2286,6 +2317,7 @@
       walletNextButton: $('walletNextButton'),
       walletPageReadout: $('walletPageReadout'),
       walletLookupForm: $('walletLookupForm'),
+      walletLookupControl: $('walletLookupControl'),
       walletLookupInput: $('walletLookupInput'),
       walletLookupButton: $('walletLookupButton'),
       walletLookupStatus: $('walletLookupStatus'),
@@ -2418,6 +2450,52 @@
       const a = normalizeAddress(left);
       const b = normalizeAddress(right);
       return a.length > 0 && a === b;
+    };
+
+    const isLikelyStacksAddressInput = (value) =>
+      /^S[PTMN][A-Z0-9]*$/i.test(value.trim());
+
+    const toBtcLookupLabel = (value) => {
+      const trimmed = value.trim().toLowerCase();
+      const withoutSuffix = trimmed.replace(/\.btc$/i, '');
+      return withoutSuffix.split('.')[0].replace(/[^a-z0-9-]/g, '');
+    };
+
+    const normalizeWalletLookupInputValue = (value) => {
+      const compact = value.trim().replace(/\s+/g, '');
+      if (!compact) {
+        return '';
+      }
+      if (isLikelyStacksAddressInput(compact)) {
+        return compact.toUpperCase();
+      }
+      return toBtcLookupLabel(compact);
+    };
+
+    const updateWalletLookupInputMode = () => {
+      const value = dom.walletLookupInput.value.trim();
+      dom.walletLookupControl.classList.toggle('is-address', isLikelyStacksAddressInput(value));
+    };
+
+    const normalizeWalletLookupField = () => {
+      const nextValue = normalizeWalletLookupInputValue(dom.walletLookupInput.value);
+      if (dom.walletLookupInput.value !== nextValue) {
+        dom.walletLookupInput.value = nextValue;
+      }
+      updateWalletLookupInputMode();
+      return nextValue;
+    };
+
+    const getWalletLookupSubmitValue = () => {
+      const inputValue = normalizeWalletLookupField();
+      if (!inputValue) {
+        return '';
+      }
+      const directLookup = getWalletLookupState(inputValue, state.walletSession.address ?? null);
+      if (directLookup.lookupAddress || isLikelyStacksAddressInput(inputValue)) {
+        return inputValue;
+      }
+      return `${inputValue}.btc`;
     };
 
     const contractExplorerUrl = (contract) =>
@@ -2971,6 +3049,29 @@
       return viewingAddress ? truncateMiddle(viewingAddress, 8, 8) : null;
     };
 
+    const getWalletLookupDisplayValue = () =>
+      state.walletViewName
+        ? toBtcLookupLabel(state.walletViewName)
+        : state.walletViewAddress ?? '';
+
+    const isViewingExternalConnectedWallet = () =>
+      !!state.walletSession.address &&
+      !!state.walletViewAddress &&
+      !addressesEqual(state.walletViewAddress, state.walletSession.address);
+
+    const shouldClearWalletLookupOnSubmit = () => {
+      if (!isViewingExternalConnectedWallet()) {
+        return false;
+      }
+      const inputValue = normalizeWalletLookupInputValue(dom.walletLookupInput.value);
+      const displayValue = getWalletLookupDisplayValue();
+      return (
+        !inputValue ||
+        inputValue === displayValue ||
+        addressesEqual(inputValue, state.walletViewAddress)
+      );
+    };
+
     const getReadOnlySenderAddress = () =>
       state.walletSession.address ?? getViewingWalletAddress() ?? state.contract.address;
 
@@ -3151,7 +3252,13 @@
           ? 'Start single-tx inscription'
           : 'Start inscription';
       dom.refreshWalletButton.disabled = state.busy || !viewingAddress;
+      dom.walletLookupButton.textContent = shouldClearWalletLookupOnSubmit()
+        ? 'Clear'
+        : state.walletLookupPending
+          ? 'Resolving'
+          : 'View';
       dom.walletLookupButton.disabled = state.busy || state.walletLookupPending;
+      updateWalletLookupInputMode();
       updateWalletLookupStatus();
       updateTransferControls();
       updateWalletPagerControls();
@@ -4494,9 +4601,27 @@
       state.walletLookupPending = false;
     };
 
+    const clearWalletLookupToConnectedWallet = async () => {
+      cancelWalletLookup();
+      state.walletLookupNotice = null;
+      state.walletViewAddress = null;
+      state.walletViewName = null;
+      dom.walletLookupInput.value = '';
+      updateWalletLookupInputMode();
+      appendLog('Returned to connected wallet view.');
+      updateWalletStatus();
+      await loadWalletInscriptions();
+      updateControls();
+    };
+
     const viewWalletFromInput = async () => {
+      if (shouldClearWalletLookupOnSubmit()) {
+        await clearWalletLookupToConnectedWallet();
+        return;
+      }
+      const lookupValue = getWalletLookupSubmitValue();
       const baseLookupState = getWalletLookupState(
-        dom.walletLookupInput.value,
+        lookupValue,
         state.walletSession.address ?? null
       );
       cancelWalletLookup();
@@ -4505,24 +4630,27 @@
       if (!baseLookupState.entered) {
         state.walletViewAddress = null;
         state.walletViewName = null;
+        dom.walletLookupInput.value = '';
+        updateWalletLookupInputMode();
         updateWalletStatus();
         await loadWalletInscriptions();
         updateControls();
         return;
       }
       if (!baseLookupState.valid) {
-        state.walletLookupNotice = 'Enter a valid Stacks address or BNS name.';
+        state.walletLookupNotice = 'Enter a valid Stacks address or .btc name.';
         updateControls();
         return;
       }
 
       if (baseLookupState.lookupAddress) {
-        state.walletViewAddress =
+        const isConnectedAddress =
           state.walletSession.address &&
-          addressesEqual(baseLookupState.lookupAddress, state.walletSession.address)
-            ? null
-            : baseLookupState.lookupAddress;
+          addressesEqual(baseLookupState.lookupAddress, state.walletSession.address);
+        state.walletViewAddress = isConnectedAddress ? null : baseLookupState.lookupAddress;
         state.walletViewName = null;
+        dom.walletLookupInput.value = isConnectedAddress ? '' : baseLookupState.lookupAddress;
+        updateWalletLookupInputMode();
         appendLog(`Viewing wallet: ${truncateMiddle(baseLookupState.lookupAddress, 8, 8)}.`);
         updateWalletStatus();
         await loadWalletInscriptions();
@@ -4553,7 +4681,7 @@
           return;
         }
         const resolvedLookupState = getWalletLookupState(
-          dom.walletLookupInput.value,
+          lookupValue,
           state.walletSession.address ?? null,
           {
             resolvedNameAddress: resolved.address,
@@ -4564,8 +4692,13 @@
           state.walletLookupNotice = `No address found for ${lookupName}.`;
           return;
         }
-        state.walletViewAddress = resolvedLookupState.resolvedAddress;
-        state.walletViewName = lookupName;
+        const isConnectedAddress =
+          state.walletSession.address &&
+          addressesEqual(resolvedLookupState.resolvedAddress, state.walletSession.address);
+        state.walletViewAddress = isConnectedAddress ? null : resolvedLookupState.resolvedAddress;
+        state.walletViewName = isConnectedAddress ? null : lookupName;
+        dom.walletLookupInput.value = isConnectedAddress ? '' : toBtcLookupLabel(lookupName);
+        updateWalletLookupInputMode();
         state.walletLookupNotice = null;
         appendLog(
           `Resolved ${lookupName} to ${truncateMiddle(resolvedLookupState.resolvedAddress, 8, 8)}.`
@@ -5104,6 +5237,7 @@
       dom.tokenUriInput.value = DEFAULT_TOKEN_URI;
       void updateTokenUriHeadPreview();
       dom.walletLookupInput.value = '';
+      updateWalletLookupInputMode();
       initializeContractSelect();
       applyContract(state.contract);
       resetSteps();
@@ -5127,6 +5261,7 @@
       await viewWalletFromInput();
     });
     dom.walletLookupInput.addEventListener('input', () => {
+      normalizeWalletLookupField();
       if (state.walletLookupPending) {
         cancelWalletLookup();
       }

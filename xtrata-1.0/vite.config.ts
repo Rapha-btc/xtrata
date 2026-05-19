@@ -22,8 +22,6 @@ export default defineConfig(({ mode }) => {
         input: {
           main: resolve(process.cwd(), 'index.html'),
           workspace: resolve(process.cwd(), 'workspace.html'),
-          homepage: resolve(process.cwd(), 'homepage.html'),
-          homepageRegistryLedgerV1: resolve(process.cwd(), 'homepage-registry-ledger-v1.html'),
           lab26: resolve(process.cwd(), 'lab26/index.html')
         },
         output: {

@@ -1,5 +1,9 @@
-/homepage-registry-ledger-v1 /homepage-registry-ledger-v1.html 200
-/homepage-registry-ledger-v1/ /homepage-registry-ledger-v1.html 200
+/homepage / 302
+/homepage/ / 302
+/homepage.html / 302
+/homepage-registry-ledger-v1 / 302
+/homepage-registry-ledger-v1/ / 302
+/homepage-registry-ledger-v1.html / 302
 /workspace /workspace.html 200
 /workspace/* /workspace.html 200
 /admin /workspace.html 200
