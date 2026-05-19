@@ -147,7 +147,7 @@
       --bg: #050505;
       --panel: #111111;
       --ink: #f7f7f7;
-      --muted: #a8a8a8;
+      --muted: #c9c9c9;
       --line: #303030;
       --line-strong: #d8d8d8;
       --green: #ffffff;
@@ -1087,6 +1087,21 @@
       margin-top: 10px;
     }
 
+    button.small-link {
+      appearance: none;
+      border: 0;
+      background: transparent;
+      padding: 0;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    button.small-link:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+      text-decoration: none;
+    }
+
     .transfer-tools {
       display: grid;
       gap: 10px;
@@ -1108,6 +1123,152 @@
 
     .small-link:hover {
       text-decoration: underline;
+    }
+
+    body.fullscreen-viewer-open {
+      overflow: hidden;
+    }
+
+    .fullscreen-viewer {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 14px;
+      padding: 16px;
+      background: color-mix(in srgb, var(--bg) 94%, #000000);
+      color: var(--ink);
+    }
+
+    .fullscreen-viewer[hidden] {
+      display: none;
+    }
+
+    .fullscreen-viewer:fullscreen {
+      background: #020604;
+    }
+
+    .fullscreen-viewer__chrome {
+      min-width: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: color-mix(in srgb, var(--panel) 78%, transparent);
+      padding: 10px 12px;
+    }
+
+    .fullscreen-viewer__title {
+      min-width: 0;
+      display: grid;
+      gap: 2px;
+    }
+
+    .fullscreen-viewer__title strong,
+    .fullscreen-viewer__title span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .fullscreen-viewer__title span {
+      color: var(--muted);
+      font-size: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .fullscreen-viewer__actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .fullscreen-viewer__stage {
+      min-width: 0;
+      min-height: 0;
+      position: relative;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #020604;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .fullscreen-viewer__stage canvas.preview-image-canvas {
+      display: block;
+      width: auto;
+      height: auto;
+      max-width: 100%;
+      max-height: 100%;
+      background: transparent;
+    }
+
+    .fullscreen-viewer__stage img,
+    .fullscreen-viewer__stage video,
+    .fullscreen-viewer__stage iframe {
+      display: block;
+      max-width: 100%;
+      max-height: 100%;
+      border: 0;
+      background: #020604;
+      object-fit: contain;
+      object-position: center;
+    }
+
+    .fullscreen-viewer__stage video,
+    .fullscreen-viewer__stage iframe {
+      width: 100%;
+      height: 100%;
+    }
+
+    .fullscreen-viewer__stage audio {
+      width: min(560px, 86vw);
+    }
+
+    .fullscreen-viewer__stage pre {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 18px;
+      overflow: auto;
+      text-align: left;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: var(--ink);
+      background: #020604;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .fullscreen-viewer__notice {
+      max-width: min(520px, 82vw);
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    @media (max-width: 680px) {
+      .fullscreen-viewer {
+        padding: 10px;
+      }
+
+      .fullscreen-viewer__chrome {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .fullscreen-viewer__actions {
+        justify-content: flex-start;
+      }
     }
 
     [hidden] {
@@ -1310,7 +1471,36 @@
     }
 
     body[data-theme="monochrome"] .registry-copy {
-      background: linear-gradient(145deg, #ffffff, #eeeeee);
+      background:
+        linear-gradient(145deg, #151515, #0b0b0b),
+        var(--panel);
+      color: var(--ink);
+    }
+
+    body[data-theme="monochrome"] .registry-title,
+    body[data-theme="monochrome"] .registry-note strong,
+    body[data-theme="monochrome"] .ledger-value {
+      color: #ffffff;
+    }
+
+    body[data-theme="monochrome"] .registry-lead,
+    body[data-theme="monochrome"] .registry-note,
+    body[data-theme="monochrome"] .ledger-key,
+    body[data-theme="monochrome"] .field-note,
+    body[data-theme="monochrome"] .page-readout,
+    body[data-theme="monochrome"] .token-meta,
+    body[data-theme="monochrome"] .log li {
+      color: #d2d2d2;
+    }
+
+    body[data-theme="monochrome"] .small-link {
+      color: #ffffff;
+      text-decoration-color: rgba(255, 255, 255, 0.45);
+    }
+
+    body[data-theme="monochrome"] button.small-link:disabled {
+      color: #bdbdbd;
+      opacity: 1;
     }
     @media (max-width: 980px) {
       .topbar {
@@ -1865,6 +2055,7 @@
                 </div>
               </div>
               <div class="preview-actions">
+                <button class="small-link" id="fullscreenButton" type="button" disabled>Fullscreen</button>
                 <a class="small-link" id="explorerLink" href="#" target="_blank" rel="noreferrer" hidden>Explorer</a>
               </div>
               <div class="transfer-tools">
@@ -1882,6 +2073,22 @@
         </div>
       </section>
     </main>
+  </div>
+
+  <div class="fullscreen-viewer" id="fullscreenViewer" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="fullscreenTitle" hidden>
+    <div class="fullscreen-viewer__chrome">
+      <div class="fullscreen-viewer__title">
+        <strong id="fullscreenTitle">No selection</strong>
+        <span id="fullscreenMeta">Select an inscription</span>
+      </div>
+      <div class="fullscreen-viewer__actions">
+        <button class="btn ghost" id="fullscreenPrevButton" type="button" disabled>Prev</button>
+        <button class="btn ghost" id="fullscreenNextButton" type="button" disabled>Next</button>
+        <a class="small-link" id="fullscreenRawLink" href="#" target="_blank" rel="noreferrer" hidden>Open raw</a>
+        <button class="btn ghost" id="fullscreenCloseButton" type="button">Close</button>
+      </div>
+    </div>
+    <div class="fullscreen-viewer__stage" id="fullscreenStage">No selection</div>
   </div>
 
   <script type="module">
@@ -2070,10 +2277,19 @@
       tokenPreviewPanel: $('tokenPreviewPanel'),
       tokenPreviewMedia: $('tokenPreviewMedia'),
       tokenPreviewMeta: $('tokenPreviewMeta'),
+      fullscreenButton: $('fullscreenButton'),
       explorerLink: $('explorerLink'),
       transferRecipientInput: $('transferRecipientInput'),
       transferButton: $('transferButton'),
       transferStatus: $('transferStatus'),
+      fullscreenViewer: $('fullscreenViewer'),
+      fullscreenTitle: $('fullscreenTitle'),
+      fullscreenMeta: $('fullscreenMeta'),
+      fullscreenStage: $('fullscreenStage'),
+      fullscreenRawLink: $('fullscreenRawLink'),
+      fullscreenPrevButton: $('fullscreenPrevButton'),
+      fullscreenNextButton: $('fullscreenNextButton'),
+      fullscreenCloseButton: $('fullscreenCloseButton'),
       introConnectButton: $('introConnectButton'),
       introPrepareButton: $('introPrepareButton'),
       registryModeBadge: $('registryModeBadge'),
@@ -2128,6 +2344,12 @@
       tokenUriPreviewTimer: null,
       payloadPreviewUrl: null,
       tokenPreviewUrl: null,
+      tokenPreviewTokenId: null,
+      tokenPreviewBytes: null,
+      tokenPreviewMimeType: null,
+      tokenPreviewSourceUrl: null,
+      fullscreenUrl: null,
+      fullscreenOpen: false,
       tokenThumbUrls: new Map(),
       thumbnailCache: new Map(),
       gridLiveMediaCache: new Map(),
@@ -2145,6 +2367,7 @@
       walletPageIndex: 0,
       walletLoadingPage: false,
       selectedTokenId: null,
+      connectedWalletMatureMode: false,
       lastSubmittedTxId: null
     };
 
@@ -2152,6 +2375,7 @@
     const WALLET_FALLBACK_SCAN_LIMIT = 2000;
     const MAX_GRID_EAGER_FULL_LOAD_BYTES = 4n * 1024n * 1024n;
     const GRID_THUMBNAIL_HYDRATION_CONCURRENCY = 2;
+    const CONNECTED_LEDGER_MODE_STORAGE_PREFIX = 'xtrata.simple-homepage.connected-ledger-mode';
 
     const sleep = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
 
@@ -2477,6 +2701,17 @@
         URL.revokeObjectURL(state.tokenPreviewUrl);
         state.tokenPreviewUrl = null;
       }
+      state.tokenPreviewTokenId = null;
+      state.tokenPreviewBytes = null;
+      state.tokenPreviewMimeType = null;
+      state.tokenPreviewSourceUrl = null;
+    };
+
+    const revokeFullscreenPreview = () => {
+      if (state.fullscreenUrl) {
+        URL.revokeObjectURL(state.fullscreenUrl);
+        state.fullscreenUrl = null;
+      }
     };
 
     const revokeGridThumbUrls = () => {
@@ -2722,6 +2957,61 @@
     const getReadOnlySenderAddress = () =>
       state.walletSession.address ?? getViewingWalletAddress() ?? state.contract.address;
 
+    const isConnectedWalletAddress = (address) =>
+      !!state.walletSession.isConnected &&
+      !!state.walletSession.address &&
+      !!address &&
+      addressesEqual(address, state.walletSession.address);
+
+    const getConnectedLedgerModeStorageKey = () => {
+      if (!state.walletSession.address) {
+        return null;
+      }
+      return [
+        CONNECTED_LEDGER_MODE_STORAGE_PREFIX,
+        state.contract.network,
+        getContractId(state.contract),
+        state.walletSession.address
+      ].join(':');
+    };
+
+    const refreshConnectedWalletMatureMode = () => {
+      const key = getConnectedLedgerModeStorageKey();
+      if (!key) {
+        state.connectedWalletMatureMode = false;
+        return;
+      }
+      try {
+        state.connectedWalletMatureMode = window.localStorage.getItem(key) === '1';
+      } catch (error) {
+        state.connectedWalletMatureMode = false;
+      }
+    };
+
+    const markConnectedWalletMatureMode = () => {
+      if (!state.walletSession.isConnected || !state.walletSession.address) {
+        return;
+      }
+      if (state.connectedWalletMatureMode) {
+        return;
+      }
+      state.connectedWalletMatureMode = true;
+      const key = getConnectedLedgerModeStorageKey();
+      if (!key) {
+        return;
+      }
+      try {
+        window.localStorage.setItem(key, '1');
+      } catch (error) {}
+    };
+
+    const rememberConnectedWalletResult = (viewingAddress, count) => {
+      if (!isConnectedWalletAddress(viewingAddress) || count <= 0) {
+        return;
+      }
+      markConnectedWalletMatureMode();
+    };
+
     const getSelectedToken = () => {
       if (state.selectedTokenId === null) {
         return null;
@@ -2784,7 +3074,10 @@
       const connected = state.walletSession.isConnected && !!state.walletSession.address;
       const viewingAddress = getViewingWalletAddress();
       const count = state.walletUsesPagedHoldings ? state.walletTotalCount : state.walletTokenIds.length;
-      const hasLedger = connected && count > 0;
+      const viewingConnectedWallet = isConnectedWalletAddress(viewingAddress);
+      const connectedWalletHasVisibleLedger = viewingConnectedWallet && count > 0;
+      const hasLedger =
+        connected && (state.connectedWalletMatureMode || connectedWalletHasVisibleLedger);
       const hasPublicLedger = !connected && !!viewingAddress && count > 0;
       document.body.classList.toggle('has-ledger', hasLedger);
       document.body.classList.toggle('has-public-ledger', hasPublicLedger);
@@ -2845,6 +3138,7 @@
       updateWalletLookupStatus();
       updateTransferControls();
       updateWalletPagerControls();
+      updateFullscreenControls();
     };
 
     const getWalletPageCount = () =>
@@ -2902,6 +3196,7 @@
       state.legacyClient = state.legacyContract
         ? createXtrataClient({ contract: state.legacyContract })
         : null;
+      refreshConnectedWalletMatureMode();
       logApiConfiguration();
       dom.contractReadout.textContent = getContractId(contract);
       setExperienceMode();
@@ -2918,6 +3213,7 @@
       state.walletTokens = [];
       state.walletPageIndex = 0;
       state.selectedTokenId = null;
+      void closeFullscreenViewer();
       void updateWalletTokenUriHeadPreview(null);
       resetBackgroundThumbnailHydration();
       revokeGridThumbUrls();
@@ -3361,6 +3657,247 @@
 
     const getThumbnailKey = (token) =>
       `${getTokenCacheContractId(token)}:${token.id.toString()}`;
+
+    const getFullscreenPagePosition = () => {
+      const pageIds = getWalletPageIds();
+      const selectedId = state.selectedTokenId;
+      const index = selectedId === null
+        ? -1
+        : pageIds.findIndex((id) => id === selectedId);
+      return { pageIds, index };
+    };
+
+    const updateFullscreenControls = () => {
+      const selectedToken = getSelectedToken();
+      dom.fullscreenButton.disabled = state.busy || !selectedToken;
+      const { pageIds, index } = getFullscreenPagePosition();
+      dom.fullscreenPrevButton.disabled =
+        state.busy || index <= 0 || pageIds.length <= 1;
+      dom.fullscreenNextButton.disabled =
+        state.busy || index < 0 || index >= pageIds.length - 1;
+    };
+
+    const setFullscreenNotice = (message) => {
+      const notice = document.createElement('div');
+      notice.className = 'fullscreen-viewer__notice';
+      notice.textContent = message;
+      dom.fullscreenStage.replaceChildren(notice);
+    };
+
+    const setFullscreenMeta = (token, mimeType) => {
+      const kind = getMediaKind(mimeType ?? null).toUpperCase();
+      const size = token.meta?.totalSize ? formatBytes(token.meta.totalSize) : 'unknown size';
+      dom.fullscreenTitle.textContent = `Inscription ${formatTokenId(token.id)}`;
+      dom.fullscreenMeta.textContent = `${kind} · ${size}`;
+    };
+
+    const getSelectedTokenPreviewSource = async () => {
+      const token = getSelectedToken();
+      if (!token) {
+        throw new Error('Select an inscription first.');
+      }
+      const tokenId = token.id.toString();
+      if (
+        state.tokenPreviewTokenId === tokenId &&
+        (state.tokenPreviewBytes || state.tokenPreviewSourceUrl)
+      ) {
+        return {
+          token,
+          bytes: state.tokenPreviewBytes,
+          mimeType: state.tokenPreviewMimeType ?? token.meta?.mimeType ?? null,
+          sourceUrl: state.tokenPreviewSourceUrl
+        };
+      }
+      if (!token.meta || token.meta.totalSize <= 0n) {
+        if (!token.svgDataUri) {
+          throw new Error('This inscription has no on-chain content to preview.');
+        }
+        state.tokenPreviewTokenId = tokenId;
+        state.tokenPreviewBytes = null;
+        state.tokenPreviewMimeType = 'image/svg+xml';
+        state.tokenPreviewSourceUrl = token.svgDataUri;
+        return {
+          token,
+          bytes: null,
+          mimeType: 'image/svg+xml',
+          sourceUrl: token.svgDataUri
+        };
+      }
+      const contentClient = getTokenClient(token);
+      const bytes = await fetchOnChainContent({
+        client: contentClient,
+        fallbackClient: contentClient === state.client ? state.legacyClient : null,
+        cacheContractId: token.sourceContractId ?? getContractId(contentClient.contract),
+        id: token.id,
+        senderAddress: getReadOnlySenderAddress(),
+        totalSize: token.meta.totalSize,
+        mimeType: token.meta.mimeType ?? null
+      });
+      const mimeType = resolveMimeType(token.meta.mimeType ?? null, bytes) ?? token.meta.mimeType ?? 'application/octet-stream';
+      state.tokenPreviewTokenId = tokenId;
+      state.tokenPreviewBytes = bytes;
+      state.tokenPreviewMimeType = mimeType;
+      state.tokenPreviewSourceUrl = null;
+      return { token, bytes, mimeType, sourceUrl: null };
+    };
+
+    const configureFullscreenRawLink = (token, sourceUrl) => {
+      dom.fullscreenRawLink.href = sourceUrl;
+      dom.fullscreenRawLink.download = `inscription-${token.id.toString()}`;
+      dom.fullscreenRawLink.hidden = false;
+    };
+
+    const renderFullscreenContent = ({ token, bytes, mimeType, sourceUrl }) => {
+      revokeFullscreenPreview();
+      setFullscreenMeta(token, mimeType);
+      dom.fullscreenRawLink.hidden = true;
+      dom.fullscreenRawLink.removeAttribute('href');
+      dom.fullscreenRawLink.removeAttribute('download');
+
+      if (sourceUrl) {
+        configureFullscreenRawLink(token, sourceUrl);
+        renderSquareImagePreview(dom.fullscreenStage, sourceUrl, {
+          mimeType,
+          isSvgSource: true,
+          alt: `Inscription ${token.id.toString()}`
+        });
+        return;
+      }
+
+      if (!bytes || bytes.length === 0) {
+        setFullscreenNotice('No content is available for this inscription.');
+        return;
+      }
+
+      const kind = getMediaKind(mimeType ?? null);
+      const blob = new Blob([bytes], { type: mimeType || 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+      state.fullscreenUrl = url;
+      configureFullscreenRawLink(token, url);
+
+      if (kind === 'image' || kind === 'svg') {
+        renderSquareImagePreview(dom.fullscreenStage, url, {
+          mimeType,
+          isSvgSource: kind === 'svg',
+          alt: `Inscription ${token.id.toString()}`
+        });
+        return;
+      }
+
+      dom.fullscreenStage.replaceChildren();
+
+      if (kind === 'video') {
+        const video = document.createElement('video');
+        video.controls = true;
+        video.playsInline = true;
+        video.preload = 'metadata';
+        video.src = url;
+        dom.fullscreenStage.append(video);
+        return;
+      }
+
+      if (kind === 'audio') {
+        const audio = document.createElement('audio');
+        audio.controls = true;
+        audio.src = url;
+        dom.fullscreenStage.append(audio);
+        return;
+      }
+
+      if (kind === 'html') {
+        const frame = document.createElement('iframe');
+        frame.title = `inscription-${token.id.toString()}`;
+        frame.referrerPolicy = 'no-referrer';
+        frame.loading = 'lazy';
+        frame.sandbox = mimeType?.trim().toLowerCase() === 'application/pdf'
+          ? ''
+          : 'allow-scripts';
+        frame.src = url;
+        dom.fullscreenStage.append(frame);
+        return;
+      }
+
+      if (kind === 'text') {
+        const pre = document.createElement('pre');
+        pre.textContent = new TextDecoder().decode(bytes);
+        dom.fullscreenStage.append(pre);
+        return;
+      }
+
+      const link = document.createElement('a');
+      link.className = 'small-link';
+      link.href = url;
+      link.download = `inscription-${token.id.toString()}`;
+      link.textContent = 'Open raw file';
+      dom.fullscreenStage.append(link);
+    };
+
+    const renderFullscreenSelectedToken = async () => {
+      setFullscreenNotice('Loading inscription...');
+      try {
+        const source = await getSelectedTokenPreviewSource();
+        renderFullscreenContent(source);
+        updateFullscreenControls();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        setFullscreenNotice(message);
+        appendLog(`Fullscreen preview failed: ${message}`);
+      }
+    };
+
+    const openFullscreenViewer = async () => {
+      const token = getSelectedToken();
+      if (!token) {
+        return;
+      }
+      state.fullscreenOpen = true;
+      dom.fullscreenViewer.hidden = false;
+      dom.fullscreenViewer.setAttribute('aria-hidden', 'false');
+      document.body.classList.add('fullscreen-viewer-open');
+      updateFullscreenControls();
+      await renderFullscreenSelectedToken();
+      dom.fullscreenCloseButton.focus({ preventScroll: true });
+      if (dom.fullscreenViewer.requestFullscreen && !document.fullscreenElement) {
+        try {
+          await dom.fullscreenViewer.requestFullscreen();
+        } catch (error) {
+          debugLog('preview', 'native fullscreen unavailable', {
+            error: error instanceof Error ? error.message : String(error)
+          }, 'warn');
+        }
+      }
+    };
+
+    const closeFullscreenViewer = async ({ skipNativeExit = false } = {}) => {
+      if (!state.fullscreenOpen) {
+        updateFullscreenControls();
+        return;
+      }
+      state.fullscreenOpen = false;
+      dom.fullscreenViewer.hidden = true;
+      dom.fullscreenViewer.setAttribute('aria-hidden', 'true');
+      document.body.classList.remove('fullscreen-viewer-open');
+      revokeFullscreenPreview();
+      dom.fullscreenStage.textContent = 'No selection';
+      if (!skipNativeExit && document.fullscreenElement === dom.fullscreenViewer) {
+        try {
+          await document.exitFullscreen();
+        } catch (error) {}
+      }
+      updateFullscreenControls();
+    };
+
+    const navigateFullscreenSelection = async (direction) => {
+      const { pageIds, index } = getFullscreenPagePosition();
+      const nextId = pageIds[index + direction];
+      if (nextId === undefined) {
+        return;
+      }
+      await selectToken(nextId);
+      if (state.fullscreenOpen) {
+        await renderFullscreenSelectedToken();
+      }
+    };
 
     const applyCachedThumbnail = async (token, thumbElement) => {
       if (token.svgDataUri) {
@@ -3837,7 +4374,7 @@
         clearElement(dom.tokenPreviewMedia, 'No selection');
         renderMeta(dom.tokenPreviewMeta, [['Token', 'None']]);
         void updateWalletTokenUriHeadPreview(null);
-        updateTransferControls();
+        updateControls();
         return;
       }
 
@@ -3864,7 +4401,12 @@
               isSvgSource: true,
               alt: `Token ${token.id.toString()}`
             });
+            state.tokenPreviewTokenId = token.id.toString();
+            state.tokenPreviewBytes = null;
+            state.tokenPreviewMimeType = 'image/svg+xml';
+            state.tokenPreviewSourceUrl = token.svgDataUri;
           }
+          updateControls();
           return;
         }
         const contentClient = getTokenClient(token);
@@ -3879,14 +4421,20 @@
         });
         const mimeType = resolveMimeType(token.meta.mimeType ?? null, bytes) ?? token.meta.mimeType ?? 'application/octet-stream';
         revokeTokenPreview();
+        state.tokenPreviewTokenId = token.id.toString();
+        state.tokenPreviewBytes = bytes;
+        state.tokenPreviewMimeType = mimeType;
+        state.tokenPreviewSourceUrl = null;
         renderBytesPreview(dom.tokenPreviewMedia, bytes, mimeType, (url) => {
           state.tokenPreviewUrl = url;
         }, { truthfulImageSizing: true });
         void warmThumbnailCacheFromBytes(token, bytes, mimeType);
+        updateControls();
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         clearElement(dom.tokenPreviewMedia, 'Preview unavailable');
         appendLog(`Preview failed for ${formatTokenId(token.id)}: ${message}`);
+        updateControls();
       }
     };
 
@@ -4191,6 +4739,7 @@
       if (pageIds.length === 0) {
         state.walletTokens = [];
         state.selectedTokenId = null;
+        void closeFullscreenViewer();
         void updateWalletTokenUriHeadPreview(null);
         renderTokenGrid();
         state.walletLoadingPage = false;
@@ -4239,6 +4788,7 @@
         state.walletTokens = [];
         state.walletPageIndex = 0;
         state.selectedTokenId = null;
+        void closeFullscreenViewer();
         void updateWalletTokenUriHeadPreview(null);
         resetBackgroundThumbnailHydration();
         revokeGridThumbUrls();
@@ -4266,6 +4816,7 @@
       state.walletTokens = [];
       state.walletPageIndex = 0;
       state.selectedTokenId = null;
+      void closeFullscreenViewer();
       void updateWalletTokenUriHeadPreview(null);
       resetBackgroundThumbnailHydration();
       revokeGridThumbUrls();
@@ -4286,6 +4837,7 @@
           state.walletUsesPagedHoldings = true;
           state.walletTotalCount = firstPage.total;
           state.walletPageIds = firstPage.ids;
+          rememberConnectedWalletResult(viewingAddress, state.walletTotalCount);
           setExperienceMode();
           appendLog(
             `Hiro holdings page loaded: ${firstPage.ids.length}/${firstPage.total} visible.`
@@ -4357,6 +4909,7 @@
           state.walletTokenIds = ids;
         }
 
+        rememberConnectedWalletResult(viewingAddress, state.walletTokenIds.length);
         setExperienceMode();
         if (state.walletTokenIds.length === 0) {
           setStatus(dom.walletGridStatus, '<strong>Grid</strong> no inscriptions found', 'empty', 'amber');
@@ -4383,6 +4936,7 @@
         state.walletTokens = [];
         state.walletPageIndex = 0;
         state.selectedTokenId = null;
+        void closeFullscreenViewer();
         void updateWalletTokenUriHeadPreview(null);
         resetBackgroundThumbnailHydration();
         revokeGridThumbUrls();
@@ -4397,6 +4951,7 @@
       setBusy(true);
       try {
         state.walletSession = await walletAdapter.connect();
+        refreshConnectedWalletMatureMode();
         appendLog(state.walletSession.address ? `Wallet connected: ${truncateMiddle(state.walletSession.address)}` : 'Wallet connection cancelled.');
         updateWalletStatus();
         await fetchAdminStatus();
@@ -4428,6 +4983,7 @@
         state.walletTokens = [];
         state.walletPageIndex = 0;
         state.selectedTokenId = null;
+        state.connectedWalletMatureMode = false;
         void updateWalletTokenUriHeadPreview(null);
         revokeGridThumbUrls();
         state.uploadState = null;
@@ -4554,6 +5110,35 @@
     dom.allowDuplicateInput.addEventListener('change', updateControls);
     dom.transferRecipientInput.addEventListener('input', updateTransferControls);
     dom.transferButton.addEventListener('click', transferSelectedToken);
+    dom.fullscreenButton.addEventListener('click', openFullscreenViewer);
+    dom.fullscreenCloseButton.addEventListener('click', () => {
+      void closeFullscreenViewer();
+    });
+    dom.fullscreenPrevButton.addEventListener('click', () => {
+      void navigateFullscreenSelection(-1);
+    });
+    dom.fullscreenNextButton.addEventListener('click', () => {
+      void navigateFullscreenSelection(1);
+    });
+    window.addEventListener('keydown', (event) => {
+      if (!state.fullscreenOpen) {
+        return;
+      }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        void closeFullscreenViewer();
+        return;
+      }
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        void navigateFullscreenSelection(-1);
+        return;
+      }
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        void navigateFullscreenSelection(1);
+      }
+    });
 
     dom.themeSelect.addEventListener('change', () => {
       applyTheme(dom.themeSelect.value);
@@ -4618,6 +5203,7 @@
       }
       revokePayloadPreview();
       revokeTokenPreview();
+      revokeFullscreenPreview();
       revokeGridThumbUrls();
     });
 
