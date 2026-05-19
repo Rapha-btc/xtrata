@@ -1894,7 +1894,7 @@
       <div class="registry-copy">
         <span class="registry-eyebrow" id="registryModeBadge">Boring infrastructure</span>
         <h1 class="registry-title" id="registryIntroTitle">Record it. Reference it. Retrieve it.</h1>
-        <p class="registry-lead" id="registryIntroLead">A stripped-back inscription registry for durable data on Stacks. Not a marketplace first. Not a metaverse. Just a reliable way to put useful objects on-chain and find them again.</p>
+        <p class="registry-lead" id="registryIntroLead">A simple inscription registry for durable data on Stacks. Not a marketplace first. Not a metaverse. Just a reliable way to put useful objects on-chain and find them again.</p>
         <div class="registry-intro-actions">
           <button class="btn" id="introConnectButton" type="button">Connect wallet</button>
           <button class="btn secondary" id="introPrepareButton" type="button">Prepare a record</button>
@@ -3093,7 +3093,7 @@
       }
       if (dom.registryIntroLead) {
         dom.registryIntroLead.textContent = !viewingAddress
-          ? 'A stripped-back inscription registry for durable data on Stacks. Connect a wallet when you are ready, or prepare a record first and keep the interface simple.'
+          ? 'A simple inscription registry for durable data on Stacks. Connect a wallet when you are ready, or prepare a record first and keep the interface simple.'
           : !connected && count === 0
             ? 'Public wallet lookup is active, but this contract has no inscriptions for that address yet.'
             : connected && count === 0
