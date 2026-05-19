@@ -3685,12 +3685,19 @@
 
     const updateFullscreenControls = () => {
       const selectedToken = getSelectedToken();
-      dom.fullscreenButton.disabled = state.busy || !selectedToken;
+      const pageCount = getWalletPageCount();
       const { pageIds, index } = getFullscreenPagePosition();
+      const hasSelectedPagePosition = !!selectedToken && index >= 0;
+      const canGoPrevious =
+        hasSelectedPagePosition && (index > 0 || state.walletPageIndex > 0);
+      const canGoNext =
+        hasSelectedPagePosition &&
+        (index < pageIds.length - 1 || state.walletPageIndex < pageCount - 1);
+      dom.fullscreenButton.disabled = state.busy || !selectedToken;
       dom.fullscreenPrevButton.disabled =
-        state.busy || index <= 0 || pageIds.length <= 1;
+        state.busy || state.walletLoadingPage || !canGoPrevious;
       dom.fullscreenNextButton.disabled =
-        state.busy || index < 0 || index >= pageIds.length - 1;
+        state.busy || state.walletLoadingPage || !canGoNext;
     };
 
     const setFullscreenNotice = (message) => {
@@ -3890,14 +3897,54 @@
     };
 
     const navigateFullscreenSelection = async (direction) => {
-      const { pageIds, index } = getFullscreenPagePosition();
-      const nextId = pageIds[index + direction];
-      if (nextId === undefined) {
+      if (state.busy || state.walletLoadingPage) {
         return;
       }
-      await selectToken(nextId);
-      if (state.fullscreenOpen) {
-        await renderFullscreenSelectedToken();
+      const { pageIds, index } = getFullscreenPagePosition();
+      const nextId = pageIds[index + direction];
+      if (nextId !== undefined) {
+        await selectToken(nextId);
+        if (state.fullscreenOpen) {
+          await renderFullscreenSelectedToken();
+        }
+        return;
+      }
+
+      const pageCount = getWalletPageCount();
+      const targetPageIndex = state.walletPageIndex + direction;
+      if (index < 0 || targetPageIndex < 0 || targetPageIndex >= pageCount) {
+        return;
+      }
+
+      const previousPageIndex = state.walletPageIndex;
+      try {
+        if (state.fullscreenOpen) {
+          setFullscreenNotice(direction > 0 ? 'Loading next page...' : 'Loading previous page...');
+        }
+        state.walletPageIndex = targetPageIndex;
+        await loadWalletPage({ deferSelection: true });
+        const targetPageIds = getWalletPageIds();
+        const targetId =
+          direction > 0
+            ? targetPageIds[0]
+            : targetPageIds[targetPageIds.length - 1];
+        if (targetId === undefined) {
+          updateFullscreenControls();
+          return;
+        }
+        await selectToken(targetId);
+        if (state.fullscreenOpen) {
+          await renderFullscreenSelectedToken();
+        }
+      } catch (error) {
+        state.walletPageIndex = previousPageIndex;
+        const message = error instanceof Error ? error.message : String(error);
+        appendLog(`Large viewer page navigation failed: ${message}`);
+        if (state.fullscreenOpen) {
+          setFullscreenNotice('Unable to load that page.');
+        }
+        updateWalletPagerControls();
+        updateFullscreenControls();
       }
     };
 
@@ -4716,6 +4763,7 @@
       resetBackgroundThumbnailHydration();
       state.walletLoadingPage = true;
       updateWalletPagerControls();
+      updateFullscreenControls();
       if (state.walletUsesPagedHoldings && !options.pageAlreadyLoaded) {
         try {
           const contractId = getContractId(state.contract);
@@ -4733,6 +4781,7 @@
         } catch (error) {
           state.walletLoadingPage = false;
           updateWalletPagerControls();
+          updateFullscreenControls();
           throw error;
         }
       }
@@ -4746,6 +4795,7 @@
         renderTokenGrid();
         state.walletLoadingPage = false;
         updateWalletPagerControls();
+        updateFullscreenControls();
         return;
       }
 
@@ -4765,6 +4815,7 @@
           .filter((token) => !!token);
         if (
           state.walletTokens.length > 0 &&
+          !options.deferSelection &&
           (!state.selectedTokenId ||
             !state.walletTokens.some((token) => token.id === state.selectedTokenId))
         ) {
@@ -4776,6 +4827,7 @@
       } finally {
         state.walletLoadingPage = false;
         updateWalletPagerControls();
+        updateFullscreenControls();
       }
     };
 
