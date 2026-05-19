@@ -1130,14 +1130,20 @@
     }
 
     .fullscreen-viewer {
+      --fullscreen-viewport-height: 90vh;
+      --fullscreen-chrome-space: 82px;
+      --fullscreen-stage-size: min(90vw, calc(var(--fullscreen-viewport-height) - var(--fullscreen-chrome-space)));
       position: fixed;
       inset: 0;
       z-index: 1000;
       display: grid;
-      grid-template-rows: auto minmax(0, 1fr);
+      grid-template-columns: minmax(0, var(--fullscreen-stage-size));
+      grid-template-rows: auto var(--fullscreen-stage-size);
+      align-content: center;
+      justify-content: center;
       gap: 14px;
-      padding: 16px;
-      background: color-mix(in srgb, var(--bg) 94%, #000000);
+      padding: 0;
+      background: color-mix(in srgb, var(--bg) 88%, rgba(0, 0, 0, 0.88));
       color: var(--ink);
     }
 
@@ -1145,8 +1151,10 @@
       display: none;
     }
 
-    .fullscreen-viewer:fullscreen {
-      background: #020604;
+    @supports (height: 100dvh) {
+      .fullscreen-viewer {
+        --fullscreen-viewport-height: 90dvh;
+      }
     }
 
     .fullscreen-viewer__chrome {
@@ -1159,6 +1167,7 @@
       border-radius: var(--radius);
       background: color-mix(in srgb, var(--panel) 78%, transparent);
       padding: 10px 12px;
+      box-shadow: 0 18px 54px rgba(0, 0, 0, 0.26);
     }
 
     .fullscreen-viewer__title {
@@ -1200,14 +1209,13 @@
       background: #020604;
       color: var(--muted);
       text-align: center;
+      box-shadow: 0 22px 70px rgba(0, 0, 0, 0.38);
     }
 
     .fullscreen-viewer__stage canvas.preview-image-canvas {
       display: block;
-      width: auto;
-      height: auto;
-      max-width: 100%;
-      max-height: 100%;
+      width: 100%;
+      height: 100%;
       background: transparent;
     }
 
@@ -1258,7 +1266,8 @@
 
     @media (max-width: 680px) {
       .fullscreen-viewer {
-        padding: 10px;
+        --fullscreen-chrome-space: 136px;
+        --fullscreen-stage-size: min(90vw, calc(var(--fullscreen-viewport-height) - var(--fullscreen-chrome-space)));
       }
 
       .fullscreen-viewer__chrome {
@@ -1268,6 +1277,13 @@
 
       .fullscreen-viewer__actions {
         justify-content: flex-start;
+      }
+    }
+
+    @media (orientation: portrait) {
+      .fullscreen-viewer {
+        --fullscreen-chrome-space: 136px;
+        --fullscreen-stage-size: min(90vw, calc(var(--fullscreen-viewport-height) - var(--fullscreen-chrome-space)));
       }
     }
 
@@ -2055,7 +2071,7 @@
                 </div>
               </div>
               <div class="preview-actions">
-                <button class="small-link" id="fullscreenButton" type="button" disabled>Fullscreen</button>
+                <button class="small-link" id="fullscreenButton" type="button" disabled>View large</button>
                 <a class="small-link" id="explorerLink" href="#" target="_blank" rel="noreferrer" hidden>Explorer</a>
               </div>
               <div class="transfer-tools">
@@ -3857,18 +3873,9 @@
       updateFullscreenControls();
       await renderFullscreenSelectedToken();
       dom.fullscreenCloseButton.focus({ preventScroll: true });
-      if (dom.fullscreenViewer.requestFullscreen && !document.fullscreenElement) {
-        try {
-          await dom.fullscreenViewer.requestFullscreen();
-        } catch (error) {
-          debugLog('preview', 'native fullscreen unavailable', {
-            error: error instanceof Error ? error.message : String(error)
-          }, 'warn');
-        }
-      }
     };
 
-    const closeFullscreenViewer = async ({ skipNativeExit = false } = {}) => {
+    const closeFullscreenViewer = async () => {
       if (!state.fullscreenOpen) {
         updateFullscreenControls();
         return;
@@ -3879,11 +3886,6 @@
       document.body.classList.remove('fullscreen-viewer-open');
       revokeFullscreenPreview();
       dom.fullscreenStage.textContent = 'No selection';
-      if (!skipNativeExit && document.fullscreenElement === dom.fullscreenViewer) {
-        try {
-          await document.exitFullscreen();
-        } catch (error) {}
-      }
       updateFullscreenControls();
     };
 
