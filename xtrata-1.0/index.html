@@ -1912,10 +1912,8 @@
           <img class="brand-logo" src="https://nxhyvj3lifp2q34nklffzxslfje426oxeruo3lkuj56srwgctdlq.arweave.net/bc-Kp2tBX6hvjVLKXN5LKknNedckaO2tVE99KNjCmNc" alt="" />
           <span>XTRATA</span>
         </a>
-        <span class="contract-readout" id="contractReadout">Loading contract...</span>
       </div>
       <div class="top-actions">
-        <select class="select" id="contractSelect" aria-label="Contract"></select>
         <button class="btn ghost" id="refreshWalletButton" type="button">Refresh</button>
         <select class="select theme-select" id="themeSelect" aria-label="Theme">
           <option value="classic">Classic infrastructure</option>
@@ -2255,28 +2253,8 @@
           entry.protocolVersion === '2.1.0' ||
           entry.contractName?.toLowerCase().includes('v2-1-0')
       ) ?? ACTIVE_CONTRACTS[0];
-    const HOMEPAGE_CONTRACT_STORAGE_KEY = 'xtrata.simple-homepage.contract.selection.v2-1-0';
     const SMALL_MINT_HELPER_TARGET_CORE_CONTRACT_ID =
       `${SMALL_MINT_HELPER_MAINNET_ADDRESS}.xtrata-v2-1-0`;
-    const ACTIVE_CONTRACT_BY_ID = new Map(
-      ACTIVE_CONTRACTS.map((entry) => [getContractId(entry), entry])
-    );
-    const loadHomepageContractSelection = () => {
-      try {
-        const raw = window.localStorage.getItem(HOMEPAGE_CONTRACT_STORAGE_KEY);
-        const parsed = raw ? JSON.parse(raw) : null;
-        const saved = parsed?.contractId ? ACTIVE_CONTRACT_BY_ID.get(parsed.contractId) : null;
-        return saved ?? DEFAULT_CONTRACT;
-      } catch (error) {
-        return DEFAULT_CONTRACT;
-      }
-    };
-    const saveHomepageContractSelection = (entry) => {
-      window.localStorage.setItem(
-        HOMEPAGE_CONTRACT_STORAGE_KEY,
-        JSON.stringify({ contractId: getContractId(entry) })
-      );
-    };
     const walletAdapter = createStacksWalletAdapter({
       appName: 'Xtrata Simple Inscription',
       appIcon: `${window.location.origin}/favicon.svg`
@@ -2285,8 +2263,6 @@
     const $ = (id) => document.getElementById(id);
 
     const dom = {
-      contractReadout: $('contractReadout'),
-      contractSelect: $('contractSelect'),
       themeSelect: $('themeSelect'),
       refreshWalletButton: $('refreshWalletButton'),
       connectButton: $('connectButton'),
@@ -2375,7 +2351,7 @@
     };
 
     const state = {
-      contract: loadHomepageContractSelection(),
+      contract: DEFAULT_CONTRACT,
       client: null,
       legacyContract: null,
       legacyClient: null,
@@ -3051,7 +3027,6 @@
       state.busy = busy;
       dom.connectButton.disabled = busy;
       dom.disconnectButton.disabled = busy;
-      dom.contractSelect.disabled = busy;
       dom.themeSelect.disabled = busy;
       dom.prepareButton.disabled = busy;
       updateControls();
@@ -3233,7 +3208,7 @@
       }
       if (dom.registryIntroLead) {
         dom.registryIntroLead.textContent = !viewingAddress
-          ? 'A simple inscription registry for durable data on Stacks. Connect a wallet when you are ready, or prepare a record first and keep the interface simple.'
+          ? 'A simple inscription registry for durable data on Stacks. Connect a wallet, prepare a file or record, and inscribe it permanently on-chain.'
           : !connected && count === 0
             ? 'Public wallet lookup is active, but this contract has no inscriptions for that address yet.'
             : connected && count === 0
@@ -3344,7 +3319,6 @@
         : null;
       refreshConnectedWalletMatureMode();
       logApiConfiguration();
-      dom.contractReadout.textContent = getContractId(contract);
       setExperienceMode();
       dom.networkBadge.textContent = contract.network;
       dom.mintSubtitle.textContent = `${contract.label} · ${contract.protocolVersion}`;
@@ -5297,24 +5271,12 @@
       renderPreparedState();
     };
 
-    const initializeContractSelect = () => {
-      dom.contractSelect.innerHTML = '';
-      for (const entry of ACTIVE_CONTRACTS) {
-        const option = document.createElement('option');
-        option.value = getContractId(entry);
-        option.textContent = entry.label;
-        dom.contractSelect.append(option);
-      }
-      dom.contractSelect.value = getContractId(state.contract);
-    };
-
     const initialize = async () => {
       applyTheme(loadTheme());
       dom.tokenUriInput.value = DEFAULT_TOKEN_URI;
       void updateTokenUriHeadPreview();
       dom.walletLookupInput.value = '';
       updateWalletLookupInputMode();
-      initializeContractSelect();
       applyContract(state.contract);
       resetSteps();
       renderTokenGridPlaceholders();
@@ -5408,18 +5370,6 @@
 
     dom.themeSelect.addEventListener('change', () => {
       applyTheme(dom.themeSelect.value);
-    });
-
-    dom.contractSelect.addEventListener('change', async () => {
-      const contract = ACTIVE_CONTRACTS.find((entry) => getContractId(entry) === dom.contractSelect.value);
-      if (!contract) {
-        return;
-      }
-      saveHomepageContractSelection(contract);
-      applyContract(contract);
-      appendLog(`Contract selected: ${contract.label}`);
-      await fetchAdminStatus();
-      await loadWalletInscriptions();
     });
 
     dom.fileInput.addEventListener('change', () => {
