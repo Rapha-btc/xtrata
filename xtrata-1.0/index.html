@@ -1055,7 +1055,7 @@
     }
 
     .token-meta {
-      min-height: 38px;
+      min-height: 20px;
       display: grid;
       gap: 2px;
       font-size: 12px;
@@ -1087,9 +1087,59 @@
       background: var(--surface-soft);
     }
 
-    .token-preview .preview-square {
+    .preview-stage {
+      position: relative;
       margin-bottom: 10px;
+    }
+
+    .token-preview .preview-square {
       background: var(--control);
+    }
+
+    .preview-expand-button {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      z-index: 2;
+      width: 34px;
+      height: 34px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--panel) 82%, transparent);
+      color: var(--ink);
+      box-shadow: var(--shadow);
+      cursor: pointer;
+    }
+
+    .preview-expand-button:hover:not(:disabled) {
+      border-color: var(--green);
+      color: var(--green);
+      background: var(--panel);
+    }
+
+    .preview-expand-button:disabled {
+      cursor: not-allowed;
+      opacity: 0.42;
+    }
+
+    .preview-expand-button[hidden] {
+      display: none;
+    }
+
+    .preview-expand-button svg {
+      width: 18px;
+      height: 18px;
+      pointer-events: none;
+    }
+
+    .preview-title {
+      margin: 0 0 8px;
+      color: var(--ink);
+      font-size: 14px;
+      line-height: 1.2;
     }
 
     .token-preview .preview-square img.preview-image--truthful {
@@ -1110,7 +1160,8 @@
 
     .preview-actions {
       display: flex;
-      gap: 8px;
+      align-items: center;
+      gap: 14px;
       flex-wrap: wrap;
       margin-top: 10px;
     }
@@ -1122,6 +1173,7 @@
       padding: 0;
       cursor: pointer;
       font: inherit;
+      color: var(--blue);
     }
 
     button.small-link:disabled {
@@ -1143,10 +1195,15 @@
     }
 
     .small-link {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
       color: var(--blue);
       text-decoration: none;
+      font-family: inherit;
       font-size: 12px;
       font-weight: 800;
+      line-height: 1.2;
     }
 
     .small-link:hover {
@@ -1937,7 +1994,7 @@
       <div class="registry-copy">
         <!-- <span class="registry-eyebrow" id="registryModeBadge">Boring infrastructure</span> -->
         <h1 class="registry-title" id="registryIntroTitle">Record it. Reference it. Retrieve it.</h1>
-        <p class="registry-lead" id="registryIntroLead">A simple inscription registry for durable data on Stacks. Not a marketplace first. Not a metaverse. Just a reliable way to put useful objects on-chain and find them again.</p>
+        <p class="registry-lead" id="registryIntroLead">A simple inscription registry for durable data on Stacks. Connect a wallet, prepare a file or record, and inscribe it permanently on-chain where it can always be found again.</p>
         <div class="registry-intro-actions">
           <button class="btn" id="introConnectButton" type="button">Connect wallet</button>
           <button class="btn secondary" id="introPrepareButton" type="button">Prepare a record</button>
@@ -2063,7 +2120,7 @@
             <p class="panel-subtitle" id="walletSubtitle">Connect a wallet or enter an address.</p>
           </div>
           <div class="wallet-tools">
-            <span class="badge blue" id="walletCountBadge">0 tokens</span>
+            <span class="badge blue" id="walletCountBadge">0 inscriptions</span>
             <button class="btn ghost" id="walletPrevButton" type="button" disabled>Prev</button>
             <span class="page-readout" id="walletPageReadout">Page 0 / 0</span>
             <button class="btn ghost" id="walletNextButton" type="button" disabled>Next</button>
@@ -2093,11 +2150,22 @@
             </div>
 
             <aside class="token-preview" id="tokenPreviewPanel">
-              <div class="preview-square" id="tokenPreviewMedia">No selection</div>
+              <div class="preview-stage">
+                <div class="preview-square" id="tokenPreviewMedia">No selection</div>
+                <button class="preview-expand-button" id="previewExpandButton" type="button" aria-label="View selected inscription large" title="View large" disabled hidden>
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M15 3h6v6"></path>
+                    <path d="M9 21H3v-6"></path>
+                    <path d="M21 3l-7 7"></path>
+                    <path d="M3 21l7-7"></path>
+                  </svg>
+                </button>
+              </div>
+              <h3 class="preview-title" id="tokenPreviewTitle">Selected inscription</h3>
               <div class="prepared-meta" id="tokenPreviewMeta">
                 <div class="meta-line">
-                  <span class="meta-key">Token</span>
-                  <span class="meta-value">None</span>
+                  <span class="meta-key">Status</span>
+                  <span class="meta-value">None selected</span>
                 </div>
               </div>
               <div class="preview-actions">
@@ -2124,7 +2192,7 @@
   <div class="fullscreen-viewer" id="fullscreenViewer" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="fullscreenTitle" hidden>
     <div class="fullscreen-viewer__chrome">
       <div class="fullscreen-viewer__title">
-        <strong id="fullscreenTitle">No selection</strong>
+        <strong id="fullscreenTitle">Selected inscription</strong>
         <span id="fullscreenMeta">Select an inscription</span>
       </div>
       <div class="fullscreen-viewer__actions">
@@ -2306,6 +2374,7 @@
       tokenPreviewPanel: $('tokenPreviewPanel'),
       tokenPreviewMedia: $('tokenPreviewMedia'),
       tokenPreviewMeta: $('tokenPreviewMeta'),
+      previewExpandButton: $('previewExpandButton'),
       fullscreenButton: $('fullscreenButton'),
       explorerLink: $('explorerLink'),
       transferRecipientInput: $('transferRecipientInput'),
@@ -2765,6 +2834,18 @@
       }
     };
 
+    const renderNoSelectedInscriptionMeta = () => {
+      renderMeta(dom.tokenPreviewMeta, [['Status', 'None selected']]);
+    };
+
+    const renderSelectedInscriptionMeta = (token) => {
+      renderMeta(dom.tokenPreviewMeta, [
+        ['Type', getGridMimeLabel(token.meta?.mimeType ?? null)],
+        ['Size', token.meta?.totalSize ? formatBytes(token.meta.totalSize) : 'unknown'],
+        ['Owner', token.owner ? truncateMiddle(token.owner, 8, 8) : 'unknown']
+      ]);
+    };
+
     const revokePayloadPreview = () => {
       if (state.payloadPreviewUrl) {
         URL.revokeObjectURL(state.payloadPreviewUrl);
@@ -2961,7 +3042,7 @@
           renderSquareImagePreview(target, url, {
             mimeType,
             isSvgSource: kind === 'svg',
-            alt: 'Token preview'
+            alt: 'Inscription preview'
           });
           return;
         }
@@ -3208,7 +3289,7 @@
       }
       if (dom.registryIntroLead) {
         dom.registryIntroLead.textContent = !viewingAddress
-          ? 'A simple inscription registry for durable data on Stacks. Connect a wallet, prepare a file or record, and inscribe it permanently on-chain.'
+          ? 'A simple inscription registry for durable data on Stacks. Connect a wallet, prepare a file or record, and inscribe it permanently on-chain where it can always be found again.'
           : !connected && count === 0
             ? 'Public wallet lookup is active, but this contract has no inscriptions for that address yet.'
             : connected && count === 0
@@ -3758,7 +3839,7 @@
         thumb.textContent = label;
         const meta = document.createElement('div');
         meta.className = 'token-meta';
-        meta.innerHTML = '<strong>#</strong><span>empty</span>';
+        meta.innerHTML = '<span>empty</span>';
         card.append(thumb, meta);
         dom.tokenGrid.append(card);
       }
@@ -3832,6 +3913,8 @@
         hasSelectedPagePosition &&
         (index < pageIds.length - 1 || state.walletPageIndex < pageCount - 1);
       dom.fullscreenButton.disabled = state.busy || !selectedToken;
+      dom.previewExpandButton.disabled = state.busy || !selectedToken;
+      dom.previewExpandButton.hidden = !selectedToken;
       dom.fullscreenPrevButton.disabled =
         state.busy || state.walletLoadingPage || !canGoPrevious;
       dom.fullscreenNextButton.disabled =
@@ -3848,7 +3931,7 @@
     const setFullscreenMeta = (token, mimeType) => {
       const kind = getMediaKind(mimeType ?? null).toUpperCase();
       const size = token.meta?.totalSize ? formatBytes(token.meta.totalSize) : 'unknown size';
-      dom.fullscreenTitle.textContent = `Inscription ${formatTokenId(token.id)}`;
+      dom.fullscreenTitle.textContent = 'Inscription';
       dom.fullscreenMeta.textContent = `${kind} · ${size}`;
     };
 
@@ -3927,7 +4010,7 @@
         renderSquareImagePreview(dom.fullscreenStage, sourceUrl, {
           mimeType,
           isSvgSource: true,
-          alt: `Inscription ${token.id.toString()}`
+          alt: 'Inscription preview'
         });
         return;
       }
@@ -3947,7 +4030,7 @@
         renderSquareImagePreview(dom.fullscreenStage, url, {
           mimeType,
           isSvgSource: kind === 'svg',
-          alt: `Inscription ${token.id.toString()}`
+          alt: 'Inscription preview'
         });
         return;
       }
@@ -3974,7 +4057,7 @@
 
       if (kind === 'html') {
         const frame = document.createElement('iframe');
-        frame.title = `inscription-${token.id.toString()}`;
+        frame.title = 'inscription-preview';
         frame.referrerPolicy = 'no-referrer';
         frame.loading = 'lazy';
         frame.sandbox = mimeType?.trim().toLowerCase() === 'application/pdf'
@@ -4146,7 +4229,7 @@
       state.tokenThumbUrls.set(cacheKey, url);
       thumbElement.innerHTML = '';
       const img = document.createElement('img');
-      img.alt = `Token ${token.id.toString()}`;
+      img.alt = 'Inscription preview';
       applyPixelPerfectImageRendering(img, {
         mimeType: thumbnail.mimeType ?? 'image/webp',
         sourceUrl: url
@@ -4260,7 +4343,7 @@
 
       if (media.kind === 'html') {
         const frame = document.createElement('iframe');
-        frame.title = `inscription-${token.id.toString()}`;
+        frame.title = 'inscription-preview';
         frame.sandbox = 'allow-scripts';
         frame.referrerPolicy = 'no-referrer';
         frame.loading = 'lazy';
@@ -4276,7 +4359,7 @@
         const url = URL.createObjectURL(blob);
         state.tokenThumbUrls.set(cacheKey, url);
         const frame = document.createElement('iframe');
-        frame.title = `inscription-${token.id.toString()}`;
+        frame.title = 'inscription-preview';
         frame.sandbox = '';
         frame.referrerPolicy = 'no-referrer';
         frame.loading = 'lazy';
@@ -4492,7 +4575,7 @@
       const totalCount = state.walletUsesPagedHoldings
         ? state.walletTotalCount
         : state.walletTokenIds.length;
-      dom.walletCountBadge.textContent = `${totalCount} token${totalCount === 1 ? '' : 's'}`;
+      dom.walletCountBadge.textContent = `${totalCount} inscription${totalCount === 1 ? '' : 's'}`;
       updateWalletPagerControls();
 
       for (let index = 0; index < WALLET_PAGE_SIZE; index += 1) {
@@ -4512,18 +4595,17 @@
         if (id === null) {
           card.disabled = true;
           thumb.textContent = '';
-          meta.innerHTML = '<strong>#</strong><span>empty</span>';
+          meta.innerHTML = '<span>empty</span>';
         } else if (!token) {
           card.disabled = true;
           thumb.textContent = '...';
-          meta.innerHTML =
-            `<strong>${formatTokenId(id)}</strong><span>loading</span>`;
+          meta.innerHTML = '<span>loading</span>';
         } else {
           const kind = getGridMimeLabel(token.meta?.mimeType ?? null);
           thumb.dataset.thumbnailKey = getThumbnailKey(token);
           if (token.svgDataUri) {
             const img = document.createElement('img');
-            img.alt = `Token ${token.id.toString()}`;
+            img.alt = 'Inscription preview';
             applyPixelPerfectImageRendering(img, {
               mimeType: 'image/svg+xml',
               sourceUrl: token.svgDataUri,
@@ -4545,7 +4627,7 @@
           }
           const size = token.meta?.totalSize ?? null;
           meta.innerHTML =
-            `<strong>${formatTokenId(token.id)}</strong><span>${kind}${size !== null ? ` · ${formatBytes(size)}` : ''}</span>`;
+            `<span>${kind}${size !== null ? ` · ${formatBytes(size)}` : ''}</span>`;
           card.addEventListener('click', () => selectToken(token.id));
         }
         card.append(thumb, meta);
@@ -4574,7 +4656,7 @@
 
       if (!token) {
         clearElement(dom.tokenPreviewMedia, 'No selection');
-        renderMeta(dom.tokenPreviewMeta, [['Token', 'None']]);
+        renderNoSelectedInscriptionMeta();
         void updateWalletTokenUriHeadPreview(null);
         updateControls();
         return;
@@ -4583,12 +4665,7 @@
       void updateWalletTokenUriHeadPreview(token.tokenUri);
 
       clearElement(dom.tokenPreviewMedia, 'Loading');
-      renderMeta(dom.tokenPreviewMeta, [
-        ['Token', formatTokenId(token.id)],
-        ['Mime', token.meta?.mimeType ?? 'unknown'],
-        ['Size', token.meta?.totalSize ? formatBytes(token.meta.totalSize) : 'unknown'],
-        ['Owner', token.owner ? truncateMiddle(token.owner, 8, 8) : 'unknown']
-      ]);
+      renderSelectedInscriptionMeta(token);
 
       const tokenContract = getTokenClient(token).contract;
       dom.explorerLink.href = tokenExplorerUrl(tokenContract, token.id);
@@ -4601,7 +4678,7 @@
             renderSquareImagePreview(dom.tokenPreviewMedia, token.svgDataUri, {
               mimeType: 'image/svg+xml',
               isSvgSource: true,
-              alt: `Token ${token.id.toString()}`
+              alt: 'Inscription preview'
             });
             state.tokenPreviewTokenId = token.id.toString();
             state.tokenPreviewBytes = null;
@@ -5030,7 +5107,7 @@
         void updateWalletTokenUriHeadPreview(null);
         resetBackgroundThumbnailHydration();
         revokeGridThumbUrls();
-        dom.walletCountBadge.textContent = '0 tokens';
+        dom.walletCountBadge.textContent = '0 inscriptions';
         setStatus(
           dom.walletGridStatus,
           '<strong>Grid</strong> enter a wallet address or connect',
@@ -5083,7 +5160,7 @@
           if (state.walletTotalCount === 0) {
             setStatus(dom.walletGridStatus, '<strong>Grid</strong> no inscriptions found', 'empty', 'amber');
             clearElement(dom.tokenPreviewMedia, 'No selection');
-            renderMeta(dom.tokenPreviewMeta, [['Token', 'None']]);
+            renderNoSelectedInscriptionMeta();
             void updateWalletTokenUriHeadPreview(null);
             renderTokenGrid();
             setExperienceMode();
@@ -5152,7 +5229,7 @@
         if (state.walletTokenIds.length === 0) {
           setStatus(dom.walletGridStatus, '<strong>Grid</strong> no inscriptions found', 'empty', 'amber');
           clearElement(dom.tokenPreviewMedia, 'No selection');
-          renderMeta(dom.tokenPreviewMeta, [['Token', 'None']]);
+          renderNoSelectedInscriptionMeta();
           void updateWalletTokenUriHeadPreview(null);
           renderTokenGrid();
         } else {
@@ -5339,6 +5416,7 @@
     dom.transferRecipientInput.addEventListener('input', updateTransferControls);
     dom.transferButton.addEventListener('click', transferSelectedToken);
     dom.fullscreenButton.addEventListener('click', openFullscreenViewer);
+    dom.previewExpandButton.addEventListener('click', openFullscreenViewer);
     dom.fullscreenCloseButton.addEventListener('click', () => {
       void closeFullscreenViewer();
     });
