@@ -64,11 +64,15 @@ const LIVE_MINT_ERROR_BACKOFF_MS = 5 * 60_000;
 const LIVE_MINT_RATE_LIMIT_BACKOFF_MS = 15 * 60_000;
 const SIMPLE_HOME_INITIAL_SCROLL_NUDGE_PX = 18;
 
-type StarterDoc = {
+type HomepageDocLink = {
+  label: string;
+  href: string;
+};
+
+type HomepageDocGroup = {
   title: string;
   description: string;
-  href: string;
-  cta: string;
+  links: HomepageDocLink[];
 };
 
 type LiveCollectionRecord = {
@@ -148,31 +152,100 @@ const resolveSectionScrollBlock = (
   section: SimpleHomeSectionKey
 ): ScrollLogicalPosition => (section === 'home-viewer' ? 'center' : 'start');
 
-const STARTER_DOCS: StarterDoc[] = [
+const DOCS_BASE_URL = 'https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0';
+
+const buildDocsUrl = (path: string) => `${DOCS_BASE_URL}/${path}`;
+
+const HOMEPAGE_DOC_GROUPS: HomepageDocGroup[] = [
   {
-    title: 'How to inscribe on Xtrata',
-    description: 'Plain-language walkthrough: begin, upload batches, then seal.',
-    href: 'https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/xtrata-quickstart.md',
-    cta: 'Read quickstart'
+    title: 'Start using Xtrata',
+    description: 'First-pass references for minting, reading, and resolving recursive inscriptions.',
+    links: [
+      {
+        label: 'Quickstart',
+        href: buildDocsUrl('docs/xtrata-quickstart.md')
+      },
+      {
+        label: 'Inscription handbook',
+        href: buildDocsUrl('docs/xtrata-inscription-handbook.md')
+      },
+      {
+        label: 'Recursive inscriptions',
+        href: buildDocsUrl('docs/recursive-inscriptions.md')
+      }
+    ]
   },
   {
-    title: 'Inscription handbook',
-    description: 'Deeper technical guide for builders integrating reads and rendering.',
-    href: 'https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/xtrata-inscription-handbook.md',
-    cta: 'Open handbook'
+    title: 'Build with the SDK',
+    description: 'SDK entry points, API selection, and starter examples for third-party apps.',
+    links: [
+      {
+        label: 'SDK overview',
+        href: buildDocsUrl('docs/sdk/README.md')
+      },
+      {
+        label: 'First 30 minutes',
+        href: buildDocsUrl('docs/sdk/quickstart-first-30-minutes.md')
+      },
+      {
+        label: 'API overview',
+        href: buildDocsUrl('docs/sdk/api-overview.md')
+      },
+      {
+        label: 'Example apps',
+        href: buildDocsUrl('examples/README.md')
+      }
+    ]
   },
   {
-    title: 'Artist collection launch guide',
-    description: 'How artists launch collection mints and manage collection setup.',
-    href: 'https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/artist-guides/collection-launch-guide.md',
-    cta: 'Open artist guide'
+    title: 'Launch a collection',
+    description: 'Artist and team guides for portal access, collection setup, and contract deployment.',
+    links: [
+      {
+        label: 'Artist guides',
+        href: buildDocsUrl('docs/artist-guides/README.md')
+      },
+      {
+        label: 'Launch guide',
+        href: buildDocsUrl('docs/artist-guides/collection-launch-guide.md')
+      },
+      {
+        label: 'Template deploy guide',
+        href: buildDocsUrl('docs/artist-guides/collection-template-deploy-guide.md')
+      }
+    ]
   },
   {
-    title: 'Collection template deploy guide',
-    description:
-      'Simplest path for artists to deploy a collection contract through the manage portal.',
-    href: 'https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/artist-guides/collection-template-deploy-guide.md',
-    cta: 'Open deploy guide'
+    title: 'Integrate contracts',
+    description: 'Contract inventory, current core API surface, and product ownership boundaries.',
+    links: [
+      {
+        label: 'Contract inventory',
+        href: buildDocsUrl('docs/contract-inventory.md')
+      },
+      {
+        label: 'v2.1.0 API reference',
+        href: buildDocsUrl('docs/xtrata-v2.1.0/api-reference.md')
+      },
+      {
+        label: 'Product contract roles',
+        href: buildDocsUrl('docs/product-contract-ui-reference.md')
+      }
+    ]
+  },
+  {
+    title: 'Train agents',
+    description: 'AI-agent training docs for safe mint, batch, query, and automation workflows.',
+    links: [
+      {
+        label: 'AI skills index',
+        href: buildDocsUrl('docs/ai-skills/README.md')
+      },
+      {
+        label: 'Agent skill reference',
+        href: buildDocsUrl('XTRATA_AGENT_SKILL.md')
+      }
+    ]
   }
 ];
 
@@ -1321,10 +1394,18 @@ export default function SimplePublicHome() {
         >
           <div className="panel__header">
             <div>
-              <h2>Start here docs</h2>
-              <p>Focused resources for first-time visitors and artist launches.</p>
+              <h2>Documentation</h2>
+              <p>Reference paths for users, SDK builders, artists, integrators, and agents.</p>
             </div>
             <div className="panel__actions">
+              <a
+                className="button button--ghost"
+                href={buildDocsUrl('docs/documentation-index.md')}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Docs Index
+              </a>
               <a className="button button--ghost" href={WORKSPACE_PATH}>
                 Open Workspace
               </a>
@@ -1340,13 +1421,17 @@ export default function SimplePublicHome() {
           </div>
           <div className="panel__body">
             <div className="simple-home__docs-grid">
-              {STARTER_DOCS.map((doc) => (
-                <article className="simple-home__doc-card" key={doc.href}>
-                  <h3>{doc.title}</h3>
-                  <p>{doc.description}</p>
-                  <a href={doc.href} target="_blank" rel="noreferrer">
-                    {doc.cta}
-                  </a>
+              {HOMEPAGE_DOC_GROUPS.map((group) => (
+                <article className="simple-home__doc-card" key={group.title}>
+                  <h3>{group.title}</h3>
+                  <p>{group.description}</p>
+                  <div className="simple-home__doc-links" aria-label={`${group.title} links`}>
+                    {group.links.map((link) => (
+                      <a href={link.href} target="_blank" rel="noreferrer" key={link.href}>
+                        {link.label}
+                      </a>
+                    ))}
+                  </div>
                 </article>
               ))}
             </div>

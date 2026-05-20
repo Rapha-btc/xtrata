@@ -909,16 +909,17 @@ body {
 .simple-home__docs-grid {
   display: grid;
   gap: 10px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
 
 .simple-home__doc-card {
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 8px;
   background: var(--surface-soft);
   padding: 12px;
   display: grid;
   gap: 8px;
+  align-content: start;
 }
 
 .simple-home__doc-card h3 {
@@ -930,14 +931,21 @@ body {
   color: var(--muted);
 }
 
-.simple-home__doc-card a {
-  width: fit-content;
+.simple-home__doc-links {
+  display: grid;
+  gap: 6px;
+}
+
+.simple-home__doc-links a {
   color: var(--simple-accent);
+  font-size: 0.82rem;
   font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
   text-decoration: none;
 }
 
-.simple-home__doc-card a:hover {
+.simple-home__doc-links a:hover {
   text-decoration: underline;
 }
 
