@@ -153,6 +153,8 @@ const resolveSectionScrollBlock = (
 ): ScrollLogicalPosition => (section === 'home-viewer' ? 'center' : 'start');
 
 const DOCS_BASE_URL = 'https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0';
+const DOCS_INDEX_URL =
+  'https://github.com/stxtrata/xtrata/blob/main-staging/xtrata-1.0/docs/documentation-index.md';
 
 const buildDocsUrl = (path: string) => `${DOCS_BASE_URL}/${path}`;
 
@@ -1400,7 +1402,7 @@ export default function SimplePublicHome() {
             <div className="panel__actions">
               <a
                 className="button button--ghost"
-                href={buildDocsUrl('docs/documentation-index.md')}
+                href={DOCS_INDEX_URL}
                 target="_blank"
                 rel="noreferrer"
               >

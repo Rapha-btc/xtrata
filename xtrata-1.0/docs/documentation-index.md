@@ -3,7 +3,9 @@
 Purpose: gather the current Xtrata reference material in one place so homepage
 documentation links can be chosen and grouped deliberately.
 
-Public link note: the current homepage code links to GitHub docs under
+Public link note: the docs index itself is published from `main-staging`:
+`https://github.com/stxtrata/xtrata/blob/main-staging/xtrata-1.0/docs/documentation-index.md`.
+Most existing public doc links still use
 `https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/`. If the
 public docs branch changes, use the paths below as the stable source list and
 update the URL prefix.
@@ -249,4 +251,3 @@ For a compact homepage documentation section, group links as:
 5. Train agents
    - `docs/ai-skills/README.md`
    - `XTRATA_AGENT_SKILL.md`
-
