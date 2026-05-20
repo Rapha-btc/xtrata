@@ -1055,7 +1055,7 @@
     }
 
     .token-meta {
-      min-height: 38px;
+      min-height: 20px;
       display: grid;
       gap: 2px;
       font-size: 12px;
@@ -1087,9 +1087,59 @@
       background: var(--surface-soft);
     }
 
-    .token-preview .preview-square {
+    .preview-stage {
+      position: relative;
       margin-bottom: 10px;
+    }
+
+    .token-preview .preview-square {
       background: var(--control);
+    }
+
+    .preview-expand-button {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      z-index: 2;
+      width: 34px;
+      height: 34px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--panel) 82%, transparent);
+      color: var(--ink);
+      box-shadow: var(--shadow);
+      cursor: pointer;
+    }
+
+    .preview-expand-button:hover:not(:disabled) {
+      border-color: var(--green);
+      color: var(--green);
+      background: var(--panel);
+    }
+
+    .preview-expand-button:disabled {
+      cursor: not-allowed;
+      opacity: 0.42;
+    }
+
+    .preview-expand-button[hidden] {
+      display: none;
+    }
+
+    .preview-expand-button svg {
+      width: 18px;
+      height: 18px;
+      pointer-events: none;
+    }
+
+    .preview-title {
+      margin: 0 0 8px;
+      color: var(--ink);
+      font-size: 14px;
+      line-height: 1.2;
     }
 
     .token-preview .preview-square img.preview-image--truthful {
@@ -1110,7 +1160,8 @@
 
     .preview-actions {
       display: flex;
-      gap: 8px;
+      align-items: center;
+      gap: 14px;
       flex-wrap: wrap;
       margin-top: 10px;
     }
@@ -1122,6 +1173,7 @@
       padding: 0;
       cursor: pointer;
       font: inherit;
+      color: var(--blue);
     }
 
     button.small-link:disabled {
@@ -1143,10 +1195,15 @@
     }
 
     .small-link {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
       color: var(--blue);
       text-decoration: none;
+      font-family: inherit;
       font-size: 12px;
       font-weight: 800;
+      line-height: 1.2;
     }
 
     .small-link:hover {
@@ -1912,10 +1969,8 @@
           <img class="brand-logo" src="https://nxhyvj3lifp2q34nklffzxslfje426oxeruo3lkuj56srwgctdlq.arweave.net/bc-Kp2tBX6hvjVLKXN5LKknNedckaO2tVE99KNjCmNc" alt="" />
           <span>XTRATA</span>
         </a>
-        <span class="contract-readout" id="contractReadout">Loading contract...</span>
       </div>
       <div class="top-actions">
-        <select class="select" id="contractSelect" aria-label="Contract"></select>
         <button class="btn ghost" id="refreshWalletButton" type="button">Refresh</button>
         <select class="select theme-select" id="themeSelect" aria-label="Theme">
           <option value="classic">Classic infrastructure</option>
@@ -1939,15 +1994,15 @@
       <div class="registry-copy">
         <!-- <span class="registry-eyebrow" id="registryModeBadge">Boring infrastructure</span> -->
         <h1 class="registry-title" id="registryIntroTitle">Record it. Reference it. Retrieve it.</h1>
-        <p class="registry-lead" id="registryIntroLead">A simple inscription registry for durable data on Stacks. Not a marketplace first. Not a metaverse. Just a reliable way to put useful objects on-chain and find them again.</p>
+        <p class="registry-lead" id="registryIntroLead">A simple inscription registry for durable data on Stacks. Connect a wallet, prepare a file or record, and inscribe it permanently on-chain where it can always be found again.</p>
         <div class="registry-intro-actions">
           <button class="btn" id="introConnectButton" type="button">Connect wallet</button>
           <button class="btn secondary" id="introPrepareButton" type="button">Prepare a record</button>
         </div>
         <div class="registry-footnotes" aria-label="Registry qualities">
-          <p class="registry-note"><strong>Plain rails</strong>No grand interface required before the first inscription.</p>
-          <p class="registry-note"><strong>Wallet first</strong>The homepage becomes useful as soon as a wallet has records.</p>
-          <p class="registry-note"><strong>Developer ready</strong>Contracts, API and object references sit behind the simple flow.</p>
+          <p class="registry-note"><strong>Create</strong>Upload a file or write text, then inscribe it with your wallet.</p>
+          <p class="registry-note"><strong>Collect</strong>Connect to see everything you have inscribed in one grid.</p>
+          <p class="registry-note"><strong>Explore</strong>Search any Stacks address or .btc name to view inscriptions.</p>
         </div>
       </div>
       <aside class="registry-proof-card" aria-label="Registry ledger summary">
@@ -2065,7 +2120,7 @@
             <p class="panel-subtitle" id="walletSubtitle">Connect a wallet or enter an address.</p>
           </div>
           <div class="wallet-tools">
-            <span class="badge blue" id="walletCountBadge">0 tokens</span>
+            <span class="badge blue" id="walletCountBadge">0 inscriptions</span>
             <button class="btn ghost" id="walletPrevButton" type="button" disabled>Prev</button>
             <span class="page-readout" id="walletPageReadout">Page 0 / 0</span>
             <button class="btn ghost" id="walletNextButton" type="button" disabled>Next</button>
@@ -2095,11 +2150,22 @@
             </div>
 
             <aside class="token-preview" id="tokenPreviewPanel">
-              <div class="preview-square" id="tokenPreviewMedia">No selection</div>
+              <div class="preview-stage">
+                <div class="preview-square" id="tokenPreviewMedia">No selection</div>
+                <button class="preview-expand-button" id="previewExpandButton" type="button" aria-label="View selected inscription large" title="View large" disabled hidden>
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M15 3h6v6"></path>
+                    <path d="M9 21H3v-6"></path>
+                    <path d="M21 3l-7 7"></path>
+                    <path d="M3 21l7-7"></path>
+                  </svg>
+                </button>
+              </div>
+              <h3 class="preview-title" id="tokenPreviewTitle">Selected inscription</h3>
               <div class="prepared-meta" id="tokenPreviewMeta">
                 <div class="meta-line">
-                  <span class="meta-key">Token</span>
-                  <span class="meta-value">None</span>
+                  <span class="meta-key">Status</span>
+                  <span class="meta-value">None selected</span>
                 </div>
               </div>
               <div class="preview-actions">
@@ -2126,7 +2192,7 @@
   <div class="fullscreen-viewer" id="fullscreenViewer" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="fullscreenTitle" hidden>
     <div class="fullscreen-viewer__chrome">
       <div class="fullscreen-viewer__title">
-        <strong id="fullscreenTitle">No selection</strong>
+        <strong id="fullscreenTitle">Selected inscription</strong>
         <span id="fullscreenMeta">Select an inscription</span>
       </div>
       <div class="fullscreen-viewer__actions">
@@ -2204,6 +2270,10 @@
       saveInscriptionThumbnailToCache
     } from '/src/lib/viewer/cache.ts';
     import { injectGridThumbnailHtml } from '/src/lib/viewer/html-preview.ts';
+    import {
+      hasRuntimeContentUrls,
+      inlineRuntimeContentUrls
+    } from '/src/lib/viewer/runtime-inline.ts';
     import { createImageThumbnail, THUMBNAIL_SIZE } from '/src/lib/viewer/thumbnail.ts';
     import { shouldUsePixelatedImageRendering } from '/src/lib/viewer/image-rendering.ts';
     import {
@@ -2251,28 +2321,8 @@
           entry.protocolVersion === '2.1.0' ||
           entry.contractName?.toLowerCase().includes('v2-1-0')
       ) ?? ACTIVE_CONTRACTS[0];
-    const HOMEPAGE_CONTRACT_STORAGE_KEY = 'xtrata.simple-homepage.contract.selection.v2-1-0';
     const SMALL_MINT_HELPER_TARGET_CORE_CONTRACT_ID =
       `${SMALL_MINT_HELPER_MAINNET_ADDRESS}.xtrata-v2-1-0`;
-    const ACTIVE_CONTRACT_BY_ID = new Map(
-      ACTIVE_CONTRACTS.map((entry) => [getContractId(entry), entry])
-    );
-    const loadHomepageContractSelection = () => {
-      try {
-        const raw = window.localStorage.getItem(HOMEPAGE_CONTRACT_STORAGE_KEY);
-        const parsed = raw ? JSON.parse(raw) : null;
-        const saved = parsed?.contractId ? ACTIVE_CONTRACT_BY_ID.get(parsed.contractId) : null;
-        return saved ?? DEFAULT_CONTRACT;
-      } catch (error) {
-        return DEFAULT_CONTRACT;
-      }
-    };
-    const saveHomepageContractSelection = (entry) => {
-      window.localStorage.setItem(
-        HOMEPAGE_CONTRACT_STORAGE_KEY,
-        JSON.stringify({ contractId: getContractId(entry) })
-      );
-    };
     const walletAdapter = createStacksWalletAdapter({
       appName: 'Xtrata Simple Inscription',
       appIcon: `${window.location.origin}/favicon.svg`
@@ -2281,8 +2331,6 @@
     const $ = (id) => document.getElementById(id);
 
     const dom = {
-      contractReadout: $('contractReadout'),
-      contractSelect: $('contractSelect'),
       themeSelect: $('themeSelect'),
       refreshWalletButton: $('refreshWalletButton'),
       connectButton: $('connectButton'),
@@ -2326,6 +2374,7 @@
       tokenPreviewPanel: $('tokenPreviewPanel'),
       tokenPreviewMedia: $('tokenPreviewMedia'),
       tokenPreviewMeta: $('tokenPreviewMeta'),
+      previewExpandButton: $('previewExpandButton'),
       fullscreenButton: $('fullscreenButton'),
       explorerLink: $('explorerLink'),
       transferRecipientInput: $('transferRecipientInput'),
@@ -2371,7 +2420,7 @@
     };
 
     const state = {
-      contract: loadHomepageContractSelection(),
+      contract: DEFAULT_CONTRACT,
       client: null,
       legacyContract: null,
       legacyClient: null,
@@ -2397,6 +2446,7 @@
       tokenPreviewBytes: null,
       tokenPreviewMimeType: null,
       tokenPreviewSourceUrl: null,
+      tokenPreviewHtmlDoc: null,
       fullscreenUrl: null,
       fullscreenOpen: false,
       tokenThumbUrls: new Map(),
@@ -2784,6 +2834,18 @@
       }
     };
 
+    const renderNoSelectedInscriptionMeta = () => {
+      renderMeta(dom.tokenPreviewMeta, [['Status', 'None selected']]);
+    };
+
+    const renderSelectedInscriptionMeta = (token) => {
+      renderMeta(dom.tokenPreviewMeta, [
+        ['Type', getGridMimeLabel(token.meta?.mimeType ?? null)],
+        ['Size', token.meta?.totalSize ? formatBytes(token.meta.totalSize) : 'unknown'],
+        ['Owner', token.owner ? truncateMiddle(token.owner, 8, 8) : 'unknown']
+      ]);
+    };
+
     const revokePayloadPreview = () => {
       if (state.payloadPreviewUrl) {
         URL.revokeObjectURL(state.payloadPreviewUrl);
@@ -2800,6 +2862,7 @@
       state.tokenPreviewBytes = null;
       state.tokenPreviewMimeType = null;
       state.tokenPreviewSourceUrl = null;
+      state.tokenPreviewHtmlDoc = null;
     };
 
     const revokeFullscreenPreview = () => {
@@ -2963,16 +3026,23 @@
     const renderBytesPreview = (target, bytes, mimeType, urlSetter, options = {}) => {
       target.innerHTML = '';
       const kind = getMediaKind(mimeType);
-      const blob = new Blob([bytes], { type: mimeType || 'application/octet-stream' });
-      const url = URL.createObjectURL(blob);
-      urlSetter(url);
+      let objectUrl = null;
+      const getObjectUrl = () => {
+        if (!objectUrl) {
+          const blob = new Blob([bytes], { type: mimeType || 'application/octet-stream' });
+          objectUrl = URL.createObjectURL(blob);
+          urlSetter(objectUrl);
+        }
+        return objectUrl;
+      };
 
       if (kind === 'image' || kind === 'svg') {
+        const url = getObjectUrl();
         if (options.truthfulImageSizing) {
           renderSquareImagePreview(target, url, {
             mimeType,
             isSvgSource: kind === 'svg',
-            alt: 'Token preview'
+            alt: 'Inscription preview'
           });
           return;
         }
@@ -2991,7 +3061,7 @@
       if (kind === 'video') {
         const video = document.createElement('video');
         video.controls = true;
-        video.src = url;
+        video.src = getObjectUrl();
         target.append(video);
         return;
       }
@@ -2999,15 +3069,24 @@
       if (kind === 'audio') {
         const audio = document.createElement('audio');
         audio.controls = true;
-        audio.src = url;
+        audio.src = getObjectUrl();
         target.append(audio);
         return;
       }
 
       if (kind === 'html') {
         const frame = document.createElement('iframe');
-        frame.sandbox = 'allow-scripts';
-        frame.src = url;
+        frame.title = 'inscription-preview';
+        frame.referrerPolicy = 'no-referrer';
+        frame.loading = 'lazy';
+        frame.sandbox = mimeType?.trim().toLowerCase() === 'application/pdf'
+          ? ''
+          : 'allow-scripts';
+        if (options.htmlDoc && mimeType?.trim().toLowerCase() !== 'application/pdf') {
+          frame.srcdoc = options.htmlDoc;
+        } else {
+          frame.src = getObjectUrl();
+        }
         target.append(frame);
         return;
       }
@@ -3029,7 +3108,6 @@
       state.busy = busy;
       dom.connectButton.disabled = busy;
       dom.disconnectButton.disabled = busy;
-      dom.contractSelect.disabled = busy;
       dom.themeSelect.disabled = busy;
       dom.prepareButton.disabled = busy;
       updateControls();
@@ -3211,7 +3289,7 @@
       }
       if (dom.registryIntroLead) {
         dom.registryIntroLead.textContent = !viewingAddress
-          ? 'A simple inscription registry for durable data on Stacks. Connect a wallet when you are ready, or prepare a record first and keep the interface simple.'
+          ? 'A simple inscription registry for durable data on Stacks. Connect a wallet, prepare a file or record, and inscribe it permanently on-chain where it can always be found again.'
           : !connected && count === 0
             ? 'Public wallet lookup is active, but this contract has no inscriptions for that address yet.'
             : connected && count === 0
@@ -3322,7 +3400,6 @@
         : null;
       refreshConnectedWalletMatureMode();
       logApiConfiguration();
-      dom.contractReadout.textContent = getContractId(contract);
       setExperienceMode();
       dom.networkBadge.textContent = contract.network;
       dom.mintSubtitle.textContent = `${contract.label} · ${contract.protocolVersion}`;
@@ -3762,7 +3839,7 @@
         thumb.textContent = label;
         const meta = document.createElement('div');
         meta.className = 'token-meta';
-        meta.innerHTML = '<strong>#</strong><span>empty</span>';
+        meta.innerHTML = '<span>empty</span>';
         card.append(thumb, meta);
         dom.tokenGrid.append(card);
       }
@@ -3781,6 +3858,40 @@
 
     const getThumbnailKey = (token) =>
       `${getTokenCacheContractId(token)}:${token.id.toString()}`;
+
+    const prepareRuntimeHtmlForToken = async (token, html, contextLabel = 'preview') => {
+      if (!html || !hasRuntimeContentUrls(html)) {
+        return html;
+      }
+      const contentClient = getTokenClient(token);
+      try {
+        debugLog('preview', 'inlining runtime content for HTML inscription', {
+          tokenId: token.id.toString(),
+          contractId: getTokenCacheContractId(token),
+          context: contextLabel
+        });
+        return await inlineRuntimeContentUrls({
+          html,
+          client: contentClient,
+          fallbackClient: contentClient === state.client ? state.legacyClient : null
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        debugLog(
+          'preview',
+          'runtime content inline failed; using raw HTML',
+          {
+            tokenId: token.id.toString(),
+            contractId: getTokenCacheContractId(token),
+            context: contextLabel,
+            error: message
+          },
+          'warn'
+        );
+        appendLog(`Runtime preview fallback for ${formatTokenId(token.id)}: ${message}`);
+        return html;
+      }
+    };
 
     const getFullscreenPagePosition = () => {
       const pageIds = getWalletPageIds();
@@ -3802,6 +3913,8 @@
         hasSelectedPagePosition &&
         (index < pageIds.length - 1 || state.walletPageIndex < pageCount - 1);
       dom.fullscreenButton.disabled = state.busy || !selectedToken;
+      dom.previewExpandButton.disabled = state.busy || !selectedToken;
+      dom.previewExpandButton.hidden = !selectedToken;
       dom.fullscreenPrevButton.disabled =
         state.busy || state.walletLoadingPage || !canGoPrevious;
       dom.fullscreenNextButton.disabled =
@@ -3818,7 +3931,7 @@
     const setFullscreenMeta = (token, mimeType) => {
       const kind = getMediaKind(mimeType ?? null).toUpperCase();
       const size = token.meta?.totalSize ? formatBytes(token.meta.totalSize) : 'unknown size';
-      dom.fullscreenTitle.textContent = `Inscription ${formatTokenId(token.id)}`;
+      dom.fullscreenTitle.textContent = 'Inscription';
       dom.fullscreenMeta.textContent = `${kind} · ${size}`;
     };
 
@@ -3836,7 +3949,8 @@
           token,
           bytes: state.tokenPreviewBytes,
           mimeType: state.tokenPreviewMimeType ?? token.meta?.mimeType ?? null,
-          sourceUrl: state.tokenPreviewSourceUrl
+          sourceUrl: state.tokenPreviewSourceUrl,
+          htmlDoc: state.tokenPreviewHtmlDoc
         };
       }
       if (!token.meta || token.meta.totalSize <= 0n) {
@@ -3847,11 +3961,13 @@
         state.tokenPreviewBytes = null;
         state.tokenPreviewMimeType = 'image/svg+xml';
         state.tokenPreviewSourceUrl = token.svgDataUri;
+        state.tokenPreviewHtmlDoc = null;
         return {
           token,
           bytes: null,
           mimeType: 'image/svg+xml',
-          sourceUrl: token.svgDataUri
+          sourceUrl: token.svgDataUri,
+          htmlDoc: null
         };
       }
       const contentClient = getTokenClient(token);
@@ -3865,11 +3981,15 @@
         mimeType: token.meta.mimeType ?? null
       });
       const mimeType = resolveMimeType(token.meta.mimeType ?? null, bytes) ?? token.meta.mimeType ?? 'application/octet-stream';
+      const htmlDoc = getMediaKind(mimeType) === 'html'
+        ? await prepareRuntimeHtmlForToken(token, new TextDecoder().decode(bytes), 'fullscreen')
+        : null;
       state.tokenPreviewTokenId = tokenId;
       state.tokenPreviewBytes = bytes;
       state.tokenPreviewMimeType = mimeType;
       state.tokenPreviewSourceUrl = null;
-      return { token, bytes, mimeType, sourceUrl: null };
+      state.tokenPreviewHtmlDoc = htmlDoc;
+      return { token, bytes, mimeType, sourceUrl: null, htmlDoc };
     };
 
     const configureFullscreenRawLink = (token, sourceUrl) => {
@@ -3878,7 +3998,7 @@
       dom.fullscreenRawLink.hidden = false;
     };
 
-    const renderFullscreenContent = ({ token, bytes, mimeType, sourceUrl }) => {
+    const renderFullscreenContent = ({ token, bytes, mimeType, sourceUrl, htmlDoc }) => {
       revokeFullscreenPreview();
       setFullscreenMeta(token, mimeType);
       dom.fullscreenRawLink.hidden = true;
@@ -3890,7 +4010,7 @@
         renderSquareImagePreview(dom.fullscreenStage, sourceUrl, {
           mimeType,
           isSvgSource: true,
-          alt: `Inscription ${token.id.toString()}`
+          alt: 'Inscription preview'
         });
         return;
       }
@@ -3910,7 +4030,7 @@
         renderSquareImagePreview(dom.fullscreenStage, url, {
           mimeType,
           isSvgSource: kind === 'svg',
-          alt: `Inscription ${token.id.toString()}`
+          alt: 'Inscription preview'
         });
         return;
       }
@@ -3937,13 +4057,17 @@
 
       if (kind === 'html') {
         const frame = document.createElement('iframe');
-        frame.title = `inscription-${token.id.toString()}`;
+        frame.title = 'inscription-preview';
         frame.referrerPolicy = 'no-referrer';
         frame.loading = 'lazy';
         frame.sandbox = mimeType?.trim().toLowerCase() === 'application/pdf'
           ? ''
           : 'allow-scripts';
-        frame.src = url;
+        if (htmlDoc && mimeType?.trim().toLowerCase() !== 'application/pdf') {
+          frame.srcdoc = htmlDoc;
+        } else {
+          frame.src = url;
+        }
         dom.fullscreenStage.append(frame);
         return;
       }
@@ -4105,7 +4229,7 @@
       state.tokenThumbUrls.set(cacheKey, url);
       thumbElement.innerHTML = '';
       const img = document.createElement('img');
-      img.alt = `Token ${token.id.toString()}`;
+      img.alt = 'Inscription preview';
       applyPixelPerfectImageRendering(img, {
         mimeType: thumbnail.mimeType ?? 'image/webp',
         sourceUrl: url
@@ -4219,7 +4343,7 @@
 
       if (media.kind === 'html') {
         const frame = document.createElement('iframe');
-        frame.title = `inscription-${token.id.toString()}`;
+        frame.title = 'inscription-preview';
         frame.sandbox = 'allow-scripts';
         frame.referrerPolicy = 'no-referrer';
         frame.loading = 'lazy';
@@ -4235,7 +4359,7 @@
         const url = URL.createObjectURL(blob);
         state.tokenThumbUrls.set(cacheKey, url);
         const frame = document.createElement('iframe');
-        frame.title = `inscription-${token.id.toString()}`;
+        frame.title = 'inscription-preview';
         frame.sandbox = '';
         frame.referrerPolicy = 'no-referrer';
         frame.loading = 'lazy';
@@ -4320,7 +4444,11 @@
         if (isGridHtmlDocument(mimeType)) {
           state.gridLiveMediaCache.set(cacheKey, {
             kind: 'html',
-            html: new TextDecoder().decode(bytes),
+            html: await prepareRuntimeHtmlForToken(
+              token,
+              new TextDecoder().decode(bytes),
+              'grid'
+            ),
             mimeType
           });
           if (
@@ -4447,7 +4575,7 @@
       const totalCount = state.walletUsesPagedHoldings
         ? state.walletTotalCount
         : state.walletTokenIds.length;
-      dom.walletCountBadge.textContent = `${totalCount} token${totalCount === 1 ? '' : 's'}`;
+      dom.walletCountBadge.textContent = `${totalCount} inscription${totalCount === 1 ? '' : 's'}`;
       updateWalletPagerControls();
 
       for (let index = 0; index < WALLET_PAGE_SIZE; index += 1) {
@@ -4467,18 +4595,17 @@
         if (id === null) {
           card.disabled = true;
           thumb.textContent = '';
-          meta.innerHTML = '<strong>#</strong><span>empty</span>';
+          meta.innerHTML = '<span>empty</span>';
         } else if (!token) {
           card.disabled = true;
           thumb.textContent = '...';
-          meta.innerHTML =
-            `<strong>${formatTokenId(id)}</strong><span>loading</span>`;
+          meta.innerHTML = '<span>loading</span>';
         } else {
           const kind = getGridMimeLabel(token.meta?.mimeType ?? null);
           thumb.dataset.thumbnailKey = getThumbnailKey(token);
           if (token.svgDataUri) {
             const img = document.createElement('img');
-            img.alt = `Token ${token.id.toString()}`;
+            img.alt = 'Inscription preview';
             applyPixelPerfectImageRendering(img, {
               mimeType: 'image/svg+xml',
               sourceUrl: token.svgDataUri,
@@ -4500,7 +4627,7 @@
           }
           const size = token.meta?.totalSize ?? null;
           meta.innerHTML =
-            `<strong>${formatTokenId(token.id)}</strong><span>${kind}${size !== null ? ` · ${formatBytes(size)}` : ''}</span>`;
+            `<span>${kind}${size !== null ? ` · ${formatBytes(size)}` : ''}</span>`;
           card.addEventListener('click', () => selectToken(token.id));
         }
         card.append(thumb, meta);
@@ -4529,7 +4656,7 @@
 
       if (!token) {
         clearElement(dom.tokenPreviewMedia, 'No selection');
-        renderMeta(dom.tokenPreviewMeta, [['Token', 'None']]);
+        renderNoSelectedInscriptionMeta();
         void updateWalletTokenUriHeadPreview(null);
         updateControls();
         return;
@@ -4538,12 +4665,7 @@
       void updateWalletTokenUriHeadPreview(token.tokenUri);
 
       clearElement(dom.tokenPreviewMedia, 'Loading');
-      renderMeta(dom.tokenPreviewMeta, [
-        ['Token', formatTokenId(token.id)],
-        ['Mime', token.meta?.mimeType ?? 'unknown'],
-        ['Size', token.meta?.totalSize ? formatBytes(token.meta.totalSize) : 'unknown'],
-        ['Owner', token.owner ? truncateMiddle(token.owner, 8, 8) : 'unknown']
-      ]);
+      renderSelectedInscriptionMeta(token);
 
       const tokenContract = getTokenClient(token).contract;
       dom.explorerLink.href = tokenExplorerUrl(tokenContract, token.id);
@@ -4556,12 +4678,13 @@
             renderSquareImagePreview(dom.tokenPreviewMedia, token.svgDataUri, {
               mimeType: 'image/svg+xml',
               isSvgSource: true,
-              alt: `Token ${token.id.toString()}`
+              alt: 'Inscription preview'
             });
             state.tokenPreviewTokenId = token.id.toString();
             state.tokenPreviewBytes = null;
             state.tokenPreviewMimeType = 'image/svg+xml';
             state.tokenPreviewSourceUrl = token.svgDataUri;
+            state.tokenPreviewHtmlDoc = null;
           }
           updateControls();
           return;
@@ -4577,14 +4700,18 @@
           mimeType: token.meta.mimeType ?? null
         });
         const mimeType = resolveMimeType(token.meta.mimeType ?? null, bytes) ?? token.meta.mimeType ?? 'application/octet-stream';
+        const htmlDoc = getMediaKind(mimeType) === 'html'
+          ? await prepareRuntimeHtmlForToken(token, new TextDecoder().decode(bytes), 'preview')
+          : null;
         revokeTokenPreview();
         state.tokenPreviewTokenId = token.id.toString();
         state.tokenPreviewBytes = bytes;
         state.tokenPreviewMimeType = mimeType;
         state.tokenPreviewSourceUrl = null;
+        state.tokenPreviewHtmlDoc = htmlDoc;
         renderBytesPreview(dom.tokenPreviewMedia, bytes, mimeType, (url) => {
           state.tokenPreviewUrl = url;
-        }, { truthfulImageSizing: true });
+        }, { truthfulImageSizing: true, htmlDoc });
         void warmThumbnailCacheFromBytes(token, bytes, mimeType);
         updateControls();
       } catch (error) {
@@ -4980,7 +5107,7 @@
         void updateWalletTokenUriHeadPreview(null);
         resetBackgroundThumbnailHydration();
         revokeGridThumbUrls();
-        dom.walletCountBadge.textContent = '0 tokens';
+        dom.walletCountBadge.textContent = '0 inscriptions';
         setStatus(
           dom.walletGridStatus,
           '<strong>Grid</strong> enter a wallet address or connect',
@@ -5033,7 +5160,7 @@
           if (state.walletTotalCount === 0) {
             setStatus(dom.walletGridStatus, '<strong>Grid</strong> no inscriptions found', 'empty', 'amber');
             clearElement(dom.tokenPreviewMedia, 'No selection');
-            renderMeta(dom.tokenPreviewMeta, [['Token', 'None']]);
+            renderNoSelectedInscriptionMeta();
             void updateWalletTokenUriHeadPreview(null);
             renderTokenGrid();
             setExperienceMode();
@@ -5102,7 +5229,7 @@
         if (state.walletTokenIds.length === 0) {
           setStatus(dom.walletGridStatus, '<strong>Grid</strong> no inscriptions found', 'empty', 'amber');
           clearElement(dom.tokenPreviewMedia, 'No selection');
-          renderMeta(dom.tokenPreviewMeta, [['Token', 'None']]);
+          renderNoSelectedInscriptionMeta();
           void updateWalletTokenUriHeadPreview(null);
           renderTokenGrid();
         } else {
@@ -5221,24 +5348,12 @@
       renderPreparedState();
     };
 
-    const initializeContractSelect = () => {
-      dom.contractSelect.innerHTML = '';
-      for (const entry of ACTIVE_CONTRACTS) {
-        const option = document.createElement('option');
-        option.value = getContractId(entry);
-        option.textContent = entry.label;
-        dom.contractSelect.append(option);
-      }
-      dom.contractSelect.value = getContractId(state.contract);
-    };
-
     const initialize = async () => {
       applyTheme(loadTheme());
       dom.tokenUriInput.value = DEFAULT_TOKEN_URI;
       void updateTokenUriHeadPreview();
       dom.walletLookupInput.value = '';
       updateWalletLookupInputMode();
-      initializeContractSelect();
       applyContract(state.contract);
       resetSteps();
       renderTokenGridPlaceholders();
@@ -5301,6 +5416,7 @@
     dom.transferRecipientInput.addEventListener('input', updateTransferControls);
     dom.transferButton.addEventListener('click', transferSelectedToken);
     dom.fullscreenButton.addEventListener('click', openFullscreenViewer);
+    dom.previewExpandButton.addEventListener('click', openFullscreenViewer);
     dom.fullscreenCloseButton.addEventListener('click', () => {
       void closeFullscreenViewer();
     });
@@ -5332,18 +5448,6 @@
 
     dom.themeSelect.addEventListener('change', () => {
       applyTheme(dom.themeSelect.value);
-    });
-
-    dom.contractSelect.addEventListener('change', async () => {
-      const contract = ACTIVE_CONTRACTS.find((entry) => getContractId(entry) === dom.contractSelect.value);
-      if (!contract) {
-        return;
-      }
-      saveHomepageContractSelection(contract);
-      applyContract(contract);
-      appendLog(`Contract selected: ${contract.label}`);
-      await fetchAdminStatus();
-      await loadWalletInscriptions();
     });
 
     dom.fileInput.addEventListener('change', () => {
