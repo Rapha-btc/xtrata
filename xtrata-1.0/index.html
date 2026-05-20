@@ -2204,6 +2204,10 @@
       saveInscriptionThumbnailToCache
     } from '/src/lib/viewer/cache.ts';
     import { injectGridThumbnailHtml } from '/src/lib/viewer/html-preview.ts';
+    import {
+      hasRuntimeContentUrls,
+      inlineRuntimeContentUrls
+    } from '/src/lib/viewer/runtime-inline.ts';
     import { createImageThumbnail, THUMBNAIL_SIZE } from '/src/lib/viewer/thumbnail.ts';
     import { shouldUsePixelatedImageRendering } from '/src/lib/viewer/image-rendering.ts';
     import {
@@ -2397,6 +2401,7 @@
       tokenPreviewBytes: null,
       tokenPreviewMimeType: null,
       tokenPreviewSourceUrl: null,
+      tokenPreviewHtmlDoc: null,
       fullscreenUrl: null,
       fullscreenOpen: false,
       tokenThumbUrls: new Map(),
@@ -2800,6 +2805,7 @@
       state.tokenPreviewBytes = null;
       state.tokenPreviewMimeType = null;
       state.tokenPreviewSourceUrl = null;
+      state.tokenPreviewHtmlDoc = null;
     };
 
     const revokeFullscreenPreview = () => {
@@ -2963,11 +2969,18 @@
     const renderBytesPreview = (target, bytes, mimeType, urlSetter, options = {}) => {
       target.innerHTML = '';
       const kind = getMediaKind(mimeType);
-      const blob = new Blob([bytes], { type: mimeType || 'application/octet-stream' });
-      const url = URL.createObjectURL(blob);
-      urlSetter(url);
+      let objectUrl = null;
+      const getObjectUrl = () => {
+        if (!objectUrl) {
+          const blob = new Blob([bytes], { type: mimeType || 'application/octet-stream' });
+          objectUrl = URL.createObjectURL(blob);
+          urlSetter(objectUrl);
+        }
+        return objectUrl;
+      };
 
       if (kind === 'image' || kind === 'svg') {
+        const url = getObjectUrl();
         if (options.truthfulImageSizing) {
           renderSquareImagePreview(target, url, {
             mimeType,
@@ -2991,7 +3004,7 @@
       if (kind === 'video') {
         const video = document.createElement('video');
         video.controls = true;
-        video.src = url;
+        video.src = getObjectUrl();
         target.append(video);
         return;
       }
@@ -2999,15 +3012,24 @@
       if (kind === 'audio') {
         const audio = document.createElement('audio');
         audio.controls = true;
-        audio.src = url;
+        audio.src = getObjectUrl();
         target.append(audio);
         return;
       }
 
       if (kind === 'html') {
         const frame = document.createElement('iframe');
-        frame.sandbox = 'allow-scripts';
-        frame.src = url;
+        frame.title = 'inscription-preview';
+        frame.referrerPolicy = 'no-referrer';
+        frame.loading = 'lazy';
+        frame.sandbox = mimeType?.trim().toLowerCase() === 'application/pdf'
+          ? ''
+          : 'allow-scripts';
+        if (options.htmlDoc && mimeType?.trim().toLowerCase() !== 'application/pdf') {
+          frame.srcdoc = options.htmlDoc;
+        } else {
+          frame.src = getObjectUrl();
+        }
         target.append(frame);
         return;
       }
@@ -3782,6 +3804,40 @@
     const getThumbnailKey = (token) =>
       `${getTokenCacheContractId(token)}:${token.id.toString()}`;
 
+    const prepareRuntimeHtmlForToken = async (token, html, contextLabel = 'preview') => {
+      if (!html || !hasRuntimeContentUrls(html)) {
+        return html;
+      }
+      const contentClient = getTokenClient(token);
+      try {
+        debugLog('preview', 'inlining runtime content for HTML inscription', {
+          tokenId: token.id.toString(),
+          contractId: getTokenCacheContractId(token),
+          context: contextLabel
+        });
+        return await inlineRuntimeContentUrls({
+          html,
+          client: contentClient,
+          fallbackClient: contentClient === state.client ? state.legacyClient : null
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        debugLog(
+          'preview',
+          'runtime content inline failed; using raw HTML',
+          {
+            tokenId: token.id.toString(),
+            contractId: getTokenCacheContractId(token),
+            context: contextLabel,
+            error: message
+          },
+          'warn'
+        );
+        appendLog(`Runtime preview fallback for ${formatTokenId(token.id)}: ${message}`);
+        return html;
+      }
+    };
+
     const getFullscreenPagePosition = () => {
       const pageIds = getWalletPageIds();
       const selectedId = state.selectedTokenId;
@@ -3836,7 +3892,8 @@
           token,
           bytes: state.tokenPreviewBytes,
           mimeType: state.tokenPreviewMimeType ?? token.meta?.mimeType ?? null,
-          sourceUrl: state.tokenPreviewSourceUrl
+          sourceUrl: state.tokenPreviewSourceUrl,
+          htmlDoc: state.tokenPreviewHtmlDoc
         };
       }
       if (!token.meta || token.meta.totalSize <= 0n) {
@@ -3847,11 +3904,13 @@
         state.tokenPreviewBytes = null;
         state.tokenPreviewMimeType = 'image/svg+xml';
         state.tokenPreviewSourceUrl = token.svgDataUri;
+        state.tokenPreviewHtmlDoc = null;
         return {
           token,
           bytes: null,
           mimeType: 'image/svg+xml',
-          sourceUrl: token.svgDataUri
+          sourceUrl: token.svgDataUri,
+          htmlDoc: null
         };
       }
       const contentClient = getTokenClient(token);
@@ -3865,11 +3924,15 @@
         mimeType: token.meta.mimeType ?? null
       });
       const mimeType = resolveMimeType(token.meta.mimeType ?? null, bytes) ?? token.meta.mimeType ?? 'application/octet-stream';
+      const htmlDoc = getMediaKind(mimeType) === 'html'
+        ? await prepareRuntimeHtmlForToken(token, new TextDecoder().decode(bytes), 'fullscreen')
+        : null;
       state.tokenPreviewTokenId = tokenId;
       state.tokenPreviewBytes = bytes;
       state.tokenPreviewMimeType = mimeType;
       state.tokenPreviewSourceUrl = null;
-      return { token, bytes, mimeType, sourceUrl: null };
+      state.tokenPreviewHtmlDoc = htmlDoc;
+      return { token, bytes, mimeType, sourceUrl: null, htmlDoc };
     };
 
     const configureFullscreenRawLink = (token, sourceUrl) => {
@@ -3878,7 +3941,7 @@
       dom.fullscreenRawLink.hidden = false;
     };
 
-    const renderFullscreenContent = ({ token, bytes, mimeType, sourceUrl }) => {
+    const renderFullscreenContent = ({ token, bytes, mimeType, sourceUrl, htmlDoc }) => {
       revokeFullscreenPreview();
       setFullscreenMeta(token, mimeType);
       dom.fullscreenRawLink.hidden = true;
@@ -3943,7 +4006,11 @@
         frame.sandbox = mimeType?.trim().toLowerCase() === 'application/pdf'
           ? ''
           : 'allow-scripts';
-        frame.src = url;
+        if (htmlDoc && mimeType?.trim().toLowerCase() !== 'application/pdf') {
+          frame.srcdoc = htmlDoc;
+        } else {
+          frame.src = url;
+        }
         dom.fullscreenStage.append(frame);
         return;
       }
@@ -4320,7 +4387,11 @@
         if (isGridHtmlDocument(mimeType)) {
           state.gridLiveMediaCache.set(cacheKey, {
             kind: 'html',
-            html: new TextDecoder().decode(bytes),
+            html: await prepareRuntimeHtmlForToken(
+              token,
+              new TextDecoder().decode(bytes),
+              'grid'
+            ),
             mimeType
           });
           if (
@@ -4562,6 +4633,7 @@
             state.tokenPreviewBytes = null;
             state.tokenPreviewMimeType = 'image/svg+xml';
             state.tokenPreviewSourceUrl = token.svgDataUri;
+            state.tokenPreviewHtmlDoc = null;
           }
           updateControls();
           return;
@@ -4577,14 +4649,18 @@
           mimeType: token.meta.mimeType ?? null
         });
         const mimeType = resolveMimeType(token.meta.mimeType ?? null, bytes) ?? token.meta.mimeType ?? 'application/octet-stream';
+        const htmlDoc = getMediaKind(mimeType) === 'html'
+          ? await prepareRuntimeHtmlForToken(token, new TextDecoder().decode(bytes), 'preview')
+          : null;
         revokeTokenPreview();
         state.tokenPreviewTokenId = token.id.toString();
         state.tokenPreviewBytes = bytes;
         state.tokenPreviewMimeType = mimeType;
         state.tokenPreviewSourceUrl = null;
+        state.tokenPreviewHtmlDoc = htmlDoc;
         renderBytesPreview(dom.tokenPreviewMedia, bytes, mimeType, (url) => {
           state.tokenPreviewUrl = url;
-        }, { truthfulImageSizing: true });
+        }, { truthfulImageSizing: true, htmlDoc });
         void warmThumbnailCacheFromBytes(token, bytes, mimeType);
         updateControls();
       } catch (error) {
