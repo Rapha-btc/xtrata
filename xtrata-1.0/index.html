@@ -1513,6 +1513,67 @@
       margin-bottom: 5px;
     }
 
+    .homepage-docs {
+      margin-top: 18px;
+    }
+
+    .docs-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .docs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
+    .docs-card {
+      min-width: 0;
+      display: grid;
+      align-content: start;
+      gap: 8px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface-soft);
+      padding: 12px;
+    }
+
+    .docs-card h3 {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.2;
+    }
+
+    .docs-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .docs-links {
+      display: grid;
+      gap: 6px;
+      margin-top: 2px;
+    }
+
+    .docs-links a {
+      width: fit-content;
+      color: var(--green);
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+      text-decoration: none;
+    }
+
+    .docs-links a:hover {
+      text-decoration: underline;
+    }
+
     body.has-ledger .registry-intro {
       display: none;
     }
@@ -1674,6 +1735,10 @@
       .registry-footnotes {
         grid-template-columns: 1fr;
       }
+
+      .docs-actions {
+        justify-content: flex-start;
+      }
     }
 
     @media (max-width: 560px) {
@@ -1686,6 +1751,10 @@
       .ledger-row {
         grid-template-columns: 1fr;
         gap: 4px;
+      }
+
+      .docs-grid {
+        grid-template-columns: 1fr;
       }
     }
 
@@ -1984,6 +2053,7 @@
           <option value="arctic">Arctic dark</option>
           <option value="ruby">Ruby night</option>
         </select>
+        <a class="btn ghost" href="#docs">Docs</a>
         <a class="btn ghost" href="/workspace">Workspace</a>
         <button class="btn" id="connectButton" type="button">Connect wallet</button>
         <button class="btn secondary" id="disconnectButton" type="button" hidden>Disconnect</button>
@@ -1998,6 +2068,7 @@
         <div class="registry-intro-actions">
           <button class="btn" id="introConnectButton" type="button">Connect wallet</button>
           <button class="btn secondary" id="introPrepareButton" type="button">Prepare a record</button>
+          <a class="btn secondary" href="#docs">Read docs</a>
         </div>
         <div class="registry-footnotes" aria-label="Registry qualities">
           <p class="registry-note"><strong>Create</strong>Upload a file or write text, then inscribe it with your wallet.</p>
@@ -2011,6 +2082,72 @@
         <div class="ledger-row"><span class="ledger-key">Contract</span><span class="ledger-value" id="introContractValue">Loading contract...</span></div>
         <div class="ledger-row"><span class="ledger-key">Status</span><span class="ledger-value" id="introStateValue">Connect a wallet to inspect your ledger.</span></div>
       </aside>
+    </section>
+
+    <section class="panel homepage-docs" id="docs" aria-labelledby="docsTitle">
+      <div class="panel-head">
+        <div>
+          <h2 class="panel-title" id="docsTitle">Documentation</h2>
+          <p class="panel-subtitle">Reference paths for users, SDK builders, artists, integrators, and agents.</p>
+        </div>
+        <div class="docs-actions">
+          <a class="btn ghost" href="https://github.com/stxtrata/xtrata/blob/main-staging/xtrata-1.0/docs/documentation-index.md" target="_blank" rel="noreferrer">Docs index</a>
+          <a class="btn ghost" href="/workspace">Workspace</a>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="docs-grid">
+          <article class="docs-card">
+            <h3>Start using Xtrata</h3>
+            <p>First-pass references for minting, reading, and resolving recursive inscriptions.</p>
+            <div class="docs-links" aria-label="Start using Xtrata links">
+              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/xtrata-quickstart.md" target="_blank" rel="noreferrer">Quickstart</a>
+              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/xtrata-inscription-handbook.md" target="_blank" rel="noreferrer">Inscription handbook</a>
+              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/recursive-inscriptions.md" target="_blank" rel="noreferrer">Recursive inscriptions</a>
+            </div>
+          </article>
+
+          <article class="docs-card">
+            <h3>Build with the SDK</h3>
+            <p>SDK entry points, API selection, and starter examples for third-party apps.</p>
+            <div class="docs-links" aria-label="Build with the SDK links">
+              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/sdk/README.md" target="_blank" rel="noreferrer">SDK overview</a>
+              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/sdk/quickstart-first-30-minutes.md" target="_blank" rel="noreferrer">First 30 minutes</a>
+              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/sdk/api-overview.md" target="_blank" rel="noreferrer">API overview</a>
+              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/examples/README.md" target="_blank" rel="noreferrer">Example apps</a>
+            </div>
+          </article>
+
+          <article class="docs-card">
+            <h3>Launch a collection</h3>
+            <p>Artist and team guides for portal access, collection setup, and contract deployment.</p>
+            <div class="docs-links" aria-label="Launch a collection links">
+              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/artist-guides/README.md" target="_blank" rel="noreferrer">Artist guides</a>
+              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/artist-guides/collection-launch-guide.md" target="_blank" rel="noreferrer">Launch guide</a>
+              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/artist-guides/collection-template-deploy-guide.md" target="_blank" rel="noreferrer">Template deploy guide</a>
+            </div>
+          </article>
+
+          <article class="docs-card">
+            <h3>Integrate contracts</h3>
+            <p>Contract inventory, current core API surface, and product ownership boundaries.</p>
+            <div class="docs-links" aria-label="Integrate contracts links">
+              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/contract-inventory.md" target="_blank" rel="noreferrer">Contract inventory</a>
+              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/xtrata-v2.1.0/api-reference.md" target="_blank" rel="noreferrer">v2.1.0 API reference</a>
+              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/product-contract-ui-reference.md" target="_blank" rel="noreferrer">Product contract roles</a>
+            </div>
+          </article>
+
+          <article class="docs-card">
+            <h3>Train agents</h3>
+            <p>AI-agent training docs for safe mint, batch, query, and automation workflows.</p>
+            <div class="docs-links" aria-label="Train agents links">
+              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/ai-skills/README.md" target="_blank" rel="noreferrer">AI skills index</a>
+              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/XTRATA_AGENT_SKILL.md" target="_blank" rel="noreferrer">Agent skill reference</a>
+            </div>
+          </article>
+        </div>
+      </div>
     </section>
 
     <main class="workspace">
