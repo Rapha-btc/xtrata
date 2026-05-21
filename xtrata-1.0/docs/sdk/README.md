@@ -9,8 +9,9 @@ The SDK is now implemented through release automation. The primary focus is stab
 1. `docs/sdk/quickstart-first-30-minutes.md`
 2. `docs/sdk/quickstart-simple-mode.md`
 3. `docs/sdk/quickstart-workflows.md`
-4. `docs/sdk/troubleshooting.md`
-5. `docs/sdk/migration-guide.md`
+4. `docs/xtrata-backup-migration-service.md`
+5. `docs/sdk/troubleshooting.md`
+6. `docs/sdk/migration-guide.md`
 
 ## Core reference docs
 
