@@ -2295,6 +2295,7 @@ export default function PublicApp() {
           collapsed={collapsedSections.inscribe}
           onToggleCollapse={() => toggleSection('inscribe')}
           restrictions={PUBLIC_MINT_RESTRICTIONS}
+          usdPriceBook={usdPriceBook}
         />
 
         <ViewerScreen
