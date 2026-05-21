@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  getSquareFramedImagePercentages,
+  getSquareFramedImageStyle,
   isPixelatedRasterMimeType,
   shouldUsePixelatedImageRendering,
   shouldUsePixelatedThumbnailRendering
@@ -87,5 +89,46 @@ describe('isPixelatedRasterMimeType', () => {
     expect(isPixelatedRasterMimeType('image/png')).toBe(true);
     expect(isPixelatedRasterMimeType('image/webp')).toBe(true);
     expect(isPixelatedRasterMimeType('image/jpeg')).toBe(false);
+  });
+});
+
+describe('square image framing', () => {
+  it('letterboxes tall images inside the square frame', () => {
+    expect(
+      getSquareFramedImagePercentages({
+        sourceWidth: 216,
+        sourceHeight: 288
+      })
+    ).toEqual({
+      widthPercent: 75,
+      heightPercent: 100,
+      referenceSize: 288
+    });
+  });
+
+  it('preserves the thumbnail reference floor for small art', () => {
+    expect(
+      getSquareFramedImagePercentages({
+        sourceWidth: 64,
+        sourceHeight: 128
+      })
+    ).toEqual({
+      widthPercent: 25,
+      heightPercent: 50,
+      referenceSize: 256
+    });
+  });
+
+  it('returns a contain-fit inline style for native animated images', () => {
+    expect(
+      getSquareFramedImageStyle({
+        sourceWidth: 216,
+        sourceHeight: 288
+      })
+    ).toMatchObject({
+      width: '75%',
+      height: '100%',
+      objectFit: 'contain'
+    });
   });
 });
