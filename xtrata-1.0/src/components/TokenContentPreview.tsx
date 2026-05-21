@@ -4,6 +4,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type SyntheticEvent
 } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -18,6 +19,7 @@ import {
   getTextPreview,
   IMMUTABLE_VIEWER_FETCH_CACHE_MODE,
   isDataUri,
+  isAnimatedImagePayload,
   isHttpUrl,
   joinChunks,
   MAX_AUTO_PREVIEW_BYTES,
@@ -35,7 +37,10 @@ import {
   inlineRuntimeContentUrls,
   RUNTIME_INLINE_HTML_VERSION
 } from '../lib/viewer/runtime-inline';
-import { shouldUsePixelatedImageRendering } from '../lib/viewer/image-rendering';
+import {
+  getSquareFramedImageStyle,
+  shouldUsePixelatedImageRendering
+} from '../lib/viewer/image-rendering';
 import {
   appendRuntimeWalletBridgeToken,
   buildRuntimeOpenUrl,
@@ -168,6 +173,8 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
   const [onChainImageFailed, setOnChainImageFailed] = useState(false);
   const [onChainImageReady, setOnChainImageReady] = useState(false);
   const [pixelatePreview, setPixelatePreview] = useState(false);
+  const [previewImageFrameStyle, setPreviewImageFrameStyle] =
+    useState<CSSProperties | undefined>(undefined);
   const [bridgeSource, setBridgeSource] = useState<MessageEventSource | null>(null);
   const [thumbnailPending, setThumbnailPending] = useState(false);
   const [thumbnailStatusMessage, setThumbnailStatusMessage] = useState<string | null>(
@@ -182,6 +189,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
     setOnChainImageFailed(false);
     setOnChainImageReady(false);
     setPixelatePreview(false);
+    setPreviewImageFrameStyle(undefined);
     setThumbnailPending(false);
     setThumbnailStatusMessage(null);
   }, [props.token.id, props.token.tokenUri]);
@@ -1392,6 +1400,10 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
         });
         return;
       }
+      if (resolvedKind === 'image' && isAnimatedImagePayload(bytes, resolvedMime)) {
+        setThumbnailStatusMessage('Animated image uses live preview');
+        return;
+      }
       const result = await createImageThumbnail({
         bytes,
         mimeType: resolvedMime,
@@ -1491,6 +1503,11 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
       ? 'preview-media--pixelated'
       : undefined;
   const mediaSourceUrl = streamUrl ?? contentUrl;
+  const previewImageFrameKey =
+    svgPreview ?? contentUrl ?? tokenUriPreview ?? jsonImagePreview ?? null;
+  useEffect(() => {
+    setPreviewImageFrameStyle(undefined);
+  }, [previewImageFrameKey]);
   const hasRenderableSource =
     !!svgPreview ||
     !!(contentQuery.data && contentQuery.data.length > 0) ||
@@ -1614,7 +1631,6 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
           setTokenUriPreviewReady(true);
         }
         const target = event.currentTarget;
-        const rect = target.getBoundingClientRect();
         const normalizedMime = (resolvedMimeType ?? mimeType ?? '').toLowerCase();
         const urlLower = url.toLowerCase();
         const isSvgSource =
@@ -1624,6 +1640,23 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
           urlLower.includes('.svg');
         const naturalWidth = target.naturalWidth || 0;
         const naturalHeight = target.naturalHeight || 0;
+        const nextFrameStyle = getSquareFramedImageStyle({
+          sourceWidth: naturalWidth,
+          sourceHeight: naturalHeight,
+          referenceSizeFloor: THUMBNAIL_SIZE
+        });
+        if (nextFrameStyle) {
+          Object.assign(target.style, nextFrameStyle);
+          setPreviewImageFrameStyle((previous) =>
+            previous?.width === nextFrameStyle.width &&
+            previous?.height === nextFrameStyle.height
+              ? previous
+              : nextFrameStyle
+          );
+        } else {
+          setPreviewImageFrameStyle(undefined);
+        }
+        const rect = target.getBoundingClientRect();
         const nextPixelate = shouldUsePixelatedImageRendering({
           naturalWidth,
           naturalHeight,
@@ -2001,6 +2034,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
                         alt="SVG preview"
                         loading="lazy"
                         className={previewImageClassName}
+                        style={previewImageFrameStyle}
                         onLoad={handlePreviewImageLoad('svg-preview', svgPreview)}
                         onError={handlePreviewImageError('svg-preview', svgPreview)}
                       />
@@ -2035,6 +2069,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
                                   ? `${previewImageClassName} preview-image--pending`
                                   : 'preview-image--pending'
                             }
+                            style={previewImageFrameStyle}
                             onLoad={handlePreviewImageLoad('on-chain', contentUrl)}
                             onError={handlePreviewImageError('on-chain', contentUrl)}
                           />
@@ -2079,6 +2114,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
                                 ? `${previewImageClassName} preview-image--pending`
                                 : 'preview-image--pending'
                           }
+                          style={previewImageFrameStyle}
                           onLoad={handlePreviewImageLoad('token-uri', tokenUriPreview)}
                           onError={handlePreviewImageError('token-uri', tokenUriPreview)}
                         />
@@ -2119,6 +2155,7 @@ export default function TokenContentPreview(props: TokenContentPreviewProps) {
                             src={jsonImagePreview}
                             alt="Metadata preview"
                             loading="lazy"
+                            style={previewImageFrameStyle}
                             onLoad={handlePreviewImageLoad(
                               'metadata-image',
                               jsonImagePreview

@@ -40,8 +40,18 @@ const logBatchReadConfigOnce = () => {
 export const normalizeMimeType = (mimeType?: string | null) =>
   mimeType ? mimeType.trim().toLowerCase() : null;
 
-export const getMediaKind = (mimeType?: string | null): MediaKind => {
+export const getMimeTypeEssence = (mimeType?: string | null) => {
   const normalized = normalizeMimeType(mimeType);
+  if (!normalized) {
+    return null;
+  }
+  const [essence] = normalized.split(';', 1);
+  const trimmed = essence.trim();
+  return trimmed || null;
+};
+
+export const getMediaKind = (mimeType?: string | null): MediaKind => {
+  const normalized = getMimeTypeEssence(mimeType);
   if (!normalized) {
     return 'binary';
   }
@@ -247,16 +257,26 @@ export const resolveMimeType = (
   metaMimeType: string | null,
   bytes?: Uint8Array | null
 ) => {
-  const normalized = normalizeMimeType(metaMimeType);
+  const normalized = getMimeTypeEssence(metaMimeType);
   if (!bytes || bytes.length === 0) {
     return normalized;
   }
+  const sniffed = sniffMimeType(bytes);
   if (
     !normalized ||
     normalized === 'application/json' ||
     normalized === 'application/octet-stream'
   ) {
-    return sniffMimeType(bytes) ?? normalized;
+    return sniffed ?? normalized;
+  }
+  if (
+    sniffed &&
+    sniffed !== normalized &&
+    sniffed.startsWith('image/') &&
+    normalized.startsWith('image/') &&
+    !(sniffed === 'image/png' && normalized === 'image/apng')
+  ) {
+    return sniffed;
   }
   return normalized;
 };
@@ -583,6 +603,159 @@ const getFiniteWebpReplayDelayMs = (bytes: Uint8Array) => {
   return perLoopDurationMs * resolvedLoops;
 };
 
+const isAnimatedGifPayload = (bytes: Uint8Array) => {
+  if (!isGifHeader(bytes) || bytes.length < 13) {
+    return false;
+  }
+  let cursor = 13;
+  const logicalDescriptorPacked = bytes[10] ?? 0;
+  if ((logicalDescriptorPacked & 0x80) !== 0) {
+    const globalColorTableSize = 1 << ((logicalDescriptorPacked & 0x07) + 1);
+    cursor += globalColorTableSize * 3;
+  }
+
+  let frameCount = 0;
+  while (cursor < bytes.length) {
+    const blockType = bytes[cursor++];
+    if (blockType === 0x3b) {
+      break;
+    }
+    if (blockType === 0x21) {
+      cursor += 1;
+      cursor = skipGifSubBlocks(bytes, cursor);
+      continue;
+    }
+    if (blockType === 0x2c) {
+      if (cursor + 9 > bytes.length) {
+        break;
+      }
+      const localDescriptorPacked = bytes[cursor + 8] ?? 0;
+      cursor += 9;
+      if ((localDescriptorPacked & 0x80) !== 0) {
+        const localColorTableSize = 1 << ((localDescriptorPacked & 0x07) + 1);
+        cursor += localColorTableSize * 3;
+      }
+      cursor += 1;
+      cursor = skipGifSubBlocks(bytes, cursor);
+      frameCount += 1;
+      if (frameCount > 1) {
+        return true;
+      }
+      continue;
+    }
+    break;
+  }
+  return false;
+};
+
+const isAnimatedApngPayload = (bytes: Uint8Array) => {
+  if (!isPngHeader(bytes)) {
+    return false;
+  }
+  let cursor = 8;
+  let hasAnimationControl = false;
+  let declaredFrameCount: number | null = null;
+  let parsedFrameCount = 0;
+
+  while (cursor + 8 <= bytes.length) {
+    const chunkLength = readUint32BE(bytes, cursor);
+    const chunkType = getChunkType(bytes, cursor + 4);
+    if (chunkLength === null || chunkType === null) {
+      break;
+    }
+    const dataStart = cursor + 8;
+    const dataEnd = dataStart + chunkLength;
+    const nextChunk = dataEnd + 4;
+    if (dataEnd > bytes.length || nextChunk > bytes.length) {
+      break;
+    }
+
+    if (chunkType === 'acTL' && chunkLength >= 8) {
+      hasAnimationControl = true;
+      declaredFrameCount = readUint32BE(bytes, dataStart);
+    } else if (chunkType === 'fcTL') {
+      parsedFrameCount += 1;
+    }
+
+    cursor = nextChunk;
+    if (chunkType === 'IEND') {
+      break;
+    }
+  }
+
+  return (
+    hasAnimationControl &&
+    Math.max(declaredFrameCount ?? 0, parsedFrameCount) > 1
+  );
+};
+
+const isAnimatedWebpPayload = (bytes: Uint8Array) => {
+  if (!isWebpHeader(bytes)) {
+    return false;
+  }
+  let cursor = 12;
+  let hasAnimationChunk = false;
+  let frameCount = 0;
+
+  while (cursor + 8 <= bytes.length) {
+    const chunkType = getChunkType(bytes, cursor);
+    const chunkLength = readUint32LE(bytes, cursor + 4);
+    if (chunkType === null || chunkLength === null) {
+      break;
+    }
+    const dataStart = cursor + 8;
+    const dataEnd = dataStart + chunkLength;
+    if (dataEnd > bytes.length) {
+      break;
+    }
+
+    if (chunkType === 'ANIM') {
+      hasAnimationChunk = true;
+    } else if (chunkType === 'ANMF') {
+      frameCount += 1;
+      if (hasAnimationChunk && frameCount > 1) {
+        return true;
+      }
+    }
+
+    const paddedLength = chunkLength + (chunkLength % 2);
+    cursor = dataStart + paddedLength;
+  }
+
+  return hasAnimationChunk && frameCount > 1;
+};
+
+export const isAnimatedImagePayload = (
+  bytes: Uint8Array,
+  mimeType?: string | null
+) => {
+  if (!bytes || bytes.length === 0) {
+    return false;
+  }
+  const normalizedMimeType = getMimeTypeEssence(mimeType);
+  if (normalizedMimeType === 'image/gif') {
+    return isAnimatedGifPayload(bytes);
+  }
+  if (normalizedMimeType === 'image/apng' || normalizedMimeType === 'image/png') {
+    return isAnimatedApngPayload(bytes);
+  }
+  if (normalizedMimeType === 'image/webp') {
+    return isAnimatedWebpPayload(bytes);
+  }
+
+  const sniffedMimeType = sniffMimeType(bytes);
+  if (sniffedMimeType === 'image/gif') {
+    return isAnimatedGifPayload(bytes);
+  }
+  if (sniffedMimeType === 'image/png') {
+    return isAnimatedApngPayload(bytes);
+  }
+  if (sniffedMimeType === 'image/webp') {
+    return isAnimatedWebpPayload(bytes);
+  }
+  return false;
+};
+
 // Returns playback duration of one finite animated-image run (all loops), or
 // null for static/infinite animations and non-animated payloads.
 export const getFiniteAnimatedImageReplayDelayMs = (
@@ -592,7 +765,7 @@ export const getFiniteAnimatedImageReplayDelayMs = (
   if (!bytes || bytes.length === 0) {
     return null;
   }
-  const normalizedMimeType = normalizeMimeType(mimeType);
+  const normalizedMimeType = getMimeTypeEssence(mimeType);
   if (normalizedMimeType === 'image/gif') {
     return getFiniteGifReplayDelayMs(bytes);
   }

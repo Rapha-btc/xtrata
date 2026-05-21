@@ -10,8 +10,10 @@ import {
   getFiniteGifReplayDelayMs,
   getExpectedChunkCount,
   getMediaKind,
+  getMimeTypeEssence,
   getTextPreview,
   getTotalChunks,
+  isAnimatedImagePayload,
   isLikelyImageUrl,
   joinChunks,
   resolveMimeType,
@@ -258,6 +260,17 @@ describe('viewer content helpers', () => {
     const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
     expect(resolveMimeType('application/octet-stream', bytes)).toBe('image/png');
     expect(resolveMimeType('image/png', bytes)).toBe('image/png');
+    expect(resolveMimeType('image/jpeg', bytes)).toBe('image/png');
+    expect(resolveMimeType('image/apng', bytes)).toBe('image/apng');
+  });
+
+  it('normalizes mime type parameters for matching', () => {
+    const gif = buildAnimatedGif({ frameCount: 2, delayCs: 5, loopCount: 0 });
+
+    expect(getMimeTypeEssence(' image/gif; charset=binary ')).toBe('image/gif');
+    expect(getMediaKind('image/gif; charset=binary')).toBe('image');
+    expect(isAnimatedImagePayload(gif, 'image/gif; charset=binary')).toBe(true);
+    expect(resolveMimeType('image/jpeg; charset=binary', gif)).toBe('image/gif');
   });
 
   it('computes finite gif replay durations', () => {
@@ -329,6 +342,87 @@ describe('viewer content helpers', () => {
     expect(
       getFiniteAnimatedImageReplayDelayMs(staticWebp, 'image/webp')
     ).toBeNull();
+  });
+
+  it('detects animated image payloads even when they loop forever', () => {
+    const infiniteApng = buildAnimatedApng({
+      frameCount: 2,
+      delayNum: 10,
+      delayDen: 100,
+      loopCount: 0
+    });
+    const finiteGif = buildAnimatedGif({
+      frameCount: 2,
+      delayCs: 5,
+      loopCount: 2
+    });
+    const infiniteWebp = buildAnimatedWebp({
+      frameCount: 2,
+      frameDurationMs: 100,
+      loopCount: 0
+    });
+    const staticApng = buildAnimatedApng({
+      frameCount: 1,
+      delayNum: 10,
+      delayDen: 100,
+      loopCount: 1
+    });
+
+    expect(isAnimatedImagePayload(infiniteApng, 'image/png')).toBe(true);
+    expect(isAnimatedImagePayload(finiteGif, 'image/gif')).toBe(true);
+    expect(isAnimatedImagePayload(infiniteWebp, 'image/webp')).toBe(true);
+    expect(isAnimatedImagePayload(staticApng, 'image/png')).toBe(false);
+  });
+
+  it('detects APNG assembler-style PNGs with palette and frame data chunks', () => {
+    const bytes: number[] = [
+      0x89, 0x50, 0x4e, 0x47,
+      0x0d, 0x0a, 0x1a, 0x0a
+    ];
+    pushPngChunk(bytes, 'IHDR', [
+      ...writeUint32BE(2),
+      ...writeUint32BE(2),
+      0x08, 0x03, 0x00, 0x00, 0x00
+    ]);
+    pushPngChunk(bytes, 'acTL', [
+      ...writeUint32BE(2),
+      ...writeUint32BE(0)
+    ]);
+    pushPngChunk(bytes, 'PLTE', [
+      0x00, 0x00, 0x00,
+      0xff, 0xff, 0xff
+    ]);
+    pushPngChunk(bytes, 'tRNS', [0x00, 0xff]);
+    pushPngChunk(bytes, 'fcTL', [
+      ...writeUint32BE(0),
+      ...writeUint32BE(2),
+      ...writeUint32BE(2),
+      ...writeUint32BE(0),
+      ...writeUint32BE(0),
+      ...writeUint16BE(1),
+      ...writeUint16BE(20),
+      0x00,
+      0x00
+    ]);
+    pushPngChunk(bytes, 'IDAT', [0x78, 0x9c, 0x63, 0x60]);
+    pushPngChunk(bytes, 'fcTL', [
+      ...writeUint32BE(1),
+      ...writeUint32BE(2),
+      ...writeUint32BE(2),
+      ...writeUint32BE(0),
+      ...writeUint32BE(0),
+      ...writeUint16BE(1),
+      ...writeUint16BE(20),
+      0x00,
+      0x00
+    ]);
+    pushPngChunk(bytes, 'fdAT', [
+      ...writeUint32BE(2),
+      0x78, 0x9c, 0x63, 0x60
+    ]);
+    pushPngChunk(bytes, 'IEND', []);
+
+    expect(isAnimatedImagePayload(new Uint8Array(bytes), 'image/png')).toBe(true);
   });
 
   it('detects webm audio/video codec markers from header bytes', () => {

@@ -4,6 +4,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type SyntheticEvent
 } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -17,7 +18,9 @@ import {
   fetchOnChainContent,
   getFiniteAnimatedImageReplayDelayMs,
   getMediaKind,
+  getMimeTypeEssence,
   getTextPreview,
+  isAnimatedImagePayload,
   isDataUri,
   isHttpUrl,
   isLikelyImageUrl,
@@ -43,7 +46,10 @@ import {
   inlineRuntimeContentUrls,
   RUNTIME_INLINE_HTML_VERSION
 } from '../lib/viewer/runtime-inline';
-import { shouldUsePixelatedImageRendering } from '../lib/viewer/image-rendering';
+import {
+  getSquareFramedImageStyle,
+  shouldUsePixelatedImageRendering
+} from '../lib/viewer/image-rendering';
 import { createObjectUrl } from '../lib/utils/blob';
 
 const MAX_GRID_EAGER_FULL_LOAD_BYTES = 4n * 1024n * 1024n;
@@ -77,6 +83,8 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
   const [pixelatePreview, setPixelatePreview] = useState(false);
   const [letterboxPreview, setLetterboxPreview] = useState(false);
   const [animatedReplayTick, setAnimatedReplayTick] = useState(0);
+  const [squareImageFrameStyle, setSquareImageFrameStyle] =
+    useState<CSSProperties | undefined>(undefined);
   const setHtmlFrameRef = useCallback((node: HTMLIFrameElement | null) => {
     setBridgeSource(node?.contentWindow ?? null);
   }, []);
@@ -131,7 +139,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     !thumbnailFailed &&
     !!thumbnailQuery.data?.data &&
     thumbnailQuery.data.data.length > 0;
-  const normalizedMetaMimeType = (mimeType ?? '').toLowerCase();
+  const normalizedMetaMimeType = getMimeTypeEssence(mimeType) ?? '';
   const isGifMetaMimeType = normalizedMetaMimeType === 'image/gif';
   const isPngAnimationProbeCandidate =
     normalizedMetaMimeType === 'image/png' &&
@@ -206,6 +214,18 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     [contentQuery.data]
   );
   const sniffedKind = sniffedMimeType ? getMediaKind(sniffedMimeType) : null;
+  const isAnimatedImageContent = useMemo(() => {
+    if (!contentQuery.data || contentQuery.data.length === 0) {
+      return false;
+    }
+    if (resolvedKind !== 'image') {
+      return false;
+    }
+    return isAnimatedImagePayload(
+      contentQuery.data,
+      resolvedMimeType ?? mimeType ?? null
+    );
+  }, [contentQuery.data, resolvedKind, resolvedMimeType, mimeType]);
 
   const thumbnailUrl = useMemo(() => {
     if (!thumbnailQuery.data || !thumbnailQuery.data.data) {
@@ -283,6 +303,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     setPixelatePreview(false);
     setLetterboxPreview(false);
     setAnimatedReplayTick(0);
+    setSquareImageFrameStyle(undefined);
   }, [props.token.id]);
 
   useEffect(() => {
@@ -299,6 +320,9 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
       return;
     }
     if (resolvedKind !== 'image') {
+      return;
+    }
+    if (isAnimatedImageContent) {
       return;
     }
     if (hasThumbnail) {
@@ -355,6 +379,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     isActiveTab,
     contentQuery.data,
     resolvedKind,
+    isAnimatedImageContent,
     hasThumbnail,
     resolvedMimeType,
     mimeType,
@@ -538,6 +563,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
     !!props.preferFullResolution ||
     isWithinGridEagerLoadWindow ||
     isGifMetaMimeType ||
+    isAnimatedImageContent ||
     !!finiteAnimatedReplayDelayMs;
   const primaryImageSource = preferFullResolution
     ? onChainPreviewSource
@@ -588,6 +614,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
 
   useEffect(() => {
     setAnimatedReplayTick(0);
+    setSquareImageFrameStyle(undefined);
   }, [props.token.id, imagePreviewSource, imagePreviewOrigin]);
 
   useEffect(() => {
@@ -614,8 +641,26 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
       if (!imagePreviewSource || !imagePreviewOrigin) {
         return;
       }
+      const target = event.currentTarget;
+      const naturalWidth = target.naturalWidth || 0;
+      const naturalHeight = target.naturalHeight || 0;
+      const nextFrameStyle = getSquareFramedImageStyle({
+        sourceWidth: naturalWidth,
+        sourceHeight: naturalHeight,
+        referenceSizeFloor: THUMBNAIL_SIZE
+      });
+      if (nextFrameStyle) {
+        Object.assign(target.style, nextFrameStyle);
+        setSquareImageFrameStyle((previous) =>
+          previous?.width === nextFrameStyle.width &&
+          previous?.height === nextFrameStyle.height
+            ? previous
+            : nextFrameStyle
+        );
+      } else {
+        setSquareImageFrameStyle(undefined);
+      }
       if (props.pixelateOnUpscale) {
-        const target = event.currentTarget;
         const rect = target.getBoundingClientRect();
         const normalizedMime = (resolvedMimeType ?? mimeType ?? '').toLowerCase();
         const urlLower = imagePreviewSource.toLowerCase();
@@ -637,9 +682,6 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
         );
       }
       if (props.letterboxNonSquare) {
-        const target = event.currentTarget;
-        const naturalWidth = target.naturalWidth || 0;
-        const naturalHeight = target.naturalHeight || 0;
         if (naturalWidth > 0 && naturalHeight > 0) {
           const aspect = naturalWidth / naturalHeight;
           const nonSquare = aspect < 0.95 || aspect > 1.05;
@@ -656,7 +698,6 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
         return;
       }
       lastImageLogRef.current = logKey;
-      const target = event.currentTarget;
       const rect = target.getBoundingClientRect();
       const computed =
         typeof window !== 'undefined' ? window.getComputedStyle(target) : null;
@@ -959,6 +1000,7 @@ export default function TokenCardMedia(props: TokenCardMediaProps) {
         onLoad={handleImageLoad}
         onError={handleImageError}
         className={previewClassName || undefined}
+        style={squareImageFrameStyle}
       />
     );
   } else if (textPreview && !jsonImagePreview) {

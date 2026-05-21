@@ -1,5 +1,6 @@
 export const PIXELATION_RESAMPLE_DELTA_THRESHOLD = 0.05;
 export const PIXELATION_MAX_NATURAL_DIMENSION = 512;
+export const SQUARE_IMAGE_REFERENCE_SIZE = 256;
 
 type PixelatedRenderParams = {
   naturalWidth: number;
@@ -88,3 +89,55 @@ export const shouldUsePixelatedThumbnailRendering = (params: {
   });
 
 export const shouldPixelateImageOnUpscale = shouldUsePixelatedImageRendering;
+
+export const getSquareFramedImagePercentages = (params: {
+  sourceWidth: number;
+  sourceHeight: number;
+  referenceSizeFloor?: number;
+}) => {
+  const sourceWidth = params.sourceWidth;
+  const sourceHeight = params.sourceHeight;
+  const referenceSizeFloor =
+    params.referenceSizeFloor ?? SQUARE_IMAGE_REFERENCE_SIZE;
+  if (
+    !Number.isFinite(sourceWidth) ||
+    !Number.isFinite(sourceHeight) ||
+    !Number.isFinite(referenceSizeFloor) ||
+    sourceWidth <= 0 ||
+    sourceHeight <= 0 ||
+    referenceSizeFloor <= 0
+  ) {
+    return null;
+  }
+
+  const referenceSize = Math.max(
+    sourceWidth,
+    sourceHeight,
+    referenceSizeFloor
+  );
+  return {
+    widthPercent: (sourceWidth / referenceSize) * 100,
+    heightPercent: (sourceHeight / referenceSize) * 100,
+    referenceSize
+  };
+};
+
+export const getSquareFramedImageStyle = (params: {
+  sourceWidth: number;
+  sourceHeight: number;
+  referenceSizeFloor?: number;
+}) => {
+  const percentages = getSquareFramedImagePercentages(params);
+  if (!percentages) {
+    return undefined;
+  }
+  return {
+    display: 'block',
+    width: `${percentages.widthPercent}%`,
+    height: `${percentages.heightPercent}%`,
+    maxWidth: '100%',
+    maxHeight: '100%',
+    objectFit: 'contain',
+    objectPosition: 'center'
+  } as const;
+};

@@ -2412,7 +2412,10 @@
       inlineRuntimeContentUrls
     } from '/src/lib/viewer/runtime-inline.ts';
     import { createImageThumbnail, THUMBNAIL_SIZE } from '/src/lib/viewer/thumbnail.ts';
-    import { shouldUsePixelatedImageRendering } from '/src/lib/viewer/image-rendering.ts';
+    import {
+      getSquareFramedImageStyle,
+      shouldUsePixelatedImageRendering
+    } from '/src/lib/viewer/image-rendering.ts';
     import {
       fetchTokenSummary,
       fetchTokenSummaryWithFallback
@@ -2422,7 +2425,9 @@
       fetchTokenImageFromUri,
       fetchOnChainContent,
       getMediaKind,
+      getMimeTypeEssence,
       getTextPreview,
+      isAnimatedImagePayload,
       isHttpUrl,
       isLikelyImageUrl,
       resolveMimeType
@@ -2712,9 +2717,24 @@
 
     const applyPixelPerfectImageRendering = (
       img,
-      { mimeType = null, sourceUrl = null, isSvgSource = false } = {}
+      {
+        mimeType = null,
+        sourceUrl = null,
+        isSvgSource = false,
+        squareFrame = false
+      } = {}
     ) => {
       const updateRendering = () => {
+        if (squareFrame) {
+          const squareFrameStyle = getSquareFramedImageStyle({
+            sourceWidth: img.naturalWidth || 0,
+            sourceHeight: img.naturalHeight || 0,
+            referenceSizeFloor: THUMBNAIL_SIZE
+          });
+          if (squareFrameStyle) {
+            Object.assign(img.style, squareFrameStyle);
+          }
+        }
         const rect = img.getBoundingClientRect();
         const normalizedMime = (mimeType ?? '').toLowerCase();
         const urlLower = (sourceUrl ?? img.currentSrc ?? img.src ?? '').toLowerCase();
@@ -2807,34 +2827,49 @@
       return true;
     };
 
-    const renderSquareImagePreview = (target, sourceUrl, { mimeType = null, isSvgSource = false, alt = 'Image preview' } = {}) => {
-      const canvas = document.createElement('canvas');
-      canvas.className = 'preview-image-canvas';
-      canvas.setAttribute('role', 'img');
-      canvas.setAttribute('aria-label', alt);
-      target.replaceChildren(canvas);
-
-      const fallbackToImage = () => {
+    const renderSquareImagePreview = (
+      target,
+      sourceUrl,
+      {
+        mimeType = null,
+        isSvgSource = false,
+        alt = 'Image preview',
+        preserveAnimation = false
+      } = {}
+    ) => {
+      const renderNativeImage = () => {
         const img = document.createElement('img');
         img.alt = alt;
         img.classList.add('preview-image--truthful');
         applyPixelPerfectImageRendering(img, {
           mimeType,
           sourceUrl,
-          isSvgSource
+          isSvgSource,
+          squareFrame: true
         });
         img.src = sourceUrl;
         target.replaceChildren(img);
       };
 
+      if (preserveAnimation) {
+        renderNativeImage();
+        return;
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.className = 'preview-image-canvas';
+      canvas.setAttribute('role', 'img');
+      canvas.setAttribute('aria-label', alt);
+      target.replaceChildren(canvas);
+
       const img = document.createElement('img');
       img.decoding = 'async';
       img.onload = () => {
         if (!drawSquareImagePreview(canvas, img, target, { mimeType, isSvgSource })) {
-          fallbackToImage();
+          renderNativeImage();
         }
       };
-      img.onerror = fallbackToImage;
+      img.onerror = renderNativeImage;
       img.src = sourceUrl;
     };
 
@@ -3162,11 +3197,17 @@
 
     const renderBytesPreview = (target, bytes, mimeType, urlSetter, options = {}) => {
       target.innerHTML = '';
-      const kind = getMediaKind(mimeType);
+      const previewMimeType =
+        resolveMimeType(mimeType ?? null, bytes) ??
+        mimeType ??
+        null;
+      const kind = getMediaKind(previewMimeType);
       let objectUrl = null;
       const getObjectUrl = () => {
         if (!objectUrl) {
-          const blob = new Blob([bytes], { type: mimeType || 'application/octet-stream' });
+          const blob = new Blob([bytes], {
+            type: previewMimeType || 'application/octet-stream'
+          });
           objectUrl = URL.createObjectURL(blob);
           urlSetter(objectUrl);
         }
@@ -3177,16 +3218,18 @@
         const url = getObjectUrl();
         if (options.truthfulImageSizing) {
           renderSquareImagePreview(target, url, {
-            mimeType,
+            mimeType: previewMimeType,
             isSvgSource: kind === 'svg',
-            alt: 'Inscription preview'
+            alt: 'Inscription preview',
+            preserveAnimation:
+              kind === 'image' && isAnimatedImagePayload(bytes, previewMimeType)
           });
           return;
         }
         const img = document.createElement('img');
         img.alt = 'Payload preview';
         applyPixelPerfectImageRendering(img, {
-          mimeType,
+          mimeType: previewMimeType,
           sourceUrl: url,
           isSvgSource: kind === 'svg'
         });
@@ -3216,10 +3259,10 @@
         frame.title = 'inscription-preview';
         frame.referrerPolicy = 'no-referrer';
         frame.loading = 'lazy';
-        frame.sandbox = mimeType?.trim().toLowerCase() === 'application/pdf'
+        frame.sandbox = previewMimeType?.trim().toLowerCase() === 'application/pdf'
           ? ''
           : 'allow-scripts';
-        if (options.htmlDoc && mimeType?.trim().toLowerCase() !== 'application/pdf') {
+        if (options.htmlDoc && previewMimeType?.trim().toLowerCase() !== 'application/pdf') {
           frame.srcdoc = options.htmlDoc;
         } else {
           frame.src = getObjectUrl();
@@ -4157,17 +4200,25 @@
         return;
       }
 
-      const kind = getMediaKind(mimeType ?? null);
-      const blob = new Blob([bytes], { type: mimeType || 'application/octet-stream' });
+      const fullscreenMimeType =
+        resolveMimeType(mimeType ?? null, bytes) ??
+        mimeType ??
+        null;
+      const kind = getMediaKind(fullscreenMimeType);
+      const blob = new Blob([bytes], {
+        type: fullscreenMimeType || 'application/octet-stream'
+      });
       const url = URL.createObjectURL(blob);
       state.fullscreenUrl = url;
       configureFullscreenRawLink(token, url);
 
       if (kind === 'image' || kind === 'svg') {
         renderSquareImagePreview(dom.fullscreenStage, url, {
-          mimeType,
+          mimeType: fullscreenMimeType,
           isSvgSource: kind === 'svg',
-          alt: 'Inscription preview'
+          alt: 'Inscription preview',
+          preserveAnimation:
+            kind === 'image' && isAnimatedImagePayload(bytes, fullscreenMimeType)
         });
         return;
       }
@@ -4391,6 +4442,23 @@
       }
       const contractId = getTokenCacheContractId(token);
       const cacheKey = getThumbnailKey(token);
+      if (kind === 'image' && isAnimatedImagePayload(bytes, mimeType)) {
+        state.gridLiveMediaCache.set(cacheKey, {
+          kind: 'image',
+          bytes,
+          mimeType
+        });
+        debugLog('cache', 'animated image uses live grid media', {
+          tokenId: token.id.toString(),
+          contractId,
+          bytes: bytes.length,
+          mimeType
+        });
+        if (options.renderGrid !== false) {
+          renderTokenGrid();
+        }
+        return null;
+      }
       try {
         const thumbnail = await createImageThumbnail({
           bytes,
@@ -4437,12 +4505,30 @@
     };
 
     const isGridHtmlDocument = (mimeType) => {
-      const normalized = mimeType?.trim().toLowerCase();
+      const normalized = getMimeTypeEssence(mimeType);
       return normalized === 'text/html' || normalized === 'application/xhtml+xml';
     };
 
     const isGridPdfDocument = (mimeType) =>
-      mimeType?.trim().toLowerCase() === 'application/pdf';
+      getMimeTypeEssence(mimeType) === 'application/pdf';
+
+    const isPotentialAnimatedRasterMimeType = (mimeType) => {
+      const normalized = getMimeTypeEssence(mimeType) ?? '';
+      return (
+        normalized === 'image/png' ||
+        normalized === 'image/apng' ||
+        normalized === 'image/gif' ||
+        normalized === 'image/webp' ||
+        normalized === 'application/octet-stream' ||
+        normalized === ''
+      );
+    };
+
+    const shouldProbeCachedAnimatedThumbnail = (token) =>
+      !!token.meta &&
+      token.meta.totalSize > 0n &&
+      token.meta.totalSize <= MAX_GRID_EAGER_FULL_LOAD_BYTES &&
+      isPotentialAnimatedRasterMimeType(token.meta.mimeType ?? null);
 
     const renderGridLiveMedia = (token, thumbElement, media) => {
       const cacheKey = getThumbnailKey(token);
@@ -4454,6 +4540,25 @@
       thumbElement.classList.add('has-thumbnail');
       thumbElement.dataset.thumbnailState = media.kind;
       thumbElement.replaceChildren();
+
+      if (media.kind === 'image' || media.kind === 'svg') {
+        const blob = new Blob([media.bytes], {
+          type: media.mimeType ?? 'application/octet-stream'
+        });
+        const url = URL.createObjectURL(blob);
+        state.tokenThumbUrls.set(cacheKey, url);
+        const img = document.createElement('img');
+        img.alt = 'Inscription preview';
+        applyPixelPerfectImageRendering(img, {
+          mimeType: media.mimeType ?? null,
+          sourceUrl: url,
+          isSvgSource: media.kind === 'svg',
+          squareFrame: true
+        });
+        img.src = url;
+        thumbElement.append(img);
+        return true;
+      }
 
       if (media.kind === 'video') {
         const blob = new Blob([media.bytes], {
@@ -4628,6 +4733,28 @@
           });
           return;
         }
+        if (kind === 'image' && isAnimatedImagePayload(bytes, mimeType)) {
+          state.gridLiveMediaCache.set(cacheKey, {
+            kind: 'image',
+            bytes,
+            mimeType
+          });
+          if (
+            thumbElement.isConnected &&
+            thumbElement.dataset.thumbnailKey === cacheKey
+          ) {
+            renderGridLiveMedia(token, thumbElement, state.gridLiveMediaCache.get(cacheKey));
+          } else if (getWalletPageIds().some((id) => id === token.id)) {
+            renderTokenGrid();
+          }
+          debugLog('cache', 'background animated image grid display ready', {
+            tokenId: token.id.toString(),
+            contractId: cacheContractId,
+            bytes: bytes.length,
+            mimeType
+          });
+          return;
+        }
         const thumbnail = await warmThumbnailCacheFromBytes(token, bytes, mimeType, {
           renderGrid: false
         });
@@ -4653,6 +4780,19 @@
           },
           'warn'
         );
+        if (
+          thumbElement.isConnected &&
+          thumbElement.dataset.thumbnailKey === cacheKey
+        ) {
+          const applied = await applyCachedThumbnail(token, thumbElement);
+          if (!applied) {
+            setTokenThumbLabel(
+              thumbElement,
+              getGridMimeLabel(token.meta?.mimeType ?? null)
+            );
+            thumbElement.dataset.thumbnailState = 'failed-live-media';
+          }
+        }
       }
     };
 
@@ -4728,6 +4868,7 @@
         const meta = document.createElement('div');
         meta.className = 'token-meta';
         let shouldApplyCachedThumbnail = false;
+        let shouldScheduleBackgroundHydration = false;
 
         if (id === null) {
           card.disabled = true;
@@ -4753,13 +4894,23 @@
             thumb.dataset.thumbnailState = 'inline-svg';
             thumb.append(img);
           } else {
-            const liveMedia = state.gridLiveMediaCache.get(getThumbnailKey(token));
+            const cacheKey = getThumbnailKey(token);
+            const liveMedia = state.gridLiveMediaCache.get(cacheKey);
             if (liveMedia && renderGridLiveMedia(token, thumb, liveMedia)) {
               shouldApplyCachedThumbnail = false;
             } else {
-              setTokenThumbLabel(thumb, kind);
-              thumb.dataset.thumbnailState = 'pending-cache';
-              shouldApplyCachedThumbnail = true;
+              const shouldProbeAnimatedImage = shouldProbeCachedAnimatedThumbnail(token);
+              const isAnimatedProbePending =
+                shouldProbeAnimatedImage &&
+                (!state.thumbnailHydrationAttempted.has(cacheKey) ||
+                  state.thumbnailHydrationQueued.has(cacheKey) ||
+                  state.thumbnailHydrationInFlight.has(cacheKey));
+              setTokenThumbLabel(thumb, isAnimatedProbePending ? 'loading' : kind);
+              thumb.dataset.thumbnailState = isAnimatedProbePending
+                ? 'pending-live-media'
+                : 'pending-cache';
+              shouldApplyCachedThumbnail = !isAnimatedProbePending;
+              shouldScheduleBackgroundHydration = isAnimatedProbePending;
             }
           }
           const size = token.meta?.totalSize ?? null;
@@ -4769,9 +4920,11 @@
         }
         card.append(thumb, meta);
         dom.tokenGrid.append(card);
-        if (token && shouldApplyCachedThumbnail) {
+        if (token && shouldScheduleBackgroundHydration) {
+          scheduleBackgroundThumbnailHydration(token, thumb);
+        } else if (token && shouldApplyCachedThumbnail) {
           void applyCachedThumbnail(token, thumb).then((applied) => {
-            if (!applied) {
+            if (!applied || shouldProbeCachedAnimatedThumbnail(token)) {
               scheduleBackgroundThumbnailHydration(token, thumb);
             }
           });
