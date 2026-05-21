@@ -9,7 +9,7 @@ export const PUBLIC_CONTRACT: ContractRegistryEntry = {
   legacyContractId: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1'
 };
 
-export const PUBLIC_MAX_FILE_BYTES = 4 * 1024 * 1024;
+export const PUBLIC_MAX_FILE_BYTES = 8 * 1024 * 1024;
 export const PUBLIC_FIXED_BATCH_SIZE = 30;
 export const PUBLIC_FIXED_TOKEN_URI =
   'https://xvgh3sbdkivby4blejmripeiyjuvji3d4tycym6hgaxalescegjq.arweave.net/vUx9yCNSKhxwKyJZFDyIwmlUo2Pk8CwzxzAuBZJCIZM';
