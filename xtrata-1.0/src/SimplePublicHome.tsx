@@ -1388,6 +1388,7 @@ export default function SimplePublicHome() {
           collapsed={mintCollapsed}
           onToggleCollapse={() => setMintCollapsed((prev) => !prev)}
           restrictions={PUBLIC_MINT_RESTRICTIONS}
+          usdPriceBook={usdPriceBook}
         />
 
         <section

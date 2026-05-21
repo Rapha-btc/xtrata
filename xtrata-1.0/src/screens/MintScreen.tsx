@@ -48,6 +48,10 @@ import {
   TX_DELAY_SECONDS
 } from '../lib/mint/constants';
 import {
+  estimateDataMiningFeeMicroStx,
+  estimateSequentialMintTransactions
+} from '../lib/mint/estimates';
+import {
   clearMintAttempt,
   loadMintAttempt,
   saveMintAttempt,
@@ -66,6 +70,9 @@ import {
   getFeeSchedule,
   MICROSTX_PER_STX
 } from '../lib/contract/fees';
+import { formatMicroStxWithUsd } from '../lib/pricing/format';
+import { useUsdPriceBook } from '../lib/pricing/hooks';
+import type { UsdPriceBook } from '../lib/pricing/types';
 import type { InscriptionMeta, UploadState } from '../lib/protocol/types';
 import TokenCardMedia from '../components/TokenCardMedia';
 import type { TokenSummary } from '../lib/viewer/types';
@@ -79,6 +86,7 @@ type MintScreenProps = {
   parentDraftIds?: bigint[];
   onClearParentDrafts?: () => void;
   restrictions?: MintRestrictions;
+  usdPriceBook?: UsdPriceBook | null;
 };
 
 type StepState = 'idle' | 'pending' | 'done' | 'error';
@@ -822,6 +830,36 @@ export default function MintScreen(props: MintScreenProps) {
     [feeSchedule, chunks.length]
   );
   const hasChunks = chunks.length > 0;
+  const mintUsdPriceBookQuery = useUsdPriceBook({
+    enabled: hasChunks && !props.usdPriceBook
+  });
+  const usdPriceBook =
+    props.usdPriceBook ?? mintUsdPriceBookQuery.data ?? null;
+  const sequentialMintTxEstimate = useMemo(
+    () =>
+      estimateSequentialMintTransactions({
+        totalChunks: chunks.length,
+        batchSize: effectiveBatchSize
+      }),
+    [chunks.length, effectiveBatchSize]
+  );
+  const dataMiningFeeMicroStx = useMemo(
+    () => estimateDataMiningFeeMicroStx(totalBytes),
+    [totalBytes]
+  );
+  const dataMiningFeeDisplay = useMemo(
+    () => formatMicroStxWithUsd(dataMiningFeeMicroStx, usdPriceBook),
+    [dataMiningFeeMicroStx, usdPriceBook]
+  );
+  const combinedFeeDisplay = useMemo(
+    () =>
+      formatMicroStxWithUsd(
+        BigInt(Math.max(0, Math.round(feeEstimate.totalMicroStx))) +
+          dataMiningFeeMicroStx,
+        usdPriceBook
+      ),
+    [dataMiningFeeMicroStx, feeEstimate.totalMicroStx, usdPriceBook]
+  );
   const feeUnitValue =
     feeSchedule.model === 'fee-unit' ? feeSchedule.feeUnitMicroStx : null;
   const isPaused = adminStatusQuery.data?.paused ?? null;
@@ -3118,6 +3156,55 @@ export default function MintScreen(props: MintScreenProps) {
             />
             <span className="meta-value">
               {formatStx(feeEstimate.totalMicroStx)}
+            </span>
+          </div>
+          <div>
+            <LabelWithInfo
+              tone="meta"
+              label="Sequential txns"
+              info="Begin plus upload batches plus seal, using the prepared file chunk count and current chunks-per-transaction setting."
+            />
+            <span className="meta-value">
+              {hasChunks ? (
+                <>
+                  {sequentialMintTxEstimate.beginTransactions} init +{' '}
+                  {sequentialMintTxEstimate.uploadTransactions} upload +{' '}
+                  {sequentialMintTxEstimate.sealTransactions} seal ={' '}
+                  {sequentialMintTxEstimate.totalTransactions} txns at{' '}
+                  {sequentialMintTxEstimate.batchSize} chunks/tx
+                </>
+              ) : (
+                'Select a file to estimate.'
+              )}
+            </span>
+          </div>
+          <div>
+            <LabelWithInfo
+              tone="meta"
+              label="Data mining estimate"
+              info="Ballpark variable mining fee for the data payload only, using 1 STX per MB and the current STX/USD price when available."
+            />
+            <span className="meta-value">
+              {hasChunks
+                ? `${dataMiningFeeDisplay.combined} at 1 STX/MB`
+                : 'Select a file to estimate.'}
+            </span>
+            {hasChunks &&
+              !dataMiningFeeDisplay.secondary &&
+              mintUsdPriceBookQuery.isFetching && (
+                <span className="meta-value">Fetching STX/USD...</span>
+              )}
+          </div>
+          <div>
+            <LabelWithInfo
+              tone="meta"
+              label="Est. total fees"
+              info="Contract protocol fees plus the ballpark data mining estimate. Wallet mining quotes can vary by network conditions."
+            />
+            <span className="meta-value">
+              {hasChunks
+                ? combinedFeeDisplay.combined
+                : 'Select a file to estimate.'}
             </span>
           </div>
           {!hideFeeRateFetch && (

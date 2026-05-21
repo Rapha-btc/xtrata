@@ -756,10 +756,10 @@
 
     .prepare-grid {
       display: grid;
-      grid-template-columns: 120px minmax(0, 1fr);
+      grid-template-columns: minmax(132px, 160px) minmax(0, 1fr);
       gap: 12px;
       margin-top: 16px;
-      align-items: stretch;
+      align-items: start;
     }
 
     .preview-square {
@@ -807,11 +807,11 @@
     .prepared-meta {
       min-width: 0;
       display: grid;
-      gap: 7px;
+      gap: 6px;
       align-content: start;
       border: 1px solid var(--line);
       border-radius: var(--radius);
-      padding: 12px;
+      padding: 10px 12px;
       background: var(--surface-soft);
       font-size: 13px;
     }
@@ -819,8 +819,15 @@
     .meta-line {
       display: grid;
       grid-template-columns: 92px minmax(0, 1fr);
-      gap: 10px;
+      gap: 8px;
+      align-items: start;
       min-width: 0;
+    }
+
+    .meta-line--wide {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 2px;
+      padding-top: 2px;
     }
 
     .meta-key {
@@ -837,6 +844,19 @@
       white-space: nowrap;
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
       font-size: 12px;
+    }
+
+    .prepared-meta .meta-value {
+      overflow: visible;
+      text-overflow: clip;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      line-height: 1.28;
+    }
+
+    .prepared-meta .meta-line:not(.meta-line--wide) .meta-value {
+      line-height: 1.2;
     }
 
     .warning {
@@ -2370,6 +2390,11 @@
       formatMicroStx,
       getFeeSchedule
     } from '/src/lib/contract/fees.ts';
+    import {
+      formatMicroStxWithUsd,
+      getUsdPriceQuote
+    } from '/src/lib/pricing/format.ts';
+    import { fetchUsdPriceBook } from '/src/lib/pricing/hooks.ts';
     import { resolveContractCapabilities } from '/src/lib/contract/capabilities.ts';
     import { buildTransferPostCondition } from '/src/lib/contract/post-conditions.ts';
     import { getNetworkMismatch } from '/src/lib/network/guard.ts';
@@ -2391,6 +2416,10 @@
       MAX_TOKEN_URI_LENGTH,
       TX_DELAY_SECONDS
     } from '/src/lib/mint/constants.ts';
+    import {
+      estimateDataMiningFeeMicroStx,
+      estimateSequentialMintTransactions
+    } from '/src/lib/mint/estimates.ts';
     import { bytesToHex } from '/src/lib/utils/encoding.ts';
     import { formatBytes, truncateMiddle } from '/src/lib/utils/format.ts';
     import {
@@ -2609,7 +2638,9 @@
       walletLoadingPage: false,
       selectedTokenId: null,
       connectedWalletMatureMode: false,
-      lastSubmittedTxId: null
+      lastSubmittedTxId: null,
+      usdPriceBook: null,
+      usdPriceBookLoading: false
     };
 
     const WALLET_PAGE_SIZE = 16;
@@ -2947,6 +2978,48 @@
         totalChunks
       });
 
+    const loadUsdPriceBook = async () => {
+      if (state.usdPriceBook || state.usdPriceBookLoading) {
+        return;
+      }
+      state.usdPriceBookLoading = true;
+      renderPreparedState();
+      try {
+        state.usdPriceBook = await fetchUsdPriceBook();
+      } catch (error) {
+        state.usdPriceBook = null;
+      } finally {
+        state.usdPriceBookLoading = false;
+        renderPreparedState();
+      }
+    };
+
+    const getStxUsdLabel = () => {
+      const quote = getUsdPriceQuote(state.usdPriceBook, 'stx');
+      if (quote) {
+        return `$${quote.usd.toFixed(quote.usd >= 1 ? 2 : 4)}`;
+      }
+      return state.usdPriceBookLoading ? 'Fetching...' : 'Unavailable';
+    };
+
+    const formatDataMiningEstimate = (bytes) => {
+      const miningFeeMicroStx = estimateDataMiningFeeMicroStx(
+        BigInt(bytes.length)
+      );
+      const display = formatMicroStxWithUsd(miningFeeMicroStx, state.usdPriceBook);
+      return {
+        miningFeeMicroStx,
+        label: `${display.combined} at 1 STX/MB`
+      };
+    };
+
+    const formatEstimatedTotalFees = (feeEstimate, miningFeeMicroStx) =>
+      formatMicroStxWithUsd(
+        BigInt(Math.max(0, Math.round(feeEstimate.totalMicroStx))) +
+          miningFeeMicroStx,
+        state.usdPriceBook
+      ).combined;
+
     const getSmallMintHelperContract = () =>
       state.contract.network === 'mainnet' &&
       getContractId(state.contract) === SMALL_MINT_HELPER_TARGET_CORE_CONTRACT_ID
@@ -2991,9 +3064,18 @@
 
     const renderMeta = (target, lines) => {
       target.innerHTML = '';
+      const widePreparedMetaKeys = new Set([
+        'Hash',
+        'Seq txns',
+        'Data fee',
+        'Total est.'
+      ]);
       for (const [key, value] of lines) {
         const row = document.createElement('div');
         row.className = 'meta-line';
+        if (target === dom.preparedMeta && widePreparedMetaKeys.has(key)) {
+          row.classList.add('meta-line--wide');
+        }
         const label = document.createElement('span');
         label.className = 'meta-key';
         label.textContent = key;
@@ -3655,6 +3737,11 @@
 
       const feeEstimate = getFeeEstimate(state.prepared.chunks.length);
       const usesSingleTx = shouldUseSmallMintHelper();
+      const sequentialTxEstimate = estimateSequentialMintTransactions({
+        totalChunks: state.prepared.chunks.length,
+        batchSize: Math.min(DEFAULT_BATCH_SIZE, MAX_BATCH_SIZE)
+      });
+      const dataMiningEstimate = formatDataMiningEstimate(state.prepared.bytes);
       renderMeta(dom.preparedMeta, [
         ['Name', state.prepared.file.name],
         ['Size', formatBytes(BigInt(state.prepared.bytes.length))],
@@ -3662,8 +3749,19 @@
         ['Chunks', state.prepared.chunks.length.toString()],
         ['Hash', state.prepared.expectedHashHex],
         ['Route', usesSingleTx ? 'Single tx' : 'Staged'],
+        [
+          'Seq txns',
+          `${sequentialTxEstimate.beginTransactions} init + ${
+            sequentialTxEstimate.uploadTransactions
+          } upload + ${sequentialTxEstimate.sealTransactions} seal = ${
+            sequentialTxEstimate.totalTransactions
+          } txns at ${sequentialTxEstimate.batchSize} chunks/tx`
+        ],
         ['Fixed', formatMicroStx(feeEstimate.beginMicroStx)],
-        ['Seal', formatMicroStx(feeEstimate.sealMicroStx)]
+        ['Seal', formatMicroStx(feeEstimate.sealMicroStx)],
+        ['Data fee', dataMiningEstimate.label],
+        ['STX/USD', getStxUsdLabel()],
+        ['Total est.', formatEstimatedTotalFees(feeEstimate, dataMiningEstimate.miningFeeMicroStx)]
       ]);
 
       revokePayloadPreview();
@@ -3781,6 +3879,7 @@
 
       await refreshUploadState(expectedHash);
       renderPreparedState();
+      void loadUsdPriceBook();
     };
 
     const fetchAdminStatus = async () => {
