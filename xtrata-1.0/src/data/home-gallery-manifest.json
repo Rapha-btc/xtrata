@@ -1,0 +1,54 @@
+{
+  "walletShowcases": [
+    {
+      "id": "dyle-art",
+      "title": "DYLE art wallet",
+      "kicker": "Visual art",
+      "description": "A live artist wallet with visual inscriptions to browse without connecting your own wallet first.",
+      "lookup": "dyle.btc",
+      "cta": "View DYLE"
+    },
+    {
+      "id": "jib-music",
+      "title": "Jib.BTC music wallet",
+      "kicker": "Music and media",
+      "description": "A creator wallet for music, media, and the wider record of work that can live around releases.",
+      "lookup": "jib.btc",
+      "cta": "View Jib.BTC"
+    }
+  ],
+  "tokenGalleries": [
+    {
+      "id": "music-tools",
+      "title": "On-chain music tools",
+      "kicker": "Programmable media",
+      "description": "BVST instruments, patches, and shells stored as Xtrata inscriptions.",
+      "tokens": [
+        { "tokenId": "237", "label": "JMS10 shell" },
+        { "tokenId": "240", "label": "BVSTEngine shell" },
+        { "tokenId": "243", "label": "BVSTSynth shell" },
+        { "tokenId": "250", "label": "MinerOne shell" },
+        { "tokenId": "253", "label": "MinerTwo shell" },
+        { "tokenId": "256", "label": "ChainPoly shell" },
+        { "tokenId": "259", "label": "LushDice shell" },
+        { "tokenId": "266", "label": "Root catalog" }
+      ]
+    },
+    {
+      "id": "reference-records",
+      "title": "Reference records",
+      "kicker": "History and links",
+      "description": "Catalog inscriptions that point to related modules, releases, and source-of-truth records.",
+      "tokens": [
+        { "tokenId": "244", "label": "JMS10 release" },
+        { "tokenId": "245", "label": "BVSTEngine release" },
+        { "tokenId": "246", "label": "BVSTSynth release" },
+        { "tokenId": "247", "label": "BVST family" },
+        { "tokenId": "260", "label": "MinerOne release" },
+        { "tokenId": "261", "label": "MinerTwo release" },
+        { "tokenId": "262", "label": "ChainPoly release" },
+        { "tokenId": "265", "label": "Release catalog" }
+      ]
+    }
+  ]
+}
