@@ -1558,36 +1558,47 @@
     }
 
     .wallet-examples {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: max-content max-content;
+      gap: 7px 10px;
       align-items: center;
-      gap: 7px;
-      margin: 8px 0 2px;
+      justify-content: start;
+      width: fit-content;
+      max-width: 100%;
+      margin: 8px 0 10px;
       color: var(--muted);
       font-size: 12px;
       line-height: 1.3;
     }
 
     .wallet-examples > span {
+      grid-column: 1 / -1;
       font-weight: 900;
       text-transform: uppercase;
       letter-spacing: 0.08em;
     }
 
     .wallet-example-chip {
+      width: auto;
+      min-height: 30px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       border: 1px solid var(--line);
       border-radius: 999px;
       background: var(--surface-soft);
       color: var(--ink);
-      padding: 6px 9px;
+      padding: 6px 11px;
       font: inherit;
       font-weight: 800;
       cursor: pointer;
       white-space: nowrap;
+      text-align: center;
     }
 
     .wallet-example-chip:hover,
-    .wallet-example-chip:focus-visible {
+    .wallet-example-chip:focus-visible,
+    .wallet-example-chip.is-active {
       border-color: var(--green);
       box-shadow: 0 0 0 3px var(--focus-ring);
       outline: none;
@@ -2155,6 +2166,23 @@
       outline-offset: 2px;
     }
 
+    .wallet-example-description {
+      margin: 8px 0 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface-soft);
+      color: var(--muted);
+      padding: 10px 12px;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .wallet-example-description strong {
+      display: block;
+      color: var(--ink);
+      margin-bottom: 3px;
+    }
+
   </style>
 </head>
 <body class="intro-mode">
@@ -2350,16 +2378,49 @@
               </form>
               <div class="wallet-examples" id="walletExamples" aria-label="Example wallet views">
                 <span>View Examples</span>
-            <button
-              class="wallet-example-chip"
-              type="button"
-              data-wallet-showcase="dyle.btc"
-              data-default-token-id="123"
-            >
-              Art by DYLE
-            </button>                
-            <button class="wallet-example-chip" type="button" data-curated-gallery="jim-music">Music by Various</button>
+
+                <button
+                  class="wallet-example-chip"
+                  type="button"
+                  data-wallet-showcase="dyle.btc"
+                  data-default-token-id="296"
+                  title="Early Stacks-native art inscriptions by DYLE."
+                >
+                  Art by DYLE
+                </button>
+
+                <button
+                  class="wallet-example-chip"
+                  type="button"
+                  data-curated-gallery="jim-music"
+                  title="Early on-chain music, audio, samples, stems, and songs."
+                >
+                  Music by Various
+                </button>
+
+                <button
+                  class="wallet-example-chip"
+                  type="button"
+                  data-curated-gallery="code-various"
+                  title="Early code inscriptions and recursive Web3 experiments."
+                >
+                  Code by Various
+                </button>
+
+                <button
+                  class="wallet-example-chip"
+                  type="button"
+                  data-curated-gallery="agent-27"
+                  title="Early autonomous agent memory inscriptions."
+                >
+                  Agent 27
+                </button>
+
+
               </div>
+
+              <!-- <div class="wallet-example-description" id="walletExampleDescription" hidden></div> -->
+
               <div class="status" id="walletGridStatus">
                 <span><strong>Grid</strong> waiting for wallet</span>
                 <span class="badge amber">empty</span>
@@ -2719,16 +2780,106 @@
       introStateValue: $('introStateValue')
     };
 
-
+    
     const THEME_STORAGE_KEY = 'xtrata.simple-homepage.theme';
     const THEME_IDS = new Set(['classic', 'terminal', 'midnight', 'neon', 'monochrome', 'obsidian', 'ember', 'ultraviolet', 'arctic', 'ruby']);
     const CURATED_GALLERIES = [
-      {
-        id: 'jim-music',
-        title: 'music',
-        tokenIds: [312n, 288n, 269n]
+          {
+            id: 'jim-music',
+            title: 'music',
+            tokenIds: [312n, 288n, 269n]
+          },
+          {
+            id: 'code-various',
+            title: 'code',
+            tokenIds: [17n, 19n, 41n, 43n, 44n, 55n, 73n, 151n, 153n]
+          },
+          {
+            id: 'agent-27',
+            title: 'Agent 27',
+            tokenIds: [ 107n, 112n, 121n, 123n, 128n, 135n,137n, 152n, 161n, 162n, 163n, 175n, 188n, 194n, 196n, 200n, 213n]
+          }
+        ];
+
+        const WALLET_SHOWCASE_DEFAULT_TOKEN_IDS = Object.freeze({
+          'dyle.btc': 296n
+        });
+
+        const CURATED_GALLERY_DEFAULT_TOKEN_IDS = Object.freeze({
+          'jim-music': 269n,
+          'code-various': 17n
+        });
+    
+        let activeExampleDescriptionKey = null;
+
+    const EXAMPLE_VIEW_DESCRIPTIONS = Object.freeze({
+      'dyle.btc': {
+        label: 'Art by DYLE',
+        heading: 'Viewing Art by DYLE',
+        tooltip: 'Early Stacks-native art inscriptions by DYLE.',
+        description:
+          'A very early Stacks art collection by OG artist DYLE, inscribed through Xtrata as permanent on-chain media.'
+      },
+
+      'jim-music': {
+        label: 'Music by Various',
+        heading: 'Viewing Music by Various',
+        tooltip: 'Early on-chain music, audio, samples, stems, and songs.',
+        description:
+          'Full-resolution audio can live here: songs, samples, stems, albums, anthologies, and other permanent music records.'
+      },
+
+      'code-various': {
+        label: 'Code by Various',
+        heading: 'Viewing Code by Various',
+        tooltip: 'Early code inscriptions and recursive Web3 experiments.',
+        description:
+          'Code, apps, recursion, and rich media can all be inscribed as durable Web3 building blocks on Stacks, secured by Bitcoin.'
+      },
+
+      'agent-27': {
+        label: 'Agent 27',
+        heading: 'Viewing Agent 27',
+        tooltip: 'Early autonomous agent memory inscriptions.',
+        description:
+          'An early on-chain agent memory test, where an automated agent used a wallet to inscribe its thoughts over time.'
       }
-    ];
+    });
+    
+
+    const setExampleDescription = (key) => {
+      const info = EXAMPLE_VIEW_DESCRIPTIONS[key] ?? null;
+
+      document.querySelectorAll('.wallet-example-chip').forEach((button) => {
+        const buttonKey =
+          button.dataset.walletShowcase?.trim().toLowerCase() ??
+          button.dataset.curatedGallery?.trim() ??
+          '';
+
+        const buttonInfo = EXAMPLE_VIEW_DESCRIPTIONS[buttonKey] ?? null;
+
+        if (buttonInfo) {
+          button.title = buttonInfo.tooltip || buttonInfo.description;
+        }
+
+        button.classList.toggle('is-active', !!info && buttonKey === key);
+      });
+
+      const descriptionEl = document.getElementById('walletExampleDescription');
+
+      if (descriptionEl) {
+        descriptionEl.hidden = true;
+        descriptionEl.innerHTML = '';
+      }
+
+      updateWalletLookupStatus();
+    };
+    
+      const clearExampleDescription = () => {
+        activeExampleDescriptionKey = null;
+        setExampleDescription(null);
+      };
+    
     const loadTheme = () => {
       try {
         const saved = window.localStorage.getItem(THEME_STORAGE_KEY);
@@ -3670,6 +3821,9 @@
       !addressesEqual(state.walletViewAddress, state.walletSession.address);
 
     const shouldClearWalletLookupOnSubmit = () => {
+      if (state.curatedGalleryId || state.walletViewAddress || state.walletViewName) {
+        return true;
+      }
       if (!isViewingExternalConnectedWallet()) {
         return false;
       }
@@ -3684,6 +3838,16 @@
 
     const getReadOnlySenderAddress = () =>
       state.walletSession.address ?? getViewingWalletAddress() ?? state.contract.address;
+
+    const clearSelectedTokenPreview = () => {
+      state.selectedTokenId = null;
+      revokeTokenPreview();
+      dom.explorerLink.hidden = true;
+      clearElement(dom.tokenPreviewMedia, 'No selection');
+      renderNoSelectedInscriptionMeta();
+      void updateWalletTokenUriHeadPreview(null);
+      updateTransferControls();
+    };
 
     const isConnectedWalletAddress = (address) =>
       !!state.walletSession.isConnected &&
@@ -3752,19 +3916,30 @@
     };
 
     const updateWalletLookupStatus = () => {
+      dom.walletLookupStatus.hidden = false;
+
       if (state.walletLookupNotice) {
         dom.walletLookupStatus.textContent = state.walletLookupNotice;
         return;
       }
-      if (state.curatedGalleryTitle) {
-        dom.walletLookupStatus.textContent = `Viewing ${state.curatedGalleryTitle}.`;
+
+      const activeExampleInfo =
+        activeExampleDescriptionKey
+          ? EXAMPLE_VIEW_DESCRIPTIONS[activeExampleDescriptionKey] ?? null
+          : null;
+
+      if (activeExampleInfo) {
+        dom.walletLookupStatus.textContent = activeExampleInfo.description;
         return;
       }
+
       const viewingAddress = getViewingWalletAddress();
+
       if (state.walletViewAddress) {
         dom.walletLookupStatus.textContent = `Viewing ${getViewingWalletLabel()}.`;
         return;
       }
+
       dom.walletLookupStatus.textContent = viewingAddress
         ? 'Using connected wallet.'
         : 'Using connected wallet when available.';
@@ -4756,6 +4931,52 @@
       }
     };
 
+    const focusWalletTokenById = async (targetTokenId) => {
+      const targetId =
+        typeof targetTokenId === 'bigint'
+          ? targetTokenId
+          : BigInt(targetTokenId);
+      const currentPageContainsTarget = getWalletPageIds().includes(targetId);
+      if (currentPageContainsTarget) {
+        await selectToken(targetId);
+        return true;
+      }
+
+      const originalPageIndex = state.walletPageIndex;
+
+      if (state.walletUsesPagedHoldings) {
+        const pageCount = getWalletPageCount();
+        for (let pageIndex = 0; pageIndex < pageCount; pageIndex += 1) {
+          if (pageIndex === state.walletPageIndex) {
+            continue;
+          }
+          state.walletPageIndex = pageIndex;
+          await loadWalletPage({ deferSelection: true });
+          if (getWalletPageIds().includes(targetId)) {
+            await selectToken(targetId);
+            return true;
+          }
+        }
+      } else {
+        const index = state.walletTokenIds.findIndex((id) => id === targetId);
+        if (index >= 0) {
+          const targetPageIndex = Math.floor(index / WALLET_PAGE_SIZE);
+          if (targetPageIndex !== state.walletPageIndex) {
+            state.walletPageIndex = targetPageIndex;
+            await loadWalletPage({ deferSelection: true });
+          }
+          await selectToken(targetId);
+          return true;
+        }
+      }
+
+      if (state.walletPageIndex !== originalPageIndex) {
+        state.walletPageIndex = originalPageIndex;
+        await loadWalletPage({ deferSelection: true });
+      }
+      return false;
+    };
+
     const applyCachedThumbnail = async (token, thumbElement) => {
       if (token.svgDataUri) {
         thumbElement.classList.add('has-thumbnail');
@@ -5408,14 +5629,22 @@
 
     const clearWalletLookupToConnectedWallet = async () => {
       cancelWalletLookup();
+
       state.walletLookupNotice = null;
       state.walletViewAddress = null;
       state.walletViewName = null;
       state.curatedGalleryId = null;
       state.curatedGalleryTitle = null;
+
+      clearExampleDescription();
+
+      clearSelectedTokenPreview();
+
       dom.walletLookupInput.value = '';
       updateWalletLookupInputMode();
+
       appendLog('Returned to connected wallet view.');
+
       updateWalletStatus();
       await loadWalletInscriptions();
       updateControls();
@@ -5439,6 +5668,9 @@
         state.walletViewName = null;
         state.curatedGalleryId = null;
         state.curatedGalleryTitle = null;
+        clearExampleDescription();
+
+        clearSelectedTokenPreview();
         dom.walletLookupInput.value = '';
         updateWalletLookupInputMode();
         updateWalletStatus();
@@ -5460,6 +5692,8 @@
         state.walletViewName = null;
         state.curatedGalleryId = null;
         state.curatedGalleryTitle = null;
+        clearExampleDescription();
+
         dom.walletLookupInput.value = isConnectedAddress ? '' : baseLookupState.lookupAddress;
         updateWalletLookupInputMode();
         appendLog(`Viewing wallet: ${truncateMiddle(baseLookupState.lookupAddress, 8, 8)}.`);
@@ -5538,59 +5772,111 @@
       }
     };
 
-    const openCuratedGallery = async (galleryId) => {
-      const gallery = CURATED_GALLERIES.find((entry) => entry.id === galleryId);
-      if (!gallery) {
-        return;
-      }
-      cancelWalletLookup();
-      state.curatedGalleryId = gallery.id;
-      state.curatedGalleryTitle = gallery.title;
-      state.walletViewAddress = null;
-      state.walletViewName = null;
-      state.walletLookupNotice = null;
-      state.walletUsesPagedHoldings = false;
-      state.walletTotalCount = gallery.tokenIds.length;
-      state.walletPageIds = [];
-      state.walletTokenIds = [...gallery.tokenIds];
-      state.walletPageIndex = 0;
-      state.selectedTokenId = null;
-      state.walletTokenCache = new Map();
-      dom.walletLookupInput.value = '';
-      updateWalletLookupInputMode();
-      updateWalletStatus();
-      setExperienceMode();
-      setStatus(dom.walletGridStatus, `<strong>Grid</strong> loading ${gallery.title}`, 'loading', 'blue');
-      renderTokenGridPlaceholders('...');
-      try {
-        const summaries = await fetchWalletTokenSummaries(gallery.tokenIds);
-        summaries.forEach((token) => {
-          state.walletTokenCache.set(token.id.toString(), token);
-        });
-        state.walletTokenIds = summaries
-          .map((token) => token.id)
-          .sort((left, right) => (left < right ? 1 : left > right ? -1 : 0));
-        state.walletTotalCount = state.walletTokenIds.length;
-        setStatus(
-          dom.walletGridStatus,
-          `<strong>Grid</strong> ${gallery.title} loaded`,
-          'ready',
-          'blue'
-        );
-        renderTokenGrid();
-        setExperienceMode();
-        document.getElementById('walletTitle')?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'start'
-        });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        setStatus(dom.walletGridStatus, `<strong>Grid</strong> ${message}`, 'error', 'rose');
-      } finally {
-        updateControls();
-      }
-    };
+const openCuratedGallery = async (galleryId) => {
+  const gallery = CURATED_GALLERIES.find((entry) => entry.id === galleryId);
+  if (!gallery) {
+    return;
+  }
 
+  cancelWalletLookup();
+
+  state.curatedGalleryId = gallery.id;
+  state.curatedGalleryTitle = gallery.title;
+  state.walletViewAddress = null;
+  state.walletViewName = null;
+  state.walletLookupNotice = null;
+  state.walletUsesPagedHoldings = false;
+  state.walletTotalCount = gallery.tokenIds.length;
+  state.walletPageIds = [];
+  state.walletTokenIds = [...gallery.tokenIds];
+  state.walletPageIndex = 0;
+
+  // Show the "Viewing..." description for this curated example.
+  activeExampleDescriptionKey = gallery.id;
+  setExampleDescription(gallery.id);
+
+  clearSelectedTokenPreview();
+
+  state.walletTokenCache = new Map();
+
+  dom.walletLookupInput.value = '';
+  updateWalletLookupInputMode();
+  updateWalletStatus();
+  setExperienceMode();
+
+  setStatus(
+    dom.walletGridStatus,
+    `<strong>Grid</strong> loading ${gallery.title}`,
+    'loading',
+    'blue'
+  );
+
+  renderTokenGridPlaceholders('...');
+
+  try {
+    const summaries = await fetchWalletTokenSummaries(gallery.tokenIds);
+
+    summaries.forEach((token) => {
+      state.walletTokenCache.set(token.id.toString(), token);
+    });
+
+    // Keep curated galleries in the exact order defined in CURATED_GALLERIES.
+    // This avoids fetch results or later sorting forcing a different display order.
+    const loadedTokenIds = new Set(
+      summaries.map((token) => token.id.toString())
+    );
+
+    state.walletTokenIds = gallery.tokenIds.filter((id) =>
+      loadedTokenIds.has(id.toString())
+    );
+
+    state.walletTotalCount = state.walletTokenIds.length;
+
+    setStatus(
+      dom.walletGridStatus,
+      `<strong>Grid</strong> ${gallery.title} loaded`,
+      'ready',
+      'blue'
+    );
+
+    renderTokenGrid();
+
+    const configuredDefaultTokenId =
+      CURATED_GALLERY_DEFAULT_TOKEN_IDS[gallery.id] ?? null;
+
+    const defaultTokenId =
+      configuredDefaultTokenId !== null &&
+      state.walletTokenIds.some(
+        (id) => id.toString() === configuredDefaultTokenId.toString()
+      )
+        ? configuredDefaultTokenId
+        : state.walletTokenIds[0] ?? null;
+
+    if (defaultTokenId !== null) {
+      await selectToken(defaultTokenId);
+    } else {
+      clearSelectedTokenPreview();
+    }
+
+    setExperienceMode();
+
+    document.getElementById('walletTitle')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+
+    setStatus(
+      dom.walletGridStatus,
+      `<strong>Grid</strong> ${message}`,
+      'error',
+      'rose'
+    );
+  } finally {
+    updateControls();
+  }
+};
     const transferSelectedToken = () => {
       const selectedToken = getSelectedToken();
       const senderAddress = state.walletSession.address ?? null;
@@ -6114,12 +6400,64 @@
       event.preventDefault();
       await viewWalletFromInput();
     });
+    
+    
     document.querySelectorAll('[data-wallet-showcase]').forEach((button) => {
       button.addEventListener('click', () => {
         const lookup = button.dataset.walletShowcase ?? '';
+        const showcaseKey = lookup.trim().toLowerCase();
+
+        if (!showcaseKey) {
+          return;
+        }
+
+        const isTogglingOff = activeExampleDescriptionKey === showcaseKey;
+
+        if (isTogglingOff) {
+          void clearWalletLookupToConnectedWallet();
+          return;
+        }
+
+        // Important:
+        // DYLE uses the wallet lookup path, but viewWalletFromInput()
+        // will clear instead of loading if a curated gallery is currently active.
+        // So we clear the current example state first, without running the full clear/reset flow.
+        cancelWalletLookup();
+
+        state.curatedGalleryId = null;
+        state.curatedGalleryTitle = null;
+        state.walletViewAddress = null;
+        state.walletViewName = null;
+        state.walletLookupNotice = null;
+
+        activeExampleDescriptionKey = showcaseKey;
+        setExampleDescription(showcaseKey);
+
         dom.walletLookupInput.value = toBtcLookupLabel(lookup);
         updateWalletLookupInputMode();
-        void viewWalletFromInput().then(() => {
+
+        void viewWalletFromInput().then(async () => {
+          const defaultTokenId =
+            WALLET_SHOWCASE_DEFAULT_TOKEN_IDS[showcaseKey] ?? null;
+
+          if (defaultTokenId !== null) {
+            try {
+              const selected = await focusWalletTokenById(defaultTokenId);
+
+              if (!selected) {
+                appendLog(
+                  `Default showcase token ${defaultTokenId.toString()} not found in this wallet view.`
+                );
+              }
+            } catch (error) {
+              const message = error instanceof Error ? error.message : String(error);
+
+              appendLog(
+                `Unable to auto-select showcase token ${defaultTokenId.toString()}: ${message}`
+              );
+            }
+          }
+
           document.getElementById('walletTitle')?.scrollIntoView({
             behavior: 'smooth',
             block: 'start'
@@ -6127,9 +6465,27 @@
         });
       });
     });
+
+
+
     document.querySelectorAll('[data-curated-gallery]').forEach((button) => {
       button.addEventListener('click', () => {
         const galleryId = button.dataset.curatedGallery ?? '';
+
+        if (!galleryId) {
+          return;
+        }
+
+        const isTogglingOff =
+          state.curatedGalleryId === galleryId ||
+          activeExampleDescriptionKey === galleryId;
+
+        if (isTogglingOff) {
+          void clearWalletLookupToConnectedWallet();
+          return;
+        }
+
+        activeExampleDescriptionKey = galleryId;
         void openCuratedGallery(galleryId);
       });
     });
