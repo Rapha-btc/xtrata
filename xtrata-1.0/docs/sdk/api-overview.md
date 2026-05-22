@@ -24,6 +24,8 @@ For write transactions, use `workflows` to prebuild deny-mode call payloads:
 - `buildMarketListWorkflowPlan`
 - `buildMarketBuyWorkflowPlan`
 - `buildMarketCancelWorkflowPlan`
+- `buildBackupMigrationWorkflowPlan` from `backup-migration` for holder-side
+  source-token escrow into a migrated collection
 
 Workflow guardrails:
 - malformed inputs now fail fast with `SdkValidationError`
@@ -43,6 +45,8 @@ Use low-level modules only when needed:
 - `safe` for deterministic spend caps + guided mint flow statuses
 - `safe` for deterministic spend caps + guided recovery helpers (`buildMintRecoveryGuide`)
 - `workflows` for high-level write transaction plans
+- `backup-migration` for Xtrata backup registry and migrated-collection call
+  builders
 - `deploy` for template injection and contract naming
 - `collections` and `market` for standalone helper logic
 
@@ -65,4 +69,5 @@ Use low-level modules only when needed:
   - `@xtrata/sdk`
   - `@xtrata/sdk/simple`
   - `@xtrata/sdk/workflows`
+  - `@xtrata/sdk/backup-migration`
   - `@xtrata/reconstruction`

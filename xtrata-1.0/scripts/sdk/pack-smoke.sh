@@ -63,6 +63,7 @@ echo "[sdk:pack:smoke] Verifying package imports"
   node -e "import('@xtrata/sdk').then(() => console.log('sdk-ok'))"
   node -e "import('@xtrata/sdk/simple').then(() => console.log('sdk-simple-ok'))"
   node -e "import('@xtrata/sdk/workflows').then(() => console.log('sdk-workflows-ok'))"
+  node -e "import('@xtrata/sdk/backup-migration').then(() => console.log('sdk-backup-migration-ok'))"
   node -e "import('@xtrata/reconstruction').then(() => console.log('reconstruction-ok'))"
 )
 

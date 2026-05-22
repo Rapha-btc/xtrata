@@ -15,6 +15,7 @@ describe('sdk public exports', () => {
     expect(typeof sdk.buildMarketListWorkflowPlan).toBe('function');
     expect(typeof sdk.buildMarketBuyWorkflowPlan).toBe('function');
     expect(typeof sdk.buildMarketCancelWorkflowPlan).toBe('function');
+    expect(typeof sdk.buildBackupMigrationWorkflowPlan).toBe('function');
     expect(typeof sdk.createCoreMintSafetyBundle).toBe('function');
     expect(typeof sdk.createCollectionMintSafetyBundle).toBe('function');
   });
@@ -26,5 +27,6 @@ describe('sdk public exports', () => {
     expect(typeof sdk.chunkBytes).toBe('function');
     expect(typeof sdk.computeExpectedHash).toBe('function');
     expect(typeof sdk.getContractId).toBe('function');
+    expect(typeof sdk.buildRegisterBackupCall).toBe('function');
   });
 });

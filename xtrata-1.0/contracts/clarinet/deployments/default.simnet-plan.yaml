@@ -64,18 +64,23 @@ plan:
     - id: 0
       transactions:
         - emulated-contract-publish:
-            contract-name: sip010-ft-trait
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/sip010-ft-trait.clar
-            clarity-version: 2
-        - emulated-contract-publish:
             contract-name: sip009-nft-trait
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/sip009-nft-trait.clar
             clarity-version: 2
+        - emulated-contract-publish:
+            contract-name: sip010-ft-trait
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/sip010-ft-trait.clar
+            clarity-version: 2
       epoch: "2.5"
     - id: 1
       transactions:
+        - emulated-contract-publish:
+            contract-name: mock-ipfs-collection
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/mock-ipfs-collection.clar
+            clarity-version: 3
         - emulated-contract-publish:
             contract-name: mock-sbtc
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
@@ -107,6 +112,21 @@ plan:
             path: contracts/xtrata-arcade-scores-v1.3.clar
             clarity-version: 3
         - emulated-contract-publish:
+            contract-name: xtrata-v1-1-1
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/xtrata-v1.1.1.clar
+            clarity-version: 3
+        - emulated-contract-publish:
+            contract-name: xtrata-v2-1-0
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/xtrata-v2.1.0.clar
+            clarity-version: 3
+        - emulated-contract-publish:
+            contract-name: xtrata-backup-registry-v1-0
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/xtrata-backup-registry-v1.0.clar
+            clarity-version: 3
+        - emulated-contract-publish:
             contract-name: xtrata-collection-mint-v1-0
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/xtrata-collection-mint-v1.0.clar
@@ -130,16 +150,6 @@ plan:
             contract-name: xtrata-collection-mint-v1-4
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/xtrata-collection-mint-v1.4.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: xtrata-v1-1-1
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-v1.1.1.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: xtrata-v2-1-0
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/xtrata-v2.1.0.clar
             clarity-version: 3
         - emulated-contract-publish:
             contract-name: xtrata-commerce
@@ -172,6 +182,11 @@ plan:
             path: contracts/xtrata-market-v1.1.clar
             clarity-version: 3
         - emulated-contract-publish:
+            contract-name: xtrata-migrated-ipfs-collection-v1-0
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/xtrata-migrated-ipfs-collection-v1.0.clar
+            clarity-version: 3
+        - emulated-contract-publish:
             contract-name: xtrata-preinscribed-collection-sale-v1-0
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/xtrata-preinscribed-collection-sale-v1.0.clar
@@ -186,6 +201,9 @@ plan:
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/xtrata-v1.1.0.clar
             clarity-version: 3
+      epoch: "3.3"
+    - id: 2
+      transactions:
         - emulated-contract-publish:
             contract-name: xtrata-v2-1-1
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM

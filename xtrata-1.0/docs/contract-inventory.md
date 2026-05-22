@@ -197,6 +197,70 @@ Source: `contracts/live/xtrata-small-mint-v1.0.clar`
 - `get-core-contract()`
 - `get-max-small-chunks()`
 
+## xtrata-backup-registry-v1.0 (Clarinet prototype)
+
+Source: `contracts/clarinet/contracts/xtrata-backup-registry-v1.0.clar`
+
+## Purpose
+- Immutable registry for mapping `{ source collection, source token id }` to a
+  verified Xtrata backup inscription pointer.
+- Prototype is locked to local `xtrata-v2-1-0` for hash verification.
+- Records are append-only.
+
+## Data Vars
+- `contract-owner` (principal)
+- `paused` (bool)
+
+## Maps
+- `CollectionEditors` -> `{ source-contract: principal, editor: principal }` => `bool`
+- `Backups` -> `{ source-contract: principal, source-token-id: uint }` => `{ xtrata-contract: principal, inscription-id: uint, content-hash: (buff 32), metadata-uri: (string-ascii 256), backup-uri: (string-ascii 256), registered-at: uint, registrar: principal }`
+
+## Public Functions
+- `set-paused(value)`
+- `transfer-contract-ownership(new-owner)`
+- `set-collection-editor(source-contract, editor, allowed)`
+- `register-backup(source-contract, source-token-id, inscription-id, content-hash, metadata-uri, backup-uri)`
+
+## Read-Only Functions
+- `get-owner()`
+- `is-paused()`
+- `get-xtrata-contract()`
+- `is-collection-editor(source-contract, editor)`
+- `get-backup(source-contract, source-token-id)`
+- `get-backup-uri(source-contract, source-token-id)`
+- `has-backup(source-contract, source-token-id)`
+
+## xtrata-migrated-ipfs-collection-v1.0 (Clarinet prototype)
+
+Source: `contracts/clarinet/contracts/xtrata-migrated-ipfs-collection-v1.0.clar`
+
+## Purpose
+- Prototype SIP-009 migrated collection.
+- Preserves source `get-token-uri` behavior while adding local backup pointer
+  reads.
+- Escrows the source token into the migrated collection contract before minting
+  the replacement token with the same ID.
+
+## NFT
+- `migrated-ipfs-token` (non-fungible token, `uint` ids)
+
+## Public Functions
+- `migrate(token-id)`
+- `transfer(id, sender, recipient)`
+
+## Read-Only Functions
+- `get-last-token-id()`
+- `get-token-uri(id)`
+- `get-owner(id)`
+- `get-collection-metadata()`
+- `get-source-contract()`
+- `get-backup-registry()`
+- `is-migrated(token-id)`
+- `get-migrated-count()`
+- `get-migrated-id(index)`
+- `get-backup(token-id)`
+- `get-backup-uri(token-id)`
+
 ## xtrata-arcade-scores-v1.0
 
 Source: `contracts/live/xtrata-arcade-scores-v1.0.clar`
