@@ -55,9 +55,13 @@ applyThemeToDocument(resolveInitialTheme());
 
 const COLLECTION_LIVE_PATH_PREFIX = '/collection/';
 const WORKSPACE_PATH_PREFIX = '/workspace';
+const GALLERY_PATH_PREFIX = '/gallery';
 const LAB_PATH_PREFIX = '/lab';
 const LAB_EVOLUTION_PATH_PREFIX = '/lab/evolution';
 const pathname = window.location.pathname;
+const isGalleryPath =
+  pathname === GALLERY_PATH_PREFIX ||
+  pathname.startsWith(`${GALLERY_PATH_PREFIX}/`);
 const isLabPath = pathname === LAB_PATH_PREFIX || pathname.startsWith(`${LAB_PATH_PREFIX}/`);
 const isLabEvolutionPath =
   pathname === LAB_EVOLUTION_PATH_PREFIX ||
@@ -90,6 +94,8 @@ ReactDOM.createRoot(root).render(
         <ArtistManagerGate>
           <CollectionManagerApp />
         </ArtistManagerGate>
+      ) : isGalleryPath ? (
+        <App />
       ) : isLabEvolutionPath ? (
         <LabEvolutionPage />
       ) : isLabPath ? (

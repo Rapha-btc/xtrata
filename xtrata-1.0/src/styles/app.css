@@ -6939,6 +6939,310 @@ p {
   color: var(--accent-strong);
 }
 
+.gallery .panel {
+  overflow: visible;
+}
+
+.gallery-panel__body {
+  gap: 14px;
+}
+
+.gallery-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.gallery-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+  gap: 14px;
+  align-items: start;
+}
+
+.gallery-room {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+
+.gallery-wall {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.gallery-wall__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.gallery-wall__surface {
+  position: relative;
+  aspect-ratio: var(--gallery-wall-ratio);
+  min-height: 160px;
+  overflow: visible;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(15, 23, 42, 0.045) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.035) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(241, 245, 249, 0.9));
+  background-size: 28px 28px, 28px 28px, 100% 100%;
+  box-shadow: inset 0 -28px 48px rgba(15, 23, 42, 0.06);
+}
+
+[data-theme]:not([data-theme='light']) .gallery-wall__surface {
+  background:
+    linear-gradient(90deg, rgba(226, 232, 240, 0.05) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(226, 232, 240, 0.04) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.94));
+}
+
+.gallery-wall__floor {
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    rgba(148, 163, 184, 0.08),
+    rgba(15, 23, 42, 0.16),
+    rgba(148, 163, 184, 0.08)
+  );
+}
+
+.gallery-frame {
+  position: absolute;
+  aspect-ratio: 1 / 1;
+  transform: translate(-50%, 50%);
+  display: block;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  overflow: visible;
+  touch-action: none;
+  z-index: 2;
+}
+
+.gallery-frame--editable {
+  cursor: grab;
+}
+
+.gallery-frame--editable:active {
+  cursor: grabbing;
+}
+
+.gallery-frame__canvas {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(15, 23, 42, 0.88);
+  border-radius: 6px;
+  background: rgba(248, 250, 252, 0.92);
+  box-shadow:
+    0 12px 20px rgba(15, 23, 42, 0.16),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.72);
+  overflow: hidden;
+}
+
+[data-theme]:not([data-theme='light']) .gallery-frame__canvas {
+  border-color: rgba(226, 232, 240, 0.86);
+  background: rgba(15, 23, 42, 0.96);
+}
+
+.gallery-frame--selected .gallery-frame__canvas {
+  outline: 3px solid rgba(224, 90, 42, 0.82);
+  outline-offset: 3px;
+}
+
+.gallery-frame__mat {
+  position: absolute;
+  inset: 6%;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  background: var(--surface-soft);
+  overflow: hidden;
+}
+
+.gallery-frame__media {
+  position: absolute;
+  inset: 0;
+  border-radius: 0;
+}
+
+.gallery-frame__media img,
+.gallery-frame__media video,
+.gallery-frame__media iframe {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
+.gallery-frame__label {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 120%;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.78);
+  color: #f8fafc;
+  font-size: clamp(0.56rem, 1.2vw, 0.68rem);
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.gallery-frame__resize {
+  position: absolute;
+  right: -8px;
+  bottom: -8px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+  background: var(--accent);
+  box-shadow: 0 6px 12px rgba(15, 23, 42, 0.22);
+  cursor: nwse-resize;
+  z-index: 4;
+}
+
+.gallery-fallback {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 6px;
+  padding: 10px;
+  text-align: center;
+  background:
+    linear-gradient(135deg, rgba(14, 165, 233, 0.12), transparent 48%),
+    var(--surface-soft);
+}
+
+.gallery-fallback__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 28px;
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: var(--surface-code);
+  color: var(--ink);
+  font-size: 0.64rem;
+  font-weight: 800;
+  font-family: "IBM Plex Mono", "SFMono-Regular", ui-monospace, monospace;
+}
+
+.gallery-fallback__title {
+  max-width: 100%;
+  color: var(--ink);
+  font-size: clamp(0.68rem, 1.4vw, 0.82rem);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.gallery-fallback__meta {
+  max-width: 100%;
+  color: var(--muted);
+  font-size: clamp(0.58rem, 1.2vw, 0.7rem);
+  overflow-wrap: anywhere;
+}
+
+.gallery-side {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.gallery-inspector,
+.gallery-persistence {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.gallery-inspector h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.gallery-inspector p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.gallery-inspector__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: start;
+}
+
+.gallery-inspector__meta {
+  grid-template-columns: 1fr;
+}
+
+.gallery-inspector__controls {
+  display: grid;
+  gap: 10px;
+}
+
+.gallery-persistence__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gallery-json {
+  min-height: 160px;
+  font-family: "IBM Plex Mono", "SFMono-Regular", ui-monospace, monospace;
+  font-size: 0.72rem;
+}
+
+@media (max-width: 1180px) {
+  .gallery-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gallery-side {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
+@media (max-width: 760px) {
+  .gallery-room,
+  .gallery-side {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gallery-wall__surface {
+    min-height: 140px;
+  }
+}
+
 /* === Art-first preview === */
 .preview-panel--art {
   padding: 0;

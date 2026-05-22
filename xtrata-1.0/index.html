@@ -1060,6 +1060,216 @@
       color: transparent;
     }
 
+    .inline-gallery {
+      display: grid;
+      gap: 12px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+    }
+
+    .inline-gallery__head,
+    .inline-gallery__actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .inline-gallery__title {
+      display: grid;
+      gap: 2px;
+    }
+
+    .inline-gallery__title h3 {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.15;
+    }
+
+    .inline-gallery__title p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .inline-gallery__actions .btn {
+      min-height: 32px;
+      padding: 6px 9px;
+      font-size: 12px;
+    }
+
+    .inline-gallery__body {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+      gap: 12px;
+      align-items: start;
+    }
+
+    .inline-gallery-room {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .inline-gallery-wall {
+      display: grid;
+      gap: 5px;
+      min-width: 0;
+    }
+
+    .inline-gallery-wall__label {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .inline-gallery-wall__surface {
+      position: relative;
+      aspect-ratio: var(--inline-gallery-wall-ratio);
+      min-height: 130px;
+      overflow: visible;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(90deg, rgba(21, 26, 23, 0.045) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(21, 26, 23, 0.035) 1px, transparent 1px),
+        var(--surface-soft);
+      background-size: 24px 24px, 24px 24px, 100% 100%;
+      box-shadow: inset 0 -24px 40px rgba(21, 26, 23, 0.05);
+    }
+
+    .inline-gallery-frame {
+      position: absolute;
+      aspect-ratio: 1 / 1;
+      transform: translate(-50%, 50%);
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+      overflow: visible;
+      touch-action: none;
+    }
+
+    .inline-gallery.is-editing .inline-gallery-frame {
+      cursor: grab;
+    }
+
+    .inline-gallery-frame__canvas {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      border: 2px solid var(--ink);
+      border-radius: 6px;
+      background: var(--control);
+      box-shadow: 0 10px 18px rgba(21, 26, 23, 0.14);
+      overflow: hidden;
+    }
+
+    .inline-gallery-frame.is-selected .inline-gallery-frame__canvas {
+      outline: 3px solid var(--green);
+      outline-offset: 3px;
+    }
+
+    .inline-gallery-frame__mat {
+      position: absolute;
+      inset: 6%;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      border-radius: 4px;
+      background: var(--thumb);
+    }
+
+    .inline-gallery-frame__media,
+    .inline-gallery-frame__media img,
+    .inline-gallery-frame__media video,
+    .inline-gallery-frame__media iframe {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border: 0;
+      background: var(--control);
+    }
+
+    .inline-gallery-frame__media {
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: clamp(9px, 1.1vw, 12px);
+      font-weight: 800;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    .inline-gallery-frame__label {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 50%;
+      transform: translateX(-50%);
+      max-width: 120%;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(21, 26, 23, 0.78);
+      color: #f6f8f5;
+      font-size: 10px;
+      font-weight: 800;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      pointer-events: none;
+    }
+
+    .inline-gallery-frame__resize {
+      position: absolute;
+      right: -7px;
+      bottom: -7px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid var(--panel);
+      background: var(--green);
+      cursor: nwse-resize;
+      box-shadow: 0 6px 12px rgba(21, 26, 23, 0.18);
+    }
+
+    .inline-gallery-inspector,
+    .inline-gallery-json {
+      display: grid;
+      gap: 9px;
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface-soft);
+      padding: 10px;
+    }
+
+    .inline-gallery-inspector h4 {
+      margin: 0;
+      font-size: 15px;
+    }
+
+    .inline-gallery-inspector .input,
+    .inline-gallery-inspector .select,
+    .inline-gallery-json .textarea {
+      min-height: 34px;
+      padding: 7px 9px;
+      font-size: 12px;
+    }
+
+    .inline-gallery-json .textarea {
+      min-height: 120px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      resize: vertical;
+    }
+
     .token-thumb-label {
       max-width: 100%;
       padding: 8px;
@@ -1747,6 +1957,10 @@
       display: none;
     }
 
+    body:not(.has-ledger):not(.has-public-ledger) .inline-gallery {
+      display: none;
+    }
+
     body:not(.has-ledger) .wallet-browser {
       margin-bottom: 0;
     }
@@ -1806,7 +2020,12 @@
       }
 
       .workspace,
-      .wallet-layout {
+      .wallet-layout,
+      .inline-gallery__body {
+        grid-template-columns: 1fr;
+      }
+
+      .inline-gallery-room {
         grid-template-columns: 1fr;
       }
     }
@@ -1855,6 +2074,16 @@
 
       .token-meta {
         font-size: 11px;
+      }
+
+      .inline-gallery__head,
+      .inline-gallery__actions {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .inline-gallery__actions .btn {
+        width: 100%;
       }
     }
 
@@ -2195,6 +2424,7 @@
         </a>
       </div>
       <div class="top-actions">
+        <a class="btn ghost" href="/gallery">Gallery</a>
         <button class="btn" id="connectButton" type="button">Connect wallet</button>
         <button class="btn secondary" id="disconnectButton" type="button" hidden>Disconnect</button>
       </div>
@@ -2463,6 +2693,50 @@
               </div>
             </aside>
           </div>
+          <div class="inline-gallery" id="inlineGallery">
+            <div class="inline-gallery__head">
+              <div class="inline-gallery__title">
+                <h3>Gallery Wall</h3>
+                <p id="galleryStatus">Load wallet inscriptions to arrange frames.</p>
+              </div>
+              <div class="inline-gallery__actions">
+                <button class="btn ghost" id="galleryEditButton" type="button">Edit</button>
+                <button class="btn ghost" id="gallerySaveButton" type="button">Save layout</button>
+                <button class="btn ghost" id="galleryResetButton" type="button">Reset auto</button>
+                <button class="btn ghost" id="galleryExportButton" type="button">Export JSON</button>
+                <button class="btn ghost" id="galleryImportButton" type="button">Import JSON</button>
+              </div>
+            </div>
+            <div class="inline-gallery__body">
+              <div class="inline-gallery-room" id="galleryRoom" aria-label="Inline Xtrata gallery room"></div>
+              <aside class="inline-gallery-inspector" id="galleryInspector">
+                <h4>Inspector</h4>
+                <div class="prepared-meta" id="galleryInspectorMeta">
+                  <div class="meta-line">
+                    <span class="meta-key">Status</span>
+                    <span class="meta-value">No frame selected</span>
+                  </div>
+                </div>
+                <label class="field">
+                  <span class="label">Frame size</span>
+                  <input class="input" id="gallerySizeInput" type="range" min="0.45" max="2.4" step="0.05" disabled />
+                </label>
+                <label class="field">
+                  <span class="label">Wall</span>
+                  <select class="select" id="galleryWallInput" disabled>
+                    <option value="north">north</option>
+                    <option value="south">south</option>
+                    <option value="east">east</option>
+                    <option value="west">west</option>
+                  </select>
+                </label>
+                <button class="small-link" id="galleryOpenViewerButton" type="button" disabled>Open in viewer</button>
+              </aside>
+            </div>
+            <div class="inline-gallery-json">
+              <textarea class="textarea" id="galleryJsonInput" spellcheck="false" placeholder="Exported or imported gallery layout JSON"></textarea>
+            </div>
+          </div>
         </div>
       </section>
     </main>
@@ -2535,6 +2809,7 @@
     <footer class="site-footer">
       <nav class="footer-links" aria-label="Footer links">
         <a href="/workspace">Workspace</a>
+        <a href="/gallery">Gallery</a>
         <a href="#docs">Documentation</a>
         <a href="/manage">Artist portal</a>
         <a href="https://x.com/XtrataLayers" target="_blank" rel="noreferrer">Xtrata on X</a>
@@ -2673,6 +2948,24 @@
       isLikelyImageUrl,
       resolveMimeType
     } from '/src/lib/viewer/content.ts';
+    import { createAutoGalleryLayout } from '/src/lib/gallery/galleryAutoLayout.ts';
+    import {
+      GALLERY_WALLS,
+      parseGalleryLayoutJson,
+      resolveGalleryItemSettings,
+      serializeGalleryLayout
+    } from '/src/lib/gallery/gallerySchema.ts';
+    import {
+      clampGalleryPosition,
+      getGalleryItemSize,
+      getGalleryWallLength,
+      updateGalleryItemPosition,
+      updateGalleryItemSize
+    } from '/src/lib/gallery/galleryEditor.ts';
+    import {
+      parseGallerySource,
+      resolveGalleryMedia
+    } from '/src/lib/gallery/galleryMediaResolver.ts';
 
     const isCoreEntry = (entry) =>
       entry.protocolVersion === '2.1.0' ||
@@ -2760,6 +3053,20 @@
       previewExpandButton: $('previewExpandButton'),
       fullscreenButton: $('fullscreenButton'),
       explorerLink: $('explorerLink'),
+      inlineGallery: $('inlineGallery'),
+      galleryStatus: $('galleryStatus'),
+      galleryRoom: $('galleryRoom'),
+      galleryInspector: $('galleryInspector'),
+      galleryInspectorMeta: $('galleryInspectorMeta'),
+      galleryEditButton: $('galleryEditButton'),
+      gallerySaveButton: $('gallerySaveButton'),
+      galleryResetButton: $('galleryResetButton'),
+      galleryExportButton: $('galleryExportButton'),
+      galleryImportButton: $('galleryImportButton'),
+      galleryJsonInput: $('galleryJsonInput'),
+      gallerySizeInput: $('gallerySizeInput'),
+      galleryWallInput: $('galleryWallInput'),
+      galleryOpenViewerButton: $('galleryOpenViewerButton'),
       transferRecipientInput: $('transferRecipientInput'),
       transferButton: $('transferButton'),
       transferStatus: $('transferStatus'),
@@ -2954,6 +3261,14 @@
       walletPageIndex: 0,
       walletLoadingPage: false,
       selectedTokenId: null,
+      galleryLayout: null,
+      galleryStorageKey: null,
+      galleryTokenSignature: '',
+      gallerySelectedItemId: null,
+      galleryDirty: false,
+      galleryLoadedFromStorage: false,
+      galleryEditMode: false,
+      galleryInteraction: null,
       connectedWalletMatureMode: false,
       lastSubmittedTxId: null,
       usdPriceBook: null,
@@ -2962,6 +3277,8 @@
 
     const WALLET_PAGE_SIZE = 16;
     const WALLET_FALLBACK_SCAN_LIMIT = 2000;
+    const INLINE_GALLERY_TOKEN_LIMIT = 50;
+    const INLINE_GALLERY_STORAGE_PREFIX = 'xtrata.inline-gallery.v1';
     const MAX_GRID_EAGER_FULL_LOAD_BYTES = 4n * 1024n * 1024n;
     const GRID_THUMBNAIL_HYDRATION_CONCURRENCY = 2;
     const CONNECTED_LEDGER_MODE_STORAGE_PREFIX = 'xtrata.simple-homepage.connected-ledger-mode';
@@ -4587,6 +4904,7 @@
         dom.tokenGrid.append(card);
       }
       updateTransferControls();
+      renderInlineGallery();
     };
 
     const getTokenClient = (token) => {
@@ -5540,6 +5858,278 @@
         }
       }
       updateTransferControls();
+      renderInlineGallery();
+    };
+
+    const getInlineGalleryStorageKey = () => {
+      const contractId = getContractId(state.contract);
+      const wallet = (getViewingWalletAddress() ?? 'connected').toLowerCase();
+      return `${INLINE_GALLERY_STORAGE_PREFIX}.${contractId}.${wallet}`;
+    };
+
+    const getInlineGalleryTokens = () => {
+      const ids = (state.walletUsesPagedHoldings ? state.walletPageIds : state.walletTokenIds)
+        .slice(0, INLINE_GALLERY_TOKEN_LIMIT);
+      return ids
+        .map((id) => state.walletTokenCache.get(id.toString()) ?? null)
+        .filter(Boolean);
+    };
+
+    const getInlineGalleryTokenSignature = (tokens) =>
+      tokens.map((token) => token.id.toString()).join(',');
+
+    const createInlineGalleryAutoLayout = (tokens) =>
+      createAutoGalleryLayout({
+        tokens,
+        title: getViewingWalletAddress()
+          ? `Xtrata Gallery ${truncateMiddle(getViewingWalletAddress(), 6, 6)}`
+          : 'Untitled Xtrata Gallery'
+      });
+
+    const syncInlineGalleryLayout = () => {
+      const tokens = getInlineGalleryTokens();
+      const storageKey = getInlineGalleryStorageKey();
+      const signature = getInlineGalleryTokenSignature(tokens);
+      if (state.galleryStorageKey !== storageKey) {
+        state.galleryStorageKey = storageKey;
+        state.galleryTokenSignature = signature;
+        state.gallerySelectedItemId = null;
+        state.galleryDirty = false;
+        state.galleryLoadedFromStorage = false;
+        state.galleryInteraction = null;
+        const raw = window.localStorage?.getItem(storageKey) ?? null;
+        if (raw) {
+          const parsed = parseGalleryLayoutJson(raw);
+          if (parsed.ok) {
+            state.galleryLayout = parsed.layout;
+            state.galleryLoadedFromStorage = true;
+            return tokens;
+          }
+        }
+        state.galleryLayout = createInlineGalleryAutoLayout(tokens);
+        return tokens;
+      }
+      if (
+        !state.galleryDirty &&
+        !state.galleryLoadedFromStorage &&
+        state.galleryTokenSignature !== signature
+      ) {
+        state.galleryTokenSignature = signature;
+        state.galleryLayout = createInlineGalleryAutoLayout(tokens);
+        state.gallerySelectedItemId = null;
+      }
+      return tokens;
+    };
+
+    const getInlineGalleryTokenForItem = (item, tokens) => {
+      const source = parseGallerySource(item.source);
+      if (!source?.tokenId) {
+        return null;
+      }
+      return tokens.find((token) => token.id === source.tokenId) ?? null;
+    };
+
+    const getInlineGalleryFrameStyle = (layout, item) => {
+      const wallLength = getGalleryWallLength(layout.room, item.position.wall);
+      const size = getGalleryItemSize(layout, item);
+      return {
+        left: `${((item.position.x + wallLength / 2) / wallLength) * 100}%`,
+        bottom: `${(item.position.y / layout.room.height) * 100}%`,
+        width: `${(size / wallLength) * 100}%`
+      };
+    };
+
+    const getInlineGalleryCssSelectorValue = (value) =>
+      window.CSS?.escape ? window.CSS.escape(value) : value.replace(/"/g, '\\"');
+
+    const renderInlineGalleryFallback = (target, media) => {
+      const label = media.kind === 'unknown' ? 'DATA' : media.kind.toUpperCase();
+      target.textContent = `${label} · ${
+        media.tokenId !== null ? `#${media.tokenId.toString()}` : media.id
+      }`;
+    };
+
+    const renderInlineGalleryMedia = (target, token, media) => {
+      target.replaceChildren();
+      if (!token) {
+        renderInlineGalleryFallback(target, media);
+        return;
+      }
+      const kind = media.kind;
+      if (token.svgDataUri && kind === 'image') {
+        const img = document.createElement('img');
+        img.alt = 'Inscription preview';
+        img.src = token.svgDataUri;
+        target.append(img);
+        return;
+      }
+      if (kind !== 'image' && kind !== 'gif' && kind !== 'video') {
+        renderInlineGalleryFallback(target, media);
+        return;
+      }
+      const cacheKey = getThumbnailKey(token);
+      const existing = dom.tokenGrid.querySelector(
+        `[data-thumbnail-key="${getInlineGalleryCssSelectorValue(cacheKey)}"]`
+      );
+      const reusable = existing?.querySelector('img, video, iframe');
+      if (reusable) {
+        target.append(reusable.cloneNode(true));
+        return;
+      }
+      const liveMedia = state.gridLiveMediaCache.get(cacheKey);
+      if (liveMedia && renderGridLiveMedia(token, target, liveMedia)) {
+        return;
+      }
+      target.textContent = getGridMimeLabel(token.meta?.mimeType ?? null);
+      void applyCachedThumbnail(token, target).then((applied) => {
+        if (!applied && target.isConnected) {
+          renderInlineGalleryFallback(target, media);
+        }
+      });
+    };
+
+    const updateInlineGalleryInspector = (tokens) => {
+      const layout = state.galleryLayout;
+      const item = layout?.items.find((entry) => entry.id === state.gallerySelectedItemId) ?? null;
+      if (!layout || !item) {
+        renderMeta(dom.galleryInspectorMeta, [['Status', 'No frame selected']]);
+        dom.gallerySizeInput.disabled = true;
+        dom.galleryWallInput.disabled = true;
+        dom.galleryOpenViewerButton.disabled = true;
+        return;
+      }
+      const token = getInlineGalleryTokenForItem(item, tokens);
+      const media = resolveGalleryMedia({ item, token });
+      const settings = resolveGalleryItemSettings(layout, item);
+      renderMeta(dom.galleryInspectorMeta, [
+        ['Token', media.tokenId !== null ? `#${media.tokenId.toString()}` : media.id],
+        ['Type', media.kind],
+        ['Source', truncateMiddle(item.source, 14, 10)],
+        ['Position', `${item.position.wall} · x ${item.position.x.toFixed(2)} · y ${item.position.y.toFixed(2)}`],
+        ['Frame', `${settings.display.size.toFixed(2)} m`]
+      ]);
+      dom.gallerySizeInput.disabled = !state.galleryEditMode;
+      dom.gallerySizeInput.value = String(settings.display.size);
+      dom.galleryWallInput.disabled = !state.galleryEditMode;
+      dom.galleryWallInput.value = item.position.wall;
+      dom.galleryOpenViewerButton.disabled = media.tokenId === null;
+      dom.galleryOpenViewerButton.dataset.tokenId = media.tokenId?.toString() ?? '';
+    };
+
+    const updateInlineGalleryLayout = (updater) => {
+      if (!state.galleryLayout) {
+        return;
+      }
+      state.galleryLayout = updater(state.galleryLayout);
+      state.galleryDirty = true;
+      state.galleryLoadedFromStorage = false;
+      renderInlineGallery();
+    };
+
+    const startInlineGalleryInteraction = (event, item, type) => {
+      if (!state.galleryEditMode || event.button !== 0 || !state.galleryLayout) {
+        return;
+      }
+      const wall = event.currentTarget.closest('[data-inline-gallery-wall]');
+      if (!wall) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      state.gallerySelectedItemId = item.id;
+      state.galleryInteraction = {
+        type,
+        item,
+        wall: item.position.wall,
+        rect: wall.getBoundingClientRect(),
+        wallLength: getGalleryWallLength(state.galleryLayout.room, item.position.wall),
+        startX: event.clientX,
+        startY: event.clientY,
+        startSize: getGalleryItemSize(state.galleryLayout, item)
+      };
+      renderInlineGallery();
+    };
+
+    const renderInlineGallery = () => {
+      if (!dom.galleryRoom || !dom.inlineGallery) {
+        return;
+      }
+      const tokens = syncInlineGalleryLayout();
+      const layout = state.galleryLayout;
+      dom.inlineGallery.classList.toggle('is-editing', state.galleryEditMode);
+      dom.galleryEditButton.textContent = state.galleryEditMode ? 'Editing' : 'Edit';
+      dom.gallerySaveButton.textContent = state.galleryDirty ? 'Save layout' : 'Saved';
+      dom.galleryStatus.textContent = tokens.length > 0
+        ? `${tokens.length} framed inscription${tokens.length === 1 ? '' : 's'}`
+        : 'Load wallet inscriptions to arrange frames.';
+      dom.galleryRoom.replaceChildren();
+      if (!layout) {
+        updateInlineGalleryInspector(tokens);
+        return;
+      }
+      if (
+        !state.gallerySelectedItemId ||
+        !layout.items.some((item) => item.id === state.gallerySelectedItemId)
+      ) {
+        state.gallerySelectedItemId = layout.items[0]?.id ?? null;
+      }
+      GALLERY_WALLS.forEach((wall) => {
+        const wallWrap = document.createElement('section');
+        wallWrap.className = `inline-gallery-wall inline-gallery-wall--${wall}`;
+        const label = document.createElement('div');
+        label.className = 'inline-gallery-wall__label';
+        const wallItems = layout.items.filter((item) => item.position.wall === wall);
+        label.innerHTML = `<span>${wall}</span><span>${wallItems.length}</span>`;
+        const surface = document.createElement('div');
+        surface.className = 'inline-gallery-wall__surface';
+        surface.dataset.inlineGalleryWall = wall;
+        surface.style.setProperty(
+          '--inline-gallery-wall-ratio',
+          `${getGalleryWallLength(layout.room, wall)} / ${layout.room.height}`
+        );
+        wallItems.forEach((item) => {
+          const frame = document.createElement('button');
+          frame.type = 'button';
+          frame.className = `inline-gallery-frame${state.gallerySelectedItemId === item.id ? ' is-selected' : ''}`;
+          const frameStyle = getInlineGalleryFrameStyle(layout, item);
+          Object.assign(frame.style, frameStyle);
+          const token = getInlineGalleryTokenForItem(item, tokens);
+          const media = resolveGalleryMedia({ item, token });
+          frame.setAttribute('aria-label', `Select ${media.title}`);
+          frame.addEventListener('click', () => {
+            state.gallerySelectedItemId = item.id;
+            renderInlineGallery();
+          });
+          frame.addEventListener('pointerdown', (event) =>
+            startInlineGalleryInteraction(event, item, 'move')
+          );
+          const canvas = document.createElement('span');
+          canvas.className = 'inline-gallery-frame__canvas';
+          const mat = document.createElement('span');
+          mat.className = 'inline-gallery-frame__mat';
+          const mediaTarget = document.createElement('span');
+          mediaTarget.className = 'inline-gallery-frame__media';
+          renderInlineGalleryMedia(mediaTarget, token, media);
+          mat.append(mediaTarget);
+          canvas.append(mat);
+          const itemLabel = document.createElement('span');
+          itemLabel.className = 'inline-gallery-frame__label';
+          itemLabel.textContent = media.tokenId !== null ? `#${media.tokenId.toString()}` : media.id;
+          frame.append(canvas, itemLabel);
+          if (state.galleryEditMode && state.gallerySelectedItemId === item.id) {
+            const resize = document.createElement('span');
+            resize.className = 'inline-gallery-frame__resize';
+            resize.addEventListener('pointerdown', (event) =>
+              startInlineGalleryInteraction(event, item, 'resize')
+            );
+            frame.append(resize);
+          }
+          surface.append(frame);
+        });
+        wallWrap.append(label, surface);
+        dom.galleryRoom.append(wallWrap);
+      });
+      updateInlineGalleryInspector(tokens);
     };
 
     const selectToken = async (id) => {
@@ -6512,6 +7102,140 @@ const openCuratedGallery = async (galleryId) => {
       }
       state.walletPageIndex += 1;
       await loadWalletPage();
+    });
+    dom.galleryEditButton.addEventListener('click', () => {
+      state.galleryEditMode = !state.galleryEditMode;
+      renderInlineGallery();
+    });
+    dom.gallerySaveButton.addEventListener('click', () => {
+      if (!state.galleryLayout) {
+        return;
+      }
+      window.localStorage?.setItem(
+        getInlineGalleryStorageKey(),
+        serializeGalleryLayout(state.galleryLayout)
+      );
+      state.galleryDirty = false;
+      state.galleryLoadedFromStorage = true;
+      renderInlineGallery();
+    });
+    dom.galleryResetButton.addEventListener('click', () => {
+      const tokens = getInlineGalleryTokens();
+      state.galleryLayout = createInlineGalleryAutoLayout(tokens);
+      state.gallerySelectedItemId = state.galleryLayout.items[0]?.id ?? null;
+      state.galleryDirty = true;
+      state.galleryLoadedFromStorage = false;
+      state.galleryTokenSignature = getInlineGalleryTokenSignature(tokens);
+      renderInlineGallery();
+    });
+    dom.galleryExportButton.addEventListener('click', () => {
+      if (!state.galleryLayout) {
+        return;
+      }
+      dom.galleryJsonInput.value = serializeGalleryLayout(state.galleryLayout);
+    });
+    dom.galleryImportButton.addEventListener('click', () => {
+      const parsed = parseGalleryLayoutJson(dom.galleryJsonInput.value);
+      if (!parsed.ok) {
+        dom.galleryStatus.textContent = `Import failed: ${parsed.errors[0]}`;
+        return;
+      }
+      state.galleryLayout = parsed.layout;
+      state.gallerySelectedItemId = parsed.layout.items[0]?.id ?? null;
+      state.galleryDirty = true;
+      state.galleryLoadedFromStorage = false;
+      renderInlineGallery();
+    });
+    dom.gallerySizeInput.addEventListener('input', () => {
+      const itemId = state.gallerySelectedItemId;
+      if (!itemId) {
+        return;
+      }
+      updateInlineGalleryLayout((layout) =>
+        updateGalleryItemSize(layout, itemId, Number(dom.gallerySizeInput.value))
+      );
+    });
+    dom.galleryWallInput.addEventListener('change', () => {
+      const itemId = state.gallerySelectedItemId;
+      if (!itemId) {
+        return;
+      }
+      updateInlineGalleryLayout((layout) => ({
+        ...layout,
+        items: layout.items.map((item) => {
+          if (item.id !== itemId) {
+            return item;
+          }
+          return {
+            ...item,
+            position: clampGalleryPosition({
+              layout,
+              item,
+              position: {
+                ...item.position,
+                wall: dom.galleryWallInput.value
+              }
+            })
+          };
+        })
+      }));
+    });
+    dom.galleryOpenViewerButton.addEventListener('click', async () => {
+      const raw = dom.galleryOpenViewerButton.dataset.tokenId ?? '';
+      if (!/^[0-9]+$/.test(raw)) {
+        return;
+      }
+      const tokenId = BigInt(raw);
+      const selected = await focusWalletTokenById(tokenId);
+      if (!selected) {
+        await selectToken(tokenId);
+      }
+      document.getElementById('tokenPreviewPanel')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    });
+    window.addEventListener('pointermove', (event) => {
+      const interaction = state.galleryInteraction;
+      if (!interaction || !state.galleryLayout) {
+        return;
+      }
+      event.preventDefault();
+      if (interaction.type === 'move') {
+        const xRatio = (event.clientX - interaction.rect.left) / interaction.rect.width;
+        const yRatio = (interaction.rect.bottom - event.clientY) / interaction.rect.height;
+        state.galleryLayout = updateGalleryItemPosition(
+          state.galleryLayout,
+          interaction.item.id,
+          {
+            ...interaction.item.position,
+            wall: interaction.wall,
+            x: xRatio * interaction.wallLength - interaction.wallLength / 2,
+            y: yRatio * state.galleryLayout.room.height
+          }
+        );
+      } else {
+        const horizontalDelta =
+          ((event.clientX - interaction.startX) / interaction.rect.width) *
+          interaction.wallLength;
+        const verticalDelta =
+          ((interaction.startY - event.clientY) / interaction.rect.height) *
+          state.galleryLayout.room.height;
+        state.galleryLayout = updateGalleryItemSize(
+          state.galleryLayout,
+          interaction.item.id,
+          interaction.startSize + Math.max(horizontalDelta, verticalDelta)
+        );
+      }
+      state.galleryDirty = true;
+      state.galleryLoadedFromStorage = false;
+      renderInlineGallery();
+    });
+    window.addEventListener('pointerup', () => {
+      state.galleryInteraction = null;
+    });
+    window.addEventListener('pointercancel', () => {
+      state.galleryInteraction = null;
     });
     dom.prepareButton.addEventListener('click', async () => {
       setBusy(true);

@@ -1,6 +1,32 @@
 import { resolve } from 'node:path';
 import { defineConfig, loadEnv } from 'vite';
+import type { Plugin, ViteDevServer } from 'vite';
 import react from '@vitejs/plugin-react';
+
+const WORKSPACE_ROUTE_PREFIXES = [
+  '/admin',
+  '/manage',
+  '/collection',
+  '/gallery',
+  '/lab',
+  '/workspace'
+];
+
+const workspaceRouteRewritePlugin = (): Plugin => ({
+  name: 'xtrata-workspace-route-rewrites',
+  configureServer(server: ViteDevServer) {
+    server.middlewares.use((req, _res, next) => {
+      const path = req.url?.split('?')[0] ?? '';
+      const shouldRewrite = WORKSPACE_ROUTE_PREFIXES.some(
+        (prefix) => path === prefix || path.startsWith(`${prefix}/`)
+      );
+      if (shouldRewrite) {
+        req.url = '/workspace.html';
+      }
+      next();
+    });
+  }
+});
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
@@ -21,7 +47,7 @@ export default defineConfig(({ mode }) => {
     'https://api.bnsv2.com/testnet';
 
   return {
-    plugins: [react()],
+    plugins: [react(), workspaceRouteRewritePlugin()],
     define: {
       __XSTRATA_HAS_HIRO_KEY__: JSON.stringify(hasHiroApiKey)
     },

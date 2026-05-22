@@ -9,6 +9,8 @@
 /admin/* /workspace 200
 /manage /workspace 200
 /manage/* /workspace 200
+/gallery /workspace 200
+/gallery/* /workspace 200
 /collection /workspace 200
 /collection/* /workspace 200
 /lab /workspace 200

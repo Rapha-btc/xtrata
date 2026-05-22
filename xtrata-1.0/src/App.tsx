@@ -46,6 +46,7 @@ import AddressLabel from './components/AddressLabel';
 import WalletTopBar from './components/WalletTopBar';
 import MintScreen from './screens/MintScreen';
 import ViewerScreen, { type ViewerMode } from './screens/ViewerScreen';
+import GalleryScreen from './screens/GalleryScreen';
 import ContractAdminScreen from './screens/ContractAdminScreen';
 import WalletLookupScreen from './screens/WalletLookupScreen';
 import AdminDiagnosticsScreen from './screens/AdminDiagnosticsScreen';
@@ -135,11 +136,64 @@ const SECTION_KEYS = [
   'collection-mint',
   'inscribe',
   'collection-viewer',
+  'gallery',
   'market',
   'commerce',
   'vault'
 ] as const;
 type SectionKey = (typeof SECTION_KEYS)[number];
+
+const GALLERY_PATH_PREFIX = '/gallery';
+
+const decodeRouteSegment = (value: string) => {
+  try {
+    return decodeURIComponent(value).trim();
+  } catch {
+    return value.trim();
+  }
+};
+
+const getInitialGalleryRouteState = () => {
+  if (typeof window === 'undefined') {
+    return {
+      isGalleryRoute: false,
+      walletInput: '',
+      editMode: false
+    };
+  }
+  const pathname = window.location.pathname;
+  if (
+    pathname !== GALLERY_PATH_PREFIX &&
+    !pathname.startsWith(`${GALLERY_PATH_PREFIX}/`)
+  ) {
+    return {
+      isGalleryRoute: false,
+      walletInput: '',
+      editMode: false
+    };
+  }
+  const parts = pathname
+    .slice(GALLERY_PATH_PREFIX.length)
+    .split('/')
+    .map(decodeRouteSegment)
+    .filter(Boolean);
+  let editMode = false;
+  let walletInput = '';
+  parts.forEach((part) => {
+    if (part.toLowerCase() === 'edit') {
+      editMode = true;
+      return;
+    }
+    if (!walletInput) {
+      walletInput = part;
+    }
+  });
+  return {
+    isGalleryRoute: true,
+    walletInput,
+    editMode
+  };
+};
 
 const buildCollapsedState = (collapsed: boolean) =>
   SECTION_KEYS.reduce(
@@ -565,6 +619,7 @@ const toRuntimeWalletSessionResponse = (
 };
 
 export default function App() {
+  const [initialGalleryRoute] = useState(() => getInitialGalleryRouteState());
   const [themeMode, setThemeMode] = useState<ThemeMode>(() =>
     resolveInitialTheme()
   );
@@ -586,8 +641,13 @@ export default function App() {
   );
   const [walletPending, setWalletPending] = useState(false);
   const [viewerFocusKey, setViewerFocusKey] = useState<number | null>(null);
+  const [viewerPreferredTokenId, setViewerPreferredTokenId] = useState<bigint | null>(
+    null
+  );
   const [parentDraftIds, setParentDraftIds] = useState<bigint[]>([]);
-  const [walletLookupInput, setWalletLookupInput] = useState('');
+  const [walletLookupInput, setWalletLookupInput] = useState(
+    initialGalleryRoute.walletInput
+  );
   const [walletLookupTouched, setWalletLookupTouched] = useState(false);
   const [collectionAdminPrefill, setCollectionAdminPrefill] = useState<{
     key: number;
@@ -597,7 +657,11 @@ export default function App() {
   const [viewerMode, setViewerMode] = useState<ViewerMode>('collection');
   const [collapsedSections, setCollapsedSections] = useState(() => {
     const initial = buildCollapsedState(true);
-    initial['collection-viewer'] = false;
+    if (initialGalleryRoute.isGalleryRoute) {
+      initial.gallery = false;
+    } else {
+      initial['collection-viewer'] = false;
+    }
     return initial;
   });
   const tabGuard = useActiveTabGuard();
@@ -1072,6 +1136,38 @@ export default function App() {
     setWalletLookupTouched(false);
   };
 
+  const handleOpenGalleryTokenDetail = (tokenId: bigint) => {
+    setViewerPreferredTokenId(tokenId);
+    setViewerMode('collection');
+    setCollapsedSections((prev) => ({
+      ...prev,
+      'collection-viewer': false
+    }));
+    if (typeof window !== 'undefined') {
+      window.requestAnimationFrame(() => {
+        const anchor = document.getElementById('collection-viewer');
+        if (anchor) {
+          anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (!initialGalleryRoute.isGalleryRoute) {
+      return;
+    }
+    if (typeof window === 'undefined') {
+      return;
+    }
+    window.requestAnimationFrame(() => {
+      const anchor = document.getElementById('gallery');
+      if (anchor) {
+        anchor.scrollIntoView({ behavior: 'auto', block: 'start' });
+      }
+    });
+  }, [initialGalleryRoute.isGalleryRoute]);
+
   const appendDeployLog = (message: string) => {
     setDeployLog((prev) => {
       const next = [...prev, message];
@@ -1233,6 +1329,13 @@ export default function App() {
                     onClick={(event) => handleNavJump(event, 'collection-viewer')}
                   >
                     Viewer
+                  </a>
+                  <a
+                    className="button button--ghost app__nav-link"
+                    href="#gallery"
+                    onClick={(event) => handleNavJump(event, 'gallery')}
+                  >
+                    Gallery
                   </a>
                   <a
                     className="button button--ghost app__nav-link"
@@ -1593,6 +1696,7 @@ export default function App() {
           walletSession={walletSession}
           walletLookupState={walletLookupState}
           focusKey={viewerFocusKey ?? undefined}
+          preferredTokenId={viewerPreferredTokenId}
           collapsed={collapsedSections['collection-viewer']}
           onToggleCollapse={() => toggleSection('collection-viewer')}
           isActiveTab={tabGuard.isActive}
@@ -1602,6 +1706,18 @@ export default function App() {
           onAddParentDraft={handleAddParentDraft}
           modeLabels={{ collection: 'Chain', wallet: 'Wallet' }}
           viewerTitles={{ collection: 'Chain viewer', wallet: 'Wallet viewer' }}
+        />
+
+        <GalleryScreen
+          contract={selectedContract}
+          senderAddress={readOnlySender}
+          walletSession={walletSession}
+          walletLookupState={walletLookupState}
+          collapsed={collapsedSections.gallery}
+          onToggleCollapse={() => toggleSection('gallery')}
+          isActiveTab={tabGuard.isActive}
+          initialEditMode={initialGalleryRoute.editMode}
+          onOpenTokenDetail={handleOpenGalleryTokenDetail}
         />
 
         <MarketScreen
