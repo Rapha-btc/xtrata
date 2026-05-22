@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Xtrata - Registry Ledger</title>
+  <title>Xtrata - Permanent Media Records</title>
   <link rel="icon" href="/favicon.svg" />
   <style>
     :root {
@@ -1420,18 +1420,6 @@
       overflow: hidden;
     }
 
-    .registry-copy::after {
-      content: "";
-      position: absolute;
-      inset: auto -90px -120px auto;
-      width: 280px;
-      height: 280px;
-      border: 1px solid var(--line);
-      border-radius: 50%;
-      opacity: 0.45;
-      pointer-events: none;
-    }
-
     .registry-eyebrow {
       display: inline-flex;
       align-items: center;
@@ -1451,17 +1439,21 @@
     .registry-title {
       margin: 0;
       max-width: 820px;
-      font-size: clamp(46px, 7vw, 92px);
-      line-height: 0.94;
-      letter-spacing: -0.075em;
+      font-size: 64px;
+      line-height: 0.98;
+      letter-spacing: 0;
       font-weight: 900;
+    }
+
+    .registry-title span {
+      display: block;
     }
 
     .registry-lead {
       max-width: 700px;
       margin: 22px 0 0;
       color: var(--muted);
-      font-size: clamp(17px, 1.8vw, 22px);
+      font-size: 19px;
       line-height: 1.55;
     }
 
@@ -1472,11 +1464,11 @@
       margin-top: 26px;
     }
 
-    .registry-proof-card {
+    .registry-promise-card {
       min-width: 0;
       display: grid;
       align-content: start;
-      gap: 18px;
+      gap: 12px;
       border: 1px solid var(--line);
       border-radius: calc(var(--radius) + 8px);
       background: var(--panel);
@@ -1484,32 +1476,60 @@
       padding: 22px;
     }
 
-    .ledger-row {
+    .promise-step {
       display: grid;
-      grid-template-columns: 110px minmax(0, 1fr);
-      gap: 14px;
-      border-bottom: 1px solid var(--line);
-      padding-bottom: 13px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface-soft);
+      padding: 14px;
+    }
+
+    .promise-step > span {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      background: var(--green-soft);
+      color: var(--green);
       font-size: 12px;
-    }
-
-    .ledger-row:last-child {
-      border-bottom: 0;
-      padding-bottom: 0;
-    }
-
-    .ledger-key {
-      color: var(--muted);
-      text-transform: uppercase;
       font-weight: 900;
-      letter-spacing: 0.08em;
     }
 
-    .ledger-value {
-      min-width: 0;
+    .promise-step strong {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.15;
+    }
+
+    .promise-step p,
+    .promise-callout {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .promise-step:nth-child(2) > span {
+      background: var(--blue-soft);
+      color: var(--blue);
+    }
+
+    .promise-step:nth-child(3) > span {
+      background: var(--rose-soft);
+      color: var(--rose);
+    }
+
+    .promise-callout {
+      margin: 0;
+      border: 1px solid rgba(132, 96, 27, 0.26);
+      border-radius: var(--radius);
+      background: var(--amber-soft);
       color: var(--ink);
-      overflow-wrap: anywhere;
+      padding: 13px 14px;
+      font-weight: 800;
     }
 
     .registry-footnotes {
@@ -1535,6 +1555,42 @@
 
     .homepage-docs {
       margin-top: 18px;
+    }
+
+    .wallet-examples {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 7px;
+      margin: 8px 0 2px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.3;
+    }
+
+    .wallet-examples > span {
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .wallet-example-chip {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--surface-soft);
+      color: var(--ink);
+      padding: 6px 9px;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .wallet-example-chip:hover,
+    .wallet-example-chip:focus-visible {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px var(--focus-ring);
+      outline: none;
     }
 
     .docs-actions {
@@ -1592,6 +1648,50 @@
 
     .docs-links a:hover {
       text-decoration: underline;
+    }
+
+    .site-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 14px;
+      padding: 18px 0 0;
+    }
+
+    .footer-links {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px 16px;
+    }
+
+    .footer-links a {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+      text-decoration: none;
+    }
+
+    .footer-links a:hover {
+      color: var(--ink);
+      text-decoration: underline;
+    }
+
+    .footer-theme {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .footer-theme .theme-select {
+      width: min(220px, 100%);
+      text-transform: none;
+      font-weight: 700;
     }
 
     body.has-ledger .registry-intro {
@@ -1661,13 +1761,14 @@
 
     body[data-theme="monochrome"] .registry-title,
     body[data-theme="monochrome"] .registry-note strong,
-    body[data-theme="monochrome"] .ledger-value {
+    body[data-theme="monochrome"] .promise-step strong,
+    body[data-theme="monochrome"] .promise-callout {
       color: #ffffff;
     }
 
     body[data-theme="monochrome"] .registry-lead,
     body[data-theme="monochrome"] .registry-note,
-    body[data-theme="monochrome"] .ledger-key,
+    body[data-theme="monochrome"] .promise-step p,
     body[data-theme="monochrome"] .field-note,
     body[data-theme="monochrome"] .page-readout,
     body[data-theme="monochrome"] .token-meta,
@@ -1766,15 +1867,21 @@
         padding-top: 18px;
       }
       .registry-title {
-        font-size: clamp(40px, 15vw, 58px);
+        font-size: 42px;
       }
-      .ledger-row {
-        grid-template-columns: 1fr;
-        gap: 4px;
-      }
-
       .docs-grid {
         grid-template-columns: 1fr;
+      }
+
+      .site-footer,
+      .footer-theme {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .footer-theme,
+      .footer-theme .theme-select {
+        width: 100%;
       }
     }
 
@@ -2060,21 +2167,6 @@
         </a>
       </div>
       <div class="top-actions">
-        <button class="btn ghost" id="refreshWalletButton" type="button">Refresh</button>
-        <select class="select theme-select" id="themeSelect" aria-label="Theme">
-          <option value="classic">Classic infrastructure</option>
-          <option value="terminal">Terminal green</option>
-          <option value="midnight">Midnight node</option>
-          <option value="neon">Full neon</option>
-          <option value="monochrome">Monochrome luxe</option>
-          <option value="obsidian">Obsidian steel</option>
-          <option value="ember">Ember archive</option>
-          <option value="ultraviolet">Ultraviolet vault</option>
-          <option value="arctic">Arctic dark</option>
-          <option value="ruby">Ruby night</option>
-        </select>
-        <a class="btn ghost" href="#docs">Docs</a>
-        <a class="btn ghost" href="/workspace">Workspace</a>
         <button class="btn" id="connectButton" type="button">Connect wallet</button>
         <button class="btn secondary" id="disconnectButton" type="button" hidden>Disconnect</button>
       </div>
@@ -2082,92 +2174,48 @@
 
     <section class="registry-intro" id="registryIntro" aria-labelledby="registryIntroTitle">
       <div class="registry-copy">
-        <!-- <span class="registry-eyebrow" id="registryModeBadge">Boring infrastructure</span> -->
-        <h1 class="registry-title" id="registryIntroTitle">Record it. Reference it. Retrieve it.</h1>
-        <p class="registry-lead" id="registryIntroLead">A simple inscription registry for durable data on Stacks. Connect a wallet, prepare a file or record, and inscribe it permanently on-chain where it can always be found again.</p>
+        <span class="registry-eyebrow" id="registryModeBadge">Permanent media records</span>
+        <h1 class="registry-title" id="registryIntroTitle">
+          <span>Record it.</span>
+          <span>Reference it.</span>
+          <span>Retrieve it.</span>
+        </h1>
+        <p class="registry-lead" id="registryIntroLead">Create and hold durable records for songs, masters, artwork, credits, documents, apps, and collaboration history, anchored to Bitcoin through Stacks.</p>
         <div class="registry-intro-actions">
           <button class="btn" id="introConnectButton" type="button">Connect wallet</button>
           <button class="btn secondary" id="introPrepareButton" type="button">Prepare a record</button>
-          <a class="btn secondary" href="#docs">Read docs</a>
+          <a class="btn secondary" href="#walletExamples">Explore examples</a>
         </div>
         <div class="registry-footnotes" aria-label="Registry qualities">
-          <p class="registry-note"><strong>Create</strong>Upload a file or write text, then inscribe it with your wallet.</p>
-          <p class="registry-note"><strong>Collect</strong>Connect to see everything you have inscribed in one grid.</p>
-          <p class="registry-note"><strong>Explore</strong>Search any Stacks address or .btc name to view inscriptions.</p>
+          <p class="registry-note"><strong>Permanent backups</strong>Keep rich media and metadata where the reference can keep working.</p>
+          <p class="registry-note"><strong>Your own masters</strong>Hold songs, artwork, credits, manifests, and proof links in your wallet.</p>
+          <p class="registry-note"><strong>Verifiable history</strong>Version your collaborations and public record from one durable place.</p>
         </div>
       </div>
-      <aside class="registry-proof-card" aria-label="Registry ledger summary">
-        <div class="ledger-row"><span class="ledger-key">Object</span><span class="ledger-value">file · text · app · manifest · media</span></div>
-        <div class="ledger-row"><span class="ledger-key">Network</span><span class="ledger-value" id="introNetworkValue">Stacks mainnet</span></div>
-        <div class="ledger-row"><span class="ledger-key">Contract</span><span class="ledger-value" id="introContractValue">Loading contract...</span></div>
-        <div class="ledger-row"><span class="ledger-key">Status</span><span class="ledger-value" id="introStateValue">Connect a wallet to inspect your ledger.</span></div>
+      <aside class="registry-promise-card" aria-label="What Xtrata makes possible">
+        <div class="promise-step">
+          <span>01</span>
+          <div>
+            <strong>Record it</strong>
+            <p>Put high-value files, rich media files like audio and video, manifests, release notes, blogs, reviews, memories and histories directly into an inscription flow.</p>
+          </div>
+        </div>
+        <div class="promise-step">
+          <span>02</span>
+          <div>
+            <strong>Reference it</strong>
+            <p>Use one current record to point at text, code, songs, artworks, agreements, contracts, and more.</p>
+          </div>
+        </div>
+        <div class="promise-step">
+          <span>03</span>
+          <div>
+            <strong>Retrieve it</strong>
+            <p>Keep the media and its proof available through programmable building blocks backed by Bitcoin finality.</p>
+          </div>
+        </div>
+        <p class="promise-callout">Permanent, programmable, reusable media records, anchored to Bitcoin without Ordinals-level wait times or costs.</p>
       </aside>
-    </section>
-
-    <section class="panel homepage-docs" id="docs" aria-labelledby="docsTitle">
-      <div class="panel-head">
-        <div>
-          <h2 class="panel-title" id="docsTitle">Documentation</h2>
-          <p class="panel-subtitle">Reference paths for users, SDK builders, artists, integrators, and agents.</p>
-        </div>
-        <div class="docs-actions">
-          <a class="btn ghost" href="https://github.com/stxtrata/xtrata/blob/main-staging/xtrata-1.0/docs/documentation-index.md" target="_blank" rel="noreferrer">Docs index</a>
-          <a class="btn ghost" href="/workspace">Workspace</a>
-        </div>
-      </div>
-      <div class="panel-body">
-        <div class="docs-grid">
-          <article class="docs-card">
-            <h3>Start using Xtrata</h3>
-            <p>First-pass references for minting, reading, and resolving recursive inscriptions.</p>
-            <div class="docs-links" aria-label="Start using Xtrata links">
-              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/xtrata-quickstart.md" target="_blank" rel="noreferrer">Quickstart</a>
-              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/xtrata-inscription-handbook.md" target="_blank" rel="noreferrer">Inscription handbook</a>
-              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/recursive-inscriptions.md" target="_blank" rel="noreferrer">Recursive inscriptions</a>
-            </div>
-          </article>
-
-          <article class="docs-card">
-            <h3>Build with the SDK</h3>
-            <p>SDK entry points, API selection, and starter examples for third-party apps.</p>
-            <div class="docs-links" aria-label="Build with the SDK links">
-              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/sdk/README.md" target="_blank" rel="noreferrer">SDK overview</a>
-              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/sdk/quickstart-first-30-minutes.md" target="_blank" rel="noreferrer">First 30 minutes</a>
-              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/sdk/api-overview.md" target="_blank" rel="noreferrer">API overview</a>
-              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/examples/README.md" target="_blank" rel="noreferrer">Example apps</a>
-            </div>
-          </article>
-
-          <article class="docs-card">
-            <h3>Launch a collection</h3>
-            <p>Artist and team guides for portal access, collection setup, and contract deployment.</p>
-            <div class="docs-links" aria-label="Launch a collection links">
-              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/artist-guides/README.md" target="_blank" rel="noreferrer">Artist guides</a>
-              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/artist-guides/collection-launch-guide.md" target="_blank" rel="noreferrer">Launch guide</a>
-              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/artist-guides/collection-template-deploy-guide.md" target="_blank" rel="noreferrer">Template deploy guide</a>
-            </div>
-          </article>
-
-          <article class="docs-card">
-            <h3>Integrate contracts</h3>
-            <p>Contract inventory, current core API surface, and product ownership boundaries.</p>
-            <div class="docs-links" aria-label="Integrate contracts links">
-              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/contract-inventory.md" target="_blank" rel="noreferrer">Contract inventory</a>
-              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/xtrata-v2.1.0/api-reference.md" target="_blank" rel="noreferrer">v2.1.0 API reference</a>
-              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/product-contract-ui-reference.md" target="_blank" rel="noreferrer">Product contract roles</a>
-            </div>
-          </article>
-
-          <article class="docs-card">
-            <h3>Train agents</h3>
-            <p>AI-agent training docs for safe mint, batch, query, and automation workflows.</p>
-            <div class="docs-links" aria-label="Train agents links">
-              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/ai-skills/README.md" target="_blank" rel="noreferrer">AI skills index</a>
-              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/XTRATA_AGENT_SKILL.md" target="_blank" rel="noreferrer">Agent skill reference</a>
-            </div>
-          </article>
-        </div>
-      </div>
     </section>
 
     <main class="workspace">
@@ -2278,6 +2326,7 @@
           </div>
           <div class="wallet-tools">
             <span class="badge blue" id="walletCountBadge">0 inscriptions</span>
+            <button class="btn ghost" id="refreshWalletButton" type="button">Refresh</button>
             <button class="btn ghost" id="walletPrevButton" type="button" disabled>Prev</button>
             <span class="page-readout" id="walletPageReadout">Page 0 / 0</span>
             <button class="btn ghost" id="walletNextButton" type="button" disabled>Next</button>
@@ -2299,6 +2348,18 @@
                   <span class="field-note" id="walletLookupStatus">Using connected wallet when available.</span>
                 </label>
               </form>
+              <div class="wallet-examples" id="walletExamples" aria-label="Example wallet views">
+                <span>View Examples</span>
+            <button
+              class="wallet-example-chip"
+              type="button"
+              data-wallet-showcase="dyle.btc"
+              data-default-token-id="123"
+            >
+              Art by DYLE
+            </button>                
+            <button class="wallet-example-chip" type="button" data-curated-gallery="jim-music">Music by Various</button>
+              </div>
               <div class="status" id="walletGridStatus">
                 <span><strong>Grid</strong> waiting for wallet</span>
                 <span class="badge amber">empty</span>
@@ -2344,6 +2405,95 @@
         </div>
       </section>
     </main>
+
+    <section class="panel homepage-docs" id="docs" aria-labelledby="docsTitle">
+      <div class="panel-head">
+        <div>
+          <h2 class="panel-title" id="docsTitle">Documentation</h2>
+          <p class="panel-subtitle">Reference paths for users, SDK builders, artists, integrators, and agents.</p>
+        </div>
+        <div class="docs-actions">
+          <a class="btn ghost" href="https://github.com/stxtrata/xtrata/blob/main-staging/xtrata-1.0/docs/documentation-index.md" target="_blank" rel="noreferrer">Docs index</a>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="docs-grid">
+          <article class="docs-card">
+            <h3>Start using Xtrata</h3>
+            <p>First-pass references for minting, reading, and resolving recursive inscriptions.</p>
+            <div class="docs-links" aria-label="Start using Xtrata links">
+              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/xtrata-quickstart.md" target="_blank" rel="noreferrer">Quickstart</a>
+              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/xtrata-inscription-handbook.md" target="_blank" rel="noreferrer">Inscription handbook</a>
+              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/recursive-inscriptions.md" target="_blank" rel="noreferrer">Recursive inscriptions</a>
+            </div>
+          </article>
+
+          <article class="docs-card">
+            <h3>Build with the SDK</h3>
+            <p>SDK entry points, API selection, and starter examples for third-party apps.</p>
+            <div class="docs-links" aria-label="Build with the SDK links">
+              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/sdk/README.md" target="_blank" rel="noreferrer">SDK overview</a>
+              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/sdk/quickstart-first-30-minutes.md" target="_blank" rel="noreferrer">First 30 minutes</a>
+              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/sdk/api-overview.md" target="_blank" rel="noreferrer">API overview</a>
+              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/examples/README.md" target="_blank" rel="noreferrer">Example apps</a>
+            </div>
+          </article>
+
+          <article class="docs-card">
+            <h3>Launch a collection</h3>
+            <p>Artist and team guides for portal access, collection setup, and contract deployment.</p>
+            <div class="docs-links" aria-label="Launch a collection links">
+              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/artist-guides/README.md" target="_blank" rel="noreferrer">Artist guides</a>
+              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/artist-guides/collection-launch-guide.md" target="_blank" rel="noreferrer">Launch guide</a>
+              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/artist-guides/collection-template-deploy-guide.md" target="_blank" rel="noreferrer">Template deploy guide</a>
+            </div>
+          </article>
+
+          <article class="docs-card">
+            <h3>Integrate contracts</h3>
+            <p>Contract inventory, current core API surface, and product ownership boundaries.</p>
+            <div class="docs-links" aria-label="Integrate contracts links">
+              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/contract-inventory.md" target="_blank" rel="noreferrer">Contract inventory</a>
+              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/xtrata-v2.1.0/api-reference.md" target="_blank" rel="noreferrer">v2.1.0 API reference</a>
+              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/product-contract-ui-reference.md" target="_blank" rel="noreferrer">Product contract roles</a>
+            </div>
+          </article>
+
+          <article class="docs-card">
+            <h3>Train agents</h3>
+            <p>AI-agent training docs for safe mint, batch, query, and automation workflows.</p>
+            <div class="docs-links" aria-label="Train agents links">
+              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/ai-skills/README.md" target="_blank" rel="noreferrer">AI skills index</a>
+              <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/XTRATA_AGENT_SKILL.md" target="_blank" rel="noreferrer">Agent skill reference</a>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <footer class="site-footer">
+      <nav class="footer-links" aria-label="Footer links">
+        <a href="/workspace">Workspace</a>
+        <a href="#docs">Documentation</a>
+        <a href="/manage">Artist portal</a>
+        <a href="https://x.com/XtrataLayers" target="_blank" rel="noreferrer">Xtrata on X</a>
+      </nav>
+      <label class="footer-theme">
+        <span>Style</span>
+        <select class="select theme-select" id="themeSelect" aria-label="Theme">
+          <option value="classic">Classic infrastructure</option>
+          <option value="terminal">Terminal green</option>
+          <option value="midnight">Midnight node</option>
+          <option value="neon">Full neon</option>
+          <option value="monochrome">Monochrome luxe</option>
+          <option value="obsidian">Obsidian steel</option>
+          <option value="ember">Ember archive</option>
+          <option value="ultraviolet">Ultraviolet vault</option>
+          <option value="arctic">Arctic dark</option>
+          <option value="ruby">Ruby night</option>
+        </select>
+      </label>
+    </footer>
   </div>
 
   <div class="fullscreen-viewer" id="fullscreenViewer" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="fullscreenTitle" hidden>
@@ -2422,6 +2572,7 @@
     } from '/src/lib/mint/estimates.ts';
     import { bytesToHex } from '/src/lib/utils/encoding.ts';
     import { formatBytes, truncateMiddle } from '/src/lib/utils/format.ts';
+    import { resolveBnsNames } from '/src/lib/bns/resolver.ts';
     import {
       loadWalletHoldingsIndex,
       loadWalletHoldingsPage
@@ -2571,6 +2722,13 @@
 
     const THEME_STORAGE_KEY = 'xtrata.simple-homepage.theme';
     const THEME_IDS = new Set(['classic', 'terminal', 'midnight', 'neon', 'monochrome', 'obsidian', 'ember', 'ultraviolet', 'arctic', 'ruby']);
+    const CURATED_GALLERIES = [
+      {
+        id: 'jim-music',
+        title: 'music',
+        tokenIds: [312n, 288n, 269n]
+      }
+    ];
     const loadTheme = () => {
       try {
         const saved = window.localStorage.getItem(THEME_STORAGE_KEY);
@@ -2598,6 +2756,13 @@
       walletSession: walletAdapter.getSession(),
       walletViewAddress: null,
       walletViewName: null,
+      connectedWalletNameAddress: null,
+      connectedWalletName: null,
+      connectedWalletNameResolved: false,
+      connectedWalletNamePending: false,
+      connectedWalletNameRequestId: 0,
+      curatedGalleryId: null,
+      curatedGalleryTitle: null,
       walletLookupPending: false,
       walletLookupNotice: null,
       walletLookupAbortController: null,
@@ -2618,6 +2783,7 @@
       tokenPreviewMimeType: null,
       tokenPreviewSourceUrl: null,
       tokenPreviewHtmlDoc: null,
+      selectedOwnerNameRequestId: 0,
       fullscreenUrl: null,
       fullscreenOpen: false,
       tokenThumbUrls: new Map(),
@@ -3089,15 +3255,57 @@
     };
 
     const renderNoSelectedInscriptionMeta = () => {
+      state.selectedOwnerNameRequestId += 1;
       renderMeta(dom.tokenPreviewMeta, [['Status', 'None selected']]);
     };
 
-    const renderSelectedInscriptionMeta = (token) => {
+    const renderSelectedInscriptionMeta = (token, ownerName = null) => {
       renderMeta(dom.tokenPreviewMeta, [
         ['Type', getGridMimeLabel(token.meta?.mimeType ?? null)],
         ['Size', token.meta?.totalSize ? formatBytes(token.meta.totalSize) : 'unknown'],
-        ['Owner', token.owner ? truncateMiddle(token.owner, 8, 8) : 'unknown']
+        [
+          'Owner',
+          ownerName ?? (token.owner ? truncateMiddle(token.owner, 8, 8) : 'unknown')
+        ]
       ]);
+      if (!ownerName) {
+        void resolveSelectedInscriptionOwnerName(token);
+      }
+    };
+
+    const resolveSelectedInscriptionOwnerName = async (token) => {
+      const owner = token.owner?.trim() ?? '';
+      if (!owner) {
+        return;
+      }
+      const requestId = ++state.selectedOwnerNameRequestId;
+      try {
+        const namesResult = await resolveBnsNames({
+          address: owner,
+          network: state.contract.network
+        });
+        const ownerName = namesResult.primary;
+        const currentToken = getSelectedToken();
+        if (
+          !ownerName ||
+          requestId !== state.selectedOwnerNameRequestId ||
+          state.selectedTokenId !== token.id ||
+          !addressesEqual(currentToken?.owner, owner)
+        ) {
+          return;
+        }
+        renderSelectedInscriptionMeta(token, ownerName);
+      } catch (error) {
+        debugLog(
+          'bns',
+          'selected owner name lookup failed',
+          {
+            owner: truncateMiddle(owner, 8, 8),
+            error: error instanceof Error ? error.message : String(error)
+          },
+          'warn'
+        );
+      }
     };
 
     const revokePayloadPreview = () => {
@@ -3389,6 +3597,68 @@
       return viewingAddress ? truncateMiddle(viewingAddress, 8, 8) : null;
     };
 
+    const getConnectedWalletLabel = () => {
+      const connectedAddress = state.walletSession.address ?? null;
+      if (!connectedAddress) {
+        return null;
+      }
+      return state.connectedWalletName &&
+        addressesEqual(state.connectedWalletNameAddress, connectedAddress)
+        ? state.connectedWalletName
+        : truncateMiddle(connectedAddress, 8, 8);
+    };
+
+    const resolveConnectedWalletName = async () => {
+      const connectedAddress = state.walletSession.address?.trim() ?? '';
+      if (!connectedAddress) {
+        return;
+      }
+      const alreadyResolvingConnectedAddress =
+        addressesEqual(state.connectedWalletNameAddress, connectedAddress) &&
+        (state.connectedWalletNamePending || state.connectedWalletNameResolved);
+      if (alreadyResolvingConnectedAddress) {
+        return;
+      }
+      const requestId = ++state.connectedWalletNameRequestId;
+      state.connectedWalletNameAddress = connectedAddress;
+      state.connectedWalletName = null;
+      state.connectedWalletNameResolved = false;
+      state.connectedWalletNamePending = true;
+      try {
+        const namesResult = await resolveBnsNames({
+          address: connectedAddress,
+          network: state.contract.network
+        });
+        if (
+          requestId !== state.connectedWalletNameRequestId ||
+          !addressesEqual(state.walletSession.address, connectedAddress)
+        ) {
+          return;
+        }
+        state.connectedWalletName = namesResult.primary;
+        state.connectedWalletNameResolved = true;
+        updateWalletStatus();
+      } catch (error) {
+        if (requestId !== state.connectedWalletNameRequestId) {
+          return;
+        }
+        state.connectedWalletNameResolved = true;
+        debugLog(
+          'bns',
+          'connected wallet name lookup failed',
+          {
+            wallet: truncateMiddle(connectedAddress, 8, 8),
+            error: error instanceof Error ? error.message : String(error)
+          },
+          'warn'
+        );
+      } finally {
+        if (requestId === state.connectedWalletNameRequestId) {
+          state.connectedWalletNamePending = false;
+        }
+      }
+    };
+
     const getWalletLookupDisplayValue = () =>
       state.walletViewName
         ? toBtcLookupLabel(state.walletViewName)
@@ -3486,6 +3756,10 @@
         dom.walletLookupStatus.textContent = state.walletLookupNotice;
         return;
       }
+      if (state.curatedGalleryTitle) {
+        dom.walletLookupStatus.textContent = `Viewing ${state.curatedGalleryTitle}.`;
+        return;
+      }
       const viewingAddress = getViewingWalletAddress();
       if (state.walletViewAddress) {
         dom.walletLookupStatus.textContent = `Viewing ${getViewingWalletLabel()}.`;
@@ -3534,9 +3808,10 @@
       const count = state.walletUsesPagedHoldings ? state.walletTotalCount : state.walletTokenIds.length;
       const viewingConnectedWallet = isConnectedWalletAddress(viewingAddress);
       const connectedWalletHasVisibleLedger = viewingConnectedWallet && count > 0;
+      const hasCuratedGallery = !!state.curatedGalleryId && count > 0;
       const hasLedger =
         connected && (state.connectedWalletMatureMode || connectedWalletHasVisibleLedger);
-      const hasPublicLedger = !connected && !!viewingAddress && count > 0;
+      const hasPublicLedger = (!connected && !!viewingAddress && count > 0) || hasCuratedGallery;
       document.body.classList.toggle('has-ledger', hasLedger);
       document.body.classList.toggle('has-public-ledger', hasPublicLedger);
       document.body.classList.toggle('intro-mode', !hasLedger);
@@ -3547,11 +3822,13 @@
         dom.introContractValue.textContent = getContractId(state.contract);
       }
       if (dom.registryModeBadge) {
-        dom.registryModeBadge.textContent = hasLedger ? 'Registry ledger' : 'Boring infrastructure';
+        dom.registryModeBadge.textContent = hasLedger ? 'Live registry view' : 'Permanent media records';
       }
       if (dom.registryIntroLead) {
-        dom.registryIntroLead.textContent = !viewingAddress
-          ? 'A simple inscription registry for durable data on Stacks. Connect a wallet, prepare a file or record, and inscribe it permanently on-chain where it can always be found again.'
+        dom.registryIntroLead.textContent = state.curatedGalleryTitle
+          ? `${state.curatedGalleryTitle} is open below in Wallet Inscriptions.`
+          : !viewingAddress
+          ? 'Create and hold durable records for songs, masters, artwork, credits, documents, apps, and collaboration history, anchored to Bitcoin through Stacks.'
           : !connected && count === 0
             ? 'Public wallet lookup is active, but this contract has no inscriptions for that address yet.'
             : connected && count === 0
@@ -3561,7 +3838,9 @@
                 : `Public ledger view loaded with ${count} inscription${count === 1 ? '' : 's'} available for this address.`;
       }
       if (dom.introStateValue) {
-        dom.introStateValue.textContent = !viewingAddress
+        dom.introStateValue.textContent = state.curatedGalleryTitle
+          ? `${count} selected inscription${count === 1 ? '' : 's'} loaded.`
+          : !viewingAddress
           ? 'Connect a wallet or enter an address to inspect a ledger.'
           : count === 0
             ? 'No inscriptions found for this contract yet.'
@@ -3691,6 +3970,9 @@
       const mismatch = getMismatch();
       const viewingAddress = getViewingWalletAddress();
       const viewingLabel = getViewingWalletLabel();
+      if (state.curatedGalleryTitle) {
+        dom.walletSubtitle.textContent = `Viewing ${state.curatedGalleryTitle}.`;
+      }
       if (!connected) {
         setStatus(
           dom.walletStatus,
@@ -3698,7 +3980,9 @@
           'idle',
           'amber'
         );
-        dom.walletSubtitle.textContent = viewingAddress
+        dom.walletSubtitle.textContent = state.curatedGalleryTitle
+          ? `Viewing ${state.curatedGalleryTitle}.`
+          : viewingAddress
           ? `Viewing ${viewingLabel}.`
           : 'Connect a wallet or enter an address.';
         return;
@@ -3721,9 +4005,14 @@
         'ready',
         'blue'
       );
-      dom.walletSubtitle.textContent = state.walletViewAddress
+      if (!state.curatedGalleryTitle && !state.walletViewAddress) {
+        void resolveConnectedWalletName();
+      }
+      dom.walletSubtitle.textContent = state.curatedGalleryTitle
+        ? `Viewing ${state.curatedGalleryTitle}.`
+        : state.walletViewAddress
         ? `Viewing ${viewingLabel}.`
-        : truncateMiddle(state.walletSession.address, 8, 8);
+        : `Connected Wallet: ${getConnectedWalletLabel()}.`;
     };
 
     const renderPreparedState = () => {
@@ -5122,6 +5411,8 @@
       state.walletLookupNotice = null;
       state.walletViewAddress = null;
       state.walletViewName = null;
+      state.curatedGalleryId = null;
+      state.curatedGalleryTitle = null;
       dom.walletLookupInput.value = '';
       updateWalletLookupInputMode();
       appendLog('Returned to connected wallet view.');
@@ -5146,6 +5437,8 @@
       if (!baseLookupState.entered) {
         state.walletViewAddress = null;
         state.walletViewName = null;
+        state.curatedGalleryId = null;
+        state.curatedGalleryTitle = null;
         dom.walletLookupInput.value = '';
         updateWalletLookupInputMode();
         updateWalletStatus();
@@ -5165,6 +5458,8 @@
           addressesEqual(baseLookupState.lookupAddress, state.walletSession.address);
         state.walletViewAddress = isConnectedAddress ? null : baseLookupState.lookupAddress;
         state.walletViewName = null;
+        state.curatedGalleryId = null;
+        state.curatedGalleryTitle = null;
         dom.walletLookupInput.value = isConnectedAddress ? '' : baseLookupState.lookupAddress;
         updateWalletLookupInputMode();
         appendLog(`Viewing wallet: ${truncateMiddle(baseLookupState.lookupAddress, 8, 8)}.`);
@@ -5213,6 +5508,8 @@
           addressesEqual(resolvedLookupState.resolvedAddress, state.walletSession.address);
         state.walletViewAddress = isConnectedAddress ? null : resolvedLookupState.resolvedAddress;
         state.walletViewName = isConnectedAddress ? null : lookupName;
+        state.curatedGalleryId = null;
+        state.curatedGalleryTitle = null;
         dom.walletLookupInput.value = isConnectedAddress ? '' : toBtcLookupLabel(lookupName);
         updateWalletLookupInputMode();
         state.walletLookupNotice = null;
@@ -5238,6 +5535,59 @@
           state.walletLookupPending = false;
           updateControls();
         }
+      }
+    };
+
+    const openCuratedGallery = async (galleryId) => {
+      const gallery = CURATED_GALLERIES.find((entry) => entry.id === galleryId);
+      if (!gallery) {
+        return;
+      }
+      cancelWalletLookup();
+      state.curatedGalleryId = gallery.id;
+      state.curatedGalleryTitle = gallery.title;
+      state.walletViewAddress = null;
+      state.walletViewName = null;
+      state.walletLookupNotice = null;
+      state.walletUsesPagedHoldings = false;
+      state.walletTotalCount = gallery.tokenIds.length;
+      state.walletPageIds = [];
+      state.walletTokenIds = [...gallery.tokenIds];
+      state.walletPageIndex = 0;
+      state.selectedTokenId = null;
+      state.walletTokenCache = new Map();
+      dom.walletLookupInput.value = '';
+      updateWalletLookupInputMode();
+      updateWalletStatus();
+      setExperienceMode();
+      setStatus(dom.walletGridStatus, `<strong>Grid</strong> loading ${gallery.title}`, 'loading', 'blue');
+      renderTokenGridPlaceholders('...');
+      try {
+        const summaries = await fetchWalletTokenSummaries(gallery.tokenIds);
+        summaries.forEach((token) => {
+          state.walletTokenCache.set(token.id.toString(), token);
+        });
+        state.walletTokenIds = summaries
+          .map((token) => token.id)
+          .sort((left, right) => (left < right ? 1 : left > right ? -1 : 0));
+        state.walletTotalCount = state.walletTokenIds.length;
+        setStatus(
+          dom.walletGridStatus,
+          `<strong>Grid</strong> ${gallery.title} loaded`,
+          'ready',
+          'blue'
+        );
+        renderTokenGrid();
+        setExperienceMode();
+        document.getElementById('walletTitle')?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        setStatus(dom.walletGridStatus, `<strong>Grid</strong> ${message}`, 'error', 'rose');
+      } finally {
+        updateControls();
       }
     };
 
@@ -5763,6 +6113,25 @@
     dom.walletLookupForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       await viewWalletFromInput();
+    });
+    document.querySelectorAll('[data-wallet-showcase]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const lookup = button.dataset.walletShowcase ?? '';
+        dom.walletLookupInput.value = toBtcLookupLabel(lookup);
+        updateWalletLookupInputMode();
+        void viewWalletFromInput().then(() => {
+          document.getElementById('walletTitle')?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
+        });
+      });
+    });
+    document.querySelectorAll('[data-curated-gallery]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const galleryId = button.dataset.curatedGallery ?? '';
+        void openCuratedGallery(galleryId);
+      });
     });
     dom.walletLookupInput.addEventListener('input', () => {
       normalizeWalletLookupField();
