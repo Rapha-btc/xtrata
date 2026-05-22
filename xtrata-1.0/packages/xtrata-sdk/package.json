@@ -55,6 +55,10 @@
       "types": "./dist/workflows.d.ts",
       "import": "./dist/workflows.js"
     },
+    "./backup-migration": {
+      "types": "./dist/backup-migration.d.ts",
+      "import": "./dist/backup-migration.js"
+    },
     "./types": {
       "types": "./dist/types.d.ts",
       "import": "./dist/types.js"

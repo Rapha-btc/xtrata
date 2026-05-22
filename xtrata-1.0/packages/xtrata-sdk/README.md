@@ -6,6 +6,8 @@ SDK package for protocol-first integrations:
 - Safe transaction helpers (`safe`) for deterministic caps + guided flow states
 - Wallet failure recovery helper (`buildMintRecoveryGuide`) for resume-safe UX
 - Workflow planners (`workflows`) for mint and market write transactions
+- Backup migration helpers (`backup-migration`) for registry and holder
+  migration call planning
 - Mint helpers (fees, caps, post-conditions, dependencies)
 - Collection mint lifecycle helpers
 - Market helpers

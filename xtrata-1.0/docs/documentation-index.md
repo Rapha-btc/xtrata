@@ -18,6 +18,7 @@ These are the strongest direct-link candidates for a public homepage.
 | --- | --- | --- |
 | First-time users | [`docs/xtrata-quickstart.md`](xtrata-quickstart.md) | Fast app walkthrough for inscribing a file. |
 | Builders, indexers, marketplaces | [`docs/xtrata-inscription-handbook.md`](xtrata-inscription-handbook.md) | Main integration guide for reading, reconstructing, and displaying Xtrata inscriptions. |
+| Collection migration partners | [`docs/xtrata-backup-migration-service.md`](xtrata-backup-migration-service.md) | Service blueprint for moving IPFS-backed collections into SIP-009 contracts with Xtrata backup pointers. |
 | SDK users | [`docs/sdk/README.md`](sdk/README.md) | SDK entry point with package boundaries, active quickstarts, and release posture. |
 | SDK users | [`docs/sdk/quickstart-first-30-minutes.md`](sdk/quickstart-first-30-minutes.md) | Beginner SDK onboarding path. |
 | SDK users | [`docs/sdk/api-overview.md`](sdk/api-overview.md) | Fastest way to choose the right SDK API surface. |
@@ -94,6 +95,7 @@ Historical SDK planning docs:
 | [`docs/assumptions.md`](assumptions.md) | Network and session assumptions. |
 | [`docs/xtrata-quickstart.md`](xtrata-quickstart.md) | End-user quickstart for first inscription. |
 | [`docs/xtrata-inscription-handbook.md`](xtrata-inscription-handbook.md) | Primary technical guide for inscription data, reads, reconstruction, and display. |
+| [`docs/xtrata-backup-migration-service.md`](xtrata-backup-migration-service.md) | Backup migration service spec for IPFS-backed collections. |
 | [`docs/recursive-inscriptions.md`](recursive-inscriptions.md) | Recursive inscription model, dependency rules, and examples. |
 | [`docs/contract-inventory.md`](contract-inventory.md) | Contract source/function inventory. |
 | [`docs/product-contract-ui-reference.md`](product-contract-ui-reference.md) | Product role map for core, market, commerce, vault, and collection-sale contracts. |

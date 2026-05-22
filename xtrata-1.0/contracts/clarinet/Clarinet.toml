@@ -26,6 +26,11 @@ path = 'contracts/mock-sbtc.clar'
 clarity_version = 3
 epoch = 'latest'
 
+[contracts.mock-ipfs-collection]
+path = 'contracts/mock-ipfs-collection.clar'
+clarity_version = 3
+epoch = 'latest'
+
 [contracts.xtrata-v1-1-0]
 path = 'contracts/xtrata-v1.1.0.clar'
 clarity_version = 3
@@ -53,6 +58,16 @@ epoch = 'latest'
 
 [contracts.xtrata-small-mint-v1-0]
 path = 'contracts/xtrata-small-mint-v1.0.clar'
+clarity_version = 3
+epoch = 'latest'
+
+[contracts.xtrata-backup-registry-v1-0]
+path = 'contracts/xtrata-backup-registry-v1.0.clar'
+clarity_version = 3
+epoch = 'latest'
+
+[contracts.xtrata-migrated-ipfs-collection-v1-0]
+path = 'contracts/xtrata-migrated-ipfs-collection-v1.0.clar'
 clarity_version = 3
 epoch = 'latest'
 
