@@ -2350,8 +2350,15 @@
               </form>
               <div class="wallet-examples" id="walletExamples" aria-label="Example wallet views">
                 <span>View Examples</span>
-                <button class="wallet-example-chip" type="button" data-wallet-showcase="dyle.btc">Art</button>
-                <button class="wallet-example-chip" type="button" data-curated-gallery="jim-music">Music</button>
+            <button
+              class="wallet-example-chip"
+              type="button"
+              data-wallet-showcase="dyle.btc"
+              data-default-token-id="123"
+            >
+              Art by DYLE
+            </button>                
+            <button class="wallet-example-chip" type="button" data-curated-gallery="jim-music">Music by Various</button>
               </div>
               <div class="status" id="walletGridStatus">
                 <span><strong>Grid</strong> waiting for wallet</span>
@@ -2565,6 +2572,7 @@
     } from '/src/lib/mint/estimates.ts';
     import { bytesToHex } from '/src/lib/utils/encoding.ts';
     import { formatBytes, truncateMiddle } from '/src/lib/utils/format.ts';
+    import { resolveBnsNames } from '/src/lib/bns/resolver.ts';
     import {
       loadWalletHoldingsIndex,
       loadWalletHoldingsPage
@@ -2748,6 +2756,11 @@
       walletSession: walletAdapter.getSession(),
       walletViewAddress: null,
       walletViewName: null,
+      connectedWalletNameAddress: null,
+      connectedWalletName: null,
+      connectedWalletNameResolved: false,
+      connectedWalletNamePending: false,
+      connectedWalletNameRequestId: 0,
       curatedGalleryId: null,
       curatedGalleryTitle: null,
       walletLookupPending: false,
@@ -2770,6 +2783,7 @@
       tokenPreviewMimeType: null,
       tokenPreviewSourceUrl: null,
       tokenPreviewHtmlDoc: null,
+      selectedOwnerNameRequestId: 0,
       fullscreenUrl: null,
       fullscreenOpen: false,
       tokenThumbUrls: new Map(),
@@ -3241,15 +3255,57 @@
     };
 
     const renderNoSelectedInscriptionMeta = () => {
+      state.selectedOwnerNameRequestId += 1;
       renderMeta(dom.tokenPreviewMeta, [['Status', 'None selected']]);
     };
 
-    const renderSelectedInscriptionMeta = (token) => {
+    const renderSelectedInscriptionMeta = (token, ownerName = null) => {
       renderMeta(dom.tokenPreviewMeta, [
         ['Type', getGridMimeLabel(token.meta?.mimeType ?? null)],
         ['Size', token.meta?.totalSize ? formatBytes(token.meta.totalSize) : 'unknown'],
-        ['Owner', token.owner ? truncateMiddle(token.owner, 8, 8) : 'unknown']
+        [
+          'Owner',
+          ownerName ?? (token.owner ? truncateMiddle(token.owner, 8, 8) : 'unknown')
+        ]
       ]);
+      if (!ownerName) {
+        void resolveSelectedInscriptionOwnerName(token);
+      }
+    };
+
+    const resolveSelectedInscriptionOwnerName = async (token) => {
+      const owner = token.owner?.trim() ?? '';
+      if (!owner) {
+        return;
+      }
+      const requestId = ++state.selectedOwnerNameRequestId;
+      try {
+        const namesResult = await resolveBnsNames({
+          address: owner,
+          network: state.contract.network
+        });
+        const ownerName = namesResult.primary;
+        const currentToken = getSelectedToken();
+        if (
+          !ownerName ||
+          requestId !== state.selectedOwnerNameRequestId ||
+          state.selectedTokenId !== token.id ||
+          !addressesEqual(currentToken?.owner, owner)
+        ) {
+          return;
+        }
+        renderSelectedInscriptionMeta(token, ownerName);
+      } catch (error) {
+        debugLog(
+          'bns',
+          'selected owner name lookup failed',
+          {
+            owner: truncateMiddle(owner, 8, 8),
+            error: error instanceof Error ? error.message : String(error)
+          },
+          'warn'
+        );
+      }
     };
 
     const revokePayloadPreview = () => {
@@ -3539,6 +3595,68 @@
       }
       const viewingAddress = getViewingWalletAddress();
       return viewingAddress ? truncateMiddle(viewingAddress, 8, 8) : null;
+    };
+
+    const getConnectedWalletLabel = () => {
+      const connectedAddress = state.walletSession.address ?? null;
+      if (!connectedAddress) {
+        return null;
+      }
+      return state.connectedWalletName &&
+        addressesEqual(state.connectedWalletNameAddress, connectedAddress)
+        ? state.connectedWalletName
+        : truncateMiddle(connectedAddress, 8, 8);
+    };
+
+    const resolveConnectedWalletName = async () => {
+      const connectedAddress = state.walletSession.address?.trim() ?? '';
+      if (!connectedAddress) {
+        return;
+      }
+      const alreadyResolvingConnectedAddress =
+        addressesEqual(state.connectedWalletNameAddress, connectedAddress) &&
+        (state.connectedWalletNamePending || state.connectedWalletNameResolved);
+      if (alreadyResolvingConnectedAddress) {
+        return;
+      }
+      const requestId = ++state.connectedWalletNameRequestId;
+      state.connectedWalletNameAddress = connectedAddress;
+      state.connectedWalletName = null;
+      state.connectedWalletNameResolved = false;
+      state.connectedWalletNamePending = true;
+      try {
+        const namesResult = await resolveBnsNames({
+          address: connectedAddress,
+          network: state.contract.network
+        });
+        if (
+          requestId !== state.connectedWalletNameRequestId ||
+          !addressesEqual(state.walletSession.address, connectedAddress)
+        ) {
+          return;
+        }
+        state.connectedWalletName = namesResult.primary;
+        state.connectedWalletNameResolved = true;
+        updateWalletStatus();
+      } catch (error) {
+        if (requestId !== state.connectedWalletNameRequestId) {
+          return;
+        }
+        state.connectedWalletNameResolved = true;
+        debugLog(
+          'bns',
+          'connected wallet name lookup failed',
+          {
+            wallet: truncateMiddle(connectedAddress, 8, 8),
+            error: error instanceof Error ? error.message : String(error)
+          },
+          'warn'
+        );
+      } finally {
+        if (requestId === state.connectedWalletNameRequestId) {
+          state.connectedWalletNamePending = false;
+        }
+      }
     };
 
     const getWalletLookupDisplayValue = () =>
@@ -3887,11 +4005,14 @@
         'ready',
         'blue'
       );
+      if (!state.curatedGalleryTitle && !state.walletViewAddress) {
+        void resolveConnectedWalletName();
+      }
       dom.walletSubtitle.textContent = state.curatedGalleryTitle
         ? `Viewing ${state.curatedGalleryTitle}.`
         : state.walletViewAddress
         ? `Viewing ${viewingLabel}.`
-        : truncateMiddle(state.walletSession.address, 8, 8);
+        : `Connected Wallet: ${getConnectedWalletLabel()}.`;
     };
 
     const renderPreparedState = () => {
