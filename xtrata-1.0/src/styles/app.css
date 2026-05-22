@@ -690,197 +690,289 @@ body {
 }
 
 .simple-home {
-  --simple-accent: #ea580c;
-  --simple-accent-soft: rgba(234, 88, 12, 0.1);
-  --app-gutter: clamp(8px, 1.8vw, 16px);
-  --app-top-offset: clamp(64px, 8.8svh, 118px);
-  gap: 6px;
+  --simple-accent: #0f8b8d;
+  --simple-accent-soft: rgba(15, 139, 141, 0.11);
+  --simple-warm: #d65a31;
+  --simple-blue: #295c7a;
+  --simple-rose: #9f3f58;
+  --app-gutter: clamp(10px, 2vw, 18px);
+  --app-top-offset: clamp(72px, 9svh, 124px);
+  gap: 10px;
 }
 
 .simple-home__hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.58fr) minmax(300px, 0.8fr);
-  gap: 8px;
+  grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.72fr);
+  gap: clamp(12px, 2vw, 22px);
   align-items: stretch;
-  padding: 7px 11px;
+  padding: clamp(16px, 3vw, 30px);
   background:
-    linear-gradient(130deg, var(--simple-accent-soft) 0%, transparent 62%),
+    linear-gradient(135deg, rgba(15, 139, 141, 0.14) 0%, transparent 48%),
+    linear-gradient(30deg, rgba(214, 90, 49, 0.12) 0%, transparent 42%),
     var(--surface-overlay);
 }
 
 .simple-home__hero-main {
   display: grid;
-  gap: 4px;
+  gap: clamp(12px, 2vw, 18px);
   grid-template-columns: minmax(0, 1fr);
+  align-content: center;
 }
 
 .simple-home__hero-copy {
   display: grid;
-  gap: 2px;
+  gap: 8px;
+}
+
+.simple-home__hero-kicker,
+.simple-home__showcase-kicker {
+  color: var(--simple-accent);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .simple-home__title {
   margin: 0;
-  font-size: clamp(1rem, 1.8vw, 1.22rem);
+  max-width: 780px;
+  font-size: 1.5rem;
+  line-height: 1.05;
 }
 
 .simple-home__subline {
+  max-width: 760px;
   margin: 0;
-  font-size: 0.69rem;
-  line-height: 1.15;
+  font-size: 1rem;
+  line-height: 1.45;
   color: var(--muted);
 }
 
 .simple-home__title-tag {
-  font-size: 0.42em;
-  letter-spacing: 0.06em;
+  font-size: 0.3em;
+  letter-spacing: 0.04em;
   text-transform: none;
   color: var(--simple-accent);
   font-weight: 700;
 }
 
-.simple-home__wallet {
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface-soft);
-  padding: 5px 7px;
-  display: grid;
-  gap: 4px;
-  align-content: start;
-  justify-items: center;
-}
-
-.simple-home__wallet-actions {
+.simple-home__hero-actions {
   display: flex;
   align-items: center;
-  justify-content: center;
   flex-wrap: wrap;
-  gap: 5px;
-  width: 100%;
+  gap: 8px;
 }
 
-.simple-home__wallet-actions .button {
-  padding: 4px 9px;
-  font-size: 0.69rem;
+.simple-home__hero-actions .button {
+  padding: 9px 14px;
+  text-decoration: none;
 }
 
-.simple-home__wallet-actions .badge {
-  font-size: 0.62rem;
-  letter-spacing: 0.07em;
-  padding: 4px 10px;
-}
-
-.simple-home__wallet-identity {
-  display: grid;
-  gap: 0;
-  justify-items: center;
-  text-align: center;
-}
-
-.simple-home__wallet-label {
-  font-size: 0.52rem;
-  letter-spacing: 0.11em;
-  text-transform: uppercase;
-  color: var(--muted);
+.simple-home__wallet-inline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
 }
 
 .simple-home__wallet-address {
-  font-size: 0.74rem;
-  font-weight: 600;
-  align-items: center;
-  text-align: center;
-  line-height: 1.1;
+  min-width: 0;
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
-.simple-home__wallet-network {
-  font-size: 0.62rem;
-  color: var(--muted);
-  text-align: center;
-  line-height: 1.1;
+.simple-home__promise-panel {
+  display: grid;
+  gap: 10px;
+  min-height: 100%;
+  align-content: stretch;
 }
 
-.simple-home__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin-top: 0;
-  align-items: center;
-  justify-content: center;
+.simple-home__promise-step {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
   width: 100%;
-}
-
-.simple-home__actions .button {
-  text-decoration: none;
-  padding: 5px 10px;
-  font-size: 0.71rem;
-}
-
-.simple-home__tools {
-  min-width: 300px;
+  padding: 12px;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 8px;
   background: var(--surface-soft);
-  padding: 5px 7px;
+}
+
+.simple-home__promise-step > span {
   display: grid;
-  gap: 4px;
-  align-content: start;
-  justify-items: center;
-}
-
-.simple-home__tools .theme-select {
-  width: min(100%, 360px);
-  justify-content: space-between;
-  padding: 1px 7px;
-}
-
-.simple-home__tools .theme-select__label {
-  font-size: 0.56rem;
-}
-
-.simple-home__tools .theme-select__control {
-  min-width: 112px;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: var(--simple-accent-soft);
+  color: var(--simple-accent);
   font-size: 0.74rem;
-  padding-top: 2px;
-  padding-bottom: 2px;
+  font-weight: 800;
 }
 
-.simple-home__mode-switch {
+.simple-home__promise-step h3,
+.simple-home__wallet-discovery-copy h3,
+.simple-home__curated-gallery h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.simple-home__promise-step p,
+.simple-home__promise-note,
+.simple-home__wallet-discovery-copy p,
+.simple-home__curated-gallery p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.simple-home__promise-step:nth-child(2) > span {
+  background: rgba(41, 92, 122, 0.12);
+  color: var(--simple-blue);
+}
+
+.simple-home__promise-step:nth-child(3) > span {
+  background: rgba(159, 63, 88, 0.12);
+  color: var(--simple-rose);
+}
+
+.simple-home__promise-note {
+  padding: 12px;
+  border: 1px solid rgba(214, 90, 49, 0.28);
+  border-radius: 8px;
+  background: rgba(214, 90, 49, 0.08);
+  color: var(--ink);
+  font-weight: 650;
+}
+
+.simple-home__showcases .panel__body {
+  gap: 16px;
+}
+
+.simple-home__showcase-layout {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(280px, 0.72fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.simple-home__wallet-discovery,
+.simple-home__token-gallery-shell {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.simple-home__wallet-showcase-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.simple-home__wallet-showcase {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft-2);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.simple-home__wallet-showcase:hover,
+.simple-home__wallet-showcase:focus-visible {
+  border-color: var(--border-strong);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.simple-home__wallet-showcase strong {
+  font-size: 0.95rem;
+}
+
+.simple-home__wallet-showcase span:not(.simple-home__showcase-kicker) {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.simple-home__wallet-showcase em {
+  color: var(--simple-accent);
+  font-size: 0.82rem;
+  font-style: normal;
+  font-weight: 750;
+}
+
+.simple-home__wallet-search {
+  display: grid;
   gap: 6px;
 }
 
-.simple-home__mode-chip {
-  justify-content: center;
-  border-radius: 10px;
-  border-color: var(--border);
-  background: var(--surface-soft-2);
+.simple-home__gallery-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.simple-home__mode-chip.is-active {
-  color: #fff;
-  border-color: transparent;
-  background: linear-gradient(120deg, var(--simple-accent), var(--accent-strong));
-}
-
-.simple-home__contract-meta {
+.simple-home__gallery-tab {
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 999px;
   background: var(--surface-soft-2);
-  padding: 8px 10px;
-  display: grid;
-  gap: 3px;
-}
-
-.simple-home__contract-meta a {
   color: var(--ink);
-  font-size: 0.78rem;
-  overflow-wrap: anywhere;
-  text-decoration: none;
+  padding: 7px 11px;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
 }
 
-.simple-home__contract-meta a:hover {
-  text-decoration: underline;
+.simple-home__gallery-tab.is-active {
+  border-color: transparent;
+  background: var(--simple-accent);
+  color: #fff;
+}
+
+.simple-home__curated-gallery {
+  display: grid;
+  gap: 12px;
+}
+
+.simple-home__curated-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(4, minmax(0, 1fr));
+  gap: clamp(7px, 1vw, 10px);
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  min-height: 0;
+}
+
+.simple-home__curated-card,
+.simple-home__curated-placeholder {
+  border-radius: 8px;
+}
+
+.simple-home__curated-placeholder {
+  border: 1px dashed var(--border);
+  background: var(--surface-muted);
+  aspect-ratio: 1 / 1;
 }
 
 .simple-home__alert {
@@ -979,28 +1071,47 @@ body {
   color: var(--simple-accent);
 }
 
+.simple-home__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 4px 26px;
+}
+
+.simple-home__footer-links {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+}
+
+.simple-home__footer a {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.simple-home__footer a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+.simple-home__footer .theme-select {
+  width: min(100%, 360px);
+  justify-content: space-between;
+}
+
 @media (max-width: 959px) {
   .simple-home__hero {
     grid-template-columns: minmax(0, 1fr);
-    padding: clamp(10px, 2.8vw, 14px);
+    padding: clamp(14px, 3.2vw, 20px);
   }
 
-  .simple-home__wallet {
-    min-width: 0;
-    width: 100%;
-  }
-
-  .simple-home__wallet-actions {
-    justify-content: center;
-  }
-
-  .simple-home__tools {
-    min-width: 0;
-    width: 100%;
-  }
-
-  .simple-home__actions {
-    justify-content: center;
+  .simple-home__showcase-layout {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .simple-home__alert {
@@ -1010,90 +1121,59 @@ body {
 }
 
 @media (max-width: 720px) {
+  .simple-home__hero-actions,
+  .simple-home__wallet-inline {
+    width: 100%;
+  }
+
+  .simple-home__hero-actions .button,
+  .simple-home__wallet-search .button {
+    flex: 1 1 150px;
+  }
+
+  .simple-home__wallet-search .field__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .simple-home__docs-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .simple-home__mode-switch {
-    grid-template-columns: minmax(0, 1fr);
+  .simple-home__curated-grid {
+    gap: 6px;
   }
 }
 
 @media (min-width: 960px) {
   .simple-home .app__header {
-    gap: 6px;
+    gap: 10px;
   }
 
   .simple-home .simple-home__hero-main .app__title {
-    font-size: clamp(1.2rem, 1.8vw, 1.55rem);
-    line-height: 1;
+    font-size: 4.2rem;
+    line-height: 0.92;
     margin-right: 4px;
   }
 
   .simple-home .simple-home__hero {
-    grid-template-columns: minmax(0, 1fr) minmax(230px, 0.58fr) minmax(340px, 0.86fr);
-    gap: 6px;
+    grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.72fr);
+    gap: clamp(14px, 2vw, 24px);
   }
 
   .simple-home .simple-home__title-tag {
-    font-size: 0.36em;
+    font-size: 0.18em;
     letter-spacing: 0.04em;
   }
 
   .simple-home .simple-home__title {
-    font-size: clamp(0.9rem, 1.26vw, 1.02rem);
+    font-size: 2.1rem;
     margin: 0;
   }
 
   .simple-home .simple-home__subline {
-    font-size: 0.64rem;
-    line-height: 1.12;
-  }
-
-  .simple-home .simple-home__wallet {
-    min-width: clamp(230px, 21vw, 320px);
-    gap: 4px;
-  }
-
-  .simple-home .simple-home__wallet-actions .badge {
-    font-size: 0.6rem;
-  }
-
-  .simple-home .simple-home__wallet-actions .button {
-    padding: 3px 8px;
-    font-size: 0.68rem;
-  }
-
-  .simple-home .simple-home__wallet-label {
-    font-size: 0.5rem;
-  }
-
-  .simple-home .simple-home__wallet-address {
-    font-size: 0.72rem;
-  }
-
-  .simple-home .simple-home__wallet-network {
-    font-size: 0.6rem;
-  }
-
-  .simple-home .simple-home__tools {
-    min-width: clamp(420px, 34vw, 560px);
-    grid-template-columns: minmax(0, 1fr);
-    gap: 5px;
-    justify-items: center;
-  }
-
-  .simple-home .simple-home__tools .simple-home__actions {
-    margin-top: 0;
-    justify-content: center;
-    flex-wrap: nowrap;
-    gap: 6px;
-  }
-
-  .simple-home .simple-home__tools .simple-home__actions .button {
-    padding: 4px 9px;
-    font-size: 0.69rem;
-    white-space: nowrap;
+    font-size: 1.02rem;
+    line-height: 1.45;
   }
 
   .simple-home .theme-select {

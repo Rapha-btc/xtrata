@@ -3,6 +3,7 @@ import {
   useMemo,
   useState,
   type ChangeEvent,
+  type FormEvent,
   type MouseEvent
 } from 'react';
 import {
@@ -17,6 +18,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { PUBLIC_CONTRACT, PUBLIC_MINT_RESTRICTIONS } from './config/public';
 import CollectionCoverImage from './components/CollectionCoverImage';
 import { getContractId } from './lib/contract/config';
+import { createXtrataClient } from './lib/contract/client';
 import { resolveCollectionMintPaymentModel } from './lib/collection-mint/payment-model';
 import {
   isDisplayedCollectionMintFree,
@@ -34,10 +36,24 @@ import { isRateLimitError, isReadOnlyNetworkError } from './lib/contract/read-on
 import { getApiBaseUrls } from './lib/network/config';
 import { formatMicroStxWithUsd } from './lib/pricing/format';
 import { useUsdPriceBook } from './lib/pricing/hooks';
-import { getViewerKey } from './lib/viewer/queries';
+import { useBnsAddress } from './lib/bns/hooks';
+import homeGalleryManifest from './data/home-gallery-manifest.json';
+import TokenCardMedia from './components/TokenCardMedia';
+import { getMediaKind } from './lib/viewer/content';
+import {
+  getViewerKey,
+  useTokenSummaries
+} from './lib/viewer/queries';
+import type { TokenSummary } from './lib/viewer/types';
 import { createStacksWalletAdapter } from './lib/wallet/adapter';
 import { createWalletSessionStore } from './lib/wallet/session';
 import { getWalletLookupState } from './lib/wallet/lookup';
+import {
+  normalizePublicWalletLookup,
+  parseHomeGalleryTokenIds,
+  type HomeGalleryManifest,
+  type HomeTokenGallery
+} from './lib/home/showcases';
 import { RATE_LIMIT_WARNING_EVENT } from './lib/network/rate-limit';
 import { getNetworkFromAddress, getNetworkMismatch } from './lib/network/guard';
 import { toStacksNetwork } from './lib/network/stacks';
@@ -123,6 +139,7 @@ type LiveCollectionCard = {
 };
 
 type SimpleHomeSectionKey =
+  | 'example-galleries'
   | 'live-drops'
   | 'home-viewer'
   | 'market'
@@ -132,12 +149,16 @@ type SimpleHomeSectionKey =
 const toSectionKeyFromHash = (hash: string): SimpleHomeSectionKey | null => {
   const normalized = hash.replace(/^#/, '').trim().toLowerCase();
   if (
+    normalized === 'example-galleries' ||
     normalized === 'live-drops' ||
     normalized === 'home-viewer' ||
     normalized === 'market' ||
     normalized === 'starter-docs'
   ) {
     return normalized;
+  }
+  if (normalized === 'examples' || normalized === 'start-here') {
+    return 'example-galleries';
   }
   if (normalized === 'mint' || normalized === 'inscribe') {
     return 'inscribe';
@@ -252,9 +273,33 @@ const HOMEPAGE_DOC_GROUPS: HomepageDocGroup[] = [
 ];
 
 const HOME_HERO_CONTENT = {
-  title: 'On-chain executable inscription data for artists and apps',
-  subline: 'Smart infrastructure for recursive web3 applications and NFTs.',
-  tag: 'Executable data layer anchored to bitcoin'
+  title: 'Permanent media records, anchored to Bitcoin',
+  subline:
+    'Record rich files, reference the people and rights around them, and retrieve them through apps, wallets, and future systems.',
+  tag: 'Record it. Reference it. Retrieve it.'
+};
+
+const HOME_GALLERY_MANIFEST = homeGalleryManifest as HomeGalleryManifest;
+
+const getHomeMediaLabel = (token: TokenSummary) => {
+  switch (getMediaKind(token.meta?.mimeType ?? null)) {
+    case 'image':
+      return 'IMAGE';
+    case 'svg':
+      return 'SVG';
+    case 'audio':
+      return 'AUDIO';
+    case 'video':
+      return 'VIDEO';
+    case 'text':
+      return 'TEXT';
+    case 'html':
+      return 'HTML';
+    case 'binary':
+      return 'BIN';
+    default:
+      return 'MEDIA';
+  }
 };
 
 const toRecord = (value: unknown): Record<string, unknown> | null =>
@@ -586,6 +631,105 @@ const parseLiveCollectionsResponse = async (response: Response) => {
   return payload as LiveCollectionRecord[];
 };
 
+const HomeTokenGalleryPreview = (props: {
+  gallery: HomeTokenGallery;
+  contract: typeof PUBLIC_CONTRACT;
+  contractId: string;
+  senderAddress: string;
+  isActiveTab: boolean;
+  onOpenToken: (id: bigint) => void;
+}) => {
+  const client = useMemo(
+    () => createXtrataClient({ contract: props.contract }),
+    [props.contract]
+  );
+  const tokenIds = useMemo(
+    () => parseHomeGalleryTokenIds(props.gallery),
+    [props.gallery]
+  );
+  const gallerySlots = useMemo(
+    () =>
+      Array.from({ length: 16 }, (_, index) => ({
+        id: tokenIds[index] ?? null,
+        manifestToken: props.gallery.tokens[index] ?? null
+      })),
+    [props.gallery.tokens, tokenIds]
+  );
+  const { tokenQueries } = useTokenSummaries({
+    client,
+    senderAddress: props.senderAddress,
+    tokenIds,
+    enabled: props.isActiveTab && tokenIds.length > 0
+  });
+
+  return (
+    <div className="simple-home__curated-gallery">
+      <div className="simple-home__curated-gallery-header">
+        <div>
+          <span className="simple-home__showcase-kicker">{props.gallery.kicker}</span>
+          <h3>{props.gallery.title}</h3>
+          <p>{props.gallery.description}</p>
+        </div>
+      </div>
+      <div className="simple-home__curated-grid" aria-label={`${props.gallery.title} tokens`}>
+        {gallerySlots.map((slot, index) => {
+          if (!slot.id) {
+            return (
+              <div
+                className="simple-home__curated-placeholder"
+                key={`empty-${props.gallery.id}-${index}`}
+                aria-hidden="true"
+              />
+            );
+          }
+          const tokenIndex = tokenIds.findIndex((id) => id === slot.id);
+          const query = tokenQueries[tokenIndex];
+          const token = query?.data ?? null;
+          return (
+            <div
+              className={`token-card simple-home__curated-card${
+                query?.isLoading ? ' token-card--loading' : ''
+              }`}
+              key={slot.id.toString()}
+            >
+              <button
+                type="button"
+                className="token-card__surface"
+                onClick={() => props.onOpenToken(slot.id!)}
+                aria-label={`Open inscription #${slot.id.toString()}`}
+              >
+                <div className="token-card__header" aria-hidden="true">
+                  <span className="token-card__id">#{slot.id.toString()}</span>
+                </div>
+                <div className="token-card__media">
+                  {token ? (
+                    <TokenCardMedia
+                      token={token}
+                      contractId={props.contractId}
+                      senderAddress={props.senderAddress}
+                      client={client}
+                      isActiveTab={props.isActiveTab}
+                    />
+                  ) : (
+                    <span className="token-card__placeholder">
+                      {query?.isError ? 'Unavailable' : 'Loading'}
+                    </span>
+                  )}
+                </div>
+                <div className="token-card__meta" aria-hidden="true">
+                  <span className="token-card__pill">
+                    {token ? getHomeMediaLabel(token) : slot.manifestToken?.label ?? 'Inscription'}
+                  </span>
+                </div>
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 export default function SimplePublicHome() {
   const contract = PUBLIC_CONTRACT;
   const [themeMode, setThemeMode] = useState<ThemeMode>(() =>
@@ -612,22 +756,36 @@ export default function SimplePublicHome() {
       return null;
     }
   }, []);
-  const preferredViewerWalletAddress = useMemo(() => {
+  const preferredViewerWalletInput = useMemo(() => {
     if (typeof window === 'undefined') {
-      return null;
+      return '';
     }
-    const raw = new URLSearchParams(window.location.search).get('viewer-wallet');
-    const trimmed = raw?.trim() ?? '';
-    if (!trimmed) {
-      return null;
+    const search = new URLSearchParams(window.location.search);
+    const nameRaw =
+      search.get('viewer-wallet-name') ?? search.get('viewer-bns') ?? '';
+    const normalizedName = normalizePublicWalletLookup(nameRaw);
+    if (normalizedName) {
+      return normalizedName;
     }
-    return validateStacksAddress(trimmed) ? trimmed : null;
+    const addressRaw = search.get('viewer-wallet') ?? '';
+    const trimmed = addressRaw.trim();
+    return validateStacksAddress(trimmed) ? trimmed : '';
   }, []);
+  const [walletLookupInput, setWalletLookupInput] = useState(
+    preferredViewerWalletInput
+  );
+  const [walletLookupTouched, setWalletLookupTouched] = useState(false);
+  const [viewerTokenId, setViewerTokenId] = useState<bigint | null>(
+    preferredViewerTokenId
+  );
   const [viewerMode, setViewerMode] = useState<ViewerMode>('collection');
   const [viewerCollapsed, setViewerCollapsed] = useState(false);
   const [marketCollapsed, setMarketCollapsed] = useState(true);
   const [mintCollapsed, setMintCollapsed] = useState(false);
   const [docsCollapsed, setDocsCollapsed] = useState(false);
+  const [activeTokenGalleryId, setActiveTokenGalleryId] = useState(
+    HOME_GALLERY_MANIFEST.tokenGalleries[0]?.id ?? ''
+  );
   const [liveCollections, setLiveCollections] = useState<LiveCollectionRecord[]>([]);
   const [liveCollectionsLoading, setLiveCollectionsLoading] = useState(false);
   const [liveCollectionsError, setLiveCollectionsError] = useState<string | null>(null);
@@ -643,13 +801,40 @@ export default function SimplePublicHome() {
 
   const contractId = getContractId(contract);
 
+  const baseWalletLookupState = useMemo(
+    () => getWalletLookupState(walletLookupInput, walletSession.address ?? null),
+    [walletLookupInput, walletSession.address]
+  );
+  const bnsLookupQuery = useBnsAddress({
+    name: baseWalletLookupState.lookupName,
+    network: contract.network,
+    enabled: !!baseWalletLookupState.lookupName
+  });
+  const bnsLookupStatus = baseWalletLookupState.lookupName
+    ? bnsLookupQuery.isLoading
+      ? 'loading'
+      : bnsLookupQuery.isError
+        ? 'error'
+        : bnsLookupQuery.data?.address
+          ? 'resolved'
+          : 'missing'
+    : 'idle';
+  const bnsLookupError =
+    bnsLookupQuery.error instanceof Error ? bnsLookupQuery.error.message : null;
   const walletLookupState = useMemo(
     () =>
-      getWalletLookupState(
-        preferredViewerWalletAddress ?? '',
-        walletSession.address ?? null
-      ),
-    [preferredViewerWalletAddress, walletSession.address]
+      getWalletLookupState(walletLookupInput, walletSession.address ?? null, {
+        resolvedNameAddress: bnsLookupQuery.data?.address ?? null,
+        bnsStatus: bnsLookupStatus,
+        bnsError: bnsLookupError
+      }),
+    [
+      walletLookupInput,
+      walletSession.address,
+      bnsLookupQuery.data?.address,
+      bnsLookupStatus,
+      bnsLookupError
+    ]
   );
   const readOnlySender = walletSession.address ?? contract.address;
   const mismatch = getNetworkMismatch(contract.network, walletSession.network);
@@ -700,6 +885,13 @@ export default function SimplePublicHome() {
       });
     return sortPublicCollectionCards(cards);
   }, [liveCollections]);
+  const activeTokenGallery = useMemo(
+    () =>
+      HOME_GALLERY_MANIFEST.tokenGalleries.find(
+        (gallery) => gallery.id === activeTokenGalleryId
+      ) ?? HOME_GALLERY_MANIFEST.tokenGalleries[0] ?? null,
+    [activeTokenGalleryId]
+  );
   const usdPriceBook = useUsdPriceBook({
     enabled: liveCollectionCards.length > 0
   }).data ?? null;
@@ -940,19 +1132,9 @@ export default function SimplePublicHome() {
     writeThemePreference(nextTheme);
   };
 
-  const focusSection = (key: SimpleHomeSectionKey) => {
+  const scrollToSection = (key: SimpleHomeSectionKey) => {
     if (key === 'home-viewer') {
-      setViewerMode('collection');
       setViewerCollapsed(false);
-    }
-    if (key === 'market') {
-      setMarketCollapsed(false);
-    }
-    if (key === 'inscribe') {
-      setMintCollapsed(false);
-    }
-    if (key === 'starter-docs') {
-      setDocsCollapsed(false);
     }
     if (typeof window !== 'undefined') {
       window.requestAnimationFrame(() => {
@@ -972,6 +1154,23 @@ export default function SimplePublicHome() {
     }
   };
 
+  const focusSection = (key: SimpleHomeSectionKey) => {
+    if (key === 'home-viewer') {
+      setViewerMode('collection');
+      setViewerCollapsed(false);
+    }
+    if (key === 'market') {
+      setMarketCollapsed(false);
+    }
+    if (key === 'inscribe') {
+      setMintCollapsed(false);
+    }
+    if (key === 'starter-docs') {
+      setDocsCollapsed(false);
+    }
+    scrollToSection(key);
+  };
+
   useEffect(() => {
     if (typeof window === 'undefined') {
       return;
@@ -980,7 +1179,7 @@ export default function SimplePublicHome() {
     const openHashSection = () => {
       const section =
         toSectionKeyFromHash(window.location.hash) ??
-        (preferredViewerTokenId !== null || preferredViewerWalletAddress !== null
+        (preferredViewerTokenId !== null || preferredViewerWalletInput.length > 0
           ? 'home-viewer'
           : null);
       if (!section) {
@@ -988,7 +1187,7 @@ export default function SimplePublicHome() {
       }
       if (section === 'home-viewer') {
         setViewerMode(
-          preferredViewerTokenId === null && preferredViewerWalletAddress !== null
+          preferredViewerTokenId === null && preferredViewerWalletInput.length > 0
             ? 'wallet'
             : 'collection'
         );
@@ -1021,7 +1220,7 @@ export default function SimplePublicHome() {
     return () => {
       window.removeEventListener('hashchange', openHashSection);
     };
-  }, [preferredViewerTokenId, preferredViewerWalletAddress]);
+  }, [preferredViewerTokenId, preferredViewerWalletInput]);
 
   const handleNavJump = (
     event: MouseEvent<HTMLAnchorElement>,
@@ -1029,6 +1228,43 @@ export default function SimplePublicHome() {
   ) => {
     event.preventDefault();
     focusSection(key);
+  };
+
+  const handleWalletLookupInputChange = (value: string) => {
+    setWalletLookupInput(value);
+    setWalletLookupTouched(false);
+  };
+
+  const openWalletLookup = (value: string) => {
+    const normalized = normalizePublicWalletLookup(value);
+    const nextInput = normalized ?? value.trim();
+    setWalletLookupInput(nextInput);
+    setWalletLookupTouched(true);
+    const nextState = getWalletLookupState(nextInput, walletSession.address ?? null);
+    if (!nextState.entered || !nextState.valid) {
+      return;
+    }
+    setViewerMode('wallet');
+    setViewerCollapsed(false);
+    setViewerFocusKey((prev) => (prev ?? 0) + 1);
+    scrollToSection('home-viewer');
+  };
+
+  const handleWalletLookupSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    openWalletLookup(walletLookupInput);
+  };
+
+  const handleClearWalletLookup = () => {
+    setWalletLookupInput('');
+    setWalletLookupTouched(false);
+  };
+
+  const handleOpenGalleryToken = (id: bigint) => {
+    setViewerTokenId(id);
+    setViewerMode('collection');
+    setViewerCollapsed(false);
+    scrollToSection('home-viewer');
   };
 
   const handleConnectWallet = async () => {
@@ -1069,19 +1305,28 @@ export default function SimplePublicHome() {
         <section className="panel simple-home__hero" aria-label="Simplified homepage">
           <div className="simple-home__hero-main">
             <div className="simple-home__hero-copy">
+              <span className="simple-home__hero-kicker">{HOME_HERO_CONTENT.tag}</span>
               <h1 className="app__title">
-                XTRATA <span className="app__title-tag simple-home__title-tag">{HOME_HERO_CONTENT.tag}</span>
+                XTRATA <span className="app__title-tag simple-home__title-tag">Bitcoin-anchored media</span>
               </h1>
               <h2 className="simple-home__title">{HOME_HERO_CONTENT.title}</h2>
               <p className="simple-home__subline">{HOME_HERO_CONTENT.subline}</p>
             </div>
-          </div>
-
-          <div className="simple-home__wallet">
-            <div className="simple-home__wallet-actions">
-              <span className="badge badge--neutral">
-                {walletSession.isConnected ? 'Connected' : 'Disconnected'}
-              </span>
+            <div className="simple-home__hero-actions">
+              <a
+                className="button"
+                href="#inscribe"
+                onClick={(event) => handleNavJump(event, 'inscribe')}
+              >
+                Inscribe a file
+              </a>
+              <a
+                className="button button--ghost"
+                href="#example-galleries"
+                onClick={(event) => handleNavJump(event, 'example-galleries')}
+              >
+                Explore examples
+              </a>
               {walletSession.isConnected ? (
                 <button
                   className="button button--ghost"
@@ -1093,7 +1338,7 @@ export default function SimplePublicHome() {
                 </button>
               ) : (
                 <button
-                  className="button"
+                  className="button button--ghost"
                   type="button"
                   onClick={handleConnectWallet}
                   disabled={walletPending}
@@ -1102,71 +1347,45 @@ export default function SimplePublicHome() {
                 </button>
               )}
             </div>
-            <div className="simple-home__wallet-identity">
-              <span className="simple-home__wallet-label">Connected wallet</span>
+            <div className="simple-home__wallet-inline">
+              <span className="badge badge--neutral">
+                {walletSession.isConnected ? 'Connected' : 'Disconnected'}
+              </span>
               <AddressLabel
                 className="simple-home__wallet-address"
                 address={walletSession.address}
                 network={walletSession.network}
                 fallback="Not connected"
               />
-              <span className="simple-home__wallet-network">
-                Network: {walletSession.network ?? 'unknown'}
-              </span>
             </div>
           </div>
 
-          <div className="simple-home__tools">
-            <div className="simple-home__actions">
-              <a
-                className="button"
-                href="#inscribe"
-                onClick={(event) => handleNavJump(event, 'inscribe')}
-              >
-                Inscribe
-              </a>
-              <a
-                className="button button--ghost"
-                href="#live-drops"
-                onClick={(event) => handleNavJump(event, 'live-drops')}
-              >
-                Mint
-              </a>
-              <a
-                className="button button--ghost"
-                href="#market"
-                onClick={(event) => handleNavJump(event, 'market')}
-              >
-                Marketplace
-              </a>
-              <a
-                className="button button--ghost"
-                href="#starter-docs"
-                onClick={(event) => handleNavJump(event, 'starter-docs')}
-              >
-                Docs
-              </a>
-              <a className="button button--ghost" href={WORKSPACE_PATH}>
-                Workspace
-              </a>
+          <aside className="simple-home__promise-panel" aria-label="Xtrata promise">
+            <div className="simple-home__promise-step">
+              <span>01</span>
+              <div>
+                <h3>Record it</h3>
+                <p>Songs, stems, masters, artwork, credits, documents, apps, and release files.</p>
+              </div>
             </div>
-            <label className="theme-select" htmlFor="simple-home-theme-select">
-              <span className="theme-select__label">Theme</span>
-              <select
-                id="simple-home-theme-select"
-                className="theme-select__control"
-                value={themeMode}
-                onChange={handleThemeChange}
-                onInput={handleThemeChange}
-              >
-                {THEME_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
+            <div className="simple-home__promise-step">
+              <span>02</span>
+              <div>
+                <h3>Reference it</h3>
+                <p>Link collaborators, rights notes, versions, parent works, and external archives.</p>
+              </div>
+            </div>
+            <div className="simple-home__promise-step">
+              <span>03</span>
+              <div>
+                <h3>Retrieve it</h3>
+                <p>Resolve the record later from the chain through wallets, viewers, apps, and SDKs.</p>
+              </div>
+            </div>
+            <p className="simple-home__promise-note">
+              Permanent backups and programmable records without ordinal-style cost or delay.
+            </p>
+          </aside>
         </section>
 
         {mismatch && (
@@ -1209,6 +1428,120 @@ export default function SimplePublicHome() {
       )}
 
       <main className="app__main simple-home__main">
+        <section className="panel app-section simple-home__showcases" id="example-galleries">
+          <div className="panel__header">
+            <div>
+              <h2>Start with live examples</h2>
+              <p>Browse real Xtrata records before you connect a wallet or inscribe your own.</p>
+            </div>
+          </div>
+          <div className="panel__body">
+            <div className="simple-home__showcase-layout">
+              <div className="simple-home__wallet-discovery">
+                <div className="simple-home__wallet-discovery-copy">
+                  <span className="simple-home__showcase-kicker">Wallet galleries</span>
+                  <h3>Open a creator wallet</h3>
+                  <p>
+                    Try a known creator wallet or search a Stacks address or .btc name.
+                  </p>
+                </div>
+                <div className="simple-home__wallet-showcase-grid">
+                  {HOME_GALLERY_MANIFEST.walletShowcases.map((showcase) => (
+                    <button
+                      className="simple-home__wallet-showcase"
+                      type="button"
+                      key={showcase.id}
+                      onClick={() => openWalletLookup(showcase.lookup)}
+                    >
+                      <span className="simple-home__showcase-kicker">{showcase.kicker}</span>
+                      <strong>{showcase.title}</strong>
+                      <span>{showcase.description}</span>
+                      <em>{showcase.cta}</em>
+                    </button>
+                  ))}
+                </div>
+                <form
+                  className="simple-home__wallet-search"
+                  onSubmit={handleWalletLookupSubmit}
+                >
+                  <label className="field field--search">
+                    <span className="field__label">Find a wallet</span>
+                    <div className="field__row">
+                      <input
+                        className={`input input--prominent${
+                          walletLookupTouched &&
+                          walletLookupState.entered &&
+                          !walletLookupState.valid
+                            ? ' input--alert'
+                            : ''
+                        }`}
+                        placeholder="Try DYLE or jib.btc"
+                        value={walletLookupInput}
+                        onChange={(event) =>
+                          handleWalletLookupInputChange(event.target.value)
+                        }
+                      />
+                      <button className="button" type="submit">
+                        View wallet
+                      </button>
+                    </div>
+                    {walletLookupTouched &&
+                      walletLookupState.entered &&
+                      !walletLookupState.valid && (
+                        <span className="field__error">
+                          Enter a Stacks address or .btc name.
+                        </span>
+                      )}
+                    {walletLookupState.lookupName &&
+                      walletLookupState.bnsStatus === 'loading' && (
+                        <span className="field__hint">Resolving .btc name...</span>
+                      )}
+                    {walletLookupState.lookupName &&
+                      walletLookupState.bnsStatus === 'missing' && (
+                        <span className="field__error">
+                          No address found for {walletLookupState.lookupName}.
+                        </span>
+                      )}
+                    {walletLookupState.lookupName &&
+                      walletLookupState.bnsStatus === 'error' && (
+                        <span className="field__error">
+                          BNS lookup is temporarily unavailable.
+                        </span>
+                      )}
+                  </label>
+                </form>
+              </div>
+
+              <div className="simple-home__token-gallery-shell">
+                <div className="simple-home__gallery-tabs" role="tablist" aria-label="Curated galleries">
+                  {HOME_GALLERY_MANIFEST.tokenGalleries.map((gallery) => (
+                    <button
+                      type="button"
+                      className={`simple-home__gallery-tab${
+                        gallery.id === activeTokenGallery?.id ? ' is-active' : ''
+                      }`}
+                      key={gallery.id}
+                      onClick={() => setActiveTokenGalleryId(gallery.id)}
+                    >
+                      {gallery.title}
+                    </button>
+                  ))}
+                </div>
+                {activeTokenGallery && (
+                  <HomeTokenGalleryPreview
+                    gallery={activeTokenGallery}
+                    contract={contract}
+                    contractId={contractId}
+                    senderAddress={readOnlySender}
+                    isActiveTab={tabGuard.isActive}
+                    onOpenToken={handleOpenGalleryToken}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section className="panel app-section simple-home__drops" id="live-drops">
           <div className="panel__header">
             <div>
@@ -1361,25 +1694,19 @@ export default function SimplePublicHome() {
             walletSession={walletSession}
             walletLookupState={walletLookupState}
             focusKey={viewerFocusKey ?? undefined}
-            preferredTokenId={preferredViewerTokenId}
+            preferredTokenId={viewerTokenId}
             collapsed={viewerCollapsed}
             onToggleCollapse={() => setViewerCollapsed((prev) => !prev)}
             isActiveTab={tabGuard.isActive}
             mode={viewerMode}
             onModeChange={setViewerMode}
+            onClearWalletLookup={handleClearWalletLookup}
             modeLabels={{ collection: 'Explore', wallet: 'Wallet' }}
             viewerTitles={{ collection: 'Live inscription viewer', wallet: 'Wallet viewer' }}
             allowSummaryPrefetch={false}
             allowBackgroundRelationshipSync={false}
           />
         </div>
-
-        <PublicMarketScreen
-          contract={contract}
-          walletSession={walletSession}
-          collapsed={marketCollapsed}
-          onToggleCollapse={() => setMarketCollapsed((prev) => !prev)}
-        />
 
         <MintScreen
           contract={contract}
@@ -1389,6 +1716,13 @@ export default function SimplePublicHome() {
           onToggleCollapse={() => setMintCollapsed((prev) => !prev)}
           restrictions={PUBLIC_MINT_RESTRICTIONS}
           usdPriceBook={usdPriceBook}
+        />
+
+        <PublicMarketScreen
+          contract={contract}
+          walletSession={walletSession}
+          collapsed={marketCollapsed}
+          onToggleCollapse={() => setMarketCollapsed((prev) => !prev)}
         />
 
         <section
@@ -1408,9 +1742,6 @@ export default function SimplePublicHome() {
                 rel="noreferrer"
               >
                 Docs Index
-              </a>
-              <a className="button button--ghost" href={WORKSPACE_PATH}>
-                Open Workspace
               </a>
               <button
                 className="button button--ghost button--collapse"
@@ -1456,6 +1787,35 @@ export default function SimplePublicHome() {
             </article>
           </div>
         </section>
+
+        <footer className="simple-home__footer">
+          <div className="simple-home__footer-links">
+            <a href={WORKSPACE_PATH}>Workspace</a>
+            <a href={DOCS_INDEX_URL} target="_blank" rel="noreferrer">
+              Documentation
+            </a>
+            <a href="/manage">Artist portal</a>
+            <a href="https://x.com/XtrataLayers" target="_blank" rel="noreferrer">
+              Xtrata on X
+            </a>
+          </div>
+          <label className="theme-select" htmlFor="simple-home-theme-select">
+            <span className="theme-select__label">Style</span>
+            <select
+              id="simple-home-theme-select"
+              className="theme-select__control"
+              value={themeMode}
+              onChange={handleThemeChange}
+              onInput={handleThemeChange}
+            >
+              {THEME_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </footer>
       </main>
     </div>
   );
