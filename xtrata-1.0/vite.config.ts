@@ -11,6 +11,14 @@ export default defineConfig(({ mode }) => {
   const hasHiroApiKey = Boolean(hiroApiKey);
   const bnsApiBase =
     env.VITE_BNS_API_MAINNET || env.VITE_BNS_API_BASE || 'https://api.bns.xyz';
+  const bnsV2MainnetApiBase =
+    env.VITE_BNSV2_API_BASE_MAINNET ||
+    env.VITE_BNSV2_API_BASE ||
+    'https://api.bnsv2.com';
+  const bnsV2TestnetApiBase =
+    env.VITE_BNSV2_API_BASE_TESTNET ||
+    env.VITE_BNSV2_API_BASE ||
+    'https://api.bnsv2.com/testnet';
 
   return {
     plugins: [react()],
@@ -36,6 +44,16 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       proxy: {
+        '/bnsv2/mainnet': {
+          target: bnsV2MainnetApiBase,
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/bnsv2\/mainnet/, '')
+        },
+        '/bnsv2/testnet': {
+          target: bnsV2TestnetApiBase,
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/bnsv2\/testnet/, '')
+        },
         '/bns': {
           target: bnsApiBase,
           changeOrigin: true,
