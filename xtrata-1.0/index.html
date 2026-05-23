@@ -1885,15 +1885,31 @@
       padding-top: 18px;
     }
 
-    @media (max-width: 1100px) {
+    @media (max-width: 1366px), (pointer: coarse) {
       .shell {
         padding-bottom: max(120px, calc(env(safe-area-inset-bottom) + 88px));
       }
 
-      body.has-ledger .workspace,
-      body.has-ledger .wallet-layout,
+      body.has-ledger .workspace {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      body.has-ledger .wallet-layout {
+        display: flex;
+        flex-direction: column;
+      }
+
       body.has-public-ledger .wallet-layout {
         grid-template-columns: 1fr;
+      }
+
+      body.has-ledger .wallet-layout,
+      body.has-ledger .wallet-controls,
+      body.has-ledger .wallet-grid-stack,
+      body.has-ledger #tokenPreviewPanel {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
       }
 
       body.has-ledger .wallet-controls,
@@ -1911,12 +1927,18 @@
         order: 1;
       }
 
-      body.has-ledger #tokenPreviewPanel,
+      body.has-ledger .wallet-grid-stack {
+        order: 2;
+      }
+
+      body.has-ledger #tokenPreviewPanel {
+        order: 3;
+      }
+
       body.has-public-ledger #tokenPreviewPanel {
         order: 2;
       }
 
-      body.has-ledger .wallet-grid-stack,
       body.has-public-ledger .wallet-grid-stack {
         order: 3;
       }
@@ -3001,7 +3023,7 @@
           {
             id: 'code-various',
             title: 'code',
-            tokenIds: [17n, 19n, 41n, 43n, 44n, 55n, 73n, 151n, 153n]
+            tokenIds: [287n, 17n, 19n, 41n, 43n, 44n, 55n, 73n, 151n, 153n]
           },
           {
             id: 'agent-27',
@@ -3016,7 +3038,7 @@
 
         const CURATED_GALLERY_DEFAULT_TOKEN_IDS = Object.freeze({
           'jim-music': 269n,
-          'code-various': 17n
+          'code-various': 287n
         });
     
         let activeExampleDescriptionKey = null;
