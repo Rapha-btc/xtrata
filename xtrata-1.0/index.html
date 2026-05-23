@@ -859,6 +859,111 @@
       line-height: 1.2;
     }
 
+    .prepared-meta .meta-line {
+      grid-template-columns: minmax(74px, 112px) minmax(0, 1fr);
+      gap: 10px;
+      align-items: center;
+    }
+
+    .prepared-meta .meta-line--stack,
+    .prepared-meta .meta-line--stat,
+    .prepared-meta .meta-line--total {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 4px;
+      align-items: start;
+      padding-top: 2px;
+    }
+
+    .prepared-meta .meta-section {
+      margin-top: 6px;
+      padding-top: 8px;
+      border-top: 1px solid var(--line);
+      color: var(--line-strong);
+      font-size: 10px;
+      line-height: 1;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      font-weight: 900;
+    }
+
+    .prepared-meta .meta-section:first-child {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: 0;
+    }
+
+    .prepared-meta .meta-key {
+      line-height: 1.15;
+    }
+
+    .meta-key__sub {
+      display: block;
+      margin-top: 2px;
+      font-size: 10px;
+      line-height: 1.1;
+      color: var(--muted);
+      letter-spacing: 0.12em;
+    }
+
+    .prepared-meta .meta-value--filename {
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      overflow-wrap: anywhere;
+      word-break: normal;
+    }
+
+    .prepared-meta .meta-value--count {
+      font-size: 24px;
+      line-height: 1;
+      font-weight: 900;
+    }
+
+    .prepared-meta .meta-line--total .meta-value {
+      font-weight: 900;
+    }
+
+    .meta-value--tooltip {
+      position: relative;
+      overflow: visible;
+      cursor: help;
+      text-decoration: underline;
+      text-decoration-style: dotted;
+      text-underline-offset: 3px;
+    }
+
+    .meta-value--tooltip::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      left: 0;
+      top: calc(100% + 6px);
+      z-index: 40;
+      width: min(290px, 74vw);
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--control);
+      color: var(--ink);
+      box-shadow: var(--shadow);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 11px;
+      line-height: 1.35;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-3px);
+      transition: opacity 0.14s ease, transform 0.14s ease;
+    }
+
+    .meta-value--tooltip:hover::after,
+    .meta-value--tooltip:focus::after {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
     .warning {
       display: none;
       border: 1px solid rgba(132, 96, 27, 0.32);
@@ -3311,10 +3416,10 @@
       }
     };
 
-    const getStxUsdLabel = () => {
+    const getLiveStxUsdRateLabel = () => {
       const quote = getUsdPriceQuote(state.usdPriceBook, 'stx');
       if (quote) {
-        return `$${quote.usd.toFixed(quote.usd >= 1 ? 2 : 4)}`;
+        return `1 STX = $${quote.usd.toFixed(quote.usd >= 1 ? 2 : 4)}`;
       }
       return state.usdPriceBookLoading ? 'Fetching...' : 'Unavailable';
     };
@@ -3326,7 +3431,8 @@
       const display = formatMicroStxWithUsd(miningFeeMicroStx, state.usdPriceBook);
       return {
         miningFeeMicroStx,
-        label: `${display.combined} at 1 STX/MB`
+        label: display.combined,
+        detail: `${display.combined} at 1 STX/MB`
       };
     };
 
@@ -3336,6 +3442,15 @@
           miningFeeMicroStx,
         state.usdPriceBook
       ).combined;
+
+    const formatExtraFee = (feeEstimate) =>
+      formatMicroStxWithUsd(
+        BigInt(Math.max(0, Math.round(feeEstimate.totalMicroStx))),
+        state.usdPriceBook
+      ).combined;
+
+    const getPreparedTransactionCount = (usesSingleTx, estimate) =>
+      usesSingleTx ? 1 : estimate.totalTransactions;
 
     const getSmallMintHelperContract = () =>
       state.contract.network === 'mainnet' &&
@@ -3382,24 +3497,57 @@
     const renderMeta = (target, lines) => {
       target.innerHTML = '';
       const widePreparedMetaKeys = new Set([
-        'Hash',
-        'Seq txns',
-        'Data fee',
-        'Total est.'
+        'Transactions required',
+        'Extra fee',
+        'Mining fee',
+        'Total estimated cost'
       ]);
-      for (const [key, value] of lines) {
+      for (const line of lines) {
+        const meta = Array.isArray(line)
+          ? { key: line[0], value: line[1] }
+          : line;
+        if (meta.section) {
+          const section = document.createElement('div');
+          section.className = 'meta-section';
+          section.textContent = meta.section;
+          target.append(section);
+          continue;
+        }
         const row = document.createElement('div');
         row.className = 'meta-line';
-        if (target === dom.preparedMeta && widePreparedMetaKeys.has(key)) {
+        if (meta.layout) {
+          row.classList.add(`meta-line--${meta.layout}`);
+        }
+        if (
+          target === dom.preparedMeta &&
+          (meta.wide || widePreparedMetaKeys.has(meta.key))
+        ) {
           row.classList.add('meta-line--wide');
         }
         const label = document.createElement('span');
         label.className = 'meta-key';
-        label.textContent = key;
+        if (meta.subkey) {
+          const primary = document.createElement('span');
+          primary.textContent = meta.key;
+          const secondary = document.createElement('span');
+          secondary.className = 'meta-key__sub';
+          secondary.textContent = meta.subkey;
+          label.append(primary, secondary);
+        } else {
+          label.textContent = meta.key;
+        }
         const body = document.createElement('span');
-        body.className = 'meta-value';
-        body.title = String(value);
-        body.textContent = String(value);
+        body.className = `meta-value${
+          meta.valueClass ? ` ${meta.valueClass}` : ''
+        }`;
+        body.title = String(meta.title ?? meta.value);
+        body.textContent = String(meta.value);
+        if (meta.tooltip) {
+          body.classList.add('meta-value--tooltip');
+          body.dataset.tooltip = String(meta.tooltip);
+          body.tabIndex = 0;
+          body.setAttribute('aria-label', `${meta.key}: ${meta.tooltip}`);
+        }
         row.append(label, body);
         target.append(row);
       }
@@ -4206,26 +4354,59 @@
         batchSize: Math.min(DEFAULT_BATCH_SIZE, MAX_BATCH_SIZE)
       });
       const dataMiningEstimate = formatDataMiningEstimate(state.prepared.bytes);
+      const transactionCount = getPreparedTransactionCount(
+        usesSingleTx,
+        sequentialTxEstimate
+      );
       renderMeta(dom.preparedMeta, [
-        ['Name', state.prepared.file.name],
+        { section: 'File' },
+        {
+          key: 'Name',
+          value: state.prepared.file.name,
+          title: state.prepared.file.name,
+          valueClass: 'meta-value--filename'
+        },
         ['Size', formatBytes(BigInt(state.prepared.bytes.length))],
-        ['Mime', state.prepared.mimeType],
+        ['Type', state.prepared.mimeType],
         ['Chunks', state.prepared.chunks.length.toString()],
-        ['Hash', state.prepared.expectedHashHex],
-        ['Route', usesSingleTx ? 'Single tx' : 'Staged'],
-        [
-          'Seq txns',
-          `${sequentialTxEstimate.beginTransactions} init + ${
-            sequentialTxEstimate.uploadTransactions
-          } upload + ${sequentialTxEstimate.sealTransactions} seal = ${
-            sequentialTxEstimate.totalTransactions
-          } txns at ${sequentialTxEstimate.batchSize} chunks/tx`
-        ],
-        ['Fixed', formatMicroStx(feeEstimate.beginMicroStx)],
-        ['Seal', formatMicroStx(feeEstimate.sealMicroStx)],
-        ['Data fee', dataMiningEstimate.label],
-        ['STX/USD', getStxUsdLabel()],
-        ['Total est.', formatEstimatedTotalFees(feeEstimate, dataMiningEstimate.miningFeeMicroStx)]
+        {
+          key: 'Hash',
+          value: 'SHA-256 ready',
+          title: state.prepared.expectedHashHex,
+          tooltip: state.prepared.expectedHashHex
+        },
+        { section: 'Mint plan' },
+        {
+          key: 'Transactions required',
+          value: transactionCount.toString(),
+          title: `${transactionCount} transaction${
+            transactionCount === 1 ? '' : 's'
+          } required`,
+          layout: 'stat',
+          valueClass: 'meta-value--count'
+        },
+        { section: 'Cost estimate' },
+        ['Live exchange rate', getLiveStxUsdRateLabel()],
+        {
+          key: 'Extra fee',
+          value: formatExtraFee(feeEstimate),
+          layout: 'stack'
+        },
+        {
+          key: 'Mining fee',
+          value: dataMiningEstimate.label,
+          title: dataMiningEstimate.detail,
+          layout: 'stack'
+        },
+        {
+          key: 'Total estimated cost',
+          subkey: 'For this inscription',
+          value: formatEstimatedTotalFees(
+            feeEstimate,
+            dataMiningEstimate.miningFeeMicroStx
+          ),
+          layout: 'total'
+        }
       ]);
 
       revokePayloadPreview();
