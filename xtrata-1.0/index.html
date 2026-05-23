@@ -1070,6 +1070,17 @@
       align-items: start;
     }
 
+    .wallet-controls,
+    .wallet-grid-stack {
+      min-width: 0;
+      grid-column: 1;
+    }
+
+    .wallet-grid-stack {
+      display: grid;
+      min-width: 0;
+    }
+
     .wallet-browser {
       display: grid;
       gap: 12px;
@@ -1188,6 +1199,14 @@
       line-height: 1.25;
     }
 
+    .token-meta span {
+      display: block;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     .token-meta strong {
       color: var(--ink);
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -1206,6 +1225,8 @@
 
     .token-preview {
       min-width: 0;
+      grid-column: 2;
+      grid-row: 1 / span 2;
       border: 1px solid var(--line);
       border-radius: var(--radius);
       padding: 12px;
@@ -1864,6 +1885,74 @@
       padding-top: 18px;
     }
 
+    @media (max-width: 1100px) {
+      .shell {
+        padding-bottom: max(120px, calc(env(safe-area-inset-bottom) + 88px));
+      }
+
+      body.has-ledger .workspace,
+      body.has-ledger .wallet-layout,
+      body.has-public-ledger .wallet-layout {
+        grid-template-columns: 1fr;
+      }
+
+      body.has-ledger .wallet-controls,
+      body.has-ledger .wallet-grid-stack,
+      body.has-ledger #tokenPreviewPanel,
+      body.has-public-ledger .wallet-controls,
+      body.has-public-ledger .wallet-grid-stack,
+      body.has-public-ledger #tokenPreviewPanel {
+        grid-column: 1;
+        grid-row: auto;
+      }
+
+      body.has-ledger .wallet-controls,
+      body.has-public-ledger .wallet-controls {
+        order: 1;
+      }
+
+      body.has-ledger #tokenPreviewPanel,
+      body.has-public-ledger #tokenPreviewPanel {
+        order: 2;
+      }
+
+      body.has-ledger .wallet-grid-stack,
+      body.has-public-ledger .wallet-grid-stack {
+        order: 3;
+      }
+
+      .panel[aria-labelledby="walletTitle"] .panel-head {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .panel[aria-labelledby="walletTitle"] .wallet-tools {
+        width: 100%;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto minmax(72px, auto) auto;
+        justify-content: stretch;
+      }
+
+      #walletCountBadge {
+        grid-column: 1 / -1;
+        justify-self: start;
+      }
+
+      #refreshWalletButton {
+        justify-self: start;
+      }
+
+      .page-readout {
+        min-width: 0;
+        align-self: center;
+      }
+
+      #tokenPreviewPanel .preview-stage {
+        width: min(100%, 560px);
+        margin-inline: auto;
+      }
+    }
+
     body[data-theme="neon"] .registry-title {
       text-shadow: 0 0 20px color-mix(in srgb, var(--green) 45%, transparent), 0 0 46px color-mix(in srgb, var(--blue) 35%, transparent);
     }
@@ -1960,6 +2049,19 @@
 
       .token-meta {
         font-size: 11px;
+      }
+
+      .panel[aria-labelledby="walletTitle"] .wallet-tools {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      #refreshWalletButton {
+        grid-column: 1 / -1;
+        width: 100%;
+      }
+
+      .wallet-tools .btn {
+        width: 100%;
       }
     }
 
@@ -2467,7 +2569,7 @@
         </div>
         <div class="panel-body">
           <div class="wallet-layout">
-            <div>
+            <div class="wallet-controls">
               <form class="wallet-browser" id="walletLookupForm">
                 <label class="field">
                   <span class="label">View wallet</span>
@@ -2525,7 +2627,9 @@
               </div>
 
               <!-- <div class="wallet-example-description" id="walletExampleDescription" hidden></div> -->
+            </div>
 
+            <div class="wallet-grid-stack">
               <div class="status" id="walletGridStatus">
                 <span><strong>Grid</strong> waiting for wallet</span>
                 <span class="badge amber">empty</span>
