@@ -1735,6 +1735,82 @@
       outline: none;
     }
 
+    .explorer-tools {
+      display: grid;
+      gap: 10px;
+      margin: 0 0 14px;
+    }
+
+    .explorer-tools__row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+      gap: 8px;
+      align-items: end;
+    }
+
+    .explorer-tools .field {
+      min-width: 0;
+    }
+
+    .explorer-tools .input {
+      min-height: 38px;
+    }
+
+    .explorer-tools .btn {
+      min-height: 38px;
+      padding: 8px 11px;
+    }
+
+    .explorer-filter-group {
+      display: grid;
+      gap: 8px;
+      margin: 2px 0 0;
+      padding: 0;
+      border: 0;
+    }
+
+    .explorer-filter-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .explorer-filter-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 34px;
+      padding: 7px 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--control);
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 900;
+      line-height: 1;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+
+    .explorer-filter-chip input {
+      width: 14px;
+      height: 14px;
+      margin: 0;
+      accent-color: var(--green);
+    }
+
+    .explorer-filter-chip.is-active {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px var(--focus-ring);
+    }
+
+    .explorer-mode-note {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
     .docs-actions {
       display: flex;
       flex-wrap: wrap;
@@ -1862,6 +1938,33 @@
       grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
     }
 
+    body.explorer-mode .registry-intro,
+    body.explorer-mode .workspace > .panel[aria-labelledby="inscribeTitle"],
+    body.explorer-mode .homepage-docs,
+    body.explorer-mode .wallet-browser,
+    body.explorer-mode .wallet-examples,
+    body.explorer-mode .transfer-tools,
+    body.explorer-mode #viewInscriptionsButton {
+      display: none;
+    }
+
+    body.explorer-mode .workspace {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    body.explorer-mode .wallet-layout {
+      grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+      gap: 18px;
+    }
+
+    body.explorer-mode .panel[aria-labelledby="walletTitle"] {
+      border-color: var(--line-strong);
+    }
+
+    body:not(.explorer-mode) .explorer-tools {
+      display: none;
+    }
+
     body:not(.has-ledger):not(.has-public-ledger) .wallet-layout {
       grid-template-columns: 1fr;
     }
@@ -1876,6 +1979,22 @@
 
     body:not(.has-ledger):not(.has-public-ledger) .wallet-tools {
       display: none;
+    }
+
+    body.explorer-mode:not(.has-ledger):not(.has-public-ledger) #tokenPreviewPanel {
+      display: block;
+    }
+
+    body.explorer-mode:not(.has-ledger):not(.has-public-ledger) .token-grid {
+      display: grid;
+    }
+
+    body.explorer-mode:not(.has-ledger):not(.has-public-ledger) .wallet-tools {
+      display: flex;
+    }
+
+    body.explorer-mode #walletGridStatus {
+      margin-bottom: 16px;
     }
 
     body:not(.has-ledger) .wallet-browser {
@@ -1899,7 +2018,8 @@
         grid-template-columns: minmax(0, 1fr);
       }
 
-      body.has-ledger .wallet-layout {
+      body.has-ledger .wallet-layout,
+      body.explorer-mode .wallet-layout {
         display: flex;
         flex-direction: column;
       }
@@ -1911,7 +2031,11 @@
       body.has-ledger .wallet-layout,
       body.has-ledger .wallet-controls,
       body.has-ledger .wallet-grid-stack,
-      body.has-ledger #tokenPreviewPanel {
+      body.has-ledger #tokenPreviewPanel,
+      body.explorer-mode .wallet-layout,
+      body.explorer-mode .wallet-controls,
+      body.explorer-mode .wallet-grid-stack,
+      body.explorer-mode #tokenPreviewPanel {
         width: 100%;
         max-width: 100%;
         min-width: 0;
@@ -1920,6 +2044,9 @@
       body.has-ledger .wallet-controls,
       body.has-ledger .wallet-grid-stack,
       body.has-ledger #tokenPreviewPanel,
+      body.explorer-mode .wallet-controls,
+      body.explorer-mode .wallet-grid-stack,
+      body.explorer-mode #tokenPreviewPanel,
       body.has-public-ledger .wallet-controls,
       body.has-public-ledger .wallet-grid-stack,
       body.has-public-ledger #tokenPreviewPanel {
@@ -1928,15 +2055,18 @@
       }
 
       body.has-ledger .wallet-controls,
+      body.explorer-mode .wallet-controls,
       body.has-public-ledger .wallet-controls {
         order: 1;
       }
 
-      body.has-ledger .wallet-grid-stack {
+      body.has-ledger .wallet-grid-stack,
+      body.explorer-mode .wallet-grid-stack {
         order: 2;
       }
 
-      body.has-ledger #tokenPreviewPanel {
+      body.has-ledger #tokenPreviewPanel,
+      body.explorer-mode #tokenPreviewPanel {
         order: 3;
       }
 
@@ -2095,6 +2225,10 @@
 
       .wallet-tools .btn {
         width: 100%;
+      }
+
+      .explorer-tools__row {
+        grid-template-columns: 1fr;
       }
     }
 
@@ -2660,6 +2794,63 @@
 
               </div>
 
+              <div class="explorer-tools" id="xtrataExplorerTools" aria-label="Xtrata explorer controls">
+                <p class="explorer-mode-note" id="xtrataExplorerStatus">Browse inscriptions from the selected contract.</p>
+                <div class="explorer-tools__row">
+                  <label class="field">
+                    <span class="label">Page</span>
+                    <input class="input" id="explorerPageInput" type="number" min="1" step="1" inputmode="numeric" placeholder="1" />
+                  </label>
+                  <label class="field">
+                    <span class="label">Inscription #</span>
+                    <input class="input" id="explorerTokenInput" type="number" min="1" step="1" inputmode="numeric" placeholder="Token ID" />
+                  </label>
+                  <button class="btn ghost" id="explorerJumpButton" type="button">Go</button>
+                </div>
+                <fieldset class="explorer-filter-group" id="explorerFilterGroup">
+                  <legend class="label">Type filters</legend>
+                  <div class="explorer-filter-options">
+                    <label class="explorer-filter-chip">
+                      <input type="checkbox" data-explorer-filter="image" />
+                      Images
+                    </label>
+                    <label class="explorer-filter-chip">
+                      <input type="checkbox" data-explorer-filter="html" />
+                      HTML
+                    </label>
+                    <label class="explorer-filter-chip">
+                      <input type="checkbox" data-explorer-filter="video" />
+                      Video
+                    </label>
+                    <label class="explorer-filter-chip">
+                      <input type="checkbox" data-explorer-filter="audio" />
+                      Audio
+                    </label>
+                    <label class="explorer-filter-chip">
+                      <input type="checkbox" data-explorer-filter="text" />
+                      Text
+                    </label>
+                    <label class="explorer-filter-chip">
+                      <input type="checkbox" data-explorer-filter="code" />
+                      Code
+                    </label>
+                    <label class="explorer-filter-chip">
+                      <input type="checkbox" data-explorer-filter="document" />
+                      Docs
+                    </label>
+                    <label class="explorer-filter-chip">
+                      <input type="checkbox" data-explorer-filter="other" />
+                      Other
+                    </label>
+                  </div>
+                  <button class="small-link" id="explorerClearFiltersButton" type="button">Clear filters</button>
+                </fieldset>
+                <div class="actions">
+                  <button class="btn secondary" id="explorerLatestButton" type="button">Latest</button>
+                  <a class="btn secondary" href="/" id="explorerHomeLink">Home</a>
+                </div>
+              </div>
+
               <!-- <div class="wallet-example-description" id="walletExampleDescription" hidden></div> -->
             </div>
 
@@ -2692,6 +2883,7 @@
               </div>
               <div class="preview-actions">
                 <a class="small-link" id="explorerLink" href="#" target="_blank" rel="noreferrer" hidden>Blockchain Explorer</a>
+                <a class="small-link" id="xtrataExplorerLink" href="#" target="_blank" rel="noreferrer" hidden>Xtrata Explorer</a>
                 <button class="small-link" id="backToGridButton" type="button" hidden>Back to grid</button>
               </div>
               <div class="transfer-tools">
@@ -2964,6 +3156,7 @@
       viewInscriptionsButton: $('viewInscriptionsButton'),
       networkBadge: $('networkBadge'),
       mintSubtitle: $('mintSubtitle'),
+      walletTitle: $('walletTitle'),
       walletStatus: $('walletStatus'),
       inscriptionForm: $('inscriptionForm'),
       nameInput: $('nameInput'),
@@ -3004,7 +3197,17 @@
       previewExpandButton: $('previewExpandButton'),
       fullscreenButton: $('fullscreenButton'),
       explorerLink: $('explorerLink'),
+      xtrataExplorerLink: $('xtrataExplorerLink'),
       backToGridButton: $('backToGridButton'),
+      xtrataExplorerTools: $('xtrataExplorerTools'),
+      xtrataExplorerStatus: $('xtrataExplorerStatus'),
+      explorerPageInput: $('explorerPageInput'),
+      explorerTokenInput: $('explorerTokenInput'),
+      explorerJumpButton: $('explorerJumpButton'),
+      explorerLatestButton: $('explorerLatestButton'),
+      explorerClearFiltersButton: $('explorerClearFiltersButton'),
+      explorerHomeLink: $('explorerHomeLink'),
+      explorerFilterInputs: [...document.querySelectorAll('[data-explorer-filter]')],
       transferRecipientInput: $('transferRecipientInput'),
       transferButton: $('transferButton'),
       transferStatus: $('transferStatus'),
@@ -3200,6 +3403,18 @@
       walletLoadingPage: false,
       selectedTokenId: null,
       connectedWalletMatureMode: false,
+      explorerMode: false,
+      explorerInitialTokenId: null,
+      explorerLatestTokenId: null,
+      explorerFilterKinds: new Set(),
+      explorerFilteredTokenIds: [],
+      explorerIndexedSummaryIds: new Set(),
+      explorerFilterIndexContractId: null,
+      explorerFilterIndexLoading: false,
+      explorerFilterIndexComplete: false,
+      explorerFilterBackgroundLoading: false,
+      explorerFollowLatestFiltered: false,
+      explorerFilterIndexRunId: 0,
       lastSubmittedTxId: null,
       usdPriceBook: null,
       usdPriceBookLoading: false
@@ -3209,6 +3424,7 @@
     const WALLET_FALLBACK_SCAN_LIMIT = 2000;
     const MAX_GRID_EAGER_FULL_LOAD_BYTES = 4n * 1024n * 1024n;
     const GRID_THUMBNAIL_HYDRATION_CONCURRENCY = 2;
+    const EXPLORER_FILTER_INDEX_CHUNK_SIZE = 48;
     const CONNECTED_LEDGER_MODE_STORAGE_PREFIX = 'xtrata.simple-homepage.connected-ledger-mode';
 
     const sleep = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -3288,6 +3504,61 @@
 
     const tokenExplorerUrl = (contract, id) =>
       `${contractExplorerUrl(contract)}&token_id=${id.toString()}`;
+
+    const parsePositiveBigInt = (value) => {
+      const normalized = String(value ?? '').trim();
+      if (!/^\d+$/.test(normalized)) {
+        return null;
+      }
+      const parsed = BigInt(normalized);
+      return parsed > 0n ? parsed : null;
+    };
+
+    const findContractById = (value) => {
+      const target = String(value ?? '').trim();
+      if (!target) {
+        return null;
+      }
+      const targetLower = target.toLowerCase();
+      return (
+        ACTIVE_CONTRACTS.find((entry) => getContractId(entry).toLowerCase() === targetLower) ??
+        CONTRACT_REGISTRY.find((entry) => getContractId(entry).toLowerCase() === targetLower) ??
+        ACTIVE_CONTRACTS.find((entry) => entry.contractName?.toLowerCase() === targetLower) ??
+        CONTRACT_REGISTRY.find((entry) => entry.contractName?.toLowerCase() === targetLower) ??
+        null
+      );
+    };
+
+    const getExplorerRequest = () => {
+      const params = new URLSearchParams(window.location.search);
+      const view = params.get('view')?.trim().toLowerCase() ?? '';
+      const enabled =
+        view === 'explorer' ||
+        params.has('explorer') ||
+        params.has('token') ||
+        params.has('inscription');
+      if (!enabled) {
+        return { enabled: false, contract: null, tokenId: null };
+      }
+      const contract = findContractById(params.get('contract')) ?? DEFAULT_CONTRACT;
+      const tokenId =
+        parsePositiveBigInt(params.get('token')) ??
+        parsePositiveBigInt(params.get('inscription')) ??
+        parsePositiveBigInt(params.get('explorer'));
+      return { enabled: true, contract, tokenId };
+    };
+
+    const xtrataExplorerUrl = (contract, id = null) => {
+      const url = new URL(window.location.href);
+      url.hash = '';
+      url.search = '';
+      url.searchParams.set('view', 'explorer');
+      url.searchParams.set('contract', getContractId(contract));
+      if (id !== null) {
+        url.searchParams.set('token', id.toString());
+      }
+      return url.toString();
+    };
 
     const appendLog = (message) => {
       const item = document.createElement('li');
@@ -3903,6 +4174,33 @@
       ['text/yaml', 'YAML']
     ]);
 
+    const EXPLORER_CODE_MIME_TYPES = new Set([
+      'application/ecmascript',
+      'application/javascript',
+      'application/json',
+      'application/typescript',
+      'application/xml',
+      'application/yaml',
+      'text/css',
+      'text/ecmascript',
+      'text/javascript',
+      'text/json',
+      'text/typescript',
+      'text/xml',
+      'text/yaml'
+    ]);
+
+    const EXPLORER_FILTER_LABELS = Object.freeze({
+      image: 'Images',
+      html: 'HTML',
+      video: 'Video',
+      audio: 'Audio',
+      text: 'Text',
+      code: 'Code',
+      document: 'Docs',
+      other: 'Other'
+    });
+
     const getGridMimeLabel = (mimeType) => {
       const normalized = mimeType?.trim().toLowerCase() ?? '';
       if (GRID_MIME_LABELS.has(normalized)) {
@@ -3915,6 +4213,49 @@
         return 'XML';
       }
       return getMediaKind(normalized || null).toUpperCase();
+    };
+
+    const getExplorerTokenFilterKind = (token) => {
+      if (token.svgDataUri) {
+        return 'image';
+      }
+      const essence = getMimeTypeEssence(token.meta?.mimeType ?? null) ?? '';
+      if (
+        EXPLORER_CODE_MIME_TYPES.has(essence) ||
+        essence.endsWith('+json') ||
+        essence.endsWith('+xml') ||
+        essence.endsWith('+yaml')
+      ) {
+        return 'code';
+      }
+      if (essence === 'application/pdf') {
+        return 'document';
+      }
+      const kind = getMediaKind(essence || token.meta?.mimeType || null);
+      if (kind === 'svg') {
+        return 'image';
+      }
+      if (
+        kind === 'image' ||
+        kind === 'html' ||
+        kind === 'video' ||
+        kind === 'audio' ||
+        kind === 'text'
+      ) {
+        return kind;
+      }
+      return 'other';
+    };
+
+    const hasActiveExplorerFilters = () => state.explorerFilterKinds.size > 0;
+
+    const getExplorerFilterLabel = () => {
+      if (!hasActiveExplorerFilters()) {
+        return 'All types';
+      }
+      return [...state.explorerFilterKinds]
+        .map((kind) => EXPLORER_FILTER_LABELS[kind] ?? kind)
+        .join(' + ');
     };
 
     const setTokenThumbLabel = (thumb, label) => {
@@ -4131,6 +4472,7 @@
       state.selectedTokenId = null;
       revokeTokenPreview();
       dom.explorerLink.hidden = true;
+      dom.xtrataExplorerLink.hidden = true;
       clearElement(dom.tokenPreviewMedia, 'No selection');
       renderNoSelectedInscriptionMeta();
       void updateWalletTokenUriHeadPreview(null);
@@ -4265,7 +4607,8 @@
     };
 
     const isMatureMobileWalletView = () =>
-      document.body.classList.contains('has-ledger') &&
+      (document.body.classList.contains('has-ledger') ||
+        document.body.classList.contains('explorer-mode')) &&
       window.matchMedia('(max-width: 1366px), (pointer: coarse)').matches;
 
     const scrollToWalletGrid = () => {
@@ -4293,7 +4636,11 @@
       const hasPublicLedger = (!connected && !!viewingAddress && count > 0) || hasCuratedGallery;
       document.body.classList.toggle('has-ledger', hasLedger);
       document.body.classList.toggle('has-public-ledger', hasPublicLedger);
-      document.body.classList.toggle('intro-mode', !hasLedger);
+      document.body.classList.toggle('explorer-mode', state.explorerMode);
+      document.body.classList.toggle('intro-mode', !hasLedger && !state.explorerMode);
+      if (dom.walletTitle) {
+        dom.walletTitle.textContent = state.explorerMode ? 'Xtrata Explorer' : 'Wallet Inscriptions';
+      }
       if (dom.introNetworkValue) {
         dom.introNetworkValue.textContent = `Stacks ${state.contract.network}`;
       }
@@ -4341,11 +4688,13 @@
         : state.walletTokenIds.length;
       const hasConnectedInscriptionView =
         connected && document.body.classList.contains('has-ledger') && visibleWalletCount > 0;
-      dom.connectButton.hidden = connected;
-      dom.disconnectButton.hidden = !connected;
-      dom.viewInscriptionsButton.hidden = !hasConnectedInscriptionView;
+      const hasGridBackTarget =
+        (hasConnectedInscriptionView || state.explorerMode) && state.selectedTokenId !== null;
+      dom.connectButton.hidden = connected || state.explorerMode;
+      dom.disconnectButton.hidden = !connected || state.explorerMode;
+      dom.viewInscriptionsButton.hidden = !hasConnectedInscriptionView || state.explorerMode;
       dom.viewInscriptionsButton.disabled = state.busy;
-      dom.backToGridButton.hidden = !hasConnectedInscriptionView;
+      dom.backToGridButton.hidden = !hasGridBackTarget;
       dom.inscribeButton.disabled =
         state.busy ||
         !connected ||
@@ -4357,17 +4706,29 @@
         : shouldUseSmallMintHelper()
           ? 'Start single-tx inscription'
           : 'Start inscription';
-      dom.refreshWalletButton.disabled = state.busy || !viewingAddress;
+      dom.refreshWalletButton.disabled = state.busy || state.walletLoadingPage || (!viewingAddress && !state.explorerMode);
       dom.walletLookupButton.textContent = shouldClearWalletLookupOnSubmit()
         ? 'Clear'
         : state.walletLookupPending
           ? 'Resolving'
           : 'View';
       dom.walletLookupButton.disabled = state.busy || state.walletLookupPending;
+      if (dom.explorerJumpButton) {
+        const explorerControlsDisabled =
+          !state.explorerMode ||
+          state.busy ||
+          state.walletLoadingPage ||
+          state.explorerFilterIndexLoading;
+        dom.explorerJumpButton.disabled = explorerControlsDisabled;
+        dom.explorerLatestButton.disabled = explorerControlsDisabled;
+        dom.explorerPageInput.disabled = explorerControlsDisabled;
+        dom.explorerTokenInput.disabled = explorerControlsDisabled;
+      }
       updateWalletLookupInputMode();
       updateWalletLookupStatus();
       updateTransferControls();
       updateWalletPagerControls();
+      syncExplorerFilterControls();
       updateFullscreenControls();
     };
 
@@ -4405,8 +4766,26 @@
       if (!dom.walletPrevButton || !dom.walletNextButton || !dom.walletPageReadout) {
         return;
       }
+      if (
+        state.explorerMode &&
+        hasActiveExplorerFilters() &&
+        !state.explorerFilterIndexComplete
+      ) {
+        if (dom.explorerPageInput) {
+          dom.explorerPageInput.max = '';
+          dom.explorerPageInput.value = '';
+        }
+        dom.walletPageReadout.textContent = 'Latest matches';
+        dom.walletPrevButton.disabled = true;
+        dom.walletNextButton.disabled = true;
+        return;
+      }
       const pageCount = getWalletPageCount();
       const hasPages = pageCount > 0;
+      if (state.explorerMode && dom.explorerPageInput) {
+        dom.explorerPageInput.max = hasPages ? String(pageCount) : '';
+        dom.explorerPageInput.value = hasPages ? String(state.walletPageIndex + 1) : '';
+      }
       dom.walletPageReadout.textContent = hasPages
         ? `Page ${state.walletPageIndex + 1} / ${pageCount}`
         : 'Page 0 / 0';
@@ -4417,6 +4796,24 @@
         state.walletLoadingPage ||
         !hasPages ||
         state.walletPageIndex >= pageCount - 1;
+    };
+
+    const syncExplorerFilterControls = () => {
+      const disabled =
+        !state.explorerMode ||
+        state.busy ||
+        state.walletLoadingPage ||
+        state.explorerFilterIndexLoading;
+      dom.explorerFilterInputs.forEach((input) => {
+        const kind = input.dataset.explorerFilter ?? '';
+        input.checked = state.explorerFilterKinds.has(kind);
+        input.disabled = disabled;
+        input.closest('.explorer-filter-chip')?.classList.toggle('is-active', input.checked);
+      });
+      if (dom.explorerClearFiltersButton) {
+        dom.explorerClearFiltersButton.disabled =
+          disabled || state.explorerFilterKinds.size === 0;
+      }
     };
 
     const applyContract = (contract) => {
@@ -4442,6 +4839,15 @@
       state.walletTokens = [];
       state.walletPageIndex = 0;
       state.selectedTokenId = null;
+      state.explorerLatestTokenId = null;
+      state.explorerFilteredTokenIds = [];
+      state.explorerIndexedSummaryIds = new Set();
+      state.explorerFilterIndexContractId = null;
+      state.explorerFilterIndexLoading = false;
+      state.explorerFilterIndexComplete = false;
+      state.explorerFilterBackgroundLoading = false;
+      state.explorerFollowLatestFiltered = false;
+      state.explorerFilterIndexRunId += 1;
       void closeFullscreenViewer();
       void updateWalletTokenUriHeadPreview(null);
       resetBackgroundThumbnailHydration();
@@ -4457,6 +4863,16 @@
       const mismatch = getMismatch();
       const viewingAddress = getViewingWalletAddress();
       const viewingLabel = getViewingWalletLabel();
+      if (state.explorerMode) {
+        setStatus(
+          dom.walletStatus,
+          `<strong>Explorer</strong> ${getContractId(state.contract)}`,
+          'ready',
+          'blue'
+        );
+        dom.walletSubtitle.textContent = `Browse ${state.contract.label} inscriptions.`;
+        return;
+      }
       if (state.curatedGalleryTitle) {
         dom.walletSubtitle.textContent = `Viewing ${state.curatedGalleryTitle}.`;
       }
@@ -5283,6 +5699,18 @@
         typeof targetTokenId === 'bigint'
           ? targetTokenId
           : BigInt(targetTokenId);
+      if (state.explorerMode) {
+        if (!state.explorerLatestTokenId) {
+          await refreshExplorerLatestTokenId();
+        }
+        const pageIndex = getExplorerTokenPageIndex(targetId);
+        if (pageIndex === null) {
+          return false;
+        }
+        state.walletPageIndex = pageIndex;
+        await loadExplorerPage({ selectTokenId: targetId, scrollToPreview: true });
+        return state.selectedTokenId === targetId;
+      }
       const currentPageContainsTarget = getWalletPageIds().includes(targetId);
       if (currentPageContainsTarget) {
         await selectToken(targetId);
@@ -5901,6 +6329,7 @@
       updateTransferControls();
       revokeTokenPreview();
       dom.explorerLink.hidden = true;
+      dom.xtrataExplorerLink.hidden = true;
 
       if (!token) {
         clearElement(dom.tokenPreviewMedia, 'No selection');
@@ -5921,6 +6350,14 @@
       const tokenContract = getTokenClient(token).contract;
       dom.explorerLink.href = tokenExplorerUrl(tokenContract, token.id);
       dom.explorerLink.hidden = false;
+      dom.xtrataExplorerLink.href = xtrataExplorerUrl(tokenContract, token.id);
+      dom.xtrataExplorerLink.hidden = false;
+      if (state.explorerMode) {
+        window.history.replaceState(null, '', xtrataExplorerUrl(tokenContract, token.id));
+        if (dom.explorerTokenInput) {
+          dom.explorerTokenInput.value = token.id.toString();
+        }
+      }
 
       try {
         if (!token.meta || token.meta.totalSize <= 0n) {
@@ -6392,7 +6829,404 @@ const openCuratedGallery = async (galleryId) => {
       return summaries.filter((token) => !!token && (token.meta || token.owner || token.svgDataUri));
     };
 
+    const refreshExplorerLatestTokenId = async () => {
+      const latest = await state.client.getLastTokenId(getReadOnlySenderAddress());
+      state.explorerLatestTokenId = latest;
+      state.walletUsesPagedHoldings = true;
+      state.walletTotalCount =
+        latest > BigInt(Number.MAX_SAFE_INTEGER)
+          ? Number.MAX_SAFE_INTEGER
+          : Number(latest);
+      return latest;
+    };
+
+    const getExplorerAllTokenIds = () => {
+      const latest = state.explorerLatestTokenId;
+      if (!latest || latest <= 0n) {
+        return [];
+      }
+      const ids = [];
+      for (let id = 1n; id <= latest; id += 1n) {
+        ids.push(id);
+      }
+      return ids;
+    };
+
+    const resetExplorerFilterIndexForContract = () => {
+      const contractId = getContractId(state.contract);
+      if (state.explorerFilterIndexContractId === contractId) {
+        return;
+      }
+      state.explorerFilterIndexContractId = contractId;
+      state.explorerFilteredTokenIds = [];
+      state.explorerIndexedSummaryIds = new Set();
+      state.explorerFilterIndexComplete = false;
+      state.explorerFilterBackgroundLoading = false;
+    };
+
+    const getExplorerFilteredIdsFromCache = () => {
+      const selectedKinds = state.explorerFilterKinds;
+      return getExplorerAllTokenIds().filter((id) => {
+        const token = state.walletTokenCache.get(id.toString()) ?? null;
+        return !!token && selectedKinds.has(getExplorerTokenFilterKind(token));
+      });
+    };
+
+    const applyExplorerFilteredIdsFromCache = () => {
+      state.explorerFilteredTokenIds = getExplorerFilteredIdsFromCache();
+      state.walletTotalCount = state.explorerFilteredTokenIds.length;
+    };
+
+    const completeExplorerFilterIndexInBackground = (runId) => {
+      if (
+        state.explorerFilterBackgroundLoading ||
+        state.explorerFilterIndexComplete ||
+        !hasActiveExplorerFilters()
+      ) {
+        return;
+      }
+      state.explorerFilterBackgroundLoading = true;
+      void (async () => {
+        const allIds = getExplorerAllTokenIds();
+        const missingIds = allIds.filter(
+          (id) => !state.explorerIndexedSummaryIds.has(id.toString())
+        );
+        for (let index = 0; index < missingIds.length; index += EXPLORER_FILTER_INDEX_CHUNK_SIZE) {
+          if (runId !== state.explorerFilterIndexRunId) {
+            return;
+          }
+          const chunk = missingIds.slice(index, index + EXPLORER_FILTER_INDEX_CHUNK_SIZE);
+          const summaries = await fetchWalletTokenSummaries(chunk);
+          if (runId !== state.explorerFilterIndexRunId) {
+            return;
+          }
+          chunk.forEach((id) => {
+            state.explorerIndexedSummaryIds.add(id.toString());
+          });
+          for (const token of summaries) {
+            state.walletTokenCache.set(token.id.toString(), token);
+          }
+          await sleep(0);
+        }
+        if (runId !== state.explorerFilterIndexRunId) {
+          return;
+        }
+        state.explorerFilterIndexComplete = true;
+        applyExplorerFilteredIdsFromCache();
+        if (state.explorerFollowLatestFiltered) {
+          state.walletPageIndex = getExplorerLatestPageIndex();
+          await loadExplorerPage({ selectLatestOnPage: true, skipFilterIndex: true });
+        } else {
+          clampWalletPageIndex();
+          state.walletPageIds = getExplorerPageIds();
+          renderTokenGrid();
+          updateWalletPagerControls();
+          updateExplorerStatus();
+        }
+      })().finally(() => {
+        if (runId === state.explorerFilterIndexRunId) {
+          state.explorerFilterBackgroundLoading = false;
+          updateControls();
+          updateExplorerStatus();
+        }
+      });
+    };
+
+    const ensureExplorerFilterIndex = async (options = {}) => {
+      if (!hasActiveExplorerFilters()) {
+        state.explorerFilteredTokenIds = [];
+        state.explorerFilterIndexComplete = false;
+        return true;
+      }
+      if (!state.explorerLatestTokenId) {
+        await refreshExplorerLatestTokenId();
+      }
+      resetExplorerFilterIndexForContract();
+      const runId = ++state.explorerFilterIndexRunId;
+      const allIds = getExplorerAllTokenIds();
+      const missingIds = allIds.filter(
+        (id) => !state.explorerIndexedSummaryIds.has(id.toString())
+      );
+      if (missingIds.length === 0) {
+        state.explorerFilterIndexComplete = true;
+        applyExplorerFilteredIdsFromCache();
+        return true;
+      }
+      state.explorerFilterIndexLoading = true;
+      updateControls();
+      if (missingIds.length > 0) {
+        dom.walletCountBadge.textContent = 'filtering';
+        renderTokenGridPlaceholders('...');
+      }
+      const scanIds = options.preferLatest ? [...missingIds].reverse() : missingIds;
+
+      try {
+        for (let index = 0; index < scanIds.length; index += EXPLORER_FILTER_INDEX_CHUNK_SIZE) {
+          if (runId !== state.explorerFilterIndexRunId) {
+            return false;
+          }
+          const chunk = scanIds.slice(index, index + EXPLORER_FILTER_INDEX_CHUNK_SIZE);
+          setStatus(
+            dom.walletGridStatus,
+            `<strong>Grid</strong> indexing ${index + 1}-${Math.min(index + chunk.length, scanIds.length)} of ${scanIds.length} unchecked inscriptions`,
+            'filter',
+            'blue'
+          );
+          const summaries = await fetchWalletTokenSummaries(chunk);
+          if (runId !== state.explorerFilterIndexRunId) {
+            return false;
+          }
+          chunk.forEach((id) => {
+            state.explorerIndexedSummaryIds.add(id.toString());
+          });
+          for (const token of summaries) {
+            state.walletTokenCache.set(token.id.toString(), token);
+          }
+          applyExplorerFilteredIdsFromCache();
+          if (
+            options.allowPartial &&
+            state.explorerFilteredTokenIds.length >= (options.minMatches ?? WALLET_PAGE_SIZE)
+          ) {
+            state.explorerFilterIndexComplete = false;
+            state.walletTotalCount = state.explorerFilteredTokenIds.length;
+            completeExplorerFilterIndexInBackground(runId);
+            return true;
+          }
+          await sleep(0);
+        }
+
+        state.explorerFilterIndexComplete = true;
+        applyExplorerFilteredIdsFromCache();
+        return true;
+      } finally {
+        if (runId === state.explorerFilterIndexRunId) {
+          state.explorerFilterIndexLoading = false;
+          updateControls();
+        }
+      }
+    };
+
+    const getExplorerPageIds = () => {
+      if (hasActiveExplorerFilters()) {
+        if (!state.explorerFilterIndexComplete) {
+          return state.explorerFilteredTokenIds.slice(-WALLET_PAGE_SIZE);
+        }
+        clampWalletPageIndex();
+        const start = state.walletPageIndex * WALLET_PAGE_SIZE;
+        return state.explorerFilteredTokenIds.slice(start, start + WALLET_PAGE_SIZE);
+      }
+      const latest = state.explorerLatestTokenId;
+      if (!latest || latest <= 0n) {
+        return [];
+      }
+      clampWalletPageIndex();
+      const start = BigInt(state.walletPageIndex * WALLET_PAGE_SIZE) + 1n;
+      if (start > latest) {
+        return [];
+      }
+      const end = start + BigInt(WALLET_PAGE_SIZE - 1) > latest
+        ? latest
+        : start + BigInt(WALLET_PAGE_SIZE - 1);
+      const ids = [];
+      for (let id = start; id <= end; id += 1n) {
+        ids.push(id);
+      }
+      return ids;
+    };
+
+    const getExplorerTokenPageIndex = (tokenId) => {
+      if (hasActiveExplorerFilters()) {
+        const filteredIndex = state.explorerFilteredTokenIds.findIndex((id) => id === tokenId);
+        return filteredIndex >= 0 ? Math.floor(filteredIndex / WALLET_PAGE_SIZE) : null;
+      }
+      const latest = state.explorerLatestTokenId;
+      if (!latest || tokenId <= 0n || tokenId > latest) {
+        return null;
+      }
+      const index = (tokenId - 1n) / BigInt(WALLET_PAGE_SIZE);
+      return index > BigInt(Number.MAX_SAFE_INTEGER)
+        ? null
+        : Number(index);
+    };
+
+    const getExplorerLatestPageIndex = () => {
+      if (hasActiveExplorerFilters() && !state.explorerFilterIndexComplete) {
+        return 0;
+      }
+      const pageCount = getWalletPageCount();
+      return pageCount > 0 ? pageCount - 1 : 0;
+    };
+
+    const updateExplorerStatus = () => {
+      if (!state.explorerMode || !dom.xtrataExplorerStatus) {
+        return;
+      }
+      const latest = state.explorerLatestTokenId;
+      const pageCount = getWalletPageCount();
+      const filterLabel = getExplorerFilterLabel();
+      if (!latest || latest <= 0n) {
+        dom.xtrataExplorerStatus.textContent =
+          'No inscriptions have been found for this contract yet.';
+        return;
+      }
+      if (hasActiveExplorerFilters()) {
+        if (!state.explorerFilterIndexComplete) {
+          dom.xtrataExplorerStatus.textContent =
+            `${filterLabel}: showing ${state.walletTotalCount} newest match${state.walletTotalCount === 1 ? '' : 'es'} while the full filter index completes.`;
+          return;
+        }
+        dom.xtrataExplorerStatus.textContent =
+          `${filterLabel}: ${state.walletTotalCount} matching inscription${state.walletTotalCount === 1 ? '' : 's'}. Latest #${latest.toString()}. Page ${pageCount === 0 ? 0 : state.walletPageIndex + 1} of ${pageCount}.`;
+        return;
+      }
+      dom.xtrataExplorerStatus.textContent =
+        `Latest inscription #${latest.toString()}. Page ${state.walletPageIndex + 1} of ${pageCount}.`;
+    };
+
+    const loadExplorerPage = async (options = {}) => {
+      state.explorerMode = true;
+      state.walletViewAddress = null;
+      state.walletViewName = null;
+      state.curatedGalleryId = null;
+      state.curatedGalleryTitle = null;
+      state.walletUsesPagedHoldings = true;
+      state.walletTokenIds = [];
+
+      if (!state.explorerLatestTokenId || options.refreshLatest) {
+        setStatus(dom.walletGridStatus, '<strong>Grid</strong> loading latest inscriptions', 'loading', 'blue');
+        renderTokenGridPlaceholders('...');
+        await refreshExplorerLatestTokenId();
+      }
+
+      if (hasActiveExplorerFilters()) {
+        if (!options.skipFilterIndex) {
+          state.explorerFollowLatestFiltered = !!options.selectLatestOnPage;
+          const indexed = await ensureExplorerFilterIndex({
+            preferLatest: !!options.selectLatestOnPage,
+            allowPartial: !!options.selectLatestOnPage,
+            minMatches: WALLET_PAGE_SIZE
+          });
+          if (!indexed) {
+            return;
+          }
+        } else {
+          state.explorerFollowLatestFiltered = !!options.selectLatestOnPage;
+        }
+      } else {
+        state.explorerFilteredTokenIds = [];
+        state.walletTotalCount =
+          state.explorerLatestTokenId > BigInt(Number.MAX_SAFE_INTEGER)
+            ? Number.MAX_SAFE_INTEGER
+            : Number(state.explorerLatestTokenId ?? 0n);
+      }
+
+      if (hasActiveExplorerFilters() && options.selectLatestOnPage) {
+        state.walletPageIndex = getExplorerLatestPageIndex();
+      }
+
+      clampWalletPageIndex();
+      state.walletPageIds = getExplorerPageIds();
+      state.walletLoadingPage = true;
+      resetBackgroundThumbnailHydration();
+      updateControls();
+      updateWalletPagerControls();
+      updateFullscreenControls();
+      updateExplorerStatus();
+
+      if (state.walletPageIds.length === 0) {
+        state.walletTokens = [];
+        state.selectedTokenId = null;
+        void closeFullscreenViewer();
+        void updateWalletTokenUriHeadPreview(null);
+        clearElement(dom.tokenPreviewMedia, 'No selection');
+        renderNoSelectedInscriptionMeta();
+        setStatus(
+          dom.walletGridStatus,
+          hasActiveExplorerFilters()
+            ? '<strong>Grid</strong> no matches for selected filters'
+            : '<strong>Grid</strong> no inscriptions found',
+          'empty',
+          'amber'
+        );
+        renderTokenGrid();
+        state.walletLoadingPage = false;
+        updateControls();
+        updateWalletPagerControls();
+        updateFullscreenControls();
+        updateExplorerStatus();
+        return;
+      }
+
+      setStatus(
+        dom.walletGridStatus,
+        hasActiveExplorerFilters()
+          ? state.explorerFilterIndexComplete
+            ? `<strong>Grid</strong> ${state.walletTotalCount} ${getExplorerFilterLabel().toLowerCase()} match${state.walletTotalCount === 1 ? '' : 'es'}`
+            : `<strong>Grid</strong> showing newest ${getExplorerFilterLabel().toLowerCase()} matches`
+          : `<strong>Grid</strong> ${state.walletTotalCount} inscription${state.walletTotalCount === 1 ? '' : 's'} available`,
+        'ready',
+        'blue'
+      );
+
+      const pageIds = getWalletPageIds();
+      const missingIds = pageIds.filter((id) => !state.walletTokenCache.has(id.toString()));
+      renderTokenGrid();
+
+      try {
+        if (missingIds.length > 0 || options.force) {
+          const idsToFetch = options.force ? pageIds : missingIds;
+          const summaries = await fetchWalletTokenSummaries(idsToFetch);
+          for (const token of summaries) {
+            state.walletTokenCache.set(token.id.toString(), token);
+          }
+        }
+
+        state.walletTokens = pageIds
+          .map((id) => state.walletTokenCache.get(id.toString()) ?? null)
+          .filter((token) => !!token);
+
+        if (!options.deferSelection) {
+          const requestedId = options.selectTokenId ?? null;
+          const currentId =
+            state.selectedTokenId !== null &&
+            pageIds.some((id) => id === state.selectedTokenId) &&
+            state.walletTokenCache.has(state.selectedTokenId.toString())
+              ? state.selectedTokenId
+              : null;
+          const selectedId =
+            requestedId !== null &&
+            pageIds.some((id) => id === requestedId) &&
+            state.walletTokenCache.has(requestedId.toString())
+              ? requestedId
+              : currentId ??
+                (options.selectLatestOnPage
+                  ? state.walletTokens[state.walletTokens.length - 1]?.id
+                  : state.walletTokens[0]?.id) ??
+                null;
+
+          if (selectedId !== null) {
+            await selectToken(selectedId, { scrollToPreview: !!options.scrollToPreview });
+          } else {
+            clearSelectedTokenPreview();
+            renderTokenGrid();
+          }
+        } else {
+          renderTokenGrid();
+        }
+      } finally {
+        state.walletLoadingPage = false;
+        updateControls();
+        updateWalletPagerControls();
+        updateFullscreenControls();
+        updateExplorerStatus();
+      }
+    };
+
     const loadWalletPage = async (options = {}) => {
+      if (state.explorerMode) {
+        await loadExplorerPage(options);
+        return;
+      }
       const viewingAddress = getViewingWalletAddress();
       if (!viewingAddress) {
         return;
@@ -6470,6 +7304,10 @@ const openCuratedGallery = async (galleryId) => {
     };
 
     const loadWalletInscriptions = async () => {
+      if (state.explorerMode) {
+        await loadExplorerPage({ refreshLatest: true, force: true });
+        return;
+      }
       const viewingAddress = getViewingWalletAddress();
       if (!viewingAddress) {
         state.walletTokenIds = [];
@@ -6690,6 +7528,179 @@ const openCuratedGallery = async (galleryId) => {
       }
     };
 
+    const setExplorerModeFromRequest = () => {
+      const request = getExplorerRequest();
+      if (!request.enabled) {
+        return;
+      }
+      state.explorerMode = true;
+      state.explorerInitialTokenId = request.tokenId;
+      state.contract = request.contract ?? DEFAULT_CONTRACT;
+    };
+
+    const loadExplorerMode = async () => {
+      state.explorerMode = true;
+      state.walletLookupNotice = null;
+      state.walletViewAddress = null;
+      state.walletViewName = null;
+      state.curatedGalleryId = null;
+      state.curatedGalleryTitle = null;
+      clearExampleDescription();
+      clearSelectedTokenPreview();
+      updateWalletStatus();
+      setStatus(dom.walletGridStatus, '<strong>Grid</strong> loading latest inscriptions', 'loading', 'blue');
+      renderTokenGridPlaceholders('...');
+
+      try {
+        await refreshExplorerLatestTokenId();
+        const requestedTokenId = state.explorerInitialTokenId;
+        let initialSelectTokenId = null;
+        if (requestedTokenId !== null) {
+          const pageIndex = getExplorerTokenPageIndex(requestedTokenId);
+          if (pageIndex !== null) {
+            state.walletPageIndex = pageIndex;
+            initialSelectTokenId = requestedTokenId;
+          } else {
+            state.walletPageIndex = getExplorerLatestPageIndex();
+            appendLog(
+              `Inscription #${requestedTokenId.toString()} is outside this contract range. Showing latest inscriptions.`
+            );
+          }
+        } else {
+          state.walletPageIndex = getExplorerLatestPageIndex();
+        }
+        await loadExplorerPage({
+          selectTokenId: initialSelectTokenId,
+          scrollToPreview: initialSelectTokenId !== null,
+          selectLatestOnPage: initialSelectTokenId === null
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        state.walletPageIds = [];
+        state.walletTokens = [];
+        setStatus(dom.walletGridStatus, `<strong>Grid</strong> ${message}`, 'error', 'rose');
+        renderTokenGridPlaceholders();
+        appendLog(`Explorer load failed: ${message}`);
+      } finally {
+        updateControls();
+      }
+    };
+
+    const jumpToExplorerPage = async () => {
+      if (!state.explorerMode || state.walletLoadingPage) {
+        return;
+      }
+      if (hasActiveExplorerFilters()) {
+        const indexed = await ensureExplorerFilterIndex();
+        if (!indexed) {
+          return;
+        }
+      }
+      const pageCount = getWalletPageCount();
+      const requestedPage = Number.parseInt(dom.explorerPageInput.value, 10);
+      if (!Number.isSafeInteger(requestedPage) || requestedPage < 1 || requestedPage > pageCount) {
+        setStatus(
+          dom.walletGridStatus,
+          `<strong>Grid</strong> enter a page from 1 to ${pageCount || 1}`,
+          'wait',
+          'amber'
+        );
+        return;
+      }
+      state.walletPageIndex = requestedPage - 1;
+      dom.explorerTokenInput.value = '';
+      await loadExplorerPage();
+      scrollToWalletGrid();
+    };
+
+    const jumpToExplorerToken = async () => {
+      if (!state.explorerMode || state.walletLoadingPage) {
+        return;
+      }
+      if (!state.explorerLatestTokenId) {
+        await refreshExplorerLatestTokenId();
+      }
+      if (hasActiveExplorerFilters()) {
+        const indexed = await ensureExplorerFilterIndex();
+        if (!indexed) {
+          return;
+        }
+      }
+      const tokenId = parsePositiveBigInt(dom.explorerTokenInput.value);
+      if (tokenId === null) {
+        await jumpToExplorerPage();
+        return;
+      }
+      const pageIndex = getExplorerTokenPageIndex(tokenId);
+      if (pageIndex === null) {
+        setStatus(
+          dom.walletGridStatus,
+          hasActiveExplorerFilters()
+            ? `<strong>Grid</strong> that inscription is not in the selected filters`
+            : `<strong>Grid</strong> enter an inscription from 1 to ${state.explorerLatestTokenId?.toString() ?? '1'}`,
+          'wait',
+          'amber'
+        );
+        return;
+      }
+      state.walletPageIndex = pageIndex;
+      await loadExplorerPage({ selectTokenId: tokenId, scrollToPreview: true });
+    };
+
+    const handleExplorerJump = async () => {
+      if (!state.explorerMode) {
+        return;
+      }
+      if (dom.explorerTokenInput.value.trim()) {
+        await jumpToExplorerToken();
+        return;
+      }
+      await jumpToExplorerPage();
+    };
+
+    const showLatestExplorerPage = async () => {
+      if (!state.explorerMode || state.walletLoadingPage) {
+        return;
+      }
+      await refreshExplorerLatestTokenId();
+      state.walletPageIndex = getExplorerLatestPageIndex();
+      dom.explorerTokenInput.value = '';
+      await loadExplorerPage({ force: true, selectLatestOnPage: true });
+      scrollToWalletGrid();
+    };
+
+    const readExplorerFilterControls = () =>
+      new Set(
+        dom.explorerFilterInputs
+          .filter((input) => input.checked)
+          .map((input) => input.dataset.explorerFilter)
+          .filter(Boolean)
+      );
+
+    const applyExplorerFilterControls = async () => {
+      if (!state.explorerMode) {
+        return;
+      }
+      state.explorerFilterKinds = readExplorerFilterControls();
+      state.explorerFilterIndexRunId += 1;
+      state.explorerFilteredTokenIds = [];
+      state.explorerFilterIndexComplete = false;
+      state.explorerFilterBackgroundLoading = false;
+      state.explorerFollowLatestFiltered = true;
+      state.walletPageIndex = 0;
+      state.selectedTokenId = null;
+      clearSelectedTokenPreview();
+      syncExplorerFilterControls();
+      await showLatestExplorerPage();
+    };
+
+    const clearExplorerFilters = async () => {
+      dom.explorerFilterInputs.forEach((input) => {
+        input.checked = false;
+      });
+      await applyExplorerFilterControls();
+    };
+
     const setSelectedFile = (file) => {
       state.selectedFile = file;
       state.prepared = null;
@@ -6727,6 +7738,7 @@ const openCuratedGallery = async (galleryId) => {
 
     const initialize = async () => {
       applyTheme(loadTheme());
+      setExplorerModeFromRequest();
       dom.tokenUriInput.value = DEFAULT_TOKEN_URI;
       void updateTokenUriHeadPreview();
       dom.walletLookupInput.value = '';
@@ -6735,8 +7747,12 @@ const openCuratedGallery = async (galleryId) => {
       resetSteps();
       renderTokenGridPlaceholders();
       updateWalletStatus();
-      await fetchAdminStatus();
-      await loadWalletInscriptions();
+      if (state.explorerMode) {
+        await loadExplorerMode();
+      } else {
+        await fetchAdminStatus();
+        await loadWalletInscriptions();
+      }
       updateControls();
     };
 
@@ -6750,6 +7766,33 @@ const openCuratedGallery = async (galleryId) => {
     dom.viewInscriptionsButton.addEventListener('click', scrollToWalletGrid);
     dom.backToGridButton.addEventListener('click', scrollToWalletGrid);
     dom.refreshWalletButton.addEventListener('click', loadWalletInscriptions);
+    dom.explorerJumpButton?.addEventListener('click', () => {
+      void handleExplorerJump();
+    });
+    dom.explorerLatestButton?.addEventListener('click', () => {
+      void showLatestExplorerPage();
+    });
+    dom.explorerPageInput?.addEventListener('input', () => {
+      if (document.activeElement === dom.explorerPageInput && dom.explorerTokenInput) {
+        dom.explorerTokenInput.value = '';
+      }
+    });
+    dom.explorerFilterInputs.forEach((input) => {
+      input.addEventListener('change', () => {
+        void applyExplorerFilterControls();
+      });
+    });
+    dom.explorerClearFiltersButton?.addEventListener('click', () => {
+      void clearExplorerFilters();
+    });
+    [dom.explorerPageInput, dom.explorerTokenInput].forEach((input) => {
+      input?.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          void handleExplorerJump();
+        }
+      });
+    });
     dom.walletLookupForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       await viewWalletFromInput();
