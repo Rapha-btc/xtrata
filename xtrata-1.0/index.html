@@ -439,6 +439,11 @@
       flex-wrap: wrap;
     }
 
+    #walletGridStatus,
+    #tokenPreviewPanel {
+      scroll-margin-top: 18px;
+    }
+
     .select,
     .input,
     .textarea {
@@ -2065,6 +2070,12 @@
         width: 100%;
       }
 
+      body.has-ledger .top-actions {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
       .token-grid {
         gap: 7px;
       }
@@ -2426,6 +2437,7 @@
       <div class="top-actions">
         <button class="btn" id="connectButton" type="button">Connect wallet</button>
         <button class="btn secondary" id="disconnectButton" type="button" hidden>Disconnect</button>
+        <button class="btn" id="viewInscriptionsButton" type="button" hidden>View inscriptions</button>
       </div>
     </header>
 
@@ -2679,8 +2691,8 @@
                 </div>
               </div>
               <div class="preview-actions">
-                <button class="small-link" id="fullscreenButton" type="button" disabled>View large</button>
-                <a class="small-link" id="explorerLink" href="#" target="_blank" rel="noreferrer" hidden>Explorer</a>
+                <a class="small-link" id="explorerLink" href="#" target="_blank" rel="noreferrer" hidden>Blockchain Explorer</a>
+                <button class="small-link" id="backToGridButton" type="button" hidden>Back to grid</button>
               </div>
               <div class="transfer-tools">
                 <label class="field">
@@ -2949,6 +2961,7 @@
       refreshWalletButton: $('refreshWalletButton'),
       connectButton: $('connectButton'),
       disconnectButton: $('disconnectButton'),
+      viewInscriptionsButton: $('viewInscriptionsButton'),
       networkBadge: $('networkBadge'),
       mintSubtitle: $('mintSubtitle'),
       walletStatus: $('walletStatus'),
@@ -2991,6 +3004,7 @@
       previewExpandButton: $('previewExpandButton'),
       fullscreenButton: $('fullscreenButton'),
       explorerLink: $('explorerLink'),
+      backToGridButton: $('backToGridButton'),
       transferRecipientInput: $('transferRecipientInput'),
       transferButton: $('transferButton'),
       transferStatus: $('transferStatus'),
@@ -4250,6 +4264,22 @@
       }
     };
 
+    const isMatureMobileWalletView = () =>
+      document.body.classList.contains('has-ledger') &&
+      window.matchMedia('(max-width: 1366px), (pointer: coarse)').matches;
+
+    const scrollToWalletGrid = () => {
+      const target = dom.walletGridStatus ?? dom.tokenGrid;
+      target?.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+    };
+
+    const scrollToSelectedPreview = () => {
+      dom.tokenPreviewPanel?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+        inline: 'nearest'
+      });
+    };
 
     const setExperienceMode = () => {
       const connected = state.walletSession.isConnected && !!state.walletSession.address;
@@ -4306,8 +4336,16 @@
       const mismatch = getMismatch();
       const viewingAddress = getViewingWalletAddress();
       const duplicateBlocked = state.duplicateId !== null && !dom.allowDuplicateInput.checked;
+      const visibleWalletCount = state.walletUsesPagedHoldings
+        ? state.walletTotalCount
+        : state.walletTokenIds.length;
+      const hasConnectedInscriptionView =
+        connected && document.body.classList.contains('has-ledger') && visibleWalletCount > 0;
       dom.connectButton.hidden = connected;
       dom.disconnectButton.hidden = !connected;
+      dom.viewInscriptionsButton.hidden = !hasConnectedInscriptionView;
+      dom.viewInscriptionsButton.disabled = state.busy;
+      dom.backToGridButton.hidden = !hasConnectedInscriptionView;
       dom.inscribeButton.disabled =
         state.busy ||
         !connected ||
@@ -4962,7 +5000,9 @@
       const canGoNext =
         hasSelectedPagePosition &&
         (index < pageIds.length - 1 || state.walletPageIndex < pageCount - 1);
-      dom.fullscreenButton.disabled = state.busy || !selectedToken;
+      if (dom.fullscreenButton) {
+        dom.fullscreenButton.disabled = state.busy || !selectedToken;
+      }
       dom.previewExpandButton.disabled = state.busy || !selectedToken;
       dom.previewExpandButton.hidden = !selectedToken;
       dom.fullscreenPrevButton.disabled =
@@ -5832,7 +5872,9 @@
           const size = token.meta?.totalSize ?? null;
           meta.innerHTML =
             `<span>${kind}${size !== null ? ` · ${formatBytes(size)}` : ''}</span>`;
-          card.addEventListener('click', () => selectToken(token.id));
+          card.addEventListener('click', () => {
+            void selectToken(token.id, { scrollToPreview: true });
+          });
         }
         card.append(thumb, meta);
         dom.tokenGrid.append(card);
@@ -5849,7 +5891,7 @@
       updateTransferControls();
     };
 
-    const selectToken = async (id) => {
+    const selectToken = async (id, options = {}) => {
       state.selectedTokenId = id;
       const token =
         state.walletTokenCache.get(id.toString()) ??
@@ -5872,6 +5914,9 @@
 
       clearElement(dom.tokenPreviewMedia, 'Loading');
       renderSelectedInscriptionMeta(token);
+      if (options.scrollToPreview && isMatureMobileWalletView()) {
+        window.requestAnimationFrame(scrollToSelectedPreview);
+      }
 
       const tokenContract = getTokenClient(token).contract;
       dom.explorerLink.href = tokenExplorerUrl(tokenContract, token.id);
@@ -6702,6 +6747,8 @@ const openCuratedGallery = async (galleryId) => {
       dom.nameInput?.focus();
     });
     dom.disconnectButton.addEventListener('click', disconnectWallet);
+    dom.viewInscriptionsButton.addEventListener('click', scrollToWalletGrid);
+    dom.backToGridButton.addEventListener('click', scrollToWalletGrid);
     dom.refreshWalletButton.addEventListener('click', loadWalletInscriptions);
     dom.walletLookupForm.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -6836,7 +6883,7 @@ const openCuratedGallery = async (galleryId) => {
     dom.allowDuplicateInput.addEventListener('change', updateControls);
     dom.transferRecipientInput.addEventListener('input', updateTransferControls);
     dom.transferButton.addEventListener('click', transferSelectedToken);
-    dom.fullscreenButton.addEventListener('click', openFullscreenViewer);
+    dom.fullscreenButton?.addEventListener('click', openFullscreenViewer);
     dom.previewExpandButton.addEventListener('click', openFullscreenViewer);
     dom.fullscreenCloseButton.addEventListener('click', () => {
       void closeFullscreenViewer();
