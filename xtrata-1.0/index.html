@@ -2691,8 +2691,7 @@
                 </div>
               </div>
               <div class="preview-actions">
-                <button class="small-link" id="fullscreenButton" type="button" disabled>View large</button>
-                <a class="small-link" id="explorerLink" href="#" target="_blank" rel="noreferrer" hidden>Explorer</a>
+                <a class="small-link" id="explorerLink" href="#" target="_blank" rel="noreferrer" hidden>Blockchain Explorer</a>
                 <button class="small-link" id="backToGridButton" type="button" hidden>Back to grid</button>
               </div>
               <div class="transfer-tools">
@@ -5001,7 +5000,9 @@
       const canGoNext =
         hasSelectedPagePosition &&
         (index < pageIds.length - 1 || state.walletPageIndex < pageCount - 1);
-      dom.fullscreenButton.disabled = state.busy || !selectedToken;
+      if (dom.fullscreenButton) {
+        dom.fullscreenButton.disabled = state.busy || !selectedToken;
+      }
       dom.previewExpandButton.disabled = state.busy || !selectedToken;
       dom.previewExpandButton.hidden = !selectedToken;
       dom.fullscreenPrevButton.disabled =
@@ -6882,7 +6883,7 @@ const openCuratedGallery = async (galleryId) => {
     dom.allowDuplicateInput.addEventListener('change', updateControls);
     dom.transferRecipientInput.addEventListener('input', updateTransferControls);
     dom.transferButton.addEventListener('click', transferSelectedToken);
-    dom.fullscreenButton.addEventListener('click', openFullscreenViewer);
+    dom.fullscreenButton?.addEventListener('click', openFullscreenViewer);
     dom.previewExpandButton.addEventListener('click', openFullscreenViewer);
     dom.fullscreenCloseButton.addEventListener('click', () => {
       void closeFullscreenViewer();
