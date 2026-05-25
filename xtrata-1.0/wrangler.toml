@@ -10,3 +10,7 @@ database_id = "7d7cf4b8-bc72-41b2-9eea-cc4af9aea54b"
 [[r2_buckets]]
 binding = "COLLECTION_ASSETS"
 bucket_name = "xtrata-manage-assets"
+
+[[r2_buckets]]
+binding = "RUNTIME_CONTENT_CACHE"
+bucket_name = "xtrata-runtime-content-cache"
