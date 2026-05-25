@@ -26,7 +26,7 @@ export type RuntimeContractRef = {
 
 const CHUNK_FALLBACK_SIZE = 16384n;
 const CONTRACT_MAX_BATCH_SIZE = 50;
-const DEFAULT_RUNTIME_READ_BATCH_SIZE = 4;
+const DEFAULT_RUNTIME_READ_BATCH_SIZE = 8;
 const DEFAULT_RUNTIME_CHUNK_CONCURRENCY = 4;
 const DEFAULT_RUNTIME_CHUNK_RETRIES = 2;
 
@@ -407,6 +407,9 @@ const fetchRuntimeChunkWithRetry = async (params: {
       return chunk;
     } catch (error) {
       lastError = asError(error);
+      if (isCostBalanceExceeded(error)) {
+        break;
+      }
       if (attempt < params.retries) {
         await wait(150 * Math.pow(2, attempt));
       }
@@ -434,6 +437,9 @@ const fetchRuntimeChunkBatchWithRetry = async (params: {
       }));
     } catch (error) {
       lastError = asError(error);
+      if (isCostBalanceExceeded(error)) {
+        break;
+      }
       if (attempt < params.retries) {
         await wait(150 * Math.pow(2, attempt));
       }
@@ -482,6 +488,85 @@ const fetchRuntimeChunksWithConcurrency = async (params: {
   return results;
 };
 
+const buildRuntimeIndexBatches = (indexes: bigint[], batchSize: number) => {
+  const batches: bigint[][] = [];
+  for (let offset = 0; offset < indexes.length; offset += batchSize) {
+    batches.push(indexes.slice(offset, offset + batchSize));
+  }
+  return batches;
+};
+
+const fetchRuntimeChunkBatchesWithConcurrency = async (params: {
+  env: RuntimeEnv;
+  apiBases: string[];
+  contract: RuntimeContractRef;
+  tokenId: bigint;
+  batches: bigint[][];
+  concurrency: number;
+  retries: number;
+  read: ResolvedRuntimeContentReader;
+}) => {
+  const chunkMap = new Map<bigint, Uint8Array>();
+  const unresolved = new Set<bigint>();
+  let costExceeded = false;
+
+  if (params.batches.length === 0) {
+    return {
+      chunkMap,
+      unresolved: [] as bigint[],
+      costExceeded
+    };
+  }
+
+  const concurrency = Math.max(1, Math.min(params.concurrency, params.batches.length));
+  let cursor = 0;
+  const workers = Array.from({ length: concurrency }, async () => {
+    while (true) {
+      const current = cursor;
+      cursor += 1;
+      if (current >= params.batches.length) {
+        return;
+      }
+
+      const batch = params.batches[current];
+      try {
+        const entries = await fetchRuntimeChunkBatchWithRetry({
+          env: params.env,
+          apiBases: params.apiBases,
+          contract: params.contract,
+          tokenId: params.tokenId,
+          indexes: batch,
+          retries: params.retries,
+          read: params.read
+        });
+        for (const entry of entries) {
+          if (entry.chunk && entry.chunk.length > 0) {
+            chunkMap.set(entry.index, entry.chunk);
+          } else {
+            unresolved.add(entry.index);
+          }
+        }
+      } catch (error) {
+        if (isCostBalanceExceeded(error)) {
+          costExceeded = true;
+        }
+        for (const index of batch) {
+          unresolved.add(index);
+        }
+      }
+    }
+  });
+  await Promise.all(workers);
+
+  return {
+    chunkMap,
+    unresolved: Array.from(unresolved).sort((left, right) =>
+      left < right ? -1 : left > right ? 1 : 0
+    ),
+    costExceeded
+  };
+};
+
 const fetchRemainingRuntimeChunks = async (params: {
   env: RuntimeEnv;
   apiBases: string[];
@@ -492,91 +577,94 @@ const fetchRemainingRuntimeChunks = async (params: {
 }) => {
   const config = getRuntimeReadConfig(params.env);
   const chunkMap = new Map<bigint, Uint8Array>();
-  const missing: bigint[] = [];
+  const unresolved = new Set<bigint>();
   let batchSize = config.batchSize;
-  let offset = 1;
+  const remainingIndexes = Array.from(
+    { length: Math.max(0, params.totalCount - 1) },
+    (_, index) => BigInt(index + 1)
+  );
 
-  while (offset < params.totalCount) {
-    if (batchSize <= 1) {
-      const remaining: bigint[] = [];
-      for (let index = offset; index < params.totalCount; index += 1) {
-        remaining.push(BigInt(index));
-      }
-      const results = await fetchRuntimeChunksWithConcurrency({
+  while (batchSize > 1 && remainingIndexes.length > 0) {
+    const batches = buildRuntimeIndexBatches(remainingIndexes, batchSize);
+    const [probeBatch, ...remainingBatches] = batches;
+    try {
+      const entries = await fetchRuntimeChunkBatchWithRetry({
         env: params.env,
         apiBases: params.apiBases,
         contract: params.contract,
         tokenId: params.tokenId,
-        indexes: remaining,
-        concurrency: config.concurrency,
+        indexes: probeBatch,
         retries: config.retries,
         read: params.read
       });
-      for (const [index, chunk] of results.entries()) {
-        chunkMap.set(index, chunk);
+      for (const entry of entries) {
+        if (entry.chunk && entry.chunk.length > 0) {
+          chunkMap.set(entry.index, entry.chunk);
+        } else {
+          unresolved.add(entry.index);
+        }
+      }
+    } catch (error) {
+      if (isCostBalanceExceeded(error) && batchSize > 1) {
+        const nextBatchSize = Math.max(1, Math.floor(batchSize / 2));
+        if (nextBatchSize < batchSize) {
+          batchSize = nextBatchSize;
+          chunkMap.clear();
+          unresolved.clear();
+          continue;
+        }
+      }
+      for (const index of remainingIndexes) {
+        unresolved.add(index);
       }
       break;
     }
 
-    const batchIndexes: bigint[] = [];
-    for (let index = offset; index < params.totalCount; index += 1) {
-      batchIndexes.push(BigInt(index));
-      offset = index + 1;
-      if (batchIndexes.length >= batchSize) {
-        break;
-      }
-    }
+    const result = await fetchRuntimeChunkBatchesWithConcurrency({
+      env: params.env,
+      apiBases: params.apiBases,
+      contract: params.contract,
+      tokenId: params.tokenId,
+      batches: remainingBatches,
+      concurrency: config.concurrency,
+      retries: config.retries,
+      read: params.read
+    });
 
-    let entries: Array<{ index: bigint; chunk: Uint8Array | null }>;
-    try {
-      entries = await fetchRuntimeChunkBatchWithRetry({
-        env: params.env,
-        apiBases: params.apiBases,
-        contract: params.contract,
-        tokenId: params.tokenId,
-        indexes: batchIndexes,
-        retries: config.retries,
-        read: params.read
-      });
-    } catch (error) {
-      if (isCostBalanceExceeded(error) && batchSize > 1) {
-        batchSize = Math.max(1, Math.floor(batchSize / 2));
-        offset = Math.max(1, offset - batchIndexes.length);
+    if (result.costExceeded && batchSize > 1) {
+      const nextBatchSize = Math.max(1, Math.floor(batchSize / 2));
+      if (nextBatchSize < batchSize) {
+        batchSize = nextBatchSize;
+        chunkMap.clear();
+        unresolved.clear();
         continue;
       }
-      batchSize = 1;
-      const results = await fetchRuntimeChunksWithConcurrency({
-        env: params.env,
-        apiBases: params.apiBases,
-        contract: params.contract,
-        tokenId: params.tokenId,
-        indexes: batchIndexes,
-        concurrency: config.concurrency,
-        retries: config.retries,
-        read: params.read
-      });
-      for (const [index, chunk] of results.entries()) {
-        chunkMap.set(index, chunk);
-      }
-      continue;
     }
 
-    for (const entry of entries) {
-      if (entry.chunk && entry.chunk.length > 0) {
-        chunkMap.set(entry.index, entry.chunk);
-      } else {
-        missing.push(entry.index);
-      }
+    for (const [index, chunk] of result.chunkMap.entries()) {
+      chunkMap.set(index, chunk);
+    }
+    for (const index of result.unresolved) {
+      unresolved.add(index);
+    }
+    break;
+  }
+
+  if (batchSize <= 1 && chunkMap.size === 0 && unresolved.size === 0) {
+    for (const index of remainingIndexes) {
+      unresolved.add(index);
     }
   }
 
-  if (missing.length > 0) {
+  if (unresolved.size > 0) {
     const results = await fetchRuntimeChunksWithConcurrency({
       env: params.env,
       apiBases: params.apiBases,
       contract: params.contract,
       tokenId: params.tokenId,
-      indexes: missing,
+      indexes: Array.from(unresolved).sort((left, right) =>
+        left < right ? -1 : left > right ? 1 : 0
+      ),
       concurrency: config.concurrency,
       retries: config.retries,
       read: params.read

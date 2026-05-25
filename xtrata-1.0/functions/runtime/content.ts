@@ -1,8 +1,8 @@
 import { buildRuntimeModuleBaseHref } from '../../src/lib/viewer/module-paths';
 import {
   buildRuntimeContentCacheKey,
-  getRuntimeContentCacheBucket,
   getRuntimeContractId,
+  hasRuntimeContentCache,
   readRuntimeContentCache,
   runtimeBytesToHex,
   writeRuntimeContentCache,
@@ -121,7 +121,7 @@ export const onRequest = async (context: {
             finalHash: resolvedMeta.meta.finalHash
           })
         : null;
-    const cacheEnabled = Boolean(getRuntimeContentCacheBucket(env));
+    const cacheEnabled = hasRuntimeContentCache(env);
     const cached = await readRuntimeContentCache(env, cacheKey);
     if (cached) {
       const sourceContractId =

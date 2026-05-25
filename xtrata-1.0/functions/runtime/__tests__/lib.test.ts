@@ -35,6 +35,11 @@ const makeEnv = (): RuntimeEnv => ({
   RUNTIME_CONTENT_READ_RETRIES: '0'
 });
 
+const wait = (ms: number) =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+
 describe('runtime content reconstruction', () => {
   it('uses get-chunk-batch for remaining chunks and preserves byte order', async () => {
     const chunks = new Map<string, Uint8Array>([
@@ -71,6 +76,94 @@ describe('runtime content reconstruction', () => {
       1n,
       2n
     ]);
+  });
+
+  it('fetches large batch groups concurrently while preserving order', async () => {
+    const chunks = new Map<string, Uint8Array>(
+      Array.from({ length: 9 }, (_, index) => [
+        index.toString(),
+        new Uint8Array([index + 1])
+      ])
+    );
+    let activeBatchReads = 0;
+    let maxActiveBatchReads = 0;
+    const reader: RuntimeContentReader = {
+      fetchMeta: vi.fn(async () =>
+        makeMeta({
+          totalSize: 9n,
+          totalChunks: 9n
+        })
+      ),
+      fetchChunk: vi.fn(async ({ index }) => chunks.get(index.toString()) ?? null),
+      fetchChunkBatch: vi.fn(async ({ indexes }) => {
+        activeBatchReads += 1;
+        maxActiveBatchReads = Math.max(maxActiveBatchReads, activeBatchReads);
+        await wait(5);
+        activeBatchReads -= 1;
+        return indexes.map((index) => chunks.get(index.toString()) ?? null);
+      })
+    };
+
+    const resolved = await resolveRuntimeContent({
+      env: {
+        ...makeEnv(),
+        RUNTIME_CONTENT_READ_BATCH_SIZE: '2',
+        RUNTIME_CONTENT_READ_CONCURRENCY: '3'
+      },
+      apiBases: ['https://example.test'],
+      tokenId: 294n,
+      primaryContract,
+      fallbackContract: null,
+      read: reader
+    });
+
+    expect(Array.from(resolved.bytes)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect(reader.fetchChunk).toHaveBeenCalledTimes(1);
+    expect(reader.fetchChunkBatch).toHaveBeenCalledTimes(4);
+    expect(maxActiveBatchReads).toBeGreaterThan(1);
+  });
+
+  it('probes larger batches and reduces batch size on cost errors', async () => {
+    const chunks = new Map<string, Uint8Array>(
+      Array.from({ length: 9 }, (_, index) => [
+        index.toString(),
+        new Uint8Array([index + 1])
+      ])
+    );
+    const reader: RuntimeContentReader = {
+      fetchMeta: vi.fn(async () =>
+        makeMeta({
+          totalSize: 9n,
+          totalChunks: 9n
+        })
+      ),
+      fetchChunk: vi.fn(async ({ index }) => chunks.get(index.toString()) ?? null),
+      fetchChunkBatch: vi.fn(async ({ indexes }) => {
+        if (indexes.length > 4) {
+          throw new Error('CostBalanceExceeded');
+        }
+        return indexes.map((index) => chunks.get(index.toString()) ?? null);
+      })
+    };
+
+    const resolved = await resolveRuntimeContent({
+      env: {
+        RUNTIME_CONTENT_READ_BATCH_SIZE: '8',
+        RUNTIME_CONTENT_READ_RETRIES: '2'
+      },
+      apiBases: ['https://example.test'],
+      tokenId: 294n,
+      primaryContract,
+      fallbackContract: null,
+      read: reader
+    });
+
+    const batchCalls = vi.mocked(reader.fetchChunkBatch).mock.calls;
+    expect(Array.from(resolved.bytes)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect(batchCalls[0][0].indexes).toHaveLength(8);
+    expect(batchCalls[1][0].indexes).toHaveLength(4);
+    expect(batchCalls[2][0].indexes).toHaveLength(4);
+    expect(reader.fetchChunk).toHaveBeenCalledTimes(1);
   });
 
   it('retries missing batch entries with individual chunk reads', async () => {
@@ -179,4 +272,3 @@ describe('runtime content reconstruction', () => {
     expect(Array.from(resolved.bytes)).toEqual([1, 2]);
   });
 });
-

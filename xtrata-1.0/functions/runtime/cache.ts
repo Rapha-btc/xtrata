@@ -10,6 +10,7 @@ export type RuntimeContentCacheMetadata = Record<string, string>;
 
 export type RuntimeContentCacheRecord = {
   key: string;
+  layer: 'r2' | 'edge';
   body: ReadableStream<Uint8Array>;
   size: number | null;
   httpMetadata?: {
@@ -20,6 +21,19 @@ export type RuntimeContentCacheRecord = {
 
 const RUNTIME_CONTENT_CACHE_BINDING = 'RUNTIME_CONTENT_CACHE';
 const RUNTIME_CONTENT_CACHE_PREFIX = 'runtime-content';
+const EDGE_CACHE_ORIGIN = 'https://xtrata-runtime-content-cache.local';
+const EDGE_METADATA_HEADERS = {
+  network: 'X-Xtrata-Cache-Meta-Network',
+  contractId: 'X-Xtrata-Cache-Meta-Contract-Id',
+  sourceContractId: 'X-Xtrata-Cache-Meta-Source-Contract-Id',
+  tokenId: 'X-Xtrata-Cache-Meta-Token-Id',
+  finalHash: 'X-Xtrata-Cache-Meta-Final-Hash',
+  totalSize: 'X-Xtrata-Cache-Meta-Total-Size',
+  totalChunks: 'X-Xtrata-Cache-Meta-Total-Chunks',
+  tokenUri: 'X-Xtrata-Cache-Meta-Token-Uri',
+  moduleBaseHref: 'X-Xtrata-Cache-Meta-Module-Base-Href',
+  createdAt: 'X-Xtrata-Cache-Meta-Created-At'
+} as const;
 
 export const runtimeBytesToHex = (bytes: Uint8Array) =>
   Array.from(bytes)
@@ -38,6 +52,34 @@ export const getRuntimeContentCacheBucket = (env: RuntimeEnv) => {
   const bucket = env[RUNTIME_CONTENT_CACHE_BINDING];
   return isR2Bucket(bucket) ? bucket : null;
 };
+
+const getRuntimeEdgeCache = () => {
+  const maybeCaches = (globalThis as {
+    caches?: {
+      default?: Cache;
+    };
+  }).caches;
+  return maybeCaches?.default ?? null;
+};
+
+const buildRuntimeEdgeCacheRequest = (key: string) =>
+  new Request(`${EDGE_CACHE_ORIGIN}/${key}`, {
+    method: 'GET'
+  });
+
+const getEdgeCacheMetadata = (headers: Headers): RuntimeContentCacheMetadata => {
+  const metadata: RuntimeContentCacheMetadata = {};
+  for (const [key, headerName] of Object.entries(EDGE_METADATA_HEADERS)) {
+    const value = headers.get(headerName);
+    if (value !== null) {
+      metadata[key] = value;
+    }
+  }
+  return metadata;
+};
+
+export const hasRuntimeContentCache = (env: RuntimeEnv) =>
+  Boolean(getRuntimeContentCacheBucket(env) || getRuntimeEdgeCache());
 
 export const getRuntimeContractId = (contract: RuntimeContractRef) =>
   `${contract.address}.${contract.contractName}`;
@@ -66,20 +108,44 @@ export const readRuntimeContentCache = async (
   env: RuntimeEnv,
   key: string | null
 ): Promise<RuntimeContentCacheRecord | null> => {
+  if (!key) {
+    return null;
+  }
   const bucket = getRuntimeContentCacheBucket(env);
-  if (!bucket || !key) {
+  if (bucket) {
+    const object = await bucket.get(key);
+    if (object?.body) {
+      return {
+        key,
+        layer: 'r2',
+        body: object.body,
+        size: typeof object.size === 'number' ? object.size : null,
+        httpMetadata: object.httpMetadata,
+        customMetadata: object.customMetadata
+      };
+    }
+  }
+
+  const edgeCache = getRuntimeEdgeCache();
+  if (!edgeCache) {
     return null;
   }
-  const object = await bucket.get(key);
-  if (!object?.body) {
+  const response = await edgeCache.match(buildRuntimeEdgeCacheRequest(key));
+  if (!response?.body) {
     return null;
   }
+  const contentLength = response.headers.get('Content-Length');
+  const parsedContentLength =
+    contentLength === null ? Number.NaN : Number.parseInt(contentLength, 10);
   return {
     key,
-    body: object.body,
-    size: typeof object.size === 'number' ? object.size : null,
-    httpMetadata: object.httpMetadata,
-    customMetadata: object.customMetadata
+    layer: 'edge',
+    body: response.body,
+    size: Number.isFinite(parsedContentLength) ? parsedContentLength : null,
+    httpMetadata: {
+      contentType: response.headers.get('Content-Type') ?? undefined
+    },
+    customMetadata: getEdgeCacheMetadata(response.headers)
   };
 };
 
@@ -90,15 +156,58 @@ export const writeRuntimeContentCache = async (params: {
   mimeType: string;
   metadata: RuntimeContentCacheMetadata;
 }) => {
-  const bucket = getRuntimeContentCacheBucket(params.env);
-  if (!bucket || !params.key) {
+  if (!params.key) {
     return false;
   }
-  await bucket.put(params.key, params.bytes, {
-    httpMetadata: {
-      contentType: params.mimeType
-    },
-    customMetadata: params.metadata
-  });
-  return true;
+  let wrote = false;
+  let lastError: unknown = null;
+  const bucket = getRuntimeContentCacheBucket(params.env);
+  if (bucket) {
+    try {
+      await bucket.put(params.key, params.bytes, {
+        httpMetadata: {
+          contentType: params.mimeType
+        },
+        customMetadata: params.metadata
+      });
+      wrote = true;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  const edgeCache = getRuntimeEdgeCache();
+  if (edgeCache) {
+    try {
+      const headers = new Headers({
+        'Content-Type': params.mimeType,
+        'Content-Length': params.bytes.length.toString(),
+        'Cache-Control': 'public, max-age=31536000, immutable'
+      });
+      if (params.metadata.finalHash) {
+        headers.set('ETag', `"${params.metadata.finalHash}"`);
+      }
+      for (const [key, headerName] of Object.entries(EDGE_METADATA_HEADERS)) {
+        const value = params.metadata[key];
+        if (value !== undefined) {
+          headers.set(headerName, value);
+        }
+      }
+      await edgeCache.put(
+        buildRuntimeEdgeCacheRequest(params.key),
+        new Response(params.bytes, {
+          status: 200,
+          headers
+        })
+      );
+      wrote = true;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (!wrote && lastError) {
+    throw lastError;
+  }
+  return wrote;
 };

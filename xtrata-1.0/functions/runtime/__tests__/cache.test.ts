@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   buildRuntimeContentCacheKey,
   getRuntimeContentCacheBucket,
+  hasRuntimeContentCache,
   readRuntimeContentCache,
   runtimeBytesToHex,
   writeRuntimeContentCache
@@ -22,6 +23,10 @@ const streamFrom = (bytes: Uint8Array) =>
   });
 
 describe('runtime content cache', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('keys content by network, contract id, token id, and final hash', () => {
     const key = buildRuntimeContentCacheKey({
       network: 'mainnet',
@@ -40,6 +45,7 @@ describe('runtime content cache', () => {
     const env: RuntimeEnv = {};
 
     expect(getRuntimeContentCacheBucket(env)).toBeNull();
+    expect(hasRuntimeContentCache(env)).toBe(false);
     await expect(readRuntimeContentCache(env, 'runtime-content/test')).resolves.toBeNull();
     await expect(
       writeRuntimeContentCache({
@@ -109,5 +115,47 @@ describe('runtime content cache', () => {
     expect(cached?.httpMetadata?.contentType).toBe('image/gif');
     expect(cached?.customMetadata?.finalHash).toBe('abc123');
   });
-});
 
+  it('uses the edge cache when no R2 binding is configured', async () => {
+    const store = new Map<string, Response>();
+    const match = vi.fn(async (request: Request) => store.get(request.url) ?? null);
+    const put = vi.fn(async (request: Request, response: Response) => {
+      store.set(request.url, response);
+    });
+    vi.stubGlobal('caches', {
+      default: {
+        match,
+        put
+      }
+    });
+
+    const env: RuntimeEnv = {};
+    const key = 'runtime-content/mainnet/demo/2/abc123';
+    const bytes = new Uint8Array([4, 5, 6]);
+
+    expect(hasRuntimeContentCache(env)).toBe(true);
+    await expect(
+      writeRuntimeContentCache({
+        env,
+        key,
+        bytes,
+        mimeType: 'image/png',
+        metadata: {
+          sourceContractId: 'SP123.demo',
+          finalHash: 'abc123'
+        }
+      })
+    ).resolves.toBe(true);
+
+    const cached = await readRuntimeContentCache(env, key);
+    expect(put).toHaveBeenCalledTimes(1);
+    expect(match).toHaveBeenCalledTimes(1);
+    expect(cached?.layer).toBe('edge');
+    expect(cached?.size).toBe(3);
+    expect(cached?.httpMetadata?.contentType).toBe('image/png');
+    expect(cached?.customMetadata?.sourceContractId).toBe('SP123.demo');
+    expect(
+      Array.from(new Uint8Array(await new Response(cached?.body).arrayBuffer()))
+    ).toEqual([4, 5, 6]);
+  });
+});
