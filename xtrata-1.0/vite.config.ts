@@ -30,7 +30,8 @@ export default defineConfig(({ mode }) => {
         input: {
           main: resolve(process.cwd(), 'index.html'),
           workspace: resolve(process.cwd(), 'workspace.html'),
-          lab26: resolve(process.cwd(), 'lab26/index.html')
+          lab26: resolve(process.cwd(), 'lab26/index.html'),
+          signalKing: resolve(process.cwd(), 'recursive-apps/signal-king/index.html')
         },
         output: {
           manualChunks: {

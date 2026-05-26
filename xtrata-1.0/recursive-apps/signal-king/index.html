@@ -409,7 +409,7 @@
         <div class="chips" id="crownChips" role="group" aria-label="Crown emoji" style="margin-top:8px"></div>
         <div id="insWrap" hidden style="margin-top:8px">
           <input type="text" id="insIn" inputmode="numeric" placeholder="e.g. 159" autocomplete="off" spellcheck="false" aria-label="Inscription number" />
-          <p class="send-steps" style="margin-top:6px">Show another Xtrata inscription inside the circle by its number. The emoji above is kept as a fallback while it loads. Tap the canvas to enlarge.</p>
+          <p class="send-steps" style="margin-top:6px">Small still images only. About 500 KB or less works best. Animated or oversized files are not supported here.</p>
           <div class="warn" id="insWarn" hidden></div>
           <details class="insdebug" id="insDebugBox" hidden>
             <summary>Runtime log</summary>
@@ -525,7 +525,9 @@ const CONFIG = {
      rendering via <img> (inscriptionUseIframe:false). HTML/SVG/JS inscriptions
      should be routed through a trusted Xtrata runtime/proxy before enabling
      iframe mode. The route is intentionally same-origin so Cloudflare preview
-     deployments exercise the preview Function instead of production.
+     deployments exercise the preview Function instead of production. Direct
+     file:// testing falls back to the production runtime URL because relative
+     function routes cannot exist on the local filesystem.
      The single integration seam is
      inscriptionContentUrl() below.
      The memo only carries the numeric tokenId; the contract + network come
@@ -533,14 +535,31 @@ const CONFIG = {
   inscriptionContractId: "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0",
   inscriptionFallbackContractId: "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1",
   inscriptionContentRoute: "/runtime/content",
+  inscriptionContentRouteFileFallback: "https://xtrata.xyz/runtime/content",
   inscriptionUseIframe: false,            // false: <img> (CORS-safe). true: sandboxed <iframe> for live HTML/SVG/JS.
   inscriptionMaxDigits: 12,
+  inscriptionMaxContentBytes: 512 * 1024,
   inscriptionDiagnostics: true,
-  inscriptionProbeHead: true
+  inscriptionProbeHead: window.location.protocol !== "file:"
 };
+const INSCRIPTION_UNSUPPORTED_COPY = "Cannot use this one here. Try a small still image inscription.";
+const INSCRIPTION_STILL_IMAGE_MIMES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+  "image/avif"
+]);
 
 /* Integration seam: tokenId number -> raw inscription content URL.
    This is the one place to change for real Xtrata recursion. */
+function inscriptionContentRoute(){
+  const route = CONFIG.inscriptionContentRoute;
+  if(/^https?:\/\//i.test(route)) return route;
+  if(window.location.protocol === "file:") return CONFIG.inscriptionContentRouteFileFallback;
+  return route;
+}
+
 function inscriptionContentUrl(num){
   const tokenId = String(num).replace(/[^0-9]/g, "");
   if(!tokenId) return "";
@@ -550,7 +569,8 @@ function inscriptionContentUrl(num){
     network: CONFIG.network
   });
   if(CONFIG.inscriptionFallbackContractId) params.set("fallbackContractId", CONFIG.inscriptionFallbackContractId);
-  return CONFIG.inscriptionContentRoute + "?" + params.toString();
+  const route = inscriptionContentRoute();
+  return route + (route.indexOf("?") === -1 ? "?" : "&") + params.toString();
 }
 
 /* ================================================================
@@ -872,6 +892,7 @@ const INS_DIAG_HEADERS = [
 ];
 let insDiagEntries = [];
 const insHeadProbeCache = new Map();
+const unsupportedInscriptionUrls = new Map();
 
 function shortUrl(url){
   try{
@@ -882,6 +903,38 @@ function shortUrl(url){
   } catch {
     return url;
   }
+}
+
+function runtimeMimeBlockReason(contentType){
+  const mime = String(contentType || '').split(';')[0].trim().toLowerCase();
+  if(!mime) return '';
+  if(INSCRIPTION_STILL_IMAGE_MIMES.has(mime)) return '';
+  if(mime === 'image/gif' || mime === 'image/apng') return 'animated image';
+  if(mime.startsWith('image/')) return 'unsupported image type';
+  return 'not a still image';
+}
+
+function runtimeContentBlockReason(headers){
+  const mimeReason = runtimeMimeBlockReason(headers['content-type']);
+  if(mimeReason) return mimeReason;
+  const rawSize = headers['x-xtrata-runtime-total-size'] || headers['content-length'] || '';
+  const size = Number.parseInt(String(rawSize), 10);
+  if(Number.isFinite(size) && size > CONFIG.inscriptionMaxContentBytes) return 'too large';
+  return '';
+}
+
+function isKnownUnsupportedInscription(num){
+  const url = inscriptionContentUrl(num);
+  return !!(url && unsupportedInscriptionUrls.has(url));
+}
+
+function markUnsupportedInscription(num, url, slot, reason){
+  if(!num || !url) return;
+  const label = reason || 'image load failed';
+  unsupportedInscriptionUrls.set(url, label);
+  insLog('image:unsupported', { slot, tokenId:num, reason:label, url:shortUrl(url) });
+  const input = $('insIn');
+  if(input && normInscription(input.value) === String(num)) updatePanel();
 }
 
 function fmtMs(ms){
@@ -933,14 +986,17 @@ function probeInscriptionEndpoint(num, url, slot){
   insLog('head:start', { slot, tokenId:num, url:shortUrl(url) });
   const probe = fetch(url, { method:'HEAD', mode:'cors', cache:'no-store' })
     .then((res)=>{
+      const headers = readRuntimeHeaders(res.headers);
       insLog('head:done', {
         slot,
         tokenId:num,
         status:res.status,
         ok:res.ok,
         ms:fmtMs(performance.now() - started),
-        headers:readRuntimeHeaders(res.headers)
+        headers
       });
+      const blockReason = res.ok ? runtimeContentBlockReason(headers) : '';
+      if(blockReason) markUnsupportedInscription(num, url, slot, blockReason);
       return res;
     })
     .catch((err)=>{
@@ -1018,6 +1074,15 @@ function setInscriptionCanvas(num){
     lastInsUrl = '';
     return totem;
   }
+  if(isKnownUnsupportedInscription(num)){
+    canvas.hidden = true;
+    frame.src = 'about:blank';
+    img.hidden = true; clearImage(img);
+    setSmallStatus('insStatus', '');
+    totem.style.display = '';
+    lastInsUrl = '';
+    return totem;
+  }
   probeInscriptionEndpoint(num, url, 'main');
   totem.style.display = 'none';
   canvas.hidden = false;
@@ -1033,6 +1098,7 @@ function setInscriptionCanvas(num){
       setImageSourceWithDiagnostics(img, url, { slot:'main', tokenId:num, onload:()=>{
         setSmallStatus('insStatus', '');
       }, onerror:()=>{
+        markUnsupportedInscription(num, url, 'main');
         canvas.hidden = true;
         img.hidden = true;
         clearImage(img);
@@ -1215,8 +1281,10 @@ function updatePanel(opts){
   const insActive = sel.crownMode === 'inscription';
   const insRaw = insActive ? $('insIn').value : '';
   const insNorm = insActive ? normInscription(insRaw) : null;
+  const insBlocked = !!(insNorm && isKnownUnsupportedInscription(insNorm));
+  const insForMemo = insBlocked ? null : insNorm;
 
-  const { memo, warnings, bytes, tokens } = compile(message, sel.vibe, sel.action, sel.crown, insNorm);
+  const { memo, warnings, bytes, tokens } = compile(message, sel.vibe, sel.action, sel.crown, insForMemo);
 
   renderTokens(tokens);
 
@@ -1227,10 +1295,10 @@ function updatePanel(opts){
 
   // preview card: emoji thumbnail vs inscription thumbnail
   const pvIns = $('pvIns'), pvTotem = $('pvTotem');
-  if(insNorm){
+  if(insForMemo){
     pvTotem.style.display = 'none';
     pvIns.hidden = false;
-    const url = inscriptionContentUrl(insNorm);
+    const url = inscriptionContentUrl(insForMemo);
     if(CONFIG.inscriptionUseIframe){
       $('pvInsImg').hidden = true; clearImage($('pvInsImg'));
       setSmallStatus('pvInsStatus', '');
@@ -1240,9 +1308,10 @@ function updatePanel(opts){
       $('pvInsFrame').hidden = true; $('pvInsFrame').src = 'about:blank';
       const pvImg = $('pvInsImg');
       pvImg.hidden = false;
-      const started = setImageSourceWithDiagnostics(pvImg, url, { slot:'preview', tokenId:insNorm, onload:()=>{
+      const started = setImageSourceWithDiagnostics(pvImg, url, { slot:'preview', tokenId:insForMemo, onload:()=>{
         setSmallStatus('pvInsStatus', '');
       }, onerror:()=>{
+        markUnsupportedInscription(insForMemo, url, 'preview');
         pvIns.hidden = true;
         pvImg.hidden = true;
         clearImage(pvImg);
@@ -1251,7 +1320,7 @@ function updatePanel(opts){
         pvTotem.textContent = CROWNS[sel.crown];
         replayAction(pvTotem, sel.action);
       }});
-      if(started || !pvImg.complete) setSmallStatus('pvInsStatus', 'Loading #' + insNorm);
+      if(started || !pvImg.complete) setSmallStatus('pvInsStatus', 'Loading #' + insForMemo);
       else setSmallStatus('pvInsStatus', '');
     }
   } else {
@@ -1265,13 +1334,16 @@ function updatePanel(opts){
   }
   const previewMsg = (message.trim() ? compileDisplay(tokens) : DEFAULTS.message);
   $('pvMsg').textContent = previewMsg;
-  $('pvMeta').textContent = VIBES[sel.vibe] + ' · ' + ACTIONS[sel.action] + (insNorm ? ' · #'+insNorm : '');
+  $('pvMeta').textContent = VIBES[sel.vibe] + ' · ' + ACTIONS[sel.action] + (insForMemo ? ' · #'+insForMemo : '');
 
   // inscription field warning (invalid / empty while in inscription mode)
   const iw = $('insWarn');
   if(insActive && insRaw.trim() && !insNorm){
     iw.hidden = false; iw.classList.add('bad');
     iw.textContent = 'That does not look like an inscription number. Use digits only, e.g. 159.';
+  } else if(insActive && insBlocked){
+    iw.hidden = false; iw.classList.add('bad');
+    iw.textContent = INSCRIPTION_UNSUPPORTED_COPY;
   } else { iw.hidden = true; iw.textContent=''; iw.classList.remove('bad'); }
 
   // memo + counter
@@ -1287,13 +1359,14 @@ function updatePanel(opts){
   for(const r of raws) rawWarn.push(r.display + ' is not in the dictionary. It can still be used, but it costs more memo bytes.');
   let msgs = [];
   if(over) msgs.push('This design is ' + bytes + ' / ' + CONFIG.memoMaxBytes + ' bytes. Remove a word, use dictionary words, or simplify the style.');
+  if(insBlocked) msgs.push(INSCRIPTION_UNSUPPORTED_COPY);
   msgs = msgs.concat(warnings, rawWarn);
-  if(msgs.length){ wb.hidden=false; wb.textContent = msgs.join('  '); wb.classList.toggle('bad', over); }
+  if(msgs.length){ wb.hidden=false; wb.textContent = msgs.join('  '); wb.classList.toggle('bad', over || insBlocked); }
   else { wb.hidden=true; wb.textContent=''; }
 
-  // copy memo disabled when over budget
-  $('copyMemo').disabled = over;
-  $('copyMemo').style.opacity = over ? '.5' : '1';
+  // copy memo disabled when over budget or the selected inscription is unsupported
+  $('copyMemo').disabled = over || insBlocked;
+  $('copyMemo').style.opacity = (over || insBlocked) ? '.5' : '1';
 
   // drive the full-screen viewer live while in Preview mode
   if(displayMode === 'preview') renderPreviewView(!!opts.fromChip);
@@ -1305,7 +1378,8 @@ function buildPreviewClaim(){
   const tokens = analyze(message);
   const msg = message.trim() ? compileDisplay(tokens) : DEFAULTS.message;
   const insNorm = (sel.crownMode === 'inscription') ? normInscription($('insIn').value) : null;
-  return { preview:true, state:{ message:msg, vibe:sel.vibe, action:sel.action, crown:sel.crown, inscription:insNorm } };
+  const inscription = insNorm && !isKnownUnsupportedInscription(insNorm) ? insNorm : null;
+  return { preview:true, state:{ message:msg, vibe:sel.vibe, action:sel.action, crown:sel.crown, inscription } };
 }
 
 // build a human-readable preview message from tokens (dict uppercased, raw preserved)
@@ -1375,7 +1449,11 @@ function openLightbox(num){
   const url = inscriptionContentUrl(num);
   if(!url) return;
   $('lightbox').hidden = false;
-  if(CONFIG.inscriptionUseIframe){
+  if(isKnownUnsupportedInscription(num)){
+    $('lbFrame').hidden = true; $('lbFrame').src = 'about:blank';
+    const img = $('lbImg'); img.hidden = true; clearImage(img);
+    setSmallStatus('lbStatus', INSCRIPTION_UNSUPPORTED_COPY);
+  } else if(CONFIG.inscriptionUseIframe){
     $('lbImg').hidden = true; clearImage($('lbImg'));
     setSmallStatus('lbStatus', '');
     $('lbFrame').hidden = false; $('lbFrame').src = url;
@@ -1386,9 +1464,10 @@ function openLightbox(num){
     setImageSourceWithDiagnostics(img, url, { slot:'lightbox', tokenId:num, onload:()=>{
       setSmallStatus('lbStatus', '');
     }, onerror:()=>{
+      markUnsupportedInscription(num, url, 'lightbox');
       img.hidden = true;
       clearImage(img);
-      setSmallStatus('lbStatus', 'Image preview unavailable. Open the raw inscription link.');
+      setSmallStatus('lbStatus', INSCRIPTION_UNSUPPORTED_COPY);
     }});
   }
   const ex = $('lbExplorer');
