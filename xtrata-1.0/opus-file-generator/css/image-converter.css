@@ -1,0 +1,56 @@
+/* Image converter specific styles */
+.preview-container {
+    display: flex;
+    justify-content: center;
+    align-items: center; /* Vertically center */
+    margin: 15px 0;
+    min-height: 150px; /* Minimum height */
+    background-color: #f9f9f9; /* Light background for preview area */
+    border: 1px dashed #ccc;
+    border-radius: 4px;
+    padding: 10px;
+  }
+  
+  #image-preview {
+    max-width: 100%;
+    max-height: 300px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    /* padding: 5px; Removed padding, container handles it */
+    display: block; /* Ensure it behaves like a block */
+    margin: auto; /* Center if smaller than container */
+  }
+  
+  .file-input-container {
+    margin: 15px 0;
+    text-align: center; /* Center the custom button */
+  }
+  
+  /* Custom file upload button styling */
+  .custom-file-upload {
+    display: inline-block;
+    padding: 10px 15px;
+    background-color: #007bff;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    border: none; /* Ensure no border */
+  }
+  
+  .custom-file-upload:hover {
+    background-color: #0056b3; /* Darker blue */
+  }
+  
+  /* Hide the actual file input visually */
+  input[type="file"].visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap; /* added line */
+    border: 0;
+  }

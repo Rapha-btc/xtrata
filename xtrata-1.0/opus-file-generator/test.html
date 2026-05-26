@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <title>Audional Art Tools: Audio to Opus + WebM & Image to Base64</title>
+  <link rel="stylesheet" href="css3/s6.css">
+<body>
+
+<main>
+  <section id="audio-section" class="conversion-section">
+    <h1 id="audio-section-heading">Opus Encoding for Audional Inscriptions (OPEN BETA)</h1>
+    <div class="info-button-container centered">
+      <button id="showAudioInfoBtn" class="button-small info-button">Audio Format Info</button>
+      <button id="showAudionalInfoBtn" class="button-small info-button">Audional Instructions</button>
+    </div>
+    <div id="audioInfoContainer" class="info-popup hidden" role="dialog" aria-modal="true" aria-labelledby="audio-section-heading" aria-describedby="audioInfoContent">
+      <button id="closeAudioInfoBtn" class="close-info-btn" title="Close" aria-label="Close Audio Format Information">×</button>
+      <div id="audioInfoContent"></div>
+    </div>
+    <div id="audionalInfoContainer" class="info-popup hidden" role="dialog" aria-modal="true" aria-labelledby="audional-info-title" aria-describedby="audionalInfoContent">
+      <button id="closeAudionalInfoBtn" class="close-info-btn" title="Close" aria-label="Close Audional Instructions">×</button>
+      <div id="audionalInfoContent"></div>
+    </div>
+    <div class="form-group">
+      <label for="fileInput">1. Select Audio File:</label>
+      <input type="file" id="fileInput" accept="audio/*,.wav,.mp3,.flac,.ogg,.aac" multiple>
+    </div>
+    <fieldset id="formatOptions" class="form-group">
+       <legend>2. Choose Output Quality (WebM/Opus):</legend>
+       <div class="radio-group">
+         <label style="display: none;"><input type="radio" name="format" value="opus"> Opus</label>
+         <label style="display: none;"><input type="radio" name="format" value="mp3"> MP3</label>
+         <label><input type="radio" name="format" value="webm" checked> WebM (Opus)</label>
+       </div>
+       <div id="opusSettings" class="settings-group">
+        <div class="setting-item">
+          <label for="audioProfileSelect">Audio Profile:</label>
+          <select id="audioProfileSelect"></select>
+        </div>
+        <p id="audioProfileDescription" class="profile-description" style="font-size: 0.9em; margin-top: 5px; color: #555;"></p>
+         <label for="opusBitrate">Opus Bitrate (kbps):</label>
+         <input type="range" id="opusBitrate" min="16" max="256" value="96" step="8">
+         <span id="opusBitrateValue">96 kbps</span>
+         <!-- REMOVED estSizeOpusSpan and estSizeWebmSpan from here -->
+
+         <div class="setting-item">
+            <label for="opusVbrMode">VBR Mode:</label>
+            <select id="opusVbrMode">
+              <option value="on" selected>VBR (Variable)</option>
+              <option value="constrained">CVBR (Constrained Variable)</option>
+              <option value="off">CBR (Constant)</option>
+            </select>
+          </div>
+          <div class="setting-item">
+            <label for="opusCompressionLevel">Compression Level (0-Fast, 10-Best):</label>
+            <input type="range" id="opusCompressionLevel" min="0" max="10" value="10" step="1">
+            <span id="opusCompressionLevelValue">10</span>
+          </div>
+          <div class="setting-item">
+            <label for="opusApplication">Application:</label>
+            <select id="opusApplication">
+              <option value="audio" selected>General Audio</option>
+              <option value="voip">Voice (VoIP)</option>
+              <option value="lowdelay">Low Latency</option>
+            </select>
+          </div>
+
+          <!-- NEW INFO SUMMARY SECTION -->
+          <div class="setting-item info-summary-section" id="outputInfoSection">
+              <p>Original File: <span id="originalFileInfo">N/A</span></p>
+              <p>Est. Output: <span id="currentEstimatedOutputSize">Select file</span></p>
+          </div>
+          <!-- END NEW INFO SUMMARY SECTION -->
+
+       </div>
+       <div id="mp3Settings" class="settings-group hidden" style="display: none;">
+         <label for="mp3Quality">MP3 Quality (VBR -q:a, 0=Best, 9=Worst):</label>
+         <input type="range" id="mp3Quality" min="0" max="9" value="4" step="1">
+         <span id="mp3QualityValue">4</span>
+         <!-- REMOVED estSizeMp3Span from here -->
+       </div>
+     </fieldset>
+     <div class="button-container">
+      <button id="playSampleBtn" disabled>Play Original</button>
+      <button id="convertBtn" disabled>3. Convert to WebM (Opus)</button>
+      <button id="batchConvertBtn" disabled class="button-small">Batch Convert All</button>
+      <button id="downloadBatchZipBtn" disabled class="button-small">Download Batch ZIP</button> <!-- NEW -->
+    </div>
+    <div id="originalAudioContainer"></div>
+    <div id="status" aria-live="polite">Status: Initializing FFmpeg...</div>
+    <progress id="progress" value="0" max="100" class="hidden" aria-labelledby="status"></progress>
+    <div id="result"></div>
+    <div id="base64Container" class="base64-container hidden">
+      <fieldset>
+        <legend>4. Audio Base64 Conversion:</legend>
+        <div id="base64Result"></div>
+        <details>
+          <summary>Show Audio Base64 Output</summary>
+          <div id="base64Output" class="base64-output"></div>
+        </details>
+        <div class="button-group">
+          <button id="copyBase64Btn" class="copy-button">Copy Audio Base64</button>
+          <button id="downloadBase64Btn" class="download-button">Download Audio Base64 as TXT</button>
+        </div>
+      </fieldset>
+    </div>
+    <div id="batchResultEl" class="batch-results-container" style="margin-top: 20px;">
+      <!-- Batch results will be appended here -->
+    </div>
+  </section>
+
+
+  <section id="image-section" class="conversion-section">
+    <h1>Image to Base64 Converter</h1>
+    <div class="file-input-container">
+      <label for="image-file-input" class="custom-file-upload">Select Image File</label>
+      <input type="file" id="image-file-input" accept="image/*">
+    </div>
+    <div class="preview-container">
+      <img id="image-preview" alt="Image Preview" style="display: none;">
+    </div>
+    <div class="info-container">
+      <p id="file-size-info"></p>
+    </div>
+    <div class="button-container">
+      <button id="convert-image-button" disabled>Convert to Base64</button>
+    </div>
+    <div class="output-container">
+        <fieldset>
+            <legend>Image Base64 Output:</legend>
+            <details>
+              <summary>Show Image Base64 Output</summary>
+              <textarea id="image-base64-output" class="base64-output" style="display: none; min-height: 100px;" readonly></textarea>
+            </details>
+            <div class="button-group">
+              <button id="copy-image-base64-button" class="copy-button" disabled>Copy Image Base64</button>
+              <button id="download-image-base64-button" class="download-button" disabled>Download Image Base64 as TXT</button>
+            </div>
+      </fieldset>
+    </div>
+  </section>
+
+
+  <div id="metadataModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="metadataModalTitle">
+    <div class="modal-content">
+      <h2 id="metadataModalTitle">Enter Audio Metadata</h2>
+      <form id="metadataForm">
+         <div class="form-group"><label for="titleInput">Title/Name:</label><input type="text" id="titleInput" name="title" required></div>
+         <div class="form-group"><label for="instrumentInput">Instrument:</label><input type="text" id="instrumentInput" name="instrument" required></div>
+         <div class="form-group"><label for="noteInput">Note:</label><input type="text" id="noteInput" name="note" required list="noteList" placeholder="e.g., C#4"><datalist id="noteList"></datalist></div>
+         <div class="form-group"><label for="frequencyInput">Frequency:</label><input type="text" id="frequencyInput" name="frequency" readonly placeholder="Calculated from Note"></div>
+         <div class="form-group form-group-checkbox"><input type="checkbox" id="loopCheckbox" name="isLoop"><label for="loopCheckbox">Is this a loop?</label></div>
+         <div id="bpmGroup" class="form-group hidden"><label for="bpmInput">BPM/Tempo:</label><input type="number" id="bpmInput" name="bpm" min="1"></div>
+         <div class="button-container modal-buttons"><button type="submit" id="submitMetadataBtn">Generate HTML</button><button type="button" id="cancelMetadataBtn">Cancel</button></div>
+      </form>
+    </div>
+    <div class="modal-overlay"></div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+  <script src="metadata-modal-handler.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+  <script src="config-state.js" defer></script>
+  <script src="dom-elements.js" defer></script>
+  <script src="utils.js" defer></script>
+  <script src="HTML_Template.js" defer></script>
+  <script src="html-generator.js" defer></script>
+  <script src="informationButtons.js" defer></script>
+  <script src="ui-helpers.js" defer></script>
+  <script src="audio-player.js" defer></script>
+  <script src="ffmpeg-handler.js" defer></script>
+  <script src="file-handler.js" defer></script>
+  <script src="base64-handler.js" defer></script>
+  <script src="conversion-process.js" defer></script>
+  <script src="batch-download-handler.js" defer></script> <!-- NEW -->
+
+  <script src="event-listeners.js" defer></script>
+  <script src="main.js" defer></script>
+  <script type="module">
+    import { initializeImageConverter } from './image-to-base64.js';
+    document.addEventListener('DOMContentLoaded', initializeImageConverter);
+  </script>
+  <div class="control-container" style="text-align: center; margin-top: 20px; padding: 15px; border-top: 1px solid #ccc;">
+    <h2>Generate New Audional HTML File</h2>
+    <button id="generateHtmlButton" class="control-button" disabled style="padding: 10px 20px; font-size: 1.1em;">Generate Clickable HTML Player</button>
+    <p style="font-size: 0.9em; color: #555;">Requires Audio (WebM/Opus recommended). Image is optional (player will adapt).</p>
+  </div>
+  <!-- <a href="https://audionals.com/OB1ModularApr25/TEST_Generated_HTML_FILES/Tester" class="button-link" target="_blank" rel="noopener noreferrer"> -->
+
+  <a href="https://audionals.com/opus-file-generator/TestingModuleForProduction/Tester" class="button-link" target="_blank" rel="noopener noreferrer">
+    Test Generated HTML Players Here
+  </a>
+</main>
+</body>
+</html>
+
+opus-file-generator/TestingModuleForProduction/Tester.html

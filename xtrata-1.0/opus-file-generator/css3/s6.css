@@ -1,0 +1,484 @@
+/* Style 6: Pro Audio Studio Dark */
+:root {
+    --bg-main: #282828; /* Dark Gray */
+    --bg-panel: #3C3C3C; /* Medium Dark Gray */
+    --text-primary: #E0E0E0; /* Light Gray */
+    --text-secondary: #A0A0A0; /* Medium Gray */
+    --accent-operational: #F59E0B; /* Amber/Orange */
+    --accent-positive: #4FD1C5; /* Muted Teal */
+    --accent-negative: #E53E3E; /* Muted Red */
+    --border-color: #555555;
+    --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --font-mono: "Menlo", "Consolas", monospace;
+}
+
+body {
+    font-family: var(--font-sans);
+    max-width: 600px;
+    margin: 20px auto;
+    padding: 20px;
+    border: 1px solid #1A1A1A;
+    border-radius: 6px;
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    font-size: 15px;
+}
+
+h1 {
+    text-align: center;
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 1.8em;
+    margin-bottom: 25px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 15px;
+}
+
+.hidden, .modal.hidden, .info-popup.hidden { display: none; }
+input[type=file].visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+.conversion-section {
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 30px;
+    background-color: var(--bg-panel);
+}
+
+section + section {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+details {
+    margin-top: 10px;
+    border: 1px solid #4A4A4A;
+    padding: 10px;
+    border-radius: 4px;
+    background-color: #333333;
+}
+summary { font-weight: 500; cursor: pointer; color: var(--accent-positive); }
+
+.info-container {
+    background: rgba(245, 158, 11, 0.1); /* Amber transparent */
+    padding: 10px 15px;
+    border-radius: 4px;
+    margin: 10px 0;
+    border-left: 3px solid var(--accent-operational);
+    color: var(--text-secondary);
+    font-size: 0.9em;
+}
+
+.main-nav {
+    background-color: #1F1F1F; /* Darker Nav */
+    padding: 8px 0;
+    margin-bottom: 20px;
+    border-radius: 4px;
+}
+.main-nav ul { list-style: none; display: flex; justify-content: center; padding: 0; margin: 0; }
+.main-nav li { margin: 0 12px; }
+.main-nav a {
+    text-decoration: none;
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-size: 0.95em;
+    padding: 6px 12px;
+    border-radius: 4px;
+    transition: background-color .2s ease, color .2s ease;
+}
+.main-nav a:hover { color: var(--text-primary); background-color: #444; }
+.main-nav a.active { background-color: var(--accent-operational); color: var(--bg-main); }
+
+label { display: block; margin-bottom: 6px; font-size: 0.9em; font-weight: 500; color: var(--text-secondary); }
+input, select, button { display: block; margin-bottom: 12px; font-size: 0.95em; }
+
+input[type=text], input[type=number], select {
+    border: 1px solid #555;
+    padding: 9px 12px;
+    border-radius: 4px;
+    width: calc(100% - 26px);
+    background-color: #2C2C2C;
+    color: var(--text-primary);
+}
+input[type=text]:focus, input[type=number]:focus, select:focus {
+    outline: none;
+    border-color: var(--accent-operational);
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3);
+}
+input[type=range] { width: 60%; }
+
+input[type=file] {
+    border: 1px solid #555;
+    padding: 8px;
+    width: calc(100% - 18px);
+    background-color: #2C2C2C;
+    color: var(--text-primary);
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+fieldset {
+    border: 1px solid #4A4A4A;
+    margin-bottom: 12px;
+    padding: 12px;
+    border-radius: 4px;
+}
+legend { font-weight: 500; color: var(--text-secondary); padding: 0 5px; margin-bottom: 5px; font-size: 0.95em; }
+
+fieldset#formatOptions label { display: inline-block; margin-right: 15px; font-weight: normal; color: var(--text-primary); }
+fieldset#formatOptions input[type=radio] { width: auto; margin-right: 5px; vertical-align: middle; accent-color: var(--accent-operational); }
+
+.estimate { font-style: italic; color: var(--text-secondary); margin-top: 6px; display: block; font-size: 0.85em; }
+
+.settings-group { padding: 10px; border: 1px dashed #555; margin-top: 8px; margin-bottom: 12px; background-color: #333333; border-radius: 4px; }
+.settings-group label { display: block; margin-bottom: 5px; font-weight: normal; }
+.settings-group input[type=range] { vertical-align: middle; margin-right: 10px; accent-color: var(--accent-operational); }
+.settings-group span { font-size: .9em; color: var(--text-secondary); vertical-align: middle; }
+
+button {
+    padding: 9px 16px; cursor: pointer;
+    background: var(--accent-operational);
+    color: #111;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    transition: background-color .2s ease, border-color .2s ease;
+    font-weight: 600;
+    font-size: 0.95em;
+}
+button:disabled { background: #505050; color: #888; border-color: #505050; cursor: not-allowed; opacity: .8; }
+button:hover:not(:disabled) { background: #D6890A; /* Darker Amber */ }
+
+.play-button, #playSampleBtn { background: var(--accent-positive); color: var(--bg-main); margin-right: 10px; }
+.play-button:hover:not(:disabled), #playSampleBtn:hover:not(:disabled) { background: #3CB0A0; }
+
+.copy-button { background: #607080; color: var(--text-primary); }
+.copy-button:hover:not(:disabled) { background: #506070; }
+
+.download-button { background: var(--accent-positive); color: var(--bg-main); }
+.download-button:hover:not(:disabled) { background: #3CB0A0; }
+
+.button-container, .button-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+#generateHtmlButton {
+    padding: 10px 20px; font-size: 1em; font-weight: 600; background-color: var(--accent-operational);
+    color: #1A1A1A; border: none; border-radius: 4px; cursor: pointer;
+    transition: all .2s ease; box-shadow: 0 1px 2px rgba(0,0,0,.3); margin-right: 0;
+}
+#generateHtmlButton:hover:not(:disabled) { background-color: #D6890A; transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,.4); }
+#generateHtmlButton:active:not(:disabled) { transform: translateY(0); box-shadow: 0 1px 2px rgba(0,0,0,.3); }
+#generateHtmlButton:disabled { opacity: .6; cursor: not-allowed; background-color: #5A5A5A; box-shadow: none; animation: none; color: #999; }
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); } /* Amber */
+    70% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+#generateHtmlButton:not(:disabled) { animation: pulse 2s infinite; }
+
+.button-link {
+    display: inline-block; padding: 10px 20px; text-align: center; text-decoration: none;
+    font-family: var(--font-sans); font-size: 0.95em; font-weight: 600; cursor: pointer;
+    border-radius: 4px; transition: all .2s ease; background-color: var(--accent-operational);
+    color: #1A1A1A; border: none;
+}
+.button-link:hover { background-color: #D6890A; }
+
+.preview-container {
+    display: flex; justify-content: center; align-items: center; margin: 15px 0; min-height: 120px;
+    background-color: #222222; border: 1px dashed #444; border-radius: 4px; padding: 10px;
+}
+#image-preview { max-width: 100%; max-height: 250px; border: 1px solid #444; border-radius: 4px; display: block; margin: auto; }
+
+.file-input-container { margin: 15px 0; text-align: center; }
+.custom-file-upload {
+    display: inline-block; padding: 9px 16px; background-color: #555555;
+    color: var(--text-primary); border-radius: 4px; cursor: pointer;
+    transition: background-color .2s ease; border: none; font-weight: 500; font-size: 0.95em;
+}
+.custom-file-upload:hover { background-color: #666666; }
+
+.base64-container { margin-top: 15px; border-top: 1px solid #444; padding-top: 15px; }
+#base64-output, .base64-output {
+    max-height: 120px; min-height: 90px; overflow-y: auto; border: 1px solid #4A4A4A;
+    padding: 10px; margin: 10px 0; font-family: var(--font-mono); font-size: .8em;
+    background: #222222; white-space: pre-wrap; word-break: break-all;
+    width: 100%; box-sizing: border-box; color: var(--text-secondary); border-radius: 4px;
+}
+.base64-size {
+    display: inline-block; padding: 6px 10px; background: #444;
+    color: var(--text-primary); text-align: center; text-decoration: none;
+    border-radius: 4px; margin-top: 8px; font-weight: 500; font-size: .85em;
+}
+
+#result a {
+    display: block; padding: 10px; background: var(--accent-positive); color: var(--bg-main);
+    text-align: center; text-decoration: none; border-radius: 4px; margin-top: 12px;
+    transition: background-color .2s ease; font-weight: 600;
+}
+#result a:hover { background-color: #3CB0A0; }
+
+#originalAudioContainer {
+    margin-top: 15px; padding: 10px; border: 1px solid #4A4A4A;
+    border-radius: 4px; display: none; background-color: #222222;
+}
+#originalAudioContainer audio { width: 100%; filter: contrast(0.8) brightness(0.9); } /* Subdue default player for dark theme */
+
+#status {
+    margin: 15px 0; padding: 10px; background: #333333;
+    border-left: 3px solid #666; border-radius: 0 4px 4px 0; color: var(--text-secondary);
+    font-size: 0.9em;
+}
+#progress {
+    width: 100%; margin-bottom: 12px; display: none; appearance: none;
+    height: 8px; border: 1px solid #444; border-radius: 4px; overflow: hidden;
+}
+#progress::-webkit-progress-bar { background-color: #444; border-radius: 3px; }
+#progress::-webkit-progress-value { background-color: var(--accent-operational); border-radius: 3px; transition: width .2s ease; }
+#progress::-moz-progress-bar { background-color: var(--accent-operational); border-radius: 3px; transition: width .2s ease; }
+
+#status.error { color: var(--accent-negative); background-color: rgba(229, 62, 62, 0.15); border-left-color: var(--accent-negative); }
+.error { color: var(--accent-negative); border-left-color: var(--accent-negative); }
+
+.modal { position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; overflow: auto; font-family: var(--font-sans); }
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(20,20,20,.8); z-index: 999; }
+.modal-content {
+    background-color: var(--bg-panel); color: var(--text-primary);
+    margin: auto; padding: 25px; border: 1px solid #555; width: 90%; max-width: 480px;
+    border-radius: 6px; box-shadow: 0 5px 15px 0 rgba(0,0,0,.4); z-index: 1001; position: relative;
+}
+.modal .form-group { margin-bottom: 15px; }
+.modal label { display: block; margin-bottom: 5px; font-weight: 500; color: var(--text-secondary); }
+.modal input[type=text] {
+    width: 100%; padding: 9px 12px; border: 1px solid #555; border-radius: 4px;
+    box-sizing: border-box; background-color: #2C2C2C; color: var(--text-primary);
+}
+.modal input[type=text]:focus { border-color: var(--accent-operational); outline: none; box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3); }
+
+.modal .modal-buttons { margin-top: 20px; display: flex; justify-content: flex-end; gap: 8px; }
+.modal .modal-buttons button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; font-weight: 600; font-size: 0.9em; }
+.modal #submitMetadataBtn { background-color: var(--accent-operational); color: #1A1A1A; }
+.modal #submitMetadataBtn:hover { background-color: #D6890A; }
+.modal #cancelMetadataBtn { background-color: #606060; color: var(--text-primary); }
+.modal #cancelMetadataBtn:hover { background-color: #707070; }
+
+.info-popup { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 90%; max-width: 700px; max-height: 85vh; background-color: var(--bg-panel); color: var(--text-primary); border: 1px solid #555; border-radius: 6px; box-shadow: 0 5px 20px rgba(0,0,0,.5); z-index: 1050; padding: 20px; padding-top: 50px; overflow: hidden; display: block; font-family: var(--font-sans); }
+#audioInfoContent, #audionalInfoContent { max-height: calc(85vh - 70px); overflow-y: auto; padding-right: 15px; }
+.close-info-btn { position: absolute; top: 15px; right: 15px; font-size: 1.8em; font-weight: 300; color: var(--text-secondary); background: none; border: none; cursor: pointer; padding: 0; line-height: 1; }
+.close-info-btn:hover, .close-info-btn:focus { color: var(--text-primary); text-decoration: none; }
+#audioInfoContent h2 { margin-top: 15px; margin-bottom: 10px; color: var(--text-primary); font-weight: 600;}
+#audioInfoContent h3 { margin-top: 12px; margin-bottom: 8px; color: var(--accent-operational); font-weight: 500;}
+#audioInfoContent p, #audioInfoContent ul, #audioInfoContent li { margin-bottom: 10px; line-height: 1.5; color: var(--text-secondary); }
+#audioInfoContent ul { padding-left: 20px; list-style: disc; }
+#audioInfoContent code { background-color: #2C2C2C; padding: 2px 5px; border-radius: 3px; font-family: var(--font-mono); color: var(--accent-positive); font-size: 0.9em; border: 1px solid #444;}
+#audioInfoContent hr { border: none; border-top: 1px solid #444; margin: 20px 0; }
+
+@media (max-width:768px){
+    body { max-width: 95%; padding: 15px; font-size: 14px; }
+    h1 { font-size: 1.6em; }
+    .button-container,.button-group{flex-direction:column;align-items:stretch}
+    .button-container button,.button-group button{width:100%;margin-right:0}
+    .main-nav ul{flex-direction:column;align-items:center}
+    .main-nav li{margin:5px 0}
+    .main-nav a{display:block;width:90%;text-align:center; padding: 8px 10px;}
+    button, #generateHtmlButton, .button-link { font-size: 1em; padding: 10px 15px; }
+    #generateHtmlButton { padding: 12px 20px; }
+}
+
+.profile-description{
+    color: var(--text-primary);
+}
+
+.setting-item {
+    margin-bottom: 15px; /* Add some consistent bottom margin to setting-items if not already present */
+}
+.setting-item label {
+    /* ... existing styles ... */
+    margin-bottom: 5px; /* ensure consistent spacing */
+}
+
+/* Styles for the new Info Summary Section */
+.info-summary-section {
+    margin-top: 20px; /* Space above the section */
+    padding: 12px 15px;
+    background-color: #2A2A2A; /* Slightly different background or same as other input backgrounds */
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+.info-summary-section p {
+    margin: 6px 0;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.info-summary-section p span { /* For the actual value part */
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-left: 5px;
+}
+
+#originalFileInfo,
+#currentEstimatedOutputSize {
+    /* Specific styles if needed, but parent p span should cover it */
+}
+
+
+/* ... (rest of the styles) ... */
+/* Ensure .settings-group has enough padding if children are close to edge */
+.settings-group {
+    padding: 15px; /* Increased from 10px for better spacing */
+    border: 1px dashed #555;
+    margin-top: 8px;
+    margin-bottom: 12px;
+    background-color: #333333;
+    border-radius: 4px;
+}
+
+
+.control-group input.manual-value-input {
+    width: 70px; /* Adjust width as needed */
+    padding: 6px 8px;
+    text-align: right;
+    border: 1px solid var(--control-border);
+    background-color: #383838; /* Slightly different from main control bg for distinction */
+    color: #e0e0e0;
+    border-radius: 3px;
+    font-size: 0.9em;
+    margin-left: 8px; /* Space between slider and this input */
+    box-sizing: border-box;
+  }
+  
+  /* Remove spinner arrows for WebKit/Blink browsers */
+  .control-group input.manual-value-input::-webkit-outer-spin-button,
+  .control-group input.manual-value-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  /* Remove spinner arrows for Firefox */
+  .control-group input.manual-value-input[type=number] {
+    -moz-appearance: textfield;
+  }
+  
+  .control-group input.manual-value-input:disabled {
+    background-color: var(--button-bg); /* Consistent with other disabled elements */
+    opacity: var(--disabled-opacity);
+    cursor: not-allowed;
+  }
+  
+  .control-group .value-display {
+    /* This contains the text span and unit span */
+    /* Adjust margin if it's too close or far from the number input */
+    margin-left: 4px; /* Reduced space as number input is also there */
+    min-width: auto; /* Override previous min-width if it was for combined display */
+    display: inline-flex; /* To keep text and unit together nicely */
+    align-items: baseline;
+  }
+  
+  .control-group .value-display .unit {
+    color: #aaa;
+    font-size: 0.9em; /* Match other display text */
+    margin-left: 2px; /* Small space before unit */
+  }
+  
+  
+  /* Responsive adjustments */
+  @media (max-width: 480px) {
+    .control-group {
+      /* Existing: flex-direction: column; align-items: stretch; */
+    }
+    .control-group input.manual-value-input {
+      width: 100%; /* Full width in column layout */
+      margin-left: 0;
+      margin-top: 5px; /* Space below slider */
+    }
+    .control-group .value-display {
+      width: 100%;
+      justify-content: flex-end; /* Align text to the right in full-width scenario */
+      margin-left: 0;
+      margin-top: 5px; /* Space below number input */
+    }
+  }
+
+  /* --- A/B Player Specific Styles --- */
+.ab-player-container {
+    /* Your existing styles for the container itself */
+    margin-top: 20px;
+    border: 1px solid #666;
+    padding: 15px;
+    background-color: #333;
+}
+
+.ab-player-container h4 {
+    color: var(--accent-operational);
+    font-weight: 600;
+    text-align: center; /* Added for consistency if not already centered by h4 global */
+    margin-bottom: 15px; /* Added for consistency */
+}
+
+.ab-player-container p { /* For labels A and B */
+    margin: 10px 0 2px 0;
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    transition: opacity 0.3s ease;
+    font-weight: bold; /* Ensure labels are bold as per JS */
+}
+
+/* General style for all control buttons within the A/B player's controlsDiv */
+.ab-player-container .controlsDiv button { /* More specific selector for buttons in this div */
+    padding: 6px 12px;     /* Consistent padding */
+    font-size: 0.9em;      /* Consistent font size */
+    border-radius: 4px;    /* Consistent border radius */
+    border: 1px solid transparent; /* Base border */
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    font-weight: 600;      /* Consistent font weight */
+}
+
+/* Style for Play/Pause and A/B Switch (if not using data-listening-to for A/B switch) */
+.ab-player-container .controlsDiv button.button-small { /* Catches play/pause, ab-switch, loop by class */
+    background-color: var(--accent-positive);
+    color: var(--bg-main);
+    margin-right: 5px; /* Add a little space if they are too close */
+}
+.ab-player-container .controlsDiv button.button-small:last-of-type {
+    margin-right: 0; /* No margin on the last button in the row */
+}
+
+.ab-player-container .controlsDiv button.button-small:hover:not(:disabled) {
+    background-color: #3CB0A0; /* Darker shade */
+}
+
+/* Specific style for A/B Switch Button (using its data attribute) */
+.ab-player-container .controlsDiv button[data-listening-to] {
+    background-color: #607080; /* Neutral color */
+    color: var(--text-primary);
+}
+.ab-player-container .controlsDiv button[data-listening-to]:hover:not(:disabled) {
+    background-color: #506070;
+}
+
+/* Explicit style for the Loop Toggle Button - giving it a default look */
+/* This ensures it gets a base style if other rules don't catch it as expected.
+   It will use the .button-small style primarily. */
+.ab-player-container .controlsDiv button[title*="Looping"] { /* Targets based on title attribute content */
+    /* Default state (Loop Off) - inherits from .button-small or a general button style */
+    /* background-color: #555; /* Example: a slightly different neutral for off state */
+    /* color: var(--text-primary); */
+}
+
+/* Style for Loop Toggle Button when 'Loop On' (active state handled by JS) */
+/* The JS already sets:
+   loopToggleBtn.style.backgroundColor = 'var(--accent-operational)';
+   loopToggleBtn.style.color = '#111';
+   So, CSS here is mostly for the default/off state or if JS styles are removed.
+*/
+
+
+.ab-player-container audio {
+    width: 100%; /* Ensure audio controls take full width */
+    filter: contrast(0.9) brightness(0.95);
+    margin-top: 5px; /* Add a bit of space above audio elements */
+    margin-bottom: 10px; /* Space below audio elements */
+}

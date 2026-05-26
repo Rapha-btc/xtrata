@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audional Art - Generated File Tester</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden; /* Prevent body scrollbars, manage scrolling in containers */
+            font-family: sans-serif;
+            background-color: #f4f4f4;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+        h1 {
+            color: #333; text-align: center; margin: 0 0 15px 0; flex-shrink: 0;
+        }
+        .warning {
+            color: #d9534f; background-color: #f2dede; border: 1px solid #ebccd1;
+            padding: 10px; margin-bottom: 15px; border-radius: 4px; font-weight: bold;
+            flex-shrink: 0;
+        }
+        #container {
+            display: flex; flex-direction: column; gap: 15px; flex-grow: 1;
+            overflow: hidden; /* Prevent container overflow */
+        }
+        #inputArea {
+            flex-shrink: 0; /* Don't let input area shrink initially */
+            background-color: #fff; padding: 15px; border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: max-height 0.5s ease-in-out, padding 0.5s ease-in-out, opacity 0.5s ease-in-out; /* Animation */
+            overflow: hidden;
+            max-height: 600px; /* Increased initial max height slightly */
+            opacity: 1;
+        }
+         /* State when output is active */
+        #inputArea.collapsed {
+             max-height: 80px; /* Height of label and button */
+             padding-top: 5px;
+             padding-bottom: 5px;
+             opacity: 0.9;
+        }
+         #inputArea.collapsed textarea,
+         #inputArea.collapsed #fileInputLabel, /* Hide file input when collapsed */
+         #inputArea.collapsed #fileInput,     /* Hide file input when collapsed */
+         #inputArea.collapsed .input-separator, /* Hide separator */
+         #inputArea.collapsed #pasteLabel,      /* Hide paste label */
+         #inputArea.collapsed #errorDisplay:not(:empty) /* Keep error visible if present */
+         {
+            display: none;
+         }
+         #inputArea.collapsed #runButton {
+             margin-top: 5px; /* Adjust button spacing when collapsed */
+         }
+
+        #inputArea label { display: block; margin-bottom: 5px; font-weight: bold; }
+        #fileInput { margin-bottom: 15px; display: block; } /* Style file input */
+        .input-separator { text-align: center; margin: 10px 0; font-weight: bold; color: #555; }
+
+        #htmlInput {
+             width: 98%; height: 30px; /* Adjusted height */
+             font-family: monospace; border: 1px solid #ccc;
+             padding: 10px; margin-bottom: 10px; display: block;
+         }
+        #runButton {
+            padding: 10px 20px; font-size: 1em; cursor: pointer; background-color: #ffc107; /* Amber button */
+            color: #212529; border: none; border-radius: 5px; transition: background-color 0.3s ease;
+            font-weight: bold; display: block; /* Make button block for easier centering/margin */
+            margin-top: 5px; /* Add some space above the button */
+        }
+        #runButton:hover { background-color: #e0a800; }
+        #outputArea {
+            border: 1px solid #ccc; /* Solid border */
+            background-color: #fff; flex-grow: 1; /* Takes remaining space */
+            display: flex; flex-direction: column;
+            min-height: 200px; /* Minimum output height */
+            border-radius: 5px;
+            overflow: hidden; /* Clip iframe border */
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: none; /* Initially hidden */
+        }
+        #outputArea.visible {
+            display: flex; /* Show when run */
+        }
+        #outputArea h2 {
+             margin: 10px 15px; color: #555; font-size: 1.1em;
+             text-align: left; flex-shrink: 0; border-bottom: 1px solid #eee; padding-bottom: 8px;
+        }
+        #executionFrame {
+            flex-grow: 1; /* Iframe fills the output area */
+            border: none; /* Remove iframe default border */
+            width: 100%;
+            height: 100%; /* Fill the container */
+        }
+        #errorDisplay { color: red; margin-top: 10px; font-weight: bold; white-space: pre-wrap; font-size: 0.9em;}
+    </style>
+</head>
+<body>
+    <h1>Audional Art - (Beta) Modular HTML Tester (Iframe/SrcDoc)</h1>
+
+    <div class="warning">
+        ⚠️ Security Warning: This page executes loaded/pasted code in an iframe. Only run code that has been created by yourself or someone you trust. Avoid loading untrusted files.
+    </div>
+
+    <div id="container">
+        <div id="inputArea">
+            <!-- File Input Section -->
+            <label id="fileInputLabel" for="fileInput">Load index.html File:</label>
+            <input type="file" id="fileInput" accept=".html, .htm">
+
+            <!-- Separator -->
+            <div class="input-separator">OR</div>
+
+            <!-- Paste Section -->
+            <label id="pasteLabel" for="htmlInput">Paste FULL generated index.html content here:</label>
+            <textarea id="htmlInput" placeholder="<!DOCTYPE html>...</html>"></textarea>
+
+            <!-- Run Button and Error Display -->
+            <button id="runButton">Run / Reset Code in Frame</button>
+            <div id="errorDisplay"></div>
+        </div>
+
+        <div id="outputArea"> <!-- Initially hidden -->
+            <h2>Executed Content: (Click inside iframe then press "i" for controls and information)</h2>
+            <iframe id="executionFrame" title="Executed HTML Content">
+                <!-- Iframe content will be set via srcdoc -->
+            </iframe>
+        </div>
+    </div>
+
+    <script>
+        const LOG_PREFIX = "[Tester Iframe Log] ";
+        const htmlInput = document.getElementById('htmlInput');
+        const runButton = document.getElementById('runButton');
+        const inputArea = document.getElementById('inputArea');
+        const outputArea = document.getElementById('outputArea');
+        const executionFrame = document.getElementById('executionFrame');
+        const errorDisplay = document.getElementById('errorDisplay');
+        const fileInput = document.getElementById('fileInput'); // Get the file input element
+
+        // --- Cleanup Function ---
+        function clearPreviousRun() {
+            console.log(LOG_PREFIX + "Clearing previous run...");
+            // Clear the iframe safely
+            try {
+                // Try accessing contentWindow, might fail if cross-origin or already navigated
+                if (executionFrame.contentWindow && typeof executionFrame.contentWindow.stop === 'function') {
+                    executionFrame.contentWindow.stop(); // Try to stop loading/scripts
+                    console.log(LOG_PREFIX + "Called contentWindow.stop()");
+                }
+            } catch (e) {
+                console.warn(LOG_PREFIX + "Could not call contentWindow.stop():", e.message);
+            }
+            executionFrame.src = 'about:blank'; // More reliable than srcdoc = ''
+            console.log(LOG_PREFIX + "Cleared executionFrame content (set src to about:blank).");
+
+            // Hide output area, expand input area
+            outputArea.classList.remove('visible');
+            inputArea.classList.remove('collapsed');
+            console.log(LOG_PREFIX + "Reset UI layout.");
+
+
+            // Clear any previous error messages
+            errorDisplay.textContent = '';
+
+            console.warn(LOG_PREFIX + "Audio running inside the previous iframe cannot be stopped directly from here after src change. Refresh page for full reset if needed.");
+            console.log(LOG_PREFIX + "Cleanup finished.");
+        }
+
+        // --- Execution Function (Modified) ---
+        // --- Execution Function (Modified Again for Robust Base Tag Handling) ---
+        function runCode() {
+            console.log(LOG_PREFIX + "--- Attempting to run code ---");
+            let htmlContent = htmlInput.value; // Use 'let' as we modify it
+
+            if (!htmlContent.trim()) {
+                errorDisplay.textContent = 'Error: Input area is empty. Load a file or paste code.';
+                console.warn(LOG_PREFIX + "Input area empty.");
+                outputArea.classList.remove('visible');
+                inputArea.classList.remove('collapsed');
+                return;
+            }
+            errorDisplay.textContent = ''; // Clear previous errors
+
+            try {
+                // Basic validation
+                if (!htmlContent.includes('<html') || !htmlContent.includes('</html')) {
+                    console.warn(LOG_PREFIX + "Content might not be complete HTML.");
+                    errorDisplay.textContent = 'Warning: Content might not be complete HTML. Ensure you copied/loaded the entire file.';
+                }
+
+                // *** Modification START: Robust Base Tag Handling ***
+                const baseHref = ''; // Define base path RELATIVE TO Tester.html
+                const desiredBaseTag = `<base href="${baseHref}">`;
+
+                // Regex to find an existing base tag (case-insensitive, handles quotes)
+                const baseRegex = /<\s*base\s[^>]*href\s*=\s*(['"]?)(.*?)\1[^>]*>/i;
+                const existingBaseMatch = htmlContent.match(baseRegex);
+
+                let baseTagHandled = false;
+
+                if (existingBaseMatch) {
+                    // Found existing base tag
+                    const oldBaseTag = existingBaseMatch[0];
+                    const oldHref = existingBaseMatch[2];
+                    if (oldHref !== baseHref) {
+                        // Replace its href if it's different
+                        const newBaseTag = oldBaseTag.replace(/href\s*=\s*(['"]?)(.*?)\1/i, `href="${baseHref}"`);
+                        htmlContent = htmlContent.replace(oldBaseTag, newBaseTag);
+                        console.log(LOG_PREFIX + `Updated existing <base> tag href from '${oldHref}' to '${baseHref}'.`);
+                        baseTagHandled = true;
+                    } else {
+                        console.log(LOG_PREFIX + `Existing <base> tag already has correct href '${baseHref}'.`);
+                        baseTagHandled = true; // No change needed
+                    }
+                }
+
+                if (!baseTagHandled) {
+                    // No existing base tag OR couldn't reliably update, inject a new one
+                    const headTagEndMatch = /<\s*head[^>]*>/i.exec(htmlContent);
+                    if (headTagEndMatch) {
+                        // Inject after the opening <head> tag
+                        const headTagEndIndex = headTagEndMatch.index + headTagEndMatch[0].length;
+                        htmlContent = htmlContent.slice(0, headTagEndIndex) + desiredBaseTag + htmlContent.slice(headTagEndIndex);
+                        console.log(LOG_PREFIX + `Successfully injected new <base href='${baseHref}'> tag.`);
+                        baseTagHandled = true;
+                    } else {
+                        // Fallback: Try inserting before </head>
+                        const headCloseMatch = /<\s*\/head\s*>/i.exec(htmlContent);
+                        if (headCloseMatch) {
+                            htmlContent = htmlContent.replace(headCloseMatch[0], desiredBaseTag + headCloseMatch[0]);
+                            console.log(LOG_PREFIX + `Injected new <base href='${baseHref}'> tag before </head> (fallback).`);
+                            baseTagHandled = true;
+                        } else {
+                             console.warn(LOG_PREFIX + "Could not find <head> tag to inject/update <base> tag. Relative paths might fail.");
+                             errorDisplay.textContent = (errorDisplay.textContent ? errorDisplay.textContent + '\n' : '') + 'Warning: Could not find <head> tag to adjust resource paths.';
+                             // Proceed anyway, maybe the paths were already absolute?
+                        }
+                    }
+                }
+                // *** Modification END ***
+
+
+                console.log(LOG_PREFIX + "Setting iframe srcdoc attribute...");
+                executionFrame.srcdoc = htmlContent; // Use the potentially modified content
+                console.log(LOG_PREFIX + "Iframe srcdoc set. Browser will now load content and resources.");
+
+                // --- Adjust UI ---
+                inputArea.classList.add('collapsed');
+                outputArea.classList.add('visible');
+                console.log(LOG_PREFIX + "Adjusted UI layout for output.");
+
+                console.info(LOG_PREFIX + "*** Execution happening inside the iframe below. Check its context (Right-click -> Inspect Frame) or the main console for potential errors/logs. ***");
+
+            } catch (e) {
+                console.error(LOG_PREFIX + "Error setting srcdoc or processing code:", e);
+                errorDisplay.textContent = `An critical error occurred: ${e.message}\nCheck console.`;
+                outputArea.classList.remove('visible');
+                inputArea.classList.remove('collapsed');
+            }
+            console.log(LOG_PREFIX + "--- 'runCode' function finished ---");
+        }
+
+        // --- File Loading Function ---
+        // --- File Loading Function ---
+        function loadFile(event) {
+             console.log(LOG_PREFIX + "File input changed.");
+             const file = event.target.files[0]; // Get the selected file
+
+             if (!file) {
+                 console.log(LOG_PREFIX + "No file selected.");
+                 return; // No file chosen
+             }
+
+             // Clear previous run state *before* loading new file content
+             clearPreviousRun();
+
+             const reader = new FileReader();
+
+             reader.onload = function(e) {
+                 console.log(LOG_PREFIX + "File read successfully.");
+                 const fileContent = e.target.result;
+                 htmlInput.value = fileContent; // Populate the textarea
+                 console.log(LOG_PREFIX + "Textarea populated with file content.");
+
+                 // Automatically run the code after loading the file
+                 setTimeout(runCode, 10); // Use a tiny timeout
+             };
+
+             reader.onerror = function(e) {
+                 console.error(LOG_PREFIX + "Error reading file:", e);
+                 errorDisplay.textContent = 'Error reading file: ' + reader.error;
+                 outputArea.classList.remove('visible');
+                 inputArea.classList.remove('collapsed');
+                 htmlInput.value = ''; // Clear textarea on error
+             };
+
+             console.log(LOG_PREFIX + `Attempting to read file: ${file.name} (${file.type})`);
+             reader.readAsText(file); // Read the file as text
+        }
+
+
+        // --- Event Listeners ---
+
+        // Add event listener to the Run button
+        runButton.addEventListener('click', () => {
+             console.log(LOG_PREFIX + "--- 'Run Code' button clicked ---");
+             // Clear the *previous* run *before* starting the new one
+             clearPreviousRun();
+             // Use a tiny timeout to allow the browser to process the cleanup before running new code
+             setTimeout(runCode, 10);
+         });
+
+        // Add event listener to the file input
+        fileInput.addEventListener('change', loadFile);
+
+        // Initial cleanup on page load
+        window.addEventListener('load', () => {
+            console.log(LOG_PREFIX + "Page loaded. Performing initial cleanup.");
+            clearPreviousRun();
+            htmlInput.value = ''; // Also clear textarea on load
+            fileInput.value = ''; // Clear file input selection on reload
+        });
+
+    </script>
+
+</body>
+</html>

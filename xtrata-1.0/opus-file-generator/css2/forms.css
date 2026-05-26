@@ -1,0 +1,40 @@
+/* Form elements */
+label, input, button, select {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 1em;
+  }
+  
+  input[type="file"] {
+    border: 1px solid #ccc;
+    padding: 5px;
+    width: calc(100% - 12px); /* Adjusted for padding/border */
+  }
+  
+  fieldset {
+    border: 1px solid #ccc;
+    margin-bottom: 10px;
+    padding: 10px;
+  }
+  
+  legend {
+    font-weight: bold;
+  }
+  
+  fieldset#formatOptions label {
+    display: inline-block;
+    margin-right: 15px;
+  }
+  
+  fieldset#formatOptions input[type="radio"] {
+    width: auto;
+    margin-right: 5px;
+    vertical-align: middle;
+  }
+  
+  .estimate {
+    font-style: italic;
+    color: #333;
+    margin-top: 5px; /* Added some spacing */
+    display: block; /* Ensure it takes its own line */
+  }

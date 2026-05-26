@@ -1,0 +1,67 @@
+/* Base Button styles */
+button {
+    padding: 10px 15px;
+    cursor: pointer;
+    background: #007bff; /* Default blue */
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    font-size: 1em; /* Ensure consistency */
+    transition: background-color 0.2s ease; /* Smooth hover */
+  }
+  
+  button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    opacity: 0.7; /* More common than just changing background */
+  }
+  
+  button:hover:not(:disabled) {
+    background: #0056b3; /* Darker blue on hover */
+  }
+  
+  /* Specific Button Variants */
+  .play-button, #playSampleBtn {
+    background: #28a745; /* Green */
+    margin-right: 10px;
+  }
+  .play-button:hover:not(:disabled),
+  #playSampleBtn:hover:not(:disabled) {
+    background: #218838; /* Darker green */
+  }
+  
+  .copy-button {
+    background: #6c757d; /* Gray */
+  }
+  .copy-button:hover:not(:disabled) {
+    background: #5a6268; /* Darker gray */
+  }
+  
+  .download-button {
+    background: #28a745; /* Green */
+  }
+  .download-button:hover:not(:disabled) {
+    background: #218838; /* Darker green */
+  }
+  
+  
+  /* Button Containers */
+  .button-container, .button-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  
+  /* Responsive Button Containers */
+  @media (max-width: 768px) {
+    .button-container, .button-group {
+      flex-direction: column;
+      align-items: stretch; /* Make buttons full width */
+    }
+    .button-container button,
+    .button-group button {
+        width: 100%;
+        margin-right: 0; /* Override specific margins */
+    }
+  }

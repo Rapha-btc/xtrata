@@ -1,0 +1,36 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audional Art Inscription Code Generator</title>
+</head>
+<body>
+    <!-- --- Embedded Base64 Data Zone (as JS global variables) --- -->
+    <script>
+        const imageBase64 = `/9j...`; // Injected Image Data
+        const audioBase64_Opus = `T2d...`; // Injected Audio Data
+    </script>
+    <!-- --- End Embedded Base64 Data Zone --- -->
+
+    <!-- Container for dynamic content -->
+    <link rel="stylesheet" href="style.css">
+    <div id="app">
+        <!-- Static Audio Metadata Section (NOW DYNAMICALLY FILLED) -->
+        <div class="audio-metadata">
+            <span id="audio-meta-instrument">Steel Drum</span>
+            <span id="audio-meta-note">C5</span>
+            <span id="audio-meta-frequency">523.25 Hz</span>
+        </div>
+        <!-- The rest of the layout will be inserted here by app.js -->
+    </div>
+
+    <!-- Load the JS modules that build the layout and add interactivity -->
+    <!-- Make sure these paths (style.css, app.js, main.js) are correct relative -->
+    <!-- to where the GENERATED HTML file will be saved/used. -->
+    <!-- Consider using absolute paths if deploying: /path/to/style.css -->
+    <!-- <script type="module" src="app.js"></script> -->
+    <script type="module" src="main.js"></script>
+</body>
+</html>

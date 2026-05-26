@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Image to Base64 Converter</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+</head>
+<body>
+    <!-- Add this to the top of both index.html and image-to-base64.html -->
+<nav class="main-nav">
+    <ul>
+      <li><a href="index.html">WAV to Opus Converter</a></li>
+      <li><a href="image-to-base64.html">Image to Base64 Converter</a></li>
+    </ul>
+  </nav>
+  <div class="container">
+    <h1>Image to Base64 Converter</h1>
+    
+    <div class="file-input-container">
+      <label for="image-file-input" class="custom-file-upload">
+        Select Image File
+      </label>
+      <input type="file" id="image-file-input" accept="image/*">
+    </div>
+    
+    <div class="preview-container">
+      <img id="image-preview" alt="Image Preview" style="display: none; max-width: 100%; max-height: 300px;">
+    </div>
+    
+    <div class="info-container">
+      <p id="file-size-info"></p>
+    </div>
+    
+    <div class="button-container">
+      <button id="convert-image-button" disabled>Convert to Base64</button>
+    </div>
+    
+    <div class="output-container">
+      <textarea id="base64-output" style="display: none;" readonly></textarea>
+    </div>
+    
+    <div class="button-container">
+      <button id="download-base64-button" disabled>Download Base64 as Text</button>
+    </div>
+  </div>
+  
+  <script type="module">
+    import { initializeImageConverter } from './image-to-base64.js';
+    
+    // Initialize the converter when the DOM is fully loaded
+    document.addEventListener('DOMContentLoaded', initializeImageConverter);
+  </script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+/* Settings groups (often within fieldsets) */
+.settings-group {
+    padding: 10px;
+    border: 1px dashed #ddd;
+    margin-top: 5px;
+    margin-bottom: 10px; /* Added spacing */
+  }
+  
+  .settings-group label {
+    display: block;
+    margin-bottom: 5px;
+  }
+  
+  .settings-group input[type="range"] {
+    width: 60%;
+    vertical-align: middle;
+    margin-right: 10px; /* Space before span */
+  }
+  
+  .settings-group span {
+    /* margin-left: 10px;  Replaced by margin-right on input */
+    font-size: 0.9em;
+    color: #555;
+    vertical-align: middle;
+  }

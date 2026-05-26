@@ -1,0 +1,87 @@
+/* --- Info Popup Styles --- */
+
+.info-popup {
+    position: fixed; /* Position relative to the viewport */
+    top: 50%;          /* Center vertically */
+    left: 50%;         /* Center horizontally */
+    transform: translate(-50%, -50%); /* Fine-tune centering */
+    width: 80%;        /* Responsive width */
+    max-width: 700px;  /* Maximum width */
+    max-height: 85vh; /* Maximum height (85% of viewport height) */
+    background-color: #fefefe; /* Background color */
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    z-index: 1050;     /* Ensure it's above other content */
+    padding: 20px;
+    padding-top: 50px; /* Extra padding at top for close button */
+    overflow: hidden; /* Hide main container overflow */
+    display: block; /* Default state */
+  }
+  
+  /* Style the content area within the popup */
+  #audioInfoContent {
+    max-height: calc(85vh - 70px); /* Calculate max-height based on parent padding */
+    overflow-y: auto; /* Add vertical scrollbar ONLY when needed */
+    padding-right: 15px; /* Space for scrollbar */
+  }
+  
+  /* Style the close button */
+  .close-info-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    font-size: 2em; /* Larger */
+    font-weight: bold;
+    color: #aaa;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+  }
+  
+  .close-info-btn:hover,
+  .close-info-btn:focus {
+    color: #333;
+    text-decoration: none;
+  }
+  
+  /* Ensure the hidden class works as expected */
+  .info-popup.hidden {
+    display: none;
+  }
+  
+  /* Adjustments for the content inside #audioInfoContent */
+  #audioInfoContent h2,
+  #audioInfoContent h3 {
+    margin-top: 15px;
+    margin-bottom: 8px;
+    color: #333;
+  }
+  
+  #audioInfoContent p,
+  #audioInfoContent ul,
+  #audioInfoContent li {
+    margin-bottom: 12px;
+    line-height: 1.6;
+    color: #555;
+  }
+  
+  #audioInfoContent ul {
+      padding-left: 25px;
+      list-style: disc; /* Ensure list styles */
+  }
+  
+  #audioInfoContent code { /* Style code blocks if any */
+      background-color: #eee;
+      padding: 2px 4px;
+      border-radius: 3px;
+      font-family: monospace;
+  }
+  
+  #audioInfoContent hr {
+      border: none;
+      border-top: 1px solid #eee;
+      margin: 20px 0;
+  }

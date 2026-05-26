@@ -1,0 +1,24 @@
+/* Button Link styles */
+.button-link {
+    /* Base styles */
+    display: inline-block; /* Important for padding and margins */
+    padding: 12px 25px;
+    text-align: center;
+    text-decoration: none; /* Remove underline */
+    font-family: sans-serif; /* Or choose a specific cool font */
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer; /* Indicate it's clickable */
+    border-radius: 5px; /* Slightly rounded corners */
+    transition: all 0.3s ease; /* Smooth transitions for hover effects */
+  
+    /* Example: Style 1 specific properties */
+    background-color: #4CAF50; /* Green */
+    color: white;
+    border: none;
+  }
+  
+  .button-link:hover {
+     /* Example: Style 1 hover properties */
+    background-color: #45a049; /* Darker Green */
+  }
