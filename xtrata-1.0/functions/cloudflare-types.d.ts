@@ -26,9 +26,11 @@ interface R2Bucket {
     key: string
   ): Promise<{
     body: ReadableStream<Uint8Array> | null;
+    size?: number;
     httpMetadata?: {
       contentType?: string;
     };
+    customMetadata?: Record<string, string>;
   } | null>;
   put(
     key: string,
@@ -37,6 +39,7 @@ interface R2Bucket {
       httpMetadata?: {
         contentType?: string;
       };
+      customMetadata?: Record<string, string>;
     }
   ): Promise<unknown>;
   delete(key: string | string[]): Promise<unknown>;
