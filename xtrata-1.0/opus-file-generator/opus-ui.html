@@ -791,6 +791,21 @@
   import { initializeImageConverter } from './image-to-base64.js';
   document.addEventListener('DOMContentLoaded', initializeImageConverter);
 
+  const syncGenerateButtonState = (audioReady) => {
+    const generateButton = document.getElementById('generateHtmlButton');
+    if (generateButton) {
+      generateButton.disabled = !audioReady;
+    }
+  };
+
+  document.addEventListener('audionalBase64Generated', () => {
+    syncGenerateButtonState(true);
+  });
+
+  window.addEventListener('load', () => {
+    window.setTimeout(() => syncGenerateButtonState(false), 0);
+  });
+
   const testerButton = document.getElementById('testGeneratedHtmlButton');
   if (testerButton) {
     testerButton.addEventListener('click', () => {
