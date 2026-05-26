@@ -4,10 +4,10 @@
 /homepage-registry-ledger-v1 / 302
 /homepage-registry-ledger-v1/ / 302
 /homepage-registry-ledger-v1.html / 302
-/signal-king/ /signal-king 302
-/recursive-apps/signal-king /signal-king 302
-/recursive-apps/signal-king/ /signal-king 302
-/recursive-apps/signal-king/index.html /signal-king 302
+/opus /opus-file-generator/ 301
+/opus/ /opus-file-generator/ 301
+/opus/* /opus-file-generator/:splat 301
+/opus-file-generator /opus-file-generator/ 301
 /workspace/* /workspace 200
 /admin /workspace 200
 /admin/* /workspace 200

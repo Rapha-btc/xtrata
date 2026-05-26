@@ -1,0 +1,29 @@
+/* Result display */
+#result a {
+    display: block;
+    padding: 10px;
+    background: #28a745; /* Green */
+    color: #fff;
+    text-align: center;
+    text-decoration: none;
+    border-radius: 4px;
+    margin-top: 10px;
+    transition: background-color 0.2s ease;
+  }
+  
+  #result a:hover {
+    background-color: #218838; /* Darker green */
+  }
+  
+  #originalAudioContainer {
+    margin-top: 15px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    display: none; /* Hidden by default */
+    background-color: #f9f9f9; /* Light background */
+  }
+  
+  #originalAudioContainer audio {
+      width: 100%; /* Make audio player responsive */
+  }

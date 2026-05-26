@@ -1,0 +1,18 @@
+/* Base styles */
+body {
+    font-family: sans-serif;
+    max-width: 600px;
+    margin: 20px auto;
+    padding: 15px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+  }
+  
+  h1 {
+    text-align: center;
+  }
+  
+  /* General utility */
+  .hidden {
+    display: none;
+  }

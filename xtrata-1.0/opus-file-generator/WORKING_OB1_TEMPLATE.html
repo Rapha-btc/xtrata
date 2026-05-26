@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clickable Image with Sound (Blob URL)</title>
+    <style>
+        /* --- CSS Styling Zone --- */
+        html, body {
+            height: 100%; margin: 0; padding: 0; overflow: hidden; box-sizing: border-box;
+        }
+        body {
+            display: flex; justify-content: center; align-items: center; background-color: #f0f0f0;
+        }
+        #clickableImage {
+            height: 80vh; width: 80vh; object-fit: cover; cursor: pointer;
+            border: 2px solid black; box-shadow: 3px 3px 8px rgba(0,0,0,0.3);
+        }
+        #clickSoundPlayer { /* Changed ID slightly for clarity */
+            display: none;
+        }
+        /* --- End CSS Styling Zone --- */
+    </style>
+</head>
+<body>
+
+    <!-- --- Embedded Base64 Data Zone (as JS variables for clarity) --- -->
+    <script>
+        // --- PASTE YOUR BASE64 IMAGE DATA HERE ---
+        // Ensure this is ONLY the Base64 string, no "data:image/jpeg;base64," prefix
+        const imageBase64 = `<!--- PASTE PURE BASE64 IMAGE DATA (JPEG) HERE --->`;
+
+        // --- PASTE YOUR BASE64 AUDIO DATA HERE ---
+        // Ensure this is ONLY the Base64 string, no "data:audio/opus;base64," prefix
+        // **THIS IS THE MOST LIKELY SOURCE OF YOUR ERROR - TRIPLE CHECK THIS DATA**
+        const audioBase64_Opus = `<!--- PASTE PURE BASE64 AUDIO DATA (Opus) HERE --->`;
+
+    </script>
+    <!-- --- End Embedded Base64 Data Zone --- -->
+
+
+    <!-- --- HTML Elements Zone --- -->
+    <img id="clickableImage" alt="Clickable Image">
+    <audio id="clickSoundPlayer">
+        Your browser does not support the audio element.
+    </audio>
+    <!-- --- End HTML Elements Zone --- -->
+
+
+    <script>
+        /* --- JavaScript Logic Zone --- */
+
+        // Get references to the HTML elements
+        const imageElement = document.getElementById('clickableImage');
+        const audioElement = document.getElementById('clickSoundPlayer');
+        let audioObjectUrl = null; // To keep track of the blob URL
+
+        console.log("DOM loaded. Initializing...");
+
+        /**
+         * Converts a Base64 string to an ArrayBuffer.
+         * Returns null if the Base64 string is invalid.
+         */
+        function base64ToArrayBuffer(base64) {
+            try {
+                const binaryString = window.atob(base64);
+                const len = binaryString.length;
+                const bytes = new Uint8Array(len);
+                for (let i = 0; i < len; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                return bytes.buffer;
+            } catch (e) {
+                console.error("Error decoding Base64 string:", e);
+                // The specific error "Failed to execute 'atob'..." strongly suggests
+                // the input 'base64' string is corrupted or not valid Base64.
+                alert("Failed to decode audio Base64 data. The data is likely corrupted or invalid. Please check the audioBase64_Opus variable.");
+                return null;
+            }
+        }
+
+        // --- Initialize Image ---
+        if (imageElement && imageBase64) {
+            // Use direct data URI for the image as it was working
+            imageElement.src = `data:image/jpeg;base64,${imageBase64}`;
+            console.log("Image source set.");
+        } else {
+            console.error("Image element or image Base64 data missing.");
+            if (imageElement) imageElement.alt = "Error loading image data.";
+        }
+
+        // --- Initialize Audio using Blob URL ---
+        if (audioElement && audioBase64_Opus) {
+            console.log("Attempting to process audio Base64 data...");
+            const audioBuffer = base64ToArrayBuffer(audioBase64_Opus);
+
+            if (audioBuffer) {
+                console.log("Base64 decoded successfully. Creating Blob...");
+                try {
+                    // Create a Blob with the correct MIME type for Opus
+                    const audioBlob = new Blob([audioBuffer], { type: 'audio/opus' });
+                    console.log(`Blob created. Type: ${audioBlob.type}, Size: ${audioBlob.size} bytes`);
+
+                    // Clean up previous object URL if one exists (though unlikely here)
+                    if (audioObjectUrl) {
+                        URL.revokeObjectURL(audioObjectUrl);
+                        console.log("Revoked previous audio Object URL.");
+                    }
+
+                    // Create an Object URL from the Blob
+                    audioObjectUrl = URL.createObjectURL(audioBlob);
+                    console.log("Created new audio Object URL:", audioObjectUrl);
+
+                    // Set the audio element's source to the Object URL
+                    audioElement.src = audioObjectUrl;
+                    console.log("Audio src set to Object URL.");
+
+                    // Optional: Add listeners for more detailed audio state debugging
+                    audioElement.onloadedmetadata = () => {
+                         console.log("Audio metadata loaded successfully. Duration:", audioElement.duration);
+                    };
+                    audioElement.onerror = (e) => {
+                        console.error("Audio Element Error:", audioElement.error);
+                        let errorMsg = "Unknown audio error.";
+                        switch (audioElement.error.code) {
+                            case MediaError.MEDIA_ERR_ABORTED: errorMsg = "Playback aborted."; break;
+                            case MediaError.MEDIA_ERR_NETWORK: errorMsg = "Network error caused audio download to fail."; break;
+                            case MediaError.MEDIA_ERR_DECODE: errorMsg = "Audio decoding error. The file might be corrupt or in an unsupported format."; break;
+                            case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED: errorMsg = "Audio source format not supported. Check Blob type ('audio/opus') and browser Opus support."; break;
+                            default: errorMsg = `An unknown error occurred (Code: ${audioElement.error.code})`;
+                        }
+                         console.error("Detailed Audio Error Message:", errorMsg);
+                         alert(`Error playing audio: ${errorMsg}`);
+                    };
+
+
+                } catch (blobError) {
+                    console.error("Error creating Blob or Object URL:", blobError);
+                    alert("Error processing audio data after decoding. Could not create Blob/URL.");
+                }
+            } else {
+                // Error handled within base64ToArrayBuffer
+                console.error("Audio setup failed due to Base64 decoding error.");
+            }
+        } else {
+            console.error("Audio element or audio Base64 data missing.");
+        }
+
+        // --- Setup Click Listener ---
+        if (imageElement && audioElement) {
+            imageElement.addEventListener('click', () => {
+                console.log('Image clicked!');
+
+                // Check if audio source is set and seems valid
+                if (!audioElement.src || audioElement.src.trim() === '') {
+                    console.warn("Audio source is not set. Cannot play.");
+                    alert("Audio is not ready to play. Check console errors.");
+                    return;
+                }
+
+                 // Check if audio is ready (readyState > 0 means metadata at least is loaded)
+                if (audioElement.readyState === 0) {
+                     console.warn("Audio is not ready yet (readyState=0). Attempting to load/play anyway...");
+                     // You might force a load, but usually the browser handles this once src is set.
+                     // audioElement.load(); // Generally not needed if src is set correctly
+                }
+
+
+                // Reset audio to the beginning
+                audioElement.currentTime = 0;
+
+                // Play the sound
+                console.log("Attempting to play audio...");
+                const playPromise = audioElement.play();
+
+                if (playPromise !== undefined) {
+                    playPromise.then(_ => {
+                        console.log('Audio playback started.');
+                    }).catch(error => {
+                        console.error("Audio playback failed:", error);
+                        // This often happens due to browser autoplay policies if there wasn't
+                        // a recent user interaction, but a click *should* be interaction.
+                        // Could also indicate deeper issues if src is invalid.
+                        alert("Could not play audio. Error: " + error.message + ". Check browser console for more details.");
+                    });
+                }
+            });
+            console.log("Click listener added to image.");
+
+        } else {
+            console.error("Could not set up click listener because image or audio element was not found.");
+        }
+
+        // Optional: Clean up the Object URL when the page is closed
+        window.addEventListener('unload', () => {
+            if (audioObjectUrl) {
+                URL.revokeObjectURL(audioObjectUrl);
+                console.log("Revoked audio Object URL on page unload.");
+            }
+        });
+
+        /* --- End JavaScript Logic Zone --- */
+    </script>
+
+</body>
+</html>
