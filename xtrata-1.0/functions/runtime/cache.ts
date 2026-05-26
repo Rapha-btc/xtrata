@@ -6,6 +6,12 @@ import type {
 
 export type RuntimeCacheStatus = 'HIT' | 'MISS' | 'BYPASS';
 
+export type RuntimeByteRange = {
+  start: number;
+  end: number;
+  length: number;
+};
+
 export type RuntimeContentCacheMetadata = Record<string, string>;
 
 export type RuntimeContentCacheRecord = {
@@ -13,6 +19,7 @@ export type RuntimeContentCacheRecord = {
   layer: 'r2' | 'edge';
   body: ReadableStream<Uint8Array>;
   size: number | null;
+  bodyRange?: RuntimeByteRange | null;
   httpMetadata?: {
     contentType?: string;
   };
@@ -106,20 +113,29 @@ export const buildRuntimeContentCacheKey = (params: {
 
 export const readRuntimeContentCache = async (
   env: RuntimeEnv,
-  key: string | null
+  key: string | null,
+  range?: RuntimeByteRange | null
 ): Promise<RuntimeContentCacheRecord | null> => {
   if (!key) {
     return null;
   }
   const bucket = getRuntimeContentCacheBucket(env);
   if (bucket) {
-    const object = await bucket.get(key);
+    const object = range
+      ? await bucket.get(key, {
+          range: {
+            offset: range.start,
+            length: range.length
+          }
+        })
+      : await bucket.get(key);
     if (object?.body) {
       return {
         key,
         layer: 'r2',
         body: object.body,
         size: typeof object.size === 'number' ? object.size : null,
+        bodyRange: range ?? null,
         httpMetadata: object.httpMetadata,
         customMetadata: object.customMetadata
       };
@@ -137,17 +153,63 @@ export const readRuntimeContentCache = async (
   const contentLength = response.headers.get('Content-Length');
   const parsedContentLength =
     contentLength === null ? Number.NaN : Number.parseInt(contentLength, 10);
+  const body = range ? sliceRuntimeStream(response.body, range) : response.body;
   return {
     key,
     layer: 'edge',
-    body: response.body,
+    body,
     size: Number.isFinite(parsedContentLength) ? parsedContentLength : null,
+    bodyRange: range ?? null,
     httpMetadata: {
       contentType: response.headers.get('Content-Type') ?? undefined
     },
     customMetadata: getEdgeCacheMetadata(response.headers)
   };
 };
+
+const sliceRuntimeStream = (
+  stream: ReadableStream<Uint8Array>,
+  range: RuntimeByteRange
+) =>
+  new ReadableStream<Uint8Array>({
+    start(controller) {
+      const reader = stream.getReader();
+      void (async () => {
+        let cursor = 0;
+        let remaining = range.length;
+        try {
+          while (remaining > 0) {
+            const { done, value } = await reader.read();
+            if (done) {
+              break;
+            }
+            const chunkStart = cursor;
+            const chunkEnd = cursor + value.length - 1;
+            cursor += value.length;
+            if (chunkEnd < range.start) {
+              continue;
+            }
+            const offset = Math.max(0, range.start - chunkStart);
+            const output = value.slice(offset, offset + remaining);
+            if (output.length > 0) {
+              controller.enqueue(output);
+              remaining -= output.length;
+            }
+          }
+          if (remaining > 0) {
+            throw new Error('Cached range body ended before the requested range.');
+          }
+          controller.close();
+        } catch (error) {
+          controller.error(error);
+        } finally {
+          if (remaining <= 0) {
+            await reader.cancel().catch(() => undefined);
+          }
+        }
+      })();
+    }
+  });
 
 export const writeRuntimeContentCache = async (params: {
   env: RuntimeEnv;

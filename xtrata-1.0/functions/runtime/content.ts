@@ -6,6 +6,7 @@ import {
   readRuntimeContentCache,
   runtimeBytesToHex,
   writeRuntimeContentCache,
+  type RuntimeByteRange,
   type RuntimeCacheStatus
 } from './cache';
 import {
@@ -15,6 +16,7 @@ import {
   parseRuntimeContractRef,
   parseRuntimeNetwork,
   parseRuntimeTokenId,
+  resolveRuntimeContent,
   resolveRuntimeMeta,
   resolveRuntimeContentStream,
   type RuntimeEnv
@@ -25,10 +27,12 @@ const RUNTIME_CONTENT_BUILD = 'stream-v1';
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET,HEAD,OPTIONS',
-  'Access-Control-Allow-Headers': 'content-type',
+  'Access-Control-Allow-Headers': 'content-type, range, if-range',
   'Access-Control-Expose-Headers': [
     'Content-Type',
     'Content-Length',
+    'Accept-Ranges',
+    'Content-Range',
     'ETag',
     'Server-Timing',
     'X-Xtrata-Runtime-Cache',
@@ -78,7 +82,8 @@ const buildRuntimeContentHeaders = (params: {
   totalSize: bigint;
   totalChunks: bigint;
   contentLength: number | null;
-  responseMode: 'cache' | 'head' | 'stream';
+  contentRange?: string;
+  responseMode: 'cache' | 'head' | 'range' | 'stream';
   readBatchSize?: number;
   readConcurrency?: number;
   readRetries?: number;
@@ -103,6 +108,13 @@ const buildRuntimeContentHeaders = (params: {
     'X-Xtrata-Runtime-Total-Chunks': params.totalChunks.toString(),
     'X-Xtrata-Runtime-Response-Mode': params.responseMode
   };
+  if (params.totalSize <= BigInt(Number.MAX_SAFE_INTEGER)) {
+    headers['Accept-Ranges'] = 'bytes';
+  }
+  if (params.contentRange) {
+    headers['Content-Range'] = params.contentRange;
+    headers.Vary = 'Range';
+  }
   if (typeof params.readBatchSize === 'number') {
     headers['X-Xtrata-Runtime-Read-Batch-Size'] = params.readBatchSize.toString();
   }
@@ -124,6 +136,106 @@ const buildRuntimeContentHeaders = (params: {
   }
   return headers;
 };
+
+type ParsedRange =
+  | { status: 'none' }
+  | { status: 'valid'; range: RuntimeByteRange; contentRange: string }
+  | { status: 'unsatisfiable'; contentRange: string };
+
+const parseRuntimeRange = (
+  headerValue: string | null,
+  totalSize: bigint
+): ParsedRange => {
+  if (!headerValue) {
+    return { status: 'none' };
+  }
+  if (totalSize < 0n || totalSize > BigInt(Number.MAX_SAFE_INTEGER)) {
+    return {
+      status: 'unsatisfiable',
+      contentRange: 'bytes */*'
+    };
+  }
+  const total = Number(totalSize);
+  const normalized = headerValue.trim();
+  const prefix = 'bytes=';
+  if (!normalized.toLowerCase().startsWith(prefix) || normalized.includes(',')) {
+    return {
+      status: 'unsatisfiable',
+      contentRange: `bytes */${total}`
+    };
+  }
+
+  const spec = normalized.slice(prefix.length).trim();
+  const separator = spec.indexOf('-');
+  if (separator < 0) {
+    return {
+      status: 'unsatisfiable',
+      contentRange: `bytes */${total}`
+    };
+  }
+
+  const startPart = spec.slice(0, separator).trim();
+  const endPart = spec.slice(separator + 1).trim();
+  const isDigits = (value: string) => /^\d+$/.test(value);
+  let start: number;
+  let end: number;
+
+  if (!startPart) {
+    if (!isDigits(endPart)) {
+      return {
+        status: 'unsatisfiable',
+        contentRange: `bytes */${total}`
+      };
+    }
+    const suffixLength = Number.parseInt(endPart, 10);
+    if (suffixLength <= 0 || total === 0) {
+      return {
+        status: 'unsatisfiable',
+        contentRange: `bytes */${total}`
+      };
+    }
+    start = Math.max(0, total - suffixLength);
+    end = total - 1;
+  } else {
+    if (!isDigits(startPart) || (endPart && !isDigits(endPart))) {
+      return {
+        status: 'unsatisfiable',
+        contentRange: `bytes */${total}`
+      };
+    }
+    start = Number.parseInt(startPart, 10);
+    end = endPart ? Number.parseInt(endPart, 10) : total - 1;
+    if (start >= total || start > end || total === 0) {
+      return {
+        status: 'unsatisfiable',
+        contentRange: `bytes */${total}`
+      };
+    }
+    end = Math.min(end, total - 1);
+  }
+
+  const length = end - start + 1;
+  return {
+    status: 'valid',
+    range: {
+      start,
+      end,
+      length
+    },
+    contentRange: `bytes ${start}-${end}/${total}`
+  };
+};
+
+const shouldHonorRange = (request: Request, finalHash: string) => {
+  const ifRange = request.headers.get('If-Range')?.trim();
+  if (!ifRange || !finalHash) {
+    return true;
+  }
+  return ifRange === finalHash || ifRange === `"${finalHash}"`;
+};
+
+const sliceBytes = (bytes: Uint8Array, range: RuntimeByteRange) =>
+  bytes.slice(range.start, range.end + 1);
 
 export const onRequest = async (context: {
   request: Request;
@@ -184,11 +296,43 @@ export const onRequest = async (context: {
           })
         : null;
     const cacheEnabled = hasRuntimeContentCache(env);
-    const cached = await readRuntimeContentCache(env, cacheKey);
+    const requestedRange = shouldHonorRange(request, finalHash)
+      ? parseRuntimeRange(request.headers.get('Range'), resolvedMeta.meta.totalSize)
+      : ({ status: 'none' } as const);
+    const range = requestedRange.status === 'valid' ? requestedRange.range : null;
+
+    if (requestedRange.status === 'unsatisfiable') {
+      const resolvedContractId = getRuntimeContractId(resolvedMeta.contract);
+      return new Response(null, {
+        status: 416,
+        headers: buildRuntimeContentHeaders({
+          mimeType: resolvedMeta.meta.mimeType || 'application/octet-stream',
+          cacheStatus: cacheEnabled ? 'MISS' : 'BYPASS',
+          network,
+          contractId: resolvedContractId,
+          sourceContractId: resolvedContractId,
+          tokenUri: '',
+          moduleBaseHref: '',
+          finalHash,
+          totalSize: resolvedMeta.meta.totalSize,
+          totalChunks: resolvedMeta.meta.totalChunks,
+          contentLength: 0,
+          contentRange: requestedRange.contentRange,
+          responseMode: 'range',
+          readBatchSize: readConfig.batchSize,
+          readConcurrency: readConfig.concurrency,
+          readRetries: readConfig.retries,
+          preparedMs: performance.now() - startedAt
+        })
+      });
+    }
+
+    const cached = await readRuntimeContentCache(env, cacheKey, range);
     if (cached) {
       const sourceContractId =
-        cached.customMetadata?.sourceContractId ??
-        getRuntimeContractId(resolvedMeta.contract);
+        cached.customMetadata?.sourceContractId ?? getRuntimeContractId(resolvedMeta.contract);
+      const rangeContentLength =
+        requestedRange.status === 'valid' ? requestedRange.range.length : null;
       const headers = buildRuntimeContentHeaders({
         mimeType:
           resolvedMeta.meta.mimeType ||
@@ -203,15 +347,24 @@ export const onRequest = async (context: {
         finalHash,
         totalSize: resolvedMeta.meta.totalSize,
         totalChunks: resolvedMeta.meta.totalChunks,
-        contentLength: cached.size,
-        responseMode: request.method === 'HEAD' ? 'head' : 'cache',
+        contentLength: rangeContentLength ?? cached.size,
+        contentRange:
+          requestedRange.status === 'valid'
+            ? requestedRange.contentRange
+            : undefined,
+        responseMode:
+          request.method === 'HEAD'
+            ? 'head'
+            : requestedRange.status === 'valid'
+              ? 'range'
+              : 'cache',
         readBatchSize: readConfig.batchSize,
         readConcurrency: readConfig.concurrency,
         readRetries: readConfig.retries,
         preparedMs: performance.now() - startedAt
       });
       return new Response(request.method === 'HEAD' ? null : cached.body, {
-        status: 200,
+        status: requestedRange.status === 'valid' ? 206 : 200,
         headers
       });
     }
@@ -219,7 +372,7 @@ export const onRequest = async (context: {
     if (request.method === 'HEAD') {
       const resolvedContractId = getRuntimeContractId(resolvedMeta.contract);
       return new Response(null, {
-        status: 200,
+        status: requestedRange.status === 'valid' ? 206 : 200,
         headers: buildRuntimeContentHeaders({
           mimeType: resolvedMeta.meta.mimeType || 'application/octet-stream',
           cacheStatus: cacheEnabled ? 'MISS' : 'BYPASS',
@@ -232,9 +385,15 @@ export const onRequest = async (context: {
           totalSize: resolvedMeta.meta.totalSize,
           totalChunks: resolvedMeta.meta.totalChunks,
           contentLength:
-            resolvedMeta.meta.totalSize <= BigInt(Number.MAX_SAFE_INTEGER)
-              ? Number(resolvedMeta.meta.totalSize)
-              : null,
+            requestedRange.status === 'valid'
+              ? requestedRange.range.length
+              : resolvedMeta.meta.totalSize <= BigInt(Number.MAX_SAFE_INTEGER)
+                ? Number(resolvedMeta.meta.totalSize)
+                : null,
+          contentRange:
+            requestedRange.status === 'valid'
+              ? requestedRange.contentRange
+              : undefined,
           responseMode: 'head',
           readBatchSize: readConfig.batchSize,
           readConcurrency: readConfig.concurrency,
@@ -245,6 +404,83 @@ export const onRequest = async (context: {
     }
 
     const cacheContractId = getRuntimeContractId(resolvedMeta.contract);
+    if (requestedRange.status === 'valid') {
+      const resolved = await resolveRuntimeContent({
+        env,
+        apiBases,
+        tokenId,
+        primaryContract: contractId,
+        fallbackContract: fallbackContractId,
+        resolvedMeta
+      });
+      let tokenUri: string | null = null;
+      try {
+        tokenUri = await fetchRuntimeTokenUri({
+          env,
+          apiBases,
+          contract: resolved.contract,
+          tokenId
+        });
+      } catch {
+        tokenUri = null;
+      }
+      const resolvedContractId = getRuntimeContractId(resolved.contract);
+      const resolvedFinalHash = runtimeBytesToHex(resolved.meta.finalHash);
+      const moduleBaseHref = buildRuntimeModuleBaseHref({
+        network,
+        contractId: resolvedContractId,
+        tokenUriPath: tokenUri,
+        entryTokenId: tokenId
+      });
+      if (cacheKey && resolved.meta.sealed && resolvedFinalHash === finalHash) {
+        const cacheWrite = writeRuntimeContentCache({
+          env,
+          key: cacheKey,
+          bytes: resolved.bytes,
+          mimeType: resolved.meta.mimeType || 'application/octet-stream',
+          metadata: {
+            network,
+            contractId: cacheContractId,
+            sourceContractId: resolvedContractId,
+            tokenId: tokenId.toString(),
+            finalHash: resolvedFinalHash,
+            totalSize: resolved.meta.totalSize.toString(),
+            totalChunks: resolved.meta.totalChunks.toString(),
+            tokenUri: tokenUri ?? '',
+            moduleBaseHref,
+            createdAt: new Date().toISOString()
+          }
+        }).catch(() => false);
+        if (context.waitUntil) {
+          context.waitUntil(cacheWrite);
+        } else {
+          await cacheWrite;
+        }
+      }
+      return new Response(sliceBytes(resolved.bytes, requestedRange.range), {
+        status: 206,
+        headers: buildRuntimeContentHeaders({
+          mimeType: resolved.meta.mimeType || 'application/octet-stream',
+          cacheStatus: cacheEnabled ? 'MISS' : 'BYPASS',
+          network,
+          contractId: cacheContractId,
+          sourceContractId: resolvedContractId,
+          tokenUri: tokenUri ?? '',
+          moduleBaseHref,
+          finalHash: resolvedFinalHash,
+          totalSize: resolved.meta.totalSize,
+          totalChunks: resolved.meta.totalChunks,
+          contentLength: requestedRange.range.length,
+          contentRange: requestedRange.contentRange,
+          responseMode: 'range',
+          readBatchSize: readConfig.batchSize,
+          readConcurrency: readConfig.concurrency,
+          readRetries: readConfig.retries,
+          preparedMs: performance.now() - startedAt
+        })
+      });
+    }
+
     let tokenUri: string | null = null;
     let moduleBaseHref: string | null = null;
     const resolved = await resolveRuntimeContentStream({
