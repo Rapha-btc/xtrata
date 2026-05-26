@@ -30,7 +30,8 @@ const runConversion = async () => {
     const inputFilename = "input_audio_file";
     const selectedFormatRadio = document.querySelector('input[name="format"]:checked');
     const outputFormat = selectedFormatRadio ? selectedFormatRadio.value : 'weba';
-    const outputFilename = `output.${outputFormat}`;
+    const outputConfig = getAudioOutputConfig(outputFormat);
+    const outputFilename = `output.${outputConfig.extension}`;
     const originalNameBase = getBaseFilename(selectedFile.name);
 
     // --- Filesystem Cleanup ---
@@ -51,14 +52,7 @@ const runConversion = async () => {
         updateStatus('Conversion complete! Processing output...');
 
         // --- Process Output Data ---
-        let mimeType;
-        if (outputFormat === 'mp3') mimeType = 'audio/mpeg';
-        else if (outputFormat === 'opus') mimeType = 'audio/opus';
-        else if (outputFormat === 'weba') mimeType = 'audio/webm; codecs=opus';
-        else {
-            mimeType = 'application/octet-stream';
-            console.warn(`Unknown output format for MIME type: ${outputFormat}`);
-        }
+        const mimeType = outputConfig.mimeType;
 
         // Create Blob from the converted data
         convertedAudioBlob = new Blob([outputData.buffer], { type: mimeType });
@@ -77,15 +71,15 @@ const runConversion = async () => {
             const downloadUrl = URL.createObjectURL(convertedAudioBlob);
             const dlLink = Object.assign(document.createElement('a'), {
                 href: downloadUrl,
-                download: `${originalNameBase}.${outputFormat}`,
-                textContent: `Download ${originalNameBase}.${outputFormat} (${formatBytes(convertedAudioBlob.size)})`,
+                download: `${originalNameBase}.${outputConfig.extension}`,
+                textContent: `Download ${originalNameBase}.${outputConfig.extension} (${formatBytes(convertedAudioBlob.size)})`,
                 style: 'display: block; margin-bottom: 10px;'
             });
 
             const audioPlayerContainer = createAudioPlayer(
                 convertedAudioBlob,
                 mimeType,
-                `Converted Audio (${outputFormat.toUpperCase()})`
+                `Converted Audio (${outputConfig.label})`
             );
 
             resultEl.append(resultTitle, dlLink, audioPlayerContainer);
@@ -149,6 +143,7 @@ const runBatchConversion = async () => {
     if (batchResultEl) batchResultEl.innerHTML = '<h3>Batch Conversion Results:</h3>';
 
     const outputFormat = document.querySelector('input[name="format"]:checked')?.value || 'weba';
+    const outputConfig = getAudioOutputConfig(outputFormat);
     let successCount = 0;
     let failCount = 0;
 
@@ -181,15 +176,19 @@ const runBatchConversion = async () => {
 
 
         const inputFilename = `input_batch_${Date.now()}_${i}`; // Unique input name
-        const outputFilename = `output_batch_${Date.now()}_${i}.${outputFormat}`;
+        const outputFilename = `output_batch_${Date.now()}_${i}.${outputConfig.extension}`;
         cleanupFFmpegFS([inputFilename, outputFilename]);
+        const restoreProgress = () => {
+            ffmpeg.setProgress(({ ratio }) => {
+                updateProgress(ratio);
+            });
+        };
 
         try {
             const fileData = await fetchFile(currentFile);
             ffmpeg.FS('writeFile', inputFilename, fileData);
 
             // Temporarily override global progress update for this file
-            const originalSetProgress = ffmpeg.setProgress;
             ffmpeg.setProgress(({ ratio }) => {
                  currentProgressEl.style.display = 'block';
                  const percent = Math.max(0, Math.min(100, Math.round(ratio * 100)));
@@ -198,13 +197,9 @@ const runBatchConversion = async () => {
             });
 
             const outputData = await runFFmpegConversion(inputFilename, outputFilename, outputFormat);
-            ffmpeg.setProgress(originalSetProgress); // Restore global progress handler
+            restoreProgress();
 
-            let mimeType;
-            if (outputFormat === 'mp3') mimeType = 'audio/mpeg';
-            else if (outputFormat === 'opus') mimeType = 'audio/opus'; // Typically in .opus or .ogg
-            else if (outputFormat === 'weba') mimeType = 'audio/webm; codecs=opus'; // Opus in WebM Audio
-            else mimeType = 'application/octet-stream';
+            const mimeType = outputConfig.mimeType;
 
             const convertedBlob = new Blob([outputData.buffer], { type: mimeType });
 
@@ -214,7 +209,7 @@ const runBatchConversion = async () => {
             currentProgressEl.style.display = 'none'; // Hide progress after completion
 
             const successInfo = document.createElement('p');
-            successInfo.textContent = `Converted to ${outputFormat.toUpperCase()}: ${formatBytes(convertedBlob.size)}`;
+            successInfo.textContent = `Converted to ${outputConfig.label}: ${formatBytes(convertedBlob.size)}`;
             successInfo.style.color = 'green';
             fileResultContainer.appendChild(successInfo);
 
@@ -225,7 +220,7 @@ const runBatchConversion = async () => {
             // Download Link for Converted File
             const dlUrl = URL.createObjectURL(convertedBlob);
             const dlLink = Object.assign(document.createElement('a'), {
-                href: dlUrl, download: `${originalNameBase}.${outputFormat}`,
+                href: dlUrl, download: `${originalNameBase}.${outputConfig.extension}`,
                 textContent: `Download Converted File`, className: 'button-small',
                 style: 'margin: 5px 5px 5px 0;'
             });
@@ -234,7 +229,7 @@ const runBatchConversion = async () => {
             
             // Store successful file for ZIP download
             successfulBatchFiles.push({
-                filename: `${originalNameBase}.${outputFormat}`, // e.g., audio1.webm
+                filename: `${originalNameBase}.${outputConfig.extension}`,
                 blob: convertedBlob
             });
 
@@ -246,7 +241,7 @@ const runBatchConversion = async () => {
                 const txtBlob = new Blob([base64Str], { type: 'text/plain;charset=utf-8' });
                 const b64DlUrl = URL.createObjectURL(txtBlob);
                 const base64DlLink = Object.assign(document.createElement('a'), {
-                    href: b64DlUrl, download: `${originalNameBase}.${outputFormat}.base64.txt`,
+                    href: b64DlUrl, download: `${originalNameBase}.${outputConfig.extension}.base64.txt`,
                     textContent: `Download Base64 TXT (${formatBytes(base64Str.length)})`, className: 'button-small'
                 });
                 fileResultContainer.appendChild(base64DlLink);
@@ -260,7 +255,7 @@ const runBatchConversion = async () => {
             successCount++;
         } catch (e) {
             failCount++;
-            ffmpeg.setProgress(originalSetProgress); // Restore on error too
+            restoreProgress();
             currentProgressEl.style.display = 'none';
             const errorP = document.createElement('p');
             errorP.textContent = `Failed to convert ${currentFile.name}: ${e.message}`;

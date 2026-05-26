@@ -47,6 +47,7 @@ import {
   MAX_TOKEN_URI_LENGTH,
   TX_DELAY_SECONDS
 } from '../lib/mint/constants';
+import { resolveInscriptionMimeType } from '../lib/mint/mime';
 import {
   buildCollectionBatchSealStxPostConditions,
   buildCollectionSealStxPostConditions,
@@ -136,6 +137,17 @@ const readResponseBytes = async (response: Response) => {
   const buffer = await response.arrayBuffer();
   return new Uint8Array(buffer);
 };
+
+const resolveCollectionMimeType = (params: {
+  fileName?: string | null;
+  declaredMimeType?: string | null;
+  bytes: Uint8Array;
+}) =>
+  resolveInscriptionMimeType({
+    fileName: params.fileName,
+    declaredMimeType: params.declaredMimeType,
+    bytes: params.bytes
+  });
 
 const isAscii = (value: string) => /^[\x00-\x7F]*$/.test(value);
 
@@ -793,7 +805,11 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
     const nextItems: CollectionItem[] = [];
     for (const file of sorted) {
       const bytes = await readFileBytes(file);
-      const mimeType = file.type || 'application/octet-stream';
+      const mimeType = resolveCollectionMimeType({
+        fileName: file.name,
+        declaredMimeType: file.type,
+        bytes
+      });
       nextItems.push({
         ...buildCollectionItemFromBytes({
           keyPrefix: file.name,
@@ -902,10 +918,13 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
           );
         }
         const bytes = await readResponseBytes(response);
-        const mimeType =
-          asset.mimeType ||
-          parseMimeFromContentType(response.headers.get('content-type')) ||
-          'application/octet-stream';
+        const mimeType = resolveCollectionMimeType({
+          fileName: resolveNameFromUrl(asset.url),
+          declaredMimeType:
+            asset.mimeType ||
+            parseMimeFromContentType(response.headers.get('content-type')),
+          bytes
+        });
         nextItems.push(
           buildCollectionItemFromBytes({
             keyPrefix: resolveNameFromUrl(asset.url),

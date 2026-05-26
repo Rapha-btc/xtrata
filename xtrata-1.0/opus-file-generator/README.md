@@ -1,11 +1,11 @@
-Use npx serve -l 3000 in the root directory to run the code
+Use `npx serve opus-file-generator -l 3000` from the Xtrata repo root, or run `npx serve -l 3000` inside this folder.
 
 Audional Art Tools: WAV to WebM Audio (.weba) & Image to Base64 Converter
 Overview
 
 This web-based application provides a suite of tools for artists and creators working with Audionals (audio-based Bitcoin Ordinals). It allows users to:
 
-*   Convert WAV audio files to web-friendly formats like WebM Audio (using the Opus codec), MP3, or raw Opus, with options to control quality and file size.
+*   Convert WAV, MP3, FLAC, OGG, or AAC audio files to web-friendly formats like WebM Audio (using the Opus codec), MP3, or Opus, with options to control quality and file size.
 *   Generate Base64 representations of these converted audio files.
 *   Convert image files (e.g., PNG, JPG, GIF, WebP) into Base64 strings.
 *   Combine the Base64 audio and image data with user-provided metadata to generate a clickable HTML file ready for inscription on the Bitcoin blockchain.
@@ -14,7 +14,7 @@ The entire process runs in the user's browser, ensuring privacy and speed, thank
 
 Features
 
-*   **Audio Conversion (WAV input):**
+*   **Audio Conversion (WAV/MP3/common audio input):**
     *   Output formats: WebM Audio (.weba with Opus codec - recommended), MP3 (LAME encoder), Opus.
     *   Adjustable Opus settings: Bitrate, VBR mode (On, Off, Constrained), Compression Level, Application type (Audio, VoIP, Low Delay).
     *   Adjustable MP3 quality (VBR -q:a setting).
@@ -22,6 +22,7 @@ Features
     *   Original audio playback.
     *   Converted audio playback.
     *   Download link for the converted audio file.
+    *   WebM Audio outputs are audio-only (`.weba`, `audio/webm; codecs=opus`) so Xtrata classifies the inscription as audio, not video.
     *   Progress bar for conversion.
 *   **Audio Base64 Generation:**
     *   Convert the processed audio into a pure Base64 string.
@@ -54,10 +55,10 @@ Prerequisites
 Steps to Run
 1.  Clone or download this repository to your local machine.
 2.  Open your terminal or command prompt.
-3.  Navigate to the root directory of the project (where index.html and serve.json are located).
+3.  Navigate to this folder (where index.html and serve.json are located), or stay at the Xtrata repo root and pass the folder name to `serve`.
 4.  Run the following command:
     ```bash
-    npx serve -l 3000
+    npx serve opus-file-generator -l 3000
     ```
 5.  This will start a local development server, typically at http://localhost:3000.
 6.  Open your web browser and go to http://localhost:3000.
@@ -73,8 +74,8 @@ How to Use
 
 The application is divided into sections: Audio Conversion, Image Conversion, and Audional Generation.
 
-1. Audio Conversion (WAV to WebM Audio/Opus/MP3)
-*   **Select WAV File:** Click "Select WAV File" and choose your .wav audio.
+1. Audio Conversion (Audio to WebM Audio/Opus/MP3)
+*   **Select Audio File:** Click "Select Audio File" and choose your WAV, MP3, FLAC, OGG, or AAC audio.
 *   The tool will display the file name and duration.
 *   You can click "Play Original" to listen to it.
 *   **Choose Output Quality:**

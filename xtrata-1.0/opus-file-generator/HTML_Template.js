@@ -12,9 +12,10 @@
  * @param {string} bpm - The BPM if it's a loop.
  * @param {string} audionalBase64Data - The pure Base64 encoded string for the Opus audio (NO prefix).
  * @param {string} audionalVisualBase64Data - The pure Base64 encoded string for the image (NO prefix). Can be empty.
+ * @param {string} audionalMimeType - The audio MIME type for data URI playback.
  * @returns {string} A string containing the complete, streamlined HTML document.
  */
-function HTML_Template(title, instrument, note, frequency, isLoop, bpm, audionalBase64Data, audionalVisualBase64Data) {
+function HTML_Template(title, instrument, note, frequency, isLoop, bpm, audionalBase64Data, audionalVisualBase64Data, audionalMimeType = 'audio/webm; codecs=opus') {
     if (typeof audionalBase64Data !== 'string' || audionalBase64Data.trim() === '') {
       console.error("HTML_Template Error: audionalBase64Data must be a non-empty string.");
       return `<!DOCTYPE html><html><head><title>Error</title></head><body><h1>Error generating Audional: Invalid or missing audio data.</h1></body></html>`;
@@ -26,6 +27,9 @@ function HTML_Template(title, instrument, note, frequency, isLoop, bpm, audional
     const metaFrequency = frequency || 'N/A'; // frequency should already be a string like "XX.XX Hz"
     const metaIsLoop = isLoop ? 'Yes' : 'No';
     const metaBPM = isLoop && bpm ? bpm : 'N/A';
+    const safeMimeType = typeof audionalMimeType === 'string' && audionalMimeType.startsWith('audio/')
+      ? audionalMimeType
+      : 'audio/webm; codecs=opus';
 
     const hasImage = typeof audionalVisualBase64Data === 'string' && audionalVisualBase64Data.trim() !== '';
 
@@ -67,6 +71,7 @@ function HTML_Template(title, instrument, note, frequency, isLoop, bpm, audional
 
     <script>
         window.audionalBase64_Opus = \`${audionalBase64Data}\`;
+        window.audionalAudioMimeType = ${JSON.stringify(safeMimeType)};
     <\/script>
     
     <script>

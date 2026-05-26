@@ -48,8 +48,18 @@ const loadFFmpeg = async () => {
 const runFFmpegConversion = async (inputFilename, outputFilename, outputFormat) => {
     if (!ffmpeg) throw new Error("FFmpeg is not loaded.");
 
-    // Build FFmpeg command
-    let cmd = ['-i', inputFilename];
+    const outputConfig = getAudioOutputConfig(outputFormat);
+
+    // Build FFmpeg command. Mapping only the first audio stream prevents embedded
+    // artwork or accidental video tracks from making the result look like a movie.
+    let cmd = [
+        '-i', inputFilename,
+        '-map', '0:a:0',
+        '-map_chapters', '-1',
+        '-vn',
+        '-sn',
+        '-dn'
+    ];
 
      // --- WATERMARK METADATA ---
     const generatorIdentifier = "AudionalOpusEncoder_v1.0"; // Your unique tool identifier
@@ -74,6 +84,10 @@ const runFFmpegConversion = async (inputFilename, outputFilename, outputFormat) 
     // We can also add a more generic comment, which might be picked up by simpler tools,
     // but it's more likely to be overwritten. It acts as a fallback.
     cmd.push('-metadata', `comment=${watermarkValue}`);
+    cmd.push('-metadata', `xtrata_mime=${outputConfig.mimeType}`);
+    cmd.push('-metadata', 'xtrata_media_kind=audio');
+    cmd.push('-metadata:s:a:0', 'handler_name=Audio');
+    cmd.push('-metadata:s:a:0', 'media_type=audio');
 
 
     if (outputFormat === 'opus' || outputFormat === 'weba') { // Common settings for Opus and WebM Audio (Opus)
@@ -94,10 +108,8 @@ const runFFmpegConversion = async (inputFilename, outputFilename, outputFormat) 
         cmd.push('-compression_level', compressionLevel.toString());
         cmd.push('-application', application);
 
-        if (outputFormat === 'weba') {
-            console.info("Using libopus codec for WebM Audio (.weba) container with specified settings.");
-            cmd.push('-vn'); // Strictly audio-only, strip any video tracks
-        }
+        console.info(`Using libopus codec for ${outputConfig.label} with specified settings.`);
+        cmd.push('-f', outputConfig.ffmpegFormat);
         cmd.push(outputFilename);
 
     } else { // MP3 (default fallback)
@@ -105,6 +117,7 @@ const runFFmpegConversion = async (inputFilename, outputFilename, outputFormat) 
         const ffmpegQuality = parseInt(quality, 10);
         cmd.push('-c:a', 'libmp3lame', '-q:a', ffmpegQuality.toString());
         // The -metadata flags added earlier will also apply to MP3 (as ID3 tags).
+        cmd.push('-f', outputConfig.ffmpegFormat);
         cmd.push(outputFilename);
     }
 

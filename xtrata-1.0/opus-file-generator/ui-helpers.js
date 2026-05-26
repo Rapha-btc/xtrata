@@ -52,7 +52,7 @@ const enableConvertButtonIfNeeded = () => {
   
     // --- Get current output format for button text ---
     const selectedFormatRadio = document.querySelector('input[name="format"]:checked');
-    const outputFormatName = selectedFormatRadio ? selectedFormatRadio.value.toUpperCase() : 'WEBA';
+    const outputConfig = getAudioOutputConfig(selectedFormatRadio ? selectedFormatRadio.value : 'weba');
   
     // --- Update "Play Original" button ---
     if (playSampleBtn) {
@@ -63,9 +63,9 @@ const enableConvertButtonIfNeeded = () => {
     if (convertBtn) {
       convertBtn.disabled = !singleConvertEnabled;
       if (multipleFilesSelected) {
-        convertBtn.textContent = `3. Convert First to ${outputFormatName}`;
+        convertBtn.textContent = `3. Convert First to ${outputConfig.label}`;
       } else {
-        convertBtn.textContent = `3. Convert to ${outputFormatName}`;
+        convertBtn.textContent = `3. Convert to ${outputConfig.label}`;
       }
     }
   

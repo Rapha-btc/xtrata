@@ -68,11 +68,16 @@ const setupBase64DisplayAndActions = async (audioBlob, outputFormat, originalNam
   try {
     updateStatus('Converting audio to Base64...');
     generatedBase64String = await convertBlobToBase64(audioBlob);
+    const outputConfig = getAudioOutputConfig(outputFormat);
 
     // --- *** DISPATCH THE EVENT FOR HTML GENERATOR *** ---
     console.log("Dispatching audionalBase64Generated event...");
     document.dispatchEvent(new CustomEvent('audionalBase64Generated', {
-        detail: { base64Data: generatedBase64String } // Send the pure base64 string
+        detail: {
+          base64Data: generatedBase64String,
+          mimeType: outputConfig.mimeType,
+          extension: outputConfig.extension
+        }
     }));
     // --- *** END OF EVENT DISPATCH *** ---
 
@@ -88,10 +93,7 @@ const setupBase64DisplayAndActions = async (audioBlob, outputFormat, originalNam
 
     // Clear previous player and create a new one for the Base64 audio (optional but good for verification)
     base64Result.innerHTML = ''; // Clear previous results
-    let mimeType;
-    if (outputFormat === 'mp3') mimeType = 'audio/mpeg';
-    else if (outputFormat === 'weba') mimeType = 'audio/webm; codecs=opus';
-    else mimeType = 'audio/opus';
+    const mimeType = outputConfig.mimeType;
     
     // Create player using the original blob, as converting Base64 back to blob just for player is inefficient
     const base64PlayerContainer = createAudioPlayer(audioBlob, mimeType, 'Converted Audio (Preview)');
@@ -130,7 +132,7 @@ const setupBase64DisplayAndActions = async (audioBlob, outputFormat, originalNam
         const url = URL.createObjectURL(txtBlob);
         const a = Object.assign(document.createElement('a'), {
           href: url,
-          download: `${originalNameBase}.${outputFormat}.base64.txt` // e.g., myaudio.mp3.base64.txt
+          download: `${originalNameBase}.${outputConfig.extension}.base64.txt`
         });
         document.body.appendChild(a); // Required for Firefox
         a.click();
