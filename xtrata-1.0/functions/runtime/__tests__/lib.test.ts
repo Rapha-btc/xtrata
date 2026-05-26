@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { InscriptionMeta } from '../../../src/lib/protocol/types';
 import {
   resolveRuntimeContent,
+  resolveRuntimeContentStream,
   type RuntimeContentReader,
   type RuntimeContractRef,
   type RuntimeEnv
@@ -76,6 +77,44 @@ describe('runtime content reconstruction', () => {
       1n,
       2n
     ]);
+  });
+
+  it('streams reconstructed bytes in order and reports completed bytes', async () => {
+    const chunks = new Map<string, Uint8Array>([
+      ['0', new Uint8Array([1])],
+      ['1', new Uint8Array([2])],
+      ['2', new Uint8Array([3])]
+    ]);
+    const onComplete = vi.fn(async () => undefined);
+    const reader: RuntimeContentReader = {
+      fetchMeta: vi.fn(async () =>
+        makeMeta({
+          totalSize: 3n,
+          totalChunks: 3n
+        })
+      ),
+      fetchChunk: vi.fn(async ({ index }) => chunks.get(index.toString()) ?? null),
+      fetchChunkBatch: vi.fn(async ({ indexes }) =>
+        indexes.map((index) => chunks.get(index.toString()) ?? null)
+      )
+    };
+
+    const resolved = await resolveRuntimeContentStream({
+      env: makeEnv(),
+      apiBases: ['https://example.test'],
+      tokenId: 2n,
+      primaryContract,
+      fallbackContract: null,
+      read: reader,
+      onComplete
+    });
+    const streamed = new Uint8Array(await new Response(resolved.stream).arrayBuffer());
+
+    expect(Array.from(streamed)).toEqual([1, 2, 3]);
+    expect(resolved.contentLength).toBe(3);
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(Array.from(onComplete.mock.calls[0][0])).toEqual([1, 2, 3]);
+    expect(onComplete.mock.calls[0][1].contract).toEqual(primaryContract);
   });
 
   it('fetches large batch groups concurrently while preserving order', async () => {

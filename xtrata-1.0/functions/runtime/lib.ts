@@ -372,6 +372,17 @@ export type RuntimeResolvedMeta = {
   meta: InscriptionMeta;
 };
 
+export type RuntimeResolvedContent = {
+  contract: RuntimeContractRef;
+  meta: InscriptionMeta;
+  bytes: Uint8Array;
+};
+
+export type RuntimeStreamCompleteContext = {
+  contract: RuntimeContractRef;
+  meta: InscriptionMeta;
+};
+
 export type RuntimeContentReader = {
   fetchMeta?: typeof fetchRuntimeMeta;
   fetchChunk?: typeof fetchRuntimeChunk;
@@ -685,6 +696,158 @@ const fetchRemainingRuntimeChunks = async (params: {
   return ordered;
 };
 
+const streamRemainingRuntimeChunks = async (params: {
+  env: RuntimeEnv;
+  apiBases: string[];
+  contract: RuntimeContractRef;
+  tokenId: bigint;
+  totalCount: number;
+  read: ResolvedRuntimeContentReader;
+  onChunk: (chunk: Uint8Array, index: bigint) => void;
+}) => {
+  const config = getRuntimeReadConfig(params.env);
+  const pending = new Map<bigint, Uint8Array>();
+  const unresolved = new Set<bigint>();
+  let batchSize = config.batchSize;
+  let nextToEmit = 1n;
+  const remainingIndexes = Array.from(
+    { length: Math.max(0, params.totalCount - 1) },
+    (_, index) => BigInt(index + 1)
+  );
+
+  const emitAvailable = () => {
+    while (pending.has(nextToEmit)) {
+      const chunk = pending.get(nextToEmit);
+      pending.delete(nextToEmit);
+      if (!chunk || chunk.length === 0) {
+        throw new Error(`Missing chunk ${nextToEmit.toString()}.`);
+      }
+      params.onChunk(chunk, nextToEmit);
+      nextToEmit += 1n;
+    }
+  };
+
+  const addEntries = (entries: Array<{ index: bigint; chunk: Uint8Array | null }>) => {
+    for (const entry of entries) {
+      if (entry.chunk && entry.chunk.length > 0) {
+        pending.set(entry.index, entry.chunk);
+      } else {
+        unresolved.add(entry.index);
+      }
+    }
+    emitAvailable();
+  };
+
+  while (batchSize > 1 && remainingIndexes.length > 0) {
+    const batches = buildRuntimeIndexBatches(remainingIndexes, batchSize);
+    const [probeBatch, ...remainingBatches] = batches;
+    try {
+      const entries = await fetchRuntimeChunkBatchWithRetry({
+        env: params.env,
+        apiBases: params.apiBases,
+        contract: params.contract,
+        tokenId: params.tokenId,
+        indexes: probeBatch,
+        retries: config.retries,
+        read: params.read
+      });
+      addEntries(entries);
+    } catch (error) {
+      if (isCostBalanceExceeded(error) && batchSize > 1) {
+        const nextBatchSize = Math.max(1, Math.floor(batchSize / 2));
+        if (nextBatchSize < batchSize) {
+          batchSize = nextBatchSize;
+          pending.clear();
+          unresolved.clear();
+          nextToEmit = 1n;
+          continue;
+        }
+      }
+      for (const index of remainingIndexes) {
+        unresolved.add(index);
+      }
+      break;
+    }
+
+    let costExceeded = false;
+    if (remainingBatches.length > 0) {
+      let cursor = 0;
+      const workerCount = Math.max(1, Math.min(config.concurrency, remainingBatches.length));
+      const workers = Array.from({ length: workerCount }, async () => {
+        while (true) {
+          const current = cursor;
+          cursor += 1;
+          if (current >= remainingBatches.length) {
+            return;
+          }
+          const batch = remainingBatches[current];
+          try {
+            const entries = await fetchRuntimeChunkBatchWithRetry({
+              env: params.env,
+              apiBases: params.apiBases,
+              contract: params.contract,
+              tokenId: params.tokenId,
+              indexes: batch,
+              retries: config.retries,
+              read: params.read
+            });
+            addEntries(entries);
+          } catch (error) {
+            if (isCostBalanceExceeded(error)) {
+              costExceeded = true;
+            }
+            for (const index of batch) {
+              unresolved.add(index);
+            }
+          }
+        }
+      });
+      await Promise.all(workers);
+    }
+
+    if (costExceeded && batchSize > 1 && nextToEmit === 1n) {
+      const nextBatchSize = Math.max(1, Math.floor(batchSize / 2));
+      if (nextBatchSize < batchSize) {
+        batchSize = nextBatchSize;
+        pending.clear();
+        unresolved.clear();
+        continue;
+      }
+    }
+    break;
+  }
+
+  if (batchSize <= 1 && pending.size === 0 && unresolved.size === 0) {
+    for (const index of remainingIndexes) {
+      unresolved.add(index);
+    }
+  }
+
+  if (unresolved.size > 0) {
+    const results = await fetchRuntimeChunksWithConcurrency({
+      env: params.env,
+      apiBases: params.apiBases,
+      contract: params.contract,
+      tokenId: params.tokenId,
+      indexes: Array.from(unresolved).sort((left, right) =>
+        left < right ? -1 : left > right ? 1 : 0
+      ),
+      concurrency: config.concurrency,
+      retries: config.retries,
+      read: params.read
+    });
+    for (const [index, chunk] of results.entries()) {
+      pending.set(index, chunk);
+    }
+    emitAvailable();
+  }
+
+  const finalExpected = BigInt(params.totalCount);
+  if (nextToEmit !== finalExpected) {
+    throw new Error(`Missing chunk ${nextToEmit.toString()}.`);
+  }
+};
+
 export const resolveRuntimeMeta = async (params: {
   env: RuntimeEnv;
   apiBases: string[];
@@ -737,7 +900,7 @@ export const resolveRuntimeMeta = async (params: {
   };
 };
 
-export const resolveRuntimeContent = async (params: {
+const resolveRuntimeContentPlan = async (params: {
   env: RuntimeEnv;
   apiBases: string[];
   tokenId: bigint;
@@ -821,38 +984,136 @@ export const resolveRuntimeContent = async (params: {
     throw new Error('Chunk count exceeds runtime limit.');
   }
 
-  const chunks: Uint8Array[] = [firstChunk];
   const expectedCountNumber = Number(expectedChunks);
 
-  if (expectedCountNumber > 1) {
+  if (activeMeta.totalSize > BigInt(Number.MAX_SAFE_INTEGER)) {
+    throw new Error('Inscription size exceeds runtime limit.');
+  }
+  const expectedBytes = Number(activeMeta.totalSize);
+
+  return {
+    contract: activeContract,
+    meta: activeMeta,
+    firstChunk,
+    expectedCountNumber,
+    expectedBytes,
+    read
+  };
+};
+
+export const resolveRuntimeContent = async (params: {
+  env: RuntimeEnv;
+  apiBases: string[];
+  tokenId: bigint;
+  primaryContract: RuntimeContractRef;
+  fallbackContract: RuntimeContractRef | null;
+  resolvedMeta?: RuntimeResolvedMeta;
+  read?: RuntimeContentReader;
+}): Promise<RuntimeResolvedContent> => {
+  const plan = await resolveRuntimeContentPlan(params);
+  const chunks: Uint8Array[] = [plan.firstChunk];
+
+  if (plan.expectedCountNumber > 1) {
     const remaining = await fetchRemainingRuntimeChunks({
       env: params.env,
       apiBases: params.apiBases,
-      contract: activeContract,
+      contract: plan.contract,
       tokenId: params.tokenId,
-      totalCount: expectedCountNumber,
-      read
+      totalCount: plan.expectedCountNumber,
+      read: plan.read
     });
     chunks.push(...remaining);
   }
 
   let bytes = combineChunks(chunks);
-  if (activeMeta.totalSize > BigInt(Number.MAX_SAFE_INTEGER)) {
-    throw new Error('Inscription size exceeds runtime limit.');
-  }
-  const expectedBytes = Number(activeMeta.totalSize);
-  if (bytes.length < expectedBytes) {
+  if (bytes.length < plan.expectedBytes) {
     throw new Error(
-      `Reconstructed content is shorter than expected (${bytes.length}/${expectedBytes}).`
+      `Reconstructed content is shorter than expected (${bytes.length}/${plan.expectedBytes}).`
     );
   }
-  if (bytes.length > expectedBytes) {
-    bytes = bytes.slice(0, expectedBytes);
+  if (bytes.length > plan.expectedBytes) {
+    bytes = bytes.slice(0, plan.expectedBytes);
   }
 
   return {
-    contract: activeContract,
-    meta: activeMeta,
+    contract: plan.contract,
+    meta: plan.meta,
     bytes
+  };
+};
+
+export const resolveRuntimeContentStream = async (params: {
+  env: RuntimeEnv;
+  apiBases: string[];
+  tokenId: bigint;
+  primaryContract: RuntimeContractRef;
+  fallbackContract: RuntimeContractRef | null;
+  resolvedMeta?: RuntimeResolvedMeta;
+  read?: RuntimeContentReader;
+  onComplete?: (
+    bytes: Uint8Array,
+    context: RuntimeStreamCompleteContext
+  ) => Promise<unknown> | unknown;
+}) => {
+  const plan = await resolveRuntimeContentPlan(params);
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      void (async () => {
+        const completedChunks: Uint8Array[] = [];
+        let emittedBytes = 0;
+        const emitChunk = (chunk: Uint8Array) => {
+          if (emittedBytes >= plan.expectedBytes) {
+            return;
+          }
+          const remainingBytes = plan.expectedBytes - emittedBytes;
+          const output =
+            chunk.length > remainingBytes ? chunk.slice(0, remainingBytes) : chunk;
+          if (output.length === 0) {
+            return;
+          }
+          completedChunks.push(output);
+          emittedBytes += output.length;
+          controller.enqueue(output);
+        };
+
+        try {
+          emitChunk(plan.firstChunk);
+          if (plan.expectedCountNumber > 1) {
+            await streamRemainingRuntimeChunks({
+              env: params.env,
+              apiBases: params.apiBases,
+              contract: plan.contract,
+              tokenId: params.tokenId,
+              totalCount: plan.expectedCountNumber,
+              read: plan.read,
+              onChunk: emitChunk
+            });
+          }
+          if (emittedBytes < plan.expectedBytes) {
+            throw new Error(
+              `Streamed content is shorter than expected (${emittedBytes}/${plan.expectedBytes}).`
+            );
+          }
+          if (params.onComplete) {
+            await params.onComplete(combineChunks(completedChunks), {
+              contract: plan.contract,
+              meta: plan.meta
+            });
+          }
+          controller.close();
+        } catch (error) {
+          controller.error(error);
+        }
+      })();
+    }
+  });
+
+  return {
+    contract: plan.contract,
+    meta: plan.meta,
+    stream,
+    contentLength: plan.expectedBytes,
+    firstChunkLength: plan.firstChunk.length,
+    expectedChunks: plan.expectedCountNumber
   };
 };

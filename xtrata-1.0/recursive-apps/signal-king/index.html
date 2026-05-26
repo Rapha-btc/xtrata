@@ -247,6 +247,10 @@
   .counter.over{ color:#ff8f7a; }
   .warn{ font-size:12px; color:#ffd27a; background:rgba(202,162,60,.1); border:1px solid rgba(202,162,60,.35); padding:9px 11px; border-radius:10px; }
   .warn.bad{ color:#ff9b8a; background:rgba(255,90,69,.1); border-color:rgba(255,90,69,.4); }
+  .insdebug{ margin-top:8px; border:1px solid var(--line); border-radius:10px; background:#05070c; color:var(--muted); font-size:11px; }
+  .insdebug[hidden]{ display:none; }
+  .insdebug summary{ cursor:pointer; padding:8px 10px; letter-spacing:.12em; text-transform:uppercase; }
+  .insdebug pre{ margin:0; padding:0 10px 10px; max-height:130px; overflow:auto; white-space:pre-wrap; word-break:break-word; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; line-height:1.45; }
 
   /* preview card inside drawer */
   .preview{ border:1px dashed var(--line); border-radius:14px; padding:14px; text-align:center; position:relative; background:var(--bg); overflow:hidden; }
@@ -407,6 +411,10 @@
           <input type="text" id="insIn" inputmode="numeric" placeholder="e.g. 159" autocomplete="off" spellcheck="false" aria-label="Inscription number" />
           <p class="send-steps" style="margin-top:6px">Show another Xtrata inscription inside the circle by its number. The emoji above is kept as a fallback while it loads. Tap the canvas to enlarge.</p>
           <div class="warn" id="insWarn" hidden></div>
+          <details class="insdebug" id="insDebugBox" hidden>
+            <summary>Runtime log</summary>
+            <pre id="insDebug"></pre>
+          </details>
         </div>
       </div>
 
@@ -510,22 +518,25 @@ const CONFIG = {
      which rebuilds the inscription from on-chain chunks and returns the raw
      bytes with the correct MIME type:
 
-       https://xtrata.xyz/runtime/content?contractId=<addr.contract>&tokenId=<id>&network=<net>
+       /runtime/content?contractId=<addr.contract>&tokenId=<id>&network=<net>
 
-     CORS note: /runtime/content is safe for <img>/media embeds, but it is not
-     guaranteed to be readable with cross-origin fetch() from a standalone
-     inscription. This build therefore defaults to image-first rendering via
-     <img> (inscriptionUseIframe:false). HTML/SVG/JS inscriptions should be
-     routed through a trusted Xtrata runtime/proxy before enabling iframe mode.
+     /runtime/content exposes diagnostic headers for HEAD probes and streams
+     large images where possible. This build still defaults to image-first
+     rendering via <img> (inscriptionUseIframe:false). HTML/SVG/JS inscriptions
+     should be routed through a trusted Xtrata runtime/proxy before enabling
+     iframe mode. The route is intentionally same-origin so Cloudflare preview
+     deployments exercise the preview Function instead of production.
      The single integration seam is
      inscriptionContentUrl() below.
      The memo only carries the numeric tokenId; the contract + network come
      from config so the memo stays tiny. */
   inscriptionContractId: "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0",
   inscriptionFallbackContractId: "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1",
-  inscriptionContentRoute: "https://xtrata.xyz/runtime/content",
+  inscriptionContentRoute: "/runtime/content",
   inscriptionUseIframe: false,            // false: <img> (CORS-safe). true: sandboxed <iframe> for live HTML/SVG/JS.
-  inscriptionMaxDigits: 12
+  inscriptionMaxDigits: 12,
+  inscriptionDiagnostics: true,
+  inscriptionProbeHead: true
 };
 
 /* Integration seam: tokenId number -> raw inscription content URL.
@@ -842,6 +853,147 @@ function setImageSource(img, url, onload, onerror){
   return true;
 }
 
+const INS_DIAG_HEADERS = [
+  'content-type',
+  'content-length',
+  'etag',
+  'server-timing',
+  'x-xtrata-runtime-cache',
+  'x-xtrata-runtime-build',
+  'x-xtrata-runtime-response-mode',
+  'x-xtrata-runtime-total-size',
+  'x-xtrata-runtime-total-chunks',
+  'x-xtrata-runtime-read-batch-size',
+  'x-xtrata-runtime-read-concurrency',
+  'x-xtrata-runtime-read-retries',
+  'x-xtrata-runtime-prepared-ms',
+  'x-xtrata-runtime-source-contract',
+  'x-xtrata-runtime-final-hash'
+];
+let insDiagEntries = [];
+const insHeadProbeCache = new Map();
+
+function shortUrl(url){
+  try{
+    const u = new URL(url, window.location.href);
+    const token = u.searchParams.get('tokenId') || '?';
+    const contract = (u.searchParams.get('contractId') || '').split('.').pop() || '?';
+    return u.origin + u.pathname + '?contract=' + contract + '&token=' + token;
+  } catch {
+    return url;
+  }
+}
+
+function fmtMs(ms){
+  if(!Number.isFinite(ms)) return '?ms';
+  return Math.round(ms) + 'ms';
+}
+
+function updateInsDebug(){
+  const box = $('insDebugBox'), out = $('insDebug');
+  if(!box || !out) return;
+  if(!CONFIG.inscriptionDiagnostics || insDiagEntries.length === 0){
+    box.hidden = true;
+    out.textContent = '';
+    return;
+  }
+  box.hidden = false;
+  out.textContent = insDiagEntries.slice(-12).map((entry)=>{
+    const extras = entry.data ? ' ' + JSON.stringify(entry.data) : '';
+    return entry.t + ' ' + entry.stage + extras;
+  }).join('\n');
+}
+
+function insLog(stage, data){
+  if(!CONFIG.inscriptionDiagnostics) return;
+  const entry = {
+    t: new Date().toISOString().slice(11, 19),
+    stage,
+    data: data || null
+  };
+  insDiagEntries.push(entry);
+  if(insDiagEntries.length > 40) insDiagEntries = insDiagEntries.slice(-40);
+  updateInsDebug();
+  try{ console.info('[SignalKing runtime]', stage, data || {}); }catch{}
+}
+
+function readRuntimeHeaders(headers){
+  const out = {};
+  INS_DIAG_HEADERS.forEach((name)=>{
+    const value = headers.get(name);
+    if(value !== null) out[name] = value;
+  });
+  return out;
+}
+
+function probeInscriptionEndpoint(num, url, slot){
+  if(!CONFIG.inscriptionDiagnostics || !CONFIG.inscriptionProbeHead || !url || typeof fetch !== 'function') return;
+  if(insHeadProbeCache.has(url)) return;
+  const started = performance.now();
+  insLog('head:start', { slot, tokenId:num, url:shortUrl(url) });
+  const probe = fetch(url, { method:'HEAD', mode:'cors', cache:'no-store' })
+    .then((res)=>{
+      insLog('head:done', {
+        slot,
+        tokenId:num,
+        status:res.status,
+        ok:res.ok,
+        ms:fmtMs(performance.now() - started),
+        headers:readRuntimeHeaders(res.headers)
+      });
+      return res;
+    })
+    .catch((err)=>{
+      insLog('head:error', {
+        slot,
+        tokenId:num,
+        ms:fmtMs(performance.now() - started),
+        error:err && err.message ? err.message : String(err),
+        hint:'HEAD blocked. The runtime endpoint may not have the streaming/CORS build deployed yet.'
+      });
+      return null;
+    });
+  insHeadProbeCache.set(url, probe);
+}
+
+function setImageSourceWithDiagnostics(img, url, opts){
+  opts = opts || {};
+  const slot = opts.slot || 'image';
+  const tokenId = opts.tokenId || '';
+  const started = performance.now();
+  probeInscriptionEndpoint(tokenId, url, slot);
+  insLog('image:start', { slot, tokenId, url:shortUrl(url) });
+  const changed = setImageSource(img, url, ()=>{
+    insLog('image:load', {
+      slot,
+      tokenId,
+      ms:fmtMs(performance.now() - started),
+      naturalWidth:img.naturalWidth || 0,
+      naturalHeight:img.naturalHeight || 0,
+      complete:!!img.complete
+    });
+    if(opts.onload) opts.onload();
+  }, ()=>{
+    insLog('image:error', {
+      slot,
+      tokenId,
+      ms:fmtMs(performance.now() - started),
+      complete:!!img.complete
+    });
+    if(opts.onerror) opts.onerror();
+  });
+  if(!changed){
+    insLog('image:reuse', {
+      slot,
+      tokenId,
+      complete:!!img.complete,
+      naturalWidth:img.naturalWidth || 0,
+      naturalHeight:img.naturalHeight || 0
+    });
+  }
+  return changed;
+}
+
 // Load a referenced inscription into the circle canvas (or hide it and fall back to emoji).
 // Returns the element that should receive the action animation.
 let lastInsUrl = '';
@@ -866,6 +1018,7 @@ function setInscriptionCanvas(num){
     lastInsUrl = '';
     return totem;
   }
+  probeInscriptionEndpoint(num, url, 'main');
   totem.style.display = 'none';
   canvas.hidden = false;
   if(url !== lastInsUrl){
@@ -877,16 +1030,16 @@ function setInscriptionCanvas(num){
       frame.hidden = true; frame.src = 'about:blank';
       img.hidden = false;
       setSmallStatus('insStatus', 'Loading image #' + num);
-      setImageSource(img, url, ()=>{
+      setImageSourceWithDiagnostics(img, url, { slot:'main', tokenId:num, onload:()=>{
         setSmallStatus('insStatus', '');
-      }, ()=>{
+      }, onerror:()=>{
         canvas.hidden = true;
         img.hidden = true;
         clearImage(img);
         setSmallStatus('insStatus', '');
         totem.style.display = '';
         lastInsUrl = '';
-      });
+      }});
     }
     lastInsUrl = url;
   }
@@ -1087,9 +1240,9 @@ function updatePanel(opts){
       $('pvInsFrame').hidden = true; $('pvInsFrame').src = 'about:blank';
       const pvImg = $('pvInsImg');
       pvImg.hidden = false;
-      const started = setImageSource(pvImg, url, ()=>{
+      const started = setImageSourceWithDiagnostics(pvImg, url, { slot:'preview', tokenId:insNorm, onload:()=>{
         setSmallStatus('pvInsStatus', '');
-      }, ()=>{
+      }, onerror:()=>{
         pvIns.hidden = true;
         pvImg.hidden = true;
         clearImage(pvImg);
@@ -1097,7 +1250,7 @@ function updatePanel(opts){
         pvTotem.style.display = '';
         pvTotem.textContent = CROWNS[sel.crown];
         replayAction(pvTotem, sel.action);
-      });
+      }});
       if(started || !pvImg.complete) setSmallStatus('pvInsStatus', 'Loading #' + insNorm);
       else setSmallStatus('pvInsStatus', '');
     }
@@ -1230,13 +1383,13 @@ function openLightbox(num){
     $('lbFrame').hidden = true; $('lbFrame').src = 'about:blank';
     const img = $('lbImg'); img.hidden = false;
     setSmallStatus('lbStatus', 'Loading image #' + num);
-    setImageSource(img, url, ()=>{
+    setImageSourceWithDiagnostics(img, url, { slot:'lightbox', tokenId:num, onload:()=>{
       setSmallStatus('lbStatus', '');
-    }, ()=>{
+    }, onerror:()=>{
       img.hidden = true;
       clearImage(img);
       setSmallStatus('lbStatus', 'Image preview unavailable. Open the raw inscription link.');
-    });
+    }});
   }
   const ex = $('lbExplorer');
   ex.hidden = false; ex.textContent = 'inscription #' + num;

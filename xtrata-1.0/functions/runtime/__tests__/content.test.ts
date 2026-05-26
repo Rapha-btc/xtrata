@@ -1,7 +1,9 @@
 import {
   boolCV,
   bufferCV,
+  listCV,
   principalCV,
+  responseOkCV,
   serializeCV,
   someCV,
   stringAsciiCV,
@@ -30,14 +32,14 @@ const streamFrom = (bytes: Uint8Array) =>
     }
   });
 
-const metaResult = () =>
+const metaResult = (params?: { totalSize?: bigint; totalChunks?: bigint }) =>
   cvHex(
     someCV(
       tupleCV({
         owner: principalCV(CONTRACT_ADDRESS),
         'mime-type': stringAsciiCV('image/gif'),
-        'total-size': uintCV(2n),
-        'total-chunks': uintCV(1n),
+        'total-size': uintCV(params?.totalSize ?? 2n),
+        'total-chunks': uintCV(params?.totalChunks ?? 1n),
         sealed: boolCV(true),
         'final-hash': bufferCV(FINAL_HASH)
       })
@@ -104,5 +106,101 @@ describe('/runtime/content', () => {
       8
     ]);
   });
-});
 
+  it('returns metadata-only diagnostics for HEAD requests', async () => {
+    const fetch = vi.fn(async () =>
+      new Response(
+        JSON.stringify({
+          okay: true,
+          result: metaResult({
+            totalSize: 3n,
+            totalChunks: 3n
+          })
+        }),
+        {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      )
+    );
+    vi.stubGlobal('fetch', fetch);
+
+    const response = await onRequest({
+      request: new Request(
+        `https://xtrata.xyz/runtime/content?contractId=${CONTRACT_ID}&tokenId=294&network=mainnet`,
+        {
+          method: 'HEAD'
+        }
+      ),
+      env: {}
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toBe('image/gif');
+    expect(response.headers.get('Content-Length')).toBe('3');
+    expect(response.headers.get('X-Xtrata-Runtime-Build')).toBe('stream-v1');
+    expect(response.headers.get('X-Xtrata-Runtime-Response-Mode')).toBe('head');
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('streams reconstructed bytes on cache misses', async () => {
+    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const endpoint = String(input);
+      let result: string;
+      if (endpoint.endsWith('/get-inscription-meta')) {
+        result = metaResult({
+          totalSize: 3n,
+          totalChunks: 3n
+        });
+      } else if (endpoint.endsWith('/get-chunk')) {
+        result = cvHex(someCV(bufferCV(new Uint8Array([1]))));
+      } else if (endpoint.endsWith('/get-chunk-batch')) {
+        result = cvHex(
+          listCV([
+            someCV(bufferCV(new Uint8Array([2]))),
+            someCV(bufferCV(new Uint8Array([3])))
+          ])
+        );
+      } else if (endpoint.endsWith('/get-token-uri')) {
+        result = cvHex(responseOkCV(someCV(stringAsciiCV('signal.gif'))));
+      } else {
+        throw new Error(`Unexpected endpoint ${endpoint}`);
+      }
+      return new Response(
+        JSON.stringify({
+          okay: true,
+          result
+        }),
+        {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+    });
+    vi.stubGlobal('fetch', fetch);
+
+    const response = await onRequest({
+      request: new Request(
+        `https://xtrata.xyz/runtime/content?contractId=${CONTRACT_ID}&tokenId=294&network=mainnet`
+      ),
+      env: {
+        RUNTIME_CONTENT_READ_RETRIES: '0'
+      }
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('X-Xtrata-Runtime-Response-Mode')).toBe('stream');
+    expect(response.headers.get('X-Xtrata-Runtime-Cache')).toBe('BYPASS');
+    expect(response.headers.get('Content-Length')).toBe('3');
+    expect(Array.from(new Uint8Array(await response.arrayBuffer()))).toEqual([
+      1,
+      2,
+      3
+    ]);
+  });
+});
