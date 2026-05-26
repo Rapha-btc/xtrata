@@ -23,7 +23,13 @@ interface D1Database {
 
 interface R2Bucket {
   get(
-    key: string
+    key: string,
+    options?: {
+      range?: {
+        offset: number;
+        length: number;
+      };
+    }
   ): Promise<{
     body: ReadableStream<Uint8Array> | null;
     size?: number;

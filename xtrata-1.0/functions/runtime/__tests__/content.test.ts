@@ -32,12 +32,16 @@ const streamFrom = (bytes: Uint8Array) =>
     }
   });
 
-const metaResult = (params?: { totalSize?: bigint; totalChunks?: bigint }) =>
+const metaResult = (params?: {
+  mimeType?: string;
+  totalSize?: bigint;
+  totalChunks?: bigint;
+}) =>
   cvHex(
     someCV(
       tupleCV({
         owner: principalCV(CONTRACT_ADDRESS),
-        'mime-type': stringAsciiCV('image/gif'),
+        'mime-type': stringAsciiCV(params?.mimeType ?? 'image/gif'),
         'total-size': uintCV(params?.totalSize ?? 2n),
         'total-chunks': uintCV(params?.totalChunks ?? 1n),
         sealed: boolCV(true),
@@ -62,19 +66,20 @@ describe('/runtime/content', () => {
         sourceContractId: CONTRACT_ID
       }
     }));
-    const fetch = vi.fn(async () =>
-      new Response(
-        JSON.stringify({
-          okay: true,
-          result: metaResult()
-        }),
-        {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/json'
+    const fetch = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            okay: true,
+            result: metaResult()
+          }),
+          {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json'
+            }
           }
-        }
-      )
+        )
     );
     vi.stubGlobal('fetch', fetch);
     const env = {
@@ -107,23 +112,154 @@ describe('/runtime/content', () => {
     ]);
   });
 
-  it('returns metadata-only diagnostics for HEAD requests', async () => {
-    const fetch = vi.fn(async () =>
-      new Response(
-        JSON.stringify({
-          okay: true,
-          result: metaResult({
-            totalSize: 3n,
-            totalChunks: 3n
-          })
-        }),
+  it('serves cached byte ranges for media playback', async () => {
+    const get = vi.fn(
+      async (
+        _key: string,
+        options?: { range?: { offset: number; length: number } }
+      ) => {
+        const bytes = new Uint8Array([9, 8, 7, 6]);
+        const range = options?.range;
+        return {
+          body: streamFrom(
+            range ? bytes.slice(range.offset, range.offset + range.length) : bytes
+          ),
+          size: bytes.length,
+          httpMetadata: {
+            contentType: 'audio/webm'
+          },
+          customMetadata: {
+            sourceContractId: CONTRACT_ID
+          }
+        };
+      }
+    );
+    const fetch = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            okay: true,
+            result: metaResult({
+              mimeType: 'audio/webm',
+              totalSize: 4n
+            })
+          }),
+          {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }
+        )
+    );
+    vi.stubGlobal('fetch', fetch);
+    const env = {
+      RUNTIME_CONTENT_CACHE: {
+        get,
+        put: vi.fn(),
+        delete: vi.fn(),
+        list: vi.fn(),
+        getUploadUrl: vi.fn()
+      }
+    } as unknown as RuntimeEnv;
+
+    const response = await onRequest({
+      request: new Request(
+        `https://xtrata.xyz/runtime/content?contractId=${CONTRACT_ID}&tokenId=294&network=mainnet`,
         {
-          status: 200,
           headers: {
-            'Content-Type': 'application/json'
+            Range: 'bytes=1-2'
           }
         }
-      )
+      ),
+      env
+    });
+
+    expect(response.status).toBe(206);
+    expect(response.headers.get('Content-Type')).toBe('audio/webm');
+    expect(response.headers.get('Accept-Ranges')).toBe('bytes');
+    expect(response.headers.get('Content-Range')).toBe('bytes 1-2/4');
+    expect(response.headers.get('Content-Length')).toBe('2');
+    expect(response.headers.get('X-Xtrata-Runtime-Response-Mode')).toBe('range');
+    expect(get).toHaveBeenCalledWith(
+      `runtime-content/mainnet/${CONTRACT_ID}/294/abcd`,
+      {
+        range: {
+          offset: 1,
+          length: 2
+        }
+      }
+    );
+    expect(Array.from(new Uint8Array(await response.arrayBuffer()))).toEqual([
+      8,
+      7
+    ]);
+  });
+
+  it('returns 416 for unsatisfiable byte ranges without reconstructing content', async () => {
+    const get = vi.fn();
+    const fetch = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            okay: true,
+            result: metaResult()
+          }),
+          {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }
+        )
+    );
+    vi.stubGlobal('fetch', fetch);
+
+    const response = await onRequest({
+      request: new Request(
+        `https://xtrata.xyz/runtime/content?contractId=${CONTRACT_ID}&tokenId=294&network=mainnet`,
+        {
+          headers: {
+            Range: 'bytes=20-30'
+          }
+        }
+      ),
+      env: {
+        RUNTIME_CONTENT_CACHE: {
+          get,
+          put: vi.fn(),
+          delete: vi.fn(),
+          list: vi.fn(),
+          getUploadUrl: vi.fn()
+        }
+      } as unknown as RuntimeEnv
+    });
+
+    expect(response.status).toBe(416);
+    expect(response.headers.get('Accept-Ranges')).toBe('bytes');
+    expect(response.headers.get('Content-Range')).toBe('bytes */2');
+    expect(response.headers.get('Content-Length')).toBe('0');
+    expect(get).not.toHaveBeenCalled();
+  });
+
+  it('returns metadata-only diagnostics for HEAD requests', async () => {
+    const fetch = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            okay: true,
+            result: metaResult({
+              totalSize: 3n,
+              totalChunks: 3n
+            })
+          }),
+          {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }
+        )
     );
     vi.stubGlobal('fetch', fetch);
 
@@ -140,6 +276,7 @@ describe('/runtime/content', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Type')).toBe('image/gif');
     expect(response.headers.get('Content-Length')).toBe('3');
+    expect(response.headers.get('Accept-Ranges')).toBe('bytes');
     expect(response.headers.get('X-Xtrata-Runtime-Build')).toBe('stream-v1');
     expect(response.headers.get('X-Xtrata-Runtime-Response-Mode')).toBe('head');
     expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
@@ -199,6 +336,68 @@ describe('/runtime/content', () => {
     expect(response.headers.get('Content-Length')).toBe('3');
     expect(Array.from(new Uint8Array(await response.arrayBuffer()))).toEqual([
       1,
+      2,
+      3
+    ]);
+  });
+
+  it('serves byte ranges after reconstructing uncached content', async () => {
+    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const endpoint = String(input);
+      let result: string;
+      if (endpoint.endsWith('/get-inscription-meta')) {
+        result = metaResult({
+          totalSize: 3n,
+          totalChunks: 3n
+        });
+      } else if (endpoint.endsWith('/get-chunk')) {
+        result = cvHex(someCV(bufferCV(new Uint8Array([1]))));
+      } else if (endpoint.endsWith('/get-chunk-batch')) {
+        result = cvHex(
+          listCV([
+            someCV(bufferCV(new Uint8Array([2]))),
+            someCV(bufferCV(new Uint8Array([3])))
+          ])
+        );
+      } else if (endpoint.endsWith('/get-token-uri')) {
+        result = cvHex(responseOkCV(someCV(stringAsciiCV('signal.gif'))));
+      } else {
+        throw new Error(`Unexpected endpoint ${endpoint}`);
+      }
+      return new Response(
+        JSON.stringify({
+          okay: true,
+          result
+        }),
+        {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+    });
+    vi.stubGlobal('fetch', fetch);
+
+    const response = await onRequest({
+      request: new Request(
+        `https://xtrata.xyz/runtime/content?contractId=${CONTRACT_ID}&tokenId=294&network=mainnet`,
+        {
+          headers: {
+            Range: 'bytes=1-2'
+          }
+        }
+      ),
+      env: {
+        RUNTIME_CONTENT_READ_RETRIES: '0'
+      }
+    });
+
+    expect(response.status).toBe(206);
+    expect(response.headers.get('Content-Range')).toBe('bytes 1-2/3');
+    expect(response.headers.get('Content-Length')).toBe('2');
+    expect(response.headers.get('X-Xtrata-Runtime-Response-Mode')).toBe('range');
+    expect(Array.from(new Uint8Array(await response.arrayBuffer()))).toEqual([
       2,
       3
     ]);
