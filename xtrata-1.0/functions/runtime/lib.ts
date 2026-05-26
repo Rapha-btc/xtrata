@@ -1,11 +1,13 @@
-import { deserializeCV, serializeCV, uintCV } from '@stacks/transactions';
+import { deserializeCV, listCV, serializeCV, uintCV } from '@stacks/transactions';
 import {
   parseGetDependencies,
   parseGetChunk,
+  parseGetChunkBatch,
   parseGetInscriptionMeta,
   parseGetLastTokenId,
   parseGetTokenUri
 } from '../../src/lib/protocol/parsers';
+import type { InscriptionMeta } from '../../src/lib/protocol/types';
 import { parseRuntimeModuleContractId } from '../../src/lib/viewer/module-paths';
 import {
   applyHiroApiKey,
@@ -13,7 +15,7 @@ import {
   shouldRetryWithNextHiroKey
 } from '../lib/hiro-keys';
 
-export type RuntimeEnv = Record<string, string | undefined>;
+export type RuntimeEnv = Record<string, unknown>;
 
 export type RuntimeNetworkType = 'mainnet' | 'testnet';
 
@@ -23,6 +25,10 @@ export type RuntimeContractRef = {
 };
 
 const CHUNK_FALLBACK_SIZE = 16384n;
+const CONTRACT_MAX_BATCH_SIZE = 50;
+const DEFAULT_RUNTIME_READ_BATCH_SIZE = 8;
+const DEFAULT_RUNTIME_CHUNK_CONCURRENCY = 4;
+const DEFAULT_RUNTIME_CHUNK_RETRIES = 2;
 
 const MAINNET_BASES = [
   'https://api.mainnet.hiro.so',
@@ -54,6 +60,9 @@ const bytesToHex = (bytes: Uint8Array) =>
     .join('');
 
 const encodeUintArg = (value: bigint) => `0x${bytesToHex(serializeCV(uintCV(value)))}`;
+
+const encodeUintListArg = (values: bigint[]) =>
+  `0x${bytesToHex(serializeCV(listCV(values.map((value) => uintCV(value)))))}`;
 
 const asError = (value: unknown) =>
   value instanceof Error ? value : new Error(String(value));
@@ -209,6 +218,27 @@ export const fetchRuntimeChunk = async (params: {
   return parseGetChunk(value);
 };
 
+export const fetchRuntimeChunkBatch = async (params: {
+  env: RuntimeEnv;
+  apiBases: string[];
+  contract: RuntimeContractRef;
+  tokenId: bigint;
+  indexes: bigint[];
+}) => {
+  if (params.indexes.length === 0) {
+    return [] as Array<Uint8Array | null>;
+  }
+  const value = await callRuntimeReadOnly({
+    env: params.env,
+    apiBases: params.apiBases,
+    contract: params.contract,
+    functionName: 'get-chunk-batch',
+    functionArgs: [encodeUintArg(params.tokenId), encodeUintListArg(params.indexes)],
+    senderAddress: params.contract.address
+  });
+  return parseGetChunkBatch(value);
+};
+
 export const fetchRuntimeLastTokenId = async (params: {
   env: RuntimeEnv;
   apiBases: string[];
@@ -286,17 +316,551 @@ const combineChunks = (chunks: Uint8Array[]) => {
   return combined;
 };
 
-export const resolveRuntimeContent = async (params: {
+const wait = (ms: number) =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+
+const parsePositiveInteger = (value: unknown, fallback: number, max: number) => {
+  const parsed =
+    typeof value === 'string' && value.trim().length > 0
+      ? Number.parseInt(value.trim(), 10)
+      : Number.NaN;
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback;
+  }
+  return Math.max(1, Math.min(max, parsed));
+};
+
+const parseNonNegativeInteger = (value: unknown, fallback: number, max: number) => {
+  const parsed =
+    typeof value === 'string' && value.trim().length > 0
+      ? Number.parseInt(value.trim(), 10)
+      : Number.NaN;
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return fallback;
+  }
+  return Math.max(0, Math.min(max, parsed));
+};
+
+export const getRuntimeReadConfig = (env: RuntimeEnv) => ({
+  batchSize: parsePositiveInteger(
+    env.RUNTIME_CONTENT_READ_BATCH_SIZE,
+    DEFAULT_RUNTIME_READ_BATCH_SIZE,
+    CONTRACT_MAX_BATCH_SIZE
+  ),
+  concurrency: parsePositiveInteger(
+    env.RUNTIME_CONTENT_READ_CONCURRENCY,
+    DEFAULT_RUNTIME_CHUNK_CONCURRENCY,
+    8
+  ),
+  retries: parseNonNegativeInteger(
+    env.RUNTIME_CONTENT_READ_RETRIES,
+    DEFAULT_RUNTIME_CHUNK_RETRIES,
+    5
+  )
+});
+
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : String(error);
+
+const isCostBalanceExceeded = (error: unknown) =>
+  getErrorMessage(error).toLowerCase().includes('costbalanceexceeded');
+
+export type RuntimeResolvedMeta = {
+  contract: RuntimeContractRef;
+  meta: InscriptionMeta;
+};
+
+export type RuntimeResolvedContent = {
+  contract: RuntimeContractRef;
+  meta: InscriptionMeta;
+  bytes: Uint8Array;
+};
+
+export type RuntimeStreamCompleteContext = {
+  contract: RuntimeContractRef;
+  meta: InscriptionMeta;
+};
+
+export type RuntimeContentReader = {
+  fetchMeta?: typeof fetchRuntimeMeta;
+  fetchChunk?: typeof fetchRuntimeChunk;
+  fetchChunkBatch?: typeof fetchRuntimeChunkBatch;
+};
+
+type ResolvedRuntimeContentReader = Required<RuntimeContentReader>;
+
+const getRuntimeContentReader = (
+  reader?: RuntimeContentReader
+): ResolvedRuntimeContentReader => ({
+  fetchMeta: reader?.fetchMeta ?? fetchRuntimeMeta,
+  fetchChunk: reader?.fetchChunk ?? fetchRuntimeChunk,
+  fetchChunkBatch: reader?.fetchChunkBatch ?? fetchRuntimeChunkBatch
+});
+
+const fetchRuntimeChunkWithRetry = async (params: {
+  env: RuntimeEnv;
+  apiBases: string[];
+  contract: RuntimeContractRef;
+  tokenId: bigint;
+  index: bigint;
+  retries: number;
+  read: ResolvedRuntimeContentReader;
+}) => {
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt <= params.retries; attempt += 1) {
+    try {
+      const chunk = await params.read.fetchChunk(params);
+      if (!chunk || chunk.length === 0) {
+        throw new Error(`Missing chunk ${params.index.toString()}.`);
+      }
+      return chunk;
+    } catch (error) {
+      lastError = asError(error);
+      if (isCostBalanceExceeded(error)) {
+        break;
+      }
+      if (attempt < params.retries) {
+        await wait(150 * Math.pow(2, attempt));
+      }
+    }
+  }
+  throw lastError || new Error(`Missing chunk ${params.index.toString()}.`);
+};
+
+const fetchRuntimeChunkBatchWithRetry = async (params: {
+  env: RuntimeEnv;
+  apiBases: string[];
+  contract: RuntimeContractRef;
+  tokenId: bigint;
+  indexes: bigint[];
+  retries: number;
+  read: ResolvedRuntimeContentReader;
+}) => {
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt <= params.retries; attempt += 1) {
+    try {
+      const batch = await params.read.fetchChunkBatch(params);
+      return params.indexes.map((index, position) => ({
+        index,
+        chunk: batch[position] ?? null
+      }));
+    } catch (error) {
+      lastError = asError(error);
+      if (isCostBalanceExceeded(error)) {
+        break;
+      }
+      if (attempt < params.retries) {
+        await wait(150 * Math.pow(2, attempt));
+      }
+    }
+  }
+  throw lastError || new Error('Missing chunk batch.');
+};
+
+const fetchRuntimeChunksWithConcurrency = async (params: {
+  env: RuntimeEnv;
+  apiBases: string[];
+  contract: RuntimeContractRef;
+  tokenId: bigint;
+  indexes: bigint[];
+  concurrency: number;
+  retries: number;
+  read: ResolvedRuntimeContentReader;
+}) => {
+  const results = new Map<bigint, Uint8Array>();
+  if (params.indexes.length === 0) {
+    return results;
+  }
+  const concurrency = Math.max(1, Math.min(params.concurrency, params.indexes.length));
+  let cursor = 0;
+  const workers = Array.from({ length: concurrency }, async () => {
+    while (true) {
+      const current = cursor;
+      cursor += 1;
+      if (current >= params.indexes.length) {
+        return;
+      }
+      const index = params.indexes[current];
+      const chunk = await fetchRuntimeChunkWithRetry({
+        env: params.env,
+        apiBases: params.apiBases,
+        contract: params.contract,
+        tokenId: params.tokenId,
+        index,
+        retries: params.retries,
+        read: params.read
+      });
+      results.set(index, chunk);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+};
+
+const buildRuntimeIndexBatches = (indexes: bigint[], batchSize: number) => {
+  const batches: bigint[][] = [];
+  for (let offset = 0; offset < indexes.length; offset += batchSize) {
+    batches.push(indexes.slice(offset, offset + batchSize));
+  }
+  return batches;
+};
+
+const fetchRuntimeChunkBatchesWithConcurrency = async (params: {
+  env: RuntimeEnv;
+  apiBases: string[];
+  contract: RuntimeContractRef;
+  tokenId: bigint;
+  batches: bigint[][];
+  concurrency: number;
+  retries: number;
+  read: ResolvedRuntimeContentReader;
+}) => {
+  const chunkMap = new Map<bigint, Uint8Array>();
+  const unresolved = new Set<bigint>();
+  let costExceeded = false;
+
+  if (params.batches.length === 0) {
+    return {
+      chunkMap,
+      unresolved: [] as bigint[],
+      costExceeded
+    };
+  }
+
+  const concurrency = Math.max(1, Math.min(params.concurrency, params.batches.length));
+  let cursor = 0;
+  const workers = Array.from({ length: concurrency }, async () => {
+    while (true) {
+      const current = cursor;
+      cursor += 1;
+      if (current >= params.batches.length) {
+        return;
+      }
+
+      const batch = params.batches[current];
+      try {
+        const entries = await fetchRuntimeChunkBatchWithRetry({
+          env: params.env,
+          apiBases: params.apiBases,
+          contract: params.contract,
+          tokenId: params.tokenId,
+          indexes: batch,
+          retries: params.retries,
+          read: params.read
+        });
+        for (const entry of entries) {
+          if (entry.chunk && entry.chunk.length > 0) {
+            chunkMap.set(entry.index, entry.chunk);
+          } else {
+            unresolved.add(entry.index);
+          }
+        }
+      } catch (error) {
+        if (isCostBalanceExceeded(error)) {
+          costExceeded = true;
+        }
+        for (const index of batch) {
+          unresolved.add(index);
+        }
+      }
+    }
+  });
+  await Promise.all(workers);
+
+  return {
+    chunkMap,
+    unresolved: Array.from(unresolved).sort((left, right) =>
+      left < right ? -1 : left > right ? 1 : 0
+    ),
+    costExceeded
+  };
+};
+
+const fetchRemainingRuntimeChunks = async (params: {
+  env: RuntimeEnv;
+  apiBases: string[];
+  contract: RuntimeContractRef;
+  tokenId: bigint;
+  totalCount: number;
+  read: ResolvedRuntimeContentReader;
+}) => {
+  const config = getRuntimeReadConfig(params.env);
+  const chunkMap = new Map<bigint, Uint8Array>();
+  const unresolved = new Set<bigint>();
+  let batchSize = config.batchSize;
+  const remainingIndexes = Array.from(
+    { length: Math.max(0, params.totalCount - 1) },
+    (_, index) => BigInt(index + 1)
+  );
+
+  while (batchSize > 1 && remainingIndexes.length > 0) {
+    const batches = buildRuntimeIndexBatches(remainingIndexes, batchSize);
+    const [probeBatch, ...remainingBatches] = batches;
+    try {
+      const entries = await fetchRuntimeChunkBatchWithRetry({
+        env: params.env,
+        apiBases: params.apiBases,
+        contract: params.contract,
+        tokenId: params.tokenId,
+        indexes: probeBatch,
+        retries: config.retries,
+        read: params.read
+      });
+      for (const entry of entries) {
+        if (entry.chunk && entry.chunk.length > 0) {
+          chunkMap.set(entry.index, entry.chunk);
+        } else {
+          unresolved.add(entry.index);
+        }
+      }
+    } catch (error) {
+      if (isCostBalanceExceeded(error) && batchSize > 1) {
+        const nextBatchSize = Math.max(1, Math.floor(batchSize / 2));
+        if (nextBatchSize < batchSize) {
+          batchSize = nextBatchSize;
+          chunkMap.clear();
+          unresolved.clear();
+          continue;
+        }
+      }
+      for (const index of remainingIndexes) {
+        unresolved.add(index);
+      }
+      break;
+    }
+
+    const result = await fetchRuntimeChunkBatchesWithConcurrency({
+      env: params.env,
+      apiBases: params.apiBases,
+      contract: params.contract,
+      tokenId: params.tokenId,
+      batches: remainingBatches,
+      concurrency: config.concurrency,
+      retries: config.retries,
+      read: params.read
+    });
+
+    if (result.costExceeded && batchSize > 1) {
+      const nextBatchSize = Math.max(1, Math.floor(batchSize / 2));
+      if (nextBatchSize < batchSize) {
+        batchSize = nextBatchSize;
+        chunkMap.clear();
+        unresolved.clear();
+        continue;
+      }
+    }
+
+    for (const [index, chunk] of result.chunkMap.entries()) {
+      chunkMap.set(index, chunk);
+    }
+    for (const index of result.unresolved) {
+      unresolved.add(index);
+    }
+    break;
+  }
+
+  if (batchSize <= 1 && chunkMap.size === 0 && unresolved.size === 0) {
+    for (const index of remainingIndexes) {
+      unresolved.add(index);
+    }
+  }
+
+  if (unresolved.size > 0) {
+    const results = await fetchRuntimeChunksWithConcurrency({
+      env: params.env,
+      apiBases: params.apiBases,
+      contract: params.contract,
+      tokenId: params.tokenId,
+      indexes: Array.from(unresolved).sort((left, right) =>
+        left < right ? -1 : left > right ? 1 : 0
+      ),
+      concurrency: config.concurrency,
+      retries: config.retries,
+      read: params.read
+    });
+    for (const [index, chunk] of results.entries()) {
+      chunkMap.set(index, chunk);
+    }
+  }
+
+  const ordered: Uint8Array[] = [];
+  for (let index = 1; index < params.totalCount; index += 1) {
+    const chunk = chunkMap.get(BigInt(index));
+    if (!chunk || chunk.length === 0) {
+      throw new Error(`Missing chunk ${index.toString()}.`);
+    }
+    ordered.push(chunk);
+  }
+  return ordered;
+};
+
+const streamRemainingRuntimeChunks = async (params: {
+  env: RuntimeEnv;
+  apiBases: string[];
+  contract: RuntimeContractRef;
+  tokenId: bigint;
+  totalCount: number;
+  read: ResolvedRuntimeContentReader;
+  onChunk: (chunk: Uint8Array, index: bigint) => void;
+}) => {
+  const config = getRuntimeReadConfig(params.env);
+  const pending = new Map<bigint, Uint8Array>();
+  const unresolved = new Set<bigint>();
+  let batchSize = config.batchSize;
+  let nextToEmit = 1n;
+  const remainingIndexes = Array.from(
+    { length: Math.max(0, params.totalCount - 1) },
+    (_, index) => BigInt(index + 1)
+  );
+
+  const emitAvailable = () => {
+    while (pending.has(nextToEmit)) {
+      const chunk = pending.get(nextToEmit);
+      pending.delete(nextToEmit);
+      if (!chunk || chunk.length === 0) {
+        throw new Error(`Missing chunk ${nextToEmit.toString()}.`);
+      }
+      params.onChunk(chunk, nextToEmit);
+      nextToEmit += 1n;
+    }
+  };
+
+  const addEntries = (entries: Array<{ index: bigint; chunk: Uint8Array | null }>) => {
+    for (const entry of entries) {
+      if (entry.chunk && entry.chunk.length > 0) {
+        pending.set(entry.index, entry.chunk);
+      } else {
+        unresolved.add(entry.index);
+      }
+    }
+    emitAvailable();
+  };
+
+  while (batchSize > 1 && remainingIndexes.length > 0) {
+    const batches = buildRuntimeIndexBatches(remainingIndexes, batchSize);
+    const [probeBatch, ...remainingBatches] = batches;
+    try {
+      const entries = await fetchRuntimeChunkBatchWithRetry({
+        env: params.env,
+        apiBases: params.apiBases,
+        contract: params.contract,
+        tokenId: params.tokenId,
+        indexes: probeBatch,
+        retries: config.retries,
+        read: params.read
+      });
+      addEntries(entries);
+    } catch (error) {
+      if (isCostBalanceExceeded(error) && batchSize > 1) {
+        const nextBatchSize = Math.max(1, Math.floor(batchSize / 2));
+        if (nextBatchSize < batchSize) {
+          batchSize = nextBatchSize;
+          pending.clear();
+          unresolved.clear();
+          nextToEmit = 1n;
+          continue;
+        }
+      }
+      for (const index of remainingIndexes) {
+        unresolved.add(index);
+      }
+      break;
+    }
+
+    let costExceeded = false;
+    if (remainingBatches.length > 0) {
+      let cursor = 0;
+      const workerCount = Math.max(1, Math.min(config.concurrency, remainingBatches.length));
+      const workers = Array.from({ length: workerCount }, async () => {
+        while (true) {
+          const current = cursor;
+          cursor += 1;
+          if (current >= remainingBatches.length) {
+            return;
+          }
+          const batch = remainingBatches[current];
+          try {
+            const entries = await fetchRuntimeChunkBatchWithRetry({
+              env: params.env,
+              apiBases: params.apiBases,
+              contract: params.contract,
+              tokenId: params.tokenId,
+              indexes: batch,
+              retries: config.retries,
+              read: params.read
+            });
+            addEntries(entries);
+          } catch (error) {
+            if (isCostBalanceExceeded(error)) {
+              costExceeded = true;
+            }
+            for (const index of batch) {
+              unresolved.add(index);
+            }
+          }
+        }
+      });
+      await Promise.all(workers);
+    }
+
+    if (costExceeded && batchSize > 1 && nextToEmit === 1n) {
+      const nextBatchSize = Math.max(1, Math.floor(batchSize / 2));
+      if (nextBatchSize < batchSize) {
+        batchSize = nextBatchSize;
+        pending.clear();
+        unresolved.clear();
+        continue;
+      }
+    }
+    break;
+  }
+
+  if (batchSize <= 1 && pending.size === 0 && unresolved.size === 0) {
+    for (const index of remainingIndexes) {
+      unresolved.add(index);
+    }
+  }
+
+  if (unresolved.size > 0) {
+    const results = await fetchRuntimeChunksWithConcurrency({
+      env: params.env,
+      apiBases: params.apiBases,
+      contract: params.contract,
+      tokenId: params.tokenId,
+      indexes: Array.from(unresolved).sort((left, right) =>
+        left < right ? -1 : left > right ? 1 : 0
+      ),
+      concurrency: config.concurrency,
+      retries: config.retries,
+      read: params.read
+    });
+    for (const [index, chunk] of results.entries()) {
+      pending.set(index, chunk);
+    }
+    emitAvailable();
+  }
+
+  const finalExpected = BigInt(params.totalCount);
+  if (nextToEmit !== finalExpected) {
+    throw new Error(`Missing chunk ${nextToEmit.toString()}.`);
+  }
+};
+
+export const resolveRuntimeMeta = async (params: {
   env: RuntimeEnv;
   apiBases: string[];
   tokenId: bigint;
   primaryContract: RuntimeContractRef;
   fallbackContract: RuntimeContractRef | null;
-}) => {
+  read?: RuntimeContentReader;
+}): Promise<RuntimeResolvedMeta> => {
+  const read = getRuntimeContentReader(params.read);
   let primaryMeta = null;
   let primaryMetaError: Error | null = null;
   try {
-    primaryMeta = await fetchRuntimeMeta({
+    primaryMeta = await read.fetchMeta({
       env: params.env,
       apiBases: params.apiBases,
       contract: params.primaryContract,
@@ -314,7 +878,7 @@ export const resolveRuntimeContent = async (params: {
     params.fallbackContract &&
     !isSameRuntimeContract(params.primaryContract, params.fallbackContract)
   ) {
-    const fallbackMeta = await fetchRuntimeMeta({
+    const fallbackMeta = await read.fetchMeta({
       env: params.env,
       apiBases: params.apiBases,
       contract: params.fallbackContract,
@@ -330,15 +894,47 @@ export const resolveRuntimeContent = async (params: {
     throw primaryMetaError || new Error('Inscription metadata not found.');
   }
 
+  return {
+    contract: activeContract,
+    meta: activeMeta
+  };
+};
+
+const resolveRuntimeContentPlan = async (params: {
+  env: RuntimeEnv;
+  apiBases: string[];
+  tokenId: bigint;
+  primaryContract: RuntimeContractRef;
+  fallbackContract: RuntimeContractRef | null;
+  resolvedMeta?: RuntimeResolvedMeta;
+  read?: RuntimeContentReader;
+}) => {
+  const read = getRuntimeContentReader(params.read);
+  const resolvedMeta =
+    params.resolvedMeta ??
+    (await resolveRuntimeMeta({
+      env: params.env,
+      apiBases: params.apiBases,
+      tokenId: params.tokenId,
+      primaryContract: params.primaryContract,
+      fallbackContract: params.fallbackContract,
+      read
+    }));
+
+  let activeContract = resolvedMeta.contract;
+  let activeMeta = resolvedMeta.meta;
   let firstChunk: Uint8Array | null = null;
   let firstChunkError: Error | null = null;
+  const readConfig = getRuntimeReadConfig(params.env);
   try {
-    firstChunk = await fetchRuntimeChunk({
+    firstChunk = await fetchRuntimeChunkWithRetry({
       env: params.env,
       apiBases: params.apiBases,
       contract: activeContract,
       tokenId: params.tokenId,
-      index: 0n
+      index: 0n,
+      retries: readConfig.retries,
+      read
     });
   } catch (error) {
     firstChunkError = asError(error);
@@ -349,7 +945,7 @@ export const resolveRuntimeContent = async (params: {
     params.fallbackContract &&
     !isSameRuntimeContract(activeContract, params.fallbackContract)
   ) {
-    const fallbackMeta = await fetchRuntimeMeta({
+    const fallbackMeta = await read.fetchMeta({
       env: params.env,
       apiBases: params.apiBases,
       contract: params.fallbackContract,
@@ -359,12 +955,14 @@ export const resolveRuntimeContent = async (params: {
       activeContract = params.fallbackContract;
       activeMeta = fallbackMeta;
       try {
-        firstChunk = await fetchRuntimeChunk({
+        firstChunk = await fetchRuntimeChunkWithRetry({
           env: params.env,
           apiBases: params.apiBases,
           contract: activeContract,
           tokenId: params.tokenId,
-          index: 0n
+          index: 0n,
+          retries: readConfig.retries,
+          read
         });
       } catch (error) {
         firstChunkError = asError(error);
@@ -386,27 +984,136 @@ export const resolveRuntimeContent = async (params: {
     throw new Error('Chunk count exceeds runtime limit.');
   }
 
-  const chunks: Uint8Array[] = [firstChunk];
   const expectedCountNumber = Number(expectedChunks);
 
-  for (let index = 1; index < expectedCountNumber; index += 1) {
-    const chunk = await fetchRuntimeChunk({
-      env: params.env,
-      apiBases: params.apiBases,
-      contract: activeContract,
-      tokenId: params.tokenId,
-      index: BigInt(index)
-    });
-    if (!chunk || chunk.length === 0) {
-      throw new Error(`Missing chunk ${index.toString()}.`);
-    }
-    chunks.push(chunk);
+  if (activeMeta.totalSize > BigInt(Number.MAX_SAFE_INTEGER)) {
+    throw new Error('Inscription size exceeds runtime limit.');
   }
+  const expectedBytes = Number(activeMeta.totalSize);
 
-  const bytes = combineChunks(chunks);
   return {
     contract: activeContract,
     meta: activeMeta,
+    firstChunk,
+    expectedCountNumber,
+    expectedBytes,
+    read
+  };
+};
+
+export const resolveRuntimeContent = async (params: {
+  env: RuntimeEnv;
+  apiBases: string[];
+  tokenId: bigint;
+  primaryContract: RuntimeContractRef;
+  fallbackContract: RuntimeContractRef | null;
+  resolvedMeta?: RuntimeResolvedMeta;
+  read?: RuntimeContentReader;
+}): Promise<RuntimeResolvedContent> => {
+  const plan = await resolveRuntimeContentPlan(params);
+  const chunks: Uint8Array[] = [plan.firstChunk];
+
+  if (plan.expectedCountNumber > 1) {
+    const remaining = await fetchRemainingRuntimeChunks({
+      env: params.env,
+      apiBases: params.apiBases,
+      contract: plan.contract,
+      tokenId: params.tokenId,
+      totalCount: plan.expectedCountNumber,
+      read: plan.read
+    });
+    chunks.push(...remaining);
+  }
+
+  let bytes = combineChunks(chunks);
+  if (bytes.length < plan.expectedBytes) {
+    throw new Error(
+      `Reconstructed content is shorter than expected (${bytes.length}/${plan.expectedBytes}).`
+    );
+  }
+  if (bytes.length > plan.expectedBytes) {
+    bytes = bytes.slice(0, plan.expectedBytes);
+  }
+
+  return {
+    contract: plan.contract,
+    meta: plan.meta,
     bytes
+  };
+};
+
+export const resolveRuntimeContentStream = async (params: {
+  env: RuntimeEnv;
+  apiBases: string[];
+  tokenId: bigint;
+  primaryContract: RuntimeContractRef;
+  fallbackContract: RuntimeContractRef | null;
+  resolvedMeta?: RuntimeResolvedMeta;
+  read?: RuntimeContentReader;
+  onComplete?: (
+    bytes: Uint8Array,
+    context: RuntimeStreamCompleteContext
+  ) => Promise<unknown> | unknown;
+}) => {
+  const plan = await resolveRuntimeContentPlan(params);
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      void (async () => {
+        const completedChunks: Uint8Array[] = [];
+        let emittedBytes = 0;
+        const emitChunk = (chunk: Uint8Array) => {
+          if (emittedBytes >= plan.expectedBytes) {
+            return;
+          }
+          const remainingBytes = plan.expectedBytes - emittedBytes;
+          const output =
+            chunk.length > remainingBytes ? chunk.slice(0, remainingBytes) : chunk;
+          if (output.length === 0) {
+            return;
+          }
+          completedChunks.push(output);
+          emittedBytes += output.length;
+          controller.enqueue(output);
+        };
+
+        try {
+          emitChunk(plan.firstChunk);
+          if (plan.expectedCountNumber > 1) {
+            await streamRemainingRuntimeChunks({
+              env: params.env,
+              apiBases: params.apiBases,
+              contract: plan.contract,
+              tokenId: params.tokenId,
+              totalCount: plan.expectedCountNumber,
+              read: plan.read,
+              onChunk: emitChunk
+            });
+          }
+          if (emittedBytes < plan.expectedBytes) {
+            throw new Error(
+              `Streamed content is shorter than expected (${emittedBytes}/${plan.expectedBytes}).`
+            );
+          }
+          if (params.onComplete) {
+            await params.onComplete(combineChunks(completedChunks), {
+              contract: plan.contract,
+              meta: plan.meta
+            });
+          }
+          controller.close();
+        } catch (error) {
+          controller.error(error);
+        }
+      })();
+    }
+  });
+
+  return {
+    contract: plan.contract,
+    meta: plan.meta,
+    stream,
+    contentLength: plan.expectedBytes,
+    firstChunkLength: plan.firstChunk.length,
+    expectedChunks: plan.expectedCountNumber
   };
 };

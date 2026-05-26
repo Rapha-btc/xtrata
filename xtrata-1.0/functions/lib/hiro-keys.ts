@@ -1,8 +1,8 @@
-type RuntimeEnv = Record<string, string | undefined>;
+type RuntimeEnv = Record<string, unknown>;
 
 const HIRO_RETRYABLE_STATUSES = new Set([401, 403, 429]);
 
-const toNonEmpty = (value: string | null | undefined) => {
+const toNonEmpty = (value: unknown) => {
   if (typeof value !== 'string') {
     return null;
   }
