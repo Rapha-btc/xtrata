@@ -409,7 +409,7 @@
         <div class="chips" id="crownChips" role="group" aria-label="Crown emoji" style="margin-top:8px"></div>
         <div id="insWrap" hidden style="margin-top:8px">
           <input type="text" id="insIn" inputmode="numeric" placeholder="e.g. 159" autocomplete="off" spellcheck="false" aria-label="Inscription number" />
-          <p class="send-steps" style="margin-top:6px">Small still images only. About 500 KB or less works best. Animated or oversized files are not supported here.</p>
+          <p class="send-steps" style="margin-top:6px">Still images up to about 2 MB. Animated or interactive files are not supported here.</p>
           <div class="warn" id="insWarn" hidden></div>
           <details class="insdebug" id="insDebugBox" hidden>
             <summary>Runtime log</summary>
@@ -538,11 +538,11 @@ const CONFIG = {
   inscriptionContentRouteFileFallback: "https://xtrata.xyz/runtime/content",
   inscriptionUseIframe: false,            // false: <img> (CORS-safe). true: sandboxed <iframe> for live HTML/SVG/JS.
   inscriptionMaxDigits: 12,
-  inscriptionMaxContentBytes: 512 * 1024,
+  inscriptionMaxContentBytes: 2 * 1024 * 1024,
   inscriptionDiagnostics: true,
   inscriptionProbeHead: window.location.protocol !== "file:"
 };
-const INSCRIPTION_UNSUPPORTED_COPY = "Cannot use this one here. Try a small still image inscription.";
+const INSCRIPTION_UNSUPPORTED_COPY = "Cannot use this one here. Try a still image under 2 MB.";
 const INSCRIPTION_STILL_IMAGE_MIMES = new Set([
   "image/png",
   "image/jpeg",
@@ -923,6 +923,13 @@ function runtimeContentBlockReason(headers){
   return '';
 }
 
+function inscriptionLimitInfo(){
+  return {
+    limitBytes: CONFIG.inscriptionMaxContentBytes,
+    limitMB: Math.round((CONFIG.inscriptionMaxContentBytes / (1024 * 1024)) * 10) / 10
+  };
+}
+
 function isKnownUnsupportedInscription(num){
   const url = inscriptionContentUrl(num);
   return !!(url && unsupportedInscriptionUrls.has(url));
@@ -983,7 +990,7 @@ function probeInscriptionEndpoint(num, url, slot){
   if(!CONFIG.inscriptionDiagnostics || !CONFIG.inscriptionProbeHead || !url || typeof fetch !== 'function') return;
   if(insHeadProbeCache.has(url)) return;
   const started = performance.now();
-  insLog('head:start', { slot, tokenId:num, url:shortUrl(url) });
+  insLog('head:start', { slot, tokenId:num, url:shortUrl(url), ...inscriptionLimitInfo() });
   const probe = fetch(url, { method:'HEAD', mode:'cors', cache:'no-store' })
     .then((res)=>{
       const headers = readRuntimeHeaders(res.headers);
@@ -1018,7 +1025,7 @@ function setImageSourceWithDiagnostics(img, url, opts){
   const tokenId = opts.tokenId || '';
   const started = performance.now();
   probeInscriptionEndpoint(tokenId, url, slot);
-  insLog('image:start', { slot, tokenId, url:shortUrl(url) });
+  insLog('image:start', { slot, tokenId, url:shortUrl(url), ...inscriptionLimitInfo() });
   const changed = setImageSource(img, url, ()=>{
     insLog('image:load', {
       slot,
@@ -1034,7 +1041,8 @@ function setImageSourceWithDiagnostics(img, url, opts){
       slot,
       tokenId,
       ms:fmtMs(performance.now() - started),
-      complete:!!img.complete
+      complete:!!img.complete,
+      hint:'If HEAD shows stream-v1 and this still fails, the runtime reconstruction likely failed before the browser received a complete image.'
     });
     if(opts.onerror) opts.onerror();
   });
