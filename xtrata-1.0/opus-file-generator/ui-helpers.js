@@ -43,12 +43,15 @@ const enableConvertButtonIfNeeded = () => {
     const anyFileSelected = selectedFiles && selectedFiles.length > 0;
     const multipleFilesSelected = selectedFiles && selectedFiles.length > 1;
     const batchFilesReadyForZip = successfulBatchFiles && successfulBatchFiles.length > 0; // NEW
+    const batchZipAvailable =
+      typeof handleDownloadBatchZip === 'function' &&
+      typeof JSZip !== 'undefined';
   
     // --- Determine button states ---
     const playSampleEnabled = anyFileSelected;
     const singleConvertEnabled = ffmpegReady && anyFileSelected;
     const batchConvertEnabled = ffmpegReady && multipleFilesSelected;
-    const downloadBatchZipEnabled = batchFilesReadyForZip; // NEW
+    const downloadBatchZipEnabled = batchFilesReadyForZip && batchZipAvailable; // NEW
   
     // --- Get current output format for button text ---
     const selectedFormatRadio = document.querySelector('input[name="format"]:checked');

@@ -223,7 +223,16 @@ const initializeUIState = () => {
     }
 
     if (downloadBatchZipBtn) {
-        downloadBatchZipBtn.addEventListener('click', handleDownloadBatchZip); // New handler function
+        const zipHandler =
+            typeof handleDownloadBatchZip === 'function'
+                ? handleDownloadBatchZip
+                : null;
+        if (zipHandler) {
+            downloadBatchZipBtn.addEventListener('click', zipHandler);
+        } else {
+            downloadBatchZipBtn.disabled = true;
+            console.warn("Batch ZIP download handler is unavailable; ZIP export disabled.");
+        }
     }
 
     if (audioInfoContainer) audioInfoContainer.style.display = 'none';
