@@ -80,7 +80,10 @@ function createAndSetupStandaloneButton(appContainer, audioBase64Data, metadata)
         appContainer.appendChild(existingMetadataDiv); // Re-add metadata if it was there
     }
 
-    const audioSrc = `data:audio/opus;base64,${audioBase64Data}`;
+    const audioMimeType = typeof audionalAudioMimeType === 'string' && audionalAudioMimeType.startsWith('audio/')
+        ? audionalAudioMimeType
+        : 'audio/webm; codecs=opus';
+    const audioSrc = `data:${audioMimeType};base64,${audioBase64Data}`;
     const audio = new Audio(); // Create audio element programmatically
 
     const button = document.createElement('button');

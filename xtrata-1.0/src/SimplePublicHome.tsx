@@ -75,6 +75,7 @@ import ViewerScreen, { type ViewerMode } from './screens/ViewerScreen';
 const walletSessionStore = createWalletSessionStore();
 
 const WORKSPACE_PATH = '/workspace';
+const OPUS_GENERATOR_PATH = '/opus-file-generator/';
 const LIVE_MINT_REFRESH_INTERVAL_MS = 3 * 60_000;
 const LIVE_MINT_ERROR_BACKOFF_MS = 5 * 60_000;
 const LIVE_MINT_RATE_LIMIT_BACKOFF_MS = 15 * 60_000;
@@ -195,6 +196,10 @@ const HOMEPAGE_DOC_GROUPS: HomepageDocGroup[] = [
       {
         label: 'Recursive inscriptions',
         href: buildDocsUrl('docs/recursive-inscriptions.md')
+      },
+      {
+        label: 'Opus audio tool',
+        href: OPUS_GENERATOR_PATH
       }
     ]
   },
@@ -1794,6 +1799,7 @@ export default function SimplePublicHome() {
             <a href={DOCS_INDEX_URL} target="_blank" rel="noreferrer">
               Documentation
             </a>
+            <a href={OPUS_GENERATOR_PATH}>Opus audio tool</a>
             <a href="/manage">Artist portal</a>
             <a href="https://x.com/XtrataLayers" target="_blank" rel="noreferrer">
               Xtrata on X

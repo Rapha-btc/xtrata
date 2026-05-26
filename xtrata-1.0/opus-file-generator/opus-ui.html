@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <title>Xtrata Opus Audio Tool</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --page: #f5f7f4;
+      --panel: #ffffff;
+      --ink: #141915;
+      --muted: #637167;
+      --line: #d7e0d8;
+      --line-strong: #9eafa2;
+      --green: #245f45;
+      --green-soft: #e8f2ec;
+      --blue: #285675;
+      --blue-soft: #e6eef4;
+      --amber: #8a641d;
+      --amber-soft: #f6ecd6;
+      --error: #9e2f40;
+      --shadow: 0 18px 42px rgba(20, 25, 21, 0.08);
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      background: var(--page);
+      color: var(--ink);
+      font-family:
+        Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
+      line-height: 1.45;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    button,
+    .button-link {
+      min-height: 40px;
+      border: 1px solid var(--ink);
+      border-radius: 8px;
+      background: var(--ink);
+      color: #fff;
+      padding: 0 14px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    button:hover:not(:disabled),
+    .button-link:hover {
+      background: #2a332d;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.48;
+    }
+
+    .button-secondary,
+    .button-small,
+    .copy-button,
+    .download-button {
+      background: transparent;
+      color: var(--ink);
+      border-color: var(--line-strong);
+    }
+
+    .button-secondary:hover:not(:disabled),
+    .button-small:hover:not(:disabled),
+    .copy-button:hover:not(:disabled),
+    .download-button:hover:not(:disabled) {
+      background: rgba(20, 25, 21, 0.06);
+    }
+
+    a {
+      color: var(--green);
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    main {
+      width: min(1180px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 24px 0 36px;
+    }
+
+    .tool-header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: end;
+      margin-bottom: 16px;
+    }
+
+    .tool-title {
+      margin: 0;
+      font-size: clamp(1.8rem, 3vw, 3rem);
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .tool-subtitle {
+      max-width: 700px;
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .tool-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .tool-nav a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--ink);
+      padding: 0 11px;
+      font-size: 0.88rem;
+      box-shadow: 0 1px 0 rgba(20, 25, 21, 0.04);
+    }
+
+    .status-strip {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(180px, 260px);
+      gap: 12px;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+
+    #status {
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--green-soft);
+      color: var(--green);
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      font-weight: 700;
+    }
+
+    #status.error,
+    .error {
+      background: #f8e7ea;
+      color: var(--error);
+      border-color: #e5b7bf;
+    }
+
+    #progress {
+      width: 100%;
+      height: 12px;
+      accent-color: var(--green);
+    }
+
+    .tool-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .tool-panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .tool-panel__header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+      padding: 14px 16px;
+      background: #fbfdfb;
+    }
+
+    .tool-panel__header h2 {
+      margin: 0;
+      font-size: 1rem;
+      letter-spacing: 0;
+    }
+
+    .tool-panel__header p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .tool-panel__body {
+      padding: 16px;
+    }
+
+    .form-stack {
+      display: grid;
+      gap: 14px;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+    }
+
+    .field span,
+    legend,
+    .label {
+      color: var(--muted);
+      font-size: 0.84rem;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    input[type="file"],
+    input[type="text"],
+    input[type="number"],
+    input[type="range"],
+    select,
+    textarea {
+      width: 100%;
+    }
+
+    input[type="file"],
+    input[type="text"],
+    input[type="number"],
+    select,
+    textarea {
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      padding: 10px 11px;
+    }
+
+    textarea,
+    .base64-output {
+      min-height: 180px;
+      max-height: 280px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.78rem;
+    }
+
+    fieldset {
+      min-width: 0;
+      margin: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .format-options {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .format-option {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 8px;
+      align-items: start;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfdfb;
+      padding: 10px;
+      min-height: 78px;
+    }
+
+    .format-option strong {
+      display: block;
+      font-size: 0.95rem;
+    }
+
+    .format-option small {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .settings-grid .field-wide {
+      grid-column: 1 / -1;
+    }
+
+    .inline-value {
+      justify-self: end;
+      color: var(--ink);
+      font-weight: 800;
+      text-transform: none;
+    }
+
+    .profile-description {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .info-summary-section {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--blue-soft);
+      padding: 10px;
+    }
+
+    .info-summary-section p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .info-summary-section span {
+      display: block;
+      margin-top: 3px;
+      color: var(--blue);
+      font-size: 0.9rem;
+      font-weight: 800;
+      text-transform: none;
+    }
+
+    .button-row,
+    .button-container,
+    .button-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    #result,
+    #base64Result,
+    #originalAudioContainer,
+    #batchResultEl {
+      display: grid;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    #result:empty,
+    #originalAudioContainer:empty,
+    #batchResultEl:empty {
+      display: none;
+    }
+
+    audio {
+      width: 100%;
+    }
+
+    .output-stack {
+      display: grid;
+      gap: 16px;
+    }
+
+    .compact-box {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfdfb;
+      padding: 12px;
+    }
+
+    .compact-box h3 {
+      margin: 0 0 10px;
+      font-size: 0.95rem;
+    }
+
+    details {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 10px;
+    }
+
+    summary {
+      cursor: pointer;
+      color: var(--ink);
+      font-weight: 800;
+    }
+
+    .media-frame {
+      display: grid;
+      place-items: center;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border: 1px dashed var(--line-strong);
+      border-radius: 8px;
+      background: #f8faf8;
+      overflow: hidden;
+    }
+
+    #image-preview {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    #file-size-info {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .export-panel {
+      background: linear-gradient(180deg, #fff, var(--amber-soft));
+    }
+
+    .modal,
+    .info-popup {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(20, 25, 21, 0.38);
+    }
+
+    .modal:not(.hidden),
+    .info-popup[style*="display: block"] {
+      display: flex !important;
+    }
+
+    .modal-content,
+    .info-popup__panel {
+      width: min(720px, 100%);
+      max-height: min(760px, calc(100vh - 40px));
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 26px 80px rgba(20, 25, 21, 0.22);
+      padding: 18px;
+    }
+
+    .modal-content h2,
+    .info-popup__panel h2 {
+      margin-top: 0;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .close-info-btn {
+      float: right;
+      min-width: 40px;
+      padding: 0;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 920px) {
+      main {
+        width: min(100% - 20px, 720px);
+        padding-top: 14px;
+      }
+
+      .tool-header,
+      .status-strip,
+      .tool-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .tool-nav {
+        justify-content: flex-start;
+      }
+
+      .settings-grid,
+      .format-options,
+      .info-summary-section {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header class="tool-header">
+    <div>
+      <h1 class="tool-title">Xtrata Opus Audio Tool</h1>
+      <p class="tool-subtitle">Convert source audio to WebM Audio with Opus, generate base64, add optional image data, and export an HTML player.</p>
+    </div>
+    <nav class="tool-nav" aria-label="Tool sections">
+      <a href="#audio-section">Audio</a>
+      <a href="#image-section">Image</a>
+      <a href="#export-section">Export</a>
+      <a href="./">Classic UI</a>
+    </nav>
+  </header>
+
+  <section class="status-strip" aria-label="Conversion status">
+    <div id="status" aria-live="polite">Status: Initializing FFmpeg...</div>
+    <progress id="progress" value="0" max="100" class="hidden" aria-labelledby="status"></progress>
+  </section>
+
+  <div class="tool-grid">
+    <section id="audio-section" class="tool-panel">
+      <div class="tool-panel__header">
+        <div>
+          <h2 id="audio-section-heading">Audio conversion</h2>
+          <p>WebM Audio with Opus is selected by default.</p>
+        </div>
+        <div class="button-row">
+          <button id="showAudioInfoBtn" class="button-small" type="button">Format info</button>
+          <button id="showAudionalInfoBtn" class="button-small" type="button">Audional info</button>
+        </div>
+      </div>
+      <div class="tool-panel__body">
+        <div class="form-stack">
+          <label class="field" for="fileInput">
+            <span>Audio file</span>
+            <input type="file" id="fileInput" accept="audio/*,.wav,.mp3,.flac,.ogg,.aac" multiple>
+          </label>
+
+          <fieldset id="formatOptions">
+            <legend>Output</legend>
+            <div class="format-options">
+              <label class="format-option">
+                <input type="radio" name="format" value="weba" checked>
+                <span>
+                  <strong>WebM Audio</strong>
+                  <small>.weba, Opus codec</small>
+                </span>
+              </label>
+              <label class="format-option">
+                <input type="radio" name="format" value="mp3">
+                <span>
+                  <strong>MP3</strong>
+                  <small>Compatibility fallback</small>
+                </span>
+              </label>
+            </div>
+          </fieldset>
+
+          <div id="opusSettings" class="settings-grid">
+            <label class="field field-wide" for="audioProfileSelect">
+              <span>Profile</span>
+              <select id="audioProfileSelect"></select>
+            </label>
+            <p id="audioProfileDescription" class="profile-description field-wide"></p>
+
+            <label class="field field-wide" for="opusBitrate">
+              <span>Opus bitrate <span id="opusBitrateValue" class="inline-value">96 kbps</span></span>
+              <input type="range" id="opusBitrate" min="16" max="256" value="96" step="8">
+            </label>
+
+            <label class="field" for="opusVbrMode">
+              <span>VBR mode</span>
+              <select id="opusVbrMode">
+                <option value="on" selected>VBR</option>
+                <option value="constrained">Constrained VBR</option>
+                <option value="off">CBR</option>
+              </select>
+            </label>
+
+            <label class="field" for="opusApplication">
+              <span>Application</span>
+              <select id="opusApplication">
+                <option value="audio" selected>General audio</option>
+                <option value="voip">Voice</option>
+                <option value="lowdelay">Low latency</option>
+              </select>
+            </label>
+
+            <label class="field field-wide" for="opusCompressionLevel">
+              <span>Compression level <span id="opusCompressionLevelValue" class="inline-value">10</span></span>
+              <input type="range" id="opusCompressionLevel" min="0" max="10" value="10" step="1">
+            </label>
+          </div>
+
+          <div id="mp3Settings" class="settings-grid hidden" style="display: none;">
+            <label class="field field-wide" for="mp3Quality">
+              <span>MP3 quality <span id="mp3QualityValue" class="inline-value">4</span></span>
+              <input type="range" id="mp3Quality" min="0" max="9" value="4" step="1">
+            </label>
+          </div>
+
+          <div class="info-summary-section" id="outputInfoSection">
+            <p>Original <span id="originalFileInfo">N/A</span></p>
+            <p>Estimate <span id="currentEstimatedOutputSize">Select file</span></p>
+            <p>Xtrata type <span><code>audio/webm; codecs=opus</code></span></p>
+          </div>
+
+          <div class="button-container">
+            <button id="playSampleBtn" class="button-secondary" type="button" disabled>Play original</button>
+            <button id="convertBtn" type="button" disabled>Convert to WebM Audio</button>
+            <button id="batchConvertBtn" class="button-secondary" type="button" disabled>Batch convert</button>
+            <button id="downloadBatchZipBtn" class="button-secondary" type="button" disabled>Download ZIP</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="output-stack">
+      <section class="tool-panel">
+        <div class="tool-panel__header">
+          <div>
+            <h2>Audio output</h2>
+            <p>Preview, download, and base64 output.</p>
+          </div>
+        </div>
+        <div class="tool-panel__body output-stack">
+          <div id="originalAudioContainer" class="compact-box"></div>
+          <div id="result" class="compact-box"></div>
+          <div id="batchResultEl" class="compact-box"></div>
+          <div id="base64Container" class="compact-box hidden">
+            <h3>Audio base64</h3>
+            <div id="base64Result"></div>
+            <details>
+              <summary>Show audio base64</summary>
+              <div id="base64Output" class="base64-output"></div>
+            </details>
+            <div class="button-group">
+              <button id="copyBase64Btn" class="copy-button" type="button" disabled>Copy audio base64</button>
+              <button id="downloadBase64Btn" class="download-button" type="button" disabled>Download audio TXT</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="export-section" class="tool-panel export-panel">
+        <div class="tool-panel__header">
+          <div>
+            <h2>HTML player</h2>
+            <p>Audio is required. Image data is optional.</p>
+          </div>
+        </div>
+        <div class="tool-panel__body">
+          <div class="button-container">
+            <button id="generateHtmlButton" type="button" disabled>Generate HTML player</button>
+            <button id="testGeneratedHtmlButton" class="button-secondary" type="button">Open tester</button>
+          </div>
+        </div>
+      </section>
+    </aside>
+
+    <section id="image-section" class="tool-panel">
+      <div class="tool-panel__header">
+        <div>
+          <h2>Image base64</h2>
+          <p>Optional visual data for the exported player.</p>
+        </div>
+      </div>
+      <div class="tool-panel__body">
+        <div class="tool-grid">
+          <div class="form-stack">
+            <label class="field" for="image-file-input">
+              <span>Image file</span>
+              <input type="file" id="image-file-input" accept="image/*">
+            </label>
+            <p id="file-size-info"></p>
+            <div class="button-container">
+              <button id="convert-image-button" type="button" disabled>Convert image</button>
+              <button id="copy-image-base64-button" class="copy-button" type="button" disabled>Copy image base64</button>
+              <button id="download-image-base64-button" class="download-button" type="button" disabled>Download image TXT</button>
+            </div>
+            <details>
+              <summary>Show image base64</summary>
+              <textarea id="image-base64-output" class="base64-output" readonly></textarea>
+            </details>
+          </div>
+          <div class="media-frame">
+            <img id="image-preview" alt="Image preview" style="display: none;">
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div id="audioInfoContainer" class="info-popup hidden" role="dialog" aria-modal="true" aria-labelledby="audio-section-heading">
+    <div class="info-popup__panel">
+      <button id="closeAudioInfoBtn" class="close-info-btn button-secondary" type="button" aria-label="Close format info">X</button>
+      <div id="audioInfoContent"></div>
+    </div>
+  </div>
+
+  <div id="audionalInfoContainer" class="info-popup hidden" role="dialog" aria-modal="true" aria-labelledby="audional-info-title">
+    <div class="info-popup__panel">
+      <button id="closeAudionalInfoBtn" class="close-info-btn button-secondary" type="button" aria-label="Close Audional info">X</button>
+      <div id="audionalInfoContent"></div>
+    </div>
+  </div>
+
+  <div id="metadataModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="metadataModalTitle">
+    <div class="modal-content">
+      <h2 id="metadataModalTitle">Player metadata</h2>
+      <form id="metadataForm" class="form-stack">
+        <label class="field" for="titleInput">
+          <span>Title</span>
+          <input type="text" id="titleInput" name="title" required>
+        </label>
+        <label class="field" for="instrumentInput">
+          <span>Instrument</span>
+          <input type="text" id="instrumentInput" name="instrument" required>
+        </label>
+        <label class="field" for="noteInput">
+          <span>Note</span>
+          <input type="text" id="noteInput" name="note" required list="noteList" placeholder="C4">
+          <datalist id="noteList"></datalist>
+        </label>
+        <label class="field" for="frequencyInput">
+          <span>Frequency</span>
+          <input type="text" id="frequencyInput" name="frequency" readonly>
+        </label>
+        <label class="format-option" for="loopCheckbox">
+          <input type="checkbox" id="loopCheckbox" name="isLoop">
+          <span>
+            <strong>Loop</strong>
+            <small>Enable tempo metadata</small>
+          </span>
+        </label>
+        <div id="bpmGroup" class="field hidden">
+          <label for="bpmInput">
+            <span>BPM</span>
+            <input type="number" id="bpmInput" name="bpm" min="1">
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button id="cancelMetadataBtn" class="button-secondary" type="button">Cancel</button>
+          <button id="submitMetadataBtn" type="submit">Download HTML</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</main>
+
+<script src="metadata-modal-handler.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="config-state.js" defer></script>
+<script src="dom-elements.js" defer></script>
+<script src="utils.js" defer></script>
+<script src="HTML_Template.js" defer></script>
+<script src="html-generator.js" defer></script>
+<script src="informationButtons.js" defer></script>
+<script src="ui-helpers.js" defer></script>
+<script src="audio-player.js" defer></script>
+<script src="ab-player.js" defer></script>
+<script src="ffmpeg-handler.js" defer></script>
+<script src="file-handler.js" defer></script>
+<script src="base64-handler.js" defer></script>
+<script src="conversion-process.js" defer></script>
+<script src="batch-download-handler.js" defer></script>
+<script src="event-listeners.js" defer></script>
+<script src="main.js" defer></script>
+<script type="module">
+  import { initializeImageConverter } from './image-to-base64.js';
+  document.addEventListener('DOMContentLoaded', initializeImageConverter);
+
+  const syncGenerateButtonState = (audioReady) => {
+    const generateButton = document.getElementById('generateHtmlButton');
+    if (generateButton) {
+      generateButton.disabled = !audioReady;
+    }
+  };
+
+  document.addEventListener('audionalBase64Generated', () => {
+    syncGenerateButtonState(true);
+  });
+
+  window.addEventListener('load', () => {
+    window.setTimeout(() => syncGenerateButtonState(false), 0);
+  });
+
+  const testerButton = document.getElementById('testGeneratedHtmlButton');
+  if (testerButton) {
+    testerButton.addEventListener('click', () => {
+      window.open('./TestingModuleForProduction/Tester.html', '_blank', 'noopener,noreferrer');
+    });
+  }
+</script>
+</body>
+</html>

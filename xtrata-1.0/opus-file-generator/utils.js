@@ -51,8 +51,34 @@ function calculateBase64Size(base64String) {
   return new Blob([base64String], {type: 'text/plain'}).size;
 }
 
+const AUDIO_OUTPUT_CONFIG = {
+  weba: {
+    extension: 'weba',
+    label: 'WebM Audio (.weba)',
+    mimeType: 'audio/webm; codecs=opus',
+    ffmpegFormat: 'webm'
+  },
+  opus: {
+    extension: 'opus',
+    label: 'Ogg Opus (.opus)',
+    mimeType: 'audio/ogg; codecs=opus',
+    ffmpegFormat: 'opus'
+  },
+  mp3: {
+    extension: 'mp3',
+    label: 'MP3',
+    mimeType: 'audio/mpeg',
+    ffmpegFormat: 'mp3'
+  }
+};
+
+function getAudioOutputConfig(format) {
+  return AUDIO_OUTPUT_CONFIG[format] || AUDIO_OUTPUT_CONFIG.weba;
+}
+
 // Attach to window to make globally available
 window.formatBytes = formatBytes;
 window.formatFileSize = formatFileSize;
 window.getBaseFilename = getBaseFilename;
 window.calculateBase64Size = calculateBase64Size;
+window.getAudioOutputConfig = getAudioOutputConfig;

@@ -3,6 +3,7 @@
 // State variables to track the base64 data
 let audionalBase64 = null;
 let audionalVisualBase64 = null;
+let audionalMimeType = 'audio/webm; codecs=opus';
 
 // DOM element references for the modal (assuming these are correctly fetched at the top of your actual file)
 // const instrumentInput = document.getElementById('instrumentInput');
@@ -51,6 +52,9 @@ function inithtmlGenerator() {
   document.addEventListener('audionalBase64Generated', function(e) {
     console.log("Received audionalBase64Generated event");
     updateaudionalBase64(e.detail.base64Data);
+    if (e.detail.mimeType) {
+      audionalMimeType = e.detail.mimeType;
+    }
   });
   document.addEventListener('audionalVisualBase64Generated', function(e) {
     console.log("Received audionalVisualBase64Generated event");
@@ -203,7 +207,8 @@ function generateAndDownloadhtmlFile(title, instrument, note, frequency, isLoop,
       isLoop,
       bpm,
       pureaudionalBase64,    // Audio data
-      pureaudionalVisualBase64     // Image data (can be empty string)
+      pureaudionalVisualBase64,     // Image data (can be empty string)
+      audionalMimeType
   );
 
   if (htmlContent.includes("Error generating Audional")) { // Check for error string from template

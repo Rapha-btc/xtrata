@@ -57,6 +57,7 @@ import {
   saveMintAttempt,
   type MintAttempt
 } from '../lib/mint/attempt-cache';
+import { resolveInscriptionMimeType } from '../lib/mint/mime';
 import {
   fromDependencyStrings,
   mergeDependencySources,
@@ -400,6 +401,13 @@ const readFileBytes = async (file: File) => {
   const buffer = await file.arrayBuffer();
   return new Uint8Array(buffer);
 };
+
+const getFileMimeType = (file: File, bytes?: Uint8Array | null) =>
+  resolveInscriptionMimeType({
+    fileName: file.name,
+    declaredMimeType: file.type,
+    bytes
+  });
 
 export default function MintScreen(props: MintScreenProps) {
   const client = useMemo(
@@ -784,7 +792,7 @@ export default function MintScreen(props: MintScreenProps) {
     if (!resumeState || !file || !fileBytes) {
       return null;
     }
-    const mimeType = file.type || 'application/octet-stream';
+    const mimeType = getFileMimeType(file, fileBytes);
     if (resumeState.mimeType !== mimeType) {
       return 'Selected file does not match the on-chain upload mime type.';
     }
@@ -1165,7 +1173,7 @@ export default function MintScreen(props: MintScreenProps) {
       setMetadataStatus('Select a file to generate SIP-016 metadata.');
       return;
     }
-    const mimeType = file.type || 'application/octet-stream';
+    const mimeType = getFileMimeType(file, fileBytes);
     const metadata = buildSip16Metadata({
       contractId,
       contractName: props.contract.contractName,
@@ -1316,7 +1324,7 @@ export default function MintScreen(props: MintScreenProps) {
         contractId,
         expectedHashHex,
         fileName: selected.name,
-        mimeType: selected.type || 'application/octet-stream',
+        mimeType: getFileMimeType(selected, bytes),
         totalBytes: bytes.length,
         totalChunks: nextChunks.length,
         batchSize: batchLimit,
@@ -1328,7 +1336,7 @@ export default function MintScreen(props: MintScreenProps) {
       setLastAttempt(attempt);
       logInfo('mint', 'Prepared inscription file', {
         fileName: selected.name,
-        fileType: selected.type || 'application/octet-stream',
+        fileType: getFileMimeType(selected, bytes),
         bytes: bytes.length,
         chunks: nextChunks.length,
         chunkSize: CHUNK_SIZE,
@@ -1604,7 +1612,7 @@ export default function MintScreen(props: MintScreenProps) {
       });
       return null;
     }
-    const mimeType = file.type || 'application/octet-stream';
+    const mimeType = getFileMimeType(file, fileBytes);
     if (!isAscii(mimeType) || mimeType.length > MAX_MIME_LENGTH) {
       setMintStatus('File type must be ASCII and <= 64 characters.');
       appendLog(`Mint blocked: invalid mime type (${mimeType}).`);
@@ -2898,7 +2906,7 @@ export default function MintScreen(props: MintScreenProps) {
                     info="Detected MIME type used when rendering and sealing the inscription."
                   />
                   <span className="meta-value">
-                    {file.type || 'application/octet-stream'}
+                    {getFileMimeType(file, fileBytes)}
                   </span>
                 </div>
                 <div>

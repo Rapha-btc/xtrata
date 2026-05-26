@@ -8,6 +8,7 @@
     "dev": "vite",
     "prebuild": "npm run arcade:games:manifest",
     "build": "vite build",
+    "postbuild": "node scripts/copy-static-apps.mjs",
     "preview": "vite preview",
     "sdk:build": "npm --prefix packages/xtrata-sdk run build && npm --prefix packages/xtrata-reconstruction run build",
     "sdk:typecheck": "npm --prefix packages/xtrata-sdk run typecheck && npm --prefix packages/xtrata-reconstruction run typecheck",
