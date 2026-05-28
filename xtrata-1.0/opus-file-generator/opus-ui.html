@@ -444,6 +444,41 @@
       background: linear-gradient(180deg, #fff, var(--amber-soft));
     }
 
+    .html-player-options {
+      display: grid;
+      gap: 12px;
+    }
+
+    .html-mode-options {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .html-export-status {
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.62);
+      color: var(--muted);
+      padding: 10px;
+      font-size: 0.86rem;
+      font-weight: 700;
+    }
+
+    .html-export-status.error {
+      background: #f8e7ea;
+      color: var(--error);
+      border-color: #e5b7bf;
+    }
+
+    .preview-value {
+      overflow-wrap: anywhere;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.78rem;
+      text-transform: none;
+    }
+
     .modal,
     .info-popup {
       position: fixed;
@@ -513,6 +548,7 @@
 
       .settings-grid,
       .format-options,
+      .html-mode-options,
       .info-summary-section {
         grid-template-columns: 1fr;
       }
@@ -668,13 +704,75 @@
         <div class="tool-panel__header">
           <div>
             <h2>HTML player</h2>
-            <p>Audio is required. Image data is optional.</p>
+            <p>Export a standalone embedded player or a recursive player.</p>
           </div>
         </div>
         <div class="tool-panel__body">
-          <div class="button-container">
-            <button id="generateHtmlButton" type="button" disabled>Generate HTML player</button>
-            <button id="testGeneratedHtmlButton" class="button-secondary" type="button">Open tester</button>
+          <div class="html-player-options">
+            <fieldset>
+              <legend>Player mode</legend>
+              <div class="html-mode-options">
+                <label class="format-option">
+                  <input type="radio" name="htmlPlayerMode" value="embedded" checked>
+                  <span>
+                    <strong>Standalone</strong>
+                    <small>Embeds Base64 audio in one HTML file</small>
+                  </span>
+                </label>
+                <label class="format-option">
+                  <input type="radio" name="htmlPlayerMode" value="recursive">
+                  <span>
+                    <strong>Recursive</strong>
+                    <small>References an audio inscription by URL or token ID</small>
+                  </span>
+                </label>
+              </div>
+            </fieldset>
+
+            <div id="embeddedPlayerOptions" class="compact-box">
+              <h3>Standalone embedded player</h3>
+              <p>Convert audio first. The generated HTML will include the audio Base64 data, optional cover art, inline CSS, and inline JavaScript.</p>
+            </div>
+
+            <div id="recursivePlayerOptions" class="compact-box hidden">
+              <h3>Recursive player source</h3>
+              <div class="form-stack">
+                <label class="field" for="recursiveAudioTokenId">
+                  <span>Audio token ID</span>
+                  <input type="text" id="recursiveAudioTokenId" placeholder="315">
+                </label>
+                <label class="field" for="recursiveAudioUrl">
+                  <span>Direct audio URL</span>
+                  <input type="text" id="recursiveAudioUrl" placeholder="Optional: https://xtrata.xyz/inscription/315">
+                </label>
+                <label class="field" for="recursiveContractId">
+                  <span>Contract ID</span>
+                  <input type="text" id="recursiveContractId" value="SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0">
+                </label>
+                <label class="field" for="recursiveNetwork">
+                  <span>Network</span>
+                  <select id="recursiveNetwork">
+                    <option value="mainnet" selected>Mainnet</option>
+                    <option value="testnet">Testnet</option>
+                  </select>
+                </label>
+                <label class="field" for="recursiveCoverTokenId">
+                  <span>Cover token ID</span>
+                  <input type="text" id="recursiveCoverTokenId" placeholder="Optional dependency">
+                </label>
+                <div class="info-summary-section">
+                  <p>Audio URL <span id="recursiveUrlPreview" class="preview-value">Enter an audio token ID or audio URL.</span></p>
+                  <p>Dependencies <span id="recursiveDependencyPreview" class="preview-value">None yet</span></p>
+                  <p>Mint note <span>Use these IDs as recursive parents.</span></p>
+                </div>
+              </div>
+            </div>
+
+            <p id="htmlExportStatus" class="html-export-status">Convert audio first or switch to recursive mode.</p>
+            <div class="button-container">
+              <button id="generateHtmlButton" type="button" disabled>Generate HTML player</button>
+              <button id="testGeneratedHtmlButton" class="button-secondary" type="button">Open tester</button>
+            </div>
           </div>
         </div>
       </section>
@@ -735,13 +833,21 @@
           <span>Title</span>
           <input type="text" id="titleInput" name="title" required>
         </label>
+        <label class="field" for="artistInput">
+          <span>Artist</span>
+          <input type="text" id="artistInput" name="artist">
+        </label>
+        <label class="field" for="albumInput">
+          <span>Album</span>
+          <input type="text" id="albumInput" name="album">
+        </label>
         <label class="field" for="instrumentInput">
           <span>Instrument</span>
-          <input type="text" id="instrumentInput" name="instrument" required>
+          <input type="text" id="instrumentInput" name="instrument">
         </label>
         <label class="field" for="noteInput">
           <span>Note</span>
-          <input type="text" id="noteInput" name="note" required list="noteList" placeholder="C4">
+          <input type="text" id="noteInput" name="note" list="noteList" placeholder="C4">
           <datalist id="noteList"></datalist>
         </label>
         <label class="field" for="frequencyInput">
@@ -761,8 +867,17 @@
             <input type="number" id="bpmInput" name="bpm" min="1">
           </label>
         </div>
+        <label class="field" for="descriptionInput">
+          <span>Description</span>
+          <textarea id="descriptionInput" name="description"></textarea>
+        </label>
+        <label class="field" for="licenseInput">
+          <span>License</span>
+          <input type="text" id="licenseInput" name="license" placeholder="All rights reserved">
+        </label>
         <div class="modal-actions">
           <button id="cancelMetadataBtn" class="button-secondary" type="button">Cancel</button>
+          <button id="previewHtmlButton" class="button-secondary" type="button" disabled>Preview HTML</button>
           <button id="submitMetadataBtn" type="submit">Download HTML</button>
         </div>
       </form>
@@ -793,19 +908,18 @@
   import { initializeImageConverter } from './image-to-base64.js';
   document.addEventListener('DOMContentLoaded', initializeImageConverter);
 
-  const syncGenerateButtonState = (audioReady) => {
-    const generateButton = document.getElementById('generateHtmlButton');
-    if (generateButton) {
-      generateButton.disabled = !audioReady;
-    }
-  };
-
   document.addEventListener('audionalBase64Generated', () => {
-    syncGenerateButtonState(true);
+    if (typeof window.updateHtmlGenerateButtonState === 'function') {
+      window.updateHtmlGenerateButtonState();
+    }
   });
 
   window.addEventListener('load', () => {
-    window.setTimeout(() => syncGenerateButtonState(false), 0);
+    window.setTimeout(() => {
+      if (typeof window.updateHtmlGenerateButtonState === 'function') {
+        window.updateHtmlGenerateButtonState();
+      }
+    }, 0);
   });
 
   const testerButton = document.getElementById('testGeneratedHtmlButton');

@@ -1,89 +1,473 @@
 // HTML_Template.js
+(function () {
 
-/**
- * Generates a streamlined HTML file content string that embeds Base64 data
- * and user-provided metadata.
- *
- * @param {string} title - The title for the Audional.
- * @param {string} instrument - The instrument name provided by the user.
- * @param {string} note - The note value provided by the user.
- * @param {string} frequency - The frequency value provided by the user.
- * @param {boolean} isLoop - Whether the audio is a loop.
- * @param {string} bpm - The BPM if it's a loop.
- * @param {string} audionalBase64Data - The pure Base64 encoded string for the Opus audio (NO prefix).
- * @param {string} audionalVisualBase64Data - The pure Base64 encoded string for the image (NO prefix). Can be empty.
- * @param {string} audionalMimeType - The audio MIME type for data URI playback.
- * @returns {string} A string containing the complete, streamlined HTML document.
- */
-function HTML_Template(title, instrument, note, frequency, isLoop, bpm, audionalBase64Data, audionalVisualBase64Data, audionalMimeType = 'audio/webm; codecs=opus') {
-    if (typeof audionalBase64Data !== 'string' || audionalBase64Data.trim() === '') {
-      console.error("HTML_Template Error: audionalBase64Data must be a non-empty string.");
-      return `<!DOCTYPE html><html><head><title>Error</title></head><body><h1>Error generating Audional: Invalid or missing audio data.</h1></body></html>`;
+const XTRATA_PLAYER_TEMPLATE_VERSION = 'xtrata-opus-player-v2';
+
+const escapeHtml = (value) =>
+  String(value ?? '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  })[char]);
+
+const escapeAttr = escapeHtml;
+
+const escapeJsonForScript = (value) =>
+  JSON.stringify(value, null, 2).replace(/</g, '\\u003c');
+
+const stripDataUriPrefix = (value) => {
+  const text = String(value ?? '').trim();
+  const commaIndex = text.indexOf(',');
+  return commaIndex >= 0 ? text.slice(commaIndex + 1) : text;
+};
+
+const normalizeBase64 = (value) => stripDataUriPrefix(value).replace(/\s+/g, '');
+
+const normalizeMimeForDataUri = (mimeType, fallback) => {
+  const raw = String(mimeType || fallback || '').trim();
+  return (raw || fallback).replace(/\s*;\s*/g, ';');
+};
+
+const sanitizeAudioMimeType = (mimeType) => {
+  const raw = String(mimeType || '').trim();
+  return raw.startsWith('audio/') ? raw : 'audio/webm; codecs=opus';
+};
+
+const sanitizeImageMimeType = (mimeType) => {
+  const raw = String(mimeType || '').trim();
+  return raw.startsWith('image/') ? raw : 'image/png';
+};
+
+const sanitizeTokenId = (value) => {
+  const text = String(value ?? '').trim().replace(/^#/, '');
+  return /^\d+$/.test(text) ? text : '';
+};
+
+const sanitizeNetwork = (value) =>
+  String(value || 'mainnet').trim().toLowerCase() === 'testnet'
+    ? 'testnet'
+    : 'mainnet';
+
+const dedupe = (values) => Array.from(new Set(values.filter(Boolean)));
+
+const buildRuntimeAudioUrl = ({ tokenId, contractId, network }) => {
+  const safeTokenId = sanitizeTokenId(tokenId);
+  const safeContractId = String(contractId || '').trim();
+  const safeNetwork = sanitizeNetwork(network);
+  if (!safeTokenId) {
+    return '';
+  }
+  if (safeContractId) {
+    const params = new URLSearchParams({
+      contractId: safeContractId,
+      tokenId: safeTokenId,
+      network: safeNetwork
+    });
+    return `/runtime/content?${params.toString()}`;
+  }
+  return `https://xtrata.xyz/inscription/${safeTokenId}`;
+};
+
+const buildPlayerSource = (config) => {
+  const mode = config.mode === 'recursive' ? 'recursive' : 'embedded';
+  const audioMimeType = sanitizeAudioMimeType(config.audioMimeType);
+  if (mode === 'recursive') {
+    const recursive = config.recursive || {};
+    const explicitUrl = String(recursive.audioUrl || '').trim();
+    const generatedUrl = buildRuntimeAudioUrl({
+      tokenId: recursive.audioTokenId || recursive.tokenId,
+      contractId: recursive.contractId,
+      network: recursive.network
+    });
+    return {
+      mode,
+      audioMimeType,
+      source: explicitUrl || generatedUrl,
+      sourceKind: explicitUrl ? 'custom-url' : generatedUrl ? 'xtrata-runtime' : ''
+    };
+  }
+
+  const audioBase64 = normalizeBase64(config.audioBase64);
+  return {
+    mode,
+    audioMimeType,
+    source: audioBase64
+      ? `data:${normalizeMimeForDataUri(audioMimeType, 'audio/webm;codecs=opus')};base64,${audioBase64}`
+      : '',
+    sourceKind: 'embedded-base64'
+  };
+};
+
+const buildDependencies = (config) => {
+  const recursive = config.recursive || {};
+  return dedupe([
+    sanitizeTokenId(recursive.audioTokenId || recursive.tokenId),
+    sanitizeTokenId(recursive.coverTokenId)
+  ]);
+};
+
+const buildCoverMarkup = (config, title) => {
+  const imageBase64 = normalizeBase64(config.imageBase64);
+  if (!imageBase64) {
+    return `<div class="cover-placeholder" aria-hidden="true">${escapeHtml(
+      title.slice(0, 1).toUpperCase() || 'X'
+    )}</div>`;
+  }
+  const imageMimeType = sanitizeImageMimeType(config.imageMimeType);
+  const imageSrc = `data:${normalizeMimeForDataUri(
+    imageMimeType,
+    'image/png'
+  )};base64,${imageBase64}`;
+  return `<img src="${escapeAttr(imageSrc)}" alt="${escapeAttr(title)} cover art">`;
+};
+
+const buildXtrataAudioPlayerHtml = (config) => {
+  const metadata = config.metadata || {};
+  const title = String(metadata.title || 'Xtrata Audio Player').trim();
+  const artist = String(metadata.artist || '').trim();
+  const album = String(metadata.album || '').trim();
+  const instrument = String(metadata.instrument || '').trim();
+  const note = String(metadata.note || '').trim();
+  const frequency = String(metadata.frequency || '').trim();
+  const description = String(metadata.description || '').trim();
+  const license = String(metadata.license || '').trim();
+  const isLoop = Boolean(metadata.isLoop);
+  const bpm = String(metadata.bpm || '').trim();
+  const source = buildPlayerSource(config);
+  const dependencies = buildDependencies(config);
+
+  if (!source.source) {
+    return `<!DOCTYPE html><html><head><title>Error</title></head><body><h1>Error generating Xtrata audio player: missing audio source.</h1></body></html>`;
+  }
+
+  const modeLabel =
+    source.mode === 'recursive'
+      ? 'Recursive Xtrata audio player'
+      : 'Standalone embedded audio player';
+  const manifest = {
+    template: XTRATA_PLAYER_TEMPLATE_VERSION,
+    mode: source.mode,
+    sourceKind: source.sourceKind,
+    audioMimeType: source.audioMimeType,
+    dependencies,
+    metadata: {
+      title,
+      artist,
+      album,
+      instrument,
+      note,
+      frequency,
+      description,
+      license,
+      isLoop,
+      bpm
     }
+  };
 
-    const metaTitle = title || 'Audional Player';
-    const metaInstrument = instrument || 'N/A';
-    const metaNote = note || 'N/A';
-    const metaFrequency = frequency || 'N/A'; // frequency should already be a string like "XX.XX Hz"
-    const metaIsLoop = isLoop ? 'Yes' : 'No';
-    const metaBPM = isLoop && bpm ? bpm : 'N/A';
-    const safeMimeType = typeof audionalMimeType === 'string' && audionalMimeType.startsWith('audio/')
-      ? audionalMimeType
-      : 'audio/webm; codecs=opus';
+  const detailRows = [
+    ['Artist', artist],
+    ['Album', album],
+    ['Instrument', instrument],
+    ['Note', note],
+    ['Frequency', frequency],
+    ['Loop', isLoop ? 'Yes' : 'No'],
+    ['BPM', isLoop ? bpm : ''],
+    ['License', license],
+    ['Dependencies', dependencies.join(', ')]
+  ]
+    .filter(([, value]) => String(value || '').trim())
+    .map(
+      ([label, value]) =>
+        `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`
+    )
+    .join('\n');
 
-    const hasImage = typeof audionalVisualBase64Data === 'string' && audionalVisualBase64Data.trim() !== '';
+  const externalLink =
+    source.mode === 'recursive' && /^https?:\/\//i.test(source.source)
+      ? `<a class="source-link" href="${escapeAttr(
+          source.source
+        )}" target="_blank" rel="noopener noreferrer">Open audio source</a>`
+      : '';
 
-    // Determine player scripts based on whether an image is present
-    // This logic assumes your player scripts (app.js, main.js, playButton.js) are in the same directory
-    // as the generated HTML file and are named accordingly.
-    let playerScripts = '';
-    if (hasImage) {
-        // Assumes app.js and main.js are for the image-based player
-        playerScripts = `
-    <script type="module" src="main.js" defer><\/script>`;
-    } else {
-        // Assumes playButton.js is for the audio-only player
-        playerScripts = `
-    <script src="playButton.js" defer><\/script>`;
-    }
-
-    const htmlContent = `
-<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${metaTitle}</title>
-    <link rel="stylesheet" href="style.css"> <!-- Common style for both player types -->
-   
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(title)}</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --page: #111412;
+      --panel: #f7f2e8;
+      --ink: #121714;
+      --muted: #637167;
+      --line: rgba(18, 23, 20, 0.18);
+      --accent: #245f45;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: var(--page);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.45;
+      padding: 20px;
+    }
+
+    .player {
+      width: min(760px, 100%);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.38);
+      overflow: hidden;
+    }
+
+    .cover {
+      display: grid;
+      place-items: center;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      background: #dfe8df;
+      border-bottom: 1px solid var(--line);
+      overflow: hidden;
+    }
+
+    .cover img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .cover-placeholder {
+      width: min(42vw, 220px);
+      aspect-ratio: 1 / 1;
+      display: grid;
+      place-items: center;
+      border: 2px solid rgba(36, 95, 69, 0.4);
+      border-radius: 50%;
+      color: var(--accent);
+      font-size: clamp(4rem, 12vw, 8rem);
+      font-weight: 900;
+      background: rgba(36, 95, 69, 0.08);
+    }
+
+    .content { padding: 18px; }
+
+    .eyebrow {
+      margin: 0 0 6px;
+      color: var(--accent);
+      font-size: 0.78rem;
+      font-weight: 900;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.6rem, 7vw, 3rem);
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .artist {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    audio {
+      width: 100%;
+      margin-top: 18px;
+      display: block;
+    }
+
+    .status {
+      min-height: 24px;
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+
+    .status.error { color: #9e2f40; }
+
+    .description {
+      margin: 14px 0 0;
+      color: #303a33;
+    }
+
+    dl {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin: 16px 0 0;
+    }
+
+    dl div {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.48);
+      min-width: 0;
+    }
+
+    dt {
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    dd {
+      margin: 3px 0 0;
+      overflow-wrap: anywhere;
+      font-weight: 800;
+    }
+
+    .source-link {
+      display: inline-flex;
+      align-items: center;
+      min-height: 38px;
+      margin-top: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--accent);
+      padding: 0 12px;
+      font-weight: 900;
+      text-decoration: none;
+    }
+
+    @media (max-width: 560px) {
+      body { padding: 10px; }
+      .content { padding: 14px; }
+      dl { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
 <body>
-    <div id="app">
-        <!-- Player content will be injected here by the respective JS -->
-    </div>
+  <main class="player" data-xtrata-player-mode="${escapeAttr(
+    source.mode
+  )}" data-xtrata-dependencies="${escapeAttr(dependencies.join(','))}">
+    <section class="cover" aria-label="Cover art">
+      ${buildCoverMarkup(config, title)}
+    </section>
+    <section class="content">
+      <p class="eyebrow">${escapeHtml(modeLabel)}</p>
+      <h1>${escapeHtml(title)}</h1>
+      ${artist ? `<p class="artist">${escapeHtml(artist)}</p>` : ''}
+      <audio id="xtrataAudio" controls preload="metadata"${
+        isLoop ? ' loop' : ''
+      }>
+        <source src="${escapeAttr(source.source)}" type="${escapeAttr(
+          source.audioMimeType
+        )}">
+        This browser cannot play the embedded audio.
+      </audio>
+      <p id="playerStatus" class="status">Ready.</p>
+      ${description ? `<p class="description">${escapeHtml(description)}</p>` : ''}
+      ${detailRows ? `<dl>${detailRows}</dl>` : ''}
+      ${externalLink}
+    </section>
+  </main>
+  <script type="application/json" id="xtrataPlayerManifest">${escapeJsonForScript(
+    manifest
+  )}<\/script>
+  <script>
+    (function () {
+      const audio = document.getElementById('xtrataAudio');
+      const status = document.getElementById('playerStatus');
+      const manifestNode = document.getElementById('xtrataPlayerManifest');
+      let manifest = {};
+      try {
+        manifest = JSON.parse(manifestNode.textContent || '{}');
+      } catch (_error) {
+        manifest = {};
+      }
 
-    <div class="audio-metadata">
-        <p>Title: <span id="audio-meta-title">${metaTitle}</span></p>
-        <p>Instrument: <span id="audio-meta-instrument">${metaInstrument}</span></p>
-        <p>Note: <span id="audio-meta-note">${metaNote}</span> (<span id="audio-meta-frequency">${metaFrequency}</span>)</p> <!-- Frequency already includes " Hz" -->
-        <p>Loop: <span id="audio-meta-loop">${metaIsLoop}</span>${isLoop && metaBPM !== 'N/A' ? `, BPM: <span id="audio-meta-bpm">${metaBPM}</span>` : ''}</p>
-    </div>
+      const setStatus = (message, isError) => {
+        if (!status) return;
+        status.textContent = message;
+        status.classList.toggle('error', Boolean(isError));
+      };
 
-    <script>
-        window.audionalBase64_Opus = \`${audionalBase64Data}\`;
-        window.audionalAudioMimeType = ${JSON.stringify(safeMimeType)};
-    <\/script>
-    
-    <script>
-        window.audionalVisualBase64 = \`${audionalVisualBase64Data || ''}\`;
-    <\/script>
+      if (!audio) return;
 
-    ${playerScripts}
+      const support = audio.canPlayType(manifest.audioMimeType || '');
+      if (!support) {
+        setStatus('This browser may not support this audio type. Try a newer Safari, Chrome, Firefox, or an MP3 fallback.', true);
+      }
+
+      audio.addEventListener('loadedmetadata', () => {
+        const duration = Number.isFinite(audio.duration)
+          ? Math.round(audio.duration)
+          : null;
+        setStatus(duration ? 'Loaded. Duration: ' + duration + ' seconds.' : 'Loaded.');
+      });
+
+      audio.addEventListener('canplay', () => {
+        setStatus('Ready to play.');
+      });
+
+      audio.addEventListener('error', () => {
+        const code = audio.error ? audio.error.code : 'unknown';
+        setStatus('Playback failed in this browser. Media error code: ' + code + '.', true);
+      });
+    })();
+  <\/script>
 </body>
-</html>
-`;
-    return htmlContent;
+</html>`;
+};
+
+function HTML_Template(
+  titleOrConfig,
+  instrument,
+  note,
+  frequency,
+  isLoop,
+  bpm,
+  audionalBase64Data,
+  audionalVisualBase64Data,
+  audionalMimeType = 'audio/webm; codecs=opus',
+  options = {}
+) {
+  if (
+    titleOrConfig &&
+    typeof titleOrConfig === 'object' &&
+    !Array.isArray(titleOrConfig)
+  ) {
+    return buildXtrataAudioPlayerHtml(titleOrConfig);
+  }
+
+  return buildXtrataAudioPlayerHtml({
+    mode: options.mode || 'embedded',
+    metadata: {
+      title: titleOrConfig,
+      instrument,
+      note,
+      frequency,
+      isLoop,
+      bpm
+    },
+    audioBase64: audionalBase64Data,
+    imageBase64: audionalVisualBase64Data,
+    audioMimeType: audionalMimeType,
+    imageMimeType: options.imageMimeType,
+    recursive: options.recursive
+  });
 }
 
-// Make it available on the window object if HTML_Template.js is loaded as a separate script tag
 window.HTML_Template = HTML_Template;
+window.buildXtrataAudioPlayerHtml = buildXtrataAudioPlayerHtml;
+})();

@@ -1,244 +1,338 @@
-// html-generator.js - Handles html generation using the HTML_Template function
+// html-generator.js - Handles Xtrata HTML audio player generation.
+(function () {
 
-// State variables to track the base64 data
 let audionalBase64 = null;
 let audionalVisualBase64 = null;
 let audionalMimeType = 'audio/webm; codecs=opus';
+let audionalVisualMimeType = 'image/png';
 
-// DOM element references for the modal (assuming these are correctly fetched at the top of your actual file)
-// const instrumentInput = document.getElementById('instrumentInput');
-// const noteInput = document.getElementById('noteInput');
-// const frequencyInput = document.getElementById('frequencyInput');
-// const titleInput = document.getElementById('titleInput');
-// const loopCheckbox = document.getElementById('loopCheckbox');
-// const bpmInput = document.getElementById('bpmInput');
-// const generateHtmlButton = document.getElementById('generateHtmlButton'); // Ensure this ID matches your HTML
-// const metadataModal = document.getElementById('metadataModal');
-// const metadataForm = document.getElementById('metadataForm');
-// const cancelMetadataBtn = document.getElementById('cancelMetadataBtn');
-
-
-/**
- * Helper function to strip the data URI prefix
- */
 function stripDataURIPrefix(dataString) {
   if (typeof dataString !== 'string') return '';
   const commaIndex = dataString.indexOf(',');
-  if (commaIndex !== -1) {
-    return dataString.substring(commaIndex + 1);
-  }
-  return dataString;
+  return commaIndex !== -1 ? dataString.substring(commaIndex + 1) : dataString;
 }
 
-/**
- * Initialize the html generator
- */
+function getElement(id) {
+  return document.getElementById(id);
+}
+
+function getPlayerMode() {
+  return document.querySelector('input[name="htmlPlayerMode"]:checked')?.value ===
+    'recursive'
+    ? 'recursive'
+    : 'embedded';
+}
+
+function getRecursiveConfig() {
+  return {
+    audioTokenId: getElement('recursiveAudioTokenId')?.value.trim() || '',
+    audioUrl: getElement('recursiveAudioUrl')?.value.trim() || '',
+    contractId: getElement('recursiveContractId')?.value.trim() || '',
+    network: getElement('recursiveNetwork')?.value || 'mainnet',
+    coverTokenId: getElement('recursiveCoverTokenId')?.value.trim() || ''
+  };
+}
+
+function sanitizeTokenId(value) {
+  const text = String(value || '').trim().replace(/^#/, '');
+  return /^\d+$/.test(text) ? text : '';
+}
+
+function buildDefaultRecursiveUrl(config) {
+  const tokenId = sanitizeTokenId(config.audioTokenId);
+  if (!tokenId) return '';
+  if (config.contractId) {
+    const params = new URLSearchParams({
+      contractId: config.contractId,
+      tokenId,
+      network: config.network || 'mainnet'
+    });
+    return `/runtime/content?${params.toString()}`;
+  }
+  return `https://xtrata.xyz/inscription/${tokenId}`;
+}
+
+function getRecursiveDependencies(config) {
+  return Array.from(
+    new Set([
+      sanitizeTokenId(config.audioTokenId),
+      sanitizeTokenId(config.coverTokenId)
+    ].filter(Boolean))
+  );
+}
+
+function setHtmlExportStatus(message, isError = false) {
+  const status = getElement('htmlExportStatus');
+  if (!status) return;
+  status.textContent = message;
+  status.classList.toggle('error', Boolean(isError));
+}
+
+function hasEmbeddedAudio() {
+  return typeof audionalBase64 === 'string' && audionalBase64.trim() !== '';
+}
+
+function hasRecursiveAudioSource() {
+  const config = getRecursiveConfig();
+  return Boolean(config.audioUrl || sanitizeTokenId(config.audioTokenId));
+}
+
+function isHtmlGenerationReady() {
+  return getPlayerMode() === 'recursive' ? hasRecursiveAudioSource() : hasEmbeddedAudio();
+}
+
+function updateRecursiveUrlPreview() {
+  const preview = getElement('recursiveUrlPreview');
+  if (!preview) return;
+  const config = getRecursiveConfig();
+  const url = config.audioUrl || buildDefaultRecursiveUrl(config);
+  preview.textContent = url || 'Enter an audio token ID or audio URL.';
+}
+
+function updateDependencyPreview() {
+  const preview = getElement('recursiveDependencyPreview');
+  if (!preview) return;
+  const deps = getRecursiveDependencies(getRecursiveConfig());
+  preview.textContent = deps.length ? deps.join(', ') : 'None yet';
+}
+
+function updateHtmlModeUI() {
+  const mode = getPlayerMode();
+  const embeddedPanel = getElement('embeddedPlayerOptions');
+  const recursivePanel = getElement('recursivePlayerOptions');
+  if (embeddedPanel) embeddedPanel.classList.toggle('hidden', mode !== 'embedded');
+  if (recursivePanel) recursivePanel.classList.toggle('hidden', mode !== 'recursive');
+  updateRecursiveUrlPreview();
+  updateDependencyPreview();
+  checkGenerateButtonState();
+}
+
+function checkGenerateButtonState() {
+  const ready = isHtmlGenerationReady();
+  if (window.generateHtmlButton) {
+    window.generateHtmlButton.disabled = !ready;
+  }
+  if (window.previewHtmlButton) {
+    window.previewHtmlButton.disabled = !ready;
+  }
+
+  const mode = getPlayerMode();
+  if (ready) {
+    setHtmlExportStatus(
+      mode === 'recursive'
+        ? 'Recursive player ready. Add metadata, then preview or download.'
+        : 'Embedded player ready. Add metadata, then preview or download.'
+    );
+    return;
+  }
+  setHtmlExportStatus(
+    mode === 'recursive'
+      ? 'Enter the audio inscription token ID or a direct audio URL.'
+      : 'Convert an audio file first to generate embedded audio data.'
+  );
+}
+
+function showMetadataModal() {
+  if (!isHtmlGenerationReady()) {
+    alert(
+      getPlayerMode() === 'recursive'
+        ? 'Enter an audio inscription token ID or direct audio URL first.'
+        : 'Convert an audio file first so the player can embed the audio data.'
+    );
+    checkGenerateButtonState();
+    return;
+  }
+  if (window.metadataModal) window.metadataModal.classList.remove('hidden');
+}
+
+function hideMetadataModal() {
+  if (window.metadataModal) window.metadataModal.classList.add('hidden');
+}
+
+function collectMetadataFromForm() {
+  return {
+    title: window.titleInput?.value.trim() || '',
+    artist: getElement('artistInput')?.value.trim() || '',
+    album: getElement('albumInput')?.value.trim() || '',
+    instrument: window.instrumentInput?.value.trim() || '',
+    note: window.noteInput?.value.trim() || '',
+    frequency: window.frequencyInput?.value.trim() || '',
+    description: getElement('descriptionInput')?.value.trim() || '',
+    license: getElement('licenseInput')?.value.trim() || '',
+    isLoop: Boolean(window.loopCheckbox?.checked),
+    bpm: window.loopCheckbox?.checked ? window.bpmInput?.value.trim() || '' : ''
+  };
+}
+
+function buildTemplateConfig(metadata) {
+  const mode = getPlayerMode();
+  return {
+    mode,
+    metadata,
+    audioBase64: mode === 'embedded' ? stripDataURIPrefix(audionalBase64) : '',
+    audioMimeType: audionalMimeType,
+    imageBase64: audionalVisualBase64
+      ? stripDataURIPrefix(audionalVisualBase64)
+      : '',
+    imageMimeType: audionalVisualMimeType,
+    recursive: getRecursiveConfig()
+  };
+}
+
+function buildGeneratedHtml(metadata) {
+  if (!metadata.title) {
+    throw new Error('Title is required.');
+  }
+  if (!isHtmlGenerationReady()) {
+    throw new Error('The selected player mode is missing its audio source.');
+  }
+  if (typeof window.HTML_Template !== 'function') {
+    throw new Error('HTML template generation function is missing.');
+  }
+
+  const config = buildTemplateConfig(metadata);
+  const htmlContent = window.HTML_Template(config);
+  if (htmlContent.includes('Error generating Xtrata audio player')) {
+    throw new Error('The template could not generate a valid player.');
+  }
+  return {
+    htmlContent,
+    config
+  };
+}
+
+function buildGeneratedFilename(title, mode) {
+  const safeTitle = title.replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '');
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  return `Xtrata_Audio_Player_${safeTitle || 'Song'}_${mode}_${timestamp}.html`;
+}
+
+function openHtmlPreview(htmlContent) {
+  const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank', 'noopener,noreferrer');
+  window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+  return blob.size;
+}
+
+function downloadHtmlFile(htmlContent, filename) {
+  const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
+  return blob.size;
+}
+
+function finishGeneration(action) {
+  try {
+    const metadata = collectMetadataFromForm();
+    const { htmlContent, config } = buildGeneratedHtml(metadata);
+    const filename = buildGeneratedFilename(metadata.title, config.mode);
+    const size =
+      action === 'preview'
+        ? openHtmlPreview(htmlContent)
+        : downloadHtmlFile(htmlContent, filename);
+    const deps =
+      config.mode === 'recursive'
+        ? getRecursiveDependencies(config.recursive).join(', ') || 'none'
+        : 'none';
+    setHtmlExportStatus(
+      `${action === 'preview' ? 'Preview opened' : 'Downloaded'} ${filename} (${formatBytes(
+        size
+      )}). Dependencies: ${deps}.`
+    );
+    hideMetadataModal();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('HTML generation failed:', error);
+    setHtmlExportStatus(`HTML generation failed: ${message}`, true);
+    alert(`HTML generation failed: ${message}`);
+  }
+}
+
+function handleMetadataSubmit(event) {
+  event.preventDefault();
+  finishGeneration('download');
+}
+
+function handlePreviewClick() {
+  if (window.metadataForm && !window.metadataForm.reportValidity()) {
+    return;
+  }
+  finishGeneration('preview');
+}
+
+function updateaudionalBase64(base64Data, mimeType) {
+  audionalBase64 = base64Data;
+  if (mimeType) audionalMimeType = mimeType;
+  checkGenerateButtonState();
+}
+
+function updateaudionalVisualBase64(base64Data, mimeType) {
+  audionalVisualBase64 = base64Data;
+  if (mimeType) audionalVisualMimeType = mimeType;
+  checkGenerateButtonState();
+}
+
 function inithtmlGenerator() {
-  // Make sure all DOM elements are correctly referenced here
-  // Using the globally defined DOM elements from dom-elements.js is better
-  if (!window.generateHtmlButton || !window.metadataModal || !window.metadataForm || !window.cancelMetadataBtn ||
-      !window.instrumentInput || !window.noteInput || !window.frequencyInput || !window.titleInput ||
-      !window.loopCheckbox || !window.bpmInput) {
-    console.error("html Generator or Modal elements not found! Check HTML IDs and dom-elements.js.");
+  if (
+    !window.generateHtmlButton ||
+    !window.metadataModal ||
+    !window.metadataForm ||
+    !window.cancelMetadataBtn ||
+    !window.titleInput ||
+    !window.loopCheckbox ||
+    !window.bpmInput
+  ) {
+    console.error('HTML generator elements not found. Check HTML IDs.');
     if (window.generateHtmlButton) window.generateHtmlButton.disabled = true;
     return;
   }
 
-  // --- Event Listeners ---
   window.generateHtmlButton.addEventListener('click', showMetadataModal);
   window.metadataForm.addEventListener('submit', handleMetadataSubmit);
   window.cancelMetadataBtn.addEventListener('click', hideMetadataModal);
+  if (window.previewHtmlButton) {
+    window.previewHtmlButton.addEventListener('click', handlePreviewClick);
+  }
 
-  document.addEventListener('audionalBase64Generated', function(e) {
-    console.log("Received audionalBase64Generated event");
-    updateaudionalBase64(e.detail.base64Data);
-    if (e.detail.mimeType) {
-      audionalMimeType = e.detail.mimeType;
-    }
-  });
-  document.addEventListener('audionalVisualBase64Generated', function(e) {
-    console.log("Received audionalVisualBase64Generated event");
-    updateaudionalVisualBase64(e.detail.base64Data);
+  document.querySelectorAll('input[name="htmlPlayerMode"]').forEach((radio) => {
+    radio.addEventListener('change', updateHtmlModeUI);
   });
 
-  checkGenerateButtonState();
-  console.log("html Generator Initialized with Modal Logic");
-}
-
-/**
- * Shows the metadata input modal.
- */
-function showMetadataModal() {
-    if (window.metadataModal) window.metadataModal.classList.remove('hidden');
-}
-
-/**
- * Hides the metadata input modal.
- */
-function hideMetadataModal() {
-    if (window.metadataModal) window.metadataModal.classList.add('hidden');
-}
-
-/**
- * Handles the submission of the metadata form.
- * @param {Event} event - The form submission event.
- */
-function handleMetadataSubmit(event) {
-    event.preventDefault();
-    console.log("Metadata form submitted.");
-
-    // Get values from the modal form using DOM elements from dom-elements.js
-    const title = window.titleInput.value.trim();
-    const instrument = window.instrumentInput.value.trim();
-    const note = window.noteInput.value.trim();
-    const frequency = window.frequencyInput.value.trim(); // Should be auto-calculated
-    const isLoop = window.loopCheckbox.checked;
-    const bpm = isLoop ? window.bpmInput.value.trim() : '';
-
-    if (!title || !instrument || !note || !frequency) { // BPM is optional
-        alert("Please fill in all required metadata fields (Title, Instrument, Note, Frequency).");
-        return;
+  [
+    'recursiveAudioTokenId',
+    'recursiveAudioUrl',
+    'recursiveContractId',
+    'recursiveNetwork',
+    'recursiveCoverTokenId'
+  ].forEach((id) => {
+    const input = getElement(id);
+    if (input) input.addEventListener('input', updateHtmlModeUI);
+    if (input && input.tagName === 'SELECT') {
+      input.addEventListener('change', updateHtmlModeUI);
     }
+  });
 
-    hideMetadataModal();
+  document.addEventListener('audionalBase64Generated', function (event) {
+    updateaudionalBase64(event.detail.base64Data, event.detail.mimeType);
+  });
 
-    // Call the orchestrator function with the collected metadata
-    generateAndDownloadhtmlFile(title, instrument, note, frequency, isLoop, bpm);
+  document.addEventListener('audionalVisualBase64Generated', function (event) {
+    updateaudionalVisualBase64(event.detail.base64Data, event.detail.mimeType);
+  });
+
+  updateHtmlModeUI();
+  console.log('HTML Generator initialized.');
 }
 
-
-/**
- * Updates the internal audio base64 data state.
- */
-function updateaudionalBase64(base64Data) {
-  audionalBase64 = base64Data; // This is a global variable in this script's scope
-  console.log("Audio Base64 state updated.");
-  checkGenerateButtonState();
-}
-
-/**
- * Updates the internal image base64 data state.
- */
-function updateaudionalVisualBase64(base64Data) {
-  audionalVisualBase64 = base64Data; // This is a global variable in this script's scope
-  console.log("Image Base64 state updated.");
-  checkGenerateButtonState();
-}
-
-/**
- * Checks if audio and image data are available and enables/disables the generate button.
- */
-function checkGenerateButtonState() {
-    const audioReady = typeof audionalBase64 === 'string' && audionalBase64.trim() !== '';
-    // Image is optional for html, so we only strictly require audio for the button
-    // However, your current check requires both. Let's adjust based on your intent.
-    // If image is truly optional, the condition should primarily depend on audio.
-    // For now, keeping your original logic that requires both (audioReady && imageReady).
-    const imageActuallyReady = typeof audionalVisualBase64 === 'string' && audionalVisualBase64.trim() !== '';
-
-
-    // The generateHtmlButton (now window.generateHtmlButton) should be enabled if EITHER:
-    // 1. Audio is ready AND Image is ready
-    // OR
-    // 2. Audio is ready AND Image is NOT required (i.e., audionalVisualBase64 can be null/empty string for HTML_Template)
-    // For simplicity, if your template *always* expects an image string (even if empty),
-    // then audionalVisualBase64 can just be an empty string if no image is selected.
-    // The event listener for 'audionalVisualBase64Generated' will set audionalVisualBase64.
-    // If no image is converted, audionalVisualBase64 remains null or its initial value.
-    // Let's assume the HTML_Template can handle an empty string for audionalVisualBase64Data.
-    // So the button should be enabled if audio is ready. Image is a "nice to have".
-
-    if (audioReady) { // Primary condition: Audio must be ready
-        if (window.generateHtmlButton) {
-            window.generateHtmlButton.disabled = false;
-            console.log("html Generate button ENABLED (Audio ready).");
-        }
-    } else {
-        if (window.generateHtmlButton) {
-            window.generateHtmlButton.disabled = true;
-            // console.log("html Generate button remains disabled (Audio not ready).");
-        }
-    }
-}
-
-/**
- * Orchestrates html HTML file generation and triggers download.
- * @param {string} title
- * @param {string} instrument
- * @param {string} note
- * @param {string} frequency
- * @param {boolean} isLoop
- * @param {string} bpm
- */
-function generateAndDownloadhtmlFile(title, instrument, note, frequency, isLoop, bpm) {
-  console.log("Starting html file generation with metadata:", { title, instrument, note, frequency, isLoop, bpm });
-
-  if (!audionalBase64) { // Check for audionalBase64 (the global in this script)
-    console.error("Cannot generate html: Missing audio Base64 data.");
-    alert("Error: Missing audio Base64 data. Please ensure audio has been converted.");
-    return;
-  }
-
-  // Ensure the HTML_Template function (from HTML_Template.js) is available
-  if (typeof window.HTML_Template !== 'function') {
-      console.error("CRITICAL ERROR: HTML_Template function not found. Make sure HTML_Template.js loaded correctly.");
-      alert("Error: HTML template generation function is missing. Cannot create file.");
-      return;
-  }
-
-  const pureaudionalBase64 = stripDataURIPrefix(audionalBase64);
-  // audionalVisualBase64 can be null or empty if no image was processed. The template should handle this.
-  const pureaudionalVisualBase64 = audionalVisualBase64 ? stripDataURIPrefix(audionalVisualBase64) : '';
-
-  if (!pureaudionalBase64) { // Audio is essential
-    console.error("Error extracting pure Base64 data for audio.");
-    alert("Error: Could not prepare audio Base64 data. Please check the console.");
-    return;
-  }
-
-  console.log("Calling HTML_Template with data and metadata...");
-
-  // Call the imported HTML_Template function WITH ALL METADATA
-  const htmlContent = window.HTML_Template(
-      title,
-      instrument,
-      note,
-      frequency,
-      isLoop,
-      bpm,
-      pureaudionalBase64,    // Audio data
-      pureaudionalVisualBase64,     // Image data (can be empty string)
-      audionalMimeType
-  );
-
-  if (htmlContent.includes("Error generating Audional")) { // Check for error string from template
-      console.error("HTML_Template function reported an error during HTML generation.");
-      // Alert might have been shown by HTML_Template, or add one here
-      alert("An error occurred while generating the HTML content for the Audional file.");
-      return;
-  }
-
-  try {
-      const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const filename = `Audional_HTML_${title.replace(/[^a-z0-9]/gi, '_') || 'Player'}_${timestamp}.html`;
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(link.href);
-      console.log(`Successfully generated and triggered download for: ${filename}`);
-  } catch (error) {
-      console.error("Error during Blob creation or download:", error);
-      alert("An error occurred while trying to create or download the HTML file.");
-  }
-}
-
-// Initialize the html generator when the DOM is loaded
 document.addEventListener('DOMContentLoaded', inithtmlGenerator);
 
-// Make functions available on window if called from other modules (optional, but can be helpful)
 window.updateaudionalBase64 = updateaudionalBase64;
 window.updateaudionalVisualBase64 = updateaudionalVisualBase64;
+window.updateHtmlGenerateButtonState = checkGenerateButtonState;
+})();

@@ -253,8 +253,12 @@ const initializeUIState = () => {
     if (copyImageBtn) copyImageBtn.disabled = true;
     if (downloadImageBtn) downloadImageBtn.disabled = true;
 
-    const generateHtmlBtn = document.getElementById('generateHtmlButton');
-    if(generateHtmlBtn) generateHtmlBtn.disabled = false; 
+    if (typeof updateHtmlGenerateButtonState === 'function') {
+        updateHtmlGenerateButtonState();
+    } else {
+        const generateHtmlBtn = document.getElementById('generateHtmlButton');
+        if (generateHtmlBtn) generateHtmlBtn.disabled = true;
+    }
 
     console.log("UI state initialized.");
 };

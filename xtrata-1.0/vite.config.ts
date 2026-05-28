@@ -2,6 +2,35 @@ import { resolve } from 'node:path';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
+const OPUS_GENERATOR_PATH_PREFIX = '/opus-file-generator/';
+const opusCrossOriginIsolationHeaders = {
+  'Cross-Origin-Opener-Policy': 'same-origin',
+  'Cross-Origin-Embedder-Policy': 'require-corp'
+};
+
+const applyOpusGeneratorHeaders = (
+  req: { url?: string },
+  res: { setHeader: (name: string, value: string) => void },
+  next: () => void
+) => {
+  if (req.url?.startsWith(OPUS_GENERATOR_PATH_PREFIX)) {
+    Object.entries(opusCrossOriginIsolationHeaders).forEach(([name, value]) => {
+      res.setHeader(name, value);
+    });
+  }
+  next();
+};
+
+const opusGeneratorHeadersPlugin = {
+  name: 'opus-generator-cross-origin-isolation-headers',
+  configureServer(server: { middlewares: { use: typeof applyOpusGeneratorHeaders } }) {
+    server.middlewares.use(applyOpusGeneratorHeaders);
+  },
+  configurePreviewServer(server: { middlewares: { use: typeof applyOpusGeneratorHeaders } }) {
+    server.middlewares.use(applyOpusGeneratorHeaders);
+  }
+};
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const hiroApiKey = env.HIRO_API_KEY || env.VITE_HIRO_API_KEY;
@@ -21,7 +50,7 @@ export default defineConfig(({ mode }) => {
     'https://api.bnsv2.com/testnet';
 
   return {
-    plugins: [react()],
+    plugins: [react(), opusGeneratorHeadersPlugin],
     define: {
       __XSTRATA_HAS_HIRO_KEY__: JSON.stringify(hasHiroApiKey)
     },
