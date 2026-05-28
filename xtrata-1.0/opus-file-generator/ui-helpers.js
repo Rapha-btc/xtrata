@@ -100,6 +100,72 @@ const enableConvertButtonIfNeeded = () => {
           }
       }
   }
+
+  function getSizeComparison(originalBytes, convertedBytes) {
+      const original = Number(originalBytes);
+      const converted = Number(convertedBytes);
+      if (
+          !Number.isFinite(original) ||
+          !Number.isFinite(converted) ||
+          original <= 0 ||
+          converted < 0 ||
+          typeof window.formatBytes !== 'function'
+      ) {
+          return {
+              text: 'N/A',
+              detailText: 'Size comparison unavailable.',
+              className: ''
+          };
+      }
+
+      const delta = original - converted;
+      const percent = Math.abs(delta / original) * 100;
+      if (delta > 0) {
+          return {
+              text: `${window.formatBytes(delta)} saved (${percent.toFixed(1)}% smaller)`,
+              detailText: `A original: ${window.formatBytes(original)}. B converted: ${window.formatBytes(converted)}. Saving: ${window.formatBytes(delta)} (${percent.toFixed(1)}% smaller).`,
+              className: 'size-saving-positive'
+          };
+      }
+      if (delta < 0) {
+          return {
+              text: `${window.formatBytes(Math.abs(delta))} larger (${percent.toFixed(1)}% increase)`,
+              detailText: `A original: ${window.formatBytes(original)}. B converted: ${window.formatBytes(converted)}. Output is ${window.formatBytes(Math.abs(delta))} larger (${percent.toFixed(1)}% increase).`,
+              className: 'size-saving-negative'
+          };
+      }
+      return {
+          text: 'No size change',
+          detailText: `A original and B converted are both ${window.formatBytes(original)}.`,
+          className: ''
+      };
+  }
+
+  function updateActualSizeInfoDisplay(originalBlob, convertedBlob) {
+      if (actualOutputFileInfoEl) {
+          actualOutputFileInfoEl.textContent =
+              convertedBlob && typeof window.formatBytes === 'function'
+                  ? window.formatBytes(convertedBlob.size)
+                  : 'Not converted';
+      }
+
+      if (!sizeSavingsInfoEl) return;
+      sizeSavingsInfoEl.classList.remove('size-saving-positive', 'size-saving-negative');
+
+      if (!originalBlob || !convertedBlob) {
+          sizeSavingsInfoEl.textContent = 'Convert to compare';
+          return;
+      }
+
+      const comparison = getSizeComparison(originalBlob.size, convertedBlob.size);
+      sizeSavingsInfoEl.textContent = comparison.text;
+      if (comparison.className) {
+          sizeSavingsInfoEl.classList.add(comparison.className);
+      }
+  }
+
+  window.getSizeComparison = getSizeComparison;
+  window.updateActualSizeInfoDisplay = updateActualSizeInfoDisplay;
   
   /**
    * Updates the estimated output file size display based on current settings.
@@ -267,6 +333,9 @@ const enableConvertButtonIfNeeded = () => {
       if (typeof updateOriginalFileInfoDisplay === 'function') {
           updateOriginalFileInfoDisplay(null);
       }
+      if (typeof updateActualSizeInfoDisplay === 'function') {
+          updateActualSizeInfoDisplay(null, null);
+      }
       if (typeof updateEstimatedSize === 'function') {
           updateEstimatedSize();
       }
@@ -349,6 +418,9 @@ const enableConvertButtonIfNeeded = () => {
       if (downloadBase64Btn) {
           downloadBase64Btn.disabled = true;
           downloadBase64Btn.textContent = 'Download Audio Base64 as TXT';
+      }
+      if (typeof updateActualSizeInfoDisplay === 'function') {
+          updateActualSizeInfoDisplay(selectedFile, null);
       }
       if (progressEl) {
           progressEl.style.display = 'none';

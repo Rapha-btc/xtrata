@@ -4,6 +4,17 @@ window.AB_PLAYER_VERSION = '1.04';
 
 console.log('[A/B Player] Loading AB Player Version 1.04');
 
+const formatABSize = (blob) =>
+    blob && typeof blob.size === 'number' && typeof window.formatBytes === 'function'
+        ? window.formatBytes(blob.size)
+        : 'size unavailable';
+
+const getABSizeComparisonText = (originalBlob, convertedBlob) => {
+    if (typeof window.getSizeComparison === 'function') {
+        return window.getSizeComparison(originalBlob?.size, convertedBlob?.size).text;
+    }
+    return 'Size comparison unavailable';
+};
 
 const createABPlayerUI = (originalBlob, originalMimeType, convertedBlob, convertedMimeType) => {
     const abContainer = document.createElement('div');
@@ -25,9 +36,10 @@ const createABPlayerUI = (originalBlob, originalMimeType, convertedBlob, convert
           <span style="font-size:0.92em;">ms</span>
         </label>
       </div>
-      <p id="labelA" style="font-weight:bold;opacity:1;">A: Original Audio</p>
+      <p id="ab-size-summary" style="text-align:center;margin:0 0 12px 0;color:#f4d37b;font-weight:bold;">Size saving: ${getABSizeComparisonText(originalBlob, convertedBlob)}</p>
+      <p id="labelA" style="font-weight:bold;opacity:1;">A: Original Audio (${formatABSize(originalBlob)})</p>
       <audio id="audioA" controls preload="metadata" style="width:100%;margin-bottom:5px;"></audio>
-      <p id="labelB" style="font-weight:bold;opacity:0.6;">B: Converted Audio (WebM Audio/Opus)</p>
+      <p id="labelB" style="font-weight:bold;opacity:0.6;">B: Converted Audio (WebM Audio/Opus, ${formatABSize(convertedBlob)})</p>
       <audio id="audioB" controls preload="metadata" style="width:100%;"></audio>
     `;
   

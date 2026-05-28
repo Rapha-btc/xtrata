@@ -359,6 +359,14 @@
       text-transform: none;
     }
 
+    .info-summary-section span.size-saving-positive {
+      color: var(--success);
+    }
+
+    .info-summary-section span.size-saving-negative {
+      color: var(--error);
+    }
+
     .button-row,
     .button-container,
     .button-group {
@@ -660,6 +668,8 @@
           <div class="info-summary-section" id="outputInfoSection">
             <p>Original <span id="originalFileInfo">N/A</span></p>
             <p>Estimate <span id="currentEstimatedOutputSize">Select file</span></p>
+            <p>Actual <span id="actualOutputFileInfo">Not converted</span></p>
+            <p>Saving <span id="sizeSavingsInfo">Convert to compare</span></p>
             <p>Xtrata type <span><code>audio/webm; codecs=opus</code></span></p>
           </div>
 
