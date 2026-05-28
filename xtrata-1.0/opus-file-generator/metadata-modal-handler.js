@@ -3,6 +3,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const loopCheckbox = document.getElementById('loopCheckbox');
     const bpmGroup = document.getElementById('bpmGroup');
     const bpmInput = document.getElementById('bpmInput');
+    const assetTypeInput = document.getElementById('assetTypeInput');
+    const sampleMetadataFields = document.getElementById('sampleMetadataFields');
+    const stemMetadataFields = document.getElementById('stemMetadataFields');
     const noteInput = document.getElementById('noteInput');
     const frequencyInput = document.getElementById('frequencyInput');
     const noteList = document.getElementById('noteList');
@@ -10,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('metadataForm');
     const modal = document.getElementById('metadataModal');
   
-    if (!loopCheckbox || !bpmGroup || !bpmInput || !noteInput || !frequencyInput || !noteList || !cancelBtn || !form || !modal) {
+    if (!loopCheckbox || !bpmGroup || !bpmInput || !assetTypeInput || !sampleMetadataFields || !stemMetadataFields || !noteInput || !frequencyInput || !noteList || !cancelBtn || !form || !modal) {
         console.error("Metadata modal script: One or more required elements not found. Frequency calculation might fail.");
         return; // Stop execution if elements are missing
     }
@@ -60,16 +63,47 @@ document.addEventListener('DOMContentLoaded', () => {
       if (loopCheckbox.checked) { bpmGroup.classList.remove('hidden'); bpmInput.required = true; }
       else { bpmGroup.classList.add('hidden'); bpmInput.required = false; bpmInput.value = ''; }
     }
+
+    function updateMetadataFieldsForAssetType() {
+      const assetType = assetTypeInput.value;
+      const showSampleFields = assetType === 'sample' || assetType === 'loop';
+      const showStemFields = assetType === 'stem';
+
+      sampleMetadataFields.classList.toggle('hidden', !showSampleFields);
+      stemMetadataFields.classList.toggle('hidden', !showStemFields);
+
+      if (assetType === 'loop') {
+        loopCheckbox.checked = true;
+      } else if (assetType === 'song' || assetType === 'voice' || assetType === 'other') {
+        loopCheckbox.checked = false;
+      }
+      toggleBpmField();
+
+      if (!showSampleFields) {
+        const instrumentInput = document.getElementById('instrumentInput');
+        if (instrumentInput) instrumentInput.value = '';
+        noteInput.value = '';
+        updateFrequencyDisplay();
+      }
+
+      if (!showStemFields) {
+        const stemRoleInput = document.getElementById('stemRoleInput');
+        if (stemRoleInput) stemRoleInput.value = '';
+      }
+    }
   
     // Initialize
     generateNoteOptions();
+    updateMetadataFieldsForAssetType();
     toggleBpmField(); // Set initial state based on checkbox default
   
     // Event Listeners
+    assetTypeInput.addEventListener('change', updateMetadataFieldsForAssetType);
     noteInput.addEventListener('input', updateFrequencyDisplay);
     loopCheckbox.addEventListener('change', toggleBpmField);
     cancelBtn.addEventListener('click', () => {
         form.reset(); // Resets form fields
+        updateMetadataFieldsForAssetType();
         updateFrequencyDisplay(); // Clear calculated frequency
         toggleBpmField(); // Ensure BPM field visibility matches reset checkbox
         modal.classList.add('hidden'); // Hide the modal

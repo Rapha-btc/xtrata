@@ -5,6 +5,9 @@ let audionalBase64 = null;
 let audionalVisualBase64 = null;
 let audionalMimeType = 'audio/webm; codecs=opus';
 let audionalVisualMimeType = 'image/png';
+let audionalVisualName = '';
+
+const SUPPORTED_VISUAL_PREFIXES = ['image/', 'video/'];
 
 function stripDataURIPrefix(dataString) {
   if (typeof dataString !== 'string') return '';
@@ -14,6 +17,31 @@ function stripDataURIPrefix(dataString) {
 
 function getElement(id) {
   return document.getElementById(id);
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (event) => resolve(event.target.result);
+    reader.onerror = () => reject(new Error(`Could not read ${file.name}.`));
+    reader.readAsDataURL(file);
+  });
+}
+
+function isSupportedVisualFile(file) {
+  return Boolean(
+    file &&
+      SUPPORTED_VISUAL_PREFIXES.some((prefix) =>
+        String(file.type || '').startsWith(prefix)
+      )
+  );
+}
+
+function getVisualKind(mimeType) {
+  const type = String(mimeType || '').toLowerCase();
+  if (type.startsWith('video/')) return 'video';
+  if (type.startsWith('image/')) return 'image';
+  return '';
 }
 
 function getPlayerMode() {
@@ -121,7 +149,7 @@ function checkGenerateButtonState() {
     setHtmlExportStatus(
       mode === 'recursive'
         ? 'Recursive player ready. Add metadata, then preview or download.'
-        : 'Embedded player ready. Add metadata, then preview or download.'
+        : 'Embedded player ready. Add artwork and metadata, then preview or download.'
     );
     return;
   }
@@ -151,9 +179,11 @@ function hideMetadataModal() {
 
 function collectMetadataFromForm() {
   return {
+    assetType: getElement('assetTypeInput')?.value || 'song',
     title: window.titleInput?.value.trim() || '',
     artist: getElement('artistInput')?.value.trim() || '',
     album: getElement('albumInput')?.value.trim() || '',
+    stemRole: getElement('stemRoleInput')?.value.trim() || '',
     instrument: window.instrumentInput?.value.trim() || '',
     note: window.noteInput?.value.trim() || '',
     frequency: window.frequencyInput?.value.trim() || '',
@@ -171,6 +201,11 @@ function buildTemplateConfig(metadata) {
     metadata,
     audioBase64: mode === 'embedded' ? stripDataURIPrefix(audionalBase64) : '',
     audioMimeType: audionalMimeType,
+    visualBase64: audionalVisualBase64
+      ? stripDataURIPrefix(audionalVisualBase64)
+      : '',
+    visualMimeType: audionalVisualMimeType,
+    visualName: audionalVisualName,
     imageBase64: audionalVisualBase64
       ? stripDataURIPrefix(audionalVisualBase64)
       : '',
@@ -272,10 +307,119 @@ function updateaudionalBase64(base64Data, mimeType) {
   checkGenerateButtonState();
 }
 
-function updateaudionalVisualBase64(base64Data, mimeType) {
+function setStandaloneArtworkStatus(message, isError = false) {
+  const status = getElement('standaloneArtworkStatus');
+  if (!status) return;
+  status.textContent = message;
+  status.classList.toggle('error', Boolean(isError));
+}
+
+function resetStandaloneArtworkPreview(message = 'No artwork selected.', isError = false) {
+  const preview = getElement('standaloneArtworkPreview');
+  const clearButton = getElement('clearStandaloneArtworkButton');
+  const output = getElement('standaloneArtworkBase64Output');
+  if (preview) {
+    preview.innerHTML = '<span>No visual selected</span>';
+  }
+  if (output) output.value = '';
+  if (clearButton) clearButton.disabled = true;
+  setStandaloneArtworkStatus(message, isError);
+}
+
+function renderStandaloneArtworkPreview(dataUrl, fileInfo = {}) {
+  const preview = getElement('standaloneArtworkPreview');
+  const clearButton = getElement('clearStandaloneArtworkButton');
+  if (!preview) return;
+
+  preview.innerHTML = '';
+  const kind = getVisualKind(fileInfo.mimeType || audionalVisualMimeType);
+  const media = document.createElement(kind === 'video' ? 'video' : 'img');
+  media.src = dataUrl;
+  if (kind === 'video') {
+    media.controls = true;
+    media.muted = true;
+    media.loop = true;
+    media.playsInline = true;
+    media.preload = 'metadata';
+  } else {
+    media.alt = fileInfo.name || 'Player artwork';
+  }
+  preview.appendChild(media);
+  if (clearButton) clearButton.disabled = false;
+
+  const sizeText =
+    typeof fileInfo.size === 'number' && typeof window.formatBytes === 'function'
+      ? ` (${window.formatBytes(fileInfo.size)})`
+      : '';
+  setStandaloneArtworkStatus(
+    `${fileInfo.name || 'Visual media'}${sizeText} embedded as ${
+      fileInfo.mimeType || audionalVisualMimeType
+    }.`
+  );
+}
+
+function updateaudionalVisualBase64(base64Data, mimeType, fileName = '', options = {}) {
+  const output = getElement('standaloneArtworkBase64Output');
   audionalVisualBase64 = base64Data;
   if (mimeType) audionalVisualMimeType = mimeType;
+  audionalVisualName = fileName || '';
+  if (output) output.value = base64Data ? stripDataURIPrefix(base64Data) : '';
+  if (!base64Data) {
+    audionalVisualName = '';
+    if (options.renderPreview !== false) resetStandaloneArtworkPreview();
+  } else if (options.renderPreview !== false) {
+    const dataUrl = String(base64Data).startsWith('data:')
+      ? base64Data
+      : `data:${audionalVisualMimeType};base64,${stripDataURIPrefix(base64Data)}`;
+    renderStandaloneArtworkPreview(dataUrl, {
+      name: audionalVisualName || 'Visual media',
+      mimeType: audionalVisualMimeType
+    });
+  }
   checkGenerateButtonState();
+}
+
+async function handleStandaloneArtworkChange(event) {
+  const input = event.currentTarget;
+  const file = input.files?.[0] || null;
+  if (!file) {
+    updateaudionalVisualBase64(null);
+    return;
+  }
+
+  if (!isSupportedVisualFile(file)) {
+    input.value = '';
+    updateaudionalVisualBase64(null, '', '', { renderPreview: false });
+    resetStandaloneArtworkPreview('Use an image, GIF, or video file.', true);
+    return;
+  }
+
+  setStandaloneArtworkStatus(`Reading ${file.name}...`);
+  try {
+    const dataUrl = await readFileAsDataUrl(file);
+    updateaudionalVisualBase64(dataUrl, file.type, file.name, {
+      renderPreview: false
+    });
+    renderStandaloneArtworkPreview(dataUrl, {
+      name: file.name,
+      size: file.size,
+      mimeType: file.type
+    });
+  } catch (error) {
+    console.error('Artwork conversion failed:', error);
+    input.value = '';
+    updateaudionalVisualBase64(null, '', '', { renderPreview: false });
+    resetStandaloneArtworkPreview(
+      error instanceof Error ? error.message : 'Artwork conversion failed.',
+      true
+    );
+  }
+}
+
+function clearStandaloneArtwork() {
+  const input = getElement('standaloneArtworkInput');
+  if (input) input.value = '';
+  updateaudionalVisualBase64(null);
 }
 
 function inithtmlGenerator() {
@@ -303,6 +447,16 @@ function inithtmlGenerator() {
   document.querySelectorAll('input[name="htmlPlayerMode"]').forEach((radio) => {
     radio.addEventListener('change', updateHtmlModeUI);
   });
+
+  const standaloneArtworkInput = getElement('standaloneArtworkInput');
+  if (standaloneArtworkInput) {
+    standaloneArtworkInput.addEventListener('change', handleStandaloneArtworkChange);
+  }
+
+  const clearStandaloneArtworkButton = getElement('clearStandaloneArtworkButton');
+  if (clearStandaloneArtworkButton) {
+    clearStandaloneArtworkButton.addEventListener('click', clearStandaloneArtwork);
+  }
 
   [
     'recursiveAudioTokenId',

@@ -35,9 +35,27 @@ const sanitizeAudioMimeType = (mimeType) => {
   return raw.startsWith('audio/') ? raw : 'audio/webm; codecs=opus';
 };
 
-const sanitizeImageMimeType = (mimeType) => {
+const sanitizeVisualMimeType = (mimeType) => {
   const raw = String(mimeType || '').trim();
-  return raw.startsWith('image/') ? raw : 'image/png';
+  return raw.startsWith('image/') || raw.startsWith('video/') ? raw : 'image/png';
+};
+
+const sanitizeImageMimeType = sanitizeVisualMimeType;
+
+const AUDIO_ASSET_TYPE_LABELS = {
+  song: 'Song',
+  sample: 'Sample',
+  stem: 'Stem',
+  loop: 'Loop',
+  voice: 'Voice',
+  other: 'Audio'
+};
+
+const normalizeAssetType = (value) => {
+  const key = String(value || '').trim().toLowerCase();
+  return Object.prototype.hasOwnProperty.call(AUDIO_ASSET_TYPE_LABELS, key)
+    ? key
+    : 'song';
 };
 
 const sanitizeTokenId = (value) => {
@@ -109,25 +127,37 @@ const buildDependencies = (config) => {
 };
 
 const buildCoverMarkup = (config, title) => {
-  const imageBase64 = normalizeBase64(config.imageBase64);
-  if (!imageBase64) {
+  const visualBase64 = normalizeBase64(config.visualBase64 || config.imageBase64);
+  if (!visualBase64) {
     return `<div class="cover-placeholder" aria-hidden="true">${escapeHtml(
       title.slice(0, 1).toUpperCase() || 'X'
     )}</div>`;
   }
-  const imageMimeType = sanitizeImageMimeType(config.imageMimeType);
-  const imageSrc = `data:${normalizeMimeForDataUri(
-    imageMimeType,
+  const visualMimeType = sanitizeVisualMimeType(
+    config.visualMimeType || config.imageMimeType
+  );
+  const visualSrc = `data:${normalizeMimeForDataUri(
+    visualMimeType,
     'image/png'
-  )};base64,${imageBase64}`;
-  return `<img src="${escapeAttr(imageSrc)}" alt="${escapeAttr(title)} cover art">`;
+  )};base64,${visualBase64}`;
+  if (visualMimeType.startsWith('video/')) {
+    return `<video controls muted loop playsinline preload="metadata" aria-label="${escapeAttr(
+      title
+    )} visual"><source src="${escapeAttr(visualSrc)}" type="${escapeAttr(
+      visualMimeType
+    )}">This browser cannot play the embedded visual.</video>`;
+  }
+  return `<img src="${escapeAttr(visualSrc)}" alt="${escapeAttr(title)} cover art">`;
 };
 
 const buildXtrataAudioPlayerHtml = (config) => {
   const metadata = config.metadata || {};
   const title = String(metadata.title || 'Xtrata Audio Player').trim();
+  const assetType = normalizeAssetType(metadata.assetType);
+  const assetTypeLabel = AUDIO_ASSET_TYPE_LABELS[assetType];
   const artist = String(metadata.artist || '').trim();
   const album = String(metadata.album || '').trim();
+  const stemRole = String(metadata.stemRole || '').trim();
   const instrument = String(metadata.instrument || '').trim();
   const note = String(metadata.note || '').trim();
   const frequency = String(metadata.frequency || '').trim();
@@ -151,11 +181,14 @@ const buildXtrataAudioPlayerHtml = (config) => {
     mode: source.mode,
     sourceKind: source.sourceKind,
     audioMimeType: source.audioMimeType,
+    visualMimeType: sanitizeVisualMimeType(config.visualMimeType || config.imageMimeType),
     dependencies,
     metadata: {
+      assetType,
       title,
       artist,
       album,
+      stemRole,
       instrument,
       note,
       frequency,
@@ -167,8 +200,10 @@ const buildXtrataAudioPlayerHtml = (config) => {
   };
 
   const detailRows = [
+    ['Type', assetTypeLabel],
     ['Artist', artist],
     ['Album', album],
+    ['Stem', stemRole],
     ['Instrument', instrument],
     ['Note', note],
     ['Frequency', frequency],
@@ -242,7 +277,8 @@ const buildXtrataAudioPlayerHtml = (config) => {
       overflow: hidden;
     }
 
-    .cover img {
+    .cover img,
+    .cover video {
       width: 100%;
       height: 100%;
       object-fit: cover;

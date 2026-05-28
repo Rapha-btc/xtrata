@@ -15,6 +15,7 @@
       --line: #d7e0d8;
       --line-strong: #9eafa2;
       --green: #245f45;
+      --success: #245f45;
       --green-soft: #e8f2ec;
       --blue: #285675;
       --blue-soft: #e6eef4;
@@ -412,6 +413,184 @@
       font-size: 0.95rem;
     }
 
+    .ab-player-container {
+      display: grid;
+      gap: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .ab-player-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      border-bottom: 1px solid var(--line);
+      background: #fbfdfb;
+      padding: 12px;
+    }
+
+    .ab-player-header h4 {
+      margin: 0;
+      font-size: 0.98rem;
+      letter-spacing: 0;
+    }
+
+    .ab-player-header p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    .ab-size-summary {
+      min-width: min(240px, 100%);
+      border: 1px solid #cfe0d4;
+      border-radius: 8px;
+      background: var(--green-soft);
+      color: var(--green);
+      padding: 8px 10px;
+      text-align: right;
+    }
+
+    .ab-size-summary span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .ab-size-summary strong {
+      display: block;
+      margin-top: 2px;
+      font-size: 0.9rem;
+      line-height: 1.25;
+    }
+
+    .ab-controls {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(150px, 190px);
+      gap: 8px;
+      align-items: stretch;
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .ab-control-button {
+      display: inline-flex;
+      align-items: center;
+      width: 100%;
+      min-height: 44px;
+      justify-content: center;
+    }
+
+    .ab-control-button.is-active {
+      background: var(--green);
+      border-color: var(--green);
+      color: #fff;
+    }
+
+    .ab-offset-field {
+      display: grid;
+      grid-template-columns: 1fr 70px auto;
+      gap: 6px;
+      align-items: center;
+      min-height: 44px;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      padding: 6px 8px;
+      background: #fbfdfb;
+    }
+
+    .ab-offset-field span {
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .ab-offset-field input {
+      min-height: 32px;
+      padding: 5px 7px;
+      text-align: right;
+    }
+
+    .ab-offset-field small {
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .ab-track-list {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+    }
+
+    .ab-track {
+      display: grid;
+      gap: 8px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfdfb;
+      padding: 10px;
+      opacity: 0.72;
+      transition: border-color 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+    }
+
+    .ab-track.is-active {
+      border-color: #d6a331;
+      background: #fffaf0;
+      opacity: 1;
+      box-shadow: inset 4px 0 0 #d6a331;
+    }
+
+    .ab-track-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .ab-track-title,
+    .ab-track-meta {
+      margin: 0;
+    }
+
+    .ab-track-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--ink);
+      font-weight: 900;
+    }
+
+    .ab-track-title span {
+      display: inline-grid;
+      place-items: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--ink);
+      color: #fff;
+      font-size: 0.8rem;
+    }
+
+    .ab-track-meta {
+      color: var(--muted);
+      font-size: 0.86rem;
+      font-weight: 800;
+      text-align: right;
+    }
+
+    .ab-track audio {
+      display: block;
+      width: 100%;
+      accent-color: var(--green);
+    }
+
     details {
       border: 1px solid var(--line);
       border-radius: 8px;
@@ -478,6 +657,53 @@
       background: #f8e7ea;
       color: var(--error);
       border-color: #e5b7bf;
+    }
+
+    .standalone-artwork-grid {
+      display: grid;
+      grid-template-columns: 132px minmax(0, 1fr);
+      gap: 10px;
+      align-items: center;
+    }
+
+    .standalone-artwork-preview {
+      display: grid;
+      place-items: center;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border: 1px dashed var(--line-strong);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--muted);
+      overflow: hidden;
+      text-align: center;
+      font-size: 0.8rem;
+      font-weight: 800;
+    }
+
+    .standalone-artwork-preview img,
+    .standalone-artwork-preview video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .standalone-artwork-status {
+      min-height: 22px;
+      margin: 0 0 8px;
+      color: var(--muted);
+      font-size: 0.84rem;
+      font-weight: 700;
+    }
+
+    .standalone-artwork-status.error {
+      color: var(--error);
+    }
+
+    .metadata-fieldset {
+      display: grid;
+      gap: 10px;
     }
 
     .preview-value {
@@ -552,6 +778,28 @@
 
       .tool-nav {
         justify-content: flex-start;
+      }
+
+      .ab-player-header,
+      .ab-track-header {
+        display: grid;
+      }
+
+      .ab-size-summary,
+      .ab-track-meta {
+        text-align: left;
+      }
+
+      .ab-controls {
+        grid-template-columns: 1fr;
+      }
+
+      .ab-offset-field {
+        grid-template-columns: 1fr 82px auto;
+      }
+
+      .standalone-artwork-grid {
+        grid-template-columns: 1fr;
       }
 
       .settings-grid,
@@ -741,7 +989,26 @@
 
             <div id="embeddedPlayerOptions" class="compact-box">
               <h3>Standalone embedded player</h3>
-              <p>Convert audio first. The generated HTML will include the audio Base64 data, optional cover art, inline CSS, and inline JavaScript.</p>
+              <p>Convert audio first. Optional visual media is embedded into the same HTML file.</p>
+              <div class="form-stack">
+                <label class="field" for="standaloneArtworkInput">
+                  <span>Artwork / visual</span>
+                  <input type="file" id="standaloneArtworkInput" accept="image/*,video/*,.gif,.webp,.mp4,.webm,.mov">
+                </label>
+                <div class="standalone-artwork-grid">
+                  <div id="standaloneArtworkPreview" class="standalone-artwork-preview">
+                    <span>No visual selected</span>
+                  </div>
+                  <div>
+                    <p id="standaloneArtworkStatus" class="standalone-artwork-status">No artwork selected.</p>
+                    <button id="clearStandaloneArtworkButton" class="button-small" type="button" disabled>Clear visual</button>
+                  </div>
+                </div>
+                <details>
+                  <summary>Show visual base64</summary>
+                  <textarea id="standaloneArtworkBase64Output" class="base64-output" readonly></textarea>
+                </details>
+              </div>
             </div>
 
             <div id="recursivePlayerOptions" class="compact-box hidden">
@@ -843,6 +1110,17 @@
           <span>Title</span>
           <input type="text" id="titleInput" name="title" required>
         </label>
+        <label class="field" for="assetTypeInput">
+          <span>Audio type</span>
+          <select id="assetTypeInput" name="assetType">
+            <option value="song" selected>Song</option>
+            <option value="sample">Sample</option>
+            <option value="stem">Stem</option>
+            <option value="loop">Loop</option>
+            <option value="voice">Voice</option>
+            <option value="other">Other audio</option>
+          </select>
+        </label>
         <label class="field" for="artistInput">
           <span>Artist</span>
           <input type="text" id="artistInput" name="artist">
@@ -851,19 +1129,29 @@
           <span>Album</span>
           <input type="text" id="albumInput" name="album">
         </label>
-        <label class="field" for="instrumentInput">
-          <span>Instrument</span>
-          <input type="text" id="instrumentInput" name="instrument">
-        </label>
-        <label class="field" for="noteInput">
-          <span>Note</span>
-          <input type="text" id="noteInput" name="note" list="noteList" placeholder="C4">
-          <datalist id="noteList"></datalist>
-        </label>
-        <label class="field" for="frequencyInput">
-          <span>Frequency</span>
-          <input type="text" id="frequencyInput" name="frequency" readonly>
-        </label>
+        <fieldset id="stemMetadataFields" class="metadata-fieldset hidden">
+          <legend>Stem details</legend>
+          <label class="field" for="stemRoleInput">
+            <span>Stem role</span>
+            <input type="text" id="stemRoleInput" name="stemRole" placeholder="Drums, vocal, guitar">
+          </label>
+        </fieldset>
+        <fieldset id="sampleMetadataFields" class="metadata-fieldset hidden">
+          <legend>Sample details</legend>
+          <label class="field" for="instrumentInput">
+            <span>Instrument</span>
+            <input type="text" id="instrumentInput" name="instrument">
+          </label>
+          <label class="field" for="noteInput">
+            <span>Note</span>
+            <input type="text" id="noteInput" name="note" list="noteList" placeholder="C4">
+            <datalist id="noteList"></datalist>
+          </label>
+          <label class="field" for="frequencyInput">
+            <span>Frequency</span>
+            <input type="text" id="frequencyInput" name="frequency" readonly>
+          </label>
+        </fieldset>
         <label class="format-option" for="loopCheckbox">
           <input type="checkbox" id="loopCheckbox" name="isLoop">
           <span>
