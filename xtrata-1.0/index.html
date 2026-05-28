@@ -984,6 +984,27 @@
       display: block;
     }
 
+    .support-note {
+      border: 1px solid rgba(36, 95, 69, 0.34);
+      border-radius: var(--radius);
+      background: var(--green-soft);
+      color: var(--ink);
+      padding: 10px 12px;
+      margin-top: 12px;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .support-note[hidden] {
+      display: none;
+    }
+
+    .support-note strong {
+      display: block;
+      margin-bottom: 3px;
+      color: var(--green);
+    }
+
     .checkline {
       display: flex;
       gap: 8px;
@@ -1066,6 +1087,16 @@
 
     .log time {
       color: var(--line-strong);
+    }
+
+    .log li.support {
+      color: var(--ink);
+      border-left: 3px solid var(--green);
+      padding-left: 8px;
+    }
+
+    .log li.support time {
+      color: var(--green);
     }
 
     .wallet-layout {
@@ -2687,12 +2718,14 @@
           </div>
 
           <div class="warning" id="duplicateWarning">
-            <div id="duplicateText">Duplicate hash detected.</div>
+            <div id="duplicateText">Existing inscription found.</div>
             <label class="checkline">
               <input type="checkbox" id="allowDuplicateInput" />
-              <span>Continue with this duplicate payload</span>
+              <span>Continue anyway with this existing payload</span>
             </label>
           </div>
+
+          <div class="support-note" id="resumeNotice" hidden></div>
 
           <div class="actions">
             <button class="btn secondary" id="prepareButton" type="button">Prepare</button>
@@ -3174,6 +3207,7 @@
       duplicateWarning: $('duplicateWarning'),
       duplicateText: $('duplicateText'),
       allowDuplicateInput: $('allowDuplicateInput'),
+      resumeNotice: $('resumeNotice'),
       prepareButton: $('prepareButton'),
       inscribeButton: $('inscribeButton'),
       stepBegin: $('stepBegin'),
@@ -3458,6 +3492,11 @@
     const isLikelyStacksAddressInput = (value) =>
       /^S[PTMN][A-Z0-9]*$/i.test(value.trim());
 
+    const isSupportiveLogMessage = (message) =>
+      message.startsWith('No problem') ||
+      message.startsWith('Existing upload data') ||
+      message.startsWith('On-chain confirmed');
+
     const toBtcLookupLabel = (value) => {
       const trimmed = value.trim().toLowerCase();
       const withoutSuffix = trimmed.replace(/\.btc$/i, '');
@@ -3562,10 +3601,13 @@
       return url.toString();
     };
 
-    const appendLog = (message) => {
+    const appendLog = (message, tone = '') => {
       const item = document.createElement('li');
       const time = document.createElement('time');
       const body = document.createElement('span');
+      if (tone === 'support' || isSupportiveLogMessage(message)) {
+        item.classList.add('support');
+      }
       time.textContent = nowLabel();
       body.textContent = message;
       item.append(time, body);
@@ -3964,6 +4006,23 @@
         row.append(label, body);
         target.append(row);
       }
+    };
+
+    const renderResumeNotice = () => {
+      dom.resumeNotice.hidden = true;
+      dom.resumeNotice.replaceChildren();
+      if (!state.prepared || !state.uploadState) {
+        return;
+      }
+      const current = state.uploadState.currentIndex.toString();
+      const total = state.uploadState.totalChunks.toString();
+      const heading = document.createElement('strong');
+      heading.textContent = 'Existing upload data found. No problem.';
+      const body = document.createElement('span');
+      body.textContent =
+        `${current}/${total} chunks are already saved. Click Resume inscription to continue from the saved data.`;
+      dom.resumeNotice.append(heading, body);
+      dom.resumeNotice.hidden = false;
     };
 
     const renderNoSelectedInscriptionMeta = () => {
@@ -4704,7 +4763,7 @@
         !state.prepared ||
         duplicateBlocked;
       dom.inscribeButton.textContent = state.uploadState
-        ? 'Continue inscription'
+        ? 'Resume inscription'
         : shouldUseSmallMintHelper()
           ? 'Start single-tx inscription'
           : 'Start inscription';
@@ -4925,6 +4984,7 @@
         clearElement(dom.payloadPreview, 'No payload');
         renderMeta(dom.preparedMeta, [['Status', 'Not prepared']]);
         dom.duplicateWarning.classList.remove('on');
+        renderResumeNotice();
         updateControls();
         return;
       }
@@ -4998,11 +5058,12 @@
 
       if (state.duplicateId !== null) {
         dom.duplicateText.textContent =
-          `Duplicate hash detected at ${formatTokenId(state.duplicateId)}.`;
+          `Existing inscription found at ${formatTokenId(state.duplicateId)}. This content is already safely on-chain.`;
         dom.duplicateWarning.classList.add('on');
       } else {
         dom.duplicateWarning.classList.remove('on');
       }
+      renderResumeNotice();
       updateControls();
     };
 
@@ -5063,7 +5124,8 @@
         );
         if (state.uploadState) {
           appendLog(
-            `Existing upload found: ${state.uploadState.currentIndex.toString()}/${state.uploadState.totalChunks.toString()} chunks.`
+            `Existing upload data found: ${state.uploadState.currentIndex.toString()}/${state.uploadState.totalChunks.toString()} chunks already saved. No problem - Resume inscription will continue from here.`,
+            'support'
           );
         }
       } catch (error) {
@@ -5162,7 +5224,7 @@
         await preparePayload();
       }
       if (state.duplicateId !== null && !dom.allowDuplicateInput.checked) {
-        throw new Error('Duplicate payload must be acknowledged before continuing.');
+        throw new Error('Existing payload must be acknowledged before continuing.');
       }
       const capabilities = resolveContractCapabilities(state.contract);
       if (capabilities.supportsPause) {
@@ -5183,10 +5245,12 @@
     const runInscription = async () => {
       setBusy(true);
       resetSteps();
+      let flowStarted = false;
       try {
         await validateMintReadiness();
         const prepared = state.prepared;
         await refreshUploadState(prepared.expectedHash);
+        flowStarted = true;
         const feeEstimate = getFeeEstimate(prepared.chunks.length);
         const hasUploadState = !!state.uploadState;
         let didSendBeforeSeal = false;
@@ -5250,6 +5314,10 @@
           await pauseBeforeNext('Next transaction in');
         } else {
           setStep('begin', 'done', 'Already started');
+          appendLog(
+            `Existing upload data found: ${state.uploadState.currentIndex.toString()}/${state.uploadState.totalChunks.toString()} chunks already saved. Resuming inscription.`,
+            'support'
+          );
         }
 
         const currentIndex = state.uploadState
@@ -5318,7 +5386,30 @@
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         appendLog(`Mint failed: ${message}`);
-        setStatus(dom.walletStatus, `<strong>Mint failed</strong> ${message}`, 'error', 'rose');
+        if (flowStarted && state.prepared?.expectedHash) {
+          await refreshUploadState(state.prepared.expectedHash);
+        }
+        if (flowStarted) {
+          if (state.uploadState) {
+            appendLog(
+              'No problem - existing upload data was found. Click Resume inscription to continue from the saved chunks.',
+              'support'
+            );
+          } else {
+            appendLog(
+              'No problem - restart the inscription when ready. Re-select the same file and the app will reuse any existing upload data it finds.',
+              'support'
+            );
+          }
+        }
+        setStatus(
+          dom.walletStatus,
+          flowStarted
+            ? `<strong>Mint stopped</strong> ${message}. No problem - restart when ready.`
+            : `<strong>Mint blocked</strong> ${message}`,
+          'error',
+          'rose'
+        );
         const pendingStep = [dom.stepSeal, dom.stepUpload, dom.stepBegin].find((step) =>
           step.classList.contains('pending')
         );
@@ -5327,6 +5418,7 @@
           pendingStep.classList.add('error');
           pendingStep.querySelector('span').textContent = 'Error';
         }
+        renderPreparedState();
       } finally {
         setBusy(false);
         updateControls();
