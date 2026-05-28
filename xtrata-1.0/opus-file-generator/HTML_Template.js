@@ -141,7 +141,7 @@ const buildCoverMarkup = (config, title) => {
     'image/png'
   )};base64,${visualBase64}`;
   if (visualMimeType.startsWith('video/')) {
-    return `<video controls muted loop playsinline preload="metadata" aria-label="${escapeAttr(
+    return `<video muted loop playsinline autoplay preload="metadata" aria-label="${escapeAttr(
       title
     )} visual"><source src="${escapeAttr(visualSrc)}" type="${escapeAttr(
       visualMimeType
@@ -275,6 +275,14 @@ const buildXtrataAudioPlayerHtml = (config) => {
       background: #dfe8df;
       border-bottom: 1px solid var(--line);
       overflow: hidden;
+      cursor: pointer;
+      user-select: none;
+      touch-action: manipulation;
+    }
+
+    .cover:focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: -6px;
     }
 
     .cover img,
@@ -283,6 +291,7 @@ const buildXtrataAudioPlayerHtml = (config) => {
       height: 100%;
       object-fit: cover;
       display: block;
+      pointer-events: none;
     }
 
     .cover-placeholder {
@@ -396,7 +405,7 @@ const buildXtrataAudioPlayerHtml = (config) => {
   <main class="player" data-xtrata-player-mode="${escapeAttr(
     source.mode
   )}" data-xtrata-dependencies="${escapeAttr(dependencies.join(','))}">
-    <section class="cover" aria-label="Cover art">
+    <section id="xtrataCover" class="cover" role="button" tabindex="0" aria-label="Play or pause audio. Double click to stop and reset." title="Click to play or pause. Double click to stop and reset.">
       ${buildCoverMarkup(config, title)}
     </section>
     <section class="content">
@@ -423,8 +432,10 @@ const buildXtrataAudioPlayerHtml = (config) => {
   <script>
     (function () {
       const audio = document.getElementById('xtrataAudio');
+      const cover = document.getElementById('xtrataCover');
       const status = document.getElementById('playerStatus');
       const manifestNode = document.getElementById('xtrataPlayerManifest');
+      let coverClickTimer = 0;
       let manifest = {};
       try {
         manifest = JSON.parse(manifestNode.textContent || '{}');
@@ -439,6 +450,72 @@ const buildXtrataAudioPlayerHtml = (config) => {
       };
 
       if (!audio) return;
+
+      const clearCoverClickTimer = () => {
+        if (!coverClickTimer) return;
+        window.clearTimeout(coverClickTimer);
+        coverClickTimer = 0;
+      };
+
+      const resetAudioToStart = () => {
+        clearCoverClickTimer();
+        audio.pause();
+        try {
+          audio.currentTime = 0;
+        } catch (_error) {
+          // Some browsers reject seeking before media metadata is available.
+        }
+        setStatus('Stopped. Ready from beginning.');
+      };
+
+      const toggleAudioPlayback = () => {
+        clearCoverClickTimer();
+        if (!audio.paused && !audio.ended) {
+          audio.pause();
+          setStatus('Paused.');
+          return;
+        }
+
+        if (audio.ended) {
+          try {
+            audio.currentTime = 0;
+          } catch (_error) {}
+        }
+
+        const playResult = audio.play();
+        if (playResult && typeof playResult.catch === 'function') {
+          playResult
+            .then(() => setStatus('Playing.'))
+            .catch(() => {
+              setStatus('Playback was blocked. Use the audio controls to start playback.', true);
+            });
+        } else {
+          setStatus('Playing.');
+        }
+      };
+
+      if (cover) {
+        cover.addEventListener('click', (event) => {
+          event.preventDefault();
+          clearCoverClickTimer();
+          coverClickTimer = window.setTimeout(toggleAudioPlayback, 300);
+        });
+
+        cover.addEventListener('dblclick', (event) => {
+          event.preventDefault();
+          resetAudioToStart();
+        });
+
+        cover.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            toggleAudioPlayback();
+          } else if (event.key === 'Escape') {
+            event.preventDefault();
+            resetAudioToStart();
+          }
+        });
+      }
 
       const support = audio.canPlayType(manifest.audioMimeType || '');
       if (!support) {
