@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   buildRuntimeContentCacheKey,
+  DEFAULT_RUNTIME_CONTENT_CACHE_LIMIT_BYTES,
   getRuntimeContentCacheBucket,
   hasRuntimeContentCache,
+  inspectRuntimeContentCacheUsage,
   readRuntimeContentCache,
   runtimeBytesToHex,
   writeRuntimeContentCache
@@ -157,5 +159,43 @@ describe('runtime content cache', () => {
     expect(
       Array.from(new Uint8Array(await new Response(cached?.body).arrayBuffer()))
     ).toEqual([4, 5, 6]);
+  });
+
+  it('reports runtime cache usage against the reserved budget', async () => {
+    const list = vi.fn(async () => ({
+      objects: [
+        { key: 'runtime-content/mainnet/demo/1/abc123', size: 4 },
+        { key: 'runtime-content/mainnet/demo/2/def456', size: 6 }
+      ],
+      truncated: false
+    }));
+    const env = {
+      RUNTIME_CONTENT_CACHE_LIMIT_BYTES: '10',
+      RUNTIME_CONTENT_CACHE: {
+        get: vi.fn(),
+        put: vi.fn(),
+        delete: vi.fn(),
+        list,
+        getUploadUrl: vi.fn()
+      }
+    } as unknown as RuntimeEnv;
+
+    const usage = await inspectRuntimeContentCacheUsage(env);
+
+    expect(list).toHaveBeenCalledWith({ prefix: 'runtime-content/' });
+    expect(usage.available).toBe(true);
+    expect(usage.objectCount).toBe(2);
+    expect(usage.totalBytes).toBe(10);
+    expect(usage.limitBytes).toBe(10);
+    expect(usage.usageRatio).toBe(1);
+    expect(usage.warningLevel).toBe('exceeded');
+  });
+
+  it('uses a 5 GB default runtime cache budget when no env override is set', async () => {
+    const usage = await inspectRuntimeContentCacheUsage({});
+
+    expect(usage.available).toBe(false);
+    expect(usage.limitBytes).toBe(DEFAULT_RUNTIME_CONTENT_CACHE_LIMIT_BYTES);
+    expect(usage.warningLevel).toBe('unknown');
   });
 });

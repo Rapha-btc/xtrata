@@ -72,7 +72,7 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 - `functions/lib/collections.ts` implements slug normalization and storage-limit helpers; `functions/lib/__tests__/collections.test.ts` guards them via Vitest.
 - `functions/lib/fee-guidance.ts` owns chunk-based mining-fee assumptions and estimate generation for collection guidance responses.
 - `functions/lib/collection-deploy.ts` validates whether a draft has a confirmed on-chain deploy transaction before upload/publish operations.
-- `functions/collections/health.ts` provides the `/collections/health` check used by the diagnostics panel to confirm D1 connectivity and table counts.
+- `functions/collections/health.ts` provides the `/collections/health` check used by the diagnostics panel to confirm D1 connectivity, table counts, storage bindings, and runtime inscription cache budget warnings.
 
 ## Contracts, network, and wallet plumbing
 

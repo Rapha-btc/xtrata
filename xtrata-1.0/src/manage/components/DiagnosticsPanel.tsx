@@ -4,7 +4,15 @@ import {
   parseManageJsonResponse,
   toManageApiErrorMessage
 } from '../lib/api-errors';
+import { formatBytes } from '../../lib/utils/format';
 import InfoTooltip from './InfoTooltip';
+
+type RuntimeCacheWarningLevel =
+  | 'ok'
+  | 'warning'
+  | 'critical'
+  | 'exceeded'
+  | 'unknown';
 
 type DbHealth = {
   collectionsCount: number;
@@ -23,6 +31,21 @@ type DbHealth = {
     }>;
     availableBindings: string[];
   };
+  runtimeCache?: {
+    available: boolean;
+    binding: string | null;
+    prefix: string;
+    objectCount: number;
+    totalBytes: number;
+    limitBytes: number;
+    usageRatio: number | null;
+    warningLevel: RuntimeCacheWarningLevel;
+    warningMessage: string | null;
+    scannedAll: boolean;
+    pagesScanned: number;
+    sampleKeys: string[];
+    error: string | null;
+  };
 };
 
 type UploadToken = {
@@ -37,6 +60,17 @@ type UploadToken = {
 type DiagnosticsPanelProps = {
   activeCollectionId?: string;
 };
+
+const formatHealthBytes = (value: number) =>
+  formatBytes(BigInt(Math.max(0, Math.trunc(value))));
+
+const formatPercent = (value: number | null) =>
+  typeof value === 'number' && Number.isFinite(value)
+    ? `${(value * 100).toFixed(1)}%`
+    : 'n/a';
+
+const isRuntimeCacheBudgetAlert = (level: RuntimeCacheWarningLevel) =>
+  level === 'warning' || level === 'critical' || level === 'exceeded';
 
 export default function DiagnosticsPanel(props: DiagnosticsPanelProps) {
   const [collectionId, setCollectionId] = useState('');
@@ -224,6 +258,19 @@ export default function DiagnosticsPanel(props: DiagnosticsPanelProps) {
               {dbHealth.storage?.selectedBinding ?? 'none selected'}
             </span>
           </div>
+          <div>
+            <span className="meta-label info-label">
+              runtime cache
+              <InfoTooltip text="R2 usage for cached inscription bytes served through `/runtime/content`; default budget is 5 GB." />
+            </span>
+            <span className="meta-value">
+              {dbHealth.runtimeCache?.available
+                ? `${formatHealthBytes(dbHealth.runtimeCache.totalBytes)} / ${formatHealthBytes(
+                    dbHealth.runtimeCache.limitBytes
+                  )}`
+                : 'not configured'}
+            </span>
+          </div>
         </div>
       )}
       {dbHealth?.storage && (
@@ -244,6 +291,29 @@ export default function DiagnosticsPanel(props: DiagnosticsPanelProps) {
             })
             .join(', ')}
         </p>
+      )}
+      {dbHealth?.runtimeCache && (
+        <p className="meta-value">
+          Runtime inscription cache:{' '}
+          {dbHealth.runtimeCache.available
+            ? `${dbHealth.runtimeCache.objectCount} objects under ${dbHealth.runtimeCache.prefix} · ${formatPercent(
+                dbHealth.runtimeCache.usageRatio
+              )} of budget · scan ${
+                dbHealth.runtimeCache.scannedAll ? 'complete' : 'partial'
+              }`
+            : 'RUNTIME_CONTENT_CACHE binding is not available.'}
+        </p>
+      )}
+      {dbHealth?.runtimeCache?.warningMessage && (
+        <div
+          className={
+            isRuntimeCacheBudgetAlert(dbHealth.runtimeCache.warningLevel)
+              ? 'alert'
+              : 'meta-value'
+          }
+        >
+          {dbHealth.runtimeCache.warningMessage}
+        </div>
       )}
 
       <label className="field">

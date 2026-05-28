@@ -11,5 +11,7 @@ describe('format helpers', () => {
   it('formats byte counts', () => {
     expect(formatBytes(512n)).toBe('512 B');
     expect(formatBytes(2048n)).toBe('2.0 KB');
+    expect(formatBytes(5n * 1024n * 1024n)).toBe('5.00 MB');
+    expect(formatBytes(5n * 1024n * 1024n * 1024n)).toBe('5.00 GB');
   });
 });

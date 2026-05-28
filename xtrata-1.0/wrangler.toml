@@ -2,6 +2,9 @@ name = "xtrata"
 compatibility_date = "2026-02-14"
 pages_build_output_dir = "dist"
 
+[vars]
+RUNTIME_CONTENT_CACHE_LIMIT_BYTES = "5368709120"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "xtrata-manage"
