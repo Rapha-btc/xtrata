@@ -2580,6 +2580,15 @@ p {
   gap: 12px;
 }
 
+.alert--supportive {
+  border-color: color-mix(in srgb, var(--badge-mainnet) 46%, var(--alert-border));
+  background: color-mix(in srgb, var(--badge-mainnet) 12%, var(--surface-soft));
+}
+
+.alert--supportive strong {
+  color: var(--ink);
+}
+
 .button {
   border: none;
   border-radius: 999px;
@@ -6660,6 +6669,12 @@ p {
   color: var(--muted);
   word-break: normal;
   overflow-wrap: break-word;
+}
+
+.mint-log__item--supportive {
+  color: var(--ink);
+  border-left: 3px solid var(--badge-mainnet);
+  padding-left: 8px;
 }
 
 .collection-live-page__hero-alert {

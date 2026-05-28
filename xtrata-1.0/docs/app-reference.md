@@ -38,10 +38,17 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 
 ## Top-level layout and navigation
 
+- `index.html` is the active public homepage entry point. It is a self-contained inline HTML/CSS/JS app, so homepage-facing copy, layout, wallet, viewer, and inscription-flow changes must be applied here when they are meant to affect the public home experience.
 - `src/App.tsx` owns the main layout, section order, anchor buttons, collapse state, deploy panel, and high-level app state wiring.
 - `src/styles/app.css` owns layout tokens, widths, grid sizing, square preview frames, and global layout rules.
 - `src/main.tsx` boots the app and wires providers (React Query) and global CSS.
 - `src/lib/theme/preferences.ts` owns theme mode catalog/persistence and document-level theme application.
+
+## Public homepage
+
+- The root `index.html` now carries the public homepage UI directly with inline styles and scripts, including homepage wallet connect, inscription preparation, transaction logs, viewer grid, token preview, examples, and explorer mode.
+- Treat `src/PublicApp.tsx`/`src/SimplePublicHome.tsx` as React public-app references or alternate surfaces, not the only homepage implementation. If a requested change affects public homepage behavior or wording, make the effective change in `index.html` and mirror it in React modules only when those modules still expose the same user-facing surface.
+- For inscription UX changes, keep the homepage inline mint flow aligned with `src/screens/MintScreen.tsx`: preserve begin -> batch/chunk -> seal order, keep resume/recovery messaging consistent, and do not hide errors.
 
 ## Screens and shared UI
 
@@ -189,12 +196,12 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 ## Update types (simple -> complex)
 
 1) Text copy, labels, and button titles.
-Files: `src/App.tsx`, `src/screens/MintScreen.tsx`, `src/screens/ViewerScreen.tsx`, `src/screens/MyWalletScreen.tsx`, `src/components/TokenContentPreview.tsx`.
-Notes: prefer in-place edits; keep strings short for tight layouts.
+Files: `index.html`, `src/App.tsx`, `src/screens/MintScreen.tsx`, `src/screens/ViewerScreen.tsx`, `src/screens/MyWalletScreen.tsx`, `src/components/TokenContentPreview.tsx`, `src/PublicApp.tsx`, `src/SimplePublicHome.tsx`.
+Notes: prefer in-place edits; keep strings short for tight layouts. If the copy appears on the public homepage, the effective change must be present in `index.html`.
 
 2) Layout spacing, widths, and overall page density.
-Files: `src/styles/app.css`, `src/App.tsx`.
-Notes: use CSS variables and layout classes; avoid per-component inline styles.
+Files: `index.html`, `src/styles/app.css`, `src/App.tsx`.
+Notes: use CSS variables and layout classes where available; for the homepage, update the inline CSS in `index.html`. Avoid horizontal shifts and preserve stable responsive widths.
 
 3) Grid layout, square sizing, and preview sizing for viewer or wallet.
 Files: `src/styles/app.css`, `src/screens/ViewerScreen.tsx`, `src/screens/MyWalletScreen.tsx`, `src/components/TokenCardMedia.tsx`, `src/components/TokenContentPreview.tsx`.
@@ -221,8 +228,8 @@ Files: `src/lib/wallet/session.ts`, `src/lib/wallet/storage.ts`, `src/lib/wallet
 Notes: session persistence is separated from UI state and should stay that way.
 
 8) Mint flow changes (file validation, hashing, fee logic, transaction steps).
-Files: `src/screens/MintScreen.tsx`, `src/lib/chunking/hash.ts`, `src/lib/protocol/clarity.ts`, `src/lib/contract/client.ts`, `src/lib/wallet/adapter.ts`.
-Notes: keep the three-step mint flow in MintScreen and avoid hiding errors.
+Files: `index.html`, `src/screens/MintScreen.tsx`, `src/lib/chunking/hash.ts`, `src/lib/protocol/clarity.ts`, `src/lib/contract/client.ts`, `src/lib/wallet/adapter.ts`.
+Notes: keep the three-step mint flow in MintScreen and the inline homepage flow; avoid hiding errors. User-facing recovery/resume copy must stay supportive and consistent across both surfaces.
 
 9) Viewer data fetching, caching, and content decoding.
 Files: `src/lib/viewer/queries.ts`, `src/lib/viewer/content.ts`, `src/lib/viewer/cache.ts`, `src/components/TokenCardMedia.tsx`, `src/components/TokenContentPreview.tsx`.

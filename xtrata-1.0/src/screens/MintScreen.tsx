@@ -181,6 +181,12 @@ const formatStepStatus = (state: StepState) => {
   return 'Idle';
 };
 
+const isSupportiveMintLog = (message: string) =>
+  message.startsWith('No problem') ||
+  message.startsWith('Existing upload data') ||
+  message.startsWith('On-chain confirmed') ||
+  message.startsWith('Matched your last inscription attempt');
+
 type InfoTipProps = {
   text: string;
   label: string;
@@ -1313,7 +1319,7 @@ export default function MintScreen(props: MintScreenProps) {
       if (previousAttempt && previousAttempt.expectedHashHex === expectedHashHex) {
         const name = previousAttempt.fileName ?? selected.name;
         setResumeHint(
-          `Matched your last inscription attempt (${name}). Resume will pick up where you left off.`
+          `No problem - matched your last inscription attempt (${name}). Resume inscription will pick up where you left off.`
         );
       } else {
         setResumeHint(null);
@@ -1699,9 +1705,9 @@ export default function MintScreen(props: MintScreenProps) {
     }
     if (hasDuplicate && !allowDuplicate) {
       setMintStatus(
-        'Duplicate hash detected. Confirm the warning to proceed.'
+        'Existing inscription found. Confirm the notice to proceed anyway.'
       );
-      appendLog('Mint blocked: duplicate hash not acknowledged.');
+      appendLog('Mint blocked: existing inscription notice not acknowledged.');
       logWarn('mint', 'Mint blocked: duplicate hash not acknowledged');
       return null;
     }
@@ -1820,7 +1826,7 @@ export default function MintScreen(props: MintScreenProps) {
           throw error;
         }
         appendLog(
-          'Retrying batch after wallet error. Update the fee if needed.'
+          'No problem - retrying this batch after the wallet error. If it stops, re-select the same file and click Resume inscription.'
         );
       }
     }
@@ -1962,8 +1968,12 @@ export default function MintScreen(props: MintScreenProps) {
       return;
     }
     if (resumeState) {
-      setMintStatus('Upload already started. Resume to continue.');
-      appendLog('Mint blocked: upload already in progress.');
+      setMintStatus(
+        'Existing upload data found. No problem - use Resume inscription to continue.'
+      );
+      appendLog(
+        'Existing upload data found. No problem - click Resume inscription to continue from the saved chunks.'
+      );
       logWarn('mint', 'Mint blocked: upload already in progress');
       return;
     }
@@ -2242,11 +2252,23 @@ export default function MintScreen(props: MintScreenProps) {
       setResumeState(null);
     } catch (error) {
       const rawMessage = error instanceof Error ? error.message : String(error);
-      const message = isExpiredContractError(rawMessage)
-        ? formatExpiredMintMessage()
-        : rawMessage;
-      setMintStatus(`Mint failed: ${message}`);
+      const expired = isExpiredContractError(rawMessage);
+      const message = expired ? formatExpiredMintMessage() : rawMessage;
+      setMintStatus(
+        `Mint stopped: ${message}. ${
+          expired
+            ? 'No problem - start over from chunk 0 when ready.'
+            : 'No problem - restart the inscription when ready.'
+        }`
+      );
       appendLog(`Mint failed: ${message}`);
+      appendLog(
+        expired
+          ? 'No problem - this upload window expired. Click Start over to clear it, then begin again from chunk 0.'
+          : activeStage === 'begin'
+          ? 'No problem - restart the inscription when ready. Re-select the same file and the app will check for any existing upload data.'
+          : 'No problem - restart the inscription with the same file. Existing upload data will be found and the button will switch to Resume inscription.'
+      );
       logWarn('mint', 'Mint failed', { error: message });
       setTxDelaySeconds(null);
       setTxDelayLabel(null);
@@ -2324,6 +2346,9 @@ export default function MintScreen(props: MintScreenProps) {
     resetSteps();
     setBeginState('done');
     appendLog('Resuming inscription.');
+    appendLog(
+      `Existing upload data found: ${resumeState.currentIndex.toString()}/${resumeState.totalChunks.toString()} chunks already saved.`
+    );
 
     let activeStage: 'upload' | 'seal' = 'upload';
 
@@ -2486,11 +2511,21 @@ export default function MintScreen(props: MintScreenProps) {
       setResumeCheckKey((prev) => prev + 1);
     } catch (error) {
       const rawMessage = error instanceof Error ? error.message : String(error);
-      const message = isExpiredContractError(rawMessage)
-        ? formatExpiredMintMessage()
-        : rawMessage;
-      setMintStatus(`Mint failed: ${message}`);
+      const expired = isExpiredContractError(rawMessage);
+      const message = expired ? formatExpiredMintMessage() : rawMessage;
+      setMintStatus(
+        `Mint stopped: ${message}. ${
+          expired
+            ? 'No problem - start over from chunk 0 when ready.'
+            : 'No problem - keep this file selected and resume again when ready.'
+        }`
+      );
       appendLog(`Mint failed: ${message}`);
+      appendLog(
+        expired
+          ? 'No problem - this upload window expired. Click Start over to clear it, then begin again from chunk 0.'
+          : 'No problem - keep this file selected and click Resume inscription again after the wallet or network issue is clear.'
+      );
       logWarn('mint', 'Resume failed', { error: message });
       setTxDelaySeconds(null);
       setTxDelayLabel(null);
@@ -3249,17 +3284,16 @@ export default function MintScreen(props: MintScreenProps) {
             will run in one wallet approval via {smallMintHelperContractId}.
           </div>
         ) : (
-          <div className="alert">
+          <div className="alert alert--supportive">
             <strong>Automated sequence.</strong> After you approve the first
             transaction, all remaining transactions will appear automatically in
-            order. If anything goes wrong, reload the page and re-select the
-            exact same file — your latest upload is stored locally (IndexedDB)
-            and will rehydrate the mint state so you can resume where you left
-            off.
+            order. If anything goes wrong, it is no problem: restart this
+            inscription, re-select the exact same file, and the app will find
+            existing upload data so you can use Resume inscription.
           </div>
         )}
 
-        {resumeHint && <div className="alert">{resumeHint}</div>}
+        {resumeHint && <div className="alert alert--supportive">{resumeHint}</div>}
 
         <div className="mint-steps">
           <div className={`mint-step mint-step--${beginState}`}>
@@ -3388,9 +3422,9 @@ export default function MintScreen(props: MintScreenProps) {
         )}
 
         {resumeState && (
-          <div className="alert">
+          <div className="alert alert--supportive">
             <div>
-              <strong>Upload already started.</strong>{' '}
+              <strong>Existing upload data found. No problem.</strong>{' '}
               {resumeState.currentIndex.toString()}/
               {resumeState.totalChunks.toString()} chunks uploaded.
               {resumeInfo && !('error' in resumeInfo) && (
@@ -3407,7 +3441,8 @@ export default function MintScreen(props: MintScreenProps) {
                 </div>
               )}
               <div className="meta-value">
-                Single-mint uploads are not auto-cancelled. You can resume for up to ~
+                Click Resume inscription to continue from the saved chunks.
+                Single-mint uploads are not auto-cancelled, and you can resume for up to ~
                 {SINGLE_MINT_UPLOAD_EXPIRY_BLOCKS.toLocaleString()} blocks after the
                 last upload transaction.
               </div>
@@ -3443,9 +3478,9 @@ export default function MintScreen(props: MintScreenProps) {
         )}
 
         {duplicateMatch && (
-          <div className="alert">
+          <div className="alert alert--supportive">
             <div>
-              <strong>Duplicate hash detected.</strong> Token #
+              <strong>Existing inscription found.</strong> Good news: token #
               {duplicateMatch.id.toString()} already matches this content
               {duplicateMatch.owner
                 ? ` (owner ${duplicateMatch.owner}).`
@@ -3478,7 +3513,12 @@ export default function MintScreen(props: MintScreenProps) {
         {mintLog.length > 0 && (
           <div className="mint-log">
             {mintLog.map((entry, index) => (
-              <div key={`${entry}-${index}`} className="mint-log__item">
+              <div
+                key={`${entry}-${index}`}
+                className={`mint-log__item${
+                  isSupportiveMintLog(entry) ? ' mint-log__item--supportive' : ''
+                }`}
+              >
                 {entry}
               </div>
             ))}
