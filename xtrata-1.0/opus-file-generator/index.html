@@ -97,7 +97,7 @@
     }
 
     main {
-      width: min(1180px, calc(100vw - 32px));
+      width: min(1380px, calc(100vw - 32px));
       margin: 0 auto;
       padding: 24px 0 36px;
     }
@@ -401,6 +401,10 @@
       gap: 16px;
     }
 
+    aside.output-stack #export-section {
+      order: -1;
+    }
+
     .compact-box {
       border: 1px solid var(--line);
       border-radius: 8px;
@@ -633,13 +637,161 @@
 
     .html-player-options {
       display: grid;
-      gap: 12px;
+      gap: 9px;
+    }
+
+    #export-section .tool-panel__body {
+      padding: 10px;
+    }
+
+    #export-section fieldset,
+    #export-section .compact-box {
+      padding: 9px;
+    }
+
+    #export-section .field {
+      gap: 4px;
+    }
+
+    #export-section input[type="file"],
+    #export-section input[type="text"],
+    #export-section input[type="number"],
+    #export-section select,
+    #export-section textarea {
+      min-height: 34px;
+      padding: 7px 8px;
+    }
+
+    #export-section .format-option {
+      min-height: 40px;
+      padding: 7px;
+    }
+
+    #export-section .tool-panel__header p,
+    #embeddedPlayerOptions p {
+      font-size: 0.74rem;
+      line-height: 1.25;
+    }
+
+    #export-section .format-option small {
+      display: none;
+    }
+
+    #embeddedPlayerOptions {
+      display: none;
+    }
+
+    #export-section .html-export-status {
+      min-height: 34px;
+      padding: 7px 8px;
+      font-size: 0.78rem;
+    }
+
+    #export-section .button-container {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 7px;
+    }
+
+    #export-section .button-container button {
+      min-height: 34px;
+      padding-inline: 8px;
+      font-size: 0.8rem;
+    }
+
+    .export-details {
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .export-details > summary {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      min-height: 40px;
+      padding: 8px;
+      list-style: none;
+    }
+
+    .export-details > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .export-details > summary::after {
+      content: "+";
+      display: inline-grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      color: var(--muted);
+      font-weight: 900;
+    }
+
+    .export-details[open] > summary::after {
+      content: "-";
+    }
+
+    .export-details > summary span {
+      display: block;
+      color: var(--ink);
+      font-size: 0.9rem;
+      font-weight: 900;
+    }
+
+    .export-details > summary small {
+      display: none;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 700;
+      grid-column: 1;
+      grid-row: 2;
+    }
+
+    .export-details > summary::after {
+      grid-column: 2;
+      grid-row: 1 / span 2;
+      align-self: center;
+    }
+
+    .export-details__body {
+      display: grid;
+      gap: 10px;
+      border-top: 1px solid var(--line);
+      padding: 10px;
+    }
+
+    #playerMetadataPanel .form-stack {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    #stemMetadataFields,
+    #sampleMetadataFields,
+    #advancedMetadataDetails,
+    #bpmGroup,
+    #playerMetadataPanel .format-option,
+    #playerMetadataPanel label[for="descriptionInput"],
+    #playerMetadataPanel label[for="licenseInput"] {
+      grid-column: 1 / -1;
+    }
+
+    #descriptionInput {
+      min-height: 50px;
+      max-height: 80px;
+    }
+
+    .html-export-summary {
+      display: none;
     }
 
     .html-mode-options {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
+      gap: 7px;
     }
 
     .html-export-status {
@@ -715,11 +867,11 @@
 
     .live-preview-panel {
       display: grid;
-      gap: 10px;
+      gap: 7px;
       border: 1px solid var(--line);
       border-radius: 8px;
       background: #fff;
-      padding: 12px;
+      padding: 10px;
     }
 
     .live-preview-panel h3 {
@@ -728,12 +880,13 @@
     }
 
     .live-preview-frame {
-      width: 100%;
+      width: min(100%, 190px);
       aspect-ratio: 1 / 1;
       border: 1px solid var(--line-strong);
       border-radius: 8px;
       background: #10120f;
       overflow: hidden;
+      margin-inline: auto;
     }
 
     .live-preview-frame iframe {
@@ -807,6 +960,113 @@
       display: none !important;
     }
 
+    @media (min-width: 1180px) {
+      main {
+        width: min(1380px, calc(100vw - 40px));
+        padding-top: 18px;
+      }
+
+      .tool-grid {
+        grid-template-columns:
+          minmax(440px, 1fr)
+          minmax(340px, 0.66fr)
+          minmax(390px, 0.76fr);
+      }
+
+      aside.output-stack {
+        display: contents;
+      }
+
+      #audio-section {
+        grid-column: 1;
+        grid-row: 1;
+      }
+
+      #audio-output-section {
+        grid-column: 2;
+        grid-row: 1;
+      }
+
+      #export-section {
+        grid-column: 3;
+        grid-row: 1;
+        order: 0;
+        align-self: start;
+      }
+
+      #export-section .tool-panel__header,
+      #export-section .tool-panel__body {
+        padding: 12px;
+      }
+
+      #export-section .tool-panel__header p,
+      #embeddedPlayerOptions p {
+        font-size: 0.8rem;
+      }
+
+      #export-section .html-player-options {
+        gap: 9px;
+      }
+
+      #export-section fieldset,
+      #export-section .compact-box {
+        padding: 10px;
+      }
+
+      #export-section .format-option {
+        min-height: 58px;
+        padding: 8px;
+      }
+
+      #export-section .format-option small {
+        font-size: 0.72rem;
+        line-height: 1.25;
+      }
+
+      #export-section .info-summary-section {
+        gap: 6px;
+        padding: 8px;
+      }
+
+      #export-section .info-summary-section p,
+      #export-section .info-summary-section span {
+        font-size: 0.74rem;
+      }
+
+      #export-section .button-container {
+        gap: 7px;
+      }
+
+      #export-section button {
+        min-height: 34px;
+        padding-inline: 10px;
+        font-size: 0.82rem;
+      }
+
+      #playerMetadataPanel .form-stack {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      #stemMetadataFields,
+      #sampleMetadataFields,
+      #bpmGroup,
+      #playerMetadataPanel .format-option,
+      #playerMetadataPanel label[for="descriptionInput"],
+      #playerMetadataPanel label[for="licenseInput"] {
+        grid-column: 1 / -1;
+      }
+
+      .live-preview-panel {
+        gap: 7px;
+        padding: 10px;
+      }
+
+      .live-preview-frame {
+        width: min(100%, 280px);
+        margin-inline: auto;
+      }
+    }
+
     @media (max-width: 920px) {
       main {
         width: min(100% - 20px, 720px);
@@ -849,6 +1109,13 @@
       .format-options,
       .html-mode-options,
       .info-summary-section {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 520px) {
+      #playerMetadataPanel .form-stack,
+      #export-section .button-container {
         grid-template-columns: 1fr;
       }
     }
@@ -975,7 +1242,7 @@
     </section>
 
     <aside class="output-stack">
-      <section class="tool-panel">
+      <section id="audio-output-section" class="tool-panel">
         <div class="tool-panel__header">
           <div>
             <h2>Audio output</h2>
@@ -1065,79 +1332,87 @@
               </div>
             </div>
 
-            <fieldset>
-              <legend>Visual source</legend>
-              <div class="html-mode-options">
-                <label class="format-option">
-                  <input type="radio" name="visualSourceMode" value="embedded" checked>
-                  <span>
-                    <strong>Embedded visual</strong>
-                    <small>Upload image, GIF, or video into the HTML</small>
-                  </span>
-                </label>
-                <label class="format-option">
-                  <input type="radio" name="visualSourceMode" value="recursive">
-                  <span>
-                    <strong>Recursive visual</strong>
-                    <small>Load cover art from an existing inscription</small>
-                  </span>
-                </label>
-              </div>
-            </fieldset>
-
-            <div id="embeddedVisualOptions" class="compact-box">
-              <h3>Embedded visual</h3>
-              <div class="form-stack">
-                <label class="field" for="standaloneArtworkInput">
-                  <span>Artwork / visual</span>
-                  <input type="file" id="standaloneArtworkInput" accept="image/*,video/*,.gif,.webp,.mp4,.webm,.mov">
-                </label>
-                <div class="standalone-artwork-grid">
-                  <div id="standaloneArtworkPreview" class="standalone-artwork-preview">
-                    <span>No visual selected</span>
+            <details id="visualOptionsDetails" class="export-details">
+              <summary>
+                <span>Artwork / cover</span>
+                <small>Optional embedded image, GIF, video, or recursive cover</small>
+              </summary>
+              <div class="export-details__body">
+                <fieldset>
+                  <legend>Visual source</legend>
+                  <div class="html-mode-options">
+                    <label class="format-option">
+                      <input type="radio" name="visualSourceMode" value="embedded" checked>
+                      <span>
+                        <strong>Embedded visual</strong>
+                        <small>Upload image, GIF, or video into the HTML</small>
+                      </span>
+                    </label>
+                    <label class="format-option">
+                      <input type="radio" name="visualSourceMode" value="recursive">
+                      <span>
+                        <strong>Recursive visual</strong>
+                        <small>Load cover art from an existing inscription</small>
+                      </span>
+                    </label>
                   </div>
-                  <div>
-                    <p id="standaloneArtworkStatus" class="standalone-artwork-status">No artwork selected.</p>
-                    <button id="clearStandaloneArtworkButton" class="button-small" type="button" disabled>Clear visual</button>
+                </fieldset>
+
+                <div id="embeddedVisualOptions" class="compact-box">
+                  <h3>Embedded visual</h3>
+                  <div class="form-stack">
+                    <label class="field" for="standaloneArtworkInput">
+                      <span>Artwork / visual</span>
+                      <input type="file" id="standaloneArtworkInput" accept="image/*,video/*,.gif,.webp,.mp4,.webm,.mov">
+                    </label>
+                    <div class="standalone-artwork-grid">
+                      <div id="standaloneArtworkPreview" class="standalone-artwork-preview">
+                        <span>No visual selected</span>
+                      </div>
+                      <div>
+                        <p id="standaloneArtworkStatus" class="standalone-artwork-status">No artwork selected.</p>
+                        <button id="clearStandaloneArtworkButton" class="button-small" type="button" disabled>Clear visual</button>
+                      </div>
+                    </div>
+                    <details>
+                      <summary>Show visual base64</summary>
+                      <textarea id="standaloneArtworkBase64Output" class="base64-output" readonly></textarea>
+                    </details>
                   </div>
                 </div>
-                <details>
-                  <summary>Show visual base64</summary>
-                  <textarea id="standaloneArtworkBase64Output" class="base64-output" readonly></textarea>
-                </details>
-              </div>
-            </div>
 
-            <div id="recursiveVisualOptions" class="compact-box hidden">
-              <h3>Recursive cover visual</h3>
-              <div class="form-stack">
-                <label class="field" for="recursiveCoverTokenId">
-                  <span>Cover token ID</span>
-                  <input type="text" id="recursiveCoverTokenId" placeholder="Optional: 314">
-                </label>
-                <label class="field" for="recursiveCoverUrl">
-                  <span>Direct cover URL</span>
-                  <input type="text" id="recursiveCoverUrl" placeholder="Optional: https://xtrata.xyz/inscription/314">
-                </label>
-                <label class="field" for="recursiveCoverKind">
-                  <span>Visual type</span>
-                  <select id="recursiveCoverKind">
-                    <option value="image" selected>Image / GIF</option>
-                    <option value="video">Video</option>
-                  </select>
-                </label>
-                <div class="info-summary-section">
-                  <p>Cover URL <span id="recursiveCoverUrlPreview" class="preview-value">Upload embedded artwork or enter a cover token ID/URL.</span></p>
-                  <p>Visual type <span>Image/GIF uses an image tag; video uses a muted looping visual.</span></p>
-                  <p>Mint note <span>Add the cover token as a recursive parent.</span></p>
+                <div id="recursiveVisualOptions" class="compact-box hidden">
+                  <h3>Recursive cover visual</h3>
+                  <div class="form-stack">
+                    <label class="field" for="recursiveCoverTokenId">
+                      <span>Cover token ID</span>
+                      <input type="text" id="recursiveCoverTokenId" placeholder="Optional: 314">
+                    </label>
+                    <label class="field" for="recursiveCoverUrl">
+                      <span>Direct cover URL</span>
+                      <input type="text" id="recursiveCoverUrl" placeholder="Optional: https://xtrata.xyz/inscription/314">
+                    </label>
+                    <label class="field" for="recursiveCoverKind">
+                      <span>Visual type</span>
+                      <select id="recursiveCoverKind">
+                        <option value="image" selected>Image / GIF</option>
+                        <option value="video">Video</option>
+                      </select>
+                    </label>
+                    <div class="info-summary-section">
+                      <p>Cover URL <span id="recursiveCoverUrlPreview" class="preview-value">Upload embedded artwork or enter a cover token ID/URL.</span></p>
+                      <p>Visual type <span>Image/GIF uses an image tag; video uses a muted looping visual.</span></p>
+                      <p>Mint note <span>Add the cover token as a recursive parent.</span></p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
+            </details>
 
-            <div class="info-summary-section">
+            <div class="info-summary-section html-export-summary">
               <p>Dependencies <span id="recursiveDependencyPreview" class="preview-value">None yet</span></p>
-              <p>Player output <span>Embedded and recursive sources can be mixed.</span></p>
-              <p>Preview <span>Updates automatically from the current form.</span></p>
+              <p>Source <span>Embedded or recursive</span></p>
+              <p>Preview <span>Live</span></p>
             </div>
 
             <section id="playerMetadataPanel" class="compact-box">
@@ -1189,27 +1464,35 @@
                     <input type="text" id="frequencyInput" name="frequency" readonly>
                   </label>
                 </fieldset>
-                <label class="format-option" for="loopCheckbox">
-                  <input type="checkbox" id="loopCheckbox" name="isLoop">
-                  <span>
-                    <strong>Loop</strong>
-                    <small>Enable tempo metadata</small>
-                  </span>
-                </label>
-                <div id="bpmGroup" class="field hidden">
-                  <label for="bpmInput">
-                    <span>BPM</span>
-                    <input type="number" id="bpmInput" name="bpm" min="1">
-                  </label>
-                </div>
-                <label class="field" for="descriptionInput">
-                  <span>Description</span>
-                  <textarea id="descriptionInput" name="description"></textarea>
-                </label>
-                <label class="field" for="licenseInput">
-                  <span>License</span>
-                  <input type="text" id="licenseInput" name="license" placeholder="All rights reserved">
-                </label>
+                <details id="advancedMetadataDetails" class="export-details metadata-more">
+                  <summary>
+                    <span>More metadata</span>
+                    <small>Loop, description, and license fields</small>
+                  </summary>
+                  <div class="export-details__body">
+                    <label class="format-option" for="loopCheckbox">
+                      <input type="checkbox" id="loopCheckbox" name="isLoop">
+                      <span>
+                        <strong>Loop</strong>
+                        <small>Enable tempo metadata</small>
+                      </span>
+                    </label>
+                    <div id="bpmGroup" class="field hidden">
+                      <label for="bpmInput">
+                        <span>BPM</span>
+                        <input type="number" id="bpmInput" name="bpm" min="1">
+                      </label>
+                    </div>
+                    <label class="field" for="descriptionInput">
+                      <span>Description</span>
+                      <textarea id="descriptionInput" name="description"></textarea>
+                    </label>
+                    <label class="field" for="licenseInput">
+                      <span>License</span>
+                      <input type="text" id="licenseInput" name="license" placeholder="All rights reserved">
+                    </label>
+                  </div>
+                </details>
               </form>
             </section>
 

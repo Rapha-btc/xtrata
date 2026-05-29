@@ -1,7 +1,7 @@
 // HTML_Template.js
 (function () {
 
-const XTRATA_PLAYER_TEMPLATE_VERSION = 'xtrata-opus-player-v4';
+const XTRATA_PLAYER_TEMPLATE_VERSION = 'xtrata-opus-player-v5';
 
 const escapeHtml = (value) =>
   String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -408,6 +408,8 @@ const buildXtrataAudioPlayerHtml = (config) => {
       background:
         linear-gradient(180deg, rgba(0, 0, 0, 0.62), transparent 24%),
         linear-gradient(0deg, rgba(0, 0, 0, 0.7), transparent 44%);
+      opacity: 1;
+      transition: opacity 0.28s ease;
     }
 
     .top-bar {
@@ -422,6 +424,9 @@ const buildXtrataAudioPlayerHtml = (config) => {
       align-items: start;
       padding: 12px;
       pointer-events: none;
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 0.28s ease, transform 0.28s ease;
     }
 
     .track-copy {
@@ -470,21 +475,6 @@ const buildXtrataAudioPlayerHtml = (config) => {
     .top-actions {
       pointer-events: auto;
       transition: opacity 0.18s ease;
-    }
-
-    .player[data-playback="playing"][data-panel="closed"] .track-copy {
-      opacity: 0;
-      transform: translateY(-4px);
-    }
-
-    .player[data-playback="playing"][data-panel="closed"] .top-actions {
-      opacity: 0.72;
-    }
-
-    .player[data-playback="playing"][data-panel="closed"]:hover .track-copy,
-    .player[data-playback="playing"][data-panel="closed"]:focus-within .track-copy {
-      opacity: 1;
-      transform: translateY(0);
     }
 
     button {
@@ -563,10 +553,6 @@ const buildXtrataAudioPlayerHtml = (config) => {
       transition: opacity 0.18s ease;
     }
 
-    .player[data-playback="playing"] .click-hint {
-      opacity: 0;
-    }
-
     .player[data-panel]:not([data-panel="closed"]) .click-hint {
       opacity: 0;
     }
@@ -603,8 +589,25 @@ const buildXtrataAudioPlayerHtml = (config) => {
       color: var(--ink);
       backdrop-filter: blur(16px);
       transform: translateY(calc(100% - 44px));
-      transition: transform 0.2s ease;
+      opacity: 1;
+      transition: transform 0.2s ease, opacity 0.28s ease;
       pointer-events: auto;
+    }
+
+    .player[data-chrome="hidden"][data-panel="closed"] .stage-scrim,
+    .player[data-chrome="hidden"][data-panel="closed"] .top-bar,
+    .player[data-chrome="hidden"][data-panel="closed"] .click-hint,
+    .player[data-chrome="hidden"][data-panel="closed"] .drawer {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .player[data-chrome="hidden"][data-panel="closed"] .top-bar {
+      transform: translateY(-8px);
+    }
+
+    .player[data-chrome="hidden"][data-panel="closed"] .drawer {
+      transform: translateY(100%);
     }
 
     .player[data-panel="controls"] .drawer,
@@ -823,7 +826,7 @@ const buildXtrataAudioPlayerHtml = (config) => {
   </style>
 </head>
 <body>
-  <main id="xtrataPlayer" class="player" data-panel="closed" data-playback="idle" data-xtrata-player-mode="${escapeAttr(
+  <main id="xtrataPlayer" class="player" data-panel="closed" data-playback="idle" data-chrome="visible" data-xtrata-player-mode="${escapeAttr(
     source.mode
   )}" data-xtrata-dependencies="${escapeAttr(dependencies.join(','))}">
     <section id="xtrataCover" class="stage" role="button" tabindex="0" aria-label="Click artwork to play or pause. Double click to stop and reset." title="Click to play or pause. Double click to stop and reset.">
@@ -923,8 +926,10 @@ const buildXtrataAudioPlayerHtml = (config) => {
       const panelViews = Array.from(document.querySelectorAll('[data-panel-view]'));
       const manifestNode = document.getElementById('xtrataPlayerManifest');
       let coverClickTimer = 0;
+      let chromeTimer = 0;
       let activePanel = 'closed';
       let manifest = {};
+      const CHROME_IDLE_DELAY_MS = 2800;
       try {
         manifest = JSON.parse(manifestNode.textContent || '{}');
       } catch (_error) {
@@ -966,6 +971,34 @@ const buildXtrataAudioPlayerHtml = (config) => {
       const getDuration = () =>
         Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : 0;
 
+      const clearChromeTimer = () => {
+        if (!chromeTimer) return;
+        window.clearTimeout(chromeTimer);
+        chromeTimer = 0;
+      };
+
+      const setChromeVisible = (visible) => {
+        if (player) player.dataset.chrome = visible ? 'visible' : 'hidden';
+      };
+
+      const scheduleChromeHide = () => {
+        clearChromeTimer();
+        if (activePanel !== 'closed') {
+          setChromeVisible(true);
+          return;
+        }
+        chromeTimer = window.setTimeout(() => {
+          if (activePanel === 'closed') {
+            setChromeVisible(false);
+          }
+        }, CHROME_IDLE_DELAY_MS);
+      };
+
+      const revealChrome = () => {
+        setChromeVisible(true);
+        scheduleChromeHide();
+      };
+
       const setPanel = (panelName) => {
         activePanel = panelName;
         if (player) player.dataset.panel = panelName;
@@ -983,6 +1016,12 @@ const buildXtrataAudioPlayerHtml = (config) => {
         });
         if (miniLabel) {
           miniLabel.textContent = panelName === 'closed' ? 'Controls' : panelName.slice(0, 1).toUpperCase() + panelName.slice(1);
+        }
+        if (isOpen) {
+          clearChromeTimer();
+          setChromeVisible(true);
+        } else {
+          revealChrome();
         }
       };
 
@@ -1082,7 +1121,12 @@ const buildXtrataAudioPlayerHtml = (config) => {
         Boolean(event.target.closest('button, input, a, [data-player-control]'));
 
       if (cover) {
+        ['pointermove', 'pointerenter', 'touchstart', 'focusin'].forEach((eventName) => {
+          cover.addEventListener(eventName, revealChrome, { passive: true });
+        });
+
         cover.addEventListener('click', (event) => {
+          revealChrome();
           if (isPlayerControlTarget(event)) return;
           event.preventDefault();
           clearCoverClickTimer();
@@ -1090,12 +1134,14 @@ const buildXtrataAudioPlayerHtml = (config) => {
         });
 
         cover.addEventListener('dblclick', (event) => {
+          revealChrome();
           if (isPlayerControlTarget(event)) return;
           event.preventDefault();
           resetAudioToStart();
         });
 
         cover.addEventListener('keydown', (event) => {
+          revealChrome();
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
             toggleAudioPlayback();
@@ -1124,6 +1170,7 @@ const buildXtrataAudioPlayerHtml = (config) => {
       }
       if (seekRange) {
         seekRange.addEventListener('input', () => {
+          revealChrome();
           const duration = getDuration();
           if (!duration) return;
           audio.currentTime = duration * (Number(seekRange.value) / 1000);
@@ -1184,6 +1231,7 @@ const buildXtrataAudioPlayerHtml = (config) => {
       setPanel('closed');
       updatePlaybackUi();
       updateProgress();
+      revealChrome();
     })();
   <\/script>
 </body>

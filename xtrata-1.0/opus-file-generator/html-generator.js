@@ -172,6 +172,7 @@ function updateHtmlModeUI() {
   const recursivePanel = getElement('recursivePlayerOptions');
   const embeddedVisualPanel = getElement('embeddedVisualOptions');
   const recursiveVisualPanel = getElement('recursiveVisualOptions');
+  const visualDetails = getElement('visualOptionsDetails');
   if (embeddedPanel) embeddedPanel.classList.toggle('hidden', mode !== 'embedded');
   if (recursivePanel) recursivePanel.classList.toggle('hidden', mode !== 'recursive');
   if (embeddedVisualPanel) {
@@ -179,6 +180,9 @@ function updateHtmlModeUI() {
   }
   if (recursiveVisualPanel) {
     recursiveVisualPanel.classList.toggle('hidden', visualMode !== 'recursive');
+  }
+  if (visualDetails && visualMode === 'recursive') {
+    visualDetails.open = true;
   }
   updateRecursiveUrlPreview();
   updateDependencyPreview();
@@ -641,6 +645,10 @@ function updateaudionalVisualBase64(base64Data, mimeType, fileName = '', options
   if (mimeType) audionalVisualMimeType = mimeType;
   audionalVisualName = fileName || '';
   if (output) output.value = base64Data ? stripDataURIPrefix(base64Data) : '';
+  if (base64Data) {
+    const visualDetails = getElement('visualOptionsDetails');
+    if (visualDetails) visualDetails.open = true;
+  }
   if (!base64Data) {
     audionalVisualName = '';
     if (options.renderPreview !== false) resetStandaloneArtworkPreview();

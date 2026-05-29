@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const frequencyInput = document.getElementById('frequencyInput');
     const noteList = document.getElementById('noteList');
     const form = document.getElementById('metadataForm');
+    const advancedMetadataDetails = document.getElementById('advancedMetadataDetails');
   
     if (!loopCheckbox || !bpmGroup || !bpmInput || !assetTypeInput || !sampleMetadataFields || !stemMetadataFields || !noteInput || !frequencyInput || !noteList || !form) {
         console.error("Metadata script: One or more required elements not found. Frequency calculation might fail.");
@@ -74,6 +75,12 @@ document.addEventListener('DOMContentLoaded', () => {
         loopCheckbox.checked = true;
       } else if (assetType === 'song' || assetType === 'voice' || assetType === 'other') {
         loopCheckbox.checked = false;
+      }
+      if (
+        advancedMetadataDetails &&
+        (assetType === 'loop' || assetType === 'sample' || assetType === 'stem')
+      ) {
+        advancedMetadataDetails.open = true;
       }
       toggleBpmField();
 
