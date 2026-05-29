@@ -11,6 +11,8 @@ The uploaded `froggy-gen.py` file contained one Python script with hard-coded Wi
 - Output files separated under `output/`
 - Dependencies separated into `requirements.txt`
 - Usage and regeneration instructions separated into `README.md`
+- Canonical collection replay added through `combinations_froggy.csv`
+- Standalone HTML display cabinet added through `src/froggy_cabinet.py`
 
 ## Original trait folders
 
@@ -48,13 +50,17 @@ Create a GIF from the first 20 images
 
 5. The original script had no config file, README, requirements file, or project structure.
 
-6. The original duplicate-combination loop could keep retrying indefinitely if the requested collection size exceeded the number of possible trait combinations. The cleaned version still retries for uniqueness, but the README makes clear that enough trait combinations are required. A future improvement would be to calculate the maximum possible combinations before generation starts.
+6. The original duplicate-combination loop could keep retrying indefinitely if the requested collection size exceeded the number of possible trait combinations. The cleaned version validates available combinations before random generation and has a retry limit.
+
+7. The original script wrote blank CSV rows for special 1/1 images. The cleaned version treats blank rows in `combinations_froggy.csv` as numbered special slots: `200 -> special_1s/1.png`, `400 -> special_1s/2.png`, and continuing through `2000 -> special_1s/10.png`.
 
 ## Behaviour preserved
 
-- Randomly selects one PNG from each trait folder.
+- Replays exact trait selections from `combinations_froggy.csv` by default.
+- Randomly selects one PNG from each trait folder when run with `--mode random`.
 - Composites layers using alpha transparency.
 - Prevents duplicate trait combinations.
 - Writes a combinations CSV.
 - Creates a GIF preview from the first generated images.
-- Inserts special numbered images at regular intervals.
+- Inserts special numbered images at regular intervals, with placeholders still available only for missing special files in placeholder mode.
+- Builds a self-contained display cabinet from JSON layer grids, embedded special 1/1 grids, and the canonical CSV.
