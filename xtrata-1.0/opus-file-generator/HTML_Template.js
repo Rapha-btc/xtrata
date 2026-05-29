@@ -1,7 +1,7 @@
 // HTML_Template.js
 (function () {
 
-const XTRATA_PLAYER_TEMPLATE_VERSION = 'xtrata-opus-player-v5.2';
+const XTRATA_PLAYER_TEMPLATE_VERSION = 'xtrata-opus-player-v5.1';
 
 const escapeHtml = (value) =>
   String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -33,58 +33,6 @@ const normalizeMimeForDataUri = (mimeType, fallback) => {
 const sanitizeAudioMimeType = (mimeType) => {
   const raw = String(mimeType || '').trim();
   return raw.startsWith('audio/') ? raw : 'audio/webm; codecs=opus';
-};
-
-const XTRATA_MAINNET_ADDRESS = 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X';
-const XTRATA_V1_CONTRACT_ID = `${XTRATA_MAINNET_ADDRESS}.xtrata-v1-1-1`;
-const XTRATA_V2_1_0_CONTRACT_ID = `${XTRATA_MAINNET_ADDRESS}.xtrata-v2-1-0`;
-const XTRATA_V2_1_1_CONTRACT_ID = `${XTRATA_MAINNET_ADDRESS}.xtrata-v2-1-1`;
-
-const normalizeContractId = (value) => String(value || '').trim();
-
-const getLegacyFallbackContractId = (contractId) => {
-  const normalized = normalizeContractId(contractId);
-  if (normalized === XTRATA_V2_1_0_CONTRACT_ID) return XTRATA_V1_CONTRACT_ID;
-  if (normalized === XTRATA_V2_1_1_CONTRACT_ID) return XTRATA_V2_1_0_CONTRACT_ID;
-  return '';
-};
-
-const isXtrataContentUrl = (url) =>
-  (url.hostname === 'xtrata.xyz' || url.hostname.endsWith('.xtrata.pages.dev')) &&
-  (url.pathname.startsWith('/inscription/') || url.pathname === '/runtime/content');
-
-const appendFallbackToXtrataContentUrl = (url, fallbackContractId) => {
-  const sourceUrl = String(url || '').trim();
-  const fallback = normalizeContractId(fallbackContractId);
-  if (!sourceUrl || !fallback) return sourceUrl;
-
-  try {
-    const parsed = new URL(sourceUrl);
-    if (!isXtrataContentUrl(parsed) || parsed.searchParams.has('fallbackContractId')) {
-      return sourceUrl;
-    }
-    parsed.searchParams.set('fallbackContractId', fallback);
-    return parsed.toString();
-  } catch (_error) {
-    return sourceUrl;
-  }
-};
-
-const appendMediaKindToXtrataContentUrl = (url, mediaKind) => {
-  const sourceUrl = String(url || '').trim();
-  const normalizedMediaKind = String(mediaKind || '').trim().toLowerCase();
-  if (!sourceUrl || !normalizedMediaKind) return sourceUrl;
-
-  try {
-    const parsed = new URL(sourceUrl);
-    if (!isXtrataContentUrl(parsed) || parsed.searchParams.has('mediaKind')) {
-      return sourceUrl;
-    }
-    parsed.searchParams.set('mediaKind', normalizedMediaKind);
-    return parsed.toString();
-  } catch (_error) {
-    return sourceUrl;
-  }
 };
 
 const sanitizeVisualMimeType = (mimeType) => {
@@ -142,27 +90,15 @@ const getVisualSourceMode = (config) => {
     : 'embedded';
 };
 
-const buildRuntimeContentUrl = ({
-  tokenId,
-  contractId,
-  network,
-  fallbackContractId,
-  mediaKind
-}) => {
+const buildRuntimeContentUrl = ({ tokenId, contractId, network }) => {
   const safeTokenId = sanitizeTokenId(tokenId);
   const safeContractId = String(contractId || '').trim();
   const safeNetwork = sanitizeNetwork(network);
-  const safeFallbackContractId =
-    normalizeContractId(fallbackContractId) || getLegacyFallbackContractId(safeContractId);
   if (!safeTokenId) {
     return '';
   }
   if (safeNetwork === 'mainnet') {
-    const url = `https://xtrata.xyz/inscription/${safeTokenId}`;
-    const fallbackUrl = safeFallbackContractId
-      ? appendFallbackToXtrataContentUrl(url, safeFallbackContractId)
-      : url;
-    return appendMediaKindToXtrataContentUrl(fallbackUrl, mediaKind);
+    return `https://xtrata.xyz/inscription/${safeTokenId}`;
   }
   if (safeContractId) {
     const params = new URLSearchParams({
@@ -170,44 +106,10 @@ const buildRuntimeContentUrl = ({
       tokenId: safeTokenId,
       network: safeNetwork
     });
-    if (safeFallbackContractId) {
-      params.set('fallbackContractId', safeFallbackContractId);
-    }
-    if (mediaKind) {
-      params.set('mediaKind', mediaKind);
-    }
     return `https://xtrata.xyz/runtime/content?${params.toString()}`;
   }
   return `https://xtrata.xyz/inscription/${safeTokenId}`;
 };
-
-const getAudioMimeCandidates = (source) => {
-  const preferred = sanitizeAudioMimeType(source.audioMimeType);
-  if (String(source.source || '').startsWith('data:')) {
-    return [preferred];
-  }
-  const candidates = [
-    preferred,
-    'audio/webm; codecs=opus',
-    'audio/webm',
-    'video/webm; codecs=opus',
-    'video/webm',
-    'audio/ogg; codecs=opus',
-    'audio/ogg',
-    ''
-  ];
-  return candidates.filter(
-    (candidate, index) => candidates.indexOf(candidate) === index
-  );
-};
-
-const buildAudioSourceMarkup = (source) =>
-  getAudioMimeCandidates(source)
-    .map((mimeType) => {
-      const typeAttribute = mimeType ? ` type="${escapeAttr(mimeType)}"` : '';
-      return `<source src="${escapeAttr(source.source)}"${typeAttribute}>`;
-    })
-    .join('\n      ');
 
 const buildPlayerSource = (config) => {
   const mode =
@@ -217,26 +119,17 @@ const buildPlayerSource = (config) => {
   const audioMimeType = sanitizeAudioMimeType(config.audioMimeType);
   if (mode === 'recursive') {
     const recursive = config.recursive || {};
-    const fallbackContractId =
-      normalizeContractId(recursive.fallbackContractId) ||
-      getLegacyFallbackContractId(recursive.contractId);
-    const explicitUrl = appendFallbackToXtrataContentUrl(
-      recursive.audioUrl,
-      fallbackContractId
-    );
-    const audioUrl = appendMediaKindToXtrataContentUrl(explicitUrl, 'audio');
+    const explicitUrl = String(recursive.audioUrl || '').trim();
     const generatedUrl = buildRuntimeContentUrl({
       tokenId: recursive.audioTokenId || recursive.tokenId,
       contractId: recursive.contractId,
-      network: recursive.network,
-      fallbackContractId,
-      mediaKind: 'audio'
+      network: recursive.network
     });
     return {
       mode,
       audioMimeType,
-      source: audioUrl || generatedUrl,
-      sourceKind: audioUrl ? 'custom-url' : generatedUrl ? 'xtrata-runtime' : ''
+      source: explicitUrl || generatedUrl,
+      sourceKind: explicitUrl ? 'custom-url' : generatedUrl ? 'xtrata-runtime' : ''
     };
   }
 
@@ -281,11 +174,7 @@ const buildRecursiveCoverSource = (config) => {
   const generatedUrl = buildRuntimeContentUrl({
     tokenId: recursive.coverTokenId,
     contractId: recursive.coverContractId || recursive.contractId,
-    network: recursive.coverNetwork || recursive.network,
-    fallbackContractId:
-      recursive.coverFallbackContractId ||
-      recursive.fallbackContractId ||
-      getLegacyFallbackContractId(recursive.coverContractId || recursive.contractId)
+    network: recursive.coverNetwork || recursive.network
   });
   return {
     source: generatedUrl,
@@ -1012,7 +901,9 @@ const buildXtrataAudioPlayerHtml = (config) => {
     <audio id="xtrataAudio" class="audio-native" preload="metadata"${
       isLoop ? ' loop' : ''
     }>
-      ${buildAudioSourceMarkup(source)}
+      <source src="${escapeAttr(source.source)}" type="${escapeAttr(
+        source.audioMimeType
+      )}">
     </audio>
   </main>
   <script type="application/json" id="xtrataPlayerManifest">${escapeJsonForScript(

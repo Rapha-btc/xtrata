@@ -70,40 +70,6 @@ const asJsonError = (status: number, message: string, detail?: string) =>
     }
   );
 
-type RuntimeMediaKindHint = 'audio' | '';
-
-const parseRuntimeMediaKindHint = (url: URL): RuntimeMediaKindHint => {
-  const raw =
-    url.searchParams.get('mediaKind') ||
-    url.searchParams.get('kind') ||
-    url.searchParams.get('as') ||
-    '';
-  return raw.trim().toLowerCase() === 'audio' ? 'audio' : '';
-};
-
-const normalizeRuntimeContentMimeType = (
-  mimeType: string | null | undefined,
-  mediaKind: RuntimeMediaKindHint
-) => {
-  const raw = String(mimeType || '').trim();
-  const fallback = raw || 'application/octet-stream';
-  if (mediaKind !== 'audio') {
-    return fallback;
-  }
-
-  const normalized = fallback.toLowerCase();
-  if (normalized.startsWith('audio/')) {
-    return fallback;
-  }
-  if (normalized === 'application/octet-stream') {
-    return 'audio/webm; codecs=opus';
-  }
-  if (normalized === 'video/webm' || normalized.startsWith('video/webm;')) {
-    return fallback.replace(/^video\/webm/i, 'audio/webm');
-  }
-  return fallback;
-};
-
 const buildRuntimeContentHeaders = (params: {
   mimeType: string;
   cacheStatus: RuntimeCacheStatus;
@@ -297,15 +263,6 @@ export const onRequest = async (context: {
   );
   const tokenId = parseRuntimeTokenId(url.searchParams.get('tokenId'));
   const network = parseRuntimeNetwork(url.searchParams.get('network'));
-  const mediaKind = parseRuntimeMediaKindHint(url);
-  const getResponseMimeType = (
-    ...candidates: Array<string | null | undefined>
-  ) =>
-    normalizeRuntimeContentMimeType(
-      candidates.find((candidate) => String(candidate || '').trim()) ||
-        'application/octet-stream',
-      mediaKind
-    );
 
   if (!contractId) {
     return asJsonError(400, 'Invalid contractId parameter.');
@@ -349,7 +306,7 @@ export const onRequest = async (context: {
       return new Response(null, {
         status: 416,
         headers: buildRuntimeContentHeaders({
-          mimeType: getResponseMimeType(resolvedMeta.meta.mimeType),
+          mimeType: resolvedMeta.meta.mimeType || 'application/octet-stream',
           cacheStatus: cacheEnabled ? 'MISS' : 'BYPASS',
           network,
           contractId: resolvedContractId,
@@ -377,10 +334,10 @@ export const onRequest = async (context: {
       const rangeContentLength =
         requestedRange.status === 'valid' ? requestedRange.range.length : null;
       const headers = buildRuntimeContentHeaders({
-        mimeType: getResponseMimeType(
-          resolvedMeta.meta.mimeType,
-          cached.httpMetadata?.contentType
-        ),
+        mimeType:
+          resolvedMeta.meta.mimeType ||
+          cached.httpMetadata?.contentType ||
+          'application/octet-stream',
         cacheStatus: 'HIT',
         network,
         contractId: getRuntimeContractId(resolvedMeta.contract),
@@ -417,7 +374,7 @@ export const onRequest = async (context: {
       return new Response(null, {
         status: requestedRange.status === 'valid' ? 206 : 200,
         headers: buildRuntimeContentHeaders({
-          mimeType: getResponseMimeType(resolvedMeta.meta.mimeType),
+          mimeType: resolvedMeta.meta.mimeType || 'application/octet-stream',
           cacheStatus: cacheEnabled ? 'MISS' : 'BYPASS',
           network,
           contractId: resolvedContractId,
@@ -480,7 +437,7 @@ export const onRequest = async (context: {
           env,
           key: cacheKey,
           bytes: resolved.bytes,
-          mimeType: getResponseMimeType(resolved.meta.mimeType),
+          mimeType: resolved.meta.mimeType || 'application/octet-stream',
           metadata: {
             network,
             contractId: cacheContractId,
@@ -503,7 +460,7 @@ export const onRequest = async (context: {
       return new Response(sliceBytes(resolved.bytes, requestedRange.range), {
         status: 206,
         headers: buildRuntimeContentHeaders({
-          mimeType: getResponseMimeType(resolved.meta.mimeType),
+          mimeType: resolved.meta.mimeType || 'application/octet-stream',
           cacheStatus: cacheEnabled ? 'MISS' : 'BYPASS',
           network,
           contractId: cacheContractId,
@@ -552,7 +509,7 @@ export const onRequest = async (context: {
           env,
           key: cacheKey,
           bytes,
-          mimeType: getResponseMimeType(streamContext.meta.mimeType),
+          mimeType: streamContext.meta.mimeType || 'application/octet-stream',
           metadata: {
             network,
             contractId: cacheContractId,
@@ -590,7 +547,7 @@ export const onRequest = async (context: {
     return new Response(resolved.stream, {
       status: 200,
       headers: buildRuntimeContentHeaders({
-        mimeType: getResponseMimeType(resolved.meta.mimeType),
+        mimeType: resolved.meta.mimeType || 'application/octet-stream',
         cacheStatus: cacheEnabled ? 'MISS' : 'BYPASS',
         network,
         contractId: cacheContractId,
