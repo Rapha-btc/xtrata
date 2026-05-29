@@ -40,6 +40,7 @@ Features
 *   **Audional HTML Generation:**
     *   Modal for inputting metadata: Title, Instrument, Note (with frequency auto-calculation), Is Loop?, BPM (if loop).
     *   Combines audio Base64, image Base64, and metadata into a single HTML file.
+    *   Recursive player URLs can use the readable `/inscription/{ID}` endpoint or the compact `/i/{ID}` endpoint for smaller repeated references.
     *   Download the generated .html file.
 *   **Informational Popups:**
     *   Detailed explanations of audio formats (containers, codecs, lossless/lossy, bitrate, WAV, WebM Audio, Opus, MP3).

@@ -1,3 +1,7 @@
 /output
 /assets
 
+# Generated recursive Froggy HTML output.
+/seeds/
+/froggy_inline_parent/
+/web3_froggys/

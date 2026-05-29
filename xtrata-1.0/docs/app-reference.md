@@ -126,6 +126,7 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 - `src/lib/viewer/types.ts` defines viewer models.
 - `functions/runtime/content.ts` serves reconstructed raw inscription bytes at `/runtime/content`.
 - `functions/inscription/*` provides readable aliases such as `/inscription/:tokenId` and the explicit `/inscription/:network/:contractAddress/:contractName/:tokenId` route.
+- `functions/i/*` provides the compact `/i/:tokenId` alias for byte-sensitive recursive references. It must stay behaviorally equivalent to `/inscription/:tokenId`.
 - `src/lib/market/actions.ts` centralizes market list/cancel validation helpers.
 - `src/lib/market/settlement.ts` centralizes market settlement asset detection, price parsing/formatting, and buy post-condition building for STX and first-party SIP-010 market flows.
 - `src/lib/market/listing-resolution.ts` resolves page-scoped listing data when activity indexes are incomplete.

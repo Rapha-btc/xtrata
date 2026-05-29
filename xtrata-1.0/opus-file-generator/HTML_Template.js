@@ -79,6 +79,11 @@ const sanitizeNetwork = (value) =>
     ? 'testnet'
     : 'mainnet';
 
+const sanitizeEndpointMode = (value) =>
+  String(value || '').trim().toLowerCase() === 'compact'
+    ? 'compact'
+    : 'readable';
+
 const dedupe = (values) => Array.from(new Set(values.filter(Boolean)));
 
 const getVisualSourceMode = (config) => {
@@ -90,7 +95,7 @@ const getVisualSourceMode = (config) => {
     : 'embedded';
 };
 
-const buildRuntimeContentUrl = ({ tokenId, contractId, network }) => {
+const buildRuntimeContentUrl = ({ tokenId, contractId, network, endpointMode }) => {
   const safeTokenId = sanitizeTokenId(tokenId);
   const safeContractId = String(contractId || '').trim();
   const safeNetwork = sanitizeNetwork(network);
@@ -98,7 +103,10 @@ const buildRuntimeContentUrl = ({ tokenId, contractId, network }) => {
     return '';
   }
   if (safeNetwork === 'mainnet') {
-    return `https://xtrata.xyz/inscription/${safeTokenId}`;
+    const route = sanitizeEndpointMode(endpointMode) === 'compact'
+      ? 'i'
+      : 'inscription';
+    return `https://xtrata.xyz/${route}/${safeTokenId}`;
   }
   if (safeContractId) {
     const params = new URLSearchParams({
@@ -123,7 +131,8 @@ const buildPlayerSource = (config) => {
     const generatedUrl = buildRuntimeContentUrl({
       tokenId: recursive.audioTokenId || recursive.tokenId,
       contractId: recursive.contractId,
-      network: recursive.network
+      network: recursive.network,
+      endpointMode: recursive.endpointMode
     });
     return {
       mode,
@@ -174,7 +183,8 @@ const buildRecursiveCoverSource = (config) => {
   const generatedUrl = buildRuntimeContentUrl({
     tokenId: recursive.coverTokenId,
     contractId: recursive.coverContractId || recursive.contractId,
-    network: recursive.coverNetwork || recursive.network
+    network: recursive.coverNetwork || recursive.network,
+    endpointMode: recursive.coverEndpointMode || recursive.endpointMode
   });
   return {
     source: generatedUrl,
@@ -329,23 +339,32 @@ const buildXtrataAudioPlayerHtml = (config) => {
 
     * { box-sizing: border-box; }
 
+    html {
+      width: 100%;
+      height: 100%;
+    }
+
     body {
       margin: 0;
-      min-width: 320px;
+      min-width: 0;
       min-height: 100vh;
+      min-height: 100dvh;
+      width: 100%;
       display: grid;
       place-items: center;
       background: var(--page);
       color: var(--ink);
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       line-height: 1.45;
-      padding: 12px;
+      padding: 0;
       overflow: hidden;
     }
 
     .player {
       position: relative;
-      width: min(94vmin, 760px);
+      width: min(100vmin, 760px);
+      max-width: 100%;
+      max-height: 100%;
       aspect-ratio: 1 / 1;
       border: 1px solid rgba(255, 255, 255, 0.16);
       border-radius: 8px;
@@ -813,7 +832,6 @@ const buildXtrataAudioPlayerHtml = (config) => {
     }
 
     @media (max-width: 560px) {
-      body { padding: 8px; }
       .player { width: min(96vmin, 100%); }
       .drawer { height: 54%; }
       .metadata-grid { grid-template-columns: 1fr; }

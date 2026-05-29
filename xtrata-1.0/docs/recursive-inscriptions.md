@@ -48,6 +48,20 @@ for the definitive implementation.
    - Use `get-dependencies(id)` to read the on-chain dependency list.
    - Fetch content by chunk for deterministic reconstruction.
 
+## Runtime aliases for recursive content
+
+Xtrata Pages exposes two same-behavior aliases for reconstructed inscription
+bytes:
+
+- `/inscription/{id}` is the readable public form.
+- `/i/{id}` is the compact form for recursive assets.
+
+Use `/inscription/{id}` where clarity matters, including docs, public links,
+debugging, and creator-facing UI. Use `/i/{id}` inside recursive HTML, CSS,
+JavaScript, manifests, and generated collection files when repeated URL length
+matters. `/i/{id}` returns the same content as `/inscription/{id}` through the
+same runtime handler; it is not a redirect.
+
 ## In-app minting (multi-parent support)
 
 The mint screen now supports multiple parents:

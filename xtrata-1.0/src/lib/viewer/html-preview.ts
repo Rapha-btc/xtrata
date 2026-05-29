@@ -6,6 +6,7 @@ html, body {
   padding: 0 !important;
   width: 100% !important;
   height: 100% !important;
+  min-width: 0 !important;
   min-height: 100% !important;
   overflow: hidden !important;
 }
@@ -25,6 +26,8 @@ body > video:first-of-type {
   top: 50% !important;
   transform: translate(-50%, -50%) !important;
   transform-origin: center center !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
   max-width: 100% !important;
   max-height: 100% !important;
 }

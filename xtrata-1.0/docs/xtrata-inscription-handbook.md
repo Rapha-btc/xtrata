@@ -121,6 +121,22 @@ Fee notes (v2.1.0):
 4) Concatenate bytes in order to rebuild the payload.
 5) Render based on `mime-type`.
 
+### HTTP content aliases
+The app also exposes raw reconstructed bytes through Cloudflare Pages Functions:
+
+- `https://xtrata.xyz/inscription/{id}` is the readable public alias.
+- `https://xtrata.xyz/i/{id}` is the compact alias for byte-sensitive recursive
+  references.
+
+Both aliases route to the same runtime content handler and should return the
+same bytes and headers. `/i/{id}` is not a redirect; it exists so recursive HTML,
+CSS, JavaScript, manifests, and collection metadata can use shorter same-origin
+references such as `/i/315`.
+
+Use `/inscription/{id}` in human-facing docs, links, and debugging output. Use
+`/i/{id}` inside generated recursive assets when repeated URL length matters.
+Query overrides supported by `/inscription/{id}` are also supported by `/i/{id}`.
+
 ### Display guidance
 - **Images:** use `object-fit: contain` to avoid cropping.
 - **Audio/Video:** stream or buffer incrementally (do not load all at once).

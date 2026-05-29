@@ -31,6 +31,7 @@ import { resolveContractCapabilities } from '../lib/contract/capabilities';
 import { useContractAdminStatus } from '../lib/contract/admin-status';
 import { createXtrataClient } from '../lib/contract/client';
 import { useTokenSummaries } from '../lib/viewer/queries';
+import { injectGridThumbnailHtml } from '../lib/viewer/html-preview';
 import {
   DEFAULT_BATCH_SIZE,
   DEFAULT_TOKEN_URI,
@@ -2583,6 +2584,10 @@ export default function MintScreen(props: MintScreenProps) {
   const isAudioPreview = Boolean(previewUrl && file?.type.startsWith('audio/'));
   const isVideoPreview = Boolean(previewUrl && file?.type.startsWith('video/'));
   const isRenderedHtmlPreview = Boolean(previewHtml && !showHtmlSource);
+  const previewHtmlFrameDoc = useMemo(
+    () => (previewHtml ? injectGridThumbnailHtml(previewHtml) : null),
+    [previewHtml]
+  );
   const useSquareMintPreview =
     isImagePreview || isVideoPreview || isRenderedHtmlPreview;
 
@@ -2908,7 +2913,7 @@ export default function MintScreen(props: MintScreenProps) {
                     title="Mint HTML preview"
                     sandbox="allow-scripts"
                     referrerPolicy="no-referrer"
-                    srcDoc={previewHtml ?? undefined}
+                    srcDoc={previewHtmlFrameDoc ?? undefined}
                   />
                 )}
                 {previewHtml && showHtmlSource && (

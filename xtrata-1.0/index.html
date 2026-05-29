@@ -4399,7 +4399,7 @@
           ? ''
           : 'allow-scripts';
         if (options.htmlDoc && previewMimeType?.trim().toLowerCase() !== 'application/pdf') {
-          frame.srcdoc = options.htmlDoc;
+          frame.srcdoc = injectGridThumbnailHtml(options.htmlDoc);
         } else {
           frame.src = getObjectUrl();
         }

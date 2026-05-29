@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from froggy_cabinet import build_cabinet_html, load_asset_json, load_collection_rows, validate_rows_against_assets
 from froggy_gen import generate_from_csv, should_use_special_image, validate_csv_replay_config
+from froggy_seed_children import child_html, redirect_child_html
 
 
 class FroggyGenTests(unittest.TestCase):
@@ -158,6 +159,9 @@ class FroggyGenTests(unittest.TestCase):
             self.assertIn("let currentId = 1", html)
             self.assertIn("input.value.trim() === \"\"", html)
             self.assertIn("syncInput: false", html)
+            self.assertIn("seedFromLocation", html)
+            self.assertIn("seed-mode", html)
+            self.assertIn("render(seedMode ? seedId : 1)", html)
             self.assertNotIn('input.addEventListener("input", () => setCurrent(Number(input.value)))', html)
             self.assertNotIn("<img", html.lower())
             self.assertNotIn("http://", html.lower())
@@ -191,6 +195,39 @@ class FroggyGenTests(unittest.TestCase):
             self.assertNotIn("<img", html.lower())
             self.assertNotIn("http://", html.lower())
             self.assertNotIn("https://", html.lower())
+
+    def test_seed_child_html_is_tiny_and_points_to_parent_hash_seed(self) -> None:
+        html = child_html(400, "../froggy_display_cabinet_inline_parent.html")
+
+        self.assertEqual(
+            html,
+            "<iframe src=../froggy_display_cabinet_inline_parent.html#400 "
+            "style=position:fixed;inset:0;border:0></iframe>",
+        )
+        self.assertLess(len(html.encode("utf-8")), 120)
+
+    def test_seed_child_html_quotes_parent_src_when_needed(self) -> None:
+        html = child_html(400, "/runtime/content?contractId=x&tokenId=123")
+
+        self.assertEqual(
+            html,
+            '<iframe src="/runtime/content?contractId=x&amp;tokenId=123#400" '
+            "style=position:fixed;inset:0;border:0></iframe>",
+        )
+
+    def test_redirect_seed_child_html_is_smaller_than_iframe_child(self) -> None:
+        html = redirect_child_html(400, "/i/318")
+
+        self.assertEqual(html, '<body onload="location=\'/i/318#400\'">')
+        self.assertLess(len(html.encode("utf-8")), 40)
+
+    def test_redirect_seed_child_html_escapes_values_for_script_and_html(self) -> None:
+        html = redirect_child_html(400, "/runtime/content?contractId=x&name=O'Reilly")
+
+        self.assertEqual(
+            html,
+            '<body onload="location=\'/runtime/content?contractId=x&amp;name=O\\&#x27;Reilly#400\'">',
+        )
 
 
 if __name__ == "__main__":

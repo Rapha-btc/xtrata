@@ -427,6 +427,28 @@ canvas {{
   border: 1px solid var(--line);
   background: #fff;
 }}
+body.seed-mode {{
+  overflow: hidden;
+  background: #fff;
+}}
+body.seed-mode main {{
+  min-height: 100vh;
+  grid-template-columns: 1fr;
+}}
+body.seed-mode .control-band {{
+  display: none;
+}}
+body.seed-mode .display-band {{
+  min-height: 100vh;
+  padding: 0;
+}}
+body.seed-mode .canvas-wrap {{
+  width: min(100vw, 100vh);
+}}
+body.seed-mode canvas {{
+  border: 0;
+  background: transparent;
+}}
 @media (max-width: 760px) {{
   main {{ grid-template-columns: 1fr; }}
   .control-band {{ border-right: 0; border-bottom: 1px solid var(--line); padding: 20px; }}
@@ -483,6 +505,41 @@ canvas {{
   const status = document.getElementById("status");
   const maxId = rows.length;
   let currentId = 1;
+
+  function seedFromLocation() {{
+    const searchParams = new URLSearchParams(window.location.search);
+    for (const key of ["seed", "id", "froggy"]) {{
+      const parsed = parseSeedValue(searchParams.get(key));
+      if (parsed !== null) return parsed;
+    }}
+
+    const hash = window.location.hash.replace(/^#/, "").trim();
+    const hashSeed = hash.includes("=")
+      ? new URLSearchParams(hash).get("seed") || new URLSearchParams(hash).get("id") || new URLSearchParams(hash).get("froggy")
+      : hash;
+    const parsedHash = parseSeedValue(hashSeed);
+    if (parsedHash !== null) return parsedHash;
+
+    const fileName = window.location.pathname.split("/").pop() || "";
+    const match = fileName.match(/^(\\d{{1,5}})\\.html?$/);
+    return match ? parseSeedValue(match[1]) : null;
+  }}
+
+  function parseSeedValue(value) {{
+    if (value === null || value === undefined) return null;
+    const text = String(value).trim();
+    if (!/^\\d+$/.test(text)) return null;
+    const parsed = Number.parseInt(text, 10);
+    if (parsed < 1 || parsed > maxId) return null;
+    return parsed;
+  }}
+
+  const seedId = seedFromLocation();
+  const seedMode = seedId !== null;
+  if (seedMode) {{
+    document.body.classList.add("seed-mode");
+    document.title = `Froggy #${{seedId}}`;
+  }}
 
   function rgbaFor(color) {{
     if (palette.has(color)) return palette.get(color);
@@ -668,7 +725,7 @@ canvas {{
   document.getElementById("next").addEventListener("click", () => setCurrent(currentId + 1));
   document.getElementById("first").addEventListener("click", () => setCurrent(1));
   document.getElementById("last").addEventListener("click", () => setCurrent(maxId));
-  render(1);
+  render(seedMode ? seedId : 1);
 }})();
 </script>
 </body>

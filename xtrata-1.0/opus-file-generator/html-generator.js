@@ -62,11 +62,18 @@ function getVisualSourceMode() {
     : 'embedded';
 }
 
+function getRecursiveEndpointMode() {
+  return getElement('recursiveEndpointMode')?.value === 'compact'
+    ? 'compact'
+    : 'readable';
+}
+
 function getRecursiveConfig() {
   return {
     audioTokenId: getElement('recursiveAudioTokenId')?.value.trim() || '',
     audioUrl: getElement('recursiveAudioUrl')?.value.trim() || '',
     contractId: getElement('recursiveContractId')?.value.trim() || '',
+    endpointMode: getRecursiveEndpointMode(),
     network: getElement('recursiveNetwork')?.value || 'mainnet',
     coverTokenId: getElement('recursiveCoverTokenId')?.value.trim() || '',
     coverUrl: getElement('recursiveCoverUrl')?.value.trim() || '',
@@ -83,7 +90,8 @@ function buildDefaultRecursiveUrl(config) {
   const tokenId = sanitizeTokenId(config.audioTokenId);
   if (!tokenId) return '';
   if ((config.network || 'mainnet') === 'mainnet') {
-    return `https://xtrata.xyz/inscription/${tokenId}`;
+    const route = config.endpointMode === 'compact' ? 'i' : 'inscription';
+    return `https://xtrata.xyz/${route}/${tokenId}`;
   }
   if (config.contractId) {
     const params = new URLSearchParams({
@@ -100,7 +108,8 @@ function buildDefaultRecursiveCoverUrl(config) {
   const tokenId = sanitizeTokenId(config.coverTokenId);
   if (!tokenId) return '';
   if ((config.network || 'mainnet') === 'mainnet') {
-    return `https://xtrata.xyz/inscription/${tokenId}`;
+    const route = config.endpointMode === 'compact' ? 'i' : 'inscription';
+    return `https://xtrata.xyz/${route}/${tokenId}`;
   }
   if (config.contractId) {
     const params = new URLSearchParams({
@@ -748,6 +757,7 @@ function inithtmlGenerator() {
     'recursiveAudioTokenId',
     'recursiveAudioUrl',
     'recursiveContractId',
+    'recursiveEndpointMode',
     'recursiveNetwork',
     'recursiveCoverTokenId',
     'recursiveCoverUrl',

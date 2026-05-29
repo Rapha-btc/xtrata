@@ -11,6 +11,8 @@ describe('html grid preview injection', () => {
     );
     expect(result).toContain('body > main:only-child');
     expect(result).toContain('body > canvas:first-of-type');
+    expect(result).toContain('min-width: 0 !important');
+    expect(result).toContain('min-height: 0 !important');
   });
 
   it('avoids duplicate injection', () => {
