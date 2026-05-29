@@ -1,7 +1,7 @@
 // HTML_Template.js
 (function () {
 
-const XTRATA_PLAYER_TEMPLATE_VERSION = 'xtrata-opus-player-v5';
+const XTRATA_PLAYER_TEMPLATE_VERSION = 'xtrata-opus-player-v5.1';
 
 const escapeHtml = (value) =>
   String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -329,23 +329,32 @@ const buildXtrataAudioPlayerHtml = (config) => {
 
     * { box-sizing: border-box; }
 
+    html {
+      width: 100%;
+      height: 100%;
+    }
+
     body {
       margin: 0;
-      min-width: 320px;
+      min-width: 0;
       min-height: 100vh;
+      min-height: 100dvh;
+      width: 100%;
       display: grid;
       place-items: center;
       background: var(--page);
       color: var(--ink);
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       line-height: 1.45;
-      padding: 12px;
+      padding: 0;
       overflow: hidden;
     }
 
     .player {
       position: relative;
-      width: min(94vmin, 760px);
+      width: min(100vmin, 760px);
+      max-width: 100%;
+      max-height: 100%;
       aspect-ratio: 1 / 1;
       border: 1px solid rgba(255, 255, 255, 0.16);
       border-radius: 8px;
@@ -816,8 +825,7 @@ const buildXtrataAudioPlayerHtml = (config) => {
     }
 
     @media (max-width: 560px) {
-      body { padding: 8px; }
-      .player { width: min(96vmin, 100%); }
+      .player { width: min(100vmin, 100%); }
       .drawer { height: 54%; }
       .metadata-grid { grid-template-columns: 1fr; }
       .top-bar { padding: 10px; }
