@@ -1,7 +1,7 @@
 // HTML_Template.js
 (function () {
 
-const XTRATA_PLAYER_TEMPLATE_VERSION = 'xtrata-opus-player-v3';
+const XTRATA_PLAYER_TEMPLATE_VERSION = 'xtrata-opus-player-v4';
 
 const escapeHtml = (value) =>
   String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -81,12 +81,24 @@ const sanitizeNetwork = (value) =>
 
 const dedupe = (values) => Array.from(new Set(values.filter(Boolean)));
 
-const buildRuntimeAudioUrl = ({ tokenId, contractId, network }) => {
+const getVisualSourceMode = (config) => {
+  if (config.visualSourceMode === 'recursive') return 'recursive';
+  if (config.visualSourceMode === 'embedded') return 'embedded';
+  const recursive = config.recursive || {};
+  return sanitizeTokenId(recursive.coverTokenId) || String(recursive.coverUrl || '').trim()
+    ? 'recursive'
+    : 'embedded';
+};
+
+const buildRuntimeContentUrl = ({ tokenId, contractId, network }) => {
   const safeTokenId = sanitizeTokenId(tokenId);
   const safeContractId = String(contractId || '').trim();
   const safeNetwork = sanitizeNetwork(network);
   if (!safeTokenId) {
     return '';
+  }
+  if (safeNetwork === 'mainnet') {
+    return `https://xtrata.xyz/inscription/${safeTokenId}`;
   }
   if (safeContractId) {
     const params = new URLSearchParams({
@@ -94,18 +106,21 @@ const buildRuntimeAudioUrl = ({ tokenId, contractId, network }) => {
       tokenId: safeTokenId,
       network: safeNetwork
     });
-    return `/runtime/content?${params.toString()}`;
+    return `https://xtrata.xyz/runtime/content?${params.toString()}`;
   }
   return `https://xtrata.xyz/inscription/${safeTokenId}`;
 };
 
 const buildPlayerSource = (config) => {
-  const mode = config.mode === 'recursive' ? 'recursive' : 'embedded';
+  const mode =
+    config.audioSourceMode === 'recursive' || config.mode === 'recursive'
+      ? 'recursive'
+      : 'embedded';
   const audioMimeType = sanitizeAudioMimeType(config.audioMimeType);
   if (mode === 'recursive') {
     const recursive = config.recursive || {};
     const explicitUrl = String(recursive.audioUrl || '').trim();
-    const generatedUrl = buildRuntimeAudioUrl({
+    const generatedUrl = buildRuntimeContentUrl({
       tokenId: recursive.audioTokenId || recursive.tokenId,
       contractId: recursive.contractId,
       network: recursive.network
@@ -132,33 +147,84 @@ const buildPlayerSource = (config) => {
 const buildDependencies = (config) => {
   const recursive = config.recursive || {};
   return dedupe([
-    sanitizeTokenId(recursive.audioTokenId || recursive.tokenId),
-    sanitizeTokenId(recursive.coverTokenId)
+    config.audioSourceMode === 'recursive' || config.mode === 'recursive'
+      ? sanitizeTokenId(recursive.audioTokenId || recursive.tokenId)
+      : '',
+    getVisualSourceMode(config) === 'recursive'
+      ? sanitizeTokenId(recursive.coverTokenId)
+      : ''
   ]);
 };
 
-const buildCoverMarkup = (config, title) => {
+const getRecursiveCoverKind = (config) => {
+  const kind = String(config.recursive?.coverKind || '').trim().toLowerCase();
+  return kind === 'video' ? 'video' : 'image';
+};
+
+const buildRecursiveCoverSource = (config) => {
+  const recursive = config.recursive || {};
+  const explicitUrl = String(recursive.coverUrl || '').trim();
+  if (explicitUrl) {
+    return {
+      source: explicitUrl,
+      kind: getRecursiveCoverKind(config),
+      sourceKind: 'custom-url'
+    };
+  }
+  const generatedUrl = buildRuntimeContentUrl({
+    tokenId: recursive.coverTokenId,
+    contractId: recursive.coverContractId || recursive.contractId,
+    network: recursive.coverNetwork || recursive.network
+  });
+  return {
+    source: generatedUrl,
+    kind: getRecursiveCoverKind(config),
+    sourceKind: generatedUrl ? 'xtrata-runtime' : ''
+  };
+};
+
+const buildVisualSource = (config) => {
+  const sourceMode = getVisualSourceMode(config);
+  if (sourceMode === 'recursive') {
+    return buildRecursiveCoverSource(config);
+  }
+
   const visualBase64 = normalizeBase64(config.visualBase64 || config.imageBase64);
   if (!visualBase64) {
-    return `<div class="cover-placeholder" aria-hidden="true">${escapeHtml(
-      buildInitials(title)
-    )}</div>`;
+    return { source: '', kind: 'placeholder', sourceKind: '' };
   }
   const visualMimeType = sanitizeVisualMimeType(
     config.visualMimeType || config.imageMimeType
   );
-  const visualSrc = `data:${normalizeMimeForDataUri(
-    visualMimeType,
-    'image/png'
-  )};base64,${visualBase64}`;
-  if (visualMimeType.startsWith('video/')) {
+  return {
+    source: `data:${normalizeMimeForDataUri(
+      visualMimeType,
+      'image/png'
+    )};base64,${visualBase64}`,
+    kind: visualMimeType.startsWith('video/') ? 'video' : 'image',
+    sourceKind: 'embedded-base64'
+  };
+};
+
+const buildCoverMarkup = (config, title) => {
+  const visual = buildVisualSource(config);
+  if (!visual.source) {
+    return `<div class="cover-placeholder" aria-hidden="true">${escapeHtml(
+      buildInitials(title)
+    )}</div>`;
+  }
+  if (visual.kind === 'video') {
+    const typeAttribute =
+      visual.source.startsWith('data:') && config.visualMimeType
+        ? ` type="${escapeAttr(sanitizeVisualMimeType(config.visualMimeType))}"`
+        : '';
     return `<video muted loop playsinline autoplay preload="metadata" aria-label="${escapeAttr(
       title
-    )} visual"><source src="${escapeAttr(visualSrc)}" type="${escapeAttr(
-      visualMimeType
-    )}">This browser cannot play the embedded visual.</video>`;
+    )} visual"><source src="${escapeAttr(
+      visual.source
+    )}"${typeAttribute}>This browser cannot play the visual.</video>`;
   }
-  return `<img src="${escapeAttr(visualSrc)}" alt="${escapeAttr(title)} cover art">`;
+  return `<img src="${escapeAttr(visual.source)}" alt="${escapeAttr(title)} cover art">`;
 };
 
 const buildXtrataAudioPlayerHtml = (config) => {
@@ -177,6 +243,7 @@ const buildXtrataAudioPlayerHtml = (config) => {
   const isLoop = Boolean(metadata.isLoop);
   const bpm = String(metadata.bpm || '').trim();
   const source = buildPlayerSource(config);
+  const visual = buildVisualSource(config);
   const dependencies = buildDependencies(config);
 
   if (!source.source) {
@@ -192,6 +259,8 @@ const buildXtrataAudioPlayerHtml = (config) => {
     mode: source.mode,
     sourceKind: source.sourceKind,
     audioMimeType: source.audioMimeType,
+    visualSourceMode: getVisualSourceMode(config),
+    visualSourceKind: visual.sourceKind,
     visualMimeType: sanitizeVisualMimeType(config.visualMimeType || config.imageMimeType),
     dependencies,
     metadata: {
@@ -359,6 +428,7 @@ const buildXtrataAudioPlayerHtml = (config) => {
       min-width: 0;
       color: var(--ink);
       text-shadow: 0 2px 18px rgba(0, 0, 0, 0.42);
+      transition: opacity 0.18s ease, transform 0.18s ease;
     }
 
     .eyebrow {
@@ -399,6 +469,22 @@ const buildXtrataAudioPlayerHtml = (config) => {
 
     .top-actions {
       pointer-events: auto;
+      transition: opacity 0.18s ease;
+    }
+
+    .player[data-playback="playing"][data-panel="closed"] .track-copy {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+
+    .player[data-playback="playing"][data-panel="closed"] .top-actions {
+      opacity: 0.72;
+    }
+
+    .player[data-playback="playing"][data-panel="closed"]:hover .track-copy,
+    .player[data-playback="playing"][data-panel="closed"]:focus-within .track-copy {
+      opacity: 1;
+      transform: translateY(0);
     }
 
     button {
@@ -426,46 +512,43 @@ const buildXtrataAudioPlayerHtml = (config) => {
     .icon-button {
       width: 38px;
       padding: 0;
+      display: inline-grid;
+      place-items: center;
     }
 
-    .center-cue {
+    .eye-icon {
+      position: relative;
+      width: 18px;
+      height: 12px;
+      border: 2px solid currentColor;
+      border-radius: 50%;
+    }
+
+    .eye-icon::after {
+      content: "";
       position: absolute;
-      z-index: 2;
       top: 50%;
       left: 50%;
-      display: grid;
-      place-items: center;
-      width: min(30%, 150px);
-      aspect-ratio: 1 / 1;
-      border: 1px solid rgba(248, 243, 231, 0.52);
+      width: 5px;
+      height: 5px;
       border-radius: 50%;
-      background: rgba(16, 18, 15, 0.58);
-      color: var(--ink);
-      font-weight: 900;
+      background: currentColor;
       transform: translate(-50%, -50%);
-      transition: opacity 0.18s ease, transform 0.18s ease;
-      pointer-events: none;
     }
 
-    .center-symbol {
-      font-size: clamp(0.86rem, 3vmin, 1.1rem);
-    }
-
-    .player[data-playback="playing"] .center-cue {
-      opacity: 0;
-      transform: translate(-50%, -50%) scale(0.94);
-    }
-
-    .player[data-playback="playing"] .stage:hover .center-cue,
-    .player[data-panel]:not([data-panel="closed"]) .center-cue {
-      opacity: 0.82;
+    .dots-icon {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: -7px 0 0 currentColor, 7px 0 0 currentColor;
     }
 
     .click-hint {
       position: absolute;
       z-index: 2;
       left: 50%;
-      bottom: 68px;
+      bottom: 54px;
       max-width: calc(100% - 32px);
       transform: translateX(-50%);
       border: 1px solid rgba(248, 243, 231, 0.22);
@@ -481,6 +564,10 @@ const buildXtrataAudioPlayerHtml = (config) => {
     }
 
     .player[data-playback="playing"] .click-hint {
+      opacity: 0;
+    }
+
+    .player[data-panel]:not([data-panel="closed"]) .click-hint {
       opacity: 0;
     }
 
@@ -510,12 +597,12 @@ const buildXtrataAudioPlayerHtml = (config) => {
       bottom: 0;
       height: 49%;
       display: grid;
-      grid-template-rows: 54px minmax(0, 1fr);
+      grid-template-rows: 44px minmax(0, 1fr);
       border-top: 1px solid rgba(248, 243, 231, 0.16);
       background: linear-gradient(180deg, rgba(16, 18, 15, 0.72), rgba(16, 18, 15, 0.96));
       color: var(--ink);
       backdrop-filter: blur(16px);
-      transform: translateY(calc(100% - 54px));
+      transform: translateY(calc(100% - 44px));
       transition: transform 0.2s ease;
       pointer-events: auto;
     }
@@ -528,7 +615,7 @@ const buildXtrataAudioPlayerHtml = (config) => {
 
     .drawer-peek {
       width: 100%;
-      min-height: 54px;
+      min-height: 44px;
       display: grid;
       grid-template-columns: auto minmax(0, 1fr) auto;
       gap: 10px;
@@ -537,7 +624,7 @@ const buildXtrataAudioPlayerHtml = (config) => {
       border-radius: 0;
       background: transparent;
       color: var(--ink);
-      padding: 8px 12px;
+      padding: 7px 12px;
       text-align: left;
     }
 
@@ -749,11 +836,10 @@ const buildXtrataAudioPlayerHtml = (config) => {
           ${subtitle ? `<p class="artist">${escapeHtml(subtitle)}</p>` : ''}
         </div>
         <div class="top-actions" data-player-control>
-          <button id="infoToggle" class="icon-button" type="button" aria-expanded="false" aria-controls="playerDrawer" title="Show player info">i</button>
-          <button id="controlsToggle" class="icon-button" type="button" aria-expanded="false" aria-controls="playerDrawer" title="Show controls">...</button>
+          <button id="infoToggle" class="icon-button" type="button" aria-expanded="false" aria-controls="playerDrawer" title="Show player info" aria-label="Show player info"><span class="eye-icon" aria-hidden="true"></span></button>
+          <button id="controlsToggle" class="icon-button" type="button" aria-expanded="false" aria-controls="playerDrawer" title="Show controls" aria-label="Show controls"><span class="dots-icon" aria-hidden="true"></span></button>
         </div>
       </header>
-      <div id="centerCue" class="center-cue" aria-hidden="true"><span id="centerSymbol" class="center-symbol">Play</span></div>
       <div id="clickHint" class="click-hint" aria-hidden="true">Click artwork to play</div>
       <section id="playerDrawer" class="drawer" data-player-control aria-label="Player controls and information">
         <button id="drawerToggle" class="drawer-peek" type="button" aria-expanded="false" aria-controls="drawerBody">
@@ -831,7 +917,6 @@ const buildXtrataAudioPlayerHtml = (config) => {
       const miniProgress = document.getElementById('miniProgress');
       const miniTime = document.getElementById('miniTime');
       const miniLabel = document.getElementById('miniLabel');
-      const centerSymbol = document.getElementById('centerSymbol');
       const clickHint = document.getElementById('clickHint');
       const waveformBars = document.getElementById('waveformBars');
       const panelButtons = Array.from(document.querySelectorAll('[data-panel-target]'));
@@ -965,7 +1050,6 @@ const buildXtrataAudioPlayerHtml = (config) => {
           player.dataset.playback = isPlaying ? 'playing' : audio.currentTime > 0 ? 'paused' : 'idle';
         }
         if (playToggleButton) playToggleButton.textContent = isPlaying ? 'Pause' : 'Play';
-        if (centerSymbol) centerSymbol.textContent = isPlaying ? 'Pause' : 'Play';
         if (clickHint) {
           clickHint.textContent = isPlaying
             ? 'Click artwork to pause'

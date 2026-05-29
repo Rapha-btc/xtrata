@@ -6,6 +6,7 @@ let audionalVisualBase64 = null;
 let audionalMimeType = 'audio/webm; codecs=opus';
 let audionalVisualMimeType = 'image/png';
 let audionalVisualName = '';
+let livePreviewTimer = 0;
 
 const SUPPORTED_VISUAL_PREFIXES = ['image/', 'video/'];
 
@@ -51,13 +52,22 @@ function getPlayerMode() {
     : 'embedded';
 }
 
+function getVisualSourceMode() {
+  return document.querySelector('input[name="visualSourceMode"]:checked')?.value ===
+    'recursive'
+    ? 'recursive'
+    : 'embedded';
+}
+
 function getRecursiveConfig() {
   return {
     audioTokenId: getElement('recursiveAudioTokenId')?.value.trim() || '',
     audioUrl: getElement('recursiveAudioUrl')?.value.trim() || '',
     contractId: getElement('recursiveContractId')?.value.trim() || '',
     network: getElement('recursiveNetwork')?.value || 'mainnet',
-    coverTokenId: getElement('recursiveCoverTokenId')?.value.trim() || ''
+    coverTokenId: getElement('recursiveCoverTokenId')?.value.trim() || '',
+    coverUrl: getElement('recursiveCoverUrl')?.value.trim() || '',
+    coverKind: getElement('recursiveCoverKind')?.value || 'image'
   };
 }
 
@@ -69,13 +79,33 @@ function sanitizeTokenId(value) {
 function buildDefaultRecursiveUrl(config) {
   const tokenId = sanitizeTokenId(config.audioTokenId);
   if (!tokenId) return '';
+  if ((config.network || 'mainnet') === 'mainnet') {
+    return `https://xtrata.xyz/inscription/${tokenId}`;
+  }
   if (config.contractId) {
     const params = new URLSearchParams({
       contractId: config.contractId,
       tokenId,
       network: config.network || 'mainnet'
     });
-    return `/runtime/content?${params.toString()}`;
+    return `https://xtrata.xyz/runtime/content?${params.toString()}`;
+  }
+  return `https://xtrata.xyz/inscription/${tokenId}`;
+}
+
+function buildDefaultRecursiveCoverUrl(config) {
+  const tokenId = sanitizeTokenId(config.coverTokenId);
+  if (!tokenId) return '';
+  if ((config.network || 'mainnet') === 'mainnet') {
+    return `https://xtrata.xyz/inscription/${tokenId}`;
+  }
+  if (config.contractId) {
+    const params = new URLSearchParams({
+      contractId: config.contractId,
+      tokenId,
+      network: config.network || 'mainnet'
+    });
+    return `https://xtrata.xyz/runtime/content?${params.toString()}`;
   }
   return `https://xtrata.xyz/inscription/${tokenId}`;
 }
@@ -83,8 +113,8 @@ function buildDefaultRecursiveUrl(config) {
 function getRecursiveDependencies(config) {
   return Array.from(
     new Set([
-      sanitizeTokenId(config.audioTokenId),
-      sanitizeTokenId(config.coverTokenId)
+      getPlayerMode() === 'recursive' ? sanitizeTokenId(config.audioTokenId) : '',
+      getVisualSourceMode() === 'recursive' ? sanitizeTokenId(config.coverTokenId) : ''
     ].filter(Boolean))
   );
 }
@@ -111,10 +141,18 @@ function isHtmlGenerationReady() {
 
 function updateRecursiveUrlPreview() {
   const preview = getElement('recursiveUrlPreview');
-  if (!preview) return;
   const config = getRecursiveConfig();
-  const url = config.audioUrl || buildDefaultRecursiveUrl(config);
-  preview.textContent = url || 'Enter an audio token ID or audio URL.';
+  if (preview) {
+    const url = config.audioUrl || buildDefaultRecursiveUrl(config);
+    preview.textContent = url || 'Enter an audio token ID or audio URL.';
+  }
+
+  const coverPreview = getElement('recursiveCoverUrlPreview');
+  if (coverPreview) {
+    const coverUrl = config.coverUrl || buildDefaultRecursiveCoverUrl(config);
+    coverPreview.textContent =
+      coverUrl || 'Upload embedded artwork or enter a cover token ID/URL.';
+  }
 }
 
 function updateDependencyPreview() {
@@ -126,13 +164,23 @@ function updateDependencyPreview() {
 
 function updateHtmlModeUI() {
   const mode = getPlayerMode();
+  const visualMode = getVisualSourceMode();
   const embeddedPanel = getElement('embeddedPlayerOptions');
   const recursivePanel = getElement('recursivePlayerOptions');
+  const embeddedVisualPanel = getElement('embeddedVisualOptions');
+  const recursiveVisualPanel = getElement('recursiveVisualOptions');
   if (embeddedPanel) embeddedPanel.classList.toggle('hidden', mode !== 'embedded');
   if (recursivePanel) recursivePanel.classList.toggle('hidden', mode !== 'recursive');
+  if (embeddedVisualPanel) {
+    embeddedVisualPanel.classList.toggle('hidden', visualMode !== 'embedded');
+  }
+  if (recursiveVisualPanel) {
+    recursiveVisualPanel.classList.toggle('hidden', visualMode !== 'recursive');
+  }
   updateRecursiveUrlPreview();
   updateDependencyPreview();
   checkGenerateButtonState();
+  scheduleLivePreviewUpdate();
 }
 
 function checkGenerateButtonState() {
@@ -171,16 +219,19 @@ function showMetadataModal() {
     return;
   }
   if (window.metadataModal) window.metadataModal.classList.remove('hidden');
+  scheduleLivePreviewUpdate();
 }
 
 function hideMetadataModal() {
   if (window.metadataModal) window.metadataModal.classList.add('hidden');
 }
 
-function collectMetadataFromForm() {
+function collectMetadataFromForm(options = {}) {
+  const previewMode = Boolean(options.preview);
+  const title = window.titleInput?.value.trim() || '';
   return {
     assetType: getElement('assetTypeInput')?.value || 'song',
-    title: window.titleInput?.value.trim() || '',
+    title: title || (previewMode ? 'Untitled audio' : ''),
     artist: getElement('artistInput')?.value.trim() || '',
     album: getElement('albumInput')?.value.trim() || '',
     stemRole: getElement('stemRoleInput')?.value.trim() || '',
@@ -196,17 +247,20 @@ function collectMetadataFromForm() {
 
 function buildTemplateConfig(metadata) {
   const mode = getPlayerMode();
+  const visualMode = getVisualSourceMode();
   return {
     mode,
+    audioSourceMode: mode,
+    visualSourceMode: visualMode,
     metadata,
     audioBase64: mode === 'embedded' ? stripDataURIPrefix(audionalBase64) : '',
     audioMimeType: audionalMimeType,
-    visualBase64: audionalVisualBase64
+    visualBase64: visualMode === 'embedded' && audionalVisualBase64
       ? stripDataURIPrefix(audionalVisualBase64)
       : '',
     visualMimeType: audionalVisualMimeType,
     visualName: audionalVisualName,
-    imageBase64: audionalVisualBase64
+    imageBase64: visualMode === 'embedded' && audionalVisualBase64
       ? stripDataURIPrefix(audionalVisualBase64)
       : '',
     imageMimeType: audionalVisualMimeType,
@@ -234,6 +288,112 @@ function buildGeneratedHtml(metadata) {
     htmlContent,
     config
   };
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  })[char]);
+}
+
+function buildPreviewPlaceholder(message) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #10120f;
+      color: #f8f3e7;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding: 18px;
+      text-align: center;
+    }
+    .preview-shell {
+      width: min(86vmin, 420px);
+      aspect-ratio: 1 / 1;
+      display: grid;
+      place-items: center;
+      border: 1px dashed rgba(248, 243, 231, 0.28);
+      border-radius: 8px;
+      background: rgba(248, 243, 231, 0.06);
+      padding: 18px;
+    }
+    p {
+      max-width: 26ch;
+      margin: 0;
+      color: rgba(248, 243, 231, 0.72);
+      font-weight: 800;
+      line-height: 1.35;
+    }
+  </style>
+</head>
+<body>
+  <div class="preview-shell"><p>${escapeHtml(message)}</p></div>
+</body>
+</html>`;
+}
+
+function setLivePreviewStatus(message, isError = false) {
+  const status = getElement('htmlLivePreviewStatus');
+  if (!status) return;
+  status.textContent = message;
+  status.classList.toggle('error', Boolean(isError));
+}
+
+function updateLivePreview() {
+  const frame = getElement('htmlPlayerLivePreview');
+  if (!frame) return;
+
+  if (!isHtmlGenerationReady()) {
+    frame.srcdoc = buildPreviewPlaceholder(
+      getPlayerMode() === 'recursive'
+        ? 'Enter a recursive audio token ID or URL to preview the player.'
+        : 'Convert audio first to preview the standalone player.'
+    );
+    setLivePreviewStatus('Waiting for an audio source.');
+    return;
+  }
+
+  if (typeof window.HTML_Template !== 'function') {
+    frame.srcdoc = buildPreviewPlaceholder('The player template is still loading.');
+    setLivePreviewStatus('Template loading.');
+    return;
+  }
+
+  try {
+    const metadata = collectMetadataFromForm({ preview: true });
+    const config = buildTemplateConfig(metadata);
+    const htmlContent = window.HTML_Template(config);
+    frame.srcdoc = htmlContent;
+    setLivePreviewStatus(
+      `${config.audioSourceMode === 'recursive' ? 'Recursive audio' : 'Embedded audio'} with ${
+        config.visualSourceMode === 'recursive' ? 'recursive visual' : 'embedded visual'
+      } preview.`
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    frame.srcdoc = buildPreviewPlaceholder(message);
+    setLivePreviewStatus(`Preview failed: ${message}`, true);
+  }
+}
+
+function scheduleLivePreviewUpdate() {
+  if (livePreviewTimer) window.clearTimeout(livePreviewTimer);
+  livePreviewTimer = window.setTimeout(() => {
+    livePreviewTimer = 0;
+    updateLivePreview();
+  }, 180);
 }
 
 function buildGeneratedFilename(title, mode) {
@@ -271,10 +431,7 @@ function finishGeneration(action) {
       action === 'preview'
         ? openHtmlPreview(htmlContent)
         : downloadHtmlFile(htmlContent, filename);
-    const deps =
-      config.mode === 'recursive'
-        ? getRecursiveDependencies(config.recursive).join(', ') || 'none'
-        : 'none';
+    const deps = getRecursiveDependencies(config.recursive).join(', ') || 'none';
     setHtmlExportStatus(
       `${action === 'preview' ? 'Preview opened' : 'Downloaded'} ${filename} (${formatBytes(
         size
@@ -305,6 +462,7 @@ function updateaudionalBase64(base64Data, mimeType) {
   audionalBase64 = base64Data;
   if (mimeType) audionalMimeType = mimeType;
   checkGenerateButtonState();
+  scheduleLivePreviewUpdate();
 }
 
 function setStandaloneArtworkStatus(message, isError = false) {
@@ -377,6 +535,7 @@ function updateaudionalVisualBase64(base64Data, mimeType, fileName = '', options
     });
   }
   checkGenerateButtonState();
+  scheduleLivePreviewUpdate();
 }
 
 async function handleStandaloneArtworkChange(event) {
@@ -448,6 +607,13 @@ function inithtmlGenerator() {
     radio.addEventListener('change', updateHtmlModeUI);
   });
 
+  document.querySelectorAll('input[name="visualSourceMode"]').forEach((radio) => {
+    radio.addEventListener('change', updateHtmlModeUI);
+  });
+
+  window.metadataForm.addEventListener('input', scheduleLivePreviewUpdate);
+  window.metadataForm.addEventListener('change', scheduleLivePreviewUpdate);
+
   const standaloneArtworkInput = getElement('standaloneArtworkInput');
   if (standaloneArtworkInput) {
     standaloneArtworkInput.addEventListener('change', handleStandaloneArtworkChange);
@@ -463,7 +629,9 @@ function inithtmlGenerator() {
     'recursiveAudioUrl',
     'recursiveContractId',
     'recursiveNetwork',
-    'recursiveCoverTokenId'
+    'recursiveCoverTokenId',
+    'recursiveCoverUrl',
+    'recursiveCoverKind'
   ].forEach((id) => {
     const input = getElement(id);
     if (input) input.addEventListener('input', updateHtmlModeUI);
@@ -481,6 +649,7 @@ function inithtmlGenerator() {
   });
 
   updateHtmlModeUI();
+  scheduleLivePreviewUpdate();
   console.log('HTML Generator initialized.');
 }
 
@@ -488,5 +657,9 @@ document.addEventListener('DOMContentLoaded', inithtmlGenerator);
 
 window.updateaudionalBase64 = updateaudionalBase64;
 window.updateaudionalVisualBase64 = updateaudionalVisualBase64;
-window.updateHtmlGenerateButtonState = checkGenerateButtonState;
+window.updateHtmlGenerateButtonState = function () {
+  checkGenerateButtonState();
+  scheduleLivePreviewUpdate();
+};
+window.updateHtmlLivePreview = scheduleLivePreviewUpdate;
 })();

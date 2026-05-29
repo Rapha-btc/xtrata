@@ -713,6 +713,49 @@
       text-transform: none;
     }
 
+    .live-preview-panel {
+      display: grid;
+      gap: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 12px;
+    }
+
+    .live-preview-panel h3 {
+      margin: 0;
+      font-size: 0.95rem;
+    }
+
+    .live-preview-frame {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      background: #10120f;
+      overflow: hidden;
+    }
+
+    .live-preview-frame iframe {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: #10120f;
+    }
+
+    .html-live-preview-status {
+      min-height: 22px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.84rem;
+      font-weight: 800;
+    }
+
+    .html-live-preview-status.error {
+      color: var(--error);
+    }
+
     .modal,
     .info-popup {
       position: fixed;
@@ -968,28 +1011,82 @@
         <div class="tool-panel__body">
           <div class="html-player-options">
             <fieldset>
-              <legend>Player mode</legend>
+              <legend>Audio source</legend>
               <div class="html-mode-options">
                 <label class="format-option">
                   <input type="radio" name="htmlPlayerMode" value="embedded" checked>
                   <span>
-                    <strong>Standalone</strong>
-                    <small>Embeds Base64 audio in one HTML file</small>
+                    <strong>Embedded audio</strong>
+                    <small>Use the converted Base64 audio in this HTML file</small>
                   </span>
                 </label>
                 <label class="format-option">
                   <input type="radio" name="htmlPlayerMode" value="recursive">
                   <span>
-                    <strong>Recursive</strong>
-                    <small>References an audio inscription by URL or token ID</small>
+                    <strong>Recursive audio</strong>
+                    <small>Load an existing audio inscription by URL or token ID</small>
                   </span>
                 </label>
               </div>
             </fieldset>
 
             <div id="embeddedPlayerOptions" class="compact-box">
-              <h3>Standalone embedded player</h3>
-              <p>Convert audio first. Optional visual media is embedded into the same HTML file.</p>
+              <h3>Embedded audio</h3>
+              <p>Convert audio first. The exported player will carry the WebM/Opus data inside the HTML.</p>
+            </div>
+
+            <div id="recursivePlayerOptions" class="compact-box hidden">
+              <h3>Recursive audio source</h3>
+              <div class="form-stack">
+                <label class="field" for="recursiveAudioTokenId">
+                  <span>Audio token ID</span>
+                  <input type="text" id="recursiveAudioTokenId" placeholder="315">
+                </label>
+                <label class="field" for="recursiveAudioUrl">
+                  <span>Direct audio URL</span>
+                  <input type="text" id="recursiveAudioUrl" placeholder="Optional: https://xtrata.xyz/inscription/315">
+                </label>
+                <label class="field" for="recursiveContractId">
+                  <span>Contract ID</span>
+                  <input type="text" id="recursiveContractId" value="SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0">
+                </label>
+                <label class="field" for="recursiveNetwork">
+                  <span>Network</span>
+                  <select id="recursiveNetwork">
+                    <option value="mainnet" selected>Mainnet</option>
+                    <option value="testnet">Testnet</option>
+                  </select>
+                </label>
+                <div class="info-summary-section">
+                  <p>Audio URL <span id="recursiveUrlPreview" class="preview-value">Enter an audio token ID or audio URL.</span></p>
+                  <p>Endpoint <span>Mainnet IDs use /inscription. Direct URL handles custom sources.</span></p>
+                  <p>Mint note <span>Add the audio token as a recursive parent.</span></p>
+                </div>
+              </div>
+            </div>
+
+            <fieldset>
+              <legend>Visual source</legend>
+              <div class="html-mode-options">
+                <label class="format-option">
+                  <input type="radio" name="visualSourceMode" value="embedded" checked>
+                  <span>
+                    <strong>Embedded visual</strong>
+                    <small>Upload image, GIF, or video into the HTML</small>
+                  </span>
+                </label>
+                <label class="format-option">
+                  <input type="radio" name="visualSourceMode" value="recursive">
+                  <span>
+                    <strong>Recursive visual</strong>
+                    <small>Load cover art from an existing inscription</small>
+                  </span>
+                </label>
+              </div>
+            </fieldset>
+
+            <div id="embeddedVisualOptions" class="compact-box">
+              <h3>Embedded visual</h3>
               <div class="form-stack">
                 <label class="field" for="standaloneArtworkInput">
                   <span>Artwork / visual</span>
@@ -1011,38 +1108,36 @@
               </div>
             </div>
 
-            <div id="recursivePlayerOptions" class="compact-box hidden">
-              <h3>Recursive player source</h3>
+            <div id="recursiveVisualOptions" class="compact-box hidden">
+              <h3>Recursive cover visual</h3>
               <div class="form-stack">
-                <label class="field" for="recursiveAudioTokenId">
-                  <span>Audio token ID</span>
-                  <input type="text" id="recursiveAudioTokenId" placeholder="315">
-                </label>
-                <label class="field" for="recursiveAudioUrl">
-                  <span>Direct audio URL</span>
-                  <input type="text" id="recursiveAudioUrl" placeholder="Optional: https://xtrata.xyz/inscription/315">
-                </label>
-                <label class="field" for="recursiveContractId">
-                  <span>Contract ID</span>
-                  <input type="text" id="recursiveContractId" value="SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0">
-                </label>
-                <label class="field" for="recursiveNetwork">
-                  <span>Network</span>
-                  <select id="recursiveNetwork">
-                    <option value="mainnet" selected>Mainnet</option>
-                    <option value="testnet">Testnet</option>
-                  </select>
-                </label>
                 <label class="field" for="recursiveCoverTokenId">
                   <span>Cover token ID</span>
-                  <input type="text" id="recursiveCoverTokenId" placeholder="Optional dependency">
+                  <input type="text" id="recursiveCoverTokenId" placeholder="Optional: 314">
+                </label>
+                <label class="field" for="recursiveCoverUrl">
+                  <span>Direct cover URL</span>
+                  <input type="text" id="recursiveCoverUrl" placeholder="Optional: https://xtrata.xyz/inscription/314">
+                </label>
+                <label class="field" for="recursiveCoverKind">
+                  <span>Visual type</span>
+                  <select id="recursiveCoverKind">
+                    <option value="image" selected>Image / GIF</option>
+                    <option value="video">Video</option>
+                  </select>
                 </label>
                 <div class="info-summary-section">
-                  <p>Audio URL <span id="recursiveUrlPreview" class="preview-value">Enter an audio token ID or audio URL.</span></p>
-                  <p>Dependencies <span id="recursiveDependencyPreview" class="preview-value">None yet</span></p>
-                  <p>Mint note <span>Use these IDs as recursive parents.</span></p>
+                  <p>Cover URL <span id="recursiveCoverUrlPreview" class="preview-value">Upload embedded artwork or enter a cover token ID/URL.</span></p>
+                  <p>Visual type <span>Image/GIF uses an image tag; video uses a muted looping visual.</span></p>
+                  <p>Mint note <span>Add the cover token as a recursive parent.</span></p>
                 </div>
               </div>
+            </div>
+
+            <div class="info-summary-section">
+              <p>Dependencies <span id="recursiveDependencyPreview" class="preview-value">None yet</span></p>
+              <p>Player output <span>Embedded and recursive sources can be mixed.</span></p>
+              <p>Preview <span>Updates automatically from the current form.</span></p>
             </div>
 
             <p id="htmlExportStatus" class="html-export-status">Convert audio first or switch to recursive mode.</p>
@@ -1050,6 +1145,13 @@
               <button id="generateHtmlButton" type="button" disabled>Generate HTML player</button>
               <button id="testGeneratedHtmlButton" class="button-secondary" type="button">Open tester</button>
             </div>
+            <section class="live-preview-panel" aria-label="Generated player live preview">
+              <h3>Live player preview</h3>
+              <p id="htmlLivePreviewStatus" class="html-live-preview-status">Waiting for an audio source.</p>
+              <div class="live-preview-frame">
+                <iframe id="htmlPlayerLivePreview" title="Generated HTML player live preview" sandbox="allow-scripts allow-same-origin"></iframe>
+              </div>
+            </section>
           </div>
         </div>
       </section>
