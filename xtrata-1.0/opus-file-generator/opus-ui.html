@@ -1317,6 +1317,11 @@
                   <span>Contract ID</span>
                   <input type="text" id="recursiveContractId" value="SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0">
                 </label>
+                <label class="field" for="recursiveFallbackContractId">
+                  <span>Legacy fallback contract</span>
+                  <input type="text" id="recursiveFallbackContractId" placeholder="SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1">
+                  <small>Optional. Leave blank to use the known V2 to V1 fallback for migrated audio.</small>
+                </label>
                 <label class="field" for="recursiveNetwork">
                   <span>Network</span>
                   <select id="recursiveNetwork">
@@ -1326,7 +1331,7 @@
                 </label>
                 <div class="info-summary-section">
                   <p>Audio URL <span id="recursiveUrlPreview" class="preview-value">Enter an audio token ID or audio URL.</span></p>
-                  <p>Endpoint <span>Mainnet IDs use /inscription. Direct URL handles custom sources.</span></p>
+                  <p>Endpoint <span>Adds legacy fallback when available for migrated audio.</span></p>
                   <p>Mint note <span>Add the audio token as a recursive parent.</span></p>
                 </div>
               </div>

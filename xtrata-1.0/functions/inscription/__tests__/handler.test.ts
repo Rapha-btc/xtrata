@@ -10,6 +10,8 @@ import { onRequest as onShortInscriptionRequest } from '../[tokenId]';
 
 const explicitContractAddress = 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X';
 const explicitContractName = 'xtrata-v2-1-1';
+const v2ContractId = `${explicitContractAddress}.xtrata-v2-1-0`;
+const v1ContractId = `${explicitContractAddress}.xtrata-v1-1-1`;
 
 const parsedRuntimeUrl = (request: Request) => {
   const url = new URL(request.url);
@@ -20,6 +22,12 @@ const parsedRuntimeUrl = (request: Request) => {
 };
 
 describe('/inscription aliases', () => {
+  it('uses the public V2.1.0 default with the legacy V1 fallback', () => {
+    expect(DEFAULT_INSCRIPTION_CONTRACT_ID).toBe(v2ContractId);
+    expect(DEFAULT_INSCRIPTION_NETWORK).toBe('mainnet');
+    expect(DEFAULT_INSCRIPTION_FALLBACK_CONTRACT_ID).toBe(v1ContractId);
+  });
+
   it('maps a short inscription URL to the default runtime content contract', () => {
     const runtimeRequest = buildRuntimeInscriptionRequest({
       request: new Request('https://xtrata.xyz/inscription/315'),
@@ -49,7 +57,7 @@ describe('/inscription aliases', () => {
     expect(parsedRuntimeUrl(runtimeRequest).params.get('tokenId')).toBe('315');
   });
 
-  it('honors the explicit contract route without applying default fallback', () => {
+  it('honors the explicit contract route and applies its registry fallback', () => {
     const runtimeRequest = buildRuntimeInscriptionRequest({
       request: new Request(
         `https://xtrata.xyz/inscription/mainnet/${explicitContractAddress}/${explicitContractName}/315`
@@ -68,7 +76,7 @@ describe('/inscription aliases', () => {
     );
     expect(params.get('tokenId')).toBe('315');
     expect(params.get('network')).toBe('mainnet');
-    expect(params.has('fallbackContractId')).toBe(false);
+    expect(params.get('fallbackContractId')).toBe(v2ContractId);
   });
 
   it('keeps query overrides available on the short route', () => {

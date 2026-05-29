@@ -12,6 +12,10 @@ const SUPPORTED_VISUAL_PREFIXES = ['image/', 'video/'];
 const XTRATA_OPUS_HTML_HANDOFF_KEY = 'xtrata.opusHtmlPlayer.pendingInscription';
 const XTRATA_OPUS_HTML_HANDOFF_DB = 'xtrata-opus-html-handoff';
 const XTRATA_OPUS_HTML_HANDOFF_STORE = 'pending';
+const XTRATA_MAINNET_ADDRESS = 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X';
+const XTRATA_V1_CONTRACT_ID = `${XTRATA_MAINNET_ADDRESS}.xtrata-v1-1-1`;
+const XTRATA_V2_1_0_CONTRACT_ID = `${XTRATA_MAINNET_ADDRESS}.xtrata-v2-1-0`;
+const XTRATA_V2_1_1_CONTRACT_ID = `${XTRATA_MAINNET_ADDRESS}.xtrata-v2-1-1`;
 
 function stripDataURIPrefix(dataString) {
   if (typeof dataString !== 'string') return '';
@@ -62,11 +66,68 @@ function getVisualSourceMode() {
     : 'embedded';
 }
 
+function normalizeContractId(value) {
+  return String(value || '').trim();
+}
+
+function getLegacyFallbackContractId(contractId) {
+  const normalized = normalizeContractId(contractId);
+  if (normalized === XTRATA_V2_1_0_CONTRACT_ID) return XTRATA_V1_CONTRACT_ID;
+  if (normalized === XTRATA_V2_1_1_CONTRACT_ID) return XTRATA_V2_1_0_CONTRACT_ID;
+  return '';
+}
+
+function isXtrataContentUrl(url) {
+  return (
+    (url.hostname === 'xtrata.xyz' || url.hostname.endsWith('.xtrata.pages.dev')) &&
+    (url.pathname.startsWith('/inscription/') || url.pathname === '/runtime/content')
+  );
+}
+
+function appendFallbackToXtrataContentUrl(url, fallbackContractId) {
+  const sourceUrl = String(url || '').trim();
+  const fallback = normalizeContractId(fallbackContractId);
+  if (!sourceUrl || !fallback) return sourceUrl;
+
+  try {
+    const parsed = new URL(sourceUrl);
+    if (!isXtrataContentUrl(parsed) || parsed.searchParams.has('fallbackContractId')) {
+      return sourceUrl;
+    }
+    parsed.searchParams.set('fallbackContractId', fallback);
+    return parsed.toString();
+  } catch (_error) {
+    return sourceUrl;
+  }
+}
+
+function appendMediaKindToXtrataContentUrl(url, mediaKind) {
+  const sourceUrl = String(url || '').trim();
+  const normalizedMediaKind = String(mediaKind || '').trim().toLowerCase();
+  if (!sourceUrl || !normalizedMediaKind) return sourceUrl;
+
+  try {
+    const parsed = new URL(sourceUrl);
+    if (!isXtrataContentUrl(parsed) || parsed.searchParams.has('mediaKind')) {
+      return sourceUrl;
+    }
+    parsed.searchParams.set('mediaKind', normalizedMediaKind);
+    return parsed.toString();
+  } catch (_error) {
+    return sourceUrl;
+  }
+}
+
 function getRecursiveConfig() {
+  const contractId = getElement('recursiveContractId')?.value.trim() || '';
+  const fallbackContractId =
+    getElement('recursiveFallbackContractId')?.value.trim() ||
+    getLegacyFallbackContractId(contractId);
   return {
     audioTokenId: getElement('recursiveAudioTokenId')?.value.trim() || '',
     audioUrl: getElement('recursiveAudioUrl')?.value.trim() || '',
-    contractId: getElement('recursiveContractId')?.value.trim() || '',
+    contractId,
+    fallbackContractId,
     network: getElement('recursiveNetwork')?.value || 'mainnet',
     coverTokenId: getElement('recursiveCoverTokenId')?.value.trim() || '',
     coverUrl: getElement('recursiveCoverUrl')?.value.trim() || '',
@@ -82,8 +143,15 @@ function sanitizeTokenId(value) {
 function buildDefaultRecursiveUrl(config) {
   const tokenId = sanitizeTokenId(config.audioTokenId);
   if (!tokenId) return '';
+  const fallbackContractId =
+    normalizeContractId(config.fallbackContractId) ||
+    getLegacyFallbackContractId(config.contractId);
   if ((config.network || 'mainnet') === 'mainnet') {
-    return `https://xtrata.xyz/inscription/${tokenId}`;
+    const fallbackUrl = appendFallbackToXtrataContentUrl(
+      `https://xtrata.xyz/inscription/${tokenId}`,
+      fallbackContractId
+    );
+    return appendMediaKindToXtrataContentUrl(fallbackUrl, 'audio');
   }
   if (config.contractId) {
     const params = new URLSearchParams({
@@ -91,6 +159,10 @@ function buildDefaultRecursiveUrl(config) {
       tokenId,
       network: config.network || 'mainnet'
     });
+    if (fallbackContractId) {
+      params.set('fallbackContractId', fallbackContractId);
+    }
+    params.set('mediaKind', 'audio');
     return `https://xtrata.xyz/runtime/content?${params.toString()}`;
   }
   return `https://xtrata.xyz/inscription/${tokenId}`;
@@ -99,8 +171,14 @@ function buildDefaultRecursiveUrl(config) {
 function buildDefaultRecursiveCoverUrl(config) {
   const tokenId = sanitizeTokenId(config.coverTokenId);
   if (!tokenId) return '';
+  const fallbackContractId =
+    normalizeContractId(config.coverFallbackContractId || config.fallbackContractId) ||
+    getLegacyFallbackContractId(config.contractId);
   if ((config.network || 'mainnet') === 'mainnet') {
-    return `https://xtrata.xyz/inscription/${tokenId}`;
+    return appendFallbackToXtrataContentUrl(
+      `https://xtrata.xyz/inscription/${tokenId}`,
+      fallbackContractId
+    );
   }
   if (config.contractId) {
     const params = new URLSearchParams({
@@ -108,6 +186,9 @@ function buildDefaultRecursiveCoverUrl(config) {
       tokenId,
       network: config.network || 'mainnet'
     });
+    if (fallbackContractId) {
+      params.set('fallbackContractId', fallbackContractId);
+    }
     return `https://xtrata.xyz/runtime/content?${params.toString()}`;
   }
   return `https://xtrata.xyz/inscription/${tokenId}`;
@@ -146,13 +227,20 @@ function updateRecursiveUrlPreview() {
   const preview = getElement('recursiveUrlPreview');
   const config = getRecursiveConfig();
   if (preview) {
-    const url = config.audioUrl || buildDefaultRecursiveUrl(config);
+    const url =
+      appendMediaKindToXtrataContentUrl(
+        appendFallbackToXtrataContentUrl(config.audioUrl, config.fallbackContractId),
+        'audio'
+      ) ||
+      buildDefaultRecursiveUrl(config);
     preview.textContent = url || 'Enter an audio token ID or audio URL.';
   }
 
   const coverPreview = getElement('recursiveCoverUrlPreview');
   if (coverPreview) {
-    const coverUrl = config.coverUrl || buildDefaultRecursiveCoverUrl(config);
+    const coverUrl =
+      appendFallbackToXtrataContentUrl(config.coverUrl, config.fallbackContractId) ||
+      buildDefaultRecursiveCoverUrl(config);
     coverPreview.textContent =
       coverUrl || 'Upload embedded artwork or enter a cover token ID/URL.';
   }
@@ -756,6 +844,7 @@ function inithtmlGenerator() {
     'recursiveAudioTokenId',
     'recursiveAudioUrl',
     'recursiveContractId',
+    'recursiveFallbackContractId',
     'recursiveNetwork',
     'recursiveCoverTokenId',
     'recursiveCoverUrl',

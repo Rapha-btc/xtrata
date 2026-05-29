@@ -283,6 +283,42 @@ describe('/runtime/content', () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
+  it('serves legacy WebM audio with an audio content type when requested', async () => {
+    const fetch = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            okay: true,
+            result: metaResult({
+              mimeType: 'video/webm; codecs=opus',
+              totalSize: 3n
+            })
+          }),
+          {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }
+        )
+    );
+    vi.stubGlobal('fetch', fetch);
+
+    const response = await onRequest({
+      request: new Request(
+        `https://xtrata.xyz/runtime/content?contractId=${CONTRACT_ID}&tokenId=294&network=mainnet&mediaKind=audio`,
+        {
+          method: 'HEAD'
+        }
+      ),
+      env: {}
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toBe('audio/webm; codecs=opus');
+    expect(response.headers.get('Content-Length')).toBe('3');
+  });
+
   it('streams reconstructed bytes on cache misses', async () => {
     const fetch = vi.fn(async (input: RequestInfo | URL) => {
       const endpoint = String(input);

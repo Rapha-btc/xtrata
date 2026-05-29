@@ -6,6 +6,7 @@ type ContractRegistryEntry = {
   address: string;
   contractName: string;
   network: string;
+  protocolVersion?: string;
   legacyContractId?: string;
 };
 
@@ -17,19 +18,32 @@ type InscriptionRouteParams = {
 };
 
 const registryEntries = contractRegistry as ContractRegistryEntry[];
+const getContractId = (entry: ContractRegistryEntry) =>
+  `${entry.address}.${entry.contractName}`;
 const defaultMainnetContract =
+  registryEntries.find(
+    (entry) =>
+      entry.network === 'mainnet' &&
+      (entry.protocolVersion === '2.1.0' ||
+        entry.contractName === 'xtrata-v2-1-0')
+  ) ??
   registryEntries
     .slice()
     .reverse()
-    .find((entry) => entry.network === 'mainnet') ?? registryEntries[0];
+    .find((entry) => entry.network === 'mainnet') ??
+  registryEntries[0];
 
 export const DEFAULT_INSCRIPTION_CONTRACT_ID = defaultMainnetContract
-  ? `${defaultMainnetContract.address}.${defaultMainnetContract.contractName}`
+  ? getContractId(defaultMainnetContract)
   : '';
 export const DEFAULT_INSCRIPTION_NETWORK =
   defaultMainnetContract?.network || 'mainnet';
 export const DEFAULT_INSCRIPTION_FALLBACK_CONTRACT_ID =
   defaultMainnetContract?.legacyContractId || '';
+
+const getRegistryFallbackContractId = (contractId: string) =>
+  registryEntries.find((entry) => getContractId(entry) === contractId)
+    ?.legacyContractId || '';
 
 const firstParam = (value: unknown) => {
   if (Array.isArray(value)) {
@@ -75,16 +89,15 @@ export const buildRuntimeInscriptionRequest = (params: {
   runtimeUrl.searchParams.set('tokenId', tokenId);
   runtimeUrl.searchParams.set('network', network);
 
-  if (
-    !pathContractId &&
-    !sourceUrl.searchParams.has('fallbackContractId') &&
-    contractId === DEFAULT_INSCRIPTION_CONTRACT_ID &&
-    DEFAULT_INSCRIPTION_FALLBACK_CONTRACT_ID
-  ) {
-    runtimeUrl.searchParams.set(
-      'fallbackContractId',
-      DEFAULT_INSCRIPTION_FALLBACK_CONTRACT_ID
-    );
+  if (!sourceUrl.searchParams.has('fallbackContractId')) {
+    const fallbackContractId =
+      getRegistryFallbackContractId(contractId) ||
+      (!pathContractId && contractId === DEFAULT_INSCRIPTION_CONTRACT_ID
+        ? DEFAULT_INSCRIPTION_FALLBACK_CONTRACT_ID
+        : '');
+    if (fallbackContractId) {
+      runtimeUrl.searchParams.set('fallbackContractId', fallbackContractId);
+    }
   }
 
   return new Request(runtimeUrl.toString(), {
