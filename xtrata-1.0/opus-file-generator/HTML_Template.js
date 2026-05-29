@@ -280,6 +280,7 @@ const buildXtrataAudioPlayerHtml = (config) => {
   };
 
   const detailRows = [
+    ['Title / Song name', title],
     ['Type', assetTypeLabel],
     ['Artist', artist],
     ['Album', album],
