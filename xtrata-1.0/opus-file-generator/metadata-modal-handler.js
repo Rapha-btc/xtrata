@@ -9,12 +9,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const noteInput = document.getElementById('noteInput');
     const frequencyInput = document.getElementById('frequencyInput');
     const noteList = document.getElementById('noteList');
-    const cancelBtn = document.getElementById('cancelMetadataBtn');
     const form = document.getElementById('metadataForm');
-    const modal = document.getElementById('metadataModal');
   
-    if (!loopCheckbox || !bpmGroup || !bpmInput || !assetTypeInput || !sampleMetadataFields || !stemMetadataFields || !noteInput || !frequencyInput || !noteList || !cancelBtn || !form || !modal) {
-        console.error("Metadata modal script: One or more required elements not found. Frequency calculation might fail.");
+    if (!loopCheckbox || !bpmGroup || !bpmInput || !assetTypeInput || !sampleMetadataFields || !stemMetadataFields || !noteInput || !frequencyInput || !noteList || !form) {
+        console.error("Metadata script: One or more required elements not found. Frequency calculation might fail.");
         return; // Stop execution if elements are missing
     }
   
@@ -101,18 +99,11 @@ document.addEventListener('DOMContentLoaded', () => {
     assetTypeInput.addEventListener('change', updateMetadataFieldsForAssetType);
     noteInput.addEventListener('input', updateFrequencyDisplay);
     loopCheckbox.addEventListener('change', toggleBpmField);
-    cancelBtn.addEventListener('click', () => {
-        form.reset(); // Resets form fields
-        updateMetadataFieldsForAssetType();
-        updateFrequencyDisplay(); // Clear calculated frequency
-        toggleBpmField(); // Ensure BPM field visibility matches reset checkbox
-        modal.classList.add('hidden'); // Hide the modal
-    });
-    form.addEventListener('submit', (event) => {
-        // Handle form submission logic here (likely in ob1-generator.js now?)
-        // You might prevent default if handling via JS only: event.preventDefault();
-        console.log("Metadata Form submitted");
-        // Access values via form.elements or getElementById if needed
-        // const title = form.elements.title.value;
+    form.addEventListener('reset', () => {
+        window.setTimeout(() => {
+            updateMetadataFieldsForAssetType();
+            updateFrequencyDisplay();
+            toggleBpmField();
+        }, 0);
     });
   });

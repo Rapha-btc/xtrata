@@ -1140,9 +1140,84 @@
               <p>Preview <span>Updates automatically from the current form.</span></p>
             </div>
 
+            <section id="playerMetadataPanel" class="compact-box">
+              <h3>Player metadata</h3>
+              <form id="metadataForm" class="form-stack">
+                <label class="field" for="titleInput">
+                  <span>Title</span>
+                  <input type="text" id="titleInput" name="title" required>
+                </label>
+                <label class="field" for="assetTypeInput">
+                  <span>Audio type</span>
+                  <select id="assetTypeInput" name="assetType">
+                    <option value="song" selected>Song</option>
+                    <option value="sample">Sample</option>
+                    <option value="stem">Stem</option>
+                    <option value="loop">Loop</option>
+                    <option value="voice">Voice</option>
+                    <option value="other">Other audio</option>
+                  </select>
+                </label>
+                <label class="field" for="artistInput">
+                  <span>Artist</span>
+                  <input type="text" id="artistInput" name="artist">
+                </label>
+                <label class="field" for="albumInput">
+                  <span>Album</span>
+                  <input type="text" id="albumInput" name="album">
+                </label>
+                <fieldset id="stemMetadataFields" class="metadata-fieldset hidden">
+                  <legend>Stem details</legend>
+                  <label class="field" for="stemRoleInput">
+                    <span>Stem role</span>
+                    <input type="text" id="stemRoleInput" name="stemRole" placeholder="Drums, vocal, guitar">
+                  </label>
+                </fieldset>
+                <fieldset id="sampleMetadataFields" class="metadata-fieldset hidden">
+                  <legend>Sample details</legend>
+                  <label class="field" for="instrumentInput">
+                    <span>Instrument</span>
+                    <input type="text" id="instrumentInput" name="instrument">
+                  </label>
+                  <label class="field" for="noteInput">
+                    <span>Note</span>
+                    <input type="text" id="noteInput" name="note" list="noteList" placeholder="C4">
+                    <datalist id="noteList"></datalist>
+                  </label>
+                  <label class="field" for="frequencyInput">
+                    <span>Frequency</span>
+                    <input type="text" id="frequencyInput" name="frequency" readonly>
+                  </label>
+                </fieldset>
+                <label class="format-option" for="loopCheckbox">
+                  <input type="checkbox" id="loopCheckbox" name="isLoop">
+                  <span>
+                    <strong>Loop</strong>
+                    <small>Enable tempo metadata</small>
+                  </span>
+                </label>
+                <div id="bpmGroup" class="field hidden">
+                  <label for="bpmInput">
+                    <span>BPM</span>
+                    <input type="number" id="bpmInput" name="bpm" min="1">
+                  </label>
+                </div>
+                <label class="field" for="descriptionInput">
+                  <span>Description</span>
+                  <textarea id="descriptionInput" name="description"></textarea>
+                </label>
+                <label class="field" for="licenseInput">
+                  <span>License</span>
+                  <input type="text" id="licenseInput" name="license" placeholder="All rights reserved">
+                </label>
+              </form>
+            </section>
+
             <p id="htmlExportStatus" class="html-export-status">Convert audio first or switch to recursive mode.</p>
             <div class="button-container">
-              <button id="generateHtmlButton" type="button" disabled>Generate HTML player</button>
+              <button id="generateHtmlButton" type="button" disabled>Download HTML player</button>
+              <button id="previewHtmlButton" class="button-secondary" type="button" disabled>Preview HTML</button>
+              <button id="inscribeHtmlButton" class="button-secondary" type="button" disabled>Prepare inscription</button>
               <button id="testGeneratedHtmlButton" class="button-secondary" type="button">Open tester</button>
             </div>
             <section class="live-preview-panel" aria-label="Generated player live preview">
@@ -1204,85 +1279,6 @@
     </div>
   </div>
 
-  <div id="metadataModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="metadataModalTitle">
-    <div class="modal-content">
-      <h2 id="metadataModalTitle">Player metadata</h2>
-      <form id="metadataForm" class="form-stack">
-        <label class="field" for="titleInput">
-          <span>Title</span>
-          <input type="text" id="titleInput" name="title" required>
-        </label>
-        <label class="field" for="assetTypeInput">
-          <span>Audio type</span>
-          <select id="assetTypeInput" name="assetType">
-            <option value="song" selected>Song</option>
-            <option value="sample">Sample</option>
-            <option value="stem">Stem</option>
-            <option value="loop">Loop</option>
-            <option value="voice">Voice</option>
-            <option value="other">Other audio</option>
-          </select>
-        </label>
-        <label class="field" for="artistInput">
-          <span>Artist</span>
-          <input type="text" id="artistInput" name="artist">
-        </label>
-        <label class="field" for="albumInput">
-          <span>Album</span>
-          <input type="text" id="albumInput" name="album">
-        </label>
-        <fieldset id="stemMetadataFields" class="metadata-fieldset hidden">
-          <legend>Stem details</legend>
-          <label class="field" for="stemRoleInput">
-            <span>Stem role</span>
-            <input type="text" id="stemRoleInput" name="stemRole" placeholder="Drums, vocal, guitar">
-          </label>
-        </fieldset>
-        <fieldset id="sampleMetadataFields" class="metadata-fieldset hidden">
-          <legend>Sample details</legend>
-          <label class="field" for="instrumentInput">
-            <span>Instrument</span>
-            <input type="text" id="instrumentInput" name="instrument">
-          </label>
-          <label class="field" for="noteInput">
-            <span>Note</span>
-            <input type="text" id="noteInput" name="note" list="noteList" placeholder="C4">
-            <datalist id="noteList"></datalist>
-          </label>
-          <label class="field" for="frequencyInput">
-            <span>Frequency</span>
-            <input type="text" id="frequencyInput" name="frequency" readonly>
-          </label>
-        </fieldset>
-        <label class="format-option" for="loopCheckbox">
-          <input type="checkbox" id="loopCheckbox" name="isLoop">
-          <span>
-            <strong>Loop</strong>
-            <small>Enable tempo metadata</small>
-          </span>
-        </label>
-        <div id="bpmGroup" class="field hidden">
-          <label for="bpmInput">
-            <span>BPM</span>
-            <input type="number" id="bpmInput" name="bpm" min="1">
-          </label>
-        </div>
-        <label class="field" for="descriptionInput">
-          <span>Description</span>
-          <textarea id="descriptionInput" name="description"></textarea>
-        </label>
-        <label class="field" for="licenseInput">
-          <span>License</span>
-          <input type="text" id="licenseInput" name="license" placeholder="All rights reserved">
-        </label>
-        <div class="modal-actions">
-          <button id="cancelMetadataBtn" class="button-secondary" type="button">Cancel</button>
-          <button id="previewHtmlButton" class="button-secondary" type="button" disabled>Preview HTML</button>
-          <button id="submitMetadataBtn" type="submit">Download HTML</button>
-        </div>
-      </form>
-    </div>
-  </div>
 </main>
 
 <script src="metadata-modal-handler.js"></script>

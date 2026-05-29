@@ -3266,6 +3266,9 @@
 
     
     const THEME_STORAGE_KEY = 'xtrata.simple-homepage.theme';
+    const OPUS_HTML_HANDOFF_KEY = 'xtrata.opusHtmlPlayer.pendingInscription';
+    const OPUS_HTML_HANDOFF_DB = 'xtrata-opus-html-handoff';
+    const OPUS_HTML_HANDOFF_STORE = 'pending';
     const THEME_IDS = new Set(['classic', 'terminal', 'midnight', 'neon', 'monochrome', 'obsidian', 'ember', 'ultraviolet', 'arctic', 'ruby']);
     const CURATED_GALLERIES = [
           {
@@ -3405,6 +3408,7 @@
       adminStatus: null,
       selectedFile: null,
       prepared: null,
+      handoffDependencyIds: [],
       duplicateId: null,
       uploadState: null,
       busy: false,
@@ -3926,6 +3930,7 @@
         capabilities.version !== '1.1.1' &&
         !state.uploadState &&
         prepared.chunks.length > 0 &&
+        (prepared.dependencyIds ?? []).length <= 50 &&
         prepared.chunks.length <= SMALL_MINT_HELPER_MAX_CHUNKS
       );
     };
@@ -4765,8 +4770,12 @@
       dom.inscribeButton.textContent = state.uploadState
         ? 'Resume inscription'
         : shouldUseSmallMintHelper()
-          ? 'Start single-tx inscription'
-          : 'Start inscription';
+          ? (state.prepared?.dependencyIds?.length ?? 0) > 0
+            ? 'Start recursive single-tx inscription'
+            : 'Start single-tx inscription'
+          : (state.prepared?.dependencyIds?.length ?? 0) > 0
+            ? 'Start recursive inscription'
+            : 'Start inscription';
       dom.refreshWalletButton.disabled = state.busy || state.walletLoadingPage || (!viewingAddress && !state.explorerMode);
       dom.walletLookupButton.textContent = shouldClearWalletLookupOnSubmit()
         ? 'Clear'
@@ -5000,6 +5009,8 @@
         usesSingleTx,
         sequentialTxEstimate
       );
+      const dependencyIds = state.prepared.dependencyIds ?? [];
+      const dependencyLabel = dependencyIds.map((id) => id.toString()).join(', ');
       renderMeta(dom.preparedMeta, [
         { section: 'File' },
         {
@@ -5017,6 +5028,16 @@
           title: state.prepared.expectedHashHex,
           tooltip: state.prepared.expectedHashHex
         },
+        ...(dependencyIds.length > 0
+          ? [
+              {
+                key: 'Dependencies',
+                value: dependencyLabel,
+                title: `Recursive parent inscription ID${dependencyIds.length === 1 ? '' : 's'}: ${dependencyLabel}`,
+                wide: true
+              }
+            ]
+          : []),
         { section: 'Mint plan' },
         {
           key: 'Transactions required',
@@ -5110,6 +5131,36 @@
       return mimeType;
     };
 
+    const normalizeOpusHandoffDependencyIds = (dependencies) => {
+      const tokens = Array.isArray(dependencies)
+        ? dependencies
+        : typeof dependencies === 'string'
+        ? dependencies.split(/[,\s]+/)
+        : [];
+      const ids = [];
+      const invalidTokens = [];
+      for (const value of tokens) {
+        const token = String(value ?? '').trim().replace(/^#/, '');
+        if (!token) {
+          continue;
+        }
+        if (!/^\d+$/.test(token)) {
+          invalidTokens.push(String(value));
+          continue;
+        }
+        ids.push(BigInt(token));
+      }
+      if (invalidTokens.length > 0) {
+        throw new Error(`Invalid dependency ID${invalidTokens.length === 1 ? '' : 's'}: ${invalidTokens.join(', ')}.`);
+      }
+      const unique = Array.from(new Set(ids));
+      unique.sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
+      if (unique.length > 50) {
+        throw new Error('Recursive inscriptions can include at most 50 dependency IDs.');
+      }
+      return unique;
+    };
+
     const refreshUploadState = async (expectedHash) => {
       state.uploadState = null;
       const owner = state.walletSession.address;
@@ -5142,6 +5193,7 @@
       const mimeType = validatePayload(file, bytes, chunks, tokenUriValue);
       const batches = batchChunks(chunks, Math.min(DEFAULT_BATCH_SIZE, MAX_BATCH_SIZE));
       const expectedHashHex = bytesToHex(expectedHash);
+      const dependencyIds = state.handoffDependencyIds ?? [];
 
       state.prepared = {
         file,
@@ -5151,7 +5203,8 @@
         expectedHash,
         expectedHashHex,
         tokenUriValue,
-        mimeType
+        mimeType,
+        dependencyIds
       };
       state.duplicateId = null;
       state.uploadState = null;
@@ -5249,6 +5302,7 @@
       try {
         await validateMintReadiness();
         const prepared = state.prepared;
+        const dependencyIds = prepared.dependencyIds ?? [];
         await refreshUploadState(prepared.expectedHash);
         flowStarted = true;
         const feeEstimate = getFeeEstimate(prepared.chunks.length);
@@ -5264,19 +5318,35 @@
           setStep('upload', 'pending', 'Single tx');
           setStep('seal', 'pending', 'Single tx');
           appendLog(
-            `Small-file helper route active (<=${SMALL_MINT_HELPER_MAX_CHUNKS} chunks).`
+            `Small-file helper route active (<=${SMALL_MINT_HELPER_MAX_CHUNKS} chunks)${
+              dependencyIds.length > 0 ? ` with ${dependencyIds.length} recursive dependency${dependencyIds.length === 1 ? '' : 'ies'}` : ''
+            }.`
           );
           const singleTx = await requestContractCall({
             contract: smallMintHelperContract,
-            functionName: 'mint-small-single-tx',
-            functionArgs: [
-              principalCV(getContractId(state.contract)),
-              bufferCV(prepared.expectedHash),
-              stringAsciiCV(prepared.mimeType),
-              uintCV(BigInt(prepared.bytes.length)),
-              listCV(prepared.chunks.map((chunk) => bufferCV(chunk))),
-              stringAsciiCV(prepared.tokenUriValue)
-            ],
+            functionName:
+              dependencyIds.length > 0
+                ? 'mint-small-single-tx-recursive'
+                : 'mint-small-single-tx',
+            functionArgs:
+              dependencyIds.length > 0
+                ? [
+                    principalCV(getContractId(state.contract)),
+                    bufferCV(prepared.expectedHash),
+                    stringAsciiCV(prepared.mimeType),
+                    uintCV(BigInt(prepared.bytes.length)),
+                    listCV(prepared.chunks.map((chunk) => bufferCV(chunk))),
+                    stringAsciiCV(prepared.tokenUriValue),
+                    listCV(dependencyIds.map((id) => uintCV(id)))
+                  ]
+                : [
+                    principalCV(getContractId(state.contract)),
+                    bufferCV(prepared.expectedHash),
+                    stringAsciiCV(prepared.mimeType),
+                    uintCV(BigInt(prepared.bytes.length)),
+                    listCV(prepared.chunks.map((chunk) => bufferCV(chunk))),
+                    stringAsciiCV(prepared.tokenUriValue)
+                  ],
             postConditions: resolveFeePostConditions(feeEstimate.totalMicroStx)
           });
           const singleTxId = normalizeTxId(singleTx);
@@ -5360,16 +5430,28 @@
         }
 
         setStep('seal', 'pending', 'Wallet prompt');
-        appendLog('Step 3: seal-inscription');
+        appendLog(
+          dependencyIds.length > 0
+            ? `Step 3: seal-recursive (deps: ${dependencyIds.map((id) => id.toString()).join(', ')})`
+            : 'Step 3: seal-inscription'
+        );
         if (didSendBeforeSeal) {
           await pauseBeforeNext('Sealing in');
         }
         const sealTx = await requestContractCall({
-          functionName: 'seal-inscription',
-          functionArgs: [
-            bufferCV(prepared.expectedHash),
-            stringAsciiCV(prepared.tokenUriValue)
-          ],
+          functionName:
+            dependencyIds.length > 0 ? 'seal-recursive' : 'seal-inscription',
+          functionArgs:
+            dependencyIds.length > 0
+              ? [
+                  bufferCV(prepared.expectedHash),
+                  stringAsciiCV(prepared.tokenUriValue),
+                  listCV(dependencyIds.map((id) => uintCV(id)))
+                ]
+              : [
+                  bufferCV(prepared.expectedHash),
+                  stringAsciiCV(prepared.tokenUriValue)
+                ],
           postConditions: resolveFeePostConditions(feeEstimate.sealMicroStx)
         });
         const sealTxId = normalizeTxId(sealTx);
@@ -7800,6 +7882,7 @@ const openCuratedGallery = async (galleryId) => {
       state.prepared = null;
       state.duplicateId = null;
       state.uploadState = null;
+      state.handoffDependencyIds = [];
       dom.fileInput.value = '';
       if (file) {
         dom.dropzoneText.innerHTML = '';
@@ -7817,6 +7900,143 @@ const openCuratedGallery = async (galleryId) => {
         dom.dropzoneText.textContent = 'Choose file or drop it here';
       }
       renderPreparedState();
+    };
+
+    const clearOpusHtmlHandoffRequest = () => {
+      if (window.location.search.includes('handoff=opus-player')) {
+        const cleanUrl = new URL(window.location.href);
+        cleanUrl.searchParams.delete('handoff');
+        window.history.replaceState(null, '', `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`);
+      }
+    };
+
+    const openOpusHtmlHandoffDb = () =>
+      new Promise((resolve, reject) => {
+        if (!window.indexedDB) {
+          reject(new Error('IndexedDB is not available in this browser.'));
+          return;
+        }
+        const request = window.indexedDB.open(OPUS_HTML_HANDOFF_DB, 1);
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains(OPUS_HTML_HANDOFF_STORE)) {
+            db.createObjectStore(OPUS_HTML_HANDOFF_STORE, { keyPath: 'id' });
+          }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => {
+          reject(request.error || new Error('Could not open Opus handoff storage.'));
+        };
+      });
+
+    const readOpusHtmlHandoffRecord = async (pointer) => {
+      if (pointer?.storage !== 'indexeddb' || !pointer.id) {
+        return pointer;
+      }
+
+      let db = null;
+      try {
+        db = await openOpusHtmlHandoffDb();
+        const record = await new Promise((resolve, reject) => {
+          const transaction = db.transaction(OPUS_HTML_HANDOFF_STORE, 'readonly');
+          const request = transaction.objectStore(OPUS_HTML_HANDOFF_STORE).get(pointer.id);
+          request.onsuccess = () => resolve(request.result || null);
+          request.onerror = () => {
+            reject(request.error || new Error('Could not read Opus handoff record.'));
+          };
+        });
+        if (!record) {
+          throw new Error('Generated HTML handoff record was not found.');
+        }
+        const html =
+          record.htmlBlob instanceof Blob
+            ? await record.htmlBlob.text()
+            : typeof record.html === 'string'
+            ? record.html
+            : '';
+        return { ...pointer, ...record, html };
+      } finally {
+        if (db) db.close();
+      }
+    };
+
+    const deleteOpusHtmlHandoffRecord = async (pointer) => {
+      if (pointer?.storage !== 'indexeddb' || !pointer.id) {
+        return;
+      }
+
+      let db = null;
+      try {
+        db = await openOpusHtmlHandoffDb();
+        await new Promise((resolve, reject) => {
+          const transaction = db.transaction(OPUS_HTML_HANDOFF_STORE, 'readwrite');
+          transaction.objectStore(OPUS_HTML_HANDOFF_STORE).delete(pointer.id);
+          transaction.oncomplete = () => resolve();
+          transaction.onerror = () => {
+            reject(transaction.error || new Error('Could not delete Opus handoff record.'));
+          };
+          transaction.onabort = () => {
+            reject(transaction.error || new Error('Opus handoff delete was aborted.'));
+          };
+        });
+      } catch (error) {
+        console.warn('Could not delete Opus handoff record:', error);
+      } finally {
+        if (db) db.close();
+      }
+    };
+
+    const consumeOpusHtmlHandoff = async () => {
+      let raw = null;
+      let pointer = null;
+      try {
+        raw = window.localStorage.getItem(OPUS_HTML_HANDOFF_KEY);
+      } catch (error) {
+        raw = null;
+      }
+
+      if (!raw) {
+        clearOpusHtmlHandoffRequest();
+        return false;
+      }
+
+      try {
+        pointer = JSON.parse(raw);
+        const payload = await readOpusHtmlHandoffRecord(pointer);
+        const html = typeof payload.html === 'string' ? payload.html : '';
+        if (!html.trim()) {
+          throw new Error('Generated HTML payload was empty.');
+        }
+
+        const filename =
+          typeof payload.filename === 'string' && payload.filename.trim()
+            ? payload.filename.trim()
+            : 'xtrata-opus-player.html';
+        const file = new File([html], filename, { type: 'text/html' });
+
+        dom.textPayload.value = '';
+        dom.payloadType.value = 'text/html';
+        dom.nameInput.value = filename;
+        setSelectedFile(file);
+        state.handoffDependencyIds = normalizeOpusHandoffDependencyIds(payload.dependencies);
+        appendLog(`Loaded generated Opus HTML player: ${filename}.`);
+        await preparePayload();
+        document
+          .getElementById('inscribeTitle')
+          ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return true;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        appendLog(`Could not load Opus HTML player handoff: ${message}`);
+        setStatus(dom.walletStatus, `<strong>Opus handoff failed</strong> ${message}`, 'error', 'rose');
+        return false;
+      } finally {
+        try {
+          window.localStorage.removeItem(OPUS_HTML_HANDOFF_KEY);
+        } catch (error) {}
+        await deleteOpusHtmlHandoffRecord(pointer);
+        clearOpusHtmlHandoffRequest();
+      }
     };
 
     const markPreparedDirty = () => {
@@ -7841,6 +8061,7 @@ const openCuratedGallery = async (galleryId) => {
       resetSteps();
       renderTokenGridPlaceholders();
       updateWalletStatus();
+      await consumeOpusHtmlHandoff();
       if (state.explorerMode) {
         await loadExplorerMode();
       } else {

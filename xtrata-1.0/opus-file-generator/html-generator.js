@@ -9,6 +9,9 @@ let audionalVisualName = '';
 let livePreviewTimer = 0;
 
 const SUPPORTED_VISUAL_PREFIXES = ['image/', 'video/'];
+const XTRATA_OPUS_HTML_HANDOFF_KEY = 'xtrata.opusHtmlPlayer.pendingInscription';
+const XTRATA_OPUS_HTML_HANDOFF_DB = 'xtrata-opus-html-handoff';
+const XTRATA_OPUS_HTML_HANDOFF_STORE = 'pending';
 
 function stripDataURIPrefix(dataString) {
   if (typeof dataString !== 'string') return '';
@@ -191,6 +194,10 @@ function checkGenerateButtonState() {
   if (window.previewHtmlButton) {
     window.previewHtmlButton.disabled = !ready;
   }
+  const inscribeHtmlButton = getElement('inscribeHtmlButton');
+  if (inscribeHtmlButton) {
+    inscribeHtmlButton.disabled = !ready;
+  }
 
   const mode = getPlayerMode();
   if (ready) {
@@ -208,7 +215,7 @@ function checkGenerateButtonState() {
   );
 }
 
-function showMetadataModal() {
+function ensureHtmlGenerationReady() {
   if (!isHtmlGenerationReady()) {
     alert(
       getPlayerMode() === 'recursive'
@@ -216,14 +223,9 @@ function showMetadataModal() {
         : 'Convert an audio file first so the player can embed the audio data.'
     );
     checkGenerateButtonState();
-    return;
+    return false;
   }
-  if (window.metadataModal) window.metadataModal.classList.remove('hidden');
-  scheduleLivePreviewUpdate();
-}
-
-function hideMetadataModal() {
-  if (window.metadataModal) window.metadataModal.classList.add('hidden');
+  return true;
 }
 
 function collectMetadataFromForm(options = {}) {
@@ -287,6 +289,26 @@ function buildGeneratedHtml(metadata) {
   return {
     htmlContent,
     config
+  };
+}
+
+function buildGeneratedHtmlBundle() {
+  if (!ensureHtmlGenerationReady()) {
+    return null;
+  }
+  if (window.metadataForm && !window.metadataForm.reportValidity()) {
+    return null;
+  }
+  const metadata = collectMetadataFromForm();
+  const { htmlContent, config } = buildGeneratedHtml(metadata);
+  const filename = buildGeneratedFilename(metadata.title, config.mode);
+  const deps = getRecursiveDependencies(config.recursive);
+  return {
+    metadata,
+    htmlContent,
+    config,
+    filename,
+    dependencies: deps
   };
 }
 
@@ -422,22 +444,98 @@ function downloadHtmlFile(htmlContent, filename) {
   return blob.size;
 }
 
+function openHtmlHandoffDb() {
+  return new Promise((resolve, reject) => {
+    if (!window.indexedDB) {
+      reject(new Error('IndexedDB is not available in this browser.'));
+      return;
+    }
+    const request = window.indexedDB.open(XTRATA_OPUS_HTML_HANDOFF_DB, 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(XTRATA_OPUS_HTML_HANDOFF_STORE)) {
+        db.createObjectStore(XTRATA_OPUS_HTML_HANDOFF_STORE, { keyPath: 'id' });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => {
+      reject(request.error || new Error('Could not open inscription handoff storage.'));
+    };
+  });
+}
+
+function waitForTransaction(transaction) {
+  return new Promise((resolve, reject) => {
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => {
+      reject(transaction.error || new Error('Storage transaction failed.'));
+    };
+    transaction.onabort = () => {
+      reject(transaction.error || new Error('Storage transaction was aborted.'));
+    };
+  });
+}
+
+async function storeHtmlHandoff(bundle) {
+  const createdAt = new Date().toISOString();
+  const id = `opus-html-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const summary = {
+    id,
+    storage: 'indexeddb',
+    source: 'xtrata-opus-file-generator',
+    createdAt,
+    filename: bundle.filename,
+    mimeType: 'text/html',
+    metadata: bundle.metadata,
+    mode: bundle.config.mode,
+    dependencies: bundle.dependencies
+  };
+  const record = {
+    ...summary,
+    htmlBlob: new Blob([bundle.htmlContent], { type: 'text/html;charset=utf-8' })
+  };
+
+  let db = null;
+  try {
+    db = await openHtmlHandoffDb();
+    const transaction = db.transaction(XTRATA_OPUS_HTML_HANDOFF_STORE, 'readwrite');
+    transaction.objectStore(XTRATA_OPUS_HTML_HANDOFF_STORE).put(record);
+    await waitForTransaction(transaction);
+    window.localStorage.setItem(
+      XTRATA_OPUS_HTML_HANDOFF_KEY,
+      JSON.stringify(summary)
+    );
+    return summary;
+  } catch (error) {
+    const fallback = {
+      ...summary,
+      storage: 'localStorage',
+      html: bundle.htmlContent
+    };
+    window.localStorage.setItem(
+      XTRATA_OPUS_HTML_HANDOFF_KEY,
+      JSON.stringify(fallback)
+    );
+    return fallback;
+  } finally {
+    if (db) db.close();
+  }
+}
+
 function finishGeneration(action) {
   try {
-    const metadata = collectMetadataFromForm();
-    const { htmlContent, config } = buildGeneratedHtml(metadata);
-    const filename = buildGeneratedFilename(metadata.title, config.mode);
+    const bundle = buildGeneratedHtmlBundle();
+    if (!bundle) return;
     const size =
       action === 'preview'
-        ? openHtmlPreview(htmlContent)
-        : downloadHtmlFile(htmlContent, filename);
-    const deps = getRecursiveDependencies(config.recursive).join(', ') || 'none';
+        ? openHtmlPreview(bundle.htmlContent)
+        : downloadHtmlFile(bundle.htmlContent, bundle.filename);
+    const deps = bundle.dependencies.join(', ') || 'none';
     setHtmlExportStatus(
-      `${action === 'preview' ? 'Preview opened' : 'Downloaded'} ${filename} (${formatBytes(
+      `${action === 'preview' ? 'Preview opened' : 'Downloaded'} ${bundle.filename} (${formatBytes(
         size
       )}). Dependencies: ${deps}.`
     );
-    hideMetadataModal();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error('HTML generation failed:', error);
@@ -451,11 +549,32 @@ function handleMetadataSubmit(event) {
   finishGeneration('download');
 }
 
+function handleDownloadClick() {
+  finishGeneration('download');
+}
+
 function handlePreviewClick() {
-  if (window.metadataForm && !window.metadataForm.reportValidity()) {
-    return;
-  }
   finishGeneration('preview');
+}
+
+async function prepareGeneratedHtmlForInscription() {
+  try {
+    const bundle = buildGeneratedHtmlBundle();
+    if (!bundle) return;
+    await storeHtmlHandoff(bundle);
+    const url = new URL('../', window.location.href);
+    url.searchParams.set('handoff', 'opus-player');
+    url.hash = 'inscribe';
+    setHtmlExportStatus(
+      `Prepared ${bundle.filename} for inscription. Opening Xtrata home...`
+    );
+    window.location.assign(url.toString());
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('HTML inscription handoff failed:', error);
+    setHtmlExportStatus(`Could not prepare inscription: ${message}`, true);
+    alert(`Could not prepare inscription: ${message}`);
+  }
 }
 
 function updateaudionalBase64(base64Data, mimeType) {
@@ -584,9 +703,7 @@ function clearStandaloneArtwork() {
 function inithtmlGenerator() {
   if (
     !window.generateHtmlButton ||
-    !window.metadataModal ||
     !window.metadataForm ||
-    !window.cancelMetadataBtn ||
     !window.titleInput ||
     !window.loopCheckbox ||
     !window.bpmInput
@@ -596,11 +713,14 @@ function inithtmlGenerator() {
     return;
   }
 
-  window.generateHtmlButton.addEventListener('click', showMetadataModal);
+  window.generateHtmlButton.addEventListener('click', handleDownloadClick);
   window.metadataForm.addEventListener('submit', handleMetadataSubmit);
-  window.cancelMetadataBtn.addEventListener('click', hideMetadataModal);
   if (window.previewHtmlButton) {
     window.previewHtmlButton.addEventListener('click', handlePreviewClick);
+  }
+  const inscribeHtmlButton = getElement('inscribeHtmlButton');
+  if (inscribeHtmlButton) {
+    inscribeHtmlButton.addEventListener('click', prepareGeneratedHtmlForInscription);
   }
 
   document.querySelectorAll('input[name="htmlPlayerMode"]').forEach((radio) => {
