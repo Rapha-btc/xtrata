@@ -15,6 +15,7 @@
       --line: #d7e0d8;
       --line-strong: #9eafa2;
       --green: #245f45;
+      --success: #245f45;
       --green-soft: #e8f2ec;
       --blue: #285675;
       --blue-soft: #e6eef4;
@@ -359,6 +360,14 @@
       text-transform: none;
     }
 
+    .info-summary-section span.size-saving-positive {
+      color: var(--success);
+    }
+
+    .info-summary-section span.size-saving-negative {
+      color: var(--error);
+    }
+
     .button-row,
     .button-container,
     .button-group {
@@ -404,6 +413,184 @@
       font-size: 0.95rem;
     }
 
+    .ab-player-container {
+      display: grid;
+      gap: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .ab-player-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      border-bottom: 1px solid var(--line);
+      background: #fbfdfb;
+      padding: 12px;
+    }
+
+    .ab-player-header h4 {
+      margin: 0;
+      font-size: 0.98rem;
+      letter-spacing: 0;
+    }
+
+    .ab-player-header p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    .ab-size-summary {
+      min-width: min(240px, 100%);
+      border: 1px solid #cfe0d4;
+      border-radius: 8px;
+      background: var(--green-soft);
+      color: var(--green);
+      padding: 8px 10px;
+      text-align: right;
+    }
+
+    .ab-size-summary span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .ab-size-summary strong {
+      display: block;
+      margin-top: 2px;
+      font-size: 0.9rem;
+      line-height: 1.25;
+    }
+
+    .ab-controls {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(150px, 190px);
+      gap: 8px;
+      align-items: stretch;
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .ab-control-button {
+      display: inline-flex;
+      align-items: center;
+      width: 100%;
+      min-height: 44px;
+      justify-content: center;
+    }
+
+    .ab-control-button.is-active {
+      background: var(--green);
+      border-color: var(--green);
+      color: #fff;
+    }
+
+    .ab-offset-field {
+      display: grid;
+      grid-template-columns: 1fr 70px auto;
+      gap: 6px;
+      align-items: center;
+      min-height: 44px;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      padding: 6px 8px;
+      background: #fbfdfb;
+    }
+
+    .ab-offset-field span {
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .ab-offset-field input {
+      min-height: 32px;
+      padding: 5px 7px;
+      text-align: right;
+    }
+
+    .ab-offset-field small {
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .ab-track-list {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+    }
+
+    .ab-track {
+      display: grid;
+      gap: 8px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfdfb;
+      padding: 10px;
+      opacity: 0.72;
+      transition: border-color 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+    }
+
+    .ab-track.is-active {
+      border-color: #d6a331;
+      background: #fffaf0;
+      opacity: 1;
+      box-shadow: inset 4px 0 0 #d6a331;
+    }
+
+    .ab-track-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .ab-track-title,
+    .ab-track-meta {
+      margin: 0;
+    }
+
+    .ab-track-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--ink);
+      font-weight: 900;
+    }
+
+    .ab-track-title span {
+      display: inline-grid;
+      place-items: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--ink);
+      color: #fff;
+      font-size: 0.8rem;
+    }
+
+    .ab-track-meta {
+      color: var(--muted);
+      font-size: 0.86rem;
+      font-weight: 800;
+      text-align: right;
+    }
+
+    .ab-track audio {
+      display: block;
+      width: 100%;
+      accent-color: var(--green);
+    }
+
     details {
       border: 1px solid var(--line);
       border-radius: 8px;
@@ -442,6 +629,131 @@
 
     .export-panel {
       background: linear-gradient(180deg, #fff, var(--amber-soft));
+    }
+
+    .html-player-options {
+      display: grid;
+      gap: 12px;
+    }
+
+    .html-mode-options {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .html-export-status {
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.62);
+      color: var(--muted);
+      padding: 10px;
+      font-size: 0.86rem;
+      font-weight: 700;
+    }
+
+    .html-export-status.error {
+      background: #f8e7ea;
+      color: var(--error);
+      border-color: #e5b7bf;
+    }
+
+    .standalone-artwork-grid {
+      display: grid;
+      grid-template-columns: 132px minmax(0, 1fr);
+      gap: 10px;
+      align-items: center;
+    }
+
+    .standalone-artwork-preview {
+      display: grid;
+      place-items: center;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border: 1px dashed var(--line-strong);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--muted);
+      overflow: hidden;
+      text-align: center;
+      font-size: 0.8rem;
+      font-weight: 800;
+    }
+
+    .standalone-artwork-preview img,
+    .standalone-artwork-preview video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .standalone-artwork-status {
+      min-height: 22px;
+      margin: 0 0 8px;
+      color: var(--muted);
+      font-size: 0.84rem;
+      font-weight: 700;
+    }
+
+    .standalone-artwork-status.error {
+      color: var(--error);
+    }
+
+    .metadata-fieldset {
+      display: grid;
+      gap: 10px;
+    }
+
+    .preview-value {
+      overflow-wrap: anywhere;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.78rem;
+      text-transform: none;
+    }
+
+    .live-preview-panel {
+      display: grid;
+      gap: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 12px;
+    }
+
+    .live-preview-panel h3 {
+      margin: 0;
+      font-size: 0.95rem;
+    }
+
+    .live-preview-frame {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      background: #10120f;
+      overflow: hidden;
+    }
+
+    .live-preview-frame iframe {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: #10120f;
+    }
+
+    .html-live-preview-status {
+      min-height: 22px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.84rem;
+      font-weight: 800;
+    }
+
+    .html-live-preview-status.error {
+      color: var(--error);
     }
 
     .modal,
@@ -511,8 +823,31 @@
         justify-content: flex-start;
       }
 
+      .ab-player-header,
+      .ab-track-header {
+        display: grid;
+      }
+
+      .ab-size-summary,
+      .ab-track-meta {
+        text-align: left;
+      }
+
+      .ab-controls {
+        grid-template-columns: 1fr;
+      }
+
+      .ab-offset-field {
+        grid-template-columns: 1fr 82px auto;
+      }
+
+      .standalone-artwork-grid {
+        grid-template-columns: 1fr;
+      }
+
       .settings-grid,
       .format-options,
+      .html-mode-options,
       .info-summary-section {
         grid-template-columns: 1fr;
       }
@@ -624,6 +959,8 @@
           <div class="info-summary-section" id="outputInfoSection">
             <p>Original <span id="originalFileInfo">N/A</span></p>
             <p>Estimate <span id="currentEstimatedOutputSize">Select file</span></p>
+            <p>Actual <span id="actualOutputFileInfo">Not converted</span></p>
+            <p>Saving <span id="sizeSavingsInfo">Convert to compare</span></p>
             <p>Xtrata type <span><code>audio/webm; codecs=opus</code></span></p>
           </div>
 
@@ -668,13 +1005,228 @@
         <div class="tool-panel__header">
           <div>
             <h2>HTML player</h2>
-            <p>Audio is required. Image data is optional.</p>
+            <p>Export a standalone embedded player or a recursive player.</p>
           </div>
         </div>
         <div class="tool-panel__body">
-          <div class="button-container">
-            <button id="generateHtmlButton" type="button" disabled>Generate HTML player</button>
-            <button id="testGeneratedHtmlButton" class="button-secondary" type="button">Open tester</button>
+          <div class="html-player-options">
+            <fieldset>
+              <legend>Audio source</legend>
+              <div class="html-mode-options">
+                <label class="format-option">
+                  <input type="radio" name="htmlPlayerMode" value="embedded" checked>
+                  <span>
+                    <strong>Embedded audio</strong>
+                    <small>Use the converted Base64 audio in this HTML file</small>
+                  </span>
+                </label>
+                <label class="format-option">
+                  <input type="radio" name="htmlPlayerMode" value="recursive">
+                  <span>
+                    <strong>Recursive audio</strong>
+                    <small>Load an existing audio inscription by URL or token ID</small>
+                  </span>
+                </label>
+              </div>
+            </fieldset>
+
+            <div id="embeddedPlayerOptions" class="compact-box">
+              <h3>Embedded audio</h3>
+              <p>Convert audio first. The exported player will carry the WebM/Opus data inside the HTML.</p>
+            </div>
+
+            <div id="recursivePlayerOptions" class="compact-box hidden">
+              <h3>Recursive audio source</h3>
+              <div class="form-stack">
+                <label class="field" for="recursiveAudioTokenId">
+                  <span>Audio token ID</span>
+                  <input type="text" id="recursiveAudioTokenId" placeholder="315">
+                </label>
+                <label class="field" for="recursiveAudioUrl">
+                  <span>Direct audio URL</span>
+                  <input type="text" id="recursiveAudioUrl" placeholder="Optional: https://xtrata.xyz/inscription/315">
+                </label>
+                <label class="field" for="recursiveContractId">
+                  <span>Contract ID</span>
+                  <input type="text" id="recursiveContractId" value="SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0">
+                </label>
+                <label class="field" for="recursiveNetwork">
+                  <span>Network</span>
+                  <select id="recursiveNetwork">
+                    <option value="mainnet" selected>Mainnet</option>
+                    <option value="testnet">Testnet</option>
+                  </select>
+                </label>
+                <div class="info-summary-section">
+                  <p>Audio URL <span id="recursiveUrlPreview" class="preview-value">Enter an audio token ID or audio URL.</span></p>
+                  <p>Endpoint <span>Mainnet IDs use /inscription. Direct URL handles custom sources.</span></p>
+                  <p>Mint note <span>Add the audio token as a recursive parent.</span></p>
+                </div>
+              </div>
+            </div>
+
+            <fieldset>
+              <legend>Visual source</legend>
+              <div class="html-mode-options">
+                <label class="format-option">
+                  <input type="radio" name="visualSourceMode" value="embedded" checked>
+                  <span>
+                    <strong>Embedded visual</strong>
+                    <small>Upload image, GIF, or video into the HTML</small>
+                  </span>
+                </label>
+                <label class="format-option">
+                  <input type="radio" name="visualSourceMode" value="recursive">
+                  <span>
+                    <strong>Recursive visual</strong>
+                    <small>Load cover art from an existing inscription</small>
+                  </span>
+                </label>
+              </div>
+            </fieldset>
+
+            <div id="embeddedVisualOptions" class="compact-box">
+              <h3>Embedded visual</h3>
+              <div class="form-stack">
+                <label class="field" for="standaloneArtworkInput">
+                  <span>Artwork / visual</span>
+                  <input type="file" id="standaloneArtworkInput" accept="image/*,video/*,.gif,.webp,.mp4,.webm,.mov">
+                </label>
+                <div class="standalone-artwork-grid">
+                  <div id="standaloneArtworkPreview" class="standalone-artwork-preview">
+                    <span>No visual selected</span>
+                  </div>
+                  <div>
+                    <p id="standaloneArtworkStatus" class="standalone-artwork-status">No artwork selected.</p>
+                    <button id="clearStandaloneArtworkButton" class="button-small" type="button" disabled>Clear visual</button>
+                  </div>
+                </div>
+                <details>
+                  <summary>Show visual base64</summary>
+                  <textarea id="standaloneArtworkBase64Output" class="base64-output" readonly></textarea>
+                </details>
+              </div>
+            </div>
+
+            <div id="recursiveVisualOptions" class="compact-box hidden">
+              <h3>Recursive cover visual</h3>
+              <div class="form-stack">
+                <label class="field" for="recursiveCoverTokenId">
+                  <span>Cover token ID</span>
+                  <input type="text" id="recursiveCoverTokenId" placeholder="Optional: 314">
+                </label>
+                <label class="field" for="recursiveCoverUrl">
+                  <span>Direct cover URL</span>
+                  <input type="text" id="recursiveCoverUrl" placeholder="Optional: https://xtrata.xyz/inscription/314">
+                </label>
+                <label class="field" for="recursiveCoverKind">
+                  <span>Visual type</span>
+                  <select id="recursiveCoverKind">
+                    <option value="image" selected>Image / GIF</option>
+                    <option value="video">Video</option>
+                  </select>
+                </label>
+                <div class="info-summary-section">
+                  <p>Cover URL <span id="recursiveCoverUrlPreview" class="preview-value">Upload embedded artwork or enter a cover token ID/URL.</span></p>
+                  <p>Visual type <span>Image/GIF uses an image tag; video uses a muted looping visual.</span></p>
+                  <p>Mint note <span>Add the cover token as a recursive parent.</span></p>
+                </div>
+              </div>
+            </div>
+
+            <div class="info-summary-section">
+              <p>Dependencies <span id="recursiveDependencyPreview" class="preview-value">None yet</span></p>
+              <p>Player output <span>Embedded and recursive sources can be mixed.</span></p>
+              <p>Preview <span>Updates automatically from the current form.</span></p>
+            </div>
+
+            <section id="playerMetadataPanel" class="compact-box">
+              <h3>Player metadata</h3>
+              <form id="metadataForm" class="form-stack">
+                <label class="field" for="titleInput">
+                  <span>Title</span>
+                  <input type="text" id="titleInput" name="title" required>
+                </label>
+                <label class="field" for="assetTypeInput">
+                  <span>Audio type</span>
+                  <select id="assetTypeInput" name="assetType">
+                    <option value="song" selected>Song</option>
+                    <option value="sample">Sample</option>
+                    <option value="stem">Stem</option>
+                    <option value="loop">Loop</option>
+                    <option value="voice">Voice</option>
+                    <option value="other">Other audio</option>
+                  </select>
+                </label>
+                <label class="field" for="artistInput">
+                  <span>Artist</span>
+                  <input type="text" id="artistInput" name="artist">
+                </label>
+                <label class="field" for="albumInput">
+                  <span>Album</span>
+                  <input type="text" id="albumInput" name="album">
+                </label>
+                <fieldset id="stemMetadataFields" class="metadata-fieldset hidden">
+                  <legend>Stem details</legend>
+                  <label class="field" for="stemRoleInput">
+                    <span>Stem role</span>
+                    <input type="text" id="stemRoleInput" name="stemRole" placeholder="Drums, vocal, guitar">
+                  </label>
+                </fieldset>
+                <fieldset id="sampleMetadataFields" class="metadata-fieldset hidden">
+                  <legend>Sample details</legend>
+                  <label class="field" for="instrumentInput">
+                    <span>Instrument</span>
+                    <input type="text" id="instrumentInput" name="instrument">
+                  </label>
+                  <label class="field" for="noteInput">
+                    <span>Note</span>
+                    <input type="text" id="noteInput" name="note" list="noteList" placeholder="C4">
+                    <datalist id="noteList"></datalist>
+                  </label>
+                  <label class="field" for="frequencyInput">
+                    <span>Frequency</span>
+                    <input type="text" id="frequencyInput" name="frequency" readonly>
+                  </label>
+                </fieldset>
+                <label class="format-option" for="loopCheckbox">
+                  <input type="checkbox" id="loopCheckbox" name="isLoop">
+                  <span>
+                    <strong>Loop</strong>
+                    <small>Enable tempo metadata</small>
+                  </span>
+                </label>
+                <div id="bpmGroup" class="field hidden">
+                  <label for="bpmInput">
+                    <span>BPM</span>
+                    <input type="number" id="bpmInput" name="bpm" min="1">
+                  </label>
+                </div>
+                <label class="field" for="descriptionInput">
+                  <span>Description</span>
+                  <textarea id="descriptionInput" name="description"></textarea>
+                </label>
+                <label class="field" for="licenseInput">
+                  <span>License</span>
+                  <input type="text" id="licenseInput" name="license" placeholder="All rights reserved">
+                </label>
+              </form>
+            </section>
+
+            <p id="htmlExportStatus" class="html-export-status">Convert audio first or switch to recursive mode.</p>
+            <div class="button-container">
+              <button id="generateHtmlButton" type="button" disabled>Download HTML player</button>
+              <button id="previewHtmlButton" class="button-secondary" type="button" disabled>Preview HTML</button>
+              <button id="inscribeHtmlButton" class="button-secondary" type="button" disabled>Prepare inscription</button>
+              <button id="testGeneratedHtmlButton" class="button-secondary" type="button">Open tester</button>
+            </div>
+            <section class="live-preview-panel" aria-label="Generated player live preview">
+              <h3>Live player preview</h3>
+              <p id="htmlLivePreviewStatus" class="html-live-preview-status">Waiting for an audio source.</p>
+              <div class="live-preview-frame">
+                <iframe id="htmlPlayerLivePreview" title="Generated HTML player live preview" sandbox="allow-scripts allow-same-origin"></iframe>
+              </div>
+            </section>
           </div>
         </div>
       </section>
@@ -727,47 +1279,6 @@
     </div>
   </div>
 
-  <div id="metadataModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="metadataModalTitle">
-    <div class="modal-content">
-      <h2 id="metadataModalTitle">Player metadata</h2>
-      <form id="metadataForm" class="form-stack">
-        <label class="field" for="titleInput">
-          <span>Title</span>
-          <input type="text" id="titleInput" name="title" required>
-        </label>
-        <label class="field" for="instrumentInput">
-          <span>Instrument</span>
-          <input type="text" id="instrumentInput" name="instrument" required>
-        </label>
-        <label class="field" for="noteInput">
-          <span>Note</span>
-          <input type="text" id="noteInput" name="note" required list="noteList" placeholder="C4">
-          <datalist id="noteList"></datalist>
-        </label>
-        <label class="field" for="frequencyInput">
-          <span>Frequency</span>
-          <input type="text" id="frequencyInput" name="frequency" readonly>
-        </label>
-        <label class="format-option" for="loopCheckbox">
-          <input type="checkbox" id="loopCheckbox" name="isLoop">
-          <span>
-            <strong>Loop</strong>
-            <small>Enable tempo metadata</small>
-          </span>
-        </label>
-        <div id="bpmGroup" class="field hidden">
-          <label for="bpmInput">
-            <span>BPM</span>
-            <input type="number" id="bpmInput" name="bpm" min="1">
-          </label>
-        </div>
-        <div class="modal-actions">
-          <button id="cancelMetadataBtn" class="button-secondary" type="button">Cancel</button>
-          <button id="submitMetadataBtn" type="submit">Download HTML</button>
-        </div>
-      </form>
-    </div>
-  </div>
 </main>
 
 <script src="metadata-modal-handler.js"></script>
@@ -793,19 +1304,18 @@
   import { initializeImageConverter } from './image-to-base64.js';
   document.addEventListener('DOMContentLoaded', initializeImageConverter);
 
-  const syncGenerateButtonState = (audioReady) => {
-    const generateButton = document.getElementById('generateHtmlButton');
-    if (generateButton) {
-      generateButton.disabled = !audioReady;
-    }
-  };
-
   document.addEventListener('audionalBase64Generated', () => {
-    syncGenerateButtonState(true);
+    if (typeof window.updateHtmlGenerateButtonState === 'function') {
+      window.updateHtmlGenerateButtonState();
+    }
   });
 
   window.addEventListener('load', () => {
-    window.setTimeout(() => syncGenerateButtonState(false), 0);
+    window.setTimeout(() => {
+      if (typeof window.updateHtmlGenerateButtonState === 'function') {
+        window.updateHtmlGenerateButtonState();
+      }
+    }, 0);
   });
 
   const testerButton = document.getElementById('testGeneratedHtmlButton');

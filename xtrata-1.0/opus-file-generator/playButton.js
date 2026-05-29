@@ -13,8 +13,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // These variables (audioBase64_Opus, imageBase64) are expected to be defined by an inline script
     // in the generated HTML (from OB1_Template2.js).
 
-    const hasAudioData = typeof audioBase64_Opus !== 'undefined' && audioBase64_Opus && audioBase64_Opus.trim() !== '';
-    const hasImageData = typeof imageBase64 !== 'undefined' && imageBase64 && imageBase64.trim() !== '';
+    const audioData =
+        typeof audionalBase64_Opus !== 'undefined'
+            ? audionalBase64_Opus
+            : typeof audioBase64_Opus !== 'undefined'
+                ? audioBase64_Opus
+                : '';
+    const imageData =
+        typeof audionalVisualBase64 !== 'undefined'
+            ? audionalVisualBase64
+            : typeof imageBase64 !== 'undefined'
+                ? imageBase64
+                : '';
+    const hasAudioData = audioData && audioData.trim() !== '';
+    const hasImageData = imageData && imageData.trim() !== '';
 
     if (hasAudioData) {
         if (!hasImageData) {
@@ -29,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const title = document.getElementById('audio-meta-title')?.textContent || 'Untitled'; // Assuming title might be there
             const metadata = { title, instrument, note, frequency };
 
-            createAndSetupStandaloneButton(appContainer, audioBase64_Opus, metadata);
+            createAndSetupStandaloneButton(appContainer, audioData, metadata);
         } else {
             // SCENARIO 2: Both audio data AND image data exist.
             // This script (playButton.js) should not create its standalone button.
