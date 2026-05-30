@@ -11,17 +11,21 @@ If you need to rebuild inscription bytes from public chain data, use
 Use `simple` when you want minimal setup and clear read helpers.
 
 - `createXtrataReadClient`
+- `createXtrataReconstructionSources`
 - `createCollectionReadClient`
 - `createMarketReadClient`
 - `createSimpleSdk`
-- `@xtrata/reconstruction` for strict byte reconstruction and hash verification
+- `@xtrata/reconstruction` for strict byte reconstruction, fallback sources,
+  batch reads, diagnostics, and hash verification
 
 These clients:
+
 - bind sender once
 - hide repetitive call plumbing
 - expose convenience snapshots (`getTokenSnapshot`, `getSnapshot`)
 
 For write transactions, use `workflows` to prebuild deny-mode call payloads:
+
 - `buildCoreMintWorkflowPlan`
 - `buildCollectionMintWorkflowPlan`
 - `buildMarketListWorkflowPlan`
@@ -31,11 +35,13 @@ For write transactions, use `workflows` to prebuild deny-mode call payloads:
   source-token escrow into a migrated collection
 
 Workflow guardrails:
+
 - malformed inputs now fail fast with `SdkValidationError`
 - network-mismatched contracts are rejected before call payload generation
 - deterministic spend-cap prerequisites are enforced (known mint price + fee unit)
 
 Collection-mint note:
+
 - Active SDK support target is `xtrata-collection-mint-v1.4`.
 - Legacy collection-mint `v1.0` and `v1.1` are archived for new SDK work.
 

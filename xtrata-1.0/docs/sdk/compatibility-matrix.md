@@ -44,7 +44,7 @@ Current public reconstruction fallback chain:
 | `safe` | baseline | Deterministic spend caps and guided flow primitives. |
 | `workflows` | supported | Covered by workflow tests and pack smoke subpath import checks. |
 | `deploy` | baseline | Template naming/injection support; deployment orchestration still evolving. |
-| `@xtrata/reconstruction` | supported | Deterministic chunk assembly/hash verification and dependency traversal. |
+| `@xtrata/reconstruction` | supported | Deterministic chunk assembly/hash verification, batch reads, fallback sources, diagnostics, and dependency traversal. |
 
 ## Error compatibility contract
 

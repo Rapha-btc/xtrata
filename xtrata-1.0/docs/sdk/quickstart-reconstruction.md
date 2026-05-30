@@ -15,15 +15,20 @@ Fallback source chain:
 ## 20-line example
 
 ```ts
-import { createXtrataReadClient } from '@xtrata/sdk/simple';
-import { reconstructInscription } from '@xtrata/reconstruction';
+import { createXtrataReadClient, createXtrataReconstructionSources } from '@xtrata/sdk/simple';
+import { reconstructXtrataInscription } from '@xtrata/reconstruction';
 
-const contractId =
-  'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1';
+const contractId = 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1';
 const senderAddress = contractId.split('.')[0];
 const core = createXtrataReadClient({ contractId, senderAddress });
+const legacy = createXtrataReadClient({
+  contractId: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0',
+  senderAddress
+});
 
-const result = await reconstructInscription(287n, core, {
+const result = await reconstructXtrataInscription({
+  tokenId: 287n,
+  sources: createXtrataReconstructionSources(core, [legacy]),
   strict: true,
   maxNodes: 64
 });
@@ -34,6 +39,7 @@ console.log({
   bytes: result.bytes.length,
   tokenUri: result.tokenUri,
   finalHash: result.verification.expectedHashHex,
+  chunkSource: result.diagnostics.chunkSourceId,
   dependencies: result.dependencies.nodes.map(String)
 });
 ```
@@ -52,5 +58,6 @@ From the repo root:
 npm run reconstruct -- 287 /tmp/xtrata-287.html
 ```
 
-The CLI prints the requested contract, source contracts used for chunks, byte
-count, MIME type, token URI, dependency count, and verified hash.
+The CLI prints the requested contract, metadata source, chunk source, fallback
+status, read mode, byte count, MIME type, token URI, dependency count, and
+verified hash.

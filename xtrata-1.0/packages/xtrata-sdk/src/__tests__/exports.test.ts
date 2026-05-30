@@ -4,6 +4,8 @@ import * as sdk from '../index.js';
 describe('sdk public exports', () => {
   it('exposes the recommended simple clients', () => {
     expect(typeof sdk.createXtrataReadClient).toBe('function');
+    expect(typeof sdk.createXtrataReconstructionSource).toBe('function');
+    expect(typeof sdk.createXtrataReconstructionSources).toBe('function');
     expect(typeof sdk.createCollectionReadClient).toBe('function');
     expect(typeof sdk.createMarketReadClient).toBe('function');
     expect(typeof sdk.createSimpleSdk).toBe('function');

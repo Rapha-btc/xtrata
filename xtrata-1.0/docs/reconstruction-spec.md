@@ -116,8 +116,11 @@ A strict reconstructor should return bytes only after all of these pass:
 - computed hash equals `final-hash`.
 
 The `@xtrata/reconstruction` package exposes `verifyPayload`,
-`assertVerified`, and `reconstructInscription(..., { strict: true })` for this
-hash boundary.
+`assertVerified`, `reconstructInscription(..., { strict: true })`, and
+`reconstructXtrataInscription({ sources, strict: true })` for this boundary.
+When a source exposes `getChunkBatch`, the package reads batches first, falls
+back to per-chunk reads for failed or missing batch entries, and records read
+diagnostics in the reconstruction result.
 
 ## Public Proof Standard
 
@@ -135,5 +138,6 @@ A third-party proof should record:
 - actual reconstructed hash;
 - dependency IDs;
 - whether fallback was used.
+- read mode (`batch`, `single`, or `mixed`) and any read fallback errors.
 
 This is enough for another client to repeat the reconstruction independently.

@@ -14,11 +14,7 @@ import {
   isCollectionMintLive,
   shouldShowLiveMintPage
 } from './collections.js';
-import type {
-  CollectionMintSnapshot,
-  CollectionMintStatus,
-  ContractConfig
-} from './types.js';
+import type { CollectionMintSnapshot, CollectionMintStatus, ContractConfig } from './types.js';
 
 export class SdkSetupError extends Error {
   constructor(message: string) {
@@ -72,9 +68,16 @@ export type BoundXtrataReadClient = {
   getDependencies: (id: bigint) => Promise<bigint[]>;
   getChunk: (id: bigint, index: bigint) => Promise<Uint8Array | null>;
   getChunkBatch: (id: bigint, indexes: bigint[]) => Promise<(Uint8Array | null)[]>;
-  getUploadState: (expectedHash: Uint8Array, owner?: string) => Promise<ReturnType<XtrataClient['getUploadState']> extends Promise<infer T> ? T : never>;
+  getUploadState: (
+    expectedHash: Uint8Array,
+    owner?: string
+  ) => Promise<ReturnType<XtrataClient['getUploadState']> extends Promise<infer T> ? T : never>;
   getIdByHash: (expectedHash: Uint8Array) => Promise<bigint | null>;
-  getPendingChunk: (expectedHash: Uint8Array, index: bigint, creator?: string) => Promise<Uint8Array | null>;
+  getPendingChunk: (
+    expectedHash: Uint8Array,
+    index: bigint,
+    creator?: string
+  ) => Promise<Uint8Array | null>;
   getTokenSnapshot: (id: bigint) => Promise<{
     id: bigint;
     owner: string | null;
@@ -84,9 +87,7 @@ export type BoundXtrataReadClient = {
   }>;
 };
 
-export const createXtrataReadClient = (
-  params: SimpleClientBaseParams
-): BoundXtrataReadClient => {
+export const createXtrataReadClient = (params: SimpleClientBaseParams): BoundXtrataReadClient => {
   const contract = resolveContract(params);
   const senderAddress = resolveSenderAddress(contract, params.senderAddress);
   const raw = createXtrataClient({
@@ -138,20 +139,54 @@ export const createXtrataReadClient = (
   };
 };
 
+export type BoundXtrataReconstructionSource = {
+  sourceId: string;
+  readers: Pick<
+    BoundXtrataReadClient,
+    'getInscriptionMeta' | 'getTokenUri' | 'getDependencies' | 'getChunk' | 'getChunkBatch'
+  >;
+};
+
+export const createXtrataReconstructionSource = (
+  client: BoundXtrataReadClient
+): BoundXtrataReconstructionSource => ({
+  sourceId: client.contractId,
+  readers: {
+    getInscriptionMeta: client.getInscriptionMeta,
+    getTokenUri: client.getTokenUri,
+    getDependencies: client.getDependencies,
+    getChunk: client.getChunk,
+    getChunkBatch: client.getChunkBatch
+  }
+});
+
+export const createXtrataReconstructionSources = (
+  primary: BoundXtrataReadClient,
+  fallbacks: BoundXtrataReadClient[] = []
+): BoundXtrataReconstructionSource[] => [
+  createXtrataReconstructionSource(primary),
+  ...fallbacks.map(createXtrataReconstructionSource)
+];
+
 export type BoundCollectionReadClient = {
   raw: CollectionMintClient;
   contract: ContractConfig;
   contractId: string;
   senderAddress: string;
   getStatus: () => Promise<CollectionMintStatus>;
-  getSnapshot: () => Promise<CollectionMintSnapshot & {
-    effectiveMintPrice: bigint;
-  }>;
+  getSnapshot: () => Promise<
+    CollectionMintSnapshot & {
+      effectiveMintPrice: bigint;
+    }
+  >;
   getMetadata: () => ReturnType<CollectionMintClient['getMetadata']>;
   getRecipients: () => ReturnType<CollectionMintClient['getRecipients']>;
   getSplits: () => ReturnType<CollectionMintClient['getSplits']>;
   getMintedId: (index: bigint) => Promise<bigint | null>;
-  getMintedIds: (count: number, startIndex?: number) => Promise<Array<{ index: bigint; tokenId: bigint | null }>>;
+  getMintedIds: (
+    count: number,
+    startIndex?: number
+  ) => Promise<Array<{ index: bigint; tokenId: bigint | null }>>;
   isLive: () => Promise<boolean>;
   shouldShowLivePage: (state?: string | null) => Promise<boolean>;
 };
@@ -217,15 +252,23 @@ export type BoundMarketReadClient = {
   getNftContract: () => Promise<string>;
   getFeeBps: () => Promise<bigint>;
   getLastListingId: () => Promise<bigint>;
-  getListing: (listingId: bigint) => Promise<ReturnType<MarketClient['getListing']> extends Promise<infer T> ? T : never>;
-  getListingByToken: (nftContractId: string, tokenId: bigint) => Promise<ReturnType<MarketClient['getListingByToken']> extends Promise<infer T> ? T : never>;
+  getListing: (
+    listingId: bigint
+  ) => Promise<ReturnType<MarketClient['getListing']> extends Promise<infer T> ? T : never>;
+  getListingByToken: (
+    nftContractId: string,
+    tokenId: bigint
+  ) => Promise<ReturnType<MarketClient['getListingByToken']> extends Promise<infer T> ? T : never>;
   getListingIdByToken: (nftContractId: string, tokenId: bigint) => Promise<bigint | null>;
-  getListings: (fromListingId: bigint, toListingId: bigint) => Promise<Array<{ listingId: bigint; listing: Awaited<ReturnType<MarketClient['getListing']>> }>>;
+  getListings: (
+    fromListingId: bigint,
+    toListingId: bigint
+  ) => Promise<
+    Array<{ listingId: bigint; listing: Awaited<ReturnType<MarketClient['getListing']>> }>
+  >;
 };
 
-export const createMarketReadClient = (
-  params: SimpleClientBaseParams
-): BoundMarketReadClient => {
+export const createMarketReadClient = (params: SimpleClientBaseParams): BoundMarketReadClient => {
   const contract = resolveContract(params);
   const senderAddress = resolveSenderAddress(contract, params.senderAddress);
   const raw = createMarketClient({
