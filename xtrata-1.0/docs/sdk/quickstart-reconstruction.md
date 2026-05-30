@@ -1,0 +1,56 @@
+# SDK Quickstart: Independent Reconstruction
+
+Use this when you want to rebuild inscription bytes from public chain data
+without trusting `xtrata.xyz`.
+
+Canonical public mainnet target:
+
+`SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1`
+
+Fallback source chain:
+
+1. `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0`
+2. `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1`
+
+## 20-line example
+
+```ts
+import { createXtrataReadClient } from '@xtrata/sdk/simple';
+import { reconstructInscription } from '@xtrata/reconstruction';
+
+const contractId =
+  'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1';
+const senderAddress = contractId.split('.')[0];
+const core = createXtrataReadClient({ contractId, senderAddress });
+
+const result = await reconstructInscription(287n, core, {
+  strict: true,
+  maxNodes: 64
+});
+
+console.log({
+  tokenId: result.tokenId.toString(),
+  mimeType: result.mimeType,
+  bytes: result.bytes.length,
+  tokenUri: result.tokenUri,
+  finalHash: result.verification.expectedHashHex,
+  dependencies: result.dependencies.nodes.map(String)
+});
+```
+
+This example uses public Stacks read-only calls through the SDK defaults. To
+avoid public rate limits, pass `apiBaseUrls` into `createXtrataReadClient`.
+
+For the full reconstruction rules, see
+[`docs/reconstruction-spec.md`](../reconstruction-spec.md).
+
+## CLI proof
+
+From the repo root:
+
+```sh
+npm run reconstruct -- 287 /tmp/xtrata-287.html
+```
+
+The CLI prints the requested contract, source contracts used for chunks, byte
+count, MIME type, token URI, dependency count, and verified hash.

@@ -16,7 +16,7 @@ import {
 
 const contract = {
   address: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
-  contractName: 'xtrata-v2-1-0',
+  contractName: 'xtrata-v2-1-1',
   network: 'mainnet' as const
 };
 

@@ -8,6 +8,8 @@ describe('reconstruction public exports', () => {
     expect(typeof reconstruction.assembleChunks).toBe('function');
     expect(typeof reconstruction.computeExpectedHash).toBe('function');
     expect(typeof reconstruction.verifyPayload).toBe('function');
+    expect(typeof reconstruction.assertVerified).toBe('function');
+    expect(typeof reconstruction.ReconstructionVerificationError).toBe('function');
   });
 
   it('exposes graph and end-to-end reconstruction helpers', () => {

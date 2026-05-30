@@ -3,6 +3,8 @@
 This is the fastest way to choose the right API surface.
 
 If you are brand new, start with `docs/sdk/quickstart-first-30-minutes.md`.
+If you need to rebuild inscription bytes from public chain data, use
+`docs/sdk/quickstart-reconstruction.md`.
 
 ## Default path (recommended)
 
@@ -12,6 +14,7 @@ Use `simple` when you want minimal setup and clear read helpers.
 - `createCollectionReadClient`
 - `createMarketReadClient`
 - `createSimpleSdk`
+- `@xtrata/reconstruction` for strict byte reconstruction and hash verification
 
 These clients:
 - bind sender once
