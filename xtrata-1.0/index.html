@@ -3106,7 +3106,7 @@
       batchChunks,
       chunkBytes,
       computeExpectedHash,
-      MAX_BATCH_SIZE
+      MAX_UPLOAD_BATCH_SIZE
     } from '/src/lib/chunking/hash.ts';
     import {
       DEFAULT_BATCH_SIZE,
@@ -5028,7 +5028,7 @@
       const usesSingleTx = shouldUseSmallMintHelper();
       const sequentialTxEstimate = estimateSequentialMintTransactions({
         totalChunks: state.prepared.chunks.length,
-        batchSize: Math.min(DEFAULT_BATCH_SIZE, MAX_BATCH_SIZE)
+        batchSize: Math.min(DEFAULT_BATCH_SIZE, MAX_UPLOAD_BATCH_SIZE)
       });
       const dataMiningEstimate = formatDataMiningEstimate(state.prepared.bytes);
       const transactionCount = getPreparedTransactionCount(
@@ -5250,7 +5250,7 @@
       const expectedHash = computeExpectedHash(chunks);
       const tokenUriValue = dom.tokenUriInput.value.trim() || DEFAULT_TOKEN_URI;
       const mimeType = validatePayload(file, bytes, chunks, tokenUriValue);
-      const batches = batchChunks(chunks, Math.min(DEFAULT_BATCH_SIZE, MAX_BATCH_SIZE));
+      const batches = batchChunks(chunks, Math.min(DEFAULT_BATCH_SIZE, MAX_UPLOAD_BATCH_SIZE));
       const expectedHashHex = bytesToHex(expectedHash);
       const dependencyIds = state.handoffDependencyIds ?? [];
 
@@ -5462,7 +5462,7 @@
         const remainingChunks = prepared.chunks.slice(currentIndex);
         const remainingBatches = batchChunks(
           remainingChunks,
-          Math.min(DEFAULT_BATCH_SIZE, MAX_BATCH_SIZE)
+          Math.min(DEFAULT_BATCH_SIZE, MAX_UPLOAD_BATCH_SIZE)
         );
 
         if (remainingBatches.length > 0) {

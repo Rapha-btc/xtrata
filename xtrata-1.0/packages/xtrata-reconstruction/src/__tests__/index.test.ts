@@ -109,6 +109,36 @@ describe('reconstruction sdk', () => {
     expect(result.diagnostics.singleReads).toBe(1);
   });
 
+  it('clamps reconstruction batch reads to 30 chunks', async () => {
+    const payload = new Uint8Array(CHUNK_SIZE * 65);
+    const chunks = chunkBytes(payload);
+    const expectedHash = computeExpectedHash(chunks);
+    const batchRequests: bigint[][] = [];
+
+    const result = await reconstructInscription(
+      7n,
+      {
+        getInscriptionMeta: async () => ({
+          mimeType: 'application/octet-stream',
+          totalSize: BigInt(payload.length),
+          totalChunks: BigInt(chunks.length),
+          sealed: true,
+          finalHash: expectedHash
+        }),
+        getChunk: async (_tokenId, index) => chunks[Number(index)] ?? null,
+        getChunkBatch: async (_tokenId, indexes) => {
+          batchRequests.push(indexes);
+          return indexes.map((index) => chunks[Number(index)] ?? null);
+        },
+        getDependencies: async () => []
+      },
+      { sourceId: 'primary', batchSize: 50, strict: true }
+    );
+
+    expect(result.verification.ok).toBe(true);
+    expect(batchRequests.map((indexes) => indexes.length)).toEqual([30, 30, 4]);
+  });
+
   it('falls back to single chunk reads for missing batch entries', async () => {
     const payload = largeBytesFromText('batch fallback');
     const chunks = chunkBytes(payload);

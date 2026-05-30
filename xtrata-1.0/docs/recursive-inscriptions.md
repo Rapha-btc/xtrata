@@ -140,13 +140,13 @@ await showContractCall(
   })
 );
 
-// 2) add-chunk-batch (repeat for each batch of 50 chunks)
+// 2) add-chunk-batch (repeat for each first-party upload batch of 30 chunks)
 await showContractCall(
   buildAddChunkBatchCall({
     contract,
     network,
     expectedHash,
-    chunks: chunks.slice(0, 50)
+    chunks: chunks.slice(0, 30)
   })
 );
 

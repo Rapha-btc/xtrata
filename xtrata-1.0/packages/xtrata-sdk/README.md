@@ -20,6 +20,10 @@ Current packaging mode:
 - Tarball smoke validation is available via `npm run sdk:pack:smoke` from repo root.
 - Example tarball smoke validation is available via `npm run sdk:examples:tarball:smoke` from repo root.
 
+Mint workflow planners cap first-party upload calls at 30 chunks per
+`add-chunk-batch` / `mint-add-chunk-batch`, while retaining the deployed
+contract ABI constant of 50 for protocol fee math and list compatibility.
+
 Quick start:
 
 ```ts

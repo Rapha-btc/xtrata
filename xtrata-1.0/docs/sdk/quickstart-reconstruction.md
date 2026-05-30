@@ -50,6 +50,12 @@ Platform adapters can also pass `isTerminalReadError` into
 `reconstructXtrataInscription` so quota exhaustion stops immediately instead
 of triggering fallback reads.
 
+The first-party Cloudflare runtime uses the same reconstruction engine and
+clamps cold-cache `get-chunk-batch` reads to 30 chunks. Production smoke checks
+should confirm the response headers expose `X-Xtrata-Runtime-Cache: MISS` on a
+purged token, `X-Xtrata-Runtime-Read-Batch-Size: 30`, low fallback/single-read
+counts, and `X-Xtrata-Runtime-Cache: HIT` on the repeat request.
+
 For the full reconstruction rules, see
 [`docs/reconstruction-spec.md`](../reconstruction-spec.md).
 

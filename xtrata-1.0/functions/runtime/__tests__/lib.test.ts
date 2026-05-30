@@ -4,6 +4,7 @@ import type { InscriptionMeta } from '../../../src/lib/protocol/types';
 import {
   resolveRuntimeContent,
   resolveRuntimeContentStream,
+  getRuntimeReadConfig,
   type RuntimeContentReader,
   type RuntimeContractRef,
   type RuntimeEnv
@@ -47,6 +48,14 @@ const wait = (ms: number) =>
   });
 
 describe('runtime content reconstruction', () => {
+  it('clamps runtime read batches to 30 chunks', () => {
+    expect(
+      getRuntimeReadConfig({
+        RUNTIME_CONTENT_READ_BATCH_SIZE: '50'
+      }).batchSize
+    ).toBe(30);
+  });
+
   it('uses get-chunk-batch for remaining chunks and preserves byte order', async () => {
     const bytes = new Uint8Array([1, 2, 3, 4, 5]);
     const chunks = new Map<string, Uint8Array>([
@@ -203,7 +212,7 @@ describe('runtime content reconstruction', () => {
     const batchCalls = vi.mocked(reader.fetchChunkBatch).mock.calls;
     expect(Array.from(resolved.bytes)).toEqual(Array.from(bytes));
     expect(batchCalls.map(([params]) => params.indexes.length)).toEqual(
-      expect.arrayContaining([50, 25, 25, 10])
+      expect.arrayContaining([30, 15, 15])
     );
     expect(reader.fetchChunk).toHaveBeenCalledTimes(1);
   });

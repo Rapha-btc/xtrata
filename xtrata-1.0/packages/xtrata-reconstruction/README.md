@@ -50,9 +50,10 @@ console.log(result.mimeType, result.bytes.length, result.diagnostics.chunkSource
 does not match the on-chain `final-hash`. It also rejects unsealed metadata
 when that flag is exposed.
 
-`batchSize` and `concurrency` are optional. They let production callers keep
-read-only reconstruction fast while preserving deterministic chunk order and
-strict hash verification. Platform adapters can also provide
+`batchSize` and `concurrency` are optional. `batchSize` is clamped to the
+production ceiling of 30 chunks per read batch. These settings let production
+callers keep read-only reconstruction fast while preserving deterministic chunk
+order and strict hash verification. Platform adapters can also provide
 `isTerminalReadError` to stop immediately when retry or per-chunk fallback
 would only amplify an exhausted upstream quota.
 

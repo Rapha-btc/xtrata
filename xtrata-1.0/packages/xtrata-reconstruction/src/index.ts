@@ -354,12 +354,12 @@ const readSingleChunk = async (params: {
 
 const normalizeBatchSize = (batchSize: number | undefined) => {
   if (batchSize === undefined) {
-    return 50;
+    return 30;
   }
   if (!Number.isFinite(batchSize)) {
-    return 50;
+    return 30;
   }
-  return Math.max(1, Math.min(50, Math.floor(batchSize)));
+  return Math.max(1, Math.min(30, Math.floor(batchSize)));
 };
 
 const normalizeConcurrency = (concurrency: number | undefined, total: number) => {

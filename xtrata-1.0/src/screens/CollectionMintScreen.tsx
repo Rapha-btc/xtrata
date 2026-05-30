@@ -23,7 +23,7 @@ import {
   batchChunks,
   chunkBytes,
   computeExpectedHash,
-  MAX_BATCH_SIZE
+  MAX_UPLOAD_BATCH_SIZE
 } from '../lib/chunking/hash';
 import { bytesToHex } from '../lib/utils/encoding';
 import { formatBytes, truncateMiddle } from '../lib/utils/format';
@@ -122,7 +122,7 @@ const MAX_COLLECTION_TOTAL_BYTES = 16 * 1024 * 1024;
 const MAX_COLLECTION_FILE_BYTES = 4 * 1024 * 1024;
 const MAX_COLLECTION_ONLY_QUANTITY = 50;
 const BATCH_OPTIONS = Array.from(
-  { length: MAX_BATCH_SIZE },
+  { length: MAX_UPLOAD_BATCH_SIZE },
   (_, index) => index + 1
 );
 const COLLECTION_RESERVATION_STORAGE_PREFIX = 'xtrata:collection-mint:reservations';
@@ -2117,7 +2117,7 @@ export default function CollectionMintScreen(props: CollectionMintScreenProps) {
               </option>
             ))}
           </select>
-          <span className="field__hint">Max {MAX_BATCH_SIZE} chunks per tx.</span>
+          <span className="field__hint">Max {MAX_UPLOAD_BATCH_SIZE} chunks per tx.</span>
         </label>
 
         <div className="collection-mint__fees">

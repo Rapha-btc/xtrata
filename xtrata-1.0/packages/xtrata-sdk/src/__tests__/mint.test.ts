@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { FungibleConditionCode } from '@stacks/transactions';
 import {
+  batchChunks,
   buildSmallMintSingleTxStxPostConditions,
   buildSealStxPostConditions,
+  DEFAULT_BATCH_SIZE,
+  MAX_BATCH_SIZE,
+  MAX_UPLOAD_BATCH_SIZE,
   normalizeDependencyIds,
   parseDependencyInput,
   resolveCollectionBeginSpendCapMicroStx,
@@ -12,6 +16,21 @@ import {
 } from '../mint';
 
 describe('sdk mint helpers', () => {
+  it('uses a 30-chunk hard upload ceiling while preserving the contract ABI max', () => {
+    const chunks = Array.from({ length: 65 }, (_, index) => new Uint8Array([index]));
+    const batches = batchChunks(chunks);
+
+    expect(MAX_BATCH_SIZE).toBe(50);
+    expect(MAX_UPLOAD_BATCH_SIZE).toBe(30);
+    expect(DEFAULT_BATCH_SIZE).toBe(30);
+    expect(batches.map((batch) => batch.length)).toEqual([30, 30, 5]);
+    expect(batchChunks(chunks, 50).map((batch) => batch.length)).toEqual([
+      30,
+      30,
+      5
+    ]);
+  });
+
   it('computes collection begin cap including protocol fee', () => {
     expect(
       resolveCollectionBeginSpendCapMicroStx({

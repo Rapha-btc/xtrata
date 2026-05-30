@@ -134,11 +134,27 @@ attempts including retries and alternate API-base attempts. Set
 `RUNTIME_CONTENT_DEBUG=1` in the runtime environment to emit opt-in
 reconstruction logs during testing.
 
-The Cloudflare Pages runtime sets `[limits] subrequests = 2_000` in
-`wrangler.toml`. The cold-cache reader probes up to the contract maximum of 50
-chunks per batch, splits oversized reads when Stacks reports
-`CostBalanceExceeded`, and treats Cloudflare subrequest quota exhaustion as a
-terminal error.
+The Cloudflare Pages runtime sets `[limits] cpu_ms = 30000` and
+`subrequests = 2_000` in `wrangler.toml`. The deployed contract read ABI can
+accept up to 50 indexes, but the first-party cold-cache runtime clamps
+`get-chunk-batch` reads to 30 chunks for production stability. The
+`@xtrata/reconstruction` package applies the same 30-chunk clamp when callers
+provide a larger `batchSize`. If a batch still triggers `CostBalanceExceeded`,
+the runtime splits that read; Cloudflare subrequest quota exhaustion is terminal
+and must not fan out into individual chunk reads.
+
+Production readiness checks after a runtime deployment should include:
+
+- purge the target token from runtime cache using the protected
+  `/runtime/cache-purge` route;
+- request `/runtime/content` and confirm `X-Xtrata-Runtime-Cache: MISS`;
+- confirm `X-Xtrata-Runtime-Read-Batch-Size: 30`;
+- confirm batch fallback and single-read counts stay low;
+- request the same URL again and confirm `X-Xtrata-Runtime-Cache: HIT`;
+- verify `/inscription/:id`, `/i/:id`, and `Range: bytes=0-1023` responses.
+
+The optional `RUNTIME_CONTENT_READ_BATCH_SIZE` environment variable may reduce
+the read batch size below 30 for diagnostics, but values above 30 are clamped.
 
 ## Chunk Size Compatibility
 
