@@ -325,6 +325,8 @@ describe('/runtime/content', () => {
     expect(response.headers.get('X-Xtrata-Runtime-Cache')).toBe('BYPASS');
     expect(response.headers.get('X-Xtrata-Runtime-Reconstruction-Read-Mode')).toBe('mixed');
     expect(response.headers.get('X-Xtrata-Runtime-Reconstruction-Fallback')).toBe('false');
+    expect(response.headers.get('X-Xtrata-Runtime-Read-Batch-Size')).toBe('50');
+    expect(response.headers.get('X-Xtrata-Runtime-Upstream-Requests')).toBe('4');
     expect(response.headers.get('Content-Length')).toBe('3');
     expect(Array.from(new Uint8Array(await response.arrayBuffer()))).toEqual([1, 2, 3]);
     expect(consoleLog).toHaveBeenCalledWith(
@@ -339,6 +341,71 @@ describe('/runtime/content', () => {
         })
       })
     );
+  });
+
+  it('returns a clear terminal response without amplifying Cloudflare subrequest exhaustion', async () => {
+    const finalHash = finalHashForBytes(new Uint8Array([1, 2, 3]));
+    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const endpoint = String(input);
+      let result: string;
+      if (endpoint.endsWith('/get-inscription-meta')) {
+        result = metaResult({
+          totalSize: 3n,
+          totalChunks: 3n,
+          finalHash
+        });
+      } else if (endpoint.endsWith('/get-chunk')) {
+        result = cvHex(someCV(bufferCV(new Uint8Array([1]))));
+      } else if (endpoint.endsWith('/get-chunk-batch')) {
+        throw new Error('Too many subrequests by single Worker invocation.');
+      } else {
+        throw new Error(`Unexpected endpoint ${endpoint}`);
+      }
+      return new Response(
+        JSON.stringify({
+          okay: true,
+          result
+        }),
+        {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+    });
+    vi.stubGlobal('fetch', fetch);
+
+    const response = await onRequest({
+      request: new Request(
+        `https://xtrata.xyz/runtime/content?contractId=${CONTRACT_ID}&tokenId=294&network=mainnet`
+      ),
+      env: {
+        RUNTIME_CONTENT_READ_RETRIES: '2'
+      }
+    });
+    const body = (await response.json()) as {
+      error: string;
+      diagnostics: {
+        upstreamRequests: number;
+        batchFallbacks: number;
+        singleReads: number;
+        errors: Array<{ operation: string }>;
+      };
+    };
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get('X-Xtrata-Runtime-Upstream-Requests')).toBe('3');
+    expect(body.error).toBe('Runtime upstream request limit exhausted.');
+    expect(body.diagnostics.upstreamRequests).toBe(3);
+    expect(body.diagnostics.batchFallbacks).toBe(0);
+    expect(body.diagnostics.singleReads).toBe(1);
+    expect(body.diagnostics.errors).toEqual([
+      expect.objectContaining({
+        operation: 'chunk-batch'
+      })
+    ]);
+    expect(fetch).toHaveBeenCalledTimes(3);
   });
 
   it('serves byte ranges after reconstructing uncached content', async () => {

@@ -54,7 +54,8 @@ export type ReconstructionErrorCode =
   | 'missing-chunk'
   | 'short-content'
   | 'unsafe-chunk-count'
-  | 'unsafe-total-size';
+  | 'unsafe-total-size'
+  | 'terminal-read-error';
 
 export type ReconstructionReadMode = 'none' | 'single' | 'batch' | 'mixed';
 
@@ -263,6 +264,7 @@ export type ReconstructionFetchOptions = {
   batchSize?: number;
   concurrency?: number;
   preferBatch?: boolean;
+  isTerminalReadError?: (error: unknown) => boolean;
 };
 
 export type ReconstructInscriptionOptions = ResolveDependenciesOptions &
@@ -311,11 +313,25 @@ const recordReadError = (
   diagnostics.errors.push(error);
 };
 
+const asTerminalReadError = (
+  error: unknown,
+  diagnostics: ReconstructionDiagnostics,
+  options?: ReconstructionFetchOptions
+) => {
+  if (error instanceof ReconstructionContentError && error.code === 'terminal-read-error') {
+    return error;
+  }
+  return options?.isTerminalReadError?.(error)
+    ? new ReconstructionContentError('terminal-read-error', errorMessage(error), diagnostics)
+    : null;
+};
+
 const readSingleChunk = async (params: {
   source: ReconstructionSource;
   tokenId: bigint;
   index: bigint;
   diagnostics: ReconstructionDiagnostics;
+  options?: ReconstructionFetchOptions;
 }) => {
   params.diagnostics.singleReads += 1;
   updateReadMode(params.diagnostics);
@@ -328,6 +344,10 @@ const readSingleChunk = async (params: {
       index: params.index,
       message: errorMessage(error)
     });
+    const terminalError = asTerminalReadError(error, params.diagnostics, params.options);
+    if (terminalError) {
+      throw terminalError;
+    }
     return null;
   }
 };
@@ -394,18 +414,33 @@ const readChunksFromSource = async (params: {
   const batchSize = normalizeBatchSize(params.options?.batchSize);
   const concurrency = normalizeConcurrency(params.options?.concurrency, total);
   const preferBatch = params.options?.preferBatch !== false;
+  let terminalReadError: ReconstructionContentError | null = null;
+
+  const throwIfTerminalReadFailed = () => {
+    if (terminalReadError) {
+      throw terminalReadError;
+    }
+  };
 
   const readSingles = async (indexes: bigint[]) => {
     await runWithConcurrency(indexes, concurrency, async (index) => {
+      throwIfTerminalReadFailed();
       if (chunksByIndex.has(index.toString())) {
         return;
       }
-      const chunk = await readSingleChunk({
-        source: params.source,
-        tokenId: params.tokenId,
-        index,
-        diagnostics: params.diagnostics
-      });
+      let chunk: Uint8Array | null;
+      try {
+        chunk = await readSingleChunk({
+          source: params.source,
+          tokenId: params.tokenId,
+          index,
+          diagnostics: params.diagnostics,
+          options: params.options
+        });
+      } catch (error) {
+        terminalReadError = asTerminalReadError(error, params.diagnostics, params.options);
+        throw error;
+      }
       if (chunk && chunk.length > 0) {
         chunksByIndex.set(index.toString(), chunk);
       }
@@ -413,6 +448,7 @@ const readChunksFromSource = async (params: {
   };
 
   const readBatch = async (indexes: bigint[]): Promise<void> => {
+    throwIfTerminalReadFailed();
     const pendingIndexes = indexes.filter((index) => !chunksByIndex.has(index.toString()));
     if (pendingIndexes.length === 0) {
       return;
@@ -449,13 +485,18 @@ const readChunksFromSource = async (params: {
       }
     } catch (error) {
       const message = errorMessage(error);
-      params.diagnostics.batchFallbacks += 1;
       recordReadError(params.diagnostics, {
         sourceId: sourceIdOf(params.source),
         operation: 'chunk-batch',
         indexes: [...pendingIndexes],
         message
       });
+      const terminalError = asTerminalReadError(error, params.diagnostics, params.options);
+      if (terminalError) {
+        terminalReadError = terminalError;
+        throw terminalError;
+      }
+      params.diagnostics.batchFallbacks += 1;
 
       if (pendingIndexes.length === 1 || !isCostBalanceExceededMessage(message)) {
         await readSingles(pendingIndexes);
@@ -502,6 +543,7 @@ const readMetaFromSources = async (params: {
   tokenId: bigint;
   sources: ReconstructionSource[];
   diagnostics: ReconstructionDiagnostics;
+  options?: ReconstructionFetchOptions;
 }) => {
   for (const source of params.sources) {
     try {
@@ -518,6 +560,10 @@ const readMetaFromSources = async (params: {
         operation: 'meta',
         message: errorMessage(error)
       });
+      const terminalError = asTerminalReadError(error, params.diagnostics, params.options);
+      if (terminalError) {
+        throw terminalError;
+      }
     }
   }
 
@@ -532,12 +578,14 @@ const readFirstChunkFromSource = async (params: {
   source: ReconstructionSource;
   tokenId: bigint;
   diagnostics: ReconstructionDiagnostics;
+  options?: ReconstructionFetchOptions;
 }) => {
   const chunk = await readSingleChunk({
     source: params.source,
     tokenId: params.tokenId,
     index: 0n,
-    diagnostics: params.diagnostics
+    diagnostics: params.diagnostics,
+    options: params.options
   });
   return chunk && chunk.length > 0 ? chunk : null;
 };
@@ -548,6 +596,7 @@ const selectChunkSource = async (params: {
   sources: ReconstructionSource[];
   totalChunks: bigint;
   diagnostics: ReconstructionDiagnostics;
+  options?: ReconstructionFetchOptions;
 }) => {
   if (params.totalChunks === 0n) {
     params.diagnostics.chunkSourceId = sourceIdOf(params.metaSource);
@@ -566,7 +615,8 @@ const selectChunkSource = async (params: {
     const firstChunk = await readFirstChunkFromSource({
       source,
       tokenId: params.tokenId,
-      diagnostics: params.diagnostics
+      diagnostics: params.diagnostics,
+      options: params.options
     });
     if (firstChunk) {
       const chunkSourceId = sourceIdOf(source);
@@ -588,6 +638,7 @@ const readTokenUri = async (params: {
   tokenId: bigint;
   source: ReconstructionSource;
   diagnostics: ReconstructionDiagnostics;
+  options?: ReconstructionFetchOptions;
 }) => {
   if (!params.source.readers.getTokenUri) {
     return null;
@@ -600,6 +651,10 @@ const readTokenUri = async (params: {
       operation: 'token-uri',
       message: errorMessage(error)
     });
+    const terminalError = asTerminalReadError(error, params.diagnostics, params.options);
+    if (terminalError) {
+      throw terminalError;
+    }
     return null;
   }
 };
@@ -659,7 +714,8 @@ export const reconstructXtrataInscription = async (
   const { source: metaSource, meta } = await readMetaFromSources({
     tokenId: options.tokenId,
     sources: options.sources,
-    diagnostics
+    diagnostics,
+    options
   });
 
   if (options.strict && meta.sealed === false) {
@@ -682,7 +738,8 @@ export const reconstructXtrataInscription = async (
     metaSource,
     sources: options.sources,
     totalChunks,
-    diagnostics
+    diagnostics,
+    options
   });
 
   const chunks = await readChunksFromSource({
@@ -712,7 +769,8 @@ export const reconstructXtrataInscription = async (
   const tokenUri = await readTokenUri({
     tokenId: options.tokenId,
     source: metaSource,
-    diagnostics
+    diagnostics,
+    options
   });
 
   return {
@@ -744,5 +802,6 @@ export const reconstructInscription = async (
     maxNodes: options?.maxNodes,
     batchSize: options?.batchSize,
     concurrency: options?.concurrency,
-    preferBatch: options?.preferBatch
+    preferBatch: options?.preferBatch,
+    isTerminalReadError: options?.isTerminalReadError
   });

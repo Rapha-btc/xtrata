@@ -52,6 +52,8 @@ when that flag is exposed.
 
 `batchSize` and `concurrency` are optional. They let production callers keep
 read-only reconstruction fast while preserving deterministic chunk order and
-strict hash verification.
+strict hash verification. Platform adapters can also provide
+`isTerminalReadError` to stop immediately when retry or per-chunk fallback
+would only amplify an exhausted upstream quota.
 
 Full rules: `docs/reconstruction-spec.md` in the main repository.

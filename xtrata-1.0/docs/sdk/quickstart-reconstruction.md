@@ -46,6 +46,9 @@ console.log({
 
 This example uses public Stacks read-only calls through the SDK defaults. To
 avoid public rate limits, pass `apiBaseUrls` into `createXtrataReadClient`.
+Platform adapters can also pass `isTerminalReadError` into
+`reconstructXtrataInscription` so quota exhaustion stops immediately instead
+of triggering fallback reads.
 
 For the full reconstruction rules, see
 [`docs/reconstruction-spec.md`](../reconstruction-spec.md).

@@ -27,7 +27,7 @@ export type RuntimeContractRef = {
 
 const CHUNK_FALLBACK_SIZE = 16384n;
 const CONTRACT_MAX_BATCH_SIZE = 50;
-const DEFAULT_RUNTIME_READ_BATCH_SIZE = 8;
+const DEFAULT_RUNTIME_READ_BATCH_SIZE = CONTRACT_MAX_BATCH_SIZE;
 const DEFAULT_RUNTIME_CHUNK_CONCURRENCY = 4;
 const DEFAULT_RUNTIME_CHUNK_RETRIES = 2;
 
@@ -60,6 +60,26 @@ const encodeUintListArg = (values: bigint[]) =>
   `0x${bytesToHex(serializeCV(listCV(values.map((value) => uintCV(value)))))}`;
 
 const asError = (value: unknown) => (value instanceof Error ? value : new Error(String(value)));
+
+export type RuntimeUpstreamRequestTracker = {
+  attempts: number;
+};
+
+export const createRuntimeUpstreamRequestTracker = (): RuntimeUpstreamRequestTracker => ({
+  attempts: 0
+});
+
+export const isCloudflareSubrequestQuotaError = (error: unknown) => {
+  const message = asError(error).message.toLowerCase();
+  return (
+    (message.includes('subrequest') &&
+      (message.includes('too many') ||
+        message.includes('limit') ||
+        message.includes('quota') ||
+        message.includes('exceed'))) ||
+    message.includes('worker exceeded resource limits')
+  );
+};
 
 export const parseRuntimeNetwork = (value: string | null) => {
   const normalized = String(value || 'mainnet')
@@ -116,6 +136,7 @@ export const callRuntimeReadOnly = async (params: {
   functionName: string;
   functionArgs: string[];
   senderAddress: string;
+  upstreamTracker?: RuntimeUpstreamRequestTracker;
 }) => {
   const { env, apiBases } = params;
   const hiroKeys = getHiroApiKeys(env);
@@ -138,6 +159,9 @@ export const callRuntimeReadOnly = async (params: {
         });
         applyHiroApiKey(headers, keyCandidate);
 
+        if (params.upstreamTracker) {
+          params.upstreamTracker.attempts += 1;
+        }
         const response = await fetch(endpoint, {
           method: 'POST',
           headers,
@@ -164,6 +188,9 @@ export const callRuntimeReadOnly = async (params: {
         return deserializeCV(body.result);
       } catch (error) {
         lastError = asError(error);
+        if (isCloudflareSubrequestQuotaError(error)) {
+          throw lastError;
+        }
         break;
       }
     }
@@ -177,6 +204,7 @@ export const fetchRuntimeMeta = async (params: {
   apiBases: string[];
   contract: RuntimeContractRef;
   tokenId: bigint;
+  upstreamTracker?: RuntimeUpstreamRequestTracker;
 }) => {
   const value = await callRuntimeReadOnly({
     env: params.env,
@@ -184,7 +212,8 @@ export const fetchRuntimeMeta = async (params: {
     contract: params.contract,
     functionName: 'get-inscription-meta',
     functionArgs: [encodeUintArg(params.tokenId)],
-    senderAddress: params.contract.address
+    senderAddress: params.contract.address,
+    upstreamTracker: params.upstreamTracker
   });
   return parseGetInscriptionMeta(value);
 };
@@ -195,6 +224,7 @@ export const fetchRuntimeChunk = async (params: {
   contract: RuntimeContractRef;
   tokenId: bigint;
   index: bigint;
+  upstreamTracker?: RuntimeUpstreamRequestTracker;
 }) => {
   const value = await callRuntimeReadOnly({
     env: params.env,
@@ -202,7 +232,8 @@ export const fetchRuntimeChunk = async (params: {
     contract: params.contract,
     functionName: 'get-chunk',
     functionArgs: [encodeUintArg(params.tokenId), encodeUintArg(params.index)],
-    senderAddress: params.contract.address
+    senderAddress: params.contract.address,
+    upstreamTracker: params.upstreamTracker
   });
   return parseGetChunk(value);
 };
@@ -213,6 +244,7 @@ export const fetchRuntimeChunkBatch = async (params: {
   contract: RuntimeContractRef;
   tokenId: bigint;
   indexes: bigint[];
+  upstreamTracker?: RuntimeUpstreamRequestTracker;
 }) => {
   if (params.indexes.length === 0) {
     return [] as Array<Uint8Array | null>;
@@ -223,7 +255,8 @@ export const fetchRuntimeChunkBatch = async (params: {
     contract: params.contract,
     functionName: 'get-chunk-batch',
     functionArgs: [encodeUintArg(params.tokenId), encodeUintListArg(params.indexes)],
-    senderAddress: params.contract.address
+    senderAddress: params.contract.address,
+    upstreamTracker: params.upstreamTracker
   });
   return parseGetChunkBatch(value);
 };
@@ -232,6 +265,7 @@ export const fetchRuntimeLastTokenId = async (params: {
   env: RuntimeEnv;
   apiBases: string[];
   contract: RuntimeContractRef;
+  upstreamTracker?: RuntimeUpstreamRequestTracker;
 }) => {
   const value = await callRuntimeReadOnly({
     env: params.env,
@@ -239,7 +273,8 @@ export const fetchRuntimeLastTokenId = async (params: {
     contract: params.contract,
     functionName: 'get-last-token-id',
     functionArgs: [],
-    senderAddress: params.contract.address
+    senderAddress: params.contract.address,
+    upstreamTracker: params.upstreamTracker
   });
   return parseGetLastTokenId(value);
 };
@@ -249,6 +284,7 @@ export const fetchRuntimeTokenUri = async (params: {
   apiBases: string[];
   contract: RuntimeContractRef;
   tokenId: bigint;
+  upstreamTracker?: RuntimeUpstreamRequestTracker;
 }) => {
   const value = await callRuntimeReadOnly({
     env: params.env,
@@ -256,7 +292,8 @@ export const fetchRuntimeTokenUri = async (params: {
     contract: params.contract,
     functionName: 'get-token-uri',
     functionArgs: [encodeUintArg(params.tokenId)],
-    senderAddress: params.contract.address
+    senderAddress: params.contract.address,
+    upstreamTracker: params.upstreamTracker
   });
   return parseGetTokenUri(value);
 };
@@ -266,6 +303,7 @@ export const fetchRuntimeDependencies = async (params: {
   apiBases: string[];
   contract: RuntimeContractRef;
   tokenId: bigint;
+  upstreamTracker?: RuntimeUpstreamRequestTracker;
 }) => {
   const value = await callRuntimeReadOnly({
     env: params.env,
@@ -273,7 +311,8 @@ export const fetchRuntimeDependencies = async (params: {
     contract: params.contract,
     functionName: 'get-dependencies',
     functionArgs: [encodeUintArg(params.tokenId)],
-    senderAddress: params.contract.address
+    senderAddress: params.contract.address,
+    upstreamTracker: params.upstreamTracker
   });
   return parseGetDependencies(value);
 };
@@ -337,19 +376,39 @@ export type RuntimeResolvedMeta = {
   meta: InscriptionMeta;
 };
 
-export type RuntimeReconstructionDiagnostics = ReconstructionDiagnostics;
+export type RuntimeReconstructionDiagnostics = ReconstructionDiagnostics & {
+  upstreamRequests: number;
+};
+
+export const syncRuntimeUpstreamRequests = (
+  diagnostics: ReconstructionDiagnostics,
+  upstreamTracker: RuntimeUpstreamRequestTracker
+) => {
+  const runtimeDiagnostics = diagnostics as RuntimeReconstructionDiagnostics;
+  runtimeDiagnostics.upstreamRequests = upstreamTracker.attempts;
+  return runtimeDiagnostics;
+};
+
+const attachRuntimeDiagnosticsToError = (
+  error: unknown,
+  diagnostics: RuntimeReconstructionDiagnostics
+) => {
+  if (error && typeof error === 'object') {
+    (error as { diagnostics?: RuntimeReconstructionDiagnostics }).diagnostics = diagnostics;
+  }
+};
 
 export type RuntimeResolvedContent = {
   contract: RuntimeContractRef;
   meta: InscriptionMeta;
   bytes: Uint8Array;
-  diagnostics: ReconstructionDiagnostics;
+  diagnostics: RuntimeReconstructionDiagnostics;
 };
 
 export type RuntimeStreamCompleteContext = {
   contract: RuntimeContractRef;
   meta: InscriptionMeta;
-  diagnostics: ReconstructionDiagnostics;
+  diagnostics: RuntimeReconstructionDiagnostics;
 };
 
 export type RuntimeContentReader = {
@@ -372,6 +431,7 @@ const buildRuntimeReconstructionSource = (params: {
   contract: RuntimeContractRef;
   read: ResolvedRuntimeContentReader;
   retries: number;
+  upstreamTracker: RuntimeUpstreamRequestTracker;
   metaOverride?: InscriptionMeta | null;
   metaBySourceId?: Map<string, InscriptionMeta>;
 }): ReconstructionSource => ({
@@ -384,7 +444,8 @@ const buildRuntimeReconstructionSource = (params: {
           env: params.env,
           apiBases: params.apiBases,
           contract: params.contract,
-          tokenId
+          tokenId,
+          upstreamTracker: params.upstreamTracker
         }));
       if (meta) {
         params.metaBySourceId?.set(formatRuntimeContractId(params.contract), meta);
@@ -399,6 +460,7 @@ const buildRuntimeReconstructionSource = (params: {
         tokenId,
         index,
         retries: params.retries,
+        upstreamTracker: params.upstreamTracker,
         read: params.read
       }),
     getChunkBatch: async (tokenId, indexes) => {
@@ -409,6 +471,7 @@ const buildRuntimeReconstructionSource = (params: {
         tokenId,
         indexes,
         retries: params.retries,
+        upstreamTracker: params.upstreamTracker,
         read: params.read
       });
       return entries.map((entry) => entry.chunk);
@@ -424,6 +487,7 @@ const buildRuntimeReconstructionSources = (params: {
   fallbackContract: RuntimeContractRef | null;
   read: ResolvedRuntimeContentReader;
   retries: number;
+  upstreamTracker: RuntimeUpstreamRequestTracker;
   resolvedMeta?: RuntimeResolvedMeta;
   metaBySourceId?: Map<string, InscriptionMeta>;
 }) => {
@@ -438,6 +502,7 @@ const buildRuntimeReconstructionSources = (params: {
       contract: params.primaryContract,
       read: params.read,
       retries: params.retries,
+      upstreamTracker: params.upstreamTracker,
       metaOverride: getMetaOverride(params.primaryContract),
       metaBySourceId: params.metaBySourceId
     })
@@ -453,6 +518,7 @@ const buildRuntimeReconstructionSources = (params: {
         contract: params.fallbackContract,
         read: params.read,
         retries: params.retries,
+        upstreamTracker: params.upstreamTracker,
         metaOverride: getMetaOverride(params.fallbackContract),
         metaBySourceId: params.metaBySourceId
       })
@@ -475,6 +541,7 @@ const fetchRuntimeChunkWithRetry = async (params: {
   tokenId: bigint;
   index: bigint;
   retries: number;
+  upstreamTracker: RuntimeUpstreamRequestTracker;
   read: ResolvedRuntimeContentReader;
 }) => {
   let lastError: Error | null = null;
@@ -487,6 +554,9 @@ const fetchRuntimeChunkWithRetry = async (params: {
       return chunk;
     } catch (error) {
       lastError = asError(error);
+      if (isCloudflareSubrequestQuotaError(error)) {
+        throw lastError;
+      }
       if (isCostBalanceExceeded(error)) {
         break;
       }
@@ -505,6 +575,7 @@ const fetchRuntimeChunkBatchWithRetry = async (params: {
   tokenId: bigint;
   indexes: bigint[];
   retries: number;
+  upstreamTracker: RuntimeUpstreamRequestTracker;
   read: ResolvedRuntimeContentReader;
 }) => {
   let lastError: Error | null = null;
@@ -517,6 +588,9 @@ const fetchRuntimeChunkBatchWithRetry = async (params: {
       }));
     } catch (error) {
       lastError = asError(error);
+      if (isCloudflareSubrequestQuotaError(error)) {
+        throw lastError;
+      }
       if (isCostBalanceExceeded(error)) {
         break;
       }
@@ -534,6 +608,7 @@ export const resolveRuntimeMeta = async (params: {
   tokenId: bigint;
   primaryContract: RuntimeContractRef;
   fallbackContract: RuntimeContractRef | null;
+  upstreamTracker?: RuntimeUpstreamRequestTracker;
   read?: RuntimeContentReader;
 }): Promise<RuntimeResolvedMeta> => {
   const read = getRuntimeContentReader(params.read);
@@ -544,10 +619,14 @@ export const resolveRuntimeMeta = async (params: {
       env: params.env,
       apiBases: params.apiBases,
       contract: params.primaryContract,
-      tokenId: params.tokenId
+      tokenId: params.tokenId,
+      upstreamTracker: params.upstreamTracker
     });
   } catch (error) {
     primaryMetaError = asError(error);
+    if (isCloudflareSubrequestQuotaError(error)) {
+      throw primaryMetaError;
+    }
   }
 
   let activeContract = params.primaryContract;
@@ -562,7 +641,8 @@ export const resolveRuntimeMeta = async (params: {
       env: params.env,
       apiBases: params.apiBases,
       contract: params.fallbackContract,
-      tokenId: params.tokenId
+      tokenId: params.tokenId,
+      upstreamTracker: params.upstreamTracker
     });
     if (fallbackMeta) {
       activeContract = params.fallbackContract;
@@ -587,10 +667,12 @@ export const resolveRuntimeContent = async (params: {
   primaryContract: RuntimeContractRef;
   fallbackContract: RuntimeContractRef | null;
   resolvedMeta?: RuntimeResolvedMeta;
+  upstreamTracker?: RuntimeUpstreamRequestTracker;
   read?: RuntimeContentReader;
 }): Promise<RuntimeResolvedContent> => {
   const read = getRuntimeContentReader(params.read);
   const readConfig = getRuntimeReadConfig(params.env);
+  const upstreamTracker = params.upstreamTracker ?? createRuntimeUpstreamRequestTracker();
   const metaBySourceId = new Map<string, InscriptionMeta>();
   if (params.resolvedMeta) {
     metaBySourceId.set(
@@ -605,27 +687,39 @@ export const resolveRuntimeContent = async (params: {
     fallbackContract: params.fallbackContract,
     read,
     retries: readConfig.retries,
+    upstreamTracker,
     resolvedMeta: params.resolvedMeta,
     metaBySourceId
   });
 
-  const result = await reconstructXtrataInscription({
-    tokenId: params.tokenId,
-    sources,
-    strict: true,
-    batchSize: readConfig.batchSize,
-    concurrency: readConfig.concurrency,
-    maxNodes: 1
-  });
+  let result: Awaited<ReturnType<typeof reconstructXtrataInscription>>;
+  try {
+    result = await reconstructXtrataInscription({
+      tokenId: params.tokenId,
+      sources,
+      strict: true,
+      batchSize: readConfig.batchSize,
+      concurrency: readConfig.concurrency,
+      isTerminalReadError: isCloudflareSubrequestQuotaError,
+      maxNodes: 1
+    });
+  } catch (error) {
+    const diagnostics = (error as { diagnostics?: ReconstructionDiagnostics }).diagnostics;
+    if (diagnostics) {
+      attachRuntimeDiagnosticsToError(error, syncRuntimeUpstreamRequests(diagnostics, upstreamTracker));
+    }
+    throw error;
+  }
+  const diagnostics = syncRuntimeUpstreamRequests(result.diagnostics, upstreamTracker);
 
-  const metaSourceId = result.diagnostics.metaSourceId;
+  const metaSourceId = diagnostics.metaSourceId;
   const meta = metaSourceId ? metaBySourceId.get(metaSourceId) : null;
   if (!meta) {
     throw new Error('Reconstruction metadata was not retained by runtime reader.');
   }
   const contract =
-    parseRuntimeContractId(result.diagnostics.chunkSourceId) ??
-    parseRuntimeContractId(result.diagnostics.metaSourceId) ??
+    parseRuntimeContractId(diagnostics.chunkSourceId) ??
+    parseRuntimeContractId(diagnostics.metaSourceId) ??
     params.resolvedMeta?.contract ??
     params.primaryContract;
 
@@ -633,7 +727,7 @@ export const resolveRuntimeContent = async (params: {
     contract,
     meta,
     bytes: result.bytes,
-    diagnostics: result.diagnostics
+    diagnostics
   };
 };
 

@@ -120,14 +120,47 @@ The `@xtrata/reconstruction` package exposes `verifyPayload`,
 `reconstructXtrataInscription({ sources, strict: true })` for this boundary.
 When a source exposes `getChunkBatch`, the package reads batches first, falls
 back to per-chunk reads for failed or missing batch entries, and records read
-diagnostics in the reconstruction result.
+diagnostics in the reconstruction result. Production callers can provide
+`isTerminalReadError` when platform quota errors must stop reconstruction
+without per-chunk fallback amplification.
 
 The first-party `/runtime/content` route now consumes the same public
 reconstruction engine. Runtime responses expose reconstruction proof/debug
 headers such as `X-Xtrata-Runtime-Reconstruction-Read-Mode`,
 `X-Xtrata-Runtime-Reconstruction-Batch-Reads`, and
-`X-Xtrata-Runtime-Reconstruction-Errors`. Set `RUNTIME_CONTENT_DEBUG=1` in the
-runtime environment to emit opt-in reconstruction logs during testing.
+`X-Xtrata-Runtime-Reconstruction-Errors`. The runtime also exposes
+`X-Xtrata-Runtime-Upstream-Requests`, which counts actual outbound Stacks API
+attempts including retries and alternate API-base attempts. Set
+`RUNTIME_CONTENT_DEBUG=1` in the runtime environment to emit opt-in
+reconstruction logs during testing.
+
+The Cloudflare Pages runtime sets `[limits] subrequests = 2_000` in
+`wrangler.toml`. The cold-cache reader probes up to the contract maximum of 50
+chunks per batch, splits oversized reads when Stacks reports
+`CostBalanceExceeded`, and treats Cloudflare subrequest quota exhaustion as a
+terminal error.
+
+## Chunk Size Compatibility
+
+Existing Xtrata core contracts use fixed 16,384-byte chunks. This is a contract
+format rule, not only an SDK default:
+
+- contract storage maps store `(buff 16384)` values;
+- upload calls accept `(buff 16384)` chunk values;
+- `get-chunk-batch` returns `(list 50 (optional (buff 16384)))`;
+- current metadata stores `total-size` and `total-chunks`, but not a per-token
+  chunk-size field.
+
+The reconstruction package therefore keeps `CHUNK_SIZE = 16_384` for existing
+contracts and for the legacy `total-chunks: 0` derivation path.
+
+A future contract version could support larger fixed chunks while preserving
+existing inscriptions by routing reconstruction according to contract
+capabilities. Variable per-token chunk sizes would require an explicit
+`chunk-size` metadata field, updated storage/read interfaces with a larger
+compile-time buffer bound, SDK capability detection, and compatibility tests.
+Existing v1, v2.1, and v3 contract sources must continue reconstructing with
+16,384-byte chunks.
 
 ## Public Proof Standard
 

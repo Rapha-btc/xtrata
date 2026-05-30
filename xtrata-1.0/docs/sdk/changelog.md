@@ -1,6 +1,6 @@
 # SDK Changelog
 
-Generated: 2026-05-30T13:37:38.076Z
+Generated: 2026-05-30T19:26:56.497Z
 
 ## Package versions
 
@@ -11,6 +11,7 @@ Generated: 2026-05-30T13:37:38.076Z
 
 | Iteration | Scope | API change | Gate | Owner |
 | --- | --- | --- | --- | --- |
+| 2026-05-30-02 | Cloudflare cold-cache reconstruction scaling hardening (paid subrequest ceiling, terminal quota handling, upstream-attempt diagnostics, adaptive max batch probe, chunk-size compatibility review) | yes | pass | Codex |
 | 2026-05-30-01 | Robust independent reconstruction engine (batch reads, fallback sources, diagnostics, CLI reuse, first-party runtime reuse) | yes | pass | Codex |
 | 2026-02-17-02 | Phase 6 release automation (CI matrix + release rehearsal + version/changelog tooling) | yes | pass | Codex |
 | 2026-02-17-01 | Phase 5 docs completion (beginner onboarding + troubleshooting/migration + docs validation gate) | yes | pass | Codex |

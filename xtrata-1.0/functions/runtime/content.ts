@@ -10,14 +10,17 @@ import {
   type RuntimeCacheStatus
 } from './cache';
 import {
+  createRuntimeUpstreamRequestTracker,
   fetchRuntimeTokenUri,
   getRuntimeReadConfig,
   getRuntimeApiBases,
+  isCloudflareSubrequestQuotaError,
   parseRuntimeContractRef,
   parseRuntimeNetwork,
   parseRuntimeTokenId,
   resolveRuntimeContent,
   resolveRuntimeMeta,
+  syncRuntimeUpstreamRequests,
   type RuntimeEnv,
   type RuntimeReconstructionDiagnostics
 } from './lib';
@@ -55,6 +58,7 @@ const CORS_HEADERS = {
     'X-Xtrata-Runtime-Reconstruction-Single-Reads',
     'X-Xtrata-Runtime-Reconstruction-Batch-Fallbacks',
     'X-Xtrata-Runtime-Reconstruction-Errors',
+    'X-Xtrata-Runtime-Upstream-Requests',
     'X-Xtrata-Runtime-Prepared-Ms'
   ].join(', '),
   'Cross-Origin-Resource-Policy': 'cross-origin'
@@ -73,6 +77,7 @@ const toRuntimeDiagnosticsSummary = (
         batchReads: diagnostics.batchReads,
         singleReads: diagnostics.singleReads,
         batchFallbacks: diagnostics.batchFallbacks,
+        upstreamRequests: diagnostics.upstreamRequests,
         missingChunks: diagnostics.missingChunks.map((index) => index.toString()),
         errors: diagnostics.errors.map((error) => ({
           sourceId: error.sourceId,
@@ -109,7 +114,8 @@ const asJsonError = (
   status: number,
   message: string,
   detail?: string,
-  diagnostics?: RuntimeReconstructionDiagnostics | null
+  diagnostics?: RuntimeReconstructionDiagnostics | null,
+  upstreamRequests?: number
 ) =>
   new Response(
     JSON.stringify({
@@ -122,7 +128,10 @@ const asJsonError = (
       headers: {
         ...CORS_HEADERS,
         'Content-Type': 'application/json; charset=utf-8',
-        'Cache-Control': 'no-store'
+        'Cache-Control': 'no-store',
+        ...(typeof upstreamRequests === 'number'
+          ? { 'X-Xtrata-Runtime-Upstream-Requests': upstreamRequests.toString() }
+          : {})
       }
     }
   );
@@ -144,6 +153,7 @@ const buildRuntimeContentHeaders = (params: {
   readBatchSize?: number;
   readConcurrency?: number;
   readRetries?: number;
+  upstreamRequests?: number;
   diagnostics?: RuntimeReconstructionDiagnostics | null;
   preparedMs?: number;
 }) => {
@@ -181,6 +191,9 @@ const buildRuntimeContentHeaders = (params: {
   }
   if (typeof params.readRetries === 'number') {
     headers['X-Xtrata-Runtime-Read-Retries'] = params.readRetries.toString();
+  }
+  if (typeof params.upstreamRequests === 'number') {
+    headers['X-Xtrata-Runtime-Upstream-Requests'] = params.upstreamRequests.toString();
   }
   if (params.diagnostics) {
     headers['X-Xtrata-Runtime-Reconstruction-Read-Mode'] = params.diagnostics.readMode;
@@ -342,6 +355,7 @@ export const onRequest = async (context: {
     return asJsonError(500, 'No API base URLs configured for runtime content.');
   }
   const readConfig = getRuntimeReadConfig(env);
+  const upstreamTracker = createRuntimeUpstreamRequestTracker();
 
   try {
     const resolvedMeta = await resolveRuntimeMeta({
@@ -349,7 +363,8 @@ export const onRequest = async (context: {
       apiBases,
       tokenId,
       primaryContract: contractId,
-      fallbackContract: fallbackContractId
+      fallbackContract: fallbackContractId,
+      upstreamTracker
     });
     const finalHash = runtimeBytesToHex(resolvedMeta.meta.finalHash);
     const cacheKey =
@@ -388,6 +403,7 @@ export const onRequest = async (context: {
           readBatchSize: readConfig.batchSize,
           readConcurrency: readConfig.concurrency,
           readRetries: readConfig.retries,
+          upstreamRequests: upstreamTracker.attempts,
           preparedMs: performance.now() - startedAt
         })
       });
@@ -424,6 +440,7 @@ export const onRequest = async (context: {
         readBatchSize: readConfig.batchSize,
         readConcurrency: readConfig.concurrency,
         readRetries: readConfig.retries,
+        upstreamRequests: upstreamTracker.attempts,
         preparedMs: performance.now() - startedAt
       });
       return new Response(request.method === 'HEAD' ? null : cached.body, {
@@ -458,6 +475,7 @@ export const onRequest = async (context: {
           readBatchSize: readConfig.batchSize,
           readConcurrency: readConfig.concurrency,
           readRetries: readConfig.retries,
+          upstreamRequests: upstreamTracker.attempts,
           preparedMs: performance.now() - startedAt
         })
       });
@@ -471,7 +489,8 @@ export const onRequest = async (context: {
         tokenId,
         primaryContract: contractId,
         fallbackContract: fallbackContractId,
-        resolvedMeta
+        resolvedMeta,
+        upstreamTracker
       });
       let tokenUri: string | null = null;
       try {
@@ -479,11 +498,21 @@ export const onRequest = async (context: {
           env,
           apiBases,
           contract: resolved.contract,
-          tokenId
+          tokenId,
+          upstreamTracker
         });
-      } catch {
+      } catch (error) {
+        syncRuntimeUpstreamRequests(resolved.diagnostics, upstreamTracker);
+        if (isCloudflareSubrequestQuotaError(error)) {
+          if (error && typeof error === 'object') {
+            (error as { diagnostics?: RuntimeReconstructionDiagnostics }).diagnostics =
+              resolved.diagnostics;
+          }
+          throw error;
+        }
         tokenUri = null;
       }
+      syncRuntimeUpstreamRequests(resolved.diagnostics, upstreamTracker);
       const resolvedContractId = getRuntimeContractId(resolved.contract);
       const resolvedFinalHash = runtimeBytesToHex(resolved.meta.finalHash);
       const moduleBaseHref = buildRuntimeModuleBaseHref({
@@ -544,6 +573,7 @@ export const onRequest = async (context: {
           readBatchSize: readConfig.batchSize,
           readConcurrency: readConfig.concurrency,
           readRetries: readConfig.retries,
+          upstreamRequests: upstreamTracker.attempts,
           diagnostics: resolved.diagnostics,
           preparedMs: performance.now() - startedAt
         })
@@ -556,7 +586,8 @@ export const onRequest = async (context: {
       tokenId,
       primaryContract: contractId,
       fallbackContract: fallbackContractId,
-      resolvedMeta
+      resolvedMeta,
+      upstreamTracker
     });
     let tokenUri: string | null = null;
     try {
@@ -564,11 +595,21 @@ export const onRequest = async (context: {
         env,
         apiBases,
         contract: resolved.contract,
-        tokenId
+        tokenId,
+        upstreamTracker
       });
-    } catch {
+    } catch (error) {
+      syncRuntimeUpstreamRequests(resolved.diagnostics, upstreamTracker);
+      if (isCloudflareSubrequestQuotaError(error)) {
+        if (error && typeof error === 'object') {
+          (error as { diagnostics?: RuntimeReconstructionDiagnostics }).diagnostics =
+            resolved.diagnostics;
+        }
+        throw error;
+      }
       tokenUri = null;
     }
+    syncRuntimeUpstreamRequests(resolved.diagnostics, upstreamTracker);
     const resolvedContractId = getRuntimeContractId(resolved.contract);
     const resolvedFinalHash = runtimeBytesToHex(resolved.meta.finalHash);
     const moduleBaseHref = buildRuntimeModuleBaseHref({
@@ -634,6 +675,7 @@ export const onRequest = async (context: {
         readBatchSize: readConfig.batchSize,
         readConcurrency: readConfig.concurrency,
         readRetries: readConfig.retries,
+        upstreamRequests: upstreamTracker.attempts,
         diagnostics: resolved.diagnostics,
         preparedMs: performance.now() - startedAt
       })
@@ -641,13 +683,23 @@ export const onRequest = async (context: {
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     const diagnostics = getErrorDiagnostics(error);
+    const subrequestQuotaExhausted = isCloudflareSubrequestQuotaError(error);
     logRuntimeContentDebug(env, 'reconstruction-error', {
       network,
       tokenId: tokenId?.toString(),
       requestedContractId: contractId ? getRuntimeContractId(contractId) : null,
       detail,
+      upstreamRequests: upstreamTracker.attempts,
       diagnostics: toRuntimeDiagnosticsSummary(diagnostics)
     });
-    return asJsonError(502, 'Failed to reconstruct runtime content.', detail, diagnostics);
+    return asJsonError(
+      subrequestQuotaExhausted ? 503 : 502,
+      subrequestQuotaExhausted
+        ? 'Runtime upstream request limit exhausted.'
+        : 'Failed to reconstruct runtime content.',
+      detail,
+      diagnostics,
+      upstreamTracker.attempts
+    );
   }
 };

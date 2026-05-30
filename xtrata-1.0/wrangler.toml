@@ -5,6 +5,9 @@ pages_build_output_dir = "dist"
 [vars]
 RUNTIME_CONTENT_CACHE_LIMIT_BYTES = "5368709120"
 
+[limits]
+subrequests = 2_000
+
 [[d1_databases]]
 binding = "DB"
 database_name = "xtrata-manage"
