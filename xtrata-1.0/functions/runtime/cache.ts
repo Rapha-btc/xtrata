@@ -341,6 +341,35 @@ export const readRuntimeContentCache = async (
   };
 };
 
+export const deleteRuntimeContentCache = async (env: RuntimeEnv, key: string | null) => {
+  if (!key) {
+    return {
+      key: null,
+      r2Deleted: false,
+      edgeDeleted: false
+    };
+  }
+
+  let r2Deleted = false;
+  const bucket = getRuntimeContentCacheBucket(env);
+  if (bucket) {
+    await bucket.delete(key);
+    r2Deleted = true;
+  }
+
+  let edgeDeleted = false;
+  const edgeCache = getRuntimeEdgeCache();
+  if (edgeCache) {
+    edgeDeleted = await edgeCache.delete(buildRuntimeEdgeCacheRequest(key));
+  }
+
+  return {
+    key,
+    r2Deleted,
+    edgeDeleted
+  };
+};
+
 const sliceRuntimeStream = (
   stream: ReadableStream<Uint8Array>,
   range: RuntimeByteRange
