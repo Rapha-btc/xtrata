@@ -12,8 +12,16 @@ Status legend:
 
 | Contract family | Version / target | SDK support | Notes |
 | --- | --- | --- | --- |
-| Xtrata core | `xtrata-v1.1.1` | baseline | Capability fallback default in SDK compatibility resolver. |
-| Xtrata core | `xtrata-v2.1.0` | supported | Default contract target across docs/examples and capability resolver. |
+| Xtrata core | `xtrata-v1.1.1` | baseline | Legacy chunk source for older migrated content. |
+| Xtrata core | `xtrata-v2.1.0` | supported | Legacy fallback source for `xtrata-v2.1.1` migrated/continued IDs. |
+| Xtrata core | `xtrata-v2.1.1` | supported | Current public mainnet default in `src/data/contract-registry.json`. |
+| Xtrata core | `xtrata-v3.0.0` | baseline | Source and SDK capability detection exist; not public default until registry/docs promote it. |
+
+Current public reconstruction fallback chain:
+
+1. `xtrata-v2.1.1`
+2. `xtrata-v2.1.0`
+3. `xtrata-v1.1.1`
 
 ## Collection and sale templates
 

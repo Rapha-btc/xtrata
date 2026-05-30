@@ -448,6 +448,8 @@
     .input,
     .textarea {
       width: 100%;
+      min-width: 0;
+      max-width: 100%;
       min-height: 42px;
       border: 1px solid var(--line);
       border-radius: var(--radius);
@@ -455,6 +457,11 @@
       color: var(--ink);
       padding: 10px 12px;
       outline: none;
+    }
+
+    .input {
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .select:focus,
@@ -662,12 +669,18 @@
     .field {
       display: grid;
       gap: 7px;
+      min-width: 0;
     }
 
     .field-row {
       display: grid;
-      grid-template-columns: 1fr 150px;
+      grid-template-columns: minmax(0, 1fr) minmax(120px, 150px);
       gap: 10px;
+      min-width: 0;
+    }
+
+    .field-row > * {
+      min-width: 0;
     }
 
     .field-inline {
@@ -745,6 +758,7 @@
     .file-chip {
       display: inline-flex;
       max-width: 100%;
+      min-width: 0;
       align-items: center;
       gap: 8px;
       border: 1px solid var(--line);
@@ -757,6 +771,13 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+
+    #dropzoneText {
+      max-width: 100%;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .prepare-grid {
@@ -917,7 +938,7 @@
       overflow: hidden;
       text-overflow: ellipsis;
       overflow-wrap: anywhere;
-      word-break: normal;
+      word-break: break-word;
     }
 
     .prepared-meta .meta-value--count {
@@ -2954,7 +2975,7 @@
               <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/xtrata-quickstart.md" target="_blank" rel="noreferrer">Quickstart</a>
               <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/xtrata-inscription-handbook.md" target="_blank" rel="noreferrer">Inscription handbook</a>
               <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/recursive-inscriptions.md" target="_blank" rel="noreferrer">Recursive inscriptions</a>
-              <a href="/opus-file-generator/">Opus audio tool</a>
+              <a href="/opus-file-generator/" target="_blank" rel="noopener noreferrer">Opus audio tool</a>
             </div>
           </article>
 
@@ -3005,7 +3026,7 @@
       <nav class="footer-links" aria-label="Footer links">
         <a href="/workspace">Workspace</a>
         <a href="#docs">Documentation</a>
-        <a href="/opus-file-generator/">Opus audio tool</a>
+        <a href="/opus-file-generator/" target="_blank" rel="noopener noreferrer">Opus audio tool</a>
         <a href="/manage">Artist portal</a>
         <a href="https://x.com/XtrataLayers" target="_blank" rel="noreferrer">Xtrata on X</a>
       </nav>
@@ -3122,6 +3143,7 @@
       hasRuntimeContentUrls,
       inlineRuntimeContentUrls
     } from '/src/lib/viewer/runtime-inline.ts';
+    import { resolveInscriptionMimeType } from '/src/lib/mint/mime.ts';
     import { createImageThumbnail, THUMBNAIL_SIZE } from '/src/lib/viewer/thumbnail.ts';
     import {
       getSquareFramedImageStyle,
@@ -4035,9 +4057,11 @@
       renderMeta(dom.tokenPreviewMeta, [['Status', 'None selected']]);
     };
 
-    const renderSelectedInscriptionMeta = (token, ownerName = null) => {
+    const renderSelectedInscriptionMeta = (token, ownerName = null, mimeTypeOverride = null) => {
+      const effectiveMimeType =
+        mimeTypeOverride ?? state.tokenPreviewMimeType ?? token.meta?.mimeType ?? null;
       renderMeta(dom.tokenPreviewMeta, [
-        ['Type', getGridMimeLabel(token.meta?.mimeType ?? null)],
+        ['Type', getGridMimeLabel(effectiveMimeType)],
         ['Size', token.meta?.totalSize ? formatBytes(token.meta.totalSize) : 'unknown'],
         [
           'Owner',
@@ -4377,6 +4401,7 @@
       if (kind === 'video') {
         const video = document.createElement('video');
         video.controls = true;
+        video.setAttribute('controlsList', 'nodownload');
         video.src = getObjectUrl();
         target.append(video);
         return;
@@ -4385,6 +4410,7 @@
       if (kind === 'audio') {
         const audio = document.createElement('audio');
         audio.controls = true;
+        audio.setAttribute('controlsList', 'nodownload');
         audio.src = getObjectUrl();
         target.append(audio);
         return;
@@ -5121,7 +5147,11 @@
       if (bytes.length === 0 || chunks.length === 0) {
         throw new Error('Payload is empty.');
       }
-      const mimeType = file.type || dom.payloadType.value || 'application/octet-stream';
+      const mimeType = resolveInscriptionMimeType({
+        fileName: file.name,
+        declaredMimeType: file.type || dom.payloadType.value || 'application/octet-stream',
+        bytes
+      });
       if (!isAscii(mimeType) || mimeType.length > MAX_MIME_LENGTH) {
         throw new Error('Mime type must be ASCII and no more than 64 characters.');
       }
@@ -5159,6 +5189,35 @@
         throw new Error('Recursive inscriptions can include at most 50 dependency IDs.');
       }
       return unique;
+    };
+
+    const getCompactOpusHandoffFilename = (payload, fallbackFilename) => {
+      const metadataTitle =
+        payload?.metadata && typeof payload.metadata.title === 'string'
+          ? payload.metadata.title.trim()
+          : '';
+      const fallbackStem = String(fallbackFilename || '')
+        .replace(/\.[^.]+$/, '')
+        .trim();
+      const rawStem = metadataTitle || fallbackStem || 'opus-player';
+      let stem = rawStem
+        .replace(/[^a-z0-9]+/gi, '-')
+        .replace(/^-+|-+$/g, '')
+        .toLowerCase();
+      if (!stem) {
+        stem = 'opus-player';
+      }
+      if (stem.length > 44) {
+        stem = stem.slice(0, 44).replace(/-+$/g, '') || 'opus-player';
+      }
+      const mode =
+        payload?.mode === 'recursive'
+          ? 'recursive'
+          : payload?.mode === 'embedded'
+          ? 'embedded'
+          : '';
+      const suffix = mode && !stem.endsWith(`-${mode}`) ? `-${mode}` : '';
+      return `xtrata-audio-${stem}${suffix}.html`;
     };
 
     const refreshUploadState = async (expectedHash) => {
@@ -6143,6 +6202,11 @@
         return true;
       }
 
+      if (media.kind === 'audio') {
+        setTokenThumbLabel(thumbElement, getGridMimeLabel(media.mimeType ?? null));
+        return true;
+      }
+
       if (media.kind === 'html') {
         const frame = document.createElement('iframe');
         frame.title = 'inscription-preview';
@@ -6221,6 +6285,27 @@
           token.meta?.mimeType ??
           'application/octet-stream';
         const kind = getMediaKind(mimeType);
+        if (kind === 'audio') {
+          state.gridLiveMediaCache.set(cacheKey, {
+            kind: 'audio',
+            mimeType
+          });
+          if (
+            thumbElement.isConnected &&
+            thumbElement.dataset.thumbnailKey === cacheKey
+          ) {
+            renderGridLiveMedia(token, thumbElement, state.gridLiveMediaCache.get(cacheKey));
+          } else if (getWalletPageIds().some((id) => id === token.id)) {
+            renderTokenGrid();
+          }
+          debugLog('cache', 'background audio grid display ready', {
+            tokenId: token.id.toString(),
+            contractId: cacheContractId,
+            bytes: bytes.length,
+            mimeType
+          });
+          return;
+        }
         if (kind === 'video') {
           state.gridLiveMediaCache.set(cacheKey, {
             kind: 'video',
@@ -6440,6 +6525,7 @@
           meta.innerHTML = '<span>loading</span>';
         } else {
           const kind = getGridMimeLabel(token.meta?.mimeType ?? null);
+          let displayKind = kind;
           thumb.dataset.thumbnailKey = getThumbnailKey(token);
           if (token.svgDataUri) {
             const img = document.createElement('img');
@@ -6456,6 +6542,7 @@
           } else {
             const cacheKey = getThumbnailKey(token);
             const liveMedia = state.gridLiveMediaCache.get(cacheKey);
+            displayKind = liveMedia?.mimeType ? getGridMimeLabel(liveMedia.mimeType) : kind;
             if (liveMedia && renderGridLiveMedia(token, thumb, liveMedia)) {
               shouldApplyCachedThumbnail = false;
             } else {
@@ -6465,7 +6552,7 @@
                 (!state.thumbnailHydrationAttempted.has(cacheKey) ||
                   state.thumbnailHydrationQueued.has(cacheKey) ||
                   state.thumbnailHydrationInFlight.has(cacheKey));
-              setTokenThumbLabel(thumb, isAnimatedProbePending ? 'loading' : kind);
+              setTokenThumbLabel(thumb, isAnimatedProbePending ? 'loading' : displayKind);
               thumb.dataset.thumbnailState = isAnimatedProbePending
                 ? 'pending-live-media'
                 : 'pending-cache';
@@ -6475,7 +6562,7 @@
           }
           const size = token.meta?.totalSize ?? null;
           meta.innerHTML =
-            `<span>${kind}${size !== null ? ` · ${formatBytes(size)}` : ''}</span>`;
+            `<span>${displayKind}${size !== null ? ` · ${formatBytes(size)}` : ''}</span>`;
           card.addEventListener('click', () => {
             void selectToken(token.id, { scrollToPreview: true });
           });
@@ -6573,6 +6660,7 @@
         state.tokenPreviewMimeType = mimeType;
         state.tokenPreviewSourceUrl = null;
         state.tokenPreviewHtmlDoc = htmlDoc;
+        renderSelectedInscriptionMeta(token, null, mimeType);
         renderBytesPreview(dom.tokenPreviewMedia, bytes, mimeType, (url) => {
           state.tokenPreviewUrl = url;
         }, { truthfulImageSizing: true, htmlDoc });
@@ -8008,18 +8096,23 @@ const openCuratedGallery = async (galleryId) => {
           throw new Error('Generated HTML payload was empty.');
         }
 
-        const filename =
+        const originalFilename =
           typeof payload.filename === 'string' && payload.filename.trim()
             ? payload.filename.trim()
             : 'xtrata-opus-player.html';
+        const filename = getCompactOpusHandoffFilename(payload, originalFilename);
         const file = new File([html], filename, { type: 'text/html' });
 
         dom.textPayload.value = '';
         dom.payloadType.value = 'text/html';
-        dom.nameInput.value = filename;
+        dom.nameInput.value = '';
         setSelectedFile(file);
         state.handoffDependencyIds = normalizeOpusHandoffDependencyIds(payload.dependencies);
-        appendLog(`Loaded generated Opus HTML player: ${filename}.`);
+        appendLog(
+          originalFilename === filename
+            ? `Loaded generated Opus HTML player: ${filename}.`
+            : `Loaded generated Opus HTML player: ${filename} (from ${originalFilename}).`
+        );
         await preparePayload();
         document
           .getElementById('inscribeTitle')

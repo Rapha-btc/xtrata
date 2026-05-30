@@ -94,7 +94,7 @@ const runConversion = async () => {
         const mimeType = outputConfig.mimeType;
 
         // Create Blob from the converted data
-        convertedAudioBlob = new Blob([outputData.buffer], { type: mimeType });
+        convertedAudioBlob = new Blob([outputData], { type: mimeType });
 
         // Defensive: ensure blob is non-empty
         if (!convertedAudioBlob || convertedAudioBlob.size === 0) {
@@ -248,7 +248,7 @@ const runBatchConversion = async () => {
 
             const mimeType = outputConfig.mimeType;
 
-            const convertedBlob = new Blob([outputData.buffer], { type: mimeType });
+            const convertedBlob = new Blob([outputData], { type: mimeType });
 
             if (!convertedBlob || convertedBlob.size === 0) {
                 throw new Error("Converted audio file is empty or invalid.");

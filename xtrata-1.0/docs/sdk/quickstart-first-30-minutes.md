@@ -32,7 +32,7 @@ import { createSimpleSdk } from '@xtrata/sdk/simple';
 
 const sdk = createSimpleSdk({
   senderAddress: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
-  xtrataContractId: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0'
+  xtrataContractId: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1'
 });
 
 console.log(Boolean(sdk.xtrata));
@@ -55,7 +55,7 @@ Create `read-only.mjs`:
 import { createXtrataReadClient } from '@xtrata/sdk/simple';
 
 const client = createXtrataReadClient({
-  contractId: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0',
+  contractId: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1',
   senderAddress: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X'
 });
 
@@ -94,7 +94,7 @@ const expectedHash = computeExpectedHash(chunkBytes(payloadBytes));
 const plan = buildCoreMintWorkflowPlan({
   contract: {
     address: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
-    contractName: 'xtrata-v2-1-0',
+    contractName: 'xtrata-v2-1-1',
     network: 'mainnet'
   },
   senderAddress: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',

@@ -20,6 +20,7 @@ const createAudioPlayer = (blob, mimeType, label) => {
       preload: 'metadata' // Load enough to get duration etc.
     });
     audio.type = mimeType; // Good practice to set type
+    audio.setAttribute('controlsList', 'nodownload');
   
     const playButton = Object.assign(document.createElement('button'), {
       className: 'play-button button-small', // Add classes for styling
@@ -109,6 +110,7 @@ const createAudioPlayer = (blob, mimeType, label) => {
               preload: 'metadata' // Load enough to get duration
           });
           originalAudioElement.type = selectedFile.type; // Set MIME type
+          originalAudioElement.setAttribute('controlsList', 'nodownload');
   
           const audioTitle = document.createElement('h3');
           audioTitle.textContent = 'Original File';

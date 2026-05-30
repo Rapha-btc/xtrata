@@ -50,7 +50,7 @@ const createABPlayerUI = (originalBlob, originalMimeType, convertedBlob, convert
             <p id="labelA" class="ab-track-title"><span>A</span> Original audio</p>
             <p class="ab-track-meta">${formatABSize(originalBlob)}</p>
           </div>
-          <audio id="audioA" controls preload="metadata"></audio>
+          <audio id="audioA" controls controlsList="nodownload" preload="metadata"></audio>
         </section>
 
         <section class="ab-track" data-ab-track="b">
@@ -58,7 +58,7 @@ const createABPlayerUI = (originalBlob, originalMimeType, convertedBlob, convert
             <p id="labelB" class="ab-track-title"><span>B</span> Converted audio</p>
             <p class="ab-track-meta">WebM Audio/Opus, ${formatABSize(convertedBlob)}</p>
           </div>
-          <audio id="audioB" controls preload="metadata"></audio>
+          <audio id="audioB" controls controlsList="nodownload" preload="metadata"></audio>
         </section>
       </div>
     `;

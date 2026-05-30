@@ -20,6 +20,8 @@
     "sdk:version:check": "node scripts/sdk/version-check.mjs",
     "sdk:changelog:generate": "node scripts/sdk/changelog-generate.mjs",
     "sdk:release:dry-run": "bash scripts/sdk/release-dry-run.sh",
+    "prereconstruct": "npm run sdk:build",
+    "reconstruct": "node scripts/reconstruct-inscription.mjs",
     "arcade:games:manifest": "node scripts/arcade-game-manifest.mjs",
     "arcade:next-version": "node scripts/arcade-next-version.mjs",
     "arcade:strategy:init": "node scripts/arcade-strategy-review.mjs --init",

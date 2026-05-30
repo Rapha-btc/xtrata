@@ -13,7 +13,7 @@ import { buildCoreMintWorkflowPlan } from '@xtrata/sdk/workflows';
 
 const contract = {
   address: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
-  contractName: 'xtrata-v2-1-0',
+  contractName: 'xtrata-v2-1-1',
   network: 'mainnet' as const
 };
 
@@ -54,7 +54,7 @@ const plan = buildCollectionMintWorkflowPlan({
   },
   xtrataContract: {
     address: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
-    contractName: 'xtrata-v2-1-0',
+    contractName: 'xtrata-v2-1-1',
     network: 'mainnet'
   },
   senderAddress: 'SP10W2EEM757922QTVDZZ5CSEW55JEFNN30J69TM7',
@@ -80,7 +80,7 @@ const plan = buildSmallMintSingleTxWorkflowPlan({
   },
   xtrataContract: {
     address: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
-    contractName: 'xtrata-v2-1-0',
+    contractName: 'xtrata-v2-1-1',
     network: 'mainnet'
   },
   senderAddress: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
@@ -111,7 +111,7 @@ const marketContract = {
 };
 const nftContract = {
   address: 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X',
-  contractName: 'xtrata-v2-1-0',
+  contractName: 'xtrata-v2-1-1',
   network: 'mainnet' as const
 };
 

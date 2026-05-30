@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ReconstructionVerificationError,
+  assertVerified,
   assembleChunks,
   chunkBytes,
   computeExpectedHash,
@@ -20,6 +22,7 @@ describe('reconstruction sdk', () => {
     const expectedHash = computeExpectedHash(chunks);
     const verification = verifyPayload(source, expectedHash, 5);
     expect(verification.ok).toBe(true);
+    expect(() => assertVerified(verification)).not.toThrow();
   });
 
   it('resolves dependency graph with truncation guard', async () => {
@@ -64,5 +67,28 @@ describe('reconstruction sdk', () => {
     expect(result.verification.ok).toBe(true);
     expect(new TextDecoder().decode(result.bytes)).toBe('xtrata-protocol');
     expect(result.dependencies.nodes).toEqual([7n, 1n]);
+  });
+
+  it('throws in strict mode when the reconstructed hash mismatches', async () => {
+    const payload = bytesFromText('xtrata-protocol');
+    const chunks = chunkBytes(payload);
+    const wrongHash = new Uint8Array(32).fill(1);
+
+    await expect(
+      reconstructInscription(
+        7n,
+        {
+          getInscriptionMeta: async () => ({
+            mimeType: 'text/plain',
+            totalSize: BigInt(payload.length),
+            totalChunks: BigInt(chunks.length),
+            finalHash: wrongHash
+          }),
+          getChunk: async (_tokenId, index) => chunks[Number(index)] ?? null,
+          getDependencies: async () => []
+        },
+        { strict: true }
+      )
+    ).rejects.toBeInstanceOf(ReconstructionVerificationError);
   });
 });

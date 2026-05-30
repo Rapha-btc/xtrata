@@ -5,7 +5,8 @@ It is written for indexers, marketplaces, galleries, databases, app builders,
 artists, and anyone who needs to handle Xtrata data correctly.
 
 Scope:
-- Core contracts: xtrata-v2.1.0 (current) and xtrata-v1.1.1 (legacy).
+- Core contracts: xtrata-v2.1.1 (current public default), xtrata-v2.1.0
+  (legacy fallback), and xtrata-v1.1.1 (legacy fallback).
 - Data model, mint flows, read-only APIs, reconstruction, and display.
 - Migration and recursion rules.
 
@@ -15,8 +16,14 @@ If you only read one doc to integrate Xtrata, read this one.
 
 ## 1) Which contract to target
 
-- **Current:** `xtrata-v2.1.0` is the canonical contract for new mints.
-- **Legacy:** `xtrata-v1.1.1` remains the source of chunk data for migrated tokens.
+- **Current public default:** `xtrata-v2.1.1`.
+- **Fallback:** `xtrata-v2.1.0` remains a chunk/source fallback for continued
+  or migrated IDs.
+- **Legacy fallback:** `xtrata-v1.1.1` remains the source of chunk data for
+  older migrated tokens.
+- **Source-only for now:** `xtrata-v3.0.0` exists in contract sources and SDK
+  capability detection, but it is not the public default until the registry and
+  public docs explicitly promote it.
 
 Important v2 behavior:
 - v2 can set a one-time ID offset to continue IDs from v1.
@@ -24,10 +31,13 @@ Important v2 behavior:
   with the same ID.
 - v2 minted IDs may be **non-contiguous** (offset or migration).
 
-If you render tokens minted or migrated into v2:
-- Ownership and metadata live in v2.
-- Chunk data can still live in v1 for migrated tokens.
-- If v2 chunk reads are empty, **fall back to v1** for chunk data.
+If you render tokens minted or migrated into the current public contract:
+- Ownership and metadata usually live in the requested/current contract.
+- Chunk data can still live in an older source contract.
+- Try chunk reads in this order: `xtrata-v2.1.1`, `xtrata-v2.1.0`,
+  `xtrata-v1.1.1`.
+
+For the standalone reconstruction rules, see `docs/reconstruction-spec.md`.
 
 ---
 
@@ -57,7 +67,7 @@ on-chain and can be reconstructed from chunks.
 
 ## 3) Invariants and limits
 
-From v2.1.0 overview:
+From the current v2 reconstruction model:
 - Chunk size is fixed at **16,384 bytes**.
 - Max chunks per inscription: **2,048**.
 - Max total size: **32 MiB** (2,048 * 16,384).
@@ -88,7 +98,7 @@ content safely.
 3) `add-chunk-batch(hash, chunks)` (repeat until all chunks uploaded)
 4) `seal-inscription(expected-hash, token-uri-string)`
 
-Fee notes (v2.1.0):
+Fee notes (current v2 public contracts):
 - Begin charges **fee-unit once**.
 - `add-chunk-batch` has **no fee**.
 - Seal fee = **fee-unit * (1 + ceil(total-chunks / 50))**.
@@ -228,10 +238,11 @@ Upload diagnostics:
 
 Xtrata inscriptions are SIP-009 NFTs whose content is stored on-chain in
 fixed-size chunks. To integrate safely:
-- Use v2.1.0 for new content.
+- Use v2.1.1 as the current public default unless a registry update promotes a
+  newer contract.
 - Enumerate with `get-minted-count` + `get-minted-id`.
 - Reconstruct bytes from chunks with batch reads.
-- Handle migration by falling back to v1 chunk reads.
+- Handle migration by falling back through v2.1.0 and then v1.1.1 chunk reads.
 - Render media with safe, non-cropping layouts.
 - Cache aggressively and avoid excessive read-only calls.
 

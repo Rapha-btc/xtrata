@@ -48,6 +48,18 @@ export type VerificationResult = {
   reason: string | null;
 };
 
+export class ReconstructionVerificationError extends Error {
+  verification: VerificationResult;
+
+  constructor(verification: VerificationResult) {
+    super(
+      `Reconstructed payload hash mismatch: expected ${verification.expectedHashHex}, got ${verification.actualHashHex}`
+    );
+    this.name = 'ReconstructionVerificationError';
+    this.verification = verification;
+  }
+}
+
 const toHex = (bytes: Uint8Array) =>
   Array.from(bytes)
     .map((entry) => entry.toString(16).padStart(2, '0'))
@@ -68,6 +80,12 @@ export const verifyPayload = (
     actualHashHex: actualHex,
     reason: expectedHex === actualHex ? null : 'hash-mismatch'
   };
+};
+
+export const assertVerified = (verification: VerificationResult) => {
+  if (!verification.ok) {
+    throw new ReconstructionVerificationError(verification);
+  }
 };
 
 export type DependencyGraph = {
@@ -152,6 +170,10 @@ export type ReconstructionResult = {
   verification: VerificationResult;
 };
 
+export type ReconstructInscriptionOptions = ResolveDependenciesOptions & {
+  strict?: boolean;
+};
+
 const resolveTotalChunks = (meta: ReconstructionMeta, chunkSize = CHUNK_SIZE) => {
   if (meta.totalChunks !== undefined && meta.totalChunks !== null && meta.totalChunks >= 0n) {
     return meta.totalChunks;
@@ -186,7 +208,7 @@ const fetchChunks = async (params: {
 export const reconstructInscription = async (
   tokenId: bigint,
   readers: ReconstructionReaders,
-  options?: ResolveDependenciesOptions
+  options?: ReconstructInscriptionOptions
 ): Promise<ReconstructionResult> => {
   const meta = await readers.getInscriptionMeta(tokenId);
   if (!meta) {
@@ -207,6 +229,9 @@ export const reconstructInscription = async (
       : bytes;
 
   const verification = verifyPayload(normalizedBytes, meta.finalHash);
+  if (options?.strict) {
+    assertVerified(verification);
+  }
   const dependencies = await resolveDependencies(tokenId, readers, options);
   const tokenUri = readers.getTokenUri ? await readers.getTokenUri(tokenId) : null;
 
