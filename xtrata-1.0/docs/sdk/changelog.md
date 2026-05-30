@@ -1,6 +1,6 @@
 # SDK Changelog
 
-Generated: 2026-05-30T13:21:04.355Z
+Generated: 2026-05-30T13:37:38.076Z
 
 ## Package versions
 
@@ -11,7 +11,7 @@ Generated: 2026-05-30T13:21:04.355Z
 
 | Iteration | Scope | API change | Gate | Owner |
 | --- | --- | --- | --- | --- |
-| 2026-05-30-01 | Robust independent reconstruction engine (batch reads, fallback sources, diagnostics, CLI reuse) | yes | pass | Codex |
+| 2026-05-30-01 | Robust independent reconstruction engine (batch reads, fallback sources, diagnostics, CLI reuse, first-party runtime reuse) | yes | pass | Codex |
 | 2026-02-17-02 | Phase 6 release automation (CI matrix + release rehearsal + version/changelog tooling) | yes | pass | Codex |
 | 2026-02-17-01 | Phase 5 docs completion (beginner onboarding + troubleshooting/migration + docs validation gate) | yes | pass | Codex |
 | 2026-02-16-06 | Phase 3 + Phase 4 hardening (validation, recovery guidance, tarball-based example smoke) | yes | pass | Codex |

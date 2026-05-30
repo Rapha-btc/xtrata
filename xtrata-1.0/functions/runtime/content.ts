@@ -18,8 +18,8 @@ import {
   parseRuntimeTokenId,
   resolveRuntimeContent,
   resolveRuntimeMeta,
-  resolveRuntimeContentStream,
-  type RuntimeEnv
+  type RuntimeEnv,
+  type RuntimeReconstructionDiagnostics
 } from './lib';
 
 const RUNTIME_CONTENT_BUILD = 'stream-v1';
@@ -49,16 +49,73 @@ const CORS_HEADERS = {
     'X-Xtrata-Runtime-Read-Batch-Size',
     'X-Xtrata-Runtime-Read-Concurrency',
     'X-Xtrata-Runtime-Read-Retries',
+    'X-Xtrata-Runtime-Reconstruction-Read-Mode',
+    'X-Xtrata-Runtime-Reconstruction-Fallback',
+    'X-Xtrata-Runtime-Reconstruction-Batch-Reads',
+    'X-Xtrata-Runtime-Reconstruction-Single-Reads',
+    'X-Xtrata-Runtime-Reconstruction-Batch-Fallbacks',
+    'X-Xtrata-Runtime-Reconstruction-Errors',
     'X-Xtrata-Runtime-Prepared-Ms'
   ].join(', '),
   'Cross-Origin-Resource-Policy': 'cross-origin'
 };
 
-const asJsonError = (status: number, message: string, detail?: string) =>
+const toRuntimeDiagnosticsSummary = (
+  diagnostics: RuntimeReconstructionDiagnostics | null | undefined
+) =>
+  diagnostics
+    ? {
+        requestedSourceId: diagnostics.requestedSourceId,
+        metaSourceId: diagnostics.metaSourceId,
+        chunkSourceId: diagnostics.chunkSourceId,
+        fallbackUsed: diagnostics.fallbackUsed,
+        readMode: diagnostics.readMode,
+        batchReads: diagnostics.batchReads,
+        singleReads: diagnostics.singleReads,
+        batchFallbacks: diagnostics.batchFallbacks,
+        missingChunks: diagnostics.missingChunks.map((index) => index.toString()),
+        errors: diagnostics.errors.map((error) => ({
+          sourceId: error.sourceId,
+          operation: error.operation,
+          index: error.index?.toString(),
+          indexes: error.indexes?.map((index) => index.toString()),
+          message: error.message
+        }))
+      }
+    : null;
+
+const isRuntimeContentDebugEnabled = (env: RuntimeEnv) => {
+  const value = env.RUNTIME_CONTENT_DEBUG;
+  return value === true || value === '1' || value === 'true';
+};
+
+const logRuntimeContentDebug = (
+  env: RuntimeEnv,
+  phase: string,
+  details: Record<string, unknown>
+) => {
+  if (!isRuntimeContentDebugEnabled(env)) {
+    return;
+  }
+  console.log(`[runtime/content] ${phase}`, details);
+};
+
+const getErrorDiagnostics = (error: unknown): RuntimeReconstructionDiagnostics | null => {
+  const candidate = error as { diagnostics?: RuntimeReconstructionDiagnostics };
+  return candidate && candidate.diagnostics ? candidate.diagnostics : null;
+};
+
+const asJsonError = (
+  status: number,
+  message: string,
+  detail?: string,
+  diagnostics?: RuntimeReconstructionDiagnostics | null
+) =>
   new Response(
     JSON.stringify({
       error: message,
-      detail: detail || null
+      detail: detail || null,
+      diagnostics: toRuntimeDiagnosticsSummary(diagnostics)
     }),
     {
       status,
@@ -87,6 +144,7 @@ const buildRuntimeContentHeaders = (params: {
   readBatchSize?: number;
   readConcurrency?: number;
   readRetries?: number;
+  diagnostics?: RuntimeReconstructionDiagnostics | null;
   preparedMs?: number;
 }) => {
   const headers: Record<string, string> = {
@@ -124,6 +182,19 @@ const buildRuntimeContentHeaders = (params: {
   if (typeof params.readRetries === 'number') {
     headers['X-Xtrata-Runtime-Read-Retries'] = params.readRetries.toString();
   }
+  if (params.diagnostics) {
+    headers['X-Xtrata-Runtime-Reconstruction-Read-Mode'] = params.diagnostics.readMode;
+    headers['X-Xtrata-Runtime-Reconstruction-Fallback'] = params.diagnostics.fallbackUsed
+      ? 'true'
+      : 'false';
+    headers['X-Xtrata-Runtime-Reconstruction-Batch-Reads'] =
+      params.diagnostics.batchReads.toString();
+    headers['X-Xtrata-Runtime-Reconstruction-Single-Reads'] =
+      params.diagnostics.singleReads.toString();
+    headers['X-Xtrata-Runtime-Reconstruction-Batch-Fallbacks'] =
+      params.diagnostics.batchFallbacks.toString();
+    headers['X-Xtrata-Runtime-Reconstruction-Errors'] = params.diagnostics.errors.length.toString();
+  }
   if (typeof params.preparedMs === 'number') {
     headers['X-Xtrata-Runtime-Prepared-Ms'] = params.preparedMs.toFixed(1);
     headers['Server-Timing'] = `runtime_prepare;dur=${params.preparedMs.toFixed(1)}`;
@@ -142,10 +213,7 @@ type ParsedRange =
   | { status: 'valid'; range: RuntimeByteRange; contentRange: string }
   | { status: 'unsatisfiable'; contentRange: string };
 
-const parseRuntimeRange = (
-  headerValue: string | null,
-  totalSize: bigint
-): ParsedRange => {
+const parseRuntimeRange = (headerValue: string | null, totalSize: bigint): ParsedRange => {
   if (!headerValue) {
     return { status: 'none' };
   }
@@ -258,9 +326,7 @@ export const onRequest = async (context: {
 
   const url = new URL(request.url);
   const contractId = parseRuntimeContractRef(url.searchParams.get('contractId'));
-  const fallbackContractId = parseRuntimeContractRef(
-    url.searchParams.get('fallbackContractId')
-  );
+  const fallbackContractId = parseRuntimeContractRef(url.searchParams.get('fallbackContractId'));
   const tokenId = parseRuntimeTokenId(url.searchParams.get('tokenId'));
   const network = parseRuntimeNetwork(url.searchParams.get('network'));
 
@@ -348,10 +414,7 @@ export const onRequest = async (context: {
         totalSize: resolvedMeta.meta.totalSize,
         totalChunks: resolvedMeta.meta.totalChunks,
         contentLength: rangeContentLength ?? cached.size,
-        contentRange:
-          requestedRange.status === 'valid'
-            ? requestedRange.contentRange
-            : undefined,
+        contentRange: requestedRange.status === 'valid' ? requestedRange.contentRange : undefined,
         responseMode:
           request.method === 'HEAD'
             ? 'head'
@@ -390,10 +453,7 @@ export const onRequest = async (context: {
               : resolvedMeta.meta.totalSize <= BigInt(Number.MAX_SAFE_INTEGER)
                 ? Number(resolvedMeta.meta.totalSize)
                 : null,
-          contentRange:
-            requestedRange.status === 'valid'
-              ? requestedRange.contentRange
-              : undefined,
+          contentRange: requestedRange.status === 'valid' ? requestedRange.contentRange : undefined,
           responseMode: 'head',
           readBatchSize: readConfig.batchSize,
           readConcurrency: readConfig.concurrency,
@@ -431,6 +491,14 @@ export const onRequest = async (context: {
         contractId: resolvedContractId,
         tokenUriPath: tokenUri,
         entryTokenId: tokenId
+      });
+      logRuntimeContentDebug(env, 'reconstructed-range', {
+        network,
+        tokenId: tokenId.toString(),
+        requestedContractId: getRuntimeContractId(contractId),
+        sourceContractId: resolvedContractId,
+        range: requestedRange.contentRange,
+        diagnostics: toRuntimeDiagnosticsSummary(resolved.diagnostics)
       });
       if (cacheKey && resolved.meta.sealed && resolvedFinalHash === finalHash) {
         const cacheWrite = writeRuntimeContentCache({
@@ -476,55 +544,21 @@ export const onRequest = async (context: {
           readBatchSize: readConfig.batchSize,
           readConcurrency: readConfig.concurrency,
           readRetries: readConfig.retries,
+          diagnostics: resolved.diagnostics,
           preparedMs: performance.now() - startedAt
         })
       });
     }
 
-    let tokenUri: string | null = null;
-    let moduleBaseHref: string | null = null;
-    const resolved = await resolveRuntimeContentStream({
+    const resolved = await resolveRuntimeContent({
       env,
       apiBases,
       tokenId,
       primaryContract: contractId,
       fallbackContract: fallbackContractId,
-      resolvedMeta,
-      onComplete: async (bytes, streamContext) => {
-        const streamFinalHash = runtimeBytesToHex(streamContext.meta.finalHash);
-        const streamSourceContractId = getRuntimeContractId(streamContext.contract);
-        const streamModuleBaseHref = buildRuntimeModuleBaseHref({
-          network,
-          contractId: streamSourceContractId,
-          tokenUriPath: tokenUri,
-          entryTokenId: tokenId
-        });
-        const shouldWriteCache = Boolean(
-          cacheKey && streamContext.meta.sealed && streamFinalHash === finalHash
-        );
-        if (!shouldWriteCache) {
-          return false;
-        }
-        return writeRuntimeContentCache({
-          env,
-          key: cacheKey,
-          bytes,
-          mimeType: streamContext.meta.mimeType || 'application/octet-stream',
-          metadata: {
-            network,
-            contractId: cacheContractId,
-            sourceContractId: streamSourceContractId,
-            tokenId: tokenId.toString(),
-            finalHash: streamFinalHash,
-            totalSize: streamContext.meta.totalSize.toString(),
-            totalChunks: streamContext.meta.totalChunks.toString(),
-            tokenUri: tokenUri ?? '',
-            moduleBaseHref: streamModuleBaseHref ?? '',
-            createdAt: new Date().toISOString()
-          }
-        }).catch(() => false);
-      }
+      resolvedMeta
     });
+    let tokenUri: string | null = null;
     try {
       tokenUri = await fetchRuntimeTokenUri({
         env,
@@ -537,14 +571,52 @@ export const onRequest = async (context: {
     }
     const resolvedContractId = getRuntimeContractId(resolved.contract);
     const resolvedFinalHash = runtimeBytesToHex(resolved.meta.finalHash);
-    moduleBaseHref = buildRuntimeModuleBaseHref({
+    const moduleBaseHref = buildRuntimeModuleBaseHref({
       network,
       contractId: resolvedContractId,
       tokenUriPath: tokenUri,
       entryTokenId: tokenId
     });
+    if (cacheKey && resolved.meta.sealed && resolvedFinalHash === finalHash) {
+      const cacheWrite = writeRuntimeContentCache({
+        env,
+        key: cacheKey,
+        bytes: resolved.bytes,
+        mimeType: resolved.meta.mimeType || 'application/octet-stream',
+        metadata: {
+          network,
+          contractId: cacheContractId,
+          sourceContractId: resolvedContractId,
+          tokenId: tokenId.toString(),
+          finalHash: resolvedFinalHash,
+          totalSize: resolved.meta.totalSize.toString(),
+          totalChunks: resolved.meta.totalChunks.toString(),
+          tokenUri: tokenUri ?? '',
+          moduleBaseHref,
+          createdAt: new Date().toISOString()
+        }
+      }).catch(() => false);
+      if (context.waitUntil) {
+        context.waitUntil(cacheWrite);
+      } else {
+        await cacheWrite;
+      }
+    }
+    logRuntimeContentDebug(env, 'reconstructed-stream', {
+      network,
+      tokenId: tokenId.toString(),
+      requestedContractId: getRuntimeContractId(contractId),
+      sourceContractId: resolvedContractId,
+      diagnostics: toRuntimeDiagnosticsSummary(resolved.diagnostics)
+    });
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(resolved.bytes);
+        controller.close();
+      }
+    });
 
-    return new Response(resolved.stream, {
+    return new Response(stream, {
       status: 200,
       headers: buildRuntimeContentHeaders({
         mimeType: resolved.meta.mimeType || 'application/octet-stream',
@@ -557,16 +629,25 @@ export const onRequest = async (context: {
         finalHash: resolvedFinalHash,
         totalSize: resolved.meta.totalSize,
         totalChunks: resolved.meta.totalChunks,
-        contentLength: resolved.contentLength,
+        contentLength: resolved.bytes.length,
         responseMode: 'stream',
         readBatchSize: readConfig.batchSize,
         readConcurrency: readConfig.concurrency,
         readRetries: readConfig.retries,
+        diagnostics: resolved.diagnostics,
         preparedMs: performance.now() - startedAt
       })
     });
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    return asJsonError(502, 'Failed to reconstruct runtime content.', detail);
+    const diagnostics = getErrorDiagnostics(error);
+    logRuntimeContentDebug(env, 'reconstruction-error', {
+      network,
+      tokenId: tokenId?.toString(),
+      requestedContractId: contractId ? getRuntimeContractId(contractId) : null,
+      detail,
+      diagnostics: toRuntimeDiagnosticsSummary(diagnostics)
+    });
+    return asJsonError(502, 'Failed to reconstruct runtime content.', detail, diagnostics);
   }
 };

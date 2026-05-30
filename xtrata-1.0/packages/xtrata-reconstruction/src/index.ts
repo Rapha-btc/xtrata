@@ -106,6 +106,9 @@ const updateReadMode = (diagnostics: ReconstructionDiagnostics) => {
 
 const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
+const isCostBalanceExceededMessage = (message: string) =>
+  message.toLowerCase().includes('costbalanceexceeded');
+
 export class ReconstructionContentError extends Error {
   code: ReconstructionErrorCode;
   diagnostics?: ReconstructionDiagnostics;
@@ -258,6 +261,7 @@ export type ReconstructionResult = {
 
 export type ReconstructionFetchOptions = {
   batchSize?: number;
+  concurrency?: number;
   preferBatch?: boolean;
 };
 
@@ -268,7 +272,11 @@ export type ReconstructInscriptionOptions = ResolveDependenciesOptions &
   };
 
 const resolveTotalChunks = (meta: ReconstructionMeta, chunkSize = CHUNK_SIZE) => {
-  if (meta.totalChunks !== undefined && meta.totalChunks !== null && meta.totalChunks >= 0n) {
+  if (
+    meta.totalChunks !== undefined &&
+    meta.totalChunks !== null &&
+    (meta.totalChunks > 0n || meta.totalSize <= 0n)
+  ) {
     return meta.totalChunks;
   }
   if (meta.totalSize <= 0n) {
@@ -334,6 +342,39 @@ const normalizeBatchSize = (batchSize: number | undefined) => {
   return Math.max(1, Math.min(50, Math.floor(batchSize)));
 };
 
+const normalizeConcurrency = (concurrency: number | undefined, total: number) => {
+  if (total <= 1) {
+    return 1;
+  }
+  if (concurrency === undefined || !Number.isFinite(concurrency)) {
+    return 1;
+  }
+  return Math.max(1, Math.min(total, Math.floor(concurrency)));
+};
+
+const runWithConcurrency = async <T>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T) => Promise<void>
+) => {
+  if (items.length === 0) {
+    return;
+  }
+  const workerCount = normalizeConcurrency(concurrency, items.length);
+  let cursor = 0;
+  const workers = Array.from({ length: workerCount }, async () => {
+    while (true) {
+      const current = cursor;
+      cursor += 1;
+      if (current >= items.length) {
+        return;
+      }
+      await worker(items[current]);
+    }
+  });
+  await Promise.all(workers);
+};
+
 const readChunksFromSource = async (params: {
   source: ReconstructionSource;
   tokenId: bigint;
@@ -351,12 +392,13 @@ const readChunksFromSource = async (params: {
   const chunksByIndex = new Map<string, Uint8Array>(params.preloadedChunks);
   const allIndexes = Array.from({ length: total }, (_entry, index) => BigInt(index));
   const batchSize = normalizeBatchSize(params.options?.batchSize);
+  const concurrency = normalizeConcurrency(params.options?.concurrency, total);
   const preferBatch = params.options?.preferBatch !== false;
 
   const readSingles = async (indexes: bigint[]) => {
-    for (const index of indexes) {
+    await runWithConcurrency(indexes, concurrency, async (index) => {
       if (chunksByIndex.has(index.toString())) {
-        continue;
+        return;
       }
       const chunk = await readSingleChunk({
         source: params.source,
@@ -367,7 +409,7 @@ const readChunksFromSource = async (params: {
       if (chunk && chunk.length > 0) {
         chunksByIndex.set(index.toString(), chunk);
       }
-    }
+    });
   };
 
   const readBatch = async (indexes: bigint[]): Promise<void> => {
@@ -406,15 +448,16 @@ const readChunksFromSource = async (params: {
         await readSingles(missingIndexes);
       }
     } catch (error) {
+      const message = errorMessage(error);
       params.diagnostics.batchFallbacks += 1;
       recordReadError(params.diagnostics, {
         sourceId: sourceIdOf(params.source),
         operation: 'chunk-batch',
         indexes: [...pendingIndexes],
-        message: errorMessage(error)
+        message
       });
 
-      if (pendingIndexes.length === 1) {
+      if (pendingIndexes.length === 1 || !isCostBalanceExceededMessage(message)) {
         await readSingles(pendingIndexes);
         return;
       }
@@ -425,9 +468,12 @@ const readChunksFromSource = async (params: {
     }
   };
 
-  for (let index = 0; index < allIndexes.length; index += batchSize) {
-    await readBatch(allIndexes.slice(index, index + batchSize));
+  const batches: bigint[][] = [];
+  const fetchIndexes = allIndexes.filter((index) => !chunksByIndex.has(index.toString()));
+  for (let index = 0; index < fetchIndexes.length; index += batchSize) {
+    batches.push(fetchIndexes.slice(index, index + batchSize));
   }
+  await runWithConcurrency(batches, concurrency, readBatch);
 
   const chunks: Uint8Array[] = [];
   const missingChunks: bigint[] = [];
@@ -697,5 +743,6 @@ export const reconstructInscription = async (
     strict: options?.strict,
     maxNodes: options?.maxNodes,
     batchSize: options?.batchSize,
+    concurrency: options?.concurrency,
     preferBatch: options?.preferBatch
   });

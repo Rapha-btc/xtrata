@@ -38,7 +38,9 @@ const legacy = createXtrataReadClient({
 const result = await reconstructXtrataInscription({
   tokenId: 287n,
   sources: createXtrataReconstructionSources(core, [legacy]),
-  strict: true
+  strict: true,
+  batchSize: 8,
+  concurrency: 4
 });
 
 console.log(result.mimeType, result.bytes.length, result.diagnostics.chunkSourceId);
@@ -47,5 +49,9 @@ console.log(result.mimeType, result.bytes.length, result.diagnostics.chunkSource
 `strict: true` throws `ReconstructionVerificationError` if the rebuilt payload
 does not match the on-chain `final-hash`. It also rejects unsealed metadata
 when that flag is exposed.
+
+`batchSize` and `concurrency` are optional. They let production callers keep
+read-only reconstruction fast while preserving deterministic chunk order and
+strict hash verification.
 
 Full rules: `docs/reconstruction-spec.md` in the main repository.

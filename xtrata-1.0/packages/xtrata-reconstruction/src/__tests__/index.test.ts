@@ -142,6 +142,77 @@ describe('reconstruction sdk', () => {
     expect(result.diagnostics.missingChunks).toEqual([]);
   });
 
+  it('can fetch batch groups concurrently while preserving bytes', async () => {
+    const payload = largeBytesFromText('concurrent-batches');
+    const chunks = chunkBytes(payload);
+    const expectedHash = computeExpectedHash(chunks);
+    let activeBatchReads = 0;
+    let maxActiveBatchReads = 0;
+
+    const result = await reconstructInscription(
+      7n,
+      {
+        getInscriptionMeta: async () => ({
+          mimeType: 'text/plain',
+          totalSize: BigInt(payload.length),
+          totalChunks: BigInt(chunks.length),
+          sealed: true,
+          finalHash: expectedHash
+        }),
+        getChunk: async (_tokenId, index) => chunks[Number(index)] ?? null,
+        getChunkBatch: async (_tokenId, indexes) => {
+          activeBatchReads += 1;
+          maxActiveBatchReads = Math.max(maxActiveBatchReads, activeBatchReads);
+          await new Promise((resolve) => {
+            setTimeout(resolve, 5);
+          });
+          activeBatchReads -= 1;
+          return indexes.map((index) => chunks[Number(index)] ?? null);
+        },
+        getDependencies: async () => []
+      },
+      {
+        sourceId: 'primary',
+        batchSize: 1,
+        concurrency: 3,
+        strict: true
+      }
+    );
+
+    expect(result.bytes).toEqual(payload);
+    expect(maxActiveBatchReads).toBeGreaterThan(1);
+    expect(result.diagnostics.batchReads).toBe(chunks.length - 1);
+  });
+
+  it('derives chunk count from total size when non-empty metadata reports zero chunks', async () => {
+    const payload = largeBytesFromText('legacy-zero-count');
+    const chunks = chunkBytes(payload);
+    const expectedHash = computeExpectedHash(chunks);
+
+    const result = await reconstructInscription(
+      7n,
+      {
+        getInscriptionMeta: async () => ({
+          mimeType: 'text/plain',
+          totalSize: BigInt(payload.length),
+          totalChunks: 0n,
+          sealed: true,
+          finalHash: expectedHash
+        }),
+        getChunk: async (_tokenId, index) => chunks[Number(index)] ?? null,
+        getDependencies: async () => []
+      },
+      {
+        sourceId: 'legacy',
+        strict: true
+      }
+    );
+
+    expect(result.bytes).toEqual(payload);
+    expect(result.chunkCount).toBe(BigInt(chunks.length));
+    expect(result.verification.ok).toBe(true);
+  });
+
   it('can reconstruct bytes from a fallback source while keeping primary metadata', async () => {
     const payload = largeBytesFromText('fallback-source-content');
     const chunks = chunkBytes(payload);

@@ -122,6 +122,13 @@ When a source exposes `getChunkBatch`, the package reads batches first, falls
 back to per-chunk reads for failed or missing batch entries, and records read
 diagnostics in the reconstruction result.
 
+The first-party `/runtime/content` route now consumes the same public
+reconstruction engine. Runtime responses expose reconstruction proof/debug
+headers such as `X-Xtrata-Runtime-Reconstruction-Read-Mode`,
+`X-Xtrata-Runtime-Reconstruction-Batch-Reads`, and
+`X-Xtrata-Runtime-Reconstruction-Errors`. Set `RUNTIME_CONTENT_DEBUG=1` in the
+runtime environment to emit opt-in reconstruction logs during testing.
+
 ## Public Proof Standard
 
 A third-party proof should record:
