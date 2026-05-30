@@ -262,6 +262,12 @@ export const resolveMimeType = (
     return normalized;
   }
   const sniffed = sniffMimeType(bytes);
+  if (sniffed === 'audio/webm') {
+    const webmTrackKind = detectWebmTrackKind(bytes);
+    if (webmTrackKind === 'audio' && normalized === 'video/webm') {
+      return 'audio/webm';
+    }
+  }
   if (
     !normalized ||
     normalized === 'application/json' ||

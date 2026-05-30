@@ -4036,9 +4036,11 @@
       renderMeta(dom.tokenPreviewMeta, [['Status', 'None selected']]);
     };
 
-    const renderSelectedInscriptionMeta = (token, ownerName = null) => {
+    const renderSelectedInscriptionMeta = (token, ownerName = null, mimeTypeOverride = null) => {
+      const effectiveMimeType =
+        mimeTypeOverride ?? state.tokenPreviewMimeType ?? token.meta?.mimeType ?? null;
       renderMeta(dom.tokenPreviewMeta, [
-        ['Type', getGridMimeLabel(token.meta?.mimeType ?? null)],
+        ['Type', getGridMimeLabel(effectiveMimeType)],
         ['Size', token.meta?.totalSize ? formatBytes(token.meta.totalSize) : 'unknown'],
         [
           'Owner',
@@ -6150,6 +6152,11 @@
         return true;
       }
 
+      if (media.kind === 'audio') {
+        setTokenThumbLabel(thumbElement, getGridMimeLabel(media.mimeType ?? null));
+        return true;
+      }
+
       if (media.kind === 'html') {
         const frame = document.createElement('iframe');
         frame.title = 'inscription-preview';
@@ -6228,6 +6235,27 @@
           token.meta?.mimeType ??
           'application/octet-stream';
         const kind = getMediaKind(mimeType);
+        if (kind === 'audio') {
+          state.gridLiveMediaCache.set(cacheKey, {
+            kind: 'audio',
+            mimeType
+          });
+          if (
+            thumbElement.isConnected &&
+            thumbElement.dataset.thumbnailKey === cacheKey
+          ) {
+            renderGridLiveMedia(token, thumbElement, state.gridLiveMediaCache.get(cacheKey));
+          } else if (getWalletPageIds().some((id) => id === token.id)) {
+            renderTokenGrid();
+          }
+          debugLog('cache', 'background audio grid display ready', {
+            tokenId: token.id.toString(),
+            contractId: cacheContractId,
+            bytes: bytes.length,
+            mimeType
+          });
+          return;
+        }
         if (kind === 'video') {
           state.gridLiveMediaCache.set(cacheKey, {
             kind: 'video',
@@ -6447,6 +6475,7 @@
           meta.innerHTML = '<span>loading</span>';
         } else {
           const kind = getGridMimeLabel(token.meta?.mimeType ?? null);
+          let displayKind = kind;
           thumb.dataset.thumbnailKey = getThumbnailKey(token);
           if (token.svgDataUri) {
             const img = document.createElement('img');
@@ -6463,6 +6492,7 @@
           } else {
             const cacheKey = getThumbnailKey(token);
             const liveMedia = state.gridLiveMediaCache.get(cacheKey);
+            displayKind = liveMedia?.mimeType ? getGridMimeLabel(liveMedia.mimeType) : kind;
             if (liveMedia && renderGridLiveMedia(token, thumb, liveMedia)) {
               shouldApplyCachedThumbnail = false;
             } else {
@@ -6472,7 +6502,7 @@
                 (!state.thumbnailHydrationAttempted.has(cacheKey) ||
                   state.thumbnailHydrationQueued.has(cacheKey) ||
                   state.thumbnailHydrationInFlight.has(cacheKey));
-              setTokenThumbLabel(thumb, isAnimatedProbePending ? 'loading' : kind);
+              setTokenThumbLabel(thumb, isAnimatedProbePending ? 'loading' : displayKind);
               thumb.dataset.thumbnailState = isAnimatedProbePending
                 ? 'pending-live-media'
                 : 'pending-cache';
@@ -6482,7 +6512,7 @@
           }
           const size = token.meta?.totalSize ?? null;
           meta.innerHTML =
-            `<span>${kind}${size !== null ? ` · ${formatBytes(size)}` : ''}</span>`;
+            `<span>${displayKind}${size !== null ? ` · ${formatBytes(size)}` : ''}</span>`;
           card.addEventListener('click', () => {
             void selectToken(token.id, { scrollToPreview: true });
           });
@@ -6580,6 +6610,7 @@
         state.tokenPreviewMimeType = mimeType;
         state.tokenPreviewSourceUrl = null;
         state.tokenPreviewHtmlDoc = htmlDoc;
+        renderSelectedInscriptionMeta(token, null, mimeType);
         renderBytesPreview(dom.tokenPreviewMedia, bytes, mimeType, (url) => {
           state.tokenPreviewUrl = url;
         }, { truthfulImageSizing: true, htmlDoc });
