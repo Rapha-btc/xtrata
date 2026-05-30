@@ -3122,6 +3122,7 @@
       hasRuntimeContentUrls,
       inlineRuntimeContentUrls
     } from '/src/lib/viewer/runtime-inline.ts';
+    import { resolveInscriptionMimeType } from '/src/lib/mint/mime.ts';
     import { createImageThumbnail, THUMBNAIL_SIZE } from '/src/lib/viewer/thumbnail.ts';
     import {
       getSquareFramedImageStyle,
@@ -4377,6 +4378,7 @@
       if (kind === 'video') {
         const video = document.createElement('video');
         video.controls = true;
+        video.setAttribute('controlsList', 'nodownload');
         video.src = getObjectUrl();
         target.append(video);
         return;
@@ -4385,6 +4387,7 @@
       if (kind === 'audio') {
         const audio = document.createElement('audio');
         audio.controls = true;
+        audio.setAttribute('controlsList', 'nodownload');
         audio.src = getObjectUrl();
         target.append(audio);
         return;
@@ -5121,7 +5124,11 @@
       if (bytes.length === 0 || chunks.length === 0) {
         throw new Error('Payload is empty.');
       }
-      const mimeType = file.type || dom.payloadType.value || 'application/octet-stream';
+      const mimeType = resolveInscriptionMimeType({
+        fileName: file.name,
+        declaredMimeType: file.type || dom.payloadType.value || 'application/octet-stream',
+        bytes
+      });
       if (!isAscii(mimeType) || mimeType.length > MAX_MIME_LENGTH) {
         throw new Error('Mime type must be ASCII and no more than 64 characters.');
       }
