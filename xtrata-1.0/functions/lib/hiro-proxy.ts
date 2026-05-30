@@ -24,6 +24,12 @@ const CORS_HEADERS = {
   'Access-Control-Expose-Headers':
     'x-xtrata-proxy-cache,x-xtrata-hiro-key-present,x-xtrata-hiro-key-count,x-ratelimit-limit,x-ratelimit-remaining,x-ratelimit-reset,cf-cache-status'
 };
+const UPSTREAM_CONTEXT_HEADERS = [
+  'content-security-policy',
+  'content-security-policy-report-only',
+  'signature',
+  'signature-input'
+];
 const inFlightSafeRequests = new Map<string, Promise<Response>>();
 const hiroKeyCooldownUntil = new Map<string, number>();
 const cachedProxyResponses = new Map<string, CachedProxyResponse>();
@@ -204,6 +210,9 @@ const cacheProxyResponse = async (params: {
 
 const withCorsHeaders = (response: Response) => {
   const responseHeaders = new Headers(response.headers);
+  UPSTREAM_CONTEXT_HEADERS.forEach((name) => {
+    responseHeaders.delete(name);
+  });
   Object.entries(CORS_HEADERS).forEach(([key, value]) => {
     responseHeaders.set(key, value);
   });
