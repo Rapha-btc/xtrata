@@ -1799,7 +1799,9 @@ export default function SimplePublicHome() {
             <a href={DOCS_INDEX_URL} target="_blank" rel="noreferrer">
               Documentation
             </a>
-            <a href={OPUS_GENERATOR_PATH}>Opus audio tool</a>
+            <a href={OPUS_GENERATOR_PATH} target="_blank" rel="noreferrer">
+              Opus audio tool
+            </a>
             <a href="/manage">Artist portal</a>
             <a href="https://x.com/XtrataLayers" target="_blank" rel="noreferrer">
               Xtrata on X
