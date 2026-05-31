@@ -42,7 +42,8 @@ those items individually.
    - [`skill-batch-mint.md`](skill-batch-mint.md)
 3. Train on fixed constants:
    - chunk size `16,384`
-   - upload batch size `50`
+   - first-party upload batch size `30`
+   - deployed contract list ABI accepts up to `50`
    - final batch item size `50`
    - helper chunk ceiling `30`
    - max chunks `2,048`

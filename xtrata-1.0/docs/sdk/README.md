@@ -4,6 +4,11 @@ Status: production-ready and actively maintained.
 
 The SDK is now implemented through release automation. The primary focus is stable usage, release discipline, and incremental improvements for third-party builders.
 
+Current production upload policy: app and SDK mint planners use a hard
+30-chunk ceiling for each upload transaction. The deployed Clarity ABI still
+accepts 50-item chunk lists, and protocol fee math remains based on the
+contract's 50-chunk fee bucket.
+
 ## Start here
 
 1. `docs/sdk/quickstart-first-30-minutes.md`

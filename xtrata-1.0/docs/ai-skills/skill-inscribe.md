@@ -33,7 +33,8 @@ one canonical token.
 | Contract | `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0` |
 | Small helper | `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-small-mint-v1-0` |
 | CHUNK-SIZE | 16,384 bytes |
-| MAX-BATCH-SIZE | 50 chunks per `add-chunk-batch` |
+| MAX-UPLOAD-BATCH-SIZE | 30 chunks per first-party app/SDK `add-chunk-batch` call |
+| CONTRACT-BATCH-LIST-MAX | 50 chunks accepted by the deployed Clarity ABI |
 | MAX-SMALL-MINT-CHUNKS | 30 chunks per helper call |
 | MAX-TOTAL-CHUNKS | 2,048 |
 | MAX-TOTAL-SIZE | 32 MiB |

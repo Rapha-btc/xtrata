@@ -32,7 +32,8 @@ administrative tooling for continuity across versions.
 - Chunk size is fixed at 16,384 bytes.
 - Max chunks per inscription is 2,048.
 - Max total size is 32 MiB (2,048 * 16,384).
-- Batch size for chunk upload and batch sealing is capped at 50.
+- First-party app and SDK chunk uploads are capped at 30 chunks per call.
+- The deployed contract list ABI and batch sealing limit remain capped at 50.
 - Uploads expire after `UPLOAD-EXPIRY-BLOCKS` if inactive.
 
 ## Design notes and limitations

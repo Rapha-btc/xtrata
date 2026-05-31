@@ -1,6 +1,6 @@
-import { MAX_BATCH_SIZE } from '../chunking/hash';
+import { MAX_UPLOAD_BATCH_SIZE } from '../chunking/hash';
 
-export const DEFAULT_BATCH_SIZE = Math.min(30, MAX_BATCH_SIZE);
+export const DEFAULT_BATCH_SIZE = MAX_UPLOAD_BATCH_SIZE;
 export const TX_DELAY_SECONDS = 5;
 export const DEFAULT_TOKEN_URI =
   'https://yfa7uhk4vmrr3jjwr57fnm6ccvwi2r2ycufcjs6nsmrpjmr25azq.ardrive.net/wUH6HVyrIx2lNo9-VrPCFWyNR1gVCiTLzZMi9LI66DM';

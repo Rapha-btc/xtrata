@@ -12,7 +12,8 @@ The collection manager backend uses Cloudflare Pages Functions plus the `DB` (D1
 2. `MAX_COLLECTION_STORAGE_BYTES` – maximum per-collection upload bytes (default `524288000` for 500 MB). Lower this if you want aggressive caps (100 MB = `104857600`).
 3. `COLLECTION_ASSET_TTL_MS` – how long staged assets remain `draft` (default `259200000` for 3 days); after this TTL we mark them `expired` so they no longer contribute toward the storage cap.
 4. `RUNTIME_CONTENT_CACHE_LIMIT_BYTES` – reserved budget for cached inscription bytes served by `/runtime/content` (default `5368709120`, shown as 5 GB in diagnostics). The health check warns at 80%, 95%, and at/over budget.
-5. (Optional) `VITE_MANAGE_FEATURE_FLAG_...` – add other feature flags here if you expose new gating options.
+5. `RUNTIME_CACHE_ADMIN_TOKEN` – optional, temporary preview-only bearer token for the protected `/runtime/cache-purge` validation route. Set only when you need to clear a token from runtime cache for cold-request testing, then rotate or remove it.
+6. (Optional) `VITE_MANAGE_FEATURE_FLAG_...` – add other feature flags here if you expose new gating options.
 
 ## Deployment steps after code changes
 1. Run `wrangler d1 migrations apply xtrata-manage --config functions/wrangler.toml` locally (or `--remote` for the live D1) to ensure schema drift is addressed before deploying.

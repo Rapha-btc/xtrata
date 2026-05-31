@@ -54,7 +54,8 @@ export type ReconstructionErrorCode =
   | 'missing-chunk'
   | 'short-content'
   | 'unsafe-chunk-count'
-  | 'unsafe-total-size';
+  | 'unsafe-total-size'
+  | 'terminal-read-error';
 
 export type ReconstructionReadMode = 'none' | 'single' | 'batch' | 'mixed';
 
@@ -105,6 +106,9 @@ const updateReadMode = (diagnostics: ReconstructionDiagnostics) => {
 };
 
 const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
+
+const isCostBalanceExceededMessage = (message: string) =>
+  message.toLowerCase().includes('costbalanceexceeded');
 
 export class ReconstructionContentError extends Error {
   code: ReconstructionErrorCode;
@@ -258,7 +262,9 @@ export type ReconstructionResult = {
 
 export type ReconstructionFetchOptions = {
   batchSize?: number;
+  concurrency?: number;
   preferBatch?: boolean;
+  isTerminalReadError?: (error: unknown) => boolean;
 };
 
 export type ReconstructInscriptionOptions = ResolveDependenciesOptions &
@@ -268,7 +274,11 @@ export type ReconstructInscriptionOptions = ResolveDependenciesOptions &
   };
 
 const resolveTotalChunks = (meta: ReconstructionMeta, chunkSize = CHUNK_SIZE) => {
-  if (meta.totalChunks !== undefined && meta.totalChunks !== null && meta.totalChunks >= 0n) {
+  if (
+    meta.totalChunks !== undefined &&
+    meta.totalChunks !== null &&
+    (meta.totalChunks > 0n || meta.totalSize <= 0n)
+  ) {
     return meta.totalChunks;
   }
   if (meta.totalSize <= 0n) {
@@ -303,11 +313,25 @@ const recordReadError = (
   diagnostics.errors.push(error);
 };
 
+const asTerminalReadError = (
+  error: unknown,
+  diagnostics: ReconstructionDiagnostics,
+  options?: ReconstructionFetchOptions
+) => {
+  if (error instanceof ReconstructionContentError && error.code === 'terminal-read-error') {
+    return error;
+  }
+  return options?.isTerminalReadError?.(error)
+    ? new ReconstructionContentError('terminal-read-error', errorMessage(error), diagnostics)
+    : null;
+};
+
 const readSingleChunk = async (params: {
   source: ReconstructionSource;
   tokenId: bigint;
   index: bigint;
   diagnostics: ReconstructionDiagnostics;
+  options?: ReconstructionFetchOptions;
 }) => {
   params.diagnostics.singleReads += 1;
   updateReadMode(params.diagnostics);
@@ -320,18 +344,55 @@ const readSingleChunk = async (params: {
       index: params.index,
       message: errorMessage(error)
     });
+    const terminalError = asTerminalReadError(error, params.diagnostics, params.options);
+    if (terminalError) {
+      throw terminalError;
+    }
     return null;
   }
 };
 
 const normalizeBatchSize = (batchSize: number | undefined) => {
   if (batchSize === undefined) {
-    return 50;
+    return 30;
   }
   if (!Number.isFinite(batchSize)) {
-    return 50;
+    return 30;
   }
-  return Math.max(1, Math.min(50, Math.floor(batchSize)));
+  return Math.max(1, Math.min(30, Math.floor(batchSize)));
+};
+
+const normalizeConcurrency = (concurrency: number | undefined, total: number) => {
+  if (total <= 1) {
+    return 1;
+  }
+  if (concurrency === undefined || !Number.isFinite(concurrency)) {
+    return 1;
+  }
+  return Math.max(1, Math.min(total, Math.floor(concurrency)));
+};
+
+const runWithConcurrency = async <T>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T) => Promise<void>
+) => {
+  if (items.length === 0) {
+    return;
+  }
+  const workerCount = normalizeConcurrency(concurrency, items.length);
+  let cursor = 0;
+  const workers = Array.from({ length: workerCount }, async () => {
+    while (true) {
+      const current = cursor;
+      cursor += 1;
+      if (current >= items.length) {
+        return;
+      }
+      await worker(items[current]);
+    }
+  });
+  await Promise.all(workers);
 };
 
 const readChunksFromSource = async (params: {
@@ -351,26 +412,43 @@ const readChunksFromSource = async (params: {
   const chunksByIndex = new Map<string, Uint8Array>(params.preloadedChunks);
   const allIndexes = Array.from({ length: total }, (_entry, index) => BigInt(index));
   const batchSize = normalizeBatchSize(params.options?.batchSize);
+  const concurrency = normalizeConcurrency(params.options?.concurrency, total);
   const preferBatch = params.options?.preferBatch !== false;
+  let terminalReadError: ReconstructionContentError | null = null;
 
-  const readSingles = async (indexes: bigint[]) => {
-    for (const index of indexes) {
-      if (chunksByIndex.has(index.toString())) {
-        continue;
-      }
-      const chunk = await readSingleChunk({
-        source: params.source,
-        tokenId: params.tokenId,
-        index,
-        diagnostics: params.diagnostics
-      });
-      if (chunk && chunk.length > 0) {
-        chunksByIndex.set(index.toString(), chunk);
-      }
+  const throwIfTerminalReadFailed = () => {
+    if (terminalReadError) {
+      throw terminalReadError;
     }
   };
 
+  const readSingles = async (indexes: bigint[]) => {
+    await runWithConcurrency(indexes, concurrency, async (index) => {
+      throwIfTerminalReadFailed();
+      if (chunksByIndex.has(index.toString())) {
+        return;
+      }
+      let chunk: Uint8Array | null;
+      try {
+        chunk = await readSingleChunk({
+          source: params.source,
+          tokenId: params.tokenId,
+          index,
+          diagnostics: params.diagnostics,
+          options: params.options
+        });
+      } catch (error) {
+        terminalReadError = asTerminalReadError(error, params.diagnostics, params.options);
+        throw error;
+      }
+      if (chunk && chunk.length > 0) {
+        chunksByIndex.set(index.toString(), chunk);
+      }
+    });
+  };
+
   const readBatch = async (indexes: bigint[]): Promise<void> => {
+    throwIfTerminalReadFailed();
     const pendingIndexes = indexes.filter((index) => !chunksByIndex.has(index.toString()));
     if (pendingIndexes.length === 0) {
       return;
@@ -406,15 +484,21 @@ const readChunksFromSource = async (params: {
         await readSingles(missingIndexes);
       }
     } catch (error) {
-      params.diagnostics.batchFallbacks += 1;
+      const message = errorMessage(error);
       recordReadError(params.diagnostics, {
         sourceId: sourceIdOf(params.source),
         operation: 'chunk-batch',
         indexes: [...pendingIndexes],
-        message: errorMessage(error)
+        message
       });
+      const terminalError = asTerminalReadError(error, params.diagnostics, params.options);
+      if (terminalError) {
+        terminalReadError = terminalError;
+        throw terminalError;
+      }
+      params.diagnostics.batchFallbacks += 1;
 
-      if (pendingIndexes.length === 1) {
+      if (pendingIndexes.length === 1 || !isCostBalanceExceededMessage(message)) {
         await readSingles(pendingIndexes);
         return;
       }
@@ -425,9 +509,12 @@ const readChunksFromSource = async (params: {
     }
   };
 
-  for (let index = 0; index < allIndexes.length; index += batchSize) {
-    await readBatch(allIndexes.slice(index, index + batchSize));
+  const batches: bigint[][] = [];
+  const fetchIndexes = allIndexes.filter((index) => !chunksByIndex.has(index.toString()));
+  for (let index = 0; index < fetchIndexes.length; index += batchSize) {
+    batches.push(fetchIndexes.slice(index, index + batchSize));
   }
+  await runWithConcurrency(batches, concurrency, readBatch);
 
   const chunks: Uint8Array[] = [];
   const missingChunks: bigint[] = [];
@@ -456,6 +543,7 @@ const readMetaFromSources = async (params: {
   tokenId: bigint;
   sources: ReconstructionSource[];
   diagnostics: ReconstructionDiagnostics;
+  options?: ReconstructionFetchOptions;
 }) => {
   for (const source of params.sources) {
     try {
@@ -472,6 +560,10 @@ const readMetaFromSources = async (params: {
         operation: 'meta',
         message: errorMessage(error)
       });
+      const terminalError = asTerminalReadError(error, params.diagnostics, params.options);
+      if (terminalError) {
+        throw terminalError;
+      }
     }
   }
 
@@ -486,12 +578,14 @@ const readFirstChunkFromSource = async (params: {
   source: ReconstructionSource;
   tokenId: bigint;
   diagnostics: ReconstructionDiagnostics;
+  options?: ReconstructionFetchOptions;
 }) => {
   const chunk = await readSingleChunk({
     source: params.source,
     tokenId: params.tokenId,
     index: 0n,
-    diagnostics: params.diagnostics
+    diagnostics: params.diagnostics,
+    options: params.options
   });
   return chunk && chunk.length > 0 ? chunk : null;
 };
@@ -502,6 +596,7 @@ const selectChunkSource = async (params: {
   sources: ReconstructionSource[];
   totalChunks: bigint;
   diagnostics: ReconstructionDiagnostics;
+  options?: ReconstructionFetchOptions;
 }) => {
   if (params.totalChunks === 0n) {
     params.diagnostics.chunkSourceId = sourceIdOf(params.metaSource);
@@ -520,7 +615,8 @@ const selectChunkSource = async (params: {
     const firstChunk = await readFirstChunkFromSource({
       source,
       tokenId: params.tokenId,
-      diagnostics: params.diagnostics
+      diagnostics: params.diagnostics,
+      options: params.options
     });
     if (firstChunk) {
       const chunkSourceId = sourceIdOf(source);
@@ -542,6 +638,7 @@ const readTokenUri = async (params: {
   tokenId: bigint;
   source: ReconstructionSource;
   diagnostics: ReconstructionDiagnostics;
+  options?: ReconstructionFetchOptions;
 }) => {
   if (!params.source.readers.getTokenUri) {
     return null;
@@ -554,6 +651,10 @@ const readTokenUri = async (params: {
       operation: 'token-uri',
       message: errorMessage(error)
     });
+    const terminalError = asTerminalReadError(error, params.diagnostics, params.options);
+    if (terminalError) {
+      throw terminalError;
+    }
     return null;
   }
 };
@@ -613,7 +714,8 @@ export const reconstructXtrataInscription = async (
   const { source: metaSource, meta } = await readMetaFromSources({
     tokenId: options.tokenId,
     sources: options.sources,
-    diagnostics
+    diagnostics,
+    options
   });
 
   if (options.strict && meta.sealed === false) {
@@ -636,7 +738,8 @@ export const reconstructXtrataInscription = async (
     metaSource,
     sources: options.sources,
     totalChunks,
-    diagnostics
+    diagnostics,
+    options
   });
 
   const chunks = await readChunksFromSource({
@@ -666,7 +769,8 @@ export const reconstructXtrataInscription = async (
   const tokenUri = await readTokenUri({
     tokenId: options.tokenId,
     source: metaSource,
-    diagnostics
+    diagnostics,
+    options
   });
 
   return {
@@ -697,5 +801,7 @@ export const reconstructInscription = async (
     strict: options?.strict,
     maxNodes: options?.maxNodes,
     batchSize: options?.batchSize,
-    preferBatch: options?.preferBatch
+    concurrency: options?.concurrency,
+    preferBatch: options?.preferBatch,
+    isTerminalReadError: options?.isTerminalReadError
   });

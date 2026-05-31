@@ -11,6 +11,7 @@ import {
   uintCV
 } from '@stacks/transactions';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { chunkBytes, computeExpectedHash } from '../../../packages/xtrata-reconstruction/src/index';
 import { onRequest } from '../content';
 import type { RuntimeEnv } from '../lib';
 
@@ -32,10 +33,13 @@ const streamFrom = (bytes: Uint8Array) =>
     }
   });
 
+const finalHashForBytes = (bytes: Uint8Array) => computeExpectedHash(chunkBytes(bytes));
+
 const metaResult = (params?: {
   mimeType?: string;
   totalSize?: bigint;
   totalChunks?: bigint;
+  finalHash?: Uint8Array;
 }) =>
   cvHex(
     someCV(
@@ -45,13 +49,14 @@ const metaResult = (params?: {
         'total-size': uintCV(params?.totalSize ?? 2n),
         'total-chunks': uintCV(params?.totalChunks ?? 1n),
         sealed: boolCV(true),
-        'final-hash': bufferCV(FINAL_HASH)
+        'final-hash': bufferCV(params?.finalHash ?? FINAL_HASH)
       })
     )
   );
 
 describe('/runtime/content', () => {
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
 
@@ -103,27 +108,17 @@ describe('/runtime/content', () => {
     expect(response.headers.get('Content-Type')).toBe('image/gif');
     expect(response.headers.get('X-Xtrata-Runtime-Cache')).toBe('HIT');
     expect(response.headers.get('X-Xtrata-Runtime-Final-Hash')).toBe('abcd');
-    expect(get).toHaveBeenCalledWith(
-      `runtime-content/mainnet/${CONTRACT_ID}/294/abcd`
-    );
-    expect(Array.from(new Uint8Array(await response.arrayBuffer()))).toEqual([
-      9,
-      8
-    ]);
+    expect(get).toHaveBeenCalledWith(`runtime-content/mainnet/${CONTRACT_ID}/294/abcd`);
+    expect(Array.from(new Uint8Array(await response.arrayBuffer()))).toEqual([9, 8]);
   });
 
   it('serves cached byte ranges for media playback', async () => {
     const get = vi.fn(
-      async (
-        _key: string,
-        options?: { range?: { offset: number; length: number } }
-      ) => {
+      async (_key: string, options?: { range?: { offset: number; length: number } }) => {
         const bytes = new Uint8Array([9, 8, 7, 6]);
         const range = options?.range;
         return {
-          body: streamFrom(
-            range ? bytes.slice(range.offset, range.offset + range.length) : bytes
-          ),
+          body: streamFrom(range ? bytes.slice(range.offset, range.offset + range.length) : bytes),
           size: bytes.length,
           httpMetadata: {
             contentType: 'audio/webm'
@@ -181,19 +176,13 @@ describe('/runtime/content', () => {
     expect(response.headers.get('Content-Range')).toBe('bytes 1-2/4');
     expect(response.headers.get('Content-Length')).toBe('2');
     expect(response.headers.get('X-Xtrata-Runtime-Response-Mode')).toBe('range');
-    expect(get).toHaveBeenCalledWith(
-      `runtime-content/mainnet/${CONTRACT_ID}/294/abcd`,
-      {
-        range: {
-          offset: 1,
-          length: 2
-        }
+    expect(get).toHaveBeenCalledWith(`runtime-content/mainnet/${CONTRACT_ID}/294/abcd`, {
+      range: {
+        offset: 1,
+        length: 2
       }
-    );
-    expect(Array.from(new Uint8Array(await response.arrayBuffer()))).toEqual([
-      8,
-      7
-    ]);
+    });
+    expect(Array.from(new Uint8Array(await response.arrayBuffer()))).toEqual([8, 7]);
   });
 
   it('returns 416 for unsatisfiable byte ranges without reconstructing content', async () => {
@@ -284,22 +273,22 @@ describe('/runtime/content', () => {
   });
 
   it('streams reconstructed bytes on cache misses', async () => {
+    const finalHash = finalHashForBytes(new Uint8Array([1, 2, 3]));
+    const consoleLog = vi.spyOn(console, 'log').mockImplementation(() => undefined);
     const fetch = vi.fn(async (input: RequestInfo | URL) => {
       const endpoint = String(input);
       let result: string;
       if (endpoint.endsWith('/get-inscription-meta')) {
         result = metaResult({
           totalSize: 3n,
-          totalChunks: 3n
+          totalChunks: 3n,
+          finalHash
         });
       } else if (endpoint.endsWith('/get-chunk')) {
         result = cvHex(someCV(bufferCV(new Uint8Array([1]))));
       } else if (endpoint.endsWith('/get-chunk-batch')) {
         result = cvHex(
-          listCV([
-            someCV(bufferCV(new Uint8Array([2]))),
-            someCV(bufferCV(new Uint8Array([3])))
-          ])
+          listCV([someCV(bufferCV(new Uint8Array([2]))), someCV(bufferCV(new Uint8Array([3])))])
         );
       } else if (endpoint.endsWith('/get-token-uri')) {
         result = cvHex(responseOkCV(someCV(stringAsciiCV('signal.gif'))));
@@ -326,6 +315,7 @@ describe('/runtime/content', () => {
         `https://xtrata.xyz/runtime/content?contractId=${CONTRACT_ID}&tokenId=294&network=mainnet`
       ),
       env: {
+        RUNTIME_CONTENT_DEBUG: '1',
         RUNTIME_CONTENT_READ_RETRIES: '0'
       }
     });
@@ -333,31 +323,107 @@ describe('/runtime/content', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('X-Xtrata-Runtime-Response-Mode')).toBe('stream');
     expect(response.headers.get('X-Xtrata-Runtime-Cache')).toBe('BYPASS');
+    expect(response.headers.get('X-Xtrata-Runtime-Reconstruction-Read-Mode')).toBe('mixed');
+    expect(response.headers.get('X-Xtrata-Runtime-Reconstruction-Fallback')).toBe('false');
+    expect(response.headers.get('X-Xtrata-Runtime-Read-Batch-Size')).toBe('30');
+    expect(response.headers.get('X-Xtrata-Runtime-Upstream-Requests')).toBe('4');
     expect(response.headers.get('Content-Length')).toBe('3');
-    expect(Array.from(new Uint8Array(await response.arrayBuffer()))).toEqual([
-      1,
-      2,
-      3
-    ]);
+    expect(Array.from(new Uint8Array(await response.arrayBuffer()))).toEqual([1, 2, 3]);
+    expect(consoleLog).toHaveBeenCalledWith(
+      '[runtime/content] reconstructed-stream',
+      expect.objectContaining({
+        tokenId: '294',
+        sourceContractId: CONTRACT_ID,
+        diagnostics: expect.objectContaining({
+          readMode: 'mixed',
+          batchReads: 1,
+          singleReads: 1
+        })
+      })
+    );
   });
 
-  it('serves byte ranges after reconstructing uncached content', async () => {
+  it('returns a clear terminal response without amplifying Cloudflare subrequest exhaustion', async () => {
+    const finalHash = finalHashForBytes(new Uint8Array([1, 2, 3]));
     const fetch = vi.fn(async (input: RequestInfo | URL) => {
       const endpoint = String(input);
       let result: string;
       if (endpoint.endsWith('/get-inscription-meta')) {
         result = metaResult({
           totalSize: 3n,
-          totalChunks: 3n
+          totalChunks: 3n,
+          finalHash
+        });
+      } else if (endpoint.endsWith('/get-chunk')) {
+        result = cvHex(someCV(bufferCV(new Uint8Array([1]))));
+      } else if (endpoint.endsWith('/get-chunk-batch')) {
+        throw new Error('Too many subrequests by single Worker invocation.');
+      } else {
+        throw new Error(`Unexpected endpoint ${endpoint}`);
+      }
+      return new Response(
+        JSON.stringify({
+          okay: true,
+          result
+        }),
+        {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+    });
+    vi.stubGlobal('fetch', fetch);
+
+    const response = await onRequest({
+      request: new Request(
+        `https://xtrata.xyz/runtime/content?contractId=${CONTRACT_ID}&tokenId=294&network=mainnet`
+      ),
+      env: {
+        RUNTIME_CONTENT_READ_RETRIES: '2'
+      }
+    });
+    const body = (await response.json()) as {
+      error: string;
+      diagnostics: {
+        upstreamRequests: number;
+        batchFallbacks: number;
+        singleReads: number;
+        errors: Array<{ operation: string }>;
+      };
+    };
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get('X-Xtrata-Runtime-Upstream-Requests')).toBe('3');
+    expect(body.error).toBe('Runtime upstream request limit exhausted.');
+    expect(body.diagnostics.upstreamRequests).toBe(3);
+    expect(body.diagnostics.batchFallbacks).toBe(0);
+    expect(body.diagnostics.singleReads).toBe(1);
+    expect(body.diagnostics.errors).toEqual([
+      expect.objectContaining({
+        operation: 'chunk-batch'
+      })
+    ]);
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('serves byte ranges after reconstructing uncached content', async () => {
+    const finalHash = finalHashForBytes(new Uint8Array([1, 2, 3]));
+    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const endpoint = String(input);
+      let result: string;
+      if (endpoint.endsWith('/get-inscription-meta')) {
+        result = metaResult({
+          totalSize: 3n,
+          totalChunks: 3n,
+          finalHash
         });
       } else if (endpoint.endsWith('/get-chunk')) {
         result = cvHex(someCV(bufferCV(new Uint8Array([1]))));
       } else if (endpoint.endsWith('/get-chunk-batch')) {
         result = cvHex(
-          listCV([
-            someCV(bufferCV(new Uint8Array([2]))),
-            someCV(bufferCV(new Uint8Array([3])))
-          ])
+          listCV([someCV(bufferCV(new Uint8Array([2]))), someCV(bufferCV(new Uint8Array([3])))])
         );
       } else if (endpoint.endsWith('/get-token-uri')) {
         result = cvHex(responseOkCV(someCV(stringAsciiCV('signal.gif'))));
@@ -397,9 +463,7 @@ describe('/runtime/content', () => {
     expect(response.headers.get('Content-Range')).toBe('bytes 1-2/3');
     expect(response.headers.get('Content-Length')).toBe('2');
     expect(response.headers.get('X-Xtrata-Runtime-Response-Mode')).toBe('range');
-    expect(Array.from(new Uint8Array(await response.arrayBuffer()))).toEqual([
-      2,
-      3
-    ]);
+    expect(response.headers.get('X-Xtrata-Runtime-Reconstruction-Batch-Reads')).toBe('1');
+    expect(Array.from(new Uint8Array(await response.arrayBuffer()))).toEqual([2, 3]);
   });
 });

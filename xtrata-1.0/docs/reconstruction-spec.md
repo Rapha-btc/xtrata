@@ -120,7 +120,63 @@ The `@xtrata/reconstruction` package exposes `verifyPayload`,
 `reconstructXtrataInscription({ sources, strict: true })` for this boundary.
 When a source exposes `getChunkBatch`, the package reads batches first, falls
 back to per-chunk reads for failed or missing batch entries, and records read
-diagnostics in the reconstruction result.
+diagnostics in the reconstruction result. Production callers can provide
+`isTerminalReadError` when platform quota errors must stop reconstruction
+without per-chunk fallback amplification.
+
+The first-party `/runtime/content` route now consumes the same public
+reconstruction engine. Runtime responses expose reconstruction proof/debug
+headers such as `X-Xtrata-Runtime-Reconstruction-Read-Mode`,
+`X-Xtrata-Runtime-Reconstruction-Batch-Reads`, and
+`X-Xtrata-Runtime-Reconstruction-Errors`. The runtime also exposes
+`X-Xtrata-Runtime-Upstream-Requests`, which counts actual outbound Stacks API
+attempts including retries and alternate API-base attempts. Set
+`RUNTIME_CONTENT_DEBUG=1` in the runtime environment to emit opt-in
+reconstruction logs during testing.
+
+The Cloudflare Pages runtime sets `[limits] cpu_ms = 30000` and
+`subrequests = 2_000` in `wrangler.toml`. The deployed contract read ABI can
+accept up to 50 indexes, but the first-party cold-cache runtime clamps
+`get-chunk-batch` reads to 30 chunks for production stability. The
+`@xtrata/reconstruction` package applies the same 30-chunk clamp when callers
+provide a larger `batchSize`. If a batch still triggers `CostBalanceExceeded`,
+the runtime splits that read; Cloudflare subrequest quota exhaustion is terminal
+and must not fan out into individual chunk reads.
+
+Production readiness checks after a runtime deployment should include:
+
+- purge the target token from runtime cache using the protected
+  `/runtime/cache-purge` route;
+- request `/runtime/content` and confirm `X-Xtrata-Runtime-Cache: MISS`;
+- confirm `X-Xtrata-Runtime-Read-Batch-Size: 30`;
+- confirm batch fallback and single-read counts stay low;
+- request the same URL again and confirm `X-Xtrata-Runtime-Cache: HIT`;
+- verify `/inscription/:id`, `/i/:id`, and `Range: bytes=0-1023` responses.
+
+The optional `RUNTIME_CONTENT_READ_BATCH_SIZE` environment variable may reduce
+the read batch size below 30 for diagnostics, but values above 30 are clamped.
+
+## Chunk Size Compatibility
+
+Existing Xtrata core contracts use fixed 16,384-byte chunks. This is a contract
+format rule, not only an SDK default:
+
+- contract storage maps store `(buff 16384)` values;
+- upload calls accept `(buff 16384)` chunk values;
+- `get-chunk-batch` returns `(list 50 (optional (buff 16384)))`;
+- current metadata stores `total-size` and `total-chunks`, but not a per-token
+  chunk-size field.
+
+The reconstruction package therefore keeps `CHUNK_SIZE = 16_384` for existing
+contracts and for the legacy `total-chunks: 0` derivation path.
+
+A future contract version could support larger fixed chunks while preserving
+existing inscriptions by routing reconstruction according to contract
+capabilities. Variable per-token chunk sizes would require an explicit
+`chunk-size` metadata field, updated storage/read interfaces with a larger
+compile-time buffer bound, SDK capability detection, and compatibility tests.
+Existing v1, v2.1, and v3 contract sources must continue reconstructing with
+16,384-byte chunks.
 
 ## Public Proof Standard
 
