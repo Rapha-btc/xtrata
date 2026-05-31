@@ -6,7 +6,7 @@ vi.mock('../../utils/logger', () => ({
   logDebug: vi.fn()
 }));
 
-import { logWarn } from '../../utils/logger';
+import { logInfo, logWarn } from '../../utils/logger';
 import type { XtrataClient } from '../../contract/client';
 
 vi.mock('../cache', () => ({
@@ -109,6 +109,46 @@ describe('fetchOnChainContent', () => {
     expect(Array.from(result)).toEqual([1, 2, 3, 4, 5, 6]);
     expect(getChunkBatch).not.toHaveBeenCalled();
     expect(getChunk).toHaveBeenCalledTimes(3);
+  });
+
+  it('logs the normal single-chunk fast path without a fallback warning', async () => {
+    const logInfoMock = vi.mocked(logInfo);
+    const logWarnMock = vi.mocked(logWarn);
+    const first = new Uint8Array([1, 2, 3, 4]);
+    const getChunk = vi.fn(async (_id: bigint, index: bigint) =>
+      index === 0n ? first : null
+    );
+    const getChunkBatch = vi.fn(async () => []);
+    const client = buildClient({
+      supportsBatch: true,
+      getChunk,
+      getChunkBatch
+    });
+
+    const result = await fetchOnChainContent({
+      client,
+      id: 75n,
+      senderAddress: 'SP2JXKMSH007NPYAQHKJPQMAQYAD90NQGTVJVQ02B',
+      totalSize: 4n,
+      mimeType: 'text/html'
+    });
+
+    expect(Array.from(result)).toEqual([1, 2, 3, 4]);
+    expect(getChunk).toHaveBeenCalledTimes(1);
+    expect(getChunkBatch).not.toHaveBeenCalled();
+    expect(logInfoMock).toHaveBeenCalledWith(
+      'chunk',
+      'Single-chunk inscription fetched',
+      {
+        id: '75',
+        totalSize: 4
+      }
+    );
+    expect(logWarnMock).not.toHaveBeenCalledWith(
+      'chunk',
+      'Falling back to sequential chunk fetch',
+      expect.anything()
+    );
   });
 
   it('falls back to fallback chunk source when primary chunk 0 is missing', async () => {

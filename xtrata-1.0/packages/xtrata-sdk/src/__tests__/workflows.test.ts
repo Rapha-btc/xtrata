@@ -49,6 +49,28 @@ describe('sdk workflows', () => {
     expect(plan.flow.nextAction).toBe('Submit begin transaction.');
   });
 
+  it('caps SDK core upload workflow batches at 30 chunks', () => {
+    const payloadBytes = new Uint8Array(16_384 * 65);
+    const expectedHash = computeExpectedHash(chunkBytes(payloadBytes));
+    const plan = buildCoreMintWorkflowPlan({
+      contract: {
+        address: mainnetAddress,
+        contractName: 'xtrata-v2-1-0',
+        network: 'mainnet'
+      },
+      senderAddress: mainnetAddress,
+      payloadBytes,
+      expectedHash,
+      mimeType: 'image/png',
+      tokenUri: 'ipfs://demo',
+      mintPrice: 1_000_000n,
+      protocolFeeMicroStx: 100_000n,
+      chunkBatchSize: 50
+    });
+
+    expect(plan.addChunkBatchCalls.map((batch) => batch.chunkCount)).toEqual([30, 30, 5]);
+  });
+
   it('builds collection mint workflow with begin cap including protocol fee', () => {
     const payloadBytes = new Uint8Array(1024);
     const expectedHash = computeExpectedHash(chunkBytes(payloadBytes));

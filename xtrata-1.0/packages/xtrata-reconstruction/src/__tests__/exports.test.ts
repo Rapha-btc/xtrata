@@ -9,11 +9,13 @@ describe('reconstruction public exports', () => {
     expect(typeof reconstruction.computeExpectedHash).toBe('function');
     expect(typeof reconstruction.verifyPayload).toBe('function');
     expect(typeof reconstruction.assertVerified).toBe('function');
+    expect(typeof reconstruction.ReconstructionContentError).toBe('function');
     expect(typeof reconstruction.ReconstructionVerificationError).toBe('function');
   });
 
   it('exposes graph and end-to-end reconstruction helpers', () => {
     expect(typeof reconstruction.resolveDependencies).toBe('function');
     expect(typeof reconstruction.reconstructInscription).toBe('function');
+    expect(typeof reconstruction.reconstructXtrataInscription).toBe('function');
   });
 });

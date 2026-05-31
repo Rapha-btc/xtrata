@@ -1491,7 +1491,7 @@ export const fetchOnChainContent = async (params: {
       contractSpeed: activeClient.supportsChunkBatchRead ? 'FAST' : 'SLOW',
       expectedChunks: expectedCountNumber
     });
-    logWarn('chunk', 'Falling back to sequential chunk fetch', {
+    logInfo('chunk', 'Single-chunk inscription fetched', {
       id: params.id.toString(),
       totalSize: totalSizeNumber
     });

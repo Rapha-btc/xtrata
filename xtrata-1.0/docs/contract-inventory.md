@@ -36,6 +36,10 @@ Source: `contracts/live/xtrata-v1.1.0.clar`
 - `SVG-STATIC-B64` -> base64 encoded SVG
 - `SVG-DATAURI-PREFIX` -> `data:image/svg+xml;base64,`
 
+First-party app and SDK upload planners intentionally cap
+`add-chunk-batch` / `mint-add-chunk-batch` calls at 30 chunks for production
+reliability, even though the deployed Clarity list ABI accepts up to 50.
+
 ## Data Vars
 - `contract-owner` (principal)
 - `next-id` (uint)

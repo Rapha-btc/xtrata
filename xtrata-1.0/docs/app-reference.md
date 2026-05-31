@@ -125,6 +125,9 @@ Purpose: one-stop map of where code lives and which files to touch for common up
 - `src/lib/viewer/relationships.ts` fetches parent IDs and scans for child relationships.
 - `src/lib/viewer/types.ts` defines viewer models.
 - `functions/runtime/content.ts` serves reconstructed raw inscription bytes at `/runtime/content`.
+- `functions/runtime/cache-purge.ts` is a protected operational route for
+  purging a token from runtime cache during preview cold-request validation; it
+  requires `RUNTIME_CACHE_ADMIN_TOKEN`.
 - `functions/inscription/*` provides readable aliases such as `/inscription/:tokenId` and the explicit `/inscription/:network/:contractAddress/:contractName/:tokenId` route.
 - `functions/i/*` provides the compact `/i/:tokenId` alias for byte-sensitive recursive references. It must stay behaviorally equivalent to `/inscription/:tokenId`.
 - `src/lib/market/actions.ts` centralizes market list/cancel validation helpers.

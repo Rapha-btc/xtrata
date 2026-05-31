@@ -19,7 +19,8 @@ import {
   chunkBytes,
   computeExpectedHash,
   CHUNK_SIZE,
-  MAX_BATCH_SIZE
+  MAX_BATCH_SIZE,
+  MAX_UPLOAD_BATCH_SIZE
 } from '../lib/chunking/hash';
 import { bytesToHex } from '../lib/utils/encoding';
 import { formatBytes } from '../lib/utils/format';
@@ -126,7 +127,7 @@ type Sip16MetadataParams = {
 };
 
 const BATCH_OPTIONS = Array.from(
-  { length: MAX_BATCH_SIZE },
+  { length: MAX_UPLOAD_BATCH_SIZE },
   (_, index) => index + 1
 );
 const MAX_UPLOAD_RETRIES = 3;
@@ -488,7 +489,7 @@ export default function MintScreen(props: MintScreenProps) {
     fixedBatchSize && fixedBatchSize > 0 ? fixedBatchSize : undefined;
   const initialBatchSize = Math.min(
     resolvedFixedBatchSize ?? DEFAULT_BATCH_SIZE,
-    MAX_BATCH_SIZE
+    MAX_UPLOAD_BATCH_SIZE
   );
   const initialTokenUri = fixedTokenUri ?? DEFAULT_TOKEN_URI;
 
@@ -522,7 +523,7 @@ export default function MintScreen(props: MintScreenProps) {
 
   useEffect(() => {
     if (resolvedFixedBatchSize) {
-      setBatchSize(Math.min(resolvedFixedBatchSize, MAX_BATCH_SIZE));
+      setBatchSize(Math.min(resolvedFixedBatchSize, MAX_UPLOAD_BATCH_SIZE));
     }
   }, [resolvedFixedBatchSize]);
 
@@ -578,7 +579,7 @@ export default function MintScreen(props: MintScreenProps) {
 
   const effectiveBatchSize = Math.min(
     resolvedFixedBatchSize ?? batchSize,
-    MAX_BATCH_SIZE
+    MAX_UPLOAD_BATCH_SIZE
   );
   const batches = useMemo(() => {
     if (chunks.length === 0) {
@@ -3134,7 +3135,7 @@ export default function MintScreen(props: MintScreenProps) {
                 ))}
               </select>
               <span className="meta-value">
-                Max {MAX_BATCH_SIZE} chunks per batch.
+                Max {MAX_UPLOAD_BATCH_SIZE} chunks per batch.
               </span>
             </label>
           ) : (

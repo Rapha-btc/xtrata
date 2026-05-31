@@ -71,7 +71,8 @@ From the current v2 reconstruction model:
 - Chunk size is fixed at **16,384 bytes**.
 - Max chunks per inscription: **2,048**.
 - Max total size: **32 MiB** (2,048 * 16,384).
-- Batch size for chunk upload and batch sealing: **50**.
+- First-party app and SDK chunk upload batch size: **30**.
+- Contract list ABI and batch sealing limit: **50**.
 - Uploads expire after `UPLOAD-EXPIRY-BLOCKS` if inactive.
 
 Once sealed, inscription content is immutable.
@@ -127,7 +128,9 @@ Fee notes (current v2 public contracts):
 ### Reconstruction steps
 1) Read `InscriptionMeta`.
 2) Create the index list `0..total-chunks-1`.
-3) Fetch chunks in batches of 50 via `get-chunk-batch`.
+3) Fetch chunks with `get-chunk-batch`. The deployed contract accepts up to 50
+   indexes, but the first-party Cloudflare runtime clamps cold-cache read
+   batches to 30 for production stability.
 4) Concatenate bytes in order to rebuild the payload.
 5) Render based on `mime-type`.
 

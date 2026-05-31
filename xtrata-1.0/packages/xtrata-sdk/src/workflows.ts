@@ -26,7 +26,7 @@ import {
 import {
   DEFAULT_BATCH_SIZE,
   MAX_SMALL_MINT_CHUNKS,
-  MAX_BATCH_SIZE,
+  MAX_UPLOAD_BATCH_SIZE,
   MAX_MIME_LENGTH,
   MAX_TOKEN_URI_LENGTH,
   batchChunks,
@@ -51,7 +51,7 @@ const normalizeBatchSize = (value: number | undefined) => {
   if (!Number.isFinite(value) || !value) {
     return DEFAULT_BATCH_SIZE;
   }
-  return Math.max(1, Math.min(MAX_BATCH_SIZE, Math.floor(value)));
+  return Math.max(1, Math.min(MAX_UPLOAD_BATCH_SIZE, Math.floor(value)));
 };
 
 const withDenyPostConditions = (

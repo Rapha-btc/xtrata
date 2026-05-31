@@ -3,8 +3,7 @@ import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 
-const DEFAULT_CONTRACT_ID =
-  'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1';
+const DEFAULT_CONTRACT_ID = 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1';
 const DEFAULT_FALLBACK_CONTRACT_IDS = [
   'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0',
   'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1'
@@ -128,52 +127,6 @@ const loadPublicPackages = async () => {
   }
 };
 
-const findFirst = async (clients, task) => {
-  let lastError = null;
-  for (const client of clients) {
-    try {
-      const result = await task(client);
-      if (result !== null && result !== undefined) {
-        return { result, contractId: client.contractId };
-      }
-    } catch (error) {
-      lastError = error;
-    }
-  }
-  if (lastError) {
-    throw lastError;
-  }
-  return { result: null, contractId: null };
-};
-
-const buildReaders = (clients) => {
-  const chunkSources = new Map();
-
-  return {
-    chunkSources,
-    readers: {
-      getInscriptionMeta: async (tokenId) =>
-        (await findFirst(clients, (client) => client.getInscriptionMeta(tokenId)))
-          .result,
-      getTokenUri: async (tokenId) =>
-        (await findFirst(clients, (client) => client.getTokenUri(tokenId))).result,
-      getDependencies: async (tokenId) =>
-        (await findFirst(clients, (client) => client.getDependencies(tokenId)))
-          .result ?? [],
-      getChunk: async (tokenId, index) => {
-        const found = await findFirst(clients, async (client) => {
-          const chunk = await client.getChunk(tokenId, index);
-          return chunk && chunk.length > 0 ? chunk : null;
-        });
-        if (found.result && found.contractId) {
-          chunkSources.set(index.toString(), found.contractId);
-        }
-        return found.result;
-      }
-    }
-  };
-};
-
 const main = async () => {
   const options = parseArgs(process.argv.slice(2));
   if (options.help) {
@@ -183,12 +136,8 @@ const main = async () => {
 
   const [tokenIdArg, outputFile] = options.positional;
   const tokenId = parseTokenId(tokenIdArg);
-  const contractIds = unique([
-    options.contractId,
-    ...options.fallbackContractIds
-  ]);
-  const senderAddress =
-    options.senderAddress ?? contractAddressFromId(options.contractId);
+  const contractIds = unique([options.contractId, ...options.fallbackContractIds]);
+  const senderAddress = options.senderAddress ?? contractAddressFromId(options.contractId);
   const { sdk, reconstruction } = await loadPublicPackages();
 
   const clients = contractIds.map((contractId) =>
@@ -198,18 +147,22 @@ const main = async () => {
       apiBaseUrls: options.apiBaseUrls
     })
   );
-  const { readers, chunkSources } = buildReaders(clients);
-  const result = await reconstruction.reconstructInscription(tokenId, readers, {
+
+  const sources = sdk.createXtrataReconstructionSources(clients[0], clients.slice(1));
+  const result = await reconstruction.reconstructXtrataInscription({
+    tokenId,
+    sources,
     strict: options.strict,
     maxNodes: options.maxNodes
   });
 
-  const sourceContracts = unique(Array.from(chunkSources.values()));
   const summary = {
     tokenId: result.tokenId.toString(),
     requestedContractId: options.contractId,
     attemptedContractIds: contractIds,
-    chunkSourceContractIds: sourceContracts,
+    metaSourceContractId: result.diagnostics.metaSourceId,
+    chunkSourceContractId: result.diagnostics.chunkSourceId,
+    fallbackUsed: result.diagnostics.fallbackUsed,
     mimeType: result.mimeType,
     bytes: result.bytes.length,
     chunkCount: result.chunkCount.toString(),
@@ -218,7 +171,19 @@ const main = async () => {
     actualHash: result.verification.actualHashHex,
     verified: result.verification.ok,
     dependencyCount: result.dependencies.nodes.length,
-    dependencyTraversalTruncated: result.dependencies.truncated
+    dependencyTraversalTruncated: result.dependencies.truncated,
+    readMode: result.diagnostics.readMode,
+    batchReads: result.diagnostics.batchReads,
+    singleReads: result.diagnostics.singleReads,
+    batchFallbacks: result.diagnostics.batchFallbacks,
+    missingChunks: result.diagnostics.missingChunks.map((index) => index.toString()),
+    readErrors: result.diagnostics.errors.map((error) => ({
+      sourceId: error.sourceId,
+      operation: error.operation,
+      index: error.index?.toString(),
+      indexes: error.indexes?.map((index) => index.toString()),
+      message: error.message
+    }))
   };
 
   console.log(JSON.stringify(summary, null, 2));

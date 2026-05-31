@@ -7,10 +7,11 @@ import {
 
 export const CHUNK_SIZE = 16_384;
 export const MAX_BATCH_SIZE = 50;
+export const MAX_UPLOAD_BATCH_SIZE = 30;
 export const MAX_SMALL_MINT_CHUNKS = 30;
 export const EMPTY_HASH = new Uint8Array(32);
 
-export const DEFAULT_BATCH_SIZE = Math.min(30, MAX_BATCH_SIZE);
+export const DEFAULT_BATCH_SIZE = MAX_UPLOAD_BATCH_SIZE;
 export const TX_DELAY_SECONDS = 5;
 export const DEFAULT_TOKEN_URI =
   'https://xvgh3sbdkivby4blejmripeiyjuvji3d4tycym6hgaxalescegjq.arweave.net/vUx9yCNSKhxwKyJZFDyIwmlUo2Pk8CwzxzAuBZJCIZM';
@@ -35,13 +36,14 @@ export const chunkBytes = (data: Uint8Array, chunkSize = CHUNK_SIZE) => {
   return chunks;
 };
 
-export const batchChunks = (chunks: Uint8Array[], batchSize = MAX_BATCH_SIZE) => {
-  if (batchSize <= 0) {
+export const batchChunks = (chunks: Uint8Array[], batchSize = MAX_UPLOAD_BATCH_SIZE) => {
+  if (!Number.isFinite(batchSize) || batchSize <= 0) {
     throw new Error('batchSize must be greater than zero');
   }
+  const resolvedBatchSize = Math.min(MAX_UPLOAD_BATCH_SIZE, Math.floor(batchSize));
   const batches: Uint8Array[][] = [];
-  for (let offset = 0; offset < chunks.length; offset += batchSize) {
-    batches.push(chunks.slice(offset, offset + batchSize));
+  for (let offset = 0; offset < chunks.length; offset += resolvedBatchSize) {
+    batches.push(chunks.slice(offset, offset + resolvedBatchSize));
   }
   return batches;
 };

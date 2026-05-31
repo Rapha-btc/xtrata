@@ -232,6 +232,36 @@ describe('hiro proxy key fallback', () => {
     expect(second.headers.get('x-xtrata-proxy-cache')).toBe('hit');
   });
 
+  it('removes upstream response-context headers from proxied responses', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response('{"okay":true}', {
+        status: 200,
+        headers: {
+          'content-security-policy': "default-src 'none'",
+          'content-security-policy-report-only': "script-src 'none'",
+          signature: 'label=:invalid-proxy-context:',
+          'signature-input': 'label=("@path");keyid="example"',
+          'content-type': 'application/json'
+        }
+      })
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const response = await proxyHiroRequest({
+      request: new Request('https://example.com/hiro/mainnet/v2/info'),
+      env: {},
+      network: 'mainnet',
+      path: 'v2/info'
+    });
+
+    expect(response.headers.get('content-security-policy')).toBeNull();
+    expect(response.headers.get('content-security-policy-report-only')).toBeNull();
+    expect(response.headers.get('signature')).toBeNull();
+    expect(response.headers.get('signature-input')).toBeNull();
+    expect(response.headers.get('content-type')).toBe('application/json');
+    expect(await response.text()).toBe('{"okay":true}');
+  });
+
   it('does not cache non-allowlisted call-read functions', async () => {
     const fetchMock = vi
       .fn()
