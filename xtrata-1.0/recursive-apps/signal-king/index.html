@@ -144,8 +144,20 @@
     border:1px solid color-mix(in srgb,var(--accent) 35%, var(--line));
     box-shadow:0 0 30px var(--glow), inset 0 0 0 1px rgba(255,255,255,.04);
     animation:var(--ambient) var(--ambient-time) ease-in-out infinite; }
-  .insframe, .insimg{ position:absolute; inset:0; width:100%; height:100%; border:0; display:block; }
+  .insframe, .insimg, .insvideo{ position:absolute; inset:0; width:100%; height:100%; border:0; display:block; }
   .insimg{ object-fit:contain; background:#05070c; }
+  .insvideo{ object-fit:contain; background:#05070c; }
+  .insplaceholder, .pvinsplaceholder, .lbplaceholder{
+    position:absolute; inset:0; display:grid; place-content:center; justify-items:center; gap:7px;
+    padding:14px; text-align:center; background:#05070c; color:#dce8ff;
+  }
+  .insplaceholder[hidden], .pvinsplaceholder[hidden], .lbplaceholder[hidden]{ display:none; }
+  .insplaceholder strong, .pvinsplaceholder strong, .lbplaceholder strong{
+    color:#8fd7ff; font:800 19px/1 var(--mono); letter-spacing:0;
+  }
+  .insplaceholder span, .pvinsplaceholder span, .lbplaceholder span{
+    color:#9fb0c8; font:700 10px/1.35 var(--mono); letter-spacing:0; text-transform:uppercase;
+  }
   .insstatus{ position:absolute; z-index:4; top:8px; left:8px; right:42px; padding:5px 7px; border-radius:8px;
     background:rgba(5,7,12,.74); border:1px solid var(--line); color:var(--muted); font-size:10px; letter-spacing:.08em;
     text-transform:uppercase; backdrop-filter:blur(4px); pointer-events:none; }
@@ -162,8 +174,13 @@
   .lightbox[hidden]{ display:none; }
   .lbstage{ width:min(86vmin,720px); height:min(86vmin,720px); max-width:94vw; border-radius:16px; overflow:hidden;
     background:#05070c; border:1px solid var(--line); box-shadow:0 0 60px rgba(0,0,0,.7); position:relative; }
-  .lbframe, .lbimg{ position:absolute; inset:0; width:100%; height:100%; border:0; display:block; }
-  .lbimg{ object-fit:contain; }
+  .lbframe, .lbimg, .lbvideo{ position:absolute; inset:0; width:100%; height:100%; border:0; display:block; }
+  .lbimg, .lbvideo{ object-fit:contain; }
+  .lbaudio{ position:absolute; left:7%; right:7%; top:50%; width:86%; transform:translateY(-50%); }
+  .lbtext{
+    position:absolute; inset:0; overflow:auto; margin:0; padding:16px; background:#05070c; color:#dce8ff;
+    font:12px/1.5 var(--mono); white-space:pre-wrap; overflow-wrap:anywhere; text-align:left;
+  }
   .lbstatus{ position:absolute; inset:0; display:grid; place-items:center; padding:20px; color:var(--muted);
     text-align:center; font-size:13px; letter-spacing:.08em; text-transform:uppercase; }
   .lbstatus[hidden]{ display:none; }
@@ -257,7 +274,8 @@
   .preview .pvlabel{ position:absolute; top:8px; left:10px; font-size:9px; letter-spacing:.22em; color:var(--muted); text-transform:uppercase; }
   .preview .pvtotem{ font-size:48px; line-height:1; margin:6px 0 4px; animation:var(--ambient) var(--ambient-time) ease-in-out infinite; }
   .preview .pvins{ width:96px; height:96px; margin:6px auto 4px; border-radius:8px; overflow:hidden; background:#05070c; border:1px solid var(--line); position:relative; }
-  .preview .pvinsframe{ width:100%; height:100%; border:0; display:block; object-fit:contain; background:#05070c; }
+  .preview .pvinsframe, .preview .pvinsvideo{ width:100%; height:100%; border:0; display:block; object-fit:contain; background:#05070c; }
+  .preview .pvinsplaceholder{ position:absolute; inset:0; }
   .preview .pvinsstatus{ position:absolute; inset:auto 6px 6px; padding:4px 5px; border-radius:6px;
     background:rgba(5,7,12,.78); color:var(--muted); font-size:8px; letter-spacing:.08em; text-transform:uppercase; }
   .preview .pvinsstatus[hidden]{ display:none; }
@@ -344,8 +362,10 @@
         <div class="core" id="core">
           <div class="totem" id="totem" aria-hidden="true">👑</div>
           <div class="inscanvas" id="insCanvas" hidden>
-            <iframe id="insFrame" class="insframe" sandbox="allow-scripts allow-same-origin" referrerpolicy="no-referrer" title="Referenced inscription" loading="lazy"></iframe>
+            <iframe id="insFrame" class="insframe" sandbox="allow-scripts" referrerpolicy="no-referrer" title="Referenced inscription" loading="lazy"></iframe>
             <img id="insImg" class="insimg" alt="Referenced inscription" hidden />
+            <video id="insVideo" class="insvideo" muted loop playsinline preload="metadata" hidden></video>
+            <div id="insPlaceholder" class="insplaceholder" hidden><strong id="insPlaceholderIcon">FILE</strong><span id="insPlaceholderLabel">Referenced inscription</span></div>
             <div class="insstatus" id="insStatus" hidden></div>
             <button class="inszoom" id="insZoom" aria-label="Enlarge inscription" title="Enlarge">⤢</button>
           </div>
@@ -409,7 +429,7 @@
         <div class="chips" id="crownChips" role="group" aria-label="Crown emoji" style="margin-top:8px"></div>
         <div id="insWrap" hidden style="margin-top:8px">
           <input type="text" id="insIn" inputmode="numeric" placeholder="e.g. 159" autocomplete="off" spellcheck="false" aria-label="Inscription number" />
-          <p class="send-steps" style="margin-top:6px">Still images up to about 2 MB. Animated or interactive files are not supported here.</p>
+          <p class="send-steps" style="margin-top:6px">Images, audio, video, documents and interactive inscriptions are supported.</p>
           <div class="warn" id="insWarn" hidden></div>
           <details class="insdebug" id="insDebugBox" hidden>
             <summary>Runtime log</summary>
@@ -422,8 +442,10 @@
         <span class="pvlabel">Preview · not on-chain</span>
         <div class="pvtotem" id="pvTotem">👑</div>
         <div class="pvins" id="pvIns" hidden>
-          <iframe id="pvInsFrame" class="pvinsframe" sandbox="allow-scripts allow-same-origin" referrerpolicy="no-referrer" title="Inscription preview" hidden></iframe>
+          <iframe id="pvInsFrame" class="pvinsframe" sandbox="allow-scripts" referrerpolicy="no-referrer" title="Inscription preview" hidden></iframe>
           <img id="pvInsImg" class="pvinsframe" alt="Inscription preview" />
+          <video id="pvInsVideo" class="pvinsvideo" muted loop playsinline preload="metadata" hidden></video>
+          <div id="pvInsPlaceholder" class="pvinsplaceholder" hidden><strong id="pvInsPlaceholderIcon">FILE</strong><span id="pvInsPlaceholderLabel">Referenced inscription</span></div>
           <div class="pvinsstatus" id="pvInsStatus" hidden></div>
         </div>
         <div class="pvmsg" id="pvMsg">THE SIGNAL KING IS BACK</div>
@@ -487,8 +509,12 @@
   <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Enlarged inscription" hidden>
     <button class="lbclose" id="lbClose" aria-label="Close">✕</button>
     <div class="lbstage" id="lbStage">
-      <iframe id="lbFrame" class="lbframe" sandbox="allow-scripts allow-same-origin" referrerpolicy="no-referrer" title="Enlarged inscription"></iframe>
+      <iframe id="lbFrame" class="lbframe" sandbox="allow-scripts" referrerpolicy="no-referrer" title="Enlarged inscription"></iframe>
       <img id="lbImg" class="lbimg" alt="Enlarged inscription" hidden />
+      <video id="lbVideo" class="lbvideo" controls playsinline hidden></video>
+      <audio id="lbAudio" class="lbaudio" controls hidden></audio>
+      <pre id="lbText" class="lbtext" hidden></pre>
+      <div id="lbPlaceholder" class="lbplaceholder" hidden><strong id="lbPlaceholderIcon">FILE</strong><span id="lbPlaceholderLabel">Referenced inscription</span></div>
       <div class="lbstatus" id="lbStatus" hidden></div>
     </div>
     <a class="lblink link" id="lbExplorer" target="_blank" rel="noreferrer" hidden>open inscription ↗</a>
@@ -521,10 +547,9 @@ const CONFIG = {
        /runtime/content?contractId=<addr.contract>&tokenId=<id>&network=<net>
 
      /runtime/content exposes diagnostic headers for HEAD probes and streams
-     large images where possible. This build still defaults to image-first
-     rendering via <img> (inscriptionUseIframe:false). HTML/SVG/JS inscriptions
-     should be routed through a trusted Xtrata runtime/proxy before enabling
-     iframe mode. The route is intentionally same-origin so Cloudflare preview
+     reconstructed content where possible. MIME-aware rendering keeps passive
+     media native and launches HTML only in a sandboxed lightbox via /runtime/.
+     The route is intentionally same-origin so Cloudflare preview
      deployments exercise the preview Function instead of production. Direct
      file:// testing falls back to the production runtime URL because relative
      function routes cannot exist on the local filesystem.
@@ -536,20 +561,13 @@ const CONFIG = {
   inscriptionFallbackContractId: "SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1",
   inscriptionContentRoute: "/runtime/content",
   inscriptionContentRouteFileFallback: "https://xtrata.xyz/runtime/content",
-  inscriptionUseIframe: false,            // false: <img> (CORS-safe). true: sandboxed <iframe> for live HTML/SVG/JS.
+  inscriptionRuntimeRoute: "/runtime/",
+  inscriptionRuntimeRouteFileFallback: "https://xtrata.xyz/runtime/",
   inscriptionMaxDigits: 12,
-  inscriptionMaxContentBytes: 2 * 1024 * 1024,
+  inscriptionLargeContentBytes: 2 * 1024 * 1024,
   inscriptionDiagnostics: true,
-  inscriptionProbeHead: window.location.protocol !== "file:"
+  inscriptionProbeHead: true
 };
-const INSCRIPTION_UNSUPPORTED_COPY = "Cannot use this one here. Try a still image under 2 MB.";
-const INSCRIPTION_STILL_IMAGE_MIMES = new Set([
-  "image/png",
-  "image/jpeg",
-  "image/jpg",
-  "image/webp",
-  "image/avif"
-]);
 
 /* Integration seam: tokenId number -> raw inscription content URL.
    This is the one place to change for real Xtrata recursion. */
@@ -570,6 +588,26 @@ function inscriptionContentUrl(num){
   });
   if(CONFIG.inscriptionFallbackContractId) params.set("fallbackContractId", CONFIG.inscriptionFallbackContractId);
   const route = inscriptionContentRoute();
+  return route + (route.indexOf("?") === -1 ? "?" : "&") + params.toString();
+}
+
+function inscriptionRuntimeRoute(){
+  const route = CONFIG.inscriptionRuntimeRoute;
+  if(/^https?:\/\//i.test(route)) return route;
+  if(window.location.protocol === "file:") return CONFIG.inscriptionRuntimeRouteFileFallback;
+  return route;
+}
+
+function inscriptionRuntimeUrl(num){
+  const tokenId = normInscription(num);
+  if(!tokenId) return "";
+  const params = new URLSearchParams({
+    contractId: CONFIG.inscriptionContractId,
+    tokenId,
+    network: CONFIG.network
+  });
+  if(CONFIG.inscriptionFallbackContractId) params.set("fallbackContractId", CONFIG.inscriptionFallbackContractId);
+  const route = inscriptionRuntimeRoute();
   return route + (route.indexOf("?") === -1 ? "?" : "&") + params.toString();
 }
 
@@ -888,11 +926,18 @@ const INS_DIAG_HEADERS = [
   'x-xtrata-runtime-read-retries',
   'x-xtrata-runtime-prepared-ms',
   'x-xtrata-runtime-source-contract',
-  'x-xtrata-runtime-final-hash'
+  'x-xtrata-runtime-final-hash',
+  'x-xtrata-runtime-reconstruction-read-mode',
+  'x-xtrata-runtime-reconstruction-fallback',
+  'x-xtrata-runtime-reconstruction-batch-reads',
+  'x-xtrata-runtime-reconstruction-single-reads',
+  'x-xtrata-runtime-reconstruction-batch-fallbacks',
+  'x-xtrata-runtime-reconstruction-errors',
+  'x-xtrata-runtime-upstream-requests'
 ];
 let insDiagEntries = [];
 const insHeadProbeCache = new Map();
-const unsupportedInscriptionUrls = new Map();
+const inscriptionDescriptors = new Map();
 
 function shortUrl(url){
   try{
@@ -905,43 +950,62 @@ function shortUrl(url){
   }
 }
 
-function runtimeMimeBlockReason(contentType){
+function runtimeMime(contentType){
   const mime = String(contentType || '').split(';')[0].trim().toLowerCase();
-  if(!mime) return '';
-  if(INSCRIPTION_STILL_IMAGE_MIMES.has(mime)) return '';
-  if(mime === 'image/gif' || mime === 'image/apng') return 'animated image';
-  if(mime.startsWith('image/')) return 'unsupported image type';
-  return 'not a still image';
+  return mime || 'application/octet-stream';
 }
 
-function runtimeContentBlockReason(headers){
-  const mimeReason = runtimeMimeBlockReason(headers['content-type']);
-  if(mimeReason) return mimeReason;
+function classifyRuntimeMime(contentType){
+  const mime = runtimeMime(contentType);
+  if(mime.startsWith('image/')) return 'image';
+  if(mime.startsWith('audio/')) return 'audio';
+  if(mime.startsWith('video/')) return 'video';
+  if(mime === 'text/html' || mime === 'application/xhtml+xml') return 'html';
+  if(mime === 'application/pdf') return 'pdf';
+  if(mime.startsWith('text/') || mime === 'application/json' || mime === 'application/javascript' || mime === 'application/xml') return 'text';
+  return 'binary';
+}
+
+function runtimeContentDescriptor(headers){
   const rawSize = headers['x-xtrata-runtime-total-size'] || headers['content-length'] || '';
   const size = Number.parseInt(String(rawSize), 10);
-  if(Number.isFinite(size) && size > CONFIG.inscriptionMaxContentBytes) return 'too large';
-  return '';
-}
-
-function inscriptionLimitInfo(){
+  const mimeType = runtimeMime(headers['content-type']);
   return {
-    limitBytes: CONFIG.inscriptionMaxContentBytes,
-    limitMB: Math.round((CONFIG.inscriptionMaxContentBytes / (1024 * 1024)) * 10) / 10
+    mimeType,
+    kind:classifyRuntimeMime(mimeType),
+    size:Number.isFinite(size) ? size : null,
+    large:Number.isFinite(size) && size > CONFIG.inscriptionLargeContentBytes
   };
 }
 
-function isKnownUnsupportedInscription(num){
-  const url = inscriptionContentUrl(num);
-  return !!(url && unsupportedInscriptionUrls.has(url));
+function inscriptionContentInfo(){
+  return {
+    largeContentBytes: CONFIG.inscriptionLargeContentBytes,
+    largeContentMB: Math.round((CONFIG.inscriptionLargeContentBytes / (1024 * 1024)) * 10) / 10
+  };
 }
 
-function markUnsupportedInscription(num, url, slot, reason){
-  if(!num || !url) return;
-  const label = reason || 'image load failed';
-  unsupportedInscriptionUrls.set(url, label);
-  insLog('image:unsupported', { slot, tokenId:num, reason:label, url:shortUrl(url) });
-  const input = $('insIn');
-  if(input && normInscription(input.value) === String(num)) updatePanel();
+function knownInscriptionDescriptor(num){
+  const url = inscriptionContentUrl(num);
+  return url ? inscriptionDescriptors.get(url) || null : null;
+}
+
+function kindLabel(kind){
+  return ({
+    image:'IMAGE', audio:'AUDIO', video:'VIDEO', html:'HTML APP',
+    pdf:'PDF', text:'TEXT', binary:'FILE', loading:'LOADING'
+  })[kind] || 'FILE';
+}
+
+function kindHint(kind, descriptor){
+  if(kind === 'html') return 'Open interactive inscription';
+  if(kind === 'audio') return 'Open audio inscription';
+  if(kind === 'video') return 'Open video inscription';
+  if(kind === 'pdf') return 'Open document inscription';
+  if(kind === 'text') return 'Open source inscription';
+  if(kind === 'loading') return 'Resolving inscription';
+  const large = descriptor && descriptor.large ? 'Large inscription' : 'Open inscription';
+  return large;
 }
 
 function fmtMs(ms){
@@ -987,24 +1051,25 @@ function readRuntimeHeaders(headers){
 }
 
 function probeInscriptionEndpoint(num, url, slot){
-  if(!CONFIG.inscriptionDiagnostics || !CONFIG.inscriptionProbeHead || !url || typeof fetch !== 'function') return;
-  if(insHeadProbeCache.has(url)) return;
+  if(!CONFIG.inscriptionProbeHead || !url || typeof fetch !== 'function') return Promise.resolve(null);
+  if(insHeadProbeCache.has(url)) return insHeadProbeCache.get(url);
   const started = performance.now();
-  insLog('head:start', { slot, tokenId:num, url:shortUrl(url), ...inscriptionLimitInfo() });
+  insLog('head:start', { slot, tokenId:num, url:shortUrl(url), ...inscriptionContentInfo() });
   const probe = fetch(url, { method:'HEAD', mode:'cors', cache:'no-store' })
     .then((res)=>{
       const headers = readRuntimeHeaders(res.headers);
+      const descriptor = res.ok ? runtimeContentDescriptor(headers) : null;
+      if(descriptor) inscriptionDescriptors.set(url, descriptor);
       insLog('head:done', {
         slot,
         tokenId:num,
         status:res.status,
         ok:res.ok,
         ms:fmtMs(performance.now() - started),
+        descriptor,
         headers
       });
-      const blockReason = res.ok ? runtimeContentBlockReason(headers) : '';
-      if(blockReason) markUnsupportedInscription(num, url, slot, blockReason);
-      return res;
+      return descriptor;
     })
     .catch((err)=>{
       insLog('head:error', {
@@ -1017,6 +1082,7 @@ function probeInscriptionEndpoint(num, url, slot){
       return null;
     });
   insHeadProbeCache.set(url, probe);
+  return probe;
 }
 
 function setImageSourceWithDiagnostics(img, url, opts){
@@ -1025,7 +1091,7 @@ function setImageSourceWithDiagnostics(img, url, opts){
   const tokenId = opts.tokenId || '';
   const started = performance.now();
   probeInscriptionEndpoint(tokenId, url, slot);
-  insLog('image:start', { slot, tokenId, url:shortUrl(url), ...inscriptionLimitInfo() });
+  insLog('image:start', { slot, tokenId, url:shortUrl(url), ...inscriptionContentInfo() });
   const changed = setImageSource(img, url, ()=>{
     insLog('image:load', {
       slot,
@@ -1058,65 +1124,100 @@ function setImageSourceWithDiagnostics(img, url, opts){
   return changed;
 }
 
+function clearVideo(video){
+  if(!video) return;
+  try{ video.pause(); }catch{}
+  video.removeAttribute('src');
+  video.load();
+}
+
+function showPlaceholder(prefix, descriptor){
+  const placeholder = $(prefix + 'Placeholder');
+  if(!placeholder) return;
+  const kind = descriptor ? descriptor.kind : 'loading';
+  $(prefix + 'PlaceholderIcon').textContent = kindLabel(kind);
+  $(prefix + 'PlaceholderLabel').textContent = kindHint(kind, descriptor);
+  placeholder.hidden = false;
+}
+
+function hidePlaceholder(prefix){
+  const placeholder = $(prefix + 'Placeholder');
+  if(placeholder) placeholder.hidden = true;
+}
+
+function clearCanvasMedia(prefix){
+  const frame = $(prefix + 'Frame'), img = $(prefix + 'Img'), video = $(prefix + 'Video');
+  if(frame){ frame.hidden = true; frame.src = 'about:blank'; }
+  if(img){ img.hidden = true; clearImage(img); }
+  if(video){ video.hidden = true; clearVideo(video); }
+  hidePlaceholder(prefix);
+}
+
+function renderCompactInscription(prefix, num, descriptor, slot){
+  const url = inscriptionContentUrl(num);
+  clearCanvasMedia(prefix);
+  setSmallStatus(prefix + 'Status', '');
+  if(!descriptor){
+    showPlaceholder(prefix, null);
+    return;
+  }
+  if(descriptor.kind === 'image'){
+    const img = $(prefix + 'Img');
+    img.hidden = false;
+    setSmallStatus(prefix + 'Status', 'Loading #' + num);
+    setImageSourceWithDiagnostics(img, url, { slot, tokenId:num, onload:()=>{
+      setSmallStatus(prefix + 'Status', '');
+    }, onerror:()=>{
+      img.hidden = true;
+      clearImage(img);
+      showPlaceholder(prefix, { kind:'binary', large:descriptor.large });
+      setSmallStatus(prefix + 'Status', '');
+    }});
+    return;
+  }
+  if(descriptor.kind === 'video'){
+    const video = $(prefix + 'Video');
+    video.hidden = false;
+    video.src = url;
+    video.play().catch(()=>{});
+    return;
+  }
+  showPlaceholder(prefix, descriptor);
+}
+
+function resolveCompactInscription(prefix, num, slot, rerender){
+  const url = inscriptionContentUrl(num);
+  const descriptor = knownInscriptionDescriptor(num);
+  renderCompactInscription(prefix, num, descriptor, slot);
+  if(!descriptor){
+    probeInscriptionEndpoint(num, url, slot).then(()=>{
+      if(rerender()) renderCompactInscription(prefix, num, knownInscriptionDescriptor(num), slot);
+    });
+  }
+}
+
 // Load a referenced inscription into the circle canvas (or hide it and fall back to emoji).
 // Returns the element that should receive the action animation.
-let lastInsUrl = '';
 function setInscriptionCanvas(num){
-  const canvas = $('insCanvas'), frame = $('insFrame'), img = $('insImg'), totem = $('totem');
+  const canvas = $('insCanvas'), totem = $('totem');
   if(!num){
     canvas.hidden = true;
-    frame.src = 'about:blank';
-    img.hidden = true; clearImage(img);
+    clearCanvasMedia('ins');
     setSmallStatus('insStatus', '');
     totem.style.display = '';
-    lastInsUrl = '';
     return totem;
   }
   const url = inscriptionContentUrl(num);
   if(!url){
     canvas.hidden = true;
-    frame.src = 'about:blank';
-    img.hidden = true; clearImage(img);
+    clearCanvasMedia('ins');
     setSmallStatus('insStatus', '');
     totem.style.display = '';
-    lastInsUrl = '';
     return totem;
   }
-  if(isKnownUnsupportedInscription(num)){
-    canvas.hidden = true;
-    frame.src = 'about:blank';
-    img.hidden = true; clearImage(img);
-    setSmallStatus('insStatus', '');
-    totem.style.display = '';
-    lastInsUrl = '';
-    return totem;
-  }
-  probeInscriptionEndpoint(num, url, 'main');
   totem.style.display = 'none';
   canvas.hidden = false;
-  if(url !== lastInsUrl){
-    if(CONFIG.inscriptionUseIframe){
-      img.hidden = true; clearImage(img);
-      setSmallStatus('insStatus', '');
-      frame.hidden = false; frame.src = url;
-    } else {
-      frame.hidden = true; frame.src = 'about:blank';
-      img.hidden = false;
-      setSmallStatus('insStatus', 'Loading image #' + num);
-      setImageSourceWithDiagnostics(img, url, { slot:'main', tokenId:num, onload:()=>{
-        setSmallStatus('insStatus', '');
-      }, onerror:()=>{
-        markUnsupportedInscription(num, url, 'main');
-        canvas.hidden = true;
-        img.hidden = true;
-        clearImage(img);
-        setSmallStatus('insStatus', '');
-        totem.style.display = '';
-        lastInsUrl = '';
-      }});
-    }
-    lastInsUrl = url;
-  }
+  resolveCompactInscription('ins', num, 'main', ()=> currentInscription === String(num));
   return canvas;
 }
 
@@ -1289,8 +1390,7 @@ function updatePanel(opts){
   const insActive = sel.crownMode === 'inscription';
   const insRaw = insActive ? $('insIn').value : '';
   const insNorm = insActive ? normInscription(insRaw) : null;
-  const insBlocked = !!(insNorm && isKnownUnsupportedInscription(insNorm));
-  const insForMemo = insBlocked ? null : insNorm;
+  const insForMemo = insNorm;
 
   const { memo, warnings, bytes, tokens } = compile(message, sel.vibe, sel.action, sel.crown, insForMemo);
 
@@ -1306,35 +1406,12 @@ function updatePanel(opts){
   if(insForMemo){
     pvTotem.style.display = 'none';
     pvIns.hidden = false;
-    const url = inscriptionContentUrl(insForMemo);
-    if(CONFIG.inscriptionUseIframe){
-      $('pvInsImg').hidden = true; clearImage($('pvInsImg'));
-      setSmallStatus('pvInsStatus', '');
-      $('pvInsFrame').hidden = false;
-      if($('pvInsFrame').src !== url) $('pvInsFrame').src = url;
-    } else {
-      $('pvInsFrame').hidden = true; $('pvInsFrame').src = 'about:blank';
-      const pvImg = $('pvInsImg');
-      pvImg.hidden = false;
-      const started = setImageSourceWithDiagnostics(pvImg, url, { slot:'preview', tokenId:insForMemo, onload:()=>{
-        setSmallStatus('pvInsStatus', '');
-      }, onerror:()=>{
-        markUnsupportedInscription(insForMemo, url, 'preview');
-        pvIns.hidden = true;
-        pvImg.hidden = true;
-        clearImage(pvImg);
-        setSmallStatus('pvInsStatus', '');
-        pvTotem.style.display = '';
-        pvTotem.textContent = CROWNS[sel.crown];
-        replayAction(pvTotem, sel.action);
-      }});
-      if(started || !pvImg.complete) setSmallStatus('pvInsStatus', 'Loading #' + insForMemo);
-      else setSmallStatus('pvInsStatus', '');
-    }
+    resolveCompactInscription('pvIns', insForMemo, 'preview', ()=>{
+      return sel.crownMode === 'inscription' && normInscription($('insIn').value) === String(insForMemo);
+    });
   } else {
     pvIns.hidden = true;
-    $('pvInsFrame').hidden = true; $('pvInsFrame').src = 'about:blank';
-    $('pvInsImg').hidden = true; clearImage($('pvInsImg'));
+    clearCanvasMedia('pvIns');
     setSmallStatus('pvInsStatus', '');
     pvTotem.style.display = '';
     pvTotem.textContent = CROWNS[sel.crown];
@@ -1349,9 +1426,6 @@ function updatePanel(opts){
   if(insActive && insRaw.trim() && !insNorm){
     iw.hidden = false; iw.classList.add('bad');
     iw.textContent = 'That does not look like an inscription number. Use digits only, e.g. 159.';
-  } else if(insActive && insBlocked){
-    iw.hidden = false; iw.classList.add('bad');
-    iw.textContent = INSCRIPTION_UNSUPPORTED_COPY;
   } else { iw.hidden = true; iw.textContent=''; iw.classList.remove('bad'); }
 
   // memo + counter
@@ -1367,14 +1441,13 @@ function updatePanel(opts){
   for(const r of raws) rawWarn.push(r.display + ' is not in the dictionary. It can still be used, but it costs more memo bytes.');
   let msgs = [];
   if(over) msgs.push('This design is ' + bytes + ' / ' + CONFIG.memoMaxBytes + ' bytes. Remove a word, use dictionary words, or simplify the style.');
-  if(insBlocked) msgs.push(INSCRIPTION_UNSUPPORTED_COPY);
   msgs = msgs.concat(warnings, rawWarn);
-  if(msgs.length){ wb.hidden=false; wb.textContent = msgs.join('  '); wb.classList.toggle('bad', over || insBlocked); }
+  if(msgs.length){ wb.hidden=false; wb.textContent = msgs.join('  '); wb.classList.toggle('bad', over); }
   else { wb.hidden=true; wb.textContent=''; }
 
-  // copy memo disabled when over budget or the selected inscription is unsupported
-  $('copyMemo').disabled = over || insBlocked;
-  $('copyMemo').style.opacity = (over || insBlocked) ? '.5' : '1';
+  // copy memo disabled only when the compact on-chain memo exceeds its byte budget
+  $('copyMemo').disabled = over;
+  $('copyMemo').style.opacity = over ? '.5' : '1';
 
   // drive the full-screen viewer live while in Preview mode
   if(displayMode === 'preview') renderPreviewView(!!opts.fromChip);
@@ -1386,7 +1459,7 @@ function buildPreviewClaim(){
   const tokens = analyze(message);
   const msg = message.trim() ? compileDisplay(tokens) : DEFAULTS.message;
   const insNorm = (sel.crownMode === 'inscription') ? normInscription($('insIn').value) : null;
-  const inscription = insNorm && !isKnownUnsupportedInscription(insNorm) ? insNorm : null;
+  const inscription = insNorm || null;
   return { preview:true, state:{ message:msg, vibe:sel.vibe, action:sel.action, crown:sel.crown, inscription } };
 }
 
@@ -1452,41 +1525,94 @@ $('crownInsBtn').addEventListener('click', ()=> setCrownMode('inscription'));
 $('insIn').addEventListener('input', ()=>{ sel.inscription = $('insIn').value; updatePanel(); });
 
 // Inscription lightbox (enlarge)
-function openLightbox(num){
-  if(!num) return;
-  const url = inscriptionContentUrl(num);
-  if(!url) return;
-  $('lightbox').hidden = false;
-  if(isKnownUnsupportedInscription(num)){
-    $('lbFrame').hidden = true; $('lbFrame').src = 'about:blank';
-    const img = $('lbImg'); img.hidden = true; clearImage(img);
-    setSmallStatus('lbStatus', INSCRIPTION_UNSUPPORTED_COPY);
-  } else if(CONFIG.inscriptionUseIframe){
-    $('lbImg').hidden = true; clearImage($('lbImg'));
-    setSmallStatus('lbStatus', '');
-    $('lbFrame').hidden = false; $('lbFrame').src = url;
-  } else {
-    $('lbFrame').hidden = true; $('lbFrame').src = 'about:blank';
+let lightboxRenderId = 0;
+
+function clearLightboxMedia(){
+  const frame = $('lbFrame');
+  frame.hidden = true;
+  frame.src = 'about:blank';
+  frame.setAttribute('sandbox', 'allow-scripts');
+  const img = $('lbImg'); img.hidden = true; clearImage(img);
+  const video = $('lbVideo'); video.hidden = true; clearVideo(video);
+  const audio = $('lbAudio'); audio.hidden = true; clearVideo(audio);
+  $('lbText').hidden = true; $('lbText').textContent = '';
+  hidePlaceholder('lb');
+  setSmallStatus('lbStatus', '');
+}
+
+async function renderLightbox(num, url, descriptor, renderId){
+  if(renderId !== lightboxRenderId || $('lightbox').hidden) return;
+  clearLightboxMedia();
+  if(!descriptor){
+    showPlaceholder('lb', { kind:'binary' });
+    return;
+  }
+  if(descriptor.kind === 'image'){
     const img = $('lbImg'); img.hidden = false;
     setSmallStatus('lbStatus', 'Loading image #' + num);
     setImageSourceWithDiagnostics(img, url, { slot:'lightbox', tokenId:num, onload:()=>{
       setSmallStatus('lbStatus', '');
     }, onerror:()=>{
-      markUnsupportedInscription(num, url, 'lightbox');
-      img.hidden = true;
-      clearImage(img);
-      setSmallStatus('lbStatus', INSCRIPTION_UNSUPPORTED_COPY);
+      img.hidden = true; clearImage(img);
+      showPlaceholder('lb', { kind:'binary', large:descriptor.large });
+      setSmallStatus('lbStatus', '');
     }});
+    return;
   }
-  const ex = $('lbExplorer');
-  ex.hidden = false; ex.textContent = 'inscription #' + num;
-  ex.href = inscriptionContentUrl(num);
+  if(descriptor.kind === 'video'){
+    const video = $('lbVideo'); video.hidden = false; video.src = url;
+    return;
+  }
+  if(descriptor.kind === 'audio'){
+    const audio = $('lbAudio'); audio.hidden = false; audio.src = url;
+    return;
+  }
+  if(descriptor.kind === 'html' || descriptor.kind === 'pdf'){
+    const frame = $('lbFrame');
+    frame.hidden = false;
+    frame.setAttribute('sandbox', descriptor.kind === 'html' ? 'allow-scripts' : '');
+    frame.src = descriptor.kind === 'html' ? inscriptionRuntimeUrl(num) : url;
+    return;
+  }
+  if(descriptor.kind === 'text'){
+    setSmallStatus('lbStatus', 'Loading source #' + num);
+    try{
+      const res = await fetch(url, { mode:'cors' });
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      const text = await res.text();
+      if(renderId !== lightboxRenderId || $('lightbox').hidden) return;
+      $('lbText').textContent = text.slice(0, 200000);
+      $('lbText').hidden = false;
+      setSmallStatus('lbStatus', text.length > 200000 ? 'Showing first 200,000 characters' : '');
+    }catch{
+      showPlaceholder('lb', descriptor);
+      setSmallStatus('lbStatus', '');
+    }
+    return;
+  }
+  showPlaceholder('lb', descriptor);
+}
+
+async function openLightbox(num){
+  if(!num) return;
+  const url = inscriptionContentUrl(num);
+  if(!url) return;
+  const renderId = ++lightboxRenderId;
   lbWasFocus = document.activeElement;
+  $('lightbox').hidden = false;
+  clearLightboxMedia();
+  showPlaceholder('lb', null);
+  const ex = $('lbExplorer');
+  ex.hidden = false; ex.textContent = 'open raw inscription #' + num + ' ↗';
+  ex.href = url;
   setTimeout(()=>$('lbClose').focus(), 40);
+  const descriptor = knownInscriptionDescriptor(num) || await probeInscriptionEndpoint(num, url, 'lightbox');
+  await renderLightbox(num, url, descriptor, renderId);
 }
 function closeLightbox(){
+  lightboxRenderId++;
   $('lightbox').hidden = true;
-  $('lbFrame').src = 'about:blank'; clearImage($('lbImg')); setSmallStatus('lbStatus', '');
+  clearLightboxMedia();
   if(lbWasFocus && lbWasFocus.focus) lbWasFocus.focus();
 }
 let lbWasFocus = null;
