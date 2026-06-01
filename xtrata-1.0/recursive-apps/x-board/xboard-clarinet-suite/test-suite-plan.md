@@ -145,13 +145,15 @@ contract STX balance >= total-locked + protocol-fees
 
 after every successful claim, outbid, release and fee withdrawal.
 
-## Important bug this suite is intended to expose
+## Release refund regression
 
-The current contract draft should be checked carefully around `release-tile`.
+The contract now captures the releasing owner before entering `as-contract`.
+Keep an explicit wallet-balance assertion for this path when the asset-map
+checks are added.
 
 In Clarity, inside `as-contract`, `tx-sender` becomes the contract principal. If a release refund uses `tx-sender` as both sender and recipient inside `as-contract`, it may send from the contract back to itself rather than to the original caller.
 
-Recommended implementation pattern:
+Required implementation pattern:
 
 ```clarity
 (let ((caller tx-sender))

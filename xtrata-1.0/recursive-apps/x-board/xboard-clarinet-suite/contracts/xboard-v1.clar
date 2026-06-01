@@ -26,6 +26,8 @@
 (define-constant MAX-PROGRAM-LEN u96)
 (define-constant PROGRAM-PREFIX-LEN u9)    ;; B1 + 2-char slot + mode + font + size + position + colour
 (define-constant MAX-INSCRIPTION-DIGITS u12)
+(define-constant WIRE-ALPHABET "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
+(define-constant WIRE-BASE u62)
 
 ;; -----------------------------------------------------------------------------
 ;; State
@@ -90,101 +92,18 @@
 
 ;; Base62 two-character wire code for tile ids u0..u92.
 ;; UI public ids such as C01, M12 and S80 stay off-chain.
+(define-private (wire-char (index uint))
+  (unwrap-panic (slice? WIRE-ALPHABET index (+ index u1)))
+)
+
 (define-private (wire-code-for-tile (tile-id uint))
-  (if (is-eq tile-id u0) "00"
-  (if (is-eq tile-id u1) "01"
-  (if (is-eq tile-id u2) "02"
-  (if (is-eq tile-id u3) "03"
-  (if (is-eq tile-id u4) "04"
-  (if (is-eq tile-id u5) "05"
-  (if (is-eq tile-id u6) "06"
-  (if (is-eq tile-id u7) "07"
-  (if (is-eq tile-id u8) "08"
-  (if (is-eq tile-id u9) "09"
-  (if (is-eq tile-id u10) "0A"
-  (if (is-eq tile-id u11) "0B"
-  (if (is-eq tile-id u12) "0C"
-  (if (is-eq tile-id u13) "0D"
-  (if (is-eq tile-id u14) "0E"
-  (if (is-eq tile-id u15) "0F"
-  (if (is-eq tile-id u16) "0G"
-  (if (is-eq tile-id u17) "0H"
-  (if (is-eq tile-id u18) "0I"
-  (if (is-eq tile-id u19) "0J"
-  (if (is-eq tile-id u20) "0K"
-  (if (is-eq tile-id u21) "0L"
-  (if (is-eq tile-id u22) "0M"
-  (if (is-eq tile-id u23) "0N"
-  (if (is-eq tile-id u24) "0O"
-  (if (is-eq tile-id u25) "0P"
-  (if (is-eq tile-id u26) "0Q"
-  (if (is-eq tile-id u27) "0R"
-  (if (is-eq tile-id u28) "0S"
-  (if (is-eq tile-id u29) "0T"
-  (if (is-eq tile-id u30) "0U"
-  (if (is-eq tile-id u31) "0V"
-  (if (is-eq tile-id u32) "0W"
-  (if (is-eq tile-id u33) "0X"
-  (if (is-eq tile-id u34) "0Y"
-  (if (is-eq tile-id u35) "0Z"
-  (if (is-eq tile-id u36) "0a"
-  (if (is-eq tile-id u37) "0b"
-  (if (is-eq tile-id u38) "0c"
-  (if (is-eq tile-id u39) "0d"
-  (if (is-eq tile-id u40) "0e"
-  (if (is-eq tile-id u41) "0f"
-  (if (is-eq tile-id u42) "0g"
-  (if (is-eq tile-id u43) "0h"
-  (if (is-eq tile-id u44) "0i"
-  (if (is-eq tile-id u45) "0j"
-  (if (is-eq tile-id u46) "0k"
-  (if (is-eq tile-id u47) "0l"
-  (if (is-eq tile-id u48) "0m"
-  (if (is-eq tile-id u49) "0n"
-  (if (is-eq tile-id u50) "0o"
-  (if (is-eq tile-id u51) "0p"
-  (if (is-eq tile-id u52) "0q"
-  (if (is-eq tile-id u53) "0r"
-  (if (is-eq tile-id u54) "0s"
-  (if (is-eq tile-id u55) "0t"
-  (if (is-eq tile-id u56) "0u"
-  (if (is-eq tile-id u57) "0v"
-  (if (is-eq tile-id u58) "0w"
-  (if (is-eq tile-id u59) "0x"
-  (if (is-eq tile-id u60) "0y"
-  (if (is-eq tile-id u61) "0z"
-  (if (is-eq tile-id u62) "10"
-  (if (is-eq tile-id u63) "11"
-  (if (is-eq tile-id u64) "12"
-  (if (is-eq tile-id u65) "13"
-  (if (is-eq tile-id u66) "14"
-  (if (is-eq tile-id u67) "15"
-  (if (is-eq tile-id u68) "16"
-  (if (is-eq tile-id u69) "17"
-  (if (is-eq tile-id u70) "18"
-  (if (is-eq tile-id u71) "19"
-  (if (is-eq tile-id u72) "1A"
-  (if (is-eq tile-id u73) "1B"
-  (if (is-eq tile-id u74) "1C"
-  (if (is-eq tile-id u75) "1D"
-  (if (is-eq tile-id u76) "1E"
-  (if (is-eq tile-id u77) "1F"
-  (if (is-eq tile-id u78) "1G"
-  (if (is-eq tile-id u79) "1H"
-  (if (is-eq tile-id u80) "1I"
-  (if (is-eq tile-id u81) "1J"
-  (if (is-eq tile-id u82) "1K"
-  (if (is-eq tile-id u83) "1L"
-  (if (is-eq tile-id u84) "1M"
-  (if (is-eq tile-id u85) "1N"
-  (if (is-eq tile-id u86) "1O"
-  (if (is-eq tile-id u87) "1P"
-  (if (is-eq tile-id u88) "1Q"
-  (if (is-eq tile-id u89) "1R"
-  (if (is-eq tile-id u90) "1S"
-  (if (is-eq tile-id u91) "1T"
-  (if (is-eq tile-id u92) "1U"
-    "??")))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+  (if (is-valid-tile tile-id)
+    (concat
+      (wire-char (/ tile-id WIRE-BASE))
+      (wire-char (mod tile-id WIRE-BASE))
+    )
+    "??"
+  )
 )
 
 (define-private (clear-program (tile-id uint))
@@ -450,6 +369,7 @@
 (define-public (release-tile (tile-id uint))
   (let
     (
+      (caller tx-sender)
       (tile (get-tile-or-empty tile-id))
       (locked (get locked tile))
     )
@@ -459,7 +379,7 @@
     (asserts! (> locked u0) ERR-INVALID-AMOUNT)
 
     ;; Return only the locked balance. The original 1% entry fee is not refunded.
-    (try! (as-contract (stx-transfer? locked tx-sender tx-sender)))
+    (try! (as-contract (stx-transfer? locked tx-sender caller)))
 
     (var-set total-locked (- (var-get total-locked) locked))
 
@@ -478,7 +398,7 @@
     (print {
       event: "release",
       tile-id: tile-id,
-      owner: tx-sender,
+      owner: caller,
       refunded: locked,
       program: (clear-program tile-id),
       block-height: block-height
