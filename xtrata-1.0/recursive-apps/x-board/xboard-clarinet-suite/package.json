@@ -1,0 +1,17 @@
+{
+  "name": "xboard-v1-clarinet-suite",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "clarinet check",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@hirosystems/clarinet-sdk": "latest",
+    "@stacks/transactions": "latest",
+    "typescript": "latest",
+    "vitest": "latest"
+  }
+}

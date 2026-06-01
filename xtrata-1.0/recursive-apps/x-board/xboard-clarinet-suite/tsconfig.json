@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "types": ["vitest/globals", "@hirosystems/clarinet-sdk/vitest"],
+    "skipLibCheck": true
+  },
+  "include": ["tests/**/*.ts"]
+}
