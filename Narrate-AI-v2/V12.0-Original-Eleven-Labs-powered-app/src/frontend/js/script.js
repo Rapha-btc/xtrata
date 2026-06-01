@@ -357,6 +357,66 @@ const TextParser = {
         });
     },
 
+    looksLikeCharacterNameLabel: function(text = '') {
+        const clean = String(text || '').trim();
+        if (!clean || clean.length > 60) return false;
+        if (/^["'“”‘’]/u.test(clean)) return false;
+
+        const label = clean.replace(/[.:\s]+$/g, '').trim();
+        if (!label || /[.!?;:]/u.test(label)) return false;
+
+        const allowedLowerWords = new Set(['da', 'de', 'del', 'di', 'du', 'la', 'le', 'van', 'von']);
+        const words = label.split(/\s+/).filter(Boolean);
+        if (!words.length || words.length > 4) return false;
+
+        return words.every(word => {
+            const normalized = TextParser.normalizeVoiceText(word);
+            if (allowedLowerWords.has(normalized)) return true;
+            return /^[\p{Lu}\p{Lt}][\p{L}'’.-]*$/u.test(word);
+        });
+    },
+
+    getVoiceSwitchRegex: function(delim = '* * *', flags = 'g') {
+        const token = String(delim || '').trim() || '* * *';
+        if (token.replace(/\s+/g, '') === '***') return new RegExp('\\*\\s*\\*\\s*\\*', flags);
+        return new RegExp(TextParser.escapeRegex(token), flags);
+    },
+
+    extractVoiceCueFromChapterHeading: function(heading = '') {
+        const clean = String(heading || '').replace(/^[#\s]+/, '').trim();
+        const match = clean.match(/^[^:|–—]+[:|–—]\s*(.+)$/u);
+        if (!match) return '';
+        const cue = TextParser.stripTrailingPunctuation(match[1]);
+        return TextParser.looksLikeCharacterNameLabel(cue) ? cue : '';
+    },
+
+    collectDetectedDualVoiceCueNames: function(manuscript = '', delim = '* * *') {
+        const parts = String(manuscript || '').split(TextParser.getChapterHeadingRegex()).filter(p => p.trim());
+        const names = [];
+        let foundChapter = false;
+        const add = (cue) => {
+            const normalized = TextParser.normalizeVoiceText(cue);
+            if (!normalized || names.some(name => TextParser.normalizeVoiceText(name) === normalized)) return;
+            names.push(cue);
+        };
+
+        parts.forEach(part => {
+            const trimmed = String(part || '').trim();
+            if (!trimmed) return;
+            if (trimmed.match(TextParser.getChapterHeadingRegex())) {
+                foundChapter = true;
+                add(TextParser.extractVoiceCueFromChapterHeading(trimmed));
+                return;
+            }
+            if (!foundChapter) return;
+            trimmed.split(TextParser.getVoiceSwitchRegex(delim)).forEach(section => {
+                add(TextParser.extractStandaloneVoiceCueLabel(section));
+            });
+        });
+
+        return names;
+    },
+
     matchesVoiceLabel: function(text = '', candidate, options = {}) {
         const norm = TextParser.normalizeVoiceText(text);
         if (!norm) return false;
@@ -503,7 +563,7 @@ const TextParser = {
             if (!normalized) continue;
             if (headingStart.test(normalized)) continue;
             if (line.length > 60) return '';
-            if (!TextParser.looksLikeCompactLabel(line)) return '';
+            if (!TextParser.looksLikeCharacterNameLabel(line)) return '';
             return line.replace(/[.:\-–—\s]+$/g, '').trim();
         }
         return '';
@@ -512,12 +572,11 @@ const TextParser = {
     parseDualVoiceSegments: function(text, delim = '* * *', initVoiceIndex = 0, voiceNames = []) {
         const segs = [];
         const token = delim.trim() || '* * *';
-        const escToken = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const aliasMap = TextParser.getVoiceAliases(voiceNames);
         const candidates = TextParser.getVoiceCandidates(voiceNames).filter(c => c.name);
         
         // Split by token
-        const parts = text.split(new RegExp(escToken, 'g'));
+        const parts = text.split(TextParser.getVoiceSwitchRegex(token));
         
         let currentVoice = initVoiceIndex % 2; // 0 or 1
         
@@ -959,7 +1018,33 @@ async function playChapter(idx,e){
     }
 }
 function haltGeneration(){STATE.halt=true;LOG.add("Stopping...",'warning');document.getElementById('btn-halt').innerText="Stopping..."}
-function openSafetyModal(){document.getElementById('safety-modal').classList.add('show')}
+function getGenerationDisplayTitle(){
+    const titleInput=document.getElementById('project-title-input');
+    return (titleInput&&titleInput.value.trim())||STATE.projectMeta.displayTitle||STATE.projectMeta.title||'Untitled';
+}
+function getGenerationChapterLabel(){
+    const hasTitles=STATE.chapters.length>0&&STATE.chapters[0].title==="Titles";
+    const actualChapterCount=hasTitles?STATE.chapters.length-1:STATE.chapters.length;
+    return hasTitles?`${actualChapterCount} (+Titles)`:`${actualChapterCount}`;
+}
+function getGenerationVoiceAssignments(){
+    const slotCount=STATE.project.mode==='dual'?2:1;
+    const assignments=[];
+    for(let index=0;index<slotCount;index++){
+        const characterName=(STATE.project.voiceNames[index]||'').trim()||`Voice ${index+1}`;
+        const selectedVoice=STATE.voices.find(voice=>voice.id===STATE.project.voiceIds[index]);
+        assignments.push(`${characterName}: ${selectedVoice?selectedVoice.name:'Not selected'}`);
+    }
+    return assignments;
+}
+function openSafetyModal(){
+    document.getElementById('confirm-book-title').innerText=getGenerationDisplayTitle();
+    document.getElementById('confirm-model').innerText=dom.elModel.options[dom.elModel.selectedIndex]?.text||dom.elModel.value||'-';
+    document.getElementById('confirm-chapters').innerText=getGenerationChapterLabel();
+    document.getElementById('confirm-language').innerText=STATE.projectMeta.language||'Unknown';
+    document.getElementById('confirm-voices').innerText=getGenerationVoiceAssignments().join('\n');
+    document.getElementById('safety-modal').classList.add('show');
+}
 function closeSafetyModal(){document.getElementById('safety-modal').classList.remove('show')}
 
 async function checkProjectCache(){
@@ -1282,16 +1367,7 @@ document.getElementById('btn-analyze').addEventListener('click', () => {
 
     const detectedDualCueNames = [];
     if (isDual) {
-        parts.forEach(part => {
-            const trimmed = String(part || '').trim();
-            if (!trimmed || trimmed.match(chapterRegex)) return;
-            const cue = TextParser.extractStandaloneVoiceCueLabel(trimmed);
-            if (!cue) return;
-            const cueNorm = TextParser.normalizeVoiceText(cue);
-            if (cueNorm && !detectedDualCueNames.some(name => TextParser.normalizeVoiceText(name) === cueNorm)) {
-                detectedDualCueNames.push(cue);
-            }
-        });
+        detectedDualCueNames.push(...TextParser.collectDetectedDualVoiceCueNames(raw, STATE.project.token));
 
         if (detectedDualCueNames.length >= 2) {
             const voice1Norm = TextParser.normalizeVoiceText(dom.voiceName1.value);
