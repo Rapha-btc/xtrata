@@ -3,8 +3,8 @@
 [`../x-board.html`](../x-board.html) is the only browser application file.
 
 X-Board is a square public billboard with `93` independently programmable
-regions. The browser prototype and Clarity registry now share one canonical
-styled `B1` programme schema.
+regions. The standalone browser and Clarity registry share one canonical styled
+`B1` programme schema and the browser packages wallet contract calls directly.
 
 | File | Purpose |
 |---|---|

@@ -3,8 +3,8 @@
 ## Boundary
 
 [`../x-board.html`](../x-board.html) is the only browser application file. It
-contains HTML, CSS, and JavaScript with no build step, framework, or wallet
-connector.
+contains HTML, CSS, and JavaScript with no build step or framework. Its small
+wallet adapter talks directly to injected Stacks wallet providers.
 
 ## Canvas
 
@@ -24,10 +24,14 @@ Slot order is center, medium row-major, then small row-major. Do not reorder it.
 |---|---|
 | `buildSlotMap()` | Deterministic topology and identities |
 | `compileBoardMemo()` | Draft to canonical styled `B1` programme |
+| `decodeBoardProgram()` | Strict contract-programme decoder |
 | `decodeBoardMemo()` | Strict transfer-memo decoder |
 | `applyTextStyle()` | Shared board and preview text rendering |
+| `fetchContractStates()` | Authoritative bounded Clarity page reads |
 | `fetchCandidates()` | Bounded Hiro transaction fetch |
-| `resolveBoard()` | Newest valid transfer programme per wire code |
+| `resolveBoard()` | Read-only legacy transfer fallback |
+| `submitProgramme()` | Package claim or owner update wallet call |
+| `releaseSelectedTile()` | Package owner release wallet call |
 | `updateComposer()` | Full-square local preview and byte counter |
 | `resolveDescriptor()` | Cached MIME probe for inscriptions |
 | `protocolSelfTest()` | Layout and decoder smoke checks |
@@ -40,9 +44,9 @@ The browser compiler and Clarity validator share:
 B1<slot><mode><font><size><position><colour><payload>
 ```
 
-The standalone transfer scanner caps programmes at `34` bytes. The Clarity
-contract accepts up to `96` ASCII characters for future wallet calls. Text
-entered through the composer must be printable ASCII.
+Wallet calls carry up to `96` ASCII characters. The retained legacy scanner
+caps transfer memos at `34` bytes. Text entered through the composer must be
+printable ASCII.
 
 Clear mode emits canonical `X0000`. Keep compiler, decoder, contract, tests, and
 documentation synchronized when changing this schema.
@@ -73,9 +77,17 @@ from `CONFIG`.
 - Use the lightbox for audio, HTML, PDF, text, and unsupported files.
 - Keep interactive HTML sandboxed.
 
-## Contract Migration
+## Wallet And Contract Boundary
 
-The standalone transfer scanner is prototype transport. The next implementation
-should load authoritative state via bounded `get-tile-page` calls and submit
-wallet transactions to the Clarity registry. Preserve the slot map and preview
-path during that migration.
+- Configure the deployed registry through `CONFIG.boardContractAddress` and
+  `CONFIG.boardContractName`.
+- Accept transaction authority only after all bounded `get-tile-page` responses
+  have exact lengths, ordered IDs, and parseable valid-tile records.
+- Infer network from wallet address prefixes and reject non-mainnet sessions.
+- Persist only address, network, and provider label in `localStorage`.
+- Serialize only the Clarity uint, ASCII, and STX post-condition forms X-Board
+  needs.
+- Use deny-mode wallet requests. Claims cap wallet spend and bounded registry
+  refunds; releases cap the registry refund; updates allow no STX transfer.
+- When contract reads fail, display the legacy transfer view but block wallet
+  submission until ownership can be verified.

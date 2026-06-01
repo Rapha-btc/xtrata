@@ -135,6 +135,7 @@ describe("xboard-v1 programme validation", () => {
     expect(ro("is-valid-program", [Cl.uint(0), program("B100T1924HELLO")])).toBeOk(Cl.bool(false));
     expect(ro("is-valid-program", [Cl.uint(0), program("B100T1394HELLO")])).toBeOk(Cl.bool(false));
     expect(ro("is-valid-program", [Cl.uint(0), program("B100T132AHELLO")])).toBeOk(Cl.bool(false));
+    expect(ro("is-valid-program", [Cl.uint(0), program("B100X1324")])).toBeOk(Cl.bool(false));
   });
 
   it("rejects invalid payloads", () => {

@@ -2,10 +2,9 @@
 
 ## Purpose
 
-The standalone X-Board prototype reads normal Stacks transfers sent to its
-configured address. Each valid transfer memo contains one visual programme for
-exactly one square. The Clarity registry stores the same `B1` schema during
-contract calls.
+X-Board sends one visual programme for exactly one square as an argument to its
+Clarity registry. A retained read-only fallback can also decode older normal
+Stacks transfer memos with the same schema.
 
 ## Format
 
@@ -24,9 +23,9 @@ B1<slot><mode><font><size><position><colour><payload>
 | `<colour>` | `1` | Colour palette code `0..9` |
 | `<payload>` | variable | Printable ASCII text or decimal token ID |
 
-The fixed header is `9` characters. The transfer-memo prototype caps the whole
-programme at `34` bytes, leaving up to `25` ASCII text characters. The Clarity
-contract stores `(string-ascii 96)` programmes for future wallet calls.
+The fixed header is `9` characters. Wallet contract calls store
+`(string-ascii 96)` programmes. The legacy transfer scanner accepts only the
+first `34` bytes supported by a Stacks transfer memo.
 
 ## Examples
 
@@ -40,8 +39,7 @@ B11UX0000
 - `B10CI0004159`: render inscription `#159` in `M12`, wire code `0C`.
 - `B11UX0000`: clear `S80`, wire code `1U`.
 
-The compiler emits clear programmes in canonical `X0000` form. The contract
-accepts valid style digits on clear programmes but ignores their visual meaning.
+The compiler and contract require clear programmes in canonical `X0000` form.
 
 ## Slot Codes
 
@@ -62,16 +60,14 @@ wire code embedded in the programme must match that numeric index.
 
 ## Validation
 
-A standalone transfer memo is rendered only when:
+A contract programme is rendered only when:
 
-1. It is no more than `34` bytes.
+1. It is no more than `96` printable ASCII characters.
 2. Its namespace is exactly `B1`.
 3. Its wire code maps to a known square.
 4. Its mode and all four style codes are valid.
 5. Text mode has non-empty printable ASCII payload.
 6. Inscription mode has a decimal token ID of at most `12` digits.
 7. Clear mode has no payload.
-8. The transfer recipient and minimum amount match `CONFIG`.
-
-The Clarity contract enforces the same header, style, tile-match, mode, and
-payload structure while allowing up to `96` ASCII characters.
+The retained transfer fallback also requires a maximum of `34` bytes and a
+recipient and minimum amount matching `CONFIG`.

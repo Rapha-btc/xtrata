@@ -2,10 +2,10 @@
 
 ## Purpose
 
-The standalone [`../x-board.html`](../x-board.html) prototype reconstructs
-visible state from normal Stacks transfer memos. The contract-powered version
-uses wallet contract calls so ownership, pricing, locked balances, and current
-programmes become explicit on-chain state.
+The standalone [`../x-board.html`](../x-board.html) client loads contract state
+and packages wallet calls so ownership, pricing, locked balances, and current
+programmes are explicit on-chain state. Legacy transfer memos remain a
+read-only fallback while a configured registry is unavailable.
 
 ## Locked V1 Decisions
 
@@ -70,22 +70,22 @@ page so clients can request a stable batch size without unbounded reads.
 - Pause cannot prevent an owner from releasing locked funds.
 - Claim, programme, release, withdrawal, and pause changes print structured
   events.
+- Clear programmes use canonical `X0000` style fields.
 
 The runnable suite verifies these properties, including a test-only forwarding
 contract that proves nested calls are rejected.
 
-## Frontend Migration
+## Frontend Client
 
-The browser compiler already emits the contract schema. Wallet integration
-should:
+The browser compiler emits the contract schema and:
 
-1. infer and persist the active Stacks network;
-2. fetch board state through bounded `get-tile-page` reads;
-3. call `claim-tile`, `program-tile`, and `release-tile`;
-4. attach STX post-conditions to claims;
-5. show wallet responses and pending state clearly;
-6. retain the full-square preview before submission;
-7. use print events for refresh cues and history, not as current-state authority.
+1. persists a mainnet-only wallet session inferred from the wallet address;
+2. fetches board state through bounded `get-tile-page` reads;
+3. packages `claim-tile`, `program-tile`, and `release-tile` wallet calls;
+4. uses deny-mode STX caps for claims, takeover refunds, and releases;
+5. logs wallet responses clearly;
+6. retains the full-square preview before submission;
+7. treats legacy transfers as a blocked, read-only fallback.
 
 ## Release Gate
 

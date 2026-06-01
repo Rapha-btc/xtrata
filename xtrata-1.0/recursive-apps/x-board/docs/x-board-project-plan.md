@@ -42,8 +42,11 @@ Standalone browser:
 - text, inscription, and clear modes;
 - font, size, position, and colour composer controls;
 - full-square local preview;
-- compact transfer-memo compiler and strict decoder;
-- bounded Hiro transaction reads, pending markers, and per-square resolution;
+- canonical contract-programme compiler and strict decoder;
+- persistent mainnet wallet session and injected-provider adapter;
+- bounded Clarity `get-tile-page` reads as render authority;
+- packaged claim, update, and release wallet calls with deny-mode STX caps;
+- read-only legacy transfer fallback when the registry is unavailable;
 - cached inscription MIME probing and lightbox;
 - protocol self-test.
 
@@ -57,16 +60,13 @@ Clarity registry:
 - structured print events;
 - runnable modern Clarinet scaffold and hardened tests.
 
-## Next Phase: Wallet Integration
+## Next Phase: Testnet Integration
 
-1. Add persistent network-aware Stacks wallet connection.
-2. Configure testnet contract identifier.
-3. Replace render authority with bounded `get-tile-page` reads.
-4. Submit `claim-tile`, `program-tile`, and `release-tile` wallet calls.
-5. Add STX post-conditions to claims.
-6. Expose owner, gross bid, locked value, required next bid, and wallet logs.
-7. Retain the full-square preview and inscription descriptor cache.
-8. Run multi-wallet takeover tests on testnet.
+1. Deploy the registry and configure its testnet identifier.
+2. Run real Leather and Xverse claim, outbid, update, and release sessions.
+3. Verify deny-mode caps for bidder spend, takeover refunds, and releases.
+4. Exercise rejection, missing-provider, stale-session, and RPC-failure paths.
+5. Verify mobile layout under real RPC latency.
 
 ## Mainnet Gate
 

@@ -10,7 +10,7 @@ clarinet check --use-computed-deployment-plan
 npm test
 ```
 
-Current verification result: `15` Vitest cases pass.
+Current verification result: `17` Vitest cases pass.
 
 ## Files
 
@@ -19,6 +19,7 @@ Current verification result: `15` Vitest cases pass.
 | `contracts/xboard-v1.clar` | Registry contract |
 | `contracts/xboard-v1-proxy.clar` | Test-only forwarding contract for nested-call rejection |
 | `tests/xboard-v1.test.ts` | Clarinet SDK tests |
+| `tests/x-board-html.test.ts` | Standalone HTML serializer and snapshot-guard tests |
 | `Clarinet.toml` | Contract manifest and analyzer settings |
 | `settings/` | Network scaffold |
 | `deployments/default.simnet-plan.yaml` | Generated simnet deployment plan |
@@ -28,6 +29,7 @@ Current verification result: `15` Vitest cases pass.
 
 - `93` tiles: `u0..u92`.
 - Styled `(string-ascii 96)` `B1` programmes.
+- Canonical `X0000` clear programmes.
 - `1 STX` minimum initial bid.
 - `1%` protocol fee.
 - Rounded-up `1%` minimum outbid.

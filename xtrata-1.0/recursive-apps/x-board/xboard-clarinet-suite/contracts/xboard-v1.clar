@@ -248,6 +248,13 @@
   )
 )
 
+(define-private (has-canonical-clear-style (program (string-ascii 96)))
+  (if (is-eq (slice? program u4 u5) (some "X"))
+    (is-eq (slice? program u5 u9) (some "0000"))
+    true
+  )
+)
+
 (define-private (is-valid-program-internal (tile-id uint) (program (string-ascii 96)))
   (and
     (is-valid-tile tile-id)
@@ -259,6 +266,7 @@
     (valid-size? program)
     (valid-position? program)
     (valid-colour? program)
+    (has-canonical-clear-style program)
     (has-valid-payload program)
   )
 )

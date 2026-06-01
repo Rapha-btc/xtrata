@@ -6,7 +6,7 @@
 <title>Xtrata X-Board</title>
 <!--
   XTRATA X-BOARD
-  Standalone programmable billboard inscription. No build tools or wallet connection.
+  Standalone programmable billboard inscription. No build tools.
 
   B1 PROGRAMME FORMAT
     B1 <slot> <mode> <font> <size> <position> <colour> <payload>
@@ -82,7 +82,10 @@
   .badge{border:1px solid var(--line);background:rgba(255,255,255,.04);border-radius:999px;padding:6px 9px}
   .btn{border:1px solid var(--line);background:rgba(255,255,255,.06);border-radius:11px;padding:10px 13px;font-weight:750}
   .btn.primary{background:linear-gradient(180deg,rgba(85,230,213,.22),rgba(109,136,255,.12));border-color:rgba(85,230,213,.5)}
-  .btn.small{padding:7px 10px;font-size:12px}.link{color:var(--accent);text-decoration:none}.link:hover{text-decoration:underline}
+  .btn.small{padding:7px 10px;font-size:12px}.btn[disabled]{cursor:not-allowed;opacity:.5}.link{color:var(--accent);text-decoration:none}.link:hover{text-decoration:underline}
+  .wallet-pill{max-width:178px;padding:9px 12px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.05);
+    color:var(--muted);font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .wallet-pill.connected{color:var(--fg);border-color:rgba(85,230,213,.55);background:rgba(85,230,213,.1)}
   .backdrop{position:fixed;inset:0;z-index:30;background:rgba(2,4,8,.66);backdrop-filter:blur(4px);opacity:0;visibility:hidden;transition:.22s}
   .backdrop.show{opacity:1;visibility:visible}
   .drawer{position:fixed;z-index:40;top:0;right:0;width:min(450px,94vw);height:100dvh;display:flex;flex-direction:column;background:rgba(16,23,34,.98);border-left:1px solid var(--line);
@@ -104,12 +107,15 @@
   .warn{border:1px solid rgba(255,209,107,.36);background:rgba(255,209,107,.09);color:#ffe09c;border-radius:10px;padding:9px 10px;font-size:12px;line-height:1.45}.warn.bad{border-color:rgba(255,139,127,.42);background:rgba(255,139,127,.1);color:#ffc0ba}
   .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.help{margin:0;color:#aebbd0;font-size:12px;line-height:1.55}
   .live-card{border:1px solid var(--line);border-radius:11px;background:rgba(255,255,255,.035);padding:10px;font-size:12px;line-height:1.55;color:#b8c5d7}
+  .txlog{min-height:72px;max-height:150px;overflow:auto;margin:0;white-space:pre-wrap;word-break:break-word;background:#05070c;border:1px solid var(--line);
+    border-radius:11px;padding:10px 11px;color:#aebbd0;font:11px/1.5 ui-monospace,"SF Mono",Menlo,Consolas,monospace}
   .info-text{font-size:14px;line-height:1.65;color:#c6d1df}.dev{font-size:12px;white-space:pre-wrap;word-break:break-word;color:#b7c8d9;background:#05070c;border:1px solid var(--line);border-radius:10px;padding:9px}
   .lightbox{position:fixed;inset:0;z-index:60;background:rgba(1,3,6,.92);backdrop-filter:blur(7px);display:grid;place-items:center;padding:56px 16px 20px}
   .lightbox-stage{width:min(84vmin,780px);height:min(84vmin,780px);position:relative;overflow:hidden;border:1px solid var(--line);border-radius:14px;background:#05070c}
   .lbmedia{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;object-fit:contain;background:#05070c}.lbtext{position:absolute;inset:0;overflow:auto;margin:0;padding:15px;color:#dfe9f7;white-space:pre-wrap;word-break:break-word;font:12px/1.5 ui-monospace,monospace}
   .lbclose{position:absolute;top:calc(12px + var(--safe-t));right:14px;z-index:2}.lblink{position:absolute;bottom:calc(12px + var(--safe-b));left:50%;transform:translateX(-50%);z-index:2}
   @media(max-width:640px){
+    .wallet-pill{max-width:132px}
     .topbar{padding-top:12px}.hero h1{font-size:28px}.hero p{font-size:10px}.stage{padding:5px 7px 10px}.board-wrap{width:min(96vw,82vh)}
     .board{gap:1px;padding:1px;border-radius:10px}.slot{border-radius:2px}.slot[data-tier="small"] .slot-id{display:none}
     .drawer{top:auto;bottom:0;width:100%;height:auto;max-height:92dvh;transform:translateY(102%);border-left:0;border-top:1px solid var(--line);border-radius:17px 17px 0 0}.drawer.open{transform:translateY(0)}
@@ -123,6 +129,7 @@
   <header class="topbar">
     <div class="brand"><span class="dot"></span><span><b>XTRATA</b> / X-BOARD</span></div>
     <div class="top-actions">
+      <button class="wallet-pill" id="walletBtn">Connect wallet</button>
       <button class="iconbtn" id="refreshBtn" aria-label="Refresh board" title="Refresh board">R</button>
       <button class="iconbtn" id="infoBtn" aria-label="About X-Board" title="About X-Board">i</button>
     </div>
@@ -151,7 +158,7 @@
     <button class="iconbtn" id="programClose" aria-label="Close">x</button>
   </div>
   <div class="drawer-body">
-    <p class="help">The generated memo includes this square's fixed code. A valid transfer changes this square only.</p>
+    <p class="help">The generated programme includes this square's fixed code. The page packages the correct contract call for your wallet.</p>
     <div class="target">
       <span class="badge">Square <b id="targetId">C01</b></span>
       <span class="badge">Wire code <b class="mono" id="targetCode">00</b></span>
@@ -228,19 +235,34 @@
     </div>
     <div class="preview" id="preview"></div>
     <div class="field">
-      <label>Generated memo</label>
+      <label>Generated programme</label>
       <div class="memo-box">
         <div class="memo mono" id="memoOut">B100T1324</div>
-        <div class="counter" id="counter"><span id="byteCount">9 / 34 bytes</span><span>Target <b id="memoTarget">C01 / 00</b></span></div>
+        <div class="counter" id="counter"><span id="byteCount">9 / 96 characters</span><span>Target <b id="memoTarget">C01 / 00</b></span></div>
       </div>
     </div>
-    <div class="warn" id="warnBox">Write a message to create a valid memo.</div>
-    <div class="row">
-      <button class="btn primary" id="copyMemoBtn">Copy memo</button>
-      <button class="btn" id="copyAddrBtn">Copy address</button>
+    <div class="warn" id="warnBox">Write a message to create a valid programme.</div>
+    <div class="field">
+      <label>Contract action</label>
+      <div class="live-card" id="actionCard">Connect a wallet to prepare the contract transaction.</div>
     </div>
-    <button class="btn primary" id="sentBtn">I sent it / refresh live board</button>
-    <p class="help">In your Stacks wallet, send a tiny STX transfer to the copied address and paste the memo into the memo or note field.</p>
+    <div class="field" id="bidField">
+      <label for="bidIn">Claim bid / STX</label>
+      <input id="bidIn" inputmode="decimal" value="1.000000" autocomplete="off" spellcheck="false" />
+      <p class="help">A claim sends this bid to the contract. The contract retains its 1% protocol fee and locks the balance until the square is released or outbid.</p>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="submitBtn">Send contract transaction</button>
+      <button class="btn" id="releaseBtn" hidden>Release square</button>
+    </div>
+    <div class="row">
+      <button class="btn small" id="copyMemoBtn">Copy programme</button>
+      <button class="btn small" id="disconnectBtn" hidden>Disconnect wallet</button>
+    </div>
+    <div class="field">
+      <label>Wallet log</label>
+      <pre class="txlog" id="txLog">Connect a mainnet wallet to programme the board.</pre>
+    </div>
   </div>
 </aside>
 
@@ -250,9 +272,9 @@
     <button class="iconbtn" id="infoClose" aria-label="Close">x</button>
   </div>
   <div class="drawer-body">
-    <p class="info-text">X-Board is an immutable programmable billboard. The code is fixed, but it reads public Stacks transfers sent to its address. Each valid <span class="mono">B1</span> programme updates one square.</p>
+    <p class="info-text">X-Board is an immutable programmable billboard. Connect a Stacks wallet, design a square, and let the page package the correct Clarity contract call. Each valid <span class="mono">B1</span> programme updates one square.</p>
     <p class="info-text">Click any square. Choose text, an Xtrata inscription, or clear. The page generates a programme containing that square's stable wire code and the same style fields enforced by the Clarity contract.</p>
-    <p class="info-text"><b>The page is the compiler. The memo is the program. Each square is an independent public state.</b></p>
+    <p class="info-text"><b>The page is the compiler. The contract call carries the programme. Each square is an independent public state.</b></p>
     <button class="btn small" id="devBtn">Run protocol self-test</button>
     <pre class="dev" id="devOut" hidden></pre>
   </div>
@@ -269,15 +291,22 @@
 
 const CONFIG = {
   targetAddress:"SPNRA47CQGS61HQNCBZMVF2HHT7AKZCP2CXH3NP3",
+  boardContractAddress:"SPNRA47CQGS61HQNCBZMVF2HHT7AKZCP2CXH3NP3",
+  boardContractName:"xboard-v1",
+  contractReadApiBases:["https://api.hiro.so"],
+  contractReadsEnabled:true,
+  legacyTransferFallback:true,
+  contractPageSize:10,
   apiBase:"https://api.hiro.so",
   explorerBase:"https://explorer.hiro.so",
   network:"mainnet",
-  memoMaxBytes:34,
+  programmeMaxChars:96,
+  legacyMemoMaxBytes:34,
   minAmountMicroStx:1,
   pendingLimit:50,
   confirmedLimit:200,
-  pollVisibleMs:7000,
-  pollHiddenMs:25000,
+  pollVisibleMs:15000,
+  pollHiddenMs:60000,
   inscriptionContractId:"SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0",
   inscriptionFallbackContractId:"SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1",
   inscriptionContentRoute:"/runtime/content",
@@ -330,6 +359,16 @@ let lastFocus = null;
 let fetching = false;
 let timer = null;
 let previewDescriptorTimer = null;
+let walletSession = null;
+let contractReadError = "";
+let contractStateVerified = false;
+let lastDefaultBidSlot = "";
+let txBusy = false;
+
+const WALLET_SESSION_KEY = "xboard.v1.wallet.session";
+const C32 = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+const STX_MICRO = 1000000n;
+const INITIAL_BID = 1000000n;
 
 function wireCode(index){
   if(!Number.isInteger(index) || index < 0 || index >= BASE62.length * BASE62.length) return null;
@@ -385,12 +424,12 @@ function compileBoardMemo(slotCode,mode,payload,style){
   }
   const memo=prefix+value;
   const bytes=byteLen(memo);
-  if(bytes>CONFIG.memoMaxBytes) return { ok:false,memo,bytes,error:"Memo is "+bytes+" / "+CONFIG.memoMaxBytes+" bytes. Shorten the payload." };
+  if(bytes>CONFIG.programmeMaxChars) return { ok:false,memo,bytes,error:"Programme is "+bytes+" / "+CONFIG.programmeMaxChars+" characters. Shorten the payload." };
   return { ok:true,memo,bytes,state:{ slotCode:slot.wireCode,mode,value,...normalizedStyle } };
 }
 function invalidDraft(memo,error){ return { ok:false,memo,bytes:byteLen(memo),error }; }
-function decodeBoardMemo(memo){
-  if(typeof memo!=="string" || byteLen(memo)>CONFIG.memoMaxBytes || memo.slice(0,2)!=="B1") return null;
+function decodeBoardProgram(memo,maxBytes=CONFIG.programmeMaxChars){
+  if(typeof memo!=="string" || byteLen(memo)>maxBytes || memo.slice(0,2)!=="B1") return null;
   const slot=SLOT_BY_CODE.get(memo.slice(2,4));
   if(!slot) return null;
   const mode=memo[4];
@@ -406,8 +445,291 @@ function decodeBoardMemo(memo){
     if(!/^\d+$/.test(payload) || payload.length>CONFIG.inscriptionMaxDigits) return null;
     return { slotCode:slot.wireCode,mode,value:payload.replace(/^0+(?=\d)/,""),...style };
   }
-  if(mode==="X" && payload==="") return { slotCode:slot.wireCode,mode,value:"",...style };
+  if(mode==="X" && payload==="" && styleWire(style)==="0000") return { slotCode:slot.wireCode,mode,value:"",...style };
   return null;
+}
+function decodeBoardMemo(memo){ return decodeBoardProgram(memo,CONFIG.legacyMemoMaxBytes); }
+
+function hexByte(value){return Number(value).toString(16).padStart(2,"0");}
+function bytesToHex(bytes){return Array.from(bytes,byte=>hexByte(byte)).join("");}
+function hexToBytes(hex){
+  const src=String(hex||"").replace(/^0x/,"");if(src.length%2||!/^[0-9a-f]*$/i.test(src))throw new Error("Invalid hex.");
+  return Uint8Array.from(src.match(/../g)||[],part=>parseInt(part,16));
+}
+function fixedHex(value,bytes){
+  let num=BigInt(value);if(num<0n)throw new Error("Negative integers are not supported.");
+  const out=num.toString(16);if(out.length>bytes*2)throw new Error("Integer is too large.");return out.padStart(bytes*2,"0");
+}
+function clarityUint(value){return "01"+fixedHex(value,16);}
+function clarityAscii(value){
+  const text=String(value);if(!/^[\x20-\x7e]*$/.test(text))throw new Error("Clarity ASCII argument contains unsupported characters.");
+  return "0d"+fixedHex(text.length,4)+bytesToHex(utf8.encode(text));
+}
+function normalizeC32(value){return String(value||"").toUpperCase().replace(/O/g,"0").replace(/[LI]/g,"1");}
+function c32encode(inputHex){
+  let hex=String(inputHex||"").toLowerCase();if(!/^[0-9a-f]*$/.test(hex))throw new Error("Invalid c32 hex.");if(hex.length%2)hex="0"+hex;
+  const leading=(hex.match(/^(00)*/)||[""])[0].length/2;let num=hex?BigInt("0x"+hex):0n,out="";
+  while(num>0n){out=C32[Number(num%32n)]+out;num/=32n;}return "0".repeat(leading)+out;
+}
+function c32decode(value){
+  const src=normalizeC32(value);if(!new RegExp("^["+C32+"]*$").test(src))throw new Error("Invalid c32 string.");
+  const leading=(src.match(/^0*/)||[""])[0].length;let num=0n;
+  for(const char of src)num=num*32n+BigInt(C32.indexOf(char));
+  let hex=num?num.toString(16):"";if(hex.length%2)hex="0"+hex;return "00".repeat(leading)+hex;
+}
+async function sha256(bytes){return new Uint8Array(await crypto.subtle.digest("SHA-256",bytes));}
+async function c32checksum(dataHex){return bytesToHex((await sha256(await sha256(hexToBytes(dataHex)))).slice(0,4));}
+async function encodeStacksAddress(version,hash160){
+  const hash=String(hash160||"").toLowerCase();if(!/^[0-9a-f]{40}$/.test(hash))throw new Error("Invalid Stacks hash160.");
+  const versionHex=hexByte(version),checksum=await c32checksum(versionHex+hash);return "S"+C32[Number(version)]+c32encode(hash+checksum);
+}
+async function decodeStacksAddress(address){
+  const src=String(address||"").trim();if(src.length<=5||src[0]!=="S")throw new Error("Invalid Stacks address.");
+  const encoded=normalizeC32(src.slice(1)),version=C32.indexOf(encoded[0]);if(version<0)throw new Error("Invalid Stacks address version.");
+  const data=c32decode(encoded.slice(1)),hash=data.slice(0,-8),checksum=data.slice(-8);
+  if(hash.length!==40||checksum!==await c32checksum(hexByte(version)+hash))throw new Error("Invalid Stacks address checksum.");
+  return {version,hash160:hash};
+}
+async function serializeStxSpendCap(address,amount){
+  const decoded=await decodeStacksAddress(address);
+  return "00"+"02"+hexByte(decoded.version)+decoded.hash160+"05"+fixedHex(amount,8);
+}
+async function serializeContractStxSpendCap(address,name,amount){
+  const decoded=await decodeStacksAddress(address),contractName=String(name||"");
+  if(!/^[a-zA-Z]([a-zA-Z0-9]|[-_]){0,39}$/.test(contractName))throw new Error("Invalid contract name.");
+  return "00"+"03"+hexByte(decoded.version)+decoded.hash160+hexByte(contractName.length)+bytesToHex(utf8.encode(contractName))+"05"+fixedHex(amount,8);
+}
+function inferNetwork(address){
+  if(/^S[PM]/.test(String(address||"")))return "mainnet";
+  if(/^S[TN]/.test(String(address||"")))return "testnet";
+  return null;
+}
+function parseStxInput(value){
+  const src=String(value||"").trim();if(!/^\d+(?:\.\d{0,6})?$/.test(src))return null;
+  const [whole,fraction=""]=src.split(".");return BigInt(whole)*STX_MICRO+BigInt((fraction+"000000").slice(0,6));
+}
+function formatStx(value){
+  const amount=BigInt(value||0),whole=amount/STX_MICRO,fraction=(amount%STX_MICRO).toString().padStart(6,"0");
+  return whole+"."+fraction;
+}
+function requiredBid(state){
+  const gross=state&&state.grossBid!=null?BigInt(state.grossBid):0n;
+  return gross===0n?INITIAL_BID:gross+(gross*100n+9999n)/10000n;
+}
+function boardContractId(){return CONFIG.boardContractAddress+"."+CONFIG.boardContractName;}
+function contractConfigured(){return /^S[PMTN][A-Z0-9]+$/.test(CONFIG.boardContractAddress)&&/^[a-zA-Z]([a-zA-Z0-9]|[-_]){0,39}$/.test(CONFIG.boardContractName);}
+
+class HexReader{
+  constructor(hex){this.hex=String(hex||"").replace(/^0x/,"");this.pos=0;}
+  read(bytes){const end=this.pos+bytes*2;if(end>this.hex.length)throw new Error("Truncated Clarity value.");const out=this.hex.slice(this.pos,end);this.pos=end;return out;}
+  byte(){return parseInt(this.read(1),16);}
+  uint(bytes){return Number.parseInt(this.read(bytes),16);}
+  bigint(bytes){return BigInt("0x"+this.read(bytes));}
+  ascii(bytes){return String.fromCharCode(...hexToBytes(this.read(bytes)));}
+}
+function parseClarityHex(hex){const reader=new HexReader(hex),value=parseClarityValue(reader);if(reader.pos!==reader.hex.length)throw new Error("Trailing Clarity bytes.");return value;}
+function parseClarityValue(reader){
+  const type=reader.byte();
+  if(type===0x00)return {type:"int",value:reader.bigint(16)};
+  if(type===0x01)return {type:"uint",value:reader.bigint(16)};
+  if(type===0x02){const length=reader.uint(4);return {type:"buffer",value:reader.read(length)};}
+  if(type===0x03||type===0x04)return {type:"bool",value:type===0x03};
+  if(type===0x05)return {type:"principal",version:reader.byte(),hash160:reader.read(20)};
+  if(type===0x06)return {type:"contract-principal",version:reader.byte(),hash160:reader.read(20),name:reader.ascii(reader.byte())};
+  if(type===0x07||type===0x08)return {type:type===0x07?"ok":"err",value:parseClarityValue(reader)};
+  if(type===0x09)return {type:"none"};
+  if(type===0x0a)return {type:"some",value:parseClarityValue(reader)};
+  if(type===0x0b){const length=reader.uint(4),value=[];for(let index=0;index<length;index++)value.push(parseClarityValue(reader));return {type:"list",value};}
+  if(type===0x0c){const length=reader.uint(4),value={};for(let index=0;index<length;index++){const key=reader.ascii(reader.byte());value[key]=parseClarityValue(reader);}return {type:"tuple",value};}
+  if(type===0x0d)return {type:"ascii",value:reader.ascii(reader.uint(4))};
+  if(type===0x0e){const length=reader.uint(4);return {type:"utf8",value:utf8Decoder.decode(hexToBytes(reader.read(length)))};}
+  throw new Error("Unsupported Clarity type 0x"+hexByte(type)+".");
+}
+async function principalText(value){
+  if(!value||!["principal","contract-principal"].includes(value.type))return "";
+  const address=await encodeStacksAddress(value.version,value.hash160);return value.type==="contract-principal"?address+"."+value.name:address;
+}
+function clarityOk(value){if(!value||value.type!=="ok")throw new Error("Read-only contract call returned an error.");return value.value;}
+async function callReadOnly(functionName,args){
+  if(!contractConfigured())throw new Error("Board contract configuration is incomplete.");
+  let lastError=null;
+  for(const base of CONFIG.contractReadApiBases){
+    try{
+      const url=String(base).replace(/\/$/,"")+"/v2/contracts/call-read/"+encodeURIComponent(CONFIG.boardContractAddress)+"/"+encodeURIComponent(CONFIG.boardContractName)+"/"+encodeURIComponent(functionName);
+      const res=await fetch(url,{method:"POST",headers:{"content-type":"application/json",accept:"application/json"},body:JSON.stringify({sender:CONFIG.boardContractAddress,arguments:args.map(arg=>"0x"+arg.replace(/^0x/,""))})});
+      if(!res.ok)throw new Error("HTTP "+res.status);const body=await res.json();if(body.okay===false)throw new Error(body.cause||"Read-only call failed.");
+      return parseClarityHex(body.result);
+    }catch(error){lastError=error;}
+  }
+  throw lastError||new Error("Read-only call failed.");
+}
+async function contractStateFromEntry(entry){
+  const values=entry&&entry.type==="tuple"?entry.value:null;if(!values||!values["tile-id"]||!values.tile)return null;
+  const slot=SLOTS[Number(values["tile-id"].value)];if(!slot||values.tile.type==="none")return null;
+  const tile=values.tile.value&&values.tile.value.value;if(!tile)return null;
+  const state=decodeBoardProgram(tile.program.value);if(!state||state.slotCode!==slot.wireCode)return null;
+  return {...state,sender:await principalText(tile.owner.value),pending:false,source:"contract",grossBid:tile["gross-bid"].value,locked:tile.locked.value,updatedAt:tile["updated-at"].value,claimedAt:tile["claimed-at"].value};
+}
+async function fetchContractStates(){
+  const states=new Map(),pageSize=Math.max(1,Math.min(20,Number(CONFIG.contractPageSize)||10));
+  for(let start=0;start<SLOTS.length;start+=pageSize){
+    const page=clarityOk(await callReadOnly("get-tile-page",[clarityUint(start),clarityUint(pageSize)]));
+    if(!page||page.type!=="list")throw new Error("Unexpected tile page response.");
+    if(page.value.length!==pageSize)throw new Error("Incomplete tile page response.");
+    for(let offset=0;offset<page.value.length;offset++){
+      const entry=page.value[offset],tileId=entry&&entry.type==="tuple"&&entry.value["tile-id"];
+      if(!tileId||tileId.type!=="uint"||Number(tileId.value)!==start+offset)throw new Error("Out-of-order tile page response.");
+      const tile=entry.value.tile;
+      if(start+offset<SLOTS.length){
+        const state=await contractStateFromEntry(entry);if(!state)throw new Error("Invalid tile page entry.");states.set(state.slotCode,state);
+      }else if(!tile||tile.type!=="none"){
+        throw new Error("Unexpected padded tile page entry.");
+      }
+    }
+  }
+  if(states.size!==SLOTS.length)throw new Error("Incomplete contract snapshot.");
+  return states;
+}
+function walletProviders(){
+  const values=[
+    ["Leather",window.LeatherProvider],
+    ["Xverse",window.XverseProviders&&window.XverseProviders.StacksProvider],
+    ["Stacks",window.StacksProvider],
+    ["Blockstack",window.BlockstackProvider]
+  ],seen=new Set(),providers=[];
+  for(const [label,provider] of values)if(provider&&typeof provider.request==="function"&&!seen.has(provider)){seen.add(provider);providers.push({label,provider});}
+  return providers;
+}
+function extractStacksAddress(payload,depth=0){
+  if(depth>8||payload==null)return null;
+  if(typeof payload==="string"){const value=payload.trim();return /^S[PMTN][A-Z0-9]+$/i.test(value)?value:null;}
+  if(Array.isArray(payload)){for(const value of payload){const address=extractStacksAddress(value,depth+1);if(address)return address;}return null;}
+  if(typeof payload!=="object")return null;
+  for(const key of ["address","selectedAddress","identityAddress","stxAddress","addresses","accounts","result","profile","authResponsePayload","userData","mainnet","testnet"]){
+    if(key in payload){const address=extractStacksAddress(payload[key],depth+1);if(address)return address;}
+  }
+  return null;
+}
+function isCancelled(error){const text=String(error&&error.message||error||"").toLowerCase();return text.includes("cancel")||text.includes("reject")||text.includes("denied")||text.includes("closed")||(error&&[-32000,4001].includes(error.code));}
+function isRetryableWalletError(error){const text=String(error&&error.message||error||"").toLowerCase();return text.includes("invalid")||text.includes("param")||text.includes("unsupported")||text.includes("method not found")||text.includes("not implemented");}
+function normalizeTxId(value,depth=0){
+  if(depth>6||value==null)return "";
+  if(typeof value==="string")return /^(0x)?[0-9a-f]{64}$/i.test(value)?value.replace(/^0x/,""):"";
+  if(typeof value!=="object")return "";
+  for(const key of ["txId","txid","transactionId","transaction_id","result","data"]){if(key in value){const id=normalizeTxId(value[key],depth+1);if(id)return id;}}
+  return "";
+}
+function logWallet(message){
+  const line=new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"})+"  "+message;
+  const box=$("txLog");box.textContent=(box.textContent?box.textContent+"\n":"")+line;box.scrollTop=box.scrollHeight;
+}
+function persistWallet(){
+  if(!walletSession){localStorage.removeItem(WALLET_SESSION_KEY);return;}
+  localStorage.setItem(WALLET_SESSION_KEY,JSON.stringify({address:walletSession.address,network:walletSession.network,label:walletSession.label}));
+}
+async function acceptWalletSession(address,label,provider){
+  const normalized=String(address||"").trim().toUpperCase(),network=inferNetwork(normalized);if(network!==CONFIG.network)throw new Error("X-Board requires a "+CONFIG.network+" wallet address.");
+  await decodeStacksAddress(normalized);walletSession={address:normalized,network,label:label||"Wallet",provider:provider||null};persistWallet();updateWalletUi();return walletSession;
+}
+async function restoreWallet(){
+  try{
+    const saved=JSON.parse(localStorage.getItem(WALLET_SESSION_KEY)||"null");if(!saved||!saved.address)return;
+    const found=walletProviders().find(item=>item.label===saved.label)||walletProviders()[0]||null;
+    await acceptWalletSession(saved.address,saved.label,found&&found.provider);
+    logWallet("Restored "+shortAddr(saved.address)+". Approve the next wallet request to transact.");
+  }catch{localStorage.removeItem(WALLET_SESSION_KEY);}
+}
+async function connectWallet(){
+  const providers=walletProviders();if(!providers.length){logWallet("No supported Stacks wallet was detected. Install Leather or Xverse, then reload.");return;}
+  const methods=["stx_getAddresses","getAddresses","stx_getAccounts","getAccounts","wallet_getAccount","wallet_connect","stx_requestAccounts","requestAccounts","connect"];
+  let lastError=null;
+  for(const {label,provider} of providers){
+    for(const method of methods){
+      try{
+        const result=await provider.request(method);const address=extractStacksAddress(result);if(!address)continue;
+        await acceptWalletSession(address,label,provider);logWallet("Connected "+label+" wallet "+shortAddr(address)+".");return;
+      }catch(error){lastError=error;if(isCancelled(error)){logWallet("Wallet connection was cancelled.");return;}}
+    }
+  }
+  logWallet("Could not connect a mainnet Stacks wallet"+(lastError?": "+String(lastError.message||lastError):"."));
+}
+function disconnectWallet(){
+  walletSession=null;persistWallet();updateWalletUi();logWallet("Wallet disconnected.");
+}
+function updateWalletUi(){
+  const connected=!!walletSession,btn=$("walletBtn");btn.textContent=connected?shortAddr(walletSession.address):"Connect wallet";btn.classList.toggle("connected",connected);
+  $("disconnectBtn").hidden=!connected;if(selectedSlot)updateContractAction();
+}
+function buildContractVariants(functionName,functionArgs,postConditions){
+  const common={functionName,functionArgs,network:CONFIG.network,postConditionMode:"deny"};
+  if(postConditions.length)common.postConditions=postConditions;
+  return [
+    {contract:boardContractId(),address:walletSession.address,sponsored:false,...common},
+    {contractAddress:CONFIG.boardContractAddress,contractName:CONFIG.boardContractName,...common}
+  ];
+}
+async function requestContractCall(functionName,functionArgs,postConditions=[]){
+  if(!walletSession)throw new Error("Connect a wallet first.");if(!walletSession.provider){const found=walletProviders().find(item=>item.label===walletSession.label)||walletProviders()[0];if(found)walletSession.provider=found.provider;}
+  if(!walletSession.provider)throw new Error("Wallet provider is unavailable. Reconnect your wallet.");
+  let lastError=null;
+  for(const params of buildContractVariants(functionName,functionArgs,postConditions)){
+    try{return await walletSession.provider.request("stx_callContract",params);}
+    catch(error){lastError=error;if(isCancelled(error)||!isRetryableWalletError(error))throw error;}
+  }
+  throw lastError||new Error("Wallet contract call failed.");
+}
+function selectedContractAction(){
+  const state=selectedSlot&&stateFor(selectedSlot);if(!selectedSlot)return {kind:"none",state:null};
+  if(!CONFIG.contractReadsEnabled||!contractStateVerified||contractReadError||(state&&state.source!=="contract"))return {kind:"unverified",state};
+  if(walletSession&&state&&state.sender===walletSession.address)return {kind:"program",state};
+  return {kind:"claim",state};
+}
+function updateContractAction(){
+  if(!selectedSlot)return;
+  const action=selectedContractAction(),connected=!!walletSession,required=requiredBid(action.state),slotKey=selectedSlot.wireCode+"|"+String(action.state&&action.state.grossBid||0);
+  $("bidField").hidden=action.kind==="program";$("releaseBtn").hidden=!(action.kind==="program"&&connected);$("releaseBtn").disabled=txBusy;
+  if(action.kind==="claim"&&slotKey!==lastDefaultBidSlot){$("bidIn").value=formatStx(required);lastDefaultBidSlot=slotKey;}
+  if(!connected)$("actionCard").textContent="Connect a mainnet Stacks wallet. The page will prepare the correct contract call for "+selectedSlot.publicId+".";
+  else if(action.kind==="program")$("actionCard").textContent="Update "+selectedSlot.publicId+" as its current owner. No new bid is required.";
+  else if(action.kind==="unverified")$("actionCard").textContent="Contract state could not be verified. Refresh before sending a transaction.";
+  else $("actionCard").textContent="Claim "+selectedSlot.publicId+" with a bid of at least "+formatStx(required)+" STX. The wallet request includes a deny-mode STX spend cap.";
+  const draft=currentDraft(),bid=parseStxInput($("bidIn").value),bidOk=action.kind!=="claim"||(bid!=null&&bid>=required);
+  $("submitBtn").disabled=txBusy||!connected||!draft||!draft.ok||action.kind==="unverified"||!bidOk;
+}
+async function submitProgramme(){
+  if(txBusy||!selectedSlot)return;const draft=currentDraft();let action=selectedContractAction();if(!draft||!draft.ok)return updateComposer();
+  if(!walletSession){await connectWallet();if(!walletSession)return;}
+  action=selectedContractAction();
+  if(action.kind==="unverified")return logWallet("Refresh the board before sending: contract state is not verified.");
+  txBusy=true;updateContractAction();
+  try{
+    let functionName,args,postConditions=[];
+    if(action.kind==="program"){functionName="program-tile";args=[clarityUint(selectedSlot.index),clarityAscii(draft.memo)];}
+    else{
+      const bid=parseStxInput($("bidIn").value),minimum=requiredBid(action.state);if(bid==null||bid<minimum)throw new Error("Enter a bid of at least "+formatStx(minimum)+" STX.");
+      const previousLocked=action.state&&action.state.locked!=null?BigInt(action.state.locked):0n;
+      functionName="claim-tile";args=[clarityUint(selectedSlot.index),clarityUint(bid),clarityAscii(draft.memo)];postConditions=[
+        await serializeStxSpendCap(walletSession.address,bid),
+        await serializeContractStxSpendCap(CONFIG.boardContractAddress,CONFIG.boardContractName,previousLocked)
+      ];
+    }
+    logWallet("Requesting "+functionName+" for "+selectedSlot.publicId+". Review and approve it in your wallet.");
+    const result=await requestContractCall(functionName,args,postConditions),txid=normalizeTxId(result);
+    logWallet(txid?"Submitted "+txid+".":"Wallet accepted the transaction. Refresh after broadcast.");
+    setTimeout(()=>refresh(true),5000);
+  }catch(error){logWallet(isCancelled(error)?"Wallet request cancelled.":"Transaction failed: "+String(error.message||error));}
+  finally{txBusy=false;updateContractAction();}
+}
+async function releaseSelectedTile(){
+  if(txBusy||!selectedSlot||!walletSession)return;const action=selectedContractAction();if(action.kind!=="program")return;
+  txBusy=true;updateContractAction();
+  try{
+    logWallet("Requesting release-tile for "+selectedSlot.publicId+". Review and approve it in your wallet.");
+    const locked=action.state&&action.state.locked!=null?BigInt(action.state.locked):0n;
+    const result=await requestContractCall("release-tile",[clarityUint(selectedSlot.index)],[await serializeContractStxSpendCap(CONFIG.boardContractAddress,CONFIG.boardContractName,locked)]),txid=normalizeTxId(result);
+    logWallet(txid?"Submitted release "+txid+".":"Wallet accepted the release. Refresh after broadcast.");setTimeout(()=>refresh(true),5000);
+  }catch(error){logWallet(isCancelled(error)?"Wallet request cancelled.":"Release failed: "+String(error.message||error));}
+  finally{txBusy=false;updateContractAction();}
 }
 
 function contentRoute(){
@@ -537,13 +859,14 @@ function currentDraft(){
 }
 function updateComposer(){
   if(!selectedSlot)return;
-  const draft=currentDraft();$("memoOut").textContent=draft.memo;$("byteCount").textContent=draft.bytes+" / "+CONFIG.memoMaxBytes+" bytes";$("counter").classList.toggle("over",draft.bytes>CONFIG.memoMaxBytes);
-  $("warnBox").textContent=draft.ok?"Ready. This memo targets "+selectedSlot.publicId+" / "+selectedSlot.wireCode+" only.":draft.error;$("warnBox").classList.toggle("bad",!draft.ok);
-  $("copyMemoBtn").disabled=!draft.ok;$("copyMemoBtn").style.opacity=draft.ok?"1":".5";
+  const draft=currentDraft();$("memoOut").textContent=draft.memo;$("byteCount").textContent=draft.bytes+" / "+CONFIG.programmeMaxChars+" characters";$("counter").classList.toggle("over",draft.bytes>CONFIG.programmeMaxChars);
+  $("warnBox").textContent=draft.ok?"Ready. This programme targets "+selectedSlot.publicId+" / "+selectedSlot.wireCode+" only.":draft.error;$("warnBox").classList.toggle("bad",!draft.ok);
+  $("copyMemoBtn").disabled=!draft.ok;
   const state=draft.ok?draft.state:{slotCode:selectedSlot.wireCode,mode:composeMode,value:composeMode==="T"?normalizeText($("textIn").value):composeMode==="I"?(normInscription($("inscriptionIn").value)||""):"",...(composeMode==="X"?CLEAR_STYLE:composeStyle)};
   const preview=$("preview");preview.innerHTML="";const previewSlot=makeSlotElement({...selectedSlot,col:0,row:0,width:1,height:1},state,true);preview.appendChild(previewSlot);
   clearTimeout(previewDescriptorTimer);
   if(state.mode==="I"&&state.value)previewDescriptorTimer=setTimeout(()=>{const placeholder=previewSlot.querySelector(".slot-kind");if(placeholder)hydrateInscription(previewSlot,selectedSlot,state.value,placeholder)},400);
+  updateContractAction();
 }
 
 function hexToText(hex){
@@ -579,8 +902,21 @@ function resolveBoard(candidates){
 }
 async function refresh(manual){
   if(fetching)return;fetching=true;if(manual)$("status").textContent="Refreshing board...";
-  try{const candidates=await fetchCandidates();liveStates=resolveBoard(candidates);renderBoard();$("status").textContent=candidates.length?"Showing latest valid square writes.":"No valid B1 writes found yet.";if(selectedSlot)renderDrawer();}
-  catch{$("status").textContent="Could not refresh from chain. Retrying automatically."}finally{fetching=false}
+  try{
+    let loaded=false;contractReadError="";
+    if(CONFIG.contractReadsEnabled){
+      try{liveStates=await fetchContractStates();contractStateVerified=true;loaded=true;$("status").textContent="Showing live Clarity contract state.";}
+      catch(error){contractStateVerified=false;contractReadError=String(error&&error.message||error||"Contract read failed.");}
+    }else{
+      contractStateVerified=false;
+    }
+    if(!loaded&&CONFIG.legacyTransferFallback){
+      const candidates=await fetchCandidates();liveStates=resolveBoard(candidates);loaded=true;
+      $("status").textContent="Contract unavailable. Showing read-only legacy transfer fallback.";
+    }
+    if(!loaded)throw new Error(contractReadError||"No board data source is configured.");
+    renderBoard();if(selectedSlot)renderDrawer();
+  }catch{$("status").textContent="Could not refresh from chain. Retrying automatically."}finally{fetching=false}
 }
 function schedule(){clearTimeout(timer);timer=setTimeout(async()=>{await refresh(false);schedule();},document.hidden?CONFIG.pollHiddenMs:CONFIG.pollVisibleMs);}
 
@@ -618,16 +954,17 @@ $("textIn").addEventListener("input",updateComposer);$("inscriptionIn").addEvent
 $("refreshBtn").addEventListener("click",()=>refresh(true));$("infoBtn").addEventListener("click",()=>openDrawer($("infoDrawer")));
 $("programClose").addEventListener("click",()=>closeDrawer());$("infoClose").addEventListener("click",()=>closeDrawer());$("backdrop").addEventListener("click",()=>closeDrawer());
 $("copyMemoBtn").addEventListener("click",event=>{const draft=currentDraft();if(draft&&draft.ok)copyText(draft.memo,event.currentTarget);});
-$("copyAddrBtn").addEventListener("click",event=>copyText(CONFIG.targetAddress,event.currentTarget));
+$("walletBtn").addEventListener("click",()=>walletSession?logWallet("Connected wallet "+shortAddr(walletSession.address)+"."):connectWallet());
+$("disconnectBtn").addEventListener("click",disconnectWallet);$("submitBtn").addEventListener("click",submitProgramme);$("releaseBtn").addEventListener("click",releaseSelectedTile);$("bidIn").addEventListener("input",updateContractAction);
 $("openInscriptionBtn").addEventListener("click",()=>{const state=selectedSlot&&stateFor(selectedSlot);if(state&&state.mode==="I")openLightbox(state.value);});
-$("sentBtn").addEventListener("click",()=>{closeDrawer();refresh(true);});
 $("devBtn").addEventListener("click",()=>{const out=$("devOut");out.hidden=false;try{out.textContent=protocolSelfTest()}catch(error){out.textContent="FAILED: "+error.message}});
 $("lbClose").addEventListener("click",closeLightbox);$("lightbox").addEventListener("click",event=>{if(event.target===$("lightbox"))closeLightbox()});
 $("board").addEventListener("dblclick",boardClickForLightbox);
 document.addEventListener("keydown",event=>{if(event.key==="Escape"){if(!$("lightbox").hidden)closeLightbox();else closeDrawer();}});
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh(false);schedule();});
 
-selectedSlot=SLOTS[0];renderBoard();setMode("T");refresh(true);schedule();
+async function init(){selectedSlot=SLOTS[0];renderBoard();setMode("T");await restoreWallet();updateWalletUi();refresh(true);schedule();}
+init();
 </script>
 </body>
 </html>

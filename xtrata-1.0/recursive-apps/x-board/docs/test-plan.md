@@ -52,13 +52,19 @@ B100X0000BAD
 B100I0004abc
 ```
 
-## Transfer Scanner Checks
+## Wallet Client Checks
 
-- A pending valid transfer appears before confirmation.
-- A confirmed transaction replaces its mempool duplicate.
-- Writes resolve independently per square.
-- Wrong recipients, insufficient amounts, malformed programmes, and unrelated
-  memos are ignored.
+- A mainnet Leather or Xverse wallet can connect and restore its persisted
+  address after reload.
+- A testnet wallet is rejected.
+- Contract state loads in bounded `get-tile-page` batches.
+- Short, out-of-order, or malformed contract pages never enable transactions.
+- An empty or externally owned tile prepares `claim-tile` with the current
+  minimum bid.
+- An owned tile prepares `program-tile` and exposes `release-tile`.
+- Claims cap wallet spend and bounded registry refund under deny mode.
+- Releases cap the registry refund under deny mode.
+- A failed contract read shows the legacy transfer fallback and blocks sends.
 - Hidden-tab polling is slower than visible-tab polling.
 - Inscription MIME probing is cached and interactive HTML remains sandboxed.
 
@@ -84,5 +90,8 @@ The automated suite covers:
 - pause semantics with release still allowed;
 - standard-wallet-only fee withdrawals;
 - direct-wallet-only mutation through proxy rejection.
+- canonical clear style enforcement.
+- standalone Clarity argument and STX-cap serialization;
+- contract-page parsing and malformed snapshot rejection.
 
-Add wallet post-condition and real RPC tests with the wallet integration phase.
+Run real provider and RPC tests on testnet before mainnet deployment.
