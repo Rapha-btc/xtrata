@@ -1,137 +1,88 @@
 # X-Board Test Plan
 
-## 1. Static Application
+## Browser Checks
 
-- Open `../x-board.html`.
-- Confirm the canvas is square.
-- Confirm `93` slots are visible.
-- Confirm the status bar reports `0 / 93 programmed` before live writes load.
-- Confirm the canvas remains square on phone, tablet, and desktop widths.
+Open [`../x-board.html`](../x-board.html) and confirm:
 
-## 2. Slot Map
+- the canvas is square at desktop and mobile widths;
+- all `93` squares render;
+- selecting `C01`, `M12`, and `S80` shows wire codes `00`, `0C`, and `1U`;
+- the drawer preview is a complete square;
+- metadata and controls stay outside the preview square;
+- opening and closing drawers does not shift the board horizontally.
 
-- Run the built-in protocol self-test from the information drawer.
-- Confirm `slots=93`.
-- Confirm `covered=144`.
-- Confirm `codes=93`.
-- Confirm the canvas has no overlapping or uncovered logical cells.
-
-Boundary mappings:
+Run the information-drawer self-test and confirm:
 
 ```text
-C01 -> index 0  -> 00
-M12 -> index 12 -> 0C
-S80 -> index 92 -> 1U
+slots=93
+covered=144
+codes=93
 ```
 
-## 3. Selection And Preview
-
-For `C01`, `M01`, `M12`, `S01`, and `S80`:
-
-- Click the square.
-- Confirm the drawer heading shows the selected public ID.
-- Confirm the drawer repeats the wire code.
-- Confirm the generated programme uses that wire code.
-- Confirm the preview is a complete square, not a cropped strip.
-- Confirm the preview remains square when the drawer scrolls.
-
-## 4. Programme Modes
+## Composer Checks
 
 Text:
 
 ```text
-B100TGM
+B100T1324GM
 ```
-
-- Select `C01`.
-- Enter `GM`.
-- Confirm the memo is `B100TGM`.
-- Confirm the full-square preview shows `GM`.
 
 Inscription:
 
 ```text
-B10CI159
+B10CI0004159
 ```
-
-- Select `M12`.
-- Choose inscription mode.
-- Enter `159`.
-- Confirm the memo is `B10CI159`.
-- Confirm the preview resolves or shows a useful placeholder.
 
 Clear:
 
 ```text
-B11UX
+B11UX0000
 ```
 
-- Select `S80`.
-- Choose clear mode.
-- Confirm the memo is `B11UX`.
-- Confirm no payload follows `X`.
+For each mode, verify the full-square preview and copied programme. For text,
+change font, size, position, and colour and confirm both the programme header
+and preview change. Verify non-ASCII text is rejected.
 
-## 5. Invalid Programmes
-
-Confirm the decoder rejects:
+Confirm malformed programmes are ignored:
 
 ```text
 K1S111
-B1zzTNO
-B100XBAD
-B100Iabc
+B1zzT1324NO
+B100X0000BAD
+B100I0004abc
 ```
 
-Also test:
+## Transfer Scanner Checks
 
-- empty text;
-- empty inscription token ID;
-- token IDs longer than the configured limit;
-- UTF-8 payloads at and over the `34`-byte boundary;
-- unknown wire codes;
-- unknown modes.
+- A pending valid transfer appears before confirmation.
+- A confirmed transaction replaces its mempool duplicate.
+- Writes resolve independently per square.
+- Wrong recipients, insufficient amounts, malformed programmes, and unrelated
+  memos are ignored.
+- Hidden-tab polling is slower than visible-tab polling.
+- Inscription MIME probing is cached and interactive HTML remains sandboxed.
 
-## 6. Chain Resolution
+## Clarity Suite
 
-With test transactions:
+Run:
 
-- Confirm a pending `B1` transfer appears before confirmation.
-- Confirm a confirmed transaction replaces its mempool duplicate.
-- Confirm a write to one slot does not affect any other slot.
-- Confirm the newest valid programme wins independently per slot.
-- Confirm wrong recipients and amounts below the minimum are ignored.
-- Confirm malformed and unrelated memos are ignored.
-- Confirm hidden-tab polling is slower than visible-tab polling.
+```bash
+cd ../xboard-clarinet-suite
+npm install
+clarinet check --use-computed-deployment-plan
+npm test
+```
 
-## 7. Inscription Runtime
+The automated suite covers:
 
-Test token IDs covering:
+- programme validation and slot mismatch;
+- bounded paged reads and final-page optional entries;
+- exact claim, outbid, release, and withdrawal STX balances;
+- failed incoming-transfer rollback;
+- rounded-up minimum outbid;
+- structured print events;
+- pause semantics with release still allowed;
+- standard-wallet-only fee withdrawals;
+- direct-wallet-only mutation through proxy rejection.
 
-- image;
-- video;
-- audio;
-- interactive HTML;
-- PDF;
-- text;
-- unsupported binary;
-- failed runtime lookup.
-
-Confirm descriptor caching, sandboxing, placeholders, and the enlarged lightbox.
-
-## 8. Contract-Backed Version
-
-Before testnet deployment, add Clarinet tests for:
-
-- valid tile indexes `u0..u92`;
-- invalid tile IDs;
-- initial claim price;
-- protocol fee calculation;
-- locked balance accounting;
-- owner-only updates;
-- underbid rejection;
-- successful outbid and refund;
-- failed outgoing-transfer rollback;
-- read-only tile state;
-- paged board reads;
-- event payloads;
-- wallet post-conditions.
+Add wallet post-condition and real RPC tests with the wallet integration phase.

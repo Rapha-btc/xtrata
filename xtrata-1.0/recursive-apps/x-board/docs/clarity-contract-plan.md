@@ -2,38 +2,31 @@
 
 ## Purpose
 
-The current `../x-board.html` prototype derives each square's visible state
-from ordinary Stacks transfer memos. The contract-powered X-Board should make
-ownership, pricing, and current programmes explicit on-chain.
+The standalone [`../x-board.html`](../x-board.html) prototype reconstructs
+visible state from normal Stacks transfer memos. The contract-powered version
+uses wallet contract calls so ownership, pricing, locked balances, and current
+programmes become explicit on-chain state.
 
-A normal STX transfer to a contract principal does not execute custom logic.
-The contract version must use wallet contract calls.
+## Locked V1 Decisions
 
-## Contract Model
-
-Each square is occupied by the wallet that has locked the highest qualifying
-bid for that square.
-
-Recommended v1 economics:
-
-1. A challenger submits a gross bid.
-2. The contract takes an entry protocol fee, initially `1%`.
-3. The remainder is locked for that square.
-4. The previous owner receives their previously locked balance.
-5. The challenger becomes the owner.
-6. The owner can update the square's programme until displaced.
-
-Use entry-fee-only accounting for v1. Do not add an exit fee initially.
+| Decision | V1 choice |
+|---|---|
+| Tiles | `u0..u92` |
+| Programme type | `(string-ascii 96)` |
+| Programme schema | `B1<slot><mode><font><size><position><colour><payload>` |
+| Initial claim | `1 STX` |
+| Protocol fee | `1%` of each successful claim or outbid |
+| Outbid increment | At least `1%` of current gross bid, rounded up |
+| Ownership identity | Direct wallet caller only: `tx-sender == contract-caller` |
+| Release | Owner can release and recover locked value, including while paused |
+| Pause | Blocks claims and programme edits, never owner withdrawal of locked value |
+| Admin withdrawals | Accrued protocol fees only, to standard wallet principals |
+| Board reads | `get-tile-page` with `1..10` entries |
 
 ## Slot Identity
 
-X-Board has `93` immutable slots. The contract should store numeric IDs:
-
-```text
-u0..u92
-```
-
-The UI retains public IDs and wire codes:
+The `tile-id uint` contract argument is authoritative. The embedded wire code
+must match it:
 
 | UI slot | Contract ID | Wire code |
 |---|---:|---|
@@ -41,143 +34,65 @@ The UI retains public IDs and wire codes:
 | `M12` | `u12` | `0C` |
 | `S80` | `u92` | `1U` |
 
-The contract-call `tile-id` argument is authoritative. The UI must verify that
-the embedded `B1` wire code matches that numeric argument before submission.
+## Public API
 
-## Suggested Tile State
-
-```clarity
-{
-  owner: (optional principal),
-  gross-bid: uint,
-  locked: uint,
-  program: (string-utf8 64),
-  updated-at: uint,
-  claimed-at: uint
-}
-```
-
-Open decision: use `(string-utf8 64)` to preserve current X-Board UTF-8 text,
-or deliberately restrict the first contract version to `(string-ascii 64)`.
-
-## Required Public Functions
+State changes:
 
 ```clarity
-(define-public (claim-tile
-  (tile-id uint)
-  (bid uint)
-  (program (string-utf8 64))
-)
-  ...
-)
+(claim-tile (tile-id uint) (bid uint) (program (string-ascii 96)))
+(program-tile (tile-id uint) (program (string-ascii 96)))
+(release-tile (tile-id uint))
+(withdraw-fees (amount uint) (recipient principal))
+(set-paused (value bool))
 ```
 
-Responsibilities:
-
-- validate `tile-id <= u92`;
-- validate the programme;
-- calculate the required bid;
-- transfer the bid into contract custody;
-- refund the previous locked balance;
-- account for the protocol fee;
-- store the new owner and programme;
-- print a claim event.
+Reads:
 
 ```clarity
-(define-public (program-tile
-  (tile-id uint)
-  (program (string-utf8 64))
-)
-  ...
-)
+(get-tile (tile-id uint))
+(get-owner (tile-id uint))
+(get-required-bid (tile-id uint))
+(can-program (tile-id uint) (who principal))
+(is-valid-program (tile-id uint) (program (string-ascii 96)))
+(get-contract-stats)
+(get-tile-page (start uint) (limit uint))
 ```
 
-Responsibilities:
+The paged reader deliberately returns optional entries after `u92` on the final
+page so clients can request a stable batch size without unbounded reads.
 
-- validate the tile;
-- require the current owner;
-- update the stored programme and block height;
-- print a programme event.
+## Security Properties
 
-## Required Read-Only Functions
+- Protocol-fee accounting is separate from locked owner balances.
+- Every public mutation requires a direct wallet call.
+- Failed incoming or outgoing transfers revert the enclosing transaction.
+- Admin fee withdrawals cannot target contract principals.
+- Pause cannot prevent an owner from releasing locked funds.
+- Claim, programme, release, withdrawal, and pause changes print structured
+  events.
 
-```clarity
-(define-read-only (get-tile (tile-id uint)) ...)
-(define-read-only (get-required-bid (tile-id uint)) ...)
-(define-read-only (get-owner (tile-id uint)) ...)
-(define-read-only (can-program (tile-id uint) (who principal)) ...)
-```
+The runnable suite verifies these properties, including a test-only forwarding
+contract that proves nested calls are rejected.
 
-Avoid loading `93` tiles with aggressive polling. Add a bounded paged read:
+## Frontend Migration
 
-```clarity
-(define-read-only (get-tile-page (start uint) (limit uint)) ...)
-```
+The browser compiler already emits the contract schema. Wallet integration
+should:
 
-The final page size must be tested against read-only execution limits.
+1. infer and persist the active Stacks network;
+2. fetch board state through bounded `get-tile-page` reads;
+3. call `claim-tile`, `program-tile`, and `release-tile`;
+4. attach STX post-conditions to claims;
+5. show wallet responses and pending state clearly;
+6. retain the full-square preview before submission;
+7. use print events for refresh cues and history, not as current-state authority.
 
-## Events
+## Release Gate
 
-Print structured claim and programme events for history, animation, and
-indexing. Render authoritative current state from read-only calls.
+Before mainnet:
 
-Claim events should include:
-
-- tile ID;
-- new owner;
-- gross bid;
-- locked balance;
-- protocol fee;
-- previous owner;
-- previous refund.
-
-Programme events should include:
-
-- tile ID;
-- owner;
-- programme;
-- update block height.
-
-## Front-End Migration
-
-Replace the current copy-memo transfer instructions with wallet-aware actions.
-
-For an empty or externally owned square:
-
-```text
-Claim square C01 for 1 STX
-```
-
-For a square owned by the connected wallet:
-
-```text
-Update square C01
-```
-
-Claim calls must use STX post-conditions so the wallet clearly enforces the
-maximum amount leaving the user account.
-
-The full-square local preview remains mandatory before wallet submission.
-
-## Security Requirements
-
-- Locked balances must never be withdrawable as protocol fees.
-- Failed refunds or fee transfers must revert the complete claim.
-- Decide deliberately whether ownership uses `tx-sender` or `contract-caller`.
-- Keep admin pause powers narrow and never allow locked-balance seizure.
-- Test fee rounding in microSTX.
-- Test Clarity contract-context outgoing transfers in Clarinet before testnet.
-
-## Implementation Sequence
-
-1. Confirm economics, fee basis points, and tier pricing.
-2. Confirm ASCII versus UTF-8 programme storage.
-3. Write the Clarinet contract skeleton for `u0..u92`.
-4. Add claim, refund, outbid, programme, and read-only tests.
-5. Add paged read-only board loading.
-6. Add Stacks wallet connection and session persistence.
-7. Replace memo-transfer scanning with contract reads.
-8. Keep print-event reads for history and refresh cues.
-9. Deploy to testnet.
-10. Run multi-wallet takeover tests.
-11. Review before mainnet deployment.
+1. deploy to testnet;
+2. run multi-wallet claim, outbid, release, and pause sessions;
+3. test pagination and mobile rendering under real RPC latency;
+4. review contract source and economic assumptions independently;
+5. pin the deployed contract identifier in the browser configuration.

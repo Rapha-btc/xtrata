@@ -11,6 +11,16 @@ path = "contracts/xboard-v1.clar"
 clarity_version = 2
 epoch = 2.5
 
+[contracts.xboard-v1-proxy]
+path = "contracts/xboard-v1-proxy.clar"
+clarity_version = 2
+epoch = 2.5
+depends_on = ["xboard-v1"]
+
 [repl]
 costs_version = 2
 parser_version = 2
+
+[repl.analysis]
+passes = ["check_checker"]
+check_checker = { trusted_sender = false, trusted_caller = false, callee_filter = false }

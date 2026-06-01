@@ -1,35 +1,41 @@
-# Xboard v1 Clarinet Suite
+# Xboard V1 Clarinet Suite
 
-This is a runnable Clarinet project for the Xboard v1 contract draft.
-
-## Files
-
-- `contracts/xboard-v1.clar` - contract draft under test
-- `tests/xboard-v1.test.ts` - Vitest/Clarinet SDK tests
-- `Clarinet.toml` - Clarinet project config
-- `package.json` - Node test dependencies and scripts
-- `test-suite-plan.md` - plain-English coverage plan
+Runnable Clarinet project for the X-Board ownership and programme registry.
 
 ## Run
 
 ```bash
 npm install
-clarinet check
+clarinet check --use-computed-deployment-plan
 npm test
 ```
 
-## Notes
+Current verification result: `15` Vitest cases pass.
 
-This is a test suite for a first implementation draft, not a completed audit.
+## Files
 
-Run `clarinet check` first. If the contract does not compile, fix compile errors before interpreting test results.
+| File | Purpose |
+|---|---|
+| `contracts/xboard-v1.clar` | Registry contract |
+| `contracts/xboard-v1-proxy.clar` | Test-only forwarding contract for nested-call rejection |
+| `tests/xboard-v1.test.ts` | Clarinet SDK tests |
+| `Clarinet.toml` | Contract manifest and analyzer settings |
+| `settings/` | Network scaffold |
+| `deployments/default.simnet-plan.yaml` | Generated simnet deployment plan |
+| `test-suite-plan.md` | Plain-English coverage summary |
 
-The suite deliberately covers the areas most likely to create permanent-money bugs:
+## V1 Contract Rules
 
-- outbid accounting
-- locked balance accounting
-- release/unlink behaviour
-- fee withdrawal separation
-- pause behaviour
-- programme validation
-- tile/programme mismatch
+- `93` tiles: `u0..u92`.
+- Styled `(string-ascii 96)` `B1` programmes.
+- `1 STX` minimum initial bid.
+- `1%` protocol fee.
+- Rounded-up `1%` minimum outbid.
+- Refundable owner lock.
+- Release remains available while paused.
+- Every mutation must be called directly by a wallet.
+- Protocol fees can be withdrawn only to standard wallet principals.
+- `get-tile-page` returns at most `10` entries.
+
+The proxy contract is test infrastructure only. Do not deploy it with the
+production registry.

@@ -1,41 +1,25 @@
 # X-Board Documentation
 
-`x-board.html` is the only application file for this workspace.
+[`../x-board.html`](../x-board.html) is the only browser application file.
 
-X-Board is a standalone programmable public billboard built using Xtrata
-Protocol. It renders a square canvas with `93` independently programmable
-regions and currently resolves public state from compact `B1` programmes in
-Stacks transfer memos.
-
-## Current Application
+X-Board is a square public billboard with `93` independently programmable
+regions. The browser prototype and Clarity registry now share one canonical
+styled `B1` programme schema.
 
 | File | Purpose |
 |---|---|
-| `../x-board.html` | Standalone HTML, CSS, and JavaScript application |
-| `memo-format.md` | Current `B1` wire protocol |
-| `developer-notes.md` | Runtime architecture and maintenance map |
-| `test-plan.md` | Verification checklist |
-| `clarity-contract-plan.md` | Contract-powered evolution plan |
-| `x-board-project-plan.md` | Product scope and implementation roadmap |
+| [`../x-board.html`](../x-board.html) | Standalone HTML, CSS, and JavaScript application |
+| [`memo-format.md`](./memo-format.md) | Canonical `B1` programme schema |
+| [`developer-notes.md`](./developer-notes.md) | Runtime architecture and maintenance map |
+| [`test-plan.md`](./test-plan.md) | Browser and contract verification checklist |
+| [`clarity-contract-plan.md`](./clarity-contract-plan.md) | Contract model and wallet migration plan |
+| [`x-board-project-plan.md`](./x-board-project-plan.md) | Product scope and implementation roadmap |
 
-## Current Capabilities
+## Rules
 
-- Square `12 x 12` logical canvas.
-- `93` stable slots: one center slot, twelve medium slots, and eighty small
-  slots.
-- Fixed human-readable slot IDs and compact two-character base62 wire codes.
-- Text, Xtrata inscription reference, and clear operations.
-- Full-square local design preview before copying a programme.
-- Confirmed and mempool transaction scanning through Hiro.
-- Newest-valid-programme resolution independently for each slot.
-- Pending-state markers.
-- MIME-aware Xtrata inscription rendering and an enlarged lightbox.
-- Built-in protocol self-test.
-
-## Development Rule
-
-Do not create a parallel board HTML implementation. Extend `../x-board.html`
-until the application is intentionally migrated into a structured source tree.
-
-The next major milestone is the Clarity-contract-backed version described in
-`clarity-contract-plan.md`.
+- Keep `../x-board.html` as the sole standalone application.
+- Preserve the `12 x 12` square canvas and `93` immutable slot identities.
+- Preserve the full-square local preview.
+- Update the browser compiler, decoder, contract validator, tests, and docs
+  together when changing `B1`.
+- Use bounded contract reads and avoid aggressive polling.

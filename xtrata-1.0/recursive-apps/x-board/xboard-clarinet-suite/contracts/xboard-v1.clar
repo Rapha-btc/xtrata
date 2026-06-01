@@ -17,6 +17,7 @@
 (define-constant ERR-TRANSFER-FAILED (err u106))
 (define-constant ERR-PAUSED (err u107))
 (define-constant ERR-INVALID-AMOUNT (err u108))
+(define-constant ERR-INVALID-PAGE (err u109))
 
 (define-constant MAX-TILE-ID u92)
 (define-constant MIN-INITIAL-BID u1000000) ;; 1 STX, in microSTX
@@ -28,6 +29,7 @@
 (define-constant MAX-INSCRIPTION-DIGITS u12)
 (define-constant WIRE-ALPHABET "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
 (define-constant WIRE-BASE u62)
+(define-constant TILE-PAGE-SIZE u10)
 
 ;; -----------------------------------------------------------------------------
 ;; State
@@ -55,6 +57,17 @@
 
 (define-private (is-valid-tile (tile-id uint))
   (<= tile-id MAX-TILE-ID)
+)
+
+(define-private (is-direct-caller)
+  (is-eq tx-sender contract-caller)
+)
+
+(define-private (is-standard-principal (who principal))
+  (match (principal-destruct? who)
+    decoded (is-none (get name decoded))
+    error-code false
+  )
 )
 
 (define-private (fee-for (bid uint))
@@ -93,7 +106,12 @@
 ;; Base62 two-character wire code for tile ids u0..u92.
 ;; UI public ids such as C01, M12 and S80 stay off-chain.
 (define-private (wire-char (index uint))
-  (unwrap-panic (slice? WIRE-ALPHABET index (+ index u1)))
+  (unwrap-panic
+    (as-max-len?
+      (unwrap-panic (slice? WIRE-ALPHABET index (+ index u1)))
+      u1
+    )
+  )
 )
 
 (define-private (wire-code-for-tile (tile-id uint))
@@ -108,6 +126,16 @@
 
 (define-private (clear-program (tile-id uint))
   (concat (concat "B1" (wire-code-for-tile tile-id)) "X0000")
+)
+
+(define-private (tile-page-entry (tile-id uint))
+  {
+    tile-id: tile-id,
+    tile: (if (is-valid-tile tile-id)
+      (some (get-tile-or-empty tile-id))
+      none
+    )
+  }
 )
 
 ;; Programme format:
@@ -186,7 +214,7 @@
   )
 )
 
-(define-private (is-inscription-payload? (payload (string-ascii 87)))
+(define-private (is-inscription-payload? (payload (string-ascii 96)))
   ;; Relies on Clarity's string-to-uint? parser to reject non-decimal strings.
   ;; Clarinet tests must cover: "159" accepted; "abc", "1a", "", and overlong strings rejected.
   (and
@@ -200,16 +228,20 @@
   (let
     (
       (mode (unwrap! (slice? program u4 u5) false))
-      (payload (unwrap! (slice? program PROGRAM-PREFIX-LEN MAX-PROGRAM-LEN) false))
       (payload-len (- (len program) PROGRAM-PREFIX-LEN))
     )
     (if (is-eq mode "X")
       (is-eq (len program) PROGRAM-PREFIX-LEN)
-      (if (is-eq mode "T")
-        (> payload-len u0)
-        (if (is-eq mode "I")
-          (is-inscription-payload? payload)
-          false
+      (let
+        (
+          (payload (unwrap! (slice? program PROGRAM-PREFIX-LEN (len program)) false))
+        )
+        (if (is-eq mode "T")
+          (> payload-len u0)
+          (if (is-eq mode "I")
+            (is-inscription-payload? payload)
+            false
+          )
         )
       )
     )
@@ -275,6 +307,37 @@
   })
 )
 
+(define-read-only (get-tile-page (start uint) (limit uint))
+  (if
+    (and
+      (is-valid-tile start)
+      (> limit u0)
+      (<= limit TILE-PAGE-SIZE)
+    )
+    (ok
+      (unwrap-panic
+        (slice?
+          (list
+            (tile-page-entry (+ start u0))
+            (tile-page-entry (+ start u1))
+            (tile-page-entry (+ start u2))
+            (tile-page-entry (+ start u3))
+            (tile-page-entry (+ start u4))
+            (tile-page-entry (+ start u5))
+            (tile-page-entry (+ start u6))
+            (tile-page-entry (+ start u7))
+            (tile-page-entry (+ start u8))
+            (tile-page-entry (+ start u9))
+          )
+          u0
+          limit
+        )
+      )
+    )
+    ERR-INVALID-PAGE
+  )
+)
+
 ;; -----------------------------------------------------------------------------
 ;; Public functions
 ;; -----------------------------------------------------------------------------
@@ -289,6 +352,7 @@
       (previous-owner (get owner tile))
       (previous-locked (get locked tile))
     )
+    (asserts! (is-direct-caller) ERR-NOT-AUTHORIZED)
     (asserts! (not (var-get paused)) ERR-PAUSED)
     (asserts! (is-valid-tile tile-id) ERR-INVALID-TILE)
     (asserts! (is-valid-program-internal tile-id program) ERR-INVALID-PROGRAM)
@@ -341,6 +405,7 @@
     (
       (tile (get-tile-or-empty tile-id))
     )
+    (asserts! (is-direct-caller) ERR-NOT-AUTHORIZED)
     (asserts! (not (var-get paused)) ERR-PAUSED)
     (asserts! (is-valid-tile tile-id) ERR-INVALID-TILE)
     (asserts! (is-eq (get owner tile) (some tx-sender)) ERR-NOT-OWNER)
@@ -373,7 +438,7 @@
       (tile (get-tile-or-empty tile-id))
       (locked (get locked tile))
     )
-    (asserts! (not (var-get paused)) ERR-PAUSED)
+    (asserts! (is-direct-caller) ERR-NOT-AUTHORIZED)
     (asserts! (is-valid-tile tile-id) ERR-INVALID-TILE)
     (asserts! (is-eq (get owner tile) (some tx-sender)) ERR-NOT-OWNER)
     (asserts! (> locked u0) ERR-INVALID-AMOUNT)
@@ -410,9 +475,11 @@
 
 (define-public (withdraw-fees (amount uint) (recipient principal))
   (begin
+    (asserts! (is-direct-caller) ERR-NOT-AUTHORIZED)
     (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-NOT-AUTHORIZED)
     (asserts! (> amount u0) ERR-INVALID-AMOUNT)
     (asserts! (<= amount (var-get protocol-fees)) ERR-INVALID-AMOUNT)
+    (asserts! (is-standard-principal recipient) ERR-NOT-AUTHORIZED)
 
     (try! (as-contract (stx-transfer? amount tx-sender recipient)))
     (var-set protocol-fees (- (var-get protocol-fees) amount))
@@ -430,6 +497,7 @@
 
 (define-public (set-paused (value bool))
   (begin
+    (asserts! (is-direct-caller) ERR-NOT-AUTHORIZED)
     (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-NOT-AUTHORIZED)
     (var-set paused value)
     (print {

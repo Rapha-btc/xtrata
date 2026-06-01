@@ -1,17 +1,14 @@
 # X-Board Developer Notes
 
-## Application Boundary
+## Boundary
 
-`../x-board.html` is the only application file. It contains HTML, CSS, and
-JavaScript with no build step, framework, or wallet connector.
+[`../x-board.html`](../x-board.html) is the only browser application file. It
+contains HTML, CSS, and JavaScript with no build step, framework, or wallet
+connector.
 
-The application is an inscription-friendly reference implementation. Keep
-protocol-facing helpers isolated and testable so they can later move into
-reusable modules.
+## Canvas
 
-## Canvas Model
-
-X-Board uses a generated `12 x 12` logical grid:
+`buildSlotMap()` generates a stable `12 x 12` logical canvas:
 
 | Tier | Size | Count | Public IDs |
 |---|---:|---:|---|
@@ -19,78 +16,40 @@ X-Board uses a generated `12 x 12` logical grid:
 | Medium | `2 x 2` | `12` | `M01..M12` |
 | Small | `1 x 1` | `80` | `S01..S80` |
 
-`buildSlotMap()` creates the `93` immutable slot records in protocol order:
+Slot order is center, medium row-major, then small row-major. Do not reorder it.
 
-1. center slot;
-2. medium slots in row-major order;
-3. small slots in row-major order.
+## Runtime Map
 
-Each record includes:
+| Function | Responsibility |
+|---|---|
+| `buildSlotMap()` | Deterministic topology and identities |
+| `compileBoardMemo()` | Draft to canonical styled `B1` programme |
+| `decodeBoardMemo()` | Strict transfer-memo decoder |
+| `applyTextStyle()` | Shared board and preview text rendering |
+| `fetchCandidates()` | Bounded Hiro transaction fetch |
+| `resolveBoard()` | Newest valid transfer programme per wire code |
+| `updateComposer()` | Full-square local preview and byte counter |
+| `resolveDescriptor()` | Cached MIME probe for inscriptions |
+| `protocolSelfTest()` | Layout and decoder smoke checks |
 
-```js
-{
-  index: 0,
-  publicId: "C01",
-  wireCode: "00",
-  tier: "center",
-  col: 4,
-  row: 4,
-  width: 4,
-  height: 4
-}
+## Programme Rules
+
+The browser compiler and Clarity validator share:
+
+```text
+B1<slot><mode><font><size><position><colour><payload>
 ```
 
-Do not reorder slot generation after programmes have been used publicly.
+The standalone transfer scanner caps programmes at `34` bytes. The Clarity
+contract accepts up to `96` ASCII characters for future wallet calls. Text
+entered through the composer must be printable ASCII.
 
-## Runtime Sections
+Clear mode emits canonical `X0000`. Keep compiler, decoder, contract, tests, and
+documentation synchronized when changing this schema.
 
-The standalone script is organized around:
+## Preview
 
-| Function or section | Responsibility |
-|---|---|
-| `CONFIG` | Address, Hiro endpoints, polling, and inscription runtime settings |
-| `buildSlotMap()` | Deterministic board topology and slot identity |
-| `compileBoardMemo()` | Local design state to compact `B1` programme |
-| `decodeBoardMemo()` | Strict `B1` validation |
-| `fetchCandidates()` | Confirmed and mempool transfer fetch |
-| `candidateFrom()` | Recipient, amount, memo, and timestamp validation |
-| `resolveBoard()` | Newest valid candidate per wire code |
-| `renderBoard()` | Full square-canvas rendering |
-| `updateComposer()` | Full-square local preview and byte counter |
-| `resolveDescriptor()` | Cached MIME probe for referenced inscriptions |
-| `openLightbox()` | Enlarged MIME-aware inscription view |
-| `protocolSelfTest()` | Layout and memo decoder smoke checks |
-
-## State Resolution
-
-Current state is reconstructed from public transfers:
-
-1. Fetch bounded mempool and confirmed transaction lists.
-2. Normalize only valid token transfers to the configured address.
-3. Decode only valid `B1` programmes.
-4. Deduplicate by transaction ID, preferring confirmed records.
-5. Sort newest first.
-6. Keep the first valid candidate for each slot wire code.
-
-There is no single global winner. Each slot resolves independently.
-
-## Inscription Rendering
-
-An inscription programme carries only a token ID. The contract ID, fallback
-contract ID, network, and runtime routes come from `CONFIG`.
-
-- `/runtime/content` provides reconstructed raw bytes and MIME headers.
-- `/runtime/` runs interactive HTML inscriptions in sandboxed frames.
-- Images render as images.
-- Video renders natively where appropriate.
-- Audio, PDFs, text, HTML, and unsupported files open in the lightbox.
-- Descriptor probes are cached.
-- Composer preview probing is debounced to avoid unnecessary requests while a
-  token ID is still being typed.
-
-## Preview Rules
-
-The drawer preview must remain a full square:
+The programming drawer preview must stay square:
 
 ```css
 .preview {
@@ -100,22 +59,23 @@ The drawer preview must remain a full square:
 }
 ```
 
-The preview is local only and must stay labelled:
+The preview uses the same `renderSlotContent()` path as the board and remains
+labelled `PREVIEW - NOT ON-CHAIN`.
 
-```text
-PREVIEW - NOT ON-CHAIN
-```
+## Inscription Rendering
 
-## Clarity Migration
+Inscription programmes carry only token IDs. Runtime routes and contracts come
+from `CONFIG`.
 
-The direct-transfer scanner is the current prototype transport. For the
-contract-backed version:
+- Cache MIME descriptor probes.
+- Debounce inscription preview probes while typing.
+- Render images and appropriate videos inline.
+- Use the lightbox for audio, HTML, PDF, text, and unsupported files.
+- Keep interactive HTML sandboxed.
 
-- preserve slot indexes `0..92`;
-- use `tile-id uint` as the authoritative key;
-- replace transfer scanning with contract read-only state loading;
-- add wallet calls for claims and owner updates;
-- keep events for activity history and refresh cues;
-- preserve the full-square local preview before wallet submission.
+## Contract Migration
 
-See `clarity-contract-plan.md`.
+The standalone transfer scanner is prototype transport. The next implementation
+should load authoritative state via bounded `get-tile-page` calls and submit
+wallet transactions to the Clarity registry. Preserve the slot map and preview
+path during that migration.

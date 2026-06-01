@@ -8,18 +8,19 @@
   XTRATA X-BOARD
   Standalone programmable billboard inscription. No build tools or wallet connection.
 
-  MEMO FORMAT (max 34 bytes)
-    B1 <slot> <mode> <payload>
+  B1 PROGRAMME FORMAT
+    B1 <slot> <mode> <font> <size> <position> <colour> <payload>
 
     B1       namespace + protocol version
     slot     fixed-width base62 wire code for one square
     mode     T text, I referenced Xtrata inscription, X clear
-    payload  UTF-8 text or decimal token id; clear has no payload
+    style    four fixed palette codes; clear uses canonical 0000
+    payload  printable ASCII text or decimal token id; clear has no payload
 
   Examples:
-    B100TGM             set center C01 / code 00 to text GM
-    B10CI159            set M12 / code 0C to Xtrata inscription #159
-    B11UX               clear S80 / code 1U
+    B100T1324GM         set center C01 / code 00 to styled text GM
+    B10CI0004159        set M12 / code 0C to Xtrata inscription #159
+    B11UX0000           clear S80 / code 1U
 
   LAYOUT
     12 x 12 logical square canvas:
@@ -44,8 +45,8 @@
       radial-gradient(720px 520px at 100% 105%,rgba(109,136,255,.13),transparent 60%),var(--bg);
     padding:var(--safe-t) var(--safe-r) var(--safe-b) var(--safe-l);
   }
-  button,input,textarea{font:inherit;color:inherit}button{cursor:pointer}
-  button:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible{
+  button,input,textarea,select{font:inherit;color:inherit}button{cursor:pointer}
+  button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,a:focus-visible{
     outline:2px solid var(--accent);outline-offset:2px
   }
   .mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace}
@@ -90,8 +91,9 @@
   .drawer-head h2{margin:0;font-size:15px;letter-spacing:.12em;text-transform:uppercase}.drawer-body{overflow:auto;padding:15px 16px calc(24px + var(--safe-b));display:flex;flex-direction:column;gap:14px}
   .target{display:flex;gap:8px;flex-wrap:wrap}.target .badge{color:#d7fffa;border-color:rgba(85,230,213,.4);background:rgba(85,230,213,.08)}
   .field label{display:block;margin:0 0 7px;color:var(--muted);font-size:10px;font-weight:850;letter-spacing:.15em;text-transform:uppercase}
-  input,textarea{width:100%;border:1px solid var(--line);background:#080c13;border-radius:11px;padding:12px;font-size:16px}
+  input,textarea,select{width:100%;border:1px solid var(--line);background:#080c13;border-radius:11px;padding:12px;font-size:16px}
   textarea{min-height:82px;resize:vertical;line-height:1.4}
+  .style-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
   .modes{display:flex;gap:7px}.mode{flex:1;border:1px solid var(--line);background:rgba(255,255,255,.045);border-radius:10px;padding:9px 6px;font-size:12px;font-weight:800}
   .mode[aria-pressed="true"]{border-color:var(--accent);background:rgba(85,230,213,.13);color:#e7fffc}
   .preview{width:100%;aspect-ratio:1 / 1;flex:0 0 auto;border:1px dashed rgba(255,255,255,.18);border-radius:14px;overflow:hidden;position:relative;background:#09101a}
@@ -173,12 +175,63 @@
       <input id="inscriptionIn" inputmode="numeric" placeholder="e.g. 159" autocomplete="off" spellcheck="false" />
     </div>
     <div class="warn" id="clearNote" hidden>Clear mode removes the visible content from this square when the memo is sent.</div>
+    <div class="style-grid" id="styleGrid">
+      <div class="field">
+        <label for="fontIn">Font</label>
+        <select id="fontIn">
+          <option value="0">System</option>
+          <option value="1" selected>Display</option>
+          <option value="2">Serif</option>
+          <option value="3">Mono</option>
+          <option value="4">Rounded</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="sizeIn">Size</label>
+        <select id="sizeIn">
+          <option value="0">Extra small</option>
+          <option value="1">Small</option>
+          <option value="2">Medium</option>
+          <option value="3" selected>Large</option>
+          <option value="4">Extra large</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="positionIn">Position</label>
+        <select id="positionIn">
+          <option value="0">Top left</option>
+          <option value="1">Top center</option>
+          <option value="2" selected>Top right</option>
+          <option value="3">Middle left</option>
+          <option value="4">Middle center</option>
+          <option value="5">Middle right</option>
+          <option value="6">Bottom left</option>
+          <option value="7">Bottom center</option>
+          <option value="8">Bottom right</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="colourIn">Colour</label>
+        <select id="colourIn">
+          <option value="0">White</option>
+          <option value="1">Sky</option>
+          <option value="2">Blue</option>
+          <option value="3">Violet</option>
+          <option value="4" selected>Mint</option>
+          <option value="5">Gold</option>
+          <option value="6">Orange</option>
+          <option value="7">Red</option>
+          <option value="8">Pink</option>
+          <option value="9">Slate</option>
+        </select>
+      </div>
+    </div>
     <div class="preview" id="preview"></div>
     <div class="field">
       <label>Generated memo</label>
       <div class="memo-box">
-        <div class="memo mono" id="memoOut">B100T</div>
-        <div class="counter" id="counter"><span id="byteCount">5 / 34 bytes</span><span>Target <b id="memoTarget">C01 / 00</b></span></div>
+        <div class="memo mono" id="memoOut">B100T1324</div>
+        <div class="counter" id="counter"><span id="byteCount">9 / 34 bytes</span><span>Target <b id="memoTarget">C01 / 00</b></span></div>
       </div>
     </div>
     <div class="warn" id="warnBox">Write a message to create a valid memo.</div>
@@ -197,8 +250,8 @@
     <button class="iconbtn" id="infoClose" aria-label="Close">x</button>
   </div>
   <div class="drawer-body">
-    <p class="info-text">X-Board is an immutable programmable billboard. The code is fixed, but it reads public Stacks transfers sent to its address. Each valid <span class="mono">B1</span> memo updates one square.</p>
-    <p class="info-text">Click any square. Choose text, an Xtrata inscription, or clear. The page generates a memo containing that square's stable wire code.</p>
+    <p class="info-text">X-Board is an immutable programmable billboard. The code is fixed, but it reads public Stacks transfers sent to its address. Each valid <span class="mono">B1</span> programme updates one square.</p>
+    <p class="info-text">Click any square. Choose text, an Xtrata inscription, or clear. The page generates a programme containing that square's stable wire code and the same style fields enforced by the Clarity contract.</p>
     <p class="info-text"><b>The page is the compiler. The memo is the program. Each square is an independent public state.</b></p>
     <button class="btn small" id="devBtn">Run protocol self-test</button>
     <pre class="dev" id="devOut" hidden></pre>
@@ -236,6 +289,31 @@ const CONFIG = {
 
 const $ = id => document.getElementById(id);
 const BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+const STYLE_CODES = {
+  font:new Set(["0","1","2","3","4"]),
+  size:new Set(["0","1","2","3","4"]),
+  position:new Set(["0","1","2","3","4","5","6","7","8"]),
+  colour:new Set(["0","1","2","3","4","5","6","7","8","9"])
+};
+const DEFAULT_STYLE = { font:"1",size:"3",position:"2",colour:"4" };
+const CLEAR_STYLE = { font:"0",size:"0",position:"0",colour:"0" };
+const FONT_STYLES = {
+  "0":'ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',
+  "1":'Impact,Haettenschweiler,"Arial Narrow Bold",sans-serif',
+  "2":'Georgia,"Times New Roman",serif',
+  "3":'ui-monospace,"SF Mono",Menlo,Consolas,monospace',
+  "4":'"Trebuchet MS","Arial Rounded MT Bold",sans-serif'
+};
+const SIZE_SCALES = { "0":.64,"1":.78,"2":.92,"3":1,"4":1.14 };
+const POSITION_STYLES = {
+  "0":["start","left"],"1":["start","center"],"2":["start","right"],
+  "3":["center","left"],"4":["center","center"],"5":["center","right"],
+  "6":["end","left"],"7":["end","center"],"8":["end","right"]
+};
+const COLOUR_STYLES = {
+  "0":"#eef6ff","1":"#8fd7ff","2":"#6d88ff","3":"#a98bff","4":"#55e6d5",
+  "5":"#ffd16b","6":"#ff9b54","7":"#ff8b7f","8":"#ff7bd5","9":"#aebbd0"
+};
 const utf8 = new TextEncoder();
 const SLOT_BY_CODE = new Map();
 const SLOT_BY_ID = new Map();
@@ -246,6 +324,7 @@ const utf8Decoder = new TextDecoder("utf-8",{ fatal:true });
 let liveStates = new Map();
 let selectedSlot = null;
 let composeMode = "T";
+let composeStyle = { ...DEFAULT_STYLE };
 let activeDrawer = null;
 let lastFocus = null;
 let fetching = false;
@@ -282,39 +361,52 @@ function normInscription(value){
 function normalizeText(value){
   return String(value==null?"":value).replace(/[\u0000-\u001f\u007f]/g,"").trim();
 }
-function compileBoardMemo(slotCode,mode,payload){
+function isPrintableAscii(value){ return /^[\x20-\x7e]+$/.test(value); }
+function normalizeStyle(style){
+  const value={ ...DEFAULT_STYLE,...(style||{}) };
+  return Object.keys(STYLE_CODES).every(key=>STYLE_CODES[key].has(value[key])) ? value : null;
+}
+function styleWire(style){ return style.font+style.size+style.position+style.colour; }
+function compileBoardMemo(slotCode,mode,payload,style){
   const slot=SLOT_BY_CODE.get(String(slotCode||""));
   if(!slot) return { ok:false,memo:"",bytes:0,error:"Unknown square code." };
   if(!["T","I","X"].includes(mode)) return { ok:false,memo:"",bytes:0,error:"Unknown content mode." };
+  const normalizedStyle=mode==="X"?{ ...CLEAR_STYLE }:normalizeStyle(style);
+  if(!normalizedStyle) return { ok:false,memo:"",bytes:0,error:"Choose a valid style." };
+  const prefix="B1"+slot.wireCode+mode+styleWire(normalizedStyle);
   let value="";
   if(mode==="T"){
     value=normalizeText(payload);
-    if(!value) return invalidDraft("B1"+slot.wireCode+"T","Write a message to create a valid memo.");
+    if(!value) return invalidDraft(prefix,"Write a message to create a valid programme.");
+    if(!isPrintableAscii(value)) return invalidDraft(prefix+value,"Use printable ASCII text only for the Clarity-compatible programme.");
   }else if(mode==="I"){
     value=normInscription(payload);
-    if(!value) return invalidDraft("B1"+slot.wireCode+"I","Use a numeric Xtrata inscription token ID.");
+    if(!value) return invalidDraft(prefix,"Use a numeric Xtrata inscription token ID.");
   }
-  const memo="B1"+slot.wireCode+mode+value;
+  const memo=prefix+value;
   const bytes=byteLen(memo);
   if(bytes>CONFIG.memoMaxBytes) return { ok:false,memo,bytes,error:"Memo is "+bytes+" / "+CONFIG.memoMaxBytes+" bytes. Shorten the payload." };
-  return { ok:true,memo,bytes,state:{ slotCode:slot.wireCode,mode,value } };
+  return { ok:true,memo,bytes,state:{ slotCode:slot.wireCode,mode,value,...normalizedStyle } };
 }
 function invalidDraft(memo,error){ return { ok:false,memo,bytes:byteLen(memo),error }; }
 function decodeBoardMemo(memo){
   if(typeof memo!=="string" || byteLen(memo)>CONFIG.memoMaxBytes || memo.slice(0,2)!=="B1") return null;
   const slot=SLOT_BY_CODE.get(memo.slice(2,4));
   if(!slot) return null;
-  const mode=memo[4],payload=memo.slice(5);
+  const mode=memo[4];
+  const style=normalizeStyle({ font:memo[5],size:memo[6],position:memo[7],colour:memo[8] });
+  if(!style) return null;
+  const payload=memo.slice(9);
   if(mode==="T"){
     const value=normalizeText(payload);
-    if(!value || value!==payload) return null;
-    return { slotCode:slot.wireCode,mode,value };
+    if(!value || value!==payload || !isPrintableAscii(value)) return null;
+    return { slotCode:slot.wireCode,mode,value,...style };
   }
   if(mode==="I"){
     if(!/^\d+$/.test(payload) || payload.length>CONFIG.inscriptionMaxDigits) return null;
-    return { slotCode:slot.wireCode,mode,value:payload.replace(/^0+(?=\d)/,"") };
+    return { slotCode:slot.wireCode,mode,value:payload.replace(/^0+(?=\d)/,""),...style };
   }
-  if(mode==="X" && payload==="") return { slotCode:slot.wireCode,mode,value:"" };
+  if(mode==="X" && payload==="") return { slotCode:slot.wireCode,mode,value:"",...style };
   return null;
 }
 
@@ -377,12 +469,20 @@ function renderSlotContent(root,slot,state){
     const empty=document.createElement("span");empty.className="slot-empty";empty.textContent="+";root.appendChild(empty);return;
   }
   if(state.mode==="T"){
-    const text=document.createElement("span");text.className="slot-text";text.textContent=state.value;root.appendChild(text);return;
+    const text=document.createElement("span");text.className="slot-text";text.textContent=state.value;applyTextStyle(text,state);root.appendChild(text);return;
   }
   const tokenId=state.value;
   const placeholder=document.createElement("span");placeholder.className="slot-kind";placeholder.textContent="#"+tokenId;root.appendChild(placeholder);
   if(!tokenId || root.dataset.preview==="true") return;
   hydrateInscription(root,slot,tokenId,placeholder);
+}
+function applyTextStyle(node,state){
+  const position=POSITION_STYLES[state.position]||POSITION_STYLES[DEFAULT_STYLE.position];
+  node.style.alignSelf=position[0];
+  node.style.textAlign=position[1];
+  node.style.fontFamily=FONT_STYLES[state.font]||FONT_STYLES[DEFAULT_STYLE.font];
+  node.style.color=COLOUR_STYLES[state.colour]||COLOUR_STYLES[DEFAULT_STYLE.colour];
+  node.style.transform="scale("+(SIZE_SCALES[state.size]||SIZE_SCALES[DEFAULT_STYLE.size])+")";
 }
 function hydrateInscription(root,slot,tokenId,placeholder){
   resolveDescriptor(tokenId).then(descriptor=>{
@@ -414,7 +514,7 @@ function closeDrawer(restore=true){
 }
 function setMode(mode){
   composeMode=mode;document.querySelectorAll(".mode").forEach(btn=>btn.setAttribute("aria-pressed",String(btn.dataset.mode===mode)));
-  $("textField").hidden=mode!=="T";$("inscriptionField").hidden=mode!=="I";$("clearNote").hidden=mode!=="X";updateComposer();
+  $("textField").hidden=mode!=="T";$("inscriptionField").hidden=mode!=="I";$("clearNote").hidden=mode!=="X";$("styleGrid").hidden=mode==="X";updateComposer();
 }
 function liveDescription(state){
   if(!state||state.mode==="X") return "This square is empty.";
@@ -433,14 +533,14 @@ function renderDrawer(){
 function currentDraft(){
   if(!selectedSlot)return null;
   const payload=composeMode==="T"?$("textIn").value:composeMode==="I"?$("inscriptionIn").value:"";
-  return compileBoardMemo(selectedSlot.wireCode,composeMode,payload);
+  return compileBoardMemo(selectedSlot.wireCode,composeMode,payload,composeStyle);
 }
 function updateComposer(){
   if(!selectedSlot)return;
   const draft=currentDraft();$("memoOut").textContent=draft.memo;$("byteCount").textContent=draft.bytes+" / "+CONFIG.memoMaxBytes+" bytes";$("counter").classList.toggle("over",draft.bytes>CONFIG.memoMaxBytes);
   $("warnBox").textContent=draft.ok?"Ready. This memo targets "+selectedSlot.publicId+" / "+selectedSlot.wireCode+" only.":draft.error;$("warnBox").classList.toggle("bad",!draft.ok);
   $("copyMemoBtn").disabled=!draft.ok;$("copyMemoBtn").style.opacity=draft.ok?"1":".5";
-  const state=draft.ok?draft.state:{slotCode:selectedSlot.wireCode,mode:composeMode,value:composeMode==="T"?normalizeText($("textIn").value):composeMode==="I"?(normInscription($("inscriptionIn").value)||""):""};
+  const state=draft.ok?draft.state:{slotCode:selectedSlot.wireCode,mode:composeMode,value:composeMode==="T"?normalizeText($("textIn").value):composeMode==="I"?(normInscription($("inscriptionIn").value)||""):"",...(composeMode==="X"?CLEAR_STYLE:composeStyle)};
   const preview=$("preview");preview.innerHTML="";const previewSlot=makeSlotElement({...selectedSlot,col:0,row:0,width:1,height:1},state,true);preview.appendChild(previewSlot);
   clearTimeout(previewDescriptorTimer);
   if(state.mode==="I"&&state.value)previewDescriptorTimer=setTimeout(()=>{const placeholder=previewSlot.querySelector(".slot-kind");if(placeholder)hydrateInscription(previewSlot,selectedSlot,state.value,placeholder)},400);
@@ -507,13 +607,14 @@ async function copyText(text,button){
 function protocolSelfTest(){
   const occupied=new Set(),checks=[];for(const slot of SLOTS)for(let row=slot.row;row<slot.row+slot.height;row++)for(let col=slot.col;col<slot.col+slot.width;col++){const key=col+","+row;if(occupied.has(key))throw new Error("Overlap "+key);occupied.add(key);}
   checks.push("slots="+SLOTS.length,"covered="+occupied.size,"codes="+new Set(SLOTS.map(slot=>slot.wireCode)).size);
-  const samples=["B100TGM","B10CI159","B11UX","K1S111","B1zzTNO","B100XBAD","B100Iabc"];
+  const samples=["B100T1324GM","B10CI0004159","B11UX0000","K1S111","B1zzT1324NO","B100X0000BAD","B100I0004abc"];
   for(const memo of samples)checks.push(memo+" -> "+JSON.stringify(decodeBoardMemo(memo)));
   return checks.join("\n");
 }
 
 document.querySelectorAll(".mode").forEach(btn=>btn.addEventListener("click",()=>setMode(btn.dataset.mode)));
 $("textIn").addEventListener("input",updateComposer);$("inscriptionIn").addEventListener("input",updateComposer);
+["font","size","position","colour"].forEach(key=>$(key+"In").addEventListener("change",()=>{composeStyle={...composeStyle,[key]:$(key+"In").value};updateComposer()}));
 $("refreshBtn").addEventListener("click",()=>refresh(true));$("infoBtn").addEventListener("click",()=>openDrawer($("infoDrawer")));
 $("programClose").addEventListener("click",()=>closeDrawer());$("infoClose").addEventListener("click",()=>closeDrawer());$("backdrop").addEventListener("click",()=>closeDrawer());
 $("copyMemoBtn").addEventListener("click",event=>{const draft=currentDraft();if(draft&&draft.ok)copyText(draft.memo,event.currentTarget);});
