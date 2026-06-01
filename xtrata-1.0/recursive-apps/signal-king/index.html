@@ -145,6 +145,7 @@
     box-shadow:0 0 30px var(--glow), inset 0 0 0 1px rgba(255,255,255,.04);
     animation:var(--ambient) var(--ambient-time) ease-in-out infinite; }
   .insframe, .insimg, .insvideo{ position:absolute; inset:0; width:100%; height:100%; border:0; display:block; }
+  .insframe[hidden], .insimg[hidden], .insvideo[hidden]{ display:none; }
   .insimg{ object-fit:contain; background:#05070c; }
   .insvideo{ object-fit:contain; background:#05070c; }
   .insplaceholder, .pvinsplaceholder, .lbplaceholder{
@@ -175,6 +176,7 @@
   .lbstage{ width:min(86vmin,720px); height:min(86vmin,720px); max-width:94vw; border-radius:16px; overflow:hidden;
     background:#05070c; border:1px solid var(--line); box-shadow:0 0 60px rgba(0,0,0,.7); position:relative; }
   .lbframe, .lbimg, .lbvideo{ position:absolute; inset:0; width:100%; height:100%; border:0; display:block; }
+  .lbframe[hidden], .lbimg[hidden], .lbvideo[hidden], .lbaudio[hidden], .lbtext[hidden]{ display:none; }
   .lbimg, .lbvideo{ object-fit:contain; }
   .lbaudio{ position:absolute; left:7%; right:7%; top:50%; width:86%; transform:translateY(-50%); }
   .lbtext{
@@ -275,6 +277,7 @@
   .preview .pvtotem{ font-size:48px; line-height:1; margin:6px 0 4px; animation:var(--ambient) var(--ambient-time) ease-in-out infinite; }
   .preview .pvins{ width:96px; height:96px; margin:6px auto 4px; border-radius:8px; overflow:hidden; background:#05070c; border:1px solid var(--line); position:relative; }
   .preview .pvinsframe, .preview .pvinsvideo{ width:100%; height:100%; border:0; display:block; object-fit:contain; background:#05070c; }
+  .preview .pvinsframe[hidden], .preview .pvinsvideo[hidden]{ display:none; }
   .preview .pvinsplaceholder{ position:absolute; inset:0; }
   .preview .pvinsstatus{ position:absolute; inset:auto 6px 6px; padding:4px 5px; border-radius:6px;
     background:rgba(5,7,12,.78); color:var(--muted); font-size:8px; letter-spacing:.08em; text-transform:uppercase; }
@@ -1145,17 +1148,31 @@ function hidePlaceholder(prefix){
   if(placeholder) placeholder.hidden = true;
 }
 
-function clearCanvasMedia(prefix){
+function compactMediaRoot(prefix){
+  return $(prefix === 'ins' ? 'insCanvas' : 'pvIns');
+}
+
+function clearCanvasMedia(prefix, preserveKind){
   const frame = $(prefix + 'Frame'), img = $(prefix + 'Img'), video = $(prefix + 'Video');
   if(frame){ frame.hidden = true; frame.src = 'about:blank'; }
-  if(img){ img.hidden = true; clearImage(img); }
-  if(video){ video.hidden = true; clearVideo(video); }
+  if(img){
+    img.hidden = preserveKind !== 'image';
+    if(preserveKind !== 'image') clearImage(img);
+  }
+  if(video){
+    video.hidden = preserveKind !== 'video';
+    if(preserveKind !== 'video') clearVideo(video);
+  }
   hidePlaceholder(prefix);
 }
 
 function renderCompactInscription(prefix, num, descriptor, slot){
   const url = inscriptionContentUrl(num);
-  clearCanvasMedia(prefix);
+  const root = compactMediaRoot(prefix);
+  const renderKey = (descriptor ? descriptor.kind : 'loading') + '|' + url;
+  const reuse = root && root.dataset.renderKey === renderKey;
+  clearCanvasMedia(prefix, descriptor && descriptor.kind);
+  if(root) root.dataset.renderKey = renderKey;
   setSmallStatus(prefix + 'Status', '');
   if(!descriptor){
     showPlaceholder(prefix, null);
@@ -1164,12 +1181,17 @@ function renderCompactInscription(prefix, num, descriptor, slot){
   if(descriptor.kind === 'image'){
     const img = $(prefix + 'Img');
     img.hidden = false;
+    if(reuse && img.getAttribute('src') === url){
+      setSmallStatus(prefix + 'Status', img.complete && img.naturalWidth ? '' : 'Loading #' + num);
+      return;
+    }
     setSmallStatus(prefix + 'Status', 'Loading #' + num);
     setImageSourceWithDiagnostics(img, url, { slot, tokenId:num, onload:()=>{
       setSmallStatus(prefix + 'Status', '');
     }, onerror:()=>{
       img.hidden = true;
       clearImage(img);
+      if(root) root.removeAttribute('data-render-key');
       showPlaceholder(prefix, { kind:'binary', large:descriptor.large });
       setSmallStatus(prefix + 'Status', '');
     }});
@@ -1178,7 +1200,7 @@ function renderCompactInscription(prefix, num, descriptor, slot){
   if(descriptor.kind === 'video'){
     const video = $(prefix + 'Video');
     video.hidden = false;
-    video.src = url;
+    if(video.getAttribute('src') !== url) video.src = url;
     video.play().catch(()=>{});
     return;
   }
@@ -1203,6 +1225,7 @@ function setInscriptionCanvas(num){
   if(!num){
     canvas.hidden = true;
     clearCanvasMedia('ins');
+    canvas.removeAttribute('data-render-key');
     setSmallStatus('insStatus', '');
     totem.style.display = '';
     return totem;
@@ -1211,6 +1234,7 @@ function setInscriptionCanvas(num){
   if(!url){
     canvas.hidden = true;
     clearCanvasMedia('ins');
+    canvas.removeAttribute('data-render-key');
     setSmallStatus('insStatus', '');
     totem.style.display = '';
     return totem;
@@ -1235,9 +1259,9 @@ function renderViewer(claim, opts){
   $('bAction').textContent = ACTIONS[st.action];
   $('bCrown').textContent = st.inscription ? ('#' + st.inscription) : (CROWNS[st.crown] || '👑');
 
-  // emoji crown vs referenced inscription
-  const animTarget = setInscriptionCanvas(st.inscription);
   currentInscription = st.inscription || null;
+  // emoji crown vs referenced inscription
+  const animTarget = setInscriptionCanvas(currentInscription);
 
   const holderEl = $('holder');
   const txLink = $('txLink');
@@ -1412,6 +1436,7 @@ function updatePanel(opts){
   } else {
     pvIns.hidden = true;
     clearCanvasMedia('pvIns');
+    pvIns.removeAttribute('data-render-key');
     setSmallStatus('pvInsStatus', '');
     pvTotem.style.display = '';
     pvTotem.textContent = CROWNS[sel.crown];
