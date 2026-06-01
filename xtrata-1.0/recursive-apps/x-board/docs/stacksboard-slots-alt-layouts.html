@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alternative Grid Layouts</title>
+<style>
+  :root {
+    --bg: #000000;
+    --cell: #EB4899;      /* pink fill */
+    --line: #000000;      /* separator / gap colour */
+    --line-w: 2;          /* separator width in viewBox units */
+  }
+
+  body.wireframe {
+    --cell: #000000;
+    --line: #ffffff;
+  }
+
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--bg);
+    font-family: system-ui, -apple-system, sans-serif;
+    overflow: hidden;
+    color: white;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .controls {
+    position: absolute;
+    top: 20px;
+    z-index: 10;
+    display: flex;
+    gap: 10px;
+    background: rgba(20, 20, 20, 0.85);
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  button {
+    background: #2a2a2a;
+    color: #fff;
+    border: 1px solid #444;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+
+  button:hover { background: #3a3a3a; }
+  
+  button.active { 
+    background: #EB4899; 
+    color: #000; 
+    border-color: #EB4899; 
+    font-weight: bold; 
+  }
+
+  .separator {
+    width: 1px;
+    background: #444;
+    margin: 0 4px;
+  }
+
+  /* The SVG container scales the grid to fit screen */
+  #svg-wrapper {
+    width: 100%;
+    height: 100%;
+    max-width: 90vw;
+    max-height: 85vh;
+    margin-top: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #grid {
+    width: 100%;
+    height: 100%;
+    display: block;
+    overflow: visible;
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .cell {
+    fill: var(--cell);
+    stroke: var(--line);
+    stroke-width: var(--line-w);
+    /* Hardware accelerated transition for position */
+    transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1), fill 0.4s, stroke 0.4s;
+  }
+
+  .legend {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    z-index: 10;
+    background: rgba(20, 20, 20, 0.85);
+    padding: 16px 20px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    font-size: 13px;
+    line-height: 1.6;
+    min-width: 180px;
+    pointer-events: none; /* Let clicks pass through to SVG */
+  }
+
+  .legend h3 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    color: var(--cell);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    border-bottom: 1px solid #444;
+    padding-bottom: 8px;
+  }
+
+  .legend-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+
+  .legend-row span:first-child {
+    color: #aaa;
+  }
+
+  .legend-row span:last-child {
+    font-weight: bold;
+    color: #fff;
+  }
+
+  .integrity-check {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #444;
+    font-size: 12px;
+    text-align: center;
+    font-weight: bold;
+    transition: color 0.3s;
+  }
+  
+  .integrity-pass { color: #4ade80; } /* Green */
+  .integrity-fail { color: #f87171; } /* Red */
+</style>
+</head>
+<body>
+
+<div class="controls">
+  <button id="btn-orig" onclick="setLayout('orig')" class="active">Original (48x35)</button>
+  <button id="btn-square" onclick="setLayout('square')">Square Block (40x42)</button>
+  <button id="btn-square-center-circle" onclick="setLayout('square-center-circle')">Radiating Circle</button>
+  <button id="btn-square-center-diamond" onclick="setLayout('square-center-diamond')">Radiating Diamond</button>
+  <button id="btn-cross" onclick="setLayout('cross')">Cross (52x52)</button>
+  <button id="btn-hollow" onclick="setLayout('hollow')">Hollow Square (44x44)</button>
+  <div class="separator"></div>
+  <button id="btn-wireframe" onclick="toggleWireframe()">Toggle B&W Wireframe</button>
+</div>
+
+<div id="svg-wrapper">
+  <svg id="grid" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg"></svg>
+</div>
+
+<div class="legend">
+  <h3>Tier Legend</h3>
+  <div class="legend-row"><span>Diamond (4x4)</span> <span>36</span></div>
+  <div class="legend-row"><span>Sapphire (12x3)</span> <span>4</span></div>
+  <div class="legend-row"><span>Emerald (6x3)</span> <span>8</span></div>
+  <div class="legend-row"><span>Platinum (6x3)</span> <span>8</span></div>
+  <div class="legend-row"><span>Gold (3x2)</span> <span>32</span></div>
+  <div class="legend-row"><span>Silver (2x2)</span> <span>72</span></div>
+  <div class="legend-row"><span>Bronze (1x1)</span> <span>192</span></div>
+  <div id="integrity-status" class="integrity-check">Verifying layout...</div>
+</div>
+
+<script>
+(() => {
+  // ---- Original Data ----
+  const bands = [
+    [ 0, 4, 4], [ 4, 3,12], [ 7, 4, 4], [11, 3, 6],
+    [14, 4, 4], [18, 3, 6], [21, 2, 3], [23, 2, 3],
+    [25, 2, 2], [27, 2, 2], [29, 2, 2], [31, 1, 1],
+    [32, 1, 1], [33, 1, 1], [34, 1, 1]
+  ];
+
+  const u = 20; // Base unit multiplier for coordinate space
+  const svg = document.getElementById('grid');
+  const allBlocks = [];
+  let rectNodes = {};
+  let layoutCache = {};
+
+  // 1. Unpack bands into individual rect definitions
+  function initBlocks() {
+    let idCounter = 0;
+    bands.forEach((band, bandIndex) => {
+      const [startRow, h, w] = band;
+      const cellsAcross = 48 / w;
+      for (let c = 0; c < cellsAcross; c++) {
+        allBlocks.push({
+          id: `rect-${idCounter++}`,
+          w: w,
+          h: h,
+          band: bandIndex,
+          origX: c * w,
+          origY: startRow
+        });
+      }
+    });
+
+    // Create DOM nodes once
+    allBlocks.forEach(b => {
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      rect.setAttribute('class', 'cell');
+      rect.setAttribute('width', b.w * u);
+      rect.setAttribute('height', b.h * u);
+      rect.setAttribute('x', 0); // Logic will rely entirely on CSS transforms
+      rect.setAttribute('y', 0);
+      svg.appendChild(rect);
+      rectNodes[b.id] = rect;
+    });
+  }
+
+  // 2. Bin Packer Algorithm
+  function calculateLayout(layoutType) {
+    let blocks = allBlocks.map(b => ({ ...b })); // Clone data
+    let gridW, gridH, validMask;
+
+    if (layoutType === 'orig') {
+      blocks.forEach(b => { b.x = b.origX; b.y = b.origY; });
+      return { blocks, w: 48, h: 35 };
+    } 
+
+    if (layoutType === 'square') {
+      gridW = 40; gridH = 42; // 40 * 42 = 1680 exactly
+      validMask = (x, y) => true; 
+    } 
+    else if (layoutType === 'square-center-circle' || layoutType === 'square-center-diamond') {
+      gridW = 40; gridH = 42;
+      validMask = (x, y) => true; 
+    }
+    else if (layoutType === 'cross') {
+      gridW = 52; gridH = 52;
+      // Cross mask: 20x20 center, 20x16 arms. (320*4 + 400 = 1680)
+      validMask = (x, y) => (x >= 16 && x < 36) || (y >= 16 && y < 36);
+    }
+    else if (layoutType === 'hollow') {
+      gridW = 44; gridH = 44;
+      // 44x44 outer, 16x16 inner hole. (1936 - 256 = 1680)
+      validMask = (x, y) => !(x >= 14 && x < 30 && y >= 14 && y < 30);
+    }
+
+    // Heuristic sort: area descending, then max dimension descending
+    // Large pieces drop in first, 1x1 pieces seamlessly fill in all the tiny gaps at the end.
+    blocks.sort((a, b) => (b.w * b.h - a.w * a.h) || (Math.max(b.w, b.h) - Math.max(a.w, a.h)));
+
+    let grid = Array(gridH).fill(null).map(() => Array(gridW).fill(false));
+    let placedCount = 0;
+
+    blocks.forEach(b => {
+      let placed = false;
+      
+      // Generate all valid top-left placements for this block
+      let candidateSpots = [];
+      for (let y = 0; y <= gridH - b.h; y++) {
+        for (let x = 0; x <= gridW - b.w; x++) {
+          candidateSpots.push({x, y});
+        }
+      }
+
+      // Distribute from the center outwards for all shapes except the original and basic square
+      if (layoutType !== 'orig' && layoutType !== 'square') {
+        const cx = gridW / 2;
+        const cy = gridH / 2;
+        const isDiamond = layoutType === 'square-center-diamond';
+        
+        candidateSpots.sort((posA, posB) => {
+          // Calculate distances from the *center* of the block to the grid center
+          const dxA = (posA.x + b.w / 2) - cx;
+          const dyA = (posA.y + b.h / 2) - cy;
+          const dxB = (posB.x + b.w / 2) - cx;
+          const dyB = (posB.y + b.h / 2) - cy;
+          
+          const distA = isDiamond ? (Math.abs(dxA) + Math.abs(dyA)) : (dxA*dxA + dyA*dyA);
+          const distB = isDiamond ? (Math.abs(dxB) + Math.abs(dyB)) : (dxB*dxB + dyB*dyB);
+          
+          return distA - distB;
+        });
+      }
+
+      // Search through candidate spots in optimal order
+      for (const pos of candidateSpots) {
+        const { x, y } = pos;
+          
+        let canFit = true;
+        for (let r = y; r < y + b.h; r++) {
+          for (let c = x; c < x + b.w; c++) {
+            if (!validMask(c, r) || grid[r][c]) {
+              canFit = false; break;
+            }
+          }
+          if (!canFit) break;
+        }
+
+        if (canFit) {
+          for (let r = y; r < y + b.h; r++) {
+            for (let c = x; c < x + b.w; c++) {
+              grid[r][c] = true;
+            }
+          }
+          b.x = x;
+          b.y = y;
+          placed = true;
+          placedCount++;
+          break;
+        }
+      }
+      
+      if (!placed) {
+        console.warn(`Failed to fit piece ${b.w}x${b.h} in layout ${layoutType}`);
+        b.x = -100; b.y = -100; // hide securely offscreen if unexpected failure
+      }
+    });
+
+    return { blocks, w: gridW, h: gridH, placedCount, totalBlocks: blocks.length };
+  }
+
+  // 3. Render loop
+  window.setLayout = function(layoutType) {
+    // Update UI Buttons
+    document.querySelectorAll('.controls button').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(`btn-${layoutType}`).classList.add('active');
+
+    // Fetch or calculate layout coordinates
+    if (!layoutCache[layoutType]) {
+      layoutCache[layoutType] = calculateLayout(layoutType);
+    }
+    
+    const layout = layoutCache[layoutType];
+
+    // Smoothly scale the viewBox to frame the new shape
+    svg.setAttribute('viewBox', `0 0 ${layout.w * u} ${layout.h * u}`);
+
+    // Move SVG nodes
+    layout.blocks.forEach(b => {
+      const node = rectNodes[b.id];
+      node.style.transform = `translate(${b.x * u}px, ${b.y * u}px)`;
+    });
+
+    // Update Integrity Validator
+    const statusEl = document.getElementById('integrity-status');
+    if (layout.placedCount === layout.totalBlocks) {
+      statusEl.textContent = `✓ 100% Integrity (${layout.placedCount}/${layout.totalBlocks} placed)`;
+      statusEl.className = 'integrity-check integrity-pass';
+    } else {
+      statusEl.textContent = `⚠ Missing Shapes (${layout.placedCount}/${layout.totalBlocks} placed)`;
+      statusEl.className = 'integrity-check integrity-fail';
+    }
+  }
+
+  // Utility to toggle wireframe since you requested B&W earlier
+  window.toggleWireframe = function() {
+    document.body.classList.toggle('wireframe');
+    const btn = document.getElementById('btn-wireframe');
+    btn.classList.toggle('active');
+  }
+
+  // Boot up
+  initBlocks();
+  setLayout('orig'); // Default to original layout on load
+
+})();
+</script>
+</body>
+</html>
