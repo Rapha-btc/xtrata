@@ -551,7 +551,8 @@ const CONFIG = {
 
      /runtime/content exposes diagnostic headers for HEAD probes and streams
      reconstructed content where possible. MIME-aware rendering keeps passive
-     media native and launches HTML only in a sandboxed lightbox via /runtime/.
+     media native and launches HTML in sandboxed compact and lightbox frames
+     via /runtime/.
      The route is intentionally same-origin so Cloudflare preview
      deployments exercise the preview Function instead of production. Direct
      file:// testing falls back to the production runtime URL because relative
@@ -1154,7 +1155,10 @@ function compactMediaRoot(prefix){
 
 function clearCanvasMedia(prefix, preserveKind){
   const frame = $(prefix + 'Frame'), img = $(prefix + 'Img'), video = $(prefix + 'Video');
-  if(frame){ frame.hidden = true; frame.src = 'about:blank'; }
+  if(frame){
+    frame.hidden = preserveKind !== 'html';
+    if(preserveKind !== 'html') frame.src = 'about:blank';
+  }
   if(img){
     img.hidden = preserveKind !== 'image';
     if(preserveKind !== 'image') clearImage(img);
@@ -1202,6 +1206,14 @@ function renderCompactInscription(prefix, num, descriptor, slot){
     video.hidden = false;
     if(video.getAttribute('src') !== url) video.src = url;
     video.play().catch(()=>{});
+    return;
+  }
+  if(descriptor.kind === 'html'){
+    const frame = $(prefix + 'Frame');
+    const runtimeUrl = inscriptionRuntimeUrl(num);
+    frame.hidden = false;
+    frame.setAttribute('sandbox', 'allow-scripts');
+    if(frame.getAttribute('src') !== runtimeUrl) frame.src = runtimeUrl;
     return;
   }
   showPlaceholder(prefix, descriptor);
