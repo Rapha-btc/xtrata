@@ -3143,6 +3143,7 @@
       hasRuntimeContentUrls,
       inlineRuntimeContentUrls
     } from '/src/lib/viewer/runtime-inline.ts';
+    import { buildRuntimeInscriptionContentUrl } from '/src/lib/collections/cover-image.ts';
     import { resolveInscriptionMimeType } from '/src/lib/mint/mime.ts';
     import { createImageThumbnail, THUMBNAIL_SIZE } from '/src/lib/viewer/thumbnail.ts';
     import {
@@ -3770,7 +3771,8 @@
         mimeType = null,
         isSvgSource = false,
         alt = 'Image preview',
-        preserveAnimation = false
+        preserveAnimation = false,
+        onError = null
       } = {}
     ) => {
       const renderNativeImage = () => {
@@ -3783,6 +3785,9 @@
           isSvgSource,
           squareFrame: true
         });
+        if (onError) {
+          img.addEventListener('error', onError, { once: true });
+        }
         img.src = sourceUrl;
         target.replaceChildren(img);
       };
@@ -3805,7 +3810,7 @@
           renderNativeImage();
         }
       };
-      img.onerror = renderNativeImage;
+      img.onerror = onError ?? renderNativeImage;
       img.src = sourceUrl;
     };
 
@@ -5606,6 +5611,12 @@
     const getThumbnailKey = (token) =>
       `${getTokenCacheContractId(token)}:${token.id.toString()}`;
 
+    const getTokenRuntimeContentUrl = (token) =>
+      buildRuntimeInscriptionContentUrl({
+        coreContractId: getTokenCacheContractId(token),
+        tokenId: token.id
+      });
+
     const prepareRuntimeHtmlForToken = async (token, html, contextLabel = 'preview') => {
       if (!html || !hasRuntimeContentUrls(html)) {
         return html;
@@ -5719,6 +5730,22 @@
           htmlDoc: null
         };
       }
+      const runtimeImageUrl = getTokenRuntimeImageUrl(token);
+      if (runtimeImageUrl) {
+        const mimeType = token.meta.mimeType ?? 'application/octet-stream';
+        state.tokenPreviewTokenId = tokenId;
+        state.tokenPreviewBytes = null;
+        state.tokenPreviewMimeType = mimeType;
+        state.tokenPreviewSourceUrl = runtimeImageUrl;
+        state.tokenPreviewHtmlDoc = null;
+        return {
+          token,
+          bytes: null,
+          mimeType,
+          sourceUrl: runtimeImageUrl,
+          htmlDoc: null
+        };
+      }
       const contentClient = getTokenClient(token);
       const bytes = await fetchOnChainContent({
         client: contentClient,
@@ -5755,11 +5782,14 @@
       dom.fullscreenRawLink.removeAttribute('download');
 
       if (sourceUrl) {
+        const kind = getMediaKind(mimeType ?? null);
         configureFullscreenRawLink(token, sourceUrl);
         renderSquareImagePreview(dom.fullscreenStage, sourceUrl, {
           mimeType,
-          isSvgSource: true,
-          alt: 'Inscription preview'
+          isSvgSource: kind === 'svg',
+          alt: 'Inscription preview',
+          preserveAnimation:
+            kind === 'image' && isPotentialAnimatedRasterMimeType(mimeType)
         });
         return;
       }
@@ -6157,6 +6187,84 @@
       token.meta.totalSize <= MAX_GRID_EAGER_FULL_LOAD_BYTES &&
       isPotentialAnimatedRasterMimeType(token.meta.mimeType ?? null);
 
+    const getTokenRuntimeImageUrl = (token) =>
+      getMediaKind(token.meta?.mimeType ?? null) === 'image'
+        ? getTokenRuntimeContentUrl(token)
+        : null;
+
+    const renderGridRuntimeImage = (token, thumbElement) => {
+      const sourceUrl = getTokenRuntimeImageUrl(token);
+      if (!sourceUrl) {
+        return false;
+      }
+      const cacheKey = getThumbnailKey(token);
+      const startedAt = performance.now();
+      const img = document.createElement('img');
+      img.alt = 'Inscription preview';
+      img.decoding = 'async';
+      applyPixelPerfectImageRendering(img, {
+        mimeType: token.meta?.mimeType ?? null,
+        sourceUrl,
+        squareFrame: true
+      });
+      img.addEventListener('load', () => {
+        if (
+          !thumbElement.isConnected ||
+          thumbElement.dataset.thumbnailKey !== cacheKey ||
+          thumbElement.dataset.thumbnailState !== 'runtime-image'
+        ) {
+          return;
+        }
+        debugLog('cache', 'runtime image grid display ready', {
+          tokenId: token.id.toString(),
+          contractId: getTokenCacheContractId(token),
+          size: token.meta?.totalSize?.toString() ?? null,
+          mimeType: token.meta?.mimeType ?? null,
+          ms: Math.round(performance.now() - startedAt)
+        });
+      }, { once: true });
+      img.addEventListener('error', () => {
+        if (
+          !thumbElement.isConnected ||
+          thumbElement.dataset.thumbnailKey !== cacheKey ||
+          thumbElement.dataset.thumbnailState !== 'runtime-image'
+        ) {
+          return;
+        }
+        debugLog(
+          'cache',
+          'runtime image grid stream failed; falling back to local reconstruction',
+          {
+            tokenId: token.id.toString(),
+            contractId: getTokenCacheContractId(token),
+            sourceUrl
+          },
+          'warn'
+        );
+        thumbElement.classList.remove('has-thumbnail');
+        setTokenThumbLabel(thumbElement, 'loading');
+        thumbElement.dataset.thumbnailState = 'runtime-image-fallback';
+        if (!scheduleBackgroundThumbnailHydration(token, thumbElement)) {
+          setTokenThumbLabel(
+            thumbElement,
+            getGridMimeLabel(token.meta?.mimeType ?? null)
+          );
+          thumbElement.dataset.thumbnailState = 'failed-runtime-image';
+        }
+      }, { once: true });
+      img.src = sourceUrl;
+      thumbElement.classList.add('has-thumbnail');
+      thumbElement.dataset.thumbnailState = 'runtime-image';
+      thumbElement.replaceChildren(img);
+      debugLog('cache', 'runtime image grid stream started', {
+        tokenId: token.id.toString(),
+        contractId: getTokenCacheContractId(token),
+        size: token.meta?.totalSize?.toString() ?? null,
+        mimeType: token.meta?.mimeType ?? null
+      });
+      return true;
+    };
+
     const renderGridLiveMedia = (token, thumbElement, media) => {
       const cacheKey = getThumbnailKey(token);
       const oldUrl = state.tokenThumbUrls.get(cacheKey);
@@ -6483,10 +6591,10 @@
         state.thumbnailHydrationQueued.has(cacheKey) ||
         state.thumbnailHydrationInFlight.has(cacheKey)
       ) {
-        return;
+        return false;
       }
       if (!shouldBackgroundHydrateThumbnail(token)) {
-        return;
+        return false;
       }
       state.thumbnailHydrationAttempted.add(cacheKey);
       state.thumbnailHydrationQueued.add(cacheKey);
@@ -6504,6 +6612,7 @@
         queueDepth: state.thumbnailHydrationQueue.length
       });
       pumpBackgroundThumbnailHydrationQueue();
+      return true;
     };
 
     const renderTokenGrid = (options = {}) => {
@@ -6563,6 +6672,12 @@
             displayKind = liveMedia?.mimeType ? getGridMimeLabel(liveMedia.mimeType) : kind;
             if (liveMedia && renderGridLiveMedia(token, thumb, liveMedia)) {
               shouldApplyCachedThumbnail = false;
+            } else if (
+              allowBackgroundHydration &&
+              shouldProbeCachedAnimatedThumbnail(token) &&
+              renderGridRuntimeImage(token, thumb)
+            ) {
+              shouldApplyCachedThumbnail = false;
             } else {
               const shouldProbeAnimatedImage = shouldProbeCachedAnimatedThumbnail(token);
               const isAnimatedProbePending =
@@ -6593,6 +6708,13 @@
         } else if (token && shouldApplyCachedThumbnail) {
           void applyCachedThumbnail(token, thumb).then((applied) => {
             if (
+              !applied &&
+              allowBackgroundHydration &&
+              renderGridRuntimeImage(token, thumb)
+            ) {
+              return;
+            }
+            if (
               allowBackgroundHydration &&
               (!applied || shouldProbeCachedAnimatedThumbnail(token))
             ) {
@@ -6602,6 +6724,60 @@
         }
       }
       updateTransferControls();
+    };
+
+    const loadSelectedTokenPreviewLocally = async (token, requestId) => {
+      const contentClient = getTokenClient(token);
+      const bytes = await fetchOnChainContent({
+        client: contentClient,
+        fallbackClient: contentClient === state.client ? state.legacyClient : null,
+        cacheContractId: token.sourceContractId ?? getContractId(contentClient.contract),
+        id: token.id,
+        senderAddress: getReadOnlySenderAddress(),
+        totalSize: token.meta.totalSize,
+        mimeType: token.meta.mimeType ?? null
+      });
+      const mimeType = resolveMimeType(token.meta.mimeType ?? null, bytes) ?? token.meta.mimeType ?? 'application/octet-stream';
+      const htmlDoc = getMediaKind(mimeType) === 'html'
+        ? await prepareRuntimeHtmlForToken(token, new TextDecoder().decode(bytes), 'preview')
+        : null;
+      if (
+        requestId !== state.tokenPreviewRequestId ||
+        state.selectedTokenId !== token.id
+      ) {
+        debugLog('preview', 'discarding stale selected inscription preview', {
+          tokenId: token.id.toString()
+        });
+        return;
+      }
+      revokeTokenPreview();
+      state.tokenPreviewTokenId = token.id.toString();
+      state.tokenPreviewBytes = bytes;
+      state.tokenPreviewMimeType = mimeType;
+      state.tokenPreviewSourceUrl = null;
+      state.tokenPreviewHtmlDoc = htmlDoc;
+      renderSelectedInscriptionMeta(token, null, mimeType);
+      renderBytesPreview(dom.tokenPreviewMedia, bytes, mimeType, (url) => {
+        state.tokenPreviewUrl = url;
+      }, { truthfulImageSizing: true, htmlDoc });
+      void warmThumbnailCacheFromBytes(token, bytes, mimeType);
+      updateControls();
+    };
+
+    const handleSelectedTokenPreviewFailure = (token, requestId, error) => {
+      if (
+        requestId !== state.tokenPreviewRequestId ||
+        state.selectedTokenId !== token.id
+      ) {
+        debugLog('preview', 'discarding stale selected inscription preview failure', {
+          tokenId: token.id.toString()
+        });
+        return;
+      }
+      const message = error instanceof Error ? error.message : String(error);
+      clearElement(dom.tokenPreviewMedia, 'Preview unavailable');
+      appendLog(`Preview failed for ${formatTokenId(token.id)}: ${message}`);
+      updateControls();
     };
 
     const selectToken = async (id, options = {}) => {
@@ -6663,55 +6839,54 @@
           updateControls();
           return;
         }
-        const contentClient = getTokenClient(token);
-        const bytes = await fetchOnChainContent({
-          client: contentClient,
-          fallbackClient: contentClient === state.client ? state.legacyClient : null,
-          cacheContractId: token.sourceContractId ?? getContractId(contentClient.contract),
-          id: token.id,
-          senderAddress: getReadOnlySenderAddress(),
-          totalSize: token.meta.totalSize,
-          mimeType: token.meta.mimeType ?? null
-        });
-        const mimeType = resolveMimeType(token.meta.mimeType ?? null, bytes) ?? token.meta.mimeType ?? 'application/octet-stream';
-        const htmlDoc = getMediaKind(mimeType) === 'html'
-          ? await prepareRuntimeHtmlForToken(token, new TextDecoder().decode(bytes), 'preview')
-          : null;
-        if (
-          requestId !== state.tokenPreviewRequestId ||
-          state.selectedTokenId !== token.id
-        ) {
-          debugLog('preview', 'discarding stale selected inscription preview', {
-            tokenId: token.id.toString()
+        const runtimeImageUrl = getTokenRuntimeImageUrl(token);
+        if (runtimeImageUrl) {
+          const mimeType = token.meta.mimeType ?? 'application/octet-stream';
+          state.tokenPreviewTokenId = token.id.toString();
+          state.tokenPreviewBytes = null;
+          state.tokenPreviewMimeType = mimeType;
+          state.tokenPreviewSourceUrl = runtimeImageUrl;
+          state.tokenPreviewHtmlDoc = null;
+          renderSelectedInscriptionMeta(token, null, mimeType);
+          renderSquareImagePreview(dom.tokenPreviewMedia, runtimeImageUrl, {
+            mimeType,
+            alt: 'Inscription preview',
+            preserveAnimation: isPotentialAnimatedRasterMimeType(mimeType),
+            onError: () => {
+              if (
+                requestId !== state.tokenPreviewRequestId ||
+                state.selectedTokenId !== token.id
+              ) {
+                return;
+              }
+              debugLog(
+                'preview',
+                'runtime image preview stream failed; falling back to local reconstruction',
+                {
+                  tokenId: token.id.toString(),
+                  contractId: getTokenCacheContractId(token),
+                  sourceUrl: runtimeImageUrl
+                },
+                'warn'
+              );
+              clearElement(dom.tokenPreviewMedia, 'Loading');
+              void loadSelectedTokenPreviewLocally(token, requestId).catch((error) => {
+                handleSelectedTokenPreviewFailure(token, requestId, error);
+              });
+            }
           });
+          debugLog('preview', 'runtime image preview stream started', {
+            tokenId: token.id.toString(),
+            contractId: getTokenCacheContractId(token),
+            size: token.meta.totalSize.toString(),
+            mimeType
+          });
+          updateControls();
           return;
         }
-        revokeTokenPreview();
-        state.tokenPreviewTokenId = token.id.toString();
-        state.tokenPreviewBytes = bytes;
-        state.tokenPreviewMimeType = mimeType;
-        state.tokenPreviewSourceUrl = null;
-        state.tokenPreviewHtmlDoc = htmlDoc;
-        renderSelectedInscriptionMeta(token, null, mimeType);
-        renderBytesPreview(dom.tokenPreviewMedia, bytes, mimeType, (url) => {
-          state.tokenPreviewUrl = url;
-        }, { truthfulImageSizing: true, htmlDoc });
-        void warmThumbnailCacheFromBytes(token, bytes, mimeType);
-        updateControls();
+        await loadSelectedTokenPreviewLocally(token, requestId);
       } catch (error) {
-        if (
-          requestId !== state.tokenPreviewRequestId ||
-          state.selectedTokenId !== token.id
-        ) {
-          debugLog('preview', 'discarding stale selected inscription preview failure', {
-            tokenId: token.id.toString()
-          });
-          return;
-        }
-        const message = error instanceof Error ? error.message : String(error);
-        clearElement(dom.tokenPreviewMedia, 'Preview unavailable');
-        appendLog(`Preview failed for ${formatTokenId(token.id)}: ${message}`);
-        updateControls();
+        handleSelectedTokenPreviewFailure(token, requestId, error);
       }
     };
 
