@@ -32,6 +32,16 @@ describe('mint mime helpers', () => {
     ).toBe('audio/webm; codecs=opus');
   });
 
+  it('canonicalizes audio-only .webm uploads when the browser reports video/webm', () => {
+    expect(
+      resolveInscriptionMimeType({
+        fileName: 'browser-blob.webm',
+        declaredMimeType: 'video/webm',
+        bytes: webmBytes('A_OPUS')
+      })
+    ).toBe('audio/webm; codecs=opus');
+  });
+
   it('uses audio MIME for .opus files when the browser reports a generic type', () => {
     expect(
       resolveInscriptionMimeType({

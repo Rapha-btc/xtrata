@@ -12,7 +12,7 @@ import {
 } from '@xtrata/sdk';
 
 const parsed = parseContractId(
-  'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0'
+  'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-1'
 );
 if (!parsed.config) {
   throw new Error(parsed.error ?? 'Invalid contract id');

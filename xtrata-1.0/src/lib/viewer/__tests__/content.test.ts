@@ -264,6 +264,23 @@ describe('viewer content helpers', () => {
     expect(resolveMimeType('image/apng', bytes)).toBe('image/apng');
   });
 
+  it('resolves mislabeled audio-only WebM payloads as audio', () => {
+    const audioOnlyWebm = new Uint8Array([
+      0x1a,
+      0x45,
+      0xdf,
+      0xa3,
+      0x41,
+      0x5f,
+      0x4f,
+      0x50,
+      0x55,
+      0x53
+    ]);
+
+    expect(resolveMimeType('video/webm', audioOnlyWebm)).toBe('audio/webm');
+  });
+
   it('normalizes mime type parameters for matching', () => {
     const gif = buildAnimatedGif({ frameCount: 2, delayCs: 5, loopCount: 0 });
 

@@ -1,34 +1,66 @@
 // ab-player.js
 
-window.AB_PLAYER_VERSION = '1.04';
+window.AB_PLAYER_VERSION = '1.05';
 
-console.log('[A/B Player] Loading AB Player Version 1.04');
+console.log('[A/B Player] Loading AB Player Version 1.05');
 
+const formatABSize = (blob) =>
+    blob && typeof blob.size === 'number' && typeof window.formatBytes === 'function'
+        ? window.formatBytes(blob.size)
+        : 'size unavailable';
+
+const getABSizeComparisonText = (originalBlob, convertedBlob) => {
+    if (typeof window.getSizeComparison === 'function') {
+        return window.getSizeComparison(originalBlob?.size, convertedBlob?.size).text;
+    }
+    return 'Size comparison unavailable';
+};
 
 const createABPlayerUI = (originalBlob, originalMimeType, convertedBlob, convertedMimeType) => {
     const abContainer = document.createElement('div');
     abContainer.className = 'ab-player-container';
-    Object.assign(abContainer.style, {
-      marginTop: '20px', border: '1px solid #666',
-      padding: '15px', backgroundColor: '#333'
-    });
+    const sizeComparison = getABSizeComparisonText(originalBlob, convertedBlob);
   
     abContainer.innerHTML = `
-      <h4 style="text-align:center;margin-bottom:15px;">A/B Comparison Player</h4>
-      <div style="display:flex;justify-content:center;align-items:center;gap:10px;margin-bottom:15px;">
-        <button id="ab-play" class="button-small">▶️ Play A/B</button>
-        <button id="ab-switch" class="button-small" data-listening-to="original">Listen to B (Converted)</button>
-        <button id="ab-loop" class="button-small" title="Enable looping (min duration: 1s)">🔁 Loop Off</button>
-        <label style="margin-left:10px;display:flex;align-items:center;gap:3px;">
-          <span style="font-size:0.92em;">B Offset:</span>
-          <input type="number" id="ab-offset" value="50" min="0" max="2000" step="5" style="width:50px;">
-          <span style="font-size:0.92em;">ms</span>
+      <div class="ab-player-header">
+        <div>
+          <h4>A/B Comparison Player</h4>
+          <p>Compare the source and converted Opus output in sync.</p>
+        </div>
+        <div id="ab-size-summary" class="ab-size-summary">
+          <span>Size change</span>
+          <strong>${sizeComparison}</strong>
+        </div>
+      </div>
+
+      <div class="ab-controls" aria-label="A/B playback controls">
+        <button id="ab-play" class="button-small ab-control-button" type="button">Play A/B</button>
+        <button id="ab-switch" class="button-small ab-control-button" type="button" data-listening-to="original">Listen to B</button>
+        <button id="ab-loop" class="button-small ab-control-button" type="button" title="Enable looping. Minimum useful duration is 1 second.">Loop Off</button>
+        <label class="ab-offset-field" for="ab-offset">
+          <span>B offset</span>
+          <input type="number" id="ab-offset" value="50" min="0" max="2000" step="5">
+          <small>ms</small>
         </label>
       </div>
-      <p id="labelA" style="font-weight:bold;opacity:1;">A: Original Audio</p>
-      <audio id="audioA" controls preload="metadata" style="width:100%;margin-bottom:5px;"></audio>
-      <p id="labelB" style="font-weight:bold;opacity:0.6;">B: Converted Audio (WebM Audio/Opus)</p>
-      <audio id="audioB" controls preload="metadata" style="width:100%;"></audio>
+
+      <div class="ab-track-list">
+        <section class="ab-track is-active" data-ab-track="a">
+          <div class="ab-track-header">
+            <p id="labelA" class="ab-track-title"><span>A</span> Original audio</p>
+            <p class="ab-track-meta">${formatABSize(originalBlob)}</p>
+          </div>
+          <audio id="audioA" controls controlsList="nodownload" preload="metadata"></audio>
+        </section>
+
+        <section class="ab-track" data-ab-track="b">
+          <div class="ab-track-header">
+            <p id="labelB" class="ab-track-title"><span>B</span> Converted audio</p>
+            <p class="ab-track-meta">WebM Audio/Opus, ${formatABSize(convertedBlob)}</p>
+          </div>
+          <audio id="audioB" controls controlsList="nodownload" preload="metadata"></audio>
+        </section>
+      </div>
     `;
   
     // --- Elements ---
@@ -37,9 +69,9 @@ const createABPlayerUI = (originalBlob, originalMimeType, convertedBlob, convert
     const playBtn = abContainer.querySelector('#ab-play');
     const switchBtn = abContainer.querySelector('#ab-switch');
     const loopBtn = abContainer.querySelector('#ab-loop');
-    const labelA = abContainer.querySelector('#labelA');
-    const labelB = abContainer.querySelector('#labelB');
     const offsetInput = abContainer.querySelector('#ab-offset');
+    const trackA = abContainer.querySelector('[data-ab-track="a"]');
+    const trackB = abContainer.querySelector('[data-ab-track="b"]');
   
     // --- Setup sources and types ---
     const urlA = URL.createObjectURL(originalBlob);
@@ -65,12 +97,20 @@ const createABPlayerUI = (originalBlob, originalMimeType, convertedBlob, convert
     // --- Mute state: A active, B muted at first ---
     audioA.muted = false; audioB.muted = true;
     switchBtn.dataset.listeningTo = 'original';
-    switchBtn.textContent = 'Listen to B (Converted)';
-    labelA.style.opacity = '1';
-    labelB.style.opacity = '0.6';
-    // Initial colors
-    labelA.style.color = '#FFB300';
-    labelB.style.color = '#aaa';
+    switchBtn.textContent = 'Listen to B';
+
+    const setPlayButtonState = (isPlaying) => {
+      playBtn.textContent = isPlaying ? 'Pause A/B' : 'Play A/B';
+      playBtn.classList.toggle('is-active', isPlaying);
+    };
+
+    const setActiveTrack = (listeningTo) => {
+      const isOriginal = listeningTo === 'original';
+      trackA.classList.toggle('is-active', isOriginal);
+      trackB.classList.toggle('is-active', !isOriginal);
+      switchBtn.textContent = isOriginal ? 'Listen to B' : 'Listen to A';
+      switchBtn.dataset.listeningTo = listeningTo;
+    };
 
 
     // --- Main Controls ---
@@ -80,7 +120,7 @@ const createABPlayerUI = (originalBlob, originalMimeType, convertedBlob, convert
       if (!audioA.paused || !audioB.paused) {
         audioA.pause();
         audioB.pause();
-        playBtn.textContent = '▶️ Play A/B';
+        setPlayButtonState(false);
         return;
       }
       // Otherwise, start both in sync
@@ -93,7 +133,7 @@ const createABPlayerUI = (originalBlob, originalMimeType, convertedBlob, convert
         audioB.currentTime = Math.max(0, audioA.currentTime + offset);
       }
       Promise.all([audioA.play(), audioB.play()])
-        .then(() => { playBtn.textContent = '⏸️ Pause A/B'; })
+        .then(() => { setPlayButtonState(true); })
         .catch(() => { playBtn.textContent = 'Error'; });
     };
     
@@ -103,20 +143,7 @@ const createABPlayerUI = (originalBlob, originalMimeType, convertedBlob, convert
       const offset = getOffset();
       audioA.muted = isOriginal;
       audioB.muted = !isOriginal;
-      switchBtn.textContent = isOriginal ? 'Listen to A (Original)' : 'Listen to B (Converted)';
-      switchBtn.dataset.listeningTo = isOriginal ? 'converted' : 'original';
-    
-      labelA.style.opacity = isOriginal ? '0.6' : '1';
-      labelB.style.opacity = isOriginal ? '1' : '0.6';
-    
-      // Corrected highlight:
-      if (audioA.muted) {
-        labelA.style.color = '#aaa';
-        labelB.style.color = '#FFB300';
-      } else {
-        labelA.style.color = '#FFB300';
-        labelB.style.color = '#aaa';
-      }
+      setActiveTrack(isOriginal ? 'converted' : 'original');
     
       if (!audioA.paused && !audioB.paused) {
         if (!isOriginal) {
@@ -133,18 +160,16 @@ const createABPlayerUI = (originalBlob, originalMimeType, convertedBlob, convert
     loopBtn.onclick = () => {
       isLoop = !isLoop;
       audioA.loop = audioB.loop = isLoop;
-      loopBtn.textContent = isLoop ? '🔁 Loop On' : '🔁 Loop Off';
-      loopBtn.style.backgroundColor = isLoop ? 'var(--accent-operational)' : '';
-      loopBtn.style.color = isLoop ? '#111' : '';
-      if (isLoop && playBtn.textContent === '▶️ Play A/B' && (audioA.ended || audioB.ended)) {
+      loopBtn.textContent = isLoop ? 'Loop On' : 'Loop Off';
+      loopBtn.classList.toggle('is-active', isLoop);
+      if (isLoop && !playBtn.classList.contains('is-active') && (audioA.ended || audioB.ended)) {
         const offset = getOffset();
         audioA.currentTime = 0; audioB.currentTime = offset;
       }
     };
   
     // --- Play/Pause/Ended Sync ---
-    const syncBtn = () =>
-      playBtn.textContent = (audioA.paused && audioB.paused) ? '▶️ Play A/B' : '⏸️ Pause A/B';
+    const syncBtn = () => setPlayButtonState(!(audioA.paused && audioB.paused));
   
     [audioA, audioB].forEach(audio => {
       audio.onplay = () => {
@@ -174,7 +199,7 @@ const createABPlayerUI = (originalBlob, originalMimeType, convertedBlob, convert
             audioA.currentTime = 0;
             audioB.currentTime = offset;
             setTimeout(() => {
-              if (playBtn.textContent !== '⏸️ Pause A/B')
+              if (!playBtn.classList.contains('is-active'))
                 Promise.all([audioA.play(), audioB.play()]).catch(() => {});
             }, 50);
           } else {
@@ -197,7 +222,7 @@ const createABPlayerUI = (originalBlob, originalMimeType, convertedBlob, convert
         else tgt.currentTime = Math.max(0, src.currentTime - offset);
         setTimeout(() => {
           isSeeking = false;
-          if (playBtn.textContent === '⏸️ Pause A/B') {
+          if (playBtn.classList.contains('is-active')) {
             if (src.paused) src.play().catch(()=>{});
             if (tgt.paused) tgt.play().catch(()=>{});
           }

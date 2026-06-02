@@ -30,6 +30,8 @@ const audioProfileDescriptionEl = document.getElementById('audioProfileDescripti
 const outputInfoSectionEl = document.getElementById('outputInfoSection');
 const originalFileInfoEl = document.getElementById('originalFileInfo');
 const currentEstimatedOutputSizeEl = document.getElementById('currentEstimatedOutputSize');
+const actualOutputFileInfoEl = document.getElementById('actualOutputFileInfo');
+const sizeSavingsInfoEl = document.getElementById('sizeSavingsInfo');
 // --- END NEW: Output Info Elements ---
 
 // REMOVED: estSizeMp3Span, estSizeOpusSpan, estSizeWebmSpan

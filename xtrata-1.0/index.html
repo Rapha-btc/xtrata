@@ -448,6 +448,8 @@
     .input,
     .textarea {
       width: 100%;
+      min-width: 0;
+      max-width: 100%;
       min-height: 42px;
       border: 1px solid var(--line);
       border-radius: var(--radius);
@@ -455,6 +457,11 @@
       color: var(--ink);
       padding: 10px 12px;
       outline: none;
+    }
+
+    .input {
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .select:focus,
@@ -662,12 +669,18 @@
     .field {
       display: grid;
       gap: 7px;
+      min-width: 0;
     }
 
     .field-row {
       display: grid;
-      grid-template-columns: 1fr 150px;
+      grid-template-columns: minmax(0, 1fr) minmax(120px, 150px);
       gap: 10px;
+      min-width: 0;
+    }
+
+    .field-row > * {
+      min-width: 0;
     }
 
     .field-inline {
@@ -745,6 +758,7 @@
     .file-chip {
       display: inline-flex;
       max-width: 100%;
+      min-width: 0;
       align-items: center;
       gap: 8px;
       border: 1px solid var(--line);
@@ -757,6 +771,13 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+
+    #dropzoneText {
+      max-width: 100%;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .prepare-grid {
@@ -917,7 +938,7 @@
       overflow: hidden;
       text-overflow: ellipsis;
       overflow-wrap: anywhere;
-      word-break: normal;
+      word-break: break-word;
     }
 
     .prepared-meta .meta-value--count {
@@ -982,6 +1003,27 @@
 
     .warning.on {
       display: block;
+    }
+
+    .support-note {
+      border: 1px solid rgba(36, 95, 69, 0.34);
+      border-radius: var(--radius);
+      background: var(--green-soft);
+      color: var(--ink);
+      padding: 10px 12px;
+      margin-top: 12px;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .support-note[hidden] {
+      display: none;
+    }
+
+    .support-note strong {
+      display: block;
+      margin-bottom: 3px;
+      color: var(--green);
     }
 
     .checkline {
@@ -1066,6 +1108,16 @@
 
     .log time {
       color: var(--line-strong);
+    }
+
+    .log li.support {
+      color: var(--ink);
+      border-left: 3px solid var(--green);
+      padding-left: 8px;
+    }
+
+    .log li.support time {
+      color: var(--green);
     }
 
     .wallet-layout {
@@ -2687,12 +2739,14 @@
           </div>
 
           <div class="warning" id="duplicateWarning">
-            <div id="duplicateText">Duplicate hash detected.</div>
+            <div id="duplicateText">Existing inscription found.</div>
             <label class="checkline">
               <input type="checkbox" id="allowDuplicateInput" />
-              <span>Continue with this duplicate payload</span>
+              <span>Continue anyway with this existing payload</span>
             </label>
           </div>
+
+          <div class="support-note" id="resumeNotice" hidden></div>
 
           <div class="actions">
             <button class="btn secondary" id="prepareButton" type="button">Prepare</button>
@@ -2921,7 +2975,7 @@
               <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/xtrata-quickstart.md" target="_blank" rel="noreferrer">Quickstart</a>
               <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/xtrata-inscription-handbook.md" target="_blank" rel="noreferrer">Inscription handbook</a>
               <a href="https://github.com/stxtrata/xtrata/blob/OPTIMISATIONS/xtrata-1.0/docs/recursive-inscriptions.md" target="_blank" rel="noreferrer">Recursive inscriptions</a>
-              <a href="/opus-file-generator/">Opus audio tool</a>
+              <a href="/opus-file-generator/" target="_blank" rel="noopener noreferrer">Opus audio tool</a>
             </div>
           </article>
 
@@ -2972,7 +3026,7 @@
       <nav class="footer-links" aria-label="Footer links">
         <a href="/workspace">Workspace</a>
         <a href="#docs">Documentation</a>
-        <a href="/opus-file-generator/">Opus audio tool</a>
+        <a href="/opus-file-generator/" target="_blank" rel="noopener noreferrer">Opus audio tool</a>
         <a href="/manage">Artist portal</a>
         <a href="https://x.com/XtrataLayers" target="_blank" rel="noreferrer">Xtrata on X</a>
       </nav>
@@ -3052,7 +3106,7 @@
       batchChunks,
       chunkBytes,
       computeExpectedHash,
-      MAX_BATCH_SIZE
+      MAX_UPLOAD_BATCH_SIZE
     } from '/src/lib/chunking/hash.ts';
     import {
       DEFAULT_BATCH_SIZE,
@@ -3089,6 +3143,7 @@
       hasRuntimeContentUrls,
       inlineRuntimeContentUrls
     } from '/src/lib/viewer/runtime-inline.ts';
+    import { resolveInscriptionMimeType } from '/src/lib/mint/mime.ts';
     import { createImageThumbnail, THUMBNAIL_SIZE } from '/src/lib/viewer/thumbnail.ts';
     import {
       getSquareFramedImageStyle,
@@ -3174,6 +3229,7 @@
       duplicateWarning: $('duplicateWarning'),
       duplicateText: $('duplicateText'),
       allowDuplicateInput: $('allowDuplicateInput'),
+      resumeNotice: $('resumeNotice'),
       prepareButton: $('prepareButton'),
       inscribeButton: $('inscribeButton'),
       stepBegin: $('stepBegin'),
@@ -3232,12 +3288,15 @@
 
     
     const THEME_STORAGE_KEY = 'xtrata.simple-homepage.theme';
+    const OPUS_HTML_HANDOFF_KEY = 'xtrata.opusHtmlPlayer.pendingInscription';
+    const OPUS_HTML_HANDOFF_DB = 'xtrata-opus-html-handoff';
+    const OPUS_HTML_HANDOFF_STORE = 'pending';
     const THEME_IDS = new Set(['classic', 'terminal', 'midnight', 'neon', 'monochrome', 'obsidian', 'ember', 'ultraviolet', 'arctic', 'ruby']);
     const CURATED_GALLERIES = [
           {
             id: 'jim-music',
             title: 'music',
-            tokenIds: [312n, 288n, 269n]
+            tokenIds: [312n, 288n, 269n, 315n]
           },
           {
             id: 'code-various',
@@ -3367,10 +3426,12 @@
       walletLookupPending: false,
       walletLookupNotice: null,
       walletLookupAbortController: null,
+      walletViewRequestId: 0,
       transferPending: false,
       adminStatus: null,
       selectedFile: null,
       prepared: null,
+      handoffDependencyIds: [],
       duplicateId: null,
       uploadState: null,
       busy: false,
@@ -3384,6 +3445,7 @@
       tokenPreviewMimeType: null,
       tokenPreviewSourceUrl: null,
       tokenPreviewHtmlDoc: null,
+      tokenPreviewRequestId: 0,
       selectedOwnerNameRequestId: 0,
       fullscreenUrl: null,
       fullscreenOpen: false,
@@ -3457,6 +3519,11 @@
 
     const isLikelyStacksAddressInput = (value) =>
       /^S[PTMN][A-Z0-9]*$/i.test(value.trim());
+
+    const isSupportiveLogMessage = (message) =>
+      message.startsWith('No problem') ||
+      message.startsWith('Existing upload data') ||
+      message.startsWith('On-chain confirmed');
 
     const toBtcLookupLabel = (value) => {
       const trimmed = value.trim().toLowerCase();
@@ -3562,10 +3629,13 @@
       return url.toString();
     };
 
-    const appendLog = (message) => {
+    const appendLog = (message, tone = '') => {
       const item = document.createElement('li');
       const time = document.createElement('time');
       const body = document.createElement('span');
+      if (tone === 'support' || isSupportiveLogMessage(message)) {
+        item.classList.add('support');
+      }
       time.textContent = nowLabel();
       body.textContent = message;
       item.append(time, body);
@@ -3884,6 +3954,7 @@
         capabilities.version !== '1.1.1' &&
         !state.uploadState &&
         prepared.chunks.length > 0 &&
+        (prepared.dependencyIds ?? []).length <= 50 &&
         prepared.chunks.length <= SMALL_MINT_HELPER_MAX_CHUNKS
       );
     };
@@ -3966,14 +4037,33 @@
       }
     };
 
+    const renderResumeNotice = () => {
+      dom.resumeNotice.hidden = true;
+      dom.resumeNotice.replaceChildren();
+      if (!state.prepared || !state.uploadState) {
+        return;
+      }
+      const current = state.uploadState.currentIndex.toString();
+      const total = state.uploadState.totalChunks.toString();
+      const heading = document.createElement('strong');
+      heading.textContent = 'Existing upload data found. No problem.';
+      const body = document.createElement('span');
+      body.textContent =
+        `${current}/${total} chunks are already saved. Click Resume inscription to continue from the saved data.`;
+      dom.resumeNotice.append(heading, body);
+      dom.resumeNotice.hidden = false;
+    };
+
     const renderNoSelectedInscriptionMeta = () => {
       state.selectedOwnerNameRequestId += 1;
       renderMeta(dom.tokenPreviewMeta, [['Status', 'None selected']]);
     };
 
-    const renderSelectedInscriptionMeta = (token, ownerName = null) => {
+    const renderSelectedInscriptionMeta = (token, ownerName = null, mimeTypeOverride = null) => {
+      const effectiveMimeType =
+        mimeTypeOverride ?? state.tokenPreviewMimeType ?? token.meta?.mimeType ?? null;
       renderMeta(dom.tokenPreviewMeta, [
-        ['Type', getGridMimeLabel(token.meta?.mimeType ?? null)],
+        ['Type', getGridMimeLabel(effectiveMimeType)],
         ['Size', token.meta?.totalSize ? formatBytes(token.meta.totalSize) : 'unknown'],
         [
           'Owner',
@@ -4054,12 +4144,17 @@
     };
 
     const resetBackgroundThumbnailHydration = () => {
+      const discardedQueued = state.thumbnailHydrationQueue.length;
       state.thumbnailHydrationRunId += 1;
       state.thumbnailHydrationQueue = [];
       state.thumbnailHydrationQueued.clear();
-      state.thumbnailHydrationInFlight.clear();
       state.thumbnailHydrationAttempted.clear();
       state.gridLiveMediaCache.clear();
+      debugLog('cache', 'background thumbnail queue reset', {
+        runId: state.thumbnailHydrationRunId,
+        discardedQueued,
+        activeFetches: state.thumbnailHydrationInFlight.size
+      });
     };
 
     const clearElement = (element, text) => {
@@ -4313,6 +4408,7 @@
       if (kind === 'video') {
         const video = document.createElement('video');
         video.controls = true;
+        video.setAttribute('controlsList', 'nodownload');
         video.src = getObjectUrl();
         target.append(video);
         return;
@@ -4321,6 +4417,7 @@
       if (kind === 'audio') {
         const audio = document.createElement('audio');
         audio.controls = true;
+        audio.setAttribute('controlsList', 'nodownload');
         audio.src = getObjectUrl();
         target.append(audio);
         return;
@@ -4335,7 +4432,7 @@
           ? ''
           : 'allow-scripts';
         if (options.htmlDoc && previewMimeType?.trim().toLowerCase() !== 'application/pdf') {
-          frame.srcdoc = options.htmlDoc;
+          frame.srcdoc = injectGridThumbnailHtml(options.htmlDoc);
         } else {
           frame.src = getObjectUrl();
         }
@@ -4471,6 +4568,7 @@
       state.walletSession.address ?? getViewingWalletAddress() ?? state.contract.address;
 
     const clearSelectedTokenPreview = () => {
+      state.tokenPreviewRequestId += 1;
       state.selectedTokenId = null;
       revokeTokenPreview();
       dom.explorerLink.hidden = true;
@@ -4704,10 +4802,14 @@
         !state.prepared ||
         duplicateBlocked;
       dom.inscribeButton.textContent = state.uploadState
-        ? 'Continue inscription'
+        ? 'Resume inscription'
         : shouldUseSmallMintHelper()
-          ? 'Start single-tx inscription'
-          : 'Start inscription';
+          ? (state.prepared?.dependencyIds?.length ?? 0) > 0
+            ? 'Start recursive single-tx inscription'
+            : 'Start single-tx inscription'
+          : (state.prepared?.dependencyIds?.length ?? 0) > 0
+            ? 'Start recursive inscription'
+            : 'Start inscription';
       dom.refreshWalletButton.disabled = state.busy || state.walletLoadingPage || (!viewingAddress && !state.explorerMode);
       dom.walletLookupButton.textContent = shouldClearWalletLookupOnSubmit()
         ? 'Clear'
@@ -4925,6 +5027,7 @@
         clearElement(dom.payloadPreview, 'No payload');
         renderMeta(dom.preparedMeta, [['Status', 'Not prepared']]);
         dom.duplicateWarning.classList.remove('on');
+        renderResumeNotice();
         updateControls();
         return;
       }
@@ -4933,13 +5036,15 @@
       const usesSingleTx = shouldUseSmallMintHelper();
       const sequentialTxEstimate = estimateSequentialMintTransactions({
         totalChunks: state.prepared.chunks.length,
-        batchSize: Math.min(DEFAULT_BATCH_SIZE, MAX_BATCH_SIZE)
+        batchSize: Math.min(DEFAULT_BATCH_SIZE, MAX_UPLOAD_BATCH_SIZE)
       });
       const dataMiningEstimate = formatDataMiningEstimate(state.prepared.bytes);
       const transactionCount = getPreparedTransactionCount(
         usesSingleTx,
         sequentialTxEstimate
       );
+      const dependencyIds = state.prepared.dependencyIds ?? [];
+      const dependencyLabel = dependencyIds.map((id) => id.toString()).join(', ');
       renderMeta(dom.preparedMeta, [
         { section: 'File' },
         {
@@ -4957,6 +5062,16 @@
           title: state.prepared.expectedHashHex,
           tooltip: state.prepared.expectedHashHex
         },
+        ...(dependencyIds.length > 0
+          ? [
+              {
+                key: 'Dependencies',
+                value: dependencyLabel,
+                title: `Recursive parent inscription ID${dependencyIds.length === 1 ? '' : 's'}: ${dependencyLabel}`,
+                wide: true
+              }
+            ]
+          : []),
         { section: 'Mint plan' },
         {
           key: 'Transactions required',
@@ -4998,11 +5113,12 @@
 
       if (state.duplicateId !== null) {
         dom.duplicateText.textContent =
-          `Duplicate hash detected at ${formatTokenId(state.duplicateId)}.`;
+          `Existing inscription found at ${formatTokenId(state.duplicateId)}. This content is already safely on-chain.`;
         dom.duplicateWarning.classList.add('on');
       } else {
         dom.duplicateWarning.classList.remove('on');
       }
+      renderResumeNotice();
       updateControls();
     };
 
@@ -5039,7 +5155,11 @@
       if (bytes.length === 0 || chunks.length === 0) {
         throw new Error('Payload is empty.');
       }
-      const mimeType = file.type || dom.payloadType.value || 'application/octet-stream';
+      const mimeType = resolveInscriptionMimeType({
+        fileName: file.name,
+        declaredMimeType: file.type || dom.payloadType.value || 'application/octet-stream',
+        bytes
+      });
       if (!isAscii(mimeType) || mimeType.length > MAX_MIME_LENGTH) {
         throw new Error('Mime type must be ASCII and no more than 64 characters.');
       }
@@ -5047,6 +5167,65 @@
         throw new Error('Token URI must be ASCII and no more than 256 characters.');
       }
       return mimeType;
+    };
+
+    const normalizeOpusHandoffDependencyIds = (dependencies) => {
+      const tokens = Array.isArray(dependencies)
+        ? dependencies
+        : typeof dependencies === 'string'
+        ? dependencies.split(/[,\s]+/)
+        : [];
+      const ids = [];
+      const invalidTokens = [];
+      for (const value of tokens) {
+        const token = String(value ?? '').trim().replace(/^#/, '');
+        if (!token) {
+          continue;
+        }
+        if (!/^\d+$/.test(token)) {
+          invalidTokens.push(String(value));
+          continue;
+        }
+        ids.push(BigInt(token));
+      }
+      if (invalidTokens.length > 0) {
+        throw new Error(`Invalid dependency ID${invalidTokens.length === 1 ? '' : 's'}: ${invalidTokens.join(', ')}.`);
+      }
+      const unique = Array.from(new Set(ids));
+      unique.sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
+      if (unique.length > 50) {
+        throw new Error('Recursive inscriptions can include at most 50 dependency IDs.');
+      }
+      return unique;
+    };
+
+    const getCompactOpusHandoffFilename = (payload, fallbackFilename) => {
+      const metadataTitle =
+        payload?.metadata && typeof payload.metadata.title === 'string'
+          ? payload.metadata.title.trim()
+          : '';
+      const fallbackStem = String(fallbackFilename || '')
+        .replace(/\.[^.]+$/, '')
+        .trim();
+      const rawStem = metadataTitle || fallbackStem || 'opus-player';
+      let stem = rawStem
+        .replace(/[^a-z0-9]+/gi, '-')
+        .replace(/^-+|-+$/g, '')
+        .toLowerCase();
+      if (!stem) {
+        stem = 'opus-player';
+      }
+      if (stem.length > 44) {
+        stem = stem.slice(0, 44).replace(/-+$/g, '') || 'opus-player';
+      }
+      const mode =
+        payload?.mode === 'recursive'
+          ? 'recursive'
+          : payload?.mode === 'embedded'
+          ? 'embedded'
+          : '';
+      const suffix = mode && !stem.endsWith(`-${mode}`) ? `-${mode}` : '';
+      return `xtrata-audio-${stem}${suffix}.html`;
     };
 
     const refreshUploadState = async (expectedHash) => {
@@ -5063,7 +5242,8 @@
         );
         if (state.uploadState) {
           appendLog(
-            `Existing upload found: ${state.uploadState.currentIndex.toString()}/${state.uploadState.totalChunks.toString()} chunks.`
+            `Existing upload data found: ${state.uploadState.currentIndex.toString()}/${state.uploadState.totalChunks.toString()} chunks already saved. No problem - Resume inscription will continue from here.`,
+            'support'
           );
         }
       } catch (error) {
@@ -5078,8 +5258,9 @@
       const expectedHash = computeExpectedHash(chunks);
       const tokenUriValue = dom.tokenUriInput.value.trim() || DEFAULT_TOKEN_URI;
       const mimeType = validatePayload(file, bytes, chunks, tokenUriValue);
-      const batches = batchChunks(chunks, Math.min(DEFAULT_BATCH_SIZE, MAX_BATCH_SIZE));
+      const batches = batchChunks(chunks, Math.min(DEFAULT_BATCH_SIZE, MAX_UPLOAD_BATCH_SIZE));
       const expectedHashHex = bytesToHex(expectedHash);
+      const dependencyIds = state.handoffDependencyIds ?? [];
 
       state.prepared = {
         file,
@@ -5089,7 +5270,8 @@
         expectedHash,
         expectedHashHex,
         tokenUriValue,
-        mimeType
+        mimeType,
+        dependencyIds
       };
       state.duplicateId = null;
       state.uploadState = null;
@@ -5162,7 +5344,7 @@
         await preparePayload();
       }
       if (state.duplicateId !== null && !dom.allowDuplicateInput.checked) {
-        throw new Error('Duplicate payload must be acknowledged before continuing.');
+        throw new Error('Existing payload must be acknowledged before continuing.');
       }
       const capabilities = resolveContractCapabilities(state.contract);
       if (capabilities.supportsPause) {
@@ -5183,10 +5365,13 @@
     const runInscription = async () => {
       setBusy(true);
       resetSteps();
+      let flowStarted = false;
       try {
         await validateMintReadiness();
         const prepared = state.prepared;
+        const dependencyIds = prepared.dependencyIds ?? [];
         await refreshUploadState(prepared.expectedHash);
+        flowStarted = true;
         const feeEstimate = getFeeEstimate(prepared.chunks.length);
         const hasUploadState = !!state.uploadState;
         let didSendBeforeSeal = false;
@@ -5200,19 +5385,35 @@
           setStep('upload', 'pending', 'Single tx');
           setStep('seal', 'pending', 'Single tx');
           appendLog(
-            `Small-file helper route active (<=${SMALL_MINT_HELPER_MAX_CHUNKS} chunks).`
+            `Small-file helper route active (<=${SMALL_MINT_HELPER_MAX_CHUNKS} chunks)${
+              dependencyIds.length > 0 ? ` with ${dependencyIds.length} recursive dependency${dependencyIds.length === 1 ? '' : 'ies'}` : ''
+            }.`
           );
           const singleTx = await requestContractCall({
             contract: smallMintHelperContract,
-            functionName: 'mint-small-single-tx',
-            functionArgs: [
-              principalCV(getContractId(state.contract)),
-              bufferCV(prepared.expectedHash),
-              stringAsciiCV(prepared.mimeType),
-              uintCV(BigInt(prepared.bytes.length)),
-              listCV(prepared.chunks.map((chunk) => bufferCV(chunk))),
-              stringAsciiCV(prepared.tokenUriValue)
-            ],
+            functionName:
+              dependencyIds.length > 0
+                ? 'mint-small-single-tx-recursive'
+                : 'mint-small-single-tx',
+            functionArgs:
+              dependencyIds.length > 0
+                ? [
+                    principalCV(getContractId(state.contract)),
+                    bufferCV(prepared.expectedHash),
+                    stringAsciiCV(prepared.mimeType),
+                    uintCV(BigInt(prepared.bytes.length)),
+                    listCV(prepared.chunks.map((chunk) => bufferCV(chunk))),
+                    stringAsciiCV(prepared.tokenUriValue),
+                    listCV(dependencyIds.map((id) => uintCV(id)))
+                  ]
+                : [
+                    principalCV(getContractId(state.contract)),
+                    bufferCV(prepared.expectedHash),
+                    stringAsciiCV(prepared.mimeType),
+                    uintCV(BigInt(prepared.bytes.length)),
+                    listCV(prepared.chunks.map((chunk) => bufferCV(chunk))),
+                    stringAsciiCV(prepared.tokenUriValue)
+                  ],
             postConditions: resolveFeePostConditions(feeEstimate.totalMicroStx)
           });
           const singleTxId = normalizeTxId(singleTx);
@@ -5250,6 +5451,10 @@
           await pauseBeforeNext('Next transaction in');
         } else {
           setStep('begin', 'done', 'Already started');
+          appendLog(
+            `Existing upload data found: ${state.uploadState.currentIndex.toString()}/${state.uploadState.totalChunks.toString()} chunks already saved. Resuming inscription.`,
+            'support'
+          );
         }
 
         const currentIndex = state.uploadState
@@ -5265,7 +5470,7 @@
         const remainingChunks = prepared.chunks.slice(currentIndex);
         const remainingBatches = batchChunks(
           remainingChunks,
-          Math.min(DEFAULT_BATCH_SIZE, MAX_BATCH_SIZE)
+          Math.min(DEFAULT_BATCH_SIZE, MAX_UPLOAD_BATCH_SIZE)
         );
 
         if (remainingBatches.length > 0) {
@@ -5292,16 +5497,28 @@
         }
 
         setStep('seal', 'pending', 'Wallet prompt');
-        appendLog('Step 3: seal-inscription');
+        appendLog(
+          dependencyIds.length > 0
+            ? `Step 3: seal-recursive (deps: ${dependencyIds.map((id) => id.toString()).join(', ')})`
+            : 'Step 3: seal-inscription'
+        );
         if (didSendBeforeSeal) {
           await pauseBeforeNext('Sealing in');
         }
         const sealTx = await requestContractCall({
-          functionName: 'seal-inscription',
-          functionArgs: [
-            bufferCV(prepared.expectedHash),
-            stringAsciiCV(prepared.tokenUriValue)
-          ],
+          functionName:
+            dependencyIds.length > 0 ? 'seal-recursive' : 'seal-inscription',
+          functionArgs:
+            dependencyIds.length > 0
+              ? [
+                  bufferCV(prepared.expectedHash),
+                  stringAsciiCV(prepared.tokenUriValue),
+                  listCV(dependencyIds.map((id) => uintCV(id)))
+                ]
+              : [
+                  bufferCV(prepared.expectedHash),
+                  stringAsciiCV(prepared.tokenUriValue)
+                ],
           postConditions: resolveFeePostConditions(feeEstimate.sealMicroStx)
         });
         const sealTxId = normalizeTxId(sealTx);
@@ -5318,7 +5535,30 @@
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         appendLog(`Mint failed: ${message}`);
-        setStatus(dom.walletStatus, `<strong>Mint failed</strong> ${message}`, 'error', 'rose');
+        if (flowStarted && state.prepared?.expectedHash) {
+          await refreshUploadState(state.prepared.expectedHash);
+        }
+        if (flowStarted) {
+          if (state.uploadState) {
+            appendLog(
+              'No problem - existing upload data was found. Click Resume inscription to continue from the saved chunks.',
+              'support'
+            );
+          } else {
+            appendLog(
+              'No problem - restart the inscription when ready. Re-select the same file and the app will reuse any existing upload data it finds.',
+              'support'
+            );
+          }
+        }
+        setStatus(
+          dom.walletStatus,
+          flowStarted
+            ? `<strong>Mint stopped</strong> ${message}. No problem - restart when ready.`
+            : `<strong>Mint blocked</strong> ${message}`,
+          'error',
+          'rose'
+        );
         const pendingStep = [dom.stepSeal, dom.stepUpload, dom.stepBegin].find((step) =>
           step.classList.contains('pending')
         );
@@ -5327,6 +5567,7 @@
           pendingStep.classList.add('error');
           pendingStep.querySelector('span').textContent = 'Error';
         }
+        renderPreparedState();
       } finally {
         setBusy(false);
         updateControls();
@@ -5728,7 +5969,7 @@
             continue;
           }
           state.walletPageIndex = pageIndex;
-          await loadWalletPage({ deferSelection: true });
+          await loadWalletPage({ deferSelection: true, deferHydration: true });
           if (getWalletPageIds().includes(targetId)) {
             await selectToken(targetId);
             return true;
@@ -5740,7 +5981,7 @@
           const targetPageIndex = Math.floor(index / WALLET_PAGE_SIZE);
           if (targetPageIndex !== state.walletPageIndex) {
             state.walletPageIndex = targetPageIndex;
-            await loadWalletPage({ deferSelection: true });
+            await loadWalletPage({ deferSelection: true, deferHydration: true });
           }
           await selectToken(targetId);
           return true;
@@ -5969,6 +6210,11 @@
         return true;
       }
 
+      if (media.kind === 'audio') {
+        setTokenThumbLabel(thumbElement, getGridMimeLabel(media.mimeType ?? null));
+        return true;
+      }
+
       if (media.kind === 'html') {
         const frame = document.createElement('iframe');
         frame.title = 'inscription-preview';
@@ -6003,10 +6249,16 @@
       if (token.svgDataUri || !token.meta || token.meta.totalSize <= 0n) {
         return false;
       }
+      const kind = getMediaKind(token.meta.mimeType ?? null);
+      if (
+        state.selectedTokenId === token.id &&
+        (kind === 'image' || kind === 'svg')
+      ) {
+        return false;
+      }
       if (token.meta.totalSize > MAX_GRID_EAGER_FULL_LOAD_BYTES) {
         return false;
       }
-      const kind = getMediaKind(token.meta.mimeType ?? null);
       return (
         kind === 'image' ||
         kind === 'svg' ||
@@ -6014,6 +6266,12 @@
         kind === 'html' ||
         kind === 'binary'
       );
+    };
+
+    const compareBackgroundThumbnailHydrationJobs = (left, right) => {
+      const leftSize = left.token.meta?.totalSize ?? 0n;
+      const rightSize = right.token.meta?.totalSize ?? 0n;
+      return leftSize < rightSize ? -1 : leftSize > rightSize ? 1 : 0;
     };
 
     const runBackgroundThumbnailHydration = async (job) => {
@@ -6039,14 +6297,32 @@
           totalSize: token.meta?.totalSize ?? 0n,
           mimeType: token.meta?.mimeType ?? null
         });
-        if (runId !== state.thumbnailHydrationRunId) {
-          return;
-        }
         const mimeType =
           resolveMimeType(token.meta?.mimeType ?? null, bytes) ??
           token.meta?.mimeType ??
           'application/octet-stream';
         const kind = getMediaKind(mimeType);
+        if (kind === 'audio') {
+          state.gridLiveMediaCache.set(cacheKey, {
+            kind: 'audio',
+            mimeType
+          });
+          if (
+            thumbElement.isConnected &&
+            thumbElement.dataset.thumbnailKey === cacheKey
+          ) {
+            renderGridLiveMedia(token, thumbElement, state.gridLiveMediaCache.get(cacheKey));
+          } else if (getWalletPageIds().some((id) => id === token.id)) {
+            renderTokenGrid();
+          }
+          debugLog('cache', 'background audio grid display ready', {
+            tokenId: token.id.toString(),
+            contractId: cacheContractId,
+            bytes: bytes.length,
+            mimeType
+          });
+          return;
+        }
         if (kind === 'video') {
           state.gridLiveMediaCache.set(cacheKey, {
             kind: 'video',
@@ -6195,9 +6471,7 @@
         state.thumbnailHydrationInFlight.add(job.cacheKey);
         void runBackgroundThumbnailHydration(job).finally(() => {
           state.thumbnailHydrationInFlight.delete(job.cacheKey);
-          if (job.runId === state.thumbnailHydrationRunId) {
-            pumpBackgroundThumbnailHydrationQueue();
-          }
+          pumpBackgroundThumbnailHydrationQueue();
         });
       }
     };
@@ -6222,15 +6496,18 @@
         cacheKey,
         runId: state.thumbnailHydrationRunId
       });
+      state.thumbnailHydrationQueue.sort(compareBackgroundThumbnailHydrationJobs);
       debugLog('cache', 'background thumbnail queued', {
         tokenId: token.id.toString(),
         contractId: getTokenCacheContractId(token),
+        priorityBytes: token.meta?.totalSize?.toString() ?? null,
         queueDepth: state.thumbnailHydrationQueue.length
       });
       pumpBackgroundThumbnailHydrationQueue();
     };
 
-    const renderTokenGrid = () => {
+    const renderTokenGrid = (options = {}) => {
+      const allowBackgroundHydration = !options.deferHydration;
       revokeGridThumbUrls();
       dom.tokenGrid.innerHTML = '';
       clampWalletPageIndex();
@@ -6266,6 +6543,7 @@
           meta.innerHTML = '<span>loading</span>';
         } else {
           const kind = getGridMimeLabel(token.meta?.mimeType ?? null);
+          let displayKind = kind;
           thumb.dataset.thumbnailKey = getThumbnailKey(token);
           if (token.svgDataUri) {
             const img = document.createElement('img');
@@ -6282,16 +6560,18 @@
           } else {
             const cacheKey = getThumbnailKey(token);
             const liveMedia = state.gridLiveMediaCache.get(cacheKey);
+            displayKind = liveMedia?.mimeType ? getGridMimeLabel(liveMedia.mimeType) : kind;
             if (liveMedia && renderGridLiveMedia(token, thumb, liveMedia)) {
               shouldApplyCachedThumbnail = false;
             } else {
               const shouldProbeAnimatedImage = shouldProbeCachedAnimatedThumbnail(token);
               const isAnimatedProbePending =
+                allowBackgroundHydration &&
                 shouldProbeAnimatedImage &&
                 (!state.thumbnailHydrationAttempted.has(cacheKey) ||
                   state.thumbnailHydrationQueued.has(cacheKey) ||
                   state.thumbnailHydrationInFlight.has(cacheKey));
-              setTokenThumbLabel(thumb, isAnimatedProbePending ? 'loading' : kind);
+              setTokenThumbLabel(thumb, isAnimatedProbePending ? 'loading' : displayKind);
               thumb.dataset.thumbnailState = isAnimatedProbePending
                 ? 'pending-live-media'
                 : 'pending-cache';
@@ -6301,18 +6581,21 @@
           }
           const size = token.meta?.totalSize ?? null;
           meta.innerHTML =
-            `<span>${kind}${size !== null ? ` · ${formatBytes(size)}` : ''}</span>`;
+            `<span>${displayKind}${size !== null ? ` · ${formatBytes(size)}` : ''}</span>`;
           card.addEventListener('click', () => {
             void selectToken(token.id, { scrollToPreview: true });
           });
         }
         card.append(thumb, meta);
         dom.tokenGrid.append(card);
-        if (token && shouldScheduleBackgroundHydration) {
+        if (token && allowBackgroundHydration && shouldScheduleBackgroundHydration) {
           scheduleBackgroundThumbnailHydration(token, thumb);
         } else if (token && shouldApplyCachedThumbnail) {
           void applyCachedThumbnail(token, thumb).then((applied) => {
-            if (!applied || shouldProbeCachedAnimatedThumbnail(token)) {
+            if (
+              allowBackgroundHydration &&
+              (!applied || shouldProbeCachedAnimatedThumbnail(token))
+            ) {
               scheduleBackgroundThumbnailHydration(token, thumb);
             }
           });
@@ -6322,6 +6605,7 @@
     };
 
     const selectToken = async (id, options = {}) => {
+      const requestId = ++state.tokenPreviewRequestId;
       state.selectedTokenId = id;
       const token =
         state.walletTokenCache.get(id.toString()) ??
@@ -6393,18 +6677,37 @@
         const htmlDoc = getMediaKind(mimeType) === 'html'
           ? await prepareRuntimeHtmlForToken(token, new TextDecoder().decode(bytes), 'preview')
           : null;
+        if (
+          requestId !== state.tokenPreviewRequestId ||
+          state.selectedTokenId !== token.id
+        ) {
+          debugLog('preview', 'discarding stale selected inscription preview', {
+            tokenId: token.id.toString()
+          });
+          return;
+        }
         revokeTokenPreview();
         state.tokenPreviewTokenId = token.id.toString();
         state.tokenPreviewBytes = bytes;
         state.tokenPreviewMimeType = mimeType;
         state.tokenPreviewSourceUrl = null;
         state.tokenPreviewHtmlDoc = htmlDoc;
+        renderSelectedInscriptionMeta(token, null, mimeType);
         renderBytesPreview(dom.tokenPreviewMedia, bytes, mimeType, (url) => {
           state.tokenPreviewUrl = url;
         }, { truthfulImageSizing: true, htmlDoc });
         void warmThumbnailCacheFromBytes(token, bytes, mimeType);
         updateControls();
       } catch (error) {
+        if (
+          requestId !== state.tokenPreviewRequestId ||
+          state.selectedTokenId !== token.id
+        ) {
+          debugLog('preview', 'discarding stale selected inscription preview failure', {
+            tokenId: token.id.toString()
+          });
+          return;
+        }
         const message = error instanceof Error ? error.message : String(error);
         clearElement(dom.tokenPreviewMedia, 'Preview unavailable');
         appendLog(`Preview failed for ${formatTokenId(token.id)}: ${message}`);
@@ -6419,6 +6722,7 @@
     };
 
     const clearWalletLookupToConnectedWallet = async () => {
+      state.walletViewRequestId += 1;
       cancelWalletLookup();
 
       state.walletLookupNotice = null;
@@ -6441,11 +6745,12 @@
       updateControls();
     };
 
-    const viewWalletFromInput = async () => {
+    const viewWalletFromInput = async (options = {}) => {
       if (shouldClearWalletLookupOnSubmit()) {
         await clearWalletLookupToConnectedWallet();
         return;
       }
+      state.walletViewRequestId += 1;
       const lookupValue = getWalletLookupSubmitValue();
       const baseLookupState = getWalletLookupState(
         lookupValue,
@@ -6465,7 +6770,7 @@
         dom.walletLookupInput.value = '';
         updateWalletLookupInputMode();
         updateWalletStatus();
-        await loadWalletInscriptions();
+        await loadWalletInscriptions(options);
         updateControls();
         return;
       }
@@ -6489,7 +6794,7 @@
         updateWalletLookupInputMode();
         appendLog(`Viewing wallet: ${truncateMiddle(baseLookupState.lookupAddress, 8, 8)}.`);
         updateWalletStatus();
-        await loadWalletInscriptions();
+        await loadWalletInscriptions(options);
         updateControls();
         return;
       }
@@ -6542,7 +6847,7 @@
           `Resolved ${lookupName} to ${truncateMiddle(resolvedLookupState.resolvedAddress, 8, 8)}.`
         );
         updateWalletStatus();
-        await loadWalletInscriptions();
+        await loadWalletInscriptions(options);
       } catch (error) {
         if (abortController.signal.aborted) {
           return;
@@ -6569,6 +6874,7 @@ const openCuratedGallery = async (galleryId) => {
     return;
   }
 
+  state.walletViewRequestId += 1;
   cancelWalletLookup();
 
   state.curatedGalleryId = gallery.id;
@@ -7274,7 +7580,7 @@ const openCuratedGallery = async (galleryId) => {
       }
 
       const missingIds = pageIds.filter((id) => !state.walletTokenCache.has(id.toString()));
-      renderTokenGrid();
+      renderTokenGrid({ deferHydration: !!options.deferHydration });
 
       try {
         if (missingIds.length > 0 || options.force) {
@@ -7296,7 +7602,7 @@ const openCuratedGallery = async (galleryId) => {
           state.selectedTokenId = state.walletTokens[0].id;
           void selectToken(state.selectedTokenId);
         } else {
-          renderTokenGrid();
+          renderTokenGrid({ deferHydration: !!options.deferHydration });
         }
       } finally {
         state.walletLoadingPage = false;
@@ -7305,7 +7611,7 @@ const openCuratedGallery = async (galleryId) => {
       }
     };
 
-    const loadWalletInscriptions = async () => {
+    const loadWalletInscriptions = async (options = {}) => {
       if (state.explorerMode) {
         await loadExplorerPage({ refreshLatest: true, force: true });
         return;
@@ -7389,7 +7695,11 @@ const openCuratedGallery = async (galleryId) => {
             'ready',
             'blue'
           );
-          await loadWalletPage({ pageAlreadyLoaded: true });
+          await loadWalletPage({
+            pageAlreadyLoaded: true,
+            deferSelection: !!options.deferSelection,
+            deferHydration: !!options.deferHydration
+          });
           return;
         } catch (pageError) {
           state.walletUsesPagedHoldings = false;
@@ -7456,7 +7766,10 @@ const openCuratedGallery = async (galleryId) => {
             'ready',
             'blue'
           );
-          await loadWalletPage();
+          await loadWalletPage({
+            deferSelection: !!options.deferSelection,
+            deferHydration: !!options.deferHydration
+          });
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -7708,6 +8021,7 @@ const openCuratedGallery = async (galleryId) => {
       state.prepared = null;
       state.duplicateId = null;
       state.uploadState = null;
+      state.handoffDependencyIds = [];
       dom.fileInput.value = '';
       if (file) {
         dom.dropzoneText.innerHTML = '';
@@ -7725,6 +8039,148 @@ const openCuratedGallery = async (galleryId) => {
         dom.dropzoneText.textContent = 'Choose file or drop it here';
       }
       renderPreparedState();
+    };
+
+    const clearOpusHtmlHandoffRequest = () => {
+      if (window.location.search.includes('handoff=opus-player')) {
+        const cleanUrl = new URL(window.location.href);
+        cleanUrl.searchParams.delete('handoff');
+        window.history.replaceState(null, '', `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`);
+      }
+    };
+
+    const openOpusHtmlHandoffDb = () =>
+      new Promise((resolve, reject) => {
+        if (!window.indexedDB) {
+          reject(new Error('IndexedDB is not available in this browser.'));
+          return;
+        }
+        const request = window.indexedDB.open(OPUS_HTML_HANDOFF_DB, 1);
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains(OPUS_HTML_HANDOFF_STORE)) {
+            db.createObjectStore(OPUS_HTML_HANDOFF_STORE, { keyPath: 'id' });
+          }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => {
+          reject(request.error || new Error('Could not open Opus handoff storage.'));
+        };
+      });
+
+    const readOpusHtmlHandoffRecord = async (pointer) => {
+      if (pointer?.storage !== 'indexeddb' || !pointer.id) {
+        return pointer;
+      }
+
+      let db = null;
+      try {
+        db = await openOpusHtmlHandoffDb();
+        const record = await new Promise((resolve, reject) => {
+          const transaction = db.transaction(OPUS_HTML_HANDOFF_STORE, 'readonly');
+          const request = transaction.objectStore(OPUS_HTML_HANDOFF_STORE).get(pointer.id);
+          request.onsuccess = () => resolve(request.result || null);
+          request.onerror = () => {
+            reject(request.error || new Error('Could not read Opus handoff record.'));
+          };
+        });
+        if (!record) {
+          throw new Error('Generated HTML handoff record was not found.');
+        }
+        const html =
+          record.htmlBlob instanceof Blob
+            ? await record.htmlBlob.text()
+            : typeof record.html === 'string'
+            ? record.html
+            : '';
+        return { ...pointer, ...record, html };
+      } finally {
+        if (db) db.close();
+      }
+    };
+
+    const deleteOpusHtmlHandoffRecord = async (pointer) => {
+      if (pointer?.storage !== 'indexeddb' || !pointer.id) {
+        return;
+      }
+
+      let db = null;
+      try {
+        db = await openOpusHtmlHandoffDb();
+        await new Promise((resolve, reject) => {
+          const transaction = db.transaction(OPUS_HTML_HANDOFF_STORE, 'readwrite');
+          transaction.objectStore(OPUS_HTML_HANDOFF_STORE).delete(pointer.id);
+          transaction.oncomplete = () => resolve();
+          transaction.onerror = () => {
+            reject(transaction.error || new Error('Could not delete Opus handoff record.'));
+          };
+          transaction.onabort = () => {
+            reject(transaction.error || new Error('Opus handoff delete was aborted.'));
+          };
+        });
+      } catch (error) {
+        console.warn('Could not delete Opus handoff record:', error);
+      } finally {
+        if (db) db.close();
+      }
+    };
+
+    const consumeOpusHtmlHandoff = async () => {
+      let raw = null;
+      let pointer = null;
+      try {
+        raw = window.localStorage.getItem(OPUS_HTML_HANDOFF_KEY);
+      } catch (error) {
+        raw = null;
+      }
+
+      if (!raw) {
+        clearOpusHtmlHandoffRequest();
+        return false;
+      }
+
+      try {
+        pointer = JSON.parse(raw);
+        const payload = await readOpusHtmlHandoffRecord(pointer);
+        const html = typeof payload.html === 'string' ? payload.html : '';
+        if (!html.trim()) {
+          throw new Error('Generated HTML payload was empty.');
+        }
+
+        const originalFilename =
+          typeof payload.filename === 'string' && payload.filename.trim()
+            ? payload.filename.trim()
+            : 'xtrata-opus-player.html';
+        const filename = getCompactOpusHandoffFilename(payload, originalFilename);
+        const file = new File([html], filename, { type: 'text/html' });
+
+        dom.textPayload.value = '';
+        dom.payloadType.value = 'text/html';
+        dom.nameInput.value = '';
+        setSelectedFile(file);
+        state.handoffDependencyIds = normalizeOpusHandoffDependencyIds(payload.dependencies);
+        appendLog(
+          originalFilename === filename
+            ? `Loaded generated Opus HTML player: ${filename}.`
+            : `Loaded generated Opus HTML player: ${filename} (from ${originalFilename}).`
+        );
+        await preparePayload();
+        document
+          .getElementById('inscribeTitle')
+          ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return true;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        appendLog(`Could not load Opus HTML player handoff: ${message}`);
+        setStatus(dom.walletStatus, `<strong>Opus handoff failed</strong> ${message}`, 'error', 'rose');
+        return false;
+      } finally {
+        try {
+          window.localStorage.removeItem(OPUS_HTML_HANDOFF_KEY);
+        } catch (error) {}
+        await deleteOpusHtmlHandoffRecord(pointer);
+        clearOpusHtmlHandoffRequest();
+      }
     };
 
     const markPreparedDirty = () => {
@@ -7746,14 +8202,18 @@ const openCuratedGallery = async (galleryId) => {
       dom.walletLookupInput.value = '';
       updateWalletLookupInputMode();
       applyContract(state.contract);
+      const walletViewRequestId = state.walletViewRequestId;
       resetSteps();
       renderTokenGridPlaceholders();
       updateWalletStatus();
+      await consumeOpusHtmlHandoff();
       if (state.explorerMode) {
         await loadExplorerMode();
       } else {
         await fetchAdminStatus();
-        await loadWalletInscriptions();
+        if (walletViewRequestId === state.walletViewRequestId) {
+          await loadWalletInscriptions();
+        }
       }
       updateControls();
     };
@@ -7835,9 +8295,13 @@ const openCuratedGallery = async (galleryId) => {
         dom.walletLookupInput.value = toBtcLookupLabel(lookup);
         updateWalletLookupInputMode();
 
-        void viewWalletFromInput().then(async () => {
-          const defaultTokenId =
-            WALLET_SHOWCASE_DEFAULT_TOKEN_IDS[showcaseKey] ?? null;
+        const defaultTokenId =
+          WALLET_SHOWCASE_DEFAULT_TOKEN_IDS[showcaseKey] ?? null;
+
+        void viewWalletFromInput({
+          deferSelection: defaultTokenId !== null,
+          deferHydration: defaultTokenId !== null
+        }).then(async () => {
 
           if (defaultTokenId !== null) {
             try {

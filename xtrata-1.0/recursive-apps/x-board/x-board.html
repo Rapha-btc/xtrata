@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Xtrata X-Board</title>
+<!--
+  XTRATA X-BOARD
+  Standalone programmable billboard inscription. No build tools.
+
+  B1 PROGRAMME FORMAT
+    B1 <slot> <mode> <font> <size> <position> <colour> <payload>
+
+    B1       namespace + protocol version
+    slot     fixed-width base62 wire code for one square
+    mode     T text, I referenced Xtrata inscription, X clear
+    style    four fixed palette codes; clear uses canonical 0000
+    payload  printable ASCII text or decimal token id; clear has no payload
+
+  Examples:
+    B100T1324GM         set center C01 / code 00 to styled text GM
+    B10CI0004159        set M12 / code 0C to Xtrata inscription #159
+    B11UX0000           clear S80 / code 1U
+
+  LAYOUT
+    12 x 12 logical square canvas:
+      1 center square  at 4 x 4 units
+     12 medium squares at 2 x 2 units
+     80 small squares  at 1 x 1 unit
+-->
+<style>
+  :root{
+    --bg:#06080d;--bg2:#0b1019;--panel:#101722;--panel2:#151f2c;
+    --fg:#eef6ff;--muted:#8fa0b6;--line:rgba(255,255,255,.11);
+    --accent:#55e6d5;--accent2:#6d88ff;--warn:#ffd16b;--bad:#ff8b7f;
+    --safe-t:env(safe-area-inset-top,0px);--safe-b:env(safe-area-inset-bottom,0px);
+    --safe-l:env(safe-area-inset-left,0px);--safe-r:env(safe-area-inset-right,0px);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;background:var(--bg);color:var(--fg)}
+  body{
+    font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;overflow-x:hidden;
+    background:radial-gradient(900px 580px at 50% -12%,rgba(85,230,213,.13),transparent 62%),
+      radial-gradient(720px 520px at 100% 105%,rgba(109,136,255,.13),transparent 60%),var(--bg);
+    padding:var(--safe-t) var(--safe-r) var(--safe-b) var(--safe-l);
+  }
+  button,input,textarea,select{font:inherit;color:inherit}button{cursor:pointer}
+  button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,a:focus-visible{
+    outline:2px solid var(--accent);outline-offset:2px
+  }
+  .mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace}
+  [hidden]{display:none!important}
+  .app{min-height:100dvh;display:flex;flex-direction:column}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px clamp(14px,3vw,28px) 8px}
+  .brand{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:11px;font-weight:800;letter-spacing:.24em;text-transform:uppercase}
+  .brand b{color:var(--fg)}.dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 18px rgba(85,230,213,.85)}
+  .top-actions{display:flex;gap:8px}.iconbtn{width:38px;height:38px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.05);display:grid;place-items:center;font-weight:850}
+  .iconbtn:hover,.btn:hover{border-color:var(--accent)}
+  .hero{text-align:center;padding:2px 14px 9px}.hero h1{margin:0;font-size:clamp(28px,5vw,54px);line-height:1;letter-spacing:.12em;text-transform:uppercase}
+  .hero p{margin:8px 0 0;color:var(--muted);font-size:12px;letter-spacing:.16em;text-transform:uppercase}
+  .stage{flex:1;display:grid;place-items:center;padding:8px 14px 14px;min-height:0}
+  .board-wrap{width:min(82vmin,880px);max-width:100%;position:relative;aspect-ratio:1}
+  .board{position:absolute;inset:0;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));grid-template-rows:repeat(12,minmax(0,1fr));gap:2px;padding:2px;
+    overflow:hidden;border:1px solid var(--line);border-radius:18px;background:#020407;box-shadow:0 28px 90px rgba(0,0,0,.46),0 0 52px rgba(85,230,213,.1)}
+  .slot{position:relative;min-width:0;min-height:0;overflow:hidden;border:1px solid rgba(255,255,255,.08);border-radius:4px;background:linear-gradient(145deg,#121b28,#09101a);
+    color:var(--fg);padding:0;display:grid;place-items:center;text-align:center;transition:border-color .16s ease,box-shadow .16s ease,filter .16s ease;isolation:isolate}
+  .slot:hover{z-index:4;border-color:rgba(85,230,213,.72);filter:brightness(1.12)}
+  .slot.selected{z-index:5;border-color:var(--accent);box-shadow:inset 0 0 0 2px var(--accent),0 0 22px rgba(85,230,213,.7)}
+  .slot.pending::after{content:"P";position:absolute;right:3px;bottom:3px;z-index:5;width:15px;height:15px;display:grid;place-items:center;border-radius:999px;background:#9b7325;color:#fff5ce;font:800 9px/1 ui-monospace,monospace}
+  .slot-id{position:absolute;z-index:4;top:4px;left:5px;color:rgba(255,255,255,.58);font:800 9px/1 ui-monospace,monospace;letter-spacing:.08em;text-shadow:0 1px 4px #000}
+  .slot[data-tier="small"] .slot-id{top:2px;left:3px;font-size:6px;color:rgba(255,255,255,.42)}
+  .slot-text{position:relative;z-index:2;width:100%;padding:12px;font-weight:900;text-transform:uppercase;line-height:1.02;overflow-wrap:anywhere;text-shadow:0 2px 14px #000}
+  .slot[data-tier="center"] .slot-text{font-size:clamp(20px,4.6vmin,46px);letter-spacing:.04em}
+  .slot[data-tier="medium"] .slot-text{font-size:clamp(11px,2.25vmin,23px);padding:7px;letter-spacing:.03em}
+  .slot[data-tier="small"] .slot-text{font-size:clamp(6px,1.05vmin,11px);padding:3px;letter-spacing:0}
+  .slot-empty{color:rgba(255,255,255,.2);font:900 clamp(10px,2vmin,18px)/1 ui-monospace,monospace}
+  .slot[data-tier="small"] .slot-empty{font-size:8px}
+  .slot-media{position:absolute;inset:0;width:100%;height:100%;display:block;border:0;object-fit:cover;background:#05070c;z-index:1}
+  .slot-kind{position:relative;z-index:2;padding:5px;border-radius:6px;background:rgba(0,0,0,.55);font:800 9px/1.2 ui-monospace,monospace;letter-spacing:.05em}
+  .statusbar{display:flex;justify-content:center;align-items:center;gap:7px;flex-wrap:wrap;padding:0 14px 16px;color:var(--muted);font-size:12px}
+  .badge{border:1px solid var(--line);background:rgba(255,255,255,.04);border-radius:999px;padding:6px 9px}
+  .btn{border:1px solid var(--line);background:rgba(255,255,255,.06);border-radius:11px;padding:10px 13px;font-weight:750}
+  .btn.primary{background:linear-gradient(180deg,rgba(85,230,213,.22),rgba(109,136,255,.12));border-color:rgba(85,230,213,.5)}
+  .btn.small{padding:7px 10px;font-size:12px}.btn[disabled]{cursor:not-allowed;opacity:.5}.link{color:var(--accent);text-decoration:none}.link:hover{text-decoration:underline}
+  .wallet-pill{max-width:178px;padding:9px 12px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.05);
+    color:var(--muted);font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .wallet-pill.connected{color:var(--fg);border-color:rgba(85,230,213,.55);background:rgba(85,230,213,.1)}
+  .backdrop{position:fixed;inset:0;z-index:30;background:rgba(2,4,8,.66);backdrop-filter:blur(4px);opacity:0;visibility:hidden;transition:.22s}
+  .backdrop.show{opacity:1;visibility:visible}
+  .drawer{position:fixed;z-index:40;top:0;right:0;width:min(450px,94vw);height:100dvh;display:flex;flex-direction:column;background:rgba(16,23,34,.98);border-left:1px solid var(--line);
+    transform:translateX(102%);transition:transform .28s cubic-bezier(.2,.8,.2,1);box-shadow:-24px 0 70px rgba(0,0,0,.42)}
+  .drawer.open{transform:translateX(0)}.drawer-head{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:calc(16px + var(--safe-t)) 16px 13px;border-bottom:1px solid var(--line)}
+  .drawer-head h2{margin:0;font-size:15px;letter-spacing:.12em;text-transform:uppercase}.drawer-body{overflow:auto;padding:15px 16px calc(24px + var(--safe-b));display:flex;flex-direction:column;gap:14px}
+  .target{display:flex;gap:8px;flex-wrap:wrap}.target .badge{color:#d7fffa;border-color:rgba(85,230,213,.4);background:rgba(85,230,213,.08)}
+  .field label{display:block;margin:0 0 7px;color:var(--muted);font-size:10px;font-weight:850;letter-spacing:.15em;text-transform:uppercase}
+  input,textarea,select{width:100%;border:1px solid var(--line);background:#080c13;border-radius:11px;padding:12px;font-size:16px}
+  textarea{min-height:82px;resize:vertical;line-height:1.4}
+  .style-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .modes{display:flex;gap:7px}.mode{flex:1;border:1px solid var(--line);background:rgba(255,255,255,.045);border-radius:10px;padding:9px 6px;font-size:12px;font-weight:800}
+  .mode[aria-pressed="true"]{border-color:var(--accent);background:rgba(85,230,213,.13);color:#e7fffc}
+  .preview{width:100%;aspect-ratio:1 / 1;flex:0 0 auto;border:1px dashed rgba(255,255,255,.18);border-radius:14px;overflow:hidden;position:relative;background:#09101a}
+  .preview::before{content:"PREVIEW - NOT ON-CHAIN";position:absolute;z-index:5;left:8px;top:8px;padding:5px 7px;border-radius:999px;background:rgba(0,0,0,.64);color:#d9fffa;font:800 9px/1 ui-monospace,monospace;letter-spacing:.08em}
+  .preview .slot{position:absolute;inset:0;width:100%;height:100%;border:0;border-radius:0}.preview .slot-id{display:none}.preview .slot-text{font-size:28px!important;padding:22px!important}
+  .memo-box{border:1px solid var(--line);border-radius:11px;background:#05070c;padding:11px 12px}.memo{word-break:break-all;color:#e5fffb;font-size:14px;line-height:1.45}
+  .counter{display:flex;justify-content:space-between;gap:8px;margin-top:8px;color:var(--muted);font-size:12px}.counter.over{color:var(--bad)}
+  .warn{border:1px solid rgba(255,209,107,.36);background:rgba(255,209,107,.09);color:#ffe09c;border-radius:10px;padding:9px 10px;font-size:12px;line-height:1.45}.warn.bad{border-color:rgba(255,139,127,.42);background:rgba(255,139,127,.1);color:#ffc0ba}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.help{margin:0;color:#aebbd0;font-size:12px;line-height:1.55}
+  .live-card{border:1px solid var(--line);border-radius:11px;background:rgba(255,255,255,.035);padding:10px;font-size:12px;line-height:1.55;color:#b8c5d7}
+  .txlog{min-height:72px;max-height:150px;overflow:auto;margin:0;white-space:pre-wrap;word-break:break-word;background:#05070c;border:1px solid var(--line);
+    border-radius:11px;padding:10px 11px;color:#aebbd0;font:11px/1.5 ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+  .info-text{font-size:14px;line-height:1.65;color:#c6d1df}.dev{font-size:12px;white-space:pre-wrap;word-break:break-word;color:#b7c8d9;background:#05070c;border:1px solid var(--line);border-radius:10px;padding:9px}
+  .lightbox{position:fixed;inset:0;z-index:60;background:rgba(1,3,6,.92);backdrop-filter:blur(7px);display:grid;place-items:center;padding:56px 16px 20px}
+  .lightbox-stage{width:min(84vmin,780px);height:min(84vmin,780px);position:relative;overflow:hidden;border:1px solid var(--line);border-radius:14px;background:#05070c}
+  .lbmedia{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;object-fit:contain;background:#05070c}.lbtext{position:absolute;inset:0;overflow:auto;margin:0;padding:15px;color:#dfe9f7;white-space:pre-wrap;word-break:break-word;font:12px/1.5 ui-monospace,monospace}
+  .lbclose{position:absolute;top:calc(12px + var(--safe-t));right:14px;z-index:2}.lblink{position:absolute;bottom:calc(12px + var(--safe-b));left:50%;transform:translateX(-50%);z-index:2}
+  @media(max-width:640px){
+    .wallet-pill{max-width:132px}
+    .topbar{padding-top:12px}.hero h1{font-size:28px}.hero p{font-size:10px}.stage{padding:5px 7px 10px}.board-wrap{width:min(96vw,82vh)}
+    .board{gap:1px;padding:1px;border-radius:10px}.slot{border-radius:2px}.slot[data-tier="small"] .slot-id{display:none}
+    .drawer{top:auto;bottom:0;width:100%;height:auto;max-height:92dvh;transform:translateY(102%);border-left:0;border-top:1px solid var(--line);border-radius:17px 17px 0 0}.drawer.open{transform:translateY(0)}
+    .drawer-head{padding-top:14px}.row{grid-template-columns:1fr}
+  }
+  @media(prefers-reduced-motion:reduce){*{transition-duration:.001ms!important;animation-duration:.001ms!important}}
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="topbar">
+    <div class="brand"><span class="dot"></span><span><b>XTRATA</b> / X-BOARD</span></div>
+    <div class="top-actions">
+      <button class="wallet-pill" id="walletBtn">Connect wallet</button>
+      <button class="iconbtn" id="refreshBtn" aria-label="Refresh board" title="Refresh board">R</button>
+      <button class="iconbtn" id="infoBtn" aria-label="About X-Board" title="About X-Board">i</button>
+    </div>
+  </header>
+  <section class="hero">
+    <h1>Public Signal Board</h1>
+    <p>93 independently programmable squares / Built using Xtrata Protocol</p>
+  </section>
+  <section class="stage">
+    <div class="board-wrap">
+      <div class="board" id="board" aria-label="Programmable public billboard"></div>
+    </div>
+  </section>
+  <footer class="statusbar">
+    <span class="badge" id="status">Searching for board writes...</span>
+    <span class="badge" id="filled">0 / 93 programmed</span>
+    <span class="badge">Namespace <span class="mono">B1</span></span>
+  </footer>
+</main>
+
+<div class="backdrop" id="backdrop"></div>
+
+<aside class="drawer" id="programDrawer" role="dialog" aria-modal="true" aria-labelledby="programTitle" aria-hidden="true">
+  <div class="drawer-head">
+    <h2 id="programTitle">Program square C01</h2>
+    <button class="iconbtn" id="programClose" aria-label="Close">x</button>
+  </div>
+  <div class="drawer-body">
+    <p class="help">The generated programme includes this square's fixed code. The page packages the correct contract call for your wallet.</p>
+    <div class="target">
+      <span class="badge">Square <b id="targetId">C01</b></span>
+      <span class="badge">Wire code <b class="mono" id="targetCode">00</b></span>
+    </div>
+    <div class="live-card" id="liveCard">This square is empty.</div>
+    <button class="btn" id="openInscriptionBtn" hidden>Open referenced inscription</button>
+    <div class="field">
+      <label>Content mode</label>
+      <div class="modes">
+        <button class="mode" data-mode="T" aria-pressed="true">Write text</button>
+        <button class="mode" data-mode="I" aria-pressed="false">Show inscription</button>
+        <button class="mode" data-mode="X" aria-pressed="false">Clear square</button>
+      </div>
+    </div>
+    <div class="field" id="textField">
+      <label for="textIn">Message</label>
+      <textarea id="textIn" placeholder="GM XTRATA" autocomplete="off" spellcheck="false"></textarea>
+    </div>
+    <div class="field" id="inscriptionField" hidden>
+      <label for="inscriptionIn">Xtrata inscription token ID</label>
+      <input id="inscriptionIn" inputmode="numeric" placeholder="e.g. 159" autocomplete="off" spellcheck="false" />
+    </div>
+    <div class="warn" id="clearNote" hidden>Clear mode removes the visible content from this square when the memo is sent.</div>
+    <div class="style-grid" id="styleGrid">
+      <div class="field">
+        <label for="fontIn">Font</label>
+        <select id="fontIn">
+          <option value="0">System</option>
+          <option value="1" selected>Display</option>
+          <option value="2">Serif</option>
+          <option value="3">Mono</option>
+          <option value="4">Rounded</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="sizeIn">Size</label>
+        <select id="sizeIn">
+          <option value="0">Extra small</option>
+          <option value="1">Small</option>
+          <option value="2">Medium</option>
+          <option value="3" selected>Large</option>
+          <option value="4">Extra large</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="positionIn">Position</label>
+        <select id="positionIn">
+          <option value="0">Top left</option>
+          <option value="1">Top center</option>
+          <option value="2" selected>Top right</option>
+          <option value="3">Middle left</option>
+          <option value="4">Middle center</option>
+          <option value="5">Middle right</option>
+          <option value="6">Bottom left</option>
+          <option value="7">Bottom center</option>
+          <option value="8">Bottom right</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="colourIn">Colour</label>
+        <select id="colourIn">
+          <option value="0">White</option>
+          <option value="1">Sky</option>
+          <option value="2">Blue</option>
+          <option value="3">Violet</option>
+          <option value="4" selected>Mint</option>
+          <option value="5">Gold</option>
+          <option value="6">Orange</option>
+          <option value="7">Red</option>
+          <option value="8">Pink</option>
+          <option value="9">Slate</option>
+        </select>
+      </div>
+    </div>
+    <div class="preview" id="preview"></div>
+    <div class="field">
+      <label>Generated programme</label>
+      <div class="memo-box">
+        <div class="memo mono" id="memoOut">B100T1324</div>
+        <div class="counter" id="counter"><span id="byteCount">9 / 96 characters</span><span>Target <b id="memoTarget">C01 / 00</b></span></div>
+      </div>
+    </div>
+    <div class="warn" id="warnBox">Write a message to create a valid programme.</div>
+    <div class="field">
+      <label>Contract action</label>
+      <div class="live-card" id="actionCard">Connect a wallet to prepare the contract transaction.</div>
+    </div>
+    <div class="field" id="bidField">
+      <label for="bidIn">Claim bid / STX</label>
+      <input id="bidIn" inputmode="decimal" value="1.000000" autocomplete="off" spellcheck="false" />
+      <p class="help">A claim sends this bid to the contract. The contract retains its 1% protocol fee and locks the balance until the square is released or outbid.</p>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="submitBtn">Send contract transaction</button>
+      <button class="btn" id="releaseBtn" hidden>Release square</button>
+    </div>
+    <div class="row">
+      <button class="btn small" id="copyMemoBtn">Copy programme</button>
+      <button class="btn small" id="disconnectBtn" hidden>Disconnect wallet</button>
+    </div>
+    <div class="field">
+      <label>Wallet log</label>
+      <pre class="txlog" id="txLog">Connect a mainnet wallet to programme the board.</pre>
+    </div>
+  </div>
+</aside>
+
+<aside class="drawer" id="infoDrawer" role="dialog" aria-modal="true" aria-labelledby="infoTitle" aria-hidden="true">
+  <div class="drawer-head">
+    <h2 id="infoTitle">What is X-Board</h2>
+    <button class="iconbtn" id="infoClose" aria-label="Close">x</button>
+  </div>
+  <div class="drawer-body">
+    <p class="info-text">X-Board is an immutable programmable billboard. Connect a Stacks wallet, design a square, and let the page package the correct Clarity contract call. Each valid <span class="mono">B1</span> programme updates one square.</p>
+    <p class="info-text">Click any square. Choose text, an Xtrata inscription, or clear. The page generates a programme containing that square's stable wire code and the same style fields enforced by the Clarity contract.</p>
+    <p class="info-text"><b>The page is the compiler. The contract call carries the programme. Each square is an independent public state.</b></p>
+    <button class="btn small" id="devBtn">Run protocol self-test</button>
+    <pre class="dev" id="devOut" hidden></pre>
+  </div>
+</aside>
+
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Referenced inscription" hidden>
+  <button class="iconbtn lbclose" id="lbClose" aria-label="Close">x</button>
+  <div class="lightbox-stage" id="lbStage"></div>
+  <a class="btn small link lblink" id="lbLink" target="_blank" rel="noreferrer">Open raw inscription</a>
+</div>
+
+<script>
+"use strict";
+
+const CONFIG = {
+  targetAddress:"SPNRA47CQGS61HQNCBZMVF2HHT7AKZCP2CXH3NP3",
+  boardContractAddress:"SPNRA47CQGS61HQNCBZMVF2HHT7AKZCP2CXH3NP3",
+  boardContractName:"xboard-v1",
+  contractReadApiBases:["https://api.hiro.so"],
+  contractReadsEnabled:true,
+  legacyTransferFallback:true,
+  contractPageSize:10,
+  apiBase:"https://api.hiro.so",
+  explorerBase:"https://explorer.hiro.so",
+  network:"mainnet",
+  programmeMaxChars:96,
+  legacyMemoMaxBytes:34,
+  minAmountMicroStx:1,
+  pendingLimit:50,
+  confirmedLimit:200,
+  pollVisibleMs:15000,
+  pollHiddenMs:60000,
+  inscriptionContractId:"SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0",
+  inscriptionFallbackContractId:"SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v1-1-1",
+  inscriptionContentRoute:"/runtime/content",
+  inscriptionContentRouteFileFallback:"https://xtrata.xyz/runtime/content",
+  inscriptionRuntimeRoute:"/runtime/",
+  inscriptionRuntimeRouteFileFallback:"https://xtrata.xyz/runtime/",
+  inscriptionMaxDigits:12
+};
+
+const $ = id => document.getElementById(id);
+const BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+const STYLE_CODES = {
+  font:new Set(["0","1","2","3","4"]),
+  size:new Set(["0","1","2","3","4"]),
+  position:new Set(["0","1","2","3","4","5","6","7","8"]),
+  colour:new Set(["0","1","2","3","4","5","6","7","8","9"])
+};
+const DEFAULT_STYLE = { font:"1",size:"3",position:"2",colour:"4" };
+const CLEAR_STYLE = { font:"0",size:"0",position:"0",colour:"0" };
+const FONT_STYLES = {
+  "0":'ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',
+  "1":'Impact,Haettenschweiler,"Arial Narrow Bold",sans-serif',
+  "2":'Georgia,"Times New Roman",serif',
+  "3":'ui-monospace,"SF Mono",Menlo,Consolas,monospace',
+  "4":'"Trebuchet MS","Arial Rounded MT Bold",sans-serif'
+};
+const SIZE_SCALES = { "0":.64,"1":.78,"2":.92,"3":1,"4":1.14 };
+const POSITION_STYLES = {
+  "0":["start","left"],"1":["start","center"],"2":["start","right"],
+  "3":["center","left"],"4":["center","center"],"5":["center","right"],
+  "6":["end","left"],"7":["end","center"],"8":["end","right"]
+};
+const COLOUR_STYLES = {
+  "0":"#eef6ff","1":"#8fd7ff","2":"#6d88ff","3":"#a98bff","4":"#55e6d5",
+  "5":"#ffd16b","6":"#ff9b54","7":"#ff8b7f","8":"#ff7bd5","9":"#aebbd0"
+};
+const utf8 = new TextEncoder();
+const SLOT_BY_CODE = new Map();
+const SLOT_BY_ID = new Map();
+const slotElements = new Map();
+const descriptorCache = new Map();
+const descriptorPromises = new Map();
+const utf8Decoder = new TextDecoder("utf-8",{ fatal:true });
+let liveStates = new Map();
+let selectedSlot = null;
+let composeMode = "T";
+let composeStyle = { ...DEFAULT_STYLE };
+let activeDrawer = null;
+let lastFocus = null;
+let fetching = false;
+let timer = null;
+let previewDescriptorTimer = null;
+let walletSession = null;
+let contractReadError = "";
+let contractStateVerified = false;
+let lastDefaultBidSlot = "";
+let txBusy = false;
+
+const WALLET_SESSION_KEY = "xboard.v1.wallet.session";
+const C32 = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+const STX_MICRO = 1000000n;
+const INITIAL_BID = 1000000n;
+
+function wireCode(index){
+  if(!Number.isInteger(index) || index < 0 || index >= BASE62.length * BASE62.length) return null;
+  return BASE62[Math.floor(index / BASE62.length)] + BASE62[index % BASE62.length];
+}
+function buildSlotMap(){
+  const slots = [{ publicId:"C01",tier:"center",col:4,row:4,width:4,height:4 }];
+  let medium = 0, small = 0;
+  for(let row=2;row<10;row+=2) for(let col=2;col<10;col+=2){
+    if(col>=4 && col<8 && row>=4 && row<8) continue;
+    slots.push({ publicId:"M"+String(++medium).padStart(2,"0"),tier:"medium",col,row,width:2,height:2 });
+  }
+  for(let row=0;row<12;row++) for(let col=0;col<12;col++){
+    if(col>=2 && col<10 && row>=2 && row<10) continue;
+    slots.push({ publicId:"S"+String(++small).padStart(2,"0"),tier:"small",col,row,width:1,height:1 });
+  }
+  return slots.map((slot,index)=>({ ...slot,index,wireCode:wireCode(index) }));
+}
+const SLOTS = buildSlotMap();
+for(const slot of SLOTS){ SLOT_BY_CODE.set(slot.wireCode,slot); SLOT_BY_ID.set(slot.publicId,slot); }
+
+function byteLen(value){ return utf8.encode(String(value||"")).length; }
+function normInscription(value){
+  const src=String(value==null?"":value).trim();
+  if(!/^\d+$/.test(src)) return null;
+  const normalized=src.replace(/^0+(?=\d)/,"");
+  return normalized.length<=CONFIG.inscriptionMaxDigits ? normalized : null;
+}
+function normalizeText(value){
+  return String(value==null?"":value).replace(/[\u0000-\u001f\u007f]/g,"").trim();
+}
+function isPrintableAscii(value){ return /^[\x20-\x7e]+$/.test(value); }
+function normalizeStyle(style){
+  const value={ ...DEFAULT_STYLE,...(style||{}) };
+  return Object.keys(STYLE_CODES).every(key=>STYLE_CODES[key].has(value[key])) ? value : null;
+}
+function styleWire(style){ return style.font+style.size+style.position+style.colour; }
+function compileBoardMemo(slotCode,mode,payload,style){
+  const slot=SLOT_BY_CODE.get(String(slotCode||""));
+  if(!slot) return { ok:false,memo:"",bytes:0,error:"Unknown square code." };
+  if(!["T","I","X"].includes(mode)) return { ok:false,memo:"",bytes:0,error:"Unknown content mode." };
+  const normalizedStyle=mode==="X"?{ ...CLEAR_STYLE }:normalizeStyle(style);
+  if(!normalizedStyle) return { ok:false,memo:"",bytes:0,error:"Choose a valid style." };
+  const prefix="B1"+slot.wireCode+mode+styleWire(normalizedStyle);
+  let value="";
+  if(mode==="T"){
+    value=normalizeText(payload);
+    if(!value) return invalidDraft(prefix,"Write a message to create a valid programme.");
+    if(!isPrintableAscii(value)) return invalidDraft(prefix+value,"Use printable ASCII text only for the Clarity-compatible programme.");
+  }else if(mode==="I"){
+    value=normInscription(payload);
+    if(!value) return invalidDraft(prefix,"Use a numeric Xtrata inscription token ID.");
+  }
+  const memo=prefix+value;
+  const bytes=byteLen(memo);
+  if(bytes>CONFIG.programmeMaxChars) return { ok:false,memo,bytes,error:"Programme is "+bytes+" / "+CONFIG.programmeMaxChars+" characters. Shorten the payload." };
+  return { ok:true,memo,bytes,state:{ slotCode:slot.wireCode,mode,value,...normalizedStyle } };
+}
+function invalidDraft(memo,error){ return { ok:false,memo,bytes:byteLen(memo),error }; }
+function decodeBoardProgram(memo,maxBytes=CONFIG.programmeMaxChars){
+  if(typeof memo!=="string" || byteLen(memo)>maxBytes || memo.slice(0,2)!=="B1") return null;
+  const slot=SLOT_BY_CODE.get(memo.slice(2,4));
+  if(!slot) return null;
+  const mode=memo[4];
+  const style=normalizeStyle({ font:memo[5],size:memo[6],position:memo[7],colour:memo[8] });
+  if(!style) return null;
+  const payload=memo.slice(9);
+  if(mode==="T"){
+    const value=normalizeText(payload);
+    if(!value || value!==payload || !isPrintableAscii(value)) return null;
+    return { slotCode:slot.wireCode,mode,value,...style };
+  }
+  if(mode==="I"){
+    if(!/^\d+$/.test(payload) || payload.length>CONFIG.inscriptionMaxDigits) return null;
+    return { slotCode:slot.wireCode,mode,value:payload.replace(/^0+(?=\d)/,""),...style };
+  }
+  if(mode==="X" && payload==="" && styleWire(style)==="0000") return { slotCode:slot.wireCode,mode,value:"",...style };
+  return null;
+}
+function decodeBoardMemo(memo){ return decodeBoardProgram(memo,CONFIG.legacyMemoMaxBytes); }
+
+function hexByte(value){return Number(value).toString(16).padStart(2,"0");}
+function bytesToHex(bytes){return Array.from(bytes,byte=>hexByte(byte)).join("");}
+function hexToBytes(hex){
+  const src=String(hex||"").replace(/^0x/,"");if(src.length%2||!/^[0-9a-f]*$/i.test(src))throw new Error("Invalid hex.");
+  return Uint8Array.from(src.match(/../g)||[],part=>parseInt(part,16));
+}
+function fixedHex(value,bytes){
+  let num=BigInt(value);if(num<0n)throw new Error("Negative integers are not supported.");
+  const out=num.toString(16);if(out.length>bytes*2)throw new Error("Integer is too large.");return out.padStart(bytes*2,"0");
+}
+function clarityUint(value){return "01"+fixedHex(value,16);}
+function clarityAscii(value){
+  const text=String(value);if(!/^[\x20-\x7e]*$/.test(text))throw new Error("Clarity ASCII argument contains unsupported characters.");
+  return "0d"+fixedHex(text.length,4)+bytesToHex(utf8.encode(text));
+}
+function normalizeC32(value){return String(value||"").toUpperCase().replace(/O/g,"0").replace(/[LI]/g,"1");}
+function c32encode(inputHex){
+  let hex=String(inputHex||"").toLowerCase();if(!/^[0-9a-f]*$/.test(hex))throw new Error("Invalid c32 hex.");if(hex.length%2)hex="0"+hex;
+  const leading=(hex.match(/^(00)*/)||[""])[0].length/2;let num=hex?BigInt("0x"+hex):0n,out="";
+  while(num>0n){out=C32[Number(num%32n)]+out;num/=32n;}return "0".repeat(leading)+out;
+}
+function c32decode(value){
+  const src=normalizeC32(value);if(!new RegExp("^["+C32+"]*$").test(src))throw new Error("Invalid c32 string.");
+  const leading=(src.match(/^0*/)||[""])[0].length;let num=0n;
+  for(const char of src)num=num*32n+BigInt(C32.indexOf(char));
+  let hex=num?num.toString(16):"";if(hex.length%2)hex="0"+hex;return "00".repeat(leading)+hex;
+}
+async function sha256(bytes){return new Uint8Array(await crypto.subtle.digest("SHA-256",bytes));}
+async function c32checksum(dataHex){return bytesToHex((await sha256(await sha256(hexToBytes(dataHex)))).slice(0,4));}
+async function encodeStacksAddress(version,hash160){
+  const hash=String(hash160||"").toLowerCase();if(!/^[0-9a-f]{40}$/.test(hash))throw new Error("Invalid Stacks hash160.");
+  const versionHex=hexByte(version),checksum=await c32checksum(versionHex+hash);return "S"+C32[Number(version)]+c32encode(hash+checksum);
+}
+async function decodeStacksAddress(address){
+  const src=String(address||"").trim();if(src.length<=5||src[0]!=="S")throw new Error("Invalid Stacks address.");
+  const encoded=normalizeC32(src.slice(1)),version=C32.indexOf(encoded[0]);if(version<0)throw new Error("Invalid Stacks address version.");
+  const data=c32decode(encoded.slice(1)),hash=data.slice(0,-8),checksum=data.slice(-8);
+  if(hash.length!==40||checksum!==await c32checksum(hexByte(version)+hash))throw new Error("Invalid Stacks address checksum.");
+  return {version,hash160:hash};
+}
+async function serializeStxSpendCap(address,amount){
+  const decoded=await decodeStacksAddress(address);
+  return "00"+"02"+hexByte(decoded.version)+decoded.hash160+"05"+fixedHex(amount,8);
+}
+async function serializeContractStxSpendCap(address,name,amount){
+  const decoded=await decodeStacksAddress(address),contractName=String(name||"");
+  if(!/^[a-zA-Z]([a-zA-Z0-9]|[-_]){0,39}$/.test(contractName))throw new Error("Invalid contract name.");
+  return "00"+"03"+hexByte(decoded.version)+decoded.hash160+hexByte(contractName.length)+bytesToHex(utf8.encode(contractName))+"05"+fixedHex(amount,8);
+}
+function inferNetwork(address){
+  if(/^S[PM]/.test(String(address||"")))return "mainnet";
+  if(/^S[TN]/.test(String(address||"")))return "testnet";
+  return null;
+}
+function parseStxInput(value){
+  const src=String(value||"").trim();if(!/^\d+(?:\.\d{0,6})?$/.test(src))return null;
+  const [whole,fraction=""]=src.split(".");return BigInt(whole)*STX_MICRO+BigInt((fraction+"000000").slice(0,6));
+}
+function formatStx(value){
+  const amount=BigInt(value||0),whole=amount/STX_MICRO,fraction=(amount%STX_MICRO).toString().padStart(6,"0");
+  return whole+"."+fraction;
+}
+function requiredBid(state){
+  const gross=state&&state.grossBid!=null?BigInt(state.grossBid):0n;
+  return gross===0n?INITIAL_BID:gross+(gross*100n+9999n)/10000n;
+}
+function boardContractId(){return CONFIG.boardContractAddress+"."+CONFIG.boardContractName;}
+function contractConfigured(){return /^S[PMTN][A-Z0-9]+$/.test(CONFIG.boardContractAddress)&&/^[a-zA-Z]([a-zA-Z0-9]|[-_]){0,39}$/.test(CONFIG.boardContractName);}
+
+class HexReader{
+  constructor(hex){this.hex=String(hex||"").replace(/^0x/,"");this.pos=0;}
+  read(bytes){const end=this.pos+bytes*2;if(end>this.hex.length)throw new Error("Truncated Clarity value.");const out=this.hex.slice(this.pos,end);this.pos=end;return out;}
+  byte(){return parseInt(this.read(1),16);}
+  uint(bytes){return Number.parseInt(this.read(bytes),16);}
+  bigint(bytes){return BigInt("0x"+this.read(bytes));}
+  ascii(bytes){return String.fromCharCode(...hexToBytes(this.read(bytes)));}
+}
+function parseClarityHex(hex){const reader=new HexReader(hex),value=parseClarityValue(reader);if(reader.pos!==reader.hex.length)throw new Error("Trailing Clarity bytes.");return value;}
+function parseClarityValue(reader){
+  const type=reader.byte();
+  if(type===0x00)return {type:"int",value:reader.bigint(16)};
+  if(type===0x01)return {type:"uint",value:reader.bigint(16)};
+  if(type===0x02){const length=reader.uint(4);return {type:"buffer",value:reader.read(length)};}
+  if(type===0x03||type===0x04)return {type:"bool",value:type===0x03};
+  if(type===0x05)return {type:"principal",version:reader.byte(),hash160:reader.read(20)};
+  if(type===0x06)return {type:"contract-principal",version:reader.byte(),hash160:reader.read(20),name:reader.ascii(reader.byte())};
+  if(type===0x07||type===0x08)return {type:type===0x07?"ok":"err",value:parseClarityValue(reader)};
+  if(type===0x09)return {type:"none"};
+  if(type===0x0a)return {type:"some",value:parseClarityValue(reader)};
+  if(type===0x0b){const length=reader.uint(4),value=[];for(let index=0;index<length;index++)value.push(parseClarityValue(reader));return {type:"list",value};}
+  if(type===0x0c){const length=reader.uint(4),value={};for(let index=0;index<length;index++){const key=reader.ascii(reader.byte());value[key]=parseClarityValue(reader);}return {type:"tuple",value};}
+  if(type===0x0d)return {type:"ascii",value:reader.ascii(reader.uint(4))};
+  if(type===0x0e){const length=reader.uint(4);return {type:"utf8",value:utf8Decoder.decode(hexToBytes(reader.read(length)))};}
+  throw new Error("Unsupported Clarity type 0x"+hexByte(type)+".");
+}
+async function principalText(value){
+  if(!value||!["principal","contract-principal"].includes(value.type))return "";
+  const address=await encodeStacksAddress(value.version,value.hash160);return value.type==="contract-principal"?address+"."+value.name:address;
+}
+function clarityOk(value){if(!value||value.type!=="ok")throw new Error("Read-only contract call returned an error.");return value.value;}
+async function callReadOnly(functionName,args){
+  if(!contractConfigured())throw new Error("Board contract configuration is incomplete.");
+  let lastError=null;
+  for(const base of CONFIG.contractReadApiBases){
+    try{
+      const url=String(base).replace(/\/$/,"")+"/v2/contracts/call-read/"+encodeURIComponent(CONFIG.boardContractAddress)+"/"+encodeURIComponent(CONFIG.boardContractName)+"/"+encodeURIComponent(functionName);
+      const res=await fetch(url,{method:"POST",headers:{"content-type":"application/json",accept:"application/json"},body:JSON.stringify({sender:CONFIG.boardContractAddress,arguments:args.map(arg=>"0x"+arg.replace(/^0x/,""))})});
+      if(!res.ok)throw new Error("HTTP "+res.status);const body=await res.json();if(body.okay===false)throw new Error(body.cause||"Read-only call failed.");
+      return parseClarityHex(body.result);
+    }catch(error){lastError=error;}
+  }
+  throw lastError||new Error("Read-only call failed.");
+}
+async function contractStateFromEntry(entry){
+  const values=entry&&entry.type==="tuple"?entry.value:null;if(!values||!values["tile-id"]||!values.tile)return null;
+  const slot=SLOTS[Number(values["tile-id"].value)];if(!slot||values.tile.type==="none")return null;
+  const tile=values.tile.value&&values.tile.value.value;if(!tile)return null;
+  const state=decodeBoardProgram(tile.program.value);if(!state||state.slotCode!==slot.wireCode)return null;
+  return {...state,sender:await principalText(tile.owner.value),pending:false,source:"contract",grossBid:tile["gross-bid"].value,locked:tile.locked.value,updatedAt:tile["updated-at"].value,claimedAt:tile["claimed-at"].value};
+}
+async function fetchContractStates(){
+  const states=new Map(),pageSize=Math.max(1,Math.min(20,Number(CONFIG.contractPageSize)||10));
+  for(let start=0;start<SLOTS.length;start+=pageSize){
+    const page=clarityOk(await callReadOnly("get-tile-page",[clarityUint(start),clarityUint(pageSize)]));
+    if(!page||page.type!=="list")throw new Error("Unexpected tile page response.");
+    if(page.value.length!==pageSize)throw new Error("Incomplete tile page response.");
+    for(let offset=0;offset<page.value.length;offset++){
+      const entry=page.value[offset],tileId=entry&&entry.type==="tuple"&&entry.value["tile-id"];
+      if(!tileId||tileId.type!=="uint"||Number(tileId.value)!==start+offset)throw new Error("Out-of-order tile page response.");
+      const tile=entry.value.tile;
+      if(start+offset<SLOTS.length){
+        const state=await contractStateFromEntry(entry);if(!state)throw new Error("Invalid tile page entry.");states.set(state.slotCode,state);
+      }else if(!tile||tile.type!=="none"){
+        throw new Error("Unexpected padded tile page entry.");
+      }
+    }
+  }
+  if(states.size!==SLOTS.length)throw new Error("Incomplete contract snapshot.");
+  return states;
+}
+function walletProviders(){
+  const values=[
+    ["Leather",window.LeatherProvider],
+    ["Xverse",window.XverseProviders&&window.XverseProviders.StacksProvider],
+    ["Stacks",window.StacksProvider],
+    ["Blockstack",window.BlockstackProvider]
+  ],seen=new Set(),providers=[];
+  for(const [label,provider] of values)if(provider&&typeof provider.request==="function"&&!seen.has(provider)){seen.add(provider);providers.push({label,provider});}
+  return providers;
+}
+function extractStacksAddress(payload,depth=0){
+  if(depth>8||payload==null)return null;
+  if(typeof payload==="string"){const value=payload.trim();return /^S[PMTN][A-Z0-9]+$/i.test(value)?value:null;}
+  if(Array.isArray(payload)){for(const value of payload){const address=extractStacksAddress(value,depth+1);if(address)return address;}return null;}
+  if(typeof payload!=="object")return null;
+  for(const key of ["address","selectedAddress","identityAddress","stxAddress","addresses","accounts","result","profile","authResponsePayload","userData","mainnet","testnet"]){
+    if(key in payload){const address=extractStacksAddress(payload[key],depth+1);if(address)return address;}
+  }
+  return null;
+}
+function isCancelled(error){const text=String(error&&error.message||error||"").toLowerCase();return text.includes("cancel")||text.includes("reject")||text.includes("denied")||text.includes("closed")||(error&&[-32000,4001].includes(error.code));}
+function isRetryableWalletError(error){const text=String(error&&error.message||error||"").toLowerCase();return text.includes("invalid")||text.includes("param")||text.includes("unsupported")||text.includes("method not found")||text.includes("not implemented");}
+function normalizeTxId(value,depth=0){
+  if(depth>6||value==null)return "";
+  if(typeof value==="string")return /^(0x)?[0-9a-f]{64}$/i.test(value)?value.replace(/^0x/,""):"";
+  if(typeof value!=="object")return "";
+  for(const key of ["txId","txid","transactionId","transaction_id","result","data"]){if(key in value){const id=normalizeTxId(value[key],depth+1);if(id)return id;}}
+  return "";
+}
+function logWallet(message){
+  const line=new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"})+"  "+message;
+  const box=$("txLog");box.textContent=(box.textContent?box.textContent+"\n":"")+line;box.scrollTop=box.scrollHeight;
+}
+function persistWallet(){
+  if(!walletSession){localStorage.removeItem(WALLET_SESSION_KEY);return;}
+  localStorage.setItem(WALLET_SESSION_KEY,JSON.stringify({address:walletSession.address,network:walletSession.network,label:walletSession.label}));
+}
+async function acceptWalletSession(address,label,provider){
+  const normalized=String(address||"").trim().toUpperCase(),network=inferNetwork(normalized);if(network!==CONFIG.network)throw new Error("X-Board requires a "+CONFIG.network+" wallet address.");
+  await decodeStacksAddress(normalized);walletSession={address:normalized,network,label:label||"Wallet",provider:provider||null};persistWallet();updateWalletUi();return walletSession;
+}
+async function restoreWallet(){
+  try{
+    const saved=JSON.parse(localStorage.getItem(WALLET_SESSION_KEY)||"null");if(!saved||!saved.address)return;
+    const found=walletProviders().find(item=>item.label===saved.label)||walletProviders()[0]||null;
+    await acceptWalletSession(saved.address,saved.label,found&&found.provider);
+    logWallet("Restored "+shortAddr(saved.address)+". Approve the next wallet request to transact.");
+  }catch{localStorage.removeItem(WALLET_SESSION_KEY);}
+}
+async function connectWallet(){
+  const providers=walletProviders();if(!providers.length){logWallet("No supported Stacks wallet was detected. Install Leather or Xverse, then reload.");return;}
+  const methods=["stx_getAddresses","getAddresses","stx_getAccounts","getAccounts","wallet_getAccount","wallet_connect","stx_requestAccounts","requestAccounts","connect"];
+  let lastError=null;
+  for(const {label,provider} of providers){
+    for(const method of methods){
+      try{
+        const result=await provider.request(method);const address=extractStacksAddress(result);if(!address)continue;
+        await acceptWalletSession(address,label,provider);logWallet("Connected "+label+" wallet "+shortAddr(address)+".");return;
+      }catch(error){lastError=error;if(isCancelled(error)){logWallet("Wallet connection was cancelled.");return;}}
+    }
+  }
+  logWallet("Could not connect a mainnet Stacks wallet"+(lastError?": "+String(lastError.message||lastError):"."));
+}
+function disconnectWallet(){
+  walletSession=null;persistWallet();updateWalletUi();logWallet("Wallet disconnected.");
+}
+function updateWalletUi(){
+  const connected=!!walletSession,btn=$("walletBtn");btn.textContent=connected?shortAddr(walletSession.address):"Connect wallet";btn.classList.toggle("connected",connected);
+  $("disconnectBtn").hidden=!connected;if(selectedSlot)updateContractAction();
+}
+function buildContractVariants(functionName,functionArgs,postConditions){
+  const common={functionName,functionArgs,network:CONFIG.network,postConditionMode:"deny"};
+  if(postConditions.length)common.postConditions=postConditions;
+  return [
+    {contract:boardContractId(),address:walletSession.address,sponsored:false,...common},
+    {contractAddress:CONFIG.boardContractAddress,contractName:CONFIG.boardContractName,...common}
+  ];
+}
+async function requestContractCall(functionName,functionArgs,postConditions=[]){
+  if(!walletSession)throw new Error("Connect a wallet first.");if(!walletSession.provider){const found=walletProviders().find(item=>item.label===walletSession.label)||walletProviders()[0];if(found)walletSession.provider=found.provider;}
+  if(!walletSession.provider)throw new Error("Wallet provider is unavailable. Reconnect your wallet.");
+  let lastError=null;
+  for(const params of buildContractVariants(functionName,functionArgs,postConditions)){
+    try{return await walletSession.provider.request("stx_callContract",params);}
+    catch(error){lastError=error;if(isCancelled(error)||!isRetryableWalletError(error))throw error;}
+  }
+  throw lastError||new Error("Wallet contract call failed.");
+}
+function selectedContractAction(){
+  const state=selectedSlot&&stateFor(selectedSlot);if(!selectedSlot)return {kind:"none",state:null};
+  if(!CONFIG.contractReadsEnabled||!contractStateVerified||contractReadError||(state&&state.source!=="contract"))return {kind:"unverified",state};
+  if(walletSession&&state&&state.sender===walletSession.address)return {kind:"program",state};
+  return {kind:"claim",state};
+}
+function updateContractAction(){
+  if(!selectedSlot)return;
+  const action=selectedContractAction(),connected=!!walletSession,required=requiredBid(action.state),slotKey=selectedSlot.wireCode+"|"+String(action.state&&action.state.grossBid||0);
+  $("bidField").hidden=action.kind==="program";$("releaseBtn").hidden=!(action.kind==="program"&&connected);$("releaseBtn").disabled=txBusy;
+  if(action.kind==="claim"&&slotKey!==lastDefaultBidSlot){$("bidIn").value=formatStx(required);lastDefaultBidSlot=slotKey;}
+  if(!connected)$("actionCard").textContent="Connect a mainnet Stacks wallet. The page will prepare the correct contract call for "+selectedSlot.publicId+".";
+  else if(action.kind==="program")$("actionCard").textContent="Update "+selectedSlot.publicId+" as its current owner. No new bid is required.";
+  else if(action.kind==="unverified")$("actionCard").textContent="Contract state could not be verified. Refresh before sending a transaction.";
+  else $("actionCard").textContent="Claim "+selectedSlot.publicId+" with a bid of at least "+formatStx(required)+" STX. The wallet request includes a deny-mode STX spend cap.";
+  const draft=currentDraft(),bid=parseStxInput($("bidIn").value),bidOk=action.kind!=="claim"||(bid!=null&&bid>=required);
+  $("submitBtn").disabled=txBusy||!connected||!draft||!draft.ok||action.kind==="unverified"||!bidOk;
+}
+async function submitProgramme(){
+  if(txBusy||!selectedSlot)return;const draft=currentDraft();let action=selectedContractAction();if(!draft||!draft.ok)return updateComposer();
+  if(!walletSession){await connectWallet();if(!walletSession)return;}
+  action=selectedContractAction();
+  if(action.kind==="unverified")return logWallet("Refresh the board before sending: contract state is not verified.");
+  txBusy=true;updateContractAction();
+  try{
+    let functionName,args,postConditions=[];
+    if(action.kind==="program"){functionName="program-tile";args=[clarityUint(selectedSlot.index),clarityAscii(draft.memo)];}
+    else{
+      const bid=parseStxInput($("bidIn").value),minimum=requiredBid(action.state);if(bid==null||bid<minimum)throw new Error("Enter a bid of at least "+formatStx(minimum)+" STX.");
+      const previousLocked=action.state&&action.state.locked!=null?BigInt(action.state.locked):0n;
+      functionName="claim-tile";args=[clarityUint(selectedSlot.index),clarityUint(bid),clarityAscii(draft.memo)];postConditions=[
+        await serializeStxSpendCap(walletSession.address,bid),
+        await serializeContractStxSpendCap(CONFIG.boardContractAddress,CONFIG.boardContractName,previousLocked)
+      ];
+    }
+    logWallet("Requesting "+functionName+" for "+selectedSlot.publicId+". Review and approve it in your wallet.");
+    const result=await requestContractCall(functionName,args,postConditions),txid=normalizeTxId(result);
+    logWallet(txid?"Submitted "+txid+".":"Wallet accepted the transaction. Refresh after broadcast.");
+    setTimeout(()=>refresh(true),5000);
+  }catch(error){logWallet(isCancelled(error)?"Wallet request cancelled.":"Transaction failed: "+String(error.message||error));}
+  finally{txBusy=false;updateContractAction();}
+}
+async function releaseSelectedTile(){
+  if(txBusy||!selectedSlot||!walletSession)return;const action=selectedContractAction();if(action.kind!=="program")return;
+  txBusy=true;updateContractAction();
+  try{
+    logWallet("Requesting release-tile for "+selectedSlot.publicId+". Review and approve it in your wallet.");
+    const locked=action.state&&action.state.locked!=null?BigInt(action.state.locked):0n;
+    const result=await requestContractCall("release-tile",[clarityUint(selectedSlot.index)],[await serializeContractStxSpendCap(CONFIG.boardContractAddress,CONFIG.boardContractName,locked)]),txid=normalizeTxId(result);
+    logWallet(txid?"Submitted release "+txid+".":"Wallet accepted the release. Refresh after broadcast.");setTimeout(()=>refresh(true),5000);
+  }catch(error){logWallet(isCancelled(error)?"Wallet request cancelled.":"Release failed: "+String(error.message||error));}
+  finally{txBusy=false;updateContractAction();}
+}
+
+function contentRoute(){
+  if(/^https?:\/\//i.test(CONFIG.inscriptionContentRoute)) return CONFIG.inscriptionContentRoute;
+  return location.protocol==="file:" ? CONFIG.inscriptionContentRouteFileFallback : CONFIG.inscriptionContentRoute;
+}
+function runtimeRoute(){
+  if(/^https?:\/\//i.test(CONFIG.inscriptionRuntimeRoute)) return CONFIG.inscriptionRuntimeRoute;
+  return location.protocol==="file:" ? CONFIG.inscriptionRuntimeRouteFileFallback : CONFIG.inscriptionRuntimeRoute;
+}
+function routeUrl(route,tokenId){
+  const params=new URLSearchParams({ contractId:CONFIG.inscriptionContractId,tokenId:String(tokenId),network:CONFIG.network });
+  if(CONFIG.inscriptionFallbackContractId) params.set("fallbackContractId",CONFIG.inscriptionFallbackContractId);
+  return route+(route.includes("?")?"&":"?")+params.toString();
+}
+function inscriptionContentUrl(tokenId){ return routeUrl(contentRoute(),tokenId); }
+function inscriptionRuntimeUrl(tokenId){ return routeUrl(runtimeRoute(),tokenId); }
+function classifyMime(contentType){
+  const mime=String(contentType||"").split(";")[0].trim().toLowerCase();
+  if(mime.startsWith("image/")) return "image";
+  if(mime.startsWith("video/")) return "video";
+  if(mime.startsWith("audio/")) return "audio";
+  if(mime==="text/html" || mime==="application/xhtml+xml") return "html";
+  if(mime==="application/pdf") return "pdf";
+  if(mime.startsWith("text/") || mime==="application/json" || mime==="application/javascript") return "text";
+  return "file";
+}
+function resolveDescriptor(tokenId){
+  const key=String(tokenId);
+  if(descriptorCache.has(key)) return Promise.resolve(descriptorCache.get(key));
+  if(descriptorPromises.has(key)) return descriptorPromises.get(key);
+  const promise=fetch(inscriptionContentUrl(tokenId),{ method:"HEAD",mode:"cors" }).then(res=>{
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const descriptor={ kind:classifyMime(res.headers.get("content-type")),mime:res.headers.get("content-type")||"" };
+    descriptorCache.set(key,descriptor);descriptorPromises.delete(key);return descriptor;
+  }).catch(()=>{ descriptorPromises.delete(key);const descriptor={kind:"file",mime:""};descriptorCache.set(key,descriptor);return descriptor; });
+  descriptorPromises.set(key,promise);return promise;
+}
+
+function stateFor(slot){ return liveStates.get(slot.wireCode)||null; }
+function makeSlotElement(slot,state,preview){
+  const button=document.createElement(preview?"div":"button");
+  if(!preview) button.type="button";
+  button.className="slot"+(state&&state.pending?" pending":"")+(selectedSlot&&selectedSlot.wireCode===slot.wireCode&&!preview?" selected":"");
+  button.dataset.tier=slot.tier;
+  button.style.gridColumn=(slot.col+1)+" / span "+slot.width;
+  button.style.gridRow=(slot.row+1)+" / span "+slot.height;
+  if(!preview){
+    button.setAttribute("aria-label","Program square "+slot.publicId+", code "+slot.wireCode);
+    button.addEventListener("click",()=>selectSlot(slot));
+  }
+  const id=document.createElement("span");id.className="slot-id";id.textContent=slot.publicId;button.appendChild(id);
+  button.dataset.preview=String(!!preview);renderSlotContent(button,slot,state);
+  return button;
+}
+function renderSlotContent(root,slot,state){
+  root.querySelectorAll(":scope > :not(.slot-id)").forEach(node=>node.remove());
+  if(!state || state.mode==="X"){
+    const empty=document.createElement("span");empty.className="slot-empty";empty.textContent="+";root.appendChild(empty);return;
+  }
+  if(state.mode==="T"){
+    const text=document.createElement("span");text.className="slot-text";text.textContent=state.value;applyTextStyle(text,state);root.appendChild(text);return;
+  }
+  const tokenId=state.value;
+  const placeholder=document.createElement("span");placeholder.className="slot-kind";placeholder.textContent="#"+tokenId;root.appendChild(placeholder);
+  if(!tokenId || root.dataset.preview==="true") return;
+  hydrateInscription(root,slot,tokenId,placeholder);
+}
+function applyTextStyle(node,state){
+  const position=POSITION_STYLES[state.position]||POSITION_STYLES[DEFAULT_STYLE.position];
+  node.style.alignSelf=position[0];
+  node.style.textAlign=position[1];
+  node.style.fontFamily=FONT_STYLES[state.font]||FONT_STYLES[DEFAULT_STYLE.font];
+  node.style.color=COLOUR_STYLES[state.colour]||COLOUR_STYLES[DEFAULT_STYLE.colour];
+  node.style.transform="scale("+(SIZE_SCALES[state.size]||SIZE_SCALES[DEFAULT_STYLE.size])+")";
+}
+function hydrateInscription(root,slot,tokenId,placeholder){
+  resolveDescriptor(tokenId).then(descriptor=>{
+    if(!root.isConnected) return;
+    if(descriptor.kind==="image"){
+      const img=document.createElement("img");img.className="slot-media";img.alt="Inscription #"+tokenId;img.loading="lazy";img.src=inscriptionContentUrl(tokenId);root.insertBefore(img,placeholder);
+    }else if(descriptor.kind==="video" && slot.tier!=="small"){
+      const video=document.createElement("video");video.className="slot-media";video.muted=true;video.loop=true;video.playsInline=true;video.src=inscriptionContentUrl(tokenId);root.insertBefore(video,placeholder);video.play().catch(()=>{});
+    }else placeholder.textContent=descriptor.kind.toUpperCase()+" #"+tokenId;
+  });
+}
+function renderBoard(){
+  const board=$("board");board.innerHTML="";slotElements.clear();
+  for(const slot of SLOTS){ const el=makeSlotElement(slot,stateFor(slot),false);slotElements.set(slot.wireCode,el);board.appendChild(el); }
+  const count=[...liveStates.values()].filter(state=>state.mode!=="X").length;
+  $("filled").textContent=count+" / "+SLOTS.length+" programmed";
+}
+
+function selectSlot(slot){
+  selectedSlot=slot;renderBoard();renderDrawer();openDrawer($("programDrawer"));
+}
+function openDrawer(drawer){
+  if(activeDrawer&&activeDrawer!==drawer) closeDrawer(false);
+  lastFocus=document.activeElement;activeDrawer=drawer;$("backdrop").classList.add("show");drawer.classList.add("open");drawer.setAttribute("aria-hidden","false");
+}
+function closeDrawer(restore=true){
+  if(!activeDrawer)return;activeDrawer.classList.remove("open");activeDrawer.setAttribute("aria-hidden","true");$("backdrop").classList.remove("show");activeDrawer=null;
+  if(restore&&lastFocus&&lastFocus.focus) lastFocus.focus();
+}
+function setMode(mode){
+  composeMode=mode;document.querySelectorAll(".mode").forEach(btn=>btn.setAttribute("aria-pressed",String(btn.dataset.mode===mode)));
+  $("textField").hidden=mode!=="T";$("inscriptionField").hidden=mode!=="I";$("clearNote").hidden=mode!=="X";$("styleGrid").hidden=mode==="X";updateComposer();
+}
+function liveDescription(state){
+  if(!state||state.mode==="X") return "This square is empty.";
+  const content=state.mode==="T" ? "Text: "+state.value : "Inscription: #"+state.value;
+  const holder=state.sender ? " / Holder "+shortAddr(state.sender) : "";
+  const status=state.pending ? " / Pending" : " / Confirmed";
+  const link=state.txid ? ' / <a class="link" target="_blank" rel="noreferrer" href="'+escapeAttr(CONFIG.explorerBase+"/txid/"+state.txid+"?chain="+CONFIG.network)+'">view tx</a>' : "";
+  return escapeHtml(content+holder+status)+link;
+}
+function renderDrawer(){
+  if(!selectedSlot)return;
+  $("programTitle").textContent="Program square "+selectedSlot.publicId;
+  $("targetId").textContent=selectedSlot.publicId;$("targetCode").textContent=selectedSlot.wireCode;$("memoTarget").textContent=selectedSlot.publicId+" / "+selectedSlot.wireCode;
+  const state=stateFor(selectedSlot);$("liveCard").innerHTML=liveDescription(state);$("openInscriptionBtn").hidden=!(state&&state.mode==="I");updateComposer();
+}
+function currentDraft(){
+  if(!selectedSlot)return null;
+  const payload=composeMode==="T"?$("textIn").value:composeMode==="I"?$("inscriptionIn").value:"";
+  return compileBoardMemo(selectedSlot.wireCode,composeMode,payload,composeStyle);
+}
+function updateComposer(){
+  if(!selectedSlot)return;
+  const draft=currentDraft();$("memoOut").textContent=draft.memo;$("byteCount").textContent=draft.bytes+" / "+CONFIG.programmeMaxChars+" characters";$("counter").classList.toggle("over",draft.bytes>CONFIG.programmeMaxChars);
+  $("warnBox").textContent=draft.ok?"Ready. This programme targets "+selectedSlot.publicId+" / "+selectedSlot.wireCode+" only.":draft.error;$("warnBox").classList.toggle("bad",!draft.ok);
+  $("copyMemoBtn").disabled=!draft.ok;
+  const state=draft.ok?draft.state:{slotCode:selectedSlot.wireCode,mode:composeMode,value:composeMode==="T"?normalizeText($("textIn").value):composeMode==="I"?(normInscription($("inscriptionIn").value)||""):"",...(composeMode==="X"?CLEAR_STYLE:composeStyle)};
+  const preview=$("preview");preview.innerHTML="";const previewSlot=makeSlotElement({...selectedSlot,col:0,row:0,width:1,height:1},state,true);preview.appendChild(previewSlot);
+  clearTimeout(previewDescriptorTimer);
+  if(state.mode==="I"&&state.value)previewDescriptorTimer=setTimeout(()=>{const placeholder=previewSlot.querySelector(".slot-kind");if(placeholder)hydrateInscription(previewSlot,selectedSlot,state.value,placeholder)},400);
+  updateContractAction();
+}
+
+function hexToText(hex){
+  let src=String(hex||"");if(src.startsWith("0x"))src=src.slice(2);if(src.length%2)return null;const bytes=[];
+  for(let i=0;i<src.length;i+=2){const byte=parseInt(src.slice(i,i+2),16);if(Number.isNaN(byte))return null;if(byte!==0)bytes.push(byte);}
+  try{return utf8Decoder.decode(Uint8Array.from(bytes))}catch{return null}
+}
+function memoString(value){ return typeof value==="string" ? (/^0x[0-9a-f]*$/i.test(value)?hexToText(value)||"":value) : ""; }
+function tsSeconds(tx,pending){
+  const values=pending?[tx.receipt_time,tx.receipt_time_iso]:[tx.burn_block_time,tx.block_time,tx.burn_block_time_iso,tx.block_time_iso];
+  for(const value of values){if(typeof value==="number"&&value>0)return value;if(typeof value==="string"){const parsed=Date.parse(value);if(!Number.isNaN(parsed))return Math.floor(parsed/1000);}}
+  return pending?Math.floor(Date.now()/1000):0;
+}
+function candidateFrom(tx,pending){
+  if(!tx||tx.tx_type!=="token_transfer"||!tx.token_transfer)return null;const transfer=tx.token_transfer;
+  if(transfer.recipient_address!==CONFIG.targetAddress)return null;let amount;try{amount=BigInt(transfer.amount)}catch{return null}if(amount<BigInt(CONFIG.minAmountMicroStx))return null;
+  const memo=memoString(transfer.memo),state=decodeBoardMemo(memo);if(!state)return null;
+  return {...state,txid:tx.tx_id,sender:tx.sender_address||"",pending:!!pending,ts:tsSeconds(tx,pending)};
+}
+async function getJSON(url){const res=await fetch(url,{headers:{Accept:"application/json"}});if(!res.ok)throw new Error("HTTP "+res.status);return res.json();}
+async function fetchCandidates(){
+  const address=encodeURIComponent(CONFIG.targetAddress);
+  const mem=CONFIG.apiBase+"/extended/v1/tx/mempool?recipient_address="+address+"&limit="+CONFIG.pendingLimit+"&order=desc";
+  const conf=CONFIG.apiBase+"/extended/v2/addresses/"+address+"/transactions?limit="+CONFIG.confirmedLimit;
+  const [memRes,confRes]=await Promise.allSettled([getJSON(mem),getJSON(conf)]);if(memRes.status==="rejected"&&confRes.status==="rejected")throw new Error("Both endpoints failed");
+  const byTx=new Map(),add=c=>{if(!c)return;const prev=byTx.get(c.txid);if(!prev||(prev.pending&&!c.pending))byTx.set(c.txid,c);};
+  if(confRes.status==="fulfilled")for(const item of confRes.value.results||[])add(candidateFrom(item.tx||item,false));
+  if(memRes.status==="fulfilled")for(const item of memRes.value.results||[])add(candidateFrom(item.tx||item,true));
+  return [...byTx.values()].sort((a,b)=>b.ts-a.ts);
+}
+function resolveBoard(candidates){
+  const states=new Map();for(const candidate of candidates)if(!states.has(candidate.slotCode))states.set(candidate.slotCode,candidate);return states;
+}
+async function refresh(manual){
+  if(fetching)return;fetching=true;if(manual)$("status").textContent="Refreshing board...";
+  try{
+    let loaded=false;contractReadError="";
+    if(CONFIG.contractReadsEnabled){
+      try{liveStates=await fetchContractStates();contractStateVerified=true;loaded=true;$("status").textContent="Showing live Clarity contract state.";}
+      catch(error){contractStateVerified=false;contractReadError=String(error&&error.message||error||"Contract read failed.");}
+    }else{
+      contractStateVerified=false;
+    }
+    if(!loaded&&CONFIG.legacyTransferFallback){
+      const candidates=await fetchCandidates();liveStates=resolveBoard(candidates);loaded=true;
+      $("status").textContent="Contract unavailable. Showing read-only legacy transfer fallback.";
+    }
+    if(!loaded)throw new Error(contractReadError||"No board data source is configured.");
+    renderBoard();if(selectedSlot)renderDrawer();
+  }catch{$("status").textContent="Could not refresh from chain. Retrying automatically."}finally{fetching=false}
+}
+function schedule(){clearTimeout(timer);timer=setTimeout(async()=>{await refresh(false);schedule();},document.hidden?CONFIG.pollHiddenMs:CONFIG.pollVisibleMs);}
+
+async function openLightbox(tokenId){
+  if(!tokenId)return;const descriptor=await resolveDescriptor(tokenId),stage=$("lbStage");stage.innerHTML="";$("lightbox").hidden=false;$("lbLink").href=inscriptionContentUrl(tokenId);
+  let node;if(descriptor.kind==="image"){node=document.createElement("img");node.src=inscriptionContentUrl(tokenId);}
+  else if(descriptor.kind==="video"){node=document.createElement("video");node.src=inscriptionContentUrl(tokenId);node.controls=true;}
+  else if(descriptor.kind==="audio"){node=document.createElement("audio");node.src=inscriptionContentUrl(tokenId);node.controls=true;}
+  else if(descriptor.kind==="html"||descriptor.kind==="pdf"){node=document.createElement("iframe");node.src=descriptor.kind==="html"?inscriptionRuntimeUrl(tokenId):inscriptionContentUrl(tokenId);node.setAttribute("sandbox",descriptor.kind==="html"?"allow-scripts":"");}
+  else if(descriptor.kind==="text"){node=document.createElement("pre");node.className="lbtext";node.textContent="Loading source...";fetch(inscriptionContentUrl(tokenId)).then(res=>res.text()).then(text=>node.textContent=text.slice(0,200000)).catch(()=>node.textContent="Could not load source.");}
+  else{node=document.createElement("div");node.className="slot-kind";node.textContent="FILE #"+tokenId;}
+  if(!node.className)node.className="lbmedia";stage.appendChild(node);$("lbClose").focus();
+}
+function closeLightbox(){$("lightbox").hidden=true;$("lbStage").innerHTML="";}
+function boardClickForLightbox(event){const slot=event.target.closest(".slot");if(!slot||!selectedSlot)return;const state=stateFor(selectedSlot);if(state&&state.mode==="I"&&event.detail===2)openLightbox(state.value);}
+
+function shortAddr(value){return value&&value.length>12?value.slice(0,6)+"..."+value.slice(-4):value||"";}
+function escapeHtml(value){return String(value).replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));}
+function escapeAttr(value){return escapeHtml(value);}
+async function copyText(text,button){
+  let ok=false;try{await navigator.clipboard.writeText(text);ok=true}catch{try{const input=document.createElement("textarea");input.value=text;input.style.position="fixed";input.style.opacity="0";document.body.appendChild(input);input.select();ok=document.execCommand("copy");input.remove()}catch{}}
+  const old=button.textContent;button.textContent=ok?"Copied":"Copy failed";setTimeout(()=>button.textContent=old,1300);
+}
+function protocolSelfTest(){
+  const occupied=new Set(),checks=[];for(const slot of SLOTS)for(let row=slot.row;row<slot.row+slot.height;row++)for(let col=slot.col;col<slot.col+slot.width;col++){const key=col+","+row;if(occupied.has(key))throw new Error("Overlap "+key);occupied.add(key);}
+  checks.push("slots="+SLOTS.length,"covered="+occupied.size,"codes="+new Set(SLOTS.map(slot=>slot.wireCode)).size);
+  const samples=["B100T1324GM","B10CI0004159","B11UX0000","K1S111","B1zzT1324NO","B100X0000BAD","B100I0004abc"];
+  for(const memo of samples)checks.push(memo+" -> "+JSON.stringify(decodeBoardMemo(memo)));
+  return checks.join("\n");
+}
+
+document.querySelectorAll(".mode").forEach(btn=>btn.addEventListener("click",()=>setMode(btn.dataset.mode)));
+$("textIn").addEventListener("input",updateComposer);$("inscriptionIn").addEventListener("input",updateComposer);
+["font","size","position","colour"].forEach(key=>$(key+"In").addEventListener("change",()=>{composeStyle={...composeStyle,[key]:$(key+"In").value};updateComposer()}));
+$("refreshBtn").addEventListener("click",()=>refresh(true));$("infoBtn").addEventListener("click",()=>openDrawer($("infoDrawer")));
+$("programClose").addEventListener("click",()=>closeDrawer());$("infoClose").addEventListener("click",()=>closeDrawer());$("backdrop").addEventListener("click",()=>closeDrawer());
+$("copyMemoBtn").addEventListener("click",event=>{const draft=currentDraft();if(draft&&draft.ok)copyText(draft.memo,event.currentTarget);});
+$("walletBtn").addEventListener("click",()=>walletSession?logWallet("Connected wallet "+shortAddr(walletSession.address)+"."):connectWallet());
+$("disconnectBtn").addEventListener("click",disconnectWallet);$("submitBtn").addEventListener("click",submitProgramme);$("releaseBtn").addEventListener("click",releaseSelectedTile);$("bidIn").addEventListener("input",updateContractAction);
+$("openInscriptionBtn").addEventListener("click",()=>{const state=selectedSlot&&stateFor(selectedSlot);if(state&&state.mode==="I")openLightbox(state.value);});
+$("devBtn").addEventListener("click",()=>{const out=$("devOut");out.hidden=false;try{out.textContent=protocolSelfTest()}catch(error){out.textContent="FAILED: "+error.message}});
+$("lbClose").addEventListener("click",closeLightbox);$("lightbox").addEventListener("click",event=>{if(event.target===$("lightbox"))closeLightbox()});
+$("board").addEventListener("dblclick",boardClickForLightbox);
+document.addEventListener("keydown",event=>{if(event.key==="Escape"){if(!$("lightbox").hidden)closeLightbox();else closeDrawer();}});
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh(false);schedule();});
+
+async function init(){selectedSlot=SLOTS[0];renderBoard();setMode("T");await restoreWallet();updateWalletUi();refresh(true);schedule();}
+init();
+</script>
+</body>
+</html>

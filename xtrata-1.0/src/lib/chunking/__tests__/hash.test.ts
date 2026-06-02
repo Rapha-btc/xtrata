@@ -5,7 +5,8 @@ import {
   chunkBytes,
   computeExpectedHash,
   CHUNK_SIZE,
-  MAX_BATCH_SIZE
+  MAX_BATCH_SIZE,
+  MAX_UPLOAD_BATCH_SIZE
 } from '../hash';
 
 const bytesToHex = (bytes: Uint8Array) => Buffer.from(bytes).toString('hex');
@@ -33,14 +34,23 @@ describe('chunking', () => {
     expect(chunks[2]).toHaveLength(10);
   });
 
-  it('batches chunks into groups of 50', () => {
+  it('batches chunks into upload groups of 30 by default', () => {
     const chunks = Array.from({ length: 120 }, (_, index) => new Uint8Array([index]));
     const batches = batchChunks(chunks);
 
-    expect(batches).toHaveLength(3);
-    expect(batches[0]).toHaveLength(MAX_BATCH_SIZE);
-    expect(batches[1]).toHaveLength(MAX_BATCH_SIZE);
-    expect(batches[2]).toHaveLength(20);
+    expect(batches).toHaveLength(4);
+    expect(batches[0]).toHaveLength(MAX_UPLOAD_BATCH_SIZE);
+    expect(batches[1]).toHaveLength(MAX_UPLOAD_BATCH_SIZE);
+    expect(batches[2]).toHaveLength(MAX_UPLOAD_BATCH_SIZE);
+    expect(batches[3]).toHaveLength(MAX_UPLOAD_BATCH_SIZE);
+    expect(MAX_BATCH_SIZE).toBe(50);
+  });
+
+  it('clamps explicit upload batch sizes to 30', () => {
+    const chunks = Array.from({ length: 65 }, (_, index) => new Uint8Array([index]));
+    const batches = batchChunks(chunks, 50);
+
+    expect(batches.map((batch) => batch.length)).toEqual([30, 30, 5]);
   });
 });
 

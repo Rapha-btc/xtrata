@@ -144,7 +144,7 @@ export function initializeImageConverter() {
 
               // Update HTML generator with the pure base64 image data
               if (typeof window.updateaudionalVisualBase64 === 'function') {
-                  window.updateaudionalVisualBase64(currentPureBase64Data);
+                  window.updateaudionalVisualBase64(currentPureBase64Data, selectedFile.type);
                   console.log('Image base64 data sent to HTML generator after conversion');
               } else {
                   console.warn('updateaudionalVisualBase64 function not found on window object');

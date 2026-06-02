@@ -1,5 +1,6 @@
 import { jsonResponse, serverError } from '../lib/utils';
 import { queryAll } from '../lib/db';
+import { inspectRuntimeContentCacheUsage } from '../runtime/cache';
 
 const countRows = async (env: Record<string, unknown>, table: string) => {
   const result = await queryAll(
@@ -66,11 +67,14 @@ export const onRequest: PagesFunction = async ({ env }) => {
     const assetsCount = await countRows(env, 'assets');
     const reservationsCount = await countRows(env, 'reservations');
     const storage = inspectStorageBindings(env as Record<string, unknown>);
+    const runtimeCache = await inspectRuntimeContentCacheUsage(env as Record<string, unknown>);
     console.log(`[collections/health][${requestId}] ok`, {
       collectionsCount,
       assetsCount,
       reservationsCount,
-      selectedBinding: storage.selectedBinding
+      selectedBinding: storage.selectedBinding,
+      runtimeCacheBytes: runtimeCache.totalBytes,
+      runtimeCacheWarningLevel: runtimeCache.warningLevel
     });
     return jsonResponse({
       collectionsCount,
@@ -78,7 +82,8 @@ export const onRequest: PagesFunction = async ({ env }) => {
       reservationsCount,
       timestamp: Date.now(),
       requestId,
-      storage
+      storage,
+      runtimeCache
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Health check failed';

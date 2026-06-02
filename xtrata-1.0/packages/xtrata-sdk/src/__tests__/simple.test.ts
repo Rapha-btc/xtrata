@@ -5,6 +5,8 @@ import {
   SdkSetupError,
   createCollectionReadClient,
   createSimpleSdk,
+  createXtrataReconstructionSource,
+  createXtrataReconstructionSources,
   createXtrataReadClient
 } from '../simple';
 
@@ -39,6 +41,32 @@ describe('simple sdk layer', () => {
     expect(next).toBe(59n);
     expect(paused).toBe(false);
     expect(calls.every((entry) => entry.senderAddress === mainnetAddress)).toBe(true);
+  });
+
+  it('builds reconstruction sources from bound xtrata clients', async () => {
+    const caller: ReadOnlyCaller = {
+      callReadOnly: async () => responseOkCV(uintCV(0))
+    };
+    const primary = createXtrataReadClient({
+      contractId: `${mainnetAddress}.xtrata-v2-1-1`,
+      senderAddress: mainnetAddress,
+      caller
+    });
+    const fallback = createXtrataReadClient({
+      contractId: `${mainnetAddress}.xtrata-v2-1-0`,
+      senderAddress: mainnetAddress,
+      caller
+    });
+
+    const source = createXtrataReconstructionSource(primary);
+    const sources = createXtrataReconstructionSources(primary, [fallback]);
+
+    expect(source.sourceId).toBe(`${mainnetAddress}.xtrata-v2-1-1`);
+    expect(typeof source.readers.getChunkBatch).toBe('function');
+    expect(sources.map((entry) => entry.sourceId)).toEqual([
+      `${mainnetAddress}.xtrata-v2-1-1`,
+      `${mainnetAddress}.xtrata-v2-1-0`
+    ]);
   });
 
   it('returns collection snapshot convenience fields', async () => {

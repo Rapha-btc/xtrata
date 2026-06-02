@@ -7,6 +7,7 @@ import {
 } from '../handler';
 import { onRequest as onExplicitInscriptionRequest } from '../[network]/[contractAddress]/[contractName]/[tokenId]';
 import { onRequest as onShortInscriptionRequest } from '../[tokenId]';
+import { onRequest as onCompactInscriptionRequest } from '../../i/[tokenId]';
 
 const explicitContractAddress = 'SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X';
 const explicitContractName = 'xtrata-v2-1-1';
@@ -47,6 +48,24 @@ describe('/inscription aliases', () => {
     });
 
     expect(parsedRuntimeUrl(runtimeRequest).params.get('tokenId')).toBe('315');
+  });
+
+  it('maps compact inscription URLs to the same runtime content route', () => {
+    const runtimeRequest = buildRuntimeInscriptionRequest({
+      request: new Request('https://xtrata.xyz/i/315'),
+      routeParams: {
+        tokenId: '315'
+      }
+    });
+
+    const { pathname, params } = parsedRuntimeUrl(runtimeRequest);
+    expect(pathname).toBe('/runtime/content');
+    expect(params.get('contractId')).toBe(DEFAULT_INSCRIPTION_CONTRACT_ID);
+    expect(params.get('tokenId')).toBe('315');
+    expect(params.get('network')).toBe(DEFAULT_INSCRIPTION_NETWORK);
+    expect(params.get('fallbackContractId')).toBe(
+      DEFAULT_INSCRIPTION_FALLBACK_CONTRACT_ID
+    );
   });
 
   it('honors the explicit contract route without applying default fallback', () => {
@@ -90,6 +109,7 @@ describe('/inscription aliases', () => {
 
   it('exports both Pages route entrypoints', () => {
     expect(onShortInscriptionRequest).toBeTypeOf('function');
+    expect(onCompactInscriptionRequest).toBeTypeOf('function');
     expect(onExplicitInscriptionRequest).toBeTypeOf('function');
   });
 });

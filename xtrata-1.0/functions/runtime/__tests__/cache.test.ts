@@ -1,8 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   buildRuntimeContentCacheKey,
+  DEFAULT_RUNTIME_CONTENT_CACHE_LIMIT_BYTES,
+  deleteRuntimeContentCache,
   getRuntimeContentCacheBucket,
   hasRuntimeContentCache,
+  inspectRuntimeContentCacheUsage,
   readRuntimeContentCache,
   runtimeBytesToHex,
   writeRuntimeContentCache
@@ -157,5 +160,74 @@ describe('runtime content cache', () => {
     expect(
       Array.from(new Uint8Array(await new Response(cached?.body).arrayBuffer()))
     ).toEqual([4, 5, 6]);
+  });
+
+  it('deletes runtime content from R2 and the edge cache', async () => {
+    const key = 'runtime-content/mainnet/demo/2/abc123';
+    const r2Delete = vi.fn(async () => undefined);
+    const edgeDelete = vi.fn(async () => true);
+    vi.stubGlobal('caches', {
+      default: {
+        delete: edgeDelete
+      }
+    });
+    const env = {
+      RUNTIME_CONTENT_CACHE: {
+        get: vi.fn(),
+        put: vi.fn(),
+        delete: r2Delete,
+        list: vi.fn(),
+        getUploadUrl: vi.fn()
+      }
+    } as unknown as RuntimeEnv;
+
+    await expect(deleteRuntimeContentCache(env, key)).resolves.toEqual({
+      key,
+      r2Deleted: true,
+      edgeDeleted: true
+    });
+
+    expect(r2Delete).toHaveBeenCalledWith(key);
+    expect(edgeDelete).toHaveBeenCalledTimes(1);
+    const edgeRequest = edgeDelete.mock.calls[0]?.[0] as Request;
+    expect(edgeRequest.url).toBe(`https://xtrata-runtime-content-cache.local/${key}`);
+  });
+
+  it('reports runtime cache usage against the reserved budget', async () => {
+    const list = vi.fn(async () => ({
+      objects: [
+        { key: 'runtime-content/mainnet/demo/1/abc123', size: 4 },
+        { key: 'runtime-content/mainnet/demo/2/def456', size: 6 }
+      ],
+      truncated: false
+    }));
+    const env = {
+      RUNTIME_CONTENT_CACHE_LIMIT_BYTES: '10',
+      RUNTIME_CONTENT_CACHE: {
+        get: vi.fn(),
+        put: vi.fn(),
+        delete: vi.fn(),
+        list,
+        getUploadUrl: vi.fn()
+      }
+    } as unknown as RuntimeEnv;
+
+    const usage = await inspectRuntimeContentCacheUsage(env);
+
+    expect(list).toHaveBeenCalledWith({ prefix: 'runtime-content/' });
+    expect(usage.available).toBe(true);
+    expect(usage.objectCount).toBe(2);
+    expect(usage.totalBytes).toBe(10);
+    expect(usage.limitBytes).toBe(10);
+    expect(usage.usageRatio).toBe(1);
+    expect(usage.warningLevel).toBe('exceeded');
+  });
+
+  it('uses a 5 GB default runtime cache budget when no env override is set', async () => {
+    const usage = await inspectRuntimeContentCacheUsage({});
+
+    expect(usage.available).toBe(false);
+    expect(usage.limitBytes).toBe(DEFAULT_RUNTIME_CONTENT_CACHE_LIMIT_BYTES);
+    expect(usage.warningLevel).toBe('unknown');
   });
 });

@@ -1,0 +1,21 @@
+{
+  "mode": "csv_replay",
+  "source_csv": "combinations_froggy.csv",
+  "edition_count": 10000,
+  "seed": null,
+  "trait_folders": [
+    "assets/background",
+    "assets/body",
+    "assets/eyes",
+    "assets/mouth",
+    "assets/stripe"
+  ],
+  "special_folder": "assets/special_1s",
+  "special_interval": 200,
+  "special_count": 10,
+  "missing_special_policy": "placeholder",
+  "output_dir": "output",
+  "combinations_csv": "combinations.csv",
+  "gif_preview_count": 20,
+  "gif_duration_ms": 500
+}

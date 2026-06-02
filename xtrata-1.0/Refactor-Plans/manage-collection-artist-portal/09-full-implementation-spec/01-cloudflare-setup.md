@@ -11,7 +11,9 @@ The collection manager backend uses Cloudflare Pages Functions plus the `DB` (D1
 1. `VITE_ARTIST_ALLOWLIST` – comma-separated, uppercase Stacks addresses; both the gate and any future allowlist-checking functions use it.
 2. `MAX_COLLECTION_STORAGE_BYTES` – maximum per-collection upload bytes (default `524288000` for 500 MB). Lower this if you want aggressive caps (100 MB = `104857600`).
 3. `COLLECTION_ASSET_TTL_MS` – how long staged assets remain `draft` (default `259200000` for 3 days); after this TTL we mark them `expired` so they no longer contribute toward the storage cap.
-4. (Optional) `VITE_MANAGE_FEATURE_FLAG_...` – add other feature flags here if you expose new gating options.
+4. `RUNTIME_CONTENT_CACHE_LIMIT_BYTES` – reserved budget for cached inscription bytes served by `/runtime/content` (default `5368709120`, shown as 5 GB in diagnostics). The health check warns at 80%, 95%, and at/over budget.
+5. `RUNTIME_CACHE_ADMIN_TOKEN` – optional, temporary preview-only bearer token for the protected `/runtime/cache-purge` validation route. Set only when you need to clear a token from runtime cache for cold-request testing, then rotate or remove it.
+6. (Optional) `VITE_MANAGE_FEATURE_FLAG_...` – add other feature flags here if you expose new gating options.
 
 ## Deployment steps after code changes
 1. Run `wrangler d1 migrations apply xtrata-manage --config functions/wrangler.toml` locally (or `--remote` for the live D1) to ensure schema drift is addressed before deploying.
@@ -22,12 +24,13 @@ The collection manager backend uses Cloudflare Pages Functions plus the `DB` (D1
 ## Storage safety guard summary
 - **TTL** – each asset row records `expires_at = Date.now() + COLLECTION_ASSET_TTL_MS`. The read path auto-expired drafts whose TTL has passed, preventing stale blobs from counting toward the cap.
 - **Cap** – `POST /collections/:id/assets` sums `total_bytes` for all non-`sold-out` assets and rejects uploads that would exceed `MAX_COLLECTION_STORAGE_BYTES`. The backend uses `functions/lib/collections.ts` helpers and throws a `400` error describing the active limit.
+- **Runtime cache budget** – `/collections/health` lists the `RUNTIME_CONTENT_CACHE` bucket under the `runtime-content/` prefix, sums cached inscription bytes, and returns warning messages as usage approaches `RUNTIME_CONTENT_CACHE_LIMIT_BYTES`.
 - **Reservation lifetime** – `POST /collections/:id/reserve` records `expires_at = now + durationMs (default 20m)` so the UI can show countdowns and release expired reservations manually.
 
 ## What we still need you to do on the Cloudflare side
 1. Confirm the `ASSETS` bucket lifecycle (if you have a lifecycle policy, keep it aligned with `COLLECTION_ASSET_TTL_MS` so the bucket doesn’t grow unbounded).
 2. Ensure the `DB` binding points to `xtrata-manage` in each environment you deploy (if you copy the Pages project for preview, double-check the binding names).
-3. Provide the `VITE_ARTIST_ALLOWLIST`, `MAX_COLLECTION_STORAGE_BYTES`, and `COLLECTION_ASSET_TTL_MS` env vars in both Production and Preview; the code reads them via `import.meta.env` & `context.env` and will fall back to defaults otherwise.
+3. Provide the `VITE_ARTIST_ALLOWLIST`, `MAX_COLLECTION_STORAGE_BYTES`, `COLLECTION_ASSET_TTL_MS`, and `RUNTIME_CONTENT_CACHE_LIMIT_BYTES` env vars in both Production and Preview; the code reads them via `import.meta.env` & `context.env` and will fall back to defaults otherwise.
 4. After deploying, open the Pages Functions logs and verify that `/collections`, `/assets`, and `/reserve` return 200s; if you see missing bindings, the env section needs adjustment.
 
 ## Verification commands

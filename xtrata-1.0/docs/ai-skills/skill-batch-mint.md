@@ -31,7 +31,8 @@ Not supported:
 | Core contract | `SP3JNSEXAZP4BDSHV0DN3M8R3P0MY0EEBQQZX743X.xtrata-v2-1-0` |
 | Batch seal function | `seal-inscription-batch` |
 | Collection batch function | `mint-seal-batch` |
-| Upload batch size | max `50` chunks per `add-chunk-batch` / `mint-add-chunk-batch` |
+| Upload batch size | max `30` chunks per first-party app/SDK `add-chunk-batch` / `mint-add-chunk-batch` |
+| Contract list ABI | deployed contracts accept up to `50` chunks in the list argument |
 | Final batch size | max `50` items per `seal-inscription-batch` / `mint-seal-batch` |
 | Small helper | `mint-small-single-tx` / `mint-small-single-tx-recursive` are single-item only |
 | Recursive limit | batch flow is non-recursive only |

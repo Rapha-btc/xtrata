@@ -14,5 +14,13 @@ export const formatBytes = (value: bigint) => {
     return `${kilobytes.toFixed(1)} KB`;
   }
   const megabytes = kilobytes / 1024;
-  return `${megabytes.toFixed(2)} MB`;
+  if (megabytes < 1024) {
+    return `${megabytes.toFixed(2)} MB`;
+  }
+  const gigabytes = megabytes / 1024;
+  if (gigabytes < 1024) {
+    return `${gigabytes.toFixed(2)} GB`;
+  }
+  const terabytes = gigabytes / 1024;
+  return `${terabytes.toFixed(2)} TB`;
 };

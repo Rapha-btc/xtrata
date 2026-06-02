@@ -108,7 +108,8 @@ fees, and error codes.
   - Errors: ERR-PAUSED, ERR-INVALID-BATCH, ERR-DUPLICATE, ERR-EXPIRED.
 
 - add-chunk-batch(hash, chunks) -> (response bool uint)
-  - Appends up to 50 chunks to the upload session.
+  - Appends chunks to the upload session. The Clarity list argument accepts up
+    to 50 chunks; first-party app and SDK upload planners cap each call at 30.
   - Errors: ERR-PAUSED, ERR-NOT-FOUND, ERR-EXPIRED, ERR-INVALID-BATCH.
 
 - seal-inscription(expected-hash, token-uri-string) -> (response uint uint)

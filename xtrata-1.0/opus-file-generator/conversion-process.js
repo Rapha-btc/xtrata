@@ -1,5 +1,44 @@
 // conversion-process.js
 
+function createConversionSizeSummary(originalBlob, convertedBlob, outputConfig) {
+    const summary = document.createElement('div');
+    summary.className = 'conversion-size-summary info-summary-section';
+    summary.style.margin = '10px 0';
+
+    const comparison =
+        typeof getSizeComparison === 'function'
+            ? getSizeComparison(originalBlob?.size, convertedBlob?.size)
+            : {
+                text: 'Size comparison unavailable.',
+                detailText: 'Size comparison unavailable.',
+                className: ''
+            };
+
+    const rows = [
+        ['A original', originalBlob && typeof formatBytes === 'function' ? formatBytes(originalBlob.size) : 'N/A'],
+        ['B converted', convertedBlob && typeof formatBytes === 'function' ? formatBytes(convertedBlob.size) : 'N/A'],
+        ['Saving', comparison.text]
+    ];
+
+    rows.forEach(([label, value], index) => {
+        const item = document.createElement('p');
+        const valueNode = document.createElement('span');
+        item.textContent = label;
+        valueNode.textContent = value;
+        if (index === 2 && comparison.className) {
+            valueNode.classList.add(comparison.className);
+        }
+        item.appendChild(valueNode);
+        summary.appendChild(item);
+    });
+
+    summary.setAttribute(
+        'aria-label',
+        `${outputConfig.label} file size comparison. ${comparison.detailText}`
+    );
+    return summary;
+}
+
 /**
  * Handles the main audio conversion workflow, ensuring robust A/B UI display.
  */
@@ -55,11 +94,15 @@ const runConversion = async () => {
         const mimeType = outputConfig.mimeType;
 
         // Create Blob from the converted data
-        convertedAudioBlob = new Blob([outputData.buffer], { type: mimeType });
+        convertedAudioBlob = new Blob([outputData], { type: mimeType });
 
         // Defensive: ensure blob is non-empty
         if (!convertedAudioBlob || convertedAudioBlob.size === 0) {
             throw new Error("Converted audio file is empty or invalid.");
+        }
+
+        if (typeof updateActualSizeInfoDisplay === 'function') {
+            updateActualSizeInfoDisplay(selectedFile, convertedAudioBlob);
         }
 
         // --- Display Results (Standard Audio Player + Download Link) ---
@@ -68,6 +111,7 @@ const runConversion = async () => {
             const resultTitle = document.createElement('h3');
             resultTitle.textContent = 'Conversion Result';
             resultTitle.style.margin = '15px 0 10px 0';
+            const sizeSummary = createConversionSizeSummary(selectedFile, convertedAudioBlob, outputConfig);
             const downloadUrl = URL.createObjectURL(convertedAudioBlob);
             const dlLink = Object.assign(document.createElement('a'), {
                 href: downloadUrl,
@@ -82,7 +126,7 @@ const runConversion = async () => {
                 `Converted Audio (${outputConfig.label})`
             );
 
-            resultEl.append(resultTitle, dlLink, audioPlayerContainer);
+            resultEl.append(resultTitle, sizeSummary, dlLink, audioPlayerContainer);
 
             dlLink.addEventListener('click', () => {
                 // Optional: setTimeout(() => URL.revokeObjectURL(downloadUrl), 1500);
@@ -97,6 +141,9 @@ const runConversion = async () => {
         conversionError = e;
         convertedAudioBlob = null;
         base64String = null;
+        if (typeof updateActualSizeInfoDisplay === 'function') {
+            updateActualSizeInfoDisplay(selectedFile, null);
+        }
     } finally {
         // --- Final Cleanup ---
         cleanupFFmpegFS([inputFilename, outputFilename]);
@@ -201,7 +248,7 @@ const runBatchConversion = async () => {
 
             const mimeType = outputConfig.mimeType;
 
-            const convertedBlob = new Blob([outputData.buffer], { type: mimeType });
+            const convertedBlob = new Blob([outputData], { type: mimeType });
 
             if (!convertedBlob || convertedBlob.size === 0) {
                 throw new Error("Converted audio file is empty or invalid.");
@@ -209,7 +256,13 @@ const runBatchConversion = async () => {
             currentProgressEl.style.display = 'none'; // Hide progress after completion
 
             const successInfo = document.createElement('p');
-            successInfo.textContent = `Converted to ${outputConfig.label}: ${formatBytes(convertedBlob.size)}`;
+            const batchComparison =
+                typeof getSizeComparison === 'function'
+                    ? getSizeComparison(currentFile.size, convertedBlob.size)
+                    : null;
+            successInfo.textContent = batchComparison
+                ? `Converted to ${outputConfig.label}: ${formatBytes(currentFile.size)} -> ${formatBytes(convertedBlob.size)}. ${batchComparison.text}.`
+                : `Converted to ${outputConfig.label}: ${formatBytes(convertedBlob.size)}`;
             successInfo.style.color = 'green';
             fileResultContainer.appendChild(successInfo);
 
