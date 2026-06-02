@@ -6635,6 +6635,9 @@
         const card = document.createElement('button');
         card.type = 'button';
         card.className = `token-card${token ? '' : ' empty'}${token && state.selectedTokenId === token.id ? ' active' : ''}`;
+        if (token) {
+          card.dataset.tokenId = token.id.toString();
+        }
         const thumb = document.createElement('div');
         thumb.className = 'token-thumb';
         const meta = document.createElement('div');
@@ -6705,7 +6708,7 @@
         dom.tokenGrid.append(card);
         if (token && allowBackgroundHydration && shouldScheduleBackgroundHydration) {
           scheduleBackgroundThumbnailHydration(token, thumb);
-        } else if (token && shouldApplyCachedThumbnail) {
+        } else if (token && allowBackgroundHydration && shouldApplyCachedThumbnail) {
           void applyCachedThumbnail(token, thumb).then((applied) => {
             if (
               !applied &&
@@ -6724,6 +6727,13 @@
         }
       }
       updateTransferControls();
+    };
+
+    const updateSelectedTokenGridCard = () => {
+      const selectedTokenId = state.selectedTokenId?.toString() ?? null;
+      dom.tokenGrid.querySelectorAll('.token-card[data-token-id]').forEach((card) => {
+        card.classList.toggle('active', card.dataset.tokenId === selectedTokenId);
+      });
     };
 
     const loadSelectedTokenPreviewLocally = async (token, requestId) => {
@@ -6787,7 +6797,7 @@
         state.walletTokenCache.get(id.toString()) ??
         state.walletTokens.find((entry) => entry.id === id) ??
         null;
-      renderTokenGrid();
+      updateSelectedTokenGridCard();
       updateTransferControls();
       revokeTokenPreview();
       dom.explorerLink.hidden = true;
