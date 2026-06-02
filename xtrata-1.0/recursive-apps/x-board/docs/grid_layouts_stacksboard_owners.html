@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StacksBoard Owner-Linked Grid Layouts</title>
+<style>
+  :root{
+    --bg:#000000;
+    --cell:#EB4899;
+    --cell-loaded:#f25aa6;
+    --cell-error:#3b1029;
+    --line:#000000;
+    --line-w:2;
+    --panel-bg:rgba(0,0,0,.84);
+    --panel-fg:#ffffff;
+    --panel-muted:rgba(255,255,255,.72);
+    --panel-border:rgba(235,72,153,.65);
+    --focus:#ffffff;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;min-height:100%;background:var(--bg);color:var(--panel-fg);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+  body{display:grid;grid-template-rows:auto 1fr;gap:10px;padding:12px;}
+  .controls{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-wrap:wrap;
+    gap:8px;
+    padding:8px 10px;
+    background:var(--panel-bg);
+    border:1px solid var(--panel-border);
+    border-radius:14px;
+    width:min(100%,1160px);
+    margin:0 auto;
+  }
+  .controls strong{margin-right:4px;}
+  button{
+    appearance:none;
+    border:1px solid var(--panel-border);
+    background:#111;
+    color:#fff;
+    padding:8px 11px;
+    border-radius:999px;
+    cursor:pointer;
+    font:inherit;
+  }
+  button[aria-pressed="true"]{background:var(--cell);color:#000;border-color:var(--cell);}
+  button:disabled{opacity:.45;cursor:wait;}
+  button:focus-visible{outline:2px solid var(--focus);outline-offset:2px;}
+  #meta,#ownerStatus{opacity:.85;font-size:13px;margin-left:6px;}
+  #ownerStatus{color:var(--panel-muted);}
+  .stage{min-height:0;display:flex;align-items:center;justify-content:center;}
+  #grid{width:100%;height:100%;max-width:1244px;max-height:912px;display:block;}
+  .cell{
+    fill:var(--cell);
+    stroke:var(--line);
+    stroke-width:var(--line-w);
+    vector-effect:non-scaling-stroke;
+    shape-rendering:crispEdges;
+    transition:fill .15s ease, opacity .15s ease;
+  }
+  a .cell{cursor:pointer;}
+  a .cell:hover{fill:#ff77bb;}
+  .cell.owner-loaded{fill:var(--cell-loaded);}
+  .cell.owner-error{fill:var(--cell-error);}
+</style>
+</head>
+<body>
+  <nav class="controls" aria-label="Grid layout controls">
+    <strong>Layout:</strong>
+    <button type="button" data-layout="stacked" aria-pressed="true">Stacked rows</button>
+    <button type="button" data-layout="square" aria-pressed="false">Square pack</button>
+    <button type="button" data-layout="landscape" aria-pressed="false">Wide pack</button>
+    <button type="button" data-layout="portrait" aria-pressed="false">Tall pack</button>
+    <button type="button" id="loadOwners">Load StacksBoard owners</button>
+    <button type="button" id="clearOwners">Clear owner cache</button>
+    <span id="meta"></span>
+    <span id="ownerStatus"></span>
+  </nav>
+
+  <main class="stage">
+    <svg id="grid" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pink grid wireframe linked to StacksBoard slot owners"></svg>
+  </main>
+
+<script>
+(() => {
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  const XLINKNS = 'http://www.w3.org/1999/xlink';
+
+  const svg = document.getElementById('grid');
+  const meta = document.getElementById('meta');
+  const ownerStatus = document.getElementById('ownerStatus');
+  const buttons = [...document.querySelectorAll('[data-layout]')];
+  const loadOwnersBtn = document.getElementById('loadOwners');
+  const clearOwnersBtn = document.getElementById('clearOwners');
+
+  // Original StacksBoard contract.
+  // Token IDs are 0-based: 0..352 = 353 total slots.
+  const STACKSBOARD = {
+    address: 'SPGAKH27HF1T170QET72C727873H911BKNMPF8YB',
+    name: 'stacks-board-slot',
+    maxSupply: 353,
+    sender: 'SPGAKH27HF1T170QET72C727873H911BKNMPF8YB',
+    explorerContract: 'https://explorer.hiro.so/contract/SPGAKH27HF1T170QET72C727873H911BKNMPF8YB.stacks-board-slot?chain=mainnet',
+    explorerAddress: owner => `https://explorer.hiro.so/address/${owner}?chain=mainnet`,
+    readOnlyURL: 'https://api.mainnet.hiro.so/v2/contracts/call-read/SPGAKH27HF1T170QET72C727873H911BKNMPF8YB/stacks-board-slot/get-owner',
+    cacheKey: 'stacksboard-owner-map-mainnet-v1',
+  };
+
+  // Everything is built on the same 48-column base.
+  // The sizes below are base units, not pixels.
+  // 12 + 4 + 12 + 8 + 12 + 9 + 16 + 16 + 24 + 24 + 24 + 48 + 48 + 48 + 48 = 353.
+  const ROWS = [
+    {tier:'diamond',  count:12, w:4,      h:4},
+    {tier:'sapphire', count:4,  w:12,     h:3},
+    {tier:'diamond',  count:12, w:4,      h:4},
+    {tier:'emerald',  count:8,  w:6,      h:3},
+    {tier:'diamond',  count:12, w:4,      h:4},
+    {tier:'platinum', count:9,  w:16 / 3, h:3},
+    {tier:'gold',     count:16, w:3,      h:2},
+    {tier:'gold',     count:16, w:3,      h:2},
+    {tier:'silver',   count:24, w:2,      h:2},
+    {tier:'silver',   count:24, w:2,      h:2},
+    {tier:'silver',   count:24, w:2,      h:2},
+    {tier:'bronze',   count:48, w:1,      h:1},
+    {tier:'bronze',   count:48, w:1,      h:1},
+    {tier:'bronze',   count:48, w:1,      h:1},
+    {tier:'bronze',   count:48, w:1,      h:1},
+  ];
+
+  const UNITS = 20.625;       // 990px / 48 columns, matching the earlier geometry.
+  const PAD = 36;
+  const TOTAL_COUNT = ROWS.reduce((sum, row) => sum + row.count, 0);
+  let currentLayout = 'stacked';
+  let ownerMap = loadCachedOwners();
+
+  const items = ROWS.flatMap((row, rowIndex) =>
+    Array.from({length: row.count}, (_, index) => ({
+      tokenId: ROWS.slice(0, rowIndex).reduce((sum, r) => sum + r.count, 0) + index,
+      id: `${row.tier}-${rowIndex}-${index}`,
+      rowIndex,
+      tier: row.tier,
+      w: row.w,
+      h: row.h,
+      originalIndex: index,
+    }))
+  );
+
+  const round = n => Number(n.toFixed(6));
+
+  function loadCachedOwners(){
+    try{
+      const cached = JSON.parse(localStorage.getItem(STACKSBOARD.cacheKey) || 'null');
+      if(cached && Array.isArray(cached.owners) && cached.owners.length === STACKSBOARD.maxSupply){
+        ownerStatus.textContent = `Cached owners loaded · ${new Date(cached.savedAt).toLocaleString()}`;
+        return cached.owners;
+      }
+    }catch(err){
+      console.warn('Could not read owner cache', err);
+    }
+    return [];
+  }
+
+  function saveCachedOwners(owners){
+    try{
+      localStorage.setItem(STACKSBOARD.cacheKey, JSON.stringify({
+        savedAt: new Date().toISOString(),
+        contract: `${STACKSBOARD.address}.${STACKSBOARD.name}`,
+        owners,
+      }));
+    }catch(err){
+      console.warn('Could not save owner cache', err);
+    }
+  }
+
+  function stackedLayout(){
+    const placed = [];
+    let y = 0;
+
+    ROWS.forEach((row, rowIndex) => {
+      for(let i = 0; i < row.count; i++){
+        placed.push({
+          ...items.find(item => item.rowIndex === rowIndex && item.originalIndex === i),
+          x: i * row.w,
+          y,
+        });
+      }
+      y += row.h;
+    });
+
+    return {name:'Stacked rows', w:48, h:y, cells:placed};
+  }
+
+  // Simple shelf packer. It keeps every slot at its original size, then reflows
+  // the same 353 slots into a new rectangle width.
+  function packedLayout(name, targetW){
+    const placed = [];
+    let x = 0, y = 0, shelfH = 0;
+
+    items.forEach(item => {
+      if(x > 0 && x + item.w > targetW + 0.000001){
+        x = 0;
+        y += shelfH;
+        shelfH = 0;
+      }
+      placed.push({...item, x:round(x), y:round(y)});
+      x += item.w;
+      shelfH = Math.max(shelfH, item.h);
+    });
+
+    return {name, w:targetW, h:y + shelfH, cells:placed};
+  }
+
+  const layouts = {
+    stacked: () => stackedLayout(),
+    square: () => packedLayout('Square pack', 42),
+    landscape: () => packedLayout('Wide pack', 84),
+    portrait: () => packedLayout('Tall pack', 24),
+  };
+
+  function titleText(cell, owner){
+    const displaySlot = cell.tokenId + 1;
+    return [
+      `Display slot ${displaySlot}`,
+      `StacksBoard token ID: ${cell.tokenId}`,
+      `Tier: ${cell.tier}`,
+      owner ? `Owner: ${owner}` : 'Owner: not loaded',
+      owner ? 'Click to open owner on Hiro Explorer.' : `Contract: ${STACKSBOARD.address}.${STACKSBOARD.name}`,
+    ].join('\n');
+  }
+
+  function makeCell(cell, owner){
+    const rect = document.createElementNS(SVGNS, 'rect');
+    rect.setAttribute('class', `cell${owner ? ' owner-loaded' : ''}`);
+    rect.setAttribute('x', round(PAD + cell.x * UNITS));
+    rect.setAttribute('y', round(PAD + cell.y * UNITS));
+    rect.setAttribute('width', round(cell.w * UNITS));
+    rect.setAttribute('height', round(cell.h * UNITS));
+    rect.dataset.tokenId = cell.tokenId;
+    rect.dataset.displaySlot = cell.tokenId + 1;
+    rect.dataset.tier = cell.tier;
+    rect.dataset.sourceRow = cell.rowIndex;
+    rect.dataset.sourceCol = cell.originalIndex;
+    if(owner) rect.dataset.owner = owner;
+
+    const title = document.createElementNS(SVGNS, 'title');
+    title.textContent = titleText(cell, owner);
+    rect.appendChild(title);
+
+    if(!owner) return rect;
+
+    const a = document.createElementNS(SVGNS, 'a');
+    a.setAttribute('href', STACKSBOARD.explorerAddress(owner));
+    a.setAttributeNS(XLINKNS, 'href', STACKSBOARD.explorerAddress(owner));
+    a.setAttribute('target', '_blank');
+    a.setAttribute('rel', 'noopener');
+    a.setAttribute('aria-label', `Open StacksBoard slot ${cell.tokenId + 1} owner ${owner} on Hiro Explorer`);
+    a.appendChild(rect);
+    return a;
+  }
+
+  function draw(layoutKey = currentLayout){
+    currentLayout = layoutKey;
+    const layout = layouts[layoutKey]();
+    svg.replaceChildren();
+
+    const viewW = layout.w * UNITS + PAD * 2;
+    const viewH = layout.h * UNITS + PAD * 2;
+    svg.setAttribute('viewBox', `0 0 ${viewW} ${viewH}`);
+
+    const bg = document.createElementNS(SVGNS, 'rect');
+    bg.setAttribute('x', 0);
+    bg.setAttribute('y', 0);
+    bg.setAttribute('width', viewW);
+    bg.setAttribute('height', viewH);
+    bg.setAttribute('fill', getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#000');
+    svg.appendChild(bg);
+
+    layout.cells.forEach(cell => {
+      svg.appendChild(makeCell(cell, ownerMap[cell.tokenId] || null));
+    });
+
+    meta.textContent = `${layout.name} · ${TOTAL_COUNT} slots · token IDs 0-${TOTAL_COUNT - 1} · ${round(layout.w)} × ${round(layout.h)} base units`;
+    buttons.forEach(btn => btn.setAttribute('aria-pressed', String(btn.dataset.layout === layoutKey)));
+  }
+
+  async function getStacksTools(){
+    // Loaded only when the owner button is clicked, so the grid still works
+    // even if the module CDN is unavailable.
+    return import('https://esm.sh/@stacks/transactions?bundle');
+  }
+
+  function ownerFromClarityString(value){
+    // Expected shape from get-owner:
+    // (ok (some SP...)) or (ok none)
+    const str = String(value || '');
+    const match = str.match(/\(ok\s+\(some\s+'?([A-Z0-9.]+)\)\)/i);
+    return match ? match[1].replace(/^'/, '') : null;
+  }
+
+  async function fetchOwner(tokenId, stacksTools){
+    const { uintCV, cvToHex, hexToCV, cvToString } = stacksTools;
+
+    const response = await fetch(STACKSBOARD.readOnlyURL, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        sender: STACKSBOARD.sender,
+        arguments: [cvToHex(uintCV(tokenId))],
+      }),
+    });
+
+    if(!response.ok){
+      throw new Error(`HTTP ${response.status} for token ${tokenId}`);
+    }
+
+    const json = await response.json();
+    if(!json.okay){
+      throw new Error(`Read-only call failed for token ${tokenId}: ${JSON.stringify(json)}`);
+    }
+
+    const cv = hexToCV(json.result);
+    return ownerFromClarityString(cvToString(cv));
+  }
+
+  async function mapLimit(items, limit, iterator, onProgress){
+    const results = new Array(items.length);
+    let nextIndex = 0;
+    let complete = 0;
+
+    async function worker(){
+      while(nextIndex < items.length){
+        const i = nextIndex++;
+        try{
+          results[i] = await iterator(items[i], i);
+        }catch(err){
+          console.warn(err);
+          results[i] = null;
+        }
+        complete++;
+        if(onProgress) onProgress(complete, items.length);
+      }
+    }
+
+    await Promise.all(Array.from({length: limit}, worker));
+    return results;
+  }
+
+  async function loadOwners(){
+    loadOwnersBtn.disabled = true;
+    ownerStatus.textContent = 'Loading StacksBoard owners from mainnet...';
+
+    try{
+      const stacksTools = await getStacksTools();
+      const tokenIds = Array.from({length: STACKSBOARD.maxSupply}, (_, i) => i);
+      const owners = await mapLimit(
+        tokenIds,
+        10,
+        tokenId => fetchOwner(tokenId, stacksTools),
+        (done, total) => {
+          ownerStatus.textContent = `Loading owners ${done}/${total}...`;
+          if(done % 25 === 0) draw(currentLayout);
+        }
+      );
+
+      ownerMap = owners;
+      saveCachedOwners(ownerMap);
+      draw(currentLayout);
+
+      const linked = ownerMap.filter(Boolean).length;
+      ownerStatus.textContent = `Owners loaded · ${linked}/${STACKSBOARD.maxSupply} slots linked · ${new Date().toLocaleTimeString()}`;
+    }catch(err){
+      console.error(err);
+      ownerStatus.textContent = `Owner load failed: ${err.message}. Try serving this file from a local web server if your browser blocks file:// requests.`;
+    }finally{
+      loadOwnersBtn.disabled = false;
+    }
+  }
+
+  buttons.forEach(btn => btn.addEventListener('click', () => draw(btn.dataset.layout)));
+  loadOwnersBtn.addEventListener('click', loadOwners);
+  clearOwnersBtn.addEventListener('click', () => {
+    localStorage.removeItem(STACKSBOARD.cacheKey);
+    ownerMap = [];
+    ownerStatus.textContent = 'Owner cache cleared.';
+    draw(currentLayout);
+  });
+
+  draw('stacked');
+})();
+</script>
+</body>
+</html>
