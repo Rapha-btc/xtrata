@@ -1817,7 +1817,7 @@
     .explorer-tools {
       display: grid;
       gap: 8px;
-      margin: 0 0 10px;
+      margin: 0 0 8px;
     }
 
     .explorer-tools__row {
@@ -2034,7 +2034,7 @@
 
     body.explorer-mode .wallet-layout {
       max-width: 100%;
-      grid-template-columns: minmax(0, 600px) minmax(300px, 340px);
+      grid-template-columns: minmax(0, 560px) minmax(280px, 320px);
       gap: 18px;
       justify-content: center;
     }
@@ -2059,11 +2059,13 @@
     }
 
     body.explorer-mode .explorer-filter-group > .label {
+      order: 0;
       margin: 0;
       flex: 0 0 auto;
     }
 
     body.explorer-mode .explorer-filter-options {
+      order: 2;
       flex: 1 1 100%;
       flex-wrap: nowrap;
       overflow-x: auto;
@@ -2071,11 +2073,17 @@
     }
 
     body.explorer-mode #explorerClearFiltersButton {
-      min-height: 28px;
+      order: 1;
+      min-height: 26px;
+      margin-left: auto;
     }
 
     body.explorer-mode .explorer-tools__row {
       align-items: center;
+    }
+
+    body.explorer-mode .explorer-tools__row .field {
+      gap: 0;
     }
 
     body.explorer-mode .explorer-tools__row .label {
@@ -2101,6 +2109,19 @@
     body.explorer-mode .explorer-filter-chip input {
       width: 10px;
       height: 10px;
+    }
+
+    body.explorer-mode .token-grid {
+      gap: 7px;
+    }
+
+    body.explorer-mode .token-card {
+      gap: 4px;
+    }
+
+    body.explorer-mode .token-meta {
+      min-height: 16px;
+      line-height: 1.15;
     }
 
     body.explorer-mode .explorer-grid-action {
@@ -2271,7 +2292,7 @@
     @media (min-width: 981px) and (max-width: 1366px) and (hover: hover) and (pointer: fine) {
       body.explorer-mode .wallet-layout {
         display: grid;
-        grid-template-columns: minmax(0, 580px) minmax(280px, 320px);
+        grid-template-columns: minmax(0, 540px) minmax(260px, 300px);
         gap: 16px;
       }
 
@@ -3193,7 +3214,7 @@
       <div class="fullscreen-viewer__actions">
         <button class="btn ghost" id="fullscreenPrevButton" type="button" disabled>Prev</button>
         <button class="btn ghost" id="fullscreenNextButton" type="button" disabled>Next</button>
-        <a class="small-link" id="fullscreenRawLink" href="#" target="_blank" rel="noreferrer" hidden>Open raw</a>
+        <a class="btn ghost" id="fullscreenRawLink" href="#" target="_blank" rel="noreferrer" hidden>Open endpoint</a>
         <button class="btn ghost" id="fullscreenCloseButton" type="button">Close</button>
       </div>
     </div>
@@ -3726,6 +3747,9 @@
 
     const tokenExplorerUrl = (contract, id) =>
       `${contractExplorerUrl(contract)}&token_id=${id.toString()}`;
+
+    const inscriptionEndpointUrl = (id) =>
+      new URL(`/inscription/${encodeURIComponent(id.toString())}`, window.location.origin).toString();
 
     const parsePositiveBigInt = (value) => {
       const normalized = String(value ?? '').trim();
@@ -6044,9 +6068,14 @@
       return { token, bytes, mimeType, sourceUrl: null, htmlDoc };
     };
 
-    const configureFullscreenRawLink = (token, sourceUrl) => {
-      dom.fullscreenRawLink.href = sourceUrl;
-      dom.fullscreenRawLink.download = `inscription-${token.id.toString()}`;
+    const configureFullscreenRawLink = (token) => {
+      dom.fullscreenRawLink.href = inscriptionEndpointUrl(token.id);
+      dom.fullscreenRawLink.textContent = 'Open endpoint';
+      dom.fullscreenRawLink.setAttribute(
+        'aria-label',
+        `Open inscription ${token.id.toString()} endpoint in a new tab`
+      );
+      dom.fullscreenRawLink.removeAttribute('download');
       dom.fullscreenRawLink.hidden = false;
     };
 
@@ -6056,10 +6085,11 @@
       dom.fullscreenRawLink.hidden = true;
       dom.fullscreenRawLink.removeAttribute('href');
       dom.fullscreenRawLink.removeAttribute('download');
+      dom.fullscreenRawLink.removeAttribute('aria-label');
 
       if (sourceUrl) {
         const kind = getMediaKind(mimeType ?? null);
-        configureFullscreenRawLink(token, sourceUrl);
+        configureFullscreenRawLink(token);
         renderSquareImagePreview(dom.fullscreenStage, sourceUrl, {
           mimeType,
           isSvgSource: kind === 'svg',
@@ -6085,7 +6115,7 @@
       });
       const url = URL.createObjectURL(blob);
       state.fullscreenUrl = url;
-      configureFullscreenRawLink(token, url);
+      configureFullscreenRawLink(token);
 
       if (kind === 'image' || kind === 'svg') {
         renderSquareImagePreview(dom.fullscreenStage, url, {
@@ -6143,10 +6173,11 @@
       }
 
       const link = document.createElement('a');
-      link.className = 'small-link';
-      link.href = url;
-      link.download = `inscription-${token.id.toString()}`;
-      link.textContent = 'Open raw file';
+      link.className = 'btn ghost';
+      link.href = inscriptionEndpointUrl(token.id);
+      link.target = '_blank';
+      link.rel = 'noreferrer';
+      link.textContent = 'Open inscription endpoint';
       dom.fullscreenStage.append(link);
     };
 
