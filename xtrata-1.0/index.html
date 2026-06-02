@@ -3503,6 +3503,22 @@
         second: '2-digit'
       }).format(new Date());
 
+    const debugSessionStartedAt = performance.now();
+    const padTimeUnit = (value, width = 2) =>
+      String(value).padStart(width, '0');
+    const debugTimecode = () => {
+      const now = new Date();
+      const elapsedMs = Math.round(performance.now() - debugSessionStartedAt);
+      return {
+        clock: [
+          padTimeUnit(now.getHours()),
+          padTimeUnit(now.getMinutes()),
+          padTimeUnit(now.getSeconds())
+        ].join(':') + `.${padTimeUnit(now.getMilliseconds(), 3)}`,
+        elapsedMs
+      };
+    };
+
     const normalizeTxId = (payload) => {
       const raw = payload?.txId ?? payload?.txid ?? '';
       return typeof raw === 'string' && raw.length > 0 ? raw : 'submitted';
@@ -3649,7 +3665,23 @@
 
     const debugLog = (scope, message, details = {}, level = 'info') => {
       const method = level === 'warn' ? 'warn' : level === 'error' ? 'error' : 'info';
-      console[method](`[homepage:${scope}] ${message}`, details);
+      const timecode = debugTimecode();
+      const payload =
+        details && typeof details === 'object' && !Array.isArray(details)
+          ? {
+              ...details,
+              timecode: timecode.clock,
+              elapsedMs: timecode.elapsedMs
+            }
+          : {
+              details,
+              timecode: timecode.clock,
+              elapsedMs: timecode.elapsedMs
+            };
+      console[method](
+        `[homepage:${scope} ${timecode.clock} +${(timecode.elapsedMs / 1000).toFixed(3)}s] ${message}`,
+        payload
+      );
     };
 
     const applyPixelPerfectImageRendering = (
@@ -4142,10 +4174,16 @@
     };
 
     const revokeGridThumbUrls = () => {
+      const revokedCount = state.tokenThumbUrls.size;
       state.tokenThumbUrls.forEach((url) => {
         URL.revokeObjectURL(url);
       });
       state.tokenThumbUrls.clear();
+      if (revokedCount > 0) {
+        debugLog('cache', 'revoked grid thumbnail object URLs', {
+          revokedCount
+        });
+      }
     };
 
     const resetBackgroundThumbnailHydration = () => {
@@ -5611,6 +5649,103 @@
     const getThumbnailKey = (token) =>
       `${getTokenCacheContractId(token)}:${token.id.toString()}`;
 
+    const formatDebugTokenIds = (ids) =>
+      ids.map((id) => id.toString());
+
+    const formatDebugOptions = (options = {}) =>
+      Object.fromEntries(
+        Object.entries(options).map(([key, value]) => [
+          key,
+          typeof value === 'bigint' ? value.toString() : value
+        ])
+      );
+
+    const getGridModeLabel = () => {
+      if (state.curatedGalleryId) {
+        return 'curated-gallery';
+      }
+      if (state.explorerMode) {
+        return 'explorer';
+      }
+      if (getViewingWalletAddress()) {
+        return 'wallet';
+      }
+      return 'empty';
+    };
+
+    const getGridCacheStats = (pageIds = getWalletPageIds()) => {
+      let summaryHits = 0;
+      let thumbnailMemoryHits = 0;
+      let liveMediaHits = 0;
+      let inlineSvgHits = 0;
+
+      for (const id of pageIds) {
+        const token = state.walletTokenCache.get(id.toString()) ?? null;
+        if (!token) {
+          continue;
+        }
+        summaryHits += 1;
+        if (token.svgDataUri) {
+          inlineSvgHits += 1;
+          continue;
+        }
+        const cacheKey = getThumbnailKey(token);
+        if (state.thumbnailCache.has(cacheKey)) {
+          thumbnailMemoryHits += 1;
+        }
+        if (state.gridLiveMediaCache.has(cacheKey)) {
+          liveMediaHits += 1;
+        }
+      }
+
+      return {
+        summaryHits,
+        summaryMisses: Math.max(0, pageIds.length - summaryHits),
+        thumbnailMemoryHits,
+        liveMediaHits,
+        inlineSvgHits,
+        summaryCacheSize: state.walletTokenCache.size,
+        thumbnailMemoryCacheSize: state.thumbnailCache.size,
+        liveMediaCacheSize: state.gridLiveMediaCache.size,
+        thumbObjectUrlCount: state.tokenThumbUrls.size
+      };
+    };
+
+    const getGridDebugContext = (pageIds = getWalletPageIds()) => {
+      const pageCount = getWalletPageCount();
+      const totalCount = state.walletUsesPagedHoldings
+        ? state.walletTotalCount
+        : state.walletTokenIds.length;
+      return {
+        mode: getGridModeLabel(),
+        contractId: getContractId(state.contract),
+        galleryId: state.curatedGalleryId,
+        galleryTitle: state.curatedGalleryTitle,
+        wallet: getViewingWalletAddress()
+          ? truncateMiddle(getViewingWalletAddress(), 8, 8)
+          : null,
+        pageIndex: state.walletPageIndex,
+        page: pageCount > 0 ? state.walletPageIndex + 1 : 0,
+        pageCount,
+        pageSize: WALLET_PAGE_SIZE,
+        totalCount,
+        usesPagedHoldings: state.walletUsesPagedHoldings,
+        selectedTokenId: state.selectedTokenId?.toString() ?? null,
+        pageIds: formatDebugTokenIds(pageIds),
+        filters: state.explorerMode ? getExplorerFilterLabel() : null,
+        filterIndexComplete: state.explorerMode
+          ? state.explorerFilterIndexComplete
+          : null,
+        cache: getGridCacheStats(pageIds),
+        hydration: {
+          runId: state.thumbnailHydrationRunId,
+          queued: state.thumbnailHydrationQueue.length,
+          inFlight: state.thumbnailHydrationInFlight.size,
+          attempted: state.thumbnailHydrationAttempted.size
+        }
+      };
+    };
+
     const getTokenRuntimeContentUrl = (token) =>
       buildRuntimeInscriptionContentUrl({
         coreContractId: getTokenCacheContractId(token),
@@ -5920,6 +6055,12 @@
         return;
       }
       const { pageIds, index } = getFullscreenPagePosition();
+      debugLog('grid', 'fullscreen selection navigation requested', {
+        direction,
+        selectedTokenId: state.selectedTokenId?.toString() ?? null,
+        selectedPageIndex: index,
+        ...getGridDebugContext(pageIds)
+      });
       const nextId = pageIds[index + direction];
       if (nextId !== undefined) {
         await selectToken(nextId);
@@ -6036,8 +6177,14 @@
         return true;
       }
       const cacheKey = getThumbnailKey(token);
+      const startedAt = performance.now();
+      const memoryHit = state.thumbnailCache.has(cacheKey);
       let thumbnail = state.thumbnailCache.get(cacheKey);
       if (thumbnail === undefined) {
+        debugLog('cache', 'thumbnail IndexedDB lookup started', {
+          tokenId: token.id.toString(),
+          contractId: getTokenCacheContractId(token)
+        });
         thumbnail = await loadInscriptionThumbnailFromCache(
           getTokenCacheContractId(token),
           token.id
@@ -6048,7 +6195,9 @@
         thumbElement.dataset.thumbnailState = 'miss';
         debugLog('cache', 'thumbnail cache miss', {
           tokenId: token.id.toString(),
-          contractId: getTokenCacheContractId(token)
+          contractId: getTokenCacheContractId(token),
+          source: memoryHit ? 'memory' : 'indexeddb',
+          ms: Math.round(performance.now() - startedAt)
         });
         return false;
       }
@@ -6087,7 +6236,9 @@
         tokenId: token.id.toString(),
         contractId: getTokenCacheContractId(token),
         bytes: thumbnail.data.length,
-        mimeType: thumbnail.mimeType ?? 'image/webp'
+        mimeType: thumbnail.mimeType ?? 'image/webp',
+        source: memoryHit ? 'memory' : 'indexeddb',
+        ms: Math.round(performance.now() - startedAt)
       });
       return true;
     };
@@ -6626,6 +6777,11 @@
         : state.walletTokenIds.length;
       dom.walletCountBadge.textContent = `${totalCount} inscription${totalCount === 1 ? '' : 's'}`;
       updateWalletPagerControls();
+      debugLog('grid', 'render grid page', {
+        ...getGridDebugContext(pageIds),
+        allowBackgroundHydration,
+        deferHydration: !!options.deferHydration
+      });
 
       for (let index = 0; index < WALLET_PAGE_SIZE; index += 1) {
         const id = pageIds[index] ?? null;
@@ -6738,10 +6894,19 @@
 
     const loadSelectedTokenPreviewLocally = async (token, requestId) => {
       const contentClient = getTokenClient(token);
+      const cacheContractId = token.sourceContractId ?? getContractId(contentClient.contract);
+      const startedAt = performance.now();
+      debugLog('preview', 'local preview content fetch started', {
+        tokenId: token.id.toString(),
+        contractId: cacheContractId,
+        size: token.meta.totalSize.toString(),
+        mimeType: token.meta.mimeType ?? null,
+        requestId
+      });
       const bytes = await fetchOnChainContent({
         client: contentClient,
         fallbackClient: contentClient === state.client ? state.legacyClient : null,
-        cacheContractId: token.sourceContractId ?? getContractId(contentClient.contract),
+        cacheContractId,
         id: token.id,
         senderAddress: getReadOnlySenderAddress(),
         totalSize: token.meta.totalSize,
@@ -6771,6 +6936,14 @@
         state.tokenPreviewUrl = url;
       }, { truthfulImageSizing: true, htmlDoc });
       void warmThumbnailCacheFromBytes(token, bytes, mimeType);
+      debugLog('preview', 'local preview content rendered', {
+        tokenId: token.id.toString(),
+        contractId: cacheContractId,
+        bytes: bytes.length,
+        mimeType,
+        requestId,
+        ms: Math.round(performance.now() - startedAt)
+      });
       updateControls();
     };
 
@@ -6797,6 +6970,12 @@
         state.walletTokenCache.get(id.toString()) ??
         state.walletTokens.find((entry) => entry.id === id) ??
         null;
+      debugLog('preview', 'select token requested', {
+        tokenId: id.toString(),
+        requestId,
+        tokenFound: !!token,
+        ...getGridDebugContext()
+      });
       updateSelectedTokenGridCard();
       updateTransferControls();
       revokeTokenPreview();
@@ -6804,6 +6983,11 @@
       dom.xtrataExplorerLink.hidden = true;
 
       if (!token) {
+        debugLog('preview', 'selected token missing from summary cache', {
+          tokenId: id.toString(),
+          requestId,
+          summaryCacheSize: state.walletTokenCache.size
+        }, 'warn');
         clearElement(dom.tokenPreviewMedia, 'No selection');
         renderNoSelectedInscriptionMeta();
         void updateWalletTokenUriHeadPreview(null);
@@ -6845,6 +7029,15 @@
             state.tokenPreviewMimeType = 'image/svg+xml';
             state.tokenPreviewSourceUrl = token.svgDataUri;
             state.tokenPreviewHtmlDoc = null;
+            debugLog('preview', 'inline SVG preview rendered', {
+              tokenId: token.id.toString(),
+              requestId
+            });
+          } else {
+            debugLog('preview', 'selected token has no on-chain content', {
+              tokenId: token.id.toString(),
+              requestId
+            });
           }
           updateControls();
           return;
@@ -7059,7 +7252,16 @@ const openCuratedGallery = async (galleryId) => {
     return;
   }
 
+  const startedAt = performance.now();
   state.walletViewRequestId += 1;
+  const viewRequestId = state.walletViewRequestId;
+  debugLog('grid', 'curated gallery load started', {
+    viewRequestId,
+    galleryId: gallery.id,
+    galleryTitle: gallery.title,
+    tokenCount: gallery.tokenIds.length,
+    tokenIds: formatDebugTokenIds(gallery.tokenIds)
+  });
   cancelWalletLookup();
 
   state.curatedGalleryId = gallery.id;
@@ -7097,6 +7299,13 @@ const openCuratedGallery = async (galleryId) => {
 
   try {
     const summaries = await fetchWalletTokenSummaries(gallery.tokenIds);
+    debugLog('grid', 'curated gallery summaries fetched', {
+      viewRequestId,
+      galleryId: gallery.id,
+      requested: gallery.tokenIds.length,
+      returned: summaries.length,
+      returnedIds: summaries.map((token) => token.id.toString())
+    });
 
     summaries.forEach((token) => {
       state.walletTokenCache.set(token.id.toString(), token);
@@ -7141,6 +7350,13 @@ const openCuratedGallery = async (galleryId) => {
     }
 
     setExperienceMode();
+    debugLog('grid', 'curated gallery load finished', {
+      viewRequestId,
+      galleryId: gallery.id,
+      selectedTokenId: state.selectedTokenId?.toString() ?? null,
+      ...getGridDebugContext(),
+      ms: Math.round(performance.now() - startedAt)
+    });
 
     document.getElementById('walletTitle')?.scrollIntoView({
       behavior: 'smooth',
@@ -7155,6 +7371,12 @@ const openCuratedGallery = async (galleryId) => {
       'error',
       'rose'
     );
+    debugLog('grid', 'curated gallery load failed', {
+      viewRequestId,
+      galleryId: gallery.id,
+      error: message,
+      ms: Math.round(performance.now() - startedAt)
+    }, 'warn');
   } finally {
     updateControls();
   }
@@ -7275,6 +7497,7 @@ const openCuratedGallery = async (galleryId) => {
     };
 
     const fetchWalletTokenSummaries = async (ids) => {
+      const startedAt = performance.now();
       const sender = getReadOnlySenderAddress();
       let legacyMaxId = null;
       if (state.legacyClient) {
@@ -7286,6 +7509,16 @@ const openCuratedGallery = async (galleryId) => {
       }
       const visibleIds = [...ids]
         .sort((left, right) => (left < right ? 1 : left > right ? -1 : 0));
+      debugLog('readonly', 'token summaries request started', {
+        requested: ids.length,
+        visibleIds: formatDebugTokenIds(visibleIds),
+        contractId: getContractId(state.contract),
+        legacyContractId: state.legacyClient
+          ? getContractId(state.legacyClient.contract)
+          : null,
+        sender: truncateMiddle(sender, 8, 8),
+        summaryCacheSize: state.walletTokenCache.size
+      });
       const summaries = await runLimited(visibleIds, 4, async (id) => {
         try {
           if (state.legacyClient) {
@@ -7319,7 +7552,15 @@ const openCuratedGallery = async (galleryId) => {
           return null;
         }
       });
-      return summaries.filter((token) => !!token && (token.meta || token.owner || token.svgDataUri));
+      const filtered = summaries.filter((token) => !!token && (token.meta || token.owner || token.svgDataUri));
+      debugLog('readonly', 'token summaries request finished', {
+        requested: ids.length,
+        returned: filtered.length,
+        dropped: summaries.length - filtered.length,
+        returnedIds: filtered.map((token) => token.id.toString()),
+        ms: Math.round(performance.now() - startedAt)
+      });
+      return filtered;
     };
 
     const refreshExplorerLatestTokenId = async () => {
@@ -7577,6 +7818,7 @@ const openCuratedGallery = async (galleryId) => {
     };
 
     const loadExplorerPage = async (options = {}) => {
+      const startedAt = performance.now();
       state.explorerMode = true;
       state.walletViewAddress = null;
       state.walletViewName = null;
@@ -7584,11 +7826,24 @@ const openCuratedGallery = async (galleryId) => {
       state.curatedGalleryTitle = null;
       state.walletUsesPagedHoldings = true;
       state.walletTokenIds = [];
+      debugLog('grid', 'explorer page load started', {
+        options: formatDebugOptions(options),
+        contractId: getContractId(state.contract),
+        requestedPageIndex: state.walletPageIndex,
+        selectedTokenId: state.selectedTokenId?.toString() ?? null,
+        latestTokenId: state.explorerLatestTokenId?.toString() ?? null,
+        filters: getExplorerFilterLabel()
+      });
 
       if (!state.explorerLatestTokenId || options.refreshLatest) {
         setStatus(dom.walletGridStatus, '<strong>Grid</strong> loading latest inscriptions', 'loading', 'blue');
         renderTokenGridPlaceholders('...');
         await refreshExplorerLatestTokenId();
+        debugLog('grid', 'explorer latest token resolved', {
+          latestTokenId: state.explorerLatestTokenId?.toString() ?? null,
+          totalCount: state.walletTotalCount,
+          ms: Math.round(performance.now() - startedAt)
+        });
       }
 
       if (hasActiveExplorerFilters()) {
@@ -7600,6 +7855,11 @@ const openCuratedGallery = async (galleryId) => {
             minMatches: WALLET_PAGE_SIZE
           });
           if (!indexed) {
+            debugLog('grid', 'explorer page load stopped while indexing filters', {
+              options: formatDebugOptions(options),
+              filters: getExplorerFilterLabel(),
+              ms: Math.round(performance.now() - startedAt)
+            });
             return;
           }
         } else {
@@ -7619,6 +7879,10 @@ const openCuratedGallery = async (galleryId) => {
 
       clampWalletPageIndex();
       state.walletPageIds = getExplorerPageIds();
+      debugLog('grid', 'explorer page ids resolved', {
+        ...getGridDebugContext(state.walletPageIds),
+        options: formatDebugOptions(options)
+      });
       state.walletLoadingPage = true;
       resetBackgroundThumbnailHydration();
       updateControls();
@@ -7647,6 +7911,11 @@ const openCuratedGallery = async (galleryId) => {
         updateWalletPagerControls();
         updateFullscreenControls();
         updateExplorerStatus();
+        debugLog('grid', 'explorer page load finished empty', {
+          ...getGridDebugContext(state.walletPageIds),
+          options: formatDebugOptions(options),
+          ms: Math.round(performance.now() - startedAt)
+        });
         return;
       }
 
@@ -7663,6 +7932,11 @@ const openCuratedGallery = async (galleryId) => {
 
       const pageIds = getWalletPageIds();
       const missingIds = pageIds.filter((id) => !state.walletTokenCache.has(id.toString()));
+      debugLog('grid', 'explorer page summary cache checked', {
+        ...getGridDebugContext(pageIds),
+        missingIds: formatDebugTokenIds(missingIds),
+        force: !!options.force
+      });
       renderTokenGrid();
 
       try {
@@ -7672,6 +7946,16 @@ const openCuratedGallery = async (galleryId) => {
           for (const token of summaries) {
             state.walletTokenCache.set(token.id.toString(), token);
           }
+          debugLog('grid', 'explorer page summaries stored', {
+            requestedIds: formatDebugTokenIds(idsToFetch),
+            returnedIds: summaries.map((token) => token.id.toString()),
+            summaryCacheSize: state.walletTokenCache.size
+          });
+        } else {
+          debugLog('grid', 'explorer page reused summary cache', {
+            pageIds: formatDebugTokenIds(pageIds),
+            summaryCacheSize: state.walletTokenCache.size
+          });
         }
 
         state.walletTokens = pageIds
@@ -7712,6 +7996,11 @@ const openCuratedGallery = async (galleryId) => {
         updateWalletPagerControls();
         updateFullscreenControls();
         updateExplorerStatus();
+        debugLog('grid', 'explorer page load finished', {
+          ...getGridDebugContext(pageIds),
+          options: formatDebugOptions(options),
+          ms: Math.round(performance.now() - startedAt)
+        });
       }
     };
 
@@ -7724,7 +8013,18 @@ const openCuratedGallery = async (galleryId) => {
       if (!viewingAddress) {
         return;
       }
+      const startedAt = performance.now();
       clampWalletPageIndex();
+      debugLog('grid', 'wallet page load started', {
+        options: formatDebugOptions(options),
+        wallet: truncateMiddle(viewingAddress, 8, 8),
+        requestedPageIndex: state.walletPageIndex,
+        usesPagedHoldings: state.walletUsesPagedHoldings,
+        totalCount: state.walletUsesPagedHoldings
+          ? state.walletTotalCount
+          : state.walletTokenIds.length,
+        summaryCacheSize: state.walletTokenCache.size
+      });
       resetBackgroundThumbnailHydration();
       state.walletLoadingPage = true;
       updateWalletPagerControls();
@@ -7743,15 +8043,29 @@ const openCuratedGallery = async (galleryId) => {
           });
           state.walletTotalCount = page.total;
           state.walletPageIds = page.ids;
+          debugLog('grid', 'wallet holdings page applied', {
+            ...getGridDebugContext(state.walletPageIds),
+            sourceBase: summarizeApiBase(page.sourceBase)
+          });
         } catch (error) {
           state.walletLoadingPage = false;
           updateWalletPagerControls();
           updateFullscreenControls();
+          debugLog('grid', 'wallet page holdings request failed', {
+            options: formatDebugOptions(options),
+            wallet: truncateMiddle(viewingAddress, 8, 8),
+            error: error instanceof Error ? error.message : String(error),
+            ms: Math.round(performance.now() - startedAt)
+          }, 'warn');
           throw error;
         }
       }
 
       const pageIds = getWalletPageIds();
+      debugLog('grid', 'wallet page ids resolved', {
+        ...getGridDebugContext(pageIds),
+        options: formatDebugOptions(options)
+      });
       if (pageIds.length === 0) {
         state.walletTokens = [];
         state.selectedTokenId = null;
@@ -7761,10 +8075,20 @@ const openCuratedGallery = async (galleryId) => {
         state.walletLoadingPage = false;
         updateWalletPagerControls();
         updateFullscreenControls();
+        debugLog('grid', 'wallet page load finished empty', {
+          ...getGridDebugContext(pageIds),
+          options: formatDebugOptions(options),
+          ms: Math.round(performance.now() - startedAt)
+        });
         return;
       }
 
       const missingIds = pageIds.filter((id) => !state.walletTokenCache.has(id.toString()));
+      debugLog('grid', 'wallet page summary cache checked', {
+        ...getGridDebugContext(pageIds),
+        missingIds: formatDebugTokenIds(missingIds),
+        force: !!options.force
+      });
       renderTokenGrid({ deferHydration: !!options.deferHydration });
 
       try {
@@ -7774,6 +8098,16 @@ const openCuratedGallery = async (galleryId) => {
           for (const token of summaries) {
             state.walletTokenCache.set(token.id.toString(), token);
           }
+          debugLog('grid', 'wallet page summaries stored', {
+            requestedIds: formatDebugTokenIds(idsToFetch),
+            returnedIds: summaries.map((token) => token.id.toString()),
+            summaryCacheSize: state.walletTokenCache.size
+          });
+        } else {
+          debugLog('grid', 'wallet page reused summary cache', {
+            pageIds: formatDebugTokenIds(pageIds),
+            summaryCacheSize: state.walletTokenCache.size
+          });
         }
         state.walletTokens = pageIds
           .map((id) => state.walletTokenCache.get(id.toString()) ?? null)
@@ -7793,6 +8127,11 @@ const openCuratedGallery = async (galleryId) => {
         state.walletLoadingPage = false;
         updateWalletPagerControls();
         updateFullscreenControls();
+        debugLog('grid', 'wallet page load finished', {
+          ...getGridDebugContext(pageIds),
+          options: formatDebugOptions(options),
+          ms: Math.round(performance.now() - startedAt)
+        });
       }
     };
 
@@ -8090,6 +8429,13 @@ const openCuratedGallery = async (galleryId) => {
       if (!state.explorerMode || state.walletLoadingPage) {
         return;
       }
+      debugLog('grid', 'explorer page jump requested', {
+        pageInput: dom.explorerPageInput.value,
+        tokenInput: dom.explorerTokenInput.value,
+        currentPageIndex: state.walletPageIndex,
+        pageCount: getWalletPageCount(),
+        filters: getExplorerFilterLabel()
+      });
       if (hasActiveExplorerFilters()) {
         const indexed = await ensureExplorerFilterIndex();
         if (!indexed) {
@@ -8117,6 +8463,12 @@ const openCuratedGallery = async (galleryId) => {
       if (!state.explorerMode || state.walletLoadingPage) {
         return;
       }
+      debugLog('grid', 'explorer token jump requested', {
+        tokenInput: dom.explorerTokenInput.value,
+        currentPageIndex: state.walletPageIndex,
+        latestTokenId: state.explorerLatestTokenId?.toString() ?? null,
+        filters: getExplorerFilterLabel()
+      });
       if (!state.explorerLatestTokenId) {
         await refreshExplorerLatestTokenId();
       }
@@ -8162,6 +8514,11 @@ const openCuratedGallery = async (galleryId) => {
       if (!state.explorerMode || state.walletLoadingPage) {
         return;
       }
+      debugLog('grid', 'explorer latest page requested', {
+        currentPageIndex: state.walletPageIndex,
+        latestTokenId: state.explorerLatestTokenId?.toString() ?? null,
+        filters: getExplorerFilterLabel()
+      });
       await refreshExplorerLatestTokenId();
       state.walletPageIndex = getExplorerLatestPageIndex();
       dom.explorerTokenInput.value = '';
@@ -8527,6 +8884,12 @@ const openCuratedGallery = async (galleryId) => {
         const isTogglingOff =
           state.curatedGalleryId === galleryId ||
           activeExampleDescriptionKey === galleryId;
+        debugLog('grid', 'curated gallery button clicked', {
+          galleryId,
+          isTogglingOff,
+          currentGalleryId: state.curatedGalleryId,
+          activeExampleDescriptionKey
+        });
 
         if (isTogglingOff) {
           void clearWalletLookupToConnectedWallet();
@@ -8550,6 +8913,12 @@ const openCuratedGallery = async (galleryId) => {
       if (state.walletPageIndex <= 0 || state.walletLoadingPage) {
         return;
       }
+      debugLog('grid', 'previous page clicked', {
+        fromPageIndex: state.walletPageIndex,
+        toPageIndex: state.walletPageIndex - 1,
+        mode: getGridModeLabel(),
+        pageCount: getWalletPageCount()
+      });
       state.walletPageIndex -= 1;
       await loadWalletPage();
     });
@@ -8558,6 +8927,12 @@ const openCuratedGallery = async (galleryId) => {
       if (state.walletPageIndex >= pageCount - 1 || state.walletLoadingPage) {
         return;
       }
+      debugLog('grid', 'next page clicked', {
+        fromPageIndex: state.walletPageIndex,
+        toPageIndex: state.walletPageIndex + 1,
+        mode: getGridModeLabel(),
+        pageCount
+      });
       state.walletPageIndex += 1;
       await loadWalletPage();
     });
