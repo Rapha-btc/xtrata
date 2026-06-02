@@ -3426,6 +3426,7 @@
       walletLookupPending: false,
       walletLookupNotice: null,
       walletLookupAbortController: null,
+      walletViewRequestId: 0,
       transferPending: false,
       adminStatus: null,
       selectedFile: null,
@@ -3444,6 +3445,7 @@
       tokenPreviewMimeType: null,
       tokenPreviewSourceUrl: null,
       tokenPreviewHtmlDoc: null,
+      tokenPreviewRequestId: 0,
       selectedOwnerNameRequestId: 0,
       fullscreenUrl: null,
       fullscreenOpen: false,
@@ -4142,12 +4144,17 @@
     };
 
     const resetBackgroundThumbnailHydration = () => {
+      const discardedQueued = state.thumbnailHydrationQueue.length;
       state.thumbnailHydrationRunId += 1;
       state.thumbnailHydrationQueue = [];
       state.thumbnailHydrationQueued.clear();
-      state.thumbnailHydrationInFlight.clear();
       state.thumbnailHydrationAttempted.clear();
       state.gridLiveMediaCache.clear();
+      debugLog('cache', 'background thumbnail queue reset', {
+        runId: state.thumbnailHydrationRunId,
+        discardedQueued,
+        activeFetches: state.thumbnailHydrationInFlight.size
+      });
     };
 
     const clearElement = (element, text) => {
@@ -4561,6 +4568,7 @@
       state.walletSession.address ?? getViewingWalletAddress() ?? state.contract.address;
 
     const clearSelectedTokenPreview = () => {
+      state.tokenPreviewRequestId += 1;
       state.selectedTokenId = null;
       revokeTokenPreview();
       dom.explorerLink.hidden = true;
@@ -5961,7 +5969,7 @@
             continue;
           }
           state.walletPageIndex = pageIndex;
-          await loadWalletPage({ deferSelection: true });
+          await loadWalletPage({ deferSelection: true, deferHydration: true });
           if (getWalletPageIds().includes(targetId)) {
             await selectToken(targetId);
             return true;
@@ -5973,7 +5981,7 @@
           const targetPageIndex = Math.floor(index / WALLET_PAGE_SIZE);
           if (targetPageIndex !== state.walletPageIndex) {
             state.walletPageIndex = targetPageIndex;
-            await loadWalletPage({ deferSelection: true });
+            await loadWalletPage({ deferSelection: true, deferHydration: true });
           }
           await selectToken(targetId);
           return true;
@@ -6241,10 +6249,16 @@
       if (token.svgDataUri || !token.meta || token.meta.totalSize <= 0n) {
         return false;
       }
+      const kind = getMediaKind(token.meta.mimeType ?? null);
+      if (
+        state.selectedTokenId === token.id &&
+        (kind === 'image' || kind === 'svg')
+      ) {
+        return false;
+      }
       if (token.meta.totalSize > MAX_GRID_EAGER_FULL_LOAD_BYTES) {
         return false;
       }
-      const kind = getMediaKind(token.meta.mimeType ?? null);
       return (
         kind === 'image' ||
         kind === 'svg' ||
@@ -6252,6 +6266,12 @@
         kind === 'html' ||
         kind === 'binary'
       );
+    };
+
+    const compareBackgroundThumbnailHydrationJobs = (left, right) => {
+      const leftSize = left.token.meta?.totalSize ?? 0n;
+      const rightSize = right.token.meta?.totalSize ?? 0n;
+      return leftSize < rightSize ? -1 : leftSize > rightSize ? 1 : 0;
     };
 
     const runBackgroundThumbnailHydration = async (job) => {
@@ -6277,9 +6297,6 @@
           totalSize: token.meta?.totalSize ?? 0n,
           mimeType: token.meta?.mimeType ?? null
         });
-        if (runId !== state.thumbnailHydrationRunId) {
-          return;
-        }
         const mimeType =
           resolveMimeType(token.meta?.mimeType ?? null, bytes) ??
           token.meta?.mimeType ??
@@ -6454,9 +6471,7 @@
         state.thumbnailHydrationInFlight.add(job.cacheKey);
         void runBackgroundThumbnailHydration(job).finally(() => {
           state.thumbnailHydrationInFlight.delete(job.cacheKey);
-          if (job.runId === state.thumbnailHydrationRunId) {
-            pumpBackgroundThumbnailHydrationQueue();
-          }
+          pumpBackgroundThumbnailHydrationQueue();
         });
       }
     };
@@ -6481,15 +6496,18 @@
         cacheKey,
         runId: state.thumbnailHydrationRunId
       });
+      state.thumbnailHydrationQueue.sort(compareBackgroundThumbnailHydrationJobs);
       debugLog('cache', 'background thumbnail queued', {
         tokenId: token.id.toString(),
         contractId: getTokenCacheContractId(token),
+        priorityBytes: token.meta?.totalSize?.toString() ?? null,
         queueDepth: state.thumbnailHydrationQueue.length
       });
       pumpBackgroundThumbnailHydrationQueue();
     };
 
-    const renderTokenGrid = () => {
+    const renderTokenGrid = (options = {}) => {
+      const allowBackgroundHydration = !options.deferHydration;
       revokeGridThumbUrls();
       dom.tokenGrid.innerHTML = '';
       clampWalletPageIndex();
@@ -6548,6 +6566,7 @@
             } else {
               const shouldProbeAnimatedImage = shouldProbeCachedAnimatedThumbnail(token);
               const isAnimatedProbePending =
+                allowBackgroundHydration &&
                 shouldProbeAnimatedImage &&
                 (!state.thumbnailHydrationAttempted.has(cacheKey) ||
                   state.thumbnailHydrationQueued.has(cacheKey) ||
@@ -6569,11 +6588,14 @@
         }
         card.append(thumb, meta);
         dom.tokenGrid.append(card);
-        if (token && shouldScheduleBackgroundHydration) {
+        if (token && allowBackgroundHydration && shouldScheduleBackgroundHydration) {
           scheduleBackgroundThumbnailHydration(token, thumb);
         } else if (token && shouldApplyCachedThumbnail) {
           void applyCachedThumbnail(token, thumb).then((applied) => {
-            if (!applied || shouldProbeCachedAnimatedThumbnail(token)) {
+            if (
+              allowBackgroundHydration &&
+              (!applied || shouldProbeCachedAnimatedThumbnail(token))
+            ) {
               scheduleBackgroundThumbnailHydration(token, thumb);
             }
           });
@@ -6583,6 +6605,7 @@
     };
 
     const selectToken = async (id, options = {}) => {
+      const requestId = ++state.tokenPreviewRequestId;
       state.selectedTokenId = id;
       const token =
         state.walletTokenCache.get(id.toString()) ??
@@ -6654,6 +6677,15 @@
         const htmlDoc = getMediaKind(mimeType) === 'html'
           ? await prepareRuntimeHtmlForToken(token, new TextDecoder().decode(bytes), 'preview')
           : null;
+        if (
+          requestId !== state.tokenPreviewRequestId ||
+          state.selectedTokenId !== token.id
+        ) {
+          debugLog('preview', 'discarding stale selected inscription preview', {
+            tokenId: token.id.toString()
+          });
+          return;
+        }
         revokeTokenPreview();
         state.tokenPreviewTokenId = token.id.toString();
         state.tokenPreviewBytes = bytes;
@@ -6667,6 +6699,15 @@
         void warmThumbnailCacheFromBytes(token, bytes, mimeType);
         updateControls();
       } catch (error) {
+        if (
+          requestId !== state.tokenPreviewRequestId ||
+          state.selectedTokenId !== token.id
+        ) {
+          debugLog('preview', 'discarding stale selected inscription preview failure', {
+            tokenId: token.id.toString()
+          });
+          return;
+        }
         const message = error instanceof Error ? error.message : String(error);
         clearElement(dom.tokenPreviewMedia, 'Preview unavailable');
         appendLog(`Preview failed for ${formatTokenId(token.id)}: ${message}`);
@@ -6681,6 +6722,7 @@
     };
 
     const clearWalletLookupToConnectedWallet = async () => {
+      state.walletViewRequestId += 1;
       cancelWalletLookup();
 
       state.walletLookupNotice = null;
@@ -6703,11 +6745,12 @@
       updateControls();
     };
 
-    const viewWalletFromInput = async () => {
+    const viewWalletFromInput = async (options = {}) => {
       if (shouldClearWalletLookupOnSubmit()) {
         await clearWalletLookupToConnectedWallet();
         return;
       }
+      state.walletViewRequestId += 1;
       const lookupValue = getWalletLookupSubmitValue();
       const baseLookupState = getWalletLookupState(
         lookupValue,
@@ -6727,7 +6770,7 @@
         dom.walletLookupInput.value = '';
         updateWalletLookupInputMode();
         updateWalletStatus();
-        await loadWalletInscriptions();
+        await loadWalletInscriptions(options);
         updateControls();
         return;
       }
@@ -6751,7 +6794,7 @@
         updateWalletLookupInputMode();
         appendLog(`Viewing wallet: ${truncateMiddle(baseLookupState.lookupAddress, 8, 8)}.`);
         updateWalletStatus();
-        await loadWalletInscriptions();
+        await loadWalletInscriptions(options);
         updateControls();
         return;
       }
@@ -6804,7 +6847,7 @@
           `Resolved ${lookupName} to ${truncateMiddle(resolvedLookupState.resolvedAddress, 8, 8)}.`
         );
         updateWalletStatus();
-        await loadWalletInscriptions();
+        await loadWalletInscriptions(options);
       } catch (error) {
         if (abortController.signal.aborted) {
           return;
@@ -6831,6 +6874,7 @@ const openCuratedGallery = async (galleryId) => {
     return;
   }
 
+  state.walletViewRequestId += 1;
   cancelWalletLookup();
 
   state.curatedGalleryId = gallery.id;
@@ -7536,7 +7580,7 @@ const openCuratedGallery = async (galleryId) => {
       }
 
       const missingIds = pageIds.filter((id) => !state.walletTokenCache.has(id.toString()));
-      renderTokenGrid();
+      renderTokenGrid({ deferHydration: !!options.deferHydration });
 
       try {
         if (missingIds.length > 0 || options.force) {
@@ -7558,7 +7602,7 @@ const openCuratedGallery = async (galleryId) => {
           state.selectedTokenId = state.walletTokens[0].id;
           void selectToken(state.selectedTokenId);
         } else {
-          renderTokenGrid();
+          renderTokenGrid({ deferHydration: !!options.deferHydration });
         }
       } finally {
         state.walletLoadingPage = false;
@@ -7567,7 +7611,7 @@ const openCuratedGallery = async (galleryId) => {
       }
     };
 
-    const loadWalletInscriptions = async () => {
+    const loadWalletInscriptions = async (options = {}) => {
       if (state.explorerMode) {
         await loadExplorerPage({ refreshLatest: true, force: true });
         return;
@@ -7651,7 +7695,11 @@ const openCuratedGallery = async (galleryId) => {
             'ready',
             'blue'
           );
-          await loadWalletPage({ pageAlreadyLoaded: true });
+          await loadWalletPage({
+            pageAlreadyLoaded: true,
+            deferSelection: !!options.deferSelection,
+            deferHydration: !!options.deferHydration
+          });
           return;
         } catch (pageError) {
           state.walletUsesPagedHoldings = false;
@@ -7718,7 +7766,10 @@ const openCuratedGallery = async (galleryId) => {
             'ready',
             'blue'
           );
-          await loadWalletPage();
+          await loadWalletPage({
+            deferSelection: !!options.deferSelection,
+            deferHydration: !!options.deferHydration
+          });
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -8151,6 +8202,7 @@ const openCuratedGallery = async (galleryId) => {
       dom.walletLookupInput.value = '';
       updateWalletLookupInputMode();
       applyContract(state.contract);
+      const walletViewRequestId = state.walletViewRequestId;
       resetSteps();
       renderTokenGridPlaceholders();
       updateWalletStatus();
@@ -8159,7 +8211,9 @@ const openCuratedGallery = async (galleryId) => {
         await loadExplorerMode();
       } else {
         await fetchAdminStatus();
-        await loadWalletInscriptions();
+        if (walletViewRequestId === state.walletViewRequestId) {
+          await loadWalletInscriptions();
+        }
       }
       updateControls();
     };
@@ -8241,9 +8295,13 @@ const openCuratedGallery = async (galleryId) => {
         dom.walletLookupInput.value = toBtcLookupLabel(lookup);
         updateWalletLookupInputMode();
 
-        void viewWalletFromInput().then(async () => {
-          const defaultTokenId =
-            WALLET_SHOWCASE_DEFAULT_TOKEN_IDS[showcaseKey] ?? null;
+        const defaultTokenId =
+          WALLET_SHOWCASE_DEFAULT_TOKEN_IDS[showcaseKey] ?? null;
+
+        void viewWalletFromInput({
+          deferSelection: defaultTokenId !== null,
+          deferHydration: defaultTokenId !== null
+        }).then(async () => {
 
           if (defaultTokenId !== null) {
             try {
