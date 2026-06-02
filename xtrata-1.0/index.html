@@ -6113,20 +6113,41 @@
         typeof targetTokenId === 'bigint'
           ? targetTokenId
           : BigInt(targetTokenId);
+      debugLog('grid', 'focus token requested', {
+        targetTokenId: targetId.toString(),
+        mode: getGridModeLabel(),
+        currentPageIndex: state.walletPageIndex,
+        pageCount: getWalletPageCount(),
+        pageIds: formatDebugTokenIds(getWalletPageIds()),
+        usesPagedHoldings: state.walletUsesPagedHoldings
+      });
       if (state.explorerMode) {
         if (!state.explorerLatestTokenId) {
           await refreshExplorerLatestTokenId();
         }
         const pageIndex = getExplorerTokenPageIndex(targetId);
         if (pageIndex === null) {
+          debugLog('grid', 'focus token unavailable in explorer range', {
+            targetTokenId: targetId.toString(),
+            latestTokenId: state.explorerLatestTokenId?.toString() ?? null,
+            filters: getExplorerFilterLabel()
+          }, 'warn');
           return false;
         }
+        debugLog('grid', 'focus token loading explorer page', {
+          targetTokenId: targetId.toString(),
+          targetPageIndex: pageIndex
+        });
         state.walletPageIndex = pageIndex;
         await loadExplorerPage({ selectTokenId: targetId, scrollToPreview: true });
         return state.selectedTokenId === targetId;
       }
       const currentPageContainsTarget = getWalletPageIds().includes(targetId);
       if (currentPageContainsTarget) {
+        debugLog('grid', 'focus token found on current page', {
+          targetTokenId: targetId.toString(),
+          pageIndex: state.walletPageIndex
+        });
         await selectToken(targetId);
         return true;
       }
@@ -6139,9 +6160,20 @@
           if (pageIndex === state.walletPageIndex) {
             continue;
           }
+          debugLog('grid', 'focus token scanning holdings page', {
+            targetTokenId: targetId.toString(),
+            fromPageIndex: state.walletPageIndex,
+            targetPageIndex: pageIndex,
+            pageCount
+          });
           state.walletPageIndex = pageIndex;
           await loadWalletPage({ deferSelection: true, deferHydration: true });
           if (getWalletPageIds().includes(targetId)) {
+            debugLog('grid', 'focus token found after page scan', {
+              targetTokenId: targetId.toString(),
+              pageIndex,
+              pageIds: formatDebugTokenIds(getWalletPageIds())
+            });
             await selectToken(targetId);
             return true;
           }
@@ -6150,6 +6182,11 @@
         const index = state.walletTokenIds.findIndex((id) => id === targetId);
         if (index >= 0) {
           const targetPageIndex = Math.floor(index / WALLET_PAGE_SIZE);
+          debugLog('grid', 'focus token found in local holdings index', {
+            targetTokenId: targetId.toString(),
+            tokenIndex: index,
+            targetPageIndex
+          });
           if (targetPageIndex !== state.walletPageIndex) {
             state.walletPageIndex = targetPageIndex;
             await loadWalletPage({ deferSelection: true, deferHydration: true });
@@ -6160,9 +6197,18 @@
       }
 
       if (state.walletPageIndex !== originalPageIndex) {
+        debugLog('grid', 'focus token not found; restoring original page', {
+          targetTokenId: targetId.toString(),
+          originalPageIndex,
+          currentPageIndex: state.walletPageIndex
+        }, 'warn');
         state.walletPageIndex = originalPageIndex;
         await loadWalletPage({ deferSelection: true });
       }
+      debugLog('grid', 'focus token not found', {
+        targetTokenId: targetId.toString(),
+        pageCount: getWalletPageCount()
+      }, 'warn');
       return false;
     };
 
@@ -8839,6 +8885,14 @@ const openCuratedGallery = async (galleryId) => {
 
         const defaultTokenId =
           WALLET_SHOWCASE_DEFAULT_TOKEN_IDS[showcaseKey] ?? null;
+        debugLog('grid', 'wallet showcase lookup started', {
+          showcaseKey,
+          lookup,
+          normalizedLookup: dom.walletLookupInput.value,
+          defaultTokenId: defaultTokenId?.toString() ?? null,
+          deferSelection: defaultTokenId !== null,
+          deferHydration: defaultTokenId !== null
+        });
 
         void viewWalletFromInput({
           deferSelection: defaultTokenId !== null,
@@ -8847,15 +8901,38 @@ const openCuratedGallery = async (galleryId) => {
 
           if (defaultTokenId !== null) {
             try {
+              debugLog('grid', 'wallet showcase default token focus started', {
+                showcaseKey,
+                defaultTokenId: defaultTokenId.toString(),
+                pageCount: getWalletPageCount(),
+                currentPageIndex: state.walletPageIndex
+              });
               const selected = await focusWalletTokenById(defaultTokenId);
 
               if (!selected) {
+                debugLog('grid', 'wallet showcase default token focus missed', {
+                  showcaseKey,
+                  defaultTokenId: defaultTokenId.toString(),
+                  pageCount: getWalletPageCount()
+                }, 'warn');
                 appendLog(
                   `Default showcase token ${defaultTokenId.toString()} not found in this wallet view.`
                 );
+              } else {
+                debugLog('grid', 'wallet showcase default token focus finished', {
+                  showcaseKey,
+                  defaultTokenId: defaultTokenId.toString(),
+                  selectedTokenId: state.selectedTokenId?.toString() ?? null,
+                  pageIndex: state.walletPageIndex
+                });
               }
             } catch (error) {
               const message = error instanceof Error ? error.message : String(error);
+              debugLog('grid', 'wallet showcase default token focus failed', {
+                showcaseKey,
+                defaultTokenId: defaultTokenId.toString(),
+                error: message
+              }, 'warn');
 
               appendLog(
                 `Unable to auto-select showcase token ${defaultTokenId.toString()}: ${message}`
