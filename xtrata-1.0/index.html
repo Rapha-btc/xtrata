@@ -6148,6 +6148,11 @@
           targetTokenId: targetId.toString(),
           pageIndex: state.walletPageIndex
         });
+        debugLog('grid', 'focus token hydrating current page', {
+          targetTokenId: targetId.toString(),
+          pageIndex: state.walletPageIndex
+        });
+        renderTokenGrid();
         await selectToken(targetId);
         return true;
       }
@@ -6174,6 +6179,11 @@
               pageIndex,
               pageIds: formatDebugTokenIds(getWalletPageIds())
             });
+            debugLog('grid', 'focus token hydrating scanned page', {
+              targetTokenId: targetId.toString(),
+              pageIndex
+            });
+            renderTokenGrid();
             await selectToken(targetId);
             return true;
           }
@@ -6191,6 +6201,11 @@
             state.walletPageIndex = targetPageIndex;
             await loadWalletPage({ deferSelection: true, deferHydration: true });
           }
+          debugLog('grid', 'focus token hydrating indexed page', {
+            targetTokenId: targetId.toString(),
+            targetPageIndex
+          });
+          renderTokenGrid();
           await selectToken(targetId);
           return true;
         }
@@ -8007,6 +8022,7 @@ const openCuratedGallery = async (galleryId) => {
         state.walletTokens = pageIds
           .map((id) => state.walletTokenCache.get(id.toString()) ?? null)
           .filter((token) => !!token);
+        renderTokenGrid({ deferHydration: !!options.deferHydration });
 
         if (!options.deferSelection) {
           const requestedId = options.selectTokenId ?? null;
@@ -8031,10 +8047,7 @@ const openCuratedGallery = async (galleryId) => {
             await selectToken(selectedId, { scrollToPreview: !!options.scrollToPreview });
           } else {
             clearSelectedTokenPreview();
-            renderTokenGrid();
           }
-        } else {
-          renderTokenGrid();
         }
       } finally {
         state.walletLoadingPage = false;
@@ -8158,16 +8171,14 @@ const openCuratedGallery = async (galleryId) => {
         state.walletTokens = pageIds
           .map((id) => state.walletTokenCache.get(id.toString()) ?? null)
           .filter((token) => !!token);
+        renderTokenGrid({ deferHydration: !!options.deferHydration });
         if (
           state.walletTokens.length > 0 &&
           !options.deferSelection &&
           (!state.selectedTokenId ||
             !state.walletTokens.some((token) => token.id === state.selectedTokenId))
         ) {
-          state.selectedTokenId = state.walletTokens[0].id;
-          void selectToken(state.selectedTokenId);
-        } else {
-          renderTokenGrid({ deferHydration: !!options.deferHydration });
+          void selectToken(state.walletTokens[0].id);
         }
       } finally {
         state.walletLoadingPage = false;
