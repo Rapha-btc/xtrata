@@ -92,6 +92,7 @@ Historical SDK planning docs:
 | --- | --- |
 | [`docs/README.md`](README.md) | Broad repo/product overview. |
 | [`docs/app-reference.md`](app-reference.md) | Internal code map and SDK-first operating rules. |
+| [`docs/xtrata-wallet-integration-guide.md`](xtrata-wallet-integration-guide.md) | Shared wallet integration guide for hosted apps and embedded runtimes. |
 | [`docs/assumptions.md`](assumptions.md) | Network and session assumptions. |
 | [`docs/xtrata-quickstart.md`](xtrata-quickstart.md) | End-user quickstart for first inscription. |
 | [`docs/xtrata-inscription-handbook.md`](xtrata-inscription-handbook.md) | Primary technical guide for inscription data, reads, reconstruction, and display. |

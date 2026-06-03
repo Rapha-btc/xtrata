@@ -266,7 +266,14 @@
           }
           try {
             var query = new URLSearchParams(window.location.search || '');
-            if (query.get('debug') === '1' || query.get('arcadeDebug') === '1') {
+            var walletBridgeToken = query.get('walletBridgeToken') || '';
+            if (walletBridgeToken) {
+              url.searchParams.set('walletBridgeToken', walletBridgeToken);
+            }
+          } catch (error) {}
+          try {
+            var debugQuery = new URLSearchParams(window.location.search || '');
+            if (debugQuery.get('debug') === '1' || debugQuery.get('arcadeDebug') === '1') {
               url.searchParams.set('debug', '1');
             }
           } catch (error) {}

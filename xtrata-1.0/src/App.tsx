@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type MouseEvent } from 'react';
-import { openSTXTransfer } from '@stacks/connect';
 import {
-  getStacksProvider,
   showContractCall,
-  showContractDeploy
+  showContractDeploy,
+  showStxTransfer
 } from './lib/wallet/connect';
 import { hexToBytes } from '@stacks/common';
 import { useQueryClient } from '@tanstack/react-query';
@@ -1088,16 +1087,9 @@ export default function App() {
             payload.params,
             fallbackNetwork
           );
-          const provider = getStacksProvider();
-          if (!provider) {
-            throw createRuntimeWalletBridgeError(
-              'No installed Stacks wallet provider was found.',
-              -32601
-            );
-          }
 
           return await new Promise((resolve, reject) => {
-            void openSTXTransfer(
+            showStxTransfer(
               {
                 recipient: request.recipient,
                 amount: request.amount,
@@ -1116,8 +1108,7 @@ export default function App() {
                       4001
                     )
                   )
-              },
-              provider
+              }
             );
           });
         }
